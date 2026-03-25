@@ -53,7 +53,7 @@
 
 			if (devisRes.status === 'fulfilled') devisList = devisRes.value;
 
-			lastSeenActualites = browser ? localStorage.getItem('lastSeenActualites') : null;
+			lastSeenActualites = browser ? getLastSeen() : null;
 			if (pendingRes.status === 'fulfilled' && pendingRes.value) {
 				pendingCount = (pendingRes.value as unknown[]).length;
 			}
@@ -75,14 +75,27 @@
 		notifList = notifList.map((n) => ({ ...n, lue: true }));
 	}
 
+	function getLastSeen(): string | null {
+		const ls = localStorage.getItem('lastSeenActualites');
+		if (ls) return ls;
+		const cookie = document.cookie.split('; ').find(r => r.startsWith('lastSeenActualites='));
+		return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
+	}
+
+	function setLastSeen(iso: string) {
+		localStorage.setItem('lastSeenActualites', iso);
+		const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
+		document.cookie = `lastSeenActualites=${encodeURIComponent(iso)}; expires=${expires}; path=/; SameSite=Strict`;
+	}
+
 	afterNavigate(() => {
-		if (browser) lastSeenActualites = localStorage.getItem('lastSeenActualites');
+		if (browser) lastSeenActualites = getLastSeen();
 	});
 
 	function markActualitesVues() {
 		if (!browser) return;
 		const now = new Date().toISOString();
-		localStorage.setItem('lastSeenActualites', now);
+		setLastSeen(now);
 		lastSeenActualites = now;
 	}
 

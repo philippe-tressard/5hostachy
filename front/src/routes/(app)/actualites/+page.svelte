@@ -51,7 +51,12 @@
 		try {
 			pubList = await pubsApi.list();
 			if (pubList.length > 0) { expandedPubs = new Set([pubList[0].id]); }
-			if (browser) localStorage.setItem('lastSeenActualites', new Date().toISOString());
+			if (browser) {
+			const now = new Date().toISOString();
+			localStorage.setItem('lastSeenActualites', now);
+			const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
+			document.cookie = `lastSeenActualites=${encodeURIComponent(now)}; expires=${expires}; path=/; SameSite=Strict`;
+		}
 		} finally {
 			loading = false;
 		}
