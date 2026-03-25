@@ -1075,8 +1075,10 @@
 									{#each col.items as ev (ev.id)}
 										<tr>
 											<td>
-												<strong>{ev.titre}</strong>
-												{#if ev.description}<br /><span class="text-muted-sm text-clamp">{ev.description}</span>{/if}
+												<strong class="report-event-title">{ev.titre}</strong>
+												{#if ev.description}
+													<div class="report-event-desc rich-content">{@html renderDesc(ev.description)}</div>
+												{/if}
 											</td>
 											<td>
 												<div>{TYPE_LABELS[ev.type] ?? ev.type}</div>
@@ -1764,6 +1766,9 @@
 	.report-table th, .report-table td { padding: .65rem .7rem; border-bottom: 1px solid var(--color-border); vertical-align: top; text-align: left; }
 	.report-table th { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
 	.report-table.compact td, .report-table.compact th { padding: .55rem .6rem; }
+	.report-event-title { display: block; margin-bottom: .25rem; }
+	.report-event-desc { color: var(--color-text); }
+	.report-event-desc :global(p:last-child) { margin-bottom: 0; }
 	.clamp-5 { display: -webkit-box; line-clamp: 5; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 
 	@media (max-width: 900px) {
