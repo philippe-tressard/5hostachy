@@ -467,6 +467,13 @@ function displayRoles(u: any): { label: string; cls: string }[] {
   }));
 }
 
+function userBatimentLabel(u: any): string {
+  if (u.batiment_id && batimentsMap[u.batiment_id]) return batimentsMap[u.batiment_id];
+  if (u.batiment_nom) return u.batiment_nom;
+  if (u.batiment_id) return `Bât. ${u.batiment_id}`;
+  return '—';
+}
+
 //  Demandes de modification de profil 
 let demandesProfil: any[] = [];
 let demandesProfilLoading = true;
@@ -1091,7 +1098,7 @@ $: _siteNom = $siteNomStore;
 <div class="card" style="overflow:hidden">
 <table class="table">
 <thead>
-<tr><th>Nom</th><th>E-mail</th><th>Type</th><th>Compte</th><th>Rôles actifs</th><th>Ajouter / Retirer un rôle</th><th>Actions</th></tr>
+<tr><th>Nom</th><th>E-mail</th><th>Type</th><th>Bâtiment</th><th>Compte</th><th>Rôles actifs</th><th>Ajouter / Retirer un rôle</th><th>Actions</th></tr>
 </thead>
 <tbody>
 {#each filteredUsers as u (u.id)}
@@ -1110,6 +1117,9 @@ $: _siteNom = $siteNomStore;
     <span class="badge {statutBadgeClass[u.statut] ?? 'badge-gray'}" style="font-size:.75rem">
       {statutLabels[u.statut] ?? u.statut ?? '—'}
     </span>
+  </td>
+  <td>
+    <span class="badge badge-gray">{userBatimentLabel(u)}</span>
   </td>
   <td>
     {#if u.actif}
