@@ -515,7 +515,7 @@
 									<div class="rich-content">{@html safeHtml(ev.description)}</div>
 								{/if}
 								<small style="color:var(--color-text-muted);font-size:.78rem;display:block;margin-top:.5rem">
-								Publié le {fmtDateLong(ev.debut)}{#if ev.fin} → {fmtDateLong(ev.fin)}{/if}{#if ev.auteur_nom} par {ev.auteur_nom}{/if}
+								Publié le {fmtDateLong(ev.debut)}{#if ev.fin} → {fmtDateLong(ev.fin)}{/if}{#if ev.auteur_nom}{` par ${ev.auteur_nom}`}{/if}
 								</small>
 							</div>
 						{/if}
