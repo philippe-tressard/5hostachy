@@ -1,9 +1,8 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
-	import { isCS, isAdmin } from '$lib/stores/auth';
-	import { publications as pubsApi, uploads as uploadsApi, ApiError, type Publication } from '$lib/api';
+	import { isCS, isAdmin, currentUser, setUser } from '$lib/stores/auth';
+	import { publications as pubsApi, uploads as uploadsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -51,12 +50,9 @@
 		try {
 			pubList = await pubsApi.list();
 			if (pubList.length > 0) { expandedPubs = new Set([pubList[0].id]); }
-			if (browser) {
+			// Persist last-seen timestamp server-side
 			const now = new Date().toISOString();
-			localStorage.setItem('lastSeenActualites', now);
-			const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
-			document.cookie = `lastSeenActualites=${encodeURIComponent(now)}; expires=${expires}; path=/; SameSite=Strict`;
-		}
+			authApi.updateMe({ last_seen_actualites: now }).then((u: any) => setUser(u)).catch(() => {});
 		} finally {
 			loading = false;
 		}

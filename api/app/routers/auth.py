@@ -253,6 +253,7 @@ class MeUpdate(BaseModel):
     telephone: str | None = None
     societe: str | None = None
     fonction: str | None = None
+    last_seen_actualites: str | None = None
 
 
 @router.patch("/me", response_model=UserRead)
@@ -278,6 +279,8 @@ def update_me(
         user.societe = body.societe
     if body.fonction is not None:
         user.fonction = body.fonction
+    if body.last_seen_actualites is not None:
+        user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))
     session.add(user)
     session.commit()
     session.refresh(user)

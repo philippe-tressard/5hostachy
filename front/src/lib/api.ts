@@ -108,6 +108,7 @@ export interface User {
 	preferences_notifications: string;
 	batiment_id?: number | null;
 	batiment_nom?: string | null;  // "Bât. A"
+	last_seen_actualites?: string | null;
 	cree_le: string;
 	derniere_connexion?: string | null;
 }

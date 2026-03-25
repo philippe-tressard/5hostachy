@@ -1,9 +1,8 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
-	import { browser } from '$app/environment';
-	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { tickets, publications, notifications as notifApi, admin as adminApi, calendrier as calApi, prestataires as prestApi, ApiError, type Ticket, type TicketEvolution, type Publication, type Notification } from '$lib/api';
+	import { currentUser, isCS, isAdmin, setUser } from '$lib/stores/auth';
+	import { tickets, publications, notifications as notifApi, admin as adminApi, calendrier as calApi, prestataires as prestApi, ApiError, type Ticket, type TicketEvolution, type Publication, type Notification, auth as authApi } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml, safeRichContent } from '$lib/sanitize';
 
@@ -53,7 +52,7 @@
 
 			if (devisRes.status === 'fulfilled') devisList = devisRes.value;
 
-			lastSeenActualites = browser ? getLastSeen() : null;
+			lastSeenActualites = $currentUser?.last_seen_actualites ?? null;
 			if (pendingRes.status === 'fulfilled' && pendingRes.value) {
 				pendingCount = (pendingRes.value as unknown[]).length;
 			}
@@ -75,27 +74,16 @@
 		notifList = notifList.map((n) => ({ ...n, lue: true }));
 	}
 
-	function getLastSeen(): string | null {
-		const ls = localStorage.getItem('lastSeenActualites');
-		if (ls) return ls;
-		const cookie = document.cookie.split('; ').find(r => r.startsWith('lastSeenActualites='));
-		return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
-	}
-
-	function setLastSeen(iso: string) {
-		localStorage.setItem('lastSeenActualites', iso);
-		const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString();
-		document.cookie = `lastSeenActualites=${encodeURIComponent(iso)}; expires=${expires}; path=/; SameSite=Strict`;
-	}
-
 	afterNavigate(() => {
-		if (browser) lastSeenActualites = getLastSeen();
+		lastSeenActualites = $currentUser?.last_seen_actualites ?? null;
 	});
 
-	function markActualitesVues() {
-		if (!browser) return;
+	async function markActualitesVues() {
 		const now = new Date().toISOString();
-		setLastSeen(now);
+		try {
+			const updated = await authApi.updateMe({ last_seen_actualites: now });
+			setUser(updated);
+		} catch { /* ignore */ }
 		lastSeenActualites = now;
 	}
 

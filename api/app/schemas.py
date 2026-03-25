@@ -43,6 +43,7 @@ class UserRead(BaseModel):
     communaute_interdit: bool = False
     communaute_ban_count: int = 0
     communaute_ban_jusqu_au: Optional[datetime] = None
+    last_seen_actualites: Optional[datetime] = None
     cree_le: datetime
     derniere_connexion: Optional[datetime] = None
 
