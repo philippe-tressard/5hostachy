@@ -61,11 +61,23 @@ npm run dev
 
 ### Submitting Code
 
+> **Branch model:** `main` is production-protected (no direct push). All contributions go through `dev` first.
+
 1. **Fork** the repository.
-2. Create a **feature branch** from `main`: `git checkout -b feat/my-feature`
+2. Create a **feature branch** from `dev`: `git checkout dev && git checkout -b feat/my-feature`
 3. Make your changes with clear, atomic commits.
-4. Ensure no regressions in existing functionality.
-5. Open a **Pull Request** against `main`.
+4. Ensure CI passes locally (see below).
+5. Open a **Pull Request against `dev`** — PRs directly targeting `main` will be declined.
+
+**Verify CI locally before opening a PR:**
+```bash
+# Backend
+pip install ruff
+ruff check api/app/ api/alembic/ --select E9,F63,F7,F82
+
+# Frontend
+cd front && npm install && npm run build
+```
 
 ### Commit Messages
 
