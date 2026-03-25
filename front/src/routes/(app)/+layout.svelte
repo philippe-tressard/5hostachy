@@ -40,6 +40,7 @@
 			© {year} &nbsp;·&nbsp;
 			<a href={siteUrl} target="_blank" rel="noopener noreferrer">{siteNom}</a>
 			&nbsp;·&nbsp; {buildVer}
+			&nbsp;·&nbsp; <a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer">GitHub</a>
 			&nbsp;·&nbsp; <a href="/mentions-legales">Mentions légales</a>
 			&nbsp;·&nbsp; <a href="/politique-de-confidentialite">Politique de confidentialité</a>
 		</footer>

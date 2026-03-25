@@ -26,11 +26,22 @@
 	{:else}
 		<p class="muted">Contenu en cours de rédaction.</p>
 	{/if}
+
+	<section class="oss-section">
+		<h2>Logiciel libre</h2>
+		<p>
+			Ce site est propulsé par <strong>5Hostachy</strong>, une application open source de gestion de copropriété
+			publiée sous licence <strong>MIT</strong>.
+			Le code source est disponible sur
+			<a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer">GitHub&nbsp;→</a>
+		</p>
+	</section>
 </main>
 
 <footer class="legal-footer">
 	© {year}
 	&nbsp;·&nbsp; <a href={siteUrl} target="_blank" rel="noopener noreferrer">{siteNom}</a>
+	&nbsp;·&nbsp; <a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer">GitHub</a>
 </footer>
 
 <style>
@@ -74,4 +85,6 @@
 	}
 	.legal-footer a { color: var(--color-text-muted); }
 	.legal-footer a:hover { color: var(--color-primary); }
+	.oss-section { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
+	.oss-section a { color: var(--color-primary); }
 </style>
