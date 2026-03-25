@@ -1,14 +1,14 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 
-	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
+	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
 	$: _siteNom = $siteNomStore;
 
 	interface PendingUser {
@@ -41,9 +41,30 @@
 		id: number; numero: string; type: string;
 		etage: number | null; batiment_id: number | null; batiment_nom: string | null;
 	}
+	interface ReportPrestataire {
+		id: number;
+		nom: string;
+		specialite?: string | null;
+		type_prestataire?: string | null;
+	}
+	interface ReportDevis {
+		id: number;
+		prestataire_id: number;
+		batiment_id?: number | null;
+		perimetre: string;
+		titre: string;
+		date_prestation?: string | null;
+		montant_estime?: number | null;
+		statut: string;
+		frequence_type?: string | null;
+		frequence_valeur?: number | null;
+		notes?: string | null;
+		actif: boolean;
+		affichable: boolean;
+	}
 
 	// -- Onglet -------------------------------------------------------------
-	let onglet: 'validations' | 'tickets' | 'annuaire' = 'validations';
+	let onglet: 'validations' | 'tickets' | 'reporting' | 'annuaire' = 'validations';
 
 	// -- Tickets ------------------------------------------------------------
 	let tkList: Ticket[] = [];
@@ -58,10 +79,19 @@
 	let tkEvolContenu = '';
 	let tkEvolStatut = '';
 	let tkEvolSaving = false;
+	let reportView: 'dossiers' | 'tickets' | 'devis' = 'dossiers';
+	let reportPeriodDays: 30 | 90 | 365 = 90;
+	let reportingLoading = false;
+	let reportingLoaded = false;
+	let reportDevisList: ReportDevis[] = [];
+	let reportPrestataires: ReportPrestataire[] = [];
+	let reportPrintTitle = '';
 
 	const TK_STATUT_BADGE: Record<string, string> = { ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray', fermé: 'badge-gray' };
 	const TK_STATUT_LABELS: Record<string, string> = { ouvert: 'Ouvert', en_cours: 'En cours', résolu: 'Résolu', annulé: 'Annulé', fermé: 'Fermé' };
 	const TK_CAT_ICON: Record<string, string> = { panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}' };
+	const REPORT_DEVIS_LABELS: Record<string, string> = { en_attente: 'En attente', accepte: 'Accepté', realise: 'Réalisé', refuse: 'Refusé' };
+	const REPORT_DEVIS_BADGES: Record<string, string> = { en_attente: 'badge-blue', accepte: 'badge-orange', realise: 'badge-green', refuse: 'badge-gray' };
 
 	$: tkFiltered = tkList.filter(t => !tkFilter || t.statut === tkFilter);
 	$: tkPendingCount = tkList.filter(t => t.statut === 'ouvert').length;
@@ -69,6 +99,140 @@
 	function fmtDate(d: string) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); }
 	function fmtDatetime(d: string) { return new Date(d).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 	function renderDesc(c: string) { const t = c.trimStart(); return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`); }
+	function apiMessage(e: unknown, fallback = 'Erreur') {
+		if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: unknown }).message ?? fallback);
+		return fallback;
+	}
+	function fmtMoney(v: number | null | undefined) {
+		if (v == null) return '—';
+		return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+	}
+	function daysSince(d: string | null | undefined) {
+		if (!d) return 0;
+		const ts = new Date(d).getTime();
+		if (Number.isNaN(ts)) return 0;
+		return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
+	}
+	function ticketAttention(t: Ticket) {
+		const age = daysSince(t.cree_le);
+		if (t.categorie === 'urgence' || t.priorite === 'haute' || age >= 60) return 'Critique';
+		if (age >= 30 || t.statut === 'ouvert') return 'À relancer';
+		return 'Normal';
+	}
+	function ticketAttentionClass(t: Ticket) {
+		const level = ticketAttention(t);
+		if (level === 'Critique') return 'badge-red';
+		if (level === 'À relancer') return 'badge-orange';
+		return 'badge-green';
+	}
+	function ticketScope(t: Ticket) {
+		return t.auteur_batiment_nom ?? (t.batiment_id ? `Bât. ${t.batiment_id}` : 'Résidence');
+	}
+	function reportPrestataireName(prestataireId: number) {
+		return reportPrestataires.find((p) => p.id === prestataireId)?.nom ?? `Prestataire #${prestataireId}`;
+	}
+	function csvCell(value: unknown) {
+		const str = String(value ?? '').replace(/"/g, '""');
+		return `"${str}"`;
+	}
+	function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
+		if (typeof window === 'undefined') return;
+		if (!rows.length) {
+			toast('info', 'Aucune donnée à exporter');
+			return;
+		}
+		const headers = Object.keys(rows[0]);
+		const csv = [headers.map(csvCell).join(';'), ...rows.map((row) => headers.map((h) => csvCell(row[h])).join(';'))].join('\n');
+		const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = filename;
+		link.click();
+		URL.revokeObjectURL(url);
+	}
+	async function printReporting(title: string) {
+		if (typeof window === 'undefined' || typeof document === 'undefined') return;
+		reportPrintTitle = title;
+		document.body.classList.add('print-reporting');
+		await tick();
+		window.print();
+		setTimeout(() => document.body.classList.remove('print-reporting'), 250);
+	}
+	function exportCurrentReporting() {
+		if (reportView === 'dossiers') {
+			downloadCsv('reporting-dossiers-en-cours.csv', reportOpenTickets.map((t) => ({
+				Numero: t.numero,
+				Titre: t.titre,
+				Categorie: t.categorie,
+				Statut: t.statut,
+				Priorite: t.priorite,
+				Demandeur: t.auteur_nom ?? '',
+				Batiment: ticketScope(t),
+				Cree_le: fmtDate(t.cree_le),
+				Anciennete_jours: daysSince(t.cree_le),
+				Derniere_maj: fmtDate(t.mis_a_jour_le ?? t.cree_le),
+				Attention: ticketAttention(t),
+			})));
+			return;
+		}
+		if (reportView === 'tickets') {
+			downloadCsv('reporting-analyse-tickets.csv', reportTicketSource.map((t) => ({
+				Numero: t.numero,
+				Titre: t.titre,
+				Categorie: t.categorie,
+				Statut: t.statut,
+				Priorite: t.priorite,
+				Batiment: ticketScope(t),
+				Demandeur: t.auteur_nom ?? '',
+				Cree_le: fmtDate(t.cree_le),
+				Anciennete_jours: daysSince(t.cree_le),
+			})));
+			return;
+		}
+		downloadCsv('reporting-devis-interventions.csv', reportDevisActifs.map((d) => ({
+			Titre: d.titre,
+			Prestataire: reportPrestataireName(d.prestataire_id),
+			Perimetre: d.perimetre,
+			Batiment: d.batiment_id ? `Bât. ${d.batiment_id}` : '',
+			Date_prestation: d.date_prestation ? fmtDate(d.date_prestation) : 'Non planifiée',
+			Montant: fmtMoney(d.montant_estime),
+			Statut: REPORT_DEVIS_LABELS[d.statut] ?? d.statut,
+			Recurrence: d.frequence_type && d.frequence_valeur ? `${d.frequence_valeur} ${d.frequence_type}` : '',
+		})));
+	}
+	function printCurrentReporting() {
+		const titles: Record<typeof reportView, string> = {
+			dossiers: 'Reporting CS — Dossiers en cours',
+			tickets: 'Reporting CS — Analyse tickets',
+			devis: 'Reporting CS — Devis & interventions',
+		};
+		void printReporting(titles[reportView]);
+	}
+
+	$: reportOpenTickets = tkList
+		.filter((t) => t.statut === 'ouvert' || t.statut === 'en_cours')
+		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));
+	$: reportTicketSource = tkList.filter((t) => daysSince(t.cree_le) <= reportPeriodDays);
+	$: reportTicketCategories = Object.entries(reportTicketSource.reduce((acc: Record<string, { total: number; ouverts: number }>, t) => {
+		const key = t.categorie || 'autre';
+		if (!acc[key]) acc[key] = { total: 0, ouverts: 0 };
+		acc[key].total += 1;
+		if (t.statut === 'ouvert' || t.statut === 'en_cours') acc[key].ouverts += 1;
+		return acc;
+	}, {})).map(([categorie, data]) => ({ categorie, ...data })).sort((a, b) => b.total - a.total);
+	$: reportTicketBuildings = Object.entries(reportTicketSource.reduce((acc: Record<string, { total: number; ouverts: number }>, t) => {
+		const key = ticketScope(t);
+		if (!acc[key]) acc[key] = { total: 0, ouverts: 0 };
+		acc[key].total += 1;
+		if (t.statut === 'ouvert' || t.statut === 'en_cours') acc[key].ouverts += 1;
+		return acc;
+	}, {})).map(([batiment, data]) => ({ batiment, ...data })).sort((a, b) => b.total - a.total);
+	$: reportDevisActifs = reportDevisList.filter((d) => d.statut === 'en_attente' || d.statut === 'accepte');
+	$: reportDevisSummary = Object.entries(reportDevisList.reduce((acc: Record<string, number>, d) => {
+		acc[d.statut] = (acc[d.statut] ?? 0) + 1;
+		return acc;
+	}, {})).map(([statut, total]) => ({ statut, total })).sort((a, b) => b.total - a.total);
 
 	async function loadTickets() {
 		if (tkLoaded) return;
@@ -78,6 +242,22 @@
 			tkLoaded = true;
 		} catch { toast('error', 'Erreur chargement tickets'); }
 		finally { tkLoading = false; }
+	}
+
+	async function loadReporting() {
+		if (reportingLoaded) return;
+		reportingLoading = true;
+		try {
+			await loadTickets();
+			const [devis, prestataires] = await Promise.all([prestApi.devis(), prestApi.list()]);
+			reportDevisList = devis as ReportDevis[];
+			reportPrestataires = prestataires as ReportPrestataire[];
+			reportingLoaded = true;
+		} catch (e) {
+			toast('error', apiMessage(e, 'Erreur chargement reporting'));
+		} finally {
+			reportingLoading = false;
+		}
 	}
 
 	async function tkToggle(id: number) {
@@ -616,6 +796,9 @@
 		{_pc.onglets?.tickets?.label ?? '\u{1F3AB} Tickets résidence'}
 		{#if tkPendingCount > 0}<span class="badge-count">{tkPendingCount}</span>{/if}
 	</button>
+	<button class="tab-btn" class:active={onglet === 'reporting'} on:click={() => { onglet = 'reporting'; loadReporting(); }}>
+		{_pc.onglets?.reporting?.label ?? '\u{1F4CA} Reporting'}
+	</button>
 	<button class="tab-btn" class:active={onglet === 'annuaire'} on:click={() => (onglet = 'annuaire')}>
 		{_pc.onglets?.annuaire?.label ?? '\u{1F4D2} Annuaire CS & Syndic'}
 	</button>
@@ -820,6 +1003,191 @@
 			</div>
 		{/each}
 	{/if}
+
+{:else if onglet === 'reporting'}
+	<div class="reporting-panel">
+		<div class="reporting-toolbar no-print">
+			<div class="reporting-switch">
+				<button class="pill" class:pill-active={reportView === 'dossiers'} on:click={() => (reportView = 'dossiers')}>
+					&#x1F4CC; Dossiers en cours
+				</button>
+				<button class="pill" class:pill-active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
+					&#x1F4CA; Analyse tickets
+				</button>
+				<button class="pill" class:pill-active={reportView === 'devis'} on:click={() => (reportView = 'devis')}>
+					&#x1F4CB; Devis & interventions
+				</button>
+			</div>
+			<div class="reporting-actions">
+				<button class="btn btn-sm btn-outline" on:click={exportCurrentReporting}>
+					&#x2B07; Exporter CSV
+				</button>
+				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
+					&#x1F5A8; Imprimer
+				</button>
+			</div>
+		</div>
+
+		<div class="reporting-print-header">
+			<h2>{reportPrintTitle || (_pc.onglets?.reporting?.label ?? 'Reporting')}</h2>
+			<p>Édité le {fmtDatetime(new Date().toISOString())}</p>
+		</div>
+
+		{#if reportingLoading}
+			<p style="color:var(--color-text-muted)">Chargement des reportings…</p>
+		{:else if reportView === 'dossiers'}
+			<div class="kpi-row" style="margin-bottom:1rem">
+				<div class="kpi-card"><div class="kpi-value">{reportOpenTickets.length}</div><div class="kpi-label">Dossiers ouverts ou en cours</div></div>
+				<div class="kpi-card kpi-alert"><div class="kpi-value">{reportOpenTickets.filter((t) => daysSince(t.cree_le) >= 30).length}</div><div class="kpi-label">À relancer (&ge; 30 jours)</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportOpenTickets.filter((t) => ticketAttention(t) === 'Critique').length}</div><div class="kpi-label">Critiques / urgents</div></div>
+			</div>
+
+			<section class="report-card">
+				<h3>Dossiers toujours en cours</h3>
+				<p class="report-intro">Liste prête pour un point CS, une réunion avec le syndic ou une préparation d’AG.</p>
+				{#if reportOpenTickets.length === 0}
+					<div class="empty-state"><h3>Aucun dossier en cours</h3></div>
+				{:else}
+					<div class="report-table-wrap">
+						<table class="report-table">
+							<thead>
+								<tr>
+									<th>Dossier</th>
+									<th>Contexte</th>
+									<th>Dates</th>
+									<th>Attention</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each reportOpenTickets as t (t.id)}
+									<tr>
+										<td>
+											<strong>#{t.numero}</strong><br />
+											<span>{t.titre}</span><br />
+											<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
+										</td>
+										<td>
+											<div>{TK_CAT_ICON[t.categorie] ?? '&#x1F4CB;'} {t.categorie}</div>
+											<div>{t.auteur_nom ?? 'Demandeur non renseigné'}</div>
+											<div class="text-muted-sm">{ticketScope(t)}</div>
+										</td>
+										<td>
+											<div>Créé le {fmtDate(t.cree_le)}</div>
+											<div>{daysSince(t.cree_le)} jour(s)</div>
+											<div class="text-muted-sm">Dernière MAJ : {fmtDate(t.mis_a_jour_le ?? t.cree_le)}</div>
+										</td>
+										<td><span class="badge {ticketAttentionClass(t)}">{ticketAttention(t)}</span></td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</section>
+
+		{:else if reportView === 'tickets'}
+			<div class="reporting-toolbar no-print" style="margin-top:0;margin-bottom:1rem">
+				<div class="reporting-switch">
+					<button class="pill" class:pill-active={reportPeriodDays === 30} on:click={() => (reportPeriodDays = 30)}>30 jours</button>
+					<button class="pill" class:pill-active={reportPeriodDays === 90} on:click={() => (reportPeriodDays = 90)}>90 jours</button>
+					<button class="pill" class:pill-active={reportPeriodDays === 365} on:click={() => (reportPeriodDays = 365)}>12 mois</button>
+				</div>
+			</div>
+
+			<div class="kpi-row" style="margin-bottom:1rem">
+				<div class="kpi-card"><div class="kpi-value">{reportTicketSource.length}</div><div class="kpi-label">Tickets sur la période</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportTicketSource.filter((t) => t.categorie === 'urgence').length}</div><div class="kpi-label">Urgences</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportTicketBuildings.length}</div><div class="kpi-label">Périmètres / bâtiments touchés</div></div>
+			</div>
+
+			<div class="report-grid-2">
+				<section class="report-card">
+					<h3>Répartition par catégorie</h3>
+					<div class="report-table-wrap">
+						<table class="report-table compact">
+							<thead><tr><th>Catégorie</th><th>Total</th><th>Ouverts / en cours</th></tr></thead>
+							<tbody>
+								{#each reportTicketCategories as row}
+									<tr><td>{row.categorie}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<section class="report-card">
+					<h3>Répartition par bâtiment / périmètre</h3>
+					<div class="report-table-wrap">
+						<table class="report-table compact">
+							<thead><tr><th>Bâtiment / périmètre</th><th>Total</th><th>Ouverts / en cours</th></tr></thead>
+							<tbody>
+								{#each reportTicketBuildings as row}
+									<tr><td>{row.batiment}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</div>
+
+		{:else if reportView === 'devis'}
+			<div class="kpi-row" style="margin-bottom:1rem">
+				<div class="kpi-card"><div class="kpi-value">{reportDevisActifs.length}</div><div class="kpi-label">Devis / interventions actifs</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportDevisList.filter((d) => d.statut === 'en_attente').length}</div><div class="kpi-label">En attente</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportDevisList.filter((d) => d.statut === 'accepte').length}</div><div class="kpi-label">Acceptés non clos</div></div>
+			</div>
+
+			<div class="report-grid-2 report-grid-2-wide">
+				<section class="report-card">
+					<h3>Suivi des devis et interventions</h3>
+					{#if reportDevisActifs.length === 0}
+						<div class="empty-state"><h3>Aucun devis actif</h3></div>
+					{:else}
+						<div class="report-table-wrap">
+							<table class="report-table">
+								<thead>
+									<tr>
+										<th>Objet</th>
+										<th>Prestataire</th>
+										<th>Périmètre</th>
+										<th>Échéance</th>
+										<th>Montant</th>
+										<th>Statut</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each reportDevisActifs as d}
+										<tr>
+											<td><strong>{d.titre}</strong>{#if d.frequence_type && d.frequence_valeur}<br /><span class="text-muted-sm">Récurrent : {d.frequence_valeur} {d.frequence_type}</span>{/if}</td>
+											<td>{reportPrestataireName(d.prestataire_id)}</td>
+											<td>{d.perimetre}{#if d.batiment_id}<br /><span class="text-muted-sm">Bât. {d.batiment_id}</span>{/if}</td>
+											<td>{d.date_prestation ? fmtDate(d.date_prestation) : 'Non planifiée'}</td>
+											<td>{fmtMoney(d.montant_estime)}</td>
+											<td><span class="badge {REPORT_DEVIS_BADGES[d.statut] ?? 'badge-gray'}">{REPORT_DEVIS_LABELS[d.statut] ?? d.statut}</span></td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</section>
+
+				<section class="report-card">
+					<h3>Répartition par statut</h3>
+					<div class="report-table-wrap">
+						<table class="report-table compact">
+							<thead><tr><th>Statut</th><th>Total</th></tr></thead>
+							<tbody>
+								{#each reportDevisSummary as row}
+									<tr><td>{REPORT_DEVIS_LABELS[row.statut] ?? row.statut}</td><td>{row.total}</td></tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</div>
+		{/if}
+	</div>
 
 {:else if onglet === 'annuaire'}
 	{#if annuaireLoading}
@@ -1357,5 +1725,54 @@
 	.field label { font-weight: 500; font-size: .85rem; }
 	.field select, .field textarea { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
-	.clamp-5 { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+	:global(.badge-red) { background: #fee2e2; color: #991b1b; }
+
+	/* Reporting */
+	.reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
+	.reporting-toolbar {
+		display: flex; justify-content: space-between; gap: .75rem;
+		align-items: center; flex-wrap: wrap;
+	}
+	.reporting-switch, .reporting-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+	.reporting-print-header { display: none; }
+	.report-card {
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: 1rem 1.1rem;
+	}
+	.report-card h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
+	.report-intro { font-size: .86rem; color: var(--color-text-muted); margin-bottom: .85rem; }
+	.report-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+	.report-grid-2-wide { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+	.report-table-wrap { overflow-x: auto; }
+	.report-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+	.report-table th, .report-table td { padding: .65rem .7rem; border-bottom: 1px solid var(--color-border); vertical-align: top; text-align: left; }
+	.report-table th { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
+	.report-table.compact td, .report-table.compact th { padding: .55rem .6rem; }
+	.clamp-5 { display: -webkit-box; line-clamp: 5; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+
+	@media (max-width: 900px) {
+		.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
+	}
+
+	@media print {
+		.no-print { display: none !important; }
+		.reporting-print-header { display: block; margin-bottom: 1rem; }
+		.reporting-print-header h2 { font-size: 1.2rem; margin: 0 0 .2rem; }
+		.reporting-print-header p { font-size: .82rem; color: #666; margin: 0; }
+		.report-card { box-shadow: none; break-inside: avoid; }
+		.report-table th, .report-table td { font-size: .78rem; }
+	}
+
+	:global(body.print-reporting .page-header),
+	:global(body.print-reporting .page-subtitle),
+	:global(body.print-reporting .tabs),
+	:global(body.print-reporting .tab-descriptif),
+	:global(body.print-reporting .no-print) {
+		display: none !important;
+	}
+	:global(body.print-reporting .reporting-print-header) {
+		display: block !important;
+	}
 </style>
