@@ -36,14 +36,18 @@ def upgrade() -> None:
     )
     # Seed the two recurring messages
     msg_hostachy = (
-        "Infos copro \u2013 Encombrants (*Boulevard Fernand Hostachy*)\n"
-        "Collecte : *3\u1d49* samedi du mois, d\u00e8s 6h*\n"
-        "Sortie : la veille apr\u00e8s 19h"
+        "\U0001f4e2 Infos copro \u2013 Encombrants (*Boulevard Fernand Hostachy*)\n"
+        "\U0001f4c5 Collecte : *3\u1d49* samedi du mois, d\u00e8s 6h*\n"
+        "\U0001f557 Sortie : la veille apr\u00e8s 19h\n"
+        "\n"
+        "\u267b\ufe0f Merci de vider le local poubelle si des encombrants y ont \u00e9t\u00e9 d\u00e9pos\u00e9s provisoirement."
     )
     msg_berteaux = (
-        "Infos copro \u2013 Encombrants (*Rue Maurice Berteaux*)\n"
-        "Collecte : *4\u1d49* samedi du mois, d\u00e8s 6h*\n"
-        "Sortie : la veille apr\u00e8s 19h"
+        "\U0001f4e2 Infos copro \u2013 Encombrants (*Rue Maurice Berteaux*)\n"
+        "\U0001f4c5 Collecte : *4\u1d49* samedi du mois, d\u00e8s 6h*\n"
+        "\U0001f557 Sortie : la veille apr\u00e8s 19h\n"
+        "\n"
+        "\u267b\ufe0f Merci de vider le local poubelle si des encombrants y ont \u00e9t\u00e9 d\u00e9pos\u00e9s provisoirement."
     )
     op.execute(
         "INSERT INTO whatsapp_scheduled (label, message, cron_rule, enabled) VALUES "
