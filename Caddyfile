@@ -1,0 +1,38 @@
+:80 {
+    # TLS géré par Cloudflare Tunnel (pas de TLS local nécessaire)
+    encode zstd gzip
+
+    # Headers de sécurité
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-XSS-Protection "0"
+        -Server
+    }
+
+    # API — proxy vers FastAPI
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy api:8000
+    }
+
+    # Fichiers uploadés — servis directement
+    handle /uploads/* {
+        root * /srv
+        file_server
+    }
+
+    # Frontend SvelteKit (SSR)
+    handle {
+        reverse_proxy front:3000
+    }
+
+    # Logs
+    log {
+        output stdout
+        format console
+    }
+}

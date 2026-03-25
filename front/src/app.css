@@ -1,0 +1,393 @@
+/* ─────────────────────────────────────────
+   5Hostachy — Styles globaux v0.1
+   Palette : Bleu Seine (#1E3A5F) · Vert Parc (#3D6B4F) · Or Croissy (#C9983A)
+   ───────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+:root {
+  /* Couleurs principales (charte graphique) */
+  --color-primary:       #1E3A5F; /* Bleu Seine */
+  --color-primary-dark:  #16304F;
+  --color-primary-light: #EEF2F7;
+  --color-secondary:     #3D6B4F; /* Vert Parc */
+  --color-accent:        #C9983A; /* Or Croissy */
+  /* Couleurs fonctionnelles */
+  --color-success:       #2E7D52;
+  --color-warning:       #B07D1E;
+  --color-danger:        #C0392B;
+  --color-info:          #2563A6;
+  /* Texte */
+  --color-text:          #1A1A2E;
+  --color-text-muted:    #5A6070;
+  --color-text-inverse:  #F2EFE9;
+  /* Surfaces */
+  --color-border:        #D0D8E4;
+  --color-bg:            #F2EFE9; /* Pierre de taille */
+  --color-surface:       #FFFFFF;
+  /* Utilitaires */
+  --radius: 0.5rem;
+  --shadow-sm: 0 1px 3px rgba(30, 58, 95, 0.10);
+  --shadow:    0 4px 12px rgba(30, 58, 95, 0.12);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+h1, h2, h3 {
+  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover { text-decoration: underline; }
+
+/* ── Layout ── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.page {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem 1rem;
+  border-radius: var(--radius);
+  border: none;
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s, background .15s;
+  text-decoration: none;
+}
+
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+
+.btn-danger { background: var(--color-danger); color: #fff; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.btn-outline:hover:not(:disabled) { background: var(--color-bg); }
+
+.btn-sm { padding: .25rem .6rem; font-size: .875rem; }
+
+/* Boutons icône (modifier · supprimer · action) */
+.btn-icon, .btn-icon-edit, .btn-icon-danger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: .9rem;
+  padding: .25rem;
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  line-height: 1;
+}
+.btn-icon:hover, .btn-icon-edit:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); }
+.btn-icon-danger:hover { color: var(--color-danger); background: #fee2e2; }
+.btn-icon-warn { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: #d97706; line-height: 1; }
+.btn-icon-warn:hover { background: #fef3c7; }
+.btn-icon-success { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: var(--color-success); line-height: 1; }
+.btn-icon-success:hover { background: #e6f4ee; }
+
+/* Tooltip CSS immédiat sur boutons icône portant un attribut title */
+.btn-icon[title], .btn-icon-edit[title], .btn-icon-danger[title],
+.btn-icon-warn[title], .btn-icon-success[title] { position: relative; }
+
+.btn-icon[title]::after, .btn-icon-edit[title]::after, .btn-icon-danger[title]::after,
+.btn-icon-warn[title]::after, .btn-icon-success[title]::after {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: #f2efe9;
+  font-size: .7rem;
+  font-family: var(--font-ui, system-ui, sans-serif);
+  white-space: nowrap;
+  padding: .2rem .5rem;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 200;
+}
+.btn-icon[title]:hover::after, .btn-icon-edit[title]:hover::after, .btn-icon-danger[title]:hover::after,
+.btn-icon-warn[title]:hover::after, .btn-icon-success[title]:hover::after { opacity: 1; }
+
+/* ── Forms ── */
+.field { margin-bottom: 1rem; }
+.field label {
+  display: block;
+  font-size: .875rem;
+  font-weight: 500;
+  margin-bottom: .3rem;
+  color: var(--color-text);
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: .5rem .75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color .15s;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 9999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.badge-blue   { background: var(--color-primary-light); color: var(--color-primary); }
+.badge-green  { background: #E6F4EE; color: #2E7D52; }
+.badge-orange { background: #FDF3E0; color: #B07D1E; }
+.badge-red    { background: #FDEDEC; color: #C0392B; }
+.badge-gray   { background: #EAEDF1; color: var(--color-text-muted); }
+
+/* ── Table ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+.table th {
+  padding: .5rem .75rem;
+  text-align: left;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: .75rem;
+}
+.table td {
+  padding: .75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.table tbody tr:hover { background: var(--color-bg); }
+
+/* ── Alerts ── */
+.alert {
+  padding: .75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: .875rem;
+}
+.alert-error   { background: #FDEDEC; color: #C0392B; border: 1px solid #E8A99D; }
+.alert-success { background: #E6F4EE; color: #2E7D52; border: 1px solid #9DCFB3; }
+.alert-warning { background: #FDF3E0; color: #B07D1E; border: 1px solid #E8C87A; }
+.alert-info    { background: var(--color-primary-light); color: var(--color-primary-dark); border: 1px solid #9BB3CC; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-muted);
+}
+.empty-state h3 { font-size: 1rem; margin-bottom: .5rem; color: var(--color-text); }
+
+/* ── Page header ── */
+.page-header { 
+  display: flex; 
+  justify-content: space-between;
+  align-items: center; 
+  gap: .75rem; 
+  margin-bottom: 1.5rem; 
+  padding-left: 1.25rem; 
+}
+
+/* ── Page header button (top-right buttons: "+ Nouveau...") ── */
+.page-header-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  min-height: 2.5rem;
+  white-space: nowrap;
+}
+
+/* ── Page subtitle ── */
+.page-subtitle { font-size: .9rem; color: var(--color-text-muted); margin-bottom: 1.5rem; line-height: 1.55; padding-left: 1.25rem; }
+.tab-descriptif { font-size: .82rem; color: var(--color-text-muted); margin: -.75rem 0 1.5rem; padding-left: 1.25rem; line-height: 1.45; }
+
+/* ── Norme UX : prévisualisation 5 lignes (blocs expansibles repliés) ── */
+.clamp-5 {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .container { padding: 0 2.5rem; }
+  .page { padding-top: 2rem; padding-bottom: 2rem; }
+}
+
+/* ── Mobile global ── */
+@media (max-width: 767px) {
+  :root {
+    font-size: 12px;
+  }
+
+  .container {
+    padding: 0 1.25rem;
+  }
+
+  .page {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  /* Tables : scroll horizontal + cellules compactes */
+  .table {
+    font-size: .8rem;
+  }
+  .table th,
+  .table td {
+    padding: .4rem .5rem;
+    white-space: nowrap;
+  }
+  /* Wrapper scrollable pour les tables */
+  .card { overflow-x: auto; max-width: 100%; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+
+  /* Inputs/selects : ne pas forcer de min-width en flex/grid */
+  input, select, textarea { min-width: 0; }
+
+  /* Modales : contraindre à la largeur de l'écran */
+  .modal-overlay { padding: .75rem; }
+
+  /* Boutons plus compacts */
+  .btn {
+    padding: .4rem .75rem;
+    font-size: .8rem;
+  }
+  .btn-sm {
+    padding: .25rem .5rem;
+    font-size: .75rem;
+  }
+  .page-header-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    min-height: 2.15rem;
+  }
+
+  /* Ligne d'actions : retour à la ligne */
+  .action-row {
+    flex-wrap: wrap;
+    gap: .35rem;
+  }
+
+  /* Grilles de formulaire : 1 colonne */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1rem;
+  }
+
+  /* Page header flex : colonne sur mobile */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .75rem;
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header-btn {
+    width: 100%;
+  }
+
+  .page-subtitle { padding-left: 1rem; }
+  .tab-descriptif { padding-left: 1rem; }
+
+  /* KPI row : 2 colonnes min */
+  .kpi-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Formulaires ──
+   Charte : Annuler (à gauche) | Action principale (à droite) */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
+.field label { font-size: .875rem; font-weight: 500; }
+.field input, .field select, .field textarea {
+  padding: .45rem .6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  background: var(--color-bg);
+  width: 100%;
+}
+
+/* ── Affichage texte enrichi (TipTap HTML) ── */
+.rich-content p  { margin: 0 0 .4rem; }
+.rich-content p:last-child { margin-bottom: 0; }
+.rich-content ul, .rich-content ol { padding-left: 1.4rem; margin: .25rem 0; }
+.rich-content li + li { margin-top: .15rem; }
+.rich-content blockquote { border-left: 3px solid var(--color-border); padding-left: .75rem; color: var(--color-text-muted); margin: .4rem 0; }
+.rich-content strong { font-weight: 600; }
+.rich-content em     { font-style: italic; }

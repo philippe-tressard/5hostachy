@@ -1,0 +1,59 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.env
+!env.example
+!_template.env
+
+# Base de donnees SQLite (donnees locales, ne pas versionner)
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets & config locaux
+.env
+.env.local
+.env.*.local
+secrets/
+
+# Node / frontend
+node_modules/
+front/node_modules/
+front/.svelte-kit/
+front/build/
+front/.env
+front/.env.local
+
+# Donnees runtime
+data/
+backups/
+logs/
+
+# Docker
+*.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Fichiers temporaires / scripts de fix one-shot
+fix_*.py
+_fix*.py
+fix*.py
+
+# Donnees d'import (contiennent potentiellement des donnees personnelles)
+import-data/*.xlsx
+import-data/*.csv

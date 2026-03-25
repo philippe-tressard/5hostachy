@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /api/
+Disallow: /auth/
+Allow: /mentions-legales
+Allow: /politique-de-confidentialite

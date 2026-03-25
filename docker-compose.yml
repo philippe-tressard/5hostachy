@@ -1,0 +1,98 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: hostachy_caddy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - uploads:/srv/uploads:ro
+    depends_on:
+      - front
+      - api
+    networks:
+      - hostachy
+
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        GIT_HASH: ${GIT_HASH:-dev}
+    container_name: hostachy_front
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_API_URL=http://api:8000
+      - ORIGIN=${ORIGIN:-http://localhost}
+    depends_on:
+      - api
+    networks:
+      - hostachy
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hostachy_api
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file: .env
+    volumes:
+      - app_data:/app/data
+      - uploads:/app/uploads
+      - backups:/backups
+    networks:
+      - hostachy
+
+  whatsapp-bridge:
+    build:
+      context: ./whatsapp-bridge
+      dockerfile: Dockerfile
+    container_name: hostachy_whatsapp
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      - WA_API_KEY=${WHATSAPP_API_KEY:-changeme}
+      - WA_PORT=8090
+      - WA_AUTH_DIR=/app/auth_state
+      - WA_LOG_LEVEL=warn
+    volumes:
+      - whatsapp_auth:/app/auth_state
+    networks:
+      - hostachy
+
+volumes:
+  caddy_data:
+  caddy_config:
+  app_data:
+  uploads:
+  backups:
+  whatsapp_auth:
+
+networks:
+  hostachy:
+    driver: bridge

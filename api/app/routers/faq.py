@@ -1,0 +1,116 @@
+"""Router FAQ — lecture publique, CRUD réservé CS/Admin."""
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
+from app.auth.deps import get_current_user, require_cs_or_admin
+from app.database import get_session
+from app.models.core import FaqItem, Utilisateur
+
+router = APIRouter(prefix="/faq", tags=["faq"])
+
+
+# ── Schémas ────────────────────────────────────────────────────────────────
+
+class FaqItemCreate(BaseModel):
+    categorie: str
+    question: str
+    reponse: str
+    ordre: int = 0
+
+
+class FaqItemUpdate(BaseModel):
+    categorie: Optional[str] = None
+    question: Optional[str] = None
+    reponse: Optional[str] = None
+    ordre: Optional[int] = None
+    actif: Optional[bool] = None
+
+
+class FaqItemRead(BaseModel):
+    id: int
+    categorie: str
+    question: str
+    reponse: str
+    ordre: int
+    actif: bool
+    cree_le: datetime
+    mis_a_jour_le: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── Endpoints ──────────────────────────────────────────────────────────────
+
+@router.get("", response_model=list[FaqItemRead])
+def list_faq(
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Retourne toutes les entrées FAQ actives, triées par catégorie puis ordre."""
+    return session.exec(
+        select(FaqItem)
+        .where(FaqItem.actif == True)
+        .order_by(FaqItem.categorie, FaqItem.ordre, FaqItem.id)
+    ).all()
+
+
+@router.get("/all", response_model=list[FaqItemRead])
+def list_faq_all(
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Retourne toutes les entrées FAQ (actives + inactives), pour la gestion CS/Admin."""
+    return session.exec(
+        select(FaqItem).order_by(FaqItem.categorie, FaqItem.ordre, FaqItem.id)
+    ).all()
+
+
+@router.post("", response_model=FaqItemRead, status_code=201)
+def create_faq(
+    body: FaqItemCreate,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    item = FaqItem(**body.model_dump())
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+@router.patch("/{item_id}", response_model=FaqItemRead)
+def update_faq(
+    item_id: int,
+    body: FaqItemUpdate,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    item = session.get(FaqItem, item_id)
+    if not item:
+        raise HTTPException(404, "Entrée FAQ introuvable")
+    data = body.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(item, k, v)
+    item.mis_a_jour_le = datetime.utcnow()
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+@router.delete("/{item_id}", status_code=204)
+def delete_faq(
+    item_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    item = session.get(FaqItem, item_id)
+    if not item:
+        raise HTTPException(404, "Entrée FAQ introuvable")
+    session.delete(item)
+    session.commit()

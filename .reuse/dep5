@@ -1,0 +1,48 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: 5Hostachy
+Upstream-Contact: https://github.com/philippe-tressard/5hostachy/issues
+Source: https://github.com/philippe-tressard/5hostachy
+
+Files: *
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: docs/*
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: specs/*
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: front/static/*
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: .gitignore
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: .editorconfig
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: .env.example
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: *.md
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: *.json
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: *.yml *.yaml
+Copyright: 2026 Philippe TRESSARD
+License: MIT
+
+Files: front/src/lib/assets/*
+Copyright: 2026 Philippe TRESSARD
+License: MIT

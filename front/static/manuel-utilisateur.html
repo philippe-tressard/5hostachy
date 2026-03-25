@@ -1,0 +1,2296 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manuel utilisateur · 5Hostachy</title>
+  <style>
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f0f4f8;
+      --surface:   #ffffff;
+      --border:    #e2e8f0;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --radius:    12px;
+      --shadow:    0 2px 12px rgba(0,0,0,.08);
+
+      /* section colours */
+      --c-login:   #7c3aed;
+      --c-lot:     #0284c7;
+      --c-ticket:  #ea580c;
+      --c-news:    #059669;
+      --c-cal:     #4f46e5;
+      --c-badges:  #dc2626;
+      --c-faq:     #0f766e;
+      --c-residence: #0f766e;
+      --c-annuaire:  #0369a1;
+      --c-profil:    #6d28d9;
+      --c-presta:    #b45309;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    /* ═══════════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════════ */
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* ═══════════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════════ */
+    .sidebar {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      background: #1e293b;
+      color: #e2e8f0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 0 0 2rem;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 1.5rem 1.25rem 1rem;
+      border-bottom: 1px solid #334155;
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 36px; height: 36px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .sidebar-logo span {
+      font-weight: 700;
+      font-size: 15px;
+      color: #f1f5f9;
+      line-height: 1.2;
+    }
+
+    .sidebar-logo small { display: block; font-size: 11px; color: #94a3b8; font-weight: 400; }
+
+    .nav-section { padding: .75rem 1.25rem .25rem; }
+    .nav-section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: .55rem 1.25rem;
+      border-radius: 8px;
+      margin: 2px 8px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background .15s, color .15s;
+    }
+
+    .nav-item:hover { background: #334155; color: #f1f5f9; }
+    .nav-item.active { background: #3b82f6; color: #fff; }
+
+    .nav-item .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       TOP HEADER
+    ═══════════════════════════════════════════ */
+    .topbar {
+      grid-column: 2;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .topbar-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+    .topbar-badge {
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 600;
+      padding: .25rem .7rem;
+      border-radius: 20px;
+      border: 1px solid #bfdbfe;
+    }
+
+    /* ═══════════════════════════════════════════
+       MAIN CONTENT
+    ═══════════════════════════════════════════ */
+    .main {
+      grid-column: 2;
+      padding: 2.5rem;
+      max-width: 860px;
+    }
+
+    /* ═══════════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════════ */
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      border-radius: 18px;
+      padding: 3rem 2.5rem;
+      color: white;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,.07);
+      border-radius: 50%;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: 60px;
+      width: 280px; height: 280px;
+      background: rgba(255,255,255,.04);
+      border-radius: 50%;
+    }
+
+    .hero-kicker {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #93c5fd;
+      font-weight: 600;
+      margin-bottom: .75rem;
+    }
+
+    .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: .75rem; line-height: 1.25; }
+    .hero p  { font-size: 1.05rem; color: #bfdbfe; max-width: 520px; margin-bottom: 1.5rem; }
+
+    .hero-actions {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-link {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .7rem 1rem;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 700;
+      transition: transform .15s ease, background .15s ease;
+    }
+
+    .hero-link.primary {
+      background: #ffffff;
+      color: #1d4ed8;
+    }
+
+    .hero-link.secondary {
+      background: rgba(255,255,255,.12);
+      color: #eff6ff;
+      border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .hero-link:hover { transform: translateY(-1px); }
+
+    .hero-note {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+      font-size: .92rem;
+      color: #dbeafe;
+      margin-top: .9rem;
+    }
+
+    .hero-cards {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-card {
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 10px;
+      padding: .6rem 1rem;
+      font-size: 13px;
+      color: #dbeafe;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-start {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 3rem;
+    }
+
+    .quick-start-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-badge {
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: .78rem;
+      font-weight: 700;
+      padding: .35rem .7rem;
+      border-radius: 999px;
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .9rem;
+      margin: 1rem 0 1.2rem;
+    }
+
+    .quick-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+    }
+
+    .quick-card strong {
+      display: block;
+      font-size: .98rem;
+      margin-bottom: .35rem;
+    }
+
+    .quick-card p {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+
+    .quick-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1d4ed8;
+      color: white;
+      font-size: .85rem;
+      font-weight: 700;
+      margin-bottom: .7rem;
+    }
+
+    .micro-list {
+      list-style: none;
+      display: grid;
+      gap: .35rem;
+    }
+
+    .micro-list li {
+      font-size: .85rem;
+      color: var(--text);
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .micro-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+    }
+
+    .choice-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+    }
+
+    .choice-card:hover {
+      border-color: #93c5fd;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, .08);
+    }
+
+    .choice-card strong {
+      display: block;
+      margin-bottom: .3rem;
+      font-size: .95rem;
+    }
+
+    .choice-card p {
+      font-size: .84rem;
+      color: var(--muted);
+    }
+
+    .persona-block {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    .persona-block h3 {
+      font-size: 1rem;
+      margin-bottom: .35rem;
+    }
+
+    .persona-block p {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: .75rem;
+    }
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+    }
+
+    .persona-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .9rem;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .05);
+    }
+
+    .persona-card strong {
+      display: block;
+      font-size: .93rem;
+      margin-bottom: .25rem;
+    }
+
+    .persona-card ul {
+      list-style: none;
+      display: grid;
+      gap: .35rem;
+      margin-top: .55rem;
+    }
+
+    .persona-card li {
+      font-size: .82rem;
+      color: var(--text);
+      padding-left: .9rem;
+      position: relative;
+    }
+
+    .persona-card li::before {
+      content: '-';
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    .quick-print {
+      margin-top: .9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      flex-wrap: wrap;
+      background: #ecfeff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: .75rem .9rem;
+    }
+
+    .quick-print p {
+      margin: 0;
+      font-size: .84rem;
+      color: #0f172a;
+    }
+
+    .quick-print a {
+      text-decoration: none;
+      font-size: .83rem;
+      font-weight: 700;
+      color: #0369a1;
+      background: #ffffff;
+      border: 1px solid #7dd3fc;
+      border-radius: 999px;
+      padding: .45rem .8rem;
+    }
+
+    .scan-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .9rem;
+      margin-top: 1rem;
+    }
+
+    .scan-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    .scan-card h3 {
+      margin-bottom: .45rem;
+      font-size: .98rem;
+    }
+
+    .scan-card p {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: .75rem;
+    }
+
+    .scan-card ul {
+      list-style: none;
+      display: grid;
+      gap: .4rem;
+    }
+
+    .scan-card li {
+      font-size: .86rem;
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .scan-card li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    .mini-note {
+      margin-top: 1rem;
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    .capture-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .9rem;
+      margin-top: .9rem;
+    }
+
+    .capture-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: .9rem;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .capture-card img {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      margin-bottom: .65rem;
+      display: block;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      background: #f8fafc;
+    }
+
+    .capture-card h3 {
+      font-size: .92rem;
+      margin-bottom: .25rem;
+    }
+
+    .capture-card p {
+      font-size: .84rem;
+      color: var(--muted);
+      margin-bottom: .45rem;
+    }
+
+    .capture-tag {
+      display: inline-block;
+      font-size: .77rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      padding: .25rem .55rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       SECTIONS
+    ═══════════════════════════════════════════ */
+    .chapter {
+      margin-bottom: 4rem;
+      scroll-margin-top: 2rem;
+    }
+
+    .chapter-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.75rem;
+    }
+
+    .chapter-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .chapter-header h2 { font-size: 1.4rem; font-weight: 700; }
+    .chapter-header p  { font-size: .9rem; color: var(--muted); margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: .75rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       STEPS
+    ═══════════════════════════════════════════ */
+    .steps { list-style: none; }
+
+    .step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-content { padding-top: 4px; }
+    .step-content strong { display: block; margin-bottom: 2px; }
+    .step-content p { font-size: .9rem; color: var(--muted); }
+
+    /* ═══════════════════════════════════════════
+       CALLOUTS
+    ═══════════════════════════════════════════ */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      margin: 1.25rem 0;
+      font-size: .9rem;
+      align-items: flex-start;
+    }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .callout.info    { background: #eff6ff; border-left: 4px solid #3b82f6; }
+    .callout.tip     { background: #f0fdf4; border-left: 4px solid #22c55e; }
+    .callout.warning { background: #fff7ed; border-left: 4px solid #f97316; }
+    .callout.danger  { background: #fef2f2; border-left: 4px solid #ef4444; }
+
+    .callout p { margin: 0; }
+    .callout p + p { margin-top: .4rem; }
+
+    /* ═══════════════════════════════════════════
+       STATUS BADGES
+    ═══════════════════════════════════════════ */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: .75rem;
+      margin: 1rem 0;
+    }
+
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: .6rem .9rem;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-weight: 600;
+      border: 1px solid;
+    }
+
+    .status-chip .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    .s-open     { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .s-open .dot { background: #3b82f6; }
+    .s-progress { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .s-progress .dot { background: #f97316; }
+    .s-resolved { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+    .s-resolved .dot { background: #22c55e; }
+    .s-closed   { background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
+    .s-closed .dot { background: #94a3b8; }
+
+    /* ═══════════════════════════════════════════
+       CATEGORY CHIPS (tickets)
+    ═══════════════════════════════════════════ */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin: 1rem 0;
+    }
+
+    .cat-card {
+      padding: .9rem 1rem;
+      border-radius: 10px;
+      border: 2px solid;
+      font-size: .9rem;
+      font-weight: 600;
+    }
+
+    .cat-card small { display: block; font-size: .78rem; font-weight: 400; margin-top: 3px; }
+
+    .cat-panne    { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .cat-nuisance { background: #fdf4ff; border-color: #e9d5ff; color: #7e22ce; }
+    .cat-question { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .cat-urgence  { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+
+    /* ═══════════════════════════════════════════
+       FAQ ACCORDÉON
+    ═══════════════════════════════════════════ */
+    details.faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: .75rem;
+      overflow: hidden;
+    }
+
+    details.faq-item summary {
+      padding: 1rem 1.25rem;
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      user-select: none;
+    }
+
+    details.faq-item summary::after {
+      content: '›';
+      font-size: 1.4rem;
+      color: var(--muted);
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+
+    details.faq-item[open] summary::after { transform: rotate(90deg); }
+
+    details.faq-item .faq-body {
+      padding: 0 1.25rem 1rem;
+      font-size: .9rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: .9rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       TABLE
+    ═══════════════════════════════════════════ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+      margin: 1rem 0;
+    }
+
+    th {
+      background: #f1f5f9;
+      padding: .6rem .9rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: .6rem .9rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child td { border: none; }
+
+    /* ═══════════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 2rem 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════ */
+    .doc-footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+      font-size: .85rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      grid-column: 2;
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE (mobile)
+    ═══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+      }
+
+      .sidebar {
+        grid-column: 1;
+        grid-row: 1;
+        position: static;
+        height: auto;
+        display: none;
+      }
+
+      .topbar { grid-column: 1; }
+      .main   { grid-column: 1; padding: 1.5rem; }
+      .doc-footer { grid-column: 1; }
+
+      .hero h1 { font-size: 1.5rem; }
+      .hero-actions,
+      .hero-cards,
+      .quick-grid,
+      .choice-grid,
+      .scan-grid,
+      .persona-grid,
+      .capture-grid { grid-template-columns: 1fr; display: grid; }
+      .hero-cards { display: flex; }
+      .cat-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ═══════════════════════════════════════════
+       PRINT
+    ═══════════════════════════════════════════ */
+    @media print {
+      .sidebar, .topbar { display: none; }
+      .layout { display: block; }
+      .main { padding: 0; max-width: 100%; }
+      .chapter { page-break-inside: avoid; }
+    }
+
+    .chapter[data-section="connexion"]  .card { border-top: 3px solid var(--c-login);    }
+    .chapter[data-section="lot"]        .card { border-top: 3px solid var(--c-lot);      }
+    .chapter[data-section="tickets"]    .card { border-top: 3px solid var(--c-ticket);   }
+    .chapter[data-section="news"]       .card { border-top: 3px solid var(--c-news);     }
+    .chapter[data-section="calendrier"] .card { border-top: 3px solid var(--c-cal);      }
+    .chapter[data-section="badges"]     .card { border-top: 3px solid var(--c-badges);   }
+    .chapter[data-section="faq"]        .card { border-top: 3px solid var(--c-faq);      }
+    .chapter[data-section="residence"]  .card { border-top: 3px solid var(--c-residence);}
+    .chapter[data-section="annuaire"]   .card { border-top: 3px solid var(--c-annuaire); }
+    .chapter[data-section="profil"]     .card { border-top: 3px solid var(--c-profil);   }
+    .chapter[data-section="presta"]     .card { border-top: 3px solid var(--c-presta);   }
+
+    .nav-dot-login    { background: var(--c-login);    }
+    .nav-dot-lot      { background: var(--c-lot);      }
+    .nav-dot-tickets  { background: var(--c-ticket);   }
+    .nav-dot-news     { background: var(--c-news);     }
+    .nav-dot-cal      { background: var(--c-cal);      }
+    .nav-dot-badges   { background: var(--c-badges);   }
+    .nav-dot-faq      { background: var(--c-faq);      }
+    .nav-dot-residence{ background: var(--c-residence);}
+    .nav-dot-annuaire { background: var(--c-annuaire); }
+    .nav-dot-profil   { background: var(--c-profil);   }
+    .nav-dot-presta   { background: var(--c-presta);   }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ══════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════ -->
+  <nav class="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="logo-icon">&#x1F3E0;</div>
+      <span>
+        5Hostachy
+        <small>Manuel utilisateur</small>
+      </span>
+    </div>
+
+    <div class="nav-section">
+      <p class="nav-section-title">Démarrer</p>
+      <a class="nav-item" href="#intro">
+        <span class="dot" style="background:#94a3b8"></span> Présentation
+      </a>
+      <a class="nav-item" href="#express">
+        <span class="dot" style="background:#2563eb"></span> Guide express
+      </a>
+      <a class="nav-item" href="#par-profil">
+        <span class="dot" style="background:#0891b2"></span> Je suis...
+      </a>
+      <a class="nav-item" href="#captures">
+        <span class="dot" style="background:#7c3aed"></span> Captures guidees
+      </a>
+      <a class="nav-item" href="#connexion">
+        <span class="dot nav-dot-login"></span> Connexion &amp; Inscription
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <p class="nav-section-title">Votre espace</p>
+      <a class="nav-item" href="#profil">
+        <span class="dot nav-dot-profil"></span> Mon profil <small style="opacity:.6">(votre prénom)</small>
+      </a>
+      <a class="nav-item" href="#residence">
+        <span class="dot nav-dot-residence"></span> Ma résidence
+      </a>
+      <a class="nav-item" href="#lot">
+        <span class="dot nav-dot-lot"></span> Mes lots
+      </a>
+      <a class="nav-item" href="#badges">
+        <span class="dot nav-dot-badges"></span> Accès &amp; badges
+      </a>
+      <a class="nav-item" href="#annuaire">
+        <span class="dot nav-dot-annuaire"></span> Annuaire
+      </a>
+      <a class="nav-item" href="#prestataires">
+        <span class="dot nav-dot-presta"></span> Prestataires
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <p class="nav-section-title">La résidence</p>
+      <a class="nav-item" href="#calendrier">
+        <span class="dot nav-dot-cal"></span> Calendrier
+      </a>
+      <a class="nav-item" href="#news">
+        <span class="dot nav-dot-news"></span> Actualités
+      </a>
+      <a class="nav-item" href="#tickets">
+        <span class="dot nav-dot-tickets"></span> Tickets
+      </a>
+      <a class="nav-item" href="#sondages">
+        <span class="dot" style="background:#ec4899"></span> Communauté
+      </a>
+      <a class="nav-item" href="#faq">
+        <span class="dot nav-dot-faq"></span> FAQ
+      </a>
+    </div>
+
+    <div style="padding: 1.5rem 1.25rem 0; font-size:12px; color:#475569; line-height:1.6;">
+      <strong style="color:#64748b">Commencez ici</strong><br>
+      Ouvrez d'abord le <strong>Guide express</strong>, puis allez directement à la rubrique qui vous concerne.
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════
+       TOPBAR
+  ══════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-title">Guide pratique coproprietaire</div>
+    <span class="topbar-badge">Version 3.0 · Mars 2026</span>
+  </header>
+
+  <!-- ══════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════ -->
+  <main class="main">
+
+    <!-- ────────────────────────────────
+         HERO
+    ──────────────────────────────── -->
+    <section class="hero" id="intro">
+      <p class="hero-kicker">Bienvenue sur votre extranet de residence</p>
+      <h1>Le guide simple pour trouver vite ce dont vous avez besoin</h1>
+      <p>Ce manuel a ete pense pour un coproprietaire presse. Vous n'avez pas besoin de tout lire : choisissez une action, ouvrez la bonne rubrique et suivez les etapes utiles.</p>
+      <div class="hero-actions">
+        <a class="hero-link primary" href="#express">Commencer en 3 minutes</a>
+        <a class="hero-link secondary" href="#faq">Voir les questions rapides</a>
+      </div>
+      <div class="hero-cards">
+        <div class="hero-card">Essentiel en quelques clics</div>
+        <div class="hero-card">Textes courts et etapes claires</div>
+        <div class="hero-card">Acces direct aux rubriques utiles</div>
+      </div>
+      <p class="hero-note">Bon reflexe : commencez par <strong>Actualites</strong>, <strong>Calendrier</strong> et <strong>Tickets</strong>. Ce sont les 3 ecrans les plus utiles au quotidien.</p>
+    </section>
+
+    <section class="quick-start" id="express">
+      <div class="quick-start-head">
+        <div>
+          <p class="hero-kicker" style="color:#2563eb; margin-bottom:.35rem">Guide express</p>
+          <h2 style="font-size:1.45rem; margin-bottom:.35rem">Commencer sans se perdre</h2>
+          <p style="color:var(--muted); max-width:620px">Si vous debutez, suivez seulement ces 3 etapes. Vous aurez deja l'essentiel pour utiliser 5Hostachy sans stress.</p>
+        </div>
+        <span class="quick-badge">3 minutes pour demarrer</span>
+      </div>
+
+      <div class="quick-grid">
+        <div class="quick-card">
+          <span class="quick-step">1</span>
+          <strong>Connectez-vous</strong>
+          <p>Entrez votre e-mail et votre mot de passe. Si besoin, creez votre compte ou utilisez le lien de reinitialisation.</p>
+          <ul class="micro-list">
+            <li>Premiere visite : allez a Connexion &amp; inscription</li>
+            <li>Mot de passe oublie : utilisez le lien sur l'ecran d'accueil</li>
+          </ul>
+        </div>
+        <div class="quick-card">
+          <span class="quick-step">2</span>
+          <strong>Reglez vos notifications</strong>
+          <p>Choisissez ce que vous voulez recevoir dans l'appli et par e-mail pour eviter les oublis sans etre submerge.</p>
+          <ul class="micro-list">
+            <li>Ouvrez Mon profil</li>
+            <li>Cochez les canaux utiles ligne par ligne</li>
+          </ul>
+        </div>
+        <div class="quick-card">
+          <span class="quick-step">3</span>
+          <strong>Faites votre premiere action</strong>
+          <p>Ensuite, allez directement a votre besoin du moment : signaler, verifier, telecharger ou demander.</p>
+          <ul class="micro-list">
+            <li>Probleme : Tickets</li>
+            <li>Date ou travaux : Calendrier</li>
+            <li>Document : Ma residence</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="choice-grid">
+        <a class="choice-card" href="#tickets">
+          <strong>Je veux signaler un probleme</strong>
+          <p>Allez dans Tickets pour faire une demande claire et suivre son avancement.</p>
+        </a>
+        <a class="choice-card" href="#calendrier">
+          <strong>Je veux verifier une date</strong>
+          <p>Ouvrez Calendrier pour voir les interventions, coupures, AG et suivis de travaux.</p>
+        </a>
+        <a class="choice-card" href="#residence">
+          <strong>Je veux retrouver un document</strong>
+          <p>Ouvrez Ma residence pour les documents utiles de la copropriete.</p>
+        </a>
+        <a class="choice-card" href="#badges">
+          <strong>Je veux demander un badge</strong>
+          <p>La rubrique Acces &amp; badges explique la procedure et le suivi.</p>
+        </a>
+        <a class="choice-card" href="#news">
+          <strong>Je veux lire les informations importantes</strong>
+          <p>Les Actualites regroupent les annonces officielles du conseil syndical.</p>
+        </a>
+        <a class="choice-card" href="#profil">
+          <strong>Je veux regler mon compte</strong>
+          <p>Dans Mon profil, modifiez vos informations et vos preferences de notifications.</p>
+        </a>
+      </div>
+
+      <div class="persona-block" id="par-profil">
+        <h3>Mini sommaire par profil</h3>
+        <p>Vous etes presse ? Choisissez votre profil et ouvrez seulement les rubriques vraiment utiles pour vous.</p>
+        <div class="persona-grid">
+          <a class="persona-card" href="#lot">
+            <strong>Je suis copropriétaire résident</strong>
+            <ul>
+              <li>Mes lots pour vos informations de bien</li>
+              <li>Tickets pour tout signalement</li>
+              <li>Calendrier pour les interventions a venir</li>
+            </ul>
+          </a>
+          <a class="persona-card" href="#profil">
+            <strong>Je suis locataire</strong>
+            <ul>
+              <li>Mon profil pour regler les notifications</li>
+              <li>Actualites pour les infos officielles</li>
+              <li>Tickets pour vos demandes et suivis</li>
+            </ul>
+          </a>
+          <a class="persona-card" href="#prestataires">
+            <strong>Je suis membre CS / syndic</strong>
+            <ul>
+              <li>Prestataires pour le suivi des interventions</li>
+              <li>Calendrier pour piloter le workflow</li>
+              <li>Tickets pour repondre et cloturer</li>
+            </ul>
+          </a>
+        </div>
+      </div>
+
+      <div class="quick-print">
+        <p>Besoin d'un support ultra-court a afficher ou imprimer ? Utilisez la version 1 page.</p>
+        <a href="manuel-utilisateur-1-page.html" target="_blank" rel="noopener">Ouvrir la version 1 page</a>
+      </div>
+    </section>
+
+    <section class="chapter" id="captures">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9">&#x1F5BC;</div>
+        <div>
+          <h2>Captures guidees des ecrans clefs</h2>
+          <p>8 reperes visuels pour trouver rapidement ou cliquer dans les rubriques les plus consultees.</p>
+        </div>
+      </div>
+
+      <div class="capture-grid">
+        <article class="capture-card">
+          <img src="img/capture-1-tableau-de-bord.png" alt="Tableau de bord" loading="lazy">
+          <h3>1. Tableau de bord</h3>
+          <p>Premier ecran apres connexion. Verifiez alertes, actualites et raccourcis principaux.</p>
+          <span class="capture-tag">Accueil rapide</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-2-creer-ticket.png" alt="Creer un ticket" loading="lazy">
+          <h3>2. Creer un ticket</h3>
+          <p>Utilisez le bouton de creation pour signaler un probleme en moins de 2 minutes.</p>
+          <span class="capture-tag">Action prioritaire</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-3-suivi-tickets.png" alt="Suivi des tickets" loading="lazy">
+          <h3>3. Suivi des tickets</h3>
+          <p>Consultez le statut de vos demandes : ouvert, en cours, résolu ou annulé.</p>
+          <span class="capture-tag">Suivi clair</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-4-calendrier-liste.png" alt="Calendrier - Liste" loading="lazy">
+          <h3>4. Calendrier - Liste</h3>
+          <p>Vue chronologique pour savoir ce qui arrive cette semaine ou ce mois-ci.</p>
+          <span class="capture-tag">Planifier vite</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-5-calendrier-kanban.png" alt="Calendrier - Kanban" loading="lazy">
+          <h3>5. Calendrier - Kanban</h3>
+          <p>Visualisez l'avancement des actions par colonne (syndic, prestataire, termine).</p>
+          <span class="capture-tag">Pilotage</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-6-mon-profil.png" alt="Mon profil" loading="lazy">
+          <h3>6. Mon profil</h3>
+          <p>Reglez votre mot de passe, vos infos et la matrice de notifications appli/e-mail.</p>
+          <span class="capture-tag">Parametres</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-7-ma-residence.png" alt="Ma residence" loading="lazy">
+          <h3>7. Ma residence</h3>
+          <p>Retrouvez les documents importants (AG, reglement, informations communes).</p>
+          <span class="capture-tag">Documents</span>
+        </article>
+        <article class="capture-card">
+          <img src="img/capture-8-acces-badges.png" alt="Acces et badges" loading="lazy">
+          <h3>8. Acces &amp; badges</h3>
+          <p>Demandez un badge ou une telecommande et suivez la validation de votre demande.</p>
+          <span class="capture-tag">Acces residence</span>
+        </article>
+      </div>
+    </section>
+
+    <!-- ────────────────────────────────
+         À QUOI ÇA SERT ?
+    ──────────────────────────────── -->
+    <section class="chapter" id="a-quoi-ca-sert">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#eff6ff; color:#2563eb">&#x1F4A1;</div>
+        <div>
+          <h2>A quoi sert l'application ?</h2>
+          <p>Retenez surtout une chose : elle vous evite de chercher partout.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <p><strong>5Hostachy</strong> est votre espace numérique de copropriete. Au lieu de jongler entre affichage papier, e-mails, appels et documents perdus, vous retrouvez tout au meme endroit.</p>
+
+        <div class="scan-grid">
+          <div class="scan-card">
+            <h3>Pour agir vite</h3>
+            <p>Quand vous avez une action a faire, voici ou aller sans hesiter.</p>
+            <ul>
+              <li>Signaler une panne ou une nuisance : <strong>Tickets</strong></li>
+              <li>Demander un badge ou une telecommande : <strong>Acces &amp; badges</strong></li>
+              <li>Trouver un contact : <strong>Annuaire</strong></li>
+            </ul>
+          </div>
+          <div class="scan-card">
+            <h3>Pour rester informe</h3>
+            <p>Quand vous voulez simplement savoir ce qu'il se passe dans la residence.</p>
+            <ul>
+              <li>Annonces officielles : <strong>Actualites</strong></li>
+              <li>Dates, interventions, coupures : <strong>Calendrier</strong></li>
+              <li>Votes et idees : <strong>Communaute</strong></li>
+            </ul>
+          </div>
+          <div class="scan-card">
+            <h3>Pour retrouver un document</h3>
+            <p>Quand vous cherchez une piece ou une information de reference.</p>
+            <ul>
+              <li>Reglement, AG, documents residence : <strong>Ma residence</strong></li>
+              <li>Vos informations et lots : <strong>Mes lots</strong></li>
+              <li>Parametres et notifications : <strong>Mon profil</strong></li>
+            </ul>
+          </div>
+          <div class="scan-card">
+            <h3>Ce que vous y gagnez</h3>
+            <p>Le vrai benefice n'est pas technique. C'est un gain de temps.</p>
+            <ul>
+              <li>Moins d'oublis grace aux notifications</li>
+              <li>Moins d'allers-retours par e-mail</li>
+              <li>Plus de visibilite sur les demandes en cours</li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="mini-note">Conseil simple : si vous ne savez pas ou cliquer, commencez par la question suivante. <strong>Est-ce que je veux agir, verifier une information, ou retrouver un document ?</strong> La bonne rubrique devient alors evidente.</p>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">&#x1F512;</span>
+        <div>
+          <p><strong>Vos données restent chez vous.</strong> L'application est hébergée directement dans votre immeuble, sur un serveur local. Aucune donnée n'est envoyée à des plateformes commerciales externes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         1. CONNEXION & INSCRIPTION
+    ════════════════════════════════ -->
+    <section class="chapter" id="connexion" data-section="connexion">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f5f3ff; color:var(--c-login)">&#x1F511;</div>
+        <div>
+          <h2>Connexion &amp; Inscription</h2>
+          <p>Créer votre compte et accéder à l'application.</p>
+        </div>
+      </div>
+
+      <!-- Créer un compte -->
+      <div class="card">
+        <h3>Créer votre compte pour la première fois</h3>
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">1</span>
+            <div class="step-content">
+              <strong>Ouvrez l'application</strong>
+              <p>Sur votre téléphone ou ordinateur, rendez-vous à l'adresse indiquée sur le panneau d'affichage de la résidence.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">2</span>
+            <div class="step-content">
+              <strong>Cliquez sur « Créer un compte »</strong>
+              <p>Sur la page d'accueil, en bas du formulaire de connexion.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">3</span>
+            <div class="step-content">
+              <strong>Remplissez le formulaire</strong>
+              <p>Votre prénom, nom, adresse e-mail, numéro de téléphone et mot de passe. Sélectionnez votre bâtiment et votre numéro de lot (appartement / parking / cave).</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">4</span>
+            <div class="step-content">
+              <strong>Acceptez les conditions</strong>
+              <p>Cochez la case pour accepter la politique de confidentialité. Cette étape est obligatoire.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">5</span>
+            <div class="step-content">
+              <strong>Validation de votre compte</strong>
+              <p>Si votre nom figure dans la liste des résidents, votre compte est actif immédiatement. Sinon, un membre du conseil de votre bâtiment le validera sous 48h.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout tip">
+          <span class="callout-icon">✅</span>
+          <p><strong>Si votre nom est reconnu automatiquement</strong>, votre compte est actif immédiatement et vous recevez un e-mail de confirmation.</p>
+          <p><strong>Sinon, un délai de validation s'applique.</strong> Un membre du conseil syndical vérifie manuellement que la demande est légitime — cette étape garantit que seuls les copropriétaires, locataires, syndic et mandataires ayant un lien réel avec la résidence peuvent accéder à l'application. Comptez généralement <strong>24 à 48 h</strong> (hors week-end). Vous serez notifié par e-mail dès que votre compte est activé.</p>
+        </div>
+      </div>
+
+      <!-- Se connecter -->
+      <div class="card">
+        <h3>Se connecter</h3>
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">1</span>
+            <div class="step-content">
+              <strong>Entrez votre e-mail et mot de passe</strong>
+              <p>Sur la page d'accueil de l'application.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-login)">2</span>
+            <div class="step-content">
+              <strong>Cliquez sur « Se connecter »</strong>
+              <p>Vous arrivez directement sur votre tableau de bord.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout warning">
+          <span class="callout-icon">⚠️</span>
+          <p><strong>Mot de passe oublié&nbsp;?</strong> Cliquez sur « Mot de passe oublié » sous le formulaire. Entrez votre adresse e-mail&nbsp;: vous recevrez un lien de réinitialisation valable <strong>1 heure</strong>. Une fois le nouveau mot de passe défini, toutes vos sessions actives sont automatiquement fermées.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         MON PROFIL (nouveau)
+    ════════════════════════════════ -->
+    <section class="chapter" id="profil" data-section="profil">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f5f3ff; color:var(--c-profil)">&#x1F464;</div>
+        <div>
+          <h2>Mon profil</h2>
+          <p>Vos informations personnelles, sécurité du compte et préférences.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Accéder à mon profil</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.6rem">En bas du menu de navigation, vous voyez <strong>votre prénom</strong> (ex : « Philippe ») à la place d'un lien « Profil ». C'est votre raccourci personnel vers la page de profil — cliquez dessus pour y accéder.</p>
+        <div class="callout info" style="margin-bottom:0">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Le menu affiche votre prénom plutôt que le mot « Profil » pour vous identifier en un coup d'œil et confirmer que vous êtes bien connecté avec votre compte.</p>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:.75rem">
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f5f3ff; border-radius:8px">
+            <span style="font-size:1.3rem">✏️</span>
+            <div>
+              <strong>Informations personnelles</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Modifier votre prénom, nom, téléphone, société / fonction (syndic et mandataires), et photo de profil.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f5f3ff; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F510;</span>
+            <div>
+              <strong>Changer de mot de passe</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Renseignez votre mot de passe actuel, puis le nouveau (minimum 8 caractères).</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f5f3ff; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F514;</span>
+            <div>
+              <strong>Préférences de notifications</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Ajuster séparément les notifications <strong>dans l'appli</strong> et <strong>par e-mail</strong> pour les tickets, actualités et documents.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f5f3ff; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F3E0;</span>
+            <div>
+              <strong>Mes lots rattachés</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Consultez la liste de vos lots (appartement, parking, cave) associés à votre compte.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:1.1rem">Affiner ses notifications (recommandé)</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.7rem">Un réglage précis permet de rester informé sans surcharge: vous choisissez, pour chaque type d'action, le canal <strong>dans l'appli</strong>, <strong>par e-mail</strong>, ou les deux.</p>
+        <ul class="steps" style="margin-top:.2rem">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-profil)">1</span>
+            <div class="step-content">
+              <strong>Ouvrez Mon profil → Préférences de notifications</strong>
+              <p>La matrice affiche les types d'action en lignes et les canaux en colonnes.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-profil)">2</span>
+            <div class="step-content">
+              <strong>Cochez selon votre usage</strong>
+              <p>Exemple conseillé: tickets = appli + e-mail ; actualités = appli ; documents = e-mail.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-profil)">3</span>
+            <div class="step-content">
+              <strong>Enregistrez et ajustez après quelques jours</strong>
+              <p>Si vous recevez trop d'alertes, retirez le canal le moins utile pour vous.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Demander une modification de statut ou de bâtiment</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Si votre situation a changé (déménagement, changement de statut locataire/propriétaire…), vous pouvez soumettre une demande de modification depuis votre profil.</p>
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-profil)">1</span>
+            <div class="step-content">
+              <strong>Cliquez sur « Demander une modification »</strong>
+              <p>Dans la section « Mes informations » de votre profil.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-profil)">2</span>
+            <div class="step-content">
+              <strong>Précisez le changement souhaité</strong>
+              <p>Nouveau statut, nouveau bâtiment, et motif de la demande.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-profil)">3</span>
+            <div class="step-content">
+              <strong>Attendez la validation du conseil syndical</strong>
+              <p>La demande est examinée sous 48h. Vous êtes notifié par e-mail du résultat.</p>
+            </div>
+          </li>
+        </ul>
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <p>Une seule demande en cours à la fois. Si une demande est déjà en attente, attendez qu'elle soit traitée avant d'en soumettre une nouvelle.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         2. MON LOT
+    ════════════════════════════════ -->
+    <section class="chapter" id="lot" data-section="lot">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f0f9ff; color:var(--c-lot)">&#x1F6AA;</div>
+        <div>
+          <h2>Mes lots</h2>
+          <p>Les informations de votre appartement, parking ou cave.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Que trouvez-vous dans « Mes lots » ?</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à la section <strong>Mes lots</strong> dans le menu.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.75rem">
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0f9ff; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F3E0;</span>
+            <div>
+              <strong>Votre logement</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Surface, étage, bâtiment, type de lot (appartement / parking / cave)</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0f9ff; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F4CB;</span>
+            <div>
+              <strong>Historique des interventions</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Toutes les demandes passées concernant votre lot</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0f9ff; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F4E5;</span>
+            <div>
+              <strong>Exporter mes données</strong>
+              <p>Suivi des demandes, badges et détails de votre lot.<br><strong>Locataires</strong>&nbsp;: vous voyez également les accès qui vous ont été accordés par votre propriétaire (badges, télécommandes inclus dans votre bail).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <p><strong>Propriétaire qui loue votre appartement&nbsp;?</strong> Un onglet supplémentaire <em>«&nbsp;Gestion locative&nbsp;»</em> apparaît. Vous y voyez vos locataires actifs, les dates du bail, et l'inventaire de l'état des lieux.</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         3. SIGNALER UN PROBLÈME
+    ════════════════════════════════ -->
+    <section class="chapter" id="tickets" data-section="tickets">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fff7ed; color:var(--c-ticket)">&#x1F4AC;</div>
+        <div>
+          <h2>Mes Tickets</h2>
+          <p>Signaler un problème et suivre l'avancement de vos tickets.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Comment signaler un problème ?</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1.25rem">Allez dans <strong>Tickets → + Nouveau ticket</strong> (bouton en haut à droite).</p>
+
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-ticket)">1</span>
+            <div class="step-content">
+              <strong>Choisissez une catégorie</strong>
+              <p>Sélectionnez le type de problème ci-dessous.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="cat-grid">
+          <div class="cat-card cat-panne">
+            &#x1F6E0;️ Panne
+            <small>Équipement cassé, ascenseur, éclairage, chauffage…</small>
+          </div>
+          <div class="cat-card cat-nuisance">
+            &#x1F4E2; Nuisance
+            <small>Bruit, odeur, problème de voisinage…</small>
+          </div>
+          <div class="cat-card cat-question">
+            ❓ Question
+            <small>Demande d'information au conseil</small>
+          </div>
+          <div class="cat-card cat-urgence">
+            &#x1F6A8; Urgence
+            <small>Dégât des eaux, danger, sécurité…</small>
+          </div>
+          <div class="cat-card" style="background:#f0fdf4; border-color:#bbf7d0; color:#15803d">
+            &#x1F41B; Bug
+            <small>Dysfonctionnement de l'application elle-même</small>
+          </div>
+        </div>
+
+        <ul class="steps" style="margin-top:1.25rem">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-ticket)">2</span>
+            <div class="step-content">
+              <strong>Décrivez le problème</strong>
+              <p>Donnez un titre court et une description claire. Vous pouvez ajouter jusqu'à 3 photos.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-ticket)">3</span>
+            <div class="step-content">
+              <strong>Envoyez la demande</strong>
+              <p>Un numéro de ticket vous est attribué immédiatement (ex. : <code>#2026-0147</code>). Le conseil est notifié automatiquement.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout danger">
+          <span class="callout-icon">&#x1F6A8;</span>
+          <p><strong>En cas d'urgence réelle</strong> (inondation, incendie, danger immédiat), appelez d'abord les secours (15, 18, 17) puis ouvrez un ticket « Urgence » dans l'application.</p>
+        </div>
+      </div>
+
+      <!-- Suivi -->
+      <div class="card">
+        <h3>Suivre l'avancement de vos tickets</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Retrouvez tous vos tickets dans la section <strong>Tickets</strong> du menu.</p>
+
+        <p style="font-size:.9rem; margin-bottom:.75rem">Chaque ticket passe par ces étapes :</p>
+        <div class="status-grid">
+          <div class="status-chip s-open">    <span class="dot"></span> Ouvert</div>
+          <div class="status-chip s-progress"><span class="dot"></span> En cours</div>
+          <div class="status-chip s-resolved"><span class="dot"></span> Résolu</div>
+          <div class="status-chip" style="background:#fef2f2; border-color:#fecaca; color:#b91c1c"><span class="dot" style="background:#ef4444"></span> Annulé</div>
+        </div>
+
+        <p style="font-size:.9rem; margin-top:1rem; color:var(--muted)">Vous recevez un e-mail à chaque changement de statut. Vous pouvez aussi <strong>ajouter des commentaires</strong> dans le ticket pour donner des précisions ou demander des nouvelles.</p>
+
+        <div class="callout tip" style="margin-top:1.25rem">
+          <span class="callout-icon">&#x1F4CA;</span>
+          <p><strong>Sur le tableau de bord</strong>, seuls vos tickets encore actifs ou récemment traités apparaissent dans « Mes tickets récents ». Les tickets résolus ou annulés depuis plus de 48 h sont automatiquement masqués pour garder un affichage clair.</p>
+        </div>
+      </div>
+
+      <!-- Historique -->
+      <div class="card">
+        <h3>&#x1F5C4;️ Historique de mes tickets</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Les tickets <strong>résolus ou annulés depuis plus de 48 h</strong> sont automatiquement déplacés dans la section <strong>Historique</strong>, en bas de la page Tickets.</p>
+
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li>Cliquez sur <strong>« 🗭 Historique de mes tickets »</strong> pour déplier la liste.</li>
+          <li>Le nombre total de tickets archivés est affiché à côté du titre.</li>
+          <li>Chaque ticket de l'historique reste consultable en détail (catégorie, description, commentaires).</li>
+        </ul>
+
+        <div class="callout tip" style="margin-top:1rem">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Si un ticket résolu vous semble réapparu dans la liste principale, c'est qu'il vient d'être traité — il basculera automatiquement dans l'historique après 48 h.</p>
+        </div>
+      </div>
+
+      <!-- CS / Gestion tickets -->
+      <div class="card">
+        <h3>&#x1F3EB; Pour les membres du conseil syndical — Gestion des tickets</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Les membres CS disposent d'un onglet dédié <strong>🎟️ Tickets</strong> dans leur <strong>Espace CS</strong> pour gérer l'ensemble des signalements de la résidence.</p>
+
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li><strong>Tous les tickets</strong> ouverts par les résidents sont visibles, quel que soit le bâtiment.</li>
+          <li>Un filtre rapide permet d'afficher uniquement les tickets <em>Ouverts</em>, <em>En cours</em>, <em>Résolus</em> ou <em>Tous</em>.</li>
+          <li>Le <strong>prénom / nom</strong> et le <strong>bâtiment du demandeur</strong> apparaissent directement sur chaque ticket pour faciliter l'identification par le CS.</li>
+          <li>Pour chaque ticket, le CS peut <strong>changer le statut</strong> (ex. : Ouvert → En cours → Résolu) et <strong>ajouter un commentaire</strong> pour informer le résident.</li>
+          <li>Un badge rouge sur l'onglet indique le nombre de tickets encore <em>Ouverts</em>.</li>
+        </ul>
+
+        <div class="callout tip" style="margin-top:1rem">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Les résidents sont notifiés par e-mail à chaque changement de statut ou commentaire ajouté par le CS.</p>
+        </div>
+        <div class="callout info" style="margin-top:.8rem">
+          <span class="callout-icon">ℹ️</span>
+          <p>Dans <strong>Admin → Paramétrage site</strong>, l'administrateur peut activer l'option <strong>« Notifier si un bug (Tickets) »</strong>. Cette option envoie un e-mail au contact administrateur du site uniquement lorsqu'un ticket de catégorie <strong>Bug</strong> est créé. Les tickets <strong>Urgence</strong> ne déclenchent pas cet e-mail.</p>
+          <p style="margin-top:.5rem">Dans le même écran, l'option <strong>« Notifier si un nouvel utilisateur est créé »</strong> permet d'envoyer un e-mail au gestionnaire du site dès qu'un nouveau compte est créé et placé en attente de validation.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Annuaire — repère contact principal</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Dans la section <strong>Annuaire</strong>, le contact principal du syndic est identifié par une <strong>étoile</strong> avec l'info-bulle <strong>« Gestionnaire principal »</strong>.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:0">Côté Conseil Syndical, le membre marqué <strong>Gestionnaire du Site</strong> est identifié par un pictogramme <strong>immeuble</strong> (info-bulle <strong>« Gestionnaire du Site »</strong>). Le repère <strong>Président</strong> est optionnel.</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         4. ACTUALITÉS
+    ════════════════════════════════ -->
+    <section class="chapter" id="news" data-section="news">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f0fdf4; color:var(--c-news)">&#x1F4F0;</div>
+        <div>
+          <h2>Actualités de la résidence</h2>
+          <p>Informations et annonces du conseil syndical.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Où trouver les actualités ?</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Actualités</strong> dans le menu.</p>
+
+        <p style="font-size:.9rem;">Le conseil publie ici toutes les informations importantes :</p>
+        <br>
+        <div style="display:flex; flex-direction:column; gap:.6rem">
+          <div style="display:flex; gap:10px; align-items:center; font-size:.9rem">
+            <span style="background:#fef2f2; color:#dc2626; padding:.2rem .6rem; border-radius:6px; font-weight:700; font-size:.8rem">URGENT</span>
+            <span>Annonces nécessitant une action immédiate (ex. : coupure d'eau inattendue)</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; font-size:.9rem">
+            <span style="background:#fff7ed; color:#ea580c; padding:.2rem .6rem; border-radius:6px; font-weight:700; font-size:.8rem">&#x1F4CC; ÉPINGLÉ</span>
+            <span>Informations importantes à garder en tête (règles, travaux programmés…)</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; font-size:.9rem">
+            <span style="background:#f0fdf4; color:#16a34a; padding:.2rem .6rem; border-radius:6px; font-weight:700; font-size:.8rem">INFO</span>
+            <span>Actualités générales de la copropriété</span>
+          </div>
+        </div>
+
+        <div class="callout tip" style="margin-top:1.25rem">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Vous ne voyez que les actualités qui concernent <strong>votre bâtiment</strong>. Les annonces pour l'ensemble de la résidence sont visibles par tous.</p>
+          <p style="margin-top:.5rem">Quand le conseil syndical publie une actualité avec une photo et coche <strong>« Partager sur le groupe WhatsApp »</strong>, l'image est désormais jointe au message envoyé sur le groupe.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         5. CALENDRIER
+    ════════════════════════════════ -->
+    <section class="chapter" id="calendrier" data-section="calendrier">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#eef2ff; color:var(--c-cal)">&#x1F4C5;</div>
+        <div>
+          <h2>Calendrier</h2>
+          <p>Interventions, réunions et événements à venir.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Consulter le calendrier partagé</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Calendrier</strong> dans le menu.</p>
+
+        <p style="font-size:.9rem; margin-bottom:1rem">Le calendrier regroupe tous les événements de la résidence :</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:1rem">
+          <div style="padding:.75rem; background:#f0fdf4; border-radius:8px; font-size:.85rem">
+            <strong>&#x1F528; Travaux</strong>
+            <p style="color:var(--muted); margin-top:2px">Interventions planifiées dans les parties communes</p>
+          </div>
+          <div style="padding:.75rem; background:#eef2ff; border-radius:8px; font-size:.85rem">
+            <strong>&#x1F3DB;️ Assemblée générale</strong>
+            <p style="color:var(--muted); margin-top:2px">Réunions de copropriétaires</p>
+          </div>
+          <div style="padding:.75rem; background:#fff7ed; border-radius:8px; font-size:.85rem">
+            <strong>&#x1F4A7; Coupures</strong>
+            <p style="color:var(--muted); margin-top:2px">Eau, électricité — avec heure de début et fin</p>
+          </div>
+          <div style="padding:.75rem; background:#fdf4ff; border-radius:8px; font-size:.85rem">
+            <strong>&#x1F527; Maintenance</strong>
+            <p style="color:var(--muted); margin-top:2px">Entretien ascenseur, VMC, chaufferie…</p>
+          </div>
+          <div style="padding:.75rem; background:#fff8f0; border-radius:8px; font-size:.85rem">
+            <strong>&#x1F6E0;️ Prestations prestataires</strong>
+            <p style="color:var(--muted); margin-top:2px">Passages planifiés des intervenants extérieurs</p>
+          </div>
+        </div>
+
+        <h3>Choisir la bonne vue Calendrier</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.7rem">Les trois vues sont complémentaires. Les utiliser ensemble améliore le suivi quotidien et la traçabilité des actions de la résidence.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.6rem; margin-bottom:.8rem">
+          <div style="padding:.75rem; background:#eff6ff; border-radius:8px; font-size:.85rem">
+            <strong>📋 Liste</strong>
+            <p style="color:var(--muted); margin-top:2px">Vision chronologique des interventions à venir. Idéale pour planifier la semaine et filtrer par type.</p>
+          </div>
+          <div style="padding:.75rem; background:#fff7ed; border-radius:8px; font-size:.85rem">
+            <strong>🗃️ Kanban</strong>
+            <p style="color:var(--muted); margin-top:2px">Suivi opérationnel par statut (CS, Syndic, Prestataire, Terminé). Idéal pour piloter l'avancement.</p>
+          </div>
+          <div style="padding:.75rem; background:#f0fdf4; border-radius:8px; font-size:.85rem">
+            <strong>📁 Archives</strong>
+            <p style="color:var(--muted); margin-top:2px">Historique des événements et prestations réalisées par année. Utile pour justifier, comparer et retrouver un précédent.</p>
+          </div>
+        </div>
+        <div class="callout tip">
+          <span class="callout-icon">&#x1F4C2;</span>
+          <p><strong>Historique fiable</strong> — L'onglet <em>Archives</em> conserve les événements passés (y compris les prestations réalisées). Les événements annulés n'y sont pas affichés.</p>
+        </div>
+        <div class="callout tip" style="margin-top:.8rem">
+          <span class="callout-icon">&#x1F4CC;</span>
+          <p><strong>Prestations ponctuelles</strong> — En vue <em>Liste</em>, seules les prestations ponctuelles acceptées apparaissent dans la chronologie. En vue <em>Kanban</em>, elles sont positionnées automatiquement dans la colonne correspondant à leur statut&nbsp;: attente syndic, prestataire, terminé ou annulé.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         6. SONDAGES
+    ════════════════════════════════ -->
+    <section class="chapter" id="sondages">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fdf4ff; color:#a21caf">&#x1FAC2;</div>
+        <div>
+          <h2>Communauté</h2>
+          <p>Sondages, votes et boîte à idées de la résidence.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Participer à un sondage</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Communauté → Sondages</strong> dans le menu.</p>
+
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:#a21caf">1</span>
+            <div class="step-content">
+              <strong>Lisez la question</strong>
+              <p>Le conseil pose une question sur une décision à prendre (ex. : « Faut-il remplacer le revêtement du hall ? »)</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#a21caf">2</span>
+            <div class="step-content">
+              <strong>Votez</strong>
+              <p>Choisissez une réponse et confirmez. Vous ne pouvez voter qu'une seule fois.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#a21caf">3</span>
+            <div class="step-content">
+              <strong>Consultez les résultats</strong>
+              <p>Les résultats s'affichent en temps réel sous forme de graphique.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <p>Votre vote est <strong>anonyme</strong>. Le conseil voit uniquement les totaux, pas qui a voté quoi.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4A1; Boîte à idées</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Communauté → Boîte à idées</strong>. Un deuxième onglet à côté des sondages.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem; margin-bottom:1rem">
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fdf4ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">✏️</span>
+            <div><strong>Proposer une idée</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Rédigez un titre et une description, puis soumettez.</p></div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fdf4ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F44D;</span>
+            <div><strong>Soutenir une idée</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Votez pour les idées qui vous semblent pertinentes (un vote par idée).</p></div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fdf4ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F4AC;</span>
+            <div><strong>Commenter</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Chaque idée dispose d'une section commentaires pour en discuter collectivement.</p></div>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Les idées les plus votées remontent en haut de la liste. Le conseil peut marquer une idée comme « retenue » ou « refusée » avec une explication.</p>
+        </div>
+
+        <h3>&#x1F6D2; Petites annonces</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Communauté → Petites annonces</strong>. Troisième onglet à côté de Sondages et Boîte à idées.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem; margin-bottom:1rem">
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fefce8; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F4E6;</span>
+            <div><strong>Publier une annonce</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Choisissez le type (vente, don ou recherche), la catégorie et ajoutez jusqu'à 5 photos.</p></div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fefce8; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F50D;</span>
+            <div><strong>Parcourir les annonces</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Consultez les annonces de vos voisins. Les annonces disponibles apparaissent en premier.</p></div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fefce8; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F504;</span>
+            <div><strong>Gérer le statut</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Passez votre annonce en « réservé », « vendu » ou « archivé » quand la transaction est conclue.</p></div>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>9 catégories sont disponibles : mobilier, électroménager, bricolage, jardin, sport, enfants, vêtements, informatique, autre. Vous pouvez choisir de rendre vos coordonnées visibles ou non.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         7. MA RÉSIDENCE (nouveau)
+    ════════════════════════════════ -->
+    <section class="chapter" id="residence" data-section="residence">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f0fdfa; color:var(--c-residence)">&#x1F3E2;</div>
+        <div>
+          <h2>Ma résidence</h2>
+          <p>Documents officiels et informations de la copropriété.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Que trouvez-vous dans « Ma résidence » ?</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Ma résidence</strong> dans le menu.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.75rem">
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F4CB;</span>
+            <div>
+              <strong>Informations générales</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Nom, adresse, année de construction, nombre de lots, numéro d'immatriculation de la copropriété, assurance.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F4D0;</span>
+            <div>
+              <strong>Plans de la résidence</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Plans des bâtiments, parties communes, locaux techniques. Téléchargeables au format PDF.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F4DC;</span>
+            <div>
+              <strong>Règlement de copropriété</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Le document officiel régissant la vie en copropriété.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F5C2;️</span>
+            <div>
+              <strong>Comptes-rendus d'assemblée générale</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Tous les CR d'AG, classés par année et accessibles en PDF.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <p>Les documents sont ajoutés par le conseil syndical au fil du temps. Si un document manque, vous pouvez signaler l'absence via un ticket « Question ».</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         8. ANNUAIRE (nouveau)
+    ════════════════════════════════ -->
+    <section class="chapter" id="annuaire" data-section="annuaire">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#eff6ff; color:var(--c-annuaire)">&#x1F465;</div>
+        <div>
+          <h2>Annuaire</h2>
+          <p>Coordonnées du conseil syndical et du syndic professionnel.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Membres du conseil syndical</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Annuaire</strong> dans le menu.</p>
+
+        <p style="font-size:.9rem; margin-bottom:.75rem">L'annuaire affiche les membres du conseil, regroupés par bâtiment. Pour chaque membre, vous voyez :</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:.75rem 0">
+          <div style="padding:.65rem .8rem; background:#eff6ff; border-radius:8px; font-size:.85rem"><strong>&#x1F3E2; Bâtiment & étage</strong></div>
+          <div style="padding:.65rem .8rem; background:#eff6ff; border-radius:8px; font-size:.85rem"><strong>&#x1F4F8; Photo (optionnelle)</strong></div>
+        </div>
+        <p style="font-size:.85rem; color:var(--muted); margin-bottom:.6rem">Repères visuels possibles sur une fiche CS :</p>
+        <ul class="checks" style="margin-top:0">
+          <li><strong>🏢 Gestionnaire du Site</strong> (si activé dans l'Espace CS).</li>
+          <li><strong>👑 Président du Conseil Syndical</strong> (optionnel).</li>
+        </ul>
+
+        <div class="callout tip" style="margin-top:.75rem">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Pour contacter un membre du CS, ouvrez un ticket « Question » dans l'application — c'est la voie officielle qui laisse une trace.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Le syndic professionnel</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">La section syndic affiche le nom de la société, son adresse et les coordonnées de chaque interlocuteur (nom, fonction, e-mail, téléphone).</p>
+        <p style="font-size:.85rem; color:var(--muted); margin-bottom:.75rem">Le contact principal est indiqué par une étoile avec l'info-bulle <strong>« Gestionnaire principal »</strong>.</p>
+
+        <div class="callout warning">
+          <span class="callout-icon">⚠️</span>
+          <p><strong>En cas d'urgence</strong> (dégât des eaux, sinistre…), appelez directement le <strong>numéro d'urgence du syndic</strong> disponible dans l'annuaire, puis ouvrez un ticket « Urgence » dans l'application.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         9. ACCÈS & BADGES
+    ════════════════════════════════ -->
+    <section class="chapter" id="badges" data-section="badges">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fef2f2; color:var(--c-badges)">&#x1F510;</div>
+        <div>
+          <h2>Accès &amp; badges</h2>
+          <p>Gérer vos badges et télécommandes d'accès aux parties communes.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Comprendre vos accès</h3>
+        <div style="display:flex; flex-direction:column; gap:.75rem; margin-bottom:1rem">
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fef2f2; border-radius:8px; align-items:flex-start">
+            <span style="font-size:1.3rem">&#x1F3F7;️</span>
+            <div>
+              <strong>Badge Vigik</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Petit badge électronique pour ouvrir les portails, halls et couloirs</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fff7ed; border-radius:8px; align-items:flex-start">
+            <span style="font-size:1.3rem">&#x1F4E1;</span>
+            <div>
+              <strong>Télécommande parking</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Télécommande pour le portail ou la barrière du parking</p>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size:.9rem; color:var(--muted)">Chaque accès a un <strong>statut</strong> :</p>
+        <div class="status-grid" style="margin:.75rem 0">
+          <div class="status-chip s-resolved"> <span class="dot"></span> Actif</div>
+          <div class="status-chip s-progress"> <span class="dot"></span> Suspendu</div>
+          <div class="status-chip s-closed">   <span class="dot"></span> Perdu / signalé</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Demander un nouveau badge</h3>
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:var(--c-badges)">1</span>
+            <div class="step-content">
+              <strong>Accédez à « Accès &amp; badges » dans le menu</strong>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-badges)">2</span>
+            <div class="step-content">
+              <strong>Cliquez sur « + Nouvelle demande »</strong>
+              <p>Précisez le type (Vigik ou télécommande) et la raison de votre demande.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:var(--c-badges)">3</span>
+            <div class="step-content">
+              <strong>Attendez la validation du conseil</strong>
+              <p>Vous recevez un e-mail dès que votre demande est traitée (généralement sous 48h).</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callout warning">
+          <span class="callout-icon">⚠️</span>
+          <p><strong>Badge perdu ou volé ?</strong> Signalez-le immédiatement dans l'application pour le faire désactiver. Cela évite qu'une personne non autorisée accède à la résidence.</p>
+        </div>
+        <div class="callout info" style="margin-top:1rem">
+          <span class="callout-icon">ℹ️</span>
+          <p>Depuis la FAQ, la question <strong>« Quel prix pour ces badges ? »</strong> affiche un bouton direct vers <strong>Accès &amp; badges → Nouvelle demande</strong>. Le lien direct est <strong>/faq#badge-prix</strong> pour y acceder rapidement.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         9bis. ESPACE BAILLEUR (copropriétaire bailleur uniquement)
+    ════════════════════════════════ -->
+    <section class="chapter" id="bailleur" data-section="bailleur">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#eff6ff; color:#2563eb">&#x1F3E0;</div>
+        <div>
+          <h2>Espace bailleur</h2>
+          <p>Gestion locative : baux, locataires et remise d'objets.</p>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">&#x1F512;</span>
+        <p>Cette section est visible uniquement par les <strong>copropriétaires bailleurs</strong>. Elle apparaît automatiquement si vous possédez au moins un lot.</p>
+      </div>
+
+      <div class="card">
+        <h3>Mes Lots — vue bailleur</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Retrouvez tous vos lots avec leur statut d'occupation : <strong>Occupé</strong> (bail actif) ou <strong>Vacant</strong>.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem; margin-bottom:1rem">
+          <div style="display:flex; gap:12px; padding:.8rem; background:#eff6ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F4CB;</span>
+            <div><strong>Label enrichi de chaque lot</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Type, numéro, bâtiment et étage — ex. « Appartement T3 — Lot 42, Bât. A, 2ᵉ étage ».</p></div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#eff6ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F465;</span>
+            <div><strong>Locataire actif</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Nom, prénom, email et téléphone du locataire en place, ou « Vacant » si aucun bail actif.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Créer un bail</h3>
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:#2563eb">1</span>
+            <div class="step-content">
+              <strong>Sélectionnez un ou plusieurs lots vacants</strong>
+              <p>Un bail sera créé pour chaque lot sélectionné (même locataire, mêmes dates).</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#2563eb">2</span>
+            <div class="step-content">
+              <strong>Recherchez le locataire</strong>
+              <p>Tapez son nom ou son email. Si le locataire existe déjà, il sera lié automatiquement. Sinon, saisissez ses coordonnées.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#2563eb">3</span>
+            <div class="step-content">
+              <strong>Renseignez les dates et validez</strong>
+              <p>Date d'entrée (obligatoire), date de sortie prévue (optionnelle) et notes éventuelles.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Remise d'objets &amp; fin de bail</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Suivez les clés, télécommandes et vigiks remis à votre locataire.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem; margin-bottom:1rem">
+          <div style="display:flex; gap:12px; padding:.8rem; background:#eff6ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F511;</span>
+            <div><strong>Ajouter un objet remis</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Clé, télécommande, vigik ou autre — avec quantité et référence optionnelle.</p></div>
+          </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#eff6ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x2705;</span>
+            <div><strong>Pointer la restitution</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">En fin de bail, pointez chaque objet rendu. Les manquants passent en « perdu » ou « non remis ».</p></div>
+          </div>
+        </div>
+
+        <div class="callout tip">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Les baux terminés restent consultables dans l'historique. Vous conservez la trace de tous les objets remis et restitués.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         10. PRESTATAIRES (CS et syndic uniquement)
+    ════════════════════════════════ -->
+    <section class="chapter" id="prestataires" data-section="presta">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fff8f0; color:var(--c-presta)">⛑️</div>
+        <div>
+          <h2>Prestataires</h2>
+          <p>Intervenants de la résidence, contrats de maintenance et suivi des prestations.</p>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">&#x1F512;</span>
+        <p>Cette section est visible uniquement par les membres du <strong>conseil syndical</strong> et le <strong>syndic</strong>. Les copropriétaires et les locataires n'y ont pas accès.</p>
+      </div>
+
+      <div class="card">
+        <h3>Les prestataires de la résidence</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Prestataires</strong> dans le menu. Trois onglets sont disponibles :</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem">
+          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F3E2; Prestataires</strong> — liste des entreprises intervenant sur la résidence, avec leur spécialité, type (ponctuel / récurrent) et coordonnées. Chaque fiche peut être dépliée pour voir les contrats associés.
+          </div>
+          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F4CA; Consommations</strong> — vue d'ensemble des dépenses par prestataire et par équipement.
+          </div>
+          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F5C2;️ Prestations</strong> — suivi des travaux et interventions sous forme de tableau kanban, avec 4 colonnes&nbsp;: <em>En attente</em>, <em>Accepté</em>, <em>Réalisé</em>, <em>Refusé</em>.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Comprendre les prestations (kanban)</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Les prestations correspondent aux devis et ordres de service envoyés aux prestataires. Elles circulent de gauche à droite :</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem">
+          <div style="padding:.7rem; background:#eff6ff; border-radius:8px; font-size:.85rem; border-left:3px solid #3b82f6">
+            <strong>⏳ En attente</strong>
+            <p style="color:var(--muted); margin-top:2px">Prestation soumise, en attente de réponse du prestataire</p>
+          </div>
+          <div style="padding:.7rem; background:#f0fdf4; border-radius:8px; font-size:.85rem; border-left:3px solid #22c55e">
+            <strong>✅ Accepté</strong>
+            <p style="color:var(--muted); margin-top:2px">Prestataire a accepté — en cours de planification</p>
+          </div>
+          <div style="padding:.7rem; background:#fdf4ff; border-radius:8px; font-size:.85rem; border-left:3px solid #a21caf">
+            <strong>&#x1F3C1; Réalisé</strong>
+            <p style="color:var(--muted); margin-top:2px">Intervention effectuée — visible dans les archives calendrier</p>
+          </div>
+          <div style="padding:.7rem; background:#fef2f2; border-radius:8px; font-size:.85rem; border-left:3px solid #ef4444">
+            <strong>❌ Refusé</strong>
+            <p style="color:var(--muted); margin-top:2px">Prestation non retenue</p>
+          </div>
+        </div>
+
+        <div class="callout tip" style="margin-top:1rem">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Les prestations récurrentes (contrats annuels) génèrent automatiquement des événements dans le <strong>Calendrier</strong>.</p>
+        </div>
+        <div class="callout tip" style="margin-top:1rem">
+          <span class="callout-icon">&#x270D;&#xFE0F;</span>
+          <p>Le formulaire <strong>Nouvelle prestation</strong> permet maintenant de renseigner dès la création le statut workflow, la date prévue, le montant, la fréquence éventuelle, les notes et les fichiers utiles pour préparer le suivi dans le kanban et le calendrier.</p>
+        </div>
+        <div class="callout info" style="margin-top:1rem">
+          <span class="callout-icon">📅</span>
+          <p>Sur le <strong>Tableau de bord</strong>, la zone « Événements récents » affiche aussi les <strong>prestations ponctuelles non terminées</strong> (en attente / acceptées), pour garder une vision opérationnelle rapide.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         11. FAQ
+    ════════════════════════════════ -->
+    <section class="chapter" id="faq" data-section="faq">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f0fdfa; color:var(--c-faq)">❓</div>
+        <div>
+          <h2>Questions fréquentes</h2>
+          <p>Les réponses aux questions les plus courantes.</p>
+        </div>
+      </div>
+
+      <details class="faq-item">
+        <summary>Je n'arrive pas à me connecter, que faire ?</summary>
+        <div class="faq-body">
+          <p>Vérifiez que vous utilisez bien l'adresse e-mail avec laquelle vous vous êtes inscrit. Si vous avez oublié votre mot de passe, cliquez sur <strong>« Mot de passe oublié »</strong> sur la page de connexion. Vous recevrez un e-mail avec un lien de réinitialisation valide pendant 1 heure.</p>
+          <p style="margin-top:.5rem">Si le problème persiste, contactez le conseil syndical via la messagerie de l'application.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Mon compte est « en attente de validation », que se passe-t-il ?</summary>
+        <div class="faq-body">
+          <p>Si votre nom ne figure pas automatiquement dans la liste des résidents, un membre du conseil syndical de votre bâtiment doit valider manuellement votre compte. Ce délai est généralement de 24 à 48 heures (hors week-end). Vous recevrez un e-mail dès que ce sera fait.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Puis-je utiliser l'application sur mon téléphone ?</summary>
+        <div class="faq-body">
+          <p>Oui, l'application est entièrement compatible avec les téléphones et tablettes (iOS et Android). Vous pouvez même l'<strong>installer comme une application</strong> sur votre écran d'accueil (sans passer par l'App Store ni le Play Store) : dans votre navigateur, appuyez sur <em>« Partager → Ajouter à l'écran d'accueil »</em> (iPhone) ou <em>« Menu → Installer l'application »</em> (Android).</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Comment savoir si mon ticket a été traité ?</summary>
+        <div class="faq-body">
+          <p>Vous recevez automatiquement un e-mail à chaque changement de statut de votre ticket (passage à « En cours », puis « Résolu »). Vous pouvez aussi vérifier à tout moment dans <strong>Mes demandes → Suivi des tickets</strong>. Un badge vert indique les tickets résolus.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Pourquoi mes anciens tickets n'apparaissent plus dans la liste principale ?</summary>
+        <div class="faq-body">
+          <p>Les tickets résolus ou annulés depuis plus de 48 h sont automatiquement déplacés dans la section <strong>Historique de mes tickets</strong>, située en bas de la page Tickets. La liste principale reste ainsi centrée sur les demandes encore actives ou récemment traitées.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Que voit le conseil syndical quand il traite mon ticket ?</summary>
+        <div class="faq-body">
+          <p>Dans l'<strong>Espace CS</strong>, les membres du conseil syndical voient le détail du ticket, son historique, ainsi que le <strong>prénom / nom</strong> et le <strong>bâtiment</strong> du demandeur. Cela leur permet d'identifier plus rapidement le contexte avant de changer le statut ou d'ajouter un commentaire.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Quel prix pour ces badges ?</summary>
+        <div class="faq-body">
+          <p>Le montant dépend du type d'accès (Vigik ou télécommande) et du barème validé par le syndic / conseil syndical.</p>
+          <p>Depuis cette question dans l'application, utilisez le bouton direct vers <strong>Accès &amp; badges → Nouvelle demande</strong> pour faire votre demande sans chercher dans le menu.</p>
+          <p>Accès direct : <a href="/faq#badge-prix">/faq#badge-prix</a></p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Mes données personnelles sont-elles en sécurité ?</summary>
+        <div class="faq-body">
+          <p>Oui. L'application est hébergée <strong>sur un serveur physique situé dans votre résidence</strong>, géré par le conseil syndical. Vos données ne sont pas partagées avec des tiers ni hébergées sur des serveurs commerciaux. Vous pouvez à tout moment demander l'accès, la correction ou la suppression de vos données en contactant le conseil.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Comment contacter directement le conseil syndical ?</summary>
+        <div class="faq-body">
+          <p>Dans le menu, allez dans <strong>Annuaire</strong>. Vous y trouverez les coordonnées des membres du conseil (avec leur bâtiment et étage) ainsi que celles du syndic professionnel. Vous pouvez aussi ouvrir un ticket de type « Question » pour une demande officielle.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Je ne reçois pas les notifications ou e-mails. Pourquoi ?</summary>
+        <div class="faq-body">
+          <p>Vérifiez d'abord votre dossier <strong>Spam / Courrier indésirable</strong>. Si les e-mails de la résidence s'y trouvent, marquez-les comme « non indésirables ». Vérifiez ensuite dans <strong>Mon profil → Préférences de notifications</strong> la matrice (lignes = types d'action, colonnes = appli / e-mail) et cochez le canal souhaité pour chaque ligne.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Puis-je télécharger mes informations personnelles ?</summary>
+        <div class="faq-body">
+          <p>Oui. Dans <strong>Mon lot → Exporter mes données</strong>, vous pouvez télécharger un fichier ZIP contenant l'ensemble de vos informations : tickets, historique des badges et détails de votre lot.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ════════════════════════════════
+         AIDE & CONTACT
+    ════════════════════════════════ -->
+    <div class="divider"></div>
+
+    <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border:1px solid #bae6fd; border-radius:16px; padding:2rem; text-align:center; margin-bottom:3rem">
+      <div style="font-size:2.5rem; margin-bottom:.75rem">&#x1F91D;</div>
+      <h2 style="font-size:1.25rem; margin-bottom:.5rem">Besoin d'aide supplémentaire ?</h2>
+      <p style="color:var(--muted); font-size:.9rem; max-width:420px; margin:0 auto 1.25rem">Si vous ne trouvez pas la réponse à votre question dans ce guide, les membres de votre conseil syndical sont là pour vous aider.</p>
+      <div style="display:inline-flex; gap:.75rem; flex-wrap:wrap; justify-content:center">
+        <span style="background:white; border:1px solid #bae6fd; border-radius:8px; padding:.5rem 1rem; font-size:.85rem; font-weight:600; color:#0369a1">&#x1F4EC; Ouvrir un ticket « Question »</span>
+        <span style="background:white; border:1px solid #bae6fd; border-radius:8px; padding:.5rem 1rem; font-size:.85rem; font-weight:600; color:#0369a1">&#x1F4D6; Consulter l'annuaire</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════
+       FOOTER
+  ══════════════════════════════════ -->
+  <footer class="doc-footer">
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.0</span>
+    <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
+  </footer>
+
+</div>
+
+<!-- Navigation active highlighting -->
+<script>
+  const navItems = document.querySelectorAll('.nav-item');
+  const sections = document.querySelectorAll('.chapter, .hero, .quick-start, .persona-block');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navItems.forEach(item => {
+          item.classList.toggle('active', item.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

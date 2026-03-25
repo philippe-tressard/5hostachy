@@ -1,0 +1,68 @@
+# Glossaire
+
+> Termes métier et techniques utilisés dans le projet 5Hostachy.
+
+| Terme | Définition |
+|-------|------------|
+| **AG** | Assemblée Générale de copropriété, réunie au moins 1 fois par an pour voter les décisions collectives (budgets, travaux, élection du conseil syndical). |
+| **A2HS** | *Add to Home Screen* — fonctionnalité permettant d'installer une PWA sur l'écran d'accueil d'un smartphone sans passer par un App Store. |
+| **Admin** | Rôle applicatif disposant de tous les droits. Réservé aux copropriétaires désignés. Ni locataire ni mandataire ni syndic ne peut être admin. |
+| **Badge d'accès** | Voir *Vigik*. |
+| **Bâtiment** | Immeuble composant la résidence. La résidence compte 4 bâtiments, chacun avec RDC + 3 étages et des niveaux en sous-sol. |
+| **Conseil syndical** | Organe élu en AG, composé de copropriétaires. Il contrôle la gestion du syndic et peut prendre certaines décisions dans les limites de son enveloppe autorisée. |
+| **Copropriétaire bailleur** | Copropriétaire qui loue son ou ses lots à un locataire, directement ou via un mandataire. |
+| **Copropriétaire résident** | Copropriétaire qui occupe lui-même son lot. |
+| **Lot** | Unité composant la copropriété : appartement, cave ou parking. Un copropriétaire peut posséder plusieurs lots. |
+| **Locataire** | Personne louant un ou plusieurs lots appartenant à un copropriétaire bailleur. Ne peut pas être admin ou membre du conseil syndical. |
+| **Mandataire** | Représentant d'un copropriétaire (agence de location, notaire). Accès applicatif limité en lecture à son lot de mandat uniquement. Ne peut pas être admin ni conseil syndical. |
+| **Mission** | Ordre de mission entre le conseil syndical et un prestataire pour une intervention ponctuelle (dépannage, expertise, intervention unique). Pour les contrats de maintenance récurrents (ascenseur, VMC…), voir `ContratEntretien`. |
+| **Prestataire** | Entreprise ou intervenant réalisant une prestation ordonnée par le syndic. N'a pas accès à l'application. |
+| **PWA** | *Progressive Web App* — application web installable sur mobile sans App Store, avec fonctionnement partiel hors-ligne via service worker. |
+| **Résidence du Parc** | Nom de la copropriété, située au 5 boulevard Fernand Hostachy, 78290 Croissy-sur-Seine. 4 bâtiments. |
+| **Syndic** | Gestionnaire professionnel mandaté par la copropriété. Seul habilité à lancer une prestation avec un fournisseur. Accès applicatif en **lecture seule** uniquement. |
+| **Télécommande** | Télécommande d'accès au parking. Comme le vigik, elle est liée à un lot et peut être commandée via l'application. |
+| **Ticket** | Demande soumise par un résident (panne, nuisance, question, urgence). Suivi de statut : ouvert → en cours → résolu → annulé. |
+| **Vigik** | Badge électronique d'accès aux parties communes (portails, halls, parkings). Lié à un lot. Peut être déclaré perdu, suspendu ou commandé en remplacement via l'application. |
+| **CNIL** | Commission Nationale de l'Informatique et des Libertés — autorité de contrôle française chargée de veiller au respect du RGPD et de la Loi Informatique et Libertés. Toute personne peut déposer une réclamation sur www.cnil.fr. |
+| **Consentement RGPD** | Manifestation de volonté libre, spécifique, éclairée et univoque (case à cocher non pré-cochée). Révocable à tout moment, aussi facilement qu'il a été donné (Art. 7 RGPD). Distinct par finalité : consentement à la politique de confidentialité ≠ consentement aux communications d'actualités. |
+| **DPO** | *Data Protection Officer* (délégué à la protection des données) — référent RGPD d'une organisation. Non obligatoire pour un syndicat de copropriétaires de taille standard, mais recommandé. Coordonnées publiées dans la politique de confidentialité. |
+| **Droit à l'effacement** | Droit de demander la suppression des données personnelles identifiantes (Art. 17 RGPD, « droit à l'oubli »). Limité par les obligations légales de conservation (documents de copropriété : 10 ans, comptabilité). Les données conservées sont anonymisées. |
+| **Droit à la portabilité** | Droit de recevoir ses données dans un format structuré, lisible par machine (JSON/CSV) et de les transférer (Art. 20 RGPD). Sur mobile, export via le Share Sheet natif iOS/Android. |
+| **Directives post-mortem** | Instruction optionnelle qu'un utilisateur peut laisser pour indiquer la conduite à tenir sur ses données après son décès (conservation, effacement, transmission). Prévu par la Loi Informatique et Libertés, Art. 85. |
+| **eIDAS** | Règlement UE n° 910/2014 sur l'identification électronique et les services de confiance. Définit trois niveaux de signature électronique (simple, avancée, qualifiée). Applicable si des votes ou résolutions d'AG sont dématérialisés. |
+| **Extranet copropriété** | Espace en ligne sécurisé donnant aux résidents accès aux documents et informations de la copropriété. Rendu obligatoire pour certaines copropriétés par la Loi ALUR (2014) et renforcé par le Loi ELAN (2018). 5Hostachy constitue cet extranet. |
+| **Fiche synthétique** | Document annuel obligatoire résumant les données financières et techniques d'une copropriété (Art. 8-2 Loi 1965 modifiée par ALUR). Doit être publiée par l'administrateur et accessible à tous les résidents. |
+| **LCEN** | Loi pour la Confiance dans l'Économie Numérique (n° 2004-575 du 21 juin 2004). Impose les mentions légales obligatoires sur tout service de communication en ligne (Art. 6), et encadre la responsabilité des hébergeurs et éditeurs. |
+| **Loi ALUR** | Loi pour l'Accès au Logement et un Urbanisme Rénové (2014). A notamment rendu obligatoire la mise à disposition en ligne des documents de copropriété via un extranet sécurisé. |
+| **Loi ELAN** | Loi portant Évolution du Logement, de l'Aménagement et du Numérique (2018). A renforcé les obligations numériques des copropriétés et simplifié certaines règles de gestion. |
+| **NIS2** | Directive UE 2022/2555 sur la cybersécurité des réseaux et des systèmes d'information (Network and Information Security). Oblige les entités essentielles et importantes à mettre en place des mesures de sécurité et à notifier les incidents. Transposée en droit français par la Loi 2023-703. |
+| **Responsable de traitement** | Entité qui détermine les finalités et les moyens du traitement de données personnelles (Art. 4 RGPD). Dans 5Hostachy : le **syndicat des copropriétaires**, représenté par le président du conseil syndical. |
+| **Jinja2** | Moteur de templates Python utilisé pour le rendu des emails. Permet d'insérer des variables (`{{ ticket.numero }}`), des conditions (`{% if %}`) et des boucles dans le sujet et le corps des emails. Intégré au framework FastAPI. |
+| **ModèleEmail** | Template paramétrable (sujet + corps HTML + corps texte) associé à un événement déclencheur (ex. changement de statut ticket, validation vigik). Éditable par l’admin via l’interface, prévisualisable et testable sans déploiement. |
+| **CarnetEntretien** | Document légal obligatoire pour toute copropriété (Art. L. 731-2 CCH, Décret 2001-477). Contient l'identification de l'immeuble, les contrats de maintenance en cours, les assurances et les diagnostics. Dans 5Hostachy, il est constitué de la fiche `Copropriété` enrichie et des `ContratEntretien`. |
+| **ContratEntretien** | Contrat de maintenance récurrent passé avec un prestataire pour un équipement collectif (ascenseur, chauffage, VMC, etc.). Distinct d'une `Mission` (intervention ponctuelle). Géré par l'admin, consultable en lecture par les résidents. |
+| **CatégorieDocument** | Entrée du catalogue documentaire définissant le libellé, le profil d'accès par défaut et le périmètre par défaut d'un type de document. Paramétrable par l'admin sans déploiement. Ex : `contrat_fournisseur`, `pv_ag`, `diagnostic_lot`. |
+| **ProfilAccèsDocument** | Template nommé listant les statuts utilisateurs autorisés à lire les documents qui lui sont assignés. Ex : `résidence_tous` (tous les résidents), `copropriétaires_et_cs` (exclut locataires et mandataires), `cs_syndic_uniquement`. Paramétrable par l'admin. |
+| **Périmètre documentaire** | Filtre géographique appliqué en complément du profil d'accès : `résidence` (tous les ayants droit), `bâtiment` (limité aux résidents du bâtiment concerné), `lot` (limité aux occupants du lot). |
+| **Surcharge de profil** | Possibilité, sur un document individuel, de remplacer le profil d'accès hérité de sa catégorie par un profil différent. Activable/désactivable par catégorie via `surcharge_autorisee`. |
+| **RGPD** | Règlement Général sur la Protection des Données (UE 2016/679), applicable depuis le 25 mai 2018. Encadre la collecte, le traitement et la conservation des données personnelles dans l'UE. Complété en France par la **Loi Informatique et Libertés** (LIL, Loi n° 78-17 modifiée). |
+| **AgCsInfo** | Table de configuration (ligne unique) stockant l'année et la date de l'AG lors de laquelle le Conseil Syndical a été élu. Affiché dans l'annuaire public (ex. « Voté en AG 2025 - 12 juin 2025 »). |
+| **MembreCS** | Entité de la base de données représentant un membre du Conseil Syndical, indépendante des comptes `Utilisateur`. Peut être liée optionnellement à un compte via `user_id` pour afficher la photo de profil. |
+| **SyndicInfo** | Table de configuration (ligne unique) stockant la raison sociale et l'adresse du cabinet syndic. |
+| **MembreSyndic** | Entité représentant un contact individuel du cabinet syndic. Indépendante des comptes `Utilisateur`. |
+| **ConfigSite** | Table clé/valeur stockant les paramètres de configuration de l'application modifiables par l'admin sans redéploiement : nom du site, titres/icônes/sous-titres des pages, contenus des pages légales. |
+| **RichEditor** | Composant Svelte (TipTap) fournissant un éditeur de texte riche (WYSIWYG) avec barre d'outils. Utilisé pour l'édition des sous-titres de pages, des pages légales et des templates d'emails. |
+| **safeHtml** | Fonction utilitaire (`$lib/sanitize.ts`) basée sur `isomorphic-dompurify`. Sanitise un fragment HTML avant son injection via `{@html …}` dans les composants Svelte — protège contre les attaques XSS. |
+| **PetiteAnnonce** | Annonce publiée par un résident (vente, don ou recherche d'objet). Statuts : `disponible`, `réservé`, `vendu`, `archivé`. Jusqu'à 5 photos. Catégories : mobilier, électroménager, bricolage, jardin, sport, enfants, vêtements, informatique, autre. |
+| **TypeAnnonce** | Enum classifiant le type d'une petite annonce : `vente`, `don`, `recherche`. |
+| **CategorieAnnonce** | Enum des catégories de petites annonces : `mobilier`, `electromenager`, `bricolage`, `jardin`, `sport`, `enfants`, `vetements`, `informatique`, `autre`. |
+| **StatutAnnonce** | Enum du cycle de vie d'une petite annonce : `disponible` → `reserve` → `vendu` / `archive`. |
+| **LocationBail** | Entité représentant un bail locatif entre un bailleur (copropriétaire) et un locataire, lié à un lot. Le locataire peut être un utilisateur existant (`locataire_id`) ou des coordonnées en texte libre. Statuts : `actif`, `en_cours_sortie`, `terminé`. |
+| **StatutBail** | Enum des statuts de bail : `actif` (occupé), `en_cours_sortie` (préavis), `termine` (lot vacant). |
+| **RemiseObjet** | Objet remis au locataire dans le cadre d'un bail (clé, télécommande, vigik, autre). Suivi de restitution en fin de bail. |
+| **TypeObjet** | Enum des types d'objets remis : `cle`, `telecommande`, `vigik`, `autre`. |
+| **StatutObjet** | Enum de l'état d'un objet remis : `en_possession`, `rendu`, `perdu`, `non_remis`. |
+| **BailCreateMulti** | Schéma API permettant de créer plusieurs baux en une opération (un par lot sélectionné, même locataire et mêmes dates). Endpoint `POST /bailleur/baux/creer-multi`. |
+| **lotLabel** | Fonction utilitaire front-end générant un libellé enrichi pour un lot : type + numéro + bâtiment + étage (ex. « Appartement T3 — Lot 42, Bât. A, 2ᵉ étage »). |
+| **Evenement** | Entrée du calendrier de la résidence. Types : `travaux`, `ag`, `coupure`, `maintenance`, `reunion`, `autre`. Statuts Kanban : `a_planifier`, `en_attente`, `en_cours`, `termine`, `annule`, `reporte`. Peut être lié à un prestataire et avoir une récurrence. |
+| **StatutKanban** | Enum de l'avancement d'un événement dans la vue Kanban du calendrier : `a_planifier`, `en_attente`, `en_cours`, `termine`, `annule`, `reporte`. |
