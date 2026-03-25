@@ -36,6 +36,7 @@ import { onMount } from 'svelte';
 
 	let showForm = false;
 	let editId: number | null = null;
+	let expandedEvId: number | null = null;
 
 	let form = { titre: '', description: '', type: 'autre', lieu: '', debut: '', fin: '', statut_kanban: '', prestataire_id: '', affichable: false };
 	let formPerimetre: 'résidence' | 'specifique' = 'résidence';
@@ -880,29 +881,48 @@ import { onMount } from 'svelte';
 		<div class="month-group">
 			<div class="month-label">&#x1F4C5; {annee}</div>
 			{#each evs as ev}
-				<div class="event-row card" class:event-urgent={ev.type === 'coupure'}>
+				{@const expanded = expandedEvId === ev.id}
+				<div
+					class="event-row card"
+					class:event-urgent={ev.type === 'coupure'}
+					class:expanded
+					style="cursor:pointer"
+					role="button"
+					tabindex="0"
+					on:click={() => expandedEvId = expanded ? null : ev.id}
+					on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedEvId = expanded ? null : ev.id; } }}
+				>
 					<div class="event-type">{typeLabel(ev.type)}</div>
 					<div class="event-body">
-						<strong class="event-titre">{ev.titre}</strong>					{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}						{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
+						<strong class="event-titre">{ev.titre}</strong>
+						{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
+						{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
 					</div>
 					<div class="event-date">
 						<div>{formatDate(ev.debut)}</div>
 						{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
 						{#if ev.perimetre && ev.perimetre !== 'résidence'}
-						<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(ev.perimetre)}</span>
-					{/if}						<small class="ev-updated">
+							<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(ev.perimetre)}</span>
+						{/if}
+						<small class="ev-updated">
 							{#if ev.mis_a_jour_le}
 								Mise à jour le {new Date(ev.mis_a_jour_le).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
 							{:else}
 								Publié le {new Date(ev.cree_le).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
-						{/if}{#if ev.auteur_nom} · {ev.auteur_nom}{/if}
-						</small>					</div>
-				{#if $isCS && ev._source !== 'devis_ponctuel'}
-						<div class="event-actions">
-					<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
-					{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
-					<button class="btn-icon" aria-label="Archiver" title="Archiver" on:click={() => archiveEv(ev.id)}>&#x1F4E6;</button>
+							{/if}{#if ev.auteur_nom} · {ev.auteur_nom}{/if}
+						</small>
+					</div>
+					{#if $isCS && ev._source !== 'devis_ponctuel'}
+						<div class="event-actions" on:click|stopPropagation on:keydown|stopPropagation>
+							<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
+							{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
+								<button class="btn-icon" aria-label="Archiver" title="Archiver" on:click={() => archiveEv(ev.id)}>&#x1F4E6;</button>
+							{/if}
+						</div>
 					{/if}
+					{#if expanded && ev.description}
+						<div class="ev-expanded-body rich-content" on:click|stopPropagation on:keydown|stopPropagation>
+							{@html safeHtml(ev.description)}
 						</div>
 					{/if}
 				</div>
@@ -1062,6 +1082,8 @@ import { onMount } from 'svelte';
 	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
 	.event-date { text-align: right; font-size: .85rem; min-width: 110px; }
 	.ev-updated { display: block; font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
+	.ev-expanded-body { grid-column: 1 / -1; padding: .6rem .75rem .25rem; font-size: .875rem; line-height: 1.6; border-top: 1px solid var(--color-border); margin-top: .4rem; }
+	.event-row.card.expanded { border-color: var(--color-primary, #2563eb); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #2563eb) 18%, transparent); }
 	.event-actions { display: flex; gap: .3rem; }
 	@media (max-width: 760px) {
 		.archive-row {
