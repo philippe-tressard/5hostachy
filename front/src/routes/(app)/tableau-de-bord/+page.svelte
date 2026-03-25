@@ -113,9 +113,14 @@
 		return values.some((v) => v.trim().toLowerCase() === 'résidence');
 	}
 
+	function hasParkingScope(values: string[]): boolean {
+		return values.some((v) => v.trim().toLowerCase() === 'parking');
+	}
+
 	function isInUserPerimeter(perimetres: string[] | null | undefined, batimentId?: number | null): boolean {
 		if (isSyndicUser) return true;
 		if (hasResidenceScope(perimetres ?? [])) return true;
+		if (hasParkingScope(perimetres ?? [])) return true;
 		if (userBatimentId == null) return true;
 		if (batimentId != null && batimentId === userBatimentId) return true;
 		return parseBatimentCodes(perimetres ?? []).includes(userBatimentId);
