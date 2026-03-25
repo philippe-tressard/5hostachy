@@ -3,7 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -40,6 +40,21 @@
 	interface LotRow {
 		id: number; numero: string; type: string;
 		etage: number | null; batiment_id: number | null; batiment_nom: string | null;
+	}
+	interface ReportEvenement {
+		id: number;
+		titre: string;
+		description?: string | null;
+		type: string;
+		debut: string;
+		fin?: string | null;
+		perimetre: string;
+		batiment_id?: number | null;
+		auteur_nom?: string | null;
+		cree_le: string;
+		mis_a_jour_le?: string | null;
+		statut_kanban?: string | null;
+		prestataire_nom?: string | null;
 	}
 	interface ReportPrestataire {
 		id: number;
@@ -79,13 +94,18 @@
 	let tkEvolContenu = '';
 	let tkEvolStatut = '';
 	let tkEvolSaving = false;
-	let reportView: 'dossiers' | 'tickets' | 'devis' = 'dossiers';
+	let reportView: 'kanban' | 'tickets' | 'devis' = 'kanban';
 	let reportPeriodDays: 30 | 90 | 365 = 90;
 	let reportingLoading = false;
 	let reportingLoaded = false;
 	let reportDevisList: ReportDevis[] = [];
 	let reportPrestataires: ReportPrestataire[] = [];
+	let reportEvenements: ReportEvenement[] = [];
 	let reportPrintTitle = '';
+
+	const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)' };
+	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange' };
+	const TYPE_LABELS: Record<string, string> = { travaux: 'Travaux', coupure: 'Coupure', ag: 'AG', maintenance: 'Maintenance', maintenance_recurrente: 'Maintenance récurrente', autre: 'Autre' };
 
 	const TK_STATUT_BADGE: Record<string, string> = { ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray', fermé: 'badge-gray' };
 	const TK_STATUT_LABELS: Record<string, string> = { ouvert: 'Ouvert', en_cours: 'En cours', résolu: 'Résolu', annulé: 'Annulé', fermé: 'Fermé' };
@@ -112,18 +132,6 @@
 		const ts = new Date(d).getTime();
 		if (Number.isNaN(ts)) return 0;
 		return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
-	}
-	function ticketAttention(t: Ticket) {
-		const age = daysSince(t.cree_le);
-		if (t.categorie === 'urgence' || t.priorite === 'haute' || age >= 60) return 'Critique';
-		if (age >= 30 || t.statut === 'ouvert') return 'À relancer';
-		return 'Normal';
-	}
-	function ticketAttentionClass(t: Ticket) {
-		const level = ticketAttention(t);
-		if (level === 'Critique') return 'badge-red';
-		if (level === 'À relancer') return 'badge-orange';
-		return 'badge-green';
 	}
 	function ticketScope(t: Ticket) {
 		return t.auteur_batiment_nom ?? (t.batiment_id ? `Bât. ${t.batiment_id}` : 'Résidence');
@@ -160,19 +168,18 @@
 		setTimeout(() => document.body.classList.remove('print-reporting'), 250);
 	}
 	function exportCurrentReporting() {
-		if (reportView === 'dossiers') {
-			downloadCsv('reporting-dossiers-en-cours.csv', reportOpenTickets.map((t) => ({
-				Numero: t.numero,
-				Titre: t.titre,
-				Categorie: t.categorie,
-				Statut: t.statut,
-				Priorite: t.priorite,
-				Demandeur: t.auteur_nom ?? '',
-				Batiment: ticketScope(t),
-				Cree_le: fmtDate(t.cree_le),
-				Anciennete_jours: daysSince(t.cree_le),
-				Derniere_maj: fmtDate(t.mis_a_jour_le ?? t.cree_le),
-				Attention: ticketAttention(t),
+		if (reportView === 'kanban') {
+			downloadCsv('reporting-kanban-ag-cs-syndic.csv', reportKanbanEvents.map((ev) => ({
+				Titre: ev.titre,
+				Type: TYPE_LABELS[ev.type] ?? ev.type,
+				Colonne: KANBAN_LABELS[ev.statut_kanban ?? ''] ?? ev.statut_kanban ?? '',
+				Perimetre: ev.perimetre,
+				Batiment: ev.batiment_id ? `Bât. ${ev.batiment_id}` : '',
+				Prestataire: ev.prestataire_nom ?? '',
+				Auteur: ev.auteur_nom ?? '',
+				Cree_le: fmtDate(ev.cree_le),
+				Anciennete_jours: daysSince(ev.cree_le),
+				Derniere_maj: fmtDate(ev.mis_a_jour_le ?? ev.cree_le),
 			})));
 			return;
 		}
@@ -203,16 +210,22 @@
 	}
 	function printCurrentReporting() {
 		const titles: Record<typeof reportView, string> = {
-			dossiers: 'Reporting CS — Dossiers en cours',
+			kanban: 'Reporting CS — Dossiers AG / CS / Syndic',
 			tickets: 'Reporting CS — Analyse tickets',
 			devis: 'Reporting CS — Devis & interventions',
 		};
 		void printReporting(titles[reportView]);
 	}
 
-	$: reportOpenTickets = tkList
-		.filter((t) => t.statut === 'ouvert' || t.statut === 'en_cours')
+	$: reportKanbanEvents = reportEvenements
+		.filter((ev) => ev.statut_kanban === 'ag' || ev.statut_kanban === 'cs' || ev.statut_kanban === 'syndic')
 		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));
+	$: reportKanbanByCol = (['ag', 'cs', 'syndic'] as const).map((col) => ({
+		col,
+		label: KANBAN_LABELS[col],
+		badge: KANBAN_COLORS[col],
+		items: reportKanbanEvents.filter((ev) => ev.statut_kanban === col),
+	}));
 	$: reportTicketSource = tkList.filter((t) => daysSince(t.cree_le) <= reportPeriodDays);
 	$: reportTicketCategories = Object.entries(reportTicketSource.reduce((acc: Record<string, { total: number; ouverts: number }>, t) => {
 		const key = t.categorie || 'autre';
@@ -249,9 +262,10 @@
 		reportingLoading = true;
 		try {
 			await loadTickets();
-			const [devis, prestataires] = await Promise.all([prestApi.devis(), prestApi.list()]);
+			const [devis, prestataires, evenements] = await Promise.all([prestApi.devis(), prestApi.list(), calApi.list()]);
 			reportDevisList = devis as ReportDevis[];
 			reportPrestataires = prestataires as ReportPrestataire[];
+			reportEvenements = evenements as ReportEvenement[];
 			reportingLoaded = true;
 		} catch (e) {
 			toast('error', apiMessage(e, 'Erreur chargement reporting'));
@@ -1008,8 +1022,8 @@
 	<div class="reporting-panel">
 		<div class="reporting-toolbar no-print">
 			<div class="reporting-switch">
-				<button class="pill" class:pill-active={reportView === 'dossiers'} on:click={() => (reportView = 'dossiers')}>
-					&#x1F4CC; Dossiers en cours
+				<button class="pill" class:pill-active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
+					&#x1F4CC; AG / CS / Syndic
 				</button>
 				<button class="pill" class:pill-active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
 					&#x1F4CA; Analyse tickets
@@ -1035,55 +1049,54 @@
 
 		{#if reportingLoading}
 			<p style="color:var(--color-text-muted)">Chargement des reportings…</p>
-		{:else if reportView === 'dossiers'}
+		{:else if reportView === 'kanban'}
 			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card"><div class="kpi-value">{reportOpenTickets.length}</div><div class="kpi-label">Dossiers ouverts ou en cours</div></div>
-				<div class="kpi-card kpi-alert"><div class="kpi-value">{reportOpenTickets.filter((t) => daysSince(t.cree_le) >= 30).length}</div><div class="kpi-label">À relancer (&ge; 30 jours)</div></div>
-				<div class="kpi-card"><div class="kpi-value">{reportOpenTickets.filter((t) => ticketAttention(t) === 'Critique').length}</div><div class="kpi-label">Critiques / urgents</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportKanbanEvents.length}</div><div class="kpi-label">Dossiers en cours</div></div>
+				{#each reportKanbanByCol as col}
+					<div class="kpi-card"><div class="kpi-value">{col.items.length}</div><div class="kpi-label">{col.label}</div></div>
+				{/each}
 			</div>
-
-			<section class="report-card">
-				<h3>Dossiers toujours en cours</h3>
-				<p class="report-intro">Liste prête pour un point CS, une réunion avec le syndic ou une préparation d’AG.</p>
-				{#if reportOpenTickets.length === 0}
-					<div class="empty-state"><h3>Aucun dossier en cours</h3></div>
-				{:else}
-					<div class="report-table-wrap">
-						<table class="report-table">
-							<thead>
-								<tr>
-									<th>Dossier</th>
-									<th>Contexte</th>
-									<th>Dates</th>
-									<th>Attention</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each reportOpenTickets as t (t.id)}
+			{#each reportKanbanByCol as col}
+				<section class="report-card" style="margin-bottom:1.5rem">
+					<h3><span class="badge {col.badge}">{col.label}</span> — {col.items.length} dossier{col.items.length > 1 ? 's' : ''}</h3>
+					{#if col.items.length === 0}
+						<div class="empty-state"><h3>Aucun dossier dans cette colonne</h3></div>
+					{:else}
+						<div class="report-table-wrap">
+							<table class="report-table">
+								<thead>
 									<tr>
-										<td>
-											<strong>#{t.numero}</strong><br />
-											<span>{t.titre}</span><br />
-											<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
-										</td>
-										<td>
-											<div>{TK_CAT_ICON[t.categorie] ?? '&#x1F4CB;'} {t.categorie}</div>
-											<div>{t.auteur_nom ?? 'Demandeur non renseigné'}</div>
-											<div class="text-muted-sm">{ticketScope(t)}</div>
-										</td>
-										<td>
-											<div>Créé le {fmtDate(t.cree_le)}</div>
-											<div>{daysSince(t.cree_le)} jour(s)</div>
-											<div class="text-muted-sm">Dernière MAJ : {fmtDate(t.mis_a_jour_le ?? t.cree_le)}</div>
-										</td>
-										<td><span class="badge {ticketAttentionClass(t)}">{ticketAttention(t)}</span></td>
+										<th>Événement</th>
+										<th>Contexte</th>
+										<th>Dates</th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{/if}
-			</section>
+								</thead>
+								<tbody>
+									{#each col.items as ev (ev.id)}
+										<tr>
+											<td>
+												<strong>{ev.titre}</strong>
+												{#if ev.description}<br /><span class="text-muted-sm text-clamp">{ev.description}</span>{/if}
+											</td>
+											<td>
+												<div>{TYPE_LABELS[ev.type] ?? ev.type}</div>
+												{#if ev.prestataire_nom}<div class="text-muted-sm">{ev.prestataire_nom}</div>{/if}
+												<div class="text-muted-sm">{ev.perimetre}{#if ev.batiment_id} · Bât. {ev.batiment_id}{/if}</div>
+												{#if ev.auteur_nom}<div class="text-muted-sm">Par {ev.auteur_nom}</div>{/if}
+											</td>
+											<td>
+												<div>Créé le {fmtDate(ev.cree_le)}</div>
+												<div>{daysSince(ev.cree_le)} jour(s)</div>
+												<div class="text-muted-sm">MAJ : {fmtDate(ev.mis_a_jour_le ?? ev.cree_le)}</div>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</section>
+			{/each}
 
 		{:else if reportView === 'tickets'}
 			<div class="reporting-toolbar no-print" style="margin-top:0;margin-bottom:1rem">
@@ -1726,6 +1739,7 @@
 	.field select, .field textarea { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
 	:global(.badge-red) { background: #fee2e2; color: #991b1b; }
+	:global(.badge-purple) { background: #ede9fe; color: #5b21b6; }
 
 	/* Reporting */
 	.reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
