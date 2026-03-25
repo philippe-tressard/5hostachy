@@ -13,11 +13,11 @@
 
 	let ticketList: Ticket[] = [];
 	let pubList: Publication[] = [];
-  $: compactPubs = pubList.length > 7;
+	$: compactPubs = visiblePubList.length > 7;
 	let notifList: Notification[] = [];
 	let evenementList: any[] = [];
 	let devisList: any[] = [];
-  $: compactEvs = evenementList.length > 7;
+	$: compactEvs = visibleEvenementList.length > 7;
 	let pendingCount = 0;
 	let loading = true;
 	let notifOpen = false;
@@ -90,13 +90,57 @@
 	$: openTickets = ticketList.filter((t) => t.statut === 'ouvert' || t.statut === 'en_cours');
 	$: urgentTickets = ticketList.filter((t) => t.categorie === 'urgence' && !['résolu', 'annulé', 'fermé'].includes(t.statut));
 	$: unreadNotifs = notifList.filter((n) => !n.lue);
-	$: pinnedPubs = pubList.filter((p) => p.epingle);
-	$: recentPubs = pubList.slice(0, 5);
+	$: pinnedPubs = visiblePubList.filter((p) => p.epingle);
+	$: recentPubs = visiblePubList.slice(0, 5);
 	$: newPubsCount = lastSeenActualites
-		? pubList.filter((p) => new Date(p.cree_le) > new Date(lastSeenActualites!)).length
-		: pubList.length;
+		? visiblePubList.filter((p) => new Date(p.cree_le) > new Date(lastSeenActualites!)).length
+		: visiblePubList.length;
 
 	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) => ['propriétaire', 'conseil_syndical', 'admin'].includes(r));
+	$: isSyndicUser = $currentUser?.statut === 'syndic' || ($currentUser?.roles ?? []).includes('syndic') || $currentUser?.role === 'syndic';
+	$: userBatimentId = $currentUser?.batiment_id ?? null;
+
+	function parseBatimentCodes(values: string[]): number[] {
+		return values
+			.map((v) => {
+				const m = v.trim().match(/^bat:(\d+)$/i);
+				return m ? Number(m[1]) : null;
+			})
+			.filter((v): v is number => Number.isFinite(v));
+	}
+
+	function hasResidenceScope(values: string[]): boolean {
+		return values.some((v) => v.trim().toLowerCase() === 'résidence');
+	}
+
+	function isInUserPerimeter(perimetres: string[] | null | undefined, batimentId?: number | null): boolean {
+		if (isSyndicUser) return true;
+		if (hasResidenceScope(perimetres ?? [])) return true;
+		if (userBatimentId == null) return true;
+		if (batimentId != null && batimentId === userBatimentId) return true;
+		return parseBatimentCodes(perimetres ?? []).includes(userBatimentId);
+	}
+
+	function publicationPerimetres(pub: Publication): string[] {
+		if (pub.perimetre_cible?.length) return pub.perimetre_cible;
+		if (pub.batiment_id != null) return [`bat:${pub.batiment_id}`];
+		if (pub.perimetre) return pub.perimetre.split(',').map((s: string) => s.trim()).filter(Boolean);
+		return ['résidence'];
+	}
+
+	function evenementPerimetres(ev: any): string[] {
+		if (typeof ev.perimetre === 'string' && ev.perimetre.trim().length > 0) {
+			const perims = ev.perimetre.split(',').map((s: string) => s.trim()).filter(Boolean);
+			if (perims.length > 0) return perims;
+		}
+		if (ev.batiment_id != null) return [`bat:${ev.batiment_id}`];
+		return ['résidence'];
+	}
+
+	$: visiblePubList = pubList.filter((p) => isInUserPerimeter(publicationPerimetres(p), p.batiment_id));
+	$: visibleEvenementList = evenementList.filter((e: any) => isInUserPerimeter(evenementPerimetres(e), e.batiment_id));
+	$: visibleDevisList = devisList.filter((d: any) => isInUserPerimeter(evenementPerimetres(d), d.batiment_id));
+
 	// Menus résidentiels : visibles si l'utilisateur a au moins un rôle résidentiel
 	// (règle README « Visibilité des menus » : admin seul = pas de menus résidentiels)
 	$: hasResidentAccess = ($currentUser?.roles ?? []).some((r: string) => ['propriétaire', 'résident', 'externe', 'conseil_syndical'].includes(r));
@@ -118,7 +162,7 @@
 		}
 	}
 
-	$: prestationsPonctuellesActives = devisList
+	$: prestationsPonctuellesActives = visibleDevisList
 		.filter((d: any) => !d.frequence_type && !d.frequence_valeur && d.statut !== 'realise' && d.statut !== 'refuse')
 		.map((d: any) => {
 			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
@@ -139,13 +183,13 @@
 		});
 
 	$: recentEvenements = [
-		...evenementList,
-		...devisList
+		...visibleEvenementList,
+		...visibleDevisList
 			.filter((d: any) => d.affichable && !d.frequence_type && !d.frequence_valeur && d.statut !== 'realise' && d.statut !== 'refuse')
 			.map((d: any) => {
 				const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
 				const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-				return { id: -(100000 + Number(d.id)), type: 'maintenance', titre: d.titre, lieu: null, debut, fin: null, affichable: true, statut_kanban: null, perimetre: d.perimetre ?? 'résidence', description: d.notes ?? null };
+				return { id: -(100000 + Number(d.id)), type: 'maintenance', titre: d.titre, lieu: null, debut, fin: null, affichable: true, statut_kanban: null, perimetre: d.perimetre ?? 'résidence', batiment_id: d.batiment_id ?? null, description: d.notes ?? null };
 			}),
 	]
 		.filter((e: any) => e.affichable && !e.archivee && (canSeeAG || e.type !== 'ag'))
