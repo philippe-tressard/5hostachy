@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend: lint Python avec Ruff ───────────────────────────
+  lint-backend:
+    name: Lint Python (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff
+        run: ruff check api/app/ api/alembic/
+        # Ruff arrête le CI si des erreurs réelles sont détectées (E/F rules)
+        # Les warnings de style sont ignorés par défaut
+
+  # ── Frontend: vérification build SvelteKit ───────────────────
+  build-frontend:
+    name: Build SvelteKit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install dependencies
+        working-directory: front
+        run: npm ci
+
+      - name: Build
+        working-directory: front
+        run: npm run build
+        env:
+          VITE_GIT_HASH: ${{ github.sha }}
+          VITE_BUILD_DATE: ${{ github.run_id }}
