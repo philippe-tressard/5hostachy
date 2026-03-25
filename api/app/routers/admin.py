@@ -1162,7 +1162,7 @@ def _declencher_accueil_arrivant(
         )
 
     session.add(Notification(
-        destinataire_id=user_id,
+        destinataire_id=user.id,
         type="system",
         titre="Bienvenue dans la résidence !",
         corps=(
@@ -1209,6 +1209,13 @@ def _declencher_accueil_arrivant(
             session=session,
             cc=cc_list,
         )
+
+    session.commit()
+    return {
+        "ok": True,
+        "notifications_envoyees": nb_notifs,
+        "email_syndic": bool(syndic_principal and syndic_principal.email),
+    }
 
 
 # ── Audit associations user-lot ─────────────────────────────────────────────
@@ -1270,9 +1277,6 @@ def supprimer_user_lot(
             session.add(imp)
     session.commit()
     return {"ok": True, "deleted_id": user_lot_id}
-
-    session.commit()
-    return {"ok": True, "notifications_envoyees": nb_notifs, "email_syndic": bool(syndic_principal and syndic_principal.email)}
 
 
 @router.post("/utilisateurs/{user_id}/accueil-arrivant")
