@@ -8,6 +8,7 @@
 		uploads as uploadsApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
+		reglesResidence as reglesApi,
 		ApiError,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -28,6 +29,7 @@
 	let plans: any[] = [];
 	let reglements: any[] = [];
 	let crAg: any[] = [];
+	let regles: any[] = [];
 	let loading = true;
 
 	let catIdPlan: number | null = null;
@@ -94,6 +96,13 @@
 	let togglingNonApplicableId: number | null = null;
 	let expandedSynths = new Set<number>();
 
+	// Règles & Recommandations
+	let showRegleForm = false;
+	let editingRegleId: number | null = null;
+	let regleTitre = '';
+	let regleContenu = '';
+	let savingRegle = false;
+
 	// ── Derived ────────────────────────────────────────────────────────────────
 	// Composition depuis les champs stockés sur Batiment et Copropriete
 	$: hasOrphanLots = (copropriete?.nb_parkings_communs ?? 0) > 0;
@@ -157,6 +166,8 @@
 			reglements     = r as any[];
 			crAg           = ag as any[];
 			diagnosticTypes = diag as any[];
+
+			regles = await reglesApi.list().catch(() => []);
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
@@ -199,6 +210,61 @@
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
 			saving = false;
+		}
+	}
+
+	// ── Règles & Recommandations ───────────────────────────────────────────────
+	function openRegleForm(regle?: any) {
+		if (regle) {
+			editingRegleId = regle.id;
+			regleTitre = regle.titre;
+			regleContenu = regle.contenu;
+		} else {
+			editingRegleId = null;
+			regleTitre = '';
+			regleContenu = '';
+		}
+		showRegleForm = true;
+	}
+
+	async function saveRegle() {
+		if (!regleTitre.trim()) return;
+		savingRegle = true;
+		try {
+			if (editingRegleId) {
+				const updated = await reglesApi.update(editingRegleId, {
+					titre: regleTitre.trim(),
+					contenu: regleContenu.trim(),
+				});
+				regles = regles.map((r) => (r.id === editingRegleId ? { ...r, ...updated } : r));
+				toast('success', 'Règle mise à jour');
+			} else {
+				const created = await reglesApi.create({
+					titre: regleTitre.trim(),
+					contenu: regleContenu.trim(),
+				});
+				regles = [...regles, created];
+				toast('success', 'Règle ajoutée');
+			}
+			showRegleForm = false;
+			regleTitre = '';
+			regleContenu = '';
+			editingRegleId = null;
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+		} finally {
+			savingRegle = false;
+		}
+	}
+
+	async function deleteRegle(id: number) {
+		if (!confirm('Supprimer cette règle ?')) return;
+		try {
+			await reglesApi.remove(id);
+			regles = regles.filter((r) => r.id !== id);
+			toast('success', 'Règle supprimée');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
 
@@ -594,6 +660,39 @@
 						</table>
 					</div>
 				{/if}
+			</div>
+		{/if}
+	</section>
+
+	<!-- ── Section : Règles & Recommandations ──────────────────────────── -->
+	<section style="margin-bottom:2.5rem">
+		<div class="section-header">
+			<h2 class="section-title">&#x1F4CB; Règles & Recommandations</h2>
+			{#if $isCS}
+				<button class="btn btn-sm" on:click={() => openRegleForm()}>+ Ajouter</button>
+			{/if}
+		</div>
+
+		{#if regles.length === 0}
+			<p class="empty-msg">Aucune règle ajoutée.</p>
+		{:else}
+			<div class="doc-list">
+				{#each regles as regle (regle.id)}
+					<div class="doc-row card">
+						<div class="doc-info" style="flex-direction:column;align-items:flex-start;gap:.25rem">
+							<span class="doc-titre">{regle.titre}</span>
+							{#if regle.contenu}
+								<span style="font-size:.85rem;color:var(--color-text-muted);white-space:pre-wrap">{regle.contenu}</span>
+							{/if}
+						</div>
+						{#if $isCS}
+							<div class="doc-actions">
+								<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => openRegleForm(regle)}>✏️</button>
+								<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={() => deleteRegle(regle.id)}>&#x1F5D1;️</button>
+							</div>
+						{/if}
+					</div>
+				{/each}
 			</div>
 		{/if}
 	</section>
@@ -1091,6 +1190,38 @@
 					disabled={savingRapport || !editingRapportTitre.trim()}
 					on:click={saveRapport}>
 					{savingRapport ? 'Enregistrement…' : 'Enregistrer'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- ── Modal : ajouter / modifier une règle ──────────────────────────────────── -->
+{#if showRegleForm}
+	<div class="modal-overlay" on:click|self={() => (showRegleForm = false)} role="dialog" aria-modal="true" aria-label="Règle" tabindex="-1">
+		<div class="modal" style="width:min(480px,95vw)">
+			<div class="modal-header">
+				<h3>{editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}</h3>
+				<button class="modal-close" on:click={() => (showRegleForm = false)}>✕</button>
+			</div>
+			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+				<div class="field">
+					<label for="regle-titre">Titre *</label>
+					<input id="regle-titre" type="text" bind:value={regleTitre} placeholder="Ex : RAL menuiseries façade bâtiment A" />
+				</div>
+				<div class="field">
+					<label for="regle-contenu">Détail / valeur</label>
+					<textarea id="regle-contenu" bind:value={regleContenu}
+						placeholder="Ex : Façade extérieure RAL 6021 vert clair"
+						rows="3" style="width:100%;resize:vertical"></textarea>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn" on:click={() => (showRegleForm = false)}>Annuler</button>
+				<button class="btn btn-primary"
+					disabled={savingRegle || !regleTitre.trim()}
+					on:click={saveRegle}>
+					{savingRegle ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
 		</div>

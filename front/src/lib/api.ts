@@ -562,6 +562,14 @@ export const copropriete = {
 		api.get<any[]>(`/copropriete/lots${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
 };
 
+export const reglesResidence = {
+	list: () => api.get<any[]>('/regles-residence'),
+	create: (data: { titre: string; contenu?: string }) => api.post<any>('/regles-residence', data),
+	update: (id: number, data: { titre?: string; contenu?: string; ordre?: number }) =>
+		api.patch<any>(`/regles-residence/${id}`, data),
+	remove: (id: number) => api.delete(`/regles-residence/${id}`),
+};
+
 export const bailleur = {
 	mesBaux: () => api.get<any[]>('/bailleur/mes-baux'),
 	creerBail: (lot_id: number, data: unknown) => api.post<any>(`/bailleur/lots/${lot_id}/bail`, data),

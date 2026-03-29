@@ -20,7 +20,7 @@ from app.database import _run_migrations, engine
 from app.routers import (
     auth, tickets, publications, documents, lots, admin,
     notifications, acces, calendrier, prestataires, sondages, idees, copropriete,
-    bailleur, config, diagnostics, annonces,
+    bailleur, config, diagnostics, annonces, regles_residence,
 )
 from app.routers import uploads, faq
 from app.seed import seed
@@ -101,6 +101,7 @@ app.include_router(faq.router)
 app.include_router(bailleur.router)
 app.include_router(config.router)
 app.include_router(diagnostics.router)
+app.include_router(regles_residence.router)
 
 # Fichiers statiques (photos uploadées)
 uploads_dir = Path("/app/uploads")

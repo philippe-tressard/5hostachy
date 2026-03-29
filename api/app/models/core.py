@@ -504,6 +504,21 @@ class Document(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
+#  Règles & Recommandations de la résidence
+# ──────────────────────────────────────────────
+
+class RegleResidence(SQLModel, table=True):
+    __tablename__ = "regle_residence"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    titre: str
+    contenu: str = ""
+    ordre: int = Field(default=0)
+    cree_par_id: int = Field(foreign_key="utilisateur.id")
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    modifie_le: Optional[datetime] = None
+
+
+# ──────────────────────────────────────────────
 #  Prestataires / Contrats
 # ──────────────────────────────────────────────
 
