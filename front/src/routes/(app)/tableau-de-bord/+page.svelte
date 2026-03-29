@@ -398,31 +398,34 @@
 			<div class="kpi-icon">
 				<Icon name="ticket" size={22} />
 			</div>
-			<div class="kpi-value">{openTickets.length}</div>
-			<div class="kpi-label">Tickets ouverts</div>
-			<a href="/tickets" class="kpi-link">Voir →</a>
+			<div class="kpi-content">
+				<div class="kpi-top"><span class="kpi-value">{openTickets.length}</span><span class="kpi-label">Tickets ouverts</span></div>
+				<a href="/tickets" class="kpi-link">Voir →</a>
+			</div>
 		</div>
 		<div class="kpi-card card" class:kpi-notif-active={unreadNotifs.length > 0}>
 			<div class="kpi-icon">
 				<Icon name="bell" size={22} />
 			</div>
-			<div class="kpi-value">{unreadNotifs.length}</div>
-			<div class="kpi-label">Notifications non lues</div>
-			{#if unreadNotifs.length > 0}
-				<button class="kpi-link btn-link" on:click={() => (notifOpen = !notifOpen)}>
-					{notifOpen ? 'Masquer' : 'Voir'} →
-				</button>
-			{:else}
-				<a href="/notifications" class="kpi-link">Voir →</a>
-			{/if}
+			<div class="kpi-content">
+				<div class="kpi-top"><span class="kpi-value">{unreadNotifs.length}</span><span class="kpi-label">Notifications non lues</span></div>
+				{#if unreadNotifs.length > 0}
+					<button class="kpi-link btn-link" on:click={() => (notifOpen = !notifOpen)}>
+						{notifOpen ? 'Masquer' : 'Voir'} →
+					</button>
+				{:else}
+					<a href="/notifications" class="kpi-link">Voir →</a>
+				{/if}
+			</div>
 		</div>
 		<div class="kpi-card card">
 			<div class="kpi-icon">
 				<Icon name="newspaper" size={22} />
 			</div>
-			<div class="kpi-value">{newPubsCount}</div>
-			<div class="kpi-label">Nouvelles actualités</div>
-			<a href="/actualites" class="kpi-link" on:click={markActualitesVues}>Voir →</a>
+			<div class="kpi-content">
+				<div class="kpi-top"><span class="kpi-value">{newPubsCount}</span><span class="kpi-label">Nouvelles actualités</span></div>
+				<a href="/actualites" class="kpi-link" on:click={markActualitesVues}>Voir →</a>
+			</div>
 		</div>
 	</div>
 
@@ -730,10 +733,12 @@
 		margin-bottom: 2rem;
 	}
 
-	.kpi-card { text-align: center; padding: 1.25rem; }
-	.kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
-	.kpi-label { font-size: .8rem; color: var(--color-text-muted); margin-top: .25rem; }
-	.kpi-link { display: block; font-size: .8rem; margin-top: .5rem; text-align: center; width: 100%; }
+	.kpi-card { display: flex; align-items: center; gap: .85rem; padding: .85rem 1rem; }
+	.kpi-content { flex: 1; min-width: 0; }
+	.kpi-top { display: flex; align-items: baseline; gap: .5rem; }
+	.kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--color-primary); line-height: 1; }
+	.kpi-label { font-size: .8rem; color: var(--color-text-muted); }
+	.kpi-link { font-size: .78rem; margin-top: .15rem; display: inline-block; }
 	.kpi-notif-active { border-color: var(--color-primary); }
 	.btn-link { background: none; border: none; color: var(--color-primary); cursor: pointer; padding: 0; font-size: .8rem; }
 
@@ -814,12 +819,12 @@
 	.rich-content :global(strong) { font-weight: 600; }
 	.rich-content :global(em) { font-style: italic; }
 	.kpi-icon {
-		display: inline-flex;
+		display: flex;
 		align-items: center;
 		justify-content: center;
 		width: 2.5rem;
 		height: 2.5rem;
-		margin: 0 auto .1rem;
+		flex-shrink: 0;
 		border-radius: 999px;
 		background: color-mix(in srgb, var(--color-primary) 10%, white);
 		color: var(--color-primary);

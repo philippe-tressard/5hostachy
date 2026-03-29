@@ -1,6 +1,6 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
-import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -16,8 +16,8 @@ import { onMount } from 'svelte';
 	let devis: any[] = [];
 	let loading = true;
 
-	// ── Onglets ────────────────────────────────────────────────────
-	let onglet: 'prestataires' | 'consommations' | 'devis' = 'prestataires';
+	// ── Onglets (5) ────────────────────────────────────────────────
+	let onglet: 'prestations' | 'visites' | 'contrats_tab' | 'prestataires' | 'consommations' = 'prestations';
 
 	// Expand prestataire cards
 	let expandedPrests = new Set<number>();
@@ -34,8 +34,6 @@ import { onMount } from 'svelte';
 	let submitting = false;
 
 	// ── Contrat form ──────────────────────────────────────────────
-	// contratFormPrestId = prestataire pour lequel on crée un contrat (null = fermé)
-	// editContratId     = ID du contrat en cours d'édition inline (null = aucun)
 	let contratFormPrestId: number | null = null;
 	let editContratId: number | null = null;
 
@@ -58,11 +56,13 @@ import { onMount } from 'svelte';
 	};
 	let devisFichierFiles: FileList | null = null;
 	let devisFichierKey = 0;
+
 	// ── Devis colonnes kanban (reactive) ──────────────────────
 	$: devisSyndic = devis.filter((d: any) => d.actif !== false && d.statut === 'en_attente');
 	$: devisPrestataire = devis.filter((d: any) => d.actif !== false && d.statut === 'accepte');
 	$: devisRealise = devis.filter((d: any) => d.actif !== false && d.statut === 'realise');
 	$: devisRefuse = devis.filter((d: any) => d.actif !== false && d.statut === 'refuse');
+
 	// ── Devis OS upload ─────────────────────────────────────────
 	let osUploadDevisId: number | null = null;
 	let osFile: File | null = null;
@@ -100,13 +100,21 @@ import { onMount } from 'svelte';
 	let uploadInputKey = 0;
 
 	let filtreEquipement = '';
+	let filtreType = '';
 
-	// Prestataires filtrés par spécialité
-	$: compactPrests = filteredPrests.length > 7;
-  $: filteredPrests = prestataires.filter(p =>
+	// ── Sous-vue dans onglet Prestations ──────────────────────────
+	let prestationsVue: 'kanban' | 'liste' = 'kanban';
+
+	$: filteredPrests = prestataires.filter(p =>
 		(!filtreEquipement || p.specialite === filtreEquipement) &&
 		(!filtreType || p.type_prestataire === filtreType)
 	);
+	$: compactPrests = filteredPrests.length > 7;
+
+	// ── Visites : contrats avec fréquence ─────────────────────────
+	$: visites = contrats.filter(c => c.frequence_type || c.prochaine_visite);
+	$: visitesEnRetard = visites.filter(c => c.prochaine_visite && new Date(c.prochaine_visite) < new Date());
+	$: visitesAJour = visites.filter(c => !c.prochaine_visite || new Date(c.prochaine_visite) >= new Date());
 
 	// ── Consommations ─────────────────────────────────────────────
 	let compteurConfigs: any[] = [];
@@ -120,17 +128,14 @@ import { onMount } from 'svelte';
 	let relevePhotoKey = 0;
 	let releveSaving = false;
 
-	// Edition prestataire par compteur
 	let editCompteurId: number | null = null;
 	let editCompteurPrestId = '';
-	// Ajout nouvelle catégorie
 	let showAddCompteur = false;
 	let newCompteurLabel = '';
 	let addCompteurSaving = false;
 
 	$: currentCompteur = compteurConfigs.find(c => c.type_compteur === typeCompteur) ?? null;
 
-	// Relevés groupés par année
 	$: relevesByYear = (() => {
 		const map = new Map<number, any[]>();
 		for (const r of releves) {
@@ -198,7 +203,6 @@ import { onMount } from 'svelte';
 				saved = await prestApi.createReleve(payload);
 				releves = [saved, ...releves];
 			}
-			// Upload photo if provided
 			if (relevePhotoFile) {
 				try {
 					const updated = await prestApi.uploadRelevePhoto(saved.id, relevePhotoFile);
@@ -220,8 +224,6 @@ import { onMount } from 'svelte';
 			toast('success', 'Relevé supprimé');
 		} catch { toast('error', 'Erreur'); }
 	}
-
-	// ── Gestion compteurs config ──────────────────────────────────────────────
 
 	function startEditCompteur(cfg: any) {
 		editCompteurId = cfg.id;
@@ -451,12 +453,12 @@ import { onMount } from 'svelte';
 	}
 
 	const typesPrestataire = [
-		{ val: 'contrat_recurrent', label: '\u{1F504} Contrat récurrent', desc: 'Interventions régulières sur contrat' },
-		{ val: 'ponctuel', label: '\u{1F4CD} Ponctuel', desc: 'Dépannage ou petits travaux sur appel' },
-		{ val: 'travaux', label: '\u{1F3D7}️ Travaux', desc: 'Travaux plus importants, planifiés' },
+		{ val: 'contrat_recurrent', label: '\u{1F504} Contrat récurrent', desc: 'Entretien, maintenance' },
+		{ val: 'ponctuel', label: '\u{1F4CD} Dépannage', desc: 'Interventions ponctuelles' },
+		{ val: 'travaux', label: '\u{1F3D7}️ Travaux', desc: 'Interventions importantes' },
 		{ val: 'reglementaire', label: '\u{1F4CB} Réglementaire', desc: 'Contrôles obligatoires' },
-		{ val: 'etudes_expertise', label: '\u{1F52C} Études / Expertise', desc: 'Analyses techniques, audits, diagnostics' },
-		{ val: 'gestion', label: '\u{1F5C2}️ Gestion', desc: 'Services administratifs ou organisationnels' },
+		{ val: 'etudes_expertise', label: '\u{1F52C} Études / Expertise', desc: 'Analyses techniques' },
+		{ val: 'gestion', label: '\u{1F5C2}️ Gestion', desc: 'Services administratifs (dont assurance)' },
 	];
 
 	function typeLabel(v: string) {
@@ -471,8 +473,6 @@ import { onMount } from 'svelte';
 	];
 	function statutDevisLabel(v: string) { return statutsDevis.find(s => s.val === v)?.label ?? v; }
 	function statutDevisColor(v: string) { return statutsDevis.find(s => s.val === v)?.color ?? 'var(--color-text-muted)'; }
-
-	let filtreType = '';
 
 	// ── Toggle expand ──────────────────────────────────────────────
 	function togglePrest(id: number) {
@@ -495,12 +495,18 @@ import { onMount } from 'svelte';
 		return dates[0] ?? null;
 	}
 
+	function frequenceLabel(c: any): string {
+		if (c.frequence_type === 'semaines') return `↺ ${c.frequence_valeur} sem.`;
+		if (c.frequence_type === 'mois') return '↺ Mensuel';
+		if (c.frequence_type === 'fois_par_an') return `↺ ${c.frequence_valeur}×/an`;
+		return '';
+	}
+
 	onMount(async () => {
 		try {
 			[prestataires, contrats, devis] = await Promise.all([prestApi.list(), prestApi.contrats(), prestApi.devis()]);
 		} catch { toast('error', 'Erreur de chargement'); } finally { loading = false; }
 
-		// Précharger les docs de tous les contrats indépendamment (erreurs ignorées par contrat)
 		if (contrats.length > 0) {
 			const results = await Promise.allSettled(
 				contrats.map(c => docsApi.list(undefined, c.id).then(docs => ({ id: c.id, docs })))
@@ -547,10 +553,10 @@ import { onMount } from 'svelte';
 		editContratId = null;
 	}
 
-	function openAddContrat(prestId: number) {
+	function openAddContrat(prestId?: number) {
 		resetContratForm();
-		contratForm.prestataire_id = String(prestId);
-		contratFormPrestId = prestId;
+		if (prestId) contratForm.prestataire_id = String(prestId);
+		contratFormPrestId = prestId ?? -1;
 		editContratId = null;
 	}
 
@@ -569,7 +575,6 @@ import { onMount } from 'svelte';
 		};
 		editContratId = c.id;
 		contratFormPrestId = null;
-		// Auto-expand the contract row
 		expandedContrats.add(c.id);
 		expandedContrats = expandedContrats;
 	}
@@ -639,6 +644,10 @@ import { onMount } from 'svelte';
 			<button class="btn btn-primary page-header-btn" on:click={() => { showPrestForm = !showPrestForm; if (!showPrestForm) resetPrestForm(); }}>
 				{showPrestForm ? '✕ Annuler' : '+ Nouveau prestataire'}
 			</button>
+		{:else if onglet === 'prestations'}
+			<button class="btn btn-primary page-header-btn" on:click={() => { resetDevisForm(); devisFormPrestId = -1; }}>+ Nouvelle prestation</button>
+		{:else if onglet === 'contrats_tab'}
+			<button class="btn btn-primary page-header-btn" on:click={() => openAddContrat()}>+ Nouveau contrat</button>
 		{:else if onglet === 'consommations'}
 			<button class="btn btn-primary page-header-btn" on:click={() => { showReleveForm = !showReleveForm; if (!showReleveForm) resetReleveForm(); }}>
 				{showReleveForm ? '✕ Annuler' : currentCompteur ? `+ Nouveau relevé — ${currentCompteur.label}` : '+ Nouveau relevé'}
@@ -649,19 +658,969 @@ import { onMount } from 'svelte';
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- ── Onglets ─────────────────────────────────────────────────── -->
-<div class="tabs" role="tablist" style="margin-bottom:1.5rem">
-	<button role="tab" class:active={onglet === 'prestataires'} on:click={() => onglet = 'prestataires'}>{_pc.onglets?.prestataires?.label ?? '\u{1F527} Prestataires'}</button>
-	<button role="tab" class:active={onglet === 'consommations'} on:click={() => onglet = 'consommations'}>{_pc.onglets?.consommations?.label ?? '\u{1F4A7} Consommations'}</button>
-	<button role="tab" class:active={onglet === 'devis'} on:click={() => onglet = 'devis'}>{_pc.onglets?.devis?.label ?? '\u{1F4CB} Prestations'}</button>
+<div class="tabs" role="tablist">
+	<button role="tab" class:active={onglet === 'prestations'} on:click={() => onglet = 'prestations'}>
+		<Icon name="clipboard-list" size={15} /> Prestations
+	</button>
+	<button role="tab" class:active={onglet === 'visites'} on:click={() => onglet = 'visites'}>
+		<Icon name="calendar-days" size={15} /> Visites
+	</button>
+	<button role="tab" class:active={onglet === 'contrats_tab'} on:click={() => onglet = 'contrats_tab'}>
+		<Icon name="file-text" size={15} /> Contrats
+	</button>
+	<button role="tab" class:active={onglet === 'prestataires'} on:click={() => onglet = 'prestataires'}>
+		<Icon name="hard-hat" size={15} /> Prestataires
+	</button>
+	<button role="tab" class:active={onglet === 'consommations'} on:click={() => onglet = 'consommations'}>
+		💧 Consommations
+	</button>
 </div>
 
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 
-{:else if onglet === 'consommations'}
-	<!-- ── Vue Consommations ──────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ONGLET 1 : PRESTATIONS (kanban + liste)                      -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{:else if onglet === 'prestations'}
 
-	<!-- Sélecteur catégorie compteur + gestion (CS) -->
+	<!-- Toggle kanban / liste -->
+	<div class="sous-vue-toggle">
+		<button class="btn btn-sm" class:btn-primary={prestationsVue === 'kanban'} on:click={() => prestationsVue = 'kanban'}>Kanban</button>
+		<button class="btn btn-sm" class:btn-primary={prestationsVue === 'liste'} on:click={() => prestationsVue = 'liste'}>Liste</button>
+		<span class="kanban-count-total">{devis.filter(d => d.actif !== false).length} prestation{devis.filter(d => d.actif !== false).length > 1 ? 's' : ''}</span>
+	</div>
+
+	{#if prestationsVue === 'kanban'}
+		<!-- ── Kanban ─────────────────────────────────── -->
+		<div class="kanban devis-kanban">
+			<!-- Colonne : Syndic -->
+			<div class="kanban-col">
+				<div class="kanban-col-header" style="border-top-color:#f59e0b">
+					<span>⏳ Syndic</span>
+					<span class="kanban-count">{devisSyndic.length}</span>
+				</div>
+				{#if devisSyndic.length === 0}
+					<p class="kanban-empty">Aucune prestation</p>
+				{:else}
+					{#each devisSyndic as d (d.id)}
+						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+						<div class="kanban-card card">
+							<div class="kanban-card-tags">
+								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
+							</div>
+							<span class="devis-card-prest">{prestNom}</span>
+							<strong class="kanban-card-titre">{d.titre}</strong>
+							<div class="kanban-card-footer">
+								<div class="devis-card-meta">
+									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
+								</div>
+								{#if $isCS}
+									<div class="kanban-card-actions">
+										<button class="devis-step-btn devis-step-btn--primary" title="Passer l'OS et transmettre au prestataire"
+											on:click={() => { osUploadDevisId = d.id; osFile = null; }}>→ OS</button>
+										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
+										<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+			<!-- Colonne : Prestataire -->
+			<div class="kanban-col">
+				<div class="kanban-col-header" style="border-top-color:#f97316">
+					<span>🔧 Prestataire</span>
+					<span class="kanban-count">{devisPrestataire.length}</span>
+				</div>
+				{#if devisPrestataire.length === 0}
+					<p class="kanban-empty">Aucune prestation</p>
+				{:else}
+					{#each devisPrestataire as d (d.id)}
+						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+						<div class="kanban-card card">
+							<div class="kanban-card-tags">
+								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
+								{#if d.os_fichier_url}<span class="kb-tag" style="background:#0ea5e9">📎 OS joint</span>{/if}
+							</div>
+							<span class="devis-card-prest">{prestNom}</span>
+							<strong class="kanban-card-titre">{d.titre}</strong>
+							<div class="kanban-card-footer">
+								<div class="devis-card-meta">
+									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+								</div>
+								{#if $isCS}
+									<div class="kanban-card-actions">
+										<button class="devis-step-btn devis-step-btn--success" title="Marquer comme réalisé"
+											on:click={() => moveDevisStatut(d.id, 'realise')}>✅</button>
+										<button class="devis-step-btn" title="Retour Syndic"
+											on:click={() => moveDevisStatut(d.id, 'en_attente')}>←</button>
+										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
+										<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+			<!-- Colonne : Réalisé -->
+			<div class="kanban-col">
+				<div class="kanban-col-header" style="border-top-color:#22c55e">
+					<span>🏁 Réalisé</span>
+					<span class="kanban-count">{devisRealise.length}</span>
+				</div>
+				{#if devisRealise.length === 0}
+					<p class="kanban-empty">Aucune prestation</p>
+				{:else}
+					{#each devisRealise as d (d.id)}
+						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+						<div class="kanban-card card">
+							<div class="kanban-card-tags">
+								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
+							</div>
+							<span class="devis-card-prest">{prestNom}</span>
+							<strong class="kanban-card-titre">{d.titre}</strong>
+							<div class="kanban-card-footer">
+								<div class="devis-card-meta">
+									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
+								</div>
+								{#if $isCS}
+									<div class="kanban-card-actions">
+										<button class="devis-step-btn" title="Retour chez le prestataire"
+											on:click={() => moveDevisStatut(d.id, 'accepte')}>←</button>
+										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+			<!-- Colonne : Refusé -->
+			<div class="kanban-col">
+				<div class="kanban-col-header" style="border-top-color:#9ca3af">
+					<span>🚫 Refusé</span>
+					<span class="kanban-count">{devisRefuse.length}</span>
+				</div>
+				{#if devisRefuse.length === 0}
+					<p class="kanban-empty">Aucune prestation</p>
+				{:else}
+					{#each devisRefuse as d (d.id)}
+						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+						<div class="kanban-card card">
+							<div class="kanban-card-tags">
+								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
+							</div>
+							<span class="devis-card-prest">{prestNom}</span>
+							<strong class="kanban-card-titre">{d.titre}</strong>
+							<div class="kanban-card-footer">
+								<div class="devis-card-meta">
+									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+								</div>
+								{#if $isCS}
+									<div class="kanban-card-actions">
+										<button class="devis-step-btn" title="Remettre en attente syndic"
+											on:click={() => moveDevisStatut(d.id, 'en_attente')}>↩</button>
+										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+		</div>
+	{:else}
+		<!-- ── Vue liste ─────────────────────────────── -->
+		{#if devis.filter(d => d.actif !== false).length === 0}
+			<div class="empty-state card"><h3>Aucune prestation</h3><p>Ajoutez la première via le bouton ci-dessus.</p></div>
+		{:else}
+			{#each devis.filter(d => d.actif !== false) as d (d.id)}
+				{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+				{@const devisExpanded = expandedDevis.has(d.id)}
+				<div class="devis-expand" class:expanded={devisExpanded}>
+					<div class="devis-row"
+						role="button" tabindex="0"
+						on:click|stopPropagation={() => toggleDevis(d.id)}
+						on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
+						<div class="devis-body-inner">
+							<span class="devis-card-prest">{prestNom}</span>
+							<strong class="devis-titre">{d.titre}</strong>
+						</div>
+						<div class="devis-infos">
+							{#if d.date_prestation}
+								<span style="font-size:.82rem;font-weight:600;color:var(--color-primary)">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>
+							{/if}
+						</div>
+						<div class="devis-meta-right">
+							<span class="badge" style="font-size:.78rem;color:{statutDevisColor(d.statut)}">{statutDevisLabel(d.statut)}</span>
+							{#if d.montant_estime != null}
+								<span class="badge badge-gray" style="font-size:.78rem">💶 {d.montant_estime.toLocaleString('fr-FR')} €</span>
+							{/if}
+							{#if $isCS}
+								<button class="btn-icon-danger" title="Supprimer" on:click|stopPropagation={() => deleteDevis(d.id)}>🗑️</button>
+							{/if}
+							<span class="toggle-arrow">{devisExpanded ? '▲' : '▼'}</span>
+						</div>
+					</div>
+					{#if devisExpanded}
+						<div class="devis-detail-body">
+							{#if editDevisId === d.id}
+								<div class="form-grid" style="margin-bottom:.6rem">
+									<label>Titre *<input bind:value={devisForm.titre} required /></label>
+									<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
+									<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
+									<label>Périmètre *
+										<select bind:value={devisForm.perimetre}>
+											{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
+										</select>
+									</label>
+									<label>Suivi Kanban
+										<select bind:value={devisForm.statut}>
+											{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
+										</select>
+									</label>
+									<label>Fréquence
+										<select bind:value={devisForm.frequence_type}>
+											<option value=''>— Ponctuelle —</option>
+											<option value='fois_par_an'>× / an</option>
+											<option value='mois'>Tous les N mois</option>
+											<option value='semaines'>Toutes les N semaines</option>
+										</select>
+									</label>
+									{#if devisForm.frequence_type}
+										<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
+									{/if}
+								</div>
+								<div style="margin-top:.75rem">
+									<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+										<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
+										<span style="font-size:.875rem">Afficher dans le tableau de bord</span>
+									</label>
+								</div>
+								<div style="margin-top:.5rem">
+									<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
+									<RichEditor bind:value={devisForm.notes} placeholder="Notes…" minHeight="60px" />
+								</div>
+								<div style="margin-top:.5rem">
+									<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers</label>
+									{#if d.fichiers_urls && d.fichiers_urls.length > 0}
+										<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem">
+											{#each d.fichiers_urls as url, i}
+												<div style="display:flex;align-items:center;gap:.2rem">
+													<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline" style="font-size:.8rem">📎 Fichier {i + 1}</a>
+													<button type="button" class="btn btn-sm btn-outline" style="color:var(--color-danger);padding:.15rem .35rem" on:click|stopPropagation={() => deleteDevisFichier(d.id, url)}>✕</button>
+												</div>
+											{/each}
+										</div>
+									{/if}
+									{#key devisFichierKey}
+										<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" on:change={onDevisFilesChange} />
+									{/key}
+								</div>
+								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
+									<button class="btn btn-sm btn-outline" on:click|stopPropagation={closeDevisForm}>Annuler</button>
+									<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
+								</div>
+							{:else}
+								<div class="detail-grid">
+									<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
+									{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</div>{/if}
+									{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
+								</div>
+								{#if d.notes}
+									<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>
+								{/if}
+								{#if d.fichiers_urls && d.fichiers_urls.length > 0}
+									<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem">
+										{#each d.fichiers_urls as url, i}
+											<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline">📎 Fichier {i + 1}</a>
+										{/each}
+									</div>
+								{/if}
+								{#if $isCS}
+									<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
+										<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditDevis(d)}>✏️ Modifier</button>
+										{#if d.statut === 'en_attente'}
+											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => { osUploadDevisId = d.id; osFile = null; }}>→ Prestataire</button>
+											<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
+										{:else if d.statut === 'accepte'}
+											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => moveDevisStatut(d.id, 'realise')}>✅ Réalisée</button>
+											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Syndic</button>
+											<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
+										{:else if d.statut === 'realise'}
+											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
+										{:else if d.statut === 'refuse'}
+											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Remettre en attente</button>
+										{/if}
+									</div>
+								{/if}
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/if}
+	{/if}
+
+	<!-- Modal nouvelle prestation -->
+	{#if devisFormPrestId === -1}
+		<div class="modal-overlay" on:click={closeDevisForm}>
+			<div class="modal" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>📋 {editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}</h2>
+					<button class="modal-close" on:click={closeDevisForm}>×</button>
+				</div>
+				<div class="modal-body">
+					<p class="devis-form-help">Les prestations ponctuelles alimentent le Calendrier et le Kanban selon leur statut.</p>
+					<div class="form-grid">
+						<label>Prestataire *
+							<select bind:value={devisForm.prestataire_id} required>
+								<option value="">— Sélectionner —</option>
+								{#each prestataires as p}<option value={String(p.id)}>{p.nom}</option>{/each}
+							</select>
+						</label>
+						<label>Périmètre *
+							<select bind:value={devisForm.perimetre}>
+								{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
+							</select>
+						</label>
+						<label>Titre *<input bind:value={devisForm.titre} required /></label>
+						<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
+						<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
+						<label>Suivi Kanban
+							<select bind:value={devisForm.statut}>
+								{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
+							</select>
+						</label>
+						<label>Fréquence
+							<select bind:value={devisForm.frequence_type}>
+								<option value=''>— Ponctuelle —</option>
+								<option value='fois_par_an'>× / an</option>
+								<option value='mois'>Tous les N mois</option>
+								<option value='semaines'>Toutes les N semaines</option>
+							</select>
+						</label>
+						{#if devisForm.frequence_type}
+							<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
+						{/if}
+					</div>
+					<div style="margin-top:.75rem">
+						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+							<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
+							<span style="font-size:.875rem">Afficher dans le tableau de bord</span>
+						</label>
+					</div>
+					<div style="margin-top:.6rem">
+						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
+						<RichEditor bind:value={devisForm.notes} placeholder="Notes…" minHeight="60px" />
+					</div>
+					<div style="margin-top:.6rem">
+						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers</label>
+						{#key devisFichierKey}
+							<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" on:change={onDevisFilesChange} />
+						{/key}
+						{#if devisFichierFiles && devisFichierFiles.length > 0}<span class="devis-file-note">📎 {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-outline" on:click={closeDevisForm}>Annuler</button>
+					<button class="btn btn-primary" disabled={submitting} on:click={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+	<!-- Modal OS upload -->
+	{#if osUploadDevisId}
+		<div class="modal-overlay" on:click={() => { osUploadDevisId = null; osFile = null; }}>
+			<div class="modal modal-sm" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>Ordre de service</h2>
+					<button class="modal-close" on:click={() => { osUploadDevisId = null; osFile = null; }}>×</button>
+				</div>
+				<div class="modal-body">
+					<p style="font-size:.875rem;color:var(--color-text-muted)">Joindre l'OS signé (optionnel) — le statut passera en <strong>Accepté</strong>.</p>
+					<input type="file" accept=".pdf,.jpg,.jpeg,.png" on:change={onOsFileChange} style="margin-top:.5rem" />
+				</div>
+				<div class="modal-footer">
+					<button class="btn" on:click={() => { osUploadDevisId = null; osFile = null; }}>Annuler</button>
+					<button class="btn btn-primary" disabled={osUploading} on:click={acceptDevisWithOs}>
+						{osUploading ? 'Enregistrement...' : "Confirmer l'OS"}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ONGLET 2 : VISITES                                           -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{:else if onglet === 'visites'}
+
+	<div class="visites-summary">
+		<div class="visites-kpi">
+			<span class="visites-kpi-value">{visites.length}</span>
+			<span class="visites-kpi-label">visites planifiées</span>
+		</div>
+		{#if visitesEnRetard.length > 0}
+			<div class="visites-kpi visites-kpi--danger">
+				<span class="visites-kpi-value">{visitesEnRetard.length}</span>
+				<span class="visites-kpi-label">en retard</span>
+			</div>
+		{/if}
+		<div class="visites-kpi visites-kpi--ok">
+			<span class="visites-kpi-value">{visitesAJour.length}</span>
+			<span class="visites-kpi-label">à jour</span>
+		</div>
+	</div>
+
+	{#if visites.length === 0}
+		<div class="empty-state card"><h3>Aucune visite planifiée</h3><p>Les visites récurrentes apparaîtront ici dès qu'un contrat avec fréquence sera créé.</p></div>
+	{:else}
+		<!-- En retard d'abord -->
+		{#if visitesEnRetard.length > 0}
+			<h2 class="section-title" style="color:var(--color-danger)">⚠️ Visites en retard</h2>
+			{#each visitesEnRetard as c (c.id)}
+				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
+				{@const contratExpanded = expandedContrats.has(c.id)}
+				<div class="visite-card card visite-card--retard" class:expanded={contratExpanded}>
+					<div class="visite-row"
+						role="button" tabindex="0"
+						on:click={() => toggleContrat(c.id)}
+						on:keydown={e => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
+						<div class="visite-main">
+							<strong>{prest?.nom ?? '—'}</strong>
+							<span class="badge badge-blue">{equipLabel(c.type_equipement)}</span>
+						</div>
+						<div class="visite-freq">
+							{#if c.frequence_type}<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>{/if}
+						</div>
+						<div class="visite-date visite-date--retard">
+							🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}
+						</div>
+						<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
+					</div>
+					{#if contratExpanded}
+						<div class="visite-detail">
+							<div class="detail-grid">
+								<div><span class="detail-label">Contrat</span>{c.libelle}</div>
+								{#if c.numero_contrat}<div><span class="detail-label">N° contrat</span>{c.numero_contrat}</div>{/if}
+								<div><span class="detail-label">Date début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+								{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
+							</div>
+							{#if $isCS}
+								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
+									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/if}
+
+		<!-- À jour -->
+		{#if visitesAJour.length > 0}
+			<h2 class="section-title" style="margin-top:1rem">✅ Visites à jour</h2>
+			{#each visitesAJour as c (c.id)}
+				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
+				{@const contratExpanded = expandedContrats.has(c.id)}
+				<div class="visite-card card" class:expanded={contratExpanded}>
+					<div class="visite-row"
+						role="button" tabindex="0"
+						on:click={() => toggleContrat(c.id)}
+						on:keydown={e => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
+						<div class="visite-main">
+							<strong>{prest?.nom ?? '—'}</strong>
+							<span class="badge badge-blue">{equipLabel(c.type_equipement)}</span>
+						</div>
+						<div class="visite-freq">
+							{#if c.frequence_type}<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>{/if}
+						</div>
+						<div class="visite-date">
+							{#if c.prochaine_visite}🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}{:else}<span style="color:var(--color-text-muted)">Non planifiée</span>{/if}
+						</div>
+						<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
+					</div>
+					{#if contratExpanded}
+						<div class="visite-detail">
+							<div class="detail-grid">
+								<div><span class="detail-label">Contrat</span>{c.libelle}</div>
+								{#if c.numero_contrat}<div><span class="detail-label">N° contrat</span>{c.numero_contrat}</div>{/if}
+								<div><span class="detail-label">Date début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+								{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
+							</div>
+							{#if $isCS}
+								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
+									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/if}
+	{/if}
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ONGLET 3 : CONTRATS                                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{:else if onglet === 'contrats_tab'}
+
+	<!-- Formulaire nouveau contrat (modal) -->
+	{#if contratFormPrestId === -1}
+		<div class="modal-overlay" on:click={closeContratForm}>
+			<div class="modal" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>📄 {editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}</h2>
+					<button class="modal-close" on:click={closeContratForm}>×</button>
+				</div>
+				<div class="modal-body">
+					<div class="form-grid">
+						<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
+						<label>Prestataire *
+							<select bind:value={contratForm.prestataire_id} required>
+								<option value="">— Sélectionner —</option>
+								{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+							</select>
+						</label>
+						<label>Équipement
+							<select bind:value={contratForm.type_equipement}>
+								{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+							</select>
+						</label>
+						<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+						<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+						<label>Durée initiale
+							<div style="display:flex;gap:.4rem">
+								<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
+								<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
+									<option value="mois">mois</option>
+									<option value="ans">ans</option>
+								</select>
+							</div>
+						</label>
+						<label>Fréquence
+							<select bind:value={contratForm.frequence_type}>
+								<option value="">— Aucune —</option>
+								<option value="semaines">Toutes les X semaines</option>
+								<option value="mois">Mensuelle</option>
+								<option value="fois_par_an">X fois par an</option>
+							</select>
+						</label>
+						{#if contratForm.frequence_type === 'semaines'}
+							<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+						{:else if contratForm.frequence_type === 'fois_par_an'}
+							<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+						{/if}
+						<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+					</div>
+					<div style="margin-top:.6rem">
+						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
+						<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
+					<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Synthèse -->
+	<div class="contrats-summary">
+		<span class="contrats-summary-count">{contrats.length} contrat{contrats.length !== 1 ? 's' : ''} actif{contrats.length !== 1 ? 's' : ''}</span>
+	</div>
+
+	<!-- Groupé par équipement -->
+	{#if contrats.length === 0}
+		<div class="empty-state card"><h3>Aucun contrat</h3><p>Ajoutez le premier contrat via le bouton ci-dessus.</p></div>
+	{:else}
+		{#each equipements.filter(e => contrats.some(c => c.type_equipement === e.val)) as eqGroup (eqGroup.val)}
+			<div class="type-section-header">
+				<span class="type-section-label">{eqGroup.label}</span>
+			</div>
+			{#each contrats.filter(c => c.type_equipement === eqGroup.val) as c (c.id)}
+				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
+				{@const contratExpanded = expandedContrats.has(c.id)}
+				<div class="contrat-expand" class:expanded={contratExpanded}>
+					<div class="contrat-row"
+						role="button" tabindex="0"
+						on:click|stopPropagation={() => toggleContrat(c.id)}
+						on:keydown|stopPropagation={e => e.key === 'Enter' && toggleContrat(c.id)}>
+						<div class="contrat-body-inner">
+							<strong class="contrat-titre">{c.libelle}</strong>
+							{#if prest}<span class="contrat-meta">— {prest.nom}</span>{/if}
+							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
+						</div>
+						<div class="contrat-infos">
+							{#if c.prochaine_visite}
+								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</div>
+							{:else}
+								<div>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+							{/if}
+							{#if c.frequence_type}
+								<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>
+							{/if}
+						</div>
+						<div class="contrat-meta-right">
+							<span class="badge" style="font-size:.8rem">📄 {contratDocsMap[c.id]?.length ?? 0}</span>
+							{#if $isCS}
+								<button class="btn-icon-danger" title="Archiver" on:click|stopPropagation={() => deleteContrat(c.id)}>🗑️</button>
+							{/if}
+							<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
+						</div>
+					</div>
+					{#if contratExpanded}
+						<div class="contrat-detail-body">
+							{#if editContratId === c.id}
+								<div class="contrat-section">
+									<div class="contrat-section-title">Infos contrat</div>
+									<div class="form-grid">
+										<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
+										<label>Prestataire *
+											<select bind:value={contratForm.prestataire_id} required>
+												<option value="">— Sélectionner —</option>
+												{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+											</select>
+										</label>
+										<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+										<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+										<label>Durée initiale
+											<div style="display:flex;gap:.4rem">
+												<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
+												<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
+													<option value="mois">mois</option>
+													<option value="ans">ans</option>
+												</select>
+											</div>
+										</label>
+										<label>Fréquence
+											<select bind:value={contratForm.frequence_type}>
+												<option value="">— Aucune —</option>
+												<option value="semaines">Toutes les X semaines</option>
+												<option value="mois">Mensuelle</option>
+												<option value="fois_par_an">X fois par an</option>
+											</select>
+										</label>
+										{#if contratForm.frequence_type === 'semaines'}
+											<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+										{:else if contratForm.frequence_type === 'fois_par_an'}
+											<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+										{/if}
+										<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+									</div>
+								</div>
+								<div class="contrat-section">
+									<div class="contrat-section-title">Notes</div>
+									<RichEditor bind:value={contratForm.notes} placeholder="Notes…" minHeight="60px" />
+								</div>
+								<div class="contrat-section">
+									<div class="contrat-section-title">📄 Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
+									{#if contratDocsMap[c.id]?.length > 0}
+										{#each contratDocsMap[c.id] as doc}
+											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
+												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
+												<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
+												<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
+											</div>
+										{/each}
+									{:else}
+										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
+									{/if}
+									<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
+										<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
+										{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
+										<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(c.id)}>{uploadingDoc ? '…' : '+ Document'}</button>
+									</div>
+								</div>
+								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
+									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
+									<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+								</div>
+							{:else}
+								<div class="contrat-section">
+									<div class="contrat-section-title">Infos contrat</div>
+									<div class="detail-grid">
+										<div><span class="detail-label">Date de début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+										{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
+										{#if c.frequence_type}
+											<div><span class="detail-label">Fréquence</span>{frequenceLabel(c)}</div>
+										{/if}
+										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</span></div>{/if}
+									</div>
+								</div>
+								{#if c.notes}
+									<div class="contrat-section">
+										<div class="contrat-section-title clickable" role="button" tabindex="0" on:click|stopPropagation={() => { expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id); expandedNotes = expandedNotes; }} on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id), expandedNotes = expandedNotes)}>Synthèse du ou des contrats {expandedNotes.has(c.id) ? '▲' : '▼'}</div>
+										{#if expandedNotes.has(c.id)}
+											<div class="rich-content" style="font-size:.875rem">{@html safeHtml(c.notes)}</div>
+										{/if}
+									</div>
+								{/if}
+								<div class="contrat-section">
+									<div class="contrat-section-title">📄 Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
+									{#if contratDocsMap[c.id]?.length > 0}
+										{#each contratDocsMap[c.id] as doc}
+											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
+												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
+												<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
+												{#if $isCS}
+													<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
+												{/if}
+											</div>
+										{/each}
+									{:else}
+										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
+									{/if}
+								</div>
+								{#if $isCS}
+									<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
+										<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+									</div>
+								{/if}
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/each}
+
+		<!-- Contrats orphelins -->
+		{#if orphanContrats.length > 0}
+			<h2 style="font-size:1rem;font-weight:600;margin-top:1.5rem;margin-bottom:.75rem">Contrats sans intervenant</h2>
+			{#each orphanContrats as c (c.id)}
+				{@const contratExpanded = expandedContrats.has(c.id)}
+				<div class="contrat-expand card" class:expanded={contratExpanded}>
+					<div class="contrat-row"
+						role="button" tabindex="0"
+						on:click={() => toggleContrat(c.id)}
+						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
+						<div class="contrat-body-inner">
+							<strong class="contrat-titre">{c.libelle}</strong>
+							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
+						</div>
+						<div class="contrat-infos">
+							{#if c.prochaine_visite}
+								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</div>
+							{:else}
+								<div>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+							{/if}
+						</div>
+						<div class="contrat-meta-right">
+							<span class="badge" style="font-size:.8rem">📄 {contratDocsMap[c.id]?.length ?? 0}</span>
+							<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
+						</div>
+					</div>
+					{#if contratExpanded}
+						<div class="contrat-detail-body">
+							{#if editContratId === c.id}
+								<div class="form-grid" style="margin-bottom:.6rem">
+									<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
+									<label>Prestataire *
+										<select bind:value={contratForm.prestataire_id} required>
+											<option value="">— Sélectionner —</option>
+											{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+										</select>
+									</label>
+									<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+									<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+									<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+								</div>
+								<div style="display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap">
+									<button class="btn btn-sm btn-outline" on:click={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
+									<button class="btn btn-sm btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+								</div>
+							{:else}
+								<div class="contrat-section">
+									<div class="contrat-section-title">Infos contrat</div>
+									<div class="detail-grid">
+										<div><span class="detail-label">Date de début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</span></div>{/if}
+									</div>
+								</div>
+								{#if c.notes}
+									<div class="contrat-section">
+										<div class="contrat-section-title clickable" role="button" tabindex="0" on:click|stopPropagation={() => { expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id); expandedNotes = expandedNotes; }} on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id), expandedNotes = expandedNotes)}>Synthèse {expandedNotes.has(c.id) ? '▲' : '▼'}</div>
+										{#if expandedNotes.has(c.id)}
+											<div class="rich-content" style="font-size:.875rem">{@html safeHtml(c.notes)}</div>
+										{/if}
+									</div>
+								{/if}
+								<div class="contrat-section">
+									<div class="contrat-section-title">📄 Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
+									{#if contratDocsMap[c.id]?.length > 0}
+										{#each contratDocsMap[c.id] as doc}
+											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
+												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
+												<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
+												{#if $isCS}
+													<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
+												{/if}
+											</div>
+										{/each}
+									{:else}
+										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
+									{/if}
+								</div>
+								{#if $isCS}
+									<div style="display:flex;gap:.4rem;margin-top:.25rem">
+										<button class="btn btn-sm btn-outline" on:click={() => startEditContrat(c)}>✏️ Modifier</button>
+										<button class="btn btn-sm btn-outline danger" on:click={() => deleteContrat(c.id)}>🗑️ Archiver</button>
+									</div>
+								{/if}
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/if}
+	{/if}
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ONGLET 4 : PRESTATAIRES (annuaire)                           -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{:else if onglet === 'prestataires'}
+
+	<!-- Filtres par type -->
+	<div class="filters">
+		<button class="btn btn-sm" class:btn-primary={filtreType === ''} on:click={() => filtreType = ''}>Tous</button>
+		{#each typesPrestataire as t}
+			<button class="btn btn-sm" class:btn-primary={filtreType === t.val} on:click={() => filtreType = t.val} title={t.desc}>{t.label}</button>
+		{/each}
+	</div>
+
+	<!-- Filtres par équipement -->
+	<div class="filters">
+		<button class="btn btn-sm" class:btn-primary={filtreEquipement === ''} on:click={() => filtreEquipement = ''}>Tous équipements</button>
+		{#each equipements as e}
+			<button class="btn btn-sm" class:btn-primary={filtreEquipement === e.val} on:click={() => filtreEquipement = e.val}>{e.label}</button>
+		{/each}
+	</div>
+
+	{#if $isCS && showPrestForm}
+		<div class="card" style="padding:1.25rem;margin-bottom:1.25rem">
+			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">{editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}</h2>
+			<form on:submit|preventDefault={savePrest}>
+				<div class="form-grid">
+					<label>Nom *<input bind:value={prestForm.nom} required /></label>
+					<label>Type *
+						<select bind:value={prestForm.type_prestataire} required>
+							{#each typesPrestataire as t}<option value={t.val}>{t.label}</option>{/each}
+						</select>
+					</label>
+					<label>Spécialité *
+						<select bind:value={prestForm.specialite} required>
+							<option value="">— Sélectionner —</option>
+							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+						</select>
+					</label>
+					<label>Email<input type="email" bind:value={prestForm.email} /></label>
+				</div>
+				<div style="margin-top:.75rem">
+					<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Téléphone{prestTelephones.length > 1 ? 's' : ''}</div>
+					{#each prestTelephones as tel, i}
+						<div style="display:flex;gap:.4rem;margin-bottom:.35rem">
+							<input style="flex:1" bind:value={prestTelephones[i]} placeholder="Ex. 06 12 34 56 78" />
+							{#if prestTelephones.length > 1}
+								<button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#dc2626" on:click={() => prestTelephones = prestTelephones.filter((_, j) => j !== i)}>−</button>
+							{/if}
+						</div>
+					{/each}
+					<button type="button" class="btn btn-sm btn-outline" on:click={() => prestTelephones = [...prestTelephones, '']}>+ N° de téléphone</button>
+				</div>
+				<div class="form-actions">
+					<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
+					<button class="btn btn-primary" disabled={submitting}>{submitting ? '…' : 'Enregistrer'}</button>
+				</div>
+			</form>
+		</div>
+	{/if}
+
+	{#if filteredPrests.length === 0}
+		<div class="empty-state card"><h3>Aucun prestataire{filtreEquipement || filtreType ? ' pour ces critères' : ''}</h3></div>
+	{:else}
+		{#each typesPrestataire.filter(t => filteredPrests.some(p => p.type_prestataire === t.val)) as typeGroup (typeGroup.val)}
+			{#if !filtreType}
+				<div class="type-section-header">
+					<span class="type-section-label">{typeGroup.label}</span>
+					<span class="type-section-desc">{typeGroup.desc}</span>
+				</div>
+			{/if}
+			{#each filteredPrests.filter(p => p.type_prestataire === typeGroup.val) as p (p.id)}
+				{@const expanded = expandedPrests.has(p.id)}
+				{@const cs = contratsForPrest(p.id)}
+				{@const dv = devisForPrest(p.id)}
+				{@const nextVisit = nextVisitForPrest(p.id)}
+				<div class="prest-expand card" class:expanded>
+					<div class="prest-header"
+						role="button" tabindex="0"
+						on:click={() => togglePrest(p.id)}
+						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && togglePrest(p.id)}>
+						<div class="prest-main">
+							<strong class="prest-nom">{p.nom}</strong>
+							<span class="badge badge-type" style="margin-left:.5rem">{typeLabel(p.type_prestataire)}</span>
+							<span class="badge badge-blue" style="margin-left:.25rem">{equipLabel(p.specialite)}</span>
+						</div>
+						{#if !compactPrests || expanded}
+							<div class="prest-contacts">
+								{#if p.telephone}
+									{#each p.telephone.split(',').filter((t) => t.trim()) as tel}
+										<span class="prest-contact">📞 {tel.trim()}</span>
+									{/each}
+								{/if}
+								{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
+							</div>
+						{/if}
+						<div class="prest-meta">
+							{#if !compactPrests || expanded}
+								<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span>
+								<span class="badge badge-gray">{dv.length} prestation{dv.length !== 1 ? 's' : ''}</span>
+								{#if nextVisit}<span class="badge" style="font-size:.75rem;color:var(--color-primary)">🗓 {new Date(nextVisit).toLocaleDateString('fr-FR')}</span>{/if}
+							{/if}
+							{#if $isCS}
+								<button class="btn-icon-edit" title="Modifier" on:click|stopPropagation={() => startEditPrest(p)}>✏️</button>
+								<button class="btn-icon-danger" title="Archiver" on:click|stopPropagation={() => deletePrest(p.id)}>🗑️</button>
+							{/if}
+							<span class="toggle-arrow">{expanded ? '▲' : '▼'}</span>
+						</div>
+					</div>
+					{#if expanded}
+						<div class="prest-body">
+							<div class="detail-grid">
+								{#if p.telephone}
+									<div><span class="detail-label">Téléphone</span>
+										{#each p.telephone.split(',').filter((t) => t.trim()) as tel}
+											<span style="display:block">📞 {tel.trim()}</span>
+										{/each}
+									</div>
+								{/if}
+								{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
+								<div><span class="detail-label">Contrats</span>{cs.length}</div>
+								<div><span class="detail-label">Prestations</span>{dv.length}</div>
+								{#if nextVisit}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {new Date(nextVisit).toLocaleDateString('fr-FR')}</span></div>{/if}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/each}
+	{/if}
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ONGLET 5 : CONSOMMATIONS (inchangé)                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{:else if onglet === 'consommations'}
+
 	<div class="compteur-selector" style="margin-bottom:1.25rem">
 		<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
 			{#each compteurConfigs as cfg}
@@ -688,12 +1647,12 @@ import { onMount } from 'svelte';
 					<button class="btn btn-sm btn-outline" on:click={() => editCompteurId = null}>Annuler</button>
 					{#if compteurConfigs.length > 1}
 						<button class="btn btn-sm btn-outline" style="color:var(--color-danger);border-color:var(--color-danger);margin-left:auto"
-							on:click={() => deleteCompteurConfig(currentCompteur)}>&#x1F5D1;️</button>
+							on:click={() => deleteCompteurConfig(currentCompteur)}>🗑️</button>
 					{/if}
 				{:else}
 					{@const prest = currentCompteur.prestataire_id ? prestataires.find(p => p.id === currentCompteur.prestataire_id) : null}
 					{#if prest}
-						<span class="badge badge-blue" style="font-size:.78rem">&#x1F527; {prest.nom}</span>
+						<span class="badge badge-blue" style="font-size:.78rem">🔧 {prest.nom}</span>
 					{:else}
 						<span style="font-size:.78rem;color:var(--color-text-muted)">Aucun fournisseur</span>
 					{/if}
@@ -763,873 +1722,11 @@ import { onMount } from 'svelte';
 					{#if $isCS}
 						<div class="releve-actions">
 							<button class="btn-icon-edit" title="Modifier" on:click={() => startEditReleve(r)}>✏️</button>
-							<button class="btn-icon-danger" title="Supprimer" on:click={() => deleteReleve(r.id)}>&#x1F5D1;️</button>
+							<button class="btn-icon-danger" title="Supprimer" on:click={() => deleteReleve(r.id)}>🗑️</button>
 						</div>
 					{/if}
 				</div>
 			{/each}
-		{/each}
-	{/if}
-
-{:else if onglet === 'devis'}
-	<!-- ── Vue Devis Kanban ────────────────── -->
-	<div class="devis-toolbar">
-		<span class="kanban-count-total">{devis.filter(d => d.actif !== false).length} prestation{devis.filter(d => d.actif !== false).length > 1 ? 's' : ''}</span>
-		{#if $isCS}
-			<button class="btn btn-sm btn-primary" on:click={() => { resetDevisForm(); devisFormPrestId = -1; }}>+ Ajouter</button>
-		{/if}
-	</div>
-	<div class="kanban devis-kanban">
-		<!-- ─ Colonne : Syndic ─ -->
-		<div class="kanban-col">
-			<div class="kanban-col-header" style="border-top-color:#f59e0b">
-				<span>⏳ Syndic</span>
-				<span class="kanban-count">{devisSyndic.length}</span>
-			</div>
-			{#if devisSyndic.length === 0}
-				<p class="kanban-empty">Aucune prestation</p>
-			{:else}
-				{#each devisSyndic as d (d.id)}
-					{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-					<div class="kanban-card card">
-						<div class="kanban-card-tags">
-							{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-						</div>
-						<span class="devis-card-prest">{prestNom}</span>
-						<strong class="kanban-card-titre">{d.titre}</strong>
-						<div class="kanban-card-footer">
-							<div class="devis-card-meta">
-								{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
-								{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
-								{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
-							</div>
-							{#if $isCS}
-								<div class="kanban-card-actions">
-									<button class="devis-step-btn devis-step-btn--primary" title="Passer l'OS et transmettre au prestataire"
-										on:click={() => { osUploadDevisId = d.id; osFile = null; }}>→ OS</button>
-									<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-									<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			{/if}
-		</div>
-		<!-- ─ Colonne : Prestataire ─ -->
-		<div class="kanban-col">
-			<div class="kanban-col-header" style="border-top-color:#f97316">
-				<span>🔧 Prestataire</span>
-				<span class="kanban-count">{devisPrestataire.length}</span>
-			</div>
-			{#if devisPrestataire.length === 0}
-				<p class="kanban-empty">Aucune prestation</p>
-			{:else}
-				{#each devisPrestataire as d (d.id)}
-					{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-					<div class="kanban-card card">
-						<div class="kanban-card-tags">
-							{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-							{#if d.os_fichier_url}<span class="kb-tag" style="background:#0ea5e9">📎 OS joint</span>{/if}
-						</div>
-						<span class="devis-card-prest">{prestNom}</span>
-						<strong class="kanban-card-titre">{d.titre}</strong>
-						<div class="kanban-card-footer">
-							<div class="devis-card-meta">
-								{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
-								{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
-							</div>
-							{#if $isCS}
-								<div class="kanban-card-actions">
-									<button class="devis-step-btn devis-step-btn--success" title="Marquer comme réalisé"
-										on:click={() => moveDevisStatut(d.id, 'realise')}>✅</button>
-									<button class="devis-step-btn" title="Retour Syndic"
-										on:click={() => moveDevisStatut(d.id, 'en_attente')}>←</button>
-									<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-									<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			{/if}
-		</div>
-		<!-- ─ Colonne : Réalisé ─ -->
-		<div class="kanban-col">
-			<div class="kanban-col-header" style="border-top-color:#22c55e">
-				<span>🏁 Réalisé</span>
-				<span class="kanban-count">{devisRealise.length}</span>
-			</div>
-			{#if devisRealise.length === 0}
-				<p class="kanban-empty">Aucune prestation</p>
-			{:else}
-				{#each devisRealise as d (d.id)}
-					{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-					<div class="kanban-card card">
-						<div class="kanban-card-tags">
-							{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-						</div>
-						<span class="devis-card-prest">{prestNom}</span>
-						<strong class="kanban-card-titre">{d.titre}</strong>
-						<div class="kanban-card-footer">
-							<div class="devis-card-meta">
-								{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
-								{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
-								{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
-							</div>
-							{#if $isCS}
-								<div class="kanban-card-actions">
-									<button class="devis-step-btn" title="Retour chez le prestataire"
-										on:click={() => moveDevisStatut(d.id, 'accepte')}>←</button>
-									<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			{/if}
-		</div>
-		<!-- ─ Colonne : Refusé ─ -->
-		<div class="kanban-col">
-			<div class="kanban-col-header" style="border-top-color:#9ca3af">
-				<span>🚫 Refusé</span>
-				<span class="kanban-count">{devisRefuse.length}</span>
-			</div>
-			{#if devisRefuse.length === 0}
-				<p class="kanban-empty">Aucune prestation</p>
-			{:else}
-				{#each devisRefuse as d (d.id)}
-					{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-					<div class="kanban-card card">
-						<div class="kanban-card-tags">
-							{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-						</div>
-						<span class="devis-card-prest">{prestNom}</span>
-						<strong class="kanban-card-titre">{d.titre}</strong>
-						<div class="kanban-card-footer">
-							<div class="devis-card-meta">
-								{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
-								{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
-							</div>
-							{#if $isCS}
-								<div class="kanban-card-actions">
-									<button class="devis-step-btn" title="Remettre en attente syndic"
-										on:click={() => moveDevisStatut(d.id, 'en_attente')}>↩</button>
-									<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			{/if}
-		</div>
-	</div>
-	{#if devisFormPrestId === -1}
-		<div class="modal-overlay" on:click={closeDevisForm}>
-			<div class="modal" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>📋 {editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}</h2>
-					<button class="modal-close" on:click={closeDevisForm}>×</button>
-				</div>
-				<div class="modal-body">
-					<p class="devis-form-help">Renseignez ici les informations opérationnelles de la prestation. Les prestations ponctuelles alimentent ensuite le Calendrier en vue Liste et Kanban selon leur statut.</p>
-					<div class="form-grid">
-						<label>Prestataire *
-							<select bind:value={devisForm.prestataire_id} required>
-								<option value="">— Sélectionner —</option>
-								{#each prestataires as p}<option value={String(p.id)}>{p.nom}</option>{/each}
-							</select>
-						</label>
-						<label>Périmètre *
-							<select bind:value={devisForm.perimetre}>
-								{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
-							</select>
-						</label>
-						<label>Titre *<input bind:value={devisForm.titre} required /></label>
-						<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
-						<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
-						<label>Suivi Kanban
-							<select bind:value={devisForm.statut}>
-								{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
-							</select>
-						</label>
-						<label>Fréquence (optionnelle)
-							<select bind:value={devisForm.frequence_type}>
-								<option value=''>— Ponctuelle —</option>
-								<option value='fois_par_an'>× / an</option>
-								<option value='mois'>Tous les N mois</option>
-								<option value='semaines'>Toutes les N semaines</option>
-							</select>
-						</label>
-						{#if devisForm.frequence_type}
-							<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
-						{/if}
-					</div>
-					<div style="margin-top:.75rem">
-						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-							<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
-							<span style="font-size:.875rem">Afficher dans le tableau de bord (évènements récents)</span>
-						</label>
-					</div>
-					<div style="margin-top:.6rem">
-						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-						<RichEditor bind:value={devisForm.notes} placeholder="Notes sur la prestation…" minHeight="60px" />
-					</div>
-					<div style="margin-top:.6rem">
-						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers (optionnel)</label>
-						{#key devisFichierKey}
-							<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-								on:change={onDevisFilesChange} />
-						{/key}
-						{#if devisFichierFiles && devisFichierFiles.length > 0}<span class="devis-file-note">📎 {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''} sélectionné{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button class="btn btn-outline" on:click={closeDevisForm}>Annuler</button>
-					<button class="btn btn-primary" disabled={submitting} on:click={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-	{#if osUploadDevisId}
-		<div class="modal-overlay" on:click={() => { osUploadDevisId = null; osFile = null; }}>
-			<div class="modal modal-sm" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>Ordre de service</h2>
-					<button class="modal-close" on:click={() => { osUploadDevisId = null; osFile = null; }}>×</button>
-				</div>
-				<div class="modal-body">
-					<p style="font-size:.875rem;color:var(--color-text-muted)">Joindre l'OS signe (optionnel) - le statut passera en <strong>Accepte</strong>.</p>
-					<input type="file" accept=".pdf,.jpg,.jpeg,.png" on:change={onOsFileChange} style="margin-top:.5rem" />
-				</div>
-				<div class="modal-footer">
-					<button class="btn" on:click={() => { osUploadDevisId = null; osFile = null; }}>Annuler</button>
-					<button class="btn btn-primary" disabled={osUploading} on:click={acceptDevisWithOs}>
-						{osUploading ? 'Enregistrement...' : "Confirmer l'OS"}
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-{:else}
-	<!-- ── Vue Prestataires ────────────────────────────────────────── -->
-
-	<!-- Filtres par type -->
-	<div class="filters">
-		<button class="btn btn-sm" class:btn-primary={filtreType === ''} on:click={() => filtreType = ''}>Tous</button>
-		{#each typesPrestataire as t}
-			<button class="btn btn-sm" class:btn-primary={filtreType === t.val} on:click={() => filtreType = t.val} title={t.desc}>{t.label}</button>
-		{/each}
-	</div>
-
-	<!-- Filtres par équipement -->
-	<div class="filters">
-		<button class="btn btn-sm" class:btn-primary={filtreEquipement === ''} on:click={() => filtreEquipement = ''}>Tous équipements</button>
-		{#each equipements as e}
-			<button class="btn btn-sm" class:btn-primary={filtreEquipement === e.val} on:click={() => filtreEquipement = e.val}>{e.label}</button>
-		{/each}
-	</div>
-
-	{#if $isCS && showPrestForm}
-			<div class="card" style="padding:1.25rem;margin-bottom:1.25rem">
-				<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">{editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}</h2>
-				<form on:submit|preventDefault={savePrest}>
-					<div class="form-grid">
-						<label>Nom *<input bind:value={prestForm.nom} required /></label>
-						<label>Type *
-							<select bind:value={prestForm.type_prestataire} required>
-								{#each typesPrestataire as t}<option value={t.val}>{t.label}</option>{/each}
-							</select>
-						</label>
-						<label>Spécialité *
-							<select bind:value={prestForm.specialite} required>
-								<option value="">— Sélectionner —</option>
-								{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
-							</select>
-						</label>
-						<label>Email<input type="email" bind:value={prestForm.email} /></label>
-					</div>
-					<div style="margin-top:.75rem">
-						<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Téléphone{prestTelephones.length > 1 ? 's' : ''}</div>
-						{#each prestTelephones as tel, i}
-							<div style="display:flex;gap:.4rem;margin-bottom:.35rem">
-								<input style="flex:1" bind:value={prestTelephones[i]} placeholder="Ex. 06 12 34 56 78" />
-								{#if prestTelephones.length > 1}
-									<button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#dc2626" on:click={() => prestTelephones = prestTelephones.filter((_, j) => j !== i)}>−</button>
-								{/if}
-							</div>
-						{/each}
-						<button type="button" class="btn btn-sm btn-outline" on:click={() => prestTelephones = [...prestTelephones, '']}>+ N° de téléphone</button>
-					</div>
-					<div class="form-actions">
-						<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
-						<button class="btn btn-primary" disabled={submitting}>{submitting ? '…' : 'Enregistrer'}</button>
-					</div>
-				</form>
-			</div>
-	{/if}
-
-	<!-- Liste des prestataires -->
-	{#if filteredPrests.length === 0}
-		<div class="empty-state card"><h3>Aucun prestataire{filtreEquipement || filtreType ? ' pour ces critères' : ''}</h3></div>
-	{:else}
-		{#each typesPrestataire.filter(t => filteredPrests.some(p => p.type_prestataire === t.val)) as typeGroup (typeGroup.val)}
-			{#if !filtreType}
-				<div class="type-section-header">
-					<span class="type-section-label">{typeGroup.label}</span>
-					<span class="type-section-desc">{typeGroup.desc}</span>
-				</div>
-			{/if}
-		{#each filteredPrests.filter(p => p.type_prestataire === typeGroup.val) as p (p.id)}
-			{@const expanded = expandedPrests.has(p.id)}
-			{@const cs = contratsForPrest(p.id)}
-			{@const nextVisit = nextVisitForPrest(p.id)}
-			{@const isRecurrent = p.type_prestataire === 'contrat_recurrent'}
-			{@const dv = devis.filter(d => d.prestataire_id === p.id)}
-			<div class="prest-expand card" class:expanded>
-				<!-- En-tête cliquable -->
-				<div class="prest-header"
-					role="button" tabindex="0"
-					on:click={() => togglePrest(p.id)}
-					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && togglePrest(p.id)}>
-					<div class="prest-main">
-						<strong class="prest-nom">{p.nom}</strong>
-						<span class="badge badge-type" style="margin-left:.5rem">{typeLabel(p.type_prestataire)}</span>
-						<span class="badge badge-blue" style="margin-left:.25rem">{equipLabel(p.specialite)}</span>
-					</div>
-					{#if !compactPrests || expanded}
-<div class="prest-contacts">
-						{#if p.telephone}
-							{#each p.telephone.split(',').filter((t) => t.trim()) as tel}
-								<span class="prest-contact">&#x1F4DE; {tel.trim()}</span>
-							{/each}
-						{/if}
-						{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
-					</div>
-{/if}
-					<div class="prest-meta">
-      {#if !compactPrests || expanded}
-						<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span>
-						{#if nextVisit}<span class="badge" style="font-size:.75rem;color:var(--color-primary)">&#x1F5D3; {new Date(nextVisit).toLocaleDateString('fr-FR')}</span>{/if}
-                                                {/if}
-						{#if $isCS}
-							<button class="btn-icon-edit" aria-label="Modifier ce prestataire" title="Modifier"
-								on:click|stopPropagation={() => startEditPrest(p)}>✏️</button>
-							<button class="btn-icon-danger" aria-label="Archiver ce prestataire" title="Archiver"
-								on:click|stopPropagation={() => deletePrest(p.id)}>&#x1F5D1;️</button>
-						{/if}
-						<span class="toggle-arrow">{expanded ? '▲' : '▼'}</span>
-					</div>
-				</div>
-
-				<!-- Contenu expansé : liste des contrats/devis + formulaire ajout -->
-				{#if expanded}
-					<div class="prest-body">
-					{#if isRecurrent}
-						{#if cs.length === 0}
-							<p class="muted-sm">Aucun contrat.</p>
-						{:else}
-							{#each cs as c (c.id)}
-								{@const contratExpanded = expandedContrats.has(c.id)}
-								<div class="contrat-expand" class:expanded={contratExpanded}>
-									<!-- Header cliquable -->
-									<div class="contrat-row"
-										role="button" tabindex="0"
-										on:click|stopPropagation={() => toggleContrat(c.id)}
-										on:keydown|stopPropagation={e => e.key === 'Enter' && toggleContrat(c.id)}>
-										<div class="contrat-body-inner">
-											<strong class="contrat-titre">{c.libelle}</strong>
-											{#if c.numero_contrat}<span class="contrat-meta">&#x1F516; {c.numero_contrat}</span>{/if}
-										</div>
-										<div class="contrat-infos">
-											{#if c.prochaine_visite}
-												<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">&#x1F5D3; {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</div>
-											{:else}
-												<div>&#x1F4C5; {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
-											{/if}
-											{#if c.frequence_type === 'semaines'}
-												<span class="badge badge-blue" style="font-size:.75rem">↺ {c.frequence_valeur} sem.</span>
-											{:else if c.frequence_type === 'mois'}
-												<span class="badge badge-blue" style="font-size:.75rem">Mensuel</span>
-											{:else if c.frequence_type === 'fois_par_an'}
-												<span class="badge badge-blue" style="font-size:.75rem">{c.frequence_valeur}×/an</span>
-											{/if}
-										</div>
-										<div class="contrat-meta-right">
-											<span class="badge" style="font-size:.8rem">&#x1F4C4; {contratDocsMap[c.id]?.length ?? 0}</span>
-											{#if $isCS}
-												<button class="btn-icon-danger" aria-label="Supprimer ce contrat" title="Supprimer le contrat"
-													on:click|stopPropagation={() => deleteContrat(c.id)}>&#x1F5D1;️</button>
-											{/if}
-											<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-										</div>
-									</div>
-									<!-- Contenu expansé -->
-									{#if contratExpanded}
-										<div class="contrat-detail-body">
-											{#if editContratId === c.id}
-												<!-- Formulaire d'édition inline -->
-												<div class="contrat-section">
-													<div class="contrat-section-title">Infos contrat</div>
-													<div class="form-grid">
-														<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-														<label>Prestataire *
-															<select bind:value={contratForm.prestataire_id} required>
-																<option value="">— Sélectionner —</option>
-																{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-															</select>
-														</label>
-														<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-														<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-														<label>Durée initiale
-															<div style="display:flex;gap:.4rem">
-																<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
-																<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
-																	<option value="mois">mois</option>
-																	<option value="ans">ans</option>
-																</select>
-															</div>
-														</label>
-														<label>Fréquence
-															<select bind:value={contratForm.frequence_type}>
-																<option value="">— Aucune —</option>
-																<option value="semaines">Toutes les X semaines</option>
-																<option value="mois">Mensuelle</option>
-																<option value="fois_par_an">X fois par an</option>
-															</select>
-														</label>
-														{#if contratForm.frequence_type === 'semaines'}
-															<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-														{:else if contratForm.frequence_type === 'fois_par_an'}
-															<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-														{/if}
-														<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-													</div>
-												</div>
-												<div class="contrat-section">
-													<div class="contrat-section-title">Notes</div>
-													<RichEditor bind:value={contratForm.notes} placeholder="Notes…" minHeight="60px" />
-												</div>
-												<div class="contrat-section">
-													<div class="contrat-section-title">&#x1F4C4; Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
-													{#if contratDocsMap[c.id]?.length > 0}
-														{#each contratDocsMap[c.id] as doc}
-															<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
-																<a href={docsApi.downloadUrl(doc.id)} target="_blank">&#x1F4CE; {doc.titre || doc.fichier_nom}</a>
-																<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
-																<button class="btn-icon-danger" title="Supprimer ce document" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>&#x1F5D1;️</button>
-															</div>
-														{/each}
-													{:else}
-														<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-													{/if}
-													<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
-														<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
-														{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
-														<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(c.id)}>{uploadingDoc ? '…' : '+ Nouveau document'}</button>
-													</div>
-												</div>
-												<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-													<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
-													<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-												</div>
-											{:else}
-												<!-- Fiche lecture seule -->
-												<div class="contrat-section">
-													<div class="contrat-section-title">Infos contrat</div>
-													<div class="detail-grid">
-														<div><span class="detail-label">Date de début</span>&#x1F4C5; {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
-														{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
-														{#if c.frequence_type}
-															<div><span class="detail-label">Fréquence</span>
-																{#if c.frequence_type === 'semaines'}↺ toutes les {c.frequence_valeur} sem.
-																{:else if c.frequence_type === 'mois'}Mensuelle
-																{:else if c.frequence_type === 'fois_par_an'}{c.frequence_valeur} fois/an{/if}
-															</div>
-														{/if}
-														{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">&#x1F5D3; {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</span></div>{/if}
-													</div>
-												</div>
-												{#if c.notes}
-													<div class="contrat-section">
-														<div class="contrat-section-title clickable" role="button" tabindex="0" on:click|stopPropagation={() => { expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id); expandedNotes = expandedNotes; }} on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id), expandedNotes = expandedNotes)}>Synthèse du ou des contrats {expandedNotes.has(c.id) ? '▲' : '▼'}</div>
-														{#if expandedNotes.has(c.id)}
-															<div class="rich-content" style="font-size:.875rem">{@html safeHtml(c.notes)}</div>
-														{/if}
-													</div>
-												{/if}
-												<div class="contrat-section">
-													<div class="contrat-section-title">&#x1F4C4; Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
-													{#if contratDocsMap[c.id]?.length > 0}
-														{#each contratDocsMap[c.id] as doc}
-															<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
-																<a href={docsApi.downloadUrl(doc.id)} target="_blank">&#x1F4CE; {doc.titre || doc.fichier_nom}</a>
-																<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
-																{#if $isCS}
-																	<button class="btn-icon-danger" title="Supprimer ce document" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>&#x1F5D1;️</button>
-																{/if}
-															</div>
-														{/each}
-													{:else}
-														<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-													{/if}
-												</div>
-												{#if $isCS}
-													<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-														<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
-													</div>
-												{/if}
-											{/if}
-										</div>
-									{/if}
-								</div>
-							{/each}
-						{/if}
-
-						<!-- Formulaire ajout contrat inline (CS only) -->
-						{#if $isCS}
-							{#if contratFormPrestId === p.id}
-								<div class="contrat-form-inline">
-									<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">Nouveau contrat</h3>
-									<div class="form-grid">
-										<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-										<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-										<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-										<label>Durée initiale
-											<div style="display:flex;gap:.4rem">
-												<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
-												<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
-													<option value="mois">mois</option>
-													<option value="ans">ans</option>
-												</select>
-											</div>
-										</label>
-										<label>Fréquence
-											<select bind:value={contratForm.frequence_type}>
-												<option value="">— Aucune —</option>
-												<option value="semaines">Toutes les X semaines</option>
-												<option value="mois">Mensuelle</option>
-												<option value="fois_par_an">X fois par an</option>
-											</select>
-										</label>
-										{#if contratForm.frequence_type === 'semaines'}
-											<label>Toutes les … semaines<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-										{:else if contratForm.frequence_type === 'fois_par_an'}
-											<label>… fois par an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-										{/if}
-										<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-									</div>
-									<div style="margin-top:.6rem">
-										<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-										<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
-									</div>
-									<div class="form-actions">
-										<button type="button" class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
-										<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-									</div>
-								</div>
-							{:else}
-								<button class="btn btn-sm btn-outline add-contrat-btn"
-									on:click|stopPropagation={() => openAddContrat(p.id)}>
-								+ Nouveau contrat
-								</button>
-							{/if}
-						{/if}
-					{:else}
-						<!-- ── Devis / Interventions ponctuelles ──────────────────────── -->
-						{#if dv.length === 0}
-			<p class="muted-sm">Aucune prestation.</p>
-						{:else}
-							{#each dv as d (d.id)}
-								{@const devisExpanded = expandedDevis.has(d.id)}
-								<div class="devis-expand" class:expanded={devisExpanded}>
-									<div class="devis-row"
-										role="button" tabindex="0"
-										on:click|stopPropagation={() => toggleDevis(d.id)}
-										on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
-										<div class="devis-body-inner">
-											<strong class="devis-titre">{d.titre}</strong>
-										</div>
-										<div class="devis-infos">
-											{#if d.date_prestation}
-												<span style="font-size:.82rem;font-weight:600;color:var(--color-primary)">&#x1F4C5; {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>
-											{/if}
-										</div>
-										<div class="devis-meta-right">
-											<span class="badge" style="font-size:.78rem;color:{statutDevisColor(d.statut)}">{statutDevisLabel(d.statut)}</span>
-											{#if d.montant_estime != null}
-												<span class="badge badge-gray" style="font-size:.78rem">&#x1F4B6; {d.montant_estime.toLocaleString('fr-FR')} €</span>
-											{/if}
-											{#if $isCS}
-												<button class="btn-icon-danger" aria-label="Supprimer prestation" title="Supprimer" on:click|stopPropagation={() => deleteDevis(d.id)}>&#x1F5D1;️</button>
-											{/if}
-											<span class="toggle-arrow">{devisExpanded ? '▲' : '▼'}</span>
-										</div>
-									</div>
-									{#if devisExpanded}
-										<div class="devis-detail-body">
-											{#if editDevisId === d.id}
-												<div class="form-grid" style="margin-bottom:.6rem">
-													<label>Titre *<input bind:value={devisForm.titre} required /></label>
-													<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
-													<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
-													<label>Périmètre *
-														<select bind:value={devisForm.perimetre}>
-															{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
-														</select>
-													</label>
-													<label>Suivi Kanban
-														<select bind:value={devisForm.statut}>
-															{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
-														</select>
-													</label>
-												<label>Fréquence (optionnelle)
-													<select bind:value={devisForm.frequence_type}>
-														<option value=''>— Ponctuelle —</option>
-														<option value='fois_par_an'>× / an</option>
-														<option value='mois'>Tous les N mois</option>
-														<option value='semaines'>Toutes les N semaines</option>
-													</select>
-												</label>
-												{#if devisForm.frequence_type}
-												<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} placeholder="ex: 2" /></label>
-												{/if}
-												</div>
-												<div style="margin-top:.75rem">
-													<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-														<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
-														<span style="font-size:.875rem">Afficher dans le tableau de bord (évènements récents)</span>
-													</label>
-												</div>
-												<div style="margin-top:.5rem">
-													<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-													<RichEditor bind:value={devisForm.notes} placeholder="Notes sur la prestation…" minHeight="60px" />
-												</div>
-												<div style="margin-top:.5rem">
-													<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Ajouter des fichiers</label>
-													{#if d.fichiers_urls && d.fichiers_urls.length > 0}
-														<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem">
-															{#each d.fichiers_urls as url, i}
-																<div style="display:flex;align-items:center;gap:.2rem">
-																	<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline" style="font-size:.8rem">&#x1F4CE; Fichier {i + 1}</a>
-																	<button type="button" class="btn btn-sm btn-outline" style="color:var(--color-danger);padding:.15rem .35rem" on:click|stopPropagation={() => deleteDevisFichier(d.id, url)}>✕</button>
-																</div>
-															{/each}
-														</div>
-													{/if}
-													{#key devisFichierKey}
-														<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" on:change={onDevisFilesChange} />
-													{/key}
-													{#if devisFichierFiles && devisFichierFiles.length > 0}<span style="font-size:.8rem;color:var(--color-text-muted);margin-left:.4rem">&#x1F4CE; {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''} sélectionné{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
-												</div>
-												<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
-													<button class="btn btn-sm btn-outline" on:click|stopPropagation={closeDevisForm}>Annuler</button>
-													<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
-												</div>
-											{:else}
-												<div class="detail-grid">
-													<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
-													{#if d.date_prestation}<div><span class="detail-label">Date de prestation</span>&#x1F4C5; {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</div>{/if}
-													{#if d.montant_estime != null}<div><span class="detail-label">Montant estimé</span>&#x1F4B6; {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
-												</div>
-												{#if d.notes}
-													<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>
-												{/if}
-												{#if d.fichiers_urls && d.fichiers_urls.length > 0}
-													<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem">
-														{#each d.fichiers_urls as url, i}
-															<div style="display:flex;align-items:center;gap:.2rem">
-																<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline">&#x1F4CE; Fichier {i + 1}</a>
-																{#if $isCS}<button type="button" class="btn btn-sm btn-outline" style="color:var(--color-danger);padding:.15rem .35rem" on:click|stopPropagation={() => deleteDevisFichier(d.id, url)}>✕</button>{/if}
-															</div>
-														{/each}
-													</div>
-												{/if}
-												{#if $isCS}
-													<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
-														<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditDevis(d)}>✏️ Modifier</button>
-														{#if d.statut === 'en_attente'}
-															<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => { osUploadDevisId = d.id; osFile = null; }}>→ Prestataire</button>
-															<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
-														{:else if d.statut === 'accepte'}
-															<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => moveDevisStatut(d.id, 'realise')}>✅ Réalisée</button>
-															<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Syndic</button>
-															<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
-														{:else if d.statut === 'realise'}
-															<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
-														{:else if d.statut === 'refuse'}
-															<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Remettre en attente</button>
-														{/if}
-													</div>
-												{/if}
-											{/if}
-										</div>
-									{/if}
-								</div>
-							{/each}
-						{/if}
-						{#if $isCS}
-							{#if devisFormPrestId === p.id && editDevisId === null}
-								<div class="contrat-form-inline">
-									<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">Nouvelle prestation</h3>
-									<p class="devis-form-help">Complétez le workflow, la planification et les pièces utiles. Une prestation ponctuelle se retrouvera ensuite dans le Calendrier en Liste et Kanban.</p>
-									<div class="form-grid">
-										<label>Prestataire
-											<input value={p.nom} disabled />
-										</label>
-										<label>Périmètre *
-											<select bind:value={devisForm.perimetre}>
-												{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
-											</select>
-										</label>
-										<label>Titre *<input bind:value={devisForm.titre} required /></label>
-										<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
-										<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
-										<label>Suivi Kanban
-											<select bind:value={devisForm.statut}>
-												{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
-											</select>
-										</label>
-										<label>Fréquence (optionnelle)
-											<select bind:value={devisForm.frequence_type}>
-												<option value=''>— Ponctuelle —</option>
-												<option value='fois_par_an'>× / an</option>
-												<option value='mois'>Tous les N mois</option>
-												<option value='semaines'>Toutes les N semaines</option>
-											</select>
-										</label>
-										{#if devisForm.frequence_type}
-										<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} placeholder="ex: 2" /></label>
-										{/if}
-									</div>
-									<div style="margin-top:.75rem">
-										<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-											<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
-											<span style="font-size:.875rem">Afficher dans le tableau de bord (évènements récents)</span>
-										</label>
-									</div>
-									<div style="margin-top:.6rem">
-										<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-										<RichEditor bind:value={devisForm.notes} placeholder="Notes sur la prestation…" minHeight="60px" />
-									</div>
-									<div style="margin-top:.6rem">
-										<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers (optionnel)</label>
-										{#key devisFichierKey}
-											<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" on:change={onDevisFilesChange} />
-										{/key}
-										{#if devisFichierFiles && devisFichierFiles.length > 0}<span style="font-size:.8rem;color:var(--color-text-muted);margin-left:.4rem">&#x1F4CE; {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''} sélectionné{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
-									</div>
-									<div class="form-actions">
-										<button type="button" class="btn btn-outline" on:click={closeDevisForm}>Annuler</button>
-										<button class="btn btn-primary" disabled={submitting} on:click={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
-									</div>
-								</div>
-							{:else}
-								<button class="btn btn-sm btn-outline add-contrat-btn"
-									on:click|stopPropagation={() => openAddDevis(p.id)}>
-								+ Nouvelle prestation
-								</button>
-							{/if}
-						{/if}
-					{/if}
-					</div>
-				{/if}
-			</div>
-		{/each}
-		{/each}
-	{/if}
-
-	<!-- Contrats orphelins -->
-	{#if orphanContrats.length > 0}
-		<h2 style="font-size:1rem;font-weight:600;margin-top:1.5rem;margin-bottom:.75rem">Contrats sans intervenant</h2>
-		{#each orphanContrats as c (c.id)}
-		{@const contratExpanded = expandedContrats.has(c.id)}
-		<div class="contrat-expand card" class:expanded={contratExpanded}>
-			<!-- Header cliquable -->
-			<div class="contrat-row"
-				role="button" tabindex="0"
-				on:click={() => toggleContrat(c.id)}
-				on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
-
-				<div class="contrat-body-inner">
-					<strong class="contrat-titre">{c.libelle}</strong>
-					{#if c.numero_contrat}<span class="contrat-meta">&#x1F516; {c.numero_contrat}</span>{/if}
-				</div>
-				<div class="contrat-infos">
-					{#if c.prochaine_visite}
-						<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">&#x1F5D3; {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</div>
-					{:else}
-						<div>&#x1F4C5; {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
-					{/if}
-				</div>
-				<div class="contrat-meta-right">
-					<span class="badge" style="font-size:.8rem">&#x1F4C4; {contratDocsMap[c.id]?.length ?? 0}</span>
-					<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-				</div>
-			</div>
-			<!-- Contenu expansé -->
-			{#if contratExpanded}
-				<div class="contrat-detail-body">
-					{#if editContratId === c.id}
-						<div class="form-grid" style="margin-bottom:.6rem">
-							<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-							<label>Prestataire *
-								<select bind:value={contratForm.prestataire_id} required>
-									<option value="">— Sélectionner —</option>
-									{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-								</select>
-							</label>
-							<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-							<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-							<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-						</div>
-						<div style="display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap">
-							<button class="btn btn-sm btn-outline" on:click={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
-							<button class="btn btn-sm btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-						</div>
-					{:else}
-						<div class="contrat-section">
-							<div class="contrat-section-title">Infos contrat</div>
-							<div class="detail-grid">
-								<div><span class="detail-label">Date de début</span>&#x1F4C5; {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
-								{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">&#x1F5D3; {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</span></div>{/if}
-							</div>
-						</div>
-						{#if c.notes}
-							<div class="contrat-section">
-								<div class="contrat-section-title clickable" role="button" tabindex="0" on:click|stopPropagation={() => { expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id); expandedNotes = expandedNotes; }} on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id), expandedNotes = expandedNotes)}>Synthèse du ou des contrats {expandedNotes.has(c.id) ? '▲' : '▼'}</div>
-								{#if expandedNotes.has(c.id)}
-									<div class="rich-content" style="font-size:.875rem">{@html safeHtml(c.notes)}</div>
-								{/if}
-							</div>
-						{/if}
-						<div class="contrat-section">
-							<div class="contrat-section-title">&#x1F4C4; Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
-							{#if contratDocsMap[c.id]?.length > 0}
-								{#each contratDocsMap[c.id] as doc}
-									<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
-										<a href={docsApi.downloadUrl(doc.id)} target="_blank">&#x1F4CE; {doc.titre || doc.fichier_nom}</a>
-										<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
-										{#if $isCS && editContratId === c.id}
-											<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click={() => deleteDoc(c.id, doc.id)}>&#x1F5D1;️</button>
-										{/if}
-									</div>
-								{/each}
-							{:else}
-								<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-							{/if}
-						</div>
-						{#if $isCS}
-							<div style="display:flex;gap:.4rem;margin-top:.25rem">
-								<button class="btn btn-sm btn-outline" on:click={() => startEditContrat(c)}>✏️ Modifier</button>
-								<button class="btn btn-sm btn-outline danger" on:click={() => deleteContrat(c.id)}>&#x1F5D1;️ Archiver</button>
-							</div>
-						{/if}
-					{/if}
-				</div>
-			{/if}
-			</div>
 		{/each}
 	{/if}
 {/if}
@@ -1638,10 +1735,13 @@ import { onMount } from 'svelte';
 	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; padding-left: 1.25rem; }
 
 	/* ── Onglets ── */
-	.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; margin-bottom: 1.5rem; }
-	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
+	.tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; margin-bottom: 1.5rem; overflow-x: auto; scrollbar-width: thin; }
+	.tabs button { padding: .45rem .75rem; border: none; background: none; cursor: pointer; font-size: .85rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; white-space: nowrap; display: inline-flex; align-items: center; gap: .3rem; }
 	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
 	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
+
+	/* ── Sous-vue toggle ── */
+	.sous-vue-toggle { display: flex; gap: .4rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
 
 	/* ── Compteur config row ── */
 	.compteur-config-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .82rem; }
@@ -1656,24 +1756,9 @@ import { onMount } from 'svelte';
 	.type-section-desc { font-size: .82rem; color: var(--color-text-muted); font-style: italic; }
 
 	/* Carte prestataire expansible */
-	.prest-expand {
-		margin-bottom: .6rem;
-		border-left: 3px solid var(--color-border);
-		transition: border-color .12s;
-		padding: 0;
-		overflow: hidden;
-	}
-	.prest-expand:hover,
-	.prest-expand.expanded { border-left-color: var(--color-primary); }
-
-	.prest-header {
-		display: flex;
-		align-items: center;
-		gap: .75rem;
-		padding: .85rem 1rem;
-		cursor: pointer;
-		flex-wrap: wrap;
-	}
+	.prest-expand { margin-bottom: .6rem; border-left: 3px solid var(--color-border); transition: border-color .12s; padding: 0; overflow: hidden; }
+	.prest-expand:hover, .prest-expand.expanded { border-left-color: var(--color-primary); }
+	.prest-header { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; cursor: pointer; flex-wrap: wrap; }
 	.prest-main { display: flex; align-items: center; min-width: 160px; flex-wrap: wrap; gap: .25rem; }
 	.prest-nom { font-size: .95rem; }
 	.badge-type { background: var(--color-bg-secondary, #f0f0f0); color: var(--color-text); font-size: .75rem; }
@@ -1681,12 +1766,28 @@ import { onMount } from 'svelte';
 	.prest-contact { font-size: .82rem; color: var(--color-text-muted); }
 	.prest-meta { display: flex; align-items: center; gap: .4rem; margin-left: auto; }
 	.toggle-arrow { font-size: .75rem; color: var(--color-primary); margin-left: .25rem; }
+	.prest-body { padding: .25rem 1rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 
-	/* Corps expansé */
-	.prest-body {
-		padding: .25rem 1rem 1rem 1rem;
-		border-top: 1px solid var(--color-border);
-	}
+	/* ── Visites ── */
+	.visites-summary { display: flex; gap: .75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+	.visites-kpi { display: flex; flex-direction: column; align-items: center; padding: .6rem 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); min-width: 90px; }
+	.visites-kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--color-primary); }
+	.visites-kpi-label { font-size: .75rem; color: var(--color-text-muted); }
+	.visites-kpi--danger .visites-kpi-value { color: var(--color-danger, #dc2626); }
+	.visites-kpi--ok .visites-kpi-value { color: #16a34a; }
+	.visite-card { margin-bottom: .5rem; border-left: 3px solid var(--color-border); overflow: hidden; transition: border-color .12s; }
+	.visite-card:hover, .visite-card.expanded { border-left-color: var(--color-primary); }
+	.visite-card--retard { border-left-color: var(--color-danger, #dc2626) !important; }
+	.visite-row { display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; cursor: pointer; flex-wrap: wrap; }
+	.visite-main { display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 150px; flex-wrap: wrap; }
+	.visite-freq { flex-shrink: 0; }
+	.visite-date { font-size: .85rem; font-weight: 600; color: var(--color-primary); flex-shrink: 0; }
+	.visite-date--retard { color: var(--color-danger, #dc2626) !important; }
+	.visite-detail { padding: .75rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
+
+	/* ── Contrats summary ── */
+	.contrats-summary { margin-bottom: 1rem; }
+	.contrats-summary-count { font-size: .85rem; color: var(--color-text-muted); }
 
 	/* Contrat expansible */
 	.contrat-expand { margin-bottom: .3rem; border-left: 2px solid var(--color-border); border-radius: var(--radius); overflow: hidden; transition: border-color .12s; }
@@ -1709,31 +1810,15 @@ import { onMount } from 'svelte';
 	.contrat-section-title.clickable { cursor: pointer; user-select: none; }
 	.contrat-section-title.clickable:hover { color: var(--color-primary); }
 
-	/* Ligne contrat (header cliquable) */
-	.contrat-row {
-		display: flex;
-		gap: .75rem;
-		align-items: flex-start;
-		padding: .55rem .75rem;
-		cursor: pointer;
-		transition: background .12s;
-	}
+	.contrat-row { display: flex; gap: .75rem; align-items: flex-start; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.contrat-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-
 	.contrat-body-inner { flex: 1; min-width: 0; }
 	.contrat-titre { font-size: .9rem; }
 	.contrat-meta { font-size: .78rem; color: var(--color-text-muted); margin-left: .5rem; }
 	.contrat-infos { text-align: right; font-size: .82rem; min-width: 100px; flex-shrink: 0; }
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }
 
-	/* Formulaire contrat inline */
-	.contrat-form-inline {
-		margin-top: .75rem;
-		padding: .85rem 1rem;
-		background: var(--color-bg-secondary, #f8f9fa);
-		border-radius: var(--radius);
-		border: 1px solid var(--color-border);
-	}
+	.contrat-form-inline { margin-top: .75rem; padding: .85rem 1rem; background: var(--color-bg-secondary, #f8f9fa); border-radius: var(--radius); border: 1px solid var(--color-border); }
 	.add-contrat-btn { margin-top: .6rem; }
 
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .65rem; }
@@ -1748,6 +1833,11 @@ import { onMount } from 'svelte';
 
 	.muted-sm { font-size: .85rem; color: var(--color-text-muted); padding: .4rem 0; }
 	.danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
+	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); margin-bottom: .5rem; }
+	.rich-content :global(p) { margin: 0 0 .5em; }
+	.rich-content :global(ul), .rich-content :global(ol) { padding-left: 1.4em; margin: 0 0 .5em; }
+	.rich-content :global(strong) { font-weight: 600; }
+	.rich-content :global(em) { font-style: italic; }
 
 	/* Relevés compteurs */
 	.releve-year { font-size: 1.1rem; font-weight: 700; margin: 1.25rem 0 .6rem; padding-bottom: .3rem; border-bottom: 2px solid var(--color-border); }
@@ -1763,6 +1853,8 @@ import { onMount } from 'svelte';
 	@media (max-width: 600px) {
 		.prest-header { gap: .5rem; }
 		.contrat-infos { min-width: 80px; }
+		.visite-row { gap: .4rem; }
+		.tabs button { padding: .4rem .55rem; font-size: .78rem; }
 	}
 
 	/* ── Devis kanban ───────────── */
@@ -1793,4 +1885,3 @@ import { onMount } from 'svelte';
 	.devis-step-btn--success { background: #f0fdf4; border-color: #22c55e; color: #16a34a; }
 	.devis-step-btn--success:hover { background: #22c55e; color: #fff; border-color: #22c55e; }
 </style>
-
