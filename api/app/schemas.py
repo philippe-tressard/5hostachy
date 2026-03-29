@@ -19,6 +19,8 @@ class UserCreate(BaseModel):
     consentement_communications: bool = False
     batiment_id: Optional[int] = None
     nom_proprietaire: Optional[str] = None
+    nom_aide: Optional[str] = None
+    prenom_aide: Optional[str] = None
 
 
 class UserRead(BaseModel):
@@ -33,6 +35,7 @@ class UserRead(BaseModel):
     role: RoleUtilisateur
     roles: list[str] = []
     actif: bool
+    email_verifie: bool = False
     onboarding_complete: bool
     onboarding_etape: int
     photo_url: Optional[str] = None
@@ -40,6 +43,8 @@ class UserRead(BaseModel):
     batiment_id: Optional[int] = None
     batiment_nom: Optional[str] = None   # ex. "Bât. A"
     nom_proprietaire: Optional[str] = None
+    nom_aide: Optional[str] = None
+    prenom_aide: Optional[str] = None
     communaute_interdit: bool = False
     communaute_ban_count: int = 0
     communaute_ban_jusqu_au: Optional[datetime] = None

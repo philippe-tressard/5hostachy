@@ -257,7 +257,17 @@ async function confirmerCompteValidation() {
     const res = await api.post<any>(`/admin/comptes/${u.id}/traiter`, { action: 'valider' });
     const lots = res?.auto_match?.lots_resolus ?? 0;
     const lotsMatches = res?.auto_match?.lots ?? 0;
-    if (lots > 0) toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
+    const aideMatch = res?.auto_match?.aide_match;
+    if (aideMatch?.aide_trouve) {
+      const parts = [`Compte activé — aidé(e) : ${aideMatch.aide_nom}`];
+      if (aideMatch.lots > 0) parts.push(`${aideMatch.lots} lot(s)`);
+      if (aideMatch.tc > 0) parts.push(`${aideMatch.tc} TC`);
+      if (aideMatch.vigik > 0) parts.push(`${aideMatch.vigik} vigik`);
+      if (aideMatch.delegation) parts.push('délégation créée');
+      toast('success', parts.join(' — '));
+    } else if (aideMatch && !aideMatch.aide_trouve) {
+      toast('warning', `Compte activé — ⚠️ Copropriétaire aidé(e) « ${u.prenom_aide ?? ''} ${u.nom_aide ?? ''} » non trouvé(e). Affectation manuelle requise.`);
+    } else if (lots > 0) toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
     else if (lotsMatches > 0) toast('success', `Compte activé — ${lotsMatches} lot(s) trouvé(s) dans l'import.`);
     else if (u.statut?.startsWith('copropriétaire')) toast('warning', 'Compte activé — ⚠️ Aucun lot trouvé dans l\'import.');
     else toast('success', 'Compte activé.');
@@ -442,6 +452,7 @@ const statutLabels: Record<string, string> = {
   locataire: 'Locataire',
   syndic: 'Syndic',
   mandataire: 'Mandataire',
+  aidant: 'Aidant (proche)',
   admin_technique: 'Admin technique',
 };
 
@@ -451,6 +462,7 @@ const statutBadgeClass: Record<string, string> = {
   locataire: 'badge-purple',
   syndic: 'badge-orange',
   mandataire: 'badge-gray',
+  aidant: 'badge-yellow',
   admin_technique: 'badge-orange',
 };
 
@@ -492,6 +504,7 @@ const statutLabelsAdmin: Record<string, string> = {
 	locataire: 'Locataire',
 	syndic: 'Syndic',
 	mandataire: 'Mandataire',
+	aidant: 'Aidant (proche)',
 };
 
 async function loadDemandesProfil() {
@@ -978,6 +991,9 @@ $: _siteNom = $siteNomStore;
 {#if u.statut === 'locataire' && u.nom_proprietaire}
   <div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">&#x1F464; Prop. : {u.nom_proprietaire}</div>
 {/if}
+{#if (u.statut === 'aidant' || u.statut === 'mandataire') && u.nom_aide}
+  <div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">&#x1F464; Aidé : {u.prenom_aide} {u.nom_aide}</div>
+{/if}
 </td>
 <td><span class="badge {statutBadgeClass[u.statut] ?? 'badge-gray'}" style="font-size:.75rem">{statutLabels[u.statut] ?? u.statut}</span></td>
 <td>
@@ -1124,6 +1140,8 @@ $: _siteNom = $siteNomStore;
   <td>
     {#if u.actif}
       <span class="badge badge-green">Actif</span>
+    {:else if u.email_verifie === false}
+      <span class="badge badge-orange" title="Email non vérifié">Email non vérifié</span>
     {:else}
       <span class="badge badge-gray">En attente</span>
     {/if}

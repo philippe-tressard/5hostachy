@@ -218,6 +218,8 @@ export const auth = {
 	updateMe: (data: unknown) => api.patch<User>('/auth/me', data),
 	changePassword: (data: unknown) => api.post('/auth/change-password', data),
 	requestPasswordReset: (data: unknown) => api.post('/auth/mot-de-passe-oublie', data),
+	verifierEmail: (token: string) => api.get<{ message: string }>(`/auth/verifier-email?token=${encodeURIComponent(token)}`),
+	renvoyerVerification: (email: string) => api.post('/auth/renvoyer-verification', { email }),
 	batiments: () => api.get<{ id: number; numero: string }[]>('/auth/batiments'),
 	mesDemandes: () => api.get<any[]>('/auth/me/demandes-modification'),
 	demanderModification: (data: unknown) => api.post<any>('/auth/me/demande-modification', data),

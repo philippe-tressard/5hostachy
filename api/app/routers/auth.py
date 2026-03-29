@@ -19,7 +19,7 @@ from app.auth.jwt import (
 from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
-from app.models.core import (Utilisateur, RefreshToken, PasswordResetToken, StatutUtilisateur, RoleUtilisateur, Batiment,
+from app.models.core import (Utilisateur, RefreshToken, PasswordResetToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
     ConfigSite, DemandeModificationProfil, StatutDemandeProfil)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.limiter import limiter
@@ -66,6 +66,9 @@ def register(
     if body.statut == StatutUtilisateur.locataire:
         if not body.nom_proprietaire or not body.nom_proprietaire.strip():
             raise HTTPException(400, "Le nom du propriétaire est obligatoire pour un locataire.")
+    if body.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire):
+        if not body.nom_aide or not body.nom_aide.strip() or not body.prenom_aide or not body.prenom_aide.strip():
+            raise HTTPException(400, "Le nom et prénom du copropriétaire aidé sont obligatoires.")
     if not body.consentement_rgpd:
         raise HTTPException(400, "Le consentement RGPD est obligatoire.")
     _check_password_strength(body.password)
@@ -89,6 +92,8 @@ def register(
         consentement_communications=body.consentement_communications,
         batiment_id=body.batiment_id,
         nom_proprietaire=body.nom_proprietaire or None,
+        nom_aide=body.nom_aide or None,
+        prenom_aide=body.prenom_aide or None,
     )
     # Attribuer les rôles selon le statut
     if body.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire, StatutUtilisateur.aidant):
@@ -108,19 +113,49 @@ def register(
     session.commit()
     session.refresh(user)
 
+    # ── Token de vérification email ──────────────────────────────
+    raw_token = secrets.token_urlsafe(32)
+    evt = EmailVerificationToken(
+        user_id=user.id,
+        token=raw_token,
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+    )
+    session.add(evt)
+    session.commit()
+
+    # Envoyer l'email de vérification à l'utilisateur
     cfg_rows = session.exec(
         select(ConfigSite).where(
             ConfigSite.cle.in_(("notify_new_user_created_email", "site_nom", "site_url", "site_manager_user_id", "site_email"))
         )
     ).all()
     cfg = {row.cle: row.valeur for row in cfg_rows}
+    site_url = cfg.get("site_url") or "https://localhost"
+    site_nom = cfg.get("site_nom") or "5Hostachy"
+
+    from app.utils.email import send_email as _send_email
+    background_tasks.add_task(
+        _send_email,
+        code="verification_email",
+        to=user.email,
+        context={
+            "prenom": user.prenom,
+            "token": raw_token,
+            "lien": f"{site_url}/auth/verifier-email?token={raw_token}",
+            "expire_heures": 24,
+            "residence": {"nom": site_nom},
+            "app": {"url": site_url},
+        },
+    )
+
+    # Notification au gestionnaire du site
     if cfg.get("notify_new_user_created_email") == "1":
-        from app.utils.email import get_site_manager_notification_email, send_email
+        from app.utils.email import get_site_manager_notification_email
 
         target_email, site_cfg = get_site_manager_notification_email(session)
         if target_email:
             background_tasks.add_task(
-                send_email,
+                _send_email,
                 code="compte_en_attente",
                 to=target_email,
                 context={
@@ -159,6 +194,8 @@ def login(request: Request, body: LoginRequest, response: Response, session: Ses
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect.")
     if not user.actif:
         raise HTTPException(status_code=403, detail="Compte en attente de validation.")
+    if not user.email_verifie:
+        raise HTTPException(status_code=403, detail="Veuillez vérifier votre adresse e-mail. Consultez votre boîte de réception.")
     if new_hash:
         user.hashed_password = new_hash  # rehash silencieux 12→10 rounds
 
@@ -496,4 +533,95 @@ def reset_password(
     session.add(user)
     session.add(prt)
     session.commit()
+    return None
+
+
+# ──────────────────────────────────────────────
+#  Vérification email
+# ──────────────────────────────────────────────
+
+class RenvoiVerificationRequest(BaseModel):
+    email: str
+
+
+@router.get("/verifier-email", status_code=200)
+def verify_email(token: str, session: Session = Depends(get_session)):
+    """Vérifie l'adresse email via le token reçu par mail."""
+    evt = session.exec(
+        select(EmailVerificationToken).where(EmailVerificationToken.token == token)
+    ).first()
+
+    if not evt or evt.used or evt.expires_at < datetime.utcnow():
+        raise HTTPException(400, "Lien de vérification invalide ou expiré.")
+
+    user = session.get(Utilisateur, evt.user_id)
+    if not user:
+        raise HTTPException(400, "Lien de vérification invalide ou expiré.")
+
+    user.email_verifie = True
+    evt.used = True
+
+    session.add(user)
+    session.add(evt)
+    session.commit()
+    return {"message": "Adresse e-mail vérifiée avec succès."}
+
+
+@router.post("/renvoyer-verification", status_code=204)
+@limiter.limit("3/minute")
+def resend_verification(
+    request: Request,
+    body: RenvoiVerificationRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
+    """Renvoie un email de vérification (si le compte existe et n'est pas encore vérifié)."""
+    user = session.exec(
+        select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())
+    ).first()
+
+    if user and not user.email_verifie:
+        # Invalider les anciens tokens
+        old_tokens = session.exec(
+            select(EmailVerificationToken).where(
+                EmailVerificationToken.user_id == user.id,
+                EmailVerificationToken.used == False,  # noqa: E712
+            )
+        ).all()
+        for t in old_tokens:
+            t.used = True
+            session.add(t)
+
+        raw_token = secrets.token_urlsafe(32)
+        evt = EmailVerificationToken(
+            user_id=user.id,
+            token=raw_token,
+            expires_at=datetime.utcnow() + timedelta(hours=24),
+        )
+        session.add(evt)
+        session.commit()
+
+        cfg_rows = session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+        ).all()
+        cfg = {row.cle: row.valeur for row in cfg_rows}
+        site_url = cfg.get("site_url") or "https://localhost"
+        site_nom = cfg.get("site_nom") or "5Hostachy"
+
+        from app.utils.email import send_email as _send_email
+        background_tasks.add_task(
+            _send_email,
+            code="verification_email",
+            to=user.email,
+            context={
+                "prenom": user.prenom,
+                "token": raw_token,
+                "lien": f"{site_url}/auth/verifier-email?token={raw_token}",
+                "expire_heures": 24,
+                "residence": {"nom": site_nom},
+                "app": {"url": site_url},
+            },
+        )
+
+    # Toujours 204 (pas d'énumération de comptes)
     return None

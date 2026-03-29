@@ -141,6 +141,7 @@ EMAIL_TEMPLATES = [
     ("digest_quotidien", "Digest quotidien", "Résumé du jour — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, voici votre résumé quotidien.</p>", True),
     ("digest_hebdomadaire", "Digest hebdomadaire", "Résumé de la semaine — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, voici votre résumé de la semaine.</p>", True),
     ("sauvegarde_echec", "Échec sauvegarde", "ALERTE — Échec de la sauvegarde automatique", "<p>La sauvegarde automatique du {{ date }} a échoué.</p><p>Erreur : {{ erreur }}</p>", False),
+    ("verification_email", "Vérification e-mail", "Vérifiez votre adresse e-mail — {{ residence.nom }}", "<p>Bonjour {{ prenom }},</p><p>Cliquez sur le lien ci-dessous pour vérifier votre adresse e-mail (valable {{ expire_heures }} heures) :</p><p><a href=\"{{ lien }}\">Vérifier mon adresse e-mail</a></p>", False),
 ]
 
 
