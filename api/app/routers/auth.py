@@ -2,11 +2,11 @@
 import re
 import re
 import secrets
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request, status
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
 
 from app.auth.jwt import (
     create_access_token,
@@ -91,9 +91,9 @@ def register(
         nom_proprietaire=body.nom_proprietaire or None,
     )
     # Attribuer les rôles selon le statut
-    if body.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
+    if body.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire, StatutUtilisateur.aidant):
         user.role = RoleUtilisateur.externe
-        user.roles_json = body.statut.value  # "syndic" ou "mandataire"
+        user.roles_json = body.statut.value  # "syndic", "mandataire" ou "aidant"
     else:
         _STATUT_ROLES = {
             StatutUtilisateur.copropriétaire_résident: [RoleUtilisateur.propriétaire, RoleUtilisateur.résident],
@@ -230,12 +230,32 @@ def logout(response: Response, refresh_token: str | None = Cookie(default=None),
 
 
 def _build_user_read(user: Utilisateur, session: Session) -> UserRead:
+    from app.models.core import Delegation, StatutDelegation
     batiment_nom = None
     if user.batiment_id:
         bat = session.get(Batiment, user.batiment_id)
         if bat:
             batiment_nom = f"Bât. {bat.numero}"
-    return UserRead.from_orm_with_roles(user, batiment_nom=batiment_nom)
+    # Charger les délégations actives où l'utilisateur est aidant
+    today = date.today()
+    deleg_rows = session.exec(
+        select(Delegation).where(
+            Delegation.aidant_id == user.id,
+            Delegation.statut == StatutDelegation.active,
+            Delegation.date_debut <= today,
+            or_(Delegation.date_fin.is_(None), Delegation.date_fin >= today),
+        )
+    ).all()
+    delegations_aidant = []
+    for d in deleg_rows:
+        mandant = session.get(Utilisateur, d.mandant_id)
+        if mandant:
+            delegations_aidant.append({
+                "delegation_id": d.id,
+                "mandant_id": mandant.id,
+                "mandant_nom": f"{mandant.prenom} {mandant.nom}",
+            })
+    return UserRead.from_orm_with_roles(user, batiment_nom=batiment_nom, delegations_aidant=delegations_aidant)
 
 
 @router.get("/me", response_model=UserRead)

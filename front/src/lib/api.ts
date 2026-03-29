@@ -6,6 +6,11 @@
 
 const BASE = '/api';
 
+/** ID du mandant si l'aidant agit en délégation (null = agit pour soi-même) */
+let _actingAsId: number | null = null;
+export function setActingAs(mandantId: number | null) { _actingAsId = mandantId; }
+export function getActingAs(): number | null { return _actingAsId; }
+
 export class ApiError extends Error {
 	constructor(
 		public status: number,
@@ -28,9 +33,13 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+	const headers: Record<string, string> = {};
+	if (body) headers['Content-Type'] = 'application/json';
+	if (_actingAsId !== null) headers['X-Acting-As'] = String(_actingAsId);
+
 	const opts: RequestInit = {
 		method,
-		headers: body ? { 'Content-Type': 'application/json' } : {},
+		headers,
 		body: body ? JSON.stringify(body) : undefined,
 		credentials: 'include',
 	};
@@ -109,6 +118,7 @@ export interface User {
 	batiment_id?: number | null;
 	batiment_nom?: string | null;  // "Bât. A"
 	last_seen_actualites?: string | null;
+	delegations_aidant?: { delegation_id: number; mandant_id: number; mandant_nom: string }[];
 	cree_le: string;
 	derniere_connexion?: string | null;
 }
@@ -568,6 +578,17 @@ export const reglesResidence = {
 	update: (id: number, data: { titre?: string; contenu?: string; ordre?: number }) =>
 		api.patch<any>(`/regles-residence/${id}`, data),
 	remove: (id: number) => api.delete(`/regles-residence/${id}`),
+};
+
+export const delegations = {
+	list: () => api.get<any[]>('/delegations'),
+	create: (data: { mandant_id: number; aidant_id: number; motif?: string; date_fin?: string }) =>
+		api.post<any>('/delegations', data),
+	update: (id: number, data: { motif?: string; date_fin?: string }) =>
+		api.patch<any>(`/delegations/${id}`, data),
+	accepter: (id: number) => api.post<any>(`/delegations/${id}/accepter`),
+	revoquer: (id: number) => api.post<any>(`/delegations/${id}/revoquer`),
+	mesMandants: () => api.get<any[]>('/delegations/mes-mandants'),
 };
 
 export const bailleur = {

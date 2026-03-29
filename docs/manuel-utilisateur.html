@@ -31,6 +31,7 @@
       --c-annuaire:  #0369a1;
       --c-profil:    #6d28d9;
       --c-presta:    #b45309;
+      --c-delegation: #d97706;
     }
 
     html { scroll-behavior: smooth; }
@@ -945,6 +946,9 @@
       <a class="nav-item" href="#prestataires">
         <span class="dot nav-dot-presta"></span> Prestataires
       </a>
+      <a class="nav-item" href="#delegations">
+        <span class="dot" style="background:var(--c-delegation)"></span> Délégations
+      </a>
     </div>
 
     <div class="nav-section">
@@ -977,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.0 · Mars 2026</span>
+    <span class="topbar-badge">Version 3.1 · Mars 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1098,6 +1102,7 @@
               <li>Prestataires pour le suivi des interventions</li>
               <li>Calendrier pour piloter le workflow</li>
               <li>Tickets pour repondre et cloturer</li>
+              <li>Delegations pour les aidants familiaux</li>
             </ul>
           </a>
         </div>
@@ -1892,6 +1897,13 @@
               <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Tous les CR d'AG, classés par année et accessibles en PDF.</p>
             </div>
           </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <span style="font-size:1.3rem">&#x1F4CB;</span>
+            <div>
+              <strong>Règles &amp; Recommandations</strong>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Règles de vie, bonnes pratiques et recommandations du conseil syndical pour la copropriété (bruit, tri, parties communes…). Éditables par le CS.</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2122,17 +2134,23 @@
 
       <div class="card">
         <h3>Les prestataires de la résidence</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Prestataires</strong> dans le menu. Trois onglets sont disponibles :</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Prestataires</strong> dans le menu. Cinq onglets sont disponibles :</p>
 
         <div style="display:flex; flex-direction:column; gap:.65rem">
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F3E2; Prestataires</strong> — liste des entreprises intervenant sur la résidence, avec leur spécialité, type (ponctuel / récurrent) et coordonnées. Chaque fiche peut être dépliée pour voir les contrats associés.
+            <strong>&#x1F4CB; Prestations ponctuelles</strong> — suivi des travaux et interventions sous forme de tableau kanban, avec 4 colonnes&nbsp;: <em>En attente</em>, <em>Accepté</em>, <em>Réalisé</em>, <em>Refusé</em>.
           </div>
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F4CA; Consommations</strong> — vue d'ensemble des dépenses par prestataire et par équipement.
+            <strong>&#x1F4C5; Visites</strong> — planification et suivi des visites d'entretien ou de contrôle (chaudières, ascenseurs, espaces verts…).
           </div>
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F5C2;️ Prestations</strong> — suivi des travaux et interventions sous forme de tableau kanban, avec 4 colonnes&nbsp;: <em>En attente</em>, <em>Accepté</em>, <em>Réalisé</em>, <em>Refusé</em>.
+            <strong>&#x1F4C4; Contrats</strong> — liste centralisée de tous les contrats de maintenance et de service, avec dates, montants et renouvellements.
+          </div>
+          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F3E2; Prestataires</strong> — liste des entreprises intervenant sur la résidence, avec leur spécialité, type (ponctuel / récurrent) et coordonnées.
+          </div>
+          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F4A7; Consommations</strong> — suivi des compteurs (eau, énergie…) et vue d'ensemble des dépenses par prestataire et par équipement.
           </div>
         </div>
       </div>
@@ -2176,7 +2194,86 @@
     </section>
 
     <!-- ════════════════════════════════
-         11. FAQ
+         11. DÉLÉGATION AIDANT
+    ════════════════════════════════ -->
+    <section class="chapter" id="delegations" data-section="delegations">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#fffbeb; color:var(--c-delegation)">&#x1F91D;</div>
+        <div>
+          <h2>Délégation aidant</h2>
+          <p>Permettre à un proche d'agir au nom d'un copropriétaire (personnes âgées, à mobilité réduite…).</p>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <p>La délégation « aidant » est distincte du <strong>mandataire</strong> (agence immobilière). Elle permet à un membre de la famille ou un proche de confiance d'utiliser l'application au nom du copropriétaire.</p>
+      </div>
+
+      <div class="card">
+        <h3>Comment fonctionne la délégation ?</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">La délégation est gérée par le <strong>conseil syndical</strong>. Elle suit un circuit en 3 étapes :</p>
+
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:#d97706">1</span>
+            <div class="step-content">
+              <strong>Le CS crée la délégation</strong>
+              <p>Un membre du conseil syndical ouvre la page <strong>Délégations</strong> et sélectionne le mandant (la personne aidée) et l'aidant (le proche). Il peut préciser un motif et une période de validité.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#d97706">2</span>
+            <div class="step-content">
+              <strong>L'aidant accepte</strong>
+              <p>L'aidant voit la délégation en attente sur sa page <strong>Délégations</strong> et clique sur <em>Accepter</em>. La délégation passe au statut « Active ».</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#d97706">3</span>
+            <div class="step-content">
+              <strong>L'aidant agit pour le mandant</strong>
+              <p>Dans le menu latéral, un sélecteur <strong>« Agir pour »</strong> apparaît. L'aidant peut basculer entre son propre compte et celui du mandant à tout moment.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Les statuts d'une délégation</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem">
+          <div style="padding:.7rem; background:#fff8f0; border-radius:8px; font-size:.85rem; border-left:3px solid #f59e0b">
+            <strong>⏳ En attente</strong>
+            <p style="color:var(--muted); margin-top:2px">Créée par le CS, en attente d'acceptation de l'aidant</p>
+          </div>
+          <div style="padding:.7rem; background:#f0fdf4; border-radius:8px; font-size:.85rem; border-left:3px solid #22c55e">
+            <strong>✅ Active</strong>
+            <p style="color:var(--muted); margin-top:2px">Acceptée — l'aidant peut agir au nom du mandant</p>
+          </div>
+          <div style="padding:.7rem; background:#fef2f2; border-radius:8px; font-size:.85rem; border-left:3px solid #ef4444">
+            <strong>❌ Révoquée</strong>
+            <p style="color:var(--muted); margin-top:2px">Annulée par le mandant, l'aidant ou le CS</p>
+          </div>
+          <div style="padding:.7rem; background:#f1f5f9; border-radius:8px; font-size:.85rem; border-left:3px solid #94a3b8">
+            <strong>⏰ Expirée</strong>
+            <p style="color:var(--muted); margin-top:2px">La date de fin de validité est dépassée</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <p>Toute partie (mandant, aidant ou CS) peut <strong>révoquer</strong> une délégation active à tout moment. La révocation est immédiate et irréversible.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">&#x1F4A1;</span>
+        <p>Quand l'aidant agit au nom d'un mandant, un <strong>bandeau jaune</strong> s'affiche en haut de l'écran pour rappeler qu'il est en mode délégation. Toutes les actions sont tracées.</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         12. FAQ
     ════════════════════════════════ -->
     <section class="chapter" id="faq" data-section="faq">
       <div class="chapter-header">
@@ -2266,6 +2363,13 @@
           <p>Oui. Dans <strong>Mon lot → Exporter mes données</strong>, vous pouvez télécharger un fichier ZIP contenant l'ensemble de vos informations : tickets, historique des badges et détails de votre lot.</p>
         </div>
       </details>
+
+      <details class="faq-item">
+        <summary>Un proche peut-il utiliser l'application à ma place ?</summary>
+        <div class="faq-body">
+          <p>Oui, grâce au système de <strong>délégation aidant</strong>. Demandez à un membre du conseil syndical de créer une délégation entre votre compte (mandant) et le compte de votre proche (aidant). Une fois acceptée, votre proche pourra naviguer dans l'application en votre nom via le sélecteur « Agir pour » dans le menu. Voir la section <a href="#delegations">Délégation aidant</a> pour les détails.</p>
+        </div>
+      </details>
     </section>
 
     <!-- ════════════════════════════════
@@ -2289,7 +2393,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.0</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.1</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

@@ -19,7 +19,15 @@ class StatutUtilisateur(str, Enum):
     locataire = "locataire"
     syndic = "syndic"
     mandataire = "mandataire"
+    aidant = "aidant"   # proche aidant (famille) — accès délégué, pas de vote AG
     admin_technique = "admin_technique"  # compte technique sans lot ni statut résidentiel
+
+
+class StatutDelegation(str, Enum):
+    en_attente = "en_attente"       # créée par le CS, en attente d'acceptation
+    active = "active"               # acceptée par l'aidant
+    revoquee = "revoquee"           # révoquée par le mandant ou le CS
+    expiree = "expiree"             # date de fin dépassée
 
 
 class RoleUtilisateur(str, Enum):
@@ -516,6 +524,25 @@ class RegleResidence(SQLModel, table=True):
     cree_par_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     modifie_le: Optional[datetime] = None
+
+
+# ──────────────────────────────────────────────
+#  Délégations aidant
+# ──────────────────────────────────────────────
+
+class Delegation(SQLModel, table=True):
+    __tablename__ = "delegation"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    mandant_id: int = Field(foreign_key="utilisateur.id")      # la personne aidée
+    aidant_id: int = Field(foreign_key="utilisateur.id")        # le proche aidant
+    statut: StatutDelegation = StatutDelegation.en_attente
+    motif: str = ""                                              # raison de la délégation
+    date_debut: date = Field(default_factory=date.today)
+    date_fin: Optional[date] = None                              # null = pas de limite
+    cree_par_id: int = Field(foreign_key="utilisateur.id")       # CS/admin qui a créé
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    revoque_le: Optional[datetime] = None
+    revoque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
 
 
 # ──────────────────────────────────────────────

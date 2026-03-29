@@ -1,9 +1,10 @@
-from fastapi import Depends, HTTPException, Cookie, status
-from sqlmodel import Session, select
+from fastapi import Depends, HTTPException, Cookie, Header, status
+from datetime import date
+from sqlmodel import Session, select, or_
 
 from app.auth.jwt import decode_token
 from app.database import get_session
-from app.models.core import Utilisateur, RoleUtilisateur
+from app.models.core import Delegation, StatutDelegation, Utilisateur, RoleUtilisateur
 
 
 def _get_current_user(
@@ -26,6 +27,39 @@ def _get_current_user(
 
 def get_current_user(user: Utilisateur = Depends(_get_current_user)) -> Utilisateur:
     return user
+
+
+def get_acting_user(
+    x_acting_as: int | None = Header(default=None, alias="X-Acting-As"),
+    user: Utilisateur = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Utilisateur:
+    """Retourne l'utilisateur effectif : le mandant si l'aidant agit en délégation,
+    sinon l'utilisateur connecté lui-même."""
+    if x_acting_as is None or x_acting_as == user.id:
+        return user
+
+    today = date.today()
+    delegation = session.exec(
+        select(Delegation).where(
+            Delegation.aidant_id == user.id,
+            Delegation.mandant_id == x_acting_as,
+            Delegation.statut == StatutDelegation.active,
+            Delegation.date_debut <= today,
+            or_(Delegation.date_fin.is_(None), Delegation.date_fin >= today),  # type: ignore[arg-type]
+        )
+    ).first()
+
+    if not delegation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Aucune délégation active pour cet utilisateur",
+        )
+
+    mandant = session.get(Utilisateur, x_acting_as)
+    if not mandant or not mandant.actif:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Mandant introuvable ou inactif")
+    return mandant
 
 
 def require_role(*roles: RoleUtilisateur):

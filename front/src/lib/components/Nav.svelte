@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { currentUser, isCS, isAdmin, hasResidentRole, isAdminOnly } from '$lib/stores/auth';
+	import { currentUser, isCS, isAdmin, hasResidentRole, isAdminOnly, actingAs, isActingAsAidant } from '$lib/stores/auth';
 	import { locale, NAV_LABELS } from '$lib/stores/locale';
 	import { auth as authApi } from '$lib/api';
 	import { setUser } from '$lib/stores/auth';
@@ -22,6 +22,7 @@
 		'/sondages':        { configId: 'communaute',       icon: 'users-round',         navLabel: 'Communauté' },
 		'/faq':             { configId: 'faq',              icon: 'help-circle',         navLabel: 'FAQ' },
 		'/espace-cs':       { configId: 'espace-cs',        icon: 'shield-half',         navLabel: 'Espace CS' },
+		'/delegations':     { configId: 'delegations',      icon: 'heart-handshake',     navLabel: 'Délégations' },
 		'/admin':           { configId: 'admin',            icon: 'sliders-horizontal',  navLabel: 'Admin' },
 	};
 
@@ -37,7 +38,7 @@
 	const DEFAULT_HREFS = [
 		'/tableau-de-bord', '/residence', '/mon-lot', '/acces-securite',
 		'/annuaire', '/prestataires', '/calendrier', '/actualites',
-		'/tickets', '/sondages', '/faq', '/espace-cs', '/admin',
+		'/tickets', '/sondages', '/faq', '/espace-cs', '/delegations', '/admin',
 	];
 
 	// Correspondance configId → href pour lire l'ordre stocké en backend
@@ -77,9 +78,10 @@
 	$: allNav = orderedHrefs
 		.filter(href => {
 			const statut = $currentUser?.statut;
-			if (href === '/sondages' && (statut === 'syndic' || statut === 'mandataire')) return false;
+			if (href === '/sondages' && (statut === 'syndic' || statut === 'mandataire' || statut === 'aidant')) return false;
 			if (href === '/prestataires') return $isCS;
 			if (href === '/espace-cs')   return $isCS && !$isAdminOnly;
+			if (href === '/delegations') return $isCS || (($currentUser?.delegations_aidant?.length ?? 0) > 0) || statut === 'aidant';
 			if (href === '/admin')       return $isAdmin;
 			return $hasResidentRole;
 		})
@@ -110,6 +112,33 @@
 	</div>
 
 	<div class="nav-footer">
+		{#if ($currentUser?.delegations_aidant?.length ?? 0) > 0}
+			<div class="aidant-switcher">
+				<span class="aidant-switcher-label">Agir pour :</span>
+				<select class="aidant-select"
+					value={$actingAs?.mandant_id ?? 0}
+					on:change={(e) => {
+						const val = Number((e.target as HTMLSelectElement).value);
+						if (val === 0) {
+							actingAs.set(null);
+						} else {
+							const d = $currentUser?.delegations_aidant?.find((x) => x.mandant_id === val);
+							if (d) actingAs.set({ mandant_id: d.mandant_id, mandant_nom: d.mandant_nom });
+						}
+					}}>
+					<option value={0}>Moi-même</option>
+					{#each $currentUser?.delegations_aidant ?? [] as d}
+						<option value={d.mandant_id}>{d.mandant_nom}</option>
+					{/each}
+				</select>
+			</div>
+		{/if}
+		{#if $isActingAsAidant}
+			<div class="aidant-banner">
+				<Icon name="heart-handshake" size={14} />
+				<span>Vous agissez pour <strong>{$actingAs?.mandant_nom}</strong></span>
+			</div>
+		{/if}
 		<a href="/profil" class="nav-item" class:active={isActive('/profil')}>
 			<span class="nav-icon"><Icon name="user" size={18} /></span>
 			<span class="nav-label">{$currentUser?.prenom ?? t['/profil']}</span>
@@ -158,6 +187,33 @@
 			{/each}
 		</div>
 		<div class="overlay-footer">
+			{#if ($currentUser?.delegations_aidant?.length ?? 0) > 0}
+				<div class="aidant-switcher" style="padding:.5rem .75rem">
+					<span class="aidant-switcher-label">Agir pour :</span>
+					<select class="aidant-select"
+						value={$actingAs?.mandant_id ?? 0}
+						on:change={(e) => {
+							const val = Number((e.target as HTMLSelectElement).value);
+							if (val === 0) {
+								actingAs.set(null);
+							} else {
+								const d = $currentUser?.delegations_aidant?.find((x) => x.mandant_id === val);
+								if (d) actingAs.set({ mandant_id: d.mandant_id, mandant_nom: d.mandant_nom });
+							}
+						}}>
+						<option value={0}>Moi-même</option>
+						{#each $currentUser?.delegations_aidant ?? [] as d}
+							<option value={d.mandant_id}>{d.mandant_nom}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
+			{#if $isActingAsAidant}
+				<div class="aidant-banner" style="margin:.25rem .75rem">
+					<Icon name="heart-handshake" size={14} />
+					<span>Vous agissez pour <strong>{$actingAs?.mandant_nom}</strong></span>
+				</div>
+			{/if}
 			<a href="/profil" class="overlay-item" class:active={isActive('/profil')}>
 				<span class="nav-icon"><Icon name="user" size={20} /></span>
 				<span>{$currentUser?.prenom ?? t['/profil']}</span>
@@ -362,5 +418,42 @@
 
 		.overlay-backdrop { display: block; }
 		.overlay-menu { display: flex; }
+	}
+
+	/* ── Aidant switcher ───────────────────────────────────────── */
+	.aidant-switcher {
+		display: flex;
+		flex-direction: column;
+		gap: .25rem;
+		padding: .4rem .75rem;
+		margin-bottom: .25rem;
+	}
+	.aidant-switcher-label {
+		font-size: .7rem;
+		text-transform: uppercase;
+		letter-spacing: .04em;
+		color: var(--color-text-muted);
+		font-weight: 600;
+	}
+	.aidant-select {
+		padding: .3rem .5rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		font-size: .8rem;
+		background: var(--color-surface);
+		width: 100%;
+		cursor: pointer;
+	}
+	.aidant-banner {
+		display: flex;
+		align-items: center;
+		gap: .35rem;
+		padding: .3rem .75rem;
+		margin: 0 .5rem .25rem;
+		background: #fef3c7;
+		color: #92400e;
+		border-radius: var(--radius);
+		font-size: .78rem;
+		line-height: 1.3;
 	}
 </style>
