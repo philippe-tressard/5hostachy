@@ -231,6 +231,7 @@
 			locataire: 'Locataire',
 			syndic: 'Syndic',
 			mandataire: 'Mandataire',
+			aidant: 'Aidant (proche)',
 		};
 		const SPECIAL: Record<string, string> = {
 			conseil_syndical: 'Conseil syndical',
@@ -375,6 +376,15 @@
 		</h1>
 	</div>
 	<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
+
+	{#if ($currentUser?.statut === 'aidant' || $currentUser?.statut === 'mandataire') && $currentUser?.nom_aide}
+		<div class="alert alert-info" style="margin-bottom:1.5rem">
+			👤 Vous agissez pour le compte de <strong>{$currentUser.prenom_aide} {$currentUser.nom_aide}</strong>
+			{#if $currentUser.delegations_aidant?.length > 0}
+				— <a href="/delegations">Gérer mes délégations</a>
+			{/if}
+		</div>
+	{/if}
 
 	<!-- Alertes urgentes -->
 	{#if urgentTickets.length > 0}
