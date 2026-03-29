@@ -16,7 +16,7 @@
 		const token = $page.url.searchParams.get('token');
 		if (!token) {
 			status = 'error';
-			errorMessage = 'Lien de v\u00e9rification invalide.';
+			errorMessage = 'Lien de vérification invalide.';
 			return;
 		}
 		try {
@@ -24,7 +24,7 @@
 			status = 'success';
 		} catch (e: any) {
 			status = 'expired';
-			errorMessage = e instanceof ApiError ? e.message : 'Lien de v\u00e9rification invalide ou expir\u00e9.';
+			errorMessage = e instanceof ApiError ? e.message : 'Lien de vérification invalide ou expiré.';
 		}
 	});
 
@@ -42,26 +42,26 @@
 	}
 </script>
 
-<svelte:head><title>V\u00e9rification e-mail \u2014 {_siteNom}</title></svelte:head>
+<svelte:head><title>Vérification e-mail — {_siteNom}</title></svelte:head>
 
 <div class="auth-page">
 	<div class="auth-card card">
 		<div class="auth-header">
 			<span class="auth-logo">&#x1F4E7;</span>
-			<h1>V\u00e9rification e-mail</h1>
+			<h1>Vérification e-mail</h1>
 		</div>
 
 		{#if status === 'loading'}
-			<p style="text-align:center; color:var(--color-text-muted)">V\u00e9rification en cours\u2026</p>
+			<p style="text-align:center; color:var(--color-text-muted)">Vérification en cours…</p>
 
 		{:else if status === 'success'}
 			<div class="alert alert-success">
-				<strong>Adresse e-mail v\u00e9rifi\u00e9e !</strong><br />
-				Votre adresse a \u00e9t\u00e9 confirm\u00e9e. Votre compte est maintenant en attente de validation par le conseil syndical.<br />
-				Vous recevrez un e-mail d\u00e8s qu\u2019il sera activ\u00e9.
+				<strong>Adresse e-mail vérifiée !</strong><br />
+				Votre adresse a été confirmée. Votre compte est maintenant en attente de validation par le conseil syndical.<br />
+				Vous recevrez un e-mail dès qu'il sera activé.
 			</div>
 			<div style="text-align:center; margin-top:1rem">
-				<a href="/auth/connexion" class="btn btn-primary">Retour \u00e0 la connexion</a>
+				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>
 			</div>
 
 		{:else if status === 'expired'}
@@ -70,29 +70,29 @@
 			</div>
 			<div style="margin-top:1.5rem">
 				<p style="font-size:.9rem; color:var(--color-text-muted); margin-bottom:.75rem">
-					Vous pouvez demander un nouveau lien de v\u00e9rification :
+					Vous pouvez demander un nouveau lien de vérification :
 				</p>
 				{#if resendDone}
 					<div class="alert alert-success" style="font-size:.9rem">
-						Si un compte non v\u00e9rifi\u00e9 existe pour cette adresse, un nouveau lien vous a \u00e9t\u00e9 envoy\u00e9.
+						Si un compte non vérifié existe pour cette adresse, un nouveau lien vous a été envoyé.
 					</div>
 				{:else}
 					<form on:submit|preventDefault={resend} style="display:flex; gap:.5rem">
 						<input type="email" bind:value={resendEmail} placeholder="Votre e-mail" required class="input" style="flex:1" />
 						<button type="submit" class="btn btn-primary" disabled={resendLoading}>
-							{resendLoading ? 'Envoi\u2026' : 'Renvoyer'}
+							{resendLoading ? 'Envoi…' : 'Renvoyer'}
 						</button>
 					</form>
 				{/if}
 			</div>
 			<div style="text-align:center; margin-top:1rem">
-				<a href="/auth/connexion" style="font-size:.85rem; color:var(--color-text-muted)">Retour \u00e0 la connexion</a>
+				<a href="/auth/connexion" style="font-size:.85rem; color:var(--color-text-muted)">Retour à la connexion</a>
 			</div>
 
 		{:else}
 			<div class="alert alert-error">{errorMessage}</div>
 			<div style="text-align:center; margin-top:1rem">
-				<a href="/auth/connexion" class="btn btn-outline">Retour \u00e0 la connexion</a>
+				<a href="/auth/connexion" class="btn btn-outline">Retour à la connexion</a>
 			</div>
 		{/if}
 	</div>
