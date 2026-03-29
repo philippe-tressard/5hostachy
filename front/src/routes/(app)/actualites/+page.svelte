@@ -6,6 +6,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 
@@ -33,13 +34,7 @@
 	let pendingImage: File | null = null;
 	let pendingPreview: string | undefined;
 	let uploadingImg = false;
-	let newPerimetre: 'résidence' | 'specifique' = 'résidence';
-	let newLieux = new Set<string>();
-
-	function perimetreCibleValue() {
-		if (newPerimetre === 'résidence') return ['résidence'];
-		return newLieux.size > 0 ? [...newLieux] : ['résidence'];
-	}
+	let newPerimetreCible: string[] = ['résidence'];
 
 	function handleImageChange(e: CustomEvent<File>) {
 		pendingImage = e.detail;
@@ -86,7 +81,7 @@
 			const shouldPublishAfterImageUpload = !!pendingImage && newPartagerWhatsapp && !newBrouillon;
 			let pub = await pubsApi.create({
 				titre: newTitre, contenu: newContenu, urgente: newUrgente, epingle: newEpingle,
-				perimetre_cible: perimetreCibleValue(), public_cible: ['résidents'],
+				perimetre_cible: newPerimetreCible, public_cible: ['résidents'],
 				brouillon: shouldPublishAfterImageUpload ? true : newBrouillon,
 				statut: newStatut || null,
 				partager_whatsapp: newPartagerWhatsapp,
@@ -105,7 +100,7 @@
 			showForm = false;
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
 			newBrouillon = false; newStatut = ''; newPartagerWhatsapp = false;
-			newPerimetre = 'résidence'; newLieux = new Set();
+			newPerimetreCible = ['résidence'];
 			pendingImage = null; pendingPreview = undefined;
 			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
 		} catch (e) {
@@ -248,18 +243,7 @@
 			</div>
 			<div class="field">
 				<label id="perimetre-label">Périmètre *</label>
-				<div class="perimetre-pills" aria-labelledby="perimetre-label">
-					<button type="button" class="pill" class:pill-active={newPerimetre === 'résidence'}
-						on:click={() => { newPerimetre = 'résidence'; newLieux = new Set(); }}>
-						&#x1F3E7; Copropriété entière
-					</button>
-					{#each [['bat:1','Bât. 1'],['bat:2','Bât. 2'],['bat:3','Bât. 3'],['bat:4','Bât. 4'],['parking','Parking'],['cave','Cave'],['aful','AFUL']] as [val, lbl]}
-						<button type="button" class="pill" class:pill-active={newLieux.has(val)}
-							on:click={() => { if (newLieux.has(val)) { newLieux.delete(val); } else { newLieux.add(val); } newLieux = newLieux; newPerimetre = newLieux.size > 0 ? 'specifique' : 'résidence'; }}>
-							{lbl}
-						</button>
-					{/each}
-				</div>
+				<PerimetrePicker bind:value={newPerimetreCible} />
 			</div>
 			<div class="field">
 				<label for="actualite-contenu">Contenu *</label>
@@ -516,10 +500,6 @@
 	.chevron.open { transform: rotate(90deg); }
 
 	.checkbox-field { display: flex; align-items: center; gap: .4rem; font-size: .875rem; cursor: pointer; }
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
-	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 	.form-actions { display: flex; justify-content: flex-end; }
 </style>
 

@@ -3,6 +3,7 @@
 	import { tickets as ticketsApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 
 	$: _siteNom = $siteNomStore;
@@ -10,8 +11,7 @@
 	let titre = '';
 	let description = '';
 	let categorie = 'panne';
-	let perimetre: 'résidence' | 'specifique' = 'résidence';
-	let lieux = new Set<string>();
+	let perimetreCible: string[] = ['résidence'];
 	let error = '';
 	let loading = false;
 
@@ -20,13 +20,8 @@
 		{ value: 'nuisance', label: '\u{1F4E2} Nuisance', description: 'Bruit, odeur, parking…' },
 		{ value: 'question', label: '❓ Question', description: 'Information, procédure…' },
 		{ value: 'urgence', label: '\u{1F6A8} Urgence', description: 'Inondation, panne majeure, danger immédiat' },
-		{ value: 'bug', label: '\u{1F41B} Bug', description: 'Problème technique sur le site ou l’application' },
+		{ value: 'bug', label: '\u{1F41B} Bug', description: 'Problème technique sur le site ou l'application' },
 	];
-
-	function perimetreCibleValue(): string[] {
-		if (perimetre === 'résidence') return ['résidence'];
-		return Array.from(lieux);
-	}
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
@@ -38,7 +33,7 @@
 		error = '';
 		loading = true;
 		try {
-			const t = await ticketsApi.create({ titre, description, categorie, perimetre_cible: perimetreCibleValue() });
+			const t = await ticketsApi.create({ titre, description, categorie, perimetre_cible: perimetreCible });
 			toast('success', `Ticket ${t.numero} créé avec succès`);
 			goto('/tickets');
 		} catch (e) {
@@ -96,18 +91,7 @@
 
 		<div class="field">
 			<label>Périmètre</label>
-			<div class="perimetre-pills">
-				<button type="button" class="pill" class:pill-active={perimetre === 'résidence'}
-					on:click={() => { perimetre = 'résidence'; lieux = new Set(); }}>
-					&#x1F3E7; Copropriété entière
-				</button>
-				{#each [['bat:1','Bât. 1'],['bat:2','Bât. 2'],['bat:3','Bât. 3'],['bat:4','Bât. 4'],['parking','Parking'],['cave','Cave'],['aful','AFUL']] as [val, lbl]}
-					<button type="button" class="pill" class:pill-active={lieux.has(val)}
-						on:click={() => { if (lieux.has(val)) { lieux.delete(val); } else { lieux.add(val); } lieux = lieux; perimetre = lieux.size > 0 ? 'specifique' : 'résidence'; }}>
-						{lbl}
-					</button>
-				{/each}
-			</div>
+			<PerimetrePicker bind:value={perimetreCible} />
 		</div>
 
 		<div class="field">
@@ -157,10 +141,6 @@
 	.cat-desc  { font-size: .78rem; color: var(--color-text-muted); }
 
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
-
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
-	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
 	@media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
 </style>
