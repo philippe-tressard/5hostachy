@@ -63,6 +63,10 @@
 	$: devisRealise = devis.filter((d: any) => d.actif !== false && d.statut === 'realise');
 	$: devisRefuse = devis.filter((d: any) => d.actif !== false && d.statut === 'refuse');
 
+	// Séparation actifs / réalisés pour la vue liste
+	$: devisActifs = devis.filter((d: any) => d.actif !== false && d.statut !== 'realise' && d.statut !== 'refuse');
+	$: devisRealises = devis.filter((d: any) => d.actif !== false && d.statut === 'realise');
+
 	// ── Devis OS upload ─────────────────────────────────────────
 	let osUploadDevisId: number | null = null;
 	let osFile: File | null = null;
@@ -103,7 +107,8 @@
 	let filtreType = '';
 
 	// ── Sous-vue dans onglet Prestations ──────────────────────────
-	let prestationsVue: 'kanban' | 'liste' = 'kanban';
+	let prestationsVue: 'kanban' | 'liste' = 'liste';
+	let showRealisees = false;
 
 	$: filteredPrests = prestataires.filter(p =>
 		(!filtreEquipement || p.specialite === filtreEquipement) &&
@@ -660,7 +665,7 @@
 <!-- ── Onglets ─────────────────────────────────────────────────── -->
 <div class="tabs" role="tablist">
 	<button role="tab" class:active={onglet === 'prestations'} on:click={() => onglet = 'prestations'}>
-		<Icon name="clipboard-list" size={15} /> Prestations
+		<Icon name="clipboard-list" size={15} /> Prestations ponctuelles
 	</button>
 	<button role="tab" class:active={onglet === 'visites'} on:click={() => onglet = 'visites'}>
 		<Icon name="calendar-days" size={15} /> Visites
@@ -684,10 +689,10 @@
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'prestations'}
 
-	<!-- Toggle kanban / liste -->
+	<!-- Toggle liste / kanban -->
 	<div class="sous-vue-toggle">
-		<button class="btn btn-sm" class:btn-primary={prestationsVue === 'kanban'} on:click={() => prestationsVue = 'kanban'}>Kanban</button>
 		<button class="btn btn-sm" class:btn-primary={prestationsVue === 'liste'} on:click={() => prestationsVue = 'liste'}>Liste</button>
+		{#if $isCS}<button class="btn btn-sm" class:btn-primary={prestationsVue === 'kanban'} on:click={() => prestationsVue = 'kanban'}>Kanban</button>{/if}
 		<span class="kanban-count-total">{devis.filter(d => d.actif !== false).length} prestation{devis.filter(d => d.actif !== false).length > 1 ? 's' : ''}</span>
 	</div>
 
@@ -840,10 +845,10 @@
 		</div>
 	{:else}
 		<!-- ── Vue liste ─────────────────────────────── -->
-		{#if devis.filter(d => d.actif !== false).length === 0}
+		{#if devisActifs.length === 0 && devisRealises.length === 0}
 			<div class="empty-state card"><h3>Aucune prestation</h3><p>Ajoutez la première via le bouton ci-dessus.</p></div>
 		{:else}
-			{#each devis.filter(d => d.actif !== false) as d (d.id)}
+			{#each devisActifs as d (d.id)}
 				{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
 				{@const devisExpanded = expandedDevis.has(d.id)}
 				<div class="devis-expand" class:expanded={devisExpanded}>
@@ -968,6 +973,69 @@
 					{/if}
 				</div>
 			{/each}
+
+			<!-- Réalisées (accordion fermé) -->
+			{#if devisRealises.length > 0}
+				<div class="realisees-accordion" style="margin-top:1rem">
+					<button class="realisees-toggle" on:click={() => showRealisees = !showRealisees}>
+						<span>🏁 Prestations réalisées ({devisRealises.length})</span>
+						<span class="toggle-arrow">{showRealisees ? '▲' : '▼'}</span>
+					</button>
+					{#if showRealisees}
+						{#each devisRealises as d (d.id)}
+							{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+							{@const devisExpanded = expandedDevis.has(d.id)}
+							<div class="devis-expand devis-expand--done" class:expanded={devisExpanded}>
+								<div class="devis-row"
+									role="button" tabindex="0"
+									on:click|stopPropagation={() => toggleDevis(d.id)}
+									on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
+									<div class="devis-body-inner">
+										<span class="devis-card-prest">{prestNom}</span>
+										<strong class="devis-titre">{d.titre}</strong>
+									</div>
+									<div class="devis-infos">
+										{#if d.date_prestation}
+											<span style="font-size:.82rem;font-weight:600;color:var(--color-text-muted)">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>
+										{/if}
+									</div>
+									<div class="devis-meta-right">
+										<span class="badge" style="font-size:.78rem;color:#7c3aed">🏁 Réalisé</span>
+										{#if d.montant_estime != null}
+											<span class="badge badge-gray" style="font-size:.78rem">💶 {d.montant_estime.toLocaleString('fr-FR')} €</span>
+										{/if}
+										<span class="toggle-arrow">{devisExpanded ? '▲' : '▼'}</span>
+									</div>
+								</div>
+								{#if devisExpanded}
+									<div class="devis-detail-body">
+										<div class="detail-grid">
+											<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
+											{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</div>{/if}
+											{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
+										</div>
+										{#if d.notes}
+											<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>
+										{/if}
+										{#if d.fichiers_urls && d.fichiers_urls.length > 0}
+											<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem">
+												{#each d.fichiers_urls as url, i}
+													<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline">📎 Fichier {i + 1}</a>
+												{/each}
+											</div>
+										{/if}
+										{#if $isCS}
+											<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
+												<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
+											</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				</div>
+			{/if}
 		{/if}
 	{/if}
 
@@ -1078,7 +1146,7 @@
 		{/if}
 		<div class="visites-kpi visites-kpi--ok">
 			<span class="visites-kpi-value">{visitesAJour.length}</span>
-			<span class="visites-kpi-label">à jour</span>
+			<span class="visites-kpi-label">en cours</span>
 		</div>
 	</div>
 
@@ -1127,9 +1195,9 @@
 			{/each}
 		{/if}
 
-		<!-- À jour -->
+		<!-- En cours -->
 		{#if visitesAJour.length > 0}
-			<h2 class="section-title" style="margin-top:1rem">✅ Visites à jour</h2>
+			<h2 class="section-title" style="margin-top:1rem">✅ Visites en cours</h2>
 			{#each visitesAJour as c (c.id)}
 				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
@@ -1241,15 +1309,15 @@
 		<span class="contrats-summary-count">{contrats.length} contrat{contrats.length !== 1 ? 's' : ''} actif{contrats.length !== 1 ? 's' : ''}</span>
 	</div>
 
-	<!-- Groupé par équipement -->
+	<!-- Groupé par spécialité du prestataire -->
 	{#if contrats.length === 0}
 		<div class="empty-state card"><h3>Aucun contrat</h3><p>Ajoutez le premier contrat via le bouton ci-dessus.</p></div>
 	{:else}
-		{#each equipements.filter(e => contrats.some(c => c.type_equipement === e.val)) as eqGroup (eqGroup.val)}
+		{#each equipements.filter(e => contrats.some(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === e.val; })) as specGroup (specGroup.val)}
 			<div class="type-section-header">
-				<span class="type-section-label">{eqGroup.label}</span>
+				<span class="type-section-label">{specGroup.label}</span>
 			</div>
-			{#each contrats.filter(c => c.type_equipement === eqGroup.val) as c (c.id)}
+			{#each contrats.filter(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === specGroup.val; }) as c (c.id)}
 				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
 				<div class="contrat-expand" class:expanded={contratExpanded}>
@@ -1884,4 +1952,11 @@
 	.devis-step-btn--primary:hover { background: #f97316; color: #fff; border-color: #f97316; }
 	.devis-step-btn--success { background: #f0fdf4; border-color: #22c55e; color: #16a34a; }
 	.devis-step-btn--success:hover { background: #22c55e; color: #fff; border-color: #22c55e; }
+
+	/* Réalisées accordion */
+	.realisees-accordion { border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+	.realisees-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .65rem 1rem; border: none; background: var(--color-bg-secondary, #f8f9fa); cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--color-text-muted); }
+	.realisees-toggle:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); }
+	.devis-expand--done { opacity: .75; }
+	.devis-expand--done:hover { opacity: 1; }
 </style>
