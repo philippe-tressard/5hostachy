@@ -37,11 +37,13 @@
 		{ value: 'locataire', label: 'Locataire' },
 		{ value: 'syndic', label: 'Syndic' },
 		{ value: 'mandataire', label: 'Mandataire' },
+		{ value: 'aidant', label: 'Aidant (proche)' },
 	];
 
 	$: isProfessional = statut === 'syndic' || statut === 'mandataire';
+	$: isAidant = statut === 'aidant';
 	$: isLocataire = statut === 'locataire';
-	$: showBatiment = batiments.length > 0 && !isProfessional;
+	$: showBatiment = batiments.length > 0 && !isProfessional && !isAidant;
 
 	onMount(async () => {
 		try {

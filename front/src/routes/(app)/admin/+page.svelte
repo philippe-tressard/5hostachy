@@ -442,6 +442,7 @@ const statutLabels: Record<string, string> = {
   locataire: 'Locataire',
   syndic: 'Syndic',
   mandataire: 'Mandataire',
+  aidant: 'Aidant (proche)',
   admin_technique: 'Admin technique',
 };
 
@@ -451,6 +452,7 @@ const statutBadgeClass: Record<string, string> = {
   locataire: 'badge-purple',
   syndic: 'badge-orange',
   mandataire: 'badge-gray',
+  aidant: 'badge-yellow',
   admin_technique: 'badge-orange',
 };
 
@@ -492,6 +494,7 @@ const statutLabelsAdmin: Record<string, string> = {
 	locataire: 'Locataire',
 	syndic: 'Syndic',
 	mandataire: 'Mandataire',
+	aidant: 'Aidant (proche)',
 };
 
 async function loadDemandesProfil() {
