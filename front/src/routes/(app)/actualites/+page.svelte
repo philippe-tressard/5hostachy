@@ -105,7 +105,7 @@
 			newPerimetreCible = ['résidence'];
 			pendingImage = null; pendingPreview = undefined;
 			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { saving = false; }
 	}
@@ -116,7 +116,7 @@
 			await pubsApi.archive(pub.id);
 			pubList = pubList.filter((p) => p.id !== pub.id);
 			toast('success', 'Publication archivée');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Impossible d\u2019archiver');
 		}
 	}
@@ -127,7 +127,7 @@
 			await pubsApi.delete(pub.id);
 			pubList = pubList.filter((p) => p.id !== pub.id);
 			toast('success', 'Publication supprimée');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Impossible de supprimer');
 		}
 	}
@@ -183,7 +183,7 @@
 			pubList = pubList.map(p => p.id === updated.id ? updated : p);
 			editingPub = null;
 			toast('success', 'Publication mise à jour');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { editSaving = false; }
 	}
@@ -215,7 +215,7 @@
 			});
 			showEvolForm = null;
 			toast('success', evolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { evolSaving = false; }
 	}

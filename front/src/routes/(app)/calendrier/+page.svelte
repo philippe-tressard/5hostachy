@@ -39,7 +39,20 @@ import { onMount } from 'svelte';
 	let editId: number | null = null;
 	let expandedEvId: number | null = null;
 
-	let form = { titre: '', description: '', type: 'autre', lieu: '', debut: '', fin: '', statut_kanban: '', prestataire_id: '', affichable: false };
+	let form = {
+		titre: '',
+		description: '',
+		type: 'autre',
+		lieu: '',
+		debut: '',
+		debut_heure: '',
+		fin: '',
+		statut_kanban: '',
+		prestataire_id: '',
+		frequence_type: '',
+		frequence_valeur: '',
+		affichable: false,
+	};
 	let formPerimetreCible: string[] = ['résidence'];
 	let submitting = false;
 
@@ -104,7 +117,7 @@ import { onMount } from 'svelte';
 	}
 
 	// AG visibles uniquement par propriétaires, CS et admin
-	$: canSeeAG = ($currentUser?.roles ?? []).some(r => ['propriétaire', 'conseil_syndical', 'admin'].includes(r));
+	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) => ['propriétaire', 'conseil_syndical', 'admin'].includes(r));
 	$: visibleTypes = (canSeeAG ? types : types.filter(t => t.val !== 'ag')).filter(t => t.val !== 'maintenance_recurrente');
 	$: filtered = (() => {
 		let evs = canSeeAG ? evenements : evenements.filter(e => e.type !== 'ag');
@@ -271,7 +284,7 @@ import { onMount } from 'svelte';
 			showForm = false;
 			resetForm();
 			toast('success', editId ? 'Événement modifié' : 'Événement créé');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
 			submitting = false;

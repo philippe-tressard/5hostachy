@@ -339,7 +339,7 @@
 			await loadEvolutions(t.id);
 			showEvolForm = null;
 			toast('success', evolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { evolSaving = false; }
 	}
@@ -350,7 +350,7 @@
 			await tickets.delete(t.id);
 			ticketList = ticketList.filter(x => x.id !== t.id);
 			toast('success', 'Ticket supprimé');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 	}
 
 	function fmtDate(d: string) {
@@ -866,7 +866,7 @@
 	.ev-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.event-meta { font-size: .8rem; color: var(--color-text-muted); display: block; }
 	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
-	.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+	.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 	@media (max-width: 1023px) {
 		.dashboard-grid { grid-template-columns: 1fr 1fr; }
