@@ -66,6 +66,9 @@ def register(
     if body.statut == StatutUtilisateur.locataire:
         if not body.nom_proprietaire or not body.nom_proprietaire.strip():
             raise HTTPException(400, "Le nom du propriétaire est obligatoire pour un locataire.")
+    if body.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire):
+        if not body.nom_aide or not body.nom_aide.strip() or not body.prenom_aide or not body.prenom_aide.strip():
+            raise HTTPException(400, "Le nom et prénom du copropriétaire aidé sont obligatoires.")
     if not body.consentement_rgpd:
         raise HTTPException(400, "Le consentement RGPD est obligatoire.")
     _check_password_strength(body.password)
@@ -89,6 +92,8 @@ def register(
         consentement_communications=body.consentement_communications,
         batiment_id=body.batiment_id,
         nom_proprietaire=body.nom_proprietaire or None,
+        nom_aide=body.nom_aide or None,
+        prenom_aide=body.prenom_aide or None,
     )
     # Attribuer les rôles selon le statut
     if body.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire, StatutUtilisateur.aidant):

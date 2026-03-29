@@ -981,6 +981,9 @@ $: _siteNom = $siteNomStore;
 {#if u.statut === 'locataire' && u.nom_proprietaire}
   <div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">&#x1F464; Prop. : {u.nom_proprietaire}</div>
 {/if}
+{#if (u.statut === 'aidant' || u.statut === 'mandataire') && u.nom_aide}
+  <div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">&#x1F464; Aidé : {u.prenom_aide} {u.nom_aide}</div>
+{/if}
 </td>
 <td><span class="badge {statutBadgeClass[u.statut] ?? 'badge-gray'}" style="font-size:.75rem">{statutLabels[u.statut] ?? u.statut}</span></td>
 <td>

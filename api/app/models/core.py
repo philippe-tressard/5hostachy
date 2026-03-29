@@ -216,6 +216,8 @@ class Utilisateur(SQLModel, table=True):
     preferences_notifications: str = Field(default="realtime")  # realtime | digest_daily | digest_weekly
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     nom_proprietaire: Optional[str] = None  # pour les locataires : nom du propriétaire bailleur
+    nom_aide: Optional[str] = None      # pour aidant/mandataire : nom du copropriétaire aidé
+    prenom_aide: Optional[str] = None   # pour aidant/mandataire : prénom du copropriétaire aidé
     last_seen_actualites: Optional[datetime] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     derniere_connexion: Optional[datetime] = None

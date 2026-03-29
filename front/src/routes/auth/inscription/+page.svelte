@@ -16,6 +16,8 @@
 	let fonction = '';
 	let password = '';
 	let nom_proprietaire = '';
+	let nom_aide = '';
+	let prenom_aide = '';
 	let statut = 'copropriétaire_résident';
 	let batiment_id: number | null = null;
 	let batiments: { id: number; numero: string }[] = [];
@@ -42,6 +44,7 @@
 
 	$: isProfessional = statut === 'syndic' || statut === 'mandataire';
 	$: isAidant = statut === 'aidant';
+	$: isAidantOrMandataire = statut === 'aidant' || statut === 'mandataire';
 	$: isLocataire = statut === 'locataire';
 	$: showBatiment = batiments.length > 0 && !isProfessional && !isAidant;
 
@@ -61,7 +64,7 @@
 		error = '';
 		loading = true;
 		try {
-			await authApi.register({ nom, prenom, email, telephone, societe: societe || null, fonction: fonction || null, password, statut, batiment_id: showBatiment ? batiment_id : null, consentement_rgpd, consentement_communications, nom_proprietaire: isLocataire ? nom_proprietaire : null });
+			await authApi.register({ nom, prenom, email, telephone, societe: societe || null, fonction: fonction || null, password, statut, batiment_id: showBatiment ? batiment_id : null, consentement_rgpd, consentement_communications, nom_proprietaire: isLocataire ? nom_proprietaire : null, nom_aide: isAidantOrMandataire ? nom_aide : null, prenom_aide: isAidantOrMandataire ? prenom_aide : null });
 			success = true;
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Erreur lors de la création du compte';
@@ -146,6 +149,21 @@
 					<input id="nom-proprietaire" type="text" bind:value={nom_proprietaire} required placeholder="Nom du propriétaire bailleur" />
 					<p class="field-hint">Permet au conseil syndical de rattacher votre compte au bon lot.</p>
 				</div>
+				{/if}
+
+				{#if isAidantOrMandataire}
+				<div class="field-row">
+					<div class="field">
+						<label for="prenom-aide">Prénom du copropriétaire aidé *</label>
+						<input id="prenom-aide" type="text" bind:value={prenom_aide} required placeholder="Prénom" />
+					</div>
+					<div class="field">
+						<label for="nom-aide">Nom du copropriétaire aidé *</label>
+						<input id="nom-aide" type="text" bind:value={nom_aide} required placeholder="NOM"
+							style="text-transform:uppercase" on:input={() => nom_aide = nom_aide.toUpperCase()} />
+					</div>
+				</div>
+				<p class="field-hint">Permet au conseil syndical de rattacher votre compte au bon copropriétaire.</p>
 				{/if}
 
 				{#if showBatiment}
