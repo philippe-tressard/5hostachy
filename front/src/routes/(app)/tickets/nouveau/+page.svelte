@@ -20,7 +20,7 @@
 		{ value: 'nuisance', label: '\u{1F4E2} Nuisance', description: 'Bruit, odeur, parking…' },
 		{ value: 'question', label: '❓ Question', description: 'Information, procédure…' },
 		{ value: 'urgence', label: '\u{1F6A8} Urgence', description: 'Inondation, panne majeure, danger immédiat' },
-		{ value: 'bug', label: '\u{1F41B} Bug', description: 'Problème technique sur le site ou l'application' },
+		{ value: 'bug', label: '\u{1F41B} Bug', description: 'Problème technique sur le site ou l\u2019application' },
 	];
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
