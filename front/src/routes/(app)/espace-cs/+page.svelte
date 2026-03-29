@@ -852,6 +852,9 @@
 							<span class="text-muted-sm">
 								{user.statut?.replace(/_/g, ' ') ?? '…'}{user.batiment_id ? ` — ${batimentsMap[user.batiment_id] ?? `Bât. #${user.batiment_id}`}` : ''}
 							</span>
+							{#if (user.statut === 'aidant' || user.statut === 'mandataire') && user.nom_aide}
+								<span class="text-muted-sm">👤 Aidé : {user.prenom_aide} {user.nom_aide}</span>
+							{/if}
 							<span class="text-muted-sm">{new Date(user.cree_le).toLocaleDateString('fr-FR')}</span>
 						</div>
 						<div class="pending-actions">

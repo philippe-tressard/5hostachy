@@ -130,7 +130,7 @@ def register(
         )
     ).all()
     cfg = {row.cle: row.valeur for row in cfg_rows}
-    site_url = cfg.get("site_url") or "https://localhost"
+    site_url = (cfg.get("site_url") or "https://localhost").rstrip("/")
     site_nom = cfg.get("site_nom") or "5Hostachy"
 
     from app.utils.email import send_email as _send_email
@@ -605,7 +605,7 @@ def resend_verification(
             select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
         ).all()
         cfg = {row.cle: row.valeur for row in cfg_rows}
-        site_url = cfg.get("site_url") or "https://localhost"
+        site_url = (cfg.get("site_url") or "https://localhost").rstrip("/")
         site_nom = cfg.get("site_nom") or "5Hostachy"
 
         from app.utils.email import send_email as _send_email
