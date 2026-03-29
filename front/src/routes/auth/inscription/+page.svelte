@@ -88,7 +88,7 @@
 			<div class="alert alert-success">
 				<strong>Demande envoyée !</strong><br />
 				Un e-mail de vérification vous a été envoyé à <strong>{email}</strong>.<br />
-				Cliquez sur le lien dans l\u2019e-mail pour confirmer votre adresse (valable 24h).<br /><br />
+				Cliquez sur le lien dans l'e-mail pour confirmer votre adresse (valable 24h).<br /><br />
 				Après vérification, votre compte sera soumis à validation par le conseil syndical.
 			</div>
 			<div class="btn-wrapper">
