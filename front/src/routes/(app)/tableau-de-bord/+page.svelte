@@ -262,8 +262,7 @@
 		aful: 'AFUL',
 	};
 	function perimètreLabel(items: string[]) {
-		const map: Record<string, string> = { 'résidence': 'Copropriété entière', 'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4', parking: 'Parking', cave: 'Cave' };
-		return items.map(i => map[i] ?? i).join(' · ');
+		return items.map(i => PERIMETRE_LABELS[i] ?? i).join(' · ');
 	}
 	function evPerimetreLabel(perimetre: string) {
 		return perimetre.split(',').map((s: string) => PERIMETRE_LABELS[s.trim()] ?? s.trim()).join(' · ');

@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 import { onMount } from 'svelte';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { calendrier as calApi, publications as pubsApi, prestataires as prestApi, ApiError, type Publication } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -39,14 +40,8 @@ import { onMount } from 'svelte';
 	let expandedEvId: number | null = null;
 
 	let form = { titre: '', description: '', type: 'autre', lieu: '', debut: '', fin: '', statut_kanban: '', prestataire_id: '', affichable: false };
-	let formPerimetre: 'résidence' | 'specifique' = 'résidence';
-	let formLieux = new Set<string>();
+	let formPerimetreCible: string[] = ['résidence'];
 	let submitting = false;
-
-	function toggleLieu(val: string) {
-		if (formLieux.has(val)) formLieux.delete(val); else formLieux.add(val);
-		formLieux = formLieux;
-	}
 
 	const types = [
 		{ val: 'travaux', label: '\u{1F528} Travaux' },
@@ -79,7 +74,7 @@ import { onMount } from 'svelte';
 		const map: Record<string, string> = {
 			'résidence': 'Copropriété entière',
 			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave',
+			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
 		};
 		return p.split(',').map(s => map[s.trim()] ?? s).join(' · ');
 	}
@@ -225,8 +220,7 @@ import { onMount } from 'svelte';
 
 	function resetForm() {
 		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: false };
-		formPerimetre = 'résidence';
-		formLieux = new Set();
+		formPerimetreCible = ['résidence'];
 		editId = null;
 	}
 
@@ -243,13 +237,7 @@ import { onMount } from 'svelte';
 			affichable: ev.affichable ?? true,
 		};
 		const p = ev.perimetre ?? 'résidence';
-		if (p === 'résidence') {
-			formPerimetre = 'résidence';
-			formLieux = new Set();
-		} else {
-			formPerimetre = 'specifique';
-			formLieux = new Set(p.split(',').filter(Boolean));
-		}
+		formPerimetreCible = p === 'résidence' ? ['résidence'] : p.split(',').filter(Boolean);
 		editId = ev.id;
 		showForm = true;
 	}
@@ -257,7 +245,7 @@ import { onMount } from 'svelte';
 	async function save() {
 		if (!form.titre || !form.debut) { toast('error', 'Titre et date de début obligatoires'); return; }
 		submitting = true;
-		const perimetre = formPerimetre === 'résidence' ? 'résidence' : ([...formLieux].join(',') || 'résidence');
+		const perimetre = formPerimetreCible.length === 1 && formPerimetreCible[0] === 'résidence' ? 'résidence' : formPerimetreCible.join(',');
 		const { debut_heure, frequence_type: ft, frequence_valeur: fv, ...formData } = form;
 		const payload = {
 			...formData,
@@ -735,18 +723,7 @@ import { onMount } from 'svelte';
 			{/if}
 			<div class="field" style="margin-top:.75rem">
 				<label>Périmètre *</label>
-				<div class="perimetre-pills">
-					<button type="button" class="pill" class:pill-active={formPerimetre === 'résidence'}
-						on:click={() => { formPerimetre = 'résidence'; formLieux = new Set(); }}>
-						&#x1F3D8;️ Copropriété entière
-					</button>
-					{#each [['bat:1','Bât. 1'],['bat:2','Bât. 2'],['bat:3','Bât. 3'],['bat:4','Bât. 4'],['parking','Parking'],['cave','Cave'],['aful','AFUL']] as [val, lbl]}
-						<button type="button" class="pill" class:pill-active={formLieux.has(val)}
-							on:click={() => { if (formLieux.has(val)) { formLieux.delete(val); } else { formLieux.add(val); } formLieux = formLieux; formPerimetre = formLieux.size > 0 ? 'specifique' : 'résidence'; }}>
-							{lbl}
-						</button>
-					{/each}
-				</div>
+				<PerimetrePicker bind:value={formPerimetreCible} />
 			</div>
 			<div class="field" style="margin-top:.75rem">
 				<label>Suivi Kanban</label>
@@ -1038,10 +1015,7 @@ import { onMount } from 'svelte';
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem; }
 	.checkbox-field { display: flex; align-items: center; gap: .4rem; font-size: .875rem; cursor: pointer; }
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
-	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 	.form-grid label, .form-grid select, .form-grid input { display: flex; flex-direction: column; gap: .3rem; font-size: .9rem; }
 	.form-grid input, .form-grid select,

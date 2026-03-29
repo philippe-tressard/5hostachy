@@ -7,6 +7,7 @@
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 
@@ -35,6 +36,7 @@
 	let pendingPreview: string | undefined;
 	let uploadingImg = false;
 	let newPerimetreCible: string[] = ['résidence'];
+	let newPublicCible: string[] = ['résidents'];
 
 	function handleImageChange(e: CustomEvent<File>) {
 		pendingImage = e.detail;
@@ -59,7 +61,7 @@
 		const map: Record<string, string> = {
 			'résidence': 'Copropriété entière',
 			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave',
+			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
 		};
 		return items.map(i => map[i] ?? i).join(' · ');
 	}
@@ -81,7 +83,7 @@
 			const shouldPublishAfterImageUpload = !!pendingImage && newPartagerWhatsapp && !newBrouillon;
 			let pub = await pubsApi.create({
 				titre: newTitre, contenu: newContenu, urgente: newUrgente, epingle: newEpingle,
-				perimetre_cible: newPerimetreCible, public_cible: ['résidents'],
+				perimetre_cible: newPerimetreCible, public_cible: newPublicCible,
 				brouillon: shouldPublishAfterImageUpload ? true : newBrouillon,
 				statut: newStatut || null,
 				partager_whatsapp: newPartagerWhatsapp,
@@ -244,6 +246,10 @@
 			<div class="field">
 				<label id="perimetre-label">Périmètre *</label>
 				<PerimetrePicker bind:value={newPerimetreCible} />
+			</div>
+			<div class="field">
+				<label>Destinataires *</label>
+				<DestinatairePicker bind:value={newPublicCible} />
 			</div>
 			<div class="field">
 				<label for="actualite-contenu">Contenu *</label>

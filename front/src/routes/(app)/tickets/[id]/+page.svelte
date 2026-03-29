@@ -66,7 +66,7 @@
 		const map: Record<string, string> = {
 			'résidence': 'Copropriété entière',
 			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave',
+			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
 		};
 		return items.map((i: string) => map[i] ?? i).join(' · ');
 	}
