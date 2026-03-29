@@ -262,8 +262,7 @@
 		aful: 'AFUL',
 	};
 	function perimètreLabel(items: string[]) {
-		const map: Record<string, string> = { 'résidence': 'Copropriété entière', 'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4', parking: 'Parking', cave: 'Cave' };
-		return items.map(i => map[i] ?? i).join(' · ');
+		return items.map(i => PERIMETRE_LABELS[i] ?? i).join(' · ');
 	}
 	function evPerimetreLabel(perimetre: string) {
 		return perimetre.split(',').map((s: string) => PERIMETRE_LABELS[s.trim()] ?? s.trim()).join(' · ');
@@ -340,7 +339,7 @@
 			await loadEvolutions(t.id);
 			showEvolForm = null;
 			toast('success', evolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { evolSaving = false; }
 	}
@@ -351,7 +350,7 @@
 			await tickets.delete(t.id);
 			ticketList = ticketList.filter(x => x.id !== t.id);
 			toast('success', 'Ticket supprimé');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 	}
 
 	function fmtDate(d: string) {
@@ -395,20 +394,20 @@
 	<!-- KPIs -->
 	<div class="kpi-grid">
 		<div class="kpi-card card">
-			<div class="kpi-icon">
-				<Icon name="ticket" size={22} />
+			<div class="kpi-icon-zone">
+				<Icon name="ticket" size={24} />
 			</div>
-			<div class="kpi-content">
-				<div class="kpi-top"><span class="kpi-value">{openTickets.length}</span><span class="kpi-label">Tickets ouverts</span></div>
+			<div class="kpi-text-zone">
+				<div class="kpi-line1"><span class="kpi-value">{openTickets.length}</span> <span class="kpi-label">Tickets ouverts</span></div>
 				<a href="/tickets" class="kpi-link">Voir →</a>
 			</div>
 		</div>
 		<div class="kpi-card card" class:kpi-notif-active={unreadNotifs.length > 0}>
-			<div class="kpi-icon">
-				<Icon name="bell" size={22} />
+			<div class="kpi-icon-zone">
+				<Icon name="bell" size={24} />
 			</div>
-			<div class="kpi-content">
-				<div class="kpi-top"><span class="kpi-value">{unreadNotifs.length}</span><span class="kpi-label">Notifications non lues</span></div>
+			<div class="kpi-text-zone">
+				<div class="kpi-line1"><span class="kpi-value">{unreadNotifs.length}</span> <span class="kpi-label">Notifications non lues</span></div>
 				{#if unreadNotifs.length > 0}
 					<button class="kpi-link btn-link" on:click={() => (notifOpen = !notifOpen)}>
 						{notifOpen ? 'Masquer' : 'Voir'} →
@@ -419,11 +418,11 @@
 			</div>
 		</div>
 		<div class="kpi-card card">
-			<div class="kpi-icon">
-				<Icon name="newspaper" size={22} />
+			<div class="kpi-icon-zone">
+				<Icon name="newspaper" size={24} />
 			</div>
-			<div class="kpi-content">
-				<div class="kpi-top"><span class="kpi-value">{newPubsCount}</span><span class="kpi-label">Nouvelles actualités</span></div>
+			<div class="kpi-text-zone">
+				<div class="kpi-line1"><span class="kpi-value">{newPubsCount}</span> <span class="kpi-label">Nouvelles actualités</span></div>
 				<a href="/actualites" class="kpi-link" on:click={markActualitesVues}>Voir →</a>
 			</div>
 		</div>
@@ -733,13 +732,15 @@
 		margin-bottom: 2rem;
 	}
 
-	.kpi-card { display: flex; align-items: center; gap: .85rem; padding: .85rem 1rem; }
-	.kpi-content { flex: 1; min-width: 0; }
-	.kpi-top { display: flex; align-items: baseline; gap: .5rem; }
-	.kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--color-primary); line-height: 1; }
-	.kpi-label { font-size: .8rem; color: var(--color-text-muted); }
-	.kpi-link { font-size: .78rem; margin-top: .15rem; display: inline-block; }
+	.kpi-card { display: flex; align-items: stretch; padding: 0; overflow: hidden; }
+	.kpi-icon-zone { width: 25%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-secondary, #f5f6f8); color: var(--color-primary); flex-shrink: 0; }
+	.kpi-text-zone { width: 75%; display: flex; flex-direction: column; justify-content: center; padding: .75rem 1rem; gap: .15rem; }
+	.kpi-line1 { display: flex; align-items: baseline; gap: .45rem; }
+	.kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--color-primary); line-height: 1; }
+	.kpi-label { font-size: .82rem; color: var(--color-text-muted); }
+	.kpi-link { font-size: .78rem; display: inline-block; }
 	.kpi-notif-active { border-color: var(--color-primary); }
+	.kpi-notif-active .kpi-icon-zone { background: rgba(30, 58, 95, .08); }
 	.btn-link { background: none; border: none; color: var(--color-primary); cursor: pointer; padding: 0; font-size: .8rem; }
 
 	.notif-panel { padding: 1rem; }
@@ -865,7 +866,7 @@
 	.ev-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.event-meta { font-size: .8rem; color: var(--color-text-muted); display: block; }
 	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
-	.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+	.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 	@media (max-width: 1023px) {
 		.dashboard-grid { grid-template-columns: 1fr 1fr; }
