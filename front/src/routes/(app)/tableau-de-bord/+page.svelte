@@ -5,6 +5,7 @@
 	import { tickets, publications, notifications as notifApi, admin as adminApi, calendrier as calApi, prestataires as prestApi, ApiError, type Ticket, type TicketEvolution, type Publication, type Notification, auth as authApi } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml, safeRichContent } from '$lib/sanitize';
+	import Icon from '$lib/components/Icon.svelte';
 
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -394,11 +395,17 @@
 	<!-- KPIs -->
 	<div class="kpi-grid">
 		<div class="kpi-card card">
+			<div class="kpi-icon">
+				<Icon name="ticket" size={22} />
+			</div>
 			<div class="kpi-value">{openTickets.length}</div>
 			<div class="kpi-label">Tickets ouverts</div>
 			<a href="/tickets" class="kpi-link">Voir →</a>
 		</div>
 		<div class="kpi-card card" class:kpi-notif-active={unreadNotifs.length > 0}>
+			<div class="kpi-icon">
+				<Icon name="bell" size={22} />
+			</div>
 			<div class="kpi-value">{unreadNotifs.length}</div>
 			<div class="kpi-label">Notifications non lues</div>
 			{#if unreadNotifs.length > 0}
@@ -410,6 +417,9 @@
 			{/if}
 		</div>
 		<div class="kpi-card card">
+			<div class="kpi-icon">
+				<Icon name="newspaper" size={22} />
+			</div>
 			<div class="kpi-value">{newPubsCount}</div>
 			<div class="kpi-label">Nouvelles actualités</div>
 			<a href="/actualites" class="kpi-link" on:click={markActualitesVues}>Voir →</a>
@@ -803,6 +813,17 @@
 	.rich-content :global(ul), .rich-content :global(ol) { padding-left: 1.4em; margin: 0 0 .5em; }
 	.rich-content :global(strong) { font-weight: 600; }
 	.rich-content :global(em) { font-style: italic; }
+	.kpi-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		margin: 0 auto .1rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--color-primary) 10%, white);
+		color: var(--color-primary);
+	}
 
 	/* Carte ticket expansible (style page tickets) */
 	.tk-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: visible; position: relative; background: var(--color-surface); transition: border-left-color .12s; box-shadow: 0 1px 2px rgba(30,58,95,.04); }
