@@ -152,13 +152,12 @@
 				{/if}
 
 				{#if isAidantOrMandataire}
+				<label style="margin-bottom:0">Copropriétaire aidé *</label>
 				<div class="field-row">
 					<div class="field">
-						<label for="prenom-aide">Prénom du copropriétaire aidé *</label>
 						<input id="prenom-aide" type="text" bind:value={prenom_aide} required placeholder="Prénom" />
 					</div>
 					<div class="field">
-						<label for="nom-aide">Nom du copropriétaire aidé *</label>
 						<input id="nom-aide" type="text" bind:value={nom_aide} required placeholder="NOM"
 							style="text-transform:uppercase" on:input={() => nom_aide = nom_aide.toUpperCase()} />
 					</div>
