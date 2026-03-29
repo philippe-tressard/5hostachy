@@ -202,6 +202,7 @@ class Utilisateur(SQLModel, table=True):
     role: RoleUtilisateur = RoleUtilisateur.résident  # rôle principal (legacy + fallback)
     roles_json: str = Field(default="")  # rôles cumulés, virgule-séparés : "résident,conseil_syndical"
     actif: bool = Field(default=False)  # False = en attente de validation
+    email_verifie: bool = Field(default=False)  # False = email non confirmé
     onboarding_complete: bool = False
     onboarding_etape: int = 0  # 0-4
     photo_url: Optional[str] = None
@@ -322,6 +323,15 @@ class RefreshToken(SQLModel, table=True):
 
 class PasswordResetToken(SQLModel, table=True):
     __tablename__ = "password_reset_token"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="utilisateur.id")
+    token: str = Field(unique=True, index=True)
+    expires_at: datetime
+    used: bool = False
+
+
+class EmailVerificationToken(SQLModel, table=True):
+    __tablename__ = "email_verification_token"
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="utilisateur.id")
     token: str = Field(unique=True, index=True)

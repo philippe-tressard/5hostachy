@@ -1127,6 +1127,8 @@ $: _siteNom = $siteNomStore;
   <td>
     {#if u.actif}
       <span class="badge badge-green">Actif</span>
+    {:else if u.email_verifie === false}
+      <span class="badge badge-orange" title="Email non vérifié">Email non vérifié</span>
     {:else}
       <span class="badge badge-gray">En attente</span>
     {/if}

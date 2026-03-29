@@ -33,6 +33,7 @@ class UserRead(BaseModel):
     role: RoleUtilisateur
     roles: list[str] = []
     actif: bool
+    email_verifie: bool = False
     onboarding_complete: bool
     onboarding_etape: int
     photo_url: Optional[str] = None

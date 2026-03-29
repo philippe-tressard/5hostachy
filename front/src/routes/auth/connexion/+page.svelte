@@ -18,6 +18,9 @@
 	let capsLockOn = false;
 	let error = '';
 	let loading = false;
+	let emailNotVerified = false;
+	let resendDone = false;
+	let resendLoading = false;
 
 	function checkCapsLock(e: KeyboardEvent) {
 		capsLockOn = e.getModifierState('CapsLock');
@@ -25,15 +28,33 @@
 
 	async function submit() {
 		error = '';
+		emailNotVerified = false;
+		resendDone = false;
 		loading = true;
 		try {
 			const user = await authApi.login(email, password);
 			setUser(user);
 			goto('/tableau-de-bord');
-		} catch (e) {
-			error = e instanceof ApiError ? e.message : 'Erreur de connexion';
+		} catch (e: any) {
+			const msg = e instanceof ApiError ? e.message : 'Erreur de connexion';
+			if (msg.includes('rifier votre adresse') || msg.includes('email')) {
+				emailNotVerified = true;
+			}
+			error = msg;
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function resendVerification() {
+		resendLoading = true;
+		try {
+			await authApi.renvoyerVerification(email);
+			resendDone = true;
+		} catch {
+			resendDone = true;
+		} finally {
+			resendLoading = false;
 		}
 	}
 </script>
@@ -49,7 +70,20 @@
 		</div>
 
 		{#if error}
-			<div class="alert alert-error">{error}</div>
+			<div class="alert alert-error">
+				{error}
+				{#if emailNotVerified}
+					<div style="margin-top:.5rem">
+						{#if resendDone}
+							<span style="color:var(--color-text-muted); font-size:.85rem">Un nouveau lien a été envoyé si un compte non vérifié existe pour cette adresse.</span>
+						{:else}
+							<button type="button" class="btn btn-sm btn-outline" style="margin-top:.25rem" disabled={resendLoading} on:click={resendVerification}>
+								{resendLoading ? 'Envoi…' : 'Renvoyer le lien de vérification'}
+							</button>
+						{/if}
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		<form on:submit|preventDefault={submit}>
