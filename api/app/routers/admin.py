@@ -22,6 +22,7 @@ from app.models.core import (
     TelecommandeImport, VigikImport, LotImport,
     Mandat, VoteSondage, VoteIdee,
     StatutLotImport, StatutImport,
+    Delegation, StatutDelegation, StatutAcces,
 )
 from app.schemas import UserRead
 from app.utils.backup import run_backup
@@ -118,6 +119,60 @@ def traiter_compte(
     if body.action == "valider":
         from app.utils.auto_match_service import auto_match_pour_utilisateur
         auto_match_result = auto_match_pour_utilisateur(user, session)
+
+        # ── Aidant / mandataire : copier lots, TC, vigik de l'aidé ───────
+        if user.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire) and user.nom_aide and user.prenom_aide:
+            from sqlalchemy import func
+            aide = session.exec(
+                select(Utilisateur).where(
+                    func.lower(Utilisateur.nom) == user.nom_aide.strip().lower(),
+                    func.lower(Utilisateur.prenom) == user.prenom_aide.strip().lower(),
+                    Utilisateur.actif == True,
+                )
+            ).first()
+            aide_result = {"aide_trouve": False, "lots": 0, "tc": 0, "vigik": 0, "delegation": False}
+            if aide:
+                aide_result["aide_trouve"] = True
+                aide_result["aide_nom"] = f"{aide.prenom} {aide.nom}"
+                # Copier les lots
+                aide_lots = session.exec(select(UserLot).where(UserLot.user_id == aide.id, UserLot.actif == True)).all()
+                for ul in aide_lots:
+                    exists = session.exec(select(UserLot).where(UserLot.user_id == user.id, UserLot.lot_id == ul.lot_id)).first()
+                    if not exists:
+                        session.add(UserLot(user_id=user.id, lot_id=ul.lot_id, type_lien=ul.type_lien, quote_part=ul.quote_part))
+                        aide_result["lots"] += 1
+                # Copier les télécommandes
+                aide_tcs = session.exec(select(Telecommande).where(Telecommande.user_id == aide.id, Telecommande.statut == StatutAcces.actif)).all()
+                for tc in aide_tcs:
+                    exists = session.exec(select(Telecommande).where(Telecommande.user_id == user.id, Telecommande.code == tc.code)).first()
+                    if not exists:
+                        session.add(Telecommande(user_id=user.id, code=tc.code, lot_id=tc.lot_id, statut=StatutAcces.actif))
+                        aide_result["tc"] += 1
+                # Copier les vigik
+                aide_vigiks = session.exec(select(Vigik).where(Vigik.user_id == aide.id, Vigik.statut == StatutAcces.actif)).all()
+                for v in aide_vigiks:
+                    exists = session.exec(select(Vigik).where(Vigik.user_id == user.id, Vigik.code == v.code)).first()
+                    if not exists:
+                        session.add(Vigik(user_id=user.id, code=v.code, lot_id=v.lot_id, statut=StatutAcces.actif))
+                        aide_result["vigik"] += 1
+                # Créer la délégation automatiquement
+                existing_del = session.exec(
+                    select(Delegation).where(
+                        Delegation.mandant_id == aide.id,
+                        Delegation.aidant_id == user.id,
+                        Delegation.statut.in_([StatutDelegation.en_attente, StatutDelegation.active]),
+                    )
+                ).first()
+                if not existing_del:
+                    session.add(Delegation(
+                        mandant_id=aide.id,
+                        aidant_id=user.id,
+                        motif="Affectation automatique à l'activation du compte",
+                        cree_par_id=admin.id,
+                        statut=StatutDelegation.active,
+                    ))
+                    aide_result["delegation"] = True
+            auto_match_result["aide_match"] = aide_result
 
     session.commit()
     session.refresh(user)

@@ -257,7 +257,17 @@ async function confirmerCompteValidation() {
     const res = await api.post<any>(`/admin/comptes/${u.id}/traiter`, { action: 'valider' });
     const lots = res?.auto_match?.lots_resolus ?? 0;
     const lotsMatches = res?.auto_match?.lots ?? 0;
-    if (lots > 0) toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
+    const aideMatch = res?.auto_match?.aide_match;
+    if (aideMatch?.aide_trouve) {
+      const parts = [`Compte activé — aidé(e) : ${aideMatch.aide_nom}`];
+      if (aideMatch.lots > 0) parts.push(`${aideMatch.lots} lot(s)`);
+      if (aideMatch.tc > 0) parts.push(`${aideMatch.tc} TC`);
+      if (aideMatch.vigik > 0) parts.push(`${aideMatch.vigik} vigik`);
+      if (aideMatch.delegation) parts.push('délégation créée');
+      toast('success', parts.join(' — '));
+    } else if (aideMatch && !aideMatch.aide_trouve) {
+      toast('warning', `Compte activé — ⚠️ Copropriétaire aidé(e) « ${u.prenom_aide ?? ''} ${u.nom_aide ?? ''} » non trouvé(e). Affectation manuelle requise.`);
+    } else if (lots > 0) toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
     else if (lotsMatches > 0) toast('success', `Compte activé — ${lotsMatches} lot(s) trouvé(s) dans l'import.`);
     else if (u.statut?.startsWith('copropriétaire')) toast('warning', 'Compte activé — ⚠️ Aucun lot trouvé dans l\'import.');
     else toast('success', 'Compte activé.');
