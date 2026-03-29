@@ -44,6 +44,7 @@ class UserRead(BaseModel):
     communaute_ban_count: int = 0
     communaute_ban_jusqu_au: Optional[datetime] = None
     last_seen_actualites: Optional[datetime] = None
+    delegations_aidant: list[dict] = []  # délégations actives où l'utilisateur est aidant
     cree_le: datetime
     derniere_connexion: Optional[datetime] = None
 
@@ -51,11 +52,13 @@ class UserRead(BaseModel):
         from_attributes = True
 
     @classmethod
-    def from_orm_with_roles(cls, u, batiment_nom: Optional[str] = None) -> "UserRead":
+    def from_orm_with_roles(cls, u, batiment_nom: Optional[str] = None, delegations_aidant: list[dict] | None = None) -> "UserRead":
         data = cls.model_validate(u)
         data.roles = u.roles
         if batiment_nom is not None:
             data.batiment_nom = batiment_nom
+        if delegations_aidant is not None:
+            data.delegations_aidant = delegations_aidant
         return data
 
 
