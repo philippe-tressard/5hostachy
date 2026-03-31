@@ -1743,10 +1743,9 @@
 							<strong class="prest-nom">{p.nom}</strong>
 							<span class="badge badge-type" style="margin-left:.5rem">{typeLabel(p.type_prestataire)}</span>
 							<span class="badge badge-blue" style="margin-left:.25rem">{equipLabel(p.specialite)}</span>
-							{@const avg = avgNote(p.id)}
-							{#if avg !== null}
-								<span class="badge" style="margin-left:.25rem;color:#f59e0b;font-size:.82rem" title="{avg}/5 ({notations.filter(n => n.prestataire_id === p.id).length} avis)">
-									{starsDisplay(avg)} {avg}
+							{#if avgNote(p.id) !== null}
+								<span class="badge" style="margin-left:.25rem;color:#f59e0b;font-size:.82rem" title="{avgNote(p.id)}/5 ({notations.filter(n => n.prestataire_id === p.id).length} avis)">
+									{starsDisplay(avgNote(p.id) ?? 0)} {avgNote(p.id)}
 								</span>
 							{/if}
 						</div>

@@ -21,17 +21,6 @@ UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
 
-def _prest_to_read(p: Prestataire) -> PrestataireRead:
-    """Construit un PrestataireRead en parsant contacts_json."""
-    data = PrestataireRead.model_validate(p)
-    if p.contacts_json:
-        try:
-            data.contacts = json.loads(p.contacts_json)
-        except Exception:
-            data.contacts = []
-    return data
-
-
 # ── Prestataires ─────────────────────────────────────────────────────────────
 
 class PrestataireContact(BaseModel):
@@ -84,6 +73,17 @@ class PrestataireRead(BaseModel):
         if v is None:
             return []
         return v
+
+
+def _prest_to_read(p: Prestataire) -> PrestataireRead:
+    """Construit un PrestataireRead en parsant contacts_json."""
+    data = PrestataireRead.model_validate(p)
+    if p.contacts_json:
+        try:
+            data.contacts = json.loads(p.contacts_json)
+        except Exception:
+            data.contacts = []
+    return data
 
 
 @router.get("", response_model=list[PrestataireRead])
