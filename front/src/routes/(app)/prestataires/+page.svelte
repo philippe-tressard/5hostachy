@@ -1299,42 +1299,6 @@
 		{/if}
 	{/if}
 
-	<!-- Modal notation prestataire -->
-	{#if showNotationForm}
-		<div class="modal-overlay" on:click={() => { showNotationForm = null; }}>
-			<div class="modal" style="max-width:420px" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>⭐ Noter le prestataire</h2>
-					<button class="modal-close" on:click={() => { showNotationForm = null; }}>×</button>
-				</div>
-				<div class="modal-body">
-					<div style="text-align:center;margin-bottom:1rem">
-						<div class="star-picker" style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
-							{#each [1,2,3,4,5] as s}
-								<button type="button" class="star-btn" class:active={notationNote >= s}
-									style="background:none;border:none;cursor:pointer;font-size:2rem;color:{notationNote >= s ? '#f59e0b' : '#d1d5db'};transition:color .15s"
-									on:click={() => notationNote = s}
-									on:mouseenter={() => notationHover = s}
-									on:mouseleave={() => notationHover = 0}>
-									{(notationHover || notationNote) >= s ? '★' : '☆'}
-								</button>
-							{/each}
-						</div>
-						{#if notationNote > 0}<p style="margin:.25rem 0 0;font-size:.9rem;color:var(--color-text-muted)">{notationNote}/5</p>{/if}
-					</div>
-					<label style="display:block;margin-bottom:.75rem">
-						Commentaire (optionnel)
-						<textarea bind:value={notationCommentaire} rows="3" style="width:100%;margin-top:.25rem;resize:vertical"></textarea>
-					</label>
-				</div>
-				<div class="modal-footer">
-					<button class="btn btn-outline" on:click={() => { showNotationForm = null; }}>Annuler</button>
-					<button class="btn btn-primary" disabled={notationNote === 0} on:click={saveNotation}>💾 Enregistrer</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- ONGLET 3 : CONTRATS                                          -->
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1913,6 +1877,42 @@
 			{/each}
 		{/each}
 	{/if}
+{/if}
+
+<!-- Modal notation prestataire (global, hors onglets) -->
+{#if showNotationForm}
+	<div class="modal-overlay" on:click={() => { showNotationForm = null; }}>
+		<div class="modal" style="max-width:420px" on:click|stopPropagation>
+			<div class="modal-header">
+				<h2>⭐ Noter le prestataire</h2>
+				<button class="modal-close" on:click={() => { showNotationForm = null; }}>×</button>
+			</div>
+			<div class="modal-body">
+				<div style="text-align:center;margin-bottom:1rem">
+					<div class="star-picker" style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
+						{#each [1,2,3,4,5] as s}
+							<button type="button" class="star-btn" class:active={notationNote >= s}
+								style="background:none;border:none;cursor:pointer;font-size:2rem;color:{notationNote >= s ? '#f59e0b' : '#d1d5db'};transition:color .15s"
+								on:click={() => notationNote = s}
+								on:mouseenter={() => notationHover = s}
+								on:mouseleave={() => notationHover = 0}>
+								{(notationHover || notationNote) >= s ? '★' : '☆'}
+							</button>
+						{/each}
+					</div>
+					{#if notationNote > 0}<p style="margin:.25rem 0 0;font-size:.9rem;color:var(--color-text-muted)">{notationNote}/5</p>{/if}
+				</div>
+				<label style="display:block;margin-bottom:.75rem">
+					Commentaire (optionnel)
+					<textarea bind:value={notationCommentaire} rows="3" style="width:100%;margin-top:.25rem;resize:vertical"></textarea>
+				</label>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-outline" on:click={() => { showNotationForm = null; }}>Annuler</button>
+				<button class="btn btn-primary" disabled={notationNote === 0} on:click={saveNotation}>💾 Enregistrer</button>
+			</div>
+		</div>
+	</div>
 {/if}
 
 <style>
