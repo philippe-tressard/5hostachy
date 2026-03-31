@@ -44,7 +44,7 @@
 			notations = [n, ...notations];
 			showNotationForm = null;
 			toast('success', 'Notation enregistrée');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 		finally { notationSaving = false; }
 	}
 
@@ -258,7 +258,7 @@
 			}
 			toast('success', editReleveId ? 'Relevé modifié' : 'Relevé ajouté');
 			resetReleveForm();
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { releveSaving = false; }
 	}
@@ -285,7 +285,7 @@
 			compteurConfigs = compteurConfigs.map(c => c.id === cfg.id ? updated : c);
 			editCompteurId = null;
 			toast('success', 'Fournisseur mis à jour');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 	}
 
 	async function addCompteurConfig() {
@@ -301,7 +301,7 @@
 			showAddCompteur = false;
 			typeCompteur = created.type_compteur;
 			toast('success', 'Catégorie ajoutée');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 		finally { addCompteurSaving = false; }
 	}
 
@@ -312,12 +312,16 @@
 			compteurConfigs = compteurConfigs.filter(c => c.id !== cfg.id);
 			if (typeCompteur === cfg.type_compteur) typeCompteur = compteurConfigs[0]?.type_compteur ?? '';
 			toast('success', 'Catégorie supprimée');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 	}
 
 	function fmtReleve(r: any) {
 		const d = new Date(r.date_releve);
 		return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+	}
+
+	function splitTels(tel: string): string[] {
+		return tel.split(',').filter(t => t.trim());
 	}
 
 	function contratsForPrest(prestId: number): any[] {
@@ -434,7 +438,7 @@
 			}
 			closeDevisForm();
 			toast('success', editDevisId ? 'Prestation modifiée' : 'Prestation ajoutée');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
 	}
 
 	async function deleteDevis(id: number) {
@@ -558,7 +562,7 @@
 
 		if (contrats.length > 0) {
 			const results = await Promise.allSettled(
-				contrats.map(c => docsApi.list(undefined, c.id).then(docs => ({ id: c.id, docs })))
+				contrats.map(c => docsApi.list(undefined, c.id).then((docs: any[]) => ({ id: c.id, docs })))
 			);
 			const map: Record<number, any[]> = {};
 			for (const r of results) {
@@ -595,7 +599,7 @@
 			prestataires = await prestApi.list();
 			showPrestForm = false; resetPrestForm();
 			toast('success', editPrestId ? 'Prestataire modifié' : 'Prestataire ajouté');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
 	}
 
 	async function deletePrest(id: number) {
@@ -658,7 +662,7 @@
 			contratFormPrestId = null;
 			resetContratForm();
 			toast('success', editContratId ? 'Contrat modifié' : 'Contrat créé');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
 	}
 
 	async function uploadDoc(contratId: number) {
@@ -672,7 +676,7 @@
 			contratUploadTitre = '';
 			uploadInputKey++;
 			toast('success', 'Document ajouté');
-		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { uploadingDoc = false; }
+		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { uploadingDoc = false; }
 	}
 
 	async function deleteDoc(contratId: number, docId: number) {
@@ -1755,7 +1759,7 @@
 										</span>
 									{/each}
 								{:else if p.telephone}
-									{#each p.telephone.split(',').filter((t) => t.trim()) as tel}
+									{#each splitTels(p.telephone) as tel}
 										<span class="prest-contact">📞 {tel.trim()}</span>
 									{/each}
 								{/if}
@@ -1780,7 +1784,7 @@
 							<div class="detail-grid">
 								{#if p.telephone}
 									<div><span class="detail-label">Téléphone</span>
-										{#each p.telephone.split(',').filter((t) => t.trim()) as tel}
+										{#each splitTels(p.telephone) as tel}
 											<span style="display:block">📞 {tel.trim()}</span>
 										{/each}
 									</div>

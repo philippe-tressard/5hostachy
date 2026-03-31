@@ -14,6 +14,7 @@
 	interface PendingUser {
 		id: number; prenom: string; nom: string;
 		statut: string; batiment_id: number | null; cree_le: string;
+		nom_aide?: string | null; prenom_aide?: string | null;
 	}
 	interface PendingAcces {
 		id: number;
@@ -299,7 +300,7 @@
 			reportPrestataires = prestataires as ReportPrestataire[];
 			reportEvenements = evenements as ReportEvenement[];
 			reportingLoaded = true;
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', apiMessage(e, 'Erreur chargement reporting'));
 		} finally {
 			reportingLoading = false;
@@ -347,7 +348,7 @@
 			tkEvolContenu = '';
 			tkEvolStatut = '';
 			toast('success', tkEvolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { tkEvolSaving = false; }
 	}
@@ -487,7 +488,7 @@
 			}));
 			allLots = lotsData as LotRow[];
 			lotImports = importsData as any[];
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;
@@ -616,7 +617,7 @@
 			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, membres: membresCS });
 			toast('success', 'Conseil Syndical enregistré');
 			csHeaderEditing = false;
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { savingCS = false; }
 	}
@@ -627,7 +628,7 @@
 			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, membres: membresCS });
 			csOpenIdx = null; csEditIdx = null;
 			toast('success', `${membresCS[i].prenom} ${membresCS[i].nom} enregistré`);
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { savingCSIdx = null; }
 	}
@@ -706,7 +707,7 @@
 			});
 			toast('success', 'Syndic enregistré');
 			syndicHeaderEditing = false;
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { savingSyndic = false; }
 	}
@@ -730,7 +731,7 @@
 			});
 			syndicOpenIdx = null; syndicEditIdx = null;
 			toast('success', `${membresSyndic[i].prenom} ${membresSyndic[i].nom} enregistré`);
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally { savingSyndicIdx = null; }
 	}
@@ -766,7 +767,7 @@
 				toast('success', 'Actions d\'accueil envoyées.');
 			}
 			cvModal = null;
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
 			cvSubmitting = false;
@@ -778,7 +779,7 @@
 			await adminApi.traiterCompte(id, { action: decision === 'approuver' ? 'valider' : 'refuser' });
 			comptesEnAttente = comptesEnAttente.filter((u) => u.id !== id);
 			toast('success', decision === 'approuver' ? 'Compte approuvé' : 'Compte rejeté');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
@@ -787,7 +788,7 @@
 			await adminApi.traiterCommandeAcces(id, { action: decision === 'approuver' ? 'accepter' : 'refuser' });
 			commandesEnAttente = commandesEnAttente.filter((c) => c.id !== id);
 			toast('success', decision === 'approuver' ? 'Commande approuvée' : 'Commande rejetée');
-		} catch (e) {
+		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
