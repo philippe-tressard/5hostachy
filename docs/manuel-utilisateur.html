@@ -1633,6 +1633,9 @@
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px">
             <strong>&#x1F4CB; Devis &amp; interventions</strong> — suivi des devis actifs, des interventions acceptées non closes et de leur répartition par statut.
           </div>
+          <div style="padding:.8rem; background:#fdf4ff; border-radius:8px">
+            <strong>&#x1F3E2; Prestataires</strong> — synthèse de chaque prestataire : nom, spécialité, nombre de devis actifs/réalisés. Cliquez <strong>« Fiche synthèse »</strong> pour accéder à l'historique complet (contrats, prestations, notations, prochaines visites).
+          </div>
         </div>
 
         <div class="callout tip" style="margin-top:1rem">
@@ -2147,7 +2150,7 @@
             <strong>&#x1F4C4; Contrats</strong> — liste centralisée de tous les contrats de maintenance et de service, avec dates, montants et renouvellements.
           </div>
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F3E2; Prestataires</strong> — liste des entreprises intervenant sur la résidence, avec leur spécialité, type (ponctuel / récurrent) et coordonnées.
+            <strong>&#x1F3E2; Prestataires</strong> — liste des entreprises intervenant sur la résidence, avec leur spécialité, type (ponctuel / récurrent) et coordonnées. Chaque prestataire peut avoir <strong>plusieurs contacts téléphoniques</strong>, chacun associé à un prénom, nom, fonction et email (tous optionnels). La <strong>note moyenne</strong> (1 à 5 étoiles) s'affiche directement sur la fiche.
           </div>
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
             <strong>&#x1F4A7; Consommations</strong> — suivi des compteurs (eau, énergie…) et vue d'ensemble des dépenses par prestataire et par équipement.
@@ -2190,6 +2193,21 @@
           <span class="callout-icon">📅</span>
           <p>Sur le <strong>Tableau de bord</strong>, la zone « Événements récents » affiche aussi les <strong>prestations ponctuelles non terminées</strong> (en attente / acceptées), pour garder une vision opérationnelle rapide.</p>
         </div>
+      </div>
+
+      <div class="card">
+        <h3>⭐ Notation des prestataires</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Lorsqu'une visite ou prestation ponctuelle est terminée (statut <strong>Réalisé</strong>), le CS peut <strong>noter le prestataire de 1 à 5 étoiles</strong> avec un commentaire optionnel.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li>Un bouton <strong>⭐ Noter</strong> apparaît sur les prestations réalisées et les visites terminées.</li>
+          <li>La <strong>note moyenne</strong> est affichée directement sur la fiche du prestataire (onglet Prestataires).</li>
+          <li>L'historique complet des notations est consultable dans <strong>Espace CS → Reporting → Prestataires → Fiche synthèse</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4AC; Commentaires d'actualités et WhatsApp</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Lorsque vous ajoutez un <strong>commentaire</strong> (évolution) à une actualité, l'option <strong>WhatsApp</strong> est proposée par défaut (héritée du paramètre de l'actualité). Le commentaire est envoyé avec le titre de l'actualité suivi de <em>(suite)</em> et le footer configuré en admin.</p>
       </div>
     </section>
 

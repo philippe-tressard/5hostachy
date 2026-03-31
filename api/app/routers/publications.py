@@ -15,7 +15,7 @@ from app.utils.whatsapp import envoyer_whatsapp_avec_log
 router = APIRouter(prefix="/publications", tags=["publications"])
 
 ARCHIVAGE_DELAI_HEURES = 48
-_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid'}  # délai avant archivage automatique après résolu/annulé
+_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}  # délai avant archivage automatique après résolu/annulé
 
 
 def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
@@ -215,6 +215,7 @@ def delete_publication(
 def add_evolution(
     pub_id: int,
     body: EvolutionCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -246,6 +247,21 @@ def add_evolution(
 
     session.commit()
     session.refresh(evol)
+
+    # Envoi WhatsApp pour le commentaire si demandé
+    share_wa = body.partager_whatsapp if body.partager_whatsapp is not None else pub.partager_whatsapp
+    if share_wa and body.contenu and body.contenu.strip():
+        wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
+        if wa_config.get('whatsapp_enabled') == '1':
+            background_tasks.add_task(
+                envoyer_whatsapp_avec_log,
+                f"{pub.titre} (suite)",
+                body.contenu,
+                pub.urgente,
+                pub.perimetre_cible,
+                None,
+                wa_config,
+            )
 
     auteur = session.get(Utilisateur, evol.auteur_id)
     return EvolutionRead(

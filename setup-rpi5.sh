@@ -504,16 +504,22 @@ success "Dockerfile API gÃ©nÃ©rÃ©."
 # â”€â”€ 5f. requirements.txt API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 cat > "${INSTALL_DIR}/api/requirements.txt" <<'EOF'
 fastapi==0.115.*
-uvicorn[standard]==0.34.*
-gunicorn==23.*
+uvicorn[standard]==0.32.*
+slowapi==0.1.*
 sqlmodel==0.0.*
 alembic==1.14.*
-pydantic[email]==2.*
+PyJWT==2.10.*
 passlib[bcrypt]==1.7.*
-python-jose[cryptography]==3.3.*
-fastapi-mail==1.4.*
+bcrypt==4.0.*
 python-multipart==0.0.*
+fastapi-mail==1.4.*
+apscheduler==3.10.*
 httpx==0.28.*
+python-dotenv==1.0.*
+aiofiles==24.*
+Pillow==11.2.*
+jinja2==3.1.6
+openpyxl==3.1.*
 EOF
 success "requirements.txt API gÃ©nÃ©rÃ©."
 

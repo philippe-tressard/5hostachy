@@ -14,7 +14,49 @@
 	let prestataires: any[] = [];
 	let contrats: any[] = [];
 	let devis: any[] = [];
+	let notations: any[] = [];
 	let loading = true;
+
+	// ── Notation ──────────────────────────────────────────────────
+	let showNotationForm: { prestataireId: number; devisId?: number; contratId?: number } | null = null;
+	let notationNote = 0;
+	let notationCommentaire = '';
+	let notationSaving = false;
+	let notationHover = 0;
+
+	function openNotationForm(prestataireId: number, devisId?: number, contratId?: number) {
+		showNotationForm = { prestataireId, devisId, contratId };
+		notationNote = 0;
+		notationCommentaire = '';
+	}
+
+	async function saveNotation() {
+		if (!showNotationForm || notationNote < 1 || notationNote > 5) { toast('error', 'Sélectionnez une note entre 1 et 5'); return; }
+		notationSaving = true;
+		try {
+			const n = await prestApi.createNotation({
+				prestataire_id: showNotationForm.prestataireId,
+				note: notationNote,
+				commentaire: notationCommentaire.trim() || undefined,
+				devis_id: showNotationForm.devisId,
+				contrat_id: showNotationForm.contratId,
+			});
+			notations = [n, ...notations];
+			showNotationForm = null;
+			toast('success', 'Notation enregistrée');
+		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+		finally { notationSaving = false; }
+	}
+
+	function avgNote(prestataireId: number): number | null {
+		const pn = notations.filter(n => n.prestataire_id === prestataireId);
+		if (pn.length === 0) return null;
+		return Math.round(pn.reduce((s: number, n: any) => s + n.note, 0) / pn.length * 10) / 10;
+	}
+
+	function starsDisplay(note: number): string {
+		return '★'.repeat(Math.round(note)) + '☆'.repeat(5 - Math.round(note));
+	}
 
 	// ── Onglets (5) ────────────────────────────────────────────────
 	let onglet: 'prestations' | 'visites' | 'contrats_tab' | 'prestataires' | 'consommations' = 'prestations';
@@ -30,7 +72,7 @@
 	let showPrestForm = false;
 	let editPrestId: number | null = null;
 	let prestForm = { nom: '', specialite: '', type_prestataire: 'ponctuel', email: '' };
-	let prestTelephones: string[] = [''];
+	let prestContacts: { telephone: string; prenom: string; nom: string; fonction: string; email: string }[] = [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }];
 	let submitting = false;
 
 	// ── Contrat form ──────────────────────────────────────────────
@@ -446,9 +488,11 @@
 		{ val: 'extincteurs', label: '\u{1F9EF} Extincteurs' },
 		{ val: 'interphone_digicode', label: '\u{1F4DE} Interphone/Digicode' },
 		{ val: 'nettoyage', label: '\u{1F9F9} Nettoyage' },
+		{ val: 'plomberie', label: '\u{1F6BF} Plomberie' },
 		{ val: 'pompe', label: '⚙️ Pompe' },
 		{ val: 'porte_parking', label: '\u{1F697} Porte parking' },
-		{ val: 'toits', label: '\u{1F3E0} Toits' },
+		{ val: 'serrurerie', label: '\u{1F511} Serrurerie' },
+		{ val: 'toiture', label: '\u{1F3E0} Toiture' },
 		{ val: 'vmc', label: '\u{1F4A8} VMC' },
 		{ val: 'autre', label: '\u{1F527} Autre' },
 	];
@@ -509,7 +553,7 @@
 
 	onMount(async () => {
 		try {
-			[prestataires, contrats, devis] = await Promise.all([prestApi.list(), prestApi.contrats(), prestApi.devis()]);
+			[prestataires, contrats, devis, notations] = await Promise.all([prestApi.list(), prestApi.contrats(), prestApi.devis(), prestApi.notations()]);
 		} catch { toast('error', 'Erreur de chargement'); } finally { loading = false; }
 
 		if (contrats.length > 0) {
@@ -524,11 +568,17 @@
 		}
 	});
 
-	function resetPrestForm() { prestForm = { nom: '', specialite: '', type_prestataire: 'ponctuel', email: '' }; prestTelephones = ['']; editPrestId = null; }
+	function resetPrestForm() { prestForm = { nom: '', specialite: '', type_prestataire: 'ponctuel', email: '' }; prestContacts = [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }]; editPrestId = null; }
 	function startEditPrest(p: any) {
 		prestForm = { nom: p.nom, specialite: p.specialite ?? '', type_prestataire: p.type_prestataire ?? 'ponctuel', email: p.email ?? '' };
-		prestTelephones = p.telephone ? p.telephone.split(',').filter((t: string) => t.trim()) : [''];
-		if (prestTelephones.length === 0) prestTelephones = [''];
+		if (p.contacts && p.contacts.length > 0) {
+			prestContacts = p.contacts.map((c: any) => ({
+				telephone: c.telephone ?? '', prenom: c.prenom ?? '', nom: c.nom ?? '', fonction: c.fonction ?? '', email: c.email ?? '',
+			}));
+		} else {
+			prestContacts = p.telephone ? p.telephone.split(',').filter((t: string) => t.trim()).map((t: string) => ({ telephone: t.trim(), prenom: '', nom: '', fonction: '', email: '' })) : [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }];
+		}
+		if (prestContacts.length === 0) prestContacts = [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }];
 		editPrestId = p.id;
 		showPrestForm = true;
 		window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -536,11 +586,12 @@
 
 	async function savePrest() {
 		if (!prestForm.nom || !prestForm.specialite) { toast('error', 'Nom et spécialité obligatoires'); return; }
-		const telephone = prestTelephones.map(t => t.trim()).filter(Boolean).join(',') || null;
+		const contacts = prestContacts.filter(c => c.telephone.trim());
+		const telephone = contacts.map(c => c.telephone.trim()).join(',') || null;
 		submitting = true;
 		try {
-			if (editPrestId) { await prestApi.update(editPrestId, { ...prestForm, telephone }); }
-			else { await prestApi.create({ ...prestForm, telephone }); }
+			if (editPrestId) { await prestApi.update(editPrestId, { ...prestForm, telephone, contacts }); }
+			else { await prestApi.create({ ...prestForm, telephone, contacts }); }
 			prestataires = await prestApi.list();
 			showPrestForm = false; resetPrestForm();
 			toast('success', editPrestId ? 'Prestataire modifié' : 'Prestataire ajouté');
@@ -800,6 +851,8 @@
 									<div class="kanban-card-actions">
 										<button class="devis-step-btn" title="Retour chez le prestataire"
 											on:click={() => moveDevisStatut(d.id, 'accepte')}>←</button>
+										<button class="devis-step-btn" title="Noter" style="color:#f59e0b"
+											on:click={() => openNotationForm(d.prestataire_id, d.id)}>⭐</button>
 										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
 									</div>
 								{/if}
@@ -963,6 +1016,7 @@
 											<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
 										{:else if d.statut === 'realise'}
 											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
+											<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(d.prestataire_id, d.id)}>⭐ Noter</button>
 										{:else if d.statut === 'refuse'}
 											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Remettre en attente</button>
 										{/if}
@@ -1027,6 +1081,7 @@
 										{#if $isCS}
 											<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
 												<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
+												<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(d.prestataire_id, d.id)}>⭐ Noter</button>
 											</div>
 										{/if}
 									</div>
@@ -1187,6 +1242,7 @@
 							{#if $isCS}
 								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
 									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+									<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(c.prestataire_id, undefined, c.id)}>⭐ Noter</button>
 								</div>
 							{/if}
 						</div>
@@ -1229,6 +1285,7 @@
 							{#if $isCS}
 								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
 									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+									<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(c.prestataire_id, undefined, c.id)}>⭐ Noter</button>
 								</div>
 							{/if}
 						</div>
@@ -1236,6 +1293,42 @@
 				</div>
 			{/each}
 		{/if}
+	{/if}
+
+	<!-- Modal notation prestataire -->
+	{#if showNotationForm}
+		<div class="modal-overlay" on:click={() => { showNotationForm = null; }}>
+			<div class="modal" style="max-width:420px" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>⭐ Noter le prestataire</h2>
+					<button class="modal-close" on:click={() => { showNotationForm = null; }}>×</button>
+				</div>
+				<div class="modal-body">
+					<div style="text-align:center;margin-bottom:1rem">
+						<div class="star-picker" style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
+							{#each [1,2,3,4,5] as s}
+								<button type="button" class="star-btn" class:active={notationNote >= s}
+									style="background:none;border:none;cursor:pointer;font-size:2rem;color:{notationNote >= s ? '#f59e0b' : '#d1d5db'};transition:color .15s"
+									on:click={() => notationNote = s}
+									on:mouseenter={() => notationHover = s}
+									on:mouseleave={() => notationHover = 0}>
+									{(notationHover || notationNote) >= s ? '★' : '☆'}
+								</button>
+							{/each}
+						</div>
+						{#if notationNote > 0}<p style="margin:.25rem 0 0;font-size:.9rem;color:var(--color-text-muted)">{notationNote}/5</p>{/if}
+					</div>
+					<label style="display:block;margin-bottom:.75rem">
+						Commentaire (optionnel)
+						<textarea bind:value={notationCommentaire} rows="3" style="width:100%;margin-top:.25rem;resize:vertical"></textarea>
+					</label>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-outline" on:click={() => { showNotationForm = null; }}>Annuler</button>
+					<button class="btn btn-primary" disabled={notationNote === 0} on:click={saveNotation}>💾 Enregistrer</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1595,16 +1688,24 @@
 					<label>Email<input type="email" bind:value={prestForm.email} /></label>
 				</div>
 				<div style="margin-top:.75rem">
-					<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Téléphone{prestTelephones.length > 1 ? 's' : ''}</div>
-					{#each prestTelephones as tel, i}
-						<div style="display:flex;gap:.4rem;margin-bottom:.35rem">
-							<input style="flex:1" bind:value={prestTelephones[i]} placeholder="Ex. 06 12 34 56 78" />
-							{#if prestTelephones.length > 1}
-								<button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#dc2626" on:click={() => prestTelephones = prestTelephones.filter((_, j) => j !== i)}>−</button>
-							{/if}
+					<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Contact{prestContacts.length > 1 ? 's' : ''}</div>
+					{#each prestContacts as contact, i}
+						<div class="contact-block" style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)">
+							<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
+								<input style="flex:2;min-width:140px" bind:value={prestContacts[i].telephone} placeholder="Téléphone *" />
+								<input style="flex:1;min-width:100px" bind:value={prestContacts[i].prenom} placeholder="Prénom" />
+								<input style="flex:1;min-width:100px" bind:value={prestContacts[i].nom} placeholder="Nom" />
+							</div>
+							<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+								<input style="flex:1;min-width:120px" bind:value={prestContacts[i].fonction} placeholder="Fonction" />
+								<input style="flex:1;min-width:140px" type="email" bind:value={prestContacts[i].email} placeholder="Email" />
+								{#if prestContacts.length > 1}
+									<button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#dc2626;flex-shrink:0" on:click={() => prestContacts = prestContacts.filter((_, j) => j !== i)}>−</button>
+								{/if}
+							</div>
 						</div>
 					{/each}
-					<button type="button" class="btn btn-sm btn-outline" on:click={() => prestTelephones = [...prestTelephones, '']}>+ N° de téléphone</button>
+					<button type="button" class="btn btn-sm btn-outline" on:click={() => prestContacts = [...prestContacts, { telephone: '', prenom: '', nom: '', fonction: '', email: '' }]}>+ Nouveau contact</button>
 				</div>
 				<div class="form-actions">
 					<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
@@ -1638,10 +1739,22 @@
 							<strong class="prest-nom">{p.nom}</strong>
 							<span class="badge badge-type" style="margin-left:.5rem">{typeLabel(p.type_prestataire)}</span>
 							<span class="badge badge-blue" style="margin-left:.25rem">{equipLabel(p.specialite)}</span>
+							{@const avg = avgNote(p.id)}
+							{#if avg !== null}
+								<span class="badge" style="margin-left:.25rem;color:#f59e0b;font-size:.82rem" title="{avg}/5 ({notations.filter(n => n.prestataire_id === p.id).length} avis)">
+									{starsDisplay(avg)} {avg}
+								</span>
+							{/if}
 						</div>
 						{#if !compactPrests || expanded}
 							<div class="prest-contacts">
-								{#if p.telephone}
+								{#if p.contacts && p.contacts.length > 0}
+									{#each p.contacts as c}
+										<span class="prest-contact">
+											📞 {c.telephone}{#if c.prenom || c.nom}{' '}— {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction}{' '}({c.fonction}){/if}
+										</span>
+									{/each}
+								{:else if p.telephone}
 									{#each p.telephone.split(',').filter((t) => t.trim()) as tel}
 										<span class="prest-contact">📞 {tel.trim()}</span>
 									{/each}

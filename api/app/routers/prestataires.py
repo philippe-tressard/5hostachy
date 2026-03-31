@@ -14,14 +14,33 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_cs_or_admin, get_current_user
 from app.database import get_session
-from app.models.core import CompteurConfig, ContratEntretien, DevisPrestataire, Prestataire, ReleveCompteur, TypeEquipement, TypePrestataire, Utilisateur, RoleUtilisateur
+from app.models.core import CompteurConfig, ContratEntretien, DevisPrestataire, NotationPrestataire, Prestataire, ReleveCompteur, TypeEquipement, TypePrestataire, Utilisateur, RoleUtilisateur
 
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
 
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
 
+def _prest_to_read(p: Prestataire) -> PrestataireRead:
+    """Construit un PrestataireRead en parsant contacts_json."""
+    data = PrestataireRead.model_validate(p)
+    if p.contacts_json:
+        try:
+            data.contacts = json.loads(p.contacts_json)
+        except Exception:
+            data.contacts = []
+    return data
+
+
 # ── Prestataires ─────────────────────────────────────────────────────────────
+
+class PrestataireContact(BaseModel):
+    telephone: Optional[str] = None
+    prenom: Optional[str] = None
+    nom: Optional[str] = None
+    fonction: Optional[str] = None
+    email: Optional[str] = None
+
 
 class PrestataireCreate(BaseModel):
     nom: str
@@ -29,6 +48,7 @@ class PrestataireCreate(BaseModel):
     type_prestataire: TypePrestataire = TypePrestataire.ponctuel
     telephone: Optional[str] = None
     email: Optional[str] = None
+    contacts: Optional[list[PrestataireContact]] = None
 
 
 class PrestataireUpdate(BaseModel):
@@ -37,6 +57,7 @@ class PrestataireUpdate(BaseModel):
     type_prestataire: Optional[TypePrestataire] = None
     telephone: Optional[str] = None
     email: Optional[str] = None
+    contacts: Optional[list[PrestataireContact]] = None
 
 
 class PrestataireRead(BaseModel):
@@ -46,10 +67,23 @@ class PrestataireRead(BaseModel):
     type_prestataire: TypePrestataire = TypePrestataire.ponctuel
     telephone: Optional[str] = None
     email: Optional[str] = None
+    contacts: list[PrestataireContact] = []
     actif: bool
 
     class Config:
         from_attributes = True
+
+    @field_validator('contacts', mode='before')
+    @classmethod
+    def parse_contacts(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        if v is None:
+            return []
+        return v
 
 
 @router.get("", response_model=list[PrestataireRead])
@@ -57,7 +91,8 @@ def list_prestataires(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    return session.exec(select(Prestataire).where(Prestataire.actif == True)).all()
+    prests = session.exec(select(Prestataire).where(Prestataire.actif == True)).all()
+    return [_prest_to_read(p) for p in prests]
 
 
 @router.post("", response_model=PrestataireRead, status_code=201)
@@ -66,11 +101,14 @@ def create_prestataire(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    p = Prestataire(**body.model_dump())
+    data = body.model_dump(exclude={'contacts'})
+    if body.contacts is not None:
+        data['contacts_json'] = json.dumps([c.model_dump() for c in body.contacts], ensure_ascii=False)
+    p = Prestataire(**data)
     session.add(p)
     session.commit()
     session.refresh(p)
-    return p
+    return _prest_to_read(p)
 
 
 @router.patch("/{p_id}", response_model=PrestataireRead)
@@ -83,12 +121,15 @@ def update_prestataire(
     p = session.get(Prestataire, p_id)
     if not p:
         raise HTTPException(404, "Prestataire introuvable")
-    for k, v in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True, exclude={'contacts'})
+    if 'contacts' in body.model_fields_set:
+        data['contacts_json'] = json.dumps([c.model_dump() for c in (body.contacts or [])], ensure_ascii=False)
+    for k, v in data.items():
         setattr(p, k, v)
     session.add(p)
     session.commit()
     session.refresh(p)
-    return p
+    return _prest_to_read(p)
 
 
 @router.delete("/{p_id}", status_code=204)
@@ -614,4 +655,147 @@ def delete_compteur_config(
     cfg.actif = False
     session.add(cfg)
     session.commit()
+
+
+# ── Notations prestataires ─────────────────────────────────────────────────
+
+class NotationCreate(BaseModel):
+    prestataire_id: int
+    note: int  # 1-5
+    commentaire: Optional[str] = None
+    devis_id: Optional[int] = None
+    contrat_id: Optional[int] = None
+
+    @field_validator('note')
+    @classmethod
+    def validate_note(cls, v):
+        if v < 1 or v > 5:
+            raise ValueError('La note doit être entre 1 et 5')
+        return v
+
+
+class NotationRead(BaseModel):
+    id: int
+    prestataire_id: int
+    note: int
+    commentaire: Optional[str] = None
+    devis_id: Optional[int] = None
+    contrat_id: Optional[int] = None
+    auteur_id: int
+    auteur_nom: Optional[str] = None
+    cree_le: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/notations", response_model=list[NotationRead])
+def list_notations(
+    prestataire_id: Optional[int] = None,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    q = select(NotationPrestataire)
+    if prestataire_id is not None:
+        q = q.where(NotationPrestataire.prestataire_id == prestataire_id)
+    q = q.order_by(NotationPrestataire.cree_le.desc())
+    notations = session.exec(q).all()
+    result = []
+    for n in notations:
+        auteur = session.get(Utilisateur, n.auteur_id)
+        nr = NotationRead.model_validate(n)
+        nr.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
+        result.append(nr)
+    return result
+
+
+@router.post("/notations", response_model=NotationRead, status_code=201)
+def create_notation(
+    body: NotationCreate,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    p = session.get(Prestataire, body.prestataire_id)
+    if not p:
+        raise HTTPException(404, "Prestataire introuvable")
+    n = NotationPrestataire(
+        prestataire_id=body.prestataire_id,
+        note=body.note,
+        commentaire=body.commentaire,
+        devis_id=body.devis_id,
+        contrat_id=body.contrat_id,
+        auteur_id=user.id,
+    )
+    session.add(n)
+    session.commit()
+    session.refresh(n)
+    nr = NotationRead.model_validate(n)
+    nr.auteur_nom = f"{user.prenom} {user.nom}"
+    return nr
+
+
+@router.delete("/notations/{n_id}", status_code=204)
+def delete_notation(
+    n_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    n = session.get(NotationPrestataire, n_id)
+    if not n:
+        raise HTTPException(404, "Notation introuvable")
+    session.delete(n)
+    session.commit()
+
+
+@router.get("/synthese/{p_id}")
+def get_prestataire_synthese(
+    p_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Synthèse complète d'un prestataire pour le reporting CS."""
+    p = session.get(Prestataire, p_id)
+    if not p:
+        raise HTTPException(404, "Prestataire introuvable")
+
+    contrats = session.exec(
+        select(ContratEntretien).where(ContratEntretien.prestataire_id == p_id, ContratEntretien.actif == True)
+    ).all()
+    devis_list = session.exec(
+        select(DevisPrestataire).where(DevisPrestataire.prestataire_id == p_id, DevisPrestataire.actif == True)
+    ).all()
+    notations = session.exec(
+        select(NotationPrestataire).where(NotationPrestataire.prestataire_id == p_id).order_by(NotationPrestataire.cree_le.desc())
+    ).all()
+
+    note_moy = round(sum(n.note for n in notations) / len(notations), 1) if notations else None
+    notations_read = []
+    for n in notations:
+        auteur = session.get(Utilisateur, n.auteur_id)
+        notations_read.append({
+            "id": n.id, "note": n.note, "commentaire": n.commentaire,
+            "devis_id": n.devis_id, "contrat_id": n.contrat_id,
+            "auteur_nom": f"{auteur.prenom} {auteur.nom}" if auteur else "?",
+            "cree_le": n.cree_le.isoformat(),
+        })
+
+    prest_data = _prest_to_read(p).model_dump()
+    return {
+        **prest_data,
+        "contrats": [ContratRead.model_validate(c).model_dump() for c in contrats],
+        "devis": [{
+            "id": d.id, "titre": d.titre, "statut": d.statut,
+            "date_prestation": d.date_prestation.isoformat() if d.date_prestation else None,
+            "montant_estime": d.montant_estime, "perimetre": d.perimetre,
+        } for d in devis_list],
+        "notations": notations_read,
+        "note_moyenne": note_moy,
+        "nb_notations": len(notations),
+        "nb_contrats": len(contrats),
+        "nb_devis": len(devis_list),
+        "prochaines_visites": [
+            {"contrat": c.libelle, "date": c.prochaine_visite.isoformat()}
+            for c in contrats if c.prochaine_visite
+        ],
+    }
 
