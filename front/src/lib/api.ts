@@ -246,7 +246,7 @@ export const publications = {
 	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
-	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string }) =>
+	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean }) =>
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 };
 
@@ -439,6 +439,12 @@ export const prestataires = {
 	createCompteurConfig: (data: unknown) => api.post<any>('/prestataires/compteurs-config', data),
 	updateCompteurConfig: (id: number, data: unknown) => api.patch<any>(`/prestataires/compteurs-config/${id}`, data),
 	deleteCompteurConfig: (id: number) => api.delete(`/prestataires/compteurs-config/${id}`),
+	// Notations
+	notations: (prestataireId?: number) => api.get<any[]>(`/prestataires/notations${prestataireId ? '?prestataire_id=' + prestataireId : ''}`),
+	createNotation: (data: { prestataire_id: number; note: number; commentaire?: string; devis_id?: number; contrat_id?: number }) => api.post<any>('/prestataires/notations', data),
+	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
+	// Synthèse
+	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),
 };
 
 export const sondages = {

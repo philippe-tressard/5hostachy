@@ -216,6 +216,7 @@ class EvolutionCreate(BaseModel):
     type: str  # commentaire | etat | correction
     contenu: Optional[str] = None
     nouveau_statut: Optional[str] = None  # requis si type=="etat"
+    partager_whatsapp: Optional[bool] = None  # None = hérite de la publication
 
 
 class PublicationRead(BaseModel):

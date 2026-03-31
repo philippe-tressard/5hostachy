@@ -98,8 +98,11 @@ class TypeEquipement(str, Enum):
     extincteurs = "extincteurs"
     interphone_digicode = "interphone_digicode"
     nettoyage = "nettoyage"
+    plomberie = "plomberie"
     pompe = "pompe"
     porte_parking = "porte_parking"
+    serrurerie = "serrurerie"
+    toiture = "toiture"
     vmc = "vmc"
     autre = "autre"
 
@@ -569,6 +572,7 @@ class Prestataire(SQLModel, table=True):
     type_prestataire: TypePrestataire = TypePrestataire.ponctuel
     telephone: Optional[str] = None
     email: Optional[str] = None
+    contacts_json: Optional[str] = None  # JSON: [{prenom, nom, fonction, email, telephone}]
     actif: bool = True
 
     contrats: List["ContratEntretien"] = Relationship(back_populates="prestataire")
@@ -619,6 +623,19 @@ class DevisPrestataire(SQLModel, table=True):
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
 
     prestataire: Optional[Prestataire] = Relationship(back_populates="devis")
+
+
+class NotationPrestataire(SQLModel, table=True):
+    """Notation d'un prestataire (1-5 étoiles) après une visite ou prestation ponctuelle."""
+    __tablename__ = "notation_prestataire"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    prestataire_id: int = Field(foreign_key="prestataire.id")
+    note: int  # 1 à 5
+    commentaire: Optional[str] = None
+    devis_id: Optional[int] = Field(default=None, foreign_key="devis_prestataire.id")
+    contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
+    auteur_id: int = Field(foreign_key="utilisateur.id")
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ──────────────────────────────────────────────
