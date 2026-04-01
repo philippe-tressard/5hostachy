@@ -6,6 +6,7 @@ Create Date: 2026-04-01
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import text
 
 revision = "0081"
 down_revision = "0080"
@@ -22,11 +23,14 @@ def upgrade():
 
     # 2. Transformation preferences_notifications : "realtime" → JSON complet
     op.execute(
-        f"UPDATE utilisateur SET preferences_notifications = '{DEFAULT_PREFS}' "
-        "WHERE preferences_notifications IS NULL OR preferences_notifications IN ('realtime', 'digest_daily', 'digest_weekly', '')"
+        text(
+            "UPDATE utilisateur SET preferences_notifications = :prefs "
+            "WHERE preferences_notifications IS NULL "
+            "OR preferences_notifications IN ('realtime', 'digest_daily', 'digest_weekly', '')"
+        ).bindparams(prefs=DEFAULT_PREFS)
     )
 
 
 def downgrade():
     op.drop_column("utilisateur", "demarche_arrivant")
-    op.execute("UPDATE utilisateur SET preferences_notifications = 'realtime'")
+    op.execute(text("UPDATE utilisateur SET preferences_notifications = 'realtime'"))
