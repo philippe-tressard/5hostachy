@@ -634,9 +634,7 @@
 			prochaine_visite: c.prochaine_visite ?? '', notes: c.notes ?? '',
 		};
 		editContratId = c.id;
-		contratFormPrestId = null;
-		expandedContrats.add(c.id);
-		expandedContrats = expandedContrats;
+		contratFormPrestId = -1;
 	}
 
 	async function saveContrat() {
@@ -1304,67 +1302,6 @@
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'contrats_tab'}
 
-	<!-- Formulaire nouveau contrat (modal) -->
-	{#if contratFormPrestId === -1}
-		<div class="modal-overlay" on:click={closeContratForm}>
-			<div class="modal" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>📄 {editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}</h2>
-					<button class="modal-close" on:click={closeContratForm}>×</button>
-				</div>
-				<div class="modal-body">
-					<div class="form-grid">
-						<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-						<label>Prestataire *
-							<select bind:value={contratForm.prestataire_id} required>
-								<option value="">— Sélectionner —</option>
-								{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-							</select>
-						</label>
-						<label>Équipement
-							<select bind:value={contratForm.type_equipement}>
-								{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
-							</select>
-						</label>
-						<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-						<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-						<label>Durée initiale
-							<div style="display:flex;gap:.4rem">
-								<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
-								<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
-									<option value="mois">mois</option>
-									<option value="ans">ans</option>
-								</select>
-							</div>
-						</label>
-						<label>Fréquence
-							<select bind:value={contratForm.frequence_type}>
-								<option value="">— Aucune —</option>
-								<option value="semaines">Toutes les X semaines</option>
-								<option value="mois">Mensuelle</option>
-								<option value="fois_par_an">X fois par an</option>
-							</select>
-						</label>
-						{#if contratForm.frequence_type === 'semaines'}
-							<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-						{:else if contratForm.frequence_type === 'fois_par_an'}
-							<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-						{/if}
-						<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-					</div>
-					<div style="margin-top:.6rem">
-						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-						<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
-					<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
 	<!-- Synthèse -->
 	<div class="contrats-summary">
 		<span class="contrats-summary-count">{contrats.length} contrat{contrats.length !== 1 ? 's' : ''} actif{contrats.length !== 1 ? 's' : ''}</span>
@@ -1411,7 +1348,7 @@
 					</div>
 					{#if contratExpanded}
 						<div class="contrat-detail-body">
-							{#if editContratId === c.id}
+							{#if editContratId === c.id && contratFormPrestId !== -1}
 								<div class="contrat-section">
 									<div class="contrat-section-title">Infos contrat</div>
 									<div class="form-grid">
@@ -1552,7 +1489,7 @@
 					</div>
 					{#if contratExpanded}
 						<div class="contrat-detail-body">
-							{#if editContratId === c.id}
+							{#if editContratId === c.id && contratFormPrestId !== -1}
 								<div class="form-grid" style="margin-bottom:.6rem">
 									<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
 									<label>Prestataire *
@@ -1637,49 +1574,56 @@
 	</div>
 
 	{#if $isCS && showPrestForm}
-		<div class="card" style="padding:1.25rem;margin-bottom:1.25rem">
-			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">{editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}</h2>
-			<form on:submit|preventDefault={savePrest}>
-				<div class="form-grid">
-					<label>Nom *<input bind:value={prestForm.nom} required /></label>
-					<label>Type *
-						<select bind:value={prestForm.type_prestataire} required>
-							{#each typesPrestataire as t}<option value={t.val}>{t.label}</option>{/each}
-						</select>
-					</label>
-					<label>Spécialité *
-						<select bind:value={prestForm.specialite} required>
-							<option value="">— Sélectionner —</option>
-							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
-						</select>
-					</label>
-					<label>Email<input type="email" bind:value={prestForm.email} /></label>
+		<div class="modal-overlay" on:click|self={() => { showPrestForm = false; resetPrestForm(); }}>
+			<div class="modal" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>{editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}</h2>
+					<button class="modal-close" on:click={() => { showPrestForm = false; resetPrestForm(); }}>×</button>
 				</div>
-				<div style="margin-top:.75rem">
-					<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Contact{prestContacts.length > 1 ? 's' : ''}</div>
-					{#each prestContacts as contact, i}
-						<div class="contact-block" style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)">
-							<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
-								<input style="flex:2;min-width:140px" bind:value={prestContacts[i].telephone} placeholder="Téléphone *" />
-								<input style="flex:1;min-width:100px" bind:value={prestContacts[i].prenom} placeholder="Prénom" />
-								<input style="flex:1;min-width:100px" bind:value={prestContacts[i].nom} placeholder="Nom" />
-							</div>
-							<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
-								<input style="flex:1;min-width:120px" bind:value={prestContacts[i].fonction} placeholder="Fonction" />
-								<input style="flex:1;min-width:140px" type="email" bind:value={prestContacts[i].email} placeholder="Email" />
-								{#if prestContacts.length > 1}
-									<button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#dc2626;flex-shrink:0" on:click={() => prestContacts = prestContacts.filter((_, j) => j !== i)}>−</button>
-								{/if}
-							</div>
+				<form on:submit|preventDefault={savePrest}>
+					<div class="modal-body">
+						<div class="form-grid">
+							<label>Nom *<input bind:value={prestForm.nom} required /></label>
+							<label>Type *
+								<select bind:value={prestForm.type_prestataire} required>
+									{#each typesPrestataire as t}<option value={t.val}>{t.label}</option>{/each}
+								</select>
+							</label>
+							<label>Spécialité *
+								<select bind:value={prestForm.specialite} required>
+									<option value="">— Sélectionner —</option>
+									{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+								</select>
+							</label>
+							<label>Email<input type="email" bind:value={prestForm.email} /></label>
 						</div>
-					{/each}
-					<button type="button" class="btn btn-sm btn-outline" on:click={() => prestContacts = [...prestContacts, { telephone: '', prenom: '', nom: '', fonction: '', email: '' }]}>+ Nouveau contact</button>
-				</div>
-				<div class="form-actions">
-					<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
-					<button class="btn btn-primary" disabled={submitting}>{submitting ? '…' : 'Enregistrer'}</button>
-				</div>
-			</form>
+						<div style="margin-top:.75rem">
+							<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Contact{prestContacts.length > 1 ? 's' : ''}</div>
+							{#each prestContacts as contact, i}
+								<div class="contact-block" style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)">
+									<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
+										<input style="flex:2;min-width:140px" bind:value={prestContacts[i].telephone} placeholder="Téléphone *" />
+										<input style="flex:1;min-width:100px" bind:value={prestContacts[i].prenom} placeholder="Prénom" />
+										<input style="flex:1;min-width:100px" bind:value={prestContacts[i].nom} placeholder="Nom" />
+									</div>
+									<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+										<input style="flex:1;min-width:120px" bind:value={prestContacts[i].fonction} placeholder="Fonction" />
+										<input style="flex:1;min-width:140px" type="email" bind:value={prestContacts[i].email} placeholder="Email" />
+										{#if prestContacts.length > 1}
+											<button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#dc2626;flex-shrink:0" on:click={() => prestContacts = prestContacts.filter((_, j) => j !== i)}>−</button>
+										{/if}
+									</div>
+								</div>
+							{/each}
+							<button type="button" class="btn btn-sm btn-outline" on:click={() => prestContacts = [...prestContacts, { telephone: '', prenom: '', nom: '', fonction: '', email: '' }]}>+ Nouveau contact</button>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
+						<button class="btn btn-primary" disabled={submitting}>{submitting ? '…' : 'Enregistrer'}</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	{/if}
 
@@ -1821,28 +1765,35 @@
 	</div>
 
 	{#if showReleveForm && $isCS}
-		<div class="card" style="padding:1.25rem;margin-bottom:1.25rem;max-width:520px">
-			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">{editReleveId ? 'Modifier le relevé' : currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}</h2>
-			<form on:submit|preventDefault={saveReleve}>
-				<div class="form-grid">
-					<label>Date du relevé *<input type="date" bind:value={releveForm.date_releve} required /></label>
-					<label>Index (m³)<input type="number" min="0" bind:value={releveForm.index} placeholder="Ex. 47047" /></label>
+		<div class="modal-overlay" on:click|self={resetReleveForm}>
+			<div class="modal modal-sm" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>{editReleveId ? 'Modifier le relevé' : currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}</h2>
+					<button class="modal-close" on:click={resetReleveForm}>×</button>
 				</div>
-				<div class="field" style="margin-top:.6rem">
-					<label for="releve-note" style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Note (optionnel)</label>
-					<input id="releve-note" type="text" bind:value={releveForm.note} placeholder="Ex. Changement compteur" style="width:100%" />
-				</div>
-				<div class="field" style="margin-top:.6rem">
-					<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Photo du relevé (optionnel)</span>
-					{#key relevePhotoKey}
-						<input type="file" accept="image/*" on:change={(e) => relevePhotoFile = e.currentTarget.files?.[0] ?? null} style="font-size:.875rem" />
-					{/key}
-				</div>
-				<div class="form-actions" style="margin-top:.75rem">
-					<button type="button" class="btn btn-outline" on:click={resetReleveForm}>Annuler</button>
-					<button type="submit" class="btn btn-primary" disabled={releveSaving}>{releveSaving ? '…' : 'Enregistrer'}</button>
-				</div>
-			</form>
+				<form on:submit|preventDefault={saveReleve}>
+					<div class="modal-body">
+						<div class="form-grid">
+							<label>Date du relevé *<input type="date" bind:value={releveForm.date_releve} required /></label>
+							<label>Index (m³)<input type="number" min="0" bind:value={releveForm.index} placeholder="Ex. 47047" /></label>
+						</div>
+						<div class="field" style="margin-top:.6rem">
+							<label for="releve-note" style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Note (optionnel)</label>
+							<input id="releve-note" type="text" bind:value={releveForm.note} placeholder="Ex. Changement compteur" style="width:100%" />
+						</div>
+						<div class="field" style="margin-top:.6rem">
+							<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Photo du relevé (optionnel)</span>
+							{#key relevePhotoKey}
+								<input type="file" accept="image/*" on:change={(e) => relevePhotoFile = e.currentTarget.files?.[0] ?? null} style="font-size:.875rem" />
+							{/key}
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-outline" on:click={resetReleveForm}>Annuler</button>
+						<button type="submit" class="btn btn-primary" disabled={releveSaving}>{releveSaving ? '…' : 'Enregistrer'}</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	{/if}
 
@@ -1877,6 +1828,67 @@
 			{/each}
 		{/each}
 	{/if}
+{/if}
+
+<!-- Modal contrat (global, hors onglets) -->
+{#if contratFormPrestId === -1}
+	<div class="modal-overlay" on:click={closeContratForm}>
+		<div class="modal" on:click|stopPropagation>
+			<div class="modal-header">
+				<h2>📄 {editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}</h2>
+				<button class="modal-close" on:click={closeContratForm}>×</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-grid">
+					<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
+					<label>Prestataire *
+						<select bind:value={contratForm.prestataire_id} required>
+							<option value="">— Sélectionner —</option>
+							{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+						</select>
+					</label>
+					<label>Équipement
+						<select bind:value={contratForm.type_equipement}>
+							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+						</select>
+					</label>
+					<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+					<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+					<label>Durée initiale
+						<div style="display:flex;gap:.4rem">
+							<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
+							<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
+								<option value="mois">mois</option>
+								<option value="ans">ans</option>
+							</select>
+						</div>
+					</label>
+					<label>Fréquence
+						<select bind:value={contratForm.frequence_type}>
+							<option value="">— Aucune —</option>
+							<option value="semaines">Toutes les X semaines</option>
+							<option value="mois">Mensuelle</option>
+							<option value="fois_par_an">X fois par an</option>
+						</select>
+					</label>
+					{#if contratForm.frequence_type === 'semaines'}
+						<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+					{:else if contratForm.frequence_type === 'fois_par_an'}
+						<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+					{/if}
+					<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+				</div>
+				<div style="margin-top:.6rem">
+					<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
+					<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
+				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+			</div>
+		</div>
+	</div>
 {/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->

@@ -694,74 +694,81 @@ import { onMount } from 'svelte';
 
 <!-- Formulaire création/édition -->
 {#if showForm && $isCS}
-	<div class="card" style="padding:1.25rem;margin-bottom:1.5rem">
-		<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">{editId ? 'Modifier' : 'Nouvel événement'}</h2>
-		<form on:submit|preventDefault={save}>
-			<div class="form-grid">
-				<label>Titre *<input bind:value={form.titre} required /></label>
-				<label>Type
-					<select bind:value={form.type}>
-						{#each types as t}<option value={t.val}>{t.label}</option>{/each}
-					</select>
-				</label>
-				<label>Date de début *<input type="date" bind:value={form.debut} required /></label>
-				<label>Heure (optionnelle)<input type="time" bind:value={form.debut_heure} /></label>
-				<label>Fin<input type="datetime-local" bind:value={form.fin} /></label>
-				<label>Lieu<input bind:value={form.lieu} /></label>
-				<label>Prestataire
-					<select bind:value={form.prestataire_id}>
-						<option value=''>— Aucun —</option>
-						{#each prestataires.filter(p => p.actif !== false) as p}
-							<option value={String(p.id)}>{p.nom}</option>
-						{/each}
-					</select>
-				</label>
+	<div class="modal-overlay" on:click|self={() => { showForm = false; resetForm(); }}>
+		<div class="modal" style="max-width:640px" on:click|stopPropagation>
+			<div class="modal-header">
+				<h2>{editId ? 'Modifier' : 'Nouvel événement'}</h2>
+				<button class="modal-close" on:click={() => { showForm = false; resetForm(); }}>×</button>
 			</div>
-			{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
-			<div class="field" style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-				<label>Fréquence (optionnelle)
-					<select bind:value={form.frequence_type}>
-						<option value=''>— Pas de récurrence —</option>
-						<option value='fois_par_an'>× / an</option>
-						<option value='mois'>Tous les N mois</option>
-						<option value='semaines'>Toutes les N semaines</option>
-					</select>
-				</label>
-				{#if form.frequence_type}
-				<label>Valeur
-					<input type="number" min="1" bind:value={form.frequence_valeur} placeholder="ex: 2" />
-				</label>
-				{/if}
-			</div>
-			{/if}
-			<div class="field" style="margin-top:.75rem">
-				<label>Périmètre *</label>
-				<PerimetrePicker bind:value={formPerimetreCible} />
-			</div>
-			<div class="field" style="margin-top:.75rem">
-				<label>Suivi Kanban</label>
-				<select bind:value={form.statut_kanban} style="max-width:280px;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:var(--radius);font-size:.875rem;background:var(--color-bg)">
-					<option value="">— Pas de suivi Kanban —</option>
-					{#each KANBAN_COLS as col}
-						<option value={col.id}>{col.label}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="field" style="margin-top:.75rem">
-				<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-					<input type="checkbox" bind:checked={form.affichable} style="width:auto;margin:0" />
-					<span>Afficher dans le tableau de bord (événements récents)</span>
-				</label>
-			</div>
-			<div class="field" style="margin-top:.75rem">
-				<label>Description</label>
-				<RichEditor bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
-			</div>
-			<div class="form-actions">
-				<button type="button" class="btn btn-outline" on:click={() => { showForm = false; resetForm(); }}>Annuler</button>
-				<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
-			</div>
-		</form>
+			<form on:submit|preventDefault={save}>
+				<div class="modal-body">
+					<div class="form-grid">
+						<label>Titre *<input bind:value={form.titre} required /></label>
+						<label>Type
+							<select bind:value={form.type}>
+								{#each types as t}<option value={t.val}>{t.label}</option>{/each}
+							</select>
+						</label>
+						<label>Date de début *<input type="date" bind:value={form.debut} required /></label>
+						<label>Heure (optionnelle)<input type="time" bind:value={form.debut_heure} /></label>
+						<label>Fin<input type="datetime-local" bind:value={form.fin} /></label>
+						<label>Lieu<input bind:value={form.lieu} /></label>
+						<label>Prestataire
+							<select bind:value={form.prestataire_id}>
+								<option value=''>— Aucun —</option>
+								{#each prestataires.filter(p => p.actif !== false) as p}
+									<option value={String(p.id)}>{p.nom}</option>
+								{/each}
+							</select>
+						</label>
+					</div>
+					{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
+					<div class="field" style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+						<label>Fréquence (optionnelle)
+							<select bind:value={form.frequence_type}>
+								<option value=''>— Pas de récurrence —</option>
+								<option value='fois_par_an'>× / an</option>
+								<option value='mois'>Tous les N mois</option>
+								<option value='semaines'>Toutes les N semaines</option>
+							</select>
+						</label>
+						{#if form.frequence_type}
+						<label>Valeur
+							<input type="number" min="1" bind:value={form.frequence_valeur} placeholder="ex: 2" />
+						</label>
+						{/if}
+					</div>
+					{/if}
+					<div class="field" style="margin-top:.75rem">
+						<label>Périmètre *</label>
+						<PerimetrePicker bind:value={formPerimetreCible} />
+					</div>
+					<div class="field" style="margin-top:.75rem">
+						<label>Suivi Kanban</label>
+						<select bind:value={form.statut_kanban} style="max-width:280px;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:var(--radius);font-size:.875rem;background:var(--color-bg)">
+							<option value="">— Pas de suivi Kanban —</option>
+							{#each KANBAN_COLS as col}
+								<option value={col.id}>{col.label}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="field" style="margin-top:.75rem">
+						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+							<input type="checkbox" bind:checked={form.affichable} style="width:auto;margin:0" />
+							<span>Afficher dans le tableau de bord (événements récents)</span>
+						</label>
+					</div>
+					<div class="field" style="margin-top:.75rem">
+						<label>Description</label>
+						<RichEditor bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline" on:click={() => { showForm = false; resetForm(); }}>Annuler</button>
+					<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+				</div>
+			</form>
+		</div>
 	</div>
 {/if}
 
