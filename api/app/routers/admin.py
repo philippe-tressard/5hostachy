@@ -1265,6 +1265,9 @@ def _declencher_accueil_arrivant(
             cc=cc_list,
         )
 
+    # ── Persister le choix en base ───────────────────────────────────────────
+    user.demarche_arrivant = "nouvel_arrivant"
+
     session.commit()
     return {
         "ok": True,

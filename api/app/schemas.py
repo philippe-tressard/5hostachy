@@ -40,6 +40,7 @@ class UserRead(BaseModel):
     onboarding_etape: int
     photo_url: Optional[str] = None
     preferences_notifications: str
+    demarche_arrivant: Optional[str] = None
     batiment_id: Optional[int] = None
     batiment_nom: Optional[str] = None   # ex. "Bât. A"
     nom_proprietaire: Optional[str] = None

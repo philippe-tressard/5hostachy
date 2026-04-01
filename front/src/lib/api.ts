@@ -115,6 +115,7 @@ export interface User {
 	onboarding_etape: number;
 	photo_url?: string;
 	preferences_notifications: string;
+	demarche_arrivant?: string | null;
 	batiment_id?: number | null;
 	batiment_nom?: string | null;  // "Bât. A"
 	last_seen_actualites?: string | null;
