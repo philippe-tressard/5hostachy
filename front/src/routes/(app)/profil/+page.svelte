@@ -125,17 +125,39 @@ import { onMount } from 'svelte';
 			fonction  = (u as any).fonction  ?? '';
 			email     = u.email     ?? '';
 			arrivantBatimentNumero = (u as any).batiment_nom?.replace(/[^0-9]/g, '') ?? '';
-			const savedChoix = localStorage.getItem(`profil_arrivant_choix_${u.id}`);
-			if (savedChoix === 'nouvel_arrivant' || savedChoix === 'deja_resident') {
-				arrivantChoix = savedChoix;
+
+			// Démarche arrivant : lire depuis la base (fallback localStorage pour migration)
+			if (u.demarche_arrivant === 'nouvel_arrivant' || u.demarche_arrivant === 'deja_resident') {
+				arrivantChoix = u.demarche_arrivant;
+			} else {
+				const savedChoix = localStorage.getItem(`profil_arrivant_choix_${u.id}`);
+				if (savedChoix === 'nouvel_arrivant' || savedChoix === 'deja_resident') {
+					arrivantChoix = savedChoix;
+					// Migrer vers la base
+					authApi.updateMe({ demarche_arrivant: savedChoix }).then(updated => setUser(updated)).catch(() => {});
+				}
+			}
+
+			// Préférences notifs : lire depuis la base (fallback localStorage pour migration)
+			let prefsFromDb: any = null;
+			try { prefsFromDb = JSON.parse(u.preferences_notifications); } catch {}
+			if (prefsFromDb && typeof prefsFromDb === 'object' && 'ticket_app' in prefsFromDb) {
+				notifTicketApp = prefsFromDb.ticket_app ?? true;
+				notifTicketMail = prefsFromDb.ticket_mail ?? true;
+				notifActuApp = prefsFromDb.actu_app ?? true;
+				notifActuMail = prefsFromDb.actu_mail ?? true;
+				notifDocApp = prefsFromDb.doc_app ?? true;
+				notifDocMail = prefsFromDb.doc_mail ?? false;
+			} else {
+				// Fallback localStorage (migration unique)
+				notifTicketApp = readNotifBool(['notif_ticket_app'], true);
+				notifTicketMail = readNotifBool(['notif_ticket_mail', 'notif_ticket'], true);
+				notifActuApp = readNotifBool(['notif_actu_app'], true);
+				notifActuMail = readNotifBool(['notif_actu_mail', 'notif_actu'], true);
+				notifDocApp = readNotifBool(['notif_doc_app'], true);
+				notifDocMail = readNotifBool(['notif_doc_mail', 'notif_doc'], false, true);
 			}
 		}
-		notifTicketApp = readNotifBool(['notif_ticket_app'], true);
-		notifTicketMail = readNotifBool(['notif_ticket_mail', 'notif_ticket'], true);
-		notifActuApp = readNotifBool(['notif_actu_app'], true);
-		notifActuMail = readNotifBool(['notif_actu_mail', 'notif_actu'], true);
-		notifDocApp = readNotifBool(['notif_doc_app'], true);
-		notifDocMail = readNotifBool(['notif_doc_mail', 'notif_doc'], false, true);
 
 		[mesLots, batiments] = await Promise.all([
 			lotsApi.mesList().catch(() => []),
@@ -196,18 +218,22 @@ import { onMount } from 'svelte';
 		}
 	}
 
-	function saveNotifs() {
-		localStorage.setItem('notif_ticket_app', String(notifTicketApp));
-		localStorage.setItem('notif_ticket_mail', String(notifTicketMail));
-		localStorage.setItem('notif_actu_app', String(notifActuApp));
-		localStorage.setItem('notif_actu_mail', String(notifActuMail));
-		localStorage.setItem('notif_doc_app', String(notifDocApp));
-		localStorage.setItem('notif_doc_mail', String(notifDocMail));
-		// Compatibilité avec l'ancien format (lecture possible par d'autres écrans)
-		localStorage.setItem('notif_ticket', String(notifTicketMail));
-		localStorage.setItem('notif_actu', String(notifActuMail));
-		localStorage.setItem('notif_doc', String(notifDocMail));
-		toast('success', 'Préférences enregistrées');
+	async function saveNotifs() {
+		const prefs = JSON.stringify({
+			ticket_app: notifTicketApp,
+			ticket_mail: notifTicketMail,
+			actu_app: notifActuApp,
+			actu_mail: notifActuMail,
+			doc_app: notifDocApp,
+			doc_mail: notifDocMail,
+		});
+		try {
+			const updated = await authApi.updateMe({ preferences_notifications: prefs });
+			setUser(updated);
+			toast('success', 'Préférences enregistrées');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur lors de l\'enregistrement');
+		}
 	}
 
 	async function soumettreDemandeModif() {
@@ -249,7 +275,8 @@ import { onMount } from 'svelte';
 				ancien_resident_inconnu: arrivantAncienResidentInconnu,
 			});
 			arrivantChoix = 'nouvel_arrivant';
-			if ($currentUser?.id) localStorage.setItem(`profil_arrivant_choix_${$currentUser.id}`, 'nouvel_arrivant');
+			// Rafraîchir le user en store (la base a été mise à jour côté serveur)
+			authApi.me().then(u => setUser(u)).catch(() => {});
 			toast('success', 'Déclaration Nouvel Arrivant envoyée');
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -258,10 +285,15 @@ import { onMount } from 'svelte';
 		}
 	}
 
-	function declarerDejaResident() {
-		arrivantChoix = 'deja_resident';
-		if ($currentUser?.id) localStorage.setItem(`profil_arrivant_choix_${$currentUser.id}`, 'deja_resident');
-		toast('success', 'Choix enregistré : déjà résident (aucune démarche nouvel arrivant).');
+	async function declarerDejaResident() {
+		try {
+			const updated = await authApi.updateMe({ demarche_arrivant: 'deja_resident' });
+			setUser(updated);
+			arrivantChoix = 'deja_resident';
+			toast('success', 'Choix enregistré : déjà résident (aucune démarche nouvel arrivant).');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+		}
 	}
 
 	function fmtDate(d: string | null | undefined): string {

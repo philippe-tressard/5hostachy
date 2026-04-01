@@ -216,7 +216,8 @@ class Utilisateur(SQLModel, table=True):
     communaute_interdit: bool = Field(default=False)  # ban permanent (2e infraction)
     communaute_ban_count: int = Field(default=0)  # 0=jamais banni, 1=1er ban, 2+=permanent
     communaute_ban_jusqu_au: Optional[datetime] = Field(default=None)  # fin du ban temporaire
-    preferences_notifications: str = Field(default="realtime")  # realtime | digest_daily | digest_weekly
+    preferences_notifications: str = Field(default='{"ticket_app":true,"ticket_mail":true,"actu_app":true,"actu_mail":true,"doc_app":true,"doc_mail":false}')
+    demarche_arrivant: Optional[str] = Field(default=None)  # nouvel_arrivant | deja_resident | None
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     nom_proprietaire: Optional[str] = None  # pour les locataires : nom du propriétaire bailleur
     nom_aide: Optional[str] = None      # pour aidant/mandataire : nom du copropriétaire aidé

@@ -311,6 +311,8 @@ class MeUpdate(BaseModel):
     societe: str | None = None
     fonction: str | None = None
     last_seen_actualites: str | None = None
+    preferences_notifications: str | None = None
+    demarche_arrivant: str | None = None
 
 
 @router.patch("/me", response_model=UserRead)
@@ -338,6 +340,12 @@ def update_me(
         user.fonction = body.fonction
     if body.last_seen_actualites is not None:
         user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))
+    if body.preferences_notifications is not None:
+        user.preferences_notifications = body.preferences_notifications
+    if body.demarche_arrivant is not None:
+        if body.demarche_arrivant not in ("nouvel_arrivant", "deja_resident"):
+            raise HTTPException(400, "Valeur invalide pour demarche_arrivant")
+        user.demarche_arrivant = body.demarche_arrivant
     session.add(user)
     session.commit()
     session.refresh(user)
