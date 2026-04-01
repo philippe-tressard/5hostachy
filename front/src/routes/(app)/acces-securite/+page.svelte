@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 import { onMount } from 'svelte';
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
@@ -259,41 +259,54 @@ import { onMount } from 'svelte';
 			{showForm ? 'Annuler' : '+ Nouvelle demande'}
 		</button>
 	</div>
-
-	{#if showForm}
-		<form class="form" on:submit|preventDefault={soumettreCommande} style="margin-top:1rem">
-			<div class="form-row">
-				<label>
-					Type d'accès *
-					<select bind:value={formType}>
-						<option value="vigik">Badge Vigik</option>
-						<option value="telecommande">Télécommande parking</option>
-					</select>
-				</label>
-				<label>
-					Lot concerné *
-					<select bind:value={formLotId} required>
-						<option value="">— Sélectionner —</option>
-						{#each mesLots as lot}
-							<option value={lot.id}>Lot {lot.numero}</option>
-						{/each}
-					</select>
-				</label>
-				<label>
-					Quantité *
-					<input type="number" bind:value={formQuantite} min="1" max="5" />
-				</label>
-			</div>
-			<label>
-				Motif
-				<textarea bind:value={formMotif} rows="2" placeholder="Raison de la demande…"></textarea>
-			</label>
-			<button class="btn btn-primary" disabled={submitting}>
-				{submitting ? 'Envoi…' : 'Soumettre la demande'}
-			</button>
-		</form>
-	{/if}
 </section>
+
+{#if showForm}
+	<div class="modal-overlay" on:click|self={() => showForm = false}>
+		<div class="modal modal-sm" on:click|stopPropagation>
+			<div class="modal-header">
+				<h2>Nouvelle demande d'accès</h2>
+				<button class="modal-close" on:click={() => showForm = false}>×</button>
+			</div>
+			<form on:submit|preventDefault={soumettreCommande}>
+				<div class="modal-body">
+					<div class="form-grid">
+						<label>
+							Type d'accès *
+							<select bind:value={formType}>
+								<option value="vigik">Badge Vigik</option>
+								<option value="telecommande">Télécommande parking</option>
+							</select>
+						</label>
+						<label>
+							Lot concerné *
+							<select bind:value={formLotId} required>
+								<option value="">— Sélectionner —</option>
+								{#each mesLots as lot}
+									<option value={lot.id}>Lot {lot.numero}</option>
+								{/each}
+							</select>
+						</label>
+						<label>
+							Quantité *
+							<input type="number" bind:value={formQuantite} min="1" max="5" />
+						</label>
+						<label>
+							Motif
+							<textarea bind:value={formMotif} rows="2" placeholder="Raison de la demande…"></textarea>
+						</label>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline" on:click={() => showForm = false}>Annuler</button>
+					<button class="btn btn-primary" disabled={submitting}>
+						{submitting ? 'Envoi…' : 'Soumettre la demande'}
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 <!-- Déclarer un accès existant -->
 <section class="section card" style="margin-top:1rem">
@@ -303,30 +316,38 @@ import { onMount } from 'svelte';
 			{showDeclareForm ? 'Annuler' : 'Ajouter'}
 		</button>
 	</div>
-	{#if showDeclareForm}
-		<form class="form" on:submit|preventDefault={declarerBadge} style="margin-top:1rem">
-			<div class="form-row">
-				<label>
-					Type d'accès *
-					<select bind:value={declareType}>
-						<option value="telecommande">Télécommande parking</option>
-						<option value="vigik">Badge Vigik</option>
-					</select>
-				</label>
-				<label>
-					Code / référence *
-					<input type="text" bind:value={declareCode} placeholder="Ex : 1234567890" style="font-family:monospace" required />
-				</label>
-			</div>
-			<p style="font-size:.82rem;color:var(--color-text-muted);margin:.25rem 0 .75rem">
-				Si ce code figure dans nos imports, l'entrée sera automatiquement liée à votre compte.
-			</p>
-			<button class="btn btn-primary" disabled={declaring}>
-				{declaring ? 'Enregistrement…' : 'Enregistrer cet accès'}
-			</button>
-		</form>
-	{/if}
 </section>
+
+{#if showDeclareForm}
+	<div class="modal-overlay" on:click|self={() => showDeclareForm = false}>
+		<div class="modal modal-sm" on:click|stopPropagation>
+			<div class="modal-header">
+				<h2>Déclarer un accès existant</h2>
+				<button class="modal-close" on:click={() => showDeclareForm = false}>×</button>
+			</div>
+			<form on:submit|preventDefault={declarerBadge}>
+				<div class="modal-body">
+					<div class="form-grid">
+						<label>Type d'accès *
+							<select bind:value={declareType}>
+								<option value="telecommande">Télécommande parking</option>
+								<option value="vigik">Badge Vigik</option>
+							</select>
+						</label>
+						<label>Code / référence *
+							<input type="text" bind:value={declareCode} placeholder="Ex : 1234567890" style="font-family:monospace" required />
+						</label>
+					</div>
+					<p style="font-size:.82rem;color:var(--color-text-muted);margin:.5rem 0 0">Si ce code figure dans nos imports, l'entrée sera automatiquement liée à votre compte.</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline" on:click={() => showDeclareForm = false}>Annuler</button>
+					<button class="btn btn-primary" disabled={declaring}>{declaring ? 'Enregistrement…' : 'Enregistrer cet accès'}</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
 
 <!-- Historique des demandes -->
 <section class="section card" style="margin-top:1rem">
