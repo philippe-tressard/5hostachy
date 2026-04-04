@@ -19,10 +19,20 @@ import { onMount } from 'svelte';
 	let showForm = false;
 	let editingItem: any | null = null;
 	let formCategorie = '';
+	let formNewCategorie = '';
+	let formIsNewCategorie = false;
 	let formQuestion = '';
 	let formReponse = '';
-	let formOrdre = 0;
 	let saving = false;
+	let existingCategories: string[] = [];
+
+	// ---- reorder mode ----
+	let reorderMode = false;
+	let reorderItems: any[] = [];
+	let dragItem: any | null = null;
+	let dragOverItem: any | null = null;
+	let dragCategory: string | null = null;
+	let reorderSaving = false;
 
 	$: canEdit = $isCS || $isAdmin;
 
@@ -146,21 +156,31 @@ import { onMount } from 'svelte';
 		open = { [id]: !wasOpen };
 	}
 
-	function openNew() {
+	async function openNew() {
 		editingItem = null;
 		formCategorie = '';
+		formNewCategorie = '';
+		formIsNewCategorie = false;
 		formQuestion = '';
 		formReponse = '';
-		formOrdre = items.length + 1;
+		try { existingCategories = await faqApi.categories(); } catch { /* conserve le cache précédent */ }
 		showForm = true;
 	}
 
-	function openEdit(it: any) {
+	async function openEdit(it: any) {
 		editingItem = it;
-		formCategorie = it.categorie ?? '';
 		formQuestion = it.question;
 		formReponse = it.reponse;
-		formOrdre = it.ordre ?? 0;
+		try { existingCategories = await faqApi.categories(); } catch { /* conserve le cache précédent */ }
+		if (existingCategories.includes(it.categorie ?? '')) {
+			formCategorie = it.categorie ?? '';
+			formIsNewCategorie = false;
+			formNewCategorie = '';
+		} else {
+			formCategorie = '__new__';
+			formIsNewCategorie = true;
+			formNewCategorie = it.categorie ?? '';
+		}
 		showForm = true;
 	}
 
@@ -176,13 +196,23 @@ import { onMount } from 'svelte';
 			toast('error', 'Question et réponse sont obligatoires.');
 			return;
 		}
+		const categorie = formIsNewCategorie ? formNewCategorie.trim() : formCategorie.trim();
+		if (!categorie) {
+			toast('error', 'La catégorie est obligatoire.');
+			return;
+		}
 		saving = true;
 		try {
+			// Calcul auto de l'ordre : dernier de la catégorie + 1
+			const catItems = items.filter((i) => normalizeCategorieLabel(i.categorie) === normalizeCategorieLabel(categorie));
+			const maxOrdre = catItems.length ? Math.max(...catItems.map((i) => i.ordre ?? 0)) : -1;
+			const ordre = editingItem ? editingItem.ordre : maxOrdre + 1;
+
 			const payload = {
-				categorie: formCategorie.trim() || null,
+				categorie,
 				question: formQuestion.trim(),
 				reponse: formReponse.trim(),
-				ordre: formOrdre,
+				ordre,
 				actif: true,
 			};
 			if (editingItem) {
@@ -222,6 +252,106 @@ import { onMount } from 'svelte';
 		}
 	}
 
+	// ---- reorder ----
+	function enterReorderMode() {
+		reorderItems = items.map((i) => ({ ...i }));
+		reorderMode = true;
+	}
+
+	function cancelReorder() {
+		reorderMode = false;
+		reorderItems = [];
+		dragItem = null;
+		dragOverItem = null;
+		dragCategory = null;
+	}
+
+	$: reorderGrouped = reorderItems.reduce((acc: Record<string, any[]>, it) => {
+		const cat = normalizeCategorieLabel(it.categorie ?? 'Général');
+		if (!acc[cat]) acc[cat] = [];
+		acc[cat].push(it);
+		return acc;
+	}, {});
+
+	function handleDragStart(item: any, category: string) {
+		dragItem = item;
+		dragCategory = category;
+	}
+
+	function handleDragOver(e: DragEvent, item: any, category: string) {
+		if (dragCategory !== category) return;
+		e.preventDefault();
+		dragOverItem = item;
+	}
+
+	function handleDrop(e: DragEvent, category: string) {
+		e.preventDefault();
+		if (!dragItem || !dragOverItem || dragCategory !== category) return;
+		const catItems = reorderGrouped[category];
+		if (!catItems) return;
+		const fromIndex = catItems.findIndex((i: any) => i.id === dragItem.id);
+		const toIndex = catItems.findIndex((i: any) => i.id === dragOverItem.id);
+		if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+		// Reorder within category
+		const newCatItems = [...catItems];
+		const [moved] = newCatItems.splice(fromIndex, 1);
+		newCatItems.splice(toIndex, 0, moved);
+		// Update ordre values
+		newCatItems.forEach((it, idx) => { it.ordre = idx; });
+		// Replace in reorderItems
+		const otherItems = reorderItems.filter((i) => normalizeCategorieLabel(i.categorie ?? 'Général') !== category);
+		reorderItems = [...otherItems, ...newCatItems];
+		dragItem = null;
+		dragOverItem = null;
+		dragCategory = null;
+	}
+
+	function handleDragEnd() {
+		dragItem = null;
+		dragOverItem = null;
+		dragCategory = null;
+	}
+
+	function moveItem(category: string, item: any, direction: -1 | 1) {
+		const catItems = reorderGrouped[category];
+		if (!catItems) return;
+		const idx = catItems.findIndex((i: any) => i.id === item.id);
+		const targetIdx = idx + direction;
+		if (targetIdx < 0 || targetIdx >= catItems.length) return;
+		const newCatItems = [...catItems];
+		[newCatItems[idx], newCatItems[targetIdx]] = [newCatItems[targetIdx], newCatItems[idx]];
+		newCatItems.forEach((it, i) => { it.ordre = i; });
+		const otherItems = reorderItems.filter((i) => normalizeCategorieLabel(i.categorie ?? 'Général') !== category);
+		reorderItems = [...otherItems, ...newCatItems];
+	}
+
+	async function saveReorder() {
+		reorderSaving = true;
+		try {
+			const changes = reorderItems
+				.filter((ri) => {
+					const orig = items.find((i) => i.id === ri.id);
+					return orig && orig.ordre !== ri.ordre;
+				})
+				.map((ri) => ({ id: ri.id, ordre: ri.ordre }));
+			if (changes.length) {
+				await faqApi.reorder(changes);
+				items = reorderItems.map((i) => ({ ...i }));
+				toast('success', 'Ordre mis à jour.');
+			}
+			reorderMode = false;
+			reorderItems = [];
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			reorderSaving = false;
+		}
+	}
+
+	function onCategorieSelectChange() {
+		formIsNewCategorie = formCategorie === '__new__';
+		if (formIsNewCategorie) formNewCategorie = '';
+	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -229,7 +359,12 @@ import { onMount } from 'svelte';
 <div class="page-header" style="margin: 0">
 	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700;margin:0"><Icon name={_pc.icone || 'help-circle'} size={20} />{_pc.titre}</h1>
 	{#if canEdit}
-		<button class="btn btn-primary page-header-btn" on:click={openNew}>+ Nouvelle question</button>
+		<div style="display:flex;gap:.5rem">
+			{#if !reorderMode}
+				<button class="btn btn-outline page-header-btn" on:click={enterReorderMode}><Icon name="move" size={15} /> Réorganiser</button>
+			{/if}
+			<button class="btn btn-primary page-header-btn" on:click={openNew} disabled={reorderMode}>+ Nouvelle question</button>
+		</div>
 	{/if}
 </div>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
@@ -240,6 +375,38 @@ import { onMount } from 'svelte';
 	<div class="card" style="padding:2rem;text-align:center;color:var(--color-text-muted)">
 		Aucune question pour l'instant.
 	</div>
+{:else if reorderMode}
+	<div class="reorder-bar">
+		<span style="font-size:.875rem;color:var(--color-text-muted)">Glissez les questions pour les réorganiser, ou utilisez les flèches ↑↓</span>
+		<div style="display:flex;gap:.5rem">
+			<button class="btn btn-outline" on:click={cancelReorder} disabled={reorderSaving}>Annuler</button>
+			<button class="btn btn-primary" on:click={saveReorder} disabled={reorderSaving}>
+				{reorderSaving ? 'Enregistrement…' : 'Sauvegarder l\'ordre'}
+			</button>
+		</div>
+	</div>
+	{#each Object.entries(reorderGrouped) as [categorie, catItems]}
+		<h2 class="categorie-title">{categorie}</h2>
+		{#each catItems as item, idx (item.id)}
+			<div
+				class="faq-item card reorder-item"
+				class:drag-over={dragOverItem?.id === item.id}
+				draggable="true"
+				on:dragstart={() => handleDragStart(item, categorie)}
+				on:dragover={(e) => handleDragOver(e, item, categorie)}
+				on:drop={(e) => handleDrop(e, categorie)}
+				on:dragend={handleDragEnd}
+				role="listitem"
+			>
+				<div class="reorder-handle" title="Glisser pour réorganiser">⠿</div>
+				<span class="reorder-question">{item.question}</span>
+				<div class="reorder-arrows">
+					<button class="btn-icon-edit" disabled={idx === 0} on:click={() => moveItem(categorie, item, -1)} title="Monter" aria-label="Monter">↑</button>
+					<button class="btn-icon-edit" disabled={idx === catItems.length - 1} on:click={() => moveItem(categorie, item, 1)} title="Descendre" aria-label="Descendre">↓</button>
+				</div>
+			</div>
+		{/each}
+	{/each}
 {:else}
 	{#each Object.entries(filteredGrouped) as [categorie, catItems]}
         {@const compact = catItems.length > 7}
@@ -301,8 +468,18 @@ import { onMount } from 'svelte';
 			{editingItem ? 'Modifier la question' : 'Nouvelle question'}
 		</h2>
 		<div class="form-grid">
-			<label class="field-label" for="faq-categorie">Catégorie</label>
-			<input id="faq-categorie" class="input-field" type="text" bind:value={formCategorie} placeholder="Ex : &#x1F5D1;️ Tri des déchets" />
+			<label class="field-label" for="faq-categorie">Catégorie *</label>
+			<select id="faq-categorie" class="input-field" bind:value={formCategorie} on:change={onCategorieSelectChange}>
+				<option value="" disabled>— Choisir une catégorie —</option>
+				{#each existingCategories as cat}
+					<option value={cat}>{cat}</option>
+				{/each}
+				<option value="__new__">➕ Nouvelle catégorie…</option>
+			</select>
+			{#if formIsNewCategorie}
+				<label class="field-label" for="faq-new-categorie">Nom de la nouvelle catégorie *</label>
+				<input id="faq-new-categorie" class="input-field" type="text" bind:value={formNewCategorie} placeholder="Ex : 🗑️ Tri des déchets" />
+			{/if}
 
 			<label class="field-label" for="faq-question">Question *</label>
 			<input id="faq-question" class="input-field" type="text" bind:value={formQuestion} placeholder="La question…" />
@@ -310,9 +487,6 @@ import { onMount } from 'svelte';
 			<label class="field-label" for="faq-reponse">Réponse *</label>
 			<!-- RichEditor n'est pas un input natif, on ne peut pas utiliser for, mais on garde le label pour l'accessibilité -->
 			<RichEditor id="faq-reponse" bind:value={formReponse} placeholder="La réponse…" minHeight="120px" />
-
-			<label class="field-label" for="faq-ordre">Ordre d'affichage</label>
-			<input id="faq-ordre" class="input-field" type="number" bind:value={formOrdre} min="0" />
 		</div>
 		<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
 			<button class="btn btn-outline" on:click={() => (showForm = false)} disabled={saving}>Annuler</button>
@@ -345,4 +519,11 @@ import { onMount } from 'svelte';
 	.input-field { padding: .45rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; font-family: inherit; width: 100%; box-sizing: border-box; resize: vertical; }
 	.req { color: var(--color-danger); }
 	.btn-outline { background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .4rem .9rem; cursor: pointer; font-size: .875rem; }
+	.reorder-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .75rem 1rem; margin-bottom: .5rem; background: var(--color-bg-subtle); border-radius: var(--radius); border: 1px dashed var(--color-border); }
+	.reorder-item { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; cursor: grab; user-select: none; }
+	.reorder-item:active { cursor: grabbing; }
+	.reorder-handle { font-size: 1.2rem; color: var(--color-text-muted); cursor: grab; flex-shrink: 0; }
+	.reorder-question { flex: 1; font-size: .9rem; }
+	.reorder-arrows { display: flex; gap: .15rem; flex-shrink: 0; }
+	.drag-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; background: var(--color-bg-subtle); }
 </style>

@@ -497,8 +497,10 @@ async function uploadExcel<T = any>(path: string, file: File, remplacer = false)
 export const faq = {
 	list: () => api.get<any[]>('/faq'),
 	listAll: () => api.get<any[]>('/faq/all'),
+	categories: () => api.get<string[]>('/faq/categories'),
 	create: (data: unknown) => api.post<any>('/faq', data),
 	update: (id: number, data: unknown) => api.patch<any>(`/faq/${id}`, data),
+	reorder: (data: { id: number; ordre: number }[]) => api.patch<void>('/faq/reorder', data),
 	delete: (id: number) => api.delete(`/faq/${id}`),
 };
 
