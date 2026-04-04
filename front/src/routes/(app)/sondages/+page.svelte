@@ -464,6 +464,7 @@ Résultats visibles avant clôture
 {#if s.cloture_le}
 · {estCloture(s) ? '\u{1F512} Clôturé' : `Clôture le ${new Date(s.cloture_le).toLocaleDateString('fr-FR')}`}
 {/if}
+· <span class="sondage-votants">{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span>
 </small>
 {#if s.profils_autorises || s.batiments_ids}
 <div class="sondage-ciblage">
@@ -746,6 +747,7 @@ input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); 
 .sondage-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; flex-shrink: 0; }
 .sondage-question { font-size: .95rem; font-weight: 600; display: block; margin-bottom: .2rem; }
 .sondage-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
+.sondage-votants { font-weight: 600; }
 .sondage-ciblage { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
 .filters { display: flex; gap: .4rem; flex-wrap: wrap; }
 .idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
