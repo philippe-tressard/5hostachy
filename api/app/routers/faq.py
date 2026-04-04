@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import distinct
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
@@ -28,6 +29,11 @@ class FaqItemUpdate(BaseModel):
     reponse: Optional[str] = None
     ordre: Optional[int] = None
     actif: Optional[bool] = None
+
+
+class FaqReorderItem(BaseModel):
+    id: int
+    ordre: int
 
 
 class FaqItemRead(BaseModel):
@@ -59,6 +65,20 @@ def list_faq(
     ).all()
 
 
+@router.get("/categories", response_model=list[str])
+def list_categories(
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Retourne la liste des catégories distinctes existantes."""
+    rows = session.exec(
+        select(distinct(FaqItem.categorie))
+        .where(FaqItem.categorie != None, FaqItem.categorie != "")
+        .order_by(FaqItem.categorie)
+    ).all()
+    return [r for r in rows if r]
+
+
 @router.get("/all", response_model=list[FaqItemRead])
 def list_faq_all(
     session: Session = Depends(get_session),
@@ -81,6 +101,21 @@ def create_faq(
     session.commit()
     session.refresh(item)
     return item
+
+
+@router.patch("/reorder", status_code=204)
+def reorder_faq(
+    body: list[FaqReorderItem],
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Met à jour l'ordre d'affichage de plusieurs entrées FAQ en une seule requête."""
+    for entry in body:
+        item = session.get(FaqItem, entry.id)
+        if item:
+            item.ordre = entry.ordre
+            session.add(item)
+    session.commit()
 
 
 @router.patch("/{item_id}", response_model=FaqItemRead)
