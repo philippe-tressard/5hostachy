@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
@@ -78,6 +79,7 @@ class SondageRead(BaseModel):
     cree_le: datetime
     profils_autorises: Optional[str] = None
     batiments_ids: Optional[str] = None
+    nb_votants: int = 0
 
     class Config:
         from_attributes = True
@@ -109,7 +111,23 @@ def list_sondages(
 ):
     _deny_communaute_for_statut(user)
     all_s = session.exec(select(Sondage).order_by(Sondage.cree_le.desc())).all()
-    return [s for s in all_s if _can_access(s, user)]
+    accessible = [s for s in all_s if _can_access(s, user)]
+    if not accessible:
+        return []
+    # Compter les votants distincts par sondage en une seule requête
+    ids = [s.id for s in accessible]
+    counts = session.exec(
+        select(VoteSondage.sondage_id, func.count(func.distinct(VoteSondage.user_id)))
+        .where(VoteSondage.sondage_id.in_(ids))
+        .group_by(VoteSondage.sondage_id)
+    ).all()
+    count_map = {row[0]: row[1] for row in counts}
+    result = []
+    for s in accessible:
+        d = SondageRead.model_validate(s)
+        d.nb_votants = count_map.get(s.id, 0)
+        result.append(d)
+    return result
 
 
 @router.get("/{sondage_id}")

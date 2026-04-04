@@ -352,6 +352,40 @@ import { onMount } from 'svelte';
 		formIsNewCategorie = formCategorie === '__new__';
 		if (formIsNewCategorie) formNewCategorie = '';
 	}
+
+	// ---- rename category ----
+	let editingCategory: string | null = null;
+	let editCategoryName = '';
+	let savingCategory = false;
+
+	function startEditCategory(cat: string) {
+		editingCategory = cat;
+		editCategoryName = cat;
+	}
+
+	function cancelEditCategory() {
+		editingCategory = null;
+		editCategoryName = '';
+	}
+
+	async function saveCategory() {
+		if (!editCategoryName.trim() || !editingCategory) return;
+		if (editCategoryName.trim() === editingCategory) { cancelEditCategory(); return; }
+		savingCategory = true;
+		try {
+			await faqApi.renameCategory(editingCategory, editCategoryName.trim());
+			// Mettre à jour localement
+			const oldName = editingCategory;
+			const newName = editCategoryName.trim();
+			items = items.map((i) => i.categorie === oldName ? { ...i, categorie: newName } : i);
+			toast('success', 'Catégorie renommée.');
+			cancelEditCategory();
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			savingCategory = false;
+		}
+	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -411,7 +445,18 @@ import { onMount } from 'svelte';
 	{#each Object.entries(filteredGrouped) as [categorie, catItems]}
         {@const compact = catItems.length > 7}
 		<div style="display:flex;justify-content:space-between;align-items:center">
-			<h2 class="categorie-title">{categorie}</h2>
+			{#if canEdit && editingCategory === categorie}
+				<div class="categorie-edit">
+					<input class="input-field categorie-input" type="text" bind:value={editCategoryName} on:keydown={(e) => { if (e.key === 'Enter') saveCategory(); if (e.key === 'Escape') cancelEditCategory(); }} />
+					<button class="btn-icon-edit" on:click={saveCategory} disabled={savingCategory} title="Valider" aria-label="Valider">✅</button>
+					<button class="btn-icon-edit" on:click={cancelEditCategory} disabled={savingCategory} title="Annuler" aria-label="Annuler">✖️</button>
+				</div>
+			{:else}
+				<h2 class="categorie-title">{categorie}</h2>
+				{#if canEdit}
+					<button class="btn-icon-edit btn-edit-cat" on:click={() => startEditCategory(categorie)} title="Renommer la catégorie" aria-label="Renommer la catégorie">✏️</button>
+				{/if}
+			{/if}
 		</div>
 		{#each catItems as item (item.id)}
 			<div id={isBadgePrixQuestion(item.question) ? 'badge-prix' : undefined}
@@ -500,6 +545,10 @@ import { onMount } from 'svelte';
 
 <style>
 	.categorie-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); margin: 1.5rem 0 .5rem; }
+	.btn-edit-cat { opacity: .4; font-size: .75rem; transition: opacity .15s; margin-top: .75rem; }
+	.btn-edit-cat:hover { opacity: 1; }
+	.categorie-edit { display: flex; align-items: center; gap: .35rem; margin: 1.25rem 0 .35rem; }
+	.categorie-input { font-size: .85rem; font-weight: 700; padding: .3rem .5rem; max-width: 300px; }
 	.faq-item { cursor: pointer; margin-bottom: .35rem; overflow: visible; padding: 0; }
 	.item-inactive { opacity: .55; }
 	.faq-header { display: flex; align-items: center; }

@@ -36,6 +36,11 @@ class FaqReorderItem(BaseModel):
     ordre: int
 
 
+class FaqCategoryRename(BaseModel):
+    old_name: str
+    new_name: str
+
+
 class FaqItemRead(BaseModel):
     id: int
     categorie: str
@@ -77,6 +82,28 @@ def list_categories(
         .order_by(FaqItem.categorie)
     ).all()
     return [r for r in rows if r]
+
+
+@router.patch("/categories/rename", status_code=200)
+def rename_category(
+    body: FaqCategoryRename,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Renomme une catégorie sur toutes les entrées FAQ correspondantes."""
+    if not body.new_name.strip():
+        raise HTTPException(400, "Le nouveau nom de catégorie ne peut pas être vide")
+    items = session.exec(
+        select(FaqItem).where(FaqItem.categorie == body.old_name)
+    ).all()
+    if not items:
+        raise HTTPException(404, "Catégorie introuvable")
+    for item in items:
+        item.categorie = body.new_name.strip()
+        item.mis_a_jour_le = datetime.utcnow()
+        session.add(item)
+    session.commit()
+    return {"count": len(items), "new_name": body.new_name.strip()}
 
 
 @router.get("/all", response_model=list[FaqItemRead])

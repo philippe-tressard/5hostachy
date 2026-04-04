@@ -501,6 +501,7 @@ export const faq = {
 	create: (data: unknown) => api.post<any>('/faq', data),
 	update: (id: number, data: unknown) => api.patch<any>(`/faq/${id}`, data),
 	reorder: (data: { id: number; ordre: number }[]) => api.patch<void>('/faq/reorder', data),
+	renameCategory: (old_name: string, new_name: string) => api.patch<any>('/faq/categories/rename', { old_name, new_name }),
 	delete: (id: number) => api.delete(`/faq/${id}`),
 };
 
