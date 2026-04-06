@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("user_id", "telecommande_id", name="uq_user_telecommande"),
     )
 
-    # Backfill : chaque Vigik/TC existant → entrée dans la table d'association
+    # Backfill : chaque Vigik/TC existant → entrée pour le détenteur
     op.execute(
         "INSERT INTO user_vigik (user_id, vigik_id) "
         "SELECT user_id, id FROM vigik"
@@ -44,6 +44,34 @@ def upgrade() -> None:
     op.execute(
         "INSERT INTO user_telecommande (user_id, telecommande_id) "
         "SELECT user_id, id FROM telecommande"
+    )
+
+    # Backfill copropriétaires : pour chaque Vigik/TC lié à un lot,
+    # ajouter les copropriétaires du même lot (conjoint, co-indivisaires…)
+    # type_lien IN ('propriétaire','bailleur','mandataire') = copropriétaires
+    op.execute(
+        "INSERT INTO user_vigik (user_id, vigik_id) "
+        "SELECT ul.user_id, v.id "
+        "FROM vigik v "
+        "JOIN user_lot ul ON ul.lot_id = v.lot_id AND ul.actif = 1 "
+        "WHERE v.lot_id IS NOT NULL "
+        "  AND ul.type_lien IN ('propriétaire', 'bailleur', 'mandataire') "
+        "  AND NOT EXISTS ("
+        "    SELECT 1 FROM user_vigik uv "
+        "    WHERE uv.user_id = ul.user_id AND uv.vigik_id = v.id"
+        "  )"
+    )
+    op.execute(
+        "INSERT INTO user_telecommande (user_id, telecommande_id) "
+        "SELECT ul.user_id, t.id "
+        "FROM telecommande t "
+        "JOIN user_lot ul ON ul.lot_id = t.lot_id AND ul.actif = 1 "
+        "WHERE t.lot_id IS NOT NULL "
+        "  AND ul.type_lien IN ('propriétaire', 'bailleur', 'mandataire') "
+        "  AND NOT EXISTS ("
+        "    SELECT 1 FROM user_telecommande ut "
+        "    WHERE ut.user_id = ul.user_id AND ut.telecommande_id = t.id"
+        "  )"
     )
 
 
