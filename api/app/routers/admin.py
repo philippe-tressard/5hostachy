@@ -23,6 +23,7 @@ from app.models.core import (
     Mandat, VoteSondage, VoteIdee,
     StatutLotImport, StatutImport,
     Delegation, StatutDelegation, StatutAcces,
+    UserVigik, UserTelecommande,
 )
 from app.schemas import UserRead
 from app.utils.backup import run_backup
@@ -723,16 +724,26 @@ def list_utilisateurs(
             select(UserLot.user_id).where(UserLot.actif == True).distinct()
         ).all()
     )
-    # Batch : user_ids ayant au moins 1 télécommande
+    # Batch : user_ids ayant au moins 1 télécommande (directe ou via M2M)
     tc_ids = set(
         session.exec(
             select(Telecommande.user_id).distinct()
         ).all()
     )
-    # Batch : user_ids ayant au moins 1 vigik
+    tc_ids |= set(
+        session.exec(
+            select(UserTelecommande.user_id).distinct()
+        ).all()
+    )
+    # Batch : user_ids ayant au moins 1 vigik (direct ou via M2M)
     vigik_ids = set(
         session.exec(
             select(Vigik.user_id).distinct()
+        ).all()
+    )
+    vigik_ids |= set(
+        session.exec(
+            select(UserVigik.user_id).distinct()
         ).all()
     )
     # Batch : user_ids liés via un bail (bailleur ou locataire)
