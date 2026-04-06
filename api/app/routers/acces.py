@@ -11,9 +11,14 @@ from app.database import get_session
 from app.models.core import (
     CommandeAcces, Notification, StatutAcces, StatutCommande, StatutImport,
     Telecommande, TelecommandeImport, Utilisateur, UserLot, Vigik, VigikImport,
+    UserVigik, UserTelecommande,
     Batiment, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
+from app.utils.auto_match_service import (
+    _user_keys, _matches_user, _split_name_candidates,
+    _create_user_vigiks, _create_user_telecommandes, _lot_coproprio_ids,
+)
 
 router = APIRouter(prefix="/acces", tags=["accès"])
 
@@ -25,9 +30,22 @@ def mes_vigiks(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    return session.exec(
+    # Vigiks possédés directement + associés via UserVigik (copropriétaire)
+    directs = session.exec(
         select(Vigik).where(Vigik.user_id == user.id)
     ).all()
+    via_assoc = session.exec(
+        select(Vigik).join(UserVigik, Vigik.id == UserVigik.vigik_id).where(
+            UserVigik.user_id == user.id
+        )
+    ).all()
+    seen = set()
+    result = []
+    for v in [*directs, *via_assoc]:
+        if v.id not in seen:
+            seen.add(v.id)
+            result.append(v)
+    return result
 
 
 @router.get("/mes-telecommandes")
@@ -35,9 +53,22 @@ def mes_telecommandes(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    return session.exec(
+    # TC possédées directement + associées via UserTelecommande (copropriétaire)
+    directs = session.exec(
         select(Telecommande).where(Telecommande.user_id == user.id)
     ).all()
+    via_assoc = session.exec(
+        select(Telecommande).join(
+            UserTelecommande, Telecommande.id == UserTelecommande.telecommande_id
+        ).where(UserTelecommande.user_id == user.id)
+    ).all()
+    seen = set()
+    result = []
+    for t in [*directs, *via_assoc]:
+        if t.id not in seen:
+            seen.add(t.id)
+            result.append(t)
+    return result
 
 
 @router.get("/mes-commandes", response_model=list[CommandeAccesRead])
@@ -287,6 +318,8 @@ def create_vigik(
 ):
     vigik = Vigik(code=body.code, lot_id=body.lot_id, user_id=body.user_id)
     session.add(vigik)
+    session.flush()
+    _create_user_vigiks(vigik, session)
     session.commit()
     session.refresh(vigik)
     return vigik
@@ -306,6 +339,8 @@ def create_telecommande(
 ):
     tc = Telecommande(code=body.code, lot_id=body.lot_id, user_id=body.user_id)
     session.add(tc)
+    session.flush()
+    _create_user_telecommandes(tc, session)
     session.commit()
     session.refresh(tc)
     return tc
@@ -385,8 +420,9 @@ def auto_match_imports(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Tente de matcher automatiquement les imports en_attente avec les utilisateurs
-    inscrits, en comparant nom_proprietaire / nom_locataire au nom de famille des
-    utilisateurs (comparaison normalisée, premier token du nom Excel)."""
+    inscrits, en utilisant l'algorithme robuste (accents, tirets, noms composés,
+    bigrammes). Quand un nom Excel matche plusieurs users (couple), le premier est
+    affecté comme propriétaire — les co-propriétaires seront ajoutés à la résolution."""
     imports = session.exec(
         select(TelecommandeImport).where(
             TelecommandeImport.statut.in_([
@@ -397,34 +433,32 @@ def auto_match_imports(
     ).all()
     utilisateurs = session.exec(select(Utilisateur)).all()
 
-    # Index nom → user (token principal du nom)
-    index: dict[str, list[Utilisateur]] = {}
+    # Pré-calculer les clés de matching pour chaque user
+    user_keys_map: dict[int, set[str]] = {}
     for u in utilisateurs:
-        key = _normaliser(u.nom)
-        index.setdefault(key, []).append(u)
-        # Aussi indexer sur premier mot (pour "FLEURY JEROME" → token "FLEURY")
-        for token in key.split():
-            if len(token) > 3:
-                index.setdefault(token, []).append(u)
+        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
 
     matched = 0
     for imp in imports:
         changed = False
 
         # Match propriétaire
-        if not imp.user_proprietaire_id:
-            norm = _normaliser(imp.nom_proprietaire)
-            candidats = index.get(norm) or index.get(norm.split()[0] if norm else "")
-            # N'auto-matcher que si un seul candidat non ambigu
-            if candidats and len(set(u.id for u in candidats)) == 1:
+        if not imp.user_proprietaire_id and imp.nom_proprietaire:
+            candidats = [
+                u for u in utilisateurs
+                if _matches_user(imp.nom_proprietaire, user_keys_map[u.id])
+            ]
+            if candidats:
                 imp.user_proprietaire_id = candidats[0].id
                 changed = True
 
         # Match locataire
         if imp.nom_locataire and not imp.user_locataire_id:
-            norm = _normaliser(imp.nom_locataire)
-            candidats = index.get(norm) or index.get(norm.split()[0] if norm else "")
-            if candidats and len(set(u.id for u in candidats)) == 1:
+            candidats = [
+                u for u in utilisateurs
+                if _matches_user(imp.nom_locataire, user_keys_map[u.id])
+            ]
+            if candidats:
                 imp.user_locataire_id = candidats[0].id
                 changed = True
 
@@ -441,8 +475,6 @@ def auto_match_imports(
                 changed = True
 
         if changed:
-            # Quand le propriétaire est lié, statut = proprietaire_lie
-            # (que ce soit avec ou sans locataire à compléter)
             if imp.user_proprietaire_id:
                 imp.statut = StatutImport.proprietaire_lie
             session.add(imp)
@@ -524,7 +556,8 @@ def resoudre_import(
     """Résout un import : crée la Telecommande réelle et lie l'utilisateur.
     
     La télécommande est affectée au locataire si chez_locataire=True,
-    sinon au propriétaire.
+    sinon au propriétaire. Les copropriétaires du même lot sont automatiquement
+    associés via UserTelecommande.
     """
     imp = session.get(TelecommandeImport, import_id)
     if not imp:
@@ -555,6 +588,9 @@ def resoudre_import(
     )
     session.add(tc)
     session.flush()
+
+    # Associer tous les copropriétaires du lot via UserTelecommande
+    _create_user_telecommandes(tc, session)
 
     # Marquer l'import comme résolu
     imp.statut = StatutImport.resolu
@@ -730,7 +766,8 @@ def auto_match_imports_vigik(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Tente de matcher automatiquement les imports vigik avec les utilisateurs
-    inscrits, et de résoudre les lots depuis batiment_raw + appartement_raw."""
+    inscrits, en utilisant l'algorithme robuste (accents, tirets, noms composés,
+    bigrammes)."""
     from app.utils.import_vigiks import _build_lot_index
     imports = session.exec(
         select(VigikImport).where(
@@ -742,14 +779,10 @@ def auto_match_imports_vigik(
     ).all()
     utilisateurs = session.exec(select(Utilisateur)).all()
 
-    # Index nom → user
-    index: dict[str, list[Utilisateur]] = {}
+    # Pré-calculer les clés de matching pour chaque user
+    user_keys_map: dict[int, set[str]] = {}
     for u in utilisateurs:
-        key = _normaliser(u.nom)
-        index.setdefault(key, []).append(u)
-        for token in key.split():
-            if len(token) > 3:
-                index.setdefault(token, []).append(u)
+        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
 
     lot_index = _build_lot_index(session)
 
@@ -758,18 +791,22 @@ def auto_match_imports_vigik(
         changed = False
 
         # Match propriétaire
-        if not imp.user_proprietaire_id:
-            norm = _normaliser(imp.nom_proprietaire)
-            candidats = index.get(norm) or index.get(norm.split()[0] if norm else "")
-            if candidats and len(set(u.id for u in candidats)) == 1:
+        if not imp.user_proprietaire_id and imp.nom_proprietaire:
+            candidats = [
+                u for u in utilisateurs
+                if _matches_user(imp.nom_proprietaire, user_keys_map[u.id])
+            ]
+            if candidats:
                 imp.user_proprietaire_id = candidats[0].id
                 changed = True
 
         # Match locataire
         if imp.nom_locataire and not imp.user_locataire_id:
-            norm = _normaliser(imp.nom_locataire)
-            candidats = index.get(norm) or index.get(norm.split()[0] if norm else "")
-            if candidats and len(set(u.id for u in candidats)) == 1:
+            candidats = [
+                u for u in utilisateurs
+                if _matches_user(imp.nom_locataire, user_keys_map[u.id])
+            ]
+            if candidats:
                 imp.user_locataire_id = candidats[0].id
                 changed = True
 
@@ -869,7 +906,8 @@ def resoudre_import_vigik(
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Résout un import vigik : crée le Vigik réel et lie l'utilisateur."""
+    """Résout un import vigik : crée le Vigik réel et lie l'utilisateur.
+    Les copropriétaires du même lot sont automatiquement associés via UserVigik."""
     imp = session.get(VigikImport, import_id)
     if not imp:
         raise HTTPException(404, "Import introuvable")
@@ -896,6 +934,9 @@ def resoudre_import_vigik(
     )
     session.add(vigik)
     session.flush()
+
+    # Associer tous les copropriétaires du lot via UserVigik
+    _create_user_vigiks(vigik, session)
 
     imp.statut = StatutImport.resolu
     imp.vigik_id = vigik.id
