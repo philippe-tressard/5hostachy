@@ -693,7 +693,7 @@ def diag_couples(
             select(Vigik).where(Vigik.lot_id.in_(lot_ids))  # type: ignore
         ).all() if lot_ids else []
         result["vigiks_on_lots"] = [
-            {"id": v.id, "numero": v.numero, "user_id": v.user_id, "lot_id": v.lot_id}
+            {"id": v.id, "code": v.code, "user_id": v.user_id, "lot_id": v.lot_id}
             for v in vigiks
         ]
 
@@ -701,7 +701,7 @@ def diag_couples(
             select(Telecommande).where(Telecommande.lot_id.in_(lot_ids))  # type: ignore
         ).all() if lot_ids else []
         result["tcs_on_lots"] = [
-            {"id": t.id, "numero": t.numero, "user_id": t.user_id, "lot_id": t.lot_id}
+            {"id": t.id, "code": t.code, "user_id": t.user_id, "lot_id": t.lot_id}
             for t in tcs
         ]
 
