@@ -39,11 +39,40 @@ def _lot_coproprio_ids(lot_id: int | None, session: Session) -> set[int]:
     }
 
 
+def _all_coproprio_ids(user_id: int, session: Session) -> set[int]:
+    """Retourne tous les user_ids qui partagent au moins un lot avec user_id."""
+    from app.models.core import UserLot
+    # Lots de cet utilisateur
+    my_lots = session.exec(
+        select(UserLot).where(UserLot.user_id == user_id, UserLot.actif == True)
+    ).all()
+    lot_ids = {
+        ul.lot_id for ul in my_lots
+        if (ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien))
+        in _TYPES_COPROPRIETAIRES
+    }
+    if not lot_ids:
+        return set()
+    # Tous les copropriétaires sur ces lots
+    co_owners = session.exec(
+        select(UserLot).where(
+            UserLot.lot_id.in_(list(lot_ids)),  # type: ignore
+            UserLot.actif == True,
+        )
+    ).all()
+    return {
+        ul.user_id for ul in co_owners
+        if (ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien))
+        in _TYPES_COPROPRIETAIRES
+    }
+
+
 def _create_user_telecommandes(tc, session: Session) -> None:
-    """Crée les UserTelecommande pour le détenteur + tous les copropriétaires du lot."""
+    """Crée les UserTelecommande pour le détenteur + tous les copropriétaires partagés."""
     from app.models.core import UserTelecommande
     user_ids = {tc.user_id}
     user_ids |= _lot_coproprio_ids(tc.lot_id, session)
+    user_ids |= _all_coproprio_ids(tc.user_id, session)
     for uid in user_ids:
         existing = session.exec(
             select(UserTelecommande).where(
@@ -56,10 +85,11 @@ def _create_user_telecommandes(tc, session: Session) -> None:
 
 
 def _create_user_vigiks(vigik, session: Session) -> None:
-    """Crée les UserVigik pour le détenteur + tous les copropriétaires du lot."""
+    """Crée les UserVigik pour le détenteur + tous les copropriétaires partagés."""
     from app.models.core import UserVigik
     user_ids = {vigik.user_id}
     user_ids |= _lot_coproprio_ids(vigik.lot_id, session)
+    user_ids |= _all_coproprio_ids(vigik.user_id, session)
     for uid in user_ids:
         existing = session.exec(
             select(UserVigik).where(
