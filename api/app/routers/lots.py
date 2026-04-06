@@ -785,7 +785,7 @@ def propager_couples(
     session.flush()
 
     # ── Étape 2 : propager UserVigik / UserTelecommande ──
-    vigiks = session.exec(select(Vigik).where(Vigik.lot_id.is_not(None))).all()  # type: ignore
+    vigiks = session.exec(select(Vigik)).all()
     vigiks_propages = 0
     for v in vigiks:
         before = session.exec(
@@ -798,7 +798,7 @@ def propager_couples(
         ).all()
         vigiks_propages += len(after) - len(before)
 
-    tcs = session.exec(select(Telecommande).where(Telecommande.lot_id.is_not(None))).all()  # type: ignore
+    tcs = session.exec(select(Telecommande)).all()
     tcs_propages = 0
     for tc in tcs:
         before = session.exec(
