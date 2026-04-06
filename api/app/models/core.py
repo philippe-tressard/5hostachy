@@ -789,6 +789,25 @@ class Telecommande(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
+#  Association M2M Vigik / Telecommande ↔ Utilisateur
+#  (un badge peut être associé à plusieurs copropriétaires)
+# ──────────────────────────────────────────────
+
+class UserVigik(SQLModel, table=True):
+    __tablename__ = "user_vigik"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="utilisateur.id")
+    vigik_id: int = Field(foreign_key="vigik.id")
+
+
+class UserTelecommande(SQLModel, table=True):
+    __tablename__ = "user_telecommande"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="utilisateur.id")
+    telecommande_id: int = Field(foreign_key="telecommande.id")
+
+
+# ──────────────────────────────────────────────
 #  Import télécommandes (staging depuis Excel)
 # ──────────────────────────────────────────────
 

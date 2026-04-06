@@ -19,6 +19,58 @@ from typing import Optional
 from sqlmodel import Session, select
 
 
+# ── Types copropriétaires (pour propagation conjoint) ────────────────────────
+
+_TYPES_COPROPRIETAIRES = {"propriétaire", "bailleur", "mandataire"}
+
+
+def _lot_coproprio_ids(lot_id: int | None, session: Session) -> set[int]:
+    """Retourne les user_ids des copropriétaires d'un lot."""
+    if not lot_id:
+        return set()
+    from app.models.core import UserLot
+    user_lots = session.exec(
+        select(UserLot).where(UserLot.lot_id == lot_id, UserLot.actif == True)
+    ).all()
+    return {
+        ul.user_id for ul in user_lots
+        if (ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien))
+        in _TYPES_COPROPRIETAIRES
+    }
+
+
+def _create_user_telecommandes(tc, session: Session) -> None:
+    """Crée les UserTelecommande pour le détenteur + tous les copropriétaires du lot."""
+    from app.models.core import UserTelecommande
+    user_ids = {tc.user_id}
+    user_ids |= _lot_coproprio_ids(tc.lot_id, session)
+    for uid in user_ids:
+        existing = session.exec(
+            select(UserTelecommande).where(
+                UserTelecommande.user_id == uid,
+                UserTelecommande.telecommande_id == tc.id,
+            )
+        ).first()
+        if not existing:
+            session.add(UserTelecommande(user_id=uid, telecommande_id=tc.id))
+
+
+def _create_user_vigiks(vigik, session: Session) -> None:
+    """Crée les UserVigik pour le détenteur + tous les copropriétaires du lot."""
+    from app.models.core import UserVigik
+    user_ids = {vigik.user_id}
+    user_ids |= _lot_coproprio_ids(vigik.lot_id, session)
+    for uid in user_ids:
+        existing = session.exec(
+            select(UserVigik).where(
+                UserVigik.user_id == uid,
+                UserVigik.vigik_id == vigik.id,
+            )
+        ).first()
+        if not existing:
+            session.add(UserVigik(user_id=uid, vigik_id=vigik.id))
+
+
 # ── Normalisation ────────────────────────────────────────────────────────────
 
 def _norm(s: Optional[str]) -> str:
@@ -210,6 +262,8 @@ def _auto_match_tc(user, session: Session) -> int:
                 )
                 session.add(tc)
                 session.flush()
+                # Associer les copropriétaires du lot
+                _create_user_telecommandes(tc, session)
                 imp.statut = StatutImport.resolu
                 imp.telecommande_id = tc.id
                 imp.resolu_le = datetime.utcnow()
@@ -281,6 +335,8 @@ def _auto_match_vigik(user, session: Session) -> int:
                 )
                 session.add(vigik)
                 session.flush()
+                # Associer les copropriétaires du lot
+                _create_user_vigiks(vigik, session)
                 imp.statut = StatutImport.resolu
                 imp.vigik_id = vigik.id
                 imp.resolu_le = datetime.utcnow()

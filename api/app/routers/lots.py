@@ -211,13 +211,13 @@ async def upload_import_lots(
     contenu = await file.read()
     stats_import = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
     # Auto-match : lie lots et utilisateurs par nom/batiment+numero
+    from app.utils.auto_match_service import _user_keys, _matches_user, _split_name_candidates
     lots_all = session.exec(select(Lot)).all()
     users_all = session.exec(select(Utilisateur)).all()
     lot_index = {(l.batiment_id, l.numero): l for l in lots_all}
-    user_index: dict[str, Utilisateur] = {}
+    user_keys_map: dict[int, set[str]] = {}
     for u in users_all:
-        user_index[_norm(f"{u.nom} {u.prenom}")] = u
-        user_index[_norm(f"{u.prenom} {u.nom}")] = u
+        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
     pending = session.exec(
         select(LotImport).where(LotImport.statut == StatutLotImport.en_attente)
     ).all()
@@ -230,14 +230,16 @@ async def upload_import_lots(
                 changed = True
         existing_users = _parse_users(imp.utilisateurs_json)
         if not existing_users and imp.nom_coproprietaire:
-            noms = [n.strip() for n in imp.nom_coproprietaire.split(" ; ") if n.strip()]
-            matched: list[dict] = []
+            noms = _split_name_candidates(imp.nom_coproprietaire)
+            matched_users: list[dict] = []
+            seen_ids: set[int] = set()
             for nom in noms:
-                user = user_index.get(_norm(nom))
-                if user:
-                    matched.append({"user_id": user.id, "type_lien": "propriétaire"})
-            if matched:
-                imp.utilisateurs_json = __import__('json').dumps(matched, ensure_ascii=False)
+                for u in users_all:
+                    if u.id not in seen_ids and _matches_user(nom, user_keys_map[u.id]):
+                        matched_users.append({"user_id": u.id, "type_lien": "propriétaire"})
+                        seen_ids.add(u.id)
+            if matched_users:
+                imp.utilisateurs_json = __import__('json').dumps(matched_users, ensure_ascii=False)
                 changed = True
         if changed:
             imp.statut = StatutLotImport.lot_lie if imp.lot_id else StatutLotImport.utilisateur_lie
@@ -573,7 +575,10 @@ def auto_match_imports(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Tente de lier automatiquement les LotImport aux Lot et Utilisateur existants."""
+    """Tente de lier automatiquement les LotImport aux Lot et Utilisateur existants.
+    Utilise l'algorithme robuste de matching (accents, tirets, noms composés, bigrammes)."""
+    from app.utils.auto_match_service import _user_keys, _matches_user, _split_name_candidates
+
     imports = session.exec(
         select(LotImport).where(LotImport.statut == StatutLotImport.en_attente)
     ).all()
@@ -583,13 +588,10 @@ def auto_match_imports(
 
     # Index par (batiment_id, numero)
     lot_index: dict[tuple, Lot] = {(l.batiment_id, l.numero): l for l in lots_all}
-    # Index utilisateurs par nom normalisé (nom + prénom)
-    user_index: dict[str, Utilisateur] = {}
+    # Pré-calculer les clés de matching pour chaque user
+    user_keys_map: dict[int, set[str]] = {}
     for u in users_all:
-        key = _norm(f"{u.nom} {u.prenom}")
-        user_index[key] = u
-        key2 = _norm(f"{u.prenom} {u.nom}")
-        user_index[key2] = u
+        user_keys_map[u.id] = _user_keys(u.nom, u.prenom)
 
     matches = 0
     for imp in imports:
@@ -603,15 +605,16 @@ def auto_match_imports(
         # Match user par nom_coproprietaire (si aucun utilisateur déjà lié)
         existing_users = _parse_users(imp.utilisateurs_json)
         if not existing_users and imp.nom_coproprietaire:
-            # Gérer les couples séparés par " ; "
-            noms = [n.strip() for n in imp.nom_coproprietaire.split(" ; ") if n.strip()]
-            matched: list[dict] = []
+            noms = _split_name_candidates(imp.nom_coproprietaire)
+            matched_users: list[dict] = []
+            seen_ids: set[int] = set()
             for nom in noms:
-                user = user_index.get(_norm(nom))
-                if user:
-                    matched.append({"user_id": user.id, "type_lien": "propriétaire"})
-            if matched:
-                imp.utilisateurs_json = json.dumps(matched, ensure_ascii=False)
+                for u in users_all:
+                    if u.id not in seen_ids and _matches_user(nom, user_keys_map[u.id]):
+                        matched_users.append({"user_id": u.id, "type_lien": "propriétaire"})
+                        seen_ids.add(u.id)
+            if matched_users:
+                imp.utilisateurs_json = json.dumps(matched_users, ensure_ascii=False)
                 changed = True
         if changed:
             if imp.lot_id:
