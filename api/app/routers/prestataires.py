@@ -360,8 +360,6 @@ def archive_devis(
     d = session.get(DevisPrestataire, d_id)
     if not d:
         raise HTTPException(404, "Devis introuvable")
-    if d.statut != "realise":
-        raise HTTPException(422, "Seules les prestations réalisées peuvent être archivées")
     d.actif = False
     session.add(d)
     session.commit()
