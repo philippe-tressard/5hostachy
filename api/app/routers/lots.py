@@ -630,6 +630,97 @@ def auto_match_imports(
     return {"matches": matches}
 
 
+@router.get("/admin/diag-couples", status_code=200)
+def diag_couples(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Diagnostic temporaire pour vérifier l'état Court/Garcia."""
+    from app.models.core import Vigik, Telecommande, UserVigik, UserTelecommande
+    from sqlalchemy import text as sa_text
+
+    result = {}
+
+    # Users Court / Garcia
+    users = session.exec(
+        select(Utilisateur).where(
+            Utilisateur.nom.in_(["COURT", "GARCIA", "Court", "Garcia", "court", "garcia"])  # type: ignore
+        )
+    ).all()
+    result["users"] = [{"id": u.id, "nom": u.nom, "prenom": u.prenom, "email": u.email} for u in users]
+
+    if not users:
+        # Fallback: search with LIKE
+        all_u = session.exec(select(Utilisateur)).all()
+        matches = [u for u in all_u if "court" in (u.nom or "").lower() or "garcia" in (u.nom or "").lower()]
+        result["users_like"] = [{"id": u.id, "nom": u.nom, "prenom": u.prenom} for u in matches]
+        users = matches
+
+    user_ids = [u.id for u in users]
+    result["user_ids"] = user_ids
+
+    # LotImport mentioning them
+    all_imports = session.exec(select(LotImport)).all()
+    matching_imports = [
+        imp for imp in all_imports
+        if imp.nom_coproprietaire and (
+            "court" in imp.nom_coproprietaire.lower()
+            or "garcia" in imp.nom_coproprietaire.lower()
+        )
+    ]
+    result["lot_imports"] = [
+        {"id": i.id, "lot_id": i.lot_id, "nom": i.nom_coproprietaire,
+         "statut": i.statut.value if hasattr(i.statut, "value") else str(i.statut),
+         "utilisateurs_json": i.utilisateurs_json}
+        for i in matching_imports
+    ]
+
+    # UserLot
+    if user_ids:
+        uls = session.exec(
+            select(UserLot).where(UserLot.user_id.in_(user_ids))  # type: ignore
+        ).all()
+        result["user_lots"] = [
+            {"user_id": ul.user_id, "lot_id": ul.lot_id,
+             "type_lien": ul.type_lien.value if hasattr(ul.type_lien, "value") else str(ul.type_lien),
+             "actif": ul.actif}
+            for ul in uls
+        ]
+
+        # Vigiks/TC on their lots
+        lot_ids = list({ul.lot_id for ul in uls})
+        vigiks = session.exec(
+            select(Vigik).where(Vigik.lot_id.in_(lot_ids))  # type: ignore
+        ).all() if lot_ids else []
+        result["vigiks_on_lots"] = [
+            {"id": v.id, "numero": v.numero, "user_id": v.user_id, "lot_id": v.lot_id}
+            for v in vigiks
+        ]
+
+        tcs = session.exec(
+            select(Telecommande).where(Telecommande.lot_id.in_(lot_ids))  # type: ignore
+        ).all() if lot_ids else []
+        result["tcs_on_lots"] = [
+            {"id": t.id, "numero": t.numero, "user_id": t.user_id, "lot_id": t.lot_id}
+            for t in tcs
+        ]
+
+        # UserVigik / UserTelecommande
+        uvs = session.exec(
+            select(UserVigik).where(UserVigik.user_id.in_(user_ids))  # type: ignore
+        ).all()
+        result["user_vigiks"] = [{"user_id": uv.user_id, "vigik_id": uv.vigik_id} for uv in uvs]
+
+        uts = session.exec(
+            select(UserTelecommande).where(UserTelecommande.user_id.in_(user_ids))  # type: ignore
+        ).all()
+        result["user_telecommandes"] = [{"user_id": ut.user_id, "tc_id": ut.telecommande_id} for ut in uts]
+    else:
+        result["user_lots"] = []
+
+    return result
+
+
 @router.post("/admin/propager-couples", status_code=200)
 def propager_couples(
     session: Session = Depends(get_session),
