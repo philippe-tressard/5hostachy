@@ -628,3 +628,102 @@ def auto_match_imports(
 
     session.commit()
     return {"matches": matches}
+
+
+@router.post("/admin/propager-couples", status_code=200)
+def propager_couples(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Rattrapage one-shot : pour les LotImport déjà résolus, re-matche les noms
+    avec l'algorithme robuste, ajoute les copropriétaires manquants aux lots,
+    puis propage les UserVigik/UserTelecommande à tous les copropriétaires."""
+    from app.utils.auto_match_service import (
+        _user_keys, _matches_user, _split_name_candidates,
+        _create_user_vigiks, _create_user_telecommandes,
+    )
+    from app.models.core import Vigik, Telecommande, UserVigik, UserTelecommande
+
+    users_all: list[Utilisateur] = session.exec(select(Utilisateur)).all()
+    user_keys_map: dict[int, set[str]] = {u.id: _user_keys(u.nom, u.prenom) for u in users_all}
+
+    # ── Étape 1 : compléter les UserLot manquants sur les LotImport résolus ──
+    imports = session.exec(
+        select(LotImport).where(
+            LotImport.statut == StatutLotImport.resolu,
+            LotImport.lot_id.is_not(None),  # type: ignore
+        )
+    ).all()
+
+    lots_completes = 0
+    user_lots_crees = 0
+    for imp in imports:
+        if not imp.nom_coproprietaire or not imp.lot_id:
+            continue
+        noms = _split_name_candidates(imp.nom_coproprietaire)
+        current_users = _parse_users(imp.utilisateurs_json)
+        existing_ids = {e["user_id"] for e in current_users}
+        added = False
+        for nom in noms:
+            for u in users_all:
+                if u.id in existing_ids:
+                    continue
+                if _matches_user(nom, user_keys_map[u.id]):
+                    current_users.append({"user_id": u.id, "type_lien": "propriétaire"})
+                    existing_ids.add(u.id)
+                    # Créer le UserLot si absent
+                    existing_ul = session.exec(
+                        select(UserLot).where(
+                            UserLot.user_id == u.id, UserLot.lot_id == imp.lot_id
+                        )
+                    ).first()
+                    if not existing_ul:
+                        session.add(UserLot(
+                            user_id=u.id,
+                            lot_id=imp.lot_id,
+                            type_lien=_type_lien_from_str("propriétaire"),
+                            actif=True,
+                        ))
+                        user_lots_crees += 1
+                    added = True
+        if added:
+            imp.utilisateurs_json = json.dumps(current_users, ensure_ascii=False)
+            session.add(imp)
+            lots_completes += 1
+
+    session.flush()
+
+    # ── Étape 2 : propager UserVigik / UserTelecommande ──
+    vigiks = session.exec(select(Vigik).where(Vigik.lot_id.is_not(None))).all()  # type: ignore
+    vigiks_propages = 0
+    for v in vigiks:
+        before = session.exec(
+            select(UserVigik).where(UserVigik.vigik_id == v.id)
+        ).all()
+        _create_user_vigiks(v, session)
+        session.flush()
+        after = session.exec(
+            select(UserVigik).where(UserVigik.vigik_id == v.id)
+        ).all()
+        vigiks_propages += len(after) - len(before)
+
+    tcs = session.exec(select(Telecommande).where(Telecommande.lot_id.is_not(None))).all()  # type: ignore
+    tcs_propages = 0
+    for tc in tcs:
+        before = session.exec(
+            select(UserTelecommande).where(UserTelecommande.telecommande_id == tc.id)
+        ).all()
+        _create_user_telecommandes(tc, session)
+        session.flush()
+        after = session.exec(
+            select(UserTelecommande).where(UserTelecommande.telecommande_id == tc.id)
+        ).all()
+        tcs_propages += len(after) - len(before)
+
+    session.commit()
+    return {
+        "lots_completes": lots_completes,
+        "user_lots_crees": user_lots_crees,
+        "vigiks_propages": vigiks_propages,
+        "tcs_propages": tcs_propages,
+    }

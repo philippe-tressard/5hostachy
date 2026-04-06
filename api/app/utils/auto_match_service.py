@@ -94,8 +94,8 @@ def _split_name_candidates(raw_name: Optional[str]) -> list[str]:
     raw = str(raw_name).strip()
     if not raw:
         return []
-    # Séparateurs rencontrés dans les imports : ';', '/', '|', '&', '+', ' ET '.
-    parts = re.split(r"\s*(?:;|/|\||&|\+)\s*|\s+et\s+", raw, flags=re.IGNORECASE)
+    # Séparateurs rencontrés dans les imports : ';', '/', '|', '&', '+', ' ET ', ' OU '.
+    parts = re.split(r"\s*(?:;|/|\||&|\+)\s*|\s+(?:et|ou)\s+", raw, flags=re.IGNORECASE)
     return [p.strip() for p in parts if p and p.strip()]
 
 
