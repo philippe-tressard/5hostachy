@@ -185,8 +185,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		<button class="btn btn-sm" class:btn-primary={filterStatut === ''} on:click={() => filterStatut = ''}>Tous</button>
 		<button class="btn btn-sm" class:btn-primary={filterStatut === 'ouvert'} on:click={() => filterStatut = 'ouvert'}>&#x1F535; Ouvert</button>
 		<button class="btn btn-sm" class:btn-primary={filterStatut === 'en_cours'} on:click={() => filterStatut = 'en_cours'}>&#x1F7E1; En cours</button>
-		<button class="btn btn-sm" class:btn-primary={filterStatut === 'résolu'} on:click={() => filterStatut = 'résolu'}>&#x1F7E2; Résolu</button>
-		<button class="btn btn-sm" class:btn-primary={filterStatut === 'annulé'} on:click={() => filterStatut = 'annulé'}>⚫ Annulé</button>
 	</span>
 	<span class="filter-sep"></span>
 	<span class="filter-group">
@@ -331,12 +329,13 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			{/if}
 		</div>
 	{/each}
+{/if}
 
-	<!-- Section Historique -->
-	{#if historyTickets.length > 0}
+<!-- Section Historique -->
+{#if historyTickets.length > 0}
 		<div class="history-section">
 			<button class="history-header" on:click={() => (historyExpanded = !historyExpanded)} aria-expanded={historyExpanded}>
-				<span class="history-title">&#x1F4AD; Historique de mes tickets</span>
+				<span class="history-title">&#x1F4AD; Historique</span>
 				<span class="history-count">{historyTickets.length}</span>
 				<span class="history-chevron">{historyExpanded ? '▲' : '▼'}</span>
 			</button>
@@ -481,7 +480,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			{/if}
 		</div>
 	{/if}
-{/if}
 
 <style>
 	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
