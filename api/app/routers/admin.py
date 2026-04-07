@@ -524,8 +524,13 @@ def annuaire(
         "syndic": {
             "nom_syndic": syndic_info.nom_syndic if syndic_info else "",
             "adresse": syndic_info.adresse if syndic_info else "",
+            "site_web": syndic_info.site_web if syndic_info else None,
             "membres": syndic_membres_out,
         },
+        "whatsapp_url": (
+            session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+            or ConfigSite(cle="", valeur="")
+        ).valeur or None,
     }
 
 
@@ -543,6 +548,7 @@ class MembreCSIn(BaseModel):
 class CompositionCSIn(BaseModel):
     ag_annee: Optional[int] = None
     ag_date: Optional[str] = None   # ISO "YYYY-MM-DD" ou None
+    whatsapp_url: Optional[str] = None
     membres: list[MembreCSIn] = []
 
 @router.get("/annuaire/cs")
@@ -564,6 +570,10 @@ def get_composition_cs(
     return {
         "ag_annee": ag.ag_annee if ag else None,
         "ag_date": ag.ag_date.isoformat() if (ag and ag.ag_date) else None,
+        "whatsapp_url": (
+            session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+            or ConfigSite(cle="", valeur="")
+        ).valeur or "",
         "membres": [
             {
                 "id": m.id,
@@ -604,6 +614,13 @@ def put_composition_cs(
     ag.ag_annee = body.ag_annee
     ag.ag_date = date_type.fromisoformat(body.ag_date) if body.ag_date else None
 
+    # WhatsApp URL
+    wa_cfg = session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+    if wa_cfg is None:
+        wa_cfg = ConfigSite(cle="whatsapp_community_url", valeur="")
+        session.add(wa_cfg)
+    wa_cfg.valeur = body.whatsapp_url or ""
+
     # Remplacer tous les membres CS
     old = session.exec(select(MembreCS)).all()
     for m in old:
@@ -642,6 +659,7 @@ class MembreSyndicIn(BaseModel):
 class SyndicIn(BaseModel):
     nom_syndic: str = ""
     adresse: str = ""
+    site_web: Optional[str] = None
     membres: list[MembreSyndicIn] = []
 
 @router.get("/annuaire/syndic")
@@ -654,6 +672,7 @@ def get_syndic_info(
     return {
         "nom_syndic": syndic.nom_syndic if syndic else "",
         "adresse": syndic.adresse if syndic else "",
+        "site_web": syndic.site_web if syndic else None,
         "membres": [
             {
                 "id": m.id,
@@ -684,6 +703,7 @@ def put_syndic_info(
         session.add(syndic)
     syndic.nom_syndic = body.nom_syndic
     syndic.adresse = body.adresse
+    syndic.site_web = body.site_web
 
     # Remplacer tous les membres syndic
     old = session.exec(select(MembreSyndic)).all()

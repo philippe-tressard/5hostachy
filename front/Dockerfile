@@ -5,7 +5,8 @@ ENV VITE_GIT_HASH=$GIT_HASH
 
 WORKDIR /app
 COPY package.json ./
-RUN npm install --legacy-peer-deps
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --legacy-peer-deps
 
 COPY . .
 RUN npm run build

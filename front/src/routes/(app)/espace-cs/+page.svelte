@@ -379,11 +379,15 @@
 	// Syndic
 	let nomSyndic = '';
 	let adresseSyndic = '';
+	let siteWebSyndic = '';
 	let membresSyndic: MembreSyndicForm[] = [];
 	let savingSyndic = false;
 	let savingSyndicIdx: number | null = null;
 	let syndicOpenIdx: number | null = null;
 	let syndicEditIdx: number | null = null;
+
+	// WhatsApp
+	let whatsappUrl = '';
 
 	// -- Header inline-edit flags -----------------------------------------
 	let csHeaderEditing = false;
@@ -505,6 +509,7 @@
 			]);
 			agAnnee = csData.ag_annee ?? null;
 			agDate = csData.ag_date ?? '';
+			whatsappUrl = csData.whatsapp_url ?? '';
 			membresCS = (csData.membres ?? []).map((m: any): MembreCSForm => ({
 				genre: m.genre ?? 'Mme',
 				prenom: m.prenom ?? '', nom: m.nom ?? '',
@@ -525,6 +530,7 @@
 			csHeaderEditing = false;
 			nomSyndic = syndicData.nom_syndic ?? '';
 			adresseSyndic = syndicData.adresse ?? '';
+			siteWebSyndic = syndicData.site_web ?? '';
 			membresSyndic = (syndicData.membres ?? []).map((m: any): MembreSyndicForm => ({
 				genre: m.genre ?? 'Mme',
 				prenom: m.prenom ?? '', nom: m.nom ?? '',
@@ -614,7 +620,7 @@
 	async function saveCS() {
 		savingCS = true;
 		try {
-			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, membres: membresCS });
+			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, whatsapp_url: whatsappUrl || null, membres: membresCS });
 			toast('success', 'Conseil Syndical enregistré');
 			csHeaderEditing = false;
 		} catch (e: any) {
@@ -625,7 +631,7 @@
 	async function saveMembreCS(i: number) {
 		savingCSIdx = i;
 		try {
-			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, membres: membresCS });
+			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, whatsapp_url: whatsappUrl || null, membres: membresCS });
 			csOpenIdx = null; csEditIdx = null;
 			toast('success', `${membresCS[i].prenom} ${membresCS[i].nom} enregistré`);
 		} catch (e: any) {
@@ -675,7 +681,7 @@
 		// Sauvegarde silencieuse de l'ordre
 		try {
 			await annuaireAdmin.putSyndic({
-				nom_syndic: nomSyndic, adresse: adresseSyndic,
+				nom_syndic: nomSyndic, adresse: adresseSyndic, site_web: siteWebSyndic || null,
 				membres: membresSyndic.map((m) => ({
 					genre: m.genre, prenom: m.prenom, nom: m.nom,
 					fonction: m.fonction || null, email: m.email || null,
@@ -698,6 +704,7 @@
 			await annuaireAdmin.putSyndic({
 				nom_syndic: nomSyndic,
 				adresse: adresseSyndic,
+				site_web: siteWebSyndic || null,
 				membres: membresSyndic.map((m) => ({
 					genre: m.genre, prenom: m.prenom, nom: m.nom,
 					fonction: m.fonction || null, email: m.email || null,
@@ -722,6 +729,7 @@
 			await annuaireAdmin.putSyndic({
 				nom_syndic: nomSyndic,
 				adresse: adresseSyndic,
+				site_web: siteWebSyndic || null,
 				membres: membresSyndic.map((m) => ({
 					genre: m.genre, prenom: m.prenom, nom: m.nom,
 					fonction: m.fonction || null, email: m.email || null,
@@ -1390,6 +1398,10 @@
 						Date de l'AG
 						<input type="date" bind:value={agDate} />
 					</label>
+					<label>
+						URL communauté WhatsApp
+						<input type="url" placeholder="https://chat.whatsapp.com/..." bind:value={whatsappUrl} />
+					</label>
 					<div class="header-edit-actions">
 						<button class="btn btn-primary btn-sm" on:click={saveCS} disabled={savingCS}>{savingCS ? '…' : '\u{1F4BE} Enregistrer'}</button>
 						<button class="btn btn-sm btn-outline" on:click={() => csHeaderEditing = false}>Annuler</button>
@@ -1398,6 +1410,7 @@
 			{:else}
 				<div class="header-summary">
 					<span>{agAnnee ? `AG ${agAnnee}` : 'Année AG non renseignée'}{agDate ? ` · ${new Date(agDate).toLocaleDateString('fr-FR')}` : ''}</span>
+					{#if whatsappUrl}<span style="margin-left:.5rem">· <a href={whatsappUrl} target="_blank" rel="noopener">WhatsApp</a></span>{/if}
 					<button type="button" class="btn-icon btn-icon-edit" title="Modifier" on:click={() => csHeaderEditing = true}><Icon name="pencil" size={13} /></button>
 				</div>
 			{/if}
@@ -1523,6 +1536,10 @@
 					<label style="grid-column:1/-1">
 						Adresse
 						<textarea rows="2" bind:value={adresseSyndic} placeholder="ex. 12 rue des Lilas, 75015 Paris"></textarea>
+					</label>
+					<label style="grid-column:1/-1">
+						Espace client (site web)
+						<input type="url" bind:value={siteWebSyndic} placeholder="https://..." />
 					</label>
 					<div class="header-edit-actions" style="grid-column:1/-1">
 						<button class="btn btn-primary btn-sm" on:click={saveSyndic} disabled={savingSyndic}>{savingSyndic ? '…' : '\u{1F4BE} Enregistrer'}</button>

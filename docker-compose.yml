@@ -28,6 +28,8 @@ services:
       args:
         GIT_HASH: ${GIT_HASH:-dev}
     container_name: hostachy_front
+    labels:
+      - "git.hash=${GIT_HASH:-dev}"
     restart: unless-stopped
     logging:
       driver: "json-file"

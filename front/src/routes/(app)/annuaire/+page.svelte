@@ -1,5 +1,6 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import QRCode from '$lib/components/QRCode.svelte';
 	import { onMount } from 'svelte';
 	import { annuaire as annuaireApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -13,10 +14,11 @@
 	interface MembreSyndic { id: number; genre: string; prenom: string; nom: string; fonction: string | null; email: string | null; telephone: string | null; est_principal: boolean; photo_url: string | null; }
 	interface AnnuaireData {
 		cs: { ag_annee: number | null; ag_date: string | null; membres: MembreCS[] };
-		syndic: { nom_syndic: string; adresse: string; membres: MembreSyndic[] };
+		syndic: { nom_syndic: string; adresse: string; site_web: string | null; membres: MembreSyndic[] };
+		whatsapp_url: string | null;
 	}
 
-	let data: AnnuaireData = { cs: { ag_annee: null, ag_date: null, membres: [] }, syndic: { nom_syndic: '', adresse: '', membres: [] } };
+	let data: AnnuaireData = { cs: { ag_annee: null, ag_date: null, membres: [] }, syndic: { nom_syndic: '', adresse: '', site_web: null, membres: [] }, whatsapp_url: null };
 	let loading = true;
 
 	onMount(async () => {
@@ -146,6 +148,16 @@
 			{/each}
 		</div>
 	{/if}
+
+	{#if data.whatsapp_url}
+		<div class="url-block">
+			<QRCode data={data.whatsapp_url} size={64} />
+			<div>
+				<strong>Groupe WhatsApp copropriété</strong>
+				<span class="contact-societe"><a href={data.whatsapp_url} target="_blank" rel="noopener">{data.whatsapp_url}</a></span>
+			</div>
+		</div>
+	{/if}
 </section>
 
 <section>
@@ -155,6 +167,15 @@
 			<strong>{data.syndic.nom_syndic}</strong>
 			{#if data.syndic.adresse}<span class="contact-societe">{data.syndic.adresse}</span>{/if}
 		</p>
+		{#if data.syndic.site_web}
+			<div class="url-block">
+				<QRCode data={data.syndic.site_web} size={64} />
+				<div>
+					<strong>Espace client</strong>
+					<span class="contact-societe"><a href={data.syndic.site_web} target="_blank" rel="noopener">{data.syndic.site_web}</a></span>
+				</div>
+			</div>
+		{/if}
 	{/if}
 	{#if data.syndic.membres.length === 0}
 		<p style="color:var(--color-text-muted);font-size:.9rem">Aucun contact syndic enregistré.</p>
@@ -252,4 +273,19 @@
 	.contact-role { font-size: .8rem; color: var(--color-text-muted); margin: .1rem 0; }
 	.contact-email { display: block; font-size: .85rem; color: var(--color-primary); text-decoration: none; margin-top: .1rem; }
 	.contact-email:hover { text-decoration: underline; }
+
+	.url-block {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		margin-top: .75rem;
+		padding: .6rem .75rem;
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		max-width: 520px;
+	}
+	.url-block strong { font-size: .85rem; display: block; }
+	.url-block .contact-societe { margin: 0; }
+	.url-block a { word-break: break-all; }
 </style>

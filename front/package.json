@@ -29,6 +29,7 @@
     "@tiptap/extension-underline": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
     "dompurify": "^3.3.3",
+    "qrcode-generator": "^2.0.4",
     "workbox-window": "^7.3.0"
   },
   "overrides": {
