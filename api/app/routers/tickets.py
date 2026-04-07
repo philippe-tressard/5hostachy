@@ -198,6 +198,20 @@ def create_ticket(
             cfg_map = {r.cle: r.valeur for r in cfg_site}
             reference_copro = cfg_map.get("reference_copro", "")
 
+            # Photos jointes
+            photo_paths = []
+            if ticket.photos_urls:
+                import json as _json, os
+                try:
+                    urls = _json.loads(ticket.photos_urls) if isinstance(ticket.photos_urls, str) else ticket.photos_urls
+                except Exception:
+                    urls = []
+                for url in (urls or []):
+                    fname = os.path.basename(url)
+                    fpath = os.path.join("/app/uploads", fname)
+                    if os.path.isfile(fpath):
+                        photo_paths.append(fpath)
+
             background_tasks.add_task(
                 send_email,
                 code="ticket_syndic",
@@ -224,6 +238,7 @@ def create_ticket(
                 },
                 session=session,
                 cc=cc_emails,
+                attachments=photo_paths or None,
             )
 
     session.commit()
