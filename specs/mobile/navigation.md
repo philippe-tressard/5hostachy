@@ -57,8 +57,8 @@ LINKS DISPONIBLES DANS LE MENU
 │   ├── Question
 │   ├── 🔴 Urgence (inondation, panne majeure)
 │   └── Bug
-├── Mes tickets en cours
-└── Historique des tickets
+├── Mes tickets en cours (filtres : Tous / Ouvert / En cours)
+└── Historique — accordéon par année décroissante (3 ans max), toujours visible
 
 [Résidence]
 ├── Actualités et alertes

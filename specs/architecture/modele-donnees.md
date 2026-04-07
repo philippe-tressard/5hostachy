@@ -141,7 +141,7 @@
 | categorie | enum | `panne` \| `nuisance` \| `question` \| `urgence` |
 | titre | string | — |
 | description | text | — |
-| statut | enum | `ouvert` \| `en_cours` \| `résolu` \| `annulé` |
+| statut | enum | `ouvert` \| `en_cours` \| `résolu` \| `annulé` \| `fermé` |
 | priorite | enum | `normale` \| `haute` \| `urgente` |
 | batiment_id | FK Bâtiment | Optionnel |
 | lot_id | FK Lot | Optionnel |
@@ -302,7 +302,7 @@
 | `locataire_validation_demande` | Locataire s’inscrit sur un lot | Copropriétaire bailleur | non |
 | `locataire_valide` | Bailleur valide le locataire | Locataire | non |
 | `locataire_refuse` | Bailleur refuse le locataire | Locataire | non |
-| `ticket_cree_cs` | Nouveau ticket soumis | CS (+ syndic si urgence) | non |
+| `ticket_cree_cs` | Nouveau ticket soumis | CS (+ syndic si urgence). E-mail syndic : photos en PJ, CC = utilisateurs avec rôle `conseil_syndical` | non |
 | `ticket_statut_change` | Statut d’un ticket modifié | Auteur du ticket | non |
 | `ticket_urgence_bailleur` | Ticket urgence d’un locataire | Bailleur + mandataire du lot | non |
 | `vigik_commande_recue` | Demande de vigik soumise | CS | non |

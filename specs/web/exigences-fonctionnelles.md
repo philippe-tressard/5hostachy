@@ -111,7 +111,9 @@
 - **Priorité :** Haute
 - **Description :** Le résident suit le statut de ses tickets et échange des messages avec le conseil syndical.
 - **Critères d’acceptance :**
-  - Statuts visibles : ouvert / en cours / résolu / annulé.
+  - Statuts visibles : ouvert / en cours / résolu / annulé / fermé.
+  - La barre de filtres propose uniquement **Tous**, **Ouvert** et **En cours**. Les tickets résolus, annulés ou fermés ne figurent plus dans les filtres.
+  - Les tickets résolus, annulés ou fermés sont immédiatement déplacés dans une section **Historique** en bas de page, groupés par année en accordéon décroissant (3 ans max). Cette section est visible pour tous les profils (copro, CS, admin) et reste affichée même en l'absence de tickets actifs.
   - Le conseil syndical peut modifier le statut et ajouter des messages.
   - Dans l'espace CS, chaque ticket affiche le prénom / nom et le bâtiment du demandeur pour accélérer la qualification et le traitement.
   - Le syndic peut lire les tickets en lecture seule.
@@ -247,6 +249,7 @@
 - **Description :** Envoi d’emails transactionnels et informatifs couvrant tous les événements métier (validation de compte, vigik, tickets, calendrier…). Chaque email est rendu depuis un template Jinja2 éditable par l’admin (cf. EF-WEB-073).
 - **Critères d’acceptance :**
   - Les événements couverts sont : invitation résident, réinitialisation MDP, compte en attente / validé / refusé, validation locataire (bailleur), statut ticket, ticket urgence, commande vigik (reçue / acceptée / refusée), événement calendrier, digest.
+  - L'e-mail syndic (ticket destiné au syndic) inclut les photos en pièces jointes et met en copie (CC) les utilisateurs ayant le rôle `conseil_syndical` (actifs, avec e-mail valide).
   - Chaque email est envoyé uniquement si le template correspondant est actif (`ModèleEmail.actif = true`).
   - Les émails transactionnels liés à la sécurité (`reinitialisation_mdp`, `invitation_resident`) sont toujours envoyés, quelles que soient les préférences de notifications de l’utilisateur.
   - Les emails utilisétés pour des communications non essentielles (actualités, calendrier, digest) incluent un lien de désinscription en un clic (cf. EF-WEB-101).
