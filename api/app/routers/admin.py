@@ -527,6 +527,10 @@ def annuaire(
             "site_web": syndic_info.site_web if syndic_info else None,
             "membres": syndic_membres_out,
         },
+        "whatsapp_url": (
+            session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+            or ConfigSite(cle="", valeur="")
+        ).valeur or None,
     }
 
 
