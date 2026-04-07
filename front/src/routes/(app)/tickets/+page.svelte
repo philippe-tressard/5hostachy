@@ -56,8 +56,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	});
 
 	$: filtered = ticketList.filter((t) => {
-		// Pour les copropriétaires simples, les résolus/annulés/fermés vont dans l'historique
-		if (!$isCS && !$isAdmin && ['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
+		if (['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
 		if (filterStatut && t.statut !== filterStatut) return false;
 		if (filterCat && t.categorie !== filterCat) return false;
 		return true;
@@ -333,8 +332,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		</div>
 	{/each}
 
-	<!-- Section Historique (copropriétaires uniquement) -->
-	{#if !$isCS && !$isAdmin && historyTickets.length > 0}
+	<!-- Section Historique -->
+	{#if historyTickets.length > 0}
 		<div class="history-section">
 			<button class="history-header" on:click={() => (historyExpanded = !historyExpanded)} aria-expanded={historyExpanded}>
 				<span class="history-title">&#x1F4AD; Historique de mes tickets</span>
