@@ -386,6 +386,9 @@
 	let syndicOpenIdx: number | null = null;
 	let syndicEditIdx: number | null = null;
 
+	// WhatsApp
+	let whatsappUrl = '';
+
 	// -- Header inline-edit flags -----------------------------------------
 	let csHeaderEditing = false;
 	let syndicHeaderEditing = false;
@@ -506,6 +509,7 @@
 			]);
 			agAnnee = csData.ag_annee ?? null;
 			agDate = csData.ag_date ?? '';
+			whatsappUrl = csData.whatsapp_url ?? '';
 			membresCS = (csData.membres ?? []).map((m: any): MembreCSForm => ({
 				genre: m.genre ?? 'Mme',
 				prenom: m.prenom ?? '', nom: m.nom ?? '',
@@ -616,7 +620,7 @@
 	async function saveCS() {
 		savingCS = true;
 		try {
-			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, membres: membresCS });
+			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, whatsapp_url: whatsappUrl || null, membres: membresCS });
 			toast('success', 'Conseil Syndical enregistré');
 			csHeaderEditing = false;
 		} catch (e: any) {
@@ -627,7 +631,7 @@
 	async function saveMembreCS(i: number) {
 		savingCSIdx = i;
 		try {
-			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, membres: membresCS });
+			await annuaireAdmin.putCS({ ag_annee: agAnnee, ag_date: agDate || null, whatsapp_url: whatsappUrl || null, membres: membresCS });
 			csOpenIdx = null; csEditIdx = null;
 			toast('success', `${membresCS[i].prenom} ${membresCS[i].nom} enregistré`);
 		} catch (e: any) {
@@ -1394,6 +1398,10 @@
 						Date de l'AG
 						<input type="date" bind:value={agDate} />
 					</label>
+					<label>
+						URL communauté WhatsApp
+						<input type="url" placeholder="https://chat.whatsapp.com/..." bind:value={whatsappUrl} />
+					</label>
 					<div class="header-edit-actions">
 						<button class="btn btn-primary btn-sm" on:click={saveCS} disabled={savingCS}>{savingCS ? '…' : '\u{1F4BE} Enregistrer'}</button>
 						<button class="btn btn-sm btn-outline" on:click={() => csHeaderEditing = false}>Annuler</button>
@@ -1402,6 +1410,7 @@
 			{:else}
 				<div class="header-summary">
 					<span>{agAnnee ? `AG ${agAnnee}` : 'Année AG non renseignée'}{agDate ? ` · ${new Date(agDate).toLocaleDateString('fr-FR')}` : ''}</span>
+					{#if whatsappUrl}<span style="margin-left:.5rem">· <a href={whatsappUrl} target="_blank" rel="noopener">WhatsApp</a></span>{/if}
 					<button type="button" class="btn-icon btn-icon-edit" title="Modifier" on:click={() => csHeaderEditing = true}><Icon name="pencil" size={13} /></button>
 				</div>
 			{/if}

@@ -548,6 +548,7 @@ class MembreCSIn(BaseModel):
 class CompositionCSIn(BaseModel):
     ag_annee: Optional[int] = None
     ag_date: Optional[str] = None   # ISO "YYYY-MM-DD" ou None
+    whatsapp_url: Optional[str] = None
     membres: list[MembreCSIn] = []
 
 @router.get("/annuaire/cs")
@@ -569,6 +570,10 @@ def get_composition_cs(
     return {
         "ag_annee": ag.ag_annee if ag else None,
         "ag_date": ag.ag_date.isoformat() if (ag and ag.ag_date) else None,
+        "whatsapp_url": (
+            session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+            or ConfigSite(cle="", valeur="")
+        ).valeur or "",
         "membres": [
             {
                 "id": m.id,
@@ -608,6 +613,13 @@ def put_composition_cs(
         session.add(ag)
     ag.ag_annee = body.ag_annee
     ag.ag_date = date_type.fromisoformat(body.ag_date) if body.ag_date else None
+
+    # WhatsApp URL
+    wa_cfg = session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+    if wa_cfg is None:
+        wa_cfg = ConfigSite(cle="whatsapp_community_url", valeur="")
+        session.add(wa_cfg)
+    wa_cfg.valeur = body.whatsapp_url or ""
 
     # Remplacer tous les membres CS
     old = session.exec(select(MembreCS)).all()
