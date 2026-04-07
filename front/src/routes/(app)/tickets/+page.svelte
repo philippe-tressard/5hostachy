@@ -331,9 +331,10 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			{/if}
 		</div>
 	{/each}
+{/if}
 
-	<!-- Section Historique -->
-	{#if historyTickets.length > 0}
+<!-- Section Historique -->
+{#if historyTickets.length > 0}
 		<div class="history-section">
 			<button class="history-header" on:click={() => (historyExpanded = !historyExpanded)} aria-expanded={historyExpanded}>
 				<span class="history-title">&#x1F4AD; Historique de mes tickets</span>
@@ -481,7 +482,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			{/if}
 		</div>
 	{/if}
-{/if}
 
 <style>
 	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
