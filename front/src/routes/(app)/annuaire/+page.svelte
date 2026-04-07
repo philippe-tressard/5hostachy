@@ -81,6 +81,15 @@
 			</span>
 		{/if}
 	</div>
+	{#if data.whatsapp_url}
+		<div class="url-block" style="margin-bottom:.75rem">
+			<QRCode data={data.whatsapp_url} size={32} />
+			<div>
+				<strong>Groupe WhatsApp copropriété</strong>
+				<span class="contact-societe"><a href={data.whatsapp_url} target="_blank" rel="noopener">{data.whatsapp_url}</a></span>
+			</div>
+		</div>
+	{/if}
 	{#if data.cs.membres.length === 0}
 		<p style="color:var(--color-text-muted);font-size:.9rem">Aucun membre CS enregistré.</p>
 	{:else if batimentsCS.length > 1}
@@ -149,15 +158,6 @@
 		</div>
 	{/if}
 
-	{#if data.whatsapp_url}
-		<div class="url-block">
-			<QRCode data={data.whatsapp_url} size={64} />
-			<div>
-				<strong>Groupe WhatsApp copropriété</strong>
-				<span class="contact-societe"><a href={data.whatsapp_url} target="_blank" rel="noopener">{data.whatsapp_url}</a></span>
-			</div>
-		</div>
-	{/if}
 </section>
 
 <section>
@@ -169,7 +169,7 @@
 		</p>
 		{#if data.syndic.site_web}
 			<div class="url-block">
-				<QRCode data={data.syndic.site_web} size={64} />
+				<QRCode data={data.syndic.site_web} size={32} />
 				<div>
 					<strong>Espace client</strong>
 					<span class="contact-societe"><a href={data.syndic.site_web} target="_blank" rel="noopener">{data.syndic.site_web}</a></span>
