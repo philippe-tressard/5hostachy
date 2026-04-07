@@ -1,15 +1,29 @@
 #!/bin/bash
 # ============================================================
-#  MaJ-Hostachy.sh — Mise à jour forcée de l'application
-#  Usage : bash /opt/5hostachy/MaJ-Hostachy.sh
-#  À exécuter manuellement après chaque déploiement depuis PC
+#  MaJ-Hostachy.sh — Mise à jour de l'application
+#  Usage : bash /opt/5hostachy/MaJ-Hostachy.sh [--nocache]
+#  --nocache : build complet sans cache Docker (utile si
+#              dépendances corrompues, base image à rafraîchir,
+#              ou comportement inexpliqué)
+#  Sans flag  : build sélectif + cache Docker (rapide ~1-2 min)
 # ============================================================
 set -e
 
 REPO=/opt/5hostachy
 LOG_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+NO_CACHE=false
 
-echo "[$LOG_DATE] === Mise à jour Hostachy ==="
+for arg in "$@"; do
+    case "$arg" in
+        --nocache) NO_CACHE=true ;;
+    esac
+done
+
+if $NO_CACHE; then
+    echo "[$LOG_DATE] === Mise à jour Hostachy (mode --nocache : build complet) ==="
+else
+    echo "[$LOG_DATE] === Mise à jour Hostachy (build sélectif + cache) ==="
+fi
 
 # 1. Synchronisation git
 cd "$REPO"
@@ -47,10 +61,40 @@ if [ -d "$REPO/docs/img" ]; then
 fi
 
 # 2. Rebuild et redémarrage des conteneurs
-echo "[$LOG_DATE] Rebuild et redémarrage des conteneurs..."
 GIT_HASH=$(git rev-parse --short HEAD)
 export GIT_HASH
-docker compose -f "$REPO/docker-compose.yml" up --build --force-recreate -d
+PREV_HASH=$(docker inspect --format '{{index .Config.Labels "git.hash"}}' hostachy_front 2>/dev/null || echo "")
+
+if $NO_CACHE; then
+    # --- Mode --nocache : rebuild total sans cache ---
+    echo "[$LOG_DATE] Build complet sans cache + force-recreate..."
+    docker compose -f "$REPO/docker-compose.yml" build --no-cache
+    docker compose -f "$REPO/docker-compose.yml" up --force-recreate -d
+else
+    # --- Mode normal : build sélectif ---
+    CHANGED_DIRS=$(git diff --name-only "$PREV_HASH" HEAD 2>/dev/null | cut -d/ -f1 | sort -u)
+    SERVICES_TO_BUILD=""
+
+    for dir in $CHANGED_DIRS; do
+        case "$dir" in
+            front)            SERVICES_TO_BUILD="$SERVICES_TO_BUILD front" ;;
+            api)              SERVICES_TO_BUILD="$SERVICES_TO_BUILD api" ;;
+            whatsapp-bridge)  SERVICES_TO_BUILD="$SERVICES_TO_BUILD whatsapp-bridge" ;;
+        esac
+    done
+    # Dédoublonner
+    SERVICES_TO_BUILD=$(echo "$SERVICES_TO_BUILD" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
+
+    # Fichiers racine modifiés (docker-compose, Caddyfile…) → tout rebuild
+    ROOT_FILES=$(git diff --name-only "$PREV_HASH" HEAD 2>/dev/null | grep -cE '^(docker-compose\.yml|Caddyfile)$' || true)
+    if [ -z "$PREV_HASH" ] || [ -z "$SERVICES_TO_BUILD" ] || [ "$ROOT_FILES" -gt 0 ]; then
+        SERVICES_TO_BUILD="front api whatsapp-bridge"
+    fi
+
+    echo "[$LOG_DATE] Services à rebuild : $SERVICES_TO_BUILD"
+    docker compose -f "$REPO/docker-compose.yml" build $SERVICES_TO_BUILD
+    docker compose -f "$REPO/docker-compose.yml" up -d
+fi
 
 # 3. Attendre que l'API soit prête
 echo "[$LOG_DATE] Attente du démarrage de l'API..."
