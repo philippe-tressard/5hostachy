@@ -11,7 +11,7 @@ from app.database import get_session
 from app.models.core import (
     Ticket, MessageTicket, TicketEvolution, Utilisateur, Batiment,
     StatutTicket, RoleUtilisateur, StatutUtilisateur,
-    Notification, ConfigSite, MembreSyndic
+    Notification, ConfigSite, MembreSyndic, MembreCS
 )
 from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
@@ -178,9 +178,16 @@ def create_ticket(
             select(MembreSyndic).where(MembreSyndic.est_principal == True)
         ).first()
         if syndic_principal and syndic_principal.email:
-            # CC : gestionnaire du site uniquement
-            manager_email, _mgr_cfg = get_site_manager_notification_email(session)
-            cc_emails = [manager_email] if manager_email and manager_email != syndic_principal.email else []
+            # CC : membres CS ayant un compte utilisateur avec email
+            cs_members = session.exec(
+                select(Utilisateur.email)
+                .join(MembreCS, MembreCS.user_id == Utilisateur.id)
+                .where(Utilisateur.actif == True, Utilisateur.email.isnot(None))
+            ).all()
+            cc_emails = [
+                e for e in cs_members
+                if e and e != syndic_principal.email
+            ]
 
             # Config
             cfg_site = session.exec(
