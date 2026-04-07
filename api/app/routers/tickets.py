@@ -11,7 +11,7 @@ from app.database import get_session
 from app.models.core import (
     Ticket, MessageTicket, TicketEvolution, Utilisateur, Batiment,
     StatutTicket, RoleUtilisateur, StatutUtilisateur,
-    Notification, ConfigSite, MembreSyndic, MembreCS
+    Notification, ConfigSite, MembreSyndic,
 )
 from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
@@ -178,11 +178,14 @@ def create_ticket(
             select(MembreSyndic).where(MembreSyndic.est_principal == True)
         ).first()
         if syndic_principal and syndic_principal.email:
-            # CC : membres CS ayant un compte utilisateur avec email
+            # CC : utilisateurs ayant le rôle conseil_syndical, actifs, avec email
             cs_members = session.exec(
                 select(Utilisateur.email)
-                .join(MembreCS, MembreCS.user_id == Utilisateur.id)
-                .where(Utilisateur.actif == True, Utilisateur.email.isnot(None))
+                .where(
+                    Utilisateur.actif == True,
+                    Utilisateur.email.isnot(None),
+                    Utilisateur.roles_json.contains("conseil_syndical"),
+                )
             ).all()
             cc_emails = [
                 e for e in cs_members
