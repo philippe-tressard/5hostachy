@@ -1549,6 +1549,7 @@
 			{:else}
 				<div class="header-summary">
 					<span>{nomSyndic || 'Nom du syndic non renseigné'}{adresseSyndic ? ` · ${adresseSyndic}` : ''}</span>
+					{#if siteWebSyndic}<span style="margin-left:.5rem">· <a href={siteWebSyndic} target="_blank" rel="noopener">Espace client</a></span>{/if}
 					<button type="button" class="btn-icon btn-icon-edit" title="Modifier" on:click={() => syndicHeaderEditing = true}><Icon name="pencil" size={13} /></button>
 				</div>
 			{/if}
