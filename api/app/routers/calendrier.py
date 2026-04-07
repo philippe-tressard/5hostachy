@@ -49,6 +49,7 @@ class EvenementRead(BaseModel):
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: bool = True
+    archivee: bool = False
 
     class Config:
         from_attributes = True
