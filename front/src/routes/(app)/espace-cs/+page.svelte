@@ -379,6 +379,7 @@
 	// Syndic
 	let nomSyndic = '';
 	let adresseSyndic = '';
+	let siteWebSyndic = '';
 	let membresSyndic: MembreSyndicForm[] = [];
 	let savingSyndic = false;
 	let savingSyndicIdx: number | null = null;
@@ -525,6 +526,7 @@
 			csHeaderEditing = false;
 			nomSyndic = syndicData.nom_syndic ?? '';
 			adresseSyndic = syndicData.adresse ?? '';
+			siteWebSyndic = syndicData.site_web ?? '';
 			membresSyndic = (syndicData.membres ?? []).map((m: any): MembreSyndicForm => ({
 				genre: m.genre ?? 'Mme',
 				prenom: m.prenom ?? '', nom: m.nom ?? '',
@@ -675,7 +677,7 @@
 		// Sauvegarde silencieuse de l'ordre
 		try {
 			await annuaireAdmin.putSyndic({
-				nom_syndic: nomSyndic, adresse: adresseSyndic,
+				nom_syndic: nomSyndic, adresse: adresseSyndic, site_web: siteWebSyndic || null,
 				membres: membresSyndic.map((m) => ({
 					genre: m.genre, prenom: m.prenom, nom: m.nom,
 					fonction: m.fonction || null, email: m.email || null,
@@ -698,6 +700,7 @@
 			await annuaireAdmin.putSyndic({
 				nom_syndic: nomSyndic,
 				adresse: adresseSyndic,
+				site_web: siteWebSyndic || null,
 				membres: membresSyndic.map((m) => ({
 					genre: m.genre, prenom: m.prenom, nom: m.nom,
 					fonction: m.fonction || null, email: m.email || null,
@@ -722,6 +725,7 @@
 			await annuaireAdmin.putSyndic({
 				nom_syndic: nomSyndic,
 				adresse: adresseSyndic,
+				site_web: siteWebSyndic || null,
 				membres: membresSyndic.map((m) => ({
 					genre: m.genre, prenom: m.prenom, nom: m.nom,
 					fonction: m.fonction || null, email: m.email || null,
@@ -1523,6 +1527,10 @@
 					<label style="grid-column:1/-1">
 						Adresse
 						<textarea rows="2" bind:value={adresseSyndic} placeholder="ex. 12 rue des Lilas, 75015 Paris"></textarea>
+					</label>
+					<label style="grid-column:1/-1">
+						Espace client (site web)
+						<input type="url" bind:value={siteWebSyndic} placeholder="https://..." />
 					</label>
 					<div class="header-edit-actions" style="grid-column:1/-1">
 						<button class="btn btn-primary btn-sm" on:click={saveSyndic} disabled={savingSyndic}>{savingSyndic ? '…' : '\u{1F4BE} Enregistrer'}</button>

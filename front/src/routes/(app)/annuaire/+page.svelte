@@ -13,10 +13,10 @@
 	interface MembreSyndic { id: number; genre: string; prenom: string; nom: string; fonction: string | null; email: string | null; telephone: string | null; est_principal: boolean; photo_url: string | null; }
 	interface AnnuaireData {
 		cs: { ag_annee: number | null; ag_date: string | null; membres: MembreCS[] };
-		syndic: { nom_syndic: string; adresse: string; membres: MembreSyndic[] };
+		syndic: { nom_syndic: string; adresse: string; site_web: string | null; membres: MembreSyndic[] };
 	}
 
-	let data: AnnuaireData = { cs: { ag_annee: null, ag_date: null, membres: [] }, syndic: { nom_syndic: '', adresse: '', membres: [] } };
+	let data: AnnuaireData = { cs: { ag_annee: null, ag_date: null, membres: [] }, syndic: { nom_syndic: '', adresse: '', site_web: null, membres: [] } };
 	let loading = true;
 
 	onMount(async () => {
@@ -154,6 +154,7 @@
 		<p class="syndic-header">
 			<strong>{data.syndic.nom_syndic}</strong>
 			{#if data.syndic.adresse}<span class="contact-societe">{data.syndic.adresse}</span>{/if}
+			{#if data.syndic.site_web}<span class="contact-societe"><a href={data.syndic.site_web} target="_blank" rel="noopener">{data.syndic.site_web}</a></span>{/if}
 		</p>
 	{/if}
 	{#if data.syndic.membres.length === 0}

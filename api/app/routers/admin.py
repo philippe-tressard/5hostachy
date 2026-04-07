@@ -524,6 +524,7 @@ def annuaire(
         "syndic": {
             "nom_syndic": syndic_info.nom_syndic if syndic_info else "",
             "adresse": syndic_info.adresse if syndic_info else "",
+            "site_web": syndic_info.site_web if syndic_info else None,
             "membres": syndic_membres_out,
         },
     }
@@ -642,6 +643,7 @@ class MembreSyndicIn(BaseModel):
 class SyndicIn(BaseModel):
     nom_syndic: str = ""
     adresse: str = ""
+    site_web: Optional[str] = None
     membres: list[MembreSyndicIn] = []
 
 @router.get("/annuaire/syndic")
@@ -654,6 +656,7 @@ def get_syndic_info(
     return {
         "nom_syndic": syndic.nom_syndic if syndic else "",
         "adresse": syndic.adresse if syndic else "",
+        "site_web": syndic.site_web if syndic else None,
         "membres": [
             {
                 "id": m.id,
@@ -684,6 +687,7 @@ def put_syndic_info(
         session.add(syndic)
     syndic.nom_syndic = body.nom_syndic
     syndic.adresse = body.adresse
+    syndic.site_web = body.site_web
 
     # Remplacer tous les membres syndic
     old = session.exec(select(MembreSyndic)).all()
