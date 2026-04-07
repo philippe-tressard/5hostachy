@@ -190,7 +190,12 @@ def create_ticket(
                     Utilisateur.email.isnot(None),
                 )
             ).all()
-            cc_emails = [u.email for u in cs_users if u.email and u.email != syndic_principal.email]
+            cc_emails = [
+                u.email for u in cs_users
+                if u.email
+                and u.email != syndic_principal.email
+                and "." in u.email.rsplit("@", 1)[-1]  # exclure domaines invalides (.local etc.)
+            ]
 
             # Config
             cfg_site = session.exec(
