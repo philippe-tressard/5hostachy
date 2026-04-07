@@ -589,6 +589,7 @@ import { onMount } from 'svelte';
 						prestataire_id: c.prestataire_id || null,
 						debut: `${kanbanExercice}-${String(month).padStart(2, '0')}-15T09:00`,
 						description: c.notes || null,
+						affichable: false,
 					});
 				}
 			}
@@ -609,6 +610,7 @@ import { onMount } from 'svelte';
 						prestataire_id: ev.prestataire_id || null,
 						debut: `${kanbanExercice}-${String(month).padStart(2, '0')}-15T09:00`,
 						description: ev.description || null,
+						affichable: false,
 					});
 				}
 			}
@@ -632,6 +634,7 @@ import { onMount } from 'svelte';
 						prestataire_id: d.prestataire_id || null,
 						debut: `${kanbanExercice}-${String(month).padStart(2, '0')}-15T09:00`,
 						description: d.notes || null,
+						affichable: false,
 					});
 				}
 			}
