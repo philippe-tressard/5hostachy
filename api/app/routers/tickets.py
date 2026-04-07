@@ -178,24 +178,9 @@ def create_ticket(
             select(MembreSyndic).where(MembreSyndic.est_principal == True)
         ).first()
         if syndic_principal and syndic_principal.email:
-            # CC : emails des membres CS inscrits
-            from sqlmodel import or_
-            cs_users = session.exec(
-                select(Utilisateur).where(
-                    Utilisateur.actif == True,
-                    or_(
-                        Utilisateur.roles_json.contains("conseil_syndical"),
-                        Utilisateur.roles_json.contains("admin"),
-                    ),
-                    Utilisateur.email.isnot(None),
-                )
-            ).all()
-            cc_emails = [
-                u.email for u in cs_users
-                if u.email
-                and u.email != syndic_principal.email
-                and "." in u.email.rsplit("@", 1)[-1]  # exclure domaines invalides (.local etc.)
-            ]
+            # CC : gestionnaire du site uniquement
+            manager_email, _mgr_cfg = get_site_manager_notification_email(session)
+            cc_emails = [manager_email] if manager_email and manager_email != syndic_principal.email else []
 
             # Config
             cfg_site = session.exec(
