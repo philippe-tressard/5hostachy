@@ -94,6 +94,7 @@ class TicketCreate(BaseModel):
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
+    destinataire_syndic: bool = False
 
 
 class TicketRead(BaseModel):
@@ -110,6 +111,8 @@ class TicketRead(BaseModel):
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
+    photos_urls: Optional[List[str]] = None
+    destinataire_syndic: bool = False
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -121,6 +124,16 @@ class TicketRead(BaseModel):
                 return json.loads(v)
             except Exception:
                 return ['résidence']
+        return v
+
+    @field_validator('photos_urls', mode='before')
+    @classmethod
+    def parse_photos_urls(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
         return v
 
     class Config:

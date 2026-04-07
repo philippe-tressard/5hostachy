@@ -387,6 +387,8 @@ class Ticket(SQLModel, table=True):
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave
+    photos_urls: Optional[str] = None  # JSON array of photo URLs
+    destinataire_syndic: bool = False
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None

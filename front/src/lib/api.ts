@@ -239,6 +239,17 @@ export const tickets = {
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
 	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
+	uploadPhoto: async (ticketId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
+		const fd = new FormData();
+		fd.append('file', file);
+		const res = await fetch(`${BASE}/uploads/ticket/${ticketId}`, { method: 'POST', body: fd, credentials: 'include' });
+		if (!res.ok) {
+			let detail = 'Erreur upload photo';
+			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
+			throw new ApiError(res.status, detail);
+		}
+		return res.json();
+	},
 };
 
 export const publications = {
