@@ -28,28 +28,33 @@ def upgrade() -> None:
     )
 
     # Template email ticket_syndic
-    op.execute("""
-        INSERT OR IGNORE INTO modele_email (code, libelle, sujet, corps_html, corps_texte, variables_disponibles, desactivable, actif)
-        VALUES (
-            'ticket_syndic',
-            'Notification ticket au syndic',
-            '{{ reference_copro }} : {{ ticket.titre }}',
-            '<h2>Nouveau ticket copropriété</h2>'
-            '<p><strong>Référence :</strong> {{ ticket.numero }}</p>'
-            '<p><strong>Catégorie :</strong> {{ ticket.categorie }}</p>'
-            '<p><strong>Titre :</strong> {{ ticket.titre }}</p>'
-            '<p><strong>Description :</strong></p>'
-            '<div>{{ ticket.description }}</div>'
-            '<p><strong>Auteur :</strong> {{ auteur.prenom }} {{ auteur.nom }}</p>'
-            '<p><strong>Résidence :</strong> {{ residence.nom }}</p>'
-            '<hr>'
-            '<p><em>Ce message a été envoyé depuis l''application <a href="{{ app.url }}">{{ residence.nom }}</a>.</em></p>',
-            'Nouveau ticket {{ reference_copro }} : {{ ticket.titre }} — {{ ticket.description }}',
-            '["ticket", "auteur", "residence", "app", "reference_copro"]',
-            0,
-            1
+    corps_html = (
+        '<h2>Nouveau ticket copropriété</h2>'
+        '<p><strong>Référence :</strong> {{ ticket.numero }}</p>'
+        '<p><strong>Catégorie :</strong> {{ ticket.categorie }}</p>'
+        '<p><strong>Titre :</strong> {{ ticket.titre }}</p>'
+        '<p><strong>Description :</strong></p>'
+        '<div>{{ ticket.description }}</div>'
+        '<p><strong>Auteur :</strong> {{ auteur.prenom }} {{ auteur.nom }}</p>'
+        '<p><strong>Résidence :</strong> {{ residence.nom }}</p>'
+        '<hr>'
+        '<p><em>Ce message a été envoyé depuis l\'application <a href="{{ app.url }}">{{ residence.nom }}</a>.</em></p>'
+    )
+    corps_texte = 'Nouveau ticket {{ reference_copro }} : {{ ticket.titre }} — {{ ticket.description }}'
+    variables = '["ticket", "auteur", "residence", "app", "reference_copro"]'
+    op.execute(
+        sa.text(
+            "INSERT OR IGNORE INTO modele_email (code, libelle, sujet, corps_html, corps_texte, variables_disponibles, desactivable, actif)"
+            " VALUES (:code, :libelle, :sujet, :corps_html, :corps_texte, :variables, 0, 1)"
+        ).bindparams(
+            code="ticket_syndic",
+            libelle="Notification ticket au syndic",
+            sujet="{{ reference_copro }} : {{ ticket.titre }}",
+            corps_html=corps_html,
+            corps_texte=corps_texte,
+            variables=variables,
         )
-    """)
+    )
 
 
 def downgrade() -> None:
