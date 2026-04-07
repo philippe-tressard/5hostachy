@@ -11,7 +11,7 @@ from app.database import get_session
 from app.models.core import (
     Ticket, MessageTicket, TicketEvolution, Utilisateur, Batiment,
     StatutTicket, RoleUtilisateur, StatutUtilisateur,
-    Notification, ConfigSite, MembreSyndic
+    Notification, ConfigSite, MembreSyndic, MembreCS
 )
 from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
@@ -178,19 +178,16 @@ def create_ticket(
             select(MembreSyndic).where(MembreSyndic.est_principal == True)
         ).first()
         if syndic_principal and syndic_principal.email:
-            # CC : emails des membres CS inscrits
-            from sqlmodel import or_
-            cs_users = session.exec(
-                select(Utilisateur).where(
-                    Utilisateur.actif == True,
-                    or_(
-                        Utilisateur.roles_json.contains("conseil_syndical"),
-                        Utilisateur.roles_json.contains("admin"),
-                    ),
-                    Utilisateur.email.isnot(None),
-                )
+            # CC : membres CS ayant un compte utilisateur avec email
+            cs_members = session.exec(
+                select(Utilisateur.email)
+                .join(MembreCS, MembreCS.user_id == Utilisateur.id)
+                .where(Utilisateur.actif == True, Utilisateur.email.isnot(None))
             ).all()
-            cc_emails = [u.email for u in cs_users if u.email and u.email != syndic_principal.email]
+            cc_emails = [
+                e for e in cs_members
+                if e and e != syndic_principal.email
+            ]
 
             # Config
             cfg_site = session.exec(
@@ -200,6 +197,20 @@ def create_ticket(
             ).all()
             cfg_map = {r.cle: r.valeur for r in cfg_site}
             reference_copro = cfg_map.get("reference_copro", "")
+
+            # Photos jointes
+            photo_paths = []
+            if ticket.photos_urls:
+                import json as _json, os
+                try:
+                    urls = _json.loads(ticket.photos_urls) if isinstance(ticket.photos_urls, str) else ticket.photos_urls
+                except Exception:
+                    urls = []
+                for url in (urls or []):
+                    fname = os.path.basename(url)
+                    fpath = os.path.join("/app/uploads", fname)
+                    if os.path.isfile(fpath):
+                        photo_paths.append(fpath)
 
             background_tasks.add_task(
                 send_email,
@@ -227,6 +238,7 @@ def create_ticket(
                 },
                 session=session,
                 cc=cc_emails,
+                attachments=photo_paths or None,
             )
 
     session.commit()

@@ -51,6 +51,7 @@ async def send_email(
     session: Session | None = None,
     *,
     cc: list[str] | None = None,
+    attachments: list[str] | None = None,
 ):
     """
     Récupère le ModèleEmail par code, rend sujet + corps, envoie si MAIL_ENABLED.
@@ -120,6 +121,8 @@ async def send_email(
             )
             if cc:
                 msg_kwargs["cc"] = cc
+            if attachments:
+                msg_kwargs["attachments"] = attachments
             msg = MessageSchema(**msg_kwargs)
             await fm.send_message(msg)
         except Exception as exc:

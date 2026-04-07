@@ -56,21 +56,32 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	});
 
 	$: filtered = ticketList.filter((t) => {
+		if (['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
 		if (filterStatut && t.statut !== filterStatut) return false;
 		if (filterCat && t.categorie !== filterCat) return false;
 		return true;
 	});
 
-	function isOldResolvedTicket(t: Ticket): boolean {
-		if (!['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
-		const lastUpdate = new Date(t.mis_a_jour_le ?? t.cree_le);
-		const now = new Date();
-		const hoursAgo = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
-		return hoursAgo > 48;
-	}
+	// Historique : tickets résolus/annulés/fermés, limité à 3 ans, groupés par année décroissante
+	const THREE_YEARS_AGO = new Date();
+	THREE_YEARS_AGO.setFullYear(THREE_YEARS_AGO.getFullYear() - 3);
 
-	$: historyTickets = ticketList.filter((t) => isOldResolvedTicket(t)).sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
+	$: historyTickets = ticketList
+		.filter((t) => ['résolu', 'annulé', 'fermé'].includes(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= THREE_YEARS_AGO)
+		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
+
+	$: historyByYear = (() => {
+		const groups = new Map<number, typeof historyTickets>();
+		for (const t of historyTickets) {
+			const year = new Date(t.mis_a_jour_le ?? t.cree_le).getFullYear();
+			if (!groups.has(year)) groups.set(year, []);
+			groups.get(year)!.push(t);
+		}
+		return [...groups.entries()].sort(([a], [b]) => b - a);
+	})();
+
 	let historyExpanded = false;
+	let expandedYears = new Set<number>();
 
 	async function toggleTicket(id: number) {
 		if (expandedTickets.has(id)) {
@@ -321,7 +332,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		</div>
 	{/each}
 
-	<!-- Section Historique de mes tickets -->
+	<!-- Section Historique -->
 	{#if historyTickets.length > 0}
 		<div class="history-section">
 			<button class="history-header" on:click={() => (historyExpanded = !historyExpanded)} aria-expanded={historyExpanded}>
@@ -331,9 +342,17 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			</button>
 			{#if historyExpanded}
 				<div class="history-content">
-					{#each historyTickets as t (t.id)}
-						{@const expanded = expandedTickets.has(t.id)}
-						{@const evols = evolsMap[t.id] ?? []}
+					{#each historyByYear as [year, yearTickets]}
+						<div class="history-year">
+							<button class="history-year-header" on:click|stopPropagation={() => { if (expandedYears.has(year)) { expandedYears.delete(year); } else { expandedYears.add(year); } expandedYears = expandedYears; }} aria-expanded={expandedYears.has(year)}>
+								<span class="history-year-label">{year}</span>
+								<span class="history-count" style="font-size:.7rem">{yearTickets.length}</span>
+								<span class="history-chevron">{expandedYears.has(year) ? '▲' : '▼'}</span>
+							</button>
+							{#if expandedYears.has(year)}
+								{#each yearTickets as t (t.id)}
+									{@const expanded = expandedTickets.has(t.id)}
+									{@const evols = evolsMap[t.id] ?? []}
 						<div class="tk-expand history-item" class:expanded class:urgent={t.categorie === 'urgence'}
 							role="button" tabindex="0"
 							on:click={() => toggleTicket(t.id)}
@@ -455,6 +474,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 							{/if}
 						</div>
 					{/each}
+							{/if}
+						</div>
+					{/each}
 				</div>
 			{/if}
 		</div>
@@ -524,6 +546,10 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	.history-chevron { font-size: .8rem; color: var(--color-text-muted); flex-shrink: 0; transition: transform .2s; }
 	.history-header[aria-expanded="true"] .history-chevron { transform: scaleY(-1); }
 	.history-content { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
+	.history-year { margin-bottom: .5rem; }
+	.history-year-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .75rem; cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--color-text); }
+	.history-year-header:hover { border-color: var(--color-primary); color: var(--color-primary); }
+	.history-year-label { flex: 1; text-align: left; }
 	.history-item { border-left: 4px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); opacity: .8; transition: opacity .15s, border-left-color .15s; }
 	.history-item:hover { opacity: 1; }
 	.history-item.expanded { opacity: 1; }
