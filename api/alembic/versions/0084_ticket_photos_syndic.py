@@ -14,9 +14,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Champs ticket
-    op.add_column("ticket", sa.Column("photos_urls", sa.Text, nullable=True))
-    op.add_column("ticket", sa.Column("destinataire_syndic", sa.Boolean, server_default="0", nullable=False))
+    # Champs ticket (idempotent pour SQLite — la colonne peut déjà exister si migration partielle)
+    conn = op.get_bind()
+    columns = [row[1] for row in conn.execute(sa.text("PRAGMA table_info('ticket')"))]
+    if "photos_urls" not in columns:
+        op.add_column("ticket", sa.Column("photos_urls", sa.Text, nullable=True))
+    if "destinataire_syndic" not in columns:
+        op.add_column("ticket", sa.Column("destinataire_syndic", sa.Boolean, server_default="0", nullable=False))
 
     # Config : référence copropriété
     op.execute(
