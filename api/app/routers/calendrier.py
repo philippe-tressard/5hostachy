@@ -1,5 +1,5 @@
 """Router calendrier — événements de la résidence."""
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire
+from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -148,6 +148,57 @@ def create_evenement(
     return _ev_to_read(ev, session)
 
 
+def _next_visit_date(contrat: ContratEntretien, from_date: date) -> date | None:
+    """Calcule la prochaine visite à partir de la fréquence du contrat."""
+    ft, fv = contrat.frequence_type, contrat.frequence_valeur
+    if not ft or not fv:
+        return None
+    if ft == "semaines":
+        return from_date + timedelta(weeks=fv)
+    if ft == "mois":
+        month = from_date.month + fv
+        year = from_date.year + (month - 1) // 12
+        month = (month - 1) % 12 + 1
+        day = min(from_date.day, 28)
+        return date(year, month, day)
+    if ft == "fois_par_an":
+        interval_months = max(1, 12 // fv)
+        month = from_date.month + interval_months
+        year = from_date.year + (month - 1) // 12
+        month = (month - 1) % 12 + 1
+        day = min(from_date.day, 28)
+        return date(year, month, day)
+    return None
+
+
+def _update_contrat_prochaine_visite(ev: Evenement, session: Session) -> None:
+    """Met à jour prochaine_visite du contrat lié quand un événement maintenance_recurrente passe en terminé."""
+    if ev.type != TypeEvenement.maintenance_recurrente or not ev.prestataire_id:
+        return
+    contrats = session.exec(
+        select(ContratEntretien).where(
+            ContratEntretien.prestataire_id == ev.prestataire_id,
+            ContratEntretien.actif == True,
+        )
+    ).all()
+    if not contrats:
+        return
+    # Match par libellé dans le titre (format "Prestataire — Libellé")
+    best = None
+    for c in contrats:
+        if c.libelle and c.libelle.lower() in ev.titre.lower():
+            best = c
+            break
+    if not best:
+        best = contrats[0] if len(contrats) == 1 else None
+    if not best:
+        return
+    next_date = _next_visit_date(best, ev.debut.date() if isinstance(ev.debut, datetime) else ev.debut)
+    if next_date:
+        best.prochaine_visite = next_date
+        session.add(best)
+
+
 @router.patch("/{ev_id}", response_model=EvenementRead)
 def update_evenement(
     ev_id: int,
@@ -161,9 +212,13 @@ def update_evenement(
     data = body.model_dump(exclude_unset=True)
     if data.get('archivee') is True and ev.statut_kanban != "termine":
         raise HTTPException(422, "Seuls les événements terminés peuvent être archivés")
+    old_statut = ev.statut_kanban
     for k, v in data.items():
         setattr(ev, k, v)
     ev.mis_a_jour_le = datetime.utcnow()
+    # Si le statut passe à "termine", mettre à jour la prochaine visite du contrat
+    if data.get('statut_kanban') == 'termine' and old_statut != 'termine':
+        _update_contrat_prochaine_visite(ev, session)
     session.add(ev)
     session.commit()
     session.refresh(ev)
