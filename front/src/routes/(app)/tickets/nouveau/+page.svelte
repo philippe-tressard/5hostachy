@@ -5,6 +5,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import { isCS } from '$lib/stores/auth';
 
 	$: _siteNom = $siteNomStore;
 
@@ -12,6 +13,9 @@
 	let description = '';
 	let categorie = 'panne';
 	let perimetreCible: string[] = ['résidence'];
+	let destinataireSyndic = false;
+	let photoFiles: File[] = [];
+	let photoPreviews: string[] = [];
 	let error = '';
 	let loading = false;
 
@@ -25,6 +29,21 @@
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
+	function handlePhotoSelect(e: Event) {
+		const input = e.target as HTMLInputElement;
+		if (!input.files) return;
+		const newFiles = Array.from(input.files).slice(0, 5 - photoFiles.length);
+		photoFiles = [...photoFiles, ...newFiles];
+		photoPreviews = [...photoPreviews, ...newFiles.map((f) => URL.createObjectURL(f))];
+		input.value = '';
+	}
+
+	function removePhoto(index: number) {
+		URL.revokeObjectURL(photoPreviews[index]);
+		photoFiles = photoFiles.filter((_, i) => i !== index);
+		photoPreviews = photoPreviews.filter((_, i) => i !== index);
+	}
+
 	async function submit() {
 		if (!titre.trim() || richEmpty(description)) {
 			error = 'Titre et description sont obligatoires.';
@@ -33,7 +52,23 @@
 		error = '';
 		loading = true;
 		try {
-			const t = await ticketsApi.create({ titre, description, categorie, perimetre_cible: perimetreCible });
+			const t = await ticketsApi.create({
+				titre,
+				description,
+				categorie,
+				perimetre_cible: perimetreCible,
+				destinataire_syndic: destinataireSyndic,
+			});
+
+			// Upload photos after ticket creation
+			for (const file of photoFiles) {
+				try {
+					await ticketsApi.uploadPhoto(t.id, file);
+				} catch {
+					// Continue even if one photo fails
+				}
+			}
+
 			toast('success', `Ticket ${t.numero} créé avec succès`);
 			goto('/tickets');
 		} catch (e) {
@@ -99,6 +134,33 @@
 			<RichEditor bind:value={description} placeholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)" minHeight="120px" />
 		</div>
 
+		<div class="field">
+			<label>Photos <span style="color:var(--color-text-muted);font-weight:normal">(max 5)</span></label>
+			{#if photoPreviews.length > 0}
+				<div class="photo-previews">
+					{#each photoPreviews as src, i}
+						<div class="photo-thumb">
+							<img src={src} alt="Photo {i + 1}" />
+							<button type="button" class="photo-remove" on:click={() => removePhoto(i)} title="Retirer">✕</button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+			{#if photoFiles.length < 5}
+				<input type="file" accept="image/*" multiple on:change={handlePhotoSelect} />
+			{/if}
+		</div>
+
+		{#if $isCS}
+			<label class="checkbox-field">
+				<input type="checkbox" bind:checked={destinataireSyndic} />
+				<span>📧 Envoyer au syndic</span>
+				<small style="display:block; color:var(--color-text-muted); margin-top:.25rem">
+					Le syndic principal recevra un email avec les membres du CS en copie.
+				</small>
+			</label>
+		{/if}
+
 		<div class="form-actions">
 			<a href="/tickets" class="btn btn-outline">Annuler</a>
 			<button type="submit" class="btn btn-primary" disabled={loading}>
@@ -141,6 +203,56 @@
 	.cat-desc  { font-size: .78rem; color: var(--color-text-muted); }
 
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+
+	.photo-previews {
+		display: flex;
+		gap: .5rem;
+		flex-wrap: wrap;
+		margin-bottom: .5rem;
+	}
+	.photo-thumb {
+		position: relative;
+		width: 80px;
+		height: 80px;
+		border-radius: var(--radius);
+		overflow: hidden;
+		border: 1px solid var(--color-border);
+	}
+	.photo-thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.photo-remove {
+		position: absolute;
+		top: 2px;
+		right: 2px;
+		background: rgba(0,0,0,.6);
+		color: #fff;
+		border: none;
+		border-radius: 50%;
+		width: 20px;
+		height: 20px;
+		font-size: .7rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		line-height: 1;
+	}
+
+	.checkbox-field {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: .5rem;
+		padding: .75rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		cursor: pointer;
+		margin-bottom: .5rem;
+	}
+	.checkbox-field input[type="checkbox"] { margin-top: .2rem; }
 
 	@media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
 </style>

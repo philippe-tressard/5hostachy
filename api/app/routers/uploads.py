@@ -13,7 +13,7 @@ import io
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Copropriete, Publication, Utilisateur
+from app.models.core import Copropriete, Publication, Ticket, Utilisateur
 from sqlmodel import Session, select
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -101,3 +101,36 @@ def upload_publication_image(
     session.add(pub)
     session.commit()
     return {"url": url}
+
+
+@router.post("/ticket/{ticket_id}", summary="Ajouter une photo à un ticket")
+def upload_ticket_photo(
+    ticket_id: int,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Ajoute une photo à un ticket existant (max 5)."""
+    import json
+
+    ticket = session.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "Ticket introuvable")
+
+    # Parse existing photos
+    photos: list[str] = []
+    if ticket.photos_urls:
+        try:
+            photos = json.loads(ticket.photos_urls)
+        except Exception:
+            photos = []
+
+    if len(photos) >= 5:
+        raise HTTPException(400, "Maximum 5 photos par ticket.")
+
+    url = _save_image(file, "tickets", max_dim=1200)
+    photos.append(url)
+    ticket.photos_urls = json.dumps(photos)
+    session.add(ticket)
+    session.commit()
+    return {"url": url, "photos_urls": photos}

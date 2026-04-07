@@ -199,6 +199,22 @@
 			<div class="rich-content ticket-desc">{@html renderContent(ticket.description)}</div>
 		{/if}
 
+		{#if ticket.photos_urls?.length}
+			<div class="ticket-photos" style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+				{#each ticket.photos_urls as photoUrl}
+					<a href={photoUrl} target="_blank" rel="noopener" class="ticket-photo-link">
+						<img src={photoUrl} alt="Photo ticket" class="ticket-photo" />
+					</a>
+				{/each}
+			</div>
+		{/if}
+
+		{#if ticket.destinataire_syndic}
+			<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.5rem">
+				📧 Envoyé au syndic
+			</p>
+		{/if}
+
 		{#if $isCS}
 			<div class="status-actions" style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)">
 				<span style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">Changer le statut :</span>
@@ -415,4 +431,16 @@
 	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
 	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+	.ticket-photo-link { display: block; }
+	.ticket-photo {
+		width: 100px;
+		height: 100px;
+		object-fit: cover;
+		border-radius: var(--radius);
+		border: 1px solid var(--color-border);
+		cursor: pointer;
+		transition: opacity .15s;
+	}
+	.ticket-photo:hover { opacity: .8; }
 </style>

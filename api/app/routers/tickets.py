@@ -11,7 +11,7 @@ from app.database import get_session
 from app.models.core import (
     Ticket, MessageTicket, TicketEvolution, Utilisateur, Batiment,
     StatutTicket, RoleUtilisateur, StatutUtilisateur,
-    Notification, ConfigSite
+    Notification, ConfigSite, MembreSyndic
 )
 from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
@@ -59,6 +59,8 @@ def _ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         lot_id=ticket.lot_id,
         batiment_id=ticket.batiment_id,
         perimetre_cible=ticket.perimetre_cible,
+        photos_urls=ticket.photos_urls,
+        destinataire_syndic=ticket.destinataire_syndic,
         cree_le=ticket.cree_le,
         mis_a_jour_le=ticket.mis_a_jour_le,
     )
@@ -96,6 +98,7 @@ def create_ticket(
         batiment_id=body.batiment_id,
         perimetre_cible=json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]',
         priorite="haute" if body.categorie == "urgence" else "normale",
+        destinataire_syndic=body.destinataire_syndic if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else False,
     )
     session.add(ticket)
     session.flush()
@@ -165,6 +168,65 @@ def create_ticket(
                         "url": site_cfg.get("site_url") or cfg.get("site_url") or "https://localhost",
                     },
                 },
+            )
+
+    # ── Email au syndic principal (option CS/Admin) ──
+    if ticket.destinataire_syndic:
+        from app.utils.email import get_site_manager_notification_email, send_email
+
+        syndic_principal = session.exec(
+            select(MembreSyndic).where(MembreSyndic.est_principal == True)
+        ).first()
+        if syndic_principal and syndic_principal.email:
+            # CC : emails des membres CS inscrits
+            from sqlmodel import or_
+            cs_users = session.exec(
+                select(Utilisateur).where(
+                    Utilisateur.actif == True,
+                    or_(
+                        Utilisateur.roles_json.contains("conseil_syndical"),
+                        Utilisateur.roles_json.contains("admin"),
+                    ),
+                    Utilisateur.email.isnot(None),
+                )
+            ).all()
+            cc_emails = [u.email for u in cs_users if u.email and u.email != syndic_principal.email]
+
+            # Config
+            cfg_site = session.exec(
+                select(ConfigSite).where(
+                    ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url"))
+                )
+            ).all()
+            cfg_map = {r.cle: r.valeur for r in cfg_site}
+            reference_copro = cfg_map.get("reference_copro", "")
+
+            background_tasks.add_task(
+                send_email,
+                code="ticket_syndic",
+                to=syndic_principal.email,
+                context={
+                    "ticket": {
+                        "id": ticket.id,
+                        "numero": ticket.numero,
+                        "titre": ticket.titre,
+                        "description": ticket.description,
+                        "categorie": ticket.categorie,
+                    },
+                    "auteur": {
+                        "prenom": user.prenom,
+                        "nom": user.nom,
+                    },
+                    "residence": {
+                        "nom": cfg_map.get("site_nom", "5Hostachy"),
+                    },
+                    "app": {
+                        "url": cfg_map.get("site_url", "https://localhost"),
+                    },
+                    "reference_copro": reference_copro,
+                },
+                session=session,
+                cc=cc_emails,
             )
 
     session.commit()
