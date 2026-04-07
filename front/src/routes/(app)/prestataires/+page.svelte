@@ -158,8 +158,13 @@
 	);
 	$: compactPrests = filteredPrests.length > 7;
 
-	// ── Visites : contrats avec fréquence ─────────────────────────
-	$: visites = contrats.filter(c => c.frequence_type || c.prochaine_visite);
+	// ── Visites : contrats actifs avec fréquence, exercice en cours ──
+	$: visites = (() => {
+		const year = new Date().getFullYear();
+		return contrats.filter(c => c.actif && (c.frequence_type || c.prochaine_visite) && (
+			!c.prochaine_visite || new Date(c.prochaine_visite).getFullYear() <= year
+		));
+	})();
 	$: visitesEnRetard = visites.filter(c => c.prochaine_visite && new Date(c.prochaine_visite) < new Date());
 	$: visitesAJour = visites.filter(c => !c.prochaine_visite || new Date(c.prochaine_visite) >= new Date());
 
