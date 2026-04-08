@@ -23,6 +23,7 @@ def run_telemetry_aggregation() -> dict:
         "mois_agreges": 0,
         "events_purges": 0,
         "daily_purges": 0,
+        "monthly_purges": 0,
         "erreurs": [],
     }
 
@@ -179,6 +180,7 @@ def run_telemetry_aggregation() -> dict:
                     {"cutoff": cutoff_monthly},
                 )
                 conn.commit()
+                rapport["monthly_purges"] = result.rowcount
         except Exception as exc:
             rapport["erreurs"].append(f"purge monthly: {exc}")
 

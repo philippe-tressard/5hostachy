@@ -11,7 +11,6 @@
 
 	onMount(async () => {
 		initTelemetry();
-		trackPageView(window.location.pathname);
 
 		const [, meResult] = await Promise.allSettled([
 			loadSiteConfig(),
@@ -24,10 +23,11 @@
 				goto('/auth/connexion');
 			}
 		}
-		// Appliquer l'opt-out télémétrie si l'utilisateur l'a activé
+		// Appliquer l'opt-out télémétrie AVANT le premier tracking
 		if ($currentUser?.opt_out_telemetrie) {
 			setTelemetryOptOut(true);
 		}
+		trackPageView(window.location.pathname);
 	});
 
 	afterNavigate(() => {

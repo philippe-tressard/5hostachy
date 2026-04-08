@@ -15,6 +15,7 @@ from app.models.core import (
     TelemetryMonthly,
     Utilisateur,
 )
+from app.utils.limiter import limiter
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -26,6 +27,7 @@ class TelemetryBatch(BaseModel):
 
 
 @router.post("/collect", status_code=204)
+@limiter.limit("60/minute")
 def collect(
     body: TelemetryBatch,
     request: Request,

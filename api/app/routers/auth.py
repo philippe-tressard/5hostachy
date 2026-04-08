@@ -1,6 +1,5 @@
 """Router auth — inscription, connexion, déconnexion, refresh, réinitialisation mot de passe."""
 import re
-import re
 import secrets
 from datetime import date, datetime, timedelta
 
@@ -639,7 +638,9 @@ def resend_verification(
 
 
 @router.get("/me/telemetrie")
+@limiter.limit("5/minute")
 def export_telemetrie(
+    request: Request,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -648,7 +649,6 @@ def export_telemetrie(
         select(TelemetryEvent)
         .where(TelemetryEvent.user_id == user.id)
         .order_by(TelemetryEvent.cree_le.desc())  # type: ignore
-        .limit(5000)
     ).all()
     return [
         {
@@ -662,7 +662,9 @@ def export_telemetrie(
 
 
 @router.delete("/me/telemetrie", status_code=204)
+@limiter.limit("5/minute")
 def effacer_telemetrie(
+    request: Request,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -675,16 +677,19 @@ def effacer_telemetrie(
     session.commit()
 
 
+class OptOutTelemetrieBody(BaseModel):
+    opt_out_telemetrie: bool
+
+
 @router.patch("/me/opt-out-telemetrie", status_code=204)
+@limiter.limit("10/minute")
 def toggle_opt_out_telemetrie(
-    body: dict,
+    request: Request,
+    body: OptOutTelemetrieBody,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
     """Activer/désactiver la collecte de télémétrie (RGPD art. 21 — droit d'opposition)."""
-    opt_out = body.get("opt_out_telemetrie")
-    if opt_out is None:
-        raise HTTPException(400, "Champ opt_out_telemetrie requis (true/false).")
-    user.opt_out_telemetrie = bool(opt_out)
+    user.opt_out_telemetrie = body.opt_out_telemetrie
     session.add(user)
     session.commit()

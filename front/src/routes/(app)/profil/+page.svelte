@@ -678,7 +678,11 @@ import { onMount } from 'svelte';
 				Refuser la collecte de statistiques de navigation
 			</label>
 			<p style="font-size:.78rem;color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem">
-				Ces statistiques anonymisées nous aident à améliorer l'application. Elles ne sont jamais partagées avec des tiers.
+				Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les plus utilisées,
+				de détecter d'éventuels problèmes de navigation et d'orienter les améliorations futures vers ce qui vous est
+				réellement utile au quotidien. Elles ne contiennent aucune donnée personnelle sensible et ne sont jamais
+				partagées avec des tiers. En les désactivant, vous nous privez d'informations précieuses pour vous offrir
+				une meilleure expérience.
 			</p>
 
 			<div style="display:flex;gap:.5rem;flex-wrap:wrap">
