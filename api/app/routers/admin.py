@@ -25,6 +25,7 @@ from app.models.core import (
     Delegation, StatutDelegation, StatutAcces,
     UserVigik, UserTelecommande,
     TelemetryEvent,
+    HistoriqueTelemetrie,
 )
 from app.schemas import UserRead
 from app.utils.backup import run_backup
@@ -373,15 +374,30 @@ def maintenance_now(
 
 # ── Télémétrie — agrégation manuelle ──────────────────────────────────────────
 
-@router.post("/telemetry/agreger", status_code=200)
+@router.post("/telemetry/agreger", status_code=202)
 def telemetry_agreger(
     background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
     """Lance l'agrégation de la télémétrie en arrière-plan."""
     from app.utils.telemetry_aggregation import run_telemetry_aggregation
-    background_tasks.add_task(run_telemetry_aggregation)
-    return {"message": "Agrégation lancée en arrière-plan"}
+    entry = HistoriqueTelemetrie(declenchee_par="manuelle")
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
+    background_tasks.add_task(run_telemetry_aggregation, entry.id)
+    return {"message": "Agrégation lancée en arrière-plan", "id": entry.id}
+
+
+@router.get("/telemetry/historique")
+def telemetry_history(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    return session.exec(
+        select(HistoriqueTelemetrie).order_by(HistoriqueTelemetrie.cree_le.desc()).limit(50)
+    ).all()
 
 
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────

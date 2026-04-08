@@ -13,11 +13,19 @@ from sqlalchemy import func, text
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models.core import TelemetryEvent, TelemetryDaily, TelemetryMonthly
+from app.models.core import (
+    TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
+)
 
 
-def run_telemetry_aggregation() -> dict:
-    """Exécute l'agrégation complète et retourne un rapport."""
+def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
+    """Exécute l'agrégation complète et retourne un rapport.
+
+    Si *entry_id* est fourni, met à jour l'entrée HistoriqueTelemetrie correspondante.
+    """
+    import time
+    t0 = time.monotonic()
+
     rapport = {
         "jours_agreges": 0,
         "mois_agreges": 0,
@@ -184,4 +192,37 @@ def run_telemetry_aggregation() -> dict:
         except Exception as exc:
             rapport["erreurs"].append(f"purge monthly: {exc}")
 
+    # ─── Mise à jour de l'historique ──────────────────────────────────
+    duree = round(time.monotonic() - t0, 2)
+    if entry_id is not None:
+        with Session(engine) as session:
+            entry = session.get(HistoriqueTelemetrie, entry_id)
+            if entry:
+                entry.jours_agreges = rapport["jours_agreges"]
+                entry.mois_agreges = rapport["mois_agreges"]
+                entry.events_purges = rapport["events_purges"]
+                entry.daily_purges = rapport["daily_purges"]
+                entry.monthly_purges = rapport["monthly_purges"]
+                entry.duree_secondes = duree
+                entry.terminee_le = datetime.utcnow()
+                if rapport["erreurs"]:
+                    entry.statut = "erreur"
+                    entry.erreur = "; ".join(rapport["erreurs"])
+                else:
+                    entry.statut = "succes"
+                session.add(entry)
+                session.commit()
+
+    rapport["duree_secondes"] = duree
     return rapport
+
+
+def run_telemetry_aggregation_cron() -> dict:
+    """Wrapper appelé par le scheduler cron — crée automatiquement une entrée historique."""
+    with Session(engine) as session:
+        entry = HistoriqueTelemetrie(declenchee_par="cron")
+        session.add(entry)
+        session.commit()
+        session.refresh(entry)
+        entry_id = entry.id
+    return run_telemetry_aggregation(entry_id)

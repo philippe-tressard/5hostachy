@@ -777,6 +777,23 @@ class TelemetryMonthly(SQLModel, table=True):
     total: int = 0
 
 
+class HistoriqueTelemetrie(SQLModel, table=True):
+    """Historique des exécutions d'agrégation de la télémétrie."""
+    __tablename__ = "historique_telemetrie"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    declenchee_par: str = "cron"               # cron | manuelle
+    statut: str = "en_cours"                   # en_cours | succes | erreur
+    jours_agreges: int = 0
+    mois_agreges: int = 0
+    events_purges: int = 0
+    daily_purges: int = 0
+    monthly_purges: int = 0
+    duree_secondes: Optional[float] = None
+    erreur: Optional[str] = None
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    terminee_le: Optional[datetime] = None
+
+
 # ──────────────────────────────────────────────
 #  Notifications
 # ──────────────────────────────────────────────

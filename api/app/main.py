@@ -54,8 +54,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(_wa_check, "cron", hour=18, minute=0, id="whatsapp_scheduled")
 
     # Agrégation télémétrie : chaque nuit à 2h
-    from app.utils.telemetry_aggregation import run_telemetry_aggregation
-    scheduler.add_job(run_telemetry_aggregation, "cron", hour=2, minute=0, id="telemetry_aggregation")
+    from app.utils.telemetry_aggregation import run_telemetry_aggregation_cron
+    scheduler.add_job(run_telemetry_aggregation_cron, "cron", hour=2, minute=0, id="telemetry_aggregation")
 
     yield
     # Nettoyage à l'arrêt

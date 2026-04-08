@@ -180,6 +180,8 @@ let telemetryData: any = null;
 let telemetryUsers: any[] = [];
 let telemetryLoading = true;
 let telemetryAggEnCours = false;
+let historiqueTelemetrie: any[] = [];
+let telemetryHistLoading = true;
 
 async function loadTelemetry() {
 telemetryLoading = true;
@@ -194,12 +196,20 @@ telemetryUsers = users;
 finally { telemetryLoading = false; }
 }
 
+async function loadHistoriqueTelemetrie() {
+telemetryHistLoading = true;
+try {
+historiqueTelemetrie = await api.get<any[]>('/admin/telemetry/historique');
+} catch { historiqueTelemetrie = []; }
+finally { telemetryHistLoading = false; }
+}
+
 async function declencherAggregation() {
 telemetryAggEnCours = true;
 try {
 await api.post('/admin/telemetry/agreger');
 toast('success', 'Agrégation lancée en arrière-plan.');
-setTimeout(loadTelemetry, 3000);
+setTimeout(() => { loadTelemetry(); loadHistoriqueTelemetrie(); }, 4000);
 } catch (e: any) {
 toast('error', e.message ?? 'Erreur');
 } finally {
@@ -651,6 +661,7 @@ loadDemandesProfil();
 loadWaScheduled();
 loadWaLogs();
 loadTelemetry();
+loadHistoriqueTelemetrie();
 });
 
 function fmt(date: string) {
@@ -997,7 +1008,7 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>
       ✉️ SMTP
     </button>
-    <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>
+    <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); loadHistoriqueTelemetrie(); }}>
       📊 Télémétrie
     </button>
   </div>
@@ -2078,6 +2089,46 @@ $: _siteNom = $siteNomStore;
       </div>
     </div>
 
+    <!-- Tendances d'audience -->
+    <div class="tl-kpi-row" style="margin-top:.75rem">
+      {#if telemetryData.peak_hour}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.peak_hour.heure}h</div>
+        <div class="tl-kpi-label">🔺 Heure de pointe (moy. 30j)</div>
+      </div>
+      {/if}
+      {#if telemetryData.low_hour}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.low_hour.heure}h</div>
+        <div class="tl-kpi-label">🔻 Heure creuse (moy. 30j)</div>
+      </div>
+      {/if}
+      {#if telemetryData.peak_day_of_month}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">le {telemetryData.peak_day_of_month.jour}</div>
+        <div class="tl-kpi-label">📅 Jour du mois le + actif</div>
+      </div>
+      {/if}
+    </div>
+
+    <!-- Records d'audience (10 ans glissant) -->
+    {#if telemetryData.records?.best_day || telemetryData.records?.best_month}
+    <div class="tl-kpi-row" style="margin-top:.75rem">
+      {#if telemetryData.records.best_day}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.records.best_day.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Record jour — {telemetryData.records.best_day.jour}</div>
+      </div>
+      {/if}
+      {#if telemetryData.records.best_month}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.records.best_month.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Record mois — {telemetryData.records.best_month.mois}</div>
+      </div>
+      {/if}
+    </div>
+    {/if}
+
     <!-- Top pages aujourd'hui -->
     {#if telemetryData.today.pages.length > 0}
     <div class="card" style="margin-top:1.25rem">
@@ -2168,6 +2219,46 @@ $: _siteNom = $siteNomStore;
       </table>
     </div>
     {/if}
+  {/if}
+</section>
+
+<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
+<section class="config-section">
+  <h2 class="config-section-title">🕓 Historique des agrégations</h2>
+  <div class="backup-header">
+    <p class="muted" style="font-size:.85rem">Exécutions de l'agrégation de la télémétrie (automatique chaque nuit à 2h, ou manuelle). Agrège les événements bruts en données journalières puis mensuelles, et purge les données expirées.</p>
+    <button class="btn btn-primary" on:click={declencherAggregation} disabled={telemetryAggEnCours}>
+      {telemetryAggEnCours ? 'En cours...' : 'Déclencher maintenant'}
+    </button>
+  </div>
+  {#if telemetryHistLoading}
+    <p class="muted">Chargement...</p>
+  {:else if historiqueTelemetrie.length === 0}
+    <div class="empty-state">
+      <h3>Aucune exécution enregistrée</h3>
+      <p>L'agrégation n'a pas encore été exécutée.</p>
+    </div>
+  {:else}
+    <div class="card" style="overflow:hidden;margin-top:1rem">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Événements agrégés</th><th>Purges</th><th>Durée</th></tr></thead>
+        <tbody>
+          {#each historiqueTelemetrie as h}
+            <tr>
+              <td style="font-size:.85rem">{fmt(h.cree_le)}</td>
+              <td style="color:var(--color-text-muted)">{h.declenchee_par}</td>
+              <td>
+                <span class="badge {h.statut === 'succes' ? 'badge-green' : h.statut === 'en_cours' ? 'badge-yellow' : 'badge-red'}">{h.statut === 'en_cours' ? 'en cours' : h.statut}</span>
+                {#if h.erreur}<span title={h.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
+              </td>
+              <td style="font-size:.85rem;color:var(--color-text-muted)">{h.jours_agreges} jour{h.jours_agreges > 1 ? 's' : ''} · {h.mois_agreges} mois</td>
+              <td style="font-size:.85rem;color:var(--color-text-muted)">{h.events_purges + h.daily_purges + h.monthly_purges} lignes</td>
+              <td style="font-size:.85rem;color:var(--color-text-muted)">{h.duree_secondes != null ? h.duree_secondes + ' s' : '—'}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {/if}
 </section>
 
