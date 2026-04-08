@@ -687,6 +687,7 @@ export const admin = {
 	telemetryDashboard: () => api.get<any>('/telemetry/dashboard'),
 	telemetryUsersActive: () => api.get<any[]>('/telemetry/users-active'),
 	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
+	telemetryHistorique: () => api.get<any[]>('/admin/telemetry/historique'),
 };
 
 export const config = {
