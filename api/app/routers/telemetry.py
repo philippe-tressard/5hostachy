@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func, text
+import sqlalchemy as sa
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin
@@ -145,6 +146,70 @@ def dashboard(
         .where(TelemetryEvent.cree_le >= today)
     ).one()
 
+    # --- Heure moyenne de plus forte / plus faible audience (30 derniers jours) ---
+    hour_stats = session.exec(
+        select(
+            func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
+            func.count().label("total"),
+        )
+        .where(TelemetryEvent.cree_le >= thirty_days_ago)
+        .group_by("heure")
+        .order_by("heure")
+    ).all()
+
+    peak_hour = None
+    low_hour = None
+    if hour_stats:
+        sorted_hours = sorted(hour_stats, key=lambda x: x[1])
+        low_hour = {"heure": sorted_hours[0][0], "vues": sorted_hours[0][1]}
+        peak_hour = {"heure": sorted_hours[-1][0], "vues": sorted_hours[-1][1]}
+
+    # --- Jour du mois de plus forte audience (moyenne sur données daily) ---
+    day_of_month_stats = session.exec(
+        select(
+            func.cast(func.substr(TelemetryDaily.jour, 9, 2), sa.Integer).label("jour_mois"),
+            func.avg(TelemetryDaily.total).label("moyenne"),
+        )
+        .group_by("jour_mois")
+        .order_by(func.avg(TelemetryDaily.total).desc())
+        .limit(1)
+    ).first()
+
+    peak_day_of_month = None
+    if day_of_month_stats:
+        peak_day_of_month = {
+            "jour": day_of_month_stats[0],
+            "moyenne_vues": round(float(day_of_month_stats[1]), 1),
+        }
+
+    # --- Records d'utilisateurs uniques (10 ans glissant) ---
+    # Meilleur jour (depuis telemetry_daily — toutes les données disponibles)
+    best_day = session.exec(
+        select(
+            TelemetryDaily.jour,
+            func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
+        )
+        .group_by(TelemetryDaily.jour)
+        .order_by(func.sum(TelemetryDaily.utilisateurs_uniques).desc())
+        .limit(1)
+    ).first()
+
+    # Meilleur mois (depuis telemetry_monthly — 10 ans)
+    best_month = session.exec(
+        select(
+            TelemetryMonthly.mois,
+            func.sum(TelemetryMonthly.utilisateurs_uniques).label("uniques"),
+        )
+        .group_by(TelemetryMonthly.mois)
+        .order_by(func.sum(TelemetryMonthly.utilisateurs_uniques).desc())
+        .limit(1)
+    ).first()
+
+    records = {
+        "best_day": {"jour": best_day[0], "uniques": best_day[1]} if best_day else None,
+        "best_month": {"mois": best_month[0], "uniques": best_month[1]} if best_month else None,
+    }
+
     return {
         "today": {
             "active_users": active_today or 0,
@@ -154,6 +219,10 @@ def dashboard(
         "daily": sorted(daily_chart.values(), key=lambda x: x["jour"]),
         "top_pages_30d": sorted(top_pages_30d.values(), key=lambda x: -x["total"]),
         "monthly": sorted(monthly_chart.values(), key=lambda x: x["mois"]),
+        "peak_hour": peak_hour,
+        "low_hour": low_hour,
+        "peak_day_of_month": peak_day_of_month,
+        "records": records,
     }
 
 

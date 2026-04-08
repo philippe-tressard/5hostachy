@@ -2089,6 +2089,46 @@ $: _siteNom = $siteNomStore;
       </div>
     </div>
 
+    <!-- Tendances d'audience -->
+    <div class="tl-kpi-row" style="margin-top:.75rem">
+      {#if telemetryData.peak_hour}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.peak_hour.heure}h</div>
+        <div class="tl-kpi-label">🔺 Heure de pointe (moy. 30j)</div>
+      </div>
+      {/if}
+      {#if telemetryData.low_hour}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.low_hour.heure}h</div>
+        <div class="tl-kpi-label">🔻 Heure creuse (moy. 30j)</div>
+      </div>
+      {/if}
+      {#if telemetryData.peak_day_of_month}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">le {telemetryData.peak_day_of_month.jour}</div>
+        <div class="tl-kpi-label">📅 Jour du mois le + actif</div>
+      </div>
+      {/if}
+    </div>
+
+    <!-- Records d'audience (10 ans glissant) -->
+    {#if telemetryData.records?.best_day || telemetryData.records?.best_month}
+    <div class="tl-kpi-row" style="margin-top:.75rem">
+      {#if telemetryData.records.best_day}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.records.best_day.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Record jour — {telemetryData.records.best_day.jour}</div>
+      </div>
+      {/if}
+      {#if telemetryData.records.best_month}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.records.best_month.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Record mois — {telemetryData.records.best_month.mois}</div>
+      </div>
+      {/if}
+    </div>
+    {/if}
+
     <!-- Top pages aujourd'hui -->
     {#if telemetryData.today.pages.length > 0}
     <div class="card" style="margin-top:1.25rem">
