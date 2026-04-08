@@ -1574,24 +1574,26 @@
 
         <div class="callout tip" style="margin-top:1.25rem">
           <span class="callout-icon">&#x1F4CA;</span>
-          <p><strong>Sur le tableau de bord</strong>, seuls vos tickets encore actifs ou récemment traités apparaissent dans « Mes tickets récents ». Les tickets résolus ou annulés depuis plus de 48 h sont automatiquement masqués pour garder un affichage clair.</p>
+          <p><strong>Sur le tableau de bord</strong>, seuls vos tickets encore actifs ou récemment traités apparaissent dans « Mes tickets récents ».</p>
         </div>
       </div>
 
       <!-- Historique -->
       <div class="card">
-        <h3>&#x1F5C4;️ Historique de mes tickets</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Les tickets <strong>résolus ou annulés depuis plus de 48 h</strong> sont automatiquement déplacés dans la section <strong>Historique</strong>, en bas de la page Tickets.</p>
+        <h3>&#x1F5C4;️ Historique</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Les tickets <strong>résolus, annulés ou fermés</strong> sont immédiatement déplacés dans la section <strong>Historique</strong>, en bas de la page Tickets. Cette section est toujours visible, même s'il n'y a aucun ticket actif.</p>
 
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
-          <li>Cliquez sur <strong>« 🗭 Historique de mes tickets »</strong> pour déplier la liste.</li>
-          <li>Le nombre total de tickets archivés est affiché à côté du titre.</li>
-          <li>Chaque ticket de l'historique reste consultable en détail (catégorie, description, commentaires).</li>
+          <li>Cliquez sur <strong>« 💭 Historique »</strong> pour déplier la section.</li>
+          <li>Les tickets sont <strong>groupés par année</strong> en accordéon décroissant (année la plus récente en premier).</li>
+          <li>Seuls les <strong>3 dernières années</strong> sont affichées.</li>
+          <li>Le nombre total de tickets archivés est affiché à côté du titre, ainsi que le décompte par année.</li>
+          <li>Chaque ticket de l'historique reste consultable en détail (catégorie, description, commentaires, fil de suivi).</li>
         </ul>
 
         <div class="callout tip" style="margin-top:1rem">
           <span class="callout-icon">&#x1F4A1;</span>
-          <p>Si un ticket résolu vous semble réapparu dans la liste principale, c'est qu'il vient d'être traité — il basculera automatiquement dans l'historique après 48 h.</p>
+          <p>L'historique est visible par tous les profils (copropriétaires, membres CS et administrateurs).</p>
         </div>
       </div>
 
@@ -1602,7 +1604,7 @@
 
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
           <li><strong>Tous les tickets</strong> ouverts par les résidents sont visibles, quel que soit le bâtiment.</li>
-          <li>Un filtre rapide permet d'afficher uniquement les tickets <em>Ouverts</em>, <em>En cours</em>, <em>Résolus</em> ou <em>Tous</em>.</li>
+          <li>Un filtre rapide permet d'afficher uniquement les tickets <em>Ouverts</em>, <em>En cours</em> ou <em>Tous</em>. Les tickets résolus, annulés ou fermés sont consultables dans la section <strong>Historique</strong> en bas de page.</li>
           <li>Le <strong>prénom / nom</strong> et le <strong>bâtiment du demandeur</strong> apparaissent directement sur chaque ticket pour faciliter l'identification par le CS.</li>
           <li>Pour chaque ticket, le CS peut <strong>changer le statut</strong> (ex. : Ouvert → En cours → Résolu) et <strong>ajouter un commentaire</strong> pour informer le résident.</li>
           <li>Un badge rouge sur l'onglet indique le nombre de tickets encore <em>Ouverts</em>.</li>
@@ -2291,6 +2293,59 @@
     </section>
 
     <!-- ════════════════════════════════
+         ADMIN – Télémétrie
+    ════════════════════════════════ -->
+    <section class="chapter" id="admin-telemetry" data-section="faq">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#f0f0ff; color:#6366f1">📊</div>
+        <div>
+          <h2>Administration — Télémétrie</h2>
+          <p>Statistiques d'utilisation de l'application (accès réservé aux administrateurs).</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Que contient le tableau de bord ?</h3>
+        <p>L'onglet <strong>📊 Télémétrie</strong> de l'espace Administration affiche :</p>
+        <ul>
+          <li><strong>KPI du jour</strong> — vues totales, utilisateurs uniques, pages distinctes visitées.</li>
+          <li><strong>Pages consultées aujourd'hui</strong> — tableau détaillé page par page.</li>
+          <li><strong>Top pages sur 30 jours</strong> — classement des pages les plus visitées (vues, utilisateurs, pourcentage).</li>
+          <li><strong>Historique sur 30 jours</strong> — graphique en barres jour par jour.</li>
+          <li><strong>Historique mensuel</strong> — graphique des tendances sur plusieurs mois.</li>
+          <li><strong>Utilisateurs les plus actifs</strong> — top 30 sur les 30 derniers jours.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <h3>Gestion de l'historique</h3>
+        <p>La télémétrie gère <strong>trois niveaux de rétention</strong> pour un stockage optimal :</p>
+        <ul>
+          <li><strong>30 jours</strong> — événements détaillés (chaque clic, chaque page vue).</li>
+          <li><strong>12 mois</strong> — données agrégées par jour (totaux quotidiens).</li>
+          <li><strong>10 ans</strong> — données super-agrégées par mois (tendances long terme).</li>
+        </ul>
+        <p>L'agrégation s'exécute automatiquement chaque nuit à 2 h. Un bouton <strong>« Agréger maintenant »</strong> permet de la déclencher manuellement.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">&#x1F4A1;</span>
+        <p>La collecte est totalement <strong>transparente</strong> pour les résidents : aucun ralentissement, aucun pop-up. Les données sont envoyées en arrière-plan sans affecter la navigation.</p>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <h3>Vos droits sur ces données (RGPD)</h3>
+        <p>Dans <strong>Mon profil → Vos droits (RGPD)</strong>, chaque utilisateur peut :</p>
+        <ul>
+          <li><strong>Refuser la collecte</strong> — une case à cocher désactive définitivement la télémétrie pour votre compte.</li>
+          <li><strong>Exporter ses données</strong> — télécharger un fichier JSON contenant l'historique de vos pages visitées (30 derniers jours).</li>
+          <li><strong>Effacer ses données</strong> — supprimer immédiatement et irréversiblement toutes vos données de navigation.</li>
+        </ul>
+        <p>En cas de suppression de votre compte, toutes vos données de télémétrie sont automatiquement supprimées.</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
          12. FAQ
     ════════════════════════════════ -->
     <section class="chapter" id="faq" data-section="faq">
@@ -2334,7 +2389,7 @@
       <details class="faq-item">
         <summary>Pourquoi mes anciens tickets n'apparaissent plus dans la liste principale ?</summary>
         <div class="faq-body">
-          <p>Les tickets résolus ou annulés depuis plus de 48 h sont automatiquement déplacés dans la section <strong>Historique de mes tickets</strong>, située en bas de la page Tickets. La liste principale reste ainsi centrée sur les demandes encore actives ou récemment traitées.</p>
+          <p>Les tickets résolus, annulés ou fermés sont immédiatement déplacés dans la section <strong>Historique</strong>, située en bas de la page Tickets. Ils y sont groupés par année en accordéon (3 ans max). La liste principale reste ainsi centrée sur les demandes encore actives.</p>
         </div>
       </details>
 

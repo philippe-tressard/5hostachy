@@ -21,6 +21,7 @@ from app.routers import (
     auth, tickets, publications, documents, lots, admin,
     notifications, acces, calendrier, prestataires, sondages, idees, copropriete,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
+    telemetry,
 )
 from app.routers import uploads, faq
 from app.seed import seed
@@ -51,6 +52,10 @@ async def lifespan(app: FastAPI):
     # Planificateur WhatsApp : vérification chaque jour à 18h
     from app.utils.whatsapp_scheduler import check_and_send as _wa_check
     scheduler.add_job(_wa_check, "cron", hour=18, minute=0, id="whatsapp_scheduled")
+
+    # Agrégation télémétrie : chaque nuit à 2h
+    from app.utils.telemetry_aggregation import run_telemetry_aggregation
+    scheduler.add_job(run_telemetry_aggregation, "cron", hour=2, minute=0, id="telemetry_aggregation")
 
     yield
     # Nettoyage à l'arrêt
@@ -103,6 +108,7 @@ app.include_router(config.router)
 app.include_router(diagnostics.router)
 app.include_router(regles_residence.router)
 app.include_router(delegations.router)
+app.include_router(telemetry.router)
 
 # Fichiers statiques (photos uploadées)
 uploads_dir = Path("/app/uploads")

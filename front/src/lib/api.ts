@@ -111,6 +111,7 @@ export interface User {
 	role: string;
 	roles: string[];  // multi-rôles cumulables
 	actif: boolean;
+	opt_out_telemetrie?: boolean;
 	onboarding_complete: boolean;
 	onboarding_etape: number;
 	photo_url?: string;
@@ -226,6 +227,9 @@ export const auth = {
 	demanderModification: (data: unknown) => api.post<any>('/auth/me/demande-modification', data),
 	declarerNouvelArrivant: (data: { batiment?: string | null; ancien_resident?: string | null; ancien_resident_inconnu?: boolean }) =>
 		api.post<any>('/admin/me/accueil-arrivant', data),
+	exportTelemetrie: () => api.get<any[]>('/auth/me/telemetrie'),
+	effacerTelemetrie: () => api.delete('/auth/me/telemetrie'),
+	toggleOptOutTelemetrie: (data: { opt_out_telemetrie: boolean }) => api.patch('/auth/me/opt-out-telemetrie', data),
 };
 
 export const tickets = {
@@ -679,6 +683,10 @@ export const admin = {
 	// Audit associations user-lot
 	auditUserLots: () => api.get<any[]>('/admin/audit/user-lots'),
 	supprimerUserLot: (id: number) => api.delete(`/admin/user-lots/${id}`),
+	// Télémétrie
+	telemetryDashboard: () => api.get<any>('/telemetry/dashboard'),
+	telemetryUsersActive: () => api.get<any[]>('/telemetry/users-active'),
+	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
 };
 
 export const config = {

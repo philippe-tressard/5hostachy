@@ -1,6 +1,5 @@
 """Router auth — inscription, connexion, déconnexion, refresh, réinitialisation mot de passe."""
 import re
-import re
 import secrets
 from datetime import date, datetime, timedelta
 
@@ -20,7 +19,7 @@ from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
 from app.models.core import (Utilisateur, RefreshToken, PasswordResetToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
-    ConfigSite, DemandeModificationProfil, StatutDemandeProfil)
+    ConfigSite, DemandeModificationProfil, StatutDemandeProfil, TelemetryEvent)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.limiter import limiter
 
@@ -633,3 +632,64 @@ def resend_verification(
 
     # Toujours 204 (pas d'énumération de comptes)
     return None
+
+
+# ── RGPD — Données de télémétrie ─────────────────────────────────────────────
+
+
+@router.get("/me/telemetrie")
+@limiter.limit("5/minute")
+def export_telemetrie(
+    request: Request,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Exporter ses données de télémétrie (RGPD art. 15 + 20 — droit d'accès et portabilité)."""
+    events = session.exec(
+        select(TelemetryEvent)
+        .where(TelemetryEvent.user_id == user.id)
+        .order_by(TelemetryEvent.cree_le.desc())  # type: ignore
+    ).all()
+    return [
+        {
+            "page": ev.page,
+            "action": ev.action,
+            "detail": ev.detail,
+            "date": ev.cree_le.isoformat() if ev.cree_le else None,
+        }
+        for ev in events
+    ]
+
+
+@router.delete("/me/telemetrie", status_code=204)
+@limiter.limit("5/minute")
+def effacer_telemetrie(
+    request: Request,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Effacer ses données de télémétrie (RGPD art. 17 — droit à l'effacement)."""
+    events = session.exec(
+        select(TelemetryEvent).where(TelemetryEvent.user_id == user.id)
+    ).all()
+    for ev in events:
+        session.delete(ev)
+    session.commit()
+
+
+class OptOutTelemetrieBody(BaseModel):
+    opt_out_telemetrie: bool
+
+
+@router.patch("/me/opt-out-telemetrie", status_code=204)
+@limiter.limit("10/minute")
+def toggle_opt_out_telemetrie(
+    request: Request,
+    body: OptOutTelemetrieBody,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Activer/désactiver la collecte de télémétrie (RGPD art. 21 — droit d'opposition)."""
+    user.opt_out_telemetrie = body.opt_out_telemetrie
+    session.add(user)
+    session.commit()

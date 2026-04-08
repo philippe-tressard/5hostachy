@@ -83,7 +83,7 @@
 	</div>
 	{#if data.whatsapp_url}
 		<div class="url-block" style="margin-bottom:.75rem">
-			<QRCode data={data.whatsapp_url} size={32} />
+			<QRCode data={data.whatsapp_url} size={45} />
 			<div>
 				<strong>Groupe WhatsApp copropriété</strong>
 				<span class="contact-societe"><a href={data.whatsapp_url} target="_blank" rel="noopener">{data.whatsapp_url}</a></span>
@@ -169,7 +169,7 @@
 		</p>
 		{#if data.syndic.site_web}
 			<div class="url-block">
-				<QRCode data={data.syndic.site_web} size={32} />
+				<QRCode data={data.syndic.site_web} size={45} />
 				<div>
 					<strong>Espace client</strong>
 					<span class="contact-societe"><a href={data.syndic.site_web} target="_blank" rel="noopener">{data.syndic.site_web}</a></span>

@@ -36,8 +36,8 @@ Espace copropriétaire
 
 Tickets
 ├── Créer un ticket (panne, nuisance, question, urgence, bug)
-├── Mes tickets en cours
-└── Historique des tickets
+├── Mes tickets en cours (filtres : Tous / Ouvert / En cours)
+└── Historique — accordéon par année décroissante (3 ans max), toujours visible
 
 Communication de la résidence
 ├── Actualités
@@ -96,7 +96,8 @@ Espace conseil syndical  ← ACCÈS RÉSERVÉ rôle conseil_syndical + admin
 ├── Tickets CS
 │   ├── Tous les tickets de la résidence
 │   ├── Affichage demandeur + bâtiment
-│   └── Changement d'état + commentaires
+│   ├── Changement d'état + commentaires
+│   └── Historique — accordéon par année (même comportement que la vue résident)
 ├── Validation en masse
 │   ├── Demandes de vigiks en attente
 │   └── Comptes résidents en attente d'activation
@@ -111,6 +112,13 @@ Espace conseil syndical  ← ACCÈS RÉSERVÉ rôle conseil_syndical + admin
     │   ├── Configuration (fréquence, nombre de versions, heure)
     │   ├── Sauvegarder maintenant
     │   └── Historique (téléchargement, restauration)
+    ├── Télémétrie
+    │   ├── KPI du jour (vues, utilisateurs uniques, pages)
+    │   ├── Top pages 30 jours (classement, %)
+    │   ├── Graphe 30 jours (barres jour par jour)
+    │   ├── Historique mensuel (barres mois par mois)
+    │   ├── Utilisateurs les plus actifs (top 30)
+    │   └── Agréger maintenant (déclenchement manuel)
     ├── Profils d'accès documentaires  (EF-WEB-013)
     ├── Catégories de documents  (EF-WEB-013)
     └── Templates d’emails  (EF-WEB-073)
@@ -305,6 +313,7 @@ Le pied de page est affiché sur toutes les pages de l'application (hors auth).
 | **Propagation** | Les boutons d'action internes (édition, suppression, masquage) utilisent `on:click|stopPropagation` pour ne pas déclencher le toggle |
 | **Contenu expansé** | Le contenu expansé utilise `on:click|stopPropagation` pour ne pas fermer quand l'utilisateur lit ou sélectionne du texte |
 | **Accordions exclusifs** | Admin → Paramétrage : sections **Pages** et **Référentiels** — ouvrir une entrée ferme la précédente |
+| **Accordéon Historique Tickets** | Section en bas de page Tickets. Niveau 1 : toggle « Historique ». Niveau 2 : une entrée par année (décroissant, 3 ans max) avec le décompte de tickets. Visible pour tous les profils (copro, CS, admin), même sans tickets actifs. |
 | **Accessibilité** | `role="button"`, `tabindex="0"`, `on:keydown` (Enter/Espace) sur les `<div>` cliquables non natifs |
 
 

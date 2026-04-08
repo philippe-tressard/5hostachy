@@ -331,7 +331,7 @@
 | # | Méthode | Chemin | Description | Auth |
 |---|---------|--------|-------------|------|
 | 1 | GET | `/tickets` | Tickets (CS/admin = tous, résident = les siens) | Authentifié |
-| 2 | POST | `/tickets` | Créer ticket (notifie CS, email si bug) | Authentifié |
+| 2 | POST | `/tickets` | Créer ticket (notifie CS ; e-mail syndic avec photos en PJ + CC rôle `conseil_syndical`) | Authentifié |
 | 3 | GET | `/tickets/{ticket_id}` | Détail ticket | Authentifié |
 | 4 | PATCH | `/tickets/{ticket_id}` | Modifier statut/priorité (auto-évolution) | CS/Admin |
 | 5 | GET | `/tickets/{ticket_id}/messages` | Messages du ticket (internes filtrés) | Authentifié |

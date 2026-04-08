@@ -1,13 +1,17 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { afterNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser } from '$lib/stores/auth';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { initTelemetry, trackPageView, setTelemetryOptOut } from '$lib/telemetry';
 	import pkg from '../../../package.json';
 
 	onMount(async () => {
+		initTelemetry();
+
 		const [, meResult] = await Promise.allSettled([
 			loadSiteConfig(),
 			!$currentUser ? authApi.me() : Promise.resolve(null),
@@ -19,6 +23,15 @@
 				goto('/auth/connexion');
 			}
 		}
+		// Appliquer l'opt-out télémétrie AVANT le premier tracking
+		if ($currentUser?.opt_out_telemetrie) {
+			setTelemetryOptOut(true);
+		}
+		trackPageView(window.location.pathname);
+	});
+
+	afterNavigate(() => {
+		trackPageView(window.location.pathname);
 	});
 
 	$: siteNom  = $siteNomStore;

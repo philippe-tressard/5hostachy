@@ -24,6 +24,7 @@ from app.models.core import (
     StatutLotImport, StatutImport,
     Delegation, StatutDelegation, StatutAcces,
     UserVigik, UserTelecommande,
+    TelemetryEvent,
 )
 from app.schemas import UserRead
 from app.utils.backup import run_backup
@@ -368,6 +369,19 @@ def maintenance_now(
     session.refresh(entry)
     background_tasks.add_task(run_maintenance, entry.id)
     return {"message": "Maintenance lancée en arrière-plan", "id": entry.id}
+
+
+# ── Télémétrie — agrégation manuelle ──────────────────────────────────────────
+
+@router.post("/telemetry/agreger", status_code=200)
+def telemetry_agreger(
+    background_tasks: BackgroundTasks,
+    _: Utilisateur = Depends(require_admin),
+):
+    """Lance l'agrégation de la télémétrie en arrière-plan."""
+    from app.utils.telemetry_aggregation import run_telemetry_aggregation
+    background_tasks.add_task(run_telemetry_aggregation)
+    return {"message": "Agrégation lancée en arrière-plan"}
 
 
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
@@ -1001,6 +1015,10 @@ def supprimer_utilisateur(
     user = session.get(Utilisateur, user_id)
     if not user:
         raise HTTPException(404, "Utilisateur introuvable")
+
+    # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
+    for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
+        session.delete(ev)
 
     # 1. Tokens d'authentification
     for t in session.exec(select(RefreshToken).where(RefreshToken.user_id == user_id)).all():
