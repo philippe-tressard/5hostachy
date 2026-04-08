@@ -38,6 +38,7 @@ import { onMount } from 'svelte';
 	let showForm = false;
 	let editId: number | null = null;
 	let expandedEvId: number | null = null;
+	let expandedKanbanId: number | null = null;
 
 	let form = {
 		titre: '',
@@ -1002,9 +1003,13 @@ import { onMount } from 'svelte';
 					{#each items as ev (ev.id)}
 						<div class="kanban-card card"
 							class:event-urgent={ev.type === 'coupure'}
-							draggable={$isCS && ev._source !== 'devis_ponctuel' ? 'true' : 'false'}
+							class:kanban-card-expanded={expandedKanbanId === ev.id}
+							draggable={$isCS && ev._source !== 'devis_ponctuel' && expandedKanbanId !== ev.id ? 'true' : 'false'}
 							on:dragstart={(e) => onDragStart(e, ev.id)}
-							role="listitem">
+							on:click={() => expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id}
+							on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id; } }}
+							role="button"
+							tabindex="0">
 							<!-- Tags périmètre + année (uniquement si année ≠ exercice sélectionné) -->
 							<div class="kanban-card-tags">
 								{#each perimetreTags(ev.perimetre) as tag}
@@ -1017,14 +1022,23 @@ import { onMount } from 'svelte';
 							<div class="kanban-card-footer">
 								<span class="kanban-card-type">{typeLabel(ev.type)}</span>
 								{#if $isCS && ev._source !== 'devis_ponctuel'}
-									<div class="kanban-card-actions">
-										<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click|stopPropagation={() => startEdit(ev)}>✏️</button>
+									<div class="kanban-card-actions" on:click|stopPropagation on:keydown|stopPropagation>
+										<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
 									{#if $isAdmin}
-										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click|stopPropagation={() => deleteEv(ev.id)}>&#x1F5D1;️</button>
+										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(ev.id)}>&#x1F5D1;️</button>
 									{/if}
 									</div>
 								{/if}
 							</div>
+							{#if expandedKanbanId === ev.id}
+								<div class="kanban-card-detail" on:click|stopPropagation on:keydown|stopPropagation>
+									<div class="kanban-card-detail-row">📅 {formatDate(ev.debut)}{#if ev.fin} → {formatDate(ev.fin)}{/if}</div>
+									{#if ev.lieu}<div class="kanban-card-detail-row">📍 {ev.lieu}</div>{/if}
+									{#if ev.description}
+										<div class="kanban-card-detail-desc rich-content">{@html safeHtml(ev.description)}</div>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					{/each}
 				{/if}
@@ -1132,7 +1146,11 @@ import { onMount } from 'svelte';
 	.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
 	.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }
 	.kanban-empty { padding: 1rem; font-size: .85rem; color: var(--color-text-muted); text-align: center; }
-	.kanban-card { margin: .3rem; padding: .35rem .55rem; display: flex; flex-direction: column; gap: .15rem; cursor: grab; transition: box-shadow .15s, opacity .15s; }
+	.kanban-card { margin: .3rem; padding: .35rem .55rem; display: flex; flex-direction: column; gap: .15rem; cursor: pointer; transition: box-shadow .15s, opacity .15s; }
+	.kanban-card-expanded { cursor: default; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+	.kanban-card-detail { border-top: 1px solid var(--color-border); margin-top: .3rem; padding-top: .35rem; }
+	.kanban-card-detail-row { font-size: .72rem; color: var(--color-text-muted); line-height: 1.5; }
+	.kanban-card-detail-desc { font-size: .72rem; line-height: 1.5; margin-top: .25rem; }
 	.kanban-card:active { cursor: grabbing; }
 	.kanban-card[draggable="true"]:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 	.kanban-card-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .15rem; }
