@@ -2,8 +2,10 @@
 5Hostachy — Application de gestion de copropriété
 API FastAPI v0.1
 """
+import json as _json
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +17,37 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.utils.limiter import limiter
+
+
+# ── Sérialisation UTC : toutes les datetime naïves sortent avec "Z" ───────────
+# FastAPI/Pydantic utilise jsonable_encoder → ENCODERS_BY_TYPE pour datetime.
+# On surcharge pour ajouter le suffixe Z (= UTC) afin que le navigateur
+# convertisse automatiquement en heure locale (Europe/Paris).
+from fastapi.encoders import ENCODERS_BY_TYPE
+
+ENCODERS_BY_TYPE[datetime] = (
+    lambda dt: dt.isoformat() + "Z" if dt.tzinfo is None else dt.isoformat()
+)
+
+
+class _UTCEncoder(_json.JSONEncoder):
+    """Filet de sécurité : si un datetime arrive directement dans le JSON
+    (retour de dict brut), on ajoute Z aussi."""
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, datetime):
+            if obj.tzinfo is None:
+                return obj.isoformat() + "Z"
+            return obj.isoformat()
+        return super().default(obj)
+
+
+class UTCJSONResponse(JSONResponse):
+    def render(self, content: Any) -> bytes:
+        return _json.dumps(
+            content,
+            cls=_UTCEncoder,
+            ensure_ascii=False,
+        ).encode("utf-8")
 
 from app.database import _run_migrations, engine
 from app.routers import (
@@ -70,6 +103,7 @@ app = FastAPI(
     description="API de gestion de la copropriété — Résidence du Parc",
     version="0.2.0",
     lifespan=lifespan,
+    default_response_class=UTCJSONResponse,
     docs_url="/docs" if _enable_docs else None,
     redoc_url="/redoc" if _enable_docs else None,
 )
