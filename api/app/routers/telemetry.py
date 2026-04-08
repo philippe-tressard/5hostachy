@@ -41,6 +41,10 @@ def collect(
             payload = decode_token(token)
             if payload and payload.get("type") == "access":
                 user_id = int(payload["sub"])
+                # RGPD opt-out : l'utilisateur a désactivé la télémétrie
+                u = session.get(Utilisateur, user_id)
+                if u and u.opt_out_telemetrie:
+                    return
     except Exception:
         pass  # Visiteur non connecté — on enregistre quand même avec user_id=None
 

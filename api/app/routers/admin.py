@@ -24,6 +24,7 @@ from app.models.core import (
     StatutLotImport, StatutImport,
     Delegation, StatutDelegation, StatutAcces,
     UserVigik, UserTelecommande,
+    TelemetryEvent,
 )
 from app.schemas import UserRead
 from app.utils.backup import run_backup
@@ -1014,6 +1015,10 @@ def supprimer_utilisateur(
     user = session.get(Utilisateur, user_id)
     if not user:
         raise HTTPException(404, "Utilisateur introuvable")
+
+    # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
+    for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
+        session.delete(ev)
 
     # 1. Tokens d'authentification
     for t in session.exec(select(RefreshToken).where(RefreshToken.user_id == user_id)).all():

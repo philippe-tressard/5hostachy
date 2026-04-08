@@ -13,9 +13,17 @@ const ENDPOINT = '/api/telemetry/collect';
 
 let buffer: { page: string; action: string; detail?: string }[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
+let disabled = false;
+
+/** Désactive la collecte côté client (opt-out RGPD). */
+export function setTelemetryOptOut(optOut: boolean) {
+	disabled = optOut;
+	if (optOut) buffer.length = 0;
+}
 
 /** Enregistre un événement de télémétrie (non-bloquant). */
 export function trackEvent(page: string, action = 'view', detail?: string) {
+	if (disabled) return;
 	buffer.push({ page, action, ...(detail ? { detail } : {}) });
 }
 

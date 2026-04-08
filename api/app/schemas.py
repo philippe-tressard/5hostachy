@@ -46,6 +46,7 @@ class UserRead(BaseModel):
     nom_proprietaire: Optional[str] = None
     nom_aide: Optional[str] = None
     prenom_aide: Optional[str] = None
+    opt_out_telemetrie: bool = False
     communaute_interdit: bool = False
     communaute_ban_count: int = 0
     communaute_ban_jusqu_au: Optional[datetime] = None

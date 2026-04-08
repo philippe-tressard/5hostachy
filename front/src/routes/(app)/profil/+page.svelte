@@ -8,6 +8,7 @@ import { onMount } from 'svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { setTelemetryOptOut } from '$lib/telemetry';
 
 	$: _pc = getPageConfig($configStore, 'profil', { titre: 'Mon profil', navLabel: 'Profil', icone: 'user', descriptif: 'Vos informations personnelles (mot de passe, lots...), sécurité du compte et préférences de notifications.' });
 	$: _siteNom = $siteNomStore;
@@ -57,6 +58,13 @@ import { onMount } from 'svelte';
 	let arrivantAncienResidentInconnu = false;
 	let savingArrivant = false;
 	let arrivantChoix: '' | 'nouvel_arrivant' | 'deja_resident' = '';
+
+	// ── RGPD Télémétrie ───────────────────────────────────────────────────────
+	let optOutTelemetrie = false;
+	let savingOptOut = false;
+	let deletingTelemetrie = false;
+	let exportingTelemetrie = false;
+	let confirmDeleteTelemetrie = false;
 
 	$: demandePending = demandes.find((d) => d.statut_demande === 'en_attente') ?? null;
 
@@ -125,6 +133,7 @@ import { onMount } from 'svelte';
 			fonction  = (u as any).fonction  ?? '';
 			email     = u.email     ?? '';
 			arrivantBatimentNumero = (u as any).batiment_nom?.replace(/[^0-9]/g, '') ?? '';
+			optOutTelemetrie = u.opt_out_telemetrie ?? false;
 
 			// Démarche arrivant : lire depuis la base (fallback localStorage pour migration)
 			if (u.demarche_arrivant === 'nouvel_arrivant' || u.demarche_arrivant === 'deja_resident') {
@@ -643,6 +652,106 @@ import { onMount } from 'svelte';
 			en contactant le responsable de traitement à l'adresse indiquée dans la
 			<a href="/politique-de-confidentialite" style="color:var(--color-primary)">politique de confidentialité</a>.
 		</p>
+
+		<!-- Télémétrie opt-out -->
+		<div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid #fde68a">
+			<label class="checkbox-field" style="margin-bottom:.4rem">
+				<input
+					type="checkbox"
+					bind:checked={optOutTelemetrie}
+					disabled={savingOptOut}
+					on:change={async () => {
+						savingOptOut = true;
+						try {
+							await authApi.toggleOptOutTelemetrie({ opt_out_telemetrie: optOutTelemetrie });
+							setTelemetryOptOut(optOutTelemetrie);
+							const updated = await authApi.me();
+							setUser(updated);
+							toast('success', optOutTelemetrie ? 'Collecte de statistiques désactivée.' : 'Collecte de statistiques réactivée.');
+						} catch {
+							optOutTelemetrie = !optOutTelemetrie;
+							toast('error', 'Erreur lors de la mise à jour.');
+						}
+						savingOptOut = false;
+					}}
+				/>
+				Refuser la collecte de statistiques de navigation
+			</label>
+			<p style="font-size:.78rem;color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem">
+				Ces statistiques anonymisées nous aident à améliorer l'application. Elles ne sont jamais partagées avec des tiers.
+			</p>
+
+			<div style="display:flex;gap:.5rem;flex-wrap:wrap">
+				<button
+					type="button"
+					class="btn btn-sm"
+					style="font-size:.8rem"
+					disabled={exportingTelemetrie}
+					on:click={async () => {
+						exportingTelemetrie = true;
+						try {
+							const data = await authApi.exportTelemetrie();
+							const json = JSON.stringify(data, null, 2);
+							const blob = new Blob([json], { type: 'application/json' });
+							const url = URL.createObjectURL(blob);
+							const a = document.createElement('a');
+							a.href = url;
+							a.download = 'mes-donnees-telemetrie.json';
+							a.click();
+							URL.revokeObjectURL(url);
+							toast('success', 'Export téléchargé.');
+						} catch {
+							toast('error', 'Erreur lors de l\'export.');
+						}
+						exportingTelemetrie = false;
+					}}
+				>
+					📥 Exporter mes données de navigation
+				</button>
+
+				{#if !confirmDeleteTelemetrie}
+					<button
+						type="button"
+						class="btn btn-sm btn-danger"
+						style="font-size:.8rem"
+						on:click={() => (confirmDeleteTelemetrie = true)}
+					>
+						🗑️ Effacer mes données de navigation
+					</button>
+				{:else}
+					<span style="display:inline-flex;gap:.35rem;align-items:center;font-size:.8rem">
+						<strong style="color:var(--color-danger)">Confirmer ?</strong>
+						<button
+							type="button"
+							class="btn btn-sm btn-danger"
+							style="font-size:.78rem"
+							disabled={deletingTelemetrie}
+							on:click={async () => {
+								deletingTelemetrie = true;
+								try {
+									await authApi.effacerTelemetrie();
+									toast('success', 'Données de navigation effacées.');
+								} catch {
+									toast('error', 'Erreur lors de la suppression.');
+								}
+								deletingTelemetrie = false;
+								confirmDeleteTelemetrie = false;
+							}}
+						>
+							Oui, effacer
+						</button>
+						<button
+							type="button"
+							class="btn btn-sm"
+							style="font-size:.78rem"
+							on:click={() => (confirmDeleteTelemetrie = false)}
+						>
+							Annuler
+						</button>
+					</span>
+				{/if}
+			</div>
+		</div>
 	</section>
 
 </div>

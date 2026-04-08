@@ -6,7 +6,7 @@
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser } from '$lib/stores/auth';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { initTelemetry, trackPageView } from '$lib/telemetry';
+	import { initTelemetry, trackPageView, setTelemetryOptOut } from '$lib/telemetry';
 	import pkg from '../../../package.json';
 
 	onMount(async () => {
@@ -23,6 +23,10 @@
 			} else {
 				goto('/auth/connexion');
 			}
+		}
+		// Appliquer l'opt-out télémétrie si l'utilisateur l'a activé
+		if ($currentUser?.opt_out_telemetrie) {
+			setTelemetryOptOut(true);
 		}
 	});
 
