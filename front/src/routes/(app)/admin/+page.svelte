@@ -2058,12 +2058,7 @@ $: _siteNom = $siteNomStore;
 {:else if onglet === 'telemetry'}
 <section class="config-section">
   <h2 class="config-section-title">📊 Télémétrie — Utilisation de l'application</h2>
-  <div class="backup-header">
-    <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand. L'agrégation est automatique (chaque nuit à 2h). Les événements bruts sont conservés 30 jours, les données journalières 12 mois, les données mensuelles 10 ans.</p>
-    <button class="btn btn-primary" on:click={declencherAggregation} disabled={telemetryAggEnCours}>
-      {telemetryAggEnCours ? 'En cours...' : 'Agréger maintenant'}
-    </button>
-  </div>
+  <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand. L'agrégation est automatique (chaque nuit à 2h). Les événements bruts sont conservés 30 jours, les données journalières 12 mois, les données mensuelles 10 ans.</p>
 
   {#if telemetryLoading}
     <p class="muted">Chargement des statistiques...</p>

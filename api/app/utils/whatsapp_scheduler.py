@@ -6,6 +6,7 @@ correspondant à une règle cron_rule, et envoie le message.
 import calendar
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlmodel import Session, select
 
@@ -40,7 +41,7 @@ def check_and_send():
     """Vérifie les messages planifiés et envoie ceux qui correspondent à aujourd'hui."""
     from app.utils.whatsapp import envoyer_whatsapp_raw
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Europe/Paris"))
     logger.info("WhatsApp scheduler check at %s", now.strftime("%Y-%m-%d %H:%M"))
 
     with Session(engine) as session:

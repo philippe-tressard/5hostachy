@@ -147,6 +147,10 @@ def dashboard(
     ).one()
 
     # --- Heure moyenne de plus forte / plus faible audience (30 derniers jours) ---
+    # Les heures sont stockées en UTC — conversion vers Europe/Paris
+    from zoneinfo import ZoneInfo
+    paris_offset = int(now.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).utcoffset().total_seconds() // 3600)
+
     hour_stats = session.exec(
         select(
             func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
@@ -161,8 +165,8 @@ def dashboard(
     low_hour = None
     if hour_stats:
         sorted_hours = sorted(hour_stats, key=lambda x: x[1])
-        low_hour = {"heure": sorted_hours[0][0], "vues": sorted_hours[0][1]}
-        peak_hour = {"heure": sorted_hours[-1][0], "vues": sorted_hours[-1][1]}
+        low_hour = {"heure": (sorted_hours[0][0] + paris_offset) % 24, "vues": sorted_hours[0][1]}
+        peak_hour = {"heure": (sorted_hours[-1][0] + paris_offset) % 24, "vues": sorted_hours[-1][1]}
 
     # --- Jour du mois de plus forte audience (moyenne sur données daily) ---
     day_of_month_stats = session.exec(
