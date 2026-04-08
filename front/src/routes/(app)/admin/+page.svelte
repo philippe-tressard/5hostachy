@@ -9,7 +9,7 @@ import RichEditor from '$lib/components/RichEditor.svelte';
 import { safeHtml } from '$lib/sanitize';
 
 //  Onglets 
-let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'referentiels' | 'whatsapp' | 'smtp' = 'comptes';
+let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'referentiels' | 'whatsapp' | 'smtp' | 'telemetry' = 'comptes';
 
 //  Bâtiments (pour affichage) 
 let batimentsMap: Record<number, string> = {};
@@ -172,6 +172,38 @@ setTimeout(loadHistoriqueMaintenance, 4000);
 toast('error', e.message ?? 'Erreur');
 } finally {
 maintenanceEnCours = false;
+}
+}
+
+//  Télémétrie 
+let telemetryData: any = null;
+let telemetryUsers: any[] = [];
+let telemetryLoading = true;
+let telemetryAggEnCours = false;
+
+async function loadTelemetry() {
+telemetryLoading = true;
+try {
+const [dash, users] = await Promise.all([
+api.get<any>('/telemetry/dashboard'),
+api.get<any[]>('/telemetry/users-active'),
+]);
+telemetryData = dash;
+telemetryUsers = users;
+} catch { telemetryData = null; telemetryUsers = []; }
+finally { telemetryLoading = false; }
+}
+
+async function declencherAggregation() {
+telemetryAggEnCours = true;
+try {
+await api.post('/admin/telemetry/agreger');
+toast('success', 'Agrégation lancée en arrière-plan.');
+setTimeout(loadTelemetry, 3000);
+} catch (e: any) {
+toast('error', e.message ?? 'Erreur');
+} finally {
+telemetryAggEnCours = false;
 }
 }
 
@@ -618,6 +650,7 @@ loadEmails();
 loadDemandesProfil();
 loadWaScheduled();
 loadWaLogs();
+loadTelemetry();
 });
 
 function fmt(date: string) {
@@ -963,6 +996,9 @@ $: _siteNom = $siteNomStore;
     </button>
     <button class="tab-btn" class:active={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>
       ✉️ SMTP
+    </button>
+    <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>
+      📊 Télémétrie
     </button>
   </div>
 </div>
@@ -2008,9 +2044,134 @@ $: _siteNom = $siteNomStore;
   </div>
 </section>
 
-{/if}
+{:else if onglet === 'telemetry'}
+<section class="config-section">
+  <h2 class="config-section-title">📊 Télémétrie — Utilisation de l'application</h2>
+  <div class="backup-header">
+    <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand. L'agrégation est automatique (chaque nuit à 2h). Les événements bruts sont conservés 30 jours, les données journalières 12 mois, les données mensuelles 10 ans.</p>
+    <button class="btn btn-primary" on:click={declencherAggregation} disabled={telemetryAggEnCours}>
+      {telemetryAggEnCours ? 'En cours...' : 'Agréger maintenant'}
+    </button>
+  </div>
 
-<!-- Modal validation compte (hors onglets car utilisé depuis "Comptes en attente") -->
+  {#if telemetryLoading}
+    <p class="muted">Chargement des statistiques...</p>
+  {:else if !telemetryData}
+    <div class="empty-state">
+      <h3>Aucune donnée de télémétrie</h3>
+      <p>Les données apparaîtront après les premières visites.</p>
+    </div>
+  {:else}
+    <!-- KPI du jour -->
+    <div class="tl-kpi-row">
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.today.active_users}</div>
+        <div class="tl-kpi-label">Utilisateurs actifs aujourd'hui</div>
+      </div>
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.today.total_views}</div>
+        <div class="tl-kpi-label">Pages vues aujourd'hui</div>
+      </div>
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.top_pages_30d.length}</div>
+        <div class="tl-kpi-label">Pages visitées (30j)</div>
+      </div>
+    </div>
+
+    <!-- Top pages aujourd'hui -->
+    {#if telemetryData.today.pages.length > 0}
+    <div class="card" style="margin-top:1.25rem">
+      <h3 class="tl-section-title">📍 Pages visitées aujourd'hui</h3>
+      <table class="table">
+        <thead><tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Utilisateurs</th></tr></thead>
+        <tbody>
+          {#each telemetryData.today.pages as p}
+            <tr>
+              <td><code style="font-size:.82rem">{p.page}</code></td>
+              <td style="text-align:right;font-weight:600">{p.total}</td>
+              <td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    {/if}
+
+    <!-- Graphe 30 derniers jours (barres CSS) -->
+    {#if telemetryData.daily.length > 0}
+    <div class="card" style="margin-top:1.25rem">
+      <h3 class="tl-section-title">📈 30 derniers jours — vues par jour</h3>
+      <div class="tl-chart">
+        {#each telemetryData.daily as d}
+          {@const maxVal = Math.max(...telemetryData.daily.map((x: any) => x.total), 1)}
+          <div class="tl-bar-col" title="{d.jour} — {d.total} vues, {d.uniques} uniques">
+            <div class="tl-bar" style="height:{Math.max(4, (d.total / maxVal) * 100)}%"></div>
+            <div class="tl-bar-label">{d.jour.slice(8)}</div>
+          </div>
+        {/each}
+      </div>
+    </div>
+    {/if}
+
+    <!-- Top pages 30 jours -->
+    {#if telemetryData.top_pages_30d.length > 0}
+    <div class="card" style="margin-top:1.25rem">
+      <h3 class="tl-section-title">🏆 Top pages — 30 derniers jours</h3>
+      <table class="table">
+        <thead><tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Utilisateurs</th><th style="text-align:right">%</th></tr></thead>
+        <tbody>
+          {#each telemetryData.top_pages_30d as p}
+            {@const grandTotal = telemetryData.top_pages_30d.reduce((s: number, x: any) => s + x.total, 0) || 1}
+            <tr>
+              <td><code style="font-size:.82rem">{p.page}</code></td>
+              <td style="text-align:right;font-weight:600">{p.total}</td>
+              <td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
+              <td style="text-align:right;color:var(--color-text-muted)">{(p.total / grandTotal * 100).toFixed(1)}%</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    {/if}
+
+    <!-- Graphe mensuel -->
+    {#if telemetryData.monthly.length > 0}
+    <div class="card" style="margin-top:1.25rem">
+      <h3 class="tl-section-title">📅 Historique mensuel</h3>
+      <div class="tl-chart">
+        {#each telemetryData.monthly as m}
+          {@const maxVal = Math.max(...telemetryData.monthly.map((x: any) => x.total), 1)}
+          <div class="tl-bar-col tl-bar-col-month" title="{m.mois} — {m.total} vues, {m.uniques} uniques">
+            <div class="tl-bar tl-bar-month" style="height:{Math.max(4, (m.total / maxVal) * 100)}%"></div>
+            <div class="tl-bar-label">{m.mois.slice(5)}</div>
+          </div>
+        {/each}
+      </div>
+    </div>
+    {/if}
+
+    <!-- Utilisateurs les plus actifs -->
+    {#if telemetryUsers.length > 0}
+    <div class="card" style="margin-top:1.25rem">
+      <h3 class="tl-section-title">👥 Utilisateurs les plus actifs (30 jours)</h3>
+      <table class="table">
+        <thead><tr><th>Utilisateur</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th></tr></thead>
+        <tbody>
+          {#each telemetryUsers as u}
+            <tr>
+              <td style="font-size:.85rem">{u.nom}</td>
+              <td style="text-align:right;font-weight:600">{u.total}</td>
+              <td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    {/if}
+  {/if}
+</section>
+
+{/if}
 {#if cvModal}
 <div class="modal-overlay" on:click|self={() => (cvModal = null)} role="dialog" aria-modal="true" tabindex="-1">
   <div class="modal-box card" style="max-width:480px">
@@ -2164,4 +2325,17 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .utag-ko { background: #f8d7da; color: #721c24; }
 .onglets-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .75rem; }
 .onglet-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
+
+/* Télémétrie */
+.tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
+.tl-kpi { background: var(--color-surface, #fff); border: 1px solid var(--color-border); border-radius: var(--radius, 8px); padding: 1.25rem 1rem; text-align: center; }
+.tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
+.tl-kpi-label { font-size: .82rem; color: var(--color-text-muted); margin-top: .3rem; }
+.tl-section-title { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
+.tl-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0 1rem .5rem; overflow-x: auto; }
+.tl-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 16px; height: 100%; justify-content: flex-end; }
+.tl-bar { background: var(--color-primary); border-radius: 3px 3px 0 0; width: 100%; min-height: 4px; transition: height .3s; }
+.tl-bar-month { background: var(--color-primary-light, #93c5fd); }
+.tl-bar-label { font-size: .6rem; color: var(--color-text-muted); margin-top: 2px; white-space: nowrap; }
+.tl-bar-col-month { min-width: 32px; }
 </style>

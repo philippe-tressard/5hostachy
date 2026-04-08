@@ -112,6 +112,13 @@ Espace conseil syndical  ← ACCÈS RÉSERVÉ rôle conseil_syndical + admin
     │   ├── Configuration (fréquence, nombre de versions, heure)
     │   ├── Sauvegarder maintenant
     │   └── Historique (téléchargement, restauration)
+    ├── Télémétrie
+    │   ├── KPI du jour (vues, utilisateurs uniques, pages)
+    │   ├── Top pages 30 jours (classement, %)
+    │   ├── Graphe 30 jours (barres jour par jour)
+    │   ├── Historique mensuel (barres mois par mois)
+    │   ├── Utilisateurs les plus actifs (top 30)
+    │   └── Agréger maintenant (déclenchement manuel)
     ├── Profils d'accès documentaires  (EF-WEB-013)
     ├── Catégories de documents  (EF-WEB-013)
     └── Templates d’emails  (EF-WEB-073)

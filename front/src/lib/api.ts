@@ -679,6 +679,10 @@ export const admin = {
 	// Audit associations user-lot
 	auditUserLots: () => api.get<any[]>('/admin/audit/user-lots'),
 	supprimerUserLot: (id: number) => api.delete(`/admin/user-lots/${id}`),
+	// Télémétrie
+	telemetryDashboard: () => api.get<any>('/telemetry/dashboard'),
+	telemetryUsersActive: () => api.get<any[]>('/telemetry/users-active'),
+	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
 };
 
 export const config = {

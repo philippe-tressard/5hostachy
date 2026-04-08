@@ -1,13 +1,18 @@
 ﻿<script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { afterNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser } from '$lib/stores/auth';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { initTelemetry, trackPageView } from '$lib/telemetry';
 	import pkg from '../../../package.json';
 
 	onMount(async () => {
+		initTelemetry();
+		trackPageView(window.location.pathname);
+
 		const [, meResult] = await Promise.allSettled([
 			loadSiteConfig(),
 			!$currentUser ? authApi.me() : Promise.resolve(null),
@@ -19,6 +24,10 @@
 				goto('/auth/connexion');
 			}
 		}
+	});
+
+	afterNavigate(() => {
+		trackPageView(window.location.pathname);
 	});
 
 	$: siteNom  = $siteNomStore;

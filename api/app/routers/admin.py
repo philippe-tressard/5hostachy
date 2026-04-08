@@ -370,6 +370,19 @@ def maintenance_now(
     return {"message": "Maintenance lancée en arrière-plan", "id": entry.id}
 
 
+# ── Télémétrie — agrégation manuelle ──────────────────────────────────────────
+
+@router.post("/telemetry/agreger", status_code=200)
+def telemetry_agreger(
+    background_tasks: BackgroundTasks,
+    _: Utilisateur = Depends(require_admin),
+):
+    """Lance l'agrégation de la télémétrie en arrière-plan."""
+    from app.utils.telemetry_aggregation import run_telemetry_aggregation
+    background_tasks.add_task(run_telemetry_aggregation)
+    return {"message": "Agrégation lancée en arrière-plan"}
+
+
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
 from app.models.core import ModeleEmail

@@ -740,6 +740,43 @@ class HistoriqueMaintenance(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
+#  Télémétrie
+# ──────────────────────────────────────────────
+
+class TelemetryEvent(SQLModel, table=True):
+    """Événement brut de télémétrie — conservé 30 jours puis agrégé."""
+    __tablename__ = "telemetry_event"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    page: str = Field(index=True)          # ex: /actualites, /tickets
+    action: str = "view"                    # view | click | submit
+    detail: Optional[str] = None            # ex: bouton cliqué, id ticket
+    cree_le: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class TelemetryDaily(SQLModel, table=True):
+    """Agrégation journalière — conservée 12 mois."""
+    __tablename__ = "telemetry_daily"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    jour: str = Field(index=True)           # YYYY-MM-DD
+    page: str
+    action: str = "view"
+    utilisateurs_uniques: int = 0
+    total: int = 0
+
+
+class TelemetryMonthly(SQLModel, table=True):
+    """Agrégation mensuelle — conservée 10 ans."""
+    __tablename__ = "telemetry_monthly"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    mois: str = Field(index=True)           # YYYY-MM
+    page: str
+    action: str = "view"
+    utilisateurs_uniques: int = 0
+    total: int = 0
+
+
+# ──────────────────────────────────────────────
 #  Notifications
 # ──────────────────────────────────────────────
 
