@@ -92,7 +92,7 @@ def setup_scheduler():
     """Configure APScheduler selon ConfigSauvegarde (ou paramètres .env par défaut)."""
     from apscheduler.schedulers.background import BackgroundScheduler
 
-    scheduler = BackgroundScheduler()
+    scheduler = BackgroundScheduler(timezone="Europe/Paris")
 
     with Session(engine) as session:
         cfg: ConfigSauvegarde | None = session.exec(select(ConfigSauvegarde)).first()
