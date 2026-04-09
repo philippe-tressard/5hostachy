@@ -98,17 +98,37 @@ def dashboard(
     # --- 30 derniers jours (depuis telemetry_daily) ---
     daily_rows = session.exec(
         select(TelemetryDaily)
-        .where(TelemetryDaily.jour >= thirty_days_ago)
+        .where(TelemetryDaily.jour >= thirty_days_ago, TelemetryDaily.page != "__total__")
         .order_by(TelemetryDaily.jour)
     ).all()
+
+    # Vrais utilisateurs uniques par jour (COUNT DISTINCT depuis events bruts)
+    # Les données agrégées par page surestiment : un user sur 13 pages = compté 13×.
+    daily_uniques_raw = session.exec(
+        select(
+            func.strftime("%Y-%m-%d", TelemetryEvent.cree_le).label("jour"),
+            func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+        )
+        .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+        .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le))
+    ).all()
+    daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
+
+    # Fallback : lignes __total__ dans telemetry_daily (quand events bruts purgés > 30j)
+    total_rows = session.exec(
+        select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques)
+        .where(TelemetryDaily.jour >= thirty_days_ago, TelemetryDaily.page == "__total__")
+    ).all()
+    for r in total_rows:
+        if r[0] not in daily_uniques_map:
+            daily_uniques_map[r[0]] = r[1]
 
     # Agrégation par jour pour le graphe
     daily_chart: dict[str, dict] = {}
     for r in daily_rows:
         if r.jour not in daily_chart:
-            daily_chart[r.jour] = {"jour": r.jour, "total": 0, "uniques": 0}
+            daily_chart[r.jour] = {"jour": r.jour, "total": 0, "uniques": daily_uniques_map.get(r.jour, 0)}
         daily_chart[r.jour]["total"] += r.total
-        daily_chart[r.jour]["uniques"] += r.utilisateurs_uniques
 
     # Top pages sur 30 jours
     top_pages_30d: dict[str, dict] = {}
@@ -122,16 +142,35 @@ def dashboard(
     twelve_months_ago = (now - timedelta(days=365)).strftime("%Y-%m")
     monthly_rows = session.exec(
         select(TelemetryMonthly)
-        .where(TelemetryMonthly.mois >= twelve_months_ago)
+        .where(TelemetryMonthly.mois >= twelve_months_ago, TelemetryMonthly.page != "__total__")
         .order_by(TelemetryMonthly.mois)
     ).all()
+
+    # Vrais uniques par mois (events bruts, fenêtre 30j — couvre mois en cours + précédent)
+    monthly_uniques_raw = session.exec(
+        select(
+            func.strftime("%Y-%m", TelemetryEvent.cree_le).label("mois"),
+            func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+        )
+        .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+        .group_by(func.strftime("%Y-%m", TelemetryEvent.cree_le))
+    ).all()
+    monthly_uniques_map = {r[0]: r[1] for r in monthly_uniques_raw}
+
+    # Fallback : lignes __total__ dans telemetry_monthly (mois anciens)
+    total_monthly_rows = session.exec(
+        select(TelemetryMonthly.mois, TelemetryMonthly.utilisateurs_uniques)
+        .where(TelemetryMonthly.mois >= twelve_months_ago, TelemetryMonthly.page == "__total__")
+    ).all()
+    for r in total_monthly_rows:
+        if r[0] not in monthly_uniques_map:
+            monthly_uniques_map[r[0]] = r[1]
 
     monthly_chart: dict[str, dict] = {}
     for r in monthly_rows:
         if r.mois not in monthly_chart:
-            monthly_chart[r.mois] = {"mois": r.mois, "total": 0, "uniques": 0}
+            monthly_chart[r.mois] = {"mois": r.mois, "total": 0, "uniques": monthly_uniques_map.get(r.mois, 0)}
         monthly_chart[r.mois]["total"] += r.total
-        monthly_chart[r.mois]["uniques"] += r.utilisateurs_uniques
 
     # --- Utilisateurs actifs aujourd'hui ---
     active_today = session.exec(
@@ -174,6 +213,7 @@ def dashboard(
             func.cast(func.substr(TelemetryDaily.jour, 9, 2), sa.Integer).label("jour_mois"),
             func.avg(TelemetryDaily.total).label("moyenne"),
         )
+        .where(TelemetryDaily.page != "__total__")
         .group_by("jour_mois")
         .order_by(func.avg(TelemetryDaily.total).desc())
         .limit(1)
@@ -186,32 +226,21 @@ def dashboard(
             "moyenne_vues": round(float(day_of_month_stats[1]), 1),
         }
 
-    # --- Records d'utilisateurs uniques (10 ans glissant) ---
-    # Meilleur jour (depuis telemetry_daily — toutes les données disponibles)
-    best_day = session.exec(
-        select(
-            TelemetryDaily.jour,
-            func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
-        )
-        .group_by(TelemetryDaily.jour)
-        .order_by(func.sum(TelemetryDaily.utilisateurs_uniques).desc())
-        .limit(1)
-    ).first()
+    # --- Records d'utilisateurs uniques ─────────────────────────────────────
+    # Priorité : events bruts (précis) → lignes __total__ dans daily/monthly (pérenne)
+    best_day = None
+    if daily_uniques_map:
+        best_jour = max(daily_uniques_map, key=daily_uniques_map.get)  # type: ignore[arg-type]
+        best_day = {"jour": best_jour, "uniques": daily_uniques_map[best_jour]}
 
-    # Meilleur mois (depuis telemetry_monthly — 10 ans)
-    best_month = session.exec(
-        select(
-            TelemetryMonthly.mois,
-            func.sum(TelemetryMonthly.utilisateurs_uniques).label("uniques"),
-        )
-        .group_by(TelemetryMonthly.mois)
-        .order_by(func.sum(TelemetryMonthly.utilisateurs_uniques).desc())
-        .limit(1)
-    ).first()
+    best_month = None
+    if monthly_uniques_map:
+        best_mois = max(monthly_uniques_map, key=monthly_uniques_map.get)  # type: ignore[arg-type]
+        best_month = {"mois": best_mois, "uniques": monthly_uniques_map[best_mois]}
 
     records = {
-        "best_day": {"jour": best_day[0], "uniques": best_day[1]} if best_day else None,
-        "best_month": {"mois": best_month[0], "uniques": best_month[1]} if best_month else None,
+        "best_day": best_day,
+        "best_month": best_month,
     }
 
     return {
