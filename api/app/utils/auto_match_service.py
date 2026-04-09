@@ -207,11 +207,9 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
       1. Nom complet normalisé exact (ex. "dupont jean")
       2. Variante compacte sans espaces (ex. "dupontjean")
       3. Bigrammes consécutifs pour noms avec bruit (ex. "M. DUPONT JEAN")
-      4. Mot unique restant après filtrage des tokens courts <= 2 chars
-         (gère "M. DUPONT" → "dupont" matché contre la clé NOM)
-
-    SUPPRIMÉ : matching mono-token agressif qui causait des faux positifs
-    quand un prénom commun (ex. "PHILIPPE") apparaissait dans un autre import.
+      4. Chaque mot significatif (>3 car) testé contre les clés NOM
+         (gère "M. DUPONT" → "dupont", mais aussi "ALIF MASSON" → "masson")
+         user_keys ne contient PAS le prénom seul → pas de faux positif.
     """
     for part in _split_name_candidates(raw_name):
         norm = _norm(part)
@@ -227,10 +225,13 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
         for i in range(len(words) - 1):
             if f"{words[i]} {words[i + 1]}" in user_keys:
                 return True
-        # Si un seul mot significatif reste (ex. "M. DUPONT" → ["dupont"]),
-        # tenter le match contre les clés NOM (pas le prénom — il n'est pas dans user_keys)
-        if len(words) == 1 and len(words[0]) > 3 and words[0] in user_keys:
-            return True
+        # Tenter chaque mot significatif individuellement contre les clés NOM.
+        # user_keys ne contient PAS le prénom seul → pas de faux positif
+        # sur un prénom commun. Permet de matcher "ALIF MASSON" → user "Christophe MASSON"
+        # via la clé NOM "masson".
+        for w in words:
+            if len(w) > 3 and w in user_keys:
+                return True
     return False
 
 

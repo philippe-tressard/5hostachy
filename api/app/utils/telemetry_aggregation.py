@@ -76,6 +76,8 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                     .group_by(TelemetryEvent.page, TelemetryEvent.action)
                 ).all()
 
+                if rows:
+                    rapport["jours_agreges"] += 1
                 for r in rows:
                     session.add(TelemetryDaily(
                         jour=jour_str,
@@ -84,7 +86,6 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         total=r[2],
                         utilisateurs_uniques=r[3],
                     ))
-                    rapport["jours_agreges"] += 1
 
                 current += timedelta(days=1)
 
@@ -140,7 +141,8 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                             total=r[2],
                             utilisateurs_uniques=r[3],
                         ))
-                        rapport["mois_agreges"] += 1
+                if any(r[2] for r in rows):
+                    rapport["mois_agreges"] += 1
 
                 # Avancer au mois suivant
                 if cursor.month == 12:
