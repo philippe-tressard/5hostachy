@@ -108,7 +108,7 @@ def dashboard(
         if r.jour not in daily_chart:
             daily_chart[r.jour] = {"jour": r.jour, "total": 0, "uniques": 0}
         daily_chart[r.jour]["total"] += r.total
-        daily_chart[r.jour]["uniques"] += r.uniques
+        daily_chart[r.jour]["uniques"] += r.utilisateurs_uniques
 
     # Top pages sur 30 jours
     top_pages_30d: dict[str, dict] = {}
@@ -116,7 +116,7 @@ def dashboard(
         if r.page not in top_pages_30d:
             top_pages_30d[r.page] = {"page": r.page, "total": 0, "uniques": 0}
         top_pages_30d[r.page]["total"] += r.total
-        top_pages_30d[r.page]["uniques"] += r.uniques
+        top_pages_30d[r.page]["uniques"] += r.utilisateurs_uniques
 
     # --- 12 derniers mois (depuis telemetry_monthly) ---
     twelve_months_ago = (now - timedelta(days=365)).strftime("%Y-%m")
@@ -131,7 +131,7 @@ def dashboard(
         if r.mois not in monthly_chart:
             monthly_chart[r.mois] = {"mois": r.mois, "total": 0, "uniques": 0}
         monthly_chart[r.mois]["total"] += r.total
-        monthly_chart[r.mois]["uniques"] += r.uniques
+        monthly_chart[r.mois]["uniques"] += r.utilisateurs_uniques
 
     # --- Utilisateurs actifs aujourd'hui ---
     active_today = session.exec(
