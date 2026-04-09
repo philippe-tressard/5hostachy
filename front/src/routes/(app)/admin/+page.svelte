@@ -186,12 +186,12 @@ let telemetryHistLoading = true;
 async function loadTelemetry() {
 telemetryLoading = true;
 try {
-const [dash, users] = await Promise.all([
+const [dashResult, usersResult] = await Promise.allSettled([
 api.get<any>('/telemetry/dashboard'),
 api.get<any[]>('/telemetry/users-active'),
 ]);
-telemetryData = dash;
-telemetryUsers = users;
+telemetryData = dashResult.status === 'fulfilled' ? dashResult.value : null;
+telemetryUsers = usersResult.status === 'fulfilled' ? usersResult.value : [];
 } catch { telemetryData = null; telemetryUsers = []; }
 finally { telemetryLoading = false; }
 }
