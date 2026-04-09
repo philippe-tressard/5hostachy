@@ -87,6 +87,24 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         utilisateurs_uniques=r[3],
                     ))
 
+                # Ligne __total__ : vrais uniques site-wide (COUNT DISTINCT user_id)
+                if rows:
+                    total_uniques = session.exec(
+                        select(func.count(func.distinct(TelemetryEvent.user_id)))
+                        .where(
+                            TelemetryEvent.cree_le >= current,
+                            TelemetryEvent.cree_le < jour_fin,
+                            TelemetryEvent.user_id.isnot(None),
+                        )
+                    ).one() or 0
+                    session.add(TelemetryDaily(
+                        jour=jour_str,
+                        page="__total__",
+                        action="view",
+                        total=sum(r[2] for r in rows),
+                        utilisateurs_uniques=total_uniques,
+                    ))
+
                 current += timedelta(days=1)
 
             session.commit()
@@ -128,7 +146,10 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         func.sum(TelemetryDaily.total).label("total"),
                         func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
                     )
-                    .where(TelemetryDaily.jour.startswith(mois_str))
+                    .where(
+                        TelemetryDaily.jour.startswith(mois_str),
+                        TelemetryDaily.page != "__total__",
+                    )
                     .group_by(TelemetryDaily.page, TelemetryDaily.action)
                 ).all()
 
@@ -141,6 +162,29 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                             total=r[2],
                             utilisateurs_uniques=r[3],
                         ))
+
+                # Ligne __total__ mensuelle : somme des __total__ daily du mois
+                total_row = session.exec(
+                    select(
+                        func.sum(TelemetryDaily.total).label("total"),
+                        func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
+                    )
+                    .where(
+                        TelemetryDaily.jour.startswith(mois_str),
+                        TelemetryDaily.page == "__total__",
+                    )
+                ).first()
+                if total_row and total_row[0]:
+                    session.add(TelemetryMonthly(
+                        mois=mois_str,
+                        page="__total__",
+                        action="view",
+                        total=total_row[0],
+                        # Approximation : somme des uniques quotidiens (même user sur 2 jours = compté 2×)
+                        # Acceptable pour les tendances mensuelles longue durée.
+                        utilisateurs_uniques=total_row[1] or 0,
+                    ))
+
                 if any(r[2] for r in rows):
                     rapport["mois_agreges"] += 1
 
