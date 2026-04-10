@@ -16,9 +16,11 @@ SessionLocal = lambda: Session(engine)
 
 # WAL mode : lectures et écritures concurrentes sans blocage mutuel
 # synchronous=NORMAL : sûr en WAL, bien plus rapide que FULL sur SD card
+# busy_timeout=5000 : attend jusqu'à 5s si la DB est verrouillée au lieu d'échouer immédiatement
 with engine.connect() as _conn:
     _conn.execute(text("PRAGMA journal_mode=WAL"))
     _conn.execute(text("PRAGMA synchronous=NORMAL"))
+    _conn.execute(text("PRAGMA busy_timeout=5000"))
     _conn.commit()
 
 

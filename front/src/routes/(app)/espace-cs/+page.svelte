@@ -3,7 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -78,6 +78,34 @@
 		actif: boolean;
 		affichable: boolean;
 	}
+	interface ReportContrat {
+		id: number;
+		prestataire_id: number;
+		type_equipement: string;
+		libelle: string;
+		numero_contrat?: string | null;
+		date_debut: string;
+		duree_initiale_valeur?: number | null;
+		duree_initiale_unite?: string | null;
+		frequence_type?: string | null;
+		frequence_valeur?: number | null;
+		prochaine_visite?: string | null;
+		actif: boolean;
+	}
+	interface DiagRapport {
+		id: number;
+		titre: string;
+		date_rapport?: string | null;
+	}
+	interface DiagType {
+		id: number;
+		code: string;
+		nom: string;
+		texte_legislatif: string;
+		frequence?: string | null;
+		non_applicable: boolean;
+		rapports: DiagRapport[];
+	}
 
 	// -- Onglet -------------------------------------------------------------
 	let onglet: 'validations' | 'tickets' | 'reporting' | 'annuaire' = 'validations';
@@ -95,7 +123,7 @@
 	let tkEvolContenu = '';
 	let tkEvolStatut = '';
 	let tkEvolSaving = false;
-	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' = 'kanban';
+	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' | 'renouvellements' = 'kanban';
 	let reportPeriodDays: 30 | 90 | 365 = 90;
 	let reportingLoading = false;
 	let reportingLoaded = false;
@@ -106,6 +134,8 @@
 	let reportPrestSynth: any = null;
 	let reportPrestSynthLoading = false;
 	let reportPrestSynthId: number | null = null;
+	let reportContrats: ReportContrat[] = [];
+	let reportDiagTypes: DiagType[] = [];
 
 	const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)' };
 	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange' };
@@ -227,6 +257,35 @@
 			}));
 			return;
 		}
+		if (reportView === 'renouvellements') {
+			const rows: Record<string, unknown>[] = [];
+			for (const c of contratsAvecFin) {
+				rows.push({
+					Section: 'Contrat',
+					Libelle: c.libelle,
+					Prestataire: c.prestataireNom,
+					Equipement: c.type_equipement,
+					Debut: fmtDate(c.date_debut),
+					Fin: fmtDate(c.dateFin.toISOString()),
+					Preavis: fmtDate(c.datePreavis.toISOString()),
+					Statut: c.urgence === 'expire' ? 'Expiré' : c.urgence === 'preavis' ? 'Préavis en cours' : 'Actif',
+				});
+			}
+			for (const d of diagsAvecNext) {
+				rows.push({
+					Section: 'Diagnostic',
+					Libelle: d.nom,
+					Prestataire: '',
+					Equipement: d.code,
+					Debut: d.lastRapportDate ? fmtDate(d.lastRapportDate) : '—',
+					Fin: fmtDate(d.nextDate.toISOString()),
+					Preavis: '',
+					Statut: d.urgence === 'depasse' ? 'Dépassé' : d.urgence === 'annee' ? `À faire en ${ANNEE_COURANTE}` : 'Planifié',
+				});
+			}
+			downloadCsv('reporting-renouvellements-audits.csv', rows);
+			return;
+		}
 	}
 	async function loadPrestSynthese(prestId: number) {
 		reportPrestSynthId = prestId;
@@ -246,8 +305,55 @@
 			tickets: 'Reporting CS — Analyse tickets',
 			devis: 'Reporting CS — Devis & interventions',
 			prestataires: 'Reporting CS — Synthèse prestataires',
+			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
 		};
 		void printReporting(titles[reportView]);
+	}
+
+	/* ── Renouvellements : calculs ──────────────────────────────────────── */
+	const PREAVIS_MOIS = 3;
+	const ANNEE_COURANTE = new Date().getFullYear();
+	const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+
+	function contratDateFin(c: ReportContrat): Date | null {
+		if (!c.date_debut || !c.duree_initiale_valeur || !c.duree_initiale_unite) return null;
+		const d = new Date(c.date_debut);
+		if (c.duree_initiale_unite === 'ans') d.setFullYear(d.getFullYear() + c.duree_initiale_valeur);
+		else if (c.duree_initiale_unite === 'mois') d.setMonth(d.getMonth() + c.duree_initiale_valeur);
+		return d;
+	}
+
+	function contratDatePreavis(dateFin: Date): Date {
+		const d = new Date(dateFin);
+		d.setMonth(d.getMonth() - PREAVIS_MOIS);
+		return d;
+	}
+
+	function contratUrgence(dateFin: Date): 'expire' | 'preavis' | 'annee' | 'futur' {
+		const now = new Date();
+		if (dateFin <= now) return 'expire';
+		if (contratDatePreavis(dateFin) <= now) return 'preavis';
+		if (dateFin.getFullYear() === ANNEE_COURANTE) return 'annee';
+		return 'futur';
+	}
+
+	function diagNextDate(dt: DiagType): Date | null {
+		if (!dt.frequence || dt.non_applicable) return null;
+		const match = dt.frequence.match(/(\d+)/);
+		if (!match) return null;
+		const freqAns = parseInt(match[1]);
+		const lastRapport = dt.rapports.find(r => r.date_rapport);
+		if (!lastRapport || !lastRapport.date_rapport) return null;
+		const d = new Date(lastRapport.date_rapport);
+		d.setFullYear(d.getFullYear() + freqAns);
+		return d;
+	}
+
+	function diagUrgence(nextDate: Date): 'depasse' | 'annee' | 'futur' {
+		const now = new Date();
+		if (nextDate <= now) return 'depasse';
+		if (nextDate.getFullYear() === ANNEE_COURANTE) return 'annee';
+		return 'futur';
 	}
 
 	$: reportKanbanEvents = reportEvenements
@@ -280,6 +386,48 @@
 		return acc;
 	}, {})).map(([statut, total]) => ({ statut, total })).sort((a, b) => b.total - a.total);
 
+	/* ── Reactives renouvellements ───────────────────────────────────── */
+	$: contratsAvecFin = reportContrats
+		.map(c => {
+			const fin = contratDateFin(c);
+			if (!fin) return null;
+			const preavis = contratDatePreavis(fin);
+			const urgence = contratUrgence(fin);
+			const prest = reportPrestataires.find(p => p.id === c.prestataire_id);
+			return { ...c, dateFin: fin, datePreavis: preavis, urgence, prestataireNom: prest?.nom ?? `#${c.prestataire_id}` };
+		})
+		.filter((c): c is NonNullable<typeof c> => c !== null)
+		.sort((a, b) => a.dateFin.getTime() - b.dateFin.getTime());
+
+	$: contratsAnneeCourante = contratsAvecFin.filter(c => c.dateFin.getFullYear() === ANNEE_COURANTE);
+
+	$: diagsAvecNext = reportDiagTypes
+		.filter(dt => !dt.non_applicable && dt.frequence && dt.frequence.toLowerCase() !== 'permanent')
+		.map(dt => {
+			const next = diagNextDate(dt);
+			if (!next) return null;
+			const urgence = diagUrgence(next);
+			const lastRapport = dt.rapports.find(r => r.date_rapport);
+			return { ...dt, nextDate: next, urgence, lastRapportDate: lastRapport?.date_rapport ?? null };
+		})
+		.filter((d): d is NonNullable<typeof d> => d !== null)
+		.sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
+
+	$: diagsParAnnee = (() => {
+		const map = new Map<number, typeof diagsAvecNext>();
+		for (const d of diagsAvecNext) {
+			const y = d.nextDate.getFullYear();
+			if (y < ANNEE_COURANTE || y > ANNEE_COURANTE + 10) continue;
+			if (!map.has(y)) map.set(y, []);
+			map.get(y)!.push(d);
+		}
+		return [...map.entries()].sort((a, b) => a[0] - b[0]);
+	})();
+
+	$: renKpiContrats = contratsAnneeCourante.length;
+	$: renKpiPreavis = contratsAvecFin.filter(c => c.urgence === 'preavis' || c.urgence === 'expire').length;
+	$: renKpiDiags = diagsAvecNext.filter(d => d.urgence === 'depasse' || d.urgence === 'annee').length;
+
 	async function loadTickets() {
 		if (tkLoaded) return;
 		tkLoading = true;
@@ -295,10 +443,15 @@
 		reportingLoading = true;
 		try {
 			await loadTickets();
-			const [devis, prestataires, evenements] = await Promise.all([prestApi.devis(), prestApi.list(), calApi.list()]);
+			const [devis, prestataires, evenements, contrats, diagTypes] = await Promise.all([
+				prestApi.devis(), prestApi.list(), calApi.list(),
+				prestApi.contrats(), diagnosticsApi.listTypes()
+			]);
 			reportDevisList = devis as ReportDevis[];
 			reportPrestataires = prestataires as ReportPrestataire[];
 			reportEvenements = evenements as ReportEvenement[];
+			reportContrats = contrats as ReportContrat[];
+			reportDiagTypes = diagTypes as DiagType[];
 			reportingLoaded = true;
 		} catch (e: any) {
 			toast('error', apiMessage(e, 'Erreur chargement reporting'));
@@ -1078,6 +1231,9 @@
 				<button class="pill" class:pill-active={reportView === 'prestataires'} on:click={() => (reportView = 'prestataires')}>
 					&#x1F3E2; Prestataires
 				</button>
+				<button class="pill" class:pill-active={reportView === 'renouvellements'} on:click={() => (reportView = 'renouvellements')}>
+					&#x1F4C5; Renouvellements
+				</button>
 			</div>
 			<div class="reporting-actions">
 				<button class="btn btn-sm btn-outline" on:click={exportCurrentReporting}>
@@ -1374,6 +1530,138 @@
 					{/if}
 				</section>
 			{/if}
+
+		{:else if reportView === 'renouvellements'}
+			<!-- ── Renouvellement contrats & audits ──────────────────────────── -->
+			<div class="kpi-row" style="margin-bottom:1rem">
+				<div class="kpi-card" class:kpi-alert={renKpiPreavis > 0}>
+					<div class="kpi-value">{renKpiPreavis}</div>
+					<div class="kpi-label">Contrats en préavis / expirés</div>
+				</div>
+				<div class="kpi-card">
+					<div class="kpi-value">{renKpiContrats}</div>
+					<div class="kpi-label">Fins de contrat en {ANNEE_COURANTE}</div>
+				</div>
+				<div class="kpi-card" class:kpi-alert={renKpiDiags > 0}>
+					<div class="kpi-value">{renKpiDiags}</div>
+					<div class="kpi-label">Audits à (re)planifier</div>
+				</div>
+			</div>
+
+			<!-- Section 1 : Frise contrats exercice courant -->
+			<section class="report-card" style="margin-bottom:1.5rem">
+				<h3>📋 Fins de contrats prestataires — exercice {ANNEE_COURANTE}</h3>
+				<p class="report-intro">Contrats avec date de fin en {ANNEE_COURANTE}. La zone hachurée indique la période de préavis ({PREAVIS_MOIS} mois).</p>
+
+				{#if contratsAnneeCourante.length === 0}
+					<div class="empty-state"><h3>Aucun contrat n'expire en {ANNEE_COURANTE}</h3></div>
+				{:else}
+					<!-- Frise graphique -->
+					<div class="frise-container">
+						<div class="frise-months">
+							{#each MOIS_LABELS as m}<div class="frise-month-label">{m}</div>{/each}
+						</div>
+						{#each contratsAnneeCourante as c (c.id)}
+							{@const moisFin = c.dateFin.getMonth()}
+							{@const moisPreavis = c.datePreavis.getFullYear() < ANNEE_COURANTE ? 0 : c.datePreavis.getMonth()}
+							{@const barStart = Math.max(0, moisPreavis)}
+							{@const barEnd = moisFin}
+							{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
+							{@const finPos = ((moisFin + 0.5) / 12) * 100}
+							<div class="frise-row">
+								<div class="frise-row-label" title="{c.libelle} — {c.prestataireNom}">
+									<strong>{c.libelle}</strong>
+									<span class="text-muted-sm">{c.prestataireNom}</span>
+								</div>
+								<div class="frise-bar-track">
+									{#if preavisWidth > 0}
+										<div class="frise-preavis-zone frise-urgence-{c.urgence}" style="left:{(barStart/12)*100}%;width:{preavisWidth}%"></div>
+									{/if}
+									<div class="frise-marker frise-marker-{c.urgence}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}">
+										<span class="frise-marker-label">{c.dateFin.getDate()}/{c.dateFin.getMonth()+1}</span>
+									</div>
+								</div>
+							</div>
+						{/each}
+						<div class="frise-legend">
+							<span><span class="frise-legend-dot" style="background:#dc2626"></span> Expiré / Préavis en cours</span>
+							<span><span class="frise-legend-dot" style="background:#f59e0b"></span> Expire cette année</span>
+							<span class="frise-legend-hatch">▧ Zone de préavis</span>
+						</div>
+					</div>
+
+					<!-- Tableau détail -->
+					<div class="report-table-wrap" style="margin-top:1rem">
+						<table class="report-table compact">
+							<thead>
+								<tr><th>Contrat</th><th>Prestataire</th><th>Équipement</th><th>Début</th><th>Fin</th><th>Préavis dès</th><th>Statut</th></tr>
+							</thead>
+							<tbody>
+								{#each contratsAnneeCourante as c (c.id)}
+									<tr>
+										<td><strong>{c.libelle}</strong>{#if c.numero_contrat}<div class="text-muted-sm">N° {c.numero_contrat}</div>{/if}</td>
+										<td>{c.prestataireNom}</td>
+										<td>{c.type_equipement}</td>
+										<td>{fmtDate(c.date_debut)}</td>
+										<td>{fmtDate(c.dateFin.toISOString())}</td>
+										<td>{fmtDate(c.datePreavis.toISOString())}</td>
+										<td>
+											{#if c.urgence === 'expire'}<span class="badge badge-red">Expiré</span>
+											{:else if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
+											{:else}<span class="badge badge-blue">Actif</span>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</section>
+
+			<!-- Section 2 : Audits à replanifier — 10 prochaines années -->
+			<section class="report-card">
+				<h3>🔍 Audits réglementaires à replanifier — {ANNEE_COURANTE}–{ANNEE_COURANTE + 10}</h3>
+				<p class="report-intro">Échéances issues de Résidence / Diagnostics et Contrôles Réglementaires, calculées depuis le dernier rapport + fréquence légale.</p>
+
+				{#if diagsAvecNext.length === 0}
+					<div class="empty-state"><h3>Aucun audit à replanifier</h3><p>Tous les diagnostics sont à jour, non applicables, ou sans rapport initial.</p></div>
+				{:else}
+					<!-- Grille par année -->
+					{#each diagsParAnnee as [annee, diags]}
+						<div class="audit-year-group" class:audit-year-current={annee === ANNEE_COURANTE}>
+							<h4 class="audit-year-title">
+								{annee}
+								<span class="badge {annee === ANNEE_COURANTE ? 'badge-orange' : 'badge-blue'}">{diags.length} audit{diags.length > 1 ? 's' : ''}</span>
+							</h4>
+							<div class="report-table-wrap">
+								<table class="report-table compact">
+									<thead>
+										<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Prochaine échéance</th><th>Statut</th></tr>
+									</thead>
+									<tbody>
+										{#each diags as d (d.id)}
+											<tr>
+												<td><strong>{d.nom}</strong></td>
+												<td>{d.code}</td>
+												<td>{d.frequence}</td>
+												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : '—'}</td>
+												<td>{fmtDate(d.nextDate.toISOString())}</td>
+												<td>
+													{#if d.urgence === 'depasse'}<span class="badge badge-red">Dépassé</span>
+													{:else if d.urgence === 'annee'}<span class="badge badge-orange">À faire en {ANNEE_COURANTE}</span>
+													{:else}<span class="badge badge-blue">{annee}</span>
+													{/if}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</section>
 		{/if}
 	</div>
 
@@ -1976,5 +2264,82 @@
 	}
 	:global(body.print-reporting .reporting-print-header) {
 		display: block !important;
+	}
+
+	/* ── Renouvellements : frise contrats ─────────────────────────── */
+	.frise-container { margin-top: .5rem; }
+	.frise-months {
+		display: grid; grid-template-columns: repeat(12, 1fr);
+		font-size: .7rem; color: var(--color-text-muted); text-transform: uppercase;
+		letter-spacing: .03em; margin-bottom: .35rem; text-align: center;
+		border-bottom: 1px solid var(--color-border); padding-bottom: .3rem;
+	}
+	.frise-row {
+		display: grid; grid-template-columns: 220px 1fr;
+		align-items: center; gap: .5rem; min-height: 36px;
+		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+	}
+	.frise-row-label {
+		display: flex; flex-direction: column; font-size: .82rem;
+		overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+	}
+	.frise-bar-track {
+		position: relative; height: 28px;
+		background: repeating-linear-gradient(
+			90deg,
+			transparent, transparent calc(100% / 12 - 1px),
+			var(--color-border) calc(100% / 12 - 1px), var(--color-border) calc(100% / 12)
+		);
+		border-radius: 4px;
+	}
+	.frise-preavis-zone {
+		position: absolute; top: 2px; bottom: 2px; border-radius: 3px; opacity: .35;
+		background: repeating-linear-gradient(
+			-45deg, transparent, transparent 4px, currentColor 4px, currentColor 6px
+		);
+	}
+	.frise-preavis-zone.frise-urgence-expire,
+	.frise-preavis-zone.frise-urgence-preavis { color: #dc2626; }
+	.frise-preavis-zone.frise-urgence-annee { color: #f59e0b; }
+	.frise-preavis-zone.frise-urgence-futur { color: #3b82f6; }
+
+	.frise-marker {
+		position: absolute; top: 0; bottom: 0; width: 3px; transform: translateX(-50%);
+		border-radius: 2px;
+	}
+	.frise-marker-expire, .frise-marker-preavis { background: #dc2626; }
+	.frise-marker-annee { background: #f59e0b; }
+	.frise-marker-futur { background: #3b82f6; }
+
+	.frise-marker-label {
+		position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+		font-size: .65rem; color: var(--color-text-muted); white-space: nowrap;
+	}
+	.frise-legend {
+		display: flex; gap: 1.2rem; font-size: .78rem; color: var(--color-text-muted);
+		margin-top: 1.2rem; flex-wrap: wrap;
+	}
+	.frise-legend span { display: flex; align-items: center; gap: .35rem; }
+	.frise-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+	.frise-legend-hatch { font-style: italic; }
+
+	/* ── Renouvellements : audits par année ───────────────────────── */
+	.audit-year-group { margin-bottom: 1.2rem; }
+	.audit-year-group:last-child { margin-bottom: 0; }
+	.audit-year-title {
+		font-size: .95rem; font-weight: 700; margin: 0 0 .5rem;
+		display: flex; align-items: center; gap: .5rem;
+	}
+	.audit-year-current { border-left: 3px solid #f59e0b; padding-left: .75rem; }
+
+	@media (max-width: 700px) {
+		.frise-row { grid-template-columns: 1fr; }
+		.frise-bar-track { min-height: 24px; }
+		.frise-months { font-size: .6rem; }
+	}
+
+	@media print {
+		.frise-container { break-inside: avoid; }
+		.audit-year-group { break-inside: avoid; }
 	}
 </style>
