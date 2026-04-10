@@ -62,6 +62,82 @@ def _render(template_str: str, context: dict) -> str:
     return tmpl.render(**context)
 
 
+# ── Logo SVG inline (favicon du site) — base64 pour compatibilité email ──
+_LOGO_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="48" height="48">'
+    '<rect width="64" height="64" rx="14" fill="#1E3A5F"/>'
+    '<g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M18 54V18a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v36Z"/>'
+    '<path d="M18 34h-6a4 4 0 0 0-4 4v16h10"/>'
+    '<path d="M46 30h6a4 4 0 0 1 4 4v20H46"/>'
+    '<path d="M25 22h14"/><path d="M25 30h14"/><path d="M25 38h14"/><path d="M25 46h14"/>'
+    '</g>'
+    '<path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/>'
+    '</svg>'
+)
+
+
+def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee: int) -> str:
+    """Encapsule le contenu HTML dans un gabarit email aux couleurs du site."""
+    safe_footer = ""
+    if footer:
+        safe_footer = (
+            f'<tr><td style="padding:20px 32px 0;border-top:1px solid #D0D8E4">'
+            f'<p style="margin:0;font-size:13px;color:#5A6070">{footer}</p></td></tr>'
+        )
+    return f'''<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{site_nom}</title></head>
+<body style="margin:0;padding:0;background-color:#F2EFE9;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,'Helvetica Neue',Arial,sans-serif;color:#1A1A2E;-webkit-text-size-adjust:100%">
+
+<!-- Wrapper -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F2EFE9;padding:24px 0">
+<tr><td align="center">
+
+<!-- Container -->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(30,58,95,0.12)">
+
+  <!-- Header -->
+  <tr><td style="background:linear-gradient(135deg,#1E3A5F 0%,#16304F 100%);padding:28px 32px;text-align:center">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto"><tr>
+      <td style="vertical-align:middle;padding-right:14px">{_LOGO_SVG}</td>
+      <td style="vertical-align:middle;text-align:left">
+        <div style="font-family:Georgia,'Palatino Linotype','Book Antiqua',Palatino,serif;font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:0.3px">{site_nom}</div>
+        <div style="font-size:12px;color:#C9983A;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;font-weight:600">Espace numérique de résidence</div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Accent bar -->
+  <tr><td style="height:4px;background:linear-gradient(90deg,#C9983A 0%,#1E3A5F 50%,#3D6B4F 100%)"></td></tr>
+
+  <!-- Body -->
+  <tr><td style="background-color:#FFFFFF;padding:32px 32px 24px;font-size:15px;line-height:1.65;color:#1A1A2E">
+    {body_html}
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background-color:#FAFAF7;padding:20px 32px 24px;font-size:12px;color:#5A6070;text-align:center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      {safe_footer}
+      <tr><td style="padding:{("16px" if footer else "0")} 0 0;text-align:center">
+        <a href="{site_url}" style="color:#1E3A5F;text-decoration:none;font-weight:600;font-size:13px">{site_url.replace("https://","").rstrip("/")}</a>
+        <p style="margin:6px 0 0;font-size:11px;color:#9AA0AD">© {annee} {site_nom} — Tous droits réservés</p>
+      </td></tr>
+    </table>
+  </td></tr>
+
+</table>
+<!-- /Container -->
+
+</td></tr>
+</table>
+<!-- /Wrapper -->
+</body>
+</html>'''
+
+
 async def send_email(
     code: str,
     to: str,
@@ -154,12 +230,19 @@ async def send_email(
             )
             fm = FastMail(cfg)
             rendered_body = _render(template.corps_html, ctx)
-            if email_footer:
-                rendered_body += f'<p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #ddd;padding-top:12px">{email_footer}</p>'
+            site_nom = site_nom_row.valeur if site_nom_row else "Ma Résidence"
+            site_url = site_url_row.valeur if site_url_row else "https://localhost"
+            full_html = _wrap_email(
+                rendered_body,
+                site_nom=site_nom,
+                site_url=site_url,
+                footer=email_footer,
+                annee=ctx["annee"],
+            )
             msg_kwargs = dict(
                 subject=_render(template.sujet, ctx),
                 recipients=[to],
-                body=rendered_body,
+                body=full_html,
                 subtype="html",
             )
             if cc:

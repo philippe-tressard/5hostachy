@@ -667,6 +667,7 @@ export const admin = {
 	// Modèles e-mail
 	emailTemplates: () => api.get<any[]>('/admin/modeles-email'),
 	updateEmailTemplate: (id: number, data: unknown) => api.patch(`/admin/modeles-email/${id}`, data),
+	resetEmailTemplates: () => api.post<{ message: string }>('/admin/modeles-email/reinitialiser'),
 	// Utilisateurs & rôles
 	utilisateurs: () => api.get<any[]>('/admin/utilisateurs'),
 	changerRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/changer-role`, { role }),
