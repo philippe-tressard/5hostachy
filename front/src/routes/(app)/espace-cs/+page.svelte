@@ -7,6 +7,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
 	$: _siteNom = $siteNomStore;
@@ -150,8 +151,6 @@
 	$: tkFiltered = tkList.filter(t => !tkFilter || t.statut === tkFilter);
 	$: tkPendingCount = tkList.filter(t => t.statut === 'ouvert').length;
 
-	function fmtDate(d: string) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); }
-	function fmtDatetime(d: string) { return new Date(d).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 	function renderDesc(c: string) { const t = c.trimStart(); return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`); }
 	function apiMessage(e: unknown, fallback = 'Erreur') {
 		if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: unknown }).message ?? fallback);
@@ -1065,7 +1064,7 @@
 							{#if (user.statut === 'aidant' || user.statut === 'mandataire') && user.nom_aide}
 								<span class="text-muted-sm">👤 Aidé : {user.prenom_aide} {user.nom_aide}</span>
 							{/if}
-							<span class="text-muted-sm">{new Date(user.cree_le).toLocaleDateString('fr-FR')}</span>
+							<span class="text-muted-sm">{fmtDateShort(user.cree_le)}</span>
 						</div>
 						<div class="pending-actions">
 							<button class="btn btn-sm btn-success" on:click={() => openCSValidation(user)}>✓ Approuver</button>
@@ -1092,7 +1091,7 @@
 								{cmd.lot.batiment.nom} · {cmd.lot.reference} ·
 								{cmd.type_acces.replace('_', ' ')} · {cmd.quantite}
 							</span>
-							<span class="text-muted-sm">{new Date(cmd.cree_le).toLocaleDateString('fr-FR')}</span>
+							<span class="text-muted-sm">{fmtDateShort(cmd.cree_le)}</span>
 						</div>
 						<div class="pending-actions">
 							<button class="btn btn-sm btn-success" on:click={() => traiterCommande(cmd.id, 'approuver')}>✓ Approuver</button>
@@ -1755,7 +1754,7 @@
 				</div>
 			{:else}
 				<div class="header-summary">
-					<span>{agAnnee ? `AG ${agAnnee}` : 'Année AG non renseignée'}{agDate ? ` · ${new Date(agDate).toLocaleDateString('fr-FR')}` : ''}</span>
+					<span>{agAnnee ? `AG ${agAnnee}` : 'Année AG non renseignée'}{agDate ? ` · ${fmtDateShort(agDate)}` : ''}</span>
 					{#if whatsappUrl}<span style="margin-left:.5rem">· <a href={whatsappUrl} target="_blank" rel="noopener">WhatsApp</a></span>{/if}
 					<button type="button" class="btn-icon btn-icon-edit" title="Modifier" on:click={() => csHeaderEditing = true}><Icon name="pencil" size={13} /></button>
 				</div>

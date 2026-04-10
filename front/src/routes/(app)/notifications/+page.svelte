@@ -5,6 +5,7 @@ import { onMount } from 'svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml, safeRichContent } from '$lib/sanitize';
+	import { fmtTime, fmtDateShort } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'notifications', { titre: 'Notifications', navLabel: 'Notifications', icone: 'bell', descriptif: 'Vos alertes et messages.' });
 	$: _siteNom = $siteNomStore;
@@ -109,7 +110,7 @@ import { onMount } from 'svelte';
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
 						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">{@html safeRichContent(n.corps)}</p>
-						<small style="color:var(--color-text-muted);font-size:.75rem">{new Date(n.cree_le).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</small>
+						<small style="color:var(--color-text-muted);font-size:.75rem">{fmtTime(n.cree_le)}</small>
 					</div>
 				</div>
 				<div class="notif-actions">
@@ -134,7 +135,7 @@ import { onMount } from 'svelte';
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
 						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">{@html safeRichContent(n.corps)}</p>
-						<small style="color:var(--color-text-muted);font-size:.75rem">{new Date(n.cree_le).toLocaleDateString('fr-FR')}</small>
+						<small style="color:var(--color-text-muted);font-size:.75rem">{fmtDateShort(n.cree_le)}</small>
 					</div>
 				</div>
 				<div class="notif-actions">

@@ -9,6 +9,7 @@ import { onMount } from 'svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { setTelemetryOptOut } from '$lib/telemetry';
+	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'profil', { titre: 'Mon profil', navLabel: 'Profil', icone: 'user', descriptif: 'Vos informations personnelles (mot de passe, lots...), sécurité du compte et préférences de notifications.' });
 	$: _siteNom = $siteNomStore;
@@ -305,15 +306,6 @@ import { onMount } from 'svelte';
 		}
 	}
 
-	function fmtDate(d: string | null | undefined): string {
-		if (!d) return '—';
-		return new Date(d).toLocaleDateString('fr-FR');
-	}
-
-	function fmtDatetime(d: string | null | undefined): string {
-		if (!d) return '—';
-		return new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>

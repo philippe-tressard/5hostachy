@@ -10,6 +10,7 @@
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'actualites', { titre: 'Actualités', navLabel: 'Actualités', icone: 'newspaper', descriptif: 'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.' });
 	$: _siteNom = $siteNomStore;
@@ -64,16 +65,6 @@
 			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
 		};
 		return items.map(i => map[i] ?? i).join(' · ');
-	}
-
-	function fmtDate(d: string) {
-		return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-	}
-	function fmtDateLong(d: string) {
-		return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-	}
-	function fmtDatetime(d: string) {
-		return new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 	}
 
 	async function publish() {

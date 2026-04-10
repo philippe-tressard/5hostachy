@@ -7,6 +7,7 @@ import Icon from '$lib/components/Icon.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import { safeHtml } from '$lib/sanitize';
+import { fmtDatetimeShort as fmt } from '$lib/date';
 
 //  Onglets 
 let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'referentiels' | 'whatsapp' | 'smtp' | 'telemetry' = 'comptes';
@@ -665,10 +666,6 @@ loadWaLogs();
 loadTelemetry();
 loadHistoriqueTelemetrie();
 });
-
-function fmt(date: string) {
-return new Date(date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-}
 
 function statutBadge(s: string) {
 const map: Record<string, string> = {

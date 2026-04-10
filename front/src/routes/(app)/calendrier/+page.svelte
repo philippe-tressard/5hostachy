@@ -8,6 +8,7 @@ import { onMount } from 'svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -224,7 +225,7 @@ import { onMount } from 'svelte';
 		return [...map.entries()].sort((a, b) => b[0] - a[0]).map(([year, items]) => {
 			const monthMap = new Map<string, any[]>();
 			for (const item of items) {
-				const key = new Date(item._date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+				const key = fmtMonthYear(item._date);
 				if (!monthMap.has(key)) monthMap.set(key, []);
 				monthMap.get(key)!.push(item);
 			}
@@ -339,7 +340,7 @@ import { onMount } from 'svelte';
 	$: if (onglet === 'archives') { loadArchivedPubs(); loadArchivedDevis(); }
 
 	function formatDate(d: string) {
-		return new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+		return fmtDatetimeShort(d);
 	}
 
 	// Regroupement pour la vue liste :
@@ -355,7 +356,7 @@ import { onMount } from 'svelte';
 			const year = d.getFullYear();
 			const key = year < currentYear
 				? String(year)
-				: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+				: fmtMonthYear(ev.debut);
 			if (!indexMap.has(key)) { indexMap.set(key, result.length); result.push([key, []]); }
 			result[indexMap.get(key)!][1].push(ev);
 		}
@@ -810,7 +811,7 @@ import { onMount } from 'svelte';
 											{#if item.contenu}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.contenu)}</div>{/if}
 										</div>
 										<div class="event-date">
-											<div>{new Date(item._date).toLocaleDateString('fr-FR', { dateStyle: 'short' })}</div>
+											<div>{fmtDateShort(item._date)}</div>
 											{#if item.auteur_nom}<small style="color:var(--color-text-muted)">{item.auteur_nom}</small>{/if}
 										</div>
 										{#if $isAdmin}
@@ -832,7 +833,7 @@ import { onMount } from 'svelte';
 											{#if item.notes}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.notes)}</div>{/if}
 										</div>
 										<div class="event-date">
-											{#if item.date_prestation}<div>{new Date(item.date_prestation).toLocaleDateString('fr-FR', { dateStyle: 'short' })}</div>{/if}
+											{#if item.date_prestation}<div>{fmtDateShort(item.date_prestation)}</div>{/if}
 											{#if item.montant_estime}<div style="font-size:.8rem;color:var(--color-text-muted)">{item.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
 										</div>
 									</div>
@@ -855,7 +856,7 @@ import { onMount } from 'svelte';
 												<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(item.perimetre)}</span>
 											{/if}
 											<small class="ev-updated">
-											{#if item.mis_a_jour_le}Mise à jour le {new Date(item.mis_a_jour_le).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}{:else}Publié le {new Date(item.cree_le).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}{/if}{#if item.auteur_nom} · {item.auteur_nom}{/if}
+											{#if item.mis_a_jour_le}Mise à jour le {fmtDateLong(item.mis_a_jour_le)}{:else}Publié le {fmtDateLong(item.cree_le)}{/if}{#if item.auteur_nom} · {item.auteur_nom}{/if}
 											</small>
 										</div>
 										{#if $isAdmin}
@@ -907,9 +908,9 @@ import { onMount } from 'svelte';
 						{/if}
 						<small class="ev-updated">
 							{#if ev.mis_a_jour_le}
-								Mise à jour le {new Date(ev.mis_a_jour_le).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+								Mise à jour le {fmtDateLong(ev.mis_a_jour_le)}
 							{:else}
-								Publié le {new Date(ev.cree_le).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+								Publié le {fmtDateLong(ev.cree_le)}
 							{/if}{#if ev.auteur_nom} · {ev.auteur_nom}{/if}
 						</small>
 					</div>

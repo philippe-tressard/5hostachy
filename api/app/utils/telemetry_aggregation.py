@@ -6,8 +6,13 @@ Trois niveaux de rétention :
   - Agrégation mensuelle (telemetry_monthly) : 10 ans
 
 Appelé quotidiennement par le scheduler ou manuellement depuis l'admin.
+
+NOTE : Les événements (cree_le) sont stockés en UTC.
+Les bornes jour/mois utilisent le fuseau Europe/Paris pour que le
+découpage corresponde aux journées réelles des utilisateurs.
 """
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, text
 from sqlmodel import Session, select
@@ -16,6 +21,20 @@ from app.database import engine
 from app.models.core import (
     TelemetryEvent, TelemetryDaily, TelemetryMonthly, HistoriqueTelemetrie,
 )
+
+_PARIS = ZoneInfo("Europe/Paris")
+
+
+def _paris_now() -> datetime:
+    """Heure actuelle en Europe/Paris (aware)."""
+    return datetime.now(_PARIS)
+
+
+def _paris_midnight(dt_paris: datetime) -> datetime:
+    """Retourne minuit Paris du jour donné, converti en UTC naïf
+    (pour comparaison avec les cree_le stockés en UTC naïf)."""
+    midnight = dt_paris.replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
 
 def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
@@ -36,10 +55,12 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
     }
 
     with Session(engine) as session:
-        now = datetime.utcnow()
+        now_utc = datetime.utcnow()
+        now_paris = _paris_now()
 
         # ─── 1. Agrégation journalière : events → daily ─────────────────
         # Agréger les événements de la veille (et jours non encore agrégés)
+        # Les bornes utilisent le fuseau Paris pour correspondre aux jours réels.
         try:
             # Trouver le dernier jour agrégé
             last_daily = session.exec(
@@ -50,17 +71,22 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
             # Commencer à partir du jour suivant le dernier agrégé, ou il y a 30 jours
             if last_daily:
-                start_date = datetime.strptime(last_daily, "%Y-%m-%d") + timedelta(days=1)
+                start_paris = datetime.strptime(last_daily, "%Y-%m-%d").replace(tzinfo=_PARIS) + timedelta(days=1)
             else:
-                start_date = now - timedelta(days=30)
+                start_paris = now_paris - timedelta(days=30)
 
             # Ne pas agréger le jour en cours (données incomplètes)
-            end_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            # end = minuit Paris aujourd'hui (= début du jour courant)
+            end_utc = _paris_midnight(now_paris)
+            current_paris = start_paris.replace(hour=0, minute=0, second=0, microsecond=0)
 
-            current = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            while current < end_date:
-                jour_str = current.strftime("%Y-%m-%d")
-                jour_fin = current + timedelta(days=1)
+            while True:
+                current_utc = _paris_midnight(current_paris)
+                if current_utc >= end_utc:
+                    break
+                jour_str = current_paris.strftime("%Y-%m-%d")
+                next_paris = current_paris + timedelta(days=1)
+                jour_fin_utc = _paris_midnight(next_paris)
 
                 rows = session.exec(
                     select(
@@ -70,8 +96,8 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
                     )
                     .where(
-                        TelemetryEvent.cree_le >= current,
-                        TelemetryEvent.cree_le < jour_fin,
+                        TelemetryEvent.cree_le >= current_utc,
+                        TelemetryEvent.cree_le < jour_fin_utc,
                     )
                     .group_by(TelemetryEvent.page, TelemetryEvent.action)
                 ).all()
@@ -92,8 +118,8 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                     total_uniques = session.exec(
                         select(func.count(func.distinct(TelemetryEvent.user_id)))
                         .where(
-                            TelemetryEvent.cree_le >= current,
-                            TelemetryEvent.cree_le < jour_fin,
+                            TelemetryEvent.cree_le >= current_utc,
+                            TelemetryEvent.cree_le < jour_fin_utc,
                             TelemetryEvent.user_id.isnot(None),
                         )
                     ).one() or 0
@@ -105,7 +131,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         utilisateurs_uniques=total_uniques,
                     ))
 
-                current += timedelta(days=1)
+                current_paris = next_paris
 
             session.commit()
         except Exception as exc:
@@ -125,15 +151,15 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                 # Mois suivant le dernier agrégé
                 y, m = map(int, last_monthly.split("-"))
                 if m == 12:
-                    start_month = datetime(y + 1, 1, 1)
+                    start_month = datetime(y + 1, 1, 1, tzinfo=_PARIS)
                 else:
-                    start_month = datetime(y, m + 1, 1)
+                    start_month = datetime(y, m + 1, 1, tzinfo=_PARIS)
             else:
-                start_month = now - timedelta(days=365)
-                start_month = start_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                start_month = (now_paris - timedelta(days=365)).replace(
+                    day=1, hour=0, minute=0, second=0, microsecond=0)
 
             # Ne pas agréger le mois en cours
-            current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            current_month_start = now_paris.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
             cursor = start_month
             while cursor < current_month_start:
@@ -201,7 +227,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
         # ─── 3. Purge : events > 30 jours ───────────────────────────────
         try:
-            cutoff = now - timedelta(days=30)
+            cutoff = now_utc - timedelta(days=30)
             with engine.connect() as conn:
                 result = conn.execute(
                     text("DELETE FROM telemetry_event WHERE cree_le < :cutoff"),
@@ -214,7 +240,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
         # ─── 4. Purge : daily > 12 mois ─────────────────────────────────
         try:
-            cutoff_daily = (now - timedelta(days=365)).strftime("%Y-%m-%d")
+            cutoff_daily = (now_paris - timedelta(days=365)).strftime("%Y-%m-%d")
             with engine.connect() as conn:
                 result = conn.execute(
                     text("DELETE FROM telemetry_daily WHERE jour < :cutoff"),
@@ -227,7 +253,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
         # ─── 5. Purge : monthly > 10 ans ────────────────────────────────
         try:
-            cutoff_monthly = (now - timedelta(days=3650)).strftime("%Y-%m")
+            cutoff_monthly = (now_paris - timedelta(days=3650)).strftime("%Y-%m")
             with engine.connect() as conn:
                 result = conn.execute(
                     text("DELETE FROM telemetry_monthly WHERE mois < :cutoff"),

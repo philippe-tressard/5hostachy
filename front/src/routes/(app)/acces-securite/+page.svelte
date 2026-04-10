@@ -6,6 +6,7 @@ import { onMount } from 'svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDateShort } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'acces-badges', { titre: 'Accès & badges', navLabel: 'Accès & badges', icone: 'key-round', descriptif: 'Gestion de vos télécommandes parkings & Vigiks. <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ?</a>' });
 	$: _siteNom = $siteNomStore;
@@ -360,7 +361,7 @@ import { onMount } from 'svelte';
 				<div>
 					<strong>{cmd.type === 'vigik' ? 'Badge Vigik' : 'Télécommande'}</strong>
 					<span style="color:var(--color-text-muted);font-size:.8rem;margin-left:.5rem">
-						× {cmd.quantite} — {new Date(cmd.cree_le).toLocaleDateString('fr-FR')}
+						× {cmd.quantite} — {fmtDateShort(cmd.cree_le)}
 					</span>
 					{#if cmd.motif}<p style="font-size:.85rem;color:var(--color-text-muted);margin:.2rem 0 0">{cmd.motif}</p>{/if}
 				</div>

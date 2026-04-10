@@ -7,6 +7,7 @@
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import { fmtDateShort as fmt } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', { titre: 'Mes lots', navLabel: 'Mes lots', icone: 'door-closed', descriptif: "Informations sur votre bien : situation de vos lots (appartement, cave & parkings) dans la résidence.", onglets: { lots: { label: '\u{1F3E0} Mes lots', descriptif: 'Situation de vos lots dans la résidence : appartements, caves et parkings.' }, location: { label: '\u{1F4CB} Gestion locative', descriptif: 'Suivi de vos baux, locataires et documents de gestion locative.' } } });
 	$: _siteNom = $siteNomStore;
@@ -609,11 +610,6 @@
 			return [bail.locataire_prenom, bail.locataire_nom].filter(Boolean).join(' ');
 		}
 		return 'Locataire non renseigné';
-	}
-
-	function fmt(d: string | null): string {
-		if (!d) return '—';
-		return new Date(d).toLocaleDateString('fr-FR');
 	}
 
 	function lotTypeLabel(t: string | null | undefined): string {
