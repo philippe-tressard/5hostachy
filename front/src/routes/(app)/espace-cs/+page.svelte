@@ -448,8 +448,8 @@
 		finally { tkLoading = false; }
 	}
 
-	async function loadReporting() {
-		if (reportingLoaded) return;
+	async function loadReporting(force = false) {
+		if (reportingLoaded && !force) return;
 		reportingLoading = true;
 		try {
 			await loadTickets();
@@ -469,6 +469,7 @@
 			reportingLoading = false;
 		}
 	}
+	function refreshReporting() { loadReporting(true); }
 
 	async function tkToggle(id: number) {
 		if (tkExpandedId === id) { tkExpandedId = null; return; }
@@ -1246,6 +1247,9 @@
 				</button>
 			</div>
 			<div class="reporting-actions">
+				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
+					&#x1F504;{reportingLoading ? ' …' : ''}
+				</button>
 				<button class="btn btn-sm btn-outline" on:click={exportCurrentReporting}>
 					&#x2B07; Exporter CSV
 				</button>
