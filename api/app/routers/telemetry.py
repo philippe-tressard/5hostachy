@@ -93,6 +93,7 @@ def dashboard(
 
     # Offset horaire Paris (pour convertir les heures UTC → Paris dans les labels)
     paris_offset = int(now_paris.utcoffset().total_seconds() // 3600)
+    paris_offset_str = f"+{paris_offset} hours"
 
     if scope == "jour":
         # ── SCOPE JOUR ────────────────────────────────────────────────────
@@ -197,11 +198,11 @@ def dashboard(
         # Vrais uniques par jour
         daily_uniques_raw = session.exec(
             select(
-                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le).label("jour"),
+                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
             .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le))
+            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
         ).all()
         daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
 
@@ -313,11 +314,11 @@ def dashboard(
         thirty_days_ago = (now_paris - timedelta(days=30)).strftime("%Y-%m-%d")
         monthly_uniques_raw = session.exec(
             select(
-                func.strftime("%Y-%m", TelemetryEvent.cree_le).label("mois"),
+                func.strftime("%Y-%m", TelemetryEvent.cree_le, paris_offset_str).label("mois"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
             .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m", TelemetryEvent.cree_le))
+            .group_by(func.strftime("%Y-%m", TelemetryEvent.cree_le, paris_offset_str))
         ).all()
         monthly_uniques_map = {r[0]: r[1] for r in monthly_uniques_raw}
 
@@ -352,11 +353,11 @@ def dashboard(
         best_day = None
         daily_uniques_raw = session.exec(
             select(
-                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le).label("jour"),
+                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
             .where(TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le))
+            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
         ).all()
         daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
         # Add fallback from daily totals
