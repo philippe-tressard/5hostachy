@@ -14,6 +14,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDateShort as fmt } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'residence', {
 		titre: 'Ma résidence',
@@ -134,11 +135,6 @@
 		if (!id) return 'Résidence';
 		const b = batiments.find((x) => x.id === id);
 		return b ? `Bât. ${b.numero}` : 'Bât. ?';
-	}
-
-	function fmt(d: string | null | undefined): string {
-		if (!d) return '—';
-		return new Date(d).toLocaleDateString('fr-FR');
 	}
 
 	// ── Init ───────────────────────────────────────────────────────────────────

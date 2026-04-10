@@ -7,6 +7,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
 
 	$: _siteNom = $siteNomStore;
 
@@ -75,10 +76,6 @@
 		const t = c.trimStart();
 		const raw = t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`;
 		return safeHtml(raw);
-	}
-
-	function fmtDatetime(d: string): string {
-		return new Date(d).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 	}
 
 	$: statusInfo = STATUTS.find((s) => s.value === ticket?.statut) ?? STATUTS[0];
@@ -185,9 +182,9 @@
 		</div>
 		<h1 style="font-size:1.1rem;font-weight:700;margin:.6rem 0 .3rem">{ticket.titre}</h1>
 		<p style="font-size:.875rem;color:var(--color-text-muted)">
-			{new Date(ticket.cree_le).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' })}
+			{fmtDateLong(ticket.cree_le)}
 			{#if ticket.mis_a_jour_le && ticket.mis_a_jour_le !== ticket.cree_le}
-				&middot; mis à jour le {new Date(ticket.mis_a_jour_le).toLocaleDateString('fr-FR')}
+				&middot; mis à jour le {fmtDateShort(ticket.mis_a_jour_le)}
 			{/if}
 		</p>
 		{#if ticket.perimetre_cible?.length}
@@ -240,7 +237,7 @@
 					<div class="msg-header">
 						<strong>{msg.auteur?.prenom} {msg.auteur?.nom}</strong>
 						{#if msg.interne}<span class="badge badge-yellow" style="font-size:.65rem">interne</span>{/if}
-						<span class="msg-time">{new Date(msg.cree_le).toLocaleString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</span>
+						<span class="msg-time">{fmtDatetime(msg.cree_le)}</span>
 					</div>
 					<div class="msg-body">{@html renderContent(msg.contenu)}</div>
 				</div>

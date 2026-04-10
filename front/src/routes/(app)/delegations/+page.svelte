@@ -9,6 +9,7 @@
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { fmtDateShort as fmt } from '$lib/date';
 
 	$: _siteNom = $siteNomStore;
 
@@ -57,10 +58,6 @@
 		return map[s] ?? '';
 	}
 
-	function fmt(d: string | null | undefined): string {
-		if (!d) return '\u2014';
-		return new Date(d).toLocaleDateString('fr-FR');
-	}
 
 	async function creer() {
 		if (!formMandantId || !formAidantId) return;

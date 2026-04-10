@@ -3,6 +3,7 @@
 API FastAPI v0.1
 """
 import json as _json
+import re as _re
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
@@ -20,14 +21,22 @@ from app.utils.limiter import limiter
 
 
 # ── Sérialisation UTC : toutes les datetime naïves sortent avec "Z" ───────────
-# FastAPI/Pydantic utilise jsonable_encoder → ENCODERS_BY_TYPE pour datetime.
-# On surcharge pour ajouter le suffixe Z (= UTC) afin que le navigateur
-# convertisse automatiquement en heure locale (Europe/Paris).
+# Problème : FastAPI 0.115+ / Pydantic v2 appelle model_dump(mode="json")
+# qui convertit les datetime en chaînes ISO AVANT que ENCODERS_BY_TYPE ne
+# puisse ajouter le suffixe "Z". Résultat : "2026-04-10T00:00:00" sans "Z"
+# → le navigateur interprète comme heure locale au lieu d'UTC.
+#
+# Solution : UTCJSONResponse post-traite le JSON pour ajouter "Z" à toute
+# chaîne ISO datetime naïve (sans timezone). Le _UTCEncoder reste en place
+# pour les cas où un dict brut contient des objets datetime Python.
 from fastapi.encoders import ENCODERS_BY_TYPE
 
 ENCODERS_BY_TYPE[datetime] = (
     lambda dt: dt.isoformat() + "Z" if dt.tzinfo is None else dt.isoformat()
 )
+
+# Regex : "2026-04-10T00:00:00" ou "2026-04-10T00:00:00.123456" (sans suffixe TZ)
+_NAIVE_DT_RE = _re.compile(r'"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)"')
 
 
 class _UTCEncoder(_json.JSONEncoder):
@@ -43,11 +52,15 @@ class _UTCEncoder(_json.JSONEncoder):
 
 class UTCJSONResponse(JSONResponse):
     def render(self, content: Any) -> bytes:
-        return _json.dumps(
+        body = _json.dumps(
             content,
             cls=_UTCEncoder,
             ensure_ascii=False,
-        ).encode("utf-8")
+        )
+        # Post-traitement : ajouter "Z" aux datetime ISO naïves
+        # (Pydantic v2 les a déjà converties en chaînes sans timezone)
+        body = _NAIVE_DT_RE.sub(r'"\1Z"', body)
+        return body.encode("utf-8")
 
 from app.database import _run_migrations, engine
 from app.routers import (

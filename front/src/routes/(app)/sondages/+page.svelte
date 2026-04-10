@@ -8,6 +8,7 @@ import RichEditor from '$lib/components/RichEditor.svelte';
 import { toast } from '$lib/components/Toast.svelte';
 import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 import { safeHtml } from '$lib/sanitize';
+import { fmtDateShort } from '$lib/date';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
 $: _siteNom = $siteNomStore;
@@ -460,9 +461,9 @@ Résultats visibles avant clôture
 <strong class="sondage-question">{s.question}</strong>
 {#if s.description}<div class="sondage-desc rich-content clamp-5">{@html safeHtml(s.description)}</div>{/if}
 <small style="color:var(--color-text-muted)">
-{new Date(s.cree_le).toLocaleDateString('fr-FR')}
+{fmtDateShort(s.cree_le)}
 {#if s.cloture_le}
-· {estCloture(s) ? '\u{1F512} Clôturé' : `Clôture le ${new Date(s.cloture_le).toLocaleDateString('fr-FR')}`}
+· {estCloture(s) ? '🔒 Clôturé' : `Clôture le ${fmtDateShort(s.cloture_le)}`}
 {/if}
 · <span class="sondage-votants">{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span>
 </small>
@@ -544,7 +545,7 @@ title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
 <span class="badge {statutClass(idee.statut)}">{idee.statut}</span>
 </div>
 <div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
-<small style="color:var(--color-text-muted)">{new Date(idee.cree_le).toLocaleDateString('fr-FR')}</small>
+<small style="color:var(--color-text-muted)">{fmtDateShort(idee.cree_le)}</small>
 </div>
 {#if $isCS}
 <div class="idee-actions">
@@ -655,7 +656,7 @@ Afficher mes coordonnées aux autres résidents
 <span class="badge {statutAnnonceClass(annonce.statut)}" style="font-size:.72rem">{annonce.statut}</span>
 </div>
 <strong class="annonce-titre">{annonce.titre}</strong>
-<small style="color:var(--color-text-muted)">{categorieAnnonceLabel(annonce.categorie)} · {new Date(annonce.cree_le).toLocaleDateString('fr-FR')}</small>
+<small style="color:var(--color-text-muted)">{categorieAnnonceLabel(annonce.categorie)} · {fmtDateShort(annonce.cree_le)}</small>
 {#if annonce.prix !== null && annonce.prix !== undefined}
 <div class="annonce-prix">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(annonce.prix)}{#if annonce.negotiable}&nbsp;<span class="badge badge-gray" style="font-size:.68rem">Négociable</span>{/if}</div>
 {:else if annonce.type_annonce === 'don'}

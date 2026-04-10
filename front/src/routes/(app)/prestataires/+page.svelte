@@ -7,6 +7,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
 	$: _siteNom = $siteNomStore;
@@ -321,8 +322,7 @@
 	}
 
 	function fmtReleve(r: any) {
-		const d = new Date(r.date_releve);
-		return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+		return fmtDayMonth(r.date_releve);
 	}
 
 	function splitTels(tel: string): string[] {
@@ -776,7 +776,7 @@
 							<strong class="kanban-card-titre">{d.titre}</strong>
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
 									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
 									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
 								</div>
@@ -813,7 +813,7 @@
 							<strong class="kanban-card-titre">{d.titre}</strong>
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
 									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
 								</div>
 								{#if $isCS}
@@ -850,7 +850,7 @@
 							<strong class="kanban-card-titre">{d.titre}</strong>
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
 									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
 									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
 								</div>
@@ -887,7 +887,7 @@
 							<strong class="kanban-card-titre">{d.titre}</strong>
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>{/if}
+									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
 									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
 								</div>
 								{#if $isCS}
@@ -922,7 +922,7 @@
 						</div>
 						<div class="devis-infos">
 							{#if d.date_prestation}
-								<span style="font-size:.82rem;font-weight:600;color:var(--color-primary)">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>
+								<span style="font-size:.82rem;font-weight:600;color:var(--color-primary)">📅 {fmtDateShort(d.date_prestation)}</span>
 							{/if}
 						</div>
 						<div class="devis-meta-right">
@@ -998,7 +998,7 @@
 							{:else}
 								<div class="detail-grid">
 									<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
-									{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</div>{/if}
+									{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
 									{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
 								</div>
 								{#if d.notes}
@@ -1057,7 +1057,7 @@
 									</div>
 									<div class="devis-infos">
 										{#if d.date_prestation}
-											<span style="font-size:.82rem;font-weight:600;color:var(--color-text-muted)">📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</span>
+											<span style="font-size:.82rem;font-weight:600;color:var(--color-text-muted)">📅 {fmtDateShort(d.date_prestation)}</span>
 										{/if}
 									</div>
 									<div class="devis-meta-right">
@@ -1072,7 +1072,7 @@
 									<div class="devis-detail-body">
 										<div class="detail-grid">
 											<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
-											{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {new Date(d.date_prestation).toLocaleDateString('fr-FR')}</div>{/if}
+											{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
 											{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
 										</div>
 										{#if d.notes}
@@ -1234,7 +1234,7 @@
 							{#if c.frequence_type}<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>{/if}
 						</div>
 						<div class="visite-date visite-date--retard">
-							🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}
+							🗓 {fmtDateShort(c.prochaine_visite)}
 						</div>
 						<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
 					</div>
@@ -1243,7 +1243,7 @@
 							<div class="detail-grid">
 								<div><span class="detail-label">Contrat</span>{c.libelle}</div>
 								{#if c.numero_contrat}<div><span class="detail-label">N° contrat</span>{c.numero_contrat}</div>{/if}
-								<div><span class="detail-label">Date début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+								<div><span class="detail-label">Date début</span>📅 {fmtDateShort(c.date_debut)}</div>
 								{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
 							</div>
 							{#if $isCS}
@@ -1277,7 +1277,7 @@
 							{#if c.frequence_type}<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>{/if}
 						</div>
 						<div class="visite-date">
-							{#if c.prochaine_visite}🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}{:else}<span style="color:var(--color-text-muted)">Non planifiée</span>{/if}
+							{#if c.prochaine_visite}🗓 {fmtDateShort(c.prochaine_visite)}{:else}<span style="color:var(--color-text-muted)">Non planifiée</span>{/if}
 						</div>
 						<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
 					</div>
@@ -1286,7 +1286,7 @@
 							<div class="detail-grid">
 								<div><span class="detail-label">Contrat</span>{c.libelle}</div>
 								{#if c.numero_contrat}<div><span class="detail-label">N° contrat</span>{c.numero_contrat}</div>{/if}
-								<div><span class="detail-label">Date début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+								<div><span class="detail-label">Date début</span>📅 {fmtDateShort(c.date_debut)}</div>
 								{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
 							</div>
 							{#if $isCS}
@@ -1335,9 +1335,9 @@
 						</div>
 						<div class="contrat-infos">
 							{#if c.prochaine_visite}
-								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</div>
+								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {fmtDateShort(c.prochaine_visite)}</div>
 							{:else}
-								<div>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+								<div>📅 {fmtDateShort(c.date_debut)}</div>
 							{/if}
 							{#if c.frequence_type}
 								<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>
@@ -1401,7 +1401,7 @@
 										{#each contratDocsMap[c.id] as doc}
 											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
 												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
-												<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
+												<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
 												<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
 											</div>
 										{/each}
@@ -1422,12 +1422,12 @@
 								<div class="contrat-section">
 									<div class="contrat-section-title">Infos contrat</div>
 									<div class="detail-grid">
-										<div><span class="detail-label">Date de début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+										<div><span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}</div>
 										{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
 										{#if c.frequence_type}
 											<div><span class="detail-label">Fréquence</span>{frequenceLabel(c)}</div>
 										{/if}
-										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</span></div>{/if}
+										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(c.prochaine_visite)}</span></div>{/if}
 									</div>
 								</div>
 								{#if c.notes}
@@ -1444,7 +1444,7 @@
 										{#each contratDocsMap[c.id] as doc}
 											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
 												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
-												<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
+												<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
 												{#if $isCS}
 													<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
 												{/if}
@@ -1482,9 +1482,9 @@
 						</div>
 						<div class="contrat-infos">
 							{#if c.prochaine_visite}
-								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</div>
+								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {fmtDateShort(c.prochaine_visite)}</div>
 							{:else}
-								<div>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
+								<div>📅 {fmtDateShort(c.date_debut)}</div>
 							{/if}
 						</div>
 						<div class="contrat-meta-right">
@@ -1515,8 +1515,8 @@
 								<div class="contrat-section">
 									<div class="contrat-section-title">Infos contrat</div>
 									<div class="detail-grid">
-										<div><span class="detail-label">Date de début</span>📅 {new Date(c.date_debut).toLocaleDateString('fr-FR')}</div>
-										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {new Date(c.prochaine_visite).toLocaleDateString('fr-FR')}</span></div>{/if}
+										<div><span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}</div>
+										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(c.prochaine_visite)}</span></div>{/if}
 									</div>
 								</div>
 								{#if c.notes}
@@ -1533,7 +1533,7 @@
 										{#each contratDocsMap[c.id] as doc}
 											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
 												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
-												<span style="font-size:.75rem;color:var(--color-text-muted)">{new Date(doc.publie_le).toLocaleDateString('fr-FR')}</span>
+												<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
 												{#if $isCS}
 													<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
 												{/if}
@@ -1682,7 +1682,7 @@
 							{#if !compactPrests || expanded}
 								<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span>
 								<span class="badge badge-gray">{dv.length} prestation{dv.length !== 1 ? 's' : ''}</span>
-								{#if nextVisit}<span class="badge" style="font-size:.75rem;color:var(--color-primary)">🗓 {new Date(nextVisit).toLocaleDateString('fr-FR')}</span>{/if}
+								{#if nextVisit}<span class="badge" style="font-size:.75rem;color:var(--color-primary)">🗓 {fmtDateShort(nextVisit)}</span>{/if}
 							{/if}
 							{#if $isCS}
 								<button class="btn-icon-edit" title="Modifier" on:click|stopPropagation={() => startEditPrest(p)}>✏️</button>
@@ -1704,7 +1704,7 @@
 								{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
 								<div><span class="detail-label">Contrats</span>{cs.length}</div>
 								<div><span class="detail-label">Prestations</span>{dv.length}</div>
-								{#if nextVisit}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {new Date(nextVisit).toLocaleDateString('fr-FR')}</span></div>{/if}
+								{#if nextVisit}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(nextVisit)}</span></div>{/if}
 							</div>
 						</div>
 					{/if}

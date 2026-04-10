@@ -453,6 +453,29 @@ def update_modele_email(
     return modele
 
 
+@router.post("/modeles-email/reinitialiser")
+def reinitialiser_modeles_email(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """Remet tous les modèles e-mail aux valeurs par défaut (seed)."""
+    from app.seed import EMAIL_TEMPLATES
+    updated = 0
+    for code, libelle, sujet, corps_html, desactivable in EMAIL_TEMPLATES:
+        modele = session.exec(
+            select(ModeleEmail).where(ModeleEmail.code == code)
+        ).first()
+        if modele:
+            modele.sujet = sujet
+            modele.corps_html = corps_html
+            modele.modifie_le = datetime.utcnow()
+            modele.modifie_par_id = _.id
+            session.add(modele)
+            updated += 1
+    session.commit()
+    return {"message": f"{updated} modèles réinitialisés"}
+
+
 # ── Notifications utilisateur ────────────────────────────────────────────────
 
 @router.get("/notifications")

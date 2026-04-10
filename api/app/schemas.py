@@ -197,6 +197,7 @@ class PublicationCreate(BaseModel):
     statut: Optional[str] = None
     brouillon: bool = False
     partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
 
 
 class PublicationUpdate(BaseModel):
@@ -210,6 +211,7 @@ class PublicationUpdate(BaseModel):
     brouillon: Optional[bool] = None
     archivee: Optional[bool] = None
     partager_whatsapp: Optional[bool] = None
+    envoyer_syndic: Optional[bool] = None
 
 
 class EvolutionRead(BaseModel):
@@ -232,6 +234,7 @@ class EvolutionCreate(BaseModel):
     contenu: Optional[str] = None
     nouveau_statut: Optional[str] = None  # requis si type=="etat"
     partager_whatsapp: Optional[bool] = None  # None = hérite de la publication
+    envoyer_syndic: Optional[bool] = None  # None = hérite de la publication
 
 
 class PublicationRead(BaseModel):
@@ -252,6 +255,7 @@ class PublicationRead(BaseModel):
     statut_change_le: Optional[datetime] = None
     brouillon: bool = False
     partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
     evolutions: List[EvolutionRead] = []
     auteur_nom: Optional[str] = None
 

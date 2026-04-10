@@ -82,11 +82,18 @@ def dashboard(
     scope=mois  → stats 30 jours (daily)
     scope=annee → stats 10 ans (monthly)
     """
-    now = datetime.utcnow()
-    today = now.strftime("%Y-%m-%d")
-
     from zoneinfo import ZoneInfo
-    paris_offset = int(now.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).utcoffset().total_seconds() // 3600)
+    _PARIS = ZoneInfo("Europe/Paris")
+
+    now_paris = datetime.now(_PARIS)
+    # Minuit Paris aujourd'hui → converti en UTC naïf pour requête sur cree_le
+    today_start_utc = now_paris.replace(hour=0, minute=0, second=0, microsecond=0) \
+        .astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    today_paris_str = now_paris.strftime("%Y-%m-%d")
+
+    # Offset horaire Paris (pour convertir les heures UTC → Paris dans les labels)
+    paris_offset = int(now_paris.utcoffset().total_seconds() // 3600)
+    paris_offset_str = f"+{paris_offset} hours"
 
     if scope == "jour":
         # ── SCOPE JOUR ────────────────────────────────────────────────────
@@ -96,20 +103,20 @@ def dashboard(
                 func.count().label("total"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
-            .where(TelemetryEvent.cree_le >= today)
+            .where(TelemetryEvent.cree_le >= today_start_utc)
             .group_by(TelemetryEvent.page)
             .order_by(func.count().desc())
         ).all()
 
         active_today = session.exec(
             select(func.count(func.distinct(TelemetryEvent.user_id)))
-            .where(TelemetryEvent.cree_le >= today, TelemetryEvent.user_id.isnot(None))
+            .where(TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None))
         ).one()
 
         total_today = session.exec(
             select(func.count())
             .select_from(TelemetryEvent)
-            .where(TelemetryEvent.cree_le >= today)
+            .where(TelemetryEvent.cree_le >= today_start_utc)
         ).one()
 
         # Répartition par heure (aujourd'hui)
@@ -119,7 +126,7 @@ def dashboard(
                 func.count().label("total"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
-            .where(TelemetryEvent.cree_le >= today)
+            .where(TelemetryEvent.cree_le >= today_start_utc)
             .group_by("heure")
             .order_by("heure")
         ).all()
@@ -145,7 +152,7 @@ def dashboard(
                 func.count().label("total"),
                 func.count(func.distinct(TelemetryEvent.page)).label("pages"),
             )
-            .where(TelemetryEvent.cree_le >= today, TelemetryEvent.user_id.isnot(None))
+            .where(TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None))
             .group_by(TelemetryEvent.user_id)
             .order_by(func.count().desc())
             .limit(30)
@@ -180,7 +187,7 @@ def dashboard(
 
     elif scope == "mois":
         # ── SCOPE MOIS (30 jours) ────────────────────────────────────────
-        thirty_days_ago = (now - timedelta(days=30)).strftime("%Y-%m-%d")
+        thirty_days_ago = (now_paris - timedelta(days=30)).strftime("%Y-%m-%d")
 
         daily_rows = session.exec(
             select(TelemetryDaily)
@@ -191,11 +198,11 @@ def dashboard(
         # Vrais uniques par jour
         daily_uniques_raw = session.exec(
             select(
-                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le).label("jour"),
+                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
             .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le))
+            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
         ).all()
         daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
 
@@ -295,7 +302,7 @@ def dashboard(
 
     else:
         # ── SCOPE ANNEE (10 ans) ─────────────────────────────────────────
-        ten_years_ago = (now - timedelta(days=3650)).strftime("%Y-%m")
+        ten_years_ago = (now_paris - timedelta(days=3650)).strftime("%Y-%m")
 
         monthly_rows = session.exec(
             select(TelemetryMonthly)
@@ -304,14 +311,14 @@ def dashboard(
         ).all()
 
         # Uniques par mois (events bruts récents + fallback __total__)
-        thirty_days_ago = (now - timedelta(days=30)).strftime("%Y-%m-%d")
+        thirty_days_ago = (now_paris - timedelta(days=30)).strftime("%Y-%m-%d")
         monthly_uniques_raw = session.exec(
             select(
-                func.strftime("%Y-%m", TelemetryEvent.cree_le).label("mois"),
+                func.strftime("%Y-%m", TelemetryEvent.cree_le, paris_offset_str).label("mois"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
             .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m", TelemetryEvent.cree_le))
+            .group_by(func.strftime("%Y-%m", TelemetryEvent.cree_le, paris_offset_str))
         ).all()
         monthly_uniques_map = {r[0]: r[1] for r in monthly_uniques_raw}
 
@@ -346,11 +353,11 @@ def dashboard(
         best_day = None
         daily_uniques_raw = session.exec(
             select(
-                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le).label("jour"),
+                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
                 func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
             )
             .where(TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le))
+            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
         ).all()
         daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
         # Add fallback from daily totals
@@ -394,7 +401,8 @@ def users_active(
     _: Utilisateur = Depends(require_admin),
 ):
     """Top utilisateurs actifs sur les 30 derniers jours."""
-    thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    from zoneinfo import ZoneInfo
+    thirty_days_ago = (datetime.now(ZoneInfo("Europe/Paris")) - timedelta(days=30)).strftime("%Y-%m-%d")
     rows = session.exec(
         select(
             TelemetryEvent.user_id,

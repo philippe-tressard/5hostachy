@@ -3,6 +3,7 @@
 	import { admin, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import { fmtDateShort, fmtTime } from '$lib/date';
 
 	$: _siteNom = $siteNomStore;
 
@@ -113,8 +114,8 @@
 					<div>
 						<strong style="font-size:.9rem">{entry.nom ?? entry.fichier ?? 'Sauvegarde'}</strong>
 						<small style="display:block;color:var(--color-text-muted)">
-							{new Date(entry.cree_le ?? entry.date).toLocaleDateString('fr-FR')}
-							{new Date(entry.cree_le ?? entry.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+							{fmtDateShort(entry.cree_le ?? entry.date)}
+							{fmtTime(entry.cree_le ?? entry.date)}
 						</small>
 					</div>
 					<div style="display:flex;align-items:center;gap:.75rem">

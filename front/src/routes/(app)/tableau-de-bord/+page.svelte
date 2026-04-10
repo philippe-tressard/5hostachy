@@ -5,6 +5,7 @@
 	import { tickets, publications, notifications as notifApi, admin as adminApi, calendrier as calApi, prestataires as prestApi, ApiError, type Ticket, type TicketEvolution, type Publication, type Notification, auth as authApi } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml, safeRichContent } from '$lib/sanitize';
+	import { fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime, fmtDatetimeShort } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
 
 	import { toast } from '$lib/components/Toast.svelte';
@@ -204,7 +205,7 @@
 
 	const TYPE_EMOJI: Record<string, string> = { travaux: '\u{1F528}', coupure: '⚡', ag: '\u{1F3DB}️', maintenance: '\u{1F527}', autre: '\u{1F4CC}' };
 	function typeEmoji(t: string) { return TYPE_EMOJI[t] ?? '\u{1F4CC}'; }
-	function formatDate(d: string) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
+	function formatDate(d: string) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' }); }
 
 	let expandedPubs = new Set<number>();
 	let pubsAutoExpanded = false;
@@ -268,8 +269,6 @@
 	function evPerimetreLabel(perimetre: string) {
 		return perimetre.split(',').map((s: string) => PERIMETRE_LABELS[s.trim()] ?? s.trim()).join(' · ');
 	}
-	function fmtDateLong(d: string) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); }
-	function fmtDatetime(d: string) { return new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 	let expandedEvols = new Set<number>();
 	const CAT_ICON: Record<string, string> = {
 		panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}',
@@ -352,10 +351,6 @@
 			ticketList = ticketList.filter(x => x.id !== t.id);
 			toast('success', 'Ticket supprimé');
 		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
-	}
-
-	function fmtDate(d: string) {
-		return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 	}
 
 	function renderDesc(c: string) {
@@ -450,7 +445,7 @@
 					<div class="notif-content">
 						<strong class="notif-titre">{n.titre}</strong>
 						<p class="notif-corps">{@html safeRichContent(n.corps)}</p>
-						<small class="notif-date">{new Date(n.cree_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small>
+						<small class="notif-date">{fmtDatetimeShort(n.cree_le)}</small>
 					</div>
 					<button class="btn btn-outline btn-sm" on:click={() => marquerLue(n.id)}>Lu ✓</button>
 				</div>
@@ -485,7 +480,7 @@
 							{#if pub.brouillon}<span class="badge badge-gray">✏️ Brouillon</span>{/if}
 							{#if pub.statut}<span class="badge {PUB_STATUT_BADGE[pub.statut] ?? 'badge-gray'}">{PUB_STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
 							{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray">&#x1F539; {perimètreLabel(pub.perimetre_cible)}</span>{/if}
-							<span class="pub-row-date">{new Date(pub.mis_a_jour_le ?? pub.cree_le).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+							<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
 						</div>
 						</div>
 						{#if !expanded && !compactPubs}

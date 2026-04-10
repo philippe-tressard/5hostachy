@@ -6,6 +6,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import { fmtDateLong as formatDate } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'annuaire', { titre: 'Annuaire', navLabel: 'Annuaire', icone: 'users', descriptif: "Coordonnées des membres du Conseil Syndical et du Syndic. En cas d'urgence, contactez le syndic directement par téléphone. Sinon, faites une demande depuis la plateforme." });
 	$: _siteNom = $siteNomStore;
@@ -30,11 +31,6 @@
 			loading = false;
 		}
 	});
-
-	function formatDate(iso: string | null): string {
-		if (!iso) return '';
-		return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-	}
 
 	$: batimentsCS = (() => {
 		const groups = new Map<string, MembreCS[]>();

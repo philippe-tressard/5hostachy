@@ -121,27 +121,210 @@ DEFAULT_LEGAL = {
 }
 
 EMAIL_TEMPLATES = [
-    ("invitation_resident", "Invitation résident", "Bienvenue sur {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }},</p><p>Vous avez été invité à rejoindre <strong>{{ residence.nom }}</strong>.</p><p><a href=\"{{ lien }}\">Créer mon compte</a></p>", False),
-    ("reinitialisation_mdp", "Réinitialisation mot de passe", "Réinitialisation de votre mot de passe — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }},</p><p><a href=\"{{ lien }}\">Réinitialiser mon mot de passe</a> (valable 1 heure)</p>", False),
-    ("compte_en_attente", "Compte en attente", "Nouvelle demande de compte — {{ residence.nom }}", "<p>Un nouveau compte est en attente de validation : {{ utilisateur.prenom }} {{ utilisateur.nom }} ({{ utilisateur.email }}).</p>", True),
-    ("compte_active", "Compte activé", "Votre compte est activé — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, votre compte est maintenant actif. <a href=\"{{ app.url }}\">Accéder à l'application</a></p>", True),
-    ("compte_refuse", "Compte refusé", "Votre demande de compte — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, votre demande n'a pas pu être acceptée. Contactez le conseil syndical.</p>", True),
-    ("locataire_validation_demande", "Demande validation locataire", "Un locataire souhaite s'inscrire sur votre lot — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, {{ locataire.prenom }} {{ locataire.nom }} souhaite s'inscrire en tant que locataire de votre lot {{ lot.numero }}.</p>", True),
-    ("locataire_valide", "Locataire validé", "Votre inscription a été validée — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, votre inscription en tant que locataire a été validée.</p>", True),
-    ("locataire_refuse", "Locataire refusé", "Votre inscription n'a pas été acceptée — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, votre demande d'inscription n'a pas été acceptée.</p>", True),
-    ("ticket_cree_cs", "Ticket créé (CS)", "Nouveau ticket #{{ ticket.numero }} — {{ residence.nom }}", "<p>Un nouveau ticket a été soumis par {{ auteur.prenom }} {{ auteur.nom }} : <strong>{{ ticket.titre }}</strong></p><p><a href=\"{{ app.url }}/tickets/{{ ticket.id }}\">Voir le ticket</a></p>", True),
-    ("ticket_bug_admin", "Ticket bug — notification admin site", "Bug signalé via Tickets — {{ residence.nom }}", "<p>Un ticket de type <strong>Bug</strong> a été soumis par {{ auteur.prenom }} {{ auteur.nom }}{% if auteur.email %} ({{ auteur.email }}){% endif %}.</p><p><strong>{{ ticket.titre }}</strong></p><p>{{ ticket.description }}</p><p><a href=\"{{ app.url }}/tickets/{{ ticket.id }}\">Voir le ticket</a></p>", True),
-    ("ticket_statut_change", "Statut ticket modifié", "Ticket #{{ ticket.numero }} mis à jour — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, le statut de votre ticket <strong>{{ ticket.titre }}</strong> est maintenant : {{ ticket.statut }}.</p>", True),
-    ("ticket_urgence_bailleur", "Ticket urgence (bailleur)", "URGENT — Ticket sur votre lot {{ lot.numero }}", "<p>Bonjour {{ destinataire.prenom }}, un ticket <strong>URGENT</strong> a été soumis sur votre lot {{ lot.numero }} : {{ ticket.titre }}.</p>", True),
-    ("vigik_commande_recue", "Commande vigik reçue (CS)", "Nouvelle commande de {{ type }} — {{ residence.nom }}", "<p>{{ demandeur.prenom }} {{ demandeur.nom }} a soumis une demande de {{ type }} pour le lot {{ lot.numero }}.</p>", True),
-    ("vigik_accepte", "Commande vigik acceptée", "Votre demande de {{ type }} a été acceptée — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, votre demande a été acceptée.</p>", True),
-    ("vigik_refuse", "Commande vigik refusée", "Votre demande de {{ type }} n'a pas été acceptée — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, votre demande a été refusée. Motif : {{ motif }}</p>", True),
-    ("calendrier_evenement_cree", "Événement calendrier créé", "Nouvel événement : {{ evenement.titre }} — {{ residence.nom }}", "<p>Un événement a été ajouté au calendrier : <strong>{{ evenement.titre }}</strong> le {{ evenement.date }}.</p>", True),
-    ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}", "<p>Un nouveau document a été publié : <strong>{{ document.titre }}</strong>.</p>", True),
-    ("digest_quotidien", "Digest quotidien", "Résumé du jour — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, voici votre résumé quotidien.</p>", True),
-    ("digest_hebdomadaire", "Digest hebdomadaire", "Résumé de la semaine — {{ residence.nom }}", "<p>Bonjour {{ destinataire.prenom }}, voici votre résumé de la semaine.</p>", True),
-    ("sauvegarde_echec", "Échec sauvegarde", "ALERTE — Échec de la sauvegarde automatique", "<p>La sauvegarde automatique du {{ date }} a échoué.</p><p>Erreur : {{ erreur }}</p>", False),
-    ("verification_email", "Vérification e-mail", "Vérifiez votre adresse e-mail — {{ residence.nom }}", "<p>Bonjour {{ prenom }},</p><p>Cliquez sur le lien ci-dessous pour vérifier votre adresse e-mail (valable {{ expire_heures }} heures) :</p><p><a href=\"{{ lien }}\">Vérifier mon adresse e-mail</a></p>", False),
+    # ── Styles inline mutualisés (CTA = Call-to-action button) ──
+    # Les templates sont encapsulés dans le gabarit email.py (_wrap_email)
+    # => pas besoin de <html>/<body>, juste le contenu riche.
+
+    ("invitation_resident", "Invitation résident", "Bienvenue sur {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Bienvenue, {{ destinataire.prenom }}\u202f!</h2>'
+     '<p style="margin:0 0 12px">Vous avez été invité(e) à rejoindre l\u2019espace numérique de <strong>{{ residence.nom }}</strong>.</p>'
+     '<p style="margin:0 0 24px;color:#5A6070">Créez votre compte en quelques clics pour accéder aux documents, au calendrier, aux tickets et à toutes les informations de votre résidence.</p>'
+     '<p style="text-align:center;margin:0 0 8px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Créer mon compte</a></p>',
+     False),
+
+    ("reinitialisation_mdp", "Réinitialisation mot de passe", "Réinitialisation de votre mot de passe — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Réinitialisation de votre mot de passe</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 24px">Une demande de réinitialisation a été effectuée pour votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.</p>'
+     '<p style="text-align:center;margin:0 0 16px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Réinitialiser mon mot de passe</a></p>'
+     '<p style="margin:0;font-size:13px;color:#5A6070">Ce lien est valable <strong>1 heure</strong>. Si vous n\u2019avez pas fait cette demande, ignorez cet e-mail.</p>',
+     False),
+
+    ("compte_en_attente", "Compte en attente", "Nouvelle demande de compte — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouvelle demande de compte</h2>'
+     '<p style="margin:0 0 12px">Un nouveau résident souhaite rejoindre la résidence\u202f:</p>'
+     '<table role="presentation" style="margin:0 0 20px;border-left:4px solid #C9983A;padding-left:16px"><tr><td>'
+     '<p style="margin:0 0 4px;font-weight:600;font-size:16px">{{ utilisateur.prenom }} {{ utilisateur.nom }}</p>'
+     '<p style="margin:0;color:#5A6070">{{ utilisateur.email }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/admin/utilisateurs" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Valider le compte</a></p>',
+     True),
+
+    ("compte_active", "Compte activé", "Votre compte est activé — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Votre compte est activé\u202f!</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 24px">Votre compte sur <strong>{{ residence.nom }}</strong> est maintenant actif. Vous pouvez dès à présent accéder à l\u2019ensemble des services de votre résidence.</p>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Accéder à l\u2019application</a></p>',
+     True),
+
+    ("compte_refuse", "Compte refusé", "Votre demande de compte — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Demande de compte non acceptée</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 12px">Votre demande de création de compte sur <strong>{{ residence.nom }}</strong> n\u2019a pas pu être acceptée.</p>'
+     '<p style="margin:0;color:#5A6070">Si vous pensez qu\u2019il s\u2019agit d\u2019une erreur, n\u2019hésitez pas à contacter le conseil syndical.</p>',
+     True),
+
+    ("locataire_validation_demande", "Demande validation locataire", "Un locataire souhaite s'inscrire sur votre lot — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Validation de locataire requise</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 12px"><strong>{{ locataire.prenom }} {{ locataire.nom }}</strong> souhaite s\u2019inscrire en tant que locataire de votre lot <strong>{{ lot.numero }}</strong>.</p>'
+     '<p style="margin:0 0 24px;color:#5A6070">Connectez-vous à l\u2019application pour valider ou refuser cette demande.</p>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Gérer la demande</a></p>',
+     True),
+
+    ("locataire_valide", "Locataire validé", "Votre inscription a été validée — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Inscription validée\u202f!</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 24px">Votre inscription en tant que locataire a été validée. Vous pouvez maintenant accéder à l\u2019ensemble des services de la résidence.</p>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Accéder à l\u2019application</a></p>',
+     True),
+
+    ("locataire_refuse", "Locataire refusé", "Votre inscription n'a pas été acceptée — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Inscription non acceptée</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 12px">Votre demande d\u2019inscription en tant que locataire n\u2019a pas été acceptée.</p>'
+     '<p style="margin:0;color:#5A6070">Contactez votre propriétaire ou le conseil syndical pour plus d\u2019informations.</p>',
+     True),
+
+    ("ticket_cree_cs", "Ticket créé (CS)", "Nouveau ticket #{{ ticket.numero }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouveau ticket soumis</h2>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
+     '<p style="margin:0;font-size:14px;color:#5A6070">par {{ auteur.prenom }} {{ auteur.nom }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le ticket</a></p>',
+     True),
+
+    ("ticket_bug_admin", "Ticket bug — notification admin site", "Bug signalé via Tickets — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Bug signalé</h2>'
+     '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.prenom }} {{ auteur.nom }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
+     '<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:#1A1A2E">{{ ticket.titre }}</p>'
+     '<p style="margin:0;font-size:14px;color:#5A6070">{{ ticket.description }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#c0392b;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Traiter le bug</a></p>',
+     True),
+
+    ("ticket_syndic", "Ticket transmis au syndic", "{% if reference_copro %}\U0001f3e2 {{ reference_copro }} — {% endif %}Ticket #{{ ticket.numero }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4cb Ticket transmis par le conseil syndical</h2>'
+     '<p style="margin:0 0 16px">Un ticket a été transmis à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} \u00b7 {{ ticket.categorie }}{% endif %}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
+     '<p style="margin:0 0 8px;font-size:14px;color:#1A1A2E">{{ ticket.description }}</p>'
+     '<p style="margin:0;font-size:14px;color:#5A6070">Soumis par {{ auteur.prenom }} {{ auteur.nom }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
+     True),
+
+    ("ticket_statut_change", "Statut ticket modifié", "Ticket #{{ ticket.numero }} mis à jour — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Mise à jour de votre ticket</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 16px">Le statut de votre ticket a été mis à jour\u202f:</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
+     '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
+     '</td></tr></table>',
+     True),
+
+    ("ticket_urgence_bailleur", "Ticket urgence (bailleur)", "URGENT — Ticket sur votre lot {{ lot.numero }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\U0001f6a8 Ticket URGENT</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 16px">Un ticket <strong style="color:#c0392b">URGENT</strong> a été soumis concernant votre lot <strong>{{ lot.numero }}</strong>\u202f:</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
+     '<p style="margin:0;font-weight:700;font-size:16px;color:#1A1A2E">{{ ticket.titre }}</p>'
+     '</td></tr></table>',
+     True),
+
+    ("vigik_commande_recue", "Commande vigik reçue (CS)", "Nouvelle commande de {{ type }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouvelle demande de badge/clé</h2>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Type : {{ type }} · Lot {{ lot.numero }}</p>'
+     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ demandeur.prenom }} {{ demandeur.nom }}</p>'
+     '</td></tr></table>',
+     True),
+
+    ("vigik_accepte", "Commande vigik acceptée", "Votre demande de {{ type }} a été acceptée — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#3D6B4F">\u2705 Demande acceptée</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0">Votre demande de <strong>{{ type }}</strong> a été acceptée. Vous serez informé(e) de la suite à donner.</p>',
+     True),
+
+    ("vigik_refuse", "Commande vigik refusée", "Votre demande de {{ type }} n'a pas été acceptée — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Demande non acceptée</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+     '<p style="margin:0 0 8px">Votre demande de <strong>{{ type }}</strong> n\u2019a pas été acceptée.</p>'
+     '<p style="margin:0;color:#5A6070"><strong>Motif\u202f:</strong> {{ motif }}</p>',
+     True),
+
+    ("calendrier_evenement_cree", "Événement calendrier créé", "Nouvel événement : {{ evenement.titre }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c5 Nouvel événement</h2>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#C9983A;font-weight:600">{{ evenement.date }}</p>'
+     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ evenement.titre }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
+     True),
+
+    ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c4 Nouveau document</h2>'
+     '<p style="margin:0 0 16px">Un nouveau document a été publié sur l\u2019espace de votre résidence\u202f:</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ document.titre }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/documents" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter les documents</a></p>',
+     True),
+
+    ("publication_syndic", "Publication transmise au syndic", "{% if reference_copro %}\U0001f3e2 {{ reference_copro }} — {% endif %}Nouvelle publication — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4e2 Publication du conseil syndical</h2>'
+     '<p style="margin:0 0 16px">Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
+     '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ publication.extrait }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/actualites" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
+     True),
+
+    ("digest_quotidien", "Digest quotidien", "Résumé du jour — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\u2600\ufe0f Votre résumé quotidien</h2>'
+     '<p style="margin:0 0 16px">Bonjour {{ destinataire.prenom }}, voici les dernières actualités de votre résidence.</p>'
+     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:0 0 16px">',
+     True),
+
+    ("digest_hebdomadaire", "Digest hebdomadaire", "Résumé de la semaine — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4ca Résumé de la semaine</h2>'
+     '<p style="margin:0 0 16px">Bonjour {{ destinataire.prenom }}, voici un récapitulatif de la semaine écoulée sur votre résidence.</p>'
+     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:0 0 16px">',
+     True),
+
+    ("sauvegarde_echec", "Échec sauvegarde", "ALERTE — Échec de la sauvegarde automatique",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Échec de la sauvegarde</h2>'
+     '<p style="margin:0 0 12px">La sauvegarde automatique du <strong>{{ date }}</strong> a échoué.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 12px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
+     '<p style="margin:0;font-family:monospace;font-size:13px;color:#1A1A2E">{{ erreur }}</p>'
+     '</td></tr></table>'
+     '<p style="margin:0;color:#5A6070;font-size:13px">Veuillez vérifier la configuration des sauvegardes dans l\u2019administration.</p>',
+     False),
+
+    ("verification_email", "Vérification e-mail", "Vérifiez votre adresse e-mail — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Vérification de votre adresse e-mail</h2>'
+     '<p style="margin:0 0 12px">Bonjour {{ prenom }},</p>'
+     '<p style="margin:0 0 24px">Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.</p>'
+     '<p style="text-align:center;margin:0 0 16px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Vérifier mon adresse</a></p>'
+     '<p style="margin:0;font-size:13px;color:#5A6070">Ce lien est valable <strong>{{ expire_heures }} heures</strong>. Si vous n\u2019êtes pas à l\u2019origine de cette demande, ignorez ce message.</p>',
+     False),
 ]
 
 
@@ -228,7 +411,7 @@ def seed():
             'notify_ticket_bug_email': '0',
             'notify_new_user_created_email': '0',
             'whatsapp_footer': '— Le Conseil Syndical',
-            'email_footer': '— Envoyé depuis 5hostachy.fr',
+            'email_footer': '— ©2026-5Hostachy - Envoyé depuis 5hostachy.fr —',
             'reference_copro': '',
             **DEFAULT_LEGAL,
         }

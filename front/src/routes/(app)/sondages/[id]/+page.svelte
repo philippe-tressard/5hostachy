@@ -7,6 +7,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import { fmtDateShort, fmtDate2d } from '$lib/date';
 
 	let sondage: any = null;
 	let loading = true;
@@ -140,7 +141,7 @@
 			{/if}
 			{#if sondage.cloture_le}
 				<small style="color:var(--color-text-muted)">
-					{sondage.cloture ? 'Clôturé' : 'Clôture'} le {new Date(sondage.cloture_le).toLocaleDateString('fr-FR')}
+					{sondage.cloture ? 'Clôturé' : 'Clôture'} le {fmtDateShort(sondage.cloture_le)}
 				</small>
 			{/if}
 			{#if peutGerer}
@@ -256,7 +257,7 @@
 					<div class="comment-card">
 						<div class="comment-header">
 							<strong class="comment-author">{c.auteur_nom}</strong>
-							<span class="comment-date">{new Date(c.cree_le).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+							<span class="comment-date">{fmtDate2d(c.cree_le)}</span>
 							{#if peutModerer || c.auteur_id === $currentUser?.id}
 							<button class="btn-icon-danger" style="margin-left:auto" aria-label="Supprimer ce commentaire" title="Supprimer" on:click={() => supprimerCommentaire(c.id)}>&#x1F5D1;️</button>
 							{/if}
