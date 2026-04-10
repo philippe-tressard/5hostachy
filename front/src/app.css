@@ -197,6 +197,7 @@ a:hover { text-decoration: underline; }
 .badge-orange { background: #FDF3E0; color: #B07D1E; }
 .badge-red    { background: #FDEDEC; color: #C0392B; }
 .badge-gray   { background: #EAEDF1; color: var(--color-text-muted); }
+.badge-purple { background: #F3E8FF; color: #6B21A8; }
 
 /* ── Table ── */
 .table {

@@ -268,7 +268,8 @@
 					Debut: c.date_debut ? fmtDate(c.date_debut) : 'N/A',
 					Fin: c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A',
 					Preavis: c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A',
-					Statut: c.urgence === 'expire' ? 'Expiré' : c.urgence === 'preavis' ? 'Préavis en cours' : c.urgence === 'inconnu' ? 'Dates manquantes' : 'Actif',
+					Statut: c.urgence === 'preavis' ? 'Préavis en cours' : c.urgence === 'inconnu' ? 'Dates manquantes' : 'Actif',
+					Reconduit: c.reconduit ? 'Oui' : 'Non',
 				});
 			}
 			for (const d of diagsAvecNext) {
@@ -315,12 +316,15 @@
 	const ANNEE_COURANTE = new Date().getFullYear();
 	const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
-	function contratDateFin(c: ReportContrat): Date | null {
+	function contratDateFin(c: ReportContrat): { date: Date; reconduit: boolean } | null {
 		if (!c.date_debut || !c.duree_initiale_valeur || !c.duree_initiale_unite) return null;
 		const d = new Date(c.date_debut);
 		if (c.duree_initiale_unite === 'ans') d.setFullYear(d.getFullYear() + c.duree_initiale_valeur);
 		else if (c.duree_initiale_unite === 'mois') d.setMonth(d.getMonth() + c.duree_initiale_valeur);
-		return d;
+		const now = new Date();
+		let reconduit = false;
+		while (d <= now) { d.setFullYear(d.getFullYear() + 1); reconduit = true; }
+		return { date: d, reconduit };
 	}
 
 	function contratDatePreavis(dateFin: Date): Date {
@@ -329,9 +333,8 @@
 		return d;
 	}
 
-	function contratUrgence(dateFin: Date): 'expire' | 'preavis' | 'annee' | 'futur' {
+	function contratUrgence(dateFin: Date): 'preavis' | 'annee' | 'futur' {
 		const now = new Date();
-		if (dateFin <= now) return 'expire';
 		if (contratDatePreavis(dateFin) <= now) return 'preavis';
 		if (dateFin.getFullYear() === ANNEE_COURANTE) return 'annee';
 		return 'futur';
@@ -389,11 +392,13 @@
 	/* ── Reactives renouvellements ───────────────────────────────────── */
 	$: contratsAvecFin = reportContrats
 		.map(c => {
-			const fin = contratDateFin(c);
+			const result = contratDateFin(c);
+			const fin = result?.date ?? null;
+			const reconduit = result?.reconduit ?? false;
 			const preavis = fin ? contratDatePreavis(fin) : null;
-			const urgence: 'expire' | 'preavis' | 'annee' | 'futur' | 'inconnu' = fin ? contratUrgence(fin) : 'inconnu';
+			const urgence: 'preavis' | 'annee' | 'futur' | 'inconnu' = fin ? contratUrgence(fin) : 'inconnu';
 			const prest = reportPrestataires.find(p => p.id === c.prestataire_id);
-			return { ...c, dateFin: fin as Date | null, datePreavis: preavis, urgence, prestataireNom: prest?.nom ?? `#${c.prestataire_id}` };
+			return { ...c, dateFin: fin as Date | null, datePreavis: preavis, urgence, reconduit, prestataireNom: prest?.nom ?? `#${c.prestataire_id}` };
 		})
 		.sort((a, b) => {
 			if (!a.dateFin && !b.dateFin) return 0;
@@ -435,7 +440,7 @@
 	})();
 
 	$: renKpiContrats = contratsAnneeCourante.length;
-	$: renKpiPreavis = contratsAvecFin.filter(c => c.urgence === 'preavis' || c.urgence === 'expire' || c.urgence === 'inconnu').length;
+	$: renKpiPreavis = contratsAvecFin.filter(c => c.urgence === 'preavis' || c.urgence === 'inconnu').length;
 	$: renKpiDiags = diagsAvecNext.filter(d => d.urgence === 'depasse' || d.urgence === 'annee' || d.urgence === 'inconnu').length;
 
 	async function loadTickets() {
@@ -1550,7 +1555,7 @@
 			<div class="kpi-row" style="margin-bottom:1rem">
 				<div class="kpi-card" class:kpi-alert={renKpiPreavis > 0}>
 					<div class="kpi-value">{renKpiPreavis}</div>
-					<div class="kpi-label">Contrats en préavis / expirés</div>
+					<div class="kpi-label">Contrats en préavis</div>
 				</div>
 				<div class="kpi-card">
 					<div class="kpi-value">{renKpiContrats}</div>
@@ -1582,24 +1587,26 @@
 							{@const barEnd = moisFin}
 							{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
 							{@const finPos = ((moisFin + 0.5) / 12) * 100}
+							{@const friseStyle = c.reconduit ? 'reconduit' : c.urgence}
 							<div class="frise-row">
-								<div class="frise-row-label" title="{c.libelle} — {c.prestataireNom}">
+								<div class="frise-row-label" title="{c.libelle} — {c.prestataireNom}{c.reconduit ? ' (reconduit)' : ''}">
 									<strong>{c.libelle}</strong>
-									<span class="text-muted-sm">{c.prestataireNom}</span>
+									<span class="text-muted-sm">{c.prestataireNom}{#if c.reconduit} <em>(reconduit)</em>{/if}</span>
 								</div>
 								<div class="frise-bar-track">
 									{#if preavisWidth > 0}
-										<div class="frise-preavis-zone frise-urgence-{c.urgence}" style="left:{(barStart/12)*100}%;width:{preavisWidth}%"></div>
+										<div class="frise-preavis-zone frise-urgence-{friseStyle}" style="left:{(barStart/12)*100}%;width:{preavisWidth}%"></div>
 									{/if}
-									<div class="frise-marker frise-marker-{c.urgence}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}">
+									<div class="frise-marker frise-marker-{friseStyle}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}{c.reconduit ? ' (reconduit)' : ''}">
 										<span class="frise-marker-label">{c.dateFin.getDate()}/{c.dateFin.getMonth()+1}</span>
 									</div>
 								</div>
 							</div>
 						{/each}
 						<div class="frise-legend">
-							<span><span class="frise-legend-dot" style="background:#dc2626"></span> Expiré / Préavis en cours</span>
+							<span><span class="frise-legend-dot" style="background:#dc2626"></span> Préavis en cours</span>
 							<span><span class="frise-legend-dot" style="background:#f59e0b"></span> Expire cette année</span>
+							<span><span class="frise-legend-dot" style="background:#8b5cf6"></span> Reconduit tacitement</span>
 							<span class="frise-legend-hatch">▧ Zone de préavis</span>
 						</div>
 					</div>
@@ -1622,11 +1629,11 @@
 										<td>{c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</td>
 										<td>{c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</td>
 										<td>
-											{#if c.urgence === 'expire'}<span class="badge badge-red">Expiré</span>
-											{:else if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
+											{#if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
 											{:else if c.urgence === 'inconnu'}<span class="badge badge-gray">Dates manquantes</span>
 											{:else}<span class="badge badge-blue">Actif</span>
 											{/if}
+											{#if c.reconduit}<span class="badge badge-purple" title="Reconduit tacitement d'un an">♻ Reconduit</span>{/if}
 										</td>
 									</tr>
 								{/each}
@@ -2353,6 +2360,7 @@
 	.frise-preavis-zone.frise-urgence-preavis { color: #dc2626; }
 	.frise-preavis-zone.frise-urgence-annee { color: #f59e0b; }
 	.frise-preavis-zone.frise-urgence-futur { color: #3b82f6; }
+	.frise-preavis-zone.frise-urgence-reconduit { color: #8b5cf6; }
 
 	.frise-marker {
 		position: absolute; top: 0; bottom: 0; width: 3px; transform: translateX(-50%);
@@ -2361,6 +2369,7 @@
 	.frise-marker-expire, .frise-marker-preavis { background: #dc2626; }
 	.frise-marker-annee { background: #f59e0b; }
 	.frise-marker-futur { background: #3b82f6; }
+	.frise-marker-reconduit { background: #8b5cf6; }
 
 	.frise-marker-label {
 		position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
