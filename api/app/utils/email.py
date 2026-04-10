@@ -1,4 +1,6 @@
 """Envoi d'emails via fastapi-mail + templates Jinja2 stockés en base."""
+import json
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -11,6 +13,22 @@ from app.models.core import ConfigSite, ModeleEmail, Utilisateur
 settings = get_settings()
 
 _SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_from_name', 'smtp_username', 'smtp_password', 'smtp_starttls', 'smtp_ssl_tls'}
+
+# Mapping code email → clé préférence utilisateur (catégorie_mail)
+# Les codes absents (system, account) sont toujours envoyés.
+_EMAIL_PREF_MAP: dict[str, str] = {
+    "ticket_cree_cs": "ticket_mail",
+    "ticket_bug_admin": "ticket_mail",
+    "ticket_statut_change": "ticket_mail",
+    "ticket_urgence_bailleur": "ticket_mail",
+    "ticket_syndic": "ticket_mail",
+    "calendrier_evenement_cree": "actu_mail",
+    "digest_quotidien": "actu_mail",
+    "digest_hebdomadaire": "actu_mail",
+    "document_publie": "doc_mail",
+}
+
+logger = logging.getLogger("email")
 
 
 def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str, str]]:
@@ -52,13 +70,15 @@ async def send_email(
     *,
     cc: list[str] | None = None,
     attachments: list[str] | None = None,
+    destinataire_id: int | None = None,
 ):
     """
     Récupère le ModèleEmail par code, rend sujet + corps, envoie si MAIL_ENABLED.
     Fail graceful : en cas d'erreur, log sans bloquer l'événement déclencheur.
     
-    Note: Si appelé depuis une BackgroundTask, la session passée peut être fermée.
-    Une nouvelle session est créée automatiquement si nécessaire.
+    Si *destinataire_id* est fourni et que le code email est lié à une
+    catégorie de préférence, l'email n'est envoyé que si l'utilisateur
+    a activé la préférence correspondante.
     """
     from app.database import SessionLocal
     
@@ -70,6 +90,19 @@ async def send_email(
         close_session = False
     
     try:
+        # ── Vérification préférence utilisateur ──────────────────────────
+        pref_key = _EMAIL_PREF_MAP.get(code)
+        if pref_key and destinataire_id:
+            user = session.get(Utilisateur, destinataire_id)
+            if user:
+                try:
+                    prefs = json.loads(user.preferences_notifications or "{}")
+                except (json.JSONDecodeError, TypeError):
+                    prefs = {}
+                if not prefs.get(pref_key, True):
+                    logger.debug("Email [%s] non envoyé → préférence %s=false pour user %s", code, pref_key, destinataire_id)
+                    return
+
         smtp_cfg = _get_smtp_config(session)
         if smtp_cfg.get('smtp_enabled') is not None:
             if smtp_cfg['smtp_enabled'] != '1':
@@ -83,10 +116,17 @@ async def send_email(
         if not template or not template.actif:
             return
 
+        # ── Footer email (similaire au footer WhatsApp) ──────────────────
+        email_footer_row = session.get(ConfigSite, "email_footer")
+        email_footer = (email_footer_row.valeur if email_footer_row else "").strip()
+
         # Variables communes
+        site_nom_row = session.get(ConfigSite, "site_nom")
+        site_url_row = session.get(ConfigSite, "site_url")
         base_ctx = {
             "annee": datetime.utcnow().year,
-            "app": {"url": "https://localhost"},
+            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost")},
+            "residence": {"nom": (site_nom_row.valeur if site_nom_row else "Ma Résidence")},
         }
         ctx = {**base_ctx, **context}
 
@@ -113,10 +153,13 @@ async def send_email(
                 USE_CREDENTIALS=bool(_username),
             )
             fm = FastMail(cfg)
+            rendered_body = _render(template.corps_html, ctx)
+            if email_footer:
+                rendered_body += f'<p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #ddd;padding-top:12px">{email_footer}</p>'
             msg_kwargs = dict(
                 subject=_render(template.sujet, ctx),
                 recipients=[to],
-                body=_render(template.corps_html, ctx),
+                body=rendered_body,
                 subtype="html",
             )
             if cc:
@@ -126,9 +169,7 @@ async def send_email(
             msg = MessageSchema(**msg_kwargs)
             await fm.send_message(msg)
         except Exception as exc:
-            # Log l'erreur sans bloquer
-            import logging
-            logging.getLogger("email").error("Erreur envoi email [%s] → %s : %s", code, to, exc)
+            logger.error("Erreur envoi email [%s] → %s : %s", code, to, exc)
     finally:
         if close_session:
             session.close()

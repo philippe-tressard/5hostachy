@@ -92,6 +92,7 @@ class CompteAction(BaseModel):
 def traiter_compte(
     user_id: int,
     body: CompteAction,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -116,6 +117,22 @@ def traiter_compte(
     )
     session.add(user)
     session.add(notif)
+
+    # ── Email de confirmation au résident ─────────────────────────────────
+    if user.email:
+        from app.utils.email import send_email
+        email_code = "compte_active" if body.action == "valider" else "compte_refuse"
+        email_ctx: dict[str, Any] = {
+            "destinataire": {"prenom": user.prenom, "nom": user.nom},
+        }
+        if body.action == "refuser" and body.motif:
+            email_ctx["motif"] = body.motif
+        background_tasks.add_task(
+            send_email,
+            code=email_code,
+            to=user.email,
+            context=email_ctx,
+        )
 
     # Auto-match sur les 3 systèmes d'import dès qu'un compte est validé
     auto_match_result: dict[str, Any] = {}
@@ -1317,6 +1334,11 @@ def _declencher_accueil_arrivant(
         from app.utils.email import send_email
 
         cc_list = [user.email] if user.email else []
+
+        # Lire reference_copro pour le sujet
+        ref_copro_row = session.get(ConfigSite, "reference_copro")
+        ref_copro = (ref_copro_row.valeur if ref_copro_row else "").strip()
+
         background_tasks.add_task(
             send_email,
             code="nouvel_arrivant_bal",
@@ -1325,6 +1347,7 @@ def _declencher_accueil_arrivant(
                 "nom_complet": nom_complet,
                 "batiment": bat,
                 "ancien_resident": ancien,
+                "reference_copro": ref_copro,
             },
             session=session,
             cc=cc_list,

@@ -228,6 +228,8 @@ def seed():
             'notify_ticket_bug_email': '0',
             'notify_new_user_created_email': '0',
             'whatsapp_footer': '— Le Conseil Syndical',
+            'email_footer': '— Envoyé depuis 5hostachy.fr',
+            'reference_copro': '',
             **DEFAULT_LEGAL,
         }
         for cle, valeur in DEFAULT_CONFIG.items():
