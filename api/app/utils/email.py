@@ -4,7 +4,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from jinja2 import Environment, BaseLoader
+from jinja2.sandbox import SandboxedEnvironment
+from jinja2 import BaseLoader
 from sqlmodel import Session, select
 
 from app.config import get_settings
@@ -57,7 +58,7 @@ def _get_smtp_config(session: Session) -> dict:
 
 
 def _render(template_str: str, context: dict) -> str:
-    env = Environment(loader=BaseLoader())
+    env = SandboxedEnvironment(loader=BaseLoader())
     tmpl = env.from_string(template_str)
     return tmpl.render(**context)
 
