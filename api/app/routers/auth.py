@@ -483,7 +483,7 @@ def request_password_reset(
         from app.utils.email import send_email
         asyncio.create_task(
             send_email(
-                code="reset_password",
+                code="reinitialisation_mdp",
                 to=user.email,
                 context={
                     "prenom": user.prenom,

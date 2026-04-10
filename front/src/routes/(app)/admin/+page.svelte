@@ -607,6 +607,8 @@ siteConfig = {
   notify_new_user_created_email: cfg['notify_new_user_created_email'] === '1',
   site_manager_user_id: cfg['site_manager_user_id'] ?? '',
   whatsapp_footer: cfg['whatsapp_footer'] ?? '— Le Conseil Syndical',
+  email_footer: cfg['email_footer'] ?? '— Envoyé depuis 5hostachy.fr',
+  reference_copro: cfg['reference_copro'] ?? '',
 };
 // Config des pages
 pagesConfig = pagesDefaults.map(pg => {
@@ -676,7 +678,7 @@ return map[s] ?? 'badge-gray';
 }
 
 // ── Paramétrage site ──────────────────────────────────────────
-let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_heures: 48, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical' };
+let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_heures: 48, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
 let siteSaving = false;
 $: siteManagerUsers = utilisateurs.filter((u) => !!u.email);
 function openSiteTab() {
@@ -686,7 +688,7 @@ function openSiteTab() {
 async function saveSiteConfig() {
   siteSaving = true;
   try {
-    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer });
+    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer, email_footer: siteConfig.email_footer, reference_copro: siteConfig.reference_copro });
     configStore.update((c: Record<string, string>) => ({ ...c, site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '' }));
     toast('success', 'Paramètres sauvegardés.');
   } catch (e: any) {
@@ -1920,11 +1922,40 @@ $: _siteNom = $siteNomStore;
       ></textarea>
       <span class="field-hint">Texte qui finalise chaque message (markdown WhatsApp autorisé : *gras*, _italique_, ~barré~).</span>
     </label>
-    <div style="display:flex;justify-content:flex-end;margin-top:.35rem">
-      <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={saveSiteConfig} disabled={siteSaving}>
-        {siteSaving ? '...' : '💾 Enregistrer'}
-      </button>
-    </div>
+  </div>
+
+  <div style="max-width:640px;margin-top:.75rem">
+    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">✉️ Signature des e-mails</p>
+    <label class="field-label">
+      <textarea
+        class="input input-sm"
+        bind:value={siteConfig.email_footer}
+        rows="2"
+        placeholder="— Envoyé depuis 5hostachy.fr"
+        style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"
+      ></textarea>
+      <span class="field-hint">Texte ajouté automatiquement en bas de chaque e-mail envoyé par la plateforme.</span>
+    </label>
+  </div>
+
+  <div style="max-width:640px;margin-top:.75rem">
+    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">🏢 Référence copropriété (syndic)</p>
+    <label class="field-label">
+      <input
+        class="input input-sm"
+        type="text"
+        bind:value={siteConfig.reference_copro}
+        placeholder="00213"
+        style="max-width:200px"
+      />
+      <span class="field-hint">Référence de la copropriété auprès du syndic. Utilisée en préfixe dans les sujets d'e-mails envoyés au syndic.</span>
+    </label>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;margin-top:.5rem;max-width:640px">
+    <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={saveSiteConfig} disabled={siteSaving}>
+      {siteSaving ? '...' : '💾 Enregistrer'}
+    </button>
   </div>
 
   <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
