@@ -177,23 +177,23 @@ maintenanceEnCours = false;
 
 //  Télémétrie 
 let telemetryData: any = null;
-let telemetryUsers: any[] = [];
 let telemetryLoading = true;
 let telemetryAggEnCours = false;
 let historiqueTelemetrie: any[] = [];
 let telemetryHistLoading = true;
+let tlScope: 'jour' | 'mois' | 'annee' = 'jour';
 
 async function loadTelemetry() {
 telemetryLoading = true;
 try {
-const [dashResult, usersResult] = await Promise.allSettled([
-api.get<any>('/telemetry/dashboard'),
-api.get<any[]>('/telemetry/users-active'),
-]);
-telemetryData = dashResult.status === 'fulfilled' ? dashResult.value : null;
-telemetryUsers = usersResult.status === 'fulfilled' ? usersResult.value : [];
-} catch { telemetryData = null; telemetryUsers = []; }
+telemetryData = await api.get<any>(`/telemetry/dashboard?scope=${tlScope}`);
+} catch { telemetryData = null; }
 finally { telemetryLoading = false; }
+}
+
+function switchTlScope(s: 'jour' | 'mois' | 'annee') {
+tlScope = s;
+loadTelemetry();
 }
 
 async function loadHistoriqueTelemetrie() {
@@ -2058,7 +2058,14 @@ $: _siteNom = $siteNomStore;
 {:else if onglet === 'telemetry'}
 <section class="config-section">
   <h2 class="config-section-title">📊 Télémétrie — Utilisation de l'application</h2>
-  <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand. L'agrégation est automatique (chaque nuit à 2h). Les événements bruts sont conservés 30 jours, les données journalières 12 mois, les données mensuelles 10 ans.</p>
+  <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand.</p>
+
+  <!-- Sélecteur Jour / Mois / Année -->
+  <div class="tl-scope-switch" style="margin:.75rem 0 1rem">
+    <button class="pill" class:pill-active={tlScope === 'jour'} on:click={() => switchTlScope('jour')}>📅 Jour</button>
+    <button class="pill" class:pill-active={tlScope === 'mois'} on:click={() => switchTlScope('mois')}>📆 Mois (30j)</button>
+    <button class="pill" class:pill-active={tlScope === 'annee'} on:click={() => switchTlScope('annee')}>📊 Année (10 ans)</button>
+  </div>
 
   {#if telemetryLoading}
     <p class="muted">Chargement des statistiques...</p>
@@ -2068,106 +2075,79 @@ $: _siteNom = $siteNomStore;
       <p>Les données apparaîtront après les premières visites.</p>
     </div>
   {:else}
-    <!-- KPI du jour -->
+    <!-- KPI universels -->
     <div class="tl-kpi-row">
       <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.today.active_users}</div>
-        <div class="tl-kpi-label">Utilisateurs actifs aujourd'hui</div>
+        <div class="tl-kpi-value">{telemetryData.kpi.vues ?? 0}</div>
+        <div class="tl-kpi-label">{tlScope === 'jour' ? 'Pages vues aujourd\'hui' : tlScope === 'mois' ? 'Pages vues (30j)' : 'Pages vues (total)'}</div>
       </div>
+      {#if telemetryData.kpi.utilisateurs != null}
       <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.today.total_views}</div>
-        <div class="tl-kpi-label">Pages vues aujourd'hui</div>
-      </div>
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.top_pages_30d.length}</div>
-        <div class="tl-kpi-label">Pages visitées (30j)</div>
-      </div>
-    </div>
-
-    <!-- Tendances d'audience -->
-    <div class="tl-kpi-row" style="margin-top:.75rem">
-      {#if telemetryData.peak_hour}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.peak_hour.heure}h</div>
-        <div class="tl-kpi-label">🔺 Heure de pointe (moy. 30j)</div>
+        <div class="tl-kpi-value">{telemetryData.kpi.utilisateurs}</div>
+        <div class="tl-kpi-label">{tlScope === 'jour' ? 'Utilisateurs actifs aujourd\'hui' : 'Utilisateurs uniques (pic)'}</div>
       </div>
       {/if}
-      {#if telemetryData.low_hour}
       <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.low_hour.heure}h</div>
-        <div class="tl-kpi-label">🔻 Heure creuse (moy. 30j)</div>
+        <div class="tl-kpi-value">{telemetryData.kpi.pages ?? 0}</div>
+        <div class="tl-kpi-label">Pages distinctes visitées</div>
+      </div>
+      {#if telemetryData.kpi.heure_pointe}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.kpi.heure_pointe}</div>
+        <div class="tl-kpi-label">🔺 Heure de pointe</div>
       </div>
       {/if}
-      {#if telemetryData.peak_day_of_month}
+      {#if telemetryData.kpi.mois_actifs != null}
       <div class="tl-kpi">
-        <div class="tl-kpi-value">le {telemetryData.peak_day_of_month.jour}</div>
-        <div class="tl-kpi-label">📅 Jour du mois le + actif</div>
+        <div class="tl-kpi-value">{telemetryData.kpi.mois_actifs}</div>
+        <div class="tl-kpi-label">Mois avec activité</div>
       </div>
       {/if}
     </div>
 
-    <!-- Records d'audience (10 ans glissant) -->
-    {#if telemetryData.records?.best_day || telemetryData.records?.best_month}
+    <!-- Records (scope annee) -->
+    {#if tlScope === 'annee' && (telemetryData.kpi.record_jour || telemetryData.kpi.record_mois)}
     <div class="tl-kpi-row" style="margin-top:.75rem">
-      {#if telemetryData.records.best_day}
+      {#if telemetryData.kpi.record_jour}
       <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.records.best_day.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
-        <div class="tl-kpi-label">🏆 Record jour — {telemetryData.records.best_day.jour}</div>
+        <div class="tl-kpi-value">{telemetryData.kpi.record_jour.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Record jour — {telemetryData.kpi.record_jour.jour}</div>
       </div>
       {/if}
-      {#if telemetryData.records.best_month}
+      {#if telemetryData.kpi.record_mois}
       <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.records.best_month.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
-        <div class="tl-kpi-label">🏆 Record mois — {telemetryData.records.best_month.mois}</div>
+        <div class="tl-kpi-value">{telemetryData.kpi.record_mois.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Record mois — {telemetryData.kpi.record_mois.mois}</div>
       </div>
       {/if}
     </div>
     {/if}
 
-    <!-- Top pages aujourd'hui -->
-    {#if telemetryData.today.pages.length > 0}
+    <!-- Graphe (barres CSS) — adaptatif au scope -->
+    {#if telemetryData.chart.length > 0}
     <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">📍 Pages visitées aujourd'hui</h3>
-      <table class="table">
-        <thead><tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Utilisateurs</th></tr></thead>
-        <tbody>
-          {#each telemetryData.today.pages as p}
-            <tr>
-              <td><code style="font-size:.82rem">{p.page}</code></td>
-              <td style="text-align:right;font-weight:600">{p.total}</td>
-              <td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    {/if}
-
-    <!-- Graphe 30 derniers jours (barres CSS) -->
-    {#if telemetryData.daily.length > 0}
-    <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">📈 30 derniers jours — vues par jour</h3>
+      <h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
       <div class="tl-chart">
-        {#each telemetryData.daily as d}
-          {@const maxVal = Math.max(...telemetryData.daily.map((x: any) => x.total), 1)}
-          <div class="tl-bar-col" title="{d.jour} — {d.total} vues, {d.uniques} uniques">
-            <div class="tl-bar" style="height:{Math.max(4, (d.total / maxVal) * 100)}%"></div>
-            <div class="tl-bar-label">{d.jour.slice(8)}</div>
+        {#each telemetryData.chart as d}
+          {@const maxVal = Math.max(...telemetryData.chart.map((x) => x.total), 1)}
+          <div class="tl-bar-col {tlScope === 'annee' ? 'tl-bar-col-month' : ''}" title="{d.label} — {d.total} vues{d.uniques != null ? `, ${d.uniques} uniques` : ''}">
+            <div class="tl-bar {tlScope === 'annee' ? 'tl-bar-month' : ''}" style="height:{Math.max(4, (d.total / maxVal) * 100)}%"></div>
+            <div class="tl-bar-label">{d.label}</div>
           </div>
         {/each}
       </div>
     </div>
     {/if}
 
-    <!-- Top pages 30 jours -->
-    {#if telemetryData.top_pages_30d.length > 0}
+    <!-- Top pages -->
+    {#if telemetryData.top_pages.length > 0}
     <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">🏆 Top pages — 30 derniers jours</h3>
+      <h3 class="tl-section-title">🏆 Top pages</h3>
       <table class="table">
         <thead><tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Utilisateurs</th><th style="text-align:right">%</th></tr></thead>
         <tbody>
-          {#each telemetryData.top_pages_30d as p}
-            {@const grandTotal = telemetryData.top_pages_30d.reduce((s: number, x: any) => s + x.total, 0) || 1}
+          {#each telemetryData.top_pages as p}
+            {@const grandTotal = telemetryData.top_pages.reduce((s, x) => s + x.total, 0) || 1}
             <tr>
               <td><code style="font-size:.82rem">{p.page}</code></td>
               <td style="text-align:right;font-weight:600">{p.total}</td>
@@ -2180,30 +2160,14 @@ $: _siteNom = $siteNomStore;
     </div>
     {/if}
 
-    <!-- Graphe mensuel -->
-    {#if telemetryData.monthly.length > 0}
+    <!-- Utilisateurs les plus actifs (scope jour et mois) -->
+    {#if telemetryData.top_users && telemetryData.top_users.length > 0}
     <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">📅 Historique mensuel</h3>
-      <div class="tl-chart">
-        {#each telemetryData.monthly as m}
-          {@const maxVal = Math.max(...telemetryData.monthly.map((x: any) => x.total), 1)}
-          <div class="tl-bar-col tl-bar-col-month" title="{m.mois} — {m.total} vues, {m.uniques} uniques">
-            <div class="tl-bar tl-bar-month" style="height:{Math.max(4, (m.total / maxVal) * 100)}%"></div>
-            <div class="tl-bar-label">{m.mois.slice(5)}</div>
-          </div>
-        {/each}
-      </div>
-    </div>
-    {/if}
-
-    <!-- Utilisateurs les plus actifs -->
-    {#if telemetryUsers.length > 0}
-    <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">👥 Utilisateurs les plus actifs (30 jours)</h3>
+      <h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
       <table class="table">
         <thead><tr><th>Utilisateur</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th></tr></thead>
         <tbody>
-          {#each telemetryUsers as u}
+          {#each telemetryData.top_users as u}
             <tr>
               <td style="font-size:.85rem">{u.nom}</td>
               <td style="text-align:right;font-weight:600">{u.total}</td>
@@ -2413,6 +2377,10 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .onglet-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
 
 /* Télémétrie */
+.tl-scope-switch { display: flex; gap: .5rem; flex-wrap: wrap; }
+.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
+.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 .tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
 .tl-kpi { background: var(--color-surface, #fff); border: 1px solid var(--color-border); border-radius: var(--radius, 8px); padding: 1.25rem 1rem; text-align: center; }
 .tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
