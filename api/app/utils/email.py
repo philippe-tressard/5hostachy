@@ -132,6 +132,11 @@ def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee
     {body_html}
   </td></tr>
 
+  <!-- Notification preferences -->
+  <tr><td style="background-color:#FFFFFF;padding:0 32px 20px;text-align:center">
+    <p style="margin:0;font-size:12px;color:#8A8FA0">Pour g\u00e9rer vos pr\u00e9f\u00e9rences de notification, rendez-vous dans votre <a href="{site_url.rstrip('/')}/profil" style="color:#1E3A5F;text-decoration:underline">profil</a>.</p>
+  </td></tr>
+
   <!-- Footer -->
   {safe_footer}
 
