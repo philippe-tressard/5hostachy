@@ -129,6 +129,15 @@ def dashboard(
             for h in hour_stats
         ]
 
+        # Heure de pointe aujourd'hui
+        hour_peak = None
+        if hour_stats:
+            best = max(hour_stats, key=lambda x: x[1])
+            hour_peak = f"{(best[0] + paris_offset) % 24}h"
+
+        # Moyenne vues/utilisateur
+        moy_vues = round(total_today / active_today, 1) if active_today else None
+
         # Top users today
         user_rows = session.exec(
             select(
@@ -157,6 +166,8 @@ def dashboard(
                 "utilisateurs": active_today or 0,
                 "vues": total_today or 0,
                 "pages": len(today_stats),
+                "heure_pointe": hour_peak,
+                "moy_vues_utilisateur": moy_vues,
             },
             "chart": chart,
             "chart_label": "Vues par heure",
@@ -214,6 +225,15 @@ def dashboard(
         # KPI agrégés
         total_vues = sum(d["total"] for d in daily_chart.values())
         total_uniques = max(daily_uniques_map.values()) if daily_uniques_map else 0
+        nb_jours = len(daily_chart) or 1
+        moy_vues_jour = round(total_vues / nb_jours, 1)
+        moy_utilisateurs_jour = round(sum(daily_uniques_map.values()) / nb_jours, 1) if daily_uniques_map else 0
+
+        # Jour le plus actif (par utilisateurs uniques)
+        jour_pointe = None
+        if daily_uniques_map:
+            best_j = max(daily_uniques_map, key=daily_uniques_map.get)  # type: ignore[arg-type]
+            jour_pointe = {"jour": best_j, "uniques": daily_uniques_map[best_j]}
 
         # Heure de pointe (30j)
         hour_stats = session.exec(
@@ -260,6 +280,9 @@ def dashboard(
                 "utilisateurs": total_uniques,
                 "pages": len(top_pages),
                 "heure_pointe": peak_hour,
+                "moy_vues_jour": moy_vues_jour,
+                "moy_utilisateurs_jour": moy_utilisateurs_jour,
+                "jour_pointe": jour_pointe,
             },
             "chart": sorted(daily_chart.values(), key=lambda x: x["label"]),
             "chart_label": "Vues par jour (30j)",
@@ -316,6 +339,8 @@ def dashboard(
             top_pages_all[r.page]["uniques"] += r.utilisateurs_uniques
 
         total_vues = sum(d["total"] for d in monthly_chart.values())
+        nb_mois_actifs = len(monthly_chart) or 1
+        moy_vues_mois = round(total_vues / nb_mois_actifs, 1)
 
         # Records
         best_day = None
@@ -354,6 +379,7 @@ def dashboard(
                 "pages": len(top_pages_all),
                 "record_jour": best_day,
                 "record_mois": best_month,
+                "moy_vues_mois": moy_vues_mois,
             },
             "chart": sorted(monthly_chart.values(), key=lambda x: x["label"]),
             "chart_label": "Vues par mois (10 ans)",

@@ -2097,13 +2097,47 @@ $: _siteNom = $siteNomStore;
         <div class="tl-kpi-label">🔺 Heure de pointe</div>
       </div>
       {/if}
+      {#if telemetryData.kpi.moy_vues_utilisateur != null}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.kpi.moy_vues_utilisateur}</div>
+        <div class="tl-kpi-label">Moy. vues / utilisateur</div>
+      </div>
+      {/if}
+      {#if telemetryData.kpi.moy_vues_jour != null}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.kpi.moy_vues_jour}</div>
+        <div class="tl-kpi-label">Moy. vues / jour</div>
+      </div>
+      {/if}
+      {#if telemetryData.kpi.moy_utilisateurs_jour != null}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.kpi.moy_utilisateurs_jour}</div>
+        <div class="tl-kpi-label">Moy. utilisateurs / jour</div>
+      </div>
+      {/if}
       {#if telemetryData.kpi.mois_actifs != null}
       <div class="tl-kpi">
         <div class="tl-kpi-value">{telemetryData.kpi.mois_actifs}</div>
         <div class="tl-kpi-label">Mois avec activité</div>
       </div>
       {/if}
+      {#if telemetryData.kpi.moy_vues_mois != null}
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.kpi.moy_vues_mois}</div>
+        <div class="tl-kpi-label">Moy. vues / mois</div>
+      </div>
+      {/if}
     </div>
+
+    <!-- Jour le plus actif (scope mois) -->
+    {#if tlScope === 'mois' && telemetryData.kpi.jour_pointe}
+    <div class="tl-kpi-row" style="margin-top:.75rem">
+      <div class="tl-kpi">
+        <div class="tl-kpi-value">{telemetryData.kpi.jour_pointe.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
+        <div class="tl-kpi-label">🏆 Jour le plus actif — {telemetryData.kpi.jour_pointe.jour}</div>
+      </div>
+    </div>
+    {/if}
 
     <!-- Records (scope annee) -->
     {#if tlScope === 'annee' && (telemetryData.kpi.record_jour || telemetryData.kpi.record_mois)}
