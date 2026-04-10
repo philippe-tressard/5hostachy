@@ -316,10 +316,15 @@
 	const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
 	function contratDateFin(c: ReportContrat): { date: Date; reconduit: boolean } | null {
-		if (!c.date_debut || !c.duree_initiale_valeur || !c.duree_initiale_unite) return null;
+		if (!c.date_debut) return null;
 		const d = new Date(c.date_debut);
-		if (c.duree_initiale_unite === 'ans') d.setFullYear(d.getFullYear() + c.duree_initiale_valeur);
-		else if (c.duree_initiale_unite === 'mois') d.setMonth(d.getMonth() + c.duree_initiale_valeur);
+		if (c.duree_initiale_valeur && c.duree_initiale_unite) {
+			if (c.duree_initiale_unite === 'ans') d.setFullYear(d.getFullYear() + c.duree_initiale_valeur);
+			else if (c.duree_initiale_unite === 'mois') d.setMonth(d.getMonth() + c.duree_initiale_valeur);
+		} else {
+			// Durée inconnue → reconduction annuelle par défaut
+			d.setFullYear(d.getFullYear() + 1);
+		}
 		const now = new Date();
 		let reconduit = false;
 		while (d <= now) { d.setFullYear(d.getFullYear() + 1); reconduit = true; }
