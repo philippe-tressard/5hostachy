@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.1 · Mars 2026</span>
+    <span class="topbar-badge">Version 3.2 · Avril 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1638,11 +1638,20 @@
           <div style="padding:.8rem; background:#fdf4ff; border-radius:8px">
             <strong>&#x1F3E2; Prestataires</strong> — synthèse de chaque prestataire : nom, spécialité, nombre de devis actifs/réalisés. Cliquez <strong>« Fiche synthèse »</strong> pour accéder à l'historique complet (contrats, prestations, notations, prochaines visites).
           </div>
+          <div style="padding:.8rem; background:#fefce8; border-radius:8px">
+            <strong>&#x1F4C5; Renouvellements</strong> — vue complète des contrats prestataires et des diagnostics réglementaires.
+            <ul style="margin:.4rem 0 0 1.2rem; font-size:.85rem">
+              <li><strong>KPIs</strong> — contrats en préavis ou expirés, fins de contrat dans l'année, audits à (re)planifier.</li>
+              <li><strong>Frise graphique</strong> — visualisation des dates de fin de contrat sur l'exercice courant avec zones de préavis hachurées.</li>
+              <li><strong>Tableau complet</strong> — tous les contrats actifs triés par date de fin. Les contrats sans date renseignée apparaissent avec la mention <em>N/A</em>.</li>
+              <li><strong>Diagnostics réglementaires</strong> — échéances calculées (dernier rapport + fréquence légale), groupées par année. Les diagnostics permanents ou sans rapport figurent dans la section <em>Sans échéance calculable</em>.</li>
+            </ul>
+          </div>
         </div>
 
         <div class="callout tip" style="margin-top:1rem">
           <span class="callout-icon">&#x1F4A1;</span>
-          <p>Chaque vue peut être <strong>exportée en CSV</strong> pour Excel / partage et <strong>imprimée</strong> pour préparer un dossier d'AG ou un point syndic.</p>
+          <p>Chaque vue peut être <strong>exportée en CSV</strong> pour Excel / partage et <strong>imprimée</strong> pour préparer un dossier d'AG ou un point syndic. Le bouton <strong>🔄</strong> permet de <strong>rafraîchir les données</strong> sans recharger la page (utile après ajout ou suppression d'un contrat ou diagnostic).</p>
         </div>
       </div>
 
@@ -1908,6 +1917,23 @@
               <strong>Règles &amp; Recommandations</strong>
               <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Règles de vie, bonnes pratiques et recommandations du conseil syndical pour la copropriété (bruit, tri, parties communes…). Éditables par le CS.</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <h3>🔍 Diagnostics et Contrôles Réglementaires</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Visible par tous les copropriétaires et membres du CS. Cette section recense les <strong>10 diagnostics obligatoires</strong> d'une copropriété (DPE collectif, amiante, plomb, électricité, gaz, CTQ ascenseurs, PPPT, audit énergétique, ERP, termites).</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem; font-size:.9rem">
+          <div style="padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <strong>Fiche diagnostic</strong> — chaque type affiche son nom, le texte législatif de référence, sa fréquence réglementaire et les rapports téléchargeables associés (avec date et synthèse optionnelle).
+          </div>
+          <div style="padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <strong>Actions CS</strong> — les membres du conseil syndical peuvent <strong>ajouter</strong>, <strong>modifier</strong> ou <strong>supprimer</strong> un rapport, et marquer un diagnostic comme <strong>non applicable</strong> à la copropriété.
+          </div>
+          <div style="padding:.8rem; background:#f0fdfa; border-radius:8px">
+            <strong>Échéances</strong> — consultez les prochaines échéances dans <strong>Espace CS → Reporting → Renouvellements</strong> (section « Diagnostics et Contrôles Réglementaires »), avec calcul automatique basé sur le dernier rapport + fréquence légale.
           </div>
         </div>
       </div>
@@ -2310,10 +2336,10 @@
         <ul>
           <li><strong>KPI du jour</strong> — vues totales, utilisateurs uniques, pages distinctes visitées.</li>
           <li><strong>Pages consultées aujourd'hui</strong> — tableau détaillé page par page.</li>
-          <li><strong>Top pages sur 30 jours</strong> — classement des pages les plus visitées (vues, utilisateurs, pourcentage).</li>
-          <li><strong>Historique sur 30 jours</strong> — graphique en barres jour par jour.</li>
-          <li><strong>Historique mensuel</strong> — graphique des tendances sur plusieurs mois.</li>
-          <li><strong>Utilisateurs les plus actifs</strong> — top 30 sur les 30 derniers jours.</li>
+          <li><strong>Top pages</strong> — classement des pages les plus visitées (vues, utilisateurs, pourcentage), avec un sélecteur <strong>Jour / Mois / Année</strong> pour choisir la période d'analyse.</li>
+          <li><strong>Historique</strong> — graphique en barres unifié avec le même sélecteur Jour / Mois / Année.</li>
+          <li><strong>Métriques par scope</strong> — répartition détaillée des vues par périmètre (résidence, bâtiment, global).</li>
+          <li><strong>Utilisateurs les plus actifs</strong> — top 30 sur la période sélectionnée.</li>
         </ul>
       </div>
 
@@ -2466,7 +2492,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.1</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.2</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
