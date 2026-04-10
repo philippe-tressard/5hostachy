@@ -454,6 +454,7 @@ class Publication(SQLModel, table=True):
     brouillon: bool = False
     archivee: bool = False
     partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
     evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")

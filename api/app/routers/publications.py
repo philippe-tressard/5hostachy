@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import ConfigSite, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
+from app.models.core import ConfigSite, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
@@ -45,6 +45,54 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
     data.auteur_nom = f"{auteur_pub.prenom} {auteur_pub.nom}" if auteur_pub else "?"
     data.evolutions = evol_reads
     return data
+
+
+def _envoyer_email_syndic_publication(
+    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session
+):
+    """Envoie un email au syndic principal avec la publication en corps."""
+    from app.utils.email import send_email
+    import re
+
+    syndic_principal = session.exec(
+        select(MembreSyndic).where(MembreSyndic.est_principal == True)
+    ).first()
+    if not syndic_principal or not syndic_principal.email:
+        return
+
+    # CC : membres CS actifs
+    cs_emails = session.exec(
+        select(Utilisateur.email)
+        .where(
+            Utilisateur.actif == True,
+            Utilisateur.email.isnot(None),
+            Utilisateur.roles_json.contains("conseil_syndical"),
+        )
+    ).all()
+    cc = [e for e in cs_emails if e and e != syndic_principal.email]
+
+    cfg_rows = session.exec(
+        select(ConfigSite).where(ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url")))
+    ).all()
+    cfg = {r.cle: r.valeur for r in cfg_rows}
+
+    # Extrait : texte brut tronqué à 300 cars
+    extrait = re.sub(r'<[^>]+>', '', pub.contenu or '').strip()[:300]
+
+    background_tasks.add_task(
+        send_email,
+        code="publication_syndic",
+        to=syndic_principal.email,
+        context={
+            "publication": {"titre": pub.titre, "extrait": extrait},
+            "auteur": {"prenom": user.prenom, "nom": user.nom},
+            "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+            "app": {"url": cfg.get("site_url", "https://localhost")},
+            "reference_copro": cfg.get("reference_copro", ""),
+        },
+        session=session,
+        cc=cc,
+    )
 
 
 def _is_archived(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEURES) -> bool:
@@ -131,6 +179,8 @@ def create_publication(
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config
             )
+    if pub.envoyer_syndic and not pub.brouillon:
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session)
     return _pub_to_read(pub, session)
 
 
@@ -191,6 +241,9 @@ def update_publication(
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config
             )
+    # Envoi email syndic si brouillon publié + flag activé
+    if was_brouillon_published and pub.envoyer_syndic:
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session)
 
     return _pub_to_read(pub, session)
 

@@ -77,13 +77,27 @@ _LOGO_SVG = (
 )
 
 
+import re as _re
+
+
+def _linkify_urls(text: str) -> str:
+    """Transforme les URLs brutes en liens cliquables dans le footer."""
+    return _re.sub(
+        r'(https?://\S+|(?<!\w)([a-zA-Z0-9-]+\.)+[a-z]{2,}(?:/\S*)?)',
+        lambda m: f'<a href="{m.group(0) if m.group(0).startswith("http") else "https://" + m.group(0)}" '
+                  f'style="color:#1E3A5F;text-decoration:underline">{m.group(0)}</a>',
+        text,
+    )
+
+
 def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee: int) -> str:
     """Encapsule le contenu HTML dans un gabarit email aux couleurs du site."""
     safe_footer = ""
     if footer:
+        linked_footer = _linkify_urls(footer)
         safe_footer = (
             f'<tr><td style="background-color:#FAFAF7;padding:20px 32px 24px;text-align:center">'
-            f'<p style="margin:0;font-size:13px;color:#5A6070">{footer}</p>'
+            f'<p style="margin:0;font-size:13px;color:#5A6070">{linked_footer}</p>'
             f'</td></tr>'
         )
     return f'''<!DOCTYPE html>
