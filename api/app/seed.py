@@ -208,6 +208,19 @@ EMAIL_TEMPLATES = [
      '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#c0392b;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Traiter le bug</a></p>',
      True),
 
+    ("ticket_syndic", "Ticket transmis au syndic", "Ticket #{{ ticket.numero }} — {{ residence.nom }}{% if reference_copro %} ({{ reference_copro }}){% endif %}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4cb Ticket transmis par le conseil syndical</h2>'
+     '<p style="margin:0 0 16px">Un ticket a été transmis à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} \u00b7 {{ ticket.categorie }}{% endif %}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
+     '<p style="margin:0 0 8px;font-size:14px;color:#1A1A2E">{{ ticket.description }}</p>'
+     '<p style="margin:0;font-size:14px;color:#5A6070">Soumis par {{ auteur.prenom }} {{ auteur.nom }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
+     True),
+
     ("ticket_statut_change", "Statut ticket modifié", "Ticket #{{ ticket.numero }} mis à jour — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Mise à jour de votre ticket</h2>'
      '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
@@ -387,7 +400,7 @@ def seed():
             'notify_ticket_bug_email': '0',
             'notify_new_user_created_email': '0',
             'whatsapp_footer': '— Le Conseil Syndical',
-            'email_footer': '— Envoyé depuis 5hostachy.fr',
+            'email_footer': '— ©2026-5Hostachy - Envoyé depuis 5hostachy.fr —',
             'reference_copro': '',
             **DEFAULT_LEGAL,
         }

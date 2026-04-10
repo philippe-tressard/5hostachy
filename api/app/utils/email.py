@@ -82,8 +82,9 @@ def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee
     safe_footer = ""
     if footer:
         safe_footer = (
-            f'<tr><td style="padding:20px 32px 0;border-top:1px solid #D0D8E4">'
-            f'<p style="margin:0;font-size:13px;color:#5A6070">{footer}</p></td></tr>'
+            f'<tr><td style="background-color:#FAFAF7;padding:20px 32px 24px;text-align:center">'
+            f'<p style="margin:0;font-size:13px;color:#5A6070">{footer}</p>'
+            f'</td></tr>'
         )
     return f'''<!DOCTYPE html>
 <html lang="fr">
@@ -118,15 +119,7 @@ def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee
   </td></tr>
 
   <!-- Footer -->
-  <tr><td style="background-color:#FAFAF7;padding:20px 32px 24px;font-size:12px;color:#5A6070;text-align:center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      {safe_footer}
-      <tr><td style="padding:{("16px" if footer else "0")} 0 0;text-align:center">
-        <a href="{site_url}" style="color:#1E3A5F;text-decoration:none;font-weight:600;font-size:13px">{site_url.replace("https://","").rstrip("/")}</a>
-        <p style="margin:6px 0 0;font-size:11px;color:#9AA0AD">© {annee} {site_nom} — Tous droits réservés</p>
-      </td></tr>
-    </table>
-  </td></tr>
+  {safe_footer}
 
 </table>
 <!-- /Container -->
