@@ -234,6 +234,7 @@ class EvolutionCreate(BaseModel):
     contenu: Optional[str] = None
     nouveau_statut: Optional[str] = None  # requis si type=="etat"
     partager_whatsapp: Optional[bool] = None  # None = hérite de la publication
+    envoyer_syndic: Optional[bool] = None  # None = hérite de la publication
 
 
 class PublicationRead(BaseModel):

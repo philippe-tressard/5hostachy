@@ -316,6 +316,11 @@ def add_evolution(
                 wa_config,
             )
 
+    # Envoi email syndic pour le commentaire si demandé
+    share_syndic = body.envoyer_syndic if body.envoyer_syndic is not None else pub.envoyer_syndic
+    if share_syndic and body.contenu and body.contenu.strip():
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session)
+
     auteur = session.get(Utilisateur, evol.auteur_id)
     return EvolutionRead(
         id=evol.id,
