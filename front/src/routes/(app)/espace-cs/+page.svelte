@@ -265,10 +265,10 @@
 					Libelle: c.libelle,
 					Prestataire: c.prestataireNom,
 					Equipement: c.type_equipement,
-					Debut: fmtDate(c.date_debut),
-					Fin: fmtDate(c.dateFin.toISOString()),
-					Preavis: fmtDate(c.datePreavis.toISOString()),
-					Statut: c.urgence === 'expire' ? 'Expiré' : c.urgence === 'preavis' ? 'Préavis en cours' : 'Actif',
+					Debut: c.date_debut ? fmtDate(c.date_debut) : 'N/A',
+					Fin: c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A',
+					Preavis: c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A',
+					Statut: c.urgence === 'expire' ? 'Expiré' : c.urgence === 'preavis' ? 'Préavis en cours' : c.urgence === 'inconnu' ? 'Dates manquantes' : 'Actif',
 				});
 			}
 			for (const d of diagsAvecNext) {
@@ -277,10 +277,10 @@
 					Libelle: d.nom,
 					Prestataire: '',
 					Equipement: d.code,
-					Debut: d.lastRapportDate ? fmtDate(d.lastRapportDate) : '—',
-					Fin: fmtDate(d.nextDate.toISOString()),
+					Debut: d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A',
+					Fin: d.nextDate ? fmtDate(d.nextDate.toISOString()) : 'N/A',
 					Preavis: '',
-					Statut: d.urgence === 'depasse' ? 'Dépassé' : d.urgence === 'annee' ? `À faire en ${ANNEE_COURANTE}` : 'Planifié',
+					Statut: d.urgence === 'depasse' ? 'Dépassé' : d.urgence === 'annee' ? `À faire en ${ANNEE_COURANTE}` : d.urgence === 'inconnu' ? (d.isPermanent ? 'Permanent' : 'Sans échéance') : 'Planifié',
 				});
 			}
 			downloadCsv('reporting-renouvellements-audits.csv', rows);
@@ -390,33 +390,43 @@
 	$: contratsAvecFin = reportContrats
 		.map(c => {
 			const fin = contratDateFin(c);
-			if (!fin) return null;
-			const preavis = contratDatePreavis(fin);
-			const urgence = contratUrgence(fin);
+			const preavis = fin ? contratDatePreavis(fin) : null;
+			const urgence: 'expire' | 'preavis' | 'annee' | 'futur' | 'inconnu' = fin ? contratUrgence(fin) : 'inconnu';
 			const prest = reportPrestataires.find(p => p.id === c.prestataire_id);
-			return { ...c, dateFin: fin, datePreavis: preavis, urgence, prestataireNom: prest?.nom ?? `#${c.prestataire_id}` };
+			return { ...c, dateFin: fin as Date | null, datePreavis: preavis, urgence, prestataireNom: prest?.nom ?? `#${c.prestataire_id}` };
 		})
-		.filter((c): c is NonNullable<typeof c> => c !== null)
-		.sort((a, b) => a.dateFin.getTime() - b.dateFin.getTime());
+		.sort((a, b) => {
+			if (!a.dateFin && !b.dateFin) return 0;
+			if (!a.dateFin) return 1;
+			if (!b.dateFin) return -1;
+			return a.dateFin.getTime() - b.dateFin.getTime();
+		});
 
-	$: contratsAnneeCourante = contratsAvecFin.filter(c => c.dateFin.getFullYear() === ANNEE_COURANTE);
+	$: contratsAnneeCourante = contratsAvecFin.filter(c => c.dateFin && c.dateFin.getFullYear() === ANNEE_COURANTE);
 
 	$: diagsAvecNext = reportDiagTypes
-		.filter(dt => !dt.non_applicable && dt.frequence && dt.frequence.toLowerCase() !== 'permanent')
+		.filter(dt => !dt.non_applicable)
 		.map(dt => {
-			const next = diagNextDate(dt);
-			if (!next) return null;
-			const urgence = diagUrgence(next);
+			const isPermanent = dt.frequence ? dt.frequence.toLowerCase().includes('permanent') : false;
+			const next = isPermanent ? null : diagNextDate(dt);
+			const urgence: 'depasse' | 'annee' | 'futur' | 'inconnu' = next ? diagUrgence(next) : 'inconnu';
 			const lastRapport = dt.rapports.find(r => r.date_rapport);
-			return { ...dt, nextDate: next, urgence, lastRapportDate: lastRapport?.date_rapport ?? null };
+			return { ...dt, nextDate: next as Date | null, urgence, lastRapportDate: lastRapport?.date_rapport ?? null, isPermanent };
 		})
-		.filter((d): d is NonNullable<typeof d> => d !== null)
-		.sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
+		.sort((a, b) => {
+			if (!a.nextDate && !b.nextDate) return 0;
+			if (!a.nextDate) return 1;
+			if (!b.nextDate) return -1;
+			return a.nextDate.getTime() - b.nextDate.getTime();
+		});
+
+	$: diagsAvecEcheance = diagsAvecNext.filter(d => d.nextDate !== null);
+	$: diagsSansEcheance = diagsAvecNext.filter(d => d.nextDate === null);
 
 	$: diagsParAnnee = (() => {
-		const map = new Map<number, typeof diagsAvecNext>();
-		for (const d of diagsAvecNext) {
-			const y = d.nextDate.getFullYear();
+		const map = new Map<number, typeof diagsAvecEcheance>();
+		for (const d of diagsAvecEcheance) {
+			const y = d.nextDate!.getFullYear();
 			if (y < ANNEE_COURANTE || y > ANNEE_COURANTE + 10) continue;
 			if (!map.has(y)) map.set(y, []);
 			map.get(y)!.push(d);
@@ -425,8 +435,8 @@
 	})();
 
 	$: renKpiContrats = contratsAnneeCourante.length;
-	$: renKpiPreavis = contratsAvecFin.filter(c => c.urgence === 'preavis' || c.urgence === 'expire').length;
-	$: renKpiDiags = diagsAvecNext.filter(d => d.urgence === 'depasse' || d.urgence === 'annee').length;
+	$: renKpiPreavis = contratsAvecFin.filter(c => c.urgence === 'preavis' || c.urgence === 'expire' || c.urgence === 'inconnu').length;
+	$: renKpiDiags = diagsAvecNext.filter(d => d.urgence === 'depasse' || d.urgence === 'annee' || d.urgence === 'inconnu').length;
 
 	async function loadTickets() {
 		if (tkLoaded) return;
@@ -438,8 +448,8 @@
 		finally { tkLoading = false; }
 	}
 
-	async function loadReporting() {
-		if (reportingLoaded) return;
+	async function loadReporting(force = false) {
+		if (reportingLoaded && !force) return;
 		reportingLoading = true;
 		try {
 			await loadTickets();
@@ -459,6 +469,7 @@
 			reportingLoading = false;
 		}
 	}
+	function refreshReporting() { loadReporting(true); }
 
 	async function tkToggle(id: number) {
 		if (tkExpandedId === id) { tkExpandedId = null; return; }
@@ -1236,6 +1247,9 @@
 				</button>
 			</div>
 			<div class="reporting-actions">
+				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
+					&#x1F504;{reportingLoading ? ' …' : ''}
+				</button>
 				<button class="btn btn-sm btn-outline" on:click={exportCurrentReporting}>
 					&#x2B07; Exporter CSV
 				</button>
@@ -1563,7 +1577,7 @@
 						</div>
 						{#each contratsAnneeCourante as c (c.id)}
 							{@const moisFin = c.dateFin.getMonth()}
-							{@const moisPreavis = c.datePreavis.getFullYear() < ANNEE_COURANTE ? 0 : c.datePreavis.getMonth()}
+							{@const moisPreavis = c.datePreavis && c.datePreavis.getFullYear() < ANNEE_COURANTE ? 0 : (c.datePreavis?.getMonth() ?? 0)}
 							{@const barStart = Math.max(0, moisPreavis)}
 							{@const barEnd = moisFin}
 							{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
@@ -1589,25 +1603,28 @@
 							<span class="frise-legend-hatch">▧ Zone de préavis</span>
 						</div>
 					</div>
+				{/if}
 
-					<!-- Tableau détail -->
+				<!-- Tableau détail — tous les contrats -->
+				{#if contratsAvecFin.length > 0}
 					<div class="report-table-wrap" style="margin-top:1rem">
 						<table class="report-table compact">
 							<thead>
 								<tr><th>Contrat</th><th>Prestataire</th><th>Équipement</th><th>Début</th><th>Fin</th><th>Préavis dès</th><th>Statut</th></tr>
 							</thead>
 							<tbody>
-								{#each contratsAnneeCourante as c (c.id)}
+								{#each contratsAvecFin as c (c.id)}
 									<tr>
 										<td><strong>{c.libelle}</strong>{#if c.numero_contrat}<div class="text-muted-sm">N° {c.numero_contrat}</div>{/if}</td>
 										<td>{c.prestataireNom}</td>
 										<td>{c.type_equipement}</td>
-										<td>{fmtDate(c.date_debut)}</td>
-										<td>{fmtDate(c.dateFin.toISOString())}</td>
-										<td>{fmtDate(c.datePreavis.toISOString())}</td>
+										<td>{c.date_debut ? fmtDate(c.date_debut) : 'N/A'}</td>
+										<td>{c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</td>
+										<td>{c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</td>
 										<td>
 											{#if c.urgence === 'expire'}<span class="badge badge-red">Expiré</span>
 											{:else if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
+											{:else if c.urgence === 'inconnu'}<span class="badge badge-gray">Dates manquantes</span>
 											{:else}<span class="badge badge-blue">Actif</span>
 											{/if}
 										</td>
@@ -1619,13 +1636,13 @@
 				{/if}
 			</section>
 
-			<!-- Section 2 : Audits à replanifier — 10 prochaines années -->
+			<!-- Section 2 : Diagnostics et Contrôles Réglementaires -->
 			<section class="report-card">
-				<h3>🔍 Audits réglementaires à replanifier — {ANNEE_COURANTE}–{ANNEE_COURANTE + 10}</h3>
+				<h3>🔍 Diagnostics et Contrôles Réglementaires — {ANNEE_COURANTE}–{ANNEE_COURANTE + 10}</h3>
 				<p class="report-intro">Échéances issues de Résidence / Diagnostics et Contrôles Réglementaires, calculées depuis le dernier rapport + fréquence légale.</p>
 
 				{#if diagsAvecNext.length === 0}
-					<div class="empty-state"><h3>Aucun audit à replanifier</h3><p>Tous les diagnostics sont à jour, non applicables, ou sans rapport initial.</p></div>
+					<div class="empty-state"><h3>Aucun diagnostic applicable</h3><p>Tous les diagnostics sont non applicables.</p></div>
 				{:else}
 					<!-- Grille par année -->
 					{#each diagsParAnnee as [annee, diags]}
@@ -1644,9 +1661,9 @@
 											<tr>
 												<td><strong>{d.nom}</strong></td>
 												<td>{d.code}</td>
-												<td>{d.frequence}</td>
-												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : '—'}</td>
-												<td>{fmtDate(d.nextDate.toISOString())}</td>
+												<td>{d.frequence ?? 'N/A'}</td>
+												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
+												<td>{d.nextDate ? fmtDate(d.nextDate.toISOString()) : 'N/A'}</td>
 												<td>
 													{#if d.urgence === 'depasse'}<span class="badge badge-red">Dépassé</span>
 													{:else if d.urgence === 'annee'}<span class="badge badge-orange">À faire en {ANNEE_COURANTE}</span>
@@ -1660,6 +1677,40 @@
 							</div>
 						</div>
 					{/each}
+
+					<!-- Diagnostics sans échéance calculable -->
+					{#if diagsSansEcheance.length > 0}
+						<div class="audit-year-group" style="margin-top:1rem">
+							<h4 class="audit-year-title">
+								Sans échéance calculable
+								<span class="badge badge-gray">{diagsSansEcheance.length}</span>
+							</h4>
+							<p class="report-intro">Diagnostics sans rapport initial, permanents ou sans fréquence définie.</p>
+							<div class="report-table-wrap">
+								<table class="report-table compact">
+									<thead>
+										<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Statut</th></tr>
+									</thead>
+									<tbody>
+										{#each diagsSansEcheance as d (d.id)}
+											<tr>
+												<td><strong>{d.nom}</strong></td>
+												<td>{d.code}</td>
+												<td>{d.frequence ?? 'N/A'}</td>
+												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
+												<td>
+													{#if d.isPermanent}<span class="badge badge-blue">Permanent</span>
+													{:else if d.rapports.length === 0}<span class="badge badge-gray">Aucun rapport</span>
+													{:else}<span class="badge badge-gray">À planifier</span>
+													{/if}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</section>
 		{/if}
