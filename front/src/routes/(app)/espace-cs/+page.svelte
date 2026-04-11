@@ -422,6 +422,9 @@
 		return false;
 	});
 
+	$: contratsFuturs = contratsAvecFin.filter(c => c.dateFin && c.urgence === 'futur' && !contratsAnneeCourante.includes(c));
+	$: contratsInconnus = contratsAvecFin.filter(c => c.urgence === 'inconnu');
+
 	$: diagsAvecNext = reportDiagTypes
 		.filter(dt => !dt.non_applicable)
 		.map(dt => {
@@ -439,7 +442,8 @@
 		});
 
 	$: diagsAvecEcheance = diagsAvecNext.filter(d => d.nextDate !== null);
-	$: diagsSansEcheance = diagsAvecNext.filter(d => d.nextDate === null);
+	$: diagsSansEcheance = diagsAvecNext.filter(d => d.nextDate === null && !d.isPermanent);
+	$: diagsPermanents = diagsAvecNext.filter(d => d.isPermanent);
 
 	$: diagsParAnnee = (() => {
 		const map = new Map<number, typeof diagsAvecEcheance>();
@@ -1580,7 +1584,7 @@
 				</div>
 			</div>
 
-			<!-- Section 1 : Frise contrats exercice courant -->
+			<!-- Section 1 : Frise contrats -->
 			<section class="report-card" style="margin-bottom:1.5rem">
 				<h3>📋 Contrats prestataires — échéances {ANNEE_COURANTE}</h3>
 				<p class="report-intro">Contrats dont la fin ou le préavis tombe en {ANNEE_COURANTE}. La zone hachurée indique la période de préavis ({PREAVIS_MOIS} mois).</p>
@@ -1588,7 +1592,6 @@
 				{#if contratsAnneeCourante.length === 0}
 					<div class="empty-state"><h3>Aucune échéance de contrat en {ANNEE_COURANTE}</h3></div>
 				{:else}
-					<!-- Frise graphique -->
 					<div class="frise-container">
 						<div class="frise-months">
 							{#each MOIS_LABELS as m}<div class="frise-month-label">{m}</div>{/each}
@@ -1602,22 +1605,36 @@
 							{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
 							{@const finPos = finDansAnnee ? ((moisFin + 0.5) / 12) * 100 : 99}
 							{@const friseStyle = c.reconduit ? 'reconduit' : c.urgence}
-							<div class="frise-row">
-								<div class="frise-row-label" title="{c.libelle} — {c.prestataireNom}{c.reconduit ? ' (reconduit)' : ''}">
-									<strong>{c.libelle}</strong>
-									<span class="text-muted-sm">{c.prestataireNom}{#if c.reconduit} <em>(reconduit)</em>{/if}</span>
+							<div class="frise-row-v2">
+								<div class="frise-row-header">
+									<div class="frise-row-title">
+										<strong>{c.libelle}</strong>
+										<span class="text-muted-sm">{c.prestataireNom}</span>
+										<span class="text-muted-sm">· {c.type_equipement}</span>
+										{#if c.numero_contrat}<span class="text-muted-sm">· N° {c.numero_contrat}</span>{/if}
+									</div>
+									<div class="frise-row-badges">
+										{#if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
+										{:else}<span class="badge badge-blue">Actif</span>
+										{/if}
+										{#if c.reconduit}<span class="badge badge-purple">♻ Reconduit</span>{/if}
+										<span class="frise-row-dates">
+											{fmtDate(c.date_debut)} → {fmtDate(c.dateFin.toISOString())}
+											{#if c.datePreavis}· préavis dès {fmtDate(c.datePreavis.toISOString())}{/if}
+										</span>
+									</div>
 								</div>
 								<div class="frise-bar-track">
 									{#if preavisWidth > 0}
 										<div class="frise-preavis-zone frise-urgence-{friseStyle}" style="left:{(barStart/12)*100}%;width:{preavisWidth}%"></div>
 									{/if}
 									{#if finDansAnnee}
-										<div class="frise-marker frise-marker-{friseStyle}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}{c.reconduit ? ' (reconduit)' : ''}">
+										<div class="frise-marker frise-marker-{friseStyle}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}">
 											<span class="frise-marker-label">{c.dateFin.getDate()}/{c.dateFin.getMonth()+1}</span>
 										</div>
 									{:else}
 										<div class="frise-marker frise-marker-{friseStyle}" style="left:98%;opacity:.7" title="Fin : {fmtDate(c.dateFin.toISOString())} ({c.dateFin.getFullYear()})">
-											<span class="frise-marker-label">→ {c.dateFin.getDate()}/{c.dateFin.getMonth()+1}/{c.dateFin.getFullYear()}</span>
+											<span class="frise-marker-label">→ {c.dateFin.getFullYear()}</span>
 										</div>
 									{/if}
 								</div>
@@ -1633,33 +1650,46 @@
 					</div>
 				{/if}
 
-				<!-- Tableau détail — tous les contrats -->
-				{#if contratsAvecFin.length > 0}
-					<div class="report-table-wrap" style="margin-top:1rem">
-						<table class="report-table compact">
-							<thead>
-								<tr><th>Contrat</th><th>Prestataire</th><th>Équipement</th><th>Début</th><th>Fin</th><th>Préavis dès</th><th>Statut</th></tr>
-							</thead>
-							<tbody>
-								{#each contratsAvecFin as c (c.id)}
-									<tr>
-										<td><strong>{c.libelle}</strong>{#if c.numero_contrat}<div class="text-muted-sm">N° {c.numero_contrat}</div>{/if}</td>
-										<td>{c.prestataireNom}</td>
-										<td>{c.type_equipement}</td>
-										<td>{c.date_debut ? fmtDate(c.date_debut) : 'N/A'}</td>
-										<td>{c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</td>
-										<td>{c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</td>
-										<td>
-											{#if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
-											{:else if c.urgence === 'inconnu'}<span class="badge badge-gray">Dates manquantes</span>
-											{:else}<span class="badge badge-blue">Actif</span>
-											{/if}
-											{#if c.reconduit}<span class="badge badge-purple" title="Reconduit tacitement d'un an">♻ Reconduit</span>{/if}
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+				<!-- Contrats futurs (hors exercice courant) -->
+				{#if contratsFuturs.length > 0}
+					<div style="margin-top:1.2rem">
+						<h4 style="font-size:.9rem;font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)">📅 Échéances futures ({contratsFuturs.length})</h4>
+						<div class="frise-compact-list">
+							{#each contratsFuturs as c (c.id)}
+								<div class="frise-compact-item">
+									<div class="frise-compact-info">
+										<strong>{c.libelle}</strong>
+										<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}</span>
+									</div>
+									<div class="frise-compact-meta">
+										<span>Fin : {c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</span>
+										<span>Préavis : {c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</span>
+										{#if c.reconduit}<span class="badge badge-purple">♻ Reconduit</span>{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Contrats sans dates -->
+				{#if contratsInconnus.length > 0}
+					<div style="margin-top:1.2rem">
+						<h4 style="font-size:.9rem;font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)">⚠️ Dates manquantes ({contratsInconnus.length})</h4>
+						<div class="frise-compact-list">
+							{#each contratsInconnus as c (c.id)}
+								<div class="frise-compact-item">
+									<div class="frise-compact-info">
+										<strong>{c.libelle}</strong>
+										<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}{#if c.numero_contrat} · N° {c.numero_contrat}{/if}</span>
+									</div>
+									<div class="frise-compact-meta">
+										<span>Début : {c.date_debut ? fmtDate(c.date_debut) : 'N/A'}</span>
+										<span class="badge badge-gray">Durée non renseignée</span>
+									</div>
+								</div>
+							{/each}
+						</div>
 					</div>
 				{/if}
 			</section>
@@ -1706,6 +1736,35 @@
 						</div>
 					{/each}
 
+					<!-- Diagnostics permanents -->
+					{#if diagsPermanents.length > 0}
+						<div class="audit-year-group" style="margin-top:1rem">
+							<h4 class="audit-year-title">
+								Permanent
+								<span class="badge badge-blue">{diagsPermanents.length}</span>
+							</h4>
+							<p class="report-intro">Diagnostics à validité permanente (sauf si révision nécessaire).</p>
+							<div class="report-table-wrap">
+								<table class="report-table compact">
+									<thead>
+										<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Statut</th></tr>
+									</thead>
+									<tbody>
+										{#each diagsPermanents as d (d.id)}
+											<tr>
+												<td><strong>{d.nom}</strong></td>
+												<td>{d.code}</td>
+												<td>{d.frequence ?? 'N/A'}</td>
+												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
+												<td><span class="badge badge-green">✓ Permanent</span></td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					{/if}
+
 					<!-- Diagnostics sans échéance calculable -->
 					{#if diagsSansEcheance.length > 0}
 						<div class="audit-year-group" style="margin-top:1rem">
@@ -1713,7 +1772,7 @@
 								Sans échéance calculable
 								<span class="badge badge-gray">{diagsSansEcheance.length}</span>
 							</h4>
-							<p class="report-intro">Diagnostics sans rapport initial, permanents ou sans fréquence définie.</p>
+							<p class="report-intro">Diagnostics sans rapport initial ou sans fréquence définie.</p>
 							<div class="report-table-wrap">
 								<table class="report-table compact">
 									<thead>
@@ -1727,8 +1786,7 @@
 												<td>{d.frequence ?? 'N/A'}</td>
 												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
 												<td>
-													{#if d.isPermanent}<span class="badge badge-blue">Permanent</span>
-													{:else if d.rapports.length === 0}<span class="badge badge-gray">Aucun rapport</span>
+													{#if d.rapports.length === 0}<span class="badge badge-gray">Aucun rapport</span>
 													{:else}<span class="badge badge-gray">À planifier</span>
 													{/if}
 												</td>
@@ -2353,14 +2411,23 @@
 		letter-spacing: .03em; margin-bottom: .35rem; text-align: center;
 		border-bottom: 1px solid var(--color-border); padding-bottom: .3rem;
 	}
-	.frise-row {
-		display: grid; grid-template-columns: 220px 1fr;
-		align-items: center; gap: .5rem; min-height: 36px;
+	.frise-row-v2 {
+		padding: .5rem 0 1.2rem;
 		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
 	}
-	.frise-row-label {
-		display: flex; flex-direction: column; font-size: .82rem;
-		overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+	.frise-row-header {
+		display: flex; justify-content: space-between; align-items: baseline;
+		flex-wrap: wrap; gap: .15rem .8rem; margin-bottom: .3rem;
+	}
+	.frise-row-title {
+		display: flex; align-items: baseline; gap: .4rem; font-size: .82rem;
+		min-width: 0; flex-wrap: wrap;
+	}
+	.frise-row-badges {
+		display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+	}
+	.frise-row-dates {
+		font-size: .72rem; color: var(--color-text-muted); white-space: nowrap;
 	}
 	.frise-bar-track {
 		position: relative; height: 28px;
@@ -2371,6 +2438,17 @@
 		);
 		border-radius: 4px;
 	}
+
+	/* Compact list for future/unknown contracts */
+	.frise-compact-list { display: flex; flex-direction: column; gap: .4rem; }
+	.frise-compact-item {
+		display: flex; justify-content: space-between; align-items: center;
+		gap: .5rem; padding: .4rem .6rem; border-radius: 6px; font-size: .82rem;
+		background: color-mix(in srgb, var(--color-bg-card) 90%, var(--color-border));
+		flex-wrap: wrap;
+	}
+	.frise-compact-info { display: flex; align-items: baseline; gap: .4rem; min-width: 0; flex-wrap: wrap; }
+	.frise-compact-meta { display: flex; align-items: center; gap: .6rem; font-size: .75rem; color: var(--color-text-muted); flex-wrap: wrap; }
 	.frise-preavis-zone {
 		position: absolute; top: 2px; bottom: 2px; border-radius: 3px; opacity: .35;
 		background: repeating-linear-gradient(
@@ -2414,9 +2492,10 @@
 	.audit-year-current { border-left: 3px solid #f59e0b; padding-left: .75rem; }
 
 	@media (max-width: 700px) {
-		.frise-row { grid-template-columns: 1fr; }
+		.frise-row-header { flex-direction: column; }
 		.frise-bar-track { min-height: 24px; }
 		.frise-months { font-size: .6rem; }
+		.frise-compact-item { flex-direction: column; align-items: flex-start; }
 	}
 
 	@media print {
