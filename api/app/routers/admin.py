@@ -1369,25 +1369,35 @@ def _declencher_accueil_arrivant(
     if syndic_principal and syndic_principal.email:
         from app.utils.email import send_email
 
-        cc_list = [user.email] if user.email else []
-
         # Lire reference_copro pour le sujet
         ref_copro_row = session.get(ConfigSite, "reference_copro")
         ref_copro = (ref_copro_row.valeur if ref_copro_row else "").strip()
 
+        ctx = {
+            "nom_complet": nom_complet,
+            "batiment": bat,
+            "ancien_resident": ancien,
+            "reference_copro": ref_copro,
+        }
+        # Email individuel au syndic
         background_tasks.add_task(
             send_email,
             code="nouvel_arrivant_bal",
             to=syndic_principal.email,
-            context={
-                "nom_complet": nom_complet,
-                "batiment": bat,
-                "ancien_resident": ancien,
-                "reference_copro": ref_copro,
-            },
+            context=ctx,
             session=session,
-            cc=cc_list,
+            destinataire_id=syndic_principal.user_id,
         )
+        # Copie à l'arrivant
+        if user.email:
+            background_tasks.add_task(
+                send_email,
+                code="nouvel_arrivant_bal",
+                to=user.email,
+                context=ctx,
+                session=session,
+                destinataire_id=user.id,
+            )
 
     # ── Persister le choix en base ───────────────────────────────────────────
     user.demarche_arrivant = "nouvel_arrivant"

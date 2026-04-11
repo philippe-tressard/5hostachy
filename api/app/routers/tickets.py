@@ -178,19 +178,23 @@ def create_ticket(
             select(MembreSyndic).where(MembreSyndic.est_principal == True)
         ).first()
         if syndic_principal and syndic_principal.email:
-            # CC : utilisateurs ayant le rôle conseil_syndical, actifs, avec email
-            cs_members = session.exec(
-                select(Utilisateur.email)
+            # Destinataires individuels : syndic principal + CS actifs
+            cs_users = session.exec(
+                select(Utilisateur.id, Utilisateur.email)
                 .where(
                     Utilisateur.actif == True,
                     Utilisateur.email.isnot(None),
                     Utilisateur.roles_json.contains("conseil_syndical"),
                 )
             ).all()
-            cc_emails = [
-                e for e in cs_members
-                if e and e != syndic_principal.email
-            ]
+            destinataires: list[tuple[int | None, str]] = []
+            syndic_user_id = syndic_principal.user_id
+            destinataires.append((syndic_user_id, syndic_principal.email))
+            seen_emails = {syndic_principal.email.lower()}
+            for uid, email in cs_users:
+                if email and email.lower() not in seen_emails:
+                    destinataires.append((uid, email))
+                    seen_emails.add(email.lower())
 
             # Config
             cfg_site = session.exec(
@@ -215,34 +219,36 @@ def create_ticket(
                     if os.path.isfile(fpath):
                         photo_paths.append(fpath)
 
-            background_tasks.add_task(
-                send_email,
-                code="ticket_syndic",
-                to=syndic_principal.email,
-                context={
-                    "ticket": {
-                        "id": ticket.id,
-                        "numero": ticket.numero,
-                        "titre": ticket.titre,
-                        "description": ticket.description,
-                        "categorie": ticket.categorie,
-                    },
-                    "auteur": {
-                        "prenom": user.prenom,
-                        "nom": user.nom,
-                    },
-                    "residence": {
-                        "nom": cfg_map.get("site_nom", "5Hostachy"),
-                    },
-                    "app": {
-                        "url": cfg_map.get("site_url", "https://localhost"),
-                    },
-                    "reference_copro": reference_copro,
+            ctx = {
+                "ticket": {
+                    "id": ticket.id,
+                    "numero": ticket.numero,
+                    "titre": ticket.titre,
+                    "description": ticket.description,
+                    "categorie": ticket.categorie,
                 },
-                session=session,
-                cc=cc_emails,
-                attachments=photo_paths or None,
-            )
+                "auteur": {
+                    "prenom": user.prenom,
+                    "nom": user.nom,
+                },
+                "residence": {
+                    "nom": cfg_map.get("site_nom", "5Hostachy"),
+                },
+                "app": {
+                    "url": cfg_map.get("site_url", "https://localhost"),
+                },
+                "reference_copro": reference_copro,
+            }
+            for dest_id, dest_email in destinataires:
+                background_tasks.add_task(
+                    send_email,
+                    code="ticket_syndic",
+                    to=dest_email,
+                    context=ctx,
+                    session=session,
+                    destinataire_id=dest_id,
+                    attachments=photo_paths or None,
+                )
 
     session.commit()
     session.refresh(ticket)
