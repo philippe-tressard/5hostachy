@@ -9,7 +9,7 @@ from jinja2 import BaseLoader
 from sqlmodel import Session, select
 
 from app.config import get_settings
-from app.models.core import ConfigSite, ModeleEmail, Utilisateur
+from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
 
 settings = get_settings()
 
@@ -55,6 +55,19 @@ def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str
 def _get_smtp_config(session: Session) -> dict:
     rows = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_SMTP_KEYS))).all()
     return {r.cle: r.valeur for r in rows}
+
+
+def _log_email(session: Session, code: str, to: str, statut: str, *, sujet: str = "", erreur: str | None = None) -> None:
+    """Enregistre une entrée dans historique_email (fail-safe)."""
+    try:
+        entry = HistoriqueEmail(code=code, destinataire=to, sujet=sujet[:200], statut=statut, erreur=erreur)
+        session.add(entry)
+        session.commit()
+    except Exception:
+        try:
+            session.rollback()
+        except Exception:
+            pass
 
 
 def _render(template_str: str, context: dict) -> str:
@@ -190,6 +203,7 @@ async def send_email(
                     prefs = {}
                 if not prefs.get(pref_key, True):
                     logger.debug("Email [%s] non envoyé → préférence %s=false pour user %s", code, pref_key, destinataire_id)
+                    _log_email(session, code, to, "ignore", erreur=f"préférence {pref_key}=false")
                     return
 
         smtp_cfg = _get_smtp_config(session)
@@ -203,6 +217,7 @@ async def send_email(
             select(ModeleEmail).where(ModeleEmail.code == code)
         ).first()
         if not template or not template.actif:
+            _log_email(session, code, to, "ignore", erreur="template inactive ou inexistante")
             return
 
         # ── Footer email (similaire au footer WhatsApp) ──────────────────
@@ -252,8 +267,9 @@ async def send_email(
                 footer=email_footer,
                 annee=ctx["annee"],
             )
+            rendered_subject = _render(template.sujet, ctx)
             msg_kwargs = dict(
-                subject=_render(template.sujet, ctx),
+                subject=rendered_subject,
                 recipients=[to],
                 body=full_html,
                 subtype="html",
@@ -264,8 +280,10 @@ async def send_email(
                 msg_kwargs["attachments"] = attachments
             msg = MessageSchema(**msg_kwargs)
             await fm.send_message(msg)
+            _log_email(session, code, to, "succes", sujet=rendered_subject)
         except Exception as exc:
             logger.error("Erreur envoi email [%s] → %s : %s", code, to, exc)
+            _log_email(session, code, to, "erreur", erreur=str(exc)[:500])
     finally:
         if close_session:
             session.close()

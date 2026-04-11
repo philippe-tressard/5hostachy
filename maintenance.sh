@@ -7,6 +7,7 @@
 #    - Purge des password reset tokens expirés     (hebdomadaire, dimanche)
 #    - Purge des notifications lues > 90 jours     (hebdomadaire, dimanche)
 #    - Purge des rapports de maintenance > 12 mois (hebdomadaire, dimanche)
+#    - Purge de l'historique emails > 90 jours     (hebdomadaire, dimanche)
 #    - VACUUM SQLite                               (hebdomadaire, dimanche)
 #    - Nettoyage des logs WhatsApp (6 derniers)   (hebdomadaire, dimanche)
 #    - Nettoyage des évolutions archivées (>90j)  (hebdomadaire, dimanche)
@@ -133,6 +134,31 @@ with engine.connect() as c:
 }
 rm -f "$MAINT_ERR1D"
 log "  → $DELETED_HIST rapport(s) supprimé(s)"
+
+# --- 1e. Purge historique emails > 90 jours ------------------------------------
+log "[1e/5] Purge historique emails (>90 jours)..."
+MAINT_ERR1E=$(mktemp)
+DELETED_EMAILS=$(docker exec hostachy_api python -c "
+from app.database import engine
+from sqlalchemy import text
+from datetime import datetime, timedelta, timezone
+cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+with engine.connect() as c:
+    r = c.execute(
+        text('DELETE FROM historique_email WHERE cree_le < :cutoff'),
+        {'cutoff': cutoff}
+    )
+    c.commit()
+    print(r.rowcount)
+" 2>"$MAINT_ERR1E") || {
+    ERREUR_DETAIL=$(cat "$MAINT_ERR1E")
+    log "ERREUR purge historique emails : $ERREUR_DETAIL"
+    GLOBAL_STATUT="erreur"
+    GLOBAL_ERREUR="${GLOBAL_ERREUR:+$GLOBAL_ERREUR | }purge hist emails: $ERREUR_DETAIL"
+    DELETED_EMAILS=0
+}
+rm -f "$MAINT_ERR1E"
+log "  → $DELETED_EMAILS entrée(s) supprimée(s)"
 
 # --- 2. VACUUM SQLite ----------------------------------------------------------
 # VACUUM ne peut pas s'exécuter dans une transaction : isolation_level AUTOCOMMIT obligatoire

@@ -22,9 +22,10 @@ def run_maintenance(history_id: int | None = None) -> None:
       2. Purge des password reset tokens expirés / utilisés
       3. Purge des notifications lues > 90 jours
       4. Purge de l'historique maintenance > 12 mois
-      5. VACUUM + PRAGMA optimize SQLite
-      6. Nettoyage logs WhatsApp (garde les 6 derniers)
-      7. Nettoyage évolutions archivées > 90 jours
+      5. Purge de l'historique emails > 90 jours
+      6. VACUUM + PRAGMA optimize SQLite
+      7. Nettoyage logs WhatsApp (garde les 6 derniers)
+      8. Nettoyage évolutions archivées > 90 jours
     Met à jour (ou crée) l'entrée HistoriqueMaintenance correspondante.
     """
     start = datetime.utcnow()
@@ -88,7 +89,19 @@ def run_maintenance(history_id: int | None = None) -> None:
         except Exception as exc:
             erreurs.append(f"purge historique: {exc}")
 
-        # 5. VACUUM + PRAGMA optimize SQLite
+        # 5. Purge historique emails > 90 jours
+        try:
+            cutoff_emails = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+            with engine.connect() as conn:
+                conn.execute(
+                    text("DELETE FROM historique_email WHERE cree_le < :cutoff"),
+                    {"cutoff": cutoff_emails},
+                )
+                conn.commit()
+        except Exception as exc:
+            erreurs.append(f"purge historique emails: {exc}")
+
+        # 6. VACUUM + PRAGMA optimize SQLite
         try:
             with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
                 conn.execute(text("VACUUM"))
@@ -96,7 +109,7 @@ def run_maintenance(history_id: int | None = None) -> None:
         except Exception as exc:
             erreurs.append(f"VACUUM: {exc}")
 
-        # 6. Nettoyage logs WhatsApp (garder 6 max)
+        # 7. Nettoyage logs WhatsApp (garder 6 max)
         try:
             with Session(engine) as s:
                 all_logs = s.exec(
@@ -109,7 +122,7 @@ def run_maintenance(history_id: int | None = None) -> None:
         except Exception as exc:
             erreurs.append(f"logs WhatsApp: {exc}")
 
-        # 7. Nettoyage évolutions anciennes (> 90 jours)
+        # 8. Nettoyage évolutions anciennes (> 90 jours)
         try:
             cutoff = datetime.now(timezone.utc) - timedelta(days=90)
             with Session(engine) as s:
