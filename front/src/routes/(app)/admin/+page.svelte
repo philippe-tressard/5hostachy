@@ -229,13 +229,20 @@ let emailCorpsHtml = '';
 let emailCorpsTexte = '';
 let emailActif = true;
 let emailSaving = false;
+let emailHistory: any[] = [];
+let emailHistoryLoading = true;
 
 async function loadEmails() {
 emailsLoading = true;
+emailHistoryLoading = true;
 try {
-emailTemplates = await api.get<any[]>('/admin/modeles-email');
+[emailTemplates, emailHistory] = await Promise.all([
+api.get<any[]>('/admin/modeles-email'),
+api.get<any[]>('/admin/emails/historique'),
+]);
 } finally {
 emailsLoading = false;
+emailHistoryLoading = false;
 }
 }
 
@@ -1529,6 +1536,37 @@ $: _siteNom = $siteNomStore;
       </button>
     </div>
   </div>
+</div>
+{/if}
+
+<!-- Historique des emails envoyés -->
+<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
+<h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">📬 Historique des envois</h3>
+<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">100 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.</p>
+{#if emailHistoryLoading}
+<p class="muted">Chargement...</p>
+{:else if emailHistory.length === 0}
+<div class="empty-state"><h3>Aucun email envoyé</h3><p>L'historique est vide.</p></div>
+{:else}
+<div class="card" style="overflow:auto;max-height:420px">
+<table class="table" style="font-size:.82rem">
+<thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Template</th><th>Destinataire</th><th>Sujet</th><th>Statut</th></tr></thead>
+<tbody>
+{#each emailHistory as h}
+<tr>
+<td style="white-space:nowrap">{fmt(h.cree_le)}</td>
+<td><code style="font-size:.75rem">{h.code}</code></td>
+<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title={h.destinataire}>{h.destinataire}</td>
+<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title={h.sujet}>{h.sujet || '—'}</td>
+<td>
+{#if h.statut === 'succes'}<span class="badge badge-green">✓</span>
+{:else if h.statut === 'erreur'}<span class="badge badge-red" title={h.erreur ?? ''}>✗</span>
+{:else}<span class="badge badge-gray" title={h.erreur ?? ''}>ignoré</span>{/if}
+</td>
+</tr>
+{/each}
+</tbody>
+</table>
 </div>
 {/if}
 

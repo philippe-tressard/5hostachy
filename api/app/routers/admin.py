@@ -26,6 +26,7 @@ from app.models.core import (
     UserVigik, UserTelecommande,
     TelemetryEvent,
     HistoriqueTelemetrie,
+    HistoriqueEmail,
 )
 from app.schemas import UserRead
 from app.utils.backup import run_backup
@@ -387,6 +388,18 @@ def maintenance_now(
     session.refresh(entry)
     background_tasks.add_task(run_maintenance, entry.id)
     return {"message": "Maintenance lancée en arrière-plan", "id": entry.id}
+
+
+# ── Historique emails ─────────────────────────────────────────────────────────
+
+@router.get("/emails/historique")
+def emails_historique(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    return session.exec(
+        select(HistoriqueEmail).order_by(HistoriqueEmail.cree_le.desc()).limit(100)
+    ).all()
 
 
 # ── Télémétrie — agrégation manuelle ──────────────────────────────────────────

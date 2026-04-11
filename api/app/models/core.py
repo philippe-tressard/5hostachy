@@ -725,6 +725,21 @@ class HistoriqueSauvegarde(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
+#  Historique emails
+# ──────────────────────────────────────────────
+
+class HistoriqueEmail(SQLModel, table=True):
+    __tablename__ = "historique_email"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(index=True)             # code du ModeleEmail
+    destinataire: str                          # adresse email
+    sujet: str = ""
+    statut: str = "succes"                     # succes | erreur | ignore
+    erreur: Optional[str] = None
+    cree_le: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+# ──────────────────────────────────────────────
 #  Maintenance (cron)
 # ──────────────────────────────────────────────
 
