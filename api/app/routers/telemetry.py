@@ -131,10 +131,13 @@ def dashboard(
             .order_by("heure")
         ).all()
 
-        chart = [
-            {"label": f"{(h[0] + paris_offset) % 24}h", "total": h[1], "uniques": h[2]}
+        # Convertir en heure Paris et trier correctement
+        chart_raw = [
+            {"paris_h": (h[0] + paris_offset) % 24, "label": f"{(h[0] + paris_offset) % 24}h", "total": h[1], "uniques": h[2]}
             for h in hour_stats
         ]
+        chart_raw.sort(key=lambda x: x["paris_h"])
+        chart = [{"label": c["label"], "total": c["total"], "uniques": c["uniques"]} for c in chart_raw]
 
         # Heure de pointe aujourd'hui
         hour_peak = None
