@@ -137,6 +137,7 @@
 	let reportPrestSynthId: number | null = null;
 	let reportContrats: ReportContrat[] = [];
 	let reportDiagTypes: DiagType[] = [];
+	let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
 
 	const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)' };
 	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange' };
@@ -405,9 +406,15 @@
 			const preavis = fin ? contratDatePreavis(fin) : null;
 			const urgence: 'preavis' | 'annee' | 'futur' | 'inconnu' = fin ? contratUrgence(fin) : 'inconnu';
 			const prest = reportPrestataires.find(p => p.id === c.prestataire_id);
-			return { ...c, dateFin: fin as Date | null, datePreavis: preavis, urgence, reconduit, prestataireNom: prest?.nom ?? `#${c.prestataire_id}` };
+			const noteInfo = reportNoteMoyParPrest.get(c.prestataire_id) ?? null;
+			return { ...c, dateFin: fin as Date | null, datePreavis: preavis, urgence, reconduit, prestataireNom: prest?.nom ?? `#${c.prestataire_id}`, noteMoy: noteInfo?.moy ?? null as number | null, nbNotations: noteInfo?.nb ?? 0 };
 		})
 		.sort((a, b) => {
+			// Tri prioritaire : pire note en premier (null = pas de note = en dernier)
+			const noteA = a.noteMoy ?? 6;
+			const noteB = b.noteMoy ?? 6;
+			if (noteA !== noteB) return noteA - noteB;
+			// Puis par date de fin
 			if (!a.dateFin && !b.dateFin) return 0;
 			if (!a.dateFin) return 1;
 			if (!b.dateFin) return -1;
@@ -475,15 +482,26 @@
 		reportingLoading = true;
 		try {
 			await loadTickets();
-			const [devis, prestataires, evenements, contrats, diagTypes] = await Promise.all([
+			const [devis, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
 				prestApi.devis(), prestApi.list(), calApi.list(),
-				prestApi.contrats(), diagnosticsApi.listTypes()
+				prestApi.contrats(), diagnosticsApi.listTypes(),
+				prestApi.notations()
 			]);
 			reportDevisList = devis as ReportDevis[];
 			reportPrestataires = prestataires as ReportPrestataire[];
 			reportEvenements = evenements as ReportEvenement[];
 			reportContrats = contrats as ReportContrat[];
 			reportDiagTypes = diagTypes as DiagType[];
+			// Calcul note moyenne par prestataire
+			const noteMap = new Map<number, number[]>();
+			for (const n of notations as { prestataire_id: number; note: number }[]) {
+				if (!noteMap.has(n.prestataire_id)) noteMap.set(n.prestataire_id, []);
+				noteMap.get(n.prestataire_id)!.push(n.note);
+			}
+			reportNoteMoyParPrest = new Map();
+			for (const [pid, notes] of noteMap) {
+				reportNoteMoyParPrest.set(pid, { moy: Math.round(notes.reduce((a, b) => a + b, 0) / notes.length * 10) / 10, nb: notes.length });
+			}
 			reportingLoaded = true;
 		} catch (e: any) {
 			toast('error', apiMessage(e, 'Erreur chargement reporting'));
@@ -1612,6 +1630,9 @@
 										<span class="text-muted-sm">{c.prestataireNom}</span>
 										<span class="text-muted-sm">· {c.type_equipement}</span>
 										{#if c.numero_contrat}<span class="text-muted-sm">· N° {c.numero_contrat}</span>{/if}
+										{#if c.noteMoy != null}
+											<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4} title="{c.noteMoy}/5 ({c.nbNotations} avis)">{starsDisplay(c.noteMoy)} {c.noteMoy}</span>
+										{/if}
 									</div>
 									<div class="frise-row-badges">
 										{#if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
@@ -1662,6 +1683,7 @@
 										<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}</span>
 									</div>
 									<div class="frise-compact-meta">
+										{#if c.noteMoy != null}<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4}>{starsDisplay(c.noteMoy)} {c.noteMoy}</span>{/if}
 										<span>Fin : {c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</span>
 										<span>Préavis : {c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</span>
 										{#if c.reconduit}<span class="badge badge-purple">♻ Reconduit</span>{/if}
@@ -1684,6 +1706,7 @@
 										<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}{#if c.numero_contrat} · N° {c.numero_contrat}{/if}</span>
 									</div>
 									<div class="frise-compact-meta">
+										{#if c.noteMoy != null}<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4}>{starsDisplay(c.noteMoy)} {c.noteMoy}</span>{/if}
 										<span>Début : {c.date_debut ? fmtDate(c.date_debut) : 'N/A'}</span>
 										<span class="badge badge-gray">Durée non renseignée</span>
 									</div>
@@ -2449,6 +2472,14 @@
 	}
 	.frise-compact-info { display: flex; align-items: baseline; gap: .4rem; min-width: 0; flex-wrap: wrap; }
 	.frise-compact-meta { display: flex; align-items: center; gap: .6rem; font-size: .75rem; color: var(--color-text-muted); flex-wrap: wrap; }
+
+	/* Stars rating display */
+	.frise-stars {
+		font-size: .78rem; white-space: nowrap; letter-spacing: -.02em;
+	}
+	.frise-stars-bad { color: #dc2626; }
+	.frise-stars-ok { color: #f59e0b; }
+	.frise-stars-good { color: #16a34a; }
 	.frise-preavis-zone {
 		position: absolute; top: 2px; bottom: 2px; border-radius: 3px; opacity: .35;
 		background: repeating-linear-gradient(
