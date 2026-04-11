@@ -1887,6 +1887,27 @@
 					<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
 					<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
 				</div>
+				{#if editContratId}
+					<div style="margin-top:.8rem">
+						<div style="font-size:.85rem;font-weight:600;margin-bottom:.4rem">📄 Documents ({contratDocsMap[editContratId]?.length ?? 0})</div>
+						{#if contratDocsMap[editContratId]?.length > 0}
+							{#each contratDocsMap[editContratId] as doc}
+								<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
+									<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
+									<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
+									<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(editContratId ?? 0, doc.id)}>🗑️</button>
+								</div>
+							{/each}
+						{:else}
+							<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
+						{/if}
+						<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
+							<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
+							{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
+							<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(editContratId ?? 0)}>{uploadingDoc ? '…' : '+ Document'}</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
