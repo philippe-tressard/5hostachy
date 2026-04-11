@@ -1629,7 +1629,7 @@ $: _siteNom = $siteNomStore;
 <section class="config-section">
   <h2 class="config-section-title">&#x1F527; Système — Maintenance</h2>
   <div class="backup-header">
-    <p class="muted" style="font-size:.85rem">Exécutions du script cron mensuel (purge tokens, VACUUM, prune images). Le script enregistre automatiquement chaque passage si <code>MAINTENANCE_KEY</code> est configuré dans le <code>.env</code>.</p>
+    <p class="muted" style="font-size:.85rem">Exécutions du script cron hebdomadaire (purge tokens, VACUUM, prune images). Le script enregistre automatiquement chaque passage si <code>MAINTENANCE_KEY</code> est configuré dans le <code>.env</code>.</p>
     <button class="btn btn-primary" on:click={declencherMaintenance} disabled={maintenanceEnCours}>
       {maintenanceEnCours ? 'En cours...' : 'Déclencher maintenant'}
     </button>
