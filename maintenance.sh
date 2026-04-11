@@ -3,19 +3,19 @@
 #  maintenance.sh — Maintenance automatique 5Hostachy
 #
 #  Tâches :
-#    - Purge des refresh tokens expirés/révoqués  (mensuel, 1er du mois)
-#    - Purge des password reset tokens expirés     (mensuel, 1er du mois)
-#    - Purge des notifications lues > 90 jours     (mensuel, 1er du mois)
-#    - Purge des rapports de maintenance > 12 mois (mensuel, 1er du mois)
-#    - VACUUM SQLite                               (mensuel, 1er du mois)
-#    - Nettoyage des logs WhatsApp (6 derniers)   (mensuel, 1er du mois)
-#    - Nettoyage des évolutions archivées (>90j)  (mensuel, 1er du mois)
-#    - Nettoyage images Docker inutilisées         (mensuel, 1er du mois)
+#    - Purge des refresh tokens expirés/révoqués  (hebdomadaire, dimanche)
+#    - Purge des password reset tokens expirés     (hebdomadaire, dimanche)
+#    - Purge des notifications lues > 90 jours     (hebdomadaire, dimanche)
+#    - Purge des rapports de maintenance > 12 mois (hebdomadaire, dimanche)
+#    - VACUUM SQLite                               (hebdomadaire, dimanche)
+#    - Nettoyage des logs WhatsApp (6 derniers)   (hebdomadaire, dimanche)
+#    - Nettoyage des évolutions archivées (>90j)  (hebdomadaire, dimanche)
+#    - Nettoyage images Docker inutilisées         (hebdomadaire, dimanche)
 #
 #  Installation cron (en tant que root sur le RPi) :
 #    sudo crontab -e
-#    # Lancer tous les 1er du mois à 03:00
-#    0 3 1 * * /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
+#    # Lancer chaque dimanche à 03:00
+#    0 3 * * 0 /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
 #
 #  Lancement manuel (via SSH root) :
 #    /opt/5hostachy/maintenance.sh

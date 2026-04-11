@@ -8,6 +8,8 @@ from sqlmodel import Session, select
 from app.database import engine
 from app.models.core import (
     HistoriqueMaintenance,
+    Notification,
+    PasswordResetToken,
     PublicationEvolution,
     WhatsAppLog,
 )
@@ -17,9 +19,12 @@ def run_maintenance(history_id: int | None = None) -> None:
     """
     Exécute les tâches de maintenance Python (identiques au script maintenance.sh) :
       1. Purge des refresh tokens expirés / révoqués
-      2. VACUUM SQLite
-      3. Nettoyage logs WhatsApp (garde les 6 derniers)
-      4. Nettoyage évolutions archivées > 90 jours
+      2. Purge des password reset tokens expirés / utilisés
+      3. Purge des notifications lues > 90 jours
+      4. Purge de l'historique maintenance > 12 mois
+      5. VACUUM + PRAGMA optimize SQLite
+      6. Nettoyage logs WhatsApp (garde les 6 derniers)
+      7. Nettoyage évolutions archivées > 90 jours
     Met à jour (ou crée) l'entrée HistoriqueMaintenance correspondante.
     """
     start = datetime.utcnow()
@@ -48,14 +53,50 @@ def run_maintenance(history_id: int | None = None) -> None:
         except Exception as exc:
             erreurs.append(f"purge tokens: {exc}")
 
-        # 2. VACUUM SQLite
+        # 2. Purge password reset tokens expirés / utilisés
+        try:
+            with engine.connect() as conn:
+                conn.execute(
+                    text("DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1"),
+                    {"now": datetime.now(timezone.utc).isoformat()},
+                )
+                conn.commit()
+        except Exception as exc:
+            erreurs.append(f"purge password reset tokens: {exc}")
+
+        # 3. Purge notifications lues > 90 jours
+        try:
+            cutoff_notif = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+            with engine.connect() as conn:
+                conn.execute(
+                    text("DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff"),
+                    {"cutoff": cutoff_notif},
+                )
+                conn.commit()
+        except Exception as exc:
+            erreurs.append(f"purge notifications: {exc}")
+
+        # 4. Purge historique maintenance > 12 mois
+        try:
+            cutoff_hist = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
+            with engine.connect() as conn:
+                conn.execute(
+                    text("DELETE FROM historique_maintenance WHERE cree_le < :cutoff"),
+                    {"cutoff": cutoff_hist},
+                )
+                conn.commit()
+        except Exception as exc:
+            erreurs.append(f"purge historique: {exc}")
+
+        # 5. VACUUM + PRAGMA optimize SQLite
         try:
             with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
                 conn.execute(text("VACUUM"))
+                conn.execute(text("PRAGMA optimize"))
         except Exception as exc:
             erreurs.append(f"VACUUM: {exc}")
 
-        # 3. Nettoyage logs WhatsApp (garder 6 max)
+        # 6. Nettoyage logs WhatsApp (garder 6 max)
         try:
             with Session(engine) as s:
                 all_logs = s.exec(
@@ -68,7 +109,7 @@ def run_maintenance(history_id: int | None = None) -> None:
         except Exception as exc:
             erreurs.append(f"logs WhatsApp: {exc}")
 
-        # 4. Nettoyage évolutions anciennes (> 90 jours)
+        # 7. Nettoyage évolutions anciennes (> 90 jours)
         try:
             cutoff = datetime.now(timezone.utc) - timedelta(days=90)
             with Session(engine) as s:
