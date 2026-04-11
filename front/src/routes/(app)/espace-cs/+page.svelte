@@ -339,8 +339,11 @@
 
 	function contratUrgence(dateFin: Date): 'preavis' | 'annee' | 'futur' {
 		const now = new Date();
-		if (contratDatePreavis(dateFin) <= now) return 'preavis';
+		const preavis = contratDatePreavis(dateFin);
+		if (preavis <= now) return 'preavis';
 		if (dateFin.getFullYear() === ANNEE_COURANTE) return 'annee';
+		// Préavis dans l'année courante même si fin l'année suivante
+		if (preavis.getFullYear() === ANNEE_COURANTE) return 'annee';
 		return 'futur';
 	}
 
@@ -411,7 +414,13 @@
 			return a.dateFin.getTime() - b.dateFin.getTime();
 		});
 
-	$: contratsAnneeCourante = contratsAvecFin.filter(c => c.dateFin && c.dateFin.getFullYear() === ANNEE_COURANTE);
+	$: contratsAnneeCourante = contratsAvecFin.filter(c => {
+		if (!c.dateFin) return false;
+		// Inclure si la fin OU le préavis tombe dans l'année courante
+		if (c.dateFin.getFullYear() === ANNEE_COURANTE) return true;
+		if (c.datePreavis && c.datePreavis.getFullYear() === ANNEE_COURANTE) return true;
+		return false;
+	});
 
 	$: diagsAvecNext = reportDiagTypes
 		.filter(dt => !dt.non_applicable)
@@ -1563,7 +1572,7 @@
 				</div>
 				<div class="kpi-card">
 					<div class="kpi-value">{renKpiContrats}</div>
-					<div class="kpi-label">Fins de contrat en {ANNEE_COURANTE}</div>
+					<div class="kpi-label">Échéances contrats en {ANNEE_COURANTE}</div>
 				</div>
 				<div class="kpi-card" class:kpi-alert={renKpiDiags > 0}>
 					<div class="kpi-value">{renKpiDiags}</div>
@@ -1573,24 +1582,25 @@
 
 			<!-- Section 1 : Frise contrats exercice courant -->
 			<section class="report-card" style="margin-bottom:1.5rem">
-				<h3>📋 Fins de contrats prestataires — exercice {ANNEE_COURANTE}</h3>
-				<p class="report-intro">Contrats avec date de fin en {ANNEE_COURANTE}. La zone hachurée indique la période de préavis ({PREAVIS_MOIS} mois).</p>
+				<h3>📋 Contrats prestataires — échéances {ANNEE_COURANTE}</h3>
+				<p class="report-intro">Contrats dont la fin ou le préavis tombe en {ANNEE_COURANTE}. La zone hachurée indique la période de préavis ({PREAVIS_MOIS} mois).</p>
 
 				{#if contratsAnneeCourante.length === 0}
-					<div class="empty-state"><h3>Aucun contrat n'expire en {ANNEE_COURANTE}</h3></div>
+					<div class="empty-state"><h3>Aucune échéance de contrat en {ANNEE_COURANTE}</h3></div>
 				{:else}
 					<!-- Frise graphique -->
 					<div class="frise-container">
 						<div class="frise-months">
 							{#each MOIS_LABELS as m}<div class="frise-month-label">{m}</div>{/each}
 						</div>
-						{#each contratsAnneeCourante as c (c.id)}
-							{@const moisFin = c.dateFin.getMonth()}
+						{#each contratsAnneeCourante.filter((x): x is typeof x & { dateFin: Date } => !!x.dateFin) as c (c.id)}
+							{@const finDansAnnee = c.dateFin.getFullYear() === ANNEE_COURANTE}
+							{@const moisFin = finDansAnnee ? c.dateFin.getMonth() : 11.9}
 							{@const moisPreavis = c.datePreavis && c.datePreavis.getFullYear() < ANNEE_COURANTE ? 0 : (c.datePreavis?.getMonth() ?? 0)}
 							{@const barStart = Math.max(0, moisPreavis)}
 							{@const barEnd = moisFin}
 							{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
-							{@const finPos = ((moisFin + 0.5) / 12) * 100}
+							{@const finPos = finDansAnnee ? ((moisFin + 0.5) / 12) * 100 : 99}
 							{@const friseStyle = c.reconduit ? 'reconduit' : c.urgence}
 							<div class="frise-row">
 								<div class="frise-row-label" title="{c.libelle} — {c.prestataireNom}{c.reconduit ? ' (reconduit)' : ''}">
@@ -1601,9 +1611,15 @@
 									{#if preavisWidth > 0}
 										<div class="frise-preavis-zone frise-urgence-{friseStyle}" style="left:{(barStart/12)*100}%;width:{preavisWidth}%"></div>
 									{/if}
-									<div class="frise-marker frise-marker-{friseStyle}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}{c.reconduit ? ' (reconduit)' : ''}">
-										<span class="frise-marker-label">{c.dateFin.getDate()}/{c.dateFin.getMonth()+1}</span>
-									</div>
+									{#if finDansAnnee}
+										<div class="frise-marker frise-marker-{friseStyle}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}{c.reconduit ? ' (reconduit)' : ''}">
+											<span class="frise-marker-label">{c.dateFin.getDate()}/{c.dateFin.getMonth()+1}</span>
+										</div>
+									{:else}
+										<div class="frise-marker frise-marker-{friseStyle}" style="left:98%;opacity:.7" title="Fin : {fmtDate(c.dateFin.toISOString())} ({c.dateFin.getFullYear()})">
+											<span class="frise-marker-label">→ {c.dateFin.getDate()}/{c.dateFin.getMonth()+1}/{c.dateFin.getFullYear()}</span>
+										</div>
+									{/if}
 								</div>
 							</div>
 						{/each}
@@ -1612,6 +1628,7 @@
 							<span><span class="frise-legend-dot" style="background:#f59e0b"></span> Expire cette année</span>
 							<span><span class="frise-legend-dot" style="background:#8b5cf6"></span> Reconduit tacitement</span>
 							<span class="frise-legend-hatch">▧ Zone de préavis</span>
+							<span style="font-size:.75rem;color:var(--color-text-muted)">→ Fin en {ANNEE_COURANTE + 1}</span>
 						</div>
 					</div>
 				{/if}
