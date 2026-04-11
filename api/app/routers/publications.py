@@ -60,16 +60,24 @@ def _envoyer_email_syndic_publication(
     if not syndic_principal or not syndic_principal.email:
         return
 
-    # CC : membres CS actifs
-    cs_emails = session.exec(
-        select(Utilisateur.email)
+    # Destinataires individuels : syndic principal + membres CS actifs
+    cs_users = session.exec(
+        select(Utilisateur.id, Utilisateur.email)
         .where(
             Utilisateur.actif == True,
             Utilisateur.email.isnot(None),
             Utilisateur.roles_json.contains("conseil_syndical"),
         )
     ).all()
-    cc = [e for e in cs_emails if e and e != syndic_principal.email]
+    # Construire la liste complète (syndic + CS sans doublon)
+    destinataires: list[tuple[int | None, str]] = []
+    syndic_user_id = syndic_principal.user_id
+    destinataires.append((syndic_user_id, syndic_principal.email))
+    seen_emails = {syndic_principal.email.lower()}
+    for uid, email in cs_users:
+        if email and email.lower() not in seen_emails:
+            destinataires.append((uid, email))
+            seen_emails.add(email.lower())
 
     cfg_rows = session.exec(
         select(ConfigSite).where(ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url")))
@@ -79,20 +87,22 @@ def _envoyer_email_syndic_publication(
     # Extrait : texte brut tronqué à 300 cars
     extrait = re.sub(r'<[^>]+>', '', pub.contenu or '').strip()[:300]
 
-    background_tasks.add_task(
-        send_email,
-        code="publication_syndic",
-        to=syndic_principal.email,
-        context={
-            "publication": {"titre": pub.titre, "extrait": extrait},
-            "auteur": {"prenom": user.prenom, "nom": user.nom},
-            "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
-            "app": {"url": cfg.get("site_url", "https://localhost")},
-            "reference_copro": cfg.get("reference_copro", ""),
-        },
-        session=session,
-        cc=cc,
-    )
+    ctx = {
+        "publication": {"titre": pub.titre, "extrait": extrait},
+        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "app": {"url": cfg.get("site_url", "https://localhost")},
+        "reference_copro": cfg.get("reference_copro", ""),
+    }
+    for dest_id, dest_email in destinataires:
+        background_tasks.add_task(
+            send_email,
+            code="publication_syndic",
+            to=dest_email,
+            context=ctx,
+            session=session,
+            destinataire_id=dest_id,
+        )
 
 
 def _is_archived(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEURES) -> bool:

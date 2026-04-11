@@ -23,6 +23,7 @@ _EMAIL_PREF_MAP: dict[str, str] = {
     "ticket_statut_change": "ticket_mail",
     "ticket_urgence_bailleur": "ticket_mail",
     "ticket_syndic": "ticket_mail",
+    "publication_syndic": "actu_mail",
     "calendrier_evenement_cree": "actu_mail",
     "digest_quotidien": "actu_mail",
     "digest_hebdomadaire": "actu_mail",
