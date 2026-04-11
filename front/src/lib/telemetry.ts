@@ -32,6 +32,12 @@ export function trackPageView(path: string) {
 	trackEvent(path, 'view');
 }
 
+/** Enregistre une vue d'onglet (page#tab). */
+export function trackTabView(tab: string) {
+	if (typeof window === 'undefined') return;
+	trackEvent(`${window.location.pathname}#${tab}`, 'view');
+}
+
 function flush() {
 	if (buffer.length === 0) return;
 	const events = buffer.splice(0);

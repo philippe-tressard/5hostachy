@@ -9,6 +9,7 @@ import { onMount } from 'svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
+	import { trackTabView } from '$lib/telemetry';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -17,6 +18,7 @@ import { onMount } from 'svelte';
 	let prestataires: any[] = [];
 	let loading = true;
 	let onglet: 'liste' | 'kanban' | 'archives' = 'liste';
+	$: trackTabView(onglet);
 	let filtreType = '';
 
 	let archivedPubs: Publication[] = [];
