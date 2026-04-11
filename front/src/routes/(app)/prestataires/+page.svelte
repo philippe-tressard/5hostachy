@@ -8,6 +8,7 @@
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
+	import { trackTabView } from '$lib/telemetry';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
 	$: _siteNom = $siteNomStore;
@@ -61,6 +62,7 @@
 
 	// ── Onglets (5) ────────────────────────────────────────────────
 	let onglet: 'prestations' | 'visites' | 'contrats_tab' | 'prestataires' | 'consommations' = 'prestations';
+	$: trackTabView(onglet);
 
 	// Expand prestataire cards
 	let expandedPrests = new Set<number>();
@@ -620,7 +622,11 @@
 
 	function openAddContrat(prestId?: number) {
 		resetContratForm();
-		if (prestId) contratForm.prestataire_id = String(prestId);
+		if (prestId) {
+			contratForm.prestataire_id = String(prestId);
+			const p = prestataires.find(pr => pr.id === prestId);
+			if (p?.specialite && p.specialite !== 'autre') contratForm.type_equipement = p.specialite;
+		}
 		contratFormPrestId = prestId ?? -1;
 		editContratId = null;
 	}
@@ -645,8 +651,15 @@
 	async function saveContrat() {
 		if (!contratForm.libelle || !contratForm.prestataire_id) { toast('error', 'Libellé et prestataire obligatoires'); return; }
 		submitting = true;
+		// Si l'équipement est "autre", prendre la spécialité du prestataire
+		let resolvedType = contratForm.type_equipement;
+		if (resolvedType === 'autre' && contratForm.prestataire_id) {
+			const p = prestataires.find(pr => pr.id === Number(contratForm.prestataire_id));
+			if (p?.specialite && p.specialite !== 'autre') resolvedType = p.specialite;
+		}
 		const payload = {
 			...contratForm,
+			type_equipement: resolvedType,
 			batiment_id: contratForm.batiment_id ? Number(contratForm.batiment_id) : null,
 			prestataire_id: Number(contratForm.prestataire_id),
 			duree_initiale_valeur: contratForm.duree_initiale_valeur ? Number(contratForm.duree_initiale_valeur) : null,

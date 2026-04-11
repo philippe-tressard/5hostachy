@@ -8,9 +8,11 @@ import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
+import { trackTabView } from '$lib/telemetry';
 
 //  Onglets 
 let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'referentiels' | 'whatsapp' | 'smtp' | 'telemetry' = 'comptes';
+$: trackTabView(onglet);
 
 //  Bâtiments (pour affichage) 
 let batimentsMap: Record<number, string> = {};
@@ -2233,13 +2235,14 @@ $: _siteNom = $siteNomStore;
     <div class="card" style="margin-top:1.25rem">
       <h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
       <table class="table">
-        <thead><tr><th>Utilisateur</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th></tr></thead>
+        <thead><tr><th>Utilisateur</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th><th style="text-align:right">Dernière connexion</th></tr></thead>
         <tbody>
           {#each telemetryData.top_users as u}
             <tr>
               <td style="font-size:.85rem">{u.nom}</td>
               <td style="text-align:right;font-weight:600">{u.total}</td>
               <td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
+              <td style="text-align:right;font-size:.82rem;color:var(--color-text-muted)">{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td>
             </tr>
           {/each}
         </tbody>

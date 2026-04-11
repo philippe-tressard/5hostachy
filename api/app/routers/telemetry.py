@@ -163,12 +163,14 @@ def dashboard(
 
         user_ids = [r[0] for r in user_rows if r[0]]
         users_map: dict[int, str] = {}
+        users_last_seen: dict[int, str | None] = {}
         if user_ids:
             users = session.exec(
-                select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom)
+                select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom, Utilisateur.derniere_connexion)
                 .where(Utilisateur.id.in_(user_ids))
             ).all()
             users_map = {u[0]: f"{u[1]} {u[2]}" for u in users}
+            users_last_seen = {u[0]: u[3].isoformat() if u[3] else None for u in users}
 
         return {
             "scope": "jour",
@@ -183,7 +185,7 @@ def dashboard(
             "chart_label": "Vues par heure",
             "top_pages": [{"page": r[0], "total": r[1], "uniques": r[2]} for r in today_stats],
             "top_users": [
-                {"nom": users_map.get(r[0], "Inconnu"), "total": r[1], "pages": r[2]}
+                {"nom": users_map.get(r[0], "Inconnu"), "total": r[1], "pages": r[2], "derniere_connexion": users_last_seen.get(r[0])}
                 for r in user_rows
             ],
         }
@@ -276,12 +278,14 @@ def dashboard(
 
         user_ids = [r[0] for r in user_rows if r[0]]
         users_map = {}
+        users_last_seen: dict[int, str | None] = {}
         if user_ids:
             users = session.exec(
-                select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom)
+                select(Utilisateur.id, Utilisateur.prenom, Utilisateur.nom, Utilisateur.derniere_connexion)
                 .where(Utilisateur.id.in_(user_ids))
             ).all()
             users_map = {u[0]: f"{u[1]} {u[2]}" for u in users}
+            users_last_seen = {u[0]: u[3].isoformat() if u[3] else None for u in users}
 
         return {
             "scope": "mois",
@@ -298,7 +302,7 @@ def dashboard(
             "chart_label": "Vues par jour (30j)",
             "top_pages": sorted(top_pages.values(), key=lambda x: -x["total"]),
             "top_users": [
-                {"nom": users_map.get(r[0], "Inconnu"), "total": r[1], "pages": r[2]}
+                {"nom": users_map.get(r[0], "Inconnu"), "total": r[1], "pages": r[2], "derniere_connexion": users_last_seen.get(r[0])}
                 for r in user_rows
             ],
         }

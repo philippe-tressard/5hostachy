@@ -8,6 +8,7 @@
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
+	import { trackTabView } from '$lib/telemetry';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
 	$: _siteNom = $siteNomStore;
@@ -110,6 +111,7 @@
 
 	// -- Onglet -------------------------------------------------------------
 	let onglet: 'validations' | 'tickets' | 'reporting' | 'annuaire' = 'validations';
+	$: trackTabView(onglet);
 
 	// -- Tickets ------------------------------------------------------------
 	let tkList: Ticket[] = [];

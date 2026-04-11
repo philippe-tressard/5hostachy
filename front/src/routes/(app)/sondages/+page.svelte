@@ -9,12 +9,14 @@ import { toast } from '$lib/components/Toast.svelte';
 import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDateShort } from '$lib/date';
+import { trackTabView } from '$lib/telemetry';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
 $: _siteNom = $siteNomStore;
 
 type Tab = 'sondages' | 'idees' | 'annonces';
 let activeTab: Tab = 'sondages';
+$: trackTabView(activeTab);
 
 // Bâtiments disponibles pour le ciblage
 let batimentsList: { id: number; numero: string }[] = [];
