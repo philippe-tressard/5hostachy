@@ -1191,11 +1191,8 @@
 				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
 					&#x1F504;{reportingLoading ? ' …' : ''}
 				</button>
-				<button class="btn btn-sm btn-outline" on:click={printCurrentReporting}>
-					&#x1F4C4; Exporter PDF
-				</button>
 				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
-					&#x1F5A8; Imprimer
+					&#x1F5A8; Imprimer / PDF
 				</button>
 			</div>
 		</div>
