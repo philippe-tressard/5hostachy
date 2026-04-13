@@ -4,7 +4,7 @@ import secrets
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select, or_
 
 from app.auth.jwt import (
@@ -312,6 +312,16 @@ class MeUpdate(BaseModel):
     last_seen_actualites: str | None = None
     preferences_notifications: str | None = None
     demarche_arrivant: str | None = None
+
+    @field_validator("nom", mode="before")
+    @classmethod
+    def uppercase_nom(cls, v: str | None) -> str | None:
+        return v.strip().upper() if v else v
+
+    @field_validator("prenom", mode="before")
+    @classmethod
+    def titlecase_prenom(cls, v: str | None) -> str | None:
+        return v.strip().title() if v else v
 
 
 @router.patch("/me", response_model=UserRead)

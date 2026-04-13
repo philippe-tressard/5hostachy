@@ -22,6 +22,16 @@ class UserCreate(BaseModel):
     nom_aide: Optional[str] = None
     prenom_aide: Optional[str] = None
 
+    @field_validator("nom", "nom_aide", "nom_proprietaire", mode="before")
+    @classmethod
+    def uppercase_nom(cls, v: str | None) -> str | None:
+        return v.strip().upper() if v else v
+
+    @field_validator("prenom", "prenom_aide", mode="before")
+    @classmethod
+    def titlecase_prenom(cls, v: str | None) -> str | None:
+        return v.strip().title() if v else v
+
 
 class UserRead(BaseModel):
     id: int
