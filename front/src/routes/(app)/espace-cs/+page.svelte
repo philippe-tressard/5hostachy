@@ -175,26 +175,7 @@
 	function reportPrestataireName(prestataireId: number) {
 		return reportPrestataires.find((p) => p.id === prestataireId)?.nom ?? `Prestataire #${prestataireId}`;
 	}
-	function csvCell(value: unknown) {
-		const str = String(value ?? '').replace(/"/g, '""');
-		return `"${str}"`;
-	}
-	function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
-		if (typeof window === 'undefined') return;
-		if (!rows.length) {
-			toast('info', 'Aucune donnée à exporter');
-			return;
-		}
-		const headers = Object.keys(rows[0]);
-		const csv = [headers.map(csvCell).join(';'), ...rows.map((row) => headers.map((h) => csvCell(row[h])).join(';'))].join('\n');
-		const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement('a');
-		link.href = url;
-		link.download = filename;
-		link.click();
-		URL.revokeObjectURL(url);
-	}
+
 	async function printReporting(title: string) {
 		if (typeof window === 'undefined' || typeof document === 'undefined') return;
 		reportPrintTitle = title;
@@ -203,93 +184,7 @@
 		window.print();
 		setTimeout(() => document.body.classList.remove('print-reporting'), 250);
 	}
-	function exportCurrentReporting() {
-		if (reportView === 'kanban') {
-			downloadCsv('reporting-kanban-ag-cs-syndic.csv', reportKanbanEvents.map((ev) => ({
-				Titre: ev.titre,
-				Type: TYPE_LABELS[ev.type] ?? ev.type,
-				Colonne: KANBAN_LABELS[ev.statut_kanban ?? ''] ?? ev.statut_kanban ?? '',
-				Perimetre: ev.perimetre,
-				Batiment: ev.batiment_id ? `Bât. ${ev.batiment_id}` : '',
-				Prestataire: ev.prestataire_nom ?? '',
-				Auteur: ev.auteur_nom ?? '',
-				Cree_le: fmtDate(ev.cree_le),
-				Anciennete_jours: daysSince(ev.cree_le),
-				Derniere_maj: fmtDate(ev.mis_a_jour_le ?? ev.cree_le),
-			})));
-			return;
-		}
-		if (reportView === 'tickets') {
-			downloadCsv('reporting-analyse-tickets.csv', reportTicketSource.map((t) => ({
-				Numero: t.numero,
-				Titre: t.titre,
-				Categorie: t.categorie,
-				Statut: t.statut,
-				Priorite: t.priorite,
-				Batiment: ticketScope(t),
-				Demandeur: t.auteur_nom ?? '',
-				Cree_le: fmtDate(t.cree_le),
-				Anciennete_jours: daysSince(t.cree_le),
-			})));
-			return;
-		}
-		if (reportView === 'devis') {
-			downloadCsv('reporting-devis-interventions.csv', reportDevisActifs.map((d) => ({
-				Titre: d.titre,
-				Prestataire: reportPrestataireName(d.prestataire_id),
-				Perimetre: d.perimetre,
-				Batiment: d.batiment_id ? `Bât. ${d.batiment_id}` : '',
-				Date_prestation: d.date_prestation ? fmtDate(d.date_prestation) : 'Non planifiée',
-				Montant: fmtMoney(d.montant_estime),
-				Statut: REPORT_DEVIS_LABELS[d.statut] ?? d.statut,
-				Recurrence: d.frequence_type && d.frequence_valeur ? `${d.frequence_valeur} ${d.frequence_type}` : '',
-			})));
-			return;
-		}
-		if (reportView === 'prestataires') {
-			downloadCsv('reporting-prestataires.csv', reportPrestataires.map((p) => {
-				const pDevis = reportDevisList.filter(d => d.prestataire_id === p.id);
-				return {
-					Nom: p.nom,
-					Specialite: p.specialite ?? '',
-					Type: p.type_prestataire ?? '',
-					Devis_actifs: pDevis.filter(d => d.statut === 'en_attente' || d.statut === 'accepte').length,
-					Realises: pDevis.filter(d => d.statut === 'realise').length,
-				};
-			}));
-			return;
-		}
-		if (reportView === 'renouvellements') {
-			const rows: Record<string, unknown>[] = [];
-			for (const c of contratsAvecFin) {
-				rows.push({
-					Section: 'Contrat',
-					Libelle: c.libelle,
-					Prestataire: c.prestataireNom,
-					Equipement: c.type_equipement,
-					Debut: c.date_debut ? fmtDate(c.date_debut) : 'N/A',
-					Fin: c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A',
-					Preavis: c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A',
-					Statut: c.urgence === 'preavis' ? 'Préavis en cours' : c.urgence === 'inconnu' ? 'Dates manquantes' : 'Actif',
-					Reconduit: c.reconduit ? 'Oui' : 'Non',
-				});
-			}
-			for (const d of diagsAvecNext) {
-				rows.push({
-					Section: 'Diagnostic',
-					Libelle: d.nom,
-					Prestataire: '',
-					Equipement: d.code,
-					Debut: d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A',
-					Fin: d.nextDate ? fmtDate(d.nextDate.toISOString()) : 'N/A',
-					Preavis: '',
-					Statut: d.urgence === 'depasse' ? 'Dépassé' : d.urgence === 'annee' ? `À faire en ${ANNEE_COURANTE}` : d.urgence === 'inconnu' ? (d.isPermanent ? 'Permanent' : 'Sans échéance') : 'Planifié',
-				});
-			}
-			downloadCsv('reporting-renouvellements-audits.csv', rows);
-			return;
-		}
-	}
+
 	async function loadPrestSynthese(prestId: number) {
 		reportPrestSynthId = prestId;
 		reportPrestSynthLoading = true;
@@ -1292,8 +1187,8 @@
 				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
 					&#x1F504;{reportingLoading ? ' …' : ''}
 				</button>
-				<button class="btn btn-sm btn-outline" on:click={exportCurrentReporting}>
-					&#x2B07; Exporter CSV
+				<button class="btn btn-sm btn-outline" on:click={printCurrentReporting}>
+					&#x1F4C4; Exporter PDF
 				</button>
 				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
 					&#x1F5A8; Imprimer
@@ -2415,6 +2310,15 @@
 		.reporting-print-header p { font-size: .82rem; color: #666; margin: 0; }
 		.report-card { box-shadow: none; break-inside: avoid; }
 		.report-table th, .report-table td { font-size: .78rem; }
+		.reporting-panel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.kpi-card { border: 1px solid #ccc !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.kpi-card.kpi-alert { border-color: #d97706 !important; background: #fffbeb !important; }
+		.kpi-value { color: #1e3a5f !important; }
+		.kpi-card.kpi-alert .kpi-value { color: #d97706 !important; }
+		.frise-preavis-zone { -webkit-print-color-adjust: exact; print-color-adjust: exact; opacity: .5; }
+		.frise-marker { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.frise-bar-track { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 	}
 
 	:global(body.print-reporting .page-header),
@@ -2423,6 +2327,15 @@
 	:global(body.print-reporting .tab-descriptif),
 	:global(body.print-reporting .no-print) {
 		display: none !important;
+	}
+	:global(body.print-reporting .sidebar),
+	:global(body.print-reporting .mobile-topbar),
+	:global(body.print-reporting .app-footer) {
+		display: none !important;
+	}
+	:global(body.print-reporting .app-content) {
+		margin-left: 0 !important;
+		max-width: 100% !important;
 	}
 	:global(body.print-reporting .reporting-print-header) {
 		display: block !important;
