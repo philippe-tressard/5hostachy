@@ -1191,11 +1191,8 @@
 				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
 					&#x1F504;{reportingLoading ? ' …' : ''}
 				</button>
-				<button class="btn btn-sm btn-outline" on:click={printCurrentReporting}>
-					&#x1F4C4; Exporter PDF
-				</button>
 				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
-					&#x1F5A8; Imprimer
+					&#x1F5A8; Imprimer / PDF
 				</button>
 			</div>
 		</div>
@@ -2307,7 +2304,7 @@
 		.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
 	}
 
-	@page { margin: 8mm 10mm; }
+	@page { margin: 10mm 10mm; }
 	@media print {
 		.no-print { display: none !important; }
 		.reporting-print-header { display: block; margin-bottom: .5rem; }
@@ -2369,6 +2366,17 @@
 	:global(body.print-reporting .app-content) {
 		margin-left: 0 !important;
 		max-width: 100% !important;
+		overflow: visible !important;
+	}
+	:global(body.print-reporting) {
+		overflow: visible !important;
+	}
+	:global(body.print-reporting .app-shell) {
+		overflow: visible !important;
+		min-height: auto !important;
+	}
+	:global(body.print-reporting .app-main) {
+		overflow: visible !important;
 	}
 	:global(body.print-reporting .reporting-print-header) {
 		display: block !important;
