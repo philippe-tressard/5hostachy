@@ -2307,7 +2307,7 @@
 		.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
 	}
 
-	@page { margin: 8mm 10mm; }
+	@page { margin: 10mm 10mm; }
 	@media print {
 		.no-print { display: none !important; }
 		.reporting-print-header { display: block; margin-bottom: .5rem; }
@@ -2369,6 +2369,17 @@
 	:global(body.print-reporting .app-content) {
 		margin-left: 0 !important;
 		max-width: 100% !important;
+		overflow: visible !important;
+	}
+	:global(body.print-reporting) {
+		overflow: visible !important;
+	}
+	:global(body.print-reporting .app-shell) {
+		overflow: visible !important;
+		min-height: auto !important;
+	}
+	:global(body.print-reporting .app-main) {
+		overflow: visible !important;
 	}
 	:global(body.print-reporting .reporting-print-header) {
 		display: block !important;
