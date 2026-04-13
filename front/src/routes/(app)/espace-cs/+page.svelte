@@ -2307,13 +2307,15 @@
 		.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
 	}
 
+	@page { margin: 8mm 10mm; }
 	@media print {
 		.no-print { display: none !important; }
-		.reporting-print-header { display: block; margin-bottom: 1rem; }
-		.reporting-print-header h2 { font-size: 1.2rem; margin: 0 0 .2rem; }
-		.reporting-print-header p { font-size: .82rem; color: #666; margin: 0; }
-		.report-card { box-shadow: none; break-inside: avoid; }
-		.report-table th, .report-table td { font-size: .78rem; }
+		.reporting-print-header { display: block; margin-bottom: .5rem; }
+		.reporting-print-header h2 { font-size: 1.1rem; margin: 0 0 .15rem; }
+		.reporting-print-header p { font-size: .78rem; color: #666; margin: 0; }
+		.report-card { box-shadow: none; break-inside: auto; margin-bottom: .75rem !important; padding: .5rem .75rem !important; }
+		.report-card h3 { break-after: avoid; font-size: .95rem; margin-bottom: .3rem; }
+		.report-table th, .report-table td { font-size: .75rem; padding: .3rem .4rem !important; }
 		.reporting-panel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 		.kpi-card { border: 1px solid #ccc !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 		.kpi-card.kpi-alert { border-color: #d97706 !important; background: #fffbeb !important; }
@@ -2338,7 +2340,18 @@
 		.frise-stars-good { color: #16a34a !important; }
 		.badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 		.report-card { background: #fff !important; border-color: #ddd !important; }
-		.report-intro { color: #666 !important; }
+		.report-intro { color: #666 !important; font-size: .78rem; margin: 0 0 .4rem !important; }
+		.kpi-row { gap: .5rem !important; margin-bottom: .5rem !important; }
+		.kpi-card { padding: .5rem .75rem !important; }
+		.kpi-value { font-size: 1.5rem !important; }
+		.kpi-label { font-size: .7rem !important; }
+		.frise-row-v2 { padding: .3rem 0 .8rem !important; }
+		.frise-row-title { font-size: .78rem !important; }
+		.frise-row-dates { font-size: .68rem !important; }
+		.frise-bar-track { height: 22px !important; }
+		.frise-legend { margin-top: .6rem !important; font-size: .72rem !important; }
+		.audit-year-group { margin-bottom: .7rem !important; }
+		.container.page { padding: 0 !important; }
 	}
 
 	:global(body.print-reporting .page-header),
@@ -2465,7 +2478,11 @@
 	}
 
 	@media print {
-		.frise-container { break-inside: avoid; }
-		.audit-year-group { break-inside: avoid; }
+		.frise-container { break-inside: auto; }
+		.frise-row-v2 { break-inside: avoid; }
+		.audit-year-group { break-inside: auto; }
+		.audit-year-title { break-after: avoid; }
+		.report-table { break-inside: auto; }
+		.report-table tr { break-inside: avoid; }
 	}
 </style>
