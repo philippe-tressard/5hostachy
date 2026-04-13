@@ -37,6 +37,33 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 log ""
 log "===== Maintenance Hostachy ====="
 
+# --- 0. Vérification espace disque (alerte si < 10 %) -------------------------
+log "[0/5] Vérification espace disque..."
+DISK_USAGE=$(df / | awk 'NR==2 {print $5}' | tr -d '%')
+DISK_FREE=$((100 - DISK_USAGE))
+DISK_TOTAL=$(df -h / | awk 'NR==2 {print $2}')
+DISK_AVAIL=$(df -h / | awk 'NR==2 {print $4}')
+log "  → Espace disque : ${DISK_FREE}% libre (${DISK_AVAIL} sur ${DISK_TOTAL})"
+
+if [ "$DISK_FREE" -lt 10 ]; then
+    log "  ⚠ ALERTE : espace disque faible (${DISK_FREE}% libre)"
+    # Envoi d'alerte email via l'API (template alerte_espace_disque)
+    docker exec hostachy_api python -c "
+import asyncio
+from app.utils.email import send_email, get_site_manager_notification_email
+from app.database import SessionLocal
+session = SessionLocal()
+to, cfg = get_site_manager_notification_email(session)
+if to:
+    asyncio.run(send_email(
+        'alerte_espace_disque', to,
+        {'pourcentage_libre': '${DISK_FREE}', 'espace_disponible': '${DISK_AVAIL}', 'espace_total': '${DISK_TOTAL}'},
+        session,
+    ))
+session.close()
+" 2>/dev/null || log "  ⚠ Échec envoi alerte email espace disque"
+fi
+
 # --- 1. Purge refresh tokens expirés / révoqués --------------------------------
 log "[1/5] Purge des refresh tokens expirés/révoqués..."
 MAINT_ERR=$(mktemp)
