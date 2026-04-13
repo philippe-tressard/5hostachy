@@ -2312,7 +2312,8 @@
 		.reporting-print-header { display: block; margin-bottom: 1rem; }
 		.reporting-print-header h2 { font-size: 1.2rem; margin: 0 0 .2rem; }
 		.reporting-print-header p { font-size: .82rem; color: #666; margin: 0; }
-		.report-card { box-shadow: none; break-inside: avoid; }
+		.report-card { box-shadow: none; break-inside: auto; }
+		.report-card h3 { break-after: avoid; }
 		.report-table th, .report-table td { font-size: .78rem; }
 		.reporting-panel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 		.kpi-card { border: 1px solid #ccc !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -2465,7 +2466,11 @@
 	}
 
 	@media print {
-		.frise-container { break-inside: avoid; }
-		.audit-year-group { break-inside: avoid; }
+		.frise-container { break-inside: auto; }
+		.frise-row-v2 { break-inside: avoid; }
+		.audit-year-group { break-inside: auto; }
+		.audit-year-title { break-after: avoid; }
+		.report-table { break-inside: auto; }
+		.report-table tr { break-inside: avoid; }
 	}
 </style>
