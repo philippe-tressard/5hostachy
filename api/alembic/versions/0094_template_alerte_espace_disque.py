@@ -18,7 +18,7 @@ def upgrade():
     exists = conn.execute(text("SELECT 1 FROM modele_email WHERE code = 'alerte_espace_disque'")).fetchone()
     if not exists:
         conn.execute(text("""
-            INSERT INTO modele_email (code, libelle, sujet, corps_html, actif, desactivable)
+            INSERT INTO modele_email (code, libelle, sujet, corps_html, corps_texte, actif, desactivable)
             VALUES (
                 'alerte_espace_disque',
                 'Alerte espace disque',
@@ -30,6 +30,7 @@ def upgrade():
                 || '<p style="margin:0 0 4px;font-size:14px;color:#1A1A2E"><strong>Espace disponible :</strong> {{ espace_disponible }} sur {{ espace_total }}</p>'
                 || '</td></tr></table>'
                 || '<p style="margin:0;color:#5A6070;font-size:13px">Veuillez libérer de l''espace sur le serveur (images Docker, backups, logs…) ou étendre le stockage.</p>',
+                '',
                 1,
                 0
             )
