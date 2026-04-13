@@ -180,9 +180,13 @@
 		if (typeof window === 'undefined' || typeof document === 'undefined') return;
 		reportPrintTitle = title;
 		document.body.classList.add('print-reporting');
+		const prevTitle = document.title;
+		const dateStr = new Date().toISOString().slice(0, 10);
+		const slug = title.replace(/^Reporting CS — /, '').replace(/[^\w\dÀ-ÿ]+/g, '-').replace(/-+$/, '');
+		document.title = `CS-${slug}-${dateStr}`;
 		await tick();
 		window.print();
-		setTimeout(() => document.body.classList.remove('print-reporting'), 250);
+		setTimeout(() => { document.body.classList.remove('print-reporting'); document.title = prevTitle; }, 250);
 	}
 
 	async function loadPrestSynthese(prestId: number) {
@@ -2315,10 +2319,26 @@
 		.kpi-card.kpi-alert { border-color: #d97706 !important; background: #fffbeb !important; }
 		.kpi-value { color: #1e3a5f !important; }
 		.kpi-card.kpi-alert .kpi-value { color: #d97706 !important; }
+		.frise-bar-track {
+			-webkit-print-color-adjust: exact; print-color-adjust: exact;
+			background: repeating-linear-gradient(90deg, transparent, transparent calc(100% / 12 - 1px), #ddd calc(100% / 12 - 1px), #ddd calc(100% / 12)) !important;
+		}
 		.frise-preavis-zone { -webkit-print-color-adjust: exact; print-color-adjust: exact; opacity: .5; }
 		.frise-marker { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.frise-bar-track { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.frise-row-v2 { border-bottom-color: #ddd !important; }
+		.frise-months { color: #666 !important; border-bottom-color: #ddd !important; }
+		.frise-compact-item { background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.frise-row-dates { color: #666 !important; }
+		.frise-marker-label { color: #666 !important; }
+		.frise-legend { color: #666 !important; }
+		.frise-legend-dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.frise-stars { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.frise-stars-bad { color: #dc2626 !important; }
+		.frise-stars-ok { color: #f59e0b !important; }
+		.frise-stars-good { color: #16a34a !important; }
 		.badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		.report-card { background: #fff !important; border-color: #ddd !important; }
+		.report-intro { color: #666 !important; }
 	}
 
 	:global(body.print-reporting .page-header),
