@@ -67,7 +67,7 @@ from app.routers import (
     auth, tickets, publications, documents, lots, admin,
     notifications, acces, calendrier, prestataires, sondages, idees, copropriete,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
-    telemetry,
+    telemetry, flux,
 )
 from app.routers import uploads, faq
 from app.seed import seed
@@ -156,6 +156,7 @@ app.include_router(diagnostics.router)
 app.include_router(regles_residence.router)
 app.include_router(delegations.router)
 app.include_router(telemetry.router)
+app.include_router(flux.router)
 
 # Fichiers statiques (photos uploadées)
 uploads_dir = Path("/app/uploads")
