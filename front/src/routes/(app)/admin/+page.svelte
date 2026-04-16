@@ -1542,7 +1542,7 @@ $: _siteNom = $siteNomStore;
 <!-- Historique des emails envoyés -->
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 <h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">📬 Historique des envois</h3>
-<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">100 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.</p>
+<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">10 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.</p>
 {#if emailHistoryLoading}
 <p class="muted">Chargement...</p>
 {:else if emailHistory.length === 0}

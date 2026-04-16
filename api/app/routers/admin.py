@@ -316,7 +316,7 @@ def backup_history(
     _: Utilisateur = Depends(require_admin),
 ):
     return session.exec(
-        select(HistoriqueSauvegarde).order_by(HistoriqueSauvegarde.cree_le.desc()).limit(50)
+        select(HistoriqueSauvegarde).order_by(HistoriqueSauvegarde.cree_le.desc()).limit(10)
     ).all()
 
 
@@ -371,7 +371,7 @@ def maintenance_history(
     _: Utilisateur = Depends(require_admin),
 ):
     return session.exec(
-        select(HistoriqueMaintenance).order_by(HistoriqueMaintenance.cree_le.desc()).limit(50)
+        select(HistoriqueMaintenance).order_by(HistoriqueMaintenance.cree_le.desc()).limit(10)
     ).all()
 
 
@@ -398,7 +398,7 @@ def emails_historique(
     _: Utilisateur = Depends(require_admin),
 ):
     return session.exec(
-        select(HistoriqueEmail).order_by(HistoriqueEmail.cree_le.desc()).limit(100)
+        select(HistoriqueEmail).order_by(HistoriqueEmail.cree_le.desc()).limit(10)
     ).all()
 
 
@@ -426,7 +426,7 @@ def telemetry_history(
     _: Utilisateur = Depends(require_admin),
 ):
     return session.exec(
-        select(HistoriqueTelemetrie).order_by(HistoriqueTelemetrie.cree_le.desc()).limit(50)
+        select(HistoriqueTelemetrie).order_by(HistoriqueTelemetrie.cree_le.desc()).limit(10)
     ).all()
 
 
