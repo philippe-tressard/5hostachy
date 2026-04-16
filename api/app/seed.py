@@ -233,6 +233,16 @@ EMAIL_TEMPLATES = [
      '</td></tr></table>',
      True),
 
+    ("ticket_nouveau_message", "Nouveau message sur un ticket", "Nouveau message — Ticket #{{ ticket.numero }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouveau message sur votre ticket</h2>'
+     '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.prenom }} {{ auteur_action.nom }}\u202f:</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ message.contenu }}</p>'
+     '</td></tr></table>'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le ticket</a></p>',
+     True),
+
     ("ticket_urgence_bailleur", "Ticket urgence (bailleur)", "URGENT — Ticket sur votre lot {{ lot.numero }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\U0001f6a8 Ticket URGENT</h2>'
      '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'

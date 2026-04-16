@@ -316,7 +316,7 @@ def backup_history(
     _: Utilisateur = Depends(require_admin),
 ):
     return session.exec(
-        select(HistoriqueSauvegarde).order_by(HistoriqueSauvegarde.cree_le.desc())
+        select(HistoriqueSauvegarde).order_by(HistoriqueSauvegarde.cree_le.desc()).limit(50)
     ).all()
 
 
