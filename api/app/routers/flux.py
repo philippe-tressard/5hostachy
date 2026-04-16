@@ -1,4 +1,5 @@
 """Router flux — agrégation temps réel pour le tableau de bord « pouls »."""
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -59,6 +60,17 @@ def _auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
         return None
     u = session.get(Utilisateur, uid)
     return f"{u.prenom} {u.nom}" if u else None
+
+
+def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
+    """Retire les balises HTML et tronque pour un résumé texte."""
+    if not text:
+        return None
+    clean = re.sub(r"<[^>]+>", " ", text)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if len(clean) > max_len:
+        clean = clean[:max_len].rsplit(" ", 1)[0] + "…"
+    return clean
 
 
 # ── endpoint ─────────────────────────────────────────────────────────────────
@@ -236,7 +248,7 @@ def get_flux(
             type="evenement",
             date=ev.debut,
             titre=ev.titre,
-            detail=ev.description[:120] if ev.description else None,
+            detail=_strip_html(ev.description),
             icon=type_emoji.get(ev.type, "📌"),
             badges=badges_ev,
             lien="/calendrier",
