@@ -1,4 +1,5 @@
 """Router flux — agrégation temps réel pour le tableau de bord « pouls »."""
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -59,6 +60,17 @@ def _auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
         return None
     u = session.get(Utilisateur, uid)
     return f"{u.prenom} {u.nom}" if u else None
+
+
+def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
+    """Retire les balises HTML et tronque pour un résumé texte."""
+    if not text:
+        return None
+    clean = re.sub(r"<[^>]+>", " ", text)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if len(clean) > max_len:
+        clean = clean[:max_len].rsplit(" ", 1)[0] + "…"
+    return clean
 
 
 # ── endpoint ─────────────────────────────────────────────────────────────────
@@ -196,11 +208,14 @@ def get_flux(
         if p.statut:
             labels = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
             badges.append(labels.get(p.statut, p.statut))
+        auteur = _auteur_nom(session, p.auteur_id)
+        contenu_extrait = _strip_html(p.contenu) if hasattr(p, 'contenu') and p.contenu else ""
+        detail_parts = [x for x in [auteur, contenu_extrait] if x]
         items.append(FluxItem(
             type="publication",
             date=p.publiee_le or p.cree_le,
             titre=p.titre,
-            detail=_auteur_nom(session, p.auteur_id),
+            detail=" — ".join(detail_parts) if detail_parts else None,
             icon="📰",
             badges=badges,
             lien="/actualites",
@@ -218,6 +233,16 @@ def get_flux(
         "travaux": "🔨", "coupure": "⚡", "ag": "🏛️",
         "maintenance": "🔧", "maintenance_recurrente": "🔧", "autre": "📌",
     }
+    PERIMETRE_LABELS = {
+        "résidence": "Copropriété entière",
+        "parking": "Parking", "cave": "Cave", "aful": "AFUL",
+    }
+    for i in range(1, 10):
+        PERIMETRE_LABELS[f"bat:{i}"] = f"Bât. {i}"
+
+    def _perimetre_label(perims: list[str]) -> str:
+        return " · ".join(PERIMETRE_LABELS.get(p, p) for p in perims)
+
     for ev in evts:
         if ev.type == "ag" and not can_see_ag:
             continue
@@ -232,15 +257,30 @@ def get_flux(
         badges_ev = [ev.type]
         if prest_name:
             badges_ev.append(prest_name)
+        # Déterminer si l'événement concerne le bâtiment de l'utilisateur
+        user_bat = user.batiment_id
+        concerne_bat = False
+        if user_bat:
+            bat_codes = {f"bat:{user_bat}"}
+            concerne_bat = bool(bat_codes & {p.lower() for p in perims}) or any(
+                p.lower() in ("résidence", "parking", "cave", "aful") for p in perims
+            )
         items.append(FluxItem(
             type="evenement",
             date=ev.debut,
             titre=ev.titre,
-            detail=ev.description[:120] if ev.description else None,
+            detail=_strip_html(ev.description),
             icon=type_emoji.get(ev.type, "📌"),
             badges=badges_ev,
             lien="/calendrier",
-            meta={"ev_id": ev.id, "type": ev.type, "lieu": ev.lieu},
+            meta={
+                "ev_id": ev.id, "type": ev.type, "lieu": ev.lieu,
+                "perimetre": _perimetre_label(perims),
+                "prestataire": prest_name,
+                "debut": ev.debut.isoformat() if ev.debut else None,
+                "fin": ev.fin.isoformat() if ev.fin else None,
+                "concerne_mon_batiment": concerne_bat,
+            },
         ))
 
     # ── 4. Devis (changements de statut) ────────────────────────────────────
