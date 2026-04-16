@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { flux, type FluxItem, type FluxResponse } from '$lib/api';
+	import { flux, lots, type FluxItem, type FluxResponse } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDateLong, fmtDatetimeShort } from '$lib/date';
@@ -12,13 +12,17 @@
 	$: _siteNom = $siteNomStore;
 
 	let data: FluxResponse | null = null;
+	let userLots: any[] = [];
 	let loading = true;
 
 	onMount(async () => {
 		try {
-			data = await flux.get();
+			const [fluxRes, lotsRes] = await Promise.allSettled([flux.get(), lots.mesList()]);
+			if (fluxRes.status === 'fulfilled') data = fluxRes.value;
+			else toast('error', 'Erreur chargement du flux');
+			if (lotsRes.status === 'fulfilled') userLots = lotsRes.value;
 		} catch (e: any) {
-			toast('error', 'Erreur chargement du flux : ' + (e?.message ?? String(e)));
+			toast('error', 'Erreur chargement : ' + (e?.message ?? String(e)));
 		} finally {
 			loading = false;
 		}
@@ -47,6 +51,23 @@
 		return labels.join(', ');
 	})();
 
+	// ── Résumé lot utilisateur ─────────────────────────────────────────────
+	$: lotLabel = (() => {
+		if (userLots.length === 0) return '';
+		const appt = userLots.find((l: any) => l.type === 'appartement');
+		if (!appt) return '';
+		const parts: string[] = [];
+		if (appt.batiment_nom) parts.push(appt.batiment_nom);
+		else if ($currentUser?.batiment_nom) parts.push($currentUser.batiment_nom);
+		if (appt.type_appartement) parts.push(appt.type_appartement);
+		if (appt.etage != null) {
+			if (appt.etage === 0) parts.push('RDC');
+			else if (appt.etage === 1) parts.push('1er étage');
+			else parts.push(`${appt.etage}ème étage`);
+		}
+		return parts.join(', ');
+	})();
+
 	// ── Groupement par jour ────────────────────────────────────────────────
 	interface DayGroup { label: string; items: FluxItem[] }
 
@@ -70,11 +91,40 @@
 
 	$: dayGroups = data ? groupByDay(data.items) : [];
 
-	// ── Urgences en cours (coupures, événements imminents) ─────────────────
+	// ── Urgences en cours (coupures, événements imminents, tickets urgents) ──
 	$: urgentItems = data?.items.filter(i =>
 		(i.type === 'evenement' && i.meta?.type === 'coupure') ||
-		(i.type === 'ticket_ouvert' && i.badges?.includes('urgence'))
+		(i.type === 'ticket_ouvert' && i.badges?.includes('urgence')) ||
+		(i.type === 'publication' && i.meta?.urgente)
 	) ?? [];
+
+	// ── Lien de destination par type de flux ───────────────────────────────
+	function typeLink(item: FluxItem): string {
+		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return '/sondages';
+		if (item.type === 'ticket_ouvert' || item.type === 'ticket_resolu') return '/tickets';
+		return item.lien ?? '#';
+	}
+
+	// ── Barre de progression temps (pour urgences avec debut/fin) ──────────
+	function urgencyProgress(item: FluxItem): { pct: number; label: string; active: boolean } | null {
+		const debut = item.meta?.debut as string | undefined;
+		const fin = item.meta?.fin as string | undefined;
+		if (!debut || !fin) return null;
+		const dStart = new Date(debut).getTime();
+		const dEnd = new Date(fin).getTime();
+		const now = Date.now();
+		if (now < dStart) return { pct: 0, label: 'À venir', active: false };
+		if (now > dEnd) return { pct: 100, label: 'Terminé', active: false };
+		const pct = Math.round(((now - dStart) / (dEnd - dStart)) * 100);
+		const hStart = new Date(dStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+		const hEnd = new Date(dEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+		return { pct, label: `En cours (${hStart}–${hEnd})`, active: true };
+	}
+
+	// ── Format heure courte pour urgence ───────────────────────────────────
+	function fmtHeure(iso: string): string {
+		return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+	}
 
 	// ── Barre de santé : calcul largeur relative ───────────────────────────
 	function barWidth(val: number, max: number): string {
@@ -106,25 +156,48 @@
 	<div class="page-header">
 		<h1 style="font-size:1.4rem;font-weight:700">
 			Bonjour {$currentUser?.prenom} {($currentUser?.nom ?? '').toUpperCase()} &#x1F44B;
-			{#if roleLabels}<span style="font-size:.95rem;font-weight:400;color:var(--color-text-muted);margin-left:.25rem">({roleLabels})</span>{/if}
+			{#if lotLabel}<span class="header-lot">· {lotLabel}</span>{/if}
 		</h1>
 		<span class="badge badge-purple" style="font-size:.7rem">β</span>
 	</div>
+	{#if roleLabels}<p class="header-roles">{roleLabels}</p>{/if}
 	<p class="page-subtitle">{@html safeHtml(_pc.descriptif)}</p>
 
-	<!-- Alertes urgentes -->
+	<!-- Alertes urgentes (style fieldset) -->
 	{#if urgentItems.length > 0}
 		{#each urgentItems.slice(0, 3) as u}
-			<div class="alert alert-error" style="margin-bottom:.75rem">
-				<div class="urgent-row">
-					<span class="urgent-icon">{u.icon}</span>
-					<div class="urgent-body">
-						<strong>{u.titre}</strong>
-						{#if u.detail}<span class="urgent-detail">{u.detail}</span>{/if}
+			{@const progress = urgencyProgress(u)}
+			<fieldset class="urgence-fieldset">
+				<legend class="urgence-legend">🔴 URGENCE</legend>
+				<div class="urgence-content">
+					<div class="urgence-title-row">
+						<span class="urgence-icon">{u.icon}</span>
+						<div class="urgence-title-col">
+							<strong class="urgence-titre">{u.titre}</strong>
+							{#if u.meta?.perimetre}<span class="urgence-perimetre">— {u.meta.perimetre}</span>{/if}
+						</div>
 					</div>
-					{#if u.lien}<a href={u.lien} class="btn btn-outline btn-sm">Voir</a>{/if}
+					{#if u.meta?.debut && u.meta?.fin}
+						<p class="urgence-horaire">
+							Aujourd'hui {fmtHeure(String(u.meta.debut))} → {fmtHeure(String(u.meta.fin))}
+							{#if u.meta?.prestataire} · {u.meta.prestataire}{/if}
+						</p>
+					{:else if u.detail}
+						<p class="urgence-horaire">{u.detail}</p>
+					{/if}
+					{#if u.meta?.concerne_mon_batiment}
+						<p class="urgence-concerne">📍 Concerne votre bâtiment</p>
+					{/if}
+					{#if progress}
+						<div class="urgence-progress-wrap">
+							<div class="urgence-progress-track">
+								<div class="urgence-progress-bar" class:urgence-active={progress.active} style="width:{progress.pct}%"></div>
+							</div>
+							<span class="urgence-progress-label">{progress.label}</span>
+						</div>
+					{/if}
 				</div>
-			</div>
+			</fieldset>
 		{/each}
 	{/if}
 
@@ -192,7 +265,7 @@
 				<div class="flux-day-label">{group.label}</div>
 				{#each group.items as item}
 					<a
-						href={item.lien ?? '#'}
+						href={typeLink(item)}
 						class="flux-item card"
 						class:flux-urgent={item.type === 'ticket_ouvert' && item.badges?.includes('urgence')}
 					>
@@ -236,12 +309,49 @@
 </script>
 
 <style>
-	/* ── Alertes urgentes ──────────────────────────────────────────────── */
-	.urgent-row { display: flex; align-items: center; gap: .75rem; }
-	.urgent-icon { font-size: 1.2rem; flex-shrink: 0; }
-	.urgent-body { flex: 1; display: flex; flex-direction: column; gap: .15rem; }
-	.urgent-body strong { font-size: .9rem; }
-	.urgent-detail { font-size: .8rem; color: var(--color-text-muted); }
+	/* ── Header lot & rôles ────────────────────────────────────────────── */
+	.header-lot {
+		font-size: .95rem; font-weight: 400; color: var(--color-text-muted); margin-left: .25rem;
+	}
+	.header-roles {
+		font-size: .82rem; color: var(--color-text-muted); margin: -.35rem 0 .25rem;
+	}
+
+	/* ── Alertes urgentes (fieldset) ───────────────────────────────────── */
+	.urgence-fieldset {
+		border: 2px solid var(--color-danger, #dc2626);
+		border-radius: var(--radius);
+		padding: 1rem 1.15rem .9rem;
+		margin-bottom: 1rem;
+		background: #fef2f2;
+		position: relative;
+	}
+	.urgence-legend {
+		font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+		color: #dc2626; background: #fef2f2;
+		padding: 0 .5rem; text-transform: uppercase;
+	}
+	.urgence-content { display: flex; flex-direction: column; gap: .45rem; }
+	.urgence-title-row { display: flex; align-items: center; gap: .6rem; }
+	.urgence-icon { font-size: 1.15rem; flex-shrink: 0; }
+	.urgence-title-col { display: flex; align-items: baseline; gap: .35rem; flex-wrap: wrap; }
+	.urgence-titre { font-size: .92rem; color: var(--color-text); }
+	.urgence-perimetre { font-size: .82rem; color: var(--color-text-muted); }
+	.urgence-horaire { font-size: .82rem; color: var(--color-text-muted); margin: 0; }
+	.urgence-concerne {
+		font-size: .82rem; color: var(--color-primary); font-weight: 500; margin: 0;
+	}
+	.urgence-progress-wrap { display: flex; align-items: center; gap: .6rem; margin-top: .15rem; }
+	.urgence-progress-track {
+		flex: 1; height: 6px; border-radius: 3px;
+		background: var(--color-border); overflow: hidden;
+	}
+	.urgence-progress-bar {
+		height: 100%; border-radius: 3px; background: var(--color-text-muted);
+		transition: width .4s ease;
+	}
+	.urgence-progress-bar.urgence-active { background: #dc2626; }
+	.urgence-progress-label { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
 
 	/* ── Carte santé ───────────────────────────────────────────────────── */
 	.sante-card { padding: 1.25rem; margin-bottom: 1.5rem; }
