@@ -1542,7 +1542,7 @@ $: _siteNom = $siteNomStore;
 <!-- Historique des emails envoyés -->
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 <h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">📬 Historique des envois</h3>
-<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">100 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.</p>
+<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">10 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.</p>
 {#if emailHistoryLoading}
 <p class="muted">Chargement...</p>
 {:else if emailHistory.length === 0}
@@ -1647,9 +1647,9 @@ $: _siteNom = $siteNomStore;
       <p>Cliquez sur Déclencher maintenant pour lancer la première sauvegarde.</p>
     </div>
   {:else}
-    <div class="card" style="overflow:hidden;margin-top:1rem">
-      <table class="table">
-        <thead><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
+    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
+      <table class="table" style="font-size:.82rem">
+        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
         <tbody>
           {#each historique as h}
             <tr>
@@ -1682,9 +1682,9 @@ $: _siteNom = $siteNomStore;
       <p>Le script <code>maintenance.sh</code> n'a pas encore été exécuté, ou <code>MAINTENANCE_KEY</code> n'est pas configuré.</p>
     </div>
   {:else}
-    <div class="card" style="overflow:hidden;margin-top:1rem">
-      <table class="table">
-        <thead><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille DB</th><th>Durée</th></tr></thead>
+    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
+      <table class="table" style="font-size:.82rem">
+        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille DB</th><th>Durée</th></tr></thead>
         <tbody>
           {#each historiqueMaintenance as m}
             <tr>
@@ -2307,9 +2307,9 @@ $: _siteNom = $siteNomStore;
       <p>L'agrégation n'a pas encore été exécutée.</p>
     </div>
   {:else}
-    <div class="card" style="overflow:hidden;margin-top:1rem">
-      <table class="table">
-        <thead><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Événements agrégés</th><th>Purges</th><th>Durée</th></tr></thead>
+    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
+      <table class="table" style="font-size:.82rem">
+        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Événements agrégés</th><th>Purges</th><th>Durée</th></tr></thead>
         <tbody>
           {#each historiqueTelemetrie as h}
             <tr>

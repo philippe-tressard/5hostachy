@@ -273,6 +273,7 @@ def get_ticket(
 def update_ticket(
     ticket_id: int,
     body: TicketUpdate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -301,7 +302,7 @@ def update_ticket(
         )
         session.add(evol)
 
-    # Notification auteur
+    # Notification auteur (in-app)
     notif = Notification(
         destinataire_id=ticket.auteur_id,
         type="ticket_update",
@@ -311,6 +312,35 @@ def update_ticket(
     )
     session.add(notif)
     session.add(ticket)
+
+    # Notification auteur (email) — changement de statut
+    if body.statut and body.statut != ancien_statut and ticket.auteur_id != user.id:
+        auteur = session.get(Utilisateur, ticket.auteur_id)
+        if auteur and auteur.email:
+            from app.utils.email import send_email
+            cfg_rows = session.exec(
+                select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+            ).all()
+            cfg_map = {r.cle: r.valeur for r in cfg_rows}
+            background_tasks.add_task(
+                send_email,
+                code="ticket_statut_change",
+                to=auteur.email,
+                context={
+                    "ticket": {
+                        "id": ticket.id,
+                        "numero": ticket.numero,
+                        "titre": ticket.titre,
+                        "statut": STATUT_LABELS.get(body.statut, body.statut),
+                        "ancien_statut": STATUT_LABELS.get(ancien_statut or "", "Aucun"),
+                    },
+                    "auteur_action": {"prenom": user.prenom, "nom": user.nom},
+                    "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                    "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                },
+                destinataire_id=ticket.auteur_id,
+            )
+
     session.commit()
     session.refresh(ticket)
     return _ticket_read(ticket, session)
@@ -335,6 +365,7 @@ def get_messages(
 def add_message(
     ticket_id: int,
     body: MessageCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -360,6 +391,71 @@ def add_message(
     ticket.mis_a_jour_le = datetime.utcnow()
     session.add(msg)
     session.add(ticket)
+
+    # Notification email — nouveau message sur le ticket
+    if not body.interne:
+        from sqlmodel import or_
+        from app.utils.email import send_email
+        cfg_rows = session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+        ).all()
+        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+        ctx = {
+            "ticket": {
+                "id": ticket.id,
+                "numero": ticket.numero,
+                "titre": ticket.titre,
+            },
+            "message": {"contenu": body.contenu[:300]},
+            "auteur_action": {"prenom": user.prenom, "nom": user.nom},
+            "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+            "app": {"url": cfg_map.get("site_url", "https://localhost")},
+        }
+        is_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+        if is_cs:
+            # CS/Admin répond → notifier l'auteur du ticket
+            if ticket.auteur_id != user.id:
+                auteur = session.get(Utilisateur, ticket.auteur_id)
+                if auteur and auteur.email:
+                    background_tasks.add_task(
+                        send_email, code="ticket_nouveau_message",
+                        to=auteur.email, context=ctx,
+                        destinataire_id=ticket.auteur_id,
+                    )
+                    session.add(Notification(
+                        destinataire_id=ticket.auteur_id,
+                        type="ticket_update",
+                        titre=f"Nouvelle réponse sur le ticket #{ticket.numero}",
+                        corps=body.contenu[:200],
+                        lien=f"/tickets/{ticket.id}",
+                    ))
+        else:
+            # Résident répond → notifier les CS/Admin
+            cs_members = session.exec(
+                select(Utilisateur).where(
+                    Utilisateur.actif == True,
+                    Utilisateur.email.isnot(None),
+                    or_(
+                        Utilisateur.roles_json.contains("conseil_syndical"),
+                        Utilisateur.roles_json.contains("admin"),
+                    ),
+                )
+            ).all()
+            for member in cs_members:
+                if member.id != user.id:
+                    background_tasks.add_task(
+                        send_email, code="ticket_nouveau_message",
+                        to=member.email, context=ctx,
+                        destinataire_id=member.id,
+                    )
+                    session.add(Notification(
+                        destinataire_id=member.id,
+                        type="ticket_update",
+                        titre=f"Nouveau message sur le ticket #{ticket.numero}",
+                        corps=body.contenu[:200],
+                        lien=f"/tickets/{ticket.id}",
+                    ))
+
     session.commit()
     session.refresh(msg)
     return msg
@@ -389,6 +485,7 @@ def get_evolutions(
 def add_evolution(
     ticket_id: int,
     body: TicketEvolutionCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -418,6 +515,64 @@ def add_evolution(
             ticket.ferme_le = datetime.utcnow()
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
+
+    # Notification auteur du ticket (email + in-app)
+    if ticket.auteur_id != user.id:
+        from app.utils.email import send_email
+        cfg_rows = session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+        ).all()
+        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+        if body.type == "etat":
+            auteur = session.get(Utilisateur, ticket.auteur_id)
+            if auteur and auteur.email:
+                background_tasks.add_task(
+                    send_email, code="ticket_statut_change",
+                    to=auteur.email,
+                    context={
+                        "ticket": {
+                            "id": ticket.id, "numero": ticket.numero,
+                            "titre": ticket.titre,
+                            "statut": STATUT_LABELS.get(body.nouveau_statut, body.nouveau_statut),
+                            "ancien_statut": STATUT_LABELS.get(ancien_statut or "", "Aucun"),
+                        },
+                        "auteur_action": {"prenom": user.prenom, "nom": user.nom},
+                        "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                        "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                    },
+                    destinataire_id=ticket.auteur_id,
+                )
+        elif body.type == "commentaire" and body.contenu:
+            auteur = session.get(Utilisateur, ticket.auteur_id)
+            if auteur and auteur.email:
+                background_tasks.add_task(
+                    send_email, code="ticket_nouveau_message",
+                    to=auteur.email,
+                    context={
+                        "ticket": {
+                            "id": ticket.id, "numero": ticket.numero,
+                            "titre": ticket.titre,
+                        },
+                        "message": {"contenu": body.contenu[:300]},
+                        "auteur_action": {"prenom": user.prenom, "nom": user.nom},
+                        "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                        "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                    },
+                    destinataire_id=ticket.auteur_id,
+                )
+        # Notification in-app
+        titre_notif = (
+            f"Ticket #{ticket.numero} — statut : {STATUT_LABELS.get(body.nouveau_statut, body.nouveau_statut)}"
+            if body.type == "etat"
+            else f"Nouveau commentaire sur le ticket #{ticket.numero}"
+        )
+        session.add(Notification(
+            destinataire_id=ticket.auteur_id,
+            type="ticket_update",
+            titre=titre_notif,
+            corps=(body.contenu or "")[:200],
+            lien=f"/tickets/{ticket.id}",
+        ))
 
     session.commit()
     session.refresh(evol)
