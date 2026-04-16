@@ -37,7 +37,8 @@
 	$: siteNom  = $siteNomStore;
 	$: siteUrl  = $configStore['site_url'] ?? '';
 	$: buildVerShort = `v${pkg.version}-${import.meta.env.VITE_GIT_HASH ?? 'dev'}`;
-	$: buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}`;
+	$: instanceId = import.meta.env.VITE_INSTANCE_ID || '';
+	$: buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}${instanceId ? ` · RPi${instanceId}` : ''}`;
 	$: year     = new Date().getFullYear();
 </script>
 
