@@ -478,6 +478,32 @@ export const sondages = {
 		api.delete(`/sondages/${sondageId}/commentaires/${commentaireId}`),
 };
 
+// ── Flux temps réel (dashboard pouls) ───────────────────────────────────────
+export interface FluxItem {
+	type: string;
+	date: string;
+	titre: string;
+	detail?: string;
+	badges: string[];
+	icon: string;
+	lien?: string;
+	meta: Record<string, unknown>;
+}
+export interface FluxSante {
+	tickets_ouverts: number;
+	tickets_urgents: number;
+	resolution_moyenne_heures: number | null;
+	sondages_actifs: number;
+	prochains: { date: string; titre: string; type: string; icon: string }[];
+}
+export interface FluxResponse {
+	items: FluxItem[];
+	sante: FluxSante;
+}
+export const flux = {
+	get: () => api.get<FluxResponse>('/flux'),
+};
+
 // ── Upload fichiers ─────────────────────────────────────────────────────────
 
 async function uploadFile(path: string, file: File): Promise<{ url: string }> {

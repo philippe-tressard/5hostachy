@@ -27,6 +27,7 @@ services:
       dockerfile: Dockerfile
       args:
         GIT_HASH: ${GIT_HASH:-dev}
+        INSTANCE_ID: ${INSTANCE_ID:-}
     container_name: hostachy_front
     labels:
       - "git.hash=${GIT_HASH:-dev}"
