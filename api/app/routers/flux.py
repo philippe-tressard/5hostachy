@@ -322,12 +322,15 @@ def get_flux(
         perims = _parse_perimetres(dv.perimetre)
         if not _is_visible(perims, user):
             continue
+        dv_date = datetime.combine(dv.date_prestation, datetime.min.time()) if dv.date_prestation else dv.cree_le
+        if not dv_date:
+            continue
         montant = f"{dv.montant_estime:,.0f} €".replace(",", " ") if dv.montant_estime else None
         items.append(FluxItem(
             id=f"dv_{dv.id}",
             type="devis",
-            date=datetime.combine(dv.date_prestation, datetime.min.time()) if dv.date_prestation else now,
-            cree_le=None,
+            date=dv_date,
+            cree_le=dv.cree_le,
             titre=dv.titre,
             detail=f"{prest.nom}{f' · {montant}' if montant else ''}",
             icon=devis_icons.get(dv.statut, "📋"),

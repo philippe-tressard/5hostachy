@@ -626,6 +626,7 @@ class DevisPrestataire(SQLModel, table=True):
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     actif: bool = True
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
 
     prestataire: Optional[Prestataire] = Relationship(back_populates="devis")
 
