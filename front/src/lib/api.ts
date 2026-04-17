@@ -480,8 +480,10 @@ export const sondages = {
 
 // ── Flux temps réel (dashboard pouls) ───────────────────────────────────────
 export interface FluxItem {
+	id: string;
 	type: string;
 	date: string;
+	cree_le?: string;
 	titre: string;
 	detail?: string;
 	badges: string[];
@@ -489,12 +491,26 @@ export interface FluxItem {
 	lien?: string;
 	meta: Record<string, unknown>;
 }
+export interface FluxProchain {
+	id: string;
+	date: string;
+	titre: string;
+	type: string;
+	icon: string;
+	ev_type?: string;
+	description?: string;
+	lieu?: string;
+	perimetre?: string;
+	prestataire?: string;
+	fin?: string;
+	statut_kanban?: string;
+}
 export interface FluxSante {
 	tickets_ouverts: number;
 	tickets_urgents: number;
 	resolution_moyenne_heures: number | null;
 	sondages_actifs: number;
-	prochains: { date: string; titre: string; type: string; icon: string }[];
+	prochains: FluxProchain[];
 }
 export interface FluxResponse {
 	items: FluxItem[];

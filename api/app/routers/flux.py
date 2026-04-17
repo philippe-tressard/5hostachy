@@ -76,8 +76,10 @@ def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
 # ── endpoint ─────────────────────────────────────────────────────────────────
 
 class FluxItem(BaseModel):
+    id: str = ""         # e.g. "ev_42", "tk_15", "pub_7", "dv_3", "sond_1"
     type: str            # ticket_resolu, ticket_ouvert, publication, evenement, devis, sondage_clos, sondage_ouvert
     date: datetime
+    cree_le: Optional[datetime] = None
     titre: str
     detail: Optional[str] = None
     badges: list[str] = []
@@ -106,7 +108,7 @@ def get_flux(
 ):
     items: list[FluxItem] = []
     now = datetime.utcnow()
-    since = now - timedelta(days=30)
+    since = now - timedelta(days=377)
     can_see_ag = user.has_role(
         RoleUtilisateur.propriétaire,
         RoleUtilisateur.conseil_syndical,
@@ -136,25 +138,32 @@ def get_flux(
                     (tk.ferme_le - tk.cree_le).total_seconds() / 3600, 1
                 )
             items.append(FluxItem(
+                id=f"tk_{tk.id}",
                 type="ticket_resolu",
                 date=evol.cree_le,
+                cree_le=tk.cree_le,
                 titre=tk.titre,
                 detail=f"Résolu{f' en {duree}h' if duree else ''}",
                 icon="✅",
                 badges=[f"#{tk.numero}", tk.categorie],
-                lien=f"/tickets",
-                meta={"ticket_id": tk.id, "duree_h": duree},
+                lien="/tickets",
+                meta={"ticket_id": tk.id, "duree_h": duree, "statut": "résolu",
+                       "description": _strip_html(tk.description, 300),
+                       "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None},
             ))
         elif nouveau in ("ouvert", "en_cours"):
             items.append(FluxItem(
+                id=f"tk_{tk.id}",
                 type="ticket_ouvert",
                 date=evol.cree_le,
+                cree_le=tk.cree_le,
                 titre=tk.titre,
                 detail=f"{'Ouvert' if nouveau == 'ouvert' else 'Pris en charge'}",
                 icon="🎫" if nouveau == "ouvert" else "🔧",
                 badges=[f"#{tk.numero}", tk.categorie],
-                lien=f"/tickets",
-                meta={"ticket_id": tk.id},
+                lien="/tickets",
+                meta={"ticket_id": tk.id, "statut": nouveau,
+                       "description": _strip_html(tk.description, 300)},
             ))
 
     # Tickets récemment créés (sans évolution)
@@ -174,14 +183,17 @@ def get_flux(
         if not _is_visible(perims, user):
             continue
         items.append(FluxItem(
+            id=f"tk_{tk.id}",
             type="ticket_ouvert",
             date=tk.cree_le,
+            cree_le=tk.cree_le,
             titre=tk.titre,
             detail="Nouveau ticket",
             icon="🎫",
             badges=[f"#{tk.numero}", tk.categorie],
             lien="/tickets",
-            meta={"ticket_id": tk.id},
+            meta={"ticket_id": tk.id, "statut": tk.statut,
+                   "description": _strip_html(tk.description, 300)},
         ))
 
     # ── 2. Publications ─────────────────────────────────────────────────────
@@ -212,14 +224,19 @@ def get_flux(
         contenu_extrait = _strip_html(p.contenu) if hasattr(p, 'contenu') and p.contenu else ""
         detail_parts = [x for x in [auteur, contenu_extrait] if x]
         items.append(FluxItem(
+            id=f"pub_{p.id}",
             type="publication",
             date=p.publiee_le or p.cree_le,
+            cree_le=p.cree_le,
             titre=p.titre,
             detail=" — ".join(detail_parts) if detail_parts else None,
             icon="📰",
             badges=badges,
             lien="/actualites",
-            meta={"pub_id": p.id, "epingle": p.epingle, "urgente": p.urgente},
+            meta={"pub_id": p.id, "epingle": p.epingle, "urgente": p.urgente,
+                   "full_html": p.contenu, "auteur": auteur,
+                   "image_url": getattr(p, 'image_url', None),
+                   "statut": p.statut},
         ))
 
     # ── 3. Événements calendrier ────────────────────────────────────────────
@@ -266,8 +283,10 @@ def get_flux(
                 p.lower() in ("résidence", "parking", "cave", "aful") for p in perims
             )
         items.append(FluxItem(
+            id=f"ev_{ev.id}",
             type="evenement",
             date=ev.debut,
+            cree_le=ev.cree_le,
             titre=ev.titre,
             detail=_strip_html(ev.description),
             icon=type_emoji.get(ev.type, "📌"),
@@ -280,6 +299,8 @@ def get_flux(
                 "debut": ev.debut.isoformat() if ev.debut else None,
                 "fin": ev.fin.isoformat() if ev.fin else None,
                 "concerne_mon_batiment": concerne_bat,
+                "full_html": ev.description,
+                "statut_kanban": ev.statut_kanban,
             },
         ))
 
@@ -303,14 +324,17 @@ def get_flux(
             continue
         montant = f"{dv.montant_estime:,.0f} €".replace(",", " ") if dv.montant_estime else None
         items.append(FluxItem(
+            id=f"dv_{dv.id}",
             type="devis",
             date=datetime.combine(dv.date_prestation, datetime.min.time()) if dv.date_prestation else now,
+            cree_le=None,
             titre=dv.titre,
             detail=f"{prest.nom}{f' · {montant}' if montant else ''}",
             icon=devis_icons.get(dv.statut, "📋"),
             badges=[devis_labels.get(dv.statut, dv.statut)],
             lien="/prestataires",
-            meta={"devis_id": dv.id, "statut": dv.statut, "montant": dv.montant_estime},
+            meta={"devis_id": dv.id, "statut": dv.statut, "montant": dv.montant_estime,
+                   "notes": dv.notes, "prestataire": prest.nom},
         ))
 
     # ── 5. Sondages ─────────────────────────────────────────────────────────
@@ -334,25 +358,31 @@ def get_flux(
             ).first()
             gagnant = top_option[0] if top_option else None
             items.append(FluxItem(
+                id=f"sond_{s.id}",
                 type="sondage_clos",
                 date=s.cloture_le or s.cree_le,
+                cree_le=s.cree_le,
                 titre=s.question,
                 detail=f"Clos · {nb_votants} vote{'s' if nb_votants > 1 else ''}{f' · Résultat : {gagnant}' if gagnant else ''}",
                 icon="🗳️",
                 badges=["Clôturé"],
                 lien=f"/sondages/{s.id}",
-                meta={"sondage_id": s.id, "nb_votants": nb_votants, "gagnant": gagnant},
+                meta={"sondage_id": s.id, "nb_votants": nb_votants, "gagnant": gagnant,
+                       "description": s.description},
             ))
         else:
             items.append(FluxItem(
+                id=f"sond_{s.id}",
                 type="sondage_ouvert",
                 date=s.cree_le,
+                cree_le=s.cree_le,
                 titre=s.question,
-                detail=f"{nb_votants} vote{'s' if nb_votants > 1 else ''}{f' · Clôture le {s.cloture_le.strftime('%d/%m')}' if s.cloture_le else ''}",
+                detail=f"{nb_votants} vote{'s' if nb_votants > 1 else ''}" + (f" · Clôture le {s.cloture_le.strftime('%d/%m')}" if s.cloture_le else ""),
                 icon="📊",
                 badges=["En cours"],
                 lien=f"/sondages/{s.id}",
-                meta={"sondage_id": s.id, "nb_votants": nb_votants},
+                meta={"sondage_id": s.id, "nb_votants": nb_votants,
+                       "description": s.description},
             ))
 
     # ── Tri global par date décroissante ────────────────────────────────────
@@ -364,10 +394,11 @@ def get_flux(
     urgents = [t for t in ouverts if t.categorie == "urgence"]
 
     # Temps moyen de résolution sur les 30 derniers jours
+    since_30d = now - timedelta(days=30)
     resolus_recents = [
         t for t in all_tickets
         if t.statut == "résolu" and t.ferme_le and t.cree_le
-        and t.ferme_le >= since
+        and t.ferme_le >= since_30d
     ]
     resolution_moy = None
     if resolus_recents:
@@ -397,31 +428,51 @@ def get_flux(
     copro = session.exec(select(Copropriete)).first()
 
     prochains: list[dict] = []
-    for ev in prochains_evts[:5]:
+    for ev in prochains_evts[:15]:
         if ev.type == "ag" and not can_see_ag:
             continue
+        perims_ev = _parse_perimetres(ev.perimetre)
+        if not _is_visible(perims_ev, user):
+            continue
+        prest_ev_name = None
+        if ev.prestataire_id:
+            prest_ev = session.get(Prestataire, ev.prestataire_id)
+            if prest_ev:
+                prest_ev_name = prest_ev.nom
         prochains.append({
+            "id": f"ev_{ev.id}",
             "date": ev.debut.isoformat(),
             "titre": ev.titre,
             "type": "evenement",
             "icon": type_emoji.get(ev.type, "📌"),
+            "ev_type": ev.type,
+            "description": ev.description,
+            "lieu": ev.lieu,
+            "perimetre": _perimetre_label(perims_ev),
+            "prestataire": prest_ev_name,
+            "fin": ev.fin.isoformat() if ev.fin else None,
+            "statut_kanban": ev.statut_kanban,
         })
-    for ct, prest in prochaines_visites[:3]:
+    for ct, prest in prochaines_visites[:5]:
         prochains.append({
+            "id": f"ct_{ct.id}",
             "date": ct.prochaine_visite.isoformat() if ct.prochaine_visite else "",
             "titre": f"{ct.libelle} — {prest.nom}",
             "type": "contrat",
             "icon": "🔧",
+            "description": ct.notes,
+            "prestataire": prest.nom,
         })
     if copro and copro.assurance_echeance:
         prochains.append({
+            "id": "assurance",
             "date": copro.assurance_echeance.isoformat(),
             "titre": f"Échéance assurance {copro.assurance_compagnie or ''}".strip(),
             "type": "assurance",
             "icon": "🛡️",
         })
     prochains.sort(key=lambda x: x.get("date", ""))
-    prochains = prochains[:8]
+    prochains = prochains[:12]
 
     sante = FluxSante(
         tickets_ouverts=len(ouverts),
