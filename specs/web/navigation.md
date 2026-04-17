@@ -19,7 +19,15 @@ Onboarding (première connexion uniquement)
 ├── Étape 3 — Activer les notifications  (skippable)
 └── Étape 4 — Votre tableau de bord est prêt
 
-Tableau de bord (accueil résident)
+Tableau de bord (accueil résident)  (EF-WEB-005)
+├── Hero (nom, lot, rôle)
+├── Consignes de la copropriété (lien vers /residence, mis en avant pour locataires)
+├── Raccourcis rapides (pilules de navigation)
+├── Alertes urgentes (publications urgentes actives)
+├── KPIs (tickets, événements, résolution, publications)
+├── Prochaines échéances (expandables, filtrées par rôle/périmètre)
+├── Fil d'activité — récent (< 30 j, expandables, dédupliqués des échéances)
+├── Fil d'activité — anciens (30-377 j, accordéon replié)
 └── [barre de complétion de profil si < 100 %]
 
 [Barre de navigation — Recherche globale]

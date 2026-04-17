@@ -41,6 +41,27 @@
   - Une barre de complétion de profil (%) reste affichée dans l'encart du tableau de bord jusqu'à 100 % de complétion.
   - Les téléphones vides (aucun ticket, aucune actualité) affichent un CTA contextuel : « Signaler un problème », « Consulter les actualités » (empty state actif).
   - L'assistant ne se déclenche pas pour les comptes importés/migrés ayant déjà un profil complet (heuristique : nom, lot, email renseignés).
+
+### EF-WEB-005 — Tableau de bord (Accueil)
+- **Priorité :** Haute
+- **Description :** La page d'accueil après connexion affiche un tableau de bord personnalisé selon le rôle et le bâtiment de l'utilisateur. Elle agrège en temps réel les KPIs, alertes urgentes, prochaines échéances et un fil d'activité chronologique.
+- **Critères d'acceptance :**
+  - **Hero** : affiche le nom de l'utilisateur, son lot et son rôle.
+  - **Consignes de la copropriété** : lien proéminent vers la page résidence, mis en avant visuellement pour les locataires et les nouveaux arrivants (animation pulsante ambre).
+  - **KPIs** : tickets ouverts, événements à venir, résolution moyenne (30 derniers jours), publications récentes. Chaque KPI est cliquable vers la page correspondante.
+  - **Alertes urgentes** : les publications urgentes actives sont affichées en tête avec un fieldset rouge, une barre de progression temporelle et l'indication du périmètre concerné.
+  - **Prochaines échéances** : événements futurs et contrats/assurances à échéance, triés par date. Chaque item est expandable au clic pour afficher lieu, périmètre, prestataire, dates, description et lien vers la page complète. Filtrage par rôle (les locataires ne voient pas les items AG) et par périmètre (bâtiment de l'utilisateur).
+  - **Fil d'activité** : timeline chronologique des 377 derniers jours regroupée par jour.
+    - Distinction visuelle par type (couleur du bord gauche + chip type) : tickets (bleu), publications (vert), événements (ambre), sondages (violet), devis (émeraude).
+    - Badge « NEW » pulsant pour les items créés il y a moins de 48 heures.
+    - Items récents (< 30 jours) affichés par défaut ; items anciens (30-377 jours) dans un accordéon replié.
+    - Les tickets non résolus et événements non réalisés restent toujours dans la section récente.
+    - Les événements avec date future apparaissent uniquement dans Prochaines échéances (dédupliqués du fil).
+    - Chaque item est expandable au clic pour voir le détail complet (description, image, métadonnées, lien).
+    - Un seul item peut être ouvert à la fois, partagé entre prochaines échéances et fil d'activité.
+  - **Filtrage rôle/périmètre** : un locataire ne voit pas les items liés à la catégorie AG. Le périmètre de l'utilisateur (bâtiment) est respecté. Les périmètres universels (résidence, parking, cave, AFUL) sont visibles par tous.
+  - **Raccourcis rapides** : pilules de navigation vers les pages principales avec compteurs.
+
 ---
 
 ## Espace copropriétaire

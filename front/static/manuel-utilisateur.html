@@ -1127,8 +1127,8 @@
         <article class="capture-card">
           <img src="img/capture-1-tableau-de-bord.png" alt="Tableau de bord" loading="lazy">
           <h3>1. Tableau de bord</h3>
-          <p>Premier ecran apres connexion. Verifiez alertes, actualites et raccourcis principaux.</p>
-          <span class="capture-tag">Accueil rapide</span>
+          <p>Premier écran après connexion. KPIs, alertes urgentes, prochaines échéances et fil d'activité chronologique.</p>
+          <span class="capture-tag">Accueil complet</span>
         </article>
         <article class="capture-card">
           <img src="img/capture-2-creer-ticket.png" alt="Creer un ticket" loading="lazy">
@@ -1324,6 +1324,74 @@
           <span class="callout-icon">⚠️</span>
           <p><strong>Mot de passe oublié&nbsp;?</strong> Cliquez sur « Mot de passe oublié » sous le formulaire. Entrez votre adresse e-mail&nbsp;: vous recevrez un lien de réinitialisation valable <strong>1 heure</strong>. Une fois le nouveau mot de passe défini, toutes vos sessions actives sont automatiquement fermées.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
+         TABLEAU DE BORD
+    ════════════════════════════════ -->
+    <section class="chapter" id="tableau-de-bord" data-section="lot">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#eff6ff; color:#3B82F6">&#x1F4CA;</div>
+        <div>
+          <h2>Tableau de bord</h2>
+          <p>Votre page d'accueil après connexion : un aperçu complet de la vie de la résidence.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F3E0; Aperçu général</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Le tableau de bord est la première page affichée après connexion. Il est personnalisé selon votre <strong>rôle</strong> (propriétaire, locataire, conseil syndical…) et votre <strong>bâtiment</strong>.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li><strong>Hero</strong> — message de bienvenue avec votre nom, numéro de lot et rôle.</li>
+          <li><strong>Consignes de la copropriété</strong> — lien direct vers la page Résidence. Mis en avant pour les locataires (encadré ambre pulsant).</li>
+          <li><strong>Raccourcis rapides</strong> — pilules cliquables vers Tickets, Calendrier, Actualités, etc. avec compteurs.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F6A8; Alertes urgentes</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Les <strong>publications urgentes</strong> actives apparaissent en tête, dans un encadré rouge avec une barre de progression temporelle.</p>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4C8; Indicateurs clés (KPIs)</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Quatre cartes de synthèse, chacune cliquable vers la page concernée :</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li><strong>Tickets ouverts</strong> — nombre total, avec badge si certains dépassent 7 jours sans mise à jour.</li>
+          <li><strong>Événements à venir</strong> — prochains événements du calendrier.</li>
+          <li><strong>Résolution moyenne</strong> — temps moyen de traitement des tickets sur les 30 derniers jours.</li>
+          <li><strong>Publications récentes</strong> — actualités publiées le mois dernier.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4C5; Prochaines échéances</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Événements à venir et contrats/assurances arrivant à échéance, triés par date.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li><strong>Cliquez</strong> sur un élément pour voir le détail (lieu, périmètre, prestataire, dates, description) sans quitter la page.</li>
+          <li>Un seul élément peut être ouvert à la fois (les autres se referment automatiquement).</li>
+          <li>La couleur du bord gauche et le chip indiquent le <strong>type</strong> (événement, contrat, assurance).</li>
+          <li>Un badge <strong style="color:#EF4444">NEW</strong> apparaît sur les éléments ajoutés il y a moins de 48 heures.</li>
+        </ul>
+        <div class="callout info" style="margin-top:.75rem">
+          <span class="callout-icon">&#x1F512;</span>
+          <p>Les échéances sont filtrées selon votre rôle : les locataires ne voient pas les éléments liés aux assemblées générales. Seuls les éléments concernant votre bâtiment sont affichés.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4F0; Fil d'activité</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Timeline chronologique regroupée par jour, couvrant les 12 derniers mois.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li>Chaque élément a une <strong>couleur distinctive</strong> par type : <span style="color:#3B82F6">&#x25CF; tickets (bleu)</span>, <span style="color:#1B9F5A">&#x25CF; publications (vert)</span>, <span style="color:#F59E0B">&#x25CF; événements (ambre)</span>, <span style="color:#8B5CF6">&#x25CF; sondages (violet)</span>, <span style="color:#10B981">&#x25CF; devis (émeraude)</span>.</li>
+          <li>Un badge <strong style="color:#EF4444">NEW</strong> pulsant signale les éléments de moins de <strong>48 heures</strong>.</li>
+          <li><strong>Cliquez</strong> sur un élément pour voir son contenu complet (description, image, métadonnées) sans quitter la page.</li>
+          <li>Les éléments <strong>récents</strong> (moins de 30 jours) sont affichés directement.</li>
+          <li>Les éléments <strong>plus anciens</strong> (30 jours à 12 mois) sont regroupés dans un accordéon replié « Activité antérieure ».</li>
+          <li>Les tickets non résolus et événements non réalisés restent toujours visibles dans la section récente.</li>
+          <li>Les événements ayant une date future apparaissent uniquement dans « Prochaines échéances » (pas de doublons).</li>
+        </ul>
       </div>
     </section>
 
