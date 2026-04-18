@@ -629,6 +629,7 @@ class DevisPrestataire(SQLModel, table=True):
     actif: bool = True
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
     cree_le: datetime = Field(default_factory=datetime.utcnow)
+    mis_a_jour_le: Optional[datetime] = Field(default=None)
 
     prestataire: Optional[Prestataire] = Relationship(back_populates="devis")
 

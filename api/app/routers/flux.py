@@ -1,7 +1,7 @@
 """Router flux — agrégation temps réel pour le tableau de bord « pouls »."""
 import json as _json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -339,13 +339,18 @@ def get_flux(
         perims = _parse_perimetres(dv.perimetre)
         if not _is_visible(perims, user):
             continue
-        if not dv.cree_le:
+        dv_date = (
+            datetime.combine(dv.date_prestation, time(12, 0))
+            if dv.date_prestation
+            else (dv.mis_a_jour_le or dv.cree_le)
+        )
+        if not dv_date:
             continue
         montant = f"{dv.montant_estime:,.0f} €".replace(",", " ") if dv.montant_estime else None
         items.append(FluxItem(
             id=f"dv_{dv.id}",
             type="devis",
-            date=dv.cree_le,
+            date=dv_date,
             cree_le=dv.cree_le,
             titre=dv.titre,
             detail=f"{prest.nom}{f' · {montant}' if montant else ''}",
