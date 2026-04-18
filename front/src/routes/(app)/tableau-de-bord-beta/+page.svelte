@@ -218,8 +218,8 @@
 	};
 
 	const TYPE_COLORS: Record<string, string> = {
-		ticket_resolu: '#3B82F6',
-		ticket_ouvert: '#3B82F6',
+		ticket_resolu: '#E95F2B',
+		ticket_ouvert: '#E95F2B',
 		publication: 'var(--color-primary)',
 		evenement: '#F59E0B',
 		devis: '#10B981',
@@ -228,8 +228,8 @@
 	};
 
 	const TYPE_BG: Record<string, string> = {
-		ticket_resolu: '#EFF6FF',
-		ticket_ouvert: '#EFF6FF',
+		ticket_resolu: '#FEF0EB',
+		ticket_ouvert: '#FEF0EB',
 		publication: '#EEF2F7',
 		evenement: '#FFFBEB',
 		devis: '#ECFDF5',
