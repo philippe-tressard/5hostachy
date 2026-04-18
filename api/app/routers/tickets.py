@@ -297,6 +297,25 @@ def update_ticket(
     if body.priorite:
         ticket.priorite = body.priorite
 
+    # Champs éditables par admin uniquement
+    changes: list[str] = []
+    if body.titre is not None or body.description is not None or body.categorie is not None or body.perimetre_cible is not None:
+        if not user.has_role(RoleUtilisateur.admin):
+            raise HTTPException(403, "Seul un administrateur peut modifier ces champs")
+        if body.titre is not None and body.titre != ticket.titre:
+            changes.append(f"Titre : {ticket.titre} → {body.titre}")
+            ticket.titre = body.titre
+        if body.description is not None:
+            changes.append("Description modifiée")
+            ticket.description = body.description
+        if body.categorie is not None and body.categorie != ticket.categorie:
+            changes.append(f"Catégorie : {ticket.categorie} → {body.categorie}")
+            ticket.categorie = body.categorie
+        if body.perimetre_cible is not None:
+            import json as _json
+            ticket.perimetre_cible = _json.dumps(body.perimetre_cible)
+            changes.append(f"Périmètre modifié")
+
     ticket.mis_a_jour_le = datetime.utcnow()
 
     # Auto-log évolution sur changement de statut
@@ -309,12 +328,22 @@ def update_ticket(
         )
         session.add(evol)
 
+    # Auto-log évolution sur modification de contenu (admin)
+    if changes:
+        evol = TicketEvolution(
+            ticket_id=ticket.id, type="commentaire",
+            contenu="Modification admin : " + " ; ".join(changes),
+            auteur_id=user.id, cree_le=datetime.utcnow(),
+        )
+        session.add(evol)
+
     # Notification auteur (in-app)
+    notif_corps = " ; ".join(changes) if changes else f"Nouveau statut : {ticket.statut}"
     notif = Notification(
         destinataire_id=ticket.auteur_id,
         type="ticket_update",
         titre=f"Ticket #{ticket.numero} mis à jour",
-        corps=f"Nouveau statut : {ticket.statut}",
+        corps=notif_corps,
         lien=f"/tickets/{ticket.id}",
     )
     session.add(notif)

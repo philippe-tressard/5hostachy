@@ -156,6 +156,10 @@ class TicketRead(BaseModel):
 class TicketUpdate(BaseModel):
     statut: Optional[str] = None
     priorite: Optional[str] = None
+    titre: Optional[str] = None
+    description: Optional[str] = None
+    categorie: Optional[str] = None
+    perimetre_cible: Optional[List[str]] = None
 
 
 class MessageCreate(BaseModel):
