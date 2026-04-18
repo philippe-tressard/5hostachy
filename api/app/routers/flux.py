@@ -40,6 +40,17 @@ def _parse_perimetres(perimetre: Optional[str]) -> list[str]:
     return [s.strip() for s in perimetre.split(",") if s.strip()]
 
 
+def _parse_json_perimetres(perimetre_cible: Optional[str]) -> list[str]:
+    """Parse un champ perimetre_cible stocké en JSON (ex: '["bat:1","bat:3"]')."""
+    if not perimetre_cible:
+        return ["résidence"]
+    try:
+        val = _json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else perimetre_cible
+        return list(val) if isinstance(val, (list, tuple)) else ["résidence"]
+    except Exception:
+        return ["résidence"]
+
+
 def _user_bat_codes(user: Utilisateur) -> set[str]:
     codes: set[str] = set()
     if user.batiment_id:
@@ -146,10 +157,9 @@ def get_flux(
         .order_by(TicketEvolution.cree_le.desc())
     ).all()
     for evol, tk in evols:
-        perims = _parse_perimetres(
-            ",".join(tk.perimetre_cible) if tk.perimetre_cible else None
-        ) if tk.perimetre_cible else (
-            [f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"]
+        perims = (
+            _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
+            else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
         if not _is_visible(perims, user):
             continue
@@ -204,7 +214,7 @@ def get_flux(
         if tk.id in evol_ticket_ids:
             continue
         perims = (
-            list(tk.perimetre_cible) if tk.perimetre_cible
+            _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
         if not _is_visible(perims, user):
@@ -233,7 +243,7 @@ def get_flux(
     ).all()
     for p in pubs:
         perims = (
-            list(p.perimetre_cible) if p.perimetre_cible
+            _parse_json_perimetres(p.perimetre_cible) if p.perimetre_cible
             else (
                 [f"bat:{p.batiment_id}"] if p.batiment_id
                 else _parse_perimetres(p.perimetre)
