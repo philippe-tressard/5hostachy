@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 
 from app.auth.deps import get_current_user, require_cs_or_admin
@@ -36,6 +36,7 @@ def _save_image(file: UploadFile, subfolder: str, max_dim: int = 1600) -> str:
     # Redimensionnement via Pillow si nécessaire
     try:
         img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img) or img  # Corriger l'orientation AVANT convert
         img = img.convert("RGB")
         if max(img.size) > max_dim:
             img.thumbnail((max_dim, max_dim), Image.LANCZOS)
