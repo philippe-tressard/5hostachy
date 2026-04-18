@@ -296,7 +296,7 @@
 	</div>
 
 	<!-- ═══ CONSIGNES DE LA COPROPRIÉTÉ ═══════════════════════════════════ -->
-	<a href="/residence" class="consignes-card section-reveal" class:section-visible={ready} class:consignes-prominent={isLocataire} style="--delay:.05s">
+	<a href="/api/admin/fiche-arrivant" target="_blank" class="consignes-card section-reveal" class:section-visible={ready} class:consignes-prominent={isLocataire} style="--delay:.05s">
 		<div class="consignes-icon">📋</div>
 		<div class="consignes-text">
 			<strong class="consignes-titre">Consignes de la copropriété</strong>
