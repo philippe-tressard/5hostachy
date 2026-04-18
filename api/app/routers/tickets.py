@@ -194,8 +194,8 @@ def create_ticket(
             except Exception:
                 urls = []
             for url in (urls or []):
-                fname = os.path.basename(url)
-                fpath = os.path.join("/app/uploads", fname)
+                # url = "/uploads/tickets/abc.jpg" → "/app/uploads/tickets/abc.jpg"
+                fpath = os.path.join("/app", url.lstrip("/"))
                 if os.path.isfile(fpath):
                     photo_paths.append(fpath)
 
