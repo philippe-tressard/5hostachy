@@ -83,13 +83,16 @@ def check_and_send():
                 logger.info("Message '%s' déjà envoyé aujourd'hui.", sched.label)
                 continue
 
+            footer = (config.get('whatsapp_footer') or '').strip() or "— Conseil Syndical 5Hostachy"
+            message_complet = f"{sched.message}\n\n{footer}"
+
             log = WhatsAppLog(
                 scheduled_id=sched.id,
                 label=sched.label,
-                message=sched.message,
+                message=message_complet,
             )
             try:
-                envoyer_whatsapp_raw(sched.message, config)
+                envoyer_whatsapp_raw(message_complet, config)
                 log.statut = "envoyé"
                 logger.info("Message planifié '%s' envoyé.", sched.label)
             except Exception as exc:

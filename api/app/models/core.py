@@ -390,6 +390,7 @@ class Ticket(SQLModel, table=True):
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave
     photos_urls: Optional[str] = None  # JSON array of photo URLs
     destinataire_syndic: bool = False
+    destinataire_cs: bool = False
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None
@@ -455,6 +456,7 @@ class Publication(SQLModel, table=True):
     archivee: bool = False
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
     evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")

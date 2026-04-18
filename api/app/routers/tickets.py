@@ -61,6 +61,7 @@ def _ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         perimetre_cible=ticket.perimetre_cible,
         photos_urls=ticket.photos_urls,
         destinataire_syndic=ticket.destinataire_syndic,
+        destinataire_cs=ticket.destinataire_cs,
         cree_le=ticket.cree_le,
         mis_a_jour_le=ticket.mis_a_jour_le,
     )
@@ -99,6 +100,7 @@ def create_ticket(
         perimetre_cible=json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]',
         priorite="haute" if body.categorie == "urgence" else "normale",
         destinataire_syndic=body.destinataire_syndic if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else False,
+        destinataire_cs=body.destinataire_cs if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else False,
     )
     session.add(ticket)
     session.flush()
@@ -170,15 +172,67 @@ def create_ticket(
                 },
             )
 
-    # ── Email au syndic principal (option CS/Admin) ──
-    if ticket.destinataire_syndic:
+    # ── Email au syndic et/ou CS (option CS/Admin) ──
+    if ticket.destinataire_syndic or ticket.destinataire_cs:
         from app.utils.email import get_site_manager_notification_email, send_email
+        import json as _json, os
 
-        syndic_principal = session.exec(
-            select(MembreSyndic).where(MembreSyndic.est_principal == True)
-        ).first()
-        if syndic_principal and syndic_principal.email:
-            # Destinataires individuels : syndic principal + CS actifs
+        # Config
+        cfg_site = session.exec(
+            select(ConfigSite).where(
+                ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url"))
+            )
+        ).all()
+        cfg_map = {r.cle: r.valeur for r in cfg_site}
+        reference_copro = cfg_map.get("reference_copro", "")
+
+        # Photos jointes
+        photo_paths: list[str] = []
+        if ticket.photos_urls:
+            try:
+                urls = _json.loads(ticket.photos_urls) if isinstance(ticket.photos_urls, str) else ticket.photos_urls
+            except Exception:
+                urls = []
+            for url in (urls or []):
+                fname = os.path.basename(url)
+                fpath = os.path.join("/app/uploads", fname)
+                if os.path.isfile(fpath):
+                    photo_paths.append(fpath)
+
+        ctx = {
+            "ticket": {
+                "id": ticket.id,
+                "numero": ticket.numero,
+                "titre": ticket.titre,
+                "description": ticket.description,
+                "categorie": ticket.categorie,
+            },
+            "auteur": {
+                "prenom": user.prenom,
+                "nom": user.nom,
+            },
+            "residence": {
+                "nom": cfg_map.get("site_nom", "5Hostachy"),
+            },
+            "app": {
+                "url": cfg_map.get("site_url", "https://localhost"),
+            },
+            "reference_copro": reference_copro,
+        }
+
+        # Construire la liste de destinataires (dédupliqués)
+        destinataires: list[tuple[int | None, str]] = []
+        seen_emails: set[str] = set()
+
+        if ticket.destinataire_syndic:
+            syndic_principal = session.exec(
+                select(MembreSyndic).where(MembreSyndic.est_principal == True)
+            ).first()
+            if syndic_principal and syndic_principal.email:
+                destinataires.append((syndic_principal.user_id, syndic_principal.email))
+                seen_emails.add(syndic_principal.email.lower())
+
+        if ticket.destinataire_cs:
             cs_users = session.exec(
                 select(Utilisateur.id, Utilisateur.email)
                 .where(
@@ -187,68 +241,21 @@ def create_ticket(
                     Utilisateur.roles_json.contains("conseil_syndical"),
                 )
             ).all()
-            destinataires: list[tuple[int | None, str]] = []
-            syndic_user_id = syndic_principal.user_id
-            destinataires.append((syndic_user_id, syndic_principal.email))
-            seen_emails = {syndic_principal.email.lower()}
             for uid, email in cs_users:
                 if email and email.lower() not in seen_emails:
                     destinataires.append((uid, email))
                     seen_emails.add(email.lower())
 
-            # Config
-            cfg_site = session.exec(
-                select(ConfigSite).where(
-                    ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url"))
-                )
-            ).all()
-            cfg_map = {r.cle: r.valeur for r in cfg_site}
-            reference_copro = cfg_map.get("reference_copro", "")
-
-            # Photos jointes
-            photo_paths = []
-            if ticket.photos_urls:
-                import json as _json, os
-                try:
-                    urls = _json.loads(ticket.photos_urls) if isinstance(ticket.photos_urls, str) else ticket.photos_urls
-                except Exception:
-                    urls = []
-                for url in (urls or []):
-                    fname = os.path.basename(url)
-                    fpath = os.path.join("/app/uploads", fname)
-                    if os.path.isfile(fpath):
-                        photo_paths.append(fpath)
-
-            ctx = {
-                "ticket": {
-                    "id": ticket.id,
-                    "numero": ticket.numero,
-                    "titre": ticket.titre,
-                    "description": ticket.description,
-                    "categorie": ticket.categorie,
-                },
-                "auteur": {
-                    "prenom": user.prenom,
-                    "nom": user.nom,
-                },
-                "residence": {
-                    "nom": cfg_map.get("site_nom", "5Hostachy"),
-                },
-                "app": {
-                    "url": cfg_map.get("site_url", "https://localhost"),
-                },
-                "reference_copro": reference_copro,
-            }
-            for dest_id, dest_email in destinataires:
-                background_tasks.add_task(
-                    send_email,
-                    code="ticket_syndic",
-                    to=dest_email,
-                    context=ctx,
-                    session=session,
-                    destinataire_id=dest_id,
-                    attachments=photo_paths or None,
-                )
+        for dest_id, dest_email in destinataires:
+            background_tasks.add_task(
+                send_email,
+                code="ticket_syndic",
+                to=dest_email,
+                context=ctx,
+                session=session,
+                destinataire_id=dest_id,
+                attachments=photo_paths or None,
+            )
 
     session.commit()
     session.refresh(ticket)

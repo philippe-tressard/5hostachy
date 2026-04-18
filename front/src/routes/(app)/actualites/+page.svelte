@@ -32,6 +32,7 @@
 	let newBrouillon = false;
 	let newPartagerWhatsapp = false;
 	let newEnvoyerSyndic = false;
+	let newEnvoyerCs = false;
 	let newStatut: string = '';
 	let saving = false;
 	let pendingImage: File | null = null;
@@ -80,6 +81,7 @@
 				statut: newStatut || null,
 				partager_whatsapp: newPartagerWhatsapp,
 				envoyer_syndic: newEnvoyerSyndic,
+				envoyer_cs: newEnvoyerCs,
 			});
 			if (pendingImage) {
 				uploadingImg = true;
@@ -94,7 +96,7 @@
 			pubList = [pub, ...pubList];
 			showForm = false;
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
-			newBrouillon = false; newStatut = ''; newPartagerWhatsapp = false; newEnvoyerSyndic = false;
+			newBrouillon = false; newStatut = ''; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false;
 			newPerimetreCible = ['résidence'];
 			pendingImage = null; pendingPreview = undefined;
 			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
@@ -143,6 +145,7 @@
 	let evolSaving = false;
 	let evolPartagerWhatsapp = false;
 	let evolEnvoyerSyndic = false;
+	let evolEnvoyerCs = false;
 
 	// ── Expansion ─────────────────────────────────────────────────────────────
 	let expandedPubs = new Set<number>();
@@ -191,6 +194,7 @@
 		evolNouveauStatut = '';
 		evolPartagerWhatsapp = pub?.partager_whatsapp ?? false;
 		evolEnvoyerSyndic = pub?.envoyer_syndic ?? false;
+		evolEnvoyerCs = pub?.envoyer_cs ?? false;
 		editingPub = null;
 		expandedPubs = new Set([pubId]);
 	}
@@ -206,6 +210,7 @@
 				nouveau_statut: evolType === 'etat' ? evolNouveauStatut : undefined,
 				partager_whatsapp: evolPartagerWhatsapp,
 				envoyer_syndic: evolEnvoyerSyndic,
+				envoyer_cs: evolEnvoyerCs,
 			});
 			pubList = pubList.map(p => {
 				if (p.id !== pub.id) return p;
@@ -286,6 +291,11 @@
 					<input type="checkbox" bind:checked={newEnvoyerSyndic} />
 					<span style="font-size:1.1em;line-height:1">✉️</span>
 					<span>Envoyer au syndic</span>
+				</label>
+				<label class="checkbox-field">
+					<input type="checkbox" bind:checked={newEnvoyerCs} />
+					<span style="font-size:1.1em;line-height:1">✉️</span>
+					<span>Envoyer au Conseil Syndical</span>
 				</label>
 			</div>
 			<div class="form-actions">
@@ -417,6 +427,10 @@
 								<label class="checkbox-field">
 									<input type="checkbox" bind:checked={evolEnvoyerSyndic} />
 									<span style="font-size:.85rem">✉️ Envoyer au syndic</span>
+								</label>
+								<label class="checkbox-field">
+									<input type="checkbox" bind:checked={evolEnvoyerCs} />
+									<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
 								</label>
 							</div>
 							<div class="form-actions" style="gap:.5rem">

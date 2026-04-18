@@ -14,6 +14,7 @@
 	let categorie = 'panne';
 	let perimetreCible: string[] = ['résidence'];
 	let destinataireSyndic = false;
+	let destinataireCs = false;
 	let photoFiles: File[] = [];
 	let photoPreviews: string[] = [];
 	let error = '';
@@ -58,6 +59,7 @@
 				categorie,
 				perimetre_cible: perimetreCible,
 				destinataire_syndic: destinataireSyndic,
+				destinataire_cs: destinataireCs,
 			});
 
 			// Upload photos after ticket creation
@@ -156,7 +158,14 @@
 				<input type="checkbox" bind:checked={destinataireSyndic} />
 				<span>📧 Envoyer au syndic</span>
 				<small style="display:block; color:var(--color-text-muted); margin-top:.25rem">
-					Le syndic principal recevra un email avec les membres du CS en copie.
+					Le syndic principal recevra un email.
+				</small>
+			</label>
+			<label class="checkbox-field">
+				<input type="checkbox" bind:checked={destinataireCs} />
+				<span>📧 Envoyer au Conseil Syndical</span>
+				<small style="display:block; color:var(--color-text-muted); margin-top:.25rem">
+					Les membres du CS recevront un email.
 				</small>
 			</label>
 		{/if}

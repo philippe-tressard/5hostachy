@@ -1,5 +1,6 @@
 """Router publications — actualités, annonces."""
 import json
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -48,36 +49,40 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
 
 
 def _envoyer_email_syndic_publication(
-    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session
+    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
+    *, syndic: bool = True, cs: bool = False,
 ):
-    """Envoie un email au syndic principal avec la publication en corps."""
+    """Envoie un email au syndic et/ou CS avec la publication en corps."""
     from app.utils.email import send_email
     import re
 
-    syndic_principal = session.exec(
-        select(MembreSyndic).where(MembreSyndic.est_principal == True)
-    ).first()
-    if not syndic_principal or not syndic_principal.email:
-        return
-
-    # Destinataires individuels : syndic principal + membres CS actifs
-    cs_users = session.exec(
-        select(Utilisateur.id, Utilisateur.email)
-        .where(
-            Utilisateur.actif == True,
-            Utilisateur.email.isnot(None),
-            Utilisateur.roles_json.contains("conseil_syndical"),
-        )
-    ).all()
-    # Construire la liste complète (syndic + CS sans doublon)
     destinataires: list[tuple[int | None, str]] = []
-    syndic_user_id = syndic_principal.user_id
-    destinataires.append((syndic_user_id, syndic_principal.email))
-    seen_emails = {syndic_principal.email.lower()}
-    for uid, email in cs_users:
-        if email and email.lower() not in seen_emails:
-            destinataires.append((uid, email))
-            seen_emails.add(email.lower())
+    seen_emails: set[str] = set()
+
+    if syndic:
+        syndic_principal = session.exec(
+            select(MembreSyndic).where(MembreSyndic.est_principal == True)
+        ).first()
+        if syndic_principal and syndic_principal.email:
+            destinataires.append((syndic_principal.user_id, syndic_principal.email))
+            seen_emails.add(syndic_principal.email.lower())
+
+    if cs:
+        cs_users = session.exec(
+            select(Utilisateur.id, Utilisateur.email)
+            .where(
+                Utilisateur.actif == True,
+                Utilisateur.email.isnot(None),
+                Utilisateur.roles_json.contains("conseil_syndical"),
+            )
+        ).all()
+        for uid, email in cs_users:
+            if email and email.lower() not in seen_emails:
+                destinataires.append((uid, email))
+                seen_emails.add(email.lower())
+
+    if not destinataires:
+        return
 
     cfg_rows = session.exec(
         select(ConfigSite).where(ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url")))
@@ -94,6 +99,15 @@ def _envoyer_email_syndic_publication(
         "app": {"url": cfg.get("site_url", "https://localhost")},
         "reference_copro": cfg.get("reference_copro", ""),
     }
+
+    # Photo jointe (image de la publication)
+    photo_paths: list[str] = []
+    if pub.image_url:
+        fname = os.path.basename(pub.image_url)
+        fpath = os.path.join("/app/uploads", "publications", fname)
+        if os.path.isfile(fpath):
+            photo_paths.append(fpath)
+
     for dest_id, dest_email in destinataires:
         background_tasks.add_task(
             send_email,
@@ -102,6 +116,7 @@ def _envoyer_email_syndic_publication(
             context=ctx,
             session=session,
             destinataire_id=dest_id,
+            attachments=photo_paths or None,
         )
 
 
@@ -190,7 +205,9 @@ def create_publication(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config
             )
     if pub.envoyer_syndic and not pub.brouillon:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session)
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
+    if pub.envoyer_cs and not pub.brouillon:
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
     return _pub_to_read(pub, session)
 
 
@@ -253,7 +270,9 @@ def update_publication(
             )
     # Envoi email syndic si brouillon publié + flag activé
     if was_brouillon_published and pub.envoyer_syndic:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session)
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
+    if was_brouillon_published and pub.envoyer_cs:
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
 
     return _pub_to_read(pub, session)
 
@@ -329,7 +348,12 @@ def add_evolution(
     # Envoi email syndic pour le commentaire si demandé
     share_syndic = body.envoyer_syndic if body.envoyer_syndic is not None else pub.envoyer_syndic
     if share_syndic and body.contenu and body.contenu.strip():
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session)
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
+
+    # Envoi email CS pour le commentaire si demandé
+    share_cs = body.envoyer_cs if body.envoyer_cs is not None else pub.envoyer_cs
+    if share_cs and body.contenu and body.contenu.strip():
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
 
     auteur = session.get(Utilisateur, evol.auteur_id)
     return EvolutionRead(
