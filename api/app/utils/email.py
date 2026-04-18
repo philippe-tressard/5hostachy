@@ -1,6 +1,8 @@
 """Envoi d'emails via fastapi-mail + templates Jinja2 stockés en base."""
 import json
 import logging
+import os
+import tempfile
 from datetime import datetime
 from typing import Any
 
@@ -166,6 +168,37 @@ def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee
 </html>'''
 
 
+def _fix_image_orientations(paths: list[str]) -> list[str]:
+    """Applique la rotation EXIF sur les images JPEG et retourne les chemins corrigés."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return paths
+
+    fixed: list[str] = []
+    for path in paths:
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
+            fixed.append(path)
+            continue
+        try:
+            with Image.open(path) as img:
+                corrected = ImageOps.exif_transpose(img)
+                if corrected is img:
+                    # Pas de correction nécessaire
+                    fixed.append(path)
+                    continue
+                tmp = tempfile.NamedTemporaryFile(
+                    suffix=ext, prefix="exif_", dir=os.path.dirname(path), delete=False,
+                )
+                corrected.save(tmp.name, quality=92)
+                tmp.close()
+                fixed.append(tmp.name)
+        except Exception:
+            fixed.append(path)
+    return fixed
+
+
 async def send_email(
     code: str,
     to: str,
@@ -178,6 +211,8 @@ async def send_email(
 ):
     """
     Récupère le ModèleEmail par code, rend sujet + corps, envoie si MAIL_ENABLED.
+
+    Les images jointes sont automatiquement corrigées (orientation EXIF) avant envoi.
     Fail graceful : en cas d'erreur, log sans bloquer l'événement déclencheur.
     
     Si *destinataire_id* est fourni et que le code email est lié à une
@@ -278,8 +313,10 @@ async def send_email(
             )
             if cc:
                 msg_kwargs["cc"] = cc
+            fixed_attachments: list[str] = []
             if attachments:
-                msg_kwargs["attachments"] = attachments
+                fixed_attachments = _fix_image_orientations(attachments)
+                msg_kwargs["attachments"] = fixed_attachments
             msg = MessageSchema(**msg_kwargs)
             await fm.send_message(msg)
             _log_email(session, code, to, "succes", sujet=rendered_subject)
@@ -287,5 +324,13 @@ async def send_email(
             logger.error("Erreur envoi email [%s] → %s : %s", code, to, exc)
             _log_email(session, code, to, "erreur", erreur=str(exc)[:500])
     finally:
+        # Nettoyer les fichiers temporaires EXIF
+        if attachments:
+            for fp in fixed_attachments:
+                if fp not in attachments:
+                    try:
+                        os.unlink(fp)
+                    except OSError:
+                        pass
         if close_session:
             session.close()
