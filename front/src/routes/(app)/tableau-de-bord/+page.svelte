@@ -286,11 +286,8 @@
 		<div class="hero-content">
 			<div class="hero-top">
 				<div>
-					<h1 class="hero-greeting">{greeting} {$currentUser?.prenom} &#x1F44B;</h1>
-					{#if lotLabel}<p class="hero-lot"><Icon name="home" size={13} /> {lotLabel}</p>{/if}
-					{#if roleLabels}<p class="hero-role">{roleLabels}</p>{/if}
+					<h1 class="hero-greeting">{greeting} {$currentUser?.prenom}{#if lotLabel} <span class="hero-lot-inline">— {lotLabel}</span>{/if}{#if roleLabels} <span class="hero-role-inline">· {roleLabels}</span>{/if}</h1>
 				</div>
-				<span class="badge badge-purple hero-badge">β</span>
 			</div>
 		</div>
 	</div>
@@ -703,10 +700,8 @@
 	.hero-content { position: relative; z-index: 1; }
 	.hero-top { display: flex; justify-content: space-between; align-items: flex-start; }
 	.hero-greeting { font-size: 1.35rem; font-weight: 700; color: var(--color-text-inverse); margin: 0; line-height: 1.3; }
-	.hero-lot { font-size: .82rem; color: rgba(255,255,255,.75); margin: .25rem 0 0; display: flex; align-items: center; gap: .3rem; }
-	.hero-lot :global(svg) { opacity: .7; }
-	.hero-role { font-size: .75rem; color: rgba(255,255,255,.55); margin: .15rem 0 0; letter-spacing: .02em; }
-	.hero-badge { font-size: .65rem; margin-top: .15rem; }
+	.hero-lot-inline { font-size: .85rem; font-weight: 400; color: rgba(255,255,255,.75); }
+	.hero-role-inline { font-size: .75rem; font-weight: 400; color: rgba(255,255,255,.55); letter-spacing: .02em; }
 
 	/* ═══ CONSIGNES DE LA COPROPRIÉTÉ ═══════════════════════════════════ */
 	.consignes-card {
