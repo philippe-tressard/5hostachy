@@ -288,6 +288,8 @@ class DevisRead(BaseModel):
     os_fichier_url: Optional[str] = None
     actif: bool
     affichable: bool = False
+    cree_le: Optional[datetime] = None
+    mis_a_jour_le: Optional[datetime] = None
 
     @field_validator('fichiers_urls', mode='before')
     @classmethod
@@ -345,6 +347,7 @@ def update_devis(
         raise HTTPException(404, "Devis introuvable")
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(d, k, v)
+    d.mis_a_jour_le = datetime.utcnow()
     session.add(d)
     session.commit()
     session.refresh(d)
@@ -389,6 +392,7 @@ async def upload_devis_fichier(
         fichiers = []
     fichiers.append(f"/uploads/{os.path.basename(dest)}")
     d.fichiers_urls = json.dumps(fichiers)
+    d.mis_a_jour_le = datetime.utcnow()
     session.add(d)
     session.commit()
     session.refresh(d)
@@ -418,6 +422,7 @@ def delete_devis_fichier(
         if os.path.exists(filepath):
             os.remove(filepath)
     d.fichiers_urls = json.dumps(fichiers) if fichiers else None
+    d.mis_a_jour_le = datetime.utcnow()
     session.add(d)
     session.commit()
     session.refresh(d)
@@ -448,6 +453,7 @@ async def upload_devis_os(
             os.remove(old_path)
     d.os_fichier_url = f"/uploads/{os.path.basename(dest)}"
     d.statut = "accepte"
+    d.mis_a_jour_le = datetime.utcnow()
     session.add(d)
     session.commit()
     session.refresh(d)
