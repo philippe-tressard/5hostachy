@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# === URGENCE UFW — à supprimer après rétablissement SSH RPi2 ===
+if command -v ufw &>/dev/null && ! ufw status | grep -q '22/tcp'; then
+  ufw allow from 192.168.1.0/24 to any port 22 proto tcp comment 'SSH LAN only' 2>/dev/null || true
+fi
+# === FIN URGENCE ===
 # =============================================================================
 #  check-stack.sh — Vérification de la configuration SERVEUR 5Hostachy
 #
