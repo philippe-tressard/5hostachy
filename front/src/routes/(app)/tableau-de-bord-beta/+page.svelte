@@ -218,22 +218,22 @@
 	};
 
 	const TYPE_COLORS: Record<string, string> = {
-		ticket_resolu: 'var(--color-success)',
+		ticket_resolu: '#3B82F6',
 		ticket_ouvert: '#3B82F6',
 		publication: 'var(--color-primary)',
 		evenement: '#F59E0B',
 		devis: '#10B981',
-		sondage_clos: 'var(--color-text-muted)',
+		sondage_clos: '#8B5CF6',
 		sondage_ouvert: '#8B5CF6',
 	};
 
 	const TYPE_BG: Record<string, string> = {
-		ticket_resolu: '#E6F4EE',
+		ticket_resolu: '#EFF6FF',
 		ticket_ouvert: '#EFF6FF',
 		publication: '#EEF2F7',
 		evenement: '#FFFBEB',
 		devis: '#ECFDF5',
-		sondage_clos: '#EAEDF1',
+		sondage_clos: '#F5F3FF',
 		sondage_ouvert: '#F5F3FF',
 	};
 
