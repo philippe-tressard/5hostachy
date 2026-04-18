@@ -139,6 +139,9 @@ export interface Ticket {
 	lot_id?: number;
 	batiment_id?: number;
 	perimetre_cible?: string[];
+	photos_urls?: string[];
+	destinataire_syndic?: boolean;
+	destinataire_cs?: boolean;
 	cree_le: string;
 	mis_a_jour_le: string;
 }
@@ -186,6 +189,8 @@ export interface Publication {
 	statut_change_le?: string | null;
 	brouillon: boolean;
 	partager_whatsapp?: boolean;
+	envoyer_syndic?: boolean;
+	envoyer_cs?: boolean;
 	evolutions: PublicationEvolution[];
 }
 
@@ -262,7 +267,7 @@ export const publications = {
 	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
-	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean }) =>
+	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 };
 

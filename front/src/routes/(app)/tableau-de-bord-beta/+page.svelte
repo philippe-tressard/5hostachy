@@ -541,6 +541,24 @@
 									{#if item.meta?.image_url}
 										<img src={String(item.meta.image_url)} alt="" class="flux-image" loading="lazy" />
 									{/if}
+									{#if (item.meta?.photos_urls as string[] | undefined)?.length}
+										<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
+											{#each (item.meta.photos_urls as string[]) as photoUrl}
+												<a href={photoUrl} target="_blank" rel="noopener">
+													<img src={photoUrl} alt="Photo" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
+												</a>
+											{/each}
+										</div>
+									{/if}
+									{#if (item.meta?.fichiers_urls as string[] | undefined)?.length}
+										<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
+											{#each (item.meta.fichiers_urls as string[]) as fichierUrl}
+												<a href={fichierUrl} target="_blank" rel="noopener">
+													<img src={fichierUrl} alt="Pièce jointe" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
+												</a>
+											{/each}
+										</div>
+									{/if}
 									<a href={typeLink(item)} class="flux-link">Voir la page complète →</a>
 								</div>
 							{/if}
@@ -600,6 +618,27 @@
 													<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
 												{:else if item.detail}
 													<p class="flux-full-content">{item.detail}</p>
+												{/if}
+												{#if item.meta?.image_url}
+													<img src={String(item.meta.image_url)} alt="" class="flux-image" loading="lazy" />
+												{/if}
+												{#if (item.meta?.photos_urls as string[] | undefined)?.length}
+													<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
+														{#each (item.meta.photos_urls as string[]) as photoUrl}
+															<a href={photoUrl} target="_blank" rel="noopener">
+																<img src={photoUrl} alt="Photo" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
+															</a>
+														{/each}
+													</div>
+												{/if}
+												{#if (item.meta?.fichiers_urls as string[] | undefined)?.length}
+													<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
+														{#each (item.meta.fichiers_urls as string[]) as fichierUrl}
+															<a href={fichierUrl} target="_blank" rel="noopener">
+																<img src={fichierUrl} alt="Pièce jointe" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
+															</a>
+														{/each}
+													</div>
 												{/if}
 												<a href={typeLink(item)} class="flux-link">Voir la page complète →</a>
 											</div>

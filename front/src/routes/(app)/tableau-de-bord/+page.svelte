@@ -676,6 +676,15 @@
 								{:else}
 									<!-- Corps normal -->
 									<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+									{#if t.photos_urls?.length}
+										<div class="tk-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
+											{#each t.photos_urls as photoUrl}
+												<a href={photoUrl} target="_blank" rel="noopener">
+													<img src={photoUrl} alt="Photo ticket" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" />
+												</a>
+											{/each}
+										</div>
+									{/if}
 									<small style="color:var(--color-text-muted);font-size:.78rem">
 										Créé le {fmtDate(t.cree_le)}
 										<span style="font-family:monospace"> · #{t.numero}</span>

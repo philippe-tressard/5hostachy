@@ -106,6 +106,7 @@ class TicketCreate(BaseModel):
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
     destinataire_syndic: bool = False
+    destinataire_cs: bool = False
 
 
 class TicketRead(BaseModel):
@@ -124,6 +125,7 @@ class TicketRead(BaseModel):
     perimetre_cible: Optional[List[str]] = None
     photos_urls: Optional[List[str]] = None
     destinataire_syndic: bool = False
+    destinataire_cs: bool = False
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -208,6 +210,7 @@ class PublicationCreate(BaseModel):
     brouillon: bool = False
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
 
 class PublicationUpdate(BaseModel):
@@ -222,6 +225,7 @@ class PublicationUpdate(BaseModel):
     archivee: Optional[bool] = None
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
+    envoyer_cs: Optional[bool] = None
 
 
 class EvolutionRead(BaseModel):
@@ -245,6 +249,7 @@ class EvolutionCreate(BaseModel):
     nouveau_statut: Optional[str] = None  # requis si type=="etat"
     partager_whatsapp: Optional[bool] = None  # None = hérite de la publication
     envoyer_syndic: Optional[bool] = None  # None = hérite de la publication
+    envoyer_cs: Optional[bool] = None  # None = hérite de la publication
 
 
 class PublicationRead(BaseModel):
@@ -266,6 +271,7 @@ class PublicationRead(BaseModel):
     brouillon: bool = False
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
+    envoyer_cs: bool = False
     evolutions: List[EvolutionRead] = []
     auteur_nom: Optional[str] = None
 

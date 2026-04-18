@@ -1,4 +1,5 @@
 """Router flux — agrégation temps réel pour le tableau de bord « pouls »."""
+import json as _json
 import re
 from datetime import datetime, timedelta
 from typing import Optional
@@ -71,6 +72,17 @@ def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
     if len(clean) > max_len:
         clean = clean[:max_len].rsplit(" ", 1)[0] + "…"
     return clean
+
+
+def _parse_photos(raw: Optional[str]) -> list[str]:
+    """Parse un champ JSON photos_urls / fichiers_urls en liste de strings."""
+    if not raw:
+        return []
+    try:
+        val = _json.loads(raw) if isinstance(raw, str) else raw
+        return list(val) if isinstance(val, (list, tuple)) else []
+    except Exception:
+        return []
 
 
 # ── endpoint ─────────────────────────────────────────────────────────────────
@@ -149,7 +161,8 @@ def get_flux(
                 lien="/tickets",
                 meta={"ticket_id": tk.id, "duree_h": duree, "statut": "résolu",
                        "description": _strip_html(tk.description, 300),
-                       "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None},
+                       "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
+                       "photos_urls": _parse_photos(tk.photos_urls)},
             ))
         elif nouveau in ("ouvert", "en_cours"):
             items.append(FluxItem(
@@ -163,7 +176,8 @@ def get_flux(
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
                 meta={"ticket_id": tk.id, "statut": nouveau,
-                       "description": _strip_html(tk.description, 300)},
+                       "description": _strip_html(tk.description, 300),
+                       "photos_urls": _parse_photos(tk.photos_urls)},
             ))
 
     # Tickets récemment créés (sans évolution)
@@ -193,7 +207,8 @@ def get_flux(
             badges=[f"#{tk.numero}", tk.categorie],
             lien="/tickets",
             meta={"ticket_id": tk.id, "statut": tk.statut,
-                   "description": _strip_html(tk.description, 300)},
+                   "description": _strip_html(tk.description, 300),
+                   "photos_urls": _parse_photos(tk.photos_urls)},
         ))
 
     # ── 2. Publications ─────────────────────────────────────────────────────
@@ -262,6 +277,8 @@ def get_flux(
 
     for ev in evts:
         if ev.type == "ag" and not can_see_ag:
+            continue
+        if ev.type == "maintenance_recurrente":
             continue
         perims = _parse_perimetres(ev.perimetre)
         if not _is_visible(perims, user):
@@ -337,7 +354,8 @@ def get_flux(
             badges=[devis_labels.get(dv.statut, dv.statut)],
             lien="/prestataires",
             meta={"devis_id": dv.id, "statut": dv.statut, "montant": dv.montant_estime,
-                   "notes": dv.notes, "prestataire": prest.nom},
+                   "notes": dv.notes, "prestataire": prest.nom,
+                   "fichiers_urls": _parse_photos(dv.fichiers_urls)},
         ))
 
     # ── 5. Sondages ─────────────────────────────────────────────────────────
@@ -433,6 +451,8 @@ def get_flux(
     prochains: list[dict] = []
     for ev in prochains_evts[:15]:
         if ev.type == "ag" and not can_see_ag:
+            continue
+        if ev.type == "maintenance_recurrente":
             continue
         perims_ev = _parse_perimetres(ev.perimetre)
         if not _is_visible(perims_ev, user):
