@@ -1728,6 +1728,13 @@
 		<p style="color:var(--color-text-muted)">Chargement…</p>
 	{:else}
 
+		<!-- ── Bouton prévisualisation fiche arrivant ─────────────────────────── -->
+		<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">
+			<a href="/api/admin/fiche-arrivant" target="_blank" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem">
+				📄 Prévisualiser la fiche arrivant
+			</a>
+		</div>
+
 		<!-- ── Section Conseil Syndical ──────────────────────────────────────── -->
 		<section class="annuaire-section">
 			<div class="annuaire-section-header">

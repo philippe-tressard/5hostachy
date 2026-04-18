@@ -1608,3 +1608,102 @@ def list_baux(
             "liaison_manquante": bool(b.locataire_email and not b.locataire_id),
         })
     return result
+
+
+# ── Fiche arrivant (génération dynamique) ────────────────────────────────────
+
+@router.get("/fiche-arrivant")
+def get_fiche_arrivant(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(get_current_user),
+):
+    """Génère la fiche arrivant HTML à partir des données annuaire actuelles."""
+    from datetime import date
+    from fastapi.responses import HTMLResponse
+    from app.utils.fiche_arrivant import generer_fiche_arrivant
+
+    # Récupérer les données annuaire (même logique que GET /admin/annuaire)
+    ag = session.exec(select(AgCsInfo)).first()
+    membres_cs_raw = session.exec(select(MembreCS)).all()
+
+    def _genre_order(g: str) -> int:
+        return 0 if g in ("Mme", "Mlle") else 1
+
+    membres_cs_sorted = sorted(
+        membres_cs_raw,
+        key=lambda m: (m.batiment_id or 9999, _genre_order(m.genre), m.nom.lower()),
+    )
+
+    batiments_cache: dict[int, str] = {}
+    def _bat_nom(bid: Optional[int]) -> Optional[str]:
+        if bid is None:
+            return None
+        if bid not in batiments_cache:
+            bat = session.get(Batiment, bid)
+            batiments_cache[bid] = bat.numero if bat else str(bid)
+        return batiments_cache[bid]
+
+    user_photo_cache: dict[int, Optional[str]] = {}
+    def _user_photo(uid: Optional[int]) -> Optional[str]:
+        if uid is None:
+            return None
+        if uid not in user_photo_cache:
+            u = session.get(Utilisateur, uid)
+            user_photo_cache[uid] = u.photo_url if u else None
+        return user_photo_cache[uid]
+
+    site_manager_user_id = _get_site_manager_user_id(session)
+
+    cs_membres = [
+        {
+            "genre": m.genre,
+            "prenom": m.prenom,
+            "nom": m.nom,
+            "batiment_nom": _bat_nom(m.batiment_id),
+            "etage": m.etage,
+            "est_gestionnaire_site": bool(
+                m.est_gestionnaire_site or (site_manager_user_id and m.user_id == site_manager_user_id)
+            ),
+            "est_president": m.est_president,
+            "photo_url": _user_photo(m.user_id),
+        }
+        for m in membres_cs_sorted
+    ]
+
+    syndic_info = session.exec(select(SyndicInfo)).first()
+    membres_syndic_raw = session.exec(select(MembreSyndic)).all()
+    syndic_membres = [
+        {
+            "genre": m.genre,
+            "prenom": m.prenom,
+            "nom": m.nom,
+            "fonction": m.fonction,
+            "email": m.email,
+            "telephone": m.telephone,
+            "est_principal": m.est_principal,
+            "photo_url": _user_photo(m.user_id),
+        }
+        for m in sorted(membres_syndic_raw, key=lambda m: m.ordre)
+    ]
+
+    whatsapp_url = (
+        session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
+        or ConfigSite(cle="", valeur="")
+    ).valeur or None
+
+    html = generer_fiche_arrivant(
+        cs_data={
+            "ag_annee": ag.ag_annee if ag else None,
+            "ag_date": ag.ag_date.isoformat() if (ag and ag.ag_date) else None,
+            "membres": cs_membres,
+        },
+        syndic_data={
+            "nom_syndic": syndic_info.nom_syndic if syndic_info else "",
+            "adresse": syndic_info.adresse if syndic_info else "",
+            "site_web": syndic_info.site_web if syndic_info else None,
+            "membres": syndic_membres,
+        },
+        whatsapp_url=whatsapp_url,
+        annee=date.today().year,
+    )
+    return HTMLResponse(content=html)
