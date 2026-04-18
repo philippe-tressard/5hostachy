@@ -127,6 +127,17 @@ def get_flux(
         RoleUtilisateur.admin,
     )
 
+    # ── helpers périmètre ───────────────────────────────────────────────────
+    PERIMETRE_LABELS = {
+        "résidence": "Copropriété entière",
+        "parking": "Parking", "cave": "Cave", "aful": "AFUL",
+    }
+    for i in range(1, 10):
+        PERIMETRE_LABELS[f"bat:{i}"] = f"Bât. {i}"
+
+    def _perimetre_label(perims: list[str]) -> str:
+        return " · ".join(PERIMETRE_LABELS.get(p, p) for p in perims)
+
     # ── 1. Tickets : changements de statut récents ──────────────────────────
     evols = session.exec(
         select(TicketEvolution, Ticket)
@@ -160,6 +171,7 @@ def get_flux(
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
                 meta={"ticket_id": tk.id, "duree_h": duree, "statut": "résolu",
+                       "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
                        "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
                        "photos_urls": _parse_photos(tk.photos_urls)},
@@ -176,6 +188,7 @@ def get_flux(
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
                 meta={"ticket_id": tk.id, "statut": nouveau,
+                       "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
                        "photos_urls": _parse_photos(tk.photos_urls)},
             ))
@@ -207,6 +220,7 @@ def get_flux(
             badges=[f"#{tk.numero}", tk.categorie],
             lien="/tickets",
             meta={"ticket_id": tk.id, "statut": tk.statut,
+                   "perimetre": _perimetre_label(perims),
                    "description": _strip_html(tk.description, 300),
                    "photos_urls": _parse_photos(tk.photos_urls)},
         ))
@@ -265,15 +279,6 @@ def get_flux(
         "travaux": "🔨", "coupure": "⚡", "ag": "🏛️",
         "maintenance": "🔧", "maintenance_recurrente": "🔧", "autre": "📌",
     }
-    PERIMETRE_LABELS = {
-        "résidence": "Copropriété entière",
-        "parking": "Parking", "cave": "Cave", "aful": "AFUL",
-    }
-    for i in range(1, 10):
-        PERIMETRE_LABELS[f"bat:{i}"] = f"Bât. {i}"
-
-    def _perimetre_label(perims: list[str]) -> str:
-        return " · ".join(PERIMETRE_LABELS.get(p, p) for p in perims)
 
     for ev in evts:
         if ev.type == "ag" and not can_see_ag:
@@ -358,6 +363,7 @@ def get_flux(
             badges=[devis_labels.get(dv.statut, dv.statut)],
             lien="/prestataires",
             meta={"devis_id": dv.id, "statut": dv.statut, "montant": dv.montant_estime,
+                   "perimetre": _perimetre_label(perims),
                    "notes": dv.notes, "prestataire": prest.nom,
                    "date_prestation": dv.date_prestation.isoformat() if dv.date_prestation else None,
                    "fichiers_urls": _parse_photos(dv.fichiers_urls)},
