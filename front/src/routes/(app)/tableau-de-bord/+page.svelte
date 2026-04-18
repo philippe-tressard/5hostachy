@@ -425,6 +425,9 @@
 							{#if p.ev_type}
 								<span class="prochain-type-chip" style="background:{TYPE_BG['evenement']};color:{TYPE_COLORS['evenement']}">{p.ev_type}</span>
 							{/if}
+							{#if p.perimetre && p.perimetre !== 'Copropriété entière'}
+								<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {p.perimetre}</span>
+							{/if}
 							{#if isNew(p)}
 								<span class="new-badge">NOUVEAU</span>
 							{/if}
@@ -500,6 +503,9 @@
 								<span class="flux-icon">{item.icon}</span>
 								<div class="flux-card-text">
 									<span class="flux-titre">{item.titre}</span>
+									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
+										<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {item.meta.perimetre}</span>
+									{/if}
 									{#if !isExpanded && item.detail}
 										<p class="flux-detail clamp-2">{item.detail}</p>
 									{/if}
@@ -605,12 +611,18 @@
 											<span class="flux-icon">{item.icon}</span>
 											<div class="flux-card-text">
 												<span class="flux-titre">{item.titre}</span>
+												{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
+													<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {item.meta.perimetre}</span>
+												{/if}
 												{#if !isExpanded && item.detail}
 													<p class="flux-detail clamp-2">{item.detail}</p>
 												{/if}
 											</div>
 										</div>
 										{#if isExpanded}										<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->											<div class="flux-body" on:click|stopPropagation>
+												{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
+												{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}<p class="flux-meta-line">🔹 {item.meta.perimetre}</p>{/if}
+												{#if item.meta?.prestataire}<p class="flux-meta-line">🔧 {item.meta.prestataire}</p>{/if}
 												{#if item.meta?.full_html}
 													<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
 												{:else if item.detail}

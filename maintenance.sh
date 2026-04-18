@@ -34,6 +34,22 @@ GLOBAL_ERREUR=""
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
+# --- Vérification : ce RPi est-il le RPi actif ? ------------------------------
+FLAG="$REPO/.active"
+if [ -f "$FLAG" ]; then
+    HOSTNAME=$(hostname)
+    case "$HOSTNAME" in
+      PhT-RB5)   SELF="rpi1" ;;
+      PhT-RB5i2) SELF="rpi2" ;;
+      *)         SELF="" ;;
+    esac
+    ACTIVE=$(cat "$FLAG" | tr -d '[:space:]')
+    if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
+        log "Ce RPi ($SELF) n'est pas actif ($ACTIVE) — maintenance ignorée."
+        exit 0
+    fi
+fi
+
 log ""
 log "===== Maintenance Hostachy ====="
 

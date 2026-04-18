@@ -7,6 +7,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime } from '$lib/date';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -137,6 +138,51 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
+
+	// ── Édition admin ──
+	let editingTicket: number | null = null;
+	let editTitre = '';
+	let editDescription = '';
+	let editCategorie = '';
+	let editPerimetre: string[] = ['résidence'];
+	let editSaving = false;
+
+	const CATEGORIES = [
+		{ value: 'panne', label: '🛠️ Panne' },
+		{ value: 'nuisance', label: '📢 Nuisance' },
+		{ value: 'question', label: '❓ Question' },
+		{ value: 'urgence', label: '🚨 Urgence' },
+		{ value: 'bug', label: '🐛 Bug' },
+	];
+
+	function openEditForm(t: Ticket) {
+		editingTicket = t.id;
+		editTitre = t.titre;
+		editDescription = t.description;
+		editCategorie = t.categorie;
+		editPerimetre = t.perimetre_cible ?? ['résidence'];
+		expandedTickets = new Set([t.id]);
+		showEvolForm = null;
+	}
+
+	async function saveEdit(t: Ticket) {
+		if (!editTitre.trim()) { toast('error', 'Le titre est obligatoire'); return; }
+		editSaving = true;
+		try {
+			const updated = await ticketsApi.update(t.id, {
+				titre: editTitre.trim(),
+				description: editDescription,
+				categorie: editCategorie,
+				perimetre_cible: editPerimetre,
+			});
+			ticketList = ticketList.map(x => x.id === t.id ? { ...x, ...updated } : x);
+			await loadEvolutions(t.id);
+			editingTicket = null;
+			toast('success', 'Ticket modifié');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+		} finally { editSaving = false; }
+	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -223,8 +269,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 						<button class="btn-icon" aria-label="Commenter / changer état" title="Commenter / état"
 							on:click|stopPropagation={() => openEvolForm(t.id)}>&#x1F4AC;</button>
 					{/if}
-					{#if $isAdmin}
-						<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
+					{#if $isAdmin}						<button class="btn-icon" aria-label="Modifier" title="Modifier le ticket"
+							on:click|stopPropagation={() => openEditForm(t)}>✏️</button>						<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
 							on:click|stopPropagation={() => deleteTicket(t)}>&#x1F5D1;️</button>
 					{/if}
 					<span class="chevron" class:open={expanded}>›</span>
@@ -237,7 +283,40 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 
 			{#if expanded}
 				<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
-					{#if showEvolForm === t.id}
+					{#if editingTicket === t.id}
+						<!-- Formulaire d'édition admin -->
+						<div class="evol-form">
+							<div class="field">
+								<label for="edit-titre-{t.id}">Titre *</label>
+								<input id="edit-titre-{t.id}" type="text" bind:value={editTitre} maxlength="200"
+									style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem" />
+							</div>
+							<div class="field">
+								<label for="edit-cat-{t.id}">Catégorie</label>
+								<select id="edit-cat-{t.id}" bind:value={editCategorie}
+									style="padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem">
+									{#each CATEGORIES as cat}
+										<option value={cat.value}>{cat.label}</option>
+									{/each}
+								</select>
+							</div>
+							<div class="field">
+								<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Périmètre</span>
+								<PerimetrePicker bind:value={editPerimetre} />
+							</div>
+							<div class="field">
+								<label for="edit-desc-{t.id}">Description</label>
+								<textarea id="edit-desc-{t.id}" bind:value={editDescription} rows="5"
+									style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
+								></textarea>
+							</div>
+							<div class="form-actions" style="gap:.5rem">
+								<button type="button" class="btn btn-outline" on:click={() => (editingTicket = null)}>Annuler</button>
+								<button type="button" class="btn btn-primary" disabled={editSaving || !editTitre.trim()}
+									on:click={() => saveEdit(t)}>{editSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
+							</div>
+						</div>
+					{:else if showEvolForm === t.id}
 						<!-- Formulaire d'évolution -->
 						<div class="evol-form">
 							<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">

@@ -952,6 +952,9 @@ import { onMount } from 'svelte';
 						<div class="event-date">
 							<div>{formatDate(ev.debut)}</div>
 							{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
+							{#if ev.perimetre && ev.perimetre !== 'résidence'}
+								<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(ev.perimetre)}</span>
+							{/if}
 							{#if ev.statut_kanban}
 								{@const col = KANBAN_COLS.find(c => c.id === ev.statut_kanban)}
 								{#if col}<span class="badge" style="background:{col.color};color:white;font-size:.73rem;margin-top:.3rem">{col.label}</span>{/if}
