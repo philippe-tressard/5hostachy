@@ -503,16 +503,16 @@
 								<span class="flux-icon">{item.icon}</span>
 								<div class="flux-card-text">
 									<span class="flux-titre">{item.titre}</span>
-									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
-										<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {item.meta.perimetre}</span>
-									{/if}
 									{#if !isExpanded && item.detail}
 										<p class="flux-detail clamp-2">{item.detail}</p>
 									{/if}
 								</div>
 							</div>
-							{#if item.badges.length > 0}
+							{#if item.badges.length > 0 || (item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière')}
 								<div class="flux-badges">
+									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
+										<span class="badge badge-blue" style="font-size:.7rem">🔹 {item.meta.perimetre}</span>
+									{/if}
 									{#each item.badges as b}
 										<span class="badge {badgeClass(item.type, b)}">{b}</span>
 									{/each}
@@ -611,14 +611,16 @@
 											<span class="flux-icon">{item.icon}</span>
 											<div class="flux-card-text">
 												<span class="flux-titre">{item.titre}</span>
-												{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
-													<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {item.meta.perimetre}</span>
-												{/if}
 												{#if !isExpanded && item.detail}
 													<p class="flux-detail clamp-2">{item.detail}</p>
 												{/if}
 											</div>
 										</div>
+										{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
+											<div class="flux-badges">
+												<span class="badge badge-blue" style="font-size:.7rem">🔹 {item.meta.perimetre}</span>
+											</div>
+										{/if}
 										{#if isExpanded}										<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->											<div class="flux-body" on:click|stopPropagation>
 												{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
 												{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}<p class="flux-meta-line">🔹 {item.meta.perimetre}</p>{/if}

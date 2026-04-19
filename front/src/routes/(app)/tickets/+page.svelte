@@ -8,6 +8,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime } from '$lib/date';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import RichEditor from '$lib/components/RichEditor.svelte';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -40,6 +41,15 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	const CAT_ICON: Record<string, string> = {
 		panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}',
 	};
+
+	function perimetreLabel(items: string[]): string {
+		const map: Record<string, string> = {
+			'résidence': 'Copropriété entière',
+			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
+			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
+		};
+		return items.map((i: string) => map[i] ?? i).join(' · ');
+	}
 
 	function renderDesc(c: string) {
 		const t = c.trimStart();
@@ -304,11 +314,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 								<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Périmètre</span>
 								<PerimetrePicker bind:value={editPerimetre} />
 							</div>
-							<div class="field">
-								<label for="edit-desc-{t.id}">Description</label>
-								<textarea id="edit-desc-{t.id}" bind:value={editDescription} rows="5"
-									style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
-								></textarea>
+							<div class="field">								<!-- svelte-ignore a11y-label-has-associated-control -->										<label>Description</label>
+										<RichEditor bind:value={editDescription} placeholder="Description du ticket…" minHeight="120px" />
 							</div>
 							<div class="form-actions" style="gap:.5rem">
 								<button type="button" class="btn btn-outline" on:click={() => (editingTicket = null)}>Annuler</button>
@@ -356,6 +363,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 					{:else}
 						<!-- Corps normal -->
 						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+						{#if t.perimetre_cible && t.perimetre_cible.length > 0 && !(t.perimetre_cible.length === 1 && t.perimetre_cible[0] === 'résidence')}
+							<p style="font-size:.8rem;color:var(--color-text-muted);margin:.25rem 0 .5rem">🔹 {perimetreLabel(t.perimetre_cible)}</p>
+						{/if}
 						<small style="color:var(--color-text-muted);font-size:.78rem">
 							Créé le {fmtDate(t.cree_le)}
 							<span style="font-family:monospace"> · #{t.numero}</span>
@@ -500,6 +510,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 									{:else}
 										<!-- Corps normal -->
 										<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+										{#if t.perimetre_cible && t.perimetre_cible.length > 0 && !(t.perimetre_cible.length === 1 && t.perimetre_cible[0] === 'résidence')}
+											<p style="font-size:.8rem;color:var(--color-text-muted);margin:.25rem 0 .5rem">🔹 {perimetreLabel(t.perimetre_cible)}</p>
+										{/if}
 										<small style="color:var(--color-text-muted);font-size:.78rem">
 											Créé le {fmtDate(t.cree_le)}
 											<span style="font-family:monospace"> · #{t.numero}</span>
