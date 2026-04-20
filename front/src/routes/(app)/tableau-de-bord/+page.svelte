@@ -326,10 +326,10 @@
 		<a href="/actualites" class="quick-pill">
 			<Icon name="megaphone" size={14} /> Actualités
 		</a>
-		{#if ($isCS || $isAdmin) && (data.sante.validations_cs ?? 0) > 0}
+		{#if $isCS || $isAdmin}
 		<a href="/espace-cs" class="quick-pill quick-pill-cs">
 			<Icon name="shield-check" size={14} /> Validations CS
-			<span class="quick-count quick-count-urgent">{data.sante.validations_cs}</span>
+			{#if (data.sante.validations_cs ?? 0) > 0}<span class="quick-count quick-count-urgent">{data.sante.validations_cs}</span>{/if}
 		</a>
 		{/if}
 	</nav>

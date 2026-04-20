@@ -17,11 +17,9 @@ from app.models.core import (
     Copropriete,
     DevisPrestataire,
     Evenement,
-    Notification,
     OptionSondage,
     Prestataire,
     Publication,
-    PublicationEvolution,
     RoleUtilisateur,
     Sondage,
     StatutCommande,
@@ -209,13 +207,46 @@ def get_flux(
                        "evol_auteur": evol_auteur},
             ))
 
+    # ── 1b. Tickets : réponses CS récentes (type=reponse) ──────────────────
+    reponses = session.exec(
+        select(TicketEvolution, Ticket)
+        .join(Ticket, TicketEvolution.ticket_id == Ticket.id)
+        .where(TicketEvolution.type == "reponse", TicketEvolution.cree_le >= since)
+        .order_by(TicketEvolution.cree_le.desc())
+    ).all()
+    for evol, tk in reponses:
+        perims = (
+            _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
+            else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
+        )
+        if not _is_visible(perims, user):
+            continue
+        evol_auteur = _auteur_nom(session, evol.auteur_id)
+        items.append(FluxItem(
+            id=f"tk_rep_{evol.id}",
+            type="ticket_mis_a_jour",
+            date=evol.cree_le,
+            cree_le=tk.cree_le,
+            titre=tk.titre,
+            detail="Réponse du CS",
+            icon="💬",
+            badges=[f"#{tk.numero}", tk.categorie],
+            lien="/tickets",
+            meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
+                   "perimetre": _perimetre_label(perims),
+                   "description": _strip_html(tk.description, 300),
+                   "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
+                   "evol_auteur": evol_auteur},
+        ))
+
     # Tickets récemment créés (sans évolution)
     new_tickets = session.exec(
         select(Ticket)
         .where(Ticket.cree_le >= since)
         .order_by(Ticket.cree_le.desc())
     ).all()
-    evol_ticket_ids = {tk.id for _, tk in evols}
+    reponse_ticket_ids = {tk.id for _, tk in reponses}
+    evol_ticket_ids = {tk.id for _, tk in evols} | reponse_ticket_ids
     for tk in new_tickets:
         if tk.id in evol_ticket_ids:
             continue
@@ -244,7 +275,7 @@ def get_flux(
     # ── 2. Publications ─────────────────────────────────────────────────────
     pubs = session.exec(
         select(Publication)
-        .where(Publication.cree_le >= since, Publication.brouillon == False, Publication.archivee == False)
+        .where(Publication.cree_le >= since, ~Publication.brouillon, ~Publication.archivee)
         .order_by(Publication.cree_le.desc())
     ).all()
     for p in pubs:
@@ -287,7 +318,7 @@ def get_flux(
     # ── 3. Événements calendrier ────────────────────────────────────────────
     evts = session.exec(
         select(Evenement)
-        .where(Evenement.archivee == False, Evenement.affichable == True)
+        .where(~Evenement.archivee, Evenement.affichable)
         .where(Evenement.debut >= since)
         .order_by(Evenement.debut.desc())
     ).all()
@@ -346,7 +377,7 @@ def get_flux(
     devis_list = session.exec(
         select(DevisPrestataire, Prestataire)
         .join(Prestataire, DevisPrestataire.prestataire_id == Prestataire.id)
-        .where(DevisPrestataire.actif == True, DevisPrestataire.affichable == True)
+        .where(DevisPrestataire.actif, DevisPrestataire.affichable)
         .order_by(DevisPrestataire.id.desc())
     ).all()
     devis_labels = {
@@ -455,21 +486,21 @@ def get_flux(
 
     sondages_actifs = session.exec(
         select(func.count(Sondage.id)).where(
-            Sondage.cloture_forcee == False,
+            ~Sondage.cloture_forcee,
         )
     ).one()
 
     # Prochains événements
     prochains_evts = session.exec(
         select(Evenement)
-        .where(Evenement.debut >= now, Evenement.archivee == False)
+        .where(Evenement.debut >= now, ~Evenement.archivee)
         .order_by(Evenement.debut.asc())
     ).all()
     # Prochaines échéances contrats
     prochaines_visites = session.exec(
         select(ContratEntretien, Prestataire)
         .join(Prestataire, ContratEntretien.prestataire_id == Prestataire.id)
-        .where(ContratEntretien.actif == True, ContratEntretien.prochaine_visite != None)
+        .where(ContratEntretien.actif, ContratEntretien.prochaine_visite.is_not(None))
         .order_by(ContratEntretien.prochaine_visite.asc())
     ).all()
     # Échéance assurance
@@ -528,7 +559,7 @@ def get_flux(
     validations_cs = 0
     if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         comptes_attente = session.exec(
-            select(func.count(Utilisateur.id)).where(Utilisateur.actif == False)
+            select(func.count(Utilisateur.id)).where(~Utilisateur.actif)
         ).one()
         commandes_attente = session.exec(
             select(func.count(CommandeAcces.id)).where(
