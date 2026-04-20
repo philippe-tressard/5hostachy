@@ -212,7 +212,7 @@
 	}
 
 	const TYPE_LABELS: Record<string, string> = {
-		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket',					
+		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Nouveau ticket', ticket_mis_a_jour: 'Ticket mis à jour',
 		publication: 'Actualité', evenement: 'Événement',
 		devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
 	};
@@ -220,6 +220,7 @@
 	const TYPE_COLORS: Record<string, string> = {
 		ticket_resolu: '#DC2626',
 		ticket_ouvert: '#DC2626',
+		ticket_mis_a_jour: '#DC2626',
 		publication: 'var(--color-primary)',
 		evenement: '#F59E0B',
 		devis: '#10B981',
@@ -230,6 +231,7 @@
 	const TYPE_BG: Record<string, string> = {
 		ticket_resolu: '#FEF2F2',
 		ticket_ouvert: '#FEF2F2',
+		ticket_mis_a_jour: '#FEF2F2',
 		publication: '#EEF2F7',
 		evenement: '#FFFBEB',
 		devis: '#ECFDF5',

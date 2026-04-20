@@ -183,6 +183,9 @@ class TicketEvolutionCreate(BaseModel):
     type: str  # commentaire | etat
     contenu: Optional[str] = None
     nouveau_statut: Optional[str] = None
+    partager_whatsapp: Optional[bool] = None
+    envoyer_syndic: Optional[bool] = None
+    envoyer_cs: Optional[bool] = None
 
 
 class TicketEvolutionRead(BaseModel):

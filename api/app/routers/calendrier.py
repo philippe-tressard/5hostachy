@@ -2,15 +2,18 @@
 from datetime import datetime, date, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien
+from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
+from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
+
+_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}
 
 
 class EvenementCreate(BaseModel):
@@ -27,6 +30,9 @@ class EvenementCreate(BaseModel):
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: bool = True
+    partager_whatsapp: Optional[bool] = None
+    envoyer_syndic: Optional[bool] = None
+    envoyer_cs: Optional[bool] = None
 
 
 class EvenementRead(BaseModel):
@@ -118,11 +124,12 @@ def get_evenement(
 @router.post("", response_model=EvenementRead, status_code=201)
 def create_evenement(
     body: EvenementCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
     ev = Evenement(
-        **body.model_dump(),
+        **body.model_dump(exclude_none=True),
         auteur_id=user.id,
     )
     session.add(ev)
@@ -145,6 +152,71 @@ def create_evenement(
 
     session.commit()
     session.refresh(ev)
+
+    # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
+    if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
+        cfg_rows = session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(
+                _WA_KEYS | {"reference_copro", "site_nom", "site_url"}
+            ))
+        ).all()
+        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+
+        if body.partager_whatsapp:
+            wa_config = {k: cfg_map[k] for k in _WA_KEYS if k in cfg_map}
+            if wa_config.get('whatsapp_enabled') == '1':
+                background_tasks.add_task(
+                    envoyer_whatsapp_avec_log,
+                    f"📅 {body.titre}", body.description or "", False, None, None, wa_config,
+                )
+
+        if body.envoyer_syndic or body.envoyer_cs:
+            from app.utils.email import send_email
+            destinataires: list[tuple[int | None, str]] = []
+            seen_emails: set[str] = set()
+
+            if body.envoyer_syndic:
+                syndic_principal = session.exec(
+                    select(MembreSyndic).where(MembreSyndic.est_principal == True)
+                ).first()
+                if syndic_principal and syndic_principal.email:
+                    destinataires.append((syndic_principal.user_id, syndic_principal.email))
+                    seen_emails.add(syndic_principal.email.lower())
+
+            if body.envoyer_cs:
+                cs_users = session.exec(
+                    select(Utilisateur.id, Utilisateur.email)
+                    .where(
+                        Utilisateur.actif == True,
+                        Utilisateur.email.isnot(None),
+                        Utilisateur.roles_json.contains("conseil_syndical"),
+                    )
+                ).all()
+                for uid, email in cs_users:
+                    if email and email.lower() not in seen_emails:
+                        destinataires.append((uid, email))
+                        seen_emails.add(email.lower())
+
+            ctx = {
+                "ticket": {
+                    "id": ev.id,
+                    "numero": str(ev.id),
+                    "titre": ev.titre,
+                    "description": ev.description or "",
+                    "categorie": ev.type.value if ev.type else "",
+                },
+                "auteur": {"prenom": user.prenom, "nom": user.nom},
+                "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                "reference_copro": cfg_map.get("reference_copro", ""),
+            }
+            for dest_id, dest_email in destinataires:
+                background_tasks.add_task(
+                    send_email, code="calendrier_evenement_cree",
+                    to=dest_email, context=ctx,
+                    session=session, destinataire_id=dest_id,
+                )
+
     return _ev_to_read(ev, session)
 
 

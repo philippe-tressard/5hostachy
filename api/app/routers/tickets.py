@@ -612,6 +612,75 @@ def add_evolution(
 
     session.commit()
     session.refresh(evol)
+
+    # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
+    if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
+        from app.utils.whatsapp import envoyer_whatsapp_avec_log
+        _WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}
+
+        cfg_rows = session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS | {"reference_copro", "site_nom", "site_url"}))
+        ).all()
+        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+
+        if body.partager_whatsapp:
+            wa_config = {k: cfg_map[k] for k in _WA_KEYS if k in cfg_map}
+            if wa_config.get('whatsapp_enabled') == '1':
+                msg = body.contenu or (
+                    f"Ticket #{ticket.numero} — {ticket.titre} : statut → {STATUT_LABELS.get(body.nouveau_statut or '', body.nouveau_statut or '')}"
+                    if body.type == "etat" else ticket.titre
+                )
+                background_tasks.add_task(
+                    envoyer_whatsapp_avec_log,
+                    f"🔧 {ticket.titre}", msg, False, None, None, wa_config,
+                )
+
+        if body.envoyer_syndic or body.envoyer_cs:
+            from app.utils.email import send_email
+            destinataires: list[tuple[int | None, str]] = []
+            seen_emails: set[str] = set()
+
+            if body.envoyer_syndic:
+                syndic_principal = session.exec(
+                    select(MembreSyndic).where(MembreSyndic.est_principal == True)
+                ).first()
+                if syndic_principal and syndic_principal.email:
+                    destinataires.append((syndic_principal.user_id, syndic_principal.email))
+                    seen_emails.add(syndic_principal.email.lower())
+
+            if body.envoyer_cs:
+                cs_users = session.exec(
+                    select(Utilisateur.id, Utilisateur.email)
+                    .where(
+                        Utilisateur.actif == True,
+                        Utilisateur.email.isnot(None),
+                        Utilisateur.roles_json.contains("conseil_syndical"),
+                    )
+                ).all()
+                for uid, email in cs_users:
+                    if email and email.lower() not in seen_emails:
+                        destinataires.append((uid, email))
+                        seen_emails.add(email.lower())
+
+            ctx = {
+                "ticket": {
+                    "id": ticket.id, "numero": ticket.numero,
+                    "titre": ticket.titre,
+                    "description": body.contenu or "",
+                    "categorie": ticket.categorie,
+                },
+                "auteur": {"prenom": user.prenom, "nom": user.nom},
+                "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                "reference_copro": cfg_map.get("reference_copro", ""),
+            }
+            for dest_id, dest_email in destinataires:
+                background_tasks.add_task(
+                    send_email, code="ticket_syndic",
+                    to=dest_email, context=ctx,
+                    session=session, destinataire_id=dest_id,
+                )
+
     return _evol_read(evol, session)
 
 

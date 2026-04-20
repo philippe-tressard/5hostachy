@@ -189,12 +189,12 @@ def get_flux(
         elif nouveau in ("ouvert", "en_cours"):
             items.append(FluxItem(
                 id=f"tk_{tk.id}",
-                type="ticket_ouvert",
+                type="ticket_mis_a_jour",
                 date=evol.cree_le,
                 cree_le=tk.cree_le,
                 titre=tk.titre,
-                detail=f"{'Ouvert' if nouveau == 'ouvert' else 'Pris en charge'}",
-                icon="🎫" if nouveau == "ouvert" else "🔧",
+                detail=f"{'Réouvert' if nouveau == 'ouvert' else 'Pris en charge'}",
+                icon="🔧",
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
                 meta={"ticket_id": tk.id, "statut": nouveau,
