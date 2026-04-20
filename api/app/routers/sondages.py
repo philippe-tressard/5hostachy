@@ -265,7 +265,7 @@ def create_sondage(
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:
-            from app.utils.email import send_email
+            from app.utils.email import send_email_group
             destinataires: list[tuple[int | None, str]] = []
             seen_emails: set[str] = set()
 
@@ -304,11 +304,11 @@ def create_sondage(
                 "app": {"url": cfg_map.get("site_url", "https://localhost")},
                 "reference_copro": cfg_map.get("reference_copro", ""),
             }
-            for dest_id, dest_email in destinataires:
+            if destinataires:
                 background_tasks.add_task(
-                    send_email, code="publication_syndic",
-                    to=dest_email, context=ctx,
-                    session=session, destinataire_id=dest_id,
+                    send_email_group, code="publication_syndic",
+                    to_recipients=destinataires, context=ctx,
+                    session=session,
                 )
 
     return s

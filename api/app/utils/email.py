@@ -334,3 +334,154 @@ async def send_email(
                         pass
         if close_session:
             session.close()
+
+
+def _check_pref(code: str, user_id: int | None, session: Session) -> bool:
+    """Retourne False si l'utilisateur a désactivé la préférence pour ce code email."""
+    pref_key = _EMAIL_PREF_MAP.get(code)
+    if not pref_key or not user_id:
+        return True
+    user = session.get(Utilisateur, user_id)
+    if not user:
+        return True
+    try:
+        prefs = json.loads(user.preferences_notifications or "{}")
+    except (json.JSONDecodeError, TypeError):
+        prefs = {}
+    return prefs.get(pref_key, True)
+
+
+async def send_email_group(
+    code: str,
+    to_recipients: list[tuple[int | None, str]],
+    context: dict[str, Any],
+    session: Session | None = None,
+    *,
+    cc_recipients: list[tuple[int | None, str]] | None = None,
+    attachments: list[str] | None = None,
+):
+    """
+    Envoie UN seul email groupé à plusieurs destinataires (to + cc optionnel).
+
+    - to_recipients  : liste (user_id | None, email) — destinataires principaux (se voient entre eux)
+    - cc_recipients  : liste (user_id | None, email) — destinataires en copie (ex: auteur du ticket)
+    - Les préférences de chaque utilisateur sont vérifiées individuellement en amont.
+    - Un seul enregistrement dans historique_email liste tous les destinataires.
+    - Les pièces jointes (photos) sont transmises si fournies.
+    """
+    from app.database import SessionLocal
+
+    if session is None:
+        session = SessionLocal()
+        close_session = True
+    else:
+        close_session = False
+
+    fixed_attachments: list[str] = []
+    try:
+        smtp_cfg = _get_smtp_config(session)
+        if smtp_cfg.get('smtp_enabled') is not None:
+            if smtp_cfg['smtp_enabled'] != '1':
+                return
+        elif not settings.mail_enabled:
+            return
+
+        template: ModeleEmail | None = session.exec(
+            select(ModeleEmail).where(ModeleEmail.code == code)
+        ).first()
+        if not template or not template.actif:
+            return
+
+        # Filtrage des préférences individuelles
+        filtered_to = [
+            (uid, email) for uid, email in to_recipients
+            if _check_pref(code, uid, session)
+        ]
+        filtered_cc = [
+            (uid, email) for uid, email in (cc_recipients or [])
+            if _check_pref(code, uid, session)
+        ]
+
+        if not filtered_to and not filtered_cc:
+            return
+
+        to_emails = [email for _, email in filtered_to]
+        cc_emails = [email for _, email in filtered_cc]
+        all_emails_str = ", ".join(to_emails + cc_emails)
+
+        # Contexte
+        email_footer_row = session.get(ConfigSite, "email_footer")
+        email_footer = (email_footer_row.valeur if email_footer_row else "").strip()
+        site_nom_row = session.get(ConfigSite, "site_nom")
+        site_url_row = session.get(ConfigSite, "site_url")
+        base_ctx = {
+            "annee": datetime.utcnow().year,
+            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost")},
+            "residence": {"nom": (site_nom_row.valeur if site_nom_row else "Ma Résidence")},
+        }
+        ctx = {**base_ctx, **context}
+
+        try:
+            from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+
+            _srv = smtp_cfg.get('smtp_server') or settings.mail_server
+            _port = int(smtp_cfg.get('smtp_port') or settings.mail_port)
+            _from = smtp_cfg.get('smtp_from') or settings.mail_from
+            _from_name = smtp_cfg.get('smtp_from_name') or settings.mail_from_name
+            _username = smtp_cfg.get('smtp_username') or settings.mail_username
+            _password = smtp_cfg.get('smtp_password') or settings.mail_password
+            _starttls = (smtp_cfg['smtp_starttls'] == '1') if 'smtp_starttls' in smtp_cfg else settings.mail_starttls
+            _ssl_tls = (smtp_cfg['smtp_ssl_tls'] == '1') if 'smtp_ssl_tls' in smtp_cfg else settings.mail_ssl_tls
+            cfg = ConnectionConfig(
+                MAIL_USERNAME=_username,
+                MAIL_PASSWORD=_password,
+                MAIL_FROM=_from,
+                MAIL_FROM_NAME=_from_name,
+                MAIL_PORT=_port,
+                MAIL_SERVER=_srv,
+                MAIL_STARTTLS=_starttls,
+                MAIL_SSL_TLS=_ssl_tls,
+                USE_CREDENTIALS=bool(_username),
+            )
+            fm = FastMail(cfg)
+            site_nom = site_nom_row.valeur if site_nom_row else "Ma Résidence"
+            site_url = site_url_row.valeur if site_url_row else "https://localhost"
+            rendered_body = _render(template.corps_html, ctx)
+            full_html = _wrap_email(
+                rendered_body,
+                site_nom=site_nom,
+                site_url=site_url,
+                footer=email_footer,
+                annee=ctx["annee"],
+            )
+            rendered_subject = _render(template.sujet, ctx)
+            msg_kwargs: dict[str, Any] = dict(
+                subject=rendered_subject,
+                recipients=to_emails if to_emails else cc_emails,
+                body=full_html,
+                subtype="html",
+            )
+            # CC : uniquement si to non vide (sinon tous en recipients)
+            if to_emails and cc_emails:
+                msg_kwargs["cc"] = cc_emails
+            # Pièces jointes (photos) — correction orientation EXIF avant envoi
+            if attachments:
+                fixed_attachments = _fix_image_orientations(attachments)
+                msg_kwargs["attachments"] = fixed_attachments
+            msg = MessageSchema(**msg_kwargs)
+            await fm.send_message(msg)
+            _log_email(session, code, all_emails_str, "succes", sujet=rendered_subject)
+        except Exception as exc:
+            logger.error("Erreur envoi email groupé [%s] → %s : %s", code, all_emails_str, exc)
+            _log_email(session, code, all_emails_str, "erreur", erreur=str(exc)[:500])
+    finally:
+        # Nettoyer les fichiers temporaires EXIF
+        if attachments:
+            for fp in fixed_attachments:
+                if fp not in attachments:
+                    try:
+                        os.unlink(fp)
+                    except OSError:
+                        pass
+        if close_session:
+            session.close()
