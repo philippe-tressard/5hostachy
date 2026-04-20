@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -10,10 +10,13 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CommentaireSondage, Notification, OptionSondage, Sondage, Utilisateur, VoteSondage, RoleUtilisateur, StatutUtilisateur
+    CommentaireSondage, ConfigSite, MembreSyndic, Notification, OptionSondage, Sondage, Utilisateur, VoteSondage, RoleUtilisateur, StatutUtilisateur
 )
+from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
+
+_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -66,6 +69,9 @@ class SondageCreate(BaseModel):
     options: list[OptionCreate]
     profils_autorises: Optional[List[str]] = None   # []  = tous les profils
     batiments_ids: Optional[List[int]] = None       # []  = toute la résidence
+    partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
 
 class SondageRead(BaseModel):
@@ -195,6 +201,7 @@ def get_sondage(
 @router.post("", status_code=201)
 def create_sondage(
     body: SondageCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -209,6 +216,9 @@ def create_sondage(
         auteur_id=user.id,
         profils_autorises=profils_csv,
         batiments_ids=batiments_csv,
+        partager_whatsapp=body.partager_whatsapp,
+        envoyer_syndic=body.envoyer_syndic,
+        envoyer_cs=body.envoyer_cs,
     )
     session.add(s)
     session.flush()
@@ -236,6 +246,71 @@ def create_sondage(
 
     session.commit()
     session.refresh(s)
+
+    # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
+    if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
+        cfg_rows = session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(
+                _WA_KEYS | {"reference_copro", "site_nom", "site_url"}
+            ))
+        ).all()
+        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+
+        if body.partager_whatsapp:
+            wa_config = {k: cfg_map[k] for k in _WA_KEYS if k in cfg_map}
+            if wa_config.get('whatsapp_enabled') == '1':
+                background_tasks.add_task(
+                    envoyer_whatsapp_avec_log,
+                    f"📊 Nouveau sondage : {s.question}", s.description or "", False, None, None, wa_config,
+                )
+
+        if body.envoyer_syndic or body.envoyer_cs:
+            from app.utils.email import send_email
+            destinataires: list[tuple[int | None, str]] = []
+            seen_emails: set[str] = set()
+
+            if body.envoyer_syndic:
+                syndic_principal = session.exec(
+                    select(MembreSyndic).where(MembreSyndic.est_principal == True)
+                ).first()
+                if syndic_principal and syndic_principal.email:
+                    destinataires.append((syndic_principal.user_id, syndic_principal.email))
+                    seen_emails.add(syndic_principal.email.lower())
+
+            if body.envoyer_cs:
+                cs_users = session.exec(
+                    select(Utilisateur.id, Utilisateur.email)
+                    .where(
+                        Utilisateur.actif == True,
+                        Utilisateur.email.isnot(None),
+                        Utilisateur.roles_json.contains("conseil_syndical"),
+                    )
+                ).all()
+                for uid, email in cs_users:
+                    if email and email.lower() not in seen_emails:
+                        destinataires.append((uid, email))
+                        seen_emails.add(email.lower())
+
+            ctx = {
+                "ticket": {
+                    "id": s.id,
+                    "numero": str(s.id),
+                    "titre": s.question,
+                    "description": s.description or "",
+                    "categorie": "sondage",
+                },
+                "auteur": {"prenom": user.prenom, "nom": user.nom},
+                "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+                "app": {"url": cfg_map.get("site_url", "https://localhost")},
+                "reference_copro": cfg_map.get("reference_copro", ""),
+            }
+            for dest_id, dest_email in destinataires:
+                background_tasks.add_task(
+                    send_email, code="publication_syndic",
+                    to=dest_email, context=ctx,
+                    session=session, destinataire_id=dest_id,
+                )
+
     return s
 
 

@@ -31,6 +31,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	let evolContenu = '';
 	let evolNouveauStatut = '';
 	let evolSaving = false;
+	let evolPartagerWhatsapp = false;
+	let evolEnvoyerSyndic = false;
+	let evolEnvoyerCs = false;
 
 	const STATUT_BADGE: Record<string, string> = {
 		ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray',
@@ -114,6 +117,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		evolType = 'commentaire';
 		evolContenu = '';
 		evolNouveauStatut = '';
+		evolPartagerWhatsapp = false;
+		evolEnvoyerSyndic = false;
+		evolEnvoyerCs = false;
 		expandedTickets = new Set([id]);
 	}
 
@@ -126,6 +132,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 				type: evolType,
 				contenu: evolContenu.trim() || undefined,
 				nouveau_statut: evolType === 'etat' ? evolNouveauStatut : undefined,
+				partager_whatsapp: evolPartagerWhatsapp,
+				envoyer_syndic: evolEnvoyerSyndic,
+				envoyer_cs: evolEnvoyerCs,
 			});
 			if (evolType === 'etat') {
 				ticketList = ticketList.map(x => x.id === t.id ? { ...x, statut: evolNouveauStatut } : x);
@@ -268,7 +277,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 				<div class="tk-row-inner">
 					<span class="tk-cat" title={t.categorie}>{CAT_ICON[t.categorie] ?? '\u{1F4CB}'}</span>
 					<span class="tk-row-titre">{t.titre}
-					{#if isNouveau(t.cree_le, t.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+					{#if isNouveau(t.cree_le, t.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">NEW</span>{/if}
 					</span>
 					<span class="badge {STATUT_BADGE[t.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[t.statut] ?? t.statut}</span>
 					{#if t.priorite === 'haute'}
@@ -353,6 +362,24 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 									style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
 								></textarea>
 							</div>
+       {#if $isCS || $isAdmin}
+       <div style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:1rem">
+       	<label class="checkbox-field">
+       		<input type="checkbox" bind:checked={evolPartagerWhatsapp} />
+       		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#25D366" style="flex-shrink:0;vertical-align:middle" aria-label="WhatsApp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.66 12.66 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+       		<span style="font-size:.85rem">Partager sur le groupe</span>
+       	</label>
+       	<label class="checkbox-field">
+       		<input type="checkbox" bind:checked={evolEnvoyerSyndic} />
+       		<span style="font-size:.85rem">✉️ Envoyer au syndic</span>
+       	</label>
+       	<label class="checkbox-field">
+       		<input type="checkbox" bind:checked={evolEnvoyerCs} />
+       		<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
+       	</label>
+       </div>
+       {/if}
+
 							<div class="form-actions" style="gap:.5rem">
 								<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = null)}>Annuler</button>
 								<button type="button" class="btn btn-primary"
@@ -500,6 +527,24 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 													style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
 												></textarea>
 											</div>
+           {#if $isCS || $isAdmin}
+           <div style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:1rem">
+           	<label class="checkbox-field">
+           		<input type="checkbox" bind:checked={evolPartagerWhatsapp} />
+           		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#25D366" style="flex-shrink:0;vertical-align:middle" aria-label="WhatsApp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.66 12.66 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+           		<span style="font-size:.85rem">Partager sur le groupe</span>
+           	</label>
+           	<label class="checkbox-field">
+           		<input type="checkbox" bind:checked={evolEnvoyerSyndic} />
+           		<span style="font-size:.85rem">✉️ Envoyer au syndic</span>
+           	</label>
+           	<label class="checkbox-field">
+           		<input type="checkbox" bind:checked={evolEnvoyerCs} />
+           		<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
+           	</label>
+           </div>
+           {/if}
+
 											<div class="form-actions" style="gap:.5rem">
 												<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = null)}>Annuler</button>
 												<button type="button" class="btn btn-primary"

@@ -1049,6 +1049,9 @@ class Evenement(SQLModel, table=True):
     frequence_type: Optional[str] = Field(default=None)   # "semaines", "mois", "fois_par_an"
     frequence_valeur: Optional[int] = Field(default=None)
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
+    partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
 
 # ──────────────────────────────────────────────
@@ -1068,6 +1071,9 @@ class Sondage(SQLModel, table=True):
     profils_autorises: Optional[str] = Field(default=None)   # CSV de StatutUtilisateur
     batiments_ids: Optional[str] = Field(default=None)       # CSV d'ids de Batiment
     cloture_forcee: bool = Field(default=False)
+    partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
     options: List["OptionSondage"] = Relationship(back_populates="sondage")
     votes: List["VoteSondage"] = Relationship(back_populates="sondage")
