@@ -515,6 +515,7 @@ export interface FluxSante {
 	tickets_urgents: number;
 	resolution_moyenne_heures: number | null;
 	sondages_actifs: number;
+	validations_cs: number;
 	prochains: FluxProchain[];
 }
 export interface FluxResponse {

@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import (
+    CommandeAcces,
     ContratEntretien,
     Copropriete,
     DevisPrestataire,
@@ -23,6 +24,7 @@ from app.models.core import (
     PublicationEvolution,
     RoleUtilisateur,
     Sondage,
+    StatutCommande,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -116,6 +118,7 @@ class FluxSante(BaseModel):
     tickets_urgents: int = 0
     resolution_moyenne_heures: Optional[float] = None
     sondages_actifs: int = 0
+    validations_cs: int = 0
     prochains: list[dict] = []
 
 
@@ -180,13 +183,14 @@ def get_flux(
                 icon="✅",
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
-                meta={"ticket_id": tk.id, "duree_h": duree, "statut": "résolu",
+                meta={"ticket_id": tk.id, "duree_h": duree, "statut": "résolu", "numero": tk.numero,
                        "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
                        "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
                        "photos_urls": _parse_photos(tk.photos_urls)},
             ))
         elif nouveau in ("ouvert", "en_cours"):
+            evol_auteur = _auteur_nom(session, evol.auteur_id)
             items.append(FluxItem(
                 id=f"tk_{tk.id}",
                 type="ticket_mis_a_jour",
@@ -197,10 +201,12 @@ def get_flux(
                 icon="🔧",
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
-                meta={"ticket_id": tk.id, "statut": nouveau,
+                meta={"ticket_id": tk.id, "statut": nouveau, "numero": tk.numero,
                        "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
-                       "photos_urls": _parse_photos(tk.photos_urls)},
+                       "photos_urls": _parse_photos(tk.photos_urls),
+                       "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
+                       "evol_auteur": evol_auteur},
             ))
 
     # Tickets récemment créés (sans évolution)
@@ -229,7 +235,7 @@ def get_flux(
             icon="🎫",
             badges=[f"#{tk.numero}", tk.categorie],
             lien="/tickets",
-            meta={"ticket_id": tk.id, "statut": tk.statut,
+            meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
                    "perimetre": _perimetre_label(perims),
                    "description": _strip_html(tk.description, 300),
                    "photos_urls": _parse_photos(tk.photos_urls)},
@@ -518,11 +524,25 @@ def get_flux(
     prochains.sort(key=lambda x: x.get("date", ""))
     prochains = prochains[:12]
 
+    # Validations en attente (visible CS/admin uniquement)
+    validations_cs = 0
+    if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+        comptes_attente = session.exec(
+            select(func.count(Utilisateur.id)).where(Utilisateur.actif == False)
+        ).one()
+        commandes_attente = session.exec(
+            select(func.count(CommandeAcces.id)).where(
+                CommandeAcces.statut == StatutCommande.en_attente
+            )
+        ).one()
+        validations_cs = (comptes_attente or 0) + (commandes_attente or 0)
+
     sante = FluxSante(
         tickets_ouverts=len(ouverts),
         tickets_urgents=len(urgents),
         resolution_moyenne_heures=resolution_moy,
         sondages_actifs=sondages_actifs,
+        validations_cs=validations_cs,
         prochains=prochains,
     )
 
