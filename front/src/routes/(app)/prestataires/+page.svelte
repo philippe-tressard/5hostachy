@@ -98,6 +98,9 @@
 		frequence_type: '',
 		frequence_valeur: '',
 		affichable: false,
+		partager_whatsapp: false,
+		envoyer_syndic: false,
+		envoyer_cs: false,
 	};
 	let devisFichierFiles: FileList | null = null;
 	let devisFichierKey = 0;
@@ -358,6 +361,9 @@
 			frequence_type: '',
 			frequence_valeur: '',
 			affichable: false,
+			partager_whatsapp: false,
+			envoyer_syndic: false,
+			envoyer_cs: false,
 		};
 		devisFichierFiles = null;
 		devisFichierKey++;
@@ -388,19 +394,22 @@
 	}
 
 	function startEditDevis(d: any, openInModal = false) {
-		devisForm = {
-			copropriete_id: d.copropriete_id,
-			prestataire_id: String(d.prestataire_id),
-			perimetre: d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'),
-			titre: d.titre,
-			date_prestation: d.date_prestation ?? '',
-			montant_estime: d.montant_estime != null ? String(d.montant_estime) : '',
-			statut: d.statut,
-			notes: d.notes ?? '',
-			frequence_type: d.frequence_type ?? '',
-			frequence_valeur: d.frequence_valeur ? String(d.frequence_valeur) : '',
-			affichable: d.affichable ?? false,
-		};
+		       devisForm = {
+			       copropriete_id: d.copropriete_id,
+			       prestataire_id: String(d.prestataire_id),
+			       perimetre: d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'),
+			       titre: d.titre,
+			       date_prestation: d.date_prestation ?? '',
+			       montant_estime: d.montant_estime != null ? String(d.montant_estime) : '',
+			       statut: d.statut,
+			       notes: d.notes ?? '',
+			       frequence_type: d.frequence_type ?? '',
+			       frequence_valeur: d.frequence_valeur ? String(d.frequence_valeur) : '',
+			       affichable: d.affichable ?? false,
+			       partager_whatsapp: d.partager_whatsapp ?? false,
+			       envoyer_syndic: d.envoyer_syndic ?? false,
+			       envoyer_cs: d.envoyer_cs ?? false,
+		       };
 		editDevisId = d.id;
 		devisFormPrestId = openInModal ? -1 : d.prestataire_id;
 		if (!expandedDevis.has(d.id)) { expandedDevis.clear(); expandedDevis.add(d.id); expandedDevis = expandedDevis; }
@@ -412,20 +421,23 @@
 		submitting = true;
 		try {
 			const perimetre = devisForm.perimetre || 'résidence';
-			const payload = {
-				copropriete_id: devisForm.copropriete_id,
-				prestataire_id: Number(devisForm.prestataire_id),
-				perimetre,
-				batiment_id: devisBatimentIdFromPerimetre(perimetre),
-				titre: devisForm.titre.trim(),
-				date_prestation: devisForm.date_prestation || null,
-				montant_estime: devisForm.montant_estime !== '' ? Number(devisForm.montant_estime) : null,
-				statut: devisForm.statut,
-				notes: devisForm.notes.trim() || null,
-				frequence_type: devisForm.frequence_type || null,
-				frequence_valeur: devisForm.frequence_valeur ? Number(devisForm.frequence_valeur) : null,
-				affichable: devisForm.affichable,
-			};
+			       const payload = {
+				       copropriete_id: devisForm.copropriete_id,
+				       prestataire_id: Number(devisForm.prestataire_id),
+				       perimetre,
+				       batiment_id: devisBatimentIdFromPerimetre(perimetre),
+				       titre: devisForm.titre.trim(),
+				       date_prestation: devisForm.date_prestation || null,
+				       montant_estime: devisForm.montant_estime !== '' ? Number(devisForm.montant_estime) : null,
+				       statut: devisForm.statut,
+				       notes: devisForm.notes.trim() || null,
+				       frequence_type: devisForm.frequence_type || null,
+				       frequence_valeur: devisForm.frequence_valeur ? Number(devisForm.frequence_valeur) : null,
+				       affichable: devisForm.affichable,
+				       partager_whatsapp: devisForm.partager_whatsapp,
+				       envoyer_syndic: devisForm.envoyer_syndic,
+				       envoyer_cs: devisForm.envoyer_cs,
+			       };
 			let saved: any;
 			if (editDevisId) {
 				saved = await prestApi.updateDevis(editDevisId, payload);
@@ -978,12 +990,26 @@
 										<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
 									{/if}
 								</div>
-								<div style="margin-top:.75rem">
-									<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-										<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
-										<span style="font-size:.875rem">Afficher dans le tableau de bord</span>
-									</label>
-								</div>
+								   <div style="margin-top:.75rem">
+									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+										   <input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
+										   <span style="font-size:.875rem">Afficher dans le tableau de bord</span>
+									   </label>
+								   </div>
+								   <div style="margin-top:.5rem;display:flex;gap:1.5rem;align-items:center">
+									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+										   <input type="checkbox" bind:checked={devisForm.partager_whatsapp} style="width:auto;margin:0" />
+										   <span style="font-size:.875rem">Notifier WhatsApp</span>
+									   </label>
+									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+										   <input type="checkbox" bind:checked={devisForm.envoyer_syndic} style="width:auto;margin:0" />
+										   <span style="font-size:.875rem">Notifier Syndic</span>
+									   </label>
+									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+										   <input type="checkbox" bind:checked={devisForm.envoyer_cs} style="width:auto;margin:0" />
+										   <span style="font-size:.875rem">Notifier Conseil Syndical</span>
+									   </label>
+								   </div>
 								<div style="margin-top:.5rem">
 									<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
 									<RichEditor bind:value={devisForm.notes} placeholder="Notes…" minHeight="60px" />

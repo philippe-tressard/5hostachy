@@ -8,7 +8,7 @@ import RichEditor from '$lib/components/RichEditor.svelte';
 import { toast } from '$lib/components/Toast.svelte';
 import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 import { safeHtml } from '$lib/sanitize';
-import { fmtDateShort } from '$lib/date';
+import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
@@ -37,7 +37,16 @@ let sondagesLoading = true;
 let showFormSondage = false;
 let submittingSondage = false;
 type OptionForm = { libelle: string; champ_libre: boolean };
-let formSondage = { question: '', description: '', cloture_le: '', resultats_publics: true, options: [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }] as OptionForm[] };
+let formSondage = {
+	question: '',
+	description: '',
+	cloture_le: '',
+	resultats_publics: true,
+	options: [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }] as OptionForm[],
+	partager_whatsapp: false,
+	envoyer_syndic: false,
+	envoyer_cs: false,
+};
 
 // Ciblage
 let selectedProfils: string[] = [];   // vide = tous
@@ -72,25 +81,39 @@ function moveOptionDown(i: number) {
 }
 
 async function creerSondage() {
-const opts = formSondage.options.map((o, i) => ({ libelle: o.libelle, ordre: i, champ_libre: o.champ_libre })).filter(o => o.libelle.trim());
-if (!formSondage.question || opts.length < 2) { toast('error', 'Question et au moins 2 options requises'); return; }
-submittingSondage = true;
-try {
-await sondagesApi.create({
-	question: formSondage.question, description: formSondage.description || undefined,
-	cloture_le: formSondage.cloture_le ? new Date(formSondage.cloture_le).toISOString() : undefined,
-	resultats_publics: formSondage.resultats_publics, options: opts,
-	profils_autorises: selectedProfils.length > 0 ? selectedProfils : null,
-	batiments_ids: selectedBatiments.length > 0 ? selectedBatiments : null,
-});
-sondages = await sondagesApi.list();
-showFormSondage = false;
-formSondage = { question: '', description: '', cloture_le: '', resultats_publics: true, options: [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }] };
-selectedProfils = [];
-selectedBatiments = [];
-toast('success', 'Sondage créé');
-} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
-finally { submittingSondage = false; }
+	const opts = formSondage.options.map((o, i) => ({ libelle: o.libelle, ordre: i, champ_libre: o.champ_libre })).filter(o => o.libelle.trim());
+	if (!formSondage.question || opts.length < 2) { toast('error', 'Question et au moins 2 options requises'); return; }
+	submittingSondage = true;
+	try {
+		await sondagesApi.create({
+			question: formSondage.question,
+			description: formSondage.description || undefined,
+			cloture_le: formSondage.cloture_le ? new Date(formSondage.cloture_le).toISOString() : undefined,
+			resultats_publics: formSondage.resultats_publics,
+			options: opts,
+			profils_autorises: selectedProfils.length > 0 ? selectedProfils : null,
+			batiments_ids: selectedBatiments.length > 0 ? selectedBatiments : null,
+			partager_whatsapp: formSondage.partager_whatsapp,
+			envoyer_syndic: formSondage.envoyer_syndic,
+			envoyer_cs: formSondage.envoyer_cs,
+		});
+		sondages = await sondagesApi.list();
+		showFormSondage = false;
+		formSondage = {
+			question: '',
+			description: '',
+			cloture_le: '',
+			resultats_publics: true,
+			options: [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }],
+			partager_whatsapp: false,
+			envoyer_syndic: false,
+			envoyer_cs: false,
+		};
+		selectedProfils = [];
+		selectedBatiments = [];
+		toast('success', 'Sondage créé');
+	} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+	finally { submittingSondage = false; }
 }
 
 function estCloture(s: any) { return s.cloture_forcee || (s.cloture_le && new Date(s.cloture_le) < new Date()); }
@@ -444,6 +467,21 @@ Résultats visibles avant clôture
 </div>
 {/if}
 
+<div class="field" style="margin-bottom:.75rem;display:flex;gap:1.5rem;align-items:center">
+	<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+		<input type="checkbox" bind:checked={formSondage.partager_whatsapp} style="width:auto;margin:0" />
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#25D366" aria-label="WhatsApp"><path d="M12 2C6.477 2 2 6.237 2 11.615c0 1.927.553 3.805 1.6 5.527L2 22l5.045-1.572A10.07 10.07 0 0 0 12 21.23c5.523 0 10-4.237 10-9.615C22 6.237 17.523 2 12 2zm0 17.692c-1.56 0-3.09-.41-4.41-1.186l-.315-.186-2.995.933.995-2.857-.206-.33C3.6 14.02 3.077 12.83 3.077 11.615c0-4.237 3.923-7.692 8.923-7.692s8.923 3.455 8.923 7.692c0 4.237-3.923 7.692-8.923 7.692zm4.923-5.846c-.269-.134-1.592-.786-1.837-.876-.245-.09-.423-.134-.601.134-.179.269-.691.876-.848 1.055-.157.179-.312.201-.581.067-.269-.134-1.136-.419-2.165-1.336-.8-.713-1.34-1.595-1.497-1.864-.157-.269-.017-.414.118-.548.122-.122.269-.312.403-.468.134-.157.179-.269.269-.448.09-.179.045-.336-.022-.47-.067-.134-.601-1.45-.823-1.988-.217-.522-.438-.451-.601-.46l-.512-.009c-.179 0-.47.067-.717.336-.245.269-.94.92-.94 2.24 0 1.32.963 2.591 1.096 2.77.134.179 1.895 2.895 4.6 3.944.644.221 1.145.353 1.537.452.646.164 1.234.141 1.7.086.519-.062 1.592-.651 1.817-1.281.224-.63.224-1.17.157-1.281-.067-.112-.245-.179-.514-.313z"/></svg>
+		<span>Partager sur le groupe WhatsApp</span>
+	</label>
+	<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+		<input type="checkbox" bind:checked={formSondage.envoyer_syndic} style="width:auto;margin:0" />
+		<span>📧 Envoyer au syndic</span>
+	</label>
+	<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+		<input type="checkbox" bind:checked={formSondage.envoyer_cs} style="width:auto;margin:0" />
+		<span>📧 Envoyer au Conseil Syndical</span>
+	</label>
+</div>
 <button class="btn btn-primary" disabled={submittingSondage}>{submittingSondage ? '' : 'Créer le sondage'}</button>
 </form>
 </div>
@@ -460,7 +498,9 @@ Résultats visibles avant clôture
 {#each sondages as s}
 <a href="/sondages/{s.id}" class="sondage-card card">
 <div class="sondage-body">
-<strong class="sondage-question">{s.question}</strong>
+<strong class="sondage-question">{s.question}
+{#if isNouveau(s.cree_le, s.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+</strong>
 {#if s.description}<div class="sondage-desc rich-content clamp-5">{@html safeHtml(s.description)}</div>{/if}
 <small style="color:var(--color-text-muted)">
 {fmtDateShort(s.cree_le)}
@@ -543,7 +583,9 @@ title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
 </button>
 <div class="idee-body">
 <div class="idee-header">
-<strong class="idee-titre">{idee.titre}</strong>
+<strong class="idee-titre">{idee.titre}
+{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+</strong>
 <span class="badge {statutClass(idee.statut)}">{idee.statut}</span>
 </div>
 <div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
@@ -657,7 +699,9 @@ Afficher mes coordonnées aux autres résidents
 <span class="badge {typeAnnonceClass(annonce.type_annonce)}" style="font-size:.72rem">{typeAnnonceLabel(annonce.type_annonce)}</span>
 <span class="badge {statutAnnonceClass(annonce.statut)}" style="font-size:.72rem">{annonce.statut}</span>
 </div>
-<strong class="annonce-titre">{annonce.titre}</strong>
+<strong class="annonce-titre">{annonce.titre}
+{#if isNouveau(annonce.cree_le, annonce.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+</strong>
 <small style="color:var(--color-text-muted)">{categorieAnnonceLabel(annonce.categorie)} · {fmtDateShort(annonce.cree_le)}</small>
 {#if annonce.prix !== null && annonce.prix !== undefined}
 <div class="annonce-prix">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(annonce.prix)}{#if annonce.negotiable}&nbsp;<span class="badge badge-gray" style="font-size:.68rem">Négociable</span>{/if}</div>
