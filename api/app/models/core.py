@@ -391,11 +391,15 @@ class Ticket(SQLModel, table=True):
     photos_urls: Optional[str] = None  # JSON array of photo URLs
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
+    saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None
 
-    auteur: Optional[Utilisateur] = Relationship(back_populates="tickets")
+    auteur: Optional[Utilisateur] = Relationship(back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
+    saisi_pour: Optional[Utilisateur] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"})
     lot: Optional[Lot] = Relationship(back_populates="tickets")
     messages: List["MessageTicket"] = Relationship(back_populates="ticket")
     evolutions: List["TicketEvolution"] = Relationship(back_populates="ticket")

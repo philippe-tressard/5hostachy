@@ -107,6 +107,9 @@ class TicketCreate(BaseModel):
     perimetre_cible: Optional[List[str]] = None
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
+    saisi_pour_user_id: Optional[int] = None
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
 
 
 class TicketRead(BaseModel):
@@ -126,6 +129,10 @@ class TicketRead(BaseModel):
     photos_urls: Optional[List[str]] = None
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
+    saisi_pour_user_id: Optional[int] = None
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
+    saisi_pour_affichage: Optional[str] = None
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
