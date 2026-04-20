@@ -56,6 +56,9 @@ import { onMount } from 'svelte';
 		frequence_type: '',
 		frequence_valeur: '',
 		affichable: false,
+		partager_whatsapp: false,
+		envoyer_syndic: false,
+		envoyer_cs: false,
 	};
 	let formPerimetreCible: string[] = ['résidence'];
 	let submitting = false;
@@ -236,7 +239,7 @@ import { onMount } from 'svelte';
 	})();
 
 	function resetForm() {
-		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: false };
+		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
 		formPerimetreCible = ['résidence'];
 		editId = null;
 	}
@@ -252,6 +255,9 @@ import { onMount } from 'svelte';
 			frequence_type: ev.frequence_type ?? '',
 			frequence_valeur: ev.frequence_valeur ? String(ev.frequence_valeur) : '',
 			affichable: ev.affichable ?? true,
+			partager_whatsapp: ev.partager_whatsapp ?? false,
+			envoyer_syndic: ev.envoyer_syndic ?? false,
+			envoyer_cs: ev.envoyer_cs ?? false,
 		};
 		const p = ev.perimetre ?? 'résidence';
 		formPerimetreCible = p === 'résidence' ? ['résidence'] : p.split(',').filter(Boolean);
@@ -277,6 +283,9 @@ import { onMount } from 'svelte';
 			frequence_type: ft || null,
 			frequence_valeur: fv ? Number(fv) : null,
 			affichable: form.affichable,
+			partager_whatsapp: form.partager_whatsapp,
+			envoyer_syndic: form.envoyer_syndic,
+			envoyer_cs: form.envoyer_cs,
 		};
 		try {
 			if (editId) {
@@ -763,6 +772,21 @@ import { onMount } from 'svelte';
 						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
 							<input type="checkbox" bind:checked={form.affichable} style="width:auto;margin:0" />
 							<span>Afficher dans le tableau de bord (événements récents)</span>
+						</label>
+					</div>
+					<div class="field" style="margin-top:.75rem;display:flex;gap:1.5rem;align-items:center">
+						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+							<input type="checkbox" bind:checked={form.partager_whatsapp} style="width:auto;margin:0" />
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#25D366" aria-label="WhatsApp"><path d="M12 2C6.477 2 2 6.237 2 11.615c0 1.927.553 3.805 1.6 5.527L2 22l5.045-1.572A10.07 10.07 0 0 0 12 21.23c5.523 0 10-4.237 10-9.615C22 6.237 17.523 2 12 2zm0 17.692c-1.56 0-3.09-.41-4.41-1.186l-.315-.186-2.995.933.995-2.857-.206-.33C3.6 14.02 3.077 12.83 3.077 11.615c0-4.237 3.923-7.692 8.923-7.692s8.923 3.455 8.923 7.692c0 4.237-3.923 7.692-8.923 7.692zm4.923-5.846c-.269-.134-1.592-.786-1.837-.876-.245-.09-.423-.134-.601.134-.179.269-.691.876-.848 1.055-.157.179-.312.201-.581.067-.269-.134-1.136-.419-2.165-1.336-.8-.713-1.34-1.595-1.497-1.864-.157-.269-.017-.414.118-.548.122-.122.269-.312.403-.468.134-.157.179-.269.269-.448.09-.179.045-.336-.022-.47-.067-.134-.601-1.45-.823-1.988-.217-.522-.438-.451-.601-.46l-.512-.009c-.179 0-.47.067-.717.336-.245.269-.94.92-.94 2.24 0 1.32.963 2.591 1.096 2.77.134.179 1.895 2.895 4.6 3.944.644.221 1.145.353 1.537.452.646.164 1.234.141 1.7.086.519-.062 1.592-.651 1.817-1.281.224-.63.224-1.17.157-1.281-.067-.112-.245-.179-.514-.313z"/></svg>
+							<span>Partager sur le groupe WhatsApp</span>
+						</label>
+						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+							<input type="checkbox" bind:checked={form.envoyer_syndic} style="width:auto;margin:0" />
+							<span>📧 Envoyer au syndic</span>
+						</label>
+						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+							<input type="checkbox" bind:checked={form.envoyer_cs} style="width:auto;margin:0" />
+							<span>📧 Envoyer au Conseil Syndical</span>
 						</label>
 					</div>
 					<div class="field" style="margin-top:.75rem">

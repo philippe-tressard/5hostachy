@@ -1,4 +1,23 @@
 /**
+ * Détermine si un item est "Nouveau" (créé il y a moins de 48h et jamais mis à jour)
+ * @param cree_le - date de création (ISO string)
+ * @param mis_a_jour_le - date de mise à jour (ISO string ou null)
+ * @returns true si l'item est considéré comme nouveau
+ */
+/**
+ * Un item est "Nouveau" si :
+ * - il a été créé il y a moins de 48h
+ * - il n'a pas été mis à jour (mis_a_jour_le absent ou identique à cree_le)
+ */
+export function isNouveau(cree_le: string, mis_a_jour_le?: string | null): boolean {
+	if (!cree_le) return false;
+	const now = Date.now();
+	const created = new Date(cree_le).getTime();
+	const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+	const notUpdated = !mis_a_jour_le || mis_a_jour_le === cree_le;
+	return notUpdated && (now - created < FORTY_EIGHT_HOURS);
+}
+/**
  * Utilitaires de formatage de dates — Europe/Paris
  *
  * Toutes les fonctions forcent le fuseau Europe/Paris pour garantir

@@ -10,7 +10,7 @@
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime } from '$lib/date';
+	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime, isNouveau } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'actualites', { titre: 'Actualités', navLabel: 'Actualités', icone: 'newspaper', descriptif: 'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.' });
 	$: _siteNom = $siteNomStore;
@@ -327,7 +327,9 @@
 			<div class="pub-row">
 				<div class="pub-row-inner">
 					{#if pub.brouillon}<span class="badge badge-gray" style="flex-shrink:0">✏️ Brouillon</span>{/if}
-					<span class="pub-row-titre">{pub.titre}</span>
+					<span class="pub-row-titre">{pub.titre}
+					{#if isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+					</span>
 					{#if pub.statut}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
 {#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimètreLabel(pub.perimetre_cible)}</span>{/if}
 				</div>
