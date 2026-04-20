@@ -207,7 +207,10 @@
 	// ── Helpers ────────────────────────────────────────────────────────────
 	function typeLink(item: FluxItem): string {
 		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return '/sondages';
-		if (item.type === 'ticket_ouvert' || item.type === 'ticket_resolu') return '/tickets';
+		if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) {
+			const numero = item.meta?.numero as string | undefined;
+			return numero ? `/tickets?open=${numero}` : '/tickets';
+		}
 		return item.lien ?? '#';
 	}
 
@@ -240,8 +243,11 @@
 	};
 
 	function isNew(item: { cree_le?: string; date: string }): boolean {
-		if (!item.cree_le) return false;
-		return Date.now() - new Date(item.cree_le).getTime() < 48 * 3600 * 1000;
+		const dateTs = new Date(item.date).getTime();
+		const creeTs = item.cree_le ? new Date(item.cree_le).getTime() : dateTs;
+		const ref = Math.max(dateTs, creeTs);
+		const diff = Date.now() - ref;
+		return diff >= 0 && diff < 48 * 3600 * 1000;
 	}
 
 	function urgencyProgress(item: FluxItem): { pct: number; label: string; active: boolean } | null {
@@ -320,6 +326,12 @@
 		<a href="/actualites" class="quick-pill">
 			<Icon name="megaphone" size={14} /> Actualités
 		</a>
+		{#if ($isCS || $isAdmin) && (data.sante.validations_cs ?? 0) > 0}
+		<a href="/espace-cs" class="quick-pill quick-pill-cs">
+			<Icon name="shield-check" size={14} /> Validations CS
+			<span class="quick-count quick-count-urgent">{data.sante.validations_cs}</span>
+		</a>
+		{/if}
 	</nav>
 
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
@@ -547,6 +559,15 @@
 									{:else if item.detail}
 										<p class="flux-full-content">{item.detail}</p>
 									{/if}
+									{#if item.type === 'ticket_mis_a_jour' && item.meta?.evol_contenu}
+										<div class="flux-reaction">
+											<span class="flux-reaction-icon">💬</span>
+											<div class="flux-reaction-body">
+												{#if item.meta?.evol_auteur}<span class="flux-reaction-auteur">{item.meta.evol_auteur}</span>{/if}
+												<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
+											</div>
+										</div>
+									{/if}
 									{#if item.meta?.image_url}
 										<img src={String(item.meta.image_url)} alt="" class="flux-image" loading="lazy" />
 									{/if}
@@ -568,7 +589,7 @@
 											{/each}
 										</div>
 									{/if}
-									<a href={typeLink(item)} class="flux-link">Voir la page complète →</a>
+									<a href={typeLink(item)} class="flux-link">Voir le ticket →</a>
 								</div>
 							{/if}
 						</div>
@@ -777,6 +798,22 @@
 		font-size: .65rem; font-weight: 700;
 		padding: .05rem .4rem; border-radius: 1rem; line-height: 1.3; min-width: 1.1rem; text-align: center;
 	}
+	.quick-pill-cs { border-color: #F59E0B; }
+	.quick-pill-cs:hover { border-color: #D97706; background: #FFFBEB; }
+	.quick-count-urgent { background: #DC2626; }
+
+	/* ═══ RÉACTION INLINE (ticket_mis_a_jour) ═══════════════════════════ */
+	.flux-reaction {
+		display: flex; gap: .5rem; align-items: flex-start;
+		margin: .6rem 0 .3rem;
+		padding: .5rem .75rem; border-radius: 6px;
+		background: #EEF2F7; border-left: 3px solid var(--color-primary);
+		font-size: .82rem;
+	}
+	.flux-reaction-icon { flex-shrink: 0; font-size: .85rem; margin-top: .1rem; }
+	.flux-reaction-body { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+	.flux-reaction-auteur { font-size: .75rem; font-weight: 600; color: var(--color-primary); }
+	.flux-reaction-text { margin: 0; color: var(--color-text); line-height: 1.45; }
 
 	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════ */
 	.section-reveal {
