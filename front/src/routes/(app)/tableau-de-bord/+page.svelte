@@ -212,7 +212,7 @@
 	}
 
 	const TYPE_LABELS: Record<string, string> = {
-		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Nouveau ticket', ticket_mis_a_jour: 'Ticket mis à jour',
+		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
 		publication: 'Actualité', evenement: 'Événement',
 		devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
 	};
@@ -431,7 +431,7 @@
 								<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {p.perimetre}</span>
 							{/if}
 							{#if isNew(p)}
-								<span class="new-badge">NEW</span>
+								<span class="new-badge">NOUVEAU</span>
 							{/if}
 							<span class="chevron" class:open={isExpanded}>›</span>
 						</div>
@@ -494,7 +494,7 @@
 							<div class="flux-card-top">
 								<div class="flux-card-top-left">
 									<span class="flux-type-chip" style="background:{TYPE_BG[item.type] ?? '#EAEDF1'};color:{typeColor}">{TYPE_LABELS[item.type] ?? item.type}</span>
-									{#if isNew(item)}<span class="new-badge">NEW</span>{/if}
+									{#if isNew(item)}<span class="new-badge">NOUVEAU</span>{/if}
 								</div>
 								<div class="flux-card-top-right">
 									<span class="flux-heure">{fmtDatetimeShort(item.date)}</span>
