@@ -328,7 +328,11 @@
 			{#each urgentItems.slice(0, 3) as u}
 				{@const progress = urgencyProgress(u)}
 				<fieldset class="urgence-fieldset">
-					<legend class="urgence-legend">🔴 URGENCE</legend>
+					<legend class="urgence-legend">🔴 URGENCE
+						<span class="flux-type-chip" style="background:{TYPE_BG[u.type] ?? '#EAEDF1'};color:{TYPE_COLORS[u.type] ?? 'var(--color-border)'}">
+							{TYPE_LABELS[u.type] ?? u.type}
+						</span>
+					</legend>
 					<div class="urgence-content">
 						<div class="urgence-title-row">
 							<span class="urgence-icon">{u.icon}</span>
