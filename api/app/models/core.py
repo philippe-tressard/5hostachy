@@ -290,7 +290,7 @@ class Utilisateur(SQLModel, table=True):
             self.role = RoleUtilisateur(top)
         except ValueError:
             pass
-    tickets: List["Ticket"] = Relationship(back_populates="auteur")
+    tickets: List["Ticket"] = Relationship(back_populates="auteur", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
     publications: List["Publication"] = Relationship(back_populates="auteur")
 
 
