@@ -240,8 +240,8 @@
 	};
 
 	function isNew(item: { cree_le?: string; date: string }): boolean {
-		const cree = item.cree_le || item.date;
-		return Date.now() - new Date(cree).getTime() < 48 * 3600 * 1000;
+		if (!item.cree_le) return false;
+		return Date.now() - new Date(item.cree_le).getTime() < 48 * 3600 * 1000;
 	}
 
 	function urgencyProgress(item: FluxItem): { pct: number; label: string; active: boolean } | null {
