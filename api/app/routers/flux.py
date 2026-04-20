@@ -209,14 +209,46 @@ def get_flux(
                        "evol_auteur": evol_auteur},
             ))
 
+    # ── 1b. Tickets : réponses CS récentes (type=reponse) ──────────────────
+    reponses = session.exec(
+        select(TicketEvolution, Ticket)
+        .join(Ticket, TicketEvolution.ticket_id == Ticket.id)
+        .where(TicketEvolution.type == "reponse", TicketEvolution.cree_le >= since)
+        .order_by(TicketEvolution.cree_le.desc())
+    ).all()
+    for evol, tk in reponses:
+        perims = (
+            _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
+            else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
+        )
+        if not _is_visible(perims, user):
+            continue
+        evol_auteur = _auteur_nom(session, evol.auteur_id)
+        items.append(FluxItem(
+            id=f"tk_rep_{evol.id}",
+            type="ticket_mis_a_jour",
+            date=evol.cree_le,
+            cree_le=tk.cree_le,
+            titre=tk.titre,
+            detail="Réponse du CS",
+            icon="💬",
+            badges=[f"#{tk.numero}", tk.categorie],
+            lien="/tickets",
+            meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
+                   "perimetre": _perimetre_label(perims),
+                   "description": _strip_html(tk.description, 300),
+                   "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
+                   "evol_auteur": evol_auteur},
+        ))
+
     # Tickets récemment créés (sans évolution)
     new_tickets = session.exec(
         select(Ticket)
         .where(Ticket.cree_le >= since)
         .order_by(Ticket.cree_le.desc())
     ).all()
-    evol_ticket_ids = {tk.id for _, tk in evols}
-    for tk in new_tickets:
+    reponse_ticket_ids = {tk.id for _, tk in reponses}
+    evol_ticket_ids = {tk.id for _, tk in evols} | reponse_ticket_ids    for tk in new_tickets:
         if tk.id in evol_ticket_ids:
             continue
         perims = (
