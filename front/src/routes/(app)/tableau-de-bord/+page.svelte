@@ -494,7 +494,7 @@
 							<div class="flux-card-top">
 								<div class="flux-card-top-left">
 									<span class="flux-type-chip" style="background:{TYPE_BG[item.type] ?? '#EAEDF1'};color:{typeColor}">{TYPE_LABELS[item.type] ?? item.type}</span>
-									{#if isNew(item)}<span class="new-badge">NOUVEAU</span>{/if}
+									{#if isNew(item)}<span class="new-badge">NEW</span>{/if}
 								</div>
 								<div class="flux-card-top-right">
 									<span class="flux-heure">{fmtDatetimeShort(item.date)}</span>
