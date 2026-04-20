@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { tickets as ticketsApi, ApiError } from '$lib/api';
+	import { tickets as ticketsApi, admin as adminApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { isCS } from '$lib/stores/auth';
+	import { onMount } from 'svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -19,6 +20,25 @@
 	let photoPreviews: string[] = [];
 	let error = '';
 	let loading = false;
+
+	// Saisi pour (CS/Admin uniquement)
+	type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
+	let modeSaisiPour: ModeSaisiPour = 'moi';
+	let saisiPourUserId: number | null = null;
+	let saisiPourNom = '';
+	let saisiPourEmail = '';
+	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
+
+	onMount(async () => {
+		if ($isCS) {
+			try {
+				const all = await adminApi.utilisateurs();
+				usersActifs = all.filter((u: any) => u.actif).sort((a: any, b: any) =>
+					`${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`)
+				);
+			} catch { /* ignore */ }
+		}
+	});
 
 	const categories = [
 		{ value: 'panne', label: '\u{1F6E0}️ Panne', description: 'Équipement défectueux, ascenseur, chauffage…' },
@@ -50,17 +70,30 @@
 			error = 'Titre et description sont obligatoires.';
 			return;
 		}
+		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
+			error = 'Veuillez saisir le nom de la personne.';
+			return;
+		}
 		error = '';
 		loading = true;
 		try {
-			const t = await ticketsApi.create({
+			const payload: any = {
 				titre,
 				description,
 				categorie,
 				perimetre_cible: perimetreCible,
 				destinataire_syndic: destinataireSyndic,
 				destinataire_cs: destinataireCs,
-			});
+			};
+			if ($isCS) {
+				if (modeSaisiPour === 'resident' && saisiPourUserId) {
+					payload.saisi_pour_user_id = saisiPourUserId;
+				} else if (modeSaisiPour === 'exterieur') {
+					if (saisiPourNom.trim()) payload.saisi_pour_nom = saisiPourNom.trim();
+					if (saisiPourEmail.trim()) payload.saisi_pour_email = saisiPourEmail.trim();
+				}
+			}
+			const t = await ticketsApi.create(payload);
 
 			// Upload photos after ticket creation
 			for (const file of photoFiles) {
@@ -154,6 +187,33 @@
 		</div>
 
 		{#if $isCS}
+			<div class="field saisi-pour-section">
+				<label style="font-weight:500">Saisi pour</label>
+				<div class="saisi-pour-tabs">
+					<button type="button" class="tab-btn" class:active={modeSaisiPour === 'moi'} on:click={() => modeSaisiPour = 'moi'}>
+						En mon nom
+					</button>
+					<button type="button" class="tab-btn" class:active={modeSaisiPour === 'resident'} on:click={() => modeSaisiPour = 'resident'}>
+						Résident inscrit
+					</button>
+					<button type="button" class="tab-btn" class:active={modeSaisiPour === 'exterieur'} on:click={() => modeSaisiPour = 'exterieur'}>
+						Personne extérieure
+					</button>
+				</div>
+				{#if modeSaisiPour === 'resident'}
+					<select bind:value={saisiPourUserId} style="margin-top:.5rem">
+						<option value={null}>— Sélectionner un résident —</option>
+						{#each usersActifs as u}
+							<option value={u.id}>{u.prenom} {u.nom}{u.email ? ` (${u.email})` : ''}</option>
+						{/each}
+					</select>
+				{:else if modeSaisiPour === 'exterieur'}
+					<div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.5rem">
+						<input type="text" bind:value={saisiPourNom} placeholder="Nom complet *" required />
+						<input type="email" bind:value={saisiPourEmail} placeholder="Email (optionnel)" />
+					</div>
+				{/if}
+			</div>
 			<label class="checkbox-field">
 				<input type="checkbox" bind:checked={destinataireSyndic} />
 				<span>📧 Envoyer au syndic</span>
@@ -262,6 +322,36 @@
 		margin-bottom: .5rem;
 	}
 	.checkbox-field input[type="checkbox"] { margin-top: .2rem; }
+
+	.saisi-pour-section {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: .75rem;
+		margin-bottom: .5rem;
+	}
+
+	.saisi-pour-tabs {
+		display: flex;
+		gap: .25rem;
+		margin-top: .5rem;
+		flex-wrap: wrap;
+	}
+
+	.tab-btn {
+		padding: .375rem .75rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: transparent;
+		cursor: pointer;
+		font-size: .85rem;
+		color: var(--color-text-muted);
+		transition: background .15s, color .15s, border-color .15s;
+	}
+	.tab-btn.active {
+		background: var(--color-primary);
+		color: #fff;
+		border-color: var(--color-primary);
+	}
 
 	@media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
 </style>

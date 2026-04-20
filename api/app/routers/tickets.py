@@ -45,6 +45,14 @@ def _ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     auteur = session.get(Utilisateur, ticket.auteur_id)
     auteur_batiment_id = ticket.batiment_id or (auteur.batiment_id if auteur else None)
     batiment = session.get(Batiment, auteur_batiment_id) if auteur_batiment_id else None
+    # Calcul de l'affichage "saisi pour"
+    saisi_pour_affichage: str | None = None
+    if ticket.saisi_pour_user_id:
+        sp_user = session.get(Utilisateur, ticket.saisi_pour_user_id)
+        if sp_user:
+            saisi_pour_affichage = f"{sp_user.prenom} {sp_user.nom}"
+    elif ticket.saisi_pour_nom:
+        saisi_pour_affichage = ticket.saisi_pour_nom
     return TicketRead(
         id=ticket.id,
         numero=ticket.numero,
@@ -62,6 +70,10 @@ def _ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         photos_urls=ticket.photos_urls,
         destinataire_syndic=ticket.destinataire_syndic,
         destinataire_cs=ticket.destinataire_cs,
+        saisi_pour_user_id=ticket.saisi_pour_user_id,
+        saisi_pour_nom=ticket.saisi_pour_nom,
+        saisi_pour_email=ticket.saisi_pour_email,
+        saisi_pour_affichage=saisi_pour_affichage,
         cree_le=ticket.cree_le,
         mis_a_jour_le=ticket.mis_a_jour_le,
     )
@@ -101,6 +113,9 @@ def create_ticket(
         priorite="haute" if body.categorie == "urgence" else "normale",
         destinataire_syndic=body.destinataire_syndic if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else False,
         destinataire_cs=body.destinataire_cs if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else False,
+        saisi_pour_user_id=body.saisi_pour_user_id if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else None,
+        saisi_pour_nom=body.saisi_pour_nom if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else None,
+        saisi_pour_email=body.saisi_pour_email if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else None,
     )
     session.add(ticket)
     session.flush()

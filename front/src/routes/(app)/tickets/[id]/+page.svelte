@@ -212,6 +212,15 @@
 			</p>
 		{/if}
 
+		{#if ticket.saisi_pour_affichage && $isCS}
+			<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem;padding:.5rem .75rem;background:var(--color-bg-muted,#f5f5f5);border-radius:var(--radius)">
+				👤 Saisi par <strong>{ticket.auteur_nom ?? 'inconnu'}</strong> pour <strong>{ticket.saisi_pour_affichage}</strong>
+				{#if ticket.saisi_pour_email}
+					· <a href="mailto:{ticket.saisi_pour_email}">{ticket.saisi_pour_email}</a>
+				{/if}
+			</p>
+		{/if}
+
 		{#if $isCS}
 			<div class="status-actions" style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)">
 				<span style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">Changer le statut :</span>
