@@ -174,7 +174,7 @@ def create_ticket(
 
     # ── Email au syndic et/ou CS (option CS/Admin) ──
     if ticket.destinataire_syndic or ticket.destinataire_cs:
-        from app.utils.email import get_site_manager_notification_email, send_email
+        from app.utils.email import send_email_group
         import json as _json, os
 
         # Config
@@ -246,14 +246,13 @@ def create_ticket(
                     destinataires.append((uid, email))
                     seen_emails.add(email.lower())
 
-        for dest_id, dest_email in destinataires:
+        if destinataires:
             background_tasks.add_task(
-                send_email,
+                send_email_group,
                 code="ticket_syndic",
-                to=dest_email,
+                to_recipients=destinataires,
                 context=ctx,
                 session=session,
-                destinataire_id=dest_id,
                 attachments=photo_paths or None,
             )
 
@@ -636,7 +635,7 @@ def add_evolution(
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:
-            from app.utils.email import send_email
+            from app.utils.email import send_email_group
             destinataires: list[tuple[int | None, str]] = []
             seen_emails: set[str] = set()
 
@@ -674,11 +673,11 @@ def add_evolution(
                 "app": {"url": cfg_map.get("site_url", "https://localhost")},
                 "reference_copro": cfg_map.get("reference_copro", ""),
             }
-            for dest_id, dest_email in destinataires:
+            if destinataires:
                 background_tasks.add_task(
-                    send_email, code="ticket_syndic",
-                    to=dest_email, context=ctx,
-                    session=session, destinataire_id=dest_id,
+                    send_email_group, code="ticket_syndic",
+                    to_recipients=destinataires, context=ctx,
+                    session=session,
                 )
 
     return _evol_read(evol, session)

@@ -53,7 +53,7 @@ def _envoyer_email_syndic_publication(
     *, syndic: bool = True, cs: bool = False,
 ):
     """Envoie un email au syndic et/ou CS avec la publication en corps."""
-    from app.utils.email import send_email
+    from app.utils.email import send_email_group
     import re
 
     destinataires: list[tuple[int | None, str]] = []
@@ -108,14 +108,13 @@ def _envoyer_email_syndic_publication(
         if os.path.isfile(fpath):
             photo_paths.append(fpath)
 
-    for dest_id, dest_email in destinataires:
+    if destinataires:
         background_tasks.add_task(
-            send_email,
+            send_email_group,
             code="publication_syndic",
-            to=dest_email,
+            to_recipients=destinataires,
             context=ctx,
             session=session,
-            destinataire_id=dest_id,
             attachments=photo_paths or None,
         )
 
