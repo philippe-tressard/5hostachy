@@ -81,8 +81,11 @@ rollback() {
 
   # Redémarrer les conteneurs locaux si arrêtés
   cd "$REPO"
-  docker compose up -d 2>/dev/null || true
-  log "  → Conteneurs locaux relancés."
+  if docker compose up -d; then
+    log "  → Conteneurs locaux relancés."
+  else
+    log "  ⚠ ÉCHEC relance conteneurs locaux — vérifier manuellement : cd /opt/5hostachy && docker compose up -d"
+  fi
 
   # Cloudflared local : s'assurer qu'il est actif (ne pas le stopper)
   systemctl is-active cloudflared > /dev/null 2>&1 || sudo systemctl start cloudflared 2>/dev/null || true
@@ -243,27 +246,29 @@ if ! $DRY_RUN; then
   fi
 fi
 
-# Supprimer WAL et SHM sur le peer AVANT rsync pour éviter toute incohérence
-# (le peer peut avoir ses propres WAL/SHM d'une ancienne session)
-run "$SSH_CMD ptressard@$PEER_IP 'PEER_VOL=\$(docker volume inspect 5hostachy_app_data --format \"{{.Mountpoint}}\") && sudo rm -f \"\$PEER_VOL/app.db-wal\" \"\$PEER_VOL/app.db-shm\"'"
-log "  → WAL/SHM peer supprimés."
-
+# Rsync DB_PATH → /tmp/sync_app_data sur le peer (ptressard, pas besoin de sudo)
+# --delete : supprime sur la cible tout fichier absent de la source
+#   → nettoie automatiquement les WAL/SHM résiduels du peer (plus besoin de sudo rm)
 run "rsync -az --delete -e '$SSH_CMD' '$DB_PATH/' ptressard@$PEER_IP:/tmp/sync_app_data/"
-run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_app_data/ \$(docker volume inspect 5hostachy_app_data --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_app_data'"
-log "  → DB transférée."
+log "  → DB + WAL/SHM synchronisés vers /tmp."
 
-# Integrity check sur le peer via sqlite3 CLI (présent sur les deux RPi)
+# Integrity check sur /tmp/sync_app_data AVANT de l'installer dans le volume
+# → aucun sudo requis (ptressard possède /tmp/sync_app_data)
 if ! $DRY_RUN; then
-  PEER_DB_PATH=$($SSH_CMD ptressard@"$PEER_IP" "docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}'" 2>/dev/null)
-  PEER_INTEGRITY=$($SSH_CMD ptressard@"$PEER_IP" "sudo sqlite3 $PEER_DB_PATH/app.db 'PRAGMA integrity_check;' 2>&1 | head -1" 2>/dev/null || echo "error")
+  PEER_INTEGRITY=$($SSH_CMD ptressard@"$PEER_IP" "sqlite3 /tmp/sync_app_data/app.db 'PRAGMA integrity_check;' 2>&1 | head -1" 2>/dev/null || echo "error")
   if [ "$PEER_INTEGRITY" != "ok" ]; then
-    log "ERREUR: DB peer corrompue après transfert ($PEER_INTEGRITY) — bascule annulée."
+    log "ERREUR: DB corrompue avant installation sur peer ($PEER_INTEGRITY) — bascule annulée."
+    $SSH_CMD ptressard@"$PEER_IP" "rm -rf /tmp/sync_app_data" 2>/dev/null || true
     false
   fi
-  log "  → DB peer OK (integrity: $PEER_INTEGRITY)."
+  log "  → DB OK (integrity: $PEER_INTEGRITY)."
 else
-  drylog "sqlite3 PRAGMA integrity_check sur peer"
+  drylog "sqlite3 PRAGMA integrity_check sur /tmp/sync_app_data (sans sudo)"
 fi
+
+# Installer DB dans le volume Docker (sudo rsync --delete pour cohérence complète)
+run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a --delete /tmp/sync_app_data/ \$(docker volume inspect 5hostachy_app_data --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_app_data'"
+log "  → DB installée dans le volume peer."
 
 # ── Phase 5 : Start peer + health check API ──────────────────────────
 log "[5/7] Démarrage peer + health check API (${HEALTH_TIMEOUT}s max)..."
