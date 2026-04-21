@@ -31,7 +31,7 @@ DRY_RUN=false
 ALERT_EMAIL="ptressard@icloud.com"
 PUBLIC_URL="https://5hostachy.fr/api/health"
 HEALTH_TIMEOUT=60   # secondes max pour que l'API peer réponde
-CLOUDFLARE_WAIT=15  # secondes d'attente après start cloudflared peer
+CLOUDFLARE_WAIT=30  # secondes d'attente après start cloudflared peer
 
 # ── Mode dry-run ─────────────────────────────────────────────────────
 if [ "${1:-}" = "--dry-run" ]; then
@@ -104,6 +104,7 @@ rollback() {
 
   log "⚠️  BASCULE ANNULÉE (phase $phase) — $SELF reste actif."
   ROLLBACK_DONE=true
+  exit 1
 }
 
 # ── Envoi email d'alerte ─────────────────────────────────────────────
