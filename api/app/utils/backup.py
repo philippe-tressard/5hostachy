@@ -4,6 +4,7 @@ import os
 import tarfile
 from datetime import datetime
 
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.config import get_settings
@@ -34,8 +35,15 @@ def run_backup(history_id: int | None = None):
             filename = f"hostachy_backup_{ts}.tar.gz"
             dest = os.path.join(settings.backup_dir, filename)
 
+            db_path = settings.database_url.replace("sqlite:////", "/")
+
+            # WAL checkpoint avant copie : garantit que app.db contient
+            # toutes les transactions committées (le WAL peut être en avance)
+            if os.path.exists(db_path):
+                with engine.connect() as _conn:
+                    _conn.execute(text("PRAGMA wal_checkpoint(FULL)"))
+
             with tarfile.open(dest, "w:gz") as tar:
-                db_path = settings.database_url.replace("sqlite:////", "/")
                 if os.path.exists(db_path):
                     tar.add(db_path, arcname="app.db")
                 uploads = "/app/uploads"
