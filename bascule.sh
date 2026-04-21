@@ -1,17 +1,24 @@
 #!/bin/bash
 # =============================================================================
-#  bascule.sh — Bascule quotidienne RPi #1 ↔ RPi #2
+#  bascule.sh — Bascule quotidienne RPi #1 ↔ RPi #2  (v2 — sécurisée)
 #
 #  Exécuté par cron à 02:00 sur le RPi ACTUELLEMENT ACTIF.
-#  Le RPi actif :
-#    1. Sync DB + uploads + WhatsApp auth vers le standby
-#    2. Adapte le .env du standby pour prod (ORIGIN HTTPS)
-#    3. Démarre les conteneurs + cloudflared sur le standby
-#    4. Arrête ses propres conteneurs + cloudflared
-#    5. Met à jour le flag actif/standby sur les deux
+#  Séquence :
+#    0. Pre-flight : peer joignable, espace disque, DB locale saine
+#    1. Sync uploads + WhatsApp auth à chaud (prod toujours UP)
+#    2. Stop conteneurs locaux
+#    3. WAL checkpoint + integrity check DB locale
+#    4. Rsync DB → peer + integrity check DB sur peer
+#    5. Start peer + health check API (60s max)
+#    6. Start cloudflared peer + vérif URL publique
+#    7. Stop cloudflared local + MAJ flags
+#
+#  Rollback automatique (set +e) si échec en phase 2-6 :
+#    → Redémarre conteneurs locaux, maintient cloudflared local actif
+#    → Envoie un email d'alerte à ptressard@icloud.com
 #
 #  Fichier flag : /opt/5hostachy/.active (contient "rpi1" ou "rpi2")
-#  Si le flag n'existe pas, le script ne fait rien (sécurité).
+#  Mode test    : bascule.sh --dry-run  (aucune action destructive)
 #
 #  Installation cron (sudo crontab sur CHAQUE RPi) :
 #    0 2 * * * /opt/5hostachy/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
@@ -20,94 +27,308 @@ set -euo pipefail
 
 REPO=/opt/5hostachy
 FLAG="$REPO/.active"
-LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
+DRY_RUN=false
+ALERT_EMAIL="ptressard@icloud.com"
+PUBLIC_URL="https://5hostachy.fr/api/health"
+HEALTH_TIMEOUT=60   # secondes max pour que l'API peer réponde
+CLOUDFLARE_WAIT=15  # secondes d'attente après start cloudflared peer
 
-# ── Identité de ce RPi ───────────────────────────────────────────────
-HOSTNAME=$(hostname)
-case "$HOSTNAME" in
-  PhT-RB5)   SELF="rpi1"; PEER_IP="192.168.1.223"; PEER="rpi2" ;;
-  PhT-RB5i2) SELF="rpi2"; PEER_IP="192.168.1.222"; PEER="rpi1" ;;
-  *) echo "$LOG_PREFIX ERREUR: hostname inconnu ($HOSTNAME)"; exit 1 ;;
-esac
-
-log() { echo "$LOG_PREFIX $*"; }
-
-SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10"
-
-# ── Vérifications ────────────────────────────────────────────────────
-if [ ! -f "$FLAG" ]; then
-  log "Pas de fichier .active — bascule désactivée. Créez $FLAG avec 'rpi1' ou 'rpi2'."
-  exit 0
+# ── Mode dry-run ─────────────────────────────────────────────────────
+if [ "${1:-}" = "--dry-run" ]; then
+  DRY_RUN=true
 fi
 
-ACTIVE=$(cat "$FLAG" | tr -d '[:space:]')
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+drylog() { log "[DRY-RUN] (simulé) $*"; }
+
+run() {
+  # Wrapper : en dry-run, affiche la commande sans l'exécuter
+  if $DRY_RUN; then
+    drylog "$*"
+  else
+    eval "$*"
+  fi
+}
+
+# ── Identité de ce RPi ───────────────────────────────────────────────
+CUR_HOSTNAME=$(hostname)
+case "$CUR_HOSTNAME" in
+  PhT-RB5)   SELF="rpi1"; SELF_IP="192.168.1.222"; PEER_IP="192.168.1.223"; PEER="rpi2" ;;
+  PhT-RB5i2) SELF="rpi2"; SELF_IP="192.168.1.223"; PEER_IP="192.168.1.222"; PEER="rpi1" ;;
+  *) log "ERREUR: hostname inconnu ($CUR_HOSTNAME)"; exit 1 ;;
+esac
+
+SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
+
+# ── Vérifications flag ───────────────────────────────────────────────
+if [ ! -f "$FLAG" ]; then
+  log "Pas de fichier .active — bascule désactivée."
+  exit 0
+fi
+ACTIVE=$(tr -d '[:space:]' < "$FLAG")
 if [ "$ACTIVE" != "$SELF" ]; then
   log "Ce RPi ($SELF) n'est pas actif ($ACTIVE) — rien à faire."
   exit 0
 fi
 
-# Vérifier que le peer est joignable
+# ── Fonction rollback ────────────────────────────────────────────────
+# Appelée via trap ERR — set +e pour éviter une sortie prématurée
+ROLLBACK_DONE=false
+rollback() {
+  local phase="${1:-inconnu}"
+  set +e
+  log "⚠️  ÉCHEC en phase $phase — rollback en cours..."
+
+  # Redémarrer les conteneurs locaux si arrêtés
+  cd "$REPO"
+  docker compose up -d 2>/dev/null || true
+  log "  → Conteneurs locaux relancés."
+
+  # Cloudflared local : s'assurer qu'il est actif (ne pas le stopper)
+  systemctl is-active cloudflared > /dev/null 2>&1 || sudo systemctl start cloudflared 2>/dev/null || true
+  log "  → Cloudflared local maintenu actif."
+
+  # Stopper les conteneurs peer s'ils avaient été démarrés
+  $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl stop cloudflared 2>/dev/null" 2>/dev/null || true
+  log "  → Conteneurs peer arrêtés (si démarrés)."
+
+  # Supprimer le lock bascule sur le peer
+  $SSH_CMD ptressard@"$PEER_IP" "rm -f /opt/5hostachy/.bascule-lock" 2>/dev/null || true
+  log "  → Lock bascule supprimé sur le peer."
+
+  # Envoyer un email d'alerte
+  send_alert_email "$phase"
+
+  log "⚠️  BASCULE ANNULÉE (phase $phase) — $SELF reste actif."
+  ROLLBACK_DONE=true
+}
+
+# ── Envoi email d'alerte ─────────────────────────────────────────────
+send_alert_email() {
+  local phase="${1:-inconnu}"
+  local subject="[5Hostachy] ⚠️ Bascule ÉCHOUÉE — phase $phase — $SELF reste actif"
+  local body="La bascule automatique du $(date '+%d/%m/%Y à %H:%M') a échoué en phase : $phase
+
+RPi actif : $SELF ($SELF_IP)
+RPi peer  : $PEER ($PEER_IP)
+
+Consultez le log complet :
+  ssh ptressard@$SELF_IP 'tail -100 /var/log/hostachy-bascule.log'
+
+Action requise : vérifier l'état du peer et relancer la bascule manuellement si nécessaire."
+
+  # Utilise Python/fastapi-mail config déjà présente dans le conteneur API
+  docker exec hostachy_api python3 -c "
+import smtplib, os
+from email.mime.text import MIMEText
+msg = MIMEText('''$body''')
+msg['Subject'] = '''$subject'''
+msg['From'] = os.environ.get('MAIL_FROM', 'noreply@5hostachy.fr')
+msg['To'] = '$ALERT_EMAIL'
+try:
+    s = smtplib.SMTP(os.environ.get('MAIL_SERVER','ssl0.ovh.net'), int(os.environ.get('MAIL_PORT','587')))
+    s.starttls()
+    s.login(os.environ.get('MAIL_USERNAME',''), os.environ.get('MAIL_PASSWORD',''))
+    s.sendmail(msg['From'], ['$ALERT_EMAIL'], msg.as_string())
+    s.quit()
+    print('Email envoyé.')
+except Exception as e:
+    print(f'Email KO: {e}')
+" 2>/dev/null || log "  (email non envoyé — conteneur API indisponible)"
+}
+
+# ── Phase 0 : Pre-flight ─────────────────────────────────────────────
+log "===== Bascule $SELF → $PEER ===== $([ $DRY_RUN = true ] && echo '[DRY-RUN]' || true)"
+log "[0/7] Pre-flight..."
+
+# Peer joignable ?
 if ! $SSH_CMD ptressard@"$PEER_IP" "echo ok" > /dev/null 2>&1; then
-  log "ERREUR: RPi peer ($PEER_IP) injoignable — bascule annulée."
+  log "ERREUR: Peer ($PEER_IP) injoignable — bascule annulée."
   exit 1
 fi
+log "  → Peer joignable."
 
-log "===== Bascule $SELF → $PEER ====="
+# Espace disque peer suffisant (>= 100 MB libres)
+PEER_FREE=$($SSH_CMD ptressard@"$PEER_IP" "df /var/lib/docker --output=avail -B 1M | tail -1 | tr -d ' '" 2>/dev/null || echo 0)
+if [ "$PEER_FREE" -lt 100 ]; then
+  log "ERREUR: Espace disque peer insuffisant (${PEER_FREE}MB < 100MB) — bascule annulée."
+  exit 1
+fi
+log "  → Espace disque peer OK (${PEER_FREE}MB libres)."
 
-# ── 1. Arrêter les conteneurs locaux (sauf pas immédiatement, d'abord sync) ──
-log "[1/6] Arrêt des conteneurs locaux..."
-cd "$REPO"
-docker compose stop
-log "  → Conteneurs arrêtés."
+# Peer sans conteneurs actifs ? → les stopper proprement
+PEER_CONTAINERS=$($SSH_CMD ptressard@"$PEER_IP" "docker ps -q 2>/dev/null | wc -l" 2>/dev/null || echo 0)
+if [ "$PEER_CONTAINERS" -gt 0 ]; then
+  log "  ⚠ Peer a $PEER_CONTAINERS conteneur(s) actif(s) — arrêt avant bascule."
+  run "$SSH_CMD ptressard@$PEER_IP 'cd /opt/5hostachy && docker compose stop 2>/dev/null'"
+fi
+log "  → Peer en état standby."
 
-# ── 2. Sync DB ───────────────────────────────────────────────────────
-log "[2/6] Sync base de données..."
-DB_SRC=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
-rsync -az --delete -e "$SSH_CMD" "$DB_SRC/" ptressard@"$PEER_IP":/tmp/sync_app_data/
-$SSH_CMD ptressard@"$PEER_IP" "sudo rsync -a /tmp/sync_app_data/ \$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')/ && rm -rf /tmp/sync_app_data"
-log "  → DB synchronisée."
+# Poser un lock sur le peer : empêche auto-deploy de relancer les conteneurs pendant la bascule
+run "$SSH_CMD ptressard@$PEER_IP 'touch /opt/5hostachy/.bascule-lock'"
+log "  → Lock bascule posé sur le peer."
 
-# ── 3. Sync uploads ──────────────────────────────────────────────────
-log "[3/6] Sync uploads..."
+# ── Phase 1 : Sync à chaud (uploads + WA, PAS la DB) ────────────────
+log "[1/7] Sync uploads + WhatsApp auth (à chaud)..."
+
 UPL_SRC=$(docker volume inspect 5hostachy_uploads --format '{{.Mountpoint}}')
-rsync -az --delete -e "$SSH_CMD" "$UPL_SRC/" ptressard@"$PEER_IP":/tmp/sync_uploads/
-$SSH_CMD ptressard@"$PEER_IP" "sudo rsync -a /tmp/sync_uploads/ \$(docker volume inspect 5hostachy_uploads --format '{{.Mountpoint}}')/ && rm -rf /tmp/sync_uploads"
+run "rsync -az --delete -e '$SSH_CMD' '$UPL_SRC/' ptressard@$PEER_IP:/tmp/sync_uploads/"
+run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_uploads/ \$(docker volume inspect 5hostachy_uploads --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_uploads'"
 log "  → Uploads synchronisés."
 
-# ── 4. Sync WhatsApp auth_state ──────────────────────────────────────
-log "[4/6] Sync WhatsApp auth_state..."
-WA_SRC=$(docker volume inspect 5hostachy_whatsapp_auth --format '{{.Mountpoint}}')
-rsync -az --delete -e "$SSH_CMD" "$WA_SRC/" ptressard@"$PEER_IP":/tmp/sync_wa_auth/
-$SSH_CMD ptressard@"$PEER_IP" "sudo rsync -a /tmp/sync_wa_auth/ \$(docker volume inspect 5hostachy_whatsapp_auth --format '{{.Mountpoint}}')/ && rm -rf /tmp/sync_wa_auth"
-log "  → WhatsApp auth synchronisé."
+WA_VOL=$(docker volume inspect 5hostachy_whatsapp_auth --format '{{.Mountpoint}}' 2>/dev/null || echo "")
+if [ -n "$WA_VOL" ]; then
+  run "rsync -az --delete -e '$SSH_CMD' '$WA_VOL/' ptressard@$PEER_IP:/tmp/sync_wa_auth/"
+  run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_wa_auth/ \$(docker volume inspect 5hostachy_whatsapp_auth --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_wa_auth'"
+  log "  → WhatsApp auth synchronisé."
+fi
 
-# ── 5. Configurer .env prod sur le peer et démarrer ──────────────────
-log "[5/6] Configuration prod + démarrage peer..."
-$SSH_CMD ptressard@"$PEER_IP" "
-  cd /opt/5hostachy
-  # Adapter .env pour prod (HTTPS via tunnel)
-  sed -i 's|^ORIGIN=.*|ORIGIN=https://5hostachy.fr|' .env
-  sed -i '/^COOKIE_SECURE=/d' .env
-  # Démarrer les conteneurs
-  docker compose up -d
-  # Démarrer cloudflared
-  sudo systemctl start cloudflared
-"
-log "  → Peer démarré en mode production."
+# ── Phase 2 : Stop conteneurs locaux ────────────────────────────────
+log "[2/7] Arrêt des conteneurs locaux..."
+trap 'rollback "2-stop-conteneurs"' ERR
+cd "$REPO"
+run "docker compose stop"
+log "  → Conteneurs arrêtés."
 
-# ── 6. Arrêter cloudflared local + mettre à jour les flags ───────────
-log "[6/6] Arrêt cloudflared local + mise à jour flags..."
-sudo systemctl stop cloudflared
+# ── Phase 3 : WAL checkpoint + integrity check DB locale ────────────
+log "[3/7] WAL checkpoint + integrity check DB locale..."
+trap 'rollback "3-db-locale"' ERR
 
-# Remettre le .env local en mode standby (HTTP local pour tests)
+DB_PATH=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
+DB_FILE="$DB_PATH/app.db"
+
+# WAL checkpoint (conteneurs stoppés = 0 writers, garanti complet)
+CHKPT=$(sqlite3 "$DB_FILE" "PRAGMA wal_checkpoint(TRUNCATE);" 2>&1)
+log "  → WAL checkpoint : $CHKPT"
+# Format retour : "busy_count|log_count|checkpointed" — les 3 doivent être cohérents
+BUSY=$(echo "$CHKPT" | cut -d'|' -f1)
+LOG_CNT=$(echo "$CHKPT" | cut -d'|' -f2)
+CKPT_CNT=$(echo "$CHKPT" | cut -d'|' -f3)
+if [ "$BUSY" != "0" ]; then
+  log "ERREUR: WAL checkpoint incomplet (busy=$BUSY) — bascule annulée."
+  false
+fi
+if [ "$LOG_CNT" != "$CKPT_CNT" ]; then
+  log "ERREUR: WAL non entièrement vidé (log=$LOG_CNT, checkpointed=$CKPT_CNT) — bascule annulée."
+  false
+fi
+# Vérifier que le fichier WAL est bien vide (0 octet) après TRUNCATE
+WAL_SIZE=$(stat -c%s "${DB_FILE}-wal" 2>/dev/null || echo 0)
+if [ "$WAL_SIZE" -gt 0 ]; then
+  log "ERREUR: WAL non vide après TRUNCATE (${WAL_SIZE} octets) — bascule annulée."
+  false
+fi
+log "  → WAL vide confirmé (${WAL_SIZE} octets)."
+
+# Integrity check
+INTEGRITY=$(sqlite3 "$DB_FILE" "PRAGMA integrity_check;" 2>&1 | head -1)
+if [ "$INTEGRITY" != "ok" ]; then
+  log "ERREUR: DB locale corrompue ($INTEGRITY) — bascule annulée."
+  false
+fi
+log "  → DB locale OK (integrity: $INTEGRITY)."
+
+# ── Phase 4 : Rsync DB → peer + integrity check sur peer ────────────
+log "[4/7] Sync DB → peer + vérification intégrité..."
+trap 'rollback "4-sync-db"' ERR
+
+# Sécurité anti-race : re-vérifier que les conteneurs peer sont encore stoppés.
+# auto-deploy.sh (cron */5 min) pourrait les avoir relancés entre Phase 0 et maintenant.
+if ! $DRY_RUN; then
+  PEER_RUNNING=$($SSH_CMD ptressard@"$PEER_IP" "docker ps -q 2>/dev/null | wc -l" 2>/dev/null || echo 0)
+  if [ "$PEER_RUNNING" -gt 0 ]; then
+    log "  ⚠ Conteneurs peer relancés entretemps ($PEER_RUNNING) — arrêt forcé avant rsync DB."
+    $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && docker compose stop 2>/dev/null"
+    log "  → Conteneurs peer arrêtés."
+  fi
+fi
+
+# Supprimer WAL et SHM sur le peer AVANT rsync pour éviter toute incohérence
+# (le peer peut avoir ses propres WAL/SHM d'une ancienne session)
+run "$SSH_CMD ptressard@$PEER_IP 'PEER_VOL=\$(docker volume inspect 5hostachy_app_data --format \"{{.Mountpoint}}\") && sudo rm -f \"\$PEER_VOL/app.db-wal\" \"\$PEER_VOL/app.db-shm\"'"
+log "  → WAL/SHM peer supprimés."
+
+run "rsync -az --delete -e '$SSH_CMD' '$DB_PATH/' ptressard@$PEER_IP:/tmp/sync_app_data/"
+run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_app_data/ \$(docker volume inspect 5hostachy_app_data --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_app_data'"
+log "  → DB transférée."
+
+# Integrity check sur le peer via sqlite3 CLI (présent sur les deux RPi)
+if ! $DRY_RUN; then
+  PEER_DB_PATH=$($SSH_CMD ptressard@"$PEER_IP" "docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}'" 2>/dev/null)
+  PEER_INTEGRITY=$($SSH_CMD ptressard@"$PEER_IP" "sudo sqlite3 $PEER_DB_PATH/app.db 'PRAGMA integrity_check;' 2>&1 | head -1" 2>/dev/null || echo "error")
+  if [ "$PEER_INTEGRITY" != "ok" ]; then
+    log "ERREUR: DB peer corrompue après transfert ($PEER_INTEGRITY) — bascule annulée."
+    false
+  fi
+  log "  → DB peer OK (integrity: $PEER_INTEGRITY)."
+else
+  drylog "sqlite3 PRAGMA integrity_check sur peer"
+fi
+
+# ── Phase 5 : Start peer + health check API ──────────────────────────
+log "[5/7] Démarrage peer + health check API (${HEALTH_TIMEOUT}s max)..."
+trap 'rollback "5-start-peer"' ERR
+
+run "$SSH_CMD ptressard@$PEER_IP 'cd /opt/5hostachy && sed -i \"s|^ORIGIN=.*|ORIGIN=https://5hostachy.fr|\" .env && sed -i \"/^COOKIE_SECURE=/d\" .env && docker compose up -d'"
+log "  → Conteneurs peer démarrés."
+
+if ! $DRY_RUN; then
+  log "  Attente API peer (http://$PEER_IP:8000/health)..."
+  API_OK=false
+  # L'API n'est pas exposée à l'hôte directement — on passe par docker exec sur le peer
+  for i in $(seq 1 $HEALTH_TIMEOUT); do
+    STATUS=$($SSH_CMD ptressard@"$PEER_IP" "docker exec hostachy_api curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/health 2>/dev/null" 2>/dev/null || echo "000")
+    if [ "$STATUS" = "200" ]; then
+      API_OK=true
+      log "  → API peer OK après ${i}s (HTTP $STATUS)."
+      break
+    fi
+    sleep 1
+  done
+  if ! $API_OK; then
+    log "ERREUR: API peer ne répond pas après ${HEALTH_TIMEOUT}s — bascule annulée."
+    false
+  fi
+else
+  drylog "Boucle health check API peer (docker exec hostachy_api curl http://localhost:8000/health)"
+fi
+
+# ── Phase 6 : Start cloudflared peer + vérif URL publique ───────────
+log "[6/7] Démarrage cloudflared peer + vérification URL publique..."
+trap 'rollback "6-cloudflared"' ERR
+
+run "$SSH_CMD ptressard@$PEER_IP 'sudo systemctl start cloudflared'"
+log "  → Cloudflared peer démarré. Attente ${CLOUDFLARE_WAIT}s établissement tunnel..."
+run "sleep $CLOUDFLARE_WAIT"
+
+if ! $DRY_RUN; then
+  CF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
+  if [ "$CF_STATUS" != "200" ]; then
+    log "ERREUR: URL publique ($PUBLIC_URL) retourne $CF_STATUS après cloudflared peer — bascule annulée."
+    false
+  fi
+  log "  → URL publique OK (HTTP $CF_STATUS)."
+else
+  drylog "curl $PUBLIC_URL → vérif HTTP 200"
+fi
+
+# ── Phase 7 : Stop cloudflared local + MAJ flags ────────────────────
+log "[7/7] Bascule cloudflared local + mise à jour flags..."
+trap - ERR   # plus de rollback au-delà : l'essentiel est fait
+
+run "sudo systemctl stop cloudflared"
+
 case "$SELF" in
-  rpi1) sed -i 's|^ORIGIN=.*|ORIGIN=http://192.168.1.222|' "$REPO/.env" ;;
-  rpi2) sed -i 's|^ORIGIN=.*|ORIGIN=http://192.168.1.223|' "$REPO/.env" ;;
+  rpi1) run "sed -i 's|^ORIGIN=.*|ORIGIN=http://192.168.1.222|' $REPO/.env" ;;
+  rpi2) run "sed -i 's|^ORIGIN=.*|ORIGIN=http://192.168.1.223|' $REPO/.env" ;;
 esac
 grep -q '^COOKIE_SECURE=' "$REPO/.env" || echo 'COOKIE_SECURE=false' >> "$REPO/.env"
 
-# Mettre à jour le flag sur les deux
-echo "$PEER" > "$FLAG"
-$SSH_CMD ptressard@"$PEER_IP" "echo '$PEER' > /opt/5hostachy/.active"
+run "echo $PEER > $FLAG"
+run "$SSH_CMD ptressard@$PEER_IP 'echo $PEER > /opt/5hostachy/.active'"
+
+# Supprimer le lock bascule sur le peer (la bascule est terminée)
+run "$SSH_CMD ptressard@$PEER_IP 'rm -f /opt/5hostachy/.bascule-lock'"
+log "  → Lock bascule supprimé sur le peer."
 
 log "===== Bascule terminée : $PEER est maintenant actif ====="
