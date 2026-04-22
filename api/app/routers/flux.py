@@ -312,7 +312,8 @@ def get_flux(
             meta={"pub_id": p.id, "epingle": p.epingle, "urgente": p.urgente,
                    "full_html": p.contenu, "auteur": auteur,
                    "image_url": getattr(p, 'image_url', None),
-                   "statut": p.statut},
+                   "statut": p.statut,
+                   "perimetre": _perimetre_label(perims)},
         ))
 
     # ── 3. Événements calendrier ────────────────────────────────────────────

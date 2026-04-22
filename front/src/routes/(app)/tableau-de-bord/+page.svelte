@@ -214,6 +214,15 @@
 		return item.lien ?? '#';
 	}
 
+	function typeVoirLabel(item: FluxItem): string {
+		if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) return 'Voir le ticket →';
+		if (item.type === 'publication') return "Voir l'actualité →";
+		if (item.type === 'evenement') return "Voir l'événement →";
+		if (item.type === 'devis') return 'Voir le devis →';
+		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
+		return 'Voir →';
+	}
+
 	const TYPE_LABELS: Record<string, string> = {
 		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
 		publication: 'Actualité', evenement: 'Événement',
@@ -589,7 +598,7 @@
 											{/each}
 										</div>
 									{/if}
-									<a href={typeLink(item)} class="flux-link">Voir le ticket →</a>
+									<a href={typeLink(item)} class="flux-link">{typeVoirLabel(item)}</a>
 								</div>
 							{/if}
 						</div>
