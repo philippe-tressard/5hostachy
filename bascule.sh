@@ -88,9 +88,9 @@ rollback() {
     log "  ⚠ ÉCHEC relance conteneurs locaux — vérifier manuellement : cd /opt/5hostachy && docker compose up -d"
   fi
 
-  # Cloudflared local : s'assurer qu'il est actif (ne pas le stopper)
+  # Cloudflared local : redémarrer si arrêté (peut avoir été stoppé en phase 6 avant rollback)
   systemctl is-active cloudflared > /dev/null 2>&1 || sudo systemctl start cloudflared 2>/dev/null || true
-  log "  → Cloudflared local maintenu actif."
+  log "  → Cloudflared local maintenu/relancé."
 
   # Stopper les conteneurs peer s'ils avaient été démarrés
   $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl stop cloudflared 2>/dev/null" 2>/dev/null || true
@@ -300,9 +300,16 @@ else
   drylog "Boucle health check API peer (docker exec hostachy_api curl http://localhost:8000/health)"
 fi
 
-# ── Phase 6 : Start cloudflared peer + vérif URL publique ───────────
-log "[6/7] Démarrage cloudflared peer + vérification URL publique..."
+# ── Phase 6 : Stop cloudflared local → Start peer → vérif URL publique ─
+# ORDRE IMPORTANT : stopper le cloudflared local EN PREMIER.
+# Sinon les 2 tunnels (local + peer) sont actifs simultanément sur le même tunnel ID.
+# Cloudflare load-balance entre les 2 : les requêtes routées vers local arrivent sur
+# des containers stoppés (phase 2) → connection refused → 503 aléatoire sur la vérif.
+log "[6/7] Bascule cloudflared : stop local → start peer → vérif URL publique..."
 trap 'rollback "6-cloudflared"' ERR
+
+run "sudo systemctl stop cloudflared"
+log "  → Cloudflared local arrêté. Plus de trafic possible vers containers stoppés."
 
 run "$SSH_CMD ptressard@$PEER_IP 'sudo systemctl start cloudflared'"
 log "  → Cloudflared peer démarré. Attente initiale ${CLOUDFLARE_INITIAL_WAIT}s puis polling URL publique (max ${CLOUDFLARE_WAIT}s)..."
@@ -329,11 +336,10 @@ else
   drylog "Polling URL publique $PUBLIC_URL (${CLOUDFLARE_INITIAL_WAIT}s wait + max ${CLOUDFLARE_WAIT}s polling)"
 fi
 
-# ── Phase 7 : Stop cloudflared local + MAJ flags ────────────────────
-log "[7/7] Bascule cloudflared local + mise à jour flags..."
+# ── Phase 7 : MAJ flags ─────────────────────────────────────────────
+# cloudflared local déjà arrêté en phase 6 — systemctl stop est idempotent
+log "[7/7] Mise à jour flags..."
 trap - ERR   # plus de rollback au-delà : l'essentiel est fait
-
-run "sudo systemctl stop cloudflared"
 
 case "$SELF" in
   rpi1) run "sed -i 's|^ORIGIN=.*|ORIGIN=http://192.168.1.222|' $REPO/.env" ;;
