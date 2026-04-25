@@ -834,7 +834,10 @@ import { onMount } from 'svelte';
 									</div>
 									<div class="event-body">
 										<strong class="event-titre">{item.titre}</strong>
-											{#if item.contenu}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.contenu)}</div>{/if}
+										{#if item.perimetre_cible?.some((p: string) => p !== 'résidence')}
+											<span class="badge badge-gray" style="font-size:.7rem">📍 {perimètreLabel(item.perimetre_cible.filter((p: string) => p !== 'résidence').join(','))}</span>
+										{/if}
+										{#if item.contenu}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.contenu)}</div>{/if}
 										</div>
 										<div class="event-date">
 											<div>{fmtDateShort(item._date)}</div>
