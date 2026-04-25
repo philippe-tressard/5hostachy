@@ -40,6 +40,12 @@
 		'search':           `<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>`,
 		'chevron-down':     `<path d="m6 9 6 6 6-6"/>`,
 		'chevron-right':    `<path d="m9 18 6-6-6-6"/>`,
+		'clock':            `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+		'activity':         `<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>`,
+		'bar-chart-3':      `<path d="M3 3v18h18"/><path d="M7 18v-5"/><path d="M11 18V9"/><path d="M15 18V5"/><path d="M19 18v-8"/>`,
+		'inbox':            `<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>`,
+		'wifi-off':         `<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>`,
+		'move':             `<polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/>`,
 	};
 </script>
 

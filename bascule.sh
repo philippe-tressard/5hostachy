@@ -31,7 +31,8 @@ DRY_RUN=false
 ALERT_EMAIL="ptressard@icloud.com"
 PUBLIC_URL="https://5hostachy.fr/api/health"
 HEALTH_TIMEOUT=60   # secondes max pour que l'API peer réponde
-CLOUDFLARE_WAIT=30  # secondes d'attente après start cloudflared peer
+CLOUDFLARE_WAIT=90  # secondes max de polling URL publique après start cloudflared peer
+CLOUDFLARE_INITIAL_WAIT=10  # attente initiale avant de commencer à poller (tunnel pas établi < 10s)
 
 # ── Mode dry-run ─────────────────────────────────────────────────────
 if [ "${1:-}" = "--dry-run" ]; then
@@ -87,9 +88,9 @@ rollback() {
     log "  ⚠ ÉCHEC relance conteneurs locaux — vérifier manuellement : cd /opt/5hostachy && docker compose up -d"
   fi
 
-  # Cloudflared local : s'assurer qu'il est actif (ne pas le stopper)
+  # Cloudflared local : redémarrer si arrêté (peut avoir été stoppé en phase 6 avant rollback)
   systemctl is-active cloudflared > /dev/null 2>&1 || sudo systemctl start cloudflared 2>/dev/null || true
-  log "  → Cloudflared local maintenu actif."
+  log "  → Cloudflared local maintenu/relancé."
 
   # Stopper les conteneurs peer s'ils avaient été démarrés
   $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl stop cloudflared 2>/dev/null" 2>/dev/null || true
@@ -187,9 +188,15 @@ if [ -n "$WA_VOL" ]; then
   log "  → WhatsApp auth synchronisé."
 fi
 
-# ── Phase 2 : Stop conteneurs locaux ────────────────────────────────
-log "[2/7] Arrêt des conteneurs locaux..."
+# ── Phase 2 : Stop cloudflared local + conteneurs locaux ────────────
+# cloudflared LOCAL arrêté EN PREMIER : tant qu'il est actif, les 2 tunnels
+# (local + peer, même tunnel ID) coexistent → Cloudflare load-balance ~50/50
+# → ~50% des requêtes arrivent sur containers stoppés → 503 pour les vrais users.
+# En arrêtant cloudflared ici, un seul tunnel sera actif pendant toute la bascule.
+log "[2/7] Arrêt cloudflared local + conteneurs..."
 trap 'rollback "2-stop-conteneurs"' ERR
+run "sudo systemctl stop cloudflared"
+log "  → Cloudflared local stoppé. Plus de trafic public possible jusqu'au peer."
 cd "$REPO"
 run "docker compose stop"
 log "  → Conteneurs arrêtés."
@@ -300,29 +307,39 @@ else
 fi
 
 # ── Phase 6 : Start cloudflared peer + vérif URL publique ───────────
+# cloudflared local déjà arrêté en phase 2 — un seul tunnel actif à la fois.
 log "[6/7] Démarrage cloudflared peer + vérification URL publique..."
 trap 'rollback "6-cloudflared"' ERR
 
 run "$SSH_CMD ptressard@$PEER_IP 'sudo systemctl start cloudflared'"
-log "  → Cloudflared peer démarré. Attente ${CLOUDFLARE_WAIT}s établissement tunnel..."
-run "sleep $CLOUDFLARE_WAIT"
+log "  → Cloudflared peer démarré. Attente initiale ${CLOUDFLARE_INITIAL_WAIT}s puis polling URL publique (max ${CLOUDFLARE_WAIT}s)..."
+run "sleep $CLOUDFLARE_INITIAL_WAIT"
 
 if ! $DRY_RUN; then
-  CF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
-  if [ "$CF_STATUS" != "200" ]; then
-    log "ERREUR: URL publique ($PUBLIC_URL) retourne $CF_STATUS après cloudflared peer — bascule annulée."
+  CF_OK=false
+  ELAPSED=$CLOUDFLARE_INITIAL_WAIT
+  while [ $ELAPSED -lt $CLOUDFLARE_WAIT ]; do
+    CF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 "$PUBLIC_URL" 2>/dev/null || echo "000")
+    if [ "$CF_STATUS" = "200" ]; then
+      CF_OK=true
+      log "  → URL publique OK après ${ELAPSED}s (HTTP $CF_STATUS)."
+      break
+    fi
+    sleep 5
+    ELAPSED=$((ELAPSED + 5))
+  done
+  if ! $CF_OK; then
+    log "ERREUR: URL publique ($PUBLIC_URL) inaccessible après ${CLOUDFLARE_WAIT}s (dernier code: $CF_STATUS) — bascule annulée."
     false
   fi
-  log "  → URL publique OK (HTTP $CF_STATUS)."
 else
-  drylog "curl $PUBLIC_URL → vérif HTTP 200"
+  drylog "Polling URL publique $PUBLIC_URL (${CLOUDFLARE_INITIAL_WAIT}s wait + max ${CLOUDFLARE_WAIT}s polling)"
 fi
 
-# ── Phase 7 : Stop cloudflared local + MAJ flags ────────────────────
-log "[7/7] Bascule cloudflared local + mise à jour flags..."
+# ── Phase 7 : MAJ flags ─────────────────────────────────────────────
+# cloudflared local déjà arrêté en phase 6 — systemctl stop est idempotent
+log "[7/7] Mise à jour flags..."
 trap - ERR   # plus de rollback au-delà : l'essentiel est fait
-
-run "sudo systemctl stop cloudflared"
 
 case "$SELF" in
   rpi1) run "sed -i 's|^ORIGIN=.*|ORIGIN=http://192.168.1.222|' $REPO/.env" ;;
