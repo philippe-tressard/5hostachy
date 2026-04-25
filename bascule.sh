@@ -31,7 +31,8 @@ DRY_RUN=false
 ALERT_EMAIL="ptressard@icloud.com"
 PUBLIC_URL="https://5hostachy.fr/api/health"
 HEALTH_TIMEOUT=60   # secondes max pour que l'API peer réponde
-CLOUDFLARE_WAIT=30  # secondes d'attente après start cloudflared peer
+CLOUDFLARE_WAIT=90  # secondes max de polling URL publique après start cloudflared peer
+CLOUDFLARE_INITIAL_WAIT=10  # attente initiale avant de commencer à poller (tunnel pas établi < 10s)
 
 # ── Mode dry-run ─────────────────────────────────────────────────────
 if [ "${1:-}" = "--dry-run" ]; then
@@ -304,18 +305,28 @@ log "[6/7] Démarrage cloudflared peer + vérification URL publique..."
 trap 'rollback "6-cloudflared"' ERR
 
 run "$SSH_CMD ptressard@$PEER_IP 'sudo systemctl start cloudflared'"
-log "  → Cloudflared peer démarré. Attente ${CLOUDFLARE_WAIT}s établissement tunnel..."
-run "sleep $CLOUDFLARE_WAIT"
+log "  → Cloudflared peer démarré. Attente initiale ${CLOUDFLARE_INITIAL_WAIT}s puis polling URL publique (max ${CLOUDFLARE_WAIT}s)..."
+run "sleep $CLOUDFLARE_INITIAL_WAIT"
 
 if ! $DRY_RUN; then
-  CF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
-  if [ "$CF_STATUS" != "200" ]; then
-    log "ERREUR: URL publique ($PUBLIC_URL) retourne $CF_STATUS après cloudflared peer — bascule annulée."
+  CF_OK=false
+  ELAPSED=$CLOUDFLARE_INITIAL_WAIT
+  while [ $ELAPSED -lt $CLOUDFLARE_WAIT ]; do
+    CF_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 "$PUBLIC_URL" 2>/dev/null || echo "000")
+    if [ "$CF_STATUS" = "200" ]; then
+      CF_OK=true
+      log "  → URL publique OK après ${ELAPSED}s (HTTP $CF_STATUS)."
+      break
+    fi
+    sleep 5
+    ELAPSED=$((ELAPSED + 5))
+  done
+  if ! $CF_OK; then
+    log "ERREUR: URL publique ($PUBLIC_URL) inaccessible après ${CLOUDFLARE_WAIT}s (dernier code: $CF_STATUS) — bascule annulée."
     false
   fi
-  log "  → URL publique OK (HTTP $CF_STATUS)."
 else
-  drylog "curl $PUBLIC_URL → vérif HTTP 200"
+  drylog "Polling URL publique $PUBLIC_URL (${CLOUDFLARE_INITIAL_WAIT}s wait + max ${CLOUDFLARE_WAIT}s polling)"
 fi
 
 # ── Phase 7 : Stop cloudflared local + MAJ flags ────────────────────
