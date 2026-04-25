@@ -188,9 +188,15 @@ if [ -n "$WA_VOL" ]; then
   log "  → WhatsApp auth synchronisé."
 fi
 
-# ── Phase 2 : Stop conteneurs locaux ────────────────────────────────
-log "[2/7] Arrêt des conteneurs locaux..."
+# ── Phase 2 : Stop cloudflared local + conteneurs locaux ────────────
+# cloudflared LOCAL arrêté EN PREMIER : tant qu'il est actif, les 2 tunnels
+# (local + peer, même tunnel ID) coexistent → Cloudflare load-balance ~50/50
+# → ~50% des requêtes arrivent sur containers stoppés → 503 pour les vrais users.
+# En arrêtant cloudflared ici, un seul tunnel sera actif pendant toute la bascule.
+log "[2/7] Arrêt cloudflared local + conteneurs..."
 trap 'rollback "2-stop-conteneurs"' ERR
+run "sudo systemctl stop cloudflared"
+log "  → Cloudflared local stoppé. Plus de trafic public possible jusqu'au peer."
 cd "$REPO"
 run "docker compose stop"
 log "  → Conteneurs arrêtés."
@@ -300,16 +306,10 @@ else
   drylog "Boucle health check API peer (docker exec hostachy_api curl http://localhost:8000/health)"
 fi
 
-# ── Phase 6 : Stop cloudflared local → Start peer → vérif URL publique ─
-# ORDRE IMPORTANT : stopper le cloudflared local EN PREMIER.
-# Sinon les 2 tunnels (local + peer) sont actifs simultanément sur le même tunnel ID.
-# Cloudflare load-balance entre les 2 : les requêtes routées vers local arrivent sur
-# des containers stoppés (phase 2) → connection refused → 503 aléatoire sur la vérif.
-log "[6/7] Bascule cloudflared : stop local → start peer → vérif URL publique..."
+# ── Phase 6 : Start cloudflared peer + vérif URL publique ───────────
+# cloudflared local déjà arrêté en phase 2 — un seul tunnel actif à la fois.
+log "[6/7] Démarrage cloudflared peer + vérification URL publique..."
 trap 'rollback "6-cloudflared"' ERR
-
-run "sudo systemctl stop cloudflared"
-log "  → Cloudflared local arrêté. Plus de trafic possible vers containers stoppés."
 
 run "$SSH_CMD ptressard@$PEER_IP 'sudo systemctl start cloudflared'"
 log "  → Cloudflared peer démarré. Attente initiale ${CLOUDFLARE_INITIAL_WAIT}s puis polling URL publique (max ${CLOUDFLARE_WAIT}s)..."
