@@ -247,6 +247,29 @@ with engine.execution_options(isolation_level='AUTOCOMMIT').connect() as c:
     }
 rm -f "$MAINT_ERR2"
 
+# --- 2b. Redémarrage API après VACUUM (refresh obligatoire du pool SQLAlchemy) ---
+# SQLite VACUUM reconstruit le fichier DB et change son inode. Tout file descriptor
+# ouvert par le pool de connexions SQLAlchemy pointe alors vers un inode orphelin
+# → disk I/O error sur toutes les requêtes SQL suivantes. Le seul remède est de
+# forcer le pool à se recréer en redémarrant le conteneur API.
+log "[2b/5] Redémarrage API post-VACUUM (refresh pool SQLAlchemy)..."
+docker restart hostachy_api >/dev/null
+API_OK=false
+for i in $(seq 1 20); do
+    if curl -sf http://localhost/api/health >/dev/null 2>&1; then
+        API_OK=true
+        break
+    fi
+    sleep 2
+done
+if $API_OK; then
+    log "  → API opérationnelle après redémarrage"
+else
+    log "  ⚠ API non joignable après 40s — vérifier manuellement"
+    GLOBAL_STATUT="erreur"
+    GLOBAL_ERREUR="${GLOBAL_ERREUR:+$GLOBAL_ERREUR | }API restart timeout"
+fi
+
 # --- 3. Taille DB après VACUUM ---------------------------------------------------
 DB_SIZE=$(docker exec hostachy_api python -c \
     "import os; print(os.path.getsize('/app/data/app.db'))" 2>/dev/null) \
