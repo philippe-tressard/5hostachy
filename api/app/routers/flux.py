@@ -308,7 +308,7 @@ def get_flux(
             detail=" — ".join(detail_parts) if detail_parts else None,
             icon="📰",
             badges=badges,
-            lien="/actualites",
+            lien=f"/actualites#pub-{p.id}",
             meta={"pub_id": p.id, "epingle": p.epingle, "urgente": p.urgente,
                    "full_html": p.contenu, "auteur": auteur,
                    "image_url": getattr(p, 'image_url', None),
@@ -361,7 +361,7 @@ def get_flux(
             detail=_strip_html(ev.description),
             icon=type_emoji.get(ev.type, "📌"),
             badges=badges_ev,
-            lien="/calendrier",
+            lien=f"/calendrier#ev-{ev.id}",
             meta={
                 "ev_id": ev.id, "type": ev.type, "lieu": ev.lieu,
                 "perimetre": _perimetre_label(perims),
