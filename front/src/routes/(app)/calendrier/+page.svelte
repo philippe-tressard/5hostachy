@@ -104,6 +104,18 @@ import { onMount } from 'svelte';
 			evenements = await calApi.list();
 			const expiredYears = [...new Set(evenements.filter(e => isExpired(e, archivageDelaiMs)).map(e => new Date(e.fin ?? e.debut).getFullYear()))].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
+			// Si un ancre #ev-{id} est présent dans l'URL, passer en vue liste, ouvrir et scroller vers l'événement
+			const hash = window.location.hash;
+			const anchorMatch = hash.match(/^#ev-(\d+)$/);
+			if (anchorMatch) {
+				const targetId = parseInt(anchorMatch[1], 10);
+				onglet = 'liste';
+				expandedEvId = targetId;
+				setTimeout(() => {
+					const el = document.getElementById(`ev-${targetId}`);
+					if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}, 100);
+			}
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
@@ -915,6 +927,7 @@ import { onMount } from 'svelte';
 				{@const expanded = expandedEvId === ev.id}
 				<div
 					class="event-row card"
+					id="ev-{ev.id}"
 					class:event-urgent={ev.type === 'coupure'}
 					class:expanded
 					style="cursor:pointer"
