@@ -571,6 +571,7 @@
 		if (c.frequence_type === 'semaines') return `↺ ${c.frequence_valeur} sem.`;
 		if (c.frequence_type === 'mois') return '↺ Mensuel';
 		if (c.frequence_type === 'fois_par_an') return `↺ ${c.frequence_valeur}×/an`;
+		if (c.frequence_type === 'ans') return `↺ tous les ${c.frequence_valeur} an${c.frequence_valeur > 1 ? 's' : ''}`;
 		return '';
 	}
 
@@ -984,6 +985,7 @@
 											<option value='fois_par_an'>× / an</option>
 											<option value='mois'>Tous les N mois</option>
 											<option value='semaines'>Toutes les N semaines</option>
+											<option value='ans'>Tous les N ans</option>
 										</select>
 									</label>
 									{#if devisForm.frequence_type}
@@ -1176,6 +1178,7 @@
 								<option value='fois_par_an'>× / an</option>
 								<option value='mois'>Tous les N mois</option>
 								<option value='semaines'>Toutes les N semaines</option>
+								<option value='ans'>Tous les N ans</option>
 							</select>
 						</label>
 						{#if devisForm.frequence_type}
@@ -1420,12 +1423,15 @@
 												<option value="semaines">Toutes les X semaines</option>
 												<option value="mois">Mensuelle</option>
 												<option value="fois_par_an">X fois par an</option>
+												<option value="ans">Tous les X ans</option>
 											</select>
 										</label>
 										{#if contratForm.frequence_type === 'semaines'}
 											<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 										{:else if contratForm.frequence_type === 'fois_par_an'}
 											<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+										{:else if contratForm.frequence_type === 'ans'}
+											<label>Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 										{/if}
 										<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
 									</div>
@@ -1913,12 +1919,15 @@
 							<option value="semaines">Toutes les X semaines</option>
 							<option value="mois">Mensuelle</option>
 							<option value="fois_par_an">X fois par an</option>
+							<option value="ans">Tous les X ans</option>
 						</select>
 					</label>
 					{#if contratForm.frequence_type === 'semaines'}
 						<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 					{:else if contratForm.frequence_type === 'fois_par_an'}
 						<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+					{:else if contratForm.frequence_type === 'ans'}
+						<label>Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 					{/if}
 					<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
 				</div>

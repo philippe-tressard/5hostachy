@@ -9,6 +9,7 @@ engine = create_engine(
     settings.database_url,
     connect_args=connect_args,
     echo=False,
+    pool_pre_ping=True,  # Teste chaque connexion avant usage → détecte les inodes orphelins (ex: post-VACUUM)
 )
 
 # SessionLocal pour les tâches asynchrones et les contextes hors requête HTTP

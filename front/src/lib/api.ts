@@ -323,6 +323,20 @@ export const documents = {
 		}
 		return res.json();
 	},
+	uploadForPublication: async (titre: string, publicationId: number, file: File): Promise<any> => {
+		const form = new FormData();
+		form.append('titre', titre);
+		form.append('publication_id', String(publicationId));
+		form.append('file', file);
+		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
+		if (!res.ok) {
+			let detail = 'Erreur upload';
+			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
+			throw new ApiError(res.status, detail);
+		}
+		return res.json();
+	},
+	listByPublication: (publicationId: number) => api.get<any[]>(`/documents?publication_id=${publicationId}`),
 	downloadUrl: (docId: number) => `${BASE}/documents/${docId}/télécharger`,
 	delete: (id: number) => api.delete(`/documents/${id}`),
 };

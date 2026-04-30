@@ -2,7 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, isAdmin, currentUser, setUser } from '$lib/stores/auth';
-	import { publications as pubsApi, uploads as uploadsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
+	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -38,6 +38,24 @@
 	let pendingImage: File | null = null;
 	let pendingPreview: string | undefined;
 	let uploadingImg = false;
+	let pendingFiles: File[] = [];
+	let pubFilesMap: Record<number, any[]> = {};
+	let loadedFilesFor = new Set<number>();
+	let fileInputKey = 0;
+
+	function handleFilesChange(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		pendingFiles = input.files ? Array.from(input.files) : [];
+	}
+
+	async function loadPubFiles(pubId: number) {
+		if (loadedFilesFor.has(pubId)) return;
+		loadedFilesFor.add(pubId);
+		try {
+			const docs = await docsApi.listByPublication(pubId);
+			pubFilesMap = { ...pubFilesMap, [pubId]: docs };
+		} catch { /* silencieux */ }
+	}
 	let newPerimetreCible: string[] = ['résidence'];
 	let newPublicCible: string[] = ['résidents'];
 
@@ -90,6 +108,11 @@
 					pub.image_url = url;
 				} finally { uploadingImg = false; }
 			}
+			if (pendingFiles.length > 0) {
+				for (const f of pendingFiles) {
+					try { await docsApi.uploadForPublication(f.name, pub.id, f); } catch { /* ignoré */ }
+				}
+			}
 			if (shouldPublishAfterImageUpload) {
 				pub = await pubsApi.update(pub.id, { brouillon: false });
 			}
@@ -99,6 +122,7 @@
 			newBrouillon = false; newStatut = ''; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false;
 			newPerimetreCible = ['résidence'];
 			pendingImage = null; pendingPreview = undefined;
+			pendingFiles = []; fileInputKey++;
 			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -151,9 +175,10 @@
 	let expandedPubs = new Set<number>();
 	let expandedEvols = new Set<number>();
 	function togglePub(id: number) {
-		expandedPubs = expandedPubs.has(id) ? new Set() : new Set([id]);
-	}
-
+			const wasOpen = expandedPubs.has(id);
+			expandedPubs = wasOpen ? new Set() : new Set([id]);
+			if (!wasOpen) loadPubFiles(id);
+		}
 	function startEdit(pub: Publication) {
 		editingPub = pub;
 		editTitre = pub.titre;
@@ -264,6 +289,15 @@
 				<label for="actualite-photo">Photo (optionnel)</label>
 				<ImageUpload id="actualite-photo" currentUrl={pendingPreview} placeholder="&#x1F5BC;️" label="Ajouter une photo"
 					shape="rect" previewSize="200px" uploading={uploadingImg} on:change={handleImageChange} />
+			</div>
+			<div class="field">
+				<label>Pièces jointes (optionnel)</label>
+				{#key fileInputKey}
+					<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.txt" on:change={handleFilesChange} style="font-size:.85rem" />
+				{/key}
+				{#if pendingFiles.length > 0}
+					<span style="font-size:.8rem;color:var(--color-text-muted)">📎 {pendingFiles.length} fichier{pendingFiles.length > 1 ? 's' : ''} sélectionné{pendingFiles.length > 1 ? 's' : ''}</span>
+				{/if}
 			</div>
 			<div class="field">
 				<label for="new-statut">État (optionnel)</label>
@@ -451,6 +485,15 @@
 							<img class="pub-img" src={pub.image_url} alt={pub.titre} />
 						{/if}
 						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
+						{#if pubFilesMap[pub.id]?.length > 0}
+							<div class="pub-attachments">
+								{#each pubFilesMap[pub.id] as doc}
+									<a href={docsApi.downloadUrl(doc.id)} target="_blank" class="pub-attachment-link">
+										📎 {doc.titre || doc.fichier_nom}
+									</a>
+								{/each}
+							</div>
+						{/if}
 						<small style="color:var(--color-text-muted);font-size:.78rem">
 						{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(pub.cree_le)}{/if}{#if pub.auteur_nom} · {pub.auteur_nom}{/if}
 						</small>
@@ -518,6 +561,9 @@
 	.pub-preview :global(p) { margin: 0 0 .4em; }
 	.pub-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.pub-img { width: 100%; max-height: 280px; object-fit: cover; display: block; border-radius: calc(var(--radius) - 2px); margin-bottom: .75rem; }
+	.pub-attachments { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 .25rem; }
+	.pub-attachment-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; padding: .25rem .55rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-primary); text-decoration: none; }
+	.pub-attachment-link:hover { background: var(--color-border); }
 
 	/* Évolutions */
 	.evol-list { margin-top: .9rem; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
