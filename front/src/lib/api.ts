@@ -267,6 +267,7 @@ export const publications = {
 	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
+	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
 	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 };

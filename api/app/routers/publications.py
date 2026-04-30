@@ -278,6 +278,27 @@ def update_publication(
     return _pub_to_read(pub, session)
 
 
+@router.post("/{pub_id}/renvoyer-email", status_code=204)
+def renvoyer_email_publication(
+    pub_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_admin),
+):
+    """Renvoie l'email de la publication au syndic et/ou CS (admin uniquement)."""
+    pub = session.get(Publication, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publication introuvable")
+    if pub.brouillon:
+        raise HTTPException(422, "Impossible de renvoyer un brouillon")
+    if pub.envoyer_syndic:
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
+    if pub.envoyer_cs:
+        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+    if not pub.envoyer_syndic and not pub.envoyer_cs:
+        raise HTTPException(422, "Cette publication n'a pas de destinataires email configurés")
+
+
 @router.delete("/{pub_id}", status_code=204)
 def delete_publication(
     pub_id: int,

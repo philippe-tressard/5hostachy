@@ -151,6 +151,16 @@
 		}
 	}
 
+	async function renvoyerEmailPub(pub: Publication) {
+		if (!confirm(`Renvoyer l'email de « ${pub.titre} » au syndic/CS ?`)) return;
+		try {
+			await pubsApi.renvoyerEmail(pub.id);
+			toast('success', 'Email renvoyé');
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Impossible de renvoyer');
+		}
+	}
+
 	// ── Édition ───────────────────────────────────────────────────────────────
 	let editingPub: Publication | null = null;
 	let editTitre = '';
@@ -380,6 +390,10 @@
 						on:click|stopPropagation={() => archivePub(pub)}>&#x1F4E6;</button>
 					{/if}
 					{/if}				{#if $isAdmin}
+				{#if (pub.envoyer_syndic || pub.envoyer_cs) && !pub.brouillon}
+				<button class="btn-icon" aria-label="Renvoyer l'email" title="Renvoyer l'email au syndic/CS"
+					on:click|stopPropagation={() => renvoyerEmailPub(pub)}>✉️</button>
+				{/if}
 				<button class="btn-icon" aria-label="Supprimer" title="Supprimer définitivement" style="color:var(--color-danger)"
 					on:click|stopPropagation={() => deletePub(pub)}>🗑️</button>
 				{/if}					<span class="chevron" class:open={expanded}>›</span>
