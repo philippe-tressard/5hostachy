@@ -54,7 +54,6 @@ def _envoyer_email_syndic_publication(
 ):
     """Envoie un email au syndic et/ou CS avec la publication en corps."""
     from app.utils.email import send_email_group
-    import re
 
     destinataires: list[tuple[int | None, str]] = []
     seen_emails: set[str] = set()
@@ -89,14 +88,11 @@ def _envoyer_email_syndic_publication(
     ).all()
     cfg = {r.cle: r.valeur for r in cfg_rows}
 
-    # Extrait : texte brut tronqué à 300 cars
-    extrait = re.sub(r'<[^>]+>', '', pub.contenu or '').strip()[:300]
-
     ctx = {
-        "publication": {"titre": pub.titre, "extrait": extrait},
+        "publication": {"titre": pub.titre, "contenu": pub.contenu or ""},
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
-        "app": {"url": cfg.get("site_url", "https://localhost")},
+        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
         "reference_copro": cfg.get("reference_copro", ""),
     }
 
