@@ -523,6 +523,7 @@ class Document(SQLModel, table=True):
     mime_type: str = "application/octet-stream"
     categorie_id: Optional[int] = Field(default=None, foreign_key="categorie_document.id")
     contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
+    publication_id: Optional[int] = Field(default=None, foreign_key="publication.id")
     profil_acces_override_id: Optional[int] = Field(default=None, foreign_key="profil_acces_document.id")
     perimetre: str = "résidence"
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")

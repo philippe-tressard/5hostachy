@@ -38,6 +38,10 @@ def _user_can_read(user: Utilisateur, doc: Document, session: Session) -> bool:
     if doc.contrat_id and not doc.categorie_id:
         return False
 
+    # Documents liés à une publication : visibles par tous les utilisateurs
+    if doc.publication_id and not doc.categorie_id:
+        return True
+
     profil_id = doc.profil_acces_override_id or doc.categorie.profil_acces_id
     profil: ProfilAccesDocument = session.get(ProfilAccesDocument, profil_id)
     if not profil:
@@ -91,6 +95,7 @@ def list_categories(
 def list_documents(
     categorie_id: int | None = None,
     contrat_id: int | None = None,
+    publication_id: int | None = None,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -99,6 +104,8 @@ def list_documents(
         stmt = stmt.where(Document.categorie_id == categorie_id)
     if contrat_id:
         stmt = stmt.where(Document.contrat_id == contrat_id)
+    if publication_id:
+        stmt = stmt.where(Document.publication_id == publication_id)
 
     docs = session.exec(stmt.order_by(Document.publie_le.desc())).all()
 
@@ -159,6 +166,7 @@ async def upload_document(
     titre: str = Form(...),
     categorie_id: int | None = Form(None),
     contrat_id: int | None = Form(None),
+    publication_id: int | None = Form(None),
     perimetre: str = Form("résidence"),
     batiment_id: int | None = Form(None),
     lot_id: int | None = Form(None),
@@ -169,8 +177,8 @@ async def upload_document(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    if not categorie_id and not contrat_id:
-        raise HTTPException(400, "categorie_id ou contrat_id obligatoire")
+    if not categorie_id and not contrat_id and not publication_id:
+        raise HTTPException(400, "categorie_id, contrat_id ou publication_id obligatoire")
 
     if categorie_id:
         categorie = session.get(CategorieDocument, categorie_id)
@@ -203,6 +211,7 @@ async def upload_document(
         mime_type=file.content_type or "application/octet-stream",
         categorie_id=categorie_id,
         contrat_id=contrat_id,
+        publication_id=publication_id,
         perimetre=perimetre,
         batiment_id=batiment_id,
         lot_id=lot_id,

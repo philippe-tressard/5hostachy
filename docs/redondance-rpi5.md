@@ -1,8 +1,9 @@
-﻿# ðŸ” Redondance RPi5 â€” Option A : Failover passif
+﻿# 🔄 Redondance RPi5 — Bascule quotidienne automatique
 
-> **Statut** : Ã€ implÃ©menter ultÃ©rieurement
+> **Statut** : En production depuis avril 2026
 >
-> **Objectif** : avoir un second RPi5 en veille chaude, capable de prendre le relais en ~5 min en cas de panne matÃ©rielle du principal.
+> **Objectif** : Alternance quotidienne entre deux RPi5 identiques pour équilibrer l'usure et assurer une continuité de service en cas de panne de l'un des deux.
+> Le script `bascule.sh` tourne en cron à 02h00 chaque nuit sur le RPi actif.
 
 ---
 
