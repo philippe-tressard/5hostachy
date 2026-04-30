@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import ConfigSite, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
+from app.models.core import ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
@@ -101,12 +101,18 @@ def _envoyer_email_syndic_publication(
     }
 
     # Photo jointe (image de la publication)
-    photo_paths: list[str] = []
+    all_attachments: list[str] = []
     if pub.image_url:
         fname = os.path.basename(pub.image_url)
         fpath = os.path.join("/app/uploads", "publications", fname)
         if os.path.isfile(fpath):
-            photo_paths.append(fpath)
+            all_attachments.append(fpath)
+
+    # Fichiers joints (documents liés à la publication)
+    docs = session.exec(select(Document).where(Document.publication_id == pub.id)).all()
+    for doc in docs:
+        if doc.fichier_chemin and os.path.isfile(doc.fichier_chemin):
+            all_attachments.append(doc.fichier_chemin)
 
     if destinataires:
         background_tasks.add_task(
@@ -115,7 +121,7 @@ def _envoyer_email_syndic_publication(
             to_recipients=destinataires,
             context=ctx,
             session=session,
-            attachments=photo_paths or None,
+            attachments=all_attachments or None,
         )
 
 
