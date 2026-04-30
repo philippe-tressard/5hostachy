@@ -303,7 +303,7 @@ EMAIL_TEMPLATES = [
      '<p style="margin:0 0 12px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
      '<div style="font-size:14px;color:#1A1A2E">{{ publication.contenu | safe }}</div>'
      '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/actualites" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/actualites#pub-{{ publication.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
      True),
 
     ("digest_quotidien", "Digest quotidien", "Résumé du jour — {{ residence.nom }}",
