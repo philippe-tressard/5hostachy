@@ -89,7 +89,7 @@ def _envoyer_email_syndic_publication(
     cfg = {r.cle: r.valeur for r in cfg_rows}
 
     ctx = {
-        "publication": {"titre": pub.titre, "contenu": pub.contenu or ""},
+        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
         "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},

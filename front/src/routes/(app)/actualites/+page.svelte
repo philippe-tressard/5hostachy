@@ -67,7 +67,20 @@
 	onMount(async () => {
 		try {
 			pubList = await pubsApi.list();
-			if (pubList.length > 0) { expandedPubs = new Set([pubList[0].id]); }
+			// Si un ancre #pub-{id} est présent dans l'URL, ouvrir et scroller vers la publication ciblée
+			const hash = window.location.hash;
+			const anchorMatch = hash.match(/^#pub-(\d+)$/);
+			if (anchorMatch) {
+				const targetId = parseInt(anchorMatch[1], 10);
+				expandedPubs = new Set([targetId]);
+				// Attendre le rendu puis scroller
+				setTimeout(() => {
+					const el = document.getElementById(`pub-${targetId}`);
+					if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}, 100);
+			} else if (pubList.length > 0) {
+				expandedPubs = new Set([pubList[0].id]);
+			}
 			// Persist last-seen timestamp server-side
 			const now = new Date().toISOString();
 			authApi.updateMe({ last_seen_actualites: now }).then((u: any) => setUser(u)).catch(() => {});
