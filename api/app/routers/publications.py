@@ -96,7 +96,7 @@ def _envoyer_email_syndic_publication(
         "publication": {"titre": pub.titre, "extrait": extrait},
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
-        "app": {"url": cfg.get("site_url", "https://localhost")},
+        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
         "reference_copro": cfg.get("reference_copro", ""),
     }
 

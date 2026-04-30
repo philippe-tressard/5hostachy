@@ -266,7 +266,7 @@ async def send_email(
         site_url_row = session.get(ConfigSite, "site_url")
         base_ctx = {
             "annee": datetime.utcnow().year,
-            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost")},
+            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost").rstrip("/")},
             "residence": {"nom": (site_nom_row.valeur if site_nom_row else "Ma Résidence")},
         }
         ctx = {**base_ctx, **context}
@@ -416,7 +416,7 @@ async def send_email_group(
         site_url_row = session.get(ConfigSite, "site_url")
         base_ctx = {
             "annee": datetime.utcnow().year,
-            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost")},
+            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost").rstrip("/")},
             "residence": {"nom": (site_nom_row.valeur if site_nom_row else "Ma Résidence")},
         }
         ctx = {**base_ctx, **context}
