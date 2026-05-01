@@ -11,7 +11,8 @@ Règles métier appliquées :
   - Périmètre géographique : résidence/parking/cave/aful = visible par tous résidents ;
       bat:N visible uniquement si user.batiment_id == N.
   - public_cible (publications) : résidents = tous ; copropriétaires = statut copropriétaire_* ;
-      locataires = statut locataire uniquement.
+      locataires = statut locataire uniquement ; conseil_syndical = CS/admin uniquement.
+      Si public_cible contient une valeur non reconnue ou non correspondante → non visible.
   - AG (événements) : visible uniquement par propriétaires, CS et admins.
   - Sondages : profils_autorises (CSV statuts) + batiments_ids (CSV ids bâtiments).
 """
@@ -85,7 +86,7 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
 
     Vérifie deux dimensions indépendantes :
       1. Périmètre géographique (perimetre_cible)
-      2. Public cible (public_cible) : résidents | copropriétaires | locataires
+      2. Public cible (public_cible) : résidents | copropriétaires | locataires | conseil_syndical
     """
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         return True
@@ -97,15 +98,17 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
 
     # 2. Public cible
     public = _parse_json_list(pub.public_cible, ["résidents"])
+    if not public:
+        return True  # aucune restriction explicite
     if "résidents" in public:
         return True
     statut = str(user.statut or "")
-    if "copropriétaires" in public:
-        return statut.startswith("copropriétaire_")
-    if "locataires" in public:
-        return statut == "locataire"
-    # public_cible vide ou valeur inconnue → visible par tous
-    return True
+    if "copropriétaires" in public and statut.startswith("copropriétaire_"):
+        return True
+    if "locataires" in public and statut == "locataire":
+        return True
+    # Valeur non reconnue ou accès restreint (ex: conseil_syndical) → non visible
+    return False
 
 
 # ── Règles sondage ────────────────────────────────────────────────────────────
