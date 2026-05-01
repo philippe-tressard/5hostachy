@@ -13,6 +13,7 @@ from app.models.core import (
     CommentaireSondage, ConfigSite, MembreSyndic, Notification, OptionSondage, Sondage, Utilisateur, VoteSondage, RoleUtilisateur, StatutUtilisateur
 )
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
+from app.utils.visibility import sondage_accessible
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -25,23 +26,6 @@ def _parse_csv(val: Optional[str]) -> list[str]:
     if not val:
         return []
     return [v.strip() for v in val.split(",") if v.strip()]
-
-
-def _can_access(s: Sondage, user: Utilisateur) -> bool:
-    """Vérifie si l'utilisateur peut voir/voter à ce sondage."""
-    # Admins et CS voient toujours tout
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
-    # Filtre profil
-    profils = _parse_csv(s.profils_autorises)
-    if profils and (user.statut is None or str(user.statut) not in profils):
-        return False
-    # Filtre bâtiment
-    batiments = _parse_csv(s.batiments_ids)
-    if batiments:
-        if user.batiment_id is None or str(user.batiment_id) not in batiments:
-            return False
-    return True
 
 
 def _deny_communaute_for_statut(user: Utilisateur) -> None:
@@ -117,7 +101,7 @@ def list_sondages(
 ):
     _deny_communaute_for_statut(user)
     all_s = session.exec(select(Sondage).order_by(Sondage.cree_le.desc())).all()
-    accessible = [s for s in all_s if _can_access(s, user)]
+    accessible = [s for s in all_s if sondage_accessible(s, user)]
     if not accessible:
         return []
     # Compter les votants distincts par sondage en une seule requête
@@ -146,7 +130,7 @@ def get_sondage(
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
-    if not _can_access(s, user):
+    if not sondage_accessible(s, user):
         raise HTTPException(403, "Vous n'êtes pas autorisé à accéder à ce sondage")
 
     options_db = session.exec(
@@ -333,7 +317,7 @@ def voter(
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
-    if not _can_access(s, user):
+    if not sondage_accessible(s, user):
         raise HTTPException(403, "Vous n'\u00eates pas autoris\u00e9 \u00e0 participer \u00e0 ce sondage")
     if s.cloture_forcee or (s.cloture_le and s.cloture_le < datetime.utcnow()):
         raise HTTPException(400, "Ce sondage est clôturé")
@@ -383,7 +367,7 @@ def commenter(
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
-    if not _can_access(s, user):
+    if not sondage_accessible(s, user):
         raise HTTPException(403, "Accès refusé")
     if not body.contenu.strip():
         raise HTTPException(400, "Le commentaire ne peut pas être vide")
