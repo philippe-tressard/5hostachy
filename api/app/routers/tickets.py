@@ -285,7 +285,8 @@ def get_ticket(
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
-    if user.role == RoleUtilisateur.résident and ticket.auteur_id != user.id:
+    # Tout non-CS / non-admin ne voit que ses propres tickets
+    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) and ticket.auteur_id != user.id:
         raise HTTPException(403, "Accès refusé")
     return _ticket_read(ticket, session)
 
@@ -406,7 +407,8 @@ def get_messages(
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
     stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
-    if user.role == RoleUtilisateur.résident:
+    # Messages internes réservés CS/admin
+    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         stmt = stmt.where(MessageTicket.interne == False)
     return session.exec(stmt.order_by(MessageTicket.cree_le)).all()
 
@@ -422,7 +424,7 @@ def add_message(
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
-    if body.interne and user.role == RoleUtilisateur.résident:
+    if body.interne and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(403, "Messages internes réservés au CS")
 
     msg = MessageTicket(

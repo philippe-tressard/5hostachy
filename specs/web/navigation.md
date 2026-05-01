@@ -168,6 +168,15 @@ Pied de page (toutes les pages)
 > **Mandataire** : lecture seule limitée à son lot uniquement — navigation réduite (cf. note arborescence).
 > **Prestataire** : aucun accès à l'application.
 
+### Règles de filtrage contenu (implémentées dans `api/app/utils/visibility.py`)
+
+- **Périmètre géographique** : `résidence / parking / cave / aful` = visible par tous les résidents ; `bat:N` = visible uniquement par le résident du bâtiment N. CS/Admin voient tout.
+- **public_cible (publications)** : `résidents` = tous les résidents actifs ; `copropriétaires` = statut `copropriétaire_*` uniquement ; `locataires` = statut `locataire` uniquement ; `conseil_syndical` = CS et Admin uniquement. Logique opt-in : si aucune valeur de `public_cible` ne correspond au profil, la publication est masquée.
+- **AG (événements)** : visible uniquement par les propriétaires, CS et admins. Masqué pour locataires, résidents simples, mandataires, syndics.
+- **maintenance_recurrente (événements)** : masqué pour tous (usage interne planificateur uniquement).
+- **Sondages** : `profils_autorises` (CSV de StatutUtilisateur) + `batiments_ids` (CSV d'ids). Vide = sans restriction. CS/Admin voient tout.
+- **Tickets** : chaque résident (tout rôle < CS) ne voit que ses propres tickets et messages publics. Les messages internes sont réservés au CS/Admin.
+
 | Section | Résident / Locataire | Conseil syndical | Syndic | Mandataire | Admin |
 |---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---|-|---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---|--|---|---|---|---|---|---||---|---|---|---|---|---|--|---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---|-|
 | Mon lot / Mes documents | ✅ propres données | ✅ tous | 👁 lecture | 👁 son lot | ✅ |
