@@ -67,6 +67,37 @@ def _is_visible(perimetres: list[str], user: Utilisateur) -> bool:
     return bool(bat_codes & {p.lower() for p in perimetres})
 
 
+def _pub_public_visible(public_cible_raw: Optional[str], user: Utilisateur) -> bool:
+    """Vérifie la compatibilité public_cible d'une publication avec le profil user."""
+    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+        return True
+    try:
+        public = _json.loads(public_cible_raw) if public_cible_raw else ["résidents"]
+    except Exception:
+        public = ["résidents"]
+    if "résidents" in public:
+        return True
+    statut = str(user.statut or "")
+    if "copropriétaires" in public:
+        return statut.startswith("copropriétaire_")
+    if "locataires" in public:
+        return statut == "locataire"
+    return True
+
+
+def _sondage_accessible(profils_autorises: Optional[str], batiments_ids: Optional[str], user: Utilisateur) -> bool:
+    """Vérifie si l'utilisateur peut voir ce sondage (profil + bâtiment)."""
+    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+        return True
+    profils = [v.strip() for v in (profils_autorises or "").split(",") if v.strip()]
+    if profils and (user.statut is None or str(user.statut) not in profils):
+        return False
+    batiments = [v.strip() for v in (batiments_ids or "").split(",") if v.strip()]
+    if batiments and (user.batiment_id is None or str(user.batiment_id) not in batiments):
+        return False
+    return True
+
+
 def _auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
     if not uid:
         return None
@@ -288,6 +319,8 @@ def get_flux(
         )
         if not _is_visible(perims, user):
             continue
+        if not _pub_public_visible(p.public_cible, user):
+            continue
         badges = []
         if p.epingle:
             badges.append("📌 Épinglé")
@@ -422,6 +455,8 @@ def get_flux(
         select(Sondage).where(Sondage.cree_le >= since).order_by(Sondage.cree_le.desc())
     ).all()
     for s in sondages:
+        if not _sondage_accessible(s.profils_autorises, s.batiments_ids, user):
+            continue
         cloture = s.cloture_forcee or (s.cloture_le is not None and s.cloture_le < now)
         nb_votants = session.exec(
             select(func.count(func.distinct(VoteSondage.user_id)))

@@ -138,6 +138,36 @@ def _is_annule_expired(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEU
     return False
 
 
+def _is_pub_visible(pub: Publication, user: Utilisateur) -> bool:
+    """Vérifie si l'utilisateur peut voir cette publication (périmètre géographique + public cible)."""
+    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+        return True
+    # Filtre géographique (perimetre_cible)
+    try:
+        perims = json.loads(pub.perimetre_cible) if pub.perimetre_cible else ["résidence"]
+    except Exception:
+        perims = ["résidence"]
+    geo_ok = (
+        any(p.lower() in ("résidence", "parking", "cave", "aful") for p in perims)
+        or (user.batiment_id is not None and f"bat:{user.batiment_id}" in [p.lower() for p in perims])
+    )
+    if not geo_ok:
+        return False
+    # Filtre public cible (public_cible)
+    try:
+        public = json.loads(pub.public_cible) if pub.public_cible else ["résidents"]
+    except Exception:
+        public = ["résidents"]
+    if "résidents" in public:
+        return True
+    statut = str(user.statut or "")
+    if "copropriétaires" in public:
+        return statut.startswith("copropriétaire_")
+    if "locataires" in public:
+        return statut == "locataire"
+    return True
+
+
 @router.get("", response_model=list[PublicationRead])
 def list_publications(
     archived: bool = Query(False),
@@ -175,6 +205,9 @@ def list_publications(
             continue
         # Les brouillons ne sont visibles que par le CS/admin
         if pub.brouillon and not is_cs:
+            continue
+        # Filtre périmètre + public cible (non-CS/admin uniquement)
+        if not is_cs and not _is_pub_visible(pub, user):
             continue
         result.append(_pub_to_read(pub, session))
     return result
