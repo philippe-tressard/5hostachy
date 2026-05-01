@@ -31,8 +31,15 @@ from app.models.core import (
 
 router = APIRouter(prefix="/flux", tags=["flux"])
 
+from app.utils.visibility import (
+    can_see_ag as _can_see_ag_vis,
+    evenement_visible,
+    perimetre_visible,
+    publication_visible,
+    sondage_accessible,
+)
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# ── helpers locaux ────────────────────────────────────────────────────────────
 
 def _parse_perimetres(perimetre: Optional[str]) -> list[str]:
     if not perimetre:
@@ -49,53 +56,6 @@ def _parse_json_perimetres(perimetre_cible: Optional[str]) -> list[str]:
         return list(val) if isinstance(val, (list, tuple)) else ["résidence"]
     except Exception:
         return ["résidence"]
-
-
-def _user_bat_codes(user: Utilisateur) -> set[str]:
-    codes: set[str] = set()
-    if user.batiment_id:
-        codes.add(f"bat:{user.batiment_id}")
-    return codes
-
-
-def _is_visible(perimetres: list[str], user: Utilisateur) -> bool:
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
-    if any(p.lower() in ("résidence", "parking", "cave", "aful") for p in perimetres):
-        return True
-    bat_codes = _user_bat_codes(user)
-    return bool(bat_codes & {p.lower() for p in perimetres})
-
-
-def _pub_public_visible(public_cible_raw: Optional[str], user: Utilisateur) -> bool:
-    """Vérifie la compatibilité public_cible d'une publication avec le profil user."""
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
-    try:
-        public = _json.loads(public_cible_raw) if public_cible_raw else ["résidents"]
-    except Exception:
-        public = ["résidents"]
-    if "résidents" in public:
-        return True
-    statut = str(user.statut or "")
-    if "copropriétaires" in public:
-        return statut.startswith("copropriétaire_")
-    if "locataires" in public:
-        return statut == "locataire"
-    return True
-
-
-def _sondage_accessible(profils_autorises: Optional[str], batiments_ids: Optional[str], user: Utilisateur) -> bool:
-    """Vérifie si l'utilisateur peut voir ce sondage (profil + bâtiment)."""
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
-    profils = [v.strip() for v in (profils_autorises or "").split(",") if v.strip()]
-    if profils and (user.statut is None or str(user.statut) not in profils):
-        return False
-    batiments = [v.strip() for v in (batiments_ids or "").split(",") if v.strip()]
-    if batiments and (user.batiment_id is None or str(user.batiment_id) not in batiments):
-        return False
-    return True
 
 
 def _auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
@@ -164,11 +124,7 @@ def get_flux(
     items: list[FluxItem] = []
     now = datetime.utcnow()
     since = now - timedelta(days=377)
-    can_see_ag = user.has_role(
-        RoleUtilisateur.propriétaire,
-        RoleUtilisateur.conseil_syndical,
-        RoleUtilisateur.admin,
-    )
+    can_see_ag = _can_see_ag_vis(user)
 
     # ── helpers périmètre ───────────────────────────────────────────────────
     PERIMETRE_LABELS = {
@@ -193,7 +149,7 @@ def get_flux(
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        if not _is_visible(perims, user):
+        if not perimetre_visible(perims, user):
             continue
         nouveau = evol.nouveau_statut or ""
         if nouveau == "résolu":
@@ -250,7 +206,7 @@ def get_flux(
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        if not _is_visible(perims, user):
+        if not perimetre_visible(perims, user):
             continue
         evol_auteur = _auteur_nom(session, evol.auteur_id)
         items.append(FluxItem(
@@ -285,7 +241,7 @@ def get_flux(
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        if not _is_visible(perims, user):
+        if not perimetre_visible(perims, user):
             continue
         items.append(FluxItem(
             id=f"tk_{tk.id}",
@@ -317,9 +273,7 @@ def get_flux(
                 else _parse_perimetres(p.perimetre)
             )
         )
-        if not _is_visible(perims, user):
-            continue
-        if not _pub_public_visible(p.public_cible, user):
+        if not publication_visible(p, user):
             continue
         badges = []
         if p.epingle:
@@ -362,13 +316,9 @@ def get_flux(
     }
 
     for ev in evts:
-        if ev.type == "ag" and not can_see_ag:
-            continue
-        if ev.type == "maintenance_recurrente":
+        if not evenement_visible(ev, user):
             continue
         perims = _parse_perimetres(ev.perimetre)
-        if not _is_visible(perims, user):
-            continue
         prest_name = None
         if ev.prestataire_id:
             p = session.get(Prestataire, ev.prestataire_id)
@@ -423,7 +373,7 @@ def get_flux(
     }
     for dv, prest in devis_list:
         perims = _parse_perimetres(dv.perimetre)
-        if not _is_visible(perims, user):
+        if not perimetre_visible(perims, user):
             continue
         dv_date = (
             datetime.combine(dv.date_prestation, time(12, 0))
@@ -455,7 +405,7 @@ def get_flux(
         select(Sondage).where(Sondage.cree_le >= since).order_by(Sondage.cree_le.desc())
     ).all()
     for s in sondages:
-        if not _sondage_accessible(s.profils_autorises, s.batiments_ids, user):
+        if not sondage_accessible(s, user):
             continue
         cloture = s.cloture_forcee or (s.cloture_le is not None and s.cloture_le < now)
         nb_votants = session.exec(
@@ -544,13 +494,9 @@ def get_flux(
 
     prochains: list[dict] = []
     for ev in prochains_evts[:15]:
-        if ev.type == "ag" and not can_see_ag:
-            continue
-        if ev.type == "maintenance_recurrente":
+        if not evenement_visible(ev, user):
             continue
         perims_ev = _parse_perimetres(ev.perimetre)
-        if not _is_visible(perims_ev, user):
-            continue
         prest_ev_name = None
         if ev.prestataire_id:
             prest_ev = session.get(Prestataire, ev.prestataire_id)

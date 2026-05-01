@@ -10,6 +10,7 @@ from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
+from app.utils.visibility import can_see_ag as _can_see_ag
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -79,11 +80,6 @@ class EvenementUpdate(BaseModel):
 
 
 _ROLES_AG = (RoleUtilisateur.propriétaire, RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-
-
-def _can_see_ag(user: Utilisateur) -> bool:
-    return user.has_role(*_ROLES_AG)
-
 
 def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     data = EvenementRead.model_validate(ev)
