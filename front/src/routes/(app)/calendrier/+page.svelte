@@ -460,7 +460,11 @@ import { onMount } from 'svelte';
 		});
 		const merged = [...baseEvents, ...prestationsPonctuellesKanban];
 		return merged.filter(ev => {
-			const evYear = new Date(ev.debut).getFullYear();
+			// Pour les clôturés (terminé/annulé), utiliser l'année de fin si dispo (l'événement peut avoir débuté l'année précédente)
+			const refDate = (ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule') && ev.fin
+				? ev.fin
+				: ev.debut;
+			const evYear = new Date(refDate).getFullYear();
 			// Événements ponctuels d'années antérieures non clôturés : toujours affichés
 			const isOverdue = ev.type !== 'maintenance_recurrente'
 				&& evYear < kanbanExercice
