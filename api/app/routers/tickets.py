@@ -453,8 +453,10 @@ def get_messages(
 ):
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
-        raise HTTPException(404, "Ticket introuvable")    if not ticket_visible(ticket, user):
-        raise HTTPException(403, "Acc\u00e8s refus\u00e9")    stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
+        raise HTTPException(404, "Ticket introuvable")
+    if not ticket_visible(ticket, user):
+        raise HTTPException(403, "Accès refusé")
+    stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
     # Messages internes réservés CS/admin
     if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         stmt = stmt.where(MessageTicket.interne == False)
