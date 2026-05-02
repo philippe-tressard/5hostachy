@@ -167,6 +167,13 @@ class TicketUpdate(BaseModel):
     description: Optional[str] = None
     categorie: Optional[str] = None
     perimetre_cible: Optional[List[str]] = None
+    lot_id: Optional[int] = None
+    batiment_id: Optional[int] = None
+    destinataire_syndic: Optional[bool] = None
+    destinataire_cs: Optional[bool] = None
+    saisi_pour_user_id: Optional[int] = None
+    saisi_pour_nom: Optional[str] = None
+    saisi_pour_email: Optional[str] = None
 
 
 class MessageCreate(BaseModel):
@@ -232,6 +239,8 @@ class PublicationUpdate(BaseModel):
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
     urgente: Optional[bool] = None
+    image_url: Optional[str] = None
+    batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
     public_cible: Optional[List[str]] = None
     statut: Optional[str] = None

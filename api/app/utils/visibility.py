@@ -26,6 +26,7 @@ from app.models.core import (
     Publication,
     RoleUtilisateur,
     Sondage,
+    Ticket,
     TypeEvenement,
     Utilisateur,
 )
@@ -168,3 +169,21 @@ def can_see_ag(user: Utilisateur) -> bool:
         RoleUtilisateur.conseil_syndical,
         RoleUtilisateur.admin,
     )
+
+# \u2500\u2500 R\u00e8gles ticket \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n
+def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
+    """
+    Retourne True si l'utilisateur peut voir ce ticket.
+
+    - CS / Admin : toujours True.
+    - Auteur du ticket (auteur_id == user.id).
+    - R\u00e9sident inscrit pour le compte duquel le ticket a \u00e9t\u00e9 saisi
+      (saisi_pour_user_id == user.id).
+    """
+    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+        return True
+    if ticket.auteur_id == user.id:
+        return True
+    if ticket.saisi_pour_user_id is not None and ticket.saisi_pour_user_id == user.id:
+        return True
+    return False
