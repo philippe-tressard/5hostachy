@@ -37,6 +37,7 @@ from app.utils.visibility import (
     perimetre_visible,
     publication_visible,
     sondage_accessible,
+    ticket_visible,
 )
 
 # ── helpers locaux ────────────────────────────────────────────────────────────
@@ -145,12 +146,12 @@ def get_flux(
         .order_by(TicketEvolution.cree_le.desc())
     ).all()
     for evol, tk in evols:
+        if not ticket_visible(tk, user):
+            continue
         perims = (
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        if not perimetre_visible(perims, user):
-            continue
         nouveau = evol.nouveau_statut or ""
         if nouveau == "résolu":
             duree = None
@@ -202,12 +203,12 @@ def get_flux(
         .order_by(TicketEvolution.cree_le.desc())
     ).all()
     for evol, tk in reponses:
+        if not ticket_visible(tk, user):
+            continue
         perims = (
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        if not perimetre_visible(perims, user):
-            continue
         evol_auteur = _auteur_nom(session, evol.auteur_id)
         items.append(FluxItem(
             id=f"tk_rep_{evol.id}",
@@ -237,12 +238,12 @@ def get_flux(
     for tk in new_tickets:
         if tk.id in evol_ticket_ids:
             continue
+        if not ticket_visible(tk, user):
+            continue
         perims = (
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        if not perimetre_visible(perims, user):
-            continue
         items.append(FluxItem(
             id=f"tk_{tk.id}",
             type="ticket_ouvert",

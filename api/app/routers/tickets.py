@@ -17,6 +17,7 @@ from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
     TicketEvolutionCreate, TicketEvolutionRead,
 )
+from app.utils.visibility import ticket_visible
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -84,9 +85,12 @@ def list_tickets(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
+    from sqlmodel import or_
     stmt = select(Ticket)
     if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        stmt = stmt.where(Ticket.auteur_id == user.id)
+        stmt = stmt.where(
+            or_(Ticket.auteur_id == user.id, Ticket.saisi_pour_user_id == user.id)
+        )
     tickets = session.exec(stmt.order_by(Ticket.cree_le.desc())).all()
     return [_ticket_read(ticket, session) for ticket in tickets]
 
@@ -285,8 +289,7 @@ def get_ticket(
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
-    # Tout non-CS / non-admin ne voit que ses propres tickets
-    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) and ticket.auteur_id != user.id:
+    if not ticket_visible(ticket, user):
         raise HTTPException(403, "Accès refusé")
     return _ticket_read(ticket, session)
 
@@ -297,26 +300,41 @@ def update_ticket(
     body: TicketUpdate,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(get_current_user),
 ):
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
 
+    is_cs_admin = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    is_auteur = ticket.auteur_id == user.id
+
+    if not is_cs_admin and not is_auteur:
+        raise HTTPException(403, "Accès refusé")
+
     ancien_statut = ticket.statut
 
-    if body.statut:
-        ticket.statut = body.statut
-        if body.statut in (StatutTicket.résolu, StatutTicket.annulé, StatutTicket.fermé):
-            ticket.ferme_le = datetime.utcnow()
-    if body.priorite:
-        ticket.priorite = body.priorite
+    # Statut et priorité : CS/admin uniquement
+    if body.statut is not None or body.priorite is not None:
+        if not is_cs_admin:
+            raise HTTPException(403, "Seul le CS ou un administrateur peut modifier le statut ou la priorité")
+        if body.statut is not None:
+            ticket.statut = body.statut
+            if body.statut in (StatutTicket.résolu, StatutTicket.annulé, StatutTicket.fermé):
+                ticket.ferme_le = datetime.utcnow()
+        if body.priorite is not None:
+            ticket.priorite = body.priorite
 
-    # Champs éditables par admin uniquement
+    # Champs du contenu : auteur (ticket ouvert uniquement) ou CS/admin
     changes: list[str] = []
-    if body.titre is not None or body.description is not None or body.categorie is not None or body.perimetre_cible is not None:
-        if not user.has_role(RoleUtilisateur.admin):
-            raise HTTPException(403, "Seul un administrateur peut modifier ces champs")
+    content_fields = (
+        body.titre is not None or body.description is not None
+        or body.categorie is not None or body.perimetre_cible is not None
+    )
+    if content_fields:
+        if is_auteur and not is_cs_admin:
+            if ticket.statut != StatutTicket.ouvert:
+                raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
         if body.titre is not None and body.titre != ticket.titre:
             changes.append(f"Titre : {ticket.titre} → {body.titre}")
             ticket.titre = body.titre
@@ -329,12 +347,40 @@ def update_ticket(
         if body.perimetre_cible is not None:
             import json as _json
             ticket.perimetre_cible = _json.dumps(body.perimetre_cible)
-            changes.append(f"Périmètre modifié")
+            changes.append("Périmètre modifié")
+
+    # Champs relationnels/destinataires : CS/admin uniquement
+    extra_fields = (
+        body.lot_id is not None or body.batiment_id is not None
+        or body.destinataire_syndic is not None or body.destinataire_cs is not None
+        or body.saisi_pour_user_id is not None or body.saisi_pour_nom is not None
+        or body.saisi_pour_email is not None
+    )
+    if extra_fields:
+        if not is_cs_admin:
+            raise HTTPException(403, "Seul le CS ou un administrateur peut modifier ces champs")
+        if body.lot_id is not None:
+            ticket.lot_id = body.lot_id
+            changes.append("Lot modifié")
+        if body.batiment_id is not None:
+            ticket.batiment_id = body.batiment_id
+            changes.append("Bâtiment modifié")
+        if body.destinataire_syndic is not None:
+            ticket.destinataire_syndic = body.destinataire_syndic
+        if body.destinataire_cs is not None:
+            ticket.destinataire_cs = body.destinataire_cs
+        if body.saisi_pour_user_id is not None:
+            ticket.saisi_pour_user_id = body.saisi_pour_user_id
+            changes.append("Résident concerné modifié")
+        if body.saisi_pour_nom is not None:
+            ticket.saisi_pour_nom = body.saisi_pour_nom
+        if body.saisi_pour_email is not None:
+            ticket.saisi_pour_email = body.saisi_pour_email
 
     ticket.mis_a_jour_le = datetime.utcnow()
 
     # Auto-log évolution sur changement de statut
-    if body.statut and body.statut != ancien_statut:
+    if body.statut is not None and body.statut != ancien_statut:
         evol = TicketEvolution(
             ticket_id=ticket.id, type="etat",
             contenu=f"Statut : {STATUT_LABELS.get(ancien_statut or '', 'Aucun')} → {STATUT_LABELS.get(body.statut, body.statut)}",
@@ -343,29 +389,31 @@ def update_ticket(
         )
         session.add(evol)
 
-    # Auto-log évolution sur modification de contenu (admin)
+    # Auto-log évolution sur modification de contenu
     if changes:
+        prefix = "Modification" if is_cs_admin else "Modification auteur"
         evol = TicketEvolution(
             ticket_id=ticket.id, type="commentaire",
-            contenu="Modification admin : " + " ; ".join(changes),
+            contenu=prefix + " : " + " ; ".join(changes),
             auteur_id=user.id, cree_le=datetime.utcnow(),
         )
         session.add(evol)
 
-    # Notification auteur (in-app)
-    notif_corps = " ; ".join(changes) if changes else f"Nouveau statut : {ticket.statut}"
-    notif = Notification(
-        destinataire_id=ticket.auteur_id,
-        type="ticket_update",
-        titre=f"Ticket #{ticket.numero} mis à jour",
-        corps=notif_corps,
-        lien=f"/tickets/{ticket.id}",
-    )
-    session.add(notif)
+    # Notification auteur (in-app) — seulement si ce n'est pas l'auteur lui-même qui modifie
+    if user.id != ticket.auteur_id:
+        notif_corps = " ; ".join(changes) if changes else f"Nouveau statut : {ticket.statut}"
+        notif = Notification(
+            destinataire_id=ticket.auteur_id,
+            type="ticket_update",
+            titre=f"Ticket #{ticket.numero} mis à jour",
+            corps=notif_corps,
+            lien=f"/tickets/{ticket.id}",
+        )
+        session.add(notif)
     session.add(ticket)
 
-    # Notification auteur (email) — changement de statut
-    if body.statut and body.statut != ancien_statut and ticket.auteur_id != user.id:
+    # Notification auteur (email) — changement de statut par quelqu'un d'autre
+    if body.statut is not None and body.statut != ancien_statut and ticket.auteur_id != user.id:
         auteur = session.get(Utilisateur, ticket.auteur_id)
         if auteur and auteur.email:
             from app.utils.email import send_email
@@ -406,6 +454,8 @@ def get_messages(
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
+    if not ticket_visible(ticket, user):
+        raise HTTPException(403, "Accès refusé")
     stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
     # Messages internes réservés CS/admin
     if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
