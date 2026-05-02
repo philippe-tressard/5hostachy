@@ -454,7 +454,8 @@ import { onMount } from 'svelte';
 			// Exception : les maintenances récurrentes restent visibles (prestations planifiées)
 			if (!$isCS && !$isAdmin && !ev.affichable && ev.type !== 'maintenance_recurrente') return false;
 			// Maintenances prestataires archivées restent dans kanban (=> Terminé)
-			if (ev.archivee && !(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')) return false;
+			// Événements annulés restent visibles dans la colonne Annulé même si archivés
+			if (ev.archivee && ev.statut_kanban !== 'annule' && !(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')) return false;
 			return true;
 		});
 		const merged = [...baseEvents, ...prestationsPonctuellesKanban];
@@ -525,7 +526,7 @@ import { onMount } from 'svelte';
 		const item = evenements.find(e => e.id === id);
 		if (!item || item.statut_kanban === colId) return;
 		const old = item.statut_kanban;
-		const shouldArchive = colId === 'termine' || colId === 'annule';
+		const shouldArchive = colId === 'termine';
 		evenements = evenements.map(e => e.id === id ? { ...e, statut_kanban: colId, archivee: shouldArchive ? true : e.archivee } : e);
 		try {
 			await calApi.update(id, shouldArchive ? { statut_kanban: colId, archivee: true } : { statut_kanban: colId });
