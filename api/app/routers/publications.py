@@ -17,7 +17,7 @@ from app.utils.whatsapp import envoyer_whatsapp_avec_log
 router = APIRouter(prefix="/publications", tags=["publications"])
 
 ARCHIVAGE_DELAI_HEURES = 48
-_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}  # délai avant archivage automatique après résolu/annulé
+_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer', 'site_url'}
 
 
 def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
@@ -208,7 +208,8 @@ def create_publication(
         wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
         if wa_config.get('whatsapp_enabled') == '1':
             background_tasks.add_task(
-                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config
+                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config,
+                pub.public_cible, pub.id,
             )
     if pub.envoyer_syndic and not pub.brouillon:
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
@@ -272,7 +273,8 @@ def update_publication(
         wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
         if wa_config.get('whatsapp_enabled') == '1':
             background_tasks.add_task(
-                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config
+                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config,
+                pub.public_cible, pub.id,
             )
     # Envoi email syndic si brouillon publié + flag activé
     if was_brouillon_published and pub.envoyer_syndic:
@@ -370,6 +372,8 @@ def add_evolution(
                 pub.perimetre_cible,
                 None,
                 wa_config,
+                pub.public_cible,
+                pub.id,
             )
 
     # Envoi email syndic pour le commentaire si demandé

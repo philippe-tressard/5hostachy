@@ -62,6 +62,53 @@ def _resolve_image_url(image_url: str | None, config: dict) -> str | None:
     return urljoin(f"{site_url.rstrip('/')}/", image_url.lstrip('/'))
 
 
+def _is_restreint(public_cible: str | list | None) -> bool:
+    """Retourne True si la publication n'est pas destinée à tous les résidents."""
+    if public_cible is None:
+        return False
+    try:
+        lst = json.loads(public_cible) if isinstance(public_cible, str) else public_cible
+    except Exception:
+        return False
+    return "résidents" not in lst
+
+
+def _build_message_restreint(
+    titre: str,
+    urgente: bool,
+    perimetre_cible: str | None,
+    site_url: str,
+    pub_id: int | None,
+    footer: str | None = None,
+) -> str:
+    """Construit un message WhatsApp court pour une publication à audience restreinte."""
+    try:
+        lieux = json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else (perimetre_cible or [])
+    except Exception:
+        lieux = []
+    if lieux and not (len(lieux) == 1 and lieux[0] == "résidence"):
+        perimetre_label = ", ".join(lieux)
+    else:
+        perimetre_label = "Copropriété"
+
+    if urgente:
+        header = f"\U0001f6a8 URGENT \u2014 \U0001f539 {perimetre_label} \u2014 *{titre}*"
+    else:
+        header = f"\U0001f4e2 \U0001f539 {perimetre_label} \u2014 *{titre}*"
+
+    avertissement = (
+        "\U0001f512 Cette publication est réservée à un public ciblé.\n"
+        "Elle n'est pas accessible à tous les résidents.\n"
+        "Si vous êtes concerné(e), connectez-vous sur 5Hostachy pour la consulter :"
+    )
+    lien = f"{site_url.rstrip('/')}/actualites"
+    if pub_id is not None:
+        lien += f"#pub-{pub_id}"
+
+    footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
+    return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
+
+
 def envoyer_whatsapp(
     titre: str,
     contenu: str,
@@ -69,6 +116,8 @@ def envoyer_whatsapp(
     perimetre_cible: str | None,
     image_url: str | None,
     config: dict,
+    public_cible: str | None = None,
+    pub_id: int | None = None,
 ) -> None:
     """Envoie un message sur le groupe WhatsApp. Silencieux en cas d'échec."""
     if config.get('whatsapp_enabled') != '1':
@@ -81,13 +130,19 @@ def envoyer_whatsapp(
         return
 
     footer = config.get('whatsapp_footer', '').strip()
-    message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
     url = f"{api_url.rstrip('/')}/send"
-    payload = {"number": group_jid, "text": message}
-    resolved_image_url = _resolve_image_url(image_url, config)
-    if resolved_image_url:
-        payload["imageUrl"] = resolved_image_url
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+
+    if _is_restreint(public_cible):
+        site_url = (config.get('site_url') or '').strip()
+        message = _build_message_restreint(titre, urgente, perimetre_cible, site_url, pub_id, footer)
+        payload = {"number": group_jid, "text": message}
+    else:
+        message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
+        payload = {"number": group_jid, "text": message}
+        resolved_image_url = _resolve_image_url(image_url, config)
+        if resolved_image_url:
+            payload["imageUrl"] = resolved_image_url
 
     try:
         with httpx.Client(timeout=10) as client:
@@ -104,6 +159,8 @@ def envoyer_whatsapp_avec_log(
     perimetre_cible: str | None,
     image_url: str | None,
     config: dict,
+    public_cible: str | None = None,
+    pub_id: int | None = None,
 ) -> None:
     """Envoie un message WhatsApp et crée un log (pour background tasks)."""
     from app.database import SessionLocal
@@ -113,10 +170,14 @@ def envoyer_whatsapp_avec_log(
     session = SessionLocal()
     try:
         footer = config.get('whatsapp_footer', '').strip()
-        message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
+        if _is_restreint(public_cible):
+            site_url = (config.get('site_url') or '').strip()
+            message = _build_message_restreint(titre, urgente, perimetre_cible, site_url, pub_id, footer)
+        else:
+            message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
         log = WhatsAppLog(label=titre, message=message)
         try:
-            envoyer_whatsapp(titre, contenu, urgente, perimetre_cible, image_url, config)
+            envoyer_whatsapp(titre, contenu, urgente, perimetre_cible, image_url, config, public_cible, pub_id)
             log.statut = "envoyé"
             logger.info("Message WhatsApp '%s' envoyé.", titre)
         except Exception as exc:
