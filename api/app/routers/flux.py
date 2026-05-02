@@ -373,6 +373,8 @@ def get_flux(
         "en_attente": "📋", "accepte": "✅", "refuse": "❌", "realise": "🏁",
     }
     for dv, prest in devis_list:
+        if user.statut == "locataire":
+            continue
         perims = _parse_perimetres(dv.perimetre)
         if not perimetre_visible(perims, user):
             continue

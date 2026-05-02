@@ -18,6 +18,8 @@ import { onMount } from 'svelte';
 	let prestataires: any[] = [];
 	let loading = true;
 	let onglet: 'liste' | 'kanban' | 'archives' = 'liste';
+	$: isLocataire = $currentUser?.statut === 'locataire';
+	$: if (isLocataire && (onglet === 'kanban' || onglet === 'archives')) onglet = 'liste';
 	$: trackTabView(onglet);
 	let filtreType = '';
 
@@ -703,8 +705,10 @@ import { onMount } from 'svelte';
 <!-- Onglets -->
 <div class="tabs" role="tablist" style="margin-bottom:1.5rem">
 	<button role="tab" class:active={onglet === 'liste'} on:click={() => onglet = 'liste'}>{_pc.onglets?.liste?.label ?? '\u{1F4CB} Liste'}</button>
+	{#if !isLocataire}
 	<button role="tab" class:active={onglet === 'kanban'} on:click={() => onglet = 'kanban'}>{_pc.onglets?.kanban?.label ?? '\u{1F5C3}️ Kanban'}</button>
 	<button role="tab" class:active={onglet === 'archives'} on:click={() => onglet = 'archives'}>{_pc.onglets?.archives?.label ?? '\u{1F4C1} Archives'}</button>
+	{/if}
 </div>
 {#if _pc.onglets?.[onglet]?.descriptif}
 <p class="tab-descriptif">{@html safeHtml(_pc.onglets[onglet].descriptif)}</p>
