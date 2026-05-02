@@ -141,8 +141,8 @@
 	let reportDiagTypes: DiagType[] = [];
 	let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
 
-	const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)' };
-	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange' };
+	const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)', annule: 'Annulé' };
+	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange', annule: 'badge-gray' };
 	const TYPE_LABELS: Record<string, string> = { travaux: 'Travaux', coupure: 'Coupure', ag: 'AG', maintenance: 'Maintenance', maintenance_recurrente: 'Maintenance récurrente', autre: 'Autre' };
 
 	const TK_STATUT_BADGE: Record<string, string> = { ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray', fermé: 'badge-gray' };
@@ -269,9 +269,9 @@
 	}
 
 	$: reportKanbanEvents = reportEvenements
-		.filter((ev) => ev.statut_kanban === 'ag' || ev.statut_kanban === 'cs' || ev.statut_kanban === 'syndic')
+		.filter((ev) => ev.statut_kanban === 'ag' || ev.statut_kanban === 'cs' || ev.statut_kanban === 'syndic' || ev.statut_kanban === 'annule')
 		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));
-	$: reportKanbanByCol = (['ag', 'cs', 'syndic'] as const).map((col) => ({
+	$: reportKanbanByCol = (['ag', 'cs', 'syndic', 'annule'] as const).map((col) => ({
 		col,
 		label: KANBAN_LABELS[col],
 		badge: KANBAN_COLORS[col],
@@ -1206,7 +1206,7 @@
 			<p style="color:var(--color-text-muted)">Chargement des reportings…</p>
 		{:else if reportView === 'kanban'}
 			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card"><div class="kpi-value">{reportKanbanEvents.length}</div><div class="kpi-label">Dossiers en cours</div></div>
+				<div class="kpi-card"><div class="kpi-value">{reportKanbanEvents.filter(ev => ev.statut_kanban !== 'annule').length}</div><div class="kpi-label">Dossiers en cours</div></div>
 				{#each reportKanbanByCol as col}
 					<div class="kpi-card"><div class="kpi-value">{col.items.length}</div><div class="kpi-label">{col.label}</div></div>
 				{/each}
