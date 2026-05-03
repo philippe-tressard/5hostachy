@@ -11,7 +11,7 @@ import { fmtDatetimeShort as fmt } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
 
 //  Onglets 
-let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'referentiels' | 'whatsapp' | 'smtp' | 'telemetry' = 'comptes';
+let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'whatsapp' | 'smtp' | 'telemetry' = 'comptes';
 $: trackTabView(onglet);
 
 //  Bâtiments (pour affichage) 
@@ -613,6 +613,7 @@ siteConfig = {
   mentions_legales: sMentions,
   politique_confidentialite: sPolitique,
   archivage_delai_heures: parseInt(cfg['archivage_delai_heures'] ?? '48') || 48,
+  relance_syndic_delai_jours: parseInt(cfg['relance_syndic_delai_jours'] ?? '30') || 30,
   notify_ticket_bug_email: cfg['notify_ticket_bug_email'] === '1',
   notify_new_user_created_email: cfg['notify_new_user_created_email'] === '1',
   site_manager_user_id: cfg['site_manager_user_id'] ?? '',
@@ -637,12 +638,6 @@ if (savedOrder) { try {
   const map = Object.fromEntries(pagesConfig.map(p => [p.id, p]));
   pagesConfig = [...ids.map(id => map[id]).filter(Boolean), ...pagesConfig.filter(p => !ids.includes(p.id))];
 } catch { /**/ } }
-// Référentiels
-referentiels = referentielsDefaults.map(ref => {
-  const s = localStorage.getItem(`ref_${ref.id}`);
-  if (s) { try { return { ...ref, items: JSON.parse(s) }; } catch { /**/ } }
-  return { ...ref, items: [...ref.items] };
-});
 // WhatsApp config
 waConfig.enabled = cfg['whatsapp_enabled'] === '1';
 waConfig.group_name = cfg['whatsapp_group_name'] ?? '';
@@ -684,7 +679,7 @@ return map[s] ?? 'badge-gray';
 }
 
 // ── Paramétrage site ──────────────────────────────────────────
-let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_heures: 48, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
+let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_heures: 48, relance_syndic_delai_jours: 30, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
 let siteSaving = false;
 $: siteManagerUsers = utilisateurs.filter((u) => !!u.email);
 function openSiteTab() {
@@ -694,7 +689,7 @@ function openSiteTab() {
 async function saveSiteConfig() {
   siteSaving = true;
   try {
-    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer, email_footer: siteConfig.email_footer, reference_copro: siteConfig.reference_copro });
+    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), relance_syndic_delai_jours: String(siteConfig.relance_syndic_delai_jours), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer, email_footer: siteConfig.email_footer, reference_copro: siteConfig.reference_copro });
     configStore.update((c: Record<string, string>) => ({ ...c, site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '' }));
     toast('success', 'Paramètres sauvegardés.');
   } catch (e: any) {
@@ -871,8 +866,8 @@ const pagesDefaults: PageDef[] = [
   { id: 'communaute',      nom: 'Communauté',           titre: 'Communauté',                navLabel: 'Communauté',     icone: 'users-round',         descriptif: "Sondages et boîte à idées pour contribuer à la vie de la résidence.",
     onglets: [{ id: 'sondages', label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, { id: 'idees', label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }] },
   { id: 'faq',             nom: 'FAQ',                  titre: 'FAQ',                       navLabel: 'FAQ',            icone: 'help-circle',         descriptif: "Réponses aux questions fréquentes sur la vie en résidence, les services et la réglementation de la copropriété." },
-  { id: 'espace-cs',       nom: 'Espace CS',            titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS',      icone: 'shield-half',         descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence et demandes d'accès — réservé au Conseil Syndical.",
-    onglets: [{ id: 'validations', label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, { id: 'tickets', label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, { id: 'annuaire', label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' }] },
+  { id: 'espace-cs',       nom: 'Espace CS',            titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS',      icone: 'shield-half',         descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting, relance syndic et demandes d'accès — réservé au Conseil Syndical.",
+    onglets: [{ id: 'validations', label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, { id: 'tickets', label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, { id: 'reporting', label: '\u{1F4CA} Reporting', descriptif: 'Synthèses et indicateurs : kanban, tableau des tickets, devis, prestataires, renouvellements de contrats et relance syndic.' }, { id: 'annuaire', label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' }] },
   { id: 'admin',           nom: 'Paramétrage',          titre: 'Paramétrage',               navLabel: 'Admin',          icone: 'sliders-horizontal',  descriptif: "Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins." },
   { id: 'profil',          nom: 'Mon profil',           titre: 'Mon profil',                navLabel: 'Profil',         icone: 'user',                descriptif: "Vos informations personnelles (mot de passe, lots...), sécurité du compte et préférences de notifications." },
   { id: 'notifications',   nom: 'Notifications',        titre: 'Notifications',             navLabel: 'Notifications',  icone: 'bell',                descriptif: "Vos alertes et messages." },
@@ -908,54 +903,6 @@ async function movePage(i: number, dir: number) {
   }
 }
 
-// ── Référentiels ──────────────────────────────────────────────
-type RefItem = { id: string; label: string };
-type Referentiel = { id: string; nom: string; items: RefItem[] };
-const referentielsDefaults: Referentiel[] = [
-  { id: 'prestataire_specialites', nom: 'Spécialités prestataires', items: [
-    { id: 'ascenseur', label: 'Ascenseur' }, { id: 'eau', label: 'Eau' },
-    { id: 'espaces_verts', label: 'Espaces verts' }, { id: 'electricite', label: 'Électricité' },
-    { id: 'toits', label: 'Toits' }, { id: 'vmc', label: 'VMC' },
-    { id: 'chauffage', label: 'Chauffage' }, { id: 'securite', label: 'Sécurité' },
-    { id: 'autre', label: 'Autre' },
-  ]},
-  { id: 'calendrier_categories', nom: 'Catégories du calendrier', items: [
-    { id: 'reunion', label: 'Réunion' }, { id: 'travaux', label: 'Travaux' },
-    { id: 'evenement', label: 'Événement' }, { id: 'permanence', label: 'Permanence' },
-  ]},
-  { id: 'ticket_statuts', nom: 'Statuts des demandes (tickets)', items: [
-    { id: 'ouvert', label: 'Ouvert' }, { id: 'en_cours', label: 'En cours' },
-    { id: 'resolu', label: 'Résolu' }, { id: 'ferme', label: 'Fermé' },
-  ]},
-  { id: 'ticket_categories', nom: 'Catégories des demandes (tickets)', items: [
-    { id: 'panne', label: 'Panne' }, { id: 'nuisance', label: 'Nuisance' },
-    { id: 'question', label: 'Question' }, { id: 'urgence', label: 'Urgence' },
-  ]},
-];
-let referentiels: Referentiel[] = referentielsDefaults.map(ref => ({ ...ref, items: [...ref.items] }));
-let expandedRefs = new Set<string>();
-function toggleRef(id: string) {
-  expandedRefs = expandedRefs.has(id) ? new Set() : new Set([id]);
-}
-let refNewItem: Record<string, string> = Object.fromEntries(referentielsDefaults.map(r => [r.id, '']));
-function addRefItem(refId: string) {
-  const label = (refNewItem[refId] ?? '').trim();
-  if (!label) return;
-  const ref = referentiels.find(r => r.id === refId);
-  if (!ref) return;
-  const newId = label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
-  ref.items = [...ref.items, { id: newId, label }];
-  referentiels = referentiels;
-  refNewItem = { ...refNewItem, [refId]: '' };
-  localStorage.setItem(`ref_${refId}`, JSON.stringify(ref.items));
-}
-function removeRefItem(refId: string, itemId: string) {
-  const ref = referentiels.find(r => r.id === refId);
-  if (!ref) return;
-  ref.items = ref.items.filter(i => i.id !== itemId);
-  referentiels = referentiels;
-  localStorage.setItem(`ref_${refId}`, JSON.stringify(ref.items));
-}
 import { getPageConfig, configStore, siteNomStore, loadSiteConfig } from '$lib/stores/pageConfig';
 $: _pc = getPageConfig($configStore, 'admin', { titre: 'Paramétrage', navLabel: 'Admin', descriptif: 'Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins.' });
 $: _siteNom = $siteNomStore;
@@ -1007,9 +954,6 @@ $: _siteNom = $siteNomStore;
     </button>
     <button class="tab-btn" class:active={onglet === 'legal'} on:click={() => (onglet = 'legal')}>
       Pages légales
-    </button>
-    <button class="tab-btn" class:active={onglet === 'referentiels'} on:click={() => (onglet = 'referentiels')}>
-      Référentiels
     </button>
     <button class="tab-btn" class:active={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#25D366" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.570-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -1612,6 +1556,11 @@ $: _siteNom = $siteNomStore;
       <span class="field-hint">Délai après lequel une actualité « Résolue » est automatiquement archivée (défaut : 48h). Le bouton 📦 permet d'archiver immédiatement sans attendre ce délai.</span>
     </label>
     <label class="field-label" style="grid-column:span 2">
+      Délai de relance syndic (jours)
+      <input class="input input-sm" type="number" bind:value={siteConfig.relance_syndic_delai_jours} min="1" max="365" placeholder="30" style="width:120px" />
+      <span class="field-hint">Nombre de jours sans mise à jour d'un ticket destinataire-syndic avant qu'il apparaisse dans la liste de relance de l'Espace CS (défaut : 30 jours).</span>
+    </label>
+    <label class="field-label" style="grid-column:span 2">
       <span style="display:flex;align-items:center;gap:.5rem">
         <input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} style="width:1rem;height:1rem" />
         Notifier si un bug (Tickets)
@@ -1801,46 +1750,6 @@ $: _siteNom = $siteNomStore;
   <button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
     {siteSaving ? 'Enregistrement...' : 'Enregistrer'}
   </button>
-</div>
-
-{:else if onglet === 'referentiels'}
-<p class="muted" style="margin-bottom:1.25rem">Gérez les valeurs de référence utilisées dans les filtres et formulaires de l'application.</p>
-<div class="ref-list">
-  {#each referentiels as ref (ref.id)}
-    <div class="ref-item" class:expanded={expandedRefs.has(ref.id)}>
-      <button class="ref-row" on:click={() => toggleRef(ref.id)} type="button">
-        <span class="ref-name">{ref.nom}</span>
-        <span class="ref-meta muted">{ref.items.length} valeur{ref.items.length > 1 ? 's' : ''}</span>
-        <span class="chevron" class:open={expandedRefs.has(ref.id)}>›</span>
-      </button>
-      {#if expandedRefs.has(ref.id)}
-        <div class="ref-body">
-          <div class="ref-chips">
-            {#each ref.items as item (item.id)}
-              <span class="ref-chip">
-                {item.label}
-                <button class="chip-del" type="button" aria-label="Supprimer {item.label}"
-                  on:click={() => removeRefItem(ref.id, item.id)}>×</button>
-              </span>
-            {/each}
-            {#if ref.items.length === 0}
-              <span class="muted" style="font-size:.82rem">Aucune valeur.</span>
-            {/if}
-          </div>
-          <div class="ref-add-row">
-            <input
-              class="input input-sm"
-              type="text"
-              placeholder="Nouvelle valeur..."
-              bind:value={refNewItem[ref.id]}
-              on:keydown={(e) => { if (e.key === 'Enter') addRefItem(ref.id); }}
-            />
-            <button class="btn btn-primary btn-sm" on:click={() => addRefItem(ref.id)} type="button">+ Ajouter</button>
-          </div>
-        </div>
-      {/if}
-    </div>
-  {/each}
 </div>
 
 {:else if onglet === 'whatsapp'}
