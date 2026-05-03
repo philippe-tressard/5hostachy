@@ -1178,6 +1178,9 @@ $: _siteNom = $siteNomStore;
 <tr class:row-cs={userRoles(u).includes('conseil_syndical')} class:row-inactive={!u.actif}>
   <td style="font-weight:500">
     {u.prenom} {u.nom}
+    {#if u.statut === 'locataire' && u.nom_proprietaire}
+      <div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">🏠 Bailleur : {u.nom_proprietaire}</div>
+    {/if}
     <div class="user-tags">
       {#if u.has_lots}<span class="utag utag-ok">Loti</span>{:else}<span class="utag utag-ko">Loti</span>{/if}
       {#if u.has_tc}<span class="utag utag-ok">TC</span>{:else}<span class="utag utag-ko">TC</span>{/if}
