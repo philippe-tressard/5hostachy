@@ -2286,11 +2286,13 @@ $: _siteNom = $siteNomStore;
     <div class="card" style="margin-top:1.25rem">
       <h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
       <table class="table">
-        <thead><tr><th>Utilisateur</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th><th style="text-align:right">Dernière connexion</th></tr></thead>
+        <thead><tr><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th><th style="text-align:right">Dernière connexion</th></tr></thead>
         <tbody>
           {#each telemetryData.top_users as u}
             <tr>
               <td style="font-size:.85rem">{u.nom}</td>
+              <td style="font-size:.8rem;color:var(--color-text-muted)">{u.statut ?? '—'}</td>
+              <td style="font-size:.8rem;color:var(--color-text-muted)">{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td>
               <td style="text-align:right;font-weight:600">{u.total}</td>
               <td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
               <td style="text-align:right;font-size:.82rem;color:var(--color-text-muted)">{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td>
