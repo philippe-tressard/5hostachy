@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount, tick } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
@@ -2648,3 +2648,5 @@
   .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
   .badge-red { background: #fee2e2; color: #991b1b; }
   .badge-orange { background: #fff7ed; color: #9a3412; }
+
+</style>

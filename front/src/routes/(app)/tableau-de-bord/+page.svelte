@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
 	import { flux, lots, tickets as ticketsApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
