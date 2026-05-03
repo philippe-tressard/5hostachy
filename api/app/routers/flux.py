@@ -436,7 +436,7 @@ def get_flux(
                 badges=["Clôturé"],
                 lien=f"/sondages/{s.id}",
                 meta={"sondage_id": s.id, "nb_votants": nb_votants, "gagnant": gagnant,
-                       "description": s.description},
+                       "full_html": s.description},
             ))
         else:
             items.append(FluxItem(
@@ -450,7 +450,7 @@ def get_flux(
                 badges=["En cours"],
                 lien=f"/sondages/{s.id}",
                 meta={"sondage_id": s.id, "nb_votants": nb_votants,
-                       "description": s.description},
+                       "full_html": s.description},
             ))
 
     # ── Tri global par date décroissante ────────────────────────────────────
