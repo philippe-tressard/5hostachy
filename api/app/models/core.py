@@ -394,6 +394,8 @@ class Ticket(SQLModel, table=True):
     saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
+    non_relancable: bool = False
+    non_relancable_motif: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None

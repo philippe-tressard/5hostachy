@@ -142,6 +142,9 @@ export interface Ticket {
 	photos_urls?: string[];
 	destinataire_syndic?: boolean;
 	destinataire_cs?: boolean;
+	non_relancable?: boolean;
+	non_relancable_motif?: string | null;
+	relance_count?: number;
 	cree_le: string;
 	mis_a_jour_le: string;
 }
@@ -248,6 +251,8 @@ export const tickets = {
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
 	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
+	relanceSyndicList: () => api.get<Ticket[]>('/tickets/relance-syndic'),
+	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	uploadPhoto: async (ticketId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
 		const fd = new FormData();
 		fd.append('file', file);

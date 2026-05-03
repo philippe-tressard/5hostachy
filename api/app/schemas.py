@@ -133,6 +133,9 @@ class TicketRead(BaseModel):
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
     saisi_pour_affichage: Optional[str] = None
+    non_relancable: bool = False
+    non_relancable_motif: Optional[str] = None
+    relance_count: int = 0
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -174,6 +177,8 @@ class TicketUpdate(BaseModel):
     saisi_pour_user_id: Optional[int] = None
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
+    non_relancable: Optional[bool] = None
+    non_relancable_motif: Optional[str] = None
 
 
 class MessageCreate(BaseModel):
