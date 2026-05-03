@@ -81,7 +81,7 @@
 			if (href === '/sondages' && (statut === 'syndic' || statut === 'mandataire' || statut === 'aidant')) return false;
 			if (href === '/prestataires') return $isCS;
 			if (href === '/espace-cs')   return $isCS && !$isAdminOnly;
-			if (href === '/delegations') return $isCS || (($currentUser?.delegations_aidant?.length ?? 0) > 0) || statut === 'aidant';
+			if (href === '/delegations') return statut === 'aidant';
 			if (href === '/admin')       return $isAdmin;
 			return $hasResidentRole;
 		})
