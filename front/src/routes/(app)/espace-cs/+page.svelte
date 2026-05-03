@@ -1770,12 +1770,8 @@
 					{/if}
 				{/if}
 			</section>
-		{/if}
-	</div>
-
-	<!-- ══ RELANCE SYNDIC ══════════════════════════════════════════════ -->
-	{:else if reportView === 'relance'}
-	<div class="reporting-wrap">
+		<!-- ══ RELANCE SYNDIC ══════════════════════════════════════════════ -->
+		{:else if reportView === 'relance'}
 		{#if relanceLoading}
 			<p style="color:var(--color-text-muted)">Chargement…</p>
 		{:else if relanceList.length === 0}
@@ -1852,6 +1848,7 @@
 					</button>
 				</div>
 			</section>
+		{/if}
 		{/if}
 	</div>
 
