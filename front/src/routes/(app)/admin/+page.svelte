@@ -2236,10 +2236,10 @@ $: _siteNom = $siteNomStore;
 
     <!-- Graphe (barres CSS) — adaptatif au scope -->
     {#if telemetryData.chart.length > 0}
-    <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
       {@const maxVal = Math.max(...telemetryData.chart.map((x) => x.total), 1)}
       {@const yTicks = (() => { const step = Math.ceil(maxVal / 4 / (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100)) * (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100); return [4,3,2,1,0].map(i => i * step); })()}
+    <div class="card" style="margin-top:1.25rem">
+      <h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
       <div class="tl-chart-wrap">
         <div class="tl-y-axis">
           {#each yTicks as tick}
