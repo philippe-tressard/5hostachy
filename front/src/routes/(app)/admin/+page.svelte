@@ -1178,6 +1178,9 @@ $: _siteNom = $siteNomStore;
 <tr class:row-cs={userRoles(u).includes('conseil_syndical')} class:row-inactive={!u.actif}>
   <td style="font-weight:500">
     {u.prenom} {u.nom}
+    {#if u.statut === 'locataire' && u.nom_proprietaire}
+      <div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">🏠 Bailleur : {u.nom_proprietaire}</div>
+    {/if}
     <div class="user-tags">
       {#if u.has_lots}<span class="utag utag-ok">Loti</span>{:else}<span class="utag utag-ko">Loti</span>{/if}
       {#if u.has_tc}<span class="utag utag-ok">TC</span>{:else}<span class="utag utag-ko">TC</span>{/if}
@@ -2233,16 +2236,29 @@ $: _siteNom = $siteNomStore;
 
     <!-- Graphe (barres CSS) — adaptatif au scope -->
     {#if telemetryData.chart.length > 0}
+      {@const maxVal = Math.max(...telemetryData.chart.map((x) => x.total), 1)}
+      {@const yTicks = (() => { const step = Math.ceil(maxVal / 4 / (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100)) * (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100); return [4,3,2,1,0].map(i => i * step); })()}
     <div class="card" style="margin-top:1.25rem">
       <h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
-      <div class="tl-chart">
-        {#each telemetryData.chart as d}
-          {@const maxVal = Math.max(...telemetryData.chart.map((x) => x.total), 1)}
-          <div class="tl-bar-col {tlScope === 'annee' ? 'tl-bar-col-month' : ''}" title="{d.label} — {d.total} vues{d.uniques != null ? `, ${d.uniques} uniques` : ''}">
-            <div class="tl-bar {tlScope === 'annee' ? 'tl-bar-month' : ''}" style="height:{Math.max(4, (d.total / maxVal) * 100)}%"></div>
-            <div class="tl-bar-label">{d.label}</div>
+      <div class="tl-chart-wrap">
+        <div class="tl-y-axis">
+          {#each yTicks as tick}
+            <div class="tl-y-tick" style="bottom:{(tick / (yTicks[0] || 1)) * 100}%">{tick}</div>
+          {/each}
+        </div>
+        <div class="tl-chart-inner">
+          {#each yTicks as tick}
+            <div class="tl-y-gridline" style="bottom:{(tick / (yTicks[0] || 1)) * 120 + 18}px"></div>
+          {/each}
+          <div class="tl-chart">
+          {#each telemetryData.chart as d}
+            <div class="tl-bar-col {tlScope === 'annee' ? 'tl-bar-col-month' : ''}" title="{d.label} — {d.total} vues{d.uniques != null ? `, ${d.uniques} uniques` : ''}">
+              <div class="tl-bar {tlScope === 'annee' ? 'tl-bar-month' : ''}" style="height:{Math.max(4, (d.total / maxVal) * 100)}%"></div>
+              <div class="tl-bar-label">{d.label}</div>
+            </div>
+          {/each}
           </div>
-        {/each}
+        </div>
       </div>
     </div>
     {/if}
@@ -2273,11 +2289,13 @@ $: _siteNom = $siteNomStore;
     <div class="card" style="margin-top:1.25rem">
       <h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
       <table class="table">
-        <thead><tr><th>Utilisateur</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th><th style="text-align:right">Dernière connexion</th></tr></thead>
+        <thead><tr><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th><th style="text-align:right">Dernière connexion</th></tr></thead>
         <tbody>
           {#each telemetryData.top_users as u}
             <tr>
               <td style="font-size:.85rem">{u.nom}</td>
+              <td style="font-size:.8rem;color:var(--color-text-muted)">{u.statut ?? '—'}</td>
+              <td style="font-size:.8rem;color:var(--color-text-muted)">{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td>
               <td style="text-align:right;font-weight:600">{u.total}</td>
               <td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
               <td style="text-align:right;font-size:.82rem;color:var(--color-text-muted)">{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td>
@@ -2495,7 +2513,12 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
 .tl-kpi-label { font-size: .82rem; color: var(--color-text-muted); margin-top: .3rem; }
 .tl-section-title { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
-.tl-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0 1rem .5rem; overflow-x: auto; }
+.tl-chart-wrap { display: flex; gap: 0; position: relative; margin-top: .5rem; }
+.tl-y-axis { position: relative; width: 32px; flex-shrink: 0; height: 130px; margin-bottom: 18px; }
+.tl-y-tick { position: absolute; right: 4px; font-size: .6rem; color: var(--color-text-muted); transform: translateY(50%); line-height: 1; text-align: right; }
+.tl-chart-inner { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tl-chart-inner .tl-y-gridline { position: absolute; left: 0; right: 0; height: 1px; background: var(--color-border); opacity: .5; pointer-events: none; z-index: 0; }
+.tl-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0 .25rem .5rem 0; overflow-x: auto; position: relative; z-index: 1; flex: 1; }
 .tl-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 16px; height: 100%; justify-content: flex-end; }
 .tl-bar { background: var(--color-primary); border-radius: 3px 3px 0 0; width: 100%; min-height: 4px; transition: height .3s; }
 .tl-bar-month { background: var(--color-primary-light, #93c5fd); }
