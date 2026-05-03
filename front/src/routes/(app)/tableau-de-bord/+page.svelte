@@ -1,7 +1,7 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
-	import { flux, lots, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
+	import { flux, lots, tickets as ticketsApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDateLong, fmtDatetimeShort, fmtTime } from '$lib/date';
@@ -15,6 +15,7 @@
 	let userLots: any[] = [];
 	let loading = true;
 	let ready = false;
+	let relanceSyndicCount = 0;
 
 	onMount(async () => {
 		try {
@@ -27,6 +28,13 @@
 		} finally {
 			loading = false;
 			setTimeout(() => { ready = true; }, 50);
+		}
+		// Relance syndic — uniquement pour CS/Admin
+		if ($isCS || $isAdmin) {
+			try {
+				const relanceList = await ticketsApi.relanceSyndicList();
+				relanceSyndicCount = relanceList.length;
+			} catch { /* silencieux */ }
 		}
 	});
 
@@ -318,6 +326,18 @@
 		</div>
 		<span class="consignes-arrow"><Icon name="chevron-right" size={18} /></span>
 	</a>
+
+	<!-- ═══ RAPPEL RELANCE SYNDIC (CS / Admin seulement) ═════════════════ -->
+	{#if ($isCS || $isAdmin) && relanceSyndicCount > 0}
+	<a href="/espace-cs#reporting-relance" class="consignes-card section-reveal" class:section-visible={ready} style="--delay:.07s;background:linear-gradient(135deg,#FEF3C7 0%,#FDE68A 100%);border-color:#F59E0B;border-left-color:#F59E0B">
+		<div class="consignes-icon">🔔</div>
+		<div class="consignes-text">
+			<strong class="consignes-titre" style="color:#92400E">{relanceSyndicCount} ticket{relanceSyndicCount > 1 ? 's' : ''} syndic sans avancées depuis +1 mois</strong>
+			<span class="consignes-sub" style="color:#78350F">Cliquer pour accéder à la relance dans l'Espace CS</span>
+		</div>
+		<span class="consignes-arrow" style="color:#92400E"><Icon name="chevron-right" size={18} /></span>
+	</a>
+	{/if}
 
 	<!-- ═══ RACCOURCIS RAPIDES ═════════════════════════════════════════════ -->
 	<nav class="quick-nav" class:section-visible={ready}>

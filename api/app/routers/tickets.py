@@ -11,7 +11,7 @@ from app.database import get_session
 from app.models.core import (
     Ticket, MessageTicket, TicketEvolution, Utilisateur, Batiment,
     StatutTicket, RoleUtilisateur, StatutUtilisateur,
-    Notification, ConfigSite, MembreSyndic,
+    Notification, ConfigSite, MembreSyndic, GenreCivilite,
 )
 from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
@@ -77,6 +77,14 @@ def _ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         saisi_pour_affichage=saisi_pour_affichage,
         cree_le=ticket.cree_le,
         mis_a_jour_le=ticket.mis_a_jour_le,
+        non_relancable=ticket.non_relancable,
+        non_relancable_motif=ticket.non_relancable_motif,
+        relance_count=len(session.exec(
+            select(TicketEvolution).where(
+                TicketEvolution.ticket_id == ticket.id,
+                TicketEvolution.type == "relance",
+            )
+        ).all()),
     )
 
 
@@ -280,6 +288,211 @@ def create_ticket(
     return _ticket_read(ticket, session)
 
 
+# ── Relance syndic ────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+
+class RelanceSyndicRequest(_BaseModel):
+    ticket_ids: list[int]
+
+
+@router.get("/relance-syndic", response_model=list[TicketRead])
+def list_relance_syndic(
+    session: Session = Depends(get_session),
+    _user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Retourne les tickets adressés au syndic, non résolus/annulés/fermés,
+    non tagués non_relancable, dont la dernière modification date de plus de
+    `relance_syndic_delai_jours` jours."""
+    from datetime import timedelta
+
+    cfg_delai = session.exec(
+        select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
+    ).first()
+    delai_jours = int(cfg_delai.valeur) if cfg_delai else 30
+
+    seuil = datetime.utcnow() - timedelta(days=delai_jours)
+
+    tickets = session.exec(
+        select(Ticket).where(
+            Ticket.destinataire_syndic == True,
+            Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
+            Ticket.non_relancable == False,
+            Ticket.mis_a_jour_le < seuil,
+        ).order_by(Ticket.mis_a_jour_le)
+    ).all()
+
+    return [_ticket_read(t, session) for t in tickets]
+
+
+@router.post("/relance-syndic", status_code=200)
+def envoyer_relance_syndic(
+    body: RelanceSyndicRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Envoie un mail de relance groupé au syndic (est_principal=True) en CC
+    des membres CS, et logue une évolution 'relance' sur chaque ticket."""
+    from app.utils.email import send_email_group
+
+    if not body.ticket_ids:
+        raise HTTPException(422, "Aucun ticket sélectionné")
+
+    tickets_relance: list[Ticket] = []
+    for tid in body.ticket_ids:
+        t = session.get(Ticket, tid)
+        if not t:
+            raise HTTPException(404, f"Ticket {tid} introuvable")
+        if not t.destinataire_syndic:
+            raise HTTPException(422, f"Ticket {tid} non adressé au syndic")
+        tickets_relance.append(t)
+
+    cfg_rows = session.exec(
+        select(ConfigSite).where(
+            ConfigSite.cle.in_(("site_nom", "site_url", "reference_copro"))
+        )
+    ).all()
+    cfg_map = {r.cle: r.valeur for r in cfg_rows}
+    now = datetime.utcnow()
+
+    for ticket in tickets_relance:
+        relance_count = len(session.exec(
+            select(TicketEvolution).where(
+                TicketEvolution.ticket_id == ticket.id,
+                TicketEvolution.type == "relance",
+            )
+        ).all())
+        evol = TicketEvolution(
+            ticket_id=ticket.id,
+            type="relance",
+            contenu=f"Relance syndic n°{relance_count + 1}",
+            auteur_id=user.id,
+            cree_le=now,
+        )
+        session.add(evol)
+        ticket.mis_a_jour_le = now
+        session.add(ticket)
+
+    session.flush()
+
+    syndic_principal = session.exec(
+        select(MembreSyndic).where(MembreSyndic.est_principal == True)
+    ).first()
+
+    if not syndic_principal or not syndic_principal.email:
+        raise HTTPException(422, "Aucun gestionnaire syndic principal avec email configuré")
+
+    civilite = "Monsieur" if syndic_principal.genre == GenreCivilite.monsieur else "Madame"
+    nom_gestionnaire = f"{syndic_principal.prenom} {syndic_principal.nom}".strip()
+
+    PERIM_LABELS: dict[str, str] = {
+        "résidence": "Copropriété entière",
+        "parking": "Parking",
+        "cave": "Cave",
+    }
+
+    def _perim_label(perim_json: str | None) -> str:
+        if not perim_json:
+            return ""
+        import json as _json
+        try:
+            items = _json.loads(perim_json)
+        except Exception:
+            return perim_json
+        labels = []
+        for i in items:
+            if i.startswith("bat:"):
+                labels.append(f"Bât. {i[4:]}")
+            else:
+                labels.append(PERIM_LABELS.get(i, i))
+        return " · ".join(labels)
+
+    def _evol_label(e: TicketEvolution) -> str:
+        if e.type == "etat":
+            return (
+                f"Changement d'état : "
+                f"{STATUT_LABELS.get(e.ancien_statut or '', e.ancien_statut or '?')} → "
+                f"{STATUT_LABELS.get(e.nouveau_statut or '', e.nouveau_statut or '?')}"
+            )
+        if e.type == "relance":
+            return e.contenu or "Relance syndic"
+        if e.type == "commentaire":
+            return "Commentaire CS"
+        if e.type == "reponse":
+            return "Réponse"
+        return e.type
+
+    tickets_ctx = []
+    for ticket in tickets_relance:
+        relance_count = len(session.exec(
+            select(TicketEvolution).where(
+                TicketEvolution.ticket_id == ticket.id,
+                TicketEvolution.type == "relance",
+            )
+        ).all()) - 1
+        evols = session.exec(
+            select(TicketEvolution).where(
+                TicketEvolution.ticket_id == ticket.id
+            ).order_by(TicketEvolution.cree_le)
+        ).all()
+        historique = [{"date": e.cree_le.strftime("%d/%m/%Y"), "label": _evol_label(e)} for e in evols]
+        historique.insert(0, {
+            "date": ticket.cree_le.strftime("%d/%m/%Y"),
+            "label": f"Création du ticket (statut : {STATUT_LABELS.get(ticket.statut, ticket.statut)})",
+        })
+        tickets_ctx.append({
+            "numero": ticket.numero,
+            "titre": ticket.titre,
+            "categorie": ticket.categorie,
+            "priorite": ticket.priorite,
+            "perimetre": _perim_label(ticket.perimetre_cible),
+            "description": ticket.description,
+            "relance_count": relance_count,
+            "historique": historique,
+        })
+
+    ctx = {
+        "civilite": civilite,
+        "nom_gestionnaire": nom_gestionnaire,
+        "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
+        "reference_copro": cfg_map.get("reference_copro", ""),
+        "tickets": tickets_ctx,
+    }
+
+    to_recipients: list[tuple[int | None, str]] = [
+        (syndic_principal.user_id, syndic_principal.email)
+    ]
+    seen_emails: set[str] = {syndic_principal.email.lower()}
+
+    cc_recipients: list[tuple[int | None, str]] = []
+    cs_users = session.exec(
+        select(Utilisateur.id, Utilisateur.email).where(
+            Utilisateur.actif == True,
+            Utilisateur.email.isnot(None),
+            Utilisateur.roles_json.contains("conseil_syndical"),
+        )
+    ).all()
+    for uid, email in cs_users:
+        if email and email.lower() not in seen_emails:
+            cc_recipients.append((uid, email))
+            seen_emails.add(email.lower())
+
+    background_tasks.add_task(
+        send_email_group,
+        code="relance_syndic",
+        to_recipients=to_recipients,
+        context=ctx,
+        session=session,
+        cc_recipients=cc_recipients or None,
+    )
+
+    session.commit()
+
+    return {"sent": len(tickets_relance), "relance_to": syndic_principal.email}
+
+
 @router.get("/{ticket_id}", response_model=TicketRead)
 def get_ticket(
     ticket_id: int,
@@ -376,6 +589,10 @@ def update_ticket(
             ticket.saisi_pour_nom = body.saisi_pour_nom
         if body.saisi_pour_email is not None:
             ticket.saisi_pour_email = body.saisi_pour_email
+        if body.non_relancable is not None:
+            ticket.non_relancable = body.non_relancable
+        if body.non_relancable_motif is not None:
+            ticket.non_relancable_motif = body.non_relancable_motif
 
     ticket.mis_a_jour_le = datetime.utcnow()
 

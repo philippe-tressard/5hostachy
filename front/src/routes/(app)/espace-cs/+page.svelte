@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount, tick } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
@@ -126,7 +126,7 @@
 	let tkEvolContenu = '';
 	let tkEvolStatut = '';
 	let tkEvolSaving = false;
-	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' | 'renouvellements' = 'kanban';
+	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' | 'renouvellements' | 'relance' = 'kanban';
 	let reportPeriodDays: 30 | 90 | 365 = 90;
 	let reportingLoading = false;
 	let reportingLoaded = false;
@@ -137,6 +137,13 @@
 	let reportPrestSynth: any = null;
 	let reportPrestSynthLoading = false;
 	let reportPrestSynthId: number | null = null;
+	let relanceList: Ticket[] = [];
+	let relanceLoading = false;
+	let relanceLoaded = false;
+	let relanceSelected: Set<number> = new Set();
+	let relanceSending = false;
+	let relanceNonRelancableEditing: number | null = null;
+	let relanceMotifTemp = '';
 	let reportContrats: ReportContrat[] = [];
 	let reportDiagTypes: DiagType[] = [];
 	let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
@@ -411,6 +418,46 @@
 		}
 	}
 	function refreshReporting() { loadReporting(true); }
+
+	async function loadRelanceSyndic(force = false) {
+		if (relanceLoaded && !force) return;
+		relanceLoading = true;
+		try {
+			relanceList = await ticketsApi.relanceSyndicList();
+			relanceSelected = new Set(relanceList.map(t => t.id));
+			relanceLoaded = true;
+		} catch (e: any) {
+			toast('error', apiMessage(e, 'Erreur chargement relances syndic'));
+		} finally {
+			relanceLoading = false;
+		}
+	}
+
+	async function envoiRelance() {
+		const ids = Array.from(relanceSelected);
+		if (ids.length === 0) return;
+		if (!confirm(`Envoyer la relance pour ${ids.length} ticket(s) au syndic ?`)) return;
+		relanceSending = true;
+		try {
+			const res = await ticketsApi.envoiRelance(ids);
+			toast('success', `✅ Relance envoyée à ${res.relance_to}`);
+			await loadRelanceSyndic(true);
+		} catch (e: any) {
+			toast('error', apiMessage(e, 'Erreur envoi relance'));
+		} finally {
+			relanceSending = false;
+		}
+	}
+
+	async function saveNonRelancable(t: Ticket, val: boolean, motif: string) {
+		try {
+			await ticketsApi.update(t.id, { non_relancable: val, non_relancable_motif: motif || null });
+			relanceNonRelancableEditing = null;
+			await loadRelanceSyndic(true);
+		} catch (e: any) {
+			toast('error', apiMessage(e, 'Erreur mise à jour ticket'));
+		}
+	}
 
 	async function tkToggle(id: number) {
 		if (tkExpandedId === id) { tkExpandedId = null; return; }
@@ -1186,6 +1233,9 @@
 				<button class="pill" class:pill-active={reportView === 'renouvellements'} on:click={() => (reportView = 'renouvellements')}>
 					&#x1F4C5; Renouvellements
 				</button>
+				<button class="pill" class:pill-active={reportView === 'relance'} on:click={() => { reportView = 'relance'; loadRelanceSyndic(); }}>
+					&#x1F514; Relance syndic
+				</button>
 			</div>
 			<div class="reporting-actions">
 				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
@@ -1720,6 +1770,85 @@
 					{/if}
 				{/if}
 			</section>
+		<!-- ══ RELANCE SYNDIC ══════════════════════════════════════════════ -->
+		{:else if reportView === 'relance'}
+		{#if relanceLoading}
+			<p style="color:var(--color-text-muted)">Chargement…</p>
+		{:else if relanceList.length === 0}
+			<div class="empty-state">
+				<h3>✅ Aucun ticket à relancer</h3>
+				<p>Tous les tickets syndic ont été mis à jour dans le délai imparti.</p>
+			</div>
+		{:else}
+			<section class="report-card" style="margin-bottom:1.5rem">
+				<h3>🔔 Tickets syndic sans avancées depuis plus d'1 mois</h3>
+				<p class="report-intro">{relanceList.length} ticket(s) éligible(s) à la relance. Décochez ceux que vous souhaitez exclure de l'envoi.</p>
+
+				<div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
+					{#each relanceList as t (t.id)}
+						{@const selected = relanceSelected.has(t.id)}
+						{@const isEditingMotif = relanceNonRelancableEditing === t.id}
+						<div class="relance-item" class:relance-item-unselected={!selected}>
+							<div class="relance-item-top">
+								<label class="relance-check" style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0">
+									<input type="checkbox" checked={selected}
+										on:change={() => {
+											const s = new Set(relanceSelected);
+											if (s.has(t.id)) s.delete(t.id); else s.add(t.id);
+											relanceSelected = s;
+										}} />
+									<span class="relance-numero">{t.numero}</span>
+									<span class="relance-titre">{t.titre}</span>
+								</label>
+								<div class="relance-item-right">
+									{#if (t.relance_count ?? 0) > 0}
+										<span class="badge badge-red">Relance n°{(t.relance_count ?? 0) + 1}</span>
+									{:else}
+										<span class="badge badge-orange">1ère relance</span>
+									{/if}
+									<span class="relance-date" title="Dernière modification">{daysSince(t.mis_a_jour_le)}j sans modif.</span>
+								</div>
+							</div>
+							<!-- Tag non-relançable -->
+							<div class="relance-item-meta">
+								<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
+								<span class="badge badge-gray">{t.categorie}</span>
+								{#if t.non_relancable}
+									<span class="badge badge-red">🚫 Non relançable{t.non_relancable_motif ? ` — ${t.non_relancable_motif}` : ''}</span>
+								{/if}
+								{#if !isEditingMotif}
+									<button class="btn-icon" style="font-size:.75rem;padding:1px 6px" title={t.non_relancable ? 'Retirer le tag non-relançable' : 'Marquer comme non-relançable'}
+										on:click={() => {
+											if (t.non_relancable) {
+												saveNonRelancable(t, false, '');
+											} else {
+												relanceNonRelancableEditing = t.id;
+												relanceMotifTemp = t.non_relancable_motif ?? '';
+											}
+										}}>
+										{t.non_relancable ? '✅ Réactiver' : '🚫 Non relançable'}
+									</button>
+								{:else}
+									<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+										<input type="text" placeholder="Motif (optionnel)" bind:value={relanceMotifTemp}
+											style="font-size:.8rem;padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px" />
+										<button class="btn btn-sm btn-primary" on:click={() => saveNonRelancable(t, true, relanceMotifTemp)}>Confirmer</button>
+										<button class="btn btn-sm btn-outline" on:click={() => relanceNonRelancableEditing = null}>Annuler</button>
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				<div style="display:flex;justify-content:flex-end">
+					<button class="btn btn-primary" disabled={relanceSending || relanceSelected.size === 0}
+						on:click={envoiRelance}>
+						{relanceSending ? '…' : `📧 Envoyer la relance (${relanceSelected.size} ticket${relanceSelected.size > 1 ? 's' : ''})`}
+					</button>
+				</div>
+			</section>
+		{/if}
 		{/if}
 	</div>
 
@@ -2500,4 +2629,24 @@
 		.report-table { break-inside: auto; }
 		.report-table tr { break-inside: avoid; }
 	}
+
+  /* ── Relance syndic ───────────────────────────────────────────────── */
+  .relance-item {
+          background: var(--color-surface);
+          border: 1px solid var(--color-border);
+          border-left: 4px solid var(--color-primary);
+          border-radius: var(--radius);
+          padding: .65rem .9rem;
+          transition: opacity .15s;
+  }
+  .relance-item-unselected { opacity: .5; border-left-color: var(--color-border); }
+  .relance-item-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .relance-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
+  .relance-numero { font-size: .8rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
+  .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .relance-item-right { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-shrink: 0; }
+  .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-orange { background: #fff7ed; color: #9a3412; }
+
 </style>
