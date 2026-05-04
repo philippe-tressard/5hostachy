@@ -8,6 +8,7 @@
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 
@@ -123,10 +124,14 @@
 	let tkEvolsMap: Record<number, TicketEvolution[]> = {};
 	let tkEvolsLoaded = new Set<number>();
 	let tkShowForm: number | null = null;
-	let tkEvolType: 'commentaire' | 'etat' = 'commentaire';
-	let tkEvolContenu = '';
-	let tkEvolStatut = '';
 	let tkEvolSaving = false;
+
+	const TK_STATUT_OPTIONS = [
+		{ value: 'ouvert',   label: '🔵 Ouvert' },
+		{ value: 'en_cours', label: '🟡 En cours' },
+		{ value: 'résolu',   label: '🟢 Résolu' },
+		{ value: 'annulé',   label: '⚫ Annulé' },
+	];
 	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' | 'renouvellements' | 'relance' = 'kanban';
 	let reportPeriodDays: 30 | 90 | 365 = 90;
 	let reportingLoading = false;
@@ -477,32 +482,26 @@
 
 	function tkOpenForm(id: number) {
 		tkShowForm = id;
-		tkEvolType = 'etat';
-		tkEvolContenu = '';
-		tkEvolStatut = '';
 		tkExpandedId = id;
 	}
 
-	async function tkSubmitEvol(t: Ticket) {
-		if (tkEvolType === 'etat' && !tkEvolStatut) return;
-		if (tkEvolType === 'commentaire' && !tkEvolContenu.trim()) return;
+	async function tkSubmitEvol(t: Ticket, e: CustomEvent) {
+		const data = e.detail;
 		tkEvolSaving = true;
 		try {
 			await ticketsApi.addEvolution(t.id, {
-				type: tkEvolType,
-				contenu: tkEvolContenu.trim() || undefined,
-				nouveau_statut: tkEvolType === 'etat' ? tkEvolStatut : undefined,
+				type: data.type,
+				contenu: data.contenu || undefined,
+				nouveau_statut: data.type === 'etat' ? data.nouveau_statut : undefined,
 			});
-			if (tkEvolType === 'etat') {
-				tkList = tkList.map(x => x.id === t.id ? { ...x, statut: tkEvolStatut } : x);
+			if (data.type === 'etat') {
+				tkList = tkList.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut } : x);
 			}
 			await tkLoadEvols(t.id);
 			tkShowForm = null;
-			tkEvolContenu = '';
-			tkEvolStatut = '';
-			toast('success', tkEvolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
+		} catch (err: any) {
+			toast('error', err instanceof ApiError ? err.message : 'Erreur');
 		} finally { tkEvolSaving = false; }
 	}
 
@@ -1141,44 +1140,24 @@
 				{#if expanded}
 					<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
 						{#if tkShowForm === t.id}
-							<div class="evol-form">
-								<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-									<button type="button" class="pill" class:pill-active={tkEvolType === 'etat'}
-										on:click={() => (tkEvolType = 'etat')}>&#x1F504; Changement d'état</button>
-									<button type="button" class="pill" class:pill-active={tkEvolType === 'commentaire'}
-										on:click={() => (tkEvolType = 'commentaire')}>&#x1F4AC; Commentaire</button>
-								</div>
-								{#if tkEvolType === 'etat'}
-									<div class="field" style="margin-bottom:.6rem">
-										<label for="tk-statut-{t.id}">Nouvel état *</label>
-										{#if t.statut}
-											<div style="font-size:.8rem;color:var(--color-text-muted);margin-bottom:.35rem">État actuel : <strong>{TK_STATUT_LABELS[t.statut] || t.statut}</strong></div>
-										{/if}
-										<select id="tk-statut-{t.id}" bind:value={tkEvolStatut}>
-											<option value="">— Choisir —</option>
-											<option value="ouvert">&#x1F535; Ouvert</option>
-											<option value="en_cours">&#x1F7E1; En cours</option>
-											<option value="résolu">&#x1F7E2; Résolu</option>
-											<option value="annulé">⚫ Annulé</option>
-										</select>
-									</div>
-								{/if}
-								<div class="field" style="margin-bottom:.6rem">
-									<label for="tk-contenu-{t.id}">{tkEvolType === 'etat' ? 'Commentaire (optionnel)' : 'Commentaire *'}</label>
-									<RichEditor bind:value={tkEvolContenu}
-										placeholder={tkEvolType === 'etat' ? 'Précisions sur ce changement…' : 'Ajoutez une note de suivi…'}
-										minHeight="90px" />
-								</div>
-								<div style="display:flex;justify-content:flex-end;gap:.5rem">
-									<button class="btn btn-outline btn-sm" on:click={() => (tkShowForm = null)}>Annuler</button>
-									<button class="btn btn-primary btn-sm"
-										disabled={tkEvolSaving || (tkEvolType === 'etat' && !tkEvolStatut) || (tkEvolType === 'commentaire' && (!tkEvolContenu || tkEvolContenu.replace(/<[^>]+>/g,'').trim() === ''))}
-										on:click={() => tkSubmitEvol(t)}>
-										{tkEvolSaving ? 'Envoi…' : 'Valider'}
-									</button>
-								</div>
-							</div>
-						{:else}
+						<div class="evol-form">
+							{#key tkShowForm}
+							<EvolForm
+								statutOptions={TK_STATUT_OPTIONS}
+								statutLabels={TK_STATUT_LABELS}
+								currentStatut={t.statut ?? ''}
+								showNotifs={false}
+								showEmail={false}
+								showFiles={false}
+								separatePhotosAndDocs={false}
+								saving={tkEvolSaving}
+								on:submit={(e) => tkSubmitEvol(t, e)}
+								on:cancel={() => (tkShowForm = null)}
+							/>
+							{/key}
+						</div>
+
+					{:else}
 							{#if t.auteur_nom || t.auteur_batiment_nom}
 								<div class="tk-context-meta">
 									{#if t.auteur_nom}<span class="context-chip">Demandeur : {t.auteur_nom}</span>{/if}
