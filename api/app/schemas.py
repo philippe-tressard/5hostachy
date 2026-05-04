@@ -223,6 +223,11 @@ class TicketEvolutionCreate(BaseModel):
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
+class TicketEvolutionUpdate(BaseModel):
+    contenu: Optional[str] = None
+    fichiers_urls: Optional[List[str]] = None
+
+
 class TicketEvolutionRead(BaseModel):
     id: int
     ticket_id: int

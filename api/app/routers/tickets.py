@@ -18,7 +18,7 @@ from app.models.core import (
 )
 from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
-    TicketEvolutionCreate, TicketEvolutionRead,
+    TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate,
 )
 from app.utils.visibility import ticket_visible
 
@@ -902,6 +902,31 @@ def get_evolutions(
         .order_by(TicketEvolution.cree_le)
     ).all()
     return [_evol_read(e, session) for e in evols]
+
+
+@router.patch("/{ticket_id}/evolutions/{evol_id}", response_model=TicketEvolutionRead)
+def update_evolution(
+    ticket_id: int,
+    evol_id: int,
+    body: TicketEvolutionUpdate,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    evol = session.get(TicketEvolution, evol_id)
+    if not evol or evol.ticket_id != ticket_id:
+        raise HTTPException(404, "Évolution introuvable")
+    if evol.type != "commentaire":
+        raise HTTPException(422, "Seuls les commentaires peuvent être modifiés")
+    if evol.auteur_id != user.id and not user.has_role(RoleUtilisateur.admin):
+        raise HTTPException(403, "Accès refusé")
+    if body.contenu is not None:
+        evol.contenu = body.contenu
+    if body.fichiers_urls is not None:
+        evol.fichiers_urls = json.dumps(body.fichiers_urls)
+    session.add(evol)
+    session.commit()
+    session.refresh(evol)
+    return _evol_read(evol, session)
 
 
 @router.post("/{ticket_id}/evolutions", response_model=TicketEvolutionRead, status_code=201)
