@@ -50,6 +50,61 @@
 	let evolEnvoyerSyndic = false;
 	let evolEnvoyerCs = false;
 
+	// Édition d'un commentaire existant
+	let editingEvolId: number | null = null;
+	let editEvolContenu = '';
+	let editEvolPhotos: { url: string; nom: string }[] = [];
+	let editEvolDocs: { url: string; nom: string }[] = [];
+	let editEvolSaving = false;
+	let uploadingEditPhoto = false;
+	let uploadingEditDoc = false;
+
+	function startEditEvol(evol: any) {
+		editingEvolId = evol.id;
+		editEvolContenu = evol.contenu || '';
+		const photos = (evol.fichiers_urls || []).filter((u: string) => /\.(jpe?g|png|webp)$/i.test(u));
+		const docs   = (evol.fichiers_urls || []).filter((u: string) => !/\.(jpe?g|png|webp)$/i.test(u));
+		editEvolPhotos = photos.map((u: string) => ({ url: u, nom: u.split('/').pop() || u }));
+		editEvolDocs   = docs.map((u: string) => ({ url: u, nom: u.split('/').pop() || u }));
+	}
+
+	async function uploadEditPhoto(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0]; if (!file) return;
+		uploadingEditPhoto = true;
+		try {
+			const r = await fichiersApi.upload(file);
+			editEvolPhotos = [...editEvolPhotos, { url: r.url, nom: r.nom || file.name }];
+		} catch { toast('error', 'Erreur upload photo'); }
+		finally { uploadingEditPhoto = false; input.value = ''; }
+	}
+
+	async function uploadEditDoc(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0]; if (!file) return;
+		uploadingEditDoc = true;
+		try {
+			const r = await fichiersApi.upload(file);
+			editEvolDocs = [...editEvolDocs, { url: r.url, nom: r.nom || file.name }];
+		} catch { toast('error', 'Erreur upload document'); }
+		finally { uploadingEditDoc = false; input.value = ''; }
+	}
+
+	async function saveEvolEdit() {
+		if (editingEvolId === null) return;
+		editEvolSaving = true;
+		try {
+			await ticketsApi.updateEvolution(ticketId, editingEvolId, {
+				contenu: editEvolContenu || undefined,
+				fichiers_urls: [...editEvolPhotos.map(f => f.url), ...editEvolDocs.map(f => f.url)],
+			});
+			await loadEvolutions();
+			editingEvolId = null;
+			toast('success', 'Commentaire mis à jour');
+		} catch { toast('error', 'Erreur de mise à jour'); }
+		finally { editEvolSaving = false; }
+	}
+
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
 	$: ticketId = Number($page.params.id);
@@ -553,7 +608,13 @@
 							{#if evol.type === 'etat'}&#x1F504;{:else if evol.type === 'reponse'}&#x1F4AC;{:else}&#x1F4DD;{/if}
 						</span>
 						<div class="evol-body">
-							<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+							<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
+								<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+								{#if evol.type === 'commentaire' && $isCS && editingEvolId !== evol.id}
+									<button type="button" title="Modifier" on:click={() => startEditEvol(evol)}
+										style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;padding:.1rem .2rem;font-size:.8rem;flex-shrink:0" aria-label="Modifier">✏️</button>
+								{/if}
+							</div>
 							{#if evol.type === 'etat'}
 								<span class="evol-text">
 									Statut : <strong>{STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong>
@@ -561,10 +622,58 @@
 							{:else if evol.type === 'reponse'}
 								<span class="evol-text">Nouvelle réponse{#if evol.contenu} ({evol.contenu}){/if}</span>
 							{/if}
-							{#if evol.contenu && evol.type === 'commentaire'}
-								<span class="evol-text rich-content" style="font-size:.875rem">{@html safeHtml(evol.contenu)}</span>
+							{#if evol.type === 'commentaire'}
+								{#if editingEvolId === evol.id}
+									<!-- Formulaire d'édition inline -->
+									<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)">
+										<RichEditor bind:value={editEvolContenu} minHeight="80px" />
+										<!-- Photos -->
+										<div style="margin:.5rem 0">
+											<label style="font-size:.78rem;font-weight:500;color:var(--color-text-muted)">📷 Photos</label>
+											<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin:.3rem 0">
+												{#each editEvolPhotos as f, i}
+													<div style="position:relative">
+														<img src={f.url} alt={f.nom} style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
+														<button type="button" on:click={() => editEvolPhotos = editEvolPhotos.filter((_,j)=>j!==i)}
+															style="position:absolute;top:-5px;right:-5px;border:none;background:var(--color-danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.65rem;cursor:pointer;line-height:16px;padding:0;text-align:center">✕</button>
+													</div>
+												{/each}
+											</div>
+											<label class="btn btn-outline" style="cursor:pointer;font-size:.78rem;padding:.25rem .5rem;display:inline-block">
+												{uploadingEditPhoto ? 'Upload…' : '+ Photo'}
+												<input type="file" accept="image/jpeg,image/png,image/webp" on:change={uploadEditPhoto} style="display:none" disabled={uploadingEditPhoto} />
+											</label>
+										</div>
+										<!-- Documents -->
+										<div style="margin:.4rem 0">
+											<label style="font-size:.78rem;font-weight:500;color:var(--color-text-muted)">📎 Documents</label>
+											<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin:.3rem 0">
+												{#each editEvolDocs as f, i}
+													<div style="display:flex;align-items:center;gap:.25rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.15rem .35rem;font-size:.75rem">
+														<span>📄</span>
+														<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
+														<button type="button" on:click={() => editEvolDocs = editEvolDocs.filter((_,j)=>j!==i)}
+															style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.85rem;padding:0;line-height:1">✕</button>
+													</div>
+												{/each}
+											</div>
+											<label class="btn btn-outline" style="cursor:pointer;font-size:.78rem;padding:.25rem .5rem;display:inline-block">
+												{uploadingEditDoc ? 'Upload…' : '+ Document'}
+												<input type="file" accept="application/pdf,.doc,.docx,.xls,.xlsx" on:change={uploadEditDoc} style="display:none" disabled={uploadingEditDoc} />
+											</label>
+										</div>
+										<div style="display:flex;gap:.5rem;margin-top:.5rem">
+											<button class="btn btn-outline btn-sm" on:click={() => editingEvolId = null}>Annuler</button>
+											<button class="btn btn-primary btn-sm" disabled={editEvolSaving || richEmpty(editEvolContenu)} on:click={saveEvolEdit}>
+												{editEvolSaving ? 'Enregistrement…' : 'Enregistrer'}
+											</button>
+										</div>
+									</div>
+								{:else if evol.contenu}
+									<span class="evol-text rich-content" style="font-size:.875rem">{@html safeHtml(evol.contenu)}</span>
+								{/if}
 							{/if}
-							{#if evol.fichiers_urls?.length}
+							{#if evol.fichiers_urls?.length && editingEvolId !== evol.id}
 								{@const photos = evol.fichiers_urls.filter(u => /\.(jpe?g|png|webp)$/i.test(u))}
 								{@const docs = evol.fichiers_urls.filter(u => !/\.(jpe?g|png|webp)$/i.test(u))}
 								{#if photos.length}

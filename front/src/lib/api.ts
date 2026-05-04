@@ -254,6 +254,8 @@ export const tickets = {
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
 	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
+	updateEvolution: (id: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
+		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
 	relanceSyndicList: () => api.get<Ticket[]>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	uploadPhoto: async (ticketId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
