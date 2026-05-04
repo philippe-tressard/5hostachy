@@ -119,7 +119,7 @@
 	let tkList: Ticket[] = [];
 	let tkLoading = false;
 	let tkLoaded = false;
-	let tkFilter: '' | 'ouvert' | 'en_cours' | 'résolu' | 'annulé' = '';
+	let tkFilter: '' | 'ouvert' | 'en_cours' = '';
 	let tkExpandedId: number | null = null;
 	let tkEvolsMap: Record<number, TicketEvolution[]> = {};
 	let tkEvolsLoaded = new Set<number>();
@@ -164,8 +164,27 @@
 	const REPORT_DEVIS_LABELS: Record<string, string> = { en_attente: 'En attente', accepte: 'Accepté', realise: 'Réalisé', refuse: 'Refusé' };
 	const REPORT_DEVIS_BADGES: Record<string, string> = { en_attente: 'badge-blue', accepte: 'badge-orange', realise: 'badge-green', refuse: 'badge-gray' };
 
-	$: tkFiltered = tkList.filter(t => !tkFilter || t.statut === tkFilter);
+	const TK_CLOSED = ['résolu', 'annulé', 'fermé'];
+	$: tkActive = tkList.filter(t => !TK_CLOSED.includes(t.statut));
+	$: tkFiltered = tkActive.filter(t => !tkFilter || t.statut === tkFilter);
 	$: tkPendingCount = tkList.filter(t => t.statut === 'ouvert').length;
+
+	const TK_THREE_YEARS_AGO = new Date();
+	TK_THREE_YEARS_AGO.setFullYear(TK_THREE_YEARS_AGO.getFullYear() - 3);
+	$: tkHistory = tkList
+		.filter(t => TK_CLOSED.includes(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= TK_THREE_YEARS_AGO)
+		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
+	$: tkHistoryByYear = (() => {
+		const groups = new Map<number, typeof tkHistory>();
+		for (const t of tkHistory) {
+			const year = new Date(t.mis_a_jour_le ?? t.cree_le).getFullYear();
+			if (!groups.has(year)) groups.set(year, []);
+			groups.get(year)!.push(t);
+		}
+		return [...groups.entries()].sort(([a], [b]) => b - a);
+	})();
+	let tkHistoryExpanded = false;
+	let tkExpandedYears = new Set<number>();
 
 	function renderDesc(c: string) { const t = c.trimStart(); return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`); }
 	function apiMessage(e: unknown, fallback = 'Erreur') {
@@ -1092,8 +1111,7 @@
 		<button class="btn btn-sm" class:btn-primary={tkFilter === ''} on:click={() => tkFilter = ''}>Tous</button>
 		<button class="btn btn-sm" class:btn-primary={tkFilter === 'ouvert'} on:click={() => tkFilter = 'ouvert'}>&#x1F535; Ouvert</button>
 		<button class="btn btn-sm" class:btn-primary={tkFilter === 'en_cours'} on:click={() => tkFilter = 'en_cours'}>&#x1F7E1; En cours</button>
-		<button class="btn btn-sm" class:btn-primary={tkFilter === 'résolu'} on:click={() => tkFilter = 'résolu'}>&#x1F7E2; Résolu</button>
-		<button class="btn btn-sm" class:btn-primary={tkFilter === 'annulé'} on:click={() => tkFilter = 'annulé'}>⚫ Annulé</button>
+
 	</div>
 
 	{#if tkLoading}
@@ -1194,6 +1212,95 @@
 				{/if}
 			</div>
 		{/each}
+	{/if}
+
+	<!-- Section Historique tickets clos -->
+	{#if tkHistory.length > 0}
+	<div class="history-section">
+		<button class="history-header" aria-expanded={tkHistoryExpanded} on:click={() => (tkHistoryExpanded = !tkHistoryExpanded)}>
+			<span class="history-title">Historique</span>
+			<span class="history-count">{tkHistory.length}</span>
+			<span class="history-chevron">▼</span>
+		</button>
+		{#if tkHistoryExpanded}
+		<div class="history-content">
+			{#each tkHistoryByYear as [year, tickets]}
+			<div class="history-year">
+				<button class="history-year-header" on:click={() => { if (tkExpandedYears.has(year)) { tkExpandedYears.delete(year); } else { tkExpandedYears.add(year); } tkExpandedYears = new Set(tkExpandedYears); }}>
+					<span class="history-year-label">{year}</span>
+					<span class="history-count">{tickets.length}</span>
+					<span class="history-chevron">{tkExpandedYears.has(year) ? '▲' : '▼'}</span>
+				</button>
+				{#if tkExpandedYears.has(year)}
+				<div>
+					{#each tickets as t (t.id)}
+					{@const hExpanded = tkExpandedId === t.id}
+					{@const evols = tkEvolsMap[t.id] ?? []}
+					<div class="tk-expand history-item" class:expanded={hExpanded} class:urgent={t.categorie === 'urgence'}
+						role="button" tabindex="0"
+						on:click={() => tkToggle(t.id)}
+						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && tkToggle(t.id)}>
+						<div class="tk-row">
+							<div class="tk-main">
+								<div class="tk-row-inner">
+									<span class="tk-cat">{TK_CAT_ICON[t.categorie] ?? '📋'}</span>
+									<span class="tk-row-titre">{t.titre}</span>
+									<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}" style="flex-shrink:0">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
+								</div>
+								{#if t.auteur_nom || t.auteur_batiment_nom}
+									<div class="tk-ticket-meta">
+										{#if t.auteur_nom}<span>👤 {t.auteur_nom}</span>{/if}
+										{#if t.auteur_batiment_nom}<span>📍 {t.auteur_batiment_nom}</span>{/if}
+									</div>
+								{/if}
+							</div>
+							<div class="tk-row-right">
+								<span class="tk-row-date">{fmtDate(t.mis_a_jour_le ?? t.cree_le)}</span>
+								<span class="chevron" class:open={hExpanded}>›</span>
+							</div>
+						</div>
+						{#if !hExpanded}
+							<div class="tk-preview clamp-5">{@html renderDesc(t.description)}</div>
+						{/if}
+						{#if hExpanded}
+							<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
+								{#if t.auteur_nom || t.auteur_batiment_nom}
+									<div class="tk-context-meta">
+										{#if t.auteur_nom}<span class="context-chip">Demandeur : {t.auteur_nom}</span>{/if}
+										{#if t.auteur_batiment_nom}<span class="context-chip">Bâtiment : {t.auteur_batiment_nom}</span>{/if}
+									</div>
+								{/if}
+								<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+								<small style="color:var(--color-text-muted);font-size:.78rem">Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span></small>
+								{#if evols.length > 0}
+									{@const sorted = [...evols].sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())}
+									<div class="evol-list">
+										{#each sorted as evol, i (evol.id)}
+											{#if i > 0}<hr class="evol-sep" />{/if}
+											<div class="evol-item evol-{evol.type}">
+												<span class="evol-icon">{#if evol.type === 'etat'}🔄{:else if evol.type === 'reponse'}💬{:else}📝{/if}</span>
+												<div class="evol-body">
+													<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+													{#if evol.type === 'etat'}
+														<span class="evol-text">Statut : <strong>{TK_STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{TK_STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong></span>
+													{/if}
+													{#if evol.contenu}<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>{/if}
+												</div>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+					{/each}
+				</div>
+				{/if}
+			</div>
+			{/each}
+		</div>
+		{/if}
+	</div>
 	{/if}
 
 {:else if onglet === 'reporting'}
@@ -2630,5 +2737,22 @@
   .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
   .badge-red { background: #fee2e2; color: #991b1b; }
   .badge-orange { background: #fff7ed; color: #9a3412; }
+
+  /* Historique tickets clos */
+  .history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
+  .history-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: none; border: none; padding: 0; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--color-text); text-align: left; }
+  .history-header:hover { color: var(--color-primary); }
+  .history-title { flex: 1; }
+  .history-count { display: inline-flex; align-items: center; justify-content: center; background: var(--color-primary); color: white; font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 12px; min-width: 1.5rem; }
+  .history-chevron { font-size: .8rem; color: var(--color-text-muted); flex-shrink: 0; transition: transform .2s; }
+  .history-header[aria-expanded="true"] .history-chevron { transform: scaleY(-1); }
+  .history-content { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
+  .history-year { margin-bottom: .5rem; }
+  .history-year-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .75rem; cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--color-text); }
+  .history-year-header:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .history-year-label { flex: 1; text-align: left; }
+  .history-item { border-left: 4px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); opacity: .8; transition: opacity .15s, border-left-color .15s; }
+  .history-item:hover { opacity: 1; }
+  .history-item.expanded { opacity: 1; }
 
 </style>

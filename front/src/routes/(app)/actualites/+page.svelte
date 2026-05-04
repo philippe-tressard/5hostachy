@@ -306,7 +306,7 @@
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if showForm && $isCS}
-	<div class="card" style="margin-bottom:1.5rem;max-width:640px">
+	<div class="card" style="margin-bottom:1.5rem">
 		<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Nouvelle publication</h2>
 		<form on:submit|preventDefault={publish}>
 			<div class="field">
