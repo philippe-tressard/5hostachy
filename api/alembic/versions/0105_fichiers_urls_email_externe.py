@@ -9,19 +9,21 @@ branch_labels = None
 depends_on = None
 
 
+def _column_exists(bind, table, column):
+    cols = [row[1] for row in bind.execute(text(f"PRAGMA table_info({table})"))]
+    return column in cols
+
+
 def upgrade():
-    # ── Colonnes fichiers_urls ──────────────────────────────────────────────
-    with op.batch_alter_table('message_ticket') as batch_op:
-        batch_op.add_column(sa.Column('fichiers_urls', sa.Text(), nullable=False, server_default='[]'))
+    bind = op.get_bind()
 
-    with op.batch_alter_table('ticket_evolution') as batch_op:
-        batch_op.add_column(sa.Column('fichiers_urls', sa.Text(), nullable=False, server_default='[]'))
-
-    with op.batch_alter_table('publication_evolution') as batch_op:
-        batch_op.add_column(sa.Column('fichiers_urls', sa.Text(), nullable=False, server_default='[]'))
+    # ── Colonnes fichiers_urls (idempotent) ─────────────────────────────────
+    for table in ('message_ticket', 'ticket_evolution', 'publication_evolution'):
+        if not _column_exists(bind, table, 'fichiers_urls'):
+            with op.batch_alter_table(table) as batch_op:
+                batch_op.add_column(sa.Column('fichiers_urls', sa.Text(), nullable=False, server_default='[]'))
 
     # ── Templates email ─────────────────────────────────────────────────────
-    bind = op.get_bind()
 
     # Template publication_externe
     existing = bind.execute(
@@ -29,12 +31,15 @@ def upgrade():
     ).fetchone()
     if not existing:
         bind.execute(text("""
-            INSERT INTO modele_email (code, libelle, sujet, corps, actif)
+            INSERT INTO modele_email (code, libelle, sujet, corps_html, corps_texte, variables_disponibles, desactivable, actif)
             VALUES (
                 'publication_externe',
                 'Notification publication (email externe)',
                 :sujet,
                 :corps,
+                '',
+                '',
+                0,
                 1
             )
         """).bindparams(
@@ -90,12 +95,15 @@ def upgrade():
     ).fetchone()
     if not existing:
         bind.execute(text("""
-            INSERT INTO modele_email (code, libelle, sujet, corps, actif)
+            INSERT INTO modele_email (code, libelle, sujet, corps_html, corps_texte, variables_disponibles, desactivable, actif)
             VALUES (
                 'ticket_externe',
                 'Notification ticket (email externe)',
                 :sujet,
                 :corps,
+                '',
+                '',
+                0,
                 1
             )
         """).bindparams(

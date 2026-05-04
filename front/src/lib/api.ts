@@ -252,7 +252,7 @@ export const tickets = {
 	addMessage: (id: number, data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
-	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string }) =>
+	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	relanceSyndicList: () => api.get<Ticket[]>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
