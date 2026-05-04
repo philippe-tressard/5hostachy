@@ -43,6 +43,20 @@
 	let pubFilesMap: Record<number, any[]> = {};
 	let loadedFilesFor = new Set<number>();
 	let fileInputKey = 0;
+	let expandedPubs = new Set<number>();
+	let expandedEvols = new Set<number>();
+
+	function togglePub(id: number) {
+		if (expandedPubs.has(id)) {
+			expandedPubs.delete(id);
+			expandedPubs = new Set(expandedPubs);
+			if (showEvolForm === id) showEvolForm = null;
+		} else {
+			expandedPubs = new Set([id]);
+			showEvolForm = null;
+			loadPubFiles(id);
+		}
+	}
 
 	function handleFilesChange(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
