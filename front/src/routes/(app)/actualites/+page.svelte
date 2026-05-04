@@ -205,8 +205,6 @@
 	let editEvolSaving = false;
 	let uploadingEditEvol = false;
 
-	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
-
 	function startEditEvol(evol: any, pubId: number) {
 		editingEvolId = evol.id;
 		editingEvolPubId = pubId;
