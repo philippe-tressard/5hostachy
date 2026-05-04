@@ -2409,7 +2409,7 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .utag { font-size: .6rem; font-weight: 600; padding: .05rem .35rem; border-radius: 4px; line-height: 1.3; }
 .utag-ok { background: #d4edda; color: #155724; }
 .utag-ko { background: #f8d7da; color: #721c24; }
-.onglets-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .75rem; }
+.onglets-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: .75rem; }
 .onglet-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
 
 /* Télémétrie */
@@ -2417,7 +2417,7 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
 .pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-.tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
+.tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 1rem; margin-top: 1.25rem; }
 .tl-kpi { background: var(--color-surface, #fff); border: 1px solid var(--color-border); border-radius: var(--radius, 8px); padding: 1.25rem 1rem; text-align: center; }
 .tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
 .tl-kpi-label { font-size: .82rem; color: var(--color-text-muted); margin-top: .3rem; }

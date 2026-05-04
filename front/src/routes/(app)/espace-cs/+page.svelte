@@ -2366,7 +2366,7 @@
 	}
 
 	/* Form grid */
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .65rem; }
+	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select, .form-grid textarea {
 		padding: .4rem .55rem; border: 1px solid var(--color-border);

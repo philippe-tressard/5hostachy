@@ -2091,14 +2091,14 @@
 	.contrat-form-inline { margin-top: .75rem; padding: .85rem 1rem; background: var(--color-bg-secondary, #f8f9fa); border-radius: var(--radius); border: 1px solid var(--color-border); }
 	.add-contrat-btn { margin-top: .6rem; }
 
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .65rem; }
+	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
 	.devis-form-help { margin: 0 0 .75rem; font-size: .82rem; color: var(--color-text-muted); line-height: 1.45; }
 	.devis-file-note { display: inline-block; margin-top: .35rem; font-size: .8rem; color: var(--color-text-muted); }
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
-	.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .6rem; }
+	.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .6rem; }
 	.detail-label { display: block; font-size: .75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .1rem; }
 
 	.muted-sm { font-size: .85rem; color: var(--color-text-muted); padding: .4rem 0; }

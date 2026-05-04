@@ -873,7 +873,7 @@
 	.urgence-progress-label { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
 
 	/* ═══ KPI CARDS ═════════════════════════════════════════════════════ */
-	.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; margin-bottom: 1.25rem; }
+	.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: .75rem; margin-bottom: 1.25rem; }
 	.kpi-card { display: flex; align-items: stretch; text-decoration: none; color: inherit; overflow: hidden; padding: 0; transition: box-shadow .15s, transform .1s; }
 	.kpi-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
 	.kpi-icon-zone { width: 3.5rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }

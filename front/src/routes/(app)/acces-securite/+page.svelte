@@ -459,7 +459,7 @@ import { onMount } from 'svelte';
 	.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 	.table th { text-align: left; padding: .4rem .5rem; font-size: .8rem; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); }
 	.table td { padding: .5rem; border-bottom: 1px solid var(--color-border); }
-	.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+	.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 1rem; margin-bottom: 1rem; }
 	.form label { display: flex; flex-direction: column; gap: .3rem; font-size: .9rem; }
 	.form select, .form input, .form textarea {
 		padding: .45rem .6rem; border: 1px solid var(--color-border);

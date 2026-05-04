@@ -1105,7 +1105,7 @@ import { onMount } from 'svelte';
 <style>
 	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-left: 1.25rem; }
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem; }
+	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
 	.checkbox-field { display: flex; align-items: center; gap: .4rem; font-size: .875rem; cursor: pointer; }
 
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }

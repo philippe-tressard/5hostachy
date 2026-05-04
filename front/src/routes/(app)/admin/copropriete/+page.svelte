@@ -134,7 +134,7 @@
 <style>
 	.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
 	.form-section { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.25rem; }
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; }
+	.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
 	.form-group { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-group span { color: var(--color-text-muted); font-size: .8rem; }
 </style>
