@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
-from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead
+from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
@@ -440,6 +440,44 @@ def delete_publication(
         session.delete(evol)
     session.delete(pub)
     session.commit()
+
+
+@router.patch("/{pub_id}/evolutions/{evol_id}", response_model=EvolutionRead)
+def update_evolution(
+    pub_id: int,
+    evol_id: int,
+    body: PublicationEvolutionUpdate,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    evol = session.get(PublicationEvolution, evol_id)
+    if not evol or evol.publication_id != pub_id:
+        raise HTTPException(404, "Évolution introuvable")
+    if evol.type != "commentaire":
+        raise HTTPException(422, "Seuls les commentaires peuvent être modifiés")
+    if evol.auteur_id != user.id and not user.has_role(RoleUtilisateur.admin):
+        raise HTTPException(403, "Accès refusé")
+    if body.contenu is not None:
+        evol.contenu = body.contenu
+    if body.fichiers_urls is not None:
+        evol.fichiers_urls = json.dumps(body.fichiers_urls)
+    session.add(evol)
+    session.commit()
+    session.refresh(evol)
+    auteur = session.get(Utilisateur, evol.auteur_id)
+    fichiers_list = json.loads(evol.fichiers_urls) if evol.fichiers_urls else []
+    return EvolutionRead(
+        id=evol.id,
+        publication_id=evol.publication_id,
+        type=evol.type,
+        contenu=evol.contenu,
+        ancien_statut=evol.ancien_statut,
+        nouveau_statut=evol.nouveau_statut,
+        auteur_id=evol.auteur_id,
+        auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
+        cree_le=evol.cree_le,
+        fichiers_urls=fichiers_list,
+    )
 
 
 @router.post("/{pub_id}/evolutions", response_model=EvolutionRead, status_code=201)
