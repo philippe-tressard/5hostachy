@@ -467,7 +467,7 @@
 							{:else if evol.type === 'reponse'}
 								<span class="evol-text">Nouvelle réponse{#if evol.contenu} ({evol.contenu}){/if}</span>
 							{/if}
-							{#if evol.type === 'commentaire'}
+						{#if evol.type === 'commentaire' || evol.type === 'etat'}
 								{#if editingEvolId === evol.id}
 								<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)">
 									{#key editingEvolId}
