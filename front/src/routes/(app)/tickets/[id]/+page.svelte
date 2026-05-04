@@ -504,6 +504,9 @@
 				{#if evolType === 'etat'}
 					<div class="field">
 						<label for="evol-statut">Nouvel état *</label>
+						{#if ticket?.statut}
+							<div style="font-size:.8rem;color:var(--color-text-muted);margin-bottom:.35rem">État actuel : <strong>{STATUT_LABELS[ticket.statut] || ticket.statut}</strong></div>
+						{/if}
 						<select id="evol-statut" bind:value={evolNouveauStatut}>
 							<option value="">— Choisir —</option>
 							<option value="ouvert">&#x1F535; Ouvert</option>
@@ -612,7 +615,7 @@
 								<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
 								{#if evol.type === 'commentaire' && $isCS && editingEvolId !== evol.id}
 									<button type="button" title="Modifier" on:click={() => startEditEvol(evol)}
-										style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;padding:.1rem .2rem;font-size:.8rem;flex-shrink:0" aria-label="Modifier">✏️</button>
+									style="border:1px solid var(--color-border);background:var(--color-bg-alt);color:var(--color-text);cursor:pointer;padding:.15rem .4rem;font-size:.75rem;flex-shrink:0;border-radius:5px;line-height:1.4" aria-label="Modifier">✏️ Modifier</button>
 								{/if}
 							</div>
 							{#if evol.type === 'etat'}
