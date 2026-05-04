@@ -228,6 +228,11 @@ class TicketEvolutionUpdate(BaseModel):
     fichiers_urls: Optional[List[str]] = None
 
 
+class PublicationEvolutionUpdate(BaseModel):
+    contenu: Optional[str] = None
+    fichiers_urls: Optional[List[str]] = None
+
+
 class TicketEvolutionRead(BaseModel):
     id: int
     ticket_id: int

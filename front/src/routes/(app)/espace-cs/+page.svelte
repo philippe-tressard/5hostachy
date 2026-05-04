@@ -7,6 +7,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 
@@ -1150,6 +1151,9 @@
 								{#if tkEvolType === 'etat'}
 									<div class="field" style="margin-bottom:.6rem">
 										<label for="tk-statut-{t.id}">Nouvel état *</label>
+										{#if t.statut}
+											<div style="font-size:.8rem;color:var(--color-text-muted);margin-bottom:.35rem">État actuel : <strong>{TK_STATUT_LABELS[t.statut] || t.statut}</strong></div>
+										{/if}
 										<select id="tk-statut-{t.id}" bind:value={tkEvolStatut}>
 											<option value="">— Choisir —</option>
 											<option value="ouvert">&#x1F535; Ouvert</option>
@@ -1161,15 +1165,14 @@
 								{/if}
 								<div class="field" style="margin-bottom:.6rem">
 									<label for="tk-contenu-{t.id}">{tkEvolType === 'etat' ? 'Commentaire (optionnel)' : 'Commentaire *'}</label>
-									<textarea id="tk-contenu-{t.id}" bind:value={tkEvolContenu} rows="3"
+									<RichEditor bind:value={tkEvolContenu}
 										placeholder={tkEvolType === 'etat' ? 'Précisions sur ce changement…' : 'Ajoutez une note de suivi…'}
-										style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
-									></textarea>
+										minHeight="90px" />
 								</div>
 								<div style="display:flex;justify-content:flex-end;gap:.5rem">
 									<button class="btn btn-outline btn-sm" on:click={() => (tkShowForm = null)}>Annuler</button>
 									<button class="btn btn-primary btn-sm"
-										disabled={tkEvolSaving || (tkEvolType === 'etat' && !tkEvolStatut) || (tkEvolType === 'commentaire' && !tkEvolContenu.trim())}
+										disabled={tkEvolSaving || (tkEvolType === 'etat' && !tkEvolStatut) || (tkEvolType === 'commentaire' && (!tkEvolContenu || tkEvolContenu.replace(/<[^>]+>/g,'').trim() === ''))}
 										on:click={() => tkSubmitEvol(t)}>
 										{tkEvolSaving ? 'Envoi…' : 'Valider'}
 									</button>

@@ -280,6 +280,8 @@ export const publications = {
 	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
 	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
+	updateEvolution: (pubId: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
+		api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
 };
 
 export const documents = {
