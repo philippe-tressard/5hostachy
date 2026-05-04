@@ -667,7 +667,7 @@
 										</div>
 										<div style="display:flex;gap:.5rem;margin-top:.5rem">
 											<button class="btn btn-outline btn-sm" on:click={() => editingEvolId = null}>Annuler</button>
-											<button class="btn btn-primary btn-sm" disabled={editEvolSaving || richEmpty(editEvolContenu)} on:click={saveEvolEdit}>
+											<button class="btn btn-primary btn-sm" disabled={editEvolSaving || (richEmpty(editEvolContenu) && editEvolPhotos.length === 0 && editEvolDocs.length === 0)} on:click={saveEvolEdit}>
 												{editEvolSaving ? 'Enregistrement…' : 'Enregistrer'}
 											</button>
 										</div>
