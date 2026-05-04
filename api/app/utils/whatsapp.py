@@ -150,6 +150,7 @@ def envoyer_whatsapp(
             resp.raise_for_status()
     except Exception as exc:
         logger.warning("Échec envoi WhatsApp : %s", exc)
+        raise
 
 
 def envoyer_whatsapp_avec_log(
