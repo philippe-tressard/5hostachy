@@ -9,6 +9,7 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime, isNouveau } from '$lib/date';
 
