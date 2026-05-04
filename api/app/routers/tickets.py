@@ -1020,7 +1020,7 @@ def add_evolution(
                 )
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
-                    f"🔧 {ticket.titre}", msg, False, None, None, wa_config,
+                    f"🔧 {ticket.titre}", msg, False, ticket.perimetre_cible, None, wa_config,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:
@@ -1050,6 +1050,25 @@ def add_evolution(
                         destinataires.append((uid, email))
                         seen_emails.add(email.lower())
 
+            # Construire l'historique des évolutions pour le contexte email
+            evols_hist = session.exec(
+                select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
+                .order_by(TicketEvolution.cree_le)
+            ).all()
+            historique = [{"date": ticket.cree_le.strftime("%d/%m/%Y"), "label": "Création du ticket"}]
+            for ev in evols_hist:
+                if ev.type == "etat":
+                    lbl = (f"Changement d'état : "
+                           f"{STATUT_LABELS.get(ev.ancien_statut or '', '?')} → "
+                           f"{STATUT_LABELS.get(ev.nouveau_statut or '', '?')}")
+                elif ev.type == "relance":
+                    lbl = ev.contenu or "Relance syndic"
+                elif ev.type == "commentaire":
+                    lbl = f"Commentaire : {(ev.contenu or '')[:100]}"
+                else:
+                    lbl = ev.type
+                historique.append({"date": _fmt_paris(ev.cree_le), "label": lbl})
+
             ctx = {
                 "ticket": {
                     "id": ticket.id, "numero": ticket.numero,
@@ -1061,6 +1080,7 @@ def add_evolution(
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
                 "app": {"url": cfg_map.get("site_url", "https://localhost")},
                 "reference_copro": cfg_map.get("reference_copro", ""),
+                "historique": historique,
             }
             if destinataires:
                 background_tasks.add_task(
