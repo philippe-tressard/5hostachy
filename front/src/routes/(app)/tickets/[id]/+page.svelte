@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { tickets as ticketsApi, ApiError, type TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, fichiersApi, ApiError, type TicketEvolution } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
@@ -17,6 +17,7 @@
 		interne: boolean;
 		auteur: { id: number; prenom: string; nom: string; role: string };
 		cree_le: string;
+		fichiers_urls?: string[];
 	}
 
 	let ticket: any = null;
@@ -27,6 +28,9 @@
 	let newInterne = false;
 	let sending = false;
 	let updatingStatus = false;
+	let msgFichiers: { url: string; nom: string; type: string }[] = [];
+	let msgEmailExterne = '';
+	let uploadingMsgFichier = false;
 
 	// Évolutions
 	let showEvolForm = false;
@@ -35,6 +39,9 @@
 	let evolNouveauStatut = '';
 	let evolSaving = false;
 	let expandedEvols = false;
+	let evolFichiers: { url: string; nom: string; type: string }[] = [];
+	let evolEmailExterne = '';
+	let uploadingEvolFichier = false;
 
 	$: ticketId = Number($page.params.id);
 
@@ -103,15 +110,54 @@
 		if (!newContent.trim()) return;
 		sending = true;
 		try {
-			const msg = await ticketsApi.addMessage(ticketId, { contenu: newContent, interne: newInterne });
+			const msg = await ticketsApi.addMessage(ticketId, {
+				contenu: newContent,
+				interne: newInterne,
+				fichiers_urls: msgFichiers.map(f => f.url),
+				email_externe: msgEmailExterne.trim() || undefined,
+			});
 			messages = [...messages, msg];
 			newContent = '';
 			newInterne = false;
+			msgFichiers = [];
+			msgEmailExterne = '';
 			await loadEvolutions();
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
 			sending = false;
+		}
+	}
+
+	async function uploadMsgFichier(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		uploadingMsgFichier = true;
+		try {
+			const result = await fichiersApi.upload(file);
+			msgFichiers = [...msgFichiers, result];
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur upload');
+		} finally {
+			uploadingMsgFichier = false;
+			input.value = '';
+		}
+	}
+
+	async function uploadEvolFichier(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		uploadingEvolFichier = true;
+		try {
+			const result = await fichiersApi.upload(file);
+			evolFichiers = [...evolFichiers, result];
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur upload');
+		} finally {
+			uploadingEvolFichier = false;
+			input.value = '';
 		}
 	}
 
@@ -137,6 +183,8 @@
 				type: evolType,
 				contenu: evolContenu.trim() || undefined,
 				nouveau_statut: evolType === 'etat' ? evolNouveauStatut : undefined,
+				fichiers_urls: evolFichiers.map(f => f.url),
+				email_externe: evolEmailExterne.trim() || undefined,
 			});
 			await loadEvolutions();
 			if (evolType === 'etat') {
@@ -145,6 +193,8 @@
 			showEvolForm = false;
 			evolContenu = '';
 			evolNouveauStatut = '';
+			evolFichiers = [];
+			evolEmailExterne = '';
 			toast('success', evolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -249,6 +299,21 @@
 						<span class="msg-time">{fmtDatetime(msg.cree_le)}</span>
 					</div>
 					<div class="msg-body">{@html renderContent(msg.contenu)}</div>
+					{#if msg.fichiers_urls?.length}
+						<div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.4rem">
+							{#each msg.fichiers_urls as fUrl}
+								{#if /\.(jpe?g|png|webp)$/i.test(fUrl)}
+									<a href={fUrl} target="_blank" rel="noopener">
+										<img src={fUrl} alt="Pièce jointe" style="width:72px;height:72px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border)" />
+									</a>
+								{:else}
+									<a href={fUrl} target="_blank" rel="noopener" style="font-size:.78rem;display:flex;align-items:center;gap:.25rem;color:var(--color-primary)">
+										📄 {fUrl.split('/').pop()}
+									</a>
+								{/if}
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{/each}
@@ -261,6 +326,36 @@
 						<input type="checkbox" bind:checked={newInterne} />
 						Message interne (visible par le CS uniquement)
 					</label>
+					<!-- Pièces jointes -->
+					{#if !newInterne}
+						<div style="margin:.4rem 0">
+							<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Pièces jointes (photos, PDF, Word, Excel)</label>
+							<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin:.3rem 0">
+								{#each msgFichiers as f, i}
+									<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
+										{#if f.type === 'image'}<span>🖼️</span>{:else}<span>📄</span>{/if}
+										<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
+										<button type="button" on:click={() => msgFichiers = msgFichiers.filter((_, j) => j !== i)}
+											style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
+									</div>
+								{/each}
+							</div>
+							<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
+								{uploadingMsgFichier ? 'Upload…' : '+ Ajouter un fichier'}
+								<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"
+									on:change={uploadMsgFichier} style="display:none" disabled={uploadingMsgFichier} />
+							</label>
+						</div>
+					{/if}
+					<!-- Email externe -->
+					{#if !newInterne}
+						<div style="margin:.4rem 0">
+							<label for="msg-email-ext" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📧 Notifier une adresse email externe (optionnel)</label>
+							<input id="msg-email-ext" type="email" bind:value={msgEmailExterne}
+								placeholder="contact@exemple.fr"
+								style="padding:.35rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem;width:100%;max-width:320px;margin-top:.25rem;display:block" />
+						</div>
+					{/if}
 				{/if}
 				<div class="form-actions">
 					<button type="submit" class="btn btn-primary" disabled={sending}>
@@ -314,6 +409,32 @@
 						style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
 					></textarea>
 				</div>
+				<!-- Pièces jointes évolution -->
+				<div style="margin:.4rem 0">
+					<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Pièces jointes (photos, PDF, Word, Excel)</label>
+					<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin:.3rem 0">
+						{#each evolFichiers as f, i}
+							<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
+								{#if f.type === 'image'}<span>🖼️</span>{:else}<span>📄</span>{/if}
+								<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
+								<button type="button" on:click={() => evolFichiers = evolFichiers.filter((_, j) => j !== i)}
+									style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
+							</div>
+						{/each}
+					</div>
+					<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
+						{uploadingEvolFichier ? 'Upload…' : '+ Ajouter un fichier'}
+						<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"
+							on:change={uploadEvolFichier} style="display:none" disabled={uploadingEvolFichier} />
+					</label>
+				</div>
+				<!-- Email externe évolution -->
+				<div style="margin:.4rem 0">
+					<label for="evol-email-ext" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📧 Notifier une adresse email externe (optionnel)</label>
+					<input id="evol-email-ext" type="email" bind:value={evolEmailExterne}
+						placeholder="contact@exemple.fr"
+						style="padding:.35rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem;width:100%;max-width:320px;margin-top:.25rem;display:block" />
+				</div>
 				<div class="form-actions" style="gap:.5rem">
 					<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = false)}>Annuler</button>
 					<button type="button" class="btn btn-primary"
@@ -349,6 +470,21 @@
 							{/if}
 							{#if evol.contenu && evol.type === 'commentaire'}
 								<span class="evol-text">{evol.contenu}</span>
+							{/if}
+							{#if evol.fichiers_urls?.length}
+								<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem">
+									{#each evol.fichiers_urls as fUrl}
+										{#if /\.(jpe?g|png|webp)$/i.test(fUrl)}
+											<a href={fUrl} target="_blank" rel="noopener">
+												<img src={fUrl} alt="Pièce jointe" style="width:52px;height:52px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border)" />
+											</a>
+										{:else}
+											<a href={fUrl} target="_blank" rel="noopener" style="font-size:.75rem;display:flex;align-items:center;gap:.2rem;color:var(--color-primary)">
+												📄 {fUrl.split('/').pop()}
+											</a>
+										{/if}
+									{/each}
+								</div>
 							{/if}
 						</div>
 					</div>

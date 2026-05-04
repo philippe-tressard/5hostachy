@@ -159,6 +159,7 @@ export interface TicketEvolution {
 	auteur_id: number;
 	auteur_nom?: string;
 	cree_le: string;
+	fichiers_urls?: string[];
 }
 
 export interface PublicationEvolution {
@@ -171,6 +172,7 @@ export interface PublicationEvolution {
 	auteur_id: number;
 	auteur_nom?: string;
 	cree_le: string;
+	fichiers_urls?: string[];
 }
 
 export interface Publication {
@@ -247,9 +249,10 @@ export const tickets = {
 	update: (id: number, data: unknown) => api.patch<Ticket>(`/tickets/${id}`, data),
 	delete: (id: number) => api.delete(`/tickets/${id}`),
 	messages: (id: number) => api.get(`/tickets/${id}/messages`),
-	addMessage: (id: number, data: unknown) => api.post(`/tickets/${id}/messages`, data),
+	addMessage: (id: number, data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
+		api.post(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
-	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string }) =>
+	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	relanceSyndicList: () => api.get<Ticket[]>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
@@ -273,7 +276,7 @@ export const publications = {
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
 	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
-	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
+	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 };
 
@@ -547,6 +550,24 @@ export const flux = {
 };
 
 // ── Upload fichiers ─────────────────────────────────────────────────────────
+
+export const fichiersApi = {
+	/**
+	 * Upload un fichier (photo ou document PDF/Word/Excel) pour joindre à un commentaire.
+	 * Retourne { url, nom, type }
+	 */
+	upload: async (file: File): Promise<{ url: string; nom: string; type: string }> => {
+		const fd = new FormData();
+		fd.append('file', file);
+		const res = await fetch(`${BASE}/uploads/fichier`, { method: 'POST', body: fd, credentials: 'include' });
+		if (!res.ok) {
+			let detail = 'Erreur upload fichier';
+			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
+			throw new ApiError(res.status, detail);
+		}
+		return res.json();
+	},
+};
 
 async function uploadFile(path: string, file: File): Promise<{ url: string }> {
 	const form = new FormData();

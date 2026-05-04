@@ -415,6 +415,7 @@ class MessageTicket(SQLModel, table=True):
     contenu: str
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     interne: bool = False  # True = visible CS seulement
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
 
     ticket: Optional[Ticket] = Relationship(back_populates="messages")
 
@@ -430,6 +431,7 @@ class TicketEvolution(SQLModel, table=True):
     nouveau_statut: Optional[str] = None
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
 
     ticket: Optional[Ticket] = Relationship(back_populates="evolutions")
     auteur: Optional[Utilisateur] = Relationship()
@@ -479,6 +481,7 @@ class PublicationEvolution(SQLModel, table=True):
     nouveau_statut: Optional[str] = None
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
 
     publication: Optional[Publication] = Relationship(back_populates="evolutions")
     auteur: Optional[Utilisateur] = Relationship()

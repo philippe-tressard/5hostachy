@@ -110,6 +110,7 @@ class TicketCreate(BaseModel):
     saisi_pour_user_id: Optional[int] = None
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
+    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
 class TicketRead(BaseModel):
@@ -184,6 +185,8 @@ class TicketUpdate(BaseModel):
 class MessageCreate(BaseModel):
     contenu: str
     interne: bool = False
+    fichiers_urls: List[str] = []
+    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
 class MessageRead(BaseModel):
@@ -193,6 +196,17 @@ class MessageRead(BaseModel):
     contenu: str
     interne: bool
     cree_le: datetime
+    fichiers_urls: List[str] = []
+
+    @field_validator('fichiers_urls', mode='before')
+    @classmethod
+    def parse_fichiers_urls(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        return v or []
 
     class Config:
         from_attributes = True
@@ -205,6 +219,8 @@ class TicketEvolutionCreate(BaseModel):
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
+    fichiers_urls: List[str] = []
+    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
 class TicketEvolutionRead(BaseModel):
@@ -217,6 +233,17 @@ class TicketEvolutionRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     cree_le: datetime
+    fichiers_urls: List[str] = []
+
+    @field_validator('fichiers_urls', mode='before')
+    @classmethod
+    def parse_fichiers_urls_evol(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        return v or []
 
     class Config:
         from_attributes = True
@@ -237,6 +264,7 @@ class PublicationCreate(BaseModel):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
 class PublicationUpdate(BaseModel):
@@ -266,6 +294,17 @@ class EvolutionRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     cree_le: datetime
+    fichiers_urls: List[str] = []
+
+    @field_validator('fichiers_urls', mode='before')
+    @classmethod
+    def parse_fichiers_urls_pub(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        return v or []
 
     class Config:
         from_attributes = True
@@ -278,6 +317,8 @@ class EvolutionCreate(BaseModel):
     partager_whatsapp: Optional[bool] = None  # None = hérite de la publication
     envoyer_syndic: Optional[bool] = None  # None = hérite de la publication
     envoyer_cs: Optional[bool] = None  # None = hérite de la publication
+    fichiers_urls: List[str] = []
+    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
 class PublicationRead(BaseModel):

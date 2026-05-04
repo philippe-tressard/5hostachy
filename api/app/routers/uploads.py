@@ -22,6 +22,22 @@ UPLOADS_ROOT = Path("/app/uploads")
 ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_SIZE_MB = 5
 
+ALLOWED_DOC_MIME = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+DOC_EXTENSIONS = {
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+}
+MAX_DOC_SIZE_MB = 15
+
 # ── helpers ────────────────────────────────────────────────────────────────
 
 def _save_image(file: UploadFile, subfolder: str, max_dim: int = 1600) -> str:
@@ -135,3 +151,47 @@ def upload_ticket_photo(
     session.add(ticket)
     session.commit()
     return {"url": url, "photos_urls": photos}
+
+
+@router.post("/fichier", summary="Upload un fichier (photo ou document) pour commentaire")
+def upload_fichier(
+    file: UploadFile = File(...),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """
+    Upload une photo ou un document (PDF, Word, Excel) destiné à être joint
+    à un commentaire d'actualité ou de ticket.
+    - Images : redimensionnées à 1200px max, converties en JPEG
+    - Documents : stockés tels quels, max 15 Mo
+    Retourne { url, nom, type }
+    """
+    is_image = file.content_type in ALLOWED_MIME
+    is_doc = file.content_type in ALLOWED_DOC_MIME
+
+    if not is_image and not is_doc:
+        raise HTTPException(
+            400,
+            f"Format non supporté : {file.content_type}. "
+            "Utilisez JPEG, PNG, WebP pour les photos ou PDF, Word, Excel pour les documents."
+        )
+
+    original_name = file.filename or "fichier"
+
+    if is_image:
+        url = _save_image(file, "fichiers", max_dim=1200)
+        ext = "jpg"
+        ftype = "image"
+    else:
+        data = file.file.read()
+        if len(data) > MAX_DOC_SIZE_MB * 1024 * 1024:
+            raise HTTPException(413, f"Fichier trop volumineux (max {MAX_DOC_SIZE_MB} Mo).")
+        ext_map = DOC_EXTENSIONS.get(file.content_type, ".bin")
+        dest_dir = UPLOADS_ROOT / "fichiers"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}{ext_map}"
+        (dest_dir / filename).write_bytes(data)
+        url = f"/uploads/fichiers/{filename}"
+        ext = ext_map.lstrip(".")
+        ftype = "document"
+
+    return {"url": url, "nom": original_name, "type": ftype}
