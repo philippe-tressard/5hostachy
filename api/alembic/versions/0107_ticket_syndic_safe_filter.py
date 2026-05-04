@@ -1,16 +1,16 @@
-"""Update ticket_syndic email template: subject format + historique in body"""
+"""Fix ticket_syndic template: description with | safe, exclude current evol from historique"""
 from alembic import op
 import sqlalchemy as sa
 
-revision = '0106'
-down_revision = '0105'
+revision = '0107'
+down_revision = '0106'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    nouveau_sujet = "[{{ reference_copro }}] Ticket #{{ ticket.numero }} — {{ ticket.titre }}"
-
+    # Correction : {{ ticket.description | safe }} pour rendre le HTML enrichi (RichEditor)
+    # Note : la logique d'exclusion de l'évolution courante est dans le code Python (tickets.py)
     corps_html = (
         '<h2>Ticket copropriété #{{ ticket.numero }}</h2>'
         '<p><strong>Catégorie :</strong> {{ ticket.categorie }}</p>'
@@ -37,35 +37,12 @@ def upgrade() -> None:
         '</p>'
     )
 
-    corps_texte = (
-        '[{{ reference_copro }}] Ticket #{{ ticket.numero }} — {{ ticket.titre }}\n'
-        'Auteur : {{ auteur.prenom }} {{ auteur.nom }}\n'
-        '{% if ticket.description %}Commentaire : {{ ticket.description }}\n{% endif %}'
-        '{% if historique and historique|length > 1 %}\n'
-        'Historique :\n'
-        '{% for h in historique %}- {{ h.date }} : {{ h.label }}\n{% endfor %}'
-        '{% endif %}'
-    )
-
-    variables = '["ticket", "auteur", "residence", "app", "reference_copro", "historique"]'
-
     op.execute(
         sa.text(
-            "UPDATE modele_email SET sujet = :sujet, corps_html = :corps_html,"
-            " corps_texte = :corps_texte, variables_disponibles = :variables"
-            " WHERE code = 'ticket_syndic'"
-        ).bindparams(
-            sujet=nouveau_sujet,
-            corps_html=corps_html,
-            corps_texte=corps_texte,
-            variables=variables,
-        )
+            "UPDATE modele_email SET corps_html = :corps_html WHERE code = 'ticket_syndic'"
+        ).bindparams(corps_html=corps_html)
     )
 
 
 def downgrade() -> None:
-    op.execute(
-        sa.text(
-            "UPDATE modele_email SET sujet = :sujet WHERE code = 'ticket_syndic'"
-        ).bindparams(sujet="{{ reference_copro }} : {{ ticket.titre }}")
-    )
+    pass

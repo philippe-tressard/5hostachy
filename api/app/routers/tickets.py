@@ -1051,8 +1051,12 @@ def add_evolution(
                         seen_emails.add(email.lower())
 
             # Construire l'historique des évolutions pour le contexte email
+            # On exclut l'évolution courante (elle est déjà affichée comme "Commentaire")
             evols_hist = session.exec(
-                select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
+                select(TicketEvolution).where(
+                    TicketEvolution.ticket_id == ticket.id,
+                    TicketEvolution.id != evol.id,
+                )
                 .order_by(TicketEvolution.cree_le)
             ).all()
             historique = [{"date": ticket.cree_le.strftime("%d/%m/%Y"), "label": "Création du ticket"}]
