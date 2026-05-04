@@ -31,12 +31,15 @@ def upgrade():
     ).fetchone()
     if not existing:
         bind.execute(text("""
-            INSERT INTO modele_email (code, libelle, sujet, corps, actif)
+            INSERT INTO modele_email (code, libelle, sujet, corps_html, corps_texte, variables_disponibles, desactivable, actif)
             VALUES (
                 'publication_externe',
                 'Notification publication (email externe)',
                 :sujet,
                 :corps,
+                '',
+                '',
+                0,
                 1
             )
         """).bindparams(
@@ -92,12 +95,15 @@ def upgrade():
     ).fetchone()
     if not existing:
         bind.execute(text("""
-            INSERT INTO modele_email (code, libelle, sujet, corps, actif)
+            INSERT INTO modele_email (code, libelle, sujet, corps_html, corps_texte, variables_disponibles, desactivable, actif)
             VALUES (
                 'ticket_externe',
                 'Notification ticket (email externe)',
                 :sujet,
                 :corps,
+                '',
+                '',
+                0,
                 1
             )
         """).bindparams(
