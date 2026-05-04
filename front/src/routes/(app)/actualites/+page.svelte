@@ -184,76 +184,64 @@
 	let editBrouillon = false;
 	let editSaving = false;
 
-	// ── Évolutions ────────────────────────────────────────────────────────────
+	// ── Évolutions ──────────────────────────────────────────────────────
 	let showEvolForm: number | null = null;  // pub.id ouvert
-	let evolType: 'commentaire' | 'etat' = 'commentaire';
-	let evolContenu = '';
-	let evolNouveauStatut = '';
 	let evolSaving = false;
-	let evolPartagerWhatsapp = false;
-	let evolEnvoyerSyndic = false;
-	let evolEnvoyerCs = false;
-	let evolEmailExterne = '';
-	let evolFichiers: { url: string; nom: string; type: string }[] = [];
-	let uploadingEvolFichier = false;
-
-	// ── Édition d'un commentaire existant ────────────────────────────────────
 	let editingEvolId: number | null = null;
 	let editingEvolPubId: number | null = null;
-	let editEvolContenu = '';
-	let editEvolFichiers: { url: string; nom: string; type: string }[] = [];
 	let editEvolSaving = false;
-	let uploadingEditEvol = false;
 
-	function startEditEvol(evol: any, pubId: number) {
-		editingEvolId = evol.id;
-		editingEvolPubId = pubId;
-		editEvolContenu = evol.contenu || '';
-		editEvolFichiers = (evol.fichiers_urls || []).map((u: string) => ({
-			url: u,
-			nom: u.split('/').pop() || u,
-			type: /\.(jpe?g|png|webp)$/i.test(u) ? 'image' : 'document',
-		}));
-	}
+	const PUB_STATUT_OPTIONS = [
+		{ value: 'en_cours', label: '🟡 En cours' },
+		{ value: 'resolu',   label: '🟢 Résolu' },
+		{ value: 'annule',   label: '⚫ Annulé' },
+	];
 
-	async function uploadEditEvolFichier(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0]; if (!file) return;
-		uploadingEditEvol = true;
+	async function addEvolFromForm(pub: Publication, e: CustomEvent) {
+		const data = e.detail;
+		evolSaving = true;
 		try {
-			const r = await fichiersApi.upload(file);
-			editEvolFichiers = [...editEvolFichiers, r];
-		} catch { toast('error', 'Erreur upload fichier'); }
-		finally { uploadingEditEvol = false; input.value = ''; }
+			const evol = await pubsApi.addEvolution(pub.id, {
+				type: data.type,
+				contenu: data.contenu || undefined,
+				nouveau_statut: data.nouveau_statut,
+				partager_whatsapp: data.partager_whatsapp,
+				envoyer_syndic: data.envoyer_syndic,
+				envoyer_cs: data.envoyer_cs,
+				fichiers_urls: data.fichiers_urls,
+				email_externe: data.email_externe || undefined,
+			});
+			pubList = pubList.map(p => {
+				if (p.id !== pub.id) return p;
+				const updated = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
+				if (data.type === 'etat') updated.statut = evol.nouveau_statut as any;
+				return updated;
+			});
+			showEvolForm = null;
+			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
+		} catch (err: any) {
+			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+		} finally { evolSaving = false; }
 	}
 
-	async function saveEvolEdit() {
+	async function saveEvolEdit(e: CustomEvent) {
 		if (editingEvolId === null || editingEvolPubId === null) return;
 		editEvolSaving = true;
 		try {
 			const updated = await pubsApi.updateEvolution(editingEvolPubId, editingEvolId, {
-				contenu: editEvolContenu || undefined,
-				fichiers_urls: editEvolFichiers.map(f => f.url),
+				contenu: e.detail.contenu || undefined,
+				fichiers_urls: e.detail.fichiers_urls,
 			});
 			pubList = pubList.map(p => {
 				if (p.id !== editingEvolPubId) return p;
-				return { ...p, evolutions: (p.evolutions ?? []).map(e => e.id === editingEvolId ? updated as any : e) };
+				return { ...p, evolutions: (p.evolutions ?? []).map(ev => ev.id === editingEvolId ? updated as any : ev) };
 			});
-			editingEvolId = null;
-			editingEvolPubId = null;
+			editingEvolId = null; editingEvolPubId = null;
 			toast('success', 'Commentaire mis à jour');
 		} catch { toast('error', 'Erreur de mise à jour'); }
 		finally { editEvolSaving = false; }
 	}
 
-	// ── Expansion ─────────────────────────────────────────────────────────────
-	let expandedPubs = new Set<number>();
-	let expandedEvols = new Set<number>();
-	function togglePub(id: number) {
-			const wasOpen = expandedPubs.has(id);
-			expandedPubs = wasOpen ? new Set() : new Set([id]);
-			if (!wasOpen) loadPubFiles(id);
-		}
 	function startEdit(pub: Publication) {
 		editingPub = pub;
 		editTitre = pub.titre;
@@ -286,64 +274,6 @@
 		} finally { editSaving = false; }
 	}
 
-	function openEvolForm(pubId: number) {
-		const pub = pubList.find(p => p.id === pubId);
-		showEvolForm = pubId;
-		evolType = 'commentaire';
-		evolContenu = '';
-		evolNouveauStatut = '';
-		evolPartagerWhatsapp = pub?.partager_whatsapp ?? false;
-		evolEnvoyerSyndic = pub?.envoyer_syndic ?? false;
-		evolEnvoyerCs = pub?.envoyer_cs ?? false;
-		evolEmailExterne = '';
-		evolFichiers = [];
-		editingPub = null;
-		expandedPubs = new Set([pubId]);
-	}
-
-	async function uploadEvolFichier(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		uploadingEvolFichier = true;
-		try {
-			const result = await fichiersApi.upload(file);
-			evolFichiers = [...evolFichiers, result];
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur upload');
-		} finally {
-			uploadingEvolFichier = false;
-			input.value = '';
-		}
-	}
-
-	async function addEvolution(pub: Publication) {
-		if (evolType === 'etat' && !evolNouveauStatut) return;
-		if (evolType === 'commentaire' && richEmpty(evolContenu) && evolFichiers.length === 0) return;
-		evolSaving = true;
-		try {
-			const evol = await pubsApi.addEvolution(pub.id, {
-				type: evolType,
-				contenu: evolContenu.trim() || undefined,
-				nouveau_statut: evolType === 'etat' ? evolNouveauStatut : undefined,
-				partager_whatsapp: evolPartagerWhatsapp,
-				envoyer_syndic: evolEnvoyerSyndic,
-				envoyer_cs: evolEnvoyerCs,
-				fichiers_urls: evolFichiers.map(f => f.url),
-				email_externe: evolEmailExterne.trim() || undefined,
-			});
-			pubList = pubList.map(p => {
-				if (p.id !== pub.id) return p;
-				const updated = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
-				if (evolType === 'etat') updated.statut = evol.nouveau_statut as any;
-				return updated;
-			});
-			showEvolForm = null;
-			toast('success', evolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally { evolSaving = false; }
-	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -468,7 +398,7 @@
 						<button class="btn-icon-edit" aria-label="Modifier" title="Modifier"
 							on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
 					<button class="btn-icon" aria-label="Ajouter un commentaire / changer état" title="Commenter / état"
-						on:click|stopPropagation={() => openEvolForm(pub.id)}>&#x1F4AC;</button>
+						on:click|stopPropagation={() => { showEvolForm = pub.id; editingPub = null; expandedPubs = new Set([pub.id]); }}>&#x1F4AC;</button>
 
 					{#if pub.statut === 'resolu'}
 					<button class="btn-icon" aria-label="Archiver" title="Archiver"
@@ -524,96 +454,29 @@
 						</form>
 
 					{:else if showEvolForm === pub.id}
-						<!-- ── Formulaire d'évolution ── -->
-						<div class="evol-form" on:click|stopPropagation on:keydown|stopPropagation>
-							<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter une évolution</h4>
-							<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-								<button type="button" class="pill" class:pill-active={evolType === 'commentaire'}
-									on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</button>
-								<button type="button" class="pill" class:pill-active={evolType === 'etat'}
-									on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</button>
-							</div>
-							{#if evolType === 'etat'}
-								<div class="field">
-									<label for="evol-statut-{pub.id}">Nouvel état *</label>
-									{#if pub.statut}
-										<div style="font-size:.8rem;color:var(--color-text-muted);margin-bottom:.35rem">État actuel : <strong>{STATUT_LABELS[pub.statut] || pub.statut}</strong></div>
-									{/if}
-									<select id="evol-statut-{pub.id}" bind:value={evolNouveauStatut}>
-										<option value="">— Choisir —</option>
-										<option value="en_cours">&#x1F7E1; En cours</option>
-										<option value="resolu">&#x1F7E2; Résolu</option>
-										<option value="annule">⚫ Annulé</option>
-									</select>
-								</div>
-							{/if}
-							<div class="field">
-								<label for="evol-contenu-{pub.id}">{evolType === 'etat' ? 'Commentaire (optionnel)' : 'Commentaire *'}</label>
-								<RichEditor bind:value={evolContenu}
-									placeholder={evolType === 'etat' ? 'Précisions sur ce changement…' : 'Ajoutez un commentaire…'}
-									minHeight="90px" />
-							</div>
-							<div style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:1rem">
-								<label class="checkbox-field">
-									<input type="checkbox" bind:checked={evolPartagerWhatsapp} />
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#25D366" style="flex-shrink:0;vertical-align:middle" aria-label="WhatsApp">
-										<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.66 12.66 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-									</svg>
-									<span style="font-size:.85rem">Partager sur le groupe</span>
-								</label>
-								<label class="checkbox-field">
-									<input type="checkbox" bind:checked={evolEnvoyerSyndic} />
-									<span style="font-size:.85rem">✉️ Envoyer au syndic</span>
-								</label>
-								<label class="checkbox-field">
-									<input type="checkbox" bind:checked={evolEnvoyerCs} />
-									<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
-								</label>
-							</div>
+					<!-- ── Formulaire d'évolution ── -->
+					<div class="evol-form" on:click|stopPropagation on:keydown|stopPropagation>
+						<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter une évolution</h4>
+						{#key showEvolForm}
+						<EvolForm
+							statutOptions={PUB_STATUT_OPTIONS}
+							statutLabels={STATUT_LABELS}
+							currentStatut={pub.statut ?? ''}
+							showNotifs={true}
+							defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
+							defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
+							defaultEnvoyerCs={pub.envoyer_cs ?? false}
+							showEmail={true}
+							showFiles={true}
+							separatePhotosAndDocs={false}
+							saving={evolSaving}
+							on:submit={(e) => addEvolFromForm(pub, e)}
+							on:cancel={() => (showEvolForm = null)}
+						/>
+						{/key}
+					</div>
 
-							<!-- Pièces jointes -->
-							{#if evolType === 'commentaire'}
-								<div class="field" style="margin-bottom:.6rem">
-									<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Pièces jointes (photos, PDF, Word, Excel)</label>
-									<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem">
-										{#each evolFichiers as f, i}
-											<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
-												{#if f.type === 'image'}<span>🖼️</span>{:else}<span>📄</span>{/if}
-												<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
-												<button type="button" on:click={() => evolFichiers = evolFichiers.filter((_, j) => j !== i)}
-													style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
-											</div>
-										{/each}
-									</div>
-									<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
-										{uploadingEvolFichier ? 'Upload…' : '+ Ajouter un fichier'}
-										<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"
-											on:change={uploadEvolFichier} style="display:none" disabled={uploadingEvolFichier} />
-									</label>
-									{#if evolPartagerWhatsapp && evolFichiers.length > 0}
-										<p style="font-size:.75rem;color:var(--color-text-muted);margin:.3rem 0 0">📎 Fichiers joints par email uniquement (WhatsApp non supporté)</p>
-									{/if}
-								</div>
-							{/if}
-
-							<!-- Email externe -->
-							<div class="field" style="margin-bottom:.75rem">
-								<label for="evol-email-ext-{pub.id}" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📧 Notifier une adresse email externe (optionnel)</label>
-								<input id="evol-email-ext-{pub.id}" type="email" bind:value={evolEmailExterne}
-									placeholder="contact@exemple.fr"
-									style="padding:.35rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem;width:100%;max-width:320px" />
-							</div>
-							<div class="form-actions" style="gap:.5rem">
-								<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = null)}>Annuler</button>
-								<button type="button" class="btn btn-primary"
-									disabled={evolSaving || (evolType === 'etat' && !evolNouveauStatut) || (evolType === 'commentaire' && richEmpty(evolContenu) && evolFichiers.length === 0)}
-									on:click={() => addEvolution(pub)}>
-									{evolSaving ? 'Envoi…' : 'Valider'}
-								</button>
-							</div>
-						</div>
-
-					{:else}
+				{:else}
 						<!-- ── Corps normal ── -->
 						{#if pub.image_url}
 							<img class="pub-img" src={pub.image_url} alt={pub.titre} />
@@ -648,7 +511,7 @@
 											<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
 												<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
 												{#if evol.type === 'commentaire' && $isCS && editingEvolId !== evol.id}
-													<button type="button" on:click|stopPropagation={() => startEditEvol(evol, pub.id)}
+													<button type="button" on:click|stopPropagation={() => { editingEvolId = evol.id; editingEvolPubId = pub.id; }}
 														style="border:1px solid var(--color-border);background:var(--color-bg-alt);color:var(--color-text);cursor:pointer;padding:.15rem .4rem;font-size:.75rem;flex-shrink:0;border-radius:5px;line-height:1.4">✏️ Modifier</button>
 												{/if}
 											</div>
@@ -658,44 +521,21 @@
 												</span>
 											{/if}
 											{#if evol.type === 'commentaire' && editingEvolId === evol.id}
-												<!-- Formulaire d'édition inline -->
-												<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
-													<RichEditor bind:value={editEvolContenu} minHeight="80px" />
-													<!-- Fichiers -->
-													<div style="margin:.5rem 0">
-														<label style="font-size:.78rem;font-weight:500;color:var(--color-text-muted)">📎 Fichiers joints</label>
-														<div style="display:flex;flex-wrap:wrap;gap:.35rem;margin:.3rem 0">
-															{#each editEvolFichiers as f, idx}
-																{#if f.type === 'image'}
-																	<div style="position:relative">
-																		<img src={f.url} alt={f.nom} style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-																		<button type="button" on:click={() => editEvolFichiers = editEvolFichiers.filter((_,j)=>j!==idx)}
-																			style="position:absolute;top:-5px;right:-5px;border:none;background:var(--color-danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.65rem;cursor:pointer;line-height:16px;padding:0;text-align:center">✕</button>
-																	</div>
-																{:else}
-																	<div style="display:flex;align-items:center;gap:.25rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.15rem .35rem;font-size:.75rem">
-																		<span>📄</span>
-																		<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
-																		<button type="button" on:click={() => editEvolFichiers = editEvolFichiers.filter((_,j)=>j!==idx)}
-																			style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.85rem;padding:0;line-height:1">✕</button>
-																	</div>
-																{/if}
-															{/each}
-														</div>
-														<label class="btn btn-outline" style="cursor:pointer;font-size:.78rem;padding:.25rem .5rem;display:inline-block">
-															{uploadingEditEvol ? 'Upload…' : '+ Fichier'}
-															<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"
-																on:change={uploadEditEvolFichier} style="display:none" disabled={uploadingEditEvol} />
-														</label>
-													</div>
-													<div style="display:flex;gap:.5rem;margin-top:.5rem">
-														<button class="btn btn-outline btn-sm" on:click={() => { editingEvolId = null; editingEvolPubId = null; }}>Annuler</button>
-														<button class="btn btn-primary btn-sm" disabled={editEvolSaving || (richEmpty(editEvolContenu) && editEvolFichiers.length === 0)} on:click={saveEvolEdit}>
-															{editEvolSaving ? 'Enregistrement…' : 'Enregistrer'}
-														</button>
-													</div>
-												</div>
-											{:else if evol.contenu}
+										<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
+											{#key editingEvolId}
+											<EvolForm
+												editMode={true}
+												initialContenu={evol.contenu || ''}
+												initialFichiers={(evol.fichiers_urls || []).map((u: string) => ({ url: u, nom: u.split('/').pop() || u, type: /\.(jpe?g|png|webp)$/i.test(u) ? 'image' : 'document' }))}
+												showFiles={true}
+												separatePhotosAndDocs={false}
+												saving={editEvolSaving}
+												on:submit={saveEvolEdit}
+												on:cancel={() => { editingEvolId = null; editingEvolPubId = null; }}
+											/>
+											{/key}
+										</div>
+									{:else if evol.contenu}
 												<div class="evol-text rich-content" style="font-size:.875rem">{@html safeHtml(evol.contenu)}</div>
 											{/if}
 											{#if evol.fichiers_urls?.length > 0 && editingEvolId !== evol.id}
