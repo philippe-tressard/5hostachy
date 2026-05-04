@@ -2,7 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, isAdmin, currentUser, setUser } from '$lib/stores/auth';
-	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
+	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, fichiersApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -193,6 +193,9 @@
 	let evolPartagerWhatsapp = false;
 	let evolEnvoyerSyndic = false;
 	let evolEnvoyerCs = false;
+	let evolEmailExterne = '';
+	let evolFichiers: { url: string; nom: string; type: string }[] = [];
+	let uploadingEvolFichier = false;
 
 	// ── Expansion ─────────────────────────────────────────────────────────────
 	let expandedPubs = new Set<number>();
@@ -243,8 +246,26 @@
 		evolPartagerWhatsapp = pub?.partager_whatsapp ?? false;
 		evolEnvoyerSyndic = pub?.envoyer_syndic ?? false;
 		evolEnvoyerCs = pub?.envoyer_cs ?? false;
+		evolEmailExterne = '';
+		evolFichiers = [];
 		editingPub = null;
 		expandedPubs = new Set([pubId]);
+	}
+
+	async function uploadEvolFichier(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		uploadingEvolFichier = true;
+		try {
+			const result = await fichiersApi.upload(file);
+			evolFichiers = [...evolFichiers, result];
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur upload');
+		} finally {
+			uploadingEvolFichier = false;
+			input.value = '';
+		}
 	}
 
 	async function addEvolution(pub: Publication) {
@@ -259,6 +280,8 @@
 				partager_whatsapp: evolPartagerWhatsapp,
 				envoyer_syndic: evolEnvoyerSyndic,
 				envoyer_cs: evolEnvoyerCs,
+				fichiers_urls: evolFichiers.map(f => f.url),
+				email_externe: evolEmailExterne.trim() || undefined,
 			});
 			pubList = pubList.map(p => {
 				if (p.id !== pub.id) return p;
@@ -496,6 +519,39 @@
 									<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
 								</label>
 							</div>
+
+							<!-- Pièces jointes -->
+							{#if evolType === 'commentaire'}
+								<div class="field" style="margin-bottom:.6rem">
+									<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Pièces jointes (photos, PDF, Word, Excel)</label>
+									<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem">
+										{#each evolFichiers as f, i}
+											<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
+												{#if f.type === 'image'}<span>🖼️</span>{:else}<span>📄</span>{/if}
+												<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
+												<button type="button" on:click={() => evolFichiers = evolFichiers.filter((_, j) => j !== i)}
+													style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
+											</div>
+										{/each}
+									</div>
+									<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
+										{uploadingEvolFichier ? 'Upload…' : '+ Ajouter un fichier'}
+										<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"
+											on:change={uploadEvolFichier} style="display:none" disabled={uploadingEvolFichier} />
+									</label>
+									{#if evolPartagerWhatsapp && evolFichiers.length > 0}
+										<p style="font-size:.75rem;color:var(--color-text-muted);margin:.3rem 0 0">📎 Fichiers joints par email uniquement (WhatsApp non supporté)</p>
+									{/if}
+								</div>
+							{/if}
+
+							<!-- Email externe -->
+							<div class="field" style="margin-bottom:.75rem">
+								<label for="evol-email-ext-{pub.id}" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📧 Notifier une adresse email externe (optionnel)</label>
+								<input id="evol-email-ext-{pub.id}" type="email" bind:value={evolEmailExterne}
+									placeholder="contact@exemple.fr"
+									style="padding:.35rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem;width:100%;max-width:320px" />
+							</div>
 							<div class="form-actions" style="gap:.5rem">
 								<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = null)}>Annuler</button>
 								<button type="button" class="btn btn-primary"
@@ -546,6 +602,22 @@
 											{/if}
 											{#if evol.contenu}
 												<span class="evol-text">{evol.contenu}</span>
+											{/if}
+											{#if evol.fichiers_urls?.length > 0}
+												<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem">
+													{#each evol.fichiers_urls as url}
+														{#if url.match(/\.(jpg|jpeg|png|webp)$/i)}
+															<a href={url} target="_blank" rel="noopener">
+																<img src={url} alt="Pièce jointe" style="max-height:80px;max-width:120px;border-radius:4px;object-fit:cover;border:1px solid var(--color-border)" />
+															</a>
+														{:else}
+															<a href={url} target="_blank" rel="noopener"
+																style="font-size:.78rem;display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .4rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:4px;text-decoration:none;color:var(--color-text)">
+																📄 {url.split('/').pop()}
+															</a>
+														{/if}
+													{/each}
+												</div>
 											{/if}
 										</div>
 									</div>

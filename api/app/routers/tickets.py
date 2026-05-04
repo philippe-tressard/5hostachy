@@ -1,7 +1,10 @@
 """Router tickets — création, suivi, messagerie, évolutions."""
+import json
+import os
 import random
 import string
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlmodel import Session, select
@@ -39,6 +42,87 @@ def _evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
         nouveau_statut=e.nouveau_statut, auteur_id=e.auteur_id,
         auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
         cree_le=e.cree_le,
+        fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
+    )
+
+
+def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
+    """Convertit des URLs /uploads/... en chemins locaux /app/uploads/..."""
+    paths = []
+    for url in fichiers_urls:
+        path = "/app" + url if url.startswith("/uploads/") else url
+        if os.path.isfile(path):
+            paths.append(path)
+    return paths
+
+
+def _fmt_paris(dt: datetime) -> str:
+    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
+
+
+def _envoyer_email_externe_ticket(
+    ticket,
+    user: Utilisateur,
+    email_externe: str,
+    background_tasks: BackgroundTasks,
+    session: Session,
+    *,
+    is_commentaire: bool = True,
+    nouveau_message: str | None = None,
+    fichiers_urls: list[str] | None = None,
+):
+    """Envoie un email vers une adresse externe avec l'historique du ticket."""
+    from app.utils.email import send_email
+
+    cfg_rows = session.exec(
+        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+    ).all()
+    cfg = {r.cle: r.valeur for r in cfg_rows}
+
+    # Messages publics du ticket (historique)
+    messages = session.exec(
+        select(MessageTicket)
+        .where(MessageTicket.ticket_id == ticket.id, MessageTicket.interne == False)
+        .order_by(MessageTicket.cree_le)
+    ).all()
+    # Exclure le dernier si c'est le message courant
+    msgs_for_history = messages[:-1] if (is_commentaire and messages) else messages
+    msgs_ctx = []
+    for m in msgs_for_history:
+        auteur_m = session.get(Utilisateur, m.auteur_id)
+        msgs_ctx.append({
+            "auteur_nom": f"{auteur_m.prenom} {auteur_m.nom}" if auteur_m else "?",
+            "date": _fmt_paris(m.cree_le),
+            "contenu": m.contenu,
+        })
+
+    attachments = _resolve_fichiers_attachments(fichiers_urls or [])
+
+    ctx = {
+        "ticket": {
+            "id": ticket.id,
+            "numero": ticket.numero,
+            "titre": ticket.titre,
+            "description": ticket.description or "",
+            "categorie": ticket.categorie or "",
+        },
+        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "date_ticket": _fmt_paris(ticket.cree_le),
+        "date_commentaire": _fmt_paris(datetime.utcnow()),
+        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
+        "is_commentaire": is_commentaire,
+        "commentaire": nouveau_message or "",
+        "messages": msgs_ctx,
+        "fichiers": bool(attachments),
+    }
+
+    background_tasks.add_task(
+        send_email,
+        code="ticket_externe",
+        to=email_externe,
+        context=ctx,
+        attachments=attachments or None,
     )
 
 
@@ -285,6 +369,15 @@ def create_ticket(
 
     session.commit()
     session.refresh(ticket)
+
+    # Email externe si adresse fournie (CS/Admin uniquement)
+    email_ext = body.email_externe
+    if email_ext and email_ext.strip() and user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+        _envoyer_email_externe_ticket(
+            ticket, user, email_ext.strip(), background_tasks, session,
+            is_commentaire=False,
+        )
+
     return _ticket_read(ticket, session)
 
 
@@ -699,6 +792,7 @@ def add_message(
         auteur_id=user.id,
         contenu=body.contenu,
         interne=body.interne,
+        fichiers_urls=json.dumps(body.fichiers_urls, ensure_ascii=False),
     )
     # Auto-log évolution "réponse"
     evol = TicketEvolution(
@@ -777,6 +871,16 @@ def add_message(
 
     session.commit()
     session.refresh(msg)
+
+    # Email externe (CS/Admin uniquement, après commit pour avoir l'id)
+    if body.email_externe and body.email_externe.strip() and not body.interne:
+        _envoyer_email_externe_ticket(
+            ticket, user, body.email_externe.strip(), background_tasks, session,
+            is_commentaire=True,
+            nouveau_message=body.contenu,
+            fichiers_urls=body.fichiers_urls,
+        )
+
     return msg
 
 
@@ -825,6 +929,7 @@ def add_evolution(
         ancien_statut=ancien_statut,
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id, cree_le=datetime.utcnow(),
+        fichiers_urls=json.dumps(body.fichiers_urls, ensure_ascii=False),
     )
     session.add(evol)
 
@@ -963,6 +1068,15 @@ def add_evolution(
                     to_recipients=destinataires, context=ctx,
                     session=session,
                 )
+
+    # Email externe (CS/Admin uniquement)
+    if body.email_externe and body.email_externe.strip():
+        _envoyer_email_externe_ticket(
+            ticket, user, body.email_externe.strip(), background_tasks, session,
+            is_commentaire=True,
+            nouveau_message=body.contenu,
+            fichiers_urls=body.fichiers_urls,
+        )
 
     return _evol_read(evol, session)
 

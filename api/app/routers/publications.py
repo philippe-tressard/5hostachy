@@ -31,6 +31,7 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
     for e in evols:
         auteur = session.get(Utilisateur, e.auteur_id)
         nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
+        fichiers_list = json.loads(e.fichiers_urls) if e.fichiers_urls else []
         evol_reads.append(EvolutionRead(
             id=e.id,
             publication_id=e.publication_id,
@@ -41,6 +42,7 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
             auteur_id=e.auteur_id,
             auteur_nom=nom,
             cree_le=e.cree_le,
+            fichiers_urls=fichiers_list,
         ))
     data = PublicationRead.model_validate(pub)
     auteur_pub = session.get(Utilisateur, pub.auteur_id)
@@ -52,9 +54,14 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
 def _envoyer_email_syndic_publication(
     pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
     *, syndic: bool = True, cs: bool = False,
+    commentaire: str | None = None, fichiers_urls: list[str] | None = None,
 ):
     """Envoie un email au syndic et/ou CS avec la publication en corps."""
     from app.utils.email import send_email_group
+    from zoneinfo import ZoneInfo
+
+    def _fmt_paris(dt: datetime) -> str:
+        return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
 
     destinataires: list[tuple[int | None, str]] = []
     seen_emails: set[str] = set()
@@ -89,12 +96,37 @@ def _envoyer_email_syndic_publication(
     ).all()
     cfg = {r.cle: r.valeur for r in cfg_rows}
 
+    # Historique des évolutions (pour les commentaires)
+    evols_ctx = []
+    is_commentaire = commentaire is not None
+    if is_commentaire:
+        evols = session.exec(
+            select(PublicationEvolution)
+            .where(PublicationEvolution.publication_id == pub.id)
+            .order_by(PublicationEvolution.cree_le)
+        ).all()
+        for e in evols[:-1]:  # Exclure le dernier (= le commentaire en cours)
+            if not e.contenu:
+                continue
+            auteur_e = session.get(Utilisateur, e.auteur_id)
+            evols_ctx.append({
+                "auteur_nom": f"{auteur_e.prenom} {auteur_e.nom}" if auteur_e else "?",
+                "date": _fmt_paris(e.cree_le),
+                "contenu": e.contenu,
+            })
+
     ctx = {
         "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
         "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
         "reference_copro": cfg.get("reference_copro", ""),
+        "is_commentaire": is_commentaire,
+        "commentaire": commentaire or "",
+        "date_commentaire": _fmt_paris(datetime.utcnow()),
+        "date_publication": _fmt_paris(pub.cree_le),
+        "evolutions": evols_ctx,
+        "fichiers": bool(fichiers_urls),
     }
 
     # Photo jointe (image de la publication)
@@ -111,6 +143,10 @@ def _envoyer_email_syndic_publication(
         if doc.fichier_chemin and os.path.isfile(doc.fichier_chemin):
             all_attachments.append(doc.fichier_chemin)
 
+    # Fichiers joints au commentaire
+    if fichiers_urls:
+        all_attachments.extend(_resolve_fichiers_attachments(fichiers_urls))
+
     if destinataires:
         background_tasks.add_task(
             send_email_group,
@@ -120,6 +156,84 @@ def _envoyer_email_syndic_publication(
             session=session,
             attachments=all_attachments or None,
         )
+
+
+def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
+    """Convertit des URLs /uploads/fichiers/... en chemins locaux /app/uploads/fichiers/..."""
+    paths = []
+    for url in fichiers_urls:
+        if url.startswith("/uploads/"):
+            path = "/app" + url
+        else:
+            path = url
+        if os.path.isfile(path):
+            paths.append(path)
+    return paths
+
+
+def _envoyer_email_externe_publication(
+    pub: Publication,
+    user: Utilisateur,
+    email_externe: str,
+    background_tasks: BackgroundTasks,
+    session: Session,
+    *,
+    is_commentaire: bool = True,
+    commentaire: str | None = None,
+    fichiers_urls: list[str] | None = None,
+):
+    """Envoie un email vers une adresse externe (non-utilisateur) avec l'historique de la publication."""
+    from app.utils.email import send_email
+    from zoneinfo import ZoneInfo
+
+    def _fmt_paris(dt: datetime) -> str:
+        return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
+
+    cfg_rows = session.exec(
+        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+    ).all()
+    cfg = {r.cle: r.valeur for r in cfg_rows}
+
+    # Historique des évolutions (du plus ancien au plus récent, sauf la dernière si commentaire)
+    evols = session.exec(
+        select(PublicationEvolution)
+        .where(PublicationEvolution.publication_id == pub.id)
+        .order_by(PublicationEvolution.cree_le)
+    ).all()
+    evols_for_history = evols[:-1] if (is_commentaire and evols) else evols
+    evol_ctx = []
+    for e in evols_for_history:
+        if not e.contenu:
+            continue
+        auteur_e = session.get(Utilisateur, e.auteur_id)
+        evol_ctx.append({
+            "auteur_nom": f"{auteur_e.prenom} {auteur_e.nom}" if auteur_e else "?",
+            "date": _fmt_paris(e.cree_le),
+            "contenu": e.contenu,
+        })
+
+    attachments = _resolve_fichiers_attachments(fichiers_urls or [])
+
+    ctx = {
+        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
+        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "date_publication": _fmt_paris(pub.cree_le),
+        "date_commentaire": _fmt_paris(datetime.utcnow()),
+        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
+        "is_commentaire": is_commentaire,
+        "commentaire": commentaire or "",
+        "evolutions": evol_ctx,
+        "fichiers": bool(attachments),
+    }
+
+    background_tasks.add_task(
+        send_email,
+        code="publication_externe",
+        to=email_externe,
+        context=ctx,
+        attachments=attachments or None,
+    )
 
 
 def _is_archived(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEURES) -> bool:
@@ -192,7 +306,8 @@ def create_publication(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    data = body.model_dump()
+    email_externe = body.email_externe  # adresse externe (pas dans le modèle)
+    data = body.model_dump(exclude={"email_externe"})
     perimetre_cible_raw = json.dumps(data.get('perimetre_cible', ["résidence"]), ensure_ascii=False)
     data['perimetre_cible'] = perimetre_cible_raw
     data['public_cible'] = json.dumps(data.get('public_cible', ["résidents"]), ensure_ascii=False)
@@ -215,6 +330,11 @@ def create_publication(
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
     if pub.envoyer_cs and not pub.brouillon:
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+    if email_externe and email_externe.strip() and not pub.brouillon:
+        _envoyer_email_externe_publication(
+            pub, user, email_externe.strip(), background_tasks, session,
+            is_commentaire=False,
+        )
     return _pub_to_read(pub, session)
 
 
@@ -347,6 +467,7 @@ def add_evolution(
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id,
         cree_le=datetime.utcnow(),
+        fichiers_urls=json.dumps(body.fichiers_urls, ensure_ascii=False),
     )
     session.add(evol)
 
@@ -379,12 +500,27 @@ def add_evolution(
     # Envoi email syndic pour le commentaire si demandé
     share_syndic = body.envoyer_syndic if body.envoyer_syndic is not None else pub.envoyer_syndic
     if share_syndic and body.contenu and body.contenu.strip():
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
+        _envoyer_email_syndic_publication(
+            pub, user, background_tasks, session, syndic=True, cs=False,
+            commentaire=body.contenu, fichiers_urls=body.fichiers_urls,
+        )
 
     # Envoi email CS pour le commentaire si demandé
     share_cs = body.envoyer_cs if body.envoyer_cs is not None else pub.envoyer_cs
     if share_cs and body.contenu and body.contenu.strip():
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+        _envoyer_email_syndic_publication(
+            pub, user, background_tasks, session, syndic=False, cs=True,
+            commentaire=body.contenu, fichiers_urls=body.fichiers_urls,
+        )
+
+    # Envoi email externe si adresse fournie
+    if body.email_externe and body.email_externe.strip():
+        _envoyer_email_externe_publication(
+            pub, user, body.email_externe.strip(), background_tasks, session,
+            is_commentaire=True,
+            commentaire=body.contenu,
+            fichiers_urls=body.fichiers_urls,
+        )
 
     auteur = session.get(Utilisateur, evol.auteur_id)
     return EvolutionRead(
@@ -397,5 +533,6 @@ def add_evolution(
         auteur_id=evol.auteur_id,
         auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
         cree_le=evol.cree_le,
+        fichiers_urls=json.loads(evol.fichiers_urls) if evol.fichiers_urls else [],
     )
 
