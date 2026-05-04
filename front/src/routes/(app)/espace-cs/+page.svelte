@@ -125,6 +125,8 @@
 	let tkEvolsLoaded = new Set<number>();
 	let tkShowForm: number | null = null;
 	let tkEvolSaving = false;
+	let tkEditingEvolId: number | null = null;
+	let tkEditEvolSaving = false;
 
 	const TK_STATUT_OPTIONS = [
 		{ value: 'ouvert',   label: '🔵 Ouvert' },
@@ -512,6 +514,7 @@
 				type: data.type,
 				contenu: data.contenu || undefined,
 				nouveau_statut: data.type === 'etat' ? data.nouveau_statut : undefined,
+				fichiers_urls: data.fichiers_urls,
 			});
 			if (data.type === 'etat') {
 				tkList = tkList.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut } : x);
@@ -522,6 +525,21 @@
 		} catch (err: any) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
 		} finally { tkEvolSaving = false; }
+	}
+
+	async function tkSaveEvolEdit(ticketId: number, e: CustomEvent) {
+		if (tkEditingEvolId === null) return;
+		tkEditEvolSaving = true;
+		try {
+			await ticketsApi.updateEvolution(ticketId, tkEditingEvolId, {
+				contenu: e.detail.contenu || undefined,
+				fichiers_urls: e.detail.fichiers_urls,
+			});
+			await tkLoadEvols(ticketId);
+			tkEditingEvolId = null;
+			toast('success', 'Commentaire mis à jour');
+		} catch { toast('error', 'Erreur de mise à jour'); }
+		finally { tkEditEvolSaving = false; }
 	}
 
 	// -- Validations --------------------------------------------------------
@@ -1166,8 +1184,8 @@
 								currentStatut={t.statut ?? ''}
 								showNotifs={false}
 								showEmail={false}
-								showFiles={false}
-								separatePhotosAndDocs={false}
+								showFiles={true}
+								separatePhotosAndDocs={true}
 								saving={tkEvolSaving}
 								on:submit={(e) => tkSubmitEvol(t, e)}
 								on:cancel={() => (tkShowForm = null)}
@@ -1194,11 +1212,56 @@
 										<div class="evol-item evol-{evol.type}">
 											<span class="evol-icon">{#if evol.type === 'etat'}&#x1F504;{:else if evol.type === 'reponse'}&#x1F4AC;{:else}&#x1F4DD;{/if}</span>
 											<div class="evol-body">
-												<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+												<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
+													<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+													{#if evol.type === 'commentaire' && tkEditingEvolId !== evol.id}
+														<button type="button" on:click|stopPropagation={() => tkEditingEvolId = evol.id}
+															style="border:1px solid var(--color-border);background:var(--color-bg-alt);color:var(--color-text);cursor:pointer;padding:.15rem .4rem;font-size:.75rem;flex-shrink:0;border-radius:5px;line-height:1.4" aria-label="Modifier">✏️ Modifier</button>
+													{/if}
+												</div>
 												{#if evol.type === 'etat'}
 													<span class="evol-text">Statut : <strong>{TK_STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{TK_STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong></span>
 												{/if}
-												{#if evol.contenu}<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>{/if}
+												{#if evol.type === 'commentaire'}
+													{#if tkEditingEvolId === evol.id}
+													<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
+														{#key tkEditingEvolId}
+														<EvolForm
+															editMode={true}
+															initialContenu={evol.contenu || ''}
+															initialFichiers={(evol.fichiers_urls || []).map((u: string) => ({ url: u, nom: u.split('/').pop() || u, type: /\.(jpe?g|png|webp)$/i.test(u) ? 'image' : 'document' }))}
+															showFiles={true}
+															separatePhotosAndDocs={true}
+															saving={tkEditEvolSaving}
+															on:submit={(e) => tkSaveEvolEdit(t.id, e)}
+															on:cancel={() => tkEditingEvolId = null}
+														/>
+														{/key}
+													</div>
+													{:else if evol.contenu}
+														<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+													{/if}
+												{:else if evol.contenu}
+													<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+												{/if}
+												{#if evol.fichiers_urls?.length && tkEditingEvolId !== evol.id}
+													{@const photos = evol.fichiers_urls.filter((u: string) => /\.(jpe?g|png|webp)$/i.test(u))}
+													{@const docs = evol.fichiers_urls.filter((u: string) => !/\.(jpe?g|png|webp)$/i.test(u))}
+													{#if photos.length}
+														<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem">
+															{#each photos as fUrl}
+																<a href={fUrl} target="_blank" rel="noopener"><img src={fUrl} alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" /></a>
+															{/each}
+														</div>
+													{/if}
+													{#if docs.length}
+														<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.25rem">
+															{#each docs as fUrl}
+																<a href={fUrl} target="_blank" rel="noopener" style="font-size:.75rem;display:flex;align-items:center;gap:.2rem;color:var(--color-primary)">&#x1F4C4; {fUrl.split('/').pop()}</a>
+															{/each}
+														</div>
+													{/if}
+												{/if}
 											</div>
 										</div>
 									{/each}
@@ -2303,7 +2366,7 @@
 	}
 
 	/* Form grid */
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .65rem; }
+	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select, .form-grid textarea {
 		padding: .4rem .55rem; border: 1px solid var(--color-border);

@@ -1299,7 +1299,7 @@
 	/* ── Infos résidence ────────────────────────────────────────── */
 	.info-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
 		gap: .6rem;
 	}
 	.info-item { display: flex; flex-direction: column; gap: .1rem; }
@@ -1368,7 +1368,7 @@
 	.batiment-table tfoot td { font-weight: 700; border-top: 2px solid var(--color-border); border-bottom: none; }
 
 	/* ── Edit form ──────────────────────────────────────────────── */
-	.edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
+	.edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: .75rem; }
 	.field { display: flex; flex-direction: column; gap: .25rem; }
 	.field label { font-size: .8rem; font-weight: 500; color: var(--color-text-muted); }
 	.field input, .field select { padding: .4rem .6rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; background: var(--color-surface); }

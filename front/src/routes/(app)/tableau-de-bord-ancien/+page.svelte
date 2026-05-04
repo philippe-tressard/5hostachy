@@ -741,7 +741,7 @@
 <style>
 	.kpi-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
 		gap: 1rem;
 		margin-bottom: 2rem;
 	}

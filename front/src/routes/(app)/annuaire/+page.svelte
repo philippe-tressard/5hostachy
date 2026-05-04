@@ -223,7 +223,7 @@
 
 	.batiment-section { margin-bottom: 1.5rem; }
 	.batiment-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-primary); border-left: 3px solid var(--color-primary); padding-left: .5rem; margin-bottom: .6rem; display: flex; align-items: center; gap: .3rem; }
-	.contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+	.contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 1rem; }
 	.contact-card { display: flex; align-items: flex-start; gap: 1rem; padding: 1.4rem 1rem .9rem; position: relative; }
 	.card-principal { border-left: 3px solid var(--color-accent, #C9983A); }
 	.site-manager-icon,

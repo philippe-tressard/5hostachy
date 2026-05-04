@@ -1448,7 +1448,7 @@
 	.lbc-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .3rem; }
 
 	/* Lots possédés grid */
-	.lots-possedes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .6rem; margin-bottom: .6rem; }
+	.lots-possedes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: .6rem; margin-bottom: .6rem; }
 	.lot-possede-card { padding: .85rem 1rem; display: flex; flex-direction: column; gap: .35rem; }
 	.lot-possede-card.lot-occupe { border-left: 3px solid var(--color-success, #22c55e); }
 	.lot-possede-card.lot-vacant { border-left: 3px dashed var(--color-border); opacity: .8; }

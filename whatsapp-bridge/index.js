@@ -37,6 +37,29 @@ let sock = null;
 let qrCode = null;       // latest QR string (null when connected)
 let connectionState = "disconnected"; // disconnected | connecting | open
 
+// ── ACK tracking (ghost session detection) ──────────────────────────
+const ACK_TIMEOUT_MS = 15_000;
+const pendingAcks = new Map(); // msgId → { resolve, reject, timer }
+
+function waitForAck(msgId) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (pendingAcks.delete(msgId)) {
+        reject(new Error(`ACK timeout after ${ACK_TIMEOUT_MS}ms — ghost session suspected`));
+      }
+    }, ACK_TIMEOUT_MS);
+    pendingAcks.set(msgId, { resolve, reject, timer });
+  });
+}
+
+function rejectAllPendingAcks(reason) {
+  for (const [id, { reject: rej, timer }] of pendingAcks) {
+    clearTimeout(timer);
+    rej(new Error(reason));
+    pendingAcks.delete(id);
+  }
+}
+
 // ── Auth middleware ──────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
   if (!API_KEY) return next(); // no key configured = open (dev only)
@@ -71,6 +94,18 @@ async function startBaileys() {
 
   sock.ev.on("creds.update", saveCreds);
 
+  // Resolve pending ACKs when WhatsApp server acknowledges receipt
+  sock.ev.on("messages.update", (updates) => {
+    for (const { key, update } of updates) {
+      const pending = pendingAcks.get(key?.id);
+      if (pending && (update?.status ?? 0) >= 2) { // SERVER_ACK or better
+        clearTimeout(pending.timer);
+        pendingAcks.delete(key.id);
+        pending.resolve(update.status);
+      }
+    }
+  });
+
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
@@ -88,6 +123,7 @@ async function startBaileys() {
 
     if (connection === "close") {
       connectionState = "disconnected";
+      rejectAllPendingAcks("Connection closed");
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       logger.warn({ statusCode, shouldReconnect }, "Connection closed");
@@ -131,14 +167,29 @@ app.post("/send", async (req, res) => {
   }
   try {
     const jid = number.includes("@") ? number : `${number}@s.whatsapp.net`;
+    let sentMsg;
     if (imageUrl) {
-      await sock.sendMessage(jid, { image: { url: imageUrl }, caption: text });
+      sentMsg = await sock.sendMessage(jid, { image: { url: imageUrl }, caption: text });
     } else {
-      await sock.sendMessage(jid, { text });
+      sentMsg = await sock.sendMessage(jid, { text });
     }
+
+    // Wait for SERVER_ACK to confirm the message actually reached WhatsApp servers.
+    // If no ACK within ACK_TIMEOUT_MS, the session is likely a ghost (connected
+    // in appearance but silently rejected by WhatsApp). Reconnect automatically.
+    const msgId = sentMsg?.key?.id;
+    if (msgId) {
+      await waitForAck(msgId);
+    }
+
     res.json({ ok: true, jid });
   } catch (err) {
     logger.error(err, "Send failed");
+    if (err.message.includes("ghost session") || err.message.includes("ACK timeout")) {
+      logger.warn("Ghost session detected — triggering reconnect");
+      try { if (sock) sock.end(); } catch (_) {}
+      setTimeout(startBaileys, 2_000);
+    }
     res.status(500).json({ error: err.message });
   }
 });
