@@ -125,7 +125,7 @@ def sondage_accessible(sondage: Sondage, user: Utilisateur) -> bool:
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         return True
     profils = _parse_csv(sondage.profils_autorises)
-    if profils and (user.statut is None or str(user.statut) not in profils):
+    if profils and (user.statut is None or user.statut.value not in profils):
         return False
     batiments = _parse_csv(sondage.batiments_ids)
     if batiments and (user.batiment_id is None or str(user.batiment_id) not in batiments):
