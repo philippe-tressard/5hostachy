@@ -1066,5 +1066,7 @@
 		.flux-new-dot { left: -1.4rem; width: 14px; height: 14px; }
 		.consignes-card { gap: .5rem; padding: .6rem .75rem; }
 		.consignes-icon { font-size: 1.2rem; }
+		.relance-alerte-card { padding: .55rem .75rem; gap: .5rem; }
+		.relance-alerte-text strong { font-size: .82rem; }
 	}
 </style>

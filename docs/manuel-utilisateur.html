@@ -1351,7 +1351,17 @@
 
       <div class="card">
         <h3>&#x1F6A8; Alertes urgentes</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Les <strong>publications urgentes</strong> actives apparaissent en tête, dans un encadré rouge avec une barre de progression temporelle.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Les <strong>publications urgentes</strong> actives apparaissent en tête, dans un encadré rouge avec une barre de progression temporelle. <strong>Cliquez</strong> sur une alerte pour ouvrir directement la publication, le ticket ou l'événement concerné.</p>
+      </div>
+
+      <div class="card" style="border-left:4px solid #F59E0B">
+        <h3>&#x1F514; Alerte relance syndic <span style="font-size:.75rem; background:#FFF7ED; color:#92400E; border:1px solid #F59E0B; border-radius:4px; padding:.1rem .45rem; margin-left:.4rem; vertical-align:middle">CS / Admin</span></h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Quand des tickets transmis au syndic n'ont reçu aucune réponse depuis plus de <strong>30 jours</strong>, une <strong>carte d'alerte orange</strong> apparaît sur le tableau de bord (visible uniquement des membres CS et admins).</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li>Elle indique le nombre de tickets en attente de relance.</li>
+          <li>Cliquez sur la carte pour accéder directement à la vue <strong>Relance syndic</strong> dans l'Espace CS (Reporting → Relance syndic).</li>
+          <li>Le raccourci <strong>Espace CS</strong> dans la barre de navigation affiche également un badge orange avec le nombre de tickets concernés.</li>
+        </ul>
       </div>
 
       <div class="card">
@@ -1707,6 +1717,13 @@
         <div style="display:flex; flex-direction:column; gap:.65rem; font-size:.9rem">
           <div style="padding:.8rem; background:#eff6ff; border-radius:8px">
             <strong>&#x1F4CC; Dossiers en cours</strong> — liste des tickets encore <em>ouverts</em> ou <em>en cours</em>, avec leur ancienneté, le bâtiment concerné et un niveau d'attention (<em>Normal</em>, <em>À relancer</em>, <em>Critique</em>).
+          </div>
+          <div style="padding:.8rem; background:#FFF7ED; border-radius:8px; border-left:3px solid #F59E0B">
+            <strong>&#x1F514; Relance syndic</strong> — liste de tous les tickets de catégorie <em>Syndic</em> non résolus, avec un décompte des jours depuis la dernière modification. Les tickets sans réponse depuis plus de <strong>30 jours</strong> sont affichés en orange. Vous pouvez en sélectionner un ou plusieurs, puis cliquer <strong>« Envoyer la relance »</strong> pour transmettre un email de relance au syndic avec les références et l'ancienneté de chaque ticket.
+            <ul style="margin:.5rem 0 0 1.2rem; font-size:.85rem">
+              <li>Les tickets <em>en attente</em> (moins de 30 jours) sont affichés avec un bord gris — ils sont inclus pour information mais ne peuvent pas encore être sélectionnés.</li>
+              <li>Un aperçu de l'email est généré automatiquement avant envoi.</li>
+            </ul>
           </div>
           <div style="padding:.8rem; background:#f0fdf4; border-radius:8px">
             <strong>&#x1F4CA; Analyse tickets</strong> — synthèse des tickets sur 30 jours, 90 jours ou 12 mois, par catégorie et par bâtiment / périmètre.
