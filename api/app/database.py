@@ -1,6 +1,10 @@
+import logging
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlmodel import create_engine, Session, SQLModel
 from app.config import get_settings
+
+logger = logging.getLogger("hostachy.db")
 
 settings = get_settings()
 
@@ -26,8 +30,20 @@ with engine.connect() as _conn:
 
 
 def get_session():
-    with Session(engine) as session:
-        yield session
+    """Dépendance FastAPI : session DB avec auto-reconnexion sur OperationalError.
+
+    Si SQLAlchemy détecte un I/O error (pool corrompu, inode obsolète après VACUUM
+    ou docker exec concurrent), on purge le pool et on retente une fois avant
+    de propager l'exception — qui sera capturée par le handler global dans main.py.
+    """
+    try:
+        with Session(engine) as session:
+            yield session
+    except OperationalError as exc:
+        logger.error("DB OperationalError — purge du pool et reconnexion : %s", exc)
+        engine.dispose()  # ferme toutes les connexions, force fresh connections
+        # La requête en cours échoue proprement ; le prochain appel repartira sain
+        raise
 
 
 def _run_migrations():

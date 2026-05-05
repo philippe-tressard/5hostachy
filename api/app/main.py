@@ -1,14 +1,16 @@
-"""
+""" 
 5Hostachy — Application de gestion de copropriété
 API FastAPI v0.1
 """
 import json as _json
+import logging as _logging
 import re as _re
+import traceback as _traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -16,8 +18,11 @@ from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy.exc import OperationalError as _SAOperationalError
 
 from app.utils.limiter import limiter
+
+_logger = _logging.getLogger("hostachy.api")
 
 
 # ── Sérialisation UTC : toutes les datetime naïves sortent avec "Z" ───────────
@@ -125,6 +130,39 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+
+# ── Gestionnaires d'erreurs globaux ──────────────────────────────────────────
+
+@app.exception_handler(_SAOperationalError)
+async def db_operational_error_handler(request: Request, exc: _SAOperationalError):
+    """SQLite I/O error, DB locked, pool corrompu → 503 avec log structuré.
+    Le pool est purgé ici pour que la prochaine requête reparte sur une connexion saine.
+    """
+    from app.database import engine as _engine
+    _engine.dispose()
+    _logger.error(
+        "DB OperationalError sur %s %s — pool purgé : %s",
+        request.method, request.url.path, exc,
+    )
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Base de données temporairement indisponible. Veuillez réessayer."},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Filet de sécurité : toute exception non gérée → 500 loggué, jamais de crash silencieux."""
+    _logger.error(
+        "Exception non gérée sur %s %s :\n%s",
+        request.method, request.url.path,
+        _traceback.format_exc(),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Erreur interne du serveur."},
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "https://localhost"],
@@ -166,4 +204,18 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 @app.get("/health", tags=["system"])
 def health():
-    return {"status": "ok", "version": "0.2.0"}
+    """Health check : vérifie aussi la disponibilité de la DB.
+    Retourne 503 si la DB est inaccessible (utilisé par check-stack.sh).
+    """
+    from sqlmodel import Session, text as _text
+    from app.database import engine as _engine
+    try:
+        with Session(_engine) as _s:
+            _s.exec(_text("SELECT 1"))  # type: ignore[arg-type]
+        return {"status": "ok", "version": "0.2.0"}
+    except Exception as exc:
+        _logger.error("Health check DB failed : %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={"status": "db_unavailable", "detail": "Base de données indisponible"},
+        )

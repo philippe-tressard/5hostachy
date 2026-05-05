@@ -15,6 +15,8 @@ export class ApiError extends Error {
 	constructor(
 		public status: number,
 		message: string,
+		/** Détail technique (jamais affiché à l'utilisateur, disponible en console) */
+		public technicalDetail?: string,
 	) {
 		super(message);
 	}
@@ -61,21 +63,31 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 	}
 
 	if (!res.ok) {
-		let detail = 'Erreur serveur';
+		let rawDetail = 'Erreur serveur';
 		try {
 			const err = await res.json();
 			if (typeof err.detail === 'string') {
-				detail = err.detail;
+				rawDetail = err.detail;
 			} else if (Array.isArray(err.detail)) {
 				// Erreurs de validation Pydantic : [{loc, msg, type}]
-				detail = err.detail.map((e: any) => e.msg ?? JSON.stringify(e)).join(', ');
+				rawDetail = err.detail.map((e: any) => e.msg ?? JSON.stringify(e)).join(', ');
 			} else if (err.detail) {
-				detail = JSON.stringify(err.detail);
+				rawDetail = JSON.stringify(err.detail);
 			}
 		} catch {
 			/* ignore */
 		}
-		throw new ApiError(res.status, detail);
+
+		if (res.status >= 500) {
+			// Erreur serveur : ne pas exposer le détail technique à l'utilisateur
+			console.error(`[API ${res.status}] ${method} ${path} — ${rawDetail}`);
+			const userMsg = res.status === 503
+				? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'
+				: 'Une erreur est survenue. Si le problème persiste, contactez l’administrateur.';
+			throw new ApiError(res.status, userMsg, rawDetail);
+		}
+
+		throw new ApiError(res.status, rawDetail);
 	}
 
 	if (res.status === 204) return undefined as T;
@@ -147,6 +159,11 @@ export interface Ticket {
 	relance_count?: number;
 	cree_le: string;
 	mis_a_jour_le: string;
+}
+
+export interface RelanceSyndicResponse {
+	delai_jours: number;
+	tickets: Ticket[];
 }
 
 export interface TicketEvolution {
@@ -256,7 +273,7 @@ export const tickets = {
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	updateEvolution: (id: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
 		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
-	relanceSyndicList: () => api.get<Ticket[]>('/tickets/relance-syndic'),
+	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	uploadPhoto: async (ticketId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
 		const fd = new FormData();
@@ -543,6 +560,7 @@ export interface FluxSante {
 	resolution_moyenne_heures: number | null;
 	sondages_actifs: number;
 	validations_cs: number;
+	tickets_relance_syndic: number;
 	prochains: FluxProchain[];
 }
 export interface FluxResponse {
