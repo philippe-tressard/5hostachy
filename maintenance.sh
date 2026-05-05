@@ -280,6 +280,27 @@ log "[4/5] Nettoyage images Docker inutilisées..."
 PRUNE_OUT=$(docker image prune -f 2>&1 | tail -1) || PRUNE_OUT="(docker image prune échoué)"
 log "  → $PRUNE_OUT"
 
+# --- 4b. Rotation des fichiers de log host ------------------------------------
+# Limite chaque fichier de log aux 1000 dernières lignes (≈ 2 ans de crons hebdo).
+# Les logs Docker sont déjà bornés par max-file/max-size dans docker-compose.yml.
+log "[4b/5] Rotation des logs host..."
+for LOGFILE in \
+    /var/log/hostachy-maintenance.log \
+    /var/log/hostachy-deploy.log \
+    /var/log/hostachy-check.log; do
+    if [ -f "$LOGFILE" ]; then
+        LINES_BEFORE=$(wc -l < "$LOGFILE")
+        tail -1000 "$LOGFILE" > "${LOGFILE}.tmp" && mv "${LOGFILE}.tmp" "$LOGFILE"
+        LINES_AFTER=$(wc -l < "$LOGFILE")
+        TRIMMED=$(( LINES_BEFORE - LINES_AFTER ))
+        if [ "$TRIMMED" -gt 0 ]; then
+            log "  → $(basename $LOGFILE) : $TRIMMED ligne(s) supprimée(s), $LINES_AFTER conservée(s)"
+        else
+            log "  → $(basename $LOGFILE) : OK ($LINES_AFTER lignes)"
+        fi
+    fi
+done
+
 # --- 5. Enregistrement dans l'API ------------------------------------------------
 MAINTE_FIN=$(date -u +%Y-%m-%dT%H:%M:%S)
 DUREE=$(( SECONDS - MAINTE_START ))
