@@ -13,6 +13,7 @@ from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import (
     CommandeAcces,
+    ConfigSite,
     ContratEntretien,
     Copropriete,
     DevisPrestataire,
@@ -109,6 +110,7 @@ class FluxSante(BaseModel):
     resolution_moyenne_heures: Optional[float] = None
     sondages_actifs: int = 0
     validations_cs: int = 0
+    tickets_relance_syndic: int = 0
     prochains: list[dict] = []
 
 
@@ -542,6 +544,7 @@ def get_flux(
 
     # Validations en attente (visible CS/admin uniquement)
     validations_cs = 0
+    tickets_relance_syndic = 0
     if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         comptes_attente = session.exec(
             select(func.count(Utilisateur.id)).where(~Utilisateur.actif)
@@ -553,12 +556,28 @@ def get_flux(
         ).one()
         validations_cs = (comptes_attente or 0) + (commandes_attente or 0)
 
+        # Tickets syndic éligibles à la relance (pas de modif depuis > délai)
+        cfg_delai = session.exec(
+            select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
+        ).first()
+        delai_jours = int(cfg_delai.valeur) if cfg_delai else 30
+        seuil_relance = now - timedelta(days=delai_jours)
+        tickets_relance_syndic = session.exec(
+            select(func.count(Ticket.id)).where(
+                Ticket.destinataire_syndic == True,
+                Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
+                Ticket.non_relancable == False,
+                Ticket.mis_a_jour_le < seuil_relance,
+            )
+        ).one() or 0
+
     sante = FluxSante(
         tickets_ouverts=len(ouverts),
         tickets_urgents=len(urgents),
         resolution_moyenne_heures=resolution_moy,
         sondages_actifs=sondages_actifs,
         validations_cs=validations_cs,
+        tickets_relance_syndic=tickets_relance_syndic,
         prochains=prochains,
     )
 

@@ -560,6 +560,7 @@ export interface FluxSante {
 	resolution_moyenne_heures: number | null;
 	sondages_actifs: number;
 	validations_cs: number;
+	tickets_relance_syndic: number;
 	prochains: FluxProchain[];
 }
 export interface FluxResponse {

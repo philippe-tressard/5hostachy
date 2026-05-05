@@ -358,13 +358,26 @@
 		</a>
 		{#if $isCS || $isAdmin}
 		<a href="/espace-cs" class="quick-pill quick-pill-cs">
-			<Icon name="shield-check" size={14} /> Validations CS
+			<Icon name="shield-check" size={14} /> Espace CS
 			{#if (data.sante.validations_cs ?? 0) > 0}<span class="quick-count quick-count-urgent">{data.sante.validations_cs}</span>{/if}
+			{#if (data.sante.tickets_relance_syndic ?? 0) > 0}<span class="quick-count quick-count-orange">{data.sante.tickets_relance_syndic} relance{(data.sante.tickets_relance_syndic ?? 0) > 1 ? 's' : ''}</span>{/if}
 		</a>
 		{/if}
 	</nav>
 
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
+	{#if ($isCS || $isAdmin) && (data.sante.tickets_relance_syndic ?? 0) > 0}
+		<div class="section-reveal" class:section-visible={ready} style="--delay:.08s">
+			<a href="/espace-cs?onglet=reporting&vue=relance" class="relance-alerte-card">
+				<span class="relance-alerte-icon">🔔</span>
+				<div class="relance-alerte-text">
+					<strong>{data.sante.tickets_relance_syndic} ticket{(data.sante.tickets_relance_syndic ?? 0) > 1 ? 's' : ''} syndic à relancer</strong>
+					<span>Sans avancée depuis plus d'1 mois — cliquez pour voir et envoyer la relance</span>
+				</div>
+				<span class="relance-alerte-arrow">→</span>
+			</a>
+		</div>
+	{/if}
 	{#if urgentItems.length > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.1s">
 			{#each urgentItems.slice(0, 3) as u}
@@ -835,6 +848,23 @@
 	.quick-pill-cs { border-color: #F59E0B; }
 	.quick-pill-cs:hover { border-color: #D97706; background: #FFFBEB; }
 	.quick-count-urgent { background: #DC2626; }
+	.quick-count-orange { background: #D97706; }
+
+	/* ═══ ALERTE RELANCE SYNDIC ══════════════════════════════════════════ */
+	.relance-alerte-card {
+		display: flex; align-items: center; gap: .75rem;
+		padding: .75rem 1rem; border-radius: var(--radius);
+		background: #FFF7ED; border: 1.5px solid #F59E0B;
+		color: #92400E; text-decoration: none;
+		transition: background .15s, border-color .15s;
+		margin-bottom: .5rem;
+	}
+	.relance-alerte-card:hover { background: #FEF3C7; border-color: #D97706; }
+	.relance-alerte-icon { font-size: 1.3rem; flex-shrink: 0; }
+	.relance-alerte-text { display: flex; flex-direction: column; gap: .1rem; flex: 1; }
+	.relance-alerte-text strong { font-size: .9rem; }
+	.relance-alerte-text span { font-size: .78rem; color: #B45309; }
+	.relance-alerte-arrow { font-size: 1.1rem; flex-shrink: 0; opacity: .7; }
 
 	/* ═══ RÉACTION INLINE (ticket_mis_a_jour) ═══════════════════════════ */
 	.flux-reaction {

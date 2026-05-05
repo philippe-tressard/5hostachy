@@ -666,6 +666,19 @@
 
 	onMount(async () => {
 		if (!$isCS) { goto('/tableau-de-bord'); return; }
+
+		// Navigation depuis le dashboard via ?onglet=...&vue=...
+		const params = new URLSearchParams(window.location.search);
+		const pOnglet = params.get('onglet') as typeof onglet | null;
+		const pVue = params.get('vue') as typeof reportView | null;
+		if (pOnglet && ['validations', 'tickets', 'reporting', 'annuaire'].includes(pOnglet)) {
+			onglet = pOnglet;
+		}
+		if (pVue && onglet === 'reporting') {
+			reportView = pVue as typeof reportView;
+			loadRelanceSyndic();
+		}
+
 		try {
 			const [comptes, commandes, batList, users, lotsData, importsData] = await Promise.all([
 				adminApi.comptesEnAttente(),
