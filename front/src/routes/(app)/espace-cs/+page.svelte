@@ -2829,7 +2829,7 @@
   .relance-item-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .relance-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
   .relance-numero { font-size: .8rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
-  .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
   .relance-item-right { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-shrink: 0; }
   .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
   .relance-date-overdue { color: #b45309; font-weight: 600; }
