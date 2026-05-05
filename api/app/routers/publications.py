@@ -453,8 +453,8 @@ def update_evolution(
     evol = session.get(PublicationEvolution, evol_id)
     if not evol or evol.publication_id != pub_id:
         raise HTTPException(404, "Évolution introuvable")
-    if evol.type != "commentaire":
-        raise HTTPException(422, "Seuls les commentaires peuvent être modifiés")
+    if evol.type not in ("commentaire", "etat"):
+        raise HTTPException(422, "Ce type d'évolution ne peut pas être modifié")
     if evol.auteur_id != user.id and not user.has_role(RoleUtilisateur.admin):
         raise HTTPException(403, "Accès refusé")
     if body.contenu is not None:

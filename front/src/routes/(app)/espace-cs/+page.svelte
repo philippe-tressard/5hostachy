@@ -1214,7 +1214,7 @@
 											<div class="evol-body">
 												<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
 													<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
-													{#if evol.type === 'commentaire' && tkEditingEvolId !== evol.id}
+													{#if (evol.type === 'commentaire' || (evol.type === 'etat' && evol.contenu)) && tkEditingEvolId !== evol.id}
 														<button type="button" on:click|stopPropagation={() => tkEditingEvolId = evol.id}
 															style="border:1px solid var(--color-border);background:var(--color-bg-alt);color:var(--color-text);cursor:pointer;padding:.15rem .4rem;font-size:.75rem;flex-shrink:0;border-radius:5px;line-height:1.4" aria-label="Modifier">✏️ Modifier</button>
 													{/if}
@@ -1222,7 +1222,7 @@
 												{#if evol.type === 'etat'}
 													<span class="evol-text">Statut : <strong>{TK_STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{TK_STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong></span>
 												{/if}
-												{#if evol.type === 'commentaire'}
+												{#if evol.type === 'commentaire' || evol.type === 'etat'}
 													{#if tkEditingEvolId === evol.id}
 													<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
 														{#key tkEditingEvolId}
