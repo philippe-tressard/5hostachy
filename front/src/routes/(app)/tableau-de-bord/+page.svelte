@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
 	import { flux, lots, tickets as ticketsApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
@@ -368,7 +369,11 @@
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.1s">
 			{#each urgentItems.slice(0, 3) as u}
 				{@const progress = urgencyProgress(u)}
-				<fieldset class="urgence-fieldset">
+				<fieldset class="urgence-fieldset"
+					role="link" tabindex="0"
+					on:click={() => goto(typeLink(u))}
+					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(typeLink(u))}
+				>
 					<legend class="urgence-legend">🔴 URGENCE
 						<span class="flux-type-chip" style="background:{TYPE_BG[u.type] ?? '#EAEDF1'};color:{TYPE_COLORS[u.type] ?? 'var(--color-border)'}">
 							{TYPE_LABELS[u.type] ?? u.type}
@@ -856,7 +861,10 @@
 		border: 2px solid var(--color-danger, #dc2626);
 		border-radius: var(--radius); padding: 1rem 1.15rem .9rem;
 		margin-bottom: 1rem; background: #fef2f2; position: relative;
+		cursor: pointer; transition: box-shadow .15s, background .12s;
 	}
+	.urgence-fieldset:hover { background: #fee2e2; box-shadow: 0 2px 8px rgba(220,38,38,.15); }
+	.urgence-fieldset:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
 	.urgence-legend { font-size: .72rem; font-weight: 700; letter-spacing: .06em; color: #dc2626; background: #fef2f2; padding: 0 .5rem; text-transform: uppercase; }
 	.urgence-content { display: flex; flex-direction: column; gap: .45rem; }
 	.urgence-title-row { display: flex; align-items: center; gap: .6rem; }
