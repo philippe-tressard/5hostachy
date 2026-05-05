@@ -136,7 +136,8 @@
 		uploadingFichier = true;
 		try {
 			const r = await fichiersApi.upload(file);
-			fichiers = [...fichiers, r];
+			const type = file.type.startsWith('image/') ? 'image' : 'document';
+			fichiers = [...fichiers, { url: r.url, nom: r.nom || file.name, type }];
 		} catch { toast('error', 'Erreur upload fichier'); }
 		finally { uploadingFichier = false; input.value = ''; }
 	}
