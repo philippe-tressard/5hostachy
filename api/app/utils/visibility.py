@@ -103,7 +103,7 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
         return True  # aucune restriction explicite
     if "résidents" in public:
         return True
-    statut = str(user.statut or "")
+    statut = user.statut.value if user.statut is not None else ""
     if "copropriétaires" in public and statut.startswith("copropriétaire_"):
         return True
     if "locataires" in public and statut == "locataire":
