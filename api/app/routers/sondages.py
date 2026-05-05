@@ -216,7 +216,7 @@ def create_sondage(
     profils_list = _parse_csv(profils_csv)
     batiments_list = _parse_csv(batiments_csv)
     for r in residents:
-        if profils_list and str(r.statut) not in profils_list:
+        if profils_list and r.statut.value not in profils_list:
             continue
         if batiments_list and str(r.batiment_id) not in batiments_list:
             continue
