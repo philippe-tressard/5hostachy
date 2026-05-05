@@ -161,6 +161,11 @@ export interface Ticket {
 	mis_a_jour_le: string;
 }
 
+export interface RelanceSyndicResponse {
+	delai_jours: number;
+	tickets: Ticket[];
+}
+
 export interface TicketEvolution {
 	id: number;
 	ticket_id: number;
@@ -268,7 +273,7 @@ export const tickets = {
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	updateEvolution: (id: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
 		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
-	relanceSyndicList: () => api.get<Ticket[]>('/tickets/relance-syndic'),
+	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	uploadPhoto: async (ticketId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
 		const fd = new FormData();

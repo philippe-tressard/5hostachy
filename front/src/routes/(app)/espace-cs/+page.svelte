@@ -146,6 +146,7 @@
 	let reportPrestSynthLoading = false;
 	let reportPrestSynthId: number | null = null;
 	let relanceList: Ticket[] = [];
+	let relanceDelaiJours = 30;
 	let relanceLoading = false;
 	let relanceLoaded = false;
 	let relanceSelected: Set<number> = new Set();
@@ -450,8 +451,11 @@
 		if (relanceLoaded && !force) return;
 		relanceLoading = true;
 		try {
-			relanceList = await ticketsApi.relanceSyndicList();
-			relanceSelected = new Set(relanceList.map(t => t.id));
+			const resp = await ticketsApi.relanceSyndicList();
+			relanceDelaiJours = resp.delai_jours;
+			relanceList = resp.tickets;
+			// Pré-sélectionner uniquement les tickets éligibles (passé le délai)
+			relanceSelected = new Set(relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours).map(t => t.id));
 			relanceLoaded = true;
 		} catch (e: any) {
 			toast('error', apiMessage(e, 'Erreur chargement relances syndic'));
@@ -1928,19 +1932,30 @@
 			<p style="color:var(--color-text-muted)">Chargement…</p>
 		{:else if relanceList.length === 0}
 			<div class="empty-state">
-				<h3>✅ Aucun ticket à relancer</h3>
-				<p>Tous les tickets syndic ont été mis à jour dans le délai imparti.</p>
+				<h3>✅ Aucun ticket syndic en cours</h3>
+				<p>Aucun ticket adressé au syndic n'est actuellement ouvert ou en cours.</p>
 			</div>
 		{:else}
+			{@const eligibles = relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
+			{@const enAttente = relanceList.filter(t => daysSince(t.mis_a_jour_le) < relanceDelaiJours)}
 			<section class="report-card" style="margin-bottom:1.5rem">
-				<h3>🔔 Tickets syndic sans avancées depuis plus d'1 mois</h3>
-				<p class="report-intro">{relanceList.length} ticket(s) éligible(s) à la relance. Décochez ceux que vous souhaitez exclure de l'envoi.</p>
+				<h3>🔔 Tickets syndic — suivi des relances</h3>
+				<p class="report-intro">
+					{relanceList.length} ticket(s) adressé(s) au syndic en cours.
+					{#if eligibles.length > 0}
+						<strong>{eligibles.length} éligible(s) à la relance</strong> (sans modification depuis plus de {relanceDelaiJours} jours).
+					{:else}
+						Aucun ticket ne dépasse le délai de {relanceDelaiJours} jours pour l'instant.
+					{/if}
+				</p>
 
 				<div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
 					{#each relanceList as t (t.id)}
+						{@const jours = daysSince(t.mis_a_jour_le)}
+						{@const eligible = jours >= relanceDelaiJours}
 						{@const selected = relanceSelected.has(t.id)}
 						{@const isEditingMotif = relanceNonRelancableEditing === t.id}
-						<div class="relance-item" class:relance-item-unselected={!selected}>
+						<div class="relance-item" class:relance-item-unselected={!selected} class:relance-item-pending={!eligible}>
 							<div class="relance-item-top">
 								<label class="relance-check" style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0">
 									<input type="checkbox" checked={selected}
@@ -1953,12 +1968,17 @@
 									<span class="relance-titre">{t.titre}</span>
 								</label>
 								<div class="relance-item-right">
-									{#if (t.relance_count ?? 0) > 0}
-										<span class="badge badge-red">Relance n°{(t.relance_count ?? 0) + 1}</span>
+									{#if eligible}
+										{#if (t.relance_count ?? 0) > 0}
+											<span class="badge badge-red">Relance n°{(t.relance_count ?? 0) + 1}</span>
+										{:else}
+											<span class="badge badge-orange">1ère relance</span>
+										{/if}
+										<span class="relance-date relance-date-overdue" title="Dernière modification">{jours}j sans modif.</span>
 									{:else}
-										<span class="badge badge-orange">1ère relance</span>
+										<span class="badge badge-gray">En attente</span>
+										<span class="relance-date" title="Dernière modification">{jours}j / {relanceDelaiJours}j</span>
 									{/if}
-									<span class="relance-date" title="Dernière modification">{daysSince(t.mis_a_jour_le)}j sans modif.</span>
 								</div>
 							</div>
 							<!-- Tag non-relançable -->
@@ -2792,12 +2812,14 @@
           transition: opacity .15s;
   }
   .relance-item-unselected { opacity: .5; border-left-color: var(--color-border); }
+  .relance-item-pending { border-left-color: var(--color-text-muted); background: var(--color-bg-subtle, #f9fafb); }
   .relance-item-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .relance-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
   .relance-numero { font-size: .8rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
   .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .relance-item-right { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-shrink: 0; }
   .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
+  .relance-date-overdue { color: #b45309; font-weight: 600; }
   .badge-red { background: #fee2e2; color: #991b1b; }
   .badge-orange { background: #fff7ed; color: #9a3412; }
 

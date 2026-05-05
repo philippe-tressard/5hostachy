@@ -390,33 +390,37 @@ class RelanceSyndicRequest(_BaseModel):
     ticket_ids: list[int]
 
 
-@router.get("/relance-syndic", response_model=list[TicketRead])
+class RelanceSyndicResponse(_BaseModel):
+    delai_jours: int
+    tickets: list[TicketRead]
+
+
+@router.get("/relance-syndic", response_model=RelanceSyndicResponse)
 def list_relance_syndic(
     session: Session = Depends(get_session),
     _user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Retourne les tickets adressés au syndic, non résolus/annulés/fermés,
-    non tagués non_relancable, dont la dernière modification date de plus de
-    `relance_syndic_delai_jours` jours."""
-    from datetime import timedelta
-
+    """Retourne tous les tickets adressés au syndic, non résolus/annulés/fermés
+    et non tagués non_relancable, avec le délai de relance configuré.
+    Le frontend distingue les tickets éligibles (passé le délai) des candidats
+    (pas encore au délai)."""
     cfg_delai = session.exec(
         select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
     ).first()
     delai_jours = int(cfg_delai.valeur) if cfg_delai else 30
-
-    seuil = datetime.utcnow() - timedelta(days=delai_jours)
 
     tickets = session.exec(
         select(Ticket).where(
             Ticket.destinataire_syndic == True,
             Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
             Ticket.non_relancable == False,
-            Ticket.mis_a_jour_le < seuil,
         ).order_by(Ticket.mis_a_jour_le)
     ).all()
 
-    return [_ticket_read(t, session) for t in tickets]
+    return RelanceSyndicResponse(
+        delai_jours=delai_jours,
+        tickets=[_ticket_read(t, session) for t in tickets],
+    )
 
 
 @router.post("/relance-syndic", status_code=200)
