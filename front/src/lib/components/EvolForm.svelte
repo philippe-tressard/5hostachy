@@ -276,12 +276,21 @@
 			<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Pièces jointes (photos, PDF, Word, Excel)</label>
 			<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem">
 				{#each fichiers as f, i}
-					<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
-						{#if f.type === 'image'}<span>🖼️</span>{:else}<span>📄</span>{/if}
-						<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
-						<button type="button" on:click={() => fichiers = fichiers.filter((_, j) => j !== i)}
-							style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
-					</div>
+					{#if f.type === 'image'}
+						<div style="position:relative">
+							<img src={f.url} alt={f.nom}
+								style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
+							<button type="button" on:click={() => fichiers = fichiers.filter((_, j) => j !== i)}
+								style="position:absolute;top:-5px;right:-5px;border:none;background:var(--color-danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.7rem;cursor:pointer;line-height:18px;padding:0;text-align:center">✕</button>
+						</div>
+					{:else}
+						<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
+							<span>📄</span>
+							<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
+							<button type="button" on:click={() => fichiers = fichiers.filter((_, j) => j !== i)}
+								style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
+						</div>
+					{/if}
 				{/each}
 			</div>
 			<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
