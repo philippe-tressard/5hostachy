@@ -262,6 +262,47 @@ EMAIL_TEMPLATES = [
      '</td></tr></table>',
      True),
 
+    ("relance_syndic", "Relance tickets syndic non résolus",
+     "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) non r\u00e9solu(s) depuis 1 mois",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
+     '\U0001f514 Relance ticket(s) non r\u00e9solu(s) depuis 1 mois</h2>'
+     '<p style="margin:0 0 20px">{{ civilite }} {{ nom_gestionnaire }},</p>'
+     '<p style="margin:0 0 20px">Le Conseil Syndical de la copropri\u00e9t\u00e9 <strong>{{ residence.nom }}</strong> '
+     'vous adresse la pr\u00e9sente relance concernant les ticket(s) ci-dessous, '
+     'transmis au syndic et rest\u00e9s <strong>sans avanc\u00e9es depuis plus d\u2019un mois</strong>.</p>'
+     '{% for item in tickets %}'
+     '<table role="presentation" style="width:100%;margin:0 0 24px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden">'
+     '<tr><td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:15px;color:#1E3A5F">'
+     '{{ item.numero }} \u2014 {{ item.titre }}'
+     '{% if item.relance_count > 0 %}'
+     ' <span style="background:#DC2626;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
+     'Relance n\u00b0{{ item.relance_count }}</span>'
+     '{% else %}'
+     ' <span style="background:#F59E0B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
+     '1\u00e8re relance</span>'
+     '{% endif %}'
+     '</p>'
+     '<p style="margin:0 0 6px;font-size:12px;color:#4B5563">'
+     'Cat\u00e9gorie\u202f: {{ item.categorie | capitalize }} \u00b7 Priorit\u00e9\u202f: {{ item.priorite | capitalize }}'
+     '{% if item.perimetre %} \u00b7 P\u00e9rim\u00e8tre\u202f: {{ item.perimetre }}{% endif %}'
+     '</p>'
+     '<p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#374151">Description\u202f:</p>'
+     '<div style="font-size:13px;color:#1A1A2E;white-space:pre-line">{{ item.description }}</div>'
+     '<p style="margin:12px 0 6px;font-size:13px;font-weight:600;color:#374151">Historique\u202f:</p>'
+     '<ul style="margin:0;padding-left:1.2em;font-size:12px;color:#374151">'
+     '{% for h in item.historique %}'
+     '<li style="margin-bottom:3px">{{ h.date }} \u2014 {{ h.label }}</li>'
+     '{% endfor %}'
+     '</ul>'
+     '</td></tr></table>'
+     '{% endfor %}'
+     '<p style="margin:24px 0 0">Nous vous remercions de bien vouloir nous tenir inform\u00e9s '
+     'des actions engag\u00e9es sur ces dossiers.</p>'
+     '<p style="margin:8px 0 0">Cordialement,<br>'
+     '<strong>Le Conseil Syndical de {{ residence.nom }}</strong></p>',
+     False),
+
     ("vigik_commande_recue", "Commande vigik reçue (CS)", "Nouvelle commande de {{ type }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouvelle demande de badge/clé</h2>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
