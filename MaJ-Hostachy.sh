@@ -106,10 +106,9 @@ for i in $(seq 1 15); do
     sleep 2
 done
 
-# 3b. Appliquer les migrations DB (sécurité post-déploiement)
-echo "[$LOG_DATE] Application des migrations Alembic..."
-docker exec hostachy_api sh -lc "cd /app && alembic upgrade head"
-echo "[$LOG_DATE] Migrations Alembic appliquées ✓"
+# Note : les migrations Alembic sont appliquées automatiquement par start.sh
+# au démarrage du conteneur — ne pas les relancer sur un conteneur en cours
+# d'exécution pour éviter la corruption du pool SQLAlchemy.
 
 # 4. Résumé
 echo ""
