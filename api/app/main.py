@@ -217,5 +217,5 @@ def health():
         _logger.error("Health check DB failed : %s", exc)
         return JSONResponse(
             status_code=503,
-            content={"status": "db_unavailable", "detail": str(exc)},
+            content={"status": "db_unavailable", "detail": "Base de données indisponible"},
         )
