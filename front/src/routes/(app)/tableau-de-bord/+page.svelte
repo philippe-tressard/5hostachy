@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
-	import { flux, lots, tickets as ticketsApi, calendrier as calApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
+	import { flux, lots, tickets as ticketsApi, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDateLong, fmtDatetimeShort, fmtTime } from '$lib/date';
@@ -18,15 +18,17 @@
 	let ready = false;
 	let relanceSyndicCount = 0;
 	let kanbanRawEvs: any[] = [];
+	let dashDevis: any[] = [];
 	let mobileKanbanIdx = 0;
 
 	onMount(async () => {
 		try {
-			const [fluxRes, lotsRes, calRes] = await Promise.allSettled([flux.get(), lots.mesList(), calApi.list()]);
+			const [fluxRes, lotsRes, calRes, devisRes] = await Promise.allSettled([flux.get(), lots.mesList(), calApi.list(), prestApi.devis()]);
 			if (fluxRes.status === 'fulfilled') data = fluxRes.value;
 			else toast('error', 'Erreur chargement du flux');
 			if (lotsRes.status === 'fulfilled') userLots = lotsRes.value;
 			if (calRes.status === 'fulfilled') kanbanRawEvs = calRes.value;
+			if (devisRes.status === 'fulfilled') dashDevis = devisRes.value;
 		} catch (e: any) {
 			toast('error', 'Erreur chargement : ' + (e?.message ?? String(e)));
 		} finally {
@@ -199,6 +201,31 @@
 	// ── Kanban widget ──────────────────────────────────────────────────────
 	const _kanbanYear = new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
 
+	function kanbanStatutPourDevis(statut: string | null | undefined): string {
+		const map: Record<string, string> = { en_attente: 'syndic', accepte: 'fournisseur', realise: 'termine', refuse: 'annule' };
+		return map[statut ?? ''] ?? 'syndic';
+	}
+
+	$: dashDevisPonctuels = dashDevis
+		.filter((d: any) => !d.frequence_type && !d.frequence_valeur)
+		.map((d: any) => {
+			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
+			const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
+			const perimetre = d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence');
+			return {
+				id: -(100000 + Number(d.id)),
+				_source: 'devis_ponctuel',
+				type: 'maintenance',
+				titre: d.titre,
+				debut,
+				fin: null,
+				statut_kanban: kanbanStatutPourDevis(d.statut),
+				archivee: false,
+				perimetre,
+				affichable: true,
+			};
+		});
+
 	const DASH_KANBAN_COLS = [
 		{ id: 'ag',          label: 'AG',          color: '#8b5cf6' },
 		{ id: 'cs',          label: 'CS',           color: '#3b82f6' },
@@ -221,7 +248,7 @@
 		return p.split(',').map(s => map[s.trim()] ?? s.trim()).filter(Boolean).join(' · ');
 	}
 
-	$: dashKanbanEvs = kanbanRawEvs.filter(ev => {
+	$: dashKanbanEvs = [...kanbanRawEvs, ...dashDevisPonctuels].filter(ev => {
 		if (!ev.statut_kanban || ev.statut_kanban === 'annule') return false;
 		if (!$isCS && !$isAdmin && !ev.affichable && ev.type !== 'maintenance_recurrente') return false;
 		if (ev.archivee && ev.statut_kanban !== 'annule' && !(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')) return false;
