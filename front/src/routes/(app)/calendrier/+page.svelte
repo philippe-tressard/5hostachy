@@ -106,6 +106,9 @@ import { onMount } from 'svelte';
 			evenements = await calApi.list();
 			const expiredYears = [...new Set(evenements.filter(e => isExpired(e, archivageDelaiMs)).map(e => new Date(e.fin ?? e.debut).getFullYear()))].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
+			// Si ?onglet=kanban (ou archives) est présent dans l'URL, sélectionner cet onglet
+			const urlOnglet = new URLSearchParams(window.location.search).get('onglet');
+			if (urlOnglet === 'kanban' || urlOnglet === 'archives') onglet = urlOnglet;
 			// Si un ancre #ev-{id} est présent dans l'URL, passer en vue liste, ouvrir et scroller vers l'événement
 			const hash = window.location.hash;
 			const anchorMatch = hash.match(/^#ev-(\d+)$/);
