@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
 	import { flux, lots, tickets as ticketsApi, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
+	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDateLong, fmtDatetimeShort, fmtTime } from '$lib/date';
@@ -201,30 +202,9 @@
 	// ── Kanban widget ──────────────────────────────────────────────────────
 	const _kanbanYear = new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
 
-	function kanbanStatutPourDevis(statut: string | null | undefined): string {
-		const map: Record<string, string> = { en_attente: 'syndic', accepte: 'fournisseur', realise: 'termine', refuse: 'annule' };
-		return map[statut ?? ''] ?? 'syndic';
-	}
-
 	$: dashDevisPonctuels = dashDevis
 		.filter((d: any) => !d.frequence_type && !d.frequence_valeur)
-		.map((d: any) => {
-			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
-			const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-			const perimetre = d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence');
-			return {
-				id: -(100000 + Number(d.id)),
-				_source: 'devis_ponctuel',
-				type: 'maintenance',
-				titre: d.titre,
-				debut,
-				fin: null,
-				statut_kanban: kanbanStatutPourDevis(d.statut),
-				archivee: false,
-				perimetre,
-				affichable: true,
-			};
-		});
+		.map((d: any) => devisPonctuelToKanban(d));
 
 	const DASH_KANBAN_COLS = [
 		{ id: 'ag',          label: 'AG',          color: '#8b5cf6' },
@@ -248,19 +228,17 @@
 		return p.split(',').map(s => map[s.trim()] ?? s.trim()).filter(Boolean).join(' · ');
 	}
 
+	$: _dashKanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
+
 	$: dashKanbanEvs = [...kanbanRawEvs, ...dashDevisPonctuels].filter(ev => {
 		if (!ev.statut_kanban || ev.statut_kanban === 'annule') return false;
-		if (!$isCS && !$isAdmin && !ev.affichable && ev.type !== 'maintenance_recurrente') return false;
-		if (ev.archivee && ev.statut_kanban !== 'annule' && !(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')) return false;
-		const refDate = ev.statut_kanban === 'termine' && ev.fin ? ev.fin : ev.debut;
-		const evYear = new Date(refDate).getFullYear();
-		const isOverdue = ev.type !== 'maintenance_recurrente' && evYear < _kanbanYear && ev.statut_kanban !== 'termine';
-		if (!isOverdue && evYear !== _kanbanYear) return false;
+		if (!kanbanEvVisible(ev, _dashKanbanCtx)) return false;
+		if (!kanbanEvMatchesYear(ev, _kanbanYear)) return false;
 		return true;
 	});
 
 	$: dashKanbanCols = DASH_KANBAN_COLS
-		.filter(col => (col.id === 'ag' || col.id === 'cs') ? canSeeAG : true)
+		.filter(col => kanbanColVisible(col.id, _dashKanbanCtx))
 		.map(col => {
 			let items: any[] = dashKanbanEvs.filter((ev: any) => {
 				if (ev.archivee && ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur') return col.id === 'termine';
@@ -543,7 +521,8 @@
 		</div>
 	</div>
 
-	<!-- ═══ KANBAN ══════════════════════════════════════════════════════════ -->
+	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
+	{#if !isLocataire}
 	<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
 		<div class="kb-header">
 			<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
@@ -634,6 +613,7 @@
 			{/if}
 		{/if}
 	</div>
+	{/if}
 
 	<!-- ═══ FIL D'ACTIVITÉ ════════════════════════════════════════════════ -->
 	<div class="section-reveal" class:section-visible={ready} style="--delay:.25s">

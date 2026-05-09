@@ -10,6 +10,7 @@ import { onMount } from 'svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
+	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -80,16 +81,6 @@ import { onMount } from 'svelte';
 
 	function prestataireNom(prestataireId: number | null | undefined) {
 		return prestataires.find(p => p.id === prestataireId)?.nom ?? '';
-	}
-
-	function kanbanStatutPourDevis(statut: string | null | undefined) {
-		const map: Record<string, string> = {
-			en_attente: 'syndic',
-			accepte: 'fournisseur',
-			realise: 'termine',
-			refuse: 'annule',
-		};
-		return map[statut ?? ''] ?? 'syndic';
 	}
 
 	function perimètreLabel(p: string) {
@@ -178,7 +169,7 @@ import { onMount } from 'svelte';
 				titre: d.titre,
 				debut,
 				fin: null,
-				statut_kanban: kanbanStatutPourDevis(d.statut),
+				statut_kanban: devisStatutToKanban(d.statut),
 				archivee: false,
 				perimetre,
 				prestataire_id: d.prestataire_id ?? null,
@@ -202,7 +193,7 @@ import { onMount } from 'svelte';
 				titre: d.titre,
 				debut,
 				fin: null,
-				statut_kanban: kanbanStatutPourDevis(d.statut),
+				statut_kanban: devisStatutToKanban(d.statut),
 				archivee: false,
 				perimetre,
 				prestataire_id: d.prestataire_id ?? null,
@@ -450,30 +441,15 @@ import { onMount } from 'svelte';
 		{ val: 'bat:4', label: 'Bât. 4' },
 	];
 
+	$: _kanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
+
 	$: kanbanEvs = (() => {
-		const baseEvents = evenements.filter(ev => {
-			if (!ev.statut_kanban) return false;
-			// Pour les non-CS/admin : masquer les événements internes (non affichables)
-			// Exception : les maintenances récurrentes restent visibles (prestations planifiées)
-			if (!$isCS && !$isAdmin && !ev.affichable && ev.type !== 'maintenance_recurrente') return false;
-			// Maintenances prestataires archivées restent dans kanban (=> Terminé)
-			// Événements annulés restent visibles dans la colonne Annulé même si archivés
-			if (ev.archivee && ev.statut_kanban !== 'annule' && !(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')) return false;
-			return true;
-		});
+		const baseEvents = evenements.filter(ev =>
+			ev.statut_kanban && kanbanEvVisible(ev, _kanbanCtx)
+		);
 		const merged = [...baseEvents, ...prestationsPonctuellesKanban];
 		return merged.filter(ev => {
-			// Pour les clôturés (terminé/annulé), utiliser l'année de fin si dispo (l'événement peut avoir débuté l'année précédente)
-			const refDate = (ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule') && ev.fin
-				? ev.fin
-				: ev.debut;
-			const evYear = new Date(refDate).getFullYear();
-			// Événements ponctuels d'années antérieures non clôturés : toujours affichés
-			const isOverdue = ev.type !== 'maintenance_recurrente'
-				&& evYear < kanbanExercice
-				&& ev.statut_kanban !== 'termine'
-				&& ev.statut_kanban !== 'annule';
-			if (!isOverdue && evYear !== kanbanExercice) return false;
+			if (!kanbanEvMatchesYear(ev, kanbanExercice)) return false;
 			if (kanbanBatiment) {
 				const p = ev.perimetre ?? 'résidence';
 				if (p !== 'résidence' && !p.split(',').some((s: string) => s.trim() === kanbanBatiment)) return false;
@@ -483,11 +459,7 @@ import { onMount } from 'svelte';
 	})();
 
 	$: kanbanCols = KANBAN_COLS
-		.filter(col => {
-			// Colonnes AG et CS : propriétaires, CS et admin uniquement (locataires exclus)
-			if (col.id === 'ag' || col.id === 'cs') return canSeeAG;
-			return true;
-		})
+		.filter(col => kanbanColVisible(col.id, _kanbanCtx))
 		.map(col => ({
 		...col,
 		items: kanbanEvs.filter(ev => {
