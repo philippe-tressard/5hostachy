@@ -271,7 +271,7 @@
 					new Date(b.fin ?? b.debut).getTime() - new Date(a.fin ?? a.debut).getTime()
 				);
 			}
-			return { ...col, total: items.length, items: items.slice(0, 3) };
+			return { ...col, total: items.length, items: items.slice(0, 5) };
 		});
 
 	$: mobileKanbanCols = dashKanbanCols.filter(col => col.items.length > 0);
@@ -561,7 +561,7 @@
 							<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
 							{#if col.total > 0}
 								<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
-									{col.total > 3 ? `+${col.total - 3} / ${col.total}` : col.total}
+									{col.total > 5 ? `+${col.total - 5} / ${col.total}` : col.total}
 								</span>
 							{/if}
 						</div>
@@ -622,9 +622,9 @@
 									</div>
 								</div>
 							{/each}
-							{#if mobileKanbanCurrent.total > 3}
+							{#if mobileKanbanCurrent.total > 5}
 								<p class="kb-mobile-plus">
-									+{mobileKanbanCurrent.total - 3} élément{mobileKanbanCurrent.total - 3 > 1 ? 's' : ''} — <a href="/calendrier" class="kb-mobile-plus-lien">voir tout</a>
+									+{mobileKanbanCurrent.total - 5} élément{mobileKanbanCurrent.total - 5 > 1 ? 's' : ''} — <a href="/calendrier" class="kb-mobile-plus-lien">voir tout</a>
 								</p>
 							{/if}
 						</div>
