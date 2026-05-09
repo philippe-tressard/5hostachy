@@ -547,7 +547,7 @@
 	<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
 		<div class="kb-header">
 			<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
-			<a href="/calendrier" class="kb-voir-lien">Voir le Kanban complet →</a>
+			<a href="/calendrier?onglet=kanban" class="kb-voir-lien">Voir le Kanban complet →</a>
 		</div>
 
 		{#if dashKanbanEvs.length === 0 && !loading}
@@ -629,7 +629,7 @@
 							{/if}
 						</div>
 					{/if}
-					<a href="/calendrier" class="kb-mobile-lien">Voir le Kanban complet →</a>
+					<a href="/calendrier?onglet=kanban" class="kb-mobile-lien">Voir le Kanban complet →</a>
 				</div>
 			{/if}
 		{/if}
