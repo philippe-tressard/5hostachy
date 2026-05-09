@@ -21,8 +21,8 @@ export function kanbanEvVisible(ev: any, ctx: KanbanCtx): boolean {
 	if (ctx.isCS || ctx.isAdmin) return true;
 	// Maintenance récurrente : toujours visible
 	if (ev.type === 'maintenance_recurrente') return true;
-	// Copropriétaires : bypass du filtre affichable (assouplissement)
-	if (ctx.statut.startsWith('copropriétaire')) return true;
+	// Copropriétaires et aidants (héritent de la vision du délégant) : bypass du filtre affichable
+	if (ctx.statut.startsWith('copropriétaire') || ctx.statut === 'aidant') return true;
 	// Autres (syndic non-CS, mandataire, externe) : seulement les items affichables
 	return !!ev.affichable;
 }
