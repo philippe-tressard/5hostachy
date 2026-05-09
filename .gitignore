@@ -49,6 +49,9 @@ desktop.ini
 .idea/
 *.swp
 
+# Claude Code (local uniquement, ne pas versionner)
+CLAUDE.md
+
 # Fichiers temporaires / scripts de fix one-shot
 fix_*.py
 _fix*.py

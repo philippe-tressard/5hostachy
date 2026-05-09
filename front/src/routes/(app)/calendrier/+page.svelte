@@ -481,10 +481,8 @@ import { onMount } from 'svelte';
 
 	$: kanbanCols = KANBAN_COLS
 		.filter(col => {
-			// Colonne CS : réservée aux CS/admin
-			if (col.id === 'cs') return $isCS || $isAdmin;
-			// Colonne AG : réservée aux propriétaires, CS et admin (locataires exclus)
-			if (col.id === 'ag') return canSeeAG;
+			// Colonnes AG et CS : propriétaires, CS et admin uniquement (locataires exclus)
+			if (col.id === 'ag' || col.id === 'cs') return canSeeAG;
 			return true;
 		})
 		.map(col => ({
