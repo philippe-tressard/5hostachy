@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
-	import { flux, lots, tickets as ticketsApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
+	import { flux, lots, tickets as ticketsApi, calendrier as calApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDateLong, fmtDatetimeShort, fmtTime } from '$lib/date';
@@ -17,13 +17,16 @@
 	let loading = true;
 	let ready = false;
 	let relanceSyndicCount = 0;
+	let kanbanRawEvs: any[] = [];
+	let mobileKanbanIdx = 0;
 
 	onMount(async () => {
 		try {
-			const [fluxRes, lotsRes] = await Promise.allSettled([flux.get(), lots.mesList()]);
+			const [fluxRes, lotsRes, calRes] = await Promise.allSettled([flux.get(), lots.mesList(), calApi.list()]);
 			if (fluxRes.status === 'fulfilled') data = fluxRes.value;
 			else toast('error', 'Erreur chargement du flux');
 			if (lotsRes.status === 'fulfilled') userLots = lotsRes.value;
+			if (calRes.status === 'fulfilled') kanbanRawEvs = calRes.value;
 		} catch (e: any) {
 			toast('error', 'Erreur chargement : ' + (e?.message ?? String(e)));
 		} finally {
@@ -193,11 +196,60 @@
 	$: olderDayGroups = groupByDay(olderItems);
 	let olderOpen = false;
 
-	// ── Prochaines échéances filtrées par rôle ─────────────────────────────
-	$: visibleProchains = (data?.sante.prochains ?? []).filter(p => {
-		if (p.ev_type === 'ag' && !canSeeAG) return false;
+	// ── Kanban widget ──────────────────────────────────────────────────────
+	const _kanbanYear = new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
+
+	const DASH_KANBAN_COLS = [
+		{ id: 'ag',          label: 'AG',          color: '#8b5cf6' },
+		{ id: 'cs',          label: 'CS',           color: '#3b82f6' },
+		{ id: 'syndic',      label: 'Syndic',       color: '#f59e0b' },
+		{ id: 'fournisseur', label: 'Prestataire',  color: '#f97316' },
+		{ id: 'termine',     label: 'Terminé', color: '#22c55e' },
+	];
+
+	const EV_ICONS: Record<string, string> = {
+		travaux: '\u{1F528}', coupure: '⚡', ag: '\u{1F3DB}️',
+		maintenance: '\u{1F527}', maintenance_recurrente: '\u{1F504}', autre: '\u{1F4CC}',
+	};
+
+	function dashKanbanPerimLabel(p: string): string {
+		const map: Record<string, string> = {
+			'résidence': '', 'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2',
+			'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
+			parking: 'Parking', cave: 'Cave',
+		};
+		return p.split(',').map(s => map[s.trim()] ?? s.trim()).filter(Boolean).join(' · ');
+	}
+
+	$: dashKanbanEvs = kanbanRawEvs.filter(ev => {
+		if (!ev.statut_kanban || ev.statut_kanban === 'annule') return false;
+		if (!$isCS && !$isAdmin && !ev.affichable && ev.type !== 'maintenance_recurrente') return false;
+		if (ev.archivee && ev.statut_kanban !== 'annule' && !(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')) return false;
+		const refDate = ev.statut_kanban === 'termine' && ev.fin ? ev.fin : ev.debut;
+		const evYear = new Date(refDate).getFullYear();
+		const isOverdue = ev.type !== 'maintenance_recurrente' && evYear < _kanbanYear && ev.statut_kanban !== 'termine';
+		if (!isOverdue && evYear !== _kanbanYear) return false;
 		return true;
 	});
+
+	$: dashKanbanCols = DASH_KANBAN_COLS
+		.filter(col => (col.id === 'ag' || col.id === 'cs') ? canSeeAG : true)
+		.map(col => {
+			let items: any[] = dashKanbanEvs.filter((ev: any) => {
+				if (ev.archivee && ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur') return col.id === 'termine';
+				return ev.statut_kanban === col.id;
+			});
+			if (col.id === 'termine') {
+				items = [...items].sort((a: any, b: any) =>
+					new Date(b.fin ?? b.debut).getTime() - new Date(a.fin ?? a.debut).getTime()
+				);
+			}
+			return { ...col, total: items.length, items: items.slice(0, 3) };
+		});
+
+	$: mobileKanbanCols = dashKanbanCols.filter(col => col.items.length > 0);
+	$: { if (mobileKanbanIdx >= mobileKanbanCols.length) mobileKanbanIdx = Math.max(0, mobileKanbanCols.length - 1); }
+	$: mobileKanbanCurrent = mobileKanbanCols[mobileKanbanIdx] ?? null;
 
 	// ── Urgences en cours ──────────────────────────────────────────────────
 	$: urgentItems = filteredItems.filter(i =>
@@ -464,61 +516,97 @@
 		</div>
 	</div>
 
-	<!-- ═══ PROCHAINES ÉCHÉANCES (expandables) ════════════════════════════ -->
-	{#if visibleProchains.length > 0}
-		<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
-			<div class="prochains-card card">
-				<h3 class="prochains-header"><Icon name="calendar-days" size={15} /> Prochaines échéances</h3>
-				{#each visibleProchains as p, i}
-					{@const isExpanded = expandedItem === `proch_${p.id}`}
-					<div
-						class="prochain-expand"
-						class:expanded={isExpanded}
-						class:prochain-first={i === 0}
-						style="--type-color:{p.ev_type ? (TYPE_COLORS['evenement'] ?? 'var(--color-border)') : (p.type === 'contrat' ? '#10B981' : 'var(--color-border)')}"
-					>
-						<div
-							class="prochain-row"
-							role="button"
-							tabindex="0"
-							on:click={() => toggleItem(`proch_${p.id}`)}
-							on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleItem(`proch_${p.id}`)}
-						>
-							<span class="prochain-icon">{p.icon}</span>
-							<span class="prochain-date">{fmtDate(p.date)}</span>
-							<span class="prochain-titre">{p.titre}</span>
-							{#if p.ev_type}
-								<span class="prochain-type-chip" style="background:{TYPE_BG['evenement']};color:{TYPE_COLORS['evenement']}">{p.ev_type}</span>
+	<!-- ═══ KANBAN ══════════════════════════════════════════════════════════ -->
+	<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
+		<div class="kb-header">
+			<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
+			<a href="/calendrier" class="kb-voir-lien">Voir le Kanban complet →</a>
+		</div>
+
+		{#if dashKanbanEvs.length === 0 && !loading}
+			<p class="kb-vide">Aucun dossier actif pour {_kanbanYear}.</p>
+		{:else}
+			<!-- Desktop : grille de colonnes -->
+			<div class="kb-grid kb-desktop">
+				{#each dashKanbanCols as col}
+					<div class="kb-col" class:kb-col-vide={col.items.length === 0}>
+						<div class="kb-col-head" style="border-top-color:{col.color}">
+							<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
+							{#if col.total > 0}
+								<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
+									{col.total > 3 ? `+${col.total - 3} / ${col.total}` : col.total}
+								</span>
 							{/if}
-							{#if p.perimetre && p.perimetre !== 'Copropriété entière'}
-								<span class="badge badge-blue" style="font-size:.7rem;flex-shrink:0">🔹 {p.perimetre}</span>
-							{/if}
-							{#if isNew(p)}
-								<span class="new-badge">NOUVEAU</span>
-							{/if}
-							<span class="chevron" class:open={isExpanded}>›</span>
 						</div>
-						{#if isExpanded}
-							<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-							<div class="prochain-body" on:click|stopPropagation>
-								{#if p.lieu}<p class="prochain-meta">📍 {p.lieu}</p>{/if}
-								{#if p.perimetre}<p class="prochain-meta">🔹 {p.perimetre}</p>{/if}
-								{#if p.prestataire}<p class="prochain-meta">🔧 {p.prestataire}</p>{/if}
-								{#if p.fin}<p class="prochain-meta">🕐 {fmtDate(p.date)} → {fmtDate(p.fin)}</p>{/if}
-								{#if p.description}
-									<div class="prochain-desc rich-content">{@html safeHtml(p.description)}</div>
-								{/if}
-								{#if p.statut_kanban}
-									<span class="badge badge-blue" style="margin-top:.5rem">{p.statut_kanban}</span>
-								{/if}
-								<a href={p.type === 'contrat' ? '/prestataires' : '/calendrier'} class="prochain-link">Voir la page complète →</a>
-							</div>
+						{#if col.items.length === 0}
+							<p class="kb-vide-col">—</p>
+						{:else}
+							{#each col.items as item (item.id)}
+								<div class="kb-item"
+									role="button" tabindex="0"
+									on:click={() => goto(`/calendrier#ev-${item.id}`)}
+									on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}>
+									<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
+									<div class="kb-item-text">
+										<span class="kb-item-titre">{item.titre}</span>
+										{#if item.perimetre && item.perimetre !== 'résidence'}
+											<span class="kb-item-perim">&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span>
+										{/if}
+									</div>
+								</div>
+							{/each}
 						{/if}
 					</div>
 				{/each}
 			</div>
-		</div>
-	{/if}
+
+			<!-- Mobile : une colonne à la fois (colonnes vides masquées) -->
+			{#if mobileKanbanCols.length > 0}
+				<div class="kb-mobile">
+					<div class="kb-mobile-nav">
+						<button class="kb-nav-btn"
+							disabled={mobileKanbanIdx === 0}
+							on:click={() => mobileKanbanIdx--}
+							aria-label="Colonne précédente">‹</button>
+						<div class="kb-mobile-nav-center">
+							<span class="kb-mobile-col-label" style="color:{mobileKanbanCurrent?.color}">
+								{mobileKanbanCurrent?.label}
+							</span>
+							<span class="kb-mobile-pos">{mobileKanbanIdx + 1} / {mobileKanbanCols.length}</span>
+						</div>
+						<button class="kb-nav-btn"
+							disabled={mobileKanbanIdx >= mobileKanbanCols.length - 1}
+							on:click={() => mobileKanbanIdx++}
+							aria-label="Colonne suivante">›</button>
+					</div>
+					{#if mobileKanbanCurrent}
+						<div class="kb-mobile-items">
+							{#each mobileKanbanCurrent.items as item (item.id)}
+								<div class="kb-item"
+									role="button" tabindex="0"
+									on:click={() => goto(`/calendrier#ev-${item.id}`)}
+									on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}>
+									<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
+									<div class="kb-item-text">
+										<span class="kb-item-titre">{item.titre}</span>
+										{#if item.perimetre && item.perimetre !== 'résidence'}
+											<span class="kb-item-perim">&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span>
+										{/if}
+									</div>
+								</div>
+							{/each}
+							{#if mobileKanbanCurrent.total > 3}
+								<p class="kb-mobile-plus">
+									+{mobileKanbanCurrent.total - 3} élément{mobileKanbanCurrent.total - 3 > 1 ? 's' : ''} — <a href="/calendrier" class="kb-mobile-plus-lien">voir tout</a>
+								</p>
+							{/if}
+						</div>
+					{/if}
+					<a href="/calendrier" class="kb-mobile-lien">Voir le Kanban complet →</a>
+				</div>
+			{/if}
+		{/if}
+	</div>
 
 	<!-- ═══ FIL D'ACTIVITÉ ════════════════════════════════════════════════ -->
 	<div class="section-reveal" class:section-visible={ready} style="--delay:.25s">
@@ -921,32 +1009,96 @@
 	.kpi-badge { font-size: .62rem; width: fit-content; margin-top: .15rem; }
 	.kpi-link { font-size: .72rem; color: var(--color-primary); font-weight: 500; margin-top: auto; }
 
-	/* ═══ PROCHAINES ÉCHÉANCES (expandable) ═════════════════════════════ */
-	.prochains-card { padding: 1rem 1.15rem; margin-bottom: 1.25rem; }
-	.prochains-header { font-size: .82rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 .6rem; display: flex; align-items: center; gap: .35rem; }
-	.prochain-expand {
+	/* ═══ KANBAN WIDGET ═════════════════════════════════════════════════ */
+	.kb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+	.kb-voir-lien { font-size: .78rem; color: var(--color-primary); font-weight: 500; text-decoration: none; white-space: nowrap; }
+	.kb-voir-lien:hover { text-decoration: underline; }
+	.kb-vide { font-size: .85rem; color: var(--color-text-muted); text-align: center; padding: 1rem 0; margin: 0; }
+
+	/* Grille desktop */
+	.kb-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
+		gap: .45rem;
+		margin-bottom: 1.25rem;
+	}
+	.kb-col {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		overflow: hidden;
+		transition: opacity .15s;
+	}
+	.kb-col-vide { opacity: .4; }
+	.kb-col-head {
+		display: flex; align-items: center; justify-content: space-between;
+		padding: .35rem .6rem;
+		background: var(--color-bg);
+		border-top: 3px solid transparent;
+		border-bottom: 1px solid var(--color-border);
+	}
+	.kb-col-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+	.kb-col-count { font-size: .62rem; font-weight: 700; padding: .1rem .4rem; border-radius: 1rem; }
+	.kb-vide-col { font-size: .78rem; color: var(--color-text-muted); text-align: center; padding: .65rem .5rem; margin: 0; }
+
+	/* Item commun desktop + mobile */
+	.kb-item {
+		display: flex; align-items: flex-start; gap: .4rem;
+		padding: .45rem .6rem;
 		border-top: 1px solid var(--color-border);
-		border-left: 4px solid var(--type-color, var(--color-border));
-		border-radius: 0 var(--radius) var(--radius) 0;
-		margin-bottom: .15rem;
-		transition: border-left-color .15s, background .15s, box-shadow .15s;
+		cursor: pointer;
+		transition: background .12s;
 	}
-	.prochain-expand.prochain-first { border-top: none; }
-	.prochain-expand:hover { background: var(--color-surface); }
-	.prochain-expand.expanded { background: var(--color-surface); box-shadow: var(--shadow-sm); }
-	.prochain-row {
-		display: flex; align-items: center; gap: .5rem;
-		padding: .5rem .6rem; font-size: .85rem; cursor: pointer;
+	.kb-item:first-of-type { border-top: none; }
+	.kb-item:hover { background: var(--color-bg); }
+	.kb-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+	.kb-item-icon { flex-shrink: 0; font-size: .85rem; line-height: 1.3; }
+	.kb-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+	.kb-item-titre { font-size: .8rem; color: var(--color-text); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+	.kb-item-perim { font-size: .68rem; color: var(--color-text-muted); }
+
+	/* Mobile */
+	.kb-mobile { display: none; }
+	.kb-mobile-nav {
+		display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+		padding: .5rem .75rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius) var(--radius) 0 0;
+		border-bottom: none;
 	}
-	.prochain-icon { flex-shrink: 0; font-size: .9rem; }
-	.prochain-date { font-size: .78rem; color: var(--color-text-muted); min-width: 5.5rem; white-space: nowrap; }
-	.prochain-titre { flex: 1; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.prochain-type-chip { font-size: .6rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; padding: .1rem .4rem; border-radius: 1rem; flex-shrink: 0; }
-	.prochain-body { padding: .5rem 1rem 1rem 2.5rem; border-top: 1px solid var(--color-border); }
-	.prochain-meta { font-size: .82rem; color: var(--color-text-muted); margin: .2rem 0; }
-	.prochain-desc { font-size: .85rem; margin: .5rem 0; line-height: 1.5; }
-	.prochain-link { font-size: .78rem; color: var(--color-primary); font-weight: 500; text-decoration: none; display: inline-block; margin-top: .5rem; }
-	.prochain-link:hover { text-decoration: underline; }
+	.kb-mobile-nav-center { display: flex; flex-direction: column; align-items: center; gap: .08rem; flex: 1; }
+	.kb-mobile-col-label { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+	.kb-mobile-pos { font-size: .66rem; color: var(--color-text-muted); }
+	.kb-nav-btn {
+		background: none; border: 1px solid var(--color-border); border-radius: var(--radius);
+		width: 2rem; height: 2rem; flex-shrink: 0;
+		font-size: 1.25rem; font-weight: 700; color: var(--color-text);
+		cursor: pointer; display: flex; align-items: center; justify-content: center;
+		transition: background .12s, border-color .12s; line-height: 1;
+	}
+	.kb-nav-btn:hover:not(:disabled) { background: var(--color-bg); border-color: var(--color-primary); }
+	.kb-nav-btn:disabled { opacity: .3; cursor: default; }
+	.kb-mobile-items {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 0 0 var(--radius) var(--radius);
+		overflow: hidden;
+	}
+	.kb-mobile-plus {
+		font-size: .74rem; color: var(--color-text-muted);
+		text-align: center; padding: .4rem .75rem; margin: 0;
+		border-top: 1px solid var(--color-border);
+	}
+	.kb-mobile-plus-lien { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+	.kb-mobile-plus-lien:hover { text-decoration: underline; }
+	.kb-mobile-lien {
+		display: block; text-align: center; padding: .55rem 1rem; margin-top: .45rem;
+		font-size: .8rem; color: var(--color-primary); font-weight: 500; text-decoration: none;
+		background: var(--color-surface); border: 1px solid var(--color-border);
+		border-radius: var(--radius); transition: background .12s;
+	}
+	.kb-mobile-lien:hover { background: var(--color-primary-light); }
 
 	/* ═══ NEW BADGE ═════════════════════════════════════════════════════ */
 	@keyframes new-pulse {
@@ -1055,6 +1207,9 @@
 	.older-timeline { opacity: .85; }
 
 	/* ═══ RESPONSIVE ════════════════════════════════════════════════════ */
+	@media (min-width: 768px) {
+		.kb-mobile { display: none !important; }
+	}
 	@media (max-width: 767px) {
 		.hero { margin: -.75rem -.75rem 0; padding: 1.25rem 1rem 1rem; }
 		.kpi-grid { grid-template-columns: 1fr; }
@@ -1068,5 +1223,7 @@
 		.consignes-icon { font-size: 1.2rem; }
 		.relance-alerte-card { padding: .55rem .75rem; gap: .5rem; }
 		.relance-alerte-text strong { font-size: .82rem; }
+		.kb-desktop { display: none !important; }
+		.kb-mobile { display: block; }
 	}
 </style>
