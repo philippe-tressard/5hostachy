@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from app.models.core import (
     Utilisateur, CommandeAcces, StatutCommande,
     HistoriqueSauvegarde, ConfigSauvegarde, StatutSauvegarde,
@@ -1047,6 +1047,11 @@ class AdminUserUpdate(BaseModel):
     batiment_id: Optional[int] = None
     actif: Optional[bool] = None
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def lowercase_email(cls, v: str | None) -> str | None:
+        return v.strip().lower() if v else v
+
 
 @router.patch("/utilisateurs/{user_id}", response_model=UserRead)
 def modifier_utilisateur(
@@ -1059,8 +1064,8 @@ def modifier_utilisateur(
     user = session.get(Utilisateur, user_id)
     if not user:
         raise HTTPException(404, "Utilisateur introuvable")
-    if body.email and body.email != user.email:
-        existing = session.exec(select(Utilisateur).where(Utilisateur.email == body.email)).first()
+    if body.email and body.email != user.email.lower():
+        existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
         if existing:
             raise HTTPException(400, "Cet e-mail est déjà utilisé.")
     for field, val in body.model_dump(exclude_unset=True).items():

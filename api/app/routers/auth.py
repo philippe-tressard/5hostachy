@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request, status
 from pydantic import BaseModel, field_validator
+from sqlalchemy import func
 from sqlmodel import Session, select, or_
 
 from app.auth.jwt import (
@@ -72,7 +73,7 @@ def register(
         raise HTTPException(400, "Le consentement RGPD est obligatoire.")
     _check_password_strength(body.password)
 
-    existing = session.exec(select(Utilisateur).where(Utilisateur.email == body.email)).first()
+    existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
     if existing:
         raise HTTPException(400, "Email déjà utilisé.")
 
@@ -185,7 +186,7 @@ def register(
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(request: Request, body: LoginRequest, response: Response, session: Session = Depends(get_session)):
-    user = session.exec(select(Utilisateur).where(Utilisateur.email == body.email)).first()
+    user = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)).first()
     if not user or not user.hashed_password:
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect.")
     valid, new_hash = verify_and_rehash(body.password, user.hashed_password)
@@ -337,7 +338,7 @@ def update_me(
     if body.email is not None:
         new_email = body.email.strip().lower()
         if new_email != user.email.lower():
-            existing = session.exec(select(Utilisateur).where(Utilisateur.email == new_email)).first()
+            existing = session.exec(select(Utilisateur).where(func.lower(Utilisateur.email) == new_email)).first()
             if existing:
                 raise HTTPException(400, "Cette adresse e-mail est déjà utilisée")
             user.email = new_email
