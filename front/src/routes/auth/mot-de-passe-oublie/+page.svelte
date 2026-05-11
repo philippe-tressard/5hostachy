@@ -10,6 +10,7 @@
 	let done = false;
 
 	async function submit() {
+		email = email.trim().toLowerCase();
 		sending = true;
 		try {
 			await authApi.requestPasswordReset({ email });
