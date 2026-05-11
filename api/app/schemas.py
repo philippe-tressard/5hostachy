@@ -22,6 +22,11 @@ class UserCreate(BaseModel):
     nom_aide: Optional[str] = None
     prenom_aide: Optional[str] = None
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def lowercase_email(cls, v: str | None) -> str | None:
+        return v.strip().lower() if v else v
+
     @field_validator("nom", "nom_aide", "nom_proprietaire", mode="before")
     @classmethod
     def uppercase_nom(cls, v: str | None) -> str | None:
@@ -91,6 +96,11 @@ class UserUpdate(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def lowercase_email(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class TokenResponse(BaseModel):
