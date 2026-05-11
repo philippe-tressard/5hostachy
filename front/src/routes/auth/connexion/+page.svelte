@@ -31,6 +31,7 @@
 		emailNotVerified = false;
 		resendDone = false;
 		loading = true;
+		email = email.trim().toLowerCase();
 		try {
 			const user = await authApi.login(email, password);
 			setUser(user);

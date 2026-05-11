@@ -63,6 +63,7 @@
 		}
 		error = '';
 		loading = true;
+		email = email.trim().toLowerCase();
 		try {
 			await authApi.register({ nom, prenom, email, telephone, societe: societe || null, fonction: fonction || null, password, statut, batiment_id: showBatiment ? batiment_id : null, consentement_rgpd, consentement_communications, nom_proprietaire: isLocataire ? nom_proprietaire : null, nom_aide: isAidantOrMandataire ? nom_aide : null, prenom_aide: isAidantOrMandataire ? prenom_aide : null });
 			success = true;
