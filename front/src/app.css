@@ -378,13 +378,19 @@ a:hover { text-decoration: underline; }
     padding: 1rem;
   }
 
-  /* Page header flex : colonne sur mobile */
+  /* Page header flex : colonne + sticky sous la topbar sur mobile */
   .page-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: .75rem;
+    gap: .5rem;
     padding-left: 1rem;
-    margin-bottom: 1.5rem;
+    padding-right: 1rem;
+    padding-bottom: .75rem;
+    margin-bottom: 1rem;
+    position: sticky;
+    top: 3.25rem;
+    background: var(--color-bg, #f2efe9);
+    z-index: 50;
   }
   .page-header-btn {
     width: 100%;

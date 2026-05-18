@@ -630,6 +630,51 @@ def _auto_link_annuaire(user, session: Session) -> dict:
     return {"cs": cs_linked, "syndic": syndic_linked}
 
 
+# ── Propagation TC/Vigik existants vers un utilisateur nouvellement lié ───────
+
+def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]:
+    """Propage les TC/Vigik existants sur les lots de cet utilisateur.
+
+    Couvre le cas du conjoint inscrit APRÈS la résolution : les imports sont
+    déjà `resolu`, donc _auto_match_tc/_vigik ne trouvent rien — mais les
+    objets Telecommande/Vigik existent déjà en base liés au lot.
+    """
+    from app.models.core import UserLot, Telecommande, Vigik, UserTelecommande, UserVigik
+
+    user_lots = session.exec(
+        select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)
+    ).all()
+    lot_ids = [ul.lot_id for ul in user_lots if ul.lot_id]
+    if not lot_ids:
+        return 0, 0
+
+    tc_count = 0
+    for tc in session.exec(select(Telecommande).where(Telecommande.lot_id.in_(lot_ids))).all():
+        existing = session.exec(
+            select(UserTelecommande).where(
+                UserTelecommande.user_id == user.id,
+                UserTelecommande.telecommande_id == tc.id,
+            )
+        ).first()
+        if not existing:
+            session.add(UserTelecommande(user_id=user.id, telecommande_id=tc.id))
+            tc_count += 1
+
+    vigik_count = 0
+    for vigik in session.exec(select(Vigik).where(Vigik.lot_id.in_(lot_ids))).all():
+        existing = session.exec(
+            select(UserVigik).where(
+                UserVigik.user_id == user.id,
+                UserVigik.vigik_id == vigik.id,
+            )
+        ).first()
+        if not existing:
+            session.add(UserVigik(user_id=user.id, vigik_id=vigik.id))
+            vigik_count += 1
+
+    return tc_count, vigik_count
+
+
 # ── Point d'entrée principal ──────────────────────────────────────────────────
 
 def auto_match_pour_utilisateur(user, session: Session) -> dict:
@@ -674,7 +719,14 @@ def auto_match_pour_utilisateur(user, session: Session) -> dict:
     else:
         tc      = _auto_match_tc(user, session)
         vigik   = _auto_match_vigik(user, session)
-    
+
+    # Cas conjoint inscrit après résolution : les imports sont déjà `resolu`,
+    # _auto_match_tc/_vigik ne trouvent rien — on propage depuis les objets existants.
+    if is_coproprietaire:
+        tc_prop, vigik_prop = _propagate_acces_pour_utilisateur(user, session)
+        tc    += tc_prop
+        vigik += vigik_prop
+
     baux    = _auto_match_baux_locataire(user, session)
     annuaire = _auto_link_annuaire(user, session)
     return {
