@@ -693,7 +693,7 @@ def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]
             if _assoc_vigik(vigik):
                 vigik_count += 1
 
-    # Vecteur 2 : par copropriétaire (couvre lot_id=None sur la Telecommande/Vigik)
+    # Vecteur 2 : par user_id direct des copropriétaires (lot_id=None possible)
     if copro_ids:
         for tc in session.exec(select(Telecommande).where(Telecommande.user_id.in_(list(copro_ids)))).all():
             if tc.id not in seen_tc:
@@ -704,6 +704,22 @@ def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]
             if vigik.id not in seen_vig:
                 seen_vig.add(vigik.id)
                 if _assoc_vigik(vigik):
+                    vigik_count += 1
+
+    # Vecteur 3 : via UserTelecommande/UserVigik des copropriétaires (association M2M)
+    # Couvre le cas où le TC n'est pas owner-direct mais lié via la table de jonction
+    if copro_ids:
+        for ut in session.exec(select(UserTelecommande).where(UserTelecommande.user_id.in_(list(copro_ids)))).all():
+            if ut.telecommande_id not in seen_tc:
+                seen_tc.add(ut.telecommande_id)
+                tc_obj = session.get(Telecommande, ut.telecommande_id)
+                if tc_obj and _assoc_tc(tc_obj):
+                    tc_count += 1
+        for uv in session.exec(select(UserVigik).where(UserVigik.user_id.in_(list(copro_ids)))).all():
+            if uv.vigik_id not in seen_vig:
+                seen_vig.add(uv.vigik_id)
+                vigik_obj = session.get(Vigik, uv.vigik_id)
+                if vigik_obj and _assoc_vigik(vigik_obj):
                     vigik_count += 1
 
     return tc_count, vigik_count
