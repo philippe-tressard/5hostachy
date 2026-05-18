@@ -18,6 +18,13 @@ Intégrer des médias-queries modernes (prefers-color-scheme, prefers-reduced-mo
 - Sélecteur de langue **absent** du menu mobile (interface exclusivement en français — la fonctionnalité i18n est réservée à une version ultérieure)
 - Pas de sidebar latérale sur mobile
 
+**Bouton d'action page (`.page-header-btn`) sur mobile :**
+
+- Le `.page-header` passe en `flex-direction: column` avec `align-items: flex-start` → le bouton est aligné à gauche à sa largeur naturelle (pas pleine largeur, pas centré).
+- Le `.page-header` est `position: sticky; top: 3.25rem` sur mobile pour rester visible lors du défilement vers les onglets.
+- Ne jamais forcer `width: 100%` sur `.page-header-btn` — cela dénature le bouton sur mobile.
+- Référence visuelle : page Actualités (bouton compact, aligné gauche sous le titre).
+
 2. Éco‑conception (Green IT)
 
 Minimiser le poids des pages, scripts et images.
