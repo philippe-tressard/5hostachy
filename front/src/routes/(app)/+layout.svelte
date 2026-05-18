@@ -99,7 +99,7 @@
 			max-width: 100vw;
 		}
 		.app-main {
-			overflow-x: hidden;
+			overflow-x: clip; /* clip sans créer de scroll-context → position:sticky fonctionne */
 		}
 	}
 </style>
