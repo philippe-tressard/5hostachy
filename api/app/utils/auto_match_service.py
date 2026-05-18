@@ -633,11 +633,12 @@ def _auto_link_annuaire(user, session: Session) -> dict:
 # ── Propagation TC/Vigik existants vers un utilisateur nouvellement lié ───────
 
 def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]:
-    """Propage les TC/Vigik existants sur les lots de cet utilisateur.
+    """Propage les TC/Vigik existants vers cet utilisateur.
 
-    Couvre le cas du conjoint inscrit APRÈS la résolution : les imports sont
-    déjà `resolu`, donc _auto_match_tc/_vigik ne trouvent rien — mais les
-    objets Telecommande/Vigik existent déjà en base liés au lot.
+    Deux vecteurs de recherche :
+    1. TC/Vigik liés au lot via lot_id
+    2. TC/Vigik détenus par un copropriétaire du même lot (couvre le cas
+       où lot_id est None sur la Telecommande/Vigik — import non résolu)
     """
     from app.models.core import UserLot, Telecommande, Vigik, UserTelecommande, UserVigik
 
@@ -648,29 +649,62 @@ def _propagate_acces_pour_utilisateur(user, session: Session) -> tuple[int, int]
     if not lot_ids:
         return 0, 0
 
-    tc_count = 0
-    for tc in session.exec(select(Telecommande).where(Telecommande.lot_id.in_(lot_ids))).all():
+    # Copropriétaires partageant au moins un lot avec cet utilisateur
+    copro_ids = _all_coproprio_ids(user.id, session)
+
+    def _assoc_tc(tc_obj) -> bool:
         existing = session.exec(
             select(UserTelecommande).where(
                 UserTelecommande.user_id == user.id,
-                UserTelecommande.telecommande_id == tc.id,
+                UserTelecommande.telecommande_id == tc_obj.id,
             )
         ).first()
         if not existing:
-            session.add(UserTelecommande(user_id=user.id, telecommande_id=tc.id))
-            tc_count += 1
+            session.add(UserTelecommande(user_id=user.id, telecommande_id=tc_obj.id))
+            return True
+        return False
 
-    vigik_count = 0
-    for vigik in session.exec(select(Vigik).where(Vigik.lot_id.in_(lot_ids))).all():
+    def _assoc_vigik(vigik_obj) -> bool:
         existing = session.exec(
             select(UserVigik).where(
                 UserVigik.user_id == user.id,
-                UserVigik.vigik_id == vigik.id,
+                UserVigik.vigik_id == vigik_obj.id,
             )
         ).first()
         if not existing:
-            session.add(UserVigik(user_id=user.id, vigik_id=vigik.id))
-            vigik_count += 1
+            session.add(UserVigik(user_id=user.id, vigik_id=vigik_obj.id))
+            return True
+        return False
+
+    seen_tc: set[int] = set()
+    tc_count = 0
+    seen_vig: set[int] = set()
+    vigik_count = 0
+
+    # Vecteur 1 : par lot_id
+    for tc in session.exec(select(Telecommande).where(Telecommande.lot_id.in_(lot_ids))).all():
+        if tc.id not in seen_tc:
+            seen_tc.add(tc.id)
+            if _assoc_tc(tc):
+                tc_count += 1
+    for vigik in session.exec(select(Vigik).where(Vigik.lot_id.in_(lot_ids))).all():
+        if vigik.id not in seen_vig:
+            seen_vig.add(vigik.id)
+            if _assoc_vigik(vigik):
+                vigik_count += 1
+
+    # Vecteur 2 : par copropriétaire (couvre lot_id=None sur la Telecommande/Vigik)
+    if copro_ids:
+        for tc in session.exec(select(Telecommande).where(Telecommande.user_id.in_(list(copro_ids)))).all():
+            if tc.id not in seen_tc:
+                seen_tc.add(tc.id)
+                if _assoc_tc(tc):
+                    tc_count += 1
+        for vigik in session.exec(select(Vigik).where(Vigik.user_id.in_(list(copro_ids)))).all():
+            if vigik.id not in seen_vig:
+                seen_vig.add(vigik.id)
+                if _assoc_vigik(vigik):
+                    vigik_count += 1
 
     return tc_count, vigik_count
 
