@@ -392,10 +392,6 @@ a:hover { text-decoration: underline; }
     background: var(--color-bg, #f2efe9);
     z-index: 50;
   }
-  .page-header-btn {
-    width: 100%;
-  }
-
   .page-subtitle { padding-left: 1rem; }
   .tab-descriptif { padding-left: 1rem; }
 
