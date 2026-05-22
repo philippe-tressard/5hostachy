@@ -1040,6 +1040,27 @@ def add_evolution(
         ).all()
         cfg_map = {r.cle: r.valeur for r in cfg_rows}
 
+        # Évolutions précédentes (excl. celle qui vient d'être créée) — communes WhatsApp + email
+        evols_hist = session.exec(
+            select(TicketEvolution).where(
+                TicketEvolution.ticket_id == ticket.id,
+                TicketEvolution.id != evol.id,
+            )
+            .order_by(TicketEvolution.cree_le)
+        ).all()
+
+        # Messages précédents avec contenu (pour WhatsApp + template email)
+        messages_ctx = []
+        for ev in evols_hist:
+            if not ev.contenu:
+                continue
+            auteur_e = session.get(Utilisateur, ev.auteur_id)
+            messages_ctx.append({
+                "auteur_nom": f"{auteur_e.prenom} {auteur_e.nom}" if auteur_e else "?",
+                "date": _fmt_paris(ev.cree_le),
+                "contenu": ev.contenu,
+            })
+
         if body.partager_whatsapp:
             wa_config = {k: cfg_map[k] for k in _WA_KEYS if k in cfg_map}
             if wa_config.get('whatsapp_enabled') == '1':
@@ -1047,9 +1068,17 @@ def add_evolution(
                     f"Ticket #{ticket.numero} — {ticket.titre} : statut → {STATUT_LABELS.get(body.nouveau_statut or '', body.nouveau_statut or '')}"
                     if body.type == "etat" else ticket.titre
                 )
+                if msg and messages_ctx:
+                    site_url = (cfg_map.get('site_url') or '').rstrip('/')
+                    nb = len(messages_ctx)
+                    msg += (
+                        f"\n\n\U0001f4dc Cet échange comporte {nb} commentaire(s) précédent(s).\n"
+                        f"Consultez l'historique complet sur l'application :\n"
+                        f"\U0001f449 {site_url}/tickets/{ticket.id}"
+                    )
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
-                    f"🔧 {ticket.titre}", msg, False, ticket.perimetre_cible, None, wa_config,
+                    f"\U0001f527 {ticket.titre}", msg, False, ticket.perimetre_cible, None, wa_config,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:
@@ -1079,15 +1108,7 @@ def add_evolution(
                         destinataires.append((uid, email))
                         seen_emails.add(email.lower())
 
-            # Construire l'historique des évolutions pour le contexte email
-            # On exclut l'évolution courante (elle est déjà affichée comme "Commentaire")
-            evols_hist = session.exec(
-                select(TicketEvolution).where(
-                    TicketEvolution.ticket_id == ticket.id,
-                    TicketEvolution.id != evol.id,
-                )
-                .order_by(TicketEvolution.cree_le)
-            ).all()
+            # Historique résumé pour le tableau email
             historique = [{"date": ticket.cree_le.strftime("%d/%m/%Y"), "label": "Création du ticket"}]
             for ev in evols_hist:
                 if ev.type == "etat":
@@ -1106,14 +1127,20 @@ def add_evolution(
                 "ticket": {
                     "id": ticket.id, "numero": ticket.numero,
                     "titre": ticket.titre,
-                    "description": body.contenu or "",
+                    "description": ticket.description or "",
                     "categorie": ticket.categorie,
                 },
                 "auteur": {"prenom": user.prenom, "nom": user.nom},
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
                 "app": {"url": cfg_map.get("site_url", "https://localhost")},
                 "reference_copro": cfg_map.get("reference_copro", ""),
+                "is_commentaire": bool(body.contenu and body.contenu.strip()),
+                "commentaire": body.contenu or "",
+                "date_commentaire": _fmt_paris(datetime.utcnow()),
+                "date_creation": ticket.cree_le.strftime("%d/%m/%Y"),
+                "messages": messages_ctx,
                 "historique": historique,
+                "fichiers": bool(body.fichiers_urls),
             }
             if destinataires:
                 background_tasks.add_task(
