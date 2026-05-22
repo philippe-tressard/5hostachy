@@ -523,10 +523,29 @@ def add_evolution(
     if share_wa and body.contenu and body.contenu.strip():
         wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
         if wa_config.get('whatsapp_enabled') == '1':
+            # Commentaires précédents (hors celui qui vient d'être créé)
+            evols_precedents = [
+                e for e in session.exec(
+                    select(PublicationEvolution).where(
+                        PublicationEvolution.publication_id == pub.id,
+                        PublicationEvolution.id != evol.id,
+                    )
+                ).all()
+                if e.contenu
+            ]
+            wa_contenu = body.contenu
+            if evols_precedents:
+                site_url = (wa_config.get('site_url') or '').rstrip('/')
+                nb = len(evols_precedents)
+                wa_contenu += (
+                    f"\n\n\U0001f4dc Cet échange comporte {nb} commentaire(s) précédent(s).\n"
+                    f"Consultez l'historique complet sur l'application :\n"
+                    f"\U0001f449 {site_url}/actualites#pub-{pub.id}"
+                )
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log,
                 f"{pub.titre} (suite)",
-                body.contenu,
+                wa_contenu,
                 pub.urgente,
                 pub.perimetre_cible,
                 None,
