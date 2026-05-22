@@ -18,7 +18,9 @@ from app.models.core import (
     Copropriete,
     DevisPrestataire,
     Evenement,
+    Idee,
     OptionSondage,
+    PetiteAnnonce,
     Prestataire,
     Publication,
     RoleUtilisateur,
@@ -27,6 +29,7 @@ from app.models.core import (
     Ticket,
     TicketEvolution,
     Utilisateur,
+    VoteIdee,
     VoteSondage,
 )
 
@@ -454,6 +457,73 @@ def get_flux(
                 meta={"sondage_id": s.id, "nb_votants": nb_votants,
                        "full_html": s.description},
             ))
+
+    # ── 6. Petites annonces ─────────────────────────────────────────────────
+    _ANN_ICONS = {"vente": "\U0001f3f7️", "don": "\U0001f381", "recherche": "\U0001f50d"}
+    _ANN_TYPE_LABELS = {"vente": "Vente", "don": "Don", "recherche": "Recherche"}
+    _ANN_STATUT_BADGES = {"disponible": "Disponible", "reserve": "Réservé", "vendu": "Vendu"}
+    annonces = session.exec(
+        select(PetiteAnnonce)
+        .where(PetiteAnnonce.cree_le >= since, PetiteAnnonce.statut != "archive")
+        .order_by(PetiteAnnonce.cree_le.desc())
+    ).all()
+    for a in annonces:
+        date_ref = a.mis_a_jour_le or a.cree_le
+        detail_parts = [_ANN_TYPE_LABELS.get(a.type_annonce, a.type_annonce)]
+        if a.prix and a.type_annonce == "vente":
+            detail_parts.append(f"{a.prix:,.0f} €".replace(",", " "))
+        if a.negotiable:
+            detail_parts.append("négociable")
+        auteur_ann = _auteur_nom(session, a.auteur_id) if a.contact_visible else None
+        items.append(FluxItem(
+            id=f"ann_{a.id}",
+            type="annonce",
+            date=date_ref,
+            cree_le=a.cree_le,
+            titre=a.titre,
+            detail=" · ".join(detail_parts),
+            badges=[_ANN_STATUT_BADGES.get(a.statut, a.statut)],
+            icon=_ANN_ICONS.get(a.type_annonce, "\U0001f3f7️"),
+            lien="/sondages",
+            meta={
+                "annonce_id": a.id,
+                "type_annonce": a.type_annonce,
+                "statut": a.statut,
+                "prix": a.prix,
+                "auteur": auteur_ann,
+                "resume": _strip_html(a.description),
+            },
+        ))
+
+    # ── 7. Boîte à idées ────────────────────────────────────────────────────
+    _IDEE_STATUT_BADGES = {
+        "ouverte": "Ouverte", "retenue": "Retenue",
+        "rejetee": "Rejetée", "realisee": "Réalisée",
+    }
+    idees = session.exec(
+        select(Idee).where(Idee.cree_le >= since).order_by(Idee.cree_le.desc())
+    ).all()
+    for idee in idees:
+        nb_votes = session.exec(
+            select(func.count(VoteIdee.id)).where(VoteIdee.idee_id == idee.id)
+        ).one()
+        items.append(FluxItem(
+            id=f"idee_{idee.id}",
+            type="idee",
+            date=idee.cree_le,
+            cree_le=idee.cree_le,
+            titre=idee.titre,
+            detail=f"{nb_votes} vote{'s' if nb_votes > 1 else ''}",
+            badges=[_IDEE_STATUT_BADGES.get(idee.statut, idee.statut)],
+            icon="\U0001f4a1",
+            lien="/sondages",
+            meta={
+                "idee_id": idee.id,
+                "statut": idee.statut,
+                "nb_votes": nb_votes,
+                "resume": _strip_html(idee.description),
+            },
+        ))
 
     # ── Tri global par date décroissante ────────────────────────────────────
     items.sort(key=lambda x: x.date, reverse=True)

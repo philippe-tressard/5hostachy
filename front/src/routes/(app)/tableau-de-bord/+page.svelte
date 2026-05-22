@@ -286,6 +286,8 @@
 		if (item.type === 'evenement') return "Voir l'événement →";
 		if (item.type === 'devis') return 'Voir le devis →';
 		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
+		if (item.type === 'annonce') return "Voir l'annonce →";
+		if (item.type === 'idee') return "Voir l'idée →";
 		return 'Voir →';
 	}
 
@@ -293,6 +295,7 @@
 		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
 		publication: 'Actualité', evenement: 'Événement',
 		devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
+		annonce: 'Petite annonce', idee: 'Boîte à idées',
 	};
 
 	const TYPE_COLORS: Record<string, string> = {
@@ -304,6 +307,8 @@
 		devis: '#10B981',
 		sondage_clos: '#8B5CF6',
 		sondage_ouvert: '#8B5CF6',
+		annonce: '#EA580C',
+		idee: '#0891B2',
 	};
 
 	const TYPE_BG: Record<string, string> = {
@@ -315,6 +320,8 @@
 		devis: '#ECFDF5',
 		sondage_clos: '#F5F3FF',
 		sondage_ouvert: '#F5F3FF',
+		annonce: '#FFF7ED',
+		idee: '#ECFEFF',
 	};
 
 	function isNew(item: { cree_le?: string; date: string }): boolean {
