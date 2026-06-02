@@ -1,74 +1,74 @@
-﻿# ðŸ”„ Restauration complÃ¨te â€” Raspberry Pi 5
+# Restauration complète — Raspberry Pi 5
 
-> **Objectif** : reconstruire l'environnement 5Hostachy depuis zÃ©ro sur un nouveau Raspberry Pi 5 (ou aprÃ¨s un crash complet de la carte SD).
+> **Objectif** : reconstruire l'environnement 5Hostachy depuis zéro sur un nouveau Raspberry Pi 5 (ou après un crash complet de la carte SD).
 >
-> **DurÃ©e estimÃ©e** : ~15 min (hors tÃ©lÃ©chargements rÃ©seau).
+> **Durée estimée** : ~15 min (hors téléchargements réseau).
 
 ---
 
-## PrÃ©requis
+## Prérequis
 
-| Ã‰lÃ©ment | DÃ©tail |
+| Élément | Détail |
 |---|---|
-| **MatÃ©riel** | Raspberry Pi 5 â€” Raspberry Pi OS Lite 64-bit (Debian Bookworm) |
-| **RÃ©seau** | IP fixe `<RPi-IP>`, accÃ¨s Internet |
+| **Matériel** | Raspberry Pi 5 — Raspberry Pi OS Lite 64-bit (Debian Bookworm) |
+| **Réseau** | IP fixe `192.168.1.222` (rpi1) ou `192.168.1.223` (rpi2), accès Internet |
 | **GitHub** | Repo `philippe-tressard/5hostachy` (branche `main`) |
-| **Backup .env** | Conserver une copie sÃ©curisÃ©e du fichier `/opt/5hostachy/.env` (clÃ©s secrÃ¨tes, tokens, SMTP, etc.) |
+| **Backup .env** | Conserver une copie sécurisée du fichier `/opt/5hostachy/.env` (clés secrètes, tokens, SMTP, etc.) |
 | **Backup SQLite** | Dernier fichier `app_*.db.gz` depuis `/data/5hostachy/backups/` |
-| **Token Cloudflare** | Token du tunnel Cloudflare (si applicable) |
+| **Token Cloudflare** | Token du tunnel Cloudflare |
 
-> âš ï¸ **Sans le `.env` et la base SQLite**, l'application sera fonctionnelle mais vide (aucun utilisateur, aucune donnÃ©e).
+> ⚠️ **Sans le `.env` et la base SQLite**, l'application sera fonctionnelle mais vide (aucun utilisateur, aucune donnée).
 
 ---
 
-## Ã‰tape 1 â€” PrÃ©parer le systÃ¨me
+## Étape 1 — Préparer le système
 
-Flasher **Raspberry Pi OS Lite 64-bit** sur la carte SD avec **Raspberry Pi Imager**.  
-Activer SSH, configurer l'utilisateur `<your-user>` et l'IP statique.
+Flasher **Raspberry Pi OS Lite 64-bit** sur la carte SD avec **Raspberry Pi Imager**.
+Activer SSH, configurer l'utilisateur `ptressard` et l'IP statique.
 
 Se connecter :
 ```bash
-ssh <your-user>@<RPi-IP>
+ssh ptressard@192.168.1.222   # ou .223
 ```
 
 ---
 
-## Ã‰tape 2 â€” Installer Docker & dÃ©pendances
+## Étape 2 — Installer Docker & dépendances
 
 ```bash
-# Mise Ã  jour
+# Mise à jour
 sudo apt-get update -qq && sudo apt-get upgrade -y -qq
 
-# Paquets systÃ¨me
+# Paquets système
 sudo apt-get install -y -qq \
   curl wget git ca-certificates gnupg lsb-release \
   ufw fail2ban unattended-upgrades \
-  cron sqlite3 rsync
+  cron sqlite3 rsync python3
 
 # Docker Engine (ARM64)
 curl -fsSL https://get.docker.com | sudo sh
 sudo systemctl enable --now docker
-sudo usermod -aG docker <your-user>
+sudo usermod -aG docker ptressard
 
-# Important : se dÃ©connecter/reconnecter pour le groupe docker
+# Important : se déconnecter/reconnecter pour le groupe docker
 exit
 ```
 
 Se reconnecter :
 ```bash
-ssh <your-user>@<RPi-IP>
-docker --version    # VÃ©rifier
+ssh ptressard@192.168.1.222
+docker --version    # Vérifier
 ```
 
 ---
 
-## Ã‰tape 3 â€” Cloner le dÃ©pÃ´t
+## Étape 3 — Cloner le dépôt
 
 ```bash
-# ClÃ© SSH deploy (si perdue, en regÃ©nÃ©rer une â€” voir docs/deploy-rpi5-auto.md)
+# Clé SSH deploy
 ssh-keygen -t ed25519 -C "hostachy-rpi5-deploy" -f ~/.ssh/hostachy_deploy -N ""
 cat ~/.ssh/hostachy_deploy.pub
-# â†’ Ajouter dans GitHub > Settings > Deploy keys
+# → Ajouter dans GitHub > Settings > Deploy keys
 
 cat >> ~/.ssh/config << 'EOF'
 Host github.com
@@ -78,34 +78,34 @@ EOF
 
 # Cloner
 sudo mkdir -p /opt/5hostachy
-sudo chown <your-user>:<your-user> /opt/5hostachy
+sudo chown ptressard:ptressard /opt/5hostachy
 git clone git@github.com:philippe-tressard/5hostachy.git /opt/5hostachy
 cd /opt/5hostachy
 ```
 
 ---
 
-## Ã‰tape 4 â€” Restaurer le `.env`
+## Étape 4 — Restaurer le `.env`
 
 ```bash
 # Option A : depuis un backup
 scp user@backup-machine:/chemin/vers/.env /opt/5hostachy/.env
 
-# Option B : recrÃ©er depuis l'exemple
+# Option B : recréer depuis l'exemple
 cp /opt/5hostachy/.env.example /opt/5hostachy/.env
 nano /opt/5hostachy/.env
 ```
 
-**Variables critiques Ã  renseigner** :
+**Variables critiques à renseigner** :
 
 | Variable | Description |
 |---|---|
-| `SECRET_KEY` | ClÃ© JWT â€” **min 32 caractÃ¨res alÃ©atoires** (`openssl rand -hex 32`) |
-| `DOMAIN` | Domaine public (`<your-domain>`) |
-| `ORIGIN` | URL complÃ¨te (`https://<your-domain>`) |
+| `SECRET_KEY` | Clé JWT — **min 32 caractères aléatoires** (`openssl rand -hex 32`) |
+| `DOMAIN` | Domaine public (`5hostachy.fr`) |
+| `ORIGIN` | URL complète (`https://5hostachy.fr`) — ou IP LAN si standby |
 | `COOKIE_SECURE` | `true` (prod HTTPS) |
 | `MAIL_*` | Configuration SMTP |
-| `MAINTENANCE_KEY` | ClÃ© partagÃ©e script maintenance â†” API (`openssl rand -hex 24`) |
+| `MAINTENANCE_KEY` | Clé partagée script maintenance ↔ API (`openssl rand -hex 24`) |
 
 ```bash
 chmod 600 /opt/5hostachy/.env
@@ -113,23 +113,23 @@ chmod 600 /opt/5hostachy/.env
 
 ---
 
-## Ã‰tape 5 â€” Restaurer la base SQLite
+## Étape 5 — Restaurer la base SQLite
 
 ```bash
-# CrÃ©er les rÃ©pertoires de volumes Docker
+# Créer les répertoires de volumes Docker
 sudo mkdir -p /var/lib/docker/volumes/5hostachy_app_data/_data
 sudo mkdir -p /var/lib/docker/volumes/5hostachy_backups/_data
 
-# Restaurer la base de donnÃ©es
+# Restaurer la base de données
 gunzip -c /chemin/vers/app_YYYYMMDD_HHMMSS.db.gz \
   > /var/lib/docker/volumes/5hostachy_app_data/_data/app.db
 ```
 
-> Si aucun backup n'est disponible, l'application crÃ©era une base vide au premier dÃ©marrage (Alembic migrations s'exÃ©cutent automatiquement).
+> Si aucun backup n'est disponible, l'application créera une base vide au premier démarrage (Alembic migrations s'exécutent automatiquement).
 
 ---
 
-## Ã‰tape 6 â€” Lancer Docker Compose
+## Étape 6 — Lancer Docker Compose
 
 ```bash
 cd /opt/5hostachy
@@ -140,39 +140,40 @@ export GIT_HASH=$(git rev-parse --short HEAD)
 # Build + lancement
 docker compose up --build -d
 
-# VÃ©rifier les 3 conteneurs
+# Vérifier les 4 conteneurs
 docker compose ps
 ```
 
-RÃ©sultat attendu :
+Résultat attendu :
 ```
-NAME               STATUS
-hostachy_caddy     Up
-hostachy_front     Up
-hostachy_api       Up
+NAME                STATUS
+hostachy_caddy      Up
+hostachy_front      Up
+hostachy_api        Up
+hostachy_whatsapp   Up
 ```
 
-VÃ©rifier les logs :
+Vérifier les logs :
 ```bash
 docker compose logs --tail=30 -f
 ```
 
-Tester l'accÃ¨s : http://<RPi-IP>
+Tester l'accès : `http://<RPi-IP>`
 
 ---
 
-## Ã‰tape 7 â€” ExÃ©cuter les migrations
+## Étape 7 — Exécuter les migrations
 
-Les migrations Alembic s'exÃ©cutent automatiquement au dÃ©marrage du conteneur API via `start.sh`. VÃ©rifier :
+Les migrations Alembic s'exécutent automatiquement au démarrage du conteneur API via `start.sh`. Vérifier :
 
 ```bash
 docker exec hostachy_api alembic current
-# Doit afficher la derniÃ¨re rÃ©vision (ex: 0043)
+# Doit afficher la dernière révision (ex: 0093)
 ```
 
 ---
 
-## Ã‰tape 8 â€” Pare-feu UFW
+## Étape 8 — Pare-feu UFW
 
 ```bash
 sudo ufw default deny incoming
@@ -187,7 +188,7 @@ sudo ufw status
 
 ---
 
-## Ã‰tape 9 â€” Fail2ban
+## Étape 9 — Fail2ban
 
 ```bash
 sudo tee /etc/fail2ban/jail.d/5hostachy.conf << 'EOF'
@@ -203,56 +204,86 @@ sudo systemctl enable --now fail2ban
 
 ---
 
-## Ã‰tape 10 â€” Cloudflare Tunnel (si applicable)
+## Étape 10 — Cloudflare Tunnel
 
 ```bash
 # Installer cloudflared
 sudo bash /opt/5hostachy/install-cloudflared.sh <VOTRE_TOKEN_TUNNEL>
 
-# VÃ©rifier
+# Vérifier
 sudo systemctl status cloudflared
 ```
 
 Le token est disponible dans **Cloudflare Zero Trust > Networks > Tunnels > Configure**.
 
+> ⚠️ Ne démarrer cloudflared que sur le RPi **actif** (voir `.active`). Le standby laisse cloudflared arrêté.
+
 ---
 
-## Ã‰tape 11 â€” Cron : sauvegardes + maintenance
-
-### Sauvegarde quotidienne (prise en charge par l'API via APScheduler)
-
-DÃ©jÃ  active automatiquement dans le conteneur API â€” rien Ã  configurer.  
-Configurable dans **Admin > ParamÃ©trage site > ðŸ–¥ï¸ SystÃ¨me â€” Sauvegardes**.
-
-### Maintenance mensuelle (script cron)
+## Étape 11 — Crons (sudo crontab -e)
 
 ```bash
-# Rendre le script exÃ©cutable
-chmod +x /opt/5hostachy/maintenance.sh
-
-# Installer le cron (en root)
 sudo crontab -e
 ```
 
-Ajouter la ligne :
+Ajouter les trois lignes suivantes :
+
 ```cron
-0 3 1 * * /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
+# Bascule quotidienne rpi1 ↔ rpi2 (02h00)
+0 2 * * * /opt/5hostachy/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
+
+# Surveillance site + failover automatique (toutes les 5 min)
+*/5 * * * * /opt/5hostachy/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
+
+# Maintenance hebdomadaire (dimanche 03h00)
+0 3 * * 0 /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
 ```
 
-VÃ©rifie que le cron est actif :
+Rendre les scripts exécutables :
 ```bash
-sudo crontab -l | grep maintenance
-# 0 3 1 * * /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
+chmod +x /opt/5hostachy/bascule.sh
+chmod +x /opt/5hostachy/health-watch.sh
+chmod +x /opt/5hostachy/maintenance.sh
 ```
 
-Tester manuellement :
+Vérifier :
 ```bash
-sudo bash /opt/5hostachy/maintenance.sh
+sudo crontab -l
 ```
 
 ---
 
-## Ã‰tape 12 â€” Mises Ã  jour automatiques Debian
+## Étape 12 — Clé SSH bascule (entre les deux RPi)
+
+La bascule automatique nécessite une clé SSH sans passphrase entre les deux machines.
+
+```bash
+# Générer sur chaque RPi (en root)
+sudo ssh-keygen -t ed25519 -C "hostachy-bascule" -f /root/.ssh/id_ed25519_bascule -N ""
+
+# Copier la clé publique du rpi1 vers rpi2 et vice-versa
+sudo ssh-copy-id -i /root/.ssh/id_ed25519_bascule.pub ptressard@192.168.1.223  # depuis rpi1
+sudo ssh-copy-id -i /root/.ssh/id_ed25519_bascule.pub ptressard@192.168.1.222  # depuis rpi2
+
+# Tester
+sudo ssh -i /root/.ssh/id_ed25519_bascule ptressard@192.168.1.223 "echo ok"
+```
+
+---
+
+## Étape 13 — Flag .active
+
+```bash
+# Sur le RPi actif (celui qui a cloudflared démarré)
+echo "rpi1" > /opt/5hostachy/.active   # ou "rpi2"
+
+# Sur le RPi standby
+echo "rpi2" > /opt/5hostachy/.active   # doit contenir le nom du RPi ACTIF
+```
+
+---
+
+## Étape 14 — Mises à jour automatiques Debian
 
 ```bash
 sudo apt-get install -y unattended-upgrades
@@ -267,110 +298,106 @@ sudo systemctl enable --now unattended-upgrades
 
 ---
 
-## VÃ©rification finale
+## Vérification finale
 
 | Test | Commande |
 |---|---|
 | Conteneurs actifs | `docker compose ps` |
 | API health | `curl -s http://localhost/api/health` |
+| URL publique | `curl -s https://5hostachy.fr/api/health` |
 | Logs API | `docker compose logs api --tail=20` |
 | Alembic version | `docker exec hostachy_api alembic current` |
+| Heure conteneurs | `docker exec hostachy_api date` (doit afficher CEST) |
 | UFW actif | `sudo ufw status` |
 | Fail2ban actif | `sudo systemctl status fail2ban` |
 | Cloudflare tunnel | `sudo systemctl status cloudflared` |
-| Cron maintenance | `sudo crontab -l \| grep maintenance` |
-| AccÃ¨s web LAN | http://<RPi-IP> |
-| AccÃ¨s web public | https://<your-domain> (si Cloudflare) |
+| Crons actifs | `sudo crontab -l` |
+| Flag .active | `cat /opt/5hostachy/.active` |
+| Accès web LAN | `http://192.168.1.222` |
+| Accès web public | `https://5hostachy.fr` |
 
 ---
 
-## Mise Ã  jour courante (post-restauration)
-
-Pour les mises Ã  jour futures, utiliser le script dÃ©diÃ© :
+## Mise à jour courante (post-restauration)
 
 ```bash
 sudo bash /opt/5hostachy/MaJ-Hostachy.sh
 ```
 
-Le script applique automatiquement les migrations DB (`alembic upgrade head`) dans le conteneur API aprÃ¨s redÃ©marrage.
-
 ---
 
-## Arborescence de rÃ©fÃ©rence
+## Arborescence de référence
 
 ```
-/opt/5hostachy/                   â† DÃ©pÃ´t git
-â”œâ”€â”€ .env                          â† Secrets (non versionnÃ©)
-â”œâ”€â”€ docker-compose.yml
-â”œâ”€â”€ Caddyfile
-â”œâ”€â”€ maintenance.sh                â† Script maintenance mensuel (cron)
-â”œâ”€â”€ MaJ-Hostachy.sh              â† Script mise Ã  jour manuelle
-â”œâ”€â”€ install-cloudflared.sh        â† Installation tunnel Cloudflare
-â”œâ”€â”€ api/                          â† FastAPI + Alembic
-â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”œâ”€â”€ requirements.txt
-â”‚   â”œâ”€â”€ alembic/
-â”‚   â””â”€â”€ app/
-â”œâ”€â”€ front/                        â† SvelteKit
-â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â”œâ”€â”€ package.json
-â”‚   â””â”€â”€ src/
-â””â”€â”€ docs/                         â† Documentation
+/opt/5hostachy/                   ← Dépôt git
+├── .env                          ← Secrets (non versionné)
+├── .active                       ← "rpi1" ou "rpi2" (non versionné)
+├── docker-compose.yml
+├── Caddyfile
+├── Dockerfile.caddy              ← Image Caddy custom (tzdata)
+├── bascule.sh                    ← Bascule quotidienne rpi1 ↔ rpi2
+├── health-watch.sh               ← Surveillance + failover automatique
+├── maintenance.sh                ← Maintenance hebdomadaire (cron)
+├── MaJ-Hostachy.sh               ← Mise à jour manuelle
+├── install-cloudflared.sh        ← Installation tunnel Cloudflare
+├── api/                          ← FastAPI + Alembic
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── alembic/
+│   └── app/
+├── front/                        ← SvelteKit
+│   ├── Dockerfile                ← tzdata inclus (runner stage)
+│   ├── package.json
+│   └── src/
+├── whatsapp-bridge/              ← Passerelle WhatsApp
+│   ├── Dockerfile                ← tzdata inclus
+│   └── index.js
+└── docs/                         ← Documentation
 
 Volumes Docker :
-  app_data  â†’ /app/data/app.db    (base SQLite)
-  uploads   â†’ /app/uploads/       (fichiers uploadÃ©s)
-  backups   â†’ /backups/           (sauvegardes auto)
-  caddy_*   â†’ certificats TLS
+  app_data  → /app/data/app.db    (base SQLite)
+  uploads   → /app/uploads/       (fichiers uploadés)
+  backups   → /backups/           (sauvegardes auto)
+  caddy_*   → config Caddy
 ```
 
 ---
 
-## Sauvegardes offsite â€” Ã€ FAIRE
+## Sauvegardes offsite
 
-> **âš ï¸ Section Ã  traiter** â€” Les donnÃ©es ci-dessous ne sont **pas** rÃ©cupÃ©rables depuis GitHub en cas de crash SD.
-
-### Fichiers critiques Ã  sauvegarder hors du RPi
+### Fichiers critiques à sauvegarder hors du RPi
 
 | Fichier | Contenu | Impact si perdu |
 |---|---|---|
-| `/opt/5hostachy/.env` | SECRET_KEY, SMTP, tokens | JWT invalides â†’ tous les utilisateurs dÃ©connectÃ©s |
-| `/backups/*.db.gz` | Base SQLite (comptes, lots, tickets, sondagesâ€¦) | **Perte totale des donnÃ©es** |
-| Volume `uploads` | Photos et documents uploadÃ©s | Perte des fichiers joints |
-| Token Cloudflare | Identifiant du tunnel | Tunnel Ã  reconfigurer dans le dashboard CF |
+| `/opt/5hostachy/.env` | SECRET_KEY, SMTP, tokens | JWT invalides → tous les utilisateurs déconnectés |
+| `/backups/*.db.gz` | Base SQLite (comptes, lots, tickets, sondages…) | **Perte totale des données** |
+| Volume `uploads` | Photos et documents uploadés | Perte des fichiers joints |
+| Token Cloudflare | Identifiant du tunnel | Tunnel à reconfigurer dans le dashboard CF |
 
 ### Copie manuelle (depuis le PC Windows)
 
 ```powershell
-# CrÃ©er un dossier de backup local
 mkdir ~\backup-hostachy
 
 # 1. Secrets
-scp <your-user>@<RPi-IP>:/opt/5hostachy/.env ~\backup-hostachy\.env
+scp ptressard@192.168.1.222:/opt/5hostachy/.env ~\backup-hostachy\.env
 
-# 2. Base de donnÃ©es (dernier backup)
-scp "<your-user>@<RPi-IP>:/backups/*.db.gz" ~\backup-hostachy\
+# 2. Base de données (dernier backup)
+scp "ptressard@192.168.1.222:/backups/*.db.gz" ~\backup-hostachy\
 
-# 3. Fichiers uploadÃ©s
-scp -r <your-user>@<RPi-IP>:/var/lib/docker/volumes/5hostachy_uploads/_data/ ~\backup-hostachy\uploads\
+# 3. Fichiers uploadés
+scp -r ptressard@192.168.1.222:/var/lib/docker/volumes/5hostachy_uploads/_data/ ~\backup-hostachy\uploads\
 ```
 
-### Automatisation (cron sur le RPi â†’ NAS ou PC)
+### Éléments déjà protégés (sur GitHub)
 
-```bash
-# Ajouter dans sudo crontab -e (hebdomadaire, dimanche 04h00)
-0 4 * * 0  rsync -az /opt/5hostachy/.env /backups/ <your-user>@<NAS-IP>:/backup-hostachy/ 2>/dev/null
-```
-
-### Ã‰lÃ©ments dÃ©jÃ  protÃ©gÃ©s (sur GitHub)
-
-| Ã‰lÃ©ment | Raison |
+| Élément | Raison |
 |---|---|
-| Code source, Dockerfiles, migrations | VersionnÃ© dans le dÃ©pÃ´t |
-| Scripts (`maintenance.sh`, `MaJ-Hostachy.sh`) | VersionnÃ© |
-| Configuration Docker (`docker-compose.yml`, `Caddyfile`) | VersionnÃ© |
-| Configuration cron | DocumentÃ©e dans ce guide (Ã©tape 11) |
+| Code source, Dockerfiles, migrations | Versionné dans le dépôt |
+| Scripts (`bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`) | Versionné |
+| Configuration Docker (`docker-compose.yml`, `Caddyfile`, `Dockerfile.caddy`) | Versionné |
+| Configuration cron | Documentée dans ce guide (étape 11) |
 
 ### Recommandation
 
-Stocker la `SECRET_KEY` et le token Cloudflare dans un **gestionnaire de mots de passe** (Bitwarden, 1Password, KeePassâ€¦).
+Stocker la `SECRET_KEY` et le token Cloudflare dans un **gestionnaire de mots de passe** (Bitwarden, 1Password, KeePass…).

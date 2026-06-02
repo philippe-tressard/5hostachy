@@ -14,6 +14,7 @@ COPY . .
 RUN npm run build
 
 FROM node:22-alpine AS runner
+RUN apk add --no-cache tzdata
 WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json .
