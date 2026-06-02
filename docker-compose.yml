@@ -1,6 +1,8 @@
 services:
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
     container_name: hostachy_caddy
     restart: unless-stopped
     logging:
@@ -10,7 +12,10 @@ services:
         max-file: "3"
     ports:
       - "80:80"
+    environment:
+      - TZ=Europe/Paris
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
@@ -82,11 +87,13 @@ services:
     ports:
       - "127.0.0.1:8090:8090"
     environment:
+      - TZ=Europe/Paris
       - WA_API_KEY=${WHATSAPP_API_KEY:-changeme}
       - WA_PORT=8090
       - WA_AUTH_DIR=/app/auth_state
       - WA_LOG_LEVEL=warn
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - whatsapp_auth:/app/auth_state
     networks:
       - hostachy

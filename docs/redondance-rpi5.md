@@ -1,189 +1,167 @@
-﻿# 🔄 Redondance RPi5 — Bascule quotidienne automatique
+# Redondance RPi5 — Bascule quotidienne automatique
 
 > **Statut** : En production depuis avril 2026
 >
 > **Objectif** : Alternance quotidienne entre deux RPi5 identiques pour équilibrer l'usure et assurer une continuité de service en cas de panne de l'un des deux.
-> Le script `bascule.sh` tourne en cron à 02h00 chaque nuit sur le RPi actif.
 
 ---
 
-## Architecture cible
+## Architecture
 
 ```
-RPi5 #1 (ACTIF)          RPi5 #2 (VEILLE)
-â”œâ”€â”€ Docker Compose        â”œâ”€â”€ Docker Compose (arrÃªtÃ©)
-â”œâ”€â”€ SQLite app.db    â”€â”€â”€â”€ â”œâ”€â”€ SQLite app.db   (Litestream, < 1s dÃ©lai)
-â”œâ”€â”€ uploads/         â”€â”€â”€â”€ â”œâ”€â”€ uploads/        (rsync toutes les 5 min)
-â”œâ”€â”€ .env             â”€â”€â”€â”€ â”œâ”€â”€ .env            (rsync toutes les 5 min)
-â””â”€â”€ Cloudflare Tunnel     â””â”€â”€ Cloudflare Tunnel (second tunnel, en pause)
-       â†“
-   DNS public (<your-domain>)
-       â†“
-   En cas de bascule : activer le tunnel du RPi5 #2
+RPi5 #1 — PhT-RB5 (192.168.1.222)      RPi5 #2 — PhT-RB5i2 (192.168.1.223)
+├── Docker Compose (actif J, J+2…)      ├── Docker Compose (actif J+1, J+3…)
+├── SQLite app.db                        ├── SQLite app.db (synchro via rsync à la bascule)
+├── uploads/                             ├── uploads/ (rsync à chaud toutes les nuits)
+├── cloudflared (tunnel Cloudflare)      └── cloudflared (tunnel Cloudflare)
+└── .active = "rpi1"                         .active = "rpi2"
+         ↓
+   https://5hostachy.fr  (Cloudflare Zero Trust Tunnel)
 ```
+
+Un seul RPi est actif à la fois. Le tunnel Cloudflare du RPi actif achemine tout le trafic public.
 
 ---
 
-## Composants
+## Scripts d'exploitation
 
-### 1. Litestream â€” rÃ©plication SQLite en temps rÃ©el
-
-[Litestream](https://litestream.io) Ã©coute le WAL de SQLite et rÃ©plique chaque transaction vers le RPi5 #2 (ou un bucket S3). DÃ©lai < 1 seconde. Restauration < 1 minute.
-
-**Sidecar Docker** Ã  ajouter dans `docker-compose.yml` :
-
-```yaml
-  litestream:
-    image: litestream/litestream:latest
-    container_name: hostachy_litestream
-    restart: unless-stopped
-    volumes:
-      - app_data:/app/data
-      - ./litestream.yml:/etc/litestream.yml:ro
-    command: replicate
-    networks:
-      - hostachy
-```
-
-**`litestream.yml`** (Ã  crÃ©er Ã  la racine du repo) :
-
-```yaml
-dbs:
-  - path: /app/data/app.db
-    replicas:
-      # Option 1 : rÃ©plication vers le second RPi via SFTP
-      - type: sftp
-        host: <RPi2-IP>:22
-        user: <your-user>
-        key-path: /app/data/litestream_id_ed25519
-        path: /opt/5hostachy-replica/app.db
-
-      # Option 2 : rÃ©plication vers un bucket S3-compatible (Backblaze B2, Cloudflare R2â€¦)
-      # - type: s3
-      #   bucket: hostachy-replica
-      #   path: app.db
-      #   access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
-      #   secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
-      #   endpoint: https://s3.eu-central-003.backblazeb2.com
-```
-
-ClÃ© SSH dÃ©diÃ©e pour Litestream (sans passphrase) :
-
-```bash
-ssh-keygen -t ed25519 -C "litestream-replica" -f /opt/5hostachy/litestream_id_ed25519 -N ""
-ssh-copy-id -i /opt/5hostachy/litestream_id_ed25519.pub <your-user>@<RPi2-IP>
-```
-
-### 2. rsync â€” synchronisation uploads + .env
-
-ClÃ© SSH dÃ©diÃ©e entre les deux RPi :
-
-```bash
-ssh-keygen -t ed25519 -C "hostachy-replica" -f ~/.ssh/hostachy_replica -N ""
-ssh-copy-id -i ~/.ssh/hostachy_replica.pub <your-user>@<RPi2-IP>
-```
-
-Crons Ã  ajouter dans `sudo crontab -e` sur le RPi5 #1 :
-
-```cron
-# Sync uploads (toutes les 5 min)
-*/5 * * * *  rsync -az --delete -e "ssh -i /home/<your-user>/.ssh/hostachy_replica" \
-  /var/lib/docker/volumes/5hostachy_uploads/_data/ \
-  <your-user>@<RPi2-IP>:/var/lib/docker/volumes/5hostachy_uploads/_data/ 2>/dev/null
-
-# Sync .env (toutes les 5 min)
-*/5 * * * *  rsync -az -e "ssh -i /home/<your-user>/.ssh/hostachy_replica" \
-  /opt/5hostachy/.env \
-  <your-user>@<RPi2-IP>:/opt/5hostachy/.env 2>/dev/null
-```
+| Script | Rôle | Cron |
+|---|---|---|
+| `bascule.sh` | Bascule quotidienne rpi1 ↔ rpi2 | `0 2 * * *` sur chaque RPi |
+| `health-watch.sh` | Surveillance et failover automatique | `*/5 * * * *` sur chaque RPi |
+| `maintenance.sh` | Purge DB, VACUUM, rotation logs | `0 3 * * 0` (dimanche) |
+| `MaJ-Hostachy.sh` | Mise en production d'une nouvelle version | Manuel |
 
 ---
 
-## ProcÃ©dure de bascule (RPi5 #1 en panne)
+## Bascule quotidienne (`bascule.sh`)
 
-### Ã‰tape 1 â€” ArrÃªter Litestream sur RPi5 #1 (si encore accessible)
+Tourne à 02h00 sur chaque RPi. Le RPi qui n'est **pas** actif (flag `.active`) sort immédiatement. Le RPi actif exécute la séquence complète :
 
-```bash
-docker stop hostachy_litestream
-```
+### Séquence (7 phases)
 
-### Ã‰tape 2 â€” Restaurer la base depuis la rÃ©plique Litestream
-
-```bash
-# Sur le RPi5 #2
-litestream restore -o /var/lib/docker/volumes/5hostachy_app_data/_data/app.db \
-  sftp://<your-user>@<RPi1-IP>/opt/5hostachy-replica/app.db
-# (ou depuis S3 si rÃ©plique distante configurÃ©e)
-```
-
-### Ã‰tape 3 â€” DÃ©marrer Docker sur le RPi5 #2
-
-```bash
-cd /opt/5hostachy
-git pull
-export GIT_HASH=$(git rev-parse --short HEAD)
-docker compose up --build -d
-docker compose ps
-curl -s http://localhost/api/health
-```
-
-### Ã‰tape 4 â€” Rediriger le trafic
-
-**Via Cloudflare** (recommandÃ©) :
-1. Aller dans **Cloudflare Zero Trust > Networks > Tunnels**
-2. DÃ©sactiver le tunnel du RPi5 #1
-3. Activer le tunnel du RPi5 #2 (prÃ©-configurÃ© en pause)
-
-â†’ Propagation DNS : ~30 secondes, aucune intervention utilisateur requise.
-
-**Via DNS local uniquement** :
-Sur le routeur, changer l'IP associÃ©e au nom d'hÃ´te hostachy de `<RPi1-IP>` â†’ `<RPi2-IP>`.
-
----
-
-## RÃ©sumÃ© des dÃ©lais
-
-| Ã‰vÃ©nement | DÃ©lai |
+| Phase | Action |
 |---|---|
-| Restauration DB Litestream | < 1 min |
-| `docker compose up --build` | 2-5 min |
-| Bascule DNS Cloudflare | ~30 s |
-| **Total bascule manuelle** | **~5 min** |
-| Perte de donnÃ©es max | < 1 s (DB) + < 5 min (uploads) |
+| 0 | Pre-flight : peer joignable, espace disque, lock bascule posé |
+| 1 | Sync uploads + WhatsApp auth à chaud (prod reste UP) |
+| 2 | Arrêt cloudflared local + conteneurs locaux |
+| 3 | WAL checkpoint SQLite + integrity check DB locale |
+| 4 | Rsync DB → peer + integrity check sur peer |
+| 5 | Démarrage conteneurs peer + health check API (60s max) |
+| 6 | Démarrage cloudflared peer + vérification URL publique (90s max) |
+| 7 | Mise à jour flags `.active` |
+
+### Rollback automatique
+
+En cas d'échec phases 2–6 : les conteneurs locaux sont relancés, cloudflared local redémarré, conteneurs peer arrêtés, email d'alerte envoyé.
+
+### Email d'alerte
+
+Envoyé via **Python3 standalone** (lit la config SMTP depuis `.env`) — fonctionne même si les conteneurs sont arrêtés.
 
 ---
 
-## DÃ©tection automatique de panne (optionnel)
+## Surveillance et failover automatique (`health-watch.sh`)
 
-Script Ã  placer sur le RPi5 #2, dÃ©clenchÃ© toutes les 2 minutes :
+Tourne toutes les **5 minutes** sur les deux RPi. Chaque RPi détermine son rôle au runtime via `.active`.
+
+### Comportement
+
+**RPi actif** → sort immédiatement sans action. Si ce RPi est gelé, il ne peut plus exécuter le script — c'est le standby qui prend le relais.
+
+**RPi standby** → surveille l'URL publique `https://5hostachy.fr/api/health` :
+
+1. Si HTTP 200 → rien à faire, reset cooldown email
+2. Si pas 200 → attend 30s, re-vérifie (évite les faux positifs sur micro-coupure réseau)
+3. Si toujours HS → **failover automatique** :
+   - Pose `.bascule-lock` (bloque la bascule cron en parallèle)
+   - Met `.env` en mode production (`ORIGIN=https://5hostachy.fr`)
+   - `docker compose up -d`
+   - `systemctl start cloudflared`
+   - Met à jour `.active`
+   - Re-vérifie l'URL publique après 20s
+   - Envoie un email d'alerte (cooldown 30 min)
+
+### Garanties
+
+- **Pas de split-brain** : seul le standby peut déclencher un failover
+- **Anti faux-positifs** : double vérification espacée de 30s
+- **Anti spam email** : cooldown 30 min entre deux alertes
+
+### Logs
 
 ```bash
-#!/bin/bash
-# /opt/5hostachy/check-failover.sh
-PRIMARY="<RPi1-IP>"
-ALERT_EMAIL="admin@<your-domain>"
-
-if ! curl -sf --max-time 5 "http://${PRIMARY}/api/health" > /dev/null 2>&1; then
-    echo "[$(date)] ALERTE : RPi5 #1 ne rÃ©pond pas â€” bascule manuelle requise." \
-      | mail -s "Hostachy â€” Panne RPi5 #1" "$ALERT_EMAIL" 2>/dev/null || true
-fi
-```
-
-Cron sur RPi5 #2 (`sudo crontab -e`) :
-
-```cron
-*/2 * * * *  bash /opt/5hostachy/check-failover.sh
+tail -f /var/log/hostachy-health-watch.log
 ```
 
 ---
 
-## Checklist d'implÃ©mentation
+## Délais de rétablissement
 
-- [ ] RPi5 #2 installÃ© et configurÃ© (voir [restauration-complete.md](restauration-complete.md))
-- [ ] ClÃ©s SSH sans passphrase : RPi5 #1 â†’ RPi5 #2 (Litestream + rsync)
-- [ ] `litestream.yml` crÃ©Ã© Ã  la racine du repo
-- [ ] Service `litestream` ajoutÃ© dans `docker-compose.yml`
-- [ ] Variables `LITESTREAM_*` ajoutÃ©es dans `.env` si rÃ©plique S3
-- [ ] Crons rsync `uploads/` + `.env` configurÃ©s sur RPi5 #1
-- [ ] Second tunnel Cloudflare crÃ©Ã© et maintenu en pause
-- [ ] Test de bascule rÃ©alisÃ© Ã  blanc (simuler une panne avant d'en avoir besoin)
+| Scénario | Délai |
+|---|---|
+| Bascule quotidienne réussie | ~40s (fenêtre sans trafic public) |
+| Panne RPi actif → failover automatique | < 5 min (health-watch détecte en ≤ 5 min + 50s de vérification/démarrage) |
+| Panne RPi actif → intervention manuelle | voir ci-dessous |
+
+---
+
+## Intervention manuelle (site HS)
+
+### 1. Identifier le RPi actif
+
+```bash
+cat /opt/5hostachy/.active          # sur rpi1 ou rpi2
+```
+
+### 2. Si le RPi actif est injoignable → basculer sur le standby
+
+```bash
+ssh ptressard@192.168.1.222         # ou .223 selon lequel répond
+cd /opt/5hostachy
+
+# Passer en mode prod
+sed -i "s|^ORIGIN=.*|ORIGIN=https://5hostachy.fr|" .env
+sed -i "/^COOKIE_SECURE=/d" .env
+
+# Démarrer
+docker compose up -d
+sudo systemctl start cloudflared
+
+# Mettre à jour le flag
+echo "rpi1" > .active               # adapter selon le RPi
+```
+
+### 3. Vérifier
+
+```bash
+curl -s https://5hostachy.fr/api/health
+```
+
+### 4. Après retour du RPi défaillant
+
+La bascule automatique reprendra le soir à 02h00 si les deux RPi sont joignables. Vérifier que les données ne divergent pas (la DB du failover est celle du standby au moment du failover — pas de perte si le RPi actif était gelé depuis peu).
+
+---
+
+## Flag `.active`
+
+Fichier `/opt/5hostachy/.active` présent sur les deux RPi. Contient `rpi1` ou `rpi2`.
+
+- La bascule quotidienne le met à jour sur les **deux** RPi simultanément
+- Le health-watch le met à jour **uniquement sur le RPi standby** lors d'un failover
+- Si absent : `bascule.sh` et `health-watch.sh` s'arrêtent sans action
+
+---
+
+## Adresses réseau
+
+| Machine | Hostname | IP locale | Rôle |
+|---|---|---|---|
+| RPi5 #1 | PhT-RB5 | 192.168.1.222 | Actif les jours pairs |
+| RPi5 #2 | PhT-RB5i2 | 192.168.1.223 | Actif les jours impairs |
+
+Accès SSH : `ssh ptressard@192.168.1.222` (ou `.223`)
+Projet : `/opt/5hostachy/`
+Logs bascule : `/var/log/hostachy-bascule.log`
+Logs health-watch : `/var/log/hostachy-health-watch.log`
