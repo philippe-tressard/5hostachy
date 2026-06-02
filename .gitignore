@@ -22,6 +22,8 @@ env/
 .env.local
 .env.*.local
 secrets/
+.active
+*.bak
 
 # Node / frontend
 node_modules/
