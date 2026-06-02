@@ -158,14 +158,17 @@ def _envoyer_email_syndic_publication(
         )
 
 
+_UPLOADS_ROOT = os.path.realpath("/app/uploads")
+
 def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
     """Convertit des URLs /uploads/fichiers/... en chemins locaux /app/uploads/fichiers/..."""
     paths = []
     for url in fichiers_urls:
-        if url.startswith("/uploads/"):
-            path = "/app" + url
-        else:
-            path = url
+        if not url.startswith("/uploads/"):
+            continue
+        path = os.path.realpath("/app" + url)
+        if not path.startswith(_UPLOADS_ROOT + os.sep):
+            continue
         if os.path.isfile(path):
             paths.append(path)
     return paths

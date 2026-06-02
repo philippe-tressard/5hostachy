@@ -46,11 +46,17 @@ def _evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
     )
 
 
+_UPLOADS_ROOT = os.path.realpath("/app/uploads")
+
 def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
     """Convertit des URLs /uploads/... en chemins locaux /app/uploads/..."""
     paths = []
     for url in fichiers_urls:
-        path = "/app" + url if url.startswith("/uploads/") else url
+        if not url.startswith("/uploads/"):
+            continue
+        path = os.path.realpath("/app" + url)
+        if not path.startswith(_UPLOADS_ROOT + os.sep):
+            continue
         if os.path.isfile(path):
             paths.append(path)
     return paths
@@ -305,8 +311,11 @@ def create_ticket(
             except Exception:
                 urls = []
             for url in (urls or []):
-                # url = "/uploads/tickets/abc.jpg" → "/app/uploads/tickets/abc.jpg"
-                fpath = os.path.join("/app", url.lstrip("/"))
+                if not isinstance(url, str) or not url.startswith("/uploads/"):
+                    continue
+                fpath = os.path.realpath("/app" + url)
+                if not fpath.startswith(_UPLOADS_ROOT + os.sep):
+                    continue
                 if os.path.isfile(fpath):
                     photo_paths.append(fpath)
 
