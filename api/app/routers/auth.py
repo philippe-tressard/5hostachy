@@ -462,6 +462,7 @@ class PasswordResetRequest(BaseModel):
 def request_password_reset(
     request: Request,
     body: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
 ):
     """
@@ -490,20 +491,18 @@ def request_password_reset(
         session.add(prt)
         session.commit()
 
-        import asyncio
         from app.utils.email import send_email
-        asyncio.create_task(
-            send_email(
-                code="reinitialisation_mdp",
-                to=user.email,
-                context={
-                    "prenom": user.prenom,
-                    "token": raw_token,
-                    "expire_heures": 1,
-                },
-                session=session,
-            )
-        ) if asyncio.get_event_loop().is_running() else None
+        background_tasks.add_task(
+            send_email,
+            code="reinitialisation_mdp",
+            to=user.email,
+            context={
+                "prenom": user.prenom,
+                "token": raw_token,
+                "expire_heures": 1,
+            },
+            session=session,
+        )
 
     return None
 
