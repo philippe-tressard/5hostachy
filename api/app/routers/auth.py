@@ -469,6 +469,13 @@ def request_password_reset(
     Génère un token de réinitialisation et envoie un e-mail si le compte existe.
     Retourne toujours 204 pour éviter l'enumération d'adresses e-mail.
     """
+    cfg_rows = session.exec(
+        select(ConfigSite).where(ConfigSite.cle.in_(("site_url", "site_nom")))
+    ).all()
+    cfg = {row.cle: row.valeur for row in cfg_rows}
+    site_url = (cfg.get("site_url") or "https://localhost").rstrip("/")
+    site_nom = cfg.get("site_nom") or "5Hostachy"
+
     user = session.exec(select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())).first()
     if user and user.actif:
         # Invalider les tokens de reset précédents non utilisés
@@ -497,9 +504,11 @@ def request_password_reset(
             code="reinitialisation_mdp",
             to=user.email,
             context={
-                "prenom": user.prenom,
-                "token": raw_token,
+                "destinataire": {"prenom": user.prenom},
+                "lien": f"{site_url}/auth/reinitialisation-mdp?token={raw_token}",
                 "expire_heures": 1,
+                "residence": {"nom": site_nom},
+                "app": {"url": site_url},
             },
         )
 
