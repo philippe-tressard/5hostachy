@@ -1,24 +1,18 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 
+	export let data: { token: string };
+
 	const _siteNom = getSiteNom();
 
-	let token = '';
+	let token = data.token;
 	let nouveauMdp = '';
 	let confirmMdp = '';
 	let saving = false;
 	let done = false;
-	let tokenInvalide = false;
-
-	onMount(() => {
-		token = $page.url.searchParams.get('token') ?? '';
-		if (!token) tokenInvalide = true;
-	});
+	let tokenInvalide = !token;
 
 	async function submit() {
 		if (nouveauMdp !== confirmMdp) {
