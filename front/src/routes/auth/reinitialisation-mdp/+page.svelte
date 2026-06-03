@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
+	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getSiteNom } from '$lib/stores/pageConfig';
@@ -10,9 +12,16 @@
 	let token = data.token;
 	let nouveauMdp = '';
 	let confirmMdp = '';
+	let showPassword = false;
+	let showConfirm = false;
+	let capsLockOn = false;
 	let saving = false;
 	let done = false;
 	let tokenInvalide = !token;
+
+	function checkCapsLock(e: KeyboardEvent) {
+		capsLockOn = e.getModifierState('CapsLock');
+	}
 
 	async function submit() {
 		if (nouveauMdp !== confirmMdp) {
@@ -63,11 +72,30 @@
 			<form on:submit|preventDefault={submit}>
 				<div class="field">
 					<label for="mdp-nouveau">Nouveau mot de passe *</label>
-					<input id="mdp-nouveau" type="password" bind:value={nouveauMdp} required autocomplete="new-password" minlength="8" />
+					<div class="input-eye">
+						<input id="mdp-nouveau" type={showPassword ? 'text' : 'password'} bind:value={nouveauMdp}
+							required autocomplete="new-password" minlength="8"
+							on:keydown={checkCapsLock} on:keyup={checkCapsLock} on:focus={checkCapsLock} />
+						<button type="button" class="eye-btn" on:click={() => showPassword = !showPassword}
+							aria-label={showPassword ? 'Masquer' : 'Afficher'}>
+							<Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
+						</button>
+					</div>
+					<PasswordStrength password={nouveauMdp} />
+					{#if capsLockOn && !showPassword}
+						<div class="capslock-warn" role="alert">⚠️ <strong>Verr. Maj. activée</strong> — votre mot de passe pourrait être incorrect.</div>
+					{/if}
 				</div>
 				<div class="field">
 					<label for="mdp-confirm">Confirmer le mot de passe *</label>
-					<input id="mdp-confirm" type="password" bind:value={confirmMdp} required autocomplete="new-password" minlength="8" />
+					<div class="input-eye">
+						<input id="mdp-confirm" type={showConfirm ? 'text' : 'password'} bind:value={confirmMdp}
+							required autocomplete="new-password" minlength="8" />
+						<button type="button" class="eye-btn" on:click={() => showConfirm = !showConfirm}
+							aria-label={showConfirm ? 'Masquer' : 'Afficher'}>
+							<Icon name={showConfirm ? 'eye-off' : 'eye'} size={18} />
+						</button>
+					</div>
 				</div>
 				<div class="btn-wrapper">
 					<a href="/auth/connexion" class="btn btn-secondary">Annuler</a>
@@ -119,7 +147,36 @@
 	}
 	.field { margin-bottom: 1rem; }
 	.field label { display: block; font-size: .875rem; font-weight: 500; margin-bottom: .35rem; }
-	.field input { width: 100%; }
+	.input-eye {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+	.input-eye input {
+		flex: 1;
+		padding-right: 2.5rem;
+	}
+	.eye-btn {
+		position: absolute;
+		right: .6rem;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		color: var(--color-text-muted);
+		display: flex;
+		align-items: center;
+	}
+	.eye-btn:hover { color: var(--color-text); }
+	.capslock-warn {
+		margin-top: .4rem;
+		padding: .45rem .7rem;
+		background: #fffbeb;
+		border: 1px solid #fde68a;
+		border-radius: .375rem;
+		font-size: .8rem;
+		color: #92400e;
+	}
 	.btn-wrapper {
 		display: flex;
 		justify-content: center;
