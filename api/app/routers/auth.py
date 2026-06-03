@@ -501,7 +501,6 @@ def request_password_reset(
                 "token": raw_token,
                 "expire_heures": 1,
             },
-            session=session,
         )
 
     return None
