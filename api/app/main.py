@@ -108,6 +108,10 @@ async def lifespan(app: FastAPI):
     from app.utils.telemetry_aggregation import run_telemetry_aggregation_cron
     scheduler.add_job(run_telemetry_aggregation_cron, "cron", hour=2, minute=0, id="telemetry_aggregation")
 
+    # Contrôle santé quotidien : WhatsApp, sauvegardes, disque (09h00)
+    from app.utils.health_monitor import run_health_check
+    scheduler.add_job(run_health_check, "cron", hour=9, minute=0, id="health_check")
+
     yield
     # Nettoyage à l'arrêt
     scheduler.shutdown()
