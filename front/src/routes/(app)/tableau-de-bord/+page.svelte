@@ -489,44 +489,6 @@
 		</div>
 	{/if}
 
-	<!-- ═══ KPI SANTÉ RÉSIDENCE ═══════════════════════════════════════════ -->
-	<div class="section-reveal" class:section-visible={ready} style="--delay:.15s">
-		<h2 class="section-title"><Icon name="activity" size={16} /> Santé résidence</h2>
-		<div class="kpi-grid">
-			<a href="/tickets" class="kpi-card card">
-				<div class="kpi-icon-zone" style="background:#EFF6FF;color:#3B82F6">
-					<Icon name="ticket" size={22} />
-				</div>
-				<div class="kpi-text-zone">
-					<span class="kpi-value">{data.sante.tickets_ouverts}</span>
-					<span class="kpi-label">Tickets ouverts</span>
-					{#if data.sante.tickets_urgents > 0}
-						<span class="badge badge-red kpi-badge">dont {data.sante.tickets_urgents} urgent{data.sante.tickets_urgents > 1 ? 's' : ''}</span>
-					{/if}
-					<span class="kpi-link">Voir →</span>
-				</div>
-			</a>
-			<div class="kpi-card card">
-				<div class="kpi-icon-zone" style="background:#FFFBEB;color:#F59E0B">
-					<Icon name="clock" size={22} />
-				</div>
-				<div class="kpi-text-zone">
-					<span class="kpi-value">{data.sante.resolution_moyenne_heures != null ? `${data.sante.resolution_moyenne_heures}h` : '—'}</span>
-					<span class="kpi-label">Résolution moy.</span>
-				</div>
-			</div>
-			<a href="/sondages" class="kpi-card card">
-				<div class="kpi-icon-zone" style="background:#F5F3FF;color:#8B5CF6">
-					<Icon name="bar-chart-3" size={22} />
-				</div>
-				<div class="kpi-text-zone">
-					<span class="kpi-value">{data.sante.sondages_actifs}</span>
-					<span class="kpi-label">Sondages actifs</span>
-					{#if data.sante.sondages_actifs > 0}<span class="kpi-link">Voter →</span>{/if}
-				</div>
-			</a>
-		</div>
-	</div>
 
 	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
 	{#if !isLocataire}
