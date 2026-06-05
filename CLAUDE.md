@@ -213,8 +213,15 @@ const icon = '\u{1F6E0}'; // 🔧
 
 ### Serveurs
 - **RPi 1** `192.168.1.222` (PhT-RB5) · **RPi 2** `192.168.1.223` (PhT-RB5i2)
-- RPi actif : `cat /opt/5hostachy/.active` — conteneurs uniquement sur le RPi actif
+- RPi actif : `cat /opt/5hostachy/.active` — ⚠️ ce fichier peut disparaître, le recréer si absent
+- Conteneurs uniquement sur le RPi actif — vérifier les 2 en cas de doute (`docker ps`)
+- En cas de split-brain (conteneurs sur les 2) : stopper le standby + recréer `.active`
 - En cas de site HS : SSH sur le RPi actif → `cd /opt/5hostachy && docker compose up -d`
+
+### Risques connus
+- **auto-deploy + redémarrage API** → peut corrompre le WAL SQLite si l'API redémarre pendant une écriture
+- **health-watch failover** → peut créer un split-brain si le flag `.active` n'est pas synchronisé
+- **Sauvegardes** stockées uniquement sur le RPi actif (volume Docker non répliqué)
 
 ### Crontabs (sudo root — identiques sur les 2 RPi)
 ```
