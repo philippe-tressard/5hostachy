@@ -58,6 +58,7 @@ services:
       dockerfile: Dockerfile
     container_name: hostachy_api
     restart: unless-stopped
+    stop_grace_period: 30s
     logging:
       driver: "json-file"
       options:

@@ -116,6 +116,19 @@ async def lifespan(app: FastAPI):
     # Nettoyage à l'arrêt
     scheduler.shutdown()
 
+    # WAL checkpoint au shutdown : vide le fichier .db-wal avant que Docker tue le process.
+    # Sans ça, si un job APScheduler est interrompu par SIGTERM, le WAL reste dans un état
+    # intermédiaire → "database disk image is malformed" au prochain démarrage.
+    try:
+        from sqlalchemy import text as _text
+        from app.database import engine as _engine
+        with _engine.connect() as _conn:
+            _conn.execute(_text("PRAGMA wal_checkpoint(TRUNCATE)"))
+            _conn.commit()
+        _logger.info("WAL checkpoint effectué au shutdown.")
+    except Exception as _e:
+        _logger.warning("WAL checkpoint échoué au shutdown (non bloquant) : %s", _e)
+
 
 import os as _os
 _enable_docs = _os.getenv("ENABLE_API_DOCS", "false").lower() == "true"
