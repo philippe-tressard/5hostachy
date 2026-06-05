@@ -5,6 +5,7 @@ Remplace le localStorage pour permettre la synchronisation multi-appareils.
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
@@ -186,6 +187,34 @@ def whatsapp_status(
         return get_whatsapp_status(config)
     except Exception as e:
         raise HTTPException(500, f"Impossible de joindre le bridge : {e}")
+
+
+@router.get("/whatsapp-qr")
+def whatsapp_qr(
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Retourne l'image QR code du bridge WhatsApp (admin uniquement)."""
+    import httpx
+
+    rows = session.exec(select(ConfigSite)).all()
+    config = {r.cle: r.valeur for r in rows}
+
+    api_url = config.get('whatsapp_api_url', '').strip()
+    api_key = config.get('whatsapp_api_key', '').strip()
+    if not api_url:
+        raise HTTPException(400, "whatsapp_api_url non configuré.")
+
+    try:
+        with httpx.Client(timeout=5) as client:
+            resp = client.get(
+                f"{api_url.rstrip('/')}/qr",
+                headers={"x-api-key": api_key},
+            )
+            resp.raise_for_status()
+            return Response(content=resp.content, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(500, f"Impossible d'obtenir le QR code : {e}")
 
 
 class SmtpTestPayload(BaseModel):

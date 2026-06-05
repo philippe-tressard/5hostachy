@@ -183,9 +183,15 @@ log "  → Uploads synchronisés."
 
 WA_VOL=$(docker volume inspect 5hostachy_whatsapp_auth --format '{{.Mountpoint}}' 2>/dev/null || echo "")
 if [ -n "$WA_VOL" ]; then
-  run "rsync -az --delete -e '$SSH_CMD' '$WA_VOL/' ptressard@$PEER_IP:/tmp/sync_wa_auth/"
-  run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_wa_auth/ \$(docker volume inspect 5hostachy_whatsapp_auth --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_wa_auth'"
-  log "  → WhatsApp auth synchronisé."
+  # Sécurité : ne pas syncer si creds.json est vide ou absent (session corrompue/en cours d'écriture)
+  CREDS_SIZE=$(stat -c%s "$WA_VOL/creds.json" 2>/dev/null || echo 0)
+  if [ "$CREDS_SIZE" -gt 0 ]; then
+    run "rsync -az --delete -e '$SSH_CMD' '$WA_VOL/' ptressard@$PEER_IP:/tmp/sync_wa_auth/"
+    run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_wa_auth/ \$(docker volume inspect 5hostachy_whatsapp_auth --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_wa_auth'"
+    log "  → WhatsApp auth synchronisé (creds.json: ${CREDS_SIZE} octets)."
+  else
+    log "  ⚠ creds.json vide ou absent — sync WhatsApp auth ignoré pour ne pas écraser une session valide sur le peer."
+  fi
 fi
 
 # ── Phase 2 : Stop cloudflared local + conteneurs locaux ────────────
