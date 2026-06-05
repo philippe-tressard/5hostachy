@@ -25,6 +25,28 @@ else
     echo "[$LOG_DATE] === Mise à jour Hostachy (build sélectif + cache) ==="
 fi
 
+# 0. Vérification : ce RPi est-il l'actif ?
+FLAG="$REPO/.active"
+if [ -f "$FLAG" ]; then
+    ACTIVE=$(tr -d '[:space:]' < "$FLAG")
+    SELF_HOSTNAME=$(hostname)
+    case "$SELF_HOSTNAME" in
+        PhT-RB5)   SELF="rpi1" ;;
+        PhT-RB5i2) SELF="rpi2" ;;
+        *)         SELF="" ;;
+    esac
+    if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
+        echo "[$LOG_DATE] ⚠️  Ce RPi ($SELF) n'est pas l'actif ($ACTIVE)."
+        echo "[$LOG_DATE]    Lancez ce script sur le RPi actif ($ACTIVE)."
+        echo "[$LOG_DATE]    Pour forcer quand même : supprimez ou modifiez $FLAG"
+        exit 1
+    fi
+else
+    echo "[$LOG_DATE] ⚠️  Fichier .active absent — impossible de vérifier quel RPi est actif."
+    echo "[$LOG_DATE]    Créez-le d'abord : echo rpi1 > $FLAG  (ou rpi2)"
+    exit 1
+fi
+
 # 1. Synchronisation git
 cd "$REPO"
 echo "[$LOG_DATE] Récupération des derniers commits depuis GitHub..."
