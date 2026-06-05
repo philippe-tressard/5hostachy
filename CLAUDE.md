@@ -218,10 +218,27 @@ const icon = '\u{1F6E0}'; // 🔧
 - En cas de split-brain (conteneurs sur les 2) : stopper le standby + recréer `.active`
 - En cas de site HS : SSH sur le RPi actif → `cd /opt/5hostachy && docker compose up -d`
 
+### Protections DB (v2.18.10)
+- `stop_grace_period: 30s` sur le service API → Docker attend 30s avant SIGKILL
+- `PRAGMA wal_checkpoint(TRUNCATE)` dans le lifespan shutdown → WAL vidé proprement à chaque arrêt
+- `bascule.sh` phase 3 : WAL checkpoint avant rsync DB vers le peer
+- `MaJ-Hostachy.sh` : bloque si lancé sur le RPi standby
+
 ### Risques connus
-- **auto-deploy + redémarrage API** → peut corrompre le WAL SQLite si l'API redémarre pendant une écriture
-- **health-watch failover** → peut créer un split-brain si le flag `.active` n'est pas synchronisé
+- **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
+- **health-watch failover** → peut créer un split-brain ; toujours vérifier `docker ps` sur les 2 RPi
 - **Sauvegardes** stockées uniquement sur le RPi actif (volume Docker non répliqué)
+- **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
+
+### Sync DB manuelle (sans basculer)
+```bash
+# Depuis le RPi actif — exporte et transfère la DB vers le standby
+docker exec -w /app hostachy_api python3 -c "from app.database import engine; from sqlalchemy import text; c=engine.connect(); c.execute(text('PRAGMA wal_checkpoint(TRUNCATE)')); c.commit()"
+docker cp hostachy_api:/app/data/app.db /tmp/app_sync.db
+scp /tmp/app_sync.db ptressard@<PEER_IP>:/tmp/app_sync.db
+# Sur le standby :
+docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db alpine sh -c 'cp /tmp/app_sync.db /data/app.db && rm -f /data/app.db-wal /data/app.db-shm'
+```
 
 ### Crontabs (sudo root — identiques sur les 2 RPi)
 ```
@@ -253,5 +270,6 @@ const icon = '\u{1F6E0}'; // 🔧
 
 - `main` = production protégé — toutes les modifications via PR vers `dev`
 - Prefixes commits : `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`
-- MEP : `MaJ-Hostachy.sh` (pull + reset + sync docs + rebuild Docker + health check)
+- MEP : `MaJ-Hostachy.sh` sur le **RPi actif uniquement** — bloque automatiquement sur le standby
 - `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
+- Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
