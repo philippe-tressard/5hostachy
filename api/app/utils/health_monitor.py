@@ -51,9 +51,14 @@ def _check_whatsapp(session: Session) -> list[str]:
         .limit(5)
     ).all()
     if len(logs) >= 3 and all(l.statut == "échec" for l in logs[:3]):
-        last_err = logs[0].erreur or "erreur inconnue"
+        from zoneinfo import ZoneInfo
+        extrait = "\n".join(
+            f"    [{l.envoye_le.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m %H:%M')}] "
+            f"« {l.label[:40]} » → {l.erreur or 'erreur inconnue'}"
+            for l in logs[:3]
+        )
         issues.append(
-            f"3 derniers envois WhatsApp en échec consécutif (dernières 24h). Dernière erreur : {last_err}"
+            f"3 derniers envois WhatsApp en échec consécutif (dernières 24h) :\n{extrait}"
         )
 
     return issues
@@ -130,12 +135,19 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
         return
 
     now_paris = datetime.now(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
-    lignes = "\n".join(f"  • {i}" for i in issues)
+    # Chaque issue peut être multi-ligne (ex: extrait de logs WhatsApp)
+    blocs = []
+    for i in issues:
+        lignes = i.split("\n")
+        blocs.append("  • " + lignes[0])
+        for l in lignes[1:]:
+            blocs.append("    " + l)
+    lignes_str = "\n".join(blocs)
     body = (
         f"Bonjour,\n\n"
         f"Le contrôle quotidien de {site_nom} a détecté {len(issues)} problème(s) "
         f"le {now_paris} :\n\n"
-        f"{lignes}\n\n"
+        f"{lignes_str}\n\n"
         f"Accédez à l'interface d'administration :\n{site_url}/admin\n\n"
         f"— Système de surveillance {site_nom}"
     )
