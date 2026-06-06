@@ -115,10 +115,12 @@ def _check_disk() -> list[str]:
 
 
 def _send_alert(to: str, issues: list[str], session: Session) -> None:
-    """Envoie l'email d'alerte système."""
+    """Envoie l'email d'alerte système avec le gabarit HTML du site."""
     import smtplib
+    from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from zoneinfo import ZoneInfo
+    from app.utils.email import _wrap_email
 
     smtp_cfg = {r.cle: r.valeur for r in session.exec(select(ConfigSite)).all()}
 
@@ -127,35 +129,84 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
     username = smtp_cfg.get("smtp_username", "").strip()
     password = smtp_cfg.get("smtp_password", "").strip()
     from_addr = smtp_cfg.get("smtp_from", username).strip()
+    from_name = smtp_cfg.get("smtp_from_name", "").strip()
     site_nom = smtp_cfg.get("site_nom", "5Hostachy")
     site_url = (smtp_cfg.get("site_url") or "https://5hostachy.fr").rstrip("/")
+    footer = smtp_cfg.get("email_footer", "")
 
     if not server or not username:
         logger.warning("Alerte santé non envoyée : SMTP non configuré.")
         return
 
     now_paris = datetime.now(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
-    # Chaque issue peut être multi-ligne (ex: extrait de logs WhatsApp)
-    blocs = []
-    for i in issues:
-        lignes = i.split("\n")
-        blocs.append("  • " + lignes[0])
-        for l in lignes[1:]:
-            blocs.append("    " + l)
-    lignes_str = "\n".join(blocs)
-    body = (
-        f"Bonjour,\n\n"
-        f"Le contrôle quotidien de {site_nom} a détecté {len(issues)} problème(s) "
-        f"le {now_paris} :\n\n"
-        f"{lignes_str}\n\n"
-        f"Accédez à l'interface d'administration :\n{site_url}/admin\n\n"
-        f"— Système de surveillance {site_nom}"
-    )
+    annee = datetime.now().year
 
-    msg = MIMEText(body, "plain", "utf-8")
+    # ── Construction du corps HTML ────────────────────────────────────────
+    blocs_html = []
+    for issue in issues:
+        lignes = issue.split("\n")
+        titre = lignes[0]
+        details = lignes[1:] if len(lignes) > 1 else []
+        detail_html = ""
+        if details:
+            rows = "".join(
+                f'<tr><td style="padding:4px 0;font-size:13px;color:#4A5568;font-family:monospace">{l.strip()}</td></tr>'
+                for l in details
+            )
+            detail_html = (
+                f'<table role="presentation" cellpadding="0" cellspacing="0" '
+                f'style="width:100%;background:#F8F9FA;border-left:3px solid #E53E3E;'
+                f'border-radius:4px;padding:10px 14px;margin-top:8px">'
+                f'{rows}</table>'
+            )
+        blocs_html.append(
+            f'<tr><td style="padding:10px 0 6px">'
+            f'<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">'
+            f'<tr><td style="vertical-align:top;width:24px;padding-top:2px">'
+            f'<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#E53E3E;margin-top:4px"></span>'
+            f'</td>'
+            f'<td style="vertical-align:top;font-size:15px;color:#1A1A2E;line-height:1.5">{titre}</td>'
+            f'</tr>'
+            f'{"<tr><td></td><td>" + detail_html + "</td></tr>" if detail_html else ""}'
+            f'</table>'
+            f'</td></tr>'
+        )
+
+    issues_html = "\n".join(blocs_html)
+
+    body_html = f"""
+<p style="margin:0 0 8px;font-size:15px;color:#4A5568">Bonjour,</p>
+<p style="margin:0 0 24px;font-size:15px;color:#4A5568">
+  Le contrôle quotidien du <strong>{now_paris}</strong> a détecté
+  <strong style="color:#E53E3E">{len(issues)} problème(s)</strong> :
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0"
+  style="width:100%;border:1px solid #FED7D7;border-radius:8px;
+         background:#FFF5F5;padding:16px 20px;margin-bottom:24px">
+  {issues_html}
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">
+  <tr><td align="center">
+    <a href="{site_url}/admin"
+       style="display:inline-block;background:#1E3A5F;color:#FFFFFF;
+              font-size:14px;font-weight:600;padding:12px 28px;
+              border-radius:6px;text-decoration:none;letter-spacing:0.3px">
+      Accéder à l'administration
+    </a>
+  </td></tr>
+</table>
+"""
+
+    full_html = _wrap_email(body_html, site_nom, site_url, footer, annee)
+
+    # ── Envoi ─────────────────────────────────────────────────────────────
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[{site_nom}] ⚠️ Alerte système — {len(issues)} problème(s) détecté(s)"
-    msg["From"] = f"{site_nom} <{from_addr}>"
+    msg["From"] = f"{from_name} <{from_addr}>" if from_name else from_addr
     msg["To"] = to
+    msg.attach(MIMEText(full_html, "html", "utf-8"))
 
     try:
         use_tls = smtp_cfg.get("smtp_starttls", "1") == "1"
