@@ -274,6 +274,26 @@ docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db
 - `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
 
+### Pré-check obligatoire avant MEP
+
+Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détectée → diagnostic + plan proposé → correction si validée par l'utilisateur → reprise de la MEP.
+
+| # | Vérification | Commande | Attendu |
+|---|---|---|---|
+| 1 | Site public | `curl https://5hostachy.fr/api/health` | HTTP 200 |
+| 2 | RPi actif identifié | `cat /opt/5hostachy/.active` sur les 2 | Fichier présent, cohérent |
+| 3 | Pas de split-brain | `docker ps -q \| wc -l` sur les 2 RPi | 0 sur le standby |
+| 4 | DB intègre | `PRAGMA integrity_check` | `ok` |
+| 5 | WhatsApp | `GET /status` bridge | `state: open` |
+| 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
+
+**Protocole si anomalie :**
+1. Diagnostiquer la cause
+2. Proposer un plan de correction à l'utilisateur
+3. Corriger après validation
+4. Relancer le pré-check complet
+5. MEP uniquement si tous les points sont verts
+
 ### Versioning (`front/package.json`)
 Version affichée dans le footer du site. Règle **obligatoire à chaque MEP** :
 
