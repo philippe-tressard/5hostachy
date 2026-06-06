@@ -41,15 +41,19 @@ def _check_whatsapp(session: Session) -> list[str]:
         issues.append(f"Bridge WhatsApp injoignable : {exc}")
         return issues
 
-    # Vérifier les logs récents : >= 3 échecs consécutifs
+    # Vérifier les logs des dernières 24h : >= 3 échecs consécutifs
+    # (on ignore les anciens échecs antérieurs à une reconnexion)
+    depuis = datetime.utcnow() - timedelta(hours=24)
     logs = session.exec(
-        select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc()).limit(5)
+        select(WhatsAppLog)
+        .where(WhatsAppLog.envoye_le >= depuis)
+        .order_by(WhatsAppLog.envoye_le.desc())
+        .limit(5)
     ).all()
-    recent_failures = [l for l in logs if l.statut == "échec"]
-    if len(recent_failures) >= 3 and all(l.statut == "échec" for l in logs[:3]):
+    if len(logs) >= 3 and all(l.statut == "échec" for l in logs[:3]):
         last_err = logs[0].erreur or "erreur inconnue"
         issues.append(
-            f"3 derniers envois WhatsApp en échec consécutif. Dernière erreur : {last_err}"
+            f"3 derniers envois WhatsApp en échec consécutif (dernières 24h). Dernière erreur : {last_err}"
         )
 
     return issues
