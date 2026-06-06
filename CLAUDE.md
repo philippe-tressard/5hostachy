@@ -273,3 +273,16 @@ docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db
 - MEP : `MaJ-Hostachy.sh` sur le **RPi actif uniquement** — bloque automatiquement sur le standby
 - `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
+
+### Versioning (`front/package.json`)
+Version affichée dans le footer du site. Règle **obligatoire à chaque MEP** :
+
+| Incrément | Quand |
+|-----------|-------|
+| **Patch** `X.Y.Z+1` | Fix, correction, amélioration mineure, doc, refactor interne |
+| **Minor** `X.Y+1.0` | Nouvelle fonctionnalité visible par les utilisateurs |
+| **Major** `X+1.0.0` | Refonte majeure de l'interface ou rupture de compatibilité |
+
+- Toujours bumper **avant** le push final sur `dev`
+- Commit dédié : `chore(version): bump vX.Y.Z`
+- Version courante : voir `front/package.json`
