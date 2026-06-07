@@ -98,6 +98,29 @@ async def lifespan(app: FastAPI):
         )
         _s.commit()
 
+    # Nettoyage des sauvegardes orphelines restées "en_cours" suite à un
+    # redémarrage/arrêt du conteneur en plein milieu du job (faussait le
+    # contrôle de santé "dernière sauvegarde réussie")
+    from datetime import timedelta as _timedelta
+    from sqlmodel import select as _select
+    from app.models.core import HistoriqueSauvegarde, StatutSauvegarde
+    with Session(engine) as _s:
+        _seuil = datetime.utcnow() - _timedelta(hours=2)
+        _orphelines = _s.exec(
+            _select(HistoriqueSauvegarde).where(
+                (HistoriqueSauvegarde.statut == StatutSauvegarde.en_cours)
+                & (HistoriqueSauvegarde.cree_le < _seuil)
+            )
+        ).all()
+        for _b in _orphelines:
+            _b.statut = StatutSauvegarde.echouee
+            _b.message_erreur = "Interrompue par redémarrage du conteneur"
+            _b.terminee_le = datetime.utcnow()
+            _s.add(_b)
+        if _orphelines:
+            _s.commit()
+            _logger.info("Sauvegardes orphelines nettoyées : %d marquée(s) en échec.", len(_orphelines))
+
     scheduler = setup_scheduler()
 
     # Planificateur WhatsApp : vérification chaque jour à 18h
