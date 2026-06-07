@@ -274,6 +274,32 @@ docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db
 - `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
 
+### Pré-check obligatoire avant MEP
+
+Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détectée → diagnostic + plan proposé → correction si validée par l'utilisateur → reprise de la MEP.
+
+| # | Vérification | Commande | Attendu |
+|---|---|---|---|
+| 1 | Site public | `curl https://5hostachy.fr/api/health` | HTTP 200 |
+| 2 | RPi actif identifié | `cat /opt/5hostachy/.active` sur les 2 | Fichier présent, cohérent |
+| 3 | Pas de split-brain | `docker ps -q \| wc -l` sur les 2 RPi | 0 sur le standby |
+| 4 | DB intègre | `PRAGMA integrity_check` | `ok` |
+| 5 | WhatsApp | `GET /status` bridge | `state: open` |
+| 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
+| 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` lancés par cron |
+| 8 | Logs cron sans échec récent | `tail -20 /var/log/hostachy-{deploy,bascule,health-watch,maintenance,check}.log` sur les 2 RPi | Aucune ligne `Permission denied` / `No such file` / `command not found` / erreur répétée |
+
+**Point 7 — pourquoi :** un script peut perdre son bit d'exécution sans prévenir (ex. `auto-deploy.sh` le 21/04 → `Permission denied` silencieux dans le cron pendant des semaines, empêchant le déploiement automatique de v2.18.11). Vérifier en particulier `auto-deploy.sh`, `bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`, `check-stack.sh`. Si un bit `x` manque : `chmod +x <script>` sur le(s) RPi concerné(s).
+
+**Point 8 — pourquoi :** le point 7 ne couvre que **la cause** déjà rencontrée (perte du bit `x`). Le point 8 détecte **le symptôme** quelle qu'en soit la cause (droits, chemin déplacé, faute de syntaxe, dépendance manquante…) en inspectant directement les logs produits par les crons — c'est ce qui aurait permis de détecter le problème `auto-deploy.sh` dès sa première occurrence le 21/04, au lieu d'attendre 7 semaines. Si une erreur récurrente apparaît → diagnostiquer la cause (pas seulement les droits) avant de poursuivre la MEP.
+
+**Protocole si anomalie :**
+1. Diagnostiquer la cause
+2. Proposer un plan de correction à l'utilisateur
+3. Corriger après validation
+4. Relancer le pré-check complet
+5. MEP uniquement si tous les points sont verts
+
 ### Versioning (`front/package.json`)
 Version affichée dans le footer du site. Règle **obligatoire à chaque MEP** :
 
