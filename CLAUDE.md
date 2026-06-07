@@ -286,6 +286,9 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 4 | DB intègre | `PRAGMA integrity_check` | `ok` |
 | 5 | WhatsApp | `GET /status` bridge | `state: open` |
 | 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
+| 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` lancés par cron |
+
+**Point 7 — pourquoi :** un script peut perdre son bit d'exécution sans prévenir (ex. `auto-deploy.sh` le 21/04 → `Permission denied` silencieux dans le cron pendant des semaines, empêchant le déploiement automatique de v2.18.11). Vérifier en particulier `auto-deploy.sh`, `bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`, `check-stack.sh`. Si un bit `x` manque : `chmod +x <script>` sur le(s) RPi concerné(s).
 
 **Protocole si anomalie :**
 1. Diagnostiquer la cause
