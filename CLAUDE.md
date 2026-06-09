@@ -251,7 +251,7 @@ docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db
 | Heure | Job | Alerte email si… |
 |-------|-----|-----------------|
 | 03:00 | backup | — |
-| 09:00 | **health_check** | WhatsApp déconnecté · backup > 25h · disque < 15% |
+| 06:00 | **health_check** | WhatsApp déconnecté · backup > 25h · disque < 15% |
 | 18:00 | whatsapp_scheduled | — |
 | 02:00 | telemetry_aggregation | — |
 
