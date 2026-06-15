@@ -445,7 +445,13 @@
 			reportingLoading = false;
 		}
 	}
-	function refreshReporting() { loadReporting(true); }
+	function refreshReporting() {
+		if (reportView === 'relance') {
+			loadRelanceSyndic(true);
+		} else {
+			loadReporting(true);
+		}
+	}
 
 	async function loadRelanceSyndic(force = false) {
 		if (relanceLoaded && !force) return;
@@ -1407,8 +1413,8 @@
 				</button>
 			</div>
 			<div class="reporting-actions">
-				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportingLoading} title="Rafraîchir les données">
-					&#x1F504;{reportingLoading ? ' …' : ''}
+				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportView === 'relance' ? relanceLoading : reportingLoading} title="Rafraîchir les données">
+					&#x1F504;{(reportView === 'relance' ? relanceLoading : reportingLoading) ? ' …' : ''}
 				</button>
 				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
 					&#x1F5A8; Imprimer / PDF
