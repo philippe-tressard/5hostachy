@@ -1719,7 +1719,7 @@
             <strong>&#x1F4CC; Dossiers en cours</strong> — liste des tickets encore <em>ouverts</em> ou <em>en cours</em>, avec leur ancienneté, le bâtiment concerné et un niveau d'attention (<em>Normal</em>, <em>À relancer</em>, <em>Critique</em>).
           </div>
           <div style="padding:.8rem; background:#FFF7ED; border-radius:8px; border-left:3px solid #F59E0B">
-            <strong>&#x1F514; Relance syndic</strong> — liste de tous les tickets de catégorie <em>Syndic</em> non résolus, avec un décompte des jours depuis la dernière modification. Les tickets sans réponse depuis plus de <strong>30 jours</strong> sont affichés en orange. Vous pouvez en sélectionner un ou plusieurs, puis cliquer <strong>« Envoyer la relance »</strong> pour transmettre un email de relance au syndic avec les références et l'ancienneté de chaque ticket.
+            <strong>&#x1F514; Relance syndic</strong> — liste de tous les tickets ouverts (hors catégorie <em>Bug</em>, du ressort technique) non résolus, avec un décompte des jours depuis la dernière modification. Les tickets sans réponse depuis plus de <strong>30 jours</strong> sont affichés en orange. Vous pouvez en sélectionner un ou plusieurs, puis cliquer <strong>« Envoyer la relance »</strong> pour transmettre un email de relance au syndic avec les références et l'ancienneté de chaque ticket. Relancer un ticket l'adresse automatiquement au syndic. Pour exclure un ticket de cette liste, marquez-le <em>« non relançable »</em>.
             <ul style="margin:.5rem 0 0 1.2rem; font-size:.85rem">
               <li>Les tickets <em>en attente</em> (moins de 30 jours) sont affichés avec un bord gris — ils sont inclus pour information mais ne peuvent pas encore être sélectionnés.</li>
               <li>Un aperçu de l'email est généré automatiquement avant envoi.</li>
@@ -1819,6 +1819,16 @@
           <li><strong>Joindre des fichiers</strong> (photos JPG/PNG/WebP, PDF, Word, Excel — max 15 Mo chacun). Cliquez sur <strong>« + Ajouter un fichier »</strong>.</li>
           <li><strong>Notifier une adresse email externe</strong> (syndic, prestataire…) en saisissant l'adresse dans le champ <strong>« Notifier une adresse email externe »</strong>. L'email inclut l'évolution, les pièces jointes et l'historique de l'actualité.</li>
         </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F535; État d'une publication &amp; Historique</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Chaque publication possède un <strong>état</strong>. Par défaut, une nouvelle publication est en état <strong>« Publié »</strong> : c'est une simple annonce, sans suivi.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
+          <li><strong>&#x1F535; Publié</strong> (par défaut) — annonce hors suivi. Elle reste visible <strong>1 mois</strong>, puis bascule automatiquement dans la section <strong>Historique</strong>, en bas de la page Actualités (groupée par année).</li>
+          <li><strong>&#x1F7E1; En cours / &#x1F7E2; Résolu / ⚫ Annulé</strong> — états de suivi. Dès qu'une publication passe dans l'un de ces états, elle quitte le fonctionnement « 1 mois » et suit le cycle de suivi (une publication résolue est archivée après le délai configuré).</li>
+        </ul>
+        <p style="font-size:.85rem; color:var(--muted); margin-top:.75rem">Le délai de visibilité des publications « Publié » (1 mois par défaut) est réglable par l'administrateur.</p>
       </div>
     </section>
 
