@@ -493,7 +493,7 @@ def envoyer_relance_syndic(
     if not syndic_principal or not syndic_principal.email:
         raise HTTPException(422, "Aucun gestionnaire syndic principal avec email configuré")
 
-    civilite = "Monsieur" if syndic_principal.genre == GenreCivilite.monsieur else "Madame"
+    civilite = "Monsieur" if syndic_principal.genre == GenreCivilite.mr else "Madame"
     nom_gestionnaire = f"{syndic_principal.prenom} {syndic_principal.nom}".strip()
 
     PERIM_LABELS: dict[str, str] = {
@@ -588,16 +588,17 @@ def envoyer_relance_syndic(
             cc_recipients.append((uid, email))
             seen_emails.add(email.lower())
 
+    session.commit()
+
+    # Pas de session= : la background task crée sa propre SessionLocal
+    # (celle de l'endpoint est fermée une fois la réponse envoyée).
     background_tasks.add_task(
         send_email_group,
         code="relance_syndic",
         to_recipients=to_recipients,
         context=ctx,
-        session=session,
         cc_recipients=cc_recipients or None,
     )
-
-    session.commit()
 
     return {"sent": len(tickets_relance), "relance_to": syndic_principal.email}
 
