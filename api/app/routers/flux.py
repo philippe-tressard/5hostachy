@@ -1,4 +1,5 @@
 """Router flux — agrégation temps réel pour le tableau de bord « pouls »."""
+import html as _html
 import json as _json
 import re
 from datetime import datetime, time, timedelta
@@ -75,6 +76,7 @@ def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
     if not text:
         return None
     clean = re.sub(r"<[^>]+>", " ", text)
+    clean = _html.unescape(clean)
     clean = re.sub(r"\s+", " ", clean).strip()
     if len(clean) > max_len:
         clean = clean[:max_len].rsplit(" ", 1)[0] + "…"

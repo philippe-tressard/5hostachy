@@ -67,7 +67,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			if (openNum) {
 				const target = ticketList.find(t => t.numero === openNum);
 				if (target) {
-					if (['résolu', 'annulé', 'fermé'].includes(target.statut)) {
+					if (estArchive(target)) {
 						historyExpanded = true;
 						const yr = new Date(target.mis_a_jour_le ?? target.cree_le).getFullYear();
 						expandedYears = new Set([yr]);
@@ -82,19 +82,27 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		finally { loading = false; }
 	});
 
+	// Délai de grâce : un ticket clôturé reste visible dans la liste principale
+	// pendant 7 jours après sa clôture, puis bascule dans l'Historique.
+	const HISTORIQUE_DELAI_MS = 7 * 24 * 60 * 60 * 1000;
+	function estArchive(t: { statut: string; mis_a_jour_le?: string; cree_le: string }): boolean {
+		if (!['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
+		return Date.now() - new Date(t.mis_a_jour_le ?? t.cree_le).getTime() > HISTORIQUE_DELAI_MS;
+	}
+
 	$: filtered = ticketList.filter((t) => {
-		if (['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
+		if (estArchive(t)) return false;
 		if (filterStatut && t.statut !== filterStatut) return false;
 		if (filterCat && t.categorie !== filterCat) return false;
 		return true;
 	});
 
-	// Historique : tickets résolus/annulés/fermés, limité à 3 ans, groupés par année décroissante
+	// Historique : tickets clôturés depuis plus de 7 jours, limité à 3 ans, groupés par année décroissante
 	const THREE_YEARS_AGO = new Date();
 	THREE_YEARS_AGO.setFullYear(THREE_YEARS_AGO.getFullYear() - 3);
 
 	$: historyTickets = ticketList
-		.filter((t) => ['résolu', 'annulé', 'fermé'].includes(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= THREE_YEARS_AGO)
+		.filter((t) => estArchive(t) && new Date(t.mis_a_jour_le ?? t.cree_le) >= THREE_YEARS_AGO)
 		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
 
 	$: historyByYear = (() => {
