@@ -17,6 +17,7 @@ from app.utils.whatsapp import envoyer_whatsapp_avec_log
 router = APIRouter(prefix="/publications", tags=["publications"])
 
 ARCHIVAGE_DELAI_HEURES = 48
+PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
 _WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer', 'site_url'}
 
 
@@ -239,13 +240,23 @@ def _envoyer_email_externe_publication(
     )
 
 
-def _is_archived(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEURES) -> bool:
+def _is_archived(
+    pub: Publication,
+    delai_heures: int = ARCHIVAGE_DELAI_HEURES,
+    publie_jours: int = PUBLIE_VISIBILITE_JOURS,
+) -> bool:
     """True si la publication doit être considérée comme archivée."""
     if pub.archivee:
         return True
     if pub.statut == "resolu" and pub.statut_change_le:
         delta = datetime.utcnow() - pub.statut_change_le
         return delta >= timedelta(hours=delai_heures)
+    # État « publié » (défaut, hors workflow) : visible publie_jours puis archivé.
+    # Les brouillons (non encore publiés) ne sont jamais concernés.
+    if pub.statut in ("publie", None) and not pub.brouillon:
+        ref = pub.statut_change_le or pub.publiee_le or pub.cree_le
+        if ref:
+            return (datetime.utcnow() - ref) >= timedelta(days=publie_jours)
     return False
 
 
@@ -272,6 +283,9 @@ def list_publications(
     delai_row = session.get(ConfigSite, 'archivage_delai_heures')
     delai_heures = int(delai_row.valeur) if delai_row and delai_row.valeur.isdigit() else ARCHIVAGE_DELAI_HEURES
 
+    publie_row = session.get(ConfigSite, 'publie_visibilite_jours')
+    publie_jours = int(publie_row.valeur) if publie_row and publie_row.valeur.isdigit() else PUBLIE_VISIBILITE_JOURS
+
     # Purge automatique : supprimer les publications annulées depuis > 48h
     to_delete = [p for p in pubs if _is_annule_expired(p, delai_heures)]
     for pub in to_delete:
@@ -287,7 +301,7 @@ def list_publications(
 
     result = []
     for pub in pubs:
-        arch = _is_archived(pub, delai_heures)
+        arch = _is_archived(pub, delai_heures, publie_jours)
         if archived and not arch:
             continue
         if not archived and arch:
@@ -370,7 +384,7 @@ def update_publication(
     # Changement de statut → enregistrer date + évolution auto
     if nouveau_statut and nouveau_statut != ancien_statut:
         pub.statut_change_le = datetime.utcnow()
-        labels = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
+        labels = {"publie": "Publié", "en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
         evol = PublicationEvolution(
             publication_id=pub.id,
             type="etat",
@@ -496,7 +510,7 @@ def add_evolution(
         raise HTTPException(404, "Publication introuvable")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
-    if body.type == "etat" and body.nouveau_statut not in ("en_cours", "resolu", "annule"):
+    if body.type == "etat" and body.nouveau_statut not in ("publie", "en_cours", "resolu", "annule"):
         raise HTTPException(422, "statut invalide")
 
     ancien_statut = pub.statut if body.type == "etat" else None

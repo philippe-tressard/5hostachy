@@ -21,8 +21,8 @@
 	let loading = true;
 
 	// ── Statut ────────────────────────────────────────────────────────────────
-	const STATUT_LABELS: Record<string, string> = { en_cours: 'En cours', resolu: 'Résolu', annule: 'Annulé' };
-	const STATUT_BADGE: Record<string, string> = { en_cours: 'badge-orange', resolu: 'badge-green', annule: 'badge-gray' };
+	const STATUT_LABELS: Record<string, string> = { publie: 'Publié', en_cours: 'En cours', resolu: 'Résolu', annule: 'Annulé' };
+	const STATUT_BADGE: Record<string, string> = { publie: 'badge-blue', en_cours: 'badge-orange', resolu: 'badge-green', annule: 'badge-gray' };
 
 	// ── Nouvelle publication (CS) ─────────────────────────────────────────────
 	let showForm = false;
@@ -34,7 +34,7 @@
 	let newPartagerWhatsapp = false;
 	let newEnvoyerSyndic = false;
 	let newEnvoyerCs = false;
-	let newStatut: string = '';
+	let newStatut: string = 'publie';
 	let saving = false;
 	let pendingImage: File | null = null;
 	let pendingPreview: string | undefined;
@@ -164,7 +164,7 @@
 				titre: newTitre, contenu: newContenu, urgente: newUrgente, epingle: newEpingle,
 				perimetre_cible: newPerimetreCible, public_cible: newPublicCible,
 				brouillon: shouldPublishAfterImageUpload ? true : newBrouillon,
-				statut: newStatut || null,
+				statut: newStatut || 'publie',
 				partager_whatsapp: newPartagerWhatsapp,
 				envoyer_syndic: newEnvoyerSyndic,
 				envoyer_cs: newEnvoyerCs,
@@ -187,7 +187,7 @@
 			pubList = [pub, ...pubList];
 			showForm = false;
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
-			newBrouillon = false; newStatut = ''; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false;
+			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false;
 			newPerimetreCible = ['résidence'];
 			pendingImage = null; pendingPreview = undefined;
 			pendingFiles = []; fileInputKey++;
@@ -247,6 +247,7 @@
 	let editEvolSaving = false;
 
 	const PUB_STATUT_OPTIONS = [
+		{ value: 'publie',   label: '🔵 Publié' },
 		{ value: 'en_cours', label: '🟡 En cours' },
 		{ value: 'resolu',   label: '🟢 Résolu' },
 		{ value: 'annule',   label: '⚫ Annulé' },
@@ -303,7 +304,7 @@
 		editContenu = pub.contenu;
 		editUrgente = pub.urgente;
 		editEpingle = pub.epingle;
-		editStatut = pub.statut ?? '';
+		editStatut = pub.statut ?? 'publie';
 		editBrouillon = pub.brouillon;
 		showEvolForm = null;
 		expandedPubs = new Set([pub.id]);
@@ -380,9 +381,9 @@
 				{/if}
 			</div>
 			<div class="field">
-				<label for="new-statut">État (optionnel)</label>
+				<label for="new-statut">État</label>
 				<select id="new-statut" bind:value={newStatut}>
-					<option value="">— Aucun état —</option>
+					<option value="publie">&#x1F535; Publié</option>
 					<option value="en_cours">&#x1F7E1; En cours</option>
 					<option value="resolu">&#x1F7E2; Résolu</option>
 					<option value="annule">⚫ Annulé</option>
@@ -444,7 +445,7 @@
 					<span class="pub-row-titre">{pub.titre}
 					{#if isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
 					</span>
-					{#if pub.statut}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
+					{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
 {#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimètreLabel(pub.perimetre_cible)}</span>{/if}
 				</div>
 				<div class="pub-row-right">
@@ -491,7 +492,7 @@
 							<div class="field">
 								<label for="edit-statut-{pub.id}">État</label>
 								<select id="edit-statut-{pub.id}" bind:value={editStatut}>
-									<option value="">— Aucun état —</option>
+									<option value="publie">&#x1F535; Publié</option>
 									<option value="en_cours">&#x1F7E1; En cours</option>
 									<option value="resolu">&#x1F7E2; Résolu</option>
 									<option value="annule">⚫ Annulé</option>
@@ -663,7 +664,7 @@
 										<div class="pub-row">
 											<div class="pub-row-inner">
 												<span class="pub-row-titre">{pub.titre}</span>
-												{#if pub.statut}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
+												{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
 												{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimètreLabel(pub.perimetre_cible)}</span>{/if}
 											</div>
 											<div class="pub-row-right">

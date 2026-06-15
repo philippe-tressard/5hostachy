@@ -279,7 +279,7 @@ class PublicationCreate(BaseModel):
     image_url: Optional[str] = None
     perimetre_cible: List[str] = ["résidence"]
     public_cible: List[str] = ["résidents"]
-    statut: Optional[str] = None
+    statut: Optional[str] = "publie"
     brouillon: bool = False
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False

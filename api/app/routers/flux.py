@@ -288,7 +288,7 @@ def get_flux(
             badges.append("📌 Épinglé")
         if p.urgente:
             badges.append("🔴 Urgent")
-        if p.statut:
+        if p.statut and p.statut != "publie":
             labels = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
             badges.append(labels.get(p.statut, p.statut))
         auteur = _auteur_nom(session, p.auteur_id)
