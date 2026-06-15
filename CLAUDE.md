@@ -207,6 +207,17 @@ const icon = '\u{1F6E0}'; // 🔧
 - [ ] `docs/manuel-utilisateur.html` mis à jour dans le même commit
 - [ ] Synchronisé : `Copy-Item docs/manuel-utilisateur.html front/static/manuel-utilisateur.html`
 
+### Tests préventifs (CI : `api/tests/`, lancés à chaque PR)
+Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
+- **`test_email_templates.py`** — verrouille les variables Jinja2 de chaque template
+  (`EXPECTED_VARS`). Complète le **point 9** (réactif) côté template.
+  ⚠️ Si tu modifies les variables d'un template (`seed.EMAIL_TEMPLATES`), **mets à jour
+  `EXPECTED_VARS`** ET vérifie que le `send_email(code=...)` correspondant fournit ces
+  variables — sinon échec silencieux à l'envoi (cf. bug `'destinataire' is undefined`).
+- **`test_migrations.py`** — chaîne Alembic : head unique, base unique, révisions uniques
+  (attrape un `down_revision` erroné qui bloquerait `alembic upgrade head` au démarrage).
+- Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
+
 ---
 
 ## Infrastructure & Monitoring
