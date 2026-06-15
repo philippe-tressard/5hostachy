@@ -288,10 +288,18 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
 | 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` lancés par cron |
 | 8 | Logs cron sans échec récent | `tail -20 /var/log/hostachy-{deploy,bascule,health-watch,maintenance,check}.log` sur les 2 RPi | Aucune ligne `Permission denied` / `No such file` / `command not found` / erreur répétée |
+| 9 | Emails sans échec récent | `historique_email` : `statut='erreur'` sur 7 j (cf. requête ci-dessous) | 0 ligne |
+
+**Point 9 — requête** (sur le RPi actif) :
+```bash
+docker exec -w /app hostachy_api python3 -c "from app.database import engine; from sqlalchemy import text; c=engine.connect(); rows=c.execute(text(\"SELECT code, COUNT(*), MAX(cree_le) FROM historique_email WHERE statut='erreur' AND cree_le >= datetime('now','-7 days') GROUP BY code\")).all(); print('\n'.join(f'{r[0]}: {r[1]} (dernier {r[2]})' for r in rows) or 'OK — aucune erreur'); c.close()"
+```
 
 **Point 7 — pourquoi :** un script peut perdre son bit d'exécution sans prévenir (ex. `auto-deploy.sh` le 21/04 → `Permission denied` silencieux dans le cron pendant des semaines, empêchant le déploiement automatique de v2.18.11). Vérifier en particulier `auto-deploy.sh`, `bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`, `check-stack.sh`. Si un bit `x` manque : `chmod +x <script>` sur le(s) RPi concerné(s).
 
 **Point 8 — pourquoi :** le point 7 ne couvre que **la cause** déjà rencontrée (perte du bit `x`). Le point 8 détecte **le symptôme** quelle qu'en soit la cause (droits, chemin déplacé, faute de syntaxe, dépendance manquante…) en inspectant directement les logs produits par les crons — c'est ce qui aurait permis de détecter le problème `auto-deploy.sh` dès sa première occurrence le 21/04, au lieu d'attendre 7 semaines. Si une erreur récurrente apparaît → diagnostiquer la cause (pas seulement les droits) avant de poursuivre la MEP.
+
+**Point 9 — pourquoi :** les emails partent en `BackgroundTask` et échouent **silencieusement** — l'erreur n'apparaît que dans la table `historique_email`, jamais dans les logs API ni à l'écran. La même cause racine (un template Jinja2 référence une variable absente du contexte du point d'appel → `UndefinedError`) s'est produite deux fois en 12 jours : `reinitialisation_mdp` le 03/06 (`destinataire.prenom` manquant) puis `ticket_statut_change` le 15/06 (même variable). Dans les deux cas, découvert seulement après un signalement utilisateur « je ne reçois pas mes mails ». Comme le point 8, ce point lit **le symptôme** quelle qu'en soit la cause (contexte template, SMTP HS, adresse invalide, domaine `.local` filtré…). Si une ligne `erreur` apparaît → ouvrir le template et le contexte du point d'appel (`send_email(code=...)`), vérifier que toute variable `{{ x.y }}` du template est fournie ; aligner sur un template voisin qui fonctionne (ex. `verification_email`).
 
 **Protocole si anomalie :**
 1. Diagnostiquer la cause
