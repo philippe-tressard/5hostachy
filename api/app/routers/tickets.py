@@ -409,10 +409,10 @@ def list_relance_syndic(
     session: Session = Depends(get_session),
     _user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Retourne tous les tickets adressés au syndic, non résolus/annulés/fermés
-    et non tagués non_relancable, avec le délai de relance configuré.
-    Le frontend distingue les tickets éligibles (passé le délai) des candidats
-    (pas encore au délai)."""
+    """Retourne tous les tickets ouverts susceptibles de relance syndic :
+    non résolus/annulés/fermés, hors catégorie « bug » (technique/site, du
+    ressort admin), et non tagués non_relancable. Le frontend distingue les
+    tickets éligibles (passé le délai) des candidats (pas encore au délai)."""
     cfg_delai = session.exec(
         select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
     ).first()
@@ -420,7 +420,7 @@ def list_relance_syndic(
 
     tickets = session.exec(
         select(Ticket).where(
-            Ticket.destinataire_syndic == True,
+            Ticket.categorie != "bug",
             Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
             Ticket.non_relancable == False,
         ).order_by(Ticket.mis_a_jour_le)
@@ -451,8 +451,8 @@ def envoyer_relance_syndic(
         t = session.get(Ticket, tid)
         if not t:
             raise HTTPException(404, f"Ticket {tid} introuvable")
-        if not t.destinataire_syndic:
-            raise HTTPException(422, f"Ticket {tid} non adressé au syndic")
+        if t.categorie == "bug":
+            raise HTTPException(422, f"Ticket {tid} (catégorie bug) non concerné par la relance syndic")
         tickets_relance.append(t)
 
     cfg_rows = session.exec(
@@ -479,6 +479,9 @@ def envoyer_relance_syndic(
         )
         session.add(evol)
         ticket.mis_a_jour_le = now
+        # Relancer un ticket l'escalade au syndic (utile pour ceux pas encore
+        # explicitement adressés au syndic) → cohérence avec le mail envoyé.
+        ticket.destinataire_syndic = True
         session.add(ticket)
 
     session.flush()
