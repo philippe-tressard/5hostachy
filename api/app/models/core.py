@@ -457,8 +457,8 @@ class Publication(SQLModel, table=True):
     image_url: Optional[str] = None
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
     public_cible: Optional[str] = Field(default='["résidents"]')     # JSON: résidents|locataires|copropriétaires
-    # statut : en_cours | resolu | annule | None
-    statut: Optional[str] = None
+    # statut : publie (défaut, hors workflow) | en_cours | resolu | annule
+    statut: Optional[str] = "publie"
     statut_change_le: Optional[datetime] = None
     brouillon: bool = False
     archivee: bool = False

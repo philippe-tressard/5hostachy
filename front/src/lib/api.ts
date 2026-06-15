@@ -207,7 +207,7 @@ export interface Publication {
 	mis_a_jour_le?: string;
 	perimetre_cible: string[];
 	public_cible: string[];
-	statut?: 'en_cours' | 'resolu' | 'annule' | null;
+	statut?: 'publie' | 'en_cours' | 'resolu' | 'annule' | null;
 	statut_change_le?: string | null;
 	brouillon: boolean;
 	partager_whatsapp?: boolean;
