@@ -31,6 +31,31 @@ jobs:
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 
+  # ── Backend: tests préventifs (templates email + migrations) ─
+  test-backend:
+    name: Tests Python (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: api
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run pytest
+        working-directory: api
+        run: pytest tests/ -q
+        env:
+          SECRET_KEY: ci-secret-key-placeholder-0123456789abcdef
+          DATABASE_URL: sqlite:///:memory:
+
   # ── Frontend: vérification build SvelteKit ───────────────────
   build-frontend:
     name: Build SvelteKit
