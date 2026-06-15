@@ -53,8 +53,8 @@ jobs:
         working-directory: api
         run: pytest tests/ -q
         env:
-          SECRET_KEY: ci-secret-key-placeholder-0123456789abcdef
-          DATABASE_URL: sqlite:///:memory:
+          SECRET_KEY: "ci-secret-key-placeholder-0123456789abcdef"
+          DATABASE_URL: "sqlite:///:memory:"
 
   # ── Frontend: vérification build SvelteKit ───────────────────
   build-frontend:
