@@ -4,7 +4,7 @@
 #
 #  Exécuté par cron à 02:00 sur le RPi ACTUELLEMENT ACTIF.
 #  Séquence :
-#    0. Pre-flight : peer joignable, espace disque, DB locale saine
+#    0. Pre-flight : peer joignable, espace disque, parité de code peer⇆actif
 #    1. Sync uploads + WhatsApp auth à chaud (prod toujours UP)
 #    2. Stop conteneurs locaux
 #    3. WAL checkpoint + integrity check DB locale
@@ -172,6 +172,32 @@ log "  → Peer en état standby."
 # Poser un lock sur le peer : empêche auto-deploy de relancer les conteneurs pendant la bascule
 run "$SSH_CMD ptressard@$PEER_IP 'touch /opt/5hostachy/.bascule-lock'"
 log "  → Lock bascule posé sur le peer."
+
+# Parité de code peer ⇆ actif (AVANT toute opération destructive).
+# auto-deploy.sh ne tourne que sur le RPi actif → le code du standby dérive
+# derrière la DB. Si l'actif a appliqué une migration (ex. 0111) absente du code
+# du peer, le démarrage peer en phase 5 plante (`alembic upgrade head` →
+# "Can't locate revision") → bascule HS. On resynchronise le code du peer sur le
+# commit de l'actif (git + rebuild image) tant que la prod tourne encore ici.
+if ! $DRY_RUN; then
+  LOCAL_HEAD=$(git -C "$REPO" rev-parse HEAD)
+  PEER_HEAD=$($SSH_CMD ptressard@"$PEER_IP" "git -C /opt/5hostachy rev-parse HEAD 2>/dev/null" 2>/dev/null || echo "unknown")
+  if [ "$PEER_HEAD" != "$LOCAL_HEAD" ]; then
+    log "  ⚠ Code peer désynchronisé (peer=${PEER_HEAD:0:7}, actif=${LOCAL_HEAD:0:7}) — resynchronisation..."
+    if $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && git fetch origin main --quiet && git reset --hard $LOCAL_HEAD && docker compose build --quiet" ; then
+      log "  → Code peer resynchronisé sur ${LOCAL_HEAD:0:7} (images rebuildées)."
+    else
+      log "ERREUR: échec resynchronisation code peer — bascule annulée (prod intacte, aucun conteneur stoppé)."
+      $SSH_CMD ptressard@"$PEER_IP" "rm -f /opt/5hostachy/.bascule-lock" 2>/dev/null || true
+      send_alert_email "0-sync-code-peer"
+      exit 1
+    fi
+  else
+    log "  → Parité de code peer OK (${LOCAL_HEAD:0:7})."
+  fi
+else
+  drylog "Vérification parité code peer (git rev-parse + reset --hard + build si écart)"
+fi
 
 # ── Phase 1 : Sync à chaud (uploads + WA, PAS la DB) ────────────────
 log "[1/7] Sync uploads + WhatsApp auth (à chaud)..."
