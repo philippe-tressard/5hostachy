@@ -180,7 +180,16 @@ log "  → Lock bascule posé sur le peer."
 # "Can't locate revision") → bascule HS. On resynchronise le code du peer sur le
 # commit de l'actif (git + rebuild image) tant que la prod tourne encore ici.
 if ! $DRY_RUN; then
-  LOCAL_HEAD=$(git -C "$REPO" rev-parse HEAD)
+  # `git -c safe.directory` : ce script tourne en cron root, mais le repo
+  # appartient à ptressard → sans cette option, git refuse ("dubious ownership")
+  # et `set -e` avorte la bascule en phase 0 (lock laissé sur le peer). Cf. 17/06/2026.
+  LOCAL_HEAD=$(git -c safe.directory="$REPO" -C "$REPO" rev-parse HEAD 2>/dev/null || echo "")
+  if [ -z "$LOCAL_HEAD" ]; then
+    log "ERREUR: impossible de lire le HEAD local ($REPO) — bascule annulée (prod intacte)."
+    $SSH_CMD ptressard@"$PEER_IP" "rm -f /opt/5hostachy/.bascule-lock" 2>/dev/null || true
+    send_alert_email "0-head-local-illisible"
+    exit 1
+  fi
   PEER_HEAD=$($SSH_CMD ptressard@"$PEER_IP" "git -C /opt/5hostachy rev-parse HEAD 2>/dev/null" 2>/dev/null || echo "unknown")
   if [ "$PEER_HEAD" != "$LOCAL_HEAD" ]; then
     log "  ⚠ Code peer désynchronisé (peer=${PEER_HEAD:0:7}, actif=${LOCAL_HEAD:0:7}) — resynchronisation..."
