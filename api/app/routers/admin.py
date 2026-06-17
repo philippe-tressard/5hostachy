@@ -430,6 +430,43 @@ def telemetry_history(
     ).all()
 
 
+# ── Base de données — opérations sûres in-process ─────────────────────────────
+# IMPORTANT : checkpoint et integrity_check doivent passer par CES endpoints
+# (exécutés dans le process API, qui détient déjà la base en WAL) et JAMAIS par un
+# process séparé type `docker exec ... python PRAGMA wal_checkpoint(TRUNCATE)` ni
+# `sqlite3` hôte tant que l'API tourne : la mutation concurrente du fichier WAL
+# depuis un process tiers a corrompu telemetry_event les 05 et 17/06/2026.
+# Pour une opération qui réécrit le fichier (VACUUM, copie/swap), STOPPER l'API.
+
+@router.post("/db/checkpoint")
+def db_checkpoint(_: Utilisateur = Depends(require_admin)):
+    """WAL checkpoint (TRUNCATE) exécuté dans le process API — sûr, sans process tiers."""
+    from sqlalchemy import text
+    from app.database import engine
+    with engine.connect() as conn:
+        row = conn.execute(text("PRAGMA wal_checkpoint(TRUNCATE)")).first()
+        conn.commit()
+    busy, log_frames, checkpointed = (row or (None, None, None))
+    return {
+        "busy": busy, "log_frames": log_frames, "checkpointed": checkpointed,
+        "ok": busy == 0,
+    }
+
+
+@router.get("/db/integrite")
+def db_integrite(_: Utilisateur = Depends(require_admin)):
+    """PRAGMA quick_check in-process — vérifie l'intégrité de la base."""
+    from sqlalchemy import text
+    from app.database import engine
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text("PRAGMA quick_check")).first()
+        verdict = row[0] if row else "(aucun résultat)"
+    except Exception as exc:
+        verdict = f"quick_check a échoué : {exc}"
+    return {"verdict": verdict, "ok": verdict == "ok"}
+
+
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
 from app.models.core import ModeleEmail

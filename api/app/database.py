@@ -20,11 +20,14 @@ engine = create_engine(
 SessionLocal = lambda: Session(engine)
 
 # WAL mode : lectures et écritures concurrentes sans blocage mutuel
-# synchronous=NORMAL : sûr en WAL, bien plus rapide que FULL sur SD card
+# synchronous=FULL : chaque commit est fsync'd intégralement (WAL + en-tête).
+#   NORMAL était plus rapide mais laisse une fenêtre de torn-write sur coupure/
+#   arrêt brutal ; sur une copro à faible trafic le surcoût est négligeable et la
+#   durabilité prime (cf. corruptions récurrentes telemetry_event 05+17/06/2026).
 # busy_timeout=5000 : attend jusqu'à 5s si la DB est verrouillée au lieu d'échouer immédiatement
 with engine.connect() as _conn:
     _conn.execute(text("PRAGMA journal_mode=WAL"))
-    _conn.execute(text("PRAGMA synchronous=NORMAL"))
+    _conn.execute(text("PRAGMA synchronous=FULL"))
     _conn.execute(text("PRAGMA busy_timeout=5000"))
     _conn.commit()
 

@@ -43,6 +43,27 @@ def run_backup(history_id: int | None = None):
                 with engine.connect() as _conn:
                     _conn.execute(text("PRAGMA wal_checkpoint(FULL)"))
 
+                # Validation d'intégrité AVANT de sauvegarder : ne jamais écraser
+                # les backups sains (rotation) par un snapshot d'une base corrompue.
+                # Cf. corruption telemetry_event du 17/06/2026 : le backup de 01:00
+                # contenait déjà la table malformée, devenu inutilisable.
+                try:
+                    with engine.connect() as _conn:
+                        verdict_row = _conn.execute(text("PRAGMA quick_check")).first()
+                    verdict = verdict_row[0] if verdict_row else "(aucun résultat)"
+                except Exception as exc:
+                    verdict = f"quick_check a échoué : {exc}"
+                if verdict != "ok":
+                    entry.statut = StatutSauvegarde.echouee
+                    entry.message_erreur = (
+                        f"Sauvegarde annulée — base corrompue (quick_check : {verdict}). "
+                        f"Backups sains préservés (pas de rotation)."
+                    )
+                    entry.terminee_le = datetime.utcnow()
+                    session.add(entry)
+                    session.commit()
+                    return
+
             with tarfile.open(dest, "w:gz") as tar:
                 if os.path.exists(db_path):
                     tar.add(db_path, arcname="app.db")

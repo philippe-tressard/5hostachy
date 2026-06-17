@@ -114,6 +114,36 @@ def _check_disk() -> list[str]:
     return issues
 
 
+def _check_db_integrity() -> list[str]:
+    """Vérifie l'intégrité de la base SQLite (PRAGMA quick_check).
+
+    Exécuté DANS le process API (même connexion que l'app) → aucun accès
+    multi-process. Détecte tôt une corruption (ex. telemetry_event 17/06/2026,
+    découverte seulement par l'échec du job d'agrégation) au lieu d'attendre
+    un signalement utilisateur.
+    """
+    from sqlalchemy import text
+    from app.database import engine
+
+    issues: list[str] = []
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("PRAGMA quick_check")).first()
+        verdict = res[0] if res else "(aucun résultat)"
+        if verdict != "ok":
+            issues.append(
+                f"Intégrité base CORROMPUE (PRAGMA quick_check : « {verdict} »). "
+                f"Récupération requise (.recover) — voir CLAUDE.md → corruption DB."
+            )
+    except Exception as exc:
+        # quick_check lui-même peut lever si la corruption est sévère
+        issues.append(
+            f"Intégrité base : quick_check a échoué ({exc}). "
+            f"Base probablement corrompue — récupération requise (.recover)."
+        )
+    return issues
+
+
 def _send_alert(to: str, issues: list[str], session: Session) -> None:
     """Envoie l'email d'alerte système avec le gabarit HTML du site."""
     import smtplib
@@ -227,6 +257,7 @@ def run_health_check() -> None:
     session = SessionLocal()
     try:
         issues: list[str] = []
+        issues += _check_db_integrity()
         issues += _check_whatsapp(session)
         issues += _check_backups(session)
         issues += _check_disk()
