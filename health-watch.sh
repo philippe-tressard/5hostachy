@@ -18,8 +18,27 @@ PUBLIC_URL="https://5hostachy.fr/api/health"
 ALERT_EMAIL="ptressard@icloud.com"
 COOLDOWN_FILE="/tmp/health-watch-cooldown"
 COOLDOWN_SECONDS=1800   # 30 min entre deux alertes email pour éviter le spam
+LOCK_MAX_AGE_S=900      # 15 min : au-delà, .bascule-lock est considéré orphelin
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+# Déploiement/bascule réellement en cours ? .bascule-lock est posé par bascule.sh
+# et MaJ-Hostachy.sh. MAIS si la machine gèle/reboote pendant (cas du 17/06 : rpi2
+# bloqué pendant la MAJ, reboot manuel), le trap de nettoyage ne s'exécute jamais →
+# lock orphelin dans $REPO (persiste au reboot) → health-watch ne basculerait PLUS
+# JAMAIS. On le rend donc auto-expirant : au-delà de LOCK_MAX_AGE_S, on l'ignore
+# et on le supprime (bascule ~40s, MAJ ~2-5 min → 15 min = forcément orphelin).
+deploy_in_progress() {
+    local f="$REPO/.bascule-lock"
+    [ -f "$f" ] || return 1
+    local age=$(( $(date +%s) - $(stat -c %Y "$f" 2>/dev/null || echo 0) ))
+    if [ "$age" -gt "$LOCK_MAX_AGE_S" ]; then
+        log "  ⚠ .bascule-lock orphelin (âge ${age}s > ${LOCK_MAX_AGE_S}s) — ignoré + supprimé (MAJ/bascule interrompue ?). Failover autorisé."
+        rm -f "$f"
+        return 1
+    fi
+    return 0
+}
 
 # ── Identité de ce RPi ───────────────────────────────────────────────────────
 CUR_HOSTNAME=$(hostname)
@@ -41,6 +60,17 @@ if ! exec 9>"$LOCK_FILE" 2>/dev/null; then
 fi
 chmod 666 "$LOCK_FILE" 2>/dev/null || true   # accessible root ET ptressard pour les prochains runs
 flock -n 9 || { log "Autre instance en cours — abandon."; exit 0; }
+
+# ── Nettoyage proactif d'un .bascule-lock orphelin (même site UP) ────────────
+# Un lock laissé par une MAJ/bascule interrompue (reboot) bloquerait aussi
+# auto-deploy.sh indéfiniment. On le purge dès qu'il dépasse LOCK_MAX_AGE_S.
+if [ -f "$REPO/.bascule-lock" ]; then
+    _lock_age=$(( $(date +%s) - $(stat -c %Y "$REPO/.bascule-lock" 2>/dev/null || echo 0) ))
+    if [ "$_lock_age" -gt "$LOCK_MAX_AGE_S" ]; then
+        log "⚠ .bascule-lock orphelin (âge ${_lock_age}s) — suppression proactive (MAJ/bascule interrompue ?)."
+        rm -f "$REPO/.bascule-lock"
+    fi
+fi
 
 # ── Check URL publique ────────────────────────────────────────────────────────
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
@@ -112,8 +142,8 @@ alert_if_not_in_cooldown() {
 # .bascule-lock est posé par bascule.sh ET par MaJ-Hostachy.sh : pendant un
 # déploiement, l'API est brièvement down (rebuild) → sans ce garde-fou le standby
 # basculait et créait un split-brain (incident du 17/06/2026).
-if [ -f "$REPO/.bascule-lock" ]; then
-    log "  Bascule/déploiement en cours (.bascule-lock présent) — pas d'intervention."
+if deploy_in_progress; then
+    log "  Bascule/déploiement en cours (.bascule-lock récent) — pas d'intervention."
     exit 0
 fi
 
@@ -130,7 +160,7 @@ fi
 log "  Standby $SELF surveille. Vérification secondaire dans 30s..."
 sleep 30
 # Re-tester le lock de bascule/déploiement : il a pu être posé pendant l'attente.
-if [ -f "$REPO/.bascule-lock" ]; then
+if deploy_in_progress; then
     log "  Bascule/déploiement détecté pendant l'attente — pas d'intervention."
     exit 0
 fi
