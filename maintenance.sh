@@ -292,7 +292,9 @@ log "[4b/5] Rotation des logs host..."
 for LOGFILE in \
     /var/log/hostachy-maintenance.log \
     /var/log/hostachy-deploy.log \
-    /var/log/hostachy-check.log; do
+    /var/log/hostachy-check.log \
+    /var/log/hostachy-health-watch.log \
+    /var/log/hostachy-bascule.log; do
     if [ -f "$LOGFILE" ]; then
         LINES_BEFORE=$(wc -l < "$LOGFILE")
         tail -1000 "$LOGFILE" > "${LOGFILE}.tmp" && mv "${LOGFILE}.tmp" "$LOGFILE"
