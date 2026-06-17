@@ -203,57 +203,62 @@ with engine.connect() as c:
 rm -f "$MAINT_ERR1E"
 log "  → $DELETED_EMAILS entrée(s) supprimée(s)"
 
-# --- 2. VACUUM SQLite ----------------------------------------------------------
-# VACUUM ne peut pas s'exécuter dans une transaction : isolation_level AUTOCOMMIT obligatoire
-log "[2/5] VACUUM SQLite..."
+# --- 2. Nettoyages applicatifs (API live — DELETE multi-process = sûr en WAL) ---
+log "[2/5] Nettoyages applicatifs (logs WhatsApp, évolutions archivées >90j)..."
 MAINT_ERR2=$(mktemp)
 docker exec hostachy_api python -c "
 from app.database import engine
-from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
-
-with engine.execution_options(isolation_level='AUTOCOMMIT').connect() as c:
-    c.execute(text('VACUUM'))
-    print('OK')
-    
-    # Nettoyage des logs WhatsApp anciens (garder seulement 6 messages)
-    from app.models.core import WhatsAppLog
-    from sqlmodel import Session, select
-    with Session(engine) as s:
-        all_logs = s.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())).all()
-        if len(all_logs) > 6:
-            for old in all_logs[6:]:
-                s.delete(old)
-            s.commit()
-    
-    # Nettoyage des évolutions de publications anciennes (archivage après 90 jours)
-    from app.models.core import PublicationEvolution
+from app.models.core import WhatsAppLog, PublicationEvolution
+from sqlmodel import Session, select
+with Session(engine) as s:
+    all_logs = s.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())).all()
+    for old in all_logs[6:]:
+        s.delete(old)
     cutoff = datetime.now(timezone.utc) - timedelta(days=90)
-    with Session(engine) as s:
-        old_evols = s.exec(
-            select(PublicationEvolution).where(PublicationEvolution.cree_le < cutoff)
-        ).all()
-        for evol in old_evols:
-            s.delete(evol)
-        if old_evols:
-            s.commit()
+    for evol in s.exec(select(PublicationEvolution).where(PublicationEvolution.cree_le < cutoff)).all():
+        s.delete(evol)
+    s.commit()
+print('OK')
 " 2>"$MAINT_ERR2" \
-    && log "  → VACUUM et nettoyage complétés" \
+    && log "  → nettoyages complétés" \
     || {
-        ERREUR_VACUUM=$(cat "$MAINT_ERR2")
-        log "  ERREUR VACUUM : $ERREUR_VACUUM"
+        ERREUR_CLEAN=$(cat "$MAINT_ERR2")
+        log "  ERREUR nettoyages : $ERREUR_CLEAN"
         GLOBAL_STATUT="erreur"
-        GLOBAL_ERREUR="${GLOBAL_ERREUR:+$GLOBAL_ERREUR | }VACUUM: $ERREUR_VACUUM"
+        GLOBAL_ERREUR="${GLOBAL_ERREUR:+$GLOBAL_ERREUR | }nettoyages: $ERREUR_CLEAN"
     }
 rm -f "$MAINT_ERR2"
 
-# --- 2b. Redémarrage API après VACUUM (refresh obligatoire du pool SQLAlchemy) ---
-# SQLite VACUUM reconstruit le fichier DB et change son inode. Tout file descriptor
-# ouvert par le pool de connexions SQLAlchemy pointe alors vers un inode orphelin
-# → disk I/O error sur toutes les requêtes SQL suivantes. Le seul remède est de
-# forcer le pool à se recréer en redémarrant le conteneur API.
-log "[2b/5] Redémarrage API post-VACUUM (refresh pool SQLAlchemy)..."
-docker restart hostachy_api >/dev/null
+# --- 2b. VACUUM SQLite sur base AU REPOS (API stoppée = 0 writer concurrent) ----
+# Une VACUUM réécrit l'intégralité du fichier. La lancer depuis un process tiers
+# (`docker exec`) pendant que l'API écrit (la télémétrie insère à chaque page vue)
+# corrompt la base — telemetry_event malformée les 05 et 17/06/2026. On stoppe donc
+# l'API d'abord, exactement comme bascule.sh phase 3 et la procédure de récupération :
+# 0 writer concurrent → VACUUM sûr. On enchaîne un quick_check de contrôle.
+log "[2b/5] VACUUM SQLite (API stoppée, base au repos)..."
+MAINT_ERR2B=$(mktemp)
+DB_DIR=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}' 2>/dev/null)
+if [ -n "$DB_DIR" ] && [ -f "$DB_DIR/app.db" ] && command -v sqlite3 >/dev/null 2>&1; then
+    docker stop hostachy_api >/dev/null 2>&1 || true
+    if sqlite3 "$DB_DIR/app.db" "PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA quick_check;" >"$MAINT_ERR2B" 2>&1 \
+       && grep -qx 'ok' "$MAINT_ERR2B"; then
+        chown 1000:1000 "$DB_DIR/app.db" 2>/dev/null || true
+        log "  → VACUUM OK (quick_check : ok)"
+    else
+        log "  ERREUR VACUUM : $(cat "$MAINT_ERR2B")"
+        GLOBAL_STATUT="erreur"
+        GLOBAL_ERREUR="${GLOBAL_ERREUR:+$GLOBAL_ERREUR | }VACUUM: $(cat "$MAINT_ERR2B")"
+    fi
+    docker start hostachy_api >/dev/null 2>&1 \
+        || (cd "$REPO" && docker compose up -d api >/dev/null 2>&1) || true
+else
+    log "  ⚠ VACUUM ignorée (volume/sqlite3 introuvable : DB_DIR='$DB_DIR')"
+fi
+rm -f "$MAINT_ERR2B"
+
+# --- 2c. Attente readiness API après redémarrage -------------------------------
+log "[2c/5] Attente API..."
 API_OK=false
 for i in $(seq 1 20); do
     if curl -sf http://localhost/api/health >/dev/null 2>&1; then
@@ -263,7 +268,7 @@ for i in $(seq 1 20); do
     sleep 2
 done
 if $API_OK; then
-    log "  → API opérationnelle après redémarrage"
+    log "  → API opérationnelle"
 else
     log "  ⚠ API non joignable après 40s — vérifier manuellement"
     GLOBAL_STATUT="erreur"

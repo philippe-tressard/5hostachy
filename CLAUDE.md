@@ -234,6 +234,20 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
 - `PRAGMA wal_checkpoint(TRUNCATE)` dans le lifespan shutdown → WAL vidé proprement à chaque arrêt
 - `bascule.sh` phase 3 : WAL checkpoint avant rsync DB vers le peer
 - `MaJ-Hostachy.sh` : bloque si lancé sur le RPi standby
+- `synchronous=FULL` (v2.20.3) : chaque commit fsync'd intégralement (anti torn-write)
+- `health_check` 06:00 + chaque backup : `PRAGMA quick_check` → alerte / backup annulé si corrompu
+- `maintenance.sh` VACUUM : **API stoppée** (base au repos, 0 writer) puis `sqlite3` hôte
+
+### ⚠️ Règle d'or anti-corruption DB (v2.20.3)
+**Ne JAMAIS muter le fichier `app.db` depuis un process tiers tant que l'API tourne.**
+La base est en WAL : un checkpoint `TRUNCATE`, une VACUUM ou une copie/rebuild lancés
+depuis un **autre process** (`docker exec … python PRAGMA …`, `sqlite3` hôte) pendant que
+l'API live écrit (la télémétrie insère à chaque page vue) corrompt la base. Cause racine
+des corruptions `telemetry_event` des 05 et 17/06/2026 (cf. [[project_db_corruption_telemetry]]).
+- Checkpoint / intégrité à chaud → endpoints **in-process** : `POST /admin/db/checkpoint`,
+  `GET /admin/db/integrite` (s'exécutent dans le process uvicorn = même connexion que l'app).
+- VACUUM / copie / swap de fichier → **stopper l'API d'abord** (0 writer), comme bascule phase 3.
+- Lecture seule (`SELECT`, `PRAGMA integrity_check`) via `docker exec` = OK (ne mute rien).
 
 ### Risques connus
 - **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
@@ -242,10 +256,15 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
 - **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
 
 ### Sync DB manuelle (sans basculer)
+⚠️ Copier `app.db` pendant que l'API écrit = copie potentiellement déchirée. On stoppe
+l'API le temps de la copie (≈ qq s) → fichier cohérent garanti (cf. règle d'or ci-dessus).
 ```bash
-# Depuis le RPi actif — exporte et transfère la DB vers le standby
-docker exec -w /app hostachy_api python3 -c "from app.database import engine; from sqlalchemy import text; c=engine.connect(); c.execute(text('PRAGMA wal_checkpoint(TRUNCATE)')); c.commit()"
-docker cp hostachy_api:/app/data/app.db /tmp/app_sync.db
+# Depuis le RPi actif — base au repos pour une copie cohérente
+DB_DIR=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
+docker stop hostachy_api
+sqlite3 "$DB_DIR/app.db" "PRAGMA wal_checkpoint(TRUNCATE);"   # vide le WAL
+cp "$DB_DIR/app.db" /tmp/app_sync.db
+cd /opt/5hostachy && docker compose up -d api                  # API repart immédiatement
 scp /tmp/app_sync.db ptressard@<PEER_IP>:/tmp/app_sync.db
 # Sur le standby :
 docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db alpine sh -c 'cp /tmp/app_sync.db /data/app.db && rm -f /data/app.db-wal /data/app.db-shm'
