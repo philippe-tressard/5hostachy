@@ -47,6 +47,15 @@ else
     exit 1
 fi
 
+# 0b. Garde-fou anti-failover pendant la MAJ
+# Pendant le rebuild, l'API est brièvement down → sans ce verrou, health-watch sur
+# le standby détecte le 503 et bascule, créant un split-brain (incident du 17/06/2026).
+# health-watch.sh et bascule.sh respectent .bascule-lock → aucune intervention tant
+# qu'il est présent. Le trap EXIT le retire quoi qu'il arrive (succès, erreur, set -e).
+touch "$REPO/.bascule-lock"
+trap 'rm -f "$REPO/.bascule-lock"' EXIT
+echo "[$LOG_DATE] 🔒 .bascule-lock posé — health-watch ne basculera pas pendant la MAJ."
+
 # 1. Synchronisation git
 cd "$REPO"
 echo "[$LOG_DATE] Récupération des derniers commits depuis GitHub..."
