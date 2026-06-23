@@ -391,6 +391,14 @@ grep -q '^COOKIE_SECURE=' "$REPO/.env" || echo 'COOKIE_SECURE=false' >> "$REPO/.
 run "echo $PEER > $FLAG"
 run "$SSH_CMD ptressard@$PEER_IP 'echo $PEER > /opt/5hostachy/.active'"
 
+# Invariant cloudflared : nouvel actif (peer) = enabled (survit au reboot),
+# nouveau standby (self) = disabled (pas d'auto-start au boot → pas de split-brain).
+# Placé en phase 7 (après `trap - ERR`) : la bascule est committée, aucun rollback
+# ne viendra ré-inverser ces états. Sans ça, l'invariant dérive à chaque bascule
+# (les rôles s'échangent mais pas le enable/disable) — cause racine du 23/06/2026.
+run "$SSH_CMD ptressard@$PEER_IP 'sudo systemctl enable cloudflared'"
+run "sudo systemctl disable cloudflared"
+
 # Supprimer le lock bascule sur le peer (la bascule est terminée)
 run "$SSH_CMD ptressard@$PEER_IP 'rm -f /opt/5hostachy/.bascule-lock'"
 log "  → Lock bascule supprimé sur le peer."

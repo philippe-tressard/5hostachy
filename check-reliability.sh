@@ -47,7 +47,7 @@ echo "cf_enabled=$(systemctl is-enabled cloudflared 2>/dev/null)"
 echo "head=$(git -C $R rev-parse --short HEAD 2>/dev/null)"
 echo "origin_head=$(git -C $R rev-parse --short origin/main 2>/dev/null)"
 echo "git_root_ok=$(git -C $R rev-parse HEAD >/dev/null 2>&1 && echo yes || echo no)"
-BITS=ok; for s in bascule.sh health-watch.sh maintenance.sh auto-deploy.sh MaJ-Hostachy.sh check-reliability.sh; do [ -f "$R/$s" ] && [ ! -x "$R/$s" ] && BITS="manque:$s"; done
+BITS=ok; for s in bascule.sh health-watch.sh maintenance.sh auto-deploy.sh MaJ-Hostachy.sh check-reliability.sh boot-role-guard.sh; do [ -f "$R/$s" ] && [ ! -x "$R/$s" ] && BITS="manque:$s"; done
 echo "exec_bits=$BITS"
 echo "disk=$(df / | awk "NR==2{print \$5}" | tr -d %)"
 echo "ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
