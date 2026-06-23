@@ -6,9 +6,13 @@ ENV VITE_GIT_HASH=$GIT_HASH
 ENV VITE_INSTANCE_ID=$INSTANCE_ID
 
 WORKDIR /app
-COPY package.json ./
+# Lockfile COPIÉ + `npm ci` : build DÉTERMINISTE (versions figées par package-lock.json).
+# Avant : `COPY package.json` seul + `npm install` re-résolvait les `^` vers les dernières
+# versions à chaque build → un build propre cassait (vite-plugin-pwa 1.3.0) alors qu'un cache
+# ancien passait. Cause des échecs silencieux de build front (cf. 23/06/2026).
+COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --legacy-peer-deps
+    npm ci --legacy-peer-deps
 
 COPY . .
 RUN npm run build
