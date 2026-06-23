@@ -183,6 +183,20 @@ sed -i "/^COOKIE_SECURE=/d" "$REPO/.env"
 
 docker compose up -d >> /dev/null 2>&1 && log "  → Conteneurs $SELF démarrés." || log "  ⚠ Échec démarrage conteneurs."
 sudo systemctl start cloudflared 2>/dev/null && log "  → Cloudflared $SELF démarré." || log "  ⚠ Échec démarrage cloudflared."
+# Nouvel actif = enabled → survit à un reboot (sinon health-watch laissait l'actif
+# en 'disabled' et l'ancien actif en 'enabled' → split-brain au reboot, cf 23/06/2026).
+sudo systemctl enable cloudflared 2>/dev/null && log "  → Cloudflared $SELF enabled." || log "  ⚠ Échec enable cloudflared."
+
+# Best-effort : démoter l'ancien actif s'il est (re)joignable (il est probablement
+# gelé/HS — d'où le failover — mais s'il répond, on évite qu'il reste 'enabled').
+# Le vrai backstop si gelé reste boot-role-guard.sh au prochain reboot de l'ancien actif.
+case "$ACTIVE" in rpi1) OLD_IP=192.168.1.222 ;; rpi2) OLD_IP=192.168.1.223 ;; *) OLD_IP="" ;; esac
+if [ -n "$OLD_IP" ]; then
+    ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no \
+        ptressard@"$OLD_IP" 'cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl disable --now cloudflared 2>/dev/null' \
+        >/dev/null 2>&1 && log "  → Ancien actif $ACTIVE démoté (cloudflared disabled + conteneurs stoppés)." \
+        || log "  ℹ Ancien actif $ACTIVE injoignable (normal s'il est gelé) — boot-role-guard prendra le relais à son reboot."
+fi
 
 echo "$SELF" > "$FLAG"
 log "  → Flag actif mis à jour : $SELF"
