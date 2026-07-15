@@ -15,13 +15,24 @@
 #    enabled/disabled quand le nœud démoté est JOIGNABLE ; ce garde est le
 #    backstop pour le cas où il était gelé/éteint pendant la démotion.
 #
-#  RÈGLE : la vérité = « qui sert réellement le public ». Si le PEER tourne
-#  (conteneurs + cloudflared actif), alors CE nœud doit être standby — quoi que
-#  dise son propre .active (qui peut être périmé s'il a gelé pendant un failover).
+#  CORRECTIF 15/07/2026 (coupure secteur des 2 RPi) :
+#    Au cold-boot simultané, le peer n'est pas encore joignable en SSH → l'ancien
+#    code tombait dans become_active en IGNORANT son propre .active → un standby
+#    pouvait ré-activer cloudflared (risque de double-actif). Désormais le .active
+#    LOCAL fait autorité : si mon flag désigne le peer comme actif, je RESTE
+#    standby même peer injoignable (il redémarre en parallèle ; sinon le
+#    health-watch de ce nœud standby me promouvra). Décision déterministe = jamais
+#    de double-actif quel que soit l'ordre de boot / la joignabilité SSH.
+#
+#  RÈGLE : la vérité = « qui sert réellement le public » (cas 1), puis le .active
+#  local persistant (qui était actif avant la coupure), puis un départage
+#  déterministe (primaire = rpi1) si les flags sont absents/ambigus.
 #
 #  Installation (one-shot, root, sur les 2 RPi) :
 #    cp /opt/5hostachy/systemd/hostachy-role-guard.service /etc/systemd/system/
 #    systemctl daemon-reload && systemctl enable hostachy-role-guard.service
+#
+#  Test de la logique de décision (sans effet de bord) : ./boot-role-guard.sh --selftest
 #
 #  Log : /var/log/hostachy-role-guard.log (via le service)
 # =============================================================================
@@ -33,6 +44,75 @@ FLAG="$REPO/.active"
 SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+# ── Décision (PURE — aucun effet de bord, testable) ──────────────────────────
+# Args : self peer local_active peer_reach peer_c peer_cf peer_act
+#   peer_reach : 0 = peer joignable en SSH, ≠0 = injoignable
+# Échoit : "active" ou "standby:<nom_actif>"
+decide() {
+  local self="$1" peer="$2" la="$3" peer_reach="$4" peer_c="${5:-0}" peer_cf="$6" peer_act="$7"
+
+  # Cas 1 — le peer SERT réellement (conteneurs + tunnel) → vérité terrain,
+  # on se retire quoi que dise notre .active (couvre le failover du 23/06).
+  if [ "${peer_c:-0}" -gt 0 ] && [ "$peer_cf" = "active" ]; then
+    echo "standby:$peer"; return
+  fi
+
+  # Cas 2 — mon .active local désigne le PEER comme actif → je RESTE standby,
+  # peer joignable OU NON (cold-boot : il redémarre en parallèle). Correctif
+  # du 15/07 : ne plus grab le rôle actif juste parce que le peer n'est pas
+  # encore joignable en SSH. Si le peer ne sert jamais, mon health-watch me
+  # promouvra (failover ~5-10 min).
+  if [ "$la" = "$peer" ]; then
+    echo "standby:$peer"; return
+  fi
+
+  # Cas 3 — mon .active me désigne actif → j'assume.
+  if [ "$la" = "$self" ]; then
+    echo "active"; return
+  fi
+
+  # Cas 4 — .active local absent/ambigu : suivre le flag du peer s'il est joignable.
+  if [ "$peer_reach" -eq 0 ] && [ "$peer_act" = "$self" ]; then
+    echo "active"; return
+  fi
+  if [ "$peer_reach" -eq 0 ] && [ "$peer_act" = "$peer" ]; then
+    echo "standby:$peer"; return
+  fi
+
+  # Cas 5 — indéterminé total (flags vides des 2 côtés, ou peer injoignable) →
+  # départage déterministe : primaire = rpi1 (jamais de double-actif).
+  if [ "$self" = "rpi1" ]; then echo "active"; else echo "standby:rpi1"; fi
+}
+
+# ── Self-test de decide() (aucun effet de bord) ──────────────────────────────
+if [ "${1:-}" = "--selftest" ]; then
+  fail=0
+  check() { # description attendu  self peer la reach c cf act
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(decide "$@")
+    if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+    else echo "FAIL  $desc  attendu=$exp obtenu=$got"; fail=1; fi
+  }
+  echo "== self-test boot-role-guard.decide =="
+  # Cold-boot coupure secteur, actif préalable = rpi1, peer PAS encore joignable :
+  check "coldboot actif=rpi1, rpi1, peer injoignable"   "active"        rpi1 rpi2 rpi1 1 0 ""       ""
+  check "coldboot actif=rpi1, rpi2, peer injoignable"   "standby:rpi1"  rpi2 rpi1 rpi1 1 0 ""       ""   # <-- bug du 15/07 corrigé
+  # Actif préalable = rpi2 :
+  check "actif=rpi2, rpi2 assume"                        "active"        rpi2 rpi1 rpi2 1 0 ""       ""
+  check "actif=rpi2, rpi1 défère"                        "standby:rpi2"  rpi1 rpi2 rpi2 1 0 ""       ""
+  # Peer sert réellement (truth on the ground) — prime sur mon flag périmé :
+  check "peer sert, mon flag dit SELF actif"             "standby:rpi2"  rpi1 rpi2 rpi1 0 4 active  rpi2
+  check "reboot standby, actif rpi1 sert"                "standby:rpi1"  rpi2 rpi1 rpi1 0 4 active  rpi1
+  # Flag local vide, peer joignable tranche :
+  check "flag vide, peer(joignable) dit self actif"      "active"        rpi1 rpi2 ""   0 0 inactive rpi1
+  check "flag vide, peer(joignable) dit peer actif"      "standby:rpi1"  rpi2 rpi1 ""   0 0 inactive rpi1
+  # Flag vide des 2 côtés + peer injoignable → primaire déterministe rpi1 :
+  check "flag vide, peer injoignable, rpi1 primaire"     "active"        rpi1 rpi2 ""   1 0 ""       ""
+  check "flag vide, peer injoignable, rpi2 défère"       "standby:rpi1"  rpi2 rpi1 ""   1 0 ""       ""
+  [ $fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
+  exit $fail
+fi
 
 case "$(hostname)" in
   PhT-RB5)   SELF="rpi1"; PEER="rpi2"; PEER_IP="192.168.1.223" ;;
@@ -58,6 +138,7 @@ if [ $PEER_REACH -eq 0 ] && [ -n "$PEER_RAW" ]; then
   PEER_ACT=$(echo "$PEER_RAW"| sed -n 's/^act=//p')
   log "Peer $PEER joignable — conteneurs=$PEER_C cloudflared=$PEER_CF .active=$PEER_ACT."
 else
+  PEER_REACH=1
   log "Peer $PEER injoignable en SSH."
 fi
 
@@ -73,26 +154,17 @@ stand_down() {  # $1 = nom de l'actif réel (le peer)
 become_active() {
   log "→ ACTIF : $SELF assume le rôle actif."
   echo "$SELF" > "$FLAG" && log "  .active → $SELF."
+  # Stack up AVANT cloudflared pour que le tunnel ait une origine (évite les 502).
+  ( cd "$REPO" && docker compose up -d >/dev/null 2>&1 ) && log "  conteneurs démarrés (idempotent)." || log "  ⚠ up -d conteneurs."
   sudo systemctl enable cloudflared 2>/dev/null && log "  cloudflared enabled (survit au reboot)." || log "  ⚠ enable cloudflared."
   sudo systemctl start cloudflared  2>/dev/null && log "  cloudflared démarré (idempotent)."        || log "  ⚠ start cloudflared."
 }
 
-# Cas 1 — le peer SERT réellement (conteneurs + tunnel) → on se retire.
-# Couvre le cas du 23/06 : .active local périmé (=$SELF) mais peer = vrai actif.
-if [ "${PEER_C:-0}" -gt 0 ] && [ "$PEER_CF" = "active" ]; then
-  stand_down "$PEER"
-  exit 0
-fi
-
-# Cas 2 — départage cold-boot (coupure secteur : les 2 redémarrent ensemble).
-# Le peer n'est pas (encore) servant. Si les DEUX flags désignent le peer comme
-# actif et que le peer est joignable, on lui laisse la priorité (il démarre) au
-# lieu de risquer un double-actif. Sinon, on prend le rôle actif.
-if [ $PEER_REACH -eq 0 ] && [ "$LOCAL_ACTIVE" = "$PEER" ] && [ "$PEER_ACT" = "$PEER" ]; then
-  log "Cold-boot : les 2 flags désignent $PEER comme actif — $SELF défère (anti double-actif)."
-  stand_down "$PEER"
-  exit 0
-fi
-
-become_active
+DECISION=$(decide "$SELF" "$PEER" "$LOCAL_ACTIVE" "$PEER_REACH" "${PEER_C:-0}" "$PEER_CF" "$PEER_ACT")
+log "Décision : $DECISION"
+case "$DECISION" in
+  active)     become_active ;;
+  standby:*)  stand_down "${DECISION#standby:}" ;;
+  *)          log "⚠ décision inattendue '$DECISION' — aucune action." ;;
+esac
 exit 0
