@@ -154,6 +154,13 @@ stand_down() {  # $1 = nom de l'actif réel (le peer)
 become_active() {
   log "→ ACTIF : $SELF assume le rôle actif."
   echo "$SELF" > "$FLAG" && log "  .active → $SELF."
+  # Config « actif » AVANT de démarrer la stack — identique à bascule.sh phase 5
+  # et health-watch.sh failover : ORIGIN public + suppression de COOKIE_SECURE.
+  # Sans ça, un nœud promu HORS bascule (role-guard/failover) servirait le public
+  # avec ORIGIN=IP locale + cookies non sécurisés = site cassé (gap .env du 15/07,
+  # les promotions non-bascule n'appliquaient pas ce sed).
+  sed -i "s|^ORIGIN=.*|ORIGIN=https://5hostachy.fr|" "$REPO/.env" && log "  ORIGIN → https://5hostachy.fr."
+  sed -i "/^COOKIE_SECURE=/d" "$REPO/.env" && log "  COOKIE_SECURE retiré (défaut sécurisé)."
   # Stack up AVANT cloudflared pour que le tunnel ait une origine (évite les 502).
   ( cd "$REPO" && docker compose up -d >/dev/null 2>&1 ) && log "  conteneurs démarrés (idempotent)." || log "  ⚠ up -d conteneurs."
   sudo systemctl enable cloudflared 2>/dev/null && log "  cloudflared enabled (survit au reboot)." || log "  ⚠ enable cloudflared."
