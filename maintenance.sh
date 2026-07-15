@@ -308,6 +308,13 @@ for LOGFILE in \
     fi
 done
 
+# Le log auto-deploy est écrit par un cron UTILISATEUR (ptressard), pas root : la
+# rotation ci-dessus (mv d'un .tmp créé par root) le repasse root-owned → le cron
+# user ne peut plus y écrire (Permission denied), et auto-deploy cesse SILENCIEUSEMENT
+# de tourner (cause du non-déploiement de rpi1 découvert le 15/07). On restaure
+# l'ownership à chaque maintenance = self-healing sur les 2 RPi.
+chown 1000:1000 /var/log/hostachy-deploy.log 2>/dev/null || true
+
 # --- 5. Enregistrement dans l'API ------------------------------------------------
 MAINTE_FIN=$(date -u +%Y-%m-%dT%H:%M:%S)
 DUREE=$(( SECONDS - MAINTE_START ))
