@@ -30,7 +30,7 @@ FLAG="$REPO/.active"
 DRY_RUN=false
 ALERT_EMAIL="ptressard@icloud.com"
 PUBLIC_URL="https://5hostachy.fr/api/health"
-HEALTH_TIMEOUT=60   # secondes max pour que l'API peer réponde
+HEALTH_TIMEOUT=150  # secondes max pour que l'API peer réponde (marge pour démarrage à froid rpi2 sous contention I/O ; rollback sûr = attendre plus ne coûte rien)
 CLOUDFLARE_WAIT=90  # secondes max de polling URL publique après start cloudflared peer
 CLOUDFLARE_INITIAL_WAIT=10  # attente initiale avant de commencer à poller (tunnel pas établi < 10s)
 
