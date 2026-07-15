@@ -55,6 +55,7 @@ echo "epoch=$(date +%s)"
 echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
 BIG=""; for l in /var/log/hostachy-*.log; do [ -f "$l" ] || continue; sz=$(( $(stat -c %s "$l")/1048576 )); [ "$sz" -ge '"$LOG_WARN_MB"' ] && BIG="$BIG $(basename $l):${sz}M"; done
 echo "biglogs=$BIG"
+echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
 '
 
 # Intégrité DB (séparée de COLLECT : heredoc → docker exec -i, sans quotes imbriquées).
@@ -176,6 +177,17 @@ for pair in "$SELF:${S_lock:-0}" "$PEER:${P_lock:-0}"; do
   n=${pair%:*}; t=${pair#*:}; [ "${t:-0}" -eq 0 ] && continue
   age=$(( (NOW - t) / 60 ))
   [ "$age" -ge "$LOCK_STALE_MIN" ] && warn ".bascule-lock orphelin sur $n (âge ${age} min — bascule/MAJ figée ?)" || ok ".bascule-lock récent sur $n (${age} min — opération en cours)"
+done
+
+# ── C13. Log auto-deploy inscriptible par le cron USER (sinon auto-deploy KO) ─
+# auto-deploy = SEUL cron user ; /var/log est root:root. Si le log repasse
+# root-owned (rotation maintenance en root), la redirection du cron user échoue
+# → auto-deploy ne tourne plus SILENCIEUSEMENT (bug rpi1 du 15/07). maintenance.sh
+# re-chown le log après rotation ; ce contrôle attrape toute régression.
+for pair in "$SELF:${S_deploylog_owner:-missing}" "$PEER:${P_deploylog_owner:-missing}"; do
+  n=${pair%:*}; o=${pair#*:}; [ "$n" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+  [ "$o" = "ptressard" ] && ok "Log auto-deploy inscriptible par le cron user sur $n" \
+    || warn "Log auto-deploy NON inscriptible par le cron user sur $n (owner=$o) → auto-deploy silencieusement KO (sudo chown ptressard:ptressard /var/log/hostachy-deploy.log)"
 done
 
 echo "─────────────────────────────────────────────────────────────"
