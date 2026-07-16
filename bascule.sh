@@ -162,7 +162,7 @@ fi
 log "  → Espace disque peer OK (${PEER_FREE}MB libres)."
 
 # Peer sans conteneurs actifs ? → les stopper proprement
-PEER_CONTAINERS=$($SSH_CMD ptressard@"$PEER_IP" "docker ps -q 2>/dev/null | wc -l" 2>/dev/null || echo 0)
+PEER_CONTAINERS=$($SSH_CMD ptressard@"$PEER_IP" "docker ps -q --filter name=hostachy 2>/dev/null | wc -l" 2>/dev/null || echo 0)
 if [ "$PEER_CONTAINERS" -gt 0 ]; then
   log "  ⚠ Peer a $PEER_CONTAINERS conteneur(s) actif(s) — arrêt avant bascule."
   run "$SSH_CMD ptressard@$PEER_IP 'cd /opt/5hostachy && docker compose stop 2>/dev/null'"
@@ -287,7 +287,7 @@ trap 'rollback "4-sync-db"' ERR
 # Sécurité anti-race : re-vérifier que les conteneurs peer sont encore stoppés.
 # auto-deploy.sh (cron */5 min) pourrait les avoir relancés entre Phase 0 et maintenant.
 if ! $DRY_RUN; then
-  PEER_RUNNING=$($SSH_CMD ptressard@"$PEER_IP" "docker ps -q 2>/dev/null | wc -l" 2>/dev/null || echo 0)
+  PEER_RUNNING=$($SSH_CMD ptressard@"$PEER_IP" "docker ps -q --filter name=hostachy 2>/dev/null | wc -l" 2>/dev/null || echo 0)
   if [ "$PEER_RUNNING" -gt 0 ]; then
     log "  ⚠ Conteneurs peer relancés entretemps ($PEER_RUNNING) — arrêt forcé avant rsync DB."
     $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && docker compose stop 2>/dev/null"

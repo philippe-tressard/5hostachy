@@ -126,7 +126,7 @@ log "Boot role-guard sur $SELF — .active local='$LOCAL_ACTIVE'."
 # ── État du peer (vérité terrain, pas le flag) ───────────────────────────────
 # Une seule session SSH : conteneurs en cours, cloudflared actif, son .active.
 PEER_RAW=$($SSH_CMD ptressard@"$PEER_IP" '
-  echo "c=$(docker ps -q 2>/dev/null | wc -l | tr -d " ")"
+  echo "c=$(docker ps -q --filter name=hostachy 2>/dev/null | wc -l | tr -d " ")"
   echo "cf=$(systemctl is-active cloudflared 2>/dev/null)"
   echo "act=$(cat /opt/5hostachy/.active 2>/dev/null | tr -d "[:space:]")"
 ' 2>/dev/null)
