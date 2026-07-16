@@ -312,7 +312,7 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 |---|---|---|---|
 | 1 | Site public | `curl https://5hostachy.fr/api/health` | HTTP 200 |
 | 2 | RPi actif identifié | `cat /opt/5hostachy/.active` sur les 2 | Fichier présent, cohérent |
-| 3 | Pas de split-brain | `docker ps -q \| wc -l` sur les 2 RPi | 0 sur le standby |
+| 3 | Pas de split-brain | `docker ps -q --filter name=hostachy \| wc -l` sur les 2 RPi | 0 sur le standby (exclut l'appli co-hébergée List-dons) |
 | 4 | DB intègre | `PRAGMA integrity_check` | `ok` |
 | 5 | WhatsApp | `GET /status` bridge | `state: open` |
 | 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
