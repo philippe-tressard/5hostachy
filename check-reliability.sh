@@ -41,7 +41,7 @@ COLLECT='
 R=/opt/5hostachy
 echo "host=$(hostname)"
 echo "active=$(cat $R/.active 2>/dev/null | tr -d "[:space:]")"
-echo "containers=$(docker ps -q 2>/dev/null | wc -l | tr -d " ")"
+echo "containers=$(docker ps -q --filter name=hostachy 2>/dev/null | wc -l | tr -d " ")"
 echo "cf_active=$(systemctl is-active cloudflared 2>/dev/null)"
 echo "cf_enabled=$(systemctl is-enabled cloudflared 2>/dev/null)"
 echo "head=$(git -C $R rev-parse --short HEAD 2>/dev/null)"
