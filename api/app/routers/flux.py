@@ -313,7 +313,9 @@ def get_flux(
             labels = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
             badges.append(labels.get(p.statut, p.statut))
         auteur = _auteur_nom(session, p.auteur_id)
-        contenu_extrait = _strip_html(p.contenu, 300) if hasattr(p, 'contenu') and p.contenu else ""
+        # 500 car. : assez pour déborder 3 lignes en pleine largeur → le clamp-3 (front)
+        # coupe proprement en fin de 3ᵉ ligne. 300 laissait la 3ᵉ ligne incomplète.
+        contenu_extrait = _strip_html(p.contenu, 500) if hasattr(p, 'contenu') and p.contenu else ""
         detail_parts = [x for x in [auteur, contenu_extrait] if x]
         items.append(FluxItem(
             id=f"pub_{p.id}",
