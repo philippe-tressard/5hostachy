@@ -633,7 +633,7 @@
 								<div class="flux-card-text">
 									<span class="flux-titre">{item.titre}</span>
 									{#if !isExpanded && item.detail}
-										<p class="flux-detail clamp-2">{item.detail}</p>
+										<p class="flux-detail clamp-3">{item.detail}</p>
 									{/if}
 								</div>
 							</div>
@@ -750,7 +750,7 @@
 											<div class="flux-card-text">
 												<span class="flux-titre">{item.titre}</span>
 												{#if !isExpanded && item.detail}
-													<p class="flux-detail clamp-2">{item.detail}</p>
+													<p class="flux-detail clamp-3">{item.detail}</p>
 												{/if}
 											</div>
 										</div>
@@ -1150,7 +1150,7 @@
 	.flux-card-text { flex: 1; min-width: 0; }
 	.flux-titre { font-size: .88rem; font-weight: 500; line-height: 1.35; display: block; }
 	.flux-detail { font-size: .8rem; color: var(--color-text-muted); margin: .15rem 0 0; line-height: 1.4; }
-	.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+	.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 	.flux-badges { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .35rem; }
 
 	/* ═══ FLUX BODY (expanded) ══════════════════════════════════════════ */
