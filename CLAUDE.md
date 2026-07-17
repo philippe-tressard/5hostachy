@@ -238,16 +238,46 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
 - `health_check` 06:00 + chaque backup : `PRAGMA quick_check` → alerte / backup annulé si corrompu
 - `maintenance.sh` VACUUM : **API stoppée** (base au repos, 0 writer) puis `sqlite3` hôte
 
-### ⚠️ Règle d'or anti-corruption DB (v2.20.3)
-**Ne JAMAIS muter le fichier `app.db` depuis un process tiers tant que l'API tourne.**
-La base est en WAL : un checkpoint `TRUNCATE`, une VACUUM ou une copie/rebuild lancés
-depuis un **autre process** (`docker exec … python PRAGMA …`, `sqlite3` hôte) pendant que
-l'API live écrit (la télémétrie insère à chaque page vue) corrompt la base. Cause racine
-des corruptions `telemetry_event` des 05 et 17/06/2026 (cf. [[project_db_corruption_telemetry]]).
+### ⚠️ Règle d'or anti-corruption DB (v2.20.3 · durcie 17/07/2026)
+**Ne JAMAIS OUVRIR `app.db` depuis un process tiers tant que l'API tourne — même en lecture.**
 - Checkpoint / intégrité à chaud → endpoints **in-process** : `POST /admin/db/checkpoint`,
   `GET /admin/db/integrite` (s'exécutent dans le process uvicorn = même connexion que l'app).
 - VACUUM / copie / swap de fichier → **stopper l'API d'abord** (0 writer), comme bascule phase 3.
-- Lecture seule (`SELECT`, `PRAGMA integrity_check`) via `docker exec` = OK (ne mute rien).
+- ❌ `docker exec hostachy_api python3 … PRAGMA …` et `sqlite3` hôte sont **INTERDITS** tant
+  que l'API tourne. **Sans exception de lecture seule.**
+
+**Pourquoi la lecture seule n'est PAS sûre** — leçon du 17/07/2026 : cette ligne affirmait
+l'inverse (« = OK (ne mute rien) »), ce qui a fait écrire `check-reliability.sh` C8 ainsi et
+a coûté ~12 h d'écritures. Les connexions du pool SQLAlchemy sont *ouvertes mais SANS VERROU*
+quand elles sont idle. Un process tiers qui ouvre la base puis la referme se croit donc
+**dernière connexion** → checkpoint + **`unlink` de `app.db-wal` et `app.db-shm`**. L'API
+continue alors d'écrire dans des **inodes orphelins** :
+1. writes **invisibles** aux autres connexions (générations de WAL divergentes) ;
+2. `disk I/O error` (SQLITE_IOERR) en rafales → **503** sur toute requête authentifiée ;
+3. **PERTE DES DONNÉES** au prochain arrêt : le checkpoint de shutdown échoue
+   (`WAL checkpoint échoué au shutdown (non bloquant)`) → le WAL orphelin est abandonné.
+
+**Signature de diagnostic (30 s, décisive) :**
+```bash
+DB_DIR=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
+sudo stat -c '%n mtime=%y' $DB_DIR/app.db          # figé depuis des heures = ALERTE ROUGE
+sudo ls $DB_DIR/ | grep -E 'app.db-(wal|shm)'      # absents du disque…
+sudo lsof -p $(docker inspect hostachy_api --format '{{.State.Pid}}') | grep app.db
+#   … mais tenus ouverts par uvicorn, a fortiori sur PLUSIEURS inodes = fichiers supprimés
+```
+- `app.db` dont le `mtime` ne bouge pas alors que le site écrit ⇒ **aucun checkpoint n'aboutit
+  ⇒ toutes les écritures depuis ce `mtime` sont en sursis.** Traiter comme une urgence.
+- 🚫 **Ne PAS redémarrer l'API dans cet état** : cela libère les inodes orphelins et rend la
+  perte **définitive**. Extraire d'abord les WAL orphelins (`/proc/<pid>/fd/<n>`).
+- Zéro erreur `dmesg`/ext4/mmc ⇒ ce n'est **pas** le matériel, c'est un process tiers.
+- ⚠️ Un `integrity_check` vert **n'innocente rien** (nouveau process = vue saine).
+- ⚠️ Les rafales **se résorbent spontanément** puis récidivent (recyclage du pool) : une
+  accalmie sans explication n'est **pas** une résolution.
+
+Cause racine des corruptions `telemetry_event` des 05 et 17/06/2026 **et** de l'incident du
+17/07/2026 (login 503 + 2 publications perdues) — coupable : `check-reliability.sh` C8, qui
+faisait exactement cela toutes les 15 min (contrôle supprimé, cf. commentaire dans le script).
+Cf. [[project_db_corruption_telemetry]] et le commentaire de `admin.py` → `/db/checkpoint`.
 
 ### Risques connus
 - **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
