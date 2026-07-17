@@ -343,18 +343,40 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 1 | Site public | `curl https://5hostachy.fr/api/health` | HTTP 200 |
 | 2 | RPi actif identifié | `cat /opt/5hostachy/.active` sur les 2 | Fichier présent, cohérent |
 | 3 | Pas de split-brain | `docker ps -q --filter name=hostachy \| wc -l` sur les 2 RPi | 0 sur le standby (exclut l'appli co-hébergée List-dons) |
-| 4 | DB intègre | `PRAGMA integrity_check` | `ok` |
+| 4 | DB saine | ⚠️ **PAS de `docker exec` !** Voir « Point 4 » ci-dessous | `mtime` récent · 0 inode fantôme · 0 `disk I/O error` |
 | 5 | WhatsApp | `GET /status` bridge | `state: open` |
 | 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
 | 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` lancés par cron |
 | 8 | Logs cron sans échec récent | `tail -20 /var/log/hostachy-{deploy,bascule,health-watch,maintenance,check}.log` sur les 2 RPi | Aucune ligne `Permission denied` / `No such file` / `command not found` / erreur répétée |
-| 9 | Emails sans échec récent | `historique_email` : `statut='erreur'` sur 7 j (cf. requête ci-dessous) | 0 ligne |
+| 9 | Emails sans échec récent | ⚠️ **PAS de `docker exec` !** Admin → Emails → Historique (filtre `erreur`, 7 j) | 0 ligne |
 | 10 | Parité de code RPi actif ⇆ standby | `git -C /opt/5hostachy rev-parse HEAD` sur les 2 RPi | HEAD **identique** sur les 2 |
 | 11 | Auto-deploy de l'actif vivant | Sur l'**actif** : `stat -c %U /var/log/hostachy-deploy.log` + HEAD actif vs `origin/main` | Log **`ptressard`** (pas `root`) · HEAD actif **==** `origin/main` |
 
-**Point 9 — requête** (sur le RPi actif) :
+> ### 🚨 Points 4 et 9 — ce pré-check contenait lui-même l'opération interdite
+> Jusqu'au 17/07/2026, le point 4 disait `PRAGMA integrity_check` et le point 9 fournissait une
+> commande `docker exec -w /app hostachy_api python3 -c "from app.database import engine …"`.
+> **Exécuter ces commandes pendant que l'API tourne casse la base** (unlink du WAL sous le pool
+> → `disk I/O error` → pertes de données). C'est exactement ce qui s'est produit le 17/07.
+> Le pré-check ne doit **jamais** ouvrir `app.db`. Cf. « Règle d'or anti-corruption DB ».
+
+**Point 4 — comment vérifier sans ouvrir la base** (sur le RPi actif) :
 ```bash
-docker exec -w /app hostachy_api python3 -c "from app.database import engine; from sqlalchemy import text; c=engine.connect(); rows=c.execute(text(\"SELECT code, COUNT(*), MAX(cree_le) FROM historique_email WHERE statut='erreur' AND cree_le >= datetime('now','-7 days') GROUP BY code\")).all(); print('\n'.join(f'{r[0]}: {r[1]} (dernier {r[2]})' for r in rows) or 'OK — aucune erreur'); c.close()"
+DB_DIR=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
+sudo stat -c '%n mtime=%y' $DB_DIR/app.db     # doit AVOIR BOUGÉ depuis le dernier checkpoint
+                                              # (backup 03:00 / redémarrage) — figé = ALERTE
+sudo lsof -p $(docker inspect hostachy_api --format '{{.State.Pid}}') | grep -c deleted   # 0
+docker logs hostachy_api --since 1h 2>&1 | grep -c 'disk I/O error'                       # 0
+```
+L'intégrité elle-même est déjà contrôlée **in-process** et alerte par email en cas de problème :
+`backup.py` (03:00, backup annulé si KO) et `health_monitor.py` (06:00). Vérification à la demande :
+`GET /admin/db/integrite` (in-process, session admin). **Jamais `docker exec` ni `sqlite3` hôte.**
+
+**Point 9 — comment vérifier sans ouvrir la base** : interface **Admin → Emails → Historique**,
+filtrer `statut = erreur` sur 7 jours (l'endpoint `GET /admin/emails/historique` s'exécute
+in-process). Si l'API est arrêtée et la base au repos (0 writer), `sqlite3` hôte redevient sûr :
+```bash
+sudo sqlite3 "$DB_DIR/app.db" "SELECT code, COUNT(*), MAX(cree_le) FROM historique_email \
+  WHERE statut='erreur' AND cree_le >= datetime('now','-7 days') GROUP BY code;"
 ```
 
 **Point 7 — pourquoi :** un script peut perdre son bit d'exécution sans prévenir (ex. `auto-deploy.sh` le 21/04 → `Permission denied` silencieux dans le cron pendant des semaines, empêchant le déploiement automatique de v2.18.11). Vérifier en particulier `auto-deploy.sh`, `bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`, `check-stack.sh`. Si un bit `x` manque : `chmod +x <script>` sur le(s) RPi concerné(s).
