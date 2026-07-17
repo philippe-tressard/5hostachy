@@ -260,7 +260,7 @@
 	$: urgentItems = filteredItems.filter(i =>
 		(i.type === 'evenement' && i.meta?.type === 'coupure') ||
 		(i.type === 'ticket_ouvert' && i.badges?.includes('urgence')) ||
-		(i.type === 'publication' && i.meta?.urgente)
+		(i.type === 'publication' && i.meta?.urgente && i.meta?.statut !== 'resolu')
 	);
 
 	// ── Compteurs rapides ──────────────────────────────────────────────────

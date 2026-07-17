@@ -45,6 +45,17 @@ from app.utils.visibility import (
     ticket_visible,
 )
 
+# Réutilise la MÊME règle d'archivage dynamique que /actualités (publications.py)
+# pour éviter la divergence dashboard ⇆ liste : une publication résolue/ancienne ne
+# doit pas rester affichée dans le fil (ni en « URGENCE ») alors qu'elle est masquée
+# de /actualités. Cf. bug 17/07/2026 (pub « Services techniques » visible seulement au
+# dashboard). Pas de cycle : publications.py n'importe pas flux.
+from app.routers.publications import (
+    _is_archived,
+    ARCHIVAGE_DELAI_HEURES,
+    PUBLIE_VISIBILITE_JOURS,
+)
+
 # ── helpers locaux ────────────────────────────────────────────────────────────
 
 def _parse_perimetres(perimetre: Optional[str]) -> list[str]:
@@ -273,7 +284,17 @@ def get_flux(
         .where(Publication.cree_le >= since, ~Publication.brouillon, ~Publication.archivee)
         .order_by(Publication.cree_le.desc())
     ).all()
+    # Mêmes seuils d'archivage que /actualités (overridables en config)
+    _delai_row = session.get(ConfigSite, 'archivage_delai_heures')
+    _delai_heures = int(_delai_row.valeur) if _delai_row and _delai_row.valeur.isdigit() else ARCHIVAGE_DELAI_HEURES
+    _publie_row = session.get(ConfigSite, 'publie_visibilite_jours')
+    _publie_jours = int(_publie_row.valeur) if _publie_row and _publie_row.valeur.isdigit() else PUBLIE_VISIBILITE_JOURS
     for p in pubs:
+        # Exclut les publications archivées dynamiquement (résolues/anciennes) —
+        # cohérence avec /actualités : sinon elles restent au dashboard sans être
+        # accessibles depuis la liste principale.
+        if _is_archived(p, _delai_heures, _publie_jours):
+            continue
         perims = (
             _parse_json_perimetres(p.perimetre_cible) if p.perimetre_cible
             else (
@@ -292,7 +313,7 @@ def get_flux(
             labels = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
             badges.append(labels.get(p.statut, p.statut))
         auteur = _auteur_nom(session, p.auteur_id)
-        contenu_extrait = _strip_html(p.contenu) if hasattr(p, 'contenu') and p.contenu else ""
+        contenu_extrait = _strip_html(p.contenu, 300) if hasattr(p, 'contenu') and p.contenu else ""
         detail_parts = [x for x in [auteur, contenu_extrait] if x]
         items.append(FluxItem(
             id=f"pub_{p.id}",
