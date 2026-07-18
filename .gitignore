@@ -53,6 +53,8 @@ desktop.ini
 
 # Claude Code (local uniquement, ne pas versionner)
 CLAUDE.md
+# Overrides Claude Code personnels — versionner .claude/settings.json + hooks, PAS le local
+.claude/settings.local.json
 
 # Fichiers temporaires / scripts de fix one-shot
 fix_*.py
