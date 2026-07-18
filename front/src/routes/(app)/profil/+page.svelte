@@ -40,6 +40,8 @@ import { onMount } from 'svelte';
 	let notifActuMail = true;
 	let notifDocApp = true;
 	let notifDocMail = false;
+	let notifCommunauteApp = true;
+	let notifCommunauteMail = true;
 
 	// ── Lots ──────────────────────────────────────────────────────────────────
 	let mesLots: any[] = [];
@@ -158,6 +160,8 @@ import { onMount } from 'svelte';
 				notifActuMail = prefsFromDb.actu_mail ?? true;
 				notifDocApp = prefsFromDb.doc_app ?? true;
 				notifDocMail = prefsFromDb.doc_mail ?? false;
+				notifCommunauteApp = prefsFromDb.communaute_app ?? true;
+				notifCommunauteMail = prefsFromDb.communaute_mail ?? true;
 			} else {
 				// Fallback localStorage (migration unique)
 				notifTicketApp = readNotifBool(['notif_ticket_app'], true);
@@ -236,6 +240,8 @@ import { onMount } from 'svelte';
 			actu_mail: notifActuMail,
 			doc_app: notifDocApp,
 			doc_mail: notifDocMail,
+			communaute_app: notifCommunauteApp,
+			communaute_mail: notifCommunauteMail,
 		});
 		try {
 			const updated = await authApi.updateMe({ preferences_notifications: prefs });
@@ -602,6 +608,7 @@ import { onMount } from 'svelte';
 			<li><strong>Tickets</strong> : activez appli + e-mail pour ne rater aucun changement de statut.</li>
 			<li><strong>Actualités</strong> : gardez l'appli active, et activez l'e-mail si vous consultez rarement la plateforme.</li>
 			<li><strong>Documents</strong> : activez l'e-mail pour être informé dès qu'un nouveau document est publié.</li>
+			<li><strong>Communauté</strong> : soyez prévenu quand quelqu'un répond à une de vos idées, annonces ou sondages.</li>
 		</ul>
 		<div class="notif-matrix-wrap">
 			<table class="notif-matrix" aria-label="Préférences de notifications">
@@ -627,6 +634,11 @@ import { onMount } from 'svelte';
 						<td>Nouveaux documents ajoutés</td>
 						<td><input type="checkbox" bind:checked={notifDocApp} aria-label="Documents - notification appli" /></td>
 						<td><input type="checkbox" bind:checked={notifDocMail} aria-label="Documents - notification mail" /></td>
+					</tr>
+					<tr>
+						<td>Réponses à mes idées / annonces / sondages</td>
+						<td><input type="checkbox" bind:checked={notifCommunauteApp} aria-label="Communauté - notification appli" /></td>
+						<td><input type="checkbox" bind:checked={notifCommunauteMail} aria-label="Communauté - notification mail" /></td>
 					</tr>
 				</tbody>
 			</table>

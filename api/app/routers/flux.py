@@ -18,8 +18,13 @@ from app.models.core import (
     ContratEntretien,
     Copropriete,
     DevisPrestataire,
+    DiagnosticRapport,
+    Document,
     Evenement,
+    FaqItem,
     Idee,
+    MembreCS,
+    MembreSyndic,
     OptionSondage,
     PetiteAnnonce,
     Prestataire,
@@ -55,6 +60,9 @@ from app.routers.publications import (
     ARCHIVAGE_DELAI_HEURES,
     PUBLIE_VISIBILITE_JOURS,
 )
+# Visibilité documents : réutilise l'algo canonique (profil d'accès + périmètre bat/lot).
+# documents.py n'importe pas flux → pas de cycle.
+from app.routers.documents import _user_can_read as _document_visible
 
 # ── helpers locaux ────────────────────────────────────────────────────────────
 
@@ -548,6 +556,132 @@ def get_flux(
                 "nb_votes": nb_votes,
                 "resume": _strip_html(idee.description),
             },
+        ))
+
+    # ── 8. FAQ (nouveaux articles) ──────────────────────────────────────────
+    faqs = session.exec(
+        select(FaqItem)
+        .where(FaqItem.actif, FaqItem.cree_le >= since)
+        .order_by(FaqItem.cree_le.desc())
+    ).all()
+    for f in faqs:
+        items.append(FluxItem(
+            id=f"faq_{f.id}",
+            type="faq",
+            date=f.cree_le,
+            cree_le=f.cree_le,
+            titre=f.question,
+            detail=_strip_html(f.reponse),
+            icon="❓",
+            badges=[f.categorie] if f.categorie else [],
+            lien="/faq",
+            meta={"faq_id": f.id, "categorie": f.categorie,
+                   "resume": _strip_html(f.reponse, 400)},
+        ))
+
+    # ── 9. Documents partagés (nouveaux) ────────────────────────────────────
+    docs = session.exec(
+        select(Document)
+        .where(Document.publie_le >= since)
+        .order_by(Document.publie_le.desc())
+    ).all()
+    for d in docs:
+        # Même contrôle d'accès que /documents (profil + périmètre bat/lot) : un
+        # document ciblé bât. 1 ne remonte pas au fil d'un résident du bât. 2.
+        if not _document_visible(user, d, session):
+            continue
+        items.append(FluxItem(
+            id=f"doc_{d.id}",
+            type="document",
+            date=d.publie_le,
+            cree_le=d.publie_le,
+            titre=d.titre,
+            detail="Nouveau document",
+            icon="\U0001f4c4",
+            badges=[],
+            lien="/documents",
+            meta={"document_id": d.id, "fichier_nom": d.fichier_nom,
+                   "mime_type": d.mime_type},
+        ))
+
+    # ── 10. Diagnostics réglementaires (nouveaux rapports) ──────────────────
+    diags = session.exec(
+        select(DiagnosticRapport)
+        .where(DiagnosticRapport.publie_le >= since)
+        .order_by(DiagnosticRapport.publie_le.desc())
+    ).all()
+    for dg in diags:
+        items.append(FluxItem(
+            id=f"diag_{dg.id}",
+            type="diagnostic",
+            date=dg.publie_le,
+            cree_le=dg.publie_le,
+            titre=dg.titre,
+            detail=_strip_html(dg.synthese) if dg.synthese else "Nouveau rapport de diagnostic",
+            icon="\U0001f9ea",
+            badges=["Diagnostic"],
+            lien="/documents",
+            meta={"diagnostic_id": dg.id,
+                   "resume": _strip_html(dg.synthese, 400) if dg.synthese else None},
+        ))
+
+    # ── 11. Prestataires (nouvelles fiches) — CS/admin uniquement ───────────
+    # La page /prestataires est réservée au CS/admin (require_cs_or_admin) : on ne
+    # remonte donc une nouvelle fiche qu'à eux, sinon lien inaccessible.
+    if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+        prestas = session.exec(
+            select(Prestataire)
+            .where(Prestataire.actif, Prestataire.cree_le >= since)
+            .order_by(Prestataire.cree_le.desc())
+        ).all()
+        for pr in prestas:
+            items.append(FluxItem(
+                id=f"presta_{pr.id}",
+                type="prestataire",
+                date=pr.cree_le,
+                cree_le=pr.cree_le,
+                titre=pr.nom,
+                detail=pr.specialite or "Nouveau prestataire",
+                icon="\U0001f6e0️",
+                badges=[pr.specialite] if pr.specialite else [],
+                lien="/prestataires",
+                meta={"prestataire_id": pr.id, "specialite": pr.specialite},
+            ))
+
+    # ── 12. Annuaire (nouveaux membres CS / syndic) — tous les résidents ────
+    membres_cs = session.exec(
+        select(MembreCS).where(MembreCS.cree_le >= since).order_by(MembreCS.cree_le.desc())
+    ).all()
+    for m in membres_cs:
+        items.append(FluxItem(
+            id=f"mcs_{m.id}",
+            type="annuaire",
+            date=m.cree_le,
+            cree_le=m.cree_le,
+            titre=f"{m.prenom} {m.nom}",
+            detail="Nouveau membre du conseil syndical"
+                   + (" — Président" if m.est_president else ""),
+            icon="\U0001f465",
+            badges=["Conseil syndical"],
+            lien="/annuaire",
+            meta={"membre_cs_id": m.id, "est_president": m.est_president},
+        ))
+    membres_syndic = session.exec(
+        select(MembreSyndic).where(MembreSyndic.cree_le >= since).order_by(MembreSyndic.cree_le.desc())
+    ).all()
+    for m in membres_syndic:
+        items.append(FluxItem(
+            id=f"msyn_{m.id}",
+            type="annuaire",
+            date=m.cree_le,
+            cree_le=m.cree_le,
+            titre=f"{m.prenom} {m.nom}",
+            detail="Nouveau membre du syndic"
+                   + (f" — {m.fonction}" if m.fonction else ""),
+            icon="\U0001f465",
+            badges=["Syndic"],
+            lien="/annuaire",
+            meta={"membre_syndic_id": m.id, "fonction": m.fonction},
         ))
 
     # ── Tri global par date décroissante ────────────────────────────────────

@@ -31,6 +31,8 @@ _EMAIL_PREF_MAP: dict[str, str] = {
     "digest_quotidien": "actu_mail",
     "digest_hebdomadaire": "actu_mail",
     "document_publie": "doc_mail",
+    "reponse_communaute": "communaute_mail",
+    "idee_statut": "communaute_mail",
 }
 
 logger = logging.getLogger("email")

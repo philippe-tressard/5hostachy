@@ -10,7 +10,7 @@ from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
-from app.utils.visibility import can_see_ag as _can_see_ag
+from app.utils.visibility import evenement_visible
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -98,8 +98,13 @@ def list_evenements(
 ):
     stmt = select(Evenement).order_by(Evenement.debut)
     evenements = session.exec(stmt).all()
-    if not _can_see_ag(user):
-        evenements = [e for e in evenements if e.type != TypeEvenement.ag]
+    # CS/admin : accès complet (ils gèrent ici les maintenances récurrentes → ne pas
+    # les masquer via evenement_visible). Non-CS/admin : filtrage périmètre + AG +
+    # maintenance_recurrente interne, aligné sur flux.py — sinon un résident du bât. 2
+    # voyait les événements ciblés bât. 1.
+    is_cs = user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical)
+    if not is_cs:
+        evenements = [e for e in evenements if evenement_visible(e, user)]
     return [_ev_to_read(e, session) for e in evenements]
 
 
@@ -112,7 +117,11 @@ def get_evenement(
     ev = session.get(Evenement, ev_id)
     if not ev:
         raise HTTPException(404, "Événement introuvable")
-    if ev.type == TypeEvenement.ag and not _can_see_ag(user):
+    # Contrôle complet périmètre + rôle AG (cf. list_evenements) : empêche l'accès
+    # direct à /calendrier/{id} d'un événement ciblant un autre bâtiment. CS/admin :
+    # accès total (gestion des maintenances récurrentes incluse).
+    if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical) \
+            and not evenement_visible(ev, user):
         raise HTTPException(403, "Accès refusé")
     return _ev_to_read(ev, session)
 

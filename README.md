@@ -29,7 +29,7 @@
 - **Mon lot** — Informations du lot, baux, diagnostics
 - **Accès & Badges** — Commande de télécommandes / badges Vigik, transfert bailleur → locataire
 - **FAQ** — Questions fréquentes filtrées par profil utilisateur
-- **Communauté** — Annuaire résidents, boîte à idées, sondages
+- **Communauté** — Annuaire résidents, boîte à idées, sondages et petites annonces, avec fil de réponses entre voisins (réponses du conseil syndical mises en avant) et notifications au créateur
 - **Prestataires & Contrats** — Gestion des prestataires et contrats d'entretien
 - **Administration** — Paramétrage site, comptes, sauvegardes, SMTP, WhatsApp
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence

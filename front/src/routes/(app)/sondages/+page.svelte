@@ -1,8 +1,9 @@
 ﻿<script lang="ts">
 import Icon from '$lib/components/Icon.svelte';
+import Reponses from '$lib/components/Reponses.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, ApiError } from '$lib/api';
+import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
 import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import { toast } from '$lib/components/Toast.svelte';
@@ -306,6 +307,68 @@ toast('success', 'Idée supprimée');
 } catch { toast('error', 'Erreur lors de la suppression'); }
 }
 
+// ── Réponses (idées + annonces) — composant partagé Reponses.svelte ──────────
+async function repondreIdee(id: number, contenu: string) {
+try {
+await ideesApi.repondre(id, contenu);
+idees = await ideesApi.list();
+toast('success', 'Réponse publiée');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); throw e; }
+}
+
+async function supprimerReponseIdee(ideeId: number, repId: number) {
+try {
+await ideesApi.supprimerReponse(ideeId, repId);
+idees = await ideesApi.list();
+toast('success', 'Réponse supprimée');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
+
+async function repondreAnnonce(id: number, contenu: string) {
+try {
+await annoncesApi.repondre(id, contenu);
+annonces = await annoncesApi.list();
+toast('success', 'Réponse publiée');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); throw e; }
+}
+
+async function supprimerReponseAnnonce(annonceId: number, repId: number) {
+try {
+await annoncesApi.supprimerReponse(annonceId, repId);
+annonces = await annoncesApi.list();
+toast('success', 'Réponse supprimée');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
+
+// ── Signalements / modération ────────────────────────────────────────────────
+let signalements: any[] = [];
+let showModeration = false;
+
+async function chargerSignalements() {
+if (!$isCS) return;
+try { signalements = await signalementsApi.liste('en_attente'); }
+catch { /* silencieux */ }
+}
+
+async function signaler(cibleType: string, cibleId: number) {
+const motif = prompt('Pourquoi signalez-vous ce contenu au conseil syndical ?');
+if (motif === null) return;
+if (!motif.trim()) { toast('error', 'Le motif est obligatoire'); return; }
+try {
+await signalementsApi.creer(cibleType, cibleId, motif.trim());
+toast('success', 'Signalement transmis au conseil syndical');
+if ($isCS) chargerSignalements();
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
+
+async function resoudreSignalement(id: number, statut: 'traite' | 'rejete') {
+try {
+await signalementsApi.resoudre(id, statut);
+signalements = signalements.filter(s => s.id !== id);
+toast('success', statut === 'traite' ? 'Signalement traité' : 'Signalement ignoré');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
+
 // Garde réactive : redirige dès que le user est connu (garde contre la race condition async layout)
 $: if ($currentUser && ($currentUser.statut === 'syndic' || $currentUser.statut === 'mandataire')) {
 	toast('error', 'La rubrique Communauté n\'est pas accessible à votre profil.');
@@ -334,6 +397,7 @@ if ($currentUser?.communaute_ban_jusqu_au && new Date($currentUser.communaute_ba
 sondagesLoading = false;
 ideesLoading = false;
 annoncesLoading = false;
+chargerSignalements();
 });
 </script>
 
@@ -376,6 +440,35 @@ annoncesLoading = false;
 </div>
 {#if _pc.onglets?.[activeTab]?.descriptif}
 <p class="tab-descriptif">{@html safeHtml(_pc.onglets[activeTab].descriptif)}</p>
+{/if}
+
+{#if $isCS && signalements.length > 0}
+<div class="moderation-panel">
+<button type="button" class="moderation-tete" on:click={() => showModeration = !showModeration}
+aria-expanded={showModeration}>
+🚩 {signalements.length} signalement{signalements.length > 1 ? 's' : ''} à modérer
+<span class="moderation-chevron">{showModeration ? '▲' : '▼'}</span>
+</button>
+{#if showModeration}
+<div class="moderation-liste">
+{#each signalements as sig (sig.id)}
+<div class="moderation-item">
+<div class="moderation-meta">
+<span class="badge badge-blue">{sig.cible_type_label}</span>
+<strong>« {sig.apercu}</strong>
+{#if sig.auteur_cible}<span style="color:var(--color-text-muted)">— par {sig.auteur_cible}</span>{/if}
+</div>
+<div class="moderation-motif">Motif : {sig.motif} <span style="color:var(--color-text-muted)">(signalé par {sig.signale_par})</span></div>
+<div class="moderation-actions">
+<button class="btn btn-sm btn-outline" on:click={() => resoudreSignalement(sig.id, 'traite')}>✓ Marquer traité</button>
+<button class="btn btn-sm btn-outline" on:click={() => resoudreSignalement(sig.id, 'rejete')}>Ignorer</button>
+</div>
+</div>
+{/each}
+<p class="moderation-aide">Pour retirer un contenu, utilisez le bouton 🗑️ sur le contenu concerné, puis marquez le signalement « traité ». Les récidives se gèrent via Admin → bannissement Communauté.</p>
+</div>
+{/if}
+</div>
 {/if}
 
 {#if activeTab === 'sondages'}
@@ -590,6 +683,19 @@ title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
 </div>
 <div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
 <small style="color:var(--color-text-muted)">{fmtDateShort(idee.cree_le)}</small>
+{#if idee.auteur_id !== $currentUser?.id}
+<button class="signaler-inline" title="Signaler cette idée au conseil syndical" aria-label="Signaler cette idée" on:click={() => signaler('idee', idee.id)}>🚩</button>
+{/if}
+
+<Reponses
+reponses={idee.reponses ?? []}
+currentUserId={$currentUser?.id}
+isCS={$isCS}
+placeholder="Votre réponse à cette idée…"
+onSubmit={(c) => repondreIdee(idee.id, c)}
+onDelete={(rid) => supprimerReponseIdee(idee.id, rid)}
+onReport={(rid) => signaler('reponse', rid)}
+/>
 </div>
 {#if $isCS}
 <div class="idee-actions">
@@ -767,6 +873,20 @@ Afficher mes coordonnées aux autres résidents
 <button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click={() => supprimerAnnonce(annonce.id)}>🗑️ Supprimer</button>
 </div>
 {/if}
+
+{#if !annonce.est_auteur}
+<div style="margin-top:.4rem"><button class="signaler-inline" title="Signaler cette annonce au conseil syndical" aria-label="Signaler cette annonce" on:click={() => signaler('annonce', annonce.id)}>🚩 Signaler l'annonce</button></div>
+{/if}
+
+<Reponses
+reponses={annonce.reponses ?? []}
+currentUserId={$currentUser?.id}
+isCS={$isCS}
+placeholder="Une question sur cette annonce ?"
+onSubmit={(c) => repondreAnnonce(annonce.id, c)}
+onDelete={(rid) => supprimerReponseAnnonce(annonce.id, rid)}
+onReport={(rid) => signaler('reponse', rid)}
+/>
 </div>
 {/if}
 </div>
@@ -808,6 +928,19 @@ input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); 
 .idee-titre { font-size: .95rem; }
 .idee-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
 .idee-actions select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .8rem; background: var(--color-bg); }
+/* Les styles des réponses sont dans le composant partagé Reponses.svelte */
+/* Signalement + modération */
+.signaler-inline { background: none; border: none; cursor: pointer; font-size: .78rem; color: var(--color-text-muted); opacity: .7; padding: 0 0 0 .5rem; }
+.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
+.moderation-panel { border: 1px solid var(--color-warning); border-radius: var(--radius); background: #fffbeb; margin-bottom: 1.25rem; overflow: hidden; }
+.moderation-tete { width: 100%; text-align: left; background: none; border: none; padding: .7rem 1rem; font-weight: 600; font-size: .9rem; cursor: pointer; color: var(--color-text); display: flex; align-items: center; gap: .5rem; }
+.moderation-chevron { margin-left: auto; font-size: .75rem; }
+.moderation-liste { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.moderation-item { border: 1px solid var(--color-border); border-radius: var(--radius); padding: .6rem .8rem; background: var(--color-surface); }
+.moderation-meta { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .85rem; margin-bottom: .25rem; }
+.moderation-motif { font-size: .82rem; margin-bottom: .4rem; }
+.moderation-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.moderation-aide { font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
 /* Ciblage */
 .ciblage-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
 .ciblage-option {

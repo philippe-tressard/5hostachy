@@ -217,7 +217,7 @@ class Utilisateur(SQLModel, table=True):
     communaute_interdit: bool = Field(default=False)  # ban permanent (2e infraction)
     communaute_ban_count: int = Field(default=0)  # 0=jamais banni, 1=1er ban, 2+=permanent
     communaute_ban_jusqu_au: Optional[datetime] = Field(default=None)  # fin du ban temporaire
-    preferences_notifications: str = Field(default='{"ticket_app":true,"ticket_mail":true,"actu_app":true,"actu_mail":true,"doc_app":true,"doc_mail":false}')
+    preferences_notifications: str = Field(default='{"ticket_app":true,"ticket_mail":true,"actu_app":true,"actu_mail":true,"doc_app":true,"doc_mail":false,"communaute_app":true,"communaute_mail":true}')
     demarche_arrivant: Optional[str] = Field(default=None)  # nouvel_arrivant | deja_resident | None
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     nom_proprietaire: Optional[str] = None  # pour les locataires : nom du propriétaire bailleur
@@ -591,6 +591,7 @@ class Prestataire(SQLModel, table=True):
     email: Optional[str] = None
     contacts_json: Optional[str] = None  # JSON: [{prenom, nom, fonction, email, telephone}]
     actif: bool = True
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
 
     contrats: List["ContratEntretien"] = Relationship(back_populates="prestataire")
     devis: List["DevisPrestataire"] = Relationship(back_populates="prestataire")
@@ -1191,6 +1192,7 @@ class MembreCS(SQLModel, table=True):
     est_president: bool                 = False
     ordre:       int                    = 0
     user_id:     Optional[int]          = Field(default=None, foreign_key="utilisateur.id")
+    cree_le:     datetime               = Field(default_factory=datetime.utcnow)
 
 
 class SyndicInfo(SQLModel, table=True):
@@ -1215,6 +1217,7 @@ class MembreSyndic(SQLModel, table=True):
     est_principal: bool             = False
     ordre:         int              = 0
     user_id:       Optional[int]    = Field(default=None, foreign_key="utilisateur.id")
+    cree_le:       datetime         = Field(default_factory=datetime.utcnow)
 
 
 class CommentaireSondage(SQLModel, table=True):
@@ -1285,6 +1288,43 @@ class VoteIdee(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
 
     idee: Optional[Idee] = Relationship(back_populates="votes")
+
+
+class ReponseCommunaute(SQLModel, table=True):
+    """Réponse à un contenu de la Communauté — table générique factorisée.
+
+    rubrique = 'idee' | 'annonce' ; cible_id = id de l'idée ou de l'annonce.
+    Les commentaires de sondage restent dans CommentaireSondage (legacy, avec
+    sémantique « commentaire attaché au vote »), mais partagent les mêmes
+    helpers d'enrichissement/notification et le même composant front.
+    """
+    __tablename__ = "reponse_communaute"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    rubrique: str = Field(index=True)          # 'idee' | 'annonce'
+    cible_id: int = Field(index=True)          # id de l'idée / annonce (polymorphe)
+    auteur_id: int = Field(foreign_key="utilisateur.id")
+    contenu: str
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Signalement(SQLModel, table=True):
+    """Signalement d'un contenu Communauté inapproprié → file de modération CS.
+
+    cible_type : 'idee' | 'annonce' | 'sondage' | 'reponse' (ReponseCommunaute)
+                 | 'commentaire' (CommentaireSondage).
+    """
+    __tablename__ = "signalement"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cible_type: str = Field(index=True)
+    cible_id: int = Field(index=True)
+    apercu: str = ""                            # extrait/titre du contenu (pour la file)
+    auteur_cible_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    signale_par_id: int = Field(foreign_key="utilisateur.id")
+    motif: str
+    statut: str = Field(default="en_attente")  # en_attente | traite | rejete
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    traite_le: Optional[datetime] = None
 
 
 # ──────────────────────────────────────────────

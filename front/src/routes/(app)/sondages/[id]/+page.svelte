@@ -2,12 +2,13 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { sondages as sondagesApi, ApiError } from '$lib/api';
+	import { sondages as sondagesApi, signalements as signalementsApi, ApiError } from '$lib/api';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
-	import { fmtDateShort, fmtDate2d } from '$lib/date';
+	import Reponses from '$lib/components/Reponses.svelte';
+	import { fmtDateShort } from '$lib/date';
 
 	let sondage: any = null;
 	let loading = true;
@@ -70,6 +71,24 @@
 			await sondagesApi.supprimerCommentaire(sondageId, commentaireId);
 			sondage = { ...sondage, commentaires: sondage.commentaires.filter((c: any) => c.id !== commentaireId) };
 			toast('info', 'Commentaire supprimé');
+		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+	}
+
+	async function repondreSondage(contenu: string) {
+		try {
+			await sondagesApi.commenter(sondageId, contenu);
+			sondage = await sondagesApi.get(sondageId);
+			toast('success', 'Commentaire publié');
+		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); throw e; }
+	}
+
+	async function signalerDetail(cibleType: string, cibleId: number) {
+		const motif = prompt('Pourquoi signalez-vous ce contenu au conseil syndical ?');
+		if (motif === null) return;
+		if (!motif.trim()) { toast('error', 'Le motif est obligatoire'); return; }
+		try {
+			await signalementsApi.creer(cibleType, cibleId, motif.trim());
+			toast('success', 'Signalement transmis au conseil syndical');
 		} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 	}
 
@@ -249,23 +268,16 @@
 		<!-- ── Section commentaires ── -->
 		<div class="comments-section">
 			<h2 class="comments-title">&#x1F4AC; Commentaires ({(sondage.commentaires ?? []).length})</h2>
-
-			{#if (sondage.commentaires ?? []).length === 0}
-				<p style="color:var(--color-text-muted);font-size:.875rem">Aucun commentaire pour l'instant.</p>
-			{:else}
-				{#each sondage.commentaires as c}
-					<div class="comment-card">
-						<div class="comment-header">
-							<strong class="comment-author">{c.auteur_nom}</strong>
-							<span class="comment-date">{fmtDate2d(c.cree_le)}</span>
-							{#if peutModerer || c.auteur_id === $currentUser?.id}
-							<button class="btn-icon-danger" style="margin-left:auto" aria-label="Supprimer ce commentaire" title="Supprimer" on:click={() => supprimerCommentaire(c.id)}>&#x1F5D1;️</button>
-							{/if}
-						</div>
-						<p class="comment-body">{c.contenu}</p>
-					</div>
-				{/each}
-			{/if}
+			<Reponses
+				reponses={sondage.commentaires ?? []}
+				currentUserId={$currentUser?.id}
+				isCS={peutModerer}
+				placeholder="Votre commentaire sur ce sondage…"
+				expanded={true}
+				onSubmit={repondreSondage}
+				onDelete={supprimerCommentaire}
+				onReport={(rid) => signalerDetail('commentaire', rid)}
+			/>
 		</div>
 	</div>
 {/if}
@@ -345,18 +357,9 @@
 		color: var(--color-text-muted); font-style: italic;
 	}
 
-	/* Commentaires */
+	/* Commentaires (rendu par le composant partagé Reponses.svelte) */
 	.comments-section { margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.25rem; }
 	.comments-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
-	.comment-card {
-		padding: .75rem 1rem; border: 1px solid var(--color-border);
-		border-radius: var(--radius); margin-bottom: .6rem; background: var(--color-surface);
-	}
-	.comment-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .3rem; flex-wrap: wrap; }
-	.comment-author { font-size: .875rem; }
-	.comment-date { font-size: .78rem; color: var(--color-text-muted); }
-
-	.comment-body { font-size: .875rem; color: var(--color-text); white-space: pre-wrap; }
 
 	/* Actions propriétaire */
 	.owner-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-left: auto; }

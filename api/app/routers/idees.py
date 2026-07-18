@@ -1,24 +1,54 @@
-"""Router boîte à idées — idées + upvotes."""
-from fastapi import APIRouter, Depends, HTTPException
+"""Router boîte à idées — idées + upvotes + réponses."""
+from datetime import datetime
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from datetime import datetime
-
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Idee, Utilisateur, VoteIdee, RoleUtilisateur, StatutUtilisateur
+from app.models.core import (
+    Idee,
+    ReponseCommunaute,
+    RoleUtilisateur,
+    StatutUtilisateur,
+    Utilisateur,
+    VoteIdee,
+)
+from app.utils.reponses import (
+    auteur_meta,
+    enrich_reponse,
+    notifier_nouvelle_reponse,
+    notifier_votants_idee,
+    tri_reponses,
+)
 
-router = APIRouter(prefix="/idees", tags=["id\u00e9es"])
+router = APIRouter(prefix="/idees", tags=["idées"])
+
+RUBRIQUE = "idee"
+
+# Statuts « positifs » qui déclenchent une notification aux votants.
+_STATUT_NOTIF_LABELS = {"retenue": "Retenue", "realisee": "Réalisée"}
+
+
+def _reponses_for(idee_id: int, session: Session) -> list[dict]:
+    """Réponses d'une idée : CS/admin en tête (plus de poids), puis chronologique."""
+    reps = session.exec(
+        select(ReponseCommunaute).where(
+            ReponseCommunaute.rubrique == RUBRIQUE,
+            ReponseCommunaute.cible_id == idee_id,
+        )
+    ).all()
+    return tri_reponses([enrich_reponse(r, session) for r in reps])
 
 
 def _deny_communaute_for_statut(user: Utilisateur) -> None:
     if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
-        raise HTTPException(403, "La rubrique Communaut\u00e9 n'est pas accessible \u00e0 votre profil")
+        raise HTTPException(403, "La rubrique Communauté n'est pas accessible à votre profil")
     if user.communaute_interdit:
-        raise HTTPException(403, "Votre acc\u00e8s \u00e0 la Communaut\u00e9 a \u00e9t\u00e9 d\u00e9finitivement suspendu.")
+        raise HTTPException(403, "Votre accès à la Communauté a été définitivement suspendu.")
     if user.communaute_ban_jusqu_au and user.communaute_ban_jusqu_au > datetime.utcnow():
-        raise HTTPException(403, "Votre acc\u00e8s \u00e0 la Communaut\u00e9 est suspendu pour une p\u00e9riode probatoire d\u2019un mois. \u00c0 la 2\u1d49 infraction, vous serez banni d\u00e9finitivement.")
+        raise HTTPException(403, "Votre accès à la Communauté est suspendu pour une période probatoire d’un mois. À la 2ᵉ infraction, vous serez banni définitivement.")
 
 
 class IdeeCreate(BaseModel):
@@ -46,10 +76,12 @@ def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
         mon_vote = bool(session.exec(
             select(VoteIdee).where(VoteIdee.idee_id == idee.id, VoteIdee.user_id == user_id)
         ).first())
+        reponses = _reponses_for(idee.id, session)
         result.append({
             "id": idee.id, "titre": idee.titre, "description": idee.description,
             "auteur_id": idee.auteur_id, "statut": idee.statut,
             "cree_le": idee.cree_le, "nb_votes": nb, "mon_vote": mon_vote,
+            "reponses": reponses, "nb_reponses": len(reponses),
         })
     return result
 
@@ -115,14 +147,31 @@ class StatutUpdate(BaseModel):
 def update_statut(
     idee_id: int,
     body: StatutUpdate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_cs_or_admin),
 ):
     idee = session.get(Idee, idee_id)
     if not idee:
         raise HTTPException(404, "Idée introuvable")
+    ancien = idee.statut
     idee.statut = body.statut
     session.add(idee)
+    # Passage à un statut positif (retenue/réalisée) → prévenir les votants.
+    if body.statut != ancien and body.statut in _STATUT_NOTIF_LABELS:
+        votant_ids = [
+            v.user_id for v in session.exec(
+                select(VoteIdee).where(VoteIdee.idee_id == idee_id)
+            ).all()
+        ]
+        notifier_votants_idee(
+            session, background_tasks,
+            votant_ids=votant_ids,
+            idee_titre=idee.titre,
+            statut_label=_STATUT_NOTIF_LABELS[body.statut],
+            lien_path="/sondages",
+            exclure_id=user.id,
+        )
     session.commit()
     return {"statut": idee.statut}
 
@@ -137,9 +186,89 @@ def delete_idee(
     idee = session.get(Idee, idee_id)
     if not idee:
         raise HTTPException(404, "Idée introuvable")
-    # Supprimer les votes associés
+    # Supprimer les votes + réponses associés
     votes = session.exec(select(VoteIdee).where(VoteIdee.idee_id == idee_id)).all()
     for v in votes:
         session.delete(v)
+    reps = session.exec(
+        select(ReponseCommunaute).where(
+            ReponseCommunaute.rubrique == RUBRIQUE,
+            ReponseCommunaute.cible_id == idee_id,
+        )
+    ).all()
+    for r in reps:
+        session.delete(r)
     session.delete(idee)
+    session.commit()
+
+
+# ── Réponses aux idées ─────────────────────────────────────────────────────────
+
+class ReponseCreate(BaseModel):
+    contenu: str
+
+
+@router.get("/{idee_id}/reponses")
+def list_reponses(
+    idee_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    _deny_communaute_for_statut(user)
+    idee = session.get(Idee, idee_id)
+    if not idee:
+        raise HTTPException(404, "Idée introuvable")
+    return _reponses_for(idee_id, session)
+
+
+@router.post("/{idee_id}/reponses", status_code=201)
+def create_reponse(
+    idee_id: int,
+    body: ReponseCreate,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    _deny_communaute_for_statut(user)
+    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
+        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
+    ):
+        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas répondre")
+    contenu = (body.contenu or "").strip()
+    if not contenu:
+        raise HTTPException(422, "La réponse ne peut pas être vide")
+    idee = session.get(Idee, idee_id)
+    if not idee:
+        raise HTTPException(404, "Idée introuvable")
+    rep = ReponseCommunaute(rubrique=RUBRIQUE, cible_id=idee_id, auteur_id=user.id, contenu=contenu)
+    session.add(rep)
+    # Notifier le créateur de l'idée (in-app + email selon préférences)
+    notifier_nouvelle_reponse(
+        session, background_tasks,
+        createur_id=idee.auteur_id, auteur=user,
+        rubrique_label="votre idée", sujet=idee.titre,
+        extrait=contenu, lien_path="/sondages",
+    )
+    session.commit()
+    session.refresh(rep)
+    return {"id": rep.id, "cible_id": rep.cible_id, "auteur_id": rep.auteur_id,
+            "contenu": rep.contenu, "cree_le": rep.cree_le, **auteur_meta(user, session)}
+
+
+@router.delete("/{idee_id}/reponses/{rep_id}", status_code=204)
+def delete_reponse(
+    idee_id: int,
+    rep_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Supprimer une réponse : son auteur, ou un CS/admin."""
+    _deny_communaute_for_statut(user)
+    rep = session.get(ReponseCommunaute, rep_id)
+    if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != idee_id:
+        raise HTTPException(404, "Réponse introuvable")
+    est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    if rep.auteur_id != user.id and not est_cs:
+        raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
+    session.delete(rep)
     session.commit()
