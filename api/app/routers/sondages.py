@@ -14,6 +14,9 @@ from app.models.core import (
 )
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 from app.utils.visibility import sondage_accessible
+from app.utils.reponses import (
+    auteur_meta, enrich_reponse, notifier_nouvelle_reponse, tri_reponses,
+)
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -157,20 +160,12 @@ def get_sondage(
             "reponses_libres": reponses,
         })
 
+    # Enrichissement partagé (nom + bâtiment + rôle, CS mis en avant) — même helper
+    # que idées/annonces pour une UX cohérente. CS/admin d'abord, puis chronologique.
     commentaires_db = session.exec(
-        select(CommentaireSondage, Utilisateur)
-        .join(Utilisateur, CommentaireSondage.auteur_id == Utilisateur.id)
-        .where(CommentaireSondage.sondage_id == sondage_id)
-        .order_by(CommentaireSondage.cree_le.asc())
+        select(CommentaireSondage).where(CommentaireSondage.sondage_id == sondage_id)
     ).all()
-    commentaires_out = [
-        {
-            "id": c.id, "contenu": c.contenu, "cree_le": c.cree_le,
-            "auteur_id": c.auteur_id,
-            "auteur_nom": f"{u.prenom} {u.nom}",
-        }
-        for c, u in commentaires_db
-    ]
+    commentaires_out = tri_reponses([enrich_reponse(c, session) for c in commentaires_db])
 
     return {
         "id": s.id, "question": s.question, "description": s.description,
@@ -308,6 +303,7 @@ class VoteBody(BaseModel):
 def voter(
     sondage_id: int,
     body: VoteBody,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -342,11 +338,18 @@ def voter(
     ))
 
     if body.commentaire and body.commentaire.strip():
+        contenu = body.commentaire.strip()
         session.add(CommentaireSondage(
             sondage_id=sondage_id,
             auteur_id=user.id,
-            contenu=body.commentaire.strip(),
+            contenu=contenu,
         ))
+        notifier_nouvelle_reponse(
+            session, background_tasks,
+            createur_id=s.auteur_id, auteur=user,
+            rubrique_label="votre sondage", sujet=s.question,
+            extrait=contenu, lien_path=f"/sondages/{sondage_id}",
+        )
 
     session.commit()
     return {"message": "Vote enregistré"}
@@ -360,6 +363,7 @@ class CommentaireBody(BaseModel):
 def commenter(
     sondage_id: int,
     body: CommentaireBody,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -371,12 +375,19 @@ def commenter(
         raise HTTPException(403, "Accès refusé")
     if not body.contenu.strip():
         raise HTTPException(400, "Le commentaire ne peut pas être vide")
-    c = CommentaireSondage(sondage_id=sondage_id, auteur_id=user.id, contenu=body.contenu.strip())
+    contenu = body.contenu.strip()
+    c = CommentaireSondage(sondage_id=sondage_id, auteur_id=user.id, contenu=contenu)
     session.add(c)
+    notifier_nouvelle_reponse(
+        session, background_tasks,
+        createur_id=s.auteur_id, auteur=user,
+        rubrique_label="votre sondage", sujet=s.question,
+        extrait=contenu, lien_path=f"/sondages/{sondage_id}",
+    )
     session.commit()
     session.refresh(c)
     return {"id": c.id, "contenu": c.contenu, "cree_le": c.cree_le,
-            "auteur_id": c.auteur_id, "auteur_nom": f"{user.prenom} {user.nom}"}
+            "auteur_id": c.auteur_id, **auteur_meta(user, session)}
 
 
 @router.delete("/{sondage_id}/commentaires/{commentaire_id}", status_code=204)

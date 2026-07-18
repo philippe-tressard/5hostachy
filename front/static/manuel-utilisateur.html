@@ -1395,6 +1395,7 @@
         <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Timeline chronologique regroupée par jour, couvrant les 12 derniers mois.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
           <li>Chaque élément a une <strong>couleur distinctive</strong> par type : <span style="color:#DC2626">&#x25CF; tickets (rouge)</span>, <span style="color:#1B9F5A">&#x25CF; publications (vert)</span>, <span style="color:#F59E0B">&#x25CF; événements (ambre)</span>, <span style="color:#8B5CF6">&#x25CF; sondages (violet)</span>, <span style="color:#10B981">&#x25CF; devis (émeraude)</span>.</li>
+          <li>Le fil couvre aussi la <strong>vie de la communauté et de la copropriété</strong> : petites annonces, boîte à idées, nouveaux articles de <strong>FAQ</strong>, <strong>documents</strong> et rapports de <strong>diagnostic</strong> partagés, nouvelles fiches <strong>prestataires</strong> (CS/admin) et nouveaux membres de l'<strong>annuaire</strong> (conseil syndical, syndic).</li>
           <li>Un badge <strong style="color:#EF4444">NEW</strong> pulsant signale les éléments de moins de <strong>48 heures</strong>.</li>
           <li><strong>Cliquez</strong> sur un élément pour voir son contenu complet (description, image, métadonnées) sans quitter la page.</li>
           <li>Les éléments <strong>récents</strong> (moins de 30 jours) sont affichés directement.</li>
@@ -1444,7 +1445,7 @@
             <span style="font-size:1.3rem">&#x1F514;</span>
             <div>
               <strong>Préférences de notifications</strong>
-              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Ajuster séparément les notifications <strong>dans l'appli</strong> et <strong>par e-mail</strong> pour les tickets, actualités et documents.</p>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Ajuster séparément les notifications <strong>dans l'appli</strong> et <strong>par e-mail</strong> pour les tickets, actualités, documents et les réponses de la Communauté (idées / annonces / sondages).</p>
             </div>
           </div>
           <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f5f3ff; border-radius:8px">
@@ -1974,7 +1975,7 @@
           </div>
           <div style="display:flex; gap:12px; padding:.8rem; background:#fdf4ff; border-radius:8px; font-size:.9rem; align-items:flex-start">
             <span style="font-size:1.2rem">&#x1F4AC;</span>
-            <div><strong>Commenter</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Chaque idée dispose d'une section commentaires pour en discuter collectivement.</p></div>
+            <div><strong>Répondre</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Chaque idée dispose d'une section de réponses pour en discuter collectivement. Chaque réponse affiche le nom, le bâtiment et le rôle de son auteur. Les réponses du conseil syndical sont mises en avant (elles font autorité). Vous pouvez supprimer vos propres réponses ; le conseil peut supprimer toute réponse.</p></div>
           </div>
         </div>
 
@@ -1999,11 +2000,25 @@
             <span style="font-size:1.2rem">&#x1F504;</span>
             <div><strong>Gérer le statut</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Passez votre annonce en « réservé », « vendu » ou « archivé » quand la transaction est conclue.</p></div>
           </div>
+          <div style="display:flex; gap:12px; padding:.8rem; background:#fefce8; border-radius:8px; font-size:.9rem; align-items:flex-start">
+            <span style="font-size:1.2rem">&#x1F4AC;</span>
+            <div><strong>Répondre / poser une question</strong><p style="color:var(--muted); font-size:.85rem; margin-top:2px">Chaque annonce dispose d'une zone de réponses (nom, bâtiment et rôle affichés). L'auteur de l'annonce est prévenu de chaque nouvelle réponse.</p></div>
+          </div>
         </div>
 
         <div class="callout tip">
           <span class="callout-icon">&#x1F4A1;</span>
           <p>9 catégories sont disponibles : mobilier, électroménager, bricolage, jardin, sport, enfants, vêtements, informatique, autre. Vous pouvez choisir de rendre vos coordonnées visibles ou non.</p>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">&#x1F514;</span>
+          <p>Les <strong>réponses fonctionnent de la même façon</strong> sur la boîte à idées, les sondages et les petites annonces. Le créateur du contenu reçoit une notification (dans l'appli et par e-mail, sauf s'il l'a désactivé dans <strong>Mon profil → Préférences de notifications</strong>). Les réponses du <strong>conseil syndical</strong> sont mises en avant car elles font autorité.</p>
+        </div>
+
+        <div class="callout warning">
+          <span class="callout-icon">&#x1F6A9;</span>
+          <p><strong>Signaler un contenu inapproprié.</strong> Un bouton 🚩 permet de signaler une idée, une annonce ou une réponse au conseil syndical, en précisant un motif. <strong>Côté conseil syndical / admin</strong>, un bandeau « signalements à modérer » apparaît en haut de la Communauté : chaque signalement peut être <em>marqué traité</em> ou <em>ignoré</em>. Le retrait d'un contenu se fait avec le bouton 🗑️ habituel ; les récidives se gèrent via le bannissement Communauté (Admin).</p>
         </div>
       </div>
     </section>

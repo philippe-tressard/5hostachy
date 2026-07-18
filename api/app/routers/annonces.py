@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -11,13 +11,28 @@ from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import (
     PetiteAnnonce, TypeAnnonce, CategorieAnnonce, StatutAnnonce,
-    Utilisateur, StatutUtilisateur, RoleUtilisateur,
+    ReponseCommunaute, Utilisateur, StatutUtilisateur, RoleUtilisateur,
 )
 from app.routers.uploads import _save_image
+from app.utils.reponses import (
+    auteur_meta, enrich_reponse, notifier_nouvelle_reponse, tri_reponses,
+)
 
 router = APIRouter(prefix="/annonces", tags=["annonces"])
 
 MAX_PHOTOS = 5
+RUBRIQUE = "annonce"
+
+
+def _reponses_for(annonce_id: int, session: Session) -> list[dict]:
+    """Réponses d'une annonce : CS/admin en tête (plus de poids), puis chronologique."""
+    reps = session.exec(
+        select(ReponseCommunaute).where(
+            ReponseCommunaute.rubrique == RUBRIQUE,
+            ReponseCommunaute.cible_id == annonce_id,
+        )
+    ).all()
+    return tri_reponses([enrich_reponse(r, session) for r in reps])
 
 
 def _deny_communaute_for_statut(user: Utilisateur) -> None:
@@ -33,12 +48,13 @@ def _can_manage(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
     """Auteur, CS ou admin peut modifier/supprimer."""
     return (
         annonce.auteur_id == user.id
-        or user.role in (RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+        or user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
     )
 
 
 def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict:
     auteur = session.get(Utilisateur, annonce.auteur_id)
+    reponses = _reponses_for(annonce.id, session)
     return {
         **annonce.model_dump(),
         "photos": json.loads(annonce.photos_json),
@@ -46,6 +62,8 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
         "auteur_nom": auteur.nom if auteur else "",
         "auteur_email": auteur.email if annonce.contact_visible and auteur else None,
         "est_auteur": annonce.auteur_id == user.id,
+        "reponses": reponses,
+        "nb_reponses": len(reponses),
     }
 
 
@@ -174,9 +192,89 @@ def delete_annonce(
         raise HTTPException(404, "Annonce introuvable")
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
+    # Réponses associées supprimées en cascade
+    reps = session.exec(
+        select(ReponseCommunaute).where(
+            ReponseCommunaute.rubrique == RUBRIQUE,
+            ReponseCommunaute.cible_id == annonce_id,
+        )
+    ).all()
+    for r in reps:
+        session.delete(r)
     session.delete(annonce)
     session.commit()
     return {"ok": True}
+
+
+# ── Réponses aux annonces ────────────────────────────────────────────────────
+
+class ReponseCreate(BaseModel):
+    contenu: str
+
+
+@router.get("/{annonce_id}/reponses")
+def list_reponses(
+    annonce_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    _deny_communaute_for_statut(user)
+    annonce = session.get(PetiteAnnonce, annonce_id)
+    if not annonce:
+        raise HTTPException(404, "Annonce introuvable")
+    return _reponses_for(annonce_id, session)
+
+
+@router.post("/{annonce_id}/reponses", status_code=201)
+def create_reponse(
+    annonce_id: int,
+    body: ReponseCreate,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    _deny_communaute_for_statut(user)
+    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
+        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
+    ):
+        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas répondre")
+    contenu = (body.contenu or "").strip()
+    if not contenu:
+        raise HTTPException(422, "La réponse ne peut pas être vide")
+    annonce = session.get(PetiteAnnonce, annonce_id)
+    if not annonce:
+        raise HTTPException(404, "Annonce introuvable")
+    rep = ReponseCommunaute(rubrique=RUBRIQUE, cible_id=annonce_id, auteur_id=user.id, contenu=contenu)
+    session.add(rep)
+    notifier_nouvelle_reponse(
+        session, background_tasks,
+        createur_id=annonce.auteur_id, auteur=user,
+        rubrique_label="votre annonce", sujet=annonce.titre,
+        extrait=contenu, lien_path="/sondages",
+    )
+    session.commit()
+    session.refresh(rep)
+    return {"id": rep.id, "cible_id": rep.cible_id, "auteur_id": rep.auteur_id,
+            "contenu": rep.contenu, "cree_le": rep.cree_le, **auteur_meta(user, session)}
+
+
+@router.delete("/{annonce_id}/reponses/{rep_id}", status_code=204)
+def delete_reponse(
+    annonce_id: int,
+    rep_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Supprimer une réponse : son auteur, ou un CS/admin."""
+    _deny_communaute_for_statut(user)
+    rep = session.get(ReponseCommunaute, rep_id)
+    if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != annonce_id:
+        raise HTTPException(404, "Réponse introuvable")
+    est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    if rep.auteur_id != user.id and not est_cs:
+        raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
+    session.delete(rep)
+    session.commit()
 
 
 @router.post("/{annonce_id}/photo")

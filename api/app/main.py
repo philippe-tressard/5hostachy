@@ -74,7 +74,7 @@ from app.routers import (
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
 )
-from app.routers import uploads, faq
+from app.routers import uploads, faq, signalements
 from app.seed import seed
 from app.utils.backup import setup_scheduler
 
@@ -235,6 +235,7 @@ app.include_router(regles_residence.router)
 app.include_router(delegations.router)
 app.include_router(telemetry.router)
 app.include_router(flux.router)
+app.include_router(signalements.router)
 
 # Fichiers statiques (photos uploadées)
 uploads_dir = Path("/app/uploads")

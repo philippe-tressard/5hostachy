@@ -682,6 +682,9 @@ export const idees = {
 	voter: (id: number) => api.post(`/idees/${id}/voter`),
 	updateStatut: (id: number, statut: string) => api.patch(`/idees/${id}/statut`, { statut }),
 	delete: (id: number) => api.delete(`/idees/${id}`),
+	listReponses: (id: number) => api.get<any[]>(`/idees/${id}/reponses`),
+	repondre: (id: number, contenu: string) => api.post<any>(`/idees/${id}/reponses`, { contenu }),
+	supprimerReponse: (id: number, repId: number) => api.delete(`/idees/${id}/reponses/${repId}`),
 };
 
 export const annonces = {
@@ -701,6 +704,18 @@ export const annonces = {
 		return res.json();
 	},
 	deletePhoto: (id: number, url: string) => api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
+	listReponses: (id: number) => api.get<any[]>(`/annonces/${id}/reponses`),
+	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
+	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),
+};
+
+export const signalements = {
+	creer: (cible_type: string, cible_id: number, motif: string) =>
+		api.post('/signalements', { cible_type, cible_id, motif }),
+	liste: (statut = 'en_attente') => api.get<any[]>(`/signalements?statut=${statut}`),
+	count: () => api.get<{ en_attente: number }>('/signalements/count'),
+	resoudre: (id: number, statut: 'traite' | 'rejete') =>
+		api.patch(`/signalements/${id}`, { statut }),
 };
 
 export const copropriete = {
