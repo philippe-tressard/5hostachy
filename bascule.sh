@@ -192,17 +192,24 @@ if ! $DRY_RUN; then
   fi
   PEER_HEAD=$($SSH_CMD ptressard@"$PEER_IP" "git -C /opt/5hostachy rev-parse HEAD 2>/dev/null" 2>/dev/null || echo "unknown")
   if [ "$PEER_HEAD" != "$LOCAL_HEAD" ]; then
-    log "  ⚠ Code peer désynchronisé (peer=${PEER_HEAD:0:7}, actif=${LOCAL_HEAD:0:7}) — resynchronisation..."
-    if $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && git fetch origin main --quiet && git reset --hard $LOCAL_HEAD && docker compose build --quiet" ; then
-      log "  → Code peer resynchronisé sur ${LOCAL_HEAD:0:7} (images rebuildées)."
-    else
-      log "ERREUR: échec resynchronisation code peer — bascule annulée (prod intacte, aucun conteneur stoppé)."
-      $SSH_CMD ptressard@"$PEER_IP" "rm -f /opt/5hostachy/.bascule-lock" 2>/dev/null || true
-      send_alert_email "0-sync-code-peer"
-      exit 1
-    fi
+    log "  ⚠ Code peer désynchronisé (peer=${PEER_HEAD:0:7}, actif=${LOCAL_HEAD:0:7}) — resynchronisation + rebuild..."
   else
-    log "  → Parité de code peer OK (${LOCAL_HEAD:0:7})."
+    log "  → Git peer en parité (${LOCAL_HEAD:0:7}) — rebuild image quand même."
+  fi
+  # Toujours reset au commit de l'actif ET rebuild, même si le git est déjà en parité :
+  # la parité de HEAD ne garantit PAS que l'image Docker du peer a été construite depuis ce
+  # commit. Incident 18/07/2026 : rpi2 à jour côté git (1211767) mais image API datée du 16/07
+  # (rebuild sauté par l'ancienne branche « Parité OK ») → vieux code servi après bascule (bug
+  # de la publication épinglée résolue réapparu). Le cache Docker rend le rebuild quasi instantané
+  # quand rien n'a changé (pas de npm rebuild → pas de risque OOM), donc on le force toujours pour
+  # garantir image == code checkouté sur le futur actif.
+  if $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && git fetch origin main --quiet && git reset --hard $LOCAL_HEAD && docker compose build --quiet" ; then
+    log "  → Code peer synchronisé sur ${LOCAL_HEAD:0:7} + images rebuildées."
+  else
+    log "ERREUR: échec resynchronisation/rebuild code peer — bascule annulée (prod intacte, aucun conteneur stoppé)."
+    $SSH_CMD ptressard@"$PEER_IP" "rm -f /opt/5hostachy/.bascule-lock" 2>/dev/null || true
+    send_alert_email "0-sync-code-peer"
+    exit 1
   fi
 else
   drylog "Vérification parité code peer (git rev-parse + reset --hard + build si écart)"
