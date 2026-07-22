@@ -165,6 +165,10 @@ def get_flux(
         return " · ".join(PERIMETRE_LABELS.get(p, p) for p in perims)
 
     # ── 1. Tickets : changements de statut récents ──────────────────────────
+    # Un seul événement par ticket dans le fil (le plus récent) — l'historique
+    # complet reste consultable sur la fiche du ticket, ceci n'est qu'un
+    # résumé « quoi de neuf ».
+    ticket_items: list[FluxItem] = []
     evols = session.exec(
         select(TicketEvolution, Ticket)
         .join(Ticket, TicketEvolution.ticket_id == Ticket.id)
@@ -185,7 +189,7 @@ def get_flux(
                 duree = round(
                     (tk.ferme_le - tk.cree_le).total_seconds() / 3600, 1
                 )
-            items.append(FluxItem(
+            ticket_items.append(FluxItem(
                 id=f"tk_{tk.id}",
                 type="ticket_resolu",
                 date=evol.cree_le,
@@ -203,7 +207,7 @@ def get_flux(
             ))
         elif nouveau in ("ouvert", "en_cours"):
             evol_auteur = _auteur_nom(session, evol.auteur_id)
-            items.append(FluxItem(
+            ticket_items.append(FluxItem(
                 id=f"tk_{tk.id}",
                 type="ticket_mis_a_jour",
                 date=evol.cree_le,
@@ -236,7 +240,7 @@ def get_flux(
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
         evol_auteur = _auteur_nom(session, evol.auteur_id)
-        items.append(FluxItem(
+        ticket_items.append(FluxItem(
             id=f"tk_rep_{evol.id}",
             type="ticket_mis_a_jour",
             date=evol.cree_le,
@@ -268,7 +272,7 @@ def get_flux(
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
         evol_auteur = _auteur_nom(session, evol.auteur_id)
-        items.append(FluxItem(
+        ticket_items.append(FluxItem(
             id=f"tk_com_{evol.id}",
             type="ticket_mis_a_jour",
             date=evol.cree_le,
@@ -303,7 +307,7 @@ def get_flux(
             _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
             else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
         )
-        items.append(FluxItem(
+        ticket_items.append(FluxItem(
             id=f"tk_{tk.id}",
             type="ticket_ouvert",
             date=tk.cree_le,
@@ -318,6 +322,14 @@ def get_flux(
                    "description": _strip_html(tk.description, 300),
                    "photos_urls": _parse_photos(tk.photos_urls)},
         ))
+
+    # Un seul événement par ticket dans le fil : le plus récent
+    latest_par_ticket: dict[int, FluxItem] = {}
+    for it in ticket_items:
+        tid = it.meta.get("ticket_id")
+        if tid not in latest_par_ticket or it.date > latest_par_ticket[tid].date:
+            latest_par_ticket[tid] = it
+    items.extend(latest_par_ticket.values())
 
     # ── 2. Publications ─────────────────────────────────────────────────────
     pubs = session.exec(
