@@ -328,7 +328,7 @@ def get_flux(
         items.append(FluxItem(
             id=f"pub_{p.id}",
             type="publication",
-            date=p.publiee_le or p.cree_le,
+            date=p.mis_a_jour_le or p.publiee_le or p.cree_le,
             cree_le=p.cree_le,
             titre=p.titre,
             detail=" — ".join(detail_parts) if detail_parts else None,

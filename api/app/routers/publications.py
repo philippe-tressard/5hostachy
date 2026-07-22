@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
@@ -149,12 +150,16 @@ def _envoyer_email_syndic_publication(
         all_attachments.extend(_resolve_fichiers_attachments(fichiers_urls))
 
     if destinataires:
+        # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
+        # Pas de doublon si l'auteur est déjà destinataire principal (syndic/CS).
+        auteur_bcc = [user.email] if user.email.lower() not in seen_emails else None
         background_tasks.add_task(
             send_email_group,
             code="publication_syndic",
             to_recipients=destinataires,
             context=ctx,
             session=session,
+            bcc=auteur_bcc,
             attachments=all_attachments or None,
         )
 
@@ -231,11 +236,14 @@ def _envoyer_email_externe_publication(
         "fichiers": bool(attachments),
     }
 
+    # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
+    auteur_bcc = [user.email] if user.email.lower() != email_externe.lower() else None
     background_tasks.add_task(
         send_email,
         code="publication_externe",
         to=email_externe,
         context=ctx,
+        bcc=auteur_bcc,
         attachments=attachments or None,
     )
 
@@ -275,7 +283,10 @@ def list_publications(
     user: Utilisateur = Depends(get_current_user),
 ):
     pubs = session.exec(
-        select(Publication).order_by(Publication.epingle.desc(), Publication.cree_le.desc())
+        select(Publication).order_by(
+            Publication.epingle.desc(),
+            func.coalesce(Publication.mis_a_jour_le, Publication.cree_le).desc(),
+        )
     ).all()
 
     is_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)

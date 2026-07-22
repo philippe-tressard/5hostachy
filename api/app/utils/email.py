@@ -208,6 +208,7 @@ async def send_email(
     session: Session | None = None,
     *,
     cc: list[str] | None = None,
+    bcc: list[str] | None = None,
     attachments: list[str] | None = None,
     destinataire_id: int | None = None,
 ):
@@ -315,6 +316,8 @@ async def send_email(
             )
             if cc:
                 msg_kwargs["cc"] = cc
+            if bcc:
+                msg_kwargs["bcc"] = bcc
             fixed_attachments: list[str] = []
             if attachments:
                 fixed_attachments = _fix_image_orientations(attachments)
@@ -360,6 +363,7 @@ async def send_email_group(
     session: Session | None = None,
     *,
     cc_recipients: list[tuple[int | None, str]] | None = None,
+    bcc: list[str] | None = None,
     attachments: list[str] | None = None,
 ):
     """
@@ -466,6 +470,8 @@ async def send_email_group(
             # CC : uniquement si to non vide (sinon tous en recipients)
             if to_emails and cc_emails:
                 msg_kwargs["cc"] = cc_emails
+            if bcc:
+                msg_kwargs["bcc"] = bcc
             # Pièces jointes (photos) — correction orientation EXIF avant envoi
             if attachments:
                 fixed_attachments = _fix_image_orientations(attachments)
