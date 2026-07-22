@@ -253,6 +253,38 @@ def get_flux(
                    "evol_auteur": evol_auteur},
         ))
 
+    # ── 1c. Tickets : modifications / commentaires (type=commentaire) ───────
+    commentaires = session.exec(
+        select(TicketEvolution, Ticket)
+        .join(Ticket, TicketEvolution.ticket_id == Ticket.id)
+        .where(TicketEvolution.type == "commentaire", TicketEvolution.cree_le >= since)
+        .order_by(TicketEvolution.cree_le.desc())
+    ).all()
+    for evol, tk in commentaires:
+        if not ticket_visible(tk, user):
+            continue
+        perims = (
+            _parse_json_perimetres(tk.perimetre_cible) if tk.perimetre_cible
+            else ([f"bat:{tk.batiment_id}"] if tk.batiment_id else ["résidence"])
+        )
+        evol_auteur = _auteur_nom(session, evol.auteur_id)
+        items.append(FluxItem(
+            id=f"tk_com_{evol.id}",
+            type="ticket_mis_a_jour",
+            date=evol.cree_le,
+            cree_le=tk.cree_le,
+            titre=tk.titre,
+            detail="Mise à jour",
+            icon="🔧",
+            badges=[f"#{tk.numero}", tk.categorie],
+            lien="/tickets",
+            meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
+                   "perimetre": _perimetre_label(perims),
+                   "description": _strip_html(tk.description, 300),
+                   "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
+                   "evol_auteur": evol_auteur},
+        ))
+
     # Tickets récemment créés (sans évolution)
     new_tickets = session.exec(
         select(Ticket)
@@ -260,7 +292,8 @@ def get_flux(
         .order_by(Ticket.cree_le.desc())
     ).all()
     reponse_ticket_ids = {tk.id for _, tk in reponses}
-    evol_ticket_ids = {tk.id for _, tk in evols} | reponse_ticket_ids
+    commentaire_ticket_ids = {tk.id for _, tk in commentaires}
+    evol_ticket_ids = {tk.id for _, tk in evols} | reponse_ticket_ids | commentaire_ticket_ids
     for tk in new_tickets:
         if tk.id in evol_ticket_ids:
             continue
