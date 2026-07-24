@@ -5,8 +5,8 @@
 #  Exécuté par cron à 02:00 sur le RPi ACTUELLEMENT ACTIF.
 #  Séquence :
 #    0. Pre-flight : peer joignable, espace disque, parité de code peer⇆actif
-#    1. Sync uploads + WhatsApp auth à chaud (prod toujours UP)
-#    2. Stop conteneurs locaux
+#    1. Sync uploads à chaud (prod toujours UP)
+#    2. Stop conteneurs locaux + sync WhatsApp auth à froid (0 writer)
 #    3. WAL checkpoint + integrity check DB locale
 #    4. Rsync DB → peer + integrity check DB sur peer
 #    5. Start peer + health check API (60s max)
@@ -215,26 +215,13 @@ else
   drylog "Vérification parité code peer (git rev-parse + reset --hard + build si écart)"
 fi
 
-# ── Phase 1 : Sync à chaud (uploads + WA, PAS la DB) ────────────────
-log "[1/7] Sync uploads + WhatsApp auth (à chaud)..."
+# ── Phase 1 : Sync uploads à chaud (PAS la DB, PAS WhatsApp auth) ───
+log "[1/7] Sync uploads (à chaud)..."
 
 UPL_SRC=$(docker volume inspect 5hostachy_uploads --format '{{.Mountpoint}}')
 run "rsync -az --delete -e '$SSH_CMD' '$UPL_SRC/' ptressard@$PEER_IP:/tmp/sync_uploads/"
 run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_uploads/ \$(docker volume inspect 5hostachy_uploads --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_uploads'"
 log "  → Uploads synchronisés."
-
-WA_VOL=$(docker volume inspect 5hostachy_whatsapp_auth --format '{{.Mountpoint}}' 2>/dev/null || echo "")
-if [ -n "$WA_VOL" ]; then
-  # Sécurité : ne pas syncer si creds.json est vide ou absent (session corrompue/en cours d'écriture)
-  CREDS_SIZE=$(stat -c%s "$WA_VOL/creds.json" 2>/dev/null || echo 0)
-  if [ "$CREDS_SIZE" -gt 0 ]; then
-    run "rsync -az --delete -e '$SSH_CMD' '$WA_VOL/' ptressard@$PEER_IP:/tmp/sync_wa_auth/"
-    run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_wa_auth/ \$(docker volume inspect 5hostachy_whatsapp_auth --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_wa_auth'"
-    log "  → WhatsApp auth synchronisé (creds.json: ${CREDS_SIZE} octets)."
-  else
-    log "  ⚠ creds.json vide ou absent — sync WhatsApp auth ignoré pour ne pas écraser une session valide sur le peer."
-  fi
-fi
 
 # ── Phase 2 : Stop cloudflared local + conteneurs locaux ────────────
 # cloudflared LOCAL arrêté EN PREMIER : tant qu'il est actif, les 2 tunnels
@@ -248,6 +235,29 @@ log "  → Cloudflared local stoppé. Plus de trafic public possible jusqu'au pe
 cd "$REPO"
 run "docker compose stop"
 log "  → Conteneurs arrêtés."
+
+# WhatsApp auth : synchronisé maintenant, conteneur source stoppé (0 writer)
+# → snapshot cohérent entre creds.json et ses fichiers de clés associés.
+# Avant le 25/07/2026, ce sync se faisait "à chaud" en Phase 1 (conteneur
+# hostachy_whatsapp encore actif, en train d'écrire ces fichiers) → snapshot
+# multi-fichiers potentiellement déchiré (creds.json désynchronisé des clés
+# de session). Cause probable de la panne du 24/07/2026 : boucle ininterrompue
+# "stream:error conflict:replaced" pendant 2h23 après la bascule, bridge jamais
+# reconnecté, échec silencieux de l'envoi WhatsApp planifié de 18h. Cf. CLAUDE.md
+# « Règle d'or anti-corruption DB » — même classe de bug, appliquée ici à l'état
+# d'authentification WhatsApp plutôt qu'à app.db.
+log "  → Sync WhatsApp auth (à froid)..."
+WA_VOL=$(docker volume inspect 5hostachy_whatsapp_auth --format '{{.Mountpoint}}' 2>/dev/null || echo "")
+if [ -n "$WA_VOL" ]; then
+  CREDS_SIZE=$(stat -c%s "$WA_VOL/creds.json" 2>/dev/null || echo 0)
+  if [ "$CREDS_SIZE" -gt 0 ] && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$WA_VOL/creds.json" 2>/dev/null; then
+    run "rsync -az --delete -e '$SSH_CMD' '$WA_VOL/' ptressard@$PEER_IP:/tmp/sync_wa_auth/"
+    run "$SSH_CMD ptressard@$PEER_IP 'sudo rsync -a /tmp/sync_wa_auth/ \$(docker volume inspect 5hostachy_whatsapp_auth --format \"{{.Mountpoint}}\")/ && rm -rf /tmp/sync_wa_auth'"
+    log "  → WhatsApp auth synchronisé (creds.json: ${CREDS_SIZE} octets, JSON valide)."
+  else
+    log "  ⚠ creds.json vide, absent ou invalide — sync WhatsApp auth ignoré pour ne pas écraser une session valide sur le peer."
+  fi
+fi
 
 # ── Phase 3 : WAL checkpoint + integrity check DB locale ────────────
 log "[3/7] WAL checkpoint + integrity check DB locale..."
