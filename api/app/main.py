@@ -123,9 +123,13 @@ async def lifespan(app: FastAPI):
 
     scheduler = setup_scheduler()
 
-    # Planificateur WhatsApp : vérification chaque jour à 18h
+    # Planificateur WhatsApp : fenêtre de rattrapage 18h00 → 21h45 (toutes les
+    # 15 min) au lieu d'une tentative unique à 18h00 pile — cf. incident du
+    # 24/07/2026 (bridge indisponible à 18h00, message mensuel perdu).
+    # La dédup dans whatsapp_scheduler.check_and_send() rend les tentatives
+    # répétées sûres (aucun risque de doublon).
     from app.utils.whatsapp_scheduler import check_and_send as _wa_check
-    scheduler.add_job(_wa_check, "cron", hour=18, minute=0, id="whatsapp_scheduled")
+    scheduler.add_job(_wa_check, "cron", hour="18-21", minute="*/15", id="whatsapp_scheduled")
 
     # Agrégation télémétrie : chaque nuit à 2h
     from app.utils.telemetry_aggregation import run_telemetry_aggregation_cron
