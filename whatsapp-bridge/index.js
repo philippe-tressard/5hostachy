@@ -37,6 +37,33 @@ let sock = null;
 let qrCode = null;       // latest QR string (null when connected)
 let connectionState = "disconnected"; // disconnected | connecting | open
 
+// ── Reconnect supervision ────────────────────────────────────────────
+// Incident 2026-07-24 : après une bascule, le bridge est resté bloqué
+// hors état "open" pendant 2h23 sans aucune tentative de reconnexion —
+// une reconnexion planifiée avait rejeté une promesse non interceptée
+// (startBaileys() est async, appelé nu dans un setTimeout), ce qui a
+// tué la chaîne de reconnexion silencieusement. Cf. CLAUDE.md.
+let starting = false;          // anti-concurrence : un seul startBaileys() à la fois
+let reconnectTimer = null;     // timer de reconnexion déjà programmé
+let reconnectAttempt = 0;      // pour le backoff exponentiel
+const RECONNECT_BASE_MS = 5_000;
+const RECONNECT_MAX_MS = 60_000;
+const WATCHDOG_INTERVAL_MS = 60_000;
+
+function scheduleReconnect() {
+  if (reconnectTimer) return; // déjà programmé
+  const delay = Math.min(RECONNECT_BASE_MS * 2 ** reconnectAttempt, RECONNECT_MAX_MS);
+  reconnectAttempt += 1;
+  logger.warn({ delay, attempt: reconnectAttempt }, "Reconnexion programmée");
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    startBaileys().catch((err) => {
+      logger.warn({ err: err.message }, "startBaileys() a échoué — nouvelle tentative programmée");
+      scheduleReconnect();
+    });
+  }, delay);
+}
+
 // ── ACK tracking (ghost session detection) ──────────────────────────
 const ACK_TIMEOUT_MS = 15_000;
 const pendingAcks = new Map(); // msgId → { resolve, reject, timer }
@@ -73,6 +100,27 @@ app.use(authMiddleware);
 
 // ── Baileys connection ──────────────────────────────────────────────
 async function startBaileys() {
+  if (starting) {
+    logger.warn("startBaileys() déjà en cours — appel ignoré (anti-concurrence)");
+    return;
+  }
+  starting = true;
+  try {
+    await startBaileysInner();
+  } finally {
+    starting = false;
+  }
+}
+
+async function startBaileysInner() {
+  // Ferme proprement le socket précédent avant d'en ouvrir un nouveau —
+  // sans ça, un ancien socket encore vivant peut se battre avec le nouveau
+  // pour la même session (source probable des tempêtes "conflict: replaced").
+  if (sock) {
+    try { sock.end(undefined); } catch (_) {}
+    sock = null;
+  }
+
   connectionState = "connecting";
   qrCode = null;
 
@@ -118,7 +166,8 @@ async function startBaileys() {
     if (connection === "open") {
       connectionState = "open";
       qrCode = null;
-      logger.info("WhatsApp connected ✓");
+      reconnectAttempt = 0; // reset du backoff après une connexion réussie
+      logger.warn("WhatsApp connected ✓");
     }
 
     if (connection === "close") {
@@ -128,13 +177,24 @@ async function startBaileys() {
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       logger.warn({ statusCode, shouldReconnect }, "Connection closed");
       if (shouldReconnect) {
-        setTimeout(startBaileys, 5_000);
+        scheduleReconnect();
       } else {
         logger.warn("Logged out — delete auth_state and restart to re-pair");
       }
     }
   });
 }
+
+// Filet de sécurité : si plus aucune reconnexion n'est en cours ni programmée
+// alors que l'état n'est pas "open", on en relance une. Couvre tout scénario
+// où la chaîne de reconnexion s'arrêterait pour une raison non anticipée
+// (cf. incident du 2026-07-24 : 2h23 sans la moindre tentative).
+setInterval(() => {
+  if (connectionState !== "open" && connectionState !== "connecting" && connectionState !== "waiting_qr" && !reconnectTimer && !starting) {
+    logger.warn("Watchdog : aucune reconnexion en cours/programmée — relance forcée");
+    scheduleReconnect();
+  }
+}, WATCHDOG_INTERVAL_MS);
 
 // ── Routes ──────────────────────────────────────────────────────────
 app.get("/status", (_req, res) => {
@@ -188,7 +248,9 @@ app.post("/send", async (req, res) => {
     if (err.message.includes("ghost session") || err.message.includes("ACK timeout")) {
       logger.warn("Ghost session detected — triggering reconnect");
       try { if (sock) sock.end(); } catch (_) {}
-      setTimeout(startBaileys, 2_000);
+      connectionState = "disconnected";
+      reconnectAttempt = 0;
+      scheduleReconnect();
     }
     res.status(500).json({ error: err.message });
   }
@@ -216,12 +278,17 @@ app.post("/restart", async (_req, res) => {
   try {
     if (sock) sock.end();
   } catch (_) {}
-  setTimeout(startBaileys, 1_000);
+  connectionState = "disconnected";
+  reconnectAttempt = 0;
+  scheduleReconnect();
   res.json({ ok: true, message: "Restarting..." });
 });
 
 // ── Start ───────────────────────────────────────────────────────────
 app.listen(PORT, "0.0.0.0", () => {
   logger.info(`WhatsApp Bridge listening on port ${PORT}`);
-  startBaileys();
+  startBaileys().catch((err) => {
+    logger.warn({ err: err.message }, "Échec du démarrage initial — nouvelle tentative programmée");
+    scheduleReconnect();
+  });
 });
