@@ -312,7 +312,7 @@ docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db
 |-------|-----|-----------------|
 | 03:00 | backup | — |
 | 06:00 | **health_check** | WhatsApp déconnecté · backup > 25h · disque < 15% |
-| 18:00 | whatsapp_scheduled | — |
+| 18:00-21:45 (`*/15`) | whatsapp_scheduled | Fenêtre de rattrapage épuisée sans envoi réussi |
 | 02:00 | telemetry_aggregation | — |
 
 ### WhatsApp bridge
@@ -323,6 +323,33 @@ docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db
   cd /opt/5hostachy && docker compose up -d whatsapp-bridge
   ```
 - `bascule.sh` ne propage jamais un `creds.json` vide vers le peer
+
+#### Incident du 24/07/2026 — bridge bloqué 2h23, message mensuel manqué
+Le message WhatsApp planifié du 4ᵉ samedi (18h00) a échoué : le bridge était en
+boucle `stream:error conflict:replaced` ininterrompue depuis 14h28, sans jamais
+revenir à `state: open`. Deux causes cumulées, corrigées :
+
+1. **`bascule.sh` synchronisait `5hostachy_whatsapp_auth` « à chaud » (Phase 1,
+   conteneur source encore actif et en train d'écrire `creds.json` + fichiers de
+   clés)** → snapshot multi-fichiers potentiellement déchiré propagé au peer à
+   chaque bascule nocturne. **Corrigé** : le sync se fait désormais en Phase 2,
+   après `docker compose stop` (0 writer, comme la DB), avec vérification que
+   `creds.json` est un JSON valide avant de l'installer sur le peer. Même classe
+   de bug que la « Règle d'or anti-corruption DB » ci-dessus, appliquée à l'état
+   d'authentification WhatsApp plutôt qu'à `app.db`.
+2. **`whatsapp-bridge/index.js` ne supervisait pas sa propre reconnexion** :
+   `setTimeout(startBaileys, 5_000)` appelait une fonction `async` sans
+   `.catch()` → une reconnexion qui rejette (ex. timeout réseau) tue la chaîne
+   silencieusement, sans aucun log. C'est ce qui a laissé le bridge mort de
+   16h18 à 18h41 sans la moindre tentative. **Corrigé** : verrou anti-concurrence
+   (`starting`), `.catch()` systématique sur chaque relance, backoff exponentiel
+   (5s → 60s max), et un watchdog (`setInterval` 60s) qui force une reconnexion
+   si l'état reste hors `open`/`connecting`/`waiting_qr` sans reconnexion en cours.
+3. Le job `whatsapp_scheduled` ne tentait l'envoi **qu'une fois, à 18h00 pile**
+   — un échec ponctuel du bridge à cette seconde précise perdait le message du
+   mois. **Corrigé** : fenêtre de rattrapage 18h00→21h45 toutes les 15 min (la
+   déduplication existante empêche tout doublon), alerte email si la fenêtre se
+   ferme sans envoi réussi.
 
 ---
 
