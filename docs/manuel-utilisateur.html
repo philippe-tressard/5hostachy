@@ -1753,6 +1753,40 @@
       </div>
 
       <div class="card">
+        <h3>&#x1F4C4; Espace CS — Annonces Hall</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">L'onglet <strong>Annonces Hall</strong> permet de produire une <strong>affiche PDF</strong> aux couleurs de la résidence, destinée aux panneaux d'affichage des halls, et de la transmettre par email aux membres du CS chargés de l'imprimer.</p>
+
+        <div style="display:flex; flex-direction:column; gap:.65rem; font-size:.9rem">
+          <div style="padding:.8rem; background:#eff6ff; border-radius:8px">
+            <strong>&#x1F4DD; Nouvelle annonce</strong> — saisissez un <strong>titre</strong>, le <strong>message</strong> (texte enrichi : gras, listes, liens) et le <strong>périmètre d'affichage</strong> (copropriété entière, un ou plusieurs bâtiments, parking, cave). Vous pouvez y ajouter <strong>1 ou 2 photos</strong>, facultatives : elles se placent en pied d'affiche, sous le texte. Le <strong>texte de l'annonce reste l'élément central</strong> — les photos sont volontairement limitées en nombre et en hauteur pour que le format A4 ou A5 soit tenu.
+          </div>
+          <div style="padding:.8rem; background:#f5f3ff; border-radius:8px">
+            <strong>&#x1F4F0; Pré-remplir depuis une actualité</strong> — le sélecteur en haut du formulaire propose les <strong>10 dernières actualités publiées</strong>. En choisir une recopie son titre, son contenu, son périmètre <strong>et ses photos</strong> (image de l'actualité puis pièces jointes de type image, dans la limite de 2) dans le formulaire. Tout reste <strong>modifiable</strong> avant validation : l'affiche est ensuite indépendante de l'actualité d'origine.
+          </div>
+          <div style="padding:.8rem; background:#f0fdf4; border-radius:8px">
+            <strong>&#x1F4D0; Format automatique, du A4 au A8</strong> — par défaut, l'affiche adopte <strong>le plus petit format qui accueille le texte</strong> (A4 210×297, A5 148×210, A6 105×148, A7 74×105, A8 52×74 mm) : une annonce brève occupe ainsi le minimum de place dans l'afficheur du hall, et plusieurs annonces peuvent y cohabiter. Les boutons <em>Auto / A4 / A5 / A6 / A7 / A8</em> permettent d'imposer un format. En dessous de l'A4, un <strong>liseré en pointillés</strong> matérialise le trait de découpe après impression sur une feuille plus grande. Une affiche portant une photo ne descend jamais sous l'A5.
+          </div>
+          <div style="padding:.8rem; background:#fdf4ff; border-radius:8px">
+            <strong>&#x1F441;&#xFE0F; Aperçu</strong> — le bouton <strong>« Aperçu »</strong> affiche l'affiche telle qu'elle sortira de l'imprimante, avant tout envoi. Rien n'est enregistré à ce stade.
+          </div>
+          <div style="padding:.8rem; background:#fff8f0; border-radius:8px">
+            <strong>&#x2709; Créer et envoyer au CS</strong> — le PDF est généré, conservé dans l'historique, et envoyé <strong>en pièce jointe</strong> aux membres du CS rattachés au périmètre choisi (ainsi qu'au gestionnaire du site). Un périmètre « copropriété entière », « parking » ou « cave » notifie l'ensemble du CS. Seuls les membres du CS <strong>disposant d'un compte avec adresse email</strong> sont notifiés.
+          </div>
+          <div style="padding:.8rem; background:#ecfeff; border-radius:8px">
+            <strong>&#x1F4F0; Depuis une actualité, sans passer par cet onglet</strong> — au moment de rédiger une actualité, cochez l'option <strong>&#x1F4C4; Créer une annonce Hall</strong> (à côté de « Partager sur le groupe » et « Envoyer au Conseil Syndical »). À la publication, l'affiche est générée à partir du titre, du contenu, du périmètre et des <strong>photos</strong> de l'actualité (image puis pièces jointes de type image, dans la limite de 2), envoyée au CS du périmètre et ajoutée à l'historique — exactement comme une annonce créée ici. Un <em>brouillon</em> ne déclenche rien tant qu'il n'est pas publié, et une actualité ne produit <strong>qu'une seule</strong> affiche.
+          </div>
+          <div style="padding:.8rem; background:#fefce8; border-radius:8px">
+            <strong>&#x1F4DA; Historique</strong> — toutes les annonces sont conservées avec leur date, leur titre, leur vignette, leur périmètre et leur PDF téléchargeable. Chaque annonce peut être <strong>renvoyée</strong> au CS, ou <strong>archivée</strong> (&#x1F4E6;) si elle n'a plus d'intérêt. Les annonces archivées restent consultables via le filtre <em>Archives</em> ; leur <strong>suppression définitive</strong> (&#x1F5D1;&#xFE0F;, PDF effacé) est réservée à l'administrateur.
+          </div>
+        </div>
+
+        <div class="callout tip" style="margin-top:1rem">
+          <span class="callout-icon">&#x1F5A8;&#xFE0F;</span>
+          <p>À l'impression, choisissez <strong>couleur</strong> et <strong>échelle 100 %</strong> (pas d'« ajuster à la page ») : l'affiche est calibrée au format exact. Pour un format inférieur à l'A4, imprimez sur une feuille A4 puis découpez le long des pointillés.</p>
+        </div>
+      </div>
+
+      <div class="card">
         <h3>Annuaire — repère contact principal</h3>
         <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Dans la section <strong>Annuaire</strong>, le contact principal du syndic est identifié par une <strong>étoile</strong> avec l'info-bulle <strong>« Gestionnaire principal »</strong>.</p>
         <p style="font-size:.9rem; color:var(--muted); margin-bottom:0">Côté Conseil Syndical, le membre marqué <strong>Gestionnaire du Site</strong> est identifié par un pictogramme <strong>immeuble</strong> (info-bulle <strong>« Gestionnaire du Site »</strong>). Le repère <strong>Président</strong> est optionnel.</p>
@@ -1810,6 +1844,7 @@
           <p>Vous ne voyez que les actualités qui concernent <strong>votre bâtiment</strong>. Les annonces pour l'ensemble de la résidence sont visibles par tous.</p>
           <p style="margin-top:.5rem">Quand le conseil syndical publie une actualité avec une photo et coche <strong>« Partager sur le groupe WhatsApp »</strong>, l'image est désormais jointe au message envoyé sur le groupe.</p>
           <p style="margin-top:.5rem"><strong>Options d'envoi par e-mail :</strong> lors de la création d'une actualité ou d'une évolution, deux cases permettent d'envoyer un e-mail — <strong>« ✉️ Envoyer au syndic »</strong> (syndic principal) et <strong>« ✉️ Envoyer au Conseil Syndical »</strong> (tous les membres CS). La photo de la publication est jointe à l'e-mail.</p>
+          <p style="margin-top:.5rem"><strong>&#x1F4C4; Créer une annonce Hall :</strong> une quatrième case, réservée au CS, transforme l'actualité en <strong>affiche PDF pour le hall</strong> — générée à la publication, envoyée aux membres du CS du périmètre et conservée dans <strong>Espace CS → Annonces Hall</strong>. Voir le chapitre <em>Espace CS — Annonces Hall</em>.</p>
         </div>
       </div>
 

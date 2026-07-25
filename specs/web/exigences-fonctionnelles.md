@@ -452,6 +452,21 @@
   - Le conseil syndical et l'admin peuvent modérer (archiver) toute annonce inappropriée.
   - La liste affiche les annonces disponibles en priorité, puis les réservées. Les annonces vendues/archivées ne sont visibles que par l'auteur.
 
+### EF-WEB-117 — Annonces de hall (affiches PDF du Conseil Syndical)
+- **Priorité :** Moyenne
+- **Description :** Le conseil syndical produit depuis son espace une affiche PDF à la charte de la résidence, destinée aux panneaux d'affichage des halls, et la transmet par email aux membres du CS chargés de l'imprimer et de l'afficher.
+- **Critères d'acceptance :**
+  - Onglet **Annonces Hall** de l'Espace CS, entre *Reporting* et *Annuaire*, réservé au CS et à l'admin.
+  - Saisie : titre, message (éditeur riche HTML sanitisé), périmètre d'affichage (composant périmètre commun) et **au plus 2 photos facultatives** (composant de galerie commun à la Communauté). Le **texte est l'élément central** de l'affiche : les photos sont placées en pied de contenu, à hauteur bridée, de façon à ce que le **format A4/A5 reste tenu** sur une page.
+  - **Pré-remplissage depuis une actualité** : un sélecteur propose les **10 dernières actualités publiées** ; le choix recopie titre, contenu, périmètre **et photos** (image de l'actualité puis pièces jointes de type image, tronquées à 2) dans le formulaire, tous les champs restant modifiables avant validation. L'affiche produite est indépendante de l'actualité (aucune synchronisation ultérieure).
+  - **Déclenchement depuis une publication** : une option **« Créer une annonce Hall »** s'ajoute aux options de publication existantes (WhatsApp, syndic, CS). Cochée, elle exécute le workflow complet (PDF, envoi au CS du périmètre, historique) à la publication — jamais sur un brouillon. Les photos de l'actualité alimentent l'affiche dans la même limite. Le déclenchement est **idempotent** : une publication ne génère qu'une seule affiche, tracée par `annonce_hall.publication_id`. Un échec de génération est journalisé et ne fait jamais échouer la publication.
+  - **Format automatique** : le plus petit format normalisé accueillant le contenu (titre + message) est retenu, parmi **A4, A5, A6, A7, A8** — objectif : occuper le minimum de place dans l'afficheur du hall. Seuils : A8 ≤ 70 caractères, A7 ≤ 140, A6 ≤ 300, A5 ≤ 600, A4 au-delà. Le CS peut imposer un format. Sous l'A4, l'affiche porte un **liseré en pointillés** servant de trait de découpe. Une affiche portant une photo ne descend pas sous l'**A5** ; sous l'A6 le QR code disparaît du pied de page, sous l'A5 la date d'affichage également.
+  - **Aperçu** avant envoi, rendu identique au PDF, sans enregistrement ni envoi.
+  - À la création : PDF généré côté serveur (WeasyPrint), conservé sur disque, puis envoyé **en pièce jointe** via le template email `annonce_hall` aux membres du CS rattachés au périmètre (plus le gestionnaire du site). Un périmètre transverse (copropriété entière, parking, cave, AFUL) notifie l'ensemble du CS. Seuls les membres liés à un compte actif avec email sont notifiés ; l'auteur reçoit une copie cachée.
+  - Le PDF est **figé** : une correction passe par une nouvelle annonce, jamais par une régénération.
+  - **Historique** : date, titre, vignette, périmètre, format, taille et téléchargement du PDF ; aperçu du message au déploiement de la carte ; renvoi possible au CS.
+  - **Archivage** par le CS (l'annonce bascule dans le filtre *Archives*) ; **suppression définitive** (ligne + PDF + illustration) réservée à l'admin depuis les archives, conformément au pattern « Archiver vs Supprimer ».
+
 ---
 
 ## Espace bailleur — Gestion locative
