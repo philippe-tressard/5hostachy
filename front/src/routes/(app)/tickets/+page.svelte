@@ -7,6 +7,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
+	import { perimetreLabel } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 
@@ -44,15 +45,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	const CAT_ICON: Record<string, string> = {
 		panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}',
 	};
-
-	function perimetreLabel(items: string[]): string {
-		const map: Record<string, string> = {
-			'résidence': 'Copropriété entière',
-			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
-		};
-		return items.map((i: string) => map[i] ?? i).join(' · ');
-	}
 
 	function renderDesc(c: string) {
 		const t = c.trimStart();

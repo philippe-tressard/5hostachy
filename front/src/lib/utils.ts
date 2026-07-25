@@ -14,3 +14,18 @@ export function htmlPreview(html: string, maxLength = 150): string {
 	const text = stripHtml(html);
 	return text.length > maxLength ? text.slice(0, maxLength) + '…' : text;
 }
+
+/** Libellés canoniques des périmètres (cf. specs/design — pattern UX « Périmètre »). */
+export const PERIMETRE_LABELS: Record<string, string> = {
+	'résidence': 'Copropriété entière',
+	'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
+	parking: 'Parking', cave: 'Cave', aful: 'AFUL',
+};
+
+/**
+ * Périmètres → libellé affichable. Séparateur ` · ` (espace point-médian espace).
+ * Ex : ['bat:1','parking'] → 'Bât. 1 · Parking'
+ */
+export function perimetreLabel(items: string[]): string {
+	return (items ?? []).map((i) => PERIMETRE_LABELS[i] ?? i).join(' · ');
+}
