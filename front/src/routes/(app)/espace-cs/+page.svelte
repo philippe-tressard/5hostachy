@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount, tick } from 'svelte';
-	import { isCS } from '$lib/stores/auth';
+	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -11,8 +11,12 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
+	import { stripHtml } from '$lib/utils';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import Vignette from '$lib/components/Vignette.svelte';
+	import PhotosUpload from '$lib/components/PhotosUpload.svelte';
 
-	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
+	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, 'annonces-hall': { label: '\u{1F4C4} Annonces Hall', descriptif: 'Créez une annonce à afficher dans le hall des bâtiments : PDF à la charte de la résidence, envoyé par mail aux membres du CS concernés, puis conservé dans l\'historique.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
 	$: _siteNom = $siteNomStore;
 
 	interface PendingUser {
@@ -112,7 +116,7 @@
 	}
 
 	// -- Onglet -------------------------------------------------------------
-	let onglet: 'validations' | 'tickets' | 'reporting' | 'annuaire' = 'validations';
+	let onglet: 'validations' | 'tickets' | 'reporting' | 'annonces-hall' | 'annuaire' = 'validations';
 	$: trackTabView(onglet);
 
 	// -- Tickets ------------------------------------------------------------
@@ -560,6 +564,206 @@
 	$: nbComptes = comptesEnAttente.length;
 	$: nbCommandes = commandesEnAttente.length;
 
+	// -- Annonces Hall ------------------------------------------------------
+	let ahVue: 'nouvelle' | 'historique' = 'nouvelle';
+	let ahList: AnnonceHall[] = [];
+	let ahLoading = false;
+	let ahLoaded = false;
+	let ahArchivees = false;
+	let ahExpandedId: number | null = null;
+
+	// Formulaire de création
+	let ahTitre = '';
+	let ahMessage = '';
+	let ahPerimetre: string[] = ['résidence'];
+	let ahFormat: AhFormat = 'auto';
+	let ahPhotos: string[] = [];
+	let ahSaving = false;
+	const AH_MAX_PHOTOS = 2;
+
+	// Aperçu avant envoi
+	let ahApercuHtml = '';
+	let ahApercuFormat = '';
+	let ahApercuLoading = false;
+
+	// Pré-remplissage depuis une actualité
+	let ahPubs: Publication[] = [];
+	let ahPubsLoaded = false;
+	let ahSourceId: number | '' = '';
+	const AH_PUBS_MAX = 10;
+
+	type AhFormat = 'auto' | 'a4' | 'a5' | 'a6' | 'a7' | 'a8';
+	const AH_FORMATS: { val: AhFormat; label: string }[] = [
+		{ val: 'auto', label: 'Auto' },
+		{ val: 'a4', label: 'A4' },
+		{ val: 'a5', label: 'A5' },
+		{ val: 'a6', label: 'A6' },
+		{ val: 'a7', label: 'A7' },
+		{ val: 'a8', label: 'A8' },
+	];
+
+	// Miroir front des seuils serveur (app/utils/annonce_hall.py) — indicatif seulement,
+	// le format retenu est toujours celui calculé par l'API.
+	const AH_SEUILS: [string, number][] = [['A8', 70], ['A7', 140], ['A6', 300], ['A5', 600]];
+	const AH_FORMAT_MIN_PHOTOS = 'A5';
+	const AH_ORDRE = ['A4', 'A5', 'A6', 'A7', 'A8'];
+
+	$: ahLongueur = stripHtml(ahMessage).length + ahTitre.trim().length;
+	$: ahFormatPrevu = (() => {
+		if (ahFormat !== 'auto') return ahFormat.toUpperCase();
+		const trouve = AH_SEUILS.find(([, seuil]) => ahLongueur <= seuil);
+		const fmt = trouve ? trouve[0] : 'A4';
+		return ahPhotos.length && AH_ORDRE.indexOf(fmt) > AH_ORDRE.indexOf(AH_FORMAT_MIN_PHOTOS)
+			? AH_FORMAT_MIN_PHOTOS
+			: fmt;
+	})();
+	$: ahFormulaireValide = ahTitre.trim().length > 0 && ahLongueur > 0;
+
+	/** Les 10 actualités publiées les plus récentes, pour le pré-remplissage. */
+	async function loadAhPublications() {
+		if (ahPubsLoaded) return;
+		try {
+			const pubs = await pubsApi.list();
+			ahPubs = pubs
+				.filter(p => !p.brouillon)
+				.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
+				.slice(0, AH_PUBS_MAX);
+			ahPubsLoaded = true;
+		} catch {
+			/* non bloquant : la saisie manuelle reste possible */
+		}
+	}
+
+	async function ahPrefillDepuisPublication(pubId: number | '') {
+		ahSourceId = pubId;
+		if (pubId === '') return;
+		try {
+			// Le serveur résout aussi les photos jointes à l'actualité (documents image).
+			const src = await annoncesHallApi.depuisPublication(pubId);
+			ahTitre = src.titre;
+			ahMessage = src.message;
+			ahPerimetre = src.perimetre_cible?.length ? [...src.perimetre_cible] : ['résidence'];
+			ahPhotos = (src.images ?? []).slice(0, AH_MAX_PHOTOS);
+			ahFormat = 'auto';
+			ahApercuHtml = '';
+			ahApercuFormat = '';
+			const nb = ahPhotos.length;
+			toast('info', nb > 0
+				? `Annonce pré-remplie (${nb} image${nb > 1 ? 's' : ''}) — ajustez avant de valider`
+				: 'Annonce pré-remplie — ajustez le texte avant de valider');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du pré-remplissage');
+		}
+	}
+
+	async function loadAnnoncesHall(force = false) {
+		if (ahLoaded && !force) return;
+		ahLoading = true;
+		try {
+			ahList = await annoncesHallApi.list(ahArchivees);
+			ahLoaded = true;
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur de chargement des annonces');
+		} finally {
+			ahLoading = false;
+		}
+	}
+
+	function ahPayload() {
+		return {
+			titre: ahTitre.trim(),
+			message: ahMessage,
+			perimetre_cible: ahPerimetre,
+			format_demande: ahFormat,
+			images: ahPhotos,
+		};
+	}
+
+	function ahResetForm() {
+		ahTitre = '';
+		ahMessage = '';
+		ahPerimetre = ['résidence'];
+		ahFormat = 'auto';
+		ahPhotos = [];
+		ahApercuHtml = '';
+		ahApercuFormat = '';
+		ahSourceId = '';
+	}
+
+	async function ahPrevisualiser() {
+		if (!ahFormulaireValide) return;
+		ahApercuLoading = true;
+		try {
+			const r = await annoncesHallApi.previsualiser(ahPayload());
+			ahApercuHtml = r.html;
+			ahApercuFormat = r.format_label;
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : "Erreur lors de la génération de l'aperçu");
+		} finally {
+			ahApercuLoading = false;
+		}
+	}
+
+	async function ahCreer() {
+		if (!ahFormulaireValide) return;
+		ahSaving = true;
+		try {
+			const annonce = await annoncesHallApi.create(ahPayload());
+			const nb = annonce.destinataires.length;
+			toast(
+				'success',
+				nb > 0
+					? `Annonce ${annonce.format_label} créée et envoyée à ${nb} membre${nb > 1 ? 's' : ''} du CS`
+					: `Annonce ${annonce.format_label} créée — aucun membre du CS à notifier sur ce périmètre`,
+			);
+			ahResetForm();
+			await loadAnnoncesHall(true);
+			ahVue = 'historique';
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : "Erreur lors de la création de l'annonce");
+		} finally {
+			ahSaving = false;
+		}
+	}
+
+	async function ahArchiver(annonce: AnnonceHall) {
+		try {
+			await annoncesHallApi.archiver(annonce.id, !annonce.archivee);
+			toast('success', annonce.archivee ? 'Annonce restaurée' : 'Annonce archivée');
+			await loadAnnoncesHall(true);
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : "Erreur lors de l'archivage");
+		}
+	}
+
+	async function ahRenvoyer(annonce: AnnonceHall) {
+		try {
+			await annoncesHallApi.renvoyerEmail(annonce.id);
+			toast('success', 'Annonce renvoyée au CS du périmètre');
+			await loadAnnoncesHall(true);
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du renvoi');
+		}
+	}
+
+	async function ahSupprimer(annonce: AnnonceHall) {
+		if (!confirm(`Supprimer définitivement « ${annonce.titre} » ? Le PDF sera effacé.`)) return;
+		try {
+			await annoncesHallApi.delete(annonce.id);
+			toast('success', 'Annonce supprimée');
+			await loadAnnoncesHall(true);
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur lors de la suppression');
+		}
+	}
+
+	function ahPoids(octets: number | null): string {
+		if (!octets) return '';
+		return octets < 1024 * 1024
+			? `${Math.round(octets / 1024)} Ko`
+			: `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
+	}
+
 	// -- Annuaire -----------------------------------------------------------
 	let batimentsList: { id: number; numero: string }[] = [];
 	let allUsers: SimpleUser[] = [];
@@ -677,8 +881,9 @@
 		const params = new URLSearchParams(window.location.search);
 		const pOnglet = params.get('onglet') as typeof onglet | null;
 		const pVue = params.get('vue') as typeof reportView | null;
-		if (pOnglet && ['validations', 'tickets', 'reporting', 'annuaire'].includes(pOnglet)) {
+		if (pOnglet && ['validations', 'tickets', 'reporting', 'annonces-hall', 'annuaire'].includes(pOnglet)) {
 			onglet = pOnglet;
+			if (onglet === 'annonces-hall') { loadAnnoncesHall(); loadAhPublications(); }
 		}
 		if (pVue && onglet === 'reporting') {
 			reportView = pVue as typeof reportView;
@@ -1065,6 +1270,9 @@
 	</button>
 	<button class="tab-btn" class:active={onglet === 'reporting'} on:click={() => { onglet = 'reporting'; loadReporting(); }}>
 		{_pc.onglets?.reporting?.label ?? '\u{1F4CA} Reporting'}
+	</button>
+	<button class="tab-btn" class:active={onglet === 'annonces-hall'} on:click={() => { onglet = 'annonces-hall'; loadAnnoncesHall(); loadAhPublications(); }}>
+		{_pc.onglets?.['annonces-hall']?.label ?? '\u{1F4C4} Annonces Hall'}
 	</button>
 	<button class="tab-btn" class:active={onglet === 'annuaire'} on:click={() => (onglet = 'annuaire')}>
 		{_pc.onglets?.annuaire?.label ?? '\u{1F4D2} Annuaire CS & Syndic'}
@@ -2043,6 +2251,209 @@
 		{/if}
 	</div>
 
+{:else if onglet === 'annonces-hall'}
+	<div class="ah-panel">
+		<div class="perimetre-pills" style="margin-bottom:1rem">
+			<button type="button" class="pill" class:pill-active={ahVue === 'nouvelle'}
+				on:click={() => (ahVue = 'nouvelle')}>&#x1F4DD; Nouvelle annonce</button>
+			<button type="button" class="pill" class:pill-active={ahVue === 'historique'}
+				on:click={() => { ahVue = 'historique'; loadAnnoncesHall(); }}>&#x1F4DA; Historique</button>
+		</div>
+
+		{#if ahVue === 'nouvelle'}
+			<!-- ── Création d'une annonce ──────────────────────────────────── -->
+			<div class="ah-layout">
+				<section class="card ah-form">
+					{#if ahPubs.length}
+						<label for="ah-source">Pré-remplir depuis une actualité</label>
+						<select id="ah-source" class="ah-select" value={ahSourceId}
+							on:change={(e) => ahPrefillDepuisPublication(
+								(e.currentTarget as HTMLSelectElement).value === ''
+									? ''
+									: Number((e.currentTarget as HTMLSelectElement).value)
+							)}>
+							<option value="">— Saisie libre —</option>
+							{#each ahPubs as pub}
+								<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
+							{/each}
+						</select>
+						<p class="ah-aide">
+							Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste
+							modifiable ci-dessous : l'affiche est indépendante de l'actualité d'origine.
+						</p>
+						<hr style="border:none;border-top:1px solid var(--color-border);margin:.9rem 0" />
+					{/if}
+
+					<label for="ah-titre">Titre *</label>
+					<input id="ah-titre" type="text" bind:value={ahTitre} maxlength="120"
+						placeholder="Ex : Coupure d'eau — mardi 4 août" />
+
+					<label for="ah-message" style="margin-top:.85rem">Message *</label>
+					<RichEditor bind:value={ahMessage} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
+
+					<label style="margin-top:.85rem">Périmètre d'affichage *</label>
+					<PerimetrePicker bind:value={ahPerimetre} />
+					<p class="ah-aide">
+						L'annonce part par mail aux membres du CS rattachés à ce périmètre, qui l'impriment
+						et l'affichent. Copropriété entière, parking et cave notifient l'ensemble du CS.
+					</p>
+
+					<label style="margin-top:.85rem">Format</label>
+					<div class="perimetre-pills">
+						{#each AH_FORMATS as f}
+							<button type="button" class="pill" class:pill-active={ahFormat === f.val}
+								on:click={() => (ahFormat = f.val)}>{f.label}</button>
+						{/each}
+					</div>
+					<p class="ah-aide">
+						{#if ahFormat === 'auto'}
+							Le plus petit format qui accueille le texte est retenu, pour occuper le moins
+							de place possible dans l'afficheur du hall. Sous l'A4, des pointillés de
+							découpe sont tracés sur l'affiche.
+						{:else}
+							Format imposé — le message sera mis en page en {ahFormat.toUpperCase()}.
+						{/if}
+						<strong>Prévu : {ahFormatPrevu}</strong> ({ahLongueur} caractère{ahLongueur > 1 ? 's' : ''} —
+						titre et message)
+					</p>
+
+					<label style="margin-top:.85rem">Photos</label>
+					<PhotosUpload
+						bind:urls={ahPhotos}
+						max={AH_MAX_PHOTOS}
+						label="Ajouter une photo"
+						upload={async (f) => (await fichiersApi.upload(f)).url}
+						on:change={() => { ahApercuHtml = ''; ahApercuFormat = ''; }}
+					/>
+					<p class="ah-aide">
+						Facultatives, {AH_MAX_PHOTOS} au maximum, placées en pied d'affiche : le texte de
+						l'annonce reste l'élément central. Une affiche avec photo ne descend jamais sous
+						l'{AH_FORMAT_MIN_PHOTOS}.
+					</p>
+
+					<div class="form-actions">
+						<button type="button" class="btn btn-outline" disabled={!ahFormulaireValide || ahApercuLoading}
+							on:click={ahPrevisualiser}>
+							{ahApercuLoading ? 'Génération…' : "Aperçu"}
+						</button>
+						<button type="button" class="btn btn-primary" disabled={!ahFormulaireValide || ahSaving}
+							on:click={ahCreer}>
+							{ahSaving ? 'Envoi…' : 'Créer et envoyer au CS'}
+						</button>
+					</div>
+				</section>
+
+				<section class="card ah-apercu">
+					<h3 class="ah-apercu-titre">
+						Aperçu {#if ahApercuFormat}<span class="badge badge-blue">{ahApercuFormat}</span>{/if}
+					</h3>
+					{#if ahApercuHtml}
+						<div class="ah-apercu-cadre">
+							<iframe class="ah-apercu-frame" title="Aperçu de l'annonce" sandbox="" srcdoc={ahApercuHtml}></iframe>
+						</div>
+					{:else}
+						<div class="empty-state" style="margin:0">
+							<p>Renseignez le titre et le message, puis cliquez sur <strong>Aperçu</strong> pour voir
+							l'affiche telle qu'elle sortira de l'imprimante.</p>
+						</div>
+					{/if}
+				</section>
+			</div>
+
+		{:else}
+			<!-- ── Historique ──────────────────────────────────────────────── -->
+			<div class="perimetre-pills" style="margin-bottom:.85rem">
+				<button type="button" class="pill" class:pill-active={!ahArchivees}
+					on:click={() => { ahArchivees = false; loadAnnoncesHall(true); }}>Annonces</button>
+				<button type="button" class="pill" class:pill-active={ahArchivees}
+					on:click={() => { ahArchivees = true; loadAnnoncesHall(true); }}>Archives</button>
+			</div>
+
+			{#if ahLoading}
+				<p style="color:var(--color-text-muted)">Chargement…</p>
+			{:else if ahList.length === 0}
+				<div class="empty-state">
+					<h3>{ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}</h3>
+					<p>{ahArchivees ? "Les annonces archivées depuis l'historique apparaîtront ici." : 'Créez la première annonce depuis l\'onglet « Nouvelle annonce ».'}</p>
+				</div>
+			{:else}
+				{#each ahList as annonce}
+					<div class="card ah-card">
+						<div class="ah-card-top">
+							<Vignette
+								src={annonce.images?.[0] ?? null}
+								alt={annonce.titre}
+								placeholder={annonce.format_label}
+								count={Math.max(0, (annonce.images?.length ?? 0) - 1)}
+								title="Format {annonce.format_label}"
+							/>
+							<div class="ah-card-body">
+								<div class="ah-card-badges">
+									<span class="badge badge-blue">{annonce.format_label}</span>
+									<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
+									{#if annonce.publication_id}<span class="badge badge-gray" title="Générée depuis une actualité">&#x1F4F0; Actualité</span>{/if}
+									{#if annonce.archivee}<span class="badge badge-gray">Archivée</span>{/if}
+								</div>
+								<strong class="ah-card-titre">{annonce.titre}</strong>
+								<small class="ah-card-meta">
+									{fmtDate(annonce.cree_le)}
+									{#if annonce.auteur_nom} · {annonce.auteur_nom}{/if}
+									{#if annonce.destinataires.length}
+										· &#x2709; {annonce.destinataires.length} destinataire{annonce.destinataires.length > 1 ? 's' : ''}
+									{:else}
+										· <span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
+									{/if}
+								</small>
+								<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
+							</div>
+							<div class="ah-card-actions">
+								<a class="btn btn-sm btn-outline" href={annoncesHallApi.pdfUrl(annonce.id)} target="_blank" rel="noopener">
+									&#x1F4C4; PDF{#if annonce.taille_octets} <span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
+								</a>
+								<button class="btn btn-sm btn-outline"
+									on:click={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}>
+									{ahExpandedId === annonce.id ? '▲' : '▼'}
+								</button>
+							</div>
+						</div>
+
+						{#if ahExpandedId === annonce.id}
+							<div class="ah-card-details">
+								<div class="rich-content" style="font-size:.88rem">{@html safeHtml(annonce.message)}</div>
+								{#if annonce.images?.length}
+									<div style="margin-top:.6rem">
+										<PhotosUpload urls={annonce.images} readonly size={64} />
+									</div>
+								{/if}
+								{#if annonce.destinataires.length}
+									<p class="ah-card-meta" style="margin-top:.6rem">
+										Envoyée le {fmtDatetime(annonce.envoye_le ?? annonce.cree_le)} à
+										{annonce.destinataires.join(', ')}
+									</p>
+								{/if}
+								<div class="ah-card-actions" style="margin-top:.75rem">
+									<button class="btn btn-sm btn-outline" on:click={() => ahRenvoyer(annonce)}>
+										&#x2709; Renvoyer au CS
+									</button>
+									<button class="btn-icon-warn" title={annonce.archivee ? 'Restaurer' : 'Archiver'}
+										aria-label={annonce.archivee ? 'Restaurer cette annonce' : 'Archiver cette annonce'}
+										on:click={() => ahArchiver(annonce)}>
+										{annonce.archivee ? '↩️' : '\u{1F4E6}'}
+									</button>
+									{#if $isAdmin && annonce.archivee}
+										<button class="btn-icon-danger" title="Supprimer définitivement"
+											aria-label="Supprimer définitivement cette annonce"
+											on:click={() => ahSupprimer(annonce)}>&#x1F5D1;&#xFE0F;</button>
+									{/if}
+								</div>
+							</div>
+						{/if}
+					</div>
+				{/each}
+			{/if}
+		{/if}
+	</div>
+
 {:else if onglet === 'annuaire'}
 	{#if annuaireLoading}
 		<p style="color:var(--color-text-muted)">Chargement…</p>
@@ -2589,6 +3000,7 @@
 	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
 	.evol-content :global(p) { margin: 0 0 .3em; }
 	.evol-form { padding: .25rem 0; }
+	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
 	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
 	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
@@ -2600,6 +3012,47 @@
 	:global(.badge-purple) { background: #ede9fe; color: #5b21b6; }
 
 	/* Reporting */
+	/* Annonces Hall */
+	.ah-panel { display: flex; flex-direction: column; }
+	.ah-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+	.ah-form { padding: 1rem 1.1rem; }
+	.ah-form label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
+	.ah-form input[type="text"] {
+		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);
+		border-radius: var(--radius); font-size: .9rem; background: var(--color-bg);
+	}
+	.ah-aide { font-size: .76rem; color: var(--color-text-muted); margin-top: .35rem; line-height: 1.45; }
+	.ah-select {
+		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);
+		border-radius: var(--radius); font-size: .875rem; background: var(--color-bg);
+	}
+	.ah-apercu { padding: 1rem 1.1rem; }
+	.ah-apercu-titre {
+		display: flex; align-items: center; gap: .4rem;
+		font-size: .95rem; font-weight: 600; margin-bottom: .75rem;
+	}
+	.ah-apercu-cadre {
+		border: 1px solid var(--color-border); border-radius: var(--radius);
+		overflow: hidden; background: #fff;
+	}
+	.ah-apercu-frame { width: 100%; height: 640px; border: none; display: block; }
+
+	.ah-card { padding: .85rem 1.1rem; margin-bottom: .5rem; }
+	.ah-card-top { display: flex; gap: .85rem; align-items: flex-start; }
+	.ah-card-body { flex: 1; min-width: 0; }
+	.ah-card-badges { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .25rem; }
+	.ah-card-titre { font-size: .95rem; font-weight: 600; display: block; margin-bottom: .15rem; }
+	.ah-card-meta { color: var(--color-text-muted); font-size: .78rem; }
+	.ah-card-apercu { font-size: .82rem; color: var(--color-text-muted); margin-top: .35rem; }
+	.ah-card-actions { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+	.ah-poids { font-size: .72rem; color: var(--color-text-muted); }
+	.ah-card-details { border-top: 1px solid var(--color-border); margin-top: .75rem; padding-top: .75rem; }
+
+	@media (max-width: 900px) {
+		.ah-layout { grid-template-columns: 1fr; }
+		.ah-apercu-frame { height: 460px; }
+	}
+
 	.reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
 	.reporting-toolbar {
 		display: flex; justify-content: space-between; gap: .75rem;

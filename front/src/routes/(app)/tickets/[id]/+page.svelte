@@ -9,6 +9,7 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
+	import { perimetreLabel } from '$lib/utils';
 
 	$: _siteNom = $siteNomStore;
 
@@ -115,15 +116,6 @@
 		normale: { label: 'Priorité normale', cls: 'badge-default' },
 		haute:   { label: 'Priorité haute',   cls: 'badge-orange' },
 	};
-
-	function perimetreLabel(items: string[]): string {
-		const map: Record<string, string> = {
-			'résidence': 'Copropriété entière',
-			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
-		};
-		return items.map((i: string) => map[i] ?? i).join(' · ');
-	}
 
 	function renderContent(c: string): string {
 		const t = c.trimStart();

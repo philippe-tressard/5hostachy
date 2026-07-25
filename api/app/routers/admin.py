@@ -35,13 +35,10 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def _get_site_manager_user_id(session: Session) -> Optional[int]:
-    cfg_site_manager = session.get(ConfigSite, "site_manager_user_id")
-    if not cfg_site_manager:
-        return None
-    valeur = (cfg_site_manager.valeur or "").strip()
-    if not valeur.isdigit():
-        return None
-    return int(valeur)
+    """Alias historique — la règle vit dans app.utils.destinataires."""
+    from app.utils.destinataires import site_manager_user_id
+
+    return site_manager_user_id(session)
 
 
 # ── Gestion des comptes ──────────────────────────────────────────────────────

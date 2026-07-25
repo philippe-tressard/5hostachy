@@ -1,6 +1,8 @@
 ﻿<script lang="ts">
 import Icon from '$lib/components/Icon.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
+import Vignette from '$lib/components/Vignette.svelte';
+import PhotosUpload from '$lib/components/PhotosUpload.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
@@ -157,7 +159,7 @@ let filtreTypeAnnonce = '';
 let filtreCatAnnonce = '';
 let filtreTriAnnonce = 'recent';
 let expandedAnnonce: number | null = null;
-let uploadingPhotoId: number | null = null;
+const MAX_PHOTOS_ANNONCE = 5;
 
 const TYPES_ANNONCE = [
 	{ val: 'vente', label: '\u{1F3F7}\uFE0F Vente' },
@@ -218,20 +220,18 @@ async function creerAnnonce() {
 	finally { submittingAnnonce = false; }
 }
 
-async function uploadPhotoAnnonce(id: number, file: File) {
-	uploadingPhotoId = id;
-	try {
-		const res: any = await annoncesApi.uploadPhoto(id, file);
-		annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
-	} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur upload'); }
-	finally { uploadingPhotoId = null; }
+/** Téléverse une photo et retourne son URL (contrat attendu par PhotosUpload). */
+async function uploadPhotoAnnonce(id: number, file: File): Promise<string> {
+	const res: any = await annoncesApi.uploadPhoto(id, file);
+	annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
+	return res.url;
 }
 
-async function supprimerPhotoAnnonce(id: number, url: string) {
-	try {
-		const res: any = await annoncesApi.deletePhoto(id, url);
-		annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
-	} catch { toast('error', 'Erreur'); }
+/** Supprime une photo et retourne la liste à jour (contrat attendu par PhotosUpload). */
+async function supprimerPhotoAnnonce(id: number, url: string): Promise<string[]> {
+	const res: any = await annoncesApi.deletePhoto(id, url);
+	annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
+	return res.photos;
 }
 
 async function changeStatutAnnonce(id: number, statut: string) {
@@ -791,14 +791,12 @@ Afficher mes coordonnées aux autres résidents
 {#each sortedAnnonces as annonce}
 <div class="annonce-card card">
 <div class="annonce-top">
-{#if annonce.photos?.length > 0}
-<div class="annonce-thumb">
-<img src={annonce.photos[0]} alt={annonce.titre} />
-{#if annonce.photos.length > 1}<span class="annonce-thumb-count">+{annonce.photos.length - 1}</span>{/if}
-</div>
-{:else}
-<div class="annonce-thumb annonce-thumb-empty">{categorieAnnonceLabel(annonce.categorie).split(' ')[0]}</div>
-{/if}
+<Vignette
+src={annonce.photos?.length ? annonce.photos[0] : null}
+alt={annonce.titre}
+placeholder={categorieAnnonceLabel(annonce.categorie).split(' ')[0]}
+count={Math.max(0, (annonce.photos?.length ?? 0) - 1)}
+/>
 
 <div class="annonce-body">
 <div class="annonce-header">
@@ -827,22 +825,14 @@ Afficher mes coordonnées aux autres résidents
 <div class="annonce-details">
 <div class="rich-content" style="font-size:.88rem;margin-bottom:.75rem">{@html safeHtml(annonce.description)}</div>
 
-{#if annonce.photos?.length > 1}
-<div class="annonce-photos-row">
-{#each annonce.photos as photo}
-<div class="annonce-photo-thumb">
-<img src={photo} alt="" />
-{#if annonce.est_auteur}<button class="btn-photo-del" on:click={() => supprimerPhotoAnnonce(annonce.id, photo)} title="Supprimer">×</button>{/if}
-</div>
-{/each}
-</div>
-{:else if annonce.photos?.length === 1 && annonce.est_auteur}
-<div class="annonce-photos-row">
-<div class="annonce-photo-thumb">
-<img src={annonce.photos[0]} alt="" />
-<button class="btn-photo-del" on:click={() => supprimerPhotoAnnonce(annonce.id, annonce.photos[0])} title="Supprimer">×</button>
-</div>
-</div>
+{#if annonce.photos?.length > 1 || annonce.est_auteur}
+<PhotosUpload
+urls={annonce.photos ?? []}
+max={MAX_PHOTOS_ANNONCE}
+readonly={!annonce.est_auteur}
+upload={(f) => uploadPhotoAnnonce(annonce.id, f)}
+remove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
+/>
 {/if}
 
 <div class="annonce-contact">
@@ -855,14 +845,6 @@ Afficher mes coordonnées aux autres résidents
 
 {#if annonce.est_auteur}
 <div class="annonce-actions">
-{#if annonce.photos?.length < 5}
-<label class="btn btn-sm btn-outline" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem">
-{uploadingPhotoId === annonce.id ? '⏳ Upload…' : '📷 Photo'}
-<input type="file" accept="image/*" style="display:none"
-	on:change={async (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) await uploadPhotoAnnonce(annonce.id, f); (e.target as HTMLInputElement).value = ''; }}
-/>
-</label>
-{/if}
 <select value={annonce.statut} on:change={e => changeStatutAnnonce(annonce.id, (e.target as HTMLSelectElement).value)}>
 {#each STATUTS_ANNONCE as s}<option value={s.val}>{s.label}</option>{/each}
 </select>
@@ -955,20 +937,12 @@ input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); 
 /* Annonces */
 .annonce-card { padding: .85rem 1.1rem; margin-bottom: .5rem; }
 .annonce-top { display: flex; gap: .85rem; align-items: flex-start; }
-.annonce-thumb { width: 80px; height: 80px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; position: relative; border: 1px solid var(--color-border); background: var(--color-bg-alt, #f5f5f5); }
-.annonce-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.annonce-thumb-empty { display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
-.annonce-thumb-count { position: absolute; bottom: 2px; right: 4px; font-size: .68rem; background: rgba(0,0,0,.55); color: #fff; border-radius: 4px; padding: 0 4px; }
 .annonce-body { flex: 1; min-width: 0; }
 .annonce-header { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .25rem; }
 .annonce-titre { font-size: .95rem; font-weight: 600; display: block; margin-bottom: .15rem; }
 .annonce-prix { font-size: .95rem; font-weight: 700; color: var(--color-primary); margin-top: .2rem; display: flex; align-items: center; gap: .3rem; }
 .annonce-toggle-col { display: flex; align-items: flex-start; padding-top: .1rem; }
 .annonce-details { border-top: 1px solid var(--color-border); margin-top: .75rem; padding-top: .75rem; }
-.annonce-photos-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .75rem; }
-.annonce-photo-thumb { position: relative; width: 72px; height: 72px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--color-border); }
-.annonce-photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.btn-photo-del { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: .75rem; cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .annonce-contact { margin-bottom: .6rem; }
 .annonce-contact a { color: var(--color-primary); }
 .annonce-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }

@@ -284,6 +284,7 @@ class PublicationCreate(BaseModel):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    annonce_hall: bool = False  # génère l'affiche de hall + envoi au CS du périmètre
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
@@ -302,6 +303,7 @@ class PublicationUpdate(BaseModel):
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
+    annonce_hall: Optional[bool] = None
 
 
 class EvolutionRead(BaseModel):
@@ -361,6 +363,7 @@ class PublicationRead(BaseModel):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    annonce_hall: bool = False
     evolutions: List[EvolutionRead] = []
     auteur_nom: Optional[str] = None
 

@@ -34,6 +34,7 @@
 	let newPartagerWhatsapp = false;
 	let newEnvoyerSyndic = false;
 	let newEnvoyerCs = false;
+	let newAnnonceHall = false;
 	let newStatut: string = 'publie';
 	let saving = false;
 	let pendingImage: File | null = null;
@@ -159,7 +160,12 @@
 		if (!newTitre.trim() || richEmpty(newContenu)) return;
 		saving = true;
 		try {
-			const shouldPublishAfterImageUpload = !!pendingImage && newPartagerWhatsapp && !newBrouillon;
+			// Image et pièces jointes sont envoyées après création : on retarde la publication
+			// réelle pour que WhatsApp et l'affiche de hall disposent bien des visuels.
+			const shouldPublishAfterImageUpload = !newBrouillon && (
+				(!!pendingImage && (newPartagerWhatsapp || newAnnonceHall))
+				|| (newAnnonceHall && pendingFiles.length > 0)
+			);
 			let pub = await pubsApi.create({
 				titre: newTitre, contenu: newContenu, urgente: newUrgente, epingle: newEpingle,
 				perimetre_cible: newPerimetreCible, public_cible: newPublicCible,
@@ -168,6 +174,7 @@
 				partager_whatsapp: newPartagerWhatsapp,
 				envoyer_syndic: newEnvoyerSyndic,
 				envoyer_cs: newEnvoyerCs,
+				annonce_hall: newAnnonceHall,
 			});
 			if (pendingImage) {
 				uploadingImg = true;
@@ -187,7 +194,7 @@
 			pubList = [pub, ...pubList];
 			showForm = false;
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
-			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false;
+			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false; newAnnonceHall = false;
 			newPerimetreCible = ['résidence'];
 			pendingImage = null; pendingPreview = undefined;
 			pendingFiles = []; fileInputKey++;
@@ -412,7 +419,20 @@
 					<span style="font-size:1.1em;line-height:1">✉️</span>
 					<span>Envoyer au Conseil Syndical</span>
 				</label>
+				<label class="checkbox-field" title="Génère l'affiche PDF à afficher dans le hall et l'envoie au CS du périmètre">
+					<input type="checkbox" bind:checked={newAnnonceHall} />
+					<span style="font-size:1.1em;line-height:1">&#x1F4C4;</span>
+					<span>Créer une annonce Hall</span>
+				</label>
 			</div>
+			{#if newAnnonceHall}
+				<p style="font-size:.78rem;color:var(--color-text-muted);margin:-.5rem 0 1rem;line-height:1.45">
+					&#x1F4C4; Une affiche PDF sera générée à partir du titre, du contenu, du périmètre et de
+					l'image de cette actualité, puis envoyée aux membres du CS du périmètre. Elle sera
+					consultable dans <strong>Espace CS → Annonces Hall</strong>. Un brouillon ne déclenche
+					rien tant qu'il n'est pas publié.
+				</p>
+			{/if}
 			<div class="form-actions">
 				<button type="submit" class="btn btn-primary" disabled={saving || uploadingImg}>
 					{saving ? 'Envoi…' : (newBrouillon ? 'Enregistrer brouillon' : 'Publier')}

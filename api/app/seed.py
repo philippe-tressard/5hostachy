@@ -469,6 +469,25 @@ EMAIL_TEMPLATES = [
      '<p style="text-align:center;margin:0 0 16px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Vérifier mon adresse</a></p>'
      '<p style="margin:0;font-size:13px;color:#5A6070">Ce lien est valable <strong>{{ expire_heures }} heures</strong>. Si vous n\u2019êtes pas à l\u2019origine de cette demande, ignorez ce message.</p>',
      False),
+
+    ("annonce_hall", "Annonce hall (PDF à afficher)",
+     "\U0001f4c4 Annonce à afficher — {{ annonce.titre }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c4 Annonce à afficher dans le hall</h2>'
+     '<p style="margin:0 0 16px">{{ auteur.prenom }} {{ auteur.nom }} a préparé une annonce pour <strong>{{ annonce.perimetre }}</strong>. '
+     'Le PDF est en pièce jointe, prêt à imprimer au format <strong>{{ annonce.format }}</strong> et à afficher.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">{{ annonce.perimetre }} · Format {{ annonce.format }} · {{ annonce.date }}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:17px;color:#1E3A5F">{{ annonce.titre }}</p>'
+     '{% if annonce.apercu %}<p style="margin:0;font-size:14px;color:#5A6070">{{ annonce.apercu }}</p>{% endif %}'
+     '</td></tr></table>'
+     '<p style="margin:0 0 20px;font-size:13px;color:#5A6070">\U0001f4ce Pièce jointe : <strong>{{ annonce.fichier }}</strong> '
+     '— imprimer en couleur, sans mise à l’échelle (100 %).</p>'
+     '<p style="text-align:center;margin:0">'
+     '<a href="{{ app.url }}/espace-cs?onglet=annonces-hall" '
+     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
+     'Voir l’historique des annonces</a></p>',
+     True),
 ]
 
 

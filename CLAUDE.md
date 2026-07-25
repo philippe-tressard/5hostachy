@@ -13,6 +13,7 @@ Les références canoniques sont dans `.github/skills/`.
 ## Stack
 
 - **Backend** : FastAPI + SQLModel + SQLite WAL + Alembic (`api/`)
+- **Documents imprimables** : HTML/CSS → PDF via WeasyPrint (libs système dans `api/Dockerfile`)
 - **Frontend** : SvelteKit v2 + TypeScript strict + Vite + PWA (`front/`)
 - **Infra** : Docker Compose + Caddy + Raspberry Pi 5
 - **Langue** : français exclusif (interface + nommage des champs)
@@ -29,6 +30,13 @@ Les références canoniques sont dans `.github/skills/`.
 - `on:click|stopPropagation` sur les actions secondaires dans le corps
 - Border-left : `var(--color-border)` → `var(--color-primary)` au hover/expand
 - Urgence : `border-left-color: var(--color-danger)` — **jamais de badge texte 🚨**
+
+### Vignette & galerie de photos
+- Vignette carrée : `$lib/components/Vignette.svelte` (`src`, `alt`, `placeholder`, `count`, `size`, slot d'actions)
+- Galerie éditable : `$lib/components/PhotosUpload.svelte` (`urls`, `max`, `readonly`, `upload`, `remove`)
+  — le téléversement est délégué par callback, chaque rubrique garde son endpoint
+- Utilisés par la Communauté (petites annonces) et les Annonces Hall
+- **Ne pas recréer** de `.xxx-thumb` ni de rangée de photos ad hoc
 
 ### Icônes de contexte
 - 📍 = lieu physique (adresse, salle) — texte inline, pas de badge
@@ -175,6 +183,20 @@ const icon = '\u{1F6E0}'; // 🔧
 | `require_admin` | Suppression définitive, config système |
 | `require_proprietaire` | Fonctions propriétaires |
 | `get_acting_user` | Délégation (header `X-Acting-As`) |
+
+### Documents imprimables (PDF)
+- Thème commun : `app/utils/pdf_theme.py` — logo, palette de la charte, data-URI (image/QR), `html_to_pdf()`.
+  **Ne jamais** redéfinir une palette, un logo ou un moteur PDF ailleurs.
+- Le HTML doit être **autonome** : CSS dans `<style>`, images en data-URI (rendu hors requête HTTP).
+- Format de page via `@page { size: A4|A5 }`. Pas d'emoji dans les affiches — logo SVG et aplats de couleur.
+- Documents existants : fiche arrivant (`fiche_arrivant.py`), annonce de hall (`annonce_hall.py`).
+
+### Destinataires CS
+- `app/utils/destinataires.py` est la source unique : `membres_cs_notifiables(session, batiment_ids)`
+  (membres du CS liés à un compte actif + gestionnaire du site, dédoublonnés) et
+  `batiments_du_perimetre()` (résidence/parking/cave/AFUL = tout le CS).
+- À distinguer de `envoyer_cs` (publications/sondages/calendrier) qui vise **le rôle**
+  `conseil_syndical`, sans notion de périmètre.
 
 ### Sécurité
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`

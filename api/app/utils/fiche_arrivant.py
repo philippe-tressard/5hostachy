@@ -1,42 +1,18 @@
 """Génération dynamique de la fiche d'accueil (fiche arrivant) en HTML."""
 from __future__ import annotations
 
-import base64
-import io
 from collections import defaultdict
 from html import escape
-from pathlib import Path
+
+from app.utils.pdf_theme import (
+    PALETTE_CSS,
+    image_data_uri as _photo_data_uri,
+    logo_svg,
+    qr_data_uri as _qr_data_uri,
+)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
-
-def _qr_data_uri(url: str) -> str:
-    """QR code → data:image/png;base64,..."""
-    try:
-        import qrcode
-
-        qr = qrcode.QRCode(box_size=6, border=2)
-        qr.add_data(url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
-    except Exception:
-        return ""
-
-
-def _photo_data_uri(photo_url: str | None) -> str | None:
-    if not photo_url:
-        return None
-    path = Path("/app") / photo_url.lstrip("/")
-    if not path.is_file():
-        return None
-    try:
-        return f"data:image/jpeg;base64,{base64.b64encode(path.read_bytes()).decode()}"
-    except Exception:
-        return None
-
 
 def _initials(prenom: str, nom: str) -> str:
     p = prenom.strip()[0].upper() if prenom and prenom.strip() else "?"
@@ -45,17 +21,6 @@ def _initials(prenom: str, nom: str) -> str:
 
 
 # ── SVG icons (inlined) ─────────────────────────────────────────────────────
-
-_LOGO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="36" height="36">
-  <rect width="64" height="64" rx="14" fill="#1E3A5F"/>
-  <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 54V18a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v36Z"/>
-    <path d="M18 34h-6a4 4 0 0 0-4 4v16h10"/>
-    <path d="M46 30h6a4 4 0 0 1 4 4v20H46"/>
-    <path d="M25 22h14"/><path d="M25 30h14"/><path d="M25 38h14"/><path d="M25 46h14"/>
-  </g>
-  <path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/>
-</svg>'''
 
 _GLOBE_SVG = '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:2px" viewBox="0 0 24 24" fill="none" stroke="#1E3A5F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>'
 
@@ -70,11 +35,7 @@ _CSS = """\
   body { background: none !important; }
   .page { box-shadow: none !important; border: none !important; }
 }
-:root {
-  --navy: #1E3A5F; --navy-dark: #16304F; --gold: #C9983A; --green: #3D6B4F;
-  --bg: #F2EFE9; --card: #FFFFFF; --ink: #1A1A2E; --muted: #5A6070;
-  --light-muted: #8A8FA0; --footer-bg: #FAFAF7; --border: #E5E2DC;
-}
+""" + PALETTE_CSS + """\
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -449,7 +410,7 @@ def generer_fiche_arrivant(
 <body>
 <div class="page">
   <div class="header">
-    {_LOGO_SVG}
+    {logo_svg()}
     <div class="header-text">
       <div class="header-title">Bienvenue dans votre résidence !</div>
       <div class="header-sub">Consignes de la copropriété</div>
