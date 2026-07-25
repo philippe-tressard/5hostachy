@@ -80,7 +80,7 @@
 
 	{#if !readonly && upload}
 		<label class="btn btn-sm btn-outline photos-add" class:disabled={complet || uploading}>
-			{uploading ? '⏳ Envoi…' : `&#x1F4F7; ${label}`}
+			{uploading ? '⏳ Envoi…' : `\u{1F4F7} ${label}`}
 			<input type="file" {accept} disabled={complet || uploading} on:change={ajouter} />
 		</label>
 		<span class="photos-compte">{urls.length}/{max}</span>
