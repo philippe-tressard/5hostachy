@@ -66,6 +66,7 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "sauvegarde_echec": {"date", "erreur"},
     "alerte_espace_disque": {"espace_total", "espace_disponible", "pourcentage_libre"},
     "verification_email": {"expire_heures", "lien", "prenom"},
+    "annonce_hall": {"annonce", "auteur"},
 }
 
 _env = SandboxedEnvironment(loader=BaseLoader())

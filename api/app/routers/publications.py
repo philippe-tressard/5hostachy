@@ -1,5 +1,6 @@
 """Router publications — actualités, annonces."""
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional
@@ -10,12 +11,14 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
+from app.models.core import AnnonceHall, ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
 router = APIRouter(prefix="/publications", tags=["publications"])
+
+logger = logging.getLogger("publications")
 
 ARCHIVAGE_DELAI_HEURES = 48
 PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
@@ -162,6 +165,38 @@ def _envoyer_email_syndic_publication(
             bcc=auteur_bcc,
             attachments=all_attachments or None,
         )
+
+
+def _generer_annonce_hall(
+    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
+) -> None:
+    """Génère l'affiche de hall d'une publication (option « Annonce Hall »).
+
+    Idempotent : une publication ne produit qu'une seule annonce. L'échec de la
+    génération ne doit jamais faire échouer la publication elle-même — il est
+    journalisé, la publication reste créée.
+    """
+    from app.routers.annonces_hall import creer_annonce_hall, images_de_publication
+
+    deja = session.exec(
+        select(AnnonceHall).where(AnnonceHall.publication_id == pub.id)
+    ).first()
+    if deja:
+        return
+
+    try:
+        creer_annonce_hall(
+            session=session,
+            user=user,
+            background_tasks=background_tasks,
+            titre=pub.titre,
+            message=pub.contenu,
+            perimetre_cible=json.loads(pub.perimetre_cible or '["résidence"]'),
+            images=images_de_publication(pub, session),
+            publication_id=pub.id,
+        )
+    except Exception as exc:
+        logger.error("Annonce de hall non générée pour la publication %s : %s", pub.id, exc)
 
 
 _UPLOADS_ROOT = os.path.realpath("/app/uploads")
@@ -358,6 +393,8 @@ def create_publication(
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
     if pub.envoyer_cs and not pub.brouillon:
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+    if pub.annonce_hall and not pub.brouillon:
+        _generer_annonce_hall(pub, user, background_tasks, session)
     if email_externe and email_externe.strip() and not pub.brouillon:
         _envoyer_email_externe_publication(
             pub, user, email_externe.strip(), background_tasks, session,
@@ -429,6 +466,8 @@ def update_publication(
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
     if was_brouillon_published and pub.envoyer_cs:
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+    if was_brouillon_published and pub.annonce_hall:
+        _generer_annonce_hall(pub, user, background_tasks, session)
 
     return _pub_to_read(pub, session)
 

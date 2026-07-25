@@ -465,6 +465,7 @@ class Publication(SQLModel, table=True):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    annonce_hall: bool = False  # génère une affiche de hall à la publication
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="publications")
     evolutions: List["PublicationEvolution"] = Relationship(back_populates="publication")
@@ -1325,6 +1326,37 @@ class Signalement(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     traite_le: Optional[datetime] = None
+
+
+# ──────────────────────────────────────────────
+#  Annonces Hall (Espace CS)
+# ──────────────────────────────────────────────
+
+class AnnonceHall(SQLModel, table=True):
+    """Annonce imprimable affichée dans le hall des bâtiments (PDF A4 / A5).
+
+    Le PDF est généré à la création puis figé sur disque : il fait foi (c'est
+    lui qui a été envoyé au CS et affiché dans le hall). Une correction passe
+    donc par une nouvelle annonce, jamais par une régénération silencieuse.
+    """
+    __tablename__ = "annonce_hall"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    titre: str
+    message: str                                    # HTML riche (RichEditor)
+    perimetre_cible: str = '["résidence"]'          # JSON: résidence|bat:{id}|parking|cave|aful
+    format_demande: str = "auto"                    # auto | a4 | a5
+    format_effectif: str = "a4"                     # a4 | a5
+    images_json: str = "[]"                         # JSON: photos facultatives (max 2)
+    pdf_chemin: str = ""                            # chemin du PDF dans le volume uploads
+    pdf_nom: str = ""                               # nom proposé au téléchargement
+    taille_octets: Optional[int] = None
+    destinataires: str = "[]"                       # JSON: emails notifiés
+    envoye_le: Optional[datetime] = None
+    archivee: bool = False
+    # Publication d'origine si l'annonce a été générée depuis une actualité
+    publication_id: Optional[int] = Field(default=None, foreign_key="publication.id")
+    auteur_id: int = Field(foreign_key="utilisateur.id")
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ──────────────────────────────────────────────

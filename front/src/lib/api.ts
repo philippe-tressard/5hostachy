@@ -213,6 +213,7 @@ export interface Publication {
 	partager_whatsapp?: boolean;
 	envoyer_syndic?: boolean;
 	envoyer_cs?: boolean;
+	annonce_hall?: boolean;
 	evolutions: PublicationEvolution[];
 }
 
@@ -707,6 +708,60 @@ export const annonces = {
 	listReponses: (id: number) => api.get<any[]>(`/annonces/${id}/reponses`),
 	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
 	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),
+};
+
+export interface AnnonceHall {
+	id: number;
+	titre: string;
+	message: string;
+	apercu: string;
+	perimetre_cible: string[];
+	perimetre_label: string;
+	format_demande: string;
+	format_effectif: string;
+	format_label: string;
+	images: string[];
+	pdf_nom: string;
+	taille_octets: number | null;
+	destinataires: string[];
+	envoye_le: string | null;
+	archivee: boolean;
+	publication_id: number | null;
+	cree_le: string;
+	auteur_nom: string;
+}
+
+export interface AnnonceHallInput {
+	titre: string;
+	message: string;
+	perimetre_cible: string[];
+	format_demande: string;
+	images?: string[];
+}
+
+/** Champs d'une actualité, prêts à alimenter le formulaire d'annonce de hall. */
+export interface AnnonceHallPrefill {
+	titre: string;
+	message: string;
+	perimetre_cible: string[];
+	images: string[];
+}
+
+export const annoncesHall = {
+	list: (archivees = false) =>
+		api.get<AnnonceHall[]>(`/annonces-hall?archivees=${archivees}`),
+	create: (data: AnnonceHallInput) => api.post<AnnonceHall>('/annonces-hall', data),
+	depuisPublication: (pubId: number) =>
+		api.get<AnnonceHallPrefill>(`/annonces-hall/depuis-publication/${pubId}`),
+	previsualiser: (data: AnnonceHallInput) =>
+		api.post<{ format_effectif: string; format_label: string; perimetre_label: string; html: string }>(
+			'/annonces-hall/previsualiser', data,
+		),
+	archiver: (id: number, archivee: boolean) =>
+		api.patch<AnnonceHall>(`/annonces-hall/${id}`, { archivee }),
+	renvoyerEmail: (id: number) => api.post(`/annonces-hall/${id}/renvoyer-email`, {}),
+	delete: (id: number) => api.delete(`/annonces-hall/${id}`),
+	pdfUrl: (id: number) => `${BASE}/annonces-hall/${id}/pdf`,
 };
 
 export const signalements = {

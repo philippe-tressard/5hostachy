@@ -19,6 +19,12 @@
         reverse_proxy api:8000
     }
 
+    # Annonces de hall — jamais servies en direct (accès via /api/annonces-hall/{id}/pdf,
+    # réservé au CS et à l'admin). Doit précéder le handle /uploads/* ci-dessous.
+    handle /uploads/annonces-hall/* {
+        respond 404
+    }
+
     # Fichiers uploadés — servis directement
     handle /uploads/* {
         root * /srv

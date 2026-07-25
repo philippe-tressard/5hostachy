@@ -74,7 +74,7 @@ from app.routers import (
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
 )
-from app.routers import uploads, faq, signalements
+from app.routers import uploads, faq, signalements, annonces_hall
 from app.seed import seed
 from app.utils.backup import setup_scheduler
 
@@ -229,6 +229,7 @@ app.include_router(prestataires.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)
+app.include_router(annonces_hall.router)
 app.include_router(copropriete.router)
 app.include_router(uploads.router)
 app.include_router(faq.router)
