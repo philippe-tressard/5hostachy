@@ -17,6 +17,7 @@ transparent dans l'URL — et des segments dynamiques (`/tickets/{id}` → `[id]
 """
 import pathlib
 import re
+import types
 
 import pytest
 
@@ -78,6 +79,157 @@ def test_tous_les_liens_emis_par_l_api_existent_cote_front():
         "Ces liens émis par l'API ne correspondent à aucune page du front — "
         "l'utilisateur qui clique reçoit un 404 :\n" + "\n".join(casses)
     )
+
+
+def _page_du_lien(lien: str) -> pathlib.Path | None:
+    """Fichier `+page.svelte` qui sert ce lien (pour inspecter ancres et onglets)."""
+    segments = [s for s in lien.split("#")[0].split("?")[0].strip("/").split("/") if s]
+
+    def descendre(base: pathlib.Path, restants: list[str]) -> pathlib.Path | None:
+        if not restants:
+            page = base / "+page.svelte"
+            return page if page.exists() else None
+        seg, suite = restants[0], restants[1:]
+        if not base.is_dir():
+            return None
+        sous = [d for d in base.iterdir() if d.is_dir()]
+        for groupe in (d for d in sous if d.name.startswith("(")):
+            trouve = descendre(groupe, restants)
+            if trouve:
+                return trouve
+        cibles = (
+            [d for d in sous if d.name.startswith("[")]
+            if seg.startswith("{")
+            else [d for d in sous if d.name == seg]
+        )
+        for c in cibles:
+            trouve = descendre(c, suite)
+            if trouve:
+                return trouve
+        return None
+
+    return descendre(_ROUTES, segments)
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
+    """`#doc-42` n'a de sens que si la page pose `id="doc-{…}"` sur ses éléments.
+
+    Une ancre qui ne correspond à rien ne casse pas visiblement : le navigateur
+    charge la page et ne bouge pas. L'utilisateur arrive en haut d'une longue liste
+    et cherche lui-même — c'est ce que faisait « Voir l'annonce → », qui ouvrait la
+    Communauté sur l'onglet Sondages (26/07/2026).
+    """
+    orphelines = []
+    for lien, fichiers in sorted(_liens_de_l_api().items()):
+        if "#" not in lien:
+            continue
+        ancre = lien.split("#", 1)[1]
+        prefixe = ancre.split("-")[0]
+        page = _page_du_lien(lien)
+        if page is None:
+            continue  # déjà couvert par le test précédent
+        if f'id="{prefixe}-' not in page.read_text(encoding="utf-8-sig"):
+            orphelines.append(
+                f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
+                f"      {page.relative_to(_RACINE)} ne pose aucun id=\"{prefixe}-…\""
+            )
+
+    assert not orphelines, (
+        "Ces ancres ne correspondent à aucun élément de la page visée — le lien "
+        "ouvre la bonne page mais ne montre pas l'élément :\n" + "\n".join(orphelines)
+    )
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_les_onglets_des_liens_existent_dans_la_page_visee():
+    """`?onglet=annonces` doit correspondre à un onglet réellement déclaré.
+
+    Les pages à onglets listent leurs valeurs dans une constante `ONGLETS` (voir
+    `$lib/deepLink.ts`) : c'est cette liste que le lien doit viser. Une valeur
+    inconnue est ignorée en silence et l'utilisateur reste sur l'onglet par défaut,
+    exactement le symptôme d'origine.
+    """
+    inconnus = []
+    for lien, fichiers in sorted(_liens_de_l_api().items()):
+        m = re.search(r"[?&]onglet=([^&#]+)", lien)
+        if not m:
+            continue
+        onglet = m.group(1)
+        page = _page_du_lien(lien)
+        if page is None:
+            continue
+        contenu = page.read_text(encoding="utf-8-sig")
+        declares = re.search(r"const ONGLETS = \[([^\]]+)\]", contenu)
+        valeurs = re.findall(r"'([^']+)'", declares.group(1)) if declares else []
+        if onglet not in valeurs:
+            inconnus.append(
+                f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
+                f"      {page.relative_to(_RACINE)} déclare {valeurs or 'aucun onglet'}"
+            )
+
+    assert not inconnus, (
+        "Ces liens visent un onglet qui n'existe pas : la page s'ouvrira sur son "
+        "onglet par défaut, sans le contenu attendu :\n" + "\n".join(inconnus)
+    )
+
+
+class _FauxUser:
+    def __init__(self, cs: bool):
+        self._cs = cs
+
+    def has_role(self, *_roles):
+        return self._cs
+
+
+class _FauxSession:
+    """`session.get(ContratEntretien, id)` — seul appel fait par `_lien_document`."""
+
+    def __init__(self, prestataire_id: int | None = 7):
+        self._prestataire_id = prestataire_id
+
+    def get(self, _modele, _id):
+        return (
+            types.SimpleNamespace(prestataire_id=self._prestataire_id)
+            if self._prestataire_id is not None
+            else None
+        )
+
+
+def _faux_document(**champs):
+    base = dict(id=42, publication_id=None, contrat_id=None, categorie=None)
+    base.update(champs)
+    return types.SimpleNamespace(**base)
+
+
+def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
+    """La table de correspondance, testée sans base : c'est elle qui a produit le 404.
+
+    Chaque cas correspond à un endroit réel de l'interface — pièce jointe d'actualité,
+    fiche prestataire, section de /residence — ou à l'absence assumée de lien quand la
+    catégorie n'est affichée nulle part.
+    """
+    from app.routers.flux import _lien_document
+
+    cs, resident = _FauxUser(cs=True), _FauxUser(cs=False)
+    categorie = lambda code: types.SimpleNamespace(code=code)  # noqa: E731
+
+    cas = [
+        (_faux_document(publication_id=3), resident, "/actualites#pub-3"),
+        (_faux_document(contrat_id=9), cs, "/prestataires#presta-7"),
+        # Page réservée au CS/admin : un résident n'a rien à y faire, même s'il a le
+        # droit de lire le document.
+        (_faux_document(contrat_id=9), resident, None),
+        (_faux_document(categorie=categorie("pv_ag")), resident, "/residence#doc-42"),
+        (_faux_document(categorie=categorie("plan_residence")), resident, "/residence#doc-42"),
+        # Catégorie affichée nulle part → aucun lien, délibérément.
+        (_faux_document(categorie=categorie("fiche_synthetique")), resident, None),
+        (_faux_document(), resident, None),
+    ]
+    for doc, user, attendu in cas:
+        assert _lien_document(doc, user, _FauxSession()) == attendu, (
+            f"document {doc} pour un {'CS' if user.has_role() else 'résident'}"
+        )
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")

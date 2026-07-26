@@ -10,6 +10,7 @@
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { fmtMontant } from '$lib/utils';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
 	$: _siteNom = $siteNomStore;
@@ -591,6 +592,21 @@
 			}
 			contratDocsMap = map;
 		}
+
+		// Liens profonds : `#dv-<id>` (prestation) et `#presta-<id>` (fiche).
+		// La vue liste est la seule où chaque élément porte un id — le kanban
+		// n'affiche qu'une colonne de statut à la fois.
+		const idDevis = cibleDuHash('dv');
+		if (idDevis !== null) {
+			prestationsVue = 'liste';
+			expandedDevis = new Set([...expandedDevis, idDevis]);
+			revelerCible(`dv-${idDevis}`);
+		}
+		const idPresta = cibleDuHash('presta');
+		if (idPresta !== null) {
+			expandedPrests = new Set([...expandedPrests, idPresta]);
+			revelerCible(`presta-${idPresta}`);
+		}
 	});
 
 	function resetPrestForm() { prestForm = { nom: '', specialite: '', type_prestataire: 'ponctuel', email: '' }; prestContacts = [{ telephone: '', prenom: '', nom: '', fonction: '', email: '' }]; editPrestId = null; }
@@ -938,7 +954,7 @@
 			{#each devisActifs as d (d.id)}
 				{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
 				{@const devisExpanded = expandedDevis.has(d.id)}
-				<div class="devis-expand" class:expanded={devisExpanded}>
+				<div class="devis-expand" class:expanded={devisExpanded} id="dv-{d.id}">
 					<div class="devis-row"
 						role="button" tabindex="0"
 						on:click|stopPropagation={() => toggleDevis(d.id)}
@@ -1088,7 +1104,7 @@
 						{#each devisRealises as d (d.id)}
 							{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
 							{@const devisExpanded = expandedDevis.has(d.id)}
-							<div class="devis-expand devis-expand--done" class:expanded={devisExpanded}>
+							<div class="devis-expand devis-expand--done" class:expanded={devisExpanded} id="dv-{d.id}">
 								<div class="devis-row"
 									role="button" tabindex="0"
 									on:click|stopPropagation={() => toggleDevis(d.id)}
@@ -1693,7 +1709,7 @@
 				{@const cs = contratsForPrest(p.id)}
 				{@const dv = devisForPrest(p.id)}
 				{@const nextVisit = nextVisitForPrest(p.id)}
-				<div class="prest-expand card" class:expanded>
+				<div class="prest-expand card" class:expanded id="presta-{p.id}">
 					<div class="prest-header"
 						role="button" tabindex="0"
 						on:click={() => togglePrest(p.id)}

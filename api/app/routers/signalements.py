@@ -49,6 +49,22 @@ def _deny_communaute_for_statut(user: Utilisateur) -> None:
         raise HTTPException(403, "Votre accès à la Communauté est suspendu.")
 
 
+def _lien_cible(cible_type: str, cible_id: int) -> str:
+    """Lien profond vers le contenu signalé, dans le bon onglet de la Communauté.
+
+    Les réponses et commentaires n'ont pas d'ancre propre : ils s'affichent sous
+    leur idée / annonce / sondage, dont on ne connaît pas l'id ici. Le lien reste
+    alors la page — c'est déjà la rubrique, pas une route inexistante.
+    """
+    if cible_type == "idee":
+        return f"/sondages?onglet=idees#idee-{cible_id}"
+    if cible_type == "annonce":
+        return f"/sondages?onglet=annonces#annonce-{cible_id}"
+    if cible_type == "sondage":
+        return f"/sondages/{cible_id}"
+    return "/sondages"
+
+
 def _resoudre_cible(cible_type: str, cible_id: int, session: Session):
     """Retourne (apercu, auteur_cible_id) pour la cible, ou (None, None) si absente."""
     if cible_type == "idee":
@@ -127,7 +143,9 @@ def creer_signalement(
                 destinataire_id=m.id, type="moderation",
                 titre="Nouveau signalement à modérer",
                 corps=f"{_CIBLE_LABELS[body.cible_type]} — {motif[:150]}",
-                lien="/sondages",
+                # Le modérateur doit atterrir sur le contenu signalé, pas sur
+                # l'onglet Sondages par défaut (cf. flux.py, même correctif).
+                lien=_lien_cible(body.cible_type, body.cible_id),
             ))
 
     session.commit()

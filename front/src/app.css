@@ -429,3 +429,19 @@ a:hover { text-decoration: underline; }
 .rich-content blockquote { border-left: 3px solid var(--color-border); padding-left: .75rem; color: var(--color-text-muted); margin: .4rem 0; }
 .rich-content strong { font-weight: 600; }
 .rich-content em     { font-style: italic; }
+
+/* ── Cible d'un lien profond (fil d'activité, notification, e-mail) ──
+   Posée en JS par `$lib/deepLink.ts` → doit rester GLOBALE : une classe ajoutée
+   hors du rendu Svelte n'est pas touchée par le scoping des styles de composant.
+   Sur une liste longue, le simple défilement ne dit pas LEQUEL des éléments
+   visibles était visé — d'où la surbrillance, qui s'efface d'elle-même. */
+.cible-lien {
+  animation: cible-lien-pulse 2.5s ease-out;
+  scroll-margin-top: 1rem;
+}
+
+@keyframes cible-lien-pulse {
+  0%   { box-shadow: 0 0 0 3px var(--color-primary); }
+  70%  { box-shadow: 0 0 0 3px var(--color-primary); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}

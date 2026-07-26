@@ -12,6 +12,7 @@
 		ApiError,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
@@ -164,6 +165,15 @@
 			diagnosticTypes = diag as any[];
 
 			regles = await reglesApi.list().catch(() => []);
+
+			// Lien profond depuis le fil d'activité ou une notification :
+			// `#doc-<id>` (plan, règlement, PV d'AG) ou `#diag-<id>` (rapport de
+			// diagnostic). La page est longue et découpée en sections — y arriver
+			// sans viser l'élément revient à faire chercher l'utilisateur.
+			const idDoc = cibleDuHash('doc');
+			if (idDoc !== null) revelerCible(`doc-${idDoc}`);
+			const idDiag = cibleDuHash('diag');
+			if (idDiag !== null) revelerCible(`diag-${idDiag}`);
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
@@ -707,7 +717,7 @@
 		{:else}
 			<div class="doc-list">
 				{#each sortedPlans as doc (doc.id)}
-					<div class="doc-row card">
+					<div class="doc-row card" id="doc-{doc.id}">
 						<div class="doc-info">
 							<Icon name="file-text" size={16} />
 							<span class="doc-titre">{doc.titre}</span>
@@ -743,7 +753,7 @@
 		{:else}
 			<div class="doc-list">
 				{#each reglements as doc (doc.id)}
-					<div class="doc-row card">
+					<div class="doc-row card" id="doc-{doc.id}">
 						<div class="doc-info">
 							<Icon name="file-text" size={16} />
 							<span class="doc-titre">{doc.titre}</span>
@@ -779,7 +789,7 @@
 		{:else}
 			<div class="doc-list">
 				{#each sortedCrAg as doc (doc.id)}
-					<div class="doc-row card">
+					<div class="doc-row card" id="doc-{doc.id}">
 						<div class="doc-info">
 							<Icon name="file-text" size={16} />
 							{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums">{doc.annee}</span>{/if}
@@ -847,7 +857,7 @@
 						{#if dtype.rapports.length > 0}
 							<div class="diag-rapports">
 								{#each dtype.rapports as rapport (rapport.id)}
-									<div class="diag-rapport-block">
+									<div class="diag-rapport-block" id="diag-{rapport.id}">
 										<div class="doc-row">
 											<div class="doc-info">
 												<Icon name="file-text" size={16} />
