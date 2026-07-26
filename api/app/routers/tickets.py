@@ -20,6 +20,7 @@ from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
     TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate,
 )
+from app.utils.dates_fr import datetime_longue
 from app.utils.visibility import ticket_visible
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -63,7 +64,7 @@ def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
 
 
 def _fmt_paris(dt: datetime) -> str:
-    return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
+    return datetime_longue(dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")))
 
 
 def _envoyer_email_externe_ticket(

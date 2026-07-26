@@ -1,0 +1,49 @@
+#!/bin/sh
+# Refuse un commit si la branche locale est en retard sur son upstream.
+#
+# Pourquoi : `origin/dev` et `origin/main` n'avancent quasiment jamais en local.
+# Le flux est local dev -> push -> PR vers main -> *merge côté GitHub* -> puis
+# « Merge branch 'main' into dev », lui aussi côté GitHub. Ces commits de merge
+# ne redescendent que si quelqu'un fait explicitement un `git fetch`. Rien dans
+# le processus ne le faisait : le clone local dérivait donc d'exactement le
+# nombre de PR fusionnées depuis le dernier pull manuel (16 le 26/07/2026, et
+# `main` à 151 commits de retard).
+#
+# Committer sur une base périmée expose à : conflits de version dans
+# `front/package.json`, réintroduction de code déjà corrigé en amont, et surtout
+# divergence de migrations Alembic entre le code et la base (la classe de panne
+# que le point 10 du pré-check MEP existe pour attraper).
+#
+# Contournement ponctuel (hors-ligne, urgence) : ALLOW_STALE=1 git commit ...
+
+[ -n "$ALLOW_STALE" ] && exit 0
+
+upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)
+[ -z "$upstream" ] && exit 0   # branche sans upstream (locale) : rien à vérifier
+
+# Fetch borné dans le temps : hors-ligne, on laisse passer plutôt que bloquer.
+if command -v timeout >/dev/null 2>&1; then
+    timeout 15 git fetch --quiet "$(echo "$upstream" | cut -d/ -f1)" 2>/dev/null
+else
+    git fetch --quiet "$(echo "$upstream" | cut -d/ -f1)" 2>/dev/null
+fi
+
+behind=$(git rev-list --count "HEAD..$upstream" 2>/dev/null || echo 0)
+[ "$behind" -eq 0 ] 2>/dev/null && exit 0
+
+branche=$(git rev-parse --abbrev-ref HEAD)
+cat >&2 <<MSG
+
+✗ Commit refusé : '$branche' est en retard de $behind commit(s) sur $upstream.
+
+  Committer ici créerait une base divergente (versions, migrations Alembic).
+  Resynchronise d'abord :
+
+      git stash push -u          # si tu as du travail en cours
+      git merge --ff-only $upstream
+      git stash pop
+
+  Puis relance ton commit. En dernier recours : ALLOW_STALE=1 git commit ...
+
+MSG
+exit 1

@@ -8,6 +8,7 @@ import httpx
 from sqlmodel import Session, select
 
 from app.database import SessionLocal
+from app.utils.dates_fr import datetime_longue
 from app.models.core import ConfigSite, HistoriqueSauvegarde, StatutSauvegarde, WhatsAppLog
 
 logger = logging.getLogger(__name__)
@@ -168,7 +169,7 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
         logger.warning("Alerte santé non envoyée : SMTP non configuré.")
         return
 
-    now_paris = datetime.now(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
+    now_paris = datetime_longue(datetime.now(ZoneInfo("Europe/Paris")))
     annee = datetime.now().year
 
     # ── Construction du corps HTML ────────────────────────────────────────
