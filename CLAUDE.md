@@ -475,7 +475,7 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 4 | DB saine | ⚠️ **PAS de `docker exec`, PAS de `sudo` !** Voir « Point 4 » ci-dessous | `app.db-wal` et `app.db-shm` **présents sur le disque** · 0 `disk I/O error` |
 | 5 | WhatsApp | Logs du bridge, voir « Point 5 » (pas de token requis) | Dernier `WhatsApp connected ✓` **postérieur** au dernier `Connection closed` |
 | 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
-| 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` lancés par cron |
+| 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` **lancés par cron** — les modules *sourcés* (`lib-alert.sh`) restent en 644, un `x` y serait trompeur |
 | 8 | Logs cron : ni erreur, ni **battement manquant** | `tail` + comptage des lignes attendues, voir « Point 8 » | Aucune erreur **et** les lignes périodiques attendues sont présentes |
 | 9 | Emails sans échec récent | ⚠️ **PAS de `docker exec` !** Admin → Emails → Historique (filtre `erreur`, 7 j) — repli : voir « Point 9 » | 0 ligne |
 | 10 | Parité de code RPi actif ⇆ standby | `git -C /opt/5hostachy rev-parse HEAD` sur les 2 RPi | HEAD **identique** sur les 2 |
