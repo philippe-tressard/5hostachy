@@ -15,10 +15,31 @@ function gitHash(): string {
 	}
 }
 
+function buildDate(): string {
+	// Horodatage de build affiché dans le footer, en heure de PARIS.
+	//
+	// `new Date().toISOString()` est toujours en UTC : le footer annonçait
+	// « 2026/07/26-08:48 » pour une MEP réellement effectuée à 10:48 (constaté le
+	// 26/07/2026), soit 2 h de moins, et sans aucune mention du fuseau — donc lu
+	// comme une heure locale fausse. Même classe que le bug des mois en anglais du
+	// même jour : une date montrée à l'utilisateur qui ne suit pas la convention
+	// Europe/Paris du projet (cf. `$lib/date.ts`).
+	//
+	// `formatToParts` plutôt qu'un `replace` sur une chaîne localisée : on
+	// recompose explicitement, sans dépendre du format d'une locale.
+	const parts = new Intl.DateTimeFormat('fr-FR', {
+		timeZone: 'Europe/Paris',
+		year: 'numeric', month: '2-digit', day: '2-digit',
+		hour: '2-digit', minute: '2-digit', hour12: false,
+	}).formatToParts(new Date());
+	const p = (type: string) => parts.find((x) => x.type === type)?.value ?? '00';
+	return `${p('year')}/${p('month')}/${p('day')}-${p('hour')}:${p('minute')}`;
+}
+
 export default defineConfig({
 	define: {
 		'import.meta.env.VITE_GIT_HASH': JSON.stringify(gitHash()),
-		'import.meta.env.VITE_BUILD_DATE': JSON.stringify(new Date().toISOString().slice(0, 16).replace(/^(\d{4})-(\d{2})-(\d{2})T/, '$1/$2/$3-')),
+		'import.meta.env.VITE_BUILD_DATE': JSON.stringify(buildDate()),
 	},
 	plugins: [
 		sveltekit(),

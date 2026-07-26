@@ -342,14 +342,14 @@
 		if (now < dStart) return { pct: 0, label: 'À venir', active: false };
 		if (now > dEnd) return { pct: 100, label: 'Terminé', active: false };
 		const pct = Math.round(((now - dStart) / (dEnd - dStart)) * 100);
-		const hStart = new Date(dStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-		const hEnd = new Date(dEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+		// `fmtTime` épingle Europe/Paris ; les `toLocaleTimeString` qui étaient ici
+		// n'indiquaient aucun fuseau et suivaient donc celui du navigateur — juste
+		// par coïncidence pour un résident en France, faux en déplacement.
+		const hStart = fmtTime(debut);
+		const hEnd = fmtTime(fin);
 		return { pct, label: `En cours (${hStart}–${hEnd})`, active: true };
 	}
 
-	function fmtHeure(iso: string): string {
-		return fmtTime(iso);
-	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -466,7 +466,7 @@
 						</div>
 						{#if u.meta?.debut && u.meta?.fin}
 							<p class="urgence-horaire">
-								Aujourd'hui {fmtHeure(String(u.meta.debut))} → {fmtHeure(String(u.meta.fin))}
+								Aujourd'hui {fmtTime(String(u.meta.debut))} → {fmtTime(String(u.meta.fin))}
 								{#if u.meta?.prestataire} · {u.meta.prestataire}{/if}
 							</p>
 						{:else if u.detail}

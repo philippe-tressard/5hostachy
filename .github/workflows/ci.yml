@@ -72,9 +72,20 @@ jobs:
         working-directory: front
         run: npm install
 
+      # Garde-fou dates : aucun formatage sans `timeZone` épinglé. Placé AVANT le
+      # build (échoue en ~1 s, sans attendre la compilation). Pendant front du
+      # `tests/test_dates_fr.py` côté API, qui ne scanne que `api/app/` — les deux
+      # bugs de dates du 26/07/2026 étaient hors de sa portée.
+      - name: Lint dates (fuseau épinglé)
+        working-directory: front
+        run: npm run lint:dates
+
       - name: Build
         working-directory: front
         run: npm run build
         env:
           VITE_GIT_HASH: ${{ github.sha }}
-          VITE_BUILD_DATE: ${{ github.run_id }}
+          # Pas de VITE_BUILD_DATE ici : le `define` de vite.config.ts remplace ce
+          # symbole à la compilation et gagne toujours sur la variable
+          # d'environnement (vérifié). La valeur passée était de surcroît un
+          # `github.run_id`, pas une date.

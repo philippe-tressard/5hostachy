@@ -1,13 +1,14 @@
 {
   "name": "hostachy-front",
-  "version": "2.22.5",
+  "version": "2.22.8",
   "private": true,
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "lint": "prettier --check . && eslint ."
+    "lint": "prettier --check . && eslint .",
+    "lint:dates": "node scripts/check-dates.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.9",
