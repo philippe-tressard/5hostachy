@@ -464,12 +464,35 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 13 | Le canal d'alerte fonctionne | Dernière alerte reçue / `grep 'Email KO' /var/log/hostachy-health-watch.log` | Aucun `Email KO` récent — sinon les contrôles automatiques sont muets |
 
 **Point 2 — pourquoi (26/07/2026) :** « fichier présent, cohérent » était trop vague
-et ne disait pas *cohérent avec quoi*. Cette nuit-là, la bascule de 02:00 a donné la
-main à rpi1, puis une coupure WAN vers 06:53 a poussé rpi2 à démarrer ses conteneurs
-et à écrire `.active=rpi2` — sans pouvoir corriger rpi1, resté sur `rpi1`. **Les deux
-nœuds se croyaient actifs.** Or `health-watch.sh` ne bascule que s'il se croit
-standby (« je suis l'actif → pas d'intervention, le standby me surveille ») : les
-deux s'étant abstenus, le site est resté HS de 06:53 à ~07:45 **sans aucun failover**.
+et ne disait pas *cohérent avec quoi*.
+
+Déroulé réel, après **coupure d'électricité** (confirmé : rpi2 a redémarré à 07:37,
+`uptime` 2 h ; rpi1 n'a **pas** redémarré, `uptime` 4 jours — probablement onduleur
+côté rpi1, mais perte de la connectivité externe, d'où `github` injoignable et
+`Email KO`) :
+1. 02:00 — bascule rpi2 → rpi1 réussie ; les 2 flags disent `rpi1`.
+2. Coupure ; rpi1 cesse de servir (dernier checkpoint de sa base à 04:53).
+3. 06:53 — rpi2, encore debout, voit le site HS, tente un failover, **échoue**
+   (réseau) mais a déjà écrit `.active=rpi2`. Les 2 nœuds se croient actifs.
+4. 06:57→07:42 — `health-watch.sh` ne bascule que s'il se croit **standby** (« je
+   suis l'actif → pas d'intervention, le standby me surveille »). Les deux
+   s'abstiennent : site HS ~50 min **sans aucun failover**.
+5. 07:37 — rpi2 redémarre ; 07:38:49 `boot-role-guard.sh` reprend la main et le site
+   revient vers 07:45. Mais le flag de rpi1 reste faux jusqu'à correction manuelle
+   (09:28).
+
+> **🐛 Cause racine — `boot-role-guard.sh` ne corrige pas le flag du peer.**
+> Son log du 26/07 est explicite : `Peer rpi1 joignable — conteneurs=0
+> cloudflared=inactive .active=rpi1` → `Décision : active` → `.active → rpi2`.
+> Il **constate** que le peer, *joignable*, se croit encore actif, décide
+> correctement d'assumer le rôle… et laisse le flag du peer inchangé. C'est ce
+> qui fabrique l'incohérence, et donc la neutralisation du failover.
+> **À corriger** : quand `boot-role-guard` prend le rôle actif et que le peer est
+> joignable, il doit aussi écrire `.active` chez le peer (ou alerter s'il n'y
+> parvient pas). Idem pour le failover de `health-watch.sh`, qui a laissé la même
+> incohérence à 06:53. Tant que ce n'est pas fait, **toute coupure ou reboot d'un
+> nœud peut laisser les deux flags en désaccord** — donc vérifier le point 2 après
+> chaque événement électrique ou redémarrage.
 En parallèle, `auto-deploy.sh` sur rpi1 franchissait son garde-fou anti-split-brain
 à chaque tick de 5 min (`ACTIVE == SELF`) et n'échouait qu'ensuite, au `git fetch`,
 faute de réseau — un merge sur `main` avec le WAN rétabli aurait donc démarré les
@@ -481,6 +504,13 @@ comparer les deux fichiers entre eux **et** au réel (qui porte les conteneurs).
 est **mono-canal (SMTP)** et tombe précisément quand le réseau tombe, c'est-à-dire
 quand on en a besoin. Tant qu'il n'y a pas de second canal, vérifier au moins que le
 premier n'est pas muet.
+
+**Coupure de courant — réflexe.** Les deux RPi partagent le même local, donc la même
+alimentation : la redondance ne protège **pas** contre une coupure électrique, elle
+protège contre la panne d'un nœud. Après tout événement électrique, contrôler dans
+l'ordre : point 2 (les 2 flags), point 3 (split-brain), `uptime` sur les 2 pour
+savoir qui a redémarré, puis point 4 (la base a-t-elle été fermée proprement —
+`app.db-wal` présent, `quick_check` via `GET /admin/db/integrite`).
 
 > ### 🚨 Points 4 et 9 — ce pré-check contenait lui-même l'opération interdite
 > Jusqu'au 17/07/2026, le point 4 disait `PRAGMA integrity_check` et le point 9 fournissait une
