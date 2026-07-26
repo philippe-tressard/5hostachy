@@ -4,6 +4,8 @@
  * En développement, vite proxy forward /api → localhost:8000.
  */
 
+import { urlDeConnexion } from '$lib/redirection';
+
 const BASE = '/api';
 
 /** ID du mandant si l'aidant agit en délégation (null = agit pour soi-même) */
@@ -54,9 +56,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		if (ok) {
 			res = await fetch(`${BASE}${path}`, opts);
 		} else {
-			// Refresh impossible : rediriger vers login
+			// Refresh impossible : rediriger vers login EN CONSERVANT la page
+			// courante. C'est le chemin réellement emprunté en production quand
+			// une session a expiré ou n'existe pas : la garde de `(app)/+layout`
+			// n'a pas le temps de s'exécuter, cette ligne part avant elle.
 			if (typeof window !== 'undefined') {
-				window.location.href = '/auth/connexion';
+				window.location.href = urlDeConnexion();
 			}
 			throw new ApiError(401, 'Session expirée, veuillez vous reconnecter.');
 		}

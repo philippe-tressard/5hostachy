@@ -25,6 +25,18 @@ _CONNEXION = _FRONT / "routes" / "auth" / "connexion" / "+page.svelte"
 
 pytestmark = pytest.mark.skipif(not _FRONT.is_dir(), reason="front/ absent de ce checkout")
 
+# Exceptions ASSUMÉES, avec leur justification — comme la liste des endpoints publics
+# de `test_autorisation.py`. Une exception sans raison écrite est un trou qui se
+# rouvre : ces deux cas n'ont réellement aucune destination à mémoriser.
+_SANS_DESTINATION_A_GARDER = {
+    # Déconnexion volontaire : l'utilisateur QUITTE la page, il ne demande pas à y
+    # revenir. Mémoriser la page qu'il ferme serait au mieux inutile, au pire
+    # indiscret sur un poste partagé.
+    "lib/components/Nav.svelte",
+    # Racine du site : `?next=/` ne dit rien de plus que le comportement par défaut.
+    "routes/+page.svelte",
+}
+
 
 def _lire(chemin: pathlib.Path) -> str:
     assert chemin.exists(), f"{chemin.relative_to(_RACINE)} est introuvable"
@@ -52,6 +64,40 @@ def test_l_ecran_de_connexion_revient_sur_la_destination():
     )
     assert "goto('/tableau-de-bord')" not in connexion, (
         "destination en dur après connexion : le `?next=` du lien partagé est ignoré."
+    )
+
+
+def test_aucune_redirection_en_dur_vers_l_ecran_de_connexion():
+    """TOUTE redirection vers la connexion doit passer par `urlDeConnexion()`.
+
+    Il y en avait trois, pas deux : la garde de `(app)/+layout.svelte`, l'écran de
+    connexion… et `$lib/api.ts`, qui redirige en dur quand le rafraîchissement de
+    session échoue (401). C'est ce troisième chemin — le seul emprunté en production
+    lorsqu'une session manque — qui a fait perdre la destination le 26/07/2026 alors
+    que les deux autres étaient corrigés. En local, sans backend, l'appel échouait en
+    erreur réseau et ce code n'était jamais atteint : le test local passait.
+
+    Les `<a href="/auth/connexion">` restent permis : ce sont des liens que
+    l'utilisateur choisit de suivre, sans destination à mémoriser.
+    """
+    fautifs = []
+    motifs = ("goto('/auth/connexion')", 'goto("/auth/connexion")',
+              "location.href = '/auth/connexion'", 'location.href = "/auth/connexion"',
+              "location.replace('/auth/connexion')")
+    for chemin in sorted(_FRONT.rglob("*")):
+        if chemin.suffix not in (".ts", ".svelte", ".js") or not chemin.is_file():
+            continue
+        relatif = chemin.relative_to(_FRONT).as_posix()
+        if relatif in _SANS_DESTINATION_A_GARDER:
+            continue
+        contenu = chemin.read_text(encoding="utf-8-sig")
+        for motif in motifs:
+            if motif in contenu:
+                fautifs.append(f"  {chemin.relative_to(_RACINE)} : {motif}")
+
+    assert not fautifs, (
+        "Redirection en dur vers l'écran de connexion — la page demandée est perdue. "
+        "Utiliser `urlDeConnexion()` :\n" + "\n".join(fautifs)
     )
 
 
