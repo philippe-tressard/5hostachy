@@ -113,6 +113,36 @@ def _parse_photos(raw: Optional[str]) -> list[str]:
         return []
 
 
+# Où un document est-il RÉELLEMENT consultable ? Il n'existe pas de page « tous les
+# documents » : chaque document s'affiche là où il est rattaché. Le fil renvoyait vers
+# `/documents`, une route qui n'a jamais existé côté front → 404 sur « Voir → »,
+# signalé le 26/07/2026 depuis un PV d'AG. Les catégories absentes de cette table ne
+# sont affichées nulle part (fiche synthétique, attestation de lot, diagnostic de lot,
+# devis, document interne CS) : dans ce cas le fil ne propose aucun lien plutôt qu'un
+# lien qui ne mène nulle part. Cf. `api/tests/test_flux_liens.py`.
+_PAGE_PAR_CATEGORIE_DOCUMENT = {
+    "plan_residence": "/residence",
+    "reglement_copropriete": "/residence",
+    "pv_ag": "/residence",
+}
+
+
+def _lien_document(doc: Document, user: Utilisateur) -> Optional[str]:
+    """Page où ce document est affiché, ou None s'il n'est affiché nulle part."""
+    if doc.publication_id:
+        return "/actualites"
+    if doc.contrat_id:
+        # Les documents de contrat ne sont visibles que dans /prestataires, page
+        # réservée au CS et aux admins : pour les autres, pas de lien.
+        return (
+            "/prestataires"
+            if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+            else None
+        )
+    code = doc.categorie.code if doc.categorie else None
+    return _PAGE_PAR_CATEGORIE_DOCUMENT.get(code)
+
+
 # ── endpoint ─────────────────────────────────────────────────────────────────
 
 class FluxItem(BaseModel):
@@ -644,7 +674,7 @@ def get_flux(
             detail="Nouveau document",
             icon="\U0001f4c4",
             badges=[],
-            lien="/documents",
+            lien=_lien_document(d, user),
             meta={"document_id": d.id, "fichier_nom": d.fichier_nom,
                    "mime_type": d.mime_type},
         ))
@@ -665,7 +695,8 @@ def get_flux(
             detail=_strip_html(dg.synthese) if dg.synthese else "Nouveau rapport de diagnostic",
             icon="\U0001f9ea",
             badges=["Diagnostic"],
-            lien="/documents",
+            # Section « Diagnostics et Contrôles Réglementaires » de /residence
+            lien="/residence",
             meta={"diagnostic_id": dg.id,
                    "resume": _strip_html(dg.synthese, 400) if dg.synthese else None},
         ))
