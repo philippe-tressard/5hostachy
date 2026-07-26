@@ -154,6 +154,26 @@ stand_down() {  # $1 = nom de l'actif réel (le peer)
 become_active() {
   log "→ ACTIF : $SELF assume le rôle actif."
   echo "$SELF" > "$FLAG" && log "  .active → $SELF."
+  # Propager le flag au peer JOIGNABLE dont le .active est périmé (incident du
+  # 26/07/2026). Sans ça, ce script écrivait son propre flag et laissait celui du
+  # peer le désigner encore actif → les 2 nœuds se croient actifs. Or
+  # health-watch.sh ne bascule QUE s'il se croit standby : les deux s'abstiennent
+  # (« l'autre me surveille ») et le failover est neutralisé — le 26/07, ~50 min de
+  # site HS sans bascule. Le log de ce jour-là montre le constat sans l'action :
+  #   « Peer rpi1 joignable — conteneurs=0 cloudflared=inactive .active=rpi1 »
+  #   « Décision : active » puis « .active → rpi2 » (flag de rpi1 laissé à rpi1).
+  # Sûr vis-à-vis du départage : decide() étant déterministe, ce que nous écrivons
+  # chez le peer est exactement ce qu'il aurait lui-même conclu.
+  if [ "$PEER_REACH" -eq 0 ] && [ "$PEER_ACT" != "$SELF" ]; then
+    log "  Flag du peer périmé ('$PEER_ACT') — correction à distance…"
+    if $SSH_CMD ptressard@"$PEER_IP" "printf '%s\n' '$SELF' > $REPO/.active" 2>/dev/null; then
+      log "  .active du peer $PEER → $SELF."
+    else
+      log "  ⚠ ÉCHEC correction du .active de $PEER (il se croit encore actif :"
+      log "     failover neutralisé). Corriger à la main :"
+      log "     ssh $PEER 'echo $SELF > $REPO/.active'"
+    fi
+  fi
   # Config « actif » AVANT de démarrer la stack — identique à bascule.sh phase 5
   # et health-watch.sh failover : ORIGIN public + suppression de COOKIE_SECURE.
   # Sans ça, un nœud promu HORS bascule (role-guard/failover) servirait le public

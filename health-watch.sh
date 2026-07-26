@@ -190,12 +190,17 @@ sudo systemctl enable cloudflared 2>/dev/null && log "  → Cloudflared $SELF en
 # Best-effort : démoter l'ancien actif s'il est (re)joignable (il est probablement
 # gelé/HS — d'où le failover — mais s'il répond, on évite qu'il reste 'enabled').
 # Le vrai backstop si gelé reste boot-role-guard.sh au prochain reboot de l'ancien actif.
+# Le .active de l'ancien actif est corrigé DANS la même session SSH : sans ça il
+# continue de se croire actif, et comme ce script ne bascule que s'il se croit
+# standby, les deux nœuds s'abstiennent en pensant que l'autre surveille → failover
+# neutralisé (incident du 26/07/2026 : ~50 min de site HS sans bascule, flags en
+# désaccord depuis un failover partiel à 06:53).
 case "$ACTIVE" in rpi1) OLD_IP=192.168.1.222 ;; rpi2) OLD_IP=192.168.1.223 ;; *) OLD_IP="" ;; esac
 if [ -n "$OLD_IP" ]; then
     ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no \
-        ptressard@"$OLD_IP" 'cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl disable --now cloudflared 2>/dev/null' \
-        >/dev/null 2>&1 && log "  → Ancien actif $ACTIVE démoté (cloudflared disabled + conteneurs stoppés)." \
-        || log "  ℹ Ancien actif $ACTIVE injoignable (normal s'il est gelé) — boot-role-guard prendra le relais à son reboot."
+        ptressard@"$OLD_IP" "printf '%s\n' '$SELF' > /opt/5hostachy/.active; cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl disable --now cloudflared 2>/dev/null" \
+        >/dev/null 2>&1 && log "  → Ancien actif $ACTIVE démoté (.active → $SELF + cloudflared disabled + conteneurs stoppés)." \
+        || log "  ⚠ Ancien actif $ACTIVE injoignable (normal s'il est gelé) — son .active le désigne ENCORE actif, donc failover neutralisé jusqu'à son reboot ; boot-role-guard prendra le relais."
 fi
 
 echo "$SELF" > "$FLAG"

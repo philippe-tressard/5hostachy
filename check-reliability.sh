@@ -190,7 +190,50 @@ for pair in "$SELF:${S_deploylog_owner:-missing}" "$PEER:${P_deploylog_owner:-mi
     || warn "Log auto-deploy NON inscriptible par le cron user sur $n (owner=$o) → auto-deploy silencieusement KO (sudo chown ptressard:ptressard /var/log/hostachy-deploy.log)"
 done
 
+# ── C14. Battement d'auto-deploy sur le STANDBY ──────────────────────────────
+# Sur le standby, auto-deploy écrit une ligne « n'est pas l'actif — ignoré » à
+# chaque tick (12/h). Sur l'ACTIF il n'écrit RIEN quand il n'y a pas de
+# changement : le silence y est normal, ce contrôle ne vaut donc que sur le
+# standby. Le 26/07/2026, ces lignes ont disparu 7 h 30 : le flag local étant
+# faussement passé à SELF, le garde-fou anti-split-brain était franchi et le
+# script mourait plus loin, au `git fetch`, en ne laissant que des erreurs git
+# NON HORODATÉES — invisibles à un grep de motifs comme à un tri par date. Seule
+# l'absence des lignes attendues le révélait.
+if [ "${S_active:-}" != "$SELF" ]; then
+  HB=$(grep -c "$(date '+%Y-%m-%d %H')" /var/log/hostachy-deploy.log 2>/dev/null || echo 0)
+  HB_PREV=$(grep -c "$(date -d '1 hour ago' '+%Y-%m-%d %H')" /var/log/hostachy-deploy.log 2>/dev/null || echo 0)
+  # Sur l'heure écoulée on attend ~12 lignes ; on alerte bien en dessous pour
+  # tolérer une rotation de log ou un décalage de tick.
+  if [ "${HB_PREV:-0}" -lt 6 ] && [ "${HB:-0}" -lt 6 ]; then
+    fail "Battement auto-deploy absent sur $SELF (standby) : ${HB} ligne(s) cette heure, ${HB_PREV} la précédente (attendu ~12) → le script ne va plus au bout"
+  else
+    ok "Battement auto-deploy présent sur $SELF (standby) : ${HB} cette heure, ${HB_PREV} la précédente"
+  fi
+fi
+
 echo "─────────────────────────────────────────────────────────────"
 echo "Résumé : $FAILS FAIL, $WARNS WARN"
 [ "$FAILS" -eq 0 ] && echo "✅ Tous les contrôles critiques sont verts." || echo "❌ $FAILS contrôle(s) critique(s) en échec — intervention requise."
+
+# ── Alerte e-mail sur échec critique ─────────────────────────────────────────
+# Sans ceci, un FAIL n'allait QUE dans /var/log/hostachy-reliability.log (le cron
+# redirige tout, donc MAILTO ne reçoit rien) : le 26/07/2026 le C4 a signalé
+# « .active divergent » neuf fois de suite, failover neutralisé et site HS ~50 min,
+# sans que personne ne soit prévenu. La détection marchait — pas la notification.
+if [ "$FAILS" -gt 0 ]; then
+  # shellcheck source=/dev/null
+  if [ -r "$REPO/lib-alert.sh" ]; then
+    ALERT_COOLDOWN_FILE=/tmp/check-reliability-cooldown
+    ALERT_COOLDOWN_SECONDS=3600   # 1 h : à */15 un FAIL persistant ferait 96 mails/jour
+    ALERT_REPO="$REPO"
+    source "$REPO/lib-alert.sh"
+    alert_if_not_in_cooldown \
+      "[5Hostachy] ❌ $FAILS contrôle(s) de fiabilité en échec sur $SELF" \
+      "$(printf 'check-reliability.sh sur %s a relevé %s FAIL et %s WARN.\n\nDétail :\n%s\n\nLog complet : /var/log/hostachy-reliability.log\n' \
+          "$SELF" "$FAILS" "$WARNS" "$(grep -E '^\[FAIL\]' /var/log/hostachy-reliability.log 2>/dev/null | tail -10)")"
+  else
+    echo "[WARN] lib-alert.sh introuvable dans $REPO — aucune alerte envoyée."
+  fi
+fi
+
 exit "$FAILS"
