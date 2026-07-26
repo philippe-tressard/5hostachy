@@ -162,6 +162,19 @@ Les `strftime("%Y-%m-%d")` / `("%Y-%m")` restants sont des **clés machine** (re
 SQL, agrégats de télémétrie, noms de sauvegarde) : ne pas les « factoriser », ce ne
 sont pas des formats d'affichage.
 
+**Deux garde-fous automatiques, un par langage** — ils échouent en CI si un
+formatage de date échappe aux helpers :
+
+| Contrôle | Portée | Interdit |
+|---|---|---|
+| `api/tests/test_dates_fr.py` | `api/app/` | `%B` `%b` `%A` `%a` (mois/jour traduits par `LC_TIME`) |
+| `front/scripts/check-dates.mjs` (`npm run lint:dates`) | `front/src/` **et `vite.config.ts`** | `toLocaleDateString` · `toLocaleTimeString` · `Intl.DateTimeFormat` · `new Date(…).toLocaleString` **sans `timeZone`** |
+
+Le second couvre `vite.config.ts` parce que le bug de l'horodatage du footer s'y
+cachait — hors de `src/`, donc hors de portée de tout contrôle existant. Restent
+autorisés : `toISOString()` seul (sérialisation UTC des payloads d'API, correct) et
+`toLocaleString()` sur un **nombre** (index, montants — ce n'est pas une date).
+
 ### Emojis non-BMP (U+10000+)
 ```typescript
 // JS/TS : encoder \u{HEX}

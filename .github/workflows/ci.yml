@@ -72,6 +72,14 @@ jobs:
         working-directory: front
         run: npm install
 
+      # Garde-fou dates : aucun formatage sans `timeZone` épinglé. Placé AVANT le
+      # build (échoue en ~1 s, sans attendre la compilation). Pendant front du
+      # `tests/test_dates_fr.py` côté API, qui ne scanne que `api/app/` — les deux
+      # bugs de dates du 26/07/2026 étaient hors de sa portée.
+      - name: Lint dates (fuseau épinglé)
+        working-directory: front
+        run: npm run lint:dates
+
       - name: Build
         working-directory: front
         run: npm run build
