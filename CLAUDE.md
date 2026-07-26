@@ -377,6 +377,31 @@ revenir à `state: open`. Deux causes cumulées, corrigées :
 
 ## Git & MEP
 
+### ⚠️ Se resynchroniser AVANT de committer (obligatoire)
+
+`origin/dev` et `origin/main` avancent **côté GitHub** : local `dev` → push → PR
+vers `main` → merge sur GitHub → « Merge branch 'main' into dev », lui aussi sur
+GitHub. Ces commits ne redescendent **jamais** tout seuls. Sans fetch explicite,
+le clone local dérive d'exactement le nombre de PR fusionnées depuis le dernier
+pull manuel — constaté le 26/07/2026 : `dev` à **16 commits** de retard, `main` à
+**151**. Committer sur cette base expose aux conflits de version
+(`front/package.json`) et à la divergence code ⇆ migrations Alembic (la panne que
+le point 10 du pré-check existe pour attraper).
+
+**Premier réflexe de toute session, avant le moindre commit :**
+```bash
+git fetch origin && git merge --ff-only origin/dev
+```
+
+Garde-fou mécanique : `.githooks/pre-commit` refuse un commit si la branche est
+en retard sur son upstream. Il est versionné mais `core.hooksPath` doit être armé
+**une fois par clone** :
+```bash
+git config core.hooksPath .githooks && git config pull.ff only
+```
+(`pull.ff only` évite qu'un `git pull` fabrique un merge commit parasite au lieu
+d'un fast-forward.) Contournement d'urgence : `ALLOW_STALE=1 git commit …`.
+
 - `main` = production protégé — toutes les modifications via PR vers `dev`
 - Prefixes commits : `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`
 - MEP : `MaJ-Hostachy.sh` sur le **RPi actif uniquement** — bloque automatiquement sur le standby
