@@ -9,9 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml"><img src="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="https://api.reuse.software/info/github.com/philippe-tressard/5hostachy"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/5hostachy" alt="REUSE compliant" /></a>
-  <img src="https://img.shields.io/badge/python-3.10+-3776ab.svg" alt="Python 3.10+" />
+  <a href="https://api.reuse.software/info/github.com/philippe-tressard/5hostachy"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/5hostachy?v=2" alt="REUSE compliant" /></a>
+  <img src="https://img.shields.io/badge/python-3.12-3776ab.svg" alt="Python 3.12" />
   <img src="https://img.shields.io/badge/node-22+-339933.svg" alt="Node 22+" />
 </p>
 
