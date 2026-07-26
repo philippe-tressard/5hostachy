@@ -15,6 +15,32 @@ export function htmlPreview(html: string, maxLength = 150): string {
 	return text.length > maxLength ? text.slice(0, maxLength) + '…' : text;
 }
 
+/**
+ * Montant en euros — format français unique de l'application.
+ *
+ * `1234` → `1 234 €` · `1234.5` → `1 234,50 €` · `null` → `—`
+ *
+ * Avant ce helper, le même champ `montant_estime` était formaté de trois façons
+ * différentes selon l'écran — parfois sur la même page : `{style:'currency'}`
+ * (« 1 234,00 € »), `toLocaleString('fr-FR')` suivi d'un `€` littéral
+ * (« 1 234 € »), et un `Intl.NumberFormat` local avec `maximumFractionDigits: 0`
+ * (qui arrondissait « 1 234,50 » en « 1 235 € »).
+ *
+ * `minimumFractionDigits: 0` + `maximumFractionDigits: 2` : les centimes sont
+ * affichés quand ils existent — donc aucun arrondi trompeur sur un montant de
+ * devis — et masqués sur un montant entier. Le `—` pour une valeur absente suit la
+ * convention de `lib/date.ts`.
+ */
+export function fmtMontant(v: number | null | undefined): string {
+	if (v == null) return '—';
+	return new Intl.NumberFormat('fr-FR', {
+		style: 'currency',
+		currency: 'EUR',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
+	}).format(v);
+}
+
 /** Libellés canoniques des périmètres (cf. specs/design — pattern UX « Périmètre »). */
 export const PERIMETRE_LABELS: Record<string, string> = {
 	'résidence': 'Copropriété entière',

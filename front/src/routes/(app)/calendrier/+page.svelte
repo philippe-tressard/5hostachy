@@ -11,6 +11,7 @@ import { onMount } from 'svelte';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
+	import { fmtMontant } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -857,7 +858,7 @@ import { onMount } from 'svelte';
 										</div>
 										<div class="event-date">
 											{#if item.date_prestation}<div>{fmtDateShort(item.date_prestation)}</div>{/if}
-											{#if item.montant_estime}<div style="font-size:.8rem;color:var(--color-text-muted)">{item.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
+											{#if item.montant_estime}<div style="font-size:.8rem;color:var(--color-text-muted)">{fmtMontant(item.montant_estime)}</div>{/if}
 										</div>
 									</div>
 								{:else}

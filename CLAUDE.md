@@ -136,11 +136,31 @@ var(--shadow)
 
 ### Helpers de formatage (à réutiliser)
 ```typescript
-fmtDate(d: string)          // DD Mon YYYY
-fmtDateHeure(d: string)     // DD Mon YYYY HH:mm
-perimetreLabel(items)       // 'bat:1,parking' → 'Bât. 1 · Parking'
-renderDesc(c: string)       // texte ou HTML → HTML sanitisé
+// $lib/date.ts — TOUTES les dates affichées (locale fr-FR + TZ Europe/Paris figés)
+fmtDate(d)  fmtDateLong(d)  fmtDateShort(d)  fmtDatetime(d)  fmtTime(d)  fmtMonthYear(d)
+// $lib/utils.ts
+fmtMontant(v)               // 1234 → '1 234 €' · 1234.5 → '1 234,50 €' · null → '—'
+perimetreLabel(items)       // ['bat:1','parking'] → 'Bât. 1 · Parking'
+stripHtml(html) · htmlPreview(html, max)
 ```
+**Ne jamais réimplémenter un format de date ou de montant dans une page.** Le
+formatage monétaire avait dérivé en trois rendus différents du même champ
+`montant_estime` — `{style:'currency'}` (« 1 234,00 € »), `toLocaleString('fr-FR')`
+suivi d'un `€` littéral, et un `Intl.NumberFormat` local qui arrondissait
+« 1 234,50 » en « 1 235 € » — parfois sur une même page. Un alias local qui délègue
+au helper partagé (`const formatDate = fmtDatetimeShort`) est une indirection
+inutile : appeler directement le helper.
+
+Côté backend, même règle avec `app/utils/dates_fr.py` :
+```python
+date_longue(d)            # 25 juillet 2026
+date_courte(d)            # 25/07/2026
+datetime_longue(dt)       # 25 juillet 2026 à 09:05
+datetime_longue_paris(dt) # horodatage naïf UTC de la base → heure de Paris
+```
+Les `strftime("%Y-%m-%d")` / `("%Y-%m")` restants sont des **clés machine** (requêtes
+SQL, agrégats de télémétrie, noms de sauvegarde) : ne pas les « factoriser », ce ne
+sont pas des formats d'affichage.
 
 ### Emojis non-BMP (U+10000+)
 ```typescript
@@ -455,7 +475,7 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 4 | DB saine | ⚠️ **PAS de `docker exec`, PAS de `sudo` !** Voir « Point 4 » ci-dessous | `app.db-wal` et `app.db-shm` **présents sur le disque** · 0 `disk I/O error` |
 | 5 | WhatsApp | Logs du bridge, voir « Point 5 » (pas de token requis) | Dernier `WhatsApp connected ✓` **postérieur** au dernier `Connection closed` |
 | 6 | Erreurs API | `docker logs --since 1h` | Aucune ERROR/CRITICAL |
-| 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` lancés par cron |
+| 7 | Droits scripts cron | `ls -la /opt/5hostachy/*.sh` sur les 2 RPi | Bit `x` (`-rwxr*`) sur tous les `.sh` **lancés par cron** — les modules *sourcés* (`lib-alert.sh`) restent en 644, un `x` y serait trompeur |
 | 8 | Logs cron : ni erreur, ni **battement manquant** | `tail` + comptage des lignes attendues, voir « Point 8 » | Aucune erreur **et** les lignes périodiques attendues sont présentes |
 | 9 | Emails sans échec récent | ⚠️ **PAS de `docker exec` !** Admin → Emails → Historique (filtre `erreur`, 7 j) — repli : voir « Point 9 » | 0 ligne |
 | 10 | Parité de code RPi actif ⇆ standby | `git -C /opt/5hostachy rev-parse HEAD` sur les 2 RPi | HEAD **identique** sur les 2 |

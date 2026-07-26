@@ -18,6 +18,10 @@ format dépendant de la locale réapparaît dans `app/`.
 from __future__ import annotations
 
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+TZ_PARIS = ZoneInfo("Europe/Paris")
+_TZ_UTC = ZoneInfo("UTC")
 
 MOIS = (
     "janvier", "février", "mars", "avril", "mai", "juin",
@@ -44,3 +48,26 @@ def datetime_longue(dt: datetime) -> str:
 def jour_longue(d: date | datetime) -> str:
     """`date(2026, 7, 25)` → `samedi 25 juillet 2026`."""
     return f"{JOURS[d.weekday()]} {date_longue(d)}"
+
+
+def date_courte(d: date | datetime) -> str:
+    """`date(2026, 7, 25)` → `25/07/2026`.
+
+    Format numérique pour les tableaux et documents denses (historiques de
+    tickets). Indépendant de la locale — aucun nom de mois — mais centralisé ici
+    pour que tout formatage de date destiné à l'affichage passe par ce module.
+    """
+    return f"{d.day:02d}/{d.month:02d}/{d.year}"
+
+
+def datetime_longue_paris(dt: datetime) -> str:
+    """Horodatage **naïf UTC** (tel que stocké en base) → texte français heure de Paris.
+
+    `datetime(2026, 7, 25, 8, 5)` → `25 juillet 2026 à 10:05`.
+
+    Était dupliqué à l'identique sous le nom `_fmt_paris` dans `routers/tickets.py`
+    et `routers/publications.py` (corps des e-mails). Les horodatages de la base
+    sont naïfs et en UTC : c'est ce module qui porte cette convention, pour que le
+    décalage ne soit pas réécrit à chaque point d'appel.
+    """
+    return datetime_longue(dt.replace(tzinfo=_TZ_UTC).astimezone(TZ_PARIS))

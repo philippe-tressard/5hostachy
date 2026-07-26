@@ -11,7 +11,7 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { stripHtml } from '$lib/utils';
+	import { stripHtml, fmtMontant } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import PhotosUpload from '$lib/components/PhotosUpload.svelte';
@@ -197,10 +197,6 @@
 	function apiMessage(e: unknown, fallback = 'Erreur') {
 		if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: unknown }).message ?? fallback);
 		return fallback;
-	}
-	function fmtMoney(v: number | null | undefined) {
-		if (v == null) return '—';
-		return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 	}
 	function daysSince(d: string | null | undefined) {
 		if (!d) return 0;
@@ -1765,7 +1761,7 @@
 											<td>{reportPrestataireName(d.prestataire_id)}</td>
 											<td>{d.perimetre}{#if d.batiment_id}<br /><span class="text-muted-sm">Bât. {d.batiment_id}</span>{/if}</td>
 											<td>{d.date_prestation ? fmtDate(d.date_prestation) : 'Non planifiée'}</td>
-											<td>{fmtMoney(d.montant_estime)}</td>
+											<td>{fmtMontant(d.montant_estime)}</td>
 											<td><span class="badge {REPORT_DEVIS_BADGES[d.statut] ?? 'badge-gray'}">{REPORT_DEVIS_LABELS[d.statut] ?? d.statut}</span></td>
 										</tr>
 									{/each}
@@ -1888,7 +1884,7 @@
 											<td>{d.titre}</td>
 											<td><span class="badge {REPORT_DEVIS_BADGES[d.statut] ?? 'badge-gray'}">{REPORT_DEVIS_LABELS[d.statut] ?? d.statut}</span></td>
 											<td>{d.date_prestation ? fmtDate(d.date_prestation) : '—'}</td>
-											<td>{fmtMoney(d.montant_estime)}</td>
+											<td>{fmtMontant(d.montant_estime)}</td>
 										</tr>
 									{/each}
 								</tbody>
