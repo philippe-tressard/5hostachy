@@ -41,6 +41,12 @@
 				onNeedRefresh() {
 					disponible = true;
 				},
+				// Un enregistrement qui échoue supprime le cache hors ligne ET ce
+				// bandeau, sans rien afficher : le 26/07/2026 l'URL relative du service
+				// worker renvoyait 404 sur toute route imbriquée, en silence complet.
+				onRegisterError(erreur) {
+					console.error('[PWA] enregistrement du service worker échoué', erreur);
+				},
 				onRegisteredSW(_url, registration) {
 					if (!registration) return;
 

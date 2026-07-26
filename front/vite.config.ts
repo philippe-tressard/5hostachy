@@ -55,6 +55,15 @@ export default defineConfig({
 			// laisserait le plugin injecter en plus son propre script selon qu'il
 			// détecte ou non l'import du module virtuel.
 			injectRegister: null,
+			// URL ABSOLUE du service worker. Sans ces deux options, le plugin hérite du
+			// `base` de Vite — vide sous SvelteKit — et génère
+			// `new Workbox('./sw.js', { scope: './' })` : l'enregistrement vise alors
+			// `/auth/sw.js` depuis `/auth/connexion` et échoue en 404. Constaté en
+			// production le 26/07/2026 (v2.24.0) : plus AUCUN service worker enregistré,
+			// donc ni cache hors ligne ni bandeau de mise à jour, sur toute route autre
+			// que la racine. Vérifié par `npm run lint:sw` sur le bundle construit.
+			base: '/',
+			scope: '/',
 			strategies: 'generateSW',
 			manifest: {
 				name: '5Hostachy',
