@@ -596,8 +596,19 @@ async function rejeterDemande(id: number) {
 //  Montage 
 onMount(async () => {
 await loadSiteConfig();
-// Paramétrage site — lu depuis le store (chargé par layout ou par fetch client)
-const cfg = get(configStore) as Record<string, string>;
+// Paramétrage site — lu depuis `/config/admin` (require_admin) et NON depuis le
+// store : depuis l'audit de sécurité du 26/07/2026, `/api/config` est filtré par
+// liste blanche et n'expose plus que les clés de la coquille d'interface. Les
+// champs édités ici (SMTP, WhatsApp, référence de copropriété, gestionnaire du
+// site…) ne sont accessibles qu'à l'admin, ce qui est précisément le rôle requis
+// pour afficher cet écran. Repli sur le store si l'appel échoue, pour ne pas
+// bloquer le reste de la page.
+let cfg = get(configStore) as Record<string, string>;
+try {
+	cfg = { ...cfg, ...(await api.get<Record<string, string>>('/config/admin')) };
+} catch {
+	toast('error', "Impossible de charger le paramétrage complet (droits admin requis).");
+}
 // Les clés légales sont exclues de /api/config (perf) — fetch dédié
 let sMentions = '';
 let sPolitique = '';

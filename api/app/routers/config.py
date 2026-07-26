@@ -17,14 +17,55 @@ from app.seed import DEFAULT_LEGAL
 router = APIRouter(prefix="/config", tags=["config"])
 
 _LEGAL_KEYS = {'mentions_legales', 'politique_confidentialite'}
-_PRIVATE_KEYS = {'whatsapp_api_key', 'smtp_password'}
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  LISTE BLANCHE des clés exposables SANS authentification.
+#
+#  ⚠️ Ne rien ajouter ici sans se demander : « accepterais-je de le lire dans un
+#  résultat de moteur de recherche ? » Cet endpoint est public : tout ce qui y
+#  figure est lisible par n'importe qui, et indexable.
+#
+#  POURQUOI une liste blanche (audit du 26/07/2026) — ce filtre était une liste
+#  NOIRE (`_PRIVATE_KEYS = {'whatsapp_api_key', 'smtp_password'}`) : toute clé non
+#  explicitement interdite était publiée. Correct avec cinq clés de configuration,
+#  devenu une fuite à mesure qu'elles s'accumulaient — 31 clés étaient exposées, dont
+#  toute la configuration SMTP sauf le mot de passe (serveur, identifiant, port),
+#  l'URL interne du bridge WhatsApp, l'identifiant du groupe privé, la référence de
+#  copropriété du syndic, et un LIEN D'INVITATION FONCTIONNEL au groupe WhatsApp des
+#  résidents. Une liste noire échoue en s'ouvrant ; une liste blanche échoue en se
+#  fermant. La donnée manquante casse un écran — visible, corrigible ; la donnée en
+#  trop fuit en silence.
+#
+#  Clés retenues = strictement celles lues hors session (écran de connexion, pages
+#  légales) et par la coquille de l'interface (navigation, titres de pages).
+#  Tout le reste passe par `GET /config/admin`, protégé par `require_admin`.
+# ─────────────────────────────────────────────────────────────────────────────
+_PUBLIC_KEYS = {
+    'site_nom',            # titre de l'onglet et en-tête, écran de connexion inclus
+    'site_url',            # liens des pages légales
+    'site_icone',          # icône de la barre de navigation et de l'écran de connexion
+    'login_sous_titre',    # sous-titre de l'écran de connexion
+    'pages_order',         # ordre des entrées de navigation
+}
+# Titres et descriptifs des pages, consommés par `getPageConfig()` côté front.
+_PUBLIC_PREFIXES = ('page_config_',)
+
+
+def _est_public(cle: str) -> bool:
+    return cle in _PUBLIC_KEYS or cle.startswith(_PUBLIC_PREFIXES)
 
 
 @router.get("", response_model=Dict[str, str])
 def get_config(session: Session = Depends(get_session)):
-    """Retourne les clés de configuration UI (public). Exclut les contenus légaux et les clés privées."""
+    """Clés de configuration de l'interface exposables **sans authentification**.
+
+    Filtrage par liste blanche (`_PUBLIC_KEYS` / `_PUBLIC_PREFIXES`) : une clé
+    inconnue n'est pas publiée. Les contenus légaux ont leur propre endpoint
+    (`/config/legal`), la configuration complète est réservée à l'admin
+    (`/config/admin`).
+    """
     rows = session.exec(select(ConfigSite)).all()
-    return {r.cle: r.valeur for r in rows if r.cle not in _LEGAL_KEYS and r.cle not in _PRIVATE_KEYS}
+    return {r.cle: r.valeur for r in rows if _est_public(r.cle)}
 
 
 @router.get("/admin", response_model=Dict[str, str])

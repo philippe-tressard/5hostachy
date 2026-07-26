@@ -476,6 +476,48 @@ message. Constaté le 26/07 sur `.githooks/pre-commit` — garde-fou inerte, dé
 seulement sur demande de relecture. Même classe que le point 7, côté dépôt.
 Remédiation : `git update-index --chmod=+x <fichier>`.
 
+### Étape 0 bis — exigences sans exception (avant le pré-check)
+
+Deux exigences de même rang que la sécurité, à contrôler **avant** de dérouler le
+pré-check technique. Elles ne portent pas sur l'état des machines mais sur celui du
+code et de la documentation livrée : un pré-check vert sur une base qui viole ces
+règles reste un mauvais déploiement.
+
+| # | Exigence | Vérification | Automatisé par |
+|---|---|---|---|
+| 0c | **Autorisation centralisée, aucun passe-droit** | Toute règle de sécurité dans `app/auth/deps.py` · tout endpoint porte une dépendance · exceptions publiques énumérées et justifiées · `has_role(RoleUtilisateur.…)` jamais `user.role` ni chaîne · exposition publique en **liste blanche** | `api/tests/test_autorisation.py` (5 tests, CI) |
+| 0d | **Factorisation** | Aucun code spécifique ne réimplémente une bibliothèque partagée (dates, montants, alertes, thème PDF, destinataires) | `test_dates_fr.py` · `front/scripts/check-dates.mjs` — le reste par relecture |
+| 0e | **Documentation à jour** | README (et ses badges) · manuel utilisateur · `specs/` reflètent l'état livré | `api/tests/test_documentation.py` pour la partie mécanique ; le fond reste à relire |
+
+**0c — pourquoi cette exigence a besoin d'un test et non d'une consigne.** L'audit du
+26/07/2026 a trouvé l'exigence globalement respectée — 276 endpoints, aucun contrôle
+sur `user.role`, tout par `has_role()` — et pourtant **trois dérives installées sans
+que rien ne les signale** :
+1. `GET /config` filtrait par liste **noire** : 31 clés exposées sans authentification,
+   dont toute la configuration SMTP, l'URL interne du bridge WhatsApp, l'identifiant
+   du groupe privé et un **lien d'invitation fonctionnel** au groupe WhatsApp des
+   résidents. Le motif était correct à cinq clés de configuration ; il est devenu une
+   fuite à mesure qu'elles s'accumulaient, sans que personne ne rouvre le fichier.
+2. `_require_bailleur` dans `routers/bailleur.py`, doublon exact de
+   `require_proprietaire`, hors du module central — 17 endpoints dessus. Un
+   durcissement de la règle centrale ne les aurait pas atteints. **Aggravant :
+   `specs/architecture/api.md` le documentait comme une dépendance officielle** — la
+   spec légitimait la dérive au lieu de la signaler.
+3. Deux contrôles par chaîne littérale (`has_role("admin")`) au lieu de l'enum.
+
+Le point commun : **aucune n'était visible sans rouvrir le fichier concerné**. Une
+exigence, même « critique et prioritaire », ne se maintient pas par la consigne — la
+consigne était là. Elle se maintient par un contrôle qui échoue.
+
+**0e — pourquoi.** La synchronisation du manuel entre `docs/` et `front/static/`
+n'était qu'une case à cocher : elle a tenu, mais une case ne résiste pas à une
+session pressée, et les résidents auraient lu une version périmée. Les badges du
+README avaient connu la dérive inverse, réelle : Python annoncé « 3.10+ » pour une
+image en 3.12. Ce qui est mécanique est désormais testé (synchronisation des manuels,
+badges Python/Node/CI alignés sur `Dockerfile` et `ci.yml`) ; le fond — le manuel
+décrit-il encore l'application, les specs l'état livré — reste une relecture, à faire
+ici et pas après.
+
 ### Pré-check obligatoire avant MEP
 
 Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détectée → diagnostic + plan proposé → correction si validée par l'utilisateur → reprise de la MEP.

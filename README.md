@@ -146,6 +146,8 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 
 - JWT avec cookies HttpOnly / Secure / SameSite=strict
 - Hachage bcrypt des mots de passe
+- **Autorisation centralisée** — toutes les règles dans `api/app/auth/deps.py`, chaque endpoint en dépend, les rares exceptions publiques sont énumérées et justifiées (vérifié en CI)
+- **Exposition publique en liste blanche** — ce qui est lisible sans authentification est énuméré, jamais déduit par exclusion
 - Rate limiting sur les endpoints d'authentification (slowapi)
 - Validation Pydantic / SQLModel sur toutes les entrées
 - Headers de sécurité via Caddy (HSTS, X-Frame-Options, CSP)
