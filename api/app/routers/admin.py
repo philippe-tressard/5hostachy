@@ -1,6 +1,7 @@
 """Router admin — gestion comptes, sauvegardes, configuration."""
 import json
 from datetime import datetime
+from html import escape
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -1366,28 +1367,46 @@ def _declencher_accueil_arrivant(
             f"• Demande d'ajout sur l'interphone transmise au Conseil Syndical{bat_str}{ancien_str}."
         )
 
-    demarches_str = ""
+    # Corps en HTML : `safeRichContent()` côté front bascule en mode HTML dès qu'une
+    # balise est détectée et ne convertit alors plus les `\n` en `<br>`. Tout le
+    # corps doit donc être structuré, sinon l'ajout du lien écraserait la mise en
+    # forme. Bénéfice au passage : les `**gras**` de l'ancienne version, qui
+    # s'affichaient avec leurs astérisques (aucun rendu markdown côté front),
+    # deviennent de vrais `<strong>`.
+    demarches_html = ""
     if demarches:
-        demarches_str = (
-            "\n\n**Démarches initiées en votre nom**\n"
-            + "\n".join(demarches)
+        # Les puces arrivent préfixées « • » (format texte) — on les retire au
+        # profit d'un vrai <ul>.
+        items = "".join(f"<li>{escape(d.lstrip('• ').strip())}</li>" for d in demarches)
+        demarches_html = (
+            "<p><strong>Démarches initiées en votre nom</strong></p>"
+            f"<ul>{items}</ul>"
         )
+
+    # La fiche d'accueil n'était référencée NULLE PART dans le parcours : cette
+    # notification affirmait que « l'ensemble des consignes est disponible dans
+    # l'application » sans le moindre lien, et son champ `lien` pointait sur `/`.
+    # L'arrivant devait donc tomber par hasard sur la carte du tableau de bord.
+    # Même chemin que celle-ci (`tableau-de-bord/+page.svelte`).
+    FICHE_URL = "/api/admin/fiche-arrivant"
 
     session.add(Notification(
         destinataire_id=user.id,
         type="system",
         titre="Bienvenue dans la résidence !",
         corps=(
-            f"Bienvenue {user.prenom} ! Nous sommes heureux de vous accueillir "
-            "dans notre résidence. Vous trouverez dans cette application toutes "
-            "les informations pratiques : actualités, documents, contacts et services."
-            "\n\n**Consignes de la copropriété**\n"
-            "L'ensemble des consignes de vie en copropriété est disponible dans "
-            "l'application : règlement intérieur, consignes de tri, modalités "
-            "d'accès et contacts utiles. N'hésitez pas à vous y référer."
-            + demarches_str
+            f"<p>Bienvenue {escape(user.prenom)} ! Nous sommes heureux de vous "
+            "accueillir dans notre résidence. Vous trouverez dans cette application "
+            "toutes les informations pratiques : actualités, documents, contacts "
+            "et services.</p>"
+            "<p><strong>Consignes de la copropriété</strong><br>"
+            "Règlement intérieur, consignes de tri, modalités d'accès, "
+            "stationnement et contacts utiles sont réunis dans votre fiche "
+            f'd\'accueil : <a href="{FICHE_URL}" target="_blank" rel="noopener">'
+            "consulter les consignes de la copropriété</a>.</p>"
+            + demarches_html
         ),
-        lien="/",
+        lien=FICHE_URL,
     ))
     nb_notifs += 1
 

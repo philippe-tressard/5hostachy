@@ -643,7 +643,7 @@ Attendre le tick, puis :
 
 | # | Vérification | Commande | Attendu |
 |---|---|---|---|
-| P1 | Le déploiement a eu lieu | `grep 'Déployé' /var/log/hostachy-deploy.log \| tail -2` sur l'actif | Ligne `Déployé: <hash>` avec le hash attendu |
+| P1 | Le déploiement a eu lieu **et est terminé** | `grep 'Déployé' /var/log/hostachy-deploy.log \| tail -2` sur l'actif | Ligne `Déployé: <hash>` avec le hash attendu |
 | P2 | Site debout | `curl -s -o /dev/null -w '%{http_code}' https://5hostachy.fr/api/health` | 200 |
 | P3 | Version servie = version bumpée | Footer du site, ou `curl -s https://5hostachy.fr/ \| grep -oE '[0-9]+\.[0-9]+\.[0-9]+'` | La version de `front/package.json` |
 | P4 | Image du service touché reconstruite | Point 12, restreint aux services modifiés par le lot | Image postérieure au commit |
@@ -652,6 +652,17 @@ Attendre le tick, puis :
 | P7 | **Le correctif est effectivement observable** | Vérifier le comportement corrigé sur le site réel | Le bug ne se reproduit plus |
 | P8 | Redondance intacte après MEP | Point 2 (rôle cohérent sur les 2 nœuds) | Inchangé et cohérent |
 | P9 | Parité du standby | Point 10 | HEAD identiques, **ou** noter que la resynchro aura lieu à la bascule de 02:00 (`bascule.sh` phase 0) |
+
+> **⏱ Attendre la BONNE condition (constaté le 26/07/2026, en utilisant ce
+> post-check pour la première fois).** Ne pas attendre que `HEAD` change : dans
+> `auto-deploy.sh`, `git reset --hard` a lieu **au début**, avant `docker compose
+> build`. Un post-check déclenché sur le changement de HEAD s'exécute donc pendant
+> le build et voit des images encore anciennes et pas de ligne `Déployé` — j'ai
+> conclu à tort à un déploiement partiel. La condition de fin est la ligne
+> **`Déployé: <hash>`** :
+> ```bash
+> until ssh <actif> "grep -q 'Déployé: <hash>' /var/log/hostachy-deploy.log"; do sleep 20; done
+> ```
 
 **P7 — pourquoi :** c'est le seul contrôle qui teste ce que la MEP était censée
 apporter. Le 26/07, le bug du mois en anglais n'a été trouvé par **aucun** contrôle
@@ -681,19 +692,42 @@ Colonne clé : **qui** a détecté.
 | Faux vert « 0 inode fantôme » (sudo muet en SSH) | Demande de vérification | **Le pré-check lui-même** était en cause → **règle 1** + point 4 sans `sudo` |
 | Faux positif « image API périmée » | Vérification avant d'alarmer | Point 12 ne bornait pas le périmètre → **règle 3** + point 12 corrigé |
 
-### À automatiser (non fait — décision utilisateur requise)
+### Surveillance continue — état après le 26/07/2026
 
-Le pré-check ne protège que pendant la MEP. Trois invariants méritent de passer dans
-`check-reliability.sh` (cron `*/15`, qui alerte déjà) :
+> **La détection existait déjà et fonctionnait. C'est la notification qui manquait.**
+> `check-reliability.sh` porte un contrôle **C4** (« `.active` cohérent entre les 2 et
+> conforme à la réalité terrain ») depuis bien avant l'incident, et il a émis
+> `[FAIL] .active divergent — rpi2='rpi2' vs rpi1='rpi1'` **neuf fois** entre 06:53 et
+> 09:28, pendant que le failover était neutralisé. Personne ne l'a su : le cron
+> redirige toute la sortie vers `/var/log/hostachy-reliability.log`, donc `MAILTO` ne
+> reçoit rien, et le script n'avait aucun canal d'alerte propre.
+> **Leçon : avant d'ajouter un contrôle, vérifier qu'il n'existe pas — et qu'il a un
+> destinataire.** Un contrôle sans destinataire est un contrôle absent.
 
-1. **Cohérence de `.active` entre les 2 nœuds** — le trou le plus grave du 26/07.
-   Purement fichier (`cat` local + `$SSH_CMD` vers le peer), **aucun accès base** :
-   à écrire avec cette contrainte explicite, la corruption du 17/07 venant d'un
-   contrôle C8 de ce même script qui ouvrait `app.db`.
-2. **Battement d'`auto-deploy`** — alerter si aucune ligne datée depuis > 20 min.
-3. **Second canal d'alerte** — le mono-canal SMTP tombe avec le WAN. Une alerte
-   WhatsApp via le bridge, ou un ping sortant vers un service de heartbeat, couvrirait
-   le cas où l'e-mail est justement impossible.
+Corrigé (v2.22.3) :
+
+1. **Alerte sur échec critique** — `check-reliability.sh` envoie désormais un e-mail
+   quand `FAILS > 0`, via le module partagé `lib-alert.sh` (cooldown 1 h : à `*/15`,
+   un FAIL persistant produirait 96 e-mails par jour). Le mécanisme SMTP, jusqu'ici
+   écrit en dur dans `health-watch.sh`, est factorisé dans ce module.
+2. **Battement d'`auto-deploy` (C14)** — alerte si les lignes périodiques du standby
+   disparaissent. Ne s'applique **qu'au standby** : sur l'actif, `auto-deploy`
+   n'écrit rien tant qu'il n'y a pas de changement, le silence y est normal.
+3. **Propagation du flag au peer** — `boot-role-guard.sh` (`become_active`) et
+   `health-watch.sh` (démotion de l'ancien actif) écrivent maintenant `.active` chez
+   le peer joignable, ce qui supprime la cause racine de l'incohérence.
+
+Reste ouvert :
+
+* **Second canal d'alerte.** Le canal est unique (SMTP) et tombe avec le réseau,
+  donc précisément quand on en a besoin — le 26/07, `Email KO: [Errno 101] Network
+  is unreachable`. Une alerte WhatsApp via le bridge (le conteneur tourne en local,
+  mais son `/status` exige un token, donc il faudrait sortir la clé de `.env`) ou un
+  heartbeat sortant vers un service tiers couvriraient le cas. Décision de conception
+  à prendre.
+* **Migration de `health-watch.sh` vers `lib-alert.sh`.** Sa copie du SMTP subsiste :
+  ce script est sur le chemin du failover et `set -uo pipefail` ferait mourir un
+  `source` d'un fichier absent. À faire délibérément, pas en passant.
 
 ### Versioning (`front/package.json`)
 Version affichée dans le footer du site. Règle **obligatoire à chaque MEP** :
