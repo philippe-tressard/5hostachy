@@ -14,11 +14,15 @@ import { safeHtml } from '$lib/sanitize';
 import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
 import { fmtMontant } from '$lib/utils';
+import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
 $: _siteNom = $siteNomStore;
 
-type Tab = 'sondages' | 'idees' | 'annonces';
+// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
+// (fil d'activité, notification) — cf. $lib/deepLink.ts.
+const ONGLETS = ['sondages', 'idees', 'annonces'] as const;
+type Tab = (typeof ONGLETS)[number];
 let activeTab: Tab = 'sondages';
 $: trackTabView(activeTab);
 
@@ -399,6 +403,27 @@ sondagesLoading = false;
 ideesLoading = false;
 annoncesLoading = false;
 chargerSignalements();
+
+// ── Lien profond ────────────────────────────────────────────────────────────
+// Trois rubriques cohabitent ici sous trois onglets. Sans cela, « Voir l'annonce → »
+// déposait l'utilisateur sur l'onglet Sondages (bug signalé le 26/07/2026) : la page
+// était la bonne, l'annonce introuvable. L'ancre prime sur `?onglet=`, elle est plus
+// précise.
+const ongletDemande = ongletDeLUrl(ONGLETS);
+if (ongletDemande) activeTab = ongletDemande;
+
+const idAnnonce = cibleDuHash('annonce');
+if (idAnnonce !== null) {
+	activeTab = 'annonces';
+	expandedAnnonce = idAnnonce; // détails dépliés, comme après un dépôt
+	revelerCible(`annonce-${idAnnonce}`);
+}
+
+const idIdee = cibleDuHash('idee');
+if (idIdee !== null) {
+	activeTab = 'idees';
+	revelerCible(`idee-${idIdee}`);
+}
 });
 </script>
 
@@ -669,7 +694,7 @@ Titre *
 </div>
 {:else}
 {#each sortedIdees as idee}
-<div class="idee-card card">
+<div class="idee-card card" id="idee-{idee.id}">
 <button class="vote-btn" class:voted={idee.mon_vote} on:click={() => voter(idee.id)}
 title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
 <span class="vote-icon">{idee.mon_vote ? '❤️' : '\u{1F90D}'}</span>
@@ -790,7 +815,7 @@ Afficher mes coordonnées aux autres résidents
 </div>
 {:else}
 {#each sortedAnnonces as annonce}
-<div class="annonce-card card">
+<div class="annonce-card card" id="annonce-{annonce.id}">
 <div class="annonce-top">
 <Vignette
 src={annonce.photos?.length ? annonce.photos[0] : null}

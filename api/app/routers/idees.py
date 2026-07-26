@@ -169,7 +169,9 @@ def update_statut(
             votant_ids=votant_ids,
             idee_titre=idee.titre,
             statut_label=_STATUT_NOTIF_LABELS[body.statut],
-            lien_path="/sondages",
+            # Onglet + ancre : la Communauté a trois rubriques, `/sondages` seul
+            # déposait le lecteur sur les sondages (cf. flux.py).
+            lien_path=f"/sondages?onglet=idees#idee-{idee_id}",
             exclure_id=user.id,
         )
     session.commit()
@@ -247,7 +249,7 @@ def create_reponse(
         session, background_tasks,
         createur_id=idee.auteur_id, auteur=user,
         rubrique_label="votre idée", sujet=idee.titre,
-        extrait=contenu, lien_path="/sondages",
+        extrait=contenu, lien_path=f"/sondages?onglet=idees#idee-{idee_id}",
     )
     session.commit()
     session.refresh(rep)

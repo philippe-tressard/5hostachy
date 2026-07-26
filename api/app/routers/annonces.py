@@ -250,7 +250,7 @@ def create_reponse(
         session, background_tasks,
         createur_id=annonce.auteur_id, auteur=user,
         rubrique_label="votre annonce", sujet=annonce.titre,
-        extrait=contenu, lien_path="/sondages",
+        extrait=contenu, lien_path=f"/sondages?onglet=annonces#annonce-{annonce_id}",
     )
     session.commit()
     session.refresh(rep)

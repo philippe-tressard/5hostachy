@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 import { onMount } from 'svelte';
+import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { calendrier as calApi, publications as pubsApi, prestataires as prestApi, ApiError, type Publication } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
@@ -19,7 +20,9 @@ import { onMount } from 'svelte';
 	let evenements: any[] = [];
 	let prestataires: any[] = [];
 	let loading = true;
-	let onglet: 'liste' | 'kanban' | 'archives' = 'liste';
+	// Liste explicite : sert aussi à valider le `?onglet=` d'un lien profond.
+	const ONGLETS = ['liste', 'kanban', 'archives'] as const;
+	let onglet: (typeof ONGLETS)[number] = 'liste';
 	$: isLocataire = $currentUser?.statut === 'locataire';
 	$: if (isLocataire && (onglet === 'kanban' || onglet === 'archives')) onglet = 'liste';
 	$: trackTabView(onglet);
@@ -98,20 +101,15 @@ import { onMount } from 'svelte';
 			evenements = await calApi.list();
 			const expiredYears = [...new Set(evenements.filter(e => isExpired(e, archivageDelaiMs)).map(e => new Date(e.fin ?? e.debut).getFullYear()))].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
-			// Si ?onglet=kanban (ou archives) est présent dans l'URL, sélectionner cet onglet
-			const urlOnglet = new URLSearchParams(window.location.search).get('onglet');
-			if (urlOnglet === 'kanban' || urlOnglet === 'archives') onglet = urlOnglet;
-			// Si un ancre #ev-{id} est présent dans l'URL, passer en vue liste, ouvrir et scroller vers l'événement
-			const hash = window.location.hash;
-			const anchorMatch = hash.match(/^#ev-(\d+)$/);
-			if (anchorMatch) {
-				const targetId = parseInt(anchorMatch[1], 10);
+			// Liens profonds : `?onglet=` pour la vue, `#ev-<id>` pour l'événement.
+			// L'ancre impose la vue liste — c'est la seule où un événement porte un id.
+			const urlOnglet = ongletDeLUrl(ONGLETS);
+			if (urlOnglet) onglet = urlOnglet;
+			const idEv = cibleDuHash('ev');
+			if (idEv !== null) {
 				onglet = 'liste';
-				expandedEvId = targetId;
-				setTimeout(() => {
-					const el = document.getElementById(`ev-${targetId}`);
-					if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-				}, 100);
+				expandedEvId = idEv;
+				revelerCible(`ev-${idEv}`);
 			}
 		} catch {
 			toast('error', 'Erreur de chargement');

@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 import { onMount } from 'svelte';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { faq as faqApi } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -127,13 +128,21 @@ import { onMount } from 'svelte';
 
 	onMount(async () => {
 		await loadFaq();
-		// Ouvre et scrolle vers la question badge-prix si le hash est présent
+		// `#faq-<id>` : question visée par le fil d'activité ou une notification.
+		const idFaq = cibleDuHash('faq');
+		if (idFaq !== null) {
+			open = { [idFaq]: true };
+			revelerCible(`faq-${idFaq}`);
+		}
+
+		// `#badge-prix` : raccourci historique, documenté dans le manuel et utilisé
+		// depuis /acces-securite — il vise la question par son libellé, pas par son
+		// id, qui varie d'une instance à l'autre.
 		if (typeof window !== 'undefined' && window.location.hash === '#badge-prix') {
 			const badgeItem = items.find((i) => isBadgePrixQuestion(i.question));
 			if (badgeItem) {
 				open = { [badgeItem.id]: true };
-				await new Promise((r) => setTimeout(r, 80));
-				document.getElementById('badge-prix')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				revelerCible(`faq-${badgeItem.id}`);
 			}
 		}
 	});
@@ -459,7 +468,7 @@ import { onMount } from 'svelte';
 			{/if}
 		</div>
 		{#each catItems as item (item.id)}
-			<div id={isBadgePrixQuestion(item.question) ? 'badge-prix' : undefined}
+			<div id="faq-{item.id}"
 				class="faq-item card" class:item-inactive={!item.actif} role="button" tabindex="0" on:click={() => toggle(item.id)} on:keydown={(e) => (e.key === "Enter" || e.key === " ") && toggle(item.id)}>
 				<div class="faq-header">
 					<button

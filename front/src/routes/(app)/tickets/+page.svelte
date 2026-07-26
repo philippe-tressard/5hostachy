@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
+	import { revelerCible } from '$lib/deepLink';
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
@@ -65,9 +66,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 						expandedYears = new Set([yr]);
 					}
 					await toggleTicket(target.id);
-					setTimeout(() => {
-						document.getElementById(`ticket-${target.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-					}, 100);
+					revelerCible(`ticket-${target.id}`);
 				}
 			}
 		}

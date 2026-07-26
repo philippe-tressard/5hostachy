@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { isCS, isAdmin, currentUser, setUser } from '$lib/stores/auth';
 	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, fichiersApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -123,17 +124,11 @@
 	onMount(async () => {
 		try {
 			pubList = await pubsApi.list();
-			// Si un ancre #pub-{id} est présent dans l'URL, ouvrir et scroller vers la publication ciblée
-			const hash = window.location.hash;
-			const anchorMatch = hash.match(/^#pub-(\d+)$/);
-			if (anchorMatch) {
-				const targetId = parseInt(anchorMatch[1], 10);
-				expandedPubs = new Set([targetId]);
-				// Attendre le rendu puis scroller
-				setTimeout(() => {
-					const el = document.getElementById(`pub-${targetId}`);
-					if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-				}, 100);
+			// Lien profond `#pub-<id>` (fil d'activité, notification, e-mail)
+			const idPub = cibleDuHash('pub');
+			if (idPub !== null) {
+				expandedPubs = new Set([idPub]);
+				revelerCible(`pub-${idPub}`);
 			} else if (pubList.length > 0) {
 				expandedPubs = new Set([pubList[0].id]);
 			}

@@ -127,20 +127,29 @@ _PAGE_PAR_CATEGORIE_DOCUMENT = {
 }
 
 
-def _lien_document(doc: Document, user: Utilisateur) -> Optional[str]:
-    """Page où ce document est affiché, ou None s'il n'est affiché nulle part."""
+def _lien_document(doc: Document, user: Utilisateur, session: Session) -> Optional[str]:
+    """Lien vers l'endroit exact où ce document est affiché, ou None s'il ne l'est nulle part.
+
+    L'ancre (`#doc-<id>`, `#pub-<id>`, `#presta-<id>`) compte autant que la page :
+    /residence enchaîne plans, règlement, PV d'AG et diagnostics — y arriver sans
+    viser le document oblige à le chercher dans la bonne section.
+    """
     if doc.publication_id:
-        return "/actualites"
+        # Pièce jointe d'une actualité : c'est la publication qu'on ouvre.
+        return f"/actualites#pub-{doc.publication_id}"
+
     if doc.contrat_id:
         # Les documents de contrat ne sont visibles que dans /prestataires, page
         # réservée au CS et aux admins : pour les autres, pas de lien.
-        return (
-            "/prestataires"
-            if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-            else None
-        )
+        if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+            return None
+        contrat = session.get(ContratEntretien, doc.contrat_id)
+        # Les documents d'un contrat sont listés dans la fiche de son prestataire.
+        return f"/prestataires#presta-{contrat.prestataire_id}" if contrat else "/prestataires"
+
     code = doc.categorie.code if doc.categorie else None
-    return _PAGE_PAR_CATEGORIE_DOCUMENT.get(code)
+    page = _PAGE_PAR_CATEGORIE_DOCUMENT.get(code)
+    return f"{page}#doc-{doc.id}" if page else None
 
 
 # ── endpoint ─────────────────────────────────────────────────────────────────
@@ -508,7 +517,14 @@ def get_flux(
             detail=f"{prest.nom}{f' · {montant}' if montant else ''}",
             icon=devis_icons.get(dv.statut, "📋"),
             badges=[devis_labels.get(dv.statut, dv.statut)],
-            lien="/prestataires",
+            # /prestataires est réservée au CS et aux admins : pour les autres,
+            # pas de lien plutôt qu'une page vide (même règle que les fiches
+            # prestataires plus bas).
+            lien=(
+                f"/prestataires#dv-{dv.id}"
+                if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+                else None
+            ),
             meta={"devis_id": dv.id, "statut": dv.statut, "montant": dv.montant_estime,
                    "perimetre": _perimetre_label(perims),
                    "notes": dv.notes, "prestataire": prest.nom,
@@ -592,7 +608,9 @@ def get_flux(
             detail=" · ".join(detail_parts),
             badges=[_ANN_STATUT_BADGES.get(a.statut, a.statut)],
             icon=_ANN_ICONS.get(a.type_annonce, "\U0001f3f7️"),
-            lien="/sondages",
+            # La Communauté a trois onglets : sans `?onglet=`, « Voir l'annonce → »
+            # ouvrait l'onglet Sondages (signalé le 26/07/2026).
+            lien=f"/sondages?onglet=annonces#annonce-{a.id}",
             meta={
                 "annonce_id": a.id,
                 "type_annonce": a.type_annonce,
@@ -624,7 +642,7 @@ def get_flux(
             detail=f"{nb_votes} vote{'s' if nb_votes > 1 else ''}",
             badges=[_IDEE_STATUT_BADGES.get(idee.statut, idee.statut)],
             icon="\U0001f4a1",
-            lien="/sondages",
+            lien=f"/sondages?onglet=idees#idee-{idee.id}",
             meta={
                 "idee_id": idee.id,
                 "statut": idee.statut,
@@ -649,7 +667,7 @@ def get_flux(
             detail=_strip_html(f.reponse),
             icon="❓",
             badges=[f.categorie] if f.categorie else [],
-            lien="/faq",
+            lien=f"/faq#faq-{f.id}",
             meta={"faq_id": f.id, "categorie": f.categorie,
                    "resume": _strip_html(f.reponse, 400)},
         ))
@@ -674,7 +692,7 @@ def get_flux(
             detail="Nouveau document",
             icon="\U0001f4c4",
             badges=[],
-            lien=_lien_document(d, user),
+            lien=_lien_document(d, user, session),
             meta={"document_id": d.id, "fichier_nom": d.fichier_nom,
                    "mime_type": d.mime_type},
         ))
@@ -696,7 +714,7 @@ def get_flux(
             icon="\U0001f9ea",
             badges=["Diagnostic"],
             # Section « Diagnostics et Contrôles Réglementaires » de /residence
-            lien="/residence",
+            lien=f"/residence#diag-{dg.id}",
             meta={"diagnostic_id": dg.id,
                    "resume": _strip_html(dg.synthese, 400) if dg.synthese else None},
         ))
@@ -720,7 +738,7 @@ def get_flux(
                 detail=pr.specialite or "Nouveau prestataire",
                 icon="\U0001f6e0️",
                 badges=[pr.specialite] if pr.specialite else [],
-                lien="/prestataires",
+                lien=f"/prestataires#presta-{pr.id}",
                 meta={"prestataire_id": pr.id, "specialite": pr.specialite},
             ))
 
