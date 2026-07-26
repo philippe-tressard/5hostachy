@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { setUser } from '$lib/stores/auth';
+	import { destinationApresConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 
@@ -35,7 +36,7 @@
 		try {
 			const user = await authApi.login(email, password);
 			setUser(user);
-			goto('/tableau-de-bord');
+			goto(destinationApresConnexion());
 		} catch (e: any) {
 			const msg = e instanceof ApiError ? e.message : 'Erreur de connexion';
 			if (msg.includes('rifier votre adresse') || msg.includes('email')) {

@@ -5,6 +5,7 @@
 	import Nav from '$lib/components/Nav.svelte';
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser } from '$lib/stores/auth';
+	import { urlDeConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { initTelemetry, trackPageView, setTelemetryOptOut } from '$lib/telemetry';
 	import pkg from '../../../package.json';
@@ -20,7 +21,9 @@
 			if (meResult.status === 'fulfilled' && meResult.value) {
 				setUser(meResult.value);
 			} else {
-				goto('/auth/connexion');
+				// Emporte la page demandée (fragment compris) pour y revenir après
+				// la connexion — un lien partagé ne doit pas être perdu au login.
+				goto(urlDeConnexion());
 			}
 		}
 		// Appliquer l'opt-out télémétrie AVANT le premier tracking
