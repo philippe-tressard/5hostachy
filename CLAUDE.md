@@ -771,6 +771,20 @@ annonce de hall) et regarder.
 > **aucun log**, ni côté serveur ni côté navigateur. Ce qui échoue en silence ne se
 > découvre qu'à P7, ou jamais.
 
+> **🧪 Une vérification locale ne vaut que pour le chemin d'erreur qu'elle emprunte
+> (26/07/2026, v2.26.0 → v2.26.1).** La conservation du lien d'origine à travers
+> l'authentification a été vérifiée dans un navigateur, sur le build de production
+> servi en local : elle marchait. En production, elle ne marchait pas. En local il
+> n'y a **pas de backend** : `auth.me()` échoue en **erreur réseau** et c'est la
+> garde du layout qui redirige ; en production l'API répond **401**, et c'est
+> `$lib/api.ts` qui redirige en premier — un troisième chemin, non corrigé. Avant de
+> conclure d'un test local, se demander **quel chemin de code il a réellement
+> exercé**, et si la production en emprunte un autre (API absente vs 401/403,
+> cookies, HTTPS, service worker, reverse proxy). Quand un même effet a plusieurs
+> points de déclenchement, les chercher tous — ici, un test qui interdit toute
+> redirection en dur vers `/auth/connexion` dans `front/src` aurait trouvé le
+> troisième du premier coup, là où la relecture en avait vu deux.
+
 **Rollback si P1–P6 échoue :** `cd /opt/5hostachy && git reset --hard <commit-précédent>
 && docker compose build && docker compose up -d`. Réversible et dans le cycle normal
 — ce n'est pas une violation de la règle d'or (aucune ouverture de `app.db`).

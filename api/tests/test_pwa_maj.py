@@ -101,6 +101,33 @@ def test_une_verification_periodique_cherche_les_nouvelles_versions():
         "principal : un onglet laissé ouvert en arrière-plan toute la nuit."
     )
     assert "onNeedRefresh" in composant, (
-        "MajDisponible.svelte n'écoute plus `onNeedRefresh` : le bandeau ne "
-        "s'afficherait jamais."
+        "MajDisponible.svelte n'écoute plus `onNeedRefresh` : la mise à jour ne "
+        "serait jamais appliquée."
+    )
+
+
+def test_la_mise_a_jour_s_applique_sans_action_de_l_utilisateur():
+    """Elle doit se poser d'elle-même aux moments où un rechargement ne coûte rien.
+
+    Demander un clic, c'est demander à l'utilisateur de comprendre un mécanisme qui
+    ne le concerne pas — et laisser tourner l'ancienne version tant qu'il ne clique
+    pas, correctif de sécurité compris. Deux moments sûrs, tous deux nécessaires :
+    l'onglet passé en arrière-plan (personne ne regarde) et le changement d'écran
+    (le contenu précédent est de toute façon quitté). Le bandeau ne reste que pour le
+    cas rare d'un écran laissé ouvert au premier plan, où recharger d'autorité
+    effacerait une saisie en cours.
+    """
+    composant = _lire(_COMPOSANT)
+    assert "afterNavigate" in composant, (
+        "MajDisponible.svelte n'applique plus la mise à jour au changement d'écran : "
+        "l'utilisateur devrait de nouveau cliquer pour l'obtenir."
+    )
+    assert "visibilityState === 'hidden'" in composant, (
+        "MajDisponible.svelte n'applique plus la mise à jour quand l'onglet passe en "
+        "arrière-plan — le moment le plus discret possible."
+    )
+    assert "sessionStorage" in composant and "MAX_AUTO" in composant, (
+        "le garde-fou anti-boucle a disparu : une version qui ne parvient pas à "
+        "prendre la main rechargerait la page sans fin, sous les yeux de "
+        "l'utilisateur et sans échappatoire."
     )
