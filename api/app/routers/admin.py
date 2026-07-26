@@ -1764,4 +1764,13 @@ def get_fiche_arrivant(
         whatsapp_url=whatsapp_url,
         annee=date.today().year,
     )
-    return HTMLResponse(content=html)
+    # Jamais de cache : la fiche est régénérée à chaque appel depuis l'annuaire
+    # (membres du CS, syndic, date d'AG). Sans ces en-têtes, un navigateur pouvait
+    # garder une copie et afficher une fiche périmée après une modification de
+    # l'annuaire — ou après un correctif, ce qui a semé la confusion le 26/07/2026.
+    # Le document contient en outre des données personnelles : on évite qu'il
+    # traîne dans un cache partagé.
+    return HTMLResponse(
+        content=html,
+        headers={"Cache-Control": "no-store, must-revalidate", "Pragma": "no-cache"},
+    )

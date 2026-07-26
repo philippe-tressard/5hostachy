@@ -13,6 +13,7 @@ import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig
 import { safeHtml } from '$lib/sanitize';
 import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
+import { fmtMontant } from '$lib/utils';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
 $: _siteNom = $siteNomStore;
@@ -808,7 +809,7 @@ count={Math.max(0, (annonce.photos?.length ?? 0) - 1)}
 </strong>
 <small style="color:var(--color-text-muted)">{categorieAnnonceLabel(annonce.categorie)} · {fmtDateShort(annonce.cree_le)}</small>
 {#if annonce.prix !== null && annonce.prix !== undefined}
-<div class="annonce-prix">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(annonce.prix)}{#if annonce.negotiable}&nbsp;<span class="badge badge-gray" style="font-size:.68rem">Négociable</span>{/if}</div>
+<div class="annonce-prix">{fmtMontant(annonce.prix)}{#if annonce.negotiable}&nbsp;<span class="badge badge-gray" style="font-size:.68rem">Négociable</span>{/if}</div>
 {:else if annonce.type_annonce === 'don'}
 <div class="annonce-prix" style="color:var(--color-success,#16a34a)">Gratuit</div>
 {/if}

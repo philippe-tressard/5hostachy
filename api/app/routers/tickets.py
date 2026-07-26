@@ -4,7 +4,6 @@ import os
 import random
 import string
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlmodel import Session, select
@@ -20,7 +19,7 @@ from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
     TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate,
 )
-from app.utils.dates_fr import datetime_longue
+from app.utils.dates_fr import date_courte, datetime_longue_paris as _fmt_paris
 from app.utils.visibility import ticket_visible
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -61,10 +60,6 @@ def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
         if os.path.isfile(path):
             paths.append(path)
     return paths
-
-
-def _fmt_paris(dt: datetime) -> str:
-    return datetime_longue(dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")))
 
 
 def _envoyer_email_externe_ticket(
@@ -547,9 +542,9 @@ def envoyer_relance_syndic(
                 TicketEvolution.ticket_id == ticket.id
             ).order_by(TicketEvolution.cree_le)
         ).all()
-        historique = [{"date": e.cree_le.strftime("%d/%m/%Y"), "label": _evol_label(e)} for e in evols]
+        historique = [{"date": date_courte(e.cree_le), "label": _evol_label(e)} for e in evols]
         historique.insert(0, {
-            "date": ticket.cree_le.strftime("%d/%m/%Y"),
+            "date": date_courte(ticket.cree_le),
             "label": f"Création du ticket (statut : {STATUT_LABELS.get(ticket.statut, ticket.statut)})",
         })
         tickets_ctx.append({
@@ -1125,7 +1120,7 @@ def add_evolution(
                         seen_emails.add(email.lower())
 
             # Historique résumé pour le tableau email
-            historique = [{"date": ticket.cree_le.strftime("%d/%m/%Y"), "label": "Création du ticket"}]
+            historique = [{"date": date_courte(ticket.cree_le), "label": "Création du ticket"}]
             for ev in evols_hist:
                 if ev.type == "etat":
                     lbl = (f"Changement d'état : "
@@ -1153,7 +1148,7 @@ def add_evolution(
                 "is_commentaire": bool(body.contenu and body.contenu.strip()),
                 "commentaire": body.contenu or "",
                 "date_commentaire": _fmt_paris(datetime.utcnow()),
-                "date_creation": ticket.cree_le.strftime("%d/%m/%Y"),
+                "date_creation": date_courte(ticket.cree_le),
                 "messages": messages_ctx,
                 "historique": historique,
                 "fichiers": bool(body.fichiers_urls),

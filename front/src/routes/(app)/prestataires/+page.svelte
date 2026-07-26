@@ -9,6 +9,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
+	import { fmtMontant } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
 	$: _siteNom = $siteNomStore;
@@ -803,7 +804,7 @@
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
 									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
 									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
 								</div>
 								{#if $isCS}
@@ -840,7 +841,7 @@
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
 									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
 								</div>
 								{#if $isCS}
 									<div class="kanban-card-actions">
@@ -877,7 +878,7 @@
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
 									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
 									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
 								</div>
 								{#if $isCS}
@@ -914,7 +915,7 @@
 							<div class="kanban-card-footer">
 								<div class="devis-card-meta">
 									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {d.montant_estime.toLocaleString('fr-FR', {style:'currency',currency:'EUR'})}</span>{/if}
+									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
 								</div>
 								{#if $isCS}
 									<div class="kanban-card-actions">
@@ -954,7 +955,7 @@
 						<div class="devis-meta-right">
 							<span class="badge" style="font-size:.78rem;color:{statutDevisColor(d.statut)}">{statutDevisLabel(d.statut)}</span>
 							{#if d.montant_estime != null}
-								<span class="badge badge-gray" style="font-size:.78rem">💶 {d.montant_estime.toLocaleString('fr-FR')} €</span>
+								<span class="badge badge-gray" style="font-size:.78rem">💶 {fmtMontant(d.montant_estime)}</span>
 							{/if}
 							{#if $isCS}
 								<button class="btn-icon-danger" title="Supprimer" on:click|stopPropagation={() => deleteDevis(d.id)}>🗑️</button>
@@ -1040,7 +1041,7 @@
 								<div class="detail-grid">
 									<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
 									{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
-									{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
+									{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {fmtMontant(d.montant_estime)}</div>{/if}
 								</div>
 								{#if d.notes}
 									<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>
@@ -1104,7 +1105,7 @@
 									<div class="devis-meta-right">
 										<span class="badge" style="font-size:.78rem;color:#7c3aed">🏁 Réalisé</span>
 										{#if d.montant_estime != null}
-											<span class="badge badge-gray" style="font-size:.78rem">💶 {d.montant_estime.toLocaleString('fr-FR')} €</span>
+											<span class="badge badge-gray" style="font-size:.78rem">💶 {fmtMontant(d.montant_estime)}</span>
 										{/if}
 										<span class="toggle-arrow">{devisExpanded ? '▲' : '▼'}</span>
 									</div>
@@ -1114,7 +1115,7 @@
 										<div class="detail-grid">
 											<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
 											{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
-											{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {d.montant_estime.toLocaleString('fr-FR')} €</div>{/if}
+											{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {fmtMontant(d.montant_estime)}</div>{/if}
 										</div>
 										{#if d.notes}
 											<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>

@@ -16,7 +16,13 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
-from app.utils.dates_fr import date_longue, datetime_longue, jour_longue
+from app.utils.dates_fr import (
+    date_courte,
+    date_longue,
+    datetime_longue,
+    datetime_longue_paris,
+    jour_longue,
+)
 
 _APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
@@ -35,6 +41,22 @@ def test_datetime_longue_en_francais():
 
 def test_jour_longue_en_francais():
     assert jour_longue(date(2026, 7, 25)) == "samedi 25 juillet 2026"
+
+
+def test_date_courte():
+    """Format numérique — zéros de tête conservés (ex-`strftime('%d/%m/%Y')`)."""
+    assert date_courte(date(2026, 7, 5)) == "05/07/2026"
+    assert date_courte(date(2026, 12, 31)) == "31/12/2026"
+
+
+def test_datetime_longue_paris_applique_le_decalage():
+    """Horodatage naïf UTC de la base → heure de Paris (ex-`_fmt_paris` dupliqué).
+
+    Été : UTC+2 · hiver : UTC+1 — c'est le décalage qui est vérifié, pas le
+    formatage (couvert au-dessus).
+    """
+    assert datetime_longue_paris(datetime(2026, 7, 25, 8, 5)) == "25 juillet 2026 à 10:05"
+    assert datetime_longue_paris(datetime(2026, 1, 15, 8, 5)) == "15 janvier 2026 à 09:05"
 
 
 def test_tous_les_mois_traduits():

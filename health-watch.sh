@@ -16,8 +16,11 @@ set -uo pipefail
 REPO=/opt/5hostachy
 PUBLIC_URL="https://5hostachy.fr/api/health"
 ALERT_EMAIL="ptressard@icloud.com"
+# Noms attendus par lib-alert.sh (cf. plus bas). `COOLDOWN_FILE` reste défini
+# séparément car il est aussi purgé quand le site redevient OK.
 COOLDOWN_FILE="/tmp/health-watch-cooldown"
-COOLDOWN_SECONDS=1800   # 30 min entre deux alertes email pour éviter le spam
+ALERT_COOLDOWN_FILE="$COOLDOWN_FILE"
+ALERT_COOLDOWN_SECONDS=1800   # 30 min entre deux alertes email pour éviter le spam
 LOCK_MAX_AGE_S=900      # 15 min : au-delà, .bascule-lock est considéré orphelin
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
@@ -87,56 +90,22 @@ log "⚠ Site HS (HTTP $HTTP_CODE) — RPi: $SELF"
 FLAG="$REPO/.active"
 ACTIVE=$(cat "$FLAG" 2>/dev/null | tr -d '[:space:]' || echo "")
 
-# ── Cooldown email (évite le spam si la panne dure) ──────────────────────────
-send_email() {
-    local subject="$1"
-    local body="$2"
-
-    # Lire config mail depuis .env
-    MAIL_SERVER=$(grep -E '^MAIL_SERVER=' "$REPO/.env" | cut -d= -f2- | tr -d '"')
-    MAIL_PORT=$(grep -E '^MAIL_PORT=' "$REPO/.env" | cut -d= -f2- | tr -d '"')
-    MAIL_USERNAME=$(grep -E '^MAIL_USERNAME=' "$REPO/.env" | cut -d= -f2- | tr -d '"')
-    MAIL_PASSWORD=$(grep -E '^MAIL_PASSWORD=' "$REPO/.env" | cut -d= -f2- | tr -d '"')
-    MAIL_FROM=$(grep -E '^MAIL_FROM=' "$REPO/.env" | cut -d= -f2- | tr -d '"')
-
-    python3 - "$subject" "$body" "$MAIL_SERVER" "$MAIL_PORT" "$MAIL_USERNAME" "$MAIL_PASSWORD" "$MAIL_FROM" "$ALERT_EMAIL" <<'PYEOF'
-import sys, smtplib
-from email.mime.text import MIMEText
-subject, body, server, port, user, password, from_addr, to_addr = sys.argv[1:]
-msg = MIMEText(body)
-msg['Subject'] = subject
-msg['From'] = from_addr
-msg['To'] = to_addr
-try:
-    s = smtplib.SMTP(server, int(port))
-    s.starttls()
-    s.login(user, password)
-    s.sendmail(from_addr, [to_addr], msg.as_string())
-    s.quit()
-    print("Email envoyé.")
-except Exception as e:
-    print(f"Email KO: {e}")
-PYEOF
-}
-
-alert_if_not_in_cooldown() {
-    local subject="$1"
-    local body="$2"
-    local now
-    now=$(date +%s)
-
-    if [ -f "$COOLDOWN_FILE" ]; then
-        local last_sent
-        last_sent=$(cat "$COOLDOWN_FILE")
-        local elapsed=$(( now - last_sent ))
-        if [ "$elapsed" -lt "$COOLDOWN_SECONDS" ]; then
-            log "  Email en cooldown (envoyé il y a ${elapsed}s, attente ${COOLDOWN_SECONDS}s) — skipped."
-            return
-        fi
-    fi
-
-    send_email "$subject" "$body" && echo "$now" > "$COOLDOWN_FILE"
-}
+# ── Alertes e-mail : module partagé ──────────────────────────────────────────
+# `send_email` + `alert_if_not_in_cooldown` vivaient ici en dur (~49 lignes) et
+# ont été dupliqués à l'identique le jour où check-reliability.sh a eu besoin
+# d'alerter. Factorisés dans lib-alert.sh.
+#
+# Le `source` est GARDÉ : ce script est sur le chemin du failover, un fichier
+# absent ne doit jamais l'empêcher de basculer. Sans le module, les alertes
+# deviennent des no-op journalisés — la bascule, elle, fonctionne toujours.
+ALERT_REPO="$REPO"
+if [ -r "$REPO/lib-alert.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$REPO/lib-alert.sh"
+else
+    log "⚠ lib-alert.sh introuvable — alertes désactivées (le failover reste opérationnel)."
+    alert_if_not_in_cooldown() { log "  (alerte non envoyée, lib-alert.sh absent) : $1"; }
+fi
 
 # ── Bascule OU déploiement en cours ? Éviter d'interférer ────────────────────
 # .bascule-lock est posé par bascule.sh ET par MaJ-Hostachy.sh : pendant un
