@@ -8,7 +8,7 @@ from sqlmodel import Session, select, or_
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Delegation, StatutDelegation, Utilisateur
+from app.models.core import Delegation, RoleUtilisateur, StatutDelegation, Utilisateur
 
 router = APIRouter(prefix="/delegations", tags=["délégations aidant"])
 
@@ -77,7 +77,7 @@ def list_delegations(
     - Aidant : ses délégations
     - Mandant : les délégations le concernant
     """
-    if user.has_role("conseil_syndical", "admin"):
+    if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         delegations = session.exec(
             select(Delegation).order_by(Delegation.cree_le.desc())
         ).all()
@@ -190,7 +190,7 @@ def revoquer_delegation(
     if not d:
         raise HTTPException(404, "Délégation introuvable")
 
-    is_cs_admin = user.has_role("conseil_syndical", "admin")
+    is_cs_admin = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
     is_party = user.id in (d.mandant_id, d.aidant_id)
     if not is_cs_admin and not is_party:
         raise HTTPException(403, "Non autorisé")

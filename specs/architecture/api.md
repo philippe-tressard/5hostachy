@@ -380,12 +380,53 @@
 
 ---
 
-## Dépendances d'authentification
+## Dépendances d'autorisation
+
+**Toutes** définies dans `api/app/auth/deps.py` — source unique. Aucune dépendance
+d'autorisation ne doit être définie ailleurs : une règle locale à un routeur échappe
+à tout durcissement du module central. Vérifié automatiquement par
+`api/tests/test_autorisation.py`.
 
 | Dépendance | Rôle requis |
 |------------|-------------|
 | `get_current_user` | Tout utilisateur authentifié |
+| `get_acting_user` | Utilisateur effectif (délégation via en-tête `X-Acting-As`) |
+| `require_proprietaire` | Propriétaire, conseil syndical ou admin |
 | `require_cs_or_admin` | Conseil syndical ou admin |
 | `require_admin` | Admin uniquement |
-| `_require_bailleur` | Propriétaire, admin ou CS |
-| `x-maintenance-key` | Header avec clé de maintenance (cron) |
+| `require_role(*roles)` | Rôles arbitraires |
+| `x-maintenance-key` | En-tête à secret partagé (cron machine-à-machine, hors système de rôles) |
+
+> **Corrigé le 26/07/2026.** Ce tableau documentait `_require_bailleur`, une
+> dépendance définie **localement** dans `routers/bailleur.py` et doublon exact de
+> `require_proprietaire` (mêmes trois rôles, même message). 17 endpoints s'appuyaient
+> dessus. La spec légitimait donc la dérive au lieu de la signaler. Les endpoints
+> utilisent désormais `require_proprietaire`.
+
+Les contrôles de rôle passent par `user.has_role(RoleUtilisateur.…)` — **jamais**
+par `user.role`, qui ne porte que le rôle principal et manquerait un admin dont le
+rôle principal est autre. Jamais de chaîne littérale non plus : une faute de frappe
+y est silencieuse.
+
+### Endpoints publics (sans authentification)
+
+Liste exhaustive et volontaire, verrouillée par `_PUBLICS_ASSUMES` dans
+`api/tests/test_autorisation.py`. Y ajouter une entrée est une décision de sécurité.
+
+| Endpoint | Pourquoi public |
+|---|---|
+| `/auth/{login,register,refresh,logout}` | Impossible d'exiger une session pour ouvrir une session |
+| `/auth/{mot-de-passe-oublie,reinitialiser-mot-de-passe}` | Parcours de récupération de compte |
+| `/auth/{verifier-email,renvoyer-verification}` | Vérification d'adresse |
+| `/auth/batiments` | Alimente le formulaire d'inscription |
+| `GET /config` | Coquille d'interface — filtrée par **liste blanche** (voir ci-dessous) |
+| `GET /config/legal` | Mentions légales et politique de confidentialité |
+| `POST /telemetry/collect` | `sendBeacon`, visiteurs anonymes ; rate-limité 60/min, 50 événements max, champs tronqués, opt-out RGPD honoré |
+| `POST /admin/maintenance/rapport` | Cron machine-à-machine ; secret partagé, refuse tout si la clé n'est pas configurée |
+
+`GET /config` filtre par **liste blanche** (`_PUBLIC_KEYS`), jamais par liste noire :
+une liste noire publie par défaut toute clé nouvelle. Elle exposait ainsi 31 clés
+sans authentification — configuration SMTP, URL interne du bridge WhatsApp,
+identifiant du groupe privé, référence de copropriété, et un lien d'invitation
+fonctionnel au groupe WhatsApp des résidents. La configuration complète est réservée
+à `GET /config/admin` (`require_admin`).

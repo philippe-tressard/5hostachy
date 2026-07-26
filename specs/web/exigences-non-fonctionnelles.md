@@ -61,7 +61,29 @@
 - En-têtes de sécurité : `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
 - Validation des entrées côté serveur (Pydantic v2) — ne jamais faire confiance au client.
 - Aucune donnée sensible dans les logs ni dans les URLs.
-- Dépéndances vérifiées régulièrement (Dependabot ou équivalent).
+- Dépendances vérifiées régulièrement (Dependabot ou équivalent).
+
+### Autorisation — centralisation sans exception
+
+Exigence de même rang que la factorisation du code, et pour la même raison : une
+règle dupliquée cesse d'être une règle.
+
+- **Toute** dépendance d'autorisation est définie dans `api/app/auth/deps.py`. Aucune
+  règle locale à un routeur : elle échapperait à tout durcissement du module central.
+- Tout endpoint porte une dépendance d'autorisation. Les exceptions publiques sont
+  **énumérées et justifiées** une à une (cf. `specs/architecture/api.md`), jamais
+  implicites.
+- Les contrôles de rôle passent par `has_role(RoleUtilisateur.…)` — jamais par
+  `user.role` (rôle principal seul), jamais par chaîne littérale.
+- **Tout filtre exposant des données sans authentification est une liste blanche.**
+  Une liste noire échoue en s'ouvrant : ce qui n'est pas interdit devient public par
+  défaut, donc chaque donnée nouvelle fuit en silence. Une liste blanche échoue en se
+  fermant — la donnée manquante casse un écran, ce qui se voit et se corrige.
+
+Ces quatre points sont vérifiés automatiquement par `api/tests/test_autorisation.py`,
+exécuté en CI. Ils ne relèvent pas de la relecture : l'audit du 26/07/2026 a montré
+que trois dérives s'étaient installées sans que personne ne les remarque, dont une
+que la spec elle-même avait légitimée.
 
 ---
 

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import get_current_user, require_cs_or_admin, require_proprietaire
 from app.database import get_session
 from app.models.core import (
     LocationBail, RemiseObjet, Lot, Batiment,
@@ -23,17 +23,13 @@ router = APIRouter(prefix="/bailleur", tags=["bailleur"])
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _require_bailleur(user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
-    if not user.has_role(RoleUtilisateur.propriétaire, RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé aux propriétaires")
-    return user
-
-
 def _get_bail_or_404(bail_id: int, user: Utilisateur, session: Session) -> LocationBail:
     bail = session.get(LocationBail, bail_id)
     if not bail:
         raise HTTPException(status_code=404, detail="Bail introuvable")
-    if bail.bailleur_id != user.id and not user.has_role("admin", "conseil_syndical"):
+    if bail.bailleur_id != user.id and not user.has_role(
+        RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical
+    ):
         raise HTTPException(status_code=403, detail="Accès interdit")
     return bail
 
@@ -143,7 +139,7 @@ class RetourObjet(BaseModel):
 
 @router.get("/mes-baux", response_model=List[BailOut])
 def mes_baux(
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     baux = session.exec(
@@ -194,7 +190,7 @@ def supprimer_bail(
 def creer_bail(
     lot_id: int,
     data: BailCreate,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     lot = session.get(Lot, lot_id)
@@ -236,7 +232,7 @@ def creer_bail(
 @router.post("/baux/creer-multi", response_model=List[BailOut], status_code=201)
 def creer_bail_multi(
     data: BailCreateMulti,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Créer un bail sur plusieurs lots en une seule opération."""
@@ -286,7 +282,7 @@ def creer_bail_multi(
 @router.get("/baux/{bail_id}", response_model=BailOut)
 def get_bail(
     bail_id: int,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     return _get_bail_or_404(bail_id, user, session)
@@ -296,7 +292,7 @@ def get_bail(
 def update_bail(
     bail_id: int,
     data: BailUpdate,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     bail = _get_bail_or_404(bail_id, user, session)
@@ -313,7 +309,7 @@ def update_bail(
 def terminer_bail(
     bail_id: int,
     data: BailTerminer,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     bail = _get_bail_or_404(bail_id, user, session)
@@ -340,7 +336,7 @@ def terminer_bail(
 @router.get("/baux/{bail_id}/objets", response_model=List[ObjetOut])
 def list_objets(
     bail_id: int,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     _get_bail_or_404(bail_id, user, session)
@@ -354,7 +350,7 @@ def list_objets(
 def ajouter_objet(
     bail_id: int,
     data: ObjetCreate,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     _get_bail_or_404(bail_id, user, session)
@@ -380,7 +376,7 @@ def update_objet(
     bail_id: int,
     obj_id: int,
     data: ObjetUpdate,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     _get_bail_or_404(bail_id, user, session)
@@ -400,7 +396,7 @@ def retour_objet(
     bail_id: int,
     obj_id: int,
     data: RetourObjet,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     _get_bail_or_404(bail_id, user, session)
@@ -419,7 +415,7 @@ def retour_objet(
 def supprimer_objet(
     bail_id: int,
     obj_id: int,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     _get_bail_or_404(bail_id, user, session)
@@ -445,7 +441,7 @@ class LocataireInfo(BaseModel):
 
 @router.get("/locataires-suggeres", response_model=List[LocataireInfo])
 def locataires_suggeres(
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Locataires inscrits qui ont déclaré ce bailleur dans leur nom_proprietaire."""
@@ -471,7 +467,7 @@ def locataires_suggeres(
 @router.get("/search-locataire", response_model=List[LocataireInfo])
 def search_locataire(
     q: str,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Chercher un utilisateur inscrit par email ou nom/prénom pour l'associer à un bail."""
@@ -526,7 +522,7 @@ class TransfertAccesIn(BaseModel):
 
 @router.get("/mes-acces", response_model=List[AccesOut])
 def mes_acces(
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Bailleur : voir tous ses Vigik et TC avec leur statut de présence."""
@@ -562,7 +558,7 @@ def mes_acces(
 @router.get("/baux/{bail_id}/acces", response_model=List[AccesOut])
 def acces_du_bail(
     bail_id: int,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Accès (Vigik+TC) du bailleur avec règles d'éligibilité de transfert."""
@@ -628,7 +624,7 @@ def acces_du_bail(
 def transferer_acces(
     bail_id: int,
     data: TransfertAccesIn,
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Marquer des Vigik/TC comme étant chez le locataire."""
@@ -681,7 +677,7 @@ def transferer_acces(
 def recuperer_acces(
     bail_id: int,
     data: TransfertAccesIn = TransfertAccesIn(),
-    user: Utilisateur = Depends(_require_bailleur),
+    user: Utilisateur = Depends(require_proprietaire),
     session: Session = Depends(get_session),
 ):
     """Retour virtuel des accès chez_locataire=True pour ce bail.
