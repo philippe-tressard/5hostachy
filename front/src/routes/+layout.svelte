@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import Toast from '$lib/components/Toast.svelte';
+	import MajDisponible from '$lib/components/MajDisponible.svelte';
 	import { configStore } from '$lib/stores/pageConfig';
 
 	export let data;
@@ -12,4 +13,5 @@
 </script>
 
 <Toast />
+<MajDisponible />
 <slot />
