@@ -77,4 +77,7 @@ jobs:
         run: npm run build
         env:
           VITE_GIT_HASH: ${{ github.sha }}
-          VITE_BUILD_DATE: ${{ github.run_id }}
+          # Pas de VITE_BUILD_DATE ici : le `define` de vite.config.ts remplace ce
+          # symbole à la compilation et gagne toujours sur la variable
+          # d'environnement (vérifié). La valeur passée était de surcroît un
+          # `github.run_id`, pas une date.
