@@ -56,7 +56,7 @@
 | Composant | Technologie |
 |---|---|
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) · SQLModel · SQLite (WAL) · Alembic |
-| Frontend | [SvelteKit](https://kit.svelte.dev/) · TypeScript · Vite |
+| Frontend | [SvelteKit](https://kit.svelte.dev/) · TypeScript · Vite · PWA (installable, consultable hors ligne) |
 | Reverse proxy | [Caddy](https://caddyserver.com/) |
 | Messaging | WhatsApp Bridge (Baileys) |
 | Déploiement | Docker Compose · Raspberry Pi 5 |

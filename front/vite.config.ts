@@ -44,7 +44,17 @@ export default defineConfig({
 	plugins: [
 		sveltekit(),
 		VitePWA({
-			registerType: 'autoUpdate',
+			// `prompt` et non `autoUpdate` : en `autoUpdate`, workbox prend la main
+			// (`skipWaiting` + `clientsClaim`) et la page se recharge d'elle-même dès
+			// qu'une version est trouvée — un formulaire en cours de saisie serait
+			// perdu sans avertissement. Ici le nouveau service worker reste en attente
+			// et `$lib/components/MajDisponible.svelte` propose le rechargement.
+			registerType: 'prompt',
+			// Enregistrement explicite par ce même composant, qui a besoin des
+			// callbacks (`onNeedRefresh`) et pose le contrôle périodique. `auto`
+			// laisserait le plugin injecter en plus son propre script selon qu'il
+			// détecte ou non l'import du module virtuel.
+			injectRegister: null,
 			strategies: 'generateSW',
 			manifest: {
 				name: '5Hostachy',
