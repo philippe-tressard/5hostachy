@@ -89,3 +89,12 @@ jobs:
           # symbole à la compilation et gagne toujours sur la variable
           # d'environnement (vérifié). La valeur passée était de surcroît un
           # `github.run_id`, pas une date.
+
+      # Garde-fou service worker : APRÈS le build, car il inspecte l'artefact livré
+      # et non la configuration — la valeur fautive venait du plugin, pas d'une ligne
+      # écrite à la main. Le 26/07/2026, `vite-plugin-pwa` a généré une URL relative
+      # (`./sw.js`) : enregistrement en 404 sur toute route imbriquée, donc plus aucun
+      # service worker en production, sans le moindre signal.
+      - name: Lint service worker (URL absolue)
+        working-directory: front
+        run: npm run lint:sw

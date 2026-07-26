@@ -48,6 +48,29 @@ def test_le_service_worker_attend_au_lieu_de_recharger_seul():
     )
 
 
+def test_le_service_worker_est_enregistre_en_url_absolue():
+    """`base` et `scope` explicites — sinon l'enregistrement échoue hors racine.
+
+    Sans eux, `vite-plugin-pwa` hérite du `base` de Vite (vide sous SvelteKit) et
+    génère `new Workbox('./sw.js', { scope: './' })` : depuis `/auth/connexion`, le
+    navigateur demande `/auth/sw.js` et reçoit un 404. Constaté en production le
+    26/07/2026 (v2.24.0) — plus aucun service worker enregistré, en silence.
+
+    Le contrôle décisif porte sur le bundle construit (`npm run lint:sw`) ; celui-ci
+    vérifie qu'il est toujours branché dans la CI et que l'intention reste écrite.
+    """
+    config = _lire(_VITE_CONFIG)
+    assert re.search(r"base:\s*'/'", config) and re.search(r"scope:\s*'/'", config), (
+        "vite.config.ts : VitePWA doit fixer `base: '/'` et `scope: '/'`, sinon "
+        "l'enregistrement du service worker échoue en 404 hors de la racine."
+    )
+    ci = _lire(_RACINE / ".github" / "workflows" / "ci.yml")
+    assert "lint:sw" in ci, (
+        "ci.yml n'exécute plus `npm run lint:sw` : le seul contrôle qui inspecte "
+        "l'artefact livré est débranché."
+    )
+
+
 def test_le_bandeau_de_mise_a_jour_est_monte_dans_le_layout_racine():
     """Monté à la racine : le bandeau doit couvrir aussi l'écran de connexion.
 
