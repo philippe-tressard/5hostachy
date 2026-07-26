@@ -643,7 +643,7 @@ Attendre le tick, puis :
 
 | # | Vérification | Commande | Attendu |
 |---|---|---|---|
-| P1 | Le déploiement a eu lieu | `grep 'Déployé' /var/log/hostachy-deploy.log \| tail -2` sur l'actif | Ligne `Déployé: <hash>` avec le hash attendu |
+| P1 | Le déploiement a eu lieu **et est terminé** | `grep 'Déployé' /var/log/hostachy-deploy.log \| tail -2` sur l'actif | Ligne `Déployé: <hash>` avec le hash attendu |
 | P2 | Site debout | `curl -s -o /dev/null -w '%{http_code}' https://5hostachy.fr/api/health` | 200 |
 | P3 | Version servie = version bumpée | Footer du site, ou `curl -s https://5hostachy.fr/ \| grep -oE '[0-9]+\.[0-9]+\.[0-9]+'` | La version de `front/package.json` |
 | P4 | Image du service touché reconstruite | Point 12, restreint aux services modifiés par le lot | Image postérieure au commit |
@@ -652,6 +652,17 @@ Attendre le tick, puis :
 | P7 | **Le correctif est effectivement observable** | Vérifier le comportement corrigé sur le site réel | Le bug ne se reproduit plus |
 | P8 | Redondance intacte après MEP | Point 2 (rôle cohérent sur les 2 nœuds) | Inchangé et cohérent |
 | P9 | Parité du standby | Point 10 | HEAD identiques, **ou** noter que la resynchro aura lieu à la bascule de 02:00 (`bascule.sh` phase 0) |
+
+> **⏱ Attendre la BONNE condition (constaté le 26/07/2026, en utilisant ce
+> post-check pour la première fois).** Ne pas attendre que `HEAD` change : dans
+> `auto-deploy.sh`, `git reset --hard` a lieu **au début**, avant `docker compose
+> build`. Un post-check déclenché sur le changement de HEAD s'exécute donc pendant
+> le build et voit des images encore anciennes et pas de ligne `Déployé` — j'ai
+> conclu à tort à un déploiement partiel. La condition de fin est la ligne
+> **`Déployé: <hash>`** :
+> ```bash
+> until ssh <actif> "grep -q 'Déployé: <hash>' /var/log/hostachy-deploy.log"; do sleep 20; done
+> ```
 
 **P7 — pourquoi :** c'est le seul contrôle qui teste ce que la MEP était censée
 apporter. Le 26/07, le bug du mois en anglais n'a été trouvé par **aucun** contrôle
