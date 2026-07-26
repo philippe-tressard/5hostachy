@@ -746,6 +746,31 @@ confirment qu'on a déployé *quelque chose*, jamais qu'on a déployé *ce qu'il
 fallait*. Pour un correctif de rendu, ouvrir le document concerné (fiche arrivant,
 annonce de hall) et regarder.
 
+> **🌐 Le comportement se vérifie dans un navigateur, sur une route imbriquée
+> (constaté le 26/07/2026, v2.24.0 → v2.24.1).** La v2.24.0 ajoutait un bandeau
+> « nouvelle version disponible » à la PWA. P1–P6 étaient **tous verts** — image
+> reconstruite, version 2.24.0 dans le conteneur, hash du commit et code du bandeau
+> présents dans le bundle servi — et la fonctionnalité était morte : elle avait de
+> surcroît **cassé l'existant**, plus aucun service worker n'était enregistré, donc
+> plus de cache hors ligne. Cause : `vite-plugin-pwa` hérite du `base` de Vite, vide
+> sous SvelteKit, et génère `new Workbox('./sw.js', { scope: './' })` ; ce chemin
+> **relatif** est résolu depuis la page courante, donc `/auth/sw.js` → 404 sur toute
+> route autre que la racine. Trois règles en sortent :
+> - **Tester ailleurs qu'à la racine.** Un chemin relatif, un cookie de portée, une
+>   règle Caddy fonctionnent souvent sur `/` et nulle part ailleurs.
+> - **Les artefacts ne prouvent rien sur le comportement.** Bundle, `sw.js`, image
+>   Docker, version du conteneur : tout était correct pendant que la fonctionnalité
+>   ne s'exécutait pas. Ouvrir la page et regarder l'état réel
+>   (`navigator.serviceWorker.getRegistrations()`, console, requêtes réseau).
+> - **Un composant qui reprend un mécanisme fourni par un plugin hérite de ses
+>   valeurs par défaut.** Ici `injectRegister` masquait le défaut depuis toujours ;
+>   le reprendre à la main l'a exposé. Quand on remplace un mécanisme automatique,
+>   vérifier ce qu'il faisait *en plus* de ce qu'on voulait.
+>
+> Et brancher les callbacks d'erreur (`onRegisterError` ici) : l'échec n'a produit
+> **aucun log**, ni côté serveur ni côté navigateur. Ce qui échoue en silence ne se
+> découvre qu'à P7, ou jamais.
+
 **Rollback si P1–P6 échoue :** `cd /opt/5hostachy && git reset --hard <commit-précédent>
 && docker compose build && docker compose up -d`. Réversible et dans le cycle normal
 — ce n'est pas une violation de la règle d'or (aucune ouverture de `app.db`).
@@ -766,6 +791,8 @@ Colonne clé : **qui** a détecté.
 | Aucune alerte pendant la panne (`Email KO`) | Lecture de log | Alerting mono-canal, qui tombe avec le réseau → **point 13** |
 | Faux vert « 0 inode fantôme » (sudo muet en SSH) | Demande de vérification | **Le pré-check lui-même** était en cause → **règle 1** + point 4 sans `sudo` |
 | Faux positif « image API périmée » | Vérification avant d'alarmer | Point 12 ne bornait pas le périmètre → **règle 3** + point 12 corrigé |
+| Version périmée servie à un onglet resté ouvert (footer bloqué en v2.22.8 après la MEP v2.23.0) | **L'utilisateur, en lisant le footer** | Le cache d'une PWA n'était surveillé par rien, et P3 lit « la version servie » sur le serveur, pas chez le client → bandeau de mise à jour (v2.24.0) + `test_pwa_maj.py` |
+| Service worker plus enregistré du tout (URL relative → 404 hors racine), cache hors ligne cassé en production | **P7**, dans un navigateur réel | P1–P6 ne regardent que des artefacts : image, version du conteneur, code présent dans le bundle — tous corrects pendant que rien ne s'exécutait → encadré P7 « tester sur une route imbriquée » + `npm run lint:sw` sur le bundle construit |
 
 ### Surveillance continue — état après le 26/07/2026
 

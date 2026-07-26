@@ -271,13 +271,22 @@
 	})();
 
 	// ── Helpers ────────────────────────────────────────────────────────────
-	function typeLink(item: FluxItem): string {
+	// `null` = cet élément n'est affiché sur aucune page : on n'affiche alors PAS de
+	// lien, plutôt qu'un `href="#"` ou une route inexistante. Un document de catégorie
+	// non exposée (fiche synthétique, attestation de lot…) est dans ce cas — le fil
+	// pointait auparavant vers `/documents`, qui renvoyait un 404 (26/07/2026).
+	function typeLink(item: FluxItem): string | null {
 		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return '/sondages';
 		if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) {
 			const numero = item.meta?.numero as string | undefined;
 			return numero ? `/tickets?open=${numero}` : '/tickets';
 		}
-		return item.lien ?? '#';
+		return item.lien ?? null;
+	}
+
+	function ouvrir(item: FluxItem) {
+		const lien = typeLink(item);
+		if (lien) goto(lien);
 	}
 
 	function typeVoirLabel(item: FluxItem): string {
@@ -448,8 +457,8 @@
 				{@const progress = urgencyProgress(u)}
 				<fieldset class="urgence-fieldset"
 					role="link" tabindex="0"
-					on:click={() => goto(typeLink(u))}
-					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(typeLink(u))}
+					on:click={() => ouvrir(u)}
+					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && ouvrir(u)}
 				>
 					<legend class="urgence-legend">🔴 URGENCE
 						<span class="flux-type-chip" style="background:{TYPE_BG[u.type] ?? '#EAEDF1'};color:{TYPE_COLORS[u.type] ?? 'var(--color-border)'}">
@@ -700,7 +709,9 @@
 											{/each}
 										</div>
 									{/if}
-									<a href={typeLink(item)} class="flux-link">{typeVoirLabel(item)}</a>
+									{#if typeLink(item)}
+										<a href={typeLink(item)} class="flux-link">{typeVoirLabel(item)}</a>
+									{/if}
 								</div>
 							{/if}
 						</div>
@@ -789,7 +800,9 @@
 														{/each}
 													</div>
 												{/if}
-												<a href={typeLink(item)} class="flux-link">Voir la page complète →</a>
+												{#if typeLink(item)}
+													<a href={typeLink(item)} class="flux-link">Voir la page complète →</a>
+												{/if}
 											</div>
 										{/if}
 									</div>
