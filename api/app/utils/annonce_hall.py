@@ -13,6 +13,10 @@ import unicodedata
 from datetime import date, datetime
 from html import escape
 
+# `date_longue` vit désormais dans `dates_fr` (source unique, partagée avec la
+# fiche arrivant et les e-mails) ; réimportée ici car le routeur `annonces_hall`
+# l'importe historiquement depuis ce module.
+from app.utils.dates_fr import date_longue
 from app.utils.pdf_theme import (
     FONT_SANS,
     FONT_SERIF,
@@ -125,11 +129,6 @@ _GABARITS: dict[str, dict[str, str]] = {
 # Formats trop petits pour porter le QR code du pied de page.
 _SANS_QR = ("a7", "a8")
 
-_MOIS = (
-    "janvier", "février", "mars", "avril", "mai", "juin",
-    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-)
-
 # Balises et attributs retirés avant rendu — défense en profondeur côté serveur,
 # en complément du `safeHtml()` appliqué à l'affichage côté front.
 _BALISES_INTERDITES = re.compile(
@@ -215,9 +214,6 @@ def perimetre_libelle(perimetres: list[str], batiments: dict[int, str] | None = 
     return " · ".join(libelles)
 
 
-def date_longue(d: date | datetime) -> str:
-    """`date(2026, 7, 25)` → `25 juillet 2026`."""
-    return f"{d.day} {_MOIS[d.month - 1]} {d.year}"
 
 
 def nom_fichier(titre: str, cree_le: date | datetime) -> str:

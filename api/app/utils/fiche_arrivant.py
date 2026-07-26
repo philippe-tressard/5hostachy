@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 from html import escape
 
+from app.utils.dates_fr import date_longue
 from app.utils.pdf_theme import (
     PALETTE_CSS,
     image_data_uri as _photo_data_uri,
@@ -262,8 +263,7 @@ def _build_cs_section(cs_data: dict) -> str:
             from datetime import date as dt_date
 
             try:
-                d = dt_date.fromisoformat(ag_date)
-                html += f" — {d.strftime('%d %B %Y').lstrip('0')}"
+                html += f" — {date_longue(dt_date.fromisoformat(ag_date))}"
             except Exception:
                 html += f" — {ag_date}"
         html += "</p>\n"

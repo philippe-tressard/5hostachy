@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func
@@ -13,6 +14,7 @@ from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import AnnonceHall, ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
+from app.utils.dates_fr import datetime_longue
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
@@ -23,6 +25,11 @@ logger = logging.getLogger("publications")
 ARCHIVAGE_DELAI_HEURES = 48
 PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
 _WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer', 'site_url'}
+
+
+def _fmt_paris(dt: datetime) -> str:
+    """Horodatage UTC en base → texte français heure de Paris (corps des e-mails)."""
+    return datetime_longue(dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")))
 
 
 def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
@@ -63,10 +70,6 @@ def _envoyer_email_syndic_publication(
 ):
     """Envoie un email au syndic et/ou CS avec la publication en corps."""
     from app.utils.email import send_email_group
-    from zoneinfo import ZoneInfo
-
-    def _fmt_paris(dt: datetime) -> str:
-        return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
 
     destinataires: list[tuple[int | None, str]] = []
     seen_emails: set[str] = set()
@@ -228,10 +231,6 @@ def _envoyer_email_externe_publication(
 ):
     """Envoie un email vers une adresse externe (non-utilisateur) avec l'historique de la publication."""
     from app.utils.email import send_email
-    from zoneinfo import ZoneInfo
-
-    def _fmt_paris(dt: datetime) -> str:
-        return dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris")).strftime("%-d %B %Y à %H:%M")
 
     cfg_rows = session.exec(
         select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
