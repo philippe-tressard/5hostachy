@@ -16,57 +16,20 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Batiment, CategorieDocument, Document, ProfilAccesDocument,
-    Utilisateur, UserLot, RoleUtilisateur, StatutUtilisateur
+    Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
+# Toute règle de visibilité — documents compris — vient du module central.
+from app.utils.visibility import document_visible
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
 
 
-def _user_can_read(user: Utilisateur, doc: Document, session: Session) -> bool:
-    """
-    Algorithme d'accès en 5 étapes (specs modele-donnees.md).
-    Retourne True si l'utilisateur a le droit de lire ce document.
-    """
-    # Admin et CS voient tout
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
-
-    # Documents liés à un contrat (sans catégorie) : CS/admin uniquement
-    if doc.contrat_id and not doc.categorie_id:
-        return False
-
-    # Documents liés à une publication : visibles par tous les utilisateurs
-    if doc.publication_id and not doc.categorie_id:
-        return True
-
-    profil_id = doc.profil_acces_override_id or doc.categorie.profil_acces_id
-    profil: ProfilAccesDocument = session.get(ProfilAccesDocument, profil_id)
-    if not profil:
-        return False
-
-    # Vérifier le rôle (supporte valeurs de rôles ET de statuts pour compatibilité)
-    roles_autorises = json.loads(profil.roles_autorises)
-    user_idents = set(user.roles) | {user.statut.value}
-    if not any(r in roles_autorises for r in user_idents):
-        return False
-
-    # Vérifier le périmètre
-    if doc.perimetre == "bâtiment" and doc.batiment_id:
-        user_batiments = {
-            ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
-        }
-        if doc.batiment_id not in user_batiments:
-            return False
-
-    if doc.perimetre == "lot" and doc.lot_id:
-        user_lots = {ul.lot_id for ul in user.user_lots if ul.actif}
-        if doc.lot_id not in user_lots:
-            return False
-
-    return True
+# La règle d'accès aux documents est `document_visible` (app/utils/visibility.py),
+# avec toutes les autres règles de visibilité. Ce router l'appelle, il ne la redéfinit
+# pas et ne l'aliase pas : un seul nom, un seul endroit.
 
 
 @router.get("/categories")
@@ -111,7 +74,7 @@ def list_documents(
 
     # Filtrage côté serveur selon profil d'accès
     if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        docs = [d for d in docs if _user_can_read(user, d, session)]
+        docs = [d for d in docs if document_visible(user, d, session)]
 
     return docs
 
@@ -125,7 +88,7 @@ def download_document(
     doc = session.get(Document, doc_id)
     if not doc:
         raise HTTPException(404, "Document introuvable")
-    if not _user_can_read(user, doc, session):
+    if not document_visible(user, doc, session):
         raise HTTPException(403, "Accès refusé")
     if not os.path.exists(doc.fichier_chemin):
         raise HTTPException(404, "Fichier introuvable sur le serveur")

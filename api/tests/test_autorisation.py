@@ -199,3 +199,57 @@ def test_config_publique_filtree_par_liste_blanche():
             f"`_PUBLIC_KEYS` contient une clé sensible ('{interdit}') : "
             "cet endpoint est lisible sans authentification"
         )
+
+
+def test_aucune_regle_de_visibilite_ne_vit_dans_un_router():
+    """Les règles de visibilité vivent dans `app/utils/visibility.py`, et nulle part ailleurs.
+
+    L'en-tête de ce module l'énonce depuis toujours : « Toute logique de filtrage par
+    rôle/périmètre/profil doit passer par ce module. Ne jamais dupliquer ces règles
+    dans les routers. » La règle documents, elle, était restée dans
+    `routers/documents.py` sous le nom `_user_can_read`, et `flux.py` l'importait
+    depuis ce router.
+
+    Ce n'est pas un détail d'organisation : une règle hors du module central est une
+    règle qu'un durcissement ultérieur peut manquer. C'est exactement ce qui est
+    arrivé aux pièces jointes d'actualité — autorisées sans consulter l'actualité
+    porteuse, donc téléchargeables par n'importe quel compte authentifié
+    (cf. `test_documents_acces.py`), pendant que les trois chemins d'accès concernés
+    partageaient la même fonction fautive et se confirmaient mutuellement.
+
+    Deux interdits, donc : définir une règle de visibilité dans un router, et
+    importer une règle depuis un router plutôt que depuis le module central.
+    """
+    import re
+
+    central = _API_DIR / "app" / "utils" / "visibility.py"
+    # Une règle de visibilité se reconnaît à son nom : `*_visible`, `*_accessible`,
+    # `can_see_*`, ou l'ancien `_user_can_read`.
+    motif_def = re.compile(
+        r"^def\s+(\w*_visible|\w*_accessible|can_see_\w*|_user_can_read)\s*\(",
+        re.MULTILINE,
+    )
+    # `from app.routers.x import ... visible/accessible/can_read ...`
+    motif_import = re.compile(
+        r"^from\s+app\.routers\.[\w.]+\s+import\s+[^\n]*"
+        r"(?:_visible|_accessible|can_see|can_read)",
+        re.MULTILINE,
+    )
+
+    egarees, imports_croises = [], []
+    for f in sorted(_ROUTERS.glob("*.py")):
+        src = f.read_text(encoding="utf-8-sig")
+        for m in motif_def.finditer(src):
+            egarees.append(f"  {f.name} définit {m.group(1)}()")
+        for m in motif_import.finditer(src):
+            imports_croises.append(f"  {f.name} : {m.group(0).strip()}")
+
+    assert not egarees, (
+        "Règle(s) de visibilité définie(s) dans un router — à déplacer dans "
+        f"{central.relative_to(_API_DIR.parent)} :\n" + "\n".join(egarees)
+    )
+    assert not imports_croises, (
+        "Règle(s) de visibilité importée(s) depuis un router au lieu du module "
+        "central — le jour où le router change, l'appelant ne le saura pas :\n"
+        + "\n".join(imports_croises)
+    )
