@@ -8,6 +8,15 @@
   export let value: string = '';
   export let placeholder: string = '';
   export let minHeight: string = '120px';
+  /**
+   * Id posé sur la zone éditable, pour qu'un `<label for="…">` la désigne.
+   *
+   * Trois pages le passaient déjà (`actualites`, `faq`, `sondages/[id]`) alors que le
+   * composant ne le déclarait pas : Svelte le laissait tomber en silence, et leurs
+   * `<label for="…">` ne pointaient sur rien. Cliquer le libellé ne donnait pas le
+   * focus, et les lecteurs d'écran annonçaient un champ sans nom.
+   */
+  export let id: string | undefined = undefined;
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
@@ -22,6 +31,9 @@
         Underline,
         Placeholder.configure({ placeholder }),
       ],
+      // Tiptap remplace l'élément monté : l'id doit être posé sur la zone éditable
+      // qu'il génère, sinon `<label for>` désigne un nœud disparu.
+      editorProps: id ? { attributes: { id } } : {},
       content: value,
       onUpdate: ({ editor }) => {
         const html = editor.getHTML();

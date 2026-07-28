@@ -62,13 +62,26 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		prestataire_id: '',
 		frequence_type: '',
 		frequence_valeur: '',
-		affichable: false,
+		affichable: true,
 		partager_whatsapp: false,
 		envoyer_syndic: false,
 		envoyer_cs: false,
 	};
 	let formPerimetreCible: string[] = ['résidence'];
 	let submitting = false;
+
+	// `affichable` avait TROIS valeurs par défaut différentes pour un même champ :
+	// `false` à la création ici, `?? true` à l'édition (`startEdit`), et `True` dans
+	// le schéma d'API (`EvenementCreate`). Résultat : un événement créé depuis le
+	// calendrier n'apparaissait jamais dans le fil d'activité, alors que le même
+	// événement rouvert puis réenregistré s'y affichait. Une seule valeur désormais :
+	// visible par défaut, comme l'API l'annonce.
+	//
+	// Seule exception, et c'est une règle métier ferme : les maintenances récurrentes
+	// ne vont jamais au fil (elles sont aussi exclues de la vue Liste et générées à
+	// `affichable: false` par le Kanban) — sinon une seule campagne annuelle inonde
+	// le tableau de bord.
+	$: if (form.type === 'maintenance_recurrente') form.affichable = false;
 
 	const types = [
 		{ val: 'travaux', label: '\u{1F528} Travaux' },
@@ -246,7 +259,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	})();
 
 	function resetForm() {
-		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
+		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
 		formPerimetreCible = ['résidence'];
 		editId = null;
 	}
@@ -763,9 +776,15 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					</div>
 					<div class="field" style="margin-top:.75rem">
 						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-							<input type="checkbox" bind:checked={form.affichable} style="width:auto;margin:0" />
-							<span>Afficher dans le tableau de bord (événements récents)</span>
+							<input type="checkbox" bind:checked={form.affichable}
+								disabled={form.type === 'maintenance_recurrente'} style="width:auto;margin:0" />
+							<span>Afficher dans le fil d'activité du tableau de bord</span>
 						</label>
+						{#if form.type === 'maintenance_recurrente'}
+							<p style="margin:.3rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
+								Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans le Kanban.
+							</p>
+						{/if}
 					</div>
 					<div class="field" style="margin-top:.75rem;display:flex;gap:1.5rem;align-items:center">
 						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
