@@ -14,6 +14,7 @@ from app.models.core import (
     ReponseCommunaute, Utilisateur, StatutUtilisateur, RoleUtilisateur,
 )
 from app.routers.uploads import _save_image
+from app.utils.liens import lien_element
 from app.utils.reponses import (
     auteur_meta, enrich_reponse, notifier_nouvelle_reponse, tri_reponses,
 )
@@ -250,7 +251,7 @@ def create_reponse(
         session, background_tasks,
         createur_id=annonce.auteur_id, auteur=user,
         rubrique_label="votre annonce", sujet=annonce.titre,
-        extrait=contenu, lien_path=f"/sondages?onglet=annonces#annonce-{annonce_id}",
+        extrait=contenu, lien_path=lien_element("annonce", annonce_id),
     )
     session.commit()
     session.refresh(rep)

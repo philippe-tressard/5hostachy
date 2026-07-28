@@ -15,6 +15,7 @@ from app.models.core import (
     Utilisateur,
     VoteIdee,
 )
+from app.utils.liens import lien_element
 from app.utils.reponses import (
     auteur_meta,
     enrich_reponse,
@@ -170,8 +171,8 @@ def update_statut(
             idee_titre=idee.titre,
             statut_label=_STATUT_NOTIF_LABELS[body.statut],
             # Onglet + ancre : la Communauté a trois rubriques, `/sondages` seul
-            # déposait le lecteur sur les sondages (cf. flux.py).
-            lien_path=f"/sondages?onglet=idees#idee-{idee_id}",
+            # déposait le lecteur sur les sondages (cf. app/utils/liens.py).
+            lien_path=lien_element("idee", idee_id),
             exclure_id=user.id,
         )
     session.commit()
@@ -249,7 +250,7 @@ def create_reponse(
         session, background_tasks,
         createur_id=idee.auteur_id, auteur=user,
         rubrique_label="votre idée", sujet=idee.titre,
-        extrait=contenu, lien_path=f"/sondages?onglet=idees#idee-{idee_id}",
+        extrait=contenu, lien_path=lien_element("idee", idee_id),
     )
     session.commit()
     session.refresh(rep)

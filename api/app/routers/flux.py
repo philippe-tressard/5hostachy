@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user
 from app.database import get_session
+from app.utils.liens import lien_element, page_element
 from app.models.core import (
     CommandeAcces,
     ConfigSite,
@@ -43,6 +44,7 @@ router = APIRouter(prefix="/flux", tags=["flux"])
 
 from app.utils.visibility import (
     can_see_ag as _can_see_ag_vis,
+    document_visible,
     evenement_visible,
     perimetre_visible,
     publication_visible,
@@ -60,9 +62,6 @@ from app.routers.publications import (
     ARCHIVAGE_DELAI_HEURES,
     PUBLIE_VISIBILITE_JOURS,
 )
-# Visibilité documents : réutilise l'algo canonique (profil d'accès + périmètre bat/lot).
-# documents.py n'importe pas flux → pas de cycle.
-from app.routers.documents import _user_can_read as _document_visible
 
 # ── helpers locaux ────────────────────────────────────────────────────────────
 
@@ -116,14 +115,18 @@ def _parse_photos(raw: Optional[str]) -> list[str]:
 # Où un document est-il RÉELLEMENT consultable ? Il n'existe pas de page « tous les
 # documents » : chaque document s'affiche là où il est rattaché. Le fil renvoyait vers
 # `/documents`, une route qui n'a jamais existé côté front → 404 sur « Voir → »,
-# signalé le 26/07/2026 depuis un PV d'AG. Les catégories absentes de cette table ne
+# signalé le 26/07/2026 depuis un PV d'AG. Les catégories absentes de cet ensemble ne
 # sont affichées nulle part (fiche synthétique, attestation de lot, diagnostic de lot,
 # devis, document interne CS) : dans ce cas le fil ne propose aucun lien plutôt qu'un
-# lien qui ne mène nulle part. Cf. `api/tests/test_flux_liens.py`.
-_PAGE_PAR_CATEGORIE_DOCUMENT = {
-    "plan_residence": "/residence",
-    "reglement_copropriete": "/residence",
-    "pv_ag": "/residence",
+# lien qui ne mène nulle part. Cf. `api/tests/test_liens_front.py`.
+#
+# La page et l'onglet, eux, ne sont plus écrits ici : ils viennent de
+# `EMPLACEMENTS["doc"]` (app/utils/liens.py), seul endroit du code qui décide où vit
+# un élément donné.
+_CATEGORIES_DOCUMENT_AVEC_LIEN = {
+    "plan_residence",
+    "reglement_copropriete",
+    "pv_ag",
 }
 
 
@@ -136,7 +139,7 @@ def _lien_document(doc: Document, user: Utilisateur, session: Session) -> Option
     """
     if doc.publication_id:
         # Pièce jointe d'une actualité : c'est la publication qu'on ouvre.
-        return f"/actualites#pub-{doc.publication_id}"
+        return lien_element("pub", doc.publication_id)
 
     if doc.contrat_id:
         # Les documents de contrat ne sont visibles que dans /prestataires, page
@@ -145,11 +148,14 @@ def _lien_document(doc: Document, user: Utilisateur, session: Session) -> Option
             return None
         contrat = session.get(ContratEntretien, doc.contrat_id)
         # Les documents d'un contrat sont listés dans la fiche de son prestataire.
-        return f"/prestataires#presta-{contrat.prestataire_id}" if contrat else "/prestataires"
+        return (
+            lien_element("presta", contrat.prestataire_id)
+            if contrat
+            else page_element("presta")
+        )
 
     code = doc.categorie.code if doc.categorie else None
-    page = _PAGE_PAR_CATEGORIE_DOCUMENT.get(code)
-    return f"{page}#doc-{doc.id}" if page else None
+    return lien_element("doc", doc.id) if code in _CATEGORIES_DOCUMENT_AVEC_LIEN else None
 
 
 # ── endpoint ─────────────────────────────────────────────────────────────────
@@ -418,7 +424,7 @@ def get_flux(
             detail=" — ".join(detail_parts) if detail_parts else None,
             icon="📰",
             badges=badges,
-            lien=f"/actualites#pub-{p.id}",
+            lien=lien_element("pub", p.id),
             meta={"pub_id": p.id, "epingle": p.epingle, "urgente": p.urgente,
                    "full_html": p.contenu, "auteur": auteur,
                    "image_url": getattr(p, 'image_url', None),
@@ -467,7 +473,7 @@ def get_flux(
             detail=_strip_html(ev.description),
             icon=type_emoji.get(ev.type, "📌"),
             badges=badges_ev,
-            lien=f"/calendrier#ev-{ev.id}",
+            lien=lien_element("ev", ev.id),
             meta={
                 "ev_id": ev.id, "type": ev.type, "lieu": ev.lieu,
                 "perimetre": _perimetre_label(perims),
@@ -521,7 +527,7 @@ def get_flux(
             # pas de lien plutôt qu'une page vide (même règle que les fiches
             # prestataires plus bas).
             lien=(
-                f"/prestataires#dv-{dv.id}"
+                lien_element("dv", dv.id)
                 if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
                 else None
             ),
@@ -610,7 +616,7 @@ def get_flux(
             icon=_ANN_ICONS.get(a.type_annonce, "\U0001f3f7️"),
             # La Communauté a trois onglets : sans `?onglet=`, « Voir l'annonce → »
             # ouvrait l'onglet Sondages (signalé le 26/07/2026).
-            lien=f"/sondages?onglet=annonces#annonce-{a.id}",
+            lien=lien_element("annonce", a.id),
             meta={
                 "annonce_id": a.id,
                 "type_annonce": a.type_annonce,
@@ -642,7 +648,7 @@ def get_flux(
             detail=f"{nb_votes} vote{'s' if nb_votes > 1 else ''}",
             badges=[_IDEE_STATUT_BADGES.get(idee.statut, idee.statut)],
             icon="\U0001f4a1",
-            lien=f"/sondages?onglet=idees#idee-{idee.id}",
+            lien=lien_element("idee", idee.id),
             meta={
                 "idee_id": idee.id,
                 "statut": idee.statut,
@@ -667,7 +673,7 @@ def get_flux(
             detail=_strip_html(f.reponse),
             icon="❓",
             badges=[f.categorie] if f.categorie else [],
-            lien=f"/faq#faq-{f.id}",
+            lien=lien_element("faq", f.id),
             meta={"faq_id": f.id, "categorie": f.categorie,
                    "resume": _strip_html(f.reponse, 400)},
         ))
@@ -681,7 +687,7 @@ def get_flux(
     for d in docs:
         # Même contrôle d'accès que /documents (profil + périmètre bat/lot) : un
         # document ciblé bât. 1 ne remonte pas au fil d'un résident du bât. 2.
-        if not _document_visible(user, d, session):
+        if not document_visible(user, d, session):
             continue
         items.append(FluxItem(
             id=f"doc_{d.id}",
@@ -714,7 +720,7 @@ def get_flux(
             icon="\U0001f9ea",
             badges=["Diagnostic"],
             # Section « Diagnostics et Contrôles Réglementaires » de /residence
-            lien=f"/residence#diag-{dg.id}",
+            lien=lien_element("diag", dg.id),
             meta={"diagnostic_id": dg.id,
                    "resume": _strip_html(dg.synthese, 400) if dg.synthese else None},
         ))
@@ -738,7 +744,7 @@ def get_flux(
                 detail=pr.specialite or "Nouveau prestataire",
                 icon="\U0001f6e0️",
                 badges=[pr.specialite] if pr.specialite else [],
-                lien=f"/prestataires#presta-{pr.id}",
+                lien=lien_element("presta", pr.id),
                 meta={"prestataire_id": pr.id, "specialite": pr.specialite},
             ))
 

@@ -14,6 +14,15 @@ routers — la même faute de frappe y produirait le même 404, dans un e-mail c
 Ce test relie les deux moitiés : il extrait tous les liens émis par l'API et vérifie
 qu'une page les sert réellement, en tenant compte des groupes SvelteKit — `(app)` est
 transparent dans l'URL — et des segments dynamiques (`/tickets/{id}` → `[id]`).
+
+MISE À JOUR (28/07/2026) : les liens vers un élément précis ne sont plus des f-strings
+éparpillées, ils sortent tous de la table `EMPLACEMENTS` (`app/utils/liens.py`). Ce
+fichier vérifie donc la table elle-même, ligne par ligne — page, onglet, ancre — en
+plus des liens encore écrits à la main. Il gagne au passage le contrôle qui manquait :
+**l'ancre doit être rendue par l'onglet que le lien sélectionne**. C'est précisément ce
+qui a échappé aux trois tests précédents avec `/prestataires#presta-23` : la page
+existait, l'ancre existait, aucun `?onglet=` n'était présent — donc rien à valider — et
+la fiche restait invisible derrière l'onglet « Prestations ponctuelles ».
 """
 import pathlib
 import re
@@ -29,9 +38,19 @@ _ROUTES = _RACINE / "front" / "src" / "routes"
 _MOTIF_LIEN = re.compile(r"""lien(?:_path)?\s*=\s*f?["'](/[^"']*)["']""")
 
 
+def _liens_de_la_table() -> dict[str, list[str]]:
+    """{lien: [source]} pour chaque ligne de `EMPLACEMENTS`, avec un id d'exemple."""
+    from app.utils.liens import EMPLACEMENTS, lien_element
+
+    return {
+        lien_element(prefixe, 1): ["api/app/utils/liens.py (EMPLACEMENTS)"]
+        for prefixe in EMPLACEMENTS
+    }
+
+
 def _liens_de_l_api() -> dict[str, list[str]]:
-    """{lien: [fichiers qui l'émettent]} sur tout `api/app/`."""
-    trouves: dict[str, list[str]] = {}
+    """{lien: [fichiers qui l'émettent]} — table centrale + littéraux restants."""
+    trouves: dict[str, list[str]] = {k: list(v) for k, v in _liens_de_la_table().items()}
     for chemin in sorted((_API_DIR / "app").rglob("*.py")):
         for lien in _MOTIF_LIEN.findall(chemin.read_text(encoding="utf-8-sig")):
             trouves.setdefault(lien, []).append(str(chemin.relative_to(_RACINE)))
@@ -59,6 +78,13 @@ def _resoudre(base: pathlib.Path, segments: list[str]) -> bool:
         candidats = [d for d in sous_dossiers if d.name == seg]
 
     return any(_resoudre(c, reste) for c in candidats)
+
+
+def page_element(prefixe: str) -> str:
+    """Raccourci de lecture vers la table centrale."""
+    from app.utils.liens import EMPLACEMENTS
+
+    return EMPLACEMENTS[prefixe][0]
 
 
 def _page_existe(lien: str) -> bool:
@@ -174,6 +200,83 @@ def test_les_onglets_des_liens_existent_dans_la_page_visee():
     )
 
 
+# Les pages à onglets branchent leur contenu sur `onglet === '…'` ou `activeTab === '…'`.
+_MOTIF_BRANCHE_ONGLET = re.compile(r"(?:onglet|activeTab)\s*===\s*'([\w]+)'")
+
+
+def _segments_par_onglet(contenu: str) -> dict[str, str]:
+    """{onglet: portion(s) du fichier rendue(s) sous cet onglet}.
+
+    Découpage volontairement grossier : chaque marqueur `onglet === 'x'` ouvre une
+    portion qui court jusqu'au marqueur suivant. Une page déclare plusieurs fois le
+    même onglet (bouton d'en-tête, onglet de la barre, bloc de contenu) → on
+    concatène toutes ses portions. Suffisant pour répondre à la seule question
+    posée : « cet onglet rend-il, quelque part, un `id="prefixe-…"` ? »
+    """
+    marqueurs = list(_MOTIF_BRANCHE_ONGLET.finditer(contenu))
+    segments: dict[str, str] = {}
+    for i, m in enumerate(marqueurs):
+        fin = marqueurs[i + 1].start() if i + 1 < len(marqueurs) else len(contenu)
+        segments[m.group(1)] = segments.get(m.group(1), "") + contenu[m.start():fin]
+    return segments
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
+    """Le contrôle manquant : viser la bonne page ET le bon onglet.
+
+    `/prestataires#presta-23` (28/07/2026) passait les trois tests précédents — page
+    existante, ancre existante, aucun `?onglet=` à valider — et déposait pourtant
+    l'utilisateur sur « Prestations ponctuelles », où aucun élément ne porte cet id.
+    L'ancre ne désignait rien de rendu : le navigateur restait immobile, la fiche
+    introuvable.
+
+    Ici on relie les deux : pour chaque ligne de `EMPLACEMENTS`, l'onglet déclaré doit
+    être celui dont le balisage produit réellement l'ancre.
+    """
+    from app.utils.liens import EMPLACEMENTS, lien_element
+
+    ecarts = []
+    for prefixe, (page, onglet) in sorted(EMPLACEMENTS.items()):
+        fichier = _page_du_lien(page)
+        if fichier is None:
+            continue  # déjà couvert par le test des pages
+        contenu = fichier.read_text(encoding="utf-8-sig")
+        segments = _segments_par_onglet(contenu)
+        ancre = f'id="{prefixe}-'
+
+        if onglet is None:
+            # Page sans onglets : l'ancre doit exister, et la page ne doit pas être
+            # devenue une page à onglets sans que la table le sache.
+            if segments and ancre in contenu:
+                ecarts.append(
+                    f"  {prefixe} → {page} : la page a désormais des onglets "
+                    f"({', '.join(sorted(segments))}) mais EMPLACEMENTS n'en déclare "
+                    f"aucun — le lien s'ouvrira sur l'onglet par défaut"
+                )
+            continue
+
+        if onglet not in segments:
+            ecarts.append(
+                f"  {prefixe} → {lien_element(prefixe, 1)} : "
+                f"{fichier.relative_to(_RACINE)} ne connaît pas l'onglet '{onglet}' "
+                f"(onglets trouvés : {', '.join(sorted(segments)) or 'aucun'})"
+            )
+        elif ancre not in segments[onglet]:
+            rendu_par = [o for o, seg in segments.items() if ancre in seg]
+            ecarts.append(
+                f"  {prefixe} → {lien_element(prefixe, 1)} : l'onglet '{onglet}' ne "
+                f"rend aucun {ancre}…\" — "
+                + (f"c'est l'onglet '{rendu_par[0]}' qui le rend"
+                   if rendu_par else "aucun onglet ne le rend")
+            )
+
+    assert not ecarts, (
+        "Ces liens ouvrent la bonne page mais un onglet où l'élément visé n'existe "
+        "pas — l'utilisateur arrive et ne voit rien :\n" + "\n".join(ecarts)
+    )
+
+
 class _FauxUser:
     def __init__(self, cs: bool):
         self._cs = cs
@@ -216,7 +319,9 @@ def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
 
     cas = [
         (_faux_document(publication_id=3), resident, "/actualites#pub-3"),
-        (_faux_document(contrat_id=9), cs, "/prestataires#presta-7"),
+        # L'onglet fait partie du lien : /prestataires s'ouvre sur « Prestations
+        # ponctuelles », la fiche vit sous « Prestataires ».
+        (_faux_document(contrat_id=9), cs, "/prestataires?onglet=prestataires#presta-7"),
         # Page réservée au CS/admin : un résident n'a rien à y faire, même s'il a le
         # droit de lire le document.
         (_faux_document(contrat_id=9), resident, None),
@@ -233,22 +338,17 @@ def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
-def test_les_pages_de_documents_du_fil_existent():
-    """La table catégorie → page du fil d'activité doit pointer sur des pages réelles.
+def test_les_categories_de_documents_du_fil_mènent_quelque_part():
+    """Les catégories que le fil accepte de lier doivent aboutir sur une page réelle.
 
-    C'est le remplacement de `/documents` : chaque catégorie exposée renvoie vers la
-    page qui l'affiche vraiment (`/residence` pour les plans, le règlement et les PV
-    d'AG). Les catégories absentes de la table ne sont affichées nulle part et ne
-    reçoivent donc AUCUN lien — c'est délibéré, pas un oubli.
+    C'est le remplacement de `/documents` : les documents liables (plans, règlement,
+    PV d'AG) s'affichent tous dans /residence, page et onglet décidés une seule fois
+    par `EMPLACEMENTS["doc"]`. Les catégories absentes de cet ensemble ne sont
+    affichées nulle part et ne reçoivent AUCUN lien — c'est délibéré, pas un oubli.
     """
-    from app.routers.flux import _PAGE_PAR_CATEGORIE_DOCUMENT
+    from app.routers.flux import _CATEGORIES_DOCUMENT_AVEC_LIEN
 
-    assert _PAGE_PAR_CATEGORIE_DOCUMENT, "la table des pages de documents est vide"
-    casses = [
-        f"  {code} → {page}"
-        for code, page in sorted(_PAGE_PAR_CATEGORIE_DOCUMENT.items())
-        if not _page_existe(page)
-    ]
-    assert not casses, (
-        "Le fil d'activité renverrait vers des pages inexistantes :\n" + "\n".join(casses)
+    assert _CATEGORIES_DOCUMENT_AVEC_LIEN, "aucune catégorie de document n'est liable"
+    assert _page_existe(page_element("doc")), (
+        f"le fil renverrait les documents vers {page_element('doc')}, page inexistante"
     )

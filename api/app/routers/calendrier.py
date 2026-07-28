@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
+from app.utils.liens import lien_element
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 from app.utils.visibility import evenement_visible
 
@@ -151,7 +152,9 @@ def create_evenement(
                 type="calendrier",
                 titre=f"📅 {body.type.value.capitalize()} : {body.titre}",
                 corps=body.description or "",
-                lien="/calendrier",
+                # `session.flush()` juste au-dessus a attribué l'id : le lecteur
+                # arrive sur l'événement annoncé, pas en haut du calendrier.
+                lien=lien_element("ev", ev.id),
                 urgente=(body.type == TypeEvenement.coupure),
             ))
 

@@ -22,7 +22,9 @@ import json
 from typing import Optional
 
 from app.models.core import (
+    Document,
     Evenement,
+    ProfilAccesDocument,
     Publication,
     RoleUtilisateur,
     Sondage,
@@ -187,3 +189,67 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     if ticket.saisi_pour_user_id is not None and ticket.saisi_pour_user_id == user.id:
         return True
     return False
+
+# ── Règles document ───────────────────────────────────────────────────────────
+
+def document_visible(user: Utilisateur, doc: Document, session) -> bool:
+    """Retourne True si l'utilisateur a le droit de lire ce document.
+
+    Algorithme d'accès en 5 étapes (specs modele-donnees.md). Un document tire sa
+    protection soit de l'objet qui le porte (contrat, actualité), soit de son profil
+    d'accès de catégorie — jamais des deux, jamais d'aucun.
+
+    Cette règle vivait dans `routers/documents.py`, et `flux.py` l'importait depuis
+    ce router. Une règle de sécurité hors du module central, c'est une règle qu'un
+    durcissement ultérieur peut manquer : c'est exactement ce qui est arrivé aux
+    pièces jointes d'actualité, autorisées sans consulter l'actualité porteuse
+    (cf. `tests/test_documents_acces.py`). Elle est ici, avec les autres.
+
+    `session` n'est typé que par usage (`.get`) pour ne pas faire dépendre ce module
+    de SQLModel : seuls `Publication` et `ProfilAccesDocument` sont chargés.
+    """
+    # Admin et CS voient tout
+    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+        return True
+
+    # Documents liés à un contrat (sans catégorie) : CS/admin uniquement
+    if doc.contrat_id and not doc.categorie_id:
+        return False
+
+    # Pièce jointe d'actualité : elle suit EXACTEMENT la visibilité de son actualité.
+    # Un document n'a pas de ciblage propre (ni `public_cible`, ni `perimetre_cible`) ;
+    # sa seule protection légitime est celle de la publication qui le porte.
+    if doc.publication_id and not doc.categorie_id:
+        pub = session.get(Publication, doc.publication_id)
+        # Publication introuvable → on refuse : aucune règle à appliquer.
+        # Brouillon → rien n'est publié, la pièce jointe non plus (CS/admin sont
+        # déjà sortis plus haut et gardent l'accès à leurs brouillons).
+        if not pub or pub.brouillon:
+            return False
+        return publication_visible(pub, user)
+
+    profil_id = doc.profil_acces_override_id or doc.categorie.profil_acces_id
+    profil: ProfilAccesDocument = session.get(ProfilAccesDocument, profil_id)
+    if not profil:
+        return False
+
+    # Vérifier le rôle (supporte valeurs de rôles ET de statuts pour compatibilité)
+    roles_autorises = json.loads(profil.roles_autorises)
+    user_idents = set(user.roles) | {user.statut.value}
+    if not any(r in roles_autorises for r in user_idents):
+        return False
+
+    # Vérifier le périmètre
+    if doc.perimetre == "bâtiment" and doc.batiment_id:
+        user_batiments = {
+            ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
+        }
+        if doc.batiment_id not in user_batiments:
+            return False
+
+    if doc.perimetre == "lot" and doc.lot_id:
+        user_lots = {ul.lot_id for ul in user.user_lots if ul.actif}
+        if doc.lot_id not in user_lots:
+            return False
+
+    return True
