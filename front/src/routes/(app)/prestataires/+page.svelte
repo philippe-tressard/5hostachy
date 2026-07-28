@@ -10,7 +10,7 @@
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { fmtMontant } from '$lib/utils';
-	import { cibleDuHash, revelerCible } from '$lib/deepLink';
+	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
 	$: _siteNom = $siteNomStore;
@@ -63,7 +63,10 @@
 	}
 
 	// ── Onglets (5) ────────────────────────────────────────────────
-	let onglet: 'prestations' | 'visites' | 'contrats_tab' | 'prestataires' | 'consommations' = 'prestations';
+	// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
+	// (même convention que /calendrier et /sondages, cf. `$lib/deepLink.ts`).
+	const ONGLETS = ['prestations', 'visites', 'contrats_tab', 'prestataires', 'consommations'] as const;
+	let onglet: (typeof ONGLETS)[number] = 'prestations';
 	$: trackTabView(onglet);
 
 	// Expand prestataire cards
@@ -593,17 +596,26 @@
 			contratDocsMap = map;
 		}
 
-		// Liens profonds : `#dv-<id>` (prestation) et `#presta-<id>` (fiche).
+		// Liens profonds : `?onglet=` pour la vue, `#dv-<id>` / `#presta-<id>` pour l'élément.
+		// Cette page a CINQ onglets et s'ouvre sur « Prestations ponctuelles » : une fiche
+		// prestataire visée sans onglet restait invisible, l'ancre ne désignant aucun
+		// élément rendu (`/prestataires#presta-23`, signalé le 28/07/2026).
+		// L'ancre prime sur `?onglet=` : elle est plus précise que la vue demandée.
+		const urlOnglet = ongletDeLUrl(ONGLETS);
+		if (urlOnglet) onglet = urlOnglet;
+
 		// La vue liste est la seule où chaque élément porte un id — le kanban
 		// n'affiche qu'une colonne de statut à la fois.
 		const idDevis = cibleDuHash('dv');
 		if (idDevis !== null) {
+			onglet = 'prestations';
 			prestationsVue = 'liste';
 			expandedDevis = new Set([...expandedDevis, idDevis]);
 			revelerCible(`dv-${idDevis}`);
 		}
 		const idPresta = cibleDuHash('presta');
 		if (idPresta !== null) {
+			onglet = 'prestataires';
 			expandedPrests = new Set([...expandedPrests, idPresta]);
 			revelerCible(`presta-${idPresta}`);
 		}
