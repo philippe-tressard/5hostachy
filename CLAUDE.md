@@ -273,6 +273,20 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   (attrape un `down_revision` erroné qui bloquerait `alembic upgrade head` au démarrage).
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
+### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)
+Les scripts qui décident d'arrêter la prod (`bascule.sh`, `health-watch.sh`,
+`boot-role-guard.sh`, `check-reliability.sh`…) n'étaient couverts par **aucun**
+test : ni Python ni Svelte, donc hors de portée des trois autres jobs. Le job
+`test-scripts` vérifie à chaque PR la syntaxe (`bash -n`) de tous les `.sh`
+versionnés, les modes git (0b), et exécute les **self-tests**.
+
+**Règle pour toute nouvelle logique de décision d'infra** : l'isoler en fonction
+**pure** (aucun SSH, docker, écriture ni `sudo`), exposer `--selftest`, et
+l'ajouter au job. C'est le seul moyen de tester une décision de bascule sans les
+deux RPi — pattern inauguré par `boot-role-guard.sh --selftest` (15/07/2026),
+étendu à `health-watch.sh` et `check-reliability.sh` (30/07/2026).
+Lancer en local : `bash <script>.sh --selftest`.
+
 ---
 
 ## Infrastructure & Monitoring
@@ -333,6 +347,40 @@ Cause racine des corruptions `telemetry_event` des 05 et 17/06/2026 **et** de l'
 17/07/2026 (login 503 + 2 publications perdues) — coupable : `check-reliability.sh` C8, qui
 faisait exactement cela toutes les 15 min (contrôle supprimé, cf. commentaire dans le script).
 Cf. [[project_db_corruption_telemetry]] et le commentaire de `admin.py` → `/db/checkpoint`.
+
+### ⚠️ Panne de CHEMIN public ≠ panne de NŒUD (incident du 30/07/2026)
+
+Entre 00:52 et 01:46, une panne DNS/WAN a coupé le tunnel des **deux** nœuds
+(`lookup _v2-origintunneld._tcp.argotunnel.com on 1.0.0.1:53: server misbehaving`,
+`Email KO: [Errno 101] Network is unreachable`). Aucun RPi n'avait redémarré ni gelé.
+
+`health-watch.sh` ne sondait que l'**URL publique**. Chaque nœud a donc conclu que
+l'autre était mort : **12 failovers croisés en 55 min**, stack arrêtée et redémarrée
+alternativement sur les deux, rôle actif déplacé 12 fois **sans synchronisation de
+base** (un failover ne sync pas la DB — [[project_freezes_recurrents_rpi2]]), et à
+trois reprises `systemctl start cloudflared` a échoué sur le nouvel actif *avant*
+que l'ancien soit démoté → **cloudflared inactif sur aucun nœud**. Aucune de ces
+bascules n'a rétabli quoi que ce soit : le nœud actif servait parfaitement en LAN.
+
+**Correctif (v2.27.2)** — avant de basculer, le standby doit établir que la panne
+vient bien du nœud actif, via deux sondes indépendantes de l'URL publique :
+
+| API de l'actif en LAN | Edge Cloudflare depuis le standby | Décision |
+|---|---|---|
+| KO | — | **Failover** (nœud réellement mort — chemin critique inchangé) |
+| OK | KO | **Abstention** + alerte : panne de chemin, basculer ne rétablirait rien |
+| OK | OK | **Failover** : le nœud actif vit mais son tunnel est cassé |
+
+La sonde LAN est `http://<actif>/api/health` (via Caddy — le port 8000 n'est **pas**
+publié, et un GET `/health` reste in-process : aucune ouverture de `app.db`). La
+sonde d'edge (`cdn-cgi/trace`) exerce DNS + TLS, c'est-à-dire exactement la chaîne
+dont le tunnel dépend : « pourrais-je seulement servir ? ». Logique isolée en
+fonction pure `decide_failover()` + `./health-watch.sh --selftest`, vérifiée en CI.
+
+**Réflexe de diagnostic** au prochain « site public KO » : avant de suspecter un
+nœud, `curl http://<actif>/api/health` depuis l'autre RPi. S'il répond 200, le
+problème est sur le chemin (box, DNS, Cloudflare) — ne pas basculer, ne pas
+redémarrer la stack.
 
 ### Risques connus
 - **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
@@ -468,7 +516,7 @@ de la confiance.
 | # | Vérification | Commande | Attendu |
 |---|---|---|---|
 | 0a | Clone à jour | `git fetch origin && git merge --ff-only origin/dev` | Fast-forward propre (cf. section ci-dessus) |
-| 0b | Modes des fichiers exécutables versionnés | `git ls-files -s .githooks/ *.sh` | `100755` sur tout ce qui doit s'exécuter |
+| 0b | Modes des fichiers exécutables versionnés | **Automatisé** : job CI `test-scripts` (étape « Bits d'exécution versionnés ») | `100755` sur tout ce qui doit s'exécuter, `100644` sur les modules sourcés `lib-*.sh` |
 
 **0b — pourquoi :** `core.filemode=false` sur un clone Windows fait avaler `chmod +x`
 en silence ; le fichier part en `100644` et Linux refuse alors de l'exécuter, sans
@@ -833,6 +881,32 @@ Corrigé (v2.22.3) :
    `health-watch.sh` (démotion de l'ancien actif) écrivent maintenant `.active` chez
    le peer joignable, ce qui supprime la cause racine de l'incohérence.
 
+Complété le 30/07/2026 (v2.27.2) — **trois contrôles qui mentaient**, tous corrigés :
+
+4. **Le contrôle du battement (C14) était vert quand le battement était nul.**
+   `HB=$(grep -c … || echo 0)` : `grep -c` affiche déjà `0` et sort en 1 quand rien
+   ne correspond, donc le `|| echo 0` **ajoutait** une seconde valeur → `"0\n0"` →
+   `[ "0\n0" -lt 6 ]` échoue en `integer expression expected`, l'expression passe à
+   faux et le contrôle affiche `[ OK ]` — exactement dans le cas qu'il existe pour
+   attraper (log vide, illisible ou renommé). Reproduit avant correction. C14 mesure
+   désormais l'**âge du dernier battement horodaté** (≤ 20 min), ce qui supprime aussi
+   la traîne des tranches horaires : le 30/07 le mail est parti à 02:06 sur les
+   compteurs de 01:00-01:59, alors que tout était vert depuis 01:46.
+5. **L'alerte décrivait le log, pas son exécution.** Le corps du mail reprenait
+   `grep '^\[FAIL\]' /var/log/hostachy-reliability.log | tail -10`, donc l'historique
+   de toutes les exécutions passées : un sujet « 1 contrôle en échec » accompagné de
+   **six** lignes, dont cinq d'une panne déjà résorbée. Le corps liste maintenant les
+   FAIL de l'exécution courante, horodatés.
+6. **`curl … || echo 000`** produisait `HTTP 000000` dans les logs et les alertes
+   (`-w '%{http_code}'` écrit déjà `000` en cas d'échec). Une seule fonction `http_code()`
+   par script, une seule valeur rendue.
+
+> **Leçon, dans le prolongement de la règle 1 (« un contrôle qui ne peut pas
+> s'exécuter renvoie INCONNU, jamais OK ») : un contrôle qui compte doit être testé
+> sur le cas ZÉRO.** Les trois défauts ci-dessus ont vécu des semaines en produisant
+> des lignes vertes plausibles. Aucun n'était visible sans rouvrir le fichier — d'où
+> le job CI `test-scripts`.
+
 Reste ouvert :
 
 * **Second canal d'alerte.** Le canal est unique (SMTP) et tombe avec le réseau,
@@ -840,10 +914,16 @@ Reste ouvert :
   is unreachable`. Une alerte WhatsApp via le bridge (le conteneur tourne en local,
   mais son `/status` exige un token, donc il faudrait sortir la clé de `.env`) ou un
   heartbeat sortant vers un service tiers couvriraient le cas. Décision de conception
-  à prendre.
-* **Migration de `health-watch.sh` vers `lib-alert.sh`.** Sa copie du SMTP subsiste :
-  ce script est sur le chemin du failover et `set -uo pipefail` ferait mourir un
-  `source` d'un fichier absent. À faire délibérément, pas en passant.
+  à prendre. La panne du 30/07 l'a confirmé une seconde fois : sept alertes perdues
+  entre 01:06 et 01:44, la première n'est partie qu'à 02:06, le réseau revenu.
+  *(Cette limite est structurelle : un canal qui emprunte le lien en panne ne peut
+  pas signaler la panne de ce lien. Le cooldown n'est volontairement pas marqué en
+  cas d'échec d'envoi, donc l'alerte est bien retentée — elle arrive en retard, pas
+  jamais.)*
+
+*Fait :* la migration de `health-watch.sh` vers `lib-alert.sh` est **terminée** (le
+script source le module, avec un repli qui journalise si le fichier manque — le
+failover reste opérationnel sans lui, contrainte du chemin critique).
 
 ### Versioning (`front/package.json`)
 Version affichée dans le footer du site. Règle **obligatoire à chaque MEP** :
