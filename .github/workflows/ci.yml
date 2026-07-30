@@ -69,6 +69,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fins de ligne LF et absence de BOM
+        # Contrôlé AVANT la syntaxe, parce qu'un CRLF ou un BOM produit un message
+        # cryptique qui envoie sur une fausse piste : `syntax error near unexpected
+        # token $'in\r'` pour le premier, `#!/bin/bash: command not found` pour le
+        # second (le BOM est consommé comme partie du shebang). C'est un artefact de
+        # clone Windows, pas une faute de frappe — il faut le nommer comme tel.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.sh' '.githooks/*'); do
+            head -c3 "$f" | grep -q $'\xef\xbb\xbf' && { echo "::error file=$f::BOM UTF-8 en tête — le shebang devient inexécutable"; st=1; }
+            grep -qU $'\r$' "$f" && { echo "::error file=$f::fins de ligne CRLF — attendu LF (.editorconfig)"; st=1; }
+          done
+          exit $st
+
       - name: Syntaxe de tous les scripts shell
         run: |
           st=0

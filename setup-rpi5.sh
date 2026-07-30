@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # =============================================================================
 #  setup-rpi5.sh â€” Installation & configuration du serveur 5Hostachy
 #  Cible : Raspberry Pi 5 â€” Raspberry Pi OS Lite 64-bit (Debian Bookworm)
