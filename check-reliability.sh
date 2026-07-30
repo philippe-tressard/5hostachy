@@ -22,6 +22,76 @@ DISK_WARN=85; DISK_FAIL=95
 LOG_WARN_MB=5
 SKEW_WARN_S=5
 LOCK_STALE_MIN=20
+HB_MAX_AGE_MIN=20       # battement auto-deploy : 4 ticks de 5 min manqués
+DEPLOY_LOG=/var/log/hostachy-deploy.log
+
+FAILS=0; WARNS=0; FAIL_LINES=""
+ok()   { echo "[ OK ] $*"; }
+warn() { echo "[WARN] $*"; WARNS=$((WARNS+1)); }
+# Les FAIL sont mémorisés pour l'alerte : celle-ci reprenait les FAIL du LOG
+# (`grep '^\[FAIL\]' … | tail -10`), donc l'historique de toutes les exécutions
+# passées. Le 30/07/2026 le mail « 1 contrôle en échec » détaillait ainsi SIX
+# lignes, dont cinq d'une panne réseau déjà résorbée une heure plus tôt : sujet
+# et corps se contredisaient et pointaient une fausse piste. Une alerte décrit
+# l'exécution qui la déclenche, rien d'autre.
+fail() { echo "[FAIL] $*"; FAIL_LINES+="[FAIL] $*"$'\n'; FAILS=$((FAILS+1)); }
+
+# ── Sonde HTTP — UNE valeur, toujours (cf. health-watch.sh) ──────────────────
+http_code() {  # $1 = URL, $2 = timeout (défaut 10) → code HTTP ou 000
+  local code
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-10}" "$1" 2>/dev/null)
+  echo "${code:-000}"
+}
+
+# ── Âge du dernier battement horodaté d'un log (minutes) ─────────────────────
+# Rend -1 si aucun horodatage exploitable : INCONNU, jamais « récent ».
+beat_age_min() {  # $1 = "AAAA-MM-JJ HH:MM:SS" (peut être vide), $2 = epoch de réf.
+  local ts="$1" now="${2:-$(date +%s)}" e
+  [ -n "$ts" ] || { echo -1; return; }
+  e=$(date -d "$ts" +%s 2>/dev/null)
+  [ -n "$e" ] || { echo -1; return; }
+  echo $(( (now - e) / 60 ))
+}
+
+# ── Verdict du battement (PURE — testable) ───────────────────────────────────
+# Args : âge en minutes (-1 = inconnu), seuil → "ok" | "absent" | "inconnu"
+beat_verdict() {
+  local age="$1" max="$2"
+  case "$age" in ''|*[!0-9-]*) echo inconnu; return ;; esac
+  [ "$age" -lt 0 ] && { echo inconnu; return; }
+  [ "$age" -le "$max" ] && echo ok || echo absent
+}
+
+# ── Self-test des fonctions pures (aucun effet de bord) ──────────────────────
+if [ "${1:-}" = "--selftest" ]; then
+  st_fail=0
+  check() { # description attendu args…
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(beat_verdict "$@")
+    if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+    else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
+  }
+  echo "== self-test check-reliability.beat_verdict =="
+  check "battement de 3 min"                    "ok"      3    "$HB_MAX_AGE_MIN"
+  check "battement pile au seuil"               "ok"      20   "$HB_MAX_AGE_MIN"
+  check "battement de 45 min (script bloqué)"   "absent"  45   "$HB_MAX_AGE_MIN"
+  # Le cas qui manquait : l'ancien contrôle comptait `grep -c … || echo 0`, ce qui
+  # rendait « 0\n0 » quand il n'y avait AUCUNE ligne. La comparaison d'entiers
+  # échouait alors en erreur, l'expression passait à faux… et le contrôle affichait
+  # [ OK ] exactement dans le cas qu'il existe pour attraper (log vide/illisible).
+  check "aucun horodatage exploitable"          "inconnu" -1   "$HB_MAX_AGE_MIN"
+  check "valeur non numérique"                  "inconnu" "0
+0"  "$HB_MAX_AGE_MIN"
+  echo "-- beat_age_min --"
+  AGE=$(beat_age_min "2026-07-30 01:00:00" "$(date -d '2026-07-30 01:30:00' +%s)")
+  [ "$AGE" = "30" ] && echo "PASS  âge calculé sur 30 min  → $AGE" || { echo "FAIL  âge attendu=30 obtenu=$AGE"; st_fail=1; }
+  AGE=$(beat_age_min "" 0)
+  [ "$AGE" = "-1" ] && echo "PASS  horodatage vide → inconnu (-1)" || { echo "FAIL  attendu=-1 obtenu=$AGE"; st_fail=1; }
+  AGE=$(beat_age_min "pas une date" 0)
+  [ "$AGE" = "-1" ] && echo "PASS  horodatage invalide → inconnu (-1)" || { echo "FAIL  attendu=-1 obtenu=$AGE"; st_fail=1; }
+  [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
+  exit $st_fail
+fi
 
 case "$(hostname)" in
   PhT-RB5)   SELF="rpi1"; SELF_IP="192.168.1.222"; PEER_IP="192.168.1.223"; PEER="rpi2" ;;
@@ -29,11 +99,6 @@ case "$(hostname)" in
   *) echo "Hostname inconnu — abandon."; exit 2 ;;
 esac
 SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
-
-FAILS=0; WARNS=0
-ok()   { echo "[ OK ] $*"; }
-warn() { echo "[WARN] $*"; WARNS=$((WARNS+1)); }
-fail() { echo "[FAIL] $*"; FAILS=$((FAILS+1)); }
 
 # ── Snippet de collecte exécuté sur chaque nœud (local + peer) ───────────────
 # Émet des lignes key=value. Tout est tolérant aux erreurs (jamais d'exit ≠ 0).
@@ -86,7 +151,7 @@ RUNNING=""
 RUNNING=$(echo "$RUNNING" | xargs)
 
 # ── C1. Public joignable ─────────────────────────────────────────────────────
-CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo 000)
+CODE=$(http_code "$PUBLIC_URL")
 [ "$CODE" = "200" ] && ok "Site public répond (HTTP 200)" || fail "Site public KO (HTTP $CODE)"
 
 # ── C2. Split-brain : un seul nœud porte les conteneurs ──────────────────────
@@ -199,16 +264,25 @@ done
 # script mourait plus loin, au `git fetch`, en ne laissant que des erreurs git
 # NON HORODATÉES — invisibles à un grep de motifs comme à un tri par date. Seule
 # l'absence des lignes attendues le révélait.
+#
+# Mesuré par l'ÂGE du dernier battement horodaté, et non plus par un comptage
+# de lignes par tranche horaire (correctif du 30/07/2026). L'ancienne version
+# avait deux défauts, tous deux constatés cette nuit-là :
+#   • `grep -c … || echo 0` rendait « 0\n0 » quand le log ne contenait AUCUNE
+#     ligne — la comparaison d'entiers échouait en erreur et le contrôle
+#     affichait [ OK ] précisément dans le cas qu'il devait attraper ;
+#   • les tranches horaires traînent : à 02:06, alors que tout était vert
+#     depuis 01:46, le contrôle échouait encore sur les compteurs de 01:00-01:59
+#     et a déclenché un mail décrivant une panne terminée. L'âge, lui, se
+#     résorbe de lui-même dès le premier tick revenu.
 if [ "${S_active:-}" != "$SELF" ]; then
-  HB=$(grep -c "$(date '+%Y-%m-%d %H')" /var/log/hostachy-deploy.log 2>/dev/null || echo 0)
-  HB_PREV=$(grep -c "$(date -d '1 hour ago' '+%Y-%m-%d %H')" /var/log/hostachy-deploy.log 2>/dev/null || echo 0)
-  # Sur l'heure écoulée on attend ~12 lignes ; on alerte bien en dessous pour
-  # tolérer une rotation de log ou un décalage de tick.
-  if [ "${HB_PREV:-0}" -lt 6 ] && [ "${HB:-0}" -lt 6 ]; then
-    fail "Battement auto-deploy absent sur $SELF (standby) : ${HB} ligne(s) cette heure, ${HB_PREV} la précédente (attendu ~12) → le script ne va plus au bout"
-  else
-    ok "Battement auto-deploy présent sur $SELF (standby) : ${HB} cette heure, ${HB_PREV} la précédente"
-  fi
+  HB_LAST=$(grep -oE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$DEPLOY_LOG" 2>/dev/null | tail -1 | tr -d '[]')
+  HB_AGE=$(beat_age_min "$HB_LAST")
+  case "$(beat_verdict "$HB_AGE" "$HB_MAX_AGE_MIN")" in
+    ok)      ok "Battement auto-deploy présent sur $SELF (standby) : dernier tick il y a ${HB_AGE} min" ;;
+    absent)  fail "Battement auto-deploy absent sur $SELF (standby) : dernier tick il y a ${HB_AGE} min (attendu ≤ ${HB_MAX_AGE_MIN}) → le script ne va plus au bout" ;;
+    *)       fail "Battement auto-deploy INCONNU sur $SELF (standby) : aucun horodatage exploitable dans $DEPLOY_LOG (log vide, illisible ou format changé)" ;;
+  esac
 fi
 
 echo "─────────────────────────────────────────────────────────────"
@@ -229,8 +303,8 @@ if [ "$FAILS" -gt 0 ]; then
     source "$REPO/lib-alert.sh"
     alert_if_not_in_cooldown \
       "[5Hostachy] ❌ $FAILS contrôle(s) de fiabilité en échec sur $SELF" \
-      "$(printf 'check-reliability.sh sur %s a relevé %s FAIL et %s WARN.\n\nDétail :\n%s\n\nLog complet : /var/log/hostachy-reliability.log\n' \
-          "$SELF" "$FAILS" "$WARNS" "$(grep -E '^\[FAIL\]' /var/log/hostachy-reliability.log 2>/dev/null | tail -10)")"
+      "$(printf 'check-reliability.sh sur %s a relevé %s FAIL et %s WARN à %s.\n\nDétail (cette exécution) :\n%s\nLog complet : /var/log/hostachy-reliability.log\n' \
+          "$SELF" "$FAILS" "$WARNS" "$(date '+%d/%m/%Y %H:%M')" "$FAIL_LINES")"
   else
     echo "[WARN] lib-alert.sh introuvable dans $REPO — aucune alerte envoyée."
   fi

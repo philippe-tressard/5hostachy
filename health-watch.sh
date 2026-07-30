@@ -5,8 +5,13 @@
 #  Tourne toutes les 5 min sur les DEUX RPi via cron.
 #  Si l'URL publique ne répond plus :
 #    - RPi actif   → redémarre ses propres conteneurs + cloudflared
-#    - RPi standby → prend le relais (failover) + démarre conteneurs + cloudflared
+#    - RPi standby → confirme la panne, PUIS établit qu'elle vient bien du nœud
+#                    actif (sondes LAN + edge, cf. decide_failover) avant de
+#                    prendre le relais. Une panne de chemin public (WAN/DNS/
+#                    Cloudflare) est signalée SANS bascule — incident du 30/07/2026.
 #  Envoie un email d'alerte dans tous les cas (via Python3 standalone).
+#
+#  Test de la logique de décision (sans effet de bord) : ./health-watch.sh --selftest
 #
 #  Cron (sudo crontab sur chaque RPi) :
 #    */5 * * * * /opt/5hostachy/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
@@ -15,6 +20,9 @@ set -uo pipefail
 
 REPO=/opt/5hostachy
 PUBLIC_URL="https://5hostachy.fr/api/health"
+# Sonde « puis-je servir le public ? » : exerce DNS + TLS vers l'edge Cloudflare,
+# c'est-à-dire exactement ce dont le tunnel a besoin (cf. decide_failover).
+EDGE_URL="https://www.cloudflare.com/cdn-cgi/trace"
 ALERT_EMAIL="ptressard@icloud.com"
 # Noms attendus par lib-alert.sh (cf. plus bas). `COOLDOWN_FILE` reste défini
 # séparément car il est aussi purgé quand le site redevient OK.
@@ -24,6 +32,69 @@ ALERT_COOLDOWN_SECONDS=1800   # 30 min entre deux alertes email pour éviter le 
 LOCK_MAX_AGE_S=900      # 15 min : au-delà, .bascule-lock est considéré orphelin
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+# ── Sonde HTTP — UNE valeur, toujours ────────────────────────────────────────
+# `curl -w '%{http_code}'` écrit DÉJÀ « 000 » quand la requête échoue ; le
+# `|| echo 000` historique en ajoutait une seconde, d'où les « HTTP 000000 »
+# des logs et des alertes de la nuit du 30/07/2026. Cosmétique ici, mais la
+# même construction rendait un contrôle de check-reliability.sh faussement vert
+# (comparaison d'entiers sur « 0\n0 ») : une sonde ne doit rendre qu'une valeur.
+http_code() {  # $1 = URL, $2 = timeout (défaut 10) → code HTTP ou 000
+    local code
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-10}" "$1" 2>/dev/null)
+    echo "${code:-000}"
+}
+
+ip_of() { case "$1" in rpi1) echo 192.168.1.222 ;; rpi2) echo 192.168.1.223 ;; *) echo "" ;; esac; }
+
+# ── Décision de failover (PURE — aucun effet de bord, testable) ──────────────
+# Args : actif_en_lan  edge_joignable   (valeurs "ok" / autre)
+#   actif_en_lan   : l'API du nœud ACTIF répond-elle en LAN (http://<actif>/api/health) ?
+#   edge_joignable : CE nœud atteint-il l'edge Cloudflare (DNS + TLS) ?
+# Échoit : "failover" ou "abstain:<raison>"
+#
+# POURQUOI (incident du 30/07/2026, 00:52→01:46) : une panne DNS/WAN a coupé le
+# tunnel Cloudflare des DEUX nœuds (« lookup … on 1.0.0.1:53: server misbehaving »).
+# Chacun sondait UNIQUEMENT l'URL publique, chacun a conclu « l'autre est HS » :
+# 12 failovers croisés en 55 min, stack arrêtée/redémarrée alternativement sur les
+# deux nœuds, rôle actif changé 12 fois SANS synchronisation de base (un failover
+# ne sync pas la DB), et à trois reprises `systemctl start cloudflared` a échoué
+# sur le nouvel actif juste avant que l'ancien soit démoté → cloudflared inactif
+# sur AUCUN nœud. Le site n'a évidemment jamais été rétabli par ces bascules :
+# le nœud actif servait parfaitement, c'est le chemin public qui était coupé.
+#
+# Règle : ne pas basculer quand le nœud actif PROUVE qu'il sert encore (LAN) et
+# que nous-mêmes ne pouvons pas atteindre l'edge — nous ne ferions pas mieux.
+# Le chemin critique « nœud actif réellement mort » est INCHANGÉ : dès que la
+# sonde LAN ne répond pas, on bascule comme avant, edge joignable ou non.
+decide_failover() {
+    local lan="$1" edge="$2"
+    if [ "$lan" = "ok" ] && [ "$edge" != "ok" ]; then
+        echo "abstain:chemin-public-coupe"; return
+    fi
+    echo "failover"
+}
+
+# ── Self-test de decide_failover() (aucun effet de bord) ─────────────────────
+if [ "${1:-}" = "--selftest" ]; then
+    fail=0
+    check() { # description attendu lan edge
+        local desc="$1" exp="$2"; shift 2
+        local got; got=$(decide_failover "$@")
+        if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+        else echo "FAIL  $desc  attendu=$exp obtenu=$got"; fail=1; fi
+    }
+    echo "== self-test health-watch.decide_failover =="
+    check "actif mort, edge OK (cas nominal)"          "failover"                  ko  ok
+    check "actif mort + WAN KO (on prend le rôle)"     "failover"                  ko  ko
+    check "actif vivant en LAN, edge KO (30/07/2026)"  "abstain:chemin-public-coupe" ok  ko
+    check "actif vivant en LAN, edge OK (tunnel HS)"   "failover"                  ok  ok
+    # Une sonde qui n'a PAS pu s'exécuter ne vaut pas « actif vivant » : sans preuve
+    # que l'actif sert, on ne bloque pas le failover (disponibilité > économie de bascule).
+    check "sonde LAN indisponible → pas de blocage"    "failover"                  ""  ko
+    [ $fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
+    exit $fail
+fi
 
 # Déploiement/bascule réellement en cours ? .bascule-lock est posé par bascule.sh
 # et MaJ-Hostachy.sh. MAIS si la machine gèle/reboote pendant (cas du 17/06 : rpi2
@@ -76,7 +147,7 @@ if [ -f "$REPO/.bascule-lock" ]; then
 fi
 
 # ── Check URL publique ────────────────────────────────────────────────────────
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
+HTTP_CODE=$(http_code "$PUBLIC_URL")
 
 if [ "$HTTP_CODE" = "200" ]; then
     # Site OK — supprimer le cooldown si présent (reset pour la prochaine panne)
@@ -133,12 +204,46 @@ if deploy_in_progress; then
     log "  Bascule/déploiement détecté pendant l'attente — pas d'intervention."
     exit 0
 fi
-HTTP_CODE2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
+HTTP_CODE2=$(http_code "$PUBLIC_URL")
 if [ "$HTTP_CODE2" = "200" ]; then
     log "  Site revenu entre les deux checks (HTTP $HTTP_CODE2) — faux positif, pas d'action."
     exit 0
 fi
-log "  Confirmation panne (HTTP $HTTP_CODE2) — failover vers $SELF."
+log "  Confirmation panne (HTTP $HTTP_CODE2) — le site public ne répond pas."
+
+# ── Le nœud ACTIF est-il en cause, ou seulement le chemin public ? ───────────
+# Deux sondes indépendantes de l'URL publique (cf. decide_failover ci-dessus) :
+#   • l'API de l'actif via son Caddy en LAN — le port 8000 n'est PAS publié,
+#     `http://<actif>/api/health` est le seul accès direct ; il ne touche pas
+#     app.db (simple GET traité in-process par l'API) ;
+#   • l'edge Cloudflare depuis CE nœud — même chaîne de dépendances que le
+#     tunnel (résolution DNS + TLS), donc « pourrais-je seulement servir ? ».
+ACTIVE_IP=$(ip_of "$ACTIVE")
+LAN_STATE=ko; EDGE_STATE=ko
+[ -n "$ACTIVE_IP" ] && [ "$(http_code "http://$ACTIVE_IP/api/health" 8)" = "200" ] && LAN_STATE=ok
+[ "$(http_code "$EDGE_URL" 8)" = "200" ] && EDGE_STATE=ok
+log "  Sondes : API $ACTIVE en LAN=$LAN_STATE · edge Cloudflare depuis $SELF=$EDGE_STATE"
+
+if [ "$(decide_failover "$LAN_STATE" "$EDGE_STATE")" != "failover" ]; then
+    log "  ⛔ Pas de failover : $ACTIVE sert toujours en LAN et $SELF n'atteint pas l'edge"
+    log "     → panne de chemin (WAN/DNS/Cloudflare), pas de panne de nœud. Basculer"
+    log "     ne rétablirait rien et ferait tourner le rôle actif sans sync de base."
+    alert_if_not_in_cooldown \
+        "[5Hostachy] ⚠ Site public HS — panne réseau, PAS de bascule" \
+        "Le site public ne répond plus (HTTP $HTTP_CODE2), mais le RPi actif ($ACTIVE) répond
+normalement sur le réseau local et $SELF n'atteint pas l'edge Cloudflare.
+
+Diagnostic : la panne est sur le CHEMIN public (WAN, DNS ou Cloudflare), pas sur le
+nœud actif. Aucun failover n'a été déclenché — il n'aurait rien rétabli.
+
+À vérifier : box/opérateur, résolution DNS, état du tunnel cloudflared.
+  systemctl status cloudflared
+  journalctl -u cloudflared --since '-30 min'
+
+Date : $(date '+%d/%m/%Y à %H:%M')"
+    exit 0
+fi
+log "  → Failover vers $SELF."
 
 # ── Failover : ce RPi standby prend le relais ────────────────────────────────
 cd "$REPO"
@@ -164,7 +269,7 @@ sudo systemctl enable cloudflared 2>/dev/null && log "  → Cloudflared $SELF en
 # standby, les deux nœuds s'abstiennent en pensant que l'autre surveille → failover
 # neutralisé (incident du 26/07/2026 : ~50 min de site HS sans bascule, flags en
 # désaccord depuis un failover partiel à 06:53).
-case "$ACTIVE" in rpi1) OLD_IP=192.168.1.222 ;; rpi2) OLD_IP=192.168.1.223 ;; *) OLD_IP="" ;; esac
+OLD_IP="$ACTIVE_IP"
 if [ -n "$OLD_IP" ]; then
     ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no \
         ptressard@"$OLD_IP" "printf '%s\n' '$SELF' > /opt/5hostachy/.active; cd /opt/5hostachy && docker compose stop 2>/dev/null; sudo systemctl disable --now cloudflared 2>/dev/null" \
@@ -177,7 +282,7 @@ log "  → Flag actif mis à jour : $SELF"
 
 # Re-check après failover
 sleep 20
-HTTP_AFTER=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PUBLIC_URL" 2>/dev/null || echo "000")
+HTTP_AFTER=$(http_code "$PUBLIC_URL")
 
 if [ "$HTTP_AFTER" = "200" ]; then
     log "  ✅ Failover réussi — $SELF est maintenant actif (HTTP 200)."

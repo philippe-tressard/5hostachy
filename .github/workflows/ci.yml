@@ -56,6 +56,54 @@ jobs:
           SECRET_KEY: "ci-secret-key-placeholder-0123456789abcdef"
           DATABASE_URL: "sqlite:///:memory:"
 
+  # ── Infra: syntaxe, self-tests et modes des scripts d'exploitation ─
+  # Ajouté après l'incident du 30/07/2026. Les scripts d'infra (bascule,
+  # failover, contrôles de fiabilité) ne passaient par AUCUN test : ils ne sont
+  # ni Python ni Svelte, donc hors de portée des trois autres jobs. Or ce sont
+  # eux qui décident d'arrêter la prod. Cette nuit-là, deux défauts de ce type
+  # ont coûté 12 bascules croisées inutiles et un contrôle faussement vert —
+  # les deux sont désormais couverts par un self-test qui échoue en CI.
+  test-scripts:
+    name: Scripts d'infra (syntaxe + self-tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntaxe de tous les scripts shell
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.sh' '.githooks/*'); do
+            bash -n "$f" || { echo "::error file=$f::erreur de syntaxe"; st=1; }
+          done
+          exit $st
+
+      - name: Self-tests des fonctions de décision
+        # Ces trois scripts exposent leur logique en fonction PURE + --selftest
+        # (aucun effet de bord : ni SSH, ni docker, ni écriture). C'est le seul
+        # moyen de tester une décision d'infra sans les deux RPi.
+        run: |
+          bash boot-role-guard.sh   --selftest
+          bash health-watch.sh      --selftest
+          bash check-reliability.sh --selftest
+
+      - name: Bits d'exécution versionnés
+        # Étape 0b du pré-check MEP, jusqu'ici manuelle : `core.filemode=false`
+        # sur un clone Windows avale un `chmod +x`, le fichier part en 100644 et
+        # Linux refuse de l'exécuter SANS message — un garde-fou inerte
+        # (constaté le 26/07/2026 sur .githooks/pre-commit). Les modules
+        # *sourcés* (`lib-*.sh`) restent en 644 : un bit x y serait trompeur
+        # (CLAUDE.md, point 7 du pré-check).
+        run: |
+          st=0
+          while read -r mode _ _ path; do
+            case "$path" in
+              lib-*.sh) exp=100644 ;;
+              *)        exp=100755 ;;
+            esac
+            [ "$mode" = "$exp" ] || { echo "::error file=$path::mode $mode, attendu $exp"; st=1; }
+          done < <(git ls-files -s -- '*.sh' '.githooks/*')
+          exit $st
+
   # ── Frontend: vérification build SvelteKit ───────────────────
   build-frontend:
     name: Build SvelteKit
