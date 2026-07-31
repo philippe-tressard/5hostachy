@@ -23,7 +23,9 @@ LOG_WARN_MB=5
 SKEW_WARN_S=5
 LOCK_STALE_MIN=20
 HB_MAX_AGE_MIN=20       # battement auto-deploy : 4 ticks de 5 min manqués
+CR_MAX_AGE_MIN=40       # exécution de CE script sur le peer : 2 ticks de 15 min manqués
 DEPLOY_LOG=/var/log/hostachy-deploy.log
+RELIABILITY_LOG=/var/log/hostachy-reliability.log
 
 FAILS=0; WARNS=0; FAIL_LINES=""
 ok()   { echo "[ OK ] $*"; }
@@ -93,11 +95,12 @@ if [ "${1:-}" = "--selftest" ]; then
   exit $st_fail
 fi
 
-case "$(hostname)" in
-  PhT-RB5)   SELF="rpi1"; SELF_IP="192.168.1.222"; PEER_IP="192.168.1.223"; PEER="rpi2" ;;
-  PhT-RB5i2) SELF="rpi2"; SELF_IP="192.168.1.223"; PEER_IP="192.168.1.222"; PEER="rpi1" ;;
-  *) echo "Hostname inconnu — abandon."; exit 2 ;;
-esac
+# Sourcé APRÈS le bloc --selftest : la CI exécute `bash check-reliability.sh
+# --selftest` depuis la racine du dépôt, où $REPO (/opt/5hostachy) n'existe pas.
+source "$REPO/lib-role.sh"
+SELF=$(role_of "$(hostname)")
+[ -n "$SELF" ] || { echo "Hostname inconnu — abandon."; exit 2; }
+SELF_IP=$(role_ip "$SELF"); PEER=$(role_peer "$SELF"); PEER_IP=$(role_ip "$PEER")
 SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # ── Snippet de collecte exécuté sur chaque nœud (local + peer) ───────────────
@@ -121,6 +124,7 @@ echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
 BIG=""; for l in /var/log/hostachy-*.log; do [ -f "$l" ] || continue; sz=$(( $(stat -c %s "$l")/1048576 )); [ "$sz" -ge '"$LOG_WARN_MB"' ] && BIG="$BIG $(basename $l):${sz}M"; done
 echo "biglogs=$BIG"
 echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
+echo "reliability_last=$(tail -3000 /var/log/hostachy-reliability.log 2>/dev/null | grep -oE "check-reliability \([0-9-]{10} [0-9:]{8}\)" | tail -1 | tr -d "()" | cut -d" " -f2-)"
 '
 
 # ⚠ PAS de contrôle d'intégrité DB ici — SUPPRIMÉ le 17/07/2026 (cf. C8 plus bas).
@@ -255,15 +259,27 @@ for pair in "$SELF:${S_deploylog_owner:-missing}" "$PEER:${P_deploylog_owner:-mi
     || warn "Log auto-deploy NON inscriptible par le cron user sur $n (owner=$o) → auto-deploy silencieusement KO (sudo chown ptressard:ptressard /var/log/hostachy-deploy.log)"
 done
 
-# ── C14. Battement d'auto-deploy sur le STANDBY ──────────────────────────────
-# Sur le standby, auto-deploy écrit une ligne « n'est pas l'actif — ignoré » à
-# chaque tick (12/h). Sur l'ACTIF il n'écrit RIEN quand il n'y a pas de
-# changement : le silence y est normal, ce contrôle ne vaut donc que sur le
-# standby. Le 26/07/2026, ces lignes ont disparu 7 h 30 : le flag local étant
-# faussement passé à SELF, le garde-fou anti-split-brain était franchi et le
-# script mourait plus loin, au `git fetch`, en ne laissant que des erreurs git
-# NON HORODATÉES — invisibles à un grep de motifs comme à un tri par date. Seule
-# l'absence des lignes attendues le révélait.
+# ── C14. Battement d'auto-deploy (les DEUX rôles) ────────────────────────────
+# auto-deploy écrit une ligne horodatée à chaque tick (12/h), quel que soit son
+# rôle — c'est son contrat de battement. Le 26/07/2026, ces lignes ont disparu
+# 7 h 30 : le flag local étant faussement passé à SELF, le garde-fou
+# anti-split-brain était franchi et le script mourait plus loin, au `git fetch`,
+# en ne laissant que des erreurs git NON HORODATÉES — invisibles à un grep de
+# motifs comme à un tri par date. Seule l'absence des lignes attendues le
+# révélait.
+#
+# Le contrôle ne valait d'abord que sur le standby, l'actif n'écrivant RIEN
+# quand il n'avait rien à déployer. Deux conséquences, toutes deux vécues :
+#   • l'actif n'était PAS couvert — c'est là qu'auto-deploy est resté KO 7
+#     semaines (bit x perdu le 21/04, découvert le 07/06) ;
+#   • au changement de rôle, l'âge mesuré remontait dans la période ACTIVE, où
+#     le silence était normal : la bascule de 02:03 le 31/07/2026 a démoté rpi2,
+#     le contrôle de 02:06 a lu le dernier battement de 20:03 (nœud actif et
+#     muet depuis) et a envoyé un mail d'échec pour une infra saine — le premier
+#     tick de standby, à 02:08, remettait tout au vert. La fenêtre était
+#     structurelle : elle se rouvrait à chaque bascule nocturne.
+# auto-deploy émet désormais aussi son battement sur l'actif ; l'âge du dernier
+# tick est comparable dans les deux rôles et ce contrôle vaut partout.
 #
 # Mesuré par l'ÂGE du dernier battement horodaté, et non plus par un comptage
 # de lignes par tranche horaire (correctif du 30/07/2026). L'ancienne version
@@ -275,13 +291,28 @@ done
 #     depuis 01:46, le contrôle échouait encore sur les compteurs de 01:00-01:59
 #     et a déclenché un mail décrivant une panne terminée. L'âge, lui, se
 #     résorbe de lui-même dès le premier tick revenu.
-if [ "${S_active:-}" != "$SELF" ]; then
-  HB_LAST=$(grep -oE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$DEPLOY_LOG" 2>/dev/null | tail -1 | tr -d '[]')
-  HB_AGE=$(beat_age_min "$HB_LAST")
-  case "$(beat_verdict "$HB_AGE" "$HB_MAX_AGE_MIN")" in
-    ok)      ok "Battement auto-deploy présent sur $SELF (standby) : dernier tick il y a ${HB_AGE} min" ;;
-    absent)  fail "Battement auto-deploy absent sur $SELF (standby) : dernier tick il y a ${HB_AGE} min (attendu ≤ ${HB_MAX_AGE_MIN}) → le script ne va plus au bout" ;;
-    *)       fail "Battement auto-deploy INCONNU sur $SELF (standby) : aucun horodatage exploitable dans $DEPLOY_LOG (log vide, illisible ou format changé)" ;;
+ROLE=$([ "${S_active:-}" = "$SELF" ] && echo actif || echo standby)
+HB_LAST=$(grep -oE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]' "$DEPLOY_LOG" 2>/dev/null | tail -1 | tr -d '[]')
+HB_AGE=$(beat_age_min "$HB_LAST")
+case "$(beat_verdict "$HB_AGE" "$HB_MAX_AGE_MIN")" in
+  ok)      ok "Battement auto-deploy présent sur $SELF ($ROLE) : dernier tick il y a ${HB_AGE} min" ;;
+  absent)  fail "Battement auto-deploy absent sur $SELF ($ROLE) : dernier tick il y a ${HB_AGE} min (attendu ≤ ${HB_MAX_AGE_MIN}) → le script ne va plus au bout" ;;
+  *)       fail "Battement auto-deploy INCONNU sur $SELF ($ROLE) : aucun horodatage exploitable dans $DEPLOY_LOG (log vide, illisible ou format changé)" ;;
+esac
+
+# ── C15. Le contrôleur lui-même tourne-t-il sur le PEER ? ────────────────────
+# Rien ne surveillait check-reliability : s'il cesse de tourner (cron perdu, bit
+# x envolé, nœud figé), il ne peut par construction pas le signaler — son
+# silence est indiscernable du vert. Même angle mort que le battement
+# auto-deploy muet sur l'actif (C14), et même mesure : l'âge du dernier
+# horodatage. Chaque nœud contrôle donc l'AUTRE — s'auto-contrôler ne prouverait
+# rien, puisque le cas à attraper est précisément « ce script ne s'exécute pas ».
+if [ "$PEER_OK" -eq 0 ]; then
+  CR_AGE=$(beat_age_min "${P_reliability_last:-}")
+  case "$(beat_verdict "$CR_AGE" "$CR_MAX_AGE_MIN")" in
+    ok)      ok "check-reliability tourne sur $PEER : dernière exécution il y a ${CR_AGE} min" ;;
+    absent)  fail "check-reliability ne tourne plus sur $PEER : dernière exécution il y a ${CR_AGE} min (attendu ≤ ${CR_MAX_AGE_MIN}) → cron perdu, bit x, ou nœud figé" ;;
+    *)       fail "check-reliability INCONNU sur $PEER : aucune exécution horodatée dans $RELIABILITY_LOG (log vide, illisible ou format changé)" ;;
   esac
 fi
 
