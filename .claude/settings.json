@@ -5,10 +5,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat .claude/5hostachy-preflight.md",
+            "command": "bash .claude/env-report.sh; cat .claude/5hostachy-preflight.md",
             "shell": "bash",
             "timeout": 10,
-            "statusMessage": "Chargement des consignes 5Hostachy…"
+            "statusMessage": "Environnement + consignes 5Hostachy…"
           }
         ]
       }
