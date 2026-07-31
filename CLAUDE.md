@@ -779,6 +779,14 @@ sur le **standby** que le pré-check n'inspectait pas :
   par **C16** (WARN ≥ 20 Go). Ne pas descendre sous 10 Go : la bascule compte sur ce
   cache pour ne pas rejouer `npm run build` (OOM). Cf. [[project_retention_logs_maintenance]].
 
+⚠ **Daemon Docker partagé sur rpi2** (co-hébergement de List-dons) : le prune d'images
+est **filtré sur `label=com.docker.compose.project=5hostachy`** — un prune nu
+supprimerait aussi les couches orphelines de l'autre application, et arbitrer sur ses
+ressources n'est pas notre rôle. `docker system prune` est **interdit** (il détruirait
+ses volumes et réseaux). Les deux règles sont vérifiées en CI. Seul le **cache
+BuildKit** reste commun — aucun filtre par projet n'existe : il est purgé **par âge**
+(> 7 j) d'abord, le plafond de 10 Go ne servant que de garde-fou.
+
 ### Post-check obligatoire après MEP
 
 La MEP se termine par ces contrôles, pas par le merge. Un merge déclenche

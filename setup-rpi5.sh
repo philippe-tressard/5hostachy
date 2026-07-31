@@ -578,7 +578,9 @@ echo "[$(date)] DÃ©ploiement dÃ©marrÃ©..."
 git pull --rebase
 docker compose pull
 docker compose up -d --build --remove-orphans
-docker image prune -f
+# Filtré sur le projet : le daemon peut être partagé avec une autre application
+# (rpi2 co-héberge List-dons). Un prune nu supprimerait aussi ses couches.
+docker image prune -f --filter label=com.docker.compose.project=5hostachy
 echo "[$(date)] DÃ©ploiement terminÃ©."
 EOF
 chmod +x "${INSTALL_DIR}/scripts/deploy.sh"

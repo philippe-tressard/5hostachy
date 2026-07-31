@@ -121,6 +121,16 @@ jobs:
           done
           grep -q 'for LOGFILE in /var/log/hostachy-\*\.log' maintenance.sh \
             || { echo "::error file=maintenance.sh::la rotation doit itérer sur le GLOB /var/log/hostachy-*.log (une liste nominative laisse filer tout log ajouté ensuite)"; st=1; }
+          for f in $(git ls-files -- '*.sh'); do
+            while IFS= read -r hit; do
+              case "$hit" in
+                *"label=com.docker.compose.project"*) ;;
+                *) echo "::error file=$f::\`docker image prune\` sans --filter label=com.docker.compose.project — le daemon de rpi2 est partagé avec List-dons, un prune nu supprime aussi ses couches"; st=1 ;;
+              esac
+            done < <(grep -nE '^[^#]*docker image prune' "$f")
+            grep -qE '^[^#]*docker system prune' "$f" \
+              && { echo "::error file=$f::\`docker system prune\` est interdit — il détruirait volumes et réseaux de l'application co-hébergée"; st=1; }
+          done
           awk '
             /\$LOG_DATE/                  { last = NR }
             /^[[:space:]]*exit [0-9]/     { if (NR - last > 4) {
