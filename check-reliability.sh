@@ -24,6 +24,7 @@ SKEW_WARN_S=5
 LOCK_STALE_MIN=20
 HB_MAX_AGE_MIN=20       # battement auto-deploy : 4 ticks de 5 min manqués
 CR_MAX_AGE_MIN=40       # exécution de CE script sur le peer : 2 ticks de 15 min manqués
+BUILD_CACHE_WARN_GB=20  # plafond de purge hebdomadaire = 10 Go : 20 = purge en panne
 DEPLOY_LOG=/var/log/hostachy-deploy.log
 RELIABILITY_LOG=/var/log/hostachy-reliability.log
 
@@ -53,6 +54,22 @@ beat_age_min() {  # $1 = "AAAA-MM-JJ HH:MM:SS" (peut être vide), $2 = epoch de 
   e=$(date -d "$ts" +%s 2>/dev/null)
   [ -n "$e" ] || { echo -1; return; }
   echo $(( (now - e) / 60 ))
+}
+
+# ── Taille du cache de build Docker en Go entiers (PURE — testable) ──────────
+# `docker system df` rend « 64.68GB », « 980MB »… Rend -1 si illisible :
+# INCONNU n'est jamais OK (règle 1 du CLAUDE.md).
+cache_go() {  # $1 = "64.68GB" → 64 ; "980MB" → 0 ; "" → -1
+  local s="$1" n u
+  n=$(echo "$s" | grep -oE '^[0-9]+([.][0-9]+)?')
+  u=$(echo "$s" | grep -oE '[kKMGT]?B$')
+  [ -n "$n" ] && [ -n "$u" ] || { echo -1; return; }
+  case "$u" in
+    GB)          echo "${n%%.*}" ;;
+    TB)          echo $(( ${n%%.*} * 1024 )) ;;
+    MB|kB|KB|B)  echo 0 ;;
+    *)           echo -1 ;;
+  esac
 }
 
 # ── Verdict du battement (PURE — testable) ───────────────────────────────────
@@ -91,6 +108,11 @@ if [ "${1:-}" = "--selftest" ]; then
   [ "$AGE" = "-1" ] && echo "PASS  horodatage vide → inconnu (-1)" || { echo "FAIL  attendu=-1 obtenu=$AGE"; st_fail=1; }
   AGE=$(beat_age_min "pas une date" 0)
   [ "$AGE" = "-1" ] && echo "PASS  horodatage invalide → inconnu (-1)" || { echo "FAIL  attendu=-1 obtenu=$AGE"; st_fail=1; }
+  echo "-- cache_go --"
+  for c in "64.68GB:64" "11.16GB:11" "980MB:0" "512kB:0" "1.5TB:1024" ":-1" "n/a:-1"; do
+    exp=${c##*:}; got=$(cache_go "${c%:*}")
+    [ "$got" = "$exp" ] && echo "PASS  cache '${c%:*}' → $got Go" || { echo "FAIL  cache '${c%:*}' attendu=$exp obtenu=$got"; st_fail=1; }
+  done
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st_fail
 fi
@@ -125,6 +147,7 @@ BIG=""; for l in /var/log/hostachy-*.log; do [ -f "$l" ] || continue; sz=$(( $(s
 echo "biglogs=$BIG"
 echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
 echo "reliability_last=$(tail -3000 /var/log/hostachy-reliability.log 2>/dev/null | grep -oE "check-reliability \([0-9-]{10} [0-9:]{8}\)" | tail -1 | tr -d "()" | cut -d" " -f2-)"
+echo "buildcache=$(docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null | grep -i "^Build Cache" | cut -d"|" -f2 | tr -d " ")"
 '
 
 # ⚠ PAS de contrôle d'intégrité DB ici — SUPPRIMÉ le 17/07/2026 (cf. C8 plus bas).
@@ -315,6 +338,25 @@ if [ "$PEER_OK" -eq 0 ]; then
     *)       fail "check-reliability INCONNU sur $PEER : aucune exécution horodatée dans $RELIABILITY_LOG (log vide, illisible ou format changé)" ;;
   esac
 fi
+
+# ── C16. Cache de build Docker sous plafond ──────────────────────────────────
+# `docker image prune` ne touche PAS le cache BuildKit, et rien ne le purgeait :
+# 64 Go sur rpi1 (disque à 66 %) et 59 Go sur rpi2 le 31/07/2026, accumulés à
+# raison d'un rebuild du peer par nuit depuis la v2.20.19. maintenance.sh le
+# plafonne désormais à 10 Go chaque dimanche ; ce contrôle attrape la panne de
+# cette purge, des mois avant que C9 (disque ≥ 85 %) ne s'en aperçoive — et sans
+# faire croire à une fuite applicative, comme un simple « disque à 85 % ».
+for pair in "$SELF:${S_buildcache:-}" "$PEER:${P_buildcache:-}"; do
+  n=${pair%%:*}; v=${pair#*:}; [ "$n" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+  g=$(cache_go "$v")
+  if [ "$g" -lt 0 ]; then
+    warn "Cache de build Docker illisible sur $n ('${v:-vide}')"
+  elif [ "$g" -ge "$BUILD_CACHE_WARN_GB" ]; then
+    warn "Cache de build Docker à ${g} Go sur $n (≥ ${BUILD_CACHE_WARN_GB}) — la purge hebdomadaire ne fait plus son travail (docker builder prune -f --max-used-space 10G)"
+  else
+    ok "Cache de build Docker à ${g} Go sur $n"
+  fi
+done
 
 echo "─────────────────────────────────────────────────────────────"
 echo "Résumé : $FAILS FAIL, $WARNS WARN"
