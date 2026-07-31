@@ -116,11 +116,10 @@ deploy_in_progress() {
 
 # ── Identité de ce RPi ───────────────────────────────────────────────────────
 CUR_HOSTNAME=$(hostname)
-case "$CUR_HOSTNAME" in
-  PhT-RB5)   SELF="rpi1" ;;
-  PhT-RB5i2) SELF="rpi2" ;;
-  *) log "Hostname inconnu ($CUR_HOSTNAME) — abandon."; exit 1 ;;
-esac
+# Sourcé APRÈS le bloc --selftest (la CI l'exécute hors de /opt/5hostachy).
+source "$REPO/lib-role.sh"
+SELF=$(role_of "$CUR_HOSTNAME")
+[ -n "$SELF" ] || { log "Hostname inconnu ($CUR_HOSTNAME) — abandon."; exit 1; }
 
 # ── Verrou anti-concurrence — robuste ────────────────────────────────────────
 # Historique : un /tmp/health-watch.lock créé par un autre utilisateur (run manuel

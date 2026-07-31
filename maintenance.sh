@@ -34,24 +34,85 @@ GLOBAL_ERREUR=""
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
-# --- Vérification : ce RPi est-il le RPi actif ? ------------------------------
-FLAG="$REPO/.active"
-if [ -f "$FLAG" ]; then
-    HOSTNAME=$(hostname)
-    case "$HOSTNAME" in
-      PhT-RB5)   SELF="rpi1" ;;
-      PhT-RB5i2) SELF="rpi2" ;;
-      *)         SELF="" ;;
-    esac
-    ACTIVE=$(cat "$FLAG" | tr -d '[:space:]')
-    if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
-        log "Ce RPi ($SELF) n'est pas actif ($ACTIVE) — maintenance ignorée."
-        exit 0
-    fi
-fi
+# Rotation : nombre de lignes conservées par fichier de log host.
+# 1000 lignes convenaient à un cron hebdomadaire ; les logs à haute fréquence
+# écrivent 100× plus (reliability : 22 lignes × 96 exécutions = ~2 100/jour).
+# 20 000 lignes = ~9 jours pour le plus bavard, plusieurs années pour le moins
+# bavard, et ~1 Mo par fichier — sous le seuil d'alerte C10 (5 Mo).
+LOG_KEEP_LINES=20000
+# Cache de build BuildKit : plafond conservé (les couches les plus récemment
+# utilisées sont gardées en priorité). Ne pas descendre trop bas : la bascule
+# nocturne rebuilde l'image du peer à chaque fois et compte sur ce cache pour
+# ne PAS rejouer `npm run build` (risque d'OOM sur RPi).
+BUILD_CACHE_KEEP=10737418240   # 10 Go
+
+# --- Hygiène locale : à faire sur les DEUX nœuds ------------------------------
+# Rotation des logs, ownership du log auto-deploy, purge des images et du cache
+# de build. Aucune de ces tâches ne touche l'application ni la base — les
+# conditionner au rôle n'avait aucune justification technique et laissait le
+# standby dériver, puisqu'un nœud n'est actif qu'un dimanche sur deux (bascule
+# nocturne alternée). Constaté le 31/07/2026 : 80 218 lignes dans
+# hostachy-check.log et ~60 Go de cache de build sur le nœud standby.
+hygiene_locale() {
+    # Images sans tag (couches orphelines des rebuilds). Ne touche jamais une
+    # image référencée par un conteneur, même arrêté (standby compris).
+    log "[Hygiène] Nettoyage images Docker inutilisées..."
+    PRUNE_OUT=$(docker image prune -f 2>&1 | tail -1) || PRUNE_OUT="(docker image prune échoué)"
+    log "  → $PRUNE_OUT"
+
+    # Cache de build : JAMAIS purgé jusqu'au 31/07/2026 — `docker image prune`
+    # ne le touche pas. Depuis que la bascule rebuilde systématiquement l'image
+    # du peer (v2.20.19), il grossit toutes les nuits sur les deux nœuds :
+    # 1113 entrées / ~64 Go sur rpi1 (disque à 66 %) et ~59 Go sur rpi2.
+    log "[Hygiène] Purge du cache de build Docker (plafond $(( BUILD_CACHE_KEEP / 1073741824 )) Go)..."
+    BPRUNE_OUT=$(docker builder prune -f --max-used-space "$BUILD_CACHE_KEEP" 2>&1 | tail -1) \
+        || BPRUNE_OUT=$(docker builder prune -f --filter until=168h 2>&1 | tail -1) \
+        || BPRUNE_OUT="(docker builder prune échoué)"
+    log "  → $BPRUNE_OUT"
+
+    # Rotation par GLOB, et non par liste nominative : hostachy-reliability.log
+    # (1,7 Mo, 33 500 lignes) et hostachy-role-guard.log avaient été ajoutés au
+    # système sans l'être ici, et n'ont donc jamais été rotés. Le glob couvre
+    # d'office tout log ajouté plus tard.
+    log "[Hygiène] Rotation des logs host (${LOG_KEEP_LINES} lignes max)..."
+    for LOGFILE in /var/log/hostachy-*.log; do
+        [ -f "$LOGFILE" ] || continue
+        LINES_BEFORE=$(wc -l < "$LOGFILE")
+        tail -"$LOG_KEEP_LINES" "$LOGFILE" > "${LOGFILE}.tmp" && mv "${LOGFILE}.tmp" "$LOGFILE"
+        LINES_AFTER=$(wc -l < "$LOGFILE")
+        TRIMMED=$(( LINES_BEFORE - LINES_AFTER ))
+        if [ "$TRIMMED" -gt 0 ]; then
+            log "  → $(basename "$LOGFILE") : $TRIMMED ligne(s) supprimée(s), $LINES_AFTER conservée(s)"
+        else
+            log "  → $(basename "$LOGFILE") : OK ($LINES_AFTER lignes)"
+        fi
+    done
+
+    # Le log auto-deploy est écrit par un cron UTILISATEUR (ptressard), pas root : la
+    # rotation ci-dessus (mv d'un .tmp créé par root) le repasse root-owned → le cron
+    # user ne peut plus y écrire (Permission denied), et auto-deploy cesse SILENCIEUSEMENT
+    # de tourner (cause du non-déploiement de rpi1 découvert le 15/07). On restaure
+    # l'ownership à chaque maintenance = self-healing sur les 2 RPi.
+    chown 1000:1000 /var/log/hostachy-deploy.log 2>/dev/null || true
+}
 
 log ""
 log "===== Maintenance Hostachy ====="
+
+# --- Vérification : ce RPi est-il le RPi actif ? ------------------------------
+# Seule la partie APPLICATIVE (base, API, rapport) exige d'être l'actif.
+FLAG="$REPO/.active"
+if [ -f "$FLAG" ]; then
+    source "$REPO/lib-role.sh"
+    SELF=$(role_of "$(hostname)")
+    ACTIVE=$(cat "$FLAG" | tr -d '[:space:]')
+    if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
+        log "Ce RPi ($SELF) n'est pas actif ($ACTIVE) — maintenance applicative ignorée."
+        hygiene_locale
+        log "===== Hygiène locale terminée (standby) ====="
+        exit 0
+    fi
+fi
 
 # --- 0. Vérification espace disque (alerte si < 10 %) -------------------------
 log "[0/5] Vérification espace disque..."
@@ -280,40 +341,9 @@ DB_SIZE=$(docker exec hostachy_api python -c \
     "import os; print(os.path.getsize('/app/data/app.db'))" 2>/dev/null) \
     || DB_SIZE="null"
 
-# --- 4. Nettoyage images Docker inutilisées ------------------------------------
-log "[4/5] Nettoyage images Docker inutilisées..."
-PRUNE_OUT=$(docker image prune -f 2>&1 | tail -1) || PRUNE_OUT="(docker image prune échoué)"
-log "  → $PRUNE_OUT"
-
-# --- 4b. Rotation des fichiers de log host ------------------------------------
-# Limite chaque fichier de log aux 1000 dernières lignes (≈ 2 ans de crons hebdo).
-# Les logs Docker sont déjà bornés par max-file/max-size dans docker-compose.yml.
-log "[4b/5] Rotation des logs host..."
-for LOGFILE in \
-    /var/log/hostachy-maintenance.log \
-    /var/log/hostachy-deploy.log \
-    /var/log/hostachy-check.log \
-    /var/log/hostachy-health-watch.log \
-    /var/log/hostachy-bascule.log; do
-    if [ -f "$LOGFILE" ]; then
-        LINES_BEFORE=$(wc -l < "$LOGFILE")
-        tail -1000 "$LOGFILE" > "${LOGFILE}.tmp" && mv "${LOGFILE}.tmp" "$LOGFILE"
-        LINES_AFTER=$(wc -l < "$LOGFILE")
-        TRIMMED=$(( LINES_BEFORE - LINES_AFTER ))
-        if [ "$TRIMMED" -gt 0 ]; then
-            log "  → $(basename $LOGFILE) : $TRIMMED ligne(s) supprimée(s), $LINES_AFTER conservée(s)"
-        else
-            log "  → $(basename $LOGFILE) : OK ($LINES_AFTER lignes)"
-        fi
-    fi
-done
-
-# Le log auto-deploy est écrit par un cron UTILISATEUR (ptressard), pas root : la
-# rotation ci-dessus (mv d'un .tmp créé par root) le repasse root-owned → le cron
-# user ne peut plus y écrire (Permission denied), et auto-deploy cesse SILENCIEUSEMENT
-# de tourner (cause du non-déploiement de rpi1 découvert le 15/07). On restaure
-# l'ownership à chaque maintenance = self-healing sur les 2 RPi.
-chown 1000:1000 /var/log/hostachy-deploy.log 2>/dev/null || true
+# --- 4. Hygiène locale (images, cache de build, rotation des logs) --------------
+# Même traitement que sur le standby — une seule implémentation, cf. hygiene_locale().
+hygiene_locale
 
 # --- 5. Enregistrement dans l'API ------------------------------------------------
 MAINTE_FIN=$(date -u +%Y-%m-%dT%H:%M:%S)

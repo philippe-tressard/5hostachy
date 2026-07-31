@@ -556,8 +556,12 @@ chmod +x "${INSTALL_DIR}/scripts/backup.sh"
 success "Script de backup crÃ©Ã©."
 
 # Cron journalier Ã  3h du matin
-CRON_JOB="0 3 * * * ${APP_USER} ${INSTALL_DIR}/scripts/backup.sh >> /var/log/5hostachy-backup.log 2>&1"
-if ! grep -qF "5hostachy-backup" /etc/crontab 2>/dev/null; then
+# Nom du log conforme au motif /var/log/hostachy-*.log : c'est CE motif que
+# maintenance.sh fait tourner. « 5hostachy-backup.log » y échappait et n'aurait
+# jamais été roté sur un nœud installé par ce script (contrôlé en CI depuis le
+# 31/07/2026, après le cas hostachy-reliability.log).
+CRON_JOB="0 3 * * * ${APP_USER} ${INSTALL_DIR}/scripts/backup.sh >> /var/log/hostachy-backup.log 2>&1"
+if ! grep -qF "hostachy-backup" /etc/crontab 2>/dev/null; then
   echo "${CRON_JOB}" >> /etc/crontab
   success "Cron backup configurÃ© (tous les jours Ã  03h00)."
 fi

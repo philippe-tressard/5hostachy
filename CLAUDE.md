@@ -585,6 +585,7 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 11 | Auto-deploy de l'actif vivant | Sur l'**actif** : `stat -c %U /var/log/hostachy-deploy.log` + HEAD actif vs `origin/main` | Log **`ptressard`** (pas `root`) · HEAD actif **==** `origin/main` |
 | 12 | Image en cours = code déployé, **pour les services concernés** | `git diff --name-only <image>..HEAD` pour savoir quels services sont touchés, puis `docker inspect <svc>` — voir « Point 12 » | Image du service **touché** reconstruite après le commit ; un service non touché n'est pas une anomalie |
 | 13 | Le canal d'alerte fonctionne | Dernière alerte reçue / `grep 'Email KO' /var/log/hostachy-health-watch.log` | Aucun `Email KO` récent — sinon les contrôles automatiques sont muets |
+| 14 | **Hygiène disque sur les 2 RPi** | `docker system df` + `ls -la /var/log/hostachy-*.log` sur les **2** nœuds | Cache de build **< 20 Go** · aucun log **> 5 Mo** · dernière maintenance < 8 j **sur chaque nœud** (voir « Point 14 ») |
 
 **Point 2 — pourquoi (26/07/2026) :** « fichier présent, cohérent » était trop vague
 et ne disait pas *cohérent avec quoi*.
@@ -756,6 +757,27 @@ git diff --name-only <dernier-commit-couvert-par-l-image>..HEAD | cut -d/ -f1 | 
 Un point **INCONNU** (contrôle impossible à exécuter) se traite comme une anomalie :
 soit on trouve un moyen de le mesurer, soit on décide explicitement de passer outre
 en le disant. Jamais de vert par défaut.
+
+**Point 14 — pourquoi (31/07/2026) :** trois oublis d'hygiène, tous silencieux, tous
+sur le **standby** que le pré-check n'inspectait pas :
+- `maintenance.sh` ne tournait **que sur l'actif**, alors que rotation, `chown` et
+  prune ne touchent ni l'appli ni la base. Un nœud n'étant actif qu'**un dimanche
+  sur deux** (bascule alternée), le standby dérivait : 80 218 lignes dans
+  `hostachy-check.log` sur rpi2. Corrigé — `hygiene_locale()` tourne sur les 2 nœuds.
+- La rotation listait les logs **nominativement** : `hostachy-reliability.log`
+  (1,7 Mo, ~2 100 lignes/jour) et `hostachy-role-guard.log` n'y figuraient pas et
+  n'ont **jamais** été rotés. Corrigé — la boucle itère sur le glob
+  `/var/log/hostachy-*.log`, donc sur tout log ajouté ensuite. **Un log hors de ce
+  motif ne sera jamais roté** : le job CI `test-scripts` refuse désormais tout
+  chemin `/var/log/…` qui n'y correspond pas (c'est ainsi qu'a été trouvé
+  `5hostachy-backup.log` dans `setup-rpi5.sh`).
+- Le **cache de build BuildKit** n'était purgé par rien (`docker image prune` ne le
+  touche pas) : 64 Go sur rpi1 (disque à 66 %) et 59 Go sur rpi2, à raison d'un
+  rebuild du peer par nuit depuis la v2.20.19. Purgé à 10 Go
+  (`docker builder prune -f --max-used-space 10G`) → rpi1 71 → 22 Go, rpi2 66 → 21 Go,
+  sans toucher images, volumes ni sauvegardes. Plafonné chaque dimanche, surveillé
+  par **C16** (WARN ≥ 20 Go). Ne pas descendre sous 10 Go : la bascule compte sur ce
+  cache pour ne pas rejouer `npm run build` (OOM). Cf. [[project_retention_logs_maintenance]].
 
 ### Post-check obligatoire après MEP
 

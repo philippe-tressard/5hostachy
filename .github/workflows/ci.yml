@@ -92,13 +92,43 @@ jobs:
           exit $st
 
       - name: Self-tests des fonctions de décision
-        # Ces trois scripts exposent leur logique en fonction PURE + --selftest
+        # Ces scripts exposent leur logique en fonction PURE + --selftest
         # (aucun effet de bord : ni SSH, ni docker, ni écriture). C'est le seul
         # moyen de tester une décision d'infra sans les deux RPi.
         run: |
+          bash lib-role.sh          --selftest
           bash boot-role-guard.sh   --selftest
           bash health-watch.sh      --selftest
           bash check-reliability.sh --selftest
+
+      - name: Contrats d'infra (logs rotés, chemins de sortie datés)
+        # Deux régressions vécues le 31/07/2026, toutes deux invisibles pendant
+        # des semaines parce qu'un manque ressemble à du calme :
+        #   • un log ajouté hors du motif roté par maintenance.sh grossit sans
+        #     fin (hostachy-reliability.log : 1,7 Mo, jamais roté) ;
+        #   • un chemin de sortie muet dans auto-deploy.sh fait croire au
+        #     contrôle de battement que le script est mort.
+        # Ces deux contrats sont statiques : ils se vérifient ici, sans les RPi.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.sh'); do
+            for p in $(grep -oE '/var/log/[A-Za-z0-9_.*-]+' "$f" | sort -u); do
+              case "$p" in
+                /var/log/hostachy-*.log) ;;
+                *) echo "::error file=$f::$p hors du motif /var/log/hostachy-*.log — maintenance.sh ne le rotera jamais"; st=1 ;;
+              esac
+            done
+          done
+          grep -q 'for LOGFILE in /var/log/hostachy-\*\.log' maintenance.sh \
+            || { echo "::error file=maintenance.sh::la rotation doit itérer sur le GLOB /var/log/hostachy-*.log (une liste nominative laisse filer tout log ajouté ensuite)"; st=1; }
+          awk '
+            /\$LOG_DATE/                  { last = NR }
+            /^[[:space:]]*exit [0-9]/     { if (NR - last > 4) {
+                printf "::error file=auto-deploy.sh,line=%d::sortie sans ligne horodatée — contrat de battement rompu (C14 conclurait que le script est mort)\n", NR
+                bad = 1 } }
+            END { exit bad }
+          ' auto-deploy.sh || st=1
+          exit $st
 
       - name: Bits d'exécution versionnés
         # Étape 0b du pré-check MEP, jusqu'ici manuelle : `core.filemode=false`

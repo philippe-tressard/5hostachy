@@ -53,11 +53,10 @@ run() {
 
 # ── Identité de ce RPi ───────────────────────────────────────────────
 CUR_HOSTNAME=$(hostname)
-case "$CUR_HOSTNAME" in
-  PhT-RB5)   SELF="rpi1"; SELF_IP="192.168.1.222"; PEER_IP="192.168.1.223"; PEER="rpi2" ;;
-  PhT-RB5i2) SELF="rpi2"; SELF_IP="192.168.1.223"; PEER_IP="192.168.1.222"; PEER="rpi1" ;;
-  *) log "ERREUR: hostname inconnu ($CUR_HOSTNAME)"; exit 1 ;;
-esac
+source "$REPO/lib-role.sh"
+SELF=$(role_of "$CUR_HOSTNAME")
+[ -n "$SELF" ] || { log "ERREUR: hostname inconnu ($CUR_HOSTNAME)"; exit 1; }
+SELF_IP=$(role_ip "$SELF"); PEER=$(role_peer "$SELF"); PEER_IP=$(role_ip "$PEER")
 
 SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
