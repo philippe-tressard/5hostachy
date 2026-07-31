@@ -29,12 +29,8 @@ fi
 FLAG="$REPO/.active"
 if [ -f "$FLAG" ]; then
     ACTIVE=$(tr -d '[:space:]' < "$FLAG")
-    SELF_HOSTNAME=$(hostname)
-    case "$SELF_HOSTNAME" in
-        PhT-RB5)   SELF="rpi1" ;;
-        PhT-RB5i2) SELF="rpi2" ;;
-        *)         SELF="" ;;
-    esac
+    source "$REPO/lib-role.sh"
+    SELF=$(role_of "$(hostname)")
     if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
         echo "[$LOG_DATE] ⚠️  Ce RPi ($SELF) n'est pas l'actif ($ACTIVE)."
         echo "[$LOG_DATE]    Lancez ce script sur le RPi actif ($ACTIVE)."

@@ -114,11 +114,11 @@ if [ "${1:-}" = "--selftest" ]; then
   exit $fail
 fi
 
-case "$(hostname)" in
-  PhT-RB5)   SELF="rpi1"; PEER="rpi2"; PEER_IP="192.168.1.223" ;;
-  PhT-RB5i2) SELF="rpi2"; PEER="rpi1"; PEER_IP="192.168.1.222" ;;
-  *) log "Hostname inconnu ($(hostname)) — abandon (aucune action)."; exit 0 ;;
-esac
+# Sourcé APRÈS le bloc --selftest (la CI l'exécute hors de /opt/5hostachy).
+source "$REPO/lib-role.sh"
+SELF=$(role_of "$(hostname)")
+[ -n "$SELF" ] || { log "Hostname inconnu ($(hostname)) — abandon (aucune action)."; exit 0; }
+PEER=$(role_peer "$SELF"); PEER_IP=$(role_ip "$PEER")
 
 LOCAL_ACTIVE=$(cat "$FLAG" 2>/dev/null | tr -d '[:space:]' || echo "")
 log "Boot role-guard sur $SELF — .active local='$LOCAL_ACTIVE'."

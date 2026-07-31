@@ -92,10 +92,11 @@ jobs:
           exit $st
 
       - name: Self-tests des fonctions de décision
-        # Ces trois scripts exposent leur logique en fonction PURE + --selftest
+        # Ces scripts exposent leur logique en fonction PURE + --selftest
         # (aucun effet de bord : ni SSH, ni docker, ni écriture). C'est le seul
         # moyen de tester une décision d'infra sans les deux RPi.
         run: |
+          bash lib-role.sh          --selftest
           bash boot-role-guard.sh   --selftest
           bash health-watch.sh      --selftest
           bash check-reliability.sh --selftest
