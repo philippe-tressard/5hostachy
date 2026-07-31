@@ -45,6 +45,10 @@ LOG_KEEP_LINES=20000
 # nocturne rebuilde l'image du peer à chaque fois et compte sur ce cache pour
 # ne PAS rejouer `npm run build` (risque d'OOM sur RPi).
 BUILD_CACHE_KEEP=10737418240   # 10 Go
+BUILD_CACHE_MAX_AGE_H=168      # 7 j : au-delà, une couche est périmée pour tous
+# Projet Compose de cette application. Sert à ne purger QUE ses propres images
+# sur un daemon partagé (rpi2 co-héberge List-dons, projet `listdons`).
+COMPOSE_PROJECT=5hostachy
 
 # --- Hygiène locale : à faire sur les DEUX nœuds ------------------------------
 # Rotation des logs, ownership du log auto-deploy, purge des images et du cache
@@ -54,20 +58,40 @@ BUILD_CACHE_KEEP=10737418240   # 10 Go
 # nocturne alternée). Constaté le 31/07/2026 : 80 218 lignes dans
 # hostachy-check.log et ~60 Go de cache de build sur le nœud standby.
 hygiene_locale() {
-    # Images sans tag (couches orphelines des rebuilds). Ne touche jamais une
-    # image référencée par un conteneur, même arrêté (standby compris).
-    log "[Hygiène] Nettoyage images Docker inutilisées..."
-    PRUNE_OUT=$(docker image prune -f 2>&1 | tail -1) || PRUNE_OUT="(docker image prune échoué)"
+    # Images sans tag (couches orphelines des rebuilds), **du projet 5hostachy
+    # seulement**. Le daemon Docker de rpi2 est partagé avec List-dons, co-hébergé :
+    # un `docker image prune` nu supprimerait aussi SES couches orphelines. Arbitrer
+    # sur les ressources d'une autre application n'est pas le rôle de cette
+    # maintenance — l'isolation vaut dans les deux sens. Les images construites par
+    # compose portent `com.docker.compose.project`, ce qui rend le filtre exact.
+    # Aucune image référencée par un conteneur, même arrêté (standby), n'est touchée.
+    log "[Hygiène] Nettoyage des images sans tag du projet $COMPOSE_PROJECT..."
+    PRUNE_OUT=$(docker image prune -f --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" 2>&1 | tail -1) \
+        || PRUNE_OUT="(échec du prune d'images)"
     log "  → $PRUNE_OUT"
 
     # Cache de build : JAMAIS purgé jusqu'au 31/07/2026 — `docker image prune`
     # ne le touche pas. Depuis que la bascule rebuilde systématiquement l'image
     # du peer (v2.20.19), il grossit toutes les nuits sur les deux nœuds :
     # 1113 entrées / ~64 Go sur rpi1 (disque à 66 %) et ~59 Go sur rpi2.
-    log "[Hygiène] Purge du cache de build Docker (plafond $(( BUILD_CACHE_KEEP / 1073741824 )) Go)..."
+    #
+    # ⚠ C'est le SEUL point de ce ménage qui ne peut pas être cloisonné :
+    # `docker builder prune` n'accepte aucun filtre par projet (Docker 29 :
+    # until / id / parents / description / inuse / private / shared / type), et le
+    # cache BuildKit est commun à tout le daemon. Un builder dédié
+    # (`docker buildx create`) le cloisonnerait vraiment, mais imposerait un
+    # `--builder` à tous les builds (auto-deploy ET bascule phase 0) et un driver
+    # conteneur sur un RPi : trop risqué pour l'enjeu.
+    # Donc : purge par ÂGE d'abord — une couche inutilisée depuis plus de 7 jours
+    # est périmée pour tout le monde, et les couches fraîches de List-dons y
+    # survivent — puis plafond de taille en simple garde-fou.
+    log "[Hygiène] Purge du cache de build inutilisé depuis > ${BUILD_CACHE_MAX_AGE_H} h..."
+    BPRUNE_AGE=$(docker builder prune -f --filter "until=${BUILD_CACHE_MAX_AGE_H}h" 2>&1 | tail -1) \
+        || BPRUNE_AGE="(purge par âge échouée)"
+    log "  → $BPRUNE_AGE"
+    log "[Hygiène] Garde-fou : plafond $(( BUILD_CACHE_KEEP / 1073741824 )) Go..."
     BPRUNE_OUT=$(docker builder prune -f --max-used-space "$BUILD_CACHE_KEEP" 2>&1 | tail -1) \
-        || BPRUNE_OUT=$(docker builder prune -f --filter until=168h 2>&1 | tail -1) \
-        || BPRUNE_OUT="(docker builder prune échoué)"
+        || BPRUNE_OUT="(plafonnement échoué)"
     log "  → $BPRUNE_OUT"
 
     # Rotation par GLOB, et non par liste nominative : hostachy-reliability.log
