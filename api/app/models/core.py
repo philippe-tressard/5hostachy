@@ -1061,6 +1061,9 @@ class Evenement(SQLModel, table=True):
     frequence_type: Optional[str] = Field(default=None)   # "semaines", "mois", "fois_par_an"
     frequence_valeur: Optional[int] = Field(default=None)
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
+    # Même convention que Ticket.photos_urls (tableau JSON d'URLs internes) : le
+    # modèle portait déjà trois noms pour la même notion, ne pas en créer un 4ᵉ.
+    photos_urls: Optional[str] = None  # JSON array of photo URLs
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False

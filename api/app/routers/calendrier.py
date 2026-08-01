@@ -1,4 +1,5 @@
 """Router calendrier — événements de la résidence."""
+import json
 from datetime import datetime, date, timedelta
 from typing import Optional
 
@@ -11,6 +12,7 @@ from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
 from app.utils.liens import lien_element
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
+from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import evenement_visible
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
@@ -58,6 +60,9 @@ class EvenementRead(BaseModel):
     frequence_valeur: Optional[int] = None
     affichable: bool = True
     archivee: bool = False
+    # Stocké en colonne comme un tableau JSON (convention Ticket.photos_urls) ;
+    # exposé en liste pour que le front n'ait rien à désérialiser.
+    photos_urls: list[str] = []
 
     class Config:
         from_attributes = True
@@ -78,12 +83,21 @@ class EvenementUpdate(BaseModel):
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: Optional[bool] = None
+    # Sert uniquement à RETIRER des photos : l'ajout passe par l'endpoint
+    # d'upload, seul capable de valider et de redimensionner le fichier.
+    photos_urls: Optional[list[str]] = None
 
 
 _ROLES_AG = (RoleUtilisateur.propriétaire, RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
 
+
 def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
-    data = EvenementRead.model_validate(ev)
+    # La colonne stocke un tableau JSON, le schéma expose une liste : on convertit
+    # AVANT la validation, sinon pydantic reçoit une chaîne là où il attend une
+    # liste et rejette l'événement entier.
+    brut = ev.model_dump()
+    brut["photos_urls"] = parse_photos(ev.photos_urls)
+    data = EvenementRead.model_validate(brut)
     auteur = session.get(Utilisateur, ev.auteur_id)
     data.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
     if ev.prestataire_id:
@@ -292,6 +306,10 @@ def update_evenement(
     data = body.model_dump(exclude_unset=True)
     if data.get('archivee') is True and ev.statut_kanban != "termine":
         raise HTTPException(422, "Seuls les événements terminés peuvent être archivés")
+    if "photos_urls" in data:
+        # Liste → tableau JSON, en ne conservant que nos propres URLs (cf.
+        # _photos_internes). Ce champ ne sert qu'à retirer des photos.
+        data["photos_urls"] = json.dumps(photos_internes(data["photos_urls"] or []))
     old_statut = ev.statut_kanban
     for k, v in data.items():
         setattr(ev, k, v)

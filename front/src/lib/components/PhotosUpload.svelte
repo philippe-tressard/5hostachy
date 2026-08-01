@@ -29,6 +29,11 @@
 	export let upload: ((file: File) => Promise<string>) | null = null;
 	export let remove: ((url: string) => Promise<string[] | void>) | null = null;
 	export let accept = 'image/jpeg,image/png,image/webp';
+	// Posé sur l'input fichier pour qu'un `<label for="…">` de la page le désigne :
+	// sans lui, le libellé « Photos » ne référence rien — cliquer dessus ne fait
+	// rien et les lecteurs d'écran annoncent un champ sans nom. Même correctif que
+	// celui apporté à RichEditor le 28/07/2026.
+	export let id: string | undefined = undefined;
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
@@ -81,7 +86,7 @@
 	{#if !readonly && upload}
 		<label class="btn btn-sm btn-outline photos-add" class:disabled={complet || uploading}>
 			{uploading ? '⏳ Envoi…' : `\u{1F4F7} ${label}`}
-			<input type="file" {accept} disabled={complet || uploading} on:change={ajouter} />
+			<input {id} type="file" {accept} disabled={complet || uploading} on:change={ajouter} />
 		</label>
 		<span class="photos-compte">{urls.length}/{max}</span>
 	{/if}

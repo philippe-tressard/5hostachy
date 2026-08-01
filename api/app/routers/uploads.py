@@ -13,7 +13,7 @@ import io
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Copropriete, Publication, Ticket, Utilisateur
+from app.models.core import Copropriete, Evenement, Publication, Ticket, Utilisateur
 from sqlmodel import Session, select
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -149,6 +149,43 @@ def upload_ticket_photo(
     photos.append(url)
     ticket.photos_urls = json.dumps(photos)
     session.add(ticket)
+    session.commit()
+    return {"url": url, "photos_urls": photos}
+
+
+@router.post("/evenement/{ev_id}", summary="Ajouter une photo à un événement (CS/Admin)")
+def upload_evenement_photo(
+    ev_id: int,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Ajoute une photo à un événement existant (max 5).
+
+    Calque exact de l'endpoint ticket — même colonne `photos_urls`, même plafond,
+    même helper de validation/redimensionnement. Seul le contrôle d'accès diffère :
+    seuls le CS et l'admin créent et modifient des événements (cf. calendrier.py).
+    """
+    import json
+
+    ev = session.get(Evenement, ev_id)
+    if not ev:
+        raise HTTPException(404, "Événement introuvable")
+
+    photos: list[str] = []
+    if ev.photos_urls:
+        try:
+            photos = json.loads(ev.photos_urls)
+        except Exception:
+            photos = []
+
+    if len(photos) >= 5:
+        raise HTTPException(400, "Maximum 5 photos par événement.")
+
+    url = _save_image(file, "evenements", max_dim=1200)
+    photos.append(url)
+    ev.photos_urls = json.dumps(photos)
+    session.add(ev)
     session.commit()
     return {"url": url, "photos_urls": photos}
 

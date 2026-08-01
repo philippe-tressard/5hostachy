@@ -446,6 +446,20 @@ export const calendrier = {
 	update: (id: number, data: unknown) => api.patch<any>(`/calendrier/${id}`, data),
 	archive: (id: number) => api.patch<any>(`/calendrier/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/calendrier/${id}`),
+	// Même contrat que tickets.uploadPhoto : l'ajout passe par l'endpoint
+	// d'upload (seul à valider format, taille et redimensionnement) ; le retrait
+	// passe par `update`, qui n'accepte que nos propres URLs.
+	uploadPhoto: async (evId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
+		const fd = new FormData();
+		fd.append('file', file);
+		const res = await fetch(`${BASE}/uploads/evenement/${evId}`, { method: 'POST', body: fd, credentials: 'include' });
+		if (!res.ok) {
+			let detail = 'Erreur upload photo';
+			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
+			throw new ApiError(res.status, detail);
+		}
+		return res.json();
+	},
 };
 
 export const prestataires = {
