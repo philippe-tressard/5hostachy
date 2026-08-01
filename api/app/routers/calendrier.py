@@ -34,6 +34,7 @@ class EvenementCreate(BaseModel):
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: bool = True
+    epingle: bool = False
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
@@ -60,6 +61,7 @@ class EvenementRead(BaseModel):
     frequence_valeur: Optional[int] = None
     affichable: bool = True
     archivee: bool = False
+    epingle: bool = False
     # Stocké en colonne comme un tableau JSON (convention Ticket.photos_urls) ;
     # exposé en liste pour que le front n'ait rien à désérialiser.
     photos_urls: list[str] = []
@@ -83,6 +85,7 @@ class EvenementUpdate(BaseModel):
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: Optional[bool] = None
+    epingle: Optional[bool] = None
     # Sert uniquement à RETIRER des photos : l'ajout passe par l'endpoint
     # d'upload, seul capable de valider et de redimensionner le fichier.
     photos_urls: Optional[list[str]] = None

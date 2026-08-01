@@ -83,6 +83,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	// `affichable: false` par le Kanban) — sinon une seule campagne annuelle inonde
 	// le tableau de bord.
 	$: if (form.type === 'maintenance_recurrente') form.affichable = false;
+	// Épingler suppose d'être dans le fil : les deux ne peuvent pas diverger.
+	$: if (!form.affichable) form.epingle = false;
 
 	const types = [
 		{ val: 'travaux', label: '\u{1F528} Travaux' },
@@ -290,7 +292,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	}
 
 	function resetForm() {
-		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
+		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, epingle: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
 		formPerimetreCible = ['résidence'];
 		editId = null;
 		for (const u of photosUrls) if (u.startsWith('blob:')) URL.revokeObjectURL(u);
@@ -309,6 +311,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			frequence_type: ev.frequence_type ?? '',
 			frequence_valeur: ev.frequence_valeur ? String(ev.frequence_valeur) : '',
 			affichable: ev.affichable ?? true,
+			epingle: ev.epingle ?? false,
 			partager_whatsapp: ev.partager_whatsapp ?? false,
 			envoyer_syndic: ev.envoyer_syndic ?? false,
 			envoyer_cs: ev.envoyer_cs ?? false,
@@ -339,6 +342,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			frequence_type: ft || null,
 			frequence_valeur: fv ? Number(fv) : null,
 			affichable: form.affichable,
+			epingle: form.affichable && form.epingle,
 			partager_whatsapp: form.partager_whatsapp,
 			envoyer_syndic: form.envoyer_syndic,
 			envoyer_cs: form.envoyer_cs,
@@ -826,6 +830,17 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 								disabled={form.type === 'maintenance_recurrente'} style="width:auto;margin:0" />
 							<span>Afficher dans le fil d'activité du tableau de bord</span>
 						</label>
+						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.4rem"
+							class:desactive={!form.affichable}>
+							<input type="checkbox" bind:checked={form.epingle}
+								disabled={!form.affichable} style="width:auto;margin:0" />
+							<span>📌 Épingler dans le fil d'activité</span>
+						</label>
+						{#if !form.affichable}
+							<p style="margin:.2rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
+								Un événement absent du fil ne peut pas y être épinglé.
+							</p>
+						{/if}
 						{#if form.type === 'maintenance_recurrente'}
 							<p style="margin:.3rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
 								Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans le Kanban.

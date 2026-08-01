@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, fichiersApi, ApiError, type TicketEvolution } from '$lib/api';
@@ -126,17 +126,42 @@
 	$: statusInfo = STATUTS.find((s) => s.value === ticket?.statut) ?? STATUTS[0];
 	$: canReply = ticket && !['fermé'].includes(ticket.statut);
 
+	// ── Lire d'abord, écrire ensuite ───────────────────────────────────────
+	// Cette page est atteinte surtout par un lien de notification (WhatsApp,
+	// e-mail) : on y vient pour LIRE. Or l'éditeur, les photos, les documents et
+	// le champ e-mail formaient un écran entier de contrôles avant même l'échange
+	// — sur mobile, toute la page. Pire, un ticket déjà résolu proposait un
+	// éditeur complet, suggérant une action que personne n'avait demandée.
+	// Le bloc de réponse est donc replié derrière un bouton, et ne s'ouvre
+	// d'emblée que sur une intention explicite (`?repondre=1`), que les liens de
+	// notification ne portent pas.
+	let repondreOuvert = false;
+	let msgVise: number | null = null;
+	$: clos = ticket && ['résolu', 'annulé', 'fermé'].includes(ticket.statut);
+
 	async function loadEvolutions() {
 		try { evolutions = await ticketsApi.evolutions(ticketId); } catch { /* silencieux */ }
 	}
 
 	onMount(async () => {
+		// Intention explicite : un lien « répondre » ouvre l'éditeur d'emblée.
+		// Les liens de notification, eux, mènent à la lecture.
+		repondreOuvert = new URLSearchParams(window.location.search).get('repondre') === '1';
+		// Ancre `#msg-42` : les notifications de réponse pointent sur le message qui
+		// a déclenché l'alerte. Sans ce défilement, le lecteur atterrissait en haut
+		// d'un fil parfois long, à lui de retrouver la nouveauté.
+		const ancre = window.location.hash.match(/^#msg-(\d+)$/);
+		if (ancre) msgVise = Number(ancre[1]);
 		try {
 			[ticket, messages] = await Promise.all([
 				ticketsApi.get(ticketId),
 				ticketsApi.messages(ticketId),
 			]);
 			await loadEvolutions();
+			if (msgVise !== null) {
+				await tick();
+				document.getElementById(`msg-${msgVise}`)?.scrollIntoView({ block: 'center' });
+			}
 		} catch {
 			toast('error', 'Ticket introuvable');
 		} finally {
@@ -299,7 +324,8 @@
 		{#each messages as msg}
 			{@const isOwn = msg.auteur?.id === $currentUser?.id}
 			{#if !msg.interne || $isCS}
-				<div class="message-bubble" class:own={isOwn} class:interne={msg.interne}>
+				<div id="msg-{msg.id}" class="message-bubble" class:own={isOwn} class:interne={msg.interne}
+					class:message-vise={msgVise === msg.id}>
 					<div class="msg-header">
 						<strong>{msg.auteur?.prenom} {msg.auteur?.nom}</strong>
 						{#if msg.interne}<span class="badge badge-yellow" style="font-size:.65rem">interne</span>{/if}
@@ -330,7 +356,15 @@
 			{/if}
 		{/each}
 
-		{#if canReply}
+		{#if canReply && !repondreOuvert}
+			<div class="card" style="text-align:center;padding:.9rem">
+				<button type="button" class="btn btn-outline" on:click={() => (repondreOuvert = true)}>
+					{clos ? '↩️ Rouvrir la discussion' : '💬 Répondre'}
+				</button>
+			</div>
+		{/if}
+
+		{#if canReply && repondreOuvert}
 			<form class="reply-form card" on:submit|preventDefault={sendMessage}>
 				<RichEditor bind:value={newContent} placeholder="Votre réponse…" minHeight="80px" />
 				{#if $isCS}
@@ -523,6 +557,10 @@
 {/if}
 
 <style>
+	/* Message pointé par l'ancre d'une notification : un cadre suffit à le
+	   situer, sans clignotement ni couleur criarde — on vient lire, pas être
+	   alerté une seconde fois. */
+	.message-vise { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 10px; }
 	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); text-decoration: none; margin-bottom: .75rem; }
 	.back-link:hover { color: var(--color-primary); }
 	.ticket-meta { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .4rem; }

@@ -67,3 +67,20 @@ def lien_element(prefixe: str, identifiant: int) -> str:
 def page_element(prefixe: str) -> str:
     """Page seule (sans onglet ni ancre) — pour un repli quand l'id est inconnu."""
     return EMPLACEMENTS[prefixe][0]
+
+def lien_ticket(ticket_id: int, message_id: int | None = None) -> str:
+    """URL d'un ticket, éventuellement ancrée sur un message précis.
+
+    Les six URLs `/tickets/{id}` de tickets.py étaient fabriquées à la main,
+    alors que ce module existe précisément pour que personne n'ait à le faire.
+    Conséquence : une notification « nouvelle réponse » déposait le lecteur en
+    haut de la page, à lui de retrouver ce qui avait déclenché l'alerte.
+    Avec `message_id`, il arrive dessus.
+
+    >>> lien_ticket(23)
+    '/tickets/23'
+    >>> lien_ticket(23, 45)
+    '/tickets/23#msg-45'
+    """
+    base = f"/tickets/{ticket_id}"
+    return f"{base}#msg-{message_id}" if message_id else base
