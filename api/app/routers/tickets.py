@@ -1,5 +1,6 @@
 """Router tickets — création, suivi, messagerie, évolutions."""
 import json
+from app.utils.liens import lien_ticket
 import os
 import random
 import string
@@ -242,7 +243,7 @@ def create_ticket(
             type="ticket_update",
             titre=f"Nouveau ticket : {ticket.titre}",
             corps=ticket.description[:200],
-            lien=f"/tickets/{ticket.id}",
+            lien=lien_ticket(ticket.id),
             urgente=body.categorie == "urgence",
         )
         session.add(notif)
@@ -730,7 +731,7 @@ def update_ticket(
             type="ticket_update",
             titre=f"Ticket #{ticket.numero} mis à jour",
             corps=notif_corps,
-            lien=f"/tickets/{ticket.id}",
+            lien=lien_ticket(ticket.id),
         )
         session.add(notif)
     session.add(ticket)
@@ -818,6 +819,10 @@ def add_message(
     ticket.mis_a_jour_le = datetime.utcnow()
     session.add(msg)
     session.add(ticket)
+    # L'id du message est nécessaire AVANT le commit : les notifications
+    # ci-dessous ancrent leur lien dessus (`#msg-42`), pour déposer le
+    # lecteur sur la réponse qui a déclenché l'alerte et non en haut de page.
+    session.flush()
 
     # Notification email — nouveau message sur le ticket
     if not body.interne:
@@ -854,7 +859,7 @@ def add_message(
                         type="ticket_update",
                         titre=f"Nouvelle réponse sur le ticket #{ticket.numero}",
                         corps=body.contenu[:200],
-                        lien=f"/tickets/{ticket.id}",
+                        lien=lien_ticket(ticket.id, msg.id),
                     ))
         else:
             # Résident répond → notifier les CS/Admin
@@ -880,7 +885,7 @@ def add_message(
                         type="ticket_update",
                         titre=f"Nouveau message sur le ticket #{ticket.numero}",
                         corps=body.contenu[:200],
-                        lien=f"/tickets/{ticket.id}",
+                        lien=lien_ticket(ticket.id, msg.id),
                     ))
 
     session.commit()
@@ -1035,7 +1040,7 @@ def add_evolution(
             type="ticket_update",
             titre=titre_notif,
             corps=(body.contenu or "")[:200],
-            lien=f"/tickets/{ticket.id}",
+            lien=lien_ticket(ticket.id),
         ))
 
     session.commit()
@@ -1085,7 +1090,7 @@ def add_evolution(
                     msg += (
                         f"\n\n\U0001f4dc Cet échange comporte {nb} commentaire(s) précédent(s).\n"
                         f"Consultez l'historique complet sur l'application :\n"
-                        f"\U0001f449 {site_url}/tickets/{ticket.id}"
+                        f"\U0001f449 {site_url}{lien_ticket(ticket.id)}"
                     )
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
