@@ -2313,8 +2313,9 @@
 						titre et message)
 					</p>
 
-					<label style="margin-top:.85rem">Photos</label>
+					<label for="ah-photos" style="margin-top:.85rem">Photos</label>
 					<PhotosUpload
+						id="ah-photos"
 						bind:urls={ahPhotos}
 						max={AH_MAX_PHOTOS}
 						label="Ajouter une photo"
