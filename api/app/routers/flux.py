@@ -101,6 +101,21 @@ def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
     return clean
 
 
+def _badges_marqueurs(obj) -> list[str]:
+    """Marqueurs « Épinglé » / « Urgent », identiques quelle que soit la rubrique.
+
+    Ils étaient construits à la main pour les publications ; les événements ont
+    désormais le même épinglage, et rien ne justifie deux écritures du même badge.
+    `getattr` avec défaut : toutes les rubriques ne portent pas les deux notions.
+    """
+    marqueurs = []
+    if getattr(obj, "epingle", False):
+        marqueurs.append("📌 Épinglé")
+    if getattr(obj, "urgente", False):
+        marqueurs.append("🔴 Urgent")
+    return marqueurs
+
+
 def _parse_photos(raw: Optional[str]) -> list[str]:
     """Parse un champ JSON photos_urls / fichiers_urls en liste de strings."""
     if not raw:
@@ -402,11 +417,7 @@ def get_flux(
         )
         if not publication_visible(p, user):
             continue
-        badges = []
-        if p.epingle:
-            badges.append("📌 Épinglé")
-        if p.urgente:
-            badges.append("🔴 Urgent")
+        badges = _badges_marqueurs(p)
         if p.statut and p.statut != "publie":
             labels = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
             badges.append(labels.get(p.statut, p.statut))
@@ -453,7 +464,7 @@ def get_flux(
             p = session.get(Prestataire, ev.prestataire_id)
             if p:
                 prest_name = p.nom
-        badges_ev = [ev.type]
+        badges_ev = _badges_marqueurs(ev) + [ev.type]
         if prest_name:
             badges_ev.append(prest_name)
         # Déterminer si l'événement concerne le bâtiment de l'utilisateur
@@ -492,6 +503,7 @@ def get_flux(
                 "concerne_mon_batiment": concerne_bat,
                 "full_html": ev.description,
                 "statut_kanban": ev.statut_kanban,
+                "epingle": ev.epingle,
                 # Le fil sait déjà rendre `photos_urls` (tickets) : rien à écrire
                 # côté carte, il suffit de le fournir.
                 "photos_urls": _parse_photos(ev.photos_urls),
@@ -636,6 +648,11 @@ def get_flux(
                 "prix": a.prix,
                 "auteur": auteur_ann,
                 "resume": _strip_html(a.description),
+                # Même clé que partout ailleurs : la vignette du fil (FluxVignette)
+                # ne connaît que `photos_urls` et `image_url`. Une rubrique qui
+                # stocke ses photos sous un autre nom doit les exposer ici sous
+                # ce nom-là, sinon elle est la seule à ne pas avoir d'aperçu.
+                "photos_urls": _parse_photos(a.photos_json),
             },
         ))
 
