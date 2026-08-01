@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';

@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 import { onMount } from 'svelte';

@@ -1,4 +1,4 @@
-﻿# Exigences fonctionnelles — Site web
+# Exigences fonctionnelles — Site web
 
 > Priorités : **Haute** (MVP), **Moyenne** (phase 1), **Basse** (phase 2).
 

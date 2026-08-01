@@ -1,4 +1,4 @@
-﻿# DÃ©ploiement automatique â€” RPi 5
+# DÃ©ploiement automatique â€” RPi 5
 
 Synchronisation automatique du code depuis GitHub vers le Raspberry Pi 5.
 

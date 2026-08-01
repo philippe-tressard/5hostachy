@@ -83,6 +83,22 @@ jobs:
           done
           exit $st
 
+      - name: Absence de BOM dans le code et la configuration
+        # Le contrôle ci-dessus ne couvre que les scripts shell. Or le BOM est un
+        # artefact de poste Windows, pas un problème de shell : il avait déjà
+        # rendu `front/package.json` illisible par Vite (CI rouge après merge), et
+        # 27 fichiers versionnés en portaient encore un le 01/08/2026 — dont deux
+        # sources Python, douze pages Svelte et `.gitignore`. Aucun ne cassait
+        # aujourd'hui ; rien ne garantissait que le prochain ne casserait pas.
+        # Les fins de ligne, elles, ne sont PAS contrôlées ici : le dépôt est
+        # légitimement mixte CRLF/LF hors des scripts.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.py' '*.ts' '*.js' '*.mjs' '*.svelte' '*.json' '*.yml' '*.yaml' '*.css' '*.html' '.gitignore'); do
+            head -c3 "$f" | grep -q $'\xef\xbb\xbf' && { echo "::error file=$f::BOM UTF-8 en tête — écrire ce fichier sans BOM (Set-Content -Encoding utf8 en pose un)"; st=1; }
+          done
+          exit $st
+
       - name: Syntaxe de tous les scripts shell
         run: |
           st=0

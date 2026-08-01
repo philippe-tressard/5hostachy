@@ -1,4 +1,4 @@
-﻿import re
+import re
 
 filepath = r"c:\Dev\5hostachy\front\src\routes\(app)\tickets\+page.svelte"
 

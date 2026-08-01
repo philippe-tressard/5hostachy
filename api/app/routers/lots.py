@@ -1,4 +1,4 @@
-﻿"""Router lots — consultation et import (staging) des lots."""
+"""Router lots — consultation et import (staging) des lots."""
 from __future__ import annotations
 
 import json

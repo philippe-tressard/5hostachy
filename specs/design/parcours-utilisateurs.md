@@ -1,4 +1,4 @@
-﻿# Parcours utilisateurs
+# Parcours utilisateurs
 
 > Les parcours utilisateurs (user journeys) décrivent de bout en bout l'expérience vécue par un utilisateur pour accomplir un objectif clé. Ils complètent les [cas d'utilisation](../commun/cas-utilisation.md) en se concentrant sur la fluidité et les points de friction potentiels.
 

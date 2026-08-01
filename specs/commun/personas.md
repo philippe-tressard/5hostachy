@@ -1,4 +1,4 @@
-﻿# Personas
+# Personas
 
 > Profils d'utilisateurs cibles du projet 5Hostachy.
 

@@ -1,4 +1,4 @@
-﻿# Stack technique
+# Stack technique
 
 > Architecture pensÃ©e pour un dÃ©ploiement autonome sur **Raspberry Pi 5** (ARM64, 4 ou 8 Go RAM).
 > PrioritÃ© : simplicitÃ© d'installation, faible consommation de ressources, maintenance minimale.
