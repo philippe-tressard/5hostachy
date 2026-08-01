@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { capsLockActif } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { auth as authApi, ApiError } from '$lib/api';
@@ -19,13 +20,15 @@
 	let done = false;
 	let tokenInvalide = !token;
 
-	function checkCapsLock(e: KeyboardEvent) {
-		capsLockOn = e.getModifierState('CapsLock');
+	function checkCapsLock(e: KeyboardEvent | FocusEvent) {
+		// `null` au focus : l'état des touches n'y est pas connaissable.
+		const etat = capsLockActif(e);
+		if (etat !== null) capsLockOn = etat;
 	}
 
 	async function submit() {
 		if (nouveauMdp !== confirmMdp) {
-			toast('Les mots de passe ne correspondent pas.', 'error');
+			toast('error', 'Les mots de passe ne correspondent pas.');
 			return;
 		}
 		saving = true;
@@ -34,10 +37,10 @@
 			done = true;
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 400) {
-				toast('Lien invalide ou expiré. Faites une nouvelle demande.', 'error');
+				toast('error', 'Lien invalide ou expiré. Faites une nouvelle demande.');
 				tokenInvalide = true;
 			} else {
-				toast('Une erreur est survenue. Réessayez.', 'error');
+				toast('error', 'Une erreur est survenue. Réessayez.');
 			}
 		} finally {
 			saving = false;

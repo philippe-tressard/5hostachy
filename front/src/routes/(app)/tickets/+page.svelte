@@ -5,7 +5,7 @@
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
+	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
 	import { perimetreLabel } from '$lib/utils';
@@ -47,10 +47,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}',
 	};
 
-	function renderDesc(c: string) {
-		const t = c.trimStart();
-		return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`);
-	}
 
 	onMount(async () => {
 		try {
@@ -316,7 +312,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			</div>
 
 			{#if !expanded}
-				<div class="tk-preview clamp-5">{@html renderDesc(t.description)}</div>
+				<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
 			{/if}
 
 			{#if expanded}
@@ -408,7 +404,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 						</div>
 					{:else}
 						<!-- Corps normal -->
-						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
 						{#if t.photos_urls && t.photos_urls.length > 0}
 							<div class="tk-photos">
 								{#each t.photos_urls as photoUrl}
@@ -445,11 +441,11 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 													Statut : <strong>{STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong>
 												</span>
 											{#if evol.contenu}
-												<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+												<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 											{/if}
 										{:else if evol.type === 'reponse' || evol.type === 'commentaire'}
 											{#if evol.contenu}
-												<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+												<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 											{/if}
 											{/if}
 										</div>
@@ -520,7 +516,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 							</div>
 
 							{#if !expanded}
-								<div class="tk-preview clamp-5">{@html renderDesc(t.description)}</div>
+								<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
 							{/if}
 
 							{#if expanded}
@@ -582,7 +578,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 										</div>
 									{:else}
 										<!-- Corps normal -->
-										<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+										<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
 										{#if t.photos_urls && t.photos_urls.length > 0}
 											<div class="tk-photos">
 												{#each t.photos_urls as photoUrl}
@@ -619,11 +615,11 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 																	Statut : <strong>{STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong>
 																</span>
 															{#if evol.contenu}
-																<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+																<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 															{/if}
 														{:else if evol.type === 'reponse' || evol.type === 'commentaire'}
 															{#if evol.contenu}
-																<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+																<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 															{/if}
 														{/if}
 														</div>

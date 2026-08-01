@@ -55,3 +55,22 @@ export const PERIMETRE_LABELS: Record<string, string> = {
 export function perimetreLabel(items: string[]): string {
 	return (items ?? []).map((i) => PERIMETRE_LABELS[i] ?? i).join(' · ');
 }
+
+/**
+ * État de la touche Verr. Maj., ou `null` si l'événement ne permet pas de le savoir.
+ *
+ * `getModifierState()` n'existe que sur les événements clavier et souris : un
+ * `FocusEvent` ne l'a pas. Or les trois pages d'authentification câblaient le
+ * même handler sur `on:focus` en plus de `on:keydown`/`on:keyup`, et il levait
+ * donc une `TypeError` à chaque fois que l'utilisateur cliquait dans le champ
+ * mot de passe — sur la connexion, l'inscription et la réinitialisation.
+ *
+ * Rendre `null` plutôt que lever : au focus, l'état des touches n'est tout
+ * simplement pas connaissable, ce n'est pas une erreur. L'appelant conserve
+ * alors la valeur qu'il avait.
+ */
+export function capsLockActif(e: KeyboardEvent | FocusEvent): boolean | null {
+	const getModifierState = (e as KeyboardEvent).getModifierState;
+	if (typeof getModifierState !== 'function') return null;
+	return getModifierState.call(e, 'CapsLock');
+}

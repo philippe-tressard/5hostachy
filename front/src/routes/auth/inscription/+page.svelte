@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { capsLockActif } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { auth as authApi, ApiError } from '$lib/api';
@@ -27,8 +28,10 @@
 	let capsLockOn = false;
 	let error = '';
 
-	function checkCapsLock(e: KeyboardEvent) {
-		capsLockOn = e.getModifierState('CapsLock');
+	function checkCapsLock(e: KeyboardEvent | FocusEvent) {
+		// `null` au focus : l'état des touches n'y est pas connaissable.
+		const etat = capsLockActif(e);
+		if (etat !== null) capsLockOn = etat;
 	}
 	let success = false;
 	let loading = false;

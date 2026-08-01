@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.utils.liens import lien_element, page_element
+from app.utils.montants import montant_fr
 from app.models.core import (
     CommandeAcces,
     ConfigSite,
@@ -550,7 +551,7 @@ def get_flux(
         )
         if not dv_date:
             continue
-        montant = f"{dv.montant_estime:,.0f} €".replace(",", " ") if dv.montant_estime else None
+        montant = montant_fr(dv.montant_estime) if dv.montant_estime else None
         items.append(FluxItem(
             id=f"dv_{dv.id}",
             type="devis",
@@ -638,7 +639,7 @@ def get_flux(
         date_ref = a.mis_a_jour_le or a.cree_le
         detail_parts = [_ANN_TYPE_LABELS.get(a.type_annonce, a.type_annonce)]
         if a.prix and a.type_annonce == "vente":
-            detail_parts.append(f"{a.prix:,.0f} €".replace(",", " "))
+            detail_parts.append(montant_fr(a.prix))
         if a.negotiable:
             detail_parts.append("négociable")
         auteur_ann = _auteur_nom(session, a.auteur_id) if a.contact_visible else None

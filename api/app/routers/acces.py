@@ -2,7 +2,9 @@
 import unicodedata
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile,
+)
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -19,6 +21,7 @@ from app.utils.auto_match_service import (
     _user_keys, _matches_user, _split_name_candidates,
     _create_user_vigiks, _create_user_telecommandes, _lot_coproprio_ids,
 )
+from app.utils.destinataires import membres_cs_notifiables
 
 router = APIRouter(prefix="/acces", tags=["accès"])
 
@@ -86,6 +89,7 @@ def mes_commandes(
 @router.post("/commandes", response_model=CommandeAccesRead, status_code=201)
 def creer_commande(
     body: CommandeAccesCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -106,6 +110,11 @@ def creer_commande(
     session.add(cmd)
     session.flush()
 
+    # Numéro affichable du lot — `lot_id` est un identifiant interne, illisible
+    # pour un membre du CS qui reçoit la demande.
+    lot = session.get(Lot, body.lot_id)
+    lot_numero = lot.numero if lot else str(body.lot_id)
+
     # Notifier CS
     cs = session.exec(
         select(Utilisateur).where(
@@ -117,9 +126,29 @@ def creer_commande(
             destinataire_id=membre.id,
             type="vigik",
             titre=f"Nouvelle demande de {body.type}",
-            corps=f"{user.prenom} {user.nom} — lot #{body.lot_id}",
+            corps=f"{user.prenom} {user.nom} — lot {lot_numero}",
             lien="/espace-cs",
         ))
+
+    # ── Email au CS ───────────────────────────────────────────────────────
+    # `vigik_commande_recue` n'était envoyé par personne : le CS ne découvrait
+    # la demande qu'en ouvrant l'application. Une commande de badge attend une
+    # décision humaine — elle doit atteindre son destinataire (01/08/2026).
+    # Passe par `membres_cs_notifiables`, source unique des destinataires CS.
+    destinataires_cs = membres_cs_notifiables(session)
+    if destinataires_cs:
+        from app.utils.email import send_email_group
+        background_tasks.add_task(
+            send_email_group,
+            code="vigik_commande_recue",
+            to_recipients=destinataires_cs,
+            context={
+                "type": body.type,
+                "lot": {"numero": lot_numero},
+                "demandeur": {"prenom": user.prenom, "nom": user.nom},
+            },
+        )
+
     session.commit()
     session.refresh(cmd)
     return cmd

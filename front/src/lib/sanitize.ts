@@ -71,3 +71,23 @@ export function safeRichContent(input: string | null | undefined): string {
 	if (looksLikeHtml) return safeHtml(value);
 	return safeHtml(value).replace(/\n/g, '<br>');
 }
+
+/**
+ * Comme `safeRichContent`, mais enveloppe le texte simple dans un `<p>`.
+ *
+ * Pourquoi deux fonctions plutôt qu'un paramètre : `safeRichContent` est appelée
+ * à l'intérieur d'un `<p>` existant (page Notifications), où produire un second
+ * `<p>` donnerait un HTML invalide. La différence est donc structurelle, pas une
+ * option — chaque appelant choisit celle qui correspond à son contexte.
+ *
+ * Cette variante était écrite en double sous le nom `renderDesc`, dans
+ * `tickets/+page.svelte` et `espace-cs/+page.svelte`, alors qu'elle ne diffère
+ * de `safeRichContent` que par cette enveloppe. Les descriptions de tickets et
+ * d'évolutions en ont besoin : elles sont rendues dans `.rich-content`, dont les
+ * styles (interlignage, marges) s'appliquent aux blocs.
+ */
+export function safeDescription(input: string | null | undefined): string {
+	if (!input) return '';
+	if (input.trimStart().startsWith('<')) return safeHtml(input);
+	return safeHtml(`<p>${input.replace(/\n/g, '<br>')}</p>`);
+}
