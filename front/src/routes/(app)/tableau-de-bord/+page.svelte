@@ -126,17 +126,17 @@
 		return true;
 	});
 
-	// ── Déduplication : événements futurs avec date → prochaines échéances seulement ─
-	$: prochainsIds = new Set((data?.sante.prochains ?? []).filter(p => p.id).map(p => p.id));
-	$: filItems = filteredItems.filter(item => {
-		// Les événements calendrier avec date future → prochaines échéances uniquement
-		if (item.type === 'evenement') {
-			if (item.id && prochainsIds.has(item.id)) return false;
-			const debut = item.meta?.debut as string | undefined;
-			if (debut && new Date(debut) > new Date()) return false;
-		}
-		return true;
-	});
+	// ── Fil et agenda ne racontent pas la même chose ───────────────────────
+	// Un événement à venir était écarté du fil deux fois : parce qu'il figurait
+	// déjà dans « Prochaines échéances », et parce que sa date était future. Un
+	// nettoyage programmé restait donc introuvable dans le fil (01/08/2026),
+	// alors qu'il venait d'être créé — c'est-à-dire qu'il s'était bien passé
+	// quelque chose.
+	// Le fil répond à « quoi de neuf ? » et date la ligne à l'ANNONCE (le
+	// backend renvoie `date = cree_le`) ; l'agenda répond à « quoi ensuite ? »
+	// et affiche la date de tenue. Les deux vues coexistent sans doublon de
+	// sens : ce n'est pas la même information.
+	$: filItems = filteredItems;
 
 	// ── Classement du fil : récent / ancien / masqué ───────────────────────
 	const THIRTY_DAYS = 30 * 86400000;
@@ -648,6 +648,11 @@
 							</div>
 							{#if item.badges.length > 0 || (item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière')}
 								<div class="flux-badges">
+									<!-- La ligne est datée de l'annonce : sans ce repère, un événement
+									     à venir se lirait comme s'il avait déjà eu lieu. -->
+									{#if item.type === 'evenement' && item.meta?.debut && new Date(String(item.meta.debut)) > new Date()}
+										<span class="badge badge-orange" style="font-size:.7rem">🗓️ prévu le {fmtDatetimeShort(String(item.meta.debut))}</span>
+									{/if}
 									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
 										<span class="badge badge-blue" style="font-size:.7rem">🔹 {item.meta.perimetre}</span>
 									{/if}
@@ -662,8 +667,11 @@
 									{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
 									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}<p class="flux-meta-line">🔹 {item.meta.perimetre}</p>{/if}
 									{#if item.meta?.prestataire}<p class="flux-meta-line">🔧 {item.meta.prestataire}</p>{/if}
-									{#if item.meta?.debut && item.meta?.fin}
-										<p class="flux-meta-line">🕐 {fmtDatetimeShort(String(item.meta.debut))} → {fmtDatetimeShort(String(item.meta.fin))}</p>
+									<!-- `fin` est facultatif : l'exiger masquait la date de tenue de
+									     tout événement sans heure de fin — désormais l'information
+									     essentielle, puisque la ligne du fil est datée de l'annonce. -->
+									{#if item.meta?.debut}
+										<p class="flux-meta-line">🕐 {fmtDatetimeShort(String(item.meta.debut))}{#if item.meta?.fin} → {fmtDatetimeShort(String(item.meta.fin))}{/if}</p>
 									{/if}
 									{#if item.meta?.auteur}<p class="flux-meta-line">✍️ {item.meta.auteur}</p>{/if}
 									{#if item.meta?.statut}

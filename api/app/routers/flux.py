@@ -467,7 +467,16 @@ def get_flux(
         items.append(FluxItem(
             id=f"ev_{ev.id}",
             type="evenement",
-            date=ev.debut,
+            # Le fil est un JOURNAL : il répond à « quoi de neuf ? ». Ce qui s'y
+            # produit, c'est l'ANNONCE de l'événement, pas sa tenue — quand
+            # l'événement a lieu, rien ne se passe dans l'application. Dater la
+            # ligne au `debut` plaçait les événements futurs *dans l'avenir* du
+            # fil, où le front les écartait purement et simplement (01/08/2026 :
+            # un nettoyage programmé restait introuvable). L'agenda « Prochaines
+            # échéances » répond, lui, à « quoi ensuite ? » et reste daté au
+            # `debut`. Même objet, deux questions, deux dates — aucune n'est en
+            # trop.
+            date=ev.cree_le,
             cree_le=ev.cree_le,
             titre=ev.titre,
             detail=_strip_html(ev.description),
@@ -483,6 +492,9 @@ def get_flux(
                 "concerne_mon_batiment": concerne_bat,
                 "full_html": ev.description,
                 "statut_kanban": ev.statut_kanban,
+                # Le fil sait déjà rendre `photos_urls` (tickets) : rien à écrire
+                # côté carte, il suffit de le fournir.
+                "photos_urls": _parse_photos(ev.photos_urls),
             },
         ))
 
@@ -827,9 +839,11 @@ def get_flux(
     copro = session.exec(select(Copropriete)).first()
 
     prochains: list[dict] = []
-    for ev in prochains_evts[:15]:
-        if not evenement_visible(ev, user):
-            continue
+    # Filtrer AVANT de tronquer : la troncature portait sur la liste brute, donc
+    # 15 événements invisibles en tête (les maintenances récurrentes générées par
+    # le Kanban le sont pour TOUS, y compris admin) suffisaient à vider l'agenda.
+    prochains_visibles = [ev for ev in prochains_evts if evenement_visible(ev, user)]
+    for ev in prochains_visibles[:15]:
         perims_ev = _parse_perimetres(ev.perimetre)
         prest_ev_name = None
         if ev.prestataire_id:
