@@ -8,6 +8,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate, fmtDateLong, fmtDatetimeShort, fmtTime } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
+	import FluxVignette from '$lib/components/FluxVignette.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	$: _pc = getPageConfig($configStore, 'tableau-de-bord', { titre: 'Tableau de bord', navLabel: 'Accueil', descriptif: "Le pouls de votre résidence — tous les mouvements en un seul flux." });
@@ -645,6 +646,14 @@
 										<p class="flux-detail clamp-3">{item.detail}</p>
 									{/if}
 								</div>
+								<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
+								     inutile de montrer deux fois la même image. -->
+								{#if !isExpanded}
+									<FluxVignette
+										photos={(item.meta?.photos_urls as string[] | undefined) ?? []}
+										image={(item.meta?.image_url as string | undefined) ?? null}
+									/>
+								{/if}
 							</div>
 							{#if item.badges.length > 0 || (item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière')}
 								<div class="flux-badges">
@@ -772,6 +781,12 @@
 													<p class="flux-detail clamp-3">{item.detail}</p>
 												{/if}
 											</div>
+											{#if !isExpanded}
+												<FluxVignette
+													photos={(item.meta?.photos_urls as string[] | undefined) ?? []}
+													image={(item.meta?.image_url as string | undefined) ?? null}
+												/>
+											{/if}
 										</div>
 										{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
 											<div class="flux-badges">
