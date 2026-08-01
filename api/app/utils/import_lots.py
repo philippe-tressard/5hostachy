@@ -1,4 +1,4 @@
-﻿"""
+"""
 Utilitaire d'import des lots depuis un fichier Excel (.xlsx).
 
 Structure attendue du fichier (première ligne = en-tête ignorée) :

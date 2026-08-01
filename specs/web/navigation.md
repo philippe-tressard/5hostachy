@@ -1,4 +1,4 @@
-﻿# Navigation et arborescence — Site web
+# Navigation et arborescence — Site web
 
 > Structure des pages et navigation principale du site web (SvelteKit SSR/SPA).  
 > La navigation s'adapte à la taille d'écran :

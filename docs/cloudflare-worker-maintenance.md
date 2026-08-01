@@ -1,4 +1,4 @@
-﻿# Cloudflare Worker â€” Page de maintenance
+# Cloudflare Worker â€” Page de maintenance
 
 ## Principe
 

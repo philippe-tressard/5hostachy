@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
 import { api, config as configApi } from '$lib/api';
