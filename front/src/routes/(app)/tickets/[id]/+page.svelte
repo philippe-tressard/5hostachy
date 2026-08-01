@@ -126,11 +126,26 @@
 	$: statusInfo = STATUTS.find((s) => s.value === ticket?.statut) ?? STATUTS[0];
 	$: canReply = ticket && !['fermé'].includes(ticket.statut);
 
+	// ── Lire d'abord, écrire ensuite ───────────────────────────────────────
+	// Cette page est atteinte surtout par un lien de notification (WhatsApp,
+	// e-mail) : on y vient pour LIRE. Or l'éditeur, les photos, les documents et
+	// le champ e-mail formaient un écran entier de contrôles avant même l'échange
+	// — sur mobile, toute la page. Pire, un ticket déjà résolu proposait un
+	// éditeur complet, suggérant une action que personne n'avait demandée.
+	// Le bloc de réponse est donc replié derrière un bouton, et ne s'ouvre
+	// d'emblée que sur une intention explicite (`?repondre=1`), que les liens de
+	// notification ne portent pas.
+	let repondreOuvert = false;
+	$: clos = ticket && ['résolu', 'annulé', 'fermé'].includes(ticket.statut);
+
 	async function loadEvolutions() {
 		try { evolutions = await ticketsApi.evolutions(ticketId); } catch { /* silencieux */ }
 	}
 
 	onMount(async () => {
+		// Intention explicite : un lien « répondre » ouvre l'éditeur d'emblée.
+		// Les liens de notification, eux, mènent à la lecture.
+		repondreOuvert = new URLSearchParams(window.location.search).get('repondre') === '1';
 		try {
 			[ticket, messages] = await Promise.all([
 				ticketsApi.get(ticketId),
@@ -330,7 +345,15 @@
 			{/if}
 		{/each}
 
-		{#if canReply}
+		{#if canReply && !repondreOuvert}
+			<div class="card" style="text-align:center;padding:.9rem">
+				<button type="button" class="btn btn-outline" on:click={() => (repondreOuvert = true)}>
+					{clos ? '↩️ Rouvrir la discussion' : '💬 Répondre'}
+				</button>
+			</div>
+		{/if}
+
+		{#if canReply && repondreOuvert}
 			<form class="reply-form card" on:submit|preventDefault={sendMessage}>
 				<RichEditor bind:value={newContent} placeholder="Votre réponse…" minHeight="80px" />
 				{#if $isCS}
