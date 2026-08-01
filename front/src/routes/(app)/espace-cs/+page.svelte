@@ -6,7 +6,7 @@
 	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
+	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
@@ -193,7 +193,6 @@
 	let tkHistoryExpanded = false;
 	let tkExpandedYears = new Set<number>();
 
-	function renderDesc(c: string) { const t = c.trimStart(); return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`); }
 	function apiMessage(e: unknown, fallback = 'Erreur') {
 		if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: unknown }).message ?? fallback);
 		return fallback;
@@ -1397,7 +1396,7 @@
 				</div>
 
 				{#if !expanded}
-					<div class="tk-preview clamp-5">{@html renderDesc(t.description)}</div>
+					<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
 				{/if}
 
 				{#if expanded}
@@ -1427,7 +1426,7 @@
 									{#if t.auteur_batiment_nom}<span class="context-chip">Bâtiment : {t.auteur_batiment_nom}</span>{/if}
 								</div>
 							{/if}
-							<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+							<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
 							<small style="color:var(--color-text-muted);font-size:.78rem">
 								Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span>
 							</small>
@@ -1466,10 +1465,10 @@
 														{/key}
 													</div>
 													{:else if evol.contenu}
-														<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+														<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 													{/if}
 												{:else if evol.contenu}
-													<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>
+													<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 												{/if}
 												{#if evol.fichiers_urls?.length && tkEditingEvolId !== evol.id}
 													{@const photos = evol.fichiers_urls.filter((u: string) => /\.(jpe?g|png|webp)$/i.test(u))}
@@ -1550,7 +1549,7 @@
 							</div>
 						</div>
 						{#if !hExpanded}
-							<div class="tk-preview clamp-5">{@html renderDesc(t.description)}</div>
+							<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
 						{/if}
 						{#if hExpanded}
 							<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
@@ -1560,7 +1559,7 @@
 										{#if t.auteur_batiment_nom}<span class="context-chip">Bâtiment : {t.auteur_batiment_nom}</span>{/if}
 									</div>
 								{/if}
-								<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html renderDesc(t.description)}</div>
+								<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
 								<small style="color:var(--color-text-muted);font-size:.78rem">Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span></small>
 								{#if evols.length > 0}
 									{@const sorted = [...evols].sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())}
@@ -1574,7 +1573,7 @@
 													{#if evol.type === 'etat'}
 														<span class="evol-text">Statut : <strong>{TK_STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{TK_STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong></span>
 													{/if}
-													{#if evol.contenu}<div class="evol-content rich-content">{@html renderDesc(evol.contenu)}</div>{/if}
+													{#if evol.contenu}<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>{/if}
 												</div>
 											</div>
 										{/each}
@@ -1661,7 +1660,7 @@
 											<td>
 												<strong class="report-event-title">{ev.titre}</strong>
 												{#if ev.description}
-													<div class="report-event-desc rich-content">{@html renderDesc(ev.description)}</div>
+													<div class="report-event-desc rich-content">{@html safeDescription(ev.description)}</div>
 												{/if}
 											</td>
 											<td>

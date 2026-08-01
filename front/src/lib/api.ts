@@ -131,6 +131,14 @@ export interface User {
 	roles: string[];  // multi-rôles cumulables
 	actif: boolean;
 	opt_out_telemetrie?: boolean;
+	// Modération de la Communauté. Ces champs étaient absents de l'interface
+	// alors que `UserRead` les renvoie et que la page Sondages s'en sert pour
+	// bloquer un membre suspendu : le contrôle fonctionnait, mais TypeScript ne
+	// pouvait pas le vérifier — une faute de frappe sur le nom du champ serait
+	// passée inaperçue et aurait rouvert l'accès à un membre banni.
+	communaute_interdit?: boolean;
+	communaute_ban_count?: number;
+	communaute_ban_jusqu_au?: string | null;
 	onboarding_complete: boolean;
 	onboarding_etape: number;
 	photo_url?: string;
