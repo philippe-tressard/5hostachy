@@ -111,7 +111,9 @@ function buildQuery(params: Record<string, string | undefined | null>): string {
 export const api = {
 	get: <T>(path: string) => request<T>('GET', path),
 	post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-	patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+	// `body` optionnel : `request` le traite déjà ainsi, et un PATCH d'action
+	// (marquer une notification lue) n'a pas de corps à envoyer.
+	patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
 	put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
 	delete: <T>(path: string) => request<T>('DELETE', path),
 };

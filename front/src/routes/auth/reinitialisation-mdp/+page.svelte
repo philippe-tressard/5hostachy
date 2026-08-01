@@ -25,7 +25,7 @@
 
 	async function submit() {
 		if (nouveauMdp !== confirmMdp) {
-			toast('Les mots de passe ne correspondent pas.', 'error');
+			toast('error', 'Les mots de passe ne correspondent pas.');
 			return;
 		}
 		saving = true;
@@ -34,10 +34,10 @@
 			done = true;
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 400) {
-				toast('Lien invalide ou expiré. Faites une nouvelle demande.', 'error');
+				toast('error', 'Lien invalide ou expiré. Faites une nouvelle demande.');
 				tokenInvalide = true;
 			} else {
-				toast('Une erreur est survenue. Réessayez.', 'error');
+				toast('error', 'Une erreur est survenue. Réessayez.');
 			}
 		} finally {
 			saving = false;
