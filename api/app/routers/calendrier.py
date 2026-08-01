@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
+from app.utils.dates_fr import datetime_longue
 from app.utils.liens import lien_element
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 from app.utils.photos import parse_photos, photos_internes
@@ -222,13 +223,25 @@ def create_evenement(
                         destinataires.append((uid, email))
                         seen_emails.add(email.lower())
 
+            # Le template `calendrier_evenement_cree` attend `evenement`, pas
+            # `ticket` : ce contexte avait été repris du mail de ticket sans
+            # renommer la clé, d'où un `'evenement' is undefined` à chaque envoi
+            # — six membres du CS n'ont rien reçu le 28/07/2026, sans aucune
+            # trace ailleurs que dans `historique_email` (l'envoi est en
+            # BackgroundTask). Même cause racine que `reinitialisation_mdp`
+            # (03/06) et `ticket_statut_change` (15/06).
             ctx = {
-                "ticket": {
+                "evenement": {
                     "id": ev.id,
-                    "numero": str(ev.id),
                     "titre": ev.titre,
+                    # `datetime_longue` et NON `datetime_longue_paris` : à la
+                    # différence des `cree_le` de la base, `debut` est l'heure de
+                    # tenue telle qu'elle a été saisie (le front envoie
+                    # `2026-08-05T14:00`, sans fuseau). La convertir depuis UTC
+                    # annoncerait 16:00 pour un événement à 14:00.
+                    "date": datetime_longue(ev.debut) if ev.debut else "",
                     "description": ev.description or "",
-                    "categorie": ev.type.value if ev.type else "",
+                    "type": ev.type.value if ev.type else "",
                 },
                 "auteur": {"prenom": user.prenom, "nom": user.nom},
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},

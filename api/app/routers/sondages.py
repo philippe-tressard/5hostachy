@@ -270,13 +270,18 @@ def create_sondage(
                         destinataires.append((uid, email))
                         seen_emails.add(email.lower())
 
+            # Le template `publication_syndic` déréférence `publication.titre`,
+            # `publication.contenu` et `publication.id` : avec la clé `ticket`
+            # reprise du mail de ticket, l'envoi échouait à tous les coups en
+            # `'publication' is undefined`. Bug LATENT — invisible dans
+            # `historique_email` faute d'un sondage créé avec « envoyer au CS »
+            # depuis sa mise en place ; trouvé le 01/08/2026 par
+            # `tests/test_email_contexte_appel.py`, pas par le pré-check.
             ctx = {
-                "ticket": {
+                "publication": {
                     "id": s.id,
-                    "numero": str(s.id),
                     "titre": s.question,
-                    "description": s.description or "",
-                    "categorie": "sondage",
+                    "contenu": s.description or "",
                 },
                 "auteur": {"prenom": user.prenom, "nom": user.nom},
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
