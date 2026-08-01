@@ -308,13 +308,23 @@ EMAIL_TEMPLATES = [
      True),
 
     ("relance_syndic", "Relance tickets syndic non résolus",
-     "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) non r\u00e9solu(s) depuis 1 mois",
+     "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '\U0001f514 Relance ticket(s) non r\u00e9solu(s) depuis 1 mois</h2>'
+     '\U0001f514 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}</h2>'
      '<p style="margin:0 0 20px">{{ civilite }} {{ nom_gestionnaire }},</p>'
-     '<p style="margin:0 0 20px">Le Conseil Syndical de la copropri\u00e9t\u00e9 <strong>{{ residence.nom }}</strong> '
-     'vous adresse la pr\u00e9sente relance concernant les ticket(s) ci-dessous, '
-     'transmis au syndic et rest\u00e9s <strong>sans avanc\u00e9es depuis plus d\u2019un mois</strong>.</p>'
+     # Pr\u00e9ambule partenarial (choisi le 01/08/2026) : poser l\u2019anciennet\u00e9 r\u00e9elle
+     # et le m\u00e9contentement qu\u2019elle nourrit, sans mettre le gestionnaire en
+     # accusation \u2014 la relance reste un outil de travail, pas un grief.
+     '<p style="margin:0 0 16px">Le Conseil Syndical de la copropri\u00e9t\u00e9 <strong>{{ residence.nom }}</strong> '
+     'se permet de revenir vers vous concernant les tickets ci-dessous, transmis au syndic '
+     'et toujours <strong>sans avanc\u00e9e apr\u00e8s {{ anciennete }}</strong>.</p>'
+     '<p style="margin:0 0 16px">Nous mesurons la charge qui p\u00e8se sur la gestion d\u2019un '
+     'portefeuille de copropri\u00e9t\u00e9s. C\u2019est pr\u00e9cis\u00e9ment pour vous \u00e9viter des '
+     'sollicitations r\u00e9p\u00e9t\u00e9es que nous regroupons ici l\u2019ensemble des dossiers '
+     'en attente. Leur anciennet\u00e9 commence toutefois \u00e0 nourrir un m\u00e9contentement '
+     'que nous pr\u00e9f\u00e9rerions d\u00e9samorcer ensemble.</p>'
+     '<p style="margin:0 0 20px">Un simple point d\u2019\u00e9tape, m\u00eame succinct, sur chacun '
+     'd\u2019eux nous permettrait de rassurer les r\u00e9sidents.</p>'
      '{% for item in tickets %}'
      '<table role="presentation" style="width:100%;margin:0 0 24px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden">'
      '<tr><td style="background:#F2EFE9;padding:16px">'

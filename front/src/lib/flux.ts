@@ -1,0 +1,164 @@
+/**
+ * Règles du fil d'activité — partagées par le tableau de bord et ses cartes.
+ *
+ * Tout ce qui décide de l'apparence ou du classement d'une ligne du fil vit ici,
+ * et nulle part ailleurs. Les deux blocs de carte du fil (« récent » et
+ * « ancien ») avaient dupliqué ces tables et ces helpers : chaque évolution
+ * devait alors être écrite deux fois, et c'est ainsi qu'un bloc a fini par
+ * afficher moins d'informations que l'autre.
+ *
+ * Le partage compte surtout pour les TROIS REGISTRES du fil (urgences /
+ * épinglé / chronologie) : leurs filtres doivent rester mutuellement exclusifs.
+ * Une seule fonction décide donc de chaque appartenance.
+ */
+import type { FluxItem } from '$lib/api';
+
+// ── Apparence par type d'élément ──────────────────────────────────────────
+export const TYPE_LABELS: Record<string, string> = {
+	ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
+	publication: 'Actualité', evenement: 'Événement',
+	devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
+	annonce: 'Petite annonce', idee: 'Boîte à idées',
+};
+
+export const TYPE_COLORS: Record<string, string> = {
+	ticket_resolu: '#DC2626',
+	ticket_ouvert: '#DC2626',
+	ticket_mis_a_jour: '#DC2626',
+	publication: 'var(--color-primary)',
+	evenement: '#F59E0B',
+	devis: '#10B981',
+	sondage_clos: '#8B5CF6',
+	sondage_ouvert: '#8B5CF6',
+	annonce: '#EA580C',
+	idee: '#0891B2',
+};
+
+export const TYPE_BG: Record<string, string> = {
+	ticket_resolu: '#FEF2F2',
+	ticket_ouvert: '#FEF2F2',
+	ticket_mis_a_jour: '#FEF2F2',
+	publication: '#EEF2F7',
+	evenement: '#FFFBEB',
+	devis: '#ECFDF5',
+	sondage_clos: '#F5F3FF',
+	sondage_ouvert: '#F5F3FF',
+	annonce: '#FFF7ED',
+	idee: '#ECFEFF',
+};
+
+export function typeCouleur(type: string): string {
+	return TYPE_COLORS[type] ?? 'var(--color-border)';
+}
+export function typeFond(type: string): string {
+	return TYPE_BG[type] ?? '#EAEDF1';
+}
+export function typeLibelle(type: string): string {
+	return TYPE_LABELS[type] ?? type;
+}
+
+export function badgeClass(type: string, badge: string): string {
+	const b = badge.toLowerCase();
+	if (b.includes('résolu') || b.includes('réalisé') || b.includes('accepté')) return 'badge-green';
+	if (b.includes('urgent') || b.includes('refusé')) return 'badge-red';
+	if (b.includes('en cours') || b.includes('en attente') || b === 'panne') return 'badge-orange';
+	if (b.includes('clôturé')) return 'badge-gray';
+	if (b.startsWith('#')) return 'badge-gray';
+	if (type === 'sondage_ouvert') return 'badge-purple';
+	return 'badge-blue';
+}
+
+// ── Liens ─────────────────────────────────────────────────────────────────
+// `null` = cet élément n'est affiché sur aucune page : on n'affiche alors PAS de
+// lien, plutôt qu'un `href="#"` ou une route inexistante. Un document de catégorie
+// non exposée (fiche synthétique, attestation de lot…) est dans ce cas — le fil
+// pointait auparavant vers `/documents`, qui renvoyait un 404 (26/07/2026).
+export function typeLink(item: FluxItem): string | null {
+	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return '/sondages';
+	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) {
+		const numero = item.meta?.numero as string | undefined;
+		return numero ? `/tickets?open=${numero}` : '/tickets';
+	}
+	return item.lien ?? null;
+}
+
+export function typeVoirLabel(item: FluxItem): string {
+	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) return 'Voir le ticket →';
+	if (item.type === 'publication') return "Voir l'actualité →";
+	if (item.type === 'evenement') return "Voir l'événement →";
+	if (item.type === 'devis') return 'Voir le devis →';
+	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
+	if (item.type === 'annonce') return "Voir l'annonce →";
+	if (item.type === 'idee') return "Voir l'idée →";
+	return 'Voir →';
+}
+
+// ── Nouveauté ─────────────────────────────────────────────────────────────
+// `date` est celle de l'ANNONCE (le backend ne la recalcule pas sur une simple
+// modification de marqueur, cf. flux.py) : décocher « Épinglé » ne redonne donc
+// pas la pastille NEW à une actualité de l'an dernier.
+export function isNew(item: { cree_le?: string; date: string }): boolean {
+	const dateTs = new Date(item.date).getTime();
+	const creeTs = item.cree_le ? new Date(item.cree_le).getTime() : dateTs;
+	const ref = Math.max(dateTs, creeTs);
+	const diff = Date.now() - ref;
+	return diff >= 0 && diff < 48 * 3600 * 1000;
+}
+
+// ── Les trois registres du fil ────────────────────────────────────────────
+// Chaque ligne appartient à UN registre et un seul :
+//   1. 🔴 Urgences en cours — « qu'est-ce qui brûle ? »
+//   2. 📌 Épinglé          — « qu'est-ce qu'il ne faut pas perdre de vue ? »
+//   3. Chronologie         — « quoi de neuf ? »
+//
+// Pourquoi épinglé n'est PAS fusionné dans les urgences : l'urgence s'auto-périme
+// (résolu/fermé sortent du filtre), pas l'épinglage. Un épinglé y resterait
+// indéfiniment et le bandeau rouge mourrait d'habitude ; et le plafond de 3 des
+// urgences ferait évincer une urgence réelle par un élément épinglé.
+
+/** Le registre le plus grave l'emporte : un élément urgent ET épinglé n'apparaît
+ *  qu'en urgence. Il retombera dans le bandeau épinglé en cessant d'être urgent. */
+export function estUrgent(item: FluxItem): boolean {
+	return (
+		(item.type === 'evenement' && item.meta?.type === 'coupure') ||
+		(item.type === 'ticket_ouvert' && (item.badges?.includes('urgence') ?? false)) ||
+		(item.type === 'publication' && Boolean(item.meta?.urgente) && item.meta?.statut !== 'resolu')
+	);
+}
+
+export function estEpingle(item: FluxItem): boolean {
+	return Boolean(item.meta?.epingle) && !estUrgent(item);
+}
+
+/** Reste en tête de la chronologie malgré son âge : ce qui n'est pas terminé
+ *  n'est pas de l'histoire ancienne. */
+export function estNonResolu(item: FluxItem): boolean {
+	if (item.type === 'ticket_ouvert') {
+		const s = (item.meta?.statut as string) ?? '';
+		return !['résolu', 'fermé'].includes(s);
+	}
+	if (item.type === 'evenement') {
+		const k = (item.meta?.statut_kanban as string) ?? '';
+		return !['termine', 'annule'].includes(k);
+	}
+	return false;
+}
+
+/** Date qui décide de l'ancienneté : la clôture prime, sinon la création. */
+export function dateDeReference(item: FluxItem): number {
+	const cloture = (item.meta?.cloture_le || item.meta?.ferme_le) as string | undefined;
+	if (cloture) return new Date(cloture).getTime();
+	return new Date(item.cree_le || item.date).getTime();
+}
+
+/** Plafond SOUPLE : on avertit celui qui épingle, on ne masque jamais un
+ *  élément épinglé — le cacher trahirait la promesse du marqueur. Au-delà,
+ *  le bandeau devient une seconde chronologie et ne signale plus rien. */
+export const PLAFOND_EPINGLES = 5;
+
+/** `totalApresEpinglage` = ce que deviendrait le total si l'on validait la case
+ *  cochée, toutes rubriques confondues. `null` = rien à signaler. */
+export function avertissementEpinglage(totalApresEpinglage: number): string | null {
+	if (totalApresEpinglage <= PLAFOND_EPINGLES) return null;
+	return `Cela porterait à ${totalApresEpinglage} le nombre d'éléments épinglés. Au-delà de ${PLAFOND_EPINGLES}, le bandeau « Épinglé » cesse d'attirer l'œil : épingler dix éléments revient à n'en épingler aucun.`;
+}

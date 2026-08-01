@@ -283,7 +283,17 @@ def _is_archived(
 ) -> bool:
     """True si la publication doit être considérée comme archivée."""
     if pub.archivee:
+        # L'archivage explicite prime sur tout : c'est une décision humaine.
         return True
+    if pub.epingle:
+        # Épinglé = « garder en vue » ; s'auto-archiver au bout de 30 jours
+        # contredirait le marqueur. Décision du 01/08/2026, prise avec le
+        # bandeau « Épinglé » du fil d'activité. Pour retirer la publication,
+        # on la dépingle (ou on l'archive à la main) — l'action reste explicite.
+        # Volontairement ici et non côté fil : /actualités et le tableau de bord
+        # doivent trancher pareil, sous peine de voir un élément dans une vue et
+        # pas dans l'autre (bug du 17/07/2026).
+        return False
     if pub.statut == "resolu" and pub.statut_change_le:
         delta = datetime.utcnow() - pub.statut_change_le
         return delta >= timedelta(hours=delai_heures)

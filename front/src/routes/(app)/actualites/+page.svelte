@@ -5,6 +5,7 @@
 	import { isCS, isAdmin, currentUser, setUser } from '$lib/stores/auth';
 	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, fichiersApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
+	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -237,6 +238,9 @@
 	let editContenu = '';
 	let editUrgente = false;
 	let editEpingle = false;
+	// Épinglage à l'ouverture du formulaire : évite que l'avertissement de
+	// plafond compte une seconde fois une publication déjà épinglée.
+	let editEpingleInitial = false;
 	let editStatut = '';
 	let editBrouillon = false;
 	let editSaving = false;
@@ -306,6 +310,7 @@
 		editContenu = pub.contenu;
 		editUrgente = pub.urgente;
 		editEpingle = pub.epingle;
+		editEpingleInitial = pub.epingle;
 		editStatut = pub.statut ?? 'publie';
 		editBrouillon = pub.brouillon;
 		showEvolForm = null;
@@ -396,6 +401,7 @@
 				<label class="checkbox-field"><input type="checkbox" bind:checked={newUrgente} /> &#x1F6A8; Urgent</label>
 				<label class="checkbox-field"><input type="checkbox" bind:checked={newBrouillon} /> ✏️ Brouillon (invisible pour les résidents)</label>
 			</div>
+			<AlerteEpinglage coche={newEpingle} />
 			<div style="margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:1rem">
 				<label class="checkbox-field">
 					<input type="checkbox" bind:checked={newPartagerWhatsapp} />
@@ -518,6 +524,7 @@
 								<label class="checkbox-field"><input type="checkbox" bind:checked={editUrgente} /> &#x1F6A8; Urgent</label>
 								<label class="checkbox-field"><input type="checkbox" bind:checked={editBrouillon} /> ✏️ Brouillon</label>
 							</div>
+							<AlerteEpinglage coche={editEpingle} dejaEpingle={editEpingleInitial} />
 							<div class="form-actions" style="gap:.5rem">
 								<button type="button" class="btn btn-outline" on:click={cancelEdit}>Annuler</button>
 								<button type="submit" class="btn btn-primary" disabled={editSaving}>{editSaving ? 'Enregistrement…' : 'Enregistrer'}</button>

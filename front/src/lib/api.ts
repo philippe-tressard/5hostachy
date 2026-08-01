@@ -588,8 +588,16 @@ export interface FluxResponse {
 	items: FluxItem[];
 	sante: FluxSante;
 }
+export interface EpinglesCompte {
+	total: number;
+	publications: number;
+	evenements: number;
+}
 export const flux = {
 	get: () => api.get<FluxResponse>('/flux'),
+	/** Compte des éléments épinglés, toutes rubriques confondues (CS/admin) —
+	 *  alimente l'avertissement de plafond souple des formulaires. */
+	epingles: () => api.get<EpinglesCompte>('/flux/epingles'),
 };
 
 // ── Upload fichiers ─────────────────────────────────────────────────────────

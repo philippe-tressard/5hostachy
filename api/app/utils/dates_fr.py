@@ -71,3 +71,43 @@ def datetime_longue_paris(dt: datetime) -> str:
     décalage ne soit pas réécrit à chaque point d'appel.
     """
     return datetime_longue(dt.replace(tzinfo=_TZ_UTC).astimezone(TZ_PARIS))
+
+
+def mois_ecoules(depuis: datetime, maintenant: datetime | None = None) -> int:
+    """Nombre de mois **entiers** écoulés depuis `depuis` (horodatage naïf UTC).
+
+    Compte des mois calendaires, pas des tranches de 30 jours : entre le 31/01 et
+    le 28/02 il s'est écoulé un mois, ce qu'une division par 30 jours nierait.
+    """
+    ref = maintenant or datetime.utcnow()
+    mois = (ref.year - depuis.year) * 12 + (ref.month - depuis.month)
+    if (ref.day, ref.hour, ref.minute) < (depuis.day, depuis.hour, depuis.minute):
+        mois -= 1
+    return max(0, mois)
+
+
+def formule_anciennete(mois: list[int]) -> str:
+    """Formule française décrivant l'ancienneté d'un lot de dossiers.
+
+    `[1]` → « plus d'un mois » · `[4, 4]` → « plus de 4 mois » · `[1, 5]` → « un à 5 mois »
+
+    Sert le préambule de la relance syndic : un chiffre exact se conteste mal,
+    alors qu'un « depuis un certain temps » s'ignore sans effort. La forme au
+    pluriel n'est employée que si elle est vraie — annoncer « 3 à 3 mois » ou
+    « plus de 1 mois » décrédibiliserait le reste du courrier.
+
+    Volontairement brève : la même formule alimente le corps ET l'objet du mail,
+    que les clients de messagerie tronquent vers 70 caractères. Une seule
+    formule, donc, plutôt qu'une version longue et une version courte à tenir
+    d'accord.
+    """
+    if not mois:
+        return "plus d'un mois"
+    mini, maxi = min(mois), max(mois)
+    if maxi < 2:
+        return "plus d'un mois"
+    if mini == maxi:
+        return f"plus de {maxi} mois"
+    if mini < 2:
+        return f"un à {maxi} mois"
+    return f"{mini} à {maxi} mois"

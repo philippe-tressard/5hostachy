@@ -7,10 +7,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.utils.liens import lien_element, page_element
 from app.models.core import (
@@ -392,9 +392,16 @@ def get_flux(
     items.extend(latest_par_ticket.values())
 
     # ── 2. Publications ─────────────────────────────────────────────────────
+    # Un élément ÉPINGLÉ échappe à la fenêtre glissante : il a été explicitement
+    # désigné comme « à ne pas perdre de vue », il serait absurde qu'il s'efface
+    # de lui-même. Même exemption pour les événements plus bas.
     pubs = session.exec(
         select(Publication)
-        .where(Publication.cree_le >= since, ~Publication.brouillon, ~Publication.archivee)
+        .where(
+            or_(Publication.cree_le >= since, Publication.epingle),
+            ~Publication.brouillon,
+            ~Publication.archivee,
+        )
         .order_by(Publication.cree_le.desc())
     ).all()
     # Mêmes seuils d'archivage que /actualités (overridables en config)
@@ -429,7 +436,13 @@ def get_flux(
         items.append(FluxItem(
             id=f"pub_{p.id}",
             type="publication",
-            date=p.mis_a_jour_le or p.publiee_le or p.cree_le,
+            # PAS `mis_a_jour_le` : cocher ou décocher « Épinglé » / « Urgent »
+            # écrit ce champ, et la publication remontait alors en tête du fil à
+            # la date du jour, pastille NEW comprise (exigé le 01/08/2026).
+            # Agir sur un marqueur est une action éditoriale, pas un événement de
+            # la copropriété : la ligne garde donc la date de son annonce et
+            # reprend simplement sa place dans la chronologie.
+            date=p.publiee_le or p.cree_le,
             cree_le=p.cree_le,
             titre=p.titre,
             detail=" — ".join(detail_parts) if detail_parts else None,
@@ -447,7 +460,7 @@ def get_flux(
     evts = session.exec(
         select(Evenement)
         .where(~Evenement.archivee, Evenement.affichable)
-        .where(Evenement.debut >= since)
+        .where(or_(Evenement.debut >= since, Evenement.epingle))
         .order_by(Evenement.debut.desc())
     ).all()
     type_emoji = {
@@ -942,3 +955,41 @@ def get_flux(
     )
 
     return FluxResponse(items=items, sante=sante)
+
+
+class EpinglesCompte(BaseModel):
+    total: int = 0
+    publications: int = 0
+    evenements: int = 0
+
+
+@router.get("/epingles", response_model=EpinglesCompte)
+def compter_epingles(
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Combien d'éléments occupent le bandeau « Épinglé », toutes rubriques confondues.
+
+    Sert l'avertissement de plafond souple affiché au moment de cocher la case
+    « Épingler », dans les actualités comme dans le calendrier. Ce compte ne peut
+    pas être fait côté client : chaque page ne connaît que sa propre rubrique et
+    afficherait donc un total partiel — deux avertissements qui se contrediraient.
+
+    Mêmes filtres que le fil : un brouillon ou un événement non affichable est
+    peut-être coché « épinglé », il n'occupe pas le bandeau pour autant.
+    """
+    publications = session.exec(
+        select(func.count(Publication.id)).where(
+            Publication.epingle, ~Publication.brouillon, ~Publication.archivee
+        )
+    ).one() or 0
+    evenements = session.exec(
+        select(func.count(Evenement.id)).where(
+            Evenement.epingle, ~Evenement.archivee, Evenement.affichable
+        )
+    ).one() or 0
+    return EpinglesCompte(
+        total=publications + evenements,
+        publications=publications,
+        evenements=evenements,
+    )

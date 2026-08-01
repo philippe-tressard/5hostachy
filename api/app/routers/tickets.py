@@ -20,7 +20,12 @@ from app.schemas import (
     TicketCreate, TicketRead, TicketUpdate, MessageCreate, MessageRead,
     TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate,
 )
-from app.utils.dates_fr import date_courte, datetime_longue_paris as _fmt_paris
+from app.utils.dates_fr import (
+    date_courte,
+    datetime_longue_paris as _fmt_paris,
+    formule_anciennete,
+    mois_ecoules,
+)
 from app.utils.visibility import ticket_visible
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -559,11 +564,21 @@ def envoyer_relance_syndic(
             "historique": historique,
         })
 
+    # Ancienneté réelle des dossiers relancés : le préambule annonçait « plus
+    # d'un mois » quelle que soit la situation, y compris pour des tickets en
+    # souffrance depuis cinq mois. Mesurée sur `mis_a_jour_le`, c'est-à-dire sur
+    # la dernière avancée — le même repère que celui qui rend un ticket
+    # relançable.
+    anciennete = formule_anciennete(
+        [mois_ecoules(t.mis_a_jour_le or t.cree_le, now) for t in tickets_relance]
+    )
+
     ctx = {
         "civilite": civilite,
         "nom_gestionnaire": nom_gestionnaire,
         "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
         "reference_copro": cfg_map.get("reference_copro", ""),
+        "anciennete": anciennete,
         "tickets": tickets_ctx,
     }
 
