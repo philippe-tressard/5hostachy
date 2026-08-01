@@ -198,6 +198,18 @@ a:hover { text-decoration: underline; }
 .badge-red    { background: #FDEDEC; color: #C0392B; }
 .badge-gray   { background: #EAEDF1; color: var(--color-text-muted); }
 .badge-purple { background: #F3E8FF; color: #6B21A8; }
+/* Pastille de type du fil d'activité. Ici et pas dans un composant : elle est
+   portée à la fois par les cartes du fil (FluxCard) et par le bandeau des
+   urgences du tableau de bord — deux composants, donc deux portées Svelte
+   distinctes, pour une seule et même pastille. */
+.flux-type-chip {
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: .12rem .5rem;
+  border-radius: 1rem;
+}
 
 /* ── Table ── */
 .table {

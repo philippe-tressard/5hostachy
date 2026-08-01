@@ -5,11 +5,16 @@
 	import { flux, lots, tickets as ticketsApi, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
-	import { fmtDate, fmtDateLong, fmtDatetimeShort, fmtTime } from '$lib/date';
+	import { fmtDateLong, fmtTime } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
-	import FluxVignette from '$lib/components/FluxVignette.svelte';
+	import FluxCard from '$lib/components/FluxCard.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
+	// Toutes les règles du fil (apparence, liens, appartenance aux trois
+	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
+	import {
+		dateDeReference, estEpingle, estNonResolu, estUrgent,
+		typeCouleur, typeFond, typeLibelle, typeLink,
+	} from '$lib/flux';
 
 	$: _pc = getPageConfig($configStore, 'tableau-de-bord', { titre: 'Tableau de bord', navLabel: 'Accueil', descriptif: "Le pouls de votre résidence — tous les mouvements en un seul flux." });
 	$: _siteNom = $siteNomStore;
@@ -143,23 +148,6 @@
 	const THIRTY_DAYS = 30 * 86400000;
 	const YEAR_PLUS = 377 * 86400000;
 
-	function getRelevantDate(item: FluxItem): number {
-		const cloture = (item.meta?.cloture_le || item.meta?.ferme_le) as string | undefined;
-		if (cloture) return new Date(cloture).getTime();
-		return new Date(item.cree_le || item.date).getTime();
-	}
-	function isUnresolved(item: FluxItem): boolean {
-		if (item.type === 'ticket_ouvert') {
-			const s = (item.meta?.statut as string) ?? '';
-			return !['résolu', 'fermé'].includes(s);
-		}
-		if (item.type === 'evenement') {
-			const k = (item.meta?.statut_kanban as string) ?? '';
-			return !['termine', 'annule'].includes(k);
-		}
-		return false;
-	}
-
 	let recentItems: FluxItem[] = [];
 	let olderItems: FluxItem[] = [];
 	$: {
@@ -167,8 +155,13 @@
 		const _older: FluxItem[] = [];
 		const now = Date.now();
 		for (const item of filItems) {
-			const age = now - getRelevantDate(item);
-			if (isUnresolved(item)) { _recent.push(item); continue; }
+			// Un élément épinglé a son propre bandeau : le laisser aussi dans la
+			// chronologie le ferait lire deux fois. C'est également ce qui le rend
+			// insensible au vieillissement — un élément qu'on a explicitement voulu
+			// garder en vue ne doit pas s'effacer au bout de 30 jours.
+			if (estEpingle(item)) continue;
+			const age = now - dateDeReference(item);
+			if (estNonResolu(item)) { _recent.push(item); continue; }
 			if (age > YEAR_PLUS) continue;
 			if (age < THIRTY_DAYS) _recent.push(item);
 			else _older.push(item);
@@ -257,12 +250,14 @@
 	$: { if (mobileKanbanIdx >= mobileKanbanCols.length) mobileKanbanIdx = Math.max(0, mobileKanbanCols.length - 1); }
 	$: mobileKanbanCurrent = mobileKanbanCols[mobileKanbanIdx] ?? null;
 
-	// ── Urgences en cours ──────────────────────────────────────────────────
-	$: urgentItems = filteredItems.filter(i =>
-		(i.type === 'evenement' && i.meta?.type === 'coupure') ||
-		(i.type === 'ticket_ouvert' && i.badges?.includes('urgence')) ||
-		(i.type === 'publication' && i.meta?.urgente && i.meta?.statut !== 'resolu')
-	);
+	// ── Les trois registres du fil ─────────────────────────────────────────
+	// 1. 🔴 Urgences  — « qu'est-ce qui brûle ? »        (plafonné à 3, s'auto-périme)
+	// 2. 📌 Épinglé   — « qu'est-ce qu'il ne faut pas perdre de vue ? »
+	// 3. Chronologie  — « quoi de neuf ? »               (recentItems / olderItems)
+	// Les filtres sont dans `$lib/flux.ts` et sont mutuellement exclusifs : un
+	// élément urgent ET épinglé ne paraît qu'en urgence, la gravité primant.
+	$: urgentItems = filteredItems.filter(estUrgent);
+	$: pinnedItems = filteredItems.filter(estEpingle);
 
 	// ── Compteurs rapides ──────────────────────────────────────────────────
 	$: countByType = (() => {
@@ -272,74 +267,9 @@
 	})();
 
 	// ── Helpers ────────────────────────────────────────────────────────────
-	// `null` = cet élément n'est affiché sur aucune page : on n'affiche alors PAS de
-	// lien, plutôt qu'un `href="#"` ou une route inexistante. Un document de catégorie
-	// non exposée (fiche synthétique, attestation de lot…) est dans ce cas — le fil
-	// pointait auparavant vers `/documents`, qui renvoyait un 404 (26/07/2026).
-	function typeLink(item: FluxItem): string | null {
-		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return '/sondages';
-		if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) {
-			const numero = item.meta?.numero as string | undefined;
-			return numero ? `/tickets?open=${numero}` : '/tickets';
-		}
-		return item.lien ?? null;
-	}
-
 	function ouvrir(item: FluxItem) {
 		const lien = typeLink(item);
 		if (lien) goto(lien);
-	}
-
-	function typeVoirLabel(item: FluxItem): string {
-		if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) return 'Voir le ticket →';
-		if (item.type === 'publication') return "Voir l'actualité →";
-		if (item.type === 'evenement') return "Voir l'événement →";
-		if (item.type === 'devis') return 'Voir le devis →';
-		if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
-		if (item.type === 'annonce') return "Voir l'annonce →";
-		if (item.type === 'idee') return "Voir l'idée →";
-		return 'Voir →';
-	}
-
-	const TYPE_LABELS: Record<string, string> = {
-		ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
-		publication: 'Actualité', evenement: 'Événement',
-		devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
-		annonce: 'Petite annonce', idee: 'Boîte à idées',
-	};
-
-	const TYPE_COLORS: Record<string, string> = {
-		ticket_resolu: '#DC2626',
-		ticket_ouvert: '#DC2626',
-		ticket_mis_a_jour: '#DC2626',
-		publication: 'var(--color-primary)',
-		evenement: '#F59E0B',
-		devis: '#10B981',
-		sondage_clos: '#8B5CF6',
-		sondage_ouvert: '#8B5CF6',
-		annonce: '#EA580C',
-		idee: '#0891B2',
-	};
-
-	const TYPE_BG: Record<string, string> = {
-		ticket_resolu: '#FEF2F2',
-		ticket_ouvert: '#FEF2F2',
-		ticket_mis_a_jour: '#FEF2F2',
-		publication: '#EEF2F7',
-		evenement: '#FFFBEB',
-		devis: '#ECFDF5',
-		sondage_clos: '#F5F3FF',
-		sondage_ouvert: '#F5F3FF',
-		annonce: '#FFF7ED',
-		idee: '#ECFEFF',
-	};
-
-	function isNew(item: { cree_le?: string; date: string }): boolean {
-		const dateTs = new Date(item.date).getTime();
-		const creeTs = item.cree_le ? new Date(item.cree_le).getTime() : dateTs;
-		const ref = Math.max(dateTs, creeTs);
-		const diff = Date.now() - ref;
-		return diff >= 0 && diff < 48 * 3600 * 1000;
 	}
 
 	function urgencyProgress(item: FluxItem): { pct: number; label: string; active: boolean } | null {
@@ -462,8 +392,8 @@
 					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && ouvrir(u)}
 				>
 					<legend class="urgence-legend">🔴 URGENCE
-						<span class="flux-type-chip" style="background:{TYPE_BG[u.type] ?? '#EAEDF1'};color:{TYPE_COLORS[u.type] ?? 'var(--color-border)'}">
-							{TYPE_LABELS[u.type] ?? u.type}
+						<span class="flux-type-chip" style="background:{typeFond(u.type)};color:{typeCouleur(u.type)}">
+							{typeLibelle(u.type)}
 						</span>
 					</legend>
 					<div class="urgence-content">
@@ -499,6 +429,29 @@
 		</div>
 	{/if}
 
+	<!-- ═══ ÉPINGLÉ ═══════════════════════════════════════════════════════
+	     Registre volontairement CALME : ni rouge ni alerte. Les urgences
+	     au-dessus signalent ce qui brûle ; ce bandeau-ci répond à « qu'est-ce
+	     qu'il ne faut pas perdre de vue ? ». Le fondre dans les urgences les
+	     userait : un épinglé ne s'auto-périme pas, il resterait indéfiniment
+	     dans un bandeau d'alerte, et le plafond de 3 des urgences finirait par
+	     évincer une urgence réelle. -->
+	{#if pinnedItems.length > 0}
+		<div class="section-reveal" class:section-visible={ready} style="--delay:.15s">
+			<div class="epingle-bloc">
+				<h2 class="epingle-titre">📌 Épinglé</h2>
+				<div class="flux-timeline epingle-timeline">
+					{#each pinnedItems as item (item.id)}
+						<FluxCard
+							{item}
+							expanded={expandedItem === item.id}
+							on:toggle={(e) => toggleItem(e.detail)}
+						/>
+					{/each}
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
 	{#if !isLocataire}
@@ -610,129 +563,12 @@
 		<div class="flux-timeline section-reveal" class:section-visible={ready} style="--delay:.3s">
 			{#each recentDayGroups as group}
 				<div class="flux-day-label">{group.label}</div>
-				{#each group.items as item}
-					{@const isExpanded = expandedItem === item.id}
-					{@const typeColor = TYPE_COLORS[item.type] ?? 'var(--color-border)'}
-					<div
-						class="flux-item"
-						class:flux-urgent={item.type === 'ticket_ouvert' && item.badges?.includes('urgence')}
-						class:flux-expanded={isExpanded}
-					>
-						<div class="flux-dot" style="background:{typeColor}"></div>
-						{#if isNew(item)}<div class="flux-new-dot"></div>{/if}
-						<div
-							class="flux-card card"
-							style="border-left-color:{typeColor}"
-							role="button"
-							tabindex="0"
-							on:click={() => toggleItem(item.id)}
-							on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleItem(item.id)}
-						>
-							<div class="flux-card-top">
-								<div class="flux-card-top-left">
-									<span class="flux-type-chip" style="background:{TYPE_BG[item.type] ?? '#EAEDF1'};color:{typeColor}">{TYPE_LABELS[item.type] ?? item.type}</span>
-									{#if isNew(item)}<span class="new-badge">NEW</span>{/if}
-								</div>
-								<div class="flux-card-top-right">
-									<span class="flux-heure">{fmtDatetimeShort(item.date)}</span>
-									<span class="chevron" class:open={isExpanded}>›</span>
-								</div>
-							</div>
-							<div class="flux-card-body">
-								<span class="flux-icon">{item.icon}</span>
-								<div class="flux-card-text">
-									<span class="flux-titre">{item.titre}</span>
-									{#if !isExpanded && item.detail}
-										<p class="flux-detail clamp-3">{item.detail}</p>
-									{/if}
-								</div>
-								<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
-								     inutile de montrer deux fois la même image. -->
-								{#if !isExpanded}
-									<FluxVignette
-										photos={(item.meta?.photos_urls as string[] | undefined) ?? []}
-										image={(item.meta?.image_url as string | undefined) ?? null}
-									/>
-								{/if}
-							</div>
-							{#if item.badges.length > 0 || (item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière')}
-								<div class="flux-badges">
-									<!-- La ligne est datée de l'annonce : sans ce repère, un événement
-									     à venir se lirait comme s'il avait déjà eu lieu. -->
-									{#if item.type === 'evenement' && item.meta?.debut && new Date(String(item.meta.debut)) > new Date()}
-										<span class="badge badge-orange" style="font-size:.7rem">🗓️ prévu le {fmtDatetimeShort(String(item.meta.debut))}</span>
-									{/if}
-									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
-										<span class="badge badge-blue" style="font-size:.7rem">🔹 {item.meta.perimetre}</span>
-									{/if}
-									{#each item.badges as b}
-										<span class="badge {badgeClass(item.type, b)}">{b}</span>
-									{/each}
-								</div>
-							{/if}
-							{#if isExpanded}
-								<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-								<div class="flux-body" on:click|stopPropagation>
-									{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
-									{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}<p class="flux-meta-line">🔹 {item.meta.perimetre}</p>{/if}
-									{#if item.meta?.prestataire}<p class="flux-meta-line">🔧 {item.meta.prestataire}</p>{/if}
-									<!-- `fin` est facultatif : l'exiger masquait la date de tenue de
-									     tout événement sans heure de fin — désormais l'information
-									     essentielle, puisque la ligne du fil est datée de l'annonce. -->
-									{#if item.meta?.debut}
-										<p class="flux-meta-line">🕐 {fmtDatetimeShort(String(item.meta.debut))}{#if item.meta?.fin} → {fmtDatetimeShort(String(item.meta.fin))}{/if}</p>
-									{/if}
-									{#if item.meta?.auteur}<p class="flux-meta-line">✍️ {item.meta.auteur}</p>{/if}
-									{#if item.meta?.statut}
-										<p class="flux-meta-line">
-											État :
-											<span class="badge {item.meta.statut === 'résolu' || item.meta.statut === 'réalisé' ? 'badge-green' : item.meta.statut === 'en_cours' || item.meta.statut === 'ouvert' ? 'badge-orange' : 'badge-gray'}">{item.meta.statut}</span>
-										</p>
-									{/if}
-									{#if item.meta?.full_html}
-										<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
-									{:else if item.meta?.description}
-										<p class="flux-full-content">{item.meta.description}</p>
-									{:else if item.detail}
-										<p class="flux-full-content">{item.detail}</p>
-									{/if}
-									{#if item.type === 'ticket_mis_a_jour' && item.meta?.evol_contenu}
-										<div class="flux-reaction">
-											<span class="flux-reaction-icon">💬</span>
-											<div class="flux-reaction-body">
-												{#if item.meta?.evol_auteur}<span class="flux-reaction-auteur">{item.meta.evol_auteur}</span>{/if}
-												<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
-											</div>
-										</div>
-									{/if}
-									{#if item.meta?.image_url}
-										<img src={String(item.meta.image_url)} alt="" class="flux-image" loading="lazy" />
-									{/if}
-									{#if (item.meta?.photos_urls as string[] | undefined)?.length}
-										<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
-											{#each (item.meta.photos_urls as string[]) as photoUrl}
-												<a href={photoUrl} target="_blank" rel="noopener">
-													<img src={photoUrl} alt="Photo" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
-												</a>
-											{/each}
-										</div>
-									{/if}
-									{#if (item.meta?.fichiers_urls as string[] | undefined)?.length}
-										<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
-											{#each (item.meta.fichiers_urls as string[]) as fichierUrl}
-												<a href={fichierUrl} target="_blank" rel="noopener">
-													<img src={fichierUrl} alt="Pièce jointe" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
-												</a>
-											{/each}
-										</div>
-									{/if}
-									{#if typeLink(item)}
-										<a href={typeLink(item)} class="flux-link">{typeVoirLabel(item)}</a>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					</div>
+				{#each group.items as item (item.id)}
+					<FluxCard
+						{item}
+						expanded={expandedItem === item.id}
+						on:toggle={(e) => toggleItem(e.detail)}
+					/>
 				{/each}
 			{/each}
 		</div>
@@ -753,83 +589,12 @@
 					<div class="flux-timeline older-timeline">
 						{#each olderDayGroups as group}
 							<div class="flux-day-label">{group.label}</div>
-							{#each group.items as item}
-								{@const isExpanded = expandedItem === item.id}
-								{@const typeColor = TYPE_COLORS[item.type] ?? 'var(--color-border)'}
-								<div class="flux-item" class:flux-expanded={isExpanded}>
-									<div class="flux-dot" style="background:{typeColor}"></div>
-									<div
-										class="flux-card card"
-										style="border-left-color:{typeColor}"
-										role="button"
-										tabindex="0"
-										on:click={() => toggleItem(item.id)}
-										on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleItem(item.id)}
-									>
-										<div class="flux-card-top">
-											<span class="flux-type-chip" style="background:{TYPE_BG[item.type] ?? '#EAEDF1'};color:{typeColor}">{TYPE_LABELS[item.type] ?? item.type}</span>
-											<div class="flux-card-top-right">
-												<span class="flux-heure">{fmtDatetimeShort(item.date)}</span>
-												<span class="chevron" class:open={isExpanded}>›</span>
-											</div>
-										</div>
-										<div class="flux-card-body">
-											<span class="flux-icon">{item.icon}</span>
-											<div class="flux-card-text">
-												<span class="flux-titre">{item.titre}</span>
-												{#if !isExpanded && item.detail}
-													<p class="flux-detail clamp-3">{item.detail}</p>
-												{/if}
-											</div>
-											{#if !isExpanded}
-												<FluxVignette
-													photos={(item.meta?.photos_urls as string[] | undefined) ?? []}
-													image={(item.meta?.image_url as string | undefined) ?? null}
-												/>
-											{/if}
-										</div>
-										{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}
-											<div class="flux-badges">
-												<span class="badge badge-blue" style="font-size:.7rem">🔹 {item.meta.perimetre}</span>
-											</div>
-										{/if}
-										{#if isExpanded}										<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->											<div class="flux-body" on:click|stopPropagation>
-												{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
-												{#if item.meta?.perimetre && item.meta.perimetre !== 'Copropriété entière'}<p class="flux-meta-line">🔹 {item.meta.perimetre}</p>{/if}
-												{#if item.meta?.prestataire}<p class="flux-meta-line">🔧 {item.meta.prestataire}</p>{/if}
-												{#if item.meta?.full_html}
-													<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
-												{:else if item.detail}
-													<p class="flux-full-content">{item.detail}</p>
-												{/if}
-												{#if item.meta?.image_url}
-													<img src={String(item.meta.image_url)} alt="" class="flux-image" loading="lazy" />
-												{/if}
-												{#if (item.meta?.photos_urls as string[] | undefined)?.length}
-													<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
-														{#each (item.meta.photos_urls as string[]) as photoUrl}
-															<a href={photoUrl} target="_blank" rel="noopener">
-																<img src={photoUrl} alt="Photo" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
-															</a>
-														{/each}
-													</div>
-												{/if}
-												{#if (item.meta?.fichiers_urls as string[] | undefined)?.length}
-													<div class="flux-photos" style="margin:.5rem 0;display:flex;gap:.5rem;flex-wrap:wrap">
-														{#each (item.meta.fichiers_urls as string[]) as fichierUrl}
-															<a href={fichierUrl} target="_blank" rel="noopener">
-																<img src={fichierUrl} alt="Pièce jointe" style="max-width:120px;max-height:90px;border-radius:6px;object-fit:cover;border:1px solid var(--color-border)" loading="lazy" />
-															</a>
-														{/each}
-													</div>
-												{/if}
-												{#if typeLink(item)}
-													<a href={typeLink(item)} class="flux-link">Voir la page complète →</a>
-												{/if}
-											</div>
-										{/if}
-									</div>
-								</div>
+							{#each group.items as item (item.id)}
+								<FluxCard
+									{item}
+									expanded={expandedItem === item.id}
+									on:toggle={(e) => toggleItem(e.detail)}
+								/>
 							{/each}
 						{/each}
 					</div>
@@ -838,19 +603,6 @@
 		{/if}
 	{/if}
 {/if}
-
-<script lang="ts" context="module">
-	function badgeClass(type: string, badge: string): string {
-		const b = badge.toLowerCase();
-		if (b.includes('résolu') || b.includes('réalisé') || b.includes('accepté')) return 'badge-green';
-		if (b.includes('urgent') || b.includes('refusé')) return 'badge-red';
-		if (b.includes('en cours') || b.includes('en attente') || b === 'panne') return 'badge-orange';
-		if (b.includes('clôturé')) return 'badge-gray';
-		if (b.startsWith('#')) return 'badge-gray';
-		if (type === 'sondage_ouvert') return 'badge-purple';
-		return 'badge-blue';
-	}
-</script>
 
 <style>
 	/* ═══ SKELETON LOADING ═══════════════════════════════════════════════ */
@@ -965,19 +717,6 @@
 	.relance-alerte-text strong { font-size: .9rem; }
 	.relance-alerte-text span { font-size: .78rem; color: #B45309; }
 	.relance-alerte-arrow { font-size: 1.1rem; flex-shrink: 0; opacity: .7; }
-
-	/* ═══ RÉACTION INLINE (ticket_mis_a_jour) ═══════════════════════════ */
-	.flux-reaction {
-		display: flex; gap: .5rem; align-items: flex-start;
-		margin: .6rem 0 .3rem;
-		padding: .5rem .75rem; border-radius: 6px;
-		background: #EEF2F7; border-left: 3px solid var(--color-primary);
-		font-size: .82rem;
-	}
-	.flux-reaction-icon { flex-shrink: 0; font-size: .85rem; margin-top: .1rem; }
-	.flux-reaction-body { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
-	.flux-reaction-auteur { font-size: .75rem; font-weight: 600; color: var(--color-primary); }
-	.flux-reaction-text { margin: 0; color: var(--color-text); line-height: 1.45; }
 
 	/* ═══ ANIMATIONS SECTIONS ═══════════════════════════════════════════ */
 	.section-reveal {
@@ -1112,27 +851,6 @@
 	}
 	.kb-mobile-lien:hover { background: var(--color-primary-light); }
 
-	/* ═══ NEW BADGE ═════════════════════════════════════════════════════ */
-	@keyframes new-pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: .7; }
-	}
-	.new-badge {
-		font-size: .55rem; font-weight: 700; letter-spacing: .06em;
-		background: #EF4444; color: #fff;
-		padding: .1rem .35rem; border-radius: .2rem;
-		animation: new-pulse 2s ease-in-out infinite;
-		flex-shrink: 0; text-transform: uppercase;
-	}
-
-	/* ═══ CHEVRON ═══════════════════════════════════════════════════════ */
-	.chevron {
-		font-size: 1.1rem; font-weight: 700; color: var(--color-text-muted);
-		transition: transform .2s ease; display: inline-block; flex-shrink: 0;
-		line-height: 1; user-select: none;
-	}
-	.chevron.open { transform: rotate(90deg); }
-
 	/* ═══ FLUX TIMELINE ═════════════════════════════════════════════════ */
 	.flux-timeline { position: relative; padding-left: 1.5rem; }
 	.flux-timeline::before {
@@ -1143,63 +861,28 @@
 		position: relative; font-size: .72rem; font-weight: 700; text-transform: uppercase;
 		letter-spacing: .06em; color: var(--color-text-muted); padding: .9rem 0 .35rem; margin-left: -.15rem;
 	}
-	.flux-item {
-		display: flex; align-items: flex-start; gap: .75rem;
-		color: inherit; position: relative; margin-bottom: .5rem;
+	/* ═══ ÉPINGLÉ ═══════════════════════════════════════════════════════
+	   Délibérément sobre : gris et bleu de la charte, aucun rouge, aucune
+	   animation. Ce bandeau doit se distinguer de la chronologie sans entrer
+	   en concurrence avec les urgences au-dessus — c'est un pense-bête, pas
+	   une alerte. */
+	.epingle-bloc {
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
+		border-left: 4px solid var(--color-primary);
+		border-radius: var(--radius);
+		padding: .75rem 1rem 1rem;
+		margin-bottom: 1rem;
 	}
-	.flux-dot {
-		width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: .85rem;
-		position: absolute; left: -1.35rem;
-		border: 2px solid var(--color-surface); box-shadow: 0 0 0 2px var(--color-border); z-index: 1;
+	.epingle-titre {
+		font-size: .72rem; font-weight: 700; text-transform: uppercase;
+		letter-spacing: .06em; color: var(--color-text-muted);
+		margin: 0 0 .25rem;
 	}
-	.flux-new-dot {
-		position: absolute; left: -1.7rem; top: .55rem;
-		width: 18px; height: 18px; border-radius: 50%;
-		background: rgba(239, 68, 68, .15);
-		animation: new-dot-pulse 2s ease-in-out infinite; z-index: 0;
-	}
-	@keyframes new-dot-pulse {
-		0%, 100% { transform: scale(1); opacity: .6; }
-		50% { transform: scale(1.6); opacity: 0; }
-	}
-	.flux-card {
-		flex: 1; padding: .7rem .9rem;
-		transition: box-shadow .15s, border-left-color .15s;
-		border-left: 4px solid var(--color-border);
-		cursor: pointer;
-	}
-	.flux-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-	.flux-item:hover .flux-card { box-shadow: var(--shadow); }
-	.flux-item.flux-urgent .flux-card { border-left-color: var(--color-danger) !important; }
-	.flux-item.flux-expanded .flux-card { box-shadow: var(--shadow); }
-
-	.flux-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .35rem; }
-	.flux-card-top-left { display: flex; align-items: center; gap: .4rem; }
-	.flux-card-top-right { display: flex; align-items: center; gap: .5rem; }
-	.flux-type-chip {
-		font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-		padding: .12rem .5rem; border-radius: 1rem;
-	}
-	.flux-heure { font-size: .72rem; color: var(--color-text-muted); white-space: nowrap; }
-	.flux-card-body { display: flex; align-items: flex-start; gap: .5rem; }
-	.flux-icon { font-size: 1.05rem; flex-shrink: 0; line-height: 1; margin-top: .1rem; }
-	.flux-card-text { flex: 1; min-width: 0; }
-	.flux-titre { font-size: .88rem; font-weight: 500; line-height: 1.35; display: block; }
-	.flux-detail { font-size: .8rem; color: var(--color-text-muted); margin: .15rem 0 0; line-height: 1.4; }
-	.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-	.flux-badges { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .35rem; }
-
-	/* ═══ FLUX BODY (expanded) ══════════════════════════════════════════ */
-	.flux-body {
-		border-top: 1px solid var(--color-border);
-		padding: .75rem .5rem .75rem 1.7rem;
-		margin-top: .5rem;
-	}
-	.flux-meta-line { font-size: .82rem; color: var(--color-text-muted); margin: .15rem 0; }
-	.flux-full-content { font-size: .85rem; line-height: 1.55; margin: .5rem 0; }
-	.flux-image { max-width: 100%; max-height: 200px; border-radius: var(--radius); margin-top: .5rem; object-fit: cover; }
-	.flux-link { font-size: .78rem; color: var(--color-primary); font-weight: 500; text-decoration: none; display: inline-block; margin-top: .5rem; }
-	.flux-link:hover { text-decoration: underline; }
+	/* La carte est la même que dans le fil : seule la ligne de temps est
+	   inutile ici, l'ordre chronologique n'étant pas le sujet. */
+	.epingle-timeline { padding-left: 1.5rem; }
+	.epingle-timeline::before { display: none; }
 
 	/* ═══ ACCORDÉON ANCIENS ═════════════════════════════════════════════ */
 	.older-toggle {
@@ -1229,8 +912,6 @@
 		.quick-pill { font-size: .72rem; padding: .35rem .65rem; }
 		.flux-timeline { padding-left: 1.25rem; }
 		.flux-timeline::before { left: .35rem; }
-		.flux-dot { left: -1.1rem; width: 8px; height: 8px; }
-		.flux-new-dot { left: -1.4rem; width: 14px; height: 14px; }
 		.consignes-card { gap: .5rem; padding: .6rem .75rem; }
 		.consignes-icon { font-size: 1.2rem; }
 		.relance-alerte-card { padding: .55rem .75rem; gap: .5rem; }

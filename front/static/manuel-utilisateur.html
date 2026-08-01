@@ -1401,7 +1401,31 @@
           <li>Les éléments <strong>récents</strong> (moins de 30 jours) sont affichés directement.</li>
           <li>Les éléments <strong>plus anciens</strong> (30 jours à 12 mois) sont regroupés dans un accordéon replié « Activité antérieure ».</li>
           <li>Les tickets non résolus et événements non réalisés restent toujours visibles dans la section récente.</li>
-          <li>Les événements ayant une date future apparaissent uniquement dans « Prochaines échéances » (pas de doublons).</li>
+          <li>Un événement à venir apparaît <strong>à la fois</strong> dans le fil, à la date de son annonce, et dans « Prochaines échéances », à la date où il aura lieu. Ce n'est pas un doublon : le fil répond à « quoi de neuf ? », l'agenda à « quoi ensuite ? ».</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4CC; Épinglé — ce qu'il ne faut pas perdre de vue</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Le tableau de bord empile trois registres, du plus pressant au plus courant. Chaque élément n'apparaît que dans un seul.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li><strong style="color:#DC2626">&#x1F534; Urgences en cours</strong> — « qu'est-ce qui brûle ? » Coupures, tickets urgents ouverts et actualités urgentes non résolues, limitées aux 3 plus récentes. Un élément en sort tout seul dès qu'il est résolu ou terminé.</li>
+          <li><strong>&#x1F4CC; Épinglé</strong> — « qu'est-ce qu'il ne faut pas perdre de vue ? » Bandeau volontairement sobre, juste sous les urgences. On y met ce qui doit rester sous les yeux sans être une alerte : une consigne de chantier, une date à retenir.</li>
+          <li><strong>Fil d'activité</strong> — la chronologie de tout le reste.</li>
+        </ul>
+        <div class="callout info" style="margin-top:.75rem">
+          <span class="callout-icon">&#x1F4A1;</span>
+          <p>Un élément à la fois <strong>urgent et épinglé</strong> n'apparaît qu'en urgence : la gravité prime. Il rejoindra le bandeau « Épinglé » dès qu'il cessera d'être urgent.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4CC; Épingler un élément <span style="font-size:.75rem; background:#FFF7ED; color:#92400E; border:1px solid #F59E0B; border-radius:4px; padding:.1rem .45rem; margin-left:.4rem; vertical-align:middle">CS / Admin</span></h3>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li>Cochez <strong>Épingler</strong> dans le formulaire d'une <strong>actualité</strong> ou d'un <strong>événement</strong>. Un événement doit d'abord être « affiché dans le fil » pour pouvoir y être épinglé.</li>
+          <li>L'élément quitte la chronologie et rejoint le bandeau « Épinglé ». Il <strong>ne vieillit plus</strong> : il ne disparaît ni au bout de 30 jours, ni une fois résolu. C'est le sens du marqueur — pour le retirer, décochez la case ou archivez l'élément.</li>
+          <li>Au-delà de <strong>5 éléments épinglés</strong>, un avertissement s'affiche. Rien n'est bloqué ni masqué, mais un bandeau trop chargé cesse d'attirer l'œil : épingler dix éléments revient à n'en épingler aucun.</li>
+          <li><strong>Dépingler ne republie rien.</strong> L'élément reprend simplement sa place dans la chronologie, à sa date d'origine, sans remonter en tête ni retrouver la pastille <strong style="color:#EF4444">NEW</strong>.</li>
         </ul>
       </div>
     </section>

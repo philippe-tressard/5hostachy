@@ -3,6 +3,7 @@
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
 	import { calendrier as calApi, publications as pubsApi, prestataires as prestApi, ApiError, type Publication } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -48,6 +49,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	let showForm = false;
 	let editId: number | null = null;
+	// État de l'épinglage à l'ouverture du formulaire : sert à ne pas compter
+	// deux fois un événement déjà épinglé dans l'avertissement de plafond.
+	let epingleInitial = false;
 	let expandedEvId: number | null = null;
 	let expandedKanbanId: number | null = null;
 
@@ -64,6 +68,10 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		frequence_type: '',
 		frequence_valeur: '',
 		affichable: true,
+		// Absent de cette déclaration, `epingle` n'existait pas dans le type
+		// inféré de `form` : les sept endroits qui l'utilisent étaient en erreur
+		// TypeScript depuis l'ajout de l'épinglage des événements.
+		epingle: false,
 		partager_whatsapp: false,
 		envoyer_syndic: false,
 		envoyer_cs: false,
@@ -294,6 +302,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	function resetForm() {
 		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, epingle: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
 		formPerimetreCible = ['résidence'];
+		epingleInitial = false;
 		editId = null;
 		for (const u of photosUrls) if (u.startsWith('blob:')) URL.revokeObjectURL(u);
 		photosUrls = [];
@@ -316,6 +325,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			envoyer_syndic: ev.envoyer_syndic ?? false,
 			envoyer_cs: ev.envoyer_cs ?? false,
 		};
+		// Mémorisé pour que l'avertissement de plafond ne recompte pas l'événement
+		// en cours d'édition comme un épinglage supplémentaire.
+		epingleInitial = form.epingle;
 		const p = ev.perimetre ?? 'résidence';
 		formPerimetreCible = p === 'résidence' ? ['résidence'] : p.split(',').filter(Boolean);
 		editId = ev.id;
@@ -836,6 +848,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 								disabled={!form.affichable} style="width:auto;margin:0" />
 							<span>📌 Épingler dans le fil d'activité</span>
 						</label>
+						<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
 						{#if !form.affichable}
 							<p style="margin:.2rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
 								Un événement absent du fil ne peut pas y être épinglé.
