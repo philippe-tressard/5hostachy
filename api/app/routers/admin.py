@@ -238,6 +238,7 @@ class CommandeAction(BaseModel):
 def traiter_commande(
     cmd_id: int,
     body: CommandeAction,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -259,6 +260,31 @@ def traiter_commande(
     )
     session.add(cmd)
     session.add(notif)
+
+    # ── Email au demandeur ────────────────────────────────────────────────
+    # Les modèles `vigik_accepte` / `vigik_refuse` existaient depuis l'origine
+    # sans qu'aucun code ne les envoie : le demandeur n'était prévenu que par une
+    # notification dans l'application, qu'il ne voit que s'il l'ouvre. Pour une
+    # demande de badge ou de télécommande — un objet qu'il faut ensuite venir
+    # retirer — l'e-mail est le canal qui atteint vraiment (01/08/2026).
+    accepte = cmd.statut == StatutCommande.acceptee
+    demandeur = session.get(Utilisateur, cmd.user_id)
+    if demandeur and demandeur.email:
+        from app.utils.email import send_email
+        ctx_vigik: dict[str, Any] = {
+            "destinataire": {"prenom": demandeur.prenom, "nom": demandeur.nom},
+            "type": cmd.type,
+        }
+        if not accepte:
+            ctx_vigik["motif"] = body.motif_refus or "Aucun motif précisé."
+        background_tasks.add_task(
+            send_email,
+            code="vigik_accepte" if accepte else "vigik_refuse",
+            to=demandeur.email,
+            context=ctx_vigik,
+            destinataire_id=demandeur.id,
+        )
+
     session.commit()
     return {"statut": cmd.statut}
 

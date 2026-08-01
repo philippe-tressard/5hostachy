@@ -118,11 +118,68 @@ def _nom_appele(node: ast.Call) -> str | None:
     return None
 
 
-def _envois(arbre: ast.AST):
+def _cibles_assignees(node):
+    """Noms affectés par `node`, qu'il soit annoté ou non.
+
+    `ctx: dict[str, Any] = {...}` est un `AnnAssign`, pas un `Assign` : les deux
+    écritures cohabitent dans `app/` et seule la seconde était reconnue. C'est ce
+    qui rendait opaques les contextes de `vigik_*` et `compte_*` — quatre envois
+    silencieusement non couverts.
+    """
+    if isinstance(node, ast.Assign):
+        cibles = node.targets
+    elif isinstance(node, ast.AnnAssign) and node.value is not None:
+        cibles = [node.target]
+    else:
+        return
+    for c in cibles:
+        if isinstance(c, ast.Name):
+            yield c
+
+
+def _codes_possibles(node, portee: ast.AST, module: ast.AST, ligne: int) -> set[str] | None:
+    """Codes que `node` peut valoir, ou None si l'expression reste opaque.
+
+    Un `code=` littéral n'est pas la seule écriture du dépôt : le choix du
+    modèle dépend souvent de l'issue traitée, et s'écrit alors en ternaire
+    (`"vigik_accepte" if accepte else "vigik_refuse"`), en variable locale
+    (`email_code`) ou en constante de module (`REPONSE_EMAIL_CODE`). Ces trois
+    formes étaient purement et simplement **ignorées** — quatre envois, dont
+    les deux couples accepté/refusé, sortaient du garde-fou sans que rien ne le
+    signale. Or ce sont précisément les envois les plus exposés : la branche de
+    refus fournit une variable (`motif`) que la branche d'acceptation n'a pas.
+
+    Un ternaire rend les DEUX codes : le contexte doit satisfaire l'un et
+    l'autre, puisque l'exécution empruntera l'une ou l'autre branche.
+    """
+    if isinstance(node, ast.Constant):
+        return {node.value} if isinstance(node.value, str) else None
+    if isinstance(node, ast.IfExp):
+        gauche = _codes_possibles(node.body, portee, module, ligne)
+        droite = _codes_possibles(node.orelse, portee, module, ligne)
+        return None if gauche is None or droite is None else gauche | droite
+    if isinstance(node, ast.Name):
+        # Assignation la plus proche AVANT l'appel dans la fonction englobante,
+        # à défaut une constante de module (portée sans contrainte de ligne).
+        for source, borne in ((portee, ligne), (module, None)):
+            valeur = None
+            for n in ast.walk(source):
+                if borne is not None and getattr(n, "lineno", 0) >= borne:
+                    continue
+                if any(c.id == node.id for c in _cibles_assignees(n)):
+                    valeur = n.value
+            if valeur is not None:
+                return _codes_possibles(valeur, portee, module, ligne)
+    return None
+
+
+def _envois(arbre: ast.AST, module: ast.AST):
     """Rend (code, node_context, ligne) pour chaque envoi d'email trouvé.
 
     Couvre les deux écritures du dépôt : l'appel direct `send_email(...)` et
     l'appel différé `background_tasks.add_task(send_email_group, code=..., ...)`.
+    Un envoi dont le code se résout à plusieurs modèles est rendu une fois par
+    modèle : chacun doit tenir avec le même contexte.
     """
     for node in ast.walk(arbre):
         if not isinstance(node, ast.Call):
@@ -135,10 +192,11 @@ def _envois(arbre: ast.AST):
         if not est_envoi:
             continue
         kwargs = {kw.arg: kw.value for kw in node.keywords if kw.arg}
-        code = kwargs.get("code")
-        if not (isinstance(code, ast.Constant) and isinstance(code.value, str)):
-            continue  # code dynamique : hors de portée d'une analyse statique
-        yield code.value, kwargs.get("context"), node.lineno
+        codes = _codes_possibles(kwargs.get("code"), arbre, module, node.lineno)
+        if not codes:
+            continue  # code réellement indéterminable statiquement
+        for code in sorted(codes):
+            yield code, kwargs.get("context"), node.lineno
 
 
 def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[str] | None:
@@ -157,13 +215,9 @@ def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[st
         dictionnaire = None
         for n in ast.walk(portee):
             if (
-                isinstance(n, ast.Assign)
-                and isinstance(n.value, ast.Dict)
-                and n.lineno < ligne_appel
-                and any(
-                    isinstance(t, ast.Name) and t.id == node_context.id
-                    for t in n.targets
-                )
+                isinstance(getattr(n, "value", None), ast.Dict)
+                and getattr(n, "lineno", 0) < ligne_appel
+                and any(c.id == node_context.id for c in _cibles_assignees(n))
             ):
                 dictionnaire = n.value
         if dictionnaire is None:
@@ -224,7 +278,7 @@ def _collecter() -> tuple[list[tuple[str, str, set[str]]], list[tuple[str, str]]
         # Des portées imbriquées voient le même appel : on retient la plus
         # étroite, c'est-à-dire celle qui déclare le moins de `ctx` candidats.
         for portee in sorted(_portees(arbre), key=lambda p: -getattr(p, "lineno", 0)):
-            for code, node_context, ligne in _envois(portee):
+            for code, node_context, ligne in _envois(portee, arbre):
                 if (code, ligne) in vus:
                     continue
                 vus.add((code, ligne))
@@ -244,6 +298,26 @@ def test_des_envois_sont_analysables():
     assert _ANALYSABLES, (
         "Aucun envoi d'email analysable trouvé dans app/ — l'analyse AST ne "
         "reconnaît plus les écritures du dépôt, ce test est devenu aveugle."
+    )
+
+
+def test_aucun_envoi_hors_de_portee():
+    """Un envoi que l'analyse n'atteint pas est INCONNU, jamais OK.
+
+    Les envois opaques étaient collectés puis jetés : `vigik_accepte`,
+    `vigik_refuse`, `compte_active` et `compte_refuse` sont restés hors du
+    garde-fou sans qu'aucune ligne rouge ne le dise. C'est la règle 1 du
+    CLAUDE.md — « un contrôle qui ne peut pas s'exécuter renvoie INCONNU » —
+    appliquée à ce test lui-même.
+
+    Pour lever un blocage : déclarer le contexte en dictionnaire littéral dans
+    la fonction d'envoi, plutôt que de le construire de façon indirecte.
+    """
+    assert not _OPAQUES, (
+        "Envois dont le `context` échappe à l'analyse statique : "
+        + ", ".join(f"{code} ({fichier})" for code, fichier in sorted(_OPAQUES))
+        + ". Ces envois ne sont couverts par AUCUN garde-fou et échoueront en "
+        "silence si le contexte diverge du template."
     )
 
 
