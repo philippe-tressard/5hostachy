@@ -360,6 +360,13 @@ class RapportMaintenance(BaseModel):
     declenchee_par: str = "cron"
     cree_le: Optional[datetime] = None
     terminee_le: Optional[datetime] = None
+    # Ajoutés en v2.32 — un rapport sans ces champs reste valide (défauts
+    # identiques au comportement d'avant), donc un nœud dont le script n'a pas
+    # encore été redéployé continue d'être accepté.
+    tache: str = "maintenance"
+    noeud: Optional[str] = None                # rpi1 | rpi2
+    portee: str = "applicative"                # applicative | hygiene_locale
+    details: Optional[dict] = None             # chiffres propres à la tâche
 
 
 @router.post("/maintenance/rapport", status_code=201)
@@ -374,11 +381,15 @@ def maintenance_rapport(
     if x_maintenance_key != settings.maintenance_key:
         raise HTTPException(status_code=403, detail="Clé maintenance invalide")
     entry = HistoriqueMaintenance(
+        tache=body.tache,
+        noeud=body.noeud,
+        portee=body.portee,
         declenchee_par=body.declenchee_par,
         statut=body.statut,
         tokens_supprimes=body.tokens_supprimes,
         taille_db_octets=body.taille_db_octets,
         duree_secondes=body.duree_secondes,
+        details=json.dumps(body.details, ensure_ascii=False) if body.details else None,
         erreur=body.erreur,
         cree_le=body.cree_le or datetime.utcnow(),
         terminee_le=body.terminee_le,
@@ -391,12 +402,150 @@ def maintenance_rapport(
 
 @router.get("/maintenance/historique")
 def maintenance_history(
+    tache: Optional[str] = None,
+    noeud: Optional[str] = None,
+    limite: int = 40,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    return session.exec(
-        select(HistoriqueMaintenance).order_by(HistoriqueMaintenance.cree_le.desc()).limit(10)
+    """Historique des exécutions, filtrable par tâche et par nœud.
+
+    `details` est stocké en JSON (une colonne par chiffre serait ingérable :
+    chaque tâche n'a pas les mêmes) mais renvoyé **désérialisé**, pour que le
+    front n'ait pas à connaître ce détail de stockage.
+    """
+    requete = select(HistoriqueMaintenance)
+    if tache:
+        requete = requete.where(HistoriqueMaintenance.tache == tache)
+    if noeud:
+        requete = requete.where(HistoriqueMaintenance.noeud == noeud)
+    lignes = session.exec(
+        requete.order_by(HistoriqueMaintenance.cree_le.desc()).limit(max(1, min(limite, 200)))
     ).all()
+    sortie = []
+    for ligne in lignes:
+        donnees = ligne.model_dump()
+        if ligne.details:
+            try:
+                donnees["details"] = json.loads(ligne.details)
+            except ValueError:
+                donnees["details"] = None      # jamais faire échouer la page sur un JSON abîmé
+        sortie.append(donnees)
+    return sortie
+
+
+#  Périodicité attendue des tâches, en heures. Sert à détecter une exécution
+#  MANQUANTE — une absence de ligne se lit sinon comme « tout va bien ».
+#  Les tâches à haute fréquence (health_watch 5 min, reliability 15 min,
+#  auto_deploy 5 min) sont volontairement ABSENTES de ce tableau : elles
+#  n'enregistrent que leurs anomalies et leurs actions, jamais leurs ticks
+#  nominaux. Journaliser chaque passage produirait des milliers de lignes par
+#  jour dans la table la plus écrite de la base — c'est exactement ce profil
+#  d'écriture qui a corrompu `telemetry_event` deux fois en juin 2026.
+#
+#  La SAUVEGARDE n'est volontairement pas dans cette table : elle a déjà la
+#  sienne (`historique_sauvegarde`), alimentée in-process par `run_backup`, et
+#  son propre onglet. L'y recopier créerait deux vérités sur le même fait —
+#  exactement ce qu'interdit la règle de factorisation. La vue de santé
+#  AGRÈGE les deux sources à la lecture (cf. `maintenance_sante`).
+_PERIODICITE_ATTENDUE_H = {
+    "maintenance": 7 * 24,     # dimanche 03:00, sur les deux nœuds
+    "bascule": 24,             # 02:00
+}
+_PERIODICITE_SAUVEGARDE_H = 24     # 03:00, tracée dans historique_sauvegarde
+_TOLERANCE_H = 6                   # marge avant de déclarer un retard
+
+
+@router.get("/maintenance/sante")
+def maintenance_sante(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """État de santé des tâches planifiées, par tâche et par nœud.
+
+    Répond à la question que l'historique seul ne sait pas poser : « qu'est-ce
+    qui aurait dû s'exécuter et ne l'a pas fait ? ». Une tâche en retard est
+    signalée `manquante`, ce qui distingue enfin les trois cas jusqu'ici
+    confondus : pas exécutée, échouée, ou exécutée sans avoir pu s'enregistrer.
+    """
+    maintenant = datetime.utcnow()
+    etat = []
+    for tache, periode_h in _PERIODICITE_ATTENDUE_H.items():
+        lignes = session.exec(
+            select(HistoriqueMaintenance)
+            .where(HistoriqueMaintenance.tache == tache)
+            .order_by(HistoriqueMaintenance.cree_le.desc())
+            .limit(20)
+        ).all()
+        par_noeud: dict = {}
+        for ligne in lignes:
+            cle = ligne.noeud or "inconnu"
+            if cle not in par_noeud:
+                par_noeud[cle] = ligne
+        if not par_noeud:
+            etat.append({"tache": tache, "noeud": None, "statut": "aucune_execution",
+                         "derniere": None, "retard_heures": None,
+                         "periodicite_heures": periode_h})
+            continue
+        for noeud, ligne in sorted(par_noeud.items()):
+            age_h = (maintenant - ligne.cree_le).total_seconds() / 3600
+            if age_h > periode_h + _TOLERANCE_H:
+                statut = "manquante"
+            elif ligne.statut == "erreur":
+                statut = "erreur"
+            else:
+                statut = "ok"
+            etat.append({
+                "tache": tache,
+                "noeud": noeud,
+                "portee": ligne.portee,
+                "statut": statut,
+                "derniere": ligne.cree_le,
+                "retard_heures": round(age_h, 1),
+                "periodicite_heures": periode_h,
+            })
+    # Sauvegarde : lue dans SA table, pas recopiée dans celle-ci.
+    derniere_sauvegarde = session.exec(
+        select(HistoriqueSauvegarde)
+        .order_by(HistoriqueSauvegarde.cree_le.desc())
+        .limit(1)
+    ).first()
+    if derniere_sauvegarde is None:
+        etat.append({"tache": "backup", "noeud": None, "statut": "aucune_execution",
+                     "derniere": None, "retard_heures": None,
+                     "periodicite_heures": _PERIODICITE_SAUVEGARDE_H})
+    else:
+        age_h = (maintenant - derniere_sauvegarde.cree_le).total_seconds() / 3600
+        if age_h > _PERIODICITE_SAUVEGARDE_H + _TOLERANCE_H:
+            statut_sauvegarde = "manquante"
+        elif derniere_sauvegarde.statut == StatutSauvegarde.echouee:
+            statut_sauvegarde = "erreur"
+        else:
+            statut_sauvegarde = "ok"
+        etat.append({
+            "tache": "backup",
+            "noeud": None,                     # tourne in-process sur l'actif
+            "portee": "applicative",
+            "statut": statut_sauvegarde,
+            "derniere": derniere_sauvegarde.cree_le,
+            "retard_heures": round(age_h, 1),
+            "periodicite_heures": _PERIODICITE_SAUVEGARDE_H,
+        })
+
+    anomalies = session.exec(
+        select(HistoriqueMaintenance)
+        .where(HistoriqueMaintenance.statut == "erreur")
+        .order_by(HistoriqueMaintenance.cree_le.desc())
+        .limit(10)
+    ).all()
+    return {
+        "taches": etat,
+        "anomalies_recentes": [
+            {"tache": a.tache, "noeud": a.noeud, "cree_le": a.cree_le, "erreur": a.erreur}
+            for a in anomalies
+        ],
+        "genere_le": maintenant,
+    }
 
 
 @router.post("/maintenance/lancer", status_code=202)

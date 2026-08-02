@@ -11,7 +11,10 @@ import { fmtDatetimeShort as fmt } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
 
 //  Onglets 
-let onglet: 'comptes' | 'acces' | 'sauvegardes' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'whatsapp' | 'smtp' | 'telemetry' = 'comptes';
+// 'sauvegardes' retiré le 02/08/2026 : ce bloc n'était accessible par AUCUN
+// bouton et dupliquait, dans une version divergente (accents perdus), celui de
+// « Paramétrage site ». Les deux vivent désormais dans le sous-onglet Maintenance.
+let onglet: 'comptes' | 'acces' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'whatsapp' | 'smtp' | 'telemetry' | 'maintenance' = 'comptes';
 $: trackTabView(onglet);
 
 //  Bâtiments (pour affichage) 
@@ -152,7 +155,7 @@ backupEnCours = false;
 }
 }
 
-//  Maintenance cron 
+//  Maintenance cron
 let historiqueMaintenance: any[] = [];
 let maintenanceLoading = true;
 let maintenanceEnCours = false;
@@ -164,6 +167,48 @@ historiqueMaintenance = await api.get<any[]>('/admin/maintenance/historique');
 } catch { historiqueMaintenance = []; }
 finally { maintenanceLoading = false; }
 }
+
+//  Santé des tâches planifiées (les deux nœuds)
+let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
+let santeLoading = true;
+
+async function loadSante() {
+santeLoading = true;
+try {
+sante = await api.get('/admin/maintenance/sante');
+} catch { sante = null; }
+finally { santeLoading = false; }
+}
+
+// Un seul chargement pour tout le sous-onglet : santé, sauvegardes et
+// maintenance décrivent le même sujet, il n'y a pas de raison de les charger
+// séparément — et l'utilisateur ne verrait pas trois états de chargement.
+function openMaintenanceTab() {
+onglet = 'maintenance';
+loadSante();
+loadHistorique();
+loadHistoriqueMaintenance();
+}
+
+const LIBELLE_STATUT_SANTE: Record<string, string> = {
+ok: 'À jour',
+manquante: 'Exécution manquante',
+erreur: 'En échec',
+aucune_execution: 'Jamais exécutée'
+};
+
+const LIBELLE_TACHE: Record<string, string> = {
+maintenance: 'Maintenance hebdomadaire',
+backup: 'Sauvegarde quotidienne',
+bascule: 'Bascule actif/standby'
+};
+
+// « hygiene_locale » ne veut rien dire pour un lecteur : c'est le ménage que le
+// nœud passif fait sans toucher à l'application ni à la base.
+const LIBELLE_PORTEE: Record<string, string> = {
+applicative: 'Maintenance applicative',
+hygiene_locale: 'Hygiène locale (nœud en veille)'
+};
 
 async function declencherMaintenance() {
 maintenanceEnCours = true;
@@ -981,6 +1026,9 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); loadHistoriqueTelemetrie(); }}>
       📊 Télémétrie
     </button>
+    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={openMaintenanceTab}>
+      🔧 Maintenance
+    </button>
   </div>
 </div>
 
@@ -1396,44 +1444,139 @@ $: _siteNom = $siteNomStore;
 </div>
 {/if}
 
-{:else if onglet === 'sauvegardes'}
-<div class="backup-header">
-<p class="muted">Stockage : <code>/data/5hostachy/backups/</code></p>
-<button class="btn btn-primary" on:click={declencherSauvegarde} disabled={backupEnCours}>
-{#if backupEnCours}En cours...{:else}Declencher maintenant{/if}
-</button>
-</div>
-{#if historiqueLoading}
-<p class="muted">Chargement...</p>
-{:else if historique.length === 0}
-<div class="empty-state">
-<h3>Aucune sauvegarde</h3>
-<p>Cliquez sur Declencher maintenant pour lancer la premiere sauvegarde.</p>
-</div>
-{:else}
-<div class="card" style="overflow:hidden;margin-top:1rem">
-<table class="table">
-<thead>
-<tr><th>Date</th><th>Declenchement</th><th>Statut</th><th>Taille</th><th>Duree</th></tr>
-</thead>
-<tbody>
-{#each historique as h}
-<tr>
-<td style="font-size:.85rem">{fmt(h.cree_le)}</td>
-<td style="color:var(--color-text-muted)">{h.declenchee_par}</td>
-<td><span class="badge {statutBadge(h.statut)}">{h.statut}</span></td>
-<td style="color:var(--color-text-muted);font-size:.85rem">
-{h.taille_octets ? (h.taille_octets / 1024 / 1024).toFixed(1) + ' Mo' : ''}
-</td>
-<td style="color:var(--color-text-muted);font-size:.85rem">
-{h.duree_secondes != null ? h.duree_secondes + ' s' : ''}
-</td>
-</tr>
-{/each}
-</tbody>
-</table>
-</div>
-{/if}
+{:else if onglet === 'maintenance'}
+<p class="muted" style="margin-bottom:1.25rem">
+  Exécution des tâches planifiées sur les <strong>deux</strong> Raspberry&nbsp;Pi.
+  Le nœud actif assure la maintenance applicative (purges, VACUUM) ; le nœud en
+  veille fait son hygiène locale (cache de build, rotation des logs) et transmet
+  son rapport au nœud actif.
+</p>
+
+<section class="config-section">
+  <h2 class="config-section-title">&#x1F4CB; Santé des tâches planifiées</h2>
+  <p class="muted" style="font-size:.85rem">
+    Une tâche attendue mais jamais arrivée est signalée ici. Sans ce contrôle,
+    une absence de ligne se lit comme « tout va bien ».
+  </p>
+  {#if santeLoading}
+    <p class="muted">Chargement...</p>
+  {:else if !sante || sante.taches.length === 0}
+    <div class="empty-state">
+      <h3>Aucune donnée</h3>
+      <p>Aucune exécution n'a encore été enregistrée.</p>
+    </div>
+  {:else}
+    <div class="card" style="overflow:auto;margin-top:1rem">
+      <table class="table" style="font-size:.82rem">
+        <thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernière exécution</th></tr></thead>
+        <tbody>
+          {#each sante.taches as t}
+            <tr>
+              <td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
+              <td style="color:var(--color-text-muted)">{t.noeud ?? '—'}</td>
+              <td>
+                <span class="badge {t.statut === 'ok' ? 'badge-green' : 'badge-red'}">
+                  {LIBELLE_STATUT_SANTE[t.statut] ?? t.statut}
+                </span>
+              </td>
+              <td style="color:var(--color-text-muted)">{t.derniere ? fmt(t.derniere) : '—'}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    {#if sante.anomalies_recentes.length > 0}
+      <p class="muted" style="margin-top:.75rem;font-size:.85rem">
+        <strong>{sante.anomalies_recentes.length}</strong> exécution(s) en échec récemment.
+      </p>
+    {/if}
+  {/if}
+</section>
+
+<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
+
+<section class="config-section">
+  <h2 class="config-section-title">&#x1F5A5;️ Système — Sauvegardes</h2>
+  <div class="backup-header">
+    <p class="muted">Stockage : <code>/data/5hostachy/backups/</code></p>
+    <button class="btn btn-primary" on:click={declencherSauvegarde} disabled={backupEnCours}>
+      {#if backupEnCours}En cours...{:else}Déclencher maintenant{/if}
+    </button>
+  </div>
+  {#if historiqueLoading}
+    <p class="muted">Chargement...</p>
+  {:else if historique.length === 0}
+    <div class="empty-state">
+      <h3>Aucune sauvegarde</h3>
+      <p>Cliquez sur Déclencher maintenant pour lancer la première sauvegarde.</p>
+    </div>
+  {:else}
+    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
+      <table class="table" style="font-size:.82rem">
+        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
+        <tbody>
+          {#each historique as h}
+            <tr>
+              <td style="font-size:.85rem">{fmt(h.cree_le)}</td>
+              <td style="color:var(--color-text-muted)">{h.declenchee_par}</td>
+              <td><span class="badge {statutBadge(h.statut)}">{h.statut}</span></td>
+              <td style="color:var(--color-text-muted);font-size:.85rem">{h.taille_octets ? (h.taille_octets / 1024 / 1024).toFixed(1) + ' Mo' : ''}</td>
+              <td style="color:var(--color-text-muted);font-size:.85rem">{h.duree_secondes != null ? h.duree_secondes + ' s' : ''}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+</section>
+
+<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
+
+<section class="config-section">
+  <h2 class="config-section-title">&#x1F527; Exécutions de la maintenance</h2>
+  <div class="backup-header">
+    <p class="muted" style="font-size:.85rem">Script cron hebdomadaire, sur les deux nœuds. Le rapport est enregistré si <code>MAINTENANCE_KEY</code> est configuré dans le <code>.env</code>.</p>
+    <button class="btn btn-primary" on:click={declencherMaintenance} disabled={maintenanceEnCours}>
+      {maintenanceEnCours ? 'En cours...' : 'Déclencher maintenant'}
+    </button>
+  </div>
+  {#if maintenanceLoading}
+    <p class="muted">Chargement...</p>
+  {:else if historiqueMaintenance.length === 0}
+    <div class="empty-state">
+      <h3>Aucune exécution enregistrée</h3>
+      <p>Le script <code>maintenance.sh</code> n'a pas encore été exécuté, ou <code>MAINTENANCE_KEY</code> n'est pas configuré.</p>
+    </div>
+  {:else}
+    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
+      <table class="table" style="font-size:.82rem">
+        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Nœud</th><th>Portée</th><th>Statut</th><th>Taille DB</th><th>Durée</th><th>Détail</th></tr></thead>
+        <tbody>
+          {#each historiqueMaintenance as m}
+            <tr>
+              <td style="font-size:.85rem">{fmt(m.cree_le)}</td>
+              <td style="color:var(--color-text-muted)">{m.noeud ?? '—'}</td>
+              <td style="color:var(--color-text-muted);font-size:.8rem">{LIBELLE_PORTEE[m.portee] ?? m.portee ?? '—'}</td>
+              <td>
+                <span class="badge {m.statut === 'succes' ? 'badge-green' : 'badge-red'}">{m.statut}</span>
+                {#if m.erreur}<span title={m.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
+              </td>
+              <td style="color:var(--color-text-muted);font-size:.85rem">{m.taille_db_octets ? (m.taille_db_octets / 1024 / 1024).toFixed(1) + ' Mo' : '—'}</td>
+              <td style="color:var(--color-text-muted);font-size:.85rem">{m.duree_secondes != null ? m.duree_secondes + ' s' : '—'}</td>
+              <td style="color:var(--color-text-muted);font-size:.78rem">
+                {#if m.details}
+                  {m.details.lignes_rotees ? m.details.lignes_rotees + ' lignes rotées' : ''}
+                  {m.details.cache_plafond ? ' · cache : ' + m.details.cache_plafond : ''}
+                  {m.details.tokens ? ' · ' + m.details.tokens + ' jetons' : ''}
+                {:else}—{/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+</section>
 
 {:else if onglet === 'emails'}
 <p class="muted" style="margin-bottom:1rem">Modeles utilises pour les notifications automatiques.</p>
@@ -1598,80 +1741,6 @@ $: _siteNom = $siteNomStore;
   </div>
 
 </section>
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-<section class="config-section">
-  <h2 class="config-section-title">&#x1F5A5;️ Système — Sauvegardes</h2>
-  <div class="backup-header">
-    <p class="muted">Stockage : <code>/data/5hostachy/backups/</code></p>
-    <button class="btn btn-primary" on:click={declencherSauvegarde} disabled={backupEnCours}>
-      {#if backupEnCours}En cours...{:else}Déclencher maintenant{/if}
-    </button>
-  </div>
-  {#if historiqueLoading}
-    <p class="muted">Chargement...</p>
-  {:else if historique.length === 0}
-    <div class="empty-state">
-      <h3>Aucune sauvegarde</h3>
-      <p>Cliquez sur Déclencher maintenant pour lancer la première sauvegarde.</p>
-    </div>
-  {:else}
-    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
-      <table class="table" style="font-size:.82rem">
-        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
-        <tbody>
-          {#each historique as h}
-            <tr>
-              <td style="font-size:.85rem">{fmt(h.cree_le)}</td>
-              <td style="color:var(--color-text-muted)">{h.declenchee_par}</td>
-              <td><span class="badge {statutBadge(h.statut)}">{h.statut}</span></td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{h.taille_octets ? (h.taille_octets / 1024 / 1024).toFixed(1) + ' Mo' : ''}</td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{h.duree_secondes != null ? h.duree_secondes + ' s' : ''}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-</section>
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-<section class="config-section">
-  <h2 class="config-section-title">&#x1F527; Système — Maintenance</h2>
-  <div class="backup-header">
-    <p class="muted" style="font-size:.85rem">Exécutions du script cron hebdomadaire (purge tokens, VACUUM, prune images). Le script enregistre automatiquement chaque passage si <code>MAINTENANCE_KEY</code> est configuré dans le <code>.env</code>.</p>
-    <button class="btn btn-primary" on:click={declencherMaintenance} disabled={maintenanceEnCours}>
-      {maintenanceEnCours ? 'En cours...' : 'Déclencher maintenant'}
-    </button>
-  </div>
-  {#if maintenanceLoading}
-    <p class="muted">Chargement...</p>
-  {:else if historiqueMaintenance.length === 0}
-    <div class="empty-state">
-      <h3>Aucune exécution enregistrée</h3>
-      <p>Le script <code>maintenance.sh</code> n'a pas encore été exécuté, ou <code>MAINTENANCE_KEY</code> n'est pas configuré.</p>
-    </div>
-  {:else}
-    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
-      <table class="table" style="font-size:.82rem">
-        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille DB</th><th>Durée</th></tr></thead>
-        <tbody>
-          {#each historiqueMaintenance as m}
-            <tr>
-              <td style="font-size:.85rem">{fmt(m.cree_le)}</td>
-              <td style="color:var(--color-text-muted)">{m.declenchee_par}</td>
-              <td>
-                <span class="badge {m.statut === 'succes' ? 'badge-green' : 'badge-red'}">{m.statut}</span>
-                {#if m.erreur}<span title={m.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
-              </td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{m.taille_db_octets ? (m.taille_db_octets / 1024 / 1024).toFixed(1) + ' Mo' : '—'}</td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{m.duree_secondes != null ? m.duree_secondes + ' s' : '—'}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-</section>
-
 {:else if onglet === 'pages'}
 <p class="muted" style="margin-bottom:1.25rem">Personnalisez l'icône, le label de navigation, le titre et la description de chaque page. Cliquer sur une entrée pour la modifier ; les autres se referment automatiquement.</p>
 <div class="ref-list">

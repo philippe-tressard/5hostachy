@@ -2557,6 +2557,44 @@
     </section>
 
     <!-- ════════════════════════════════
+         ADMIN – Maintenance
+    ════════════════════════════════ -->
+    <section class="chapter" id="admin-maintenance" data-section="faq">
+      <div class="chapter-header">
+        <div class="chapter-icon" style="background:#eef6ff; color:#1E3A5F">🔧</div>
+        <div>
+          <h2>Administration — Maintenance</h2>
+          <p>Santé des tâches automatiques, sauvegardes et entretien de la base (accès réservé aux administrateurs).</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Où le trouver ?</h3>
+        <p>Espace <strong>Administration</strong>, groupe <strong>⚙️ Configuration</strong>, sous-onglet <strong>🔧 Maintenance</strong>.</p>
+        <p>Les sauvegardes et l'entretien de la base étaient auparavant présentés dans « Paramétrage site » ; ils sont désormais réunis ici, avec le reste de l'exploitation.</p>
+      </div>
+
+      <div class="card">
+        <h3>Que contient cet onglet ?</h3>
+        <ul>
+          <li><strong>Santé des tâches planifiées</strong> — pour chaque tâche automatique, son état et sa dernière exécution. Une tâche qui <em>aurait dû</em> s'exécuter et ne l'a pas fait est signalée <strong>« Exécution manquante »</strong>. C'est le point le plus utile : sans lui, une tâche silencieusement arrêtée ressemble à une tâche qui n'a rien à signaler.</li>
+          <li><strong>Sauvegardes</strong> — historique des sauvegardes automatiques (03&nbsp;h) et bouton pour en déclencher une immédiatement.</li>
+          <li><strong>Exécutions de la maintenance</strong> — passages du script hebdomadaire, avec le détail de ce qui a été fait.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Pourquoi deux nœuds, et deux « portées » ?</h3>
+        <p>L'application tourne sur deux Raspberry&nbsp;Pi : l'un sert le site (le <strong>nœud actif</strong>), l'autre attend de prendre le relais (le <strong>nœud en veille</strong>). Les deux font du ménage, mais pas le même :</p>
+        <ul>
+          <li><strong>Maintenance applicative</strong> — sur le nœud actif : purge des jetons expirés, des notifications anciennes, compactage de la base.</li>
+          <li><strong>Hygiène locale</strong> — sur le nœud en veille : nettoyage du cache de compilation et rotation des journaux. Ce travail est réel (plusieurs gigaoctets libérés certaines semaines) mais ne touche ni l'application ni les données.</li>
+        </ul>
+        <p>La colonne <strong>Portée</strong> indique laquelle des deux a été exécutée. Une ligne « Hygiène locale » n'est donc pas une maintenance incomplète : c'est le travail normal du nœud en veille.</p>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════
          ADMIN – Télémétrie
     ════════════════════════════════ -->
     <section class="chapter" id="admin-telemetry" data-section="faq">
