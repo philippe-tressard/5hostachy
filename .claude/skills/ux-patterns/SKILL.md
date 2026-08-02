@@ -1,6 +1,6 @@
 ---
 name: ux-patterns
-description: "Apply and enforce 5Hostachy UX patterns: expand cards, tabs, pills, badges, pagination, accessibility, archiving, perimeter display, urgency, pinned items. Use when: implementing a new UI feature, reviewing UX consistency, checking if a pattern is correctly applied across all pages."
+description: "Apply and enforce 5Hostachy UX patterns: expand cards, tabs, pills, badges, photo thumbnails and galleries, kanban column visibility, pagination, accessibility, archiving, perimeter display, urgency, pinned items, form field conventions. Use when: implementing a new UI feature, reviewing UX consistency, checking if a pattern is correctly applied across all pages."
 argument-hint: "Describe the UX element to implement or review (e.g. 'add tabs to page fournisseurs', 'review badge consistency')"
 ---
 
@@ -13,7 +13,7 @@ Guide de référence des patterns UX établis. Tout pattern utilisé ≥ 2 fois 
 1. **Avant** d'implémenter, vérifier si un pattern similaire existe déjà (grep / semantic search)
 2. Si le pattern existe ≥ 2 fois → c'est un **pattern établi** → l'appliquer à l'identique
 3. Si la demande contredit un pattern → **signaler le conflit** et demander confirmation
-4. Après implémentation → mettre à jour `/memories/repo/ui-patterns.md`
+4. Après implémentation → mettre à jour **cette skill** si le pattern a évolué
 
 ## 1. Icônes de contexte
 
@@ -39,10 +39,13 @@ const PERIMETRE_LABELS = {
 
 Séparateur multi-périmètre : ` · ` (espace · espace).
 
-Rendus par page :
-- Actualités : `<span class="badge badge-gray">📍 {label}</span>`
-- Calendrier : `<span class="badge badge-blue">📍 {label}</span>`
-- Tickets : `<p style="font-size:.8rem;color:var(--color-text-muted)">📍 {label}</p>`
+Rendus par page — l'icône du périmètre est **🔹**, jamais 📍 (cf. §1) :
+- Actualités : `<span class="badge badge-gray">&#x1F539; {label}</span>`
+- Calendrier : `<span class="badge badge-blue">&#x1F539; {label}</span>`
+- Tickets : `<p style="font-size:.8rem;color:var(--color-text-muted)">🔹 {label}</p>`
+
+Le label vient de `perimetreLabel()` (`$lib/utils`) — ne pas réimplémenter la table
+de correspondance dans une page.
 
 ## 3. Carte expansible (Expand Card)
 
@@ -95,7 +98,7 @@ Pages implémentées : `actualites`, `calendrier`
 
 ## 6. Ligne de publication
 
-**Ordre** : `[📌 coin absolu] [Brouillon?] Titre [Statut] [📍 Périmètre]`
+**Ordre** : `[📌 coin absolu] [Brouillon?] Titre [Statut] [🔹 Périmètre]`
 
 - Badges : toujours **après** le titre
 - Urgence : bord gauche rouge uniquement (pas de badge texte)
@@ -125,9 +128,11 @@ Pages implémentées : `actualites`, `tableau-de-bord`, `faq`, `calendrier`, `so
 
 Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
 
-## 9. Champs obligatoires
+## 9. Champs de formulaire
 
-Tout label de champ requis suivi de ` *` : `Titre *`, `Périmètre *`.
+- Champ requis : label suivi de ` *` — `Titre *`, `Périmètre *`
+- **Pas** de mention « (optionnel) » : l'absence de `*` suffit
+- Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**
 
 ## 10. Fil d'évolutions
 
@@ -137,6 +142,34 @@ Structure pour les tickets/publications avec historique :
 - `.evol-item` : `.evol-icon` + `.evol-body` (`.evol-meta` + `.evol-text`)
 - Pagination : si > 7 → afficher 5 + bouton `.evol-more`
 - Formulaire inline : pills type + textarea + select statut → `.evol-form`
+
+## 11. Vignette & galerie de photos
+
+Deux composants partagés, utilisés par la Communauté (petites annonces) et les
+Annonces Hall. **Ne pas recréer** de `.xxx-thumb` ni de rangée de photos ad hoc.
+
+| Composant | Rôle | Props |
+|---|---|---|
+| `$lib/components/Vignette.svelte` | vignette carrée | `src`, `alt`, `placeholder`, `count`, `size`, slot d'actions |
+| `$lib/components/PhotosUpload.svelte` | galerie éditable | `urls`, `max`, `readonly`, `upload`, `remove` |
+
+Le téléversement est **délégué par callback** : chaque rubrique garde son propre
+endpoint, le composant ne connaît pas l'API.
+
+## 12. Visibilité du Kanban (calendrier + widget tableau de bord)
+
+Filtre des colonnes : `if (col.id === 'ag' || col.id === 'cs') return canSeeAG;`
+
+| Colonne | Locataire | Copropriétaire | CS / Admin |
+|---|---|---|---|
+| AG | ✗ | ✓ | ✓ |
+| CS | ✗ | ✓ | ✓ |
+| Syndic | ✓ | ✓ | ✓ |
+| Prestataire | ✓ | ✓ | ✓ |
+| Terminé | ✓ (affichables) | ✓ (affichables) | ✓ (tout) |
+| Annulé | masqué dashboard | masqué dashboard | masqué |
+
+Items non-affichables : masqués aux non-CS/admin, sauf `maintenance_recurrente`.
 
 ## Checklist UX (à vérifier avant commit)
 

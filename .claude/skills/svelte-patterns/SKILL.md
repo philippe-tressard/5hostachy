@@ -21,6 +21,8 @@ Conventions et patterns pour créer des pages et composants SvelteKit dans le pr
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { fmtDate, fmtDatetime } from '$lib/date';
+	import { fmtMontant, perimetreLabel } from '$lib/utils';
 </script>
 ```
 
@@ -244,37 +246,44 @@ Conventions et patterns pour créer des pages et composants SvelteKit dans le pr
 {/if}
 ```
 
-## Helpers de formatage
+## Helpers de formatage — **à importer, jamais à réécrire**
+
+Les formats de date et de montant sont **centralisés**. Une page qui redéfinit
+`fmtDate` localement casse la cohérence et **échoue en CI**.
 
 ```svelte
 <script lang="ts">
-	function fmtDate(d: string) {
-		return new Date(d).toLocaleDateString('fr-FR', {
-			day: 'numeric', month: 'short', year: 'numeric'
-		});
-	}
+	// $lib/date.ts — TOUTES les dates affichées (locale fr-FR + TZ Europe/Paris figés)
+	import { fmtDate, fmtDateLong, fmtDateShort, fmtDatetime, fmtTime, fmtMonthYear } from '$lib/date';
+	// $lib/utils.ts — montants, périmètre, extraits HTML
+	import { fmtMontant, perimetreLabel, stripHtml, htmlPreview } from '$lib/utils';
+</script>
+```
 
-	function fmtDateHeure(d: string) {
-		return new Date(d).toLocaleDateString('fr-FR', {
-			day: 'numeric', month: 'short', year: 'numeric',
-			hour: '2-digit', minute: '2-digit'
-		});
-	}
+| Helper | Entrée → sortie |
+|---|---|
+| `fmtDate(d)` | `'2026-07-25'` → `25/07/2026` |
+| `fmtDatetime(d)` | horodatage → date + heure de Paris |
+| `fmtMontant(v)` | `1234` → `1 234 €` · `1234.5` → `1 234,50 €` · `null` → `—` |
+| `perimetreLabel(items)` | `['bat:1','parking']` → `Bât. 1 · Parking` |
 
+**Interdits, vérifiés par `npm run lint:dates`** (sur `front/src/` **et**
+`vite.config.ts`) : `toLocaleDateString`, `toLocaleTimeString`,
+`Intl.DateTimeFormat` et `new Date(…).toLocaleString` **sans `timeZone`**. Restent
+autorisés : `toISOString()` seul (sérialisation UTC d'un payload d'API) et
+`toLocaleString()` sur un **nombre** — ce n'est pas une date.
+
+Un alias local qui délègue au helper partagé (`const formatDate = fmtDatetimeShort`)
+est une indirection inutile : appeler directement le helper.
+
+Le seul helper qui reste légitimement local est le rendu d'une description mixte
+texte/HTML :
+
+```svelte
+<script lang="ts">
 	function renderDesc(c: string) {
 		const t = c.trimStart();
 		return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`);
-	}
-
-	const PERIMETRE_LABELS: Record<string, string> = {
-		'résidence': 'Copropriété entière',
-		'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-		parking: 'Parking', cave: 'Cave',
-	};
-
-	function perimetreLabel(items: string | string[]) {
-		const arr = Array.isArray(items) ? items : items.split(',').map(s => s.trim());
-		return arr.filter(i => i !== 'résidence').map(i => PERIMETRE_LABELS[i] ?? i).join(' · ');
 	}
 </script>
 ```
@@ -305,6 +314,21 @@ var(--shadow)              /* Box-shadow standard */
 
 <!-- ✓ CORRECT -->
 {@html safeHtml(contenu)}
+```
+
+## Emojis non-BMP (U+10000 et au-delà)
+
+Écrits littéralement, ils survivent mal aux allers-retours d'encodage sous Windows.
+Les encoder :
+
+```typescript
+// JS / TS : échappement \u{HEX}
+const icon = '\u{1F6E0}'; // 🔧
+```
+
+```svelte
+<!-- Template HTML / Svelte : entité &#xHEX; -->
+&#x1F539; <!-- 🔹 -->
 ```
 
 ## Accessibilité
