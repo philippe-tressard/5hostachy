@@ -5,7 +5,7 @@ Avant de produire du code ou d'intervenir sur l'infra 5Hostachy, tu DOIS avoir
 chargé les consignes ci-dessous, puis le DÉCLARER (voir « CONFORMITÉ » en bas).
 
 1. DÉJÀ EN CONTEXTE (auto-chargés) — à relire, pas à ignorer :
-   • CLAUDE.md — volontairement COURT (~13 Ko) : principe, stack, conventions
+   • CLAUDE.md — volontairement COURT (~16 Ko) : principe, stack, conventions
      backend, checklist avant commit, versioning, RÈGLE D'OR anti-corruption DB,
      et le tableau « quelle skill charger pour quelle tâche ». Le détail n'y est
      PLUS : il est dans .claude/skills/, à charger explicitement.
