@@ -57,6 +57,12 @@ COMPOSE_PROJECT=5hostachy
 # standby dériver, puisqu'un nœud n'est actif qu'un dimanche sur deux (bascule
 # nocturne alternée). Constaté le 31/07/2026 : 80 218 lignes dans
 # hostachy-check.log et ~60 Go de cache de build sur le nœud standby.
+# Chiffres produits par hygiene_locale(), pour le rapport envoyé à l'API.
+# Ils étaient jusqu'ici écrits dans le log local et perdus : le 02/08/2026, le
+# standby avait purgé 3,358 Go de cache et roté 66 338 lignes sans qu'aucune
+# trace n'apparaisse dans l'application.
+HYG_IMAGES=""; HYG_CACHE_AGE=""; HYG_CACHE_PLAFOND=""; HYG_LIGNES_ROTEES=0
+
 hygiene_locale() {
     # Images sans tag (couches orphelines des rebuilds), **du projet 5hostachy
     # seulement**. Le daemon Docker de rpi2 est partagé avec List-dons, co-hébergé :
@@ -69,6 +75,7 @@ hygiene_locale() {
     PRUNE_OUT=$(docker image prune -f --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" 2>&1 | tail -1) \
         || PRUNE_OUT="(échec du prune d'images)"
     log "  → $PRUNE_OUT"
+    HYG_IMAGES="$PRUNE_OUT"
 
     # Cache de build : JAMAIS purgé jusqu'au 31/07/2026 — `docker image prune`
     # ne le touche pas. Depuis que la bascule rebuilde systématiquement l'image
@@ -89,10 +96,12 @@ hygiene_locale() {
     BPRUNE_AGE=$(docker builder prune -f --filter "until=${BUILD_CACHE_MAX_AGE_H}h" 2>&1 | tail -1) \
         || BPRUNE_AGE="(purge par âge échouée)"
     log "  → $BPRUNE_AGE"
+    HYG_CACHE_AGE="$BPRUNE_AGE"
     log "[Hygiène] Garde-fou : plafond $(( BUILD_CACHE_KEEP / 1073741824 )) Go..."
     BPRUNE_OUT=$(docker builder prune -f --max-used-space "$BUILD_CACHE_KEEP" 2>&1 | tail -1) \
         || BPRUNE_OUT="(plafonnement échoué)"
     log "  → $BPRUNE_OUT"
+    HYG_CACHE_PLAFOND="$BPRUNE_OUT"
 
     # Rotation par GLOB, et non par liste nominative : hostachy-reliability.log
     # (1,7 Mo, 33 500 lignes) et hostachy-role-guard.log avaient été ajoutés au
@@ -107,6 +116,7 @@ hygiene_locale() {
         TRIMMED=$(( LINES_BEFORE - LINES_AFTER ))
         if [ "$TRIMMED" -gt 0 ]; then
             log "  → $(basename "$LOGFILE") : $TRIMMED ligne(s) supprimée(s), $LINES_AFTER conservée(s)"
+            HYG_LIGNES_ROTEES=$(( HYG_LIGNES_ROTEES + TRIMMED ))
         else
             log "  → $(basename "$LOGFILE") : OK ($LINES_AFTER lignes)"
         fi
@@ -118,6 +128,69 @@ hygiene_locale() {
     # de tourner (cause du non-déploiement de rpi1 découvert le 15/07). On restaure
     # l'ownership à chaque maintenance = self-healing sur les 2 RPi.
     chown 1000:1000 /var/log/hostachy-deploy.log 2>/dev/null || true
+}
+
+# ── Envoi du rapport à l'API — UNE seule implémentation ───────────────────────
+#  $1 = portée : "applicative" (nœud actif) | "hygiene_locale" (standby)
+#
+#  POURQUOI le standby doit poster ailleurs que sur localhost :
+#  il n'y a pas d'API sur le nœud passif (les conteneurs ne tournent que sur
+#  l'actif). Le POST vers http://localhost échouait donc silencieusement, et
+#  tout le ménage du standby restait invisible dans l'application — constaté le
+#  02/08/2026. Il poste désormais vers l'IP de l'ACTIF, résolue par lib-role.sh
+#  (aucune table d'adresses recopiée ici).
+#
+#  Cette fonction ne fait JAMAIS échouer la maintenance : le ménage a déjà eu
+#  lieu quand elle s'exécute, et perdre le rapport ne doit pas transformer un
+#  succès en échec.
+envoyer_rapport() {
+    local portee="$1" cible="http://localhost" ip=""
+
+    MAINTENANCE_KEY=$(grep -E '^MAINTENANCE_KEY=' "$REPO/.env" 2>/dev/null \
+        | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'") || MAINTENANCE_KEY=""
+    if [ -z "$MAINTENANCE_KEY" ]; then
+        log "  ⚠ MAINTENANCE_KEY absent du .env — rapport non enregistré"
+        return 0
+    fi
+
+    if [ "$portee" = "hygiene_locale" ]; then
+        [ -n "${ACTIVE:-}" ] || { log "  ⚠ Nœud actif inconnu — rapport non enregistré"; return 0; }
+        command -v role_ip >/dev/null 2>&1 || source "$REPO/lib-role.sh" 2>/dev/null || true
+        ip=$(role_ip "$ACTIVE" 2>/dev/null) || ip=""
+        if [ -z "$ip" ]; then
+            log "  ⚠ IP de l'actif ($ACTIVE) introuvable — rapport non enregistré"
+            return 0
+        fi
+        cible="http://$ip"
+    fi
+
+    local details erreur_json duree fin
+    fin=$(date -u +%Y-%m-%dT%H:%M:%S)
+    duree=$(( SECONDS - MAINTE_START ))
+    erreur_json=$(echo "${GLOBAL_ERREUR:-}" | sed 's/"/\\"/g')
+    details=$(printf \
+        '{"images":"%s","cache_age":"%s","cache_plafond":"%s","lignes_rotees":%d,"tokens":%s,"prt":%s,"notifications":%s,"historique":%s,"emails":%s}' \
+        "${HYG_IMAGES//\"/}" "${HYG_CACHE_AGE//\"/}" "${HYG_CACHE_PLAFOND//\"/}" \
+        "${HYG_LIGNES_ROTEES:-0}" "${DELETED:-0}" "${DELETED_PRT:-0}" \
+        "${DELETED_NOTIF:-0}" "${DELETED_HIST:-0}" "${DELETED_EMAILS:-0}")
+
+    local payload http
+    payload=$(printf \
+        '{"tache":"maintenance","noeud":"%s","portee":"%s","statut":"%s","tokens_supprimes":%s,"taille_db_octets":%s,"duree_secondes":%d,"details":%s,"erreur":"%s","cree_le":"%s","terminee_le":"%s"}' \
+        "${SELF:-}" "$portee" "$GLOBAL_STATUT" "${DELETED:-0}" "${DB_SIZE:-null}" \
+        "$duree" "$details" "$erreur_json" "$MAINTE_DEBUT" "$fin")
+
+    http=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
+        -X POST "$cible/api/admin/maintenance/rapport" \
+        -H "Content-Type: application/json" \
+        -H "x-maintenance-key: $MAINTENANCE_KEY" \
+        -d "$payload" 2>/dev/null) || http="000"
+    if [ "$http" = "201" ]; then
+        log "  → Rapport $portee enregistré sur $cible (HTTP $http)"
+    else
+        log "  ⚠ Rapport $portee non enregistré sur $cible (HTTP $http)"
+    fi
+    return 0
 }
 
 log ""
@@ -133,6 +206,9 @@ if [ -f "$FLAG" ]; then
     if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
         log "Ce RPi ($SELF) n'est pas actif ($ACTIVE) — maintenance applicative ignorée."
         hygiene_locale
+        # Le ménage du standby est réel (cache de build, rotation des logs) :
+        # il doit laisser une trace consultable, sur l'API de l'ACTIF.
+        envoyer_rapport "hygiene_locale"
         log "===== Hygiène locale terminée (standby) ====="
         exit 0
     fi
@@ -370,28 +446,9 @@ DB_SIZE=$(docker exec hostachy_api python -c \
 hygiene_locale
 
 # --- 5. Enregistrement dans l'API ------------------------------------------------
-MAINTE_FIN=$(date -u +%Y-%m-%dT%H:%M:%S)
+# Même fonction que sur le standby : la logique d'envoi (clé, cible, payload,
+# code de retour) n'existe qu'à un seul endroit — cf. envoyer_rapport().
 DUREE=$(( SECONDS - MAINTE_START ))
-MAINTENANCE_KEY=$(grep -E '^MAINTENANCE_KEY=' "$REPO/.env" 2>/dev/null \
-    | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'") || MAINTENANCE_KEY=""
-
-if [ -n "$MAINTENANCE_KEY" ]; then
-    ERREUR_JSON=$(echo "$GLOBAL_ERREUR" | sed 's/"/\\"/g')
-    PAYLOAD=$(printf \
-        '{"statut":"%s","tokens_supprimes":%s,"taille_db_octets":%s,"duree_secondes":%d,"erreur":"%s","cree_le":"%s","terminee_le":"%s"}' \
-        "$GLOBAL_STATUT" "$DELETED" "$DB_SIZE" "$DUREE" "$ERREUR_JSON" "$MAINTE_DEBUT" "$MAINTE_FIN")
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-        -X POST http://localhost/api/admin/maintenance/rapport \
-        -H "Content-Type: application/json" \
-        -H "x-maintenance-key: $MAINTENANCE_KEY" \
-        -d "$PAYLOAD" 2>/dev/null) || HTTP_CODE="000"
-    if [ "$HTTP_CODE" = "201" ]; then
-        log "  → Rapport enregistré (HTTP $HTTP_CODE)"
-    else
-        log "  ⚠ Rapport non enregistré (HTTP $HTTP_CODE)"
-    fi
-else
-    log "  ⚠ MAINTENANCE_KEY absent du .env — rapport non enregistré"
-fi
+envoyer_rapport "applicative"
 
 log "===== Maintenance terminée (${DUREE}s, statut: $GLOBAL_STATUT) ====="

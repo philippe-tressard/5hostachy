@@ -759,14 +759,47 @@ class HistoriqueEmail(SQLModel, table=True):
 #  Maintenance (cron)
 # ──────────────────────────────────────────────
 
+class TachePlanifiee(str, Enum):
+    """Tâches planifiées dont on conserve l'historique d'exécution."""
+    maintenance = "maintenance"
+    backup = "backup"
+    bascule = "bascule"
+    health_watch = "health_watch"
+    reliability = "reliability"
+    auto_deploy = "auto_deploy"
+
+
+class PorteeExecution(str, Enum):
+    """Ce qu'une exécution a réellement fait.
+
+    Le nœud actif exécute la maintenance *applicative* (purges, VACUUM) ;
+    le standby n'exécute que l'*hygiène locale* (images, cache de build,
+    rotation des logs) — cf. maintenance.sh. Sans cette distinction, une
+    ligne de standby se lirait comme une maintenance applicative incomplète.
+    """
+    applicative = "applicative"
+    hygiene_locale = "hygiene_locale"
+
+
 class HistoriqueMaintenance(SQLModel, table=True):
+    """Historique d'exécution des tâches planifiées, tous nœuds confondus.
+
+    ⚠️ Le nom de table reste `historique_maintenance` pour raison historique :
+    la renommer imposerait une migration de renommage sur une base de
+    production SQLite, pour un gain purement cosmétique. Elle porte désormais
+    **toutes** les tâches de `TachePlanifiee`, pas seulement la maintenance.
+    """
     __tablename__ = "historique_maintenance"
     id: Optional[int] = Field(default=None, primary_key=True)
+    tache: str = Field(default=TachePlanifiee.maintenance.value, index=True)
+    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
+    portee: str = PorteeExecution.applicative.value
     declenchee_par: str = "cron"               # cron | manuel
     statut: str = "succes"                     # succes | erreur
     tokens_supprimes: int = 0
     taille_db_octets: Optional[int] = None     # taille DB après VACUUM
     duree_secondes: Optional[int] = None
+    details: Optional[str] = None              # JSON : chiffres propres à la tâche
     erreur: Optional[str] = None
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     terminee_le: Optional[datetime] = None
