@@ -1474,8 +1474,10 @@ $: _siteNom = $siteNomStore;
             <tr>
               <td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
               <td style="color:var(--color-text-muted)">
-                {#if t.noeud === 'inconnu' || !t.noeud}
-                  <span title="Le nœud n'était pas enregistré avant la v2.32.0">non enregistré</span>
+                {#if t.statut === 'aucune_execution'}
+                  —
+                {:else if t.noeud === 'inconnu' || !t.noeud}
+                  <span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>
                 {:else}{t.noeud.toUpperCase()}{/if}
               </td>
               <td>
@@ -1531,11 +1533,6 @@ $: _siteNom = $siteNomStore;
         </tbody>
       </table>
     </div>
-    <p class="muted" style="margin-top:.6rem;font-size:.8rem">
-      Les exécutions antérieures à la <strong>v2.32.0</strong> n'enregistraient pas le nœud :
-      elles s'affichent « non enregistré ». Le nœud en veille transmettra son premier
-      rapport après la prochaine bascule nocturne.
-    </p>
   {/if}
 </section>
 
@@ -1586,6 +1583,11 @@ $: _siteNom = $siteNomStore;
         </tbody>
       </table>
     </div>
+    <p class="muted" style="margin-top:.6rem;font-size:.8rem">
+      Les exécutions antérieures à la <strong>v2.32.0</strong> n'enregistraient pas le nœud :
+      elles s'affichent « non enregistré ». Le nœud en veille transmettra son premier
+      rapport après la prochaine bascule nocturne.
+    </p>
   {/if}
 </section>
 
