@@ -1521,7 +1521,7 @@ $: _siteNom = $siteNomStore;
   {:else}
     <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
       <table class="table" style="font-size:.82rem">
-        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
+        <thead class="sticky-head"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
         <tbody>
           {#each historique as h}
             <tr>
@@ -1558,7 +1558,7 @@ $: _siteNom = $siteNomStore;
   {:else}
     <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
       <table class="table" style="font-size:.82rem">
-        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Nœud</th><th>Portée</th><th>Statut</th><th>Taille DB</th><th>Durée</th><th>Détail</th></tr></thead>
+        <thead class="sticky-head"><tr><th>Date</th><th>Nœud</th><th>Portée</th><th>Statut</th><th>Taille DB</th><th>Durée</th><th>Détail</th></tr></thead>
         <tbody>
           {#each historiqueMaintenance as m}
             <tr>
@@ -1606,7 +1606,7 @@ $: _siteNom = $siteNomStore;
   {:else}
     <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
       <table class="table" style="font-size:.82rem">
-        <thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Événements agrégés</th><th>Purges</th><th>Durée</th></tr></thead>
+        <thead class="sticky-head"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Événements agrégés</th><th>Purges</th><th>Durée</th></tr></thead>
         <tbody>
           {#each historiqueTelemetrie as h}
             <tr>
@@ -1712,7 +1712,7 @@ $: _siteNom = $siteNomStore;
 {:else}
 <div class="card" style="overflow:auto;max-height:420px">
 <table class="table" style="font-size:.82rem">
-<thead style="position:sticky;top:0;background:var(--color-surface)"><tr><th>Date</th><th>Template</th><th>Destinataire</th><th>Sujet</th><th>Statut</th></tr></thead>
+<thead class="sticky-head"><tr><th>Date</th><th>Template</th><th>Destinataire</th><th>Sujet</th><th>Statut</th></tr></thead>
 <tbody>
 {#each emailHistory as h}
 <tr>
@@ -2425,6 +2425,19 @@ $: _siteNom = $siteNomStore;
 {/if}
 
 <style>
+/* En-tête de tableau qui reste visible au défilement.
+   Le `z-index` n'est PAS optionnel : sans lui, les cellules du corps se
+   dessinent PAR-DESSUS l'en-tête collé, qui réapparaît alors au milieu du
+   tableau (constaté le 02/08/2026 sur l'historique des sauvegardes).
+   Règle unique plutôt que le style inline qui était recopié sur chaque
+   tableau — c'était la même déclaration à quatre endroits, donc quatre fois
+   le même défaut. */
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-surface);
+}
 .page-header { display: flex; align-items: center; margin-bottom: 1.5rem; padding-left: 1.25rem; }
 .page-header h1 { font-size: 1.4rem; font-weight: 700; }
 .tabs-group { margin-bottom: 0; }
