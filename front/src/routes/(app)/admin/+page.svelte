@@ -1473,7 +1473,11 @@ $: _siteNom = $siteNomStore;
           {#each sante.taches as t}
             <tr>
               <td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
-              <td style="color:var(--color-text-muted)">{t.noeud ?? '—'}</td>
+              <td style="color:var(--color-text-muted)">
+                {#if t.noeud === 'inconnu' || !t.noeud}
+                  <span title="Le nœud n'était pas enregistré avant la v2.32.0">non enregistré</span>
+                {:else}{t.noeud.toUpperCase()}{/if}
+              </td>
               <td>
                 <span class="badge {t.statut === 'ok' ? 'badge-green' : 'badge-red'}">
                   {LIBELLE_STATUT_SANTE[t.statut] ?? t.statut}
@@ -1527,6 +1531,11 @@ $: _siteNom = $siteNomStore;
         </tbody>
       </table>
     </div>
+    <p class="muted" style="margin-top:.6rem;font-size:.8rem">
+      Les exécutions antérieures à la <strong>v2.32.0</strong> n'enregistraient pas le nœud :
+      elles s'affichent « non enregistré ». Le nœud en veille transmettra son premier
+      rapport après la prochaine bascule nocturne.
+    </p>
   {/if}
 </section>
 
@@ -1555,7 +1564,9 @@ $: _siteNom = $siteNomStore;
           {#each historiqueMaintenance as m}
             <tr>
               <td style="font-size:.85rem">{fmt(m.cree_le)}</td>
-              <td style="color:var(--color-text-muted)">{m.noeud ?? '—'}</td>
+              <td style="color:var(--color-text-muted)">
+                {#if m.noeud}{m.noeud.toUpperCase()}{:else}<span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>{/if}
+              </td>
               <td style="color:var(--color-text-muted);font-size:.8rem">{LIBELLE_PORTEE[m.portee] ?? m.portee ?? '—'}</td>
               <td>
                 <span class="badge {m.statut === 'succes' ? 'badge-green' : 'badge-red'}">{m.statut}</span>

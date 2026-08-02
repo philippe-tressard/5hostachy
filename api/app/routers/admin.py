@@ -351,6 +351,39 @@ from app.models.core import HistoriqueMaintenance
 from app.config import get_settings
 
 
+#  Rétention : on ne conserve que les N derniers rapports. Au-delà, ils
+#  n'apprennent plus rien — la santé se lit sur les dernières exécutions, pas
+#  sur un an d'archives.
+#
+#  La purge est faite ICI, in-process, et non plus par `maintenance.sh` : ce
+#  dernier la faisait via `docker exec hostachy_api python -c "…engine…"`,
+#  c'est-à-dire un PROCESS DISTINCT d'uvicorn ouvrant `app.db` pendant que
+#  l'API tourne. C'est le motif que la règle d'or anti-corruption interdit
+#  (cf. skill infra-rpi) — un process tiers qui referme la base se croit
+#  dernière connexion et peut unlinker le WAL sous le pool. Une purge d'une
+#  dizaine de lignes ne justifie pas ce risque.
+_RAPPORTS_CONSERVES = 10
+
+
+def _purger_anciens_rapports(session: Session) -> int:
+    """Ne conserve que les `_RAPPORTS_CONSERVES` rapports les plus récents."""
+    a_garder = session.exec(
+        select(HistoriqueMaintenance.id)
+        .order_by(HistoriqueMaintenance.cree_le.desc())
+        .limit(_RAPPORTS_CONSERVES)
+    ).all()
+    if len(a_garder) < _RAPPORTS_CONSERVES:
+        return 0
+    obsoletes = session.exec(
+        select(HistoriqueMaintenance).where(HistoriqueMaintenance.id.notin_(a_garder))
+    ).all()
+    for ligne in obsoletes:
+        session.delete(ligne)
+    if obsoletes:
+        session.commit()
+    return len(obsoletes)
+
+
 class RapportMaintenance(BaseModel):
     statut: str = "succes"
     tokens_supprimes: int = 0
@@ -397,6 +430,7 @@ def maintenance_rapport(
     session.add(entry)
     session.commit()
     session.refresh(entry)
+    _purger_anciens_rapports(session)
     return entry
 
 
@@ -404,7 +438,7 @@ def maintenance_rapport(
 def maintenance_history(
     tache: Optional[str] = None,
     noeud: Optional[str] = None,
-    limite: int = 40,
+    limite: int = _RAPPORTS_CONSERVES,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
@@ -420,7 +454,7 @@ def maintenance_history(
     if noeud:
         requete = requete.where(HistoriqueMaintenance.noeud == noeud)
     lignes = session.exec(
-        requete.order_by(HistoriqueMaintenance.cree_le.desc()).limit(max(1, min(limite, 200)))
+        requete.order_by(HistoriqueMaintenance.cree_le.desc()).limit(max(1, min(limite, _RAPPORTS_CONSERVES)))
     ).all()
     sortie = []
     for ligne in lignes:
@@ -454,6 +488,21 @@ _PERIODICITE_ATTENDUE_H = {
 }
 _PERIODICITE_SAUVEGARDE_H = 24     # 03:00, tracée dans historique_sauvegarde
 _TOLERANCE_H = 6                   # marge avant de déclarer un retard
+
+
+def _noeud_courant() -> Optional[str]:
+    """Nœud sur lequel cette API s'exécute, ou None hors production.
+
+    `INSTANCE_ID` est déjà injecté dans le conteneur par docker-compose et sert
+    au front pour afficher « RPi1 » au pied de page. On le réutilise ici plutôt
+    que d'inventer un second mécanisme d'identification du nœud.
+
+    Sans lui, tout ce que l'API exécute elle-même (sauvegarde, maintenance
+    déclenchée à la main) s'enregistrait sans nœud — et une colonne « Nœud »
+    vide vide le tableau de son intérêt : il existe pour dire QUI a agi.
+    """
+    identifiant = (get_settings().instance_id or "").strip()
+    return f"rpi{identifiant}" if identifiant else None
 
 
 @router.get("/maintenance/sante")
@@ -524,7 +573,9 @@ def maintenance_sante(
             statut_sauvegarde = "ok"
         etat.append({
             "tache": "backup",
-            "noeud": None,                     # tourne in-process sur l'actif
+            # La sauvegarde tourne in-process : elle s'exécute forcément sur le
+            # nœud qui répond, donc celui-ci. Inutile de laisser la colonne vide.
+            "noeud": _noeud_courant(),
             "portee": "applicative",
             "statut": statut_sauvegarde,
             "derniere": derniere_sauvegarde.cree_le,
@@ -555,7 +606,10 @@ def maintenance_now(
     admin: Utilisateur = Depends(require_admin),
 ):
     from app.utils.maintenance import run_maintenance
-    entry = HistoriqueMaintenance(declenchee_par="manuelle")
+    # Déclenchée depuis l'interface : elle s'exécute dans CE process, donc sur ce
+    # nœud. Sans cette ligne, un déclenchement manuel produisait une entrée sans
+    # nœud, indistinguable des lignes antérieures à la v2.32.0.
+    entry = HistoriqueMaintenance(declenchee_par="manuelle", noeud=_noeud_courant())
     session.add(entry)
     session.commit()
     session.refresh(entry)
