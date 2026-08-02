@@ -486,8 +486,46 @@ _PERIODICITE_ATTENDUE_H = {
     "maintenance": 7 * 24,     # dimanche 03:00, sur les deux nœuds
     "bascule": 24,             # 02:00
 }
+#
+#  Même principe pour l'agrégation de TÉLÉMÉTRIE : sa propre table
+#  `historique_telemetrie`, alimentée in-process par `run_telemetry_aggregation`.
+#  Si ce job s'arrête, les statistiques d'usage deviennent silencieusement
+#  fausses sans qu'aucun écran ne le signale — c'est le même besoin que pour la
+#  maintenance et la sauvegarde, donc le même traitement plutôt qu'un régime à
+#  part pour une troisième table.
 _PERIODICITE_SAUVEGARDE_H = 24     # 03:00, tracée dans historique_sauvegarde
+_PERIODICITE_TELEMETRIE_H = 24     # 02:00, tracée dans historique_telemetrie
 _TOLERANCE_H = 6                   # marge avant de déclarer un retard
+
+
+def _etat_tache_a_table_propre(
+    tache: str, derniere_ligne, periode_h: float, statut_erreur,
+) -> dict:
+    """Calcule l'entrée de santé d'une tâche qui a SA PROPRE table d'historique
+    (sauvegarde, agrégation télémétrie) — par opposition aux tâches regroupées
+    dans `historique_maintenance`. Ces tâches tournent toutes in-process sur le
+    nœud qui répond : leur nœud est donc toujours `_noeud_courant()`, jamais lu
+    en base (ces tables n'ont pas de colonne `noeud`).
+    """
+    if derniere_ligne is None:
+        return {"tache": tache, "noeud": None, "statut": "aucune_execution",
+                "derniere": None, "retard_heures": None, "periodicite_heures": periode_h}
+    age_h = (datetime.utcnow() - derniere_ligne.cree_le).total_seconds() / 3600
+    if age_h > periode_h + _TOLERANCE_H:
+        statut = "manquante"
+    elif derniere_ligne.statut == statut_erreur:
+        statut = "erreur"
+    else:
+        statut = "ok"
+    return {
+        "tache": tache,
+        "noeud": _noeud_courant(),
+        "portee": "applicative",
+        "statut": statut,
+        "derniere": derniere_ligne.cree_le,
+        "retard_heures": round(age_h, 1),
+        "periodicite_heures": periode_h,
+    }
 
 
 def _noeud_courant() -> Optional[str]:
@@ -553,35 +591,21 @@ def maintenance_sante(
                 "retard_heures": round(age_h, 1),
                 "periodicite_heures": periode_h,
             })
-    # Sauvegarde : lue dans SA table, pas recopiée dans celle-ci.
+    # Sauvegarde et agrégation télémétrie : lues dans LEUR table, pas recopiées
+    # dans celle-ci — cf. commentaire de _PERIODICITE_ATTENDUE_H.
     derniere_sauvegarde = session.exec(
-        select(HistoriqueSauvegarde)
-        .order_by(HistoriqueSauvegarde.cree_le.desc())
-        .limit(1)
+        select(HistoriqueSauvegarde).order_by(HistoriqueSauvegarde.cree_le.desc()).limit(1)
     ).first()
-    if derniere_sauvegarde is None:
-        etat.append({"tache": "backup", "noeud": None, "statut": "aucune_execution",
-                     "derniere": None, "retard_heures": None,
-                     "periodicite_heures": _PERIODICITE_SAUVEGARDE_H})
-    else:
-        age_h = (maintenant - derniere_sauvegarde.cree_le).total_seconds() / 3600
-        if age_h > _PERIODICITE_SAUVEGARDE_H + _TOLERANCE_H:
-            statut_sauvegarde = "manquante"
-        elif derniere_sauvegarde.statut == StatutSauvegarde.echouee:
-            statut_sauvegarde = "erreur"
-        else:
-            statut_sauvegarde = "ok"
-        etat.append({
-            "tache": "backup",
-            # La sauvegarde tourne in-process : elle s'exécute forcément sur le
-            # nœud qui répond, donc celui-ci. Inutile de laisser la colonne vide.
-            "noeud": _noeud_courant(),
-            "portee": "applicative",
-            "statut": statut_sauvegarde,
-            "derniere": derniere_sauvegarde.cree_le,
-            "retard_heures": round(age_h, 1),
-            "periodicite_heures": _PERIODICITE_SAUVEGARDE_H,
-        })
+    etat.append(_etat_tache_a_table_propre(
+        "backup", derniere_sauvegarde, _PERIODICITE_SAUVEGARDE_H, StatutSauvegarde.echouee,
+    ))
+
+    derniere_telemetrie = session.exec(
+        select(HistoriqueTelemetrie).order_by(HistoriqueTelemetrie.cree_le.desc()).limit(1)
+    ).first()
+    etat.append(_etat_tache_a_table_propre(
+        "telemetrie", derniere_telemetrie, _PERIODICITE_TELEMETRIE_H, "erreur",
+    ))
 
     anomalies = session.exec(
         select(HistoriqueMaintenance)

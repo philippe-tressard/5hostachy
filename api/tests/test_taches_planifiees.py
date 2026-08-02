@@ -94,6 +94,26 @@ def test_sauvegarde_nest_pas_dupliquee_dans_la_table_maintenance():
     assert _PERIODICITE_SAUVEGARDE_H == 24
 
 
+def test_telemetrie_nest_pas_dupliquee_dans_la_table_maintenance():
+    """Même règle pour l'agrégation de télémétrie — `historique_telemetrie`.
+
+    Ajoutée le 02/08/2026 : ce job tourne aussi toutes les nuits (02:00), et
+    s'il s'arrête, les statistiques d'usage deviennent silencieusement fausses
+    sans qu'aucun écran ne le signale — même besoin que la maintenance ou la
+    sauvegarde, donc le même traitement générique
+    (`_etat_tache_a_table_propre`) plutôt qu'un troisième bloc dupliqué.
+    """
+    from app.routers.admin import (
+        _PERIODICITE_ATTENDUE_H,
+        _PERIODICITE_TELEMETRIE_H,
+        _etat_tache_a_table_propre,
+    )
+
+    assert "telemetrie" not in _PERIODICITE_ATTENDUE_H
+    assert _PERIODICITE_TELEMETRIE_H == 24
+    assert callable(_etat_tache_a_table_propre)
+
+
 def test_retention_bornee_et_purgee_in_process():
     """Seuls les 10 derniers rapports sont conservés, et la purge est in-process.
 
