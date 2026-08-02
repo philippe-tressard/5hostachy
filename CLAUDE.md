@@ -2,11 +2,24 @@
 
 Règles de développement à appliquer dans toutes les sessions sur ce projet.
 
+## ⚠️ Socle commun d'abord
+
+Les bonnes pratiques valables pour **tous** les projets (méthode de travail,
+factorisation, sécurité, fiabilité des contrôles, tests, données, observabilité, git,
+livraison, encodage, UX, documentation, outillage) vivent dans
+**`~/.claude/standards/`** — index : `standards/INDEX.md`.
+
+**Ce fichier ne contient que l'instanciation 5Hostachy** : les chemins, commandes,
+seuils, patterns et incidents propres à ce projet. Une leçon qui pourrait servir à un
+autre projet monte dans le socle et n'est **pas** recopiée ici.
+
 ## Principe fondamental
 
 Avant toute implémentation : **grep le pattern existant**. Si le pattern existe ≥ 2 fois → l'appliquer à l'identique. Si une demande contredit un pattern établi → signaler le conflit et demander confirmation.
 
-Les références canoniques sont dans `.github/skills/`.
+Les références canoniques sont dans `.github/skills/` (⚠️ répertoire **non découvert
+automatiquement** par Claude Code : ces specs ne sont lues que parce que ce fichier et
+le pré-flight ordonnent de les lire — cf. `standards/13-outillage-claude-code.md` §2).
 
 ---
 
@@ -263,6 +276,10 @@ const icon = '\u{1F6E0}'; // 🔧
 - [ ] Synchronisé : `Copy-Item docs/manuel-utilisateur.html front/static/manuel-utilisateur.html`
 
 ### Tests préventifs (CI : `api/tests/`, lancés à chaque PR)
+
+> 📖 Pourquoi un défaut corrigé sans garde-fou revient, et les quatre familles de
+> garde-fous qui marchent : **`standards/05-tests-et-garde-fous.md`**.
+
 Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
 - **`test_email_templates.py`** — verrouille les variables Jinja2 de chaque template
   (`EXPECTED_VARS`). Complète le **point 9** (réactif) côté template.
@@ -308,6 +325,10 @@ Lancer en local : `bash <script>.sh --selftest`.
 - `maintenance.sh` VACUUM : **API stoppée** (base au repos, 0 writer) puis `sqlite3` hôte
 
 ### ⚠️ Règle d'or anti-corruption DB (v2.20.3 · durcie 17/07/2026)
+
+> 📖 Principe généralisé à tout état multi-fichiers tenu ouvert par un processus
+> (base **et** état d'authentification) : **`standards/06-donnees-et-integrite.md`** §1.
+
 **Ne JAMAIS OUVRIR `app.db` depuis un process tiers tant que l'API tourne — même en lecture.**
 - Checkpoint / intégrité à chaud → endpoints **in-process** : `POST /admin/db/checkpoint`,
   `GET /admin/db/integrite` (s'exécutent dans le process uvicorn = même connexion que l'app).
@@ -349,6 +370,10 @@ faisait exactement cela toutes les 15 min (contrôle supprimé, cf. commentaire 
 Cf. [[project_db_corruption_telemetry]] et le commentaire de `admin.py` → `/db/checkpoint`.
 
 ### ⚠️ Panne de CHEMIN public ≠ panne de NŒUD (incident du 30/07/2026)
+
+> 📖 Règle générale « distinguer la panne du composant de celle d'une dépendance
+> partagée — deux sondes indépendantes avant toute décision destructive » :
+> **`standards/04-fiabilite-des-controles.md`** §10.
 
 Entre 00:52 et 01:46, une panne DNS/WAN a coupé le tunnel des **deux** nœuds
 (`lookup _v2-origintunneld._tcp.argotunnel.com on 1.0.0.1:53: server misbehaving`,
@@ -460,14 +485,14 @@ revenir à `state: open`. Deux causes cumulées, corrigées :
 
 ### ⚠️ Se resynchroniser AVANT de committer (obligatoire)
 
+> 📖 Règle générale : **`standards/08-git-et-versioning.md`** §2.
+
 `origin/dev` et `origin/main` avancent **côté GitHub** : local `dev` → push → PR
 vers `main` → merge sur GitHub → « Merge branch 'main' into dev », lui aussi sur
-GitHub. Ces commits ne redescendent **jamais** tout seuls. Sans fetch explicite,
-le clone local dérive d'exactement le nombre de PR fusionnées depuis le dernier
-pull manuel — constaté le 26/07/2026 : `dev` à **16 commits** de retard, `main` à
-**151**. Committer sur cette base expose aux conflits de version
-(`front/package.json`) et à la divergence code ⇆ migrations Alembic (la panne que
-le point 10 du pré-check existe pour attraper).
+GitHub. Ces commits ne redescendent **jamais** tout seuls — constaté le 26/07/2026 :
+`dev` à **16 commits** de retard, `main` à **151**. Committer sur cette base expose
+aux conflits de version (`front/package.json`) et à la divergence code ⇆ migrations
+Alembic (la panne que le point 10 du pré-check existe pour attraper).
 
 **Premier réflexe de toute session, avant le moindre commit :**
 ```bash
@@ -489,47 +514,43 @@ d'un fast-forward.) Contournement d'urgence : `ALLOW_STALE=1 git commit …`.
 - `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
 
-### Trois règles qui priment sur la liste des contrôles
+### Ce qui prime sur la liste des contrôles
 
-Issues de l'incident du 26/07/2026 (cf. « Rétrospective » en fin de section). Un
-contrôle mal conçu est plus dangereux qu'un contrôle absent, parce qu'il produit
-de la confiance.
+> 📖 **`~/.claude/standards/04-fiabilite-des-controles.md`** — les douze règles de
+> fiabilité, dont les trois nées ici le 26/07/2026 : (§1) un contrôle qui ne peut pas
+> s'exécuter renvoie **INCONNU, jamais OK** ; (§6) ce qui est critique en continu ne
+> se vérifie pas seulement en MEP ; (§3) vérifier le fait, pas le symptôme attendu.
 
-1. **Un contrôle qui ne peut pas s'exécuter renvoie INCONNU, jamais OK.**
-   `sudo` en SSH non interactif échoue en demandant un mot de passe ; `… | grep -c`
-   sur cette sortie vide affiche `0`, c'est-à-dire « aucun problème ». Le 26/07 j'ai
-   annoncé « 0 inode fantôme » sur cette base : c'était un faux vert. Toute commande
-   du pré-check doit soit fonctionner sans `sudo`, soit signaler explicitement son
-   échec. **Ne jamais déduire un vert d'une sortie vide.**
-2. **Ce qui est critique en continu ne doit pas être vérifié seulement en MEP.**
-   Le pré-check est ponctuel ; les invariants de redondance sont permanents. Le
-   26/07, `.active` était incohérent depuis 02:00 et personne ne l'a su avant un
-   pré-check à 09:00 — entre-temps le site est resté HS ~50 min sans failover. Voir
-   « À automatiser » ci-dessous.
-3. **Vérifier le fait, pas le symptôme attendu.** Avant de déclarer une anomalie,
-   confirmer qu'elle en est une (le 26/07 l'image API paraissait périmée : le commit
-   ne touchait que `front/`). Et avant de déclarer un vert, confirmer que le
-   contrôle mesure bien ce qu'on croit.
+Instanciation ici : **aucune commande du pré-check ne doit dépendre de `sudo`** (SSH
+non interactif échoue en demandant un mot de passe, et le `grep -c` qui suit affiche
+`0` = « aucun problème »). C'est ainsi qu'a été annoncé « 0 inode fantôme » le 26/07 —
+faux vert intégral. Les points 4, 5 et 9 ci-dessous donnent les méthodes de
+remplacement, sans `sudo` et sans token.
 
 ### Étape 0 — poste de développement (avant d'écrire une ligne)
+
+> 📖 **`standards/08-git-et-versioning.md`** §2–3 pour le pourquoi (dérive du clone,
+> modes de fichiers avalés par Windows).
 
 | # | Vérification | Commande | Attendu |
 |---|---|---|---|
 | 0a | Clone à jour | `git fetch origin && git merge --ff-only origin/dev` | Fast-forward propre (cf. section ci-dessus) |
 | 0b | Modes des fichiers exécutables versionnés | **Automatisé** : job CI `test-scripts` (étape « Bits d'exécution versionnés ») | `100755` sur tout ce qui doit s'exécuter, `100644` sur les modules sourcés `lib-*.sh` |
 
-**0b — pourquoi :** `core.filemode=false` sur un clone Windows fait avaler `chmod +x`
-en silence ; le fichier part en `100644` et Linux refuse alors de l'exécuter, sans
-message. Constaté le 26/07 sur `.githooks/pre-commit` — garde-fou inerte, découvert
-seulement sur demande de relecture. Même classe que le point 7, côté dépôt.
-Remédiation : `git update-index --chmod=+x <fichier>`.
+**0b — constaté ici** le 26/07 sur `.githooks/pre-commit`, committé en `100644` :
+garde-fou inerte depuis sa création, découvert seulement sur demande de relecture.
+Même classe que le point 7, côté dépôt. Remédiation :
+`git update-index --chmod=+x <fichier>`.
 
 ### Étape 0 bis — exigences sans exception (avant le pré-check)
 
-Deux exigences de même rang que la sécurité, à contrôler **avant** de dérouler le
+Trois exigences de même rang que la sécurité, à contrôler **avant** de dérouler le
 pré-check technique. Elles ne portent pas sur l'état des machines mais sur celui du
 code et de la documentation livrée : un pré-check vert sur une base qui viole ces
 règles reste un mauvais déploiement.
+
+> 📖 `standards/03-securite.md` §1–2 (0c) · `standards/02-factorisation.md` (0d) ·
+> `standards/12-documentation.md` (0e) · vue d'ensemble : `standards/09-livraison-et-mep.md`.
 
 | # | Exigence | Vérification | Automatisé par |
 |---|---|---|---|
@@ -824,44 +845,33 @@ confirment qu'on a déployé *quelque chose*, jamais qu'on a déployé *ce qu'il
 fallait*. Pour un correctif de rendu, ouvrir le document concerné (fiche arrivant,
 annonce de hall) et regarder.
 
-> **🌐 Le comportement se vérifie dans un navigateur, sur une route imbriquée
-> (constaté le 26/07/2026, v2.24.0 → v2.24.1).** La v2.24.0 ajoutait un bandeau
-> « nouvelle version disponible » à la PWA. P1–P6 étaient **tous verts** — image
-> reconstruite, version 2.24.0 dans le conteneur, hash du commit et code du bandeau
-> présents dans le bundle servi — et la fonctionnalité était morte : elle avait de
-> surcroît **cassé l'existant**, plus aucun service worker n'était enregistré, donc
-> plus de cache hors ligne. Cause : `vite-plugin-pwa` hérite du `base` de Vite, vide
-> sous SvelteKit, et génère `new Workbox('./sw.js', { scope: './' })` ; ce chemin
-> **relatif** est résolu depuis la page courante, donc `/auth/sw.js` → 404 sur toute
-> route autre que la racine. Trois règles en sortent :
-> - **Tester ailleurs qu'à la racine.** Un chemin relatif, un cookie de portée, une
->   règle Caddy fonctionnent souvent sur `/` et nulle part ailleurs.
-> - **Les artefacts ne prouvent rien sur le comportement.** Bundle, `sw.js`, image
->   Docker, version du conteneur : tout était correct pendant que la fonctionnalité
->   ne s'exécutait pas. Ouvrir la page et regarder l'état réel
->   (`navigator.serviceWorker.getRegistrations()`, console, requêtes réseau).
-> - **Un composant qui reprend un mécanisme fourni par un plugin hérite de ses
->   valeurs par défaut.** Ici `injectRegister` masquait le défaut depuis toujours ;
->   le reprendre à la main l'a exposé. Quand on remplace un mécanisme automatique,
->   vérifier ce qu'il faisait *en plus* de ce qu'on voulait.
->
-> Et brancher les callbacks d'erreur (`onRegisterError` ici) : l'échec n'a produit
-> **aucun log**, ni côté serveur ni côté navigateur. Ce qui échoue en silence ne se
-> découvre qu'à P7, ou jamais.
+> 📖 Les trois règles générales qui en sont sorties — **tester ailleurs qu'à la
+> racine**, **les artefacts ne prouvent rien sur le comportement**, **une
+> vérification locale ne vaut que pour le chemin d'erreur qu'elle emprunte** — sont
+> dans `standards/09-livraison-et-mep.md`. Ci-dessous, les deux cas 5Hostachy qui les
+> ont produites : les relire avant de conclure d'un test local sur ce projet.
 
-> **🧪 Une vérification locale ne vaut que pour le chemin d'erreur qu'elle emprunte
-> (26/07/2026, v2.26.0 → v2.26.1).** La conservation du lien d'origine à travers
-> l'authentification a été vérifiée dans un navigateur, sur le build de production
-> servi en local : elle marchait. En production, elle ne marchait pas. En local il
-> n'y a **pas de backend** : `auth.me()` échoue en **erreur réseau** et c'est la
-> garde du layout qui redirige ; en production l'API répond **401**, et c'est
-> `$lib/api.ts` qui redirige en premier — un troisième chemin, non corrigé. Avant de
-> conclure d'un test local, se demander **quel chemin de code il a réellement
-> exercé**, et si la production en emprunte un autre (API absente vs 401/403,
-> cookies, HTTPS, service worker, reverse proxy). Quand un même effet a plusieurs
-> points de déclenchement, les chercher tous — ici, un test qui interdit toute
-> redirection en dur vers `/auth/connexion` dans `front/src` aurait trouvé le
-> troisième du premier coup, là où la relecture en avait vu deux.
+> **🌐 v2.24.0 → v2.24.1 (26/07/2026) — service worker mort, P1–P6 tous verts.** Le
+> bandeau « nouvelle version disponible » ne s'exécutait pas, et avait **cassé
+> l'existant** : plus aucun service worker enregistré, donc plus de cache hors ligne.
+> Image reconstruite, version 2.24.0 dans le conteneur, hash du commit et code du
+> bandeau présents dans le bundle servi — tout était vert. Cause :
+> `vite-plugin-pwa` hérite du `base` de Vite, vide sous SvelteKit, et génère
+> `new Workbox('./sw.js', { scope: './' })` ; ce chemin **relatif** est résolu depuis
+> la page courante → `/auth/sw.js` → 404 sur toute route autre que la racine. En
+> reprenant `injectRegister` à la main, on a exposé un défaut que le plugin masquait
+> depuis toujours. Vérifier l'état réel dans le navigateur
+> (`navigator.serviceWorker.getRegistrations()`, console, requêtes réseau), et
+> brancher `onRegisterError` : l'échec n'a produit **aucun log**, nulle part.
+
+> **🧪 v2.26.0 → v2.26.1 (26/07/2026) — trois points de redirection, deux corrigés.**
+> La conservation du lien d'origine à travers l'authentification marchait sur le build
+> de production servi en local, et pas en production. En local il n'y a **pas de
+> backend** : `auth.me()` échoue en **erreur réseau** et c'est la garde du layout qui
+> redirige ; en production l'API répond **401**, et c'est `$lib/api.ts` qui redirige en
+> premier — le troisième chemin, non corrigé. Un test interdisant toute redirection en
+> dur vers `/auth/connexion` dans `front/src` les aurait trouvés tous les trois, là où
+> la relecture en avait vu deux.
 
 **Rollback si P1–P6 échoue :** `cd /opt/5hostachy && git reset --hard <commit-précédent>
 && docker compose build && docker compose up -d`. Réversible et dans le cycle normal
@@ -956,14 +966,13 @@ script source le module, avec un repli qui journalise si le fichier manque — l
 failover reste opérationnel sans lui, contrainte du chemin critique).
 
 ### Versioning (`front/package.json`)
-Version affichée dans le footer du site. Règle **obligatoire à chaque MEP** :
 
-| Incrément | Quand |
-|-----------|-------|
-| **Patch** `X.Y.Z+1` | Fix, correction, amélioration mineure, doc, refactor interne |
-| **Minor** `X.Y+1.0` | Nouvelle fonctionnalité visible par les utilisateurs |
-| **Major** `X+1.0.0` | Refonte majeure de l'interface ou rupture de compatibilité |
+> 📖 Règle générale (patch/minor/major, commit dédié, bump d'office sans rappel) :
+> **`standards/08-git-et-versioning.md`** §6.
 
-- Toujours bumper **avant** le push final sur `dev`
-- Commit dédié : `chore(version): bump vX.Y.Z`
-- Version courante : voir `front/package.json`
+Instanciation 5Hostachy :
+- Le fichier est **`front/package.json`** ; la version s'affiche dans le **pied de
+  page** du site — c'est ce qui permet le contrôle **P3** du post-check.
+- Bump **avant** le push final sur `dev`, commit dédié `chore(version): bump vX.Y.Z`.
+- ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
+  à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.
