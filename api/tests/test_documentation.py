@@ -2,7 +2,7 @@
 
 Ce que l'on peut vérifier mécaniquement l'est ici. Ce qui relève du jugement
 (« le manuel décrit-il encore fidèlement l'application ? ») reste une étape du
-pré-check MEP — cf. la section « Documentation » de CLAUDE.md.
+pré-check MEP — cf. l'étape 0 bis, point 0e, de `.claude/skills/mep-precheck`.
 
 POURQUOI : la synchronisation du manuel entre `docs/` et `front/static/` était une
 simple case à cocher dans la checklist avant commit. Elle a tenu jusqu'ici, mais une

@@ -235,7 +235,27 @@ export const nouvelleEntite = {
 };
 ```
 
-### 6. Checklist finale
+### 6. Dates affichées — `app/utils/dates_fr.py`, jamais un `strftime` local
+
+Toute date **destinée à être lue** (email, PDF, réponse affichée telle quelle) passe
+par les helpers partagés :
+
+```python
+date_longue(d)            # 25 juillet 2026
+date_courte(d)            # 25/07/2026
+datetime_longue(dt)       # 25 juillet 2026 à 09:05
+datetime_longue_paris(dt) # horodatage naïf UTC de la base → heure de Paris
+```
+
+`api/tests/test_dates_fr.py` **échoue en CI** si `%B` `%b` `%A` `%a` apparaissent
+dans `api/app/` : ces motifs traduisent le mois ou le jour selon `LC_TIME`, ce qui a
+produit des mois en anglais sur la fiche arrivant (26/07/2026).
+
+⚠️ Les `strftime("%Y-%m-%d")` / `("%Y-%m")` restants sont des **clés machine**
+(requêtes SQL, agrégats de télémétrie, noms de sauvegarde) : **ne pas les
+« factoriser »**, ce ne sont pas des formats d'affichage.
+
+### 7. Checklist finale
 
 - [ ] Modèle ajouté dans `models/core.py`
 - [ ] Schémas Create/Read/Update dans `schemas.py`
@@ -244,3 +264,4 @@ export const nouvelleEntite = {
 - [ ] Client API ajouté dans `front/src/lib/api.ts`
 - [ ] Types TypeScript exportés
 - [ ] Imports vérifiés (pas d'import circulaire)
+- [ ] Dates affichées via `dates_fr.py` (pas de `%B`/`%A` dans `api/app/`)

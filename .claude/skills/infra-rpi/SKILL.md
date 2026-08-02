@@ -1,0 +1,185 @@
+---
+name: infra-rpi
+description: "Infrastructure HA 5Hostachy sur 2 Raspberry Pi : serveurs et rôle actif, protections SQLite, règle d'or anti-corruption DB et sa signature de diagnostic, distinction panne de chemin public / panne de nœud, crontabs, monitoring APScheduler, bridge WhatsApp, sync DB manuelle. Use when: intervenir sur un RPi, basculer, diagnostiquer un site HS ou une corruption de base, reconnecter WhatsApp, analyser un incident ou une coupure de courant."
+argument-hint: "Décrire l'intervention ou le symptôme (ex. « site HS depuis 20 min », « reconnecter le bridge WhatsApp », « disk I/O error dans les logs »)"
+---
+
+# Infrastructure & Monitoring — 5Hostachy
+
+Instanciation 5Hostachy de `standards/06-donnees-et-integrite.md` et
+`standards/07-observabilite-et-alertes.md`. La **règle d'or anti-corruption DB**
+ci-dessous est également résumée dans `CLAUDE.md` et dans
+`.claude/5hostachy-preflight.md` : elle ne doit jamais dépendre de ce chargement.
+
+> 📖 **Le générique n'est pas recopié ici** — l'ouvrir en parallèle :
+> `standards/06-donnees-et-integrite.md` §1 (règle d'or généralisée à tout état
+> multi-fichiers tenu ouvert — elle s'est reproduite sur l'authentification WhatsApp),
+> §2 (copier une base), §6 (sauvegardes : restauration testée, et **où** elles vivent)
+> · `standards/04-fiabilite-des-controles.md` §10 (deux sondes indépendantes avant
+> toute décision destructive : panne de nœud ≠ panne de chemin) ·
+> `standards/07-observabilite-et-alertes.md` §2 (un canal qui emprunte le lien en
+> panne ne peut pas signaler cette panne), §5 (échec silencieux), §6–8 (rotation,
+> maintenance sur tous les nœuds, hygiène).
+
+## Serveurs
+- **RPi 1** `192.168.1.222` (PhT-RB5) · **RPi 2** `192.168.1.223` (PhT-RB5i2)
+- RPi actif : `cat /opt/5hostachy/.active` — ⚠️ ce fichier peut disparaître, le recréer si absent
+- Conteneurs uniquement sur le RPi actif — vérifier les 2 en cas de doute (`docker ps`)
+- En cas de split-brain (conteneurs sur les 2) : stopper le standby + recréer `.active`
+- En cas de site HS : SSH sur le RPi actif → `cd /opt/5hostachy && docker compose up -d`
+
+## Protections DB (v2.18.10)
+- `stop_grace_period: 30s` sur le service API → Docker attend 30s avant SIGKILL
+- `PRAGMA wal_checkpoint(TRUNCATE)` dans le lifespan shutdown → WAL vidé proprement à chaque arrêt
+- `bascule.sh` phase 3 : WAL checkpoint avant rsync DB vers le peer
+- `MaJ-Hostachy.sh` : bloque si lancé sur le RPi standby
+- `synchronous=FULL` (v2.20.3) : chaque commit fsync'd intégralement (anti torn-write)
+- `health_check` 06:00 + chaque backup : `PRAGMA quick_check` → alerte / backup annulé si corrompu
+- `maintenance.sh` VACUUM : **API stoppée** (base au repos, 0 writer) puis `sqlite3` hôte
+
+## ⚠️ Règle d'or anti-corruption DB (v2.20.3 · durcie 17/07/2026)
+**Ne JAMAIS OUVRIR `app.db` depuis un process tiers tant que l'API tourne — même en lecture.**
+- Checkpoint / intégrité à chaud → endpoints **in-process** : `POST /admin/db/checkpoint`,
+  `GET /admin/db/integrite` (s'exécutent dans le process uvicorn = même connexion que l'app).
+- VACUUM / copie / swap de fichier → **stopper l'API d'abord** (0 writer), comme bascule phase 3.
+- ❌ `docker exec hostachy_api python3 … PRAGMA …` et `sqlite3` hôte sont **INTERDITS** tant
+  que l'API tourne. **Sans exception de lecture seule.**
+
+**Pourquoi la lecture seule n'est PAS sûre** — leçon du 17/07/2026 : cette ligne affirmait
+l'inverse (« = OK (ne mute rien) »), ce qui a fait écrire `check-reliability.sh` C8 ainsi et
+a coûté ~12 h d'écritures. Les connexions du pool SQLAlchemy sont *ouvertes mais SANS VERROU*
+quand elles sont idle. Un process tiers qui ouvre la base puis la referme se croit donc
+**dernière connexion** → checkpoint + **`unlink` de `app.db-wal` et `app.db-shm`**. L'API
+continue alors d'écrire dans des **inodes orphelins** :
+1. writes **invisibles** aux autres connexions (générations de WAL divergentes) ;
+2. `disk I/O error` (SQLITE_IOERR) en rafales → **503** sur toute requête authentifiée ;
+3. **PERTE DES DONNÉES** au prochain arrêt : le checkpoint de shutdown échoue
+   (`WAL checkpoint échoué au shutdown (non bloquant)`) → le WAL orphelin est abandonné.
+
+**Signature de diagnostic (30 s, décisive) :**
+```bash
+DB_DIR=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
+sudo stat -c '%n mtime=%y' $DB_DIR/app.db          # figé depuis des heures = ALERTE ROUGE
+sudo ls $DB_DIR/ | grep -E 'app.db-(wal|shm)'      # absents du disque…
+sudo lsof -p $(docker inspect hostachy_api --format '{{.State.Pid}}') | grep app.db
+#   … mais tenus ouverts par uvicorn, a fortiori sur PLUSIEURS inodes = fichiers supprimés
+```
+- `app.db` dont le `mtime` ne bouge pas alors que le site écrit ⇒ **aucun checkpoint n'aboutit
+  ⇒ toutes les écritures depuis ce `mtime` sont en sursis.** Traiter comme une urgence.
+- 🚫 **Ne PAS redémarrer l'API dans cet état** : cela libère les inodes orphelins et rend la
+  perte **définitive**. Extraire d'abord les WAL orphelins (`/proc/<pid>/fd/<n>`).
+- Zéro erreur `dmesg`/ext4/mmc ⇒ ce n'est **pas** le matériel, c'est un process tiers.
+- ⚠️ Un `integrity_check` vert **n'innocente rien** (nouveau process = vue saine).
+- ⚠️ Les rafales **se résorbent spontanément** puis récidivent (recyclage du pool) : une
+  accalmie sans explication n'est **pas** une résolution.
+
+Cause racine des corruptions `telemetry_event` des 05 et 17/06/2026 **et** de l'incident du
+17/07/2026 (login 503 + 2 publications perdues) — coupable : `check-reliability.sh` C8, qui
+faisait exactement cela toutes les 15 min (contrôle supprimé, cf. commentaire dans le script).
+Cf. [[project_db_corruption_telemetry]] et le commentaire de `admin.py` → `/db/checkpoint`.
+
+## ⚠️ Panne de CHEMIN public ≠ panne de NŒUD (incident du 30/07/2026)
+
+Entre 00:52 et 01:46, une panne DNS/WAN a coupé le tunnel des **deux** nœuds
+(`lookup _v2-origintunneld._tcp.argotunnel.com on 1.0.0.1:53: server misbehaving`,
+`Email KO: [Errno 101] Network is unreachable`). Aucun RPi n'avait redémarré ni gelé.
+
+`health-watch.sh` ne sondait que l'**URL publique**. Chaque nœud a donc conclu que
+l'autre était mort : **12 failovers croisés en 55 min**, stack arrêtée et redémarrée
+alternativement sur les deux, rôle actif déplacé 12 fois **sans synchronisation de
+base** (un failover ne sync pas la DB — [[project_freezes_recurrents_rpi2]]), et à
+trois reprises `systemctl start cloudflared` a échoué sur le nouvel actif *avant*
+que l'ancien soit démoté → **cloudflared inactif sur aucun nœud**. Aucune de ces
+bascules n'a rétabli quoi que ce soit : le nœud actif servait parfaitement en LAN.
+
+**Correctif (v2.27.2)** — avant de basculer, le standby doit établir que la panne
+vient bien du nœud actif, via deux sondes indépendantes de l'URL publique :
+
+| API de l'actif en LAN | Edge Cloudflare depuis le standby | Décision |
+|---|---|---|
+| KO | — | **Failover** (nœud réellement mort — chemin critique inchangé) |
+| OK | KO | **Abstention** + alerte : panne de chemin, basculer ne rétablirait rien |
+| OK | OK | **Failover** : le nœud actif vit mais son tunnel est cassé |
+
+La sonde LAN est `http://<actif>/api/health` (via Caddy — le port 8000 n'est **pas**
+publié, et un GET `/health` reste in-process : aucune ouverture de `app.db`). La
+sonde d'edge (`cdn-cgi/trace`) exerce DNS + TLS, c'est-à-dire exactement la chaîne
+dont le tunnel dépend : « pourrais-je seulement servir ? ». Logique isolée en
+fonction pure `decide_failover()` + `./health-watch.sh --selftest`, vérifiée en CI.
+
+**Réflexe de diagnostic** au prochain « site public KO » : avant de suspecter un
+nœud, `curl http://<actif>/api/health` depuis l'autre RPi. S'il répond 200, le
+problème est sur le chemin (box, DNS, Cloudflare) — ne pas basculer, ne pas
+redémarrer la stack.
+
+## Risques connus
+- **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
+- **health-watch failover** → peut créer un split-brain ; toujours vérifier `docker ps` sur les 2 RPi
+- **Sauvegardes** stockées uniquement sur le RPi actif (volume Docker non répliqué)
+- **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
+
+## Sync DB manuelle (sans basculer)
+⚠️ Copier `app.db` pendant que l'API écrit = copie potentiellement déchirée. On stoppe
+l'API le temps de la copie (≈ qq s) → fichier cohérent garanti (cf. règle d'or ci-dessus).
+```bash
+# Depuis le RPi actif — base au repos pour une copie cohérente
+DB_DIR=$(docker volume inspect 5hostachy_app_data --format '{{.Mountpoint}}')
+docker stop hostachy_api
+sqlite3 "$DB_DIR/app.db" "PRAGMA wal_checkpoint(TRUNCATE);"   # vide le WAL
+cp "$DB_DIR/app.db" /tmp/app_sync.db
+cd /opt/5hostachy && docker compose up -d api                  # API repart immédiatement
+scp /tmp/app_sync.db ptressard@<PEER_IP>:/tmp/app_sync.db
+# Sur le standby :
+docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db alpine sh -c 'cp /tmp/app_sync.db /data/app.db && rm -f /data/app.db-wal /data/app.db-shm'
+```
+
+## Crontabs (sudo root — identiques sur les 2 RPi)
+```
+0 2 * * *   bascule.sh        # bascule active/standby
+0 3 * * 0   maintenance.sh    # purge, VACUUM, rotation logs (dimanche)
+*/5 * * * * health-watch.sh   # failover automatique si site HS
+```
+
+## Monitoring APScheduler (tourne dans le conteneur API)
+| Heure | Job | Alerte email si… |
+|-------|-----|-----------------|
+| 03:00 | backup | — |
+| 06:00 | **health_check** | WhatsApp déconnecté · backup > 25h · disque < 15% |
+| 18:00-21:45 (`*/15`) | whatsapp_scheduled | Fenêtre de rattrapage épuisée sans envoi réussi |
+| 02:00 | telemetry_aggregation | — |
+
+## WhatsApp bridge
+- Reconnexion QR : Admin → WhatsApp → **bouton Statut** (affiche le QR si déconnecté)
+- Session corrompue (`creds.json` vide) : vider le volume + redémarrer le bridge
+  ```bash
+  docker run --rm -v 5hostachy_whatsapp_auth:/data alpine sh -c 'rm -rf /data/*'
+  cd /opt/5hostachy && docker compose up -d whatsapp-bridge
+  ```
+- `bascule.sh` ne propage jamais un `creds.json` vide vers le peer
+
+#### Incident du 24/07/2026 — bridge bloqué 2h23, message mensuel manqué
+Le message WhatsApp planifié du 4ᵉ samedi (18h00) a échoué : le bridge était en
+boucle `stream:error conflict:replaced` ininterrompue depuis 14h28, sans jamais
+revenir à `state: open`. Deux causes cumulées, corrigées :
+
+1. **`bascule.sh` synchronisait `5hostachy_whatsapp_auth` « à chaud » (Phase 1,
+   conteneur source encore actif et en train d'écrire `creds.json` + fichiers de
+   clés)** → snapshot multi-fichiers potentiellement déchiré propagé au peer à
+   chaque bascule nocturne. **Corrigé** : le sync se fait désormais en Phase 2,
+   après `docker compose stop` (0 writer, comme la DB), avec vérification que
+   `creds.json` est un JSON valide avant de l'installer sur le peer. Même classe
+   de bug que la « Règle d'or anti-corruption DB » ci-dessus, appliquée à l'état
+   d'authentification WhatsApp plutôt qu'à `app.db`.
+2. **`whatsapp-bridge/index.js` ne supervisait pas sa propre reconnexion** :
+   `setTimeout(startBaileys, 5_000)` appelait une fonction `async` sans
+   `.catch()` → une reconnexion qui rejette (ex. timeout réseau) tue la chaîne
+   silencieusement, sans aucun log. C'est ce qui a laissé le bridge mort de
+   16h18 à 18h41 sans la moindre tentative. **Corrigé** : verrou anti-concurrence
+   (`starting`), `.catch()` systématique sur chaque relance, backoff exponentiel
+   (5s → 60s max), et un watchdog (`setInterval` 60s) qui force une reconnexion
+   si l'état reste hors `open`/`connecting`/`waiting_qr` sans reconnexion en cours.
+3. Le job `whatsapp_scheduled` ne tentait l'envoi **qu'une fois, à 18h00 pile**
+   — un échec ponctuel du bridge à cette seconde précise perdait le message du
+   mois. **Corrigé** : fenêtre de rattrapage 18h00→21h45 toutes les 15 min (la
+   déduplication existante empêche tout doublon), alerte email si la fenêtre se
+   ferme sans envoi réussi.
