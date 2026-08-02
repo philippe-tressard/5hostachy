@@ -6,7 +6,7 @@
 #    - Purge des refresh tokens expirés/révoqués  (hebdomadaire, dimanche)
 #    - Purge des password reset tokens expirés     (hebdomadaire, dimanche)
 #    - Purge des notifications lues > 90 jours     (hebdomadaire, dimanche)
-#    - Purge des rapports de maintenance > 12 mois (hebdomadaire, dimanche)
+#    (les rapports de maintenance sont purgés IN-PROCESS par l'API — 10 derniers)
 #    - Purge de l'historique emails > 90 jours     (hebdomadaire, dimanche)
 #    - VACUUM SQLite                               (hebdomadaire, dimanche)
 #    - Nettoyage des logs WhatsApp (6 derniers)   (hebdomadaire, dimanche)
@@ -315,31 +315,14 @@ rm -f "$MAINT_ERR1C"
 log "  → $DELETED_NOTIF notification(s) supprimée(s)"
 
 # --- 1d. Purge rapports de maintenance > 12 mois -------------------------------
-log "[1d/5] Purge historique maintenance > 12 mois..."
-MAINT_ERR1D=$(mktemp)
-DELETED_HIST=$(docker exec hostachy_api python -c "
-from app.database import engine
-from sqlalchemy import text
-from datetime import datetime, timedelta, timezone
-cutoff = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
-with engine.connect() as c:
-    r = c.execute(
-        text('DELETE FROM historique_maintenance WHERE cree_le < :cutoff'),
-        {'cutoff': cutoff}
-    )
-    c.commit()
-    print(r.rowcount)
-" 2>"$MAINT_ERR1D") || {
-    ERREUR_DETAIL=$(cat "$MAINT_ERR1D")
-    log "ERREUR purge historique : $ERREUR_DETAIL"
-    GLOBAL_STATUT="erreur"
-    GLOBAL_ERREUR="${GLOBAL_ERREUR:+$GLOBAL_ERREUR | }purge hist: $ERREUR_DETAIL"
-    DELETED_HIST=0
-}
-rm -f "$MAINT_ERR1D"
-log "  → $DELETED_HIST rapport(s) supprimé(s)"
+# [1d/5] — SUPPRIMÉ le 02/08/2026. La purge de l'historique de maintenance se
+# faisait ici par `docker exec hostachy_api python -c "…engine…"`, donc depuis un
+# PROCESS DISTINCT d'uvicorn ouvrant app.db pendant que l'API tourne : le motif
+# même que la règle d'or anti-corruption interdit. La rétention (10 derniers
+# rapports) est désormais appliquée IN-PROCESS par l'API à chaque rapport reçu
+# — voir `_purger_anciens_rapports` dans api/app/routers/admin.py.
+DELETED_HIST=0
 
-# --- 1e. Purge historique emails > 90 jours ------------------------------------
 log "[1e/5] Purge historique emails (>90 jours)..."
 MAINT_ERR1E=$(mktemp)
 DELETED_EMAILS=$(docker exec hostachy_api python -c "
