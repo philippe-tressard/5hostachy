@@ -24,6 +24,26 @@ import uuid
 #: au moment de l'appel.
 RACINE_UPLOADS = os.path.realpath("/app/uploads")
 
+#: Sous-répertoire des fichiers qui ne doivent JAMAIS être servis en statique.
+#:
+#: `/uploads/*` est publié par Caddy sans authentification : tout fichier posé à la
+#: racine du volume est accessible à qui connaît son URL. Or la bibliothèque
+#: documentaire et les rapports de diagnostic ont un contrôle d'accès applicatif
+#: (`document_visible`, session authentifiée) que cette URL contourne entièrement —
+#: 48 fichiers concernés le 03/08/2026, dont des PV d'assemblée générale et un plan
+#: pluriannuel de travaux.
+#:
+#: C'est un **sous-répertoire du volume existant**, et non un volume dédié, pour une
+#: raison de survie des données : `bascule.sh` réplique le volume `5hostachy_uploads`
+#: par son nom et `backup.py` archive `/app/uploads` par son chemin. Un volume
+#: nouveau serait absent des deux — donc ni répliqué vers le standby, ni sauvegardé,
+#: et perdu à la première bascule.
+#:
+#: Le blocage est posé dans le `Caddyfile`, sur le modèle de `/uploads/annonces-hall/*`
+#: qui applique déjà cette règle. `api/tests/test_uploads_prives.py` vérifie que la
+#: directive existe **et** qu'elle précède le service statique.
+REPERTOIRE_PRIVE = os.path.join(os.getenv("UPLOADS_DIR", "/app/uploads"), "prive")
+
 # Assez long pour rester lisible dans une URL, assez court pour ne pas buter sur
 # la limite de longueur de nom de fichier une fois le préfixe UUID ajouté.
 _LONGUEUR_MAX_RADICAL = 60

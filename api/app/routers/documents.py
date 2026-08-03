@@ -17,7 +17,7 @@ from app.models.core import (
     Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
-from app.utils.fichiers import extension_assainie, nom_stocke
+from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
 # Toute règle de visibilité — documents compris — vient du module central.
 from app.utils.visibility import document_visible
 
@@ -147,13 +147,16 @@ async def upload_document(
         if not categorie or not categorie.actif:
             raise HTTPException(400, "Catégorie invalide")
 
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    # REPERTOIRE_PRIVE et non la racine du volume : `/uploads/*` est servi en
+    # statique sans authentification, et le contrôle d'accès à trois couches de
+    # `document_visible` serait contourné par la simple URL du fichier.
+    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
     # Assainissement et préfixe UUID : app/utils/fichiers.py, seul endroit où
     # cette règle est écrite. Le téléchargement passe par un endpoint
     # authentifié qui impose lui-même le `media_type`, l'extension d'origine
     # peut donc être conservée telle quelle.
     raw_name = file.filename or "document"
-    dest = os.path.join(UPLOADS_DIR, nom_stocke(raw_name, extension_assainie(raw_name)))
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
 

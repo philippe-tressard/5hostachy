@@ -25,6 +25,18 @@
         respond 404
     }
 
+    # Fichiers privés — bibliothèque documentaire (PV d'AG, règlement, plan
+    # pluriannuel) et rapports de diagnostic. Ils se téléchargent par un endpoint
+    # authentifié qui applique `document_visible` ; les servir ici contournerait ce
+    # contrôle pour qui connaît l'URL. Ils vivaient à la racine du volume jusqu'au
+    # 03/08/2026 — 48 fichiers exposés.
+    # ⚠️ Comme le bloc ci-dessus, DOIT précéder le handle /uploads/* : Caddy applique
+    # le premier `handle` qui correspond. Placé après, il ne servirait à rien.
+    # Verrouillé par api/tests/test_uploads_prives.py.
+    handle /uploads/prive/* {
+        respond 404
+    }
+
     # Fichiers uploadés — servis directement
     handle /uploads/* {
         root * /srv
