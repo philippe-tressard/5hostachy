@@ -283,7 +283,7 @@ def test_les_fichiers_de_prestataires_exigent_le_role_cs():
         RACINE / "api" / "app" / "routers" / "prestataires.py"
     ).read_text(encoding="utf-8")
 
-    for endpoint in ("/devis/{d_id}/fichier/{nom}", "/releves/{r_id}/photo"):
+    for endpoint in ("/devis/{d_id}/fichier/{nom}", "/releves/{r_id}/photo/{nom}"):
         assert f'@router.get("{endpoint}")' in source, (
             f"L'endpoint {endpoint} a disparu : les URLs stockées en base "
             "pointent dans le vide et les pièces jointes deviennent illisibles."
@@ -333,3 +333,32 @@ def test_les_urls_stockees_pointent_vers_les_endpoints_authentifies():
     )
     assert '/api/prestataires/devis/' in source
     assert '/api/prestataires/releves/' in source
+
+
+def test_les_urls_de_fichiers_portent_le_nom_du_fichier():
+    """Une URL qui sert à RETROUVER un fichier doit contenir son nom.
+
+    La 0125 a stocké `/api/prestataires/releves/{id}/photo` — sans nom — alors
+    que l'endpoint dérivait le nom de cette même URL. `basename` rendait
+    « photo », et la migration avait écrasé la seule copie du vrai nom : toutes
+    les photos de relevé sont devenues introuvables en production, une heure
+    après la mise en service. Réparé par la 0126, à partir de la base du standby.
+
+    La leçon tient en une phrase : **ne pas écraser la seule copie d'une donnée
+    par une valeur qui en dépend**. Le circuit était fermé sur lui-même.
+    """
+    source = (
+        RACINE / "api" / "app" / "routers" / "prestataires.py"
+    ).read_text(encoding="utf-8")
+
+    urls = re.findall(r'= f"(/api/prestataires/[^"]+)"', source)
+    assert urls, "aucune URL de fichier construite — le module a changé de forme"
+    for url in urls:
+        assert url.rstrip("/").endswith("}"), (
+            f"L'URL « {url} » ne se termine pas par un segment variable : si "
+            "c'est le nom du fichier qui manque, l'endpoint ne pourra pas le "
+            "retrouver et la donnée d'origine sera perdue."
+        )
+        assert "basename(dest)" in source, (
+            "le nom du fichier n'est plus injecté dans l'URL stockée"
+        )

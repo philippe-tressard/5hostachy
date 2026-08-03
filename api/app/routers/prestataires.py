@@ -563,7 +563,7 @@ async def upload_releve_photo(
     dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    r.photo_url = f"/api/prestataires/releves/{r.id}/photo"
+    r.photo_url = f"/api/prestataires/releves/{r.id}/photo/{os.path.basename(dest)}"
     session.add(r)
     session.commit()
     session.refresh(r)
@@ -859,15 +859,22 @@ def download_fichier_devis(
     return _servir_fichier_prive(nom, _noms_du_devis(d), "Pièce")
 
 
-@router.get("/releves/{r_id}/photo")
+@router.get("/releves/{r_id}/photo/{nom}")
 def download_photo_releve(
+    nom: str,
     r_id: int,
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Photo d'un relevé de compteur — CS et admin uniquement."""
+    """Photo d'un relevé de compteur — CS et admin uniquement.
+
+    Le nom du fichier est DANS l'URL, comme pour les pièces de devis. La
+    première version stockait `/releves/{id}/photo` puis redemandait le nom à
+    cette même URL : `basename` rendait alors « photo », et la migration 0125
+    avait détruit la seule copie du vrai nom. Toutes les photos de relevé sont
+    devenues introuvables (03/08/2026, réparé par la migration 0126).
+    """
     r = session.get(ReleveCompteur, r_id)
     if not r or not r.photo_url:
         raise HTTPException(404, "Relevé ou photo introuvable")
-    nom = os.path.basename(r.photo_url)
-    return _servir_fichier_prive(nom, {nom}, "Photo")
+    return _servir_fichier_prive(nom, {os.path.basename(r.photo_url)}, "Photo")

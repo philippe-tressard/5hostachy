@@ -49,6 +49,10 @@ SANS_CONSOMMATEUR_FRONT = {
         "`os_fichier_url`) ; le front la rend depuis la donnée, elle n'apparaît "
         "donc jamais dans son code source — troisième famille de consommateur, "
         "après l'interface et les scripts",
+    "/prestataires/releves/{r_id}/photo/{nom}":
+        "idem, pour `releve_compteur.photo_url` — le GET passait auparavant par "
+        "coïncidence, le POST d'upload partageant son chemin (cf. limite de "
+        "`_motif`) ; les chemins diffèrent depuis la 0126, il est donc vu",
 }
 
 
