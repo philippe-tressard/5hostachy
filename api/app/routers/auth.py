@@ -295,6 +295,24 @@ def _build_user_read(user: Utilisateur, session: Session) -> UserRead:
     return UserRead.from_orm_with_roles(user, batiment_nom=batiment_nom, delegations_aidant=delegations_aidant)
 
 
+@router.get("/verifier-acces", status_code=204)
+def verifier_acces(_: Utilisateur = Depends(get_current_user)) -> Response:
+    """Réservé au `forward_auth` de Caddy : 204 si la session est valide, 401 sinon.
+
+    Caddy interroge cet endpoint avant de servir un fichier de `/uploads/*`, qui
+    était jusqu'ici public. Il ne renvoie **aucun contenu** : seul le code compte,
+    et un corps vide évite d'exposer quoi que ce soit sur le porteur du cookie.
+
+    Il s'appuie volontairement sur `get_current_user`, la dépendance d'authentification
+    commune, et non sur une vérification allégée maison. Une seconde façon de valider
+    une session serait une seconde sémantique à maintenir — et à faire diverger. Le
+    coût dominant est le trajet HTTP interne, pas la lecture SQLite qu'elle effectue :
+    l'économiser ne rapporterait presque rien et laisserait un compte désactivé
+    conserver l'accès jusqu'à l'expiration de son jeton (120 min).
+    """
+    return Response(status_code=204)
+
+
 @router.get("/me", response_model=UserRead)
 def me(
     user: Utilisateur = Depends(get_current_user),

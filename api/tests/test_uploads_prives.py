@@ -162,3 +162,56 @@ def test_la_migration_ne_leve_jamais(tmp_path, monkeypatch):
     monkeypatch.setattr(mig.shutil, "move", _echec)
     assert mig._deplacer(str(source)) is None, "un échec doit rendre None, pas lever"
     assert source.exists(), "le fichier d'origine reste en place"
+
+
+# ── forward_auth : le reste de /uploads exige une session ────────────────────
+
+def test_uploads_exige_une_session_authentifiee():
+    """Photos de profil, de ticket et pièces jointes ne sont plus publiques."""
+    contenu = _caddyfile()
+    bloc = re.search(
+        r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S
+    )
+    assert bloc, "bloc /uploads/* introuvable"
+    assert "forward_auth" in bloc.group(1), (
+        "Le service statique de /uploads/* ne passe plus par forward_auth : "
+        "toutes les pièces jointes redeviennent publiques."
+    )
+    assert "/auth/verifier-acces" in bloc.group(1), (
+        "forward_auth n'interroge plus l'endpoint de vérification attendu"
+    )
+
+
+def test_les_images_dactualite_restent_publiques_pour_whatsapp():
+    """Le bridge reçoit une URL absolue et la récupère en anonyme.
+
+    `app/utils/whatsapp.py::_resolve_image_url` construit `https://<site>/uploads/…`
+    et le bridge va chercher l'image lui-même, sans cookie. Protéger ce dossier
+    casserait le partage sur le groupe — et son contenu est justement destiné à
+    être diffusé.
+    """
+    contenu = _caddyfile()
+    publications = contenu.find("handle /uploads/publications/*")
+    protege = re.search(r"handle\s+/uploads/\*\s*\{", contenu)
+
+    assert publications != -1, (
+        "Le dossier des images d'actualité n'est plus servi publiquement : "
+        "le partage WhatsApp d'une actualité avec photo va échouer."
+    )
+    assert protege and publications < protege.start(), (
+        "Le bloc publications est placé APRÈS le bloc protégé : Caddy applique le "
+        "premier `handle` qui correspond, les images passeraient sous forward_auth."
+    )
+
+
+def test_l_endpoint_de_verification_existe_et_reste_authentifie():
+    """Un endpoint qui cesserait d'exiger une session rendrait forward_auth inerte."""
+    source = (RACINE / "api" / "app" / "routers" / "auth.py").read_text(encoding="utf-8")
+    bloc = re.search(
+        r'@router\.get\("/verifier-acces".*?\ndef verifier_acces\((.*?)\)', source, re.S
+    )
+    assert bloc, "l'endpoint /auth/verifier-acces a disparu — forward_auth pointe dans le vide"
+    assert "get_current_user" in bloc.group(1), (
+        "verifier_acces ne dépend plus de get_current_user : il répondrait 204 "
+        "à tout le monde, et forward_auth n'empêcherait plus rien."
+    )

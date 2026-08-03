@@ -37,8 +37,28 @@
         respond 404
     }
 
-    # Fichiers uploadés — servis directement
+    # Images d'actualité — publiques à dessein. Le bridge WhatsApp reçoit une URL
+    # ABSOLUE (app/utils/whatsapp.py, `_resolve_image_url`) et va chercher l'image
+    # lui-même, en anonyme : exiger une session ici casserait le partage sur le
+    # groupe. C'est le seul dossier dans ce cas, et c'est aussi le moins sensible —
+    # son contenu est précisément destiné à être diffusé.
+    # DOIT précéder le handle /uploads/* ci-dessous.
+    handle /uploads/publications/* {
+        root * /srv
+        file_server
+    }
+
+    # Tout le reste des fichiers uploadés — photos de profil, photos de ticket,
+    # pièces jointes : réservé aux sessions authentifiées. Caddy interroge l'API
+    # avant de servir (204 = autorisé, 401 = refusé).
     handle /uploads/* {
+        # `forward_auth` transmet les en-têtes de la requête d'origine — donc le
+        # cookie de session — et ne sert le fichier que sur une réponse 2xx.
+        # Pas de `copy_headers` ici : cette sous-directive recopie des en-têtes de
+        # la RÉPONSE d'authentification vers la requête, ce qui n'a rien à voir.
+        forward_auth api:8000 {
+            uri /auth/verifier-acces
+        }
         root * /srv
         file_server
     }

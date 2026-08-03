@@ -76,7 +76,20 @@ def _routes() -> list[tuple[str, str, str]]:
 
 
 def _sources_consommatrices() -> str:
-    """Tout ce qui peut appeler l'API : le front, et les scripts d'infra."""
+    """Tout ce qui peut appeler l'API.
+
+    Trois familles de clients, et en oublier une fait déclarer morte une route
+    bien vivante — c'est « la portée du contrôle fait partie du contrôle »
+    (`standards/05` §9) :
+
+    - le **front**, client évident ;
+    - les **scripts d'infra** (`maintenance.sh`, `check-reliability.sh`), qui
+      appellent par `curl` ;
+    - le **reverse proxy** : depuis le 03/08/2026, `forward_auth` fait interroger
+      `/auth/verifier-acces` par Caddy avant de servir un fichier. Cette route
+      n'est appelée ni par le front ni par un script — le contrôle l'a signalée
+      comme orpheline, à raison de son point de vue, à tort en réalité.
+    """
     morceaux = [
         p.read_text(encoding="utf-8", errors="ignore")
         for p in (RACINE / "front" / "src").rglob("*")
@@ -86,6 +99,7 @@ def _sources_consommatrices() -> str:
         p.read_text(encoding="utf-8", errors="ignore")
         for p in RACINE.glob("*.sh")
     ]
+    morceaux.append((RACINE / "Caddyfile").read_text(encoding="utf-8", errors="ignore"))
     return "\n".join(morceaux)
 
 
