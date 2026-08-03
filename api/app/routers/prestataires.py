@@ -1,12 +1,11 @@
 """Router prestataires & contrats d'entretien."""
 import os
-import re
 import shutil
-import uuid
 from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 import json
 
 from pydantic import BaseModel, field_validator
@@ -15,8 +14,9 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin, get_current_user
 from app.database import get_session
 from app.models.core import CompteurConfig, ContratEntretien, DevisPrestataire, NotationPrestataire, Prestataire, ReleveCompteur, TypeEquipement, TypePrestataire, Utilisateur, RoleUtilisateur
-
-UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
+from app.utils.fichiers import (
+    REPERTOIRE_PRIVE, extension_assainie, nom_lisible, nom_stocke,
+)
 
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
@@ -378,10 +378,9 @@ async def upload_devis_fichier(
     d = session.get(DevisPrestataire, d_id)
     if not d:
         raise HTTPException(404, "Devis introuvable")
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-    raw_name = os.path.basename(file.filename or "fichier")
-    safe_name = re.sub(r"[^\w.\-]", "_", raw_name)[:200] or "fichier"
-    dest = os.path.join(UPLOADS_DIR, f"{uuid.uuid4().hex}_{safe_name}")
+    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
+    raw_name = file.filename or "fichier"
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
     try:
@@ -390,7 +389,7 @@ async def upload_devis_fichier(
             fichiers = []
     except Exception:
         fichiers = []
-    fichiers.append(f"/uploads/{os.path.basename(dest)}")
+    fichiers.append(f"/api/prestataires/devis/{d.id}/fichier/{os.path.basename(dest)}")
     d.fichiers_urls = json.dumps(fichiers)
     d.mis_a_jour_le = datetime.utcnow()
     session.add(d)
@@ -418,7 +417,7 @@ def delete_devis_fichier(
     if url in fichiers:
         fichiers.remove(url)
         filename = os.path.basename(url)
-        filepath = os.path.join(UPLOADS_DIR, filename)
+        filepath = os.path.join(REPERTOIRE_PRIVE, filename)
         if os.path.exists(filepath):
             os.remove(filepath)
     d.fichiers_urls = json.dumps(fichiers) if fichiers else None
@@ -440,18 +439,17 @@ async def upload_devis_os(
     d = session.get(DevisPrestataire, d_id)
     if not d:
         raise HTTPException(404, "Devis introuvable")
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-    raw_name = os.path.basename(file.filename or "os")
-    safe_name = re.sub(r"[^\w.\-]", "_", raw_name)[:200] or "os"
-    dest = os.path.join(UPLOADS_DIR, f"{uuid.uuid4().hex}_{safe_name}")
+    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
+    raw_name = file.filename or "os"
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
     # Supprimer l'ancien OS si remplacé
     if d.os_fichier_url:
-        old_path = os.path.join(UPLOADS_DIR, os.path.basename(d.os_fichier_url))
+        old_path = os.path.join(REPERTOIRE_PRIVE, os.path.basename(d.os_fichier_url))
         if os.path.exists(old_path):
             os.remove(old_path)
-    d.os_fichier_url = f"/uploads/{os.path.basename(dest)}"
+    d.os_fichier_url = f"/api/prestataires/devis/{d.id}/fichier/{os.path.basename(dest)}"
     d.statut = "accepte"
     d.mis_a_jour_le = datetime.utcnow()
     session.add(d)
@@ -560,13 +558,12 @@ async def upload_releve_photo(
     r = session.get(ReleveCompteur, r_id)
     if not r:
         raise HTTPException(404, "Relevé introuvable")
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-    raw_name = os.path.basename(file.filename or "photo")
-    safe_name = re.sub(r"[^\w.\-]", "_", raw_name)[:200] or "photo"
-    dest = os.path.join(UPLOADS_DIR, f"{uuid.uuid4().hex}_{safe_name}")
+    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
+    raw_name = file.filename or "photo"
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    r.photo_url = f"/uploads/{os.path.basename(dest)}"
+    r.photo_url = f"/api/prestataires/releves/{r.id}/photo"
     session.add(r)
     session.commit()
     session.refresh(r)
@@ -803,3 +800,74 @@ def get_prestataire_synthese(
         ],
     }
 
+
+
+# ── Téléchargement des pièces (CS/admin) ─────────────────────────────────────
+#
+# Ces fichiers — devis, ordres de service, conditions d'assurance, relevés de
+# compteur — vivaient à la racine du volume `uploads`, servi en statique. Deux
+# conséquences, corrigées ici le 03/08/2026 :
+#
+#   1. avant le durcissement du 03/08, ils étaient **publics** ;
+#   2. après, `forward_auth` les protégeait — mais il ne vérifie que la présence
+#      d'une session, PAS le rôle. Or l'écran qui les affiche est réservé au CS :
+#      n'importe quel résident disposant de l'URL pouvait donc les lire.
+#
+# Servis par ces endpoints, ils suivent enfin la même règle que la bibliothèque
+# documentaire : fichier hors du tronc servi, autorisation appliquée à la lecture.
+
+def _servir_fichier_prive(nom: str, noms_autorises: set[str], libelle: str) -> FileResponse:
+    """Sert un fichier de `prive/`, à condition qu'il appartienne à la ressource.
+
+    ⚠️ La validation par appartenance n'est pas une formalité : `prive/` contient
+    aussi les PV d'assemblée générale et les rapports de diagnostic, qui ont leur
+    propre contrôle d'accès. Servir un nom arbitraire depuis cet endpoint le
+    contournerait — on ne se contente donc pas d'un `basename`.
+    """
+    if nom not in noms_autorises:
+        raise HTTPException(404, f"{libelle} introuvable")
+    chemin = os.path.join(REPERTOIRE_PRIVE, nom)
+    if not os.path.isfile(chemin):
+        raise HTTPException(404, "Fichier introuvable sur le serveur")
+    return FileResponse(chemin, filename=nom_lisible(nom))
+
+
+def _noms_du_devis(d: DevisPrestataire) -> set[str]:
+    """Noms de fichiers rattachés à ce devis : pièces jointes et ordre de service."""
+    noms: set[str] = set()
+    try:
+        for url in json.loads(d.fichiers_urls or "[]") or []:
+            noms.add(os.path.basename(str(url)))
+    except Exception:
+        pass
+    if d.os_fichier_url:
+        noms.add(os.path.basename(d.os_fichier_url))
+    return noms
+
+
+@router.get("/devis/{d_id}/fichier/{nom}")
+def download_fichier_devis(
+    nom: str,
+    d_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Pièce jointe ou ordre de service d'un devis — CS et admin uniquement."""
+    d = session.get(DevisPrestataire, d_id)
+    if not d:
+        raise HTTPException(404, "Devis introuvable")
+    return _servir_fichier_prive(nom, _noms_du_devis(d), "Pièce")
+
+
+@router.get("/releves/{r_id}/photo")
+def download_photo_releve(
+    r_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Photo d'un relevé de compteur — CS et admin uniquement."""
+    r = session.get(ReleveCompteur, r_id)
+    if not r or not r.photo_url:
+        raise HTTPException(404, "Relevé ou photo introuvable")
+    nom = os.path.basename(r.photo_url)
+    return _servir_fichier_prive(nom, {nom}, "Photo")

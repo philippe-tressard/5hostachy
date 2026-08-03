@@ -27,11 +27,11 @@ import pytest
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 CADDYFILE = RACINE / "Caddyfile"
 
-#: Routeurs qui écrivent des fichiers à accès restreint. `prestataires.py` en est
-#: volontairement absent : le front consomme ses devis par une URL publique
-#: stockée en base, les déplacer casserait l'affichage tant qu'un endpoint de
-#: téléchargement authentifié n'existe pas. Lot distinct, exposition connue.
-ROUTEURS_PRIVES = ("documents.py", "diagnostics.py")
+#: Routeurs qui écrivent des fichiers à accès restreint. `prestataires.py` les a
+#: rejoints le 03/08/2026 (migration 0125) : ses devis étaient consommés par une
+#: URL publique stockée en base, ce qui imposait d'abord un endpoint de
+#: téléchargement authentifié. Plus aucune exception à ce jour.
+ROUTEURS_PRIVES = ("documents.py", "diagnostics.py", "prestataires.py")
 
 
 def _caddyfile() -> str:
@@ -266,3 +266,70 @@ def test_les_images_publiques_restent_cacheables():
         "Les images d'actualité sont devenues non-cacheables : chaque affichage "
         "repartira jusqu'au RPi."
     )
+
+
+# ── Fichiers de prestataires : autorisation, pas seulement authentification ──
+
+def test_les_fichiers_de_prestataires_exigent_le_role_cs():
+    """`forward_auth` ne vérifie qu'une session — pas le rôle.
+
+    Devis, ordres de service, conditions d'assurance et relevés de compteur ne
+    s'affichent que dans un écran réservé au conseil syndical. Tant qu'ils
+    étaient servis en statique, tout résident disposant de l'URL pouvait les
+    lire : authentifié n'est pas autorisé. Servis par un endpoint, ils héritent
+    enfin de `require_cs_or_admin`.
+    """
+    source = (
+        RACINE / "api" / "app" / "routers" / "prestataires.py"
+    ).read_text(encoding="utf-8")
+
+    for endpoint in ("/devis/{d_id}/fichier/{nom}", "/releves/{r_id}/photo"):
+        assert f'@router.get("{endpoint}")' in source, (
+            f"L'endpoint {endpoint} a disparu : les URLs stockées en base "
+            "pointent dans le vide et les pièces jointes deviennent illisibles."
+        )
+
+    bloc = source[source.index("def _servir_fichier_prive"):]
+    assert "require_cs_or_admin" in source[source.index("download_fichier_devis") - 400:], (
+        "Le téléchargement des pièces de devis n'exige plus le rôle CS/admin."
+    )
+    assert "noms_autorises" in bloc, "la validation d'appartenance a disparu"
+
+
+def test_un_endpoint_prestataire_ne_peut_pas_servir_un_pv_dag():
+    """`prive/` contient AUSSI les PV d'AG et les diagnostics.
+
+    Un endpoint qui servirait un nom arbitraire depuis ce répertoire
+    contournerait le contrôle d'accès à trois couches de la bibliothèque
+    documentaire. La validation par appartenance à la ressource est donc une
+    condition de sécurité, pas une commodité — et un `basename` ne suffit pas.
+    """
+    source = (
+        RACINE / "api" / "app" / "routers" / "prestataires.py"
+    ).read_text(encoding="utf-8")
+
+    assert "if nom not in noms_autorises:" in source, (
+        "La vérification d'appartenance a été retirée : l'endpoint peut servir "
+        "n'importe quel fichier de prive/, PV d'assemblée générale compris."
+    )
+    # Les noms proposés viennent des colonnes de la ressource, jamais de l'URL.
+    assert "_noms_du_devis" in source and "d.fichiers_urls" in source
+
+
+def test_les_urls_stockees_pointent_vers_les_endpoints_authentifies():
+    """Le front lit ces URLs depuis la base : elles font foi.
+
+    Si le code réécrivait `/uploads/…`, les fichiers seraient à nouveau demandés
+    en statique — donc introuvables (ils sont dans `prive/`), et l'affichage
+    casserait sans erreur serveur.
+    """
+    source = (
+        RACINE / "api" / "app" / "routers" / "prestataires.py"
+    ).read_text(encoding="utf-8")
+
+    fautifs = re.findall(r'f"/uploads/\{[^"]*\}"', source)
+    assert not fautifs, (
+        f"{len(fautifs)} URL(s) publique(s) encore écrite(s) en base : {fautifs}"
+    )
+    assert '/api/prestataires/devis/' in source
+    assert '/api/prestataires/releves/' in source
