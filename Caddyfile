@@ -59,6 +59,16 @@
         forward_auth api:8000 {
             uri /auth/verifier-acces
         }
+        # ⚠️ SANS CETTE LIGNE, LE CONTRÔLE CI-DESSUS NE SERT À RIEN.
+        # Cloudflare met en cache les extensions statiques (.pdf, .jpg…) par
+        # défaut. Le premier accès AUTORISÉ peuple donc l'edge, qui sert ensuite
+        # le fichier à tout le monde sans jamais revenir à l'origine — 4 heures
+        # durant. Constaté le 03/08/2026 sur une pièce jointe de ticket :
+        # origine 401, edge 200 avec `CF-Cache-Status: HIT`.
+        # `private` interdit le stockage aux caches partagés, `no-store` aux
+        # caches privés : une réponse qui dépend d'un cookie de session ne doit
+        # être conservée nulle part.
+        header Cache-Control "private, no-store"
         root * /srv
         file_server
     }
