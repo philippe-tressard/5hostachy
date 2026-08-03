@@ -14,7 +14,7 @@ les trois règles ci-dessous priment sur la liste des contrôles.
 > `standards/09-livraison-et-mep.md` §2 (les trois exigences de même rang que la
 > sécurité), §3 (grille de pré-check générique), §4 (post-check et les trois pièges
 > de vérification), §6 (rollback), §7 (rétrospective) ·
-> `standards/04-fiabilite-des-controles.md` — **douze** règles, dont trois seulement
+> `standards/04-fiabilite-des-controles.md` — **treize** règles, dont trois seulement
 > sont reprises ci-dessous · `standards/08-git-et-versioning.md` §2–3 (étape 0) ·
 > skill globale **`avant-commit`** pour les six contrôles de deux minutes.
 
