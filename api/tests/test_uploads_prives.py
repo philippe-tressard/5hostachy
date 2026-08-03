@@ -215,3 +215,54 @@ def test_l_endpoint_de_verification_existe_et_reste_authentifie():
         "verifier_acces ne dépend plus de get_current_user : il répondrait 204 "
         "à tout le monde, et forward_auth n'empêcherait plus rien."
     )
+
+
+def test_les_fichiers_proteges_ne_sont_pas_mis_en_cache_par_le_cdn():
+    """Sans cette directive, `forward_auth` ne protège rien.
+
+    Cloudflare met en cache les extensions statiques (.pdf, .jpg…) par défaut.
+    Le premier accès AUTORISÉ peuple donc l'edge, qui sert ensuite le fichier à
+    tout le monde sans jamais revenir à l'origine.
+
+    Constaté le 03/08/2026, quelques minutes après la mise en production de
+    forward_auth : sur une pièce jointe de ticket, l'origine répondait 401 et
+    l'edge 200, avec `CF-Cache-Status: HIT` et `Age: 344`. Le contrôle était
+    parfaitement fonctionnel — et parfaitement inutile.
+
+    Une purge du cache ne suffit pas : le premier accès autorisé suivant
+    repeuple l'edge. Seule la directive à l'origine règle le problème.
+    """
+    contenu = _caddyfile()
+    bloc = re.search(r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S)
+    assert bloc, "bloc /uploads/* introuvable"
+
+    directive = re.search(
+        r'header\s+Cache-Control\s+"([^"]+)"', bloc.group(1)
+    )
+    assert directive, (
+        "Le bloc protégé n'impose plus de Cache-Control : Cloudflare remettra "
+        "les pièces jointes en cache et les servira sans authentification."
+    )
+    valeur = directive.group(1).lower()
+    assert "private" in valeur or "no-store" in valeur, (
+        f"Cache-Control « {directive.group(1)} » n'interdit pas le stockage par "
+        "un cache partagé — une réponse qui dépend d'un cookie ne doit être "
+        "conservée nulle part."
+    )
+
+
+def test_les_images_publiques_restent_cacheables():
+    """Le contraire du test précédent : ne pas dégrader ce qui doit être servi vite.
+
+    Les images d'actualité sont publiques par nécessité (WhatsApp) ; les priver
+    de cache ferait repartir chaque vignette jusqu'au Raspberry Pi.
+    """
+    contenu = _caddyfile()
+    bloc = re.search(
+        r"handle\s+/uploads/publications/\*\s*\{(.*?)\n    \}", contenu, re.S
+    )
+    assert bloc, "bloc /uploads/publications/* introuvable"
+    assert "no-store" not in bloc.group(1), (
+        "Les images d'actualité sont devenues non-cacheables : chaque affichage "
+        "repartira jusqu'au RPi."
+    )
