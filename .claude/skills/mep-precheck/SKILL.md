@@ -1,6 +1,6 @@
 ---
 name: mep-precheck
-description: "Pré-check et post-check obligatoires de mise en production 5Hostachy : étape 0 (poste de dev), étape 0 bis (autorisation, factorisation, documentation), pré-check 14 points sur les 2 RPi, post-check P1-P9, rollback, surveillance continue. Use when: déployer, préparer une MEP, merger vers main, diagnostiquer un déploiement qui n'a pas eu lieu, vérifier qu'un correctif est réellement servi, auditer les contrôles automatiques."
+description: "Pré-check et post-check obligatoires de mise en production 5Hostachy : étape 0 (poste de dev), étape 0 bis (autorisation, factorisation, documentation), pré-check 15 points sur les 2 RPi, post-check P1-P10, rollback, surveillance continue. Use when: déployer, préparer une MEP, merger vers main, diagnostiquer un déploiement qui n'a pas eu lieu, vérifier qu'un correctif est réellement servi, auditer les contrôles automatiques."
 argument-hint: "Décrire le lot à déployer ou le point à vérifier (ex. « pré-check avant MEP v2.31.3 », « post-check après merge »)"
 ---
 
@@ -146,6 +146,7 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 12 | Image en cours = code déployé, **pour les services concernés** | `git diff --name-only <image>..HEAD` pour savoir quels services sont touchés, puis `docker inspect <svc>` — voir « Point 12 » | Image du service **touché** reconstruite après le commit ; un service non touché n'est pas une anomalie |
 | 13 | Le canal d'alerte fonctionne | Dernière alerte reçue / `grep 'Email KO' /var/log/hostachy-health-watch.log` | Aucun `Email KO` récent — sinon les contrôles automatiques sont muets |
 | 14 | **Hygiène disque sur les 2 RPi** | `docker system df` + `ls -la /var/log/hostachy-*.log` sur les **2** nœuds | Cache de build **< 20 Go** · aucun log **> 5 Mo** · dernière maintenance < 8 j **sur chaque nœud** (voir « Point 14 ») |
+| 15 | **Aucun endpoint orphelin introduit par le lot** | `cd api && pytest tests/test_endpoints_orphelins.py -q` (poste de dev, avant le push) | 3 tests verts — voir « Point 15 » |
 
 **Point 2 — pourquoi (26/07/2026) :** « fichier présent, cohérent » était trop vague
 et ne disait pas *cohérent avec quoi*.
@@ -339,6 +340,34 @@ sur le **standby** que le pré-check n'inspectait pas :
   par **C16** (WARN ≥ 20 Go). Ne pas descendre sous 10 Go : la bascule compte sur ce
   cache pour ne pas rejouer `npm run build` (OOM). Cf. [[project_retention_logs_maintenance]].
 
+**Point 15 — pourquoi (03/08/2026) :** en basculant les pièces jointes vers
+`POST /uploads/fichier`, deux endpoints (`/uploads/ticket/{id}`,
+`/uploads/evenement/{id}`) se sont retrouvés **sans le moindre appelant**, et
+personne ne l'a vu — ni la CI, ni le pré-check, ni `svelte-check`, qui ne signale
+que le code mort *à l'intérieur* d'un fichier, jamais une route serveur devenue
+inutile. Un endpoint orphelin n'est pas un simple déchet : c'est une **surface
+d'attaque authentifiée que plus aucun test ne parcourt**, et il fige un contrat
+(ici : alimenter `photos_urls` après création) que le reste du code ne respecte
+plus — donc il diverge en silence jusqu'au jour où quelqu'un s'y fie.
+
+Le contrôle est **automatisé**, `api/tests/test_endpoints_orphelins.py` : il lit les
+décorateurs `@router.<méthode>` par analyse statique (aucun import de l'app, donc
+aucune base) et cherche un consommateur dans `front/src` **et** dans les `*.sh` —
+`maintenance.sh` et `check-reliability.sh` sont des clients aussi légitimes qu'une
+page Svelte, c'est ce qui distingue `/admin/db/integrite` d'une route morte.
+
+Deux détails qui font la différence entre un garde-fou et un décor :
+- la liste d'exceptions `SANS_CONSOMMATEUR_FRONT` est vérifiée **dans les deux sens** —
+  une entrée qui a retrouvé un appelant fait échouer le test, sinon la liste
+  grossit à chaque exception et finit par tout couvrir ;
+- le détecteur s'auto-contrôle (`> 200 routes`, sources consommatrices non vides) :
+  un parseur cassé rendrait tout « consommé », donc vert à vide.
+
+Ce point se déroule **sur le poste de développement, avant le push** : il ne
+nécessite aucun accès aux RPi. Une route orpheline n'est pas bloquante en soi —
+c'est la **décision** qui l'est : supprimer l'endpoint *et* son client TypeScript,
+ou l'inscrire dans la liste d'exceptions avec sa raison en une ligne.
+
 ⚠ **Daemon Docker partagé sur rpi2** (co-hébergement de List-dons) : le prune d'images
 est **filtré sur `label=com.docker.compose.project=5hostachy`** — un prune nu
 supprimerait aussi les couches orphelines de l'autre application, et arbitrer sur ses
@@ -365,6 +394,7 @@ Attendre le tick, puis :
 | P7 | **Le correctif est effectivement observable** | Vérifier le comportement corrigé sur le site réel | Le bug ne se reproduit plus |
 | P8 | Redondance intacte après MEP | Point 2 (rôle cohérent sur les 2 nœuds) | Inchangé et cohérent |
 | P9 | Parité du standby | Point 10 | HEAD identiques, **ou** noter que la resynchro aura lieu à la bascule de 02:00 (`bascule.sh` phase 0) |
+| P10 | **Bilan mémoire du lot** — 🟡 priorité 3 | Relire les activités de la PR : qu'a-t-on appris qui n'est écrit nulle part ? Voir « P10 » | Chaque leçon est **écrite** (socle ou banque projet), ou explicitement écartée |
 
 > **⏱ Attendre la BONNE condition (constaté le 26/07/2026, en utilisant ce
 > post-check pour la première fois).** Ne pas attendre que `HEAD` change : dans
@@ -426,6 +456,43 @@ annonce de hall) et regarder.
 **Rollback si P1–P6 échoue :** `cd /opt/5hostachy && git reset --hard <commit-précédent>
 && docker compose build && docker compose up -d`. Réversible et dans le cycle normal
 — ce n'est pas une violation de la règle d'or (aucune ouverture de `app.db`).
+
+**P10 — bilan mémoire du lot (🟡 priorité 3, ajouté le 03/08/2026).** Une MEP réussie
+n'est pas une MEP close : ce qui a été appris pendant le lot disparaît si personne ne
+l'écrit. Ce point est le **dernier** du post-check, et le seul qui ne regarde pas la
+production — il regarde le lot.
+
+Ce point **ne bloque pas** la MEP (priorité 3, après la sécurité et la fiabilité des
+contrôles) : il la **termine**. Une leçon écartée doit l'être explicitement, pas par
+omission.
+
+Relire les activités de la PR — pas le diff, les **surprises** — et se poser les
+quatre questions dans cet ordre :
+
+1. **Un défaut a-t-il été trouvé par l'utilisateur plutôt que par un contrôle ?**
+   C'est le signal le plus fort : le contrôle manquant est la vraie leçon, pas le
+   défaut. → charger la skill globale `retrospective-incident`.
+2. **Cela pouvait-il arriver sur un autre projet ?** Si oui, ça monte dans le socle
+   `~/.claude/standards/`, et **nulle part ailleurs** (règle de placement,
+   `~/.claude/CLAUDE.md` §1). Une pratique générique recopiée dans un projet est déjà
+   une divergence.
+3. **Sinon, est-ce propre à 5Hostachy ?** → banque `~/.claude/projects/C--Dev-5hostachy/memory/`,
+   un fichier = un fait, plus une ligne dans `MEMORY.md`.
+4. **Une mémoire existante est-elle devenue fausse ?** Une mémoire périmée est pire
+   qu'une mémoire absente : elle est citée avec assurance. La corriger ou la
+   supprimer — ne jamais empiler une exception par-dessus.
+
+Vérifier aussi que la documentation *visible* a suivi : manuel utilisateur mis à jour
+**et** sa version/date bumpées aux deux emplacements
+(cf. [[feedback_manuel_version_date]]), `specs/` si un contrat d'API a changé.
+
+**Pourquoi ce point existe :** sur le lot des pièces jointes (03/08/2026), quatre
+constats n'auraient été écrits nulle part sans un rappel explicite — la version du
+manuel jamais bumpée, les fins de ligne cassées par `sed -i` puis « réparées » d'une
+façon qui ne restaure pas un fichier mixte, les endpoints devenus orphelins, et le
+drapeau `fichiers` des e-mails calculé sur l'intention plutôt que sur la pièce jointe
+réelle. Trois d'entre eux ont été soulevés **par l'utilisateur**, pas par le
+processus : c'est exactement la question 1.
 
 ## Rétrospective du 26/07/2026 — ce que le processus n'a pas vu
 

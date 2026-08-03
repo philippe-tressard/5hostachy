@@ -389,6 +389,9 @@ class Ticket(SQLModel, table=True):
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave
     photos_urls: Optional[str] = None  # JSON array of photo URLs
+    # Pièces jointes non-images (PDF, bureautique). Même convention que
+    # TicketEvolution.fichiers_urls : un seul nom pour la notion « fichier joint ».
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
@@ -1097,6 +1100,8 @@ class Evenement(SQLModel, table=True):
     # Même convention que Ticket.photos_urls (tableau JSON d'URLs internes) : le
     # modèle portait déjà trois noms pour la même notion, ne pas en créer un 4ᵉ.
     photos_urls: Optional[str] = None  # JSON array of photo URLs
+    # Pièces jointes non-images, même convention que Ticket.fichiers_urls.
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
     epingle: bool = False  # même notion que Publication.epingle
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False

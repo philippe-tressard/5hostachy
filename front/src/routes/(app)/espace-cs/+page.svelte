@@ -15,6 +15,8 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import PhotosUpload from '$lib/components/PhotosUpload.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import { fichiersDepuisUrls } from '$lib/fichiers';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, 'annonces-hall': { label: '\u{1F4C4} Annonces Hall', descriptif: 'Créez une annonce à afficher dans le hall des bâtiments : PDF à la charte de la résidence, envoyé par mail aux membres du CS concernés, puis conservé dans l\'historique.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
 	$: _siteNom = $siteNomStore;
@@ -1455,7 +1457,7 @@
 														<EvolForm
 															editMode={true}
 															initialContenu={evol.contenu || ''}
-															initialFichiers={(evol.fichiers_urls || []).map((u: string) => ({ url: u, nom: u.split('/').pop() || u, type: /\.(jpe?g|png|webp)$/i.test(u) ? 'image' : 'document' }))}
+															initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 															showFiles={true}
 															separatePhotosAndDocs={true}
 															saving={tkEditEvolSaving}
@@ -1471,22 +1473,9 @@
 													<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 												{/if}
 												{#if evol.fichiers_urls?.length && tkEditingEvolId !== evol.id}
-													{@const photos = evol.fichiers_urls.filter((u: string) => /\.(jpe?g|png|webp)$/i.test(u))}
-													{@const docs = evol.fichiers_urls.filter((u: string) => !/\.(jpe?g|png|webp)$/i.test(u))}
-													{#if photos.length}
-														<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem">
-															{#each photos as fUrl}
-																<a href={fUrl} target="_blank" rel="noopener"><img src={fUrl} alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" /></a>
-															{/each}
-														</div>
-													{/if}
-													{#if docs.length}
-														<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.25rem">
-															{#each docs as fUrl}
-																<a href={fUrl} target="_blank" rel="noopener" style="font-size:.75rem;display:flex;align-items:center;gap:.2rem;color:var(--color-primary)">&#x1F4C4; {fUrl.split('/').pop()}</a>
-															{/each}
-														</div>
-													{/if}
+													<div style="margin-top:.3rem">
+														<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
+													</div>
 												{/if}
 											</div>
 										</div>

@@ -2,10 +2,13 @@
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { tickets as ticketsApi, fichiersApi, ApiError, type TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, ApiError, type TicketEvolution } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import { ACCEPT_PHOTOS, fichiersDepuisUrls } from '$lib/fichiers';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
@@ -30,11 +33,9 @@
 	let newInterne = false;
 	let sending = false;
 	let updatingStatus = false;
-	let msgPhotos: { url: string; nom: string; type: string }[] = [];
-	let msgDocs: { url: string; nom: string; type: string }[] = [];
+	let msgPhotos: string[] = [];
+	let msgDocs: string[] = [];
 	let msgEmailExterne = '';
-	let uploadingMsgPhoto = false;
-	let uploadingMsgDoc = false;
 
 	// Évolutions
 	let showEvolForm = false;
@@ -176,7 +177,7 @@
 			const msg = await ticketsApi.addMessage(ticketId, {
 				contenu: newContent,
 				interne: newInterne,
-				fichiers_urls: [...msgPhotos.map(f => f.url), ...msgDocs.map(f => f.url)],
+				fichiers_urls: [...msgPhotos, ...msgDocs],
 				email_externe: msgEmailExterne.trim() || undefined,
 			});
 			messages = [...messages, msg];
@@ -192,31 +193,8 @@
 		}
 	}
 
-	async function uploadMsgPhoto(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		uploadingMsgPhoto = true;
-		try {
-			const result = await fichiersApi.upload(file);
-			msgPhotos = [...msgPhotos, result];
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur upload');
-		} finally { uploadingMsgPhoto = false; input.value = ''; }
-	}
-
-	async function uploadMsgDoc(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		uploadingMsgDoc = true;
-		try {
-			const result = await fichiersApi.upload(file);
-			msgDocs = [...msgDocs, result];
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur upload');
-		} finally { uploadingMsgDoc = false; input.value = ''; }
-	}
+	// Le téléversement du formulaire de réponse est celui de `FichiersUpload` :
+	// c'était la quatrième copie de la même fonction dans le projet.
 
 	async function updateStatus(s: string) {
 		updatingStatus = true;
@@ -278,13 +256,9 @@
 			<div class="rich-content ticket-desc">{@html renderContent(ticket.description)}</div>
 		{/if}
 
-		{#if ticket.photos_urls?.length}
-			<div class="ticket-photos" style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
-				{#each ticket.photos_urls as photoUrl}
-					<a href={photoUrl} target="_blank" rel="noopener" class="ticket-photo-link">
-						<img src={photoUrl} alt="Photo ticket" class="ticket-photo" />
-					</a>
-				{/each}
+		{#if ticket.photos_urls?.length || ticket.fichiers_urls?.length}
+			<div style="margin-top:.75rem">
+				<PiecesJointes urls={[...(ticket.photos_urls ?? []), ...(ticket.fichiers_urls ?? [])]} size={90} />
 			</div>
 		{/if}
 
@@ -333,24 +307,9 @@
 					</div>
 					<div class="msg-body">{@html renderContent(msg.contenu)}</div>
 					{#if msg.fichiers_urls?.length}
-					{@const photos = msg.fichiers_urls.filter(u => /\.(jpe?g|png|webp)$/i.test(u))}
-					{@const docs = msg.fichiers_urls.filter(u => !/\.(jpe?g|png|webp)$/i.test(u))}
-					{#if photos.length}
-						<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem">
-							{#each photos as fUrl}
-								<a href={fUrl} target="_blank" rel="noopener">
-									<img src={fUrl} alt="Photo" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-								</a>
-							{/each}
+						<div style="margin-top:.4rem">
+							<PiecesJointes urls={msg.fichiers_urls} size={80} />
 						</div>
-					{/if}
-					{#if docs.length}
-						<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem">
-							{#each docs as fUrl}
-								<a href={fUrl} target="_blank" rel="noopener" style="font-size:.78rem;display:flex;align-items:center;gap:.25rem;color:var(--color-primary)">📄 {fUrl.split('/').pop()}</a>
-							{/each}
-						</div>
-					{/if}
 					{/if}
 				</div>
 			{/if}
@@ -372,43 +331,16 @@
 						<input type="checkbox" bind:checked={newInterne} />
 						Message interne (visible par le CS uniquement)
 					</label>
-					<!-- Photos réponse -->
 					{#if !newInterne}
 						<div style="margin:.4rem 0">
-							<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📷 Photos</label>
-							<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.3rem 0">
-								{#each msgPhotos as f, i}
-									<div style="position:relative">
-										<img src={f.url} alt={f.nom} style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-										<button type="button" on:click={() => msgPhotos = msgPhotos.filter((_, j) => j !== i)}
-											style="position:absolute;top:-5px;right:-5px;border:none;background:var(--color-danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.7rem;cursor:pointer;line-height:18px;padding:0;text-align:center">✕</button>
-									</div>
-								{/each}
-							</div>
-							<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
-								{uploadingMsgPhoto ? 'Upload…' : '+ Ajouter une photo'}
-								<input type="file" accept="image/jpeg,image/png,image/webp"
-									on:change={uploadMsgPhoto} style="display:none" disabled={uploadingMsgPhoto} />
-							</label>
+							<label for="msg-photos" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4F7; Photos</label>
+							<FichiersUpload id="msg-photos" bind:urls={msgPhotos} max={5}
+								label="Ajouter une photo" accept={ACCEPT_PHOTOS} />
 						</div>
-						<!-- Documents réponse -->
 						<div style="margin:.4rem 0">
-							<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Documents (PDF, Word, Excel)</label>
-							<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin:.3rem 0">
-								{#each msgDocs as f, i}
-									<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
-										<span>📄</span>
-										<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
-										<button type="button" on:click={() => msgDocs = msgDocs.filter((_, j) => j !== i)}
-											style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
-									</div>
-								{/each}
-							</div>
-							<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
-								{uploadingMsgDoc ? 'Upload…' : '+ Ajouter un document'}
-								<input type="file" accept="application/pdf,.doc,.docx,.xls,.xlsx"
-									on:change={uploadMsgDoc} style="display:none" disabled={uploadingMsgDoc} />
-							</label>
+							<label for="msg-docs" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4CE; Documents (PDF, Word, Excel)</label>
+							<FichiersUpload id="msg-docs" bind:urls={msgDocs} max={5}
+								label="Ajouter un document" />
 						</div>
 					{/if}
 					<!-- Email externe -->
@@ -500,7 +432,7 @@
 									<EvolForm
 										editMode={true}
 										initialContenu={evol.contenu || ''}
-										initialFichiers={(evol.fichiers_urls || []).map((u: string) => ({ url: u, nom: u.split('/').pop() || u, type: /\.(jpe?g|png|webp)$/i.test(u) ? 'image' : 'document' }))}
+										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 										showFiles={true}
 										separatePhotosAndDocs={true}
 										saving={editEvolSaving}
@@ -514,24 +446,9 @@
 								{/if}
 							{/if}
 							{#if evol.fichiers_urls?.length && editingEvolId !== evol.id}
-								{@const photos = evol.fichiers_urls.filter(u => /\.(jpe?g|png|webp)$/i.test(u))}
-								{@const docs = evol.fichiers_urls.filter(u => !/\.(jpe?g|png|webp)$/i.test(u))}
-								{#if photos.length}
-									<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem">
-										{#each photos as fUrl}
-											<a href={fUrl} target="_blank" rel="noopener">
-												<img src={fUrl} alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-											</a>
-										{/each}
-									</div>
-								{/if}
-								{#if docs.length}
-									<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.25rem">
-										{#each docs as fUrl}
-											<a href={fUrl} target="_blank" rel="noopener" style="font-size:.75rem;display:flex;align-items:center;gap:.2rem;color:var(--color-primary)">📄 {fUrl.split('/').pop()}</a>
-										{/each}
-									</div>
-								{/if}
+								<div style="margin-top:.3rem">
+									<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
+								</div>
 							{/if}
 						</div>
 					</div>

@@ -287,6 +287,12 @@ def create_sondage(
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
                 "app": {"url": cfg_map.get("site_url", "https://localhost")},
                 "reference_copro": cfg_map.get("reference_copro", ""),
+                # Un sondage n'a pas de pièce jointe, mais le modèle
+                # `publication_syndic` teste `fichiers` : Jinja évalue un
+                # indéfini à faux sans rien dire, donc le rendu était correct
+                # par chance. La clé manquante est précisément ce que
+                # `test_email_contexte_appel.py` cherche — on la fournit.
+                "fichiers": False,
             }
             if destinataires:
                 background_tasks.add_task(

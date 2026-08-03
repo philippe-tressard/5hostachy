@@ -22,6 +22,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort } from '$lib/date';
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import {
 		badgeClass, isNew, typeCouleur, typeFond, typeLibelle, typeLink, typeVoirLabel,
 	} from '$lib/flux';
@@ -137,22 +138,12 @@
 				{#if image}
 					<img src={image} alt="" class="flux-image" loading="lazy" />
 				{/if}
-				{#if photos.length}
+				{#if photos.length || fichiers.length}
+					<!-- Les pièces jointes de devis sont des PDF : elles étaient
+					     rendues en <img>, donc en image cassée. Le composant
+					     distingue image et document, une fois pour toutes. -->
 					<div class="flux-photos">
-						{#each photos as photoUrl}
-							<a href={photoUrl} target="_blank" rel="noopener">
-								<img src={photoUrl} alt="Photo" loading="lazy" />
-							</a>
-						{/each}
-					</div>
-				{/if}
-				{#if fichiers.length}
-					<div class="flux-photos">
-						{#each fichiers as fichierUrl}
-							<a href={fichierUrl} target="_blank" rel="noopener">
-								<img src={fichierUrl} alt="Pièce jointe" loading="lazy" />
-							</a>
-						{/each}
+						<PiecesJointes urls={[...photos, ...fichiers]} size={72} />
 					</div>
 				{/if}
 				{#if lien}

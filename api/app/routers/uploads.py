@@ -13,7 +13,8 @@ import io
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Copropriete, Evenement, Publication, Ticket, Utilisateur
+from app.models.core import Copropriete, Publication, Utilisateur
+from app.utils.fichiers import nom_stocke
 from sqlmodel import Session, select
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -120,77 +121,15 @@ def upload_publication_image(
     return {"url": url}
 
 
-@router.post("/ticket/{ticket_id}", summary="Ajouter une photo à un ticket")
-def upload_ticket_photo(
-    ticket_id: int,
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Ajoute une photo à un ticket existant (max 5)."""
-    import json
-
-    ticket = session.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Ticket introuvable")
-
-    # Parse existing photos
-    photos: list[str] = []
-    if ticket.photos_urls:
-        try:
-            photos = json.loads(ticket.photos_urls)
-        except Exception:
-            photos = []
-
-    if len(photos) >= 5:
-        raise HTTPException(400, "Maximum 5 photos par ticket.")
-
-    url = _save_image(file, "tickets", max_dim=1200)
-    photos.append(url)
-    ticket.photos_urls = json.dumps(photos)
-    session.add(ticket)
-    session.commit()
-    return {"url": url, "photos_urls": photos}
+# Les endpoints `/ticket/{id}` et `/evenement/{id}` ont été supprimés le
+# 03/08/2026 avec les pièces jointes documentaires : les formulaires de création
+# téléversent désormais photos ET documents par `/fichier`, avant que l'élément
+# existe, et passent les URLs dans le payload de création. C'est ce qui permet à
+# l'e-mail syndic/CS de partir avec ses pièces jointes — l'ancien flux
+# « créer puis téléverser » construisait l'e-mail avant les photos.
 
 
-@router.post("/evenement/{ev_id}", summary="Ajouter une photo à un événement (CS/Admin)")
-def upload_evenement_photo(
-    ev_id: int,
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Ajoute une photo à un événement existant (max 5).
-
-    Calque exact de l'endpoint ticket — même colonne `photos_urls`, même plafond,
-    même helper de validation/redimensionnement. Seul le contrôle d'accès diffère :
-    seuls le CS et l'admin créent et modifient des événements (cf. calendrier.py).
-    """
-    import json
-
-    ev = session.get(Evenement, ev_id)
-    if not ev:
-        raise HTTPException(404, "Événement introuvable")
-
-    photos: list[str] = []
-    if ev.photos_urls:
-        try:
-            photos = json.loads(ev.photos_urls)
-        except Exception:
-            photos = []
-
-    if len(photos) >= 5:
-        raise HTTPException(400, "Maximum 5 photos par événement.")
-
-    url = _save_image(file, "evenements", max_dim=1200)
-    photos.append(url)
-    ev.photos_urls = json.dumps(photos)
-    session.add(ev)
-    session.commit()
-    return {"url": url, "photos_urls": photos}
-
-
-@router.post("/fichier", summary="Upload un fichier (photo ou document) pour commentaire")
+@router.post("/fichier", summary="Upload une pièce jointe (photo ou document)")
 def upload_fichier(
     file: UploadFile = File(...),
     user: Utilisateur = Depends(get_current_user),
@@ -216,19 +155,21 @@ def upload_fichier(
 
     if is_image:
         url = _save_image(file, "fichiers", max_dim=1200)
-        ext = "jpg"
         ftype = "image"
     else:
         data = file.file.read()
         if len(data) > MAX_DOC_SIZE_MB * 1024 * 1024:
             raise HTTPException(413, f"Fichier trop volumineux (max {MAX_DOC_SIZE_MB} Mo).")
+        # L'extension vient de la liste blanche de types MIME, JAMAIS du nom
+        # fourni : `/app/uploads` est servi en statique et Caddy pose le
+        # `Content-Type` d'après l'extension du fichier sur disque. Un `.html`
+        # téléversé sous un type MIME autorisé s'exécuterait sur notre origine.
         ext_map = DOC_EXTENSIONS.get(file.content_type, ".bin")
         dest_dir = UPLOADS_ROOT / "fichiers"
         dest_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"{uuid.uuid4().hex}{ext_map}"
+        filename = nom_stocke(original_name, ext_map)
         (dest_dir / filename).write_bytes(data)
         url = f"/uploads/fichiers/{filename}"
-        ext = ext_map.lstrip(".")
         ftype = "document"
 
     return {"url": url, "nom": original_name, "type": ftype}

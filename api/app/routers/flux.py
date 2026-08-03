@@ -14,6 +14,7 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.utils.liens import lien_element, page_element
 from app.utils.montants import montant_fr
+from app.utils.photos import parse_photos
 from app.models.core import (
     CommandeAcces,
     ConfigSite,
@@ -117,15 +118,10 @@ def _badges_marqueurs(obj) -> list[str]:
     return marqueurs
 
 
-def _parse_photos(raw: Optional[str]) -> list[str]:
-    """Parse un champ JSON photos_urls / fichiers_urls en liste de strings."""
-    if not raw:
-        return []
-    try:
-        val = _json.loads(raw) if isinstance(raw, str) else raw
-        return list(val) if isinstance(val, (list, tuple)) else []
-    except Exception:
-        return []
+# Les colonnes photos_urls / fichiers_urls sont lues par `parse_photos`
+# (app/utils/photos.py), partagé avec le calendrier et les tickets. Ce module en
+# avait sa propre copie : même règle écrite deux fois, donc deux comportements
+# à faire diverger un jour.
 
 
 # Où un document est-il RÉELLEMENT consultable ? Il n'existe pas de page « tous les
@@ -264,7 +260,8 @@ def get_flux(
                        "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
                        "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
-                       "photos_urls": _parse_photos(tk.photos_urls)},
+                       "photos_urls": parse_photos(tk.photos_urls),
+                       "fichiers_urls": parse_photos(tk.fichiers_urls)},
             ))
         elif nouveau in ("ouvert", "en_cours"):
             evol_auteur = _auteur_nom(session, evol.auteur_id)
@@ -281,7 +278,8 @@ def get_flux(
                 meta={"ticket_id": tk.id, "statut": nouveau, "numero": tk.numero,
                        "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
-                       "photos_urls": _parse_photos(tk.photos_urls),
+                       "photos_urls": parse_photos(tk.photos_urls),
+                       "fichiers_urls": parse_photos(tk.fichiers_urls),
                        "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
                        "evol_auteur": evol_auteur},
             ))
@@ -381,7 +379,8 @@ def get_flux(
             meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
                    "perimetre": _perimetre_label(perims),
                    "description": _strip_html(tk.description, 300),
-                   "photos_urls": _parse_photos(tk.photos_urls)},
+                   "photos_urls": parse_photos(tk.photos_urls),
+                       "fichiers_urls": parse_photos(tk.fichiers_urls)},
         ))
 
     # Un seul événement par ticket dans le fil : le plus récent
@@ -520,7 +519,8 @@ def get_flux(
                 "epingle": ev.epingle,
                 # Le fil sait déjà rendre `photos_urls` (tickets) : rien à écrire
                 # côté carte, il suffit de le fournir.
-                "photos_urls": _parse_photos(ev.photos_urls),
+                "photos_urls": parse_photos(ev.photos_urls),
+                "fichiers_urls": parse_photos(ev.fichiers_urls),
             },
         ))
 
@@ -573,7 +573,7 @@ def get_flux(
                    "perimetre": _perimetre_label(perims),
                    "notes": dv.notes, "prestataire": prest.nom,
                    "date_prestation": dv.date_prestation.isoformat() if dv.date_prestation else None,
-                   "fichiers_urls": _parse_photos(dv.fichiers_urls)},
+                   "fichiers_urls": parse_photos(dv.fichiers_urls)},
         ))
 
     # ── 5. Sondages ─────────────────────────────────────────────────────────
@@ -666,7 +666,7 @@ def get_flux(
                 # ne connaît que `photos_urls` et `image_url`. Une rubrique qui
                 # stocke ses photos sous un autre nom doit les exposer ici sous
                 # ce nom-là, sinon elle est la seule à ne pas avoir d'aperçu.
-                "photos_urls": _parse_photos(a.photos_json),
+                "photos_urls": parse_photos(a.photos_json),
             },
         ))
 

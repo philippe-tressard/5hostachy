@@ -167,6 +167,8 @@ export interface Ticket {
 	batiment_id?: number;
 	perimetre_cible?: string[];
 	photos_urls?: string[];
+	/** Documents joints (PDF, bureautique) — les images restent dans photos_urls. */
+	fichiers_urls?: string[];
 	destinataire_syndic?: boolean;
 	destinataire_cs?: boolean;
 	non_relancable?: boolean;
@@ -292,17 +294,8 @@ export const tickets = {
 		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
 	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
-	uploadPhoto: async (ticketId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/uploads/ticket/${ticketId}`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload photo';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	// Pas de `uploadPhoto` : photos et documents passent par `fichiersApi.upload`
+	// AVANT la création, et voyagent dans `photos_urls` / `fichiers_urls`.
 };
 
 export const publications = {
@@ -456,20 +449,9 @@ export const calendrier = {
 	update: (id: number, data: unknown) => api.patch<any>(`/calendrier/${id}`, data),
 	archive: (id: number) => api.patch<any>(`/calendrier/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/calendrier/${id}`),
-	// Même contrat que tickets.uploadPhoto : l'ajout passe par l'endpoint
-	// d'upload (seul à valider format, taille et redimensionnement) ; le retrait
-	// passe par `update`, qui n'accepte que nos propres URLs.
-	uploadPhoto: async (evId: number, file: File): Promise<{ url: string; photos_urls: string[] }> => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/uploads/evenement/${evId}`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload photo';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	// Pas de `uploadPhoto` : comme pour les tickets, les pièces jointes sont
+	// téléversées par `fichiersApi.upload` avant la création et passent dans le
+	// payload ; le retrait passe par `update`, qui n'accepte que nos URLs.
 };
 
 export const prestataires = {
@@ -614,7 +596,10 @@ export const flux = {
 
 export const fichiersApi = {
 	/**
-	 * Upload un fichier (photo ou document PDF/Word/Excel) pour joindre à un commentaire.
+	 * Upload un fichier (photo ou document PDF/Word/Excel) destiné à être joint à
+	 * un ticket, une affaire ou un commentaire. Ne demande aucun élément parent :
+	 * l'URL est connue avant la création, ce qui permet de la passer dans le
+	 * payload — et donc de la joindre à l'e-mail envoyé au syndic.
 	 * Retourne { url, nom, type }
 	 */
 	upload: async (file: File): Promise<{ url: string; nom: string; type: string }> => {
