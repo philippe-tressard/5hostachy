@@ -44,10 +44,6 @@ SANS_CONSOMMATEUR_FRONT = {
     "/acces/admin/imports/{import_id}/refuser-locataire":
         "pendant de `resoudre` documenté dans specs/architecture/api.md, "
         "conservé pour l'exploitation manuelle des imports Vigik",
-    "/lots/admin/diag-couples":
-        "diagnostic ponctuel des couples de lots, appelé au cas par cas",
-    "/lots/admin/propager-couples":
-        "remédiation associée à /lots/admin/diag-couples",
 }
 
 
@@ -120,17 +116,28 @@ def test_aucun_endpoint_orphelin_non_declare(orphelines):
     )
 
 
-def test_la_liste_blanche_ne_pourrit_pas(orphelines):
-    """Une exception qui a retrouvé un appelant n'a plus lieu d'être.
+def test_la_liste_dexceptions_ne_pourrit_pas(orphelines):
+    """Une exception qui n'a plus lieu d'être doit disparaître de la liste.
 
-    Sans ce sens-là, la liste d'exceptions grossit à chaque incident et finit par
+    Sans ce sens-là, la liste grossit à chaque cas particulier et finit par
     couvrir des routes redevenues normales : le contrôle reste vert en ne
     contrôlant plus rien.
+
+    Les deux causes sont distinguées, parce qu'elles n'appellent pas la même
+    correction — un message qui les confond envoie chercher au mauvais endroit.
     """
-    perimees = sorted(set(SANS_CONSOMMATEUR_FRONT) - orphelines)
-    assert not perimees, (
-        "Ces routes ont désormais un consommateur : les retirer de "
-        "SANS_CONSOMMATEUR_FRONT :\n  " + "\n  ".join(perimees)
+    declarees = {chemin for _, _, chemin in _routes()}
+
+    supprimees = sorted(set(SANS_CONSOMMATEUR_FRONT) - declarees)
+    assert not supprimees, (
+        "Ces routes n'existent plus : retirer leur entrée de "
+        "SANS_CONSOMMATEUR_FRONT :\n  " + "\n  ".join(supprimees)
+    )
+
+    reutilisees = sorted(set(SANS_CONSOMMATEUR_FRONT) - orphelines - set(supprimees))
+    assert not reutilisees, (
+        "Ces routes ont désormais un consommateur : elles n'ont plus besoin "
+        "d'exception :\n  " + "\n  ".join(reutilisees)
     )
 
 
