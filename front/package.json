@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.32.4",
+  "version": "2.33.0",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -9,7 +9,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check . && eslint .",
     "lint:dates": "node scripts/check-dates.mjs",
-    "lint:sw": "node scripts/check-sw-url.mjs"
+    "lint:sw": "node scripts/check-sw-url.mjs",
+    "lint:fichiers": "node scripts/check-fichiers.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.9",
