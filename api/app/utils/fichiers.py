@@ -56,6 +56,28 @@ def extension_assainie(nom_origine: str | None) -> str:
     return f".{ext}" if ext else ""
 
 
+#: Préfixe technique posé par `nom_stocke` : 32 caractères hexadécimaux et `_`.
+#: Il rend l'URL non devinable et n'a aucun sens pour un lecteur.
+_PREFIXE_UUID = re.compile(r"^[0-9a-f]{32}_", re.IGNORECASE)
+
+
+def nom_lisible(chemin_ou_url: str | None) -> str:
+    """Nom d'origine d'une pièce jointe, débarrassé du préfixe technique.
+
+    Pendant Python de `nomFichier()` (front/src/lib/fichiers.ts) : même règle, deux
+    langages. `api/tests/test_pieces_jointes.py` vérifie qu'elles ne divergent pas.
+
+    Sans elle, une pièce jointe d'e-mail s'affiche « 0d41107a6c…lasseurs.pdf » dans
+    la messagerie du destinataire — le nom que le client tronque par le milieu est
+    justement celui qui portait le sens. Constaté le 03/08/2026 sur un e-mail réel.
+
+    Les fichiers téléversés avant cette date sont nommés `{uuid}.pdf` : il n'y a
+    aucun nom d'origine à restituer, on rend le nom tel quel.
+    """
+    base = os.path.basename(chemin_ou_url or "")
+    return _PREFIXE_UUID.sub("", base) or base
+
+
 def chemins_locaux(urls: list[str]) -> list[str]:
     """URLs internes `/uploads/…` → chemins locaux existants, pour les joindre à un e-mail.
 

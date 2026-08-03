@@ -203,3 +203,113 @@ def test_ecriture_de_pieces_jointes_passe_par_le_filtre(chemin, fonction):
         f"{fonction} écrit fichiers_urls sans passer par photos_internes : "
         "une URL arbitraire fournie par le client serait servie à chaque lecteur"
     )
+
+
+# ── 4. Nom des pièces jointes dans l'e-mail ──────────────────────────────────
+
+def test_nom_lisible_retire_le_prefixe_technique():
+    """Le destinataire doit lire « devis.pdf », pas « 0d41107a6c…lasseurs.pdf ».
+
+    Constaté le 03/08/2026 sur un e-mail réel : le client de messagerie tronque
+    par le milieu, donc c'est précisément la partie porteuse de sens qui
+    disparaît.
+    """
+    from app.utils.fichiers import nom_lisible
+
+    uuid = "0d41107a6c9b4e2f8a1d3c5e7b9f0a2c"
+    assert nom_lisible(f"/app/uploads/fichiers/{uuid}_ramonage.pdf") == "ramonage.pdf"
+    # Fichiers antérieurs au nommage : aucun nom d'origine à restituer.
+    assert nom_lisible(f"/app/uploads/tickets/{uuid}.jpg") == f"{uuid}.jpg"
+    assert nom_lisible("") == ""
+
+
+def test_la_regle_du_nom_est_la_meme_cote_front():
+    """`nom_lisible` (Python) et `nomFichier` (TypeScript) sont la même règle.
+
+    Deux langages, un seul comportement attendu : si les motifs divergent, le nom
+    affiché dans l'application et celui de la pièce jointe de l'e-mail cessent de
+    correspondre, sans que rien ne le signale.
+    """
+    source_ts = FICHIERS_TS.read_text(encoding="utf-8")
+    trouve = re.search(r"PREFIXE_UUID = /(.+?)/i", source_ts)
+    assert trouve, "PREFIXE_UUID introuvable dans fichiers.ts"
+
+    py = (RACINE / "api" / "app" / "utils" / "fichiers.py").read_text(encoding="utf-8")
+    motif_py = re.search(r'_PREFIXE_UUID = re\.compile\(r"(.+?)"', py)
+    assert motif_py, "_PREFIXE_UUID introuvable dans fichiers.py"
+
+    assert trouve.group(1) == motif_py.group(1), (
+        f"Motifs divergents — TS: {trouve.group(1)} / Python: {motif_py.group(1)}"
+    )
+
+
+def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
+    """Comportement, pas intention : on inspecte le MIME réellement produit."""
+    import asyncio
+
+    from fastapi_mail import MessageSchema
+    from fastapi_mail.msg import MailMsg
+
+    from app.utils.email import _preparer_pieces_jointes
+
+    fichier = tmp_path / "0d41107a6c9b4e2f8a1d3c5e7b9f0a2c_devis-ramonage.pdf"
+    fichier.write_bytes(b"%PDF-1.4 test")
+
+    prets, temporaires = _preparer_pieces_jointes([str(fichier)])
+    assert temporaires == [], "aucune image : rien à nettoyer"
+
+    msg = MessageSchema(subject="s", recipients=["a@b.fr"], body="<p>x</p>",
+                        subtype="html", attachments=prets)
+    brut = asyncio.run(MailMsg(msg)._message("5Hostachy <no-reply@x.fr>")).as_string()
+
+    assert 'filename="devis-ramonage.pdf"' in brut
+    assert "0d41107a6c9b4e2f8a1d3c5e7b9f0a2c" not in brut, (
+        "le préfixe technique ne doit plus apparaître dans le message"
+    )
+
+
+# ── 5. Sommaire des pièces jointes dans le corps du message ──────────────────
+
+def test_le_sommaire_annonce_exactement_les_pieces_jointes():
+    """Décompte, accord au pluriel, numérotation et noms — sur une liste réelle."""
+    from app.utils.email import _bandeau_pieces_jointes
+
+    assert _bandeau_pieces_jointes([]) == "", "aucune pièce jointe : aucun bandeau"
+
+    seule = _bandeau_pieces_jointes(["devis.pdf"])
+    assert "1 pièce jointe" in seule and "pièces jointes" not in seule
+
+    trois = _bandeau_pieces_jointes(["devis.pdf", "plan.jpg", "constat.docx"])
+    assert "3 pièces jointes" in trois
+    for i, nom in enumerate(["devis.pdf", "plan.jpg", "constat.docx"], start=1):
+        assert nom in trois, nom
+        assert f">{i}.<" in trois, f"numérotation {i} absente"
+
+
+def test_le_sommaire_echappe_les_noms():
+    """Un nom de fichier est une donnée : il ne doit pas injecter de balise.
+
+    Les noms produits depuis le 03/08/2026 sont assainis, mais les fichiers
+    antérieurs ne l'ont pas été — on ne fait pas confiance à la provenance.
+    """
+    from app.utils.email import _bandeau_pieces_jointes
+
+    bandeau = _bandeau_pieces_jointes(['<img src=x onerror=alert(1)>.pdf'])
+    assert "<img src=x" not in bandeau
+    assert "&lt;img src=x" in bandeau
+
+
+def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
+    """Le sommaire ne peut pas mentir : il est construit sur `attachments`.
+
+    Le drapeau `fichiers` des modèles, lui, était calculé séparément — et deux
+    points d'appel se sont trompés (annoncer sans joindre, joindre sans annoncer).
+    Ici la source est unique : `send_email` et `send_email_group` dérivent le
+    sommaire de la liste qu'ils transmettent au message.
+    """
+    source = (RACINE / "api" / "app" / "utils" / "email.py").read_text(encoding="utf-8")
+    appels = re.findall(r"pieces_jointes=\[nom_lisible\(p\) for p in \(attachments or \[\]\)\]", source)
+    assert len(appels) == 2, (
+        f"{len(appels)} point(s) d'envoi dérivent le sommaire de `attachments` — "
+        "il en faut 2 (send_email et send_email_group)"
+    )

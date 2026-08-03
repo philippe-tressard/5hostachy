@@ -84,3 +84,33 @@ def test_readme_expose_un_badge_ci():
     assert "workflows/ci.yml/badge.svg" in readme, (
         "README.md n'expose pas le badge de la CI"
     )
+
+
+def test_ancrage_du_controle_p3_reste_valide():
+    """Le contrôle P3 du post-check MEP repose sur le NOM du paquet front.
+
+    P3 lit la version réellement servie dans le bundle public, en s'ancrant sur
+    `"hostachy-front"` — Vite intègre `front/package.json` dans le chunk du layout
+    `(app)`, et le nom précède immédiatement la version. Cet ancrage a été choisi
+    parce qu'il survit à la minification, contrairement aux noms de variables.
+
+    Renommer le paquet casserait P3 **en silence** : le contrôle rendrait
+    « INCONNU » à chaque MEP, et personne ne saurait que c'est l'ancrage, pas le
+    déploiement, qui est en cause. Corollaire de la règle 1 du pré-check — un
+    contrôle qui ne peut plus mesurer doit être réparé, pas subi.
+
+    L'ancienne commande P3 (`curl / | grep`) ne pouvait pas fonctionner du tout :
+    la racine redirige vers /auth/connexion. Corrigé le 03/08/2026.
+    """
+    import json
+
+    nom = json.loads((_RACINE / "front" / "package.json").read_text(encoding="utf-8"))["name"]
+    skill = (_RACINE / ".claude" / "skills" / "mep-precheck" / "SKILL.md").read_text(encoding="utf-8")
+
+    assert f'"{nom}"' in skill, (
+        f"Le paquet front s'appelle « {nom} », mais le contrôle P3 de "
+        "mep-precheck/SKILL.md s'ancre sur un autre nom : il rendra INCONNU à "
+        "chaque MEP. Mettre l'ancrage à jour."
+    )
+    # Le contrôle doit rester capable de dire qu'il n'a pas pu mesurer.
+    assert "INCONNU" in skill, "P3 ne prévoit plus de sortie INCONNU"
