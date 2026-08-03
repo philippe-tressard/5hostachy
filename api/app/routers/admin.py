@@ -136,8 +136,13 @@ def traiter_compte(
     # Auto-match sur les 3 systèmes d'import dès qu'un compte est validé
     auto_match_result: dict[str, Any] = {}
     if body.action == "valider":
-        from app.utils.auto_match_service import auto_match_pour_utilisateur
+        from app.utils.auto_match_service import (
+            auto_match_pour_utilisateur, notifier_gestionnaire_appariement,
+        )
         auto_match_result = auto_match_pour_utilisateur(user, session)
+        # Des accès ont pu être créés sans validation préalable : le
+        # gestionnaire du site doit pouvoir le vérifier sans aller le chercher.
+        notifier_gestionnaire_appariement(user, auto_match_result, background_tasks, session)
 
         # ── Aidant / mandataire : copier lots, TC, vigik de l'aidé ───────
         if user.statut in (StatutUtilisateur.aidant, StatutUtilisateur.mandataire) and user.nom_aide and user.prenom_aide:

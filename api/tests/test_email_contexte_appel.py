@@ -49,7 +49,21 @@ def _variables_qui_font_echouer(sujet: str | None, corps: str | None) -> set[str
     Exiger davantage produirait de faux positifs : plusieurs contextes du dépôt
     omettent des variables seulement affichées, sans que l'envoi échoue.
     """
-    arbre = _env_jinja.parse(f"{sujet or ''} {corps or ''}")
+    # Sujet et corps sont analysés SÉPARÉMENT puis réunis. Les concaténer
+    # laissait un `{% if x %}` du corps « garder » un `{{ x.y }}` du sujet, qui
+    # n'est protégé par rien — le sujet est rendu à part, avant le corps.
+    # Trouvé le 03/08/2026 : `acces_apparies_auto` déréférence `utilisateur` dans
+    # son sujet et le teste dans une condition du corps ; sa clé manquante ne
+    # faisait rougir aucun test alors que l'envoi levait bien `UndefinedError`.
+    return (
+        _risquees_dans(sujet or "")
+        | _risquees_dans(corps or "")
+    )
+
+
+def _risquees_dans(source: str) -> set[str]:
+    """Variables dont l'absence lève, dans UN fragment de template."""
+    arbre = _env_jinja.parse(source)
     risquees: set[str] = set()
 
     # `{% for m in messages %}` définit `m` (et `loop`) : ce sont des variables

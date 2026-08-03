@@ -176,9 +176,14 @@ def register(
     # Si le compte est actif dès la création (cas admin ou futur flow),
     # lancer l'auto-match immédiatement
     if user.actif:
-        from app.utils.auto_match_service import auto_match_pour_utilisateur
-        auto_match_pour_utilisateur(user, session)
+        from app.utils.auto_match_service import (
+            auto_match_pour_utilisateur, notifier_gestionnaire_appariement,
+        )
+        resultat = auto_match_pour_utilisateur(user, session)
         session.commit()
+        # Le résultat était jusqu'ici jeté : des accès pouvaient être créés
+        # sans que personne n'en soit informé.
+        notifier_gestionnaire_appariement(user, resultat, background_tasks, session)
 
     return user
 

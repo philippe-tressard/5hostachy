@@ -277,7 +277,7 @@ sur la liste des contrôles :
 2. **Ce qui est critique en continu ne doit pas être vérifié seulement en MEP.**
 3. **Vérifier le fait, pas le symptôme attendu** — et le comportement, jamais l'artefact.
 
-> 📖 Ces trois règles sont nées ici le 26/07/2026 ; le socle en compte **douze** :
+> 📖 Ces trois règles sont nées ici le 26/07/2026 ; le socle en compte **treize** :
 > `standards/04-fiabilite-des-controles.md`. Les neuf autres valent aussi pour ce
 > projet — notamment le **cas zéro** (§2), le **battement manquant** (§4) et le
 > **contrôle sans destinataire** (§7), qui ont tous produit un faux vert ici.

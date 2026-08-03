@@ -820,3 +820,61 @@ def _auto_match_baux_locataire(user, session: Session) -> int:
         session.add(bail)
         matched += 1
     return matched
+
+
+# ── Notification du gestionnaire du site ─────────────────────────────────────
+
+def notifier_gestionnaire_appariement(user, resultat: dict, background_tasks, session: Session) -> None:
+    """Prévient le gestionnaire du site quand des accès ont été créés tout seuls.
+
+    Pourquoi ce message existe (demandé le 03/08/2026) : l'appariement se fait
+    sur le **nom de famille**, volontairement — un foyer partage ses accès, et le
+    fichier du syndic ne nomme souvent qu'un occupant. La contrepartie est que
+    deux foyers homonymes sont indiscernables, et que `_auto_match_tc` ne propose
+    pas : il **crée** le badge et marque l'import « résolu ».
+
+    La revue du CS reste le filet ; ce message la déclenche au lieu de l'attendre.
+
+    Silencieux si rien n'a été créé : une notification à chaque inscription
+    finirait ignorée, et un canal qu'on ignore est un canal absent
+    (`standards/07-observabilite-et-alertes.md`).
+    """
+    tc = resultat.get("tc", 0)
+    vigik = resultat.get("vigik", 0)
+    if tc + vigik <= 0:
+        return
+
+    from app.utils.email import get_site_manager_notification_email, send_email
+
+    destinataire, cfg = get_site_manager_notification_email(session)
+    if not destinataire:
+        return
+
+    statut = user.statut.value if hasattr(user.statut, "value") else str(user.statut)
+    total = tc + vigik
+    background_tasks.add_task(
+        send_email,
+        code="acces_apparies_auto",
+        to=destinataire,
+        context={
+            "utilisateur": {
+                "nom": user.nom,
+                "prenom": user.prenom,
+                "email": user.email,
+                "statut": statut,
+            },
+            "resultat": {
+                "telecommandes": tc,
+                "vigiks": vigik,
+                "lots": resultat.get("lots_resolus", 0),
+                "total_acces": total,
+                # Accords calculés ici : un modèle Jinja n'a pas à porter la
+                # grammaire française, et le faire à trois endroits divergerait.
+                "pluriel": "s" if total > 1 else "",
+                "pluriel_tc": "s" if tc > 1 else "",
+                "pluriel_vigik": "s" if vigik > 1 else "",
+            },
+            "residence": {"nom": cfg.get("site_nom") or "5Hostachy"},
+            "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
+        },
+    )
