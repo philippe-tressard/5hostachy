@@ -362,3 +362,36 @@ def test_les_urls_de_fichiers_portent_le_nom_du_fichier():
         assert "basename(dest)" in source, (
             "le nom du fichier n'est plus injecté dans l'URL stockée"
         )
+
+
+def test_l_api_entiere_est_non_cacheable():
+    """Le bloc /uploads/* ne suffit pas : les fichiers passent AUSSI par /api/*.
+
+    Cloudflare met en cache d'après l'extension de l'URL. Les endpoints de
+    téléchargement en portent une (`…/photo/x.png`, `…/fichier/y.pdf`) : le
+    premier accès autorisé peuple l'edge, qui sert ensuite le fichier à tout le
+    monde.
+
+    Le défaut s'est produit DEUX FOIS le 03/08/2026 — sur `/uploads/*` le matin,
+    puis sur `/api/*` l'après-midi, parce que la directive n'avait été posée que
+    sur le premier bloc. La règle est écrite dans `standards/03-securite.md` §6 ;
+    ce test est ce qui la rend applicable ici.
+
+    Appliqué à TOUT `/api/*` volontairement : une réponse d'API dépend d'une
+    session par nature, et la prochaine route qui servira un fichier n'aura pas
+    à y penser.
+    """
+    contenu = _caddyfile()
+    bloc = re.search(r"handle\s+/api/\*\s*\{(.*?)\n    \}", contenu, re.S)
+    assert bloc, "bloc /api/* introuvable"
+
+    directive = re.search(r'header\s+Cache-Control\s+"([^"]+)"', bloc.group(1))
+    assert directive, (
+        "Le bloc /api/* n'impose plus de Cache-Control : tout endpoint servant "
+        "un fichier avec une extension redeviendra public via le cache du CDN."
+    )
+    valeur = directive.group(1).lower()
+    assert "private" in valeur or "no-store" in valeur, (
+        f"Cache-Control « {directive.group(1)} » n'interdit pas le stockage par "
+        "un cache partagé."
+    )
