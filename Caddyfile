@@ -16,6 +16,17 @@
     # API — proxy vers FastAPI
     handle /api/* {
         uri strip_prefix /api
+        # ⚠️ SANS CETTE LIGNE, TOUT ENDPOINT SERVANT UN FICHIER DEVIENT PUBLIC.
+        # Cloudflare met en cache d'après l'EXTENSION de l'URL. Les endpoints de
+        # téléchargement en portent une (`…/photo/x.png`, `…/fichier/y.pdf`) :
+        # le premier accès autorisé peuple l'edge, qui sert ensuite le fichier à
+        # tout le monde sans revenir à l'origine. Constaté deux fois le
+        # 03/08/2026 — sur /uploads/* le matin, puis ici l'après-midi, parce que
+        # la directive n'avait été posée que sur le premier bloc.
+        # Appliqué à TOUT /api/* et pas aux seules routes de fichiers : une
+        # réponse d'API dépend d'une session par nature, et la prochaine route
+        # qui servira un fichier n'aura pas à y penser.
+        header Cache-Control "private, no-store"
         reverse_proxy api:8000
     }
 
