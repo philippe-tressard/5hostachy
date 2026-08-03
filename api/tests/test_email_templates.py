@@ -57,7 +57,7 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "vigik_commande_recue": {"lot", "demandeur", "type"},
     "vigik_accepte": {"destinataire", "type"},
     "vigik_refuse": {"type", "destinataire", "motif"},
-    "calendrier_evenement_cree": {"evenement", "fichiers"},
+    "calendrier_evenement_cree": {"evenement"},
     "document_publie": {"document"},
     "publication_syndic": {
         "date_publication", "evolutions", "commentaire", "is_commentaire",

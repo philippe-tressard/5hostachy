@@ -387,7 +387,6 @@ EMAIL_TEMPLATES = [
      '<p style="margin:0 0 4px;font-size:13px;color:#C9983A;font-weight:600">{{ evenement.date }}</p>'
      '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ evenement.titre }}</p>'
      '</td></tr></table>'
-     '{% if fichiers %}<p style="margin:0 0 16px;font-size:13px;color:#5A6070">\U0001f4ce Pièces jointes disponibles ci-dessous.</p>{% endif %}'
      '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
      True),
 

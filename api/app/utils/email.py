@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from app.config import get_settings
 from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
+from app.utils.fichiers import nom_lisible
 
 settings = get_settings()
 
@@ -110,8 +111,105 @@ def _linkify_urls(text: str) -> str:
     )
 
 
-def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee: int) -> str:
+def _html_echappe(texte: str) -> str:
+    """Un nom de fichier est une donnée : il ne doit pas pouvoir injecter de balise.
+
+    Les noms produits par `nom_stocke` sont déjà réduits à `[A-Za-z0-9_.-]`, mais
+    les fichiers antérieurs à ce nommage n'ont pas eu ce traitement. On ne fait
+    donc pas confiance à la provenance — cf. `standards/03-securite.md` §4.
+    """
+    return (
+        (texte or "")
+        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _preparer_pieces_jointes(paths: list[str]) -> tuple[list[dict], list[str]]:
+    """(pièces jointes prêtes pour le message, chemins temporaires à nettoyer).
+
+    Deux renommages techniques faisaient perdre le nom d'origine dans la
+    messagerie du destinataire :
+      - le préfixe UUID de `nom_stocke` → « 0d41107a6c…lasseurs.pdf » ;
+      - `_fix_image_orientations`, qui écrit un fichier `exif_XXXX.jpg`.
+
+    Le nom affiché est donc calculé sur le chemin **d'origine**, avant toute
+    correction, et transmis explicitement en `Content-Disposition`.
+
+    Écrit une fois : `send_email` et `send_email_group` faisaient déjà le même
+    `_fix_image_orientations` suivi du même nettoyage, chacun de son côté.
+    """
+    corriges = _fix_image_orientations(paths)
+    prets: list[dict] = []
+    for origine, chemin in zip(paths, corriges):
+        # Le nom vient de `nom_stocke`, donc déjà réduit à [A-Za-z0-9_.-] ; on
+        # neutralise malgré tout guillemets et sauts de ligne, qui casseraient
+        # l'en-tête pour les fichiers plus anciens, aux noms non assainis.
+        affiche = _re.sub(r'["\r\n]', "_", nom_lisible(origine))
+        prets.append({
+            "file": chemin,
+            "headers": {"Content-Disposition": f'attachment; filename="{affiche}"'},
+        })
+    temporaires = [c for c in corriges if c not in paths]
+    return prets, temporaires
+
+
+def _bandeau_pieces_jointes(noms: list[str]) -> str:
+    """Sommaire des pièces jointes, en pied de contenu : décompte puis liste nommée.
+
+    Écrite **ici** et pas dans les modèles, pour trois raisons :
+
+    1. Les modèles vivent en **base** (`modele_email`) et `seed()` ne les met à jour
+       que s'ils n'existent pas encore : modifier `seed.EMAIL_TEMPLATES` n'a aucun
+       effet sur une installation en service. Ce qui est écrit dans le code, si.
+    2. Le nombre vient de la liste **réellement transmise** au constructeur du
+       message, pas d'un drapeau de contexte. Un drapeau peut mentir — deux le
+       faisaient encore le 03/08/2026, l'un annonçant des pièces jointes sans en
+       attacher, l'autre l'inverse. Ici, la mention et la pièce jointe ont la même
+       source : elles ne peuvent pas diverger.
+    3. Un seul endroit couvre les six modèles susceptibles de porter des pièces
+       jointes, et tous ceux à venir.
+
+    La liste nommée n'est pas un doublon de ce que montre la messagerie : c'est le
+    **repli**. Le nom d'origine est déjà rétabli dans l'en-tête
+    `Content-Disposition` (cf. `_preparer_pieces_jointes`), mais un client ou une
+    passerelle peut l'ignorer, tronquer, ou retirer la pièce jointe sans le dire.
+    Écrit dans le corps du message, le sommaire survit à tout cela — et il permet
+    au destinataire de constater qu'il manque quelque chose.
+
+    Les noms viennent de `nom_lisible`, comme l'en-tête : une seule règle, donc
+    aucune divergence possible entre ce qui est annoncé et ce qui est joint.
+    """
+    if not noms:
+        return ""
+    libelle = "1 pièce jointe" if len(noms) == 1 else f"{len(noms)} pièces jointes"
+    lignes = "".join(
+        f'<tr><td style="padding:2px 0;font-size:13px;color:#1A1A2E">'
+        f'<span style="color:#8A8FA0">{i}.</span>&nbsp;{_html_echappe(nom)}</td></tr>'
+        for i, nom in enumerate(noms, start=1)
+    )
+    return (
+        '<tr><td style="background-color:#FFFFFF;padding:0 32px 20px">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="border-top:1px solid #E4E7EC">'
+        '<tr><td style="padding-top:14px;font-size:13px;color:#5A6070">'
+        f'\U0001F4CE Ce message comporte <strong>{libelle}</strong> :'
+        '</td></tr>'
+        f'<tr><td style="padding-top:6px"><table role="presentation" cellpadding="0" '
+        f'cellspacing="0">{lignes}</table></td></tr>'
+        '<tr><td style="padding-top:8px;font-size:12px;color:#8A8FA0">'
+        "Si l'une d'elles n'apparaît pas, votre messagerie a pu la filtrer."
+        '</td></tr>'
+        '</table></td></tr>'
+    )
+
+
+def _wrap_email(
+    body_html: str, site_nom: str, site_url: str, footer: str, annee: int,
+    pieces_jointes: list[str] | None = None,
+) -> str:
     """Encapsule le contenu HTML dans un gabarit email aux couleurs du site."""
+    bandeau_pj = _bandeau_pieces_jointes(pieces_jointes or [])
     safe_footer = ""
     if footer:
         linked_footer = _linkify_urls(footer)
@@ -151,6 +249,9 @@ def _wrap_email(body_html: str, site_nom: str, site_url: str, footer: str, annee
   <tr><td style="background-color:#FFFFFF;padding:32px 32px 24px;font-size:15px;line-height:1.65;color:#1A1A2E">
     {body_html}
   </td></tr>
+
+  <!-- Pièces jointes -->
+  {bandeau_pj}
 
   <!-- Notification preferences -->
   <tr><td style="background-color:#FFFFFF;padding:0 32px 20px;text-align:center">
@@ -306,6 +407,7 @@ async def send_email(
                 site_url=site_url,
                 footer=email_footer,
                 annee=ctx["annee"],
+                pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
             )
             rendered_subject = _render(template.sujet, ctx)
             msg_kwargs = dict(
@@ -320,8 +422,8 @@ async def send_email(
                 msg_kwargs["bcc"] = bcc
             fixed_attachments: list[str] = []
             if attachments:
-                fixed_attachments = _fix_image_orientations(attachments)
-                msg_kwargs["attachments"] = fixed_attachments
+                prets, fixed_attachments = _preparer_pieces_jointes(attachments)
+                msg_kwargs["attachments"] = prets
             msg = MessageSchema(**msg_kwargs)
             await fm.send_message(msg)
             _log_email(session, code, to, "succes", sujet=rendered_subject)
@@ -459,6 +561,7 @@ async def send_email_group(
                 site_url=site_url,
                 footer=email_footer,
                 annee=ctx["annee"],
+                pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
             )
             rendered_subject = _render(template.sujet, ctx)
             msg_kwargs: dict[str, Any] = dict(
@@ -474,8 +577,8 @@ async def send_email_group(
                 msg_kwargs["bcc"] = bcc
             # Pièces jointes (photos) — correction orientation EXIF avant envoi
             if attachments:
-                fixed_attachments = _fix_image_orientations(attachments)
-                msg_kwargs["attachments"] = fixed_attachments
+                prets, fixed_attachments = _preparer_pieces_jointes(attachments)
+                msg_kwargs["attachments"] = prets
             msg = MessageSchema(**msg_kwargs)
             await fm.send_message(msg)
             _log_email(session, code, all_emails_str, "succes", sujet=rendered_subject)
