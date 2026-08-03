@@ -1,8 +1,6 @@
 """Router diagnostics réglementaires — types + rapports avec upload."""
 import os
-import re
 import shutil
-import uuid
 from datetime import datetime, date as dateclass
 from typing import Optional
 
@@ -14,12 +12,9 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import DiagnosticRapport, DiagnosticType, Utilisateur
+from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
 
 router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
-
-UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
-
-from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
 
 
 # ── Schémas ────────────────────────────────────────────────────────────────
@@ -159,7 +154,9 @@ async def upload_rapport(
         diagnostic_type_id=type_id,
         titre=titre,
         date_rapport=parsed_date,
-        fichier_nom=file.filename or safe_name,
+        # `raw_name` vaut déjà `file.filename or "rapport"` : un seul repli, en
+        # amont, plutôt que deux expressions à garder d'accord.
+        fichier_nom=raw_name,
         fichier_chemin=dest,
         taille_octets=os.path.getsize(dest),
         mime_type=file.content_type or "application/octet-stream",
