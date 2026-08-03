@@ -177,6 +177,15 @@ def _bandeau_pieces_jointes(noms: list[str]) -> str:
     Écrit dans le corps du message, le sommaire survit à tout cela — et il permet
     au destinataire de constater qu'il manque quelque chose.
 
+    ⚠️ `ticket_syndic` et `publication_syndic` portent en base une mention
+    « Pièces jointes disponibles ci-dessous », **conservée volontairement**
+    (décision du 03/08/2026). Ce n'est pas un doublon : elle est imbriquée dans
+    `{% if is_commentaire %}` et rendue *à l'intérieur du cadre du commentaire*,
+    donc elle dit **à quoi** les pièces jointes se rattachent — ce commentaire-ci,
+    pas l'historique. Le sommaire, lui, dit combien et lesquelles. Sur un ticket
+    à dix messages, les deux informations sont utiles.
+    Elle ne s'affiche jamais à la création (`is_commentaire` faux).
+
     Les noms viennent de `nom_lisible`, comme l'en-tête : une seule règle, donc
     aucune divergence possible entre ce qui est annoncé et ce qui est joint.
     """
