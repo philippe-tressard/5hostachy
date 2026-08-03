@@ -1,8 +1,6 @@
 """Router diagnostics réglementaires — types + rapports avec upload."""
 import os
-import re
 import shutil
-import uuid
 from datetime import datetime, date as dateclass
 from typing import Optional
 
@@ -14,10 +12,9 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import DiagnosticRapport, DiagnosticType, Utilisateur
+from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
 
 router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
-
-UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
 
 
 # ── Schémas ────────────────────────────────────────────────────────────────
@@ -137,10 +134,12 @@ async def upload_rapport(
     if not diag_type:
         raise HTTPException(404, "Type de diagnostic introuvable")
 
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-    raw_name = os.path.basename(file.filename or "rapport")
-    safe_name = re.sub(r"[^\w.\-]", "_", raw_name)[:200] or "rapport"
-    dest = os.path.join(UPLOADS_DIR, f"{uuid.uuid4().hex}_{safe_name}")
+    # REPERTOIRE_PRIVE et non la racine du volume : un rapport de diagnostic
+    # (DPE, amiante, plomb) se télécharge par un endpoint authentifié ; posé à la
+    # racine, il serait aussi servi en statique par Caddy, sans aucun contrôle.
+    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
+    raw_name = file.filename or "rapport"
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
@@ -155,7 +154,9 @@ async def upload_rapport(
         diagnostic_type_id=type_id,
         titre=titre,
         date_rapport=parsed_date,
-        fichier_nom=file.filename or safe_name,
+        # `raw_name` vaut déjà `file.filename or "rapport"` : un seul repli, en
+        # amont, plutôt que deux expressions à garder d'accord.
+        fichier_nom=raw_name,
         fichier_chemin=dest,
         taille_octets=os.path.getsize(dest),
         mime_type=file.content_type or "application/octet-stream",
