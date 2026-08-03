@@ -387,7 +387,7 @@ Attendre le tick, puis :
 |---|---|---|---|
 | P1 | Le déploiement a eu lieu **et est terminé** | `grep 'Déployé' /var/log/hostachy-deploy.log \| tail -2` sur l'actif | Ligne `Déployé: <hash>` avec le hash attendu |
 | P2 | Site debout | `curl -s -o /dev/null -w '%{http_code}' https://5hostachy.fr/api/health` | 200 |
-| P3 | Version servie = version bumpée | Footer du site, ou `curl -s https://5hostachy.fr/ \| grep -oE '[0-9]+\.[0-9]+\.[0-9]+'` | La version de `front/package.json` |
+| P3 | Version servie = version bumpée | Voir « P3 » ci-dessous — l'ancienne commande ne pouvait **pas** fonctionner | La version de `front/package.json`, ou `INCONNU` (jamais vide) |
 | P4 | Image du service touché reconstruite | Point 12, restreint aux services modifiés par le lot | Image postérieure au commit |
 | P5 | Migrations appliquées | `docker logs hostachy_api --since 10m \| grep -iE 'alembic\|revision'` | Pas d'erreur ; head atteint |
 | P6 | Aucune régression visible en logs | `docker logs hostachy_api --since 10m \| grep -cE 'ERROR\|CRITICAL'` | 0 |
@@ -406,6 +406,62 @@ Attendre le tick, puis :
 > ```bash
 > until ssh <actif> "grep -q 'Déployé: <hash>' /var/log/hostachy-deploy.log"; do sleep 20; done
 > ```
+
+**P3 — l'ancienne commande renvoyait toujours du vide (corrigé le 03/08/2026).**
+`curl -s https://5hostachy.fr/ | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'` ne pouvait pas
+marcher : la racine **redirige vers `/auth/connexion`**, et le pied de page versionné
+vit dans le layout `(app)`, donc derrière l'authentification. Le `grep` ne trouvait
+rien et rendait la main sans un mot — un `$(…)` vide qu'on lit comme « rien à
+signaler ». C'est la règle 1 (« une sortie vide n'est pas un vert ») dans le
+post-check lui-même.
+
+La version **est** publique : Vite intègre `front/package.json` dans le chunk du
+layout `(app)`. On l'y lit sans authentification et sans rien exposer de nouveau —
+c'est aussi le seul point de mesure qui reflète ce qu'un **navigateur reçoit
+vraiment**, là où lire `package.json` dans le conteneur ne décrirait que l'image.
+
+```bash
+#!/usr/bin/env bash
+# Version réellement servie, ou INCONNU. Code 0 = mesurée, 2 = non mesurable.
+set -uo pipefail
+SITE="${1:-https://5hostachy.fr}"
+entry=$(curl -sL --max-time 15 "$SITE/" \
+        | grep -oE '/_app/immutable/entry/app\.[A-Za-z0-9_-]+\.js' | head -1)
+[ -n "$entry" ] || { echo "INCONNU: point d'entrée introuvable"; exit 2; }
+for n in $(curl -s --max-time 15 "$SITE$entry" \
+           | grep -oE 'nodes/[0-9]+\.[A-Za-z0-9_-]+\.js' | sort -u); do
+  v=$(curl -s --max-time 12 "$SITE/_app/immutable/$n" \
+      | grep -oE '"hostachy-front",[A-Za-z_$]+="[0-9]+\.[0-9]+\.[0-9]+"' \
+      | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+  [ -n "$v" ] && { echo "$v"; exit 0; }
+done
+echo "INCONNU: version absente du bundle servi"; exit 2
+```
+
+L'ancrage est `"hostachy-front"`, le **nom** du paquet : il précède immédiatement la
+version et survit à la minification, contrairement aux noms de variables (`_n=` au
+03/08) et au numéro du chunk. Ne pas se contenter d'un `grep '2\.[0-9]'` sur le
+chunk : `package.json` y est intégré **en entier**, dépendances comprises — on
+récupérerait la version de Tiptap ou de SvelteKit.
+
+Les deux chemins d'échec ont été éprouvés (site sans bundle, hôte injoignable) :
+`INCONNU` et code 2. Un contrôle qui ne sait pas dire qu'il n'a pas pu mesurer est
+un contrôle qui ment.
+
+⚠️ **P3 mesure le serveur, pas le client.** Un onglet PWA resté ouvert peut servir
+l'ancienne version depuis son cache — c'est ce qui s'est produit le 26/07/2026, le
+pied de page bloqué en v2.22.8 après la MEP v2.23.0, alors que P3 était vert. Le
+bandeau de mise à jour (v2.24.0) couvre ce cas, et `api/tests/test_pwa_maj.py` le
+verrouille.
+
+> 🔒 **Pourquoi ne pas exposer la version dans `/api/health`** (question posée le
+> 03/08/2026). L'endpoint est public et porte déjà un champ `version`, mais figé à
+> `"0.2.0"` — un littéral codé en dur **deux fois** (`main.py` L166 et L261), sans
+> aucun rapport avec l'application. Le rendre exact donnerait un P3 en une ligne, au
+> prix d'une **divulgation publique de la version déployée** que rien n'impose
+> aujourd'hui. Décision : on ne l'a pas fait. Lire le bundle coûte trois requêtes et
+> n'expose rien de plus qu'aujourd'hui. Le littéral dupliqué reste un défaut de
+> factorisation à traiter séparément, sans changer ce qui est publié.
 
 **P7 — pourquoi :** c'est le seul contrôle qui teste ce que la MEP était censée
 apporter. Le 26/07, le bug du mois en anglais n'a été trouvé par **aucun** contrôle
