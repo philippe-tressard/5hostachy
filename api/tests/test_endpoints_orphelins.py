@@ -44,6 +44,11 @@ SANS_CONSOMMATEUR_FRONT = {
     "/acces/admin/imports/{import_id}/refuser-locataire":
         "pendant de `resoudre` documenté dans specs/architecture/api.md, "
         "conservé pour l'exploitation manuelle des imports Vigik",
+    "/prestataires/devis/{d_id}/fichier/{nom}":
+        "URL construite côté serveur et STOCKÉE en base (`fichiers_urls`, "
+        "`os_fichier_url`) ; le front la rend depuis la donnée, elle n'apparaît "
+        "donc jamais dans son code source — troisième famille de consommateur, "
+        "après l'interface et les scripts",
 }
 
 
@@ -104,7 +109,15 @@ def _sources_consommatrices() -> str:
 
 
 def _motif(chemin: str) -> re.Pattern:
-    """`/tickets/{id}/evolutions` → motif tolérant à `${…}` et aux concaténations."""
+    """`/tickets/{id}/evolutions` → motif tolérant à `${…}` et aux concaténations.
+
+    ⚠️ Limite connue : la comparaison porte sur le CHEMIN, pas sur le couple
+    (méthode, chemin). Un `GET /x/{id}/photo` sans appelant passe donc au vert si
+    un `POST /x/{id}/photo` est appelé quelque part — constaté le 03/08/2026 sur
+    les photos de relevés. Distinguer les méthodes produirait beaucoup de bruit
+    (une même route porte souvent GET, PATCH et DELETE) ; on préfère l'assumer et
+    l'écrire, plutôt qu'un faux vert silencieux.
+    """
     segments = [re.escape(s) for s in re.split(r"\{[^}]+\}", chemin)]
     return re.compile(r"[^\s'\"`]*".join(segments))
 
