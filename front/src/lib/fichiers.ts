@@ -1,0 +1,89 @@
+/**
+ * Pièces jointes — une seule définition de « qu'est-ce qu'une image », « quel
+ * nom afficher » et « quels types accepter ».
+ *
+ * Ces trois règles étaient recopiées dans les pages : le test d'image huit fois,
+ * le nom dérivé de l'URL sept fois, la liste `accept` trois fois. Une pièce
+ * jointe ajoutée au mauvais endroit tombait alors dans la mauvaise colonne
+ * (`.gif` classé « document », vignette jamais affichée) sans que rien ne le
+ * signale.
+ *
+ * La liste blanche qui FAIT AUTORITÉ est celle du serveur
+ * (`api/app/routers/uploads.py`) : celle-ci ne fait que filtrer le sélecteur de
+ * fichiers du navigateur, elle ne protège rien. Les deux doivent rester
+ * alignées — `api/tests/test_pieces_jointes.py` le vérifie.
+ */
+
+/** Formats d'image acceptés par `_save_image` (ALLOWED_MIME côté API). */
+export const ACCEPT_PHOTOS = 'image/jpeg,image/png,image/webp,image/gif';
+
+/** Documents acceptés par `POST /uploads/fichier` (ALLOWED_DOC_MIME côté API). */
+export const ACCEPT_DOCUMENTS = 'application/pdf,.pdf,.doc,.docx,.xls,.xlsx';
+
+/** Les deux à la fois, pour un sélecteur unique « pièce jointe ». */
+export const ACCEPT_FICHIERS = `${ACCEPT_PHOTOS},${ACCEPT_DOCUMENTS}`;
+
+/** Extensions produites par nos propres endpoints d'upload d'image. */
+const EXTENSIONS_IMAGE = /\.(jpe?g|png|webp|gif)$/i;
+
+/**
+ * Préfixe technique posé par `nom_stocke` (api/app/utils/fichiers.py) :
+ * 32 caractères hexadécimaux suivis d'un `_`. Il rend l'URL non devinable mais
+ * n'a aucun sens pour un lecteur.
+ */
+const PREFIXE_UUID = /^[0-9a-f]{32}_/i;
+
+/** Cette URL désigne-t-elle une image affichable en vignette ? */
+export function estImage(url: string): boolean {
+	return EXTENSIONS_IMAGE.test(url || '');
+}
+
+/**
+ * Nom lisible d'une pièce jointe, déduit de son URL.
+ *
+ * Les fichiers téléversés avant le 03/08/2026 sont nommés `{uuid}.pdf` : le nom
+ * d'origine n'était pas conservé, il n'y a rien à en tirer. Depuis, ils sont
+ * nommés `{uuid}_{nom}.pdf` et le nom réapparaît.
+ */
+export function nomFichier(url: string): string {
+	let base = (url || '').split('/').pop() || url || '';
+	try {
+		base = decodeURIComponent(base);
+	} catch {
+		/* URL mal encodée : on garde la forme brute plutôt que d'échouer */
+	}
+	return base.replace(PREFIXE_UUID, '') || base;
+}
+
+/** Pièce jointe telle que la manipulent les formulaires (EvolForm, uploads). */
+export interface PieceJointe {
+	url: string;
+	nom: string;
+	type: 'image' | 'document';
+}
+
+/**
+ * Liste d'URLs stockées → pièces jointes affichables.
+ *
+ * Trois pages construisaient cet objet à la main pour pré-remplir `EvolForm` en
+ * mode édition, chacune avec sa propre copie du test d'image et du nom.
+ */
+export function fichiersDepuisUrls(urls: string[] | null | undefined): PieceJointe[] {
+	return (urls ?? []).map((url) => ({
+		url,
+		nom: nomFichier(url),
+		type: estImage(url) ? ('image' as const) : ('document' as const),
+	}));
+}
+
+/** Sépare une liste d'URLs en photos (vignettes) et documents (liens). */
+export function separerFichiers(urls: string[] | null | undefined): {
+	photos: string[];
+	documents: string[];
+} {
+	const liste = urls ?? [];
+	return {
+		photos: liste.filter(estImage),
+		documents: liste.filter((u) => !estImage(u)),
+	};
+}

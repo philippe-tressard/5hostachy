@@ -11,6 +11,7 @@ from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, StatutKanban, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, ConfigSite, MembreSyndic
 from app.utils.dates_fr import datetime_longue
+from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_element
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 from app.utils.photos import parse_photos, photos_internes
@@ -39,6 +40,10 @@ class EvenementCreate(BaseModel):
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
+    # Pièces jointes déjà téléversées via POST /uploads/fichier. Les fournir dès
+    # la création est ce qui permet à l'e-mail syndic/CS de partir avec.
+    photos_urls: list[str] = []
+    fichiers_urls: list[str] = []
 
 
 class EvenementRead(BaseModel):
@@ -66,6 +71,7 @@ class EvenementRead(BaseModel):
     # Stocké en colonne comme un tableau JSON (convention Ticket.photos_urls) ;
     # exposé en liste pour que le front n'ait rien à désérialiser.
     photos_urls: list[str] = []
+    fichiers_urls: list[str] = []
 
     class Config:
         from_attributes = True
@@ -90,6 +96,9 @@ class EvenementUpdate(BaseModel):
     # Sert uniquement à RETIRER des photos : l'ajout passe par l'endpoint
     # d'upload, seul capable de valider et de redimensionner le fichier.
     photos_urls: Optional[list[str]] = None
+    # Idem pour les documents : POST /uploads/fichier valide le type MIME, ce
+    # champ ne fait que fixer la liste finale.
+    fichiers_urls: Optional[list[str]] = None
 
 
 _ROLES_AG = (RoleUtilisateur.propriétaire, RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
@@ -101,6 +110,7 @@ def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     # liste et rejette l'événement entier.
     brut = ev.model_dump()
     brut["photos_urls"] = parse_photos(ev.photos_urls)
+    brut["fichiers_urls"] = parse_photos(ev.fichiers_urls)
     data = EvenementRead.model_validate(brut)
     auteur = session.get(Utilisateur, ev.auteur_id)
     data.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
@@ -152,10 +162,17 @@ def create_evenement(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    ev = Evenement(
-        **body.model_dump(exclude_none=True),
-        auteur_id=user.id,
-    )
+    champs = body.model_dump(exclude_none=True)
+    # Les colonnes stockent un tableau JSON, le schéma reçoit une liste :
+    # convertir ici, sinon SQLite reçoit une liste Python et lève à l'insertion.
+    # `photos_internes` écarte toute URL qui ne vient pas de notre endpoint
+    # d'upload — une pièce jointe pointant vers un site tiers révélerait l'IP de
+    # chaque lecteur, avec un contenu hors de notre contrôle.
+    for champ in ("photos_urls", "fichiers_urls"):
+        champs[champ] = json.dumps(
+            photos_internes(champs.get(champ) or []), ensure_ascii=False
+        )
+    ev = Evenement(**champs, auteur_id=user.id)
     session.add(ev)
     session.flush()
 
@@ -198,6 +215,13 @@ def create_evenement(
 
         if body.envoyer_syndic or body.envoyer_cs:
             from app.utils.email import send_email_group
+
+            # Photos et documents de l'affaire, résolus en chemins locaux comme
+            # pour les tickets et les actualités.
+            pieces_jointes = chemins_locaux(
+                parse_photos(ev.photos_urls) + parse_photos(ev.fichiers_urls)
+            )
+
             destinataires: list[tuple[int | None, str]] = []
             seen_emails: set[str] = set()
 
@@ -247,12 +271,18 @@ def create_evenement(
                 "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
                 "app": {"url": cfg_map.get("site_url", "https://localhost")},
                 "reference_copro": cfg_map.get("reference_copro", ""),
+                # Calculé sur la liste réellement attachée, jamais sur l'intention :
+                # ce que l'e-mail annonce doit être ce qu'il transporte.
+                "fichiers": bool(pieces_jointes),
             }
             if destinataires:
                 background_tasks.add_task(
                     send_email_group, code="calendrier_evenement_cree",
                     to_recipients=destinataires, context=ctx,
                     session=session,
+                    # Cet envoi ne transportait AUCUNE pièce jointe : une affaire
+                    # créée avec son devis notifiait le syndic sans le devis.
+                    attachments=pieces_jointes or None,
                 )
 
     return _ev_to_read(ev, session)
@@ -322,10 +352,11 @@ def update_evenement(
     data = body.model_dump(exclude_unset=True)
     if data.get('archivee') is True and ev.statut_kanban != "termine":
         raise HTTPException(422, "Seuls les événements terminés peuvent être archivés")
-    if "photos_urls" in data:
-        # Liste → tableau JSON, en ne conservant que nos propres URLs (cf.
-        # _photos_internes). Ce champ ne sert qu'à retirer des photos.
-        data["photos_urls"] = json.dumps(photos_internes(data["photos_urls"] or []))
+    for champ in ("photos_urls", "fichiers_urls"):
+        if champ in data:
+            # Liste → tableau JSON, en ne conservant que nos propres URLs (cf.
+            # photos_internes). Ces champs ne servent qu'à retirer des fichiers.
+            data[champ] = json.dumps(photos_internes(data[champ] or []))
     old_statut = ev.statut_kanban
     for k, v in data.items():
         setattr(ev, k, v)

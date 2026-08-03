@@ -14,6 +14,8 @@ from app.database import get_session
 from app.models.core import AnnonceHall, ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution, Utilisateur, RoleUtilisateur
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
 from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
+from app.utils.fichiers import chemins_locaux
+from app.utils.photos import photos_internes
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
@@ -117,20 +119,6 @@ def _envoyer_email_syndic_publication(
                 "contenu": e.contenu,
             })
 
-    ctx = {
-        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
-        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
-        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
-        "reference_copro": cfg.get("reference_copro", ""),
-        "is_commentaire": is_commentaire,
-        "commentaire": commentaire or "",
-        "date_commentaire": _fmt_paris(datetime.utcnow()),
-        "date_publication": _fmt_paris(pub.cree_le),
-        "evolutions": evols_ctx,
-        "fichiers": bool(fichiers_urls),
-    }
-
     # Photo jointe (image de la publication)
     all_attachments: list[str] = []
     if pub.image_url:
@@ -147,7 +135,25 @@ def _envoyer_email_syndic_publication(
 
     # Fichiers joints au commentaire
     if fichiers_urls:
-        all_attachments.extend(_resolve_fichiers_attachments(fichiers_urls))
+        all_attachments.extend(chemins_locaux(fichiers_urls))
+
+    ctx = {
+        "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
+        "auteur": {"prenom": user.prenom, "nom": user.nom},
+        "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
+        "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
+        "reference_copro": cfg.get("reference_copro", ""),
+        "is_commentaire": is_commentaire,
+        "commentaire": commentaire or "",
+        "date_commentaire": _fmt_paris(datetime.utcnow()),
+        "date_publication": _fmt_paris(pub.cree_le),
+        "evolutions": evols_ctx,
+        # Ce que le lecteur voit annoncé doit être ce qui est réellement attaché :
+        # le drapeau se calcule donc APRÈS la liste, et sur elle. Il ne portait que
+        # sur les fichiers du commentaire — une actualité publiée avec ses pièces
+        # jointes les envoyait sans jamais les annoncer.
+        "fichiers": bool(all_attachments),
+    }
 
     if destinataires:
         # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
@@ -196,22 +202,6 @@ def _generer_annonce_hall(
         logger.error("Annonce de hall non générée pour la publication %s : %s", pub.id, exc)
 
 
-_UPLOADS_ROOT = os.path.realpath("/app/uploads")
-
-def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
-    """Convertit des URLs /uploads/fichiers/... en chemins locaux /app/uploads/fichiers/..."""
-    paths = []
-    for url in fichiers_urls:
-        if not url.startswith("/uploads/"):
-            continue
-        path = os.path.realpath("/app" + url)
-        if not path.startswith(_UPLOADS_ROOT + os.sep):
-            continue
-        if os.path.isfile(path):
-            paths.append(path)
-    return paths
-
-
 def _envoyer_email_externe_publication(
     pub: Publication,
     user: Utilisateur,
@@ -249,7 +239,7 @@ def _envoyer_email_externe_publication(
             "contenu": e.contenu,
         })
 
-    attachments = _resolve_fichiers_attachments(fichiers_urls or [])
+    attachments = chemins_locaux(fichiers_urls or [])
 
     ctx = {
         "publication": {"id": pub.id, "titre": pub.titre, "contenu": pub.contenu or ""},
@@ -530,7 +520,7 @@ def update_evolution(
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
-        evol.fichiers_urls = json.dumps(body.fichiers_urls)
+        evol.fichiers_urls = json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False)
     session.add(evol)
     session.commit()
     session.refresh(evol)
@@ -575,7 +565,7 @@ def add_evolution(
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id,
         cree_le=datetime.utcnow(),
-        fichiers_urls=json.dumps(body.fichiers_urls, ensure_ascii=False),
+        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
     )
     session.add(evol)
 

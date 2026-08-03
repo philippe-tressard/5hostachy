@@ -22,8 +22,8 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
-	import { fichiersApi } from '$lib/api';
-	import { toast } from '$lib/components/Toast.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import { ACCEPT_DOCUMENTS, ACCEPT_FICHIERS, ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	/** Options affichées dans le select "Nouvel état" */
@@ -78,26 +78,21 @@
 	let emailExterne = '';
 
 	// Fichiers séparés (separatePhotosAndDocs = true — mode ticket)
-	let photos: { url: string; nom: string }[] = editMode && separatePhotosAndDocs
-		? initialFichiers.filter(f => /\.(jpe?g|png|webp)$/i.test(f.url)).map(f => ({ url: f.url, nom: f.nom }))
+	let photos: string[] = editMode && separatePhotosAndDocs
+		? initialFichiers.filter(f => estImage(f.url)).map(f => f.url)
 		: [];
-	let docs: { url: string; nom: string }[] = editMode && separatePhotosAndDocs
-		? initialFichiers.filter(f => !/\.(jpe?g|png|webp)$/i.test(f.url)).map(f => ({ url: f.url, nom: f.nom }))
+	let docs: string[] = editMode && separatePhotosAndDocs
+		? initialFichiers.filter(f => !estImage(f.url)).map(f => f.url)
 		: [];
-	let uploadingPhoto = false;
-	let uploadingDoc = false;
 
 	// Fichiers unifiés (separatePhotosAndDocs = false — mode publication / espace-cs)
-	let fichiers: { url: string; nom: string; type?: string }[] =
-		editMode && !separatePhotosAndDocs ? [...initialFichiers] : [];
-	let uploadingFichier = false;
+	let fichiers: string[] =
+		editMode && !separatePhotosAndDocs ? initialFichiers.map(f => f.url) : [];
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
-	$: allFichiersUrls = separatePhotosAndDocs
-		? [...photos.map(f => f.url), ...docs.map(f => f.url)]
-		: fichiers.map(f => f.url);
+	$: allFichiersUrls = separatePhotosAndDocs ? [...photos, ...docs] : fichiers;
 
 	$: canSubmit = !saving && (
 		editMode
@@ -107,40 +102,9 @@
 				: !(richEmpty(contenu) && (!showFiles || allFichiersUrls.length === 0))
 	);
 
-	// ── Upload ────────────────────────────────────────────────────────────────
-	async function uploadPhoto(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0]; if (!file) return;
-		uploadingPhoto = true;
-		try {
-			const r = await fichiersApi.upload(file);
-			photos = [...photos, { url: r.url, nom: r.nom || file.name }];
-		} catch { toast('error', 'Erreur upload photo'); }
-		finally { uploadingPhoto = false; input.value = ''; }
-	}
-
-	async function uploadDoc(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0]; if (!file) return;
-		uploadingDoc = true;
-		try {
-			const r = await fichiersApi.upload(file);
-			docs = [...docs, { url: r.url, nom: r.nom || file.name }];
-		} catch { toast('error', 'Erreur upload document'); }
-		finally { uploadingDoc = false; input.value = ''; }
-	}
-
-	async function uploadFichier(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0]; if (!file) return;
-		uploadingFichier = true;
-		try {
-			const r = await fichiersApi.upload(file);
-			const type = file.type.startsWith('image/') ? 'image' : 'document';
-			fichiers = [...fichiers, { url: r.url, nom: r.nom || file.name, type }];
-		} catch { toast('error', 'Erreur upload fichier'); }
-		finally { uploadingFichier = false; input.value = ''; }
-	}
+	// Le téléversement lui-même vit dans `FichiersUpload` : trois copies de la
+	// même fonction (photo, document, fichier unifié) ne différaient que par la
+	// liste alimentée.
 
 	// ── Submit ────────────────────────────────────────────────────────────────
 	function handleSubmit() {
@@ -233,72 +197,21 @@
 <!-- ── Fichiers (masqués si !showFiles ou si type=etat en mode ajout) ── -->
 {#if showFiles && (editMode || evolType === 'commentaire')}
 	{#if separatePhotosAndDocs}
-		<!-- Photos -->
 		<div style="margin:.4rem 0">
-			<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📷 Photos</label>
-			<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.3rem 0">
-				{#each photos as f, i}
-					<div style="position:relative">
-						<img src={f.url} alt={f.nom}
-							style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-						<button type="button" on:click={() => photos = photos.filter((_, j) => j !== i)}
-							style="position:absolute;top:-5px;right:-5px;border:none;background:var(--color-danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.7rem;cursor:pointer;line-height:18px;padding:0;text-align:center">✕</button>
-					</div>
-				{/each}
-			</div>
-			<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
-				{uploadingPhoto ? 'Upload…' : '+ Ajouter une photo'}
-				<input type="file" accept="image/jpeg,image/png,image/webp"
-					on:change={uploadPhoto} style="display:none" disabled={uploadingPhoto} />
-			</label>
+			<label for="evol-photos" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4F7; Photos</label>
+			<FichiersUpload id="evol-photos" bind:urls={photos} max={5}
+				label="Ajouter une photo" accept={ACCEPT_PHOTOS} />
 		</div>
-		<!-- Documents -->
 		<div style="margin:.4rem 0">
-			<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Documents (PDF, Word, Excel)</label>
-			<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin:.3rem 0">
-				{#each docs as f, i}
-					<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
-						<span>📄</span>
-						<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
-						<button type="button" on:click={() => docs = docs.filter((_, j) => j !== i)}
-							style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
-					</div>
-				{/each}
-			</div>
-			<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
-				{uploadingDoc ? 'Upload…' : '+ Ajouter un document'}
-				<input type="file" accept="application/pdf,.doc,.docx,.xls,.xlsx"
-					on:change={uploadDoc} style="display:none" disabled={uploadingDoc} />
-			</label>
+			<label for="evol-docs" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4CE; Documents (PDF, Word, Excel)</label>
+			<FichiersUpload id="evol-docs" bind:urls={docs} max={5}
+				label="Ajouter un document" accept={ACCEPT_DOCUMENTS} />
 		</div>
 	{:else}
-		<!-- Fichiers unifiés (photos + docs mélangés) -->
 		<div class="field" style="margin-bottom:.6rem">
-			<label style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">📎 Pièces jointes (photos, PDF, Word, Excel)</label>
-			<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem">
-				{#each fichiers as f, i}
-					{#if f.type === 'image'}
-						<div style="position:relative">
-							<img src={f.url} alt={f.nom}
-								style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-							<button type="button" on:click={() => fichiers = fichiers.filter((_, j) => j !== i)}
-								style="position:absolute;top:-5px;right:-5px;border:none;background:var(--color-danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.7rem;cursor:pointer;line-height:18px;padding:0;text-align:center">✕</button>
-						</div>
-					{:else}
-						<div style="display:flex;align-items:center;gap:.3rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:5px;padding:.2rem .4rem;font-size:.78rem">
-							<span>📄</span>
-							<span style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.nom}</span>
-							<button type="button" on:click={() => fichiers = fichiers.filter((_, j) => j !== i)}
-								style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:.9rem;padding:0;line-height:1">✕</button>
-						</div>
-					{/if}
-				{/each}
-			</div>
-			<label class="btn btn-outline" style="cursor:pointer;font-size:.8rem;padding:.3rem .6rem;display:inline-block">
-				{uploadingFichier ? 'Upload…' : '+ Ajouter un fichier'}
-				<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"
-					on:change={uploadFichier} style="display:none" disabled={uploadingFichier} />
-			</label>
+			<label for="evol-fichiers" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4CE; Pièces jointes (photos, PDF, Word, Excel)</label>
+			<FichiersUpload id="evol-fichiers" bind:urls={fichiers} max={5}
+				label="Ajouter un fichier" accept={ACCEPT_FICHIERS} />
 			{#if partagerWhatsapp && fichiers.length > 0}
 				<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.3rem">
 					⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.

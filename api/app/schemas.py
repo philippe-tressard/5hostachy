@@ -1,9 +1,36 @@
 import json
 from datetime import datetime, date
-from typing import Optional, List
-from pydantic import BaseModel, field_validator
+from typing import Annotated, Optional, List
+from pydantic import BaseModel, BeforeValidator, field_validator
 
 from app.models.core import StatutUtilisateur, RoleUtilisateur
+
+
+def _liste_depuis_json(v):
+    """Colonne texte contenant un tableau JSON → liste d'URLs.
+
+    Quatre schémas portaient ce même validateur recopié (`photos_urls`,
+    `fichiers_urls` × 3). C'est la contrepartie côté pydantic de
+    `app/utils/photos.parse_photos`, que les routeurs utilisent pour lire les
+    mêmes colonnes : deux points d'entrée, une seule règle.
+
+    Ne lève jamais : une valeur illisible en base ne doit pas faire échouer la
+    lecture de l'élément qui la porte. Le pire cas est une liste vide.
+    """
+    if v is None:
+        return []
+    if isinstance(v, str):
+        try:
+            charge = json.loads(v)
+        except Exception:
+            return []
+        return [str(u) for u in charge] if isinstance(charge, list) else []
+    return v
+
+
+#: Champ exposé en liste, stocké en colonne texte. `Optional[ListeUrls]` reste
+#: possible là où l'absence et la liste vide doivent se distinguer.
+ListeUrls = Annotated[List[str], BeforeValidator(_liste_depuis_json)]
 
 
 class UserCreate(BaseModel):
@@ -121,6 +148,13 @@ class TicketCreate(BaseModel):
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
+    # Pièces jointes déjà téléversées via POST /uploads/fichier — photos et
+    # documents. Les fournir DÈS la création, et non après, est ce qui permet à
+    # l'e-mail syndic/CS de partir avec : il est construit dans la foulée.
+    # Filtrées par `photos_internes` côté routeur : le client ne choisit pas
+    # quelle URL est jointe, il ne peut que désigner nos propres fichiers.
+    photos_urls: List[str] = []
+    fichiers_urls: List[str] = []
 
 
 class TicketRead(BaseModel):
@@ -137,7 +171,8 @@ class TicketRead(BaseModel):
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
-    photos_urls: Optional[List[str]] = None
+    photos_urls: Optional[ListeUrls] = None
+    fichiers_urls: ListeUrls = []
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     saisi_pour_user_id: Optional[int] = None
@@ -160,16 +195,6 @@ class TicketRead(BaseModel):
                 return ['résidence']
         return v
 
-    @field_validator('photos_urls', mode='before')
-    @classmethod
-    def parse_photos_urls(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return []
-        return v
-
     class Config:
         from_attributes = True
 
@@ -190,6 +215,9 @@ class TicketUpdate(BaseModel):
     saisi_pour_email: Optional[str] = None
     non_relancable: Optional[bool] = None
     non_relancable_motif: Optional[str] = None
+    # Sert à retirer ou réordonner des pièces jointes déjà téléversées : l'ajout
+    # passe par POST /uploads/fichier, seul endroit qui valide le type MIME.
+    fichiers_urls: Optional[List[str]] = None
 
 
 class MessageCreate(BaseModel):
@@ -206,17 +234,7 @@ class MessageRead(BaseModel):
     contenu: str
     interne: bool
     cree_le: datetime
-    fichiers_urls: List[str] = []
-
-    @field_validator('fichiers_urls', mode='before')
-    @classmethod
-    def parse_fichiers_urls(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return []
-        return v or []
+    fichiers_urls: ListeUrls = []
 
     class Config:
         from_attributes = True
@@ -253,17 +271,7 @@ class TicketEvolutionRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     cree_le: datetime
-    fichiers_urls: List[str] = []
-
-    @field_validator('fichiers_urls', mode='before')
-    @classmethod
-    def parse_fichiers_urls_evol(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return []
-        return v or []
+    fichiers_urls: ListeUrls = []
 
     class Config:
         from_attributes = True
@@ -316,17 +324,7 @@ class EvolutionRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     cree_le: datetime
-    fichiers_urls: List[str] = []
-
-    @field_validator('fichiers_urls', mode='before')
-    @classmethod
-    def parse_fichiers_urls_pub(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return []
-        return v or []
+    fichiers_urls: ListeUrls = []
 
     class Config:
         from_attributes = True

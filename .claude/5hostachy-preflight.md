@@ -14,7 +14,7 @@ chargé les consignes ci-dessous, puis le DÉCLARER (voir « CONFORMITÉ » en b
 
 2. À CHARGER SELON LA TÂCHE (lecture obligatoire AVANT d'agir) :
    • MEP / déploiement    → .claude/skills/mep-precheck   (étapes 0 et 0 bis,
-       pré-check 14 points, post-check P1-P9, rollback, surveillance continue)
+       pré-check 15 points, post-check P1-P10, rollback, surveillance continue)
        + memory/feedback_mep_workflow.md   (qui fait quoi : Claude s'arrête au push dev)
    • Infra / bascule / DB → .claude/skills/infra-rpi
        + memory/project_infra.md
@@ -36,9 +36,9 @@ chargé les consignes ci-dessous, puis le DÉCLARER (voir « CONFORMITÉ » en b
      PRAGMA` ni `sqlite3` hôte, y compris au pré-check. VACUUM/copie : stopper l'API.
    • CONTRÔLES : un contrôle qui ne peut pas s'exécuter renvoie INCONNU, jamais OK
      (une sortie vide n'est PAS un vert). Vérifier le comportement, pas l'artefact.
-   • MEP : charger .claude/skills/mep-precheck et dérouler le pré-check 14 points
+   • MEP : charger .claude/skills/mep-precheck et dérouler le pré-check 15 points
      AVANT ; bump front/package.json ; push dev ; la PR dev→main est créée/mergée par
-     L'UTILISATEUR ; MaJ-Hostachy.sh sur le RPi ACTIF ; post-check P1-P9 (dont P7 :
+     L'UTILISATEUR ; MaJ-Hostachy.sh sur le RPi ACTIF ; post-check P1-P10 (dont P7 :
      le correctif est-il réellement observable, et P4 : image = code déployé).
    • Décision : agir sans demander sur le réversible ; ne solliciter que pour
      l'irréversible (écraser/supprimer des données, push/PR sur main, envoi

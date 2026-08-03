@@ -7,7 +7,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { calendrier as calApi, publications as pubsApi, prestataires as prestApi, ApiError, type Publication } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
-	import PhotosUpload from '$lib/components/PhotosUpload.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -269,44 +270,22 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		});
 	})();
 
-	// ── Photos ─────────────────────────────────────────────────────────────
-	// L'endpoint d'upload exige un événement existant (comme pour les tickets) :
-	// à la création, les fichiers sont mis en attente et téléversés juste après,
-	// avec un aperçu local en attendant. Un seul composant (PhotosUpload) sert
-	// les deux cas.
+	// ── Pièces jointes ─────────────────────────────────────────────────────
+	// Photos et documents passent par `POST /uploads/fichier`, qui n'a pas besoin
+	// que l'affaire existe : l'URL est connue tout de suite et part dans la
+	// création. La file d'attente précédente (téléverser APRÈS, avec un aperçu
+	// blob:) avait un défaut invisible — l'e-mail au syndic était construit avant
+	// les photos, et partait sans elles.
 	let photosUrls: string[] = [];
-	let photosEnAttente: File[] = [];
-
-	async function uploadPhotoEv(file: File): Promise<string> {
-		if (editId) {
-			const r = await calApi.uploadPhoto(editId, file);
-			return r.url;
-		}
-		photosEnAttente = [...photosEnAttente, file];
-		return URL.createObjectURL(file);
-	}
-
-	async function removePhotoEv(url: string): Promise<string[] | void> {
-		if (editId) {
-			const restantes = photosUrls.filter((u) => u !== url);
-			await calApi.update(editId, { photos_urls: restantes });
-			return restantes;
-		}
-		const i = photosUrls.indexOf(url);
-		if (i >= 0) {
-			URL.revokeObjectURL(url);
-			photosEnAttente = photosEnAttente.filter((_, k) => k !== i);
-		}
-	}
+	let fichiersUrls: string[] = [];
 
 	function resetForm() {
 		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, epingle: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
 		formPerimetreCible = ['résidence'];
 		epingleInitial = false;
 		editId = null;
-		for (const u of photosUrls) if (u.startsWith('blob:')) URL.revokeObjectURL(u);
 		photosUrls = [];
-		photosEnAttente = [];
+		fichiersUrls = [];
 	}
 
 	function startEdit(ev: any) {
@@ -332,7 +311,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		formPerimetreCible = p === 'résidence' ? ['résidence'] : p.split(',').filter(Boolean);
 		editId = ev.id;
 		photosUrls = ev.photos_urls ?? [];
-		photosEnAttente = [];
+		fichiersUrls = ev.fichiers_urls ?? [];
 		showForm = true;
 	}
 
@@ -358,22 +337,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			partager_whatsapp: form.partager_whatsapp,
 			envoyer_syndic: form.envoyer_syndic,
 			envoyer_cs: form.envoyer_cs,
+			photos_urls: photosUrls,
+			fichiers_urls: fichiersUrls,
 		};
 		try {
 			if (editId) {
 				await calApi.update(editId, payload);
 			} else {
-				const cree = await calApi.create(payload);
-				// Photos mises en attente pendant la saisie : l'événement existe
-				// désormais, on les téléverse. Un échec sur une photo ne doit pas
-				// annuler l'événement déjà créé — on le signale, sans plus.
-				for (const f of photosEnAttente) {
-					try {
-						await calApi.uploadPhoto(cree.id, f);
-					} catch {
-						toast('error', `Photo « ${f.name} » non envoyée`);
-					}
-				}
+				await calApi.create(payload);
 			}
 			evenements = await calApi.list();
 			showForm = false;
@@ -881,14 +852,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					</div>
 					<div class="field" style="margin-top:.75rem">
 						<label for="ev-photos">Photos</label>
-						<PhotosUpload
-							id="ev-photos"
-							bind:urls={photosUrls}
-							max={5}
-							label="Photo"
-							upload={uploadPhotoEv}
-							remove={removePhotoEv}
-						/>
+						<FichiersUpload id="ev-photos" bind:urls={photosUrls} max={5}
+							label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
+					</div>
+					<div class="field" style="margin-top:.75rem">
+						<label for="ev-documents">Documents <span style="font-weight:normal;color:var(--color-text-muted)">(PDF, Word, Excel)</span></label>
+						<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
 					</div>
 				</div>
 				<div class="modal-footer">

@@ -26,6 +26,8 @@ from app.utils.dates_fr import (
     formule_anciennete,
     mois_ecoules,
 )
+from app.utils.fichiers import chemins_locaux
+from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import ticket_visible
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -50,22 +52,6 @@ def _evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
         cree_le=e.cree_le,
         fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
     )
-
-
-_UPLOADS_ROOT = os.path.realpath("/app/uploads")
-
-def _resolve_fichiers_attachments(fichiers_urls: list[str]) -> list[str]:
-    """Convertit des URLs /uploads/... en chemins locaux /app/uploads/..."""
-    paths = []
-    for url in fichiers_urls:
-        if not url.startswith("/uploads/"):
-            continue
-        path = os.path.realpath("/app" + url)
-        if not path.startswith(_UPLOADS_ROOT + os.sep):
-            continue
-        if os.path.isfile(path):
-            paths.append(path)
-    return paths
 
 
 def _envoyer_email_externe_ticket(
@@ -104,7 +90,7 @@ def _envoyer_email_externe_ticket(
             "contenu": m.contenu,
         })
 
-    attachments = _resolve_fichiers_attachments(fichiers_urls or [])
+    attachments = chemins_locaux(fichiers_urls or [])
 
     ctx = {
         "ticket": {
@@ -161,6 +147,7 @@ def _ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         batiment_id=ticket.batiment_id,
         perimetre_cible=ticket.perimetre_cible,
         photos_urls=ticket.photos_urls,
+        fichiers_urls=ticket.fichiers_urls,
         destinataire_syndic=ticket.destinataire_syndic,
         destinataire_cs=ticket.destinataire_cs,
         saisi_pour_user_id=ticket.saisi_pour_user_id,
@@ -204,7 +191,6 @@ def create_ticket(
 ):
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Les utilisateurs externes ne peuvent pas créer de tickets")
-    import json
     ticket = Ticket(
         numero=_generate_numero(),
         titre=body.titre,
@@ -220,6 +206,11 @@ def create_ticket(
         saisi_pour_user_id=body.saisi_pour_user_id if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else None,
         saisi_pour_nom=body.saisi_pour_nom if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else None,
         saisi_pour_email=body.saisi_pour_email if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin) else None,
+        # `photos_internes` écarte toute URL qui n'a pas été produite par notre
+        # endpoint d'upload : sans ce filtre, un client pourrait faire pointer une
+        # pièce jointe vers un site tiers, servi ensuite à chaque lecteur.
+        photos_urls=json.dumps(photos_internes(body.photos_urls), ensure_ascii=False),
+        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
     )
     session.add(ticket)
     session.flush()
@@ -294,7 +285,6 @@ def create_ticket(
     # ── Email au syndic et/ou CS (option CS/Admin) ──
     if ticket.destinataire_syndic or ticket.destinataire_cs:
         from app.utils.email import send_email_group
-        import json as _json, os
 
         # Config
         cfg_site = session.exec(
@@ -305,21 +295,11 @@ def create_ticket(
         cfg_map = {r.cle: r.valeur for r in cfg_site}
         reference_copro = cfg_map.get("reference_copro", "")
 
-        # Photos jointes
-        photo_paths: list[str] = []
-        if ticket.photos_urls:
-            try:
-                urls = _json.loads(ticket.photos_urls) if isinstance(ticket.photos_urls, str) else ticket.photos_urls
-            except Exception:
-                urls = []
-            for url in (urls or []):
-                if not isinstance(url, str) or not url.startswith("/uploads/"):
-                    continue
-                fpath = os.path.realpath("/app" + url)
-                if not fpath.startswith(_UPLOADS_ROOT + os.sep):
-                    continue
-                if os.path.isfile(fpath):
-                    photo_paths.append(fpath)
+        # Pièces jointes de l'e-mail : mêmes règles de résolution que partout
+        # ailleurs (URL interne → chemin local, hors de /app/uploads on ignore).
+        photo_paths = chemins_locaux(
+            parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+        )
 
         ctx = {
             "ticket": {
@@ -340,6 +320,12 @@ def create_ticket(
                 "url": cfg_map.get("site_url", "https://localhost"),
             },
             "reference_copro": reference_copro,
+            # Le modèle `ticket_syndic` annonce les pièces jointes derrière
+            # `{% if fichiers %}` ; la clé n'était pas fournie ici. Jinja évalue
+            # un indéfini à faux sans rien signaler : les photos partaient en
+            # pièce jointe sans être annoncées, et l'absence de clé ne se voyait
+            # nulle part.
+            "fichiers": bool(photo_paths),
         }
 
         # Construire la liste de destinataires (dédupliqués)
@@ -387,6 +373,7 @@ def create_ticket(
         _envoyer_email_externe_ticket(
             ticket, user, email_ext.strip(), background_tasks, session,
             is_commentaire=False,
+            fichiers_urls=parse_photos(ticket.fichiers_urls),
         )
 
     return _ticket_read(ticket, session)
@@ -665,6 +652,7 @@ def update_ticket(
     content_fields = (
         body.titre is not None or body.description is not None
         or body.categorie is not None or body.perimetre_cible is not None
+        or body.fichiers_urls is not None
     )
     if content_fields:
         if is_auteur and not is_cs_admin:
@@ -680,9 +668,13 @@ def update_ticket(
             changes.append(f"Catégorie : {ticket.categorie} → {body.categorie}")
             ticket.categorie = body.categorie
         if body.perimetre_cible is not None:
-            import json as _json
-            ticket.perimetre_cible = _json.dumps(body.perimetre_cible)
+            ticket.perimetre_cible = json.dumps(body.perimetre_cible)
             changes.append("Périmètre modifié")
+        if body.fichiers_urls is not None:
+            ticket.fichiers_urls = json.dumps(
+                photos_internes(body.fichiers_urls), ensure_ascii=False
+            )
+            changes.append("Pièces jointes modifiées")
 
     # Champs relationnels/destinataires : CS/admin uniquement
     extra_fields = (
@@ -822,7 +814,7 @@ def add_message(
         auteur_id=user.id,
         contenu=body.contenu,
         interne=body.interne,
-        fichiers_urls=json.dumps(body.fichiers_urls, ensure_ascii=False),
+        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
     )
     # Auto-log évolution "réponse"
     evol = TicketEvolution(
@@ -956,7 +948,7 @@ def update_evolution(
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
-        evol.fichiers_urls = json.dumps(body.fichiers_urls)
+        evol.fichiers_urls = json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False)
     session.add(evol)
     session.commit()
     session.refresh(evol)
@@ -988,7 +980,7 @@ def add_evolution(
         ancien_statut=ancien_statut,
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id, cree_le=datetime.utcnow(),
-        fichiers_urls=json.dumps(body.fichiers_urls, ensure_ascii=False),
+        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
     )
     session.add(evol)
 
@@ -1114,6 +1106,12 @@ def add_evolution(
 
         if body.envoyer_syndic or body.envoyer_cs:
             from app.utils.email import send_email_group
+
+            # Pièces jointes du commentaire. `photos_internes` avant résolution :
+            # même filtre qu'à l'enregistrement, pour ne pas joindre une URL que
+            # l'on vient précisément de refuser de stocker.
+            pieces_jointes = chemins_locaux(photos_internes(body.fichiers_urls))
+
             destinataires: list[tuple[int | None, str]] = []
             seen_emails: set[str] = set()
 
@@ -1171,13 +1169,17 @@ def add_evolution(
                 "date_creation": date_courte(ticket.cree_le),
                 "messages": messages_ctx,
                 "historique": historique,
-                "fichiers": bool(body.fichiers_urls),
+                # Calculé sur ce qui est réellement attaché, pas sur l'intention :
+                # le contexte annonçait des pièces jointes que l'envoi ne
+                # transportait pas (`attachments` n'était pas passé du tout).
+                "fichiers": bool(pieces_jointes),
             }
             if destinataires:
                 background_tasks.add_task(
                     send_email_group, code="ticket_syndic",
                     to_recipients=destinataires, context=ctx,
                     session=session,
+                    attachments=pieces_jointes or None,
                 )
 
     # Email externe (CS/Admin uniquement)

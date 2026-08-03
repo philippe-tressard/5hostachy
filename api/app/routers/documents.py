@@ -1,9 +1,7 @@
 """Router documents — bibliothèque documentaire avec contrôle d'accès 3 couches."""
 import json
 import os
-import re
 import shutil
-import uuid
 from datetime import datetime
 from typing import Optional
 
@@ -19,6 +17,7 @@ from app.models.core import (
     Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
+from app.utils.fichiers import extension_assainie, nom_stocke
 # Toute règle de visibilité — documents compris — vient du module central.
 from app.utils.visibility import document_visible
 
@@ -149,10 +148,12 @@ async def upload_document(
             raise HTTPException(400, "Catégorie invalide")
 
     os.makedirs(UPLOADS_DIR, exist_ok=True)
-    # Sanitize filename to prevent path traversal attacks
-    raw_name = os.path.basename(file.filename or "document")
-    safe_name = re.sub(r"[^\w.\-]", "_", raw_name)[:200] or "document"
-    dest = os.path.join(UPLOADS_DIR, f"{uuid.uuid4().hex}_{safe_name}")
+    # Assainissement et préfixe UUID : app/utils/fichiers.py, seul endroit où
+    # cette règle est écrite. Le téléchargement passe par un endpoint
+    # authentifié qui impose lui-même le `media_type`, l'extension d'origine
+    # peut donc être conservée telle quelle.
+    raw_name = file.filename or "document"
+    dest = os.path.join(UPLOADS_DIR, nom_stocke(raw_name, extension_assainie(raw_name)))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
 

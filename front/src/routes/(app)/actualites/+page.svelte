@@ -7,6 +7,8 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
@@ -604,7 +606,7 @@
 											<EvolForm
 												editMode={true}
 												initialContenu={evol.contenu || ''}
-												initialFichiers={(evol.fichiers_urls || []).map((u: string) => ({ url: u, nom: u.split('/').pop() || u, type: /\.(jpe?g|png|webp)$/i.test(u) ? 'image' : 'document' }))}
+												initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 												showFiles={true}
 												separatePhotosAndDocs={false}
 												saving={editEvolSaving}
@@ -617,27 +619,9 @@
 												<div class="evol-text rich-content" style="font-size:.875rem">{@html safeHtml(evol.contenu)}</div>
 											{/if}
 											{#if evol.fichiers_urls?.length > 0 && editingEvolId !== evol.id}
-												{@const photos = evol.fichiers_urls.filter((u: string) => /\.(jpe?g|png|webp)$/i.test(u))}
-												{@const docs = evol.fichiers_urls.filter((u: string) => !/\.(jpe?g|png|webp)$/i.test(u))}
-												{#if photos.length}
-													<div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem">
-														{#each photos as url}
-															<a href={url} target="_blank" rel="noopener">
-																<img src={url} alt="Photo" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)" />
-															</a>
-														{/each}
-													</div>
-												{/if}
-												{#if docs.length}
-													<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.25rem">
-														{#each docs as url}
-															<a href={url} target="_blank" rel="noopener"
-																style="font-size:.75rem;display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .4rem;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:4px;text-decoration:none;color:var(--color-primary)">
-																📄 {url.split('/').pop()}
-															</a>
-														{/each}
-													</div>
-												{/if}
+												<div style="margin-top:.3rem">
+													<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
+												</div>
 											{/if}
 										</div>
 									</div>

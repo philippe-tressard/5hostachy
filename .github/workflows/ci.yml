@@ -198,6 +198,14 @@ jobs:
         working-directory: front
         run: npm run lint:dates
 
+      # Garde-fou pièces jointes : « est-ce une image ? », le nom affiché et la
+      # liste `accept` ne se réécrivent pas dans une page. Quinze copies de ces
+      # trois règles coexistaient le 03/08/2026, dont huit ignoraient .gif.
+      # Comme lint:dates, il tourne AVANT le build : il échoue en une seconde.
+      - name: Lint pièces jointes (règles non réécrites)
+        working-directory: front
+        run: npm run lint:fichiers
+
       - name: Build
         working-directory: front
         run: npm run build
