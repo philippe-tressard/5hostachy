@@ -181,16 +181,23 @@ def test_l_appariement_est_declenche_a_la_validation_d_un_compte():
 # conscient.
 
 def test_le_prenom_de_l_import_n_ecarte_jamais():
-    """Le prénom sert à AJOUTER des clés, jamais à en exclure.
+    """VOULU : le prénom ajoute des clés, il n'en exclut jamais.
 
-    Conséquence : deux foyers portant le même nom de famille sont appariés l'un
-    à l'autre. Et `_auto_match_tc` ne propose pas — il CRÉE la télécommande et
-    passe l'import en « résolu », sans revue humaine. Le premier des deux qui
-    active son compte récupère donc les accès de l'autre.
+    Confirmé par l'utilisateur le 03/08/2026 : **un foyer partage ses accès**.
+    Conjoint et enfants disposant d'un compte doivent retrouver les badges du
+    lot, alors que le fichier du syndic ne nomme souvent qu'un seul occupant.
+    L'appariement sur le nom de famille seul est donc la règle, pas une
+    approximation à corriger.
 
-    Signalé le 03/08/2026. Décision de conception en attente : l'atténuation la
-    moins intrusive serait de ne pas AUTO-RÉSOUDRE quand la correspondance n'a
-    été obtenue que par le nom de famille seul — proposer au lieu de créer.
+    ⚠️ NE PAS « corriger » en exigeant le prénom, ni en supprimant
+    l'auto-résolution des correspondances par nom seul : ce sont exactement les
+    cas de famille ci-dessus. Ce test existe pour empêcher ce faux correctif.
+
+    Cas résiduel, non traitable par le code : deux foyers SANS LIEN portant le
+    même nom de famille, dans des lots différents. Les fichiers d'import ne
+    portent aucune colonne de lot (télécommandes : propriétaire, locataire,
+    référence — Vigik : idem), donc le nom est la seule clé disponible. Seul un
+    fichier plus riche fourni par le syndic lèverait l'ambiguïté.
     """
     cles = _user_keys("Martin", "Jean")
     for saisie in ("MARTIN Pierre", "MARTIN Sophie", "Pierre MARTIN"):
@@ -201,11 +208,17 @@ def test_le_prenom_de_l_import_n_ecarte_jamais():
 
 
 def test_les_noms_de_famille_courts_echappent_a_cet_elargissement():
-    """Asymétrie non voulue : effet de bord du seuil « mot > 3 caractères ».
+    """Asymétrie NON VOULUE : effet de bord du seuil « mot > 3 caractères ».
 
-    Un résident nommé Roy, Gay ou Cot n'est apparié que sur une correspondance
-    exacte — il bénéficie donc d'une règle plus sûre, mais aussi de bien moins
-    d'appariements automatiques, sans que ce soit un choix.
+    Puisque le partage familial est la règle (cf. test ci-dessus), un résident
+    nommé Roy, Gay ou Cot en est privé : son conjoint ne récupère PAS les badges
+    du lot si le fichier ne nomme que lui. C'est le seul des trois constats du
+    03/08/2026 qui soit un vrai défaut — un patronyme court ne devrait pas
+    changer la règle.
+
+    Non corrigé : abaisser le seuil rouvrirait les appariements sur « de »,
+    « la », « du ». La correction juste compare le mot aux clés NOM sans seuil
+    de longueur, le seuil ne servant qu'à écarter les mots vides.
     """
     cles = _user_keys("Roy", "Jean")
     assert _matches_user("ROY", cles), "le nom seul reste apparié"
@@ -239,4 +252,43 @@ def test_l_auto_resolution_cree_le_badge_sans_revue():
     assert "StatutImport.resolu" in source and "session.add(tc)" in source, (
         "L'auto-résolution a changé de forme : revoir si la création sans revue "
         "est toujours le comportement, et mettre ces tests à jour."
+    )
+
+
+def test_le_cs_voit_les_imports_auto_resolus():
+    """Le filet de sécurité du mécanisme est la revue manuelle du CS.
+
+    L'appariement large est volontaire (partage familial) et l'auto-résolution
+    crée les badges sans validation préalable : la sécurité repose donc
+    entièrement sur le fait que le CS **voie** ce qui a été résolu tout seul, et
+    par qui. Un écran qui ne montrerait que les lignes en attente rendrait ce
+    filet inexistant — sans que rien ne le signale.
+
+    Trois conditions, vérifiées ici parce qu'aucune n'est évidente à la lecture :
+      1. l'endpoint de liste ne filtre pas par défaut ;
+      2. il enrichit chaque ligne du résident lié, sans quoi « résolu » ne dit
+         pas à QUI ;
+      3. l'écran d'administration propose le statut « résolu » au filtrage.
+    """
+    import pathlib
+
+    racine = pathlib.Path(__file__).resolve().parents[2]
+    acces = (racine / "api" / "app" / "routers" / "acces.py").read_text(encoding="utf-8")
+
+    assert "statut: str = Query(None)" in acces, (
+        "Le filtre de statut n'est plus optionnel : le CS risque de ne plus voir "
+        "l'ensemble des imports d'un coup d'œil."
+    )
+    assert '"proprietaire"' in acces, (
+        "Les lignes ne sont plus enrichies du résident lié : « résolu » ne dit "
+        "plus à qui le badge a été attribué."
+    )
+
+    ecran = (
+        racine / "front" / "src" / "routes" / "(app)" / "admin"
+        / "telecommandes-import" / "+page.svelte"
+    ).read_text(encoding="utf-8")
+    assert "'resolu'" in ecran, (
+        "L'écran d'import ne propose plus le filtre « résolu » : les appariements "
+        "automatiques deviennent invisibles à la revue du CS."
     )

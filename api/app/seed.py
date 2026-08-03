@@ -498,6 +498,28 @@ EMAIL_TEMPLATES = [
      'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
      'Voir l’historique des annonces</a></p>',
      True),
+
+    ("acces_apparies_auto", "Accès attribués automatiquement — gestionnaire du site",
+     "\U0001f511 {{ resultat.total_acces }} accès attribué{{ resultat.pluriel }} automatiquement à {{ utilisateur.prenom }} {{ utilisateur.nom }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f511 Accès attribués automatiquement</h2>'
+     '<p style="margin:0 0 16px">L’activation du compte de <strong>{{ utilisateur.prenom }} {{ utilisateur.nom }}</strong>'
+     '{% if utilisateur.email %} (<a href="mailto:{{ utilisateur.email }}" style="color:#1E3A5F">{{ utilisateur.email }}</a>){% endif %} '
+     'a rattaché des accès <strong>sans validation préalable</strong>, par rapprochement de nom avec les fichiers du syndic.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">{{ utilisateur.statut }}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">'
+     '{{ resultat.telecommandes }} télécommande{{ resultat.pluriel_tc }} · {{ resultat.vigiks }} badge{{ resultat.pluriel_vigik }} Vigik</p>'
+     '<p style="margin:0;font-size:13px;color:#5A6070">Lots rattachés : {{ resultat.lots }}</p>'
+     '</td></tr></table>'
+     '<p style="margin:0 0 20px;font-size:13px;color:#5A6070">Le rapprochement se fait sur le <strong>nom de famille</strong>, '
+     'volontairement — un foyer partage ses accès. Deux foyers homonymes sont donc indiscernables : '
+     'ce message est là pour que vous puissiez le vérifier.</p>'
+     '<p style="text-align:center;margin:0">'
+     '<a href="{{ app.url }}/admin/telecommandes-import" '
+     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
+     'Vérifier les imports</a></p>',
+     True),
 ]
 
 

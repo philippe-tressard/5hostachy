@@ -69,6 +69,10 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "alerte_espace_disque": {"espace_total", "espace_disponible", "pourcentage_libre"},
     "verification_email": {"expire_heures", "lien", "prenom"},
     "annonce_hall": {"annonce", "auteur"},
+    # Prévient le gestionnaire du site quand l'appariement a créé des accès
+    # sans validation préalable. `resultat` porte aussi les accords en français,
+    # calculés au point d'appel : un modèle n'a pas à porter la grammaire.
+    "acces_apparies_auto": {"utilisateur", "resultat"},
 }
 
 _env = SandboxedEnvironment(loader=BaseLoader())
