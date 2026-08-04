@@ -96,7 +96,10 @@ def test_l_annonce_de_hall_se_rend_en_pdf():
         titre="Coupure d'eau programmée",
         message_html="<p>L'eau sera coupée <strong>mardi</strong> de 9h à 12h.</p>",
         perimetre_label="Bâtiment 1",
-        format_effectif="A4",
+        # Les clés de `_GABARITS` sont en MINUSCULES (`a4` … `a8`) — « A4 » lève
+        # un KeyError. Trouvé au premier passage réel en intégration continue :
+        # un autotest ne couvre pas ce qu'il ne fait pas tourner (standards/04 §11).
+        format_effectif="a4",
         site_nom="5Hostachy",
         site_url="5hostachy.fr",
         images=None,
