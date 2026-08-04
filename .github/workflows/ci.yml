@@ -219,6 +219,23 @@ jobs:
         working-directory: front
         run: npm run lint:fichiers
 
+      # Vérificateur de types. Il existait dans package.json depuis toujours et
+      # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
+      # hook versionné en 100644. Or **Vite transpile le TypeScript sans le
+      # vérifier** : le job ci-dessous était donc vert quoi qu'il arrive côté
+      # typage. C'est ce qui a rendu la PR #267 (typescript 5 → 6, une MAJEURE)
+      # verte sans qu'aucun contrôle de types n'ait tourné — même motif que
+      # WeasyPrint dans .github/dependabot.yml : « la PR était VERTE parce
+      # qu'aucun test ne rend un PDF ».
+      # Armé le 04/08/2026 après avoir ramené la dette de 12 erreurs à 0, et
+      # après avoir vérifié qu'il sort bien en 1 sur une erreur introduite
+      # exprès — un contrôle qu'on n'a pas vu rougir n'est pas un contrôle.
+      # Les 171 avertissements restants ne le font pas échouer : seule une
+      # ERREUR bloque. Les résorber est un lot à part.
+      - name: Vérification des types (svelte-check)
+        working-directory: front
+        run: npm run check
+
       - name: Build
         working-directory: front
         run: npm run build

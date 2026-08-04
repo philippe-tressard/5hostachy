@@ -618,7 +618,7 @@
 									{:else if evol.contenu}
 												<div class="evol-text rich-content" style="font-size:.875rem">{@html safeHtml(evol.contenu)}</div>
 											{/if}
-											{#if evol.fichiers_urls?.length > 0 && editingEvolId !== evol.id}
+											{#if (evol.fichiers_urls?.length ?? 0) > 0 && editingEvolId !== evol.id}
 												<div style="margin-top:.3rem">
 													<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
 												</div>

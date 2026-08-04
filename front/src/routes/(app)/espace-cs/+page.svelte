@@ -244,6 +244,7 @@
 			devis: 'Reporting CS — Devis & interventions',
 			prestataires: 'Reporting CS — Synthèse prestataires',
 			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
+			relance: 'Reporting CS — Relance syndic',
 		};
 		void printReporting(titles[reportView]);
 	}

@@ -511,7 +511,7 @@ import { onMount } from 'svelte';
 <div class="still-need-help card">
 	<strong>Vous ne trouvez pas la réponse ?</strong>
 	<p>Créez un ticket via la rubrique <a href="/tickets">Signalements & tickets</a> et le conseil syndical vous répondra dans les meilleurs délais.</p>
-	<p style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)"><Icon name="book-open" size={15} style="vertical-align:middle;margin-right:.3rem" />Consultez le <a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur complet</a> pour un guide pas à pas de toutes les fonctionnalités.</p>
+	<p style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)"><span style="vertical-align:middle;margin-right:.3rem;display:inline-flex"><Icon name="book-open" size={15} /></span>Consultez le <a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur complet</a> pour un guide pas à pas de toutes les fonctionnalités.</p>
 </div>
 
 <!-- Modal ajout / édition -->

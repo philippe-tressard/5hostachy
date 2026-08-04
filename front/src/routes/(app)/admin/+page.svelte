@@ -2312,7 +2312,7 @@ $: _siteNom = $siteNomStore;
 
     <!-- Graphe (barres CSS) — adaptatif au scope -->
     {#if telemetryData.chart.length > 0}
-      {@const maxVal = Math.max(...telemetryData.chart.map((x) => x.total), 1)}
+      {@const maxVal = Math.max(...telemetryData.chart.map((x: { total: number }) => x.total), 1)}
       {@const yTicks = (() => { const step = Math.ceil(maxVal / 4 / (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100)) * (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100); return [4,3,2,1,0].map(i => i * step); })()}
     <div class="card" style="margin-top:1.25rem">
       <h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
@@ -2347,7 +2347,7 @@ $: _siteNom = $siteNomStore;
         <thead><tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Utilisateurs</th><th style="text-align:right">%</th></tr></thead>
         <tbody>
           {#each telemetryData.top_pages as p}
-            {@const grandTotal = telemetryData.top_pages.reduce((s, x) => s + x.total, 0) || 1}
+            {@const grandTotal = telemetryData.top_pages.reduce((s: number, x: { total: number }) => s + x.total, 0) || 1}
             <tr>
               <td><code style="font-size:.82rem">{p.page}</code></td>
               <td style="text-align:right;font-weight:600">{p.total}</td>

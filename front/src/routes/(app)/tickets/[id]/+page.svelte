@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { tickets as ticketsApi, ApiError, type TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, ApiError, type TicketEvolution, type TicketMessage } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
@@ -16,17 +16,8 @@
 
 	$: _siteNom = $siteNomStore;
 
-	interface Message {
-		id: number;
-		contenu: string;
-		interne: boolean;
-		auteur: { id: number; prenom: string; nom: string; role: string };
-		cree_le: string;
-		fichiers_urls?: string[];
-	}
-
 	let ticket: any = null;
-	let messages: Message[] = [];
+	let messages: TicketMessage[] = [];
 	let evolutions: TicketEvolution[] = [];
 	let loading = true;
 	let newContent = '';

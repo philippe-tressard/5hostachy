@@ -392,7 +392,7 @@ import { onMount } from 'svelte';
 						<span style="display:block">
 							{#if lot.batiment_nom}{lot.batiment_nom} — {/if}
 							N° {lot.numero}
-							· {{appartement:'Appartement',cave:'Cave',parking:'Parking'}[lot.type] ?? lot.type}
+							· {({appartement:'Appartement',cave:'Cave',parking:'Parking'} as Record<string, string>)[lot.type] ?? lot.type}
 							{#if lot.type_appartement} ({lot.type_appartement}){/if}
 							{#if lot.etage !== null && lot.etage !== undefined}
 								· {lot.etage === 0 ? 'RDC' : (lot.etage < 0 ? 'SS ' + Math.abs(lot.etage) : lot.etage + (lot.etage === 1 ? 'er' : 'ème') + ' étage')}
