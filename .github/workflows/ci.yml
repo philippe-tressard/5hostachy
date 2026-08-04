@@ -116,6 +116,7 @@ jobs:
           bash boot-role-guard.sh   --selftest
           bash health-watch.sh      --selftest
           bash check-reliability.sh --selftest
+          bash export-hors-site.sh  --selftest
 
       - name: Contrats d'infra (logs rotés, chemins de sortie datés)
         # Deux régressions vécues le 31/07/2026, toutes deux invisibles pendant

@@ -115,8 +115,46 @@ redémarrer la stack.
 ## Risques connus
 - **Build OOM** : `npm run build` peut saturer la RAM du RPi → préférer `--nocache` en cas de build lourd
 - **health-watch failover** → peut créer un split-brain ; toujours vérifier `docker ps` sur les 2 RPi
-- **Sauvegardes** stockées uniquement sur le RPi actif (volume Docker non répliqué)
+- **Sauvegardes** : le volume `backups` n'est **pas** répliqué par `bascule.sh` (qui ne
+  synchronise que `uploads`, `whatsapp_auth` et `app_data`). Le rôle alternant chaque
+  nuit, chaque nœud n'accumule qu'un jour sur deux, et `_rotate_backups()` ne voit que
+  ses fichiers locaux → 7 versions ≈ 14 jours **à trous**, aucun nœud n'ayant celle de
+  la veille. Copie hors site : `export-hors-site.cmd` (voir ci-dessous)
 - **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
+
+## Copie hors site des sauvegardes (v2.37.0 — 04/08/2026)
+
+Avant cette date, **100 % des archives vivaient sur les deux RPi**, au même domicile,
+sur la même box et la même alimentation. Les deux nœuds protègent de la panne d'**un**
+nœud — jamais d'un `docker volume rm`, d'un rançongiciel ou d'un sinistre, qui
+emportent base + uploads + toutes les sauvegardes d'un coup
+(`standards/06-donnees-et-integrite.md` §6).
+
+- **Lancement : MANUEL depuis le poste** — double-clic sur `export-hors-site.cmd`, ou
+  `bash /c/Dev/5hostachy/export-hors-site.sh`. Destination par défaut : `C:\Backup`
+  (`EXPORT_DEST`), 14 versions (`EXPORT_KEEP`).
+- Le script choisit sa source par **comportement** (qui répond sur `/api/health` en
+  LAN), pas en lisant `.active` — et **s'abstient** en cas de split-brain : deux nœuds
+  qui servent = deux bases divergentes, en copier une au hasard puis faire tourner la
+  rotation détruirait la bonne.
+- Il **n'ouvre jamais `app.db`** sur un RPi : il ne lit que des `.tar.gz` clos.
+  L'`integrity_check` porte sur la copie extraite **sur le poste**.
+- Vérifications avant de déclarer la copie bonne : empreinte SHA-256 identique à la
+  source, `app.db` présent dans l'archive, `PRAGMA integrity_check`. Une copie non
+  validée est renommée `.invalide` — elle ne doit pas se présenter comme une
+  sauvegarde disponible. **Intégrité non vérifiable = échec, pas succès.**
+- Il poste son rapport sur le canal cron existant (`POST /admin/maintenance/rapport`,
+  `tache=export_hors_site`) → visible dans **Admin → Maintenance**, et le contrôle de
+  06:00 alerte au-delà de **7 jours** (seuil hebdomadaire assumé : le poste n'est pas
+  allumé en permanence, et une alerte quotidienne ignorée est un contrôle mort).
+- Le contrôle distingue **deux** questions : « l'export a-t-il tourné ? » et « la copie
+  est-elle fraîche ? ». Un export fidèle qui recopie chaque jour la même archive
+  périmée est un faux vert — verrouillé par `api/tests/test_sauvegarde_hors_site.py`.
+
+⚠️ **Portée** : le poste est au même domicile que les RPi. Cette copie couvre la perte
+d'un nœud, le `docker volume rm` et le rançongiciel visant les RPi — **pas l'incendie
+ni le vol**. Une destination réellement distante (S3 UE chiffré, disque tournant) reste
+à ajouter ; `EXPORT_DEST` et la boucle de vérification sont écrits pour l'accueillir.
 
 ## Sync DB manuelle (sans basculer)
 ⚠️ Copier `app.db` pendant que l'API écrit = copie potentiellement déchirée. On stoppe

@@ -490,6 +490,12 @@ def maintenance_history(
 _PERIODICITE_ATTENDUE_H = {
     "maintenance": 7 * 24,     # dimanche 03:00, sur les deux nœuds
     "bascule": 24,             # 02:00
+    #  Copie hors site : lancée À LA MAIN depuis le poste, qui n'est pas
+    #  allumé en permanence. Attendre 24 h ferait crier ce contrôle presque
+    #  tous les jours, et une alerte qui crie tout le temps finit ignorée —
+    #  c'est ainsi qu'un contrôle meurt (standards/07 §5). Une semaine est le
+    #  rythme réellement tenable ; au-delà, l'absence redevient un signal.
+    "export_hors_site": 7 * 24,
 }
 #
 #  Même principe pour l'agrégation de TÉLÉMÉTRIE : sa propre table

@@ -202,7 +202,10 @@ const LIBELLE_TACHE: Record<string, string> = {
 maintenance: 'Maintenance hebdomadaire',
 backup: 'Sauvegarde quotidienne',
 bascule: 'Bascule actif/standby',
-telemetrie: 'Agrégation télémétrie'
+telemetrie: 'Agrégation télémétrie',
+// Seule tâche lancée à la main depuis le poste : le libellé le dit, sinon une
+// « exécution manquante » se lirait comme une panne alors qu'il s'agit d'un oubli.
+export_hors_site: 'Copie hors site (manuelle)'
 };
 
 // « hygiene_locale » ne veut rien dire pour un lecteur : c'est le ménage que le

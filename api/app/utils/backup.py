@@ -13,6 +13,37 @@ from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauveg
 
 settings = get_settings()
 
+#  Nommage des archives — convention PORTEUSE DE SENS, pas cosmétique.
+#  L'horodatage dans le nom est déjà ce sur quoi repose la rotation (tri
+#  lexicographique = tri chronologique). `export-hors-site.sh` le remonte à
+#  l'API, et `health_monitor` le relit pour distinguer « l'export tourne » de
+#  « la copie hors site est fraîche ». Trois lecteurs, donc UN SEUL endroit où
+#  la convention est écrite, et un seul parseur.
+PREFIXE_ARCHIVE = "hostachy_backup_"
+MOTIF_ARCHIVE = f"{PREFIXE_ARCHIVE}*.tar.gz"
+_FORMAT_HORODATAGE = "%Y%m%d_%H%M%S"
+_SUFFIXE_ARCHIVE = ".tar.gz"
+
+
+def horodatage_archive(nom_fichier: str) -> datetime | None:
+    """Date UTC de création lue dans le nom d'une archive, ou None si illisible.
+
+    Rend None plutôt que de lever : un nom non conforme (fichier déposé à la
+    main, archive renommée) ne doit pas faire échouer un contrôle de santé —
+    il doit le faire répondre « je ne sais pas », ce que l'appelant traite
+    comme une anomalie et non comme un OK (standards/04 §1).
+    """
+    if not nom_fichier:
+        return None
+    base = os.path.basename(nom_fichier)
+    if not base.startswith(PREFIXE_ARCHIVE) or not base.endswith(_SUFFIXE_ARCHIVE):
+        return None
+    brut = base[len(PREFIXE_ARCHIVE): -len(_SUFFIXE_ARCHIVE)]
+    try:
+        return datetime.strptime(brut, _FORMAT_HORODATAGE)
+    except ValueError:
+        return None
+
 
 def run_backup(history_id: int | None = None):
     """
@@ -31,8 +62,8 @@ def run_backup(history_id: int | None = None):
 
         try:
             os.makedirs(settings.backup_dir, exist_ok=True)
-            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            filename = f"hostachy_backup_{ts}.tar.gz"
+            ts = datetime.utcnow().strftime(_FORMAT_HORODATAGE)
+            filename = f"{PREFIXE_ARCHIVE}{ts}{_SUFFIXE_ARCHIVE}"
             dest = os.path.join(settings.backup_dir, filename)
 
             db_path = settings.database_url.replace("sqlite:////", "/")
@@ -94,7 +125,7 @@ def _rotate_backups(session: Session):
     cfg: ConfigSauvegarde | None = session.exec(select(ConfigSauvegarde)).first()
     keep = cfg.nb_versions_conservees if cfg else settings.backup_keep_versions
 
-    pattern = os.path.join(settings.backup_dir, "hostachy_backup_*.tar.gz")
+    pattern = os.path.join(settings.backup_dir, MOTIF_ARCHIVE)
     files = sorted(glob.glob(pattern))  # order par date (timestamp dans le nom)
 
     to_delete = files[: max(0, len(files) - keep)]
