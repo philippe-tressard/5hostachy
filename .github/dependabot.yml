@@ -1,0 +1,81 @@
+# =============================================================================
+#  Dependabot — mises à jour de dépendances
+#
+#  POURQUOI cette configuration existe (04/08/2026) :
+#    Sans elle, Dependabot applique ses défauts, et ses défauts ne conviennent
+#    pas à ce projet. Deux problèmes constatés dès les deux premières PR :
+#
+#    1. ELLES VISAIENT `main`, c'est-à-dire la PRODUCTION. Or `auto-deploy.sh`
+#       déploie `origin/main` toutes les 5 minutes : fusionner une PR de
+#       dépendances aurait déployé sans passer par `dev`, sans pré-check, et
+#       sans que le standby soit resynchronisé. Tout le flux du projet
+#       court-circuité par un robot. → `target-branch: dev`.
+#
+#    2. ELLES GROUPAIENT TOUT ENSEMBLE. La PR pip mélangeait un correctif de
+#       sécurité (`python-multipart` 0.0.19 → 0.0.31, analyseur de
+#       téléversement) avec un saut de version MAJEURE de Pillow (11 → 12) et
+#       SIX versions majeures de WeasyPrint (63 → 69), moteur des documents
+#       imprimables. La PR était VERTE — parce qu'aucun test ne rend un PDF.
+#       Un correctif de sécurité qu'on ne peut pas fusionner sans embarquer
+#       deux sauts majeurs non vérifiés, c'est un correctif qu'on repousse.
+#
+#  D'OÙ LE DÉCOUPAGE CI-DESSOUS : les mises à jour mineures et correctives sont
+#  groupées (peu risquées, fusionnables d'un bloc) ; les MAJEURES arrivent
+#  SEULES, chacune dans sa PR, parce que chacune mérite d'être regardée et
+#  qu'une majeure noyée dans un groupe de douze ne l'est jamais.
+#
+#  ⚠️ Avant d'accepter une majeure de Pillow ou de WeasyPrint : il n'existe
+#  toujours AUCUN contrôle qui rende un document. Tant que ce garde-fou
+#  n'existe pas, leur vert ne prouve que l'installation, jamais le rendu.
+# =============================================================================
+version: 2
+
+updates:
+  # ── Backend Python ─────────────────────────────────────────────────────────
+  - package-ecosystem: pip
+    directory: /api
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      python-mineur:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      python-securite:
+        applies-to: security-updates
+        update-types: [minor, patch]
+    # Les majeures ne figurent dans aucun groupe : Dependabot leur ouvre donc
+    # une PR chacune, ce qui est exactement le but. Rien à déclarer pour ça.
+
+  # ── Frontend npm ───────────────────────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: /front
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-mineur:
+        applies-to: version-updates
+        update-types: [minor, patch]
+      npm-securite:
+        applies-to: security-updates
+        update-types: [minor, patch]
+
+  # ── Actions GitHub ─────────────────────────────────────────────────────────
+  # Une action figée sur une version vulnérable a accès au dépôt et aux
+  # secrets du workflow : elle mérite le même suivi que le code.
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(deps)"
