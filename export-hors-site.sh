@@ -97,6 +97,22 @@ decider_source() { # $1=code_rpi1 $2=code_rpi2 → rpi1|rpi2|split-brain|aucun
   echo "aucun"
 }
 
+# ── L'archive contient-elle bien la base ? ───────────────────────────────────
+# Prend le LISTING déjà produit, et ne fait aucune E/S — parce que la version
+# « en ligne » de ce test était fausse de deux façons (04/08/2026) :
+#   • `tar -tzf … | grep -qx app.db` : `grep -q` sort dès le premier match et
+#     ferme le tube ; `tar` meurt alors en SIGPIPE, et `set -o pipefail` propage
+#     cet échec. Le test rendait donc « absent » sur une archive qui contenait
+#     app.db — un faux négatif silencieux sur le contrôle le plus important ;
+#   • une comparaison par sous-chaîne ferait passer `uploads/app.db` pour la
+#     base. Le nom doit correspondre à la ligne ENTIÈRE.
+contient_app_db() { # $1=listing tar → oui|non
+  case $'\n'"${1:-}"$'\n' in
+    *$'\napp.db\n'*) echo "oui" ;;
+    *)              echo "non" ;;
+  esac
+}
+
 # ── L'archive tirée est-elle exploitable ? ───────────────────────────────────
 # Quatre conditions, toutes nécessaires. Une archive qu'on n'a pas su vérifier
 # n'est PAS déclarée saine : elle renvoie `erreur`, jamais `succes` — un
@@ -157,6 +173,19 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
   check "503 n'est pas un actif"    "rpi2"        "$(decider_source 503 200)"
   check "codes absents → aucun"     "aucun"       "$(decider_source)"
 
+  # Le faux négatif du 04/08/2026 : `tar | grep -q` sous pipefail rendait
+  # « absent » sur une archive contenant app.db. Le listing est désormais
+  # analysé hors de tout tube, et ces cas verrouillent l'analyse.
+  LISTING_OK=$'app.db\nuploads/\nuploads/doc.pdf'
+  check "app.db en tête de listing"  "oui"        "$(contient_app_db "$LISTING_OK")"
+  check "app.db seul"                "oui"        "$(contient_app_db 'app.db')"
+  check "listing sans base"          "non"        "$(contient_app_db $'uploads/\nuploads/doc.pdf')"
+  check "listing vide"               "non"        "$(contient_app_db '')"
+  # Le piège de la sous-chaîne : un fichier nommé app.db DANS uploads n'est pas
+  # la base. Une comparaison naïve l'accepterait.
+  check "uploads/app.db ne compte pas" "non"      "$(contient_app_db $'uploads/app.db\nuploads/x')"
+  check "suffixe app.db2 ne compte pas" "non"     "$(contient_app_db 'app.db2')"
+
   check "archive saine"             "succes"      "$(verdict_archive 1024 oui oui ok | cut -d'|' -f1)"
   check "archive vide"              "erreur"      "$(verdict_archive 0 oui oui ok | cut -d'|' -f1)"
   check "empreinte différente"      "erreur"      "$(verdict_archive 1024 non oui ok | cut -d'|' -f1)"
@@ -201,7 +230,10 @@ log "===== Export hors site ====="
 
 # ── 1. Quel nœud sert réellement ? ───────────────────────────────────────────
 IP1=$(role_ip rpi1); IP2=$(role_ip rpi2)
-sonde() { curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://$1/api/health" 2>/dev/null || echo "000"; }
+# curl écrit déjà `000` quand la connexion échoue : un `|| echo "000"` en plus
+# concaténait les deux et produisait `000000` dans le journal (vu le 04/08/2026).
+# Trompeur à lire, et fragile — la comparaison se fait sur la chaîne exacte.
+sonde() { curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://$1/api/health" 2>/dev/null; }
 CODE1=$(sonde "$IP1"); CODE2=$(sonde "$IP2")
 SOURCE_NOEUD=$(decider_source "$CODE1" "$CODE2")
 log "  Sonde LAN : rpi1=$CODE1 rpi2=$CODE2 → source = $SOURCE_NOEUD"
@@ -232,9 +264,21 @@ if [ -z "$VOL" ]; then
   exit 1
 fi
 
-DISTANT=$($SSH_CMD "$SSH_CIBLE" "sudo ls -1 '$VOL'/hostachy_backup_*.tar.gz 2>/dev/null | sort | tail -1")
+# `sudo sh -c` et non `sudo ls …*…` : le shell distant développe le motif AVANT
+# d'invoquer sudo, donc sous `ptressard`, qui ne peut pas lister
+# /var/lib/docker/volumes/. Le motif littéral arrivait alors à `ls`, qui
+# échouait, et `2>/dev/null` transformait cette erreur en « aucune archive » —
+# un KO déguisé en constat, exactement ce qu'interdit standards/04 §1.
+# Vécu le 04/08/2026 au premier lancement réel, avec 7 archives bien présentes.
+DISTANT=$($SSH_CMD "$SSH_CIBLE" "sudo sh -c \"ls -1 '$VOL'/hostachy_backup_*.tar.gz 2>/dev/null\"" | sort | tail -1)
 if [ -z "$DISTANT" ]; then
-  log "ERREUR: aucune archive sur $SOURCE_NOEUD ($VOL)."
+  # Distinguer « aucune archive » de « je n'ai pas pu regarder » : sans cette
+  # distinction, une panne de droits se lit comme une absence de sauvegarde.
+  if ! $SSH_CMD "$SSH_CIBLE" "sudo -n true" 2>/dev/null; then
+    log "ERREUR: sudo indisponible sur $SOURCE_NOEUD — état des sauvegardes INCONNU."
+  else
+    log "ERREUR: aucune archive sur $SOURCE_NOEUD ($VOL) — la sauvegarde de 03:00 ne produit rien."
+  fi
   exit 1
 fi
 ARCHIVE=$(basename "$DISTANT")
@@ -269,8 +313,8 @@ SHA_DST=$(sha256sum "$LOCAL" 2>/dev/null | awk '{print $1}')
 EMPREINTES="non"; [ -n "$SHA_SRC" ] && [ "$SHA_SRC" = "$SHA_DST" ] && EMPREINTES="oui"
 
 # ── 3. Vérifier la copie (sur le POSTE — jamais sur la base de production) ───
-CONTIENT="non"
-tar -tzf "$LOCAL" 2>/dev/null | grep -qx 'app.db' && CONTIENT="oui"
+LISTING=$(tar -tzf "$LOCAL" 2>/dev/null || true)
+CONTIENT=$(contient_app_db "$LISTING")
 
 if [ "$CONTIENT" = "oui" ]; then
   TMP=$(mktemp -d 2>/dev/null || echo "/tmp/export-hs-$$")
@@ -281,9 +325,15 @@ if [ "$CONTIENT" = "oui" ]; then
     if command -v sqlite3 >/dev/null 2>&1; then
       INTEGRITE=$(sqlite3 "$TMP/app.db" "PRAGMA integrity_check;" 2>&1 | head -1)
     else
+      # Python est un binaire Windows NATIF : il ne sait pas ouvrir un chemin
+      # MSYS (`/c/…`). Sans cette conversion, il rend FileNotFoundError et
+      # l'intégrité resterait « inconnue » — donc un échec — sur une archive
+      # pourtant saine. Vérifié le 04/08/2026.
+      CHEMIN_DB="$TMP/app.db"
+      command -v cygpath >/dev/null 2>&1 && CHEMIN_DB=$(cygpath -w "$TMP/app.db")
       for PY in python3 python py; do
         if command -v "$PY" >/dev/null 2>&1; then
-          INTEGRITE=$("$PY" -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); print(c.execute('PRAGMA integrity_check').fetchone()[0]); c.close()" "$TMP/app.db" 2>&1 | head -1)
+          INTEGRITE=$("$PY" -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); print(c.execute('PRAGMA integrity_check').fetchone()[0]); c.close()" "$CHEMIN_DB" 2>&1 | head -1)
           break
         fi
       done
@@ -318,7 +368,12 @@ fi
 # ── 5. Rapport à l'API (canal cron existant) ─────────────────────────────────
 # La clé est lue sur le nœud, pas recopiée sur le poste : un secret dupliqué est
 # un secret à faire tourner deux fois.
-MAINTENANCE_KEY=$($SSH_CMD "$SSH_CIBLE" "grep -E '^MAINTENANCE_KEY=' /opt/5hostachy/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\"'\''" 2>/dev/null)
+# Le dépouillement se fait ICI, pas dans la commande distante : imbriquer des
+# apostrophes et des guillemets dans un `tr` passé à ssh produisait une commande
+# invalide, et la clé revenait vide alors qu'elle est bien dans le .env
+# (04/08/2026). Les codes octaux \042 \047 évitent toute quote dans la source.
+LIGNE_CLE=$($SSH_CMD "$SSH_CIBLE" "grep -m1 '^MAINTENANCE_KEY=' /opt/5hostachy/.env" 2>/dev/null || true)
+MAINTENANCE_KEY=$(printf '%s' "${LIGNE_CLE#MAINTENANCE_KEY=}" | tr -d '\042\047\r')
 if [ -z "$MAINTENANCE_KEY" ]; then
   log "  ⚠ MAINTENANCE_KEY illisible — rapport non enregistré (l'export, lui, a bien eu lieu)."
 else
