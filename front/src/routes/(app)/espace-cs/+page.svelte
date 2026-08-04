@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
@@ -212,18 +212,58 @@
 		return reportPrestataires.find((p) => p.id === prestataireId)?.nom ?? `Prestataire #${prestataireId}`;
 	}
 
+	/* La classe `print-reporting` vit sur <body> : tant qu'elle y reste, elle
+	   déborde de cette page. Le nettoyage ne peut donc PAS dépendre du chemin
+	   nominal — il était posé après `window.print()`, si bien qu'une exception
+	   levée là le sautait, la classe restait, et la barre de navigation
+	   disparaissait dans TOUTE l'application jusqu'à un rechargement complet
+	   (signalé par l'utilisateur le 04/08/2026 depuis la vue « Relance syndic »).
+	   Même classe que le bridge WhatsApp du 24/07 : une fonction `async` dont
+	   personne n'attrape le rejet meurt sans un mot.
+	   Trois filets désormais, et `restaurer` est idempotente : `afterprint`
+	   (le signal fiable), `finally` (même si `print()` lève), et `onDestroy`
+	   (si on quitte la page avant la fin). */
+	let annulerImpression: (() => void) | null = null;
+
 	async function printReporting(title: string) {
 		if (typeof window === 'undefined' || typeof document === 'undefined') return;
-		reportPrintTitle = title;
-		document.body.classList.add('print-reporting');
-		const prevTitle = document.title;
+		const titrePrecedent = document.title;
 		const dateStr = new Date().toISOString().slice(0, 10);
 		const slug = title.replace(/^Reporting CS — /, '').replace(/[^\w\dÀ-ÿ]+/g, '-').replace(/-+$/, '');
-		document.title = `CS-${slug}-${dateStr}`;
-		await tick();
-		window.print();
-		setTimeout(() => { document.body.classList.remove('print-reporting'); document.title = prevTitle; }, 250);
+		const titreImpression = `CS-${slug}-${dateStr}`;
+
+		let fait = false;
+		const restaurer = () => {
+			if (fait) return;
+			fait = true;
+			document.body.classList.remove('print-reporting');
+			// Ne rendre le titre que s'il est encore le nôtre : si l'utilisateur a
+			// navigué entre-temps, l'écraser afficherait le titre d'une autre page.
+			if (document.title === titreImpression) document.title = titrePrecedent;
+			window.removeEventListener('afterprint', restaurer);
+			annulerImpression = null;
+		};
+		annulerImpression = restaurer;
+
+		try {
+			reportPrintTitle = title;
+			document.body.classList.add('print-reporting');
+			document.title = titreImpression;
+			await tick();
+			window.addEventListener('afterprint', restaurer);
+			window.print();
+		} catch (e) {
+			toast('error', "Impression impossible — l'affichage a été rétabli.");
+		} finally {
+			// `afterprint` n'est pas garanti partout : filet de sécurité. Volontairement
+			// LONG — un délai court retirerait la classe pendant qu'un aperçu est encore
+			// ouvert et gâcherait la mise en page imprimée. Le retard est sans effet
+			// visible, les règles ci-dessous ne s'appliquant qu'à l'impression.
+			setTimeout(restaurer, 60000);
+		}
 	}
+
+	onDestroy(() => annulerImpression?.());
 
 	async function loadPrestSynthese(prestId: number) {
 		reportPrestSynthId = prestId;
@@ -246,6 +286,13 @@
 			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
 			relance: 'Reporting CS — Relance syndic',
 		};
+		// Rien à imprimer : le dire, plutôt qu'ouvrir la boîte de dialogue sur une
+		// page vide. C'est le cas qu'a rencontré l'utilisateur (04/08/2026) — la vue
+		// « Relance syndic » n'affichait qu'un état vide, sans aucun ticket.
+		if (reportView === 'relance' && !relanceLoading && relanceList.length === 0) {
+			toast('info', 'Aucun ticket syndic en cours — rien à imprimer.');
+			return;
+		}
 		void printReporting(titles[reportView]);
 	}
 
@@ -3117,35 +3164,45 @@
 		.container.page { padding: 0 !important; }
 	}
 
-	:global(body.print-reporting .page-header),
-	:global(body.print-reporting .page-subtitle),
-	:global(body.print-reporting .tabs),
-	:global(body.print-reporting .tab-descriptif),
-	:global(body.print-reporting .no-print) {
-		display: none !important;
-	}
-	:global(body.print-reporting .sidebar),
-	:global(body.print-reporting .mobile-topbar),
-	:global(body.print-reporting .app-footer) {
-		display: none !important;
-	}
-	:global(body.print-reporting .app-content) {
-		margin-left: 0 !important;
-		max-width: 100% !important;
-		overflow: visible !important;
-	}
-	:global(body.print-reporting) {
-		overflow: visible !important;
-	}
-	:global(body.print-reporting .app-shell) {
-		overflow: visible !important;
-		min-height: auto !important;
-	}
-	:global(body.print-reporting .app-main) {
-		overflow: visible !important;
-	}
-	:global(body.print-reporting .reporting-print-header) {
-		display: block !important;
+	/* ⚠️ Ces règles étaient HORS de tout `@media print` : elles masquaient donc la
+	   barre de navigation À L'ÉCRAN dès que la classe était posée sur <body>.
+	   Tant que tout se passait bien, l'effet durait 250 ms et ne se voyait pas ;
+	   le jour où le nettoyage a été sauté, l'application est restée sans
+	   navigation jusqu'à un rechargement complet (04/08/2026).
+	   Elles ne servent qu'à la mise en page imprimée — aucune n'a de raison de
+	   toucher l'écran. Les enfermer ici supprime le rayon de dégâts : même si la
+	   classe restait collée, l'affichage serait intact. */
+	@media print {
+		:global(body.print-reporting .page-header),
+		:global(body.print-reporting .page-subtitle),
+		:global(body.print-reporting .tabs),
+		:global(body.print-reporting .tab-descriptif),
+		:global(body.print-reporting .no-print) {
+			display: none !important;
+		}
+		:global(body.print-reporting .sidebar),
+		:global(body.print-reporting .mobile-topbar),
+		:global(body.print-reporting .app-footer) {
+			display: none !important;
+		}
+		:global(body.print-reporting .app-content) {
+			margin-left: 0 !important;
+			max-width: 100% !important;
+			overflow: visible !important;
+		}
+		:global(body.print-reporting) {
+			overflow: visible !important;
+		}
+		:global(body.print-reporting .app-shell) {
+			overflow: visible !important;
+			min-height: auto !important;
+		}
+		:global(body.print-reporting .app-main) {
+			overflow: visible !important;
+		}
+		:global(body.print-reporting .reporting-print-header) {
+			display: block !important;
+		}
 	}
 
 	/* ── Renouvellements : frise contrats ─────────────────────────── */
