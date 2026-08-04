@@ -216,7 +216,8 @@ def test_le_script_declare_la_meme_tache_que_l_enum():
     """Le script poste `tache=export_hors_site` ; l'API interroge l'énumération.
     Rien ne relie ces deux chaînes — sauf ce test."""
     contenu = SCRIPT.read_text(encoding="utf-8")
-    assert f'"tache":"{TachePlanifiee.export_hors_site.value}"' in contenu
+    nom = TachePlanifiee.export_hors_site.value
+    assert f"rapport_payload {nom} " in contenu or f'"tache":"{nom}"' in contenu
 
 
 def test_le_script_remonte_les_cles_que_le_controle_relit():

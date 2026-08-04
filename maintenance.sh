@@ -143,12 +143,15 @@ hygiene_locale() {
 #  Cette fonction ne fait JAMAIS échouer la maintenance : le ménage a déjà eu
 #  lieu quand elle s'exécute, et perdre le rapport ne doit pas transformer un
 #  succès en échec.
+#  Depuis le 04/08/2026, la construction et l'envoi vivent dans `lib-rapport.sh` :
+#  `bascule.sh` en avait besoin aussi, et recopier cette fonction aurait figé deux
+#  formats de charge utile destinés à diverger. Ce qui reste ici est ce qui est
+#  PROPRE à la maintenance : le choix de la cible selon la portée, et ses chiffres.
 envoyer_rapport() {
-    local portee="$1" cible="http://localhost" ip=""
+    local portee="$1" cible="http://localhost" ip="" cle=""
 
-    MAINTENANCE_KEY=$(grep -E '^MAINTENANCE_KEY=' "$REPO/.env" 2>/dev/null \
-        | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'") || MAINTENANCE_KEY=""
-    if [ -z "$MAINTENANCE_KEY" ]; then
+    command -v rapport_payload >/dev/null 2>&1 || source "$REPO/lib-rapport.sh" 2>/dev/null || true
+    if ! cle=$(rapport_cle "$REPO"); then
         log "  ⚠ MAINTENANCE_KEY absent du .env — rapport non enregistré"
         return 0
     fi
@@ -164,32 +167,20 @@ envoyer_rapport() {
         cible="http://$ip"
     fi
 
-    local details erreur_json duree fin
+    local details duree fin
     fin=$(date -u +%Y-%m-%dT%H:%M:%S)
     duree=$(( SECONDS - MAINTE_START ))
-    erreur_json=$(echo "${GLOBAL_ERREUR:-}" | sed 's/"/\\"/g')
     details=$(printf \
         '{"images":"%s","cache_age":"%s","cache_plafond":"%s","lignes_rotees":%d,"tokens":%s,"prt":%s,"notifications":%s,"historique":%s,"emails":%s}' \
         "${HYG_IMAGES//\"/}" "${HYG_CACHE_AGE//\"/}" "${HYG_CACHE_PLAFOND//\"/}" \
         "${HYG_LIGNES_ROTEES:-0}" "${DELETED:-0}" "${DELETED_PRT:-0}" \
         "${DELETED_NOTIF:-0}" "${DELETED_HIST:-0}" "${DELETED_EMAILS:-0}")
 
-    local payload http
-    payload=$(printf \
-        '{"tache":"maintenance","noeud":"%s","portee":"%s","statut":"%s","tokens_supprimes":%s,"taille_db_octets":%s,"duree_secondes":%d,"details":%s,"erreur":"%s","cree_le":"%s","terminee_le":"%s"}' \
-        "${SELF:-}" "$portee" "$GLOBAL_STATUT" "${DELETED:-0}" "${DB_SIZE:-null}" \
-        "$duree" "$details" "$erreur_json" "$MAINTE_DEBUT" "$fin")
-
-    http=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-        -X POST "$cible/api/admin/maintenance/rapport" \
-        -H "Content-Type: application/json" \
-        -H "x-maintenance-key: $MAINTENANCE_KEY" \
-        -d "$payload" 2>/dev/null) || http="000"
-    if [ "$http" = "201" ]; then
-        log "  → Rapport $portee enregistré sur $cible (HTTP $http)"
-    else
-        log "  ⚠ Rapport $portee non enregistré sur $cible (HTTP $http)"
-    fi
+    rapport_envoyer "$cible" "$cle" \
+        "$(rapport_payload maintenance "${SELF:-}" "$portee" "$GLOBAL_STATUT" "$duree" \
+            "$details" "${GLOBAL_ERREUR:-}" "$MAINTE_DEBUT" "$fin" \
+            "${DELETED:-0}" "${DB_SIZE:-null}")" \
+        "Rapport $portee"
     return 0
 }
 
