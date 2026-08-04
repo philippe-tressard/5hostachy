@@ -243,7 +243,16 @@ app.include_router(flux.router)
 app.include_router(signalements.router)
 
 # Fichiers statiques (photos uploadées)
-uploads_dir = Path("/app/uploads")
+#  `UPLOADS_DIR` plutôt qu'un chemin figé : le motif existe déjà dans
+#  `routers/documents.py` et `utils/fichiers.py`, donc on l'applique à
+#  l'identique (CLAUDE.md — un pattern présent ≥ 2 fois fait loi). En
+#  production rien ne change, la variable n'étant pas définie.
+#  Ce qu'il débloque : importer `app.main` hors conteneur. Le `mkdir` d'un
+#  chemin absolu échouait sur un poste de développement et sur un exécuteur
+#  d'intégration continue — ce qui rendait l'application intestable dans son
+#  ensemble, et laissait passer toute rupture d'assemblage (cf.
+#  tests/test_demarrage.py).
+uploads_dir = Path(_os.getenv("UPLOADS_DIR", "/app/uploads"))
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
