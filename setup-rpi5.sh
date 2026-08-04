@@ -21,8 +21,7 @@ ENABLE_CLOUDFLARE=false
 ENABLE_WATCHTOWER=false
 INSTALL_DIR="/opt/5hostachy"
 DATA_DIR="/data/5hostachy"
-VERSION="1.3.0"
-BACKUP_DIR="${DATA_DIR}/backups"
+VERSION="1.4.0"
 APP_USER="hostachy"
 
 while [[ $# -gt 0 ]]; do
@@ -112,7 +111,7 @@ fi
 # =============================================================================
 info "CrÃ©ation de l'arborescence..."
 mkdir -p "${INSTALL_DIR}"/{caddy,front,api,scripts}
-mkdir -p "${DATA_DIR}"/{db,backups}
+mkdir -p "${DATA_DIR}/db"
 chown -R "${APP_USER}:${APP_USER}" "${INSTALL_DIR}" "${DATA_DIR}"
 success "Arborescence crÃ©Ã©e."
 
@@ -524,47 +523,40 @@ EOF
 success "requirements.txt API gÃ©nÃ©rÃ©."
 
 # =============================================================================
-# 6. SCRIPT DE BACKUP SQLite
+# 6. SAUVEGARDE - VOLONTAIREMENT ABSENTE DE CET INSTALLEUR
 # =============================================================================
-info "CrÃ©ation du script de backup..."
-cat > "${INSTALL_DIR}/scripts/backup.sh" <<EOF
-#!/usr/bin/env bash
-# Backup journalier de la base SQLite
-set -euo pipefail
-
-DB_FILE="${DATA_DIR}/db/app.db"
-BACKUP_DIR="${BACKUP_DIR}"
-TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="\${BACKUP_DIR}/app_\${TIMESTAMP}.db"
-KEEP_DAYS=30
-
-if [[ ! -f "\${DB_FILE}" ]]; then
-  echo "Base de donnÃ©es introuvable : \${DB_FILE}"
-  exit 1
-fi
-
-# Backup atomique SQLite
-sqlite3 "\${DB_FILE}" ".backup '\${BACKUP_FILE}'"
-gzip "\${BACKUP_FILE}"
-
-# Nettoyage des backups > KEEP_DAYS jours
-find "\${BACKUP_DIR}" -name "*.db.gz" -mtime +\${KEEP_DAYS} -delete
-
-echo "Backup crÃ©Ã© : \${BACKUP_FILE}.gz"
-EOF
-chmod +x "${INSTALL_DIR}/scripts/backup.sh"
-success "Script de backup crÃ©Ã©."
-
-# Cron journalier Ã  3h du matin
-# Nom du log conforme au motif /var/log/hostachy-*.log : c'est CE motif que
-# maintenance.sh fait tourner. « 5hostachy-backup.log » y échappait et n'aurait
-# jamais été roté sur un nœud installé par ce script (contrôlé en CI depuis le
-# 31/07/2026, après le cas hostachy-reliability.log).
-CRON_JOB="0 3 * * * ${APP_USER} ${INSTALL_DIR}/scripts/backup.sh >> /var/log/hostachy-backup.log 2>&1"
-if ! grep -qF "hostachy-backup" /etc/crontab 2>/dev/null; then
-  echo "${CRON_JOB}" >> /etc/crontab
-  success "Cron backup configurÃ© (tous les jours Ã  03h00)."
-fi
+#
+# Cette section creait `scripts/backup.sh` (un `sqlite3 ... ".backup"` cote HOTE)
+# et l'installait dans /etc/crontab a 03:00. SUPPRIMEE le 04/08/2026.
+#
+# POURQUOI - ce cron est le motif exact que la regle d'or anti-corruption
+# interdit (cf. CLAUDE.md et .claude/skills/infra-rpi) : un process TIERS qui
+# ouvre `app.db` pendant que l'API tourne. Les connexions du pool SQLAlchemy
+# sont ouvertes mais SANS VERROU quand elles sont idle ; le process tiers se
+# croit donc derniere connexion, checkpointe, puis `unlink` les fichiers WAL et
+# SHM sous le pool. L'API ecrit ensuite dans des inodes orphelins : writes
+# invisibles aux autres connexions, `disk I/O error` en rafales, 503, puis
+# PERTE DES DONNEES au prochain arret. Trois incidents a ce jour : corruptions
+# `telemetry_event` des 05 et 17/06/2026, et panne de connexion du 17/07/2026
+# (~12 h d'ecritures perdues, 2 publications).
+#
+# Ce script date du 25/03/2026, c'est-a-dire de l'epoque MONO-RPi : avant la
+# haute disponibilite (bascule.sh, 18/04/2026) et avant la sauvegarde
+# in-process. Personne ne l'avait relu depuis. Constate sur rpi1 le 04/08/2026 :
+# la ligne cron etait toujours dans /etc/crontab, inoffensive uniquement parce
+# que le script qu'elle appelle avait disparu - un piege arme, en attente d'une
+# reinstallation pour se declencher.
+#
+# CE QUI SAUVEGARDE AUJOURD'HUI, et qui n'a rien a faire ici :
+#   . api/app/utils/backup.py - job APScheduler 03:00, IN-PROCESS (meme
+#     connexion que l'application), avec `PRAGMA quick_check` prealable : une
+#     base corrompue annule la sauvegarde au lieu d'ecraser les archives saines.
+#   . export-hors-site.sh - copie verifiee hors des deux RPi, lancee a la main.
+#
+# NE PAS REINTRODUIRE de sauvegarde ici. Un installeur qui pose un piege est un
+# piege differe : la prochaine reinstallation le rearmerait sans que personne
+# ne s'en apercoive. Un garde-fou CI (job `test-scripts`) refuse desormais tout
+# `sqlite3` visant `app.db` dans un script versionne.
 
 # =============================================================================
 # 7. SCRIPT DE DÃ‰PLOIEMENT

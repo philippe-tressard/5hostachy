@@ -28,6 +28,7 @@ set -euo pipefail
 REPO=/opt/5hostachy
 FLAG="$REPO/.active"
 DRY_RUN=false
+BASCULE_DEBUT=$(date -u +%Y-%m-%dT%H:%M:%S)   # horodatage du rapport de phase 7
 ALERT_EMAIL="ptressard@icloud.com"
 PUBLIC_URL="https://5hostachy.fr/api/health"
 HEALTH_TIMEOUT=150  # secondes max pour que l'API peer réponde (marge pour démarrage à froid rpi2 sous contention I/O ; rollback sûr = attendre plus ne coûte rien)
@@ -418,5 +419,37 @@ run "sudo systemctl disable cloudflared"
 # Supprimer le lock bascule sur le peer (la bascule est terminée)
 run "$SSH_CMD ptressard@$PEER_IP 'rm -f /opt/5hostachy/.bascule-lock'"
 log "  → Lock bascule supprimé sur le peer."
+
+# ── Rapport à l'application ──────────────────────────────────────────────────
+# POURQUOI (04/08/2026) : jusqu'ici la bascule ne rendait compte à personne. La
+# ligne « Bascule actif/standby » de l'écran Admin → Maintenance affichait donc
+# « Jamais exécutée » EN PERMANENCE, alors qu'elle réussissait chaque nuit — et,
+# plus grave, l'écran serait resté IDENTIQUE si elle s'était arrêtée pour de bon.
+# Un rouge permanent ne signale rien : c'est le battement manquant de
+# standards/04 §4. Elle alerte désormais quand elle échoue (send_alert_email,
+# déjà en place) ET rend compte quand elle réussit — les deux sont nécessaires,
+# une alerte ne prouve jamais que la tâche tourne encore.
+#
+# La cible est le PEER : les flags viennent d'être inversés, c'est lui qui porte
+# maintenant l'API. Poster sur soi-même échouerait — même erreur que celle
+# corrigée le 02/08 pour l'hygiène locale du standby.
+#
+# Placé après `trap - ERR` : la bascule est committée. Perdre le rapport ne doit
+# en aucun cas transformer une bascule réussie en échec, d'où le `|| true`.
+if ! $DRY_RUN; then
+  (
+    source "$REPO/lib-rapport.sh" 2>/dev/null || exit 0
+    cle=$(rapport_cle "$REPO") || { log "  ⚠ MAINTENANCE_KEY illisible — rapport de bascule non enregistré"; exit 0; }
+    fin=$(date -u +%Y-%m-%dT%H:%M:%S)
+    commit="${LOCAL_HEAD:-}"; commit="${commit:0:7}"
+    details=$(printf '{"depuis":"%s","vers":"%s","commit":"%s"}' "$SELF" "$PEER" "$commit")
+    # `noeud` = QUI a agi (comme dans maintenance.sh), pas qui en hérite : c'est
+    # l'ancien actif qui exécute la bascule. Le nœud devenu actif est dans `vers`.
+    rapport_envoyer "http://$PEER_IP" "$cle" \
+      "$(rapport_payload bascule "$SELF" applicative succes "$SECONDS" \
+          "$details" '' "$BASCULE_DEBUT" "$fin")" \
+      "Rapport bascule"
+  ) || true
+fi
 
 log "===== Bascule terminée : $PEER est maintenant actif ====="

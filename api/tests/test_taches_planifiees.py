@@ -61,6 +61,47 @@ def test_taches_couvrent_les_crons_reels():
     assert "export_hors_site" in valeurs
 
 
+def test_toute_tache_attendue_a_un_producteur():
+    """Une tâche inscrite au tableau d'attente doit avoir quelqu'un qui la poste.
+
+    POURQUOI (04/08/2026) : `bascule` figurait dans `_PERIODICITE_ATTENDUE_H`, mais
+    **aucun script ne postait jamais `tache=bascule`**. La ligne « Bascule
+    actif/standby » affichait donc « Jamais exécutée » en permanence, alors que la
+    bascule réussissait chaque nuit depuis avril.
+
+    Deux dégâts, et le second est le vrai : la ligne apprenait une chose fausse, et
+    surtout **elle serait restée identique si la bascule s'était arrêtée pour de
+    bon**. Un rouge permanent ne peut plus rien signaler — c'est une alerte qu'on
+    apprend à ignorer, donc un contrôle mort (standards/07 §5).
+
+    Ce test verrouille la classe et non le cas : toute tâche ajoutée au tableau sans
+    producteur échouera ici, avant d'aller peindre un faux rouge sur l'écran.
+    """
+    from pathlib import Path
+
+    from app.routers.admin import _PERIODICITE_ATTENDUE_H
+
+    racine = Path(__file__).resolve().parents[2]
+    scripts = {p.name: p.read_text(encoding="utf-8") for p in racine.glob("*.sh")}
+    assert len(scripts) >= 10, "chemin de scan cassé — ce test serait vert à vide"
+
+    # Deux formes possibles : la charge utile mutualisée (`rapport_payload <tache>`,
+    # cf. lib-rapport.sh) ou un `printf` local. Ne chercher qu'une des deux rendrait
+    # ce test faux au premier refactor — et un test faux est pire qu'aucun test.
+    for tache in _PERIODICITE_ATTENDUE_H:
+        producteurs = [
+            nom for nom, src in scripts.items()
+            if f'"tache":"{tache}"' in src or f"rapport_payload {tache} " in src
+        ]
+        assert producteurs, (
+            f"la tâche « {tache} » est attendue toutes les "
+            f"{_PERIODICITE_ATTENDUE_H[tache]}h mais AUCUN script ne la poste : "
+            f"elle affichera « Jamais exécutée » pour toujours, et son passage au "
+            f"rouge ne voudra jamais rien dire. Soit un script la rapporte "
+            f"(cf. lib-rapport.sh), soit elle sort du tableau."
+        )
+
+
 def test_export_hors_site_est_attendu_avec_une_cadence_tenable():
     """La copie hors site est suivie — mais à un rythme réellement soutenable.
 

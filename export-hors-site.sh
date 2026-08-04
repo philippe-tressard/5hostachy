@@ -384,20 +384,17 @@ else
   # faux vert — c'est exactement ce cas que le champ permet de démasquer.
   DETAILS=$(printf '{"archive":"%s","taille_octets":%s,"integrite":"%s","empreinte_verifiee":"%s","destination":"%s","versions_conservees":%s}' \
     "$ARCHIVE" "${OCTETS:-0}" "${INTEGRITE//\"/}" "$EMPREINTES" "${EXPORT_DEST//\"/}" "${EXPORT_KEEP:-0}")
-  PAYLOAD=$(printf '{"tache":"export_hors_site","noeud":"%s","portee":"applicative","statut":"%s","duree_secondes":%d,"details":%s,"erreur":"%s","cree_le":"%s","terminee_le":"%s"}' \
-    "$SOURCE_NOEUD" "$STATUT" "$((SECONDS - T0))" "$DETAILS" \
-    "$([ "$STATUT" = "succes" ] && echo "" || echo "${MESSAGE//\"/}")" "$DEBUT" "$FIN")
 
-  HTTP=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
-    -X POST "http://$SOURCE_IP/api/admin/maintenance/rapport" \
-    -H "Content-Type: application/json" \
-    -H "x-maintenance-key: $MAINTENANCE_KEY" \
-    -d "$PAYLOAD" 2>/dev/null) || HTTP="000"
-  if [ "$HTTP" = "201" ]; then
-    log "  → Rapport enregistré sur $SOURCE_NOEUD (HTTP $HTTP)."
-  else
-    log "  ⚠ Rapport non enregistré (HTTP $HTTP) — le contrôle de 06:00 signalera l'absence."
-  fi
+  # Construction et envoi mutualisés (lib-rapport.sh) : trois scripts rendent
+  # compte, un seul sait fabriquer la charge utile. La clé, elle, est lue par
+  # SSH sur le nœud ci-dessus et non dans un `.env` local — ce script tourne sur
+  # le poste, qui n'en a pas.
+  source "$SCRIPT_DIR/lib-rapport.sh"
+  rapport_envoyer "http://$SOURCE_IP" "$MAINTENANCE_KEY" \
+    "$(rapport_payload export_hors_site "$SOURCE_NOEUD" applicative "$STATUT" \
+        "$((SECONDS - T0))" "$DETAILS" \
+        "$([ "$STATUT" = "succes" ] || printf '%s' "$MESSAGE")" "$DEBUT" "$FIN")" \
+    "Rapport"
 fi
 
 # ── 6. Résumé lisible ────────────────────────────────────────────────────────
