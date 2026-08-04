@@ -183,6 +183,17 @@ export interface RelanceSyndicResponse {
 	tickets: Ticket[];
 }
 
+/** Message d'un fil de ticket. Vit ici, pas dans la page : le client TypeScript
+ *  est la source unique des types d'API (cf. CLAUDE.md, checklist backend). */
+export interface TicketMessage {
+	id: number;
+	contenu: string;
+	interne: boolean;
+	auteur: { id: number; prenom: string; nom: string; role: string };
+	cree_le: string;
+	fichiers_urls?: string[];
+}
+
 export interface TicketEvolution {
 	id: number;
 	ticket_id: number;
@@ -284,9 +295,9 @@ export const tickets = {
 	create: (data: unknown) => api.post<Ticket>('/tickets', data),
 	update: (id: number, data: unknown) => api.patch<Ticket>(`/tickets/${id}`, data),
 	delete: (id: number) => api.delete(`/tickets/${id}`),
-	messages: (id: number) => api.get(`/tickets/${id}/messages`),
+	messages: (id: number) => api.get<TicketMessage[]>(`/tickets/${id}/messages`),
 	addMessage: (id: number, data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
-		api.post(`/tickets/${id}/messages`, data),
+		api.post<TicketMessage>(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
 	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
@@ -674,7 +685,9 @@ export const diagnostics = {
 		}
 		return res.json();
 	},
-	updateRapport: (id: number, data: { titre?: string; date_rapport?: string | null }) =>
+	// `synthese` est bien géré par l'API (`if "synthese" in body.model_fields_set`)
+	// et stocké sur le modèle : c'est la signature d'ici qui était en retard.
+	updateRapport: (id: number, data: { titre?: string; date_rapport?: string | null; synthese?: string | null }) =>
 		api.patch<any>(`/diagnostics/rapports/${id}`, data),
 	deleteRapport: (id: number) => api.delete(`/diagnostics/rapports/${id}`),
 	downloadUrl: (id: number) => `${BASE}/diagnostics/rapports/${id}/télécharger`,

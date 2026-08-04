@@ -13,6 +13,9 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
+	/** Posé sur le champ fichier, pour qu'un `<label for=…>` extérieur le désigne
+	 *  réellement — sans lui, l'étiquette ne pointait sur rien. */
+	export let id: string | undefined = undefined;
 	export let currentUrl: string | undefined = undefined;
 	export let placeholder = '\u{1F4F7}';
 	export let label = 'Changer la photo';
@@ -73,6 +76,7 @@
 
 	<input
 		bind:this={input}
+		{id}
 		type="file"
 		{accept}
 		style="display:none"
