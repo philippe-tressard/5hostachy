@@ -7,6 +7,7 @@
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
@@ -310,6 +311,20 @@
 				<div>
 					<h1 class="hero-greeting">{greeting} {$currentUser?.prenom}{#if lotLabel} <span class="hero-lot-inline">— {lotLabel}</span>{/if}{#if roleLabels} <span class="hero-role-inline">· {roleLabels}</span>{/if}</h1>
 				</div>
+				<!-- Raccourci vers le profil. Sans photo, la pastille porte un
+				     crayon : c'est l'invitation à en déposer une, sans texte ni
+				     bandeau qui encombrerait l'en-tête. -->
+				<a
+					class="hero-avatar"
+					href="/profil"
+					title={$currentUser?.photo_url ? 'Mon profil' : 'Mon profil — ajouter une photo'}
+					aria-label={$currentUser?.photo_url ? 'Mon profil' : 'Mon profil — ajouter une photo de profil'}
+				>
+					<Avatar photoUrl={$currentUser?.photo_url} prenom={$currentUser?.prenom} nom={$currentUser?.nom} />
+					{#if !$currentUser?.photo_url}
+						<span class="hero-avatar-badge" aria-hidden="true"><Icon name="pencil" size={9} /></span>
+					{/if}
+				</a>
 			</div>
 		</div>
 	</div>
@@ -625,7 +640,31 @@
 		background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-secondary) 50%, var(--color-accent) 100%);
 	}
 	.hero-content { position: relative; z-index: 1; }
-	.hero-top { display: flex; justify-content: space-between; align-items: flex-start; }
+	.hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; }
+	/* L'anneau clair détache la pastille du dégradé bleu ; le fond de repli des
+	   initiales reste translucide pour ne pas concurrencer la salutation. */
+	.hero-avatar {
+		position: relative; flex-shrink: 0;
+		/* Cible tactile ≥ 44 px (2,6 rem + l'anneau) — atteignable au pouce. */
+		display: flex; align-items: center; justify-content: center;
+		min-width: 44px; min-height: 44px;
+		padding: 2px; border-radius: 50%;
+		background: rgba(255, 255, 255, .3);
+		text-decoration: none;
+		transition: background .2s ease, transform .2s ease;
+		--avatar-size: 2.6rem;
+		--avatar-bg: rgba(255, 255, 255, .18);
+		--avatar-color: #fff;
+	}
+	.hero-avatar:hover { background: rgba(255, 255, 255, .6); transform: scale(1.04); }
+	.hero-avatar:focus-visible { outline: 2px solid var(--color-accent, #C9983A); outline-offset: 3px; }
+	.hero-avatar-badge {
+		position: absolute; right: -1px; bottom: -1px;
+		width: 1.05rem; height: 1.05rem; border-radius: 50%;
+		background: var(--color-accent, #C9983A); color: #fff;
+		display: flex; align-items: center; justify-content: center;
+		box-shadow: 0 0 0 2px var(--color-primary);
+	}
 	.hero-greeting { font-size: 1.35rem; font-weight: 700; color: var(--color-text-inverse); margin: 0; line-height: 1.3; }
 	.hero-lot-inline { font-size: .85rem; font-weight: 400; color: rgba(255,255,255,.75); }
 	.hero-role-inline { font-size: .75rem; font-weight: 400; color: rgba(255,255,255,.55); letter-spacing: .02em; }
