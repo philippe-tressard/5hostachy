@@ -2248,7 +2248,11 @@
 									<span class="badge badge-red">🚫 Non relançable{t.non_relancable_motif ? ` — ${t.non_relancable_motif}` : ''}</span>
 								{/if}
 								{#if !isEditingMotif}
-									<button class="btn-icon" style="font-size:.75rem;padding:1px 6px" title={t.non_relancable ? 'Retirer le tag non-relançable' : 'Marquer comme non-relançable'}
+									<!-- Libellé à l'infinitif : posé au milieu des badges d'état, « Non
+									     relançable » se lisait comme un ÉTAT alors que c'est l'ACTION de
+									     le poser. Les sept lignes l'affichaient sans qu'aucun ticket ne
+									     le soit (signalé le 04/08/2026). -->
+									<button class="btn-icon relance-tag-action no-print" title={t.non_relancable ? 'Retirer le tag non-relançable' : 'Marquer comme non-relançable'}
 										on:click={() => {
 											if (t.non_relancable) {
 												saveNonRelancable(t, false, '');
@@ -2257,7 +2261,7 @@
 												relanceMotifTemp = t.non_relancable_motif ?? '';
 											}
 										}}>
-										{t.non_relancable ? '✅ Réactiver' : '🚫 Non relançable'}
+										{t.non_relancable ? '✅ Réactiver' : '🚫 Marquer non relançable'}
 									</button>
 								{:else}
 									<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
@@ -2272,7 +2276,7 @@
 					{/each}
 				</div>
 
-				<div style="display:flex;justify-content:flex-end">
+				<div class="no-print" style="display:flex;justify-content:flex-end">
 					<button class="btn btn-primary" disabled={relanceSending || relanceSelected.size === 0}
 						on:click={envoiRelance}>
 						{relanceSending ? '…' : `📧 Envoyer la relance (${relanceSelected.size} ticket${relanceSelected.size > 1 ? 's' : ''})`}
@@ -3330,6 +3334,10 @@
   .relance-item-pending { border-left-color: var(--color-text-muted); background: var(--color-bg-subtle, #f9fafb); }
   .relance-item-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
   .relance-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
+  /* `nowrap` comme `.relance-numero` juste en dessous : sans lui le libellé se
+     coupait entre « Non » et « relançable », et la seconde ligne chevauchait le
+     badge voisin — à l'écran comme à l'impression. */
+  .relance-tag-action { font-size: .75rem; padding: 1px 6px; white-space: nowrap; }
   .relance-numero { font-size: .8rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
   .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
   .relance-item-right { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-shrink: 0; }
