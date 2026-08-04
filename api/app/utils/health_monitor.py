@@ -1,4 +1,6 @@
 """Vérification quotidienne de santé du système — WhatsApp, sauvegardes, disque."""
+import glob
+import json
 import logging
 import os
 import shutil
@@ -7,13 +9,21 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from sqlmodel import Session, select
 
+from app.config import get_settings
 from app.database import SessionLocal
 from app.utils.dates_fr import datetime_longue
-from app.models.core import ConfigSite, HistoriqueSauvegarde, StatutSauvegarde, WhatsAppLog
+from app.models.core import (
+    ConfigSite, HistoriqueMaintenance, HistoriqueSauvegarde, StatutSauvegarde,
+    TachePlanifiee, WhatsAppLog,
+)
 
 logger = logging.getLogger(__name__)
 
 _WA_KEYS = {"whatsapp_enabled", "whatsapp_api_url", "whatsapp_api_key"}
+
+#  Âge au-delà duquel l'archive locale la plus récente est anormale : le cron
+#  de sauvegarde tourne à 03:00 et ce contrôle à 06:00, sur le même nœud.
+_AGE_MAX_ARCHIVE_LOCALE_H = 25
 
 
 def _check_whatsapp(session: Session) -> list[str]:
@@ -93,6 +103,152 @@ def _check_backups(session: Session) -> list[str]:
     if last_any and last_any.statut == StatutSauvegarde.echouee:
         issues.append(
             f"La dernière sauvegarde a échoué : {last_any.message_erreur or 'erreur inconnue'}."
+        )
+
+    issues += _check_archive_locale()
+    return issues
+
+
+def _check_archive_locale() -> list[str]:
+    """Vérifie qu'une archive RÉELLE et récente existe sur ce nœud.
+
+    POURQUOI ce contrôle s'ajoute à celui de l'historique (04/08/2026) :
+    `historique_sauvegarde` vit dans `app.db`, que `bascule.sh` réplique sur le
+    peer — mais le volume Docker `backups`, lui, n'est jamais répliqué. Une
+    ligne « réussie » ne prouvait donc PAS qu'un fichier existe : elle prouvait
+    qu'une ligne a été écrite. Volume vidé, disque plein, archive tronquée,
+    rotation trop agressive — le contrôle restait vert dans tous ces cas.
+    C'est « vérifier l'artefact déclaré plutôt que le fait » (standards/04).
+
+    Le contrôle tourne à 06:00 sur le nœud actif, qui a produit la sauvegarde de
+    03:00 trois heures plus tôt : en marche nominale, une archive fraîche est
+    forcément là. Après un failover survenu entre 03:00 et 06:00, ce nœud n'en a
+    effectivement pas — et le signaler est correct, pas excessif : cela veut dire
+    que si l'autre nœud est perdu, l'archive la plus récente a deux jours.
+    """
+    from app.utils.backup import MOTIF_ARCHIVE, horodatage_archive
+
+    repertoire = get_settings().backup_dir
+    try:
+        chemins = sorted(glob.glob(os.path.join(repertoire, MOTIF_ARCHIVE)))
+    except OSError as exc:
+        return [f"Répertoire de sauvegarde illisible ({repertoire}) : {exc}."]
+
+    if not chemins:
+        return [
+            f"Aucun fichier de sauvegarde présent sur ce nœud ({repertoire}), "
+            f"alors que l'historique en annonce. Le volume `backups` n'est pas "
+            f"répliqué entre les RPi : vérifier Admin → Sauvegardes."
+        ]
+
+    recent = chemins[-1]
+    nom = os.path.basename(recent)
+    try:
+        taille = os.path.getsize(recent)
+    except OSError as exc:
+        return [f"Archive la plus récente illisible ({nom}) : {exc}."]
+
+    if taille == 0:
+        return [f"L'archive la plus récente est VIDE (0 octet) : {nom}."]
+
+    horodatage = horodatage_archive(nom)
+    if horodatage is None:
+        # Ne pas savoir dater n'est pas un OK : c'est un INCONNU, donc une anomalie.
+        return [f"Archive au nom non conforme, impossible d'en vérifier l'âge : {nom}."]
+
+    age = datetime.utcnow() - horodatage
+    if age > timedelta(hours=_AGE_MAX_ARCHIVE_LOCALE_H):
+        heures = int(age.total_seconds() / 3600)
+        return [
+            f"L'archive la plus récente présente sur ce nœud date de {heures}h "
+            f"({nom}) — au-delà des {_AGE_MAX_ARCHIVE_LOCALE_H}h attendues."
+        ]
+    return []
+
+
+def _check_export_hors_site(session: Session) -> list[str]:
+    """Vérifie qu'une copie des sauvegardes existe HORS des deux Raspberry Pi.
+
+    POURQUOI (04/08/2026) : jusqu'ici, 100 % des archives vivaient dans des
+    volumes Docker sur deux RPi posés au même endroit, sur la même box et la
+    même alimentation. Les deux nœuds protègent de la panne d'UN nœud, jamais
+    d'un `docker volume rm`, d'un rançongiciel ou d'un sinistre — qui emportent
+    la base, les uploads ET toutes les sauvegardes d'un coup.
+    `export-hors-site.sh` produit cette copie ; ce contrôle est ce qui empêche
+    son oubli de passer inaperçu.
+
+    Deux questions DISTINCTES, et c'est le point important :
+      1. l'export a-t-il tourné récemment ?
+      2. la copie qu'il a produite est-elle FRAÎCHE ?
+    Un export qui s'exécute fidèlement mais recopie chaque fois la même archive
+    périmée satisfait (1) et trahit (2). Ne vérifier que (1) fabriquerait
+    exactement le faux vert que ce lot corrige ailleurs.
+    """
+    from app.utils.backup import horodatage_archive
+    #  Seuil lu là où l'écran de santé le lit déjà : deux constantes séparées
+    #  divergeraient au premier ajustement, et l'e-mail contredirait l'écran.
+    from app.routers.admin import _PERIODICITE_ATTENDUE_H, _TOLERANCE_H
+
+    tache = TachePlanifiee.export_hors_site.value
+    seuil_h = _PERIODICITE_ATTENDUE_H[tache] + _TOLERANCE_H
+    jours = int(seuil_h / 24)
+
+    derniere = session.exec(
+        select(HistoriqueMaintenance)
+        .where(HistoriqueMaintenance.tache == tache)
+        .order_by(HistoriqueMaintenance.cree_le.desc())
+    ).first()
+
+    if derniere is None:
+        return [
+            "Aucune copie hors site n'a jamais été enregistrée. Les sauvegardes "
+            "n'existent que sur les deux RPi : un sinistre au domicile les perd "
+            "toutes. Lancer export-hors-site.cmd depuis le poste."
+        ]
+
+    issues = []
+    if derniere.statut == "erreur":
+        issues.append(
+            f"Le dernier export hors site a ÉCHOUÉ : "
+            f"{derniere.erreur or 'erreur inconnue'}."
+        )
+
+    age_execution = datetime.utcnow() - derniere.cree_le
+    if age_execution > timedelta(hours=seuil_h):
+        j = int(age_execution.total_seconds() / 86400)
+        issues.append(
+            f"Aucun export hors site depuis {j} jours (seuil : {jours} jours). "
+            f"Lancer export-hors-site.cmd depuis le poste."
+        )
+
+    #  Fraîcheur de l'archive RÉELLEMENT copiée — cf. docstring, question (2).
+    details = {}
+    if derniere.details:
+        try:
+            details = json.loads(derniere.details) or {}
+        except ValueError:
+            details = {}
+
+    archive = details.get("archive")
+    horodatage = horodatage_archive(archive) if archive else None
+    if horodatage is None:
+        issues.append(
+            "Le dernier export hors site n'indique pas quelle archive il a "
+            "copiée — impossible d'en vérifier la fraîcheur."
+        )
+    else:
+        age_copie = datetime.utcnow() - horodatage
+        if age_copie > timedelta(hours=seuil_h):
+            j = int(age_copie.total_seconds() / 86400)
+            issues.append(
+                f"La sauvegarde copiée hors site date de {j} jours ({archive}) — "
+                f"l'export s'exécute mais recopie une archive périmée."
+            )
+
+    if details.get("integrite") and details["integrite"] != "ok":
+        issues.append(
+            f"La copie hors site n'a pas passé le contrôle d'intégrité "
+            f"(integrity_check : {details['integrite']})."
         )
 
     return issues
@@ -261,6 +417,7 @@ def run_health_check() -> None:
         issues += _check_db_integrity()
         issues += _check_whatsapp(session)
         issues += _check_backups(session)
+        issues += _check_export_hors_site(session)
         issues += _check_disk()
 
         if not issues:

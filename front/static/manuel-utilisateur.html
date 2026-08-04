@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.4 · Août 2026</span>
+    <span class="topbar-badge">Version 3.5 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -2586,7 +2586,42 @@
           <li><strong>Sauvegardes</strong> — historique des sauvegardes automatiques (03&nbsp;h) et bouton pour en déclencher une immédiatement.</li>
           <li><strong>Exécutions de la maintenance</strong> — passages du script hebdomadaire, avec le détail de ce qui a été fait.</li>
           <li><strong>Historique des agrégations</strong> — passages du job qui agrège la télémétrie chaque nuit (02&nbsp;h) et purge les données expirées. Regroupé ici depuis la v2.32.3 : c'est une tâche planifiée comme les autres, et son arrêt rendrait les statistiques de l'onglet Télémétrie silencieusement fausses.</li>
+          <li><strong>Copie hors site (manuelle)</strong> — depuis la v2.37.0, la tâche <em>Copie hors site</em> apparaît dans la santé des tâches. C'est la seule qui ne se lance pas toute seule : voir la carte ci-dessous.</li>
         </ul>
+      </div>
+
+      <div class="card">
+        <h3>La copie hors site : la seule tâche à lancer soi-même</h3>
+        <p>Les sauvegardes automatiques de 3&nbsp;h sont enregistrées sur le Raspberry&nbsp;Pi qui sert le site. Les deux machines étant au <strong>même endroit</strong>, elles protègent d'une panne de matériel, mais pas d'un dégât des eaux, d'un incendie ni d'un vol : tout partirait ensemble.</p>
+        <p>La copie hors site répond à ce risque en rapatriant la dernière sauvegarde sur un ordinateur, hors des deux Raspberry&nbsp;Pi.</p>
+        <ul class="steps">
+          <li class="step">
+            <span class="step-num" style="background:#1E3A5F">1</span>
+            <div class="step-content">
+              <strong>Lancer la copie</strong>
+              <p>Double-cliquer sur <code>export-hors-site.cmd</code>. Une fenêtre s'ouvre et affiche le déroulé.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#1E3A5F">2</span>
+            <div class="step-content">
+              <strong>Lire le résumé final</strong>
+              <p>« ✅ Sauvegarde hors site à jour » indique que la copie est arrivée <em>et</em> qu'elle a été vérifiée : taille, empreinte identique à l'originale, et base lisible. En cas d'échec, le motif est affiché et la copie douteuse est écartée — elle ne doit jamais passer pour une sauvegarde valide.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num" style="background:#1E3A5F">3</span>
+            <div class="step-content">
+              <strong>Vérifier de temps en temps</strong>
+              <p>La ligne <strong>Copie hors site (manuelle)</strong> de la santé des tâches indique la date de la dernière copie. Au-delà d'une semaine, elle passe en <strong>« Exécution manquante »</strong> et l'alerte quotidienne de 6&nbsp;h le signale par e-mail.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="callout warning">
+        <span class="callout-icon">&#x26A0;&#xFE0F;</span>
+        <p><strong>Ce que cette copie ne couvre pas.</strong> L'ordinateur de destination se trouve au même domicile que les deux Raspberry&nbsp;Pi : la copie protège de la perte d'une machine, pas d'un sinistre touchant le logement. Une seconde destination réellement distante reste à mettre en place.</p>
       </div>
 
       <div class="card">
@@ -2782,7 +2817,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.4</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.5</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

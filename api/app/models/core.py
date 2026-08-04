@@ -770,6 +770,12 @@ class TachePlanifiee(str, Enum):
     health_watch = "health_watch"
     reliability = "reliability"
     auto_deploy = "auto_deploy"
+    #  Seule tâche exécutée depuis le POSTE et non par un cron des RPi
+    #  (`export-hors-site.sh`, lancé à la main). Elle est enregistrée ici comme
+    #  les autres : ce qui compte pour la surveillance n'est pas d'où part la
+    #  tâche, mais qu'on puisse constater son ABSENCE. Aucune migration n'est
+    #  requise — `historique_maintenance.tache` est une colonne texte libre.
+    export_hors_site = "export_hors_site"
 
 
 class PorteeExecution(str, Enum):

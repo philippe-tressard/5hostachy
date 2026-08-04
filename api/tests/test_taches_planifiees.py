@@ -55,6 +55,28 @@ def test_taches_couvrent_les_crons_reels():
     valeurs = {t.value for t in TachePlanifiee}
     assert {"maintenance", "backup", "bascule"} <= valeurs
     assert {"health_watch", "reliability", "auto_deploy"} <= valeurs
+    # Ajoutée le 04/08/2026 : seule tâche lancée depuis le POSTE et non par un
+    # cron des RPi. Ce qui compte pour la surveillance n'est pas d'où part la
+    # tâche, mais qu'on puisse constater son absence.
+    assert "export_hors_site" in valeurs
+
+
+def test_export_hors_site_est_attendu_avec_une_cadence_tenable():
+    """La copie hors site est suivie — mais à un rythme réellement soutenable.
+
+    Elle est lancée à la main depuis un poste qui n'est pas allumé en
+    permanence : l'attendre toutes les 24 h ferait crier ce contrôle presque
+    tous les jours, et une alerte qui crie tout le temps finit ignorée. C'est
+    ainsi qu'un contrôle meurt (standards/07 §5) — le seuil hebdomadaire est
+    donc un choix, pas un réglage par défaut, et il est verrouillé ici.
+
+    À l'inverse, ne PAS l'inscrire au tableau la rendrait invisible : son
+    absence se lirait comme du calme, ce qui est précisément le « battement
+    manquant » de standards/04 §4.
+    """
+    from app.routers.admin import _PERIODICITE_ATTENDUE_H
+
+    assert _PERIODICITE_ATTENDUE_H["export_hors_site"] == 7 * 24
 
 
 def test_periodicite_exclut_les_crons_a_haute_frequence():
