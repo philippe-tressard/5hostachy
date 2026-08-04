@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
 	import QRCode from '$lib/components/QRCode.svelte';
 	import { onMount } from 'svelte';
 	import { annuaire as annuaireApi } from '$lib/api';
@@ -108,11 +109,7 @@
 									<Icon name="shield" size={12} />
 								</span>
 							{/if}
-							{#if m.photo_url}
-								<img class="avatar" src={m.photo_url} alt="{m.prenom} {m.nom}" />
-							{:else}
-								<div class="avatar">{m.prenom[0]}{m.nom[0]}</div>
-							{/if}
+							<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 							<div>
 								<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
 								{#if m.etage != null}
@@ -138,11 +135,7 @@
 							<Icon name="shield" size={12} />
 						</span>
 					{/if}
-					{#if m.photo_url}
-						<img class="avatar" src={m.photo_url} alt="{m.prenom} {m.nom}" />
-					{:else}
-						<div class="avatar">{m.prenom[0]}{m.nom[0]}</div>
-					{/if}
+					<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 					<div>
 						<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
 						{#if m.batiment_nom || m.etage != null}
@@ -184,11 +177,7 @@
 							★
 						</span>
 					{/if}
-					{#if m.photo_url}
-						<img class="avatar" class:avatar-accent={m.est_principal} src={m.photo_url} alt="{m.prenom} {m.nom}" />
-					{:else}
-						<div class="avatar" class:avatar-accent={m.est_principal}>{m.prenom[0]}{m.nom[0]}</div>
-					{/if}
+					<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 					<div>
 						<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
 						{#if m.fonction}<div class="contact-role">{m.fonction}</div>{/if}
@@ -225,7 +214,9 @@
 	.batiment-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-primary); border-left: 3px solid var(--color-primary); padding-left: .5rem; margin-bottom: .6rem; display: flex; align-items: center; gap: .3rem; }
 	.contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 1rem; }
 	.contact-card { display: flex; align-items: flex-start; gap: 1rem; padding: 1.4rem 1rem .9rem; position: relative; }
-	.card-principal { border-left: 3px solid var(--color-accent, #C9983A); }
+	/* La variable cascade jusqu'au fond de repli d'`Avatar` (initiales) : le
+	   gestionnaire principal garde sa pastille dorée sans classe dédiée. */
+	.card-principal { border-left: 3px solid var(--color-accent, #C9983A); --avatar-bg: var(--color-accent, #C9983A); }
 	.site-manager-icon,
 	.president-icon {
 		position: absolute;
@@ -263,10 +254,6 @@
 		font-size: .9rem;
 		z-index: 1;
 	}
-
-	.avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem; flex-shrink: 0; }
-	img.avatar { object-fit: cover; background: none; padding: 0; }
-	.avatar.avatar-accent { background: var(--color-accent, #C9983A); }
 
 
 
