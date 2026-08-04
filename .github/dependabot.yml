@@ -24,9 +24,17 @@
 #  SEULES, chacune dans sa PR, parce que chacune mérite d'être regardée et
 #  qu'une majeure noyée dans un groupe de douze ne l'est jamais.
 #
-#  ⚠️ Avant d'accepter une majeure de Pillow ou de WeasyPrint : il n'existe
-#  toujours AUCUN contrôle qui rende un document. Tant que ce garde-fou
-#  n'existe pas, leur vert ne prouve que l'installation, jamais le rendu.
+#  UNE EXCEPTION, apprise le soir même : une FAMILLE COORDONNÉE ne peut pas se
+#  juger paquet par paquet, parce que ses membres se contraignent mutuellement
+#  et qu'une PR isolée n'arrive même pas à s'installer. Voir les groupes
+#  `tiptap` et `chaine-svelte` plus bas — ils passent AVANT les groupes par type
+#  de mise à jour, Dependabot retenant le premier groupe qui reconnaît un paquet.
+#
+#  ✅ Mis à jour le 04/08/2026 au soir : le contrôle de rendu manquant existe
+#  désormais (`api/tests/test_documents_pdf.py`, avec pango/cairo installés dans
+#  le job). Il a immédiatement fait son travail : Pillow 12 et WeasyPrint 69 ont
+#  été acceptés parce qu'ils rendent réellement une fiche arrivant et une annonce
+#  de hall — pas parce que leur CI était verte.
 # =============================================================================
 version: 2
 
@@ -62,6 +70,26 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
+      #  ⚠️ LES FAMILLES COORDONNÉES D'ABORD — Dependabot affecte une dépendance
+      #  au PREMIER groupe qui la reconnaît. Déclarées après les groupes par
+      #  type de mise à jour, elles n'attraperaient jamais rien.
+      #
+      #  Pourquoi elles existent (04/08/2026) : la règle « une majeure = une PR »
+      #  rend chaque saut jugeable — sauf pour un ensemble dont les paquets se
+      #  contraignent mutuellement. #253 montait `@tiptap/core` seul en 3.29.2 :
+      #      Found: @tiptap/pm@2.27.2
+      #        peer @tiptap/pm@"^2.7.0"  from @tiptap/extension-placeholder@2.27.2
+      #        peer @tiptap/pm@"3.29.2"  from @tiptap/core@3.29.2
+      #  npm n'arrivait même pas à installer (ERESOLVE) : la PR ne pouvait pas
+      #  être jugée, elle ne pouvait qu'échouer. Tiptap épingle ses pairs à la
+      #  version EXACTE — même un correctif isolé casserait. Ces paquets bougent
+      #  donc ensemble, quel que soit le type de mise à jour.
+      tiptap:
+        patterns: ["@tiptap/*"]
+      #  Même raison pour la chaîne de construction : #252 (Vite 6 → 8) échouait
+      #  aussi en ERESOLVE, la plage de pairs de SvelteKit ne l'admettant pas.
+      chaine-svelte:
+        patterns: ["vite", "@sveltejs/*", "vite-plugin-*", "svelte", "svelte-check"]
       npm-mineur:
         applies-to: version-updates
         update-types: [minor, patch]
