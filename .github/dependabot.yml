@@ -96,6 +96,57 @@ updates:
       npm-securite:
         applies-to: security-updates
         update-types: [minor, patch]
+    ignore:
+      #  ══ MIGRATIONS, PAS DES MONTÉES DE VERSION (décidé le 04/08/2026) ══
+      #
+      #  Ces majeures ne sont pas « en attente d'être fusionnées » : elles sont
+      #  impossibles telles quelles. Les laisser ouvertes produisait quatre PR
+      #  rouges permanentes que Dependabot recréait chaque lundi, et du rouge
+      #  permanent finit par ne plus être lu — c'est un contrôle qui s'éteint.
+      #  Chaque règle porte donc SA CONDITION DE LEVÉE, vérifiable par une
+      #  commande, jamais par une date ni par une compatibilité annoncée.
+      #
+      #  ── Chaîne Vite/Svelte : on reste en Vite 6 ──────────────────────────
+      #  Mesuré, pas déduit : vite 8 + @sveltejs/vite-plugin-svelte 7
+      #  s'installent proprement ET le build réussit (SvelteKit 2.70.2 accepte
+      #  déjà les deux, svelte ^5.56.8 couvre le ^5.46.4 exigé). Ce qui casse
+      #  est invisible au build : plus AUCUNE référence à `/sw.js` dans le
+      #  bundle client. `sw.js` et `workbox-*.js` sont bien écrits sur le
+      #  disque — mais personne ne les enregistre. Donc ni cache hors ligne,
+      #  ni bandeau de mise à jour, et rien ne le signalerait à l'exécution :
+      #  le jumeau exact de l'incident du 26/07/2026. Seul `npm run lint:sw`,
+      #  qui inspecte le bundle livré, l'a vu.
+      #  Second dégât de la même montée : sous Rolldown (moteur de Vite 8), le
+      #  nom du paquet disparaît du bundle. Or c'est l'ancrage du contrôle P3,
+      #  qui mesure la version réellement servie — P3 deviendrait aveugle.
+      #  `vite-plugin-pwa@1.3.0`, la dernière, déclare pourtant `vite: ^8.0.0`.
+      #  Une compatibilité déclarée n'est pas une compatibilité observée
+      #  (~/.claude/standards/04-fiabilite-des-controles.md §15).
+      #  LEVÉE : quand `npm run lint:sw` passe avec vite 8 sur une branche
+      #  d'essai. C'est la condition — pas une annonce de l'auteur du greffon.
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@sveltejs/vite-plugin-svelte"
+        update-types: ["version-update:semver-major"]
+      #
+      #  ── Tiptap 2 → 3 : une migration, pas un bump ────────────────────────
+      #  `@tiptap/extension-placeholder@3.29.2` exige `@tiptap/extensions`
+      #  épinglé à l'EXACT `3.29.2` — un paquet qui n'est même pas dans nos
+      #  dépendances aujourd'hui. Passer en 3 suppose donc d'ajouter ce paquet
+      #  et de déplacer core / starter-kit / underline ensemble : c'est un
+      #  chantier à mener, pas une PR à relire. Le groupe `tiptap` ci-dessus
+      #  reste utile le jour où on le fera.
+      #  LEVÉE : le jour où la migration tiptap 3 est décidée et planifiée.
+      - dependency-name: "@tiptap/*"
+        update-types: ["version-update:semver-major"]
+      #
+      #  ── TypeScript 7 : refusé par SvelteKit ──────────────────────────────
+      #  `@sveltejs/kit@2.70.2` déclare `typescript: "^5.3.3 || ^6.0.0"`.
+      #  TypeScript 6 reste donc autorisé — d'où `versions` et non
+      #  `semver-major`, pour ne pas bloquer une majeure qui, elle, passerait.
+      #  LEVÉE : quand une version de @sveltejs/kit admet `^7.0.0`.
+      - dependency-name: "typescript"
+        versions: [">= 7"]
 
   # ── Actions GitHub ─────────────────────────────────────────────────────────
   # Une action figée sur une version vulnérable a accès au dépôt et aux
