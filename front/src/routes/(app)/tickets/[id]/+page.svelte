@@ -249,7 +249,11 @@
 
 		{#if ticket.photos_urls?.length || ticket.fichiers_urls?.length}
 			<div style="margin-top:.75rem">
-				<PiecesJointes urls={[...(ticket.photos_urls ?? []), ...(ticket.fichiers_urls ?? [])]} size={90} />
+				<!-- La fiche EST le contenu déplié : c'est ici qu'on regarde la
+				     photo du dégât, pas qu'on la survole. Les fils de messages et
+				     d'évolutions gardent leurs vignettes — y empiler des grandes
+				     photos rendrait la discussion interminable à parcourir. -->
+				<PiecesJointes urls={[...(ticket.photos_urls ?? []), ...(ticket.fichiers_urls ?? [])]} format="grand" />
 			</div>
 		{/if}
 

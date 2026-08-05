@@ -274,6 +274,34 @@ grep -E '^\[[0-9]{4}-' /var/log/hostachy-deploy.log | tail -5   # dernières dé
 Et élargir les motifs d'erreur au réseau et à git : `Network is unreachable`,
 `Could not read from remote repository`, `fatal:`, `Connection timed out`.
 
+⚠ **Troisième angle mort — tous les logs ne battent pas (05/08/2026).**
+`hostachy-health-watch.log` était figé depuis **44 h** sur les deux nœuds, ce qui
+ressemble exactement au battement manquant du point précédent — sauf que
+`health-watch.sh` sort en `exit 0` **sans écrire** quand le site répond 200
+(ligne « Site OK »). Son silence est le fonctionnement nominal : il n'écrit que
+sur panne. Crier au loup ici ferait perdre du temps avant chaque MEP, et pire,
+apprendrait à ignorer ce log.
+
+Avant de conclure au battement manquant, **savoir si le script écrit à chaque
+passage** :
+
+| Log | Bat à chaque passage ? | Silence = |
+|---|---|---|
+| `hostachy-deploy.log` (standby) | oui, ~12 lignes/h | anomalie |
+| `hostachy-reliability.log` | oui, toutes les 15 min | anomalie |
+| `hostachy-check.log` (actif) | oui, toutes les 10 min | anomalie |
+| `hostachy-health-watch.log` | **non — seulement si le site est HS** | normal |
+| `hostachy-bascule.log` | non — une fois par nuit à 02:00 | normal |
+| `hostachy-maintenance.log` | non — le dimanche à 03:00 | normal |
+| `hostachy-role-guard.log` | non — au démarrage du nœud | normal |
+
+⚠ **Et ne pas écrire `$(grep -c … || echo 0)`** — le piège documenté en
+« Surveillance continue » §4 se retend à chaque pré-check improvisé : `grep -c`
+affiche déjà `0` **et** sort en code 1, donc le `||` ajoute une seconde valeur et
+le test qui suit devient inexploitable. Reproduit le 05/08/2026 dans un contrôle
+écrit à la volée, avec la documentation du piège sous les yeux : sept fichiers
+sont apparus « illisibles » alors qu'ils étaient simplement sans erreur.
+
 **Point 9 — pourquoi :** les emails partent en `BackgroundTask` et échouent **silencieusement** — l'erreur n'apparaît que dans la table `historique_email`, jamais dans les logs API ni à l'écran. La même cause racine (un template Jinja2 référence une variable absente du contexte du point d'appel → `UndefinedError`) s'est produite deux fois en 12 jours : `reinitialisation_mdp` le 03/06 (`destinataire.prenom` manquant) puis `ticket_statut_change` le 15/06 (même variable). Dans les deux cas, découvert seulement après un signalement utilisateur « je ne reçois pas mes mails ». Comme le point 8, ce point lit **le symptôme** quelle qu'en soit la cause (contexte template, SMTP HS, adresse invalide, domaine `.local` filtré…). Si une ligne `erreur` apparaît → ouvrir le template et le contexte du point d'appel (`send_email(code=...)`), vérifier que toute variable `{{ x.y }}` du template est fournie ; aligner sur un template voisin qui fonctionne (ex. `verification_email`).
 **Repli quand l'UI n'est pas accessible (26/07/2026)** — si le **standby** n'a aucun
 conteneur, sa base est au repos : `sqlite3`/Python y sont sûrs (règle d'or). On lit

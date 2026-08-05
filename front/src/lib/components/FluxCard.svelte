@@ -142,8 +142,11 @@
 					<!-- Les pièces jointes de devis sont des PDF : elles étaient
 					     rendues en <img>, donc en image cassée. Le composant
 					     distingue image et document, une fois pour toutes. -->
+					<!-- Format « grand » : la carte est dépliée, l'utilisateur a
+					     demandé à voir. Une vignette de 72 px lui imposerait un
+					     clic de plus pour ce qu'il vient d'ouvrir. -->
 					<div class="flux-photos">
-						<PiecesJointes urls={[...photos, ...fichiers]} size={72} />
+						<PiecesJointes urls={[...photos, ...fichiers]} format="grand" />
 					</div>
 				{/if}
 				{#if lien}
@@ -231,13 +234,12 @@
 	.flux-link:hover { text-decoration: underline; }
 
 	/* Galerie dépliée — les styles étaient écrits en `style=` sur chaque balise,
-	   donc quatre fois pour deux blocs. */
-	.flux-photos { margin: .5rem 0; display: flex; gap: .5rem; flex-wrap: wrap; }
-	.flux-photos img {
-		max-width: 120px; max-height: 90px;
-		border-radius: 6px; object-fit: cover;
-		border: 1px solid var(--color-border);
-	}
+	   donc quatre fois pour deux blocs.
+	   La règle `.flux-photos img` qui bornait les images à 120×90 en `cover` a été
+	   retirée : le format des photos appartient désormais à `PiecesJointes`, qui
+	   les rend en grand une fois la carte dépliée. Deux endroits pour décider de
+	   la même taille, c'est un endroit de trop — et celui-ci était devenu mort. */
+	.flux-photos { margin: .5rem 0; }
 
 	/* ═══ RÉACTION INLINE (ticket_mis_a_jour) ═══════════════════════════ */
 	.flux-reaction {

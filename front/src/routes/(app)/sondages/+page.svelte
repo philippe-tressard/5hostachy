@@ -3,6 +3,7 @@ import Icon from '$lib/components/Icon.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import Vignette from '$lib/components/Vignette.svelte';
 import PhotosUpload from '$lib/components/PhotosUpload.svelte';
+import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
@@ -851,11 +852,21 @@ count={Math.max(0, (annonce.photos?.length ?? 0) - 1)}
 <div class="annonce-details">
 <div class="rich-content" style="font-size:.88rem;margin-bottom:.75rem">{@html safeHtml(annonce.description)}</div>
 
-{#if annonce.photos?.length > 1 || annonce.est_auteur}
+<!-- Lecture : les photos en grand, l'annonce est dépliée. La condition
+     précédente (`> 1 || est_auteur`) faisait qu'une annonce à UNE seule
+     photo n'en montrait aucune au lecteur : il ne restait que la vignette
+     de 80 px du bandeau, sans moyen de l'agrandir. -->
+{#if annonce.photos?.length && !annonce.est_auteur}
+<PiecesJointes urls={annonce.photos} format="grand" />
+{/if}
+<!-- Édition : l'auteur garde la galerie éditable. Ici on gère ses photos
+     (ajout, retrait), on ne les contemple pas — la vignette est le bon
+     format pour ça. -->
+{#if annonce.est_auteur}
 <PhotosUpload
 urls={annonce.photos ?? []}
 max={MAX_PHOTOS_ANNONCE}
-readonly={!annonce.est_auteur}
+readonly={false}
 upload={(f) => uploadPhotoAnnonce(annonce.id, f)}
 remove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
 />
