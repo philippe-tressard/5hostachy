@@ -125,12 +125,6 @@ EMAIL_TEMPLATES = [
     # Les templates sont encapsulés dans le gabarit email.py (_wrap_email)
     # => pas besoin de <html>/<body>, juste le contenu riche.
 
-    ("invitation_resident", "Invitation résident", "Bienvenue sur {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Bienvenue, {{ destinataire.prenom }}\u202f!</h2>'
-     '<p style="margin:0 0 12px">Vous avez été invité(e) à rejoindre l\u2019espace numérique de <strong>{{ residence.nom }}</strong>.</p>'
-     '<p style="margin:0 0 24px;color:#5A6070">Créez votre compte en quelques clics pour accéder aux documents, au calendrier, aux tickets et à toutes les informations de votre résidence.</p>'
-     '<p style="text-align:center;margin:0 0 8px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Créer mon compte</a></p>',
-     False),
 
     ("reinitialisation_mdp", "Réinitialisation mot de passe", "Réinitialisation de votre mot de passe — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Réinitialisation de votre mot de passe</h2>'
@@ -164,38 +158,9 @@ EMAIL_TEMPLATES = [
      '<p style="margin:0;color:#5A6070">Si vous pensez qu\u2019il s\u2019agit d\u2019une erreur, n\u2019hésitez pas à contacter le conseil syndical.</p>',
      True),
 
-    ("locataire_validation_demande", "Demande validation locataire", "Un locataire souhaite s'inscrire sur votre lot — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Validation de locataire requise</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 12px"><strong>{{ locataire.prenom }} {{ locataire.nom }}</strong> souhaite s\u2019inscrire en tant que locataire de votre lot <strong>{{ lot.numero }}</strong>.</p>'
-     '<p style="margin:0 0 24px;color:#5A6070">Connectez-vous à l\u2019application pour valider ou refuser cette demande.</p>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Gérer la demande</a></p>',
-     True),
 
-    ("locataire_valide", "Locataire validé", "Votre inscription a été validée — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Inscription validée\u202f!</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 24px">Votre inscription en tant que locataire a été validée. Vous pouvez maintenant accéder à l\u2019ensemble des services de la résidence.</p>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Accéder à l\u2019application</a></p>',
-     True),
 
-    ("locataire_refuse", "Locataire refusé", "Votre inscription n'a pas été acceptée — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Inscription non acceptée</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 12px">Votre demande d\u2019inscription en tant que locataire n\u2019a pas été acceptée.</p>'
-     '<p style="margin:0;color:#5A6070">Contactez votre propriétaire ou le conseil syndical pour plus d\u2019informations.</p>',
-     True),
 
-    ("ticket_cree_cs", "Ticket créé (CS)", "Nouveau ticket #{{ ticket.numero }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouveau ticket soumis</h2>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '<p style="margin:0;font-size:14px;color:#5A6070">par {{ auteur.prenom }} {{ auteur.nom }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le ticket</a></p>',
-     True),
 
     ("ticket_bug_admin", "Ticket bug — notification admin site", "Bug signalé via Tickets — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Bug signalé</h2>'
@@ -297,15 +262,6 @@ EMAIL_TEMPLATES = [
      '<p style="text-align:center;margin:0"><a href="{{ idee.lien }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la boîte à idées</a></p>',
      True),
 
-    ("ticket_urgence_bailleur", "Ticket urgence (bailleur)", "URGENT — Ticket sur votre lot {{ lot.numero }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\U0001f6a8 Ticket URGENT</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 16px">Un ticket <strong style="color:#c0392b">URGENT</strong> a été soumis concernant votre lot <strong>{{ lot.numero }}</strong>\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1A1A2E">{{ ticket.titre }}</p>'
-     '</td></tr></table>',
-     True),
 
     ("relance_syndic", "Relance tickets syndic non résolus",
      "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}",
@@ -440,17 +396,7 @@ EMAIL_TEMPLATES = [
      '<a href="{{ app.url }}/actualites#pub-{{ publication.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
      True),
 
-    ("digest_quotidien", "Digest quotidien", "Résumé du jour — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\u2600\ufe0f Votre résumé quotidien</h2>'
-     '<p style="margin:0 0 16px">Bonjour {{ destinataire.prenom }}, voici les dernières actualités de votre résidence.</p>'
-     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:0 0 16px">',
-     True),
 
-    ("digest_hebdomadaire", "Digest hebdomadaire", "Résumé de la semaine — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4ca Résumé de la semaine</h2>'
-     '<p style="margin:0 0 16px">Bonjour {{ destinataire.prenom }}, voici un récapitulatif de la semaine écoulée sur votre résidence.</p>'
-     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:0 0 16px">',
-     True),
 
     ("sauvegarde_echec", "Échec sauvegarde", "ALERTE — Échec de la sauvegarde automatique",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Échec de la sauvegarde</h2>'

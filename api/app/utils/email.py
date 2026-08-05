@@ -21,16 +21,12 @@ _SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_fro
 # Mapping code email → clé préférence utilisateur (catégorie_mail)
 # Les codes absents (system, account) sont toujours envoyés.
 _EMAIL_PREF_MAP: dict[str, str] = {
-    "ticket_cree_cs": "ticket_mail",
     "ticket_bug_admin": "ticket_mail",
     "ticket_statut_change": "ticket_mail",
     "ticket_nouveau_message": "ticket_mail",
-    "ticket_urgence_bailleur": "ticket_mail",
     "ticket_syndic": "ticket_mail",
     "publication_syndic": "actu_mail",
     "calendrier_evenement_cree": "actu_mail",
-    "digest_quotidien": "actu_mail",
-    "digest_hebdomadaire": "actu_mail",
     "document_publie": "doc_mail",
     "reponse_communaute": "communaute_mail",
     "idee_statut": "communaute_mail",

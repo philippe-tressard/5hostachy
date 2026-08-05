@@ -32,15 +32,10 @@ BASE_CTX_VARS = {"annee", "app", "residence"}
 # Extrait de seed.EMAIL_TEMPLATES — à mettre à jour consciemment lors de toute
 # modification d'un template (en alignant le point d'appel send_email).
 EXPECTED_VARS: dict[str, set[str]] = {
-    "invitation_resident": {"destinataire", "lien"},
     "reinitialisation_mdp": {"destinataire", "lien"},
     "compte_en_attente": {"utilisateur"},
     "compte_active": {"destinataire"},
     "compte_refuse": {"destinataire"},
-    "locataire_validation_demande": {"lot", "destinataire", "locataire"},
-    "locataire_valide": {"destinataire"},
-    "locataire_refuse": {"destinataire"},
-    "ticket_cree_cs": {"auteur", "ticket"},
     "ticket_bug_admin": {"auteur", "ticket"},
     "ticket_syndic": {
         "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
@@ -50,7 +45,6 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "ticket_nouveau_message": {"ticket", "auteur_action", "message"},
     "reponse_communaute": {"reponse"},
     "idee_statut": {"idee"},
-    "ticket_urgence_bailleur": {"lot", "destinataire", "ticket"},
     "relance_syndic": {
         "tickets", "reference_copro", "civilite", "nom_gestionnaire", "anciennete",
     },
@@ -63,8 +57,6 @@ EXPECTED_VARS: dict[str, set[str]] = {
         "date_publication", "evolutions", "commentaire", "is_commentaire",
         "fichiers", "reference_copro", "publication", "date_commentaire", "auteur",
     },
-    "digest_quotidien": {"destinataire"},
-    "digest_hebdomadaire": {"destinataire"},
     "sauvegarde_echec": {"date", "erreur"},
     "alerte_espace_disque": {"espace_total", "espace_disponible", "pourcentage_libre"},
     "verification_email": {"expire_heures", "lien", "prenom"},
