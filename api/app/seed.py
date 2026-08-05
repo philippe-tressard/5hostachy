@@ -120,6 +120,45 @@ DEFAULT_LEGAL = {
     ),
 }
 
+# Intention de chaque modèle : ce qui est attendu du destinataire, affiché en
+# tête du message par le gabarit commun (cf. `email.INTENTIONS`).
+#
+# Table séparée, et non sixième élément des tuples ci-dessous : les migrations
+# 0104 et 0108 déballent `EMAIL_TEMPLATES` en cinq valeurs. Leur ajouter un
+# élément les ferait lever `ValueError` sur une base neuve — et `start.sh` a
+# `set -e`, donc le conteneur resterait bloqué au démarrage. Une migration est
+# figée : c'est le code d'aujourd'hui qui doit rester compatible avec elle.
+INTENTIONS_PAR_MODELE: dict[str, str] = {
+    # On attend un geste du destinataire.
+    "reinitialisation_mdp": "action_requise",
+    "verification_email": "action_requise",
+    "compte_en_attente": "action_requise",
+    "ticket_bug_admin": "action_requise",
+    "vigik_commande_recue": "action_requise",
+    "annonce_hall": "action_requise",
+    "nouvel_arrivant_bal": "action_requise",
+    "alerte_systeme": "action_requise",
+    # On attend une réponse écrite — ce sont les envois vers l'extérieur, ceux
+    # dont le silence est justement le problème qu'on cherche à traiter.
+    "ticket_syndic": "reponse_attendue",
+    "ticket_externe": "reponse_attendue",
+    "relance_syndic": "reponse_attendue",
+    # On informe, sans rien attendre en retour.
+    "compte_active": "information",
+    "compte_refuse": "information",
+    "ticket_statut_change": "information",
+    "ticket_nouveau_message": "information",
+    "reponse_communaute": "information",
+    "idee_statut": "information",
+    "vigik_accepte": "information",
+    "vigik_refuse": "information",
+    "calendrier_evenement_cree": "information",
+    "document_publie": "information",
+    "publication_syndic": "information",
+    "publication_externe": "information",
+    "acces_apparies_auto": "information",
+}
+
 EMAIL_TEMPLATES = [
     # ── Styles inline mutualisés (CTA = Call-to-action button) ──
     # Les templates sont encapsulés dans le gabarit email.py (_wrap_email)
@@ -687,6 +726,7 @@ def seed():
                     sujet=sujet,
                     corps_html=corps_html,
                     desactivable=desactivable,
+                    intention=INTENTIONS_PAR_MODELE.get(code, ""),
                 ))
 
         session.commit()

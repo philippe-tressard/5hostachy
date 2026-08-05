@@ -89,6 +89,65 @@ def _required_vars(sujet: str | None, corps_html: str | None) -> set[str]:
     return meta.find_undeclared_variables(ast) - BASE_CTX_VARS
 
 
+def test_chaque_modele_declare_son_intention():
+    """Tout modèle doit dire ce qu'il attend du destinataire.
+
+    Le bandeau d'intention ne vaut que s'il est là partout : un seul e-mail qui
+    n'annonce pas la couleur ramène le lecteur au tri à l'aveugle, et comme
+    l'absence d'intention ne rend simplement aucun bandeau, rien ne le
+    signalerait. C'est le genre d'oubli qui arrive au modèle suivant, pas à
+    ceux d'aujourd'hui.
+    """
+    from app.seed import INTENTIONS_PAR_MODELE
+    from app.utils.email import INTENTIONS
+
+    codes = {row[0] for row in EMAIL_TEMPLATES}
+    sans_intention = codes - set(INTENTIONS_PAR_MODELE)
+    assert not sans_intention, (
+        f"Modèles sans intention déclarée : {sorted(sans_intention)}. Ajoute-les "
+        "à `seed.INTENTIONS_PAR_MODELE` — information, action_requise, "
+        "reponse_attendue ou archive."
+    )
+
+    inconnues = {
+        code: valeur
+        for code, valeur in INTENTIONS_PAR_MODELE.items()
+        if valeur not in INTENTIONS
+    }
+    assert not inconnues, (
+        f"Intentions non reconnues par le gabarit : {inconnues}. Elles ne "
+        "rendraient aucun bandeau, en silence."
+    )
+
+    orphelines = set(INTENTIONS_PAR_MODELE) - codes
+    assert not orphelines, (
+        f"Intentions déclarées pour des modèles inexistants : {sorted(orphelines)}."
+    )
+
+
+def test_le_bandeau_dintention_est_rendu_dans_le_gabarit():
+    """Cas zéro : le bandeau doit réellement apparaître dans le HTML envoyé."""
+    from app.utils.email import INTENTIONS, _wrap_email
+
+    html = _wrap_email(
+        "<p>corps</p>", "Résidence", "https://exemple.fr", "", 2026,
+        intention="action_requise",
+    )
+    assert INTENTIONS["action_requise"][0] in html, (
+        "Le bandeau d'intention n'apparaît pas dans le gabarit : les modèles "
+        "déclarent une intention que personne n'affiche."
+    )
+    # Une intention absente ou inconnue ne doit rien ajouter, jamais une
+    # étiquette fausse.
+    for valeur in ("", None, "inconnue"):
+        neutre = _wrap_email(
+            "<p>corps</p>", "Résidence", "https://exemple.fr", "", 2026, intention=valeur
+        )
+        assert all(lib not in neutre for lib, _, _ in INTENTIONS.values()), (
+            f"Une intention {valeur!r} affiche pourtant un bandeau."
+        )
+
+
 def test_tous_les_templates_ont_un_contrat():
     """Chaque template de seed.EMAIL_TEMPLATES doit avoir une entrée EXPECTED_VARS."""
     codes = {row[0] for row in EMAIL_TEMPLATES}

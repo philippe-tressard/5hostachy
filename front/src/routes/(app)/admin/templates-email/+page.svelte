@@ -15,6 +15,21 @@
 	let previewHtml = '';
 	let showPreview = false;
 
+	//  Intention : ce que le message attend de son destinataire, affiché en
+	//  bandeau au-dessus du corps par le gabarit commun. Les valeurs sont celles
+	//  de `INTENTIONS` côté API, qui refuse tout ce qui n'y figure pas.
+	const INTENTIONS = [
+		{ valeur: '', label: 'Aucun bandeau' },
+		{ valeur: 'information', label: 'Pour information' },
+		{ valeur: 'action_requise', label: 'Action requise' },
+		{ valeur: 'reponse_attendue', label: 'Réponse attendue' },
+		{ valeur: 'archive', label: 'À conserver' }
+	];
+
+	function labelIntention(valeur: string | null | undefined): string {
+		return INTENTIONS.find(i => i.valeur === (valeur ?? ''))?.label ?? '';
+	}
+
 	onMount(async () => {
 		try {
 			templates = await admin.emailTemplates();
@@ -23,7 +38,10 @@
 	});
 
 	function startEdit(t: any) {
-		editing = { ...t };
+		//  `intention` normalisée à '' : un `undefined` ne correspondrait à aucune
+		//  option et laisserait la liste déroulante vide, donnant à croire qu'il
+		//  n'y a rien à choisir.
+		editing = { ...t, intention: t.intention ?? '' };
 		previewHtml = '';
 		showPreview = false;
 	}
@@ -46,7 +64,8 @@
 			await admin.updateEmailTemplate(editing.id, {
 				sujet: editing.sujet,
 				corps_html: editing.corps_html ?? editing.corps,
-				actif: editing.actif
+				actif: editing.actif,
+				intention: editing.intention ?? ''
 			});
 			templates = templates.map(t => t.id === editing.id ? { ...t, ...editing } : t);
 			toast('success', 'Template mis à jour');
@@ -106,6 +125,9 @@
 					<span style="font-size:.85rem;color:var(--color-text-muted)">{t.sujet}</span>
 				</div>
 				<div style="display:flex;align-items:center;gap:.5rem">
+					{#if t.intention}
+						<span class="badge badge-blue">{labelIntention(t.intention)}</span>
+					{/if}
 					<span class="badge {t.actif ? 'badge-green' : 'badge-red'}">{t.actif ? 'Actif' : 'Inactif'}</span>
 					<button class="btn btn-secondary btn-sm" on:click={() => startEdit(t)}>Modifier</button>
 				</div>
@@ -121,6 +143,19 @@
 				<label class="form-group" style="margin-bottom:.75rem">
 					<span>Sujet</span>
 					<input class="input" bind:value={editing.sujet} />
+				</label>
+
+				<label class="form-group" style="margin-bottom:.75rem">
+					<span>Intention — ce que le message attend du destinataire</span>
+					<select class="input" bind:value={editing.intention}>
+						{#each INTENTIONS as i}
+							<option value={i.valeur}>{i.label}</option>
+						{/each}
+					</select>
+					<span style="font-size:.75rem">
+						Affichée en bandeau au-dessus du corps, pour que le lecteur sache
+						d'emblée s'il doit agir. « Aucun bandeau » n'affiche rien.
+					</span>
 				</label>
 
 				<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">

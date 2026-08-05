@@ -32,6 +32,50 @@ _EMAIL_PREF_MAP: dict[str, str] = {
     "idee_statut": "communaute_mail",
 }
 
+# Intention d'un e-mail : ce qui est attendu du destinataire, annoncé d'emblée.
+#
+# La plupart des modèles entrent dans le détail sans annoncer la couleur : le
+# lecteur doit lire jusqu'au bout pour savoir si on l'informe ou si on attend
+# quelque chose de lui. Un bandeau en tête le dit en trois mots.
+#
+# Le bandeau est rendu par le gabarit commun, à partir d'une colonne de
+# `modele_email` — surtout pas recopié dans chaque corps : il resterait
+# introuvable le jour où il faudrait le changer, et une migration qui réécrit
+# vingt-quatre corps écraserait les personnalisations faites depuis
+# Admin → Emails.
+#
+# code → (libellé affiché, fond, texte)
+INTENTIONS: dict[str, tuple[str, str, str]] = {
+    "information": ("Pour information", "#EEF2F7", "#1E3A5F"),
+    "action_requise": ("Action requise", "#FEF3E2", "#8A5A0B"),
+    "reponse_attendue": ("Réponse attendue", "#F0F7F2", "#2C5138"),
+    # Disponible depuis Admin → Emails, aucun modèle ne la porte aujourd'hui :
+    # elle vaut pour un envoi qu'on garde sans avoir à en faire quoi que ce soit.
+    "archive": ("À conserver", "#F4F2ED", "#5A6070"),
+}
+
+
+def _bandeau_intention(intention: str | None) -> str:
+    """Bandeau « ce qu'on attend de vous », ou rien si l'intention est inconnue.
+
+    Une intention vide ou non reconnue ne rend rien plutôt que d'afficher une
+    étiquette fausse : un modèle sans intention déclarée reste exactement ce
+    qu'il était.
+    """
+    entree = INTENTIONS.get((intention or "").strip())
+    if not entree:
+        return ""
+    libelle, fond, couleur = entree
+    return (
+        f'<table role="presentation" cellpadding="0" cellspacing="0" '
+        f'style="width:100%;margin:0 0 20px"><tr>'
+        f'<td style="background:{fond};border-radius:6px;padding:10px 14px">'
+        f'<span style="font-size:12px;font-weight:700;letter-spacing:.6px;'
+        f'text-transform:uppercase;color:{couleur}">{libelle}</span>'
+        f'</td></tr></table>'
+    )
+
+
 logger = logging.getLogger("email")
 
 
@@ -211,10 +255,11 @@ def _bandeau_pieces_jointes(noms: list[str]) -> str:
 
 def _wrap_email(
     body_html: str, site_nom: str, site_url: str, footer: str, annee: int,
-    pieces_jointes: list[str] | None = None,
+    pieces_jointes: list[str] | None = None, intention: str | None = None,
 ) -> str:
     """Encapsule le contenu HTML dans un gabarit email aux couleurs du site."""
     bandeau_pj = _bandeau_pieces_jointes(pieces_jointes or [])
+    bandeau_intention = _bandeau_intention(intention)
     safe_footer = ""
     if footer:
         linked_footer = _linkify_urls(footer)
@@ -252,7 +297,7 @@ def _wrap_email(
 
   <!-- Body -->
   <tr><td style="background-color:#FFFFFF;padding:32px 32px 24px;font-size:15px;line-height:1.65;color:#1A1A2E">
-    {body_html}
+    {bandeau_intention}{body_html}
   </td></tr>
 
   <!-- Pièces jointes -->
@@ -413,6 +458,7 @@ async def send_email(
                 footer=email_footer,
                 annee=ctx["annee"],
                 pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
+                intention=template.intention,
             )
             rendered_subject = _render(template.sujet, ctx)
             msg_kwargs = dict(
@@ -567,6 +613,7 @@ async def send_email_group(
                 footer=email_footer,
                 annee=ctx["annee"],
                 pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
+                intention=template.intention,
             )
             rendered_subject = _render(template.sujet, ctx)
             msg_kwargs: dict[str, Any] = dict(
