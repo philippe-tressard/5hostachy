@@ -405,24 +405,43 @@ EMAIL_TEMPLATES = [
 
 
 
-    ("sauvegarde_echec", "Échec sauvegarde", "ALERTE — Échec de la sauvegarde automatique",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Échec de la sauvegarde</h2>'
-     '<p style="margin:0 0 12px">La sauvegarde automatique du <strong>{{ date }}</strong> a échoué.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 12px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
-     '<p style="margin:0;font-family:monospace;font-size:13px;color:#1A1A2E">{{ erreur }}</p>'
-     '</td></tr></table>'
-     '<p style="margin:0;color:#5A6070;font-size:13px">Veuillez vérifier la configuration des sauvegardes dans l\u2019administration.</p>',
-     False),
 
-    ("alerte_espace_disque", "Alerte espace disque", "ALERTE — Espace disque faible ({{ pourcentage_libre }}% libre)",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Espace disque faible</h2>'
-     '<p style="margin:0 0 12px">Le serveur ne dispose plus que de <strong>{{ pourcentage_libre }}%</strong> d\u2019espace disque libre.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 12px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
-     '<p style="margin:0 0 4px;font-size:14px;color:#1A1A2E"><strong>Espace disponible :</strong> {{ espace_disponible }} sur {{ espace_total }}</p>'
-     '</td></tr></table>'
-     '<p style="margin:0;color:#5A6070;font-size:13px">Veuillez libérer de l\u2019espace sur le serveur (images Docker, backups, logs\u2026) ou étendre le stockage.</p>',
+    ("alerte_systeme", "Alerte système (contrôle quotidien)",
+     "[{{ residence.nom }}] ⚠️ Alerte système — {{ nb_problemes }} problème(s) détecté(s)",
+     '<p style="margin:0 0 8px;font-size:15px;color:#4A5568">Bonjour,</p>'
+     '<p style="margin:0 0 24px;font-size:15px;color:#4A5568">'
+     'Le contrôle quotidien du <strong>{{ date_controle }}</strong> a détecté '
+     '<strong style="color:#E53E3E">{{ nb_problemes }} problème(s)</strong> :</p>'
+     '<table role="presentation" cellpadding="0" cellspacing="0" '
+     'style="width:100%;border:1px solid #FED7D7;border-radius:8px;'
+     'background:#FFF5F5;padding:16px 20px;margin-bottom:24px">'
+     '{% for probleme in problemes %}'
+     '<tr><td style="padding:10px 0 6px">'
+     '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">'
+     '<tr><td style="vertical-align:top;width:24px;padding-top:2px">'
+     '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;'
+     'background:#E53E3E;margin-top:4px"></span></td>'
+     '<td style="vertical-align:top;font-size:15px;color:#1A1A2E;line-height:1.5">'
+     '{{ probleme.titre }}</td></tr>'
+     '{% if probleme.details %}'
+     '<tr><td></td><td>'
+     '<table role="presentation" cellpadding="0" cellspacing="0" '
+     'style="width:100%;background:#F8F9FA;border-left:3px solid #E53E3E;'
+     'border-radius:4px;padding:10px 14px;margin-top:8px">'
+     '{% for detail in probleme.details %}'
+     '<tr><td style="padding:4px 0;font-size:13px;color:#4A5568;'
+     'font-family:monospace">{{ detail }}</td></tr>'
+     '{% endfor %}'
+     '</table></td></tr>'
+     '{% endif %}'
+     '</table></td></tr>'
+     '{% endfor %}'
+     '</table>'
+     '<p style="text-align:center;margin:0">'
+     '<a href="{{ app.url }}/admin" style="display:inline-block;background:#1E3A5F;'
+     'color:#ffffff;font-size:14px;font-weight:600;padding:12px 28px;'
+     'border-radius:6px;text-decoration:none;letter-spacing:0.3px">'
+     'Accéder à l’administration</a></p>',
      False),
 
     ("verification_email", "Vérification e-mail", "Vérifiez votre adresse e-mail — {{ residence.nom }}",

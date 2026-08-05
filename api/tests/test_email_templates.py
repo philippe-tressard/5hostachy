@@ -57,8 +57,9 @@ EXPECTED_VARS: dict[str, set[str]] = {
         "date_publication", "evolutions", "commentaire", "is_commentaire",
         "fichiers", "reference_copro", "publication", "date_commentaire", "auteur",
     },
-    "sauvegarde_echec": {"date", "erreur"},
-    "alerte_espace_disque": {"espace_total", "espace_disponible", "pourcentage_libre"},
+    # Remplace `sauvegarde_echec` et `alerte_espace_disque` : le contrôle
+    # quotidien découvre les problèmes ensemble et n'envoie qu'un message.
+    "alerte_systeme": {"problemes", "nb_problemes", "date_controle"},
     "verification_email": {"expire_heures", "lien", "prenom"},
     "annonce_hall": {"annonce", "auteur"},
     # Prévient le gestionnaire du site quand l'appariement a créé des accès
