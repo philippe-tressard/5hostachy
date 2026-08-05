@@ -73,6 +73,17 @@ EXPECTED_VARS: dict[str, set[str]] = {
     # sans validation préalable. `resultat` porte aussi les accords en français,
     # calculés au point d'appel : un modèle n'a pas à porter la grammaire.
     "acces_apparies_auto": {"utilisateur", "resultat"},
+    # Les trois modèles destinés à des destinataires EXTERNES (syndic, tiers),
+    # longtemps déclarés en migration seulement et donc sans contrat ici.
+    "nouvel_arrivant_bal": {"nom_complet", "batiment", "ancien_resident", "reference_copro"},
+    "publication_externe": {
+        "date_publication", "evolutions", "commentaire", "is_commentaire",
+        "fichiers", "publication", "date_commentaire", "auteur",
+    },
+    "ticket_externe": {
+        "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
+        "fichiers", "date_commentaire", "auteur",
+    },
 }
 
 _env = SandboxedEnvironment(loader=BaseLoader())

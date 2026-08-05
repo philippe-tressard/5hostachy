@@ -520,6 +520,98 @@ EMAIL_TEMPLATES = [
      'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
      'Vérifier les imports</a></p>',
      True),
+
+    # ── Modèles longtemps déclarés en migration seulement ────────────────────
+    # `nouvel_arrivant_bal` (0066, sujet corrigé en 0090), `publication_externe`
+    # et `ticket_externe` (0105) n'existaient QUE dans leur migration. Ils sont
+    # donc restés hors des deux garde-fous, qui itèrent sur cette liste : ni
+    # contrat de variables, ni vérification du contexte au point d'appel — alors
+    # que ce sont les trois modèles envoyés à des destinataires EXTERNES, syndic
+    # et tiers, où un envoi raté ne se voit pas depuis l'application.
+    # Le seed n'insère que ce qui manque : les rapatrier ici ne touche à aucune
+    # base existante, et rend une base neuve conforme à celles en service.
+    ("nouvel_arrivant_bal", "Nouvel arrivant — Étiquette boîte aux lettres",
+     "{{ reference_copro }} - Nouvel arrivant MaJ Boites aux lettres",
+     "<p>Bonjour,</p>"
+     "<p>Nous vous informons de l'arrivée d'un nouveau résident :</p>"
+     "<ul>"
+     "<li><strong>Nom :</strong> {{ nom_complet }}</li>"
+     "{% if batiment %}<li><strong>Bâtiment / Apt :</strong> {{ batiment }}</li>{% endif %}"
+     "{% if ancien_resident %}<li><strong>Ancien résident :</strong> {{ ancien_resident }}</li>{% endif %}"
+     "</ul>"
+     "<p>Merci de préparer l'étiquette de boîte aux lettres correspondante.</p>"
+     "<p>Cordialement,<br>Le Conseil Syndical</p>",
+     True),
+
+    ("publication_externe", "Notification publication (email externe)",
+     '{% if is_commentaire %}Relance {{ publication.titre }}{% else %}{{ publication.titre }} — {{ residence.nom }}{% endif %}',
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
+     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4e2 Publication{% endif %} : {{ publication.titre }}</h2>'
+     '{% if is_commentaire %}'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#EEF2F7;padding:16px">'
+     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
+     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
+     '{% if fichiers %}'
+     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Voir les pièces jointes ci-dessous.</p>'
+     '{% endif %}'
+     '</td></tr></table>'
+     '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
+     '{% endif %}'
+     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Publication initiale — {{ date_publication }}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
+     '<div style="font-size:14px;color:#1A1A2E">{{ publication.contenu | safe }}</div>'
+     '</td></tr></table>'
+     '{% if is_commentaire and evolutions %}'
+     '{% for e in evolutions %}'
+     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#FFFFFF;padding:12px 16px">'
+     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ e.auteur_nom }} — {{ e.date }}</p>'
+     '<div style="font-size:14px;color:#1A1A2E">{{ e.contenu | safe }}</div>'
+     '</td></tr></table>'
+     '{% endfor %}'
+     '{% endif %}'
+     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:20px 0 16px">'
+     '<p style="margin:0;font-size:13px;color:#5A6070;text-align:center">'
+     'Ce message vous a été transmis par le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong>.</p>',
+     False),
+
+    ("ticket_externe", "Notification ticket (email externe)",
+     '{% if is_commentaire %}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
+     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f527 Ticket{% endif %} : {{ ticket.titre }}</h2>'
+     '{% if is_commentaire %}'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#EEF2F7;padding:16px">'
+     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
+     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
+     '{% if fichiers %}'
+     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Voir les pièces jointes ci-dessous.</p>'
+     '{% endif %}'
+     '</td></tr></table>'
+     '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
+     '{% endif %}'
+     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %} — {{ date_creation }}</p>'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
+     '<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>'
+     '</td></tr></table>'
+     '{% if is_commentaire and messages %}'
+     '{% for m in messages %}'
+     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#FFFFFF;padding:12px 16px">'
+     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} — {{ m.date }}</p>'
+     '<div style="font-size:14px;color:#1A1A2E">{{ m.contenu | safe }}</div>'
+     '</td></tr></table>'
+     '{% endfor %}'
+     '{% endif %}'
+     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:20px 0 16px">'
+     '<p style="margin:0;font-size:13px;color:#5A6070;text-align:center">'
+     'Ce message vous a été transmis par le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong>.</p>',
+     False),
 ]
 
 
