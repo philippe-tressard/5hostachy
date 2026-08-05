@@ -301,107 +301,71 @@ def _check_db_integrity() -> list[str]:
     return issues
 
 
-def _send_alert(to: str, issues: list[str], session: Session) -> None:
-    """Envoie l'email d'alerte système avec le gabarit HTML du site."""
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    from zoneinfo import ZoneInfo
-    from app.utils.email import _wrap_email
+def _en_problemes(issues: list[str]) -> list[dict]:
+    """Découpe « titre\\ndétail\\ndétail » en {titre, details} pour le modèle.
 
-    smtp_cfg = {r.cle: r.valeur for r in session.exec(select(ConfigSite)).all()}
-
-    server = smtp_cfg.get("smtp_server", "").strip()
-    port = int(smtp_cfg.get("smtp_port") or 587)
-    username = smtp_cfg.get("smtp_username", "").strip()
-    password = smtp_cfg.get("smtp_password", "").strip()
-    from_addr = smtp_cfg.get("smtp_from", username).strip()
-    from_name = smtp_cfg.get("smtp_from_name", "").strip()
-    site_nom = smtp_cfg.get("site_nom", "5Hostachy")
-    site_url = (smtp_cfg.get("site_url") or "https://5hostachy.fr").rstrip("/")
-    footer = smtp_cfg.get("email_footer", "")
-
-    if not server or not username:
-        logger.warning("Alerte santé non envoyée : SMTP non configuré.")
-        return
-
-    now_paris = datetime_longue(datetime.now(ZoneInfo("Europe/Paris")))
-    annee = datetime.now().year
-
-    # ── Construction du corps HTML ────────────────────────────────────────
-    blocs_html = []
+    Les `_check_*` rendent des chaînes dont les lignes suivantes sont des
+    précisions techniques. Le découpage se fait ici, pas dans le modèle : un
+    modèle d'e-mail affiche, il ne défait pas un format.
+    """
+    problemes = []
     for issue in issues:
         lignes = issue.split("\n")
-        titre = lignes[0]
-        details = lignes[1:] if len(lignes) > 1 else []
-        detail_html = ""
-        if details:
-            rows = "".join(
-                f'<tr><td style="padding:4px 0;font-size:13px;color:#4A5568;font-family:monospace">{l.strip()}</td></tr>'
-                for l in details
-            )
-            detail_html = (
-                f'<table role="presentation" cellpadding="0" cellspacing="0" '
-                f'style="width:100%;background:#F8F9FA;border-left:3px solid #E53E3E;'
-                f'border-radius:4px;padding:10px 14px;margin-top:8px">'
-                f'{rows}</table>'
-            )
-        blocs_html.append(
-            f'<tr><td style="padding:10px 0 6px">'
-            f'<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">'
-            f'<tr><td style="vertical-align:top;width:24px;padding-top:2px">'
-            f'<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#E53E3E;margin-top:4px"></span>'
-            f'</td>'
-            f'<td style="vertical-align:top;font-size:15px;color:#1A1A2E;line-height:1.5">{titre}</td>'
-            f'</tr>'
-            f'{"<tr><td></td><td>" + detail_html + "</td></tr>" if detail_html else ""}'
-            f'</table>'
-            f'</td></tr>'
-        )
+        problemes.append({
+            "titre": lignes[0],
+            "details": [l.strip() for l in lignes[1:] if l.strip()],
+        })
+    return problemes
 
-    issues_html = "\n".join(blocs_html)
 
-    body_html = f"""
-<p style="margin:0 0 8px;font-size:15px;color:#4A5568">Bonjour,</p>
-<p style="margin:0 0 24px;font-size:15px;color:#4A5568">
-  Le contrôle quotidien du <strong>{now_paris}</strong> a détecté
-  <strong style="color:#E53E3E">{len(issues)} problème(s)</strong> :
-</p>
+def _send_alert(to: str, issues: list[str], session: Session) -> None:
+    """Envoie l'alerte système par le moteur d'e-mail commun.
 
-<table role="presentation" cellpadding="0" cellspacing="0"
-  style="width:100%;border:1px solid #FED7D7;border-radius:8px;
-         background:#FFF5F5;padding:16px 20px;margin-bottom:24px">
-  {issues_html}
-</table>
+    Cette fonction parlait à SMTP en direct et fabriquait son HTML en f-strings,
+    doublant un moteur d'envoi qui existait à côté. Quatre conséquences, toutes
+    silencieuses : l'alerte n'apparaissait pas dans `historique_email` (donc
+    l'envoi le plus critique du système était le seul dont on ne pouvait pas
+    vérifier le départ), elle n'était pas modifiable depuis Admin → Emails, elle
+    ignorait `smtp_ssl_tls` en ne gérant que STARTTLS, et les deux modèles
+    prévus pour elle — `sauvegarde_echec` et `alerte_espace_disque` — dormaient
+    en base sans que rien ne les envoie.
 
-<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">
-  <tr><td align="center">
-    <a href="{site_url}/admin"
-       style="display:inline-block;background:#1E3A5F;color:#FFFFFF;
-              font-size:14px;font-weight:600;padding:12px 28px;
-              border-radius:6px;text-decoration:none;letter-spacing:0.3px">
-      Accéder à l'administration
-    </a>
-  </td></tr>
-</table>
-"""
+    Ces deux modèles sont fusionnés en un seul, `alerte_systeme` : le contrôle
+    quotidien découvre les problèmes ensemble et n'envoie qu'un message. Deux
+    modèles pour un envoi ne se maintiennent pas — ils divergent.
 
-    full_html = _wrap_email(body_html, site_nom, site_url, footer, annee)
+    `send_email` est une coroutine et ce contrôle tourne dans un fil
+    d'APScheduler (`BackgroundScheduler`), sans boucle d'événements : `asyncio.
+    run` en ouvre une pour la durée de l'envoi, ce qui est le cas d'usage prévu.
+    """
+    import asyncio
 
-    # ── Envoi ─────────────────────────────────────────────────────────────
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[{site_nom}] ⚠️ Alerte système — {len(issues)} problème(s) détecté(s)"
-    msg["From"] = f"{from_name} <{from_addr}>" if from_name else from_addr
-    msg["To"] = to
-    msg.attach(MIMEText(full_html, "html", "utf-8"))
+    from zoneinfo import ZoneInfo
+
+    from app.utils.email import send_email
+
+    cfg = {
+        r.cle: r.valeur
+        for r in session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+        ).all()
+    }
+    site_nom = cfg.get("site_nom") or "5Hostachy"
+    site_url = (cfg.get("site_url") or "https://5hostachy.fr").rstrip("/")
+
+    contexte = {
+        "problemes": _en_problemes(issues),
+        "nb_problemes": len(issues),
+        # Heure de Paris : ce message est lu par une personne, pas par une
+        # machine. `datetime_longue` et non `datetime_longue_paris` — la
+        # conversion de fuseau est faite ici, sur un instant réellement daté.
+        "date_controle": datetime_longue(datetime.now(ZoneInfo("Europe/Paris"))),
+        "residence": {"nom": site_nom},
+        "app": {"url": site_url},
+    }
 
     try:
-        use_tls = smtp_cfg.get("smtp_starttls", "1") == "1"
-        with smtplib.SMTP(server, port) as s:
-            if use_tls:
-                s.starttls()
-            s.login(username, password)
-            s.sendmail(from_addr, [to], msg.as_string())
+        asyncio.run(send_email(code="alerte_systeme", to=to, context=contexte))
         logger.info("Alerte santé envoyée à %s (%d problème(s)).", to, len(issues))
     except Exception as exc:
         logger.error("Échec envoi alerte santé : %s", exc)

@@ -752,10 +752,23 @@ def update_modele_email(
     modele = session.get(ModeleEmail, modele_id)
     if not modele:
         raise HTTPException(404, "Modèle introuvable")
-    allowed = {"sujet", "corps_html", "corps_texte", "actif"}
+    allowed = {"sujet", "corps_html", "corps_texte", "actif", "intention"}
     for key, value in payload.items():
-        if key in allowed:
-            setattr(modele, key, value)
+        if key not in allowed:
+            continue
+        # L'intention est rendue telle quelle dans le gabarit : liste blanche,
+        # jamais la valeur reçue. `""` reste permis — c'est « aucun bandeau ».
+        if key == "intention":
+            from app.utils.email import INTENTIONS
+
+            value = (value or "").strip()
+            if value and value not in INTENTIONS:
+                raise HTTPException(
+                    422,
+                    f"Intention inconnue : {value!r}. Valeurs admises : "
+                    + ", ".join(sorted(INTENTIONS)),
+                )
+        setattr(modele, key, value)
     from datetime import datetime
     modele.modifie_le = datetime.utcnow()
     modele.modifie_par_id = _.id
@@ -771,7 +784,7 @@ def reinitialiser_modeles_email(
     _: Utilisateur = Depends(require_admin),
 ):
     """Remet tous les modèles e-mail aux valeurs par défaut (seed)."""
-    from app.seed import EMAIL_TEMPLATES
+    from app.seed import EMAIL_TEMPLATES, INTENTIONS_PAR_MODELE
     updated = 0
     for code, libelle, sujet, corps_html, desactivable in EMAIL_TEMPLATES:
         modele = session.exec(
@@ -780,6 +793,10 @@ def reinitialiser_modeles_email(
         if modele:
             modele.sujet = sujet
             modele.corps_html = corps_html
+            # « Réinitialiser » doit tout remettre par défaut : l'intention
+            # aussi, sans quoi un modèle réinitialisé garderait un bandeau
+            # modifié au-dessus d'un corps redevenu celui d'origine.
+            modele.intention = INTENTIONS_PAR_MODELE.get(code, "")
             modele.modifie_le = datetime.utcnow()
             modele.modifie_par_id = _.id
             session.add(modele)

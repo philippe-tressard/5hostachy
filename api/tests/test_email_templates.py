@@ -32,15 +32,10 @@ BASE_CTX_VARS = {"annee", "app", "residence"}
 # Extrait de seed.EMAIL_TEMPLATES — à mettre à jour consciemment lors de toute
 # modification d'un template (en alignant le point d'appel send_email).
 EXPECTED_VARS: dict[str, set[str]] = {
-    "invitation_resident": {"destinataire", "lien"},
     "reinitialisation_mdp": {"destinataire", "lien"},
     "compte_en_attente": {"utilisateur"},
     "compte_active": {"destinataire"},
     "compte_refuse": {"destinataire"},
-    "locataire_validation_demande": {"lot", "destinataire", "locataire"},
-    "locataire_valide": {"destinataire"},
-    "locataire_refuse": {"destinataire"},
-    "ticket_cree_cs": {"auteur", "ticket"},
     "ticket_bug_admin": {"auteur", "ticket"},
     "ticket_syndic": {
         "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
@@ -50,7 +45,6 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "ticket_nouveau_message": {"ticket", "auteur_action", "message"},
     "reponse_communaute": {"reponse"},
     "idee_statut": {"idee"},
-    "ticket_urgence_bailleur": {"lot", "destinataire", "ticket"},
     "relance_syndic": {
         "tickets", "reference_copro", "civilite", "nom_gestionnaire", "anciennete",
     },
@@ -63,16 +57,26 @@ EXPECTED_VARS: dict[str, set[str]] = {
         "date_publication", "evolutions", "commentaire", "is_commentaire",
         "fichiers", "reference_copro", "publication", "date_commentaire", "auteur",
     },
-    "digest_quotidien": {"destinataire"},
-    "digest_hebdomadaire": {"destinataire"},
-    "sauvegarde_echec": {"date", "erreur"},
-    "alerte_espace_disque": {"espace_total", "espace_disponible", "pourcentage_libre"},
+    # Remplace `sauvegarde_echec` et `alerte_espace_disque` : le contrôle
+    # quotidien découvre les problèmes ensemble et n'envoie qu'un message.
+    "alerte_systeme": {"problemes", "nb_problemes", "date_controle"},
     "verification_email": {"expire_heures", "lien", "prenom"},
     "annonce_hall": {"annonce", "auteur"},
     # Prévient le gestionnaire du site quand l'appariement a créé des accès
     # sans validation préalable. `resultat` porte aussi les accords en français,
     # calculés au point d'appel : un modèle n'a pas à porter la grammaire.
     "acces_apparies_auto": {"utilisateur", "resultat"},
+    # Les trois modèles destinés à des destinataires EXTERNES (syndic, tiers),
+    # longtemps déclarés en migration seulement et donc sans contrat ici.
+    "nouvel_arrivant_bal": {"nom_complet", "batiment", "ancien_resident", "reference_copro"},
+    "publication_externe": {
+        "date_publication", "evolutions", "commentaire", "is_commentaire",
+        "fichiers", "publication", "date_commentaire", "auteur",
+    },
+    "ticket_externe": {
+        "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
+        "fichiers", "date_commentaire", "auteur",
+    },
 }
 
 _env = SandboxedEnvironment(loader=BaseLoader())
@@ -85,13 +89,93 @@ def _required_vars(sujet: str | None, corps_html: str | None) -> set[str]:
     return meta.find_undeclared_variables(ast) - BASE_CTX_VARS
 
 
+def test_chaque_modele_declare_son_intention():
+    """Tout modèle doit dire ce qu'il attend du destinataire.
+
+    Le bandeau d'intention ne vaut que s'il est là partout : un seul e-mail qui
+    n'annonce pas la couleur ramène le lecteur au tri à l'aveugle, et comme
+    l'absence d'intention ne rend simplement aucun bandeau, rien ne le
+    signalerait. C'est le genre d'oubli qui arrive au modèle suivant, pas à
+    ceux d'aujourd'hui.
+    """
+    from app.seed import INTENTIONS_PAR_MODELE
+    from app.utils.email import INTENTIONS
+
+    codes = {row[0] for row in EMAIL_TEMPLATES}
+    sans_intention = codes - set(INTENTIONS_PAR_MODELE)
+    assert not sans_intention, (
+        f"Modèles sans intention déclarée : {sorted(sans_intention)}. Ajoute-les "
+        "à `seed.INTENTIONS_PAR_MODELE` — information, action_requise, "
+        "reponse_attendue ou archive."
+    )
+
+    inconnues = {
+        code: valeur
+        for code, valeur in INTENTIONS_PAR_MODELE.items()
+        if valeur not in INTENTIONS
+    }
+    assert not inconnues, (
+        f"Intentions non reconnues par le gabarit : {inconnues}. Elles ne "
+        "rendraient aucun bandeau, en silence."
+    )
+
+    orphelines = set(INTENTIONS_PAR_MODELE) - codes
+    assert not orphelines, (
+        f"Intentions déclarées pour des modèles inexistants : {sorted(orphelines)}."
+    )
+
+
+def test_le_bandeau_dintention_est_rendu_dans_le_gabarit():
+    """Cas zéro : le bandeau doit réellement apparaître dans le HTML envoyé."""
+    from app.utils.email import INTENTIONS, _wrap_email
+
+    html = _wrap_email(
+        "<p>corps</p>", "Résidence", "https://exemple.fr", "", 2026,
+        intention="action_requise",
+    )
+    assert INTENTIONS["action_requise"][0] in html, (
+        "Le bandeau d'intention n'apparaît pas dans le gabarit : les modèles "
+        "déclarent une intention que personne n'affiche."
+    )
+    # Une intention absente ou inconnue ne doit rien ajouter, jamais une
+    # étiquette fausse.
+    for valeur in ("", None, "inconnue"):
+        neutre = _wrap_email(
+            "<p>corps</p>", "Résidence", "https://exemple.fr", "", 2026, intention=valeur
+        )
+        assert all(lib not in neutre for lib, _, _ in INTENTIONS.values()), (
+            f"Une intention {valeur!r} affiche pourtant un bandeau."
+        )
+
+
 def test_tous_les_templates_ont_un_contrat():
-    """Chaque template de seed.EMAIL_TEMPLATES doit avoir une entrée EXPECTED_VARS."""
+    """EXPECTED_VARS et EMAIL_TEMPLATES doivent lister exactement les mêmes codes.
+
+    La vérification est **bidirectionnelle**, et le second sens est le plus
+    important depuis que les modèles vivent dans quatre modules assemblés par
+    `seed/emails/__init__.py` (05/08/2026) : une famille oubliée à l'assemblage
+    ferait disparaître cinq ou six modèles d'un coup.
+
+    Rien ne l'aurait vu. Les contrôles qui comparent la base à `EMAIL_TEMPLATES`
+    comparent alors une liste amputée à elle-même et restent verts — vérifié en
+    retirant une famille, ils passaient tous. EXPECTED_VARS est la seule liste de
+    codes maintenue **indépendamment** de l'assemblage : c'est elle qui sert
+    d'ancre, et c'est ce qui rend ce test non circulaire (`standards/04` §16).
+    """
     codes = {row[0] for row in EMAIL_TEMPLATES}
     sans_contrat = codes - set(EXPECTED_VARS)
     assert not sans_contrat, (
         f"Templates sans contrat déclaré dans EXPECTED_VARS : {sorted(sans_contrat)}. "
         "Ajoute leur jeu de variables et vérifie le point d'appel send_email."
+    )
+
+    disparus = set(EXPECTED_VARS) - codes
+    assert not disparus, (
+        f"Modèles déclarés dans EXPECTED_VARS mais absents de EMAIL_TEMPLATES : "
+        f"{sorted(disparus)}. Soit une famille manque à l'assemblage de "
+        "`seed/emails/__init__.py` — et ces e-mails ne partiront plus du tout —, "
+        "soit la suppression est voulue et EXPECTED_VARS doit suivre, avec la "
+        "migration qui retire les modèles de la base."
     )
 
 

@@ -706,6 +706,10 @@ class ModeleEmail(SQLModel, table=True):
     corps_html: str  # Jinja2
     corps_texte: str = ""  # Fallback
     variables_disponibles: str = "[]"  # JSON
+    # Ce qui est attendu du destinataire, annoncé en tête du message :
+    # information | action_requise | reponse_attendue | archive (cf.
+    # `email.INTENTIONS`). Vide = aucun bandeau, le modèle reste tel quel.
+    intention: str = ""
     desactivable: bool = True
     actif: bool = True
     modifie_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")

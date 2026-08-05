@@ -107,6 +107,56 @@ def test_tous_les_liens_emis_par_l_api_existent_cote_front():
     )
 
 
+def _liens_des_modeles_email() -> dict[str, list[str]]:
+    """{lien: [modèles qui l'écrivent]} pour les `href="{{ app.url }}/…"`.
+
+    Le contrôle au-dessus ne lit que les `lien=` fabriqués en Python. Or un
+    modèle d'e-mail écrit ses URL **en dur dans du HTML**, et personne ne les
+    relisait : `document_publie` a gardé pendant toute sa vie un bouton vers
+    `/documents`, la route inexistante à l'origine même de ce fichier. Le défaut
+    est resté invisible parce qu'aucune ligne de code n'envoyait ce modèle —
+    un lien mort dans un e-mail que personne n'expédie ne se voit nulle part.
+
+    Un lien d'e-mail est plus coûteux qu'un lien d'application : le destinataire
+    est hors de l'outil, souvent sur son téléphone, et un 404 ne lui laisse
+    aucun moyen de retrouver ce qu'on lui annonçait.
+
+    Les portions `{{ … }}` restantes (`{{ document.lien }}`) sont fournies au
+    rendu et proviennent de `EMPLACEMENTS`, déjà couvert ligne par ligne : elles
+    sont écartées ici plutôt que devinées.
+    """
+    from app.seed import EMAIL_TEMPLATES
+
+    motif = re.compile(r'href="\{\{\s*app\.url\s*\}\}(/[^"{]*)"')
+    trouves: dict[str, list[str]] = {}
+    for code, _libelle, sujet, corps, _desactivable in EMAIL_TEMPLATES:
+        for lien in motif.findall(f"{sujet or ''} {corps or ''}"):
+            trouves.setdefault(lien, []).append(f"modèle « {code} »")
+    return trouves
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_les_liens_ecrits_dans_les_modeles_email_existent():
+    """Un bouton d'e-mail vers une route absente envoie le destinataire nulle part."""
+    casses = [
+        f"  {lien}  ← {', '.join(sorted(set(sources)))}"
+        for lien, sources in sorted(_liens_des_modeles_email().items())
+        if not _page_existe(lien)
+    ]
+    assert not casses, (
+        "Ces liens écrits dans un modèle d'e-mail ne correspondent à aucune "
+        "page du front :\n" + "\n".join(casses)
+    )
+
+
+def test_des_liens_de_modeles_sont_analyses():
+    """Cas zéro : si le motif ne trouve plus rien, le test au-dessus est décoratif."""
+    assert _liens_des_modeles_email(), (
+        "Aucun lien extrait des modèles d'e-mail — le motif ne reconnaît plus la "
+        "façon dont les boutons sont écrits, et ce contrôle ne vérifie plus rien."
+    )
+
+
 def _page_du_lien(lien: str) -> pathlib.Path | None:
     """Fichier `+page.svelte` qui sert ce lien (pour inspecter ancres et onglets)."""
     segments = [s for s in lien.split("#")[0].split("?")[0].strip("/").split("/") if s]

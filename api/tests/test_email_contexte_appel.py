@@ -132,6 +132,30 @@ def _nom_appele(node: ast.Call) -> str | None:
     return None
 
 
+def _noms_denvoi(module: ast.AST) -> set[str]:
+    """Noms locaux qui désignent une fonction d'envoi, alias compris.
+
+    `auth.py` importe `from app.utils.email import send_email as _send_email`
+    puis appelle `add_task(_send_email, code=…)`. Le nom appelé n'étant plus
+    `send_email`, les QUATRE envois du fichier — `verification_email` (deux
+    fois), `compte_en_attente` et `reinitialisation_mdp` — sortaient du
+    garde-fou. Pire que non couverts : **invisibles**, car un appel non reconnu
+    n'est pas non plus compté parmi les opaques que
+    `test_aucun_envoi_hors_de_portee` fait rougir. Trouvé le 05/08/2026 en
+    auditant les modèles, un an après le troisième `'X' is undefined`.
+
+    C'est la leçon de la v2.31.2 reconduite : un garde-fou mérite qu'on vérifie
+    ce qu'il ne voit pas, pas seulement qu'il passe au vert.
+    """
+    noms = set(_FONCTIONS_ENVOI)
+    for n in ast.walk(module):
+        if isinstance(n, ast.ImportFrom):
+            for alias in n.names:
+                if alias.name in _FONCTIONS_ENVOI and alias.asname:
+                    noms.add(alias.asname)
+    return noms
+
+
 def _cibles_assignees(node):
     """Noms affectés par `node`, qu'il soit annoté ou non.
 
@@ -195,14 +219,15 @@ def _envois(arbre: ast.AST, module: ast.AST):
     Un envoi dont le code se résout à plusieurs modèles est rendu une fois par
     modèle : chacun doit tenir avec le même contexte.
     """
+    noms_envoi = _noms_denvoi(module)
     for node in ast.walk(arbre):
         if not isinstance(node, ast.Call):
             continue
         nom = _nom_appele(node)
-        est_envoi = nom in _FONCTIONS_ENVOI
+        est_envoi = nom in noms_envoi
         if nom == "add_task" and node.args:
             premier = node.args[0]
-            est_envoi = isinstance(premier, ast.Name) and premier.id in _FONCTIONS_ENVOI
+            est_envoi = isinstance(premier, ast.Name) and premier.id in noms_envoi
         if not est_envoi:
             continue
         kwargs = {kw.arg: kw.value for kw in node.keywords if kw.arg}
@@ -282,9 +307,12 @@ def _portees(arbre: ast.AST):
             yield n
 
 
-def _collecter() -> tuple[list[tuple[str, str, set[str]]], list[tuple[str, str]]]:
+def _collecter() -> tuple[
+    list[tuple[str, str, set[str]]], list[tuple[str, str]], set[tuple[str, int]]
+]:
     analysables: list[tuple[str, str, set[str]]] = []
     opaques: list[tuple[str, str]] = []
+    lignes_atteintes: set[tuple[str, int]] = set()
     for chemin in sorted(_APP_DIR.rglob("*.py")):
         arbre = ast.parse(chemin.read_text(encoding="utf-8"))
         relatif = chemin.relative_to(_APP_DIR).as_posix()
@@ -296,15 +324,44 @@ def _collecter() -> tuple[list[tuple[str, str, set[str]]], list[tuple[str, str]]
                 if (code, ligne) in vus:
                     continue
                 vus.add((code, ligne))
+                lignes_atteintes.add((relatif, ligne))
                 cles = _cles_du_contexte(node_context, portee, ligne)
                 if cles is None:
                     opaques.append((code, relatif))
                 else:
                     analysables.append((code, relatif, cles))
-    return analysables, opaques
+    return analysables, opaques, lignes_atteintes
 
 
-_ANALYSABLES, _OPAQUES = _collecter()
+def _envois_par_signature() -> set[tuple[str, int]]:
+    """Envois repérés SANS regarder le nom de la fonction appelée.
+
+    Détection volontairement indépendante de `_envois` : un appel qui porte à la
+    fois `code=` et `context=` est un envoi d'e-mail, quel que soit le nom sous
+    lequel la fonction a été importée. Aucun autre appel du dépôt ne combine ces
+    deux mots-clés.
+
+    Cette indépendance est le point. Une première version de ce croisement
+    réutilisait la résolution d'alias qu'elle était censée surveiller : le bug
+    réintroduit pour l'éprouver la rendait aveugle des deux côtés à la fois, et
+    elle restait verte. Un contrôle qui partage la faiblesse de ce qu'il
+    contrôle ne contrôle rien — cf. `standards/04-fiabilite-des-controles.md`.
+    """
+    reperes: set[tuple[str, int]] = set()
+    for chemin in sorted(_APP_DIR.rglob("*.py")):
+        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+        relatif = chemin.relative_to(_APP_DIR).as_posix()
+        for n in ast.walk(arbre):
+            if not isinstance(n, ast.Call):
+                continue
+            mots_cles = {kw.arg for kw in n.keywords if kw.arg}
+            if {"code", "context"} <= mots_cles:
+                reperes.add((relatif, n.lineno))
+    return reperes
+
+
+_ANALYSABLES, _OPAQUES, _LIGNES_ATTEINTES = _collecter()
+_LIGNES_ATTENDUES = _envois_par_signature()
 
 
 def test_des_envois_sont_analysables():
@@ -312,6 +369,29 @@ def test_des_envois_sont_analysables():
     assert _ANALYSABLES, (
         "Aucun envoi d'email analysable trouvé dans app/ — l'analyse AST ne "
         "reconnaît plus les écritures du dépôt, ce test est devenu aveugle."
+    )
+
+
+def test_aucun_envoi_nechappe_a_lanalyse():
+    """Tout envoi repéré par signature doit avoir été atteint par l'analyse.
+
+    Le cas zéro précédent était global : tant qu'un envoi restait analysable
+    quelque part, il était vert. Il l'est donc resté pendant que `auth.py` —
+    quatre envois, dont la réinitialisation de mot de passe — n'en exposait
+    qu'un, à cause d'un alias d'import. Un total ne voit pas ce qui s'éteint.
+
+    Le croisement se fait ligne à ligne, contre une détection qui ignore le nom
+    de la fonction appelée : une écriture d'appel devenue méconnaissable se
+    signale ici au lieu de disparaître. Un envoi non atteint n'est pas non plus
+    compté parmi les opaques — il n'apparaîtrait nulle part sans ce test.
+    """
+    ignores = sorted(_LIGNES_ATTENDUES - _LIGNES_ATTEINTES)
+    assert not ignores, (
+        "Envois qu'aucune écriture reconnue n'atteint : "
+        + ", ".join(f"{f}:{ligne}" for f, ligne in ignores)
+        + ". L'analyse ne reconnaît plus la façon dont ces envois sont écrits "
+        "(alias d'import, appel indirect…) : ils sont hors garde-fou et "
+        "échoueront en silence si leur contexte diverge du template."
     )
 
 
@@ -342,8 +422,17 @@ def test_aucun_envoi_hors_de_portee():
 )
 def test_le_contexte_fournit_les_variables_du_template(code, fichier, cles):
     attendues = _VARS_CRITIQUES.get(code)
-    if attendues is None:
-        pytest.skip("template inconnu — couvert par test_email_templates")
+    # Le skip d'origine renvoyait vers `test_email_templates` — qui itère sur la
+    # MÊME liste et ne voyait donc pas davantage ces modèles. Quatre envois vers
+    # des destinataires externes ont vécu ainsi, dispensés par un renvoi vers un
+    # test qui ne les couvrait pas. Un contrôle qui ne peut pas s'exécuter
+    # renvoie INCONNU, jamais OK : ici, il échoue.
+    assert attendues is not None, (
+        f"{fichier} envoie le modèle `{code}`, absent de `seed.EMAIL_TEMPLATES` : "
+        "aucun garde-fou ne le couvre. Un modèle créé par migration doit être "
+        "rapatrié dans EMAIL_TEMPLATES (le seed n'insère que ce qui manque, "
+        "donc l'ajout est sans effet sur les bases existantes)."
+    )
     # `annee`, `app` et `residence` sont injectées d'office par send_email.
     manquantes = attendues - cles - BASE_CTX_VARS
     assert not manquantes, (

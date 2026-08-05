@@ -5,7 +5,7 @@ import shutil
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -13,8 +13,8 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    Batiment, CategorieDocument, Document, ProfilAccesDocument,
-    Utilisateur, RoleUtilisateur
+    Batiment, CategorieDocument, ConfigSite, Document, Notification,
+    ProfilAccesDocument, Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
 from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
@@ -29,6 +29,87 @@ UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/app/uploads")
 # La règle d'accès aux documents est `document_visible` (app/utils/visibility.py),
 # avec toutes les autres règles de visibilité. Ce router l'appelle, il ne la redéfinit
 # pas et ne l'aliase pas : un seul nom, un seul endroit.
+
+
+def _notifier_document_publie(
+    doc: Document, auteur: Utilisateur, background_tasks: BackgroundTasks, session: Session,
+) -> None:
+    """Prévient les résidents qui ont le droit de voir ce document.
+
+    Le modèle `document_publie` existait depuis l'origine sans qu'aucune ligne
+    ne l'envoie. Ce n'était pas un modèle mort : le manuel recommande
+    « documents = e-mail » et le profil affiche la ligne « Nouveaux documents
+    ajoutés » avec ses deux cases. Les deux canaux étaient promis, aucun n'était
+    branché — la préférence se réglait dans le vide.
+
+    **Le périmètre de diffusion est celui de la lecture, pas un autre.** La
+    liste des destinataires est filtrée par `document_visible`, la même
+    fonction que l'endpoint de téléchargement : une notification qui annonce un
+    document qu'on ne peut pas ouvrir est au mieux une frustration, au pire la
+    divulgation d'un titre confidentiel. Réutiliser la règle plutôt que de la
+    réécrire garantit qu'un durcissement ultérieur profite aux deux.
+
+    Envois **individuels** et non groupés : `send_email_group` place tous les
+    destinataires en TO, où ils se voient les uns les autres. Le dépôt ne s'en
+    sert que pour des groupes internes de quelques personnes (syndic, conseil
+    syndical) ; diffuser ainsi à toute la résidence exposerait le carnet
+    d'adresses des copropriétaires à chacun d'eux.
+    """
+    from app.utils.email import send_email
+    from app.utils.liens import lien_element
+
+    # Une pièce jointe d'actualité et un document de contrat ne sont pas des
+    # publications documentaires : la première est annoncée par l'e-mail de sa
+    # publication, le second ne concerne que le CS, déjà à la manœuvre.
+    if not doc.categorie_id:
+        return
+
+    cfg = {
+        row.cle: row.valeur
+        for row in session.exec(
+            select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
+        ).all()
+    }
+    site_nom = cfg.get("site_nom") or "5Hostachy"
+    site_url = (cfg.get("site_url") or "https://localhost").rstrip("/")
+
+    destinataires = session.exec(
+        select(Utilisateur).where(Utilisateur.actif == True)  # noqa: E712
+    ).all()
+
+    # Ni ici ni dans le modèle l'URL n'est écrite à la main : `/documents`
+    # n'existe pas côté front, et c'est exactement la faute qui a produit un 404
+    # en pleine page le 26/07/2026. La table `EMPLACEMENTS` sait où vit un
+    # document, et `test_liens_front.py` vérifie qu'elle dit vrai.
+    lien_doc = lien_element("doc", doc.id)
+
+    for u in destinataires:
+        if u.id == auteur.id or not document_visible(u, doc, session):
+            continue
+        session.add(Notification(
+            destinataire_id=u.id,
+            type="document",
+            titre=f"Nouveau document : {doc.titre}",
+            corps=doc.titre,
+            lien=lien_doc,
+        ))
+        if not u.email:
+            continue
+        background_tasks.add_task(
+            send_email,
+            code="document_publie",
+            to=u.email,
+            context={
+                "document": {"titre": doc.titre, "lien": lien_doc},
+                "residence": {"nom": site_nom},
+                "app": {"url": site_url},
+            },
+            session=session,
+            # Sans cet identifiant, la préférence `doc_mail` du profil ne serait
+            # toujours pas consultée : la case resterait décorative.
+            destinataire_id=u.id,
+        )
+    session.commit()
 
 
 @router.get("/categories")
@@ -136,6 +217,7 @@ async def upload_document(
     date_ag: str | None = Form(None),
     batiments_ids_json: str | None = Form(None),
     file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = None,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -190,6 +272,12 @@ async def upload_document(
     session.add(doc)
     session.commit()
     session.refresh(doc)
+
+    # `background_tasks` est optionnel : un appel qui ne le fournit pas publie
+    # le document sans notifier, plutôt que d'échouer en cours de route.
+    if background_tasks is not None:
+        _notifier_document_publie(doc, user, background_tasks, session)
+
     return doc
 
 

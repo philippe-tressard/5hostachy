@@ -41,3 +41,42 @@ def test_revisions_uniques():
     revs = [s.revision for s in _script_dir().walk_revisions()]
     doublons = sorted({r for r in revs if revs.count(r) > 1})
     assert not doublons, f"Identifiants de révision dupliqués : {doublons}"
+
+
+def test_les_migrations_qui_lisent_le_seed_y_trouvent_leur_modele():
+    """Un modèle retiré du seed ne doit pas bloquer le démarrage du conteneur.
+
+    Plusieurs migrations vont chercher le corps d'un modèle dans
+    `seed.EMAIL_TEMPLATES` plutôt que d'en garder une copie — c'est voulu, deux
+    copies du même HTML divergent. Mais elles l'extraient par
+    `next(t for t in EMAIL_TEMPLATES if t[0] == "<code>")` : le jour où ce code
+    disparaît du seed, `next` lève `StopIteration`. Sur une base neuve, cela
+    fait échouer `alembic upgrade head`, et `start.sh` a `set -e` — le conteneur
+    ne démarre plus du tout.
+
+    Le risque n'est pas théorique : l'audit du 05/08/2026 a retiré dix modèles
+    du seed en une journée. Une migration est figée ; c'est au code d'aujourd'hui
+    de rester compatible avec elle, et ce test le vérifie.
+    """
+    import re
+
+    from app.seed import EMAIL_TEMPLATES
+
+    codes = {row[0] for row in EMAIL_TEMPLATES}
+    motif = re.compile(r"""t\[0\]\s*==\s*["']([a-z0-9_]+)["']""")
+    manquants: list[str] = []
+    for chemin in sorted((_API_DIR / "alembic" / "versions").glob("*.py")):
+        source = chemin.read_text(encoding="utf-8")
+        if "EMAIL_TEMPLATES" not in source:
+            continue
+        for code in motif.findall(source):
+            if code not in codes:
+                manquants.append(f"{chemin.name} cherche « {code} »")
+
+    assert not manquants, (
+        "Migrations qui cherchent dans seed.EMAIL_TEMPLATES un modèle qui n'y "
+        "est plus :\n  " + "\n  ".join(manquants)
+        + "\nSur une base neuve, `next(...)` lève StopIteration et le conteneur "
+        "reste bloqué au démarrage. Garder une copie du contenu dans la "
+        "migration concernée plutôt que de la laisser lire le seed."
+    )
