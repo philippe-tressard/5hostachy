@@ -141,7 +141,10 @@ EMAIL_TEMPLATES = [
      '<p style="margin:0 0 4px;font-weight:600;font-size:16px">{{ utilisateur.prenom }} {{ utilisateur.nom }}</p>'
      '<p style="margin:0;color:#5A6070">{{ utilisateur.email }}</p>'
      '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/admin/utilisateurs" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Valider le compte</a></p>',
+     # `/admin/utilisateurs` n'existe pas : la page `/admin` s'ouvre d'elle-même
+     # sur l'onglet « Comptes en attente », et ne lit pas `?onglet=`. Ce bouton
+     # ouvrait un 404 depuis l'origine, dans un e-mail réellement envoyé.
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/admin" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Valider le compte</a></p>',
      True),
 
     ("compte_active", "Compte activé", "Votre compte est activé — {{ residence.nom }}",
@@ -353,7 +356,11 @@ EMAIL_TEMPLATES = [
      '<td style="background:#F2EFE9;padding:16px">'
      '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ document.titre }}</p>'
      '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/documents" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter les documents</a></p>',
+     # `/documents` n'a jamais existé côté front : chaque document s'affiche là
+     # où il est rattaché. Le bouton menait donc à un 404 — le même que celui
+     # signalé depuis un PV d'AG le 26/07/2026, resté ici parce que ce modèle
+     # n'était envoyé par personne. Le lien vient de `app/utils/liens.py`.
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}{{ document.lien }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le document</a></p>',
      True),
 
     ("publication_syndic", "Publication transmise au syndic",
