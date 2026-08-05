@@ -545,17 +545,33 @@ EMAIL_TEMPLATES = [
     # et tiers, où un envoi raté ne se voit pas depuis l'application.
     # Le seed n'insère que ce qui manque : les rapatrier ici ne touche à aucune
     # base existante, et rend une base neuve conforme à celles en service.
+    # Seul modèle resté en HTML brut, hérité de la migration 0066 : ni gabarit,
+    # ni encadré, un sujet en abrégé (« MaJ Boites aux lettres ») et une demande
+    # sèche. C'est pourtant un message adressé au syndic — même destinataire que
+    # `relance_syndic`, dont le préambule a été repris le 01/08/2026 pour dire ce
+    # qu'on attend sans mettre personne en cause.
     ("nouvel_arrivant_bal", "Nouvel arrivant — Étiquette boîte aux lettres",
-     "{{ reference_copro }} - Nouvel arrivant MaJ Boites aux lettres",
-     "<p>Bonjour,</p>"
-     "<p>Nous vous informons de l'arrivée d'un nouveau résident :</p>"
-     "<ul>"
-     "<li><strong>Nom :</strong> {{ nom_complet }}</li>"
-     "{% if batiment %}<li><strong>Bâtiment / Apt :</strong> {{ batiment }}</li>{% endif %}"
-     "{% if ancien_resident %}<li><strong>Ancien résident :</strong> {{ ancien_resident }}</li>{% endif %}"
-     "</ul>"
-     "<p>Merci de préparer l'étiquette de boîte aux lettres correspondante.</p>"
-     "<p>Cordialement,<br>Le Conseil Syndical</p>",
+     "{% if reference_copro %}\U0001f3e2 {{ reference_copro }} — {% endif %}"
+     "Nouvel arrivant — mise à jour des boîtes aux lettres",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
+     '\U0001f4ea Étiquette de boîte aux lettres à mettre à jour</h2>'
+     '<p style="margin:0 0 16px">Un nouveau résident vient d’emménager dans la '
+     'copropriété <strong>{{ residence.nom }}</strong>. Nous vous transmettons les '
+     'éléments nécessaires pour que son étiquette de boîte aux lettres soit à jour.</p>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
+     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ nom_complet }}</p>'
+     '{% if batiment %}<p style="margin:0 0 4px;font-size:14px;color:#5A6070">'
+     'Bâtiment / appartement : <strong>{{ batiment }}</strong></p>{% endif %}'
+     '{% if ancien_resident %}<p style="margin:0;font-size:14px;color:#5A6070">'
+     'Occupant précédent : {{ ancien_resident }}</p>{% endif %}'
+     '</td></tr></table>'
+     '<p style="margin:0 0 16px">Une étiquette absente ou périmée fait revenir le '
+     'courrier à l’expéditeur, et c’est le résident qui nous le signale. Un '
+     'mot de votre part une fois la modification faite nous permettra de lui '
+     'répondre sans vous relancer.</p>'
+     '<p style="margin:8px 0 0">Cordialement,<br>'
+     '<strong>Le Conseil Syndical</strong></p>',
      True),
 
     ("publication_externe", "Notification publication (email externe)",
