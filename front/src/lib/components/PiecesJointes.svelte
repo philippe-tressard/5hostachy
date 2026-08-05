@@ -9,30 +9,71 @@
 
   Props :
     - urls   : liste d'URLs internes (/uploads/…)
-    - size   : côté des vignettes en px
+    - size   : côté des vignettes en px (format « vignette » uniquement)
     - compact: réduit la typographie des liens (fils d'évolutions)
+    - format : « vignette » (aperçu) ou « grand » (contenu déplié)
+
+  Deux formats, parce que la vignette ne répond pas à la même question. Dans une
+  liste ou un fil d'évolutions, elle signale « il y a une photo » sans casser le
+  rythme de lecture. Une fois le contenu déplié, l'utilisateur a demandé à voir :
+  lui laisser un timbre-poste de 72 px l'oblige à un clic de plus pour ce qu'il
+  vient justement de demander.
+
+  Le format « grand » ne coûte aucun octet supplémentaire : il n'existe pas de
+  miniature côté serveur, les photos sont réduites à 1600 px au téléversement, et
+  la vignette téléchargeait déjà ce fichier-là pour l'afficher en 72 px.
+
+  `object-fit: contain` en grand format, et non `cover` : une photo portrait
+  affichée dans un cadre carré perd ses bords haut et bas. Sur un dégât des eaux,
+  c'est précisément ce qu'on cherchait à montrer.
 -->
 <script lang="ts">
+	import Lightbox from './Lightbox.svelte';
 	import Vignette from './Vignette.svelte';
 	import { nomFichier, separerFichiers } from '$lib/fichiers';
 
 	export let urls: string[] | null | undefined = [];
 	export let size = 72;
 	export let compact = false;
+	export let format: 'vignette' | 'grand' = 'vignette';
 
 	$: ({ photos, documents } = separerFichiers(urls));
+
+	//  null = visionneuse fermée. Le clic n'ouvre plus un onglet : il ouvrait le
+	//  fichier brut hors de la PWA, et le retour ramenait sur un article refermé.
+	let photoOuverte: number | null = null;
 </script>
 
 {#if photos.length || documents.length}
 	<div class="pj">
 		{#if photos.length}
-			<div class="pj-photos">
-				{#each photos as url (url)}
-					<a href={url} target="_blank" rel="noopener" aria-label="Ouvrir {nomFichier(url)}">
-						<Vignette src={url} alt="" {size} title={nomFichier(url)} />
-					</a>
-				{/each}
-			</div>
+			{#if format === 'grand'}
+				<div class="pj-grandes">
+					{#each photos as url, i (url)}
+						<button
+							type="button"
+							class="pj-grande"
+							aria-label="Agrandir {nomFichier(url)}"
+							on:click|stopPropagation={() => (photoOuverte = i)}
+						>
+							<img src={url} alt={nomFichier(url)} loading="lazy" />
+						</button>
+					{/each}
+				</div>
+			{:else}
+				<div class="pj-photos">
+					{#each photos as url, i (url)}
+						<button
+							type="button"
+							class="pj-vignette"
+							aria-label="Agrandir {nomFichier(url)}"
+							on:click|stopPropagation={() => (photoOuverte = i)}
+						>
+							<Vignette src={url} alt="" {size} title={nomFichier(url)} />
+						</button>
+					{/each}
+				</div>
+			{/if}
 		{/if}
 		{#if documents.length}
 			<div class="pj-docs">
@@ -47,9 +88,38 @@
 	</div>
 {/if}
 
+{#if photoOuverte !== null}
+	<Lightbox {photos} index={photoOuverte} on:fermer={() => (photoOuverte = null)} />
+{/if}
+
 <style>
 	.pj { display: flex; flex-direction: column; gap: .4rem; }
 	.pj-photos { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+	/*  Boutons et non liens : l'action reste dans la page. Le style par défaut du
+	    bouton est neutralisé pour que seule la photo se voie. */
+	.pj-vignette,
+	.pj-grande {
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: zoom-in;
+		display: block;
+		line-height: 0;
+	}
+	.pj-grandes { display: flex; flex-direction: column; gap: .5rem; }
+	.pj-grande { width: 100%; }
+	.pj-grande img {
+		width: 100%;
+		/*  Plafond de hauteur : une photo portrait 1200×1600 affichée pleine
+		    largeur occuperait deux écrans sur mobile et repousserait commentaires
+		    et actions hors de vue. `contain` préserve les proportions. */
+		max-height: 60vh;
+		object-fit: contain;
+		border-radius: var(--radius);
+		border: 1px solid var(--color-border);
+		background: var(--color-bg-alt, #f5f5f5);
+	}
 	.pj-docs { display: flex; gap: .35rem; flex-wrap: wrap; }
 	.pj-doc {
 		display: inline-flex;
