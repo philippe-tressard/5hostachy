@@ -149,12 +149,33 @@ def test_le_bandeau_dintention_est_rendu_dans_le_gabarit():
 
 
 def test_tous_les_templates_ont_un_contrat():
-    """Chaque template de seed.EMAIL_TEMPLATES doit avoir une entrée EXPECTED_VARS."""
+    """EXPECTED_VARS et EMAIL_TEMPLATES doivent lister exactement les mêmes codes.
+
+    La vérification est **bidirectionnelle**, et le second sens est le plus
+    important depuis que les modèles vivent dans quatre modules assemblés par
+    `seed/emails/__init__.py` (05/08/2026) : une famille oubliée à l'assemblage
+    ferait disparaître cinq ou six modèles d'un coup.
+
+    Rien ne l'aurait vu. Les contrôles qui comparent la base à `EMAIL_TEMPLATES`
+    comparent alors une liste amputée à elle-même et restent verts — vérifié en
+    retirant une famille, ils passaient tous. EXPECTED_VARS est la seule liste de
+    codes maintenue **indépendamment** de l'assemblage : c'est elle qui sert
+    d'ancre, et c'est ce qui rend ce test non circulaire (`standards/04` §16).
+    """
     codes = {row[0] for row in EMAIL_TEMPLATES}
     sans_contrat = codes - set(EXPECTED_VARS)
     assert not sans_contrat, (
         f"Templates sans contrat déclaré dans EXPECTED_VARS : {sorted(sans_contrat)}. "
         "Ajoute leur jeu de variables et vérifie le point d'appel send_email."
+    )
+
+    disparus = set(EXPECTED_VARS) - codes
+    assert not disparus, (
+        f"Modèles déclarés dans EXPECTED_VARS mais absents de EMAIL_TEMPLATES : "
+        f"{sorted(disparus)}. Soit une famille manque à l'assemblage de "
+        "`seed/emails/__init__.py` — et ces e-mails ne partiront plus du tout —, "
+        "soit la suppression est voulue et EXPECTED_VARS doit suivre, avec la "
+        "migration qui retire les modèles de la base."
     )
 
 
