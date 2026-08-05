@@ -352,8 +352,12 @@ EMAIL_TEMPLATES = [
      '{% endfor %}'
      '<p style="margin:24px 0 0">Nous vous remercions de bien vouloir nous tenir inform\u00e9s '
      'des actions engag\u00e9es sur ces dossiers.</p>'
+     # Signature sans le nom de la résidence : « Le Conseil Syndical de
+     # {{ residence.nom }} » rendait « … de Les Hostachy ». L'article du nom
+     # propre ne se contracte pas, et le destinataire sait déjà de quelle
+     # copropriété il s'agit — le préambule le dit, l'objet aussi.
      '<p style="margin:8px 0 0">Cordialement,<br>'
-     '<strong>Le Conseil Syndical de {{ residence.nom }}</strong></p>',
+     '<strong>Le Conseil Syndical</strong></p>',
      False),
 
     ("vigik_commande_recue", "Commande vigik reçue (CS)", "Nouvelle commande de {{ type }} — {{ residence.nom }}",
