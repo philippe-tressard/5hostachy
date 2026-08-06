@@ -393,6 +393,13 @@ a-t-elle tourné ? » ne se mesurait qu'ici, au point 14, donc seulement les jou
 illisible. Le point 14 reste utile pour les logs et le disque ; l'hygiène, elle, n'a
 plus besoin d'un pré-check pour être vue.
 
+> 📖 Généralisé au socle — c'est là que vit la règle, pas ici :
+> `standards/04-fiabilite-des-controles.md` §18 (un seuil se règle sur le **régime** de
+> ce qu'il surveille, pas sur l'action corrective ; et il se valide **à la veille** du
+> passage suivant, pas au lendemain du précédent) et §19 (un contrôle nomme ce qu'il a
+> mesuré, jamais la cause qu'il suppose). Ce qui précède n'en est que l'instanciation
+> 5Hostachy : les seuils, les logs et les numéros de contrôle.
+
 **Point 15 — pourquoi (03/08/2026) :** en basculant les pièces jointes vers
 `POST /uploads/fichier`, deux endpoints (`/uploads/ticket/{id}`,
 `/uploads/evenement/{id}`) se sont retrouvés **sans le moindre appelant**, et
