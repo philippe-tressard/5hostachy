@@ -145,16 +145,51 @@ Structure pour les tickets/publications avec historique :
 
 ## 11. Vignette & galerie de photos
 
-Deux composants partagés, utilisés par la Communauté (petites annonces) et les
-Annonces Hall. **Ne pas recréer** de `.xxx-thumb` ni de rangée de photos ad hoc.
+Composants partagés. **Ne pas recréer** de `.xxx-thumb`, de rangée de photos ad hoc,
+ni de visionneuse : `PiecesJointes` était déjà réécrit à l'identique dans quatre pages,
+chacune avec sa propre expression régulière pour décider ce qui est une image.
 
 | Composant | Rôle | Props |
 |---|---|---|
-| `$lib/components/Vignette.svelte` | vignette carrée | `src`, `alt`, `placeholder`, `count`, `size`, slot d'actions |
-| `$lib/components/PhotosUpload.svelte` | galerie éditable | `urls`, `max`, `readonly`, `upload`, `remove` |
+| `$lib/components/PiecesJointes.svelte` | **affichage en lecture seule** d'une liste de pièces jointes (photos + documents) | `urls`, `size`, `compact`, `format` |
+| `$lib/components/Lightbox.svelte` | visionneuse plein écran | `photos`, `index` · événement `fermer` |
+| `$lib/components/Vignette.svelte` | vignette carrée (brique de bas niveau) | `src`, `alt`, `placeholder`, `count`, `size`, slot d'actions |
+| `$lib/components/PhotosUpload.svelte` | galerie **éditable** | `urls`, `max`, `readonly`, `upload`, `remove` |
 
 Le téléversement est **délégué par callback** : chaque rubrique garde son propre
-endpoint, le composant ne connaît pas l'API.
+endpoint, le composant ne connaît pas l'API. La règle « qu'est-ce qu'une image, et
+quel nom afficher » vit dans `$lib/fichiers.ts` (`separerFichiers`, `nomFichier`) —
+jamais réimplémentée dans une page.
+
+### Quel `format` de `PiecesJointes` — la vignette ne répond pas à la même question
+
+| `format` | Où | Pourquoi |
+|---|---|---|
+| `'vignette'` (défaut) | là où l'on **survole** : fils de messages, fils d'évolutions, listes | signale « il y a une photo » sans casser le rythme de lecture |
+| `'grand'` | là où l'on a **demandé à voir** : fil déplié, annonce dépliée, fiche ticket | l'utilisateur vient de déplier ; lui laisser un timbre-poste de 72 px lui impose un clic de plus pour ce qu'il demande |
+
+Le grand format **ne coûte aucun octet** : il n'existe pas de miniature côté serveur,
+les photos sont réduites à 1600 px / JPEG q85 au téléversement, et la vignette
+téléchargeait déjà ce fichier-là pour l'afficher en 72 px.
+
+⚠️ **`object-fit: contain` en grand format, jamais `cover`.** Une photo portrait dans
+un cadre carré perd ses bords haut et bas — sur un dégât des eaux, précisément ce
+qu'on cherchait à montrer. `cover` reste correct pour la vignette, où l'on ne cherche
+qu'à signaler la présence d'une image.
+
+### Ce que la visionneuse impose (v2.42.0)
+
+- **Un clic sur une photo n'ouvre jamais un onglet.** L'ancien `<a target="_blank">`
+  sortait de la PWA vers le fichier brut, et le retour ramenait sur une page dont
+  l'article s'était refermé — le geste le plus coûteux de l'écran, sur mobile surtout.
+- **Le verrou de défilement est un état global** : fonction idempotente appelée depuis
+  *chaque* sortie (fermeture, `Échap`, clic sur le fond) **et** depuis `onDestroy` —
+  l'utilisateur peut naviguer ailleurs sans jamais fermer la visionneuse, et la page
+  d'arrivée resterait figée jusqu'au rechargement. Cf. `standards/11-interface-et-ux.md`
+  §12, et l'incident du 04/08/2026 qui est exactement ce cas.
+- `Échap` ferme, les flèches naviguent, le compteur suit ; cible tactile **≥ 44 px**
+  sur le bouton de fermeture — mesurée, pas supposée : la relecture avait laissé
+  passer un bouton à 40 px, trouvé en mesurant dans un navigateur à 375×812.
 
 ## 12. Visibilité du Kanban (calendrier + widget tableau de bord)
 
