@@ -56,17 +56,42 @@ SANS_CONSOMMATEUR_FRONT = {
 }
 
 
+def _prefixe_declare(chemin: pathlib.Path) -> str:
+    """Le `prefix=` passé à `APIRouter(...)` dans ce fichier, ou "" s'il n'y en a pas."""
+    prefixe = ""
+    for noeud in ast.walk(ast.parse(chemin.read_text(encoding="utf-8"))):
+        if isinstance(noeud, ast.Call) and getattr(noeud.func, "id", "") == "APIRouter":
+            for kw in noeud.keywords:
+                if kw.arg == "prefix" and isinstance(kw.value, ast.Constant):
+                    prefixe = kw.value.value
+    return prefixe
+
+
 def _routes() -> list[tuple[str, str, str]]:
-    """(fichier, méthode, chemin complet) de chaque endpoint déclaré."""
+    """(fichier, méthode, chemin complet) de chaque endpoint déclaré.
+
+    Parcourt les **sous-paquets** (`rglob`), et pas seulement `routers/*.py`. Sans
+    cela, découper un router en paquet fait disparaître ses endpoints du champ du
+    contrôle : c'est arrivé le 06/08/2026 avec `admin.py` (2057 lignes) devenu le
+    paquet `admin/`, et ses 45 routes se sont évaporées d'un coup.
+
+    Le préfixe **s'hérite du paquet**. Dans un paquet découpé, les sous-modules
+    déclarent `APIRouter()` nu et c'est l'`__init__.py` qui porte
+    `APIRouter(prefix="/admin")` — le montage réel donne donc `/admin/...`. Un
+    détecteur qui lit chaque fichier isolément reconstruirait `/db/checkpoint` et
+    conclurait que `/admin/db/checkpoint` n'existe plus. C'est exactement le
+    message d'erreur qu'a produit ce test au moment du découpage.
+    """
     trouvees: list[tuple[str, str, str]] = []
-    for fichier in sorted(ROUTEURS.glob("*.py")):
+    fichiers = [f for f in sorted(ROUTEURS.rglob("*.py")) if "__pycache__" not in f.parts]
+    for fichier in fichiers:
         arbre = ast.parse(fichier.read_text(encoding="utf-8"))
-        prefixe = ""
-        for noeud in ast.walk(arbre):
-            if isinstance(noeud, ast.Call) and getattr(noeud.func, "id", "") == "APIRouter":
-                for kw in noeud.keywords:
-                    if kw.arg == "prefix" and isinstance(kw.value, ast.Constant):
-                        prefixe = kw.value.value
+        prefixe = _prefixe_declare(fichier)
+        if not prefixe and fichier.parent != ROUTEURS:
+            #  Sous-module d'un paquet : le préfixe est celui de son `__init__.py`.
+            init = fichier.parent / "__init__.py"
+            if init.exists():
+                prefixe = _prefixe_declare(init)
         for noeud in ast.walk(arbre):
             if not isinstance(noeud, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue

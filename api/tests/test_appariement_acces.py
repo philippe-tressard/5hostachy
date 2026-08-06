@@ -163,7 +163,11 @@ def test_l_appariement_est_declenche_a_la_validation_d_un_compte():
     racine = pathlib.Path(__file__).resolve().parents[2]
     appelants = {
         "api/app/routers/auth.py": "inscription / validation d'e-mail",
-        "api/app/routers/admin.py": "activation d'un compte par un administrateur",
+        #  Chemin suivi au découpage de `admin.py` en paquet (06/08/2026). Un test
+        #  qui cite un fichier en dur casse au premier déplacement — c'est le prix
+        #  d'un contrôle de point d'appel, et il vaut mieux le payer ici qu'ignorer
+        #  que l'appariement puisse disparaître sans erreur visible.
+        "api/app/routers/admin/comptes.py": "activation d'un compte par un administrateur",
     }
     for chemin, contexte in appelants.items():
         source = (racine / chemin).read_text(encoding="utf-8")
