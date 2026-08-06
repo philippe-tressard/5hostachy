@@ -145,7 +145,7 @@ Avant toute MEP, Claude vérifie les points suivants. Si une anomalie est détec
 | 11 | Auto-deploy de l'actif vivant | Sur l'**actif** : `stat -c %U /var/log/hostachy-deploy.log` + HEAD actif vs `origin/main` | Log **`ptressard`** (pas `root`) · HEAD actif **==** `origin/main` |
 | 12 | Image en cours = code déployé, **pour les services concernés** | `git diff --name-only <image>..HEAD` pour savoir quels services sont touchés, puis `docker inspect <svc>` — voir « Point 12 » | Image du service **touché** reconstruite après le commit ; un service non touché n'est pas une anomalie |
 | 13 | Le canal d'alerte fonctionne | Dernière alerte reçue / `grep 'Email KO' /var/log/hostachy-health-watch.log` | Aucun `Email KO` récent — sinon les contrôles automatiques sont muets |
-| 14 | **Hygiène disque sur les 2 RPi** | `docker system df` + `ls -la /var/log/hostachy-*.log` sur les **2** nœuds | Cache de build **< 20 Go** · aucun log **> 5 Mo** · dernière maintenance < 8 j **sur chaque nœud** (voir « Point 14 ») |
+| 14 | **Hygiène disque sur les 2 RPi** | `docker system df` + `ls -la /var/log/hostachy-*.log` sur les **2** nœuds | Cache de build **< 40 Go** (régime normal : 10 à ~29 Go selon le jour de la semaine) · aucun log **> 5 Mo** · dernière maintenance < 8 j **sur chaque nœud** — automatisé par **C17** (voir « Point 14 ») |
 | 15 | **Aucun endpoint orphelin introduit par le lot** | `cd api && pytest tests/test_endpoints_orphelins.py -q` (poste de dev, avant le push) | 3 tests verts — voir « Point 15 » |
 
 **Point 2 — pourquoi (26/07/2026) :** « fichier présent, cohérent » était trop vague
@@ -365,8 +365,33 @@ sur le **standby** que le pré-check n'inspectait pas :
   rebuild du peer par nuit depuis la v2.20.19. Purgé à 10 Go
   (`docker builder prune -f --max-used-space 10G`) → rpi1 71 → 22 Go, rpi2 66 → 21 Go,
   sans toucher images, volumes ni sauvegardes. Plafonné chaque dimanche, surveillé
-  par **C16** (WARN ≥ 20 Go). Ne pas descendre sous 10 Go : la bascule compte sur ce
+  par **C16** (WARN ≥ 40 Go). Ne pas descendre sous 10 Go : la bascule compte sur ce
   cache pour ne pas rejouer `npm run build` (OOM). Cf. [[project_retention_logs_maintenance]].
+
+⚠ **Le seuil de C16 était à 20 Go, et il criait au loup 4 jours sur 7 (06/08/2026).**
+Il avait été « déduit » du plafond du dimanche — 10 Go plafonnés, donc 20 = le double,
+donc la purge est en panne. Le raisonnement oublie que le plafond n'est pas un régime :
+il s'applique **une fois par semaine**, et le cache regrossit ensuite d'environ 3,1 Go
+par nuit puisque la bascule reconstruit l'image du peer. Le régime stationnaire est
+donc `plafond + 6 nuits` ≈ 29 Go, **au-dessus** du seuil censé le surveiller : WARN sur
+les deux nœuds dès le mercredi, sur une infra parfaitement saine.
+
+Deux corrections, et la seconde est la vraie :
+- le seuil se **déduit désormais de la politique de rétention** (`BUILD_CACHE_FLOOR_GB`
+  + 6 × `BUILD_CACHE_GROWTH_GB`), et le self-test **échoue** si on le redescend sous ce
+  régime — l'erreur d'origine ne peut plus être refaite par le même raisonnement ;
+- le message **n'affirme plus de cause**. Il disait « la purge hebdomadaire ne fait plus
+  son travail » alors qu'elle avait réclamé 1,76 Go quatre jours plus tôt : il envoyait
+  déboguer `maintenance.sh` pour rien. Un contrôle rapporte ce qu'il mesure ; désigner
+  une cause qu'il n'a pas mesurée est une erreur de conception, pas de formulation.
+
+Et surtout : **la taille du cache était un proxy, jamais le fait**. « La maintenance
+a-t-elle tourné ? » ne se mesurait qu'ici, au point 14, donc seulement les jours de MEP
+— alors que l'invariant est permanent (règle 2). C'est désormais **C17**, toutes les
+15 minutes, sur les deux nœuds : âge de la dernière ligne `Garde-fou` de
+`hostachy-maintenance.log`, WARN au-delà de 8 jours, INCONNU si le log est absent ou
+illisible. Le point 14 reste utile pour les logs et le disque ; l'hygiène, elle, n'a
+plus besoin d'un pré-check pour être vue.
 
 **Point 15 — pourquoi (03/08/2026) :** en basculant les pièces jointes vers
 `POST /uploads/fichier`, deux endpoints (`/uploads/ticket/{id}`,

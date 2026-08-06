@@ -24,9 +24,30 @@ SKEW_WARN_S=5
 LOCK_STALE_MIN=20
 HB_MAX_AGE_MIN=20       # battement auto-deploy : 4 ticks de 5 min manqués
 CR_MAX_AGE_MIN=40       # exécution de CE script sur le peer : 2 ticks de 15 min manqués
-BUILD_CACHE_WARN_GB=20  # plafond de purge hebdomadaire = 10 Go : 20 = purge en panne
+MAINT_MAX_AGE_MIN=11520 # maintenance hebdomadaire : 8 j, un dimanche manqué toléré
+
+# ── Cache de build : le seuil se DÉDUIT de la politique de rétention ──────────
+# Le seuil valait 20 Go, « déduit » du plafond de 10 Go appliqué le dimanche :
+# le double, donc la purge est en panne. C'était faux, et le contrôle criait au
+# loup 4 jours sur 7 sur une infra saine (constaté le 06/08/2026, WARN sur les
+# 2 nœuds alors que la purge du 02/08 avait bien réclamé 1,76 Go sur rpi1 et
+# 3,36 Go sur rpi2). Le plafond n'est pas un régime : il est appliqué UNE fois
+# par semaine, et le cache regrossit ensuite d'environ 3,1 Go par nuit — la
+# bascule reconstruit l'image du peer chaque nuit depuis la v2.20.19. Le régime
+# stationnaire de la rétention à 7 jours est donc le plafond PLUS six nuits, soit
+# ~29 Go la veille du dimanche suivant : au-dessus du seuil qui le surveillait.
+#
+# Le seuil doit donc dépasser ce régime, sinon il ne mesure pas ce qu'il croit.
+# Les trois valeurs sont explicites pour que la relation soit vérifiable — le
+# self-test échoue si le seuil redescend sous le régime, ce qui interdit de le
+# re-déduire du seul plafond comme la première fois.
+BUILD_CACHE_FLOOR_GB=10   # plafond appliqué chaque dimanche par maintenance.sh
+BUILD_CACHE_GROWTH_GB=4   # croissance par nuit (3,1 Go mesurés, arrondi prudent)
+BUILD_CACHE_WARN_GB=40    # > 10 + 6 nuits × 4 = 34 Go de régime, avec marge
+
 DEPLOY_LOG=/var/log/hostachy-deploy.log
 RELIABILITY_LOG=/var/log/hostachy-reliability.log
+MAINT_LOG=/var/log/hostachy-maintenance.log
 
 FAILS=0; WARNS=0; FAIL_LINES=""
 ok()   { echo "[ OK ] $*"; }
@@ -72,6 +93,17 @@ cache_go() {  # $1 = "64.68GB" → 64 ; "980MB" → 0 ; "" → -1
   esac
 }
 
+# ── Verdict du cache de build (PURE — testable) ──────────────────────────────
+# Args : taille en Go (-1 = illisible), seuil → "ok" | "depasse" | "inconnu".
+# Séparé de la mesure pour que le CAS ZÉRO soit testable : un cache illisible
+# doit rendre INCONNU et non « 0 Go, donc sous le seuil » (règle 1).
+cache_verdict() {
+  local go="$1" max="$2"
+  case "$go" in ''|*[!0-9-]*) echo inconnu; return ;; esac
+  [ "$go" -lt 0 ] && { echo inconnu; return; }
+  [ "$go" -ge "$max" ] && echo depasse || echo ok
+}
+
 # ── Verdict du battement (PURE — testable) ───────────────────────────────────
 # Args : âge en minutes (-1 = inconnu), seuil → "ok" | "absent" | "inconnu"
 beat_verdict() {
@@ -113,6 +145,39 @@ if [ "${1:-}" = "--selftest" ]; then
     exp=${c##*:}; got=$(cache_go "${c%:*}")
     [ "$got" = "$exp" ] && echo "PASS  cache '${c%:*}' → $got Go" || { echo "FAIL  cache '${c%:*}' attendu=$exp obtenu=$got"; st_fail=1; }
   done
+  echo "-- cache_verdict --"
+  cv() { # description attendu go seuil
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(cache_verdict "$@")
+    [ "$got" = "$exp" ] && echo "PASS  $desc  → $got" \
+      || { echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; }
+  }
+  cv "régime normal du dimanche"        "ok"      10 "$BUILD_CACHE_WARN_GB"
+  cv "régime de veille de dimanche"     "ok"      29 "$BUILD_CACHE_WARN_GB"
+  cv "pile au seuil"                    "depasse" 40 "$BUILD_CACHE_WARN_GB"
+  cv "purge réellement en panne"        "depasse" 64 "$BUILD_CACHE_WARN_GB"
+  # Le CAS ZÉRO, celui qui a déjà fait mentir C14 le 30/07 : une mesure illisible
+  # rend -1, et -1 n'est PAS « 0 Go, donc tout va bien ».
+  cv "mesure illisible (-1)"            "inconnu" -1 "$BUILD_CACHE_WARN_GB"
+  cv "mesure vide"                      "inconnu" "" "$BUILD_CACHE_WARN_GB"
+  cv "mesure non numérique"             "inconnu" "n/a" "$BUILD_CACHE_WARN_GB"
+  echo "-- cohérence seuil / politique de rétention --"
+  # C'est l'erreur du 06/08/2026 mise sous garde-fou : le seuil avait été déduit
+  # du plafond du dimanche (10 → 20), en oubliant que le cache regrossit six
+  # nuits avant la purge suivante. Un seuil sous le régime rend le contrôle WARN
+  # en permanence sur une infra saine. Si la croissance mesurée augmente, c'est
+  # ce test qui doit rappeler de relever le seuil — pas un log qu'on ignore.
+  REGIME=$(( BUILD_CACHE_FLOOR_GB + 6 * BUILD_CACHE_GROWTH_GB ))
+  if [ "$BUILD_CACHE_WARN_GB" -gt "$REGIME" ]; then
+    echo "PASS  seuil ${BUILD_CACHE_WARN_GB} Go > régime ${REGIME} Go (plafond ${BUILD_CACHE_FLOOR_GB} + 6 nuits × ${BUILD_CACHE_GROWTH_GB})"
+  else
+    echo "FAIL  seuil ${BUILD_CACHE_WARN_GB} Go ≤ régime ${REGIME} Go — C16 sera WARN sur une infra saine"; st_fail=1
+  fi
+  echo "-- âge de maintenance (réutilise beat_age_min/beat_verdict) --"
+  check "maintenance de 4 j"                    "ok"      5760  "$MAINT_MAX_AGE_MIN"
+  check "maintenance pile à 8 j"                "ok"      11520 "$MAINT_MAX_AGE_MIN"
+  check "deux dimanches manqués"                "absent"  20160 "$MAINT_MAX_AGE_MIN"
+  check "maintenance jamais horodatée"          "inconnu" -1    "$MAINT_MAX_AGE_MIN"
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st_fail
 fi
@@ -148,6 +213,9 @@ echo "biglogs=$BIG"
 echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
 echo "reliability_last=$(tail -3000 /var/log/hostachy-reliability.log 2>/dev/null | grep -oE "check-reliability \([0-9-]{10} [0-9:]{8}\)" | tail -1 | tr -d "()" | cut -d" " -f2-)"
 echo "buildcache=$(docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null | grep -i "^Build Cache" | cut -d"|" -f2 | tr -d " ")"
+# Motif SANS accent volontairement : ce bloc traverse SSH, et « Hygiène » y
+# dépendrait de la locale des deux bouts. « Garde-fou » est aussi distinctif.
+echo "maint_last=$(grep "Garde-fou" '"$MAINT_LOG"' 2>/dev/null | grep -oE "^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]" | tail -1 | tr -d "[]")"
 '
 
 # ⚠ PAS de contrôle d'intégrité DB ici — SUPPRIMÉ le 17/07/2026 (cf. C8 plus bas).
@@ -346,16 +414,48 @@ fi
 # plafonne désormais à 10 Go chaque dimanche ; ce contrôle attrape la panne de
 # cette purge, des mois avant que C9 (disque ≥ 85 %) ne s'en aperçoive — et sans
 # faire croire à une fuite applicative, comme un simple « disque à 85 % ».
+#
+# Le seuil est calculé sur la politique de rétention, pas sur le plafond (voir le
+# bloc BUILD_CACHE_* en tête). Et le message ne DÉSIGNE PLUS DE CAUSE : il disait
+# « la purge hebdomadaire ne fait plus son travail », ce qui envoyait déboguer
+# maintenance.sh alors qu'elle avait purgé quatre jours plus tôt. Un dépassement
+# a plusieurs causes possibles — purge en panne, croissance plus rapide que
+# prévu, semaine chargée en rebuilds — et ce contrôle ne sait pas laquelle.
+# Il rapporte ce qu'il mesure et renvoie vers ce qui, lui, sait : C17.
 for pair in "$SELF:${S_buildcache:-}" "$PEER:${P_buildcache:-}"; do
   n=${pair%%:*}; v=${pair#*:}; [ "$n" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
   g=$(cache_go "$v")
-  if [ "$g" -lt 0 ]; then
-    warn "Cache de build Docker illisible sur $n ('${v:-vide}')"
-  elif [ "$g" -ge "$BUILD_CACHE_WARN_GB" ]; then
-    warn "Cache de build Docker à ${g} Go sur $n (≥ ${BUILD_CACHE_WARN_GB}) — la purge hebdomadaire ne fait plus son travail (docker builder prune -f --max-used-space 10G)"
-  else
-    ok "Cache de build Docker à ${g} Go sur $n"
-  fi
+  case "$(cache_verdict "$g" "$BUILD_CACHE_WARN_GB")" in
+    ok)      ok "Cache de build Docker à ${g} Go sur $n (< ${BUILD_CACHE_WARN_GB})" ;;
+    depasse) warn "Cache de build Docker à ${g} Go sur $n (≥ ${BUILD_CACHE_WARN_GB}, régime attendu ≤ $(( BUILD_CACHE_FLOOR_GB + 6 * BUILD_CACHE_GROWTH_GB )) Go) — vérifier C17 avant de conclure à une purge en panne" ;;
+    *)       warn "Cache de build Docker INCONNU sur $n ('${v:-vide}' illisible) — ni vert ni rouge : la mesure a échoué" ;;
+  esac
+done
+
+# ── C17. La maintenance hebdomadaire a-t-elle tourné, sur les DEUX nœuds ? ────
+# C16 ne mesurait la santé de la purge que par la TAILLE du cache — un proxy
+# confondu par la croissance normale, ce qui l'a rendu WARN 4 jours sur 7 (voir
+# son commentaire). Le fait lui-même n'était mesuré nulle part en continu : il
+# n'existait qu'au point 14 du pré-check, donc seulement les jours de MEP, alors
+# que l'invariant est permanent (règle 2 du CLAUDE.md).
+#
+# Ce contrôle mesure donc directement CE QUI COMPTE : la date de la dernière
+# exécution de l'hygiène. Sur les deux nœuds, parce que le défaut du 31/07/2026
+# était précisément que maintenance.sh ne tournait que sur l'actif, et qu'un nœud
+# n'est actif qu'un dimanche sur deux — le standby dérivait sans que rien ne le
+# dise (80 218 lignes dans hostachy-check.log sur rpi2).
+#
+# WARN et non FAIL : une maintenance en retard ne coupe pas la production, elle
+# la laisse se dégrader. Ce qui coupe, C9 et C10 le voient déjà.
+for pair in "$SELF:${S_maint_last:-}" "$PEER:${P_maint_last:-}"; do
+  n=${pair%%:*}; v=${pair#*:}; [ "$n" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+  MAINT_AGE=$(beat_age_min "$v")
+  MAINT_D=$(( MAINT_AGE / 1440 ))
+  case "$(beat_verdict "$MAINT_AGE" "$MAINT_MAX_AGE_MIN")" in
+    ok)      ok "Maintenance hebdomadaire sur $n : dernière exécution il y a ${MAINT_D} j" ;;
+    absent)  warn "Maintenance hebdomadaire en retard sur $n : dernière exécution il y a ${MAINT_D} j (attendu ≤ $(( MAINT_MAX_AGE_MIN / 1440 )) j) → cron root perdu, bit x, ou script en erreur avant l'hygiène" ;;
+    *)       warn "Maintenance hebdomadaire INCONNUE sur $n : aucune ligne horodatée 'Garde-fou' dans $MAINT_LOG (jamais exécutée, log illisible, ou format changé)" ;;
+  esac
 done
 
 echo "─────────────────────────────────────────────────────────────"
