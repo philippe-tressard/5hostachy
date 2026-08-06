@@ -160,10 +160,21 @@ async def lifespan(app: FastAPI):
 import os as _os
 _enable_docs = _os.getenv("ENABLE_API_DOCS", "false").lower() == "true"
 
+#  Version du CONTRAT de l'API, délibérément distincte de celle de l'application
+#  (`front/package.json`). Elle était écrite en dur à deux endroits — ici et dans
+#  la réponse de `/health` — donc rien ne garantissait qu'ils restent d'accord.
+#
+#  ⚠️ Ne pas la faire pointer vers la version applicative : `/health` est PUBLIC et
+#  non authentifié, la rendre exacte divulguerait la version déployée sans qu'aucun
+#  besoin ne l'impose. Le post-check lit la version servie dans le bundle du front,
+#  ce qui n'expose rien de plus (décision du 03/08/2026, cf. la skill mep-precheck).
+#  Aucun script d'infra ne consomme ce champ — vérifié le 06/08/2026.
+API_VERSION = "0.2.0"
+
 app = FastAPI(
     title="5Hostachy API",
     description="API de gestion de la copropriété — Résidence du Parc",
-    version="0.2.0",
+    version=API_VERSION,
     lifespan=lifespan,
     default_response_class=UTCJSONResponse,
     docs_url="/docs" if _enable_docs else None,
@@ -267,7 +278,7 @@ def health():
     try:
         with Session(_engine) as _s:
             _s.exec(_text("SELECT 1"))  # type: ignore[arg-type]
-        return {"status": "ok", "version": "0.2.0"}
+        return {"status": "ok", "version": API_VERSION}
     except Exception as exc:
         _logger.error("Health check DB failed : %s", exc)
         return JSONResponse(
