@@ -169,6 +169,23 @@ jobs:
           ' auto-deploy.sh || st=1
           exit $st
 
+      - name: Modularité — un fichier de plus de 500 lignes ne doit pas grossir
+        # Rang 1 du socle. Le dépôt compte 26 fichiers déjà au-dessus du plafond :
+        # un contrôle absolu échouerait en permanence et serait désactivé dans la
+        # semaine. La règle est « l'existant se découpe AU FIL DE L'EAU » — ce qui
+        # est interdit n'est pas d'être gros, c'est de GROSSIR sans découper.
+        #
+        # Posé le 07/08/2026 sur remarque de l'utilisateur : trois lots successifs
+        # avaient fait grossir flux.py (996 → 1044), check-reliability.sh (386 →
+        # 565) et email.py (650 → 656) sans qu'aucun contrôle ne le signale. La
+        # consigne existait depuis le début ; elle ne tenait pas seule.
+        run: |
+          # Historique COMPLET de la base : un clone superficiel a fait échouer la
+          # comparaison au premier essai, et le contrôle avait conclu au vert sur
+          # un diff vide. Le script refuse désormais de conclure dans ce cas.
+          git fetch --no-tags --unshallow origin ${{ github.base_ref || 'main' }} 2>/dev/null             || git fetch --no-tags origin ${{ github.base_ref || 'main' }}
+          bash scripts-ci-modularite.sh origin/${{ github.base_ref || 'main' }}
+
       - name: Bits d'exécution versionnés
         # Étape 0b du pré-check MEP, jusqu'ici manuelle : `core.filemode=false`
         # sur un clone Windows avale un `chmod +x`, le fichier part en 100644 et
