@@ -65,7 +65,15 @@ def _save_image(file: UploadFile, subfolder: str, max_dim: int = 1600) -> str:
 
     dest_dir = UPLOADS_ROOT / subfolder
     dest_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}.jpg"
+    #  Le nom passe par `nom_stocke`, comme toute autre pièce jointe. Il était
+    #  fabriqué ici à la main — `f"{uuid4().hex}.jpg"`, sans radical — alors que
+    #  `app/utils/fichiers.py` annonce en tête « écrit une seule fois ». Il l'était
+    #  deux fois, et la seconde perdait le nom d'origine : une photo arrivait dans
+    #  l'e-mail sous « fb6cb1df94734926bfcd9b7f07e99ded.jpg », là où un PDF joint au
+    #  même message s'affichait « Devis-toiture.pdf ». Signalé sur un e-mail réel le
+    #  07/08/2026. L'image est réencodée en JPEG, d'où l'extension forcée — mais le
+    #  radical du fichier d'origine, lui, n'a aucune raison d'être jeté.
+    filename = nom_stocke(file.filename, ".jpg")
     (dest_dir / filename).write_bytes(data)
     return f"/uploads/{subfolder}/{filename}"
 

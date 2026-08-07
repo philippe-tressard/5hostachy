@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from app.config import get_settings
 from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
-from app.utils.fichiers import nom_lisible
+from app.utils.fichiers import libelle_pieces_jointes, nom_lisible
 
 settings = get_settings()
 
@@ -231,7 +231,13 @@ def _bandeau_pieces_jointes(noms: list[str]) -> str:
     """
     if not noms:
         return ""
-    libelle = "1 pièce jointe" if len(noms) == 1 else f"{len(noms)} pièces jointes"
+    #  « 1 photo » plutôt que « 1 pièce jointe » quand l'extension permet de le
+    #  dire : le décompte seul oblige le destinataire à ouvrir pour savoir de quoi
+    #  il s'agit. Repli sur le libellé générique si aucune extension n'est
+    #  exploitable — mieux vaut vague qu'inexact.
+    libelle = libelle_pieces_jointes(noms) or (
+        "1 pièce jointe" if len(noms) == 1 else f"{len(noms)} pièces jointes"
+    )
     lignes = "".join(
         f'<tr><td style="padding:2px 0;font-size:13px;color:#1A1A2E">'
         f'<span style="color:#8A8FA0">{i}.</span>&nbsp;{_html_echappe(nom)}</td></tr>'

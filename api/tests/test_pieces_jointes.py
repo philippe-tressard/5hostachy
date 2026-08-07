@@ -276,11 +276,14 @@ def test_le_sommaire_annonce_exactement_les_pieces_jointes():
 
     assert _bandeau_pieces_jointes([]) == "", "aucune pièce jointe : aucun bandeau"
 
+    #  Le libellé annonce la NATURE depuis le 07/08/2026 : « 1 document » plutôt
+    #  que « 1 pièce jointe », parce que le décompte seul oblige le destinataire à
+    #  ouvrir pour savoir de quoi il s'agit.
     seule = _bandeau_pieces_jointes(["devis.pdf"])
-    assert "1 pièce jointe" in seule and "pièces jointes" not in seule
+    assert "1 document" in seule and "documents" not in seule
 
     trois = _bandeau_pieces_jointes(["devis.pdf", "plan.jpg", "constat.docx"])
-    assert "3 pièces jointes" in trois
+    assert "1 photo et 2 documents" in trois
     for i, nom in enumerate(["devis.pdf", "plan.jpg", "constat.docx"], start=1):
         assert nom in trois, nom
         assert f">{i}.<" in trois, f"numérotation {i} absente"
@@ -312,4 +315,99 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
     assert len(appels) == 2, (
         f"{len(appels)} point(s) d'envoi dérivent le sommaire de `attachments` — "
         "il en faut 2 (send_email et send_email_group)"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Nommage des fichiers téléversés — une seule source, tenue par un contrôle
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_aucun_nom_de_fichier_fabrique_hors_de_nom_stocke():
+    """`app/utils/fichiers.py` annonce « écrit une seule fois ». Il faut le vérifier.
+
+    POURQUOI (07/08/2026, signalé par l'utilisateur sur un e-mail réel) : la règle
+    était écrite, elle n'était pas tenue. `_save_image()` fabriquait son nom à la
+    main — `f"{uuid.uuid4().hex}.jpg"`, sans radical — pendant que tout le reste
+    passait par `nom_stocke()`. Conséquence visible : dans le même e-mail, un PDF
+    s'affichait « Devis-toiture.pdf » et une photo
+    « fb6cb1df94734926bfcd9b7f07e99ded.jpg ».
+
+    Le nom d'origine n'était pas tronqué à l'affichage — il était **détruit au
+    téléversement**, donc irrécupérable pour toutes les photos déjà en base.
+    C'est ce qui rend la duplication coûteuse ici : elle ne se rattrape pas.
+
+    Un commentaire ne suffisait pas ; ce test échoue si la seconde implémentation
+    revient.
+    """
+    import pathlib
+    import re
+
+    racine = pathlib.Path(__file__).resolve().parents[1] / "app"
+    #  Un nom de fichier bâti à partir d'un UUID et d'une extension, hors du module
+    #  qui a le droit de le faire.
+    motif = re.compile(r"""uuid4\(\)\.hex\}?["']?\s*\+?\s*["']?\.[a-z0-9]{2,5}""", re.IGNORECASE)
+    #  Fichiers GÉNÉRÉS, pas téléversés : il n'existe aucun nom d'origine à
+    #  conserver, donc `nom_stocke` n'aurait rien à quoi s'appliquer. Vérifié dans
+    #  les deux sens plus bas — une exception qui n'a plus lieu d'être fait échouer
+    #  le test, sinon la liste grossit jusqu'à tout couvrir.
+    generes = {"routers/annonces_hall.py"}  # affiche de hall produite par WeasyPrint
+
+    fautifs, vus = [], set()
+    for f in sorted(racine.rglob("*.py")):
+        if f.name == "fichiers.py" and f.parent.name == "utils":
+            continue  # la source unique, seule autorisée
+        rel = f.relative_to(racine).as_posix()
+        for num, ligne in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            if ligne.lstrip().startswith("#"):
+                continue
+            if motif.search(ligne):
+                if rel in generes:
+                    vus.add(rel)
+                    continue
+                fautifs.append(f"  {f.relative_to(racine.parent)}:{num}: {ligne.strip()}")
+
+    obsoletes = sorted(generes - vus)
+    assert not obsoletes, (
+        "Exception(s) devenue(s) inutile(s) dans `generes` — à retirer : " + ", ".join(obsoletes)
+    )
+    assert not fautifs, (
+        "Nom de fichier téléversé fabriqué hors de `nom_stocke()` — le nom d'origine "
+        "sera perdu, et perdu définitivement :\n" + "\n".join(fautifs)
+    )
+
+
+def test_libelle_annonce_la_nature_des_pieces_jointes():
+    """Le sommaire dit « 1 photo », pas « 1 pièce jointe », quand il peut le dire."""
+    from app.utils.fichiers import est_image, libelle_pieces_jointes
+
+    assert est_image("abc_vue.JPG") and est_image("x.png") and est_image("y.webp")
+    assert not est_image("devis.pdf") and not est_image("") and not est_image("sans-extension")
+
+    assert libelle_pieces_jointes(["a_vue.jpg"]) == "1 photo"
+    assert libelle_pieces_jointes(["a.jpg", "b.png"]) == "2 photos"
+    assert libelle_pieces_jointes(["a.pdf"]) == "1 document"
+    assert libelle_pieces_jointes(["a.jpg", "b.pdf", "c.docx"]) == "1 photo et 2 documents"
+    #  Cas ZÉRO : aucune pièce → chaîne vide, et c'est l'appelant qui décide du
+    #  repli. Rendre « 0 pièce jointe » afficherait un bandeau pour rien.
+    assert libelle_pieces_jointes([]) == ""
+
+
+def test_est_image_et_estImage_sont_la_meme_regle():
+    """Parité Python / TypeScript, comme `nom_lisible` / `nomFichier`.
+
+    Deux listes d'extensions qui divergent, et une photo est annoncée « document »
+    dans l'e-mail tout en s'affichant en vignette dans l'application.
+    """
+    import pathlib
+    import re
+
+    ts = (pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "fichiers.ts")
+    m = re.search(r"EXTENSIONS_IMAGE\s*=\s*/\\.\(([^)]+)\)\$/i", ts.read_text(encoding="utf-8"))
+    assert m, "EXTENSIONS_IMAGE introuvable dans fichiers.ts — parité invérifiable"
+
+    from app.utils import fichiers
+    py = re.search(r"\\.\(([^)]+)\)\$", fichiers._EXTENSIONS_IMAGE.pattern)
+    assert py, "motif Python illisible — parité invérifiable"
+    assert m.group(1) == py.group(1), (
+        f"Les extensions image divergent : TS='{m.group(1)}' vs Python='{py.group(1)}'"
     )

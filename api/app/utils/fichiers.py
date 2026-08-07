@@ -129,3 +129,38 @@ def nom_stocke(nom_origine: str | None, extension: str) -> str:
     """
     ext = extension if (not extension or extension.startswith(".")) else f".{extension}"
     return f"{uuid.uuid4().hex}_{radical_assaini(nom_origine)}{ext}"
+
+
+#  Même expression que `EXTENSIONS_IMAGE` dans front/src/lib/fichiers.ts : une
+#  règle, deux langages, et `tests/test_pieces_jointes.py` vérifie qu'elles ne
+#  divergent pas — comme pour `nom_lisible` / `nomFichier`.
+_EXTENSIONS_IMAGE = re.compile(r"\.(jpe?g|png|webp|gif)$", re.IGNORECASE)
+
+
+def est_image(chemin_ou_url: str | None) -> bool:
+    """Une pièce jointe est-elle une image ?
+
+    Sert à annoncer la NATURE des pièces jointes dans le sommaire d'un e-mail :
+    « 1 photo » plutôt que « 1 pièce jointe » quand on peut le dire. Le
+    destinataire sait alors s'il doit ouvrir la pièce ou s'il l'a déjà vue dans
+    le corps du message.
+    """
+    return bool(_EXTENSIONS_IMAGE.search(chemin_ou_url or ""))
+
+
+def libelle_pieces_jointes(noms: list[str]) -> str:
+    """« 1 photo », « 2 documents », « 1 photo et 2 documents »…
+
+    Le décompte seul (« 3 pièces jointes ») oblige à ouvrir pour savoir de quoi
+    il s'agit. La nature est déductible de l'extension : autant la donner.
+    """
+    photos = sum(1 for n in noms if est_image(n))
+    docs = len(noms) - photos
+    morceaux = []
+    if photos:
+        morceaux.append(f"{photos} photo" + ("s" if photos > 1 else ""))
+    if docs:
+        morceaux.append(f"{docs} document" + ("s" if docs > 1 else ""))
+    if not morceaux:
+        return ""
+    return " et ".join(morceaux)
