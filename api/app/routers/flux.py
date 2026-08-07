@@ -281,8 +281,9 @@ def get_flux(
                        "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
                        "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
-                       "photos_urls": parse_photos(tk.photos_urls),
-                       "fichiers_urls": parse_photos(tk.fichiers_urls)},
+                       #  Même règle que les trois autres cartes de ticket : une photo
+                       #  jointe au commentaire de clôture doit se voir.
+                       **_pj_evolution_ou_ticket(evol, tk)},
             ))
         elif nouveau in ("ouvert", "en_cours"):
             evol_auteur = _auteur_nom(session, evol.auteur_id)
@@ -341,6 +342,12 @@ def get_flux(
             meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
                    "perimetre": _perimetre_label(perims),
                    "description": _strip_html(tk.description, 300),
+                   #  Ces deux blocs (réponse CS, commentaire) n'émettaient AUCUNE
+                   #  clé de pièce jointe : la carte du fil ne pouvait donc rien
+                   #  afficher, même quand l'évolution en portait. Corrigé le
+                   #  07/08/2026 — la photo d'un commentaire restait invisible dans
+                   #  le fil alors qu'elle l'était déjà dans le ticket et l'e-mail.
+                   **_pj_evolution_ou_ticket(evol, tk),
                    "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
                    "evol_auteur": evol_auteur},
         ))
@@ -373,6 +380,12 @@ def get_flux(
             meta={"ticket_id": tk.id, "statut": tk.statut, "numero": tk.numero,
                    "perimetre": _perimetre_label(perims),
                    "description": _strip_html(tk.description, 300),
+                   #  Ces deux blocs (réponse CS, commentaire) n'émettaient AUCUNE
+                   #  clé de pièce jointe : la carte du fil ne pouvait donc rien
+                   #  afficher, même quand l'évolution en portait. Corrigé le
+                   #  07/08/2026 — la photo d'un commentaire restait invisible dans
+                   #  le fil alors qu'elle l'était déjà dans le ticket et l'e-mail.
+                   **_pj_evolution_ou_ticket(evol, tk),
                    "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
                    "evol_auteur": evol_auteur},
         ))
