@@ -11,6 +11,7 @@
 	import { perimetreLabel } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import EvolForm from '$lib/components/EvolForm.svelte';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -29,13 +30,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	let evolsLoaded = new Set<number>();
 	// Formulaire d'évolution
 	let showEvolForm: number | null = null;
-	let evolType: 'commentaire' | 'etat' = 'commentaire';
-	let evolContenu = '';
-	let evolNouveauStatut = '';
 	let evolSaving = false;
-	let evolPartagerWhatsapp = false;
-	let evolEnvoyerSyndic = false;
-	let evolEnvoyerCs = false;
 
 	const STATUT_BADGE: Record<string, string> = {
 		ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray',
@@ -43,6 +38,18 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	const STATUT_LABELS: Record<string, string> = {
 		ouvert: 'Ouvert', en_cours: 'En cours', résolu: 'Résolu', annulé: 'Annulé',
 	};
+	//  Les états proposés au changement, repris tels quels de la liste déroulante
+	//  écrite à la main que `EvolForm` remplace ici : aucun changement de
+	//  comportement dans ce lot.
+	//  ⚠️ La fiche détail (`tickets/[id]`) propose `fermé` là où cette page propose
+	//  `annulé` — divergence héritée de la duplication, signalée mais pas tranchée
+	//  ici : aligner les deux est une décision fonctionnelle, pas un refactor.
+	const TICKET_STATUT_OPTIONS = [
+		{ value: 'ouvert',   label: '🔵 Ouvert' },
+		{ value: 'en_cours', label: '🟡 En cours' },
+		{ value: 'résolu',   label: '🟢 Résolu' },
+		{ value: 'annulé',   label: '⚫ Annulé' },
+	];
 	const CAT_ICON: Record<string, string> = {
 		panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}',
 	};
@@ -126,37 +133,40 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	}
 
 	function openEvolForm(id: number) {
+		//  Les champs du formulaire ne sont plus remis à zéro ici : `EvolForm` porte
+		//  son propre état, et le `{#key showEvolForm}` du gabarit le remonte à neuf
+		//  à chaque ouverture — y compris les pièces jointes déjà téléversées, qui
+		//  ne doivent surtout pas se retrouver sur le ticket suivant.
 		showEvolForm = id;
-		evolType = 'commentaire';
-		evolContenu = '';
-		evolNouveauStatut = '';
-		evolPartagerWhatsapp = false;
-		evolEnvoyerSyndic = false;
-		evolEnvoyerCs = false;
 		expandedTickets = new Set([id]);
 	}
 
-	async function addEvolution(t: Ticket) {
-		if (evolType === 'etat' && !evolNouveauStatut) return;
-		if (evolType === 'commentaire' && !evolContenu.trim()) return;
+	//  Reçoit l'événement `submit` d'`EvolForm` — même contrat que la fiche détail
+	//  (`tickets/[id]`), y compris `fichiers_urls` : c'est ce qui apporte les pièces
+	//  jointes à une réaction depuis cette page, où le formulaire était réécrit à la
+	//  main et n'en proposait aucune.
+	async function addEvolFromForm(t: Ticket, e: CustomEvent) {
+		const data = e.detail;
 		evolSaving = true;
 		try {
 			await ticketsApi.addEvolution(t.id, {
-				type: evolType,
-				contenu: evolContenu.trim() || undefined,
-				nouveau_statut: evolType === 'etat' ? evolNouveauStatut : undefined,
-				partager_whatsapp: evolPartagerWhatsapp,
-				envoyer_syndic: evolEnvoyerSyndic,
-				envoyer_cs: evolEnvoyerCs,
+				type: data.type,
+				contenu: data.contenu || undefined,
+				nouveau_statut: data.nouveau_statut,
+				fichiers_urls: data.fichiers_urls,
+				email_externe: data.email_externe,
+				partager_whatsapp: data.partager_whatsapp || undefined,
+				envoyer_syndic: data.envoyer_syndic || undefined,
+				envoyer_cs: data.envoyer_cs || undefined,
 			});
-			if (evolType === 'etat') {
-				ticketList = ticketList.map(x => x.id === t.id ? { ...x, statut: evolNouveauStatut } : x);
+			if (data.type === 'etat') {
+				ticketList = ticketList.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut } : x);
 			}
 			await loadEvolutions(t.id);
 			showEvolForm = null;
-			toast('success', evolType === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
+		} catch (e2) {
+			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
 		} finally { evolSaving = false; }
 	}
 
@@ -348,59 +358,21 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 							</div>
 						</div>
 					{:else if showEvolForm === t.id}
-						<!-- Formulaire d'évolution -->
+						<!-- Formulaire d'évolution — composant partagé `EvolForm` -->
 						<div class="evol-form">
-							<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-								<button type="button" class="pill" class:pill-active={evolType === 'commentaire'}
-									on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</button>
-								<button type="button" class="pill" class:pill-active={evolType === 'etat'}
-									on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</button>
-							</div>
-							{#if evolType === 'etat'}
-								<div class="field">
-									<label for="evol-statut-{t.id}">Nouvel état *</label>
-									<select id="evol-statut-{t.id}" bind:value={evolNouveauStatut}>
-										<option value="">— Choisir —</option>
-										<option value="ouvert">&#x1F535; Ouvert</option>
-										<option value="en_cours">&#x1F7E1; En cours</option>
-										<option value="résolu">&#x1F7E2; Résolu</option>
-									<option value="annulé">⚫ Annulé</option>
-									</select>
-								</div>
-							{/if}
-							<div class="field">
-								<label for="evol-contenu-{t.id}">{evolType === 'etat' ? 'Commentaire (optionnel)' : 'Commentaire *'}</label>
-								<textarea id="evol-contenu-{t.id}" bind:value={evolContenu} rows="3"
-									placeholder={evolType === 'etat' ? 'Précisions sur ce changement…' : 'Ajoutez un commentaire de suivi…'}
-									style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
-								></textarea>
-							</div>
-       {#if $isCS || $isAdmin}
-       <div style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:1rem">
-       	<label class="checkbox-field">
-       		<input type="checkbox" bind:checked={evolPartagerWhatsapp} />
-       		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#25D366" style="flex-shrink:0;vertical-align:middle" aria-label="WhatsApp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.66 12.66 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-       		<span style="font-size:.85rem">Partager sur le groupe</span>
-       	</label>
-       	<label class="checkbox-field">
-       		<input type="checkbox" bind:checked={evolEnvoyerSyndic} />
-       		<span style="font-size:.85rem">✉️ Envoyer au syndic</span>
-       	</label>
-       	<label class="checkbox-field">
-       		<input type="checkbox" bind:checked={evolEnvoyerCs} />
-       		<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
-       	</label>
-       </div>
-       {/if}
-
-							<div class="form-actions" style="gap:.5rem">
-								<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = null)}>Annuler</button>
-								<button type="button" class="btn btn-primary"
-									disabled={evolSaving || (evolType === 'etat' && !evolNouveauStatut) || (evolType === 'commentaire' && !evolContenu.trim())}
-									on:click={() => addEvolution(t)}>
-									{evolSaving ? 'Envoi…' : 'Valider'}
-								</button>
-							</div>
+							{#key showEvolForm}
+								<EvolForm
+									statutOptions={TICKET_STATUT_OPTIONS}
+									statutLabels={STATUT_LABELS}
+									currentStatut={t.statut}
+									showNotifs={$isCS || $isAdmin}
+									showFiles={true}
+									separatePhotosAndDocs={true}
+									saving={evolSaving}
+									on:submit={(e) => addEvolFromForm(t, e)}
+									on:cancel={() => (showEvolForm = null)}
+								/>
+							{/key}
 						</div>
 					{:else}
 						<!-- Corps normal -->
@@ -522,59 +494,21 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 							{#if expanded}
 								<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
 									{#if showEvolForm === t.id}
-										<!-- Formulaire d'évolution -->
+										<!-- Formulaire d'évolution — composant partagé `EvolForm` -->
 										<div class="evol-form">
-											<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-												<button type="button" class="pill" class:pill-active={evolType === 'commentaire'}
-													on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</button>
-												<button type="button" class="pill" class:pill-active={evolType === 'etat'}
-													on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</button>
-											</div>
-											{#if evolType === 'etat'}
-												<div class="field">
-													<label for="evol-statut-{t.id}">Nouvel état *</label>
-													<select id="evol-statut-{t.id}" bind:value={evolNouveauStatut}>
-														<option value="">— Choisir —</option>
-														<option value="ouvert">&#x1F535; Ouvert</option>
-														<option value="en_cours">&#x1F7E1; En cours</option>
-														<option value="résolu">&#x1F7E2; Résolu</option>
-														<option value="annulé">⚫ Annulé</option>
-													</select>
-												</div>
-											{/if}
-											<div class="field">
-												<label for="evol-contenu-{t.id}">{evolType === 'etat' ? 'Commentaire (optionnel)' : 'Commentaire *'}</label>
-												<textarea id="evol-contenu-{t.id}" bind:value={evolContenu} rows="3"
-													placeholder={evolType === 'etat' ? 'Précisions sur ce changement…' : 'Ajoutez un commentaire de suivi…'}
-													style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem;resize:vertical"
-												></textarea>
-											</div>
-           {#if $isCS || $isAdmin}
-           <div style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:1rem">
-           	<label class="checkbox-field">
-           		<input type="checkbox" bind:checked={evolPartagerWhatsapp} />
-           		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#25D366" style="flex-shrink:0;vertical-align:middle" aria-label="WhatsApp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.66 12.66 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-           		<span style="font-size:.85rem">Partager sur le groupe</span>
-           	</label>
-           	<label class="checkbox-field">
-           		<input type="checkbox" bind:checked={evolEnvoyerSyndic} />
-           		<span style="font-size:.85rem">✉️ Envoyer au syndic</span>
-           	</label>
-           	<label class="checkbox-field">
-           		<input type="checkbox" bind:checked={evolEnvoyerCs} />
-           		<span style="font-size:.85rem">✉️ Envoyer au Conseil Syndical</span>
-           	</label>
-           </div>
-           {/if}
-
-											<div class="form-actions" style="gap:.5rem">
-												<button type="button" class="btn btn-outline" on:click={() => (showEvolForm = null)}>Annuler</button>
-												<button type="button" class="btn btn-primary"
-													disabled={evolSaving || (evolType === 'etat' && !evolNouveauStatut) || (evolType === 'commentaire' && !evolContenu.trim())}
-													on:click={() => addEvolution(t)}>
-													{evolSaving ? 'Envoi…' : 'Valider'}
-												</button>
-											</div>
+											{#key showEvolForm}
+												<EvolForm
+													statutOptions={TICKET_STATUT_OPTIONS}
+													statutLabels={STATUT_LABELS}
+													currentStatut={t.statut}
+													showNotifs={$isCS || $isAdmin}
+													showFiles={true}
+													separatePhotosAndDocs={true}
+													saving={evolSaving}
+													on:submit={(e) => addEvolFromForm(t, e)}
+													on:cancel={() => (showEvolForm = null)}
+												/>
+											{/key}
 										</div>
 									{:else}
 										<!-- Corps normal -->
