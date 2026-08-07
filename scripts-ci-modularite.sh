@@ -53,6 +53,23 @@ if [ "${1:-}" = "--selftest" ]; then
 fi
 
 BASE="${1:-origin/main}"
+
+#  ⚠️ La liste des fichiers est le CONTRÔLE lui-même : si elle est vide parce que
+#  la commande a échoué, on rendrait un vert sans rien avoir examiné. C'est
+#  arrivé à la première exécution en CI — `origin/main...HEAD: no merge base`,
+#  faute d'un historique assez profond, diff vide, contrôle « réussi ».
+#  Une sortie vide n'est PAS un vert (socle 04 §1) : ici, elle est INCONNUE.
+#  Comparaison à deux points, qui n'exige aucune base de fusion.
+if ! CHANGES=$(git diff --name-only "$BASE" HEAD 2>&1); then
+  echo "::error::Modularité INCONNUE — impossible de comparer à $BASE : $CHANGES"
+  echo "Le contrôle n'a rien pu examiner ; ne pas lire ceci comme un succès."
+  exit 2
+fi
+if ! git rev-parse --verify -q "$BASE" >/dev/null; then
+  echo "::error::Modularité INCONNUE — la référence $BASE est introuvable."
+  exit 2
+fi
+
 fautifs=""
 while IFS= read -r f; do
   case "$f" in
@@ -66,7 +83,7 @@ while IFS= read -r f; do
     grossit)        fautifs="$fautifs  $f : $av → $ap lignes (déjà au-dessus de $PLAFOND, et il grossit)\n" ;;
     neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $PLAFOND)\n" ;;
   esac
-done < <(git diff --name-only "$BASE"...HEAD)
+done <<< "$CHANGES"
 
 if [ -n "$fautifs" ]; then
   printf "::error::Modularité (rang 1) — découper avant d'ajouter :\n"

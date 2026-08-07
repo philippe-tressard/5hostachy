@@ -180,7 +180,10 @@ jobs:
         # 565) et email.py (650 → 656) sans qu'aucun contrôle ne le signale. La
         # consigne existait depuis le début ; elle ne tenait pas seule.
         run: |
-          git fetch --no-tags --depth=50 origin ${{ github.base_ref || 'main' }}
+          # Historique COMPLET de la base : un clone superficiel a fait échouer la
+          # comparaison au premier essai, et le contrôle avait conclu au vert sur
+          # un diff vide. Le script refuse désormais de conclure dans ce cas.
+          git fetch --no-tags --unshallow origin ${{ github.base_ref || 'main' }} 2>/dev/null             || git fetch --no-tags origin ${{ github.base_ref || 'main' }}
           bash scripts-ci-modularite.sh origin/${{ github.base_ref || 'main' }}
 
       - name: Bits d'exécution versionnés
