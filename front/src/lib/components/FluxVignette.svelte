@@ -21,9 +21,10 @@
   - pas d'image mais des documents → une tuile de MÊME gabarit, trombone et
     décompte. Même emplacement, même taille : le rythme vertical du fil ne bouge
     pas, ce qui est toute la raison d'être de ce composant ;
-  - image ET documents → la photo reste (elle informe davantage) et un petit
-    trombone se pose dans l'angle. Deux tuiles côte à côte auraient déséquilibré
-    la carte pour une information secondaire.
+  - image ET documents → la photo seule. Un trombone en angle avait été essayé
+    (v2.45.0) puis retiré : sur une carte illustrée, l'aperçu suffit, et la
+    surcharge visuelle ne valait pas le rappel. Les fichiers se découvrent au
+    dépliage. Choix assumé, pas un oubli.
 
   ⚠️ Contrairement à la photo, cette tuile n'est PAS décorative : elle porte la
   seule mention de la pièce jointe dans l'état plié. Elle est donc annoncée aux
@@ -36,10 +37,14 @@
 
 	/** Pièces jointes non-images de l'élément (PDF, documents…). */
 	export let fichiers: string[] = [];
+	/**  Décompte seul, quand l'élément EST son fichier (carte « document ») : on
+	 *   veut la tuile sans alimenter la galerie dépliée, qui afficherait le
+	 *   dernier segment de l'URL — « télécharger » — au lieu du titre. */
+	export let nbPieces = 0;
 
 	$: premiere = photos[0] ?? image ?? null;
 	$: reste = Math.max(0, photos.length - 1);
-	$: nbFichiers = fichiers.length;
+	$: nbFichiers = fichiers.length || nbPieces;
 	$: libelleFichiers = nbFichiers > 1 ? `${nbFichiers} pièces jointes` : '1 pièce jointe';
 </script>
 
@@ -51,10 +56,6 @@
 		     décrite. -->
 		<img src={premiere} alt="" loading="lazy" />
 		{#if reste > 0}<span class="flux-vignette-compte">+{reste}</span>{/if}
-		{#if nbFichiers > 0}
-			<span class="flux-vignette-pj" title={libelleFichiers} aria-label={libelleFichiers}
-				>📎{#if nbFichiers > 1}&nbsp;{nbFichiers}{/if}</span>
-		{/if}
 	</div>
 {:else if nbFichiers > 0}
 	<div class="flux-vignette flux-vignette-doc" style="--taille:{size}px"
@@ -103,22 +104,6 @@
 		border-style: dashed;
 	}
 	.flux-vignette-doc-icone { font-size: 1.35rem; line-height: 1; opacity: .75; }
-	/*  Trombone posé sur une vignette photo : la photo prime, ceci n'est qu'un
-	    rappel secondaire — d'où l'angle et la taille réduite. */
-	.flux-vignette-pj {
-		position: absolute;
-		left: 3px;
-		bottom: 3px;
-		display: inline-flex;
-		align-items: center;
-		padding: 1px 4px;
-		border-radius: 6px;
-		background: rgba(0, 0, 0, .58);
-		color: #FFF;
-		font-size: .62rem;
-		font-weight: 600;
-		line-height: 1.35;
-	}
 	@media (max-width: 640px) {
 		.flux-vignette { width: 48px; height: 48px; }
 		.flux-vignette-doc-icone { font-size: 1.15rem; }

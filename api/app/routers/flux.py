@@ -784,8 +784,14 @@ def get_flux(
             icon="\U0001f4c4",
             badges=[],
             lien=_lien_document(d, user, session),
+            #  Un document EST un fichier : sa carte doit le signaler comme
+            #  n'importe quelle pièce jointe (décision du 07/08/2026, « PJ =
+            #  fichiers ou photo »). On transmet un DÉCOMPTE et non une URL : la
+            #  galerie dépliée afficherait « télécharger », dernier segment de
+            #  /documents/{id}/télécharger, au lieu du titre du document — et
+            #  ferait doublon avec le lien que la carte porte déjà.
             meta={"document_id": d.id, "fichier_nom": d.fichier_nom,
-                   "mime_type": d.mime_type},
+                   "mime_type": d.mime_type, "pj_compte": 1},
         ))
 
     # ── 10. Diagnostics réglementaires (nouveaux rapports) ──────────────────
