@@ -12,6 +12,7 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -420,6 +421,12 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 												<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 											{/if}
 											{/if}
+											<!-- Pièces jointes de l'évolution — même rendu que la fiche détail -->
+											{#if evol.fichiers_urls?.length}
+												<div class="evol-pj" style="margin-top:.4rem">
+													<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
+												</div>
+											{/if}
 										</div>
 									</div>
 								{/each}
@@ -555,6 +562,12 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 															{#if evol.contenu}
 																<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 															{/if}
+														{/if}
+														<!-- Pièces jointes de l'évolution — même rendu que la fiche détail -->
+														{#if evol.fichiers_urls?.length}
+															<div class="evol-pj" style="margin-top:.4rem">
+																<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
+															</div>
 														{/if}
 														</div>
 													</div>

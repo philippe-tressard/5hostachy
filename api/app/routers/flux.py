@@ -14,6 +14,7 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.utils.liens import lien_element, page_element
 from app.utils.montants import montant_fr
+from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 from app.models.core import (
     CommandeAcces,
@@ -89,6 +90,26 @@ def _auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
         return None
     u = session.get(Utilisateur, uid)
     return f"{u.prenom} {u.nom}" if u else None
+
+
+def _pj_evolution_ou_ticket(evol, tk) -> dict:
+    """Pièces jointes à montrer sur une carte « ticket mis à jour ».
+
+    Celles de l'évolution si elle en porte, sinon celles du ticket. Réparties en
+    `photos_urls` / `fichiers_urls` parce que `FluxCard` n'en fait pas le même
+    usage : les premières alimentent la vignette, les secondes la liste dépliée.
+    Le tri se fait par `est_image`, la même règle qu'`estImage` côté front.
+    """
+    urls = parse_photos(evol.fichiers_urls)
+    if not urls:
+        return {
+            "photos_urls": parse_photos(tk.photos_urls),
+            "fichiers_urls": parse_photos(tk.fichiers_urls),
+        }
+    return {
+        "photos_urls": [u for u in urls if est_image(u)],
+        "fichiers_urls": [u for u in urls if not est_image(u)],
+    }
 
 
 def _strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
@@ -278,8 +299,16 @@ def get_flux(
                 meta={"ticket_id": tk.id, "statut": nouveau, "numero": tk.numero,
                        "perimetre": _perimetre_label(perims),
                        "description": _strip_html(tk.description, 300),
-                       "photos_urls": parse_photos(tk.photos_urls),
-                       "fichiers_urls": parse_photos(tk.fichiers_urls),
+                       #  Les pièces jointes de l'ÉVOLUTION priment sur celles du
+                       #  ticket. La carte annonce « ticket mis à jour » et affiche
+                       #  déjà `evol_contenu` : lui faire porter les photos d'origine
+                       #  montrerait une image vieille de dix jours à côté d'un texte
+                       #  du jour. Constaté le 07/08/2026 — une photo jointe à un
+                       #  commentaire n'apparaissait ni en vignette ni au dépliage,
+                       #  parce que seules celles du ticket étaient transmises.
+                       #  Repli sur le ticket si l'évolution n'en porte aucune, pour
+                       #  ne rien retirer aux cartes qui fonctionnaient.
+                       **_pj_evolution_ou_ticket(evol, tk),
                        "evol_contenu": _strip_html(evol.contenu, 300) if evol.contenu else None,
                        "evol_auteur": evol_auteur},
             ))
