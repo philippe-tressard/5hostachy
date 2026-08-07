@@ -82,7 +82,7 @@
 			<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
 			     inutile de montrer deux fois la même image. -->
 			{#if !expanded}
-				<FluxVignette {photos} {image} />
+				<FluxVignette {photos} {image} {fichiers} />
 			{/if}
 		</div>
 		{#if item.badges.length > 0 || perimetreAffiche || aVenir}
