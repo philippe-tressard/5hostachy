@@ -82,7 +82,7 @@
 			<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
 			     inutile de montrer deux fois la même image. -->
 			{#if !expanded}
-				<FluxVignette {photos} {image} {fichiers} />
+				<FluxVignette {photos} {image} {fichiers} nbPieces={(item.meta?.pj_compte as number | undefined) ?? 0} />
 			{/if}
 		</div>
 		{#if item.badges.length > 0 || perimetreAffiche || aVenir}
