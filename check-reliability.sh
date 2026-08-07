@@ -67,6 +67,22 @@ http_code() {  # $1 = URL, $2 = timeout (défaut 10) → code HTTP ou 000
   echo "${code:-000}"
 }
 
+# ── Empreinte des scripts planifiés dans un crontab (PURE — testable) ────────
+# Rend la liste TRIÉE et dédoublonnée des scripts `/opt/5hostachy/*.sh` invoqués,
+# séparés par des virgules — ou une chaîne vide si le crontab est illisible.
+#
+# On compare volontairement le SEUL ensemble de scripts, pas les horaires : deux
+# nœuds peuvent écrire `*/5` et `2,7,12,…` pour la même cadence, et un contrôle
+# qui hurlerait là-dessus serait exactement le faux positif qu'on vient de retirer
+# de C16. La borne est donc assumée (§12 du socle) : ce contrôle attrape « un
+# script planifié d'un seul côté », pas « planifié à un rythme différent ».
+crontab_scripts() {  # $1 = texte brut du crontab → "a.sh,b.sh" | ""
+  echo "$1" \
+    | grep -vE '^\s*(#|$)' \
+    | grep -oE '/opt/5hostachy/[A-Za-z0-9_.-]+\.sh' \
+    | sed 's#.*/##' | sort -u | paste -sd, - | tr -d ' \n'
+}
+
 # ── Âge du dernier battement horodaté d'un log (minutes) ─────────────────────
 # Rend -1 si aucun horodatage exploitable : INCONNU, jamais « récent ».
 beat_age_min() {  # $1 = "AAAA-MM-JJ HH:MM:SS" (peut être vide), $2 = epoch de réf.
@@ -173,6 +189,39 @@ if [ "${1:-}" = "--selftest" ]; then
   else
     echo "FAIL  seuil ${BUILD_CACHE_WARN_GB} Go ≤ régime ${REGIME} Go — C16 sera WARN sur une infra saine"; st_fail=1
   fi
+  echo "-- crontab_scripts --"
+  cs() { # description attendu crontab-brut
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(crontab_scripts "$1")
+    [ "$got" = "$exp" ] && echo "PASS  $desc  → '$got'" \
+      || { echo "FAIL  $desc  attendu='$exp' obtenu='$got'"; st_fail=1; }
+  }
+  #  Les redirections des fixtures respectent le motif des logs rotés : le job CI
+  #  `test-scripts` scanne TOUS les .sh à la recherche d'un chemin de journal que
+  #  `maintenance.sh` ne roterait pas, et il ne distingue — à raison — ni le code
+  #  de la donnée de test, ni le code du commentaire. Des fixtures avec un nom
+  #  court et arbitraire le faisaient donc échouer ; attrapé en rejouant la CI en
+  #  local, pas en s'en souvenant.
+  cs "deux tâches, triées" "bascule.sh,maintenance.sh" \
+"0 3 * * 0 /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
+0 2 * * * /opt/5hostachy/bascule.sh >> /var/log/hostachy-bascule.log 2>&1"
+  cs "commentaires et lignes vides ignorés" "health-watch.sh" \
+"# Health check toutes les 5 min
+
+2,7 * * * * /opt/5hostachy/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1"
+  #  Le cas qui a motivé C18 : le même crontab, plus une entrée d'un seul côté.
+  cs "le script en trop apparaît" "bascule.sh,check-stack.sh" \
+"0 2 * * * /opt/5hostachy/bascule.sh
+4,14 * * * * /opt/5hostachy/check-stack.sh >> /var/log/hostachy-check.log 2>&1"
+  #  Une ligne COMMENTÉE ne compte pas : désactiver un cron doit se voir comme un
+  #  retrait, sinon le contrôle dirait « identiques » sur deux nœuds qui diffèrent.
+  cs "entrée commentée non comptée" "bascule.sh" \
+"0 2 * * * /opt/5hostachy/bascule.sh
+#4,14 * * * * /opt/5hostachy/check-stack.sh"
+  #  Cas ZÉRO : crontab illisible ou vide → chaîne vide, que C18 traite en INCONNU
+  #  et jamais en « identiques » (deux vides seraient égaux — le piège exact).
+  cs "crontab vide" "" ""
+  cs "crontab sans tâche 5Hostachy" "" "0 5 * * * /usr/bin/autre-chose"
   echo "-- âge de maintenance (réutilise beat_age_min/beat_verdict) --"
   check "maintenance de 4 j"                    "ok"      5760  "$MAINT_MAX_AGE_MIN"
   check "maintenance pile à 8 j"                "ok"      11520 "$MAINT_MAX_AGE_MIN"
@@ -216,6 +265,13 @@ echo "buildcache=$(docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null |
 # Motif SANS accent volontairement : ce bloc traverse SSH, et « Hygiène » y
 # dépendrait de la locale des deux bouts. « Garde-fou » est aussi distinctif.
 echo "maint_last=$(grep "Garde-fou" '"$MAINT_LOG"' 2>/dev/null | grep -oE "^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]" | tail -1 | tr -d "[]")"
+# Crontab ROOT, et root seulement. Le test sur l'\''uid n'\''est pas une précaution
+# de style : ce bloc tourne en root en local (cron root) mais en `ptressard` sur le
+# peer (SSH). Un `crontab -l` nu y rendrait le crontab de `ptressard` — qui existe,
+# donc la commande RÉUSSIRAIT en donnant la mauvaise réponse. Un faux vert par
+# succès, le pire des cas.
+if [ "$(id -u)" = "0" ]; then CRONRAW=$(crontab -l 2>/dev/null); else CRONRAW=$(sudo -n crontab -l 2>/dev/null); fi
+echo "cronscripts=$(echo "$CRONRAW" | grep -vE "^\s*(#|$)" | grep -oE "/opt/5hostachy/[A-Za-z0-9_.-]+\.sh" | sed "s#.*/##" | sort -u | paste -sd, - | tr -d " \n")"
 '
 
 # ⚠ PAS de contrôle d'intégrité DB ici — SUPPRIMÉ le 17/07/2026 (cf. C8 plus bas).
@@ -457,6 +513,29 @@ for pair in "$SELF:${S_maint_last:-}" "$PEER:${P_maint_last:-}"; do
     *)       warn "Maintenance hebdomadaire INCONNUE sur $n : aucune ligne horodatée 'Garde-fou' dans $MAINT_LOG (jamais exécutée, log illisible, ou format changé)" ;;
   esac
 done
+
+# ── C18. Les crontabs root portent-ils les MÊMES scripts sur les 2 nœuds ? ────
+# `CLAUDE.md` annonce « Cron root (identique sur les 2 nœuds) ». C'était faux, et
+# personne ne pouvait le savoir : rpi2 portait en plus `check-stack.sh`, planifié
+# toutes les 10 min, qui y échouait à CHAQUE passage — le port 8080 est tenu par
+# l'application co-hébergée — soit 144 échecs par jour dans un log que rien ne lit.
+# Sur rpi1, où le port est libre, il n'était pas planifié du tout : la couverture
+# réelle était nulle des deux côtés, à l'inverse l'un de l'autre. Retiré du cron le
+# 06/08/2026, redevenu l'outil ponctuel que son en-tête décrit.
+#
+# La leçon n'est pas « il y avait un script en trop », c'est qu'une **phrase de
+# documentation tenait lieu de garantie**. Une divergence de crontab est invisible :
+# chaque nœud a l'air normal vu de lui-même, et il faut comparer pour voir quoi que
+# ce soit. D'où ce contrôle, qui est la seule chose qui rend la phrase vraie.
+if [ "$PEER_OK" -eq 0 ]; then
+  if [ -z "${S_cronscripts:-}" ] || [ -z "${P_cronscripts:-}" ]; then
+    warn "Crontabs root INCONNUS (${SELF}='${S_cronscripts:-vide}' ${PEER}='${P_cronscripts:-vide}') — comparaison impossible, ni vert ni rouge"
+  elif [ "$S_cronscripts" = "$P_cronscripts" ]; then
+    ok "Crontabs root identiques sur les 2 nœuds ($S_cronscripts)"
+  else
+    warn "Crontabs root DIVERGENTS — $SELF='$S_cronscripts' vs $PEER='$P_cronscripts' : un script planifié d'un seul côté ne tourne qu'un jour sur deux, ou échoue en silence là où il ne peut pas fonctionner"
+  fi
+fi
 
 echo "─────────────────────────────────────────────────────────────"
 echo "Résumé : $FAILS FAIL, $WARNS WARN"

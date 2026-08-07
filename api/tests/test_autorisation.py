@@ -26,6 +26,34 @@ import pathlib
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _ROUTERS = _API_DIR / "app" / "routers"
 
+
+def _fichiers_routers() -> list[pathlib.Path]:
+    """Tous les modules de routers, **sous-paquets compris**.
+
+    ⚠️ Cette fonction est la PORTÉE du contrôle, donc une partie du contrôle
+    (`standards/05-tests-et-garde-fous.md` §9). Les quatre tests de ce fichier
+    parcouraient `glob("*.py")`, sans récursion. Le jour où `admin.py` est devenu
+    le paquet `admin/` (06/08/2026, 2057 lignes → 8 modules), ses **45 endpoints**
+    sont sortis du champ d'un coup — et le test serait resté VERT en vérifiant
+    simplement moins de choses. Un contrôle qui rétrécit sans le dire est pire
+    qu'un contrôle absent : il continue de rassurer.
+
+    C'est le test des endpoints orphelins qui a levé le lièvre, parce que sa liste
+    d'exceptions est vérifiée dans les deux sens. Ce test-ci n'avait pas cette
+    chance ; d'où le contrôle de couverture minimale ci-dessous.
+    """
+    fichiers = [
+        f for f in sorted(_ROUTERS.rglob("*.py"))
+        if "__pycache__" not in f.parts
+    ]
+    #  Garde-fou du garde-fou : un glob cassé rendrait une liste vide, et tous les
+    #  tests de ce fichier passeraient sans rien examiner.
+    assert len(fichiers) >= 25, (
+        f"Seulement {len(fichiers)} module(s) de router trouvé(s) sous {_ROUTERS} — "
+        "la portée du contrôle est cassée, ne pas lire les tests suivants comme verts."
+    )
+    return fichiers
+
 # Dépendances d'autorisation — TOUTES définies dans app/auth/deps.py.
 _DEPS_AUTORISATION = {
     "get_current_user", "get_acting_user", "require_role",
@@ -55,7 +83,7 @@ _PUBLICS_ASSUMES = {
     ("telemetry.py", "collect"),
     # Rapport de maintenance machine-à-machine : authentifié par secret partagé
     # (en-tête `x-maintenance-key`), et refuse tout si la clé n'est pas configurée.
-    ("admin.py", "maintenance_rapport"),
+    ("exploitation.py", "maintenance_rapport"),
 }
 
 
@@ -71,7 +99,7 @@ def _noms(node) -> set[str]:
 
 def _endpoints():
     """Itère sur (fichier, ligne, verbe, chemin, nom_fonction, a_autorisation)."""
-    for f in sorted(_ROUTERS.glob("*.py")):
+    for f in _fichiers_routers():
         if f.name == "__init__.py":
             continue
         arbre = ast.parse(f.read_text(encoding="utf-8-sig"))
@@ -139,7 +167,7 @@ def test_aucune_dependance_d_autorisation_locale():
     `require_proprietaire`, invisible depuis le module central.
     """
     locales = []
-    for f in sorted(_ROUTERS.glob("*.py")):
+    for f in _fichiers_routers():
         arbre = ast.parse(f.read_text(encoding="utf-8-sig"))
         for node in ast.walk(arbre):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -162,7 +190,7 @@ def test_controles_de_role_via_l_enum():
     et le renommage d'un rôle casse le contrôle sans erreur.
     """
     fautifs = []
-    for f in sorted(list(_ROUTERS.glob("*.py")) + list((_API_DIR / "app" / "utils").glob("*.py"))):
+    for f in _fichiers_routers() + sorted((_API_DIR / "app" / "utils").glob("*.py")):
         for num, ligne in enumerate(f.read_text(encoding="utf-8-sig").splitlines(), 1):
             if "has_role(" in ligne and '"' in ligne.split("has_role(", 1)[1][:60]:
                 fautifs.append(f"{f.name}:{num}: {ligne.strip()}")
@@ -237,7 +265,7 @@ def test_aucune_regle_de_visibilite_ne_vit_dans_un_router():
     )
 
     egarees, imports_croises = [], []
-    for f in sorted(_ROUTERS.glob("*.py")):
+    for f in _fichiers_routers():
         src = f.read_text(encoding="utf-8-sig")
         for m in motif_def.finditer(src):
             egarees.append(f"  {f.name} définit {m.group(1)}()")

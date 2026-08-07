@@ -216,6 +216,13 @@ traiter avant toute autre chose. Site HS : SSH sur l'actif →
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
 | `0 3 * * 0` `maintenance.sh` | purge, VACUUM, rotation des logs |
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
+| `*/15 * * * *` `check-reliability.sh` | 24 contrôles de fiabilité + alerte e-mail sur `FAIL` |
+
+⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
+jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois
+par jour. Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
+à part : c'est le seul cron **utilisateur** (`ptressard`), et c'est ce qui fait
+l'objet du point 11.
 
 **Réflexe avant de suspecter un nœud** : depuis l'autre RPi, `curl
 http://<actif>/api/health`. S'il répond 200, la panne est sur le **chemin** public

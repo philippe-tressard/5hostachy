@@ -254,7 +254,7 @@ sudo sqlite3 "$DB_DIR/app.db" "SELECT code, COUNT(*), MAX(cree_le) FROM historiq
   WHERE statut='erreur' AND cree_le >= datetime('now','-7 days') GROUP BY code;"
 ```
 
-**Point 7 — pourquoi :** un script peut perdre son bit d'exécution sans prévenir (ex. `auto-deploy.sh` le 21/04 → `Permission denied` silencieux dans le cron pendant des semaines, empêchant le déploiement automatique de v2.18.11). Vérifier en particulier `auto-deploy.sh`, `bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`, `check-stack.sh`. Si un bit `x` manque : `chmod +x <script>` sur le(s) RPi concerné(s).
+**Point 7 — pourquoi :** un script peut perdre son bit d'exécution sans prévenir (ex. `auto-deploy.sh` le 21/04 → `Permission denied` silencieux dans le cron pendant des semaines, empêchant le déploiement automatique de v2.18.11). Vérifier en particulier `auto-deploy.sh`, `bascule.sh`, `health-watch.sh`, `maintenance.sh`, `MaJ-Hostachy.sh`, `check-reliability.sh`, `boot-role-guard.sh`. Si un bit `x` manque : `chmod +x <script>` sur le(s) RPi concerné(s). (`check-stack.sh` n'y figure plus depuis le 06/08/2026 : il n'est plus dans aucun cron — voir le point 8.)
 
 **Point 8 — pourquoi :** le point 7 ne couvre que **la cause** déjà rencontrée (perte du bit `x`). Le point 8 détecte **le symptôme** quelle qu'en soit la cause (droits, chemin déplacé, faute de syntaxe, dépendance manquante…) en inspectant directement les logs produits par les crons — c'est ce qui aurait permis de détecter le problème `auto-deploy.sh` dès sa première occurrence le 21/04, au lieu d'attendre 7 semaines. Si une erreur récurrente apparaît → diagnostiquer la cause (pas seulement les droits) avant de poursuivre la MEP. ⚠ **Angle mort** : ce point ne détecte **rien** si le log est figé/absent/non-inscriptible (aucune ligne à lire = faux « OK ») — précisément le cas du bug auto-deploy du 15/07 (cf. **point 11**). Un `tail` vide ou un log root-owned n'est PAS un feu vert.
 ⚠ **Second angle mort, découvert le 26/07/2026 — le battement manquant.** La liste de
@@ -289,11 +289,28 @@ passage** :
 |---|---|---|
 | `hostachy-deploy.log` (standby) | oui, ~12 lignes/h | anomalie |
 | `hostachy-reliability.log` | oui, toutes les 15 min | anomalie |
-| `hostachy-check.log` (actif) | oui, toutes les 10 min | anomalie |
 | `hostachy-health-watch.log` | **non — seulement si le site est HS** | normal |
 | `hostachy-bascule.log` | non — une fois par nuit à 02:00 | normal |
 | `hostachy-maintenance.log` | non — le dimanche à 03:00 | normal |
 | `hostachy-role-guard.log` | non — au démarrage du nœud | normal |
+| `hostachy-check.log` | **plus alimenté** — `check-stack.sh` retiré du cron le 06/08/2026 | normal (log figé) |
+
+⚠️ **Ce tableau a lui-même menti, et c'est instructif (06/08/2026).** Il annonçait
+`hostachy-check.log (actif) — oui, toutes les 10 min, silence = anomalie`. Trois
+erreurs dans une seule ligne : ce n'était pas l'actif mais **rpi2 quel que soit son
+rôle** ; il ne battait pas, puisque `check-stack.sh` y **échouait avant d'écrire quoi
+que ce soit d'utile** (port 8080 tenu par l'application co-hébergée, 144 échecs par
+jour) ; et sa sortie n'est de toute façon **pas horodatée**, donc son battement
+n'était pas mesurable — ce qui est précisément ce qui a permis à la ligne de rester
+fausse. Sur rpi1, où le port est libre, le script n'était pas planifié du tout : la
+couverture réelle était nulle sur les deux nœuds, à l'inverse l'un de l'autre.
+
+`check-stack.sh` est **redevenu ce que son en-tête décrit** — un outil ponctuel
+(`bash check-stack.sh [--keep]`), à lancer après une modification de Caddy, pas un
+cron. Vérifié avant retrait qu'aucun script ne l'appelle et qu'aucun ne lit son log.
+La leçon générique est au socle : un contrôle sans destinataire est un contrôle
+absent (`standards/04-fiabilite-des-controles.md` §7), et une sortie non horodatée
+rend son propre battement invérifiable.
 
 ⚠ **Et ne pas écrire `$(grep -c … || echo 0)`** — le piège documenté en
 « Surveillance continue » §4 se retend à chaque pré-check improvisé : `grep -c`
