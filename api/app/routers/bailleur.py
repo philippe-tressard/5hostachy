@@ -5,7 +5,7 @@ Accès réservé aux copropriétaires bailleurs (et admin / CS en lecture).
 from datetime import date, datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 

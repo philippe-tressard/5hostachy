@@ -8,8 +8,6 @@ from sqlmodel import Session, select
 from app.database import engine
 from app.models.core import (
     HistoriqueMaintenance,
-    Notification,
-    PasswordResetToken,
     PublicationEvolution,
     WhatsAppLog,
 )

@@ -10,13 +10,8 @@ from app.utils.liens import lien_element
 from app.utils.photos import parse_photos
 from app.utils.visibility import evenement_visible
 
-from .commun import (
-    ContexteFlux,
-    badges_marqueurs,
-    parse_perimetres,
-    perimetre_label,
-    strip_html,
-)
+from app.utils.perimetres import parse_perimetres, perimetre_label
+from .commun import ContexteFlux, badges_marqueurs, strip_html
 from .schemas import FluxItem
 
 #: Icône par type d'événement. Définie **ici** et importée par `sante.py`, qui

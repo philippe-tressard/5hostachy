@@ -14,7 +14,6 @@ from app.models.core import (
     Batiment,
     CommandeAcces,
     Lot,
-    LotImport,
     Notification,
     StatutCommande,
     UserLot,

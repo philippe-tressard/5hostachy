@@ -21,14 +21,9 @@ from app.models.core import Utilisateur
 
 #  Les périmètres vivent dans `app/utils/perimetres.py` : la table et l'analyse
 #  étaient écrites ici ET dans la relance syndic des tickets, avec deux résultats
-#  différents pour AFUL. Réexportés sous leurs noms d'ici pour ne pas disperser
-#  le vocabulaire du paquet flux.
-from app.utils.perimetres import (
-    LABELS as PERIMETRE_LABELS,
-    depuis_json as parse_json_perimetres,
-    depuis_texte as parse_perimetres,
-    libelle as perimetre_label,
-)
+#  différents pour AFUL. Importés sous leur vrai nom et non ré-exportés : un
+#  alias qui délègue au helper partagé masque son origine (socle 02 §6).
+from app.utils.perimetres import parse_json_perimetres, parse_perimetres
 
 
 @dataclass(frozen=True)

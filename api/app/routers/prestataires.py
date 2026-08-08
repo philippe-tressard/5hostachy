@@ -2,7 +2,7 @@
 import os
 import shutil
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse

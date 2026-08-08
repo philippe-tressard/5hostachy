@@ -26,7 +26,6 @@ from app.models.core import (
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
-from datetime import datetime
 from html import escape
 from typing import Optional
 

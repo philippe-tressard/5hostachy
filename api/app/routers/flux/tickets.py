@@ -23,13 +23,8 @@ from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
 
-from .commun import (
-    ContexteFlux,
-    auteur_nom,
-    perimetre_label,
-    perimetres_de,
-    strip_html,
-)
+from app.utils.perimetres import perimetre_label
+from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html
 from .schemas import FluxItem
 
 #: Évolutions qui produisent une carte « ticket mis à jour » sans changer l'état.

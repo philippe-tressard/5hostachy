@@ -24,14 +24,8 @@ from app.routers.publications import (
     _is_archived,
 )
 
-from .commun import (
-    ContexteFlux,
-    auteur_nom,
-    badges_marqueurs,
-    perimetre_label,
-    perimetres_de,
-    strip_html,
-)
+from app.utils.perimetres import perimetre_label
+from .commun import ContexteFlux, auteur_nom, badges_marqueurs, perimetres_de, strip_html
 from .schemas import FluxItem
 
 _STATUT_LABELS = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}

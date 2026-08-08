@@ -27,7 +27,21 @@ jobs:
         run: pip install ruff
 
       - name: Run Ruff
-        run: ruff check api/app/ api/alembic/ --select E9,F63,F7,F82
+        # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
+        # ce n'est pas du style. Une factorisation se termine par la suppression
+        # de ce qu'elle a remplacé (socle 02 §5), et l'import orphelin est le
+        # résidu le plus fréquent — 26 traînaient dans `app/`, dont deux que je
+        # venais de créer en ré-exportant des périmètres que plus personne
+        # n'importait. Ruff respecte `__all__` : les ré-exports voulus des
+        # paquets découpés (`admin/`, `flux/`, `tickets/`) ne sont pas touchés.
+        #
+        # `alembic/` en est EXCLU volontairement : quatre migrations portent des
+        # imports inutiles, et une migration déjà appliquée ne se modifie jamais
+        # (CLAUDE.md). Les corriger pour satisfaire un linter réécrirait
+        # l'historique du schéma — le remède serait pire que le défaut.
+        run: |
+          ruff check api/app/ --select E9,F63,F7,F82,F401
+          ruff check api/alembic/ --select E9,F63,F7,F82
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 

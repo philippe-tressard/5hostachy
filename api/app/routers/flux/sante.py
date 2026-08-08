@@ -27,7 +27,8 @@ from app.models.core import (
 )
 from app.utils.visibility import evenement_visible
 
-from .commun import ContexteFlux, perimetre_label
+from app.utils.perimetres import perimetre_label
+from .commun import ContexteFlux
 from .evenements import TYPE_EMOJI, perimetres_evenement
 from .schemas import FluxSante
 
