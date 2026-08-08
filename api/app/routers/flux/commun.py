@@ -1,0 +1,132 @@
+"""Flux — contexte de collecte et notions partagées par toutes les rubriques.
+
+Extrait de `flux.py` (1044 lignes) le 08/08/2026. Voir `__init__.py` pour la
+règle de découpage.
+
+Ce module porte ce qu'une rubrique ne peut **pas** redéfinir sans faire diverger
+le fil : le libellé d'un périmètre, le résumé d'un texte riche, les marqueurs
+« Épinglé » / « Urgent ». Une rubrique qui en réécrirait un afficherait la même
+notion sous deux formes selon la ligne — c'est précisément ce que le découpage
+doit empêcher, pas provoquer.
+"""
+import html as _html
+import json as _json
+import re
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
+
+from sqlmodel import Session
+
+from app.models.core import Utilisateur
+
+
+@dataclass(frozen=True)
+class ContexteFlux:
+    """Ce que chaque rubrique reçoit pour collecter ses lignes.
+
+    `now` et `since` sont calculés **une fois** par requête et transportés :
+    douze rubriques qui appelleraient `utcnow()` chacune travailleraient sur
+    douze instants différents, et la fenêtre glissante ne serait plus la même
+    d'une ligne à l'autre.
+    """
+
+    session: Session
+    user: Utilisateur
+    now: datetime
+    since: datetime
+
+
+# ── Périmètres ───────────────────────────────────────────────────────────────
+
+PERIMETRE_LABELS: dict[str, str] = {
+    "résidence": "Copropriété entière",
+    "parking": "Parking",
+    "cave": "Cave",
+    "aful": "AFUL",
+    **{f"bat:{i}": f"Bât. {i}" for i in range(1, 10)},
+}
+
+
+def perimetre_label(perims: list[str]) -> str:
+    """Libellé lisible d'un périmètre, identique dans toutes les rubriques."""
+    return " · ".join(PERIMETRE_LABELS.get(p, p) for p in perims)
+
+
+def parse_perimetres(perimetre: Optional[str]) -> list[str]:
+    """Champ `perimetre` texte (« résidence », « parking,cave »…)."""
+    if not perimetre:
+        return ["résidence"]
+    return [s.strip() for s in perimetre.split(",") if s.strip()]
+
+
+def parse_json_perimetres(perimetre_cible: Optional[str]) -> list[str]:
+    """Parse un champ perimetre_cible stocké en JSON (ex: '["bat:1","bat:3"]')."""
+    if not perimetre_cible:
+        return ["résidence"]
+    try:
+        val = _json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else perimetre_cible
+        return list(val) if isinstance(val, (list, tuple)) else ["résidence"]
+    except Exception:
+        return ["résidence"]
+
+
+def perimetres_de(obj) -> list[str]:
+    """Périmètre d'un élément qui porte `perimetre_cible` — ticket ou publication.
+
+    Précision décroissante : la cible JSON explicite, sinon le bâtiment de
+    rattachement, sinon le champ texte `perimetre`. Un `Ticket` n'a pas ce
+    dernier champ, il retombe donc sur « résidence » — exactement le
+    comportement d'avant le découpage, où les quatre blocs de ticket écrivaient
+    cette cascade à la main, à l'identique.
+
+    ⚠️ **Ne pas étendre aux événements ni aux devis.** Ces deux-là n'ont pas de
+    `perimetre_cible` et leur règle ignore volontairement `batiment_id` : les
+    faire passer ici changerait le périmètre affiché dès qu'un bâtiment est
+    renseigné. Deux règles qui se ressemblent ne sont pas la même règle
+    (`standards/02-factorisation.md` §4) — d'où l'appel direct à
+    `parse_perimetres` conservé dans `evenements.py` et `prestataires.py`.
+    """
+    cible = getattr(obj, "perimetre_cible", None)
+    if cible:
+        return parse_json_perimetres(cible)
+    batiment_id = getattr(obj, "batiment_id", None)
+    if batiment_id:
+        return [f"bat:{batiment_id}"]
+    return parse_perimetres(getattr(obj, "perimetre", None))
+
+
+# ── Résumés, auteurs, marqueurs ──────────────────────────────────────────────
+
+def auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
+    if not uid:
+        return None
+    u = session.get(Utilisateur, uid)
+    return f"{u.prenom} {u.nom}" if u else None
+
+
+def strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:
+    """Retire les balises HTML et tronque pour un résumé texte."""
+    if not text:
+        return None
+    clean = re.sub(r"<[^>]+>", " ", text)
+    clean = _html.unescape(clean)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if len(clean) > max_len:
+        clean = clean[:max_len].rsplit(" ", 1)[0] + "…"
+    return clean
+
+
+def badges_marqueurs(obj) -> list[str]:
+    """Marqueurs « Épinglé » / « Urgent », identiques quelle que soit la rubrique.
+
+    Ils étaient construits à la main pour les publications ; les événements ont
+    désormais le même épinglage, et rien ne justifie deux écritures du même badge.
+    `getattr` avec défaut : toutes les rubriques ne portent pas les deux notions.
+    """
+    marqueurs = []
+    if getattr(obj, "epingle", False):
+        marqueurs.append("📌 Épinglé")
+    if getattr(obj, "urgente", False):
+        marqueurs.append("🔴 Urgent")
+    return marqueurs
