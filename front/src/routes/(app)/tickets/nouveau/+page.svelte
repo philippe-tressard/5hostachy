@@ -5,6 +5,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { isCS } from '$lib/stores/auth';
@@ -18,6 +19,7 @@
 	let perimetreCible: string[] = ['résidence'];
 	let destinataireSyndic = false;
 	let destinataireCs = false;
+	let partagerWhatsapp = false;
 	// Photos et documents sont téléversés dès leur sélection, avant que le ticket
 	// existe : `POST /uploads/fichier` rend l'URL immédiatement. Les envoyer avec
 	// la création est ce qui permet à l'e-mail syndic/CS de partir avec — quand
@@ -76,6 +78,7 @@
 				perimetre_cible: perimetreCible,
 				destinataire_syndic: destinataireSyndic,
 				destinataire_cs: destinataireCs,
+				partager_whatsapp: partagerWhatsapp,
 				photos_urls: photosUrls,
 				fichiers_urls: fichiersUrls,
 			};
@@ -194,20 +197,12 @@
 					</div>
 				{/if}
 			</div>
-			<label class="checkbox-field">
-				<input type="checkbox" bind:checked={destinataireSyndic} />
-				<span>📧 Envoyer au syndic</span>
-				<small style="display:block; color:var(--color-text-muted); margin-top:.25rem">
-					Le syndic principal recevra un email.
-				</small>
-			</label>
-			<label class="checkbox-field">
-				<input type="checkbox" bind:checked={destinataireCs} />
-				<span>📧 Envoyer au Conseil Syndical</span>
-				<small style="display:block; color:var(--color-text-muted); margin-top:.25rem">
-					Les membres du CS recevront un email.
-				</small>
-			</label>
+			<CanauxNotification
+				bind:whatsapp={partagerWhatsapp}
+				bind:syndic={destinataireSyndic}
+				bind:cs={destinataireCs}
+				aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
+			/>
 		{/if}
 
 		<div class="form-actions">
@@ -257,18 +252,10 @@
 	   FichiersUpload : la mise en forme suit le composant, elle ne reste pas
 	   ici en double. */
 
-	.checkbox-field {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		gap: .5rem;
-		padding: .75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		cursor: pointer;
-		margin-bottom: .5rem;
-	}
-	.checkbox-field input[type="checkbox"] { margin-top: .2rem; }
+	/* Les cases « qui est prévenu ? » vivent désormais dans
+	   CanauxNotification : leur mise en forme suit le composant, elle ne reste
+	   pas ici en double (socle 02 §5 — une factorisation se termine par la
+	   suppression de ce qu'elle a remplacé). */
 
 	.saisi-pour-section {
 		border: 1px solid var(--color-border);

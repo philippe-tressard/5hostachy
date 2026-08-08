@@ -19,8 +19,6 @@ from app.models.core import (
 
 logger = logging.getLogger(__name__)
 
-_WA_KEYS = {"whatsapp_enabled", "whatsapp_api_url", "whatsapp_api_key"}
-
 #  Âge au-delà duquel l'archive locale la plus récente est anormale : le cron
 #  de sauvegarde tourne à 03:00 et ce contrôle à 06:00, sur le même nœud.
 _AGE_MAX_ARCHIVE_LOCALE_H = 25
@@ -28,12 +26,15 @@ _AGE_MAX_ARCHIVE_LOCALE_H = 25
 
 def _check_whatsapp(session: Session) -> list[str]:
     """Retourne une liste de problèmes WhatsApp détectés."""
-    issues = []
-    cfg = {r.cle: r.valeur for r in session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))
-    ).all()}
+    from app.utils.whatsapp import config_whatsapp, whatsapp_actif
 
-    if cfg.get("whatsapp_enabled") != "1":
+    issues = []
+    #  Ce contrôle n'a besoin que de trois clés, mais c'est la MÊME notion que
+    #  celle des routers : il en gardait sa propre liste, cinquième exemplaire.
+    #  Lire l'ensemble complet ne coûte rien et supprime la divergence.
+    cfg = config_whatsapp(session)
+
+    if not whatsapp_actif(cfg):
         return []
 
     api_url = cfg.get("whatsapp_api_url", "").strip()

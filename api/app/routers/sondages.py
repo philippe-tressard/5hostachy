@@ -20,7 +20,7 @@ from app.utils.reponses import (
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
-_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}
+from app.utils.whatsapp import config_whatsapp, whatsapp_actif
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -228,19 +228,13 @@ def create_sondage(
 
     # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
     if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
-        cfg_rows = session.exec(
-            select(ConfigSite).where(ConfigSite.cle.in_(
-                _WA_KEYS | {"reference_copro", "site_nom", "site_url"}
-            ))
-        ).all()
-        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+        cfg_map = config_whatsapp(session, "reference_copro", "site_nom")
 
         if body.partager_whatsapp:
-            wa_config = {k: cfg_map[k] for k in _WA_KEYS if k in cfg_map}
-            if wa_config.get('whatsapp_enabled') == '1':
+            if whatsapp_actif(cfg_map):
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
-                    f"📊 Nouveau sondage : {s.question}", s.description or "", False, None, None, wa_config,
+                    f"📊 Nouveau sondage : {s.question}", s.description or "", False, None, None, cfg_map,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:

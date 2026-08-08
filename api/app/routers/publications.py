@@ -25,7 +25,7 @@ logger = logging.getLogger("publications")
 
 ARCHIVAGE_DELAI_HEURES = 48
 PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
-_WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer', 'site_url'}
+from app.utils.whatsapp import config_whatsapp, whatsapp_actif
 
 
 def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
@@ -376,8 +376,8 @@ def create_publication(
     session.commit()
     session.refresh(pub)
     if pub.partager_whatsapp and not pub.brouillon:
-        wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
-        if wa_config.get('whatsapp_enabled') == '1':
+        wa_config = config_whatsapp(session)
+        if whatsapp_actif(wa_config):
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config,
                 pub.public_cible, pub.id,
@@ -448,8 +448,8 @@ def update_publication(
 
     # Envoi WhatsApp si brouillon publié + flag activé
     if was_brouillon_published and pub.partager_whatsapp:
-        wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
-        if wa_config.get('whatsapp_enabled') == '1':
+        wa_config = config_whatsapp(session)
+        if whatsapp_actif(wa_config):
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config,
                 pub.public_cible, pub.id,
@@ -581,8 +581,8 @@ def add_evolution(
     # Envoi WhatsApp pour le commentaire si demandé
     share_wa = body.partager_whatsapp if body.partager_whatsapp is not None else pub.partager_whatsapp
     if share_wa and body.contenu and body.contenu.strip():
-        wa_config = {r.cle: r.valeur for r in session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS))).all()}
-        if wa_config.get('whatsapp_enabled') == '1':
+        wa_config = config_whatsapp(session)
+        if whatsapp_actif(wa_config):
             # Commentaires précédents (hors celui qui vient d'être créé)
             evols_precedents = [
                 e for e in session.exec(
