@@ -1,0 +1,73 @@
+#!/bin/sh
+# Refuse un push sur `dev` ou `main` sans pré-check MEP passé pour CE commit.
+#
+# POURQUOI. Sur ce projet, `auto-deploy.sh` déploie `origin/main` toutes les cinq
+# minutes : **fusionner la PR est la mise en production**. Le pré-check doit donc
+# être passé AVANT que la PR soit remise, c'est-à-dire avant le push sur `dev` —
+# c'est exactement l'ordre écrit dans `.claude/skills/mep-precheck` et dans la
+# banque de mémoire du projet.
+#
+# Cet ordre était juste, et il a quand même été enfreint sur trois lots d'affilée
+# les 07 et 08/08/2026, au motif que « s'arrêter au push dev » dispenserait du
+# pré-check. Troisième récidive du même défaut (socle 01 §2). La conclusion du
+# socle vaut pour elle-même : une consigne ne se maintient pas seule, il lui faut
+# un contrôle qui échoue.
+#
+# Le hook ne rejoue pas les quinze points — il exige leur TRACE, produite par
+# `precheck-mep.sh`, et liée au commit exact qui part. Un pré-check passé sur un
+# autre commit ne vaut rien : c'est la version poussée qui sera déployée.
+#
+# Contournement ponctuel, à assumer : SKIP_PRECHECK=1 git push ...
+
+[ -n "$SKIP_PRECHECK" ] && {
+    echo "⚠ pre-push : pré-check DÉLIBÉRÉMENT contourné (SKIP_PRECHECK=1)." >&2
+    exit 0
+}
+
+MARQUEUR=".git/precheck-mep.ok"
+AGE_MAX_S=7200          # 2 h : au-delà, l'état des RPi a pu changer
+
+# stdin : <ref locale> <sha local> <ref distante> <sha distant>
+protege=""
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+    [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue  # suppression
+    case "$remote_ref" in
+        refs/heads/dev|refs/heads/main) protege="$local_sha" ;;
+    esac
+done
+
+[ -z "$protege" ] && exit 0     # aucune branche surveillée : rien à exiger
+
+refuser() {
+    echo "" >&2
+    echo "✗ pre-push refusé — $1" >&2
+    echo "" >&2
+    echo "  Sur ce dépôt, un merge vers main déclenche un déploiement dans les 5" >&2
+    echo "  minutes. Le pré-check se passe AVANT le push, pas après :" >&2
+    echo "" >&2
+    echo "      bash precheck-mep.sh" >&2
+    echo "" >&2
+    echo "  Contournement assumé : SKIP_PRECHECK=1 git push ..." >&2
+    echo "" >&2
+    exit 1
+}
+
+[ -f "$MARQUEUR" ] || refuser "aucun pré-check enregistré."
+
+# Le marqueur contient : <sha couvert> <horodatage epoch>
+sha_couvert=$(cut -d' ' -f1 "$MARQUEUR")
+quand=$(cut -d' ' -f2 "$MARQUEUR")
+
+case "$quand" in
+    ''|*[!0-9]*) refuser "marqueur de pré-check illisible ($MARQUEUR)." ;;
+esac
+
+age=$(( $(date +%s) - quand ))
+[ "$age" -gt "$AGE_MAX_S" ] && \
+    refuser "pré-check trop ancien ($(( age / 60 )) min) — l'état des RPi a pu changer."
+
+[ "$sha_couvert" = "$protege" ] || \
+    refuser "pré-check passé sur ${sha_couvert%"${sha_couvert#???????}"}…, or c'est ${protege%"${protege#???????}"}… qui part."
+
+echo "✓ pre-push : pré-check MEP validé pour ${protege%"${protege#???????}"} (il y a $(( age / 60 )) min)."
+exit 0
