@@ -1,0 +1,83 @@
+"""Router tickets — création, suivi, messagerie, évolutions, relance syndic.
+
+`tickets.py` faisait **1238 lignes**, dont deux fonctions de 224 et 231 lignes.
+Découpé le 08/08/2026, au fil de l'eau : l'ajout du partage WhatsApp à la
+création l'avait fait passer de 1213 à 1238 lignes, et c'est le garde-fou de
+modularité écrit la veille (`scripts-ci-modularite.sh`) qui a refusé le lot.
+Le contrôle a donc fonctionné exactement comme prévu — on découpe le fichier
+quand on y touche.
+
+## La règle de découpage : un domaine, un module
+
+Reprise de `app/routers/admin/` et `app/routers/flux/` — par domaine, chacun
+ayant sa propre raison de changer.
+
+| Module | Ce qui y change |
+|---|---|
+| `crud` | cycle de vie : lister, créer, lire, modifier, supprimer |
+| `messages` | messagerie publique et notes internes du CS |
+| `evolutions` | fil de suivi : changements d'état et commentaires |
+| `relance` | relance groupée du syndic, avec civilité et ancienneté |
+| `courriels` | composition et envoi des e-mails d'un ticket |
+| `commun` | destinataires, configuration, libellés, sérialisation |
+
+## Ce qui a été factorisé au passage
+
+La longueur *fabrique* la duplication — trois exemples pris dans ce seul fichier :
+
+- **la liste des destinataires syndic / CS**, écrite trois fois (création,
+  relance, évolution), avec trois déduplications d'adresses indépendantes
+  → `commun.destinataires_syndic_cs` ;
+- **la lecture de `site_nom` / `site_url`**, refaite quatre fois
+  → `commun.config_site` et `commun.contexte_site` ;
+- **le libellé d'une évolution**, écrit deux fois avec deux résultats différents
+  (« Commentaire CS » ici, « Commentaire : … » là) → `commun.libelle_evolution`,
+  dont le paramètre `avec_extrait` conserve la nuance qui, elle, était voulue ;
+- **la table des périmètres**, qui redoublait celle du fil d'activité en moins
+  complet (ni AFUL, ni bâtiment hors table) → `app/utils/perimetres.py`, désormais
+  partagé avec `routers/flux`.
+
+L'e-mail `ticket_syndic` était par ailleurs composé à deux endroits : c'est ce
+qui avait laissé la clé `fichiers` absente d'un des deux, si bien que les photos
+partaient en pièce jointe sans être annoncées. Une seule écriture désormais.
+
+## Ordre de montage — il n'est pas cosmétique
+
+`relance` est monté **avant** `crud` : ses chemins sont littéraux
+(`/tickets/relance-syndic`) et FastAPI résout dans l'ordre d'enregistrement. Monté
+après, `/{ticket_id}` capterait « relance-syndic » et la route deviendrait
+inatteignable — sans erreur, juste une relance qui répond 422.
+
+`crud` est le seul sous-router à déclarer son propre préfixe : ses deux routes de
+collection ont un chemin **vide** (`GET /tickets`, `POST /tickets`), et FastAPI
+refuse un chemin vide sur un router sans préfixe. Les trois autres déclarent des
+chemins nus et reçoivent le préfixe au montage. Les 12 chemins sont identiques au
+caractère près à ceux d'avant le découpage, vérifié par comparaison d'inventaire.
+"""
+from fastapi import APIRouter
+
+from . import crud, evolutions, messages, relance
+
+#  Les sous-modules à chemins nus reçoivent le préfixe ici. Ce littéral est aussi
+#  ce que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un
+#  paquet découpé : le garder en clair n'est pas cosmétique non plus.
+_a_prefixer = APIRouter(prefix="/tickets", tags=["tickets"])
+for _sous_router in (relance.router, messages.router, evolutions.router):
+    _a_prefixer.include_router(_sous_router)
+
+#  ⚠️ Les chemins littéraux d'abord — voir la docstring : `/relance-syndic` doit
+#  être testé avant le motif `/{ticket_id}` que porte `crud`.
+router = APIRouter(tags=["tickets"])
+router.include_router(_a_prefixer)
+router.include_router(crud.router)
+
+#  Surface publique conservée pour les importateurs externes.
+from .commun import STATUT_LABELS  # noqa: E402  (après le montage, pour la lisibilité)
+from .relance import RelanceSyndicRequest, RelanceSyndicResponse  # noqa: E402
+
+__all__ = [
+    "router",
+    "STATUT_LABELS",
+    "RelanceSyndicRequest",
+    "RelanceSyndicResponse",
+]

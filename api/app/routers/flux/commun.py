@@ -10,7 +10,6 @@ notion sous deux formes selon la ligne — c'est précisément ce que le découp
 doit empêcher, pas provoquer.
 """
 import html as _html
-import json as _json
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,6 +18,17 @@ from typing import Optional
 from sqlmodel import Session
 
 from app.models.core import Utilisateur
+
+#  Les périmètres vivent dans `app/utils/perimetres.py` : la table et l'analyse
+#  étaient écrites ici ET dans la relance syndic des tickets, avec deux résultats
+#  différents pour AFUL. Réexportés sous leurs noms d'ici pour ne pas disperser
+#  le vocabulaire du paquet flux.
+from app.utils.perimetres import (
+    LABELS as PERIMETRE_LABELS,
+    depuis_json as parse_json_perimetres,
+    depuis_texte as parse_perimetres,
+    libelle as perimetre_label,
+)
 
 
 @dataclass(frozen=True)
@@ -38,38 +48,6 @@ class ContexteFlux:
 
 
 # ── Périmètres ───────────────────────────────────────────────────────────────
-
-PERIMETRE_LABELS: dict[str, str] = {
-    "résidence": "Copropriété entière",
-    "parking": "Parking",
-    "cave": "Cave",
-    "aful": "AFUL",
-    **{f"bat:{i}": f"Bât. {i}" for i in range(1, 10)},
-}
-
-
-def perimetre_label(perims: list[str]) -> str:
-    """Libellé lisible d'un périmètre, identique dans toutes les rubriques."""
-    return " · ".join(PERIMETRE_LABELS.get(p, p) for p in perims)
-
-
-def parse_perimetres(perimetre: Optional[str]) -> list[str]:
-    """Champ `perimetre` texte (« résidence », « parking,cave »…)."""
-    if not perimetre:
-        return ["résidence"]
-    return [s.strip() for s in perimetre.split(",") if s.strip()]
-
-
-def parse_json_perimetres(perimetre_cible: Optional[str]) -> list[str]:
-    """Parse un champ perimetre_cible stocké en JSON (ex: '["bat:1","bat:3"]')."""
-    if not perimetre_cible:
-        return ["résidence"]
-    try:
-        val = _json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else perimetre_cible
-        return list(val) if isinstance(val, (list, tuple)) else ["résidence"]
-    except Exception:
-        return ["résidence"]
-
 
 def perimetres_de(obj) -> list[str]:
     """Périmètre d'un élément qui porte `perimetre_cible` — ticket ou publication.

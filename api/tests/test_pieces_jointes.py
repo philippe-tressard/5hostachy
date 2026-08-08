@@ -141,11 +141,17 @@ def test_photos_internes_ecarte_les_urls_externes():
 #: rubrique sans l'inscrire ici est le scénario que ce test ne peut pas couvrir :
 #: la liste est donc volontairement explicite, pour se relire.
 ECRITURES_CLIENT = [
-    ("api/app/routers/tickets.py", "create_ticket"),
-    ("api/app/routers/tickets.py", "update_ticket"),
-    ("api/app/routers/tickets.py", "add_message"),
-    ("api/app/routers/tickets.py", "add_evolution"),
-    ("api/app/routers/tickets.py", "update_evolution"),
+    # `tickets.py` est devenu le paquet `tickets/` le 08/08/2026 : les chemins
+    # suivent le découpage, pas l'inverse. Le test échouait bruyamment (fichier
+    # introuvable), ce qui est la bonne façon de perdre sa cible.
+    ("api/app/routers/tickets/crud.py", "create_ticket"),
+    # `update_ticket` délègue l'écriture à `_appliquer_contenu` depuis le
+    # découpage : c'est cette fonction qui filtre, et donc elle qu'il faut viser.
+    # Le test a échoué bruyamment au découpage, ce qui est le comportement voulu.
+    ("api/app/routers/tickets/crud.py", "_appliquer_contenu"),
+    ("api/app/routers/tickets/messages.py", "add_message"),
+    ("api/app/routers/tickets/evolutions.py", "add_evolution"),
+    ("api/app/routers/tickets/evolutions.py", "update_evolution"),
     ("api/app/routers/publications.py", "add_evolution"),
     ("api/app/routers/publications.py", "update_evolution"),
     ("api/app/routers/calendrier.py", "create_evenement"),
@@ -162,7 +168,7 @@ _DRAPEAU_FICHIERS = re.compile(r'"fichiers":\s*bool\(([A-Za-z_][\w.]*)\)')
 
 @pytest.mark.parametrize(
     "chemin",
-    ["api/app/routers/tickets.py", "api/app/routers/publications.py",
+    ["api/app/routers/tickets/courriels.py", "api/app/routers/publications.py",
      "api/app/routers/calendrier.py"],
 )
 def test_le_drapeau_fichiers_decrit_ce_qui_est_vraiment_joint(chemin):

@@ -54,16 +54,38 @@ def test_les_cles_de_configuration_whatsapp_ne_sont_ecrites_qu_une_fois():
     )
 
 
-def _appels_avec_role(arbre: ast.AST) -> list[ast.If]:
-    """Les `if` dont la condition mentionne `has_role`."""
-    return [
-        n for n in ast.walk(arbre)
-        if isinstance(n, ast.If)
-        and any(
-            isinstance(c, ast.Attribute) and c.attr == "has_role"
-            for c in ast.walk(n.test)
-        )
-    ]
+def _condition_resolue(fonction: ast.AST, test: ast.AST) -> str:
+    """La condition d'un `if`, variables locales d'un niveau remplacées.
+
+    Sans cela, extraire `est_cs = user.has_role(...)` — parfaitement légitime
+    quand le rôle sert six fois dans la même fonction — sortirait l'autorisation
+    du champ du contrôle. C'est le même angle mort que celui corrigé sur le fil
+    d'activité le 08/08/2026 : un garde-fou ne doit pas obliger à dupliquer pour
+    rester visible.
+    """
+    affectations: dict[str, ast.AST] = {}
+    for n in ast.walk(fonction):
+        if isinstance(n, ast.Assign):
+            for cible in n.targets:
+                if isinstance(cible, ast.Name):
+                    affectations[cible.id] = n.value
+    morceaux = [ast.unparse(test)]
+    for n in ast.walk(test):
+        if isinstance(n, ast.Name) and n.id in affectations:
+            morceaux.append(ast.unparse(affectations[n.id]))
+    return " ".join(morceaux)
+
+
+def _conditions_de_partage(arbre: ast.AST) -> list[str]:
+    """Conditions résolues des `if` qui décident d'un partage WhatsApp."""
+    trouvees = []
+    for fonction in ast.walk(arbre):
+        if not isinstance(fonction, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for n in ast.walk(fonction):
+            if isinstance(n, ast.If) and "partager_whatsapp" in ast.unparse(n.test):
+                trouvees.append(_condition_resolue(fonction, n.test))
+    return trouvees
 
 
 def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
@@ -73,23 +95,22 @@ def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
     case masquée dans l'interface ne protège rien, le client peut poster le
     champ directement.
     """
-    source = (_APP / "routers" / "tickets.py").read_text(encoding="utf-8")
-    arbre = ast.parse(source)
+    source = (_APP / "routers" / "tickets" / "crud.py").read_text(encoding="utf-8")
+    conditions = _conditions_de_partage(ast.parse(source))
 
-    gardes = [
-        n for n in _appels_avec_role(arbre)
-        if "partager_whatsapp" in ast.unparse(n.test)
-    ]
-    assert gardes, (
-        "Aucun `if ... partager_whatsapp ... has_role(...)` dans tickets.py : le "
-        "partage sur le groupe WhatsApp n'est plus réservé au CS/admin."
+    assert conditions, (
+        "Aucune condition portant `partager_whatsapp` dans tickets/crud.py : le "
+        "partage sur le groupe WhatsApp n'est plus gardé du tout."
     )
-
-    roles = ast.unparse(gardes[0].test)
-    for attendu in ("conseil_syndical", "admin"):
-        assert attendu in roles, (
-            f"Le garde du partage WhatsApp ne mentionne pas `{attendu}` : {roles}"
+    for condition in conditions:
+        assert "has_role" in condition, (
+            "Le partage sur le groupe WhatsApp n'est plus réservé au CS/admin — "
+            f"condition sans contrôle de rôle : {condition}"
         )
+        for attendu in ("conseil_syndical", "admin"):
+            assert attendu in condition, (
+                f"Le garde du partage WhatsApp ne mentionne pas `{attendu}` : {condition}"
+            )
 
 
 def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():
