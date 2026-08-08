@@ -276,7 +276,12 @@ age_ligne() {  # $1 = hôte, $2 = motif, $3 = fichier — âge en minutes, vide 
 }
 AGE_ALERTE=$(age_ligne "$ACTIF" "Alerte envoyée" /var/log/hostachy-reliability.log)
 AGE_FAIL=$(age_ligne "$ACTIF" "^\[FAIL\]" /var/log/hostachy-reliability.log)
-rapporter 13 "$(verdict_alerte "${AGE_ALERTE:-}" "${AGE_FAIL:-}")" "Canal d'alerte non muet"           "$([ -n \"${AGE_FAIL:-}\" ] && echo \"dernier échec il y a ${AGE_FAIL} min, alerte ${AGE_ALERTE:-jamais}\" || echo \"aucun échec à signaler\")"
+if [ -n "${AGE_FAIL:-}" ]; then
+  DETAIL13="dernier échec il y a ${AGE_FAIL} min, alerte ${AGE_ALERTE:-jamais envoyée}"
+else
+  DETAIL13="aucun échec à signaler (silence normal)"
+fi
+rapporter 13 "$(verdict_alerte "${AGE_ALERTE:-}" "${AGE_FAIL:-}")" "Canal d'alerte non muet" "$DETAIL13"
 
 # 14 — hygiène disque sur les DEUX nœuds
 for h in "$RPI1" "$RPI2"; do
