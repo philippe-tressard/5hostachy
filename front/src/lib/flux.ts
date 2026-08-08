@@ -14,44 +14,83 @@
 import type { FluxItem } from '$lib/api';
 
 // ── Apparence par type d'élément ──────────────────────────────────────────
+//
+// ⚠️ CES TROIS TABLES DOIVENT COUVRIR TOUS LES TYPES QUE L'API ÉMET.
+//
+// Elles n'en couvraient que dix pour quinze : `prestataire`, `document`,
+// `diagnostic`, `faq` et `annuaire` — les cinq rubriques ajoutées au fil depuis —
+// retombaient sur les valeurs par défaut, c'est-à-dire **gris de bordure sur fond
+// gris**, illisible, avec le nom technique brut en guise de libellé
+// (« PRESTATAIRE »). Signalé par l'utilisateur le 08/08/2026 ; personne ne
+// l'avait vu parce qu'une pastille grise ressemble à une pastille.
+// `api/tests/test_flux_apparence.py` échoue désormais si un type émis par le
+// backend n'a pas ses trois entrées.
+//
+// CONTRASTE. Six des sept couleurs d'origine échouaient déjà au niveau AA
+// (4.5:1) : l'ambre était à 2,07 et l'émeraude à 2,41 — le gris sur gris à 1,15
+// n'était que le cas extrême. Les textes sont passés en teintes foncées (700/800)
+// sur des fonds clairs (50) : les douze sont désormais entre 4,75 et 10,2.
+//
+// DIFFÉRENCIATION. Les douze teintes sont réparties sur la roue, écart minimal
+// 17°, sauf `devis` ⇄ `prestataire` (12°) — volontaire : ce sont les deux
+// rubriques de la page /prestataires, leur parenté se lit.
 export const TYPE_LABELS: Record<string, string> = {
 	ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
 	publication: 'Actualité', evenement: 'Événement',
 	devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
 	annonce: 'Petite annonce', idee: 'Boîte à idées',
+	prestataire: 'Prestataire', document: 'Document', diagnostic: 'Diagnostic',
+	faq: 'Question fréquente', annuaire: 'Annuaire',
 };
 
 export const TYPE_COLORS: Record<string, string> = {
-	ticket_resolu: '#DC2626',
-	ticket_ouvert: '#DC2626',
-	ticket_mis_a_jour: '#DC2626',
-	publication: 'var(--color-primary)',
-	evenement: '#F59E0B',
-	devis: '#10B981',
-	sondage_clos: '#8B5CF6',
-	sondage_ouvert: '#8B5CF6',
-	annonce: '#EA580C',
-	idee: '#0891B2',
+	ticket_resolu: '#B91C1C',          //   0° rouge
+	ticket_ouvert: '#B91C1C',
+	ticket_mis_a_jour: '#B91C1C',
+	annonce: '#C2410C',                //  17° orange
+	evenement: '#A16207',              //  35° ambre
+	diagnostic: '#4D7C0F',             //  86° olive
+	annuaire: '#15803D',               // 142° vert
+	devis: '#047857',                  // 163° émeraude ┐ page /prestataires
+	prestataire: '#0F766E',            // 175° sarcelle ┘
+	idee: '#0E7490',                   // 193° cyan
+	publication: 'var(--color-primary)', // 214° bleu Seine, couleur de la charte
+	document: '#4338CA',               // 245° indigo
+	sondage_clos: '#6D28D9',           // 263° violet
+	sondage_ouvert: '#6D28D9',
+	faq: '#A21CAF',                    // 295° fuchsia
 };
 
 export const TYPE_BG: Record<string, string> = {
 	ticket_resolu: '#FEF2F2',
 	ticket_ouvert: '#FEF2F2',
 	ticket_mis_a_jour: '#FEF2F2',
-	publication: '#EEF2F7',
+	annonce: '#FFF7ED',
 	evenement: '#FFFBEB',
+	diagnostic: '#F7FEE7',
+	annuaire: '#F0FDF4',
 	devis: '#ECFDF5',
+	prestataire: '#F0FDFA',
+	idee: '#ECFEFF',
+	publication: '#EEF2F7',
+	document: '#EEF2FF',
 	sondage_clos: '#F5F3FF',
 	sondage_ouvert: '#F5F3FF',
-	annonce: '#FFF7ED',
-	idee: '#ECFEFF',
+	faq: '#FDF4FF',
 };
 
+//  Les défauts restent des VALEURS DE REPLI, pas une apparence acceptable : un
+//  type inconnu doit se voir comme tel plutôt que passer pour une rubrique
+//  normale. Ils sont lisibles (contraste 7,6:1) — c'est le garde-fou de test,
+//  pas le repli, qui empêche un type d'y rester.
+const COULEUR_INCONNUE = '#475569';
+const FOND_INCONNU = '#F1F5F9';
+
 export function typeCouleur(type: string): string {
-	return TYPE_COLORS[type] ?? 'var(--color-border)';
+	return TYPE_COLORS[type] ?? COULEUR_INCONNUE;
 }
 export function typeFond(type: string): string {
-	return TYPE_BG[type] ?? '#EAEDF1';
+	return TYPE_BG[type] ?? FOND_INCONNU;
 }
 export function typeLibelle(type: string): string {
 	return TYPE_LABELS[type] ?? type;
