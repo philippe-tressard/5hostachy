@@ -21,7 +21,7 @@ from typing import Optional
 #: libellé calculé — aucun périmètre ne reste jamais affiché en brut.
 _BATIMENTS = 9
 
-LABELS: dict[str, str] = {
+PERIMETRE_LABELS: dict[str, str] = {
     "résidence": "Copropriété entière",
     "parking": "Parking",
     "cave": "Cave",
@@ -30,28 +30,28 @@ LABELS: dict[str, str] = {
 }
 
 
-def libelle_un(perim: str) -> str:
+def perimetre_label_un(perim: str) -> str:
     """Libellé d'un périmètre isolé, y compris un bâtiment hors table."""
-    if perim in LABELS:
-        return LABELS[perim]
+    if perim in PERIMETRE_LABELS:
+        return PERIMETRE_LABELS[perim]
     if perim.startswith("bat:"):
         return f"Bât. {perim[4:]}"
     return perim
 
 
-def libelle(perims: list[str]) -> str:
+def perimetre_label(perims: list[str]) -> str:
     """« Bât. 1 · Parking » — le rendu commun à toutes les rubriques."""
-    return " · ".join(libelle_un(p) for p in perims)
+    return " · ".join(perimetre_label_un(p) for p in perims)
 
 
-def depuis_texte(perimetre: Optional[str]) -> list[str]:
+def parse_perimetres(perimetre: Optional[str]) -> list[str]:
     """Champ `perimetre` en texte (« résidence », « parking,cave »)."""
     if not perimetre:
         return ["résidence"]
     return [s.strip() for s in perimetre.split(",") if s.strip()]
 
 
-def depuis_json(perimetre_cible: Optional[str]) -> list[str]:
+def parse_json_perimetres(perimetre_cible: Optional[str]) -> list[str]:
     """Champ `perimetre_cible` en JSON (ex. '["bat:1","bat:3"]').
 
     Un contenu illisible retombe sur « résidence » plutôt que de lever : ce champ
@@ -66,7 +66,7 @@ def depuis_json(perimetre_cible: Optional[str]) -> list[str]:
         return ["résidence"]
 
 
-def libelle_json(perimetre_cible: Optional[str], *, vide: str = "") -> str:
+def perimetre_label_json(perimetre_cible: Optional[str], *, vide: str = "") -> str:
     """Libellé direct depuis un champ JSON.
 
     `vide` est rendu quand le champ est absent — l'e-mail de relance syndic
@@ -76,4 +76,4 @@ def libelle_json(perimetre_cible: Optional[str], *, vide: str = "") -> str:
     """
     if not perimetre_cible:
         return vide
-    return libelle(depuis_json(perimetre_cible))
+    return perimetre_label(parse_json_perimetres(perimetre_cible))

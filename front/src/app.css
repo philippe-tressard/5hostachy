@@ -457,3 +457,69 @@ a:hover { text-decoration: underline; }
   70%  { box-shadow: 0 0 0 3px var(--color-primary); }
   100% { box-shadow: 0 0 0 3px transparent; }
 }
+
+/* ── Écrans d'import (lots · télécommandes · vigiks) ──────────────────────
+   Ces quinze règles étaient recopiées à l'identique dans les <style> des trois
+   pages d'import — vérifié règle par règle avant regroupement : aucune ne
+   divergeait. Environ 150 lignes pour une seule mise en forme.
+
+   Le préfixe `imp-` n'est pas décoratif. Trois de ces noms — `toolbar`,
+   `edit-form`, `edit-grid` — sont DÉJÀ employés par d'autres écrans (admin,
+   calendrier, espace-cs, mon-lot, residence) avec leurs propres définitions
+   scopées : les globaliser tels quels y aurait fait fuiter ce style. Et
+   `page-header` existe déjà plus haut dans ce fichier, avec des valeurs
+   DIFFÉRENTES (justify-content, gap, padding) — l'override local des imports
+   était donc voulu, pas une redite.
+
+   Préfixer sans exception évite d'avoir à trancher au cas par cas, et empêche
+   la prochaine collision. */
+.imp-header { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.5rem; }
+.imp-header h1 { font-size: 1.4rem; font-weight: 700; }
+
+.imp-stats-bar {
+  display: flex;
+  gap: 1.5rem;
+  padding: .75rem 1.25rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.imp-stat { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.imp-stat-val { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
+.imp-stat-lbl { font-size: .75rem; color: var(--color-text-muted); }
+
+.imp-upload-section { padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.imp-upload-row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.imp-file-input { flex: 1; min-width: 200px; }
+.imp-checkbox-label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
+
+.imp-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+}
+
+.imp-table-dense td, .imp-table-dense th { padding: .35rem .55rem; }
+.imp-row-resolu td { opacity: .55; }
+.imp-row-ignore td { opacity: .4; }
+
+.imp-edit-row td { background: var(--color-bg-secondary, #f8f9fa); padding: 0; }
+.imp-edit-form { padding: .75rem 1rem; border-left: 3px solid var(--color-primary, #1a56db); }
+.imp-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: .5rem .75rem;
+  margin-bottom: .75rem;
+}
+.imp-field-checkbox { display: flex; align-items: flex-end; }
+.imp-field-checkbox label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
+
+@media (max-width: 900px) {
+  .imp-edit-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .imp-edit-grid { grid-template-columns: 1fr; }
+  .imp-stats-bar { gap: 1rem; }
+}

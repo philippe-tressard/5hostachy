@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import httpx
 from sqlmodel import Session, select

@@ -3,9 +3,7 @@ Router uploads — gestion des photos (avatar, résidence, publications).
 Les fichiers sont enregistrés dans /app/uploads/{type}/{uuid}.ext
 et servis en statique via /uploads/*.
 """
-import uuid
 from pathlib import Path
-from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from PIL import Image, ImageOps

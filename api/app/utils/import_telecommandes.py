@@ -14,15 +14,22 @@ Usage depuis le conteneur :
 """
 from __future__ import annotations
 
-import io
-import unicodedata
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.database import engine
+#  La mécanique d'un import (ouverture du classeur, transaction, normalisation)
+#  vit dans `import_xlsx` : elle était écrite à l'identique dans les trois modules.
+#  Ce qui reste ici est la seule chose qui leur soit propre — comment lire les
+#  colonnes. `normaliser` est ré-exporté : `acces.py` et `auto_match_service.py`
+#  l'importent depuis ce module.
+from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
+    importer_bytes,
+    importer_fichier,
+    normaliser,
+)
+
 from app.models.core import StatutImport, TelecommandeImport
 
 
@@ -36,16 +43,6 @@ _NOMS_IGNORES = {
 }
 
 
-def normaliser(s: Optional[str]) -> str:
-    """Normalise une chaîne : majuscules, sans accents, espaces normalisés."""
-    if not s:
-        return ""
-    s = s.strip().upper()
-    s = "".join(
-        c for c in unicodedata.normalize("NFD", s)
-        if unicodedata.category(c) != "Mn"
-    )
-    return " ".join(s.split())
 
 
 def importer_depuis_bytes(
@@ -53,50 +50,16 @@ def importer_depuis_bytes(
     session: Session,
     remplacer: bool = False,
 ) -> dict:
-    """Import depuis des bytes en mémoire (endpoint upload FastAPI)."""
-    try:
-        import openpyxl  # type: ignore
-    except ImportError:
-        raise RuntimeError("openpyxl n'est pas installé.")
-    wb = openpyxl.load_workbook(io.BytesIO(contenu), read_only=True, data_only=True)
-    ws = wb.active
-    rows = list(ws.iter_rows(values_only=True))
-    wb.close()
-    stats = _traiter_rows(rows, session, remplacer)
-    session.commit()
-    return stats
+    """Import depuis des octets en mémoire (téléversement HTTP)."""
+    return importer_bytes(contenu, session, remplacer, _traiter_rows)
 
 
 def importer_depuis_fichier(chemin: str, remplacer: bool = False) -> dict:
+    """Importe les télécommandes depuis un xlsx (script en ligne de commande).
+
+    Rend un dict aux clés ``importes``, ``ignores``, ``doublons``, ``erreurs``.
     """
-    Importe les télécommandes depuis un xlsx (script CLI dans le conteneur).
-
-    Args:
-        chemin    : chemin absolu vers le fichier Excel.
-        remplacer : si True, supprime tous les enregistrements `en_attente`
-                    existants avant de ré-importer.
-
-    Returns:
-        dict avec les clés `importes`, `ignores`, `doublons`, `erreurs`.
-    """
-    try:
-        import openpyxl  # type: ignore
-    except ImportError:
-        raise RuntimeError("openpyxl n'est pas installé. Ajouter au requirements.txt.")
-
-    path = Path(chemin)
-    if not path.exists():
-        raise FileNotFoundError(f"Fichier introuvable : {chemin}")
-
-    wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
-    ws = wb.active
-    rows = list(ws.iter_rows(values_only=True))
-    wb.close()
-
-    with Session(engine) as session:
-        stats = _traiter_rows(rows, session, remplacer)
-        session.commit()
-    return stats
+    return importer_fichier(chemin, remplacer, _traiter_rows)
 
 
 def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:

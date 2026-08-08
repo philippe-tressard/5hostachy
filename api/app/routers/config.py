@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_admin
+from app.auth.deps import require_admin
 from app.database import get_session
 from app.models.core import ConfigSite, Utilisateur
 from app.seed import DEFAULT_LEGAL
@@ -270,7 +270,7 @@ async def smtp_test(
 ):
     """Envoie un e-mail de test à l'adresse fournie en utilisant la config SMTP actuelle (admin uniquement)."""
     from app.config import get_settings
-    from app.utils.email import _get_smtp_config
+    from app.utils.email import _get_smtp_config, connexion_smtp
 
     settings = get_settings()
     smtp_cfg = _get_smtp_config(session)
@@ -279,28 +279,9 @@ async def smtp_test(
         raise HTTPException(400, "L'envoi d'e-mails est désactivé. Activez-le avant de tester.")
 
     try:
-        from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+        from fastapi_mail import FastMail, MessageSchema
 
-        _srv = smtp_cfg.get('smtp_server') or settings.mail_server
-        _port = int(smtp_cfg.get('smtp_port') or settings.mail_port)
-        _from = smtp_cfg.get('smtp_from') or settings.mail_from
-        _from_name = smtp_cfg.get('smtp_from_name') or settings.mail_from_name
-        _username = smtp_cfg.get('smtp_username') or settings.mail_username
-        _password = smtp_cfg.get('smtp_password') or settings.mail_password
-        _starttls = (smtp_cfg['smtp_starttls'] == '1') if 'smtp_starttls' in smtp_cfg else settings.mail_starttls
-        _ssl_tls = (smtp_cfg['smtp_ssl_tls'] == '1') if 'smtp_ssl_tls' in smtp_cfg else settings.mail_ssl_tls
-
-        cfg = ConnectionConfig(
-            MAIL_USERNAME=_username,
-            MAIL_PASSWORD=_password,
-            MAIL_FROM=_from,
-            MAIL_FROM_NAME=_from_name,
-            MAIL_PORT=_port,
-            MAIL_SERVER=_srv,
-            MAIL_STARTTLS=_starttls,
-            MAIL_SSL_TLS=_ssl_tls,
-            USE_CREDENTIALS=bool(_username),
-        )
+        cfg = connexion_smtp(smtp_cfg)
         fm = FastMail(cfg)
         msg = MessageSchema(
             subject="[5Hostachy] Test de configuration SMTP",

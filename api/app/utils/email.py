@@ -13,10 +13,13 @@ from sqlmodel import Session, select
 from app.config import get_settings
 from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
 from app.utils.fichiers import libelle_pieces_jointes, nom_lisible
+#  La configuration du canal SMTP est un sujet distinct de la composition
+#  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026,
+#  ce qui ramène aussi ce module sous son poids d'avant la factorisation.
+from app.utils.smtp import _get_smtp_config, connexion_smtp  # noqa: F401  (ré-export : config.py l'importe d'ici)
 
 settings = get_settings()
 
-_SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_from_name', 'smtp_username', 'smtp_password', 'smtp_starttls', 'smtp_ssl_tls'}
 
 # Mapping code email → clé préférence utilisateur (catégorie_mail)
 # Les codes absents (system, account) sont toujours envoyés.
@@ -97,11 +100,6 @@ def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str
             site_manager_email = manager_user.email.strip()
 
     return site_manager_email or site_email, config
-
-
-def _get_smtp_config(session: Session) -> dict:
-    rows = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_SMTP_KEYS))).all()
-    return {r.cle: r.valeur for r in rows}
 
 
 def _log_email(session: Session, code: str, to: str, statut: str, *, sujet: str = "", erreur: str | None = None) -> None:
@@ -432,27 +430,9 @@ async def send_email(
         ctx = {**base_ctx, **context}
 
         try:
-            from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+            from fastapi_mail import FastMail, MessageSchema
 
-            _srv = smtp_cfg.get('smtp_server') or settings.mail_server
-            _port = int(smtp_cfg.get('smtp_port') or settings.mail_port)
-            _from = smtp_cfg.get('smtp_from') or settings.mail_from
-            _from_name = smtp_cfg.get('smtp_from_name') or settings.mail_from_name
-            _username = smtp_cfg.get('smtp_username') or settings.mail_username
-            _password = smtp_cfg.get('smtp_password') or settings.mail_password
-            _starttls = (smtp_cfg['smtp_starttls'] == '1') if 'smtp_starttls' in smtp_cfg else settings.mail_starttls
-            _ssl_tls = (smtp_cfg['smtp_ssl_tls'] == '1') if 'smtp_ssl_tls' in smtp_cfg else settings.mail_ssl_tls
-            cfg = ConnectionConfig(
-                MAIL_USERNAME=_username,
-                MAIL_PASSWORD=_password,
-                MAIL_FROM=_from,
-                MAIL_FROM_NAME=_from_name,
-                MAIL_PORT=_port,
-                MAIL_SERVER=_srv,
-                MAIL_STARTTLS=_starttls,
-                MAIL_SSL_TLS=_ssl_tls,
-                USE_CREDENTIALS=bool(_username),
-            )
+            cfg = connexion_smtp(smtp_cfg)
             fm = FastMail(cfg)
             rendered_body = _render(template.corps_html, ctx)
             site_nom = site_nom_row.valeur if site_nom_row else "Ma Résidence"
@@ -587,27 +567,9 @@ async def send_email_group(
         ctx = {**base_ctx, **context}
 
         try:
-            from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+            from fastapi_mail import FastMail, MessageSchema
 
-            _srv = smtp_cfg.get('smtp_server') or settings.mail_server
-            _port = int(smtp_cfg.get('smtp_port') or settings.mail_port)
-            _from = smtp_cfg.get('smtp_from') or settings.mail_from
-            _from_name = smtp_cfg.get('smtp_from_name') or settings.mail_from_name
-            _username = smtp_cfg.get('smtp_username') or settings.mail_username
-            _password = smtp_cfg.get('smtp_password') or settings.mail_password
-            _starttls = (smtp_cfg['smtp_starttls'] == '1') if 'smtp_starttls' in smtp_cfg else settings.mail_starttls
-            _ssl_tls = (smtp_cfg['smtp_ssl_tls'] == '1') if 'smtp_ssl_tls' in smtp_cfg else settings.mail_ssl_tls
-            cfg = ConnectionConfig(
-                MAIL_USERNAME=_username,
-                MAIL_PASSWORD=_password,
-                MAIL_FROM=_from,
-                MAIL_FROM_NAME=_from_name,
-                MAIL_PORT=_port,
-                MAIL_SERVER=_srv,
-                MAIL_STARTTLS=_starttls,
-                MAIL_SSL_TLS=_ssl_tls,
-                USE_CREDENTIALS=bool(_username),
-            )
+            cfg = connexion_smtp(smtp_cfg)
             fm = FastMail(cfg)
             site_nom = site_nom_row.valeur if site_nom_row else "Ma Résidence"
             site_url = site_url_row.valeur if site_url_row else "https://localhost"

@@ -17,7 +17,8 @@ from app.utils.montants import montant_fr
 from app.utils.photos import parse_photos
 from app.utils.visibility import perimetre_visible
 
-from .commun import ContexteFlux, parse_perimetres, perimetre_label
+from app.utils.perimetres import parse_perimetres, perimetre_label
+from .commun import ContexteFlux
 from .schemas import FluxItem
 
 _DEVIS_LABELS = {

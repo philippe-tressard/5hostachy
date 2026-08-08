@@ -3,7 +3,7 @@ import re
 import secrets
 from datetime import date, datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import func
 from sqlmodel import Session, select, or_

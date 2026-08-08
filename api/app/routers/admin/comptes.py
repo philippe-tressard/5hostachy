@@ -7,7 +7,6 @@ Voir `__init__.py` pour la règle de découpage.
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
-from sqlalchemy import func
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (

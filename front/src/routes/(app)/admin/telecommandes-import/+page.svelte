@@ -166,33 +166,33 @@
 
 <svelte:head><title>Import Télécommandes — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
+<div class="imp-header">
 	<a href="/admin" class="btn btn-outline btn-sm" style="margin-right:.75rem">← Paramétrage</a>
 	<h1>&#x1F17F; Import Télécommandes</h1>
 </div>
 
 <!-- ── Stats ──────────────────────────────────────────────────────────────────────────── -->
 {#if stats}
-<div class="stats-bar card">
-	<div class="stat"><span class="stat-val">{stats.total}</span><span class="stat-lbl">Total</span></div>
-	<div class="stat"><span class="stat-val" style="color:#d97706">{stats.en_attente}</span><span class="stat-lbl">En attente</span></div>
-	<div class="stat"><span class="stat-val" style="color:#2563eb">{stats.proprietaire_lie}</span><span class="stat-lbl">Proprio lié</span></div>
-	<div class="stat"><span class="stat-val" style="color:#16a34a">{stats.resolu}</span><span class="stat-lbl">Résolus</span></div>
-	<div class="stat"><span class="stat-val" style="color:#6b7280">{stats.ignore}</span><span class="stat-lbl">Ignorés</span></div>
-	<div class="stat"><span class="stat-val">{stats.avec_reference}</span><span class="stat-lbl">Avec réf.</span></div>
-	<div class="stat"><span class="stat-val">{stats.avec_locataire}</span><span class="stat-lbl">Avec locataire</span></div>
+<div class="imp-stats-bar card">
+	<div class="imp-stat"><span class="imp-stat-val">{stats.total}</span><span class="imp-stat-lbl">Total</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#d97706">{stats.en_attente}</span><span class="imp-stat-lbl">En attente</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#2563eb">{stats.proprietaire_lie}</span><span class="imp-stat-lbl">Proprio lié</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#16a34a">{stats.resolu}</span><span class="imp-stat-lbl">Résolus</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#6b7280">{stats.ignore}</span><span class="imp-stat-lbl">Ignorés</span></div>
+	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_reference}</span><span class="imp-stat-lbl">Avec réf.</span></div>
+	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_locataire}</span><span class="imp-stat-lbl">Avec locataire</span></div>
 </div>
 {/if}
 
 <!-- ── Upload ─────────────────────────────────────────────────────────────────────────────────────────── -->
-<div class="card upload-section">
+<div class="card imp-upload-section">
 	<h2 class="section-title">Importer un fichier Excel</h2>
 	<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
 		Colonnes attendues : <code>Copropriétaire | Locataire | Télécommandes</code>
 	</p>
-	<div class="upload-row">
-		<input type="file" accept=".xlsx,.xls" bind:files={uploadFile} class="file-input" />
-		<label class="checkbox-label">
+	<div class="imp-upload-row">
+		<input type="file" accept=".xlsx,.xls" bind:files={uploadFile} class="imp-file-input" />
+		<label class="imp-checkbox-label">
 			<input type="checkbox" bind:checked={remplacer} />
 			Remplacer les imports en attente existants
 		</label>
@@ -203,7 +203,7 @@
 </div>
 
 <!-- ── Filtres + actions ──────────────────────────────────────────────────────────── -->
-<div class="toolbar">
+<div class="imp-toolbar">
 	<div style="display:flex;gap:.5rem;align-items:center">
 		<span class="muted" style="font-size:.85rem">Filtrer :</span>
 		{#each ['', 'en_attente', 'proprietaire_lie', 'resolu', 'ignore'] as s}
@@ -229,7 +229,7 @@
 	</div>
 {:else}
 <div class="card" style="overflow:auto">
-	<table class="table table-dense">
+	<table class="table imp-table-dense">
 		<thead>
 			<tr>
 				<th>Propriétaire (Excel)</th><th>Locataire (Excel)</th>
@@ -240,7 +240,7 @@
 		</thead>
 		<tbody>
 			{#each imports as imp (imp.id)}
-				<tr class:row-resolu={imp.statut === 'resolu'} class:row-ignore={imp.statut === 'ignore'}>
+				<tr class:imp-row-resolu={imp.statut === 'resolu'} class:imp-row-ignore={imp.statut === 'ignore'}>
 					<td style="font-weight:500">{imp.nom_proprietaire}</td>
 					<td style="color:var(--color-text-muted)">{imp.nom_locataire ?? '—'}</td>
 					<td><code style="font-size:.8rem">{imp.reference ?? '—'}</code></td>
@@ -286,13 +286,13 @@
 
 				<!-- Formulaire d'édition inline -->
 				{#if editId === imp.id}
-				<tr class="edit-row">
+				<tr class="imp-edit-row">
 					<td colspan="8">
-						<div class="edit-form card" style="margin:.5rem 0">
+						<div class="imp-edit-form card" style="margin:.5rem 0">
 							<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">
 								Lier : <em>{imp.nom_proprietaire}</em>
 							</h3>
-							<div class="edit-grid">
+							<div class="imp-edit-grid">
 								<div class="field">
 									<label for="tc-proprio">Propriétaire *</label>
 									<select id="tc-proprio" bind:value={editProprio}>
@@ -320,7 +320,7 @@
 										{/each}
 									</select>
 								</div>
-								<div class="field field-checkboxes">
+								<div class="field imp-field-checkbox">
 									<label>
 										<input type="checkbox" bind:checked={editChezLoc} />
 										TC chez le locataire
@@ -351,65 +351,3 @@
 </div>
 {/if}
 
-<style>
-	.page-header {
-		display: flex;
-		align-items: center;
-		gap: .5rem;
-		margin-bottom: 1.5rem;
-	}
-	h1 { font-size: 1.4rem; font-weight: 700; }
-
-	.stats-bar {
-		display: flex;
-		gap: 1.5rem;
-		padding: .75rem 1.25rem;
-		margin-bottom: 1.25rem;
-		flex-wrap: wrap;
-	}
-	.stat { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
-	.stat-val { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
-	.stat-lbl { font-size: .75rem; color: var(--color-text-muted); }
-
-	.upload-section { padding: 1rem 1.25rem; margin-bottom: 1rem; }
-	.upload-row {
-		display: flex;
-		gap: .75rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-	.file-input { flex: 1; min-width: 200px; }
-	.checkbox-label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
-
-	.toolbar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: .75rem;
-		margin-bottom: .75rem;
-		flex-wrap: wrap;
-	}
-
-	.table-dense td, .table-dense th { padding: .35rem .55rem; }
-	.row-resolu td { opacity: .55; }
-	.row-ignore td { opacity: .4; }
-
-	.edit-row td { background: var(--color-bg-secondary, #f8f9fa); padding: 0; }
-	.edit-form { padding: .75rem 1rem; border-left: 3px solid var(--color-primary, #1a56db); }
-	.edit-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr 1fr 1fr;
-		gap: .5rem .75rem;
-		margin-bottom: .75rem;
-	}
-	.field-checkboxes { display: flex; flex-direction: column; gap: .4rem; justify-content: flex-end; }
-	.field-checkboxes label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
-
-	@media (max-width: 900px) {
-		.edit-grid { grid-template-columns: 1fr 1fr; }
-	}
-	@media (max-width: 600px) {
-		.edit-grid { grid-template-columns: 1fr; }
-		.stats-bar { gap: 1rem; }
-	}
-</style>

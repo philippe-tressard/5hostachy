@@ -17,7 +17,7 @@ from app.database import get_session
 from app.models.core import ConfigSite, GenreCivilite, Ticket, TicketEvolution, Utilisateur
 from app.schemas import TicketRead
 from app.utils.dates_fr import date_courte, formule_anciennete, mois_ecoules
-from app.utils.perimetres import libelle_json as perimetre_libelle
+from app.utils.perimetres import perimetre_label_json
 
 from .commun import (
     STATUT_LABELS,
@@ -96,7 +96,7 @@ def _contexte_ticket(session: Session, ticket: Ticket) -> dict:
         "priorite": ticket.priorite,
         #  `vide=""` : un ticket sans périmètre n'affiche aucune ligne, là où le
         #  fil d'activité afficherait « Copropriété entière ». Cf. utils/perimetres.
-        "perimetre": perimetre_libelle(ticket.perimetre_cible),
+        "perimetre": perimetre_label_json(ticket.perimetre_cible),
         "description": ticket.description,
         # La relance qui vient d'être enregistrée ne se compte pas elle-même.
         "relance_count": compter_relances(session, ticket.id) - 1,

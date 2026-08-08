@@ -2,7 +2,6 @@
 import json
 import os
 import shutil
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
@@ -13,7 +12,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    Batiment, CategorieDocument, ConfigSite, Document, Notification,
+    CategorieDocument, ConfigSite, Document, Notification,
     ProfilAccesDocument, Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead

@@ -15,7 +15,7 @@ import json
 from typing import Optional
 
 from fastapi import BackgroundTasks
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.models.core import (
     Batiment,

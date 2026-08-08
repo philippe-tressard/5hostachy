@@ -11,15 +11,14 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CommandeAcces, Notification, StatutAcces, StatutCommande, StatutImport,
+    CommandeAcces, Notification, StatutAcces, StatutImport,
     Telecommande, TelecommandeImport, Utilisateur, UserLot, Vigik, VigikImport,
     UserVigik, UserTelecommande,
     Batiment, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.utils.auto_match_service import (
-    _user_keys, _matches_user, _split_name_candidates,
-    _create_user_vigiks, _create_user_telecommandes, _lot_coproprio_ids,
+    _user_keys, _matches_user, _create_user_vigiks, _create_user_telecommandes,
 )
 from app.utils.destinataires import membres_cs_notifiables
 
@@ -397,7 +396,6 @@ async def upload_import_excel(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Upload un fichier Excel et importe les télécommandes dans la table de staging."""
-    import io
     from app.utils.import_telecommandes import importer_depuis_bytes
     contenu = await file.read()
     stats = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)

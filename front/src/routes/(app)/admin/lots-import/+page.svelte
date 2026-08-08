@@ -210,33 +210,33 @@
 
 <svelte:head><title>Import Lots — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
+<div class="imp-header">
 	<a href="/admin" class="btn btn-outline btn-sm" style="margin-right:.75rem">← Paramétrage</a>
 	<h1>&#x1F3E0; Import Lots</h1>
 </div>
 
 <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
 {#if stats}
-<div class="stats-bar card">
-	<div class="stat"><span class="stat-val">{stats.total}</span><span class="stat-lbl">Total</span></div>
-	<div class="stat"><span class="stat-val" style="color:#d97706">{stats.en_attente}</span><span class="stat-lbl">En attente</span></div>
-	<div class="stat"><span class="stat-val" style="color:#7c3aed">{stats.utilisateur_lie ?? 0}</span><span class="stat-lbl">Occupant lié</span></div>
-	<div class="stat"><span class="stat-val" style="color:#2563eb">{stats.lot_lie}</span><span class="stat-lbl">Lot lié</span></div>
-	<div class="stat"><span class="stat-val" style="color:#16a34a">{stats.resolu}</span><span class="stat-lbl">Résolus</span></div>
-	<div class="stat"><span class="stat-val" style="color:#6b7280">{stats.ignore}</span><span class="stat-lbl">Ignorés</span></div>
-	<div class="stat"><span class="stat-val">{stats.avec_user}</span><span class="stat-lbl">Copro lié</span></div>
+<div class="imp-stats-bar card">
+	<div class="imp-stat"><span class="imp-stat-val">{stats.total}</span><span class="imp-stat-lbl">Total</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#d97706">{stats.en_attente}</span><span class="imp-stat-lbl">En attente</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#7c3aed">{stats.utilisateur_lie ?? 0}</span><span class="imp-stat-lbl">Occupant lié</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#2563eb">{stats.lot_lie}</span><span class="imp-stat-lbl">Lot lié</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#16a34a">{stats.resolu}</span><span class="imp-stat-lbl">Résolus</span></div>
+	<div class="imp-stat"><span class="imp-stat-val" style="color:#6b7280">{stats.ignore}</span><span class="imp-stat-lbl">Ignorés</span></div>
+	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_user}</span><span class="imp-stat-lbl">Copro lié</span></div>
 </div>
 {/if}
 
 <!-- ── Upload ────────────────────────────────────────────────────────────── -->
-<div class="card upload-section">
+<div class="card imp-upload-section">
 	<h2 class="section-title">Importer un fichier Excel</h2>
 	<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
 		Colonnes attendues : <code>ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE</code>
 	</p>
-	<div class="upload-row">
-		<input type="file" accept=".xlsx,.xls" bind:files={uploadFile} class="file-input" />
-		<label class="checkbox-label">
+	<div class="imp-upload-row">
+		<input type="file" accept=".xlsx,.xls" bind:files={uploadFile} class="imp-file-input" />
+		<label class="imp-checkbox-label">
 			<input type="checkbox" bind:checked={remplacer} />
 			Remplacer les imports non résolus
 		</label>
@@ -247,7 +247,7 @@
 </div>
 
 <!-- ── Filtres + actions ─────────────────────────────────────────────────── -->
-<div class="toolbar">
+<div class="imp-toolbar">
 	<div style="display:flex;gap:.5rem;align-items:center">
 		<span class="muted" style="font-size:.85rem">Filtrer :</span>
 		{#each ['', 'en_attente', 'utilisateur_lie', 'lot_lie', 'resolu', 'ignore'] as s}
@@ -278,7 +278,7 @@
 	</div>
 {:else}
 <div class="card" style="overflow:auto">
-	<table class="table table-dense">
+	<table class="table imp-table-dense">
 		<thead>
 			<tr>
 				<th>Nom copropriétaire</th><th>N° Copro</th>
@@ -289,7 +289,7 @@
 		</thead>
 		<tbody>
 			{#each imports as imp (imp.id)}
-				<tr class:row-resolu={imp.statut === 'resolu'} class:row-ignore={imp.statut === 'ignore'}>
+				<tr class:imp-row-resolu={imp.statut === 'resolu'} class:imp-row-ignore={imp.statut === 'ignore'}>
 					<td style="font-weight:600">{imp.nom_coproprietaire ?? '—'}</td>
 					<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.no_coproprietaire ?? '—'}</td>
 					<td style="font-size:.8rem;font-weight:600">{imp.batiment_nom ?? imp.batiment_id}</td>
@@ -336,9 +336,9 @@
 
 				<!-- Formulaire d'édition inline -->
 				{#if editId === imp.id}
-				<tr class="edit-row">
+				<tr class="imp-edit-row">
 					<td colspan="10">
-						<div class="edit-form card" style="margin:.5rem 0">
+						<div class="imp-edit-form card" style="margin:.5rem 0">
 							<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">
 							Lier : <em>{imp.nom_coproprietaire ?? '—'} — Bât. {imp.batiment_nom ?? imp.batiment_id} n°{imp.numero} ({imp.type_raw})</em>
 							</h3>
@@ -397,43 +397,9 @@
 {/if}
 
 <style>
-	.page-header {
-		display: flex;
-		align-items: center;
-		gap: .5rem;
-		margin-bottom: 1.5rem;
-	}
-	h1 { font-size: 1.4rem; font-weight: 700; }
 
-	.stats-bar {
-		display: flex;
-		gap: 1.5rem;
-		padding: .75rem 1.25rem;
-		margin-bottom: 1.25rem;
-		flex-wrap: wrap;
-	}
-	.stat { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
-	.stat-val { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
-	.stat-lbl { font-size: .75rem; color: var(--color-text-muted); }
 
-	.upload-section { padding: 1rem 1.25rem; margin-bottom: 1rem; }
-	.upload-row {
-		display: flex;
-		gap: .75rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-	.file-input { flex: 1; min-width: 200px; }
-	.checkbox-label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
 
-	.toolbar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: .75rem;
-		margin-bottom: .75rem;
-		flex-wrap: wrap;
-	}
 
 	.badge-type {
 		background: #f0f4ff;
@@ -444,12 +410,7 @@
 		font-weight: 600;
 	}
 
-	.table-dense td, .table-dense th { padding: .35rem .55rem; }
-	.row-resolu td { opacity: .55; }
-	.row-ignore td { opacity: .4; }
 
-	.edit-row td { background: var(--color-bg-secondary, #f8f9fa); padding: 0; }
-	.edit-form { padding: .75rem 1rem; border-left: 3px solid var(--color-primary, #1a56db); }
 	.occupants-editor {
 		border: 1px solid var(--color-border, #e5e7eb);
 		border-radius: 6px;
@@ -478,8 +439,5 @@
 	@media (max-width: 600px) {
 		.occupant-row { flex-wrap: wrap; }
 		.select-role { min-width: 140px; }
-	}
-	@media (max-width: 600px) {
-		.stats-bar { gap: 1rem; }
 	}
 </style>

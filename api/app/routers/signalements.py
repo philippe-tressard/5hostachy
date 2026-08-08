@@ -21,7 +21,6 @@ from app.models.core import (
     Notification,
     PetiteAnnonce,
     ReponseCommunaute,
-    RoleUtilisateur,
     Signalement,
     Sondage,
     StatutUtilisateur,
