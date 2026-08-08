@@ -9,6 +9,46 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+#: Clés de `ConfigSite` qui décrivent le canal WhatsApp.
+#:
+#: Elles étaient recopiées dans QUATRE routers (publications, calendrier,
+#: sondages, tickets) — et la copie de `publications` incluait `site_url` en
+#: plus des autres, si bien que le lien « consulter l'application » ne pouvait
+#: apparaître que dans les messages d'actualité. Une notion, une écriture
+#: (`standards/02-factorisation.md` §2).
+#:
+#: `site_url` fait partie de l'ensemble : `_build_message_restreint` en a besoin
+#: pour renvoyer vers l'application quand la publication est à public restreint.
+CLES_CONFIG = frozenset({
+    "whatsapp_enabled",
+    "whatsapp_api_url",
+    "whatsapp_api_key",
+    "whatsapp_group_jid",
+    "whatsapp_footer",
+    "site_url",
+})
+
+
+def config_whatsapp(session, *cles_en_plus: str) -> dict:
+    """Configuration WhatsApp lue en une requête, avec d'éventuelles clés de contexte.
+
+    Les appelants ont souvent besoin, dans la même passe, de `site_nom` ou de
+    `reference_copro` pour composer leur message : les demander ici évite une
+    seconde requête et surtout une seconde liste de clés à maintenir.
+    """
+    from sqlmodel import select
+
+    from app.models.core import ConfigSite
+
+    voulues = CLES_CONFIG | set(cles_en_plus)
+    lignes = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(voulues))).all()
+    return {r.cle: r.valeur for r in lignes}
+
+
+def whatsapp_actif(config: dict) -> bool:
+    """Le canal est-il activé ? Seul `'1'` vaut oui — comparé à la main partout avant."""
+    return config.get("whatsapp_enabled") == "1"
+
 
 def _build_message(titre: str, contenu: str, urgente: bool, perimetre_cible: str | None, footer: str | None = None) -> str:
     """Construit le texte du message WhatsApp."""

@@ -282,6 +282,36 @@ def create_ticket(
                 },
             )
 
+    # ── Partage sur le groupe WhatsApp (option CS/Admin) ──
+    #  Même règle d'accès que les deux canaux e-mail juste en dessous : le groupe
+    #  est un canal de diffusion vers tous les résidents, il n'est pas ouvert à
+    #  l'auteur d'un ticket quelconque. Le contrôle est ici, côté serveur — la
+    #  case n'est masquée côté interface que par confort (socle 03 §1).
+    if body.partager_whatsapp and user.has_role(
+        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
+    ):
+        from app.utils.fichiers import est_image
+        from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+
+        wa_config = config_whatsapp(session)
+        if whatsapp_actif(wa_config):
+            #  La première photo accompagne le message, comme l'image d'une
+            #  actualité : sur une fuite ou une dégradation, c'est elle qui porte
+            #  l'information. Les documents joints ne partent pas — le bridge
+            #  n'envoie qu'une image.
+            premiere_photo = next(
+                (u for u in parse_photos(ticket.photos_urls) if est_image(u)), None
+            )
+            background_tasks.add_task(
+                envoyer_whatsapp_avec_log,
+                f"\U0001f3ab {ticket.titre}",
+                ticket.description,
+                ticket.categorie == "urgence",
+                ticket.perimetre_cible,
+                premiere_photo,
+                wa_config,
+            )
+
     # ── Email au syndic et/ou CS (option CS/Admin) ──
     if ticket.destinataire_syndic or ticket.destinataire_cs:
         from app.utils.email import send_email_group
@@ -1055,13 +1085,9 @@ def add_evolution(
 
     # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
     if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
-        from app.utils.whatsapp import envoyer_whatsapp_avec_log
-        _WA_KEYS = {'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key', 'whatsapp_group_jid', 'whatsapp_footer'}
+        from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
-        cfg_rows = session.exec(
-            select(ConfigSite).where(ConfigSite.cle.in_(_WA_KEYS | {"reference_copro", "site_nom", "site_url"}))
-        ).all()
-        cfg_map = {r.cle: r.valeur for r in cfg_rows}
+        cfg_map = config_whatsapp(session, "reference_copro", "site_nom")
 
         # Évolutions précédentes (excl. celle qui vient d'être créée) — communes WhatsApp + email
         evols_hist = session.exec(
@@ -1085,8 +1111,7 @@ def add_evolution(
             })
 
         if body.partager_whatsapp:
-            wa_config = {k: cfg_map[k] for k in _WA_KEYS if k in cfg_map}
-            if wa_config.get('whatsapp_enabled') == '1':
+            if whatsapp_actif(cfg_map):
                 msg = body.contenu or (
                     f"Ticket #{ticket.numero} — {ticket.titre} : statut → {STATUT_LABELS.get(body.nouveau_statut or '', body.nouveau_statut or '')}"
                     if body.type == "etat" else ticket.titre
@@ -1101,7 +1126,7 @@ def add_evolution(
                     )
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
-                    f"\U0001f527 {ticket.titre}", msg, False, ticket.perimetre_cible, None, wa_config,
+                    f"\U0001f527 {ticket.titre}", msg, False, ticket.perimetre_cible, None, cfg_map,
                 )
 
         if body.envoyer_syndic or body.envoyer_cs:

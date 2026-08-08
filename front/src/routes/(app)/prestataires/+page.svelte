@@ -4,6 +4,7 @@
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -1027,19 +1028,13 @@
 										   <span style="font-size:.875rem">Afficher dans le tableau de bord</span>
 									   </label>
 								   </div>
-								   <div style="margin-top:.5rem;display:flex;gap:1.5rem;align-items:center">
-									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-										   <input type="checkbox" bind:checked={devisForm.partager_whatsapp} style="width:auto;margin:0" />
-										   <span style="font-size:.875rem">Notifier WhatsApp</span>
-									   </label>
-									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-										   <input type="checkbox" bind:checked={devisForm.envoyer_syndic} style="width:auto;margin:0" />
-										   <span style="font-size:.875rem">Notifier Syndic</span>
-									   </label>
-									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-										   <input type="checkbox" bind:checked={devisForm.envoyer_cs} style="width:auto;margin:0" />
-										   <span style="font-size:.875rem">Notifier Conseil Syndical</span>
-									   </label>
+								   <div style="margin-top:.5rem">
+									   <CanauxNotification
+										   bind:whatsapp={devisForm.partager_whatsapp}
+										   bind:syndic={devisForm.envoyer_syndic}
+										   bind:cs={devisForm.envoyer_cs}
+										   compact
+									   />
 								   </div>
 								<div style="margin-top:.5rem">
 									<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>

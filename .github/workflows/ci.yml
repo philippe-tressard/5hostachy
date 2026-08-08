@@ -236,6 +236,16 @@ jobs:
         working-directory: front
         run: npm run lint:fichiers
 
+      # Les trois canaux « groupe WhatsApp / syndic / CS » étaient écrits à la
+      # main dans SIX formulaires et avaient divergé : deux tracés SVG, trois
+      # libellés, deux icônes — et un écran où le canal WhatsApp manquait tout
+      # simplement (création d'un ticket, signalé le 08/08/2026). Un écran qui
+      # n'affiche PAS une option ressemble à un écran normal : seul un contrôle
+      # peut le voir.
+      - name: Canaux de notification centralisés
+        working-directory: front
+        run: npm run lint:notifications
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

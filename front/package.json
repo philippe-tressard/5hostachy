@@ -10,7 +10,8 @@
     "lint": "prettier --check . && eslint .",
     "lint:dates": "node scripts/check-dates.mjs",
     "lint:sw": "node scripts/check-sw-url.mjs",
-    "lint:fichiers": "node scripts/check-fichiers.mjs"
+    "lint:fichiers": "node scripts/check-fichiers.mjs",
+    "lint:notifications": "node scripts/check-notifications.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",
