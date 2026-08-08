@@ -13,10 +13,13 @@ from sqlmodel import Session, select
 from app.config import get_settings
 from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
 from app.utils.fichiers import libelle_pieces_jointes, nom_lisible
+#  La configuration du canal SMTP est un sujet distinct de la composition
+#  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026,
+#  ce qui ramène aussi ce module sous son poids d'avant la factorisation.
+from app.utils.smtp import _get_smtp_config, connexion_smtp  # noqa: F401  (ré-export : config.py l'importe d'ici)
 
 settings = get_settings()
 
-_SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_from_name', 'smtp_username', 'smtp_password', 'smtp_starttls', 'smtp_ssl_tls'}
 
 # Mapping code email → clé préférence utilisateur (catégorie_mail)
 # Les codes absents (system, account) sont toujours envoyés.
@@ -97,54 +100,6 @@ def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str
             site_manager_email = manager_user.email.strip()
 
     return site_manager_email or site_email, config
-
-
-def _get_smtp_config(session: Session) -> dict:
-    rows = session.exec(select(ConfigSite).where(ConfigSite.cle.in_(_SMTP_KEYS))).all()
-    return {r.cle: r.valeur for r in rows}
-
-
-def connexion_smtp(smtp_cfg: dict):
-    """La connexion SMTP effective : configuration en base, sinon le `.env`.
-
-    Ces dix-sept lignes étaient écrites **trois fois** — deux dans ce module
-    (envoi simple et envoi groupé) et une dans `routers/config.py` pour l'e-mail
-    de test. C'est la duplication la plus coûteuse qui soit sur ce chemin : le
-    bouton « tester la configuration SMTP » n'a d'intérêt que s'il emprunte
-    exactement la même construction que les envois réels. Trois écritures, c'est
-    trois occasions de tester autre chose que ce qui part vraiment.
-
-    Le repli est champ par champ, et non « bloc en base OU bloc du .env » : une
-    configuration partielle en base (seulement le serveur, par exemple) hérite du
-    reste de l'environnement.
-    """
-    from fastapi_mail import ConnectionConfig
-
-    settings = get_settings()
-    #  `in` et non `.get()` pour les deux booléens : une case décochée vaut « 0 »
-    #  en base, ce qu'un `or` traiterait comme absent et remplacerait par la
-    #  valeur du .env — l'utilisateur ne pourrait alors jamais désactiver STARTTLS.
-    starttls = (
-        smtp_cfg["smtp_starttls"] == "1" if "smtp_starttls" in smtp_cfg
-        else settings.mail_starttls
-    )
-    ssl_tls = (
-        smtp_cfg["smtp_ssl_tls"] == "1" if "smtp_ssl_tls" in smtp_cfg
-        else settings.mail_ssl_tls
-    )
-    username = smtp_cfg.get("smtp_username") or settings.mail_username
-
-    return ConnectionConfig(
-        MAIL_USERNAME=username,
-        MAIL_PASSWORD=smtp_cfg.get("smtp_password") or settings.mail_password,
-        MAIL_FROM=smtp_cfg.get("smtp_from") or settings.mail_from,
-        MAIL_FROM_NAME=smtp_cfg.get("smtp_from_name") or settings.mail_from_name,
-        MAIL_PORT=int(smtp_cfg.get("smtp_port") or settings.mail_port),
-        MAIL_SERVER=smtp_cfg.get("smtp_server") or settings.mail_server,
-        MAIL_STARTTLS=starttls,
-        MAIL_SSL_TLS=ssl_tls,
-        USE_CREDENTIALS=bool(username),
-    )
 
 
 def _log_email(session: Session, code: str, to: str, statut: str, *, sujet: str = "", erreur: str | None = None) -> None:

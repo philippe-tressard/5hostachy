@@ -18,7 +18,7 @@ import pathlib
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 
 #: Le seul module autorisé à instancier la connexion.
-_MODULE_AUTORISE = "utils/email.py"
+_MODULE_AUTORISE = "utils/smtp.py"
 
 
 def _modules() -> list[tuple[str, str]]:
@@ -74,7 +74,7 @@ def test_le_repli_sur_le_env_reste_champ_par_champ():
     d'un coup identifiants, port et expéditeur. Le contrôle vise le FAIT — chaque
     clé porte son propre repli.
     """
-    source = (_APP / "utils" / "email.py").read_text(encoding="utf-8")
+    source = (_APP / "utils" / "smtp.py").read_text(encoding="utf-8")
     arbre = ast.parse(source)
     fonction = next(
         n for n in ast.walk(arbre)
