@@ -117,12 +117,36 @@ def test_le_cycle_de_vie_est_branche(application):
 
 
 def test_la_documentation_reste_fermee_par_defaut(application):
-    """`ENABLE_API_DOCS=false` doit réellement fermer /docs.
+    """`ENABLE_API_DOCS=false` doit fermer la documentation ET son schéma.
 
-    Le réglage est vérifié ici parce que c'est au moment de l'assemblage qu'il
-    s'applique — et parce qu'une inversion de ce défaut exposerait publiquement
-    la carte complète de l'API sur un dépôt déjà public.
+    ⚠️ **Ce test avait la portée trop étroite, et c'est ce qui a laissé passer le
+    défaut** (constaté en production le 08/08/2026). Il vérifiait `/docs` et
+    `/redoc` — les deux pages — mais pas `/openapi.json`, le document qu'elles
+    affichent. Or `openapi_url` gardait sa valeur par défaut : le schéma complet
+    répondait **200 en production**, 279 routes et tous les modèles avec leurs
+    noms de champs, sans authentification.
+
+    Ce n'était pas une ouverture d'accès — les autorisations restaient intactes —
+    mais une divulgation de surface d'attaque, qui épargne à un attaquant tout le
+    travail d'énumération. Et le nom du réglage promettait plus qu'il ne tenait.
+
+    Le contrôle vise désormais le **fait** — ce que le serveur répond — et non
+    l'absence d'une route dans une liste : c'est le serveur qui décide, et une
+    version future de FastAPI pourrait servir le schéma autrement.
     """
-    chemins = {r.path for r in application.routes if hasattr(r, "path")}
-    assert "/docs" not in chemins
-    assert "/redoc" not in chemins
+    from fastapi.testclient import TestClient
+
+    client = TestClient(application, raise_server_exceptions=False)
+    for chemin in ("/docs", "/redoc", "/openapi.json"):
+        reponse = client.get(chemin)
+        assert reponse.status_code == 404, (
+            f"{chemin} répond {reponse.status_code} alors que ENABLE_API_DOCS est "
+            "faux. La carte complète de l'API serait publique."
+        )
+
+    #  Cas zéro : si l'application ne montait plus rien, tout répondrait 404 et le
+    #  test ci-dessus serait vert sans rien prouver (`standards/04` §2).
+    assert client.get("/health").status_code == 200, (
+        "L'application ne répond même pas sur /health — les 404 ci-dessus ne "
+        "prouvent rien."
+    )

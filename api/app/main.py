@@ -179,6 +179,19 @@ app = FastAPI(
     default_response_class=UTCJSONResponse,
     docs_url="/docs" if _enable_docs else None,
     redoc_url="/redoc" if _enable_docs else None,
+    #  ⚠️ Le SCHÉMA aussi, pas seulement les deux pages qui l'affichent.
+    #  Jusqu'au 08/08/2026 seuls `docs_url` et `redoc_url` étaient fermés :
+    #  `openapi_url` gardait sa valeur par défaut, et `/api/openapi.json`
+    #  répondait 200 en production. Le document rend l'intégralité de la surface
+    #  — 279 routes, leurs paramètres, et tous les modèles avec leurs noms de
+    #  champs. Ce n'est pas une ouverture d'accès : les autorisations restaient
+    #  intactes. C'est une divulgation de surface d'attaque, qui épargne à un
+    #  attaquant tout le travail d'énumération.
+    #
+    #  Le défaut n'était pas dans le réglage mais dans sa PORTÉE : son nom
+    #  (`ENABLE_API_DOCS`) promettait de fermer la documentation, il n'en fermait
+    #  que l'affichage. Un réglage doit couvrir tout ce que son nom annonce.
+    openapi_url="/openapi.json" if _enable_docs else None,
 )
 
 app.state.limiter = limiter

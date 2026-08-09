@@ -59,6 +59,19 @@ verdict_role() {           # $1/$2 = .active des 2 nœuds, $3/$4 = nb conteneurs
   fi
 }
 
+verdict_standby() {       # $1 = .active (qui DIT être l'actif), $2/$3 = conteneurs rpi1/rpi2
+  #  Le standby est désigné par le DRAPEAU, pas supposé. Première version : elle
+  #  vérifiait « rpi2 porte 0 conteneur », en dur — donc elle criait au split-brain
+  #  le lendemain matin, la bascule de 02:00 ayant fait de rpi2 l'actif (09/08/2026).
+  #  Un contrôle qui suppose lequel des deux nœuds est actif ne survit pas à la
+  #  première bascule, c'est-à-dire à une nuit.
+  [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] && { echo INCONNU; return; }
+  case "$2$3" in (*[!0-9]*) echo INCONNU; return ;; esac
+  if [ "$1" = "rpi1" ]; then [ "$3" -eq 0 ] && echo OK || echo FAIL
+  elif [ "$1" = "rpi2" ]; then [ "$2" -eq 0 ] && echo OK || echo FAIL
+  else echo INCONNU; fi
+}
+
 verdict_compte() {         # $1 = nombre observé, $2 = maximum toléré
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
@@ -130,6 +143,11 @@ if [ "${1:-}" = "--selftest" ]; then
   t "personne ne sert"                   FAIL    verdict_role rpi1 rpi1 0 0
   t "flag ment : rpi2 porte la charge"   FAIL    verdict_role rpi1 rpi1 0 4
   t "mesure manquante"                   INCONNU verdict_role "" rpi1 4 0
+  t "standby vide, rpi1 actif"           OK      verdict_standby rpi1 4 0
+  t "standby vide, rpi2 actif (après bascule)" OK verdict_standby rpi2 0 4
+  t "standby qui porte des conteneurs"   FAIL    verdict_standby rpi1 4 3
+  t "drapeau inconnu"                    INCONNU verdict_standby rpi9 4 0
+  t "comptes non mesurés"                INCONNU verdict_standby rpi1 "" 0
   t "zéro erreur"                        OK      verdict_compte 0 0
   t "erreurs présentes"                  FAIL    verdict_compte 3 0
   t "compte non mesuré"                  INCONNU verdict_compte "" 0
@@ -184,6 +202,18 @@ BRANCHE=$(git rev-parse --abbrev-ref HEAD)
 RETARD=$(git rev-list --count "HEAD..origin/$BRANCHE" 2>/dev/null)
 rapporter 0a "$(verdict_compte "${RETARD:-}" 0)" "Clone à jour sur origin/$BRANCHE" "retard=${RETARD:-?} commit(s)"
 
+# 0b — modularité : rejouer ici ce que la CI refusera
+#      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI
+#      `test-scripts` les rejetait (email.py 656 → 663). Le contrôle existait,
+#      il n'était simplement pas dans le chemin qui précède le push.
+MOD=$(bash scripts-ci-modularite.sh origin/main 2>&1)
+case "$?" in
+  0) V0B=OK ;;
+  1) V0B=FAIL ;;
+  *) V0B=INCONNU ;;
+esac
+rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)"           "$(echo "$MOD" | grep -oE '[a-z_/.]+\.(py|sh|ts|svelte) : [0-9]+ → [0-9]+ lignes' | head -1 || echo 'aucun fichier n a grossi')"
+
 # 15 — endpoints orphelins (poste de dev, avant le push)
 if [ -d api/tests ]; then
   ORPH=$( (cd api && python -m pytest tests/test_endpoints_orphelins.py -q 2>&1 | tail -1) )
@@ -207,9 +237,7 @@ C1=$(sur "$RPI1" 'docker ps -q --filter name=hostachy | wc -l')
 C2=$(sur "$RPI2" 'docker ps -q --filter name=hostachy | wc -l')
 rapporter 2 "$(verdict_role "$A1" "$A2" "$C1" "$C2")" "Rôle actif cohérent et conforme au réel" \
           "rpi1='${A1:-?}'/${C1:-?}c  rpi2='${A2:-?}'/${C2:-?}c"
-if [ -n "$C2" ] && [ "$C2" -eq 0 ] 2>/dev/null; then V3=OK; else V3=FAIL; fi
-[ -z "$C2" ] && V3=INCONNU
-rapporter 3 "$V3" "Pas de split-brain" "conteneurs standby=${C2:-?}"
+rapporter 3 "$(verdict_standby "${A1:-}" "${C1:-}" "${C2:-}")" "Pas de split-brain"           "actif déclaré=${A1:-?} — conteneurs rpi1=${C1:-?} rpi2=${C2:-?}"
 
 #  L'actif est déduit du réel, pas du flag : c'est lui qui porte les conteneurs.
 if [ "${C1:-0}" != "0" ]; then ACTIF="$RPI1"; STANDBY="$RPI2"; else ACTIF="$RPI2"; STANDBY="$RPI1"; fi
