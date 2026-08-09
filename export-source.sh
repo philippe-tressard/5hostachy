@@ -24,12 +24,15 @@
 #  `ptressard` peut réécrire n'est pas une permission restreinte : c'est un accès
 #  root complet. Ce script doit donc vivre dans un répertoire root :
 #
-#    sudo install -o root -g root -m 0755 \
-#         /opt/5hostachy/export-source.sh /usr/local/sbin/hostachy-export-source
-#    printf 'ptressard ALL=(ALL) NOPASSWD: /usr/local/sbin/hostachy-export-source\n' \
-#      | sudo tee /etc/sudoers.d/hostachy-export >/dev/null
-#    sudo chmod 0440 /etc/sudoers.d/hostachy-export
-#    sudo visudo -c        # ⚠️ OBLIGATOIRE : un sudoers malformé verrouille sudo
+#    sudo bash /opt/5hostachy/export-source.sh --installer
+#
+#  Une seule commande, sans guillemet ni parenthèse : la procédure manuelle
+#  équivalente a cassé au premier essai (PowerShell retirait les guillemets
+#  internes avant de la passer à ssh). Le mode --installer copie ce script en
+#  root:root 0755, écrit la règle sudoers APRÈS l'avoir fait valider par
+#  `visudo -cf`, la retire si l'ensemble devient invalide, puis vérifie la
+#  permission par `sudo -l -U` — le comportement, pas le fichier.
+#  À lancer sur CHAQUE nœud (le fichier arrive sur le standby à la bascule 02:00).
 #
 #  Usage (appelé par export-hors-site.sh, via ssh + sudo) :
 #    hostachy-export-source liste            → un nom d'archive par ligne
@@ -46,6 +49,13 @@ VOLUME_NOM=5hostachy_backups
 #  Liste blanche du nom d'archive. Ancrée aux deux bouts : c'est elle qui empêche
 #  qu'un nom devienne un chemin. `standards/03-securite.md` §2.
 MOTIF='^hostachy_backup_[A-Za-z0-9._-]+\.tar\.gz$'
+
+CIBLE_INSTALL=/usr/local/sbin/hostachy-export-source
+REGLE_SUDO=/etc/sudoers.d/hostachy-export
+
+ligne_sudoers() {  # $1 = compte · $2 = chemin absolu → la règle, une ligne
+    printf '%s ALL=(ALL) NOPASSWD: %s\n' "$1" "$2"
+}
 
 nom_valide() {  # $1 = nom candidat → 0 si acceptable
     local n=${1:-}
@@ -74,8 +84,69 @@ if [ "${1:-}" = "--selftest" ]; then
     t "extension non conforme"     "hostachy_backup_2026.tar.gz.sh"            refuse
     t "espace puis commande"       "hostachy_backup_2026.tar.gz ; id"          refuse
     t "substitution de commande"   'hostachy_backup_$(id).tar.gz'              refuse
+    #  La règle sudoers doit désigner le chemin INSTALLÉ (root), jamais celui du
+    #  dépôt : c'est toute la différence entre une permission et un accès root.
+    attendu="ptressard ALL=(ALL) NOPASSWD: /usr/local/sbin/hostachy-export-source"
+    obtenu=$(ligne_sudoers ptressard "$CIBLE_INSTALL")
+    [ "$obtenu" = "$attendu" ] && echo "PASS  règle sudoers bien formée" \
+        || { echo "FAIL  règle sudoers : obtenu '$obtenu'"; st=1; }
+    case "$CIBLE_INSTALL" in
+        /opt/*) echo "FAIL  la cible d'installation est dans l'arbre déployé"; st=1 ;;
+        *)      echo "PASS  la cible d'installation est hors de l'arbre déployé" ;;
+    esac
     [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
     exit $st
+fi
+
+# ── Installation (à lancer en root, une fois par nœud) ───────────────────────
+#  Remplace la commande à rallonge qu'il fallait recopier à la main : elle a
+#  cassé au premier essai (09/08/2026), PowerShell ayant retiré les guillemets
+#  internes avant de la passer à ssh, si bien que la parenthèse de `ALL=(ALL)`
+#  arrivait nue sur le bash distant. Une procédure qui ne vit que dans un message
+#  se retape ; celle-ci est versionnée, identique sur les deux nœuds, et testée.
+if [ "${1:-}" = "--installer" ]; then
+    [ "$(id -u)" = "0" ] || {
+        echo "export-source: à lancer en root — sudo bash $0 --installer" >&2; exit 1; }
+    COMPTE=${2:-ptressard}
+    SOURCE=$(readlink -f "${BASH_SOURCE[0]}")
+
+    if [ "$SOURCE" = "$CIBLE_INSTALL" ]; then
+        echo "  déjà en place : $CIBLE_INSTALL (installation depuis la copie installée)"
+    else
+        install -o root -g root -m 0755 "$SOURCE" "$CIBLE_INSTALL" || exit 1
+        echo "  installé : $CIBLE_INSTALL (root:root 0755)"
+    fi
+
+    #  ⚠️ Valider AVANT d'écrire dans /etc/sudoers.d : un fragment invalide rend
+    #  `sudo` inutilisable sur la machine — y compris pour le réparer. On écrit
+    #  donc dans un fichier temporaire, on le fait valider, et on ne l'installe
+    #  qu'ensuite ; puis on revalide l'ensemble et on RETIRE en cas d'échec.
+    tmp=$(mktemp) || exit 1
+    trap 'rm -f "$tmp"' EXIT
+    ligne_sudoers "$COMPTE" "$CIBLE_INSTALL" > "$tmp"
+    chmod 0440 "$tmp"
+    if ! visudo -cf "$tmp" >/dev/null 2>&1; then
+        echo "ERREUR: règle sudoers invalide — RIEN n'a été écrit dans /etc/sudoers.d." >&2
+        exit 1
+    fi
+    install -o root -g root -m 0440 "$tmp" "$REGLE_SUDO" || exit 1
+    if ! visudo -c >/dev/null 2>&1; then
+        rm -f "$REGLE_SUDO"
+        echo "ERREUR: /etc/sudoers global invalide après ajout — la règle a été RETIRÉE." >&2
+        exit 1
+    fi
+    echo "  installé : $REGLE_SUDO (0440) → $COMPTE"
+
+    #  Vérifier le COMPORTEMENT, pas l'artefact : le fichier peut exister et la
+    #  permission ne pas s'appliquer (compte inexistant, règle plus restrictive
+    #  ailleurs). `sudo -l -U` interroge la politique effective.
+    if sudo -l -U "$COMPTE" 2>/dev/null | grep -q "$CIBLE_INSTALL"; then
+        echo "  ✓ vérifié : $COMPTE peut lancer $CIBLE_INSTALL sans mot de passe"
+    else
+        echo "  ⚠ règle écrite mais NON confirmée par 'sudo -l -U $COMPTE' — à vérifier" >&2
+        exit 2
+    fi
+    exit 0
 fi
 
 [ "$(id -u)" = "0" ] || { echo "export-source: doit être lancé en root (via sudo)." >&2; exit 1; }
