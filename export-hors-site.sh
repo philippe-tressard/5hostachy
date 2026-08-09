@@ -20,9 +20,10 @@
 #    1. Détermine le nœud source par son COMPORTEMENT (qui répond réellement
 #       sur /api/health en LAN), et non en lisant le drapeau `.active` — cf.
 #       standards/04 §10. Un `.active` peut mentir ; une API qui répond, non.
-#    2. Tire la plus récente archive de ce nœud via `hostachy-export-source`,
-#       un script root à chemin fixe qui n'expose que trois verbes (ni rsync ni
-#       scp requis, Git for Windows n'embarque pas rsync). Voir export-source.sh.
+#    2. Tire la plus récente archive de ce nœud par un CONTENEUR JETABLE monté
+#       en lecture seule sur le volume des sauvegardes — ni sudo, ni règle
+#       sudoers, ni installation sur les nœuds (ni rsync ni scp : Git for
+#       Windows n'embarque pas rsync).
 #    3. La VÉRIFIE : empreinte identique à la source, gzip intact, `app.db`
 #       présent dans l'archive, et `PRAGMA integrity_check` sur la copie
 #       extraite. Vérifier la copie extraite est sans danger : c'est un
@@ -114,6 +115,20 @@ contient_app_db() { # $1=listing tar → oui|non
   esac
 }
 
+# ── Le nom d'archive annoncé par le nœud est-il acceptable ? ─────────────────
+# Ce nom vient d'une machine distante et repart dans une commande exécutée là-bas :
+# il est validé en LISTE BLANCHE ancrée (standards/03-securite.md §2), jamais par
+# liste noire. Sans cette borne, un nom fabriqué deviendrait un chemin ou une
+# commande. C'est aussi ce qui garantit qu'on ne lira jamais autre chose qu'une
+# archive de sauvegarde close — jamais `app.db`.
+nom_valide() { # $1 = nom candidat → 0 si acceptable
+  local n=${1:-}
+  [ -n "$n" ] || return 1
+  [[ "$n" =~ ^hostachy_backup_[A-Za-z0-9._-]+\.tar\.gz$ ]] || return 1
+  case "$n" in */*|*'\'*|*..*) return 1 ;; esac
+  return 0
+}
+
 # ── L'archive tirée est-elle exploitable ? ───────────────────────────────────
 # Quatre conditions, toutes nécessaires. Une archive qu'on n'a pas su vérifier
 # n'est PAS déclarée saine : elle renvoie `erreur`, jamais `succes` — un
@@ -186,6 +201,18 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
   # la base. Une comparaison naïve l'accepterait.
   check "uploads/app.db ne compte pas" "non"      "$(contient_app_db $'uploads/app.db\nuploads/x')"
   check "suffixe app.db2 ne compte pas" "non"     "$(contient_app_db 'app.db2')"
+
+  # ── Liste blanche du nom d'archive ─────────────────────────────────────────
+  # Le nom vient du nœud distant et repart dans une commande exécutée là-bas.
+  tn() { local r=refuse; nom_valide "$2" && r=ok
+         [ "$r" = "$3" ] && echo "PASS  $1" || { echo "FAIL  $1 : attendu=$3 obtenu=$r"; st=1; }; }
+  tn "nom d'archive normal"      "hostachy_backup_2026-08-09_030000.tar.gz" ok
+  tn "nom vide"                  ""                                          refuse
+  tn "chemin absolu"             "/etc/shadow"                               refuse
+  tn "remontée de répertoire"    "hostachy_backup_../../etc/shadow.tar.gz"   refuse
+  tn "sous-répertoire"           "hostachy_backup_a/b.tar.gz"                refuse
+  tn "la base elle-même"         "app.db"                                    refuse
+  tn "substitution de commande"  'hostachy_backup_$(id).tar.gz'              refuse
 
   check "archive saine"             "succes"      "$(verdict_archive 1024 oui oui ok | cut -d'|' -f1)"
   check "archive vide"              "erreur"      "$(verdict_archive 0 oui oui ok | cut -d'|' -f1)"
@@ -267,32 +294,52 @@ SSH_CIBLE="$EXPORT_SSH_USER@$SOURCE_IP"
 # `ptressard` et `auto-deploy` y réécrit tout — une règle NOPASSWD sur un fichier
 # que l'appelant peut réécrire est un accès root complet, pas une permission.
 #
-# `sudo -n` partout : jamais d'attente d'un mot de passe sur un canal SSH non
-# interactif — c'est ce qui produisait un blocage plutôt qu'un diagnostic.
-SRC=/usr/local/sbin/hostachy-export-source
+# ── Comment on lit les archives : un conteneur jetable, PAS `sudo` ───────────
+# Le point de montage du volume appartient à root, mais `ptressard` est déjà dans
+# le groupe `docker` sur les deux nœuds — c'est ce qui fait tourner auto-deploy et
+# la bascule. Un conteneur monté en LECTURE SEULE sur le volume lit donc les
+# archives sans le moindre privilège supplémentaire, et sans mot de passe.
+#
+# C'est ce qui remplace la dépendance à `sudo` : elle n'existait que sur rpi1
+# (règle `010_pi-nopasswd` par défaut de Raspberry Pi OS) et manquait sur rpi2, si
+# bien que la copie échouait UNE NUIT SUR DEUX — celles où rpi2 est actif
+# (constaté le 09/08/2026, dernière copie réussie le 06/08). La corriger en
+# ajoutant une règle sudoers demandait une installation manuelle sur chaque nœud ;
+# ceci ne demande rien et vaut pour tout nœud présent ou futur.
+#
+# Aucun privilège n'est élargi : l'appartenance au groupe `docker` équivaut déjà à
+# root, elle est antérieure et nécessaire au modèle de déploiement. On en RETIRE
+# une (la règle sudoers devient inutile). Le montage est `:ro` et ne porte que le
+# volume des sauvegardes : ni `app_data`, ni `app.db` — cf. la règle d'or.
+LIRE="docker run --rm -v 5hostachy_backups:/b:ro alpine"
 
-# On établit d'abord qu'on a PU regarder. Sans cette étape, une panne de droits
-# rend une liste vide, qui se lit comme « aucune sauvegarde » — un KO déguisé en
+# On établit d'abord qu'on a PU regarder. Sans cette étape, une panne d'accès rend
+# une liste vide, qui se lit comme « aucune sauvegarde » — un KO déguisé en
 # constat, exactement ce qu'interdit standards/04 §1. Vécu deux fois : le
-# 04/08/2026 (motif développé avant sudo) et le 09/08/2026 (sudo sans mot de
-# passe absent sur rpi2, donc échec une nuit sur deux — celles où rpi2 est actif).
-if ! $SSH_CMD "$SSH_CIBLE" "sudo -n $SRC liste" >/dev/null 2>&1; then
-  if ! $SSH_CMD "$SSH_CIBLE" "test -x $SRC" 2>/dev/null; then
-    log "ERREUR: $SRC absent sur $SOURCE_NOEUD — état des sauvegardes INCONNU."
-    log "        Installation : voir l'en-tête de export-source.sh (install + sudoers + visudo -c)."
-  elif ! $SSH_CMD "$SSH_CIBLE" "sudo -n true" 2>/dev/null; then
-    log "ERREUR: sudo sans mot de passe indisponible sur $SOURCE_NOEUD — état INCONNU."
-    log "        La règle /etc/sudoers.d/hostachy-export manque sur ce nœud."
+# 04/08/2026 (motif développé avant sudo) et le 09/08/2026 (sudo absent sur rpi2).
+if ! $SSH_CMD "$SSH_CIBLE" "$LIRE true" >/dev/null 2>&1; then
+  if ! $SSH_CMD "$SSH_CIBLE" "docker info" >/dev/null 2>&1; then
+    log "ERREUR: docker inaccessible pour $EXPORT_SSH_USER sur $SOURCE_NOEUD — état INCONNU."
+    log "        Le compte doit appartenir au groupe docker (id -nG)."
+  elif ! $SSH_CMD "$SSH_CIBLE" "docker image inspect alpine" >/dev/null 2>&1; then
+    log "ERREUR: image alpine absente sur $SOURCE_NOEUD et non téléchargeable — état INCONNU."
   else
-    log "ERREUR: listage des archives impossible sur $SOURCE_NOEUD — état INCONNU."
+    log "ERREUR: lecture du volume 5hostachy_backups impossible sur $SOURCE_NOEUD — état INCONNU."
   fi
   exit 1
 fi
 
-# Ici seulement une liste vide est un FAIT : le listage a réussi.
-ARCHIVE=$($SSH_CMD "$SSH_CIBLE" "sudo -n $SRC liste" 2>/dev/null | tail -1)
+# Ici seulement une liste vide est un FAIT : la lecture a réussi.
+ARCHIVE=$($SSH_CMD "$SSH_CIBLE"   "$LIRE sh -c 'ls -1 /b/hostachy_backup_*.tar.gz 2>/dev/null'" 2>/dev/null   | tr -d '
+' | sed 's#.*/##' | sort | tail -1)
 if [ -z "$ARCHIVE" ]; then
   log "ERREUR: aucune archive sur $SOURCE_NOEUD — la sauvegarde de 03:00 ne produit rien."
+  exit 1
+fi
+# Le nom vient d'une machine distante et repart dans une commande : il est validé
+# avant, jamais après. standards/03-securite.md §2 — liste blanche, ancrée.
+if ! nom_valide "$ARCHIVE"; then
+  log "ERREUR: nom d'archive inattendu sur $SOURCE_NOEUD ('$ARCHIVE') — abandon."
   exit 1
 fi
 log "  Archive la plus récente sur $SOURCE_NOEUD : $ARCHIVE"
@@ -302,7 +349,7 @@ LOCAL="$EXPORT_DEST/$ARCHIVE"
 
 # Empreinte à la source AVANT transfert : c'est elle qui prouvera que la copie
 # est fidèle. Sans elle, un transfert tronqué produit un fichier plausible.
-SHA_SRC=$($SSH_CMD "$SSH_CIBLE" "sudo -n $SRC sha '$ARCHIVE'" 2>/dev/null)
+SHA_SRC=$($SSH_CMD "$SSH_CIBLE" "$LIRE sha256sum '/b/$ARCHIVE'" 2>/dev/null | awk '{print $1}')
 
 if [ -f "$LOCAL" ] && [ "$(sha256sum "$LOCAL" 2>/dev/null | awk '{print $1}')" = "$SHA_SRC" ]; then
   log "  → Déjà présente et identique — transfert ignoré."
@@ -310,7 +357,7 @@ else
   log "  Transfert en cours…"
   # Flux via ssh plutôt que rsync/scp : Git for Windows n'embarque pas rsync, et
   # scp ne sait pas élever ses droits sur la source.
-  if ! $SSH_CMD "$SSH_CIBLE" "sudo -n $SRC flux '$ARCHIVE'" > "$LOCAL.partiel" 2>/dev/null; then
+  if ! $SSH_CMD "$SSH_CIBLE" "$LIRE cat '/b/$ARCHIVE'" > "$LOCAL.partiel" 2>/dev/null; then
     log "ERREUR: transfert interrompu."
     rm -f "$LOCAL.partiel"
     exit 1
