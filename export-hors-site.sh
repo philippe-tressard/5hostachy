@@ -20,8 +20,9 @@
 #    1. Détermine le nœud source par son COMPORTEMENT (qui répond réellement
 #       sur /api/health en LAN), et non en lisant le drapeau `.active` — cf.
 #       standards/04 §10. Un `.active` peut mentir ; une API qui répond, non.
-#    2. Tire la plus récente archive de ce nœud (ssh + sudo cat : ni rsync ni
-#       scp requis, Git for Windows n'embarque pas rsync).
+#    2. Tire la plus récente archive de ce nœud via `hostachy-export-source`,
+#       un script root à chemin fixe qui n'expose que trois verbes (ni rsync ni
+#       scp requis, Git for Windows n'embarque pas rsync). Voir export-source.sh.
 #    3. La VÉRIFIE : empreinte identique à la source, gzip intact, `app.db`
 #       présent dans l'archive, et `PRAGMA integrity_check` sur la copie
 #       extraite. Vérifier la copie extraite est sans danger : c'est un
@@ -256,32 +257,44 @@ SOURCE_IP=$(role_ip "$SOURCE_NOEUD")
 SSH_CIBLE="$EXPORT_SSH_USER@$SOURCE_IP"
 
 # ── 2. Repérer et tirer la plus récente archive ──────────────────────────────
-# `sudo` : le point de montage du volume Docker appartient à root. On ne lit
-# que des .tar.gz clos — jamais app.db, jamais le volume app_data.
-VOL=$($SSH_CMD "$SSH_CIBLE" "docker volume inspect 5hostachy_backups --format '{{.Mountpoint}}'" 2>/dev/null)
-if [ -z "$VOL" ]; then
-  log "ERREUR: volume 5hostachy_backups introuvable sur $SOURCE_NOEUD."
-  exit 1
-fi
+# Le point de montage du volume Docker appartient à root : `ptressard` ne peut ni
+# le lister ni le lire. On passe par un script root à CHEMIN FIXE, qui n'expose
+# que trois verbes et détermine le volume lui-même — voir `export-source.sh`.
+#
+# ⚠️ Pourquoi pas `NOPASSWD` sur `ls`/`cat`/`sha256sum` : ce serait la lecture de
+# n'importe quel fichier en root (`sudo cat /etc/shadow`). Et pourquoi le script
+# vit dans /usr/local/sbin et non /opt/5hostachy : ce dernier appartient à
+# `ptressard` et `auto-deploy` y réécrit tout — une règle NOPASSWD sur un fichier
+# que l'appelant peut réécrire est un accès root complet, pas une permission.
+#
+# `sudo -n` partout : jamais d'attente d'un mot de passe sur un canal SSH non
+# interactif — c'est ce qui produisait un blocage plutôt qu'un diagnostic.
+SRC=/usr/local/sbin/hostachy-export-source
 
-# `sudo sh -c` et non `sudo ls …*…` : le shell distant développe le motif AVANT
-# d'invoquer sudo, donc sous `ptressard`, qui ne peut pas lister
-# /var/lib/docker/volumes/. Le motif littéral arrivait alors à `ls`, qui
-# échouait, et `2>/dev/null` transformait cette erreur en « aucune archive » —
-# un KO déguisé en constat, exactement ce qu'interdit standards/04 §1.
-# Vécu le 04/08/2026 au premier lancement réel, avec 7 archives bien présentes.
-DISTANT=$($SSH_CMD "$SSH_CIBLE" "sudo sh -c \"ls -1 '$VOL'/hostachy_backup_*.tar.gz 2>/dev/null\"" | sort | tail -1)
-if [ -z "$DISTANT" ]; then
-  # Distinguer « aucune archive » de « je n'ai pas pu regarder » : sans cette
-  # distinction, une panne de droits se lit comme une absence de sauvegarde.
-  if ! $SSH_CMD "$SSH_CIBLE" "sudo -n true" 2>/dev/null; then
-    log "ERREUR: sudo indisponible sur $SOURCE_NOEUD — état des sauvegardes INCONNU."
+# On établit d'abord qu'on a PU regarder. Sans cette étape, une panne de droits
+# rend une liste vide, qui se lit comme « aucune sauvegarde » — un KO déguisé en
+# constat, exactement ce qu'interdit standards/04 §1. Vécu deux fois : le
+# 04/08/2026 (motif développé avant sudo) et le 09/08/2026 (sudo sans mot de
+# passe absent sur rpi2, donc échec une nuit sur deux — celles où rpi2 est actif).
+if ! $SSH_CMD "$SSH_CIBLE" "sudo -n $SRC liste" >/dev/null 2>&1; then
+  if ! $SSH_CMD "$SSH_CIBLE" "test -x $SRC" 2>/dev/null; then
+    log "ERREUR: $SRC absent sur $SOURCE_NOEUD — état des sauvegardes INCONNU."
+    log "        Installation : voir l'en-tête de export-source.sh (install + sudoers + visudo -c)."
+  elif ! $SSH_CMD "$SSH_CIBLE" "sudo -n true" 2>/dev/null; then
+    log "ERREUR: sudo sans mot de passe indisponible sur $SOURCE_NOEUD — état INCONNU."
+    log "        La règle /etc/sudoers.d/hostachy-export manque sur ce nœud."
   else
-    log "ERREUR: aucune archive sur $SOURCE_NOEUD ($VOL) — la sauvegarde de 03:00 ne produit rien."
+    log "ERREUR: listage des archives impossible sur $SOURCE_NOEUD — état INCONNU."
   fi
   exit 1
 fi
-ARCHIVE=$(basename "$DISTANT")
+
+# Ici seulement une liste vide est un FAIT : le listage a réussi.
+ARCHIVE=$($SSH_CMD "$SSH_CIBLE" "sudo -n $SRC liste" 2>/dev/null | tail -1)
+if [ -z "$ARCHIVE" ]; then
+  log "ERREUR: aucune archive sur $SOURCE_NOEUD — la sauvegarde de 03:00 ne produit rien."
+  exit 1
+fi
 log "  Archive la plus récente sur $SOURCE_NOEUD : $ARCHIVE"
 
 mkdir -p "$EXPORT_DEST" || { log "ERREUR: destination inaccessible ($EXPORT_DEST)."; exit 1; }
@@ -289,15 +302,15 @@ LOCAL="$EXPORT_DEST/$ARCHIVE"
 
 # Empreinte à la source AVANT transfert : c'est elle qui prouvera que la copie
 # est fidèle. Sans elle, un transfert tronqué produit un fichier plausible.
-SHA_SRC=$($SSH_CMD "$SSH_CIBLE" "sudo sha256sum '$DISTANT'" 2>/dev/null | awk '{print $1}')
+SHA_SRC=$($SSH_CMD "$SSH_CIBLE" "sudo -n $SRC sha '$ARCHIVE'" 2>/dev/null)
 
 if [ -f "$LOCAL" ] && [ "$(sha256sum "$LOCAL" 2>/dev/null | awk '{print $1}')" = "$SHA_SRC" ]; then
   log "  → Déjà présente et identique — transfert ignoré."
 else
   log "  Transfert en cours…"
-  # `sudo cat` plutôt que rsync/scp : Git for Windows n'embarque pas rsync, et
+  # Flux via ssh plutôt que rsync/scp : Git for Windows n'embarque pas rsync, et
   # scp ne sait pas élever ses droits sur la source.
-  if ! $SSH_CMD "$SSH_CIBLE" "sudo cat '$DISTANT'" > "$LOCAL.partiel" 2>/dev/null; then
+  if ! $SSH_CMD "$SSH_CIBLE" "sudo -n $SRC flux '$ARCHIVE'" > "$LOCAL.partiel" 2>/dev/null; then
     log "ERREUR: transfert interrompu."
     rm -f "$LOCAL.partiel"
     exit 1

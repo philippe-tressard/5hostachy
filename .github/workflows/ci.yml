@@ -145,6 +145,7 @@ jobs:
           bash lib-rapport.sh       --selftest
           bash precheck-mep.sh      --selftest
           bash maintenance.sh       --selftest
+          bash export-source.sh     --selftest
 
       - name: Contrats d'infra (logs rotés, chemins de sortie datés)
         # Deux régressions vécues le 31/07/2026, toutes deux invisibles pendant
