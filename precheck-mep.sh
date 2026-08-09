@@ -214,6 +214,19 @@ case "$?" in
 esac
 rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)"           "$(echo "$MOD" | grep -oE '[a-z_/.]+\.(py|sh|ts|svelte) : [0-9]+ → [0-9]+ lignes' | head -1 || echo 'aucun fichier n a grossi')"
 
+# 0c — la CI de la BRANCHE, pas seulement celle de la PR
+#      Ajouté le 09/08/2026 : j'ai annoncé « CI verte » en ne consultant que les
+#      checks de la pull request, pendant que trois exécutions sur `dev`
+#      échouaient. Une PR verte ne dit rien des pushes qui l'ont précédée.
+if command -v gh >/dev/null 2>&1; then
+  ECHECS=$(gh run list --branch "$BRANCHE" --limit 5 --json conclusion            --jq '[.[] | select(.conclusion=="failure")] | length' 2>/dev/null)
+  V0C=$(verdict_compte "${ECHECS:-}" 0)
+  DETAIL0C="${ECHECS:-?} échec(s) sur les 5 dernières exécutions"
+else
+  V0C=INCONNU; DETAIL0C="gh absent — état de la CI non mesurable"
+fi
+rapporter 0c "$V0C" "CI de la branche $BRANCHE" "$DETAIL0C"
+
 # 15 — endpoints orphelins (poste de dev, avant le push)
 if [ -d api/tests ]; then
   ORPH=$( (cd api && python -m pytest tests/test_endpoints_orphelins.py -q 2>&1 | tail -1) )
