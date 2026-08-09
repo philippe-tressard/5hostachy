@@ -60,7 +60,19 @@ BASE="${1:-origin/main}"
 #  faute d'un historique assez profond, diff vide, contrôle « réussi ».
 #  Une sortie vide n'est PAS un vert (socle 04 §1) : ici, elle est INCONNUE.
 #  Comparaison à deux points, qui n'exige aucune base de fusion.
-if ! CHANGES=$(git diff --name-only "$BASE" HEAD 2>&1); then
+#  ⚠️ Comparaison à l'ARBRE DE TRAVAIL, pas à HEAD. `git diff "$BASE" HEAD` ne
+#  liste que les fichiers du dernier COMMIT, alors que la taille est lue sur le
+#  disque juste après (`wc -l < "$f"`). Mélanger les deux crée un angle mort :
+#  un fichier modifié mais pas encore committé n'apparaît pas dans la liste,
+#  donc n'est jamais mesuré — et le contrôle annonce « aucun fichier n'a grossi »
+#  en n'ayant pas regardé celui qui venait de grossir.
+#
+#  Vécu le 08/08/2026 : lancé avant `git commit`, ce contrôle a rendu vert trois
+#  fois de suite pendant que la CI, elle, échouait sur `email.py` (656 → 663).
+#  J'ai annoncé une CI verte sur la foi de ce vert-là. En intégration continue
+#  l'arbre est propre, donc les deux formes sont équivalentes ; en local, seule
+#  celle-ci mesure ce qu'on s'apprête à pousser.
+if ! CHANGES=$(git diff --name-only "$BASE" 2>&1); then
   echo "::error::Modularité INCONNUE — impossible de comparer à $BASE : $CHANGES"
   echo "Le contrôle n'a rien pu examiner ; ne pas lire ceci comme un succès."
   exit 2

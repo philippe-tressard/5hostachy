@@ -184,6 +184,18 @@ BRANCHE=$(git rev-parse --abbrev-ref HEAD)
 RETARD=$(git rev-list --count "HEAD..origin/$BRANCHE" 2>/dev/null)
 rapporter 0a "$(verdict_compte "${RETARD:-}" 0)" "Clone à jour sur origin/$BRANCHE" "retard=${RETARD:-?} commit(s)"
 
+# 0b — modularité : rejouer ici ce que la CI refusera
+#      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI
+#      `test-scripts` les rejetait (email.py 656 → 663). Le contrôle existait,
+#      il n'était simplement pas dans le chemin qui précède le push.
+MOD=$(bash scripts-ci-modularite.sh origin/main 2>&1)
+case "$?" in
+  0) V0B=OK ;;
+  1) V0B=FAIL ;;
+  *) V0B=INCONNU ;;
+esac
+rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)"           "$(echo "$MOD" | grep -oE '[a-z_/.]+\.(py|sh|ts|svelte) : [0-9]+ → [0-9]+ lignes' | head -1 || echo 'aucun fichier n a grossi')"
+
 # 15 — endpoints orphelins (poste de dev, avant le push)
 if [ -d api/tests ]; then
   ORPH=$( (cd api && python -m pytest tests/test_endpoints_orphelins.py -q 2>&1 | tail -1) )
