@@ -17,6 +17,7 @@ from app.database import get_session
 from app.models.core import ConfigSite, GenreCivilite, Ticket, TicketEvolution, Utilisateur
 from app.schemas import TicketRead
 from app.utils.dates_fr import date_courte, formule_anciennete, mois_ecoules
+from app.utils.destinataires import formule_appel, interlocuteurs_syndic
 from app.utils.perimetres import perimetre_label_json
 
 from .commun import (
@@ -165,6 +166,15 @@ def envoyer_relance_syndic(
     )
 
     ctx = {
+        #  La formule d'appel s'adresse à la gestionnaire ET à l'assistante de
+        #  gestion : le cabinet fonctionne en binôme, l'une supplée l'autre en son
+        #  absence. Les personnes viennent de l'annuaire, choisies par leur
+        #  FONCTION — écrire les noms en dur ne survivrait pas au premier
+        #  changement de personnel.
+        "interlocuteurs": formule_appel(interlocuteurs_syndic(session)),
+        #  Les deux variables historiques restent fournies : le modèle déjà en
+        #  base les utilise encore tant que la migration 0127 n'a pas tourné, et
+        #  une variable absente rend une chaîne vide sans rien signaler.
         "civilite": "Monsieur" if principal.genre == GenreCivilite.mr else "Madame",
         "nom_gestionnaire": f"{principal.prenom} {principal.nom}".strip(),
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},

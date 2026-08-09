@@ -91,7 +91,7 @@ MODELES = [
      "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
      '\U0001f514 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}</h2>'
-     '<p style="margin:0 0 20px">{{ civilite }} {{ nom_gestionnaire }},</p>'
+     '<p style="margin:0 0 20px">{{ interlocuteurs }},</p>'
      # Pr\u00e9ambule partenarial (choisi le 01/08/2026) : poser l\u2019anciennet\u00e9 r\u00e9elle
      # et le m\u00e9contentement qu\u2019elle nourrit, sans mettre le gestionnaire en
      # accusation \u2014 la relance reste un outil de travail, pas un grief.
