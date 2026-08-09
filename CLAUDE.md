@@ -266,7 +266,12 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 > partagé, regarder `git worktree list` puis `git -C <autre> status` : rien ne
 > signale le travail **non committé** d'une session voisine (vécu le 02/08/2026).
 
-- `main` = production protégé — toute modification passe par une PR vers `dev`
+- `main` = production **réellement protégée depuis le 09/08/2026** : les 4 jobs de
+  CI sont des *checks requis*, `enforce_admins` est actif, le push direct et le
+  `--force` sont refusés. Toute modification passe par une PR depuis `dev`.
+  ⚠️ Cette ligne affirmait « production protégé » alors que GitHub répondait
+  « Branch not protected » : rien n'empêchait de fusionner une CI rouge — ce qui
+  est arrivé trois fois le 08/08. Une consigne fausse est pire qu'absente.
 - Préfixes de commit : `feat:` `fix:` `docs:` `refactor:` `test:` `chore:` `perf:`
 - Claude s'arrête au **push sur `dev`** : la PR `dev → main` est créée et fusionnée
   par l'utilisateur

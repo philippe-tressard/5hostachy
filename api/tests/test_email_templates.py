@@ -46,7 +46,7 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "reponse_communaute": {"reponse"},
     "idee_statut": {"idee"},
     "relance_syndic": {
-        "tickets", "reference_copro", "civilite", "nom_gestionnaire", "anciennete",
+        "tickets", "reference_copro", "interlocuteurs", "anciennete",
     },
     "vigik_commande_recue": {"lot", "demandeur", "type"},
     "vigik_accepte": {"destinataire", "type"},
