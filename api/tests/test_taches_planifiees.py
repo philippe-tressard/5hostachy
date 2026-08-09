@@ -15,6 +15,7 @@ Ces tests verrouillent le contrat : les nouveaux champs existent, ils ont des
 défauts rétrocompatibles, et une exécution attendue mais absente est signalée
 `manquante` au lieu de passer pour un silence normal.
 """
+import pytest
 from datetime import datetime, timedelta
 
 from app.models.core import HistoriqueMaintenance, PorteeExecution, TachePlanifiee
@@ -224,3 +225,95 @@ def test_retard_declenche_le_statut_manquante():
 
     assert not est_manquante(a_lheure), "une exécution récente ne doit pas être manquante"
     assert est_manquante(en_retard), "une exécution trop ancienne doit être signalée"
+
+
+# ── Deux faux positifs constatés à l'écran le 09/08/2026 ────────────────────
+
+@pytest.fixture()
+def session_memoire():
+    """Base en mémoire, isolée. Aucun `app.db` n'est approché (règle d'or)."""
+    from sqlmodel import Session, SQLModel, create_engine
+
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur)
+    with Session(moteur) as s:
+        yield s
+
+
+def test_la_bascule_est_attendue_toutes_les_48h_car_le_role_alterne():
+    """Un nœud n'agit qu'une nuit sur deux : l'attendre chaque jour est un faux rouge.
+
+    `bascule.sh` sort immédiatement sur le standby (« Ce RPi n'est pas actif —
+    rien à faire »). L'historique le montre : 05/08 rpi1, 06/08 rpi2, 07/08 rpi1,
+    08/08 rpi2. Avec 24 h d'attente, **un nœud sur deux était signalé
+    « Exécution manquante » tous les jours**, sur une infrastructure saine.
+
+    Même erreur que le seuil du cache de build le 06/08 : un seuil se règle sur le
+    RÉGIME de ce qu'il surveille, pas sur la fréquence du cron.
+    """
+    from app.routers.admin import _PERIODICITE_ATTENDUE_H
+
+    assert _PERIODICITE_ATTENDUE_H["bascule"] >= 48, (
+        "La bascule alterne : chaque nœud n'opère qu'une nuit sur deux. Une "
+        "périodicité de 24 h peint un rouge permanent sur le nœud qui n'était pas "
+        "actif — et un rouge permanent ne signale plus rien."
+    )
+
+
+def test_le_script_de_bascule_s_abstient_sur_le_standby():
+    """Le fait sur lequel repose la périodicité de 48 h, vérifié et non supposé.
+
+    Si `bascule.sh` se mettait à agir (et donc à rapporter) depuis les deux nœuds,
+    48 h deviendrait deux fois trop permissif et l'absence cesserait de se voir.
+    """
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[2] / "bascule.sh").read_text(encoding="utf-8")
+    assert 'if [ "$ACTIVE" != "$SELF" ]' in source and "exit 0" in source, (
+        "bascule.sh ne s'abstient plus sur le standby : la périodicité attendue "
+        "de 48 h reposait sur cette abstention."
+    )
+
+
+def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
+    """La rétention ne doit pas effacer la preuve que le contrôle cherche.
+
+    Constaté à l'écran le 09/08/2026 : « Maintenance hebdomadaire : jamais
+    exécutée », alors qu'elle avait tourné le matin même — la purge gardait les
+    dix lignes les plus récentes **toutes tâches confondues**, et les quotidiennes
+    avaient chassé l'unique ligne hebdomadaire.
+
+    Une tâche rare est justement celle dont l'absence doit se voir.
+    """
+    from datetime import datetime, timedelta
+
+    from app.models.core import HistoriqueMaintenance
+    from app.routers.admin import _purger_anciens_rapports
+
+    base = datetime(2026, 8, 2, 1, 0)
+    session_memoire.add(HistoriqueMaintenance(
+        tache="maintenance", noeud="rpi1", statut="succes", cree_le=base))
+    #  Trente exécutions quotidiennes postérieures : bien plus que le quota.
+    for j in range(30):
+        session_memoire.add(HistoriqueMaintenance(
+            tache="bascule", noeud="rpi1" if j % 2 else "rpi2", statut="succes",
+            cree_le=base + timedelta(days=j + 1)))
+    session_memoire.commit()
+
+    _purger_anciens_rapports(session_memoire)
+
+    from sqlmodel import select
+    restantes = session_memoire.exec(
+        select(HistoriqueMaintenance).where(HistoriqueMaintenance.tache == "maintenance")
+    ).all()
+    assert len(restantes) == 1, (
+        "La ligne hebdomadaire a été chassée par les quotidiennes : l'écran "
+        "affichera « jamais exécutée » pour une tâche qui tourne."
+    )
+    bascules = session_memoire.exec(
+        select(HistoriqueMaintenance).where(HistoriqueMaintenance.tache == "bascule")
+    ).all()
+    assert len(bascules) == 10, (
+        f"{len(bascules)} lignes de bascule conservées — le quota par tâche ne "
+        "s'applique plus, et la table croîtra sans fin."
+    )
