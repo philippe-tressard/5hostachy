@@ -72,6 +72,30 @@ verdict_standby() {       # $1 = .active (qui DIT être l'actif), $2/$3 = conten
   else echo INCONNU; fi
 }
 
+#  Retard sur l'upstream : compter les commits ne suffit PAS à décider.
+#  Les PR sont fusionnées en SQUASH : `main` ne partage aucun commit avec `dev`,
+#  si bien que rapatrier `main` par un merge empilait tout l'historique à chaque
+#  tour (30 commits affichés dans la PR du 09/08/2026). La routine est désormais
+#  de RÉALIGNER `dev` sur `main` après chaque fusion — le clone est alors « en
+#  retard » sur `origin/dev` sans qu'aucun contenu ne lui manque.
+#
+#  ⚠️ Ne PAS comparer son propre arbre à `origin/dev` : dès le premier commit
+#  suivant, les arbres diffèrent légitimement et le contrôle refuse tout. Vécu
+#  immédiatement après avoir écrit cette correction-là. Ce qu'il faut établir est
+#  asymétrique : `origin/dev` n'apporte-t-il RIEN que nous n'ayons déjà ?
+#  Deux conditions, toutes deux nécessaires :
+#    • `origin/dev` et `origin/main` ont le même contenu (le retard n'est que
+#      l'historique pré-squash) ;
+#    • notre HEAD descend de `origin/main` (donc nous avons bien ce contenu).
+#  Un contrôle qui crie au loup à chaque livraison finit contourné, et c'est le
+#  contournement qui devient l'habitude (socle 04 §18).
+verdict_clone() {          # $1 = commits de retard, $2 = upstream sans apport (oui/non)
+  [ -z "$1" ] && { echo INCONNU; return; }
+  case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
+  [ "$1" -eq 0 ] && { echo OK; return; }
+  [ "${2:-non}" = "oui" ] && echo OK || echo FAIL
+}
+
 verdict_compte() {         # $1 = nombre observé, $2 = maximum toléré
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
@@ -153,6 +177,11 @@ if [ "${1:-}" = "--selftest" ]; then
   t "compte non mesuré"                  INCONNU verdict_compte "" 0
   t "piège du grep -c || echo 0"         INCONNU verdict_compte "0 0" 0
   t "compte non numérique"               INCONNU verdict_compte "abc" 0
+  t "clone à jour"                       OK      verdict_clone 0 non
+  t "retard sans apport (post-squash)"    OK      verdict_clone 2 oui
+  t "retard avec apport manquant"        FAIL    verdict_clone 2 non
+  t "retard non mesuré"                  INCONNU verdict_clone "" oui
+  t "retard non numérique"               INCONNU verdict_clone "abc" oui
   t "HEAD identiques"                    OK      verdict_parite abc123 abc123
   t "standby en retard : toléré"         ECART   verdict_parite abc123 def456
   t "parité non mesurable"               INCONNU verdict_parite "" def456
@@ -200,7 +229,18 @@ echo
 git fetch origin --quiet 2>/dev/null
 BRANCHE=$(git rev-parse --abbrev-ref HEAD)
 RETARD=$(git rev-list --count "HEAD..origin/$BRANCHE" 2>/dev/null)
-rapporter 0a "$(verdict_compte "${RETARD:-}" 0)" "Clone à jour sur origin/$BRANCHE" "retard=${RETARD:-?} commit(s)"
+#  « Identique » = MÊME ARBRE. Un retard sur des commits dont le contenu est déjà
+#  chez nous est le réalignement post-squash ; un retard sur du contenu absent est
+#  la dérive que ce point existe pour attraper.
+#  `origin/dev` n'apporte rien que `origin/main` n'ait déjà, ET nous descendons
+#  de `origin/main` : le retard est le réalignement post-squash, pas une dérive.
+if git diff --quiet "origin/$BRANCHE" origin/main 2>/dev/null    && git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then IDENT=oui; else IDENT=non; fi
+if [ "${RETARD:-0}" != "0" ] && [ "$IDENT" = "oui" ]; then
+  DETAIL0A="retard=$RETARD commit(s) sans apport (réalignement post-squash)"
+else
+  DETAIL0A="retard=${RETARD:-?} commit(s)"
+fi
+rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT")" "Clone à jour sur origin/$BRANCHE" "$DETAIL0A"
 
 # 0b — modularité : rejouer ici ce que la CI refusera
 #      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI

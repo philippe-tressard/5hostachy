@@ -31,6 +31,22 @@ fi
 behind=$(git rev-list --count "HEAD..$upstream" 2>/dev/null || echo 0)
 [ "$behind" -eq 0 ] 2>/dev/null && exit 0
 
+# Être « en retard » de N commits n'est pas la même chose qu'avoir un contenu
+# différent. Les PR étant fusionnées en SQUASH, `main` ne partage aucun commit
+# avec `dev` : après chaque fusion, on RÉALIGNE `dev` sur `main`, ce qui laisse le
+# clone en retard sur `origin/dev` avec un arbre RIGOUREUSEMENT identique.
+# Refuser ce cas ferait passer ALLOW_STALE=1 dans l'habitude — et un garde-fou
+# qu'on contourne par réflexe ne garde plus rien (socle 04 §18). On compare donc
+# les ARBRES, comme le point 0a de precheck-mep.sh, avec lequel ce hook doit
+# rester cohérent : un contenu absent, lui, est toujours refusé.
+# ⚠️ Ne PAS comparer notre arbre à $upstream : dès le premier commit suivant, ils
+# diffèrent légitimement et tout serait refusé. La question est asymétrique —
+# $upstream apporte-t-il quelque chose que nous n'avons pas ? Deux conditions :
+# son contenu est déjà celui de origin/main, et notre HEAD descend de origin/main.
+# Même règle que le point 0a de precheck-mep.sh : les deux doivent rester alignés,
+# sinon l'un autorise ce que l'autre refuse.
+if git diff --quiet "$upstream" origin/main 2>/dev/null    && git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then exit 0; fi
+
 branche=$(git rev-parse --abbrev-ref HEAD)
 cat >&2 <<MSG
 
