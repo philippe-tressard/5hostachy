@@ -457,7 +457,7 @@ class Publication(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     publiee_le: Optional[datetime] = None
     mis_a_jour_le: Optional[datetime] = None
-    image_url: Optional[str] = None
+    photos_urls: Optional[str] = None  # JSON array — même convention que Ticket/Evenement
     perimetre_cible: Optional[str] = Field(default='["résidence"]')  # JSON: résidence|bat:{id}|parking|cave|résidents
     public_cible: Optional[str] = Field(default='["résidents"]')     # JSON: résidents|locataires|copropriétaires
     # statut : publie (défaut, hors workflow) | en_cours | resolu | annule

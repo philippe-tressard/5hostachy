@@ -230,7 +230,7 @@ export interface Publication {
 	urgente: boolean;
 	auteur_id: number;
 	auteur_nom?: string;
-	image_url?: string;
+	photos_urls?: string[];
 	cree_le: string;
 	mis_a_jour_le?: string;
 	perimetre_cible: string[];
@@ -709,7 +709,6 @@ export const annuaireAdmin = {
 export const uploads = {
 	avatar: (file: File) => uploadFile('/uploads/avatar', file),
 	residence: (file: File) => uploadFile('/uploads/residence', file),
-	publication: (id: number, file: File) => uploadFile(`/uploads/publication/${id}`, file),
 };
 
 export const idees = {

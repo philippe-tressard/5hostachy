@@ -14,7 +14,7 @@
 	import { stripHtml, fmtMontant } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
-	import PhotosUpload from '$lib/components/PhotosUpload.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 
@@ -2354,11 +2354,11 @@
 					</p>
 
 					<label for="ah-photos" style="margin-top:.85rem">Photos</label>
-					<PhotosUpload
+					<FichiersUpload
 						id="ah-photos"
 						bind:urls={ahPhotos}
 						max={AH_MAX_PHOTOS}
-						label="Ajouter une photo"
+						mode="photos"
 						upload={async (f) => (await fichiersApi.upload(f)).url}
 						on:change={() => { ahApercuHtml = ''; ahApercuFormat = ''; }}
 					/>
@@ -2459,7 +2459,7 @@
 								<div class="rich-content" style="font-size:.88rem">{@html safeHtml(annonce.message)}</div>
 								{#if annonce.images?.length}
 									<div style="margin-top:.6rem">
-										<PhotosUpload urls={annonce.images} readonly size={64} />
+										<FichiersUpload urls={annonce.images} readonly size={64} />
 									</div>
 								{/if}
 								{#if annonce.destinataires.length}

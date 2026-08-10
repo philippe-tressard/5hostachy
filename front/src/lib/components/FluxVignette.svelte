@@ -32,7 +32,6 @@
 -->
 <script lang="ts">
 	export let photos: string[] = [];
-	export let image: string | null = null;
 	export let size = 56;
 
 	/** Pièces jointes non-images de l'élément (PDF, documents…). */
@@ -42,7 +41,7 @@
 	 *   dernier segment de l'URL — « télécharger » — au lieu du titre. */
 	export let nbPieces = 0;
 
-	$: premiere = photos[0] ?? image ?? null;
+	$: premiere = photos[0] ?? null;
 	$: reste = Math.max(0, photos.length - 1);
 	$: nbFichiers = fichiers.length || nbPieces;
 	$: libelleFichiers = nbFichiers > 1 ? `${nbFichiers} pièces jointes` : '1 pièce jointe';

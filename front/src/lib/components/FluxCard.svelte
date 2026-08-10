@@ -38,7 +38,7 @@
 	$: lien = typeLink(item);
 	$: photos = (item.meta?.photos_urls as string[] | undefined) ?? [];
 	$: fichiers = (item.meta?.fichiers_urls as string[] | undefined) ?? [];
-	$: image = (item.meta?.image_url as string | undefined) ?? null;
+
 	$: perimetre = item.meta?.perimetre as string | undefined;
 	// « Copropriété entière » n'apprend rien : c'est le cas par défaut.
 	$: perimetreAffiche = perimetre && perimetre !== 'Copropriété entière' ? perimetre : null;
@@ -82,7 +82,7 @@
 			<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
 			     inutile de montrer deux fois la même image. -->
 			{#if !expanded}
-				<FluxVignette {photos} {image} {fichiers} nbPieces={(item.meta?.pj_compte as number | undefined) ?? 0} />
+				<FluxVignette {photos} {fichiers} nbPieces={(item.meta?.pj_compte as number | undefined) ?? 0} />
 			{/if}
 		</div>
 		{#if item.badges.length > 0 || perimetreAffiche || aVenir}
@@ -134,9 +134,6 @@
 							<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
 						</div>
 					</div>
-				{/if}
-				{#if image}
-					<img src={image} alt="" class="flux-image" loading="lazy" />
 				{/if}
 				{#if photos.length || fichiers.length}
 					<!-- Les pièces jointes de devis sont des PDF : elles étaient
@@ -229,7 +226,6 @@
 	}
 	.flux-meta-line { font-size: .82rem; color: var(--color-text-muted); margin: .15rem 0; }
 	.flux-full-content { font-size: .85rem; line-height: 1.55; margin: .5rem 0; }
-	.flux-image { max-width: 100%; max-height: 200px; border-radius: var(--radius); margin-top: .5rem; object-fit: cover; }
 	.flux-link { font-size: .78rem; color: var(--color-primary); font-weight: 500; text-decoration: none; display: inline-block; margin-top: .5rem; }
 	.flux-link:hover { text-decoration: underline; }
 

@@ -20,6 +20,7 @@ Trois classes d'erreurs sont verrouillées ici.
    laisse servir un contenu tiers dans un `<img src>` à chaque lecteur.
 """
 import ast
+import json
 import pathlib
 import re
 
@@ -27,7 +28,7 @@ import pytest
 
 from app.routers.uploads import ALLOWED_DOC_MIME, ALLOWED_MIME, DOC_EXTENSIONS
 from app.utils.fichiers import extension_assainie, nom_stocke, radical_assaini
-from app.utils.photos import photos_internes
+from app.utils.photos import photos_internes, photos_json
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 FICHIERS_TS = RACINE / "front" / "src" / "lib" / "fichiers.ts"
@@ -205,10 +206,36 @@ def test_ecriture_de_pieces_jointes_passe_par_le_filtre(chemin, fonction):
 
     corps = ast.dump(noeuds[0])
     assert "fichiers_urls" in corps, f"{fonction} n'écrit plus de pièces jointes"
-    assert "photos_internes" in corps, (
-        f"{fonction} écrit fichiers_urls sans passer par photos_internes : "
+    #  Deux portes d'entrée légitimes, et deux seulement : `photos_internes`
+    #  directement, ou `photos_json` qui l'enveloppe (filtre + sérialisation, pour
+    #  ne pas réécrire le même `json.dumps(photos_internes(...))` à cinq endroits).
+    #  L'indirection ne serait un trou que si `photos_json` cessait de filtrer :
+    #  c'est ce que verrouille `test_photos_json_ecarte_les_urls_etrangeres`.
+    assert "photos_internes" in corps or "photos_json" in corps, (
+        f"{fonction} écrit fichiers_urls sans passer par photos_internes/photos_json : "
         "une URL arbitraire fournie par le client serait servie à chaque lecteur"
     )
+
+
+def test_photos_json_ecarte_les_urls_etrangeres():
+    """Le helper qui sérialise doit filtrer — sinon l'indirection ci-dessus ment.
+
+    Vérifié sur le COMPORTEMENT : ce qui ressort de la fonction, pas le fait
+    qu'elle mentionne `photos_internes` quelque part.
+    """
+    sortie = photos_json([
+        "/uploads/publications/ok.jpg",
+        "https://tiers.example/pixel.png",   # traceur : révélerait l'IP de chaque lecteur
+        "/uploads/../../etc/passwd",          # traversée
+        "javascript:alert(1)",
+    ])
+    assert json.loads(sortie) == ["/uploads/publications/ok.jpg"]
+
+
+def test_photos_json_tolere_l_absence():
+    """Cas zéro : ni None ni liste vide ne doivent lever — le pire cas est `[]`."""
+    assert json.loads(photos_json(None)) == []
+    assert json.loads(photos_json([])) == []
 
 
 # ── 4. Nom des pièces jointes dans l'e-mail ──────────────────────────────────

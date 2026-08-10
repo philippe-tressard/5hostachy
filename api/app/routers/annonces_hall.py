@@ -36,6 +36,7 @@ from app.utils.annonce_hall import (
 )
 from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiables
 from app.utils.email import send_email_group
+from app.utils.photos import parse_photos
 
 router = APIRouter(prefix="/annonces-hall", tags=["annonces-hall"])
 
@@ -177,9 +178,9 @@ def images_de_publication(pub: Publication, session: Session) -> list[str]:
     `/uploads/...` — les documents sont écrits à la racine du volume uploads,
     cf. `documents.py`).
     """
-    urls: list[str] = []
-    if pub.image_url and pub.image_url.startswith("/uploads/"):
-        urls.append(pub.image_url)
+    urls: list[str] = [
+        u for u in parse_photos(pub.photos_urls) if u.startswith("/uploads/")
+    ]
 
     docs = session.exec(
         select(Document)
