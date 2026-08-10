@@ -444,3 +444,52 @@ def test_est_image_et_estImage_sont_la_meme_regle():
     assert m.group(1) == py.group(1), (
         f"Les extensions image divergent : TS='{m.group(1)}' vs Python='{py.group(1)}'"
     )
+
+
+# ── 5. Résolution des chemins d'upload ───────────────────────────────────────
+#  Le 10/08/2026, l'unification des galeries a fait passer les photos de
+#  publication du dossier `publications/` au dossier générique `fichiers/`. Deux
+#  endroits gardaient l'ancien dossier écrit en dur, et les deux ont échoué
+#  SANS LA MOINDRE ERREUR : le courriel est parti sans ses photos, et le message
+#  WhatsApp a disparu entièrement du groupe (401 sur une URL publique devenue
+#  authentifiée). Un chemin fabriqué à la main ne signale jamais qu'il est faux.
+
+def test_aucun_sous_dossier_d_upload_colle_a_la_main():
+    """Définir la RACINE des uploads est normal ; y coller un sous-dossier ne l'est pas.
+
+    Le défaut n'était pas de connaître `/app/uploads`, c'était de reconstruire
+    `<racine>/<dossier écrit en dur>/<nom de fichier>` alors qu'on avait déjà
+    l'URL réelle du fichier. Le jour où le dossier change, le chemin devient faux
+    et le fichier « n'existe pas » — sans erreur, donc sans que personne ne le voie.
+    """
+    racine = RACINE / "api" / "app"
+    motif = re.compile(r"os\.path\.join\(\s*[\"']/app/uploads[\"']\s*,\s*[\"']")
+    fautifs = [
+        f"{f.relative_to(racine).as_posix()}:{n}"
+        for f in sorted(racine.rglob("*.py"))
+        if "__pycache__" not in f.parts
+        for n, ligne in enumerate(f.read_text(encoding="utf-8").splitlines(), 1)
+        if motif.search(ligne)
+    ]
+    assert not fautifs, (
+        f"Sous-dossier d'upload écrit en dur : {fautifs}. Passer par "
+        "`chemins_locaux()`, qui résout l'URL réelle du fichier."
+    )
+
+
+def test_whatsapp_n_envoie_plus_d_url_publique_pour_les_medias():
+    """Le bridge reçoit des OCTETS, pas une URL qu'il retéléchargerait.
+
+    Lui passer une URL obligeait à servir le dossier en anonyme : c'est ce qui a
+    rendu `/uploads/publications/` public, et ce qui a cassé l'envoi quand les
+    photos ont rejoint le dossier authentifié.
+    """
+    source = (RACINE / "api" / "app" / "utils" / "whatsapp.py").read_text(encoding="utf-8")
+    assert "imageBase64" in source, "l'image n'est plus transmise en octets"
+    lignes_actives = [
+        l for l in source.splitlines()
+        if "imageUrl" in l and not l.lstrip().startswith("#")
+    ]
+    assert not lignes_actives, (
+        f"whatsapp.py construit encore une URL d'image : {lignes_actives}"
+    )

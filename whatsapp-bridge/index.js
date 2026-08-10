@@ -4,7 +4,7 @@
  * Endpoints:
  *   GET  /status        → connection state
  *   GET  /qr            → QR code as PNG image (for pairing)
- *   POST /send          → send a message  { number, text, imageUrl? }
+ *   POST /send          → send a message  { number, text, imageBase64?, imageUrl? }
  *   GET  /groups        → list groups the account is in
  *   POST /restart       → reconnect
  *
@@ -221,16 +221,33 @@ app.post("/send", async (req, res) => {
   if (connectionState !== "open") {
     return res.status(503).json({ error: "WhatsApp not connected", state: connectionState });
   }
-  const { number, text, imageUrl } = req.body;
+  const { number, text, imageUrl, imageBase64 } = req.body;
   if (!number || !text) {
     return res.status(400).json({ error: "number and text are required" });
   }
   try {
     const jid = number.includes("@") ? number : `${number}@s.whatsapp.net`;
+    // `imageBase64` est la voie normale : l'API a le fichier sous la main et nous
+    // l'envoie. `imageUrl` reste accepté par compatibilité, mais il oblige Baileys
+    // à retélécharger le fichier PAR L'INTERNET PUBLIC — ce qui suppose que le
+    // dossier soit servi en anonyme, et a cassé l'envoi le 10/08/2026 quand les
+    // photos de publication ont rejoint le dossier authentifié.
+    const media = imageBase64
+      ? { image: Buffer.from(imageBase64, "base64"), caption: text }
+      : imageUrl
+        ? { image: { url: imageUrl }, caption: text }
+        : null;
+
     let sentMsg;
-    if (imageUrl) {
-      sentMsg = await sock.sendMessage(jid, { image: { url: imageUrl }, caption: text });
-    } else {
+    try {
+      sentMsg = await sock.sendMessage(jid, media ?? { text });
+    } catch (errMedia) {
+      // ⚠️ Un échec sur l'IMAGE ne doit jamais faire perdre le MESSAGE. Le
+      // 10/08/2026, un 401 sur la photo a supprimé l'annonce entière du groupe :
+      // les résidents n'ont rien reçu du tout, et l'échec n'était visible que
+      // dans les logs. Le texte part, l'image est signalée.
+      if (!media) throw errMedia;
+      logger.warn({ err: errMedia }, "Média refusé — repli sur le texte seul");
       sentMsg = await sock.sendMessage(jid, { text });
     }
 

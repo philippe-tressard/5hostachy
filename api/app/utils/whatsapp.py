@@ -1,11 +1,13 @@
 """Utilitaire envoi WhatsApp via whatsapp-bridge."""
+import base64
 import html
 import json
 import logging
 import re
-from urllib.parse import urljoin
 
 import httpx
+
+from app.utils.fichiers import chemins_locaux
 
 logger = logging.getLogger(__name__)
 
@@ -89,17 +91,33 @@ def _build_message(titre: str, contenu: str, urgente: bool, perimetre_cible: str
     return f"{header}\n\n{text}\n\n{footer}"
 
 
-def _resolve_image_url(image_url: str | None, config: dict) -> str | None:
-    """Transforme une URL relative en URL absolue exploitable par le bridge."""
+def _image_pour_bridge(image_url: str | None) -> str | None:
+    """Photo interne → octets en base64, prêts pour le bridge. None si indisponible.
+
+    ⚠️ On ne donne PLUS d'URL au bridge. Baileys allait alors chercher le fichier
+    par l'internet public, ce qui exigeait que le dossier soit servi en anonyme :
+    `/uploads/publications/` était le seul dans ce cas, et le seul pour cette
+    raison. Le 10/08/2026, l'unification des galeries a fait atterrir les photos
+    de publication dans le dossier authentifié — le bridge a reçu un 401 et
+    l'annonce entière a disparu du groupe.
+
+    L'API a le fichier sous la main : le lui faire retélécharger par le réseau
+    public était un détour, et ce détour imposait de publier des photos que rien
+    n'obligeait à rendre publiques. La résolution passe par `chemins_locaux`, qui
+    refuse ce qui n'est pas à nous et ce qui sort du bac à sable.
+    """
     if not image_url:
         return None
-    if image_url.startswith('http://') or image_url.startswith('https://'):
-        return image_url
-
-    site_url = (config.get('site_url') or '').strip()
-    if not site_url:
+    chemins = chemins_locaux([image_url])
+    if not chemins:
+        logger.warning("Photo WhatsApp introuvable ou hors périmètre : %s", image_url)
         return None
-    return urljoin(f"{site_url.rstrip('/')}/", image_url.lstrip('/'))
+    try:
+        with open(chemins[0], "rb") as f:
+            return base64.b64encode(f.read()).decode("ascii")
+    except OSError as exc:
+        logger.warning("Photo WhatsApp illisible (%s) : %s", image_url, exc)
+        return None
 
 
 def _is_restreint(public_cible: str | list | None) -> bool:
@@ -180,9 +198,19 @@ def envoyer_whatsapp(
     else:
         message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
         payload = {"number": group_jid, "text": message}
-        resolved_image_url = _resolve_image_url(image_url, config)
-        if resolved_image_url:
-            payload["imageUrl"] = resolved_image_url
+        image_b64 = _image_pour_bridge(image_url)
+        if image_b64:
+            payload["imageBase64"] = image_b64
+        elif image_url:
+            # La photo existe mais n'a pas pu être jointe. Le message part quand
+            # même — un envoi perdu est bien pire qu'un envoi sans image — et il
+            # dit où la voir plutôt que de laisser croire qu'il n'y en a pas.
+            lien = (config.get('site_url') or '').strip().rstrip('/')
+            if lien:
+                payload["text"] += (
+                    "\n\n\U0001F4F7 Photos à voir sur le site : "
+                    f"{lien}/actualites"
+                )
 
     try:
         with httpx.Client(timeout=10) as client:
