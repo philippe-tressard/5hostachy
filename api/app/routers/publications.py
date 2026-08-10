@@ -118,12 +118,11 @@ def _envoyer_email_syndic_publication(
                 "contenu": e.contenu,
             })
 
-    # La galerie ENTIÈRE : n'en joindre qu'une amputerait le courriel.
-    all_attachments: list[str] = []
-    for url in parse_photos(pub.photos_urls):
-        fpath = os.path.join("/app/uploads", "publications", os.path.basename(url))
-        if os.path.isfile(fpath):
-            all_attachments.append(fpath)
+    # La galerie ENTIÈRE, résolue par `chemins_locaux` et JAMAIS par un dossier
+    # écrit en dur : les photos vivent dans `/uploads/fichiers/` depuis
+    # l'unification, et un chemin figé rendait un courriel SANS ses photos, sans
+    # la moindre erreur (10/08/2026).
+    all_attachments: list[str] = chemins_locaux(parse_photos(pub.photos_urls))
 
     # Fichiers joints (documents liés à la publication)
     docs = session.exec(select(Document).where(Document.publication_id == pub.id)).all()
