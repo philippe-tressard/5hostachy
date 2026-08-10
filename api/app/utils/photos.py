@@ -37,3 +37,28 @@ def photos_internes(urls: list[str]) -> list[str]:
         str(u) for u in urls
         if str(u).startswith("/uploads/") and ".." not in str(u)
     ]
+
+
+def premiere_photo(raw: Optional[str]) -> Optional[str]:
+    """Première photo de la galerie, ou None.
+
+    Certains canaux ne portent QU'UNE image : le message WhatsApp, l'affiche de
+    hall, l'en-tête d'un PDF. Avant l'unification du 10/08/2026, la publication
+    portait pour cela une colonne `image_url` distincte — une seconde notion pour
+    la même chose, que `Ticket` et `Evenement` n'avaient pas. Elle est devenue une
+    galerie comme les autres ; « l'image du canal mono-image » se lit ici, une
+    fois, et non dans chacun des six appelants.
+    """
+    urls = parse_photos(raw)
+    return urls[0] if urls else None
+
+
+def photos_json(urls: Optional[list]) -> str:
+    """Liste reçue d'un client → colonne texte, filtrée. Contrepartie de `parse_photos`.
+
+    Toujours passer par ici pour ÉCRIRE : le filtre `photos_internes` n'est pas
+    une précaution de confort, c'est ce qui empêche une requête forgée de faire
+    servir une URL étrangère dans un `<img src>` chez chaque résident. Écrite deux
+    fois dans le même routeur, elle aurait fini par n'être filtrée qu'une fois.
+    """
+    return json.dumps(photos_internes([str(u) for u in (urls or [])]), ensure_ascii=False)

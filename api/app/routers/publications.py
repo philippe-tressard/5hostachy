@@ -14,7 +14,7 @@ from app.models.core import AnnonceHall, ConfigSite, Document, MembreSyndic, Pub
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate, EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
 from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
 from app.utils.fichiers import chemins_locaux
-from app.utils.photos import photos_internes
+from app.utils.photos import parse_photos, photos_json, premiere_photo
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import envoyer_whatsapp_avec_log
 
@@ -118,11 +118,10 @@ def _envoyer_email_syndic_publication(
                 "contenu": e.contenu,
             })
 
-    # Photo jointe (image de la publication)
+    # La galerie ENTIÈRE : n'en joindre qu'une amputerait le courriel.
     all_attachments: list[str] = []
-    if pub.image_url:
-        fname = os.path.basename(pub.image_url)
-        fpath = os.path.join("/app/uploads", "publications", fname)
+    for url in parse_photos(pub.photos_urls):
+        fpath = os.path.join("/app/uploads", "publications", os.path.basename(url))
         if os.path.isfile(fpath):
             all_attachments.append(fpath)
 
@@ -363,9 +362,9 @@ def create_publication(
 ):
     email_externe = body.email_externe  # adresse externe (pas dans le modèle)
     data = body.model_dump(exclude={"email_externe"})
-    perimetre_cible_raw = json.dumps(data.get('perimetre_cible', ["résidence"]), ensure_ascii=False)
-    data['perimetre_cible'] = perimetre_cible_raw
+    data['perimetre_cible'] = json.dumps(data.get('perimetre_cible', ["résidence"]), ensure_ascii=False)
     data['public_cible'] = json.dumps(data.get('public_cible', ["résidents"]), ensure_ascii=False)
+    data['photos_urls'] = photos_json(data.get('photos_urls'))
     pub = Publication(
         **data,
         auteur_id=user.id,
@@ -378,7 +377,7 @@ def create_publication(
         wa_config = config_whatsapp(session)
         if whatsapp_actif(wa_config):
             background_tasks.add_task(
-                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config,
+                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, premiere_photo(pub.photos_urls), wa_config,
                 pub.public_cible, pub.id,
             )
     if pub.envoyer_syndic and not pub.brouillon:
@@ -409,10 +408,11 @@ def update_publication(
     data = body.model_dump(exclude_unset=True)
     if data.get('archivee') is True and pub.statut != "resolu":
         raise HTTPException(422, "Seules les publications résolues peuvent être archivées")
-    if 'perimetre_cible' in data:
-        data['perimetre_cible'] = json.dumps(data['perimetre_cible'], ensure_ascii=False)
-    if 'public_cible' in data:
-        data['public_cible'] = json.dumps(data['public_cible'], ensure_ascii=False)
+    for champ in ('perimetre_cible', 'public_cible'):
+        if champ in data:
+            data[champ] = json.dumps(data[champ], ensure_ascii=False)
+    if 'photos_urls' in data:
+        data['photos_urls'] = photos_json(data['photos_urls'])
 
     ancien_statut = pub.statut
     nouveau_statut = data.get('statut')
@@ -450,7 +450,7 @@ def update_publication(
         wa_config = config_whatsapp(session)
         if whatsapp_actif(wa_config):
             background_tasks.add_task(
-                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, pub.image_url, wa_config,
+                envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, premiere_photo(pub.photos_urls), wa_config,
                 pub.public_cible, pub.id,
             )
     # Envoi email syndic si brouillon publié + flag activé
@@ -519,7 +519,7 @@ def update_evolution(
     if body.contenu is not None:
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
-        evol.fichiers_urls = json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False)
+        evol.fichiers_urls = photos_json(body.fichiers_urls)
     session.add(evol)
     session.commit()
     session.refresh(evol)
@@ -564,7 +564,7 @@ def add_evolution(
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id,
         cree_le=datetime.utcnow(),
-        fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
+        fichiers_urls=photos_json(body.fichiers_urls),
     )
     session.add(evol)
 

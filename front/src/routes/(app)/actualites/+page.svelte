@@ -6,7 +6,7 @@
 	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, fichiersApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
-	import ImageUpload from '$lib/components/ImageUpload.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -42,9 +42,11 @@
 	let newAnnonceHall = false;
 	let newStatut: string = 'publie';
 	let saving = false;
-	let pendingImage: File | null = null;
-	let pendingPreview: string | undefined;
-	let uploadingImg = false;
+	//  Les photos sont téléversées AVANT la création (endpoint générique), comme
+	//  pour les tickets et les événements : leurs URLs partent dans la charge utile.
+	//  C'est ce qui supprime la danse « créer en brouillon → téléverser → publier »
+	//  qui n'existait que parce que l'image arrivait après coup.
+	let newPhotos: string[] = [];
 	let pendingFiles: File[] = [];
 	let pubFilesMap: Record<number, any[]> = {};
 	let loadedFilesFor = new Set<number>();
@@ -120,11 +122,6 @@
 	let newPerimetreCible: string[] = ['résidence'];
 	let newPublicCible: string[] = ['résidents'];
 
-	function handleImageChange(e: CustomEvent<File>) {
-		pendingImage = e.detail;
-		pendingPreview = URL.createObjectURL(e.detail);
-	}
-
 	onMount(async () => {
 		try {
 			pubList = await pubsApi.list();
@@ -159,35 +156,29 @@
 		if (!newTitre.trim() || richEmpty(newContenu)) return;
 		saving = true;
 		try {
-			// Image et pièces jointes sont envoyées après création : on retarde la publication
-			// réelle pour que WhatsApp et l'affiche de hall disposent bien des visuels.
-			const shouldPublishAfterImageUpload = !newBrouillon && (
-				(!!pendingImage && (newPartagerWhatsapp || newAnnonceHall))
-				|| (newAnnonceHall && pendingFiles.length > 0)
-			);
+			//  Les photos partent avec la création : plus rien à retarder pour elles.
+			//  Restent les DOCUMENTS, encore persistés en entités `Document` propres
+			//  aux publications (les tickets et les événements utilisent
+			//  `fichiers_urls`) — eux seuls imposent encore de publier après coup,
+			//  pour que l'affiche de hall les voie. Divergence connue, à traiter.
+			const publierApresDocuments = !newBrouillon && newAnnonceHall && pendingFiles.length > 0;
 			let pub = await pubsApi.create({
 				titre: newTitre, contenu: newContenu, urgente: newUrgente, epingle: newEpingle,
 				perimetre_cible: newPerimetreCible, public_cible: newPublicCible,
-				brouillon: shouldPublishAfterImageUpload ? true : newBrouillon,
+				brouillon: publierApresDocuments ? true : newBrouillon,
+				photos_urls: newPhotos,
 				statut: newStatut || 'publie',
 				partager_whatsapp: newPartagerWhatsapp,
 				envoyer_syndic: newEnvoyerSyndic,
 				envoyer_cs: newEnvoyerCs,
 				annonce_hall: newAnnonceHall,
 			});
-			if (pendingImage) {
-				uploadingImg = true;
-				try {
-					const { url } = await uploadsApi.publication(pub.id, pendingImage);
-					pub.image_url = url;
-				} finally { uploadingImg = false; }
-			}
 			if (pendingFiles.length > 0) {
 				for (const f of pendingFiles) {
 					try { await docsApi.uploadForPublication(f.name, pub.id, f); } catch { /* ignoré */ }
 				}
 			}
-			if (shouldPublishAfterImageUpload) {
+			if (publierApresDocuments) {
 				pub = await pubsApi.update(pub.id, { brouillon: false });
 			}
 			pubList = [pub, ...pubList];
@@ -195,7 +186,7 @@
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
 			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false; newAnnonceHall = false;
 			newPerimetreCible = ['résidence'];
-			pendingImage = null; pendingPreview = undefined;
+			newPhotos = [];
 			pendingFiles = []; fileInputKey++;
 			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
 		} catch (e: any) {
@@ -377,12 +368,11 @@
 				<RichEditor id="actualite-contenu" bind:value={newContenu} placeholder="Contenu de l'actualité…" minHeight="120px" />
 			</div>
 			<div class="field">
-				<label for="actualite-photo">Photo (optionnel)</label>
-				<ImageUpload id="actualite-photo" currentUrl={pendingPreview} placeholder="&#x1F5BC;️" label="Ajouter une photo"
-					shape="rect" previewSize="200px" uploading={uploadingImg} on:change={handleImageChange} />
+				<label for="actualite-photos">Photos</label>
+				<FichiersUpload id="actualite-photos" bind:urls={newPhotos} max={6} mode="photos" />
 			</div>
 			<div class="field">
-				<label>Pièces jointes (optionnel)</label>
+				<label>Documents</label>
 				{#key fileInputKey}
 					<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.txt" on:change={handleFilesChange} style="font-size:.85rem" />
 				{/key}
@@ -430,7 +420,7 @@
 				</p>
 			{/if}
 			<div class="form-actions">
-				<button type="submit" class="btn btn-primary" disabled={saving || uploadingImg}>
+				<button type="submit" class="btn btn-primary" disabled={saving}>
 					{saving ? 'Envoi…' : (newBrouillon ? 'Enregistrer brouillon' : 'Publier')}
 				</button>
 			</div>
@@ -551,8 +541,8 @@
 
 				{:else}
 						<!-- ── Corps normal ── -->
-						{#if pub.image_url}
-							<img class="pub-img" src={pub.image_url} alt={pub.titre} />
+						{#if pub.photos_urls?.length}
+							<PiecesJointes urls={pub.photos_urls} format="grand" />
 						{/if}
 						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
 						{#if pubFilesMap[pub.id]?.length > 0}
@@ -679,7 +669,7 @@
 											<div class="pub-preview rich-content clamp-5">{@html safeHtml(pub.contenu)}</div>
 										{:else}
 											<div class="pub-body" on:click|stopPropagation on:keydown|stopPropagation>
-												{#if pub.image_url}<img class="pub-img" src={pub.image_url} alt={pub.titre} />{/if}
+												{#if pub.photos_urls?.length}<PiecesJointes urls={pub.photos_urls} format="grand" />{/if}
 												<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
 												<small style="color:var(--color-text-muted);font-size:.78rem">
 												{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(pub.cree_le)}{/if}{#if pub.auteur_nom} · {pub.auteur_nom}{/if}

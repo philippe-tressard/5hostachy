@@ -378,14 +378,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 					{:else}
 						<!-- Corps normal -->
 						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
-						{#if t.photos_urls && t.photos_urls.length > 0}
-							<div class="tk-photos">
-								{#each t.photos_urls as photoUrl}
-									<a href={photoUrl} target="_blank" rel="noopener noreferrer">
-											<img src={photoUrl} alt="" loading="lazy" />
-									</a>
-								{/each}
-							</div>
+						{#if t.photos_urls?.length}
+							<PiecesJointes urls={t.photos_urls} format="grand" />
 						{/if}
 						{#if t.perimetre_cible && t.perimetre_cible.length > 0 && !(t.perimetre_cible.length === 1 && t.perimetre_cible[0] === 'résidence')}
 							<p style="font-size:.8rem;color:var(--color-text-muted);margin:.25rem 0 .5rem">🔹 {perimetreLabel(t.perimetre_cible)}</p>
@@ -520,15 +514,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 									{:else}
 										<!-- Corps normal -->
 										<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
-										{#if t.photos_urls && t.photos_urls.length > 0}
-											<div class="tk-photos">
-												{#each t.photos_urls as photoUrl}
-													<a href={photoUrl} target="_blank" rel="noopener noreferrer">
-														<img src={photoUrl} alt="" loading="lazy" />
-													</a>
-												{/each}
-											</div>
-										{/if}
+										{#if t.photos_urls?.length}
+							<PiecesJointes urls={t.photos_urls} format="grand" />
+						{/if}
 										{#if t.perimetre_cible && t.perimetre_cible.length > 0 && !(t.perimetre_cible.length === 1 && t.perimetre_cible[0] === 'résidence')}
 											<p style="font-size:.8rem;color:var(--color-text-muted);margin:.25rem 0 .5rem">🔹 {perimetreLabel(t.perimetre_cible)}</p>
 										{/if}
@@ -618,10 +606,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	.tk-preview { padding: .4rem 1rem .6rem; font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); }
 	.tk-preview :global(p) { margin: 0 0 .4em; }
 	.tk-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
-	.tk-photos { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
-	.tk-photos a { display: block; flex-shrink: 0; }
-	.tk-photos img { max-width: 140px; max-height: 110px; border-radius: 6px; object-fit: cover; border: 1px solid var(--color-border); transition: box-shadow .15s; }
-	.tk-photos a:hover img { box-shadow: var(--shadow); }
 	.tk-body :global(p) { margin: 0 0 .5em; }
 
 	.chevron { font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; display: inline-block; line-height: 1; }

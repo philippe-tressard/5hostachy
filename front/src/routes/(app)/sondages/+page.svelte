@@ -2,7 +2,7 @@
 import Icon from '$lib/components/Icon.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import Vignette from '$lib/components/Vignette.svelte';
-import PhotosUpload from '$lib/components/PhotosUpload.svelte';
+import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
@@ -227,14 +227,14 @@ async function creerAnnonce() {
 	finally { submittingAnnonce = false; }
 }
 
-/** Téléverse une photo et retourne son URL (contrat attendu par PhotosUpload). */
+/** Téléverse une photo et retourne son URL (contrat attendu par FichiersUpload). */
 async function uploadPhotoAnnonce(id: number, file: File): Promise<string> {
 	const res: any = await annoncesApi.uploadPhoto(id, file);
 	annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
 	return res.url;
 }
 
-/** Supprime une photo et retourne la liste à jour (contrat attendu par PhotosUpload). */
+/** Supprime une photo et retourne la liste à jour (contrat attendu par FichiersUpload). */
 async function supprimerPhotoAnnonce(id: number, url: string): Promise<string[]> {
 	const res: any = await annoncesApi.deletePhoto(id, url);
 	annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
@@ -856,10 +856,10 @@ count={Math.max(0, (annonce.photos?.length ?? 0) - 1)}
      (ajout, retrait), on ne les contemple pas — la vignette est le bon
      format pour ça. -->
 {#if annonce.est_auteur}
-<PhotosUpload
+<FichiersUpload
 urls={annonce.photos ?? []}
 max={MAX_PHOTOS_ANNONCE}
-readonly={false}
+mode="photos"
 upload={(f) => uploadPhotoAnnonce(annonce.id, f)}
 remove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
 />

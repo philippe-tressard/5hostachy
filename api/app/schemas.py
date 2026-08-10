@@ -290,7 +290,7 @@ class PublicationCreate(BaseModel):
     batiment_id: Optional[int] = None
     epingle: bool = False
     urgente: bool = False
-    image_url: Optional[str] = None
+    photos_urls: ListeUrls = []
     perimetre_cible: List[str] = ["résidence"]
     public_cible: List[str] = ["résidents"]
     statut: Optional[str] = "publie"
@@ -307,7 +307,7 @@ class PublicationUpdate(BaseModel):
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
     urgente: Optional[bool] = None
-    image_url: Optional[str] = None
+    photos_urls: Optional[ListeUrls] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
     public_cible: Optional[List[str]] = None
@@ -356,7 +356,7 @@ class PublicationRead(BaseModel):
     epingle: bool
     urgente: bool
     auteur_id: int
-    image_url: Optional[str] = None
+    photos_urls: ListeUrls = []
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
     perimetre_cible: List[str] = ["résidence"]

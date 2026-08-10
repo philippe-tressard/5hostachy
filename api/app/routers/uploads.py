@@ -11,7 +11,7 @@ import io
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Copropriete, Publication, Utilisateur
+from app.models.core import Copropriete, Utilisateur
 from app.utils.fichiers import nom_stocke
 from sqlmodel import Session, select
 
@@ -109,26 +109,9 @@ def upload_residence(
     return {"url": url}
 
 
-@router.post("/publication/{pub_id}", summary="Ajouter une image à une publication (CS/Admin)")
-def upload_publication_image(
-    pub_id: int,
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Attache une image à une publication existante."""
-    pub = session.get(Publication, pub_id)
-    if not pub:
-        raise HTTPException(404, "Publication introuvable")
-    url = _save_image(file, "publications", max_dim=1200)
-    pub.image_url = url  # type: ignore[attr-defined]
-    session.add(pub)
-    session.commit()
-    return {"url": url}
-
-
-# Les endpoints `/ticket/{id}` et `/evenement/{id}` ont été supprimés le
-# 03/08/2026 avec les pièces jointes documentaires : les formulaires de création
+# Les endpoints `/ticket/{id}`, `/evenement/{id}` et `/publication/{id}` ont été
+# supprimés — les deux premiers le 03/08/2026 avec les pièces jointes
+# documentaires, le dernier le 10/08/2026 : les formulaires de création
 # téléversent désormais photos ET documents par `/fichier`, avant que l'élément
 # existe, et passent les URLs dans le payload de création. C'est ce qui permet à
 # l'e-mail syndic/CS de partir avec ses pièces jointes — l'ancien flux

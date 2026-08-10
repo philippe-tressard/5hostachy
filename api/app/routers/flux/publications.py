@@ -25,6 +25,7 @@ from app.routers.publications import (
 )
 
 from app.utils.perimetres import perimetre_label
+from app.utils.photos import parse_photos
 from .commun import ContexteFlux, auteur_nom, badges_marqueurs, perimetres_de, strip_html
 from .schemas import FluxItem
 
@@ -96,7 +97,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "urgente": p.urgente,
                 "full_html": p.contenu,
                 "auteur": auteur,
-                "image_url": getattr(p, "image_url", None),
+                "photos_urls": parse_photos(getattr(p, "photos_urls", None)),
                 "statut": p.statut,
                 "perimetre": perimetre_label(perimetres_de(p)),
             },
