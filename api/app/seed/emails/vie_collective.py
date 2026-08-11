@@ -8,7 +8,10 @@ Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
 
 MODELES = [
     ("publication_syndic", "Publication transmise au syndic",
-     '{% if is_commentaire %}\U0001f4ac Commentaire sur « {{ publication.titre }} »{% else %}{% if reference_copro %}\U0001f3e2 {{ reference_copro }} — {% endif %}Nouvelle publication{% endif %} — {{ residence.nom }}',
+     #  Mêmes deux règles que `ticket_syndic`, où elles sont expliquées. Ici la
+     #  branche « commentaire » nommait déjà la publication ; c'est celle de la
+     #  création qui annonçait « Nouvelle publication » sans dire laquelle.
+     '{% if is_commentaire %}{{ prefixe_copro }}\U0001f4ac Commentaire sur « {{ publication.titre }} »{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
      '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4e2 Publication du conseil syndical{% endif %}'
      '</h2>'
@@ -47,7 +50,9 @@ MODELES = [
      '<a href="{{ app.url }}/actualites#pub-{{ publication.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
      True),
     ("publication_externe", "Notification publication (email externe)",
-     '{% if is_commentaire %}Relance {{ publication.titre }}{% else %}{{ publication.titre }} — {{ residence.nom }}{% endif %}',
+     #  Même raison que `ticket_externe` : l'adresse est saisie à la main et peut
+     #  être celle du syndic.
+     '{% if is_commentaire %}{{ prefixe_copro }}Relance {{ publication.titre }}{% else %}{{ prefixe_copro }}{{ publication.titre }} — {{ residence.nom }}{% endif %}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
      '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4e2 Publication{% endif %} : {{ publication.titre }}</h2>'
      '{% if is_commentaire %}'

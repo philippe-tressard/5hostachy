@@ -4,6 +4,32 @@
 figées l'importent depuis `app.seed`, ainsi que l'administration et les tests.
 L'ordre de la liste n'a aucune portée : chaque modèle est inséré indépendamment,
 et le seed ne pose que ce qui manque.
+
+## `{{ prefixe_copro }}` — la référence de copropriété dans l'objet
+
+Tout message adressé au syndic porte sa référence de copropriété, **sans
+exception** : c'est l'identifiant sous lequel il classe ses dossiers, et un
+message qui ne la porte pas sort de son tri par affaire.
+
+L'objet ne la compose donc jamais lui-même. Il écrit `{{ prefixe_copro }}` en
+tête, et `email._prefixe_copro` rend « 🏢 00213 — » ou rien. Deux raisons, dont la
+seconde n'est visible que d'ici :
+
+1. Le préambule était recopié dans **sept** objets, et deux formes coexistaient
+   déjà — « 🏢 00213 — » d'un côté, « [🏢 00213] – » pour `relance_syndic`. Deux
+   copies d'une même notion divergent ; celles-ci l'avaient fait.
+2. Un modèle vit **en base** et se réécrit depuis Admin → Emails. Le
+   `{% if reference_copro %}` qui portait la règle pouvait être retiré d'un
+   formulaire, et la règle avec lui. Dans le code, il ne peut pas l'être.
+
+La variable est injectée après le contexte de l'appelant (`email._contexte_rendu`) :
+aucun point d'appel ne peut l'omettre ni la contredire. Et comme un préfixe vide
+ne se voit pas, `health_monitor._check_reference_copro` alerte le gestionnaire du
+site quand la clé n'est pas renseignée — sans quoi la règle serait vérifiée sur
+les modèles et fausse à chaque envoi.
+
+Les **corps** HTML, eux, écrivent librement « — réf. {{ reference_copro }} » :
+c'est une phrase, pas le préambule d'un objet.
 """
 from app.seed.emails.comptes import MODELES as _COMPTES
 from app.seed.emails.exploitation import MODELES as _EXPLOITATION

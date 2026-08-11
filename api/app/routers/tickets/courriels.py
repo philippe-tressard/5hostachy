@@ -65,7 +65,7 @@ def envoyer_email_syndic_cs(
 
     from app.utils.email import send_email_group
 
-    cfg = config_site(session, "reference_copro")
+    cfg = config_site(session)
 
     messages_ctx = []
     historique = [{"date": date_courte(ticket.cree_le), "label": "Création du ticket"}]
@@ -83,7 +83,6 @@ def envoyer_email_syndic_cs(
         "ticket": _contexte_ticket(ticket),
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         **contexte_site(cfg),
-        "reference_copro": cfg.get("reference_copro", ""),
         "is_commentaire": bool(commentaire and commentaire.strip()),
         "commentaire": commentaire or "",
         "date_commentaire": fmt_paris(datetime.utcnow()),

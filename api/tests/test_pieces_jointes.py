@@ -153,8 +153,8 @@ ECRITURES_CLIENT = [
     ("api/app/routers/tickets/messages.py", "add_message"),
     ("api/app/routers/tickets/evolutions.py", "add_evolution"),
     ("api/app/routers/tickets/evolutions.py", "update_evolution"),
-    ("api/app/routers/publications.py", "add_evolution"),
-    ("api/app/routers/publications.py", "update_evolution"),
+    ("api/app/routers/publications/evolutions.py", "add_evolution"),
+    ("api/app/routers/publications/evolutions.py", "update_evolution"),
     ("api/app/routers/calendrier.py", "create_evenement"),
     ("api/app/routers/calendrier.py", "update_evenement"),
 ]
@@ -169,7 +169,7 @@ _DRAPEAU_FICHIERS = re.compile(r'"fichiers":\s*bool\(([A-Za-z_][\w.]*)\)')
 
 @pytest.mark.parametrize(
     "chemin",
-    ["api/app/routers/tickets/courriels.py", "api/app/routers/publications.py",
+    ["api/app/routers/tickets/courriels.py", "api/app/routers/publications/courriels.py",
      "api/app/routers/calendrier.py"],
 )
 def test_le_drapeau_fichiers_decrit_ce_qui_est_vraiment_joint(chemin):
@@ -283,7 +283,7 @@ def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
     from fastapi_mail import MessageSchema
     from fastapi_mail.msg import MailMsg
 
-    from app.utils.email import _preparer_pieces_jointes
+    from app.utils.email.pieces_jointes import _preparer_pieces_jointes
 
     fichier = tmp_path / "0d41107a6c9b4e2f8a1d3c5e7b9f0a2c_devis-ramonage.pdf"
     fichier.write_bytes(b"%PDF-1.4 test")
@@ -305,7 +305,7 @@ def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
 
 def test_le_sommaire_annonce_exactement_les_pieces_jointes():
     """Décompte, accord au pluriel, numérotation et noms — sur une liste réelle."""
-    from app.utils.email import _bandeau_pieces_jointes
+    from app.utils.email.gabarit import _bandeau_pieces_jointes
 
     assert _bandeau_pieces_jointes([]) == "", "aucune pièce jointe : aucun bandeau"
 
@@ -328,7 +328,7 @@ def test_le_sommaire_echappe_les_noms():
     Les noms produits depuis le 03/08/2026 sont assainis, mais les fichiers
     antérieurs ne l'ont pas été — on ne fait pas confiance à la provenance.
     """
-    from app.utils.email import _bandeau_pieces_jointes
+    from app.utils.email.gabarit import _bandeau_pieces_jointes
 
     bandeau = _bandeau_pieces_jointes(['<img src=x onerror=alert(1)>.pdf'])
     assert "<img src=x" not in bandeau
@@ -343,7 +343,7 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
     Ici la source est unique : `send_email` et `send_email_group` dérivent le
     sommaire de la liste qu'ils transmettent au message.
     """
-    source = (RACINE / "api" / "app" / "utils" / "email.py").read_text(encoding="utf-8")
+    source = (RACINE / "api" / "app" / "utils" / "email" / "__init__.py").read_text(encoding="utf-8")
     appels = re.findall(r"pieces_jointes=\[nom_lisible\(p\) for p in \(attachments or \[\]\)\]", source)
     assert len(appels) == 2, (
         f"{len(appels)} point(s) d'envoi dérivent le sommaire de `attachments` — "
