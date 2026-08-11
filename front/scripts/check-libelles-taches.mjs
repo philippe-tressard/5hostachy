@@ -1,22 +1,25 @@
 /**
  * Garde-fou : le nom d'une tâche planifiée ne s'écrit qu'à un seul endroit.
  *
- * POURQUOI. Le nom d'une tâche apparaît à trois endroits qui ne se voient pas
- * les uns les autres : la synthèse « Santé des tâches planifiées », la colonne
- * Tâche du journal des exécutions, et le titre de la carte qui détaille cette
- * tâche — ces deux derniers dans des FICHIERS DIFFÉRENTS. Ils avaient divergé :
- * la synthèse annonçait « Sauvegarde quotidienne » quand la carte s'appelait
- * « Système — Sauvegardes », et « Agrégation télémétrie » quand la carte
- * s'appelait « Historique des agrégations ». On ne pouvait donc pas relier une
- * ligne de la synthèse au tableau censé la détailler — signalé par
- * l'utilisateur le 11/08/2026.
+ * POURQUOI. Le nom d'une tâche apparaissait à trois endroits qui ne se voyaient
+ * pas les uns les autres : la synthèse « Santé des tâches planifiées », la
+ * colonne Tâche du journal des exécutions, et le titre de la carte qui détaillait
+ * cette tâche — ces deux derniers dans des FICHIERS DIFFÉRENTS. Ils avaient
+ * divergé : la synthèse annonçait « Sauvegarde quotidienne » quand la carte
+ * s'appelait « Système — Sauvegardes ». On ne pouvait donc pas relier une ligne
+ * de la synthèse au tableau censé la détailler — signalé par l'utilisateur le
+ * 11/08/2026.
+ *
+ * Les cartes de détail ont disparu avec #299, et `titreDetail()` avec elles. Ce
+ * contrôle reste utile : il reste deux emplacements dans deux fichiers, et rien
+ * n'empêcherait le prochain écran de retaper un nom à la main.
  *
  * Regrouper les libellés dans `$lib/taches.ts` ne suffit pas : rien n'empêche
  * le prochain écran de retaper « Sauvegarde quotidienne » dans un titre. Ce
  * contrôle échoue en CI si c'est le cas.
  *
  * LA RÈGLE : un libellé de tâche en toutes lettres n'est permis que dans
- * `lib/taches.ts`. Ailleurs, passer par `LIBELLE_TACHE[...]` ou `titreDetail()`.
+ * `lib/taches.ts`. Ailleurs, passer par `LIBELLE_TACHE[...]`.
  *
  * Le contrôle s'auto-contrôle : s'il n'analyse aucun fichier, s'il ne trouve
  * plus la source unique, ou s'il n'en extrait aucun libellé, il ÉCHOUE au lieu
@@ -87,7 +90,7 @@ if (fautes.length) {
 	console.error('✗ Libellé de tâche écrit en dur hors de lib/taches.ts :\n');
 	for (const f of fautes) console.error(`   ${f}`);
 	console.error(
-		`\n  ${fautes.length} occurrence(s). Utiliser LIBELLE_TACHE[...] ou titreDetail(...) :` +
+		`\n  ${fautes.length} occurrence(s). Utiliser LIBELLE_TACHE[...] :` +
 			'\n  un nom recopié diverge, et la synthèse cesse de renvoyer à son détail.'
 	);
 	process.exit(1);

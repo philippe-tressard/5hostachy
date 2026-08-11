@@ -112,13 +112,19 @@ echo "maint_last=$(grep "Garde-fou" '"$MAINT_LOG"' 2>/dev/null | grep -oE "^\[[0
 # Et aucune apostrophe dans ces commentaires : ils sont DANS la chaîne, et une
 # apostrophe nue la referme — sinon écrire le motif échappé, comme plus haut.
 MK=$(grep -E "^MAINTENANCE_KEY=" $R/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' \r")
+REP=""
 if [ -n "$MK" ]; then
-  echo "rapports=$(curl -s --max-time 8 -H "x-maintenance-key: $MK" \
-    "http://localhost/api/admin/maintenance/dernier-rapport?tache=maintenance" 2>/dev/null \
-    | grep -oE "\"rpi[0-9]\": ?\"[0-9T:.-]+\"" | tr -d "\" " | tr "\n" ";")"
-else
-  echo "rapports="
+  REP=$(curl -s --max-time 8 -w "|%{http_code}" -H "x-maintenance-key: $MK" \
+    "http://localhost/api/admin/maintenance/dernier-rapport?tache=maintenance" 2>/dev/null)
 fi
+# Le marqueur `ok:` est posé UNIQUEMENT quand le curl a rendu 200. Sans lui, une
+# carte vide se confond avec « demande impossible » — et cette confusion a rendu
+# C19 muet le 11/08/2026 sur le cas meme que ce contrôle devait attraper (#305).
+# (Aucune apostrophe ici : ce bloc vit DANS une chaîne à quotes simples.)
+case "$REP" in
+  *"|200") echo "rapports=ok:$(echo "$REP" | grep -oE "\"rpi[0-9]\": ?\"[0-9T:.-]+\"" | tr -d "\" " | tr "\n" ";")" ;;
+  *)       echo "rapports=" ;;
+esac
 # Crontab ROOT, et root seulement. Le test sur l'\''uid n'\''est pas une précaution
 # de style : ce bloc tourne en root en local (cron root) mais en `ptressard` sur le
 # peer (SSH). Un `crontab -l` nu y rendrait le crontab de `ptressard` — qui existe,
@@ -404,32 +410,17 @@ if [ "$PEER_OK" -eq 0 ]; then
   fi
 fi
 
-echo "─────────────────────────────────────────────────────────────"
-echo "Résumé : $FAILS FAIL, $WARNS WARN"
-[ "$FAILS" -eq 0 ] && echo "✅ Tous les contrôles critiques sont verts." || echo "❌ $FAILS contrôle(s) critique(s) en échec — intervention requise."
-
-# ── Alerte e-mail sur échec critique ─────────────────────────────────────────
-# Sans ceci, un FAIL n'allait QUE dans /var/log/hostachy-reliability.log (le cron
-# redirige tout, donc MAILTO ne reçoit rien) : le 26/07/2026 le C4 a signalé
-# « .active divergent » neuf fois de suite, failover neutralisé et site HS ~50 min,
-# sans que personne ne soit prévenu. La détection marchait — pas la notification.
-if [ "$FAILS" -gt 0 ]; then
-  # shellcheck source=/dev/null
-  if [ -r "$REPO/lib-alert.sh" ]; then
-    ALERT_COOLDOWN_FILE=/tmp/check-reliability-cooldown
-    ALERT_COOLDOWN_SECONDS=3600   # 1 h : à */15 un FAIL persistant ferait 96 mails/jour
-    ALERT_REPO="$REPO"
-    source "$REPO/lib-alert.sh"
-    alert_if_not_in_cooldown \
-      "[5Hostachy] ❌ $FAILS contrôle(s) de fiabilité en échec sur $SELF" \
-      "$(printf 'check-reliability.sh sur %s a relevé %s FAIL et %s WARN à %s.\n\nDétail (cette exécution) :\n%s\nLog complet : /var/log/hostachy-reliability.log\n' \
-          "$SELF" "$FAILS" "$WARNS" "$(date '+%d/%m/%Y %H:%M')" "$FAIL_LINES")"
-  else
-    echo "[WARN] lib-alert.sh introuvable dans $REPO — aucune alerte envoyée."
-  fi
-fi
-
 # ── C19. Le journal et la base disent-ils la même chose de la maintenance ? ───
+# ⚠ Sa PLACE fait partie du contrôle. Livré en v2.52.0 APRÈS le résumé et après
+# le bloc d'alerte, il était hors de portée des deux : l'exécution du 11/08 à
+# 21:06 a imprimé « Résumé : 0 FAIL, 0 WARN » puis, en dessous, deux [WARN]. Le
+# résumé était faux, le décompte du mail aussi, et un futur `fail()` posé ici
+# n'aurait atteint personne — le mail était déjà parti. Un contrôle sans
+# destinataire (`standards/04-fiabilite-des-controles.md` §7), à l'intérieur même
+# du script qui porte tous les autres.
+#
+# Tout verdict se rend donc AVANT la ligne de résumé. Le garde-fou qui interdit
+# la récidive est dans `lib-verdicts.sh` → `verdicts_selftest`.
 # C17 lit le JOURNAL du nœud et sait si la maintenance a tourné. L'écran
 # d'administration lit la BASE et sait si son rapport est arrivé. Du 09 au
 # 11/08/2026 les deux se sont contredits pendant trois jours sans que rien ne le
@@ -456,16 +447,21 @@ for pair in "$SELF:${S_maint_last:-}" "$PEER:${P_maint_last:-}"; do
   AGE_J=$(beat_age_min "$v")
   #  `rapports` n'est renseigné que par le nœud qui porte l'API (l'actif) : la
   #  carte qu'il rend couvre LES DEUX nœuds, puisque le standby lui poste ses
-  #  propres rapports. Si aucun des deux n'a pu l'obtenir, la base est
-  #  ininterrogeable → « - », que la fonction traduit en INCONNU.
-  CARTE="${S_rapports:-}${P_rapports:-}"
-  if [ -z "$CARTE" ]; then
-    AGE_B="-"
+  #  propres rapports.
+  #
+  #  `sonde_base` sépare les trois réponses possibles, ce que ce bloc ne savait
+  #  pas faire : « - » personne n'a pu interroger la base (INCONNU), chaîne vide
+  #  la base a répondu et n'a rien sur ce nœud (DIVERGENCE), sinon la date. La
+  #  confusion des deux premières rendait DIVERGENCE inatteignable — C19 a donc
+  #  répondu INCONNU en production sur le cas exact qu'il devait attraper (#305).
+  D=$(sonde_base "${S_rapports:-}${P_rapports:-}" "$n")
+  if [ "$D" = "-" ] || [ -z "$D" ]; then
+    AGE_B="$D"
   else
-    D=$(echo "$CARTE" | tr ';' '
-' | grep -oE "^$n:[0-9-]{10}T[0-9:]{8}" | head -1 | cut -d: -f2- | tr 'T' ' ')
+    #  Un horodatage illisible rend -1, que `verdict_sondes_maintenance` traduit
+    #  en INCONNU : on ne le rabat SURTOUT pas sur la chaîne vide, qui signifie
+    #  « la base n'a rien » et vaudrait DIVERGENCE.
     AGE_B=$(beat_age_min "$D")
-    [ "$AGE_B" = "-1" ] && AGE_B=""      # aucune ligne pour ce nœud
   fi
   case "$(verdict_sondes_maintenance "$AGE_J" "$AGE_B" "$C19_TOLERANCE_MIN")" in
     OK)         ok "Maintenance sur $n : le journal et la base concordent" ;;
@@ -473,5 +469,31 @@ for pair in "$SELF:${S_maint_last:-}" "$PEER:${P_maint_last:-}"; do
     *)          warn "Maintenance sur $n : concordance journal/base INCONNUE (journal='${AGE_J}' base='${AGE_B}') — ni vert ni rouge" ;;
   esac
 done
+
+
+echo "─────────────────────────────────────────────────────────────"
+echo "Résumé : $FAILS FAIL, $WARNS WARN"
+[ "$FAILS" -eq 0 ] && echo "✅ Tous les contrôles critiques sont verts." || echo "❌ $FAILS contrôle(s) critique(s) en échec — intervention requise."
+
+# ── Alerte e-mail sur échec critique ─────────────────────────────────────────
+# Sans ceci, un FAIL n'allait QUE dans /var/log/hostachy-reliability.log (le cron
+# redirige tout, donc MAILTO ne reçoit rien) : le 26/07/2026 le C4 a signalé
+# « .active divergent » neuf fois de suite, failover neutralisé et site HS ~50 min,
+# sans que personne ne soit prévenu. La détection marchait — pas la notification.
+if [ "$FAILS" -gt 0 ]; then
+  # shellcheck source=/dev/null
+  if [ -r "$REPO/lib-alert.sh" ]; then
+    ALERT_COOLDOWN_FILE=/tmp/check-reliability-cooldown
+    ALERT_COOLDOWN_SECONDS=3600   # 1 h : à */15 un FAIL persistant ferait 96 mails/jour
+    ALERT_REPO="$REPO"
+    source "$REPO/lib-alert.sh"
+    alert_if_not_in_cooldown \
+      "[5Hostachy] ❌ $FAILS contrôle(s) de fiabilité en échec sur $SELF" \
+      "$(printf 'check-reliability.sh sur %s a relevé %s FAIL et %s WARN à %s.\n\nDétail (cette exécution) :\n%s\nLog complet : /var/log/hostachy-reliability.log\n' \
+          "$SELF" "$FAILS" "$WARNS" "$(date '+%d/%m/%Y %H:%M')" "$FAIL_LINES")"
+  else
+    echo "[WARN] lib-alert.sh introuvable dans $REPO — aucune alerte envoyée."
+  fi
+fi
 
 exit "$FAILS"

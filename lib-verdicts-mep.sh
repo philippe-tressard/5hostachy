@@ -83,6 +83,7 @@ verdict_clone() {          # $1 = commits de retard, $2 = upstream sans apport (
 }
 
 verdict_bumps() {          # $1 = nombre de commits `chore(version)` du lot
+                           # $2 = version dans origin/main · $3 = version dans HEAD
   #  Un lot porte UN bump, et un seul, posé en DERNIER.
   #
   #  Le 11/08/2026, la PR #297 en portait deux : `bump v2.49.1` puis
@@ -100,11 +101,28 @@ verdict_bumps() {          # $1 = nombre de commits `chore(version)` du lot
   #  ZÉRO n'est pas un échec mais un ÉCART : un lot sans bump se déploie quand
   #  même, et c'est P3 qui devient incapable de prouver que le déploiement a eu
   #  lieu — la version servie serait identique avant et après. Visible, toléré.
+  #
+  #  ⚠️ $2 et $3 ajoutés le 11/08/2026 (#308). Compter les commits `chore(version)`
+  #  mesure le SYMPTÔME attendu — la forme du message — et non le FAIT : la
+  #  version qui sera servie. Un bump replié dans un commit fonctionnel faisait
+  #  donc répondre « aucun bump : la version servie sera identique », phrase
+  #  fausse alors que `front/package.json` passait bien de 2.52.1 à 2.52.2.
+  #  C'est la règle 3 de la skill `mep-precheck`, enfreinte par un point du
+  #  pré-check. La forme reste contrôlée — DEUX bumps restent un échec, c'est le
+  #  défaut d'origine — mais le zéro se juge désormais sur les versions elles-mêmes.
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
-  [ "$1" -eq 1 ] && { echo OK; return; }
-  [ "$1" -eq 0 ] && { echo ECART; return; }
-  echo FAIL
+  #  Deux bumps ou plus : défaut de forme, tranché avant tout le reste.
+  [ "$1" -ge 2 ] && { echo FAIL; return; }
+  #  Versions non mesurables → INCONNU, jamais un vert par défaut.
+  { [ -z "$2" ] || [ -z "$3" ]; } && { echo INCONNU; return; }
+  #  Le FAIT : la version servie change-t-elle ? Si oui, P3 pourra le prouver,
+  #  que le bump ait eu son commit dédié ou non.
+  [ "$2" != "$3" ] && { echo OK; return; }
+  #  Versions identiques : P3 ne pourra rien prouver. Y compris avec UN commit
+  #  `chore(version)` — un bump annoncé qui ne change pas la version est le même
+  #  mensonge que la PR vide de la #294, pas un vert.
+  echo ECART
 }
 
 verdict_brief() {          # $1 = commit du brief, $2 = HEAD, $3 = lignes de corps
@@ -167,12 +185,32 @@ verdict_cache() {          # $1 = taille brute rendue par docker system df (ex. 
 }
 
 verdict_alerte() {         # $1 = âge de la dernière « Alerte envoyée », $2 = âge du dernier [FAIL]
+                           # $3 = âge de la dernière EXÉCUTION de check-reliability
+                           # $4 = âge maximal toléré pour $3
   #  Le canal n'écrit QUE lorsqu'il a quelque chose à dire : son silence est normal
   #  s'il n'y a rien à signaler. On ne peut donc conclure qu'en croisant les deux.
   #  Les lignes « Email KO » ne servent pas : elles ne sont pas horodatées — constat
   #  du 02/08/2026, où le point a été classé INCONNU alors que l'utilisateur venait
   #  de recevoir deux alertes.
-  [ -z "$2" ] && { echo OK; return; }                    # aucun échec → rien à envoyer
+  #
+  #  ⚠️ $3 et $4 ajoutés le 11/08/2026 (#306). Le silence a DEUX causes : « rien à
+  #  signaler » et « le producteur de FAIL ne tourne plus ». Pendant les 2 h 15 où
+  #  check-reliability était mort sur l'actif, ce point a répondu OK deux fois de
+  #  suite — zéro FAIL au journal, donc rien à envoyer, donc tout va bien. Il a
+  #  autorisé deux MEP en affirmant que le canal d'alerte allait bien, alors que
+  #  ce qui l'alimente n'existait plus. Un contrôle qui ne peut pas s'exécuter
+  #  rend INCONNU, jamais OK — c'est la première règle de la skill `mep-precheck`,
+  #  et c'est un point du pré-check qui l'enfreignait.
+  #
+  #  La vivacité ne conditionne QUE la conclusion tirée du silence : un échec déjà
+  #  écrit prouve que le producteur a tourné, et la suite garde sa logique.
+  if [ -z "$2" ]; then
+    [ -z "$3" ] && { echo INCONNU; return; }
+    case "$3" in (*[!0-9]*) echo INCONNU; return ;; esac
+    { [ -z "$4" ] || case "$4" in (*[!0-9]*) true ;; (*) false ;; esac; } && { echo INCONNU; return; }
+    [ "$3" -gt "$4" ] && { echo INCONNU; return; }        # producteur muet : on ne sait pas
+    echo OK; return                                       # producteur vivant, rien à signaler
+  fi
   case "$2" in (*[!0-9]*) echo INCONNU; return ;; esac
   [ -z "$1" ] && { echo FAIL; return; }                  # un échec, aucune alerte : muet
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
@@ -207,12 +245,24 @@ verdicts_mep_selftest() {
   t "standby qui porte des conteneurs"   FAIL    verdict_standby rpi1 4 3
   t "drapeau inconnu"                    INCONNU verdict_standby rpi9 4 0
   t "comptes non mesurés"                INCONNU verdict_standby rpi1 "" 0
-  t "un seul bump, le cas nominal"       OK      verdict_bumps 1
-  t "deux bumps (PR #297, 11/08)"        FAIL    verdict_bumps 2
-  t "cinq bumps"                         FAIL    verdict_bumps 5
-  t "aucun bump : P3 ne prouvera rien"   ECART   verdict_bumps 0
-  t "comptage impossible"                INCONNU verdict_bumps ""
-  t "comptage aberrant"                  INCONNU verdict_bumps "deux"
+  t "un seul bump, le cas nominal"       OK      verdict_bumps 1 2.52.1 2.52.2
+  t "deux bumps (PR #297, 11/08)"        FAIL    verdict_bumps 2 2.52.1 2.52.2
+  t "cinq bumps"                         FAIL    verdict_bumps 5 2.52.1 2.52.2
+  t "aucun bump : P3 ne prouvera rien"   ECART   verdict_bumps 0 2.52.1 2.52.1
+  t "comptage impossible"                INCONNU verdict_bumps ""  2.52.1 2.52.2
+  t "comptage aberrant"                  INCONNU verdict_bumps "deux" 2.52.1 2.52.2
+  #  ── #308 : le FAIT, pas la forme du message de commit ─────────────────────
+  #  Le cas vécu : bump replié dans un commit `fix(admin)`. 0d comptait zéro
+  #  commit `chore(version)` et annonçait « la version servie sera identique »,
+  #  alors que package.json passait de 2.52.1 à 2.52.2.
+  t "bump replié dans un commit métier"  OK      verdict_bumps 0 2.52.1 2.52.2
+  #  Un bump ANNONCÉ qui ne change rien reste un écart : P3 ne prouvera rien.
+  t "commit de bump sans changement"     ECART   verdict_bumps 1 2.52.1 2.52.1
+  t "version amont non mesurée"          INCONNU verdict_bumps 0 ""     2.52.2
+  t "version locale non mesurée"         INCONNU verdict_bumps 0 2.52.1 ""
+  #  La forme prime sur le fait dans un seul sens : deux bumps restent un échec
+  #  même si la version finit par changer — c'est le défaut d'origine (#297).
+  t "deux bumps malgré version changée"  FAIL    verdict_bumps 2 2.52.1 2.53.0
   t "brief du lot, corps fourni"         OK      verdict_brief abc123 abc123 40
   t "brief pile à la borne"              OK      verdict_brief abc123 abc123 5
   t "brief réduit à un titre"            FAIL    verdict_brief abc123 abc123 2
@@ -240,11 +290,24 @@ verdicts_mep_selftest() {
   t "cache en mégaoctets"                OK      verdict_cache "812.4MB"
   t "cache non mesuré"                   INCONNU verdict_cache ""
   t "nombre d'entrées pris pour Go"      INCONNU verdict_cache "589"
-  t "aucun échec : silence normal"       OK      verdict_alerte "" ""
-  t "échec sans aucune alerte"           FAIL    verdict_alerte "" 30
-  t "alerte postérieure à l'échec"       OK      verdict_alerte 25 30
-  t "alerte dans le cooldown d'1 h"      OK      verdict_alerte 80 30
-  t "échec ancien jamais alerté"         FAIL    verdict_alerte 5000 30
+  #  Le 4ᵉ argument est le seuil ; 40 min = 2 ticks de 15 min manqués, comme C15.
+  t "silence, producteur vivant"         OK      verdict_alerte "" "" 5 40
+  t "échec sans aucune alerte"           FAIL    verdict_alerte "" 30 5 40
+  t "alerte postérieure à l'échec"       OK      verdict_alerte 25 30 5 40
+  t "alerte dans le cooldown d'1 h"      OK      verdict_alerte 80 30 5 40
+  t "échec ancien jamais alerté"         FAIL    verdict_alerte 5000 30 5 40
+  #  ── #306 : le silence d'un producteur mort n'est pas un silence normal ─────
+  #  Le cas vécu le 11/08/2026 : check-reliability mort depuis 135 min sur
+  #  l'actif, aucun FAIL au journal — le point répondait OK.
+  t "silence, producteur mort (vécu)"    INCONNU verdict_alerte "" "" 135 40
+  t "silence, producteur pile au seuil"  OK      verdict_alerte "" "" 40 40
+  t "silence, producteur jamais vu"      INCONNU verdict_alerte "" "" "" 40
+  t "silence, âge producteur illisible"  INCONNU verdict_alerte "" "" "x" 40
+  t "silence, seuil non fourni"          INCONNU verdict_alerte "" "" 5 ""
+  t "silence, seuil illisible"           INCONNU verdict_alerte "" "" 5 "x"
+  #  Un échec DÉJÀ ÉCRIT prouve que le producteur a tourné : la vivacité ne doit
+  #  pas rendre INCONNU un canal démontré muet, sinon on perd l'information.
+  t "échec muet malgré producteur mort"  FAIL    verdict_alerte "" 30 999 40
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st
 }

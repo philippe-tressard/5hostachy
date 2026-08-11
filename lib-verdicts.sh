@@ -86,6 +86,35 @@ verdict_sondes_maintenance() {
   [ $(( $2 - $1 )) -gt "$3" ] && echo DIVERGENCE || echo OK
 }
 
+# ── Sonde « base » de C19 : que dit la base pour CE nœud ? (PURE — testable) ─
+# $1 = concaténation des champs `rapports` collectés sur les deux nœuds
+# $2 = nom du nœud cherché
+#
+# Rend :
+#   -       la base n'a pu être interrogée par AUCUN nœud → INCONNU
+#   (vide)  la base a répondu, et n'a aucun rapport pour ce nœud → DIVERGENCE
+#   date    horodatage du dernier rapport de ce nœud
+#
+# POURQUOI cette distinction existe. Jusqu'au 11/08/2026 les deux premiers cas
+# rendaient la même chaîne vide, et C19 concluait INCONNU dans les deux. Or « la
+# base répond : aucun rapport » est très exactement le cas que C19 existe pour
+# attraper — il l'a rencontré en production le soir même (journal : maintenance
+# il y a 2 j ; base : `"noeuds": {}`) et a répondu INCONNU. Le cas zéro de
+# `standards/04-fiabilite-des-controles.md` §2 : une réponse vide est une
+# information, pas une absence d'information.
+#
+# Le marqueur `ok:` est posé par la collecte, et seulement si le curl a rendu
+# HTTP 200 — c'est lui qui distingue « demandé » de « pas pu demander ».
+sonde_base() {
+  case "$1" in
+    *ok:*) ;;
+    *) echo "-"; return ;;
+  esac
+  echo "$1" | sed 's/ok://g' | tr ';' '\n' \
+    | grep -oE "^$2:[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}" | head -1 \
+    | cut -d: -f2- | tr 'T' ' '
+}
+
 # ── Taille du cache de build Docker en Go entiers (PURE — testable) ──────────
 # `docker system df` rend « 64.68GB », « 980MB »… Rend -1 si illisible :
 # INCONNU n'est jamais OK (règle 1 du CLAUDE.md).
@@ -241,6 +270,74 @@ verdicts_selftest() {
   sm "journal illisible"                   INCONNU    ""   2880  720
   sm "âge journal aberrant"                INCONNU    "x"  2880  720
   sm "âge base aberrant"                   INCONNU    2880 "hier" 720
+
+  #  ── sonde_base : la traduction « ce qu'a rendu l'API » → entrée de C19 ─────
+  #  C'est ICI qu'était le défaut du 11/08/2026, et non dans la décision : la
+  #  collecte ne savait pas produire « interrogée, vide », donc DIVERGENCE était
+  #  inatteignable en pratique. Ces cas verrouillent la distinction (#305).
+  echo "-- sonde_base : « pas pu demander » n'est pas « rien à dire » --"
+  sb() {  # $1=libellé $2=attendu $3=carte $4=nœud
+    r=$(sonde_base "$3" "$4")
+    if [ "$r" = "$2" ]; then echo "PASS  $1 → '$r'"
+    else echo "FAIL  $1  attendu='$2' obtenu='$r'"; st_fail=1; fi
+  }
+  #  Le cas de production du 11/08 : l'API a répondu 200 avec `"noeuds": {}`.
+  sb "API 200, carte vide → DIVERGENCE possible"  ""  "ok:"  rpi2
+  #  Le cas du standby : aucun nœud n'a pu interroger la base.
+  sb "aucun nœud n'a interrogé la base"          "-"  ""     rpi2
+  sb "clé absente des deux côtés"                "-"  ""     rpi1
+  #  Nominal : la carte porte les deux nœuds.
+  sb "nœud présent dans la carte"                "2026-08-11 00:00:01" \
+     "ok:rpi1:2026-08-11T00:00:01Z;rpi2:2026-08-10T00:00:01Z;" rpi1
+  sb "second nœud de la carte"                   "2026-08-10 00:00:01" \
+     "ok:rpi1:2026-08-11T00:00:01Z;rpi2:2026-08-10T00:00:01Z;" rpi2
+  #  Carte non vide, mais SANS ligne pour ce nœud-là : la base a répondu et n'a
+  #  rien sur lui → DIVERGENCE, surtout pas INCONNU.
+  sb "carte peuplée, nœud absent"                ""  \
+     "ok:rpi1:2026-08-11T00:00:01Z;" rpi2
+  #  Un seul nœud porte l'API : sa carte couvre les deux, celle du standby est
+  #  vide. La concaténation doit rester exploitable.
+  sb "concaténation actif + standby muet"        "2026-08-11 00:00:01" \
+     "ok:rpi1:2026-08-11T00:00:01Z;" rpi1
+
+  #  ── Ordre des blocs : aucun verdict APRÈS la ligne de résumé ──────────────
+  #  Statique, parce que le défaut de #304 n'était pas une valeur fausse mais une
+  #  POSITION : C19 avait été livré après le résumé ET après le bloc d'alerte. Il
+  #  rendait donc des verdicts justes que personne ne comptait ni ne recevait —
+  #  « Résumé : 0 FAIL, 0 WARN » suivi de deux [WARN], en production le 11/08.
+  #  Aucun test de fonction pure ne pouvait le voir : c'est le FICHIER qu'il faut
+  #  regarder. Le prochain contrôle ajouté en fin de fichier échouera ici.
+  echo "-- ordre des blocs : tout verdict avant le résumé --"
+  CR="$(dirname "${BASH_SOURCE[0]}")/check-reliability.sh"
+  L_RESUME=$(grep -n '^echo "Résumé' "$CR" 2>/dev/null | head -1 | cut -d: -f1)
+  compte_verdicts() {  # $1=fichier $2=ligne à partir de laquelle compter
+    awk -v l="$2" '
+      NR<=l { next }
+      { t=$0; sub(/^[[:space:]]+/,"",t); if (t ~ /^#/) next }
+      /(^|[[:space:];)])(ok|warn|fail) "/ { n++ }
+      END { print n+0 }' "$1"
+  }
+  #  Auto-contrôle avant de conclure : sans fichier, sans repère ou sans motif
+  #  reconnu, ce contrôle ne mesure rien — il échoue au lieu de passer au vert
+  #  (`standards/04-fiabilite-des-controles.md` §2).
+  if [ ! -r "$CR" ]; then
+    echo "FAIL  check-reliability.sh illisible — contrôle d ordre inopérant"; st_fail=1
+  elif [ -z "$L_RESUME" ]; then
+    echo "FAIL  ligne de résumé introuvable — le repère a changé, contrôle inopérant"; st_fail=1
+  else
+    TOTAL=$(compte_verdicts "$CR" 0)
+    APRES=$(compte_verdicts "$CR" "$L_RESUME")
+    if [ "$TOTAL" -lt 15 ]; then
+      echo "FAIL  $TOTAL verdict(s) reconnus dans $CR — motif changé, contrôle inopérant"; st_fail=1
+    elif [ "$APRES" -ne 0 ]; then
+      echo "FAIL  $APRES verdict(s) rendus APRÈS la ligne $L_RESUME (résumé) :"
+      echo "      ils sortent du décompte ET du mail d alerte, comme C19 en v2.52.0."
+      st_fail=1
+    else
+      echo "PASS  les $TOTAL verdicts sont rendus avant le résumé (ligne $L_RESUME)"
+    fi
+  fi
+
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail
 }

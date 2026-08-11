@@ -72,15 +72,37 @@
 	//  agrégation — dans des cartes séparées : trois tableaux pour un même fait,
 	//  aucun ne le disant. Signalé illisible par l'utilisateur le 11/08/2026.
 	//  Le détail vit désormais SOUS la ligne qui l'annonce.
-	const SOURCE: Record<string, { url: string; limite: number }> = {
-		backup: { url: '/admin/sauvegardes/historique', limite: 4 },
-		telemetrie: { url: '/admin/telemetry/historique', limite: 4 }
+	const SOURCE: Record<string, string> = {
+		backup: '/admin/sauvegardes/historique',
+		telemetrie: '/admin/telemetry/historique'
 	};
 
+	//  Profondeur d'historique sous une ligne dépliée. UNE constante : elle était
+	//  écrite trois fois — dans `SOURCE.limite`, qui n'était même pas lue, dans
+	//  l'URL des tâches à source commune, et dans le `slice` des tables propres.
+	//  Portée de 4 à 10 le 11/08/2026 en supprimant les deux cartes de détail qui
+	//  montraient l'historique complet (#299) : les retirer sans compenser aurait
+	//  réduit en silence ce qu'un administrateur peut voir.
+	const PROFONDEUR = 10;
+
 	function urlHistorique(tache: string): string {
-		const s = SOURCE[tache];
-		return s ? s.url : `/admin/maintenance/historique?tache=${encodeURIComponent(tache)}&limite=4`;
+		return (
+			SOURCE[tache] ??
+			`/admin/maintenance/historique?tache=${encodeURIComponent(tache)}&limite=${PROFONDEUR}`
+		);
 	}
+
+	//  Ce que fait une tâche, quand sa ligne seule ne le dit pas. Repris des deux
+	//  cartes supprimées avec #299 : elles faisaient double emploi pour
+	//  l'historique, mais portaient ces informations-là, et rien d'autre ne les
+	//  donnait. Les supprimer sans les déplacer aurait perdu la seule mention du
+	//  lieu de stockage des archives.
+	const AIDE_TACHE: Record<string, string> = {
+		backup: 'Stockage des archives : /data/5hostachy/backups/',
+		telemetrie:
+			'Automatique chaque nuit à 2 h. Agrège les événements bruts en données ' +
+			'journalières puis mensuelles, et purge les données expirées.'
+	};
 
 	let historiques: Record<string, any[]> = {};
 	let enChargement: Record<string, boolean> = {};
@@ -92,7 +114,7 @@
 			const lignes = await api.get<any[]>(urlHistorique(tache));
 			//  Les tables propres à une tâche ne savent pas se limiter côté serveur :
 			//  on tronque ici, à la même profondeur que les autres.
-			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, 4) };
+			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, PROFONDEUR) };
 		} catch {
 			historiques = { ...historiques, [tache]: [] };
 		} finally {
@@ -125,6 +147,30 @@
 		const mo = n / (1024 * 1024);
 		return mo >= 1024 ? `${(mo / 1024).toFixed(2)} Go` : `${mo.toFixed(1)} Mo`;
 	}
+
+	//  Colonnes propres à la sauvegarde et à l'agrégation. Elles vivaient dans les
+	//  deux cartes supprimées avec #299, et la ligne dépliée ne savait pas les
+	//  rendre : la taille des archives, le déclencheur, le volume agrégé et les
+	//  lignes purgées avaient donc disparu de l'écran. Signalé par l'utilisateur
+	//  le 11/08/2026 — la compensation portait sur la PROFONDEUR de l'historique
+	//  et j'avais manqué sa LARGEUR.
+	//
+	//  Chacune suit la même règle que Taille DB et Détail : présente dès qu'une
+	//  ligne la renseigne, absente sinon. Une tâche ne montre donc que les
+	//  colonnes que sa table sait remplir.
+	const CHAMPS_PURGE = ['events_purges', 'daily_purges', 'monthly_purges'];
+
+	//  0 est une valeur, pas une absence : `aValeur` ne retient que null, undefined
+	//  et la chaîne vide. Une purge qui n'a rien eu à purger doit s'afficher « 0 ».
+	const aPurges = (lignes: any[]) => CHAMPS_PURGE.some((c) => aValeur(lignes, c));
+
+	const totalPurges = (l: any): number =>
+		CHAMPS_PURGE.reduce((somme, c) => somme + (Number(l?.[c]) || 0), 0);
+
+	//  « 1 jour · 0 mois » — le pluriel suit le nombre de JOURS, comme dans la
+	//  carte d'origine ; les mois gardent leur forme courte.
+	const fmtAgrege = (l: any): string =>
+		`${l.jours_agreges} jour${l.jours_agreges > 1 ? 's' : ''} · ${l.mois_agreges} mois`;
 
 	//  Seules ces trois tâches savent se lancer à la main : les autres n'ont pas
 	//  d'équivalent in-process. Ne montrer le bouton que là où il agit.
@@ -232,6 +278,9 @@
 							{@const lignes = historiques[t.tache] ?? []}
 							<tr class="detail">
 								<td colspan="4">
+									{#if AIDE_TACHE[t.tache]}
+										<p class="aide-tache">{AIDE_TACHE[t.tache]}</p>
+									{/if}
 									{#if enChargement[t.tache]}
 										<p class="muted" style="margin:.5rem 0">Chargement...</p>
 									{:else if lignes.length === 0}
@@ -244,8 +293,12 @@
 												<tr>
 													<th>Date</th>
 													{#if aValeur(lignes, 'noeud')}<th>Nœud</th>{/if}
+													{#if aValeur(lignes, 'declenchee_par')}<th>Déclenchement</th>{/if}
 													<th>Statut</th>
+													{#if aValeur(lignes, 'jours_agreges')}<th>Événements agrégés</th>{/if}
+													{#if aPurges(lignes)}<th>Purges</th>{/if}
 													{#if aValeur(lignes, 'duree_secondes')}<th>Durée</th>{/if}
+													{#if aValeur(lignes, 'taille_octets')}<th>Taille</th>{/if}
 													{#if aValeur(lignes, 'taille_db_octets')}<th>Taille DB</th>{/if}
 													{#if aValeur(lignes, 'details')}<th>Détail</th>{/if}
 												</tr>
@@ -257,13 +310,28 @@
 														{#if aValeur(lignes, 'noeud')}
 															<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
 														{/if}
+														{#if aValeur(lignes, 'declenchee_par')}
+															<td style="color:var(--color-text-muted)">{l.declenchee_par ?? '—'}</td>
+														{/if}
 														<td>
 															<span class="badge {l.statut === 'erreur' || l.statut === 'echouee' ? 'badge-red' : 'badge-green'}">
 																{l.statut ?? '—'}
 															</span>
+															<!--  Le motif de l'échec était porté par la carte supprimée avec
+															      #299 : sans lui, un statut « erreur » ne dit pas pourquoi. -->
+															{#if l.erreur}<span title={l.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
 														</td>
+														{#if aValeur(lignes, 'jours_agreges')}
+															<td style="color:var(--color-text-muted)">{fmtAgrege(l)}</td>
+														{/if}
+														{#if aPurges(lignes)}
+															<td style="color:var(--color-text-muted)">{totalPurges(l)} lignes</td>
+														{/if}
 														{#if aValeur(lignes, 'duree_secondes')}
 															<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
+														{/if}
+														{#if aValeur(lignes, 'taille_octets')}
+															<td>{fmtOctets(l.taille_octets)}</td>
 														{/if}
 														{#if aValeur(lignes, 'taille_db_octets')}
 															<td>{fmtOctets(l.taille_db_octets)}</td>
@@ -279,7 +347,18 @@
 										</table>
 									{/if}
 									{#if LANCEMENT[t.tache]}
-										<div style="margin:.5rem 0 .25rem;padding-left:.75rem">
+										<!--  Bouton à DROITE, comme dans les deux cartes supprimées avec #299
+										      et comme partout ailleurs dans le projet : action primaire à
+										      droite (`ux-patterns` §9). Collé à gauche sous le tableau, il se
+										      lisait comme une cellule de plus. Signalé par l'utilisateur le
+										      11/08/2026. La note de la maintenance reste à gauche : elle se lit
+										      AVANT le geste qu'elle nuance, pas après. -->
+										<div class="lancement">
+											{#if t.tache === 'maintenance'}
+												<span class="muted note-lancement">
+													part applicative seulement — l'hygiène du nœud en veille reste au script hebdomadaire
+												</span>
+											{/if}
 											<button class="btn btn-primary" style="font-size:.8rem;padding:.3rem .7rem"
 												on:click|stopPropagation={() => declencher(t.tache)}
 												disabled={enCours === t.tache}
@@ -288,11 +367,6 @@
 													: ''}>
 												{enCours === t.tache ? 'En cours...' : `Lancer ${LIBELLE_TACHE[t.tache].toLowerCase()}`}
 											</button>
-											{#if t.tache === 'maintenance'}
-												<span class="muted" style="font-size:.75rem;margin-left:.5rem">
-													part applicative seulement — l'hygiène du nœud en veille reste au script hebdomadaire
-												</span>
-											{/if}
 										</div>
 									{/if}
 								</td>
@@ -323,4 +397,17 @@
 		color: var(--color-primary); font-size: .9rem; margin-right: .4rem;
 	}
 	.chevron.open { transform: rotate(90deg); }
+	/*  Aide propre à une tâche, en tête de son détail — recueillie des deux cartes
+	    supprimées avec #299. */
+	.aide-tache {
+		margin: .5rem 0 .25rem; padding-left: .75rem;
+		font-size: .78rem; color: var(--color-text-muted);
+	}
+	/*  Action primaire à droite. `margin-right:auto` sur la note plutôt que
+	    `space-between` : sans note, le bouton doit rester à droite quand même. */
+	.lancement {
+		display: flex; align-items: center; justify-content: flex-end;
+		gap: .75rem; margin: .5rem 0 .25rem; padding: 0 .75rem;
+	}
+	.note-lancement { font-size: .75rem; margin-right: auto; }
 </style>

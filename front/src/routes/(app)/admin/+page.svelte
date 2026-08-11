@@ -2,7 +2,6 @@
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
 import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
-import { titreDetail } from '$lib/taches';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -130,52 +129,16 @@ toast('error', e.message ?? 'Erreur');
 }
 }
 
-//  Sauvegardes 
-let historique: any[] = [];
-let historiqueLoading = true;
-let backupEnCours = false;
+//  Le sous-onglet Maintenance ne charge plus rien lui-même : `TachesPlanifiees`
+//  charge sa synthèse, déplie l'historique de la tâche qu'on ouvre et porte son
+//  bouton de lancement. Les deux cartes qui doublaient tout cela sont parties
+//  avec #299, et avec elles `historique`, `historiqueTelemetrie` et leurs
+//  déclencheurs — précharger ici des tableaux que plus personne n'affiche aurait
+//  laissé deux appels d'API sans lecteur.
 
-async function loadHistorique() {
-historiqueLoading = true;
-try {
-historique = await api.get<any[]>('/admin/sauvegardes/historique');
-} finally {
-historiqueLoading = false;
-}
-}
-
-async function declencherSauvegarde() {
-backupEnCours = true;
-try {
-await api.post('/admin/sauvegardes/maintenant');
-toast('success', 'Sauvegarde lancee en arriere-plan.');
-setTimeout(loadHistorique, 3000);
-} catch (e: any) {
-toast('error', e.message ?? 'Erreur');
-} finally {
-backupEnCours = false;
-}
-}
-
-// Un seul chargement pour tout le sous-onglet : santé, sauvegardes et
-// maintenance décrivent le même sujet, il n'y a pas de raison de les charger
-// séparément — et l'utilisateur ne verrait pas trois états de chargement.
-//  Le composant `TachesPlanifiees` charge lui-même santé et exécutions —
-//  la référence sert au bouton de rafraîchissement après un déclenchement.
-let tachesPlanifiees: any;
-
-function openMaintenanceTab() {
-onglet = 'maintenance';
-loadHistorique();
-loadHistoriqueTelemetrie();
-}
-
-//  Télémétrie 
+//  Télémétrie
 let telemetryData: any = null;
 let telemetryLoading = true;
-let telemetryAggEnCours = false;
-let historiqueTelemetrie: any[] = [];
-let telemetryHistLoading = true;
 let tlScope: 'jour' | 'mois' | 'annee' = 'jour';
 
 async function loadTelemetry() {
@@ -189,27 +152,6 @@ finally { telemetryLoading = false; }
 function switchTlScope(s: 'jour' | 'mois' | 'annee') {
 tlScope = s;
 loadTelemetry();
-}
-
-async function loadHistoriqueTelemetrie() {
-telemetryHistLoading = true;
-try {
-historiqueTelemetrie = await api.get<any[]>('/admin/telemetry/historique');
-} catch { historiqueTelemetrie = []; }
-finally { telemetryHistLoading = false; }
-}
-
-async function declencherAggregation() {
-telemetryAggEnCours = true;
-try {
-await api.post('/admin/telemetry/agreger');
-toast('success', 'Agrégation lancée en arrière-plan.');
-setTimeout(() => { loadTelemetry(); loadHistoriqueTelemetrie(); }, 4000);
-} catch (e: any) {
-toast('error', e.message ?? 'Erreur');
-} finally {
-telemetryAggEnCours = false;
-}
 }
 
 //  Modeles e-mail 
@@ -664,21 +606,12 @@ try {
 loadBatiments();
 loadComptes();
 loadCommandes();
-loadHistorique();
 loadEmails();
 loadDemandesProfil();
 loadWaScheduled();
 loadWaLogs();
 loadTelemetry();
-loadHistoriqueTelemetrie();
 });
-
-function statutBadge(s: string) {
-const map: Record<string, string> = {
-succes: 'badge-green', erreur: 'badge-red', echec: 'badge-red', en_cours: 'badge-orange',
-};
-return map[s] ?? 'badge-gray';
-}
 
 // ── Paramétrage site ──────────────────────────────────────────
 let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_heures: 48, relance_syndic_delai_jours: 30, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
@@ -972,7 +905,7 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>
       📊 Télémétrie
     </button>
-    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={openMaintenanceTab}>
+    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>
       🔧 Maintenance
     </button>
   </div>
@@ -1398,89 +1331,16 @@ $: _siteNom = $siteNomStore;
   son rapport au nœud actif.
 </p>
 
-<TachesPlanifiees bind:this={tachesPlanifiees} />
-
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-
-<section class="config-section">
-  <!-- Titre construit depuis `$lib/taches.ts` : c'est ce qui garantit que la carte
-       porte le MÊME nom que la ligne de la synthèse qui y renvoie. Écrit à la main,
-       il disait « Système — Sauvegardes » là où la synthèse disait « Sauvegarde
-       quotidienne » — on ne pouvait pas relier les deux. -->
-  <h2 class="config-section-title">&#x1F5A5;️ {titreDetail('backup')}</h2>
-  <div class="backup-header">
-    <p class="muted">Stockage : <code>/data/5hostachy/backups/</code></p>
-    <button class="btn btn-primary" on:click={declencherSauvegarde} disabled={backupEnCours}>
-      {#if backupEnCours}En cours...{:else}Déclencher maintenant{/if}
-    </button>
-  </div>
-  {#if historiqueLoading}
-    <p class="muted">Chargement...</p>
-  {:else if historique.length === 0}
-    <div class="empty-state">
-      <h3>Aucune sauvegarde</h3>
-      <p>Cliquez sur Déclencher maintenant pour lancer la première sauvegarde.</p>
-    </div>
-  {:else}
-    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
-      <table class="table" style="font-size:.82rem">
-        <thead class="sticky-head"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Taille</th><th>Durée</th></tr></thead>
-        <tbody>
-          {#each historique as h}
-            <tr>
-              <td style="font-size:.85rem">{fmt(h.cree_le)}</td>
-              <td style="color:var(--color-text-muted)">{h.declenchee_par}</td>
-              <td><span class="badge {statutBadge(h.statut)}">{h.statut}</span></td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{h.taille_octets ? (h.taille_octets / 1024 / 1024).toFixed(1) + ' Mo' : ''}</td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{h.duree_secondes != null ? h.duree_secondes + ' s' : ''}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-</section>
-
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-
-<section class="config-section">
-  <h2 class="config-section-title">🕓 {titreDetail('telemetrie')}</h2>
-  <div class="backup-header">
-    <p class="muted" style="font-size:.85rem">Exécutions de l'agrégation de la télémétrie (automatique chaque nuit à 2h, ou manuelle). Agrège les événements bruts en données journalières puis mensuelles, et purge les données expirées.</p>
-    <button class="btn btn-primary" on:click={declencherAggregation} disabled={telemetryAggEnCours}>
-      {telemetryAggEnCours ? 'En cours...' : 'Déclencher maintenant'}
-    </button>
-  </div>
-  {#if telemetryHistLoading}
-    <p class="muted">Chargement...</p>
-  {:else if historiqueTelemetrie.length === 0}
-    <div class="empty-state">
-      <h3>Aucune exécution enregistrée</h3>
-      <p>L'agrégation n'a pas encore été exécutée.</p>
-    </div>
-  {:else}
-    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
-      <table class="table" style="font-size:.82rem">
-        <thead class="sticky-head"><tr><th>Date</th><th>Déclenchement</th><th>Statut</th><th>Événements agrégés</th><th>Purges</th><th>Durée</th></tr></thead>
-        <tbody>
-          {#each historiqueTelemetrie as h}
-            <tr>
-              <td style="font-size:.85rem">{fmt(h.cree_le)}</td>
-              <td style="color:var(--color-text-muted)">{h.declenchee_par}</td>
-              <td>
-                <span class="badge {h.statut === 'succes' ? 'badge-green' : h.statut === 'en_cours' ? 'badge-yellow' : 'badge-red'}">{h.statut === 'en_cours' ? 'en cours' : h.statut}</span>
-                {#if h.erreur}<span title={h.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
-              </td>
-              <td style="font-size:.85rem;color:var(--color-text-muted)">{h.jours_agreges} jour{h.jours_agreges > 1 ? 's' : ''} · {h.mois_agreges} mois</td>
-              <td style="font-size:.85rem;color:var(--color-text-muted)">{h.events_purges + h.daily_purges + h.monthly_purges} lignes</td>
-              <td style="font-size:.85rem;color:var(--color-text-muted)">{h.duree_secondes != null ? h.duree_secondes + ' s' : '—'}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-</section>
+<!--  Les deux cartes « Sauvegarde quotidienne — historique » et « Agrégation
+      télémétrie — historique » vivaient ici. Supprimées avec #299 : depuis que la
+      synthèse déplie l'historique de chaque tâche et porte son bouton de
+      lancement, elles montraient les MÊMES lignes, tirées des MÊMES endpoints,
+      sous un titre construit exprès pour ressembler à celui de la synthèse.
+      Ce qu'elles portaient d'unique — le lieu de stockage des archives et le rôle
+      de l'agrégation — est déplacé dans `TachesPlanifiees` (AIDE_TACHE), et la
+      profondeur d'historique y passe de 4 à 10 : retirer les cartes sans
+      compenser aurait réduit en silence ce qu'un administrateur peut voir. -->
+<TachesPlanifiees />
 
 {:else if onglet === 'emails'}
 <p class="muted" style="margin-bottom:1rem">Modeles utilises pour les notifications automatiques.</p>
@@ -2273,9 +2133,10 @@ $: _siteNom = $siteNomStore;
 {/if}
 
 <style>
-/* `.sticky-head`, `.config-section`, `.config-section-title`, `.muted` et
-   `.backup-header` sont passées dans `app.css` le 11/08/2026 : scopées ici,
-   elles ne suivaient pas les composants extraits de cette page. */
+/* `.sticky-head`, `.config-section`, `.config-section-title` et `.muted` sont
+   passées dans `app.css` le 11/08/2026 : scopées ici, elles ne suivaient pas les
+   composants extraits de cette page. (`.backup-header` y était aussi, et en est
+   repartie avec les deux cartes qui l'utilisaient — #299.) */
 .page-header { display: flex; align-items: center; margin-bottom: 1.5rem; padding-left: 1.25rem; }
 .page-header h1 { font-size: 1.4rem; font-weight: 700; }
 .tabs-group { margin-bottom: 0; }

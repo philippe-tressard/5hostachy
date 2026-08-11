@@ -1,20 +1,51 @@
 ---
 name: user-manual
-description: "Update the 5Hostachy user manual (manuel-utilisateur.html) when a feature is added or modified. Use when: adding a new feature visible to users, modifying UI behavior, adding a new page or section, updating navigation or workflows. Do NOT use for purely technical changes (migrations, refactor, backend-only security)."
+description: "Update the 5Hostachy user-facing documentation — manuel-utilisateur.html AND README.md — when a feature is added, modified or removed. Use when: adding a new feature visible to users, modifying UI behavior, adding or removing a page, screen or module, updating navigation or workflows. Do NOT use for purely technical changes (migrations, refactor, backend-only security)."
 argument-hint: "Describe the feature to document (e.g. 'new fournisseurs page with list and detail')"
 ---
 
-# Manuel Utilisateur — 5Hostachy
+# Documentation utilisateur — 5Hostachy
 
-Met à jour `docs/manuel-utilisateur.html` et synchronise vers `front/static/manuel-utilisateur.html`.
+**DEUX documents, pas un.** Cette skill couvre `docs/manuel-utilisateur.html`
+(synchronisé vers `front/static/`) **et** `README.md`. Ils sont de **même rang** :
+un changement visible se répercute dans les deux quand il touche les deux.
+
+## Les deux questions à se poser — elles n'ont pas la même réponse
+
+| Document | Répond à | À mettre à jour quand… |
+|---|---|---|
+| `docs/manuel-utilisateur.html` | **comment on s'en sert** | tout changement visible : écran, libellé, geste, parcours, ce qui apparaît ou disparaît sous les yeux d'un résident ou d'un administrateur |
+| `README.md` | **ce que le produit EST** | un module, un écran de premier niveau ou une capacité est **ajouté, retiré ou renommé** · la pile technique change · un document du tableau `docs/` bouge · une commande d'exploitation change |
+
+Un lot peut légitimement ne toucher qu'un seul des deux — mais alors on le **dit**,
+on ne l'omet pas en silence. Exemple : supprimer deux cartes redondantes de
+l'onglet Maintenance (#299) change le manuel — le geste pour consulter un
+historique n'est plus le même — et **pas** le README, dont la ligne « Maintenance
+— Tâches automatiques + déclenchement manuel » reste vraie.
+
+> **Pourquoi cette skill porte les deux depuis le 11/08/2026.** Le manuel était
+> vérifié par réflexe et le README jamais : la consigne du projet ne nommait que
+> le manuel, alors que le point **0e** du pré-check dit « README · manuel ·
+> `specs/` » depuis toujours. Deux listes ont divergé, et c'est la plus courte qui
+> a été suivie. Signalé par l'utilisateur.
 
 ## Règle obligatoire
 
-Toute modification UX ou fonctionnalité visible **doit** être documentée dans le manuel utilisateur dans le **même commit** que la fonctionnalité. Après modification :
+Toute modification UX ou fonctionnalité visible **doit** être documentée dans le
+**même commit** que la fonctionnalité. Après modification du manuel :
 
 ```powershell
 Copy-Item 5hostachy/docs/manuel-utilisateur.html 5hostachy/front/static/manuel-utilisateur.html
 ```
+
+⚠️ **Ne jamais éditer le manuel avec `sed -i`** : il est versionné en **CRLF**, et
+`sed` le réécrit en LF — le diff passe alors de 3 lignes à 5 700, et la
+relecture devient impossible. Vérifier après coup : `git diff --stat`.
+
+Ce qui est vérifié **mécaniquement** (`api/tests/test_documentation.py`) : la
+synchronisation `docs/` ⇆ `front/static/` et les badges du README (Python, Node,
+CI). Le **fond** des deux documents reste à relire — aucun test ne sait dire si
+une phrase décrit encore l'application.
 
 ## Structure du document
 

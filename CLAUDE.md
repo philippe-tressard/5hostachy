@@ -34,7 +34,7 @@ quand la tâche le demande** — ouvrir la skill *avant* d'agir, jamais après.
 | Page ou composant SvelteKit, store, appel API côté front | `.claude/skills/svelte-patterns` |
 | Nouveau modèle, schéma, router, migration | `.claude/skills/api-scaffold` |
 | Auth, droits, secrets, exposition publique | `.claude/skills/security-audit` |
-| Manuel utilisateur (`docs/manuel-utilisateur.html`) | `.claude/skills/user-manual` |
+| Documentation utilisateur — manuel **et** `README.md` | `.claude/skills/user-manual` |
 
 Les bonnes pratiques **génériques** — valables pour un autre projet — sont dans le
 socle `~/.claude/standards/`. Ce fichier-ci ne contient que leur **instanciation
@@ -167,9 +167,23 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - [ ] Router créé + enregistré dans `main.py`
 - [ ] Client TypeScript ajouté dans `front/src/lib/api.ts`
 
-### Manuel utilisateur
-- [ ] `docs/manuel-utilisateur.html` mis à jour dans le même commit
+### Documentation utilisateur — **deux** documents de même rang
+- [ ] `docs/manuel-utilisateur.html` — **comment on s'en sert** : mis à jour dans le
+      même commit dès qu'un écran, un libellé, un geste ou un parcours change
 - [ ] Synchronisé : `Copy-Item docs/manuel-utilisateur.html front/static/manuel-utilisateur.html`
+- [ ] `README.md` — **ce que le produit est** : mis à jour dès qu'un module, un écran
+      de premier niveau ou une capacité est **ajouté, retiré ou renommé**, que la pile
+      change, ou qu'un document du tableau `docs/` bouge
+- [ ] Un lot qui ne touche qu'un seul des deux, c'est possible — mais on **dit** lequel
+      et pourquoi, on ne l'omet pas en silence
+
+> ⚠️ Le manuel ne se modifie **jamais** avec `sed -i` : il est versionné en CRLF, que
+> `sed` réécrit en LF — le diff passe de 3 lignes à 5 700. Vérifier `git diff --stat`.
+>
+> Le README était vérifié par personne alors que le point **0e** du pré-check le nomme
+> depuis toujours au même rang que le manuel : cette checklist-ci ne citait que le
+> manuel, et c'est la liste la plus courte qui a été suivie (11/08/2026, signalé par
+> l'utilisateur). Détail et déclencheurs : `.claude/skills/user-manual`.
 
 ### Tests préventifs (CI : `api/tests/`, lancés à chaque PR)
 
