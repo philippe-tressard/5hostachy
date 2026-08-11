@@ -2268,19 +2268,9 @@ $: _siteNom = $siteNomStore;
 {/if}
 
 <style>
-/* En-tête de tableau qui reste visible au défilement.
-   Le `z-index` n'est PAS optionnel : sans lui, les cellules du corps se
-   dessinent PAR-DESSUS l'en-tête collé, qui réapparaît alors au milieu du
-   tableau (constaté le 02/08/2026 sur l'historique des sauvegardes).
-   Règle unique plutôt que le style inline qui était recopié sur chaque
-   tableau — c'était la même déclaration à quatre endroits, donc quatre fois
-   le même défaut. */
-.sticky-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--color-surface);
-}
+/* `.sticky-head`, `.config-section`, `.config-section-title`, `.muted` et
+   `.backup-header` sont passées dans `app.css` le 11/08/2026 : scopées ici,
+   elles ne suivaient pas les composants extraits de cette page. */
 .page-header { display: flex; align-items: center; margin-bottom: 1.5rem; padding-left: 1.25rem; }
 .page-header h1 { font-size: 1.4rem; font-weight: 700; }
 .tabs-group { margin-bottom: 0; }
@@ -2309,18 +2299,6 @@ font-size: .7rem; padding: .1rem .45rem; font-weight: 700;
 padding: .3rem .5rem; border: 1px solid var(--color-border);
 border-radius: var(--radius); font-size: .85rem; min-width: 160px;
 }
-.backup-header {
-display: flex; justify-content: space-between; align-items: center;
-margin-bottom: .5rem; flex-wrap: wrap; gap: .75rem;
-}
-.backup-header p {
-margin: 0;
-flex: 1 1 320px;
-}
-.backup-header .btn {
-margin-left: auto;
-}
-.muted { color: var(--color-text-muted); }
 code { background: var(--color-bg); padding: .1rem .35rem; border-radius: .25rem; font-size: .85em; }
 .role-select {
 padding: .25rem .4rem; border: 1px solid var(--color-border);
@@ -2354,8 +2332,6 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .825rem; font-weight: 500; }
 .email-label { display: block; font-size: .78rem; font-weight: 500; color: var(--color-text-muted); margin-bottom: .25rem; }
 .email-input { width: 100%; padding: .4rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .85rem; font-family: monospace; box-sizing: border-box; resize: vertical; }
-.config-section { margin-bottom: 1.25rem; }
-.config-section-title { font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
 .field-label { display: flex; flex-direction: column; gap: .25rem; font-size: .825rem; font-weight: 500; }
 .field-hint { font-size: .75rem; color: var(--color-text-muted); }
 .ref-list { display: flex; flex-direction: column; gap: .4rem; }

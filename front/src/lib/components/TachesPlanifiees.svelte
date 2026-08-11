@@ -173,18 +173,15 @@
 		<p class="muted" style="font-size:.85rem">
 			Toutes les tâches planifiées des deux nœuds, pas seulement la maintenance —
 			la colonne <strong>Tâche</strong> les distingue. Taille DB et Détail ne sont
-			renseignés que par la maintenance applicative.
+			renseignés que par la maintenance applicative. Le bouton exécute cette part
+			applicative (purges, VACUUM) sur ce nœud : il ne remplace pas le script
+			hebdomadaire, qui fait en plus l'hygiène du nœud en veille.
 		</p>
 		<button class="btn btn-primary" on:click={declencher} disabled={enCours}
-			title="Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille.">
+			title="Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille : images Docker, cache de build, rotation des journaux.">
 			{enCours ? 'En cours...' : 'Lancer la maintenance applicative'}
 		</button>
 	</div>
-	<p class="muted" style="font-size:.8rem;margin-top:-.25rem">
-		Ce bouton exécute la part <strong>applicative</strong> (purges, VACUUM) sur ce
-		nœud. Il ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du
-		nœud en veille — images Docker, cache de build, rotation des journaux.
-	</p>
 	{#if executionsLoading}
 		<p class="muted">Chargement...</p>
 	{:else if executions.length === 0}
