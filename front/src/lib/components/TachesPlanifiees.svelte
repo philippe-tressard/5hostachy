@@ -12,7 +12,13 @@
 	import { api } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { LIBELLE_TACHE } from '$lib/taches';
+	import { LIBELLE_TACHE, LIBELLE_ACTION } from '$lib/taches';
+
+	//  Le bouton dit ce qu'il FAIT, pas le nom de la tâche — voir LIBELLE_ACTION.
+	//  Défaut : « Lancer <nom de la tâche> », qui reste juste là où le bouton
+	//  déclenche bien la tâche entière (sauvegarde, agrégation).
+	const libelleBouton = (t: string) =>
+		LIBELLE_ACTION[t] ?? `Lancer ${LIBELLE_TACHE[t].toLowerCase()}`;
 
 	let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
 	let santeLoading = true;
@@ -365,7 +371,7 @@
 												title={t.tache === 'maintenance'
 													? "Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille."
 													: ''}>
-												{enCours === t.tache ? 'En cours...' : `Lancer ${LIBELLE_TACHE[t.tache].toLowerCase()}`}
+												{enCours === t.tache ? 'En cours...' : libelleBouton(t.tache)}
 											</button>
 										</div>
 									{/if}

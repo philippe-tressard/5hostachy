@@ -253,7 +253,16 @@ CMT=$(sur "$ACTIF" 'git -C /opt/5hostachy log -1 --format=%cI 2>/dev/null')
 if [ -z "$IMG" ] || [ -z "$CMT" ]; then V12=INCONNU
 elif [ "$(date -d "$IMG" +%s 2>/dev/null)" -ge "$(date -d "$CMT" +%s 2>/dev/null)" ]; then V12=OK
 else V12=FAIL; fi
-rapporter 12 "$V12" "Image postérieure au commit déployé" "image=${IMG:0:19} commit=${CMT:0:19}"
+#  Les deux instants s'affichent dans le MÊME référentiel — celui du poste.
+#  Tronquer à 19 caractères supprimait justement ce qui portait le fuseau : le
+#  `Z` de Docker (UTC) d'un côté, le `+02:00` de git (local) de l'autre. Le
+#  détail montrait alors « image=…20:24:29 commit=…22:19:39 » à côté d'un verdict
+#  OK — deux chiffres incomparables qui contredisaient leur propre conclusion,
+#  alors que la comparaison, elle, était juste (#313). Un contrôle dont le détail
+#  dément le verdict pousse à ignorer le détail.
+horodate() { date -d "$1" '+%d/%m %H:%M:%S' 2>/dev/null || echo "?"; }
+rapporter 12 "$V12" "Image postérieure au commit déployé" \
+          "image=$(horodate "$IMG") commit=$(horodate "$CMT") (heure du poste)"
 
 # 13 — le canal d'alerte a-t-il émis ? On croise la dernière ALERTE et le dernier
 #      ÉCHEC, tous deux horodatés. Les « Email KO » ne le sont pas : les compter

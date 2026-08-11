@@ -27,3 +27,20 @@ export const LIBELLE_TACHE: Record<string, string> = {
 	//  « exécution manquante » se lirait comme une panne alors qu'il s'agit d'un oubli.
 	export_hors_site: 'Copie hors site (manuelle)'
 };
+
+//  Libellé du BOUTON qui lance une tâche à la main — quand il diffère du nom de
+//  la tâche. Le nom d'une tâche planifiée et le nom de l'action déclenchable ne
+//  sont pas la même chose : le bouton de la maintenance annonçait « Lancer
+//  maintenance hebdomadaire » alors qu'il n'exécute que la part applicative
+//  in-process (purges + VACUUM, sur le nœud qui répond). Le script hebdomadaire
+//  fait cela ET l'hygiène du nœud en veille, que rien dans l'interface ne
+//  déclenche.
+//
+//  Le 11/08/2026, l'utilisateur a cliqué ce bouton en croyant relancer la tâche
+//  entière — et le rapport ainsi inséré a fait passer le badge au vert, masquant
+//  le symptôme qu'un contrôle en cours d'observation attendait. La nuance était
+//  écrite : en petit, à côté. Le libellé est ce qu'on lit avant d'agir ; une note
+//  posée à côté ne corrige pas une promesse portée par le bouton lui-même.
+export const LIBELLE_ACTION: Record<string, string> = {
+	maintenance: 'Lancer la purge applicative'
+};
