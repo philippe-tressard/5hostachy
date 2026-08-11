@@ -295,7 +295,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 
 **Aucune MEP sans avoir chargé `.claude/skills/mep-precheck`.** Cette skill porte les
 étapes 0 et 0 bis (poste de développement, exigences sans exception), le **pré-check
-15 points**, le **post-check P1–P10**, le rollback, la rétrospective du 26/07/2026 et
+15 points**, le **post-check P1–P11**, le rollback, la rétrospective du 26/07/2026 et
 l'état de la surveillance continue. Elle porte surtout les trois règles qui priment
 sur la liste des contrôles :
 
