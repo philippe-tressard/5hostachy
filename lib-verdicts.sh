@@ -110,9 +110,42 @@ sonde_base() {
     *ok:*) ;;
     *) echo "-"; return ;;
   esac
+  #  L'horodatage ressort tel quel, `Z` compris : il est en UTC, et `date -d` sait
+  #  le lire. Le convertir en « AAAA-MM-JJ HH:MM:SS » le ferait interpréter comme
+  #  une heure LOCALE — mesuré le 11/08/2026 sur le même rapport : 8 min avec le
+  #  `Z`, 128 min sans. Deux heures d'erreur silencieuse sur une tolérance de 12 h.
   echo "$1" | sed 's/ok://g' | tr ';' '\n' \
-    | grep -oE "^$2:[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}" | head -1 \
-    | cut -d: -f2- | tr 'T' ' '
+    | grep -oE "^$2:$RAPPORTS_MOTIF_TS" | head -1 | cut -d: -f2-
+}
+
+# ── Extraction des rapports depuis la réponse de l'API (PURE — testable) ─────
+# $1 = corps de la réponse suivi de « |<code HTTP> » (curl -w)
+#
+# POURQUOI cette fonction existe, et pourquoi le motif est UNE constante.
+# Le 11/08/2026, la collecte extrayait les dates avec `"rpi[0-9]": ?"[0-9T:.-]+"`.
+# Le `Z` final des horodatages ISO n'était pas dans la classe, donc le motif ne
+# pouvait JAMAIS compléter une correspondance : la carte revenait vide quoi que
+# rende l'API. C19 en tirait INCONNU en permanence — puis DIVERGENCE en
+# permanence une fois #305 « corrigé », ce qui est pire : un contrôle qui crie
+# toujours ne dit plus rien, et le rendez-vous de #301 aurait été sans valeur.
+#
+# `sonde_base` était testée, et juste. Le défaut vivait EN AMONT d'elle, dans le
+# tuyau qui la nourrit — exactement là où personne ne regardait, comme le défaut
+# d'origine de C19. D'où cette seconde fonction pure : ce qui traduit une réponse
+# d'API en entrée de décision se teste, au même titre que la décision.
+#
+# Le motif est débarrassé de ses guillemets en amont (`tr -d`), ce qui le rend
+# injectable tel quel dans la chaîne COLLECT et testable ici — une seule
+# définition pour les deux usages.
+RAPPORTS_MOTIF_TS='[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}([.][0-9]+)?Z?'
+RAPPORTS_MOTIF="rpi[0-9]:$RAPPORTS_MOTIF_TS"
+
+extraire_rapports() {
+  case "$1" in
+    *"|200") ;;
+    *) echo ""; return ;;          # pas de réponse exploitable : PAS de marqueur
+  esac
+  echo "ok:$(echo "$1" | tr -d '" ' | grep -oE "$RAPPORTS_MOTIF" | tr '\n' ';')"
 }
 
 # ── Taille du cache de build Docker en Go entiers (PURE — testable) ──────────
@@ -286,19 +319,48 @@ verdicts_selftest() {
   #  Le cas du standby : aucun nœud n'a pu interroger la base.
   sb "aucun nœud n'a interrogé la base"          "-"  ""     rpi2
   sb "clé absente des deux côtés"                "-"  ""     rpi1
-  #  Nominal : la carte porte les deux nœuds.
-  sb "nœud présent dans la carte"                "2026-08-11 00:00:01" \
+  #  Nominal : la carte porte les deux nœuds. Le `Z` RESSORT — sans lui, `date -d`
+  #  lirait de l'heure locale et se tromperait de deux heures.
+  sb "nœud présent dans la carte"                "2026-08-11T00:00:01Z" \
      "ok:rpi1:2026-08-11T00:00:01Z;rpi2:2026-08-10T00:00:01Z;" rpi1
-  sb "second nœud de la carte"                   "2026-08-10 00:00:01" \
+  sb "second nœud de la carte"                   "2026-08-10T00:00:01Z" \
      "ok:rpi1:2026-08-11T00:00:01Z;rpi2:2026-08-10T00:00:01Z;" rpi2
+  #  Horodatage à fraction de seconde, la forme que rend réellement l'API.
+  sb "fraction de seconde conservée"             "2026-08-11T20:29:53.712806Z" \
+     "ok:rpi2:2026-08-11T20:29:53.712806Z;" rpi2
   #  Carte non vide, mais SANS ligne pour ce nœud-là : la base a répondu et n'a
   #  rien sur lui → DIVERGENCE, surtout pas INCONNU.
   sb "carte peuplée, nœud absent"                ""  \
      "ok:rpi1:2026-08-11T00:00:01Z;" rpi2
   #  Un seul nœud porte l'API : sa carte couvre les deux, celle du standby est
   #  vide. La concaténation doit rester exploitable.
-  sb "concaténation actif + standby muet"        "2026-08-11 00:00:01" \
+  sb "concaténation actif + standby muet"        "2026-08-11T00:00:01Z" \
      "ok:rpi1:2026-08-11T00:00:01Z;" rpi1
+
+  #  ── extraire_rapports : le tuyau qui NOURRIT sonde_base ────────────────────
+  #  Le défaut du 11/08/2026 vivait ici, pas dans la décision : le motif ne
+  #  pouvait correspondre à aucune réponse réelle. Ces cas partent donc de VRAIES
+  #  réponses de l API, copiées telles quelles depuis la production.
+  echo "-- extraire_rapports : de la réponse brute à la carte --"
+  er() {  # $1=libellé $2=attendu $3=réponse brute
+    r=$(extraire_rapports "$3")
+    if [ "$r" = "$2" ]; then echo "PASS  $1 → '$r'"
+    else echo "FAIL  $1  attendu='$2' obtenu='$r'"; st_fail=1; fi
+  }
+  er "réponse réelle, un nœud" "ok:rpi2:2026-08-11T20:29:53.712806Z;" \
+     '{"tache": "maintenance", "noeuds": {"rpi2": "2026-08-11T20:29:53.712806Z"}, "genere_le": "2026-08-11T20:36:56.297066Z"}|200'
+  er "réponse réelle, deux nœuds" "ok:rpi1:2026-08-11T00:00:01Z;rpi2:2026-08-10T00:00:01Z;" \
+     '{"tache": "bascule", "noeuds": {"rpi1": "2026-08-11T00:00:01Z", "rpi2": "2026-08-10T00:00:01Z"}, "genere_le": "2026-08-11T19:15:53Z"}|200'
+  #  Carte vide MAIS API interrogée : le marqueur doit être là, seul.
+  er "API 200, aucun rapport" "ok:" \
+     '{"tache": "maintenance", "noeuds": {}, "genere_le": "2026-08-11T19:15:24.890687Z"}|200'
+  #  `genere_le` ne doit JAMAIS être pris pour un rapport de nœud.
+  er "genere_le non confondu avec un nœud" "ok:" \
+     '{"noeuds": {}, "genere_le": "2026-08-11T19:15:24Z"}|200'
+  #  Pas 200 → aucun marqueur, donc INCONNU en aval et non DIVERGENCE.
+  er "API en erreur"   "" '{"detail":"Not authenticated"}|401'
+  er "hôte injoignable" "" '|000'
+  er "réponse vide"     "" ''
 
   #  ── Ordre des blocs : aucun verdict APRÈS la ligne de résumé ──────────────
   #  Statique, parce que le défaut de #304 n'était pas une valeur fausse mais une
@@ -307,6 +369,25 @@ verdicts_selftest() {
   #  « Résumé : 0 FAIL, 0 WARN » suivi de deux [WARN], en production le 11/08.
   #  Aucun test de fonction pure ne pouvait le voir : c'est le FICHIER qu'il faut
   #  regarder. Le prochain contrôle ajouté en fin de fichier échouera ici.
+  #  ── Le snippet ASSEMBLÉ est-il du shell valide ? ──────────────────────────
+  #  `bash -n check-reliability.sh` ne voit RIEN de ce qui est dans COLLECT :
+  #  pour lui c'est une chaîne. Or cette chaîne est du code, exécuté sur les deux
+  #  nœuds. Le 11/08/2026 une injection de motif y a produit un `grep -oE` sans
+  #  guillemets autour d'un motif contenant des parenthèses — syntaxe invalide
+  #  côté distant, assemblage parfaitement valide côté local. Même famille que le
+  #  défaut d'origine : ce qui n'est pas exécuté pendant le test ne prouve rien.
+  echo "-- le snippet de collecte est du shell valide --"
+  if [ -z "${COLLECT:-}" ]; then
+    echo "FAIL  COLLECT vide ou absent — le contrôle ne mesure rien"; st_fail=1
+  elif printf '%s\n' "$COLLECT" | bash -n 2>/tmp/collect-syntaxe.$$; then
+    echo "PASS  COLLECT assemblé ($(printf '%s' "$COLLECT" | wc -l) lignes) : syntaxe valide"
+  else
+    echo "FAIL  COLLECT assemblé est du shell INVALIDE :"
+    sed 's/^/      /' /tmp/collect-syntaxe.$$
+    st_fail=1
+  fi
+  rm -f /tmp/collect-syntaxe.$$
+
   echo "-- ordre des blocs : tout verdict avant le résumé --"
   CR="$(dirname "${BASH_SOURCE[0]}")/check-reliability.sh"
   L_RESUME=$(grep -n '^echo "Résumé' "$CR" 2>/dev/null | head -1 | cut -d: -f1)

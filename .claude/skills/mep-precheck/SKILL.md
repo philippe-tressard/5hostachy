@@ -1,6 +1,6 @@
 ---
 name: mep-precheck
-description: "MEP 5Hostachy : lancer `bash precheck-mep.sh` (les 15 points s'exécutent), lire ses verdicts, dérouler le post-check P1-P10, rollback. Use when: AVANT tout `git push` sur dev ou main, avant de remettre une PR, après un merge vers main, pour diagnostiquer un déploiement qui n'a pas eu lieu ou vérifier qu'un correctif est réellement servi. L'histoire des incidents qui ont fait naître chaque contrôle est dans HISTORIQUE.md, à ouvrir seulement pour diagnostiquer."
+description: "MEP 5Hostachy : lancer `bash precheck-mep.sh` (les 15 points s'exécutent), lire ses verdicts, dérouler le post-check P1-P11 (dont la clôture des tickets, après vérification en production), rollback. Use when: AVANT tout `git push` sur dev ou main, avant de remettre une PR, après un merge vers main, pour diagnostiquer un déploiement qui n'a pas eu lieu ou vérifier qu'un correctif est réellement servi. L'histoire des incidents qui ont fait naître chaque contrôle est dans HISTORIQUE.md, à ouvrir seulement pour diagnostiquer."
 argument-hint: "Décrire le lot à déployer ou le point à vérifier (ex. « pré-check avant MEP v2.31.3 », « post-check après merge »)"
 ---
 
@@ -229,6 +229,7 @@ Attendre le tick, puis :
 | P8 | Redondance intacte après MEP | Point 2 (rôle cohérent sur les 2 nœuds) | Inchangé et cohérent |
 | P9 | Parité du standby | Point 10 | HEAD identiques, **ou** noter que la resynchro aura lieu à la bascule de 02:00 (`bascule.sh` phase 0) |
 | P10 | **Bilan mémoire du lot** — 🟡 priorité 3 | Relire les activités de la PR : qu'a-t-on appris qui n'est écrit nulle part ? Voir « P10 » | Chaque leçon est **écrite** (socle ou banque projet), ou explicitement écartée |
+| P11 | **Clore les tickets du lot** — après P7, jamais avant | `gh issue close <n> --comment "…"` avec la preuve observée | Chaque ticket du lot est clos **ou** dit ce qu'il attend encore |
 
 > **⏱ Attendre la BONNE condition (constaté le 26/07/2026, en utilisant ce
 > post-check pour la première fois).** Ne pas attendre que `HEAD` change : dans
@@ -342,6 +343,32 @@ annonce de hall) et regarder.
 > points de déclenchement, les chercher tous — ici, un test qui interdit toute
 > redirection en dur vers `/auth/connexion` dans `front/src` aurait trouvé le
 > troisième du premier coup, là où la relecture en avait vu deux.
+
+**P11 — clore les tickets, et surtout pas par mot-clé GitHub (11/08/2026).**
+Écrire `Closes #299` dans le corps d'une PR fait fermer le ticket **au merge**.
+C'est la mauvaise date : ce soir-là, #299 aurait été clos pendant qu'une
+régression était en vol — quatre colonnes disparues de l'écran, trouvées par
+l'utilisateur *après* la fusion. Et le matin même, un merge avait livré un
+`check-reliability.sh` incapable de démarrer. **Fusionner n'est pas déployer,
+déployer n'est pas vérifier.**
+
+Un ticket se ferme quand le comportement qu'il décrit est **observé corrigé en
+production** — donc après P7, et avec la preuve dans le commentaire :
+
+```bash
+gh issue close 299 --comment "Vérifié en production après la MEP v2.52.2 : <ce qui a été observé, et comment>."
+```
+
+Un ticket dont la vérification est **différée** (elle dépend d'un événement à
+venir : un passage hebdomadaire, une bascule) **reste ouvert**, et reçoit un
+commentaire disant ce qu'il attend et à quelle date. Le fermer « parce que le
+code est livré » revient à confondre le correctif et sa preuve.
+
+Le corps de la PR continue de **nommer** les tickets en français (« Ferme #299 »)
+— c'est de la lisibilité pour le relecteur, pas un mécanisme. À ne pas confondre :
+le français n'est pas reconnu par GitHub, donc cette mention ne ferme rien, et
+c'est très bien ainsi. Les tickets **ouverts** par le lot se listent aussi, pour
+qu'un relecteur voie ce qui a été découvert sans être traité.
 
 **Rollback si P1–P6 échoue :** `cd /opt/5hostachy && git reset --hard <commit-précédent>
 && docker compose build && docker compose up -d`. Réversible et dans le cycle normal
