@@ -538,12 +538,8 @@ a:hover { text-decoration: underline; }
 .config-section { margin-bottom: 1.25rem; }
 .config-section-title { font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
 .muted { color: var(--color-text-muted); }
-.backup-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: .5rem; flex-wrap: wrap; gap: .75rem;
-}
-.backup-header p { margin: 0; flex: 1 1 320px; }
-.backup-header .btn { margin-left: auto; }
+/* `.backup-header` vivait ici : c'était l'en-tête des deux cartes de détail
+   supprimées avec #299, et de rien d'autre. Elle est partie avec elles. */
 /* En-tête de tableau qui reste visible au défilement.
    Le `z-index` n'est PAS optionnel : sans lui, les cellules du corps se
    dessinent PAR-DESSUS l'en-tête collé, qui réapparaît alors au milieu du

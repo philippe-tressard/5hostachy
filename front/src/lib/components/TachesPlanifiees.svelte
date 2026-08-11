@@ -72,15 +72,37 @@
 	//  agrégation — dans des cartes séparées : trois tableaux pour un même fait,
 	//  aucun ne le disant. Signalé illisible par l'utilisateur le 11/08/2026.
 	//  Le détail vit désormais SOUS la ligne qui l'annonce.
-	const SOURCE: Record<string, { url: string; limite: number }> = {
-		backup: { url: '/admin/sauvegardes/historique', limite: 4 },
-		telemetrie: { url: '/admin/telemetry/historique', limite: 4 }
+	const SOURCE: Record<string, string> = {
+		backup: '/admin/sauvegardes/historique',
+		telemetrie: '/admin/telemetry/historique'
 	};
 
+	//  Profondeur d'historique sous une ligne dépliée. UNE constante : elle était
+	//  écrite trois fois — dans `SOURCE.limite`, qui n'était même pas lue, dans
+	//  l'URL des tâches à source commune, et dans le `slice` des tables propres.
+	//  Portée de 4 à 10 le 11/08/2026 en supprimant les deux cartes de détail qui
+	//  montraient l'historique complet (#299) : les retirer sans compenser aurait
+	//  réduit en silence ce qu'un administrateur peut voir.
+	const PROFONDEUR = 10;
+
 	function urlHistorique(tache: string): string {
-		const s = SOURCE[tache];
-		return s ? s.url : `/admin/maintenance/historique?tache=${encodeURIComponent(tache)}&limite=4`;
+		return (
+			SOURCE[tache] ??
+			`/admin/maintenance/historique?tache=${encodeURIComponent(tache)}&limite=${PROFONDEUR}`
+		);
 	}
+
+	//  Ce que fait une tâche, quand sa ligne seule ne le dit pas. Repris des deux
+	//  cartes supprimées avec #299 : elles faisaient double emploi pour
+	//  l'historique, mais portaient ces informations-là, et rien d'autre ne les
+	//  donnait. Les supprimer sans les déplacer aurait perdu la seule mention du
+	//  lieu de stockage des archives.
+	const AIDE_TACHE: Record<string, string> = {
+		backup: 'Stockage des archives : /data/5hostachy/backups/',
+		telemetrie:
+			'Automatique chaque nuit à 2 h. Agrège les événements bruts en données ' +
+			'journalières puis mensuelles, et purge les données expirées.'
+	};
 
 	let historiques: Record<string, any[]> = {};
 	let enChargement: Record<string, boolean> = {};
@@ -92,7 +114,7 @@
 			const lignes = await api.get<any[]>(urlHistorique(tache));
 			//  Les tables propres à une tâche ne savent pas se limiter côté serveur :
 			//  on tronque ici, à la même profondeur que les autres.
-			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, 4) };
+			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, PROFONDEUR) };
 		} catch {
 			historiques = { ...historiques, [tache]: [] };
 		} finally {
@@ -232,6 +254,9 @@
 							{@const lignes = historiques[t.tache] ?? []}
 							<tr class="detail">
 								<td colspan="4">
+									{#if AIDE_TACHE[t.tache]}
+										<p class="aide-tache">{AIDE_TACHE[t.tache]}</p>
+									{/if}
 									{#if enChargement[t.tache]}
 										<p class="muted" style="margin:.5rem 0">Chargement...</p>
 									{:else if lignes.length === 0}
@@ -323,4 +348,10 @@
 		color: var(--color-primary); font-size: .9rem; margin-right: .4rem;
 	}
 	.chevron.open { transform: rotate(90deg); }
+	/*  Aide propre à une tâche, en tête de son détail — recueillie des deux cartes
+	    supprimées avec #299. */
+	.aide-tache {
+		margin: .5rem 0 .25rem; padding-left: .75rem;
+		font-size: .78rem; color: var(--color-text-muted);
+	}
 </style>
