@@ -7,7 +7,8 @@ Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
 """
 
 MODELES = [
-    ("ticket_bug_admin", "Ticket bug — notification admin site", "Bug signalé via Tickets — {{ residence.nom }}",
+    ("ticket_bug_admin", "Ticket bug — notification admin site",
+     "Bug signalé via Tickets — {{ ticket.titre }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Bug signalé</h2>'
      '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.prenom }} {{ auteur.nom }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
@@ -18,7 +19,15 @@ MODELES = [
      '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#c0392b;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Traiter le bug</a></p>',
      True),
     ("ticket_syndic", "Ticket transmis au syndic",
-     '{% if is_commentaire %}\U0001f4ac Commentaire \u2014 Ticket #{{ ticket.numero }} \u2014 {{ residence.nom }}{% else %}{% if reference_copro %}\U0001f3e2 {{ reference_copro }} \u2014 {% endif %}Ticket #{{ ticket.numero }} \u2014 {{ residence.nom }}{% endif %}',
+     #  `{{ prefixe_copro }}` ouvre les DEUX branches \u2014 il ne manquait qu'\u00e0 celle
+     #  du commentaire, donc un \u00e9change sur un ticket d\u00e9j\u00e0 transmis arrivait sans
+     #  r\u00e9f\u00e9rence. La r\u00e8gle et sa forme unique : `seed/emails/__init__.py`.
+     #
+     #  Le **titre** passe avant le nom de la r\u00e9sidence : un client de messagerie
+     #  n'affiche qu'une soixantaine de caract\u00e8res, et sur ces quatre
+     #  informations, celle que le destinataire ne conna\u00eet pas encore est le
+     #  titre. La r\u00e9sidence est ce qu'on accepte de perdre.
+     '{% if is_commentaire %}{{ prefixe_copro }}\U0001f4ac Commentaire \u2014 Ticket #{{ ticket.numero }} \u2014 {{ ticket.titre }} \u2014 {{ residence.nom }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} \u2014 {{ ticket.titre }} \u2014 {{ residence.nom }}{% endif %}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
      '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4cb Ticket transmis par le conseil syndical{% endif %}'
      '</h2>'
@@ -67,7 +76,8 @@ MODELES = [
      '<p style="text-align:center;margin:{% if is_commentaire %}16{% else %}0{% endif %}px 0 0">'
      '<a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
      True),
-    ("ticket_statut_change", "Statut ticket modifié", "Ticket #{{ ticket.numero }} mis à jour — {{ residence.nom }}",
+    ("ticket_statut_change", "Statut ticket modifié",
+     "Ticket #{{ ticket.numero }} mis à jour — {{ ticket.titre }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Mise à jour de votre ticket</h2>'
      '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
      '<p style="margin:0 0 16px">Le statut de votre ticket a été mis à jour\u202f:</p>'
@@ -78,7 +88,8 @@ MODELES = [
      '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
      '</td></tr></table>',
      True),
-    ("ticket_nouveau_message", "Nouveau message sur un ticket", "Nouveau message — Ticket #{{ ticket.numero }} — {{ residence.nom }}",
+    ("ticket_nouveau_message", "Nouveau message sur un ticket",
+     "Nouveau message — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouveau message sur votre ticket</h2>'
      '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.prenom }} {{ auteur_action.nom }}\u202f:</p>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
@@ -88,7 +99,7 @@ MODELES = [
      '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le ticket</a></p>',
      True),
     ("relance_syndic", "Relance tickets syndic non résolus",
-     "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}",
+     "{{ prefixe_copro }}Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
      '\U0001f514 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}</h2>'
      '<p style="margin:0 0 20px">{{ interlocuteurs }},</p>'
@@ -142,7 +153,12 @@ MODELES = [
      '<strong>Le Conseil Syndical</strong></p>',
      False),
     ("ticket_externe", "Notification ticket (email externe)",
-     '{% if is_commentaire %}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
+     #  Ce canal vise « le syndic ou un tiers » (cf. l'en-tête de ce module) :
+     #  l'adresse est saisie à la main et rien ne dit laquelle des deux. Il porte
+     #  donc la référence lui aussi — inoffensive pour un prestataire,
+     #  indispensable pour le syndic, et c'est la seule façon de tenir « sans
+     #  exception » sur un destinataire que le code ne peut pas identifier.
+     '{% if is_commentaire %}{{ prefixe_copro }}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
      '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f527 Ticket{% endif %} : {{ ticket.titre }}</h2>'
      '{% if is_commentaire %}'

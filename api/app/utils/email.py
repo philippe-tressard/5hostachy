@@ -163,6 +163,100 @@ def _html_echappe(texte: str) -> str:
     )
 
 
+def _prefixe_copro(reference: str) -> str:
+    """« 🏢 00213 — » en tête d'objet, ou rien si la référence n'est pas renseignée.
+
+    Forme **unique** du rappel de référence, obligatoire sans exception dans tout
+    message adressé au syndic — c'est l'identifiant sous lequel il classe ses
+    dossiers. Elle était recopiée sept fois dans les modèles, sous deux formes
+    déjà différentes (« 🏢 00213 — » et « [🏢 00213] – ») : deux copies d'une même
+    notion finissent toujours par diverger, et celles-ci l'avaient déjà fait.
+
+    La composer ici plutôt que dans les modèles a une seconde conséquence, plus
+    importante que la forme : un modèle vit en base et se réécrit depuis
+    Admin → Emails. Le `{% if reference_copro %}` qui y était recopié pouvait
+    être retiré d'un formulaire, et la règle avec lui.
+    """
+    ref = (reference or "").strip()
+    return f"\U0001f3e2 {ref} — " if ref else ""
+
+
+def _contexte_rendu(session: Session, context: dict) -> tuple[dict, str, str, str]:
+    """(contexte complet du rendu, nom du site, URL du site, pied de page).
+
+    Les deux fonctions d'envoi lisaient ces valeurs chacune de leur côté, en
+    trois `session.get` recopiés — la même configuration, deux fois.
+    """
+    lignes = {
+        r.cle: r.valeur
+        for r in session.exec(
+            select(ConfigSite).where(
+                ConfigSite.cle.in_(
+                    ("site_nom", "site_url", "email_footer", "reference_copro")
+                )
+            )
+        ).all()
+    }
+    site_nom = lignes.get("site_nom") or "Ma Résidence"
+    site_url = lignes.get("site_url") or "https://localhost"
+    reference = (lignes.get("reference_copro") or "").strip()
+
+    ctx = {
+        "annee": datetime.utcnow().year,
+        "app": {"url": site_url.rstrip("/")},
+        "residence": {"nom": site_nom},
+        **context,
+        #  Après `context`, donc non surchargeable : la référence vient de la
+        #  configuration du site, jamais d'un point d'appel. Cinq d'entre eux la
+        #  lisaient séparément et deux ne la fournissaient pas du tout — leurs
+        #  objets partaient sans référence, et Jinja évalue un indéfini à faux
+        #  sans rien signaler. Lue ici, elle ne peut plus être oubliée.
+        "reference_copro": reference,
+        "prefixe_copro": _prefixe_copro(reference),
+    }
+    return ctx, site_nom, site_url, (lignes.get("email_footer") or "").strip()
+
+
+#  Au-delà, un objet n'informe plus personne : aucun client de messagerie n'en
+#  affiche le quart. La borne n'est pas cosmétique — ni `ticket.titre` ni
+#  `publication.titre` n'ont de longueur maximale en base, donc rien ne limitait
+#  la taille d'un objet depuis qu'ils y figurent.
+_SUJET_MAX = 150
+
+
+def _sujet_sur_une_ligne(sujet: str) -> str:
+    """Objet d'un message : une seule ligne, de longueur bornée.
+
+    Depuis le 11/08/2026, l'objet des e-mails de tickets et de publications
+    porte le **titre** de l'objet métier — donc une saisie libre, qui n'était
+    jusqu'ici rendue que dans le corps HTML. Deux conséquences, et aucune ne
+    relève du modèle :
+
+    1. **Sécurité.** Un `\\n` dans un titre coupe l'en-tête `Subject:` et laisse
+       injecter un `Bcc:` — le message part alors à un destinataire choisi par
+       l'auteur du ticket. Nos objets contiennent aujourd'hui tous un tiret
+       cadratin, donc Python les encode en RFC 2047 et la coupure est
+       neutralisée : c'est une protection **de circonstance**, qui disparaîtrait
+       sans bruit le jour où un objet devient purement ASCII. On ne s'appuie pas
+       dessus (`standards/03-securite.md` §4).
+    2. **Lisibilité.** Un titre de 400 caractères produisait un objet de 400
+       caractères.
+
+    Écrit ici et non dans les modèles pour la même raison que
+    `_bandeau_pieces_jointes` : ceux-ci vivent en base et sont réécrivables
+    depuis Admin → Emails. Une règle qu'un formulaire peut retirer n'est pas une
+    règle. À cet endroit, elle couvre les vingt-quatre modèles et tous ceux à
+    venir.
+    """
+    #  Les caractères de contrôle d'abord : `\\s` ignore NUL, qui ferait lever
+    #  la bibliothèque `email` au lieu d'être simplement neutralisé.
+    propre = _re.sub(r"[\x00-\x1f\x7f]+", " ", sujet or "")
+    propre = _re.sub(r"\s+", " ", propre).strip()
+    if len(propre) <= _SUJET_MAX:
+        return propre
+    return propre[: _SUJET_MAX - 1].rstrip() + "…"
+
+
 def _preparer_pieces_jointes(paths: list[str]) -> tuple[list[dict], list[str]]:
     """(pièces jointes prêtes pour le message, chemins temporaires à nettoyer).
 
@@ -415,19 +509,7 @@ async def send_email(
             _log_email(session, code, to, "ignore", erreur="template inactive ou inexistante")
             return
 
-        # ── Footer email (similaire au footer WhatsApp) ──────────────────
-        email_footer_row = session.get(ConfigSite, "email_footer")
-        email_footer = (email_footer_row.valeur if email_footer_row else "").strip()
-
-        # Variables communes
-        site_nom_row = session.get(ConfigSite, "site_nom")
-        site_url_row = session.get(ConfigSite, "site_url")
-        base_ctx = {
-            "annee": datetime.utcnow().year,
-            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost").rstrip("/")},
-            "residence": {"nom": (site_nom_row.valeur if site_nom_row else "Ma Résidence")},
-        }
-        ctx = {**base_ctx, **context}
+        ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
 
         try:
             from fastapi_mail import FastMail, MessageSchema
@@ -435,8 +517,6 @@ async def send_email(
             cfg = connexion_smtp(smtp_cfg)
             fm = FastMail(cfg)
             rendered_body = _render(template.corps_html, ctx)
-            site_nom = site_nom_row.valeur if site_nom_row else "Ma Résidence"
-            site_url = site_url_row.valeur if site_url_row else "https://localhost"
             full_html = _wrap_email(
                 rendered_body,
                 site_nom=site_nom,
@@ -446,7 +526,7 @@ async def send_email(
                 pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
                 intention=template.intention,
             )
-            rendered_subject = _render(template.sujet, ctx)
+            rendered_subject = _sujet_sur_une_ligne(_render(template.sujet, ctx))
             msg_kwargs = dict(
                 subject=rendered_subject,
                 recipients=[to],
@@ -554,25 +634,13 @@ async def send_email_group(
         cc_emails = [email for _, email in filtered_cc]
         all_emails_str = ", ".join(to_emails + cc_emails)
 
-        # Contexte
-        email_footer_row = session.get(ConfigSite, "email_footer")
-        email_footer = (email_footer_row.valeur if email_footer_row else "").strip()
-        site_nom_row = session.get(ConfigSite, "site_nom")
-        site_url_row = session.get(ConfigSite, "site_url")
-        base_ctx = {
-            "annee": datetime.utcnow().year,
-            "app": {"url": (site_url_row.valeur if site_url_row else "https://localhost").rstrip("/")},
-            "residence": {"nom": (site_nom_row.valeur if site_nom_row else "Ma Résidence")},
-        }
-        ctx = {**base_ctx, **context}
+        ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
 
         try:
             from fastapi_mail import FastMail, MessageSchema
 
             cfg = connexion_smtp(smtp_cfg)
             fm = FastMail(cfg)
-            site_nom = site_nom_row.valeur if site_nom_row else "Ma Résidence"
-            site_url = site_url_row.valeur if site_url_row else "https://localhost"
             rendered_body = _render(template.corps_html, ctx)
             full_html = _wrap_email(
                 rendered_body,
@@ -583,7 +651,7 @@ async def send_email_group(
                 pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
                 intention=template.intention,
             )
-            rendered_subject = _render(template.sujet, ctx)
+            rendered_subject = _sujet_sur_une_ligne(_render(template.sujet, ctx))
             msg_kwargs: dict[str, Any] = dict(
                 subject=rendered_subject,
                 recipients=to_emails if to_emails else cc_emails,

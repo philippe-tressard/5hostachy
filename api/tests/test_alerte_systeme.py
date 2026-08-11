@@ -96,3 +96,79 @@ def test_aucun_marqueur_jinja_ne_subsiste():
         assert "{{" not in rendu and "{%" not in rendu, (
             f"Un marqueur Jinja subsiste dans {ou} de l'alerte système."
         )
+
+
+# ── Référence de copropriété ────────────────────────────────────────────────
+#
+# Ce contrôle est la seule chose qui empêche la règle « la référence figure dans
+# tout message au syndic » d'être vraie sur le modèle et fausse à l'envoi. Les
+# objets la portent derrière un `{% if reference_copro %}` — nécessaire, sinon
+# une installation sans référence enverrait « 🏢  — Ticket #… » — mais ce `{% if
+# %}` rend l'omission totalement silencieuse : pas d'erreur, pas d'objet dégradé,
+# aucune trace. Aucun test de modèle ne peut voir ça, ils resteraient tous verts.
+
+def _base_jetable():
+    """Base SQLite en mémoire portant la seule table dont le contrôle a besoin."""
+    from sqlmodel import Session, SQLModel, create_engine
+
+    from app.models.core import ConfigSite
+
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur, tables=[ConfigSite.__table__])
+    return Session(moteur), ConfigSite
+
+
+@pytest.mark.parametrize("valeur", ["", "   ", None])
+def test_reference_copro_absente_est_signalee(valeur):
+    """Vide, blanche ou jamais posée : les trois doivent alerter."""
+    from app.utils.health_monitor import _check_reference_copro
+
+    session, ConfigSite = _base_jetable()
+    with session:
+        if valeur is not None:
+            session.add(ConfigSite(cle="reference_copro", valeur=valeur))
+            session.commit()
+        issues = _check_reference_copro(session)
+
+    assert len(issues) == 1, (
+        f"Référence {valeur!r} : aucune alerte. Les messages au syndic partiraient "
+        "sans référence, sans que rien ne le signale."
+    )
+    assert "syndic" in issues[0].lower()
+    #  Une alerte doit dire quoi faire : le gestionnaire du site n'a pas à
+    #  chercher où se règle la clé.
+    assert "Admin" in issues[0], "L'alerte ne dit pas où corriger."
+
+
+def test_reference_copro_renseignee_ne_declenche_rien():
+    """Cas zéro : sur une installation correcte, le contrôle doit se taire.
+
+    Sans cette moitié, un contrôle qui alerterait *toujours* passerait pour bon —
+    et une alerte permanente est une alerte qu'on cesse de lire.
+    """
+    from app.utils.health_monitor import _check_reference_copro
+
+    session, ConfigSite = _base_jetable()
+    with session:
+        session.add(ConfigSite(cle="reference_copro", valeur="00213"))
+        session.commit()
+        assert _check_reference_copro(session) == []
+
+
+def test_le_controle_est_branche_dans_le_job_quotidien():
+    """Un contrôle que personne n'appelle ne contrôle rien.
+
+    C'est arrivé ici : `sauvegarde_echec` et `alerte_espace_disque` ont dormi en
+    base sans que rien ne les envoie. Le test lit la source de `run_health_check`
+    plutôt que de l'exécuter — le job touche le disque, la base et SMTP.
+    """
+    import inspect
+
+    from app.utils import health_monitor
+
+    source = inspect.getsource(health_monitor.run_health_check)
+    assert "_check_reference_copro" in source, (
+        "`_check_reference_copro` n'est pas appelé par `run_health_check` : il ne "
+        "s'exécutera jamais et la référence pourra rester vide sans que personne "
+        "ne l'apprenne."
+    )

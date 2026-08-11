@@ -174,15 +174,10 @@ def _declencher_accueil_arrivant(
     if syndic_principal and syndic_principal.email:
         from app.utils.email import send_email
 
-        # Lire reference_copro pour le sujet
-        ref_copro_row = session.get(ConfigSite, "reference_copro")
-        ref_copro = (ref_copro_row.valeur if ref_copro_row else "").strip()
-
         ctx = {
             "nom_complet": nom_complet,
             "batiment": bat,
             "ancien_resident": ancien,
-            "reference_copro": ref_copro,
         }
         # Email individuel au syndic
         background_tasks.add_task(

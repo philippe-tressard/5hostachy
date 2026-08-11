@@ -154,7 +154,7 @@ def envoyer_relance_syndic(
     if not principal or not principal.email:
         raise HTTPException(422, "Aucun gestionnaire syndic principal avec email configuré")
 
-    cfg = config_site(session, "reference_copro")
+    cfg = config_site(session)
 
     #  Ancienneté réelle des dossiers relancés : le préambule annonçait « plus
     #  d'un mois » quelle que soit la situation, y compris pour des tickets en
@@ -178,7 +178,6 @@ def envoyer_relance_syndic(
         "civilite": "Monsieur" if principal.genre == GenreCivilite.mr else "Madame",
         "nom_gestionnaire": f"{principal.prenom} {principal.nom}".strip(),
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
-        "reference_copro": cfg.get("reference_copro", ""),
         "anciennete": anciennete,
         "tickets": [_contexte_ticket(session, t) for t in tickets_relance],
     }

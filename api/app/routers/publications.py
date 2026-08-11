@@ -95,7 +95,7 @@ def _envoyer_email_syndic_publication(
         return
 
     cfg_rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("reference_copro", "site_nom", "site_url")))
+        select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
     ).all()
     cfg = {r.cle: r.valeur for r in cfg_rows}
 
@@ -139,7 +139,6 @@ def _envoyer_email_syndic_publication(
         "auteur": {"prenom": user.prenom, "nom": user.nom},
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
         "app": {"url": (cfg.get("site_url") or "https://localhost").rstrip("/")},
-        "reference_copro": cfg.get("reference_copro", ""),
         "is_commentaire": is_commentaire,
         "commentaire": commentaire or "",
         "date_commentaire": _fmt_paris(datetime.utcnow()),

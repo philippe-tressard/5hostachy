@@ -302,6 +302,32 @@ def _check_db_integrity() -> list[str]:
     return issues
 
 
+def _check_reference_copro(session: Session) -> list[str]:
+    """La référence de copropriété doit être renseignée : le syndic trie dessus.
+
+    Depuis le 11/08/2026, elle est obligatoire — sans exception — dans l'objet de
+    tout message qui lui est adressé. Les six modèles concernés ouvrent donc leur
+    objet par `{{ prefixe_copro }}`, composé par `email._prefixe_copro`.
+
+    Ce préfixe rend une chaîne vide quand la clé n'est pas renseignée — il le
+    faut, sinon l'objet commencerait par « 🏢  — ». Mais c'est précisément ce qui
+    rend ce contrôle nécessaire : une clé vide ne produit alors aucune erreur,
+    aucun objet dégradé, aucune trace. La règle serait vérifiée sur les modèles —
+    les tests resteraient tous verts — et fausse à chaque envoi. Le seul endroit
+    d'où l'écart se voit est ici, sur la configuration réelle de l'installation.
+    """
+    ligne = session.get(ConfigSite, "reference_copro")
+    if (ligne.valeur if ligne else "").strip():
+        return []
+    return [
+        "Référence de copropriété non renseignée : les messages adressés au "
+        "syndic partent sans elle.\n"
+        "Le syndic identifie ses dossiers par cette référence ; sans elle, tickets "
+        "et publications transmis sortent de son tri par affaire.\n"
+        "À renseigner dans Admin → Configuration du site → Référence de copropriété."
+    ]
+
+
 def _en_problemes(issues: list[str]) -> list[dict]:
     """Découpe « titre\\ndétail\\ndétail » en {titre, details} pour le modèle.
 
@@ -384,6 +410,7 @@ def run_health_check() -> None:
         issues += _check_backups(session)
         issues += _check_export_hors_site(session)
         issues += _check_disk()
+        issues += _check_reference_copro(session)
 
         if not issues:
             logger.info("Contrôle santé quotidien : tout est OK.")
