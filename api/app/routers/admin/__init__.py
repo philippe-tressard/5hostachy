@@ -20,6 +20,7 @@ modèles Pydantic et les helpers privés vivent donc auprès des routes qu'ils s
 | `arrivants` | accueil d'un arrivant, baux locatifs, fiche d'arrivée |
 | `annuaire` | annuaire public, composition du CS et du syndic |
 | `exploitation` | sauvegardes, maintenance planifiée, opérations sûres sur la base |
+| `rapports_scripts` | canal machine-à-machine des scripts cron (clé partagée, sans session) |
 | `communications` | historique et modèles d'e-mail, notifications, télémétrie |
 | `acces` | commandes vigik/télécommande, audit des liens utilisateur-lot |
 
@@ -58,6 +59,7 @@ from . import (
     comptes,
     exploitation,
     profils,
+    rapports_scripts,
     utilisateurs,
 )
 
@@ -72,6 +74,7 @@ for _sous_router in (
     arrivants.router,
     annuaire.router,
     exploitation.router,
+    rapports_scripts.router,
     communications.router,
     acces.router,
 ):
@@ -86,8 +89,10 @@ from .exploitation import (  # noqa: E402  (après le montage du router, pour la
     _TOLERANCE_H,
     _etat_tache_a_table_propre,
     _purger_anciens_rapports,
-    maintenance_rapport,
 )
+#  Le canal des scripts vit dans son propre module depuis le 11/08/2026 ;
+#  la surface publique, elle, ne bouge pas.
+from .rapports_scripts import maintenance_rapport  # noqa: E402
 
 __all__ = [
     "router",
