@@ -11,6 +11,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
+	import { toast } from '$lib/components/Toast.svelte';
 
 	let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
 	let santeLoading = true;
@@ -86,11 +87,28 @@
 		}
 	}
 
+	//  ⚠️ Ce bouton ne lance PAS `maintenance.sh`. Il appelle
+	//  `POST /admin/maintenance/lancer` → `run_maintenance`, exécuté DANS le
+	//  process de l'API : purges applicatives + VACUUM, sur le seul nœud qui
+	//  répond. Le script hebdomadaire fait cela ET l'hygiène locale du standby
+	//  (images Docker, cache de build, rotation des journaux) — que rien ici ne
+	//  déclenche. Deux choses différentes : le libellé et l'aide le disent
+	//  désormais, faute de quoi un clic ici laisse croire que l'hebdomadaire a
+	//  été rattrapée.
+	//
+	//  Le retour à l'utilisateur avait été perdu en extrayant ce composant : ni
+	//  succès ni erreur n'étaient signalés, et un clic sans effet visible se lit
+	//  comme un bouton mort. La tâche part en arrière-plan (202), donc le succès
+	//  annoncé est celui de la PRISE EN COMPTE, pas du ménage — le tableau, lui,
+	//  dira ce qui s'est réellement passé.
 	export async function declencher() {
 		enCours = true;
 		try {
 			await api.post('/admin/maintenance/lancer');
+			toast('success', 'Maintenance applicative lancée en arrière-plan.');
 			setTimeout(charger, 4000);
+		} catch (e: any) {
+			toast('error', e?.message ?? "Impossible de lancer la maintenance");
 		} finally {
 			enCours = false;
 		}
@@ -157,10 +175,16 @@
 			la colonne <strong>Tâche</strong> les distingue. Taille DB et Détail ne sont
 			renseignés que par la maintenance applicative.
 		</p>
-		<button class="btn btn-primary" on:click={declencher} disabled={enCours}>
-			{enCours ? 'En cours...' : 'Lancer une maintenance'}
+		<button class="btn btn-primary" on:click={declencher} disabled={enCours}
+			title="Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille.">
+			{enCours ? 'En cours...' : 'Lancer la maintenance applicative'}
 		</button>
 	</div>
+	<p class="muted" style="font-size:.8rem;margin-top:-.25rem">
+		Ce bouton exécute la part <strong>applicative</strong> (purges, VACUUM) sur ce
+		nœud. Il ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du
+		nœud en veille — images Docker, cache de build, rotation des journaux.
+	</p>
 	{#if executionsLoading}
 		<p class="muted">Chargement...</p>
 	{:else if executions.length === 0}
