@@ -59,6 +59,11 @@ try {
 
 //  Les libellés sont extraits de la source, jamais recopiés ici : une seconde
 //  liste serait exactement la duplication que ce contrôle interdit.
+//
+//  Le motif ramasse TOUTES les tables de libellés de `taches.ts`, pas seulement
+//  `LIBELLE_TACHE` — depuis le 11/08/2026 il y a aussi `LIBELLE_ACTION`, le nom
+//  du BOUTON quand il diffère du nom de la tâche. C'est voulu : un libellé
+//  d'action recopié dans un écran diverge exactement comme un nom de tâche.
 const LIBELLES = [...source.matchAll(/^\t[a-z_]+: '([^']+)'/gm)].map((m) => m[1]);
 if (LIBELLES.length < 5) {
 	console.error(
