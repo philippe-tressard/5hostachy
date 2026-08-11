@@ -317,3 +317,99 @@ def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
         f"{len(bascules)} lignes de bascule conservées — le quota par tâche ne "
         "s'applique plus, et la table croîtra sans fin."
     )
+
+
+#  ─────────────────────────────────────────────────────────────────────────────
+#  Cohérence du tableau de santé — signalé à l'écran par l'utilisateur le
+#  11/08/2026 : « certaines tâches sont doublées car exécutées sur 2 nœuds,
+#  d'autres pas ». Le tableau mélangeait deux unités de ligne (la tâche pour les
+#  unes, le couple tâche+nœud pour les autres), si bien qu'une ligne unique
+#  pouvait vouloir dire « une seule exécution » OU « une seule ligne pour deux ».
+#  ─────────────────────────────────────────────────────────────────────────────
+
+def _sante(session):
+    from app.routers.admin.exploitation import maintenance_sante
+    return maintenance_sante(session=session, _=None)
+
+
+def test_la_sante_rend_une_seule_ligne_par_tache(session_memoire):
+    """Une tâche exécutée sur les DEUX nœuds ne produit qu'une ligne.
+
+    C'est ce qui rend le tableau lisible comme une synthèse : l'unité de ligne
+    est la tâche, jamais le couple tâche+nœud. Le détail par nœud reste
+    disponible dans `noeuds`, il n'est simplement plus une ligne.
+    """
+    maintenant = datetime.utcnow()
+    for noeud in ("rpi1", "rpi2"):
+        session_memoire.add(HistoriqueMaintenance(
+            tache="bascule", noeud=noeud, statut="succes",
+            cree_le=maintenant - timedelta(hours=2)))
+    session_memoire.commit()
+
+    lignes = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"]
+    assert len(lignes) == 1, (
+        f"{len(lignes)} lignes pour la bascule — le tableau redevient un mélange "
+        "de tâches et de couples tâche+nœud."
+    )
+    assert len(lignes[0]["noeuds"]) == 2, "Le détail par nœud a été perdu au passage."
+
+
+def test_l_etat_affiche_est_celui_du_noeud_le_moins_a_jour(session_memoire):
+    """Un nœud sain ne doit pas masquer un nœud muet.
+
+    Si l'on affichait le rapport le plus RÉCENT des deux, une tâche morte sur un
+    nœud depuis des semaines s'afficherait « À jour » — exactement la panne que
+    ce tableau existe pour voir (défaut du 31/07/2026 : maintenance.sh ne
+    tournait que sur l'actif, et le standby dérivait sans que rien ne le dise).
+    """
+    maintenant = datetime.utcnow()
+    session_memoire.add(HistoriqueMaintenance(
+        tache="bascule", noeud="rpi2", statut="succes",
+        cree_le=maintenant - timedelta(hours=2)))
+    session_memoire.add(HistoriqueMaintenance(        # muet depuis 20 jours
+        tache="bascule", noeud="rpi1", statut="succes",
+        cree_le=maintenant - timedelta(days=20)))
+    session_memoire.commit()
+
+    ligne = [t for t in _sante(session_memoire)["taches"] if t["tache"] == "bascule"][0]
+    assert ligne["statut"] == "manquante", (
+        f"état « {ligne['statut']} » alors qu'un nœud n'a rien rapporté depuis "
+        "20 jours : le nœud sain masque le nœud muet."
+    )
+    assert ligne["noeud"] == "rpi1", (
+        "La ligne doit nommer le nœud qui PORTE l'état, sinon on voit un problème "
+        "sans savoir où aller le chercher."
+    )
+
+
+def test_une_tache_qui_n_enregistre_pas_son_noeud_n_en_invente_pas(session_memoire):
+    """`backup` et `telemetrie` n'ont pas de colonne `noeud` : la réponse doit le
+    dire, et surtout ne pas combler le trou.
+
+    Jusqu'au 11/08/2026 on y mettait le nœud qui répondait à la requête — donc
+    le nœud ACTIF du moment, pas celui qui avait exécuté la tâche. Le rôle
+    alternant chaque nuit, la sauvegarde faite par rpi1 s'affichait « rpi2 » dès
+    la bascule suivante : une valeur par défaut présentée comme une mesure.
+    """
+    lignes = {t["tache"]: t for t in _sante(session_memoire)["taches"]}
+    for tache in ("backup", "telemetrie"):
+        assert lignes[tache]["noeud"] is None, (
+            f"« {tache} » annonce le nœud {lignes[tache]['noeud']} alors que sa "
+            "table n'en conserve aucun — c'est le nœud qui répond, pas celui qui a agi."
+        )
+        assert lignes[tache]["noeud_enregistre"] is False, (
+            f"« {tache} » se déclare traçable par nœud : l'écran affichera un nœud "
+            "au lieu de « non enregistré »."
+        )
+
+
+def test_chaque_tache_attendue_apparait_exactement_une_fois(session_memoire):
+    """Cas zéro du tableau : aucune tâche ne doit disparaître de la synthèse.
+
+    Sans cette borne, une refonte qui déduplique trop rendrait un tableau vide —
+    et un tableau vide se lit comme « rien à signaler ».
+    """
+    taches = [t["tache"] for t in _sante(session_memoire)["taches"]]
+    assert len(taches) == len(set(taches)), f"doublons dans la synthèse : {taches}"
+    for attendue in ("maintenance", "bascule", "export_hors_site", "backup", "telemetrie"):
+        assert attendue in taches, f"« {attendue} » a disparu du tableau de santé"

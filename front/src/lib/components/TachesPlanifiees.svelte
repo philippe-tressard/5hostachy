@@ -120,8 +120,11 @@
 <section class="config-section">
 	<h2 class="config-section-title">&#x1F4CB; Santé des tâches planifiées</h2>
 	<p class="muted" style="font-size:.85rem">
-		Une tâche attendue mais dont aucun rapport n'est arrivé est signalée ici. Sans ce
-		contrôle, une absence de ligne se lit comme « tout va bien ».
+		Synthèse : <strong>une ligne par tâche</strong>, quel que soit le nombre de nœuds
+		qui l'exécutent. Quand une tâche tourne sur les deux, l'état affiché est celui du
+		nœud le <strong>moins</strong> à jour — un nœud sain ne compense pas un nœud muet.
+		Les tableaux qui suivent en donnent le détail. Sans ce contrôle, une absence de
+		ligne se lirait comme « tout va bien ».
 	</p>
 	{#if santeLoading}
 		<p class="muted">Chargement...</p>
@@ -139,11 +142,22 @@
 						<tr>
 							<td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
 							<td style="color:var(--color-text-muted)">
-								{#if t.statut === 'aucune_execution'}
+								{#if !t.noeud_enregistre}
+									<span style="font-style:italic"
+										title="Cette tâche s'exécute sur le nœud actif, mais son historique ne conserve pas lequel. Afficher le nœud qui répond aujourd'hui serait faux : le rôle alterne chaque nuit.">non enregistré</span>
+								{:else if t.statut === 'aucune_execution'}
 									—
 								{:else if t.noeud === 'inconnu' || !t.noeud}
 									<span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>
-								{:else}{t.noeud.toUpperCase()}{/if}
+								{:else if t.noeuds?.length > 1 && t.statut === 'ok'}
+									<!-- Les deux nœuds sont à jour : les nommer plutôt que d'en élire un,
+									     sinon la ligne laisse croire que l'autre n'a rien fait. -->
+									{t.noeuds.map((n: any) => n.noeud.toUpperCase()).join(' · ')}
+								{:else}
+									<span title={t.noeuds?.length > 1
+										? `État porté par ${t.noeud.toUpperCase()}, le moins à jour des ${t.noeuds.length} nœuds.`
+										: ''}>{t.noeud.toUpperCase()}</span>
+								{/if}
 							</td>
 							<td>
 								<span class="badge {t.statut === 'ok' ? 'badge-green' : 'badge-red'}"
@@ -168,7 +182,12 @@
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
 <section class="config-section">
-	<h2 class="config-section-title">&#x1F527; Exécutions enregistrées</h2>
+	<!-- Pas « Maintenances programmées » : ce tableau contient aussi les bascules
+	     et les copies hors site. Le nommer d'après une seule de ses tâches est
+	     exactement le défaut corrigé en v2.49.0 — on lisait des bascules sous un
+	     titre annonçant des maintenances. « Journal » dit sa nature (le détail,
+	     chronologique) là où la synthèse est au-dessus. -->
+	<h2 class="config-section-title">&#x1F527; Journal des exécutions — toutes tâches</h2>
 	<div class="backup-header">
 		<p class="muted" style="font-size:.85rem">
 			Toutes les tâches planifiées des deux nœuds, pas seulement la maintenance —
