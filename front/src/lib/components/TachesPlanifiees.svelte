@@ -16,9 +16,7 @@
 
 	let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
 	let santeLoading = true;
-	let executions: any[] = [];
-	let executionsLoading = true;
-	let enCours = false;
+	let enCours: string | null = null;
 
 	//  Le tableau des exécutions filtrait sur RIEN : il affichait toutes les
 	//  tâches de `historique_maintenance` — bascules et copies hors site
@@ -54,16 +52,8 @@
 			'Vérifier le journal du nœud avant de conclure.'
 	};
 
-	// « hygiene_locale » ne veut rien dire pour un lecteur : c'est le ménage que le
-	// nœud passif fait sans toucher à l'application ni à la base.
-	const LIBELLE_PORTEE: Record<string, string> = {
-		applicative: 'Maintenance applicative',
-		hygiene_locale: 'Hygiène locale (nœud en veille)'
-	};
-
 	async function charger() {
 		santeLoading = true;
-		executionsLoading = true;
 		try {
 			sante = await api.get('/admin/maintenance/sante');
 		} catch {
@@ -71,14 +61,73 @@
 		} finally {
 			santeLoading = false;
 		}
+		//  Les historiques déjà dépliés sont rechargés : après un déclenchement
+		//  manuel, la ligne ouverte doit montrer le passage qu'on vient de causer.
+		for (const t of Object.keys(historiques)) await chargerHistorique(t, true);
+	}
+
+	//  Chaque tâche a SA source. Le tableau unique « Journal des exécutions »
+	//  mélangeait les trois tâches de `historique_maintenance` sous un titre qui
+	//  n'en annonçait qu'une, et laissait les deux autres — sauvegarde et
+	//  agrégation — dans des cartes séparées : trois tableaux pour un même fait,
+	//  aucun ne le disant. Signalé illisible par l'utilisateur le 11/08/2026.
+	//  Le détail vit désormais SOUS la ligne qui l'annonce.
+	const SOURCE: Record<string, { url: string; limite: number }> = {
+		backup: { url: '/admin/sauvegardes/historique', limite: 4 },
+		telemetrie: { url: '/admin/telemetry/historique', limite: 4 }
+	};
+
+	function urlHistorique(tache: string): string {
+		const s = SOURCE[tache];
+		return s ? s.url : `/admin/maintenance/historique?tache=${encodeURIComponent(tache)}&limite=4`;
+	}
+
+	let historiques: Record<string, any[]> = {};
+	let enChargement: Record<string, boolean> = {};
+
+	async function chargerHistorique(tache: string, force = false) {
+		if (historiques[tache] && !force) return;
+		enChargement = { ...enChargement, [tache]: true };
 		try {
-			executions = await api.get<any[]>('/admin/maintenance/historique');
+			const lignes = await api.get<any[]>(urlHistorique(tache));
+			//  Les tables propres à une tâche ne savent pas se limiter côté serveur :
+			//  on tronque ici, à la même profondeur que les autres.
+			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, 4) };
 		} catch {
-			executions = [];
+			historiques = { ...historiques, [tache]: [] };
 		} finally {
-			executionsLoading = false;
+			enChargement = { ...enChargement, [tache]: false };
 		}
 	}
+
+	//  Une seule ligne ouverte à la fois — pattern des cartes expansibles du projet.
+	let ouverte: string | null = null;
+	function basculer(tache: string) {
+		ouverte = ouverte === tache ? null : tache;
+		if (ouverte) chargerHistorique(ouverte);
+	}
+
+	//  Taille DB et Détail ne sont renseignés que par la maintenance applicative.
+	//  Ils ne sont PAS structurellement vides : ils l'étaient parce qu'aucun
+	//  rapport de maintenance n'arrivait. La colonne apparaît donc dès qu'une
+	//  ligne la renseigne, et disparaît sinon — plutôt que d'être supprimée, ce
+	//  qui aurait effacé une donnée à cause d'un défaut de remontée.
+	const aValeur = (lignes: any[], champ: string) =>
+		lignes.some((l) => l?.[champ] !== null && l?.[champ] !== undefined && l?.[champ] !== '');
+
+	function fmtOctets(n: number | null | undefined): string {
+		if (n === null || n === undefined) return '—';
+		const mo = n / (1024 * 1024);
+		return mo >= 1024 ? `${(mo / 1024).toFixed(2)} Go` : `${mo.toFixed(1)} Mo`;
+	}
+
+	//  Seules ces trois tâches savent se lancer à la main : les autres n'ont pas
+	//  d'équivalent in-process. Ne montrer le bouton que là où il agit.
+	const LANCEMENT: Record<string, string> = {
+		maintenance: '/admin/maintenance/lancer',
+		backup: '/admin/sauvegardes/maintenant',
+		telemetrie: '/admin/telemetry/agreger'
+	};
 
 	//  ⚠️ Ce bouton ne lance PAS `maintenance.sh`. Il appelle
 	//  `POST /admin/maintenance/lancer` → `run_maintenance`, exécuté DANS le
@@ -94,16 +143,21 @@
 	//  comme un bouton mort. La tâche part en arrière-plan (202), donc le succès
 	//  annoncé est celui de la PRISE EN COMPTE, pas du ménage — le tableau, lui,
 	//  dira ce qui s'est réellement passé.
-	export async function declencher() {
-		enCours = true;
+	async function declencher(tache: string) {
+		const url = LANCEMENT[tache];
+		if (!url) return;
+		enCours = tache;
 		try {
-			await api.post('/admin/maintenance/lancer');
-			toast('success', 'Maintenance applicative lancée en arrière-plan.');
+			await api.post(url);
+			toast('success', `${LIBELLE_TACHE[tache]} lancée en arrière-plan.`);
+			//  La tâche part en arrière-plan (202) : le succès annoncé est celui de
+			//  la PRISE EN COMPTE. C'est l'historique rechargé qui dira ce qui s'est
+			//  réellement passé — d'où le rechargement différé.
 			setTimeout(charger, 4000);
 		} catch (e: any) {
-			toast('error', e?.message ?? "Impossible de lancer la maintenance");
+			toast('error', e?.message ?? `Impossible de lancer ${LIBELLE_TACHE[tache]}`);
 		} finally {
-			enCours = false;
+			enCours = null;
 		}
 	}
 
@@ -129,10 +183,13 @@
 	{:else}
 		<div class="card" style="overflow:auto;margin-top:1rem">
 			<table class="table" style="font-size:.82rem">
-				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th></tr></thead>
+				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th><th></th></tr></thead>
 				<tbody>
 					{#each sante.taches as t}
-						<tr>
+						<tr class="cliquable" role="button" tabindex="0"
+							aria-expanded={ouverte === t.tache}
+							on:click={() => basculer(t.tache)}
+							on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), basculer(t.tache))}>
 							<td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
 							<td style="color:var(--color-text-muted)">
 								{#if !t.noeud_enregistre}
@@ -159,7 +216,73 @@
 								</span>
 							</td>
 							<td style="color:var(--color-text-muted)">{t.derniere ? fmtDatetime(t.derniere) : '—'}</td>
+							<td style="text-align:right;color:var(--color-text-muted)">
+								<span class="chevron" class:open={ouverte === t.tache}>&rsaquo;</span>
+							</td>
 						</tr>
+						{#if ouverte === t.tache}
+							{@const lignes = historiques[t.tache] ?? []}
+							<tr class="detail">
+								<td colspan="6">
+									{#if enChargement[t.tache]}
+										<p class="muted" style="margin:.5rem 0">Chargement...</p>
+									{:else if lignes.length === 0}
+										<p class="muted" style="margin:.5rem 0">
+											Aucune exécution enregistrée pour cette tâche.
+										</p>
+									{:else}
+										<table class="table" style="font-size:.78rem;margin:.25rem 0">
+											<thead>
+												<tr>
+													<th>Date</th><th>Nœud</th><th>Statut</th><th>Durée</th>
+													{#if aValeur(lignes, 'taille_db_octets')}<th>Taille DB</th>{/if}
+													{#if aValeur(lignes, 'details')}<th>Détail</th>{/if}
+												</tr>
+											</thead>
+											<tbody>
+												{#each lignes as l}
+													<tr>
+														<td>{fmtDatetime(l.cree_le)}</td>
+														<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
+														<td>
+															<span class="badge {l.statut === 'erreur' || l.statut === 'echouee' ? 'badge-red' : 'badge-green'}">
+																{l.statut ?? '—'}
+															</span>
+														</td>
+														<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
+														{#if aValeur(lignes, 'taille_db_octets')}
+															<td>{fmtOctets(l.taille_db_octets)}</td>
+														{/if}
+														{#if aValeur(lignes, 'details')}
+															<td style="font-size:.72rem;color:var(--color-text-muted)">
+																{l.details ? Object.entries(l.details).map(([k, v]) => `${k}: ${v}`).join(' · ') : '—'}
+															</td>
+														{/if}
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									{/if}
+									{#if LANCEMENT[t.tache]}
+										<div style="margin:.5rem 0 .25rem">
+											<button class="btn btn-primary" style="font-size:.8rem;padding:.3rem .7rem"
+												on:click|stopPropagation={() => declencher(t.tache)}
+												disabled={enCours === t.tache}
+												title={t.tache === 'maintenance'
+													? "Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille."
+													: ''}>
+												{enCours === t.tache ? 'En cours...' : `Lancer ${LIBELLE_TACHE[t.tache].toLowerCase()}`}
+											</button>
+											{#if t.tache === 'maintenance'}
+												<span class="muted" style="font-size:.75rem;margin-left:.5rem">
+													part applicative seulement — l'hygiène du nœud en veille reste au script hebdomadaire
+												</span>
+											{/if}
+										</div>
+									{/if}
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -172,70 +295,14 @@
 	{/if}
 </section>
 
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-
-<section class="config-section">
-	<!-- Pas « Maintenances programmées » : ce tableau contient aussi les bascules
-	     et les copies hors site. Le nommer d'après une seule de ses tâches est
-	     exactement le défaut corrigé en v2.49.0 — on lisait des bascules sous un
-	     titre annonçant des maintenances. « Journal » dit sa nature (le détail,
-	     chronologique) là où la synthèse est au-dessus. -->
-	<h2 class="config-section-title">&#x1F527; Journal des exécutions — toutes tâches</h2>
-	<div class="backup-header">
-		<p class="muted" style="font-size:.85rem">
-			Toutes les tâches planifiées des deux nœuds, pas seulement la maintenance —
-			la colonne <strong>Tâche</strong> les distingue. Taille DB et Détail ne sont
-			renseignés que par la maintenance applicative. Le bouton exécute cette part
-			applicative (purges, VACUUM) sur ce nœud : il ne remplace pas le script
-			hebdomadaire, qui fait en plus l'hygiène du nœud en veille.
-		</p>
-		<button class="btn btn-primary" on:click={declencher} disabled={enCours}
-			title="Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille : images Docker, cache de build, rotation des journaux.">
-			{enCours ? 'En cours...' : 'Lancer la maintenance applicative'}
-		</button>
-	</div>
-	{#if executionsLoading}
-		<p class="muted">Chargement...</p>
-	{:else if executions.length === 0}
-		<div class="empty-state">
-			<h3>Aucune exécution enregistrée</h3>
-			<p>Aucune tâche n'a encore transmis de rapport, ou <code>MAINTENANCE_KEY</code> n'est pas configuré dans le <code>.env</code>.</p>
-		</div>
-	{:else}
-		<div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
-			<table class="table" style="font-size:.82rem">
-				<thead class="sticky-head"><tr><th>Date</th><th>Tâche</th><th>Nœud</th><th>Portée</th><th>Statut</th><th>Taille DB</th><th>Durée</th><th>Détail</th></tr></thead>
-				<tbody>
-					{#each executions as m}
-						<tr>
-							<td style="font-size:.85rem">{fmtDatetime(m.cree_le)}</td>
-							<td>{LIBELLE_TACHE[m.tache] ?? m.tache ?? '—'}</td>
-							<td style="color:var(--color-text-muted)">
-								{#if m.noeud}{m.noeud.toUpperCase()}{:else}<span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>{/if}
-							</td>
-							<td style="color:var(--color-text-muted);font-size:.8rem">{LIBELLE_PORTEE[m.portee] ?? m.portee ?? '—'}</td>
-							<td>
-								<span class="badge {m.statut === 'succes' ? 'badge-green' : 'badge-red'}">{m.statut}</span>
-								{#if m.erreur}<span title={m.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
-							</td>
-							<td style="color:var(--color-text-muted);font-size:.85rem">{m.taille_db_octets ? (m.taille_db_octets / 1024 / 1024).toFixed(1) + ' Mo' : '—'}</td>
-							<td style="color:var(--color-text-muted);font-size:.85rem">{m.duree_secondes != null ? m.duree_secondes + ' s' : '—'}</td>
-							<td style="color:var(--color-text-muted);font-size:.78rem">
-								{#if m.details}
-									{m.details.lignes_rotees ? m.details.lignes_rotees + ' lignes rotées' : ''}
-									{m.details.cache_plafond ? ' · cache : ' + m.details.cache_plafond : ''}
-									{m.details.tokens ? ' · ' + m.details.tokens + ' jetons' : ''}
-								{:else}—{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-		<p class="muted" style="margin-top:.6rem;font-size:.8rem">
-			Les exécutions antérieures à la <strong>v2.32.0</strong> n'enregistraient pas le nœud :
-			elles s'affichent « non enregistré ». Le nœud en veille transmettra son premier
-			rapport après la prochaine bascule nocturne.
-		</p>
-	{/if}
-</section>
+<style>
+	/*  Ligne de synthèse dépliable. Le détail vit SOUS la ligne qui l'annonce :
+	    c'est ce qui remplace les trois tableaux séparés que l'utilisateur a
+	    jugés illisibles le 11/08/2026. */
+	tr.cliquable { cursor: pointer; }
+	tr.cliquable:hover { background: var(--color-bg); }
+	tr.cliquable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+	tr.detail > td { background: var(--color-bg); padding: .25rem .75rem .75rem; }
+	.chevron { display: inline-block; transition: transform .15s; font-size: 1.1rem; }
+	.chevron.open { transform: rotate(90deg); }
+</style>
