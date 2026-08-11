@@ -2,6 +2,7 @@
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
 import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
+import { titreDetail } from '$lib/taches';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -1402,7 +1403,11 @@ $: _siteNom = $siteNomStore;
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
 <section class="config-section">
-  <h2 class="config-section-title">&#x1F5A5;️ Système — Sauvegardes</h2>
+  <!-- Titre construit depuis `$lib/taches.ts` : c'est ce qui garantit que la carte
+       porte le MÊME nom que la ligne de la synthèse qui y renvoie. Écrit à la main,
+       il disait « Système — Sauvegardes » là où la synthèse disait « Sauvegarde
+       quotidienne » — on ne pouvait pas relier les deux. -->
+  <h2 class="config-section-title">&#x1F5A5;️ {titreDetail('backup')}</h2>
   <div class="backup-header">
     <p class="muted">Stockage : <code>/data/5hostachy/backups/</code></p>
     <button class="btn btn-primary" on:click={declencherSauvegarde} disabled={backupEnCours}>
@@ -1439,7 +1444,7 @@ $: _siteNom = $siteNomStore;
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
 <section class="config-section">
-  <h2 class="config-section-title">🕓 Historique des agrégations</h2>
+  <h2 class="config-section-title">🕓 {titreDetail('telemetrie')}</h2>
   <div class="backup-header">
     <p class="muted" style="font-size:.85rem">Exécutions de l'agrégation de la télémétrie (automatique chaque nuit à 2h, ou manuelle). Agrège les événements bruts en données journalières puis mensuelles, et purge les données expirées.</p>
     <button class="btn btn-primary" on:click={declencherAggregation} disabled={telemetryAggEnCours}>

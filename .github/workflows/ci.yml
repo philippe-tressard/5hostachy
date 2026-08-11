@@ -262,6 +262,17 @@ jobs:
         working-directory: front
         run: npm run lint:notifications
 
+      # Le nom d'une tâche planifiée s'affiche dans la synthèse, dans la colonne
+      # Tâche du journal, et dans le titre de la carte qui la détaille — ces deux
+      # derniers dans des FICHIERS différents. Ils avaient divergé : la synthèse
+      # disait « Sauvegarde quotidienne » quand la carte s'appelait « Système —
+      # Sauvegardes », si bien qu'on ne pouvait pas relier une ligne au tableau
+      # censé la détailler (signalé par l'utilisateur le 11/08/2026). Regrouper
+      # ne suffit pas : rien n'empêche le prochain écran de retaper le nom.
+      - name: Libellés de tâches non dupliqués
+        working-directory: front
+        run: npm run lint:taches
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

@@ -12,6 +12,7 @@
 	import { api } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { LIBELLE_TACHE } from '$lib/taches';
 
 	let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
 	let santeLoading = true;
@@ -26,18 +27,10 @@
 	//  tâche hebdomadaire déclarée jamais exécutée, et des colonnes Taille DB et
 	//  Détail vides : une bascule n'a ni l'une ni l'autre à déclarer.
 	//  Signalé par l'utilisateur le 11/08/2026, par aucun contrôle.
-	const LIBELLE_TACHE: Record<string, string> = {
-		maintenance: 'Maintenance hebdomadaire',
-		backup: 'Sauvegarde quotidienne',
-		bascule: 'Bascule actif/standby',
-		telemetrie: 'Agrégation télémétrie',
-		health_watch: 'Surveillance du site',
-		reliability: 'Contrôles de fiabilité',
-		auto_deploy: 'Déploiement automatique',
-		// Seule tâche lancée à la main depuis le poste : le libellé le dit, sinon une
-		// « exécution manquante » se lirait comme une panne alors qu'il s'agit d'un oubli.
-		export_hors_site: 'Copie hors site (manuelle)'
-	};
+	//
+	//  Les libellés eux-mêmes vivent dans `$lib/taches.ts` : ils servent AUSSI aux
+	//  titres des cartes de détail, qui sont dans un autre fichier. Les redéfinir
+	//  ici est précisément ce qui les avait fait diverger.
 
 	//  « Jamais exécutée » affirmait plus que ce que le contrôle mesure : il
 	//  observe l'absence de RAPPORT en base, pas l'absence d'exécution. Les deux
