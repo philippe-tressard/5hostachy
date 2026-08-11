@@ -93,6 +93,36 @@ beat_age_min() {  # $1 = "AAAA-MM-JJ HH:MM:SS" (peut être vide), $2 = epoch de 
   echo $(( (now - e) / 60 ))
 }
 
+verdict_sondes_maintenance() {
+  # $1 = âge (min) de la dernière exécution vue dans le JOURNAL du nœud
+  # $2 = âge (min) du dernier rapport de ce nœud EN BASE ("" = aucun)
+  # $3 = tolérance (min) entre les deux
+  #
+  #  DEUX SONDES INDÉPENDANTES, et c'est leur DÉSACCORD qui porte l'information
+  #  (`standards/04-fiabilite-des-controles.md`). Chacune prise seule ment par
+  #  omission — vécu du 09 au 11/08/2026 :
+  #    - le journal disait « la maintenance a tourné » (C17, vert) ;
+  #    - la base disait « aucun rapport », et l'écran affichait un badge rouge
+  #      que rien ne permettait de distinguer d'une tâche qui n'a pas tourné.
+  #  Les deux avaient raison : le script tournait et mourait avant d'envoyer son
+  #  rapport, la rotation des journaux ayant délié son propre inode (corrigé en
+  #  v2.46.8). Personne ne comparait, donc le seul symptôme était illisible.
+  #
+  #  Sens de la comparaison : un rapport NETTEMENT plus vieux que la dernière
+  #  exécution connue signifie que la chaîne de remontée est rompue. L'inverse
+  #  (rapport plus récent que le journal) n'est pas une anomalie : le rapport
+  #  peut venir d'un déclenchement manuel depuis l'interface, qui n'écrit pas
+  #  dans le journal du nœud.
+  [ -z "$1" ] && { echo INCONNU; return; }
+  case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
+  #  Base non interrogeable (standby : aucune API locale) → INCONNU, jamais OK.
+  [ "$2" = "-" ] && { echo INCONNU; return; }
+  #  Le journal montre une exécution, la base n'a AUCUN rapport de ce nœud.
+  [ -z "$2" ] && { echo DIVERGENCE; return; }
+  case "$2" in (*[!0-9]*) echo INCONNU; return ;; esac
+  [ $(( $2 - $1 )) -gt "$3" ] && echo DIVERGENCE || echo OK
+}
+
 # ── Taille du cache de build Docker en Go entiers (PURE — testable) ──────────
 # `docker system df` rend « 64.68GB », « 980MB »… Rend -1 si illisible :
 # INCONNU n'est jamais OK (règle 1 du CLAUDE.md).
@@ -227,6 +257,25 @@ if [ "${1:-}" = "--selftest" ]; then
   check "maintenance pile à 8 j"                "ok"      11520 "$MAINT_MAX_AGE_MIN"
   check "deux dimanches manqués"                "absent"  20160 "$MAINT_MAX_AGE_MIN"
   check "maintenance jamais horodatée"          "inconnu" -1    "$MAINT_MAX_AGE_MIN"
+  echo "-- C19 : le journal et la base disent-ils la même chose ? --"
+  sm() {  # $1 = libellé, $2 = attendu, $3 = âge journal, $4 = âge base, $5 = tolérance
+    r=$(verdict_sondes_maintenance "$3" "$4" "$5")
+    if [ "$r" = "$2" ]; then echo "PASS  $1 → $r"
+    else echo "FAIL  $1  attendu=$2 obtenu=$r"; st_fail=1; fi
+  }
+  #  Le cas vécu : la maintenance a tourné il y a 2 j, aucun rapport en base.
+  sm "a tourné, aucun rapport (09-11/08)"  DIVERGENCE 2880 ""    720
+  sm "rapport aussi vieux que l'exécution" OK         2880 2880  720
+  sm "rapport en retard mais dans la marge" OK        2880 3300  720
+  sm "rapport bien plus vieux que la course" DIVERGENCE 2880 5760 720
+  #  Un déclenchement manuel depuis l'interface n'écrit pas dans le journal :
+  #  un rapport PLUS RÉCENT que la dernière ligne du journal est normal.
+  sm "rapport plus récent que le journal"  OK         2880 60    720
+  #  Standby : aucune API locale, la base n'est pas interrogeable depuis ce nœud.
+  sm "base non interrogeable (standby)"    INCONNU    2880 "-"   720
+  sm "journal illisible"                   INCONNU    ""   2880  720
+  sm "âge journal aberrant"                INCONNU    "x"  2880  720
+  sm "âge base aberrant"                   INCONNU    2880 "hier" 720
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st_fail
 fi
@@ -265,6 +314,18 @@ echo "buildcache=$(docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null |
 # Motif SANS accent volontairement : ce bloc traverse SSH, et « Hygiène » y
 # dépendrait de la locale des deux bouts. « Garde-fou » est aussi distinctif.
 echo "maint_last=$(grep "Garde-fou" '"$MAINT_LOG"' 2>/dev/null | grep -oE "^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]" | tail -1 | tr -d "[]")"
+# Date du dernier rapport de maintenance EN BASE, pour ce nœud — la seconde sonde
+# de C19. Lue par l'\''API in-process (jamais en ouvrant app.db : règle d'\''or), donc
+# elle ne répond que sur l'\''ACTIF. Sur le standby la chaîne est vide, et C19 le
+# traduit en INCONNU au lieu de conclure à une divergence.
+MK=$(grep -E "^MAINTENANCE_KEY=" '"$R"'/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' \r")
+if [ -n "$MK" ]; then
+  echo "rapports=$(curl -s --max-time 8 -H "x-maintenance-key: $MK" \
+    "http://localhost/api/admin/maintenance/dernier-rapport?tache=maintenance" 2>/dev/null \
+    | grep -oE "\"rpi[0-9]\": ?\"[0-9T:.-]+\"" | tr -d "\" " | tr "\n" ";")"
+else
+  echo "rapports="
+fi
 # Crontab ROOT, et root seulement. Le test sur l'\''uid n'\''est pas une précaution
 # de style : ce bloc tourne en root en local (cron root) mais en `ptressard` sur le
 # peer (SSH). Un `crontab -l` nu y rendrait le crontab de `ptressard` — qui existe,
@@ -561,5 +622,50 @@ if [ "$FAILS" -gt 0 ]; then
     echo "[WARN] lib-alert.sh introuvable dans $REPO — aucune alerte envoyée."
   fi
 fi
+
+# ── C19. Le journal et la base disent-ils la même chose de la maintenance ? ───
+# C17 lit le JOURNAL du nœud et sait si la maintenance a tourné. L'écran
+# d'administration lit la BASE et sait si son rapport est arrivé. Du 09 au
+# 11/08/2026 les deux se sont contredits pendant trois jours sans que rien ne le
+# signale : C17 était vert, l'écran affichait « Aucun rapport reçu » en rouge, et
+# ce badge était indiscernable de celui d'une tâche qui n'aurait jamais tourné.
+#
+# Les deux disaient vrai. Le script tournait et mourait AVANT d'envoyer son
+# rapport : la rotation des journaux déliait son propre inode (corrigé en
+# v2.46.8, mais 11 h après le dernier passage hebdomadaire). Aucune des deux
+# sondes ne pouvait le dire seule — c'est leur DÉSACCORD qui portait
+# l'information, et personne ne les comparait.
+#
+# Ce contrôle est donc la sonde manquante : il ne mesure rien de neuf, il
+# confronte deux mesures existantes (`standards/04-fiabilite-des-controles.md`,
+# deux sondes indépendantes avant de conclure).
+#
+# WARN et non FAIL : une remontée cassée ne coupe pas la production, elle rend
+# la surveillance aveugle. Ce qui coupe, C9 et C10 le voient déjà.
+C19_TOLERANCE_MIN=720          # 12 h : le rapport part en fin de maintenance,
+                               # elle-même longue de quelques minutes.
+for pair in "$SELF:${S_maint_last:-}" "$PEER:${P_maint_last:-}"; do
+  n=${pair%%:*}; v=${pair#*:}
+  [ "$n" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+  AGE_J=$(beat_age_min "$v")
+  #  `rapports` n'est renseigné que par le nœud qui porte l'API (l'actif) : la
+  #  carte qu'il rend couvre LES DEUX nœuds, puisque le standby lui poste ses
+  #  propres rapports. Si aucun des deux n'a pu l'obtenir, la base est
+  #  ininterrogeable → « - », que la fonction traduit en INCONNU.
+  CARTE="${S_rapports:-}${P_rapports:-}"
+  if [ -z "$CARTE" ]; then
+    AGE_B="-"
+  else
+    D=$(echo "$CARTE" | tr ';' '
+' | grep -oE "^$n:[0-9-]{10}T[0-9:]{8}" | head -1 | cut -d: -f2- | tr 'T' ' ')
+    AGE_B=$(beat_age_min "$D")
+    [ "$AGE_B" = "-1" ] && AGE_B=""      # aucune ligne pour ce nœud
+  fi
+  case "$(verdict_sondes_maintenance "$AGE_J" "$AGE_B" "$C19_TOLERANCE_MIN")" in
+    OK)         ok "Maintenance sur $n : le journal et la base concordent" ;;
+    DIVERGENCE) warn "Maintenance sur $n : elle a TOURNÉ (journal) mais son rapport n'est pas arrivé en base — la chaîne de remontée est rompue, l'écran d'administration affichera « Aucun rapport reçu » à tort" ;;
+    *)          warn "Maintenance sur $n : concordance journal/base INCONNUE (journal='${AGE_J}' base='${AGE_B}') — ni vert ni rouge" ;;
+  esac
+done
 
 exit "$FAILS"

@@ -84,6 +84,12 @@ _PUBLICS_ASSUMES = {
     # Rapport de maintenance machine-à-machine : authentifié par secret partagé
     # (en-tête `x-maintenance-key`), et refuse tout si la clé n'est pas configurée.
     ("exploitation.py", "maintenance_rapport"),
+    # Même canal, en lecture : `check-reliability.sh` C19 y compare la date du
+    # dernier rapport en base avec ce que dit le journal du nœud. Tourne en cron,
+    # donc sans session. Ne rend que des dates d'exécution de tâches — aucune
+    # donnée de copropriétaire — et la clé qui l'ouvre autorise déjà l'ÉCRITURE
+    # de ces mêmes lignes : la lecture est strictement moins sensible.
+    ("exploitation.py", "maintenance_dernier_rapport"),
 }
 
 
