@@ -112,6 +112,11 @@
 	//  rapport de maintenance n'arrivait. La colonne apparaît donc dès qu'une
 	//  ligne la renseigne, et disparaît sinon — plutôt que d'être supprimée, ce
 	//  qui aurait effacé une donnée à cause d'un défaut de remontée.
+	//  Étendu le 11/08/2026 au NŒUD et à la DURÉE : `historique_sauvegarde` et
+	//  `historique_telemetrie` n'ont ni l'une ni l'autre de ces colonnes, et le
+	//  tableau affichait donc quatre tirets alignés — l'utilisateur les a lus
+	//  comme un historique « incomplet », ce qui est exactement ce qu'une colonne
+	//  vide raconte. Une colonne qu'aucune ligne ne renseigne ne s'affiche pas.
 	const aValeur = (lignes: any[], champ: string) =>
 		lignes.some((l) => l?.[champ] !== null && l?.[champ] !== undefined && l?.[champ] !== '');
 
@@ -183,14 +188,20 @@
 	{:else}
 		<div class="card" style="overflow:auto;margin-top:1rem">
 			<table class="table" style="font-size:.82rem">
-				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th><th></th></tr></thead>
+				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th></tr></thead>
 				<tbody>
 					{#each sante.taches as t}
 						<tr class="cliquable" role="button" tabindex="0"
 							aria-expanded={ouverte === t.tache}
 							on:click={() => basculer(t.tache)}
 							on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), basculer(t.tache))}>
-							<td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
+							<td>
+								<!--  Affordance de dépliement DEVANT le libellé, pas au bout de la
+								      ligne : à droite, gris et petit, il n'était pas vu — l'utilisateur
+								      ignorait que les lignes s'ouvraient (11/08/2026). -->
+								<span class="chevron" class:open={ouverte === t.tache} aria-hidden="true">&#x25B8;</span>
+								{LIBELLE_TACHE[t.tache] ?? t.tache}
+							</td>
 							<td style="color:var(--color-text-muted)">
 								{#if !t.noeud_enregistre}
 									<span style="font-style:italic"
@@ -216,14 +227,11 @@
 								</span>
 							</td>
 							<td style="color:var(--color-text-muted)">{t.derniere ? fmtDatetime(t.derniere) : '—'}</td>
-							<td style="text-align:right;color:var(--color-text-muted)">
-								<span class="chevron" class:open={ouverte === t.tache}>&rsaquo;</span>
-							</td>
 						</tr>
 						{#if ouverte === t.tache}
 							{@const lignes = historiques[t.tache] ?? []}
 							<tr class="detail">
-								<td colspan="6">
+								<td colspan="4">
 									{#if enChargement[t.tache]}
 										<p class="muted" style="margin:.5rem 0">Chargement...</p>
 									{:else if lignes.length === 0}
@@ -234,7 +242,10 @@
 										<table class="table" style="font-size:.78rem;margin:.25rem 0">
 											<thead>
 												<tr>
-													<th>Date</th><th>Nœud</th><th>Statut</th><th>Durée</th>
+													<th>Date</th>
+													{#if aValeur(lignes, 'noeud')}<th>Nœud</th>{/if}
+													<th>Statut</th>
+													{#if aValeur(lignes, 'duree_secondes')}<th>Durée</th>{/if}
 													{#if aValeur(lignes, 'taille_db_octets')}<th>Taille DB</th>{/if}
 													{#if aValeur(lignes, 'details')}<th>Détail</th>{/if}
 												</tr>
@@ -243,13 +254,17 @@
 												{#each lignes as l}
 													<tr>
 														<td>{fmtDatetime(l.cree_le)}</td>
-														<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
+														{#if aValeur(lignes, 'noeud')}
+															<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
+														{/if}
 														<td>
 															<span class="badge {l.statut === 'erreur' || l.statut === 'echouee' ? 'badge-red' : 'badge-green'}">
 																{l.statut ?? '—'}
 															</span>
 														</td>
-														<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
+														{#if aValeur(lignes, 'duree_secondes')}
+															<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
+														{/if}
 														{#if aValeur(lignes, 'taille_db_octets')}
 															<td>{fmtOctets(l.taille_db_octets)}</td>
 														{/if}
@@ -264,7 +279,7 @@
 										</table>
 									{/if}
 									{#if LANCEMENT[t.tache]}
-										<div style="margin:.5rem 0 .25rem">
+										<div style="margin:.5rem 0 .25rem;padding-left:.75rem">
 											<button class="btn btn-primary" style="font-size:.8rem;padding:.3rem .7rem"
 												on:click|stopPropagation={() => declencher(t.tache)}
 												disabled={enCours === t.tache}
@@ -302,7 +317,10 @@
 	tr.cliquable { cursor: pointer; }
 	tr.cliquable:hover { background: var(--color-bg); }
 	tr.cliquable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-	tr.detail > td { background: var(--color-bg); padding: .25rem .75rem .75rem; }
-	.chevron { display: inline-block; transition: transform .15s; font-size: 1.1rem; }
+	tr.detail > td { background: var(--color-bg); padding: .25rem 0 .75rem; }
+	.chevron {
+		display: inline-block; transition: transform .15s;
+		color: var(--color-primary); font-size: .9rem; margin-right: .4rem;
+	}
 	.chevron.open { transform: rotate(90deg); }
 </style>

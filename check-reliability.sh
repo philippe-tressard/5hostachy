@@ -67,21 +67,16 @@ fail() { echo "[FAIL] $*"; FAIL_LINES+="[FAIL] $*"$'\n'; FAILS=$((FAILS+1)); }
 # shellcheck source=lib-verdicts.sh
 . "$(dirname "$0")/lib-verdicts.sh"
 
-if [ "${1:-}" = "--selftest" ]; then
-  verdicts_selftest
-  exit $?
-fi
-
-
-# Sourcé APRÈS le bloc --selftest : la CI exécute `bash check-reliability.sh
-# --selftest` depuis la racine du dépôt, où $REPO (/opt/5hostachy) n'existe pas.
-source "$REPO/lib-role.sh"
-SELF=$(role_of "$(hostname)")
-[ -n "$SELF" ] || { echo "Hostname inconnu — abandon."; exit 2; }
-SELF_IP=$(role_ip "$SELF"); PEER=$(role_peer "$SELF"); PEER_IP=$(role_ip "$PEER")
-SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
-
 # ── Snippet de collecte exécuté sur chaque nœud (local + peer) ───────────────
+# ⚠ Assemblé AVANT le gate --selftest, et ce n'est pas un rangement cosmétique.
+# Le 11/08/2026 ce bloc a référencé $R en sortant des quotes ('"$R"'), c'est-à-dire
+# dans le shell qui ASSEMBLE la chaîne — où $R n'existe pas, n'ayant jamais existé
+# ailleurs que dans le snippet lui-même. Sous `set -u`, l'assemblage tue le script
+# avant son premier contrôle : check-reliability n'a plus tourné du tout sur le
+# nœud actif, et seule la version périmée du standby a pu le signaler. `bash -n` ne
+# voyait rien (la syntaxe est valide) et `--selftest` rendait la main avant d'y
+# arriver : CI verte sur un script mort. Le gate est donc passé APRÈS, pour que la
+# CI paie le prix de l'assemblage exactement comme la production.
 # Émet des lignes key=value. Tout est tolérant aux erreurs (jamais d'exit ≠ 0).
 COLLECT='
 R=/opt/5hostachy
@@ -111,7 +106,12 @@ echo "maint_last=$(grep "Garde-fou" '"$MAINT_LOG"' 2>/dev/null | grep -oE "^\[[0
 # de C19. Lue par l'\''API in-process (jamais en ouvrant app.db : règle d'\''or), donc
 # elle ne répond que sur l'\''ACTIF. Sur le standby la chaîne est vide, et C19 le
 # traduit en INCONNU au lieu de conclure à une divergence.
-MK=$(grep -E "^MAINTENANCE_KEY=" '"$R"'/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' \r")
+# $R reste DANS les quotes : il appartient au snippet (défini plus haut), pas au
+# shell qui assemble. Seules les CONSTANTES du script (LOG_WARN_MB, MAINT_LOG)
+# justifient une sortie de quotes : elles ne vivent que côté assembleur.
+# Et aucune apostrophe dans ces commentaires : ils sont DANS la chaîne, et une
+# apostrophe nue la referme — sinon écrire le motif échappé, comme plus haut.
+MK=$(grep -E "^MAINTENANCE_KEY=" $R/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' \r")
 if [ -n "$MK" ]; then
   echo "rapports=$(curl -s --max-time 8 -H "x-maintenance-key: $MK" \
     "http://localhost/api/admin/maintenance/dernier-rapport?tache=maintenance" 2>/dev/null \
@@ -127,6 +127,19 @@ fi
 if [ "$(id -u)" = "0" ]; then CRONRAW=$(crontab -l 2>/dev/null); else CRONRAW=$(sudo -n crontab -l 2>/dev/null); fi
 echo "cronscripts=$(echo "$CRONRAW" | grep -vE "^\s*(#|$)" | grep -oE "/opt/5hostachy/[A-Za-z0-9_.-]+\.sh" | sed "s#.*/##" | sort -u | paste -sd, - | tr -d " \n")"
 '
+
+if [ "${1:-}" = "--selftest" ]; then
+  verdicts_selftest
+  exit $?
+fi
+
+# Sourcé APRÈS le bloc --selftest : la CI exécute `bash check-reliability.sh
+# --selftest` depuis la racine du dépôt, où $REPO (/opt/5hostachy) n'existe pas.
+source "$REPO/lib-role.sh"
+SELF=$(role_of "$(hostname)")
+[ -n "$SELF" ] || { echo "Hostname inconnu — abandon."; exit 2; }
+SELF_IP=$(role_ip "$SELF"); PEER=$(role_peer "$SELF"); PEER_IP=$(role_ip "$PEER")
+SSH_CMD="ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # ⚠ PAS de contrôle d'intégrité DB ici — SUPPRIMÉ le 17/07/2026 (cf. C8 plus bas).
 # Ce script ne doit JAMAIS ouvrir app.db : il tourne toutes les 15 min et l'ouverture
