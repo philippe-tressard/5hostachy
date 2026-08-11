@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.12 · Août 2026</span>
+    <span class="topbar-badge">Version 3.13 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -2605,10 +2605,10 @@
       <div class="card">
         <h3>Que contient cet onglet ?</h3>
         <ul>
-          <li><strong>Santé des tâches planifiées</strong> — pour chaque tâche automatique, son état et la date du <strong>dernier rapport reçu</strong>. Une tâche qui <em>aurait dû</em> se signaler et ne l'a pas fait apparaît en <strong>« Exécution manquante »</strong> ; une tâche dont aucun rapport n'est jamais arrivé, en <strong>« Aucun rapport reçu »</strong>. La nuance compte : ce tableau observe les <em>rapports</em>, pas les exécutions. Une tâche peut avoir tourné sans que son rapport parvienne — passez la souris sur l'état pour lire ce qu'il mesure exactement.</li>
-          <li><strong>Sauvegardes</strong> — historique des sauvegardes automatiques (03&nbsp;h) et bouton pour en déclencher une immédiatement.</li>
-          <li><strong>Exécutions enregistrées</strong> — tous les rapports reçus, <strong>toutes tâches confondues</strong> : maintenance hebdomadaire, bascules nocturnes, copies hors site. La colonne <strong>Tâche</strong> les distingue — sans elle, on lisait des bascules quotidiennes en croyant voir des maintenances. Les colonnes <em>Taille DB</em> et <em>Détail</em> ne sont renseignées que par la maintenance applicative : vides sur les autres lignes, c'est normal. Le bouton <strong>Lancer la maintenance applicative</strong> ne remplace pas le script hebdomadaire : il exécute les purges et le <em>VACUUM</em> sur le seul nœud qui répond, sans l'hygiène du nœud en veille (images Docker, cache de build, rotation des journaux).</li>
-          <li><strong>Historique des agrégations</strong> — passages du job qui agrège la télémétrie chaque nuit (02&nbsp;h) et purge les données expirées. Regroupé ici depuis la v2.32.3 : c'est une tâche planifiée comme les autres, et son arrêt rendrait les statistiques de l'onglet Télémétrie silencieusement fausses.</li>
+          <li><strong>Santé des tâches planifiées</strong> — la <strong>synthèse</strong> : <strong>une ligne par tâche</strong>, quel que soit le nombre de nœuds qui l'exécutent, avec son état et la date du <strong>dernier rapport reçu</strong>. Quand une tâche tourne sur les deux nœuds, l'état affiché est celui du nœud le <strong>moins</strong> à jour, et la colonne <em>Nœud</em> nomme celui qui pose problème : un nœud sain ne doit pas masquer un nœud muet. Deux tâches — la sauvegarde et l'agrégation — n'enregistrent pas quel nœud les a exécutées : leur colonne <em>Nœud</em> affiche « non enregistré » plutôt qu'une valeur inventée. Une tâche qui <em>aurait dû</em> se signaler et ne l'a pas fait apparaît en <strong>« Exécution manquante »</strong> ; une tâche dont aucun rapport n'est jamais arrivé, en <strong>« Aucun rapport reçu »</strong>. La nuance compte : ce tableau observe les <em>rapports</em>, pas les exécutions. Une tâche peut avoir tourné sans que son rapport parvienne — passez la souris sur l'état pour lire ce qu'il mesure exactement.</li>
+          <li><strong>Sauvegarde quotidienne — historique</strong> — les sauvegardes automatiques (03&nbsp;h) et bouton pour en déclencher une immédiatement.</li>
+          <li><strong>Journal des exécutions — toutes tâches</strong> — le <strong>détail</strong> de la synthèse ci-dessus : tous les rapports reçus, <strong>toutes tâches confondues</strong> : maintenance hebdomadaire, bascules nocturnes, copies hors site. La colonne <strong>Tâche</strong> les distingue — sans elle, on lisait des bascules quotidiennes en croyant voir des maintenances. Les colonnes <em>Taille DB</em> et <em>Détail</em> ne sont renseignées que par la maintenance applicative : vides sur les autres lignes, c'est normal. Le bouton <strong>Lancer la maintenance applicative</strong> ne remplace pas le script hebdomadaire : il exécute les purges et le <em>VACUUM</em> sur le seul nœud qui répond, sans l'hygiène du nœud en veille (images Docker, cache de build, rotation des journaux).</li>
+          <li><strong>Agrégation télémétrie — historique</strong> — passages du job qui agrège la télémétrie chaque nuit (02&nbsp;h) et purge les données expirées. Regroupé ici depuis la v2.32.3 : c'est une tâche planifiée comme les autres, et son arrêt rendrait les statistiques de l'onglet Télémétrie silencieusement fausses.</li>
           <li><strong>Copie hors site (manuelle)</strong> — depuis la v2.37.0, la tâche <em>Copie hors site</em> apparaît dans la santé des tâches. C'est la seule qui ne se lance pas toute seule : voir la carte ci-dessous.</li>
         </ul>
       </div>
@@ -2840,7 +2840,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.12</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.13</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

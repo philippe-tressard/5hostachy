@@ -2,6 +2,7 @@
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
 import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
+import { titreDetail } from '$lib/taches';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -1402,7 +1403,11 @@ $: _siteNom = $siteNomStore;
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
 <section class="config-section">
-  <h2 class="config-section-title">&#x1F5A5;️ Système — Sauvegardes</h2>
+  <!-- Titre construit depuis `$lib/taches.ts` : c'est ce qui garantit que la carte
+       porte le MÊME nom que la ligne de la synthèse qui y renvoie. Écrit à la main,
+       il disait « Système — Sauvegardes » là où la synthèse disait « Sauvegarde
+       quotidienne » — on ne pouvait pas relier les deux. -->
+  <h2 class="config-section-title">&#x1F5A5;️ {titreDetail('backup')}</h2>
   <div class="backup-header">
     <p class="muted">Stockage : <code>/data/5hostachy/backups/</code></p>
     <button class="btn btn-primary" on:click={declencherSauvegarde} disabled={backupEnCours}>
@@ -1439,7 +1444,7 @@ $: _siteNom = $siteNomStore;
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
 <section class="config-section">
-  <h2 class="config-section-title">🕓 Historique des agrégations</h2>
+  <h2 class="config-section-title">🕓 {titreDetail('telemetrie')}</h2>
   <div class="backup-header">
     <p class="muted" style="font-size:.85rem">Exécutions de l'agrégation de la télémétrie (automatique chaque nuit à 2h, ou manuelle). Agrège les événements bruts en données journalières puis mensuelles, et purge les données expirées.</p>
     <button class="btn btn-primary" on:click={declencherAggregation} disabled={telemetryAggEnCours}>
@@ -2268,19 +2273,9 @@ $: _siteNom = $siteNomStore;
 {/if}
 
 <style>
-/* En-tête de tableau qui reste visible au défilement.
-   Le `z-index` n'est PAS optionnel : sans lui, les cellules du corps se
-   dessinent PAR-DESSUS l'en-tête collé, qui réapparaît alors au milieu du
-   tableau (constaté le 02/08/2026 sur l'historique des sauvegardes).
-   Règle unique plutôt que le style inline qui était recopié sur chaque
-   tableau — c'était la même déclaration à quatre endroits, donc quatre fois
-   le même défaut. */
-.sticky-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--color-surface);
-}
+/* `.sticky-head`, `.config-section`, `.config-section-title`, `.muted` et
+   `.backup-header` sont passées dans `app.css` le 11/08/2026 : scopées ici,
+   elles ne suivaient pas les composants extraits de cette page. */
 .page-header { display: flex; align-items: center; margin-bottom: 1.5rem; padding-left: 1.25rem; }
 .page-header h1 { font-size: 1.4rem; font-weight: 700; }
 .tabs-group { margin-bottom: 0; }
@@ -2309,18 +2304,6 @@ font-size: .7rem; padding: .1rem .45rem; font-weight: 700;
 padding: .3rem .5rem; border: 1px solid var(--color-border);
 border-radius: var(--radius); font-size: .85rem; min-width: 160px;
 }
-.backup-header {
-display: flex; justify-content: space-between; align-items: center;
-margin-bottom: .5rem; flex-wrap: wrap; gap: .75rem;
-}
-.backup-header p {
-margin: 0;
-flex: 1 1 320px;
-}
-.backup-header .btn {
-margin-left: auto;
-}
-.muted { color: var(--color-text-muted); }
 code { background: var(--color-bg); padding: .1rem .35rem; border-radius: .25rem; font-size: .85em; }
 .role-select {
 padding: .25rem .4rem; border: 1px solid var(--color-border);
@@ -2354,8 +2337,6 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .825rem; font-weight: 500; }
 .email-label { display: block; font-size: .78rem; font-weight: 500; color: var(--color-text-muted); margin-bottom: .25rem; }
 .email-input { width: 100%; padding: .4rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .85rem; font-family: monospace; box-sizing: border-box; resize: vertical; }
-.config-section { margin-bottom: 1.25rem; }
-.config-section-title { font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
 .field-label { display: flex; flex-direction: column; gap: .25rem; font-size: .825rem; font-weight: 500; }
 .field-hint { font-size: .75rem; color: var(--color-text-muted); }
 .ref-list { display: flex; flex-direction: column; gap: .4rem; }
