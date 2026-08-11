@@ -1,0 +1,133 @@
+"""Publications — notions partagées par les quatre sous-domaines.
+
+Extrait de `publications.py` (682 lignes) le 11/08/2026. Voir `__init__.py` pour
+la règle de découpage.
+"""
+import json
+import logging
+from datetime import datetime, timedelta
+
+from fastapi import BackgroundTasks
+from sqlmodel import Session, select
+
+from app.models.core import (
+    AnnonceHall, Publication, PublicationEvolution, Utilisateur,
+)
+from app.schemas import EvolutionRead, PublicationRead
+
+#  `_generer_annonce_hall` journalise l'échec de génération sans le propager :
+#  sans ce logger, l'`except` du module d'origine levait un `NameError` et
+#  faisait échouer la publication qu'il devait justement protéger. Trouvé par
+#  ruff au découpage, jamais par un test — aucun n'emprunte ce chemin.
+logger = logging.getLogger("publications")
+
+ARCHIVAGE_DELAI_HEURES = 48
+PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
+
+
+def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
+    """Construit un PublicationRead avec les évolutions et le nom auteur."""
+    evols = session.exec(
+        select(PublicationEvolution)
+        .where(PublicationEvolution.publication_id == pub.id)
+        .order_by(PublicationEvolution.cree_le)
+    ).all()
+    evol_reads = [evolution_read(e, session) for e in evols]
+    data = PublicationRead.model_validate(pub)
+    auteur_pub = session.get(Utilisateur, pub.auteur_id)
+    data.auteur_nom = f"{auteur_pub.prenom} {auteur_pub.nom}" if auteur_pub else "?"
+    data.evolutions = evol_reads
+    return data
+
+
+def _generer_annonce_hall(
+    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
+) -> None:
+    """Génère l'affiche de hall d'une publication (option « Annonce Hall »).
+
+    Idempotent : une publication ne produit qu'une seule annonce. L'échec de la
+    génération ne doit jamais faire échouer la publication elle-même — il est
+    journalisé, la publication reste créée.
+    """
+    from app.routers.annonces_hall import creer_annonce_hall, images_de_publication
+
+    deja = session.exec(
+        select(AnnonceHall).where(AnnonceHall.publication_id == pub.id)
+    ).first()
+    if deja:
+        return
+
+    try:
+        creer_annonce_hall(
+            session=session,
+            user=user,
+            background_tasks=background_tasks,
+            titre=pub.titre,
+            message=pub.contenu,
+            perimetre_cible=json.loads(pub.perimetre_cible or '["résidence"]'),
+            images=images_de_publication(pub, session),
+            publication_id=pub.id,
+        )
+    except Exception as exc:
+        logger.error("Annonce de hall non générée pour la publication %s : %s", pub.id, exc)
+
+
+def _is_archived(
+    pub: Publication,
+    delai_heures: int = ARCHIVAGE_DELAI_HEURES,
+    publie_jours: int = PUBLIE_VISIBILITE_JOURS,
+) -> bool:
+    """True si la publication doit être considérée comme archivée."""
+    if pub.archivee:
+        # L'archivage explicite prime sur tout : c'est une décision humaine.
+        return True
+    if pub.epingle:
+        # Épinglé = « garder en vue » ; s'auto-archiver au bout de 30 jours
+        # contredirait le marqueur. Décision du 01/08/2026, prise avec le
+        # bandeau « Épinglé » du fil d'activité. Pour retirer la publication,
+        # on la dépingle (ou on l'archive à la main) — l'action reste explicite.
+        # Volontairement ici et non côté fil : /actualités et le tableau de bord
+        # doivent trancher pareil, sous peine de voir un élément dans une vue et
+        # pas dans l'autre (bug du 17/07/2026).
+        return False
+    if pub.statut == "resolu" and pub.statut_change_le:
+        delta = datetime.utcnow() - pub.statut_change_le
+        return delta >= timedelta(hours=delai_heures)
+    # État « publié » (défaut, hors workflow) : visible publie_jours puis archivé.
+    # Les brouillons (non encore publiés) ne sont jamais concernés.
+    if pub.statut in ("publie", None) and not pub.brouillon:
+        ref = pub.statut_change_le or pub.publiee_le or pub.cree_le
+        if ref:
+            return (datetime.utcnow() - ref) >= timedelta(days=publie_jours)
+    return False
+
+
+def _is_annule_expired(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEURES) -> bool:
+    """True si la publication annulée a dépassé le délai et doit être supprimée."""
+    if pub.statut == "annule" and pub.statut_change_le:
+        return (datetime.utcnow() - pub.statut_change_le) >= timedelta(hours=delai_heures)
+    return False
+
+
+def evolution_read(evol: PublicationEvolution, session: Session) -> EvolutionRead:
+    """Sérialisation d'une évolution — écrite trois fois avant le découpage.
+
+    `update_evolution`, `add_evolution` et `_pub_to_read` construisaient chacun
+    ce même `EvolutionRead` de dix champs, avec la même résolution de l'auteur et
+    le même `json.loads` défensif sur `fichiers_urls`. Trois copies d'une
+    sérialisation divergent au premier champ ajouté — celui-ci n'aurait été mis à
+    jour qu'à deux endroits sur trois, et rien ne l'aurait signalé.
+    """
+    auteur = session.get(Utilisateur, evol.auteur_id)
+    return EvolutionRead(
+        id=evol.id,
+        publication_id=evol.publication_id,
+        type=evol.type,
+        contenu=evol.contenu,
+        ancien_statut=evol.ancien_statut,
+        nouveau_statut=evol.nouveau_statut,
+        auteur_id=evol.auteur_id,
+        auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
+        cree_le=evol.cree_le,
+        fichiers_urls=json.loads(evol.fichiers_urls) if evol.fichiers_urls else [],
+    )
