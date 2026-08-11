@@ -96,6 +96,31 @@ verdict_clone() {          # $1 = commits de retard, $2 = upstream sans apport (
   [ "${2:-non}" = "oui" ] && echo OK || echo FAIL
 }
 
+verdict_bumps() {          # $1 = nombre de commits `chore(version)` du lot
+  #  Un lot porte UN bump, et un seul, posé en DERNIER.
+  #
+  #  Le 11/08/2026, la PR #297 en portait deux : `bump v2.49.1` puis
+  #  `bump v2.50.0`. La v2.49.1 n'a JAMAIS été servie — j'avais bumpé en croyant
+  #  le lot fini, les retours ont continué, j'ai rebumpé par-dessus. L'historique
+  #  annonce donc une version qui n'a jamais existé en production : un commit qui
+  #  décrit un fait faux, comme la PR vide de la #294.
+  #
+  #  La consigne « commit dédié » existait déjà et n'a pas suffi : elle ne disait
+  #  pas « un seul, et en dernier ». Quand le lot repart, la conduite est de
+  #  RÉÉCRIRE le bump (reset --soft puis push --force-with-lease), pas d'en
+  #  empiler un second — `dev` n'est pas protégée et le force-push y est déjà le
+  #  geste normal après chaque squash.
+  #
+  #  ZÉRO n'est pas un échec mais un ÉCART : un lot sans bump se déploie quand
+  #  même, et c'est P3 qui devient incapable de prouver que le déploiement a eu
+  #  lieu — la version servie serait identique avant et après. Visible, toléré.
+  [ -z "$1" ] && { echo INCONNU; return; }
+  case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
+  [ "$1" -eq 1 ] && { echo OK; return; }
+  [ "$1" -eq 0 ] && { echo ECART; return; }
+  echo FAIL
+}
+
 verdict_compte() {         # $1 = nombre observé, $2 = maximum toléré
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
@@ -172,6 +197,12 @@ if [ "${1:-}" = "--selftest" ]; then
   t "standby qui porte des conteneurs"   FAIL    verdict_standby rpi1 4 3
   t "drapeau inconnu"                    INCONNU verdict_standby rpi9 4 0
   t "comptes non mesurés"                INCONNU verdict_standby rpi1 "" 0
+  t "un seul bump, le cas nominal"       OK      verdict_bumps 1
+  t "deux bumps (PR #297, 11/08)"        FAIL    verdict_bumps 2
+  t "cinq bumps"                         FAIL    verdict_bumps 5
+  t "aucun bump : P3 ne prouvera rien"   ECART   verdict_bumps 0
+  t "comptage impossible"                INCONNU verdict_bumps ""
+  t "comptage aberrant"                  INCONNU verdict_bumps "deux"
   t "zéro erreur"                        OK      verdict_compte 0 0
   t "erreurs présentes"                  FAIL    verdict_compte 3 0
   t "compte non mesuré"                  INCONNU verdict_compte "" 0
@@ -266,6 +297,26 @@ else
   V0C=INCONNU; DETAIL0C="gh absent — état de la CI non mesurable"
 fi
 rapporter 0c "$V0C" "CI de la branche $BRANCHE" "$DETAIL0C"
+
+# 0d — un seul bump de version par lot, et posé en dernier
+#      Ajouté le 11/08/2026 sur remarque de l'utilisateur : la PR #297 portait
+#      DEUX `chore(version)` — v2.49.1 puis v2.50.0 — et la v2.49.1 n'a jamais
+#      été servie. J'avais bumpé en croyant le lot fini, les retours ont
+#      continué, j'ai rebumpé. L'historique annonçait donc une version qui
+#      n'a jamais existé en production.
+#
+#      Le lot = ce que la PR déposera sur `main`, donc `origin/main..HEAD`.
+#      `--grep` sur le préfixe conventionnel, ancré : un commit qui MENTIONNE un
+#      bump dans son corps ne doit pas être compté.
+NB_BUMPS=$(git log origin/main..HEAD --grep='^chore(version)' --oneline 2>/dev/null | wc -l | tr -d ' ')
+V0D=$(verdict_bumps "${NB_BUMPS:-}")
+case "$V0D" in
+  OK)    D0D="1 bump — $(git log origin/main..HEAD --grep='^chore(version)' --format='%s' 2>/dev/null | head -1)" ;;
+  ECART) D0D="aucun bump : la version servie sera identique, P3 ne prouvera rien" ;;
+  FAIL)  D0D="$NB_BUMPS bumps — n'en garder qu'un : reset --soft puis push --force-with-lease" ;;
+  *)     D0D="comptage impossible" ;;
+esac
+rapporter 0d "$V0D" "Un seul bump de version dans le lot" "$D0D"
 
 # 15 — endpoints orphelins (poste de dev, avant le push)
 if [ -d api/tests ]; then

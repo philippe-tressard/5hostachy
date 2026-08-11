@@ -153,6 +153,7 @@ elle.
 |---|---|---|
 | 0a | Clone à jour sur `origin/dev` | OK · FAIL |
 | 0b | Modularité — ce que la CI vérifiera | OK · FAIL |
+| 0d | **Un seul bump de version dans le lot** | OK · ÉCART · FAIL |
 | 15 | Aucun endpoint orphelin | OK · FAIL |
 | 1 | Site public répond | OK · FAIL · INCONNU |
 | 2 | Rôle actif cohérent **et conforme au réel** | OK · FAIL |
@@ -172,8 +173,17 @@ elle.
 ### Lire le verdict
 
 - **FAIL** → MEP non autorisée. Diagnostiquer, corriger, **relancer le script**.
-- **ÉCART** (point 10 seulement) → toléré : le standby se resynchronise à la
-  bascule de 02:00 (`bascule.sh` phase 0).
+- **ÉCART** (points 10 et 0d) → toléré, mais à lire. Point 10 : le standby se
+  resynchronise à la bascule de 02:00 (`bascule.sh` phase 0). Point 0d : un lot
+  **sans** bump se déploie quand même — c'est P3 qui devient incapable de prouver
+  que le déploiement a eu lieu, la version servie étant identique avant et après.
+- **0d en FAIL** → le lot porte **deux bumps ou plus**. N'en garder qu'un, posé
+  en dernier : `git reset --soft <avant le 1er bump>` puis recommit et
+  `push --force-with-lease` — `dev` n'est pas protégée et le force-push y est
+  déjà le geste normal après chaque squash. Ne **jamais** empiler un second bump
+  quand le lot repart : la version intermédiaire n'atteindra jamais la
+  production et l'historique annoncera un déploiement qui n'a pas eu lieu
+  (PR #297, 11/08/2026 — v2.49.1 jamais servie).
 - **INCONNU** → le contrôle n'a **pas pu** mesurer. Ce n'est jamais un vert. Le
   script sort en 2 au-delà d'un seul INCONNU.
 - **Point 9 est INCONNU par construction** : l'historique des e-mails s'interroge
