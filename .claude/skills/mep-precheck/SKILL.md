@@ -154,6 +154,7 @@ elle.
 | 0a | Clone à jour sur `origin/dev` | OK · FAIL |
 | 0b | Modularité — ce que la CI vérifiera | OK · FAIL |
 | 0d | **Un seul bump de version dans le lot** | OK · ÉCART · FAIL |
+| 0f | **Titre et descriptif de PR préparés** (`.git/pr-brief.md`) | OK · FAIL · INCONNU |
 | 15 | Aucun endpoint orphelin | OK · FAIL |
 | 1 | Site public répond | OK · FAIL · INCONNU |
 | 2 | Rôle actif cohérent **et conforme au réel** | OK · FAIL |
@@ -177,6 +178,13 @@ elle.
   resynchronise à la bascule de 02:00 (`bascule.sh` phase 0). Point 0d : un lot
   **sans** bump se déploie quand même — c'est P3 qui devient incapable de prouver
   que le déploiement a eu lieu, la version servie étant identique avant et après.
+- **0f** → le lot doit porter son titre et son descriptif de PR **avant** le push,
+  dans `.git/pr-brief.md` : première ligne `commit: <sha court de HEAD>`, deuxième
+  ligne le titre en `# …`, puis le corps (5 lignes minimum). Un brief rédigé pour
+  un autre commit **échoue** — sinon il décrirait le lot précédent. Ajouté le
+  11/08/2026 après deux oublis dans la même journée, le second juste après
+  s'être fait reprendre sur le premier : la consigne de la skill `avant-commit`
+  ne tenait pas seule.
 - **0d en FAIL** → le lot porte **deux bumps ou plus**. N'en garder qu'un, posé
   en dernier : `git reset --soft <avant le 1er bump>` puis recommit et
   `push --force-with-lease` — `dev` n'est pas protégée et le force-push y est

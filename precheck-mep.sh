@@ -121,6 +121,29 @@ verdict_bumps() {          # $1 = nombre de commits `chore(version)` du lot
   echo FAIL
 }
 
+verdict_brief() {          # $1 = commit du brief, $2 = HEAD, $3 = lignes de corps
+  #  Le titre et le descriptif de PR doivent être PRÉPARÉS avant le push, pas
+  #  fournis quand on les réclame.
+  #
+  #  La skill `avant-commit` le prescrit noir sur blanc — « ne pas s'arrêter au
+  #  push : enchaîner le titre et le corps de PR sans attendre qu'on les
+  #  demande » — et je l'ai oublié DEUX fois le 11/08/2026, la seconde après
+  #  m'être fait reprendre sur la première. C'est la démonstration, à trois jours
+  #  d'intervalle du même constat sur le bump de version, qu'une consigne écrite
+  #  ne se maintient pas seule : seul un contrôle qui échoue le fait.
+  #
+  #  Le brief est daté par le COMMIT auquel il se rapporte, comme la trace du
+  #  pré-check elle-même. Sans cela, un brief rédigé pour le lot précédent
+  #  passerait le contrôle en décrivant autre chose — le faux vert par fichier
+  #  périmé, cousin de la liste d'exceptions qui ne pourrit pas.
+  [ -z "$1" ] && { echo INCONNU; return; }        # brief absent ou illisible
+  [ "$1" != "$2" ] && { echo FAIL; return; }      # brief d'un autre lot
+  case "$3" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+  #  Cinq lignes : de quoi porter un « ce qui change » et un « pourquoi ». En
+  #  dessous, ce n'est pas un descriptif, c'est un titre répété.
+  [ "$3" -ge 5 ] && echo OK || echo FAIL
+}
+
 verdict_compte() {         # $1 = nombre observé, $2 = maximum toléré
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
@@ -203,6 +226,12 @@ if [ "${1:-}" = "--selftest" ]; then
   t "aucun bump : P3 ne prouvera rien"   ECART   verdict_bumps 0
   t "comptage impossible"                INCONNU verdict_bumps ""
   t "comptage aberrant"                  INCONNU verdict_bumps "deux"
+  t "brief du lot, corps fourni"         OK      verdict_brief abc123 abc123 40
+  t "brief pile à la borne"              OK      verdict_brief abc123 abc123 5
+  t "brief réduit à un titre"            FAIL    verdict_brief abc123 abc123 2
+  t "brief du lot PRÉCÉDENT"             FAIL    verdict_brief vieux1 abc123 40
+  t "aucun brief"                        INCONNU verdict_brief "" abc123 40
+  t "compte de lignes illisible"         INCONNU verdict_brief abc123 abc123 ""
   t "zéro erreur"                        OK      verdict_compte 0 0
   t "erreurs présentes"                  FAIL    verdict_compte 3 0
   t "compte non mesuré"                  INCONNU verdict_compte "" 0
@@ -317,6 +346,36 @@ case "$V0D" in
   *)     D0D="comptage impossible" ;;
 esac
 rapporter 0d "$V0D" "Un seul bump de version dans le lot" "$D0D"
+
+# 0f — titre et descriptif de PR préparés AVANT le push
+#      Ajouté le 11/08/2026, sur demande de l'utilisateur, après deux oublis dans
+#      la même journée — dont le second APRÈS s'être fait reprendre sur le
+#      premier. La consigne existe dans la skill `avant-commit` ; elle n'a pas
+#      tenu. Même remède que 0d : un contrôle, pas un rappel.
+#
+#      Format attendu de `.git/pr-brief.md` — première ligne `commit: <sha>`,
+#      puis le titre en `# …`, puis le corps :
+#          commit: 6055161
+#          # feat(admin): …
+#          ### Ce qui change
+#          …
+BRIEF=".git/pr-brief.md"
+if [ -f "$BRIEF" ]; then
+  BRIEF_SHA=$(head -1 "$BRIEF" | grep -oE '[0-9a-f]{7,40}')
+  BRIEF_CORPS=$(tail -n +3 "$BRIEF" | grep -cvE '^\s*$')
+else
+  BRIEF_SHA=""; BRIEF_CORPS=""
+fi
+HEAD_COURT=$(git rev-parse --short HEAD 2>/dev/null)
+V0F=$(verdict_brief "${BRIEF_SHA:-}" "${HEAD_COURT:-?}" "${BRIEF_CORPS:-}")
+case "$V0F" in
+  OK)      D0F="$(sed -n 2p "$BRIEF" | cut -c1-60)…" ;;
+  FAIL)    if [ -n "$BRIEF_SHA" ] && [ "$BRIEF_SHA" != "$HEAD_COURT" ]; then
+             D0F="brief écrit pour $BRIEF_SHA, or c'est $HEAD_COURT qui part"
+           else D0F="descriptif trop court ($BRIEF_CORPS ligne(s)) — un titre n'est pas un descriptif"; fi ;;
+  *)       D0F="aucun $BRIEF — rédiger titre et descriptif AVANT de pousser" ;;
+esac
+rapporter 0f "$V0F" "Titre et descriptif de PR préparés" "$D0F"
 
 # 15 — endpoints orphelins (poste de dev, avant le push)
 if [ -d api/tests ]; then
