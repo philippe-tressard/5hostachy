@@ -125,10 +125,19 @@ rapporter 0c "$V0C" "CI de la branche $BRANCHE" "$DETAIL0C"
 #      `--grep` sur le préfixe conventionnel, ancré : un commit qui MENTIONNE un
 #      bump dans son corps ne doit pas être compté.
 NB_BUMPS=$(git log origin/main..HEAD --grep='^chore(version)' --oneline 2>/dev/null | wc -l | tr -d ' ')
-V0D=$(verdict_bumps "${NB_BUMPS:-}")
+#  Le FAIT, en plus de la forme : la version qui sera SERVIE change-t-elle ?
+#  Compter les commits ne le dit pas — un bump replié dans un commit fonctionnel
+#  change bien la version et faisait pourtant conclure « identique » (#308).
+lire_version() {  # $1 = révision git
+  git show "$1:front/package.json" 2>/dev/null | grep -m1 '"version"' | cut -d'"' -f4
+}
+V_MAIN=$(lire_version origin/main); V_HEAD=$(lire_version HEAD)
+V0D=$(verdict_bumps "${NB_BUMPS:-}" "${V_MAIN:-}" "${V_HEAD:-}")
 case "$V0D" in
-  OK)    D0D="1 bump — $(git log origin/main..HEAD --grep='^chore(version)' --format='%s' 2>/dev/null | head -1)" ;;
-  ECART) D0D="aucun bump : la version servie sera identique, P3 ne prouvera rien" ;;
+  OK)    D0D="${V_MAIN:-?} → ${V_HEAD:-?}$(
+           [ "$NB_BUMPS" = "1" ] && echo " — $(git log origin/main..HEAD --grep='^chore(version)' --format='%s' 2>/dev/null | head -1)" \
+                                 || echo " (bump replié dans un commit fonctionnel, pas de commit dédié)")" ;;
+  ECART) D0D="version inchangée (${V_MAIN:-?}) : P3 ne prouvera rien" ;;
   FAIL)  D0D="$NB_BUMPS bumps — n'en garder qu'un : reset --soft puis push --force-with-lease" ;;
   *)     D0D="comptage impossible" ;;
 esac
@@ -254,12 +263,22 @@ age_ligne() {  # $1 = hôte, $2 = motif, $3 = fichier — âge en minutes, vide 
 }
 AGE_ALERTE=$(age_ligne "$ACTIF" "Alerte envoyée" /var/log/hostachy-reliability.log)
 AGE_FAIL=$(age_ligne "$ACTIF" "^\[FAIL\]" /var/log/hostachy-reliability.log)
+#  Vivacité du PRODUCTEUR de FAIL. Sans elle, un script mort rend ce point vert :
+#  zéro FAIL au journal se lit « rien à signaler » alors que plus rien n'écrit.
+#  Vécu le 11/08/2026 — deux MEP autorisées pendant que check-reliability était
+#  mort sur l'actif (#306). L'horodatage est celui de l'en-tête de chaque
+#  exécution, le même repère que C15 utilise pour surveiller le peer.
+CR_MAX_AGE_MIN=40   # 2 ticks de 15 min manqués, aligné sur C15
+AGE_CR=$(sur "$ACTIF" "d=\$(grep -oE 'check-reliability \([0-9-]{10} [0-9:]{8}\)' /var/log/hostachy-reliability.log 2>/dev/null | tail -1 | tr -d '()' | cut -d' ' -f2-);             [ -n \"\$d\" ] && echo \$(( ( \$(date +%s) - \$(date -d \"\$d\" +%s) ) / 60 ))")
 if [ -n "${AGE_FAIL:-}" ]; then
   DETAIL13="dernier échec il y a ${AGE_FAIL} min, alerte ${AGE_ALERTE:-jamais envoyée}"
+elif [ -z "${AGE_CR:-}" ] || [ "${AGE_CR:-999}" -gt "$CR_MAX_AGE_MIN" ] 2>/dev/null; then
+  DETAIL13="check-reliability muet depuis ${AGE_CR:-?} min — son silence ne prouve rien"
 else
-  DETAIL13="aucun échec à signaler (silence normal)"
+  DETAIL13="aucun échec à signaler, et le contrôle tourne (il y a ${AGE_CR} min)"
 fi
-rapporter 13 "$(verdict_alerte "${AGE_ALERTE:-}" "${AGE_FAIL:-}")" "Canal d'alerte non muet" "$DETAIL13"
+rapporter 13 "$(verdict_alerte "${AGE_ALERTE:-}" "${AGE_FAIL:-}" "${AGE_CR:-}" "$CR_MAX_AGE_MIN")" \
+          "Canal d'alerte non muet" "$DETAIL13"
 
 # 14 — hygiène disque sur les DEUX nœuds
 for h in "$RPI1" "$RPI2"; do
