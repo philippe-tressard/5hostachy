@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
+import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -155,77 +156,17 @@ backupEnCours = false;
 }
 }
 
-//  Maintenance cron
-let historiqueMaintenance: any[] = [];
-let maintenanceLoading = true;
-let maintenanceEnCours = false;
-
-async function loadHistoriqueMaintenance() {
-maintenanceLoading = true;
-try {
-historiqueMaintenance = await api.get<any[]>('/admin/maintenance/historique');
-} catch { historiqueMaintenance = []; }
-finally { maintenanceLoading = false; }
-}
-
-//  Santé des tâches planifiées (les deux nœuds)
-let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
-let santeLoading = true;
-
-async function loadSante() {
-santeLoading = true;
-try {
-sante = await api.get('/admin/maintenance/sante');
-} catch { sante = null; }
-finally { santeLoading = false; }
-}
-
 // Un seul chargement pour tout le sous-onglet : santé, sauvegardes et
 // maintenance décrivent le même sujet, il n'y a pas de raison de les charger
 // séparément — et l'utilisateur ne verrait pas trois états de chargement.
+//  Le composant `TachesPlanifiees` charge lui-même santé et exécutions —
+//  la référence sert au bouton de rafraîchissement après un déclenchement.
+let tachesPlanifiees: any;
+
 function openMaintenanceTab() {
 onglet = 'maintenance';
-loadSante();
 loadHistorique();
-loadHistoriqueMaintenance();
 loadHistoriqueTelemetrie();
-}
-
-const LIBELLE_STATUT_SANTE: Record<string, string> = {
-ok: 'À jour',
-manquante: 'Exécution manquante',
-erreur: 'En échec',
-aucune_execution: 'Jamais exécutée'
-};
-
-const LIBELLE_TACHE: Record<string, string> = {
-maintenance: 'Maintenance hebdomadaire',
-backup: 'Sauvegarde quotidienne',
-bascule: 'Bascule actif/standby',
-telemetrie: 'Agrégation télémétrie',
-// Seule tâche lancée à la main depuis le poste : le libellé le dit, sinon une
-// « exécution manquante » se lirait comme une panne alors qu'il s'agit d'un oubli.
-export_hors_site: 'Copie hors site (manuelle)'
-};
-
-// « hygiene_locale » ne veut rien dire pour un lecteur : c'est le ménage que le
-// nœud passif fait sans toucher à l'application ni à la base.
-const LIBELLE_PORTEE: Record<string, string> = {
-applicative: 'Maintenance applicative',
-hygiene_locale: 'Hygiène locale (nœud en veille)'
-};
-
-async function declencherMaintenance() {
-maintenanceEnCours = true;
-try {
-await api.post('/admin/maintenance/lancer');
-toast('success', 'Maintenance lancée en arrière-plan.');
-setTimeout(loadHistoriqueMaintenance, 4000);
-} catch (e: any) {
-toast('error', e.message ?? 'Erreur');
-} finally {
-maintenanceEnCours = false;
-}
 }
 
 //  Télémétrie 
@@ -723,7 +664,6 @@ loadBatiments();
 loadComptes();
 loadCommandes();
 loadHistorique();
-loadHistoriqueMaintenance();
 loadEmails();
 loadDemandesProfil();
 loadWaScheduled();
@@ -1457,52 +1397,7 @@ $: _siteNom = $siteNomStore;
   son rapport au nœud actif.
 </p>
 
-<section class="config-section">
-  <h2 class="config-section-title">&#x1F4CB; Santé des tâches planifiées</h2>
-  <p class="muted" style="font-size:.85rem">
-    Une tâche attendue mais jamais arrivée est signalée ici. Sans ce contrôle,
-    une absence de ligne se lit comme « tout va bien ».
-  </p>
-  {#if santeLoading}
-    <p class="muted">Chargement...</p>
-  {:else if !sante || sante.taches.length === 0}
-    <div class="empty-state">
-      <h3>Aucune donnée</h3>
-      <p>Aucune exécution n'a encore été enregistrée.</p>
-    </div>
-  {:else}
-    <div class="card" style="overflow:auto;margin-top:1rem">
-      <table class="table" style="font-size:.82rem">
-        <thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernière exécution</th></tr></thead>
-        <tbody>
-          {#each sante.taches as t}
-            <tr>
-              <td>{LIBELLE_TACHE[t.tache] ?? t.tache}</td>
-              <td style="color:var(--color-text-muted)">
-                {#if t.statut === 'aucune_execution'}
-                  —
-                {:else if t.noeud === 'inconnu' || !t.noeud}
-                  <span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>
-                {:else}{t.noeud.toUpperCase()}{/if}
-              </td>
-              <td>
-                <span class="badge {t.statut === 'ok' ? 'badge-green' : 'badge-red'}">
-                  {LIBELLE_STATUT_SANTE[t.statut] ?? t.statut}
-                </span>
-              </td>
-              <td style="color:var(--color-text-muted)">{t.derniere ? fmt(t.derniere) : '—'}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    {#if sante.anomalies_recentes.length > 0}
-      <p class="muted" style="margin-top:.75rem;font-size:.85rem">
-        <strong>{sante.anomalies_recentes.length}</strong> exécution(s) en échec récemment.
-      </p>
-    {/if}
-  {/if}
-</section>
+<TachesPlanifiees bind:this={tachesPlanifiees} />
 
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
@@ -1544,54 +1439,6 @@ $: _siteNom = $siteNomStore;
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 
 <section class="config-section">
-  <h2 class="config-section-title">&#x1F527; Exécutions de la maintenance</h2>
-  <div class="backup-header">
-    <p class="muted" style="font-size:.85rem">Script cron hebdomadaire, sur les deux nœuds. Le rapport est enregistré si <code>MAINTENANCE_KEY</code> est configuré dans le <code>.env</code>.</p>
-    <button class="btn btn-primary" on:click={declencherMaintenance} disabled={maintenanceEnCours}>
-      {maintenanceEnCours ? 'En cours...' : 'Déclencher maintenant'}
-    </button>
-  </div>
-  {#if maintenanceLoading}
-    <p class="muted">Chargement...</p>
-  {:else if historiqueMaintenance.length === 0}
-    <div class="empty-state">
-      <h3>Aucune exécution enregistrée</h3>
-      <p>Le script <code>maintenance.sh</code> n'a pas encore été exécuté, ou <code>MAINTENANCE_KEY</code> n'est pas configuré.</p>
-    </div>
-  {:else}
-    <div class="card" style="overflow:auto;max-height:420px;margin-top:1rem">
-      <table class="table" style="font-size:.82rem">
-        <thead class="sticky-head"><tr><th>Date</th><th>Nœud</th><th>Portée</th><th>Statut</th><th>Taille DB</th><th>Durée</th><th>Détail</th></tr></thead>
-        <tbody>
-          {#each historiqueMaintenance as m}
-            <tr>
-              <td style="font-size:.85rem">{fmt(m.cree_le)}</td>
-              <td style="color:var(--color-text-muted)">
-                {#if m.noeud}{m.noeud.toUpperCase()}{:else}<span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>{/if}
-              </td>
-              <td style="color:var(--color-text-muted);font-size:.8rem">{LIBELLE_PORTEE[m.portee] ?? m.portee ?? '—'}</td>
-              <td>
-                <span class="badge {m.statut === 'succes' ? 'badge-green' : 'badge-red'}">{m.statut}</span>
-                {#if m.erreur}<span title={m.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
-              </td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{m.taille_db_octets ? (m.taille_db_octets / 1024 / 1024).toFixed(1) + ' Mo' : '—'}</td>
-              <td style="color:var(--color-text-muted);font-size:.85rem">{m.duree_secondes != null ? m.duree_secondes + ' s' : '—'}</td>
-              <td style="color:var(--color-text-muted);font-size:.78rem">
-                {#if m.details}
-                  {m.details.lignes_rotees ? m.details.lignes_rotees + ' lignes rotées' : ''}
-                  {m.details.cache_plafond ? ' · cache : ' + m.details.cache_plafond : ''}
-                  {m.details.tokens ? ' · ' + m.details.tokens + ' jetons' : ''}
-                {:else}—{/if}
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-
-<section class="config-section">
   <h2 class="config-section-title">🕓 Historique des agrégations</h2>
   <div class="backup-header">
     <p class="muted" style="font-size:.85rem">Exécutions de l'agrégation de la télémétrie (automatique chaque nuit à 2h, ou manuelle). Agrège les événements bruts en données journalières puis mensuelles, et purge les données expirées.</p>
@@ -1627,13 +1474,6 @@ $: _siteNom = $siteNomStore;
         </tbody>
       </table>
     </div>
-  {/if}
-</section>
-    <p class="muted" style="margin-top:.6rem;font-size:.8rem">
-      Les exécutions antérieures à la <strong>v2.32.0</strong> n'enregistraient pas le nœud :
-      elles s'affichent « non enregistré ». Le nœud en veille transmettra son premier
-      rapport après la prochaine bascule nocturne.
-    </p>
   {/if}
 </section>
 
