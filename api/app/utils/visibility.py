@@ -8,8 +8,12 @@ Règles métier appliquées :
   - CS et Admin voient toujours tout (pas de filtre).
   - Syndic : lecture seule sur tout (pas filtré ici — géré par les dépendances auth).
   - Mandataire : non géré ici (filtrage lot dans bailleur.py — périmètre trop spécifique).
-  - Périmètre géographique : résidence/parking/cave/aful = visible par tous résidents ;
-      bat:N visible uniquement si user.batiment_id == N.
+  - Périmètre géographique : un nœud à portée globale (ou dont un ancêtre l'est) est
+      visible par tous les résidents ; sinon, visible si le bâtiment du nœud — ou de
+      son plus proche ancêtre qui en porte un — est celui de l'utilisateur.
+      La liste des périmètres transverses n'est plus écrite ici : elle était en trois
+      exemplaires (ici, `flux/evenements.py`, et le tableau de bord côté front) et
+      c'est désormais le drapeau `portee_globale` de la table `perimetre`.
   - public_cible (publications) : résidents = tous ; copropriétaires = statut copropriétaire_* ;
       locataires = statut locataire uniquement ; conseil_syndical = CS/admin uniquement.
       Si public_cible contient une valeur non reconnue ou non correspondante → non visible.
@@ -32,10 +36,7 @@ from app.models.core import (
     TypeEvenement,
     Utilisateur,
 )
-
-# ── Périmètres "résidence entière" (visibles par tous les résidents) ──────────
-SCOPES_RESIDENCE = frozenset({"résidence", "parking", "cave", "aful"})
-
+from app.utils.perimetres import a_portee_globale, batiments_cibles, parse_perimetres
 
 # ── Parseurs internes ─────────────────────────────────────────────────────────
 
@@ -57,6 +58,34 @@ def _parse_csv(raw: Optional[str]) -> list[str]:
     return [v.strip() for v in raw.split(",") if v.strip()]
 
 
+def _codes_json_pour_acces(raw: Optional[str]) -> Optional[list[str]]:
+    """Codes de périmètre d'un champ JSON, pour une **décision d'accès**.
+
+    Distingue trois états là où `utils/perimetres.parse_json_perimetres` n'en
+    distingue que deux, et la nuance est une nuance de sécurité :
+
+    - champ absent ou vide → `[]`, c'est-à-dire « aucune restriction ». C'était
+      déjà le comportement, et il est conservé ;
+    - JSON valide → les codes ;
+    - JSON **illisible** → `None`, et l'appelant refuse.
+
+    Ce dernier cas est un changement assumé. Jusqu'ici, un `perimetre_cible`
+    corrompu retombait sur `["résidence"]` : une donnée abîmée **élargissait** la
+    visibilité au lieu de la restreindre. Pour un badge à l'écran ce repli est
+    bienvenu (cf. `parse_json_perimetres`) ; pour décider qui a le droit de lire,
+    il est exactement à l'envers.
+    """
+    if not raw:
+        return []
+    try:
+        val = json.loads(raw) if isinstance(raw, str) else raw
+    except Exception:
+        return None
+    if not isinstance(val, (list, tuple)):
+        return None
+    return [str(v) for v in val]
+
+
 # ── Règles géographiques ──────────────────────────────────────────────────────
 
 def perimetre_visible(perimetres: list[str], user: Utilisateur) -> bool:
@@ -64,21 +93,36 @@ def perimetre_visible(perimetres: list[str], user: Utilisateur) -> bool:
     Retourne True si le périmètre de l'item est accessible à l'utilisateur.
 
     - CS / Admin : toujours True.
-    - Périmètre résidence/parking/cave/aful : True pour tout résident.
-    - Périmètre bat:N : True uniquement si user.batiment_id == N.
-    - Liste vide : considérée comme 'résidence' → True.
+    - Nœud à portée globale, ou dont un ancêtre l'est : True pour tout résident.
+    - Sinon : True si le bâtiment du nœud (ou du plus proche ancêtre qui en porte
+      un) est celui de l'utilisateur.
+    - Liste vide : aucune restriction → True.
+    - Code introuvable : n'accorde **rien**. Un nœud supprimé, un arbre vidé ou une
+      table illisible ne peuvent pas justifier un accès — ils ne permettent pas de
+      décider, et un contrôle qui ne peut pas s'exécuter ne renvoie jamais OK
+      (`standards/04`). La première écriture de cette fonction court-circuitait à
+      `True` quand l'arbre était vide : `tests/test_documents_acces.py` l'a
+      attrapée, une pièce jointe ciblée sur un autre bâtiment devenant lisible dès
+      que la table manquait.
+
+    L'ordre des tests reproduit exactement celui de la règle précédente, qui
+    comparait des chaînes : `api/tests/test_perimetres_arbre.py` rejoue l'ancienne
+    implémentation contre celle-ci sur tous les couples (périmètre × utilisateur)
+    et exige des verdicts identiques.
     """
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         return True
     if not perimetres:
         return True
-    perims_lower = {p.lower() for p in perimetres}
-    if perims_lower & SCOPES_RESIDENCE:
+    if a_portee_globale(perimetres):
         return True
     if user.batiment_id is None:
-        # Pas de bâtiment assigné → accès résidence entière par défaut
+        #  Pas de bâtiment assigné → accès résidence entière par défaut.
+        #  ⚠️ Repli permissif **conservé volontairement** : le corriger changerait
+        #  qui voit quoi aujourd'hui, ce qui n'est pas l'objet de ce lot. Il est
+        #  épinglé par un test pour qu'il ne bouge pas par accident, et suivi à part.
         return True
-    return f"bat:{user.batiment_id}" in perims_lower
+    return user.batiment_id in batiments_cibles(perimetres)
 
 
 # ── Règles publication ────────────────────────────────────────────────────────
@@ -95,7 +139,11 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
         return True
 
     # 1. Périmètre géographique
-    perims = _parse_json_list(pub.perimetre_cible, ["résidence"])
+    perims = _codes_json_pour_acces(pub.perimetre_cible)
+    if perims is None:
+        #  Ciblage illisible : on refuse. Le CS et l'admin sont déjà sortis plus
+        #  haut et gardent donc l'accès nécessaire pour corriger la publication.
+        return False
     if not perimetre_visible(perims, user):
         return False
 
@@ -158,8 +206,10 @@ def evenement_visible(ev: Evenement, user: Utilisateur) -> bool:
         if not user.has_role(RoleUtilisateur.propriétaire):
             return False
 
-    perims = _parse_csv(ev.perimetre) if ev.perimetre else ["résidence"]
-    return perimetre_visible(perims, user)
+    #  `parse_perimetres` porte le repli : un événement sans périmètre désigne le
+    #  nœud racine à portée globale, désigné par les données et non par une chaîne
+    #  « résidence » écrite ici — une autre copropriété peut l'avoir renommé.
+    return perimetre_visible(parse_perimetres(ev.perimetre), user)
 
 
 # ── Règle AG (helper rapide) ──────────────────────────────────────────────────
