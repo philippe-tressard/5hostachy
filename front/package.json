@@ -13,7 +13,8 @@
     "lint:fichiers": "node scripts/check-fichiers.mjs",
     "lint:notifications": "node scripts/check-notifications.mjs",
     "lint:taches": "node scripts/check-libelles-taches.mjs",
-    "lint:routes": "node scripts/check-routes-atteignables.mjs"
+    "lint:routes": "node scripts/check-routes-atteignables.mjs",
+    "lint:perimetres": "node scripts/check-perimetres.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",

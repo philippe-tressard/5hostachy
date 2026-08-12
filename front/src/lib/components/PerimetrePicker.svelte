@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { PERIMETRE_LABELS } from '$lib/utils';
 
 	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidence'] ou ['bat:1','parking'] */
 	export let value: string[] = ['résidence'];
@@ -9,15 +10,12 @@
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
-	const options: [string, string][] = [
-		['bat:1', 'Bât. 1'],
-		['bat:2', 'Bât. 2'],
-		['bat:3', 'Bât. 3'],
-		['bat:4', 'Bât. 4'],
-		['parking', 'Parking'],
-		['cave', 'Cave'],
-		['aful', 'AFUL'],
-	];
+	//  Dérivées de la source unique : une entrée ajoutée à PERIMETRE_LABELS
+	//  apparaît ici sans qu'on y touche. « résidence » est retiré parce que ce
+	//  composant le traite à part (bouton/option dédiés, avec son emoji).
+	const options: [string, string][] = Object.entries(PERIMETRE_LABELS).filter(
+		([cle]) => cle !== 'résidence',
+	);
 
 	$: isResidence = value.length === 0 || (value.length === 1 && value[0] === 'résidence');
 	$: selected = new Set(value);
