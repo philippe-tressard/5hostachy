@@ -382,24 +382,67 @@ def test_l_etat_affiche_est_celui_du_noeud_le_moins_a_jour(session_memoire):
     )
 
 
-def test_une_tache_qui_n_enregistre_pas_son_noeud_n_en_invente_pas(session_memoire):
-    """`backup` et `telemetrie` n'ont pas de colonne `noeud` : la réponse doit le
-    dire, et surtout ne pas combler le trou.
+def test_une_execution_sans_noeud_enregistre_n_en_invente_pas(session_memoire):
+    """Une ligne antérieure à la migration 0137 n'a pas de nœud — et on ne le comble pas.
 
-    Jusqu'au 11/08/2026 on y mettait le nœud qui répondait à la requête — donc
-    le nœud ACTIF du moment, pas celui qui avait exécuté la tâche. Le rôle
+    Jusqu'au 11/08/2026 on y mettait le nœud qui répondait à la requête, donc le
+    nœud ACTIF du moment et non celui qui avait exécuté la tâche. Le rôle
     alternant chaque nuit, la sauvegarde faite par rpi1 s'affichait « rpi2 » dès
     la bascule suivante : une valeur par défaut présentée comme une mesure.
+
+    `backup` et `telemetrie` ont reçu la colonne le 12/08/2026 (#312), mais les
+    lignes déjà en base restent `NULL` — aucun rétro-remplissage, personne ne
+    sachant sur quel nœud elles ont tourné. C'est ce cas-là que ce test garde.
     """
     lignes = {t["tache"]: t for t in _sante(session_memoire)["taches"]}
     for tache in ("backup", "telemetrie"):
         assert lignes[tache]["noeud"] is None, (
-            f"« {tache} » annonce le nœud {lignes[tache]['noeud']} alors que sa "
-            "table n'en conserve aucun — c'est le nœud qui répond, pas celui qui a agi."
+            f"« {tache} » annonce le nœud {lignes[tache]['noeud']} alors qu'aucune "
+            "ligne ne l'a enregistré — c'est le nœud qui répond, pas celui qui a agi."
         )
         assert lignes[tache]["noeud_enregistre"] is False, (
             f"« {tache} » se déclare traçable par nœud : l'écran affichera un nœud "
             "au lieu de « non enregistré »."
+        )
+
+
+def test_le_noeud_enregistre_est_restitue_tel_quel(session_memoire):
+    """Le pendant du test précédent, et le seul qui prouve que #312 sert à quelque chose.
+
+    Sans lui, retirer la colonne — ou cesser de la renseigner à l'écriture —
+    laisserait tous les tests verts : le test ci-dessus est satisfait par
+    l'absence de nœud, qui est justement ce qu'on vient de corriger. Un
+    garde-fou qui ne peut échouer que dans un sens ne garde que ce sens.
+
+    La valeur doit ressortir **telle qu'elle a été écrite**, jamais recalculée à
+    la lecture : c'est toute la différence entre « le nœud qui a exécuté » et
+    « le nœud qui répond aujourd'hui ».
+    """
+    from datetime import datetime
+
+    from app.models.core import (
+        HistoriqueSauvegarde, HistoriqueTelemetrie, StatutSauvegarde,
+    )
+
+    session_memoire.add(HistoriqueSauvegarde(
+        declenchee_par="automatique", statut=StatutSauvegarde.reussie, noeud="rpi1",
+        cree_le=datetime.utcnow(),
+    ))
+    session_memoire.add(HistoriqueTelemetrie(
+        declenchee_par="cron", statut="succes", noeud="rpi2",
+        cree_le=datetime.utcnow(),
+    ))
+    session_memoire.commit()
+
+    lignes = {t["tache"]: t for t in _sante(session_memoire)["taches"]}
+    for tache, attendu in (("backup", "rpi1"), ("telemetrie", "rpi2")):
+        assert lignes[tache]["noeud"] == attendu, (
+            f"« {tache} » devait restituer le nœud enregistré ({attendu}), "
+            f"obtenu {lignes[tache]['noeud']!r}"
+        )
+        assert lignes[tache]["noeud_enregistre"] is True, (
+            f"« {tache} » a un nœud en base mais se déclare non traçable : "
+            "l'écran affichera « non enregistré » sur une donnée qui existe."
         )
 
 

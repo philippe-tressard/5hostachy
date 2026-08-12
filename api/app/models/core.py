@@ -739,6 +739,12 @@ class HistoriqueSauvegarde(SQLModel, table=True):
     declenchee_par: str = "automatique"  # automatique | manuelle
     declenchee_par_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     statut: StatutSauvegarde = StatutSauvegarde.en_cours
+    #: Nœud qui a exécuté la tâche — renseigné À L'ÉCRITURE, jamais déduit à
+    #: la lecture (cf. `utils/noeud.py`). Nullable et sans valeur par défaut :
+    #: les lignes antérieures au 12/08/2026 resteront `None`, et c'est correct
+    #: — personne ne sait sur quel nœud elles ont tourné, et l'inventer serait
+    #: la faute retirée le 11/08 (#312).
+    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
     fichier_nom: Optional[str] = None
     fichier_chemin: Optional[str] = None
     taille_octets: Optional[int] = None
@@ -860,6 +866,12 @@ class HistoriqueTelemetrie(SQLModel, table=True):
     __tablename__ = "historique_telemetrie"
     id: Optional[int] = Field(default=None, primary_key=True)
     declenchee_par: str = "cron"               # cron | manuelle
+    #: Nœud qui a exécuté la tâche — renseigné À L'ÉCRITURE, jamais déduit à
+    #: la lecture (cf. `utils/noeud.py`). Nullable et sans valeur par défaut :
+    #: les lignes antérieures au 12/08/2026 resteront `None`, et c'est correct
+    #: — personne ne sait sur quel nœud elles ont tourné, et l'inventer serait
+    #: la faute retirée le 11/08 (#312).
+    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
     statut: str = "en_cours"                   # en_cours | succes | erreur
     jours_agreges: int = 0
     mois_agreges: int = 0

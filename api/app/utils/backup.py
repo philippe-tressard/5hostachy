@@ -9,7 +9,8 @@ from sqlmodel import Session, select
 
 from app.config import get_settings
 from app.database import engine
-from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
+from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
+from app.utils.noeud import noeud_courant
 
 settings = get_settings()
 
@@ -55,7 +56,7 @@ def run_backup(history_id: int | None = None):
         if history_id:
             entry = session.get(HistoriqueSauvegarde, history_id)
         if not entry:
-            entry = HistoriqueSauvegarde(declenchee_par="automatique")
+            entry = HistoriqueSauvegarde(declenchee_par="automatique", noeud=noeud_courant())
             session.add(entry)
             session.commit()
             session.refresh(entry)

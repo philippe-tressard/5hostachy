@@ -42,7 +42,7 @@ def telemetry_agreger(
 ):
     """Lance l'agrégation de la télémétrie en arrière-plan."""
     from app.utils.telemetry_aggregation import run_telemetry_aggregation
-    entry = HistoriqueTelemetrie(declenchee_par="manuelle")
+    entry = HistoriqueTelemetrie(declenchee_par="manuelle", noeud=noeud_courant())
     session.add(entry)
     session.commit()
     session.refresh(entry)
@@ -61,6 +61,7 @@ def telemetry_history(
 # ── Modèles e-mail ────────────────────────────────────────────────────────────────────────
 
 from app.models.core import ModeleEmail
+from app.utils.noeud import noeud_courant
 
 
 @router.get("/modeles-email")
