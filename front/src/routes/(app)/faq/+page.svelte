@@ -563,8 +563,8 @@ import { onMount } from 'svelte';
 	.faq-header { display: flex; align-items: center; }
 	.faq-q { user-select: none; flex: 1; display: flex; justify-content: space-between; align-items: center; padding: .875rem 1rem; background: none; border: none; cursor: pointer; font-size: .925rem; font-weight: 500; text-align: left; gap: 1rem; color: var(--color-text); }
 	.faq-q:hover { background: var(--color-bg-subtle); }
-	.chevron { font-size: 1.1rem; line-height: 1; transform: rotate(0deg); transition: transform .18s ease; flex-shrink: 0; }
-	.chevron.open { transform: rotate(90deg); }
+	/*  Écart assumé : il HÉRITE la couleur de sa question, et vit dans un flex. */
+	.chevron { color: inherit; flex-shrink: 0; }
 	.faq-a { padding: .5rem 1rem .9rem; font-size: .875rem; color: var(--color-text-muted); line-height: 1.55; border-top: 1px solid var(--color-border); }
 	.faq-cta-row { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.8rem; padding-top:.75rem; border-top:1px dashed var(--color-border); }
 	.faq-actions { display: flex; gap: .15rem; padding-right: .5rem; }

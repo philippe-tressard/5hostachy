@@ -3020,8 +3020,6 @@
 		background: var(--color-bg); border: 1px solid var(--color-border);
 		font-size: .78rem; color: var(--color-text-muted);
 	}
-	.chevron { font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; display: inline-block; line-height: 1; }
-	.chevron.open { transform: rotate(90deg); }
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); }
 	.rich-content :global(p) { margin: 0 0 .5em; }
 	.evol-list { margin-top: .9rem; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }

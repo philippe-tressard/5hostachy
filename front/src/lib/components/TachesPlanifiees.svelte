@@ -398,11 +398,10 @@
 	tr.cliquable:hover { background: var(--color-bg); }
 	tr.cliquable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 	tr.detail > td { background: var(--color-bg); padding: .25rem 0 .75rem; }
-	.chevron {
-		display: inline-block; transition: transform .15s;
-		color: var(--color-primary); font-size: .9rem; margin-right: .4rem;
-	}
-	.chevron.open { transform: rotate(90deg); }
+	/*  Écart assumé : plus petit et en couleur primaire — il ouvre une ligne
+	    de tableau, pas une carte, et doit se voir (il était invisible avant
+	    le 11/08, cf. #299). */
+	.chevron { font-size: .9rem; color: var(--color-primary); margin-right: .4rem; }
 	/*  Aide propre à une tâche, en tête de son détail — recueillie des deux cartes
 	    supprimées avec #299. */
 	.aide-tache {
