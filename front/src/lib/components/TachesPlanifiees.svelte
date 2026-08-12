@@ -257,7 +257,7 @@
 							<td style="color:var(--color-text-muted)">
 								{#if !t.noeud_enregistre}
 									<span style="font-style:italic"
-										title="Cette tâche s'exécute sur le nœud actif, mais son historique ne conserve pas lequel. Afficher le nœud qui répond aujourd'hui serait faux : le rôle alterne chaque nuit.">non enregistré</span>
+										title="Cette exécution est antérieure à la v2.53.0, qui a ajouté la colonne : on ne sait pas quel nœud l'a faite. Afficher le nœud qui répond aujourd'hui serait faux — le rôle alterne chaque nuit. La colonne se remplira à la prochaine exécution.">non enregistré</span>
 								{:else if t.statut === 'aucune_execution'}
 									—
 								{:else if t.noeud === 'inconnu' || !t.noeud}

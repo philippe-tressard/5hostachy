@@ -87,4 +87,40 @@ esac
 # succès, le pire des cas.
 if [ "$(id -u)" = "0" ]; then CRONRAW=$(crontab -l 2>/dev/null); else CRONRAW=$(sudo -n crontab -l 2>/dev/null); fi
 echo "cronscripts=$(echo "$CRONRAW" | grep -vE "^\s*(#|$)" | grep -oE "/opt/5hostachy/[A-Za-z0-9_.-]+\.sh" | sed "s#.*/##" | sort -u | paste -sd, - | tr -d " \n")"
+# ── C20. Inventaire des permissions élevées — METADONNEES SEULES ─────────────
+# Nom, taille et mode de chaque fichier, JAMAIS son contenu. Le repertoire est
+# traversable par tous, donc ceci se lit sans le moindre privilege : c est ce qui
+# permet de comparer les deux noeuds alors que le snippet tourne en root ici et
+# en ptressard sur le peer. Lire le contenu a distance supposerait un NOPASSWD
+# sur cat, cest-a-dire /etc/shadow — la faille meme quon surveille.
+# Le marqueur ok: distingue « mesure faite, rien trouve » de « pas pu mesurer » :
+# sans lui, deux repertoires illisibles rendraient deux chaines EGALES, donc un
+# faux « identiques » (cas zero, deja vecu sur C14 et C18).
+echo "sudofiles=$([ -x /etc/sudoers.d ] && { printf "ok:"; for f in /etc/sudoers.d/*; do [ -e "$f" ] || continue; printf "%s:%s:%s," "$(basename "$f")" "$(stat -c %s "$f" 2>/dev/null)" "$(stat -c %a "$f" 2>/dev/null)"; done; })"
+# ── C21. Une permission elevee ne vaut que ce que vaut sa cible ──────────────
+# Analyse LOCALE, en root : le peer ne rend rien et son champ vaut INCONNU. Le
+# controle couvre quand meme les deux noeuds, puisquil tourne sur chacun deux.
+# On rapporte des FAITS BRUTS (les cibles douteuses) ; cest lib-verdicts.sh qui
+# conclut, et cest ce qui rend la decision testable sans les deux RPi.
+if [ "$(id -u)" = "0" ]; then
+  RISK=""
+  RULES=$(grep -rhE "NOPASSWD" /etc/sudoers.d/ /etc/sudoers 2>/dev/null | grep -vE "^[[:space:]]*#")
+  # Une regle bornee a aucune commande : le cas le plus grave, et le plus discret.
+  case "$RULES" in *NOPASSWD:*ALL*) RISK="ALL" ;; esac
+  for c in $(echo "$RULES" | grep -oE "/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+" | sort -u); do
+    [ -e "$c" ] || continue
+    M=$(stat -c %A "$c" 2>/dev/null); O=$(stat -c %U "$c" 2>/dev/null); D=$(stat -c %U "$(dirname "$c")" 2>/dev/null)
+    BAD=""
+    # Cible ou repertoire hors de root : lappelant peut remplacer le code execute.
+    [ "$O" = "root" ] || BAD=1
+    [ "$D" = "root" ] || BAD=1
+    # %A rend 10 caracteres : position 6 = w du groupe, position 9 = w des autres.
+    case "$M" in ?????w*) BAD=1 ;; esac
+    case "$M" in ????????w*) BAD=1 ;; esac
+    [ -n "$BAD" ] && RISK="$RISK $(basename "$c")"
+  done
+  echo "sudorisk=ok:$RISK"
+else
+  echo "sudorisk="
+fi
 '

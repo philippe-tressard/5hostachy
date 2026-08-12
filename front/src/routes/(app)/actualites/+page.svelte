@@ -16,6 +16,8 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { safeHtml } from '$lib/sanitize';
+	import { perimetreLabel } from '$lib/utils';
+	import { STATUT_LABELS, STATUT_BADGE, richEmpty, grouperParAnnee } from '$lib/publications';
 	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime, isNouveau } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'actualites', { titre: 'Actualités', navLabel: 'Actualités', icone: 'newspaper', descriptif: 'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.' });
@@ -26,8 +28,6 @@
 	let loading = true;
 
 	// ── Statut ────────────────────────────────────────────────────────────────
-	const STATUT_LABELS: Record<string, string> = { publie: 'Publié', en_cours: 'En cours', resolu: 'Résolu', annule: 'Annulé' };
-	const STATUT_BADGE: Record<string, string> = { publie: 'badge-blue', en_cours: 'badge-orange', resolu: 'badge-green', annule: 'badge-gray' };
 
 	// ── Nouvelle publication (CS) ─────────────────────────────────────────────
 	let showForm = false;
@@ -69,15 +69,7 @@
 
 	$: if (historyExpanded) loadArchivedPubs();
 
-	$: historyByYear = (() => {
-		const groups = new Map<number, Publication[]>();
-		for (const p of archivedPubs) {
-			const year = new Date(p.mis_a_jour_le ?? p.cree_le).getFullYear();
-			if (!groups.has(year)) groups.set(year, []);
-			groups.get(year)!.push(p);
-		}
-		return [...groups.entries()].sort(([a], [b]) => b - a);
-	})();
+	$: historyByYear = grouperParAnnee(archivedPubs);
 
 	function toggleHistoryItem(id: number) {
 		expandedHistoryItems = expandedHistoryItems.has(id) ? new Set() : new Set([id]);
@@ -141,16 +133,7 @@
 		}
 	});
 
-	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
-	function perimètreLabel(items: string[]) {
-		const map: Record<string, string> = {
-			'résidence': 'Copropriété entière',
-			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
-		};
-		return items.map(i => map[i] ?? i).join(' · ');
-	}
 
 	async function publish() {
 		if (!newTitre.trim() || richEmpty(newContenu)) return;
@@ -216,11 +199,20 @@
 		}
 	}
 
-	async function renvoyerEmailPub(pub: Publication) {
-		if (!confirm(`Renvoyer l'email de « ${pub.titre} » au syndic/CS ?`)) return;
+	//  Un seul gestionnaire pour les deux canaux : le second aurait été la copie
+	//  du premier à trois mots près, et c'est ainsi que deux boutons finissent par
+	//  ne plus se comporter pareil.
+	const CANAUX = {
+		email: { quoi: "l'email au syndic/CS", ok: 'Email renvoyé', envoi: pubsApi.renvoyerEmail },
+		whatsapp: { quoi: "l'annonce sur le groupe WhatsApp", ok: 'Annonce renvoyée', envoi: pubsApi.renvoyerWhatsapp },
+	} as const;
+
+	async function renvoyerPub(pub: Publication, canal: keyof typeof CANAUX) {
+		const c = CANAUX[canal];
+		if (!confirm(`Renvoyer ${c.quoi} pour « ${pub.titre} » ?`)) return;
 		try {
-			await pubsApi.renvoyerEmail(pub.id);
-			toast('success', 'Email renvoyé');
+			await c.envoi(pub.id);
+			toast('success', c.ok);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Impossible de renvoyer');
 		}
@@ -452,7 +444,7 @@
 					{#if isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
 					</span>
 					{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimètreLabel(pub.perimetre_cible)}</span>{/if}
+{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
 				</div>
 				<div class="pub-row-right">
 					<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
@@ -469,7 +461,11 @@
 					{/if}				{#if $isAdmin}
 				{#if (pub.envoyer_syndic || pub.envoyer_cs) && !pub.brouillon}
 				<button class="btn-icon" aria-label="Renvoyer l'email" title="Renvoyer l'email au syndic/CS"
-					on:click|stopPropagation={() => renvoyerEmailPub(pub)}>✉️</button>
+					on:click|stopPropagation={() => renvoyerPub(pub, 'email')}>✉️</button>
+				{/if}
+				{#if pub.partager_whatsapp && !pub.brouillon}
+				<button class="btn-icon" aria-label="Renvoyer sur WhatsApp" title="Renvoyer l'annonce sur le groupe WhatsApp"
+					on:click|stopPropagation={() => renvoyerPub(pub, 'whatsapp')}>💬</button>
 				{/if}
 				<button class="btn-icon" aria-label="Supprimer" title="Supprimer définitivement" style="color:var(--color-danger)"
 					on:click|stopPropagation={() => deletePub(pub)}>🗑️</button>
@@ -654,7 +650,7 @@
 											<div class="pub-row-inner">
 												<span class="pub-row-titre">{pub.titre}</span>
 												{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-												{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimètreLabel(pub.perimetre_cible)}</span>{/if}
+												{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
 											</div>
 											<div class="pub-row-right">
 												<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>

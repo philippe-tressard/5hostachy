@@ -279,6 +279,7 @@ verdicts_selftest() {
   #  et jamais en « identiques » (deux vides seraient égaux — le piège exact).
   cs "crontab vide" "" ""
   cs "crontab sans tâche 5Hostachy" "" "0 5 * * * /usr/bin/autre-chose"
+  sudo_selftest
   echo "-- âge de maintenance (réutilise beat_age_min/beat_verdict) --"
   check "maintenance de 4 j"                    "ok"      5760  "$MAINT_MAX_AGE_MIN"
   check "maintenance pile à 8 j"                "ok"      11520 "$MAINT_MAX_AGE_MIN"

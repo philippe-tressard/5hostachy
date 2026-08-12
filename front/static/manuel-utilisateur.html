@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.16 · Août 2026</span>
+    <span class="topbar-badge">Version 3.18 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1915,6 +1915,18 @@
         </ul>
         <p style="font-size:.85rem; color:var(--muted); margin-top:.75rem">Le délai de visibilité des publications « Publié » (1 mois par défaut) est réglable par l'administrateur.</p>
       </div>
+      <div class="card">
+        <h3>&#x1F504; Renvoyer une actualité (administrateur)</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Un envoi peut échouer sans que personne ne s'en rende compte sur le moment&nbsp;: groupe WhatsApp déconnecté, messagerie du syndic indisponible. Deux boutons, visibles des seuls administrateurs sur chaque actualité du fil, permettent de le rejouer sans rien recréer&nbsp;:</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
+          <li><strong>&#x2709;&#xFE0F; Renvoyer l'e-mail</strong> — réexpédie l'actualité au syndic et/ou au conseil syndical. Visible si l'actualité avait été envoyée à l'un des deux.</li>
+          <li><strong>&#x1F4AC; Renvoyer sur WhatsApp</strong> — republie l'annonce sur le groupe de la copropriété, avec sa première photo. Visible si l'actualité avait l'option <strong>«&nbsp;Partager sur le groupe&nbsp;»</strong> et que le partage WhatsApp est actif.</li>
+        </ul>
+        <div class="callout tip">
+          <strong>&#x1F4A1; Astuce</strong>
+          <p>Republier l'actualité ne relance rien&nbsp;: le partage n'a lieu qu'à la <strong>première</strong> publication. Ajouter un commentaire enverrait le commentaire, pas l'annonce. Ces deux boutons sont la seule façon de renvoyer l'annonce elle-même.</p>
+        </div>
+      </div>
     </section>
 
     <!-- ════════════════════════════════
@@ -2605,11 +2617,20 @@
       <div class="card">
         <h3>Que contient cet onglet ?</h3>
         <ul>
-          <li><strong>Santé des tâches planifiées</strong> — la <strong>synthèse</strong> : <strong>une ligne par tâche</strong>, quel que soit le nombre de nœuds qui l'exécutent, avec son état et la date du <strong>dernier rapport reçu</strong>. Quand une tâche tourne sur les deux nœuds, l'état affiché est celui du nœud le <strong>moins</strong> à jour, et la colonne <em>Nœud</em> nomme celui qui pose problème : un nœud sain ne doit pas masquer un nœud muet. Deux tâches — la sauvegarde et l'agrégation — n'enregistrent pas quel nœud les a exécutées : leur colonne <em>Nœud</em> affiche « non enregistré » plutôt qu'une valeur inventée. Une tâche qui <em>aurait dû</em> se signaler et ne l'a pas fait apparaît en <strong>« Exécution manquante »</strong> ; une tâche dont aucun rapport n'est jamais arrivé, en <strong>« Aucun rapport reçu »</strong>. La nuance compte : ce tableau observe les <em>rapports</em>, pas les exécutions. Une tâche peut avoir tourné sans que son rapport parvienne — passez la souris sur l'état pour lire ce qu'il mesure exactement.</li>
+          <li><strong>Santé des tâches planifiées</strong> — la <strong>synthèse</strong> : <strong>une ligne par tâche</strong>, quel que soit le nombre de nœuds qui l'exécutent, avec son état et la date du <strong>dernier rapport reçu</strong>. Quand une tâche tourne sur les deux nœuds, l'état affiché est celui du nœud le <strong>moins</strong> à jour, et la colonne <em>Nœud</em> nomme celui qui pose problème : un nœud sain ne doit pas masquer un nœud muet. Depuis la v2.53.0, <strong>toutes</strong> les tâches enregistrent quel nœud les a exécutées — la sauvegarde et l'agrégation ne le faisaient pas, leurs tables n'ayant pas la colonne. Les exécutions <em>antérieures</em> à cette version restent en « non enregistré » : personne ne sait sur quel nœud elles ont tourné, et l'inventer serait faux. La colonne se remplit d'elle-même à chaque nouvelle exécution. Une tâche qui <em>aurait dû</em> se signaler et ne l'a pas fait apparaît en <strong>« Exécution manquante »</strong> ; une tâche dont aucun rapport n'est jamais arrivé, en <strong>« Aucun rapport reçu »</strong>. La nuance compte : ce tableau observe les <em>rapports</em>, pas les exécutions. Une tâche peut avoir tourné sans que son rapport parvienne — passez la souris sur l'état pour lire ce qu'il mesure exactement.</li>
           <li><strong>Le détail de chaque tâche, sous sa ligne</strong> — <strong>cliquez une ligne</strong> de la synthèse : elle s'ouvre sur ses dix derniers passages, et sur le bouton qui la déclenche quand elle sait se lancer à la main. Les sauvegardes automatiques (03&nbsp;h) et l'agrégation de la télémétrie (02&nbsp;h) se consultent donc là, sous leur propre ligne. Jusqu'à la v2.52.2, elles avaient <em>en plus</em> leur carte séparée sous le tableau : les mêmes passages affichés deux fois, à deux endroits qui pouvaient se contredire. La ligne dépliée porte aussi ce que ces cartes disaient d'unique — le dossier où sont rangées les archives, et ce que fait exactement l'agrégation.</li>
           <li><strong>Copie hors site (manuelle)</strong> — depuis la v2.37.0, la tâche <em>Copie hors site</em> apparaît dans la santé des tâches. C'est la seule qui ne se lance pas toute seule : voir la carte ci-dessous.</li>
           <li><strong>⚠️ « Lancer la purge applicative » ne relance pas la maintenance hebdomadaire</strong> — sous la ligne <em>Maintenance hebdomadaire</em>, ce bouton n'exécute que la <strong>part applicative</strong> : purges et compactage de la base, sur le seul nœud qui répond. Le vrai passage hebdomadaire fait cela <em>et</em> l'hygiène du nœud en veille (images Docker, cache de compilation, rotation des journaux), que rien ici ne déclenche. Le bouton s'appelait « Lancer maintenance hebdomadaire » jusqu'à la v2.52.4, ce qui promettait plus qu'il ne fait. Conséquence à connaître : cliquer ce bouton inscrit un rapport et fait passer l'état à <em>À jour</em> — si vous étiez en train d'observer une remontée défaillante, vous perdez le symptôme.</li>
         </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4BE; Régler la fréquence et la rétention des sauvegardes</h3>
+        <p>Depuis <strong>Administration</strong>, le bouton <strong>« Sauvegardes »</strong> ouvre l'écran de configuration : à quelle <strong>fréquence</strong> la sauvegarde automatique s'exécute, à quelle <strong>heure</strong>, et combien de <strong>versions</strong> sont conservées avant que la plus ancienne soit effacée.</p>
+        <div class="callout info">
+          <strong>&#x2139;&#xFE0F; Information</strong>
+          <p>Cet écran existait déjà, mais <strong>aucun bouton n'y menait</strong> : il fallait connaître son adresse et la taper à la main. Corrigé le 12/08/2026 — un contrôle refuse désormais, à chaque livraison, qu'un écran d'administration ne soit atteignable par aucun chemin.</p>
+        </div>
       </div>
 
       <div class="card">
@@ -2839,7 +2860,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.16</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.18</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

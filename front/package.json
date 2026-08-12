@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.52.4",
+  "version": "2.53.0",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -12,7 +12,8 @@
     "lint:sw": "node scripts/check-sw-url.mjs",
     "lint:fichiers": "node scripts/check-fichiers.mjs",
     "lint:notifications": "node scripts/check-notifications.mjs",
-    "lint:taches": "node scripts/check-libelles-taches.mjs"
+    "lint:taches": "node scripts/check-libelles-taches.mjs",
+    "lint:routes": "node scripts/check-routes-atteignables.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",

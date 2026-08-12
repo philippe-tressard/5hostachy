@@ -217,6 +217,36 @@ def renvoyer_email_publication(
         raise HTTPException(422, "Cette publication n'a pas de destinataires email configurés")
 
 
+@router.post("/{pub_id}/renvoyer-whatsapp", status_code=204)
+def renvoyer_whatsapp_publication(
+    pub_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_admin),
+):
+    """Renvoie l'annonce sur le groupe WhatsApp (admin uniquement).
+
+    Pendant exact de `renvoyer-email`, qui existait seul. L'asymétrie s'est vue
+    le 10/08/2026 : un envoi WhatsApp a échoué en production et il n'existait
+    AUCUN moyen de le rejouer — republier ne déclenche rien (le déclencheur exige
+    `publiee_le is None`, donc il ne vaut qu'une fois), et ajouter un commentaire
+    aurait envoyé le commentaire, pas l'annonce. Le seul recours aurait été de
+    supprimer la publication et de la recréer.
+    """
+    pub = session.get(Publication, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publication introuvable")
+    if pub.brouillon:
+        raise HTTPException(422, "Impossible de renvoyer un brouillon")
+    wa_config = config_whatsapp(session)
+    if not whatsapp_actif(wa_config):
+        raise HTTPException(422, "Le partage WhatsApp n'est pas actif")
+    background_tasks.add_task(
+        envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible,
+        premiere_photo(pub.photos_urls), wa_config, pub.public_cible, pub.id,
+    )
+
+
 @router.delete("/{pub_id}", status_code=204)
 def delete_publication(
     pub_id: int,

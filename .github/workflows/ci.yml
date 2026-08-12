@@ -273,6 +273,15 @@ jobs:
         working-directory: front
         run: npm run lint:taches
 
+      # Trois routes sous admin/ compilaient, étaient protégées, avaient leurs
+      # endpoints — et aucun écran n'y menait (#307). Dont la configuration des
+      # sauvegardes : fréquence et rétention réglables par aucun chemin de
+      # l'interface. Rien ne pouvait le voir — le contrôle des endpoints
+      # orphelins vérifie l'autre bout de la chaîne, pas celui-ci.
+      - name: Écrans admin atteignables depuis l'interface
+        working-directory: front
+        run: npm run lint:routes
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le
