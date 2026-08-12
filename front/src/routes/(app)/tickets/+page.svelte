@@ -608,8 +608,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	.tk-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.tk-body :global(p) { margin: 0 0 .5em; }
 
-	.chevron { font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; display: inline-block; line-height: 1; }
-	.chevron.open { transform: rotate(90deg); }
 
 	/* Évolutions */
 	.evol-list { margin-top: .9rem; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }

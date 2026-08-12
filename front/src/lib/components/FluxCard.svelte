@@ -211,12 +211,8 @@
 	}
 
 	/* ═══ CHEVRON ═══════════════════════════════════════════════════════ */
-	.chevron {
-		font-size: 1.1rem; font-weight: 700; color: var(--color-text-muted);
-		transition: transform .2s ease; display: inline-block; flex-shrink: 0;
-		line-height: 1; user-select: none;
-	}
-	.chevron.open { transform: rotate(90deg); }
+	/*  Écart assumé : chevron en gras, non sélectionnable, dans un flex. */
+	.chevron { font-weight: 700; flex-shrink: 0; user-select: none; }
 
 	/* ═══ CORPS DÉPLIÉ ══════════════════════════════════════════════════ */
 	.flux-body {

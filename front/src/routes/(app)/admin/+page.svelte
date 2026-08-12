@@ -2224,8 +2224,6 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .chip-del { background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 0 .1rem; font-size: 1rem; line-height: 1; margin-left: .1rem; }
 .chip-del:hover { color: var(--color-danger); }
 .ref-add-row { display: flex; gap: .5rem; align-items: center; }
-.chevron { font-size: 1.1rem; color: var(--color-text-muted); transition: transform .2s; display: inline-block; }
-.chevron.open { transform: rotate(90deg); }
 .user-tags { display: flex; flex-wrap: wrap; gap: .2rem; margin-top: .15rem; }
 .utag { font-size: .6rem; font-weight: 600; padding: .05rem .35rem; border-radius: 4px; line-height: 1.3; }
 .utag-ok { background: #d4edda; color: #155724; }

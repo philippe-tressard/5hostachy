@@ -1226,8 +1226,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.archive-year-header:hover { background: var(--color-bg); }
 	.archive-year-label { flex: 1; }
 	.archive-year-count { font-size: .8rem; font-weight: 400; color: var(--color-text-muted); }
-	.chevron { font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; display: inline-block; line-height: 1; }
-	.chevron.open { transform: rotate(90deg); }
 	.kanban-col { border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
 	.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
 	.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }

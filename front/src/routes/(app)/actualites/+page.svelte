@@ -727,8 +727,6 @@
 	/* Badges statut */
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
 
-	.chevron { font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; display: inline-block; line-height: 1; }
-	.chevron.open { transform: rotate(90deg); }
 
 	.checkbox-field { display: flex; align-items: center; gap: .4rem; font-size: .875rem; cursor: pointer; }
 	.form-actions { display: flex; justify-content: flex-end; }

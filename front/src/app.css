@@ -123,6 +123,25 @@ a:hover { text-decoration: underline; }
 }
 .btn-icon:hover, .btn-icon-edit:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); }
 .btn-icon-danger:hover { color: var(--color-danger); background: #fee2e2; }
+
+/* ── Chevron d'ouverture ─────────────────────────────────────────────────
+   « cette ligne se déplie » est UN geste d'interface ; il était pourtant
+   redéclaré dans 8 fichiers, qui avaient divergé sur la durée de transition,
+   la graisse et la couleur (#317). Base commune ici, dans la variante
+   majoritaire (5 des 8).
+
+   Les composants qui s'en écartent VRAIMENT gardent leur seule différence en
+   local : Svelte scope ses styles avec une classe supplémentaire, donc une
+   règle locale l'emporte toujours sur celle-ci — c'est prévisible, et c'est
+   ce qui rend ce découpage sûr. */
+.chevron {
+	font-size: 1.1rem;
+	color: var(--color-text-muted);
+	transition: transform .15s;
+	display: inline-block;
+	line-height: 1;
+}
+.chevron.open { transform: rotate(90deg); }
 .btn-icon-warn { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: #d97706; line-height: 1; }
 .btn-icon-warn:hover { background: #fef3c7; }
 .btn-icon-success { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: var(--color-success); line-height: 1; }
