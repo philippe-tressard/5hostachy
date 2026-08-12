@@ -10,7 +10,12 @@ from app.utils.liens import lien_element
 from app.utils.photos import parse_photos
 from app.utils.visibility import evenement_visible
 
-from app.utils.perimetres import parse_perimetres, perimetre_label
+from app.utils.perimetres import (
+    a_portee_globale,
+    batiments_cibles,
+    parse_perimetres,
+    perimetre_label,
+)
 from .commun import ContexteFlux, badges_marqueurs, strip_html
 from .schemas import FluxItem
 
@@ -25,10 +30,6 @@ TYPE_EMOJI = {
     "maintenance_recurrente": "🔧",
     "autre": "📌",
 }
-
-#: Périmètres qui concernent tout le monde, quel que soit le bâtiment.
-_PERIMETRES_GLOBAUX = ("résidence", "parking", "cave", "aful")
-
 
 def perimetres_evenement(ev) -> list[str]:
     """Périmètre d'un événement — `perimetre` seul, volontairement.
@@ -67,11 +68,14 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             badges.append(prest_name)
 
         # L'événement concerne-t-il le bâtiment de l'utilisateur ?
+        #  La liste des périmètres transverses était recopiée ici ; elle vient
+        #  maintenant de l'arbre, via les mêmes primitives que la règle de
+        #  visibilité et que la résolution des destinataires.
         concerne_bat = False
         if ctx.user.batiment_id:
-            minuscules = {p.lower() for p in perims}
-            concerne_bat = f"bat:{ctx.user.batiment_id}" in minuscules or any(
-                p in _PERIMETRES_GLOBAUX for p in minuscules
+            concerne_bat = (
+                a_portee_globale(perims)
+                or ctx.user.batiment_id in batiments_cibles(perims)
             )
 
         cartes.append(FluxItem(

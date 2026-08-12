@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { perimetreDefautListe } from '$lib/perimetres';
 	import { goto } from '$app/navigation';
 	import { tickets as ticketsApi, admin as adminApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -16,7 +17,7 @@
 	let titre = '';
 	let description = '';
 	let categorie = 'panne';
-	let perimetreCible: string[] = ['résidence'];
+	let perimetreCible: string[] = perimetreDefautListe();
 	let destinataireSyndic = false;
 	let destinataireCs = false;
 	let partagerWhatsapp = false;

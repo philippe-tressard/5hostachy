@@ -6,7 +6,7 @@
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
-	import { perimetreLabel } from '$lib/utils';
+	import { perimetreLabel, concerneTous, batimentsCibles, estPerimetreParDefaut } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
@@ -53,24 +53,24 @@
 	$: userBatimentId = $currentUser?.batiment_id ?? null;
 	$: isSyndicUser = $currentUser?.statut === 'syndic' || ($currentUser?.roles ?? []).includes('syndic');
 
-	function parseBatimentCodes(values: string[]): number[] {
-		return values.map(v => { const m = v.trim().match(/^bat:(\d+)$/i); return m ? Number(m[1]) : null; }).filter((v): v is number => Number.isFinite(v));
-	}
-	function hasResidenceScope(values: string[]): boolean {
-		return values.some(v => ['résidence', 'parking', 'cave', 'aful'].includes(v.trim().toLowerCase()));
-	}
+	//  Ce filtre réimplémentait la règle du serveur : un motif `bat:(\d+)` analysé à
+	//  la main et la liste des périmètres transverses écrite en dur — troisième
+	//  copie de la même énumération. Il s'appuie désormais sur l'arborescence, comme
+	//  `api/app/utils/visibility.py`. Ce n'est qu'un filtre d'AFFICHAGE : le serveur
+	//  a déjà écarté ce que l'utilisateur n'a pas le droit de voir.
 	function isInUserPerimeter(perimetres: string[] | null | undefined): boolean {
 		if ($isAdmin || $isCS || isSyndicUser) return true;
-		const perims = perimetres ?? ['résidence'];
-		if (hasResidenceScope(perims)) return true;
+		const perims = perimetres ?? [];
+		if (perims.length === 0) return true;
+		if (concerneTous(perims)) return true;
 		if (userBatimentId == null) return true;
-		return parseBatimentCodes(perims).includes(userBatimentId);
+		return batimentsCibles(perims).includes(userBatimentId);
 	}
 	function parseItemPerimetres(item: FluxItem): string[] {
 		const m = item.meta;
 		if (m.perimetre_cible && Array.isArray(m.perimetre_cible)) return m.perimetre_cible as string[];
 		if (typeof m.perimetre === 'string' && m.perimetre) return (m.perimetre as string).split(',').map(s => s.trim());
-		return ['résidence'];
+		return [];
 	}
 
 	// ── Salutation contextuelle ────────────────────────────────────────────
@@ -212,7 +212,7 @@
 	//  (#316, détail dans scripts/check-perimetres.mjs). « résidence » reste masqué
 	//  — c'est le cas par défaut, l'afficher n'apprend rien.
 	const dashKanbanPerimLabel = (p: string): string =>
-		perimetreLabel((p ?? '').split(',').filter((x) => x.trim() !== 'résidence'));
+		perimetreLabel(p ?? '');
 
 	$: _dashKanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
 
@@ -488,7 +488,7 @@
 									<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
 									<div class="kb-item-text">
 										<span class="kb-item-titre">{item.titre}</span>
-										{#if item.perimetre && item.perimetre !== 'résidence'}
+										{#if !estPerimetreParDefaut(item.perimetre)}
 											<span class="kb-item-perim">&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span>
 										{/if}
 									</div>
@@ -528,7 +528,7 @@
 									<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
 									<div class="kb-item-text">
 										<span class="kb-item-titre">{item.titre}</span>
-										{#if item.perimetre && item.perimetre !== 'résidence'}
+										{#if !estPerimetreParDefaut(item.perimetre)}
 											<span class="kb-item-perim">&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span>
 										{/if}
 									</div>

@@ -16,7 +16,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
-	import { fmtMontant, perimetreLabel, PERIMETRE_LABELS } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
+	import { perimetresStore } from '$lib/stores/perimetres';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -78,7 +79,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		envoyer_syndic: false,
 		envoyer_cs: false,
 	};
-	let formPerimetreCible: string[] = ['résidence'];
+	let formPerimetreCible: string[] = perimetreDefautListe();
 	let submitting = false;
 
 	// `affichable` avait TROIS valeurs par défaut différentes pour un même champ :
@@ -178,7 +179,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		.map((d: any) => {
 			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
 			const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-			const perimetre = d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence');
+			const perimetre = d.perimetre ?? perimetreDuBatiment(d.batiment_id);
 			return {
 				id: -(100000 + Number(d.id)),
 				_source: 'devis_ponctuel',
@@ -202,7 +203,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		.map((d: any) => {
 			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
 			const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-			const perimetre = d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence');
+			const perimetre = d.perimetre ?? perimetreDuBatiment(d.batiment_id);
 			return {
 				id: -(100000 + Number(d.id)),
 				_source: 'devis_ponctuel',
@@ -274,7 +275,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	function resetForm() {
 		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, epingle: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
-		formPerimetreCible = ['résidence'];
+		formPerimetreCible = perimetreDefautListe();
 		epingleInitial = false;
 		editId = null;
 		photosUrls = [];
@@ -300,8 +301,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		// Mémorisé pour que l'avertissement de plafond ne recompte pas l'événement
 		// en cours d'édition comme un épinglage supplémentaire.
 		epingleInitial = form.epingle;
-		const p = ev.perimetre ?? 'résidence';
-		formPerimetreCible = p === 'résidence' ? ['résidence'] : p.split(',').filter(Boolean);
+		const p = ev.perimetre ?? '';
+		formPerimetreCible = estPerimetreParDefaut(p) ? perimetreDefautListe() : p.split(',').filter(Boolean);
 		editId = ev.id;
 		photosUrls = ev.photos_urls ?? [];
 		fichiersUrls = ev.fichiers_urls ?? [];
@@ -311,7 +312,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	async function save() {
 		if (!form.titre || !form.debut) { toast('error', 'Titre et date de début obligatoires'); return; }
 		submitting = true;
-		const perimetre = formPerimetreCible.length === 1 && formPerimetreCible[0] === 'résidence' ? 'résidence' : formPerimetreCible.join(',');
+		const perimetre = formPerimetreCible.join(',');
 		const { debut_heure, frequence_type: ft, frequence_valeur: fv, ...formData } = form;
 		const payload = {
 			...formData,
@@ -454,31 +455,29 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		{ id: 'annule',       label: 'Annulé',               color: '#9ca3af' },
 	];
 
-	const PERIMETRE_COLORS: Record<string, string> = {
-		'bat:1': '#ef4444', 'bat:2': '#3b82f6', 'bat:3': '#22c55e', 'bat:4': '#f59e0b',
-		parking: '#f97316', cave: '#8b5cf6', 'partie commune': '#ec4899', 'partie privative': '#6b7280',
-		aful: '#0ea5e9',
-	};
-
-	const PERIMETRE_SHORT: Record<string, string> = {
-		'bat:1': 'bât. 1', 'bat:2': 'bât. 2', 'bat:3': 'bât. 3', 'bat:4': 'bât. 4',
-		parking: 'Parking', cave: 'Cave', 'partie commune': 'partie commune', 'partie privative': 'privatif',
-		aful: 'AFUL',
-	};
-
+	//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
+	//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
+	const PALETTE_PERIMETRE = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#8b5cf6', '#ec4899', '#0ea5e9', '#14b8a6'];
+	function couleurPerimetre(code: string): string {
+		let s = 0;
+		for (let i = 0; i < code.length; i++) s = (s * 31 + code.charCodeAt(i)) >>> 0;
+		return PALETTE_PERIMETRE[s % PALETTE_PERIMETRE.length];
+	}
 	// Exercice = année. Par défaut : année courante, sauf si < février → N-1
 	const defaultExercice = _now.getMonth() < 1 ? _now.getFullYear() - 1 : _now.getFullYear();
 	let kanbanExercice = defaultExercice;
 	let kanbanBatiment = '';
 
-	//  Les bâtiments sont dérivés de PERIMETRE_LABELS : c'était la dernière liste
-	//  du calendrier à recopier ses libellés (#316). Un cinquième bâtiment ajouté à
-	//  la source apparaîtra ici sans qu'on y touche.
-	const BATIMENT_OPTIONS = [
+	//  Les bâtiments viennent de l'arborescence en base : ce sont les nœuds qui
+	//  portent un `batiment_id`. Ils étaient dérivés d'une table de sept clés
+	//  écrite en dur, arrêtée à `bat:4` — un cinquième bâtiment n'apparaissait pas
+	//  du tout dans ce filtre. Réactif : la liste se remplit dès que le store est
+	//  chargé, sans que cette page attende quoi que ce soit.
+	$: BATIMENT_OPTIONS = [
 		{ val: '', label: 'Tous les bâtiments' },
-		...Object.entries(PERIMETRE_LABELS)
-			.filter(([cle]) => cle.startsWith('bat:'))
-			.map(([val, label]) => ({ val, label })),
+		...$perimetresStore
+			.filter((n) => n.actif && n.batiment_id !== null && n.selectionnable)
+			.map((n) => ({ val: n.code, label: n.libelle })),
 	];
 
 	$: _kanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
@@ -491,8 +490,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return merged.filter(ev => {
 			if (!kanbanEvMatchesYear(ev, kanbanExercice)) return false;
 			if (kanbanBatiment) {
-				const p = ev.perimetre ?? 'résidence';
-				if (p !== 'résidence' && !p.split(',').some((s: string) => s.trim() === kanbanBatiment)) return false;
+				const p = ev.perimetre ?? '';
+				if (!estPerimetreParDefaut(p) && !p.split(',').some((s: string) => s.trim() === kanbanBatiment)) return false;
 			}
 			return true;
 		});
@@ -553,12 +552,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		}
 	}
 
+	//  `PERIMETRE_SHORT` a disparu : le libellé court est un CHAMP de l'arbre
+	//  (`libelle_court`), et c'est sa recopie ici qui l'avait fait diverger (#316).
 	function perimetreTags(p: string): { label: string; color: string }[] {
-		if (!p || p === 'résidence') return [{ label: '\u{1F3D8}️ Résidence', color: '#6b7280' }];
-		return p.split(',').map(s => s.trim()).filter(Boolean).map(s => ({
-			label: PERIMETRE_SHORT[s] ?? s,
-			color: PERIMETRE_COLORS[s] ?? '#6b7280',
-		}));
+		if (estPerimetreParDefaut(p)) return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
+		return p.split(',').map(s => s.trim()).filter(Boolean)
+			.map(s => ({ label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s), color: couleurPerimetre(s) }));
 	}
 
 	function kanbanYear(ev: any): string {
@@ -619,7 +618,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			for (const c of qualifying) {
 				const n = annualFreq(c.frequence_type, c.frequence_valeur);
 				const prestNom = prestMap.get(c.prestataire_id) ?? 'Prestataire';
-				const perimetre = c.batiment_id ? `bat:${c.batiment_id}` : 'résidence';
+				const perimetre = perimetreDuBatiment(c.batiment_id);
 				const titre = `${prestNom} — ${c.libelle}`;
 				for (let i = 0; i < n; i++) {
 					const month = spreadMonth(n, i);
@@ -649,7 +648,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					toCreate.push({
 						titre: ev.titre,
 						type: 'maintenance_recurrente',
-						perimetre: ev.perimetre ?? 'résidence',
+						perimetre: ev.perimetre ?? '',
 						batiment_id: null,
 						statut_kanban: 'fournisseur',
 						prestataire_id: ev.prestataire_id || null,
@@ -673,7 +672,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					toCreate.push({
 						titre,
 						type: 'maintenance_recurrente',
-						perimetre: 'résidence',
+						perimetre: perimetreParDefaut() ?? '',
 						batiment_id: null,
 						statut_kanban: 'fournisseur',
 						prestataire_id: d.prestataire_id || null,
@@ -887,8 +886,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 									</div>
 									<div class="event-body">
 										<strong class="event-titre">{item.titre}</strong>
-										{#if item.perimetre_cible?.some((p: string) => p !== 'résidence')}
-											<span class="badge badge-gray" style="font-size:.7rem">📍 {perimetreLabel(item.perimetre_cible.filter((p: string) => p !== 'résidence'))}</span>
+										{#if !estPerimetreParDefaut(item.perimetre_cible)}
+											<span class="badge badge-gray" style="font-size:.7rem">&#x1F539; {perimetreLabel(item.perimetre_cible)}</span>
 										{/if}
 										{#if item.contenu}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.contenu)}</div>{/if}
 										</div>
@@ -934,7 +933,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 										<div class="event-date">
 											<div>{formatDate(item.debut)}</div>
 											{#if item.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(item.fin)}</div>{/if}
-											{#if item.perimetre && item.perimetre !== 'résidence'}
+											{#if !estPerimetreParDefaut(item.perimetre)}
 												<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(item.perimetre)}</span>
 											{/if}
 											<small class="ev-updated">
@@ -986,7 +985,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					<div class="event-date">
 						<div>{formatDate(ev.debut)}</div>
 						{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
-						{#if ev.perimetre && ev.perimetre !== 'résidence'}
+						{#if !estPerimetreParDefaut(ev.perimetre)}
 							<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(ev.perimetre)}</span>
 						{/if}
 						<small class="ev-updated">
@@ -1033,7 +1032,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 						<div class="event-date">
 							<div>{formatDate(ev.debut)}</div>
 							{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
-							{#if ev.perimetre && ev.perimetre !== 'résidence'}
+							{#if !estPerimetreParDefaut(ev.perimetre)}
 								<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(ev.perimetre)}</span>
 							{/if}
 							{#if ev.statut_kanban}

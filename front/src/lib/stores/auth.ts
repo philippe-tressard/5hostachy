@@ -46,6 +46,33 @@ export const isAdminOnly = derived(currentUser, ($u) => {
 	return hasAdm && !hasRes && !hasCS;
 });
 
+/**
+ * L'état d'authentification est-il RÉSOLU ?
+ *
+ * Faux tant que `authApi.me()` n'a pas répondu — succès comme échec. À ne pas
+ * confondre avec `isAuthenticated`, qui vaut faux dans **deux** cas très
+ * différents : « pas connecté » et « on ne sait pas encore ».
+ *
+ * Cette distinction n'existait pas, et un garde d'accès la confondait :
+ * `admin/+layout.svelte` testait `$isAdmin` dans son `onMount`, en même temps que
+ * `(app)/+layout.svelte` chargeait l'utilisateur. Le garde décidait donc toujours
+ * sur une valeur encore vide, et **toute adresse `/admin/**` ouverte directement
+ * — lien partagé, favori, F5 — renvoyait au tableau de bord, y compris pour un
+ * administrateur.** En navigation interne l'utilisateur était déjà chargé, d'où un
+ * défaut invisible depuis toujours (trouvé le 12/08/2026 en vérifiant
+ * `/admin/patrimoine` dans un navigateur).
+ *
+ * Un garde doit attendre de SAVOIR avant de refuser : ne rien rendre pendant
+ * l'attente, refuser sur un « non » avéré, jamais sur un « pas encore ».
+ */
+export const authResolue = writable(false);
+
 export function setUser(user: User | null) {
 	currentUser.set(user);
+	authResolue.set(true);
+}
+
+/** L'authentification a répondu, sans utilisateur (visiteur non connecté). */
+export function marquerAuthResolue() {
+	authResolue.set(true);
 }

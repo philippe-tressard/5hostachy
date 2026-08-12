@@ -125,43 +125,6 @@ def _run_category_migrations():
     with engine.connect() as conn:
         try:
             # Supprimer la cat\u00e9gorie Budget / Comptes annuels
-            conn.execute(text(
-                "DELETE FROM categorie_document WHERE code = 'budget_comptes'"
-            ))
-            # PV AG : copropri\u00e9taires_et_cs + b\u00e2timent
-            conn.execute(text("""
-                UPDATE categorie_document
-                SET profil_acces_id = (SELECT id FROM profil_acces_document WHERE code = 'copropri\u00e9taires_et_cs'),
-                    perimetre_defaut = 'b\u00e2timent',
-                    surcharge_autorisee = 1
-                WHERE code = 'pv_ag'
-            """))
-            # Diagnostic : copropri\u00e9taires_et_cs + b\u00e2timent (\u00e9tait lot_occupants + lot)
-            conn.execute(text("""
-                UPDATE categorie_document
-                SET libelle = 'Diagnostic',
-                    profil_acces_id = (SELECT id FROM profil_acces_document WHERE code = 'copropri\u00e9taires_et_cs'),
-                    perimetre_defaut = 'b\u00e2timent',
-                    surcharge_autorisee = 1
-                WHERE code = 'diagnostic_lot'
-            """))
-            # Contrat fournisseur : p\u00e9rim\u00e8tre b\u00e2timent (\u00e9tait r\u00e9sidence)
-            conn.execute(text("""
-                UPDATE categorie_document
-                SET perimetre_defaut = 'b\u00e2timent',
-                    surcharge_autorisee = 1
-                WHERE code = 'contrat_fournisseur'
-            """))
-            conn.commit()
-        except Exception:
-            pass
-
-
-def _run_category_migrations():
-    """Met \u00e0 jour les cat\u00e9gories de documents existantes pour aligner les droits."""
-    with engine.connect() as conn:
-        try:
-            # Supprimer la cat\u00e9gorie Budget / Comptes annuels
             conn.execute(text("DELETE FROM categorie_document WHERE code = 'budget_comptes'"))
             # PV AG : copropri\u00e9taires_et_cs + b\u00e2timent
             conn.execute(text("""
@@ -195,5 +158,4 @@ def _run_category_migrations():
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
     _run_migrations()
-    _run_category_migrations()
     _run_category_migrations()

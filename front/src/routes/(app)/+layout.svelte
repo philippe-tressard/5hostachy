@@ -4,9 +4,10 @@
 	import { afterNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import { auth as authApi } from '$lib/api';
-	import { setUser, currentUser } from '$lib/stores/auth';
+	import { setUser, currentUser, marquerAuthResolue } from '$lib/stores/auth';
 	import { urlDeConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { chargerPerimetres } from '$lib/stores/perimetres';
 	import { initTelemetry, trackPageView, setTelemetryOptOut } from '$lib/telemetry';
 	import pkg from '../../../package.json';
 
@@ -23,9 +24,20 @@
 			} else {
 				// Emporte la page demandée (fragment compris) pour y revenir après
 				// la connexion — un lien partagé ne doit pas être perdu au login.
+				marquerAuthResolue();
 				goto(urlDeConnexion());
 			}
+		} else {
+			//  Utilisateur déjà en mémoire (navigation interne) : l'état est résolu
+			//  d'emblée. Sans cette branche, un garde d'accès attendrait indéfiniment.
+			marquerAuthResolue();
 		}
+		//  L'arborescence des périmètres alimente `perimetreLabel()`. Chargée APRÈS
+		//  l'authentification — l'endpoint exige une session — et sans `await` : les
+		//  listes de contenus arrivent elles aussi en asynchrone, et un libellé
+		//  manquant retombe sur son rendu calculé plutôt que de retarder la page.
+		if ($currentUser) chargerPerimetres();
+
 		// Appliquer l'opt-out télémétrie AVANT le premier tracking
 		if ($currentUser?.opt_out_telemetrie) {
 			setTelemetryOptOut(true);

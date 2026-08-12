@@ -8,7 +8,7 @@
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
-	import { perimetreLabel } from '$lib/utils';
+	import { perimetreLabel, perimetreDefautListe, estPerimetreParDefaut } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
@@ -187,7 +187,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	let editTitre = '';
 	let editDescription = '';
 	let editCategorie = '';
-	let editPerimetre: string[] = ['résidence'];
+	let editPerimetre: string[] = perimetreDefautListe();
 	let editSaving = false;
 
 	const CATEGORIES = [
@@ -203,7 +203,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 		editTitre = t.titre;
 		editDescription = t.description;
 		editCategorie = t.categorie;
-		editPerimetre = t.perimetre_cible ?? ['résidence'];
+		editPerimetre = t.perimetre_cible ?? perimetreDefautListe();
 		expandedTickets = new Set([t.id]);
 		showEvolForm = null;
 	}
@@ -381,7 +381,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 						{#if t.photos_urls?.length}
 							<PiecesJointes urls={t.photos_urls} format="grand" />
 						{/if}
-						{#if t.perimetre_cible && t.perimetre_cible.length > 0 && !(t.perimetre_cible.length === 1 && t.perimetre_cible[0] === 'résidence')}
+						{#if !estPerimetreParDefaut(t.perimetre_cible)}
 							<p style="font-size:.8rem;color:var(--color-text-muted);margin:.25rem 0 .5rem">🔹 {perimetreLabel(t.perimetre_cible)}</p>
 						{/if}
 						<small style="color:var(--color-text-muted);font-size:.78rem">
@@ -517,7 +517,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 										{#if t.photos_urls?.length}
 							<PiecesJointes urls={t.photos_urls} format="grand" />
 						{/if}
-										{#if t.perimetre_cible && t.perimetre_cible.length > 0 && !(t.perimetre_cible.length === 1 && t.perimetre_cible[0] === 'résidence')}
+										{#if !estPerimetreParDefaut(t.perimetre_cible)}
 											<p style="font-size:.8rem;color:var(--color-text-muted);margin:.25rem 0 .5rem">🔹 {perimetreLabel(t.perimetre_cible)}</p>
 										{/if}
 										<small style="color:var(--color-text-muted);font-size:.78rem">

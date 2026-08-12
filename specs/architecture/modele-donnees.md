@@ -38,6 +38,39 @@
 | sous_sol | string | Description des niveaux -1 / -2 |
 | specificites | string | Ex. jardin collectif + local vélo (bât. 4) |
 
+### Périmètre  *(arborescence : où se situe une demande)*
+
+Remplace la table de libellés qui était écrite en dur dans `api/app/utils/perimetres.py`
+et recopiée dans `front/src/lib/utils.ts` avec un contenu différent. **Aucun code de
+périmètre n'existe plus dans le code** : l'arborescence est entièrement reconstructible
+depuis l'administration, ce qui permet de servir une copropriété sans AFUL ni caves.
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| id | integer PK | Identifiant |
+| code | string unique | Ce qui est stocké dans les contenus (`résidence`, `bat:2`, `bat:2/hall`). **Immuable après création** : le modifier orphelinerait les contenus déjà publiés |
+| parent_id | FK Périmètre | Nullable — les nœuds de premier niveau n'ont pas de parent |
+| libelle / libelle_court | string | « Hall d'entrée » / « Hall » (badges) |
+| description | string | Ce que le périmètre couvre, qui le voit, qui est notifié |
+| icone | string | Nom d'icône Lucide, nullable |
+| batiment_id | FK Bâtiment | Nullable — porté par les nœuds de bâtiment ; les descendants l'héritent par remontée d'arbre |
+| portee_globale | boolean | Concerne tous les résidents. Remplace la liste `SCOPES_RESIDENCE`, qui existait en trois exemplaires |
+| selectionnable | boolean | Un nœud de regroupement ne se cible pas ; sert aussi à retirer un périmètre de la saisie sans casser l'historique |
+| ordre / actif | integer / boolean | Tri, suppression logique |
+| modifie_par_id / modifie_le | FK Utilisateur / datetime | Traçabilité — `portee_globale` est une décision de sécurité |
+
+**Règles de résolution** (`api/app/utils/perimetres.py`, seul module à parcourir l'arbre) :
+
+- un nœud est à portée globale si lui **ou l'un de ses ancêtres** l'est ;
+- le bâtiment visé est celui du nœud, ou du **plus proche ancêtre** qui en porte un ;
+- un code introuvable — nœud supprimé, arbre vidé, table illisible — **n'accorde rien** :
+  un contrôle qui ne peut pas s'exécuter ne renvoie jamais OK (`standards/04`).
+
+⚠️ À ne pas confondre avec `Document.perimetre` et `CategorieDocument.perimetre_defaut`
+(`résidence` \| `bâtiment` \| `lot`), qui portent le même nom mais répondent à une autre
+question : non pas *où* se passe une demande, mais *qui a le droit de lire* un fichier.
+Les deux axes restent distincts.
+
 ### Lot
 
 | Champ | Type | Description |

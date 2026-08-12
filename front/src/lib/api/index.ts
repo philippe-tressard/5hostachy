@@ -1,6 +1,12 @@
 import { api, ApiError, BASE, buildQuery } from './client';
 import { uploadExcel } from './documents';
 import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
+//  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
+//  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
+//  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
+import type { Perimetre as PerimetreDTO } from '$lib/perimetres';
+
+export type { Perimetre } from '$lib/perimetres';
 
 //  Le paquet expose exactement ce que `api.ts` exposait : les 41 imports
 //  `from '$lib/api'` du front n'ont pas à changer, et ne changent pas.
@@ -354,6 +360,22 @@ export const copropriete = {
 	batiments: () => api.get<any[]>('/copropriete/batiments'),
 	lots: (batiment_id?: number) =>
 		api.get<any[]>(`/copropriete/lots${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
+};
+
+/**
+ * Périmètres — l'arborescence « où se situe une demande ».
+ *
+ * Lecture pour tout utilisateur connecté, écriture réservée à l'administration.
+ * Le type `Perimetre` vit dans `$lib/perimetres`, qui n'importe rien : c'est ce
+ * qui permet à `perimetreLabel()` de rester synchrone dans les gabarits.
+ */
+export const perimetres = {
+	list: () => api.get<PerimetreDTO[]>('/perimetres'),
+	create: (data: Partial<PerimetreDTO> & { code: string; libelle: string }) =>
+		api.post<PerimetreDTO>('/perimetres', data),
+	update: (id: number, data: Partial<PerimetreDTO>) =>
+		api.patch<PerimetreDTO>(`/perimetres/${id}`, data),
+	remove: (id: number) => api.delete(`/perimetres/${id}`),
 };
 
 export const reglesResidence = {

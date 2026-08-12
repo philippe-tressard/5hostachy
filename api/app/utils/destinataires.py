@@ -8,7 +8,7 @@ Règles :
   - Seuls les membres du CS **liés à un compte utilisateur actif avec e-mail**
     sont notifiables (`MembreCS.user_id` renseigné).
   - Le **gestionnaire du site** est toujours ajouté, quel que soit le périmètre.
-  - Périmètre transverse (résidence / parking / cave / AFUL) → tout le CS.
+  - Périmètre à portée globale (ou dont un ancêtre l'est) → tout le CS.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from typing import Optional
 from sqlmodel import Session, select
 
 from app.models.core import ConfigSite, GenreCivilite, MembreCS, MembreSyndic, Utilisateur
-from app.utils.visibility import SCOPES_RESIDENCE
+from app.utils.perimetres import a_portee_globale, batiments_cibles
 
 
 def site_manager_user_id(session: Session) -> Optional[int]:
@@ -30,23 +30,22 @@ def site_manager_user_id(session: Session) -> Optional[int]:
 
 
 def batiments_du_perimetre(perimetres: list[str]) -> Optional[set[int]]:
-    """`['bat:1','bat:3']` → `{1, 3}` ; None si le périmètre couvre la résidence.
+    """`['bat:1','bat:3']` → `{1, 3}` ; None si le périmètre concerne tout le monde.
 
-    Les périmètres transverses (parking, cave, AFUL) concernent l'ensemble des
-    résidents : ils sont traités comme « résidence entière ».
+    Un nœud à portée globale — ou dont un ancêtre l'est — concerne l'ensemble des
+    résidents, et l'on renvoie alors None (« tout le conseil syndical »). Sinon on
+    remonte l'arbre pour chaque code afin de trouver le bâtiment visé : c'est ce qui
+    permet de cibler « Bât. 2 › Hall d'entrée » sans redire que le hall est dans le
+    bâtiment 2.
+
+    La liste des périmètres transverses n'est plus écrite ici. Elle vivait en trois
+    exemplaires et c'est maintenant `perimetre.portee_globale`.
     """
     if not perimetres:
         return None
-    ids: set[int] = set()
-    for p in perimetres:
-        p = p.lower()
-        if p in SCOPES_RESIDENCE:
-            return None
-        if p.startswith("bat:"):
-            ident = p.split(":", 1)[1]
-            if ident.isdigit():
-                ids.add(int(ident))
-    return ids or None
+    if a_portee_globale(perimetres):
+        return None
+    return batiments_cibles(perimetres) or None
 
 
 def membres_cs_notifiables(

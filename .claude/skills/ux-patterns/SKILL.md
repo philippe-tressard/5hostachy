@@ -26,18 +26,36 @@ Guide de référence des patterns UX établis. Tout pattern utilisé ≥ 2 fois 
 
 ## 2. Affichage du périmètre
 
-**Condition** : ne jamais afficher si valeur = `'résidence'` (c'est le défaut).
+**Il n'y a plus de table de libellés, ni ici ni dans le code.** L'arborescence vit
+en base (table `perimetre`) et s'édite depuis `/admin/patrimoine` : le produit doit
+servir une autre copropriété, qui n'a ni AFUL, ni quatre bâtiments, ni forcément de
+caves.
 
-Labels canoniques :
-```typescript
-const PERIMETRE_LABELS = {
-    'résidence': 'Copropriété entière',
-    'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-    parking: 'Parking', cave: 'Cave',
-};
-```
+> ⚠️ Cette section portait la table en dur — et elle en **omettait AFUL**, si bien
+> qu'un développeur qui la suivait recopiait un défaut. C'est exactement ce que
+> `standards/02` §2 décrit : une table recopiée finit par diverger, et la copie la
+> plus consultée est celle qui trompe le plus longtemps.
 
-Séparateur multi-périmètre : ` · ` (espace · espace).
+**Écrire un code de périmètre est interdit** — `npm run lint:perimetres` échoue
+dessus. Utiliser, depuis `$lib/perimetres` :
+
+| Besoin | Fonction |
+|---|---|
+| libellé affichable | `perimetreLabel(items)` — accepte tableau **ou** chaîne CSV |
+| « c'est le périmètre par défaut ? » | `estPerimetreParDefaut(items)` — **remplace** `=== 'résidence'` |
+| valeur initiale d'un formulaire | `perimetreDefautListe()` |
+| périmètre d'un bâtiment | `perimetreDuBatiment(batimentId)` |
+| « concerne tout le monde ? » | `concerneTous(items)` |
+| bâtiments visés | `batimentsCibles(items)` |
+
+**Condition d'affichage** : ne jamais afficher le badge si `estPerimetreParDefaut()`
+est vrai (c'est le défaut, le redire n'apprend rien).
+
+Séparateur multi-périmètre : ` · ` (espace · espace) — porté par `perimetreLabel()`.
+
+**Sélecteur** : `PerimetrePicker.svelte`, alimenté par le store — premier niveau de
+pastilles, second niveau facultatif quand un bâtiment est choisi, et la
+**description** du nœud affichée sous la sélection.
 
 Rendus par page — l'icône du périmètre est **🔹**, jamais 📍 (cf. §1) :
 - Actualités : `<span class="badge badge-gray">&#x1F539; {label}</span>`

@@ -10,7 +10,8 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { fmtMontant, PERIMETRE_LABELS } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/utils';
+	import { perimetresStore } from '$lib/stores/perimetres';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
@@ -95,7 +96,7 @@
 	let devisForm = {
 		copropriete_id: 1,
 		prestataire_id: '',
-		perimetre: 'résidence',
+		perimetre: perimetreParDefaut() ?? '',
 		titre: '',
 		date_prestation: '',
 		montant_estime: '',
@@ -125,18 +126,16 @@
 	let osUploadDevisId: number | null = null;
 	let osFile: File | null = null;
 	let osUploading = false;
-	//  Dérivées de PERIMETRE_LABELS : cette liste en était la troisième copie,
-	//  clés et libellés identiques au caractère près (#316).
-	const devisPerimetreOptions = Object.entries(PERIMETRE_LABELS).map(([val, label]) => ({
-		val,
-		label: val === 'résidence' ? `🏘️ ${label}` : label,
-	}));
+	//  Les options viennent de l'arborescence en base. Cette liste était la
+	//  troisième copie de la table de libellés (#316) ; elle est maintenant
+	//  réactive, et un périmètre ajouté depuis l'administration y apparaît seul.
+	$: devisPerimetreOptions = $perimetresStore
+		.filter((n) => n.actif && n.selectionnable)
+		.map((n) => ({ val: n.code, label: n.libelle }));
 
-	function devisBatimentIdFromPerimetre(perimetre: string): number | null {
-		if (!perimetre?.startsWith('bat:')) return null;
-		const parsed = Number(perimetre.split(':')[1]);
-		return Number.isFinite(parsed) ? parsed : null;
-	}
+	//  Le bâtiment se LIT dans l'arbre (clé étrangère) : le déduire du code supposait
+	//  la convention `bat:N` du seed, que l'administration peut ne pas suivre.
+	const devisBatimentIdFromPerimetre = (p: string) => noeudPerimetre(p)?.batiment_id ?? null;
 	let contratForm = {
 		copropriete_id: 1, batiment_id: '', prestataire_id: '',
 		type_equipement: 'autre', libelle: '', numero_contrat: '',
@@ -354,7 +353,7 @@
 		devisForm = {
 			copropriete_id: 1,
 			prestataire_id: '',
-			perimetre: 'résidence',
+			perimetre: perimetreParDefaut() ?? '',
 			titre: '',
 			date_prestation: '',
 			montant_estime: '',
@@ -399,7 +398,7 @@
 		       devisForm = {
 			       copropriete_id: d.copropriete_id,
 			       prestataire_id: String(d.prestataire_id),
-			       perimetre: d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'),
+			       perimetre: d.perimetre ?? perimetreDuBatiment(d.batiment_id),
 			       titre: d.titre,
 			       date_prestation: d.date_prestation ?? '',
 			       montant_estime: d.montant_estime != null ? String(d.montant_estime) : '',
@@ -422,7 +421,7 @@
 		if (!devisForm.prestataire_id) { toast('error', 'Prestataire obligatoire'); return; }
 		submitting = true;
 		try {
-			const perimetre = devisForm.perimetre || 'résidence';
+			const perimetre = devisForm.perimetre || (perimetreParDefaut() ?? '');
 			       const payload = {
 				       copropriete_id: devisForm.copropriete_id,
 				       prestataire_id: Number(devisForm.prestataire_id),
@@ -1058,7 +1057,7 @@
 								</div>
 							{:else}
 								<div class="detail-grid">
-									<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
+									<div><span class="detail-label">Périmètre</span>{perimetreLabel(d.perimetre ?? perimetreDuBatiment(d.batiment_id))}</div>
 									{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
 									{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {fmtMontant(d.montant_estime)}</div>{/if}
 								</div>
@@ -1132,7 +1131,7 @@
 								{#if devisExpanded}
 									<div class="devis-detail-body">
 										<div class="detail-grid">
-											<div><span class="detail-label">Périmètre</span>{(d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence'))}</div>
+											<div><span class="detail-label">Périmètre</span>{perimetreLabel(d.perimetre ?? perimetreDuBatiment(d.batiment_id))}</div>
 											{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
 											{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {fmtMontant(d.montant_estime)}</div>{/if}
 										</div>

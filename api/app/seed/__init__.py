@@ -45,6 +45,7 @@ from app.seed.contenus_legaux import DEFAULT_LEGAL
 from app.seed.diagnostics import DIAGNOSTICS
 from app.seed.emails import EMAIL_TEMPLATES, INTENTIONS_PAR_MODELE
 from app.seed.faq import FAQ_COMPLEMENTAIRE, FAQ_INITIALE
+from app.seed.patrimoine import poser_arborescence
 from app.seed.profils_documents import CATEGORIES, PROFILS
 
 __all__ = [
@@ -227,6 +228,23 @@ def _types_de_diagnostics(session: Session) -> None:
     _poser_les_absents(session, DiagnosticType, "code", DIAGNOSTICS)
 
 
+def _arborescence_des_perimetres(session: Session) -> None:
+    """Périmètres — où se situe une demande. Proposition de départ, remplaçable.
+
+    Passe après le premier `commit` de `seed()` : les nœuds de bâtiment portent une
+    clé étrangère vers `batiment.id`, et sur une base vierge les bâtiments viennent
+    d'être créés — sans écriture préalable, ils n'ont pas encore d'identifiant.
+
+    Le cache de `utils/perimetres` est vidé ensuite : il vit 30 secondes, et sans
+    cela le premier appel suivant un démarrage servirait un arbre vide.
+    """
+    from app.utils.perimetres import invalider_cache
+
+    poser_arborescence(session)
+    session.commit()
+    invalider_cache()
+
+
 def seed() -> None:
     """Pose toutes les données de démarrage absentes. Sans effet si tout est là."""
     create_db_and_tables()
@@ -244,6 +262,8 @@ def seed() -> None:
 
         _types_de_diagnostics(session)
         session.commit()
+
+        _arborescence_des_perimetres(session)
 
     print("✅ Seed terminé.")
 
