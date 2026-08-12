@@ -66,6 +66,11 @@ fail() { echo "[FAIL] $*"; FAIL_LINES+="[FAIL] $*"$'\n'; FAILS=$((FAILS+1)); }
 # est parti avec elles — il est leur contrat.
 # shellcheck source=lib-verdicts.sh
 . "$(dirname "$0")/lib-verdicts.sh"
+# Décisions de C20 et C21, dans leur propre module pour la même raison — ajoutées
+# à `lib-verdicts.sh`, elles le repoussaient à 524 lignes. Sourcé AVANT le gate
+# --selftest : `verdicts_selftest` appelle `sudo_selftest`, qui vit ici.
+# shellcheck source=lib-verdicts-sudo.sh
+. "$(dirname "$0")/lib-verdicts-sudo.sh"
 
 # Snippet de collecte : extrait dans lib-collecte.sh (plafond de modularité).
 # Il dépend de LOG_WARN_MB, MAINT_LOG et RAPPORTS_MOTIF, définis ci-dessus.
@@ -409,6 +414,44 @@ for pair in "$SELF:${S_maint_last:-}" "$PEER:${P_maint_last:-}"; do
   esac
 done
 
+# ── C20. Les permissions élevées sont-elles les MÊMES sur les 2 nœuds ? ───────
+# Jumeau de C18, né du même défaut : une divergence que personne ne pouvait voir,
+# chaque nœud ayant l'air normal vu de lui-même. C18 a rendu vraie la phrase
+# « cron root identique sur les 2 nœuds » ; celui-ci fait le même travail pour
+# les règles `sudo`, posées à la main nœud par nœud — donc divergentes par
+# construction, ce qu'a établi #302.
+#
+# La divergence n'est pas un détail d'hygiène : c'est elle qui a fait échouer la
+# copie hors site UNE NUIT SUR DEUX (09/08/2026), la permission n'existant que
+# sur le nœud actif un jour sur deux. Un nœud plus permissif que l'autre, c'est
+# aussi une surface d'attaque qui dépend du jour de la semaine.
+#
+# WARN et non FAIL : cela ne coupe pas la production, et un FAIL à */15 enverrait
+# un mail par heure jusqu'à correction — c'est-à-dire une alerte qu'on apprend à
+# ignorer, le défaut exact qu'on a retiré de C16 le 06/08.
+if [ "$PEER_OK" -eq 0 ]; then
+  case "$(sudo_parite "${S_sudofiles:-}" "${P_sudofiles:-}")" in
+    OK)         ok "Permissions élevées identiques sur les 2 nœuds" ;;
+    DIVERGENCE) warn "Permissions élevées DIVERGENTES entre $SELF et $PEER — écarts : $(sudo_ecarts "${S_sudofiles:-}" "${P_sudofiles:-}") ; une règle posée d'un seul côté ne vaut qu'un jour sur deux, et rend un nœud plus permissif que l'autre (#302)" ;;
+    *)          warn "Permissions élevées INCONNUES ($SELF='${S_sudofiles:-vide}' $PEER='${P_sudofiles:-vide}') — comparaison impossible, ni vert ni rouge" ;;
+  esac
+fi
+
+# ── C21. Une permission élevée vaut-elle mieux que sa cible ? ─────────────────
+# `standards/03-securite.md` §8 bis : une permission élevée ne vaut que ce que
+# vaut la cible qu'elle désigne. Une règle qui a l'air bornée à un script précis
+# ne borne rien si le compte appelant peut réécrire ce script — la permission
+# porte sur un CHEMIN, pas sur le code qu'il contiendra à l'exécution.
+#
+# Analyse locale (root). Sur le peer le champ est vide et vaut INCONNU : c'est
+# assumé, puisque le contrôle tourne des deux côtés et que chaque nœud examine
+# donc les siennes. Ne jamais rabattre ce vide sur OK — ce serait le nœud le
+# moins surveillé qui rassurerait le plus.
+case "$(verdict_sudo_risque "${S_sudorisk:-}")" in
+  OK)     ok "Permissions élevées de $SELF : aucune cible réinscriptible par son appelant" ;;
+  RISQUE) warn "Permissions élevées de $SELF : cible(s) réinscriptible(s) par l'appelant ou règle sans borne →${S_sudorisk#ok:} — qui obtient ce compte obtient root (#302)" ;;
+  *)      warn "Permissions élevées de $SELF : non mesurables (exige root) — ni vert ni rouge" ;;
+esac
 
 echo "─────────────────────────────────────────────────────────────"
 echo "Résumé : $FAILS FAIL, $WARNS WARN"
