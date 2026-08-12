@@ -6,6 +6,7 @@
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
+	import { perimetreLabel } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
@@ -206,14 +207,12 @@
 		maintenance: '\u{1F527}', maintenance_recurrente: '\u{1F504}', autre: '\u{1F4CC}',
 	};
 
-	function dashKanbanPerimLabel(p: string): string {
-		const map: Record<string, string> = {
-			'résidence': '', 'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2',
-			'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave',
-		};
-		return p.split(',').map(s => map[s.trim()] ?? s.trim()).filter(Boolean).join(' · ');
-	}
+	//  Réimplémentait PERIMETRE_LABELS, et avait divergé deux fois sans que
+	//  personne le voie : `aful` manquant, et une espace INSÉCABLE dans « Bât. 1 »
+	//  (#316, détail dans scripts/check-perimetres.mjs). « résidence » reste masqué
+	//  — c'est le cas par défaut, l'afficher n'apprend rien.
+	const dashKanbanPerimLabel = (p: string): string =>
+		perimetreLabel((p ?? '').split(',').filter((x) => x.trim() !== 'résidence'));
 
 	$: _dashKanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
 

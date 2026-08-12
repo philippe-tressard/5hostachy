@@ -51,9 +51,24 @@ export const PERIMETRE_LABELS: Record<string, string> = {
 /**
  * Périmètres → libellé affichable. Séparateur ` · ` (espace point-médian espace).
  * Ex : ['bat:1','parking'] → 'Bât. 1 · Parking'
+ *
+ * Accepte les DEUX formes que porte réellement le produit : le tableau
+ * `perimetre_cible` (publications, tickets) et la chaîne `perimetre` des
+ * événements, que le modèle déclare `str` mais que le front recevait parfois
+ * séparée par des virgules. Le calendrier réimplémentait la fonction pour cette
+ * seule raison, avec une table de correspondance recopiée à l'identique — une
+ * correction faite ici ne l'atteignait pas (#316).
+ *
+ * Le `trim()` n'est pas cosmétique : sur `'bat:1, parking'`, une clé avec espace
+ * de tête ne correspond à rien et ressortirait brute à l'écran.
  */
-export function perimetreLabel(items: string[]): string {
-	return (items ?? []).map((i) => PERIMETRE_LABELS[i] ?? i).join(' · ');
+export function perimetreLabel(items: string[] | string | null | undefined): string {
+	const liste = typeof items === 'string' ? items.split(',') : (items ?? []);
+	return liste
+		.map((i) => (i ?? '').trim())
+		.filter(Boolean)
+		.map((i) => PERIMETRE_LABELS[i] ?? i)
+		.join(' · ');
 }
 
 /**

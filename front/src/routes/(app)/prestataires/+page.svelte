@@ -10,7 +10,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { fmtMontant } from '$lib/utils';
+	import { fmtMontant, PERIMETRE_LABELS } from '$lib/utils';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
@@ -125,16 +125,12 @@
 	let osUploadDevisId: number | null = null;
 	let osFile: File | null = null;
 	let osUploading = false;
-	const devisPerimetreOptions = [
-		{ val: 'résidence', label: '🏘️ Copropriété entière' },
-		{ val: 'bat:1', label: 'Bât. 1' },
-		{ val: 'bat:2', label: 'Bât. 2' },
-		{ val: 'bat:3', label: 'Bât. 3' },
-		{ val: 'bat:4', label: 'Bât. 4' },
-		{ val: 'parking', label: 'Parking' },
-		{ val: 'cave', label: 'Cave' },
-		{ val: 'aful', label: 'AFUL' },
-	];
+	//  Dérivées de PERIMETRE_LABELS : cette liste en était la troisième copie,
+	//  clés et libellés identiques au caractère près (#316).
+	const devisPerimetreOptions = Object.entries(PERIMETRE_LABELS).map(([val, label]) => ({
+		val,
+		label: val === 'résidence' ? `🏘️ ${label}` : label,
+	}));
 
 	function devisBatimentIdFromPerimetre(perimetre: string): number | null {
 		if (!perimetre?.startsWith('bat:')) return null;

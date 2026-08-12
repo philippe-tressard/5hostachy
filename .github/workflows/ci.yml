@@ -282,6 +282,15 @@ jobs:
         working-directory: front
         run: npm run lint:routes
 
+      # La table des périmètres avait QUATRE copies autour de lib/utils.ts, dont
+      # deux qui avaient déjà divergé sans que personne le voie : l'une n'avait
+      # pas `aful` (un événement AFUL affichait la clé brute), l'autre écrivait
+      # « Bât. 1 » avec une espace INSÉCABLE — indiscernable à l'œil, décisif
+      # pour du code. C'est ainsi qu'une table recopiée dérive (#316).
+      - name: Table des périmètres non recopiée
+        working-directory: front
+        run: npm run lint:perimetres
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

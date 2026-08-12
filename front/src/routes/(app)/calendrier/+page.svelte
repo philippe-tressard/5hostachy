@@ -16,7 +16,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
-	import { fmtMontant } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, PERIMETRE_LABELS } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -113,14 +113,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return prestataires.find(p => p.id === prestataireId)?.nom ?? '';
 	}
 
-	function perimètreLabel(p: string) {
-		const map: Record<string, string> = {
-			'résidence': 'Copropriété entière',
-			'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-			parking: 'Parking', cave: 'Cave', aful: 'AFUL',
-		};
-		return p.split(',').map(s => map[s.trim()] ?? s).join(' · ');
-	}
 
 	onMount(async () => {
 		try {
@@ -479,12 +471,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	let kanbanExercice = defaultExercice;
 	let kanbanBatiment = '';
 
+	//  Les bâtiments sont dérivés de PERIMETRE_LABELS : c'était la dernière liste
+	//  du calendrier à recopier ses libellés (#316). Un cinquième bâtiment ajouté à
+	//  la source apparaîtra ici sans qu'on y touche.
 	const BATIMENT_OPTIONS = [
 		{ val: '', label: 'Tous les bâtiments' },
-		{ val: 'bat:1', label: 'Bât. 1' },
-		{ val: 'bat:2', label: 'Bât. 2' },
-		{ val: 'bat:3', label: 'Bât. 3' },
-		{ val: 'bat:4', label: 'Bât. 4' },
+		...Object.entries(PERIMETRE_LABELS)
+			.filter(([cle]) => cle.startsWith('bat:'))
+			.map(([val, label]) => ({ val, label })),
 	];
 
 	$: _kanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
@@ -894,7 +888,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 									<div class="event-body">
 										<strong class="event-titre">{item.titre}</strong>
 										{#if item.perimetre_cible?.some((p: string) => p !== 'résidence')}
-											<span class="badge badge-gray" style="font-size:.7rem">📍 {perimètreLabel(item.perimetre_cible.filter((p: string) => p !== 'résidence').join(','))}</span>
+											<span class="badge badge-gray" style="font-size:.7rem">📍 {perimetreLabel(item.perimetre_cible.filter((p: string) => p !== 'résidence'))}</span>
 										{/if}
 										{#if item.contenu}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.contenu)}</div>{/if}
 										</div>
@@ -941,7 +935,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 											<div>{formatDate(item.debut)}</div>
 											{#if item.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(item.fin)}</div>{/if}
 											{#if item.perimetre && item.perimetre !== 'résidence'}
-												<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(item.perimetre)}</span>
+												<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(item.perimetre)}</span>
 											{/if}
 											<small class="ev-updated">
 											{#if item.mis_a_jour_le}Mise à jour le {fmtDateLong(item.mis_a_jour_le)}{:else}Publié le {fmtDateLong(item.cree_le)}{/if}{#if item.auteur_nom} · {item.auteur_nom}{/if}
@@ -993,7 +987,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 						<div>{formatDate(ev.debut)}</div>
 						{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
 						{#if ev.perimetre && ev.perimetre !== 'résidence'}
-							<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(ev.perimetre)}</span>
+							<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(ev.perimetre)}</span>
 						{/if}
 						<small class="ev-updated">
 							{#if ev.mis_a_jour_le}
@@ -1040,7 +1034,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 							<div>{formatDate(ev.debut)}</div>
 							{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
 							{#if ev.perimetre && ev.perimetre !== 'résidence'}
-								<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimètreLabel(ev.perimetre)}</span>
+								<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(ev.perimetre)}</span>
 							{/if}
 							{#if ev.statut_kanban}
 								{@const col = KANBAN_COLS.find(c => c.id === ev.statut_kanban)}
