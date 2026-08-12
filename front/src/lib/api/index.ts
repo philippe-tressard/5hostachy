@@ -1,271 +1,12 @@
-/**
- * Client API — wrappeur fetch vers le backend FastAPI.
- * En production, Caddy route /api/* → FastAPI.
- * En développement, vite proxy forward /api → localhost:8000.
- */
+import { api, ApiError, BASE, buildQuery } from './client';
+import { uploadExcel } from './documents';
+import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
 
-import { urlDeConnexion } from '$lib/redirection';
-
-const BASE = '/api';
-
-/** ID du mandant si l'aidant agit en délégation (null = agit pour soi-même) */
-let _actingAsId: number | null = null;
-export function setActingAs(mandantId: number | null) { _actingAsId = mandantId; }
-export function getActingAs(): number | null { return _actingAsId; }
-
-export class ApiError extends Error {
-	constructor(
-		public status: number,
-		message: string,
-		/** Détail technique (jamais affiché à l'utilisateur, disponible en console) */
-		public technicalDetail?: string,
-	) {
-		super(message);
-	}
-}
-
-// Guard pour éviter deux refreshes simultanés
-let _refreshing: Promise<boolean> | null = null;
-
-async function tryRefresh(): Promise<boolean> {
-	if (_refreshing) return _refreshing;
-	_refreshing = fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
-		.then(r => r.ok)
-		.catch(() => false)
-		.finally(() => { _refreshing = null; });
-	return _refreshing;
-}
-
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-	const headers: Record<string, string> = {};
-	if (body) headers['Content-Type'] = 'application/json';
-	if (_actingAsId !== null) headers['X-Acting-As'] = String(_actingAsId);
-
-	const opts: RequestInit = {
-		method,
-		headers,
-		body: body ? JSON.stringify(body) : undefined,
-		credentials: 'include',
-	};
-
-	let res = await fetch(`${BASE}${path}`, opts);
-
-	// Refresh silencieux sur 401 (sauf sur les routes d'auth elles-mêmes)
-	if (res.status === 401 && !path.startsWith('/auth/')) {
-		const ok = await tryRefresh();
-		if (ok) {
-			res = await fetch(`${BASE}${path}`, opts);
-		} else {
-			// Refresh impossible : rediriger vers login EN CONSERVANT la page
-			// courante. C'est le chemin réellement emprunté en production quand
-			// une session a expiré ou n'existe pas : la garde de `(app)/+layout`
-			// n'a pas le temps de s'exécuter, cette ligne part avant elle.
-			if (typeof window !== 'undefined') {
-				window.location.href = urlDeConnexion();
-			}
-			throw new ApiError(401, 'Session expirée, veuillez vous reconnecter.');
-		}
-	}
-
-	if (!res.ok) {
-		let rawDetail = 'Erreur serveur';
-		try {
-			const err = await res.json();
-			if (typeof err.detail === 'string') {
-				rawDetail = err.detail;
-			} else if (Array.isArray(err.detail)) {
-				// Erreurs de validation Pydantic : [{loc, msg, type}]
-				rawDetail = err.detail.map((e: any) => e.msg ?? JSON.stringify(e)).join(', ');
-			} else if (err.detail) {
-				rawDetail = JSON.stringify(err.detail);
-			}
-		} catch {
-			/* ignore */
-		}
-
-		if (res.status >= 500) {
-			// Erreur serveur : ne pas exposer le détail technique à l'utilisateur
-			console.error(`[API ${res.status}] ${method} ${path} — ${rawDetail}`);
-			const userMsg = res.status === 503
-				? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'
-				: 'Une erreur est survenue. Si le problème persiste, contactez l’administrateur.';
-			throw new ApiError(res.status, userMsg, rawDetail);
-		}
-
-		throw new ApiError(res.status, rawDetail);
-	}
-
-	if (res.status === 204) return undefined as T;
-	return res.json() as Promise<T>;
-}
-
-/** Construit une query string depuis un objet en filtrant les undefined/null/vide. */
-function buildQuery(params: Record<string, string | undefined | null>): string {
-	const q = Object.entries(params)
-		.filter(([, v]) => v !== undefined && v !== null && v !== '')
-		.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`)
-		.join('&');
-	return q ? `?${q}` : '';
-}
-
-export const api = {
-	get: <T>(path: string) => request<T>('GET', path),
-	post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-	// `body` optionnel : `request` le traite déjà ainsi, et un PATCH d'action
-	// (marquer une notification lue) n'a pas de corps à envoyer.
-	patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
-	put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
-	delete: <T>(path: string) => request<T>('DELETE', path),
-};
-
-// ── Helpers métier ──────────────────────────────────────────────────────────
-
-export interface User {
-	id: number;
-	nom: string;
-	prenom: string;
-	email: string;
-	telephone?: string | null;
-	societe?: string | null;	fonction?: string | null;	statut: string;
-	role: string;
-	roles: string[];  // multi-rôles cumulables
-	actif: boolean;
-	opt_out_telemetrie?: boolean;
-	// Modération de la Communauté. Ces champs étaient absents de l'interface
-	// alors que `UserRead` les renvoie et que la page Sondages s'en sert pour
-	// bloquer un membre suspendu : le contrôle fonctionnait, mais TypeScript ne
-	// pouvait pas le vérifier — une faute de frappe sur le nom du champ serait
-	// passée inaperçue et aurait rouvert l'accès à un membre banni.
-	communaute_interdit?: boolean;
-	communaute_ban_count?: number;
-	communaute_ban_jusqu_au?: string | null;
-	onboarding_complete: boolean;
-	onboarding_etape: number;
-	photo_url?: string;
-	preferences_notifications: string;
-	demarche_arrivant?: string | null;
-	batiment_id?: number | null;
-	batiment_nom?: string | null;  // "Bât. A"
-	last_seen_actualites?: string | null;
-	delegations_aidant?: { delegation_id: number; mandant_id: number; mandant_nom: string }[];
-	cree_le: string;
-	derniere_connexion?: string | null;
-}
-
-export interface Ticket {
-	id: number;
-	numero: string;
-	titre: string;
-	description: string;
-	categorie: string;
-	statut: string;
-	priorite: string;
-	auteur_id: number;
-	auteur_nom?: string | null;
-	auteur_batiment_nom?: string | null;
-	lot_id?: number;
-	batiment_id?: number;
-	perimetre_cible?: string[];
-	photos_urls?: string[];
-	/** Documents joints (PDF, bureautique) — les images restent dans photos_urls. */
-	fichiers_urls?: string[];
-	destinataire_syndic?: boolean;
-	destinataire_cs?: boolean;
-	non_relancable?: boolean;
-	non_relancable_motif?: string | null;
-	relance_count?: number;
-	cree_le: string;
-	mis_a_jour_le: string;
-}
-
-export interface RelanceSyndicResponse {
-	delai_jours: number;
-	tickets: Ticket[];
-}
-
-/** Message d'un fil de ticket. Vit ici, pas dans la page : le client TypeScript
- *  est la source unique des types d'API (cf. CLAUDE.md, checklist backend). */
-export interface TicketMessage {
-	id: number;
-	contenu: string;
-	interne: boolean;
-	auteur: { id: number; prenom: string; nom: string; role: string };
-	cree_le: string;
-	fichiers_urls?: string[];
-}
-
-export interface TicketEvolution {
-	id: number;
-	ticket_id: number;
-	type: 'commentaire' | 'etat' | 'reponse';
-	contenu?: string;
-	ancien_statut?: string;
-	nouveau_statut?: string;
-	auteur_id: number;
-	auteur_nom?: string;
-	cree_le: string;
-	fichiers_urls?: string[];
-}
-
-export interface PublicationEvolution {
-	id: number;
-	publication_id: number;
-	type: 'commentaire' | 'etat' | 'correction';
-	contenu?: string;
-	ancien_statut?: string;
-	nouveau_statut?: string;
-	auteur_id: number;
-	auteur_nom?: string;
-	cree_le: string;
-	fichiers_urls?: string[];
-}
-
-export interface Publication {
-	id: number;
-	titre: string;
-	contenu: string;
-	perimetre: string;
-	batiment_id?: number;
-	epingle: boolean;
-	urgente: boolean;
-	auteur_id: number;
-	auteur_nom?: string;
-	photos_urls?: string[];
-	cree_le: string;
-	mis_a_jour_le?: string;
-	perimetre_cible: string[];
-	public_cible: string[];
-	statut?: 'publie' | 'en_cours' | 'resolu' | 'annule' | null;
-	statut_change_le?: string | null;
-	brouillon: boolean;
-	partager_whatsapp?: boolean;
-	envoyer_syndic?: boolean;
-	envoyer_cs?: boolean;
-	annonce_hall?: boolean;
-	evolutions: PublicationEvolution[];
-}
-
-export interface Document {
-	id: number;
-	titre: string;
-	fichier_nom: string;
-	taille_octets?: number;
-	mime_type: string;
-	categorie_id: number;
-	perimetre: string;
-	publie_le: string;
-}
-
-export interface Notification {
-	id: number;
-	type: string;
-	titre: string;
-	corps: string;
-	lien?: string;
-	lue: boolean;
-	urgente: boolean;
-	cree_le: string;
-}
+//  Le paquet expose exactement ce que `api.ts` exposait : les 41 imports
+//  `from '$lib/api'` du front n'ont pas à changer, et ne changent pas.
+export * from './client';
+export * from './types';
+export * from './documents';
 
 export const auth = {
 	me: () => api.get<User>('/auth/me'),
@@ -316,81 +57,13 @@ export const publications = {
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
 	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
+	renvoyerWhatsapp: (id: number) => api.post(`/publications/${id}/renvoyer-whatsapp`, {}),
 	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 	updateEvolution: (pubId: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
 		api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
 };
 
-export const documents = {
-	list: (categorieId?: number, contratId?: number) => {
-		const params = new URLSearchParams();
-		if (categorieId) params.set('categorie_id', String(categorieId));
-		if (contratId) params.set('contrat_id', String(contratId));
-		const qs = params.toString();
-		return api.get<Document[]>(`/documents${qs ? `?${qs}` : ''}`);
-	},
-	listCategories: () =>
-		api.get<{ id: number; code: string; libelle: string }[]>('/documents/categories'),
-	update: (id: number, data: { titre?: string; annee?: number | null; date_ag?: string | null }) =>
-		api.patch<Document>(`/documents/${id}`, data),
-	upload: async (
-		titre: string,
-		categorieId: number,
-		file: File,
-		perimetre = 'résidence',
-		batimentId?: number,
-		annee?: number,
-		dateAg?: string,
-		batimentsIdsJson?: string,
-	): Promise<Document> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		form.append('categorie_id', String(categorieId));
-		form.append('perimetre', perimetre);
-		if (batimentId) form.append('batiment_id', String(batimentId));
-		if (annee) form.append('annee', String(annee));
-		if (dateAg) form.append('date_ag', dateAg);
-		if (batimentsIdsJson) form.append('batiments_ids_json', batimentsIdsJson);
-		form.append('file', file);
-		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	uploadForContrat: async (titre: string, contratId: number, file: File): Promise<any> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		form.append('contrat_id', String(contratId));
-		form.append('file', file);
-		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	uploadForPublication: async (titre: string, publicationId: number, file: File): Promise<any> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		form.append('publication_id', String(publicationId));
-		form.append('file', file);
-		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	listByPublication: (publicationId: number) => api.get<any[]>(`/documents?publication_id=${publicationId}`),
-	downloadUrl: (docId: number) => `${BASE}/documents/${docId}/télécharger`,
-	delete: (id: number) => api.delete(`/documents/${id}`),
-};
 
 export const lots = {
 	mesList: () => api.get<any[]>('/lots/mes-lots'),
@@ -552,50 +225,7 @@ export const sondages = {
 };
 
 // ── Flux temps réel (dashboard pouls) ───────────────────────────────────────
-export interface FluxItem {
-	id: string;
-	type: string;
-	date: string;
-	cree_le?: string;
-	titre: string;
-	detail?: string;
-	badges: string[];
-	icon: string;
-	lien?: string;
-	meta: Record<string, unknown>;
-}
-export interface FluxProchain {
-	id: string;
-	date: string;
-	titre: string;
-	type: string;
-	icon: string;
-	ev_type?: string;
-	description?: string;
-	lieu?: string;
-	perimetre?: string;
-	prestataire?: string;
-	fin?: string;
-	statut_kanban?: string;
-}
-export interface FluxSante {
-	tickets_ouverts: number;
-	tickets_urgents: number;
-	resolution_moyenne_heures: number | null;
-	sondages_actifs: number;
-	validations_cs: number;
-	tickets_relance_syndic: number;
-	prochains: FluxProchain[];
-}
-export interface FluxResponse {
-	items: FluxItem[];
-	sante: FluxSante;
-}
-export interface EpinglesCompte {
-	total: number;
-	publications: number;
-	evenements: number;
-}
+
 export const flux = {
 	get: () => api.get<FluxResponse>('/flux'),
 	/** Compte des éléments épinglés, toutes rubriques confondues (CS/admin) —
@@ -605,55 +235,6 @@ export const flux = {
 
 // ── Upload fichiers ─────────────────────────────────────────────────────────
 
-export const fichiersApi = {
-	/**
-	 * Upload un fichier (photo ou document PDF/Word/Excel) destiné à être joint à
-	 * un ticket, une affaire ou un commentaire. Ne demande aucun élément parent :
-	 * l'URL est connue avant la création, ce qui permet de la passer dans le
-	 * payload — et donc de la joindre à l'e-mail envoyé au syndic.
-	 * Retourne { url, nom, type }
-	 */
-	upload: async (file: File): Promise<{ url: string; nom: string; type: string }> => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/uploads/fichier`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload fichier';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-};
-
-async function uploadFile(path: string, file: File): Promise<{ url: string }> {
-	const form = new FormData();
-	form.append('file', file);
-	const res = await fetch(`${BASE}${path}`, {
-		method: 'POST',
-		body: form,
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		let detail = 'Erreur upload';
-		try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-		throw new ApiError(res.status, detail);
-	}
-	return res.json();
-}
-
-async function uploadExcel<T = any>(path: string, file: File, remplacer = false): Promise<T> {
-	const form = new FormData();
-	form.append('file', file);
-	const url = `${BASE}${path}${remplacer ? '?remplacer=true' : ''}`;
-	const res = await fetch(url, { method: 'POST', body: form, credentials: 'include' });
-	if (!res.ok) {
-		let detail = 'Erreur import';
-		try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-		throw new ApiError(res.status, detail);
-	}
-	return res.json();
-}
 
 export const faq = {
 	list: () => api.get<any[]>('/faq'),
@@ -706,10 +287,6 @@ export const annuaireAdmin = {
 	putSyndic: (data: unknown) => api.put<any>('/admin/annuaire/syndic', data),
 };
 
-export const uploads = {
-	avatar: (file: File) => uploadFile('/uploads/avatar', file),
-	residence: (file: File) => uploadFile('/uploads/residence', file),
-};
 
 export const idees = {
 	list: () => api.get<any[]>('/idees'),
@@ -744,42 +321,6 @@ export const annonces = {
 	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),
 };
 
-export interface AnnonceHall {
-	id: number;
-	titre: string;
-	message: string;
-	apercu: string;
-	perimetre_cible: string[];
-	perimetre_label: string;
-	format_demande: string;
-	format_effectif: string;
-	format_label: string;
-	images: string[];
-	pdf_nom: string;
-	taille_octets: number | null;
-	destinataires: string[];
-	envoye_le: string | null;
-	archivee: boolean;
-	publication_id: number | null;
-	cree_le: string;
-	auteur_nom: string;
-}
-
-export interface AnnonceHallInput {
-	titre: string;
-	message: string;
-	perimetre_cible: string[];
-	format_demande: string;
-	images?: string[];
-}
-
-/** Champs d'une actualité, prêts à alimenter le formulaire d'annonce de hall. */
-export interface AnnonceHallPrefill {
-	titre: string;
-	message: string;
-	perimetre_cible: string[];
-	images: string[];
-}
 
 export const annoncesHall = {
 	list: (archivees = false) =>
