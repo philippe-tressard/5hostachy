@@ -10,9 +10,8 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { fmtMontant } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
-	import { perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/perimetres';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
@@ -134,12 +133,9 @@
 		.filter((n) => n.actif && n.selectionnable)
 		.map((n) => ({ val: n.code, label: n.libelle }));
 
-	//  Le bâtiment d'un périmètre se LIT dans l'arborescence : il y est une clé
-	//  étrangère. L'extraire du code par découpage de chaîne supposait la
-	//  convention `bat:N` du seed, que l'administration peut ne pas suivre.
-	function devisBatimentIdFromPerimetre(perimetre: string): number | null {
-		return noeudPerimetre(perimetre)?.batiment_id ?? null;
-	}
+	//  Le bâtiment se LIT dans l'arbre (clé étrangère) : le déduire du code supposait
+	//  la convention `bat:N` du seed, que l'administration peut ne pas suivre.
+	const devisBatimentIdFromPerimetre = (p: string) => noeudPerimetre(p)?.batiment_id ?? null;
 	let contratForm = {
 		copropriete_id: 1, batiment_id: '', prestataire_id: '',
 		type_equipement: 'autre', libelle: '', numero_contrat: '',

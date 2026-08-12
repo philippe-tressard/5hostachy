@@ -11,8 +11,7 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { stripHtml, fmtMontant } from '$lib/utils';
-	import { perimetreDefautListe } from '$lib/perimetres';
+	import { stripHtml, fmtMontant, perimetreDefautListe } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';

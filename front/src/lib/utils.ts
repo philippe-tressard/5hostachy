@@ -62,8 +62,12 @@ export {
 	perimetreLabelUn,
 	estPerimetreParDefaut,
 	perimetreParDefaut,
+	perimetreDefautListe,
+	perimetreDuBatiment,
 	noeudPerimetre,
 	tousLesPerimetres,
+	concerneTous,
+	batimentsCibles,
 	type Perimetre,
 } from '$lib/perimetres';
 

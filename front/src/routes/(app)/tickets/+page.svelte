@@ -8,8 +8,7 @@
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
-	import { perimetreLabel } from '$lib/utils';
-	import { perimetreDefautListe, estPerimetreParDefaut } from '$lib/perimetres';
+	import { perimetreLabel, perimetreDefautListe, estPerimetreParDefaut } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';

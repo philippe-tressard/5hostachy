@@ -6,8 +6,7 @@
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
-	import { perimetreLabel } from '$lib/utils';
-	import { concerneTous, batimentsCibles, estPerimetreParDefaut } from '$lib/perimetres';
+	import { perimetreLabel, concerneTous, batimentsCibles, estPerimetreParDefaut } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';

@@ -16,8 +16,7 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { perimetreLabel } from '$lib/utils';
-	import { perimetreDefautListe, estPerimetreParDefaut } from '$lib/perimetres';
+	import { perimetreLabel, perimetreDefautListe, estPerimetreParDefaut } from '$lib/utils';
 	import { STATUT_LABELS, STATUT_BADGE, richEmpty, grouperParAnnee } from '$lib/publications';
 	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime, isNouveau } from '$lib/date';
 

@@ -16,9 +16,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
-	import { fmtMontant, perimetreLabel } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
-	import { estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/perimetres';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
 	$: _siteNom = $siteNomStore;
@@ -456,21 +455,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		{ id: 'annule',       label: 'Annulé',               color: '#9ca3af' },
 	];
 
-	//  La couleur d'une pastille était une table de sept clés écrites en dur : un
-	//  périmètre créé depuis l'administration retombait sur le gris, et un bâtiment
-	//  au-delà du quatrième aussi. Elle est maintenant DÉRIVÉE du code — stable
-	//  (même code, même couleur, d'une session à l'autre) et définie pour tout code.
-	const PALETTE_PERIMETRE = [
-		'#ef4444', '#3b82f6', '#22c55e', '#f59e0b',
-		'#f97316', '#8b5cf6', '#ec4899', '#0ea5e9', '#14b8a6',
-	];
+	//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
+	//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
+	const PALETTE_PERIMETRE = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#8b5cf6', '#ec4899', '#0ea5e9', '#14b8a6'];
 	function couleurPerimetre(code: string): string {
-		let somme = 0;
-		for (let i = 0; i < code.length; i++) somme = (somme * 31 + code.charCodeAt(i)) >>> 0;
-		return PALETTE_PERIMETRE[somme % PALETTE_PERIMETRE.length];
+		let s = 0;
+		for (let i = 0; i < code.length; i++) s = (s * 31 + code.charCodeAt(i)) >>> 0;
+		return PALETTE_PERIMETRE[s % PALETTE_PERIMETRE.length];
 	}
-
-
 	// Exercice = année. Par défaut : année courante, sauf si < février → N-1
 	const defaultExercice = _now.getMonth() < 1 ? _now.getFullYear() - 1 : _now.getFullYear();
 	let kanbanExercice = defaultExercice;
@@ -560,20 +552,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		}
 	}
 
-	//  `PERIMETRE_SHORT` a disparu : le libellé court est un CHAMP de l'arborescence
-	//  (`libelle_court`), éditable au même endroit que le reste. Il n'y avait aucune
-	//  raison qu'une pastille du calendrier ait sa propre table de sept clés — c'est
-	//  ce qui l'avait fait diverger de `PERIMETRE_LABELS` (#316).
-	//  `PERIMETRE_COLORS`, en revanche, reste local : une couleur n'est pas un
-	//  libellé, et l'arborescence n'en porte pas.
+	//  `PERIMETRE_SHORT` a disparu : le libellé court est un CHAMP de l'arbre
+	//  (`libelle_court`), et c'est sa recopie ici qui l'avait fait diverger (#316).
 	function perimetreTags(p: string): { label: string; color: string }[] {
-		if (estPerimetreParDefaut(p)) {
-			return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
-		}
-		return p.split(',').map(s => s.trim()).filter(Boolean).map(s => ({
-			label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s),
-			color: couleurPerimetre(s),
-		}));
+		if (estPerimetreParDefaut(p)) return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
+		return p.split(',').map(s => s.trim()).filter(Boolean)
+			.map(s => ({ label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s), color: couleurPerimetre(s) }));
 	}
 
 	function kanbanYear(ev: any): string {
