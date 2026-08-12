@@ -140,6 +140,20 @@ def utilisateur(roles: str, batiment_id: int | None) -> Utilisateur:
 PROFILS = ["résident", "propriétaire", "conseil_syndical", "admin"]
 
 
+def _auteur(session: Session) -> int:
+    """Un utilisateur persisté — `Publication.auteur_id` et `Evenement.auteur_id`
+    sont NOT NULL, et un contenu sans auteur ne s'écrit pas."""
+    existant = session.exec(
+        select(Utilisateur).where(Utilisateur.email == "auteur@test.fr")
+    ).first()
+    if existant:
+        return existant.id
+    u = Utilisateur(nom="A", prenom="B", email="auteur@test.fr", actif=True)
+    session.add(u)
+    session.commit()
+    return u.id
+
+
 # ── Le contrôle central : aucun verdict ne change ─────────────────────────────
 
 def test_equivalence_stricte_sur_les_codes_en_service(batiments):

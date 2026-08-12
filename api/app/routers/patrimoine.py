@@ -123,7 +123,13 @@ def _codes_cites(session: Session) -> set[str]:
         (Evenement, "perimetre", False),
         (DevisPrestataire, "perimetre", False),
     ):
-        for (valeur,) in session.exec(select(getattr(modele, champ))).all():
+        #  `session.exec(select(<colonne>))` rend des SCALAIRES, pas des tuples à un
+        #  élément — contrairement à `session.execute`. La première écriture
+        #  dépaquetait `(valeur,)` et levait `ValueError: too many values to unpack`
+        #  sur toute chaîne de plus d'un caractère, donc sur *toutes* les valeurs
+        #  réelles. `GET /perimetres` répondait 500 en production (12/08/2026), et
+        #  aucun test ne couvrait ce router.
+        for valeur in session.exec(select(getattr(modele, champ))).all():
             analyse = parse_json_perimetres(valeur) if json_ else parse_perimetres(valeur)
             cites.update(c.strip().lower() for c in analyse if c and c.strip())
     return cites
