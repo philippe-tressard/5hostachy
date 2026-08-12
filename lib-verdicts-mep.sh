@@ -148,6 +148,54 @@ verdict_brief() {          # $1 = commit du brief, $2 = HEAD, $3 = lignes de cor
   [ "$3" -ge 5 ] && echo OK || echo FAIL
 }
 
+# ── 0c : un échec de CI que le lot CORRIGE ne doit pas bloquer son push ───────
+# Le 12/08/2026, la CI est passée rouge sur un import devenu orphelin. Le commit
+# suivant le corrigeait — et 0c a refusé de le pousser, parce qu'il voyait
+# l'échec dans les 5 dernières exécutions. Circulaire : on ne peut pas prouver
+# que la CI repasse sans pousser, et on ne peut pas pousser tant qu'elle a
+# échoué. La seule issue était `SKIP_PRECHECK=1`, c'est-à-dire désarmer les
+# vingt points pour contourner celui-ci (#318).
+#
+# Le contrôle ne distinguait pas deux situations opposées :
+#   - l'échec porte sur un commit dont HEAD DESCEND → ce push est le correctif,
+#     et le bloquer n'a aucun sens ;
+#   - l'échec porte sur autre chose (branche divergente, commit inconnu du clone,
+#     ou HEAD lui-même) → là, il doit bloquer.
+#
+# DEUX façons pour un échec d'être dépassé, et il faut les deux :
+#
+#   1. un run PLUS RÉCENT a réussi — l'échec appartient au passé, quoi qu'ait
+#      fait le lot courant ;
+#   2. HEAD descend du commit en échec — le correctif n'est pas encore poussé,
+#      donc aucun run plus récent n'existe, mais ce push EST la correction.
+#
+# La première seule ne suffit pas : c'est précisément la situation du 12/08 au
+# matin, où le correctif était commité et rien n'avait encore tourné après
+# l'échec. La seconde seule ne suffit pas non plus : les PR sont fusionnées en
+# SQUASH puis `dev` est réaligné sur `main`, ce qui DÉTRUIT le lien d'ascendance
+# — le contenu est intégré, le commit en échec n'est plus un ancêtre de personne.
+# Vécu deux heures après avoir écrit la première version de ce contrôle.
+#
+# L'appelant fournit les deux mesures (`gh run list` ordonné, et
+# `git merge-base --is-ancestor`) : cette fonction reste PURE, donc testable sans
+# dépôt ni CI. Une ascendance inconnue compte comme NON dépassée — on ne déduit
+# pas un vert d'une mesure qu'on n'a pas pu faire.
+echecs_bloquants() {       # $1 = runs « conclusion:sha:oui|non|? », du PLUS RÉCENT
+                           #      au plus ancien ; anc = ancêtre strict de HEAD
+                           # → « <nombre> <sha bloquants…> »
+  local n=0 restants="" e concl sha anc reste vu_succes=0
+  for e in $1; do
+    [ -n "$e" ] || continue
+    concl=${e%%:*}; reste=${e#*:}; sha=${reste%%:*}; anc=${reste#*:}
+    if [ "$concl" = "success" ]; then vu_succes=1; continue; fi
+    [ "$concl" = "failure" ] || continue          # annulé, en cours… : ni l un ni l autre
+    [ "$vu_succes" -eq 1 ] && continue            # (1) un run plus récent a réussi
+    [ "$anc" = "oui" ] && continue                # (2) ce push descend de l échec
+    n=$((n + 1)); restants="$restants ${sha}"
+  done
+  echo "$n$restants"
+}
+
 verdict_compte() {         # $1 = nombre observé, $2 = maximum toléré
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
@@ -274,6 +322,28 @@ verdicts_mep_selftest() {
   t "compte non mesuré"                  INCONNU verdict_compte "" 0
   t "piège du grep -c || echo 0"         INCONNU verdict_compte "0 0" 0
   t "compte non numérique"               INCONNU verdict_compte "abc" 0
+  #  0c — un échec que le lot corrige ne bloque pas son propre push (#318).
+  eb() {  # $1 = libellé, $2 = attendu, $3 = liste sha:ancêtre
+    local got; got=$(echecs_bloquants "$3")
+    if [ "$got" = "$2" ]; then echo "PASS  $1 → '$got'"
+    else echo "FAIL  $1  attendu='$2' obtenu='$got'"; st=1; fi
+  }
+  eb "aucun échec"                        "0" ""
+  eb "que des succès"                     "0" "success:b8aeb1e:non success:28b1e9f:non"
+  #  (2) Le cas du 12/08 au matin : le correctif est commité, rien n a encore
+  #  tourné après l échec, mais HEAD descend du commit fautif.
+  eb "échec dépassé par HEAD"             "0" "failure:b003e0d:oui"
+  #  (1) Le cas du 12/08 à midi : le squash a détruit l ascendance, mais des
+  #  runs plus récents ont réussi. Sans cette règle, 0c bloquerait pour toujours.
+  eb "échec suivi d un succès (squash)"   "0" "success:b8aeb1e:non failure:b003e0d:non"
+  eb "échec sur un commit étranger"       "1 9f1c2ab" "failure:9f1c2ab:non"
+  eb "le plus récent a échoué"            "1 9f1c2ab" "failure:9f1c2ab:non success:aaa1111:non"
+  eb "deux échecs, un seul dépassé"       "1 9f1c2ab" "failure:9f1c2ab:non failure:b003e0d:oui"
+  #  Ascendance non mesurable (sha absent du clone) : on ne conclut pas au vert.
+  eb "ascendance inconnue"                "1 deadbee" "failure:deadbee:?"
+  #  Un run annulé ou en cours n est ni un échec ni un succès : il ne doit ni
+  #  bloquer, ni servir à déclarer un échec dépassé.
+  eb "run annulé ignoré"                  "1 9f1c2ab" "cancelled:ccc3333:non failure:9f1c2ab:non"
   t "clone à jour"                       OK      verdict_clone 0 non
   t "retard sans apport (post-squash)"    OK      verdict_clone 2 oui
   t "retard avec apport manquant"        FAIL    verdict_clone 2 non

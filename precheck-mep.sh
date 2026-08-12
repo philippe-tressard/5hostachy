@@ -105,10 +105,45 @@ rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)"           "$(echo "$
 #      Ajouté le 09/08/2026 : j'ai annoncé « CI verte » en ne consultant que les
 #      checks de la pull request, pendant que trois exécutions sur `dev`
 #      échouaient. Une PR verte ne dit rien des pushes qui l'ont précédée.
+#      ⚠️ Corrigé le 12/08/2026 (#318) : ce point refusait aussi le push qui
+#      CORRIGE l'échec qu'il constate — on ne peut pas prouver que la CI repasse
+#      sans pousser, et on ne pouvait pas pousser. La seule issue était
+#      `SKIP_PRECHECK=1`, donc désarmer les vingt points pour contourner celui-ci.
+#      Un échec porté par un commit dont HEAD DESCEND est dépassé par définition ;
+#      les autres bloquent toujours. `echecs_bloquants` tranche, et est testée.
 if command -v gh >/dev/null 2>&1; then
-  ECHECS=$(gh run list --branch "$BRANCHE" --limit 5 --json conclusion            --jq '[.[] | select(.conclusion=="failure")] | length' 2>/dev/null)
-  V0C=$(verdict_compte "${ECHECS:-}" 0)
-  DETAIL0C="${ECHECS:-?} échec(s) sur les 5 dernières exécutions"
+  #  Les runs sont rendus du PLUS RÉCENT au plus ancien — cet ordre porte la
+  #  moitié de la décision, ne pas le trier.
+  RUNS=$(gh run list --branch "$BRANCHE" --limit 5 --json conclusion,headSha \
+           --jq '.[] | "\(.conclusion):\(.headSha)"' 2>/dev/null)
+  if [ -z "${RUNS:-}" ]; then
+    #  `gh` présent mais muet (hors ligne, jeton expiré), ou branche sans
+    #  historique : une liste vide se lit comme « aucun échec ». On ne déduit
+    #  pas un vert d'une sortie vide (socle 04 §1).
+    V0C=INCONNU; DETAIL0C="aucune exécution lisible — état de la CI non mesurable"
+  else
+    TRIPLETS=""; NB_ECHECS=0
+    for run in $RUNS; do
+      concl=${run%%:*}; sha=${run#*:}
+      [ "$concl" = "failure" ] && NB_ECHECS=$((NB_ECHECS + 1))
+      if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then anc="?"     # absent du clone
+      elif [ "$sha" = "$(git rev-parse HEAD)" ]; then anc="non"            # c est HEAD lui-même
+      elif git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then anc="oui"
+      else anc="non"
+      fi
+      TRIPLETS="$TRIPLETS ${concl}:${sha:0:7}:$anc"
+    done
+    RESTE=$(echecs_bloquants "$TRIPLETS")
+    NB0C=${RESTE%% *}; SHAS0C=${RESTE#"$NB0C"}
+    V0C=$(verdict_compte "$NB0C" 0)
+    if [ "$NB0C" -gt 0 ]; then
+      DETAIL0C="$NB0C échec(s) que ce lot ne corrige pas :$SHAS0C"
+    elif [ "$NB_ECHECS" -gt 0 ]; then
+      DETAIL0C="$NB_ECHECS échec(s), tous dépassés (succès postérieur ou corrigé ici)"
+    else
+      DETAIL0C="0 échec sur les 5 dernières exécutions"
+    fi
+  fi
 else
   V0C=INCONNU; DETAIL0C="gh absent — état de la CI non mesurable"
 fi
