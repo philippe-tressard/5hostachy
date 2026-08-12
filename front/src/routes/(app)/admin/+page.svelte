@@ -7,6 +7,7 @@ import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
+import LiensEcransAdmin from '$lib/components/LiensEcransAdmin.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
@@ -876,12 +877,7 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'emails'} on:click={() => (onglet = 'emails')}>
       Modèles e-mail
     </button>
-    <a href="/admin/lots-import" class="tab-btn" style="text-decoration:none">Import Lots</a>
-    <a href="/admin/telecommandes-import" class="tab-btn" style="text-decoration:none">Import TC</a>
-    <a href="/admin/vigiks-import" class="tab-btn" style="text-decoration:none">Import Vigik</a>
-    <a href="/admin/audit-lots" class="tab-btn" style="text-decoration:none">Audit lots</a>
-    <a href="/admin/copropriete" class="tab-btn" style="text-decoration:none">Fiche copropriété</a>
-    <a href="/admin/sauvegardes" class="tab-btn" style="text-decoration:none">Sauvegardes</a>
+    <LiensEcransAdmin />
   </div>
 </div>
 
