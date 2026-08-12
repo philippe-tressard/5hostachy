@@ -33,11 +33,11 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
+from app.models.perimetre import Perimetre
 from app.models.core import (
     AnnonceHall,
     DevisPrestataire,
     Evenement,
-    Perimetre,
     Publication,
     Ticket,
     Utilisateur,

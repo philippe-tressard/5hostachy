@@ -100,7 +100,7 @@ def arbre() -> dict[str, Noeud]:
         from sqlmodel import select
 
         from app.database import SessionLocal
-        from app.models.core import Perimetre
+        from app.models.perimetre import Perimetre
 
         with SessionLocal() as session:
             lignes = session.exec(select(Perimetre)).all()

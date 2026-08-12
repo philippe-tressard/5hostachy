@@ -26,10 +26,10 @@ import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
+from app.models.perimetre import Perimetre
 from app.models.core import (
     Batiment,
     Copropriete,
-    Perimetre,
     Publication,
     RoleUtilisateur,
     Utilisateur,

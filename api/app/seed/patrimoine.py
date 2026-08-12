@@ -40,7 +40,8 @@ d'administration, une fois la table d'icônes consultée.
 """
 from sqlmodel import Session, select
 
-from app.models.core import Batiment, Perimetre
+from app.models.core import Batiment
+from app.models.perimetre import Perimetre
 
 #: Espaces posés sous chaque bâtiment. `(suffixe de code, libellé, description)`.
 #: C'est le « gabarit » que l'écran d'administration proposera de réappliquer.
