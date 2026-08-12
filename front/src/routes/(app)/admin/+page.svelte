@@ -880,6 +880,8 @@ $: _siteNom = $siteNomStore;
     <a href="/admin/telecommandes-import" class="tab-btn" style="text-decoration:none">Import TC</a>
     <a href="/admin/vigiks-import" class="tab-btn" style="text-decoration:none">Import Vigik</a>
     <a href="/admin/audit-lots" class="tab-btn" style="text-decoration:none">Audit lots</a>
+    <a href="/admin/copropriete" class="tab-btn" style="text-decoration:none">Fiche copropriété</a>
+    <a href="/admin/sauvegardes" class="tab-btn" style="text-decoration:none">Sauvegardes</a>
   </div>
 </div>
 
