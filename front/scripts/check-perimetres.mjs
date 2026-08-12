@@ -1,63 +1,97 @@
 /**
- * Garde-fou : la table des périmètres ne s'écrit qu'à un seul endroit.
+ * Garde-fou : le front ne connaît AUCUN code de périmètre.
  *
- * POURQUOI. `PERIMETRE_LABELS` et `perimetreLabel()` vivent dans `lib/utils.ts`
- * depuis toujours — et trois copies s'étaient installées autour, sans que rien ne
- * les voie (#316) :
+ * ## Ce que ce contrôle vérifiait avant, et pourquoi il a changé de cible
  *
- *   - `actualites/+page.svelte` réimplémentait la fonction, table identique au
- *     caractère près (corrigé le 12/08/2026 en livrant #300) ;
- *   - `calendrier/+page.svelte` faisait de même, avec une signature différente —
- *     une chaîne au lieu d'un tableau — ce qui est précisément ce qui l'avait fait
- *     diverger et ce qui a retardé sa correction ;
- *   - `prestataires/+page.svelte` et `PerimetrePicker.svelte` recopiaient la table
- *     sous forme de listes d'options.
+ * `PERIMETRE_LABELS` vivait dans `lib/utils.ts` et trois copies s'étaient
+ * installées autour (#316) : `actualites`, `calendrier` (signature différente —
+ * une chaîne au lieu d'un tableau, ce qui l'avait fait diverger), `prestataires`
+ * et `PerimetrePicker`. Ce contrôle cherchait donc les **recopies de la table**.
  *
- * Aucune n'était fausse. C'est le danger : une correction faite dans `utils.ts`
- * — ajouter un bâtiment, renommer « AFUL » — n'aurait atteint aucune des quatre,
- * et l'écart ne se serait vu qu'à l'écran, longtemps après.
+ * La table n'existe plus. L'arborescence vit en base et s'édite depuis
+ * `/admin/patrimoine` : le front la reçoit par `GET /perimetres` et n'en écrit
+ * aucun élément. L'invariant est donc plus fort qu'avant — non plus « la table
+ * n'est pas recopiée », mais « aucun code de périmètre n'est écrit ».
  *
- * LA RÈGLE : une clé de périmètre associée au libellé EXACT de `PERIMETRE_LABELS`
- * n'apparaît que dans `lib/utils.ts`. Ailleurs, dériver (`Object.entries`) ou
- * appeler `perimetreLabel()`.
+ * C'est ce que la demande exige : le produit doit servir une autre copropriété,
+ * qui n'a ni AFUL, ni quatre bâtiments, ni forcément de caves. Un `'résidence'`
+ * écrit dans une page casse silencieusement dès que ce nœud est renommé — le
+ * badge s'affiche quand il ne devrait pas, le formulaire s'ouvre sur une pastille
+ * morte, et rien ne lève d'erreur.
  *
- * Ce que le contrôle NE signale pas, et c'est délibéré :
- *   - une occurrence isolée de « Copropriété entière » dans une phrase ;
- *   - une table qui associe ces clés à AUTRE CHOSE qu'un libellé — les couleurs
- *     de `PERIMETRE_COLORS` sont une notion propre, pas une copie ;
- *   - une variante d'affichage assumée, aux libellés délibérément différents
- *     (`PERIMETRE_SHORT` écrit « bât. 1 » et « privatif ») — déclarée dans
- *     TOLEREES avec sa raison.
+ * ## Ce qui est cherché
  *
- * La première version de ce contrôle signalait ces trois cas. Un contrôle qui
- * crie sur du légitime finit désarmé — c'est ce qui avait été corrigé sur C16 le
- * 06/08. On compare donc aux libellés RÉELS, lus dans la source.
+ *   - `'résidence'` / `"résidence"` — le code du périmètre par défaut ;
+ *   - `'bat:1'`, `` `bat:${…}` `` — la convention de nommage des bâtiments, qui
+ *     appartient au seed et non au front.
  *
- * Le contrôle s'auto-contrôle : s'il n'analyse aucun fichier, ou si la source
- * elle-même ne contient plus la table, il ÉCHOUE au lieu de conclure au vert
+ * `'parking'` et `'cave'` ne sont **pas** cherchés : ce sont aussi des valeurs de
+ * `TypeLot` (`mon-lot/+page.svelte`), et un contrôle qui crie sur du légitime finit
+ * désarmé — c'est la leçon de C16, corrigée le 06/08.
+ *
+ * ## Les deux homonymes, déclarés avec leur raison
+ *
+ * `Document.perimetre` vaut `résidence` | `bâtiment` | `lot` : ce n'est PAS le même
+ * axe. Il ne dit pas *où* se passe une demande mais *qui a le droit de lire* un
+ * fichier. Les fichiers qui le portent sont dans EXCEPTIONS.
+ *
+ * Le contrôle s'auto-contrôle : si la source n'existe plus ou n'expose plus ce
+ * qu'elle doit exposer, il ÉCHOUE au lieu de conclure au vert
  * (`standards/04-fiabilite-des-controles.md` §2, cas zéro).
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const SOURCE = join(RACINE, 'lib', 'utils.ts');
+const SOURCE = join(RACINE, 'lib', 'perimetres.ts');
+const STORE = join(RACINE, 'lib', 'stores', 'perimetres.ts');
 
-/** Clés de périmètre attendues dans la source. */
-const CLES = ['bat:1', 'bat:2', 'bat:3', 'bat:4', 'parking', 'cave', 'aful'];
+/** Motifs interdits, avec ce qu'il faut écrire à la place. */
+const MOTIFS = [
+	{
+		regex: /['"]résidence['"]/g,
+		quoi: "le code du périmètre par défaut, écrit en dur",
+		remede: '`perimetreParDefaut()`, `perimetreDefautListe()` ou `estPerimetreParDefaut()`',
+	},
+	{
+		regex: /['"`]bat:[^'"`]*['"`]|`bat:\$\{/g,
+		quoi: 'la convention de nommage des bâtiments, qui appartient au seed',
+		remede: '`perimetreDuBatiment(batimentId)`',
+	},
+];
 
-/** Au-delà de ce nombre de couples clé→libellé EXACT, ce n'est plus une coïncidence. */
-const SEUIL = 3;
-
-/** Fichiers dont la table est une notion distincte, avec la raison. */
-const TOLEREES = {
-	'routes/(app)/calendrier/+page.svelte':
-		'PERIMETRE_SHORT — libellés volontairement courts et en minuscules pour les ' +
-		'pastilles du calendrier (« bât. 1 », « privatif »), et deux clés qui ' +
-		"n'existent pas dans PERIMETRE_LABELS (partie commune, partie privative). " +
-		'Les trois libellés identiques (Parking, Cave, AFUL) le sont par coïncidence, ' +
-		'pas par recopie.',
+/**
+ * Fichiers qui emploient ces mots pour une AUTRE notion, avec la raison.
+ *
+ * Une tolérance sans raison se transforme en dépotoir : chacune est nommée, et le
+ * contrôle échoue si l'une devient inutile (voir plus bas).
+ */
+const EXCEPTIONS = {
+	'lib/perimetres.ts':
+		"la source elle-même : elle porte le repli d'affichage `bat:N` pour les " +
+		'contenus qui citent un nœud supprimé depuis, et documente ce qui a été retiré.',
+	'lib/api/documents.ts':
+		'granularité documentaire — `Document.perimetre` vaut `résidence` | `bâtiment` | ' +
+		"`lot`. Autre axe : qui a le droit de LIRE un fichier, pas où se passe une demande.",
+	'routes/(app)/residence/+page.svelte':
+		'granularité documentaire également (dépôt de plans et de règlements).',
 };
+
+/**
+ * Retire commentaires et docstrings avant la recherche.
+ *
+ * Sans cela, le contrôle interdit d'EXPLIQUER la règle : les commentaires qui
+ * racontent pourquoi `bat:4` a disparu contiennent `bat:4`. Un contrôle qui
+ * pousse à supprimer les explications plutôt que les défauts se retourne contre
+ * ce qu'il protège — c'est la même correction que celle faite côté Python, où
+ * l'analyse passe par l'AST pour la même raison.
+ */
+function sansCommentaires(texte) {
+	return texte
+		.replace(/<!--[\s\S]*?-->/g, '')
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		.replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
+}
 
 function fichiers(dir) {
 	const sortie = [];
@@ -69,107 +103,88 @@ function fichiers(dir) {
 	return sortie;
 }
 
-if (!existsSync(SOURCE)) {
-	console.error(`✗ Source unique introuvable (${SOURCE}) — contrôle inopérant.`);
+//  ── Auto-contrôle (cas zéro) ────────────────────────────────────────────────
+//  Sans la source ni le store, le motif a changé et ce contrôle ne mesure plus
+//  rien : il passerait au vert pour la pire des raisons.
+for (const [chemin, quoi] of [[SOURCE, 'la source du rendu'], [STORE, 'le store']]) {
+	if (!existsSync(chemin)) {
+		console.error(`✗ Cas zéro : ${quoi} est introuvable (${chemin}) — contrôle inopérant.`);
+		process.exit(1);
+	}
+}
+const source = readFileSync(SOURCE, 'utf8');
+const store = readFileSync(STORE, 'utf8');
+const attendus = ['perimetreLabel', 'definirPerimetres', 'estPerimetreParDefaut', 'perimetreDuBatiment'];
+const manquants = attendus.filter((f) => !source.includes(`export function ${f}`));
+if (manquants.length > 0) {
+	console.error(
+		`✗ Cas zéro : lib/perimetres.ts n'exporte plus ${manquants.join(', ')}. ` +
+			'Le rendu a changé de forme — mettre ce contrôle à jour, sinon il laisse ' +
+			'passer toutes les écritures en dur.',
+	);
 	process.exit(1);
 }
-
-//  Auto-contrôle : la source doit elle-même porter la table. Sans cela, le
-//  motif a changé et ce contrôle ne mesure plus rien — il passerait au vert
-//  pour la pire des raisons.
-const source = readFileSync(SOURCE, 'utf8');
-const clesSource = CLES.filter((c) => source.includes(`'${c}'`) || source.includes(`${c}:`));
-if (!source.includes('PERIMETRE_LABELS') || clesSource.length < CLES.length) {
+if (!store.includes('/perimetres') && !store.includes('perimetresApi')) {
 	console.error(
-		`✗ Cas zéro : ${clesSource.length}/${CLES.length} clé(s) trouvée(s) dans ` +
-			`lib/utils.ts. La table a changé de forme — mettre CLES à jour, sinon ce ` +
-			`contrôle laisse passer toutes les copies.`,
+		"✗ Cas zéro : le store n'appelle plus l'API des périmètres. L'arborescence ne " +
+			"viendrait plus de la base, et ce contrôle n'aurait plus d'objet.",
 	);
 	process.exit(1);
 }
 
-const tous = fichiers(RACINE).filter((f) => f !== SOURCE);
+const tous = fichiers(RACINE);
 if (tous.length === 0) {
 	console.error("✗ Cas zéro : aucun fichier analysé — l'arborescence a changé.");
 	process.exit(1);
 }
 
-//  Libellés RÉELS, lus dans la source : c'est la comparaison à ces valeurs qui
-//  distingue une copie d'une table qui partage seulement les clés.
-const libelles = {};
-for (const cle of CLES) {
-	//  La clé s'écrit `'bat:1':` (quotée, car elle contient un `:`) ou `parking:`
-	//  (nue). On accepte les deux, et on capture le libellé qui suit.
-	const cleEchappee = cle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	const m = source.match(new RegExp(`['"]?${cleEchappee}['"]?\\s*:\\s*['"]([^'"]+)['"]`));
-	if (m) libelles[cle] = m[1];
-}
+//  ── Recherche ───────────────────────────────────────────────────────────────
+const fautifs = [];
+const exceptionsUtiles = new Set();
 
-/**
- * Espaces normalisées avant comparaison.
- *
- * Sans cela, ce contrôle rate exactement la copie qu'il doit trouver. Le tableau
- * de bord écrivait `'Bât. 1'` — espace INSÉCABLE — quand `utils.ts` écrit une
- * espace normale : indiscernable à l'œil, deux chaînes différentes pour du code.
- * Sa table était bien une copie, divergente de surcroît (`aful` y manquait, donc
- * un événement AFUL affichait la clé brute), et la première version de ce
- * contrôle l'a laissée passer.
- *
- * Une copie « presque identique » est le cas le PLUS fréquent, pas un cas limite :
- * c'est ainsi qu'une table recopiée dérive.
- */
-const normaliser = (t) => t.replace(/[\s ]+/g, ' ');
-
-const copies = [];
-const tolereesPropres = [];
 for (const f of tous) {
-	const contenu = normaliser(readFileSync(f, 'utf8'));
-	//  Un couple compte quand la clé ET son libellé figurent dans le fichier.
-	const trouvees = CLES.filter(
-		//  Les deux écritures d'une clé d'objet JS : quotée (obligatoire pour
-		//  `'bat:1'`, qui contient un `:`) et nue (`parking:`). Ne chercher que la
-		//  première rendait le contrôle aveugle à la moitié d'une table — celle du
-		//  calendrier mélange justement les deux.
-		(c) =>
-			(contenu.includes(`'${c}'`) ||
-				contenu.includes(`"${c}"`) ||
-				new RegExp(`(^|[\\s,{])${c}\\s*:`).test(contenu)) &&
-			libelles[c] &&
-			contenu.includes(normaliser(libelles[c])),
-	);
-	//  Séparateurs normalisés : les clés de TOLEREES s'écrivent en `/`, y compris
-	//  sur ce poste Windows où `relative()` rend des `\`.
 	const rel = relative(RACINE, f).split(sep).join('/');
-	if (trouvees.length >= SEUIL) {
-		if (rel in TOLEREES) continue;
-		copies.push({ fichier: rel, cles: trouvees });
-	} else if (rel in TOLEREES) {
-		tolereesPropres.push(rel);
+	const contenu = sansCommentaires(readFileSync(f, 'utf8'));
+	const trouves = [];
+	for (const motif of MOTIFS) {
+		const m = contenu.match(motif.regex);
+		if (m) trouves.push({ ...motif, exemples: [...new Set(m)].slice(0, 3) });
 	}
+	if (trouves.length === 0) continue;
+	if (rel in EXCEPTIONS) {
+		exceptionsUtiles.add(rel);
+		continue;
+	}
+	fautifs.push({ fichier: rel, trouves });
 }
 
-if (copies.length > 0) {
-	console.error('✗ Table des périmètres recopiée hors de lib/utils.ts :');
-	for (const c of copies) {
-		console.error(`    ${c.fichier} — ${c.cles.length} clés : ${c.cles.join(', ')}`);
+if (fautifs.length > 0) {
+	console.error('✗ Code(s) de périmètre écrit(s) en dur dans le front :');
+	for (const { fichier, trouves } of fautifs) {
+		for (const t of trouves) {
+			console.error(`    ${fichier} — ${t.exemples.join(', ')}`);
+			console.error(`        ${t.quoi}`);
+			console.error(`        → ${t.remede}`);
+		}
 	}
 	console.error(
-		'\n  Dériver de `PERIMETRE_LABELS` (Object.entries) ou appeler `perimetreLabel()`.\n' +
-			"  Une table correcte mais recopiée reste un manquement : c'est la correction\n" +
-			'  suivante qui ne l\'atteindra pas.',
+		"\n  L'arborescence vit en base et s'édite depuis /admin/patrimoine. Un code\n" +
+			"  écrit ici cesse d'être vrai dès qu'une copropriété le renomme — sans\n" +
+			'  erreur, sans trace, et seulement à l\'écran.',
 	);
 	process.exit(1);
 }
 
 //  Une tolérance qui n'a plus lieu d'être fait échouer, comme pour les routes
 //  admin : sinon la liste se remplit et ne protège plus rien.
-if (tolereesPropres.length > 0) {
-	console.error('✗ Tolérance(s) devenue(s) inutile(s) — plus aucune table recopiée :');
-	for (const f of tolereesPropres) console.error(`    ${f} — retirer l'entrée de TOLEREES`);
+const inutiles = Object.keys(EXCEPTIONS).filter((f) => !exceptionsUtiles.has(f));
+if (inutiles.length > 0) {
+	console.error('✗ Exception(s) devenue(s) inutile(s) — plus aucun code en dur dedans :');
+	for (const f of inutiles) console.error(`    ${f} — retirer l'entrée de EXCEPTIONS`);
 	process.exit(1);
 }
 
 console.log(
-	`✓ Périmètres : table unique dans lib/utils.ts, ${tous.length} fichier(s) vérifié(s), ` +
-		`${Object.keys(TOLEREES).length} tolérée(s) et justifiée(s).`,
+	`✓ Périmètres : aucun code en dur, ${tous.length} fichier(s) vérifié(s), ` +
+		`${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s) et justifiée(s).`,
 );

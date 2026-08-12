@@ -12,6 +12,7 @@
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { stripHtml, fmtMontant } from '$lib/utils';
+	import { perimetreDefautListe } from '$lib/perimetres';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
@@ -620,7 +621,7 @@
 	// Formulaire de création
 	let ahTitre = '';
 	let ahMessage = '';
-	let ahPerimetre: string[] = ['résidence'];
+	let ahPerimetre: string[] = perimetreDefautListe();
 	let ahFormat: AhFormat = 'auto';
 	let ahPhotos: string[] = [];
 	let ahSaving = false;
@@ -687,7 +688,7 @@
 			const src = await annoncesHallApi.depuisPublication(pubId);
 			ahTitre = src.titre;
 			ahMessage = src.message;
-			ahPerimetre = src.perimetre_cible?.length ? [...src.perimetre_cible] : ['résidence'];
+			ahPerimetre = src.perimetre_cible?.length ? [...src.perimetre_cible] : perimetreDefautListe();
 			ahPhotos = (src.images ?? []).slice(0, AH_MAX_PHOTOS);
 			ahFormat = 'auto';
 			ahApercuHtml = '';
@@ -727,7 +728,7 @@
 	function ahResetForm() {
 		ahTitre = '';
 		ahMessage = '';
-		ahPerimetre = ['résidence'];
+		ahPerimetre = perimetreDefautListe();
 		ahFormat = 'auto';
 		ahPhotos = [];
 		ahApercuHtml = '';

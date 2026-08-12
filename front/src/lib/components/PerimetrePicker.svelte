@@ -1,70 +1,155 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	import { PERIMETRE_LABELS } from '$lib/utils';
+	import { perimetresStore } from '$lib/stores/perimetres';
+	import { perimetreParDefaut, type Perimetre } from '$lib/perimetres';
 
-	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidence'] ou ['bat:1','parking'] */
-	export let value: string[] = ['résidence'];
+	/** Valeurs sélectionnées — tableau de codes. Ex : ['résidence'] ou ['bat:1','parking'] */
+	export let value: string[] = [];
 
-	/** Mode mono-sélection (select dropdown) ou multi (pills). Par défaut: multi */
+	/** Mono-sélection (liste déroulante) ou multi (pastilles). Par défaut : multi. */
 	export let mode: 'multi' | 'single' = 'multi';
 
+	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
-	//  Dérivées de la source unique : une entrée ajoutée à PERIMETRE_LABELS
-	//  apparaît ici sans qu'on y touche. « résidence » est retiré parce que ce
-	//  composant le traite à part (bouton/option dédiés, avec son emoji).
-	const options: [string, string][] = Object.entries(PERIMETRE_LABELS).filter(
-		([cle]) => cle !== 'résidence',
+	//  L'arborescence vient de la base : une entrée ajoutée depuis
+	//  `/admin/patrimoine` apparaît ici sans qu'on touche à ce fichier. C'est tout
+	//  l'objet du lot — la table de sept clés qui vivait dans `lib/utils.ts` ne
+	//  pouvait pas décrire une copropriété sans AFUL, ni un cinquième bâtiment.
+	$: actifs = $perimetresStore.filter((n) => n.actif);
+	$: parCode = new Map(actifs.map((n) => [n.code, n]));
+	$: defaut = perimetreParDefaut();
+
+	//  Un nœud de premier niveau est soit une racine sélectionnable, soit l'enfant
+	//  d'un REGROUPEMENT racine (« Bâtiments » n'est pas une cible : on choisit un
+	//  bâtiment). Cela remonte les bâtiments dans la première rangée, là où
+	//  l'utilisateur les cherche, sans inventer de niveau dans les données.
+	function estGroupeRacine(n: Perimetre | undefined): boolean {
+		return !!n && n.parent === null && !n.selectionnable;
+	}
+	$: niveau1 = actifs.filter(
+		(n) =>
+			n.selectionnable &&
+			n.code !== defaut &&
+			(n.parent === null || estGroupeRacine(parCode.get(n.parent!))),
 	);
 
-	$: isResidence = value.length === 0 || (value.length === 1 && value[0] === 'résidence');
-	$: selected = new Set(value);
+	const codesNiveau1 = (liste: Perimetre[]) => new Set(liste.map((n) => n.code));
 
-	function selectResidence() {
-		value = ['résidence'];
+	/** Le nœud de premier niveau dont dépend une valeur sélectionnée, s'il y en a un. */
+	function racineDe(code: string, n1: Set<string>): string | null {
+		let courant = parCode.get(code);
+		const vus = new Set<string>();
+		while (courant && !vus.has(courant.code)) {
+			if (n1.has(courant.code)) return courant.code;
+			vus.add(courant.code);
+			courant = courant.parent ? parCode.get(courant.parent) : undefined;
+		}
+		return null;
+	}
+
+	//  Le second niveau ne s'affiche que pour UN parent à la fois : proposer les
+	//  espaces de quatre bâtiments simultanément produirait une rangée illisible,
+	//  et le geste attendu est « je précise dans celui-ci ».
+	$: n1 = codesNiveau1(niveau1);
+	$: parentOuvert = value.map((v) => racineDe(v, n1)).find(Boolean) ?? null;
+	$: niveau2 = parentOuvert
+		? actifs.filter((n) => n.parent === parentOuvert && n.selectionnable)
+		: [];
+
+	$: estDefaut = value.length === 0 || (value.length === 1 && value[0] === defaut);
+	$: selection = new Set(value);
+
+	//  Aide contextuelle : la description du nœud choisi. C'est ce qui manquait
+	//  entièrement — un résident n'avait nulle part l'information qu'AFUL notifie
+	//  tout le conseil syndical.
+	$: descriptionActive = value.length === 1 ? (parCode.get(value[0])?.description ?? '') : '';
+
+	function choisirDefaut() {
+		value = defaut ? [defaut] : [];
 		dispatch('change', value);
 	}
 
-	function toggleItem(val: string) {
+	function basculer(code: string) {
 		if (mode === 'single') {
-			value = [val];
+			value = [code];
 			dispatch('change', value);
 			return;
 		}
-		const s = new Set(value.filter(v => v !== 'résidence'));
-		if (s.has(val)) s.delete(val);
-		else s.add(val);
-		value = s.size > 0 ? [...s] : ['résidence'];
+		const s = new Set(value.filter((v) => v !== defaut));
+		if (s.has(code)) {
+			s.delete(code);
+		} else {
+			//  Choisir un espace remplace son bâtiment : « Bât. 2 » puis
+			//  « Bât. 2 › Hall » veut dire le hall, pas les deux.
+			const racine = racineDe(code, n1);
+			if (racine && racine !== code) s.delete(racine);
+			s.add(code);
+		}
+		value = s.size > 0 ? [...s] : defaut ? [defaut] : [];
 		dispatch('change', value);
 	}
 
-	function handleSingleChange(e: Event) {
-		const v = (e.target as HTMLSelectElement).value;
-		value = [v];
+	function changerListe(e: Event) {
+		value = [(e.target as HTMLSelectElement).value];
 		dispatch('change', value);
 	}
 </script>
 
 {#if mode === 'single'}
-	<select value={value[0] ?? 'résidence'} on:change={handleSingleChange} class="perimetre-select">
-		<option value="résidence">🏘️ Copropriété entière</option>
-		{#each options as [val, lbl]}
-			<option value={val}>{lbl}</option>
+	<select value={value[0] ?? defaut ?? ''} on:change={changerListe} class="perimetre-select">
+		{#if defaut}
+			<option value={defaut}>{parCode.get(defaut)?.libelle ?? defaut}</option>
+		{/if}
+		{#each niveau1 as n (n.code)}
+			<option value={n.code}>{n.libelle}</option>
+			{#each actifs.filter((e) => e.parent === n.code && e.selectionnable) as espace (espace.code)}
+				<option value={espace.code}>&nbsp;&nbsp;{n.libelle_court} › {espace.libelle}</option>
+			{/each}
 		{/each}
 	</select>
 {:else}
 	<div class="perimetre-pills">
-		<button type="button" class="pill" class:pill-active={isResidence}
-			on:click={selectResidence}>
-			🏘️ Copropriété entière
-		</button>
-		{#each options as [val, lbl]}
-			<button type="button" class="pill" class:pill-active={!isResidence && selected.has(val)}
-				on:click={() => toggleItem(val)}>
-				{lbl}
+		{#if defaut}
+			<button type="button" class="pill" class:pill-active={estDefaut} on:click={choisirDefaut}>
+				{parCode.get(defaut)?.libelle ?? defaut}
+			</button>
+		{/if}
+		{#each niveau1 as n (n.code)}
+			<button
+				type="button"
+				class="pill"
+				class:pill-active={!estDefaut && selection.has(n.code)}
+				on:click={() => basculer(n.code)}
+			>
+				{n.libelle}
 			</button>
 		{/each}
 	</div>
+
+	{#if niveau2.length > 0}
+		<div class="perimetre-niveau2">
+			<p class="perimetre-precision">
+				Préciser dans {parCode.get(parentOuvert ?? '')?.libelle ?? ''}
+				<span class="perimetre-facultatif">— facultatif</span>
+			</p>
+			<div class="perimetre-pills">
+				{#each niveau2 as espace (espace.code)}
+					<button
+						type="button"
+						class="pill pill-sm"
+						class:pill-active={selection.has(espace.code)}
+						on:click={() => basculer(espace.code)}
+					>
+						{espace.libelle}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	{#if descriptionActive}
+		<p class="perimetre-aide">{descriptionActive}</p>
+	{/if}
 {/if}
 
 <style>
@@ -72,5 +157,10 @@
 	.pill { padding: .35rem .7rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); font-size: .82rem; cursor: pointer; color: var(--color-text-muted); transition: all .12s; white-space: nowrap; }
 	.pill:hover { border-color: var(--color-primary); color: var(--color-text); }
 	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+	.pill-sm { font-size: .78rem; padding: .28rem .6rem; }
+	.perimetre-niveau2 { margin-top: .6rem; padding-left: .1rem; }
+	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
+	.perimetre-facultatif { opacity: .75; }
+	.perimetre-aide { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
 	.perimetre-select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
 </style>

@@ -41,35 +41,31 @@ export function fmtMontant(v: number | null | undefined): string {
 	}).format(v);
 }
 
-/** Libellés canoniques des périmètres (cf. specs/design — pattern UX « Périmètre »). */
-export const PERIMETRE_LABELS: Record<string, string> = {
-	'résidence': 'Copropriété entière',
-	'bat:1': 'Bât. 1', 'bat:2': 'Bât. 2', 'bat:3': 'Bât. 3', 'bat:4': 'Bât. 4',
-	parking: 'Parking', cave: 'Cave', aful: 'AFUL',
-};
-
 /**
- * Périmètres → libellé affichable. Séparateur ` · ` (espace point-médian espace).
- * Ex : ['bat:1','parking'] → 'Bât. 1 · Parking'
+ * Périmètres — la table a disparu d'ici, et de partout ailleurs.
  *
- * Accepte les DEUX formes que porte réellement le produit : le tableau
- * `perimetre_cible` (publications, tickets) et la chaîne `perimetre` des
- * événements, que le modèle déclare `str` mais que le front recevait parfois
- * séparée par des virgules. Le calendrier réimplémentait la fonction pour cette
- * seule raison, avec une table de correspondance recopiée à l'identique — une
- * correction faite ici ne l'atteignait pas (#316).
+ * `PERIMETRE_LABELS` vivait juste en dessous : sept clés écrites en dur, arrêtées
+ * à `bat:4` quand l'API allait jusqu'à `bat:9`. Un cinquième bâtiment s'affichait
+ * « Bât. 5 » côté serveur et **`bat:5` brut** à l'écran, et aucune description
+ * n'existait nulle part.
  *
- * Le `trim()` n'est pas cosmétique : sur `'bat:1, parking'`, une clé avec espace
- * de tête ne correspond à rien et ressortirait brute à l'écran.
+ * L'arborescence vit désormais en base et s'édite depuis l'administration
+ * (`/admin/patrimoine`). Le rendu est dans `$lib/perimetres`, alimenté au
+ * démarrage par `$lib/stores/perimetres`.
+ *
+ * Ces réexports existent pour que les cinq pages qui écrivent
+ * `import { perimetreLabel } from '$lib/utils'` n'aient pas à changer : le chemin
+ * d'import n'est pas la question que ce lot traite.
  */
-export function perimetreLabel(items: string[] | string | null | undefined): string {
-	const liste = typeof items === 'string' ? items.split(',') : (items ?? []);
-	return liste
-		.map((i) => (i ?? '').trim())
-		.filter(Boolean)
-		.map((i) => PERIMETRE_LABELS[i] ?? i)
-		.join(' · ');
-}
+export {
+	perimetreLabel,
+	perimetreLabelUn,
+	estPerimetreParDefaut,
+	perimetreParDefaut,
+	noeudPerimetre,
+	tousLesPerimetres,
+	type Perimetre,
+} from '$lib/perimetres';
 
 /**
  * État de la touche Verr. Maj., ou `null` si l'événement ne permet pas de le savoir.

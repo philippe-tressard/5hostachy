@@ -1,5 +1,6 @@
 // Règles de visibilité kanban — source unique de vérité
 // Utilisé par calendrier/+page.svelte et tableau-de-bord/+page.svelte
+import { perimetreDuBatiment } from '$lib/perimetres';
 
 export interface KanbanCtx {
 	isCS: boolean;
@@ -74,7 +75,7 @@ export function devisPonctuelToKanban(
 	const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
 	const debut =
 		typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-	const perimetre = d.perimetre ?? (d.batiment_id ? `bat:${d.batiment_id}` : 'résidence');
+	const perimetre = d.perimetre ?? perimetreDuBatiment(d.batiment_id);
 	return {
 		id: -(100000 + Number(d.id)),
 		_source: 'devis_ponctuel',

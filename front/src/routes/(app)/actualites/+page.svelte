@@ -17,6 +17,7 @@
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { perimetreLabel } from '$lib/utils';
+	import { perimetreDefautListe, estPerimetreParDefaut } from '$lib/perimetres';
 	import { STATUT_LABELS, STATUT_BADGE, richEmpty, grouperParAnnee } from '$lib/publications';
 	import { fmtDate2d as fmtDate, fmtDateLong, fmtDatetime2d as fmtDatetime, isNouveau } from '$lib/date';
 
@@ -111,7 +112,7 @@
 			pubFilesMap = { ...pubFilesMap, [pubId]: docs };
 		} catch { /* silencieux */ }
 	}
-	let newPerimetreCible: string[] = ['résidence'];
+	let newPerimetreCible: string[] = perimetreDefautListe();
 	let newPublicCible: string[] = ['résidents'];
 
 	onMount(async () => {
@@ -168,7 +169,7 @@
 			showForm = false;
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
 			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false; newAnnonceHall = false;
-			newPerimetreCible = ['résidence'];
+			newPerimetreCible = perimetreDefautListe();
 			newPhotos = [];
 			pendingFiles = []; fileInputKey++;
 			toast('success', pub.brouillon ? 'Brouillon enregistré' : 'Publication créée');
@@ -444,7 +445,7 @@
 					{#if isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
 					</span>
 					{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
+{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
 				</div>
 				<div class="pub-row-right">
 					<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
@@ -650,7 +651,7 @@
 											<div class="pub-row-inner">
 												<span class="pub-row-titre">{pub.titre}</span>
 												{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-												{#if pub.perimetre_cible && !(pub.perimetre_cible.length === 1 && pub.perimetre_cible[0] === 'résidence')}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
+												{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
 											</div>
 											<div class="pub-row-right">
 												<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
