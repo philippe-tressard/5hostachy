@@ -28,13 +28,9 @@ from sqlmodel import Session, SQLModel, select
 from app.database import engine
 from app.models.perimetre import Perimetre
 from app.models.core import (
-    Batiment,
-    Copropriete,
-    Publication,
-    RoleUtilisateur,
-    Utilisateur,
+    Batiment, ConfigSite, Copropriete, Publication, RoleUtilisateur, Utilisateur,
 )
-from app.seed.patrimoine import GABARIT_BATIMENT, poser_arborescence
+from app.seed.patrimoine import CLE_SEMEE, GABARIT_BATIMENT, poser_arborescence
 from app.utils import perimetres as P
 from app.utils.destinataires import batiments_du_perimetre
 from app.utils.visibility import perimetre_visible, publication_visible
@@ -93,6 +89,11 @@ ANCIENS_LIBELLES = {
 # ── Montage ───────────────────────────────────────────────────────────────────
 
 def _vider(session: Session) -> None:
+    #  Le marqueur de semis part aussi : sans lui, `poser_arborescence` croirait
+    #  avoir déjà semé et les tests repartiraient sur une base vide.
+    marqueur = session.get(ConfigSite, CLE_SEMEE)
+    if marqueur:
+        session.delete(marqueur)
     for modele in (Perimetre, Batiment, Copropriete):
         for ligne in session.exec(select(modele)).all():
             session.delete(ligne)
