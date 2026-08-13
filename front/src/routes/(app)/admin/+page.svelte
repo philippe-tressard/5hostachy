@@ -901,7 +901,6 @@ $: _siteNom = $siteNomStore;
       📊 Télémétrie
     </button>
     <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>🔧 Maintenance</button>
-    <LiensEcransAdmin groupe="exploitation" />
   </div>
 </div>
 
@@ -2139,15 +2138,8 @@ $: _siteNom = $siteNomStore;
   letter-spacing: .06em; color: var(--color-text-muted);
   padding: 0 .25rem .3rem;
 }
-.tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; }
-.tab-btn {
-padding: .45rem .9rem; border: none; background: none; cursor: pointer;
-font-size: .875rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
-margin-bottom: -2px; font-weight: 500; display: flex; align-items: center; gap: .4rem;
-transition: color .15s, border-color .15s; white-space: nowrap;
-}
-.tab-btn:hover { color: var(--color-text); }
-.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+/*  `.tabs` et `.tab-btn` sont dans `app.css` : partagées avec
+    `LiensEcransAdmin.svelte`, elles ne peuvent pas vivre dans un style scopé. */
 .badge-count {
 background: var(--color-danger); color: #fff; border-radius: 999px;
 font-size: .7rem; padding: .1rem .45rem; font-weight: 700;

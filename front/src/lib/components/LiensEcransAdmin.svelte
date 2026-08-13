@@ -3,14 +3,12 @@
 	 * `donnees` — imports et audits, qui alimentent les comptes et les accès.
 	 * `configuration` — ce qui DÉCRIT la copropriété : sa fiche, ses périmètres.
 	 *   Placé juste après « Paramétrage site », dont il est le prolongement.
-	 * `exploitation` — les sauvegardes, à côté de « Maintenance » : ce sont les
-	 *   deux écrans qui parlent des tâches planifiées.
 	 *
 	 * Les deux groupes existent parce que « Fiche copropriété » et « Périmètres »
 	 * se trouvaient sous 👥 Gestion utilisateurs, où ils n'ont rien à faire :
 	 * ils ne décrivent pas des personnes mais l'immeuble (signalé le 12/08/2026).
 	 */
-	export let groupe: 'donnees' | 'configuration' | 'exploitation' = 'donnees';
+	export let groupe: 'donnees' | 'configuration' = 'donnees';
 </script>
 
 <!--
@@ -30,13 +28,11 @@
 	laisse les littéraux intacts.
 -->
 {#if groupe === 'donnees'}
-	<a href="/admin/lots-import" class="tab-btn" style="text-decoration:none">Import Lots</a>
-	<a href="/admin/telecommandes-import" class="tab-btn" style="text-decoration:none">Import TC</a>
-	<a href="/admin/vigiks-import" class="tab-btn" style="text-decoration:none">Import Vigik</a>
-	<a href="/admin/audit-lots" class="tab-btn" style="text-decoration:none">Audit lots</a>
-{:else if groupe === 'configuration'}
-	<a href="/admin/copropriete" class="tab-btn" style="text-decoration:none">Fiche copropriété</a>
-	<a href="/admin/patrimoine" class="tab-btn" style="text-decoration:none">Périmètres</a>
+	<a href="/admin/lots-import" class="tab-btn">Import Lots</a>
+	<a href="/admin/telecommandes-import" class="tab-btn">Import TC</a>
+	<a href="/admin/vigiks-import" class="tab-btn">Import Vigik</a>
+	<a href="/admin/audit-lots" class="tab-btn">Audit lots</a>
 {:else}
-	<a href="/admin/sauvegardes" class="tab-btn" style="text-decoration:none">Sauvegardes</a>
+	<a href="/admin/copropriete" class="tab-btn">Fiche copropriété</a>
+	<a href="/admin/patrimoine" class="tab-btn">Périmètres</a>
 {/if}
