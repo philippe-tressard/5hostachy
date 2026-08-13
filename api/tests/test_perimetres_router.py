@@ -34,6 +34,14 @@ from app.utils import perimetres as P
 
 
 def _vider(session: Session) -> None:
+    #  Le marqueur de semis part avec l'arborescence : sans lui, `poser_arborescence`
+    #  croirait avoir déjà semé et laisserait les tests sur une base vide.
+    from app.models.core import ConfigSite
+    from app.seed.patrimoine import CLE_SEMEE
+
+    marqueur = session.get(ConfigSite, CLE_SEMEE)
+    if marqueur:
+        session.delete(marqueur)
     for modele in (Publication, Evenement, Perimetre, Batiment, Copropriete):
         for ligne in session.exec(select(modele)).all():
             session.delete(ligne)
@@ -132,3 +140,70 @@ def test_codes_cites_lit_les_trois_formats_de_stockage(batiments):
         cites = _codes_cites(session)
 
     assert {"parking", "espaces-verts", "cheminements"} <= cites
+
+
+# ── Le seed ne doit plus jamais annuler une suppression ───────────────────────
+
+def test_le_seed_ne_repose_pas_ce_qui_a_ete_supprime(batiments):
+    """Une suppression doit survivre au déploiement suivant.
+
+    `seed()` tourne au démarrage de l'API, donc à CHAQUE déploiement. La première
+    écriture reposait « ce qui manque » : un périmètre supprimé depuis
+    l'administration ressuscitait à la mise à jour suivante — « à chaque mise à
+    jour mes périmètres ajoutés, supprimés sont perdus » (13/08/2026).
+
+    La règle du paquet `seed` protège les MODIFICATIONS, pas les SUPPRESSIONS :
+    un seed ne distingue pas un nœud supprimé d'un nœud jamais posé. D'où le
+    marqueur `ConfigSite["perimetres_semes"]`.
+    """
+    from app.models.core import ConfigSite
+    from app.seed.patrimoine import CLE_SEMEE
+
+    with Session(engine) as session:
+        assert session.get(ConfigSite, CLE_SEMEE) is not None, (
+            "le premier semis doit poser son marqueur"
+        )
+
+        #  L'administrateur supprime un périmètre, et en ajoute un à lui.
+        cible = session.exec(select(Perimetre).where(Perimetre.code == "cheminements")).one()
+        for enfant in session.exec(
+            select(Perimetre).where(Perimetre.parent_id == cible.id)
+        ).all():
+            session.delete(enfant)
+        session.delete(cible)
+        session.add(Perimetre(code="piscine", libelle="Piscine", portee_globale=True))
+        session.commit()
+
+        #  Un déploiement plus tard : le seed repasse.
+        assert poser_arborescence(session) == 0, "le seed ne doit plus rien poser"
+        session.commit()
+
+        codes = {n.code for n in session.exec(select(Perimetre)).all()}
+        assert "cheminements" not in codes, "la suppression a été annulée par le seed"
+        assert "piscine" in codes, "l'ajout de l'administrateur a disparu"
+        assert "résidence" in codes, "le reste de l'arborescence doit être intact"
+
+
+def test_le_seed_pose_bien_l_arbre_sur_une_base_vierge():
+    """Le marqueur ne doit pas empêcher le premier semis.
+
+    C'est le cas zéro : une installation neuve doit obtenir son arborescence.
+    """
+    from app.models.core import ConfigSite
+    from app.seed.patrimoine import CLE_SEMEE
+
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        _vider(session)
+        marqueur = session.get(ConfigSite, CLE_SEMEE)
+        if marqueur:
+            session.delete(marqueur)
+        session.commit()
+
+        poses = poser_arborescence(session)
+        session.commit()
+        assert poses > 0, "une base vierge doit recevoir l'arborescence"
+        assert session.get(ConfigSite, CLE_SEMEE) is not None
+
+        #  Et une seconde exécution ne pose plus rien.
+        assert poser_arborescence(session) == 0

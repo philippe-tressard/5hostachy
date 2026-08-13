@@ -40,7 +40,7 @@ d'administration, une fois la table d'icônes consultée.
 """
 from sqlmodel import Session, select
 
-from app.models.core import Batiment
+from app.models.core import Batiment, ConfigSite
 from app.models.perimetre import Perimetre
 
 #: Espaces posés sous chaque bâtiment. `(suffixe de code, libellé, description)`.
@@ -244,17 +244,40 @@ def _poser(session: Session, connus: dict[str, int], entree: dict,
     return noeud.id
 
 
+#: Marqueur posé une fois l'arborescence initiale écrite. Tant qu'il est là, ce
+#: module ne touche plus à rien.
+CLE_SEMEE = "perimetres_semes"
+
+
 def poser_arborescence(session: Session) -> int:
-    """Pose les nœuds absents de l'arborescence. N'écrase jamais un nœud existant.
+    """Pose l'arborescence de départ — **une seule fois**, jamais ensuite.
 
-    Suit la règle du paquet `seed` : ce qui est déjà là est laissé tel quel,
-    personnalisations comprises. Un administrateur qui a renommé « AFUL » ou
-    supprimé « Cheminements » ne les verra pas revenir — sauf pour la suppression,
-    qu'un seed ne peut pas distinguer d'une absence initiale ; c'est la raison
-    pour laquelle l'écran propose de **désactiver** plutôt que de supprimer.
+    ## Pourquoi un marqueur, et pas « pose ce qui manque »
 
-    Renvoie le nombre de nœuds posés.
+    La première écriture reposait à chaque démarrage tout nœud absent. Or
+    `seed()` est appelé par `main.py` au démarrage de l'API, donc **à chaque
+    déploiement** : un périmètre supprimé par l'administration ressuscitait au
+    déploiement suivant. Signalé à l'usage le 13/08/2026, et c'est rédhibitoire —
+    une arborescence « propre à chaque copropriété » qui revient à l'état d'usine
+    toutes les semaines n'est pas éditable, elle est décorative.
+
+    La règle du paquet (« pose ce qui manque, ne met jamais à jour ») protège les
+    modifications, pas les **suppressions** : un seed ne distingue pas un nœud
+    supprimé d'un nœud jamais posé. Il faut donc une mémoire, et c'est ce que
+    `ConfigSite[CLE_SEMEE]` apporte. C'est la même logique que
+    `_copropriete_par_defaut`, qui ne s'exécute que sur une base vierge.
+
+    ⚠️ **Conséquence assumée** : un bâtiment ajouté après coup n'obtient plus son
+    nœud `bat:N` automatiquement. C'est le prix à payer, et c'est le bon sens de
+    l'échange — l'écran d'administration sait créer un périmètre, alors que rien
+    ne savait rattraper une suppression annulée. Un bouton « poser les bâtiments
+    manquants » reste possible plus tard, déclenché par l'administrateur.
+
+    Renvoie le nombre de nœuds posés (0 si l'arborescence a déjà été semée).
     """
+    if session.get(ConfigSite, CLE_SEMEE) is not None:
+        return 0
+
     connus = {
         code: identifiant
         for identifiant, code in session.exec(
@@ -281,6 +304,11 @@ def poser_arborescence(session: Session) -> int:
             }, racine_id)
 
     _poser_les_batiments(session, connus)
+
+    #  Le marqueur est posé DANS la même transaction que les nœuds : si l'écriture
+    #  échoue, on ne se retrouve pas avec un marqueur sans arborescence, ce qui
+    #  laisserait une installation vide pour toujours.
+    session.add(ConfigSite(cle=CLE_SEMEE, valeur="1"))
     return len(connus) - avant
 
 

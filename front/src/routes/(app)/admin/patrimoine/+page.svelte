@@ -169,8 +169,13 @@
 					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && basculer(n.code)}
 				>
 					<span class="ref-titre">{n.libelle}</span>
-					{#if n.concerne_tous}
-						<span class="badge badge-blue" title="Visible de tous les résidents">tous</span>
+					{#if n.portee_globale}
+						<span class="badge badge-blue" title="Ce périmètre porte lui-même la portée globale : visible de tous les résidents">tous</span>
+					{:else if n.concerne_tous}
+						<!--  Hérité d'un ancêtre. Sans cette distinction, la pastille « tous »
+						      s'affichait à côté d'une case décochée — deux informations exactes
+						      qui se lisent comme une contradiction (signalé le 13/08/2026). -->
+						<span class="badge badge-gray" title="Hérité d’un périmètre parent — la case de ce nœud est décochée, et c’est normal">tous (hérité)</span>
 					{/if}
 					{#if !n.selectionnable}
 						<span class="badge badge-gray" title="Non proposé à la saisie">regroupement</span>
@@ -247,6 +252,14 @@
 			<label class="field-check danger">
 				<input type="checkbox" bind:checked={form.portee_globale} />
 				Concerne tous les résidents
+				{#if edite.concerne_tous && !edite.portee_globale}
+					<span class="field-hint herite">
+						ℹ️ Ce périmètre concerne <strong>déjà</strong> tous les résidents, par
+						héritage de son parent — la case ci-dessus est décochée, et c’est normal.
+						La cocher n’ajouterait rien ; la laisser décochée ne retire rien. Pour
+						changer cela, il faut décocher la case du périmètre parent.
+					</span>
+				{/if}
 				<span class="field-hint">
 					⚠️ Un contenu ciblé sur ce périmètre — ou sur l’un de ses sous-périmètres —
 					sera visible de <strong>tous les résidents</strong> et notifiera
@@ -320,6 +333,7 @@
 	.field-label input, .field-label textarea { width: 100%; padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; margin-top: .2rem; }
 	.field-hint { display: block; font-size: .78rem; color: var(--color-text-muted); margin-top: .25rem; line-height: 1.45; }
 	.field-check { display: block; font-size: .85rem; margin-bottom: .8rem; }
+	.herite { border-left: 2px solid var(--color-border); padding-left: .5rem; margin-top: .4rem; }
 	.field-check.danger { border-left: 3px solid var(--color-warning, #d97706); padding-left: .6rem; }
 	.modal-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: 1rem; }
 </style>
