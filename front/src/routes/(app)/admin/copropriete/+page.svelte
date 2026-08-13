@@ -14,7 +14,7 @@
 	//  `assurance_numero` était le plus traître : le champ existe, sous le nom
 	//  `assurance_numero_police`. Une lettre de plus et il ne s'enregistrait pas.
 	let form: any = {
-		nom: '', adresse: '', nb_lots_total: '', nb_parkings_communs: '',
+		nom: '', adresse: '', nb_lots_total: '', nb_lots_principaux: '', nb_parkings_communs: '',
 		annee_construction: '', numero_immatriculation: '',
 		assurance_compagnie: '', assurance_numero_police: '', assurance_echeance: ''
 	};
@@ -35,10 +35,13 @@
 		saving = true;
 		try {
 			const payload = { ...form };
-			if (payload.nb_lots_total === '') payload.nb_lots_total = null;
-			else payload.nb_lots_total = Number(payload.nb_lots_total);
-			if (payload.annee_construction === '') payload.annee_construction = null;
-			else payload.annee_construction = Number(payload.annee_construction);
+			//  Un champ numérique vide doit partir à `null`, jamais à `''` : Pydantic
+			//  refuse la chaîne vide sur un `Optional[int]` et l'enregistrement échoue
+			//  en silence côté écran. La règle était recopiée par champ — le troisième
+			//  ajout est le bon moment pour cesser de la recopier.
+			for (const champ of ['nb_lots_total', 'nb_lots_principaux', 'annee_construction']) {
+				payload[champ] = payload[champ] === '' ? null : Number(payload[champ]);
+			}
 			await coproprieteApi.update(payload);
 			toast('success', 'Fiche enregistrée');
 		} catch { toast('error', 'Erreur lors de la sauvegarde'); }
@@ -66,9 +69,18 @@
 				<span>Adresse</span>
 				<input class="input" bind:value={form.adresse} />
 			</label>
-			<label class="form-group">
-				<span>Nombre de lots total</span>
+			<!--  Les DEUX décomptes de la fiche du registre national (ANAH). Un seul
+			      champ obligeait à choisir lequel perdre, et le chiffre saisi ne
+			      disait pas lequel il était : 195 ou 63 pour la même résidence. Les
+			      libellés reprennent mot pour mot ceux de la fiche, pour qu'on
+			      recopie sans avoir à interpréter. -->
+			<label class="form-group" title="Le « Nombre de lots » de la fiche d'immatriculation : tous les lots, caves et parkings compris.">
+				<span>Nombre de lots — total, caves et parkings compris</span>
 				<input class="input" type="number" min="1" bind:value={form.nb_lots_total} />
+			</label>
+			<label class="form-group" title="Le décompte qui porte les seuils réglementaires, et qui dit combien de foyers vivent ici.">
+				<span>Dont lots d'habitation, commerces et bureaux</span>
+				<input class="input" type="number" min="1" bind:value={form.nb_lots_principaux} />
 			</label>
 			<label class="form-group">
 				<span>Année de construction</span>

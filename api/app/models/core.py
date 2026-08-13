@@ -8,6 +8,17 @@ from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+#  Réexportation : `Copropriete`, `Batiment`, `Lot` et `TypeLot` vivent dans
+#  `copropriete.py` depuis le 13/08/2026 (modularité, rang 1). Ils restent
+#  importables ici pour ne pas avoir à toucher sept modules appelants — dont
+#  `auth.py`, que sa taille empêche de recevoir une ligne d'import de plus.
+from app.models.copropriete import (
+    Batiment as Batiment,
+    Copropriete as Copropriete,
+    Lot as Lot,
+    TypeLot as TypeLot,
+)
+
 
 # ──────────────────────────────────────────────
 #  Enums
@@ -38,10 +49,6 @@ class RoleUtilisateur(str, Enum):
     admin = "admin"
 
 
-class TypeLot(str, Enum):
-    appartement = "appartement"
-    cave = "cave"
-    parking = "parking"
 
 
 class TypeLien(str, Enum):
@@ -134,59 +141,6 @@ class FrequenceSauvegarde(str, Enum):
     hebdomadaire = "hebdomadaire"
     mensuelle = "mensuelle"
 
-
-# ──────────────────────────────────────────────
-#  Copropriété
-# ──────────────────────────────────────────────
-
-class Copropriete(SQLModel, table=True):
-    __tablename__ = "copropriete"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    nom: str
-    adresse: str
-    annee_construction: Optional[int] = None
-    nb_lots_total: Optional[int] = None
-    numero_immatriculation: Optional[str] = None  # ANAH/ALUR
-    assurance_compagnie: Optional[str] = None
-    assurance_numero_police: Optional[str] = None
-    assurance_echeance: Optional[date] = None
-    photo_url: Optional[str] = None
-    nb_parkings_communs: int = 0
-
-    batiments: List["Batiment"] = Relationship(back_populates="copropriete")
-    contrats_entretien: List["ContratEntretien"] = Relationship(back_populates="copropriete")
-
-
-class Batiment(SQLModel, table=True):
-    __tablename__ = "batiment"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    copropriete_id: int = Field(foreign_key="copropriete.id")
-    numero: str  # A, B, C, D…
-    nb_etages: int = 0
-    sous_sol: bool = False
-    specificites: Optional[str] = None
-    nb_appartements: int = 0
-    nb_caves: int = 0
-    nb_parkings: int = 0
-    nb_locaux_commerciaux: int = 0
-
-    copropriete: Optional[Copropriete] = Relationship(back_populates="batiments")
-    lots: List["Lot"] = Relationship(back_populates="batiment")
-
-
-class Lot(SQLModel, table=True):
-    __tablename__ = "lot"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")  # None pour les parkings
-    numero: str
-    type: TypeLot = TypeLot.appartement
-    type_appartement: Optional[str] = None  # Studio, T1, T2…
-    etage: Optional[int] = None
-    superficie: Optional[float] = None
-
-    batiment: Optional[Batiment] = Relationship(back_populates="lots")
-    user_lots: List["UserLot"] = Relationship(back_populates="lot")
-    tickets: List["Ticket"] = Relationship(back_populates="lot")
 
 
 # ──────────────────────────────────────────────
