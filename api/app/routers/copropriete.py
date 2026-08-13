@@ -1,4 +1,5 @@
 """Router copropriété — fiche, bâtiments, lots."""
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -33,7 +34,7 @@ class CoproprieteRead(BaseModel):
     numero_immatriculation: Optional[str] = None
     assurance_compagnie: Optional[str] = None
     assurance_numero_police: Optional[str] = None
-    assurance_echeance: Optional[str] = None
+    assurance_echeance: Optional[date] = None
     photo_url: Optional[str] = None
     nb_parkings_communs: int = 0
 
@@ -88,7 +89,28 @@ def update_copropriete(
     copro = session.exec(select(Copropriete)).first()
     if not copro:
         raise HTTPException(404, "Copropriété non configurée")
-    for k, v in body.model_dump(exclude_none=True).items():
+    donnees = body.model_dump(exclude_none=True)
+
+    #  `assurance_echeance` arrive en CHAÎNE (« 2026-12-17 ») et la colonne est un
+    #  `date` : affecter la chaîne telle quelle faisait lever SQLAlchemy —
+    #  « SQLite Date type only accepts Python date objects as input » — et TOUTE
+    #  la fiche devenait inenregistrable, y compris quand on n'avait modifié que
+    #  le nom du syndic. Signalé à l'usage le 13/08/2026 ; le défaut existait
+    #  depuis que le champ avait été ajouté, personne n'ayant retouché l'échéance.
+    echeance = donnees.get("assurance_echeance")
+    if echeance is not None:
+        if isinstance(echeance, str) and not echeance.strip():
+            donnees["assurance_echeance"] = None      # champ vidé
+        elif isinstance(echeance, str):
+            try:
+                donnees["assurance_echeance"] = date.fromisoformat(echeance.strip()[:10])
+            except ValueError:
+                raise HTTPException(
+                    422, f"Échéance d'assurance illisible : « {echeance} » "
+                         "(format attendu : AAAA-MM-JJ)."
+                )
+
+    for k, v in donnees.items():
         setattr(copro, k, v)
     session.add(copro)
     session.commit()

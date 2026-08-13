@@ -13,7 +13,7 @@ d'aucune autre route du projet. Les isoler rend ce régime visible plutôt que n
 au milieu d'endpoints protégés par `require_admin`.
 """
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -22,7 +22,7 @@ from sqlmodel import Session, select
 
 from app.config import get_settings
 from app.database import get_session
-from app.models.core import HistoriqueMaintenance
+from app.models.core import HistoriqueEmail, HistoriqueMaintenance
 
 from .exploitation import _purger_anciens_rapports
 
@@ -137,3 +137,53 @@ def maintenance_rapport(
     session.refresh(entry)
     _purger_anciens_rapports(session)
     return entry
+
+
+@router.get("/emails/echecs-recents")
+def emails_echecs_recents(
+    jours: int = 7,
+    x_maintenance_key: Optional[str] = Header(default=None, alias="x-maintenance-key"),
+    session: Session = Depends(get_session),
+):
+    """Combien d'e-mails ont échoué ces derniers jours, et de quels modèles.
+
+    **Pourquoi cette route existe.** Le point 9 du pré-check MEP — « e-mails sans
+    échec récent » — sortait `INCONNU` à *chaque* exécution : l'historique
+    s'interroge in-process et exigeait une session admin, donc il fallait ouvrir
+    l'écran à la main. Personne ne le faisait. Un contrôle qu'on ne fait jamais ne
+    protège rien, et celui-là garde la seule trace d'une classe de défaut qui s'est
+    reproduite **trois fois** : un e-mail dont le gabarit Jinja ne se rend pas part
+    en échec **sans que rien ne remonte à l'expéditeur** — l'envoi est une
+    `BackgroundTask`. Le 28/07/2026, six membres du conseil syndical n'ont rien
+    reçu et cela ne se voyait nulle part ailleurs.
+
+    **Ce qu'elle rend, et ce qu'elle ne rend pas.** Des comptes et des codes de
+    modèles. **Jamais d'adresse ni de sujet** : ce canal est authentifié par un
+    secret partagé, pas par une session, et il n'a aucune raison de laisser sortir
+    une donnée personnelle pour répondre à « combien ». C'est la même discipline
+    que `dernier-rapport`, qui ne rend que des dates.
+
+    `total = 0` est la réponse attendue ; toute autre valeur fait échouer le point 9.
+    """
+    _exiger_cle_maintenance(x_maintenance_key)
+    #  Borné : une valeur aberrante passée par un script ne doit pas balayer toute
+    #  la table, que la purge garde à 90 jours.
+    jours = max(1, min(int(jours), 90))
+    depuis = datetime.utcnow() - timedelta(days=jours)
+
+    lignes = session.exec(
+        select(HistoriqueEmail)
+        .where(HistoriqueEmail.statut == "erreur", HistoriqueEmail.cree_le >= depuis)
+    ).all()
+
+    par_code: dict[str, int] = {}
+    for ligne in lignes:
+        par_code[ligne.code] = par_code.get(ligne.code, 0) + 1
+
+    return {
+        "jours": jours,
+        "total": len(lignes),
+        "par_code": par_code,
+        "dernier": max((l.cree_le for l in lignes), default=None),
+        "genere_le": datetime.utcnow(),
+    }

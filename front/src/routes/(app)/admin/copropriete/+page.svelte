@@ -6,11 +6,17 @@
 
 	$: _siteNom = $siteNomStore;
 
+	//  UNIQUEMENT les champs que `CoproprieteUpdate` accepte. Sept autres
+	//  figuraient ici — `code_postal`, `ville`, les quatre du syndic et
+	//  `assurance_numero` — qui n'existent ni dans le schéma ni dans le modèle :
+	//  Pydantic les jetait en silence, et le formulaire promettait donc un
+	//  enregistrement qui n'avait pas lieu (signalé à l'usage le 13/08/2026).
+	//  `assurance_numero` était le plus traître : le champ existe, sous le nom
+	//  `assurance_numero_police`. Une lettre de plus et il ne s'enregistrait pas.
 	let form: any = {
-		nom: '', adresse: '', code_postal: '', ville: '', nb_lots_total: '',
+		nom: '', adresse: '', nb_lots_total: '', nb_parkings_communs: '',
 		annee_construction: '', numero_immatriculation: '',
-		assurance_compagnie: '', assurance_numero: '', assurance_echeance: '',
-		syndic_nom: '', syndic_contact: '', syndic_email: '', syndic_telephone: ''
+		assurance_compagnie: '', assurance_numero_police: '', assurance_echeance: ''
 	};
 	let loading = true;
 	let saving = false;
@@ -61,14 +67,6 @@
 				<input class="input" bind:value={form.adresse} />
 			</label>
 			<label class="form-group">
-				<span>Code postal</span>
-				<input class="input" bind:value={form.code_postal} maxlength="5" />
-			</label>
-			<label class="form-group">
-				<span>Ville</span>
-				<input class="input" bind:value={form.ville} />
-			</label>
-			<label class="form-group">
 				<span>Nombre de lots total</span>
 				<input class="input" type="number" min="1" bind:value={form.nb_lots_total} />
 			</label>
@@ -92,7 +90,7 @@
 			</label>
 			<label class="form-group">
 				<span>N° de contrat</span>
-				<input class="input" bind:value={form.assurance_numero} />
+				<input class="input" bind:value={form.assurance_numero_police} />
 			</label>
 			<label class="form-group">
 				<span>Échéance</span>
@@ -101,27 +99,17 @@
 		</div>
 	</section>
 
-	<section class="form-section">
-		<h2 class="section-title">Syndic</h2>
-		<div class="form-grid">
-			<label class="form-group">
-				<span>Nom du syndic</span>
-				<input class="input" bind:value={form.syndic_nom} />
-			</label>
-			<label class="form-group">
-				<span>Interlocuteur</span>
-				<input class="input" bind:value={form.syndic_contact} />
-			</label>
-			<label class="form-group">
-				<span>Email</span>
-				<input class="input" type="email" bind:value={form.syndic_email} />
-			</label>
-			<label class="form-group">
-				<span>Téléphone</span>
-				<input class="input" type="tel" bind:value={form.syndic_telephone} />
-			</label>
-		</div>
-	</section>
+	<!--  La section « Syndic » vivait ici et n'enregistrait RIEN : ses quatre champs
+	      n'existent ni dans `CoproprieteUpdate` ni dans le modèle `Copropriete`,
+	      donc Pydantic les jetait en silence. Le syndic se décrit dans l'Annuaire,
+	      sur `SyndicInfo` et `MembreSyndic` — et c'est cette donnée-là qui sert
+	      réellement : `utils/destinataires.interlocuteurs_syndic()` s'en sert pour
+	      choisir à qui partent les e-mails du cabinet. Deux saisies pour une seule
+	      notion, dont une inerte. -->
+	<p class="renvoi">
+		Le syndic se décrit dans <a href="/espace-cs">Espace CS &rsaquo; Annuaire</a> :
+		c'est de là que partent les e-mails au cabinet.
+	</p>
 
 	<div>
 		<button class="btn btn-primary" type="submit" disabled={saving}>
@@ -132,6 +120,7 @@
 {/if}
 
 <style>
+	.renvoi { font-size: .85rem; color: var(--color-text-muted); margin: 0 0 1.5rem; }
 	.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
 	.form-section { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.25rem; }
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
