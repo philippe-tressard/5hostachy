@@ -441,8 +441,6 @@ export const admin = {
 	// Sauvegardes
 	backupConfig: () => api.get<any>('/admin/sauvegardes/config'),
 	updateBackupConfig: (data: unknown) => api.put<any>('/admin/sauvegardes/config', data),
-	triggerBackup: () => api.post('/admin/sauvegardes/maintenant'),
-	backupHistory: () => api.get<any[]>('/admin/sauvegardes/historique'),
 	// Modèles e-mail
 	emailTemplates: () => api.get<any[]>('/admin/modeles-email'),
 	updateEmailTemplate: (id: number, data: unknown) => api.patch(`/admin/modeles-email/${id}`, data),

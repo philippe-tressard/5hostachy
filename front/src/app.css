@@ -564,3 +564,24 @@ a:hover { text-decoration: underline; }
    dessinent PAR-DESSUS l'en-tête collé, qui réapparaît alors au milieu du
    tableau (constaté le 02/08/2026 sur l'historique des sauvegardes). */
 .sticky-head { position: sticky; top: 0; z-index: 2; background: var(--color-surface); }
+
+/* Onglets d'administration — GLOBAL, et ce n'est pas un détail.
+   Ces règles vivaient dans le `<style>` scopé d'`admin/+page.svelte`. Depuis que
+   les écrans sur route propre ont été extraits dans `LiensEcransAdmin.svelte`
+   (#307, 12/08/2026), leurs `<a class="tab-btn">` appartiennent à un AUTRE
+   composant : le scope Svelte ne les atteignait plus, et ces liens s'affichaient
+   sans aucun style. Le défaut ne sautait pas aux yeux tant qu'ils étaient tous en
+   bout de rangée ; il est devenu criant dès qu'un lien s'est retrouvé au milieu
+   des onglets (signalé le 13/08/2026).
+   Remonter la règle ici plutôt que la recopier dans le composant : une classe
+   partagée par deux composants n'a rien à faire dans le style scopé de l'un
+   d'eux (`standards/02-factorisation.md`). */
+.tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; }
+.tab-btn {
+  padding: .45rem .9rem; border: none; background: none; cursor: pointer;
+  font-size: .875rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
+  margin-bottom: -2px; font-weight: 500; display: flex; align-items: center; gap: .4rem;
+  transition: color .15s, border-color .15s; white-space: nowrap; text-decoration: none;
+}
+.tab-btn:hover { color: var(--color-text); }
+.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }

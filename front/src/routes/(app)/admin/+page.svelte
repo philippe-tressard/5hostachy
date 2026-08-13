@@ -874,19 +874,16 @@ $: _siteNom = $siteNomStore;
       Demandes profil
       {#if demandesProfil.length > 0}<span class="badge-count">{demandesProfil.length}</span>{/if}
     </button>
-    <button class="tab-btn" class:active={onglet === 'emails'} on:click={() => (onglet = 'emails')}>
-      Modèles e-mail
-    </button>
-    <LiensEcransAdmin />
+    <button class="tab-btn" class:active={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</button>
+    <LiensEcransAdmin groupe="donnees" />
   </div>
 </div>
 
 <div class="tabs-group" style="margin-top:.5rem;margin-bottom:1.5rem">
   <div class="tabs-group-label">⚙️ Configuration</div>
   <div class="tabs" style="margin-bottom:0">
-    <button class="tab-btn" class:active={onglet === 'site'} on:click={openSiteTab}>
-      Paramétrage site
-    </button>
+    <button class="tab-btn" class:active={onglet === 'site'} on:click={openSiteTab}>Paramétrage site</button>
+    <LiensEcransAdmin groupe="configuration" />
     <button class="tab-btn" class:active={onglet === 'pages'} on:click={() => (onglet = 'pages')}>
       Descriptif pages
     </button>
@@ -903,9 +900,7 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>
       📊 Télémétrie
     </button>
-    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>
-      🔧 Maintenance
-    </button>
+    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>🔧 Maintenance</button>
   </div>
 </div>
 
@@ -2143,15 +2138,8 @@ $: _siteNom = $siteNomStore;
   letter-spacing: .06em; color: var(--color-text-muted);
   padding: 0 .25rem .3rem;
 }
-.tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; }
-.tab-btn {
-padding: .45rem .9rem; border: none; background: none; cursor: pointer;
-font-size: .875rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
-margin-bottom: -2px; font-weight: 500; display: flex; align-items: center; gap: .4rem;
-transition: color .15s, border-color .15s; white-space: nowrap;
-}
-.tab-btn:hover { color: var(--color-text); }
-.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+/*  `.tabs` et `.tab-btn` sont dans `app.css` : partagées avec
+    `LiensEcransAdmin.svelte`, elles ne peuvent pas vivre dans un style scopé. */
 .badge-count {
 background: var(--color-danger); color: #fff; border-radius: 999px;
 font-size: .7rem; padding: .1rem .45rem; font-weight: 700;

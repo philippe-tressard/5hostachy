@@ -13,6 +13,7 @@
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { LIBELLE_TACHE, LIBELLE_ACTION } from '$lib/taches';
+	import ConfigSauvegarde from '$lib/components/ConfigSauvegarde.svelte';
 
 	//  Le bouton dit ce qu'il FAIT, pas le nom de la tâche — voir LIBELLE_ACTION.
 	//  Défaut : « Lancer <nom de la tâche> », qui reste juste là où le bouton
@@ -389,6 +390,8 @@
 		{/if}
 	{/if}
 </section>
+
+<ConfigSauvegarde />
 
 <style>
 	/*  Ligne de synthèse dépliable. Le détail vit SOUS la ligne qui l'annonce :

@@ -163,18 +163,18 @@ def setup_scheduler():
         scheduler.start()
         return scheduler
 
-    freq = cfg.frequence.value if cfg else settings.backup_frequency
     hour = cfg.heure_execution if cfg else settings.backup_hour
-    dow = cfg.jour_semaine if cfg else settings.backup_day_of_week
 
-    # Les valeurs de l'enum FrequenceSauvegarde sont en français
-    if freq in ("quotidienne", "daily"):
-        scheduler.add_job(run_backup, "cron", hour=hour, minute=0, id="backup")
-    elif freq in ("hebdomadaire", "weekly"):
-        scheduler.add_job(run_backup, "cron", day_of_week=dow, hour=hour, minute=0, id="backup")
-    elif freq in ("mensuelle", "monthly"):
-        dom = cfg.jour_mois if cfg else 1
-        scheduler.add_job(run_backup, "cron", day=dom, hour=hour, minute=0, id="backup")
+    #  QUOTIDIENNE, et rien d'autre. `frequence` proposait aussi « hebdomadaire »
+    #  et « mensuelle », qui ne s'ajoutent pas au quotidien mais le REMPLACENT :
+    #  sur une base de quelques mégaoctets, les espacer ne fait que perdre des
+    #  jours de données. Le choix est retiré de l'interface, et la migration 0139
+    #  ramène les installations existantes au quotidien (13/08/2026).
+    #
+    #  Une valeur ancienne qui ressurgirait — base non migrée, restauration —
+    #  donne donc une sauvegarde quotidienne : le repli va dans le sens de la
+    #  sécurité, jamais dans celui de la rareté.
+    scheduler.add_job(run_backup, "cron", hour=hour, minute=0, id="backup")
 
     scheduler.start()
     return scheduler
