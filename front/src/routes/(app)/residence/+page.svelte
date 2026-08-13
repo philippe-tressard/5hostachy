@@ -16,6 +16,7 @@
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
+	import FicheResidence from '$lib/components/FicheResidence.svelte';
 
 	$: _pc = getPageConfig($configStore, 'residence', {
 		titre: 'Ma résidence',
@@ -45,6 +46,7 @@
 	let editAdresse = '';
 	let editAnnee: string | number = '';
 	let editNbLots: string | number = '';
+	let editNbLotsPrincipaux: string | number = '';
 	let editImmatriculation = '';
 	let editAssuranceCompagnie = '';
 	let editAssuranceNumero = '';
@@ -107,11 +109,6 @@
 
 	// ── Derived ────────────────────────────────────────────────────────────────
 	// Composition depuis les champs stockés sur Batiment et Copropriete
-	$: hasOrphanLots = (copropriete?.nb_parkings_communs ?? 0) > 0;
-	$: totalAppart  = batiments.reduce((s, b) => s + (b.nb_appartements ?? 0), 0);
-	$: totalCave    = batiments.reduce((s, b) => s + (b.nb_caves ?? 0), 0);
-	$: totalParking = batiments.reduce((s, b) => s + (b.nb_parkings ?? 0), 0) + (copropriete?.nb_parkings_communs ?? 0);
-	$: totalLocaux  = batiments.reduce((s, b) => s + (b.nb_locaux_commerciaux ?? 0), 0);
 
 	$: activeDiagTypes       = diagnosticTypes.filter((t) => !t.non_applicable);
 	$: nonApplicableDiagTypes = diagnosticTypes.filter((t) => t.non_applicable);
@@ -188,6 +185,7 @@
 		editAdresse           = copropriete.adresse ?? '';
 		editAnnee             = copropriete.annee_construction ?? '';
 		editNbLots            = copropriete.nb_lots_total ?? '';
+		editNbLotsPrincipaux  = copropriete.nb_lots_principaux ?? '';
 		editImmatriculation   = copropriete.numero_immatriculation ?? '';
 		editAssuranceCompagnie = copropriete.assurance_compagnie ?? '';
 		editAssuranceNumero   = copropriete.assurance_numero_police ?? '';
@@ -205,6 +203,7 @@
 				adresse:                 editAdresse || undefined,
 				annee_construction:      editAnnee ? Number(editAnnee) : undefined,
 				nb_lots_total:           editNbLots ? Number(editNbLots) : undefined,
+				nb_lots_principaux:      editNbLotsPrincipaux ? Number(editNbLotsPrincipaux) : undefined,
 				numero_immatriculation:  editImmatriculation || undefined,
 				assurance_compagnie:     editAssuranceCompagnie || undefined,
 				assurance_numero_police: editAssuranceNumero || undefined,
@@ -583,7 +582,8 @@
 						<div class="field"><label for="e-nom">Nom</label><input id="e-nom" type="text" bind:value={editNom} /></div>
 						<div class="field"><label for="e-adr">Adresse</label><input id="e-adr" type="text" bind:value={editAdresse} /></div>
 						<div class="field"><label for="e-ann">Année de construction</label><input id="e-ann" type="number" bind:value={editAnnee} min="1800" max="2100" /></div>
-						<div class="field"><label for="e-lots">Nb lots (manuel)</label><input id="e-lots" type="number" bind:value={editNbLots} min="1" /></div>
+						<div class="field"><label for="e-lots">Lots — total, caves et parkings compris</label><input id="e-lots" type="number" bind:value={editNbLots} min="1" /></div>
+						<div class="field"><label for="e-lots-p">Dont habitation, commerces et bureaux</label><input id="e-lots-p" type="number" bind:value={editNbLotsPrincipaux} min="1" /></div>
 						<div class="field"><label for="e-imm">N° immatriculation (ANAH)</label><input id="e-imm" type="text" bind:value={editImmatriculation} /></div>
 						<div class="field"><label for="e-ass">Assurance – compagnie</label><input id="e-ass" type="text" bind:value={editAssuranceCompagnie} /></div>
 						<div class="field"><label for="e-pol">Assurance – n° police</label><input id="e-pol" type="text" bind:value={editAssuranceNumero} /></div>
@@ -596,77 +596,7 @@
 				</form>
 			</div>
 		{:else}
-			<div class="card" style="padding:1.25rem">
-				{#if copropriete.adresse}
-					<div style="margin-bottom:1rem">
-						<span class="info-label">Adresse</span>
-						<div class="info-value" style="margin-top:.25rem">{copropriete.adresse}</div>
-					</div>
-				{/if}
-
-				{#if copropriete.numero_immatriculation || copropriete.assurance_compagnie}
-					<div class="info-grid" style="margin-bottom:1.25rem">
-						{#if copropriete.numero_immatriculation}
-							<div class="info-item">
-								<span class="info-label">N° immatriculation</span>
-								<span class="info-value info-highlight">{copropriete.numero_immatriculation}</span>
-							</div>
-						{/if}
-						{#if copropriete.assurance_compagnie}
-							<div class="info-item">
-								<span class="info-label">Assurance</span>
-								<span class="info-value">{copropriete.assurance_compagnie}{#if copropriete.assurance_echeance} — échéance {fmt(copropriete.assurance_echeance)}{/if}</span>
-							</div>
-						{/if}
-					</div>
-				{/if}
-
-				{#if batiments.length > 0}
-					<div style="border-top:1px solid var(--color-border);padding-top:1rem">
-						<p class="info-label" style="margin-bottom:.6rem">Composition</p>
-						<table class="batiment-table">
-							<thead>
-								<tr>
-									<th>Bâtiment</th>
-									<th>Parkings</th>
-									<th>Caves</th>
-									<th>Appartements</th>
-									<th>Loc. commerciaux</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each batiments as b}
-									<tr>
-										<td style="font-weight:600">Bât. {b.numero}</td>
-										<td>{(b.nb_parkings ?? 0) > 0 ? b.nb_parkings : '—'}</td>
-										<td>{(b.nb_caves ?? 0) > 0 ? b.nb_caves : '—'}</td>
-										<td>{(b.nb_appartements ?? 0) > 0 ? b.nb_appartements : '—'}</td>
-										<td>{(b.nb_locaux_commerciaux ?? 0) > 0 ? b.nb_locaux_commerciaux : '—'}</td>
-									</tr>
-								{/each}
-								{#if hasOrphanLots}
-									<tr>
-										<td style="color:var(--color-text-muted);font-style:italic">Communs</td>
-										<td>{copropriete.nb_parkings_communs}</td>
-										<td>—</td>
-										<td>—</td>
-										<td>—</td>
-									</tr>
-								{/if}
-							</tbody>
-							<tfoot>
-								<tr>
-									<td>Total</td>
-									<td>{totalParking > 0 ? totalParking : '—'}</td>
-									<td>{totalCave > 0 ? totalCave : '—'}</td>
-									<td>{totalAppart > 0 ? totalAppart : '—'}</td>
-									<td>{totalLocaux > 0 ? totalLocaux : '—'}</td>
-								</tr>
-							</tfoot>
-						</table>
-					</div>
-				{/if}
-			</div>
+			<FicheResidence {copropriete} {batiments} />
 		{/if}
 	</section>
 
@@ -1306,22 +1236,6 @@
 		margin: 0;
 	}
 
-	/* ── Infos résidence ────────────────────────────────────────── */
-	.info-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-		gap: .6rem;
-	}
-	.info-item { display: flex; flex-direction: column; gap: .1rem; }
-	.info-label {
-		font-size: .72rem;
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: .04em;
-		font-weight: 600;
-	}
-	.info-value { font-size: .9rem; font-weight: 500; }
-	.info-highlight { color: var(--color-primary); font-weight: 700; }
 
 	/* ── Bâtiments / lot counts ─────────────────────────────────── */
 	.batiment-row {
@@ -1362,20 +1276,6 @@
 	.doc-actions { display: flex; gap: .35rem; flex-shrink: 0; }
 	.empty-msg { font-size: .875rem; color: var(--color-text-muted); padding: .5rem 0; }
 
-	/* ── Tableau bâtiments ────────────────────────────────────────────── */
-	.batiment-table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-top: .25rem; }
-	.batiment-table th {
-		text-align: left;
-		padding: .4rem .75rem;
-		font-size: .72rem;
-		text-transform: uppercase;
-		letter-spacing: .04em;
-		color: var(--color-text-muted);
-		border-bottom: 2px solid var(--color-border);
-		font-weight: 600;
-	}
-	.batiment-table td { padding: .4rem .75rem; border-bottom: 1px solid var(--color-border); }
-	.batiment-table tfoot td { font-weight: 700; border-top: 2px solid var(--color-border); border-bottom: none; }
 
 	/* ── Edit form ──────────────────────────────────────────────── */
 	.edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: .75rem; }

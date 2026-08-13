@@ -96,3 +96,34 @@ def test_echeance_illisible_repond_422_et_ne_corrompt_rien(copro):
         assert session.get(Copropriete, copro).assurance_echeance == date(2026, 12, 17), (
             "un refus ne doit pas avoir écrasé la valeur précédente"
         )
+
+
+def test_les_deux_decomptes_de_lots_sont_independants(copro):
+    """Les deux chiffres de la fiche ANAH ne se déduisent pas l'un de l'autre.
+
+    La fiche du registre national en porte deux : le total (caves et parkings
+    compris) et les seuls lots d'habitation, commerces et bureaux — relevé réel
+    sur la résidence, 195 et 63. L'application n'avait qu'un champ, si bien que le
+    chiffre saisi ne disait pas lequel il était et que le produit annonçait une
+    taille fausse du simple au triple.
+
+    Ce test verrouille l'indépendance : écrire l'un ne doit pas toucher l'autre.
+    Le rapport entre les deux dépend du nombre de caves et de parkings, propre à
+    chaque copropriété — le déduire serait inventer une mesure.
+    """
+    lu = _patch(nb_lots_total=195, nb_lots_principaux=63)
+    assert (lu.nb_lots_total, lu.nb_lots_principaux) == (195, 63)
+
+    lu = _patch(nb_lots_total=196)
+    assert lu.nb_lots_principaux == 63, "modifier le total a écrasé les lots principaux"
+
+
+def test_un_seul_decompte_renseigne_reste_valide(copro):
+    """Une copropriété peut n'en connaître qu'un — on n'invente pas l'autre.
+
+    Cas zéro du couple (`standards/04-fiabilite-des-controles.md` §2) : le champ
+    absent reste vide, et l'écran n'affiche que celui qu'il a.
+    """
+    lu = _patch(nb_lots_principaux=63)
+    assert lu.nb_lots_principaux == 63
+    assert lu.nb_lots_total is None, "le total a été déduit alors que personne ne le sait"

@@ -18,6 +18,7 @@ class CoproprieteUpdate(BaseModel):
     adresse: Optional[str] = None
     annee_construction: Optional[int] = None
     nb_lots_total: Optional[int] = None
+    nb_lots_principaux: Optional[int] = None
     nb_parkings_communs: Optional[int] = None
     numero_immatriculation: Optional[str] = None
     assurance_compagnie: Optional[str] = None
@@ -31,6 +32,7 @@ class CoproprieteRead(BaseModel):
     adresse: str
     annee_construction: Optional[int] = None
     nb_lots_total: Optional[int] = None
+    nb_lots_principaux: Optional[int] = None
     numero_immatriculation: Optional[str] = None
     assurance_compagnie: Optional[str] = None
     assurance_numero_police: Optional[str] = None
