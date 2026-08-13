@@ -268,8 +268,28 @@ AGE=$(sur "$STANDBY" 'd=$(grep -oE "^\[[0-9-]+ [0-9:]+" /var/log/hostachy-deploy
 rapporter 8 "$(verdict_age_min "${AGE:-}" $BATTEMENT_DEPLOY_MIN)" "Battement auto-deploy (standby)" \
           "dernier battement il y a ${AGE:-?} min"
 
-# 9 — e-mails en échec : in-process uniquement, donc hors de portée d'ici
-rapporter 9 INCONNU "E-mails sans échec récent" "exige une session admin — Admin → E-mails → Historique"
+# 9 — e-mails en échec sur 7 jours
+#     Sortait INCONNU à CHAQUE exécution : l'historique s'interroge in-process et
+#     exigeait une session admin, donc il fallait ouvrir l'écran à la main. Personne
+#     ne le faisait — et c'est le seul contrôle qui voit cette classe de défaut, qui
+#     s'est reproduite trois fois : un gabarit Jinja qui ne se rend pas part en échec
+#     SANS que rien ne remonte à l'expéditeur (l'envoi est une BackgroundTask). Le
+#     28/07/2026, six membres du CS n'ont rien reçu, visible nulle part ailleurs.
+#
+#     Mesuré depuis l'ACTIF, par le canal machine déjà utilisé par les scripts cron
+#     (`x-maintenance-key`, cf. lib-collecte.sh) : la route ne rend que des COMPTES
+#     et des codes de gabarits, jamais une adresse ni un sujet.
+#
+#     Le compte n'est lu QUE sur un HTTP 200 — sans cette condition, une réponse
+#     vide (clé absente, API muette) se lirait comme « zéro échec », c'est-à-dire un
+#     vert obtenu par l'absence de mesure. C'est la leçon de C19, le 11/08/2026.
+REP9=$(sur "$ACTIF" 'MK=$(grep -E "^MAINTENANCE_KEY=" /opt/5hostachy/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' ");        [ -n "$MK" ] && curl -s --max-time 10 -w "|%{http_code}" -H "x-maintenance-key: $MK"          "http://localhost/api/admin/emails/echecs-recents?jours=7"')
+case "${REP9:-}" in
+  *"|200") NB9=$(echo "$REP9" | grep -oE '"total"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')
+           CODES9=$(echo "$REP9" | grep -oE '"par_code"[[:space:]]*:[[:space:]]*\{[^}]*\}' | cut -c1-90)
+           rapporter 9 "$(verdict_compte "${NB9:-}" 0)" "E-mails sans échec (7 j)"                      "échecs=${NB9:-?}${CODES9:+ — $CODES9}" ;;
+  *)       rapporter 9 INCONNU "E-mails sans échec (7 j)"                      "canal machine muet (clé absente ou API injoignable) — vérifier Admin → Modèles e-mail" ;;
+esac
 
 # 10 — parité de code entre les 2 nœuds
 H1=$(sur "$RPI1" 'git -C /opt/5hostachy rev-parse --short HEAD')

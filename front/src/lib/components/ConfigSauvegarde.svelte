@@ -97,6 +97,15 @@
 		<p class="aide note">
 			Au-delà de {nb_versions_conservees} versions, la plus ancienne est effacée.
 		</p>
+		{#if heure_execution === 2 || heure_execution === 3}
+			<p class="avertissement">
+				⚠️ <strong>{String(heure_execution).padStart(2, '0')} h</strong> croise une autre
+				tâche : la <strong>bascule</strong> entre les deux Raspberry Pi tourne à 02 h,
+				et la <strong>maintenance hebdomadaire</strong> (purge et VACUUM de la base) le
+				dimanche à 03 h. Une sauvegarde qui démarre pendant l’une ou l’autre lit une
+				base en cours de réorganisation. Préférez une heure creuse — 01 h ou 04 h.
+			</p>
+		{/if}
 	{/if}
 </section>
 
@@ -105,6 +114,7 @@
 	.titre { font-size: .95rem; margin: 0 0 .35rem; }
 	.aide { font-size: .82rem; color: var(--color-text-muted); line-height: 1.5; margin: 0 0 .9rem; }
 	.note { margin: .7rem 0 0; }
+	.avertissement { font-size: .82rem; line-height: 1.5; margin: .7rem 0 0; padding: .6rem .7rem; border-left: 3px solid var(--color-warning, #d97706); background: var(--color-bg); }
 	.grille { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
 	.champ { display: flex; flex-direction: column; gap: .2rem; font-size: .82rem; color: var(--color-text-muted); }
 	.champ select, .champ input { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); min-width: 9rem; }

@@ -90,6 +90,12 @@ _PUBLICS_ASSUMES = {
     # donnée de copropriétaire — et la clé qui l'ouvre autorise déjà l'ÉCRITURE
     # de ces mêmes lignes : la lecture est strictement moins sensible.
     ("rapports_scripts.py", "maintenance_dernier_rapport"),
+    # Même canal, même clé : COMBIEN d'e-mails ont échoué ces derniers jours, et
+    # de quels modèles. Rend des comptes et des codes de gabarits — **jamais une
+    # adresse ni un sujet**, alors que l'écran d'administration en montre. C'est
+    # ce qui rend le point 9 du pré-check mesurable au lieu d'`INCONNU` à chaque
+    # exécution : un contrôle que personne ne fait ne protège rien.
+    ("rapports_scripts.py", "emails_echecs_recents"),
 }
 
 
