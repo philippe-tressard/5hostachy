@@ -54,6 +54,45 @@
 		index = (index + 1) % photos.length;
 	}
 
+	//  ── Glissement tactile (#334) ─────────────────────────────────────────────
+	//  C'est le geste qu'on tente en plein écran, et il manquait : seules les
+	//  flèches et le clavier naviguaient. `pointer*` couvre le doigt, le stylet et
+	//  le glisser-souris d'un seul jeu d'écouteurs.
+	const SEUIL_GLISSEMENT = 45;   // px — sous ce seuil, c'est un clic qui a tremblé
+	let departX: number | null = null;
+	let aGlisse = false;
+
+	function debutGeste(e: PointerEvent) {
+		departX = e.clientX;
+		aGlisse = false;
+	}
+
+	function finGeste(e: PointerEvent) {
+		if (departX === null) return;
+		const dx = e.clientX - departX;
+		departX = null;
+		if (photos.length < 2 || Math.abs(dx) < SEUIL_GLISSEMENT) return;
+		aGlisse = true;
+		dx > 0 ? precedente() : suivante();
+	}
+
+	//  Un glissement amorcé sur le fond produit AUSSI un `click` en fin de geste :
+	//  sans ce garde-fou, naviguer d'une photo à l'autre refermerait la visionneuse.
+	function fondClique(e: MouseEvent) {
+		if (aGlisse) { aGlisse = false; return; }
+		if (e.target === e.currentTarget) fermer();
+	}
+
+	//  Précharger les voisines : il n'existe aucune miniature côté serveur, chaque
+	//  photo pèse jusqu'à 1600 px. Sans cela, chaque flèche ouvre sur un cadre vide
+	//  le temps du téléchargement — c'est ce qui fait paraître l'écran lent.
+	$: if (typeof Image !== 'undefined' && photos.length > 1) {
+		for (const decalage of [-1, 1]) {
+			const voisine = photos[(index + decalage + photos.length) % photos.length];
+			if (voisine) new Image().src = voisine;
+		}
+	}
+
 	function auClavier(e: KeyboardEvent) {
 		if (e.key === 'Escape') fermer();
 		else if (e.key === 'ArrowLeft' && photos.length > 1) precedente();
@@ -74,8 +113,10 @@
 	aria-modal="true"
 	aria-label="Photo en plein écran"
 	tabindex="-1"
-	on:click={(e) => e.target === e.currentTarget && fermer()}
+	on:click={fondClique}
 	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && fermer()}
+	on:pointerdown={debutGeste}
+	on:pointerup={finGeste}
 >
 	<button class="lb-fermer" aria-label="Fermer la photo" on:click|stopPropagation={fermer}>×</button>
 
