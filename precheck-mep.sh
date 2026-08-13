@@ -220,6 +220,26 @@ else
 fi
 rapporter 15 "$V15" "Aucun endpoint orphelin" "$ORPH"
 
+# 16 — la CI rejouée EN LOCAL sur ce commit (#319)
+#      Le 12/08/2026, pytest, svelte-check, le build, les six lints du front et
+#      les self-tests avaient été rejoués à la main : le seul job non lancé —
+#      Ruff — est le seul qui a échoué. La consigne de tout rejouer existe
+#      (skill `avant-commit` §7) et n'a pas tenu. `rejouer-ci.sh` EXTRAIT les
+#      commandes de ci.yml et écrit sa trace ; ce point la lit.
+if [ -f .git/rejeu-ci.ok ]; then
+  read -r R_SHA _ R_OK R_FAIL R_INC < .git/rejeu-ci.ok
+  R_FAIL=${R_FAIL#FAIL=}; R_INC=${R_INC#INCONNU=}; R_OK=${R_OK#OK=}
+else
+  R_SHA=""; R_OK="?"; R_FAIL=""; R_INC=""
+fi
+V16=$(verdict_rejeu_ci "${R_SHA:-}" "$(git rev-parse HEAD 2>/dev/null)" "${R_FAIL:-}" "${R_INC:-}")
+case "$V16" in
+  OK)   D16="$R_OK étape(s) rejouée(s) sur ce commit" ;;
+  FAIL) D16="$R_FAIL étape(s) en échec — la CI échouerait" ;;
+  *)    D16="lancer \`bash rejouer-ci.sh\` (trace absente ou d'un autre commit)" ;;
+esac
+rapporter 16 "$V16" "CI rejouée en local sur ce commit" "$D16"
+
 # 1 — site public
 CODE=$(http_code "$SITE/api/health")
 rapporter 1 "$(verdict_http "$CODE")" "Site public" "HTTP ${CODE:-?}"
