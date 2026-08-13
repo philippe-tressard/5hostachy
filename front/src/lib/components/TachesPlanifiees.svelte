@@ -225,11 +225,11 @@
 <section class="config-section">
 	<h2 class="config-section-title">&#x1F4CB; Santé des tâches planifiées</h2>
 	<p class="muted" style="font-size:.85rem">
-		Synthèse : <strong>une ligne par tâche</strong>, quel que soit le nombre de nœuds
-		qui l'exécutent. Quand une tâche tourne sur les deux, l'état affiché est celui du
-		nœud le <strong>moins</strong> à jour — un nœud sain ne compense pas un nœud muet.
-		Les tableaux qui suivent en donnent le détail. Sans ce contrôle, une absence de
-		ligne se lirait comme « tout va bien ».
+		Synthèse : <strong>une ligne par tâche</strong>, portant la <strong>dernière
+		exécution réelle</strong> — quel que soit le nœud qui l'a faite. Quand une tâche
+		tourne sur les deux, chacun a sa <strong>propre sous-ligne</strong> : un nœud sain
+		ne compense pas un nœud muet, et l'on voit lequel décroche sans avoir à cliquer.
+		Sans ce contrôle, une absence de ligne se lirait comme « tout va bien ».
 	</p>
 	{#if santeLoading}
 		<p class="muted">Chargement...</p>
@@ -263,13 +263,11 @@
 									—
 								{:else if t.noeud === 'inconnu' || !t.noeud}
 									<span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>
-								{:else if t.noeuds?.length > 1 && t.statut === 'ok'}
-									<!-- Les deux nœuds sont à jour : les nommer plutôt que d'en élire un,
-									     sinon la ligne laisse croire que l'autre n'a rien fait. -->
-									{t.noeuds.map((n: any) => n.noeud.toUpperCase()).join(' · ')}
 								{:else}
+									<!-- Le nœud de la DERNIÈRE exécution. Les autres ont leur propre
+									     sous-ligne ci-dessous : plus rien n'est élu ni masqué (#331). -->
 									<span title={t.noeuds?.length > 1
-										? `État porté par ${t.noeud.toUpperCase()}, le moins à jour des ${t.noeuds.length} nœuds.`
+										? `Nœud de la dernière exécution. L'état de chaque nœud est détaillé sous cette ligne.`
 										: ''}>{t.noeud.toUpperCase()}</span>
 								{/if}
 							</td>
@@ -278,9 +276,39 @@
 									title={AIDE_STATUT[t.statut] ?? ''}>
 									{LIBELLE_STATUT[t.statut] ?? t.statut}
 								</span>
+								{#if t.noeud_en_retard}
+									<!-- La dernière exécution est saine, mais un nœud décroche. L'ancien
+									     écran le disait en remplaçant l'état ET la date par ceux du
+									     retardataire — ce qui faisait mentir « Dernier rapport ». -->
+									<span class="badge badge-orange" style="margin-left:.35rem"
+										title="Ce nœud n'a pas exécuté la tâche dans le délai attendu. La dernière exécution, elle, s'est bien passée sur l'autre nœud.">
+										{t.noeud_en_retard.toUpperCase()} en retard
+									</span>
+								{/if}
 							</td>
 							<td style="color:var(--color-text-muted)">{t.derniere ? fmtDatetime(t.derniere) : '—'}</td>
 						</tr>
+						{#if t.noeuds?.length > 1}
+							<!--  UNE SOUS-LIGNE PAR NŒUD, toujours visible (#331).
+							      C'est elle, et non l'état de synthèse, qui garantit désormais qu'un
+							      nœud sain ne compense pas un nœud muet. Toujours visible et non
+							      dépliable : ce qu'il faut voir sans cliquer ne se range pas derrière
+							      un clic. Rendue seulement au-delà d'un nœud — une sous-ligne unique
+							      qui répète la synthèse serait du bruit. -->
+							{#each t.noeuds as n}
+								<tr class="par-noeud">
+									<td></td>
+									<td style="color:var(--color-text-muted)">↳ {n.noeud.toUpperCase()}</td>
+									<td>
+										<span class="badge {n.statut === 'ok' ? 'badge-green' : 'badge-red'}"
+											title={AIDE_STATUT[n.statut] ?? ''}>
+											{LIBELLE_STATUT[n.statut] ?? n.statut}
+										</span>
+									</td>
+									<td style="color:var(--color-text-muted)">{n.derniere ? fmtDatetime(n.derniere) : '—'}</td>
+								</tr>
+							{/each}
+						{/if}
 						{#if ouverte === t.tache}
 							{@const lignes = historiques[t.tache] ?? []}
 							<tr class="detail">
@@ -401,6 +429,10 @@
 	tr.cliquable:hover { background: var(--color-bg); }
 	tr.cliquable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 	tr.detail > td { background: var(--color-bg); padding: .25rem 0 .75rem; }
+	/*  Sous-ligne par nœud : rattachée visuellement à sa tâche sans devenir une
+	    ligne de plein droit, sinon on relit un tableau à double granularité —
+	    exactement ce qui avait été corrigé le 11/08/2026. */
+	tr.par-noeud > td { padding-top: .15rem; padding-bottom: .15rem; font-size: .95em; }
 	/*  Écart assumé : plus petit et en couleur primaire — il ouvre une ligne
 	    de tableau, pas une carte, et doit se voir (il était invisible avant
 	    le 11/08, cf. #299). */
