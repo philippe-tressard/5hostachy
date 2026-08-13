@@ -2,6 +2,7 @@
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
 import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
+import TopPages from '$lib/components/TopPages.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -2037,26 +2038,8 @@ $: _siteNom = $siteNomStore;
     </div>
     {/if}
 
-    <!-- Top pages -->
-    {#if telemetryData.top_pages.length > 0}
-    <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">🏆 Top pages</h3>
-      <table class="table">
-        <thead><tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Utilisateurs</th><th style="text-align:right">%</th></tr></thead>
-        <tbody>
-          {#each telemetryData.top_pages as p}
-            {@const grandTotal = telemetryData.top_pages.reduce((s: number, x: { total: number }) => s + x.total, 0) || 1}
-            <tr>
-              <td><code style="font-size:.82rem">{p.page}</code></td>
-              <td style="text-align:right;font-weight:600">{p.total}</td>
-              <td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
-              <td style="text-align:right;color:var(--color-text-muted)">{(p.total / grandTotal * 100).toFixed(1)}%</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    {/if}
+    <!-- Top pages — tableau et total extraits en composant (#total des vues) -->
+    <TopPages pages={telemetryData.top_pages} />
 
     <!-- Utilisateurs les plus actifs (scope jour et mois) -->
     {#if telemetryData.top_users && telemetryData.top_users.length > 0}
