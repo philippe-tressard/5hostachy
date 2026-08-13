@@ -34,9 +34,15 @@ gagne ni ne perd un accès, et la pastille disparaît simplement du formulaire.
 
 ## Icônes
 
-Volontairement absentes. `Icon.svelte` ne rend que les noms présents dans sa table ;
-en inventer ici produirait des badges vides. Elles seront posées avec l'écran
-d'administration, une fois la table d'icônes consultée.
+Posées par `ICONES_INITIALES` / `ICONES_GABARIT`, plus bas. Les noms sont ceux que
+`Icon.svelte` sait rendre — un nom absent de sa table s'afficherait avec le point
+d'interrogation du repli, ce qui se voit tout de suite mais ne se corrige que par
+une livraison.
+
+**C'est une initialisation, jamais une remise à jour.** Le seed ne pose l'arbre
+qu'une fois, et la migration `0141` ne remplit que les icônes RESTÉES VIDES : une
+icône choisie depuis l'administration n'est jamais écrasée, exactement comme un
+libellé renommé.
 """
 from sqlmodel import Session, select
 
@@ -70,6 +76,68 @@ GABARIT_BATIMENT: list[tuple[str, str, str]] = [
     ("autres", "Autres espaces",
      "Tout espace du bâtiment qui n'entre pas dans les catégories ci-dessus."),
 ]
+
+
+#: Icône **initiale** de chaque périmètre, par code. Les noms sont ceux que
+#: `front/src/lib/components/Icon.svelte` sait rendre : un nom absent de sa table
+#: s'afficherait avec le point d'interrogation du repli.
+#:
+#: ⚠️ C'est une INITIALISATION, jamais une remise à jour. Le seed ne pose l'arbre
+#: qu'une fois (marqueur `CLE_SEMEE`), et la migration `0141` ne remplit que les
+#: icônes RESTÉES VIDES. Une icône changée depuis l'administration n'est donc
+#: jamais écrasée — c'est la même règle que pour les libellés.
+#:
+#: Cette table est la source unique : la migration l'importe plutôt que d'en
+#: recopier une seconde, qui divergerait au premier ajout.
+ICONES_INITIALES: dict[str, str] = {
+    "résidence": "home",
+    "batiments": "building-2",
+    "parking": "car",
+    "parking/places": "square-parking",
+    "parking/voies": "car",
+    "parking/portail": "door-closed",
+    "parking/eclairage": "lightbulb",
+    "cave": "box",
+    "aful": "square-parking",
+    "espaces-verts": "trees",
+    "espaces-verts/pelouses": "sprout",
+    "espaces-verts/massifs": "sprout",
+    "espaces-verts/arbres": "trees",
+    "espaces-verts/jardins": "sprout",
+    "cheminements": "footprints",
+    "cheminements/chemin-pietonne": "footprints",
+    "cheminements/escalier-exterieur": "stairs",
+    "cheminements/acces-batiments": "door-closed",
+    "cheminements/eclairage-exterieur": "lightbulb",
+    "locaux-techniques": "warehouse",
+    "locaux-techniques/chaufferie": "flame",
+    "locaux-techniques/local-eau": "droplet",
+    "locaux-techniques/autres": "wrench",
+}
+
+#: Icônes des espaces posés sous CHAQUE bâtiment — indexées par le suffixe du
+#: code, puisque le préfixe (`bat:3/`) varie d'un bâtiment à l'autre.
+ICONES_GABARIT: dict[str, str] = {
+    "hall": "door-closed",
+    "paliers": "layers",
+    "escaliers": "stairs",
+    "ascenseur": "arrow-up-down",
+    "caves": "box",
+    "toit": "home",
+    "local-electrique": "zap",
+    "jardins-privatifs": "sprout",
+    "autres": "settings",
+}
+
+
+def icone_pour(code: str) -> str | None:
+    """L'icône initiale d'un code, gabarit de bâtiment compris."""
+    if code in ICONES_INITIALES:
+        return ICONES_INITIALES[code]
+    if code.startswith("bat:"):
+        suffixe = code.split("/", 1)[1] if "/" in code else None
+        return ICONES_GABARIT.get(suffixe) if suffixe else "building-2"
+    return None
 
 
 def _racines() -> list[dict]:
@@ -233,6 +301,7 @@ def _poser(session: Session, connus: dict[str, int], entree: dict,
         libelle=entree["libelle"],
         libelle_court=entree.get("libelle_court"),
         description=entree.get("description", ""),
+        icone=icone_pour(code),
         batiment_id=entree.get("batiment_id"),
         portee_globale=entree.get("portee_globale", False),
         selectionnable=entree.get("selectionnable", True),
