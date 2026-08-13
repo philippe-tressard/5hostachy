@@ -267,6 +267,19 @@ verdict_alerte() {         # $1 = âge de la dernière « Alerte envoyée », $2
 }
 
 # ── Contrat du module ────────────────────────────────────────────────────────
+#  Rejeu local de la CI (#319). Le point 0c regarde la CI DISTANTE et PASSÉE ;
+#  celui-ci regarde ce qu'on s'apprête à pousser. La trace est écrite par
+#  `rejouer-ci.sh` et porte le commit couvert : une trace d'un autre commit ne
+#  dit rien de celui-ci, donc INCONNU — jamais OK par ancienneté.
+verdict_rejeu_ci() {       # $1 = sha de la trace, $2 = HEAD, $3 = nb FAIL, $4 = nb INCONNU
+  [ -z "$1" ] || [ -z "$2" ] && { echo INCONNU; return; }
+  [ "$1" != "$2" ] && { echo INCONNU; return; }
+  case "$3$4" in (*[!0-9]*|"") echo INCONNU; return ;; esac
+  [ "$3" -gt 0 ] && { echo FAIL; return; }
+  [ "$4" -gt 0 ] && { echo INCONNU; return; }
+  echo OK
+}
+
 verdicts_mep_selftest() {
   st=0
   #  `"$@"` et non `$1 $2 …` : la découpe des mots supprimait les arguments VIDES,
@@ -378,6 +391,15 @@ verdicts_mep_selftest() {
   #  Un échec DÉJÀ ÉCRIT prouve que le producteur a tourné : la vivacité ne doit
   #  pas rendre INCONNU un canal démontré muet, sinon on perd l'information.
   t "échec muet malgré producteur mort"  FAIL    verdict_alerte "" 30 999 40
+  #  ── #319 : la CI rejouée en local couvre-t-elle CE commit ? ───────────────
+  t "rejeu complet et vert"              OK      verdict_rejeu_ci abc123 abc123 0 0
+  t "rejeu en échec"                     FAIL    verdict_rejeu_ci abc123 abc123 1 0
+  #  Une étape non rejouable ici n'est pas un succès : c'est une mesure absente.
+  t "rejeu partiellement mesurable"      INCONNU verdict_rejeu_ci abc123 abc123 0 2
+  #  Le piège que ce verdict existe pour fermer : une trace vieille d'un lot.
+  t "trace d'un autre commit"            INCONNU verdict_rejeu_ci deadbee abc123 0 0
+  t "aucune trace"                       INCONNU verdict_rejeu_ci "" abc123 0 0
+  t "comptes illisibles"                 INCONNU verdict_rejeu_ci abc123 abc123 "x" 0
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st
 }
