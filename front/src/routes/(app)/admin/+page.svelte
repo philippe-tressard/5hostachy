@@ -874,19 +874,16 @@ $: _siteNom = $siteNomStore;
       Demandes profil
       {#if demandesProfil.length > 0}<span class="badge-count">{demandesProfil.length}</span>{/if}
     </button>
-    <button class="tab-btn" class:active={onglet === 'emails'} on:click={() => (onglet = 'emails')}>
-      Modèles e-mail
-    </button>
-    <LiensEcransAdmin />
+    <button class="tab-btn" class:active={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</button>
+    <LiensEcransAdmin groupe="donnees" />
   </div>
 </div>
 
 <div class="tabs-group" style="margin-top:.5rem;margin-bottom:1.5rem">
   <div class="tabs-group-label">⚙️ Configuration</div>
   <div class="tabs" style="margin-bottom:0">
-    <button class="tab-btn" class:active={onglet === 'site'} on:click={openSiteTab}>
-      Paramétrage site
-    </button>
+    <button class="tab-btn" class:active={onglet === 'site'} on:click={openSiteTab}>Paramétrage site</button>
+    <LiensEcransAdmin groupe="configuration" />
     <button class="tab-btn" class:active={onglet === 'pages'} on:click={() => (onglet = 'pages')}>
       Descriptif pages
     </button>
@@ -903,9 +900,8 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>
       📊 Télémétrie
     </button>
-    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>
-      🔧 Maintenance
-    </button>
+    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>🔧 Maintenance</button>
+    <LiensEcransAdmin groupe="exploitation" />
   </div>
 </div>
 

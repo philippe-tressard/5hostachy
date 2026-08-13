@@ -1,3 +1,18 @@
+<script lang="ts">
+	/**
+	 * `donnees` — imports et audits, qui alimentent les comptes et les accès.
+	 * `configuration` — ce qui DÉCRIT la copropriété : sa fiche, ses périmètres.
+	 *   Placé juste après « Paramétrage site », dont il est le prolongement.
+	 * `exploitation` — les sauvegardes, à côté de « Maintenance » : ce sont les
+	 *   deux écrans qui parlent des tâches planifiées.
+	 *
+	 * Les deux groupes existent parce que « Fiche copropriété » et « Périmètres »
+	 * se trouvaient sous 👥 Gestion utilisateurs, où ils n'ont rien à faire :
+	 * ils ne décrivent pas des personnes mais l'immeuble (signalé le 12/08/2026).
+	 */
+	export let groupe: 'donnees' | 'configuration' | 'exploitation' = 'donnees';
+</script>
+
 <!--
 	Les écrans d'administration qui vivent sur leur PROPRE route, par opposition
 	aux onglets internes d'`admin/+page.svelte`.
@@ -9,14 +24,19 @@
 	⚠️ Les adresses restent écrites EN TOUTES LETTRES, une par lien. Les produire
 	par un `{#each}` sur un tableau de routes ferait disparaître le littéral
 	`/admin/…`, et `scripts/check-routes-atteignables.mjs` — le contrôle né de
-	#307, qui cherche exactement ce littéral — déclarerait alors ces six écrans
+	#307, qui cherche exactement ce littéral — déclarerait alors ces écrans
 	orphelins. Un raccourci d'écriture qui aveugle son propre garde-fou coûte plus
-	qu'il ne rapporte.
+	qu'il ne rapporte. Le découpage en deux groupes se fait donc par `{#if}`, qui
+	laisse les littéraux intacts.
 -->
-<a href="/admin/lots-import" class="tab-btn" style="text-decoration:none">Import Lots</a>
-<a href="/admin/telecommandes-import" class="tab-btn" style="text-decoration:none">Import TC</a>
-<a href="/admin/vigiks-import" class="tab-btn" style="text-decoration:none">Import Vigik</a>
-<a href="/admin/audit-lots" class="tab-btn" style="text-decoration:none">Audit lots</a>
-<a href="/admin/copropriete" class="tab-btn" style="text-decoration:none">Fiche copropriété</a>
-<a href="/admin/patrimoine" class="tab-btn" style="text-decoration:none">Périmètres</a>
-<a href="/admin/sauvegardes" class="tab-btn" style="text-decoration:none">Sauvegardes</a>
+{#if groupe === 'donnees'}
+	<a href="/admin/lots-import" class="tab-btn" style="text-decoration:none">Import Lots</a>
+	<a href="/admin/telecommandes-import" class="tab-btn" style="text-decoration:none">Import TC</a>
+	<a href="/admin/vigiks-import" class="tab-btn" style="text-decoration:none">Import Vigik</a>
+	<a href="/admin/audit-lots" class="tab-btn" style="text-decoration:none">Audit lots</a>
+{:else if groupe === 'configuration'}
+	<a href="/admin/copropriete" class="tab-btn" style="text-decoration:none">Fiche copropriété</a>
+	<a href="/admin/patrimoine" class="tab-btn" style="text-decoration:none">Périmètres</a>
+{:else}
+	<a href="/admin/sauvegardes" class="tab-btn" style="text-decoration:none">Sauvegardes</a>
+{/if}

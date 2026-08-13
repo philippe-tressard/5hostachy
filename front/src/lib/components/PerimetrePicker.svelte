@@ -51,6 +51,12 @@
 	//  espaces de quatre bâtiments simultanément produirait une rangée illisible,
 	//  et le geste attendu est « je précise dans celui-ci ».
 	$: n1 = codesNiveau1(niveau1);
+	//  Rien n'indiquait qu'un bâtiment cachait neuf espaces : il fallait cliquer
+	//  pour le découvrir, et personne ne cliquait (signalé le 12/08/2026). Le
+	//  chevron dit qu'il y a un second niveau, sans l'imposer.
+	$: aDesEnfants = new Set(
+		actifs.filter((n) => n.selectionnable && n.parent && n1.has(n.parent)).map((n) => n.parent!),
+	);
 	$: parentOuvert = value.map((v) => racineDe(v, n1)).find(Boolean) ?? null;
 	$: niveau2 = parentOuvert
 		? actifs.filter((n) => n.parent === parentOuvert && n.selectionnable)
@@ -121,7 +127,7 @@
 				class:pill-active={!estDefaut && selection.has(n.code)}
 				on:click={() => basculer(n.code)}
 			>
-				{n.libelle}
+				{n.libelle}{#if aDesEnfants.has(n.code)}<span class="pill-chevron" aria-hidden="true">›</span>{/if}
 			</button>
 		{/each}
 	</div>
@@ -158,6 +164,7 @@
 	.pill:hover { border-color: var(--color-primary); color: var(--color-text); }
 	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.pill-sm { font-size: .78rem; padding: .28rem .6rem; }
+	.pill-chevron { margin-left: .3rem; opacity: .6; }
 	.perimetre-niveau2 { margin-top: .6rem; padding-left: .1rem; }
 	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
 	.perimetre-facultatif { opacity: .75; }

@@ -202,13 +202,11 @@
 
 <!-- ── Modification ────────────────────────────────────────────────────────── -->
 {#if edite}
-	<div
-		class="modal-overlay"
-		on:click={() => (edite = null)}
-		on:keydown={(e) => e.key === 'Escape' && (edite = null)}
-		role="presentation"
-	>
-		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+	<!--  Pas de fermeture au clic sur le fond : on saisit ici un libellé et une
+	      description, et un clic à côté effaçait tout sans prévenir. `Échap` et
+	      « Annuler » suffisent, et sont des gestes voulus. -->
+	<div class="modal-overlay" on:keydown={(e) => e.key === 'Escape' && (edite = null)} role="presentation">
+		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:keydown|stopPropagation>
 			<h2>{edite.libelle}</h2>
 			<p class="modal-code">
 				Code <code>{edite.code}</code> — non modifiable : il est enregistré dans les
@@ -268,13 +266,8 @@
 
 <!-- ── Création ────────────────────────────────────────────────────────────── -->
 {#if creation}
-	<div
-		class="modal-overlay"
-		on:click={() => (creation = null)}
-		on:keydown={(e) => e.key === 'Escape' && (creation = null)}
-		role="presentation"
-	>
-		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+	<div class="modal-overlay" on:keydown={(e) => e.key === 'Escape' && (creation = null)} role="presentation">
+		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:keydown|stopPropagation>
 			<h2>{creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}</h2>
 
 			<label class="field-label">Libellé *
