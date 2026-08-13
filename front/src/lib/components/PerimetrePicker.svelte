@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { perimetreParDefaut, type Perimetre } from '$lib/perimetres';
 
@@ -62,6 +63,7 @@
 		? actifs.filter((n) => n.parent === parentOuvert && n.selectionnable)
 		: [];
 
+	$: noeudDefaut = defaut ? parCode.get(defaut) : undefined;
 	$: estDefaut = value.length === 0 || (value.length === 1 && value[0] === defaut);
 	$: selection = new Set(value);
 
@@ -117,7 +119,7 @@
 	<div class="perimetre-pills">
 		{#if defaut}
 			<button type="button" class="pill" class:pill-active={estDefaut} on:click={choisirDefaut}>
-				{parCode.get(defaut)?.libelle ?? defaut}
+				{#if noeudDefaut?.icone}<Icon name={noeudDefaut.icone} size={15} />{/if}{noeudDefaut?.libelle ?? defaut}
 			</button>
 		{/if}
 		{#each niveau1 as n (n.code)}
@@ -127,7 +129,7 @@
 				class:pill-active={!estDefaut && selection.has(n.code)}
 				on:click={() => basculer(n.code)}
 			>
-				{n.libelle}{#if aDesEnfants.has(n.code)}<span class="pill-chevron" aria-hidden="true">›</span>{/if}
+				{#if n.icone}<Icon name={n.icone} size={15} />{/if}{n.libelle}{#if aDesEnfants.has(n.code)}<span class="pill-chevron" aria-hidden="true">›</span>{/if}
 			</button>
 		{/each}
 	</div>
@@ -160,7 +162,7 @@
 
 <style>
 	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
-	.pill { padding: .35rem .7rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); font-size: .82rem; cursor: pointer; color: var(--color-text-muted); transition: all .12s; white-space: nowrap; }
+	.pill { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); font-size: .82rem; cursor: pointer; color: var(--color-text-muted); transition: all .12s; white-space: nowrap; }
 	.pill:hover { border-color: var(--color-primary); color: var(--color-text); }
 	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.pill-sm { font-size: .78rem; padding: .28rem .6rem; }

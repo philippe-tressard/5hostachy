@@ -15,7 +15,8 @@ Règles métier appliquées :
       exemplaires (ici, `flux/evenements.py`, et le tableau de bord côté front) et
       c'est désormais le drapeau `portee_globale` de la table `perimetre`.
   - public_cible (publications) : résidents = tous ; copropriétaires = statut copropriétaire_* ;
-      locataires = statut locataire uniquement ; conseil_syndical = CS/admin uniquement.
+      bailleurs = copropriétaire_bailleur uniquement ; locataires = statut locataire
+      uniquement ; conseil_syndical = CS/admin uniquement.
       Si public_cible contient une valeur non reconnue ou non correspondante → non visible.
   - AG (événements) : visible uniquement par propriétaires, CS et admins.
   - Sondages : profils_autorises (CSV statuts) + batiments_ids (CSV ids bâtiments).
@@ -157,6 +158,15 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
     if "copropriétaires" in public and statut.startswith("copropriétaire_"):
         return True
     if "locataires" in public and statut == "locataire":
+        return True
+    #  « Bailleurs » vise les copropriétaires qui LOUENT leur lot, et eux seuls.
+    #  `copropriétaires` ci-dessus les inclut déjà — il couvre les deux statuts
+    #  `copropriétaire_*` — mais rien ne permettait de s'adresser à eux SANS
+    #  toucher les copropriétaires occupants, alors que tout un pan du produit
+    #  leur est propre (baux, remise d'objets, accès confiés aux locataires).
+    #  Ajout purement additif : une valeur inconnue tombait déjà sur le `return
+    #  False` final, donc aucune publication existante ne change de public.
+    if "bailleurs" in public and statut == "copropriétaire_bailleur":
         return True
     # Valeur non reconnue ou accès restreint (ex: conseil_syndical) → non visible
     return False

@@ -194,3 +194,33 @@ export function batimentsCibles(items: string[] | string | null | undefined): nu
 	}
 	return [...cibles];
 }
+
+/**
+ * Icônes proposées pour un périmètre, dans l'écran d'administration.
+ *
+ * Volontairement **courte et thématique** : un choix de cinquante icônes ne se
+ * parcourt pas, il se subit. Chacune doit dire quelque chose d'un lieu de
+ * copropriété — et toutes existent dans `Icon.svelte`, sans quoi la pastille
+ * s'afficherait avec le point d'interrogation du repli.
+ */
+export const ICONES_PERIMETRE: { nom: string; libelle: string }[] = [
+	{ nom: 'building-2', libelle: 'Bâtiment' },
+	{ nom: 'home', libelle: 'Copropriété' },
+	{ nom: 'door-closed', libelle: 'Hall, porte' },
+	{ nom: 'stairs', libelle: 'Escalier' },
+	{ nom: 'layers', libelle: 'Paliers, étages' },
+	{ nom: 'arrow-up-down', libelle: 'Ascenseur' },
+	{ nom: 'box', libelle: 'Cave, stockage' },
+	{ nom: 'car', libelle: 'Parking' },
+	{ nom: 'square-parking', libelle: 'Parking public' },
+	{ nom: 'trees', libelle: 'Espaces verts' },
+	{ nom: 'sprout', libelle: 'Jardin' },
+	{ nom: 'footprints', libelle: 'Cheminement' },
+	{ nom: 'lightbulb', libelle: 'Éclairage' },
+	{ nom: 'zap', libelle: 'Électricité' },
+	{ nom: 'droplet', libelle: 'Eau' },
+	{ nom: 'flame', libelle: 'Chauffage' },
+	{ nom: 'warehouse', libelle: 'Local technique' },
+	{ nom: 'wrench', libelle: 'Entretien' },
+	{ nom: 'settings', libelle: 'Divers technique' },
+];

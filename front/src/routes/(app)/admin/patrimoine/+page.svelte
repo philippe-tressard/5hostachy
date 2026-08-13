@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { perimetres as perimetresApi, ApiError } from '$lib/api';
+	import Icon from '$lib/components/Icon.svelte';
 	import { perimetresStore, rechargerPerimetres } from '$lib/stores/perimetres';
-	import type { Perimetre } from '$lib/perimetres';
+	import { ICONES_PERIMETRE, type Perimetre } from '$lib/perimetres';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -168,6 +169,7 @@
 					on:click={() => basculer(n.code)}
 					on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && basculer(n.code)}
 				>
+					{#if n.icone}<Icon name={n.icone} size={16} />{/if}
 					<span class="ref-titre">{n.libelle}</span>
 					{#if n.portee_globale}
 						<span class="badge badge-blue" title="Ce périmètre porte lui-même la portée globale : visible de tous les résidents">tous</span>
@@ -225,6 +227,27 @@
 				<input bind:value={form.libelle_court} placeholder={edite.libelle} />
 				<span class="field-hint">Employé sur les pastilles étroites du calendrier.</span>
 			</label>
+			<div class="field-label">Icône
+				<div class="icones">
+					<button
+						type="button" class="icone" class:icone-active={!form.icone}
+						title="Aucune icône" on:click={() => (form.icone = '')}
+					>—</button>
+					{#each ICONES_PERIMETRE as ic (ic.nom)}
+						<button
+							type="button" class="icone" class:icone-active={form.icone === ic.nom}
+							title={ic.libelle} aria-label={ic.libelle}
+							on:click={() => (form.icone = ic.nom)}
+						>
+							<Icon name={ic.nom} size={18} />
+						</button>
+					{/each}
+				</div>
+				<span class="field-hint">
+					Affichée sur la pastille du sélecteur, devant le libellé.
+				</span>
+			</div>
+
 			<label class="field-label">Description
 				<textarea bind:value={form.description} rows="4"></textarea>
 				<span class="field-hint">
@@ -327,6 +350,10 @@
 	.ref-corps { padding: .2rem 1rem .8rem 1.6rem; border-top: 1px dashed var(--color-border); }
 	.ref-desc { font-size: .84rem; color: var(--color-text-muted); line-height: 1.55; margin: .5rem 0; }
 	.ref-actions { display: flex; gap: .3rem; }
+	.icones { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+	.icone { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: var(--color-text-muted); font-size: .8rem; }
+	.icone:hover { border-color: var(--color-primary); color: var(--color-text); }
+	.icone-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.modal-box { background: var(--color-surface); border-radius: var(--radius); padding: 1.25rem; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
 	.modal-code { font-size: .8rem; color: var(--color-text-muted); margin: -.4rem 0 1rem; }
 	.field-label { display: block; font-size: .85rem; margin-bottom: .8rem; }

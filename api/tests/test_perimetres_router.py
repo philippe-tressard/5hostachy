@@ -207,3 +207,48 @@ def test_le_seed_pose_bien_l_arbre_sur_une_base_vierge():
 
         #  Et une seconde exécution ne pose plus rien.
         assert poser_arborescence(session) == 0
+
+
+# ── Icônes : initialisation, jamais écrasement ────────────────────────────────
+
+def test_le_seed_pose_les_icones_initiales(batiments):
+    """Chaque périmètre semé porte une icône que `Icon.svelte` sait rendre."""
+    from app.seed.patrimoine import icone_pour
+
+    with Session(engine) as session:
+        noeuds = session.exec(select(Perimetre)).all()
+        sans = [n.code for n in noeuds if not n.icone and icone_pour(n.code)]
+        assert not sans, f"périmètre(s) sans icône alors qu'une était prévue : {sans}"
+
+        par_code = {n.code: n.icone for n in noeuds}
+        assert par_code["parking"] == "car"
+        assert par_code["aful"] == "square-parking"
+        assert par_code[f"bat:{batiments[0]}/ascenseur"] == "arrow-up-down"
+        assert par_code[f"bat:{batiments[0]}"] == "building-2"
+
+
+def test_les_icones_proposees_existent_toutes_dans_le_composant():
+    """Une icône inconnue de `Icon.svelte` s'affiche en point d'interrogation.
+
+    Le contrôle est statique parce que le couplage est implicite : la table du
+    seed et celle du composant vivent dans deux langages et deux dossiers, et rien
+    à l'exécution ne signale qu'un nom a été inventé.
+    """
+    import re
+    from pathlib import Path
+
+    from app.seed.patrimoine import ICONES_GABARIT, ICONES_INITIALES
+
+    composant = (
+        Path(__file__).resolve().parents[2]
+        / "front" / "src" / "lib" / "components" / "Icon.svelte"
+    )
+    disponibles = set(re.findall(r"^\s*'([a-z0-9-]+)':", composant.read_text(encoding="utf-8"), re.M))
+    assert disponibles, "cas zéro : aucune icône lue dans Icon.svelte"
+
+    voulues = set(ICONES_INITIALES.values()) | set(ICONES_GABARIT.values()) | {"building-2"}
+    manquantes = sorted(voulues - disponibles)
+    assert not manquantes, (
+        "icône(s) citée(s) par le seed mais absente(s) d'Icon.svelte — elles "
+        f"s'afficheraient en « ? » : {manquantes}"
+    )
