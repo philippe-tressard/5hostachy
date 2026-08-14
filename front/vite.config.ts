@@ -79,6 +79,26 @@ export default defineConfig({
 				],
 			},
 			workbox: {
+				// PAS de repli de navigation. `vite-plugin-pwa` suppose une SPA et pose
+				// par défaut `navigateFallback: 'index.html'` : le service worker répond
+				// alors à CHAQUE navigation en servant cet `index.html` depuis son
+				// precache. Or SvelteKit en `adapter-node` rend les pages côté serveur
+				// et ne produit aucun `index.html` — le fichier n'est donc pas dans le
+				// precache, et workbox lève `non-precached-url :: [{"url":"index.html"}]`.
+				//
+				// Conséquence observée en production le 14/08/2026, signalée par
+				// l'utilisateur : sur /profil rechargée directement, la navigation
+				// cliente échoue, l'hydratation ne se termine pas, et les champs
+				// (prénom, nom, e-mail) restent VIDES — « Enregistrer » aurait écrasé
+				// les vraies valeurs par du vide. Le défaut est intermittent, parce
+				// qu'il dépend de l'état du cache et du chemin d'arrivée sur la page :
+				// il a donc survécu à tous les post-checks, qui regardaient la racine.
+				//
+				// `null` rend les navigations au serveur, ce qui est exactement ce
+				// qu'on veut d'un site rendu côté serveur. Le precache des ressources
+				// statiques (js, css, icônes) n'est pas touché. `npm run lint:sw`
+				// vérifie sur le bundle CONSTRUIT que le repli n'est pas réapparu.
+				navigateFallback: null,
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
 				runtimeCaching: [
 					{

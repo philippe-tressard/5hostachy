@@ -127,9 +127,31 @@ import { onMount } from 'svelte';
 	}
 
 	// ── Init ──────────────────────────────────────────────────────────────────
-	onMount(async () => {
-		const u = $currentUser;
-		if (u) {
+	//
+	//  ⚠️ L'initialisation suit le STORE, elle ne se fait pas au montage.
+	//
+	//  Le layout `(app)` peuple `currentUser` en appelant `/auth/me` dans SON
+	//  `onMount` — et en Svelte, les `onMount` des enfants s'exécutent AVANT ceux
+	//  du parent. Sur un rechargement direct de /profil (F5, lien externe, PWA
+	//  rouverte), cette page lisait donc un store encore vide et n'affectait
+	//  rien : prénom, nom, e-mail restaient blancs, et « Enregistrer » aurait
+	//  écrasé les vraies valeurs par du vide. En navigation interne le store est
+	//  déjà rempli, ce qui rendait le défaut invisible une fois sur deux.
+	//
+	//  Signalé en production le 14/08/2026. Le drapeau garantit qu'on n'écrase
+	//  pas la saisie en cours si le store est réassigné (après un enregistrement,
+	//  `setUser` le remplace).
+	let champsInitialises = false;
+	$: if ($currentUser && !champsInitialises) {
+		champsInitialises = true;
+		initialiserDepuis($currentUser);
+	}
+
+	function initialiserDepuis(u: any) {
+		//  Le bloc nu conserve l'indentation d'origine : le corps n'a pas changé
+		//  d'une ligne, seul son déclencheur. Un diff de 40 lignes ré-indentées
+		//  aurait caché le seul changement qui compte.
+		{
 			prenom    = u.prenom    ?? '';
 			nom       = u.nom       ?? '';
 			telephone = (u as any).telephone ?? '';
@@ -171,7 +193,9 @@ import { onMount } from 'svelte';
 			valeursNotifs = valeursNotifs;   // Svelte 4 : réassigner pour propager
 			restreindreAMesBatiments = u.restreindre_a_mes_batiments ?? false;
 		}
+	}
 
+	onMount(async () => {
 		[mesLots, batiments] = await Promise.all([
 			lotsApi.mesList().catch(() => []),
 			authApi.batiments().catch(() => []),

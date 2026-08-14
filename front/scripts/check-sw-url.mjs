@@ -90,4 +90,54 @@ if (!absoluTrouve) {
 	process.exit(1);
 }
 
-console.log(`✓ ${fichiers.length} fichiers du bundle analysés — service worker enregistré en URL absolue.`);
+// ── Repli de navigation vers un fichier qui n'existe pas ──────────────────────
+//
+// `vite-plugin-pwa` suppose une SPA et pose par défaut `navigateFallback:
+// 'index.html'` : le service worker répond alors à CHAQUE navigation en servant
+// cet `index.html` depuis son precache. SvelteKit en `adapter-node` rend les
+// pages côté serveur et n'en produit aucun — workbox lève donc
+// `non-precached-url :: [{"url":"index.html"}]`, la navigation cliente échoue et
+// l'hydratation ne se termine pas.
+//
+// Constaté en production le 14/08/2026, signalé par l'utilisateur : sur /profil
+// rechargée directement, prénom, nom et e-mail restaient VIDES — et « Enregistrer »
+// aurait écrasé les vraies valeurs par du vide. Le défaut est intermittent (il
+// dépend de l'état du cache et du chemin d'arrivée), ce qui explique qu'il ait
+// traversé tous les post-checks : ils regardaient la racine, où le repli tombe
+// juste. Il n'a été trouvé que par la console du navigateur, sur la page fautive.
+//
+// Le contrôle porte, comme celui du dessus, sur l'ARTEFACT construit : la valeur
+// fautive vient d'un défaut du plugin, pas d'une ligne écrite à la main.
+const SW = join(CLIENT, 'sw.js');
+if (!existsSync(SW)) {
+	console.error(
+		`\n✗ ${relative(RACINE, SW)} est introuvable — le service worker n'a pas été généré.` +
+			`\n  Un contrôle qui ne peut pas s'exécuter renvoie INCONNU, jamais OK.\n`,
+	);
+	process.exit(1);
+}
+
+const sw = readFileSync(SW, 'utf-8');
+const repli = sw.match(/createHandlerBoundToURL\(\s*["']([^"']+)["']\s*\)/);
+if (repli) {
+	const cible = repli[1];
+	//  Le repli n'est acceptable que si sa cible est RÉELLEMENT précachée.
+	const precachee = new RegExp(`["']url["']\\s*:\\s*["']${cible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`).test(sw)
+		|| new RegExp(`["']${cible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']\\s*,\\s*["']revision["']`).test(sw);
+	if (!precachee) {
+		console.error(
+			`\n✗ Le service worker replie les navigations sur « ${cible} », qui n'est PAS` +
+				`\n  dans son precache. Workbox lèvera \`non-precached-url\` à chaque` +
+				`\n  navigation : la page se charge, l'hydratation échoue, et les formulaires` +
+				`\n  restent vides sans le moindre message côté serveur.` +
+				`\n\n  SvelteKit rend les pages côté serveur : poser \`navigateFallback: null\`` +
+				`\n  dans les options \`workbox\` de VitePWA (front/vite.config.ts).\n`,
+		);
+		process.exit(1);
+	}
+}
+
+console.log(
+	`✓ ${fichiers.length} fichiers du bundle analysés — service worker en URL absolue, ` +
+		`sans repli de navigation orphelin.`,
+);
