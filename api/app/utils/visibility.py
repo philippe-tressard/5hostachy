@@ -37,6 +37,7 @@ from app.models.core import (
     TypeEvenement,
     Utilisateur,
 )
+from app.utils.mes_batiments import batiments_de_l_utilisateur
 from app.utils.perimetres import a_portee_globale, batiments_cibles, parse_perimetres
 
 # ── Parseurs internes ─────────────────────────────────────────────────────────
@@ -89,15 +90,36 @@ def _codes_json_pour_acces(raw: Optional[str]) -> Optional[list[str]]:
 
 # ── Règles géographiques ──────────────────────────────────────────────────────
 
-def perimetre_visible(perimetres: list[str], user: Utilisateur) -> bool:
+def perimetre_visible(
+    perimetres: list[str], user: Utilisateur, *, ouvert_a_la_copropriete: bool = False
+) -> bool:
     """
     Retourne True si le périmètre de l'item est accessible à l'utilisateur.
 
     - CS / Admin : toujours True.
     - Nœud à portée globale, ou dont un ancêtre l'est : True pour tout résident.
+    - `ouvert_a_la_copropriete` : les contenus dont le bâtiment ne restreint plus
+      la lecture — actualités et tickets (#339). Voir ci-dessous.
     - Sinon : True si le bâtiment du nœud (ou du plus proche ancêtre qui en porte
       un) est celui de l'utilisateur.
     - Liste vide : aucune restriction → True.
+
+    ## `ouvert_a_la_copropriete` — ce que ce paramètre ouvre, et ce qu'il n'ouvre pas
+
+    Il vaut **False par défaut**, et c'est le point important : le comportement
+    d'hier reste celui de tout ce qui ne demande pas explicitement l'ouverture.
+    Documents, sondages et événements d'AG ne la demandent pas, et leur accès est
+    donc rigoureusement inchangé.
+
+    Ce paramètre élargit l'axe **bâtiment**, jamais l'axe **public**. Cette
+    fonction est combinée en ET avec `public_cible` (résidents, copropriétaires,
+    bailleurs, locataires, CS), avec `ProfilAccesDocument` et avec les règles
+    mandataire de `routers/bailleur.py` : l'ouvrir ne peut donc rien débloquer
+    pour quelqu'un que ces règles refusent. Contrainte posée par l'utilisateur le
+    14/08/2026 — *une agence, un bailleur ou un mandataire qui n'avaient pas de
+    visibilité n'en gagnent aucune* — et vérifiée couple par couple dans
+    `tests/test_visibilite_ouverte.py`.
+
     - Code introuvable : n'accorde **rien**. Un nœud supprimé, un arbre vidé ou une
       table illisible ne peuvent pas justifier un accès — ils ne permettent pas de
       décider, et un contrôle qui ne peut pas s'exécuter ne renvoie jamais OK
@@ -117,6 +139,21 @@ def perimetre_visible(perimetres: list[str], user: Utilisateur) -> bool:
         return True
     if a_portee_globale(perimetres):
         return True
+
+    if ouvert_a_la_copropriete:
+        if not getattr(user, "restreindre_a_mes_batiments", False):
+            return True
+        #  L'utilisateur s'est restreint LUI-MÊME. On prend alors ses bâtiments au
+        #  sens large — rattachement et lots —, parce qu'il s'agit de lui montrer
+        #  les siens, pas de lui accorder quoi que ce soit : cette liste ne sert
+        #  qu'ici, et seulement pour montrer MOINS.
+        miens = batiments_de_l_utilisateur(user)
+        if not miens:
+            #  Cas zéro : rien de connu, donc rien à restreindre. Renvoyer False
+            #  laisserait un fil vide à qui a simplement coché une case.
+            return True
+        return bool(miens & batiments_cibles(perimetres))
+
     if user.batiment_id is None:
         #  Pas de bâtiment assigné → accès résidence entière par défaut.
         #  ⚠️ Repli permissif **conservé volontairement** : le corriger changerait
@@ -145,7 +182,16 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
         #  Ciblage illisible : on refuse. Le CS et l'admin sont déjà sortis plus
         #  haut et gardent donc l'accès nécessaire pour corriger la publication.
         return False
-    if not perimetre_visible(perims, user):
+    #  `ouvert_a_la_copropriete` : une actualité ciblée sur un autre bâtiment reste
+    #  lisible (#339). La vie d'une copropriété se passe rarement dans un seul
+    #  bâtiment — un chantier, une coupure, une réunion concernent souvent sans
+    #  être « chez soi ». Le résident qui préfère l'ancien fonctionnement coche
+    #  « n'afficher que mes bâtiments » dans son profil.
+    #
+    #  ⚠️ Ce n'est QUE l'axe bâtiment. Le public cible ci-dessous n'est pas touché,
+    #  et c'est lui qui protège : une agence, un bailleur non résident ou un
+    #  mandataire qui ne voyaient pas cette publication ne la voient pas davantage.
+    if not perimetre_visible(perims, user, ouvert_a_la_copropriete=True):
         return False
 
     # 2. Public cible

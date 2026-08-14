@@ -1,5 +1,4 @@
 """Router auth — inscription, connexion, déconnexion, refresh, réinitialisation mot de passe."""
-import re
 import secrets
 from datetime import date, datetime, timedelta
 
@@ -13,34 +12,20 @@ from app.auth.jwt import (
     create_refresh_token,
     decode_token,
     hash_password,
-    verify_password,
     verify_and_rehash,
 )
 from app.auth.deps import get_current_user
 from app.config import get_settings
 from app.database import get_session
-from app.models.core import (Utilisateur, RefreshToken, PasswordResetToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
+from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, StatutUtilisateur, RoleUtilisateur, Batiment,
     ConfigSite, DemandeModificationProfil, StatutDemandeProfil, TelemetryEvent)
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.limiter import limiter
+from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
-
-def _check_password_strength(password: str) -> None:
-    """Vérifie la complexité du mot de passe. Lève HTTPException 400 si les critères ne sont pas satisfaits."""
-    errors = []
-    if len(password) < 8:
-        errors.append("au moins 8 caractères")
-    if not re.search(r"[A-Z]", password):
-        errors.append("une lettre majuscule")
-    if not re.search(r"\d", password):
-        errors.append("un chiffre")
-    if not re.search(r"[@$!%*?&#._\-+]", password):
-        errors.append("un caractère spécial (@$!%*?&#._-+)")
-    if errors:
-        raise HTTPException(400, "Le mot de passe doit contenir : " + ", ".join(errors) + ".")
 
 COOKIE_OPTS = dict(httponly=True, secure=settings.cookie_secure, samesite="strict", path="/")
 
@@ -335,6 +320,7 @@ class MeUpdate(BaseModel):
     fonction: str | None = None
     last_seen_actualites: str | None = None
     preferences_notifications: str | None = None
+    restreindre_a_mes_batiments: bool | None = None
     demarche_arrivant: str | None = None
 
     @field_validator("nom", mode="before")
@@ -375,6 +361,10 @@ def update_me(
         user.last_seen_actualites = datetime.fromisoformat(body.last_seen_actualites.replace("Z", "+00:00"))
     if body.preferences_notifications is not None:
         user.preferences_notifications = body.preferences_notifications
+    if body.restreindre_a_mes_batiments is not None:
+        #  L'utilisateur se restreint LUI-MÊME : aucun contrôle de droit à faire,
+        #  cette préférence ne peut que lui montrer moins.
+        user.restreindre_a_mes_batiments = body.restreindre_a_mes_batiments
     if body.demarche_arrivant is not None:
         if body.demarche_arrivant not in ("nouvel_arrivant", "deja_resident"):
             raise HTTPException(400, "Valeur invalide pour demarche_arrivant")
@@ -455,133 +445,6 @@ def mes_demandes_modif(
             item["batiment_nom_souhaite"] = None
         result.append(item)
     return result
-
-
-class ChangePasswordBody(BaseModel):
-    mot_de_passe_actuel: str
-    nouveau_mot_de_passe: str
-
-
-@router.post("/change-password", status_code=204)
-def change_password(
-    body: ChangePasswordBody,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    if not verify_password(body.mot_de_passe_actuel, user.hashed_password or ""):
-        raise HTTPException(400, "Mot de passe actuel incorrect.")
-    _check_password_strength(body.nouveau_mot_de_passe)
-    user.hashed_password = hash_password(body.nouveau_mot_de_passe)
-    session.add(user)
-    session.commit()
-
-
-class PasswordResetRequest(BaseModel):
-    email: str
-
-
-@router.post("/mot-de-passe-oublie", status_code=204)
-@limiter.limit("3/minute")
-def request_password_reset(
-    request: Request,
-    body: PasswordResetRequest,
-    background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session),
-):
-    """
-    Génère un token de réinitialisation et envoie un e-mail si le compte existe.
-    Retourne toujours 204 pour éviter l'enumération d'adresses e-mail.
-    """
-    cfg_rows = session.exec(
-        select(ConfigSite).where(ConfigSite.cle.in_(("site_url", "site_nom")))
-    ).all()
-    cfg = {row.cle: row.valeur for row in cfg_rows}
-    site_url = (cfg.get("site_url") or "https://localhost").rstrip("/")
-    site_nom = cfg.get("site_nom") or "5Hostachy"
-
-    user = session.exec(select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())).first()
-    if user and user.actif:
-        # Invalider les tokens de reset précédents non utilisés
-        old_tokens = session.exec(
-            select(PasswordResetToken).where(
-                PasswordResetToken.user_id == user.id,
-                PasswordResetToken.used == False,  # noqa: E712
-            )
-        ).all()
-        for t in old_tokens:
-            t.used = True
-            session.add(t)
-
-        raw_token = secrets.token_urlsafe(32)
-        prt = PasswordResetToken(
-            user_id=user.id,
-            token=raw_token,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
-        )
-        session.add(prt)
-        session.commit()
-
-        from app.utils.email import send_email
-        background_tasks.add_task(
-            send_email,
-            code="reinitialisation_mdp",
-            to=user.email,
-            context={
-                "destinataire": {"prenom": user.prenom},
-                "lien": f"{site_url}/auth/reinitialisation-mdp?token={raw_token}",
-                "expire_heures": 1,
-                "residence": {"nom": site_nom},
-                "app": {"url": site_url},
-            },
-        )
-
-    return None
-
-
-class PasswordResetConfirm(BaseModel):
-    token: str
-    nouveau_mot_de_passe: str
-
-
-@router.post("/reinitialiser-mot-de-passe", status_code=204)
-@limiter.limit("5/minute")
-def reset_password(
-    request: Request,
-    body: PasswordResetConfirm,
-    session: Session = Depends(get_session),
-):
-    """Utilise le token de réinitialisation pour définir un nouveau mot de passe."""
-    _check_password_strength(body.nouveau_mot_de_passe)
-
-    prt = session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.token == body.token)
-    ).first()
-
-    if not prt or prt.used or prt.expires_at < datetime.utcnow():
-        raise HTTPException(400, "Lien de réinitialisation invalide ou expiré.")
-
-    user = session.get(Utilisateur, prt.user_id)
-    if not user or not user.actif:
-        raise HTTPException(400, "Lien de réinitialisation invalide ou expiré.")
-
-    user.hashed_password = hash_password(body.nouveau_mot_de_passe)
-    prt.used = True
-
-    # Révoquer toutes les sessions actives de l'utilisateur
-    active_sessions = session.exec(
-        select(RefreshToken).where(
-            RefreshToken.user_id == user.id,
-            RefreshToken.revoked == False,  # noqa: E712
-        )
-    ).all()
-    for rt in active_sessions:
-        rt.revoked = True
-        session.add(rt)
-
-    session.add(user)
-    session.add(prt)
-    session.commit()
-    return None
 
 
 # ──────────────────────────────────────────────

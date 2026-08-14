@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
+	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
 	import { auth as authApi, lots as lotsApi, uploads as uploadsApi, ApiError } from '$lib/api';
@@ -34,14 +35,14 @@ import { onMount } from 'svelte';
 	let showPwdConf = false;
 
 	// ── Notifications ─────────────────────────────────────────────────────────
-	let notifTicketApp = true;
-	let notifTicketMail = true;
-	let notifActuApp = true;
-	let notifActuMail = true;
-	let notifDocApp = true;
-	let notifDocMail = false;
-	let notifCommunauteApp = true;
-	let notifCommunauteMail = true;
+	//  Un objet plutôt que huit variables : c'est ce que le composant rend, et
+	//  c'est ce que l'API attend. Les huit `let` séparés obligeaient à réécrire la
+	//  liste trois fois — déclaration, lecture, enregistrement.
+	let valeursNotifs: Record<string, boolean> = {
+		ticket_app: true, ticket_mail: true, actu_app: true, actu_mail: true,
+		doc_app: true, doc_mail: false, communaute_app: true, communaute_mail: true,
+	};
+	let restreindreAMesBatiments = false;
 
 	// ── Lots ──────────────────────────────────────────────────────────────────
 	let mesLots: any[] = [];
@@ -154,23 +155,21 @@ import { onMount } from 'svelte';
 			let prefsFromDb: any = null;
 			try { prefsFromDb = JSON.parse(u.preferences_notifications); } catch {}
 			if (prefsFromDb && typeof prefsFromDb === 'object' && 'ticket_app' in prefsFromDb) {
-				notifTicketApp = prefsFromDb.ticket_app ?? true;
-				notifTicketMail = prefsFromDb.ticket_mail ?? true;
-				notifActuApp = prefsFromDb.actu_app ?? true;
-				notifActuMail = prefsFromDb.actu_mail ?? true;
-				notifDocApp = prefsFromDb.doc_app ?? true;
-				notifDocMail = prefsFromDb.doc_mail ?? false;
-				notifCommunauteApp = prefsFromDb.communaute_app ?? true;
-				notifCommunauteMail = prefsFromDb.communaute_mail ?? true;
+				for (const cle of Object.keys(valeursNotifs)) {
+					valeursNotifs[cle] = prefsFromDb[cle] ?? valeursNotifs[cle];
+				}
 			} else {
-				// Fallback localStorage (migration unique)
-				notifTicketApp = readNotifBool(['notif_ticket_app'], true);
-				notifTicketMail = readNotifBool(['notif_ticket_mail', 'notif_ticket'], true);
-				notifActuApp = readNotifBool(['notif_actu_app'], true);
-				notifActuMail = readNotifBool(['notif_actu_mail', 'notif_actu'], true);
-				notifDocApp = readNotifBool(['notif_doc_app'], true);
-				notifDocMail = readNotifBool(['notif_doc_mail', 'notif_doc'], false, true);
+				// Fallback localStorage (migration unique). `communaute_*` n'y a jamais
+				// été écrit : il garde sa valeur par défaut, comme avant.
+				valeursNotifs.ticket_app = readNotifBool(['notif_ticket_app'], true);
+				valeursNotifs.ticket_mail = readNotifBool(['notif_ticket_mail', 'notif_ticket'], true);
+				valeursNotifs.actu_app = readNotifBool(['notif_actu_app'], true);
+				valeursNotifs.actu_mail = readNotifBool(['notif_actu_mail', 'notif_actu'], true);
+				valeursNotifs.doc_app = readNotifBool(['notif_doc_app'], true);
+				valeursNotifs.doc_mail = readNotifBool(['notif_doc_mail', 'notif_doc'], false, true);
 			}
+			valeursNotifs = valeursNotifs;   // Svelte 4 : réassigner pour propager
+			restreindreAMesBatiments = u.restreindre_a_mes_batiments ?? false;
 		}
 
 		[mesLots, batiments] = await Promise.all([
@@ -232,23 +231,19 @@ import { onMount } from 'svelte';
 		}
 	}
 
-	async function saveNotifs() {
-		const prefs = JSON.stringify({
-			ticket_app: notifTicketApp,
-			ticket_mail: notifTicketMail,
-			actu_app: notifActuApp,
-			actu_mail: notifActuMail,
-			doc_app: notifDocApp,
-			doc_mail: notifDocMail,
-			communaute_app: notifCommunauteApp,
-			communaute_mail: notifCommunauteMail,
-		});
+	async function saveNotifs(valeurs: Record<string, boolean>, restreindre: boolean) {
+		const prefs = JSON.stringify(valeurs);
 		try {
-			const updated = await authApi.updateMe({ preferences_notifications: prefs });
+			const updated = await authApi.updateMe({
+				preferences_notifications: prefs,
+				restreindre_a_mes_batiments: restreindre,
+			});
 			setUser(updated);
+			valeursNotifs = valeurs;
+			restreindreAMesBatiments = restreindre;
 			toast('success', 'Préférences enregistrées');
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors de l\'enregistrement');
+			toast('error', e instanceof ApiError ? e.message : "Erreur lors de l'enregistrement");
 		}
 	}
 
@@ -600,53 +595,12 @@ import { onMount } from 'svelte';
 		</form>
 	</section>
 
-	<!-- ── Notifications ────────────────────────────────────────────────────── -->
-	<section class="card" style="margin-bottom:1.5rem">
-		<h2 class="section-title">Préférences de notifications</h2>
-		<p class="notif-help">Affiner ces réglages vous évite le bruit inutile et vous garantit de recevoir les informations importantes sur le bon canal.</p>
-		<ul class="notif-reco">
-			<li><strong>Tickets</strong> : activez appli + e-mail pour ne rater aucun changement de statut.</li>
-			<li><strong>Actualités</strong> : gardez l'appli active, et activez l'e-mail si vous consultez rarement la plateforme.</li>
-			<li><strong>Documents</strong> : activez l'e-mail pour être informé dès qu'un nouveau document est publié.</li>
-			<li><strong>Communauté</strong> : soyez prévenu quand quelqu'un répond à une de vos idées, annonces ou sondages.</li>
-		</ul>
-		<div class="notif-matrix-wrap">
-			<table class="notif-matrix" aria-label="Préférences de notifications">
-				<thead>
-					<tr>
-						<th>Type d'action</th>
-						<th>Dans l'appli</th>
-						<th>Par e-mail</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td>Mises à jour de mes tickets</td>
-						<td><input type="checkbox" bind:checked={notifTicketApp} aria-label="Tickets - notification appli" /></td>
-						<td><input type="checkbox" bind:checked={notifTicketMail} aria-label="Tickets - notification mail" /></td>
-					</tr>
-					<tr>
-						<td>Nouvelles publications / actualités</td>
-						<td><input type="checkbox" bind:checked={notifActuApp} aria-label="Actualités - notification appli" /></td>
-						<td><input type="checkbox" bind:checked={notifActuMail} aria-label="Actualités - notification mail" /></td>
-					</tr>
-					<tr>
-						<td>Nouveaux documents ajoutés</td>
-						<td><input type="checkbox" bind:checked={notifDocApp} aria-label="Documents - notification appli" /></td>
-						<td><input type="checkbox" bind:checked={notifDocMail} aria-label="Documents - notification mail" /></td>
-					</tr>
-					<tr>
-						<td>Réponses à mes idées / annonces / sondages</td>
-						<td><input type="checkbox" bind:checked={notifCommunauteApp} aria-label="Communauté - notification appli" /></td>
-						<td><input type="checkbox" bind:checked={notifCommunauteMail} aria-label="Communauté - notification mail" /></td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<div class="form-actions">
-			<button type="button" class="btn btn-primary" on:click={saveNotifs}>Enregistrer</button>
-		</div>
-	</section>
+	<!-- ── Ce que j'affiche, ce que je reçois ──────────────────────────────── -->
+	<PreferencesAffichageNotifs
+		valeurs={valeursNotifs}
+		bind:restreindre={restreindreAMesBatiments}
+		onSave={saveNotifs}
+	/>
 
 	<!-- ── RGPD ─────────────────────────────────────────────────────────────── -->
 	<section class="card" style="border-color:#fde68a;background:#fffbeb">
