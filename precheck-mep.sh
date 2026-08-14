@@ -52,12 +52,13 @@ fi
 # ── Exécution ────────────────────────────────────────────────────────────────
 
 NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_ECART=0
+POINTS_INCONNUS=""   # les NUMÉROS des points non mesurés, pour les nommer à la fin
 rapporter() {              # $1 = numéro, $2 = verdict, $3 = libellé, $4 = détail
   local icone
   case "$2" in
     OK)      icone="✓"; NB_OK=$((NB_OK+1)) ;;
     ECART)   icone="~"; NB_ECART=$((NB_ECART+1)) ;;
-    INCONNU) icone="?"; NB_INCONNU=$((NB_INCONNU+1)) ;;
+    INCONNU) icone="?"; NB_INCONNU=$((NB_INCONNU+1)); POINTS_INCONNUS="${POINTS_INCONNUS:+$POINTS_INCONNUS, }$1" ;;
     *)       icone="✗"; NB_FAIL=$((NB_FAIL+1)) ;;
   esac
   printf "%s %-3s %-46s %-8s %s\n" "$icone" "$1" "$3" "$2" "${4:-}"
@@ -391,5 +392,10 @@ fi
 mkdir -p "$(dirname "$MARQUEUR")"
 printf '%s %s\n' "$(git rev-parse HEAD)" "$(date +%s)" > "$MARQUEUR"
 echo "✓ Pré-check passé pour $(git rev-parse --short HEAD) — push autorisé."
-[ "$NB_INCONNU" -gt 0 ] && echo "  (1 point INCONNU assumé : le point 9 exige une session admin.)"
+#  Le message nommait le point 9 en dur : n'importe quel INCONNU était donc
+#  présenté comme normal et attribué à une limite connue. Constaté le 14/08/2026,
+#  le point 9 étant OK et le 16 (CI rejouée) INCONNU : le script disait le
+#  contraire de ce qu'il avait mesuré. Un contrôle qui ne sait pas dire CE QU'IL
+#  n'a pas mesuré fabrique la confiance qu'il devrait retirer (socle 04 §1).
+[ "$NB_INCONNU" -gt 0 ] && echo "  (non mesuré : point(s) $POINTS_INCONNUS — un INCONNU n'est pas un vert.)"
 exit 0
