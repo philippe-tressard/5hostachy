@@ -91,14 +91,29 @@ def test_piece_jointe_d_actualite_reservee_au_cs_refusee_a_un_locataire():
     assert document_visible(locataire, _piece_jointe(), session) is False
 
 
-def test_piece_jointe_d_actualite_ciblee_sur_un_autre_batiment_refusee():
-    """Le ciblage géographique de l'actualité vaut aussi pour ses fichiers."""
-    resident_bat2 = _utilisateur(
-        "locataire", StatutUtilisateur.locataire, batiment_id=2
-    )
-    session = _SessionSansBase(_publication(perimetre_cible='["bat:1"]'))
+def test_piece_jointe_d_actualite_ciblee_ailleurs_suit_l_actualite():
+    """Le fichier suit l'actualité qui le porte — c'est le principe, et il tient.
 
-    assert document_visible(resident_bat2, _piece_jointe(), session) is False
+    Ce test exigeait auparavant un refus. Il ne l'exige plus **parce que
+    l'actualité elle-même a changé de verdict** (#339, 14/08/2026) : une actualité
+    ciblée sur un autre bâtiment est désormais lisible, sauf si le lecteur a coché
+    « n'afficher que mes bâtiments » dans son profil.
+
+    Le principe que ce test protège n'a donc pas bougé d'un pouce — il est même
+    vérifié dans les deux sens ici. Ce qui a bougé, c'est la visibilité de
+    l'actualité, et le fichier la suit, comme il l'a toujours fait. La protection
+    par le **public** (`public_cible`), elle, est inchangée : c'est le test
+    juste au-dessus, et c'est lui qui empêche une agence ou un bailleur de gagner
+    quoi que ce soit.
+    """
+    publication_ailleurs = _publication(perimetre_cible='["bat:1"]')
+
+    ouvert = _utilisateur("locataire", StatutUtilisateur.locataire, batiment_id=2)
+    assert document_visible(ouvert, _piece_jointe(), _SessionSansBase(publication_ailleurs)) is True
+
+    restreint = _utilisateur("locataire", StatutUtilisateur.locataire, batiment_id=2)
+    restreint.restreindre_a_mes_batiments = True
+    assert document_visible(restreint, _piece_jointe(), _SessionSansBase(publication_ailleurs)) is False
 
 
 def test_piece_jointe_de_brouillon_refusee():

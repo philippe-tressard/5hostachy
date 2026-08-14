@@ -70,9 +70,14 @@ _VERBES = {"get", "post", "put", "patch", "delete"}
 _PUBLICS_ASSUMES = {
     # Pré-authentification : impossible d'exiger une session pour se connecter.
     ("auth.py", "login"), ("auth.py", "register"), ("auth.py", "refresh"),
-    ("auth.py", "logout"), ("auth.py", "request_password_reset"),
-    ("auth.py", "reset_password"), ("auth.py", "verify_email"),
+    ("auth.py", "logout"), ("auth.py", "verify_email"),
     ("auth.py", "resend_verification"),
+    #  Le bloc « mot de passe » a quitté `auth.py` le 14/08/2026 (modularité) : ces
+    #  deux exemptions ont suivi le code, sans changer de nature. Qui a perdu son
+    #  mot de passe ne peut pas prouver qui il est — c'est le jeton envoyé par
+    #  courriel qui le fait, et sa vérification est dans l'endpoint lui-même.
+    ("auth_mot_de_passe.py", "request_password_reset"),
+    ("auth_mot_de_passe.py", "reset_password"),
     # Liste des bâtiments : alimente le formulaire d'inscription.
     ("auth.py", "list_batiments"),
     # Coquille d'interface et pages légales, filtrées par LISTE BLANCHE

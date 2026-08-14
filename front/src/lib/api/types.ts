@@ -24,6 +24,8 @@ export interface User {
 	onboarding_etape: number;
 	photo_url?: string;
 	preferences_notifications: string;
+	/** Préférence d'AFFICHAGE, jamais un droit : n'afficher que ses bâtiments (#339). */
+	restreindre_a_mes_batiments?: boolean;
 	demarche_arrivant?: string | null;
 	batiment_id?: number | null;
 	batiment_nom?: string | null;  // "Bât. A"

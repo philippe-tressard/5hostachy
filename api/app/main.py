@@ -69,7 +69,7 @@ class UTCJSONResponse(JSONResponse):
 
 from app.database import _run_migrations, engine
 from app.routers import (
-    auth, tickets, publications, documents, lots, admin,
+    auth, auth_mot_de_passe, tickets, publications, documents, lots, admin,
     notifications, acces, calendrier, prestataires, sondages, idees, copropriete,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
@@ -241,6 +241,9 @@ app.add_middleware(
 
 # Routeurs
 app.include_router(auth.router)
+#  Même préfixe `/auth`, monté à part : FastAPI additionne les routers, les URL
+#  publiques sont donc inchangées (cf. en-tête de `routers/auth_mot_de_passe.py`).
+app.include_router(auth_mot_de_passe.router)
 app.include_router(lots.router)
 app.include_router(tickets.router)
 app.include_router(publications.router)

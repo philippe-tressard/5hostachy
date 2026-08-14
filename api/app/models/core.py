@@ -114,10 +114,6 @@ class TypeEquipement(str, Enum):
     autre = "autre"
 
 
-class StatutSauvegarde(str, Enum):
-    en_cours = "en_cours"
-    reussie = "reussie"
-    echouee = "echouee"
 
 
 # ──────────────────────────────────────────────
@@ -136,10 +132,6 @@ class FaqItem(SQLModel, table=True):
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
 
 
-class FrequenceSauvegarde(str, Enum):
-    quotidienne = "quotidienne"
-    hebdomadaire = "hebdomadaire"
-    mensuelle = "mensuelle"
 
 
 
@@ -172,6 +164,14 @@ class Utilisateur(SQLModel, table=True):
     communaute_ban_count: int = Field(default=0)  # 0=jamais banni, 1=1er ban, 2+=permanent
     communaute_ban_jusqu_au: Optional[datetime] = Field(default=None)  # fin du ban temporaire
     preferences_notifications: str = Field(default='{"ticket_app":true,"ticket_mail":true,"actu_app":true,"actu_mail":true,"doc_app":true,"doc_mail":false,"communaute_app":true,"communaute_mail":true}')
+    #  Préférence d'AFFICHAGE, jamais un droit : le résident choisit de ne plus
+    #  voir les actualités et tickets des autres bâtiments. Décochée d'origine —
+    #  la vie d'une copropriété se passe rarement dans un seul bâtiment, et un
+    #  chantier ou une coupure concernent souvent sans être « chez soi » (#339).
+    #  Elle ne protège rien et ne doit jamais être présentée comme une mesure de
+    #  confidentialité : celle-ci reste portée par `public_cible` et les profils
+    #  d'accès aux documents, qui ne bougent pas.
+    restreindre_a_mes_batiments: bool = Field(default=False)
     demarche_arrivant: Optional[str] = Field(default=None)  # nouvel_arrivant | deja_resident | None
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     nom_proprietaire: Optional[str] = None  # pour les locataires : nom du propriétaire bailleur
@@ -673,39 +673,14 @@ class ModeleEmail(SQLModel, table=True):
 # ──────────────────────────────────────────────
 #  Sauvegardes
 # ──────────────────────────────────────────────
-
-class ConfigSauvegarde(SQLModel, table=True):
-    __tablename__ = "config_sauvegarde"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    active: bool = True
-    frequence: FrequenceSauvegarde = FrequenceSauvegarde.quotidienne
-    heure_execution: int = 3  # 0-23
-    jour_semaine: int = 6     # 0=lun … 6=dim
-    jour_mois: int = 1        # 1-28
-    nb_versions_conservees: int = 7
-    modifie_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    modifie_le: Optional[datetime] = None
-
-
-class HistoriqueSauvegarde(SQLModel, table=True):
-    __tablename__ = "historique_sauvegarde"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    declenchee_par: str = "automatique"  # automatique | manuelle
-    declenchee_par_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    statut: StatutSauvegarde = StatutSauvegarde.en_cours
-    #: Nœud qui a exécuté la tâche — renseigné À L'ÉCRITURE, jamais déduit à
-    #: la lecture (cf. `utils/noeud.py`). Nullable et sans valeur par défaut :
-    #: les lignes antérieures au 12/08/2026 resteront `None`, et c'est correct
-    #: — personne ne sait sur quel nœud elles ont tourné, et l'inventer serait
-    #: la faute retirée le 11/08 (#312).
-    noeud: Optional[str] = Field(default=None, index=True)   # rpi1 | rpi2
-    fichier_nom: Optional[str] = None
-    fichier_chemin: Optional[str] = None
-    taille_octets: Optional[int] = None
-    message_erreur: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    terminee_le: Optional[datetime] = None
-
+#  Les deux tables vivent dans `models/sauvegarde.py` depuis le 14/08/2026
+#  (modularité). Ré-exportées ici : les imports existants ne bougent pas.
+from app.models.sauvegarde import (  # noqa: E402,F401
+    ConfigSauvegarde,
+    FrequenceSauvegarde,
+    HistoriqueSauvegarde,
+    StatutSauvegarde,
+)
 
 # ──────────────────────────────────────────────
 #  Historique emails

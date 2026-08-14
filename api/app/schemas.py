@@ -82,6 +82,8 @@ class UserRead(BaseModel):
     onboarding_etape: int
     photo_url: Optional[str] = None
     preferences_notifications: str
+    #  Préférence d'AFFICHAGE, jamais un droit — cf. models/core.py.
+    restreindre_a_mes_batiments: bool = False
     demarche_arrivant: Optional[str] = None
     batiment_id: Optional[int] = None
     batiment_nom: Optional[str] = None   # ex. "Bât. A"
@@ -118,6 +120,7 @@ class UserUpdate(BaseModel):
     societe: Optional[str] = None
     photo_url: Optional[str] = None
     preferences_notifications: Optional[str] = None
+    restreindre_a_mes_batiments: Optional[bool] = None
 
 
 class LoginRequest(BaseModel):
