@@ -71,10 +71,49 @@
 </section>
 
 <style>
-	.notif-help { font-size: .82rem; color: var(--color-text-muted); margin: .35rem 0 .75rem; line-height: 1.5; }
+	/*  Règles reprises telles quelles du `<style>` de la page profil lors de
+	    l'extraction. Les styles de Svelte sont scopés au composant : déplacer du
+	    balisage sans ses règles ne casse ni la compilation, ni les types, ni les
+	    tests — seulement l'affichage. C'est ce qui est arrivé à l'œil du bloc mot
+	    de passe le 14/08/2026, tombé sous le champ au lieu de tenir dedans. */
 	.notif-matrix-wrap { overflow-x: auto; }
-	.notif-matrix { width: 100%; border-collapse: collapse; font-size: .88rem; }
-	.notif-matrix th, .notif-matrix td { padding: .45rem .5rem; border-bottom: 1px solid var(--color-border); text-align: left; }
-	.notif-matrix th:not(:first-child), .notif-matrix td:not(:first-child) { text-align: center; width: 6.5rem; }
+	.notif-help {
+		font-size: .85rem;
+		color: var(--color-text-muted);
+		margin: 0 0 .45rem;
+		line-height: 1.45;
+	}
+	.notif-reco {
+		margin: 0 0 .75rem;
+		padding-left: 1.1rem;
+		font-size: .82rem;
+		color: var(--color-text-muted);
+		display: grid;
+		gap: .2rem;
+	}
+	.notif-matrix {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: .9rem;
+		margin-bottom: .75rem;
+	}
+	.notif-matrix th,
+	.notif-matrix td {
+		border: 1px solid var(--color-border);
+		padding: .55rem .65rem;
+	}
+	.notif-matrix thead th {
+		background: var(--color-bg-subtle, #f8fafc);
+		font-weight: 600;
+		text-align: left;
+	}
+	.notif-matrix td:nth-child(2),
+	.notif-matrix td:nth-child(3),
+	.notif-matrix th:nth-child(2),
+	.notif-matrix th:nth-child(3) {
+		text-align: center;
+		width: 120px;
+	}
 	.checkbox-field { display: flex; align-items: flex-start; gap: .55rem; font-size: .9rem; }
+	.section-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
 </style>

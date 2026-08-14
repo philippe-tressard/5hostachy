@@ -68,3 +68,22 @@
 			</div>
 		</form>
 	</section>
+
+<style>
+	/*  Ces règles vivaient dans le `<style>` de la page profil et n'ont pas suivi
+	    le composant lors de l'extraction (14/08/2026) : l'œil, positionné en
+	    absolu par rapport à `.input-eye`, est retombé SOUS le champ au lieu de
+	    tenir dedans à droite. Signalé par l'utilisateur.
+
+	    C'est le piège propre à Svelte : les styles sont scopés au composant, donc
+	    déplacer du balisage sans ses règles ne casse rien à la compilation, rien
+	    aux types, rien aux tests — seulement l'affichage. `svelte-check` l'avait
+	    d'ailleurs signalé côté page (« Unused CSS selector »), ce qui est le
+	    même défaut vu par l'autre bout. */
+	.section-title { font-size:1rem; font-weight:600; margin-bottom:1rem; }
+	.form-actions { display: flex; justify-content: flex-end; margin-top: .5rem; gap: .5rem; flex-wrap: wrap; }
+	.input-eye { position: relative; display: flex; align-items: center; }
+	.input-eye input { flex: 1; padding-right: 2.5rem; }
+	.eye-btn { position: absolute; right: .6rem; background: none; border: none; padding: 0; cursor: pointer; color: var(--color-text-muted); display: flex; align-items: center; }
+	.eye-btn:hover { color: var(--color-text); }
+</style>
