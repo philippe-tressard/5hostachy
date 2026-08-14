@@ -32,6 +32,7 @@ from app.models.core import (
 )
 from app.seed.patrimoine import CLE_SEMEE, GABARIT_BATIMENT, poser_arborescence
 from app.utils import perimetres as P
+from tests.conftest import vider_patrimoine
 from app.utils.destinataires import batiments_du_perimetre
 from app.utils.visibility import perimetre_visible, publication_visible
 
@@ -88,47 +89,11 @@ ANCIENS_LIBELLES = {
 
 # ── Montage ───────────────────────────────────────────────────────────────────
 
-def _vider(session: Session) -> None:
-    #  Le marqueur de semis part aussi : sans lui, `poser_arborescence` croirait
-    #  avoir déjà semé et les tests repartiraient sur une base vide.
-    marqueur = session.get(ConfigSite, CLE_SEMEE)
-    if marqueur:
-        session.delete(marqueur)
-    for modele in (Perimetre, Batiment, Copropriete):
-        for ligne in session.exec(select(modele)).all():
-            session.delete(ligne)
-    session.commit()
-
-
-@pytest.fixture()
-def batiments() -> list[int]:
-    """Arbre semé sur quatre bâtiments réels. Renvoie leurs identifiants."""
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        _vider(session)
-        copro = Copropriete(nom="Test", adresse="1 rue Test")
-        session.add(copro)
-        session.flush()
-        for numero in ("1", "2", "3", "4"):
-            session.add(Batiment(copropriete_id=copro.id, numero=numero))
-        session.commit()
-        ids = list(session.exec(select(Batiment.id).order_by(Batiment.id)).all())
-        poser_arborescence(session)
-        session.commit()
-    P.invalider_cache()
-    yield ids
-    P.invalider_cache()
-
-
-@pytest.fixture()
-def arbre_vide():
-    """Aucun périmètre configuré — l'état d'une copropriété qui n'a rien saisi."""
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        _vider(session)
-    P.invalider_cache()
-    yield
-    P.invalider_cache()
+#  Le montage (quatre bâtiments + arbre semé) et la purge vivent dans
+#  `conftest.py` depuis le 14/08/2026 : ils étaient écrits à l'identique ici et
+#  dans `test_perimetres_router.py`, et leurs deux `_vider` avaient déjà divergé.
+#  La fixture `batiments` est donc injectée sans être déclarée dans ce fichier.
+_vider = vider_patrimoine
 
 
 def utilisateur(roles: str, batiment_id: int | None) -> Utilisateur:

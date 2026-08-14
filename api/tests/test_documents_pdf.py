@@ -85,6 +85,81 @@ def test_la_fiche_arrivant_se_rend_en_pdf():
 
 
 @besoin_weasyprint
+def test_la_fiche_avec_ses_icones_se_rend_en_pdf(batiments, caplog):
+    """Le cas que le test précédent n'atteint pas : un document qui porte des SVG.
+
+    `test_la_fiche_arrivant_se_rend_en_pdf` passe une liste de membres **vide** —
+    donc aucun en-tête de bâtiment, donc aucune icône. Depuis que les en-têtes
+    portent le pictogramme du périmètre (#335), le seul chemin qui compte n'était
+    exercé nulle part : un SVG inline peut très bien disparaître, ou faire échouer
+    le rendu, sans que le PDF « vide » du test voisin s'en aperçoive.
+
+    Deux contrôles, parce qu'aucun des deux ne suffit :
+
+    1. **Le PDF rétrécit quand on retire les icônes.** C'est le seul qui observe le
+       dessin lui-même — des tracés vectoriels en moins, ce sont des opérateurs en
+       moins dans le flux. WeasyPrint **n'échoue pas** sur un SVG qu'il ne sait pas
+       rendre : il l'ignore, et un test qui ne regarderait que le code de sortie
+       resterait vert sur un document amputé de toutes ses icônes
+       (`standards/04-fiabilite-des-controles.md` §14).
+    2. **Le journal ne porte pas de plainte nouvelle**, les propriétés CSS non
+       supportées mises à part.
+
+    ⚠️ Le filtre `unknown property` n'est pas une commodité : WeasyPrint ignore
+    `box-shadow` et `print-color-adjust`, que la feuille de style porte pour
+    l'aperçu HTML du même document. Trois avertissements sont donc émis à **chaque**
+    rendu, depuis toujours. La première version de ce test échouait dessus (CI du
+    14/08/2026) : une assertion « aucune plainte » sur un flux qui en produit trois
+    en permanence n'aurait jamais pu passer. Ce qu'on surveille, c'est ce qui
+    apparaîtrait **en plus**.
+    """
+    import logging
+    import re
+
+    from app.utils.fiche_arrivant import generer_fiche_arrivant
+    from app.utils.pdf_theme import html_to_pdf
+
+    membres = [{
+        "genre": "M.", "prenom": "Jean", "nom": "Dupont",
+        "batiment_id": batiments[0], "batiment_nom": str(batiments[0]),
+        "etage": "2", "est_gestionnaire_site": False, "est_president": True,
+        "photo_url": None,
+    }]
+    html = generer_fiche_arrivant(
+        cs_data={"membres": membres},
+        syndic_data={"nom_syndic": "Syndic Test", "adresse": "1 rue Test", "membres": []},
+        site_url="5hostachy.fr",
+        whatsapp_url="https://chat.whatsapp.com/essai",
+        annee=2026,
+    )
+    assert html.count("<svg") >= 3, (
+        "le document devrait porter au moins le logo, le globe et l'icône du bâtiment"
+    )
+
+    with caplog.at_level(logging.WARNING, logger="weasyprint"):
+        contenu = html_to_pdf(html)
+
+    assert contenu[:5] == b"%PDF-"
+    assert len(contenu) > 5_000
+
+    #  Le même document, privé de ses seules icônes : tout le reste est identique,
+    #  donc l'écart de taille ne peut venir que d'elles.
+    sans_icones = re.sub(r"<svg\b.*?</svg>", "", html, flags=re.S)
+    assert sans_icones.count("<svg") == 0
+    contenu_nu = html_to_pdf(sans_icones)
+    assert len(contenu) > len(contenu_nu), (
+        "le PDF ne rétrécit pas quand on retire les icônes : WeasyPrint ne les "
+        f"dessine donc pas ({len(contenu)} octets avec, {len(contenu_nu)} sans)"
+    )
+
+    plaintes = [
+        r.getMessage() for r in caplog.records
+        if r.name.startswith("weasyprint") and "unknown property" not in r.getMessage()
+    ]
+    assert not plaintes, f"WeasyPrint s'est plaint du document : {plaintes}"
+
+
+@besoin_weasyprint
 def test_l_annonce_de_hall_se_rend_en_pdf():
     """L'affiche apposée dans le hall — l'autre document imprimable du projet."""
     from datetime import date

@@ -339,6 +339,10 @@ def get_fiche_arrivant(
             "genre": m.genre,
             "prenom": m.prenom,
             "nom": m.nom,
+            #  L'identifiant en plus du nom : le document nomme le bâtiment
+            #  d'après l'arbre des périmètres, qui s'interroge par `batiment_id`.
+            #  `batiment_nom` reste son dernier repli, quand l'arbre est vide.
+            "batiment_id": m.batiment_id,
             "batiment_nom": _bat_nom(m.batiment_id),
             "etage": m.etage,
             "est_gestionnaire_site": bool(

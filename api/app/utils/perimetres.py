@@ -29,13 +29,15 @@ C'est pourquoi `parse_perimetres` ne renvoie plus la chaîne littérale
 « résidence » quand le champ est vide, mais le **nœud racine à portée globale**
 désigné par les données — voir `code_par_defaut`.
 
-## Les trois primitives
+## Les primitives
 
-`a_portee_globale`, `batiments_cibles` et `perimetre_label` sont les seules
-fonctions qui parcourent l'arbre. Trois consommateurs s'en servent —
-`utils/visibility.py` (qui voit), `utils/destinataires.py` (qui est notifié) et
-`routers/flux/evenements.py` (le badge « concerne mon bâtiment ») — là où chacun
-portait auparavant sa propre copie de la liste des périmètres transverses.
+`a_portee_globale`, `batiments_cibles`, `perimetre_du_batiment` et
+`perimetre_label` sont les seules fonctions qui parcourent l'arbre. Leurs
+consommateurs — `utils/visibility.py` (qui voit), `utils/destinataires.py` (qui
+est notifié), `routers/flux/evenements.py` (le badge « concerne mon bâtiment ») et
+`utils/fiche_arrivant.py` (le document imprimé) — portaient auparavant chacun sa
+propre copie de la liste des périmètres transverses, ou sa propre convention de
+nommage.
 """
 from __future__ import annotations
 
@@ -209,6 +211,36 @@ def batiments_cibles(codes: list[str]) -> set[int]:
                 cibles.add(n.batiment_id)
                 break
     return cibles
+
+
+def perimetre_du_batiment(batiment_id: Optional[int]) -> Optional[Noeud]:
+    """Le nœud de l'arbre qui **est** ce bâtiment — chemin inverse de `batiments_cibles`.
+
+    Sert à tout ce qui part d'un bâtiment (un membre du conseil syndical, un lot)
+    et doit le **nommer** : le nom et l'icône viennent alors de l'arbre, donc de
+    l'administration, au lieu d'être fabriqués par un `f"Bât. {numero}"` recopié.
+    Cette convention-là existait dans sept fichiers le 14/08/2026 ; le document
+    imprimé était le seul endroit où elle produisait un libellé qu'aucun
+    renommage ne rattrapait, puisqu'il ne passe par aucun écran.
+
+    Renvoie `None` si l'arbre est vide, si le bâtiment n'y figure pas, ou si son
+    nœud est inactif — l'appelant garde alors son propre repli. Ne jamais faire
+    lever : un document doit se produire même sur un arbre incomplet.
+
+    Seul le nœud « bâtiment » porte un `batiment_id` ; ses espaces (hall,
+    ascenseur…) l'héritent de leur ancêtre, ce que `batiments_cibles` exploite.
+    Si plusieurs nœuds actifs le portaient malgré tout — données reprises à la
+    main — on retient le plus prioritaire, jamais un au hasard.
+    """
+    if batiment_id is None:
+        return None
+    candidats = [
+        n for n in arbre().values()
+        if n.batiment_id == batiment_id and n.actif
+    ]
+    if not candidats:
+        return None
+    return min(candidats, key=lambda n: (n.ordre, n.code))
 
 
 # ── Libellés ──────────────────────────────────────────────────────────────────
