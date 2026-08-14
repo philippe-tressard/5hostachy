@@ -13,7 +13,6 @@ La surface publique ne bouge pas : `send_email`, `send_email_group`,
 `connexion_smtp` s'importent depuis `app.utils.email` comme avant — vingt
 modules en dépendent, plus les tests.
 """
-import json
 import logging
 import os
 from datetime import datetime
@@ -24,6 +23,7 @@ from jinja2 import BaseLoader
 from sqlmodel import Session, select
 
 from app.config import get_settings
+from app.utils.preferences_mail import mail_autorise
 from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateur
 from app.utils.fichiers import nom_lisible
 #  La configuration du canal SMTP est un sujet distinct de la composition
@@ -42,17 +42,9 @@ logger = logging.getLogger("email")
 
 # Mapping code email → clé préférence utilisateur (catégorie_mail)
 # Les codes absents (system, account) sont toujours envoyés.
-_EMAIL_PREF_MAP: dict[str, str] = {
-    "ticket_bug_admin": "ticket_mail",
-    "ticket_statut_change": "ticket_mail",
-    "ticket_nouveau_message": "ticket_mail",
-    "ticket_syndic": "ticket_mail",
-    "publication_syndic": "actu_mail",
-    "calendrier_evenement_cree": "actu_mail",
-    "document_publie": "doc_mail",
-    "reponse_communaute": "communaute_mail",
-    "idee_statut": "communaute_mail",
-}
+#  Les rubriques ont disparu le 14/08/2026 (#339) : le réglage ne se fait plus par
+#  type de contenu mais par BÂTIMENT — le mien, les autres. La décision est dans
+#  `utils/preferences_mail.py`, seul endroit qui lit les préférences.
 
 
 def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str, str]]:
@@ -198,6 +190,7 @@ async def send_email(
     bcc: list[str] | None = None,
     attachments: list[str] | None = None,
     destinataire_id: int | None = None,
+    batiments_concernes: set[int] | None = None,
 ):
     """
     Récupère le ModèleEmail par code, rend sujet + corps, envoie si MAIL_ENABLED.
@@ -220,18 +213,13 @@ async def send_email(
     
     try:
         # ── Vérification préférence utilisateur ──────────────────────────
-        pref_key = _EMAIL_PREF_MAP.get(code)
-        if pref_key and destinataire_id:
+        if destinataire_id:
             user = session.get(Utilisateur, destinataire_id)
-            if user:
-                try:
-                    prefs = json.loads(user.preferences_notifications or "{}")
-                except (json.JSONDecodeError, TypeError):
-                    prefs = {}
-                if not prefs.get(pref_key, True):
-                    logger.debug("Email [%s] non envoyé → préférence %s=false pour user %s", code, pref_key, destinataire_id)
-                    _log_email(session, code, to, "ignore", erreur=f"préférence {pref_key}=false")
-                    return
+            if user and not mail_autorise(user, batiments_concernes):
+                logger.debug("Email [%s] non envoyé → préférence de bâtiment, user %s",
+                             code, destinataire_id)
+                _log_email(session, code, to, "ignore", erreur="préférence de bâtiment")
+                return
 
         smtp_cfg = _get_smtp_config(session)
         if smtp_cfg.get('smtp_enabled') is not None:
@@ -298,19 +286,15 @@ async def send_email(
             session.close()
 
 
-def _check_pref(code: str, user_id: int | None, session: Session) -> bool:
-    """Retourne False si l'utilisateur a désactivé la préférence pour ce code email."""
-    pref_key = _EMAIL_PREF_MAP.get(code)
-    if not pref_key or not user_id:
+def _check_pref(user_id: int | None, session: Session,
+                batiments_concernes: set[int] | None = None) -> bool:
+    """L'utilisateur veut-il cet e-mail ? — délègue à la décision unique."""
+    if not user_id:
         return True
     user = session.get(Utilisateur, user_id)
     if not user:
         return True
-    try:
-        prefs = json.loads(user.preferences_notifications or "{}")
-    except (json.JSONDecodeError, TypeError):
-        prefs = {}
-    return prefs.get(pref_key, True)
+    return mail_autorise(user, batiments_concernes)
 
 
 async def send_email_group(
@@ -322,6 +306,7 @@ async def send_email_group(
     cc_recipients: list[tuple[int | None, str]] | None = None,
     bcc: list[str] | None = None,
     attachments: list[str] | None = None,
+    batiments_concernes: set[int] | None = None,
 ):
     """
     Envoie UN seul email groupé à plusieurs destinataires (to + cc optionnel).
@@ -358,11 +343,11 @@ async def send_email_group(
         # Filtrage des préférences individuelles
         filtered_to = [
             (uid, email) for uid, email in to_recipients
-            if _check_pref(code, uid, session)
+            if _check_pref(uid, session, batiments_concernes)
         ]
         filtered_cc = [
             (uid, email) for uid, email in (cc_recipients or [])
-            if _check_pref(code, uid, session)
+            if _check_pref(uid, session, batiments_concernes)
         ]
 
         if not filtered_to and not filtered_cc:

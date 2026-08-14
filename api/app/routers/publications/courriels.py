@@ -16,7 +16,22 @@ from app.models.core import (
 )
 from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
 from app.utils.fichiers import chemins_locaux
+from app.utils.perimetres import batiments_cibles, parse_json_perimetres
 from app.utils.photos import parse_photos
+
+
+def _batiments_de(pub) -> set[int]:
+    """Les bâtiments visés par une publication, pour la préférence d'e-mail.
+
+    Sans cela, la case « des autres bâtiments » du profil ne déciderait rien : le
+    moteur d'envoi ne saurait pas d'où vient le contenu et retomberait sur
+    « mon bâtiment » — c'est-à-dire enverrait toujours (#339).
+
+    Un ensemble VIDE signifie « portée globale ou périmètre inconnu », et
+    `preferences_mail.mail_autorise` le traite comme « me concerne » : une
+    actualité qui vise tout le monde me vise aussi.
+    """
+    return batiments_cibles(parse_json_perimetres(getattr(pub, "perimetre_cible", None)))
 
 
 def _envoyer_email_syndic_publication(
@@ -124,6 +139,7 @@ def _envoyer_email_syndic_publication(
             session=session,
             bcc=auteur_bcc,
             attachments=all_attachments or None,
+            batiments_concernes=_batiments_de(pub),
         )
 
 

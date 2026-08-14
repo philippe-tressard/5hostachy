@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
+	import { DEFAUTS_NOTIFS } from '$lib/preferences';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -26,13 +27,7 @@ import { onMount } from 'svelte';
 	let uploadingAvatar = false;
 
 	// ── Notifications ─────────────────────────────────────────────────────────
-	//  Un objet plutôt que huit variables : c'est ce que le composant rend, et
-	//  c'est ce que l'API attend. Les huit `let` séparés obligeaient à réécrire la
-	//  liste trois fois — déclaration, lecture, enregistrement.
-	let valeursNotifs: Record<string, boolean> = {
-		ticket_app: true, ticket_mail: true, actu_app: true, actu_mail: true,
-		doc_app: true, doc_mail: false, communaute_app: true, communaute_mail: true,
-	};
+	let valeursNotifs: Record<string, boolean> = { ...DEFAUTS_NOTIFS };
 	let restreindreAMesBatiments = false;
 
 	// ── Lots ──────────────────────────────────────────────────────────────────
@@ -109,13 +104,6 @@ import { onMount } from 'svelte';
 	};
 	$: derniereConnexion = ($currentUser as any)?.derniere_connexion ?? null;
 
-	function readNotifBool(keys: string[], defaultValue: boolean, trueOnly = false): boolean {
-		for (const key of keys) {
-			const raw = localStorage.getItem(key);
-			if (raw !== null) return trueOnly ? raw === 'true' : raw !== 'false';
-		}
-		return defaultValue;
-	}
 
 	// ── Init ──────────────────────────────────────────────────────────────────
 	//  L'initialisation suit le STORE, pas le montage : le layout `(app)` peuple
@@ -154,22 +142,17 @@ import { onMount } from 'svelte';
 				}
 			}
 
-			// Préférences notifs : lire depuis la base (fallback localStorage pour migration)
-			let prefsFromDb: any = null;
-			try { prefsFromDb = JSON.parse(u.preferences_notifications); } catch {}
-			if (prefsFromDb && typeof prefsFromDb === 'object' && 'ticket_app' in prefsFromDb) {
-				for (const cle of Object.keys(valeursNotifs)) {
-					valeursNotifs[cle] = prefsFromDb[cle] ?? valeursNotifs[cle];
+			//  Préférences d'e-mail. L'ancien format (huit clés `*_app` / `*_mail`) est
+			//  converti par la migration 0145 ; le repli sur les défauts couvre les
+			//  comptes qu'elle n'aurait pas atteints — un compte créé entre le
+			//  déploiement de l'API et celui du front, par exemple.
+			try {
+				const lues = JSON.parse(u.preferences_notifications || '{}');
+				for (const cle of Object.keys(DEFAUTS_NOTIFS)) {
+					valeursNotifs[cle] = typeof lues?.[cle] === 'boolean' ? lues[cle] : DEFAUTS_NOTIFS[cle];
 				}
-			} else {
-				// Fallback localStorage (migration unique). `communaute_*` n'y a jamais
-				// été écrit : il garde sa valeur par défaut, comme avant.
-				valeursNotifs.ticket_app = readNotifBool(['notif_ticket_app'], true);
-				valeursNotifs.ticket_mail = readNotifBool(['notif_ticket_mail', 'notif_ticket'], true);
-				valeursNotifs.actu_app = readNotifBool(['notif_actu_app'], true);
-				valeursNotifs.actu_mail = readNotifBool(['notif_actu_mail', 'notif_actu'], true);
-				valeursNotifs.doc_app = readNotifBool(['notif_doc_app'], true);
-				valeursNotifs.doc_mail = readNotifBool(['notif_doc_mail', 'notif_doc'], false, true);
+			} catch {
+				valeursNotifs = { ...DEFAUTS_NOTIFS };
 			}
 			valeursNotifs = valeursNotifs;   // Svelte 4 : réassigner pour propager
 			restreindreAMesBatiments = u.restreindre_a_mes_batiments ?? false;

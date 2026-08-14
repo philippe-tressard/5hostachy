@@ -3,117 +3,69 @@
 
   Extrait de `routes/(app)/profil/+page.svelte` le 14/08/2026 (#339). La page
   dépassait 838 lignes — le contrôle de modularité refuse qu'un fichier déjà
-  au-dessus de 500 grossisse, et il fallait y ajouter la case de visibilité.
+  au-dessus de 500 grossisse.
 
-  Les deux blocs vivent ensemble parce qu'ils répondent à la même question du
-  résident — « qu'est-ce que la copropriété m'envoie ? » — mais ils sont
-  séparés visuellement, et ce n'est pas cosmétique :
+  Les notifications sont passées de HUIT cases (quatre rubriques × appli/e-mail)
+  à DEUX. Le résident devait comprendre une matrice pour dire une chose simple :
+  « je veux les e-mails de chez moi, pas ceux d'à côté ». Ce que la simplification
+  coûte est assumé et documenté dans `api/app/utils/preferences_mail.py` — le
+  réglage par rubrique disparaît, et les notifications dans l'application restent
+  actives sans être réglables, ce qui était déjà leur valeur par défaut.
 
-  ⚠️ La case de visibilité est une préférence d'**affichage**, jamais une mesure
-  de confidentialité. Le résident se restreint lui-même et peut se déverrouiller
-  quand il veut. Ce qui protège réellement — qui a le droit de lire quoi — reste
-  le public cible d'une publication et les profils d'accès aux documents, que ce
-  lot ne touche pas. L'interface ne doit donc jamais laisser croire que cocher
-  cette case cache quelque chose à quelqu'un.
+  ⚠️ La case de visibilité est une préférence d'AFFICHAGE, jamais une mesure de
+  confidentialité : le résident se restreint lui-même et peut se déverrouiller
+  quand il veut. Ce qui protège reste le public cible d'une publication et les
+  profils d'accès aux documents. L'interface ne doit pas laisser croire l'inverse.
 -->
 <script lang="ts">
+	import { AUTRES_BATIMENTS, MON_BATIMENT } from '$lib/preferences';
+
 	export let valeurs: Record<string, boolean>;
 	export let restreindre = false;
 	export let onSave: (valeurs: Record<string, boolean>, restreindre: boolean) => void;
-
-	const LIGNES = [
-		{ cle: 'ticket', libelle: 'Mises à jour de mes tickets' },
-		{ cle: 'actu', libelle: 'Nouvelles publications / actualités' },
-		{ cle: 'doc', libelle: 'Nouveaux documents ajoutés' },
-		{ cle: 'communaute', libelle: 'Réponses à mes idées / annonces / sondages' },
-	];
 </script>
 
 <section class="card" style="margin-bottom:1.5rem">
 	<h2 class="section-title">Ce que j'affiche</h2>
 	<label class="checkbox-field">
 		<input type="checkbox" bind:checked={restreindre} />
-		N'afficher que les contenus de mon ou mes bâtiments
+		<span>N'afficher que les contenus de mon ou mes bâtiments</span>
 	</label>
-	<p class="notif-help" style="padding-left:1.55rem">
-		Décochée, vous voyez les actualités de toute la copropriété : un chantier, une coupure ou
-		une réunion vous concernent souvent sans être « chez vous ». Cochée, vous retrouvez
-		l'affichage d'avant — seuls les contenus de votre bâtiment, et de ceux où vous avez un lot.
-		Ce réglage ne change rien aux documents et aux sondages, qui restent réservés aux personnes
-		concernées.
+	<p class="aide">
+		Décochée, vous voyez les actualités de toute la copropriété ; cochée, vous ne voyez
+		que celles de votre bâtiment.
 	</p>
 
-	<h2 class="section-title" style="margin-top:1.5rem">Préférences de notifications</h2>
-	<p class="notif-help">Affiner ces réglages vous évite le bruit inutile et vous garantit de recevoir les informations importantes sur le bon canal.</p>
-	<div class="notif-matrix-wrap">
-		<table class="notif-matrix" aria-label="Préférences de notifications">
-			<thead>
-				<tr>
-					<th>Type d'action</th>
-					<th>Dans l'appli</th>
-					<th>Par e-mail</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each LIGNES as ligne}
-					<tr>
-						<td>{ligne.libelle}</td>
-						<td><input type="checkbox" bind:checked={valeurs[`${ligne.cle}_app`]} aria-label="{ligne.libelle} — notification dans l'application" /></td>
-						<td><input type="checkbox" bind:checked={valeurs[`${ligne.cle}_mail`]} aria-label="{ligne.libelle} — notification par e-mail" /></td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<h2 class="section-title" style="margin-top:1.5rem">Notifications par e-mail</h2>
+	<label class="checkbox-field">
+		<input type="checkbox" bind:checked={valeurs[MON_BATIMENT]} />
+		<span>De mon ou mes bâtiments</span>
+	</label>
+	<label class="checkbox-field" style="margin-top:.5rem">
+		<input type="checkbox" bind:checked={valeurs[AUTRES_BATIMENTS]} />
+		<span>Des autres bâtiments</span>
+	</label>
+	<p class="aide">
+		Les notifications dans l'application ne sont pas concernées : elles restent actives.
+	</p>
+
 	<div class="form-actions">
 		<button type="button" class="btn btn-primary" on:click={() => onSave(valeurs, restreindre)}>Enregistrer</button>
 	</div>
 </section>
 
 <style>
-	/*  Règles reprises telles quelles du `<style>` de la page profil lors de
-	    l'extraction. Les styles de Svelte sont scopés au composant : déplacer du
-	    balisage sans ses règles ne casse ni la compilation, ni les types, ni les
-	    tests — seulement l'affichage. C'est ce qui est arrivé à l'œil du bloc mot
-	    de passe le 14/08/2026, tombé sous le champ au lieu de tenir dedans. */
-	.notif-matrix-wrap { overflow-x: auto; }
-	.notif-help {
-		font-size: .85rem;
-		color: var(--color-text-muted);
-		margin: 0 0 .45rem;
-		line-height: 1.45;
-	}
-	.notif-reco {
-		margin: 0 0 .75rem;
-		padding-left: 1.1rem;
+	.section-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+	.form-actions { display: flex; justify-content: flex-end; margin-top: 1rem; gap: .5rem; flex-wrap: wrap; }
+	.checkbox-field { display: flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
+	.checkbox-field input { margin: 0; flex-shrink: 0; }
+	/*  L'aide s'aligne sur le LIBELLÉ, pas sur le bord de la carte : largeur de la
+	    case (~1rem) plus l'écart (.5rem). */
+	.aide {
 		font-size: .82rem;
 		color: var(--color-text-muted);
-		display: grid;
-		gap: .2rem;
+		margin: .35rem 0 0;
+		padding-left: 1.5rem;
+		line-height: 1.45;
 	}
-	.notif-matrix {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: .9rem;
-		margin-bottom: .75rem;
-	}
-	.notif-matrix th,
-	.notif-matrix td {
-		border: 1px solid var(--color-border);
-		padding: .55rem .65rem;
-	}
-	.notif-matrix thead th {
-		background: var(--color-bg-subtle, #f8fafc);
-		font-weight: 600;
-		text-align: left;
-	}
-	.notif-matrix td:nth-child(2),
-	.notif-matrix td:nth-child(3),
-	.notif-matrix th:nth-child(2),
-	.notif-matrix th:nth-child(3) {
-		text-align: center;
-		width: 120px;
-	}
-	.checkbox-field { display: flex; align-items: flex-start; gap: .55rem; font-size: .9rem; }
-	.section-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
 </style>
