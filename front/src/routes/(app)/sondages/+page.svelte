@@ -166,6 +166,8 @@ let filtreTypeAnnonce = '';
 let filtreCatAnnonce = '';
 let filtreTriAnnonce = 'recent';
 let expandedAnnonce: number | null = null;
+/** Annonce dont l'auteur a demandé à GÉRER les photos — voir le bloc de rendu. */
+let gestionPhotos: number | null = null;
 const MAX_PHOTOS_ANNONCE = 5;
 
 const TYPES_ANNONCE = [
@@ -845,17 +847,34 @@ count={Math.max(0, (annonce.photos?.length ?? 0) - 1)}
 <div class="annonce-details">
 <div class="rich-content" style="font-size:.88rem;margin-bottom:.75rem">{@html safeHtml(annonce.description)}</div>
 
-<!-- Lecture : les photos en grand, l'annonce est dépliée. La condition
-     précédente (`> 1 || est_auteur`) faisait qu'une annonce à UNE seule
-     photo n'en montrait aucune au lecteur : il ne restait que la vignette
-     de 80 px du bandeau, sans moyen de l'agrandir. -->
-{#if annonce.photos?.length && !annonce.est_auteur}
+<!-- Lecture : les photos en grand, pour TOUT LE MONDE — auteur compris.
+     Elles lui étaient refusées (`&& !annonce.est_auteur`) : il n'avait que
+     la grille d'édition ci-dessous, des vignettes faites pour ajouter et
+     retirer, pas pour regarder. Les annonces étaient le seul contenu du
+     produit où déplier ne donnait pas la galerie (#338) — et l'auteur est
+     précisément celui qui a besoin de voir ce que les autres verront.
+     Deuxième fois que ce bloc prive quelqu'un de ses photos : la condition
+     précédente (`> 1 || est_auteur`) privait le LECTEUR d'une annonce à
+     une seule photo. Le défaut avait changé de victime, pas disparu. -->
+{#if annonce.photos?.length}
 <PiecesJointes urls={annonce.photos} format="grand" />
 {/if}
-<!-- Édition : l'auteur garde la galerie éditable. Ici on gère ses photos
-     (ajout, retrait), on ne les contemple pas — la vignette est le bon
-     format pour ça. -->
+<!-- Édition : sur geste explicite, et c'est le pattern du produit. Partout
+     ailleurs — actualité, événement, ticket — `FichiersUpload` vit dans un
+     contexte d'ÉDITION et jamais dans la vue de lecture ; l'annonce était
+     l'exception, les deux rôles empilés dans la même carte. Le bouton la
+     ramène dans le rang sans imposer un écran de plus à l'auteur, et sans
+     lui montrer deux fois les mêmes photos quand il vient seulement lire. -->
 {#if annonce.est_auteur}
+<button
+	class="btn btn-sm btn-outline"
+	style="margin:.25rem 0 .5rem"
+	aria-expanded={gestionPhotos === annonce.id}
+	on:click={() => gestionPhotos = gestionPhotos === annonce.id ? null : annonce.id}
+>
+	{gestionPhotos === annonce.id ? '▲' : '▼'} Gérer les photos{annonce.photos?.length ? ` (${annonce.photos.length})` : ''}
+</button>
+{#if gestionPhotos === annonce.id}
 <FichiersUpload
 urls={annonce.photos ?? []}
 max={MAX_PHOTOS_ANNONCE}
@@ -863,6 +882,7 @@ mode="photos"
 upload={(f) => uploadPhotoAnnonce(annonce.id, f)}
 remove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
 />
+{/if}
 {/if}
 
 <div class="annonce-contact">
