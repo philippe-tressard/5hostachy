@@ -6,19 +6,43 @@ samedi du mois correspondant à une règle cron_rule, et envoie le message.
 Fenêtre de rattrapage (depuis l'incident du 24/07/2026) : le job ne tentait
 auparavant l'envoi qu'une seule fois, à 18h00 pile — une panne ponctuelle du
 bridge WhatsApp à cette seconde précise faisait perdre le message du mois.
-La déduplication (basée uniquement sur un log au statut "envoyé") rend les
-tentatives répétées sûres : aucun risque de doublon. Si la fenêtre se ferme
-sans envoi réussi, une alerte email est déclenchée.
+
+⚠️ Ce commentaire affirmait ensuite : « la déduplication rend les tentatives
+répétées sûres : aucun risque de doublon ». C'était faux, et le 14/08/2026 le
+message « Encombrants (Boulevard Fernand Hostachy) » est parti **trois fois**
+dans le groupe. La déduplication n'observait pas ce qu'elle croyait observer :
+elle lisait l'acquittement HTTP du bridge — « ai-je reçu une réponse ? » — et
+non le fait — « le message est-il parti ? ». Le bridge dépassait le délai
+d'attente tout en délivrant : chaque créneau concluait « échec » et renvoyait.
+Le remède au « zéro message » avait créé le « seize messages ».
+
+Ce qui protège du doublon depuis :
+
+1. **Le verrou est posé avant l'envoi**, pas après. Une tentative engagée
+   interdit la suivante, même si le processus meurt en plein envoi.
+2. **On ne rejoue que sur un échec établi** — un résultat inconnu n'est pas un
+   échec (`whatsapp.EnvoiIncertain`). Entre un doublon irréversible dans un
+   groupe de copropriétaires et un message à renvoyer à la main, on choisit le
+   second, et on alerte un humain.
+
+Si la fenêtre se ferme sans envoi réussi, une alerte e-mail est déclenchée.
 """
 import calendar
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from sqlmodel import Session, select
 
 from app.database import engine
 from app.models.core import WhatsAppScheduled, WhatsAppLog, ConfigSite
+from app.utils.whatsapp import (
+    STATUT_EN_COURS,
+    STATUT_ENVOYE,
+    STATUT_INCERTAIN,
+    STATUTS_NON_REJOUABLES,
+    verdict_envoi,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +71,18 @@ def _is_friday_before_nth_saturday(dt: datetime, n: int) -> bool:
     saturday = dt.date() + timedelta(days=1)
     day = _nth_weekday(saturday.year, saturday.month, calendar.SATURDAY, n)
     return day is not None and saturday.day == day
+
+
+def _debut_du_jour_utc(now: datetime) -> datetime:
+    """Minuit du jour local `now`, exprimé en UTC naïf comme `WhatsAppLog.envoye_le`.
+
+    Les horodatages sont écrits en UTC (`datetime.utcnow`) et la borne était
+    calculée en heure de Paris : comparer les deux ne « marchait » que parce que
+    la fenêtre d'envoi est en soirée, où les deux dates coïncident. Décaler la
+    fenêtre d'une heure après minuit aurait suffi à casser la déduplication.
+    """
+    minuit_local = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return minuit_local.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def check_and_send():
@@ -84,7 +120,7 @@ def check_and_send():
                 continue
 
             # Tentatives déjà faites aujourd'hui pour ce message (tout statut)
-            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start = _debut_du_jour_utc(now)
             today_logs = session.exec(
                 select(WhatsAppLog)
                 .where(
@@ -94,8 +130,20 @@ def check_and_send():
                 .order_by(WhatsAppLog.envoye_le.desc())
             ).all()
 
-            if any(l.statut == "envoyé" for l in today_logs):
-                logger.info("Message '%s' déjà envoyé aujourd'hui.", sched.label)
+            #  Seul un échec ÉTABLI autorise une nouvelle tentative. Un envoi
+            #  réussi, un résultat inconnu ou une tentative dont on n'a pas vu
+            #  la fin valent tous « le groupe l'a peut-être déjà reçu ».
+            deja = next((l for l in today_logs if l.statut in STATUTS_NON_REJOUABLES), None)
+            if deja is not None:
+                logger.info(
+                    "Message '%s' : tentative du jour au statut « %s », pas de rejeu.",
+                    sched.label, deja.statut,
+                )
+                #  « en cours » = tentative interrompue (redémarrage en plein
+                #  envoi) : personne n'a encore été prévenu. « incertain » a
+                #  déjà déclenché son alerte au moment du verdict.
+                if is_last_attempt and deja.statut == STATUT_EN_COURS:
+                    _alerter(session, sched, deja.statut, deja.erreur)
                 continue
 
             footer = (config.get('whatsapp_footer') or '').strip() or "— Conseil Syndical 5Hostachy"
@@ -112,53 +160,99 @@ def check_and_send():
             log.message = message_complet
             log.envoye_le = datetime.utcnow()
 
-            try:
-                envoyer_whatsapp_raw(message_complet, config)
-                log.statut = "envoyé"
-                log.erreur = None
-                logger.info("Message planifié '%s' envoyé.", sched.label)
-            except Exception as exc:
-                log.statut = "échec"
-                log.erreur = str(exc)
-                logger.warning("Échec envoi planifié '%s': %s", sched.label, exc)
-
+            #  ── Verrou, posé AVANT l'envoi ────────────────────────────────
+            #  Écrire le log après coup ne protège que des envois dont on a vu
+            #  la fin. Committer « en cours » d'abord ferme aussi la porte au
+            #  créneau suivant si celui-ci arrive alors que l'envoi dure encore,
+            #  et au redémarrage du conteneur en plein appel : dans les deux cas
+            #  on ne sait pas ce que le groupe a reçu, donc on ne renvoie pas.
+            log.statut = STATUT_EN_COURS
+            log.erreur = None
             session.add(log)
             session.commit()
 
-            if log.statut == "échec" and is_last_attempt:
-                _alert_missed(session, sched, log.erreur)
+            log.statut, log.erreur = verdict_envoi(
+                lambda: envoyer_whatsapp_raw(message_complet, config)
+            )
+            session.add(log)
+            session.commit()
+
+            if log.statut == STATUT_ENVOYE:
+                logger.info("Message planifié '%s' envoyé.", sched.label)
+            elif log.statut == STATUT_INCERTAIN:
+                logger.warning(
+                    "Envoi planifié '%s' au résultat inconnu (%s) — pas de rejeu : "
+                    "le groupe l'a peut-être reçu.", sched.label, log.erreur,
+                )
+                _alerter(session, sched, log.statut, log.erreur)
+            else:
+                logger.warning("Échec envoi planifié '%s': %s", sched.label, log.erreur)
+                if is_last_attempt:
+                    _alerter(session, sched, log.statut, log.erreur)
 
             # Garder seulement les 6 derniers logs
             _prune_logs(session)
 
 
-def _alert_missed(session: Session, sched: WhatsAppScheduled, erreur: str | None) -> None:
-    """Alerte email si la fenêtre de rattrapage se ferme sans envoi réussi."""
+def _alerter(session: Session, sched: WhatsAppScheduled, statut: str, erreur: str | None) -> None:
+    """Alerte e-mail : un message planifié n'est pas arrivé, ou peut-être si.
+
+    Le cas « incertain » demande une action que la machine ne peut pas prendre à
+    la place d'un humain : aller regarder le groupe. Rejouer d'autorité, c'est ce
+    qui a produit trois exemplaires le 14/08/2026.
+    """
     from app.utils.email import get_site_manager_notification_email
     from app.utils.health_monitor import _send_alert
+
+    if statut == STATUT_INCERTAIN:
+        constat = (
+            f"Message WhatsApp planifié « {sched.label} » : le bridge n'a pas acquitté "
+            "l'envoi, mais le message est peut-être arrivé dans le groupe.\n"
+            "    → Vérifier le groupe WhatsApp. S'il n'y est pas, le renvoyer depuis "
+            "Admin → WhatsApp. Aucun rejeu automatique n'aura lieu : il ferait doublon."
+        )
+    else:
+        constat = (
+            f"Message WhatsApp planifié « {sched.label} » non envoyé malgré la fenêtre "
+            f"de rattrapage (18h00 → {CATCHUP_END_HOUR:02d}h{CATCHUP_END_MINUTE:02d}).\n"
+            f"    Statut : {statut}"
+        )
+    issue = f"{constat}\n    Dernière erreur : {erreur or 'inconnue'}"
 
     to, _ = get_site_manager_notification_email(session)
     if not to:
         logger.warning(
-            "Message planifié '%s' définitivement manqué (fenêtre de rattrapage épuisée) "
-            "— pas d'email admin configuré pour alerter.",
-            sched.label,
+            "Message planifié '%s' au statut « %s » — pas d'email admin configuré "
+            "pour alerter. %s", sched.label, statut, erreur or "",
         )
         return
-    issue = (
-        f"Message WhatsApp planifié « {sched.label} » non envoyé malgré la fenêtre "
-        f"de rattrapage (18h00 → {CATCHUP_END_HOUR:02d}h{CATCHUP_END_MINUTE:02d}).\n"
-        f"    Dernière erreur : {erreur or 'inconnue'}"
-    )
     _send_alert(to, [issue], session)
 
 
+#: Un log de message planifié plus récent que ce délai n'est pas de l'historique :
+#: c'est le verrou qui dit « une tentative a déjà été engagée aujourd'hui ».
+DUREE_VERROU = timedelta(hours=24)
+
+
 def _prune_logs(session: Session):
-    """Conserve uniquement les 6 derniers messages envoyés."""
+    """Conserve les 6 derniers messages — sans jamais retirer un verrou du jour.
+
+    La purge traitait tous les logs pareil, alors que ceux des messages planifiés
+    portent la déduplication. Six publications dans la soirée suffisaient à
+    évincer le log « envoyé » des encombrants — et le créneau suivant, ne voyant
+    plus rien, renvoyait le message.
+    """
     all_logs = session.exec(
         select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())
     ).all()
-    if len(all_logs) > 6:
-        for old in all_logs[6:]:
-            session.delete(old)
+    if len(all_logs) <= 6:
+        return
+    seuil_verrou = datetime.utcnow() - DUREE_VERROU
+    supprimes = False
+    for old in all_logs[6:]:
+        if old.scheduled_id is not None and old.envoye_le >= seuil_verrou:
+            continue
+        session.delete(old)
+        supprimes = True
+    if supprimes:
         session.commit()

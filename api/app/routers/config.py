@@ -185,8 +185,9 @@ def whatsapp_test(
     session: Session = Depends(get_session),
 ):
     """Envoie un message de test sur le groupe WhatsApp (admin uniquement)."""
-    from app.utils.whatsapp import envoyer_whatsapp_raw
+    from app.utils.whatsapp import STATUT_ENVOYE, STATUT_INCERTAIN, envoyer_whatsapp_raw, verdict_envoi
     from app.models.core import WhatsAppLog
+    from app.utils.whatsapp_scheduler import _prune_logs
 
     rows = session.exec(select(ConfigSite)).all()
     config = {r.cle: r.valeur for r in rows}
@@ -196,21 +197,28 @@ def whatsapp_test(
         raise HTTPException(400, "Le message ne peut pas être vide.")
 
     log = WhatsAppLog(label="Test manuel", message=text)
-    try:
-        result = envoyer_whatsapp_raw(text, config)
-        log.statut = "envoyé"
-        session.add(log)
-        session.commit()
-        # Garder seulement les 6 derniers
-        from app.utils.whatsapp_scheduler import _prune_logs
-        _prune_logs(session)
-        return {"ok": True, "message": "Message envoyé sur le groupe WhatsApp.", "detail": result}
-    except Exception as e:
-        log.statut = "échec"
-        log.erreur = str(e)
-        session.add(log)
-        session.commit()
-        raise HTTPException(500, f"Échec de l'envoi : {e}")
+    resultat: dict = {}
+
+    def _envoyer() -> None:
+        resultat.update(envoyer_whatsapp_raw(text, config) or {})
+
+    log.statut, log.erreur = verdict_envoi(_envoyer)
+    session.add(log)
+    session.commit()
+    # Garder seulement les 6 derniers
+    _prune_logs(session)
+
+    if log.statut == STATUT_ENVOYE:
+        return {"ok": True, "message": "Message envoyé sur le groupe WhatsApp.", "detail": resultat}
+    if log.statut == STATUT_INCERTAIN:
+        #  Ne pas présenter un doute comme un échec : renvoyer sur ce bouton
+        #  après un délai dépassé est précisément ce qui crée les doublons.
+        raise HTTPException(
+            502,
+            "Le bridge n'a pas répondu à temps : le message est peut-être arrivé. "
+            "Vérifiez le groupe WhatsApp avant de renvoyer.",
+        )
+    raise HTTPException(500, f"Échec de l'envoi : {log.erreur}")
 
 
 @router.get("/whatsapp-status")

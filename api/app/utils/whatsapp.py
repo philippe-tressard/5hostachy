@@ -4,12 +4,100 @@ import html
 import json
 import logging
 import re
+from typing import Any, Callable
 
 import httpx
 
 from app.utils.fichiers import chemins_locaux
 
 logger = logging.getLogger(__name__)
+
+
+class EnvoiIncertain(Exception):
+    """L'envoi n'a pas été acquitté — et rien ne dit qu'il n'a pas eu lieu.
+
+    À distinguer d'un échec : un **échec** est établi (la requête n'a jamais
+    atteint le bridge, donc rien n'a pu être remis au groupe), un envoi
+    **incertain** a peut-être été remis. Les deux ne se traitent pas pareil : on
+    rejoue le premier, jamais le second.
+    """
+
+
+#: Verdicts d'un envoi, tels qu'ils sont stockés dans `WhatsAppLog.statut`.
+STATUT_ENVOYE = "envoyé"
+STATUT_ECHEC = "échec"
+STATUT_INCERTAIN = "incertain"
+STATUT_EN_COURS = "en cours"
+
+#: Verdicts qui interdisent de rejouer l'envoi.
+#:
+#: `en cours` en fait partie : une tentative engagée dont on n'a jamais vu la fin
+#: (redémarrage du conteneur en plein envoi) est, du point de vue du groupe,
+#: exactement un envoi incertain.
+STATUTS_NON_REJOUABLES = frozenset({STATUT_ENVOYE, STATUT_INCERTAIN, STATUT_EN_COURS})
+
+#: Délai d'attente d'une réponse du bridge.
+#:
+#: Le bridge chiffre le message pour chaque appareil du groupe et resynchronise
+#: au besoin les sessions Signal : sur un Raspberry Pi, la réponse peut demander
+#: bien plus que les 15 s d'origine. Ce délai ne garantit rien — il ne fait que
+#: rendre le verdict « incertain » rare. C'est `EnvoiIncertain`, et non ce
+#: nombre, qui protège du doublon.
+TIMEOUT_ENVOI = 60
+
+
+def _poster_au_bridge(url: str, payload: dict, headers: dict, timeout: float = TIMEOUT_ENVOI):
+    """POST vers le bridge, en distinguant l'échec établi du résultat inconnu.
+
+    Un client HTTP qui n'obtient pas de réponse ne sait **rien** de ce que le
+    serveur a fait. Traiter ce silence comme « rien n'est parti » puis rejouer,
+    c'est fabriquer des doublons dès que le bridge est lent : le 14/08/2026,
+    trois exemplaires du message « Encombrants » sont partis dans le groupe pour
+    cette seule raison — le bridge dépassait le délai d'attente mais délivrait.
+    Un doublon dans un groupe de copropriétaires ne se retire pas.
+
+    Les cas où l'on **sait** que rien n'est sorti sont énumérés ici ; tout le
+    reste est incertain par défaut (`standards/04-fiabilite-des-controles.md` :
+    un résultat qu'on ne peut pas constater se rapporte INCONNU, jamais autre
+    chose — ici, pas davantage KO que OK).
+    """
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+            return resp
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
+        #  Aucune connexion n'a été établie : la requête n'a jamais atteint le
+        #  bridge, le groupe n'a rien reçu. Rejouer est sûr.
+        raise
+    except httpx.HTTPStatusError as exc:
+        #  Le bridge a répondu et refusé. 4xx : requête invalide (clé d'API,
+        #  destinataire) — elle n'a pas été traitée. 5xx : il a échoué en cours
+        #  de route, sans dire de quel côté de l'envoi.
+        if exc.response.status_code < 500:
+            raise
+        raise EnvoiIncertain(f"réponse {exc.response.status_code} du bridge") from exc
+    except httpx.HTTPError as exc:
+        #  Délai dépassé après émission, coupure en cours d'échange, réponse
+        #  tronquée : le message a pu partir.
+        raise EnvoiIncertain(str(exc) or exc.__class__.__name__) from exc
+
+
+def verdict_envoi(envoi: Callable[[], Any]) -> tuple[str, str | None]:
+    """Exécute `envoi` et rend `(statut, erreur)` — jamais « échec » sur un doute.
+
+    Une notion, une écriture : les trois chemins d'envoi (message planifié,
+    publication, test manuel) qualifiaient chacun leur résultat avec un
+    `except Exception` qui écrivait « échec ». L'historique de l'administration
+    affirmait donc qu'un message n'était pas parti alors qu'il l'était.
+    """
+    try:
+        envoi()
+        return STATUT_ENVOYE, None
+    except EnvoiIncertain as exc:
+        return STATUT_INCERTAIN, str(exc)
+    except Exception as exc:
+        return STATUT_ECHEC, str(exc)
 
 #: Clés de `ConfigSite` qui décrivent le canal WhatsApp.
 #:
@@ -213,9 +301,10 @@ def envoyer_whatsapp(
                 )
 
     try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
+        _poster_au_bridge(url, payload, headers)
+    except EnvoiIncertain as exc:
+        logger.warning("Envoi WhatsApp au résultat inconnu : %s", exc)
+        raise
     except Exception as exc:
         logger.warning("Échec envoi WhatsApp : %s", exc)
         raise
@@ -245,15 +334,16 @@ def envoyer_whatsapp_avec_log(
         else:
             message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
         log = WhatsAppLog(label=titre, message=message)
-        try:
-            envoyer_whatsapp(titre, contenu, urgente, perimetre_cible, image_url, config, public_cible, pub_id)
-            log.statut = "envoyé"
+        log.statut, log.erreur = verdict_envoi(
+            lambda: envoyer_whatsapp(
+                titre, contenu, urgente, perimetre_cible, image_url, config, public_cible, pub_id
+            )
+        )
+        if log.statut == STATUT_ENVOYE:
             logger.info("Message WhatsApp '%s' envoyé.", titre)
-        except Exception as exc:
-            log.statut = "échec"
-            log.erreur = str(exc)
-            logger.warning("Échec envoi WhatsApp '%s': %s", titre, exc)
-        
+        else:
+            logger.warning("Envoi WhatsApp '%s' — %s : %s", titre, log.statut, log.erreur)
+
         session.add(log)
         session.commit()
         _prune_logs(session)
@@ -275,10 +365,7 @@ def envoyer_whatsapp_raw(text: str, config: dict) -> dict:
     payload = {"number": group_jid, "text": text}
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
-    with httpx.Client(timeout=15) as client:
-        resp = client.post(url, json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    return _poster_au_bridge(url, payload, headers).json()
 
 
 def get_whatsapp_status(config: dict) -> dict:
