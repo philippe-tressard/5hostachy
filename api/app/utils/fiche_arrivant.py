@@ -3,14 +3,17 @@ from __future__ import annotations
 
 from collections import defaultdict
 from html import escape
+from typing import Optional
 
 from app.utils.dates_fr import date_longue
+from app.utils.fiche_arrivant_css import CSS
 from app.utils.pdf_theme import (
-    PALETTE_CSS,
+    icone_svg,
     image_data_uri as _photo_data_uri,
     logo_svg,
     qr_data_uri as _qr_data_uri,
 )
+from app.utils.perimetres import perimetre_du_batiment, perimetre_label_un
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -21,150 +24,22 @@ def _initials(prenom: str, nom: str) -> str:
     return p + n
 
 
-# ── SVG icons (inlined) ─────────────────────────────────────────────────────
+# ── Icônes ───────────────────────────────────────────────────────────────────
+#
+#  Le globe et le logo WhatsApp étaient dessinés ICI, en dur — le second étant
+#  précisément celui qu'on avait consolidé côté site le 08/08/2026 parce qu'il
+#  existait en six exemplaires et deux tracés. La consolidation s'était arrêtée à
+#  la frontière front/api. Les deux viennent maintenant du catalogue commun, et
+#  le tracé WhatsApp qui subsistait ici (il différait de celui du site de deux
+#  caractères) a disparu avec eux.
+#
+#  Appel à l'usage et non à l'import : si le catalogue était momentanément
+#  illisible, une constante de module figerait le repli (chaîne vide) pour toute
+#  la vie du process — même raisonnement que le cache de `utils/perimetres.py`,
+#  qui refuse de mémoriser un arbre vide.
 
-_GLOBE_SVG = '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:2px" viewBox="0 0 24 24" fill="none" stroke="#1E3A5F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>'
 
-_WA_SVG = '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:2px" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.019-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>'
-
-
-# ── CSS ──────────────────────────────────────────────────────────────────────
-
-_CSS = """\
-@page { size: A4; margin: 6mm 8mm; }
-@media print {
-  body { background: none !important; }
-  .page { box-shadow: none !important; border: none !important; }
-}
-""" + PALETTE_CSS + """\
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color: var(--ink); background: var(--bg); line-height: 1.4; font-size: 12.5px;
-  -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-.page {
-  max-width: 210mm; height: 281mm; margin: 0 auto; background: var(--card);
-  border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(30,58,95,.12);
-  display: flex; flex-direction: column;
-}
-.header {
-  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
-  padding: 12px 20px; display: flex; align-items: center; gap: 10px;
-}
-.header svg { flex-shrink: 0; }
-.header-text { flex: 1; }
-.header-title {
-  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
-  font-size: 18px; font-weight: 700; color: #fff; letter-spacing: .3px;
-}
-.header-sub {
-  font-size: 10px; color: var(--gold); letter-spacing: 1.5px;
-  text-transform: uppercase; margin-top: 1px; font-weight: 600;
-}
-.accent-bar {
-  height: 3px;
-  background: linear-gradient(90deg, var(--gold) 0%, var(--navy) 50%, var(--green) 100%);
-}
-.content { padding: 10px 20px; flex: 1; }
-.content h2 {
-  font-family: Georgia, 'Palatino Linotype', serif;
-  font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 3px;
-}
-.content h3 {
-  font-size: 12.5px; font-weight: 700; color: var(--navy);
-  margin: 8px 0 4px; padding-bottom: 2px;
-  border-bottom: 2px solid var(--gold); display: inline-block;
-}
-.content p { margin-bottom: 4px; font-size: 12px; }
-.content .muted { color: var(--muted); font-size: 10.5px; }
-.dual-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
-.cta-banner {
-  display: flex; align-items: center; gap: 8px;
-  background: linear-gradient(135deg, #F7F5F0, #F0EDE6);
-  border-radius: 6px; padding: 7px 10px; border-left: 4px solid var(--gold);
-}
-.cta-banner-text { flex: 1; }
-.cta-banner-text .label { font-size: 9px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.cta-banner-text .url { font-size: 13px; font-weight: 700; color: var(--navy); letter-spacing: .3px; }
-.cta-banner-text .hint { font-size: 9px; color: var(--light-muted); margin-top: 1px; }
-.bat-section { margin-bottom: 4px; }
-.bat-label {
-  font-size: 10px; font-weight: 700; color: var(--navy);
-  text-transform: uppercase; letter-spacing: .5px;
-  padding: 2px 6px; border-left: 3px solid var(--gold);
-  margin-bottom: 3px; background: #FAFAF7;
-}
-.bat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; }
-.annuaire-section { margin-top: 6px; }
-.annuaire-section h3 { margin-top: 6px; }
-.contact-card {
-  background: #F7F5F0; border-radius: 5px; padding: 4px 8px;
-  border-left: 3px solid var(--navy); display: flex; align-items: center; gap: 6px;
-}
-.contact-card.president { border-left-color: var(--green); background: #F2F7F4; }
-.contact-card.syndic { border-left-color: #7C3AED; }
-.contact-card.principal { border-left-color: var(--gold); background: #FDFAF3; }
-.contact-avatar {
-  width: 24px; height: 24px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
-}
-.contact-avatar.navy { background: var(--navy); }
-.contact-avatar.green { background: var(--green); }
-.contact-avatar.gold { background: var(--gold); }
-.contact-avatar.purple { background: #7C3AED; }
-.contact-body { flex: 1; min-width: 0; }
-.contact-name { font-size: 11px; font-weight: 600; color: var(--ink); }
-.contact-role { font-size: 8.5px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.contact-info { font-size: 9.5px; color: var(--muted); line-height: 1.3; }
-.syndic-header {
-  background: linear-gradient(135deg, #F7F5F0, #F0EDE6); border-radius: 6px;
-  padding: 7px 10px; margin-top: 4px; margin-bottom: 3px; overflow: visible;
-}
-.syndic-name { font-size: 12px; font-weight: 700; color: var(--navy); }
-.syndic-detail { font-size: 10px; color: var(--muted); }
-.syndic-contacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-.contact-photo {
-  width: 24px; height: 24px; border-radius: 50%;
-  object-fit: cover; flex-shrink: 0;
-}
-.qr-code { width: 52px; min-width: 52px; height: 52px; flex-shrink: 0; display: block; }
-.sep { border: none; height: 1px; background: var(--border); margin: 6px 0; }
-.footer {
-  background: var(--footer-bg); padding: 6px 20px; text-align: center;
-  border-top: 1px solid var(--border);
-}
-.footer p { font-size: 10px; color: var(--light-muted); }
-.consignes-intro {
-  background: linear-gradient(135deg, #F7F5F0, #F0EDE6);
-  border-radius: 6px; padding: 8px 12px; margin-bottom: 6px;
-  border-left: 4px solid var(--gold);
-}
-.consignes-intro p { margin: 0; font-size: 10.5px; color: var(--muted); line-height: 1.35; }
-.consignes-intro strong { color: var(--navy); }
-.regle {
-  margin-bottom: 5px; padding: 6px 10px;
-  background: #FAFAF7; border-radius: 5px;
-  border-left: 3px solid var(--green); page-break-inside: avoid;
-}
-.regle-titre { font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 2px; }
-.regle-contenu { font-size: 10.5px; color: var(--muted); line-height: 1.35; white-space: pre-wrap; }
-.regle-contenu strong { color: var(--ink); }
-.consigne-footer-note {
-  text-align: center; margin-top: 6px;
-  font-size: 10px; color: var(--light-muted); font-style: italic;
-}
-.whatsapp-cta {
-  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
-  background: linear-gradient(135deg, #E8F5E9, #F1F8E9);
-  border-radius: 6px; border-left: 4px solid #25D366;
-}
-.whatsapp-cta .wa-text { flex: 1; }
-.whatsapp-cta .wa-title { font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 1px; }
-.whatsapp-cta .wa-desc { font-size: 9px; color: var(--muted); line-height: 1.3; }
-.whatsapp-cta .wa-desc strong { color: var(--ink); }
-"""
+# ── CSS ── la feuille de style vit dans `fiche_arrivant_css.py` (plafond de 500 l.)
 
 
 # ── Consignes (contenu statique) ─────────────────────────────────────────────
@@ -241,6 +116,42 @@ def _build_cs_card(m: dict) -> str:
     )
 
 
+def _batiment_entete(batiment_id: Optional[int], membres: list) -> tuple[tuple, str, list]:
+    """Clé de tri, en-tête HTML et membres d'un bâtiment.
+
+    L'en-tête vient de l'**arbre des périmètres**, jamais d'un `f"Bât. {n}"`
+    écrit ici : une copropriété qui renomme un bâtiment depuis `/admin/patrimoine`
+    doit le voir renommé sur le document imprimé, et c'est précisément ce qui ne
+    marchait pas — ce document ne passant par aucun écran, la divergence y était
+    invisible. Le seed nomme d'ailleurs les nœuds « Bât. {id} » quand la fiche
+    écrivait « Bât. {numero} » : les deux ne disaient déjà pas la même chose.
+
+    L'ordre est celui de l'administration (`Noeud.ordre`), pas l'ordre
+    alphabétique d'un libellé : « Bât. 10 » se rangeait avant « Bât. 2 ».
+
+    Trois replis, du plus au moins renseigné, aucun qui puisse lever :
+    l'arbre connaît le bâtiment → son libellé et son icône ; l'arbre est vide ou
+    ne le connaît pas → `perimetre_label_un` rend la convention `bat:{id}` sans
+    qu'on la réécrive ici ; aucun identifiant → le nom transmis, ou « ? ».
+    """
+    noeud = perimetre_du_batiment(batiment_id)
+    if noeud is not None:
+        libelle, icone, rang = noeud.libelle, noeud.icone, (0, noeud.ordre, noeud.code)
+    elif batiment_id is not None:
+        libelle, icone, rang = perimetre_label_un(f"bat:{batiment_id}"), None, (1, batiment_id, "")
+    else:
+        #  Aucun bâtiment rattaché : le membre reste affiché, sous un en-tête
+        #  neutre et en dernier. Le faire disparaître serait pire — mais l'en-tête
+        #  doit rester lisible : ce document est imprimé et remis à un arrivant,
+        #  qui n'a aucun moyen d'interpréter un « ? » ni un « Bât. ? » (ce que
+        #  produisait la version précédente).
+        libelle, icone, rang = "Bâtiment non précisé", None, (2, 0, "")
+
+    #  Icône hors du texte échappé : c'est du balisage produit par le catalogue,
+    #  pas une donnée. Le libellé, lui, vient de la base — donc échappé.
+    return rang, f"{icone_svg(icone, taille=11)}{escape(libelle)}", membres
+
+
 def _build_cs_section(cs_data: dict) -> str:
     """Section Conseil Syndical groupée par bâtiment."""
     membres = cs_data.get("membres", [])
@@ -250,10 +161,13 @@ def _build_cs_section(cs_data: dict) -> str:
     ag_annee = cs_data.get("ag_annee")
     ag_date = cs_data.get("ag_date", "")
 
-    by_bat: dict[str, list] = defaultdict(list)
+    #  Groupé par identifiant de bâtiment, et non par son nom : le nom vient de
+    #  l'arbre des périmètres, qui est seul à savoir comment l'administration a
+    #  choisi de l'appeler. Grouper sur un libellé reviendrait à fusionner deux
+    #  bâtiments qu'une copropriété aurait nommés pareil.
+    by_bat: dict[Optional[int], list] = defaultdict(list)
     for m in membres:
-        bat = m.get("batiment_nom") or "?"
-        by_bat[bat].append(m)
+        by_bat[m.get("batiment_id")].append(m)
 
     html = '<div class="annuaire-section">\n'
     html += '  <h3>📇 Conseil Syndical</h3>\n'
@@ -268,9 +182,12 @@ def _build_cs_section(cs_data: dict) -> str:
                 html += f" — {ag_date}"
         html += "</p>\n"
 
-    for bat_nom, bat_membres in sorted(by_bat.items()):
+    for _, entete, bat_membres in sorted(
+        (_batiment_entete(bid, ms) for bid, ms in by_bat.items()),
+        key=lambda t: t[0],
+    ):
         html += '  <div class="bat-section">\n'
-        html += f'    <div class="bat-label">Bât. {escape(bat_nom)}</div>\n'
+        html += f'    <div class="bat-label">{entete}</div>\n'
         html += '    <div class="bat-grid">\n'
         for m in bat_membres:
             html += f"      {_build_cs_card(m)}\n"
@@ -373,6 +290,8 @@ def generer_fiche_arrivant(
     """Génère le HTML complet de la fiche arrivant à partir des données annuaire."""
     site_qr = _qr_data_uri(f"https://{site_url}")
     wa_qr = _qr_data_uri(whatsapp_url) if whatsapp_url else ""
+    globe_svg = icone_svg("globe")
+    wa_svg = icone_svg("whatsapp")
 
     # ── Dual CTA ──
     wa_cta = ""
@@ -380,7 +299,7 @@ def generer_fiche_arrivant(
         wa_cta = (
             '<div class="whatsapp-cta">\n'
             '  <div class="wa-text">\n'
-            f'    <div class="wa-title">{_WA_SVG}WhatsApp de la Copro</div>\n'
+            f'    <div class="wa-title">{wa_svg}WhatsApp de la Copro</div>\n'
             '    <div class="wa-desc">Infos résidence en temps réel.<br>Demandez le lien au CS de votre bâtiment.</div>\n'
             "  </div>\n"
             f'  <img class="qr-code" src="{wa_qr}" alt="QR WhatsApp">\n'
@@ -390,7 +309,7 @@ def generer_fiche_arrivant(
         wa_cta = (
             '<div class="whatsapp-cta">\n'
             '  <div class="wa-text">\n'
-            f'    <div class="wa-title">{_WA_SVG}WhatsApp de la Copro</div>\n'
+            f'    <div class="wa-title">{wa_svg}WhatsApp de la Copro</div>\n'
             '    <div class="wa-desc">Infos résidence en temps réel.<br>Demandez le lien au CS de votre bâtiment.</div>\n'
             "  </div>\n"
             "</div>\n"
@@ -404,7 +323,7 @@ def generer_fiche_arrivant(
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bienvenue — 5Hostachy</title>
 <style>
-{_CSS}
+{CSS}
 </style>
 </head>
 <body>
@@ -424,7 +343,7 @@ def generer_fiche_arrivant(
       <div class="cta-banner">
         <div class="cta-banner-text">
           <div class="label">Votre espace en ligne</div>
-          <div class="url">{_GLOBE_SVG}{escape(site_url)}</div>
+          <div class="url">{globe_svg}{escape(site_url)}</div>
           <div class="hint">Inscription → Validation par le CS → C'est prêt !</div>
         </div>
         <img class="qr-code" src="{site_qr}" alt="QR {escape(site_url)}">
@@ -444,3 +363,4 @@ def generer_fiche_arrivant(
 </div>
 </body>
 </html>"""
+

@@ -31,41 +31,15 @@ from app.models.perimetre import Perimetre
 from app.routers.patrimoine import _codes_cites, _en_lecture
 from app.seed.patrimoine import poser_arborescence
 from app.utils import perimetres as P
+from tests.conftest import vider_patrimoine
 
 
+#  Le montage (quatre bâtiments + arbre semé) vit dans `conftest.py` depuis le
+#  14/08/2026 : il était écrit à l'identique ici et dans `test_perimetres_arbre.py`.
+#  La fixture `batiments` est donc injectée sans être déclarée dans ce fichier.
 def _vider(session: Session) -> None:
-    #  Le marqueur de semis part avec l'arborescence : sans lui, `poser_arborescence`
-    #  croirait avoir déjà semé et laisserait les tests sur une base vide.
-    from app.models.core import ConfigSite
-    from app.seed.patrimoine import CLE_SEMEE
-
-    marqueur = session.get(ConfigSite, CLE_SEMEE)
-    if marqueur:
-        session.delete(marqueur)
-    for modele in (Publication, Evenement, Perimetre, Batiment, Copropriete):
-        for ligne in session.exec(select(modele)).all():
-            session.delete(ligne)
-    session.commit()
-
-
-@pytest.fixture()
-def batiments() -> list[int]:
-    """Arbre semé sur quatre bâtiments réels. Renvoie leurs identifiants."""
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        _vider(session)
-        copro = Copropriete(nom="Test", adresse="1 rue Test")
-        session.add(copro)
-        session.flush()
-        for numero in ("1", "2", "3", "4"):
-            session.add(Batiment(copropriete_id=copro.id, numero=numero))
-        session.commit()
-        ids = list(session.exec(select(Batiment.id).order_by(Batiment.id)).all())
-        poser_arborescence(session)
-        session.commit()
-    P.invalider_cache()
-    yield ids
-    P.invalider_cache()
+    """Purge locale : le patrimoine **et** les contenus que ce fichier écrit."""
+    vider_patrimoine(session, (Publication, Evenement))
 
 
 def _auteur(session: Session) -> int:
@@ -227,28 +201,10 @@ def test_le_seed_pose_les_icones_initiales(batiments):
         assert par_code[f"bat:{batiments[0]}"] == "building-2"
 
 
-def test_les_icones_proposees_existent_toutes_dans_le_composant():
-    """Une icône inconnue de `Icon.svelte` s'affiche en point d'interrogation.
-
-    Le contrôle est statique parce que le couplage est implicite : la table du
-    seed et celle du composant vivent dans deux langages et deux dossiers, et rien
-    à l'exécution ne signale qu'un nom a été inventé.
-    """
-    import re
-    from pathlib import Path
-
-    from app.seed.patrimoine import ICONES_GABARIT, ICONES_INITIALES
-
-    composant = (
-        Path(__file__).resolve().parents[2]
-        / "front" / "src" / "lib" / "components" / "Icon.svelte"
-    )
-    disponibles = set(re.findall(r"^\s*'([a-z0-9-]+)':", composant.read_text(encoding="utf-8"), re.M))
-    assert disponibles, "cas zéro : aucune icône lue dans Icon.svelte"
-
-    voulues = set(ICONES_INITIALES.values()) | set(ICONES_GABARIT.values()) | {"building-2"}
-    manquantes = sorted(voulues - disponibles)
-    assert not manquantes, (
-        "icône(s) citée(s) par le seed mais absente(s) d'Icon.svelte — elles "
-        f"s'afficheraient en « ? » : {manquantes}"
-    )
+#  Le contrôle « une icône citée par le seed existe bien » a déménagé dans
+#  `test_icones_svg.py` (14/08/2026), en même temps que les tracés eux-mêmes :
+#  ils ne vivent plus dans `Icon.svelte` mais dans le catalogue partagé
+#  `front/src/lib/icones-svg.json`, que le composant ET les documents imprimables
+#  du serveur consomment. Le laisser ici l'aurait fait lire un fichier qui ne
+#  porte plus la réponse — et le réécrire à côté de son jumeau aurait dupliqué un
+#  contrôle, ce qui est aussi de la duplication.

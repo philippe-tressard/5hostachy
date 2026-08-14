@@ -11,6 +11,7 @@ changer distinctes — une retouche de charte graphique ne touche pas au SMTP.
 import re as _re
 
 from app.utils.fichiers import libelle_pieces_jointes
+from app.utils.pdf_theme import logo_svg as _logo_svg
 
 
 # Intention d'un e-mail : ce qui est attendu du destinataire, annoncé d'emblée.
@@ -57,19 +58,18 @@ def _bandeau_intention(intention: str | None) -> str:
     )
 
 
-# ── Logo SVG inline (favicon du site) — base64 pour compatibilité email ──
-_LOGO_SVG = (
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="48" height="48">'
-    '<rect width="64" height="64" rx="14" fill="#1E3A5F"/>'
-    '<g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
-    '<path d="M18 54V18a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v36Z"/>'
-    '<path d="M18 34h-6a4 4 0 0 0-4 4v16h10"/>'
-    '<path d="M46 30h6a4 4 0 0 1 4 4v20H46"/>'
-    '<path d="M25 22h14"/><path d="M25 30h14"/><path d="M25 38h14"/><path d="M25 46h14"/>'
-    '</g>'
-    '<path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/>'
-    '</svg>'
-)
+# ── Logo SVG inline ──
+#
+#  Le logo était redessiné ici, tracé pour tracé, alors que `CLAUDE.md` pose
+#  depuis toujours `utils/pdf_theme.py` comme sa source unique — « ne jamais
+#  redéfinir une palette, un logo ni un moteur PDF ailleurs ». Deux copies, donc
+#  deux logos le jour où l'une bouge : l'e-mail aurait porté une marque et le
+#  document imprimé une autre, sans que rien ne le signale (14/08/2026).
+#
+#  `pdf_theme` pour un e-mail surprend, et son nom n'aide pas : ce module est le
+#  thème de la marque, dont le PDF n'est qu'un débouché. Importer là où la source
+#  est vaut mieux que la recopier là où l'on croit qu'elle devrait être.
+_LOGO_SVG = _logo_svg(48)
 
 
 def _linkify_urls(text: str) -> str:
