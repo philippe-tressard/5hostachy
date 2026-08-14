@@ -1,9 +1,9 @@
 <script lang="ts">
 import Icon from '$lib/components/Icon.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
-import Vignette from '$lib/components/Vignette.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+import AnnonceCard from '$lib/components/AnnonceCard.svelte';
+import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
@@ -15,7 +15,6 @@ import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig
 import { safeHtml } from '$lib/sanitize';
 import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
-import { fmtMontant } from '$lib/utils';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
@@ -168,31 +167,6 @@ let filtreTriAnnonce = 'recent';
 let expandedAnnonce: number | null = null;
 /** Annonce dont l'auteur a demandé à GÉRER les photos — voir le bloc de rendu. */
 let gestionPhotos: number | null = null;
-const MAX_PHOTOS_ANNONCE = 5;
-
-const TYPES_ANNONCE = [
-	{ val: 'vente', label: '\u{1F3F7}\uFE0F Vente' },
-	{ val: 'don', label: '\u{1F381} Don' },
-	{ val: 'recherche', label: '\u{1F50D} Recherche' },
-];
-const CATEGORIES_ANNONCE = [
-	{ val: 'appartement', label: '\u{1F3E0} Appartement' },
-	{ val: 'parking_cave', label: '\u{1F17F}\uFE0F Parking / Cave' },
-	{ val: 'mobilier', label: '\u{1F6CB}\uFE0F Mobilier' },
-	{ val: 'electromenager', label: '\u{1FAD9} Électroménager' },
-	{ val: 'high_tech', label: '\u{1F4BB} High-tech' },
-	{ val: 'vehicule', label: '\u{1F697} Véhicule' },
-	{ val: 'vetements', label: '\u{1F457} Vêtements' },
-	{ val: 'services', label: '\u{1F6E0}\uFE0F Services' },
-	{ val: 'divers', label: '\u{1F4E6} Divers' },
-];
-const STATUTS_ANNONCE = [
-	{ val: 'disponible', label: 'Disponible' },
-	{ val: 'reserve', label: 'Réservé' },
-	{ val: 'vendu', label: 'Vendu / Donné' },
-	{ val: 'archive', label: 'Archiver' },
-];
-
 $: filteredAnnonces = annonces
 	.filter(a => !filtreTypeAnnonce || a.type_annonce === filtreTypeAnnonce)
 	.filter(a => !filtreCatAnnonce || a.categorie === filtreCatAnnonce);
@@ -202,10 +176,6 @@ $: sortedAnnonces = [...filteredAnnonces].sort((a, b) => {
 	return new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime();
 });
 
-function typeAnnonceLabel(val: string) { return TYPES_ANNONCE.find(t => t.val === val)?.label ?? val; }
-function categorieAnnonceLabel(val: string) { return CATEGORIES_ANNONCE.find(c => c.val === val)?.label ?? val; }
-function typeAnnonceClass(val: string) { return ({ vente: 'badge-blue', don: 'badge-green', recherche: 'badge-orange' } as Record<string, string>)[val] ?? 'badge-gray'; }
-function statutAnnonceClass(val: string) { return ({ disponible: 'badge-green', reserve: 'badge-orange', vendu: 'badge-gray', archive: 'badge-gray' } as Record<string, string>)[val] ?? 'badge-gray'; }
 
 async function creerAnnonce() {
 	if (!formAnnonce.titre || !formAnnonce.description) { toast('error', 'Titre et description obligatoires'); return; }
@@ -811,117 +781,24 @@ Afficher mes coordonnées aux autres résidents
 </div>
 {:else}
 {#each sortedAnnonces as annonce}
-<div class="annonce-card card" id="annonce-{annonce.id}">
-<div class="annonce-top">
-<Vignette
-src={annonce.photos?.length ? annonce.photos[0] : null}
-alt={annonce.titre}
-placeholder={categorieAnnonceLabel(annonce.categorie).split(' ')[0]}
-count={Math.max(0, (annonce.photos?.length ?? 0) - 1)}
+<AnnonceCard
+	{annonce}
+	expanded={expandedAnnonce === annonce.id}
+	gestionOuverte={gestionPhotos === annonce.id}
+	estCS={$isCS}
+	estAdmin={$isAdmin}
+	currentUserId={$currentUser?.id}
+	onToggle={() => (expandedAnnonce = expandedAnnonce === annonce.id ? null : annonce.id)}
+	onToggleGestion={() => (gestionPhotos = gestionPhotos === annonce.id ? null : annonce.id)}
+	onUpload={(f) => uploadPhotoAnnonce(annonce.id, f)}
+	onRemove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
+	onStatut={(statut) => changeStatutAnnonce(annonce.id, statut)}
+	onSupprimer={() => supprimerAnnonce(annonce.id)}
+	onRepondre={(c) => repondreAnnonce(annonce.id, c)}
+	onSupprimerReponse={(rid) => supprimerReponseAnnonce(annonce.id, rid)}
+	onSignalerAnnonce={() => signaler('annonce', annonce.id)}
+	onSignalerReponse={(rid) => signaler('reponse', rid)}
 />
-
-<div class="annonce-body">
-<div class="annonce-header">
-<span class="badge {typeAnnonceClass(annonce.type_annonce)}" style="font-size:.72rem">{typeAnnonceLabel(annonce.type_annonce)}</span>
-<span class="badge {statutAnnonceClass(annonce.statut)}" style="font-size:.72rem">{annonce.statut}</span>
-</div>
-<strong class="annonce-titre">{annonce.titre}
-{#if isNouveau(annonce.cree_le, annonce.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
-</strong>
-<small style="color:var(--color-text-muted)">{categorieAnnonceLabel(annonce.categorie)} · {fmtDateShort(annonce.cree_le)}</small>
-{#if annonce.prix !== null && annonce.prix !== undefined}
-<div class="annonce-prix">{fmtMontant(annonce.prix)}{#if annonce.negotiable}&nbsp;<span class="badge badge-gray" style="font-size:.68rem">Négociable</span>{/if}</div>
-{:else if annonce.type_annonce === 'don'}
-<div class="annonce-prix" style="color:var(--color-success,#16a34a)">Gratuit</div>
-{/if}
-</div>
-
-<div class="annonce-toggle-col">
-<button class="btn btn-sm btn-outline" on:click={() => expandedAnnonce = expandedAnnonce === annonce.id ? null : annonce.id}>
-{expandedAnnonce === annonce.id ? '▲' : '▼'}
-</button>
-</div>
-</div>
-
-{#if expandedAnnonce === annonce.id}
-<div class="annonce-details">
-<div class="rich-content" style="font-size:.88rem;margin-bottom:.75rem">{@html safeHtml(annonce.description)}</div>
-
-<!-- Lecture : les photos en grand, pour TOUT LE MONDE — auteur compris.
-     Elles lui étaient refusées (`&& !annonce.est_auteur`) : il n'avait que
-     la grille d'édition ci-dessous, des vignettes faites pour ajouter et
-     retirer, pas pour regarder. Les annonces étaient le seul contenu du
-     produit où déplier ne donnait pas la galerie (#338) — et l'auteur est
-     précisément celui qui a besoin de voir ce que les autres verront.
-     Deuxième fois que ce bloc prive quelqu'un de ses photos : la condition
-     précédente (`> 1 || est_auteur`) privait le LECTEUR d'une annonce à
-     une seule photo. Le défaut avait changé de victime, pas disparu. -->
-{#if annonce.photos?.length}
-<PiecesJointes urls={annonce.photos} format="grand" />
-{/if}
-<!-- Édition : sur geste explicite, et c'est le pattern du produit. Partout
-     ailleurs — actualité, événement, ticket — `FichiersUpload` vit dans un
-     contexte d'ÉDITION et jamais dans la vue de lecture ; l'annonce était
-     l'exception, les deux rôles empilés dans la même carte. Le bouton la
-     ramène dans le rang sans imposer un écran de plus à l'auteur, et sans
-     lui montrer deux fois les mêmes photos quand il vient seulement lire. -->
-{#if annonce.est_auteur}
-<button
-	class="btn btn-sm btn-outline"
-	style="margin:.25rem 0 .5rem"
-	aria-expanded={gestionPhotos === annonce.id}
-	on:click={() => gestionPhotos = gestionPhotos === annonce.id ? null : annonce.id}
->
-	{gestionPhotos === annonce.id ? '▲' : '▼'} Gérer les photos{annonce.photos?.length ? ` (${annonce.photos.length})` : ''}
-</button>
-{#if gestionPhotos === annonce.id}
-<FichiersUpload
-urls={annonce.photos ?? []}
-max={MAX_PHOTOS_ANNONCE}
-mode="photos"
-upload={(f) => uploadPhotoAnnonce(annonce.id, f)}
-remove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
-/>
-{/if}
-{/if}
-
-<div class="annonce-contact">
-{#if annonce.auteur_email}
-<small>📬 <a href="mailto:{annonce.auteur_email}">{annonce.auteur_prenom} {annonce.auteur_nom}</a></small>
-{:else}
-<small>👤 {annonce.auteur_prenom} {annonce.auteur_nom}</small>
-{/if}
-</div>
-
-{#if annonce.est_auteur}
-<div class="annonce-actions">
-<select value={annonce.statut} on:change={e => changeStatutAnnonce(annonce.id, (e.target as HTMLSelectElement).value)}>
-{#each STATUTS_ANNONCE as s}<option value={s.val}>{s.label}</option>{/each}
-</select>
-<button class="btn-icon-danger" title="Supprimer" on:click={() => supprimerAnnonce(annonce.id)}>🗑️</button>
-</div>
-{:else if $isCS || $isAdmin}
-<div class="annonce-actions">
-<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click={() => supprimerAnnonce(annonce.id)}>🗑️ Supprimer</button>
-</div>
-{/if}
-
-{#if !annonce.est_auteur}
-<div style="margin-top:.4rem"><button class="signaler-inline" title="Signaler cette annonce au conseil syndical" aria-label="Signaler cette annonce" on:click={() => signaler('annonce', annonce.id)}>🚩 Signaler l'annonce</button></div>
-{/if}
-
-<Reponses
-reponses={annonce.reponses ?? []}
-currentUserId={$currentUser?.id}
-isCS={$isCS}
-placeholder="Une question sur cette annonce ?"
-onSubmit={(c) => repondreAnnonce(annonce.id, c)}
-onDelete={(rid) => supprimerReponseAnnonce(annonce.id, rid)}
-onReport={(rid) => signaler('reponse', rid)}
-/>
-</div>
-{/if}
-</div>
 {/each}
 {/if}
 {/if}
@@ -985,17 +862,5 @@ input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); 
 .ciblage-option.selected { border-color: var(--color-primary); background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
 .ciblage-option input[type="checkbox"] { display: none; }
 /* Annonces */
-.annonce-card { padding: .85rem 1.1rem; margin-bottom: .5rem; }
-.annonce-top { display: flex; gap: .85rem; align-items: flex-start; }
-.annonce-body { flex: 1; min-width: 0; }
-.annonce-header { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .25rem; }
-.annonce-titre { font-size: .95rem; font-weight: 600; display: block; margin-bottom: .15rem; }
-.annonce-prix { font-size: .95rem; font-weight: 700; color: var(--color-primary); margin-top: .2rem; display: flex; align-items: center; gap: .3rem; }
-.annonce-toggle-col { display: flex; align-items: flex-start; padding-top: .1rem; }
-.annonce-details { border-top: 1px solid var(--color-border); margin-top: .75rem; padding-top: .75rem; }
-.annonce-contact { margin-bottom: .6rem; }
-.annonce-contact a { color: var(--color-primary); }
-.annonce-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
-.annonce-actions select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .8rem; background: var(--color-bg); }
 .filter-select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .85rem; background: var(--color-bg); }
 </style>
