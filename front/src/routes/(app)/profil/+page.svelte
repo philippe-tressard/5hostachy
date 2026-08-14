@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
-	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
+	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -24,15 +24,6 @@ import { onMount } from 'svelte';
 	let email = '';
 	let saving = false;
 	let uploadingAvatar = false;
-
-	// ── Mot de passe ───────────────────────────────────────────────────────────
-	let pwdActuel = '';
-	let pwdNouv = '';
-	let pwdConf = '';
-	let savingPwd = false;
-	let showPwdActuel = false;
-	let showPwdNouv = false;
-	let showPwdConf = false;
 
 	// ── Notifications ─────────────────────────────────────────────────────────
 	//  Un objet plutôt que huit variables : c'est ce que le composant rend, et
@@ -127,20 +118,12 @@ import { onMount } from 'svelte';
 	}
 
 	// ── Init ──────────────────────────────────────────────────────────────────
-	//
-	//  ⚠️ L'initialisation suit le STORE, elle ne se fait pas au montage.
-	//
-	//  Le layout `(app)` peuple `currentUser` en appelant `/auth/me` dans SON
-	//  `onMount` — et en Svelte, les `onMount` des enfants s'exécutent AVANT ceux
-	//  du parent. Sur un rechargement direct de /profil (F5, lien externe, PWA
-	//  rouverte), cette page lisait donc un store encore vide et n'affectait
-	//  rien : prénom, nom, e-mail restaient blancs, et « Enregistrer » aurait
-	//  écrasé les vraies valeurs par du vide. En navigation interne le store est
-	//  déjà rempli, ce qui rendait le défaut invisible une fois sur deux.
-	//
-	//  Signalé en production le 14/08/2026. Le drapeau garantit qu'on n'écrase
-	//  pas la saisie en cours si le store est réassigné (après un enregistrement,
-	//  `setUser` le remplace).
+	//  L'initialisation suit le STORE, pas le montage : le layout `(app)` peuple
+	//  `currentUser` dans SON `onMount`, et les `onMount` des enfants s'exécutent
+	//  AVANT ceux du parent. Sur un rechargement direct de /profil, cette page
+	//  lisait donc un store vide et laissait prénom, nom et e-mail blancs —
+	//  « Enregistrer » aurait écrasé les vraies valeurs (signalé le 14/08/2026).
+	//  Le drapeau évite d'écraser une saisie en cours quand `setUser` réassigne.
 	let champsInitialises = false;
 	$: if ($currentUser && !champsInitialises) {
 		champsInitialises = true;
@@ -148,10 +131,8 @@ import { onMount } from 'svelte';
 	}
 
 	function initialiserDepuis(u: any) {
-		//  Le bloc nu conserve l'indentation d'origine : le corps n'a pas changé
-		//  d'une ligne, seul son déclencheur. Un diff de 40 lignes ré-indentées
-		//  aurait caché le seul changement qui compte.
-		{
+		{  // bloc nu : le corps n'a pas changé, seul son déclencheur
+
 			prenom    = u.prenom    ?? '';
 			nom       = u.nom       ?? '';
 			telephone = (u as any).telephone ?? '';
@@ -238,20 +219,6 @@ import { onMount } from 'svelte';
 			toast('error', err instanceof ApiError ? err.message : 'Erreur upload');
 		} finally {
 			uploadingAvatar = false;
-		}
-	}
-
-	async function changePassword() {
-		if (pwdNouv !== pwdConf) { toast('error', 'Les mots de passe ne correspondent pas'); return; }
-		savingPwd = true;
-		try {
-			await authApi.changePassword({ mot_de_passe_actuel: pwdActuel, nouveau_mot_de_passe: pwdNouv });
-			pwdActuel = ''; pwdNouv = ''; pwdConf = '';
-			toast('success', 'Mot de passe modifié');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally {
-			savingPwd = false;
 		}
 	}
 
@@ -585,39 +552,7 @@ import { onMount } from 'svelte';
 	</section>
 	{/if}
 
-	<!-- ── Mot de passe ────────────────────────────────────────────────────── -->
-	<section class="card" style="margin-bottom:1.5rem">
-		<h2 class="section-title">Modifier le mot de passe</h2>
-		<form on:submit|preventDefault={changePassword}>
-			<div class="field">
-				<label for="pwd-actuel">Mot de passe actuel *</label>
-				<div class="input-eye">
-					<input id="pwd-actuel" type={showPwdActuel ? 'text' : 'password'} bind:value={pwdActuel} required autocomplete="current-password" />
-					<button type="button" class="eye-btn" on:click={() => showPwdActuel = !showPwdActuel} aria-label={showPwdActuel ? 'Masquer' : 'Afficher'}><Icon name={showPwdActuel ? 'eye-off' : 'eye'} size={18} /></button>
-				</div>
-			</div>
-			<div class="field">
-				<label for="pwd-nouv">Nouveau mot de passe *</label>
-				<div class="input-eye">
-					<input id="pwd-nouv" type={showPwdNouv ? 'text' : 'password'} bind:value={pwdNouv} required autocomplete="new-password" minlength="8" />
-					<button type="button" class="eye-btn" on:click={() => showPwdNouv = !showPwdNouv} aria-label={showPwdNouv ? 'Masquer' : 'Afficher'}><Icon name={showPwdNouv ? 'eye-off' : 'eye'} size={18} /></button>
-				</div>
-				<PasswordStrength password={pwdNouv} />
-			</div>
-			<div class="field">
-				<label for="pwd-conf">Confirmation *</label>
-				<div class="input-eye">
-					<input id="pwd-conf" type={showPwdConf ? 'text' : 'password'} bind:value={pwdConf} required autocomplete="new-password" minlength="8" />
-					<button type="button" class="eye-btn" on:click={() => showPwdConf = !showPwdConf} aria-label={showPwdConf ? 'Masquer' : 'Afficher'}><Icon name={showPwdConf ? 'eye-off' : 'eye'} size={18} /></button>
-				</div>
-			</div>
-			<div class="form-actions">
-				<button type="submit" class="btn btn-primary" disabled={savingPwd}>
-					{savingPwd ? 'Modification…' : 'Modifier'}
-				</button>
-			</div>
-		</form>
-	</section>
+	<ChangementMotDePasse />
 
 	<!-- ── Ce que j'affiche, ce que je reçois ──────────────────────────────── -->
 	<PreferencesAffichageNotifs
