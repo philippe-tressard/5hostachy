@@ -163,14 +163,12 @@ class Utilisateur(SQLModel, table=True):
     communaute_interdit: bool = Field(default=False)  # ban permanent (2e infraction)
     communaute_ban_count: int = Field(default=0)  # 0=jamais banni, 1=1er ban, 2+=permanent
     communaute_ban_jusqu_au: Optional[datetime] = Field(default=None)  # fin du ban temporaire
-    preferences_notifications: str = Field(default='{"ticket_app":true,"ticket_mail":true,"actu_app":true,"actu_mail":true,"doc_app":true,"doc_mail":false,"communaute_app":true,"communaute_mail":true}')
-    #  Préférence d'AFFICHAGE, jamais un droit : le résident choisit de ne plus
-    #  voir les actualités et tickets des autres bâtiments. Décochée d'origine —
-    #  la vie d'une copropriété se passe rarement dans un seul bâtiment, et un
-    #  chantier ou une coupure concernent souvent sans être « chez soi » (#339).
-    #  Elle ne protège rien et ne doit jamais être présentée comme une mesure de
-    #  confidentialité : celle-ci reste portée par `public_cible` et les profils
-    #  d'accès aux documents, qui ne bougent pas.
+    #  Deux clés depuis le 14/08/2026 (#339) — `utils/preferences_mail.py` fait foi
+    #  et réapplique ces défauts à la lecture, quel que soit l'état du champ.
+    preferences_notifications: str = Field(default='{"mon_batiment_mail": true, "autres_batiments_mail": false}')
+    #  Préférence d'AFFICHAGE, jamais un droit : ne voir que ses bâtiments (#339).
+    #  Elle ne protège rien — la confidentialité reste portée par `public_cible`
+    #  et les profils d'accès aux documents, que ce lot ne touche pas.
     restreindre_a_mes_batiments: bool = Field(default=False)
     demarche_arrivant: Optional[str] = Field(default=None)  # nouvel_arrivant | deja_resident | None
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")

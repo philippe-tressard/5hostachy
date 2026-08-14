@@ -92,16 +92,22 @@
     # 14/08/2026 : le fichier était juste dans le conteneur (rebuild de 14:44) et
     # l'edge servait encore celui de 10:04, avec le repli de navigation fautif.
     #
+    # `>` REMPLACE l'en-tête ; sans lui, `header` AJOUTE et la valeur d'amont
+    # subsiste. Constaté au post-check du 14/08/2026, la première écriture de ce
+    # bloc ayant produit « max-age=14400, must-revalidate » : le `no-cache` avait
+    # disparu dans la fusion, et l'edge gardait son droit de cacher quatre heures.
+    # Le contrôle regardait le bon fait — l'en-tête RÉELLEMENT servi, cache edge
+    # contourné — et c'est ce qui l'a trouvé.
     # C'est le pire fichier à mettre en cache longuement : il décide de ce que
     # tous les autres deviennent. `no-cache` n'interdit pas de le stocker, il
     # impose de le revalider — ce que le navigateur fait déjà de lui-même, et que
     # l'edge ne faisait pas.
     handle /sw.js {
-        header Cache-Control "no-cache, must-revalidate"
+        header >Cache-Control "no-cache, must-revalidate"
         reverse_proxy front:3000
     }
     handle /manifest.webmanifest {
-        header Cache-Control "no-cache, must-revalidate"
+        header >Cache-Control "no-cache, must-revalidate"
         reverse_proxy front:3000
     }
 

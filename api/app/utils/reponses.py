@@ -11,7 +11,6 @@ toute divergence de code entre les sous-rubriques.
 """
 from __future__ import annotations
 
-import json
 from typing import Optional
 
 from fastapi import BackgroundTasks
@@ -87,13 +86,12 @@ def tri_reponses(reponses: list[dict]) -> list[dict]:
     return sorted(reponses, key=lambda x: (not x["est_cs"], x["cree_le"]))
 
 
-def _pref(user: Utilisateur, key: str, default: bool = True) -> bool:
-    try:
-        prefs = json.loads(user.preferences_notifications or "{}")
-    except (json.JSONDecodeError, TypeError):
-        prefs = {}
-    return bool(prefs.get(key, default))
-
+#  `_pref` a disparu le 14/08/2026 (#339). Il lisait `communaute_app`, l'un des
+#  quatre réglages de notification DANS L'APPLICATION — supprimés avec la matrice.
+#  Ces notifications restent actives, ce qui était déjà leur valeur par défaut :
+#  la condition est donc devenue toujours vraie, et on la retire plutôt que de la
+#  laisser mentir. Seul l'e-mail se règle désormais, par bâtiment
+#  (`utils/preferences_mail.py`).
 
 def _site_url(session: Session) -> str:
     row = session.get(ConfigSite, "site_url")
@@ -125,14 +123,13 @@ def notifier_nouvelle_reponse(
         return
 
     extrait = (extrait or "").strip()
-    if _pref(createur, "communaute_app", True):
-        session.add(Notification(
-            destinataire_id=createur_id,
-            type="communaute_reponse",
-            titre=f"Nouvelle réponse sur {rubrique_label}",
-            corps=extrait[:200],
-            lien=lien_path,
-        ))
+    session.add(Notification(
+        destinataire_id=createur_id,
+        type="communaute_reponse",
+        titre=f"Nouvelle réponse sur {rubrique_label}",
+        corps=extrait[:200],
+        lien=lien_path,
+    ))
 
     if createur.email:
         # send_email importé paresseusement (comme tickets.py) — évite un import
@@ -180,14 +177,13 @@ def notifier_votants_idee(
         dest = session.get(Utilisateur, uid)
         if not dest:
             continue
-        if _pref(dest, "communaute_app", True):
-            session.add(Notification(
-                destinataire_id=uid,
-                type="communaute_idee",
-                titre=f"Une idée que vous avez soutenue est {statut_label.lower()}",
-                corps=idee_titre[:200],
-                lien=lien_path,
-            ))
+        session.add(Notification(
+            destinataire_id=uid,
+            type="communaute_idee",
+            titre=f"Une idée que vous avez soutenue est {statut_label.lower()}",
+            corps=idee_titre[:200],
+            lien=lien_path,
+        ))
         if dest.email:
             from app.utils.email import send_email
             ctx = {"idee": {
