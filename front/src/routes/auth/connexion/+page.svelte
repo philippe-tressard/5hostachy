@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { capsLockActif } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { auth as authApi, ApiError } from '$lib/api';
@@ -7,6 +6,7 @@
 	import { destinationApresConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
+	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 
 	onMount(() => { loadSiteConfig(); });
 
@@ -16,19 +16,11 @@
 
 	let email = '';
 	let password = '';
-	let showPassword = false;
-	let capsLockOn = false;
 	let error = '';
 	let loading = false;
 	let emailNotVerified = false;
 	let resendDone = false;
 	let resendLoading = false;
-
-	function checkCapsLock(e: KeyboardEvent | FocusEvent) {
-		// `null` au focus : l'état des touches n'y est pas connaissable.
-		const etat = capsLockActif(e);
-		if (etat !== null) capsLockOn = etat;
-	}
 
 	async function submit() {
 		error = '';
@@ -97,27 +89,12 @@
 				<input id="email" type="email" bind:value={email} required autocomplete="email" />
 			</div>
 
-			<div class="field">
-				<label for="password">Mot de passe *</label>
-				<div class="input-eye">
-					<input
-						id="password"
-						type={showPassword ? 'text' : 'password'}
-						bind:value={password}
-						required
-						autocomplete="current-password"
-						on:keydown={checkCapsLock}
-						on:keyup={checkCapsLock}
-						on:focus={checkCapsLock}
-					/>
-					<button type="button" class="eye-btn" on:click={() => showPassword = !showPassword} aria-label={showPassword ? 'Masquer' : 'Afficher'}>
-						<Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
-					</button>
-				</div>
-				{#if capsLockOn && !showPassword}
-					<div class="capslock-warn" role="alert">⚠️ <strong>Verr. Maj. activée</strong> — votre mot de passe pourrait être incorrect.</div>
-				{/if}
-			</div>
+			<ChampMotDePasse
+				id="password"
+				libelle="Mot de passe"
+				bind:valeur={password}
+				autocomplete="current-password"
+			/>
 
 			<div class="btn-wrapper">
 				<button class="btn btn-primary" type="submit" disabled={loading}>
@@ -171,39 +148,6 @@
 	}
 
 	.auth-header p { color: var(--color-text-muted); font-size: .875rem; }
-
-	.input-eye {
-		position: relative;
-		display: flex;
-		align-items: center;
-	}
-	.input-eye input {
-		flex: 1;
-		padding-right: 2.5rem;
-	}
-	.eye-btn {
-		position: absolute;
-		right: .6rem;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		color: var(--color-text-muted);
-		display: flex;
-		align-items: center;
-	}
-	.eye-btn:hover { color: var(--color-text); }
-
-	.capslock-warn {
-		margin-top: .4rem;
-		padding: .45rem .7rem;
-		background: #fffbeb;
-		border: 1px solid #fcd34d;
-		border-radius: var(--radius);
-		font-size: .8rem;
-		color: #92400e;
-		line-height: 1.4;
-	}
 
 	.btn-wrapper {
 		display: flex;

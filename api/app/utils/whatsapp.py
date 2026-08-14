@@ -4,12 +4,100 @@ import html
 import json
 import logging
 import re
+from typing import Any, Callable
 
 import httpx
 
 from app.utils.fichiers import chemins_locaux
 
 logger = logging.getLogger(__name__)
+
+
+class EnvoiIncertain(Exception):
+    """L'envoi n'a pas été acquitté — et rien ne dit qu'il n'a pas eu lieu.
+
+    À distinguer d'un échec : un **échec** est établi (la requête n'a jamais
+    atteint le bridge, donc rien n'a pu être remis au groupe), un envoi
+    **incertain** a peut-être été remis. Les deux ne se traitent pas pareil : on
+    rejoue le premier, jamais le second.
+    """
+
+
+#: Verdicts d'un envoi, tels qu'ils sont stockés dans `WhatsAppLog.statut`.
+STATUT_ENVOYE = "envoyé"
+STATUT_ECHEC = "échec"
+STATUT_INCERTAIN = "incertain"
+STATUT_EN_COURS = "en cours"
+
+#: Verdicts qui interdisent de rejouer l'envoi.
+#:
+#: `en cours` en fait partie : une tentative engagée dont on n'a jamais vu la fin
+#: (redémarrage du conteneur en plein envoi) est, du point de vue du groupe,
+#: exactement un envoi incertain.
+STATUTS_NON_REJOUABLES = frozenset({STATUT_ENVOYE, STATUT_INCERTAIN, STATUT_EN_COURS})
+
+#: Délai d'attente d'une réponse du bridge.
+#:
+#: Le bridge chiffre le message pour chaque appareil du groupe et resynchronise
+#: au besoin les sessions Signal : sur un Raspberry Pi, la réponse peut demander
+#: bien plus que les 15 s d'origine. Ce délai ne garantit rien — il ne fait que
+#: rendre le verdict « incertain » rare. C'est `EnvoiIncertain`, et non ce
+#: nombre, qui protège du doublon.
+TIMEOUT_ENVOI = 60
+
+
+def _poster_au_bridge(url: str, payload: dict, headers: dict, timeout: float = TIMEOUT_ENVOI):
+    """POST vers le bridge, en distinguant l'échec établi du résultat inconnu.
+
+    Un client HTTP qui n'obtient pas de réponse ne sait **rien** de ce que le
+    serveur a fait. Traiter ce silence comme « rien n'est parti » puis rejouer,
+    c'est fabriquer des doublons dès que le bridge est lent : le 14/08/2026,
+    trois exemplaires du message « Encombrants » sont partis dans le groupe pour
+    cette seule raison — le bridge dépassait le délai d'attente mais délivrait.
+    Un doublon dans un groupe de copropriétaires ne se retire pas.
+
+    Les cas où l'on **sait** que rien n'est sorti sont énumérés ici ; tout le
+    reste est incertain par défaut (`standards/04-fiabilite-des-controles.md` :
+    un résultat qu'on ne peut pas constater se rapporte INCONNU, jamais autre
+    chose — ici, pas davantage KO que OK).
+    """
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+            return resp
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
+        #  Aucune connexion n'a été établie : la requête n'a jamais atteint le
+        #  bridge, le groupe n'a rien reçu. Rejouer est sûr.
+        raise
+    except httpx.HTTPStatusError as exc:
+        #  Le bridge a répondu et refusé. 4xx : requête invalide (clé d'API,
+        #  destinataire) — elle n'a pas été traitée. 5xx : il a échoué en cours
+        #  de route, sans dire de quel côté de l'envoi.
+        if exc.response.status_code < 500:
+            raise
+        raise EnvoiIncertain(f"réponse {exc.response.status_code} du bridge") from exc
+    except httpx.HTTPError as exc:
+        #  Délai dépassé après émission, coupure en cours d'échange, réponse
+        #  tronquée : le message a pu partir.
+        raise EnvoiIncertain(str(exc) or exc.__class__.__name__) from exc
+
+
+def verdict_envoi(envoi: Callable[[], Any]) -> tuple[str, str | None]:
+    """Exécute `envoi` et rend `(statut, erreur)` — jamais « échec » sur un doute.
+
+    Une notion, une écriture : les trois chemins d'envoi (message planifié,
+    publication, test manuel) qualifiaient chacun leur résultat avec un
+    `except Exception` qui écrivait « échec ». L'historique de l'administration
+    affirmait donc qu'un message n'était pas parti alors qu'il l'était.
+    """
+    try:
+        envoi()
+        return STATUT_ENVOYE, None
+    except EnvoiIncertain as exc:
+        return STATUT_INCERTAIN, str(exc)
+    except Exception as exc:
+        return STATUT_ECHEC, str(exc)
 
 #: Clés de `ConfigSite` qui décrivent le canal WhatsApp.
 #:
@@ -131,6 +219,16 @@ def _is_restreint(public_cible: str | list | None) -> bool:
     return "résidents" not in lst
 
 
+#: Titre affiché à la place du vrai quand l'actualité est **confidentielle**.
+#:
+#: Le groupe WhatsApp est commun à toute la copropriété : y écrire le vrai titre
+#: révélerait précisément ce que la confidentialité protège — « Fuite chez M. X,
+#: bât. 3 » en dit déjà l'essentiel. Le message garde en revanche le **périmètre**
+#: (c'est lui qui fait venir les bons résidents) et le **lien**, qui renvoie vers
+#: l'application où la règle d'accès s'applique normalement (arbitrage #347).
+TITRE_CONFIDENTIEL = "Information réservée au périmètre concerné"
+
+
 def _build_message_restreint(
     titre: str,
     urgente: bool,
@@ -139,7 +237,14 @@ def _build_message_restreint(
     pub_id: int | None,
     footer: str | None = None,
 ) -> str:
-    """Construit un message WhatsApp court pour une publication à audience restreinte."""
+    """Construit un message WhatsApp court pour une publication à audience restreinte.
+
+    `titre` est le titre **à afficher**, pas nécessairement celui de la
+    publication : le cas confidentiel y passe `TITRE_CONFIDENTIEL`. C'est la
+    seule différence entre les deux usages, et elle tient dans un argument — une
+    seconde fonction jumelle aurait divergé dès la première retouche de l'en-tête
+    ou du lien (`standards/02-factorisation.md` §2).
+    """
     try:
         lieux = json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else (perimetre_cible or [])
     except Exception:
@@ -167,6 +272,47 @@ def _build_message_restreint(
     return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
 
 
+def message_sans_contenu(public_cible: str | list | None, confidentiel: bool = False) -> bool:
+    """Ce message doit-il se réduire à « avertissement + périmètre + lien » ?
+
+    Deux raisons, une seule forme de message :
+      - **public restreint** — le groupe est commun, le contenu ne s'adresse pas
+        à tous ceux qui le liraient ;
+      - **confidentiel** (#347) — même raison, sur l'axe bâtiment cette fois, et
+        le titre lui-même est retiré.
+    """
+    return bool(confidentiel) or _is_restreint(public_cible)
+
+
+def construire_message(
+    titre: str,
+    contenu: str,
+    urgente: bool,
+    perimetre_cible: str | None,
+    config: dict,
+    public_cible: str | None = None,
+    pub_id: int | None = None,
+    confidentiel: bool = False,
+) -> str:
+    """Le texte du message, décidé **une seule fois**.
+
+    `envoyer_whatsapp` et `envoyer_whatsapp_avec_log` construisaient chacun leur
+    message avec le même `if _is_restreint(...)`, si bien que le texte journalisé
+    et le texte envoyé étaient deux calculs distincts d'une même chose. Ajouter
+    le cas confidentiel en aurait fait deux copies à tenir alignées — dont l'une
+    décide de ce qui part dans le groupe, l'autre de ce qu'on croit y avoir
+    envoyé.
+    """
+    footer = config.get('whatsapp_footer', '').strip()
+    if message_sans_contenu(public_cible, confidentiel):
+        site_url = (config.get('site_url') or '').strip()
+        titre_affiche = TITRE_CONFIDENTIEL if confidentiel else titre
+        return _build_message_restreint(
+            titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer
+        )
+    return _build_message(titre, contenu, urgente, perimetre_cible, footer)
+
+
 def envoyer_whatsapp(
     titre: str,
     contenu: str,
@@ -176,6 +322,7 @@ def envoyer_whatsapp(
     config: dict,
     public_cible: str | None = None,
     pub_id: int | None = None,
+    confidentiel: bool = False,
 ) -> None:
     """Envoie un message sur le groupe WhatsApp. Silencieux en cas d'échec."""
     if config.get('whatsapp_enabled') != '1':
@@ -187,17 +334,17 @@ def envoyer_whatsapp(
         logger.warning("WhatsApp activé mais whatsapp_api_url ou whatsapp_group_jid manquant.")
         return
 
-    footer = config.get('whatsapp_footer', '').strip()
     url = f"{api_url.rstrip('/')}/send"
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
-    if _is_restreint(public_cible):
-        site_url = (config.get('site_url') or '').strip()
-        message = _build_message_restreint(titre, urgente, perimetre_cible, site_url, pub_id, footer)
-        payload = {"number": group_jid, "text": message}
-    else:
-        message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
-        payload = {"number": group_jid, "text": message}
+    message = construire_message(
+        titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+    )
+    payload = {"number": group_jid, "text": message}
+    #  La photo ne part QUE avec le message complet : sur une actualité
+    #  confidentielle ou à public restreint, l'image dirait au groupe entier ce
+    #  que le texte s'abstient de dire.
+    if not message_sans_contenu(public_cible, confidentiel):
         image_b64 = _image_pour_bridge(image_url)
         if image_b64:
             payload["imageBase64"] = image_b64
@@ -213,9 +360,10 @@ def envoyer_whatsapp(
                 )
 
     try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
+        _poster_au_bridge(url, payload, headers)
+    except EnvoiIncertain as exc:
+        logger.warning("Envoi WhatsApp au résultat inconnu : %s", exc)
+        raise
     except Exception as exc:
         logger.warning("Échec envoi WhatsApp : %s", exc)
         raise
@@ -230,6 +378,7 @@ def envoyer_whatsapp_avec_log(
     config: dict,
     public_cible: str | None = None,
     pub_id: int | None = None,
+    confidentiel: bool = False,
 ) -> None:
     """Envoie un message WhatsApp et crée un log (pour background tasks)."""
     from app.database import SessionLocal
@@ -238,22 +387,21 @@ def envoyer_whatsapp_avec_log(
 
     session = SessionLocal()
     try:
-        footer = config.get('whatsapp_footer', '').strip()
-        if _is_restreint(public_cible):
-            site_url = (config.get('site_url') or '').strip()
-            message = _build_message_restreint(titre, urgente, perimetre_cible, site_url, pub_id, footer)
-        else:
-            message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
+        message = construire_message(
+            titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+        )
         log = WhatsAppLog(label=titre, message=message)
-        try:
-            envoyer_whatsapp(titre, contenu, urgente, perimetre_cible, image_url, config, public_cible, pub_id)
-            log.statut = "envoyé"
+        log.statut, log.erreur = verdict_envoi(
+            lambda: envoyer_whatsapp(
+                titre, contenu, urgente, perimetre_cible, image_url, config,
+                public_cible, pub_id, confidentiel,
+            )
+        )
+        if log.statut == STATUT_ENVOYE:
             logger.info("Message WhatsApp '%s' envoyé.", titre)
-        except Exception as exc:
-            log.statut = "échec"
-            log.erreur = str(exc)
-            logger.warning("Échec envoi WhatsApp '%s': %s", titre, exc)
-        
+        else:
+            logger.warning("Envoi WhatsApp '%s' — %s : %s", titre, log.statut, log.erreur)
+
         session.add(log)
         session.commit()
         _prune_logs(session)
@@ -275,10 +423,7 @@ def envoyer_whatsapp_raw(text: str, config: dict) -> dict:
     payload = {"number": group_jid, "text": text}
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
-    with httpx.Client(timeout=15) as client:
-        resp = client.post(url, json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+    return _poster_au_bridge(url, payload, headers).json()
 
 
 def get_whatsapp_status(config: dict) -> dict:

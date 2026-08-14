@@ -5,7 +5,7 @@
 	import { isCS, isAdmin, currentUser, setUser } from '$lib/stores/auth';
 	import { publications as pubsApi, uploads as uploadsApi, documents as docsApi, fichiersApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
+	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
@@ -14,7 +14,6 @@
 	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import EvolForm from '$lib/components/EvolForm.svelte';
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { perimetreLabel, perimetreDefautListe, estPerimetreParDefaut } from '$lib/utils';
 	import { STATUT_LABELS, STATUT_BADGE, richEmpty, grouperParAnnee } from '$lib/publications';
@@ -40,6 +39,7 @@
 	let newEnvoyerSyndic = false;
 	let newEnvoyerCs = false;
 	let newAnnonceHall = false;
+	let newConfidentiel = false;
 	let newStatut: string = 'publie';
 	let saving = false;
 	//  Les photos sont téléversées AVANT la création (endpoint générique), comme
@@ -155,6 +155,7 @@
 				envoyer_syndic: newEnvoyerSyndic,
 				envoyer_cs: newEnvoyerCs,
 				annonce_hall: newAnnonceHall,
+				confidentiel: newConfidentiel,
 			});
 			if (pendingFiles.length > 0) {
 				for (const f of pendingFiles) {
@@ -167,7 +168,7 @@
 			pubList = [pub, ...pubList];
 			showForm = false;
 			newTitre = ''; newContenu = ''; newUrgente = false; newEpingle = false;
-			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false; newAnnonceHall = false;
+			newBrouillon = false; newStatut = 'publie'; newPartagerWhatsapp = false; newEnvoyerSyndic = false; newEnvoyerCs = false; newAnnonceHall = false; newConfidentiel = false;
 			newPerimetreCible = perimetreDefautListe();
 			newPhotos = [];
 			pendingFiles = []; fileInputKey++;
@@ -229,6 +230,7 @@
 	let editEpingleInitial = false;
 	let editStatut = '';
 	let editBrouillon = false;
+	let editConfidentiel = false;
 	let editSaving = false;
 
 	// ── Évolutions ──────────────────────────────────────────────────────
@@ -299,6 +301,7 @@
 		editEpingleInitial = pub.epingle;
 		editStatut = pub.statut ?? 'publie';
 		editBrouillon = pub.brouillon;
+		editConfidentiel = pub.confidentiel ?? false;
 		showEvolForm = null;
 		expandedPubs = new Set([pub.id]);
 	}
@@ -314,6 +317,7 @@
 				urgente: editUrgente, epingle: editEpingle,
 				statut: editStatut || null,
 				brouillon: editBrouillon,
+				confidentiel: editConfidentiel,
 			});
 			pubList = pubList.map(p => p.id === updated.id ? updated : p);
 			editingPub = null;
@@ -381,36 +385,18 @@
 					<option value="annule">⚫ Annulé</option>
 				</select>
 			</div>
-			<div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem">
-				<label class="checkbox-field"><input type="checkbox" bind:checked={newEpingle} /> Épingler</label>
-				<label class="checkbox-field"><input type="checkbox" bind:checked={newUrgente} /> &#x1F6A8; Urgent</label>
-				<label class="checkbox-field"><input type="checkbox" bind:checked={newBrouillon} /> ✏️ Brouillon (invisible pour les résidents)</label>
-			</div>
-			<AlerteEpinglage coche={newEpingle} />
-			<CanauxNotification
+			<OptionsPublication
+				complet
+				perimetreCible={newPerimetreCible}
+				bind:epingle={newEpingle}
+				bind:urgente={newUrgente}
+				bind:brouillon={newBrouillon}
+				bind:confidentiel={newConfidentiel}
 				bind:whatsapp={newPartagerWhatsapp}
 				bind:syndic={newEnvoyerSyndic}
 				bind:cs={newEnvoyerCs}
-				aideWhatsapp="Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."
+				bind:annonceHall={newAnnonceHall}
 			/>
-			<!--  L'annonce de hall n'est PAS un canal de notification : elle produit
-			      une affiche PDF. Elle reste donc hors de `CanauxNotification`,
-			      dont le contrat est « qui est prévenu ? ». -->
-			<div style="margin-bottom:1rem">
-				<label class="checkbox-field" title="Génère l'affiche PDF à afficher dans le hall et l'envoie au CS du périmètre">
-					<input type="checkbox" bind:checked={newAnnonceHall} />
-					<span style="font-size:1.1em;line-height:1">&#x1F4C4;</span>
-					<span>Créer une annonce Hall</span>
-				</label>
-			</div>
-			{#if newAnnonceHall}
-				<p style="font-size:.78rem;color:var(--color-text-muted);margin:-.5rem 0 1rem;line-height:1.45">
-					&#x1F4C4; Une affiche PDF sera générée à partir du titre, du contenu, du périmètre et de
-					l'image de cette actualité, puis envoyée aux membres du CS du périmètre. Elle sera
-					consultable dans <strong>Espace CS → Annonces Hall</strong>. Un brouillon ne déclenche
-					rien tant qu'il n'est pas publié.
-				</p>
-			{/if}
 			<div class="form-actions">
 				<button type="submit" class="btn btn-primary" disabled={saving}>
 					{saving ? 'Envoi…' : (newBrouillon ? 'Enregistrer brouillon' : 'Publier')}
@@ -444,7 +430,7 @@
 					{#if isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
 					</span>
 					{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
+{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}{#if pub.confidentiel}<span class="badge badge-gray" style="flex-shrink:0" title="Visible du seul périmètre sélectionné">&#x1F512; Confidentiel</span>{/if}
 				</div>
 				<div class="pub-row-right">
 					<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
@@ -500,12 +486,14 @@
 									<option value="annule">⚫ Annulé</option>
 								</select>
 							</div>
-							<div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem">
-								<label class="checkbox-field"><input type="checkbox" bind:checked={editEpingle} /> Épingler</label>
-								<label class="checkbox-field"><input type="checkbox" bind:checked={editUrgente} /> &#x1F6A8; Urgent</label>
-								<label class="checkbox-field"><input type="checkbox" bind:checked={editBrouillon} /> ✏️ Brouillon</label>
-							</div>
-							<AlerteEpinglage coche={editEpingle} dejaEpingle={editEpingleInitial} />
+							<OptionsPublication
+								perimetreCible={pub.perimetre_cible}
+								dejaEpingle={editEpingleInitial}
+								bind:epingle={editEpingle}
+								bind:urgente={editUrgente}
+								bind:brouillon={editBrouillon}
+								bind:confidentiel={editConfidentiel}
+							/>
 							<div class="form-actions" style="gap:.5rem">
 								<button type="button" class="btn btn-outline" on:click={cancelEdit}>Annuler</button>
 								<button type="submit" class="btn btn-primary" disabled={editSaving}>{editSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
@@ -650,7 +638,7 @@
 											<div class="pub-row-inner">
 												<span class="pub-row-titre">{pub.titre}</span>
 												{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-												{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
+												{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}{#if pub.confidentiel}<span class="badge badge-gray" style="flex-shrink:0" title="Visible du seul périmètre sélectionné">&#x1F512; Confidentiel</span>{/if}
 											</div>
 											<div class="pub-row-right">
 												<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
@@ -728,7 +716,6 @@
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
 
 
-	.checkbox-field { display: flex; align-items: center; gap: .4rem; font-size: .875rem; cursor: pointer; }
 	.form-actions { display: flex; justify-content: flex-end; }
 
 	/* Section historique */

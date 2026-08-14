@@ -9,6 +9,7 @@ import Icon from '$lib/components/Icon.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import LiensEcransAdmin from '$lib/components/LiensEcransAdmin.svelte';
+import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
@@ -585,11 +586,8 @@ if (savedOrder) { try {
   const map = Object.fromEntries(pagesConfig.map(p => [p.id, p]));
   pagesConfig = [...ids.map(id => map[id]).filter(Boolean), ...pagesConfig.filter(p => !ids.includes(p.id))];
 } catch { /**/ } }
-// WhatsApp config
-waConfig.enabled = cfg['whatsapp_enabled'] === '1';
-waConfig.group_name = cfg['whatsapp_group_name'] ?? '';
-waConfig.api_url = cfg['whatsapp_api_url'] ?? '';
-waConfig.group_jid = cfg['whatsapp_group_jid'] ?? '';
+// WhatsApp : la configuration part telle quelle vers l'onglet dédié.
+waCfgPublique = cfg;
 try {
   const adminCfg = await api.get<Record<string, string>>('/config/admin');
   waApiKeySet = !!(adminCfg['whatsapp_api_key']);
@@ -610,8 +608,6 @@ loadComptes();
 loadCommandes();
 loadEmails();
 loadDemandesProfil();
-loadWaScheduled();
-loadWaLogs();
 loadTelemetry();
 });
 
@@ -636,82 +632,12 @@ async function saveSiteConfig() {
   }
 }
 
-// ── WhatsApp ──────────────────────────────────────────────────
-let waConfig = { enabled: false, group_name: '', api_url: '', api_key: '', group_jid: '' };
-let waSaving = false;
+// ── WhatsApp ──────────────────────────────────
+//  L'onglet est un composant à part (`OngletWhatsApp.svelte`) : il porte son
+//  état, ses appels et son rendu. Ne restent ici que les deux valeurs que la
+//  page a déjà chargées et lui transmet.
+let waCfgPublique: Record<string, string> = {};
 let waApiKeySet = false;
-let waTestMessage = '🧪 Test WhatsApp — si vous recevez ce message, la configuration est correcte ✅';
-let waTesting = false;
-let waStatus: { state: string; hasQR: boolean } | null = null;
-let waStatusLoading = false;
-let waQrTimestamp = Date.now();
-// Messages planifiés
-let waScheduled: { id: number; label: string; message: string; cron_rule: string; enabled: boolean; mis_a_jour_le: string | null }[] = [];
-let waScheduledSaving: Record<number, boolean> = {};
-let waLogs: { id: number; label: string; message: string; statut: string; erreur: string | null; envoye_le: string | null }[] = [];
-async function loadWaScheduled() {
-  try { waScheduled = await api.get('/config/whatsapp-scheduled'); } catch { /**/ }
-}
-async function loadWaLogs() {
-  try { waLogs = await api.get('/config/whatsapp-logs'); } catch { /**/ }
-}
-async function saveWaScheduledItem(item: typeof waScheduled[0]) {
-  waScheduledSaving = { ...waScheduledSaving, [item.id]: true };
-  try {
-    await api.put(`/config/whatsapp-scheduled/${item.id}`, { label: item.label, message: item.message, cron_rule: item.cron_rule, enabled: item.enabled });
-    toast('success', `Message « ${item.label} » enregistré.`);
-  } catch (e: any) { toast('error', e.message ?? 'Erreur'); }
-  finally { waScheduledSaving = { ...waScheduledSaving, [item.id]: false }; }
-}
-async function sendWaTest() {
-  if (!waTestMessage.trim()) return;
-  waTesting = true;
-  try {
-    await api.post('/config/whatsapp-test', { message: waTestMessage });
-    toast('success', 'Message de test envoyé sur le groupe WhatsApp.');
-    loadWaLogs();
-  } catch (e: any) {
-    toast('error', e.message ?? 'Échec de l\'envoi');
-  } finally {
-    waTesting = false;
-  }
-}
-async function checkWaStatus() {
-  waStatusLoading = true;
-  try {
-    waStatus = await api.get('/config/whatsapp-status');
-    if (waStatus?.state === 'waiting_qr') waQrTimestamp = Date.now();
-  } catch (e: any) {
-    waStatus = null;
-    toast('error', e.message ?? 'Impossible de joindre le bridge');
-  } finally {
-    waStatusLoading = false;
-  }
-}
-function refreshWaQr() {
-  waQrTimestamp = Date.now();
-}
-async function saveWaConfig() {
-  waSaving = true;
-  try {
-    const payload: Record<string, string> = {
-      whatsapp_enabled: waConfig.enabled ? '1' : '0',
-      whatsapp_group_name: waConfig.group_name,
-      whatsapp_api_url: waConfig.api_url,
-      whatsapp_group_jid: waConfig.group_jid,
-    };
-    if (waConfig.api_key) payload['whatsapp_api_key'] = waConfig.api_key;
-    await configApi.save(payload);
-    configStore.update((c: Record<string, string>) => ({ ...c, whatsapp_enabled: waConfig.enabled ? '1' : '0', whatsapp_group_name: waConfig.group_name, whatsapp_api_url: waConfig.api_url, whatsapp_group_jid: waConfig.group_jid }));
-    if (waConfig.api_key) waApiKeySet = true;
-    waConfig.api_key = '';
-    toast('success', 'Configuration WhatsApp enregistrée.');
-  } catch (e: any) {
-    toast('error', e.message ?? 'Erreur');
-  } finally {
-    waSaving = false;
-  }
-}
 
 // ── SMTP ────────────────────────────────────────────────────
 let smtpConfig = { enabled: false, server: '', port: 587, from: '', from_name: '', username: '', password: '', starttls: true, ssl_tls: false };
@@ -1596,190 +1522,13 @@ $: _siteNom = $siteNomStore;
 </div>
 
 {:else if onglet === 'whatsapp'}
-<section class="config-section">
-  <h2 class="config-section-title">
-    <Icon name="whatsapp" size={18} />
-    Configuration WhatsApp
-  </h2>
-  <div class="form-grid" style="max-width:640px">
-    <label class="field-label" style="grid-column:span 2">
-      <span style="display:flex;align-items:center;gap:.5rem">
-        <input type="checkbox" bind:checked={waConfig.enabled} style="width:1rem;height:1rem" />
-        Activer l'envoi WhatsApp
-      </span>
-      <span class="field-hint">Si activé, les actualités avec "Partager sur le groupe" seront envoyées au groupe WhatsApp.</span>
-    </label>
-    <label class="field-label">
-      Nom du canal
-      <input class="input input-sm" type="text" bind:value={waConfig.group_name} placeholder="Groupe WhatsApp" />
-      <span class="field-hint">Nom affiché dans l'interface (informatif).</span>
-    </label>
-    <label class="field-label">
-      URL du bridge WhatsApp
-      <input class="input input-sm" type="url" bind:value={waConfig.api_url} placeholder="http://whatsapp-bridge:8090" />
-    </label>
-    <label class="field-label">
-      Group JID
-      <input class="input input-sm" type="text" bind:value={waConfig.group_jid} placeholder="1234567890@g.us" />
-      <span class="field-hint">Identifiant du groupe WhatsApp (format : 123...@g.us).</span>
-    </label>
-    <label class="field-label" style="grid-column:span 2">
-      Clé API
-      <input class="input input-sm" type="password" bind:value={waConfig.api_key}
-        placeholder={waApiKeySet ? '••••••  (clé déjà configurée — laisser vide pour conserver)' : 'Entrez la clé API du bridge WhatsApp'} />
-      <span class="field-hint">{waApiKeySet ? 'Une clé est déjà configurée. Laissez ce champ vide pour la conserver.' : 'Requis pour l\'authentification au bridge WhatsApp.'}</span>
-    </label>
-  </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:.75rem;max-width:640px">
-    <button class="btn btn-primary" on:click={saveWaConfig} disabled={waSaving}>
-      {waSaving ? 'Enregistrement...' : 'Enregistrer'}
-    </button>
-  </div>
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0;max-width:640px" />
-  <div style="max-width:640px">
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
-      <p style="font-size:.85rem;font-weight:600;color:var(--color-text-muted);margin:0">🧪 Tester la configuration</p>
-      <button class="btn btn-outline" style="font-size:.75rem;padding:.15rem .5rem" on:click={checkWaStatus} disabled={waStatusLoading}>
-        {waStatusLoading ? '...' : '🔄 Statut'}
-      </button>
-      {#if waStatus}
-        <span style="font-size:.8rem;padding:.1rem .5rem;border-radius:4px;{waStatus.state === 'open' ? 'background:#d1fae5;color:#065f46' : 'background:#fee2e2;color:#991b1b'}">
-          {waStatus.state === 'open' ? '✅ Connecté' : waStatus.state === 'waiting_qr' ? '📱 En attente du QR' : '❌ ' + waStatus.state}
-        </span>
-      {/if}
-    </div>
-    {#if waStatus?.state === 'waiting_qr'}
-      <div style="margin-top:.75rem;padding:.75rem;border:2px solid #f59e0b;border-radius:8px;background:#fffbeb;max-width:360px">
-        <p style="margin:0 0 .5rem;font-size:.85rem;font-weight:600;color:#92400e">
-          &#x26A0;&#xFE0F; Bridge déconnecté — scannez ce QR code avec WhatsApp
-        </p>
-        <p style="margin:0 0 .75rem;font-size:.78rem;color:#92400e">
-          WhatsApp → Appareils connectés → Connecter un appareil
-        </p>
-        <img
-          src="/api/config/whatsapp-qr?t={waQrTimestamp}"
-          alt="QR code WhatsApp"
-          style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid #f59e0b"
-        />
-        <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center">
-          <button class="btn btn-outline" style="font-size:.75rem;padding:.15rem .5rem" type="button" on:click={refreshWaQr}>
-            &#x1F504; Rafraîchir le QR
-          </button>
-          <button class="btn btn-outline" style="font-size:.75rem;padding:.15rem .5rem" type="button" on:click={checkWaStatus}>
-            &#x2705; Vérifier la connexion
-          </button>
-        </div>
-      </div>
-    {/if}
-    <div style="display:flex;gap:.5rem;align-items:start;flex-wrap:wrap">
-      <textarea
-        class="input input-sm"
-        bind:value={waTestMessage}
-        rows="2"
-        placeholder="Message de test..."
-        style="flex:1;min-width:220px;resize:vertical"
-      ></textarea>
-      <button
-        class="btn btn-outline"
-        on:click={sendWaTest}
-        disabled={waTesting || !waTestMessage.trim()}
-        style="white-space:nowrap"
-      >
-        {waTesting ? 'Envoi...' : '📨 Envoyer le test'}
-      </button>
-    </div>
-    <p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">Envoie le message ci-dessus sur le groupe WhatsApp configuré.</p>
-  </div>
-
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
-
-  <!-- Messages planifiés -->
-  <div style="max-width:640px">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">📅 Messages planifiés (envoi automatique)</p>
-    <p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:1rem;line-height:1.5">
-      💡 Markdown WhatsApp : <strong>*gras*</strong> | <em>_italique_</em> | <s>~barré~</s> | Sauts de ligne (Enter)
-    </p>
-    {#if waScheduled.length === 0}
-      <p style="font-size:.8rem;color:var(--color-text-muted)">Aucun message planifié.</p>
-    {/if}
-    {#each waScheduled as item (item.id)}
-      <div style="border:1px solid var(--color-border);border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:var(--color-surface)">
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-          <input type="checkbox" bind:checked={item.enabled} style="width:1rem;height:1rem" />
-          <input class="input input-sm" type="text" bind:value={item.label} style="flex:1;font-weight:600" placeholder="Titre du message" />
-          <span style="font-size:.75rem;padding:.1rem .4rem;border-radius:4px;background:#dbeafe;color:#1e40af">
-            {item.cron_rule === '3eme_samedi' ? 'Vendredi avant le 3ᵉ samedi' : item.cron_rule === '4eme_samedi' ? 'Vendredi avant le 4ᵉ samedi' : item.cron_rule}
-          </span>
-        </div>
-        <textarea class="input input-sm" bind:value={item.message} rows="4" style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace" placeholder="Contenu du message (markdown WhatsApp autorisé)"></textarea>
-        <div style="margin-top:.4rem;padding:.5rem;background:var(--color-bg);border-left:3px solid var(--color-border);border-radius:4px;font-size:.78rem;color:var(--color-text-muted);line-height:1.6;white-space:pre-wrap;word-wrap:break-word">
-          {item.message || '— Aperçu du message'}
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:.4rem">
-          <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={() => saveWaScheduledItem(item)} disabled={waScheduledSaving[item.id]}>
-            {waScheduledSaving[item.id] ? '...' : '💾 Enregistrer'}
-          </button>
-        </div>
-      </div>
-    {/each}
-  </div>
-
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
-
-  <!-- Footer des messages -->
-  <div style="max-width:640px">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">📝 Footer des messages (markdown WhatsApp)</p>
-    <label class="field-label">
-      <textarea
-        class="input input-sm"
-        bind:value={siteConfig.whatsapp_footer}
-        rows="2"
-        placeholder="— Le Conseil Syndical"
-        style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"
-      ></textarea>
-      <span class="field-hint">Texte qui finalise chaque message (markdown WhatsApp autorisé : *gras*, _italique_, ~barré~).</span>
-    </label>
-  </div>
-
-  <div style="display:flex;justify-content:flex-end;margin-top:.5rem;max-width:640px">
-    <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={saveSiteConfig} disabled={siteSaving}>
-      {siteSaving ? '...' : '💾 Enregistrer'}
-    </button>
-  </div>
-
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
-
-  <!-- Historique des envois -->
-  <div style="max-width:640px">
-    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-      <p style="font-size:.85rem;font-weight:600;color:var(--color-text-muted);margin:0">📋 Historique des envois (6 derniers)</p>
-      <button class="btn btn-outline" style="font-size:.7rem;padding:.1rem .4rem" on:click={loadWaLogs}>🔄</button>
-    </div>
-    {#if waLogs.length === 0}
-      <p style="font-size:.8rem;color:var(--color-text-muted)">Aucun message envoyé.</p>
-    {:else}
-      <div style="display:flex;flex-direction:column;gap:.4rem">
-        {#each waLogs as log (log.id)}
-          <div style="border:1px solid var(--color-border);border-radius:6px;padding:.5rem .75rem;font-size:.8rem;background:var(--color-surface)">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem">
-              <span style="font-weight:600">{log.label}</span>
-              <div style="display:flex;align-items:center;gap:.4rem">
-                <span style="padding:.1rem .3rem;border-radius:4px;font-size:.7rem;{log.statut === 'envoyé' ? 'background:#d1fae5;color:#065f46' : 'background:#fee2e2;color:#991b1b'}">
-                  {log.statut === 'envoyé' ? '✅' : '❌'} {log.statut}
-                </span>
-                <span style="color:var(--color-text-muted);font-size:.75rem">{log.envoye_le ? fmt(log.envoye_le) : ''}</span>
-              </div>
-            </div>
-            <p style="margin:0;white-space:pre-wrap;color:var(--color-text-muted);font-size:.78rem">{log.message.length > 120 ? log.message.slice(0, 120) + '…' : log.message}</p>
-            {#if log.erreur}
-              <p style="margin:.2rem 0 0;color:#991b1b;font-size:.75rem">⚠️ {log.erreur}</p>
-            {/if}
-          </div>
-        {/each}
-      </div>
-    {/if}
-  </div>
-</section>
+<OngletWhatsApp
+  cfgPublique={waCfgPublique}
+  apiKeySet={waApiKeySet}
+  bind:footer={siteConfig.whatsapp_footer}
+  footerSaving={siteSaving}
+  onSaveFooter={saveSiteConfig}
+/>
 
 {:else if onglet === 'smtp'}
 <section class="config-section">

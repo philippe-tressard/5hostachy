@@ -266,13 +266,33 @@ elif [ "$WAL" -lt 2 ]; then V4=FAIL          # WAL/SHM unlinkés = signature de 
 else V4=$(verdict_compte "${IO:-}" 0); fi
 rapporter 4 "$V4" "Base saine (WAL présent, 0 disk I/O error)" "wal+shm=${WAL:-?}  io=${IO:-?}"
 
-# 5 — WhatsApp : dernière connexion postérieure à la dernière fermeture
+# 5 — WhatsApp : le bridge tourne-t-il, ET sa dernière connexion est-elle
+#     postérieure à la dernière fermeture ?
+#
+#     Le contrôle ne lisait que la dernière ligne de journal. Or un `docker stop`
+#     propre n'écrit PAS "Connection closed", et les journaux d'un conteneur
+#     arrêté restent lisibles indéfiniment : le bridge stoppé le 14/08/2026 à
+#     18h43 était encore rapporté « connecté » cinq heures plus tard, alors
+#     qu'aucun message ne pouvait plus partir. On observait l'enregistrement, pas
+#     la chose (`standards/04-fiabilite-des-controles.md` §14).
+#
+#     La surveillance continue, elle, interroge le bridge (`GET /status`) : c'est
+#     un fait. Ici on n'a pas la clé d'API, donc on vérifie d'abord le seul fait
+#     accessible — le conteneur tourne — avant de faire dire quoi que ce soit aux
+#     journaux.
+WA_UP=$(sur "$ACTIF" 'docker inspect -f "{{.State.Running}}" hostachy_whatsapp 2>/dev/null')
 WA=$(sur "$ACTIF" 'docker logs hostachy_whatsapp --since 24h 2>&1 | grep -oE "WhatsApp connected|Connection closed" | tail -1')
-case "$WA" in
-  "WhatsApp connected") V5=OK ;;
-  "") V5=INCONNU ;;
-  *) V5=FAIL ;;
-esac
+if [ -z "${WA_UP:-}" ]; then
+  V5=INCONNU; WA="conteneur introuvable ou hôte injoignable"
+elif [ "$WA_UP" != "true" ]; then
+  V5=FAIL; WA="le conteneur ne tourne pas — aucun message ne peut partir"
+else
+  case "$WA" in
+    "WhatsApp connected") V5=OK ;;
+    "") V5=INCONNU ;;
+    *) V5=FAIL ;;
+  esac
+fi
 rapporter 5 "$V5" "Bridge WhatsApp connecté" "dernier état : ${WA:-?}"
 
 # 6 — erreurs API

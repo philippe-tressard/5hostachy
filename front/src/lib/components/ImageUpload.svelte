@@ -58,7 +58,7 @@
 
 		<div class="overlay">
 			{#if uploading}
-				<span class="spinner" />
+				<span class="spinner"></span>
 			{:else}
 				<span class="overlay-label">&#x1F4F7;</span>
 			{/if}
@@ -134,16 +134,16 @@
 
 	.overlay-label { font-size: 1.5rem; }
 
+	/* Base commune dans `app.css` : forme, rotation et durée viennent de là. Ne
+	   restent ici que les deux vraies différences — la taille fixe et le blanc
+	   du survol photo, `currentColor` n'ayant pas de sens sur cet aplat sombre. */
 	.spinner {
 		width: 24px;
 		height: 24px;
-		border: 3px solid rgba(255,255,255,.4);
+		border-width: 3px;
+		border-color: rgba(255,255,255,.4);
 		border-top-color: #fff;
-		border-radius: 50%;
-		animation: spin .7s linear infinite;
 	}
-
-	@keyframes spin { to { transform: rotate(360deg); } }
 
 	.btn-link {
 		background: none;

@@ -71,10 +71,11 @@ def _utilisateur(roles, statut, batiment_id, *, restreint=False) -> Utilisateur:
     )
 
 
-def _publication(perimetre_cible, public_cible) -> Publication:
+def _publication(perimetre_cible, public_cible, *, confidentiel=False) -> Publication:
     return Publication(
         titre="T", contenu="C", auteur_id=1,
         perimetre_cible=perimetre_cible, public_cible=public_cible,
+        confidentiel=confidentiel,
     )
 
 
@@ -198,3 +199,103 @@ def test_un_ciblage_illisible_refuse_toujours(batiments):
     """L'ouverture ne doit pas transformer une donnée abîmée en autorisation."""
     resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
     assert publication_visible(_publication("{ceci n'est pas du JSON", '["résidents"]'), resident) is False
+
+
+# ── Confidentiel (#347) : refermer l'ouverture, et RIEN de plus ───────────────
+#
+#  La case « 🔒 Confidentiel » ne s'appuie sur aucune règle d'accès nouvelle :
+#  elle repasse `ouvert_a_la_copropriete` à sa valeur par défaut, c'est-à-dire au
+#  comportement d'avant #339. Ces contrôles vérifient les deux moitiés de cette
+#  phrase — qu'elle referme bien, et qu'elle n'ouvre nulle part.
+
+def test_confidentiel_ne_rend_jamais_une_publication_plus_visible(batiments):
+    """Le sens de la confidentialité : elle RESTREINT, elle n'accorde jamais.
+
+    Sur tous les couples (périmètre × public × profil × préférence d'affichage),
+    le verdict « confidentielle » doit être **inclus** dans le verdict de la même
+    publication non confidentielle. Un seul contre-exemple signifierait qu'une
+    case censée protéger montre le contenu à quelqu'un de plus — et un contenu
+    devenu visible de trop de monde ne produit aucun signal : personne ne se
+    plaint de *voir* quelque chose.
+    """
+    cibles = [None, "[]"] + [f'["bat:{b}"]' for b in batiments]
+
+    gains = []
+    for cible, public, (roles, statut, bat), restreint in itertools.product(
+        cibles, PUBLICS, PROFILS, (False, True)
+    ):
+        user = _utilisateur(roles, statut, bat, restreint=restreint)
+        if not publication_visible(_publication(cible, public, confidentiel=True), user):
+            continue
+        if not publication_visible(_publication(cible, public), user):
+            gains.append(
+                f"  {roles}/{statut}/bât.{bat} (restreint={restreint}) voit la version "
+                f"CONFIDENTIELLE de {public} ciblée {cible}, pas la version ouverte"
+            )
+
+    assert not gains, (
+        "La confidentialité OUVRE un accès au lieu de le fermer :\n" + "\n".join(gains)
+    )
+
+
+def test_confidentiel_referme_le_fil_aux_autres_batiments(batiments):
+    """Le changement demandé, énoncé dans le sens positif."""
+    resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
+    autre = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
+    sien = _publication(f'["bat:{batiments[0]}"]', '["résidents"]', confidentiel=True)
+
+    assert publication_visible(autre, resident) is False
+    assert publication_visible(sien, resident) is True
+    #  Et la même publication non confidentielle reste lisible : c'est bien la
+    #  case, et elle seule, qui a refermé le périmètre.
+    assert publication_visible(_publication(f'["bat:{batiments[2]}"]', '["résidents"]'), resident) is True
+
+
+def test_confidentiel_se_combine_en_et_avec_le_public_cible(batiments):
+    """Elle restreint l'axe bâtiment ; elle n'accorde rien sur l'axe public.
+
+    Le cas nommé par l'utilisateur le 14/08/2026 vaut aussi ici : un bailleur non
+    résident ou une agence à qui le public cible refusait la publication ne la
+    gagnent pas parce qu'elle est devenue confidentielle sur « leur » bâtiment.
+    """
+    bailleur = _utilisateur("propriétaire", StatutUtilisateur.copropriétaire_bailleur, batiments[0])
+    agence = _utilisateur("mandataire", None, batiments[0])
+    cible = f'["bat:{batiments[0]}"]'
+
+    for public in ('["locataires"]', '["conseil_syndical"]'):
+        pub = _publication(cible, public, confidentiel=True)
+        assert publication_visible(pub, bailleur) is False, public
+        assert publication_visible(pub, agence) is False, public
+
+
+def test_le_conseil_syndical_et_l_admin_voient_les_confidentielles(batiments):
+    """Ils rédigent et corrigent : leur retirer l'accès rendrait la case ingérable."""
+    for roles in ("conseil_syndical", "admin"):
+        user = _utilisateur(roles, StatutUtilisateur.locataire, batiments[0])
+        pub = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
+        assert publication_visible(pub, user) is True
+
+
+def test_un_ciblage_illisible_refuse_aussi_en_confidentiel(batiments):
+    """Une donnée abîmée ne devient pas une autorisation, dans les deux régimes."""
+    resident = _utilisateur("résident", StatutUtilisateur.locataire, batiments[0])
+    pub = _publication("{ceci n'est pas du JSON", '["résidents"]', confidentiel=True)
+    assert publication_visible(pub, resident) is False
+
+
+def test_sans_batiment_connu_le_confidentiel_ne_referme_rien(batiments):
+    """Limite connue, **épinglée** plutôt que passée sous silence.
+
+    `perimetre_visible` porte un repli permissif assumé : un compte sans bâtiment
+    de rattachement accède à toute la résidence. Ce repli vaut depuis toujours
+    pour les documents, les sondages et les AG ; la confidentialité n'étant que
+    ce même chemin (`ouvert_a_la_copropriete=False`), elle en hérite — un compte
+    sans `batiment_id` voit donc les actualités confidentielles.
+
+    Ce n'est pas un effet du lot #347, et le corriger changerait qui voit quoi
+    bien au-delà des actualités. Le contrôle est ici pour que la dépendance soit
+    écrite : le jour où ce repli sera repris, la confidentialité en dépend.
+    """
+    sans_batiment = _utilisateur("résident", StatutUtilisateur.locataire, None)
+    pub = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
+    assert publication_visible(pub, sans_batiment) is True

@@ -125,6 +125,8 @@ export interface Publication {
 	envoyer_syndic?: boolean;
 	envoyer_cs?: boolean;
 	annonce_hall?: boolean;
+	/** Lecture réservée au périmètre visé — incompatible avec l'affiche de hall (#347). */
+	confidentiel?: boolean;
 	evolutions: PublicationEvolution[];
 }
 

@@ -14,6 +14,7 @@ from app.models.core import (
     AnnonceHall, Publication, PublicationEvolution, Utilisateur,
 )
 from app.schemas import EvolutionRead, PublicationRead
+from app.utils.perimetres import a_portee_globale
 
 #  `_generer_annonce_hall` journalise l'échec de génération sans le propager :
 #  sans ce logger, l'`except` du module d'origine levait un `NameError` et
@@ -40,6 +41,57 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
     return data
 
 
+def appliquer_confidentialite(pub: Publication, session: Session) -> None:
+    """Fait tenir les deux invariants de la confidentialité, à chaque écriture.
+
+    ## 1. Confidentiel n'a de sens que sur un périmètre qui restreint vraiment
+
+    `perimetre_visible` rend `True` pour tout le monde dès qu'un nœud cité — ou
+    l'un de ses ancêtres — porte `portee_globale` : « Copropriété entière », mais
+    aussi « Parking » ou « Caves » sur l'arbre livré. Cocher « Confidentiel »
+    là-dessus ne retirerait la publication à personne, et le cadenas affiché
+    promettrait une protection inexistante. Le drapeau est donc **décoché** dans
+    ce cas, plutôt que conservé et menteur (`standards/04` : vérifier le fait).
+
+    L'interface grise déjà la case ; ce contrôle-ci est celui qui vaut, parce
+    qu'il est le seul que l'API ne délègue pas au formulaire.
+
+    ## 2. Confidentiel ⇒ pas d'affiche de hall
+
+    Une affiche est punaisée dans un hall et lue par n'importe qui : il n'y a
+    aucun contrôle d'accès derrière, contrairement à WhatsApp où le lien renvoie
+    vers l'application. La symétrie compte — cocher « Confidentiel » sur une
+    actualité **déjà retenue** pour le hall doit l'en retirer (arbitrage #347),
+    et l'affiche déjà générée est **archivée**, pas supprimée : le PDF a été
+    envoyé au CS, il fait foi (archiver ≠ supprimer, `standards/11`).
+    """
+    if pub.confidentiel:
+        try:
+            codes = json.loads(pub.perimetre_cible or "[]")
+        except Exception:
+            #  Ciblage illisible : on ne RETIRE pas une protection sur la foi
+            #  d'une donnée qu'on n'a pas su lire. `publication_visible` refuse
+            #  déjà cette publication à tout le monde sauf au CS, qui pourra la
+            #  corriger.
+            codes = None
+        if isinstance(codes, (list, tuple)) and (
+            not codes or a_portee_globale([str(c) for c in codes])
+        ):
+            pub.confidentiel = False
+
+    if not pub.confidentiel:
+        return
+
+    pub.annonce_hall = False
+    for annonce in session.exec(
+        select(AnnonceHall).where(
+            AnnonceHall.publication_id == pub.id, AnnonceHall.archivee == False,  # noqa: E712
+        )
+    ).all():
+        annonce.archivee = True
+        session.add(annonce)
+
+
 def _generer_annonce_hall(
     pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
 ) -> None:
@@ -50,6 +102,16 @@ def _generer_annonce_hall(
     journalisé, la publication reste créée.
     """
     from app.routers.annonces_hall import creer_annonce_hall, images_de_publication
+
+    #  Garde-fou de dernier recours : `appliquer_confidentialite` a déjà décoché
+    #  `annonce_hall`, donc aucun appelant ne devrait arriver ici. On ne génère
+    #  pas l'affiche pour autant — un contrôle placé au seul endroit qui produit
+    #  le PDF est le seul qu'un futur chemin d'appel ne pourra pas contourner.
+    if pub.confidentiel:
+        logger.warning(
+            "Affiche de hall refusée : la publication %s est confidentielle", pub.id,
+        )
+        return
 
     deja = session.exec(
         select(AnnonceHall).where(AnnonceHall.publication_id == pub.id)

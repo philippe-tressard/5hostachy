@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { capsLockActif } from '$lib/utils';
-	import Icon from '$lib/components/Icon.svelte';
-	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
+	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getSiteNom } from '$lib/stores/pageConfig';
@@ -13,18 +11,14 @@
 	let token = data.token;
 	let nouveauMdp = '';
 	let confirmMdp = '';
-	let showPassword = false;
-	let showConfirm = false;
-	let capsLockOn = false;
 	let saving = false;
 	let done = false;
 	let tokenInvalide = !token;
 
-	function checkCapsLock(e: KeyboardEvent | FocusEvent) {
-		// `null` au focus : l'état des touches n'y est pas connaissable.
-		const etat = capsLockActif(e);
-		if (etat !== null) capsLockOn = etat;
-	}
+	/* Même défaut qu'au profil (issue #344) : la divergence des deux saisies
+	   était connue à la frappe et n'était dite qu'au clic. On ne la signale
+	   qu'une fois la confirmation entamée, pour ne pas crier sur un champ vide. */
+	$: confirmationDivergente = confirmMdp.length > 0 && nouveauMdp !== confirmMdp;
 
 	async function submit() {
 		if (nouveauMdp !== confirmMdp) {
@@ -73,33 +67,22 @@
 				Choisissez un nouveau mot de passe pour votre compte.
 			</p>
 			<form on:submit|preventDefault={submit}>
-				<div class="field">
-					<label for="mdp-nouveau">Nouveau mot de passe *</label>
-					<div class="input-eye">
-						<input id="mdp-nouveau" type={showPassword ? 'text' : 'password'} bind:value={nouveauMdp}
-							required autocomplete="new-password" minlength="8"
-							on:keydown={checkCapsLock} on:keyup={checkCapsLock} on:focus={checkCapsLock} />
-						<button type="button" class="eye-btn" on:click={() => showPassword = !showPassword}
-							aria-label={showPassword ? 'Masquer' : 'Afficher'}>
-							<Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
-						</button>
-					</div>
-					<PasswordStrength password={nouveauMdp} />
-					{#if capsLockOn && !showPassword}
-						<div class="capslock-warn" role="alert">⚠️ <strong>Verr. Maj. activée</strong> — votre mot de passe pourrait être incorrect.</div>
-					{/if}
-				</div>
-				<div class="field">
-					<label for="mdp-confirm">Confirmer le mot de passe *</label>
-					<div class="input-eye">
-						<input id="mdp-confirm" type={showConfirm ? 'text' : 'password'} bind:value={confirmMdp}
-							required autocomplete="new-password" minlength="8" />
-						<button type="button" class="eye-btn" on:click={() => showConfirm = !showConfirm}
-							aria-label={showConfirm ? 'Masquer' : 'Afficher'}>
-							<Icon name={showConfirm ? 'eye-off' : 'eye'} size={18} />
-						</button>
-					</div>
-				</div>
+				<ChampMotDePasse
+					id="mdp-nouveau"
+					libelle="Nouveau mot de passe"
+					bind:valeur={nouveauMdp}
+					autocomplete="new-password"
+					longueurMini={8}
+					robustesse
+				/>
+				<ChampMotDePasse
+					id="mdp-confirm"
+					libelle="Confirmer le mot de passe"
+					bind:valeur={confirmMdp}
+					autocomplete="new-password"
+					longueurMini={8}
+					erreur={confirmationDivergente ? 'Cette saisie diffère du nouveau mot de passe.' : ''}
+				/>
 				<div class="btn-wrapper">
 					<a href="/auth/connexion" class="btn btn-secondary">Annuler</a>
 					<button type="submit" class="btn btn-primary" disabled={saving}>
@@ -148,38 +131,10 @@
 		color: #991b1b;
 		line-height: 1.6;
 	}
-	.field { margin-bottom: 1rem; }
-	.field label { display: block; font-size: .875rem; font-weight: 500; margin-bottom: .35rem; }
-	.input-eye {
-		position: relative;
-		display: flex;
-		align-items: center;
-	}
-	.input-eye input {
-		flex: 1;
-		padding-right: 2.5rem;
-	}
-	.eye-btn {
-		position: absolute;
-		right: .6rem;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		color: var(--color-text-muted);
-		display: flex;
-		align-items: center;
-	}
-	.eye-btn:hover { color: var(--color-text); }
-	.capslock-warn {
-		margin-top: .4rem;
-		padding: .45rem .7rem;
-		background: #fffbeb;
-		border: 1px solid #fde68a;
-		border-radius: .375rem;
-		font-size: .8rem;
-		color: #92400e;
-	}
+	/* `.field` et `.field label` vivaient aussi ici, à l'identique de `app.css`
+	   qui s'applique déjà à cette route : deux copies de la même règle, dont
+	   celle-ci n'était même plus atteinte depuis que la saisie appartient à
+	   `ChampMotDePasse`. Supprimées avec le reste de l'œil recopié. */
 	.btn-wrapper {
 		display: flex;
 		justify-content: center;

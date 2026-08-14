@@ -24,7 +24,7 @@ from app.utils.visibility import publication_visible
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
 from .commun import (
-    ARCHIVAGE_DELAI_HEURES, PUBLIE_VISIBILITE_JOURS,
+    ARCHIVAGE_DELAI_HEURES, PUBLIE_VISIBILITE_JOURS, appliquer_confidentialite,
     _generer_annonce_hall, _is_annule_expired, _is_archived, _pub_to_read,
 )
 from .courriels import (
@@ -103,6 +103,8 @@ def create_publication(
         publiee_le=datetime.utcnow() if not data.get('brouillon') else None,
     )
     session.add(pub)
+    session.flush()
+    appliquer_confidentialite(pub, session)
     session.commit()
     session.refresh(pub)
     if pub.partager_whatsapp and not pub.brouillon:
@@ -110,7 +112,7 @@ def create_publication(
         if whatsapp_actif(wa_config):
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, premiere_photo(pub.photos_urls), wa_config,
-                pub.public_cible, pub.id,
+                pub.public_cible, pub.id, pub.confidentiel,
             )
     if pub.envoyer_syndic and not pub.brouillon:
         _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
@@ -173,6 +175,11 @@ def update_publication(
     if was_brouillon_published:
         pub.publiee_le = datetime.utcnow()
 
+    #  Après l'affectation des champs, pas avant : la case « Confidentiel » reste
+    #  modifiable après publication (arbitrage #347), et c'est précisément ce
+    #  changement-là qui doit retirer l'actualité de l'affiche de hall.
+    appliquer_confidentialite(pub, session)
+
     session.add(pub)
     session.commit()
     session.refresh(pub)
@@ -183,7 +190,7 @@ def update_publication(
         if whatsapp_actif(wa_config):
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, premiere_photo(pub.photos_urls), wa_config,
-                pub.public_cible, pub.id,
+                pub.public_cible, pub.id, pub.confidentiel,
             )
     # Envoi email syndic si brouillon publié + flag activé
     if was_brouillon_published and pub.envoyer_syndic:
@@ -243,7 +250,7 @@ def renvoyer_whatsapp_publication(
         raise HTTPException(422, "Le partage WhatsApp n'est pas actif")
     background_tasks.add_task(
         envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible,
-        premiere_photo(pub.photos_urls), wa_config, pub.public_cible, pub.id,
+        premiere_photo(pub.photos_urls), wa_config, pub.public_cible, pub.id, pub.confidentiel,
     )
 
 
