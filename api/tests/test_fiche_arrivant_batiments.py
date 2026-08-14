@@ -57,7 +57,7 @@ def _entetes(html: str) -> list[str]:
 def test_le_document_nomme_les_batiments_avec_le_libelle_de_l_arbre(batiments):
     entetes = _entetes(_fiche([_membre(batiments[0])]))
     assert len(entetes) == 1
-    assert f"Bât. {batiments[0]}" in entetes[0]
+    assert f"Bâtiment {batiments[0]}" in entetes[0]
 
 
 def test_un_batiment_renomme_apparait_renomme(batiments):
@@ -79,7 +79,7 @@ def test_un_batiment_renomme_apparait_renomme(batiments):
     assert "Villa des Tilleuls" in entetes[0], (
         "le document ne suit pas le renommage : il fabrique encore son propre libellé"
     )
-    assert f"Bât. {batiments[0]}" not in entetes[0]
+    assert f"Bâtiment {batiments[0]}" not in entetes[0]
 
 
 def test_le_libelle_venu_de_la_base_est_echappe(batiments):
@@ -111,7 +111,7 @@ def test_l_ordre_est_celui_de_l_administration(batiments):
     P.invalider_cache()
 
     entetes = _entetes(_fiche([_membre(b) for b in batiments[:3]]))
-    lus = [int(re.search(r"Bât\. (\d+)", e).group(1)) for e in entetes]
+    lus = [int(re.search(r"Bâtiment (\d+)", e).group(1)) for e in entetes]
     assert lus == list(reversed(batiments[:3])), f"ordre ignoré : {lus}"
 
 
@@ -139,7 +139,7 @@ def test_un_noeud_sans_icone_ne_produit_ni_carre_vide_ni_point_d_interrogation(b
 
     entete = _entetes(_fiche([_membre(batiments[0])]))[0]
     assert "<svg" not in entete, "une icône est dessinée alors qu'aucune n'est définie"
-    assert f"Bât. {batiments[0]}" in entete, "le libellé a disparu avec l'icône"
+    assert f"Bâtiment {batiments[0]}" in entete, "le libellé a disparu avec l'icône"
 
 
 def test_icone_svg_rend_vide_sur_un_nom_absent_ou_inconnu():
@@ -159,7 +159,7 @@ def test_sans_arbre_le_document_se_produit_quand_meme(arbre_vide):
     `bat:{id}` — elle n'est pas réécrite dans le générateur du document.
     """
     entetes = _entetes(_fiche([_membre(7)]))
-    assert entetes == [] or "Bât. 7" in entetes[0]
+    assert entetes == [] or "Bât. 7" in entetes[0]  # repli hors arbre : la convention du code
     assert "<svg" not in (entetes[0] if entetes else "<svg")
 
 

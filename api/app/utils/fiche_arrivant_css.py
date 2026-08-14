@@ -62,20 +62,34 @@ body {
 }
 .content p { margin-bottom: 4px; font-size: 12px; }
 .content .muted { color: var(--muted); font-size: 10.5px; }
-.dual-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+/*  Hauteur des blocs à QR code — resserrée le 14/08/2026 pour que le document
+    tienne sur UNE page A4 (`.page` est haute de 281 mm, fixe : ce qui dépasse
+    part sur une seconde feuille).
+
+    WeasyPrint rend à 96 px par pouce, donc 1 mm = 3.78 px. Le gain est pris sur
+    les rembourrages verticaux (7 → 4 px, soit 6 px = 1,6 mm par bloc) et sur les
+    marges, JAMAIS sur `.qr-code` : un QR rétréci reste beau et cesse d'être
+    scannable, et celui du groupe WhatsApp porte un lien long, donc un motif dense.
+    C'est le seul élément de ce document dont la taille a une fonction. */
+.dual-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0; }
 .cta-banner {
   display: flex; align-items: center; gap: 8px;
   background: linear-gradient(135deg, #F7F5F0, #F0EDE6);
-  border-radius: 6px; padding: 7px 10px; border-left: 4px solid var(--gold);
+  border-radius: 6px; padding: 4px 10px; border-left: 4px solid var(--gold);
 }
 .cta-banner-text { flex: 1; }
 .cta-banner-text .label { font-size: 9px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
 .cta-banner-text .url { font-size: 13px; font-weight: 700; color: var(--navy); letter-spacing: .3px; }
 .cta-banner-text .hint { font-size: 9px; color: var(--light-muted); margin-top: 1px; }
 .bat-section { margin-bottom: 4px; }
+/*  Pas de `text-transform: uppercase` : le libellé est celui que
+    l'administration a saisi dans Périmètres, et le document l'affiche TEL QUEL.
+    Le mettre en capitales, c'était le réécrire — « Bâtiment 1 » devenait
+    « BÂTIMENT 1 », et une copropriété qui nommerait ses bâtiments « Le Cèdre »
+    n'aurait pas reconnu le sien. */
 .bat-label {
-  font-size: 10px; font-weight: 700; color: var(--navy);
-  text-transform: uppercase; letter-spacing: .5px;
+  font-size: 10.5px; font-weight: 700; color: var(--navy);
+  letter-spacing: .3px;
   padding: 2px 6px; border-left: 3px solid var(--gold);
   margin-bottom: 3px; background: #FAFAF7;
 }
@@ -104,7 +118,7 @@ body {
 .contact-info { font-size: 9.5px; color: var(--muted); line-height: 1.3; }
 .syndic-header {
   background: linear-gradient(135deg, #F7F5F0, #F0EDE6); border-radius: 6px;
-  padding: 7px 10px; margin-top: 4px; margin-bottom: 3px; overflow: visible;
+  padding: 4px 10px; margin-top: 2px; margin-bottom: 2px; overflow: visible;
 }
 .syndic-name { font-size: 12px; font-weight: 700; color: var(--navy); }
 .syndic-detail { font-size: 10px; color: var(--muted); }
@@ -140,7 +154,7 @@ body {
   font-size: 10px; color: var(--light-muted); font-style: italic;
 }
 .whatsapp-cta {
-  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  display: flex; align-items: center; gap: 8px; padding: 4px 10px;
   background: linear-gradient(135deg, #E8F5E9, #F1F8E9);
   border-radius: 6px; border-left: 4px solid #25D366;
 }

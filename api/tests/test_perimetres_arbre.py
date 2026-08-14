@@ -159,10 +159,26 @@ def test_libelles_des_codes_en_service_inchanges(batiments):
     """Un libellé qui change, c'est un changement visible sur du contenu publié."""
     for code, libelle in ANCIENS_LIBELLES.items():
         assert P.perimetre_label_un(code) == libelle
+
+    #  ⚠️ Les bâtiments font exception depuis le 14/08/2026, et c'est un changement
+    #  VOULU, pas une dérive : le seed remplissait `libelle` et `libelle_court` à
+    #  l'identique (« Bât. {id} »), ce qui rendait le second inutile et imposait
+    #  l'abréviation jusque sur le document imprimé remis aux arrivants. Le long
+    #  sert aux documents et aux e-mails, l'abrégé aux badges contraints.
+    #
+    #  Ce test garde tout son sens : il continue d'interdire qu'un libellé bouge
+    #  SANS qu'on l'ait décidé — il fallait venir l'éditer ici pour que le lot
+    #  passe, et c'est exactement ce qu'on lui demande de faire.
+    #  Migration correspondante : `0143_libelle_long_des_batiments`.
     for identifiant in batiments:
-        assert P.perimetre_label_un(f"bat:{identifiant}") == f"Bât. {identifiant}"
+        assert P.perimetre_label_un(f"bat:{identifiant}") == f"Bâtiment {identifiant}"
+        noeud = P.arbre()[f"bat:{identifiant}"]
+        assert noeud.libelle_court == f"Bât. {identifiant}", (
+            "l'abrégé doit rester court : c'est lui que lisent le calendrier et le "
+            "sélecteur de périmètre, où la place est contrainte"
+        )
     #  Le séparateur du rendu multiple ne bouge pas non plus.
-    assert P.perimetre_label(["bat:1", "parking"]) == "Bât. 1 · Parking"
+    assert P.perimetre_label(["bat:1", "parking"]) == "Bâtiment 1 · Parking"
 
 
 # ── Le repli permissif, épinglé pour qu'il ne bouge pas par accident ──────────

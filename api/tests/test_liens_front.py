@@ -32,7 +32,8 @@ import pytest
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
-_ROUTES = _RACINE / "front" / "src" / "routes"
+_FRONT_SRC = _RACINE / "front" / "src"
+_ROUTES = _FRONT_SRC / "routes"
 
 # `lien="/x"`, `lien=f"/x/{y}"`, `lien_path="/x"` — les liens vers le front.
 _MOTIF_LIEN = re.compile(r"""lien(?:_path)?\s*=\s*f?["'](/[^"']*)["']""")
@@ -187,6 +188,49 @@ def _page_du_lien(lien: str) -> pathlib.Path | None:
     return descendre(_ROUTES, segments)
 
 
+_MOTIF_IMPORT_COMPOSANT = re.compile(
+    r"import\s+(\w+)\s+from\s+['\"]\$lib/components/([\w./-]+\.svelte)['\"]"
+)
+
+
+def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 2) -> str:
+    """Le balisage d'une page, **composants locaux inclus**, à leur place d'appel.
+
+    Une page qui rend `id="annonce-…"` directement, ou qui délègue à
+    `<AnnonceCard>` qui le rend, produit le même écran : les contrôles d'ancre
+    doivent voir les deux. Sans cela, découper une page en composants ferait
+    échouer ces tests **sans qu'aucun lien ne soit cassé**, et la tentation serait
+    de les affaiblir — alors qu'ils viennent d'attraper trois liens morts.
+
+    Le découpage est une obligation permanente ici (rang 1 §4, « au fil de l'eau ») :
+    ce dépliage n'est donc pas une commodité ponctuelle, c'est ce qui permet aux
+    deux règles de coexister. Constaté le 14/08/2026, quand l'extraction de
+    `AnnonceCard.svelte` a fait tomber deux de ces tests.
+
+    Le contenu du composant est **inséré** à l'endroit de sa balise plutôt que
+    substitué : `_segments_par_onglet` découpe la page par onglet, et l'ancre doit
+    donc tomber dans le segment où le composant est réellement invoqué. Une
+    substitution demanderait de reconnaître la fin d'une balise dont les attributs
+    contiennent des `>` (`onToggle={() => …}`), ce qu'aucune expression régulière
+    ne fait correctement.
+    """
+    contenu = fichier.read_text(encoding="utf-8-sig")
+    if _profondeur <= 0:
+        return contenu
+
+    for nom, cible in _MOTIF_IMPORT_COMPOSANT.findall(contenu):
+        chemin = _FRONT_SRC / "lib" / "components" / cible
+        if not chemin.is_file():
+            continue
+        position = contenu.find(f"<{nom}", contenu.find("</script>"))
+        if position == -1:
+            continue                       # importé mais pas utilisé dans le balisage
+        interne = contenu_deplie(chemin, _profondeur - 1)
+        contenu = contenu[:position] + interne + contenu[position:]
+
+    return contenu
+
+
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
 def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
     """`#doc-42` n'a de sens que si la page pose `id="doc-{…}"` sur ses éléments.
@@ -205,7 +249,7 @@ def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
         page = _page_du_lien(lien)
         if page is None:
             continue  # déjà couvert par le test précédent
-        if f'id="{prefixe}-' not in page.read_text(encoding="utf-8-sig"):
+        if f'id="{prefixe}-' not in contenu_deplie(page):
             orphelines.append(
                 f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
                 f"      {page.relative_to(_RACINE)} ne pose aucun id=\"{prefixe}-…\""
@@ -291,7 +335,7 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
         fichier = _page_du_lien(page)
         if fichier is None:
             continue  # déjà couvert par le test des pages
-        contenu = fichier.read_text(encoding="utf-8-sig")
+        contenu = contenu_deplie(fichier)
         segments = _segments_par_onglet(contenu)
         ancre = f'id="{prefixe}-'
 

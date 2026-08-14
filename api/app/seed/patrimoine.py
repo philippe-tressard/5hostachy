@@ -399,9 +399,16 @@ def _poser_les_batiments(session: Session, connus: dict[str, int]) -> None:
         code = f"bat:{batiment.id}"
         bat_id = _poser(session, connus, {
             "code": code,
-            #  « Bât. {id} » et non « Bât. {numero} » : voir la règle 1 du
-            #  docstring du module. Le numéro figure dans la description.
-            "libelle": f"Bât. {batiment.id}",
+            #  « {id} » et non « {numero} » : voir la règle 1 du docstring du
+            #  module. Le numéro figure dans la description.
+            #
+            #  Le libellé LONG et l'ABRÉGÉ diffèrent, et c'est tout l'intérêt des
+            #  deux champs : ils valaient la même chose (« Bât. 1 »), ce qui rendait
+            #  `libelle_court` inutile et imposait l'abréviation partout — y compris
+            #  sur le document imprimé, où la place ne manque pas (14/08/2026).
+            #  Le long sert aux documents et aux e-mails, l'abrégé aux badges
+            #  contraints (calendrier, sélecteur de périmètre).
+            "libelle": f"Bâtiment {batiment.id}",
             "libelle_court": f"Bât. {batiment.id}",
             "description":
                 f"Le bâtiment {batiment.numero} et ses parties communes. "
