@@ -31,9 +31,13 @@
 		<input type="checkbox" bind:checked={restreindre} />
 		<span>N'afficher que les contenus de mon ou mes bâtiments</span>
 	</label>
+	<!--  L'exception n'est pas un détail : sans elle, ce texte promet de voir « toute
+	      la copropriété » alors qu'une actualité confidentielle restera invisible
+	      (v2.64.0). Un réglage qui annonce plus que ce qu'il fait se lit comme une
+	      panne. -->
 	<p class="aide">
-		Décochée, vous voyez les actualités de toute la copropriété ; cochée, vous ne voyez
-		que celles de votre bâtiment.
+		Décochée, vous voyez les actualités de toute la copropriété, sauf celles marquées
+		confidentielles ; cochée, vous ne voyez que celles de votre bâtiment.
 	</p>
 
 	<h2 class="section-title" style="margin-top:1.5rem">Notifications par e-mail</h2>
