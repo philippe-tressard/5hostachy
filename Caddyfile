@@ -84,6 +84,27 @@
         file_server
     }
 
+    # Service worker et manifeste — JAMAIS mis en cache par un intermédiaire.
+    #
+    # Cloudflare met en cache d'après l'EXTENSION : `/sw.js` était servi depuis
+    # l'edge pendant les 4 heures du `max-age` d'adapter-node. Un service worker
+    # corrigé n'atteignait donc AUCUN navigateur avant l'expiration — constaté le
+    # 14/08/2026 : le fichier était juste dans le conteneur (rebuild de 14:44) et
+    # l'edge servait encore celui de 10:04, avec le repli de navigation fautif.
+    #
+    # C'est le pire fichier à mettre en cache longuement : il décide de ce que
+    # tous les autres deviennent. `no-cache` n'interdit pas de le stocker, il
+    # impose de le revalider — ce que le navigateur fait déjà de lui-même, et que
+    # l'edge ne faisait pas.
+    handle /sw.js {
+        header Cache-Control "no-cache, must-revalidate"
+        reverse_proxy front:3000
+    }
+    handle /manifest.webmanifest {
+        header Cache-Control "no-cache, must-revalidate"
+        reverse_proxy front:3000
+    }
+
     # Frontend SvelteKit (SSR)
     handle {
         reverse_proxy front:3000

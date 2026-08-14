@@ -681,10 +681,6 @@ import { onMount } from 'svelte';
 	.section-title { font-size:1rem; font-weight:600; margin-bottom:1rem; }
 	.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
 	.form-actions { display: flex; justify-content: flex-end; margin-top: .5rem; gap: .5rem; flex-wrap: wrap; }
-	.input-eye { position: relative; display: flex; align-items: center; }
-	.input-eye input { flex: 1; padding-right: 2.5rem; }
-	.eye-btn { position: absolute; right: .6rem; background: none; border: none; padding: 0; cursor: pointer; color: var(--color-text-muted); display: flex; align-items: center; }
-	.eye-btn:hover { color: var(--color-text); }
 	.checkbox-field { display: flex; align-items: center; gap: .5rem; font-size: .875rem; cursor: pointer; }
 	.hint { font-size: 0.78rem; color: var(--color-text-muted); }
 	.info-grid {
@@ -709,43 +705,5 @@ import { onMount } from 'svelte';
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		padding: 1rem;
-	}
-	.notif-matrix-wrap { overflow-x: auto; }
-	.notif-help {
-		font-size: .85rem;
-		color: var(--color-text-muted);
-		margin: 0 0 .45rem;
-		line-height: 1.45;
-	}
-	.notif-reco {
-		margin: 0 0 .75rem;
-		padding-left: 1.1rem;
-		font-size: .82rem;
-		color: var(--color-text-muted);
-		display: grid;
-		gap: .2rem;
-	}
-	.notif-matrix {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: .9rem;
-		margin-bottom: .75rem;
-	}
-	.notif-matrix th,
-	.notif-matrix td {
-		border: 1px solid var(--color-border);
-		padding: .55rem .65rem;
-	}
-	.notif-matrix thead th {
-		background: var(--color-bg-subtle, #f8fafc);
-		font-weight: 600;
-		text-align: left;
-	}
-	.notif-matrix td:nth-child(2),
-	.notif-matrix td:nth-child(3),
-	.notif-matrix th:nth-child(2),
-	.notif-matrix th:nth-child(3) {
-		text-align: center;
-		width: 120px;
 	}
 </style>
