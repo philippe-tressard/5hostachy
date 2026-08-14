@@ -147,6 +147,35 @@ a:hover { text-decoration: underline; }
 .btn-icon-success { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: var(--color-success); line-height: 1; }
 .btn-icon-success:hover { background: #e6f4ee; }
 
+/* ── Indicateur d'attente ────────────────────────────────────────────────
+   « une action est en cours » est UN geste d'interface. Il n'existait qu'en un
+   exemplaire (`ImageUpload`) ; le deuxième usage — le bouton du changement de
+   mot de passe — le fait passer le seuil de mutualisation (`standards/02` §1),
+   d'où cette base commune plutôt qu'une seconde copie.
+
+   Elle est neutre exprès : dimensionnée en `em` et teintée par `currentColor`,
+   donc lisible dans un bouton comme sur un aplat sombre. Un composant qui s'en
+   écarte VRAIMENT ne garde en local que sa différence — même mécanique que
+   `.chevron` ci-dessus, et c'est ce qui rend le découpage sûr. */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Une rotation perpétuelle est exactement ce que ce réglage vise ; on la
+   ralentit au lieu de la couper — l'attente doit rester signalée. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.5s; }
+}
+
 /* Tooltip CSS immédiat sur boutons icône portant un attribut title */
 .btn-icon[title], .btn-icon-edit[title], .btn-icon-danger[title],
 .btn-icon-warn[title], .btn-icon-success[title] { position: relative; }

@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { capsLockActif } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { getSiteNom } from '$lib/stores/pageConfig';
-	import Icon from '$lib/components/Icon.svelte';
-	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
+	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 
 	const _siteNom = getSiteNom();
 
@@ -24,15 +22,7 @@
 	let batiments: { id: number; numero: string }[] = [];
 	let consentement_rgpd = false;
 	let consentement_communications = false;
-	let showPassword = false;
-	let capsLockOn = false;
 	let error = '';
-
-	function checkCapsLock(e: KeyboardEvent | FocusEvent) {
-		// `null` au focus : l'état des touches n'y est pas connaissable.
-		const etat = capsLockActif(e);
-		if (etat !== null) capsLockOn = etat;
-	}
 	let success = false;
 	let loading = false;
 
@@ -181,20 +171,14 @@
 				</div>
 				{/if}
 
-				<div class="field">
-					<label for="password">Mot de passe *</label>
-					<div class="input-eye">
-						<input id="password" type={showPassword ? 'text' : 'password'} bind:value={password} required minlength="8" autocomplete="new-password"
-							on:keydown={checkCapsLock} on:keyup={checkCapsLock} on:focus={checkCapsLock} />
-						<button type="button" class="eye-btn" on:click={() => showPassword = !showPassword} aria-label={showPassword ? 'Masquer' : 'Afficher'}>
-							<Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
-						</button>
-					</div>
-					<PasswordStrength {password} />
-					{#if capsLockOn && !showPassword}
-						<div class="capslock-warn" role="alert">⚠️ <strong>Verr. Maj. activée</strong> — votre mot de passe pourrait être incorrect.</div>
-					{/if}
-				</div>
+				<ChampMotDePasse
+					id="password"
+					libelle="Mot de passe"
+					bind:valeur={password}
+					autocomplete="new-password"
+					longueurMini={8}
+					robustesse
+				/>
 
 				<div class="rgpd-box">
 					<p class="rgpd-info">
@@ -287,39 +271,6 @@
 		margin-top: 1rem;
 		font-size: .875rem;
 		color: var(--color-text-muted);
-	}
-
-	.input-eye {
-		position: relative;
-		display: flex;
-		align-items: center;
-	}
-	.input-eye input {
-		flex: 1;
-		padding-right: 2.5rem;
-	}
-	.eye-btn {
-		position: absolute;
-		right: .6rem;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: pointer;
-		color: var(--color-text-muted);
-		display: flex;
-		align-items: center;
-	}
-	.eye-btn:hover { color: var(--color-text); }
-
-	.capslock-warn {
-		margin-top: .4rem;
-		padding: .45rem .7rem;
-		background: #fffbeb;
-		border: 1px solid #fcd34d;
-		border-radius: var(--radius);
-		font-size: .8rem;
-		color: #92400e;
-		line-height: 1.4;
 	}
 
 	.btn-wrapper {
