@@ -302,6 +302,7 @@ class PublicationCreate(BaseModel):
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
     annonce_hall: bool = False  # génère l'affiche de hall + envoi au CS du périmètre
+    confidentiel: bool = False  # lecture réservée au périmètre visé (#347)
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
 
 
@@ -321,6 +322,10 @@ class PublicationUpdate(BaseModel):
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
     annonce_hall: Optional[bool] = None
+    #  Modifiable après publication, volontairement : c'est ce qui permet de
+    #  rattraper une actualité publiée au mauvais périmètre. Elle disparaît alors
+    #  du fil des autres périmètres — ceux qui l'ont lue l'ont lue (arbitrage #347).
+    confidentiel: Optional[bool] = None
 
 
 class EvolutionRead(BaseModel):
@@ -371,6 +376,7 @@ class PublicationRead(BaseModel):
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
     annonce_hall: bool = False
+    confidentiel: bool = False
     evolutions: List[EvolutionRead] = []
     auteur_nom: Optional[str] = None
 

@@ -219,6 +219,16 @@ def _is_restreint(public_cible: str | list | None) -> bool:
     return "résidents" not in lst
 
 
+#: Titre affiché à la place du vrai quand l'actualité est **confidentielle**.
+#:
+#: Le groupe WhatsApp est commun à toute la copropriété : y écrire le vrai titre
+#: révélerait précisément ce que la confidentialité protège — « Fuite chez M. X,
+#: bât. 3 » en dit déjà l'essentiel. Le message garde en revanche le **périmètre**
+#: (c'est lui qui fait venir les bons résidents) et le **lien**, qui renvoie vers
+#: l'application où la règle d'accès s'applique normalement (arbitrage #347).
+TITRE_CONFIDENTIEL = "Information réservée au périmètre concerné"
+
+
 def _build_message_restreint(
     titre: str,
     urgente: bool,
@@ -227,7 +237,14 @@ def _build_message_restreint(
     pub_id: int | None,
     footer: str | None = None,
 ) -> str:
-    """Construit un message WhatsApp court pour une publication à audience restreinte."""
+    """Construit un message WhatsApp court pour une publication à audience restreinte.
+
+    `titre` est le titre **à afficher**, pas nécessairement celui de la
+    publication : le cas confidentiel y passe `TITRE_CONFIDENTIEL`. C'est la
+    seule différence entre les deux usages, et elle tient dans un argument — une
+    seconde fonction jumelle aurait divergé dès la première retouche de l'en-tête
+    ou du lien (`standards/02-factorisation.md` §2).
+    """
     try:
         lieux = json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else (perimetre_cible or [])
     except Exception:
@@ -255,6 +272,47 @@ def _build_message_restreint(
     return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
 
 
+def message_sans_contenu(public_cible: str | list | None, confidentiel: bool = False) -> bool:
+    """Ce message doit-il se réduire à « avertissement + périmètre + lien » ?
+
+    Deux raisons, une seule forme de message :
+      - **public restreint** — le groupe est commun, le contenu ne s'adresse pas
+        à tous ceux qui le liraient ;
+      - **confidentiel** (#347) — même raison, sur l'axe bâtiment cette fois, et
+        le titre lui-même est retiré.
+    """
+    return bool(confidentiel) or _is_restreint(public_cible)
+
+
+def construire_message(
+    titre: str,
+    contenu: str,
+    urgente: bool,
+    perimetre_cible: str | None,
+    config: dict,
+    public_cible: str | None = None,
+    pub_id: int | None = None,
+    confidentiel: bool = False,
+) -> str:
+    """Le texte du message, décidé **une seule fois**.
+
+    `envoyer_whatsapp` et `envoyer_whatsapp_avec_log` construisaient chacun leur
+    message avec le même `if _is_restreint(...)`, si bien que le texte journalisé
+    et le texte envoyé étaient deux calculs distincts d'une même chose. Ajouter
+    le cas confidentiel en aurait fait deux copies à tenir alignées — dont l'une
+    décide de ce qui part dans le groupe, l'autre de ce qu'on croit y avoir
+    envoyé.
+    """
+    footer = config.get('whatsapp_footer', '').strip()
+    if message_sans_contenu(public_cible, confidentiel):
+        site_url = (config.get('site_url') or '').strip()
+        titre_affiche = TITRE_CONFIDENTIEL if confidentiel else titre
+        return _build_message_restreint(
+            titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer
+        )
+    return _build_message(titre, contenu, urgente, perimetre_cible, footer)
+
+
 def envoyer_whatsapp(
     titre: str,
     contenu: str,
@@ -264,6 +322,7 @@ def envoyer_whatsapp(
     config: dict,
     public_cible: str | None = None,
     pub_id: int | None = None,
+    confidentiel: bool = False,
 ) -> None:
     """Envoie un message sur le groupe WhatsApp. Silencieux en cas d'échec."""
     if config.get('whatsapp_enabled') != '1':
@@ -275,17 +334,17 @@ def envoyer_whatsapp(
         logger.warning("WhatsApp activé mais whatsapp_api_url ou whatsapp_group_jid manquant.")
         return
 
-    footer = config.get('whatsapp_footer', '').strip()
     url = f"{api_url.rstrip('/')}/send"
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
-    if _is_restreint(public_cible):
-        site_url = (config.get('site_url') or '').strip()
-        message = _build_message_restreint(titre, urgente, perimetre_cible, site_url, pub_id, footer)
-        payload = {"number": group_jid, "text": message}
-    else:
-        message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
-        payload = {"number": group_jid, "text": message}
+    message = construire_message(
+        titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+    )
+    payload = {"number": group_jid, "text": message}
+    #  La photo ne part QUE avec le message complet : sur une actualité
+    #  confidentielle ou à public restreint, l'image dirait au groupe entier ce
+    #  que le texte s'abstient de dire.
+    if not message_sans_contenu(public_cible, confidentiel):
         image_b64 = _image_pour_bridge(image_url)
         if image_b64:
             payload["imageBase64"] = image_b64
@@ -319,6 +378,7 @@ def envoyer_whatsapp_avec_log(
     config: dict,
     public_cible: str | None = None,
     pub_id: int | None = None,
+    confidentiel: bool = False,
 ) -> None:
     """Envoie un message WhatsApp et crée un log (pour background tasks)."""
     from app.database import SessionLocal
@@ -327,16 +387,14 @@ def envoyer_whatsapp_avec_log(
 
     session = SessionLocal()
     try:
-        footer = config.get('whatsapp_footer', '').strip()
-        if _is_restreint(public_cible):
-            site_url = (config.get('site_url') or '').strip()
-            message = _build_message_restreint(titre, urgente, perimetre_cible, site_url, pub_id, footer)
-        else:
-            message = _build_message(titre, contenu, urgente, perimetre_cible, footer)
+        message = construire_message(
+            titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+        )
         log = WhatsAppLog(label=titre, message=message)
         log.statut, log.erreur = verdict_envoi(
             lambda: envoyer_whatsapp(
-                titre, contenu, urgente, perimetre_cible, image_url, config, public_cible, pub_id
+                titre, contenu, urgente, perimetre_cible, image_url, config,
+                public_cible, pub_id, confidentiel,
             )
         )
         if log.statut == STATUT_ENVOYE:

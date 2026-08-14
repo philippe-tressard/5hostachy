@@ -82,6 +82,18 @@ def batiments() -> list[int]:
         session.commit()
     P.invalider_cache()
     yield ids
+    #  Le patrimoine repart AUSSI à la sortie. Il ne partait qu'à l'entrée, si
+    #  bien que la copropriété et ses quatre bâtiments survivaient au test et
+    #  attendaient le suivant : `test_copropriete_fiche.py` supprime toutes les
+    #  copropriétés dans sa propre fixture, et SQLAlchemy dénoue alors les
+    #  bâtiments orphelins (`UPDATE batiment SET copropriete_id = NULL`) — la
+    #  colonne est NOT NULL, six tests tombaient en erreur de montage.
+    #  Le défaut ne s'est vu qu'en ajoutant un fichier qui trie AVANT
+    #  `test_copropriete_fiche` (15/08/2026) : jusque-là, les deux seuls usagers
+    #  de cette fixture passaient après lui. Un test dont le résultat dépend de
+    #  l'ordre alphabétique des fichiers n'est pas un test.
+    with Session(engine) as session:
+        vider_patrimoine(session)
     P.invalider_cache()
 
 

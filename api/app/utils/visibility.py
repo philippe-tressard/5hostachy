@@ -191,7 +191,15 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
     #  ⚠️ Ce n'est QUE l'axe bâtiment. Le public cible ci-dessous n'est pas touché,
     #  et c'est lui qui protège : une agence, un bailleur non résident ou un
     #  mandataire qui ne voyaient pas cette publication ne la voient pas davantage.
-    if not perimetre_visible(perims, user, ouvert_a_la_copropriete=True):
+    #
+    #  `confidentiel` (#347) ne fait que **refermer** cette ouverture-là, et rien
+    #  d'autre : il n'existe pas de seconde règle d'accès pour les actualités
+    #  confidentielles — c'est le paramètre à sa valeur par défaut, c'est-à-dire
+    #  le comportement d'avant #339. Une règle à part aurait dû être maintenue en
+    #  parallèle de celle-ci, et c'est ainsi que deux règles divergent.
+    if not perimetre_visible(
+        perims, user, ouvert_a_la_copropriete=not pub.confidentiel
+    ):
         return False
 
     # 2. Public cible

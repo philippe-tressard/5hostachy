@@ -104,6 +104,10 @@ def add_evolution(
                 ).all()
                 if e.contenu
             ]
+            #  Sur une actualité confidentielle, le commentaire ne part PAS dans
+            #  le groupe : `envoyer_whatsapp_avec_log` réduit alors le message à
+            #  l'avertissement + le périmètre + le lien. Le contenu ci-dessous
+            #  n'est donc pas diffusé — il reste construit pour le cas normal.
             wa_contenu = body.contenu
             if evols_precedents:
                 site_url = (wa_config.get('site_url') or '').rstrip('/')
@@ -123,6 +127,7 @@ def add_evolution(
                 wa_config,
                 pub.public_cible,
                 pub.id,
+                pub.confidentiel,
             )
 
     # Envoi email syndic pour le commentaire si demandé

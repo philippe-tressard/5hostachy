@@ -33,7 +33,7 @@
 - **Communauté** — Annuaire résidents, boîte à idées, sondages et petites annonces, avec fil de réponses entre voisins (réponses du conseil syndical mises en avant) et notifications au créateur
 - **Prestataires & Contrats** — Gestion des prestataires et contrats d'entretien
 - **Administration** — Paramétrage site, comptes, sauvegardes, SMTP, WhatsApp
-- **Périmètres** — arborescence de la copropriété (bâtiments et leurs espaces, parking, AFUL, espaces verts, cheminements, locaux techniques) servant à localiser tickets, actualités, événements et annonces. Entièrement éditable depuis l'administration, sans déploiement
+- **Périmètres** — arborescence de la copropriété (bâtiments et leurs espaces, parking, AFUL, espaces verts, cheminements, locaux techniques) servant à localiser tickets, actualités, événements et annonces. Entièrement éditable depuis l'administration, sans déploiement. Le périmètre dit *de quoi* il s'agit, pas *qui peut lire* — sauf sur une actualité marquée **🔒 Confidentiel**, où il redevient restrictif (lecture réservée au périmètre visé, affiche de hall alors impossible)
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence
 - **Maintenance** — Tâches automatiques (purge tokens, archivage, logs) + déclenchement manuel
 
