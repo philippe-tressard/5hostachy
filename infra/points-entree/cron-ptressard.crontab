@@ -1,0 +1,10 @@
+# Tâches cron de l'utilisateur `ptressard` — état attendu sur LES DEUX nœuds.
+#
+# `auto-deploy.sh` est le SEUL cron utilisateur de 5Hostachy, et c'est délibéré :
+# il déploie par `git pull`, ce qui doit se faire avec le propriétaire du clone,
+# pas en root.
+#
+# ⚠️ rpi2 porte en plus une tâche de List-dons, l'autre projet hébergé sur la même
+# machine. Elle est légitime et n'a rien à faire ici : le contrôle de conformité
+# ignore les lignes qui ne mentionnent pas /opt/5hostachy.
+3,8,13,18,23,28,33,38,43,48,53,58 * * * * /opt/5hostachy/auto-deploy.sh >> /var/log/hostachy-deploy.log 2>&1

@@ -400,6 +400,24 @@ for h in "$RPI1" "$RPI2"; do
   rapporter 14 "$V14" "Hygiène disque (${h##*@})" "cache=${CACHE:-?}  logs>${LOG_MAX_MO}Mo=${GROS:-?}"
 done
 
+# 17 — les points d'entrée des nœuds sont-ils ceux que le dépôt attend ?
+#
+#      Ajouté le 15/08/2026. Les tâches cron et l'unité systemd désignent les
+#      scripts par CHEMIN ABSOLU, et n'étaient écrites nulle part : déplacer un
+#      script coupait la bascule, le failover et les alertes sur les deux nœuds
+#      dans les cinq minutes suivant la fusion — sans rien signaler, puisque le
+#      producteur d'alertes fait partie de ce qui ne démarre plus.
+#
+#      C'est le seul contrôle qui compare les nœuds au DÉPÔT. `check-reliability`
+#      C18 les compare entre eux, ce qui laisse passer la dérive commune.
+PE=$(bash "$RACINE_DEPOT/scripts/poste/verifier-points-entree.sh" 2>&1)
+case "$?" in
+  0) V17=OK;      D17="cron et systemd conformes sur les 2 nœuds" ;;
+  2) V17=INCONNU; D17="au moins un point non lisible (sudo refusé ? hôte injoignable ?)" ;;
+  *) V17=FAIL;    D17=$(printf '%s' "$PE" | grep -m1 -E '^\s+(cron|hostachy)' | sed 's/^ *//') ;;
+esac
+rapporter 17 "$V17" "Points d'entrée conformes au dépôt" "$D17"
+
 echo
 echo "───────────────────────────────────────────────────────────────"
 printf "OK=%d  ÉCART=%d  INCONNU=%d  ÉCHEC=%d\n" "$NB_OK" "$NB_ECART" "$NB_INCONNU" "$NB_FAIL"

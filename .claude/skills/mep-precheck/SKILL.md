@@ -172,6 +172,7 @@ elle.
 | 12 | Image postérieure au commit déployé | OK · FAIL |
 | 13 | Canal d'alerte non muet | OK · FAIL |
 | 14 | Hygiène disque sur les **2** nœuds | OK · FAIL |
+| 17 | **Points d'entrée conformes au dépôt** (crons, unité systemd) | OK · FAIL · INCONNU |
 
 ### Lire le verdict
 

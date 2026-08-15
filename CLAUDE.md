@@ -234,6 +234,11 @@ Production **HA sur 2 Raspberry Pi** : rpi1 `192.168.1.222` (PhT-RB5), rpi2
 traiter avant toute autre chose. Site HS : SSH sur l'actif →
 `cd /opt/5hostachy && docker compose up -d`.
 
+> 📇 **Les points d'entrée sont versionnés depuis le 15/08/2026** :
+> `infra/points-entree/` porte les crons et l'unité systemd attendus, et le
+> **point 17** du pré-check compare l'installé au dépôt. C18 ne compare que les
+> nœuds entre eux, donc pas la dérive commune.
+
 | Cron root (identique sur les 2 nœuds) | Rôle |
 |---|---|
 | `0 2 * * *` `bascule.sh` | bascule active/standby |

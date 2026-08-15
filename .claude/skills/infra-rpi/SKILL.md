@@ -171,6 +171,19 @@ scp /tmp/app_sync.db ptressard@<PEER_IP>:/tmp/app_sync.db
 docker run --rm -v 5hostachy_app_data:/data -v /tmp/app_sync.db:/tmp/app_sync.db alpine sh -c 'cp /tmp/app_sync.db /data/app.db && rm -f /data/app.db-wal /data/app.db-shm'
 ```
 
+## Crontabs et unité systemd — **source versionnée : `infra/points-entree/`**
+
+Depuis le 15/08/2026, les six points d'entrée (4 crons root, 1 cron utilisateur,
+et l'unité `hostachy-role-guard.service`) sont décrits dans le dépôt. Vérifier
+qu'un nœud y est conforme :
+
+    bash scripts/poste/verifier-points-entree.sh
+
+C'est le **point 17** du pré-check. À la différence de C18 — qui compare les deux
+nœuds *entre eux* et laisse donc passer la dérive commune — il compare au **dépôt**.
+Rien n'est posé automatiquement : installer reste un geste explicite, un nœud à la
+fois.
+
 ## Crontabs (sudo root — identiques sur les 2 RPi)
 ```
 0 2 * * *   bascule.sh        # bascule active/standby
