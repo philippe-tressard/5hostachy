@@ -102,10 +102,19 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 - **Une seule** carte ouverte à la fois
 - Chargement lazy des détails au premier clic
 - Prévisualisation `.clamp-5` (5 lignes max)
-- Border-left : `4px solid var(--color-border)` → `var(--color-primary)` (hover/expanded)
-- Urgence : `border-left-color: var(--color-danger)` — **pas de badge texte 🚨**
-- `margin-bottom: .5rem` entre chaque item
-- `box-shadow: 0 1px 2px rgba(30,58,95,.04)`
+- Border-left, urgence, espacement et ombre : **portés par `.carte-liste`** (voir
+  ci-dessus). Ne pas les redéfinir dans une page.
+- Urgence : bord gauche rouge — **pas de badge texte 🚨**
+- **Le corps déplié ne referme pas la carte** : `on:click|stopPropagation` dessus.
+  On referme par l'en-tête. Sans cela, impossible de sélectionner du texte, et un
+  clic sur une photo ou un formulaire referme ce qu'on lisait. Le fil des
+  actualités était le seul à ne pas l'appliquer (corrigé le 15/08/2026, signalé
+  par l'utilisateur — qui croyait l'anomalie du côté des tickets, alors que
+  c'étaient eux qui avaient raison).
+- **Aperçu replié : vignette dès que l'élément porte une photo**, via
+  `ApercuCarte.svelte`. Les tickets ne l'avaient pas alors que le fil d'activité
+  et les actualités si — une règle qui ne vaut que sur deux écrans sur trois n'est
+  pas un standard, c'est un accident.
 - Accessibilité : `role="button"` + `tabindex="0"` + `on:keydown`
 
 ### Préfixes par page

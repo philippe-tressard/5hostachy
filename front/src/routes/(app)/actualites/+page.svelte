@@ -8,7 +8,7 @@
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
-	import ApercuActualite from '$lib/components/ApercuActualite.svelte';
+	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -460,11 +460,11 @@
 			</div>
 
 			{#if !expanded && !compactPubs}
-				<ApercuActualite contenu={pub.contenu} photos={pub.photos_urls ?? []} />
+				<ApercuCarte contenu={pub.contenu} photos={pub.photos_urls ?? []} />
 			{/if}
 
 			{#if expanded}
-				<div class="pub-body" on:keydown|stopPropagation>
+				<div class="pub-body" on:click|stopPropagation on:keydown|stopPropagation>
 
 					{#if editingPub?.id === pub.id}
 						<!-- ── Formulaire d'édition ── -->
@@ -651,7 +651,7 @@
 											</div>
 										</div>
 										{#if !expanded}
-											<ApercuActualite contenu={pub.contenu} photos={pub.photos_urls ?? []} />
+											<ApercuCarte contenu={pub.contenu} photos={pub.photos_urls ?? []} />
 										{:else}
 											<div class="pub-body" on:click|stopPropagation on:keydown|stopPropagation>
 												<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
