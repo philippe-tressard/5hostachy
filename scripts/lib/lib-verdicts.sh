@@ -390,7 +390,9 @@ verdicts_selftest() {
   rm -f /tmp/collect-syntaxe.$$
 
   echo "-- ordre des blocs : tout verdict avant le résumé --"
-  CR="$(dirname "${BASH_SOURCE[0]}")/check-reliability.sh"
+  #  Les modules vivent dans scripts/lib/, le script contrôlé dans
+  #  scripts/exploitation/ (#337). Le chemin traverse donc les deux.
+  CR="$(dirname "${BASH_SOURCE[0]}")/../exploitation/check-reliability.sh"
   L_RESUME=$(grep -n '^echo "Résumé' "$CR" 2>/dev/null | head -1 | cut -d: -f1)
   compte_verdicts() {  # $1=fichier $2=ligne à partir de laquelle compter
     awk -v l="$2" '

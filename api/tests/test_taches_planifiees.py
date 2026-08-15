@@ -271,7 +271,7 @@ def test_le_script_de_bascule_s_abstient_sur_le_standby():
     """
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[2] / "bascule.sh").read_text(encoding="utf-8")
+    source = (Path(__file__).resolve().parents[2] / "scripts" / "exploitation" / "bascule.sh").read_text(encoding="utf-8")
     assert 'if [ "$ACTIVE" != "$SELF" ]' in source and "exit 0" in source, (
         "bascule.sh ne s'abstient plus sur le standby : la périodicité attendue "
         "de 48 h reposait sur cette abstention."

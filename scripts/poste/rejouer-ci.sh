@@ -36,11 +36,11 @@ set -uo pipefail
 CI="${CI_FICHIER:-.github/workflows/ci.yml}"
 MARQUEUR="${MARQUEUR_CI:-.git/rejeu-ci.ok}"
 
-# shellcheck source=lib-ci-replay.sh
+# shellcheck source=../lib/lib-ci-replay.sh
 #  Modules à la racine du dépôt — cf. le commentaire de precheck-mep.sh (#337).
 RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$RACINE_DEPOT" || exit 1   # le rejeu extrait .github/workflows/ci.yml en relatif
-. "$RACINE_DEPOT/lib-ci-replay.sh"
+. "$RACINE_DEPOT/scripts/lib/lib-ci-replay.sh"
 
 if [ "${1:-}" = "--selftest" ]; then
   ci_replay_selftest

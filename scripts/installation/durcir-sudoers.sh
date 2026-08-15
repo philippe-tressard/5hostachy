@@ -32,8 +32,8 @@ set -uo pipefail
 
 #  `lib-sudoers.sh` est resté à la racine du dépôt (#337).
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
-# shellcheck source=lib-sudoers.sh
-. "$REPO/lib-sudoers.sh"
+# shellcheck source=../lib/lib-sudoers.sh
+. "$REPO/scripts/lib/lib-sudoers.sh"
 
 if [ "${1:-}" = "--selftest" ]; then
   sudoers_selftest

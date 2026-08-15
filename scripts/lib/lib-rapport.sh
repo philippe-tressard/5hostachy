@@ -24,7 +24,7 @@
 #    message d'erreur qui devait la décrire.
 #
 #  Usage :
-#    source /opt/5hostachy/lib-rapport.sh
+#    source /opt/5hostachy/scripts/lib/lib-rapport.sh
 #    cle=$(rapport_cle /opt/5hostachy) || exit 0
 #    charge=$(rapport_payload bascule rpi1 applicative succes 42 '{"vers":"rpi2"}' '' "$debut" "$fin")
 #    rapport_envoyer "http://192.168.1.223" "$cle" "$charge" "bascule"

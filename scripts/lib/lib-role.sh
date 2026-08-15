@@ -16,7 +16,7 @@
 #  reste lu dans $REPO/.active par chaque appelant. Ne pas mélanger les deux.
 #
 #  Usage :
-#    source /opt/5hostachy/lib-role.sh
+#    source /opt/5hostachy/scripts/lib/lib-role.sh
 #    SELF=$(role_of "$(hostname)")       # "" si hostname inconnu
 #    PEER=$(role_peer "$SELF")
 #    PEER_IP=$(role_ip "$PEER")

@@ -137,14 +137,14 @@ jobs:
         # (aucun effet de bord : ni SSH, ni docker, ni écriture). C'est le seul
         # moyen de tester une décision d'infra sans les deux RPi.
         run: |
-          bash lib-role.sh          --selftest
-          bash boot-role-guard.sh   --selftest
-          bash health-watch.sh      --selftest
-          bash check-reliability.sh --selftest
+          bash scripts/lib/lib-role.sh              --selftest
+          bash scripts/exploitation/boot-role-guard.sh   --selftest
+          bash scripts/exploitation/health-watch.sh      --selftest
+          bash scripts/exploitation/check-reliability.sh --selftest
           bash scripts/poste/export-hors-site.sh --selftest
-          bash lib-rapport.sh       --selftest
+          bash scripts/lib/lib-rapport.sh           --selftest
           bash scripts/poste/precheck-mep.sh      --selftest
-          bash maintenance.sh       --selftest
+          bash scripts/exploitation/maintenance.sh       --selftest
           bash scripts/poste/rejouer-ci.sh        --selftest
           bash scripts/poste/verifier-points-entree.sh --selftest
 
@@ -166,8 +166,8 @@ jobs:
               esac
             done
           done
-          grep -q 'for LOGFILE in /var/log/hostachy-\*\.log' maintenance.sh \
-            || { echo "::error file=maintenance.sh::la rotation doit itérer sur le GLOB /var/log/hostachy-*.log (une liste nominative laisse filer tout log ajouté ensuite)"; st=1; }
+          grep -q 'for LOGFILE in /var/log/hostachy-\*\.log' scripts/exploitation/maintenance.sh \
+            || { echo "::error file=scripts/exploitation/maintenance.sh::la rotation doit itérer sur le GLOB /var/log/hostachy-*.log (une liste nominative laisse filer tout log ajouté ensuite)"; st=1; }
           for f in $(git ls-files -- '*.sh'); do
             while IFS= read -r hit; do
               case "$hit" in
@@ -181,10 +181,10 @@ jobs:
           awk '
             /\$LOG_DATE/                  { last = NR }
             /^[[:space:]]*exit [0-9]/     { if (NR - last > 4) {
-                printf "::error file=auto-deploy.sh,line=%d::sortie sans ligne horodatée — contrat de battement rompu (C14 conclurait que le script est mort)\n", NR
+                printf "::error file=scripts/exploitation/auto-deploy.sh,line=%d::sortie sans ligne horodatée — contrat de battement rompu (C14 conclurait que le script est mort)\n", NR
                 bad = 1 } }
             END { exit bad }
-          ' auto-deploy.sh || st=1
+          ' scripts/exploitation/auto-deploy.sh || st=1
           exit $st
 
       - name: Modularité — un fichier de plus de 500 lignes ne doit pas grossir
@@ -214,7 +214,11 @@ jobs:
         run: |
           st=0
           while read -r mode _ _ path; do
-            case "$path" in
+            # Le motif porte sur le NOM DE BASE, pas sur le chemin : les modules
+            # ont été rangés dans scripts/lib/ (#337) et une exclusion ancrée à la
+            # racine cessait de les reconnaître — le contrôle réclamait alors un
+            # bit x sur ce qui ne doit surtout pas en porter.
+            case "${path##*/}" in
               lib-*.sh) exp=100644 ;;
               *)        exp=100755 ;;
             esac

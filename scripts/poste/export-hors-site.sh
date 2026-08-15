@@ -243,8 +243,8 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Table d'adresses : aucune recopie ici — lib-role.sh est la source unique.
-# shellcheck source=lib-role.sh
-source "$SCRIPT_DIR/lib-role.sh"
+# shellcheck source=../lib/lib-role.sh
+source "$SCRIPT_DIR/scripts/lib/lib-role.sh"
 
 SSH_CMD="ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new"
 STATUT="succes"
@@ -451,7 +451,7 @@ else
   # compte, un seul sait fabriquer la charge utile. La clé, elle, est lue par
   # SSH sur le nœud ci-dessus et non dans un `.env` local — ce script tourne sur
   # le poste, qui n'en a pas.
-  source "$SCRIPT_DIR/lib-rapport.sh"
+  source "$SCRIPT_DIR/scripts/lib/lib-rapport.sh"
   rapport_envoyer "http://$SOURCE_IP" "$MAINTENANCE_KEY" \
     "$(rapport_payload export_hors_site "$SOURCE_NOEUD" applicative "$STATUT" \
         "$((SECONDS - T0))" "$DETAILS" \

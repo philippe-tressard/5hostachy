@@ -306,6 +306,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 - MEP : `MaJ-Hostachy.sh` sur le **RPi actif** uniquement (le script bloque sur le standby)
 - `.env` non versionné · `SECRET_KEY` ≥ 32 caractères · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
+  (chemin de **relais** ; le script vit dans `scripts/exploitation/` — cf. #337)
 
 **Aucune MEP sans avoir chargé `.claude/skills/mep-precheck`.** Cette skill porte les
 étapes 0 et 0 bis (poste de développement, exigences sans exception), le **pré-check**

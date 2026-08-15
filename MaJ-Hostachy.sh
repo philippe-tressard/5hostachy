@@ -1,146 +1,17 @@
-#!/bin/bash
-# ============================================================
-#  MaJ-Hostachy.sh — Mise à jour de l'application
-#  Usage : bash /opt/5hostachy/MaJ-Hostachy.sh [--nocache]
-#  --nocache : build complet sans cache Docker (utile si
-#              dépendances corrompues, base image à rafraîchir,
-#              ou comportement inexpliqué)
-#  Sans flag  : build sélectif + cache Docker (rapide ~1-2 min)
-# ============================================================
-set -e
-
-REPO=/opt/5hostachy
-LOG_DATE=$(date '+%Y-%m-%d %H:%M:%S')
-NO_CACHE=false
-
-for arg in "$@"; do
-    case "$arg" in
-        --nocache) NO_CACHE=true ;;
-    esac
-done
-
-if $NO_CACHE; then
-    echo "[$LOG_DATE] === Mise à jour Hostachy (mode --nocache : build complet) ==="
-else
-    echo "[$LOG_DATE] === Mise à jour Hostachy (build sélectif + cache) ==="
-fi
-
-# 0. Vérification : ce RPi est-il l'actif ?
-FLAG="$REPO/.active"
-if [ -f "$FLAG" ]; then
-    ACTIVE=$(tr -d '[:space:]' < "$FLAG")
-    source "$REPO/lib-role.sh"
-    SELF=$(role_of "$(hostname)")
-    if [ -n "$SELF" ] && [ "$ACTIVE" != "$SELF" ]; then
-        echo "[$LOG_DATE] ⚠️  Ce RPi ($SELF) n'est pas l'actif ($ACTIVE)."
-        echo "[$LOG_DATE]    Lancez ce script sur le RPi actif ($ACTIVE)."
-        echo "[$LOG_DATE]    Pour forcer quand même : supprimez ou modifiez $FLAG"
-        exit 1
-    fi
-else
-    echo "[$LOG_DATE] ⚠️  Fichier .active absent — impossible de vérifier quel RPi est actif."
-    echo "[$LOG_DATE]    Créez-le d'abord : echo rpi1 > $FLAG  (ou rpi2)"
-    exit 1
-fi
-
-# 0b. Garde-fou anti-failover pendant la MAJ
-# Pendant le rebuild, l'API est brièvement down → sans ce verrou, health-watch sur
-# le standby détecte le 503 et bascule, créant un split-brain (incident du 17/06/2026).
-# health-watch.sh et bascule.sh respectent .bascule-lock → aucune intervention tant
-# qu'il est présent. Le trap EXIT le retire quoi qu'il arrive (succès, erreur, set -e).
-touch "$REPO/.bascule-lock"
-trap 'rm -f "$REPO/.bascule-lock"' EXIT
-echo "[$LOG_DATE] 🔒 .bascule-lock posé — health-watch ne basculera pas pendant la MAJ."
-
-# 1. Synchronisation git
-cd "$REPO"
-echo "[$LOG_DATE] Récupération des derniers commits depuis GitHub..."
-git fetch origin main
-# reset --hard : force la synchro avec GitHub (fichiers non trackés comme .env sont préservés)
-# En cas de modifications locales sur des fichiers trackés, elles seront écrasées
-git reset --hard origin/main
-echo "[$LOG_DATE] Code synchronisé : $(git log --oneline -1)"
-
-# 1b. Synchronisation manuel utilisateur
-# Filet de sécurité : si docs/ et front/static/ divergent (oubli de commit côté dev),
-# on prend docs/ comme source de vérité avant le rebuild du frontend.
-if ! diff -q "$REPO/docs/manuel-utilisateur.html" "$REPO/front/static/manuel-utilisateur.html" > /dev/null 2>&1; then
-    echo "[$LOG_DATE] ⚠️  manuel-utilisateur.html désynchronisé — copie de docs/ → front/static/"
-    cp "$REPO/docs/manuel-utilisateur.html" "$REPO/front/static/manuel-utilisateur.html"
-else
-    echo "[$LOG_DATE] Manuel utilisateur synchronisé ✓"
-fi
-
-if [ -f "$REPO/docs/manuel-utilisateur-1-page.html" ]; then
-    if ! diff -q "$REPO/docs/manuel-utilisateur-1-page.html" "$REPO/front/static/manuel-utilisateur-1-page.html" > /dev/null 2>&1; then
-        echo "[$LOG_DATE] ⚠️  manuel-utilisateur-1-page.html désynchronisé — copie de docs/ → front/static/"
-        cp "$REPO/docs/manuel-utilisateur-1-page.html" "$REPO/front/static/manuel-utilisateur-1-page.html"
-    else
-        echo "[$LOG_DATE] Manuel utilisateur 1 page synchronisé ✓"
-    fi
-fi
-
-# 1c. Synchronisation images du manuel utilisateur
-if [ -d "$REPO/docs/img" ]; then
-    mkdir -p "$REPO/front/static/img"
-    rsync -a --delete "$REPO/docs/img/" "$REPO/front/static/img/"
-    echo "[$LOG_DATE] Images manuel utilisateur synchronisées ✓"
-fi
-
-# 2. Rebuild et redémarrage des conteneurs
-GIT_HASH=$(git rev-parse --short HEAD)
-export GIT_HASH
-PREV_HASH=$(docker inspect --format '{{index .Config.Labels "git.hash"}}' hostachy_front 2>/dev/null || echo "")
-
-if $NO_CACHE; then
-    # --- Mode --nocache : rebuild total sans cache ---
-    echo "[$LOG_DATE] Build complet sans cache + force-recreate..."
-    docker compose -f "$REPO/docker-compose.yml" build --no-cache
-    docker compose -f "$REPO/docker-compose.yml" up --force-recreate -d
-else
-    # --- Mode normal : build sélectif ---
-    CHANGED_DIRS=$(git diff --name-only "$PREV_HASH" HEAD 2>/dev/null | cut -d/ -f1 | sort -u)
-    SERVICES_TO_BUILD=""
-
-    for dir in $CHANGED_DIRS; do
-        case "$dir" in
-            front)            SERVICES_TO_BUILD="$SERVICES_TO_BUILD front" ;;
-            api)              SERVICES_TO_BUILD="$SERVICES_TO_BUILD api" ;;
-            whatsapp-bridge)  SERVICES_TO_BUILD="$SERVICES_TO_BUILD whatsapp-bridge" ;;
-        esac
-    done
-    # Dédoublonner
-    SERVICES_TO_BUILD=$(echo "$SERVICES_TO_BUILD" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
-
-    # Fichiers racine modifiés (docker-compose, Caddyfile…) → tout rebuild
-    ROOT_FILES=$(git diff --name-only "$PREV_HASH" HEAD 2>/dev/null | grep -cE '^(docker-compose\.yml|Caddyfile)$' || true)
-    if [ -z "$PREV_HASH" ] || [ -z "$SERVICES_TO_BUILD" ] || [ "$ROOT_FILES" -gt 0 ]; then
-        SERVICES_TO_BUILD="front api whatsapp-bridge"
-    fi
-
-    echo "[$LOG_DATE] Services à rebuild : $SERVICES_TO_BUILD"
-    docker compose -f "$REPO/docker-compose.yml" build $SERVICES_TO_BUILD
-    docker compose -f "$REPO/docker-compose.yml" up -d
-fi
-
-# 3. Attendre que l'API soit prête
-echo "[$LOG_DATE] Attente du démarrage de l'API..."
-for i in $(seq 1 15); do
-    if docker exec hostachy_api curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-        echo "[$LOG_DATE] API opérationnelle."
-        break
-    fi
-    sleep 2
-done
-
-# Note : les migrations Alembic sont appliquées automatiquement par start.sh
-# au démarrage du conteneur — ne pas les relancer sur un conteneur en cours
-# d'exécution pour éviter la corruption du pool SQLAlchemy.
-
-# 4. Résumé
-echo ""
-echo "[$LOG_DATE] === État des conteneurs ==="
-docker compose -f "$REPO/docker-compose.yml" ps
-echo "[$LOG_DATE] === Logs récents de l'API ==="
-docker logs hostachy_api --tail 10
-echo "[$LOG_DATE] === Mise à jour terminée ==="
+#!/usr/bin/env bash
+# =============================================================================
+#  RELAIS TEMPORAIRE — le script vit désormais dans scripts/exploitation/.
+#
+#  Il n'existe que pour une raison : les tâches cron et l'unité systemd
+#  désignent CE chemin absolu, et rien dans un déploiement ne les met à jour.
+#  Sans ce relais, fusionner ferait pointer les six points d'entrée dans le vide
+#  sur les deux nœuds en cinq minutes — plus de bascule, plus de failover, plus
+#  de contrôles, et AUCUNE alerte, puisque le producteur d'alertes fait partie de
+#  ce qui ne démarre plus.
+#
+#  À RETIRER une fois les points d'entrée basculés vers scripts/exploitation/ ET
+#  la bascule de 02:00 constatée sur les deux nœuds — dans une PR séparée (#337).
+#  Tant qu'ils sont là, `bash scripts/poste/verifier-points-entree.sh` reste vert
+#  sur les anciens chemins : c'est voulu, c'est la définition d'un relais.
+# =============================================================================
+exec "$(dirname "$0")/scripts/exploitation/MaJ-Hostachy.sh" "$@"
