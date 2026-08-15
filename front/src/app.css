@@ -203,23 +203,40 @@ a:hover { text-decoration: underline; }
 .btn-icon-warn[title]:hover::after, .btn-icon-success[title]:hover::after { opacity: 1; }
 
 /* ── Forms ── */
-.field { margin-bottom: 1rem; }
-.field label {
-  display: block;
-  font-size: .875rem;
-  font-weight: 500;
-  margin-bottom: .3rem;
-  color: var(--color-text);
-}
+/*  `.field` et `.field label` étaient eux aussi déclarés DEUX fois, avec des
+    valeurs contradictoires : `margin-bottom: 1rem` puis `.75rem`, et un label
+    `display:block` + `margin-bottom:.3rem` puis un simple `font-size`+`weight`
+    dans un parent devenu flex. Ce sont les secondes qui gagnaient. Fusionnées
+    ici, aux valeurs effectives — l'écran ne change pas. */
+.field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
+.field label { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+/*  Le <label> peut ENVELOPPER son champ — c'est même la forme la plus sûre :
+    l'association label/champ est alors implicite et native, rien ne peut la
+    casser. Il porte lui-même `.field`, et le texte hérite de la même taille que
+    le label d'un `.field` en div. Constaté en convertissant #374 : séparer le
+    label du champ avait produit 39 avertissements « a form label must be
+    associated with a control » — l'inverse du but recherché. */
+label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+/*  ⚠️ DÉFINITION UNIQUE du champ de saisie. Elle l'était si peu qu'`app.css`
+    la portait DEUX FOIS — ici et 300 lignes plus bas — avec des valeurs
+    différentes : `.5rem .75rem` contre `.45rem .6rem`, et surtout un fond blanc
+    (`--color-surface`) contre un fond beige (`--color-bg`). La seconde gagnait,
+    étant plus basse dans la cascade ; la première ne servait donc à rien, sauf à
+    faire croire à qui la lisait que les champs étaient blancs.
+
+    Les valeurs retenues sont celles qui GAGNAIENT — l'écran ne change pas.
+    Trouvé le 15/08/2026 en instruisant #374 : le site reprochait aux pages de
+    redéfinir localement ce que le global portait déjà, et le global se
+    contredisait lui-même. */
 .field input,
 .field select,
 .field textarea {
   width: 100%;
-  padding: .5rem .75rem;
+  padding: .45rem .6rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   font-size: .9rem;
-  background: var(--color-surface);
+  background: var(--color-bg);
   color: var(--color-text);
   transition: border-color .15s;
 }
@@ -520,16 +537,6 @@ a:hover { text-decoration: underline; }
   margin-top: .75rem;
 }
 
-.field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
-.field label { font-size: .875rem; font-weight: 500; }
-.field input, .field select, .field textarea {
-  padding: .45rem .6rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size: .9rem;
-  background: var(--color-bg);
-  width: 100%;
-}
 
 /* ── Affichage texte enrichi (TipTap HTML) ── */
 .rich-content p  { margin: 0 0 .4rem; }
