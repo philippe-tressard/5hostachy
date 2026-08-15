@@ -47,8 +47,16 @@
 #    sans réécriture.
 #
 #  LANCEMENT — MANUEL, depuis le poste, quand il est allumé :
-#    • double-clic sur `export-hors-site.cmd` (à la racine du dépôt), ou
-#    • depuis Git Bash :   bash /c/Dev/5hostachy/export-hors-site.sh
+#    • raccourci « Sauvegarde hors site 5Hostachy » sur le Bureau, ou
+#    • double-clic sur `scripts/poste/export-hors-site.cmd`, ou
+#    • depuis Git Bash :   bash /c/Dev/5hostachy/scripts/poste/export-hors-site.sh
+#
+#    ⚠ Ces trois chemins ont changé le 15/08/2026 (#350, rangement de
+#      l'outillage) : le raccourci du Bureau pointait toujours sur la racine du
+#      dépôt et ne lançait plus rien. Un point d'entrée qui vit HORS du dépôt
+#      n'est réparé par aucun `git mv` — si ce script est redéplacé, le
+#      raccourci est à repointer à la main. Aucun contrôle ne le vérifie
+#      encore : c'est l'objet du ticket #377.
 #
 #    Le poste n'étant pas allumé en permanence, ce script n'est PAS planifié :
 #    une tâche quotidienne sur une machine éteinte échoue plus souvent qu'elle
