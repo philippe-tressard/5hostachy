@@ -1,11 +1,16 @@
 # Tâches cron de root — état attendu sur LES DEUX nœuds.
 #
-# Capturé le 15/08/2026 à l'identique de la production. Les chemins sont absolus :
-# déplacer l'un de ces scripts sans mettre ce fichier ET les deux crontabs à jour
-# coupe la bascule, le failover et les alertes, sans que rien ne le signale.
+# Basculé vers scripts/exploitation/ le 15/08/2026 (#337), les deux nœuds
+# vérifiés : sur rpi1 le journal système confirme les trois commandes au nouveau
+# chemin ; sur rpi2 (journalctl hors de son allowlist sudo) la preuve vient des
+# logs applicatifs — auto-deploy à 11h58 et check-reliability à 12h06, tous deux
+# postérieurs à la bascule.
+#
+# Les relais à la racine du dépôt sont encore en place : ils partiront dans une
+# PR séparée, après le constat de la bascule de 02:00 sur les deux nœuds.
 #
 # Pose : sudo crontab -e sur chaque nœud (geste explicite, jamais automatique).
-0 2 * * * /opt/5hostachy/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
-0 3 * * 0 /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
-2,7,12,17,22,27,32,37,42,47,52,57 * * * * /opt/5hostachy/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
-6,21,36,51 * * * * /opt/5hostachy/check-reliability.sh >> /var/log/hostachy-reliability.log 2>&1
+0 2 * * * /opt/5hostachy/scripts/exploitation/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
+0 3 * * 0 /opt/5hostachy/scripts/exploitation/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
+2,7,12,17,22,27,32,37,42,47,52,57 * * * * /opt/5hostachy/scripts/exploitation/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
+6,21,36,51 * * * * /opt/5hostachy/scripts/exploitation/check-reliability.sh >> /var/log/hostachy-reliability.log 2>&1
