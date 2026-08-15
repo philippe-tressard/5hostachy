@@ -230,20 +230,20 @@ Ajouter les trois lignes suivantes :
 
 ```cron
 # Bascule quotidienne rpi1 ↔ rpi2 (02h00)
-0 2 * * * /opt/5hostachy/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
+0 2 * * * /opt/5hostachy/scripts/exploitation/bascule.sh >> /var/log/hostachy-bascule.log 2>&1
 
 # Surveillance site + failover automatique (toutes les 5 min)
-*/5 * * * * /opt/5hostachy/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
+*/5 * * * * /opt/5hostachy/scripts/exploitation/health-watch.sh >> /var/log/hostachy-health-watch.log 2>&1
 
 # Maintenance hebdomadaire (dimanche 03h00)
-0 3 * * 0 /opt/5hostachy/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
+0 3 * * 0 /opt/5hostachy/scripts/exploitation/maintenance.sh >> /var/log/hostachy-maintenance.log 2>&1
 ```
 
 Rendre les scripts exécutables :
 ```bash
-chmod +x /opt/5hostachy/bascule.sh
-chmod +x /opt/5hostachy/health-watch.sh
-chmod +x /opt/5hostachy/maintenance.sh
+chmod +x /opt/5hostachy/scripts/exploitation/bascule.sh
+chmod +x /opt/5hostachy/scripts/exploitation/health-watch.sh
+chmod +x /opt/5hostachy/scripts/exploitation/maintenance.sh
 ```
 
 Vérifier :
@@ -321,7 +321,7 @@ sudo systemctl enable --now unattended-upgrades
 ## Mise à jour courante (post-restauration)
 
 ```bash
-sudo bash /opt/5hostachy/MaJ-Hostachy.sh
+sudo bash /opt/5hostachy/scripts/exploitation/MaJ-Hostachy.sh
 ```
 
 ---

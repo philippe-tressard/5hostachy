@@ -7,4 +7,4 @@
 # ⚠️ rpi2 porte en plus une tâche de List-dons, l'autre projet hébergé sur la même
 # machine. Elle est légitime et n'a rien à faire ici : le contrôle de conformité
 # ignore les lignes qui ne mentionnent pas /opt/5hostachy.
-3,8,13,18,23,28,33,38,43,48,53,58 * * * * /opt/5hostachy/auto-deploy.sh >> /var/log/hostachy-deploy.log 2>&1
+3,8,13,18,23,28,33,38,43,48,53,58 * * * * /opt/5hostachy/scripts/exploitation/auto-deploy.sh >> /var/log/hostachy-deploy.log 2>&1

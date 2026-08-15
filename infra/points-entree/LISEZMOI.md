@@ -29,21 +29,21 @@ ici n'écrit sur un nœud. Les installer reste un geste explicite, fait un nœud
 fois. Un fichier versionné qui s'installerait tout seul serait un déploiement
 d'infrastructure déguisé.
 
-## ⚠️ Phase de transition (depuis le 15/08/2026)
+## Où en est la transition (#337)
 
-Les scripts d'exploitation vivent désormais dans `scripts/exploitation/`, mais les
-crontabs et l'unité systemd **désignent encore la racine**. Des relais d'une ligne
-y pourvoient : `bascule.sh` à la racine fait un `exec` vers le vrai script.
+| | État |
+|---|---|
+| Les 5 tâches cron | **basculées** vers `scripts/exploitation/` le 15/08/2026, sur les deux nœuds |
+| L'unité systemd | **reste sur le relais** `/opt/5hostachy/boot-role-guard.sh` — voir ci-dessous |
+| Les relais à la racine | encore présents, retrait dans une PR séparée après le constat de la bascule de 02:00 |
 
-Les fichiers de ce répertoire décrivent donc **les anciens chemins**, et c'est
-volontaire : ils décrivent ce qui est *installé*, pas ce qui serait souhaitable.
-Le contrôle doit rester **vert** pendant toute la transition.
+**Pourquoi l'unité systemd garde son relais.** L'écrire demande d'écrire dans
+`/etc/systemd/system/`, ce que l'allowlist `sudo` de rpi2 n'autorise pas (#302) :
+il faudrait un mot de passe. Le relais `boot-role-guard.sh` à la racine est donc
+**permanent et assumé**, et non un reste de transition. Il est commenté comme tel.
 
-Quand les points d'entrée seront basculés vers `scripts/exploitation/`, il faudra
-mettre à jour **ensemble** : les crontabs des deux nœuds, l'unité systemd, les
-fichiers de ce répertoire, et `docs/restauration-complete.md`. Les relais ne
-partent qu'après, et seulement une fois la bascule de 02:00 constatée sur les deux
-nœuds.
+Avantage secondaire, et il compte : le garde-fou anti-split-brain n'est jamais
+exposé à une modification root de plus.
 
 ## Vérifier qu'un nœud est conforme
 
