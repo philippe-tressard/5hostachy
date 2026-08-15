@@ -112,9 +112,17 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
   par l'utilisateur — qui croyait l'anomalie du côté des tickets, alors que
   c'étaient eux qui avaient raison).
 - **Aperçu replié : vignette dès que l'élément porte une photo**, via
-  `ApercuCarte.svelte`. Les tickets ne l'avaient pas alors que le fil d'activité
-  et les actualités si — une règle qui ne vaut que sur deux écrans sur trois n'est
-  pas un standard, c'est un accident.
+  `ApercuCarte.svelte` (ou `FluxVignette` quand la carte n'a pas d'aperçu texte).
+  Vaut pour **les six écrans dépliables**, vérifié un par un le 15/08/2026 : fil
+  d'activité, actualités, tickets, espace CS, calendrier, prestataires. Les trois
+  derniers ne l'appliquaient pas — et le **calendrier** laissait joindre des photos
+  à un événement sans jamais les montrer, ni repliées ni dépliées.
+
+  ⚠️ Deux architectures donnent le bon comportement de refermeture : conteneur
+  cliquable **+** corps en `stopPropagation` (actualités, tickets, calendrier), ou
+  en-tête cliquable **+** corps *frère* (prestataires). Ne pas « corriger » une
+  absence de `stopPropagation` sans regarder la structure : on casserait ce qui
+  marche.
 - Accessibilité : `role="button"` + `tabindex="0"` + `on:keydown`
 
 ### Préfixes par page
