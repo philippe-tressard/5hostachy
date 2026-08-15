@@ -16,7 +16,7 @@
 #  non-duplication du projet).
 #
 #  Usage :
-#    source /opt/5hostachy/lib-alert.sh
+#    source /opt/5hostachy/scripts/lib/lib-alert.sh
 #    ALERT_COOLDOWN_FILE=/tmp/mon-script-cooldown   # défaut : par nom de script
 #    ALERT_COOLDOWN_SECONDS=3600                    # défaut : 1800 (30 min)
 #    alert_if_not_in_cooldown "sujet" "corps"

@@ -100,7 +100,7 @@ def test_le_repertoire_prive_est_bien_sous_le_volume_repliqué():
         "REPERTOIRE_PRIVE est hors du volume répliqué et sauvegardé"
     )
 
-    bascule = (RACINE / "bascule.sh").read_text(encoding="utf-8")
+    bascule = (RACINE / "scripts" / "exploitation" / "bascule.sh").read_text(encoding="utf-8")
     assert "5hostachy_uploads" in bascule, "bascule.sh ne réplique plus ce volume"
     backup = (RACINE / "api" / "app" / "utils" / "backup.py").read_text(encoding="utf-8")
     assert '"/app/uploads"' in backup, "backup.py n'archive plus ce répertoire"

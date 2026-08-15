@@ -41,13 +41,13 @@ BATTEMENT_DEPLOY_MIN=20    # auto-deploy écrit ~12 lignes/h sur le standby
 # Extraites dans `lib-verdicts-mep.sh` le 11/08/2026 : ce fichier a dépassé 500
 # lignes en recevant 0f, et son PROPRE point 0b a refusé le push. Le self-test
 # est parti avec elles — il est leur contrat.
-# shellcheck source=lib-verdicts-mep.sh
+# shellcheck source=../lib/lib-verdicts-mep.sh
 #  Les modules `lib-*.sh` restent à la RACINE du dépôt : ils sont partagés avec
 #  les scripts d'exploitation lancés par cron, dont les chemins absolus ne sont
 #  pas versionnés (#337). Les déplacer ici couperait la bascule et le failover.
 RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$RACINE_DEPOT" || exit 1   # les contrôles lisent api/, .git/ et front/ en relatif
-. "$RACINE_DEPOT/lib-verdicts-mep.sh"
+. "$RACINE_DEPOT/scripts/lib/lib-verdicts-mep.sh"
 
 if [ "${1:-}" = "--selftest" ]; then
   verdicts_mep_selftest
@@ -305,8 +305,25 @@ ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "ERROR|C
 rapporter 6 "$(verdict_compte "${ERR:-}" 0)" "Aucune ERROR/CRITICAL (1 h)" "compte=${ERR:-?}"
 
 # 7 — bits d'exécution des scripts lancés par cron
-SANSX=$(sur "$ACTIF" 'ls -l /opt/5hostachy/*.sh 2>/dev/null | grep -v "^-rwx" | grep -cv "lib-"; true')
-rapporter 7 "$(verdict_compte "${SANSX:-}" 0)" "Scripts cron exécutables" "sans bit x=${SANSX:-?}"
+#
+#     ⚠️ Le glob était `/opt/5hostachy/*.sh` : il ne regardait que la RACINE.
+#     Déplacer les scripts dans `scripts/` l'aurait fait ne correspondre à rien —
+#     donc « 0 script sans bit d'exécution », donc **OK**. Le contrôle qui
+#     garantit que les scripts de cron sont exécutables serait passé au vert
+#     précisément parce qu'ils avaient disparu (cas zéro, socle 04 §2).
+#
+#     Il compte désormais le TOTAL en plus des fautifs : zéro script trouvé n'est
+#     pas un succès, c'est un contrôle qui n'a rien mesuré.
+LOT7=$(sur "$ACTIF" 'set -- /opt/5hostachy/*.sh /opt/5hostachy/scripts/*/*.sh;        tot=0; ko=0; for f; do [ -f "$f" ] || continue; case "${f##*/}" in lib-*) continue;; esac;        tot=$((tot+1)); [ -x "$f" ] || ko=$((ko+1)); done; echo "$tot $ko"')
+TOT7=${LOT7%% *}; SANSX=${LOT7##* }
+if [ -z "${LOT7:-}" ] || [ -z "${TOT7:-}" ]; then
+  V7=INCONNU; D7="hôte injoignable — rien n'a été mesuré"
+elif [ "${TOT7:-0}" -eq 0 ] 2>/dev/null; then
+  V7=INCONNU; D7="aucun script trouvé — le chemin de scan est faux, ce n'est pas un succès"
+else
+  V7=$(verdict_compte "${SANSX:-}" 0); D7="$TOT7 script(s) examiné(s), sans bit x=${SANSX:-?}"
+fi
+rapporter 7 "$V7" "Scripts cron exécutables" "$D7"
 
 # 8 — battement d'auto-deploy sur le STANDBY (sur l'actif, le silence est normal)
 AGE=$(sur "$STANDBY" 'd=$(grep -oE "^\[[0-9-]+ [0-9:]+" /var/log/hostachy-deploy.log 2>/dev/null | tail -1 | tr -d "["); \
@@ -399,6 +416,24 @@ for h in "$RPI1" "$RPI2"; do
   [ -z "$GROS" ] && V14=INCONNU
   rapporter 14 "$V14" "Hygiène disque (${h##*@})" "cache=${CACHE:-?}  logs>${LOG_MAX_MO}Mo=${GROS:-?}"
 done
+
+# 17 — les points d'entrée des nœuds sont-ils ceux que le dépôt attend ?
+#
+#      Ajouté le 15/08/2026. Les tâches cron et l'unité systemd désignent les
+#      scripts par CHEMIN ABSOLU, et n'étaient écrites nulle part : déplacer un
+#      script coupait la bascule, le failover et les alertes sur les deux nœuds
+#      dans les cinq minutes suivant la fusion — sans rien signaler, puisque le
+#      producteur d'alertes fait partie de ce qui ne démarre plus.
+#
+#      C'est le seul contrôle qui compare les nœuds au DÉPÔT. `check-reliability`
+#      C18 les compare entre eux, ce qui laisse passer la dérive commune.
+PE=$(bash "$RACINE_DEPOT/scripts/poste/verifier-points-entree.sh" 2>&1)
+case "$?" in
+  0) V17=OK;      D17="cron et systemd conformes sur les 2 nœuds" ;;
+  2) V17=INCONNU; D17="au moins un point non lisible (sudo refusé ? hôte injoignable ?)" ;;
+  *) V17=FAIL;    D17=$(printf '%s' "$PE" | grep -m1 -E '^\s+(cron|hostachy)' | sed 's/^ *//') ;;
+esac
+rapporter 17 "$V17" "Points d'entrée conformes au dépôt" "$D17"
 
 echo
 echo "───────────────────────────────────────────────────────────────"

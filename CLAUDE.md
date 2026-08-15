@@ -234,6 +234,11 @@ Production **HA sur 2 Raspberry Pi** : rpi1 `192.168.1.222` (PhT-RB5), rpi2
 traiter avant toute autre chose. Site HS : SSH sur l'actif →
 `cd /opt/5hostachy && docker compose up -d`.
 
+> 📇 **Les points d'entrée sont versionnés depuis le 15/08/2026** :
+> `infra/points-entree/` porte les crons et l'unité systemd attendus, et le
+> **point 17** du pré-check compare l'installé au dépôt. C18 ne compare que les
+> nœuds entre eux, donc pas la dérive commune.
+
 | Cron root (identique sur les 2 nœuds) | Rôle |
 |---|---|
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
@@ -301,6 +306,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 - MEP : `MaJ-Hostachy.sh` sur le **RPi actif** uniquement (le script bloque sur le standby)
 - `.env` non versionné · `SECRET_KEY` ≥ 32 caractères · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
+  (chemin de **relais** ; le script vit dans `scripts/exploitation/` — cf. #337)
 
 **Aucune MEP sans avoir chargé `.claude/skills/mep-precheck`.** Cette skill porte les
 étapes 0 et 0 bis (poste de développement, exigences sans exception), le **pré-check**
