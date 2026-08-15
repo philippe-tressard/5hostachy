@@ -1533,7 +1533,7 @@ $: _siteNom = $siteNomStore;
 {:else if onglet === 'smtp'}
 <section class="config-section">
   <h2 class="config-section-title">✉️ Configuration SMTP (notifications e-mail)</h2>
-  <div class="form-grid" style="max-width:640px">
+  <div class="form-grid largeur-saisie">
     <label class="field-label" style="grid-column:span 2">
       <span style="display:flex;align-items:center;gap:.5rem">
         <input type="checkbox" bind:checked={smtpConfig.enabled} style="width:1rem;height:1rem" />
@@ -1596,13 +1596,13 @@ $: _siteNom = $siteNomStore;
       <span class="field-hint">STARTTLS et SSL/TLS sont mutuellement exclusifs. Décocher les deux pour connexion non chiffrée.</span>
     </label>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:.75rem;max-width:640px">
+  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.75rem">
     <button class="btn btn-primary" on:click={saveSmtpConfig} disabled={smtpSaving}>
       {smtpSaving ? 'Enregistrement...' : 'Enregistrer'}
     </button>
   </div>
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0;max-width:640px" />
-  <div style="max-width:640px">
+  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
+  <div class="largeur-saisie">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">🧪 Tester la configuration</p>
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
       <input
@@ -1622,8 +1622,8 @@ $: _siteNom = $siteNomStore;
     </div>
     <p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">Envoie un e-mail de test avec la configuration SMTP actuellement enregistrée en base.</p>
   </div>
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0;max-width:640px" />
-  <div style="max-width:640px">
+  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
+  <div class="largeur-saisie">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">✉️ Signature des e-mails</p>
     <label class="field-label">
       <textarea
@@ -1636,7 +1636,7 @@ $: _siteNom = $siteNomStore;
       <span class="field-hint">Texte ajouté automatiquement en bas de chaque e-mail envoyé par la plateforme.</span>
     </label>
   </div>
-  <div style="max-width:640px;margin-top:.75rem">
+  <div class="largeur-saisie" style="margin-top:.75rem">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">🏢 Référence copropriété (syndic)</p>
     <label class="field-label">
       <input
@@ -1649,7 +1649,7 @@ $: _siteNom = $siteNomStore;
       <span class="field-hint">Référence de la copropriété auprès du syndic. Utilisée en préfixe dans les sujets d'e-mails envoyés au syndic.</span>
     </label>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:.5rem;max-width:640px">
+  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.5rem">
     <button class="btn btn-primary" on:click={saveSmtpConfig} disabled={smtpSaving}>
       {smtpSaving ? 'Enregistrement...' : 'Enregistrer'}
     </button>

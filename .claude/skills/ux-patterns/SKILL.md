@@ -112,9 +112,17 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
   par l'utilisateur — qui croyait l'anomalie du côté des tickets, alors que
   c'étaient eux qui avaient raison).
 - **Aperçu replié : vignette dès que l'élément porte une photo**, via
-  `ApercuCarte.svelte`. Les tickets ne l'avaient pas alors que le fil d'activité
-  et les actualités si — une règle qui ne vaut que sur deux écrans sur trois n'est
-  pas un standard, c'est un accident.
+  `ApercuCarte.svelte` (ou `FluxVignette` quand la carte n'a pas d'aperçu texte).
+  Vaut pour **les six écrans dépliables**, vérifié un par un le 15/08/2026 : fil
+  d'activité, actualités, tickets, espace CS, calendrier, prestataires. Les trois
+  derniers ne l'appliquaient pas — et le **calendrier** laissait joindre des photos
+  à un événement sans jamais les montrer, ni repliées ni dépliées.
+
+  ⚠️ Deux architectures donnent le bon comportement de refermeture : conteneur
+  cliquable **+** corps en `stopPropagation` (actualités, tickets, calendrier), ou
+  en-tête cliquable **+** corps *frère* (prestataires). Ne pas « corriger » une
+  absence de `stopPropagation` sans regarder la structure : on casserait ce qui
+  marche.
 - Accessibilité : `role="button"` + `tabindex="0"` + `on:keydown`
 
 ### Préfixes par page
@@ -181,6 +189,21 @@ Pages implémentées : `actualites`, `tableau-de-bord`, `faq`, `calendrier`, `so
 Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
 
 ## 9. Champs de formulaire
+
+**Largeur : `.largeur-saisie` (720 px), sur le conteneur du formulaire.** Vaut
+pour les pages dédiées *et* les formulaires intégrés à une liste — le même geste
+ne doit pas avoir deux largeurs selon l'écran.
+
+Trois pratiques coexistaient avant le 15/08/2026 : 640 px sur les pages dédiées et
+l'administration, pleine largeur sur les formulaires inline (actualités,
+sondages). Signalé par l'utilisateur, pas par un contrôle.
+
+⚠️ Les séparateurs `<hr>` d'un bloc de saisie portent la **même** classe : sinon
+le trait s'arrête avant le formulaire, ce qui se voit immédiatement.
+
+⚠️ Ne s'applique **pas aux modales**, qui ont leurs propres contraintes (celle du
+calendrier reste à 640 px, délibérément).
+
 
 - Champ requis : label suivi de ` *` — `Titre *`, `Périmètre *`
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit

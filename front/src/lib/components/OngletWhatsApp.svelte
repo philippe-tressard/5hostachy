@@ -143,7 +143,7 @@
     <Icon name="whatsapp" size={18} />
     Configuration WhatsApp
   </h2>
-  <div class="form-grid" style="max-width:640px">
+  <div class="form-grid largeur-saisie">
     <label class="field-label" style="grid-column:span 2">
       <span style="display:flex;align-items:center;gap:.5rem">
         <input type="checkbox" bind:checked={waConfig.enabled} style="width:1rem;height:1rem" />
@@ -172,13 +172,13 @@
       <span class="field-hint">{apiKeySet ? 'Une clé est déjà configurée. Laissez ce champ vide pour la conserver.' : 'Requis pour l\'authentification au bridge WhatsApp.'}</span>
     </label>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:.75rem;max-width:640px">
+  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.75rem">
     <button class="btn btn-primary" on:click={saveWaConfig} disabled={waSaving}>
       {waSaving ? 'Enregistrement...' : 'Enregistrer'}
     </button>
   </div>
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0;max-width:640px" />
-  <div style="max-width:640px">
+  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
+  <div class="largeur-saisie">
     <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
       <p style="font-size:.85rem;font-weight:600;color:var(--color-text-muted);margin:0">&#x1F9EA; Tester la configuration</p>
       <button class="btn btn-outline" style="font-size:.75rem;padding:.15rem .5rem" on:click={checkWaStatus} disabled={waStatusLoading}>
@@ -233,10 +233,10 @@
     <p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">Envoie le message ci-dessus sur le groupe WhatsApp configuré.</p>
   </div>
 
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
+  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:1rem 0">
 
   <!-- Messages planifiés -->
-  <div style="max-width:640px">
+  <div class="largeur-saisie">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">&#x1F4C5; Messages planifiés (envoi automatique)</p>
     <p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:1rem;line-height:1.5">
       &#x1F4A1; Markdown WhatsApp : <strong>*gras*</strong> | <em>_italique_</em> | <s>~barré~</s> | Sauts de ligne (Enter)
@@ -266,10 +266,10 @@
     {/each}
   </div>
 
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
+  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:1rem 0">
 
   <!-- Footer des messages -->
-  <div style="max-width:640px">
+  <div class="largeur-saisie">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">&#x1F4DD; Footer des messages (markdown WhatsApp)</p>
     <label class="field-label">
       <textarea
@@ -283,16 +283,16 @@
     </label>
   </div>
 
-  <div style="display:flex;justify-content:flex-end;margin-top:.5rem;max-width:640px">
+  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.5rem">
     <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={onSaveFooter} disabled={footerSaving}>
       {footerSaving ? '...' : '\u{1F4BE} Enregistrer'}
     </button>
   </div>
 
-  <hr style="border:none;border-top:1px solid var(--color-border);margin:1rem 0;max-width:640px" />
+  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:1rem 0">
 
   <!-- Historique des envois -->
-  <div style="max-width:640px">
+  <div class="largeur-saisie">
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
       <p style="font-size:.85rem;font-weight:600;color:var(--color-text-muted);margin:0">&#x1F4CB; Historique des envois (6 derniers)</p>
       <button class="btn btn-outline" style="font-size:.7rem;padding:.1rem .4rem" on:click={loadWaLogs} aria-label="Rafraîchir l'historique">&#x1F504;</button>

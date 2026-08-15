@@ -9,6 +9,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import FluxVignette from '$lib/components/FluxVignette.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
@@ -982,6 +984,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 						{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
 						{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
 					</div>
+					{#if !expanded}<FluxVignette photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} size={48} />{/if}
 					<div class="event-date">
 						<div>{formatDate(ev.debut)}</div>
 						{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
@@ -1004,9 +1007,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 							{/if}
 						</div>
 					{/if}
-					{#if expanded && ev.description}
+					{#if expanded && (ev.description || ev.photos_urls?.length || ev.fichiers_urls?.length)}
 						<div class="ev-expanded-body rich-content" on:click|stopPropagation on:keydown|stopPropagation>
-							{@html safeHtml(ev.description)}
+							{#if ev.description}{@html safeHtml(ev.description)}{/if}
+							{#if ev.photos_urls?.length || ev.fichiers_urls?.length}
+								<PiecesJointes urls={[...(ev.photos_urls ?? []), ...(ev.fichiers_urls ?? [])]} format="grand" />
+							{/if}
 						</div>
 					{/if}
 				</div>
@@ -1138,15 +1144,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
 
-	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 	.form-grid label, .form-grid select, .form-grid input { display: flex; flex-direction: column; gap: .3rem; font-size: .9rem; }
 	.form-grid input, .form-grid select,
-	form textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .9rem; background: var(--color-bg); width: 100%; }
 	.month-group { margin-bottom: 1.5rem; }
 	.month-label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
-	.event-row { display: flex; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; }
-	.ev-expandable { cursor: pointer; }
-	.ev-expandable:hover { background: var(--color-bg); }
+	/*  `flex-wrap` : le corps déplié portait `grid-column`, sans effet en flex. */
+	.event-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; }
 	.event-urgent { border-left: 3px solid var(--color-danger); }
 	.event-type { min-width: 7rem; font-size: .8rem; font-weight: 600; padding-top: .1rem; }
 	.event-body { flex: 1; }
@@ -1178,7 +1181,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
 	.event-date { text-align: right; font-size: .85rem; min-width: 110px; }
 	.ev-updated { display: block; font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
-	.ev-expanded-body { grid-column: 1 / -1; padding: .6rem .75rem .25rem; font-size: .875rem; line-height: 1.6; border-top: 1px solid var(--color-border); margin-top: .4rem; }
+	.ev-expanded-body { flex-basis: 100%; padding: .6rem .75rem .25rem; font-size: .875rem; line-height: 1.6; border-top: 1px solid var(--color-border); margin-top: .4rem; }
 	.event-row.card.expanded { border-color: var(--color-primary, #2563eb); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #2563eb) 18%, transparent); }
 	.event-actions { display: flex; gap: .3rem; }
 	@media (max-width: 760px) {
@@ -1201,9 +1204,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		}
 	}
 
-	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); text-decoration: none; margin-bottom: .75rem; }
-	.back-link:hover { color: var(--color-primary); }
-	.danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
 
 	.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
 	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
@@ -1240,7 +1240,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.kb-tag { font-size: .65rem; font-weight: 600; padding: .1rem .4rem; border-radius: 3px; color: #fff; line-height: 1.4; text-transform: lowercase; }
 	.kanban-card-titre { font-size: .75rem; line-height: 1.25; }
 	.kanban-card-prest { font-size: .68rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.kanban-card-desc { font-size: .78rem; color: var(--color-text-muted); margin-top: .1rem; }
 	.kanban-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: .2rem; }
 	.kanban-card-type { font-size: .72rem; font-weight: 600; color: var(--color-text-muted); }
 	.kanban-card-actions { display: flex; gap: .3rem; }

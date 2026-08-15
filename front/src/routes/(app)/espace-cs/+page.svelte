@@ -13,6 +13,7 @@
 	import { trackTabView } from '$lib/telemetry';
 	import { stripHtml, fmtMontant, perimetreDefautListe } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
@@ -1418,7 +1419,7 @@
 		{#each tkFiltered as t (t.id)}
 			{@const expanded = tkExpandedId === t.id}
 			{@const evols = tkEvolsMap[t.id] ?? []}
-			<div class="tk-expand" class:expanded class:urgent={t.categorie === 'urgence'}
+			<div class="carte-liste tk-expand" class:expanded class:urgent={t.categorie === 'urgence'}
 				role="button" tabindex="0"
 				on:click={() => tkToggle(t.id)}
 				on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && tkToggle(t.id)}>
@@ -1446,7 +1447,7 @@
 				</div>
 
 				{#if !expanded}
-					<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
+					<ApercuCarte contenu={t.description} photos={t.photos_urls ?? []} />
 				{/if}
 
 				{#if expanded}
@@ -1586,7 +1587,7 @@
 							</div>
 						</div>
 						{#if !hExpanded}
-							<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
+							<ApercuCarte contenu={t.description} photos={t.photos_urls ?? []} />
 						{/if}
 						{#if hExpanded}
 							<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
@@ -3113,7 +3114,6 @@
 	.report-event-title { display: block; margin-bottom: .25rem; }
 	.report-event-desc { color: var(--color-text); }
 	.report-event-desc :global(p:last-child) { margin-bottom: 0; }
-	.clamp-5 { display: -webkit-box; line-clamp: 5; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 
 	@media (max-width: 900px) {
 		.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }

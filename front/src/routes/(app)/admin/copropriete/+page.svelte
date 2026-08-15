@@ -56,7 +56,7 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else}
-<form on:submit|preventDefault={save} style="max-width:640px;display:flex;flex-direction:column;gap:1.25rem">
+<form on:submit|preventDefault={save} class="largeur-saisie" style="display:flex;flex-direction:column;gap:1.25rem">
 
 	<section class="form-section">
 		<h2 class="section-title">Identité</h2>
