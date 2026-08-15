@@ -416,7 +416,7 @@
 {:else}
 	{#each pubList as pub (pub.id)}
 		{@const expanded = expandedPubs.has(pub.id)}
-		<div class="pub-expand" class:expanded class:urgent={pub.urgente} class:brouillon={pub.brouillon} class:epingle={pub.epingle} id="pub-{pub.id}"
+		<div class="carte-liste pub-expand" class:expanded class:urgent={pub.urgente} class:brouillon={pub.brouillon} class:epingle={pub.epingle} id="pub-{pub.id}"
 			role="button" tabindex="0"
 			on:click={() => togglePub(pub.id)}
 			on:keydown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) togglePub(pub.id); }}>
@@ -631,7 +631,7 @@
 							{#if expandedHistoryYears.has(year)}
 								{#each yearPubs as pub (pub.id)}
 									{@const expanded = expandedHistoryItems.has(pub.id)}
-									<div class="pub-expand history-item" class:expanded id="hist-pub-{pub.id}"
+									<div class="carte-liste pub-expand history-item" class:expanded id="hist-pub-{pub.id}"
 										role="button" tabindex="0"
 										on:click={() => toggleHistoryItem(pub.id)}
 										on:keydown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) toggleHistoryItem(pub.id); }}>
@@ -677,11 +677,8 @@
 	.page-header h1 { font-size: 1.4rem; font-weight: 700; }
 
 	/* Publication expansible */
-	.pub-expand { margin-bottom: .3rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: visible; position: relative; background: var(--color-surface); transition: border-left-color .12s; }
-	.pub-expand:hover, .pub-expand.expanded { border-left-color: var(--color-primary); }
-	.pub-expand.urgent { border-left-color: var(--color-danger); }
-	.pub-expand.brouillon { opacity: .7; border-left-style: dashed; }
-	.pub-expand.epingle { margin-top: 10px; }
+	/*  Conteneur, survol, urgence : `.carte-liste` (app.css). Ne reste ici que
+	    le débordement visible, requis par le badge d'épingle qui sort du cadre. */
 	.pin-badge { position: absolute; top: -9px; left: 8px; display: inline-flex; align-items: center; background: var(--color-primary); color: #fff; font-size: .65rem; padding: .1rem .35rem; border-radius: 8px; line-height: 1.6; z-index: 1; pointer-events: none; }
 
 	.pub-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; cursor: pointer; user-select: none; transition: background .12s; }

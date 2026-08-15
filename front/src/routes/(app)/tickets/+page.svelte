@@ -292,7 +292,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	{#each filtered as t (t.id)}
 		{@const expanded = expandedTickets.has(t.id)}
 		{@const evols = evolsMap[t.id] ?? []}
-		<div id="ticket-{t.id}" class="tk-expand" class:expanded class:urgent={t.categorie === 'urgence'}
+		<div id="ticket-{t.id}" class="carte-liste tk-expand" class:expanded class:urgent={t.categorie === 'urgence'}
 			role="button" tabindex="0"
 			on:click={() => toggleTicket(t.id)}
 			on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleTicket(t.id)}>
@@ -591,11 +591,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	.filter-sep { width: 1px; height: 1.2rem; background: var(--color-border); margin: 0 .3rem; }
 
 	/* Carte ticket expansible */
-	.tk-expand { margin-bottom: .3rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: visible; position: relative; background: var(--color-surface); transition: border-left-color .12s; }
-	.tk-expand:hover, .tk-expand.expanded { border-left-color: var(--color-primary); }
-	.tk-expand.urgent { border-left-color: var(--color-danger); }
-
-	.tk-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; cursor: pointer; user-select: none; transition: background .12s; }
+	/*  Conteneur, survol, urgence : `.carte-liste` (app.css). Ne reste ici que
+	    le débordement visible, requis par le badge d'épingle qui sort du cadre. */
 	.tk-row:hover { background: var(--color-bg); }
 	.tk-row-inner { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; overflow: hidden; }
 	.tk-cat { flex-shrink: 0; font-size: .95rem; }
