@@ -84,3 +84,21 @@
 	<button class="btn btn-outline" on:click={onCancel}>Annuler</button>
 	<button class="btn btn-primary" disabled={submitting} on:click={onSave}>{submitting ? '…' : 'Enregistrer'}</button>
 </div>
+
+<style>
+	/*  ⚠️ CES RÈGLES SONT PARTIES AVEC LE BALISAGE, et elles devaient partir avec
+	    lui. Svelte scope les styles au FICHIER : laissées dans la page, elles ne
+	    s'appliquaient plus au formulaire extrait — la grille disparaissait et les
+	    champs s'alignaient en une seule ligne illisible. C'est la régression du
+	    14/08/2026 (#344), reproduite à l'identique le 15/08 en extrayant ce
+	    composant, et vue en production par l'utilisateur avant tout contrôle.
+
+	    `svelte-check` ne l'a PAS signalée : les sélecteurs restaient « utilisés »
+	    dans la page, qui porte d'autres `.form-grid`. Le signal « aucun sélecteur
+	    orphelin » ne dit donc rien quand la classe existe des deux côtés. */
+	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
+	.form-grid .field { margin-bottom: 0; }
+	.devis-form-help { margin: 0 0 .75rem; font-size: .82rem; color: var(--color-text-muted); line-height: 1.45; }
+	.devis-file-note { display: inline-block; margin-top: .35rem; font-size: .8rem; color: var(--color-text-muted); }
+	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
+</style>

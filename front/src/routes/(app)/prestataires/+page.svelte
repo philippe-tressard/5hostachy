@@ -1005,21 +1005,21 @@
 						<div class="devis-detail-body">
 							{#if editDevisId === d.id}
 								<div class="form-grid" style="margin-bottom:.6rem">
-									<label>Titre *<input bind:value={devisForm.titre} required /></label>
-									<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
-									<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
+									<label class="field">Titre *<input bind:value={devisForm.titre} required /></label>
+									<label class="field">Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
+									<label class="field">Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
 									<div class="field">
-										<label>Périmètre *</label>
+										<label class="field">Périmètre *</label>
 										<PerimetrePicker mode="single"
 											value={devisForm.perimetre ? [devisForm.perimetre] : []}
 											on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
 									</div>
-									<label>Suivi Kanban
+									<label class="field">Suivi Kanban
 										<select bind:value={devisForm.statut}>
 											{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
 										</select>
 									</label>
-									<label>Fréquence
+									<label class="field">Fréquence
 										<select bind:value={devisForm.frequence_type}>
 											<option value=''>— Ponctuelle —</option>
 											<option value='fois_par_an'>× / an</option>
@@ -1029,7 +1029,7 @@
 										</select>
 									</label>
 									{#if devisForm.frequence_type}
-										<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
+										<label class="field">Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
 									{/if}
 								</div>
 								   <div style="margin-top:.75rem">
@@ -1365,16 +1365,16 @@
 								<div class="contrat-section">
 									<div class="contrat-section-title">Infos contrat</div>
 									<div class="form-grid">
-										<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-										<label>Prestataire *
+										<label class="field">Libellé *<input bind:value={contratForm.libelle} required /></label>
+										<label class="field">Prestataire *
 											<select bind:value={contratForm.prestataire_id} required>
 												<option value="">— Sélectionner —</option>
 												{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
 											</select>
 										</label>
-										<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-										<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-										<label>Durée initiale
+										<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+										<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+										<label class="field">Durée initiale
 											<div style="display:flex;gap:.4rem">
 												<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
 												<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
@@ -1383,7 +1383,7 @@
 												</select>
 											</div>
 										</label>
-										<label>Fréquence
+										<label class="field">Fréquence
 											<select bind:value={contratForm.frequence_type}>
 												<option value="">— Aucune —</option>
 												<option value="semaines">Toutes les X semaines</option>
@@ -1393,13 +1393,13 @@
 											</select>
 										</label>
 										{#if contratForm.frequence_type === 'semaines'}
-											<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+											<label class="field">Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 										{:else if contratForm.frequence_type === 'fois_par_an'}
-											<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+											<label class="field">… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 										{:else if contratForm.frequence_type === 'ans'}
-											<label>Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+											<label class="field">Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 										{/if}
-										<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+										<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
 									</div>
 								</div>
 								<div class="contrat-section">
@@ -1507,16 +1507,16 @@
 						<div class="contrat-detail-body">
 							{#if editContratId === c.id && contratFormPrestId !== -1}
 								<div class="form-grid" style="margin-bottom:.6rem">
-									<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-									<label>Prestataire *
+									<label class="field">Libellé *<input bind:value={contratForm.libelle} required /></label>
+									<label class="field">Prestataire *
 										<select bind:value={contratForm.prestataire_id} required>
 											<option value="">— Sélectionner —</option>
 											{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
 										</select>
 									</label>
-									<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-									<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-									<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+									<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+									<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+									<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
 								</div>
 								<div style="display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap">
 									<button class="btn btn-sm btn-outline" on:click={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
@@ -1594,19 +1594,19 @@
 				<form on:submit|preventDefault={savePrest}>
 					<div>
 						<div class="form-grid">
-							<label>Nom *<input bind:value={prestForm.nom} required /></label>
-							<label>Type *
+							<label class="field">Nom *<input bind:value={prestForm.nom} required /></label>
+							<label class="field">Type *
 								<select bind:value={prestForm.type_prestataire} required>
 									{#each typesPrestataire as t}<option value={t.val}>{t.label}</option>{/each}
 								</select>
 							</label>
-							<label>Spécialité *
+							<label class="field">Spécialité *
 								<select bind:value={prestForm.specialite} required>
 									<option value="">— Sélectionner —</option>
 									{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
 								</select>
 							</label>
-							<label>Email<input type="email" bind:value={prestForm.email} /></label>
+							<label class="field">Email<input type="email" bind:value={prestForm.email} /></label>
 						</div>
 						<div style="margin-top:.75rem">
 							<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Contact{prestContacts.length > 1 ? 's' : ''}</div>
@@ -1779,8 +1779,8 @@
 				<form on:submit|preventDefault={saveReleve}>
 					<div>
 						<div class="form-grid">
-							<label>Date du relevé *<input type="date" bind:value={releveForm.date_releve} required /></label>
-							<label>Index (m³)<input type="number" min="0" bind:value={releveForm.index} placeholder="Ex. 47047" /></label>
+							<label class="field">Date du relevé *<input type="date" bind:value={releveForm.date_releve} required /></label>
+							<label class="field">Index (m³)<input type="number" min="0" bind:value={releveForm.index} placeholder="Ex. 47047" /></label>
 						</div>
 						<div class="field" style="margin-top:.6rem">
 							<label for="releve-note" style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Note (optionnel)</label>
@@ -1839,21 +1839,21 @@
 	<FormulaireCreation titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}>
 			<div>
 				<div class="form-grid">
-					<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
-					<label>Prestataire *
+					<label class="field">Libellé *<input bind:value={contratForm.libelle} required /></label>
+					<label class="field">Prestataire *
 						<select bind:value={contratForm.prestataire_id} required>
 							<option value="">— Sélectionner —</option>
 							{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
 						</select>
 					</label>
-					<label>Équipement
+					<label class="field">Équipement
 						<select bind:value={contratForm.type_equipement}>
 							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
 						</select>
 					</label>
-					<label>N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-					<label>Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-					<label>Durée initiale
+					<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+					<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+					<label class="field">Durée initiale
 						<div style="display:flex;gap:.4rem">
 							<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
 							<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
@@ -1862,7 +1862,7 @@
 							</select>
 						</div>
 					</label>
-					<label>Fréquence
+					<label class="field">Fréquence
 						<select bind:value={contratForm.frequence_type}>
 							<option value="">— Aucune —</option>
 							<option value="semaines">Toutes les X semaines</option>
@@ -1872,13 +1872,13 @@
 						</select>
 					</label>
 					{#if contratForm.frequence_type === 'semaines'}
-						<label>Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+						<label class="field">Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 					{:else if contratForm.frequence_type === 'fois_par_an'}
-						<label>… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+						<label class="field">… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 					{:else if contratForm.frequence_type === 'ans'}
-						<label>Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+						<label class="field">Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
 					{/if}
-					<label>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+					<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
 				</div>
 				<div style="margin-top:.6rem">
 					<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
@@ -2041,8 +2041,8 @@
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
-	.devis-form-help { margin: 0 0 .75rem; font-size: .82rem; color: var(--color-text-muted); line-height: 1.45; }
-	.devis-file-note { display: inline-block; margin-top: .35rem; font-size: .8rem; color: var(--color-text-muted); }
+	/*  `.devis-form-help` et `.devis-file-note` sont parties avec le formulaire,
+	    dans `FormulairePrestation.svelte` — les laisser ici les rendait inertes. */
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 	.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .6rem; }

@@ -1284,8 +1284,8 @@
     </label>
     {#if cvNewArrivant}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem">
-      <label>Bâtiment / logement<input bind:value={cvBatiment} placeholder="Ex: Bât. A, Apt. 12…" /></label>
-      <label>Ancien résident (optionnel)<input bind:value={cvAncienResident} placeholder="Nom de l'ancien occupant…" /></label>
+      <label class="field">Bâtiment / logement<input bind:value={cvBatiment} placeholder="Ex: Bât. A, Apt. 12…" /></label>
+      <label class="field">Ancien résident (optionnel)<input bind:value={cvAncienResident} placeholder="Nom de l'ancien occupant…" /></label>
     </div>
     {/if}
     <div class="modal-actions">
@@ -2511,15 +2511,15 @@
 
 			{#if csHeaderEditing}
 				<div class="form-grid header-edit-form" style="max-width:460px;margin-bottom:1rem">
-					<label>
+					<label class="field">
 						Voté en AG
 						<input type="number" min="2000" max="2099" placeholder="ex. 2024" bind:value={agAnnee} />
 					</label>
-					<label>
+					<label class="field">
 						Date de l'AG
 						<input type="date" bind:value={agDate} />
 					</label>
-					<label>
+					<label class="field">
 						URL communauté WhatsApp
 						<input type="url" placeholder="https://chat.whatsapp.com/..." bind:value={whatsappUrl} />
 					</label>
@@ -2562,7 +2562,7 @@
 					{#if csOpenIdx === i}
 						{#if csEditIdx === i}
 							<div class="form-grid">
-								<label>
+								<label class="field">
 									Civilité
 									<select bind:value={membresCS[i].genre} on:change={() => membresCS = [...membresCS]}>
 										<option value="Mme">Mme</option>
@@ -2570,11 +2570,11 @@
 										<option value="Mr">Mr</option>
 									</select>
 								</label>
-								<label>
+								<label class="field">
 									Prénom
 									<input type="text" bind:value={membresCS[i].prenom} placeholder="Prénom" />
 								</label>
-								<label>
+								<label class="field">
 									NOM
 									<input type="text" bind:value={membresCS[i].nom} placeholder="NOM" class="input-nom"
 										on:input={() => onCSNomInput(i)} />
@@ -2708,7 +2708,7 @@
 					{#if syndicOpenIdx === i}
 						{#if syndicEditIdx === i}
 							<div class="form-grid">
-								<label>
+								<label class="field">
 									Civilité
 									<select bind:value={membresSyndic[i].genre} on:change={() => membresSyndic = [...membresSyndic]}>
 										<option value="Mme">Mme</option>
@@ -2716,19 +2716,19 @@
 										<option value="Mr">Mr</option>
 									</select>
 								</label>
-								<label>
+								<label class="field">
 									Prénom
 									<input type="text" bind:value={membresSyndic[i].prenom} placeholder="Prénom" />
 								</label>
-								<label>
+								<label class="field">
 									NOM
 									<input type="text" bind:value={membresSyndic[i].nom} placeholder="NOM" class="input-nom" on:input={() => onSyndicNomInput(i)} />
 								</label>
-								<label>
+								<label class="field">
 									Fonction
 									<input type="text" bind:value={membresSyndic[i].fonction} placeholder="ex. Directeur de gérance" />
 								</label>
-								<label>
+								<label class="field">
 									Email
 									<input type="email" bind:value={membresSyndic[i].email} placeholder="Email" />
 								</label>
