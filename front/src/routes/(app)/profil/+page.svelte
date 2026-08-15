@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
@@ -285,9 +285,7 @@ import { onMount } from 'svelte';
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'user'} size={20} />{_pc.titre}</h1>
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'user'} />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <div style="max-width:580px">

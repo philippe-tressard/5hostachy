@@ -297,6 +297,16 @@ jobs:
         working-directory: front
         run: npm run lint:perimetres
 
+      # L'en-tête de page était écrit de DOUZE façons : `.page-header` redéfini en
+      # CSS local dans six pages, surchargé en ligne dans six autres, et le style du
+      # <h1> recopié en ligne dans onze. Une page l'avait réécrit sans redéclarer
+      # `justify-content` : elle héritait du global en silence, et son titre partait
+      # à l'autre bout de l'écran (#363). La consigne existait — c'est le contrôle
+      # qui manquait.
+      - name: En-têtes de page passant par le composant
+        working-directory: front
+        run: npm run lint:entetes
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

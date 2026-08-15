@@ -6,6 +6,7 @@ import TopPages from '$lib/components/TopPages.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import LiensEcransAdmin from '$lib/components/LiensEcransAdmin.svelte';
@@ -778,9 +779,7 @@ $: _siteNom = $siteNomStore;
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-<h1 style="display:flex;align-items:center;gap:.4rem"><Icon name={_pc.icone || 'sliders-horizontal'} size={20} />{_pc.titre}</h1>
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'sliders-horizontal'} />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <div class="tabs-group">
@@ -1862,8 +1861,6 @@ $: _siteNom = $siteNomStore;
    passées dans `app.css` le 11/08/2026 : scopées ici, elles ne suivaient pas les
    composants extraits de cette page. (`.backup-header` y était aussi, et en est
    repartie avec les deux cartes qui l'utilisaient — #299.) */
-.page-header { display: flex; align-items: center; margin-bottom: 1.5rem; padding-left: 1.25rem; }
-.page-header h1 { font-size: 1.4rem; font-weight: 700; }
 .tabs-group { margin-bottom: 0; }
 .tabs-group-label {
   font-size: .72rem; font-weight: 700; text-transform: uppercase;

@@ -309,6 +309,46 @@ Filtre des colonnes : `if (col.id === 'ag' || col.id === 'cs') return canSeeAG;`
 
 Items non-affichables : masqués aux non-CS/admin, sauf `maintenance_recurrente`.
 
+## 13. En-tête de page — `EntetePage.svelte`, une seule écriture
+
+**Ne jamais rendre `<div class="page-header">` à la main.** Le composant porte le
+conteneur, le titre (icône + libellé + taille), le retour et la zone d'actions :
+
+```svelte
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
+  {#if $isCS}<button class="btn btn-primary page-header-btn">+ Nouvelle publication</button>{/if}
+</EntetePage>
+```
+
+| Prop | Rôle |
+|---|---|
+| `titre` | obligatoire |
+| `icone` | nom Lucide du catalogue `$lib/icones-svg.json` |
+| `retour` | href — affiche `← Retour` **à gauche du titre** |
+| `marge` | marge basse dérogatoire (quatre écrans l'utilisent — dette, cf. plus bas) |
+| slot par défaut | les actions, **à droite** |
+
+**Disposition, la même partout** : `[retour] titre` à gauche · actions à droite.
+
+⚠️ **Vérifier que l'icône existe** dans `$lib/icones-svg.json` : `Icon` retombe
+**silencieusement** sur `help-circle` pour un nom inconnu. `message-square-plus`
+n'existe pas et aurait affiché un point d'interrogation sans qu'aucun contrôle ne
+le dise (constaté le 15/08/2026).
+
+**Garde-fou** : `npm run lint:entetes` (job `build-frontend`) refuse un
+`class="page-header"` écrit à la main, une redéfinition locale de `.page-header`,
+et un `<h1>` portant `font-size` en ligne. Les exceptions sont **nommées avec leur
+raison** dans le script, et le contrôle échoue si l'une devient inutile.
+
+**Dette assumée** : `marge` existe parce que quatre écrans divergeaient
+(`0`, `.5rem`, `.75rem`, `1rem` au lieu de `1.5rem`). La valeur est désormais
+explicite et centralisée au lieu d'être un `style=` en ligne, mais le bon écart se
+tranche **à l'écran**. Ne pas ajouter de cinquième valeur sans avoir regardé.
+
+**Pages de détail** (`tickets/[id]`, `sondages/[id]`) : elles n'ont **pas**
+d'en-tête de page — leur `<h1>` est le titre de l'objet, dans sa carte. Ne pas les
+convertir mécaniquement : ce qu'il faut y mettre est instruit dans #365.
+
 ## Checklist UX (à vérifier avant commit)
 
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
@@ -320,3 +360,5 @@ Items non-affichables : masqués aux non-CS/admin, sauf `maintenance_recurrente`
 - [ ] Archiver (pas supprimer) sur la vue principale
 - [ ] Champs requis : label + ` *`
 - [ ] Labels en français
+- [ ] En-tête : `<EntetePage>`, jamais `<div class="page-header">` (§13)
+- [ ] Icône vérifiée dans `$lib/icones-svg.json` — un nom inconnu échoue en silence

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -711,14 +711,13 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'calendar-days'} size={20} />{_pc.titre}</h1>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'} marge="1rem">
 	{#if $isCS}
 		<button class="btn btn-primary page-header-btn" on:click={() => { showForm = !showForm; if (!showForm) resetForm(); }}>
 			{showForm ? '✕ Annuler' : '+ Nouvel événement'}
 		</button>
 	{/if}
-</div>
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- Onglets -->
@@ -1140,7 +1139,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 {/if}
 
 <style>
-	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-left: 1.25rem; }
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
 

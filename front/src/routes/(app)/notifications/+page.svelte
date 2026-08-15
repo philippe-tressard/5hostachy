@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 import { onMount } from 'svelte';
 	import { notifications as notifApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -79,15 +79,12 @@ import { onMount } from 'svelte';
 
 <a href="/tableau-de-bord" class="back-link">← Tableau de bord</a>
 
-<div class="page-header" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'bell'} size={20} />{_pc.titre}</h1>
-	<div style="display:flex;gap:.5rem;align-items:center">
-		{#if unread > 0}
-			<span style="font-size:.85rem;color:var(--color-text-muted)">{unread} non lue{unread > 1 ? 's' : ''}</span>
-			<button class="btn btn-secondary btn-sm" on:click={markAll}>Tout marquer lu</button>
-		{/if}
-	</div>
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'bell'}>
+	{#if unread > 0}
+		<span style="font-size:.85rem;color:var(--color-text-muted)">{unread} non lue{unread > 1 ? 's' : ''}</span>
+		<button class="btn btn-secondary btn-sm" on:click={markAll}>Tout marquer lu</button>
+	{/if}
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}

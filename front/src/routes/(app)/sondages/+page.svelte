@@ -1,5 +1,5 @@
 <script lang="ts">
-import Icon from '$lib/components/Icon.svelte';
+import EntetePage from '$lib/components/EntetePage.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import AnnonceCard from '$lib/components/AnnonceCard.svelte';
@@ -403,22 +403,21 @@ if (idIdee !== null) {
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header" style="justify-content:space-between;flex-wrap:wrap">
-<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'users-round'} size={20} />{_pc.titre}</h1>
-{#if activeTab === 'sondages' && $isCS}
-<button class="btn btn-primary page-header-btn" on:click={() => { showFormSondage = !showFormSondage; }}>
-{showFormSondage ? 'Annuler' : '+ Nouveau sondage'}
-</button>
-{:else if activeTab === 'idees'}
-<button class="btn btn-primary page-header-btn" on:click={() => { showFormIdee = !showFormIdee; }}>
-{showFormIdee ? 'Annuler' : '+ Nouvelle idée'}
-</button>
-{:else if activeTab === 'annonces'}
-<button class="btn btn-primary page-header-btn" on:click={() => { showFormAnnonce = !showFormAnnonce; }}>
-{showFormAnnonce ? 'Annuler' : '+ Déposer une annonce'}
-</button>
-{/if}
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}>
+	{#if activeTab === 'sondages' && $isCS}
+		<button class="btn btn-primary page-header-btn" on:click={() => { showFormSondage = !showFormSondage; }}>
+			{showFormSondage ? '✕ Annuler' : '+ Nouveau sondage'}
+		</button>
+	{:else if activeTab === 'idees'}
+		<button class="btn btn-primary page-header-btn" on:click={() => { showFormIdee = !showFormIdee; }}>
+			{showFormIdee ? '✕ Annuler' : '+ Nouvelle idée'}
+		</button>
+	{:else if activeTab === 'annonces'}
+		<button class="btn btn-primary page-header-btn" on:click={() => { showFormAnnonce = !showFormAnnonce; }}>
+			{showFormAnnonce ? '✕ Annuler' : '+ Déposer une annonce'}
+		</button>
+	{/if}
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if banMessage}

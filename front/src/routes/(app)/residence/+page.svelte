@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
 	$: isLocataire = $currentUser?.statut === 'locataire';
@@ -534,11 +535,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header" style="margin-bottom:.75rem">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700">
-		<Icon name={_pc.icone || 'building-2'} size={20} />{_pc.titre}
-	</h1>
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'building-2'} marge=".75rem" />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}

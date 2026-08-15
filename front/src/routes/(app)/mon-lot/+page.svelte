@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -638,12 +638,11 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header" style="justify-content:space-between;flex-wrap:wrap">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'door-closed'} size={20} />{_pc.titre}</h1>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'door-closed'}>
 	{#if mainTab === 'location'}
 		<button class="btn btn-primary page-header-btn" on:click={() => (showNewBail = true)}>+ Nouveau bail</button>
 	{/if}
-</div>
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if isBailleur || $isAdmin || $isCS || (isResident && bauxTermines.length > 0)}
