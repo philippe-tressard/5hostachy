@@ -41,11 +41,11 @@ const COMPOSANT = join(RACINE, 'lib', 'components', 'FormulaireCreation.svelte')
  * contrôle échoue si l'une cesse de servir.
  */
 const EXCEPTIONS = {
-	'(app)/prestataires/+page.svelte':
-		'quatre formulaires encore en MODALE, dans un fichier de 2 182 lignes qui doit ' +
-		"d'abord être découpé. S'y ajoute un écart de fond : le périmètre y est une " +
-		'CHAÎNE dans un `<select>`, là où `PerimetrePicker` travaille sur un tableau — ' +
-		"c'est un changement de contrat, pas un remplacement de composant. Instruit dans #367",
+	//  Plus aucune : `prestataires` a été traité le 15/08/2026 (ses quatre modales
+	//  sont devenues des boîtes, et son `<select>` de périmètre a laissé place à
+	//  `PerimetrePicker mode="single"`). L'exception qui le couvrait a été retirée
+	//  parce que ce contrôle l'a refusée dès qu'elle est devenue inutile — c'est
+	//  exactement ce qu'on attend d'une liste de tolérances.
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */

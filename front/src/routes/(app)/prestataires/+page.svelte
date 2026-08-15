@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
@@ -994,11 +996,12 @@
 									<label>Titre *<input bind:value={devisForm.titre} required /></label>
 									<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
 									<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
-									<label>Périmètre *
-										<select bind:value={devisForm.perimetre}>
-											{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
-										</select>
-									</label>
+									<div class="field">
+										<label>Périmètre *</label>
+										<PerimetrePicker mode="single"
+											value={devisForm.perimetre ? [devisForm.perimetre] : []}
+											on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
+									</div>
 									<label>Suivi Kanban
 										<select bind:value={devisForm.statut}>
 											{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
@@ -1163,13 +1166,8 @@
 
 	<!-- Modal nouvelle prestation -->
 	{#if devisFormPrestId === -1}
-		<div class="modal-overlay" on:click={closeDevisForm}>
-			<div class="modal" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>📋 {editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}</h2>
-					<button class="modal-close" on:click={closeDevisForm}>×</button>
-				</div>
-				<div class="modal-body">
+		<FormulaireCreation titre={editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}>
+				<div>
 					<p class="devis-form-help">Les prestations ponctuelles alimentent le Calendrier et le Kanban selon leur statut.</p>
 					<div class="form-grid">
 						<label>Prestataire *
@@ -1178,11 +1176,12 @@
 								{#each prestataires as p}<option value={String(p.id)}>{p.nom}</option>{/each}
 							</select>
 						</label>
-						<label>Périmètre *
-							<select bind:value={devisForm.perimetre}>
-								{#each devisPerimetreOptions as opt}<option value={opt.val}>{opt.label}</option>{/each}
-							</select>
-						</label>
+						<div class="field">
+							<label>Périmètre *</label>
+							<PerimetrePicker mode="single"
+								value={devisForm.perimetre ? [devisForm.perimetre] : []}
+								on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
+						</div>
 						<label>Titre *<input bind:value={devisForm.titre} required /></label>
 						<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
 						<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
@@ -1222,12 +1221,11 @@
 						{#if devisFichierFiles && devisFichierFiles.length > 0}<span class="devis-file-note">📎 {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
 					</div>
 				</div>
-				<div class="modal-footer">
+				<div class="form-actions">
 					<button class="btn btn-outline" on:click={closeDevisForm}>Annuler</button>
 					<button class="btn btn-primary" disabled={submitting} on:click={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
 				</div>
-			</div>
-		</div>
+		</FormulaireCreation>
 	{/if}
 	<!-- Modal OS upload -->
 	{#if osUploadDevisId}
@@ -1643,14 +1641,9 @@
 	</div>
 
 	{#if $isCS && showPrestForm}
-		<div class="modal-overlay" on:click|self={() => { showPrestForm = false; resetPrestForm(); }}>
-			<div class="modal" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>{editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}</h2>
-					<button class="modal-close" on:click={() => { showPrestForm = false; resetPrestForm(); }}>×</button>
-				</div>
+		<FormulaireCreation titre={editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}>
 				<form on:submit|preventDefault={savePrest}>
-					<div class="modal-body">
+					<div>
 						<div class="form-grid">
 							<label>Nom *<input bind:value={prestForm.nom} required /></label>
 							<label>Type *
@@ -1687,13 +1680,12 @@
 							<button type="button" class="btn btn-sm btn-outline" on:click={() => prestContacts = [...prestContacts, { telephone: '', prenom: '', nom: '', fonction: '', email: '' }]}>+ Nouveau contact</button>
 						</div>
 					</div>
-					<div class="modal-footer">
+					<div class="form-actions">
 						<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
 						<button class="btn btn-primary" disabled={submitting}>{submitting ? '…' : 'Enregistrer'}</button>
 					</div>
 				</form>
-			</div>
-		</div>
+		</FormulaireCreation>
 	{/if}
 
 	{#if filteredPrests.length === 0}
@@ -1834,14 +1826,9 @@
 	</div>
 
 	{#if showReleveForm && $isCS}
-		<div class="modal-overlay" on:click|self={resetReleveForm}>
-			<div class="modal modal-sm" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>{editReleveId ? 'Modifier le relevé' : currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}</h2>
-					<button class="modal-close" on:click={resetReleveForm}>×</button>
-				</div>
+		<FormulaireCreation titre={editReleveId ? 'Modifier le relevé' : currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}>
 				<form on:submit|preventDefault={saveReleve}>
-					<div class="modal-body">
+					<div>
 						<div class="form-grid">
 							<label>Date du relevé *<input type="date" bind:value={releveForm.date_releve} required /></label>
 							<label>Index (m³)<input type="number" min="0" bind:value={releveForm.index} placeholder="Ex. 47047" /></label>
@@ -1857,13 +1844,12 @@
 							{/key}
 						</div>
 					</div>
-					<div class="modal-footer">
+					<div class="form-actions">
 						<button type="button" class="btn btn-outline" on:click={resetReleveForm}>Annuler</button>
 						<button type="submit" class="btn btn-primary" disabled={releveSaving}>{releveSaving ? '…' : 'Enregistrer'}</button>
 					</div>
 				</form>
-			</div>
-		</div>
+		</FormulaireCreation>
 	{/if}
 
 	{#if releveLoading}
@@ -1901,13 +1887,8 @@
 
 <!-- Modal contrat (global, hors onglets) -->
 {#if contratFormPrestId === -1}
-	<div class="modal-overlay" on:click={closeContratForm}>
-		<div class="modal" on:click|stopPropagation>
-			<div class="modal-header">
-				<h2>📄 {editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}</h2>
-				<button class="modal-close" on:click={closeContratForm}>×</button>
-			</div>
-			<div class="modal-body">
+	<FormulaireCreation titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}>
+			<div>
 				<div class="form-grid">
 					<label>Libellé *<input bind:value={contratForm.libelle} required /></label>
 					<label>Prestataire *
@@ -1976,12 +1957,11 @@
 					</div>
 				{/if}
 			</div>
-			<div class="modal-footer">
+			<div class="form-actions">
 				<button class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
 				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
 			</div>
-		</div>
-	</div>
+	</FormulaireCreation>
 {/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->
