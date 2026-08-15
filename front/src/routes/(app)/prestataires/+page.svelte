@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
@@ -751,8 +752,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header" style="justify-content: space-between">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'hard-hat'} size={20} />{_pc.titre}</h1>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'hard-hat'} marge=".5rem">
 	{#if $isCS}
 		{#if onglet === 'prestataires'}
 			<button class="btn btn-primary page-header-btn" on:click={() => { showPrestForm = !showPrestForm; if (!showPrestForm) resetPrestForm(); }}>
@@ -768,7 +768,7 @@
 			</button>
 		{/if}
 	{/if}
-</div>
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- ── Onglets ─────────────────────────────────────────────────── -->
@@ -2021,7 +2021,6 @@
 {/if}
 
 <style>
-	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; padding-left: 1.25rem; }
 
 	/* ── Onglets ── */
 	.tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; margin-bottom: 1.5rem; overflow-x: auto; scrollbar-width: thin; }

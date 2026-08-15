@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, isCS } from '$lib/stores/auth';
 	import {
@@ -107,11 +108,7 @@
 
 <svelte:head><title>Délégations aidant — {_siteNom}</title></svelte:head>
 
-<div class="page-header" style="margin-bottom:.75rem">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700">
-		<Icon name="heart-handshake" size={20} />Délégations aidant
-	</h1>
-</div>
+<EntetePage titre="Délégations aidant" icone="heart-handshake" marge=".75rem" />
 <p class="page-subtitle" style="margin-bottom:1.5rem;color:var(--color-text-muted);font-size:.9rem">
 	Gestion des accès délégués pour les proches aidants.
 	<br /><em style="font-size:.82rem">L'accès aidant ne constitue pas une procuration d'AG.</em>

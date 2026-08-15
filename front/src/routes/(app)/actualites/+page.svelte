@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { isCS, isAdmin, setUser } from '$lib/stores/auth';
@@ -228,16 +228,13 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-	<h1 style="display:flex;align-items:center;gap:.4rem"><Icon name={_pc.icone || 'newspaper'} size={20} />{_pc.titre}</h1>
-	<div style="display:flex;gap:.5rem;align-items:center">
-		{#if $isCS}
-			<button class="btn btn-primary page-header-btn" on:click={() => (showForm = !showForm)}>
-				{showForm ? '✕ Annuler' : '+ Nouvelle publication'}
-			</button>
-		{/if}
-	</div>
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
+	{#if $isCS}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = !showForm)}>
+			{showForm ? '✕ Annuler' : '+ Nouvelle publication'}
+		</button>
+	{/if}
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if showForm && $isCS}
@@ -414,9 +411,6 @@
 {/if}
 
 <style>
-	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-	.page-header h1 { font-size: 1.4rem; font-weight: 700; }
-
 	/* Évolutions */
 	.evol-list { margin-top: .9rem; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
 	.evol-sep { margin: 0; border: none; border-top: 1px solid var(--color-border); }

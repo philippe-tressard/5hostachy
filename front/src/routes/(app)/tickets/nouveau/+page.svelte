@@ -7,6 +7,7 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { isCS } from '$lib/stores/auth';
@@ -104,10 +105,7 @@
 
 <svelte:head><title>Nouveau ticket — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-	<a href="/tickets" class="btn btn-outline">← Retour</a>
-	<h1>Nouveau ticket</h1>
-</div>
+<EntetePage titre="Nouveau ticket" icone="message-square-text" retour="/tickets" />
 
 {#if categorie === 'urgence'}
 	<div class="alert alert-error" style="margin-bottom:1rem">
@@ -216,14 +214,6 @@
 </div>
 
 <style>
-	.page-header {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-	.page-header h1 { font-size: 1.4rem; font-weight: 700; }
-
 	.cat-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import QRCode from '$lib/components/QRCode.svelte';
 	import { onMount } from 'svelte';
@@ -60,9 +61,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-	<h1 style="display:flex;align-items:center;gap:.4rem;font-size:1.4rem;font-weight:700"><Icon name={_pc.icone || 'users'} size={20} />{_pc.titre}</h1>
-</div>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'users'} />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}

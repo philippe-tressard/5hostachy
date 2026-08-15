@@ -4,6 +4,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -99,14 +100,17 @@
 
 <svelte:head><title>Admin — Templates email — {_siteNom}</title></svelte:head>
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem">
-	<h1 style="font-size:1.3rem;font-weight:700;margin:0">✉️ Templates email</h1>
+<!--  Titre distinct de l'onglet « Modèles e-mail » de /admin, dont cet écran est un
+      doublon partiel : lui seul porte la réinitialisation des designs. Les fusionner
+      est une décision fonctionnelle, instruite dans #307 — en attendant, deux écrans
+      qui portent le MÊME nom seraient pris l'un pour l'autre. -->
+<EntetePage titre="Designs des modèles d'e-mail" icone="file-text" retour="/admin">
 	{#if templates.length > 0}
 		<button class="btn btn-secondary btn-sm" on:click={resetAll} disabled={resetting} title="Remet tous les modèles au design par défaut">
 			{resetting ? '⏳ Réinitialisation…' : '🔄 Réinitialiser les designs'}
 		</button>
 	{/if}
-</div>
+</EntetePage>
 
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>

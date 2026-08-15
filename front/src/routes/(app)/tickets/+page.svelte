@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
 	import { isCS, isAdmin } from '$lib/stores/auth';
@@ -231,10 +231,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<div class="page-header">
-	<h1 style="display:flex;align-items:center;gap:.4rem"><Icon name={_pc.icone || 'message-square-text'} size={20} />{_pc.titre}</h1>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'message-square-text'}>
 	<a href="/tickets/nouveau" class="btn btn-primary page-header-btn">+ Nouveau ticket</a>
-</div>
+</EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <div class="urgence-disclaimer" role="note" aria-label="Avertissement tickets urgence">
@@ -583,8 +582,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	{/if}
 
 <style>
-	.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-	.page-header h1 { font-size: 1.4rem; font-weight: 700; }
 
 	/* Filtres (style identique à calendrier) */
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
