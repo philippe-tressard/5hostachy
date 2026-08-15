@@ -13,6 +13,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -323,7 +324,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 			</div>
 
 			{#if !expanded}
-				<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
+				<ApercuCarte contenu={t.description} photos={t.photos_urls ?? []} />
 			{/if}
 
 			{#if expanded}
@@ -489,7 +490,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 							</div>
 
 							{#if !expanded}
-								<div class="tk-preview clamp-5">{@html safeDescription(t.description)}</div>
+								<ApercuCarte contenu={t.description} photos={t.photos_urls ?? []} />
 							{/if}
 
 							{#if expanded}
@@ -600,8 +601,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	.tk-row-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
 	.tk-row-date { font-size: .78rem; color: var(--color-text-muted); margin-right: .3rem; white-space: nowrap; }
 
-	.tk-preview { padding: .4rem 1rem .6rem; font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); }
-	.tk-preview :global(p) { margin: 0 0 .4em; }
 	.tk-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.tk-body :global(p) { margin: 0 0 .5em; }
 

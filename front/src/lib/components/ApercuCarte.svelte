@@ -1,12 +1,15 @@
 <!--
-  Aperçu d'une actualité repliée : les cinq premières lignes du texte, et la
-  vignette de sa photo à droite.
+  Aperçu d'une carte repliée : les cinq premières lignes du texte, et la vignette
+  de sa photo à droite. Sert les actualités ET les tickets — d'où le nom neutre :
+  un composant partagé qui porte le nom d'une seule rubrique finit par être
+  recopié plutôt que réutilisé.
 
-  Pourquoi un composant pour si peu : le fil principal et la section Historique
-  de `/actualites` affichent le même aperçu, et le rendaient chacun de leur côté.
-  Le 15/08/2026 (#351), il a fallu leur ajouter la vignette — deux fois, au même
-  moment, exactement le geste qui finit par diverger le jour où l'on ne pense
-  qu'à l'un des deux.
+  Pourquoi un composant pour si peu : quatre listes affichent le même aperçu —
+  actualités (fil + historique) et tickets (fil + archives) — et le rendaient
+  chacune de leur côté. Le 15/08/2026, il a fallu leur ajouter la vignette : deux
+  fois d'abord (#351), puis deux autres quand l'utilisateur a constaté que les
+  tickets n'en avaient pas. Exactement le geste qui finit par diverger le jour où
+  l'on ne pense qu'à l'un des quatre.
 
   Le placement suit `ux-patterns` §11 : vignette là où l'on survole, grand format
   là où l'on a demandé à voir. La vignette est à DROITE, comme dans le fil
@@ -19,9 +22,11 @@
 <script lang="ts">
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
 	import { onMount } from 'svelte';
-	import { safeHtml } from '$lib/sanitize';
+	import { safeDescription } from '$lib/sanitize';
 
-	/** Contenu HTML de la publication (assaini avant rendu). */
+	/**  Contenu de l'élément, brut. `safeDescription` l'assainit ET enveloppe le
+	 *   texte non-HTML dans un paragraphe : les descriptions de tickets sont parfois
+	 *   du texte simple, dont `safeHtml` seul perdrait les retours à la ligne. */
 	export let contenu: string;
 	/** URLs des photos ; la première sert de vignette. */
 	export let photos: string[] = [];
@@ -38,25 +43,25 @@
 	});
 </script>
 
-<div class="pub-apercu">
-	<div class="pub-preview rich-content clamp-5" class:tronque bind:this={bloc}>{@html safeHtml(contenu)}</div>
+<div class="carte-apercu">
+	<div class="carte-preview rich-content clamp-5" class:tronque bind:this={bloc}>{@html safeDescription(contenu)}</div>
 	<FluxVignette {photos} />
 </div>
 
 <style>
 	/*  `min-width:0` : sans lui un enfant flex ne rétrécit pas sous la largeur de
 	    son contenu, et le `-webkit-line-clamp` de .clamp-5 n'est jamais appliqué. */
-	.pub-apercu { display: flex; align-items: flex-start; gap: .85rem; padding: 0 .95rem .85rem; }
-	.pub-apercu .pub-preview { flex: 1; min-width: 0; }
-	.pub-preview { font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); position: relative; }
-	.pub-preview :global(p) { margin: 0 0 .4em; }
+	.carte-apercu { display: flex; align-items: flex-start; gap: .85rem; padding: 0 .95rem .85rem; }
+	.carte-apercu .carte-preview { flex: 1; min-width: 0; }
+	.carte-preview { font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); position: relative; }
+	.carte-preview :global(p) { margin: 0 0 .4em; }
 
 	/*  Le texte tronqué était coupé NET au ras du bord : rien ne disait s'il
 	    continuait ou si la carte s'arrêtait là, et deux cartes voisines formaient
 	    un pavé continu. Le dégradé le dit, sans ajouter ni bouton ni libellé.
 	    `pointer-events:none` : il couvre le texte, il ne doit pas manger le clic
 	    qui déplie la carte. */
-	.pub-preview.tronque::after {
+	.carte-preview.tronque::after {
 		content: "";
 		position: absolute;
 		left: 0; right: 0; bottom: 0;
@@ -66,6 +71,6 @@
 	}
 
 	@media (max-width: 640px) {
-		.pub-apercu { padding: 0 .75rem .7rem; gap: .6rem; }
+		.carte-apercu { padding: 0 .75rem .7rem; gap: .6rem; }
 	}
 </style>
