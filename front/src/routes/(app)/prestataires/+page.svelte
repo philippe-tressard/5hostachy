@@ -2,6 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import FormulairePrestation from '$lib/components/FormulairePrestation.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
@@ -807,6 +808,17 @@
 		<span class="kanban-count-total">{devis.filter(d => d.actif !== false).length} prestation{devis.filter(d => d.actif !== false).length > 1 ? 's' : ''}</span>
 	</div>
 
+	<!--  Le formulaire s'affiche AU-DESSUS de la liste, comme sur toutes les autres
+	      rubriques (#372). Il était rendu APRÈS elle : sur un onglet qui liste six
+	      prestations, on ouvrait un formulaire qu'on ne voyait pas. -->
+	{#if devisFormPrestId === -1}
+		<FormulaireCreation titre={editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}>
+			<FormulairePrestation bind:devisForm {prestataires} {statutsDevis} {submitting}
+				{devisFichierKey} {devisFichierFiles}
+				onFilesChange={onDevisFilesChange} onSave={saveDevis} onCancel={closeDevisForm} />
+		</FormulaireCreation>
+	{/if}
+
 	{#if prestationsVue === 'kanban'}
 		<!-- ── Kanban ─────────────────────────────────── -->
 		<div class="kanban devis-kanban">
@@ -1164,69 +1176,6 @@
 		{/if}
 	{/if}
 
-	<!-- Modal nouvelle prestation -->
-	{#if devisFormPrestId === -1}
-		<FormulaireCreation titre={editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}>
-				<div>
-					<p class="devis-form-help">Les prestations ponctuelles alimentent le Calendrier et le Kanban selon leur statut.</p>
-					<div class="form-grid">
-						<label>Prestataire *
-							<select bind:value={devisForm.prestataire_id} required>
-								<option value="">— Sélectionner —</option>
-								{#each prestataires as p}<option value={String(p.id)}>{p.nom}</option>{/each}
-							</select>
-						</label>
-						<div class="field">
-							<label>Périmètre *</label>
-							<PerimetrePicker mode="single"
-								value={devisForm.perimetre ? [devisForm.perimetre] : []}
-								on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
-						</div>
-						<label>Titre *<input bind:value={devisForm.titre} required /></label>
-						<label>Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
-						<label>Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
-						<label>Suivi Kanban
-							<select bind:value={devisForm.statut}>
-								{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
-							</select>
-						</label>
-						<label>Fréquence
-							<select bind:value={devisForm.frequence_type}>
-								<option value=''>— Ponctuelle —</option>
-								<option value='fois_par_an'>× / an</option>
-								<option value='mois'>Tous les N mois</option>
-								<option value='semaines'>Toutes les N semaines</option>
-								<option value='ans'>Tous les N ans</option>
-							</select>
-						</label>
-						{#if devisForm.frequence_type}
-							<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
-						{/if}
-					</div>
-					<div style="margin-top:.75rem">
-						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-							<input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
-							<span style="font-size:.875rem">Afficher dans le tableau de bord</span>
-						</label>
-					</div>
-					<div style="margin-top:.6rem">
-						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-						<RichEditor bind:value={devisForm.notes} placeholder="Notes…" minHeight="60px" />
-					</div>
-					<div style="margin-top:.6rem">
-						<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers</label>
-						{#key devisFichierKey}
-							<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" on:change={onDevisFilesChange} />
-						{/key}
-						{#if devisFichierFiles && devisFichierFiles.length > 0}<span class="devis-file-note">📎 {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
-					</div>
-				</div>
-				<div class="form-actions">
-					<button class="btn btn-outline" on:click={closeDevisForm}>Annuler</button>
-					<button class="btn btn-primary" disabled={submitting} on:click={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
-				</div>
-		</FormulaireCreation>
-	{/if}
 	<!-- Modal OS upload -->
 	{#if osUploadDevisId}
 		<div class="modal-overlay" on:click={() => { osUploadDevisId = null; osFile = null; }}>

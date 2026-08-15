@@ -1,6 +1,7 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -749,107 +750,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 <!-- Formulaire création/édition -->
 {#if showForm && $isCS}
 	<FormulaireCreation titre={editId ? 'Modifier l’événement' : 'Nouvel événement'}>
-			<form on:submit|preventDefault={save}>
-				<div>
-					<div class="form-grid">
-						<label>Titre *<input bind:value={form.titre} required /></label>
-						<label>Type
-							<select bind:value={form.type}>
-								{#each types as t}<option value={t.val}>{t.label}</option>{/each}
-							</select>
-						</label>
-						<label>Date de début *<input type="date" bind:value={form.debut} required /></label>
-						<label>Heure (optionnelle)<input type="time" bind:value={form.debut_heure} /></label>
-						<label>Fin<input type="datetime-local" bind:value={form.fin} /></label>
-						<label>Lieu<input bind:value={form.lieu} /></label>
-						<label>Prestataire
-							<select bind:value={form.prestataire_id}>
-								<option value=''>— Aucun —</option>
-								{#each prestataires.filter(p => p.actif !== false) as p}
-									<option value={String(p.id)}>{p.nom}</option>
-								{/each}
-							</select>
-						</label>
-					</div>
-					{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
-					<div class="field" style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-						<label>Fréquence (optionnelle)
-							<select bind:value={form.frequence_type}>
-								<option value=''>— Pas de récurrence —</option>
-								<option value='fois_par_an'>× / an</option>
-								<option value='mois'>Tous les N mois</option>
-								<option value='semaines'>Toutes les N semaines</option>
-							</select>
-						</label>
-						{#if form.frequence_type}
-						<label>Valeur
-							<input type="number" min="1" bind:value={form.frequence_valeur} placeholder="ex: 2" />
-						</label>
-						{/if}
-					</div>
-					{/if}
-					<div class="field" style="margin-top:.75rem">
-						<label>Périmètre *</label>
-						<PerimetrePicker bind:value={formPerimetreCible} />
-					</div>
-					<div class="field" style="margin-top:.75rem">
-						<label>Suivi Kanban</label>
-						<select bind:value={form.statut_kanban} style="max-width:280px;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:var(--radius);font-size:.875rem;background:var(--color-bg)">
-							<option value="">— Pas de suivi Kanban —</option>
-							{#each KANBAN_COLS as col}
-								<option value={col.id}>{col.label}</option>
-							{/each}
-						</select>
-					</div>
-					<div class="field" style="margin-top:.75rem">
-						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-							<input type="checkbox" bind:checked={form.affichable}
-								disabled={form.type === 'maintenance_recurrente'} style="width:auto;margin:0" />
-							<span>Afficher dans le fil d'activité du tableau de bord</span>
-						</label>
-						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.4rem"
-							class:desactive={!form.affichable}>
-							<input type="checkbox" bind:checked={form.epingle}
-								disabled={!form.affichable} style="width:auto;margin:0" />
-							<span>📌 Épingler dans le fil d'activité</span>
-						</label>
-						<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
-						{#if !form.affichable}
-							<p style="margin:.2rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
-								Un événement absent du fil ne peut pas y être épinglé.
-							</p>
-						{/if}
-						{#if form.type === 'maintenance_recurrente'}
-							<p style="margin:.3rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
-								Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans le Kanban.
-							</p>
-						{/if}
-					</div>
-					<div class="field" style="margin-top:.75rem">
-						<CanauxNotification
-							bind:whatsapp={form.partager_whatsapp}
-							bind:syndic={form.envoyer_syndic}
-							bind:cs={form.envoyer_cs}
-						/>
-					</div>
-					<div class="field" style="margin-top:.75rem">
-						<label for="ev-description">Description</label>
-						<RichEditor id="ev-description" bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
-					</div>
-					<div class="field" style="margin-top:.75rem">
-						<label for="ev-photos">Photos</label>
-						<FichiersUpload id="ev-photos" bind:urls={photosUrls} max={5}
-							label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
-					</div>
-					<div class="field" style="margin-top:.75rem">
-						<label for="ev-documents">Documents <span style="font-weight:normal;color:var(--color-text-muted)">(PDF, Word, Excel)</span></label>
-						<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
-					</div>
-				</div>
-				<div class="form-actions">
-					<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
-				</div>
-			</form>
+			<FormulaireEvenement bind:form bind:photosUrls bind:fichiersUrls
+				bind:formPerimetreCible {types} {prestataires} {submitting}
+				{epingleInitial} kanbanCols={KANBAN_COLS} onSubmit={save} />
 	</FormulaireCreation>
 {/if}
 
@@ -1003,6 +906,10 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 							{/if}
 						</div>
 					{/if}
+					<!--  Le chevron dit que la carte s'ouvre (#362). Il manquait ici, seul
+					      écran dépliable du site sans lui — et sur tactile c'est LUI qui
+					      porte l'information, `:hover` ne s'y déclenchant pas. -->
+					<span class="chevron" class:open={expanded}>›</span>
 					{#if expanded && (ev.description || ev.photos_urls?.length || ev.fichiers_urls?.length)}
 						<div class="ev-expanded-body rich-content" on:click|stopPropagation on:keydown|stopPropagation>
 							{#if ev.description}{@html safeHtml(ev.description)}{/if}
@@ -1139,12 +1046,25 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
 
-	.form-grid label, .form-grid select, .form-grid input { display: flex; flex-direction: column; gap: .3rem; font-size: .9rem; }
-	.form-grid input, .form-grid select,
+	/*  `.form-grid` ne fait plus QUE la grille : le style des champs vient de
+	    `.field` (app.css), une seule fois pour tout le site. */
+	.form-grid .field { margin-bottom: 0; }
+	/*  ⚠️ Ici vivait `.form-grid input, .form-grid select,` — un sélecteur qui se
+	    terminait par une virgule et FUSIONNAIT avec la règle suivante. Les champs
+	    ne recevaient donc qu'une marge, et aucun style : ni fond, ni bordure, ni
+	    rayon. Ils s'affichaient avec l'apparence native du navigateur — blancs à
+	    bordure noire — là où tout le reste du site est gris et arrondi.
+	    Défaut présent depuis la v1.0, masqué par la modale et révélé par le
+	    passage à la boîte dans la page (#372). Il n'est pas réparé ici : les
+	    champs passent à `.field`, dont `app.css` porte déjà le style. */
 	.month-group { margin-bottom: 1.5rem; }
 	.month-label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
 	/*  `flex-wrap` : le corps déplié portait `grid-column`, sans effet en flex. */
-	.event-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; }
+	.event-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; transition: background .12s; }
+	/*  Même signal que `.pub-row:hover` et `.tk-row:hover` : le fond s'éclaircit
+	    au survol pour dire que la carte s'ouvre (#362). Le calendrier était le
+	    seul écran dépliable à n'avoir ni ce retour, ni le chevron. */
+	.event-row:hover { background: var(--color-bg); }
 	.event-urgent { border-left: 3px solid var(--color-danger); }
 	.event-type { min-width: 7rem; font-size: .8rem; font-weight: 600; padding-top: .1rem; }
 	.event-body { flex: 1; }

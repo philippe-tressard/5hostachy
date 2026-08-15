@@ -176,12 +176,17 @@
 	}
 	.flux-card {
 		flex: 1; padding: .7rem .9rem;
-		transition: box-shadow .15s, border-left-color .15s;
+		transition: box-shadow .15s, border-left-color .15s, background .12s;
 		border-left: 4px solid var(--color-border);
 		cursor: pointer;
 	}
 	.flux-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-	.flux-item:hover .flux-card { box-shadow: var(--shadow); }
+	/*  Le fond change au survol, comme sur toutes les listes dépliables du site
+	    (#362). La carte ne renforçait que son OMBRE — trop discret pour annoncer
+	    « ceci s'ouvre », et l'utilisateur l'a signalé deux fois : une carte du fil
+	    restait blanche là où une actualité se teintait. La même valeur que
+	    `.pub-row:hover` et `.tk-row:hover`, pas une nuance de plus. */
+	.flux-item:hover .flux-card { box-shadow: var(--shadow); background: var(--color-bg); }
 	.flux-item.flux-urgent .flux-card { border-left-color: var(--color-danger) !important; }
 	.flux-item.flux-expanded .flux-card { box-shadow: var(--shadow); }
 
