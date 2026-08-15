@@ -68,14 +68,16 @@
 #    une archive de plusieurs centaines de Mo dans l'arbre de travail pollue
 #    chaque `git status` et chaque diff, gitignorée ou non.
 #
-#  Test sans effet de bord : bash export-hors-site.sh --selftest
+#  Test sans effet de bord : bash scripts/poste/export-hors-site.sh --selftest
 # =============================================================================
 set -uo pipefail
 
 EXPORT_DEST="${EXPORT_DEST:-/c/Backup}"
 EXPORT_KEEP="${EXPORT_KEEP:-14}"
 EXPORT_SSH_USER="${EXPORT_SSH_USER:-ptressard}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#  `lib-role.sh` (table des nœuds) et `lib-rapport.sh` vivent à la racine du
+#  dépôt : ils servent aussi aux scripts de cron, qui n'ont pas bougé (#337).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 

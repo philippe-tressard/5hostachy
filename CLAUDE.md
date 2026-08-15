@@ -215,13 +215,13 @@ deux RPi — pattern inauguré par `boot-role-guard.sh --selftest` (15/07/2026),
 étendu à `health-watch.sh` et `check-reliability.sh` (30/07/2026).
 Lancer en local : `bash <script>.sh --selftest`.
 
-### Rejouer la CI en local — `bash rejouer-ci.sh` (depuis le 13/08/2026)
+### Rejouer la CI en local — `bash scripts/poste/rejouer-ci.sh` (depuis le 13/08/2026)
 Les quatre jobs ci-dessus se rejouent en **une minute** sur le poste, sans rien
 recopier : le script **extrait** les commandes de `.github/workflows/ci.yml`. Une
 liste tenue à la main divergerait au premier job ajouté — et c'est justement le job
 ajouté, ou celui qu'on ne pense pas à lancer, qui échoue (#319 : Ruff, le 12/08).
 Sa trace (`.git/rejeu-ci.ok`) est lue par le **point 16** du pré-check.
-Un seul job : `bash rejouer-ci.sh build-frontend` — mais alors aucune trace n'est
+Un seul job : `bash scripts/poste/rejouer-ci.sh build-frontend` — mais alors aucune trace n'est
 écrite, et le point 16 reste INCONNU.
 
 ---
@@ -304,7 +304,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 
 **Aucune MEP sans avoir chargé `.claude/skills/mep-precheck`.** Cette skill porte les
 étapes 0 et 0 bis (poste de développement, exigences sans exception), le **pré-check**
-(`precheck-mep.sh`), le **post-check P1–P11**, le rollback, la rétrospective du 26/07/2026 et
+(`scripts/poste/precheck-mep.sh`), le **post-check P1–P11**, le rollback, la rétrospective du 26/07/2026 et
 l'état de la surveillance continue. Elle porte surtout les trois règles qui priment
 sur la liste des contrôles :
 

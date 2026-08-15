@@ -11,7 +11,7 @@ Il ne reste ici que ce qu'un hook seul peut apporter : des DÉCLENCHEURS liés �
 une action concrète, et non à une intention.
 
 ┌─ AVANT CETTE ACTION ──────────────→ CHARGER / LANCER ─────────────────────┐
-│ `git push` sur dev ou main          bash precheck-mep.sh   (le hook        │
+│ `git push` sur dev ou main          bash scripts/poste/precheck-mep.sh   (le hook        │
 │   = tu t'apprêtes à déployer          pre-push le refuse sans sa trace)    │
 │ écrire dans front/src/**             .claude/skills/ux-patterns            │
 │                                      + svelte-patterns                     │

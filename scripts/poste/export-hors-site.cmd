@@ -20,9 +20,10 @@ if not exist "%BASH%" echo   Git Bash introuvable. Installer Git pour Windows, p
 if not exist "%BASH%" pause
 if not exist "%BASH%" exit /b 1
 
-rem Se placer dans le depot : le script y trouve lib-role.sh (table des noeuds).
-cd /d "%~dp0"
-"%BASH%" -lc "./export-hors-site.sh"
+rem Se placer a la RACINE du depot : le script y trouve lib-role.sh (table des
+rem noeuds), restee la avec les scripts lances par cron (#337).
+cd /d "%~dp0..\.."
+"%BASH%" -lc "./scripts/poste/export-hors-site.sh"
 
 echo.
 pause

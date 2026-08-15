@@ -45,7 +45,7 @@ refuser() {
     echo "  Sur ce dépôt, un merge vers main déclenche un déploiement dans les 5" >&2
     echo "  minutes. Le pré-check se passe AVANT le push, pas après :" >&2
     echo "" >&2
-    echo "      bash precheck-mep.sh" >&2
+    echo "      bash scripts/poste/precheck-mep.sh" >&2
     echo "" >&2
     echo "  Contournement assumé : SKIP_PRECHECK=1 git push ..." >&2
     echo "" >&2

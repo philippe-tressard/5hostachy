@@ -19,6 +19,7 @@ import pytest
 from datetime import datetime, timedelta
 
 from app.models.core import HistoriqueMaintenance, PorteeExecution, TachePlanifiee
+from tests.conftest import scripts_shell_versionnes
 
 
 def test_champs_nouveaux_presents():
@@ -83,7 +84,9 @@ def test_toute_tache_attendue_a_un_producteur():
     from app.routers.admin import _PERIODICITE_ATTENDUE_H
 
     racine = Path(__file__).resolve().parents[2]
-    scripts = {p.name: p.read_text(encoding="utf-8") for p in racine.glob("*.sh")}
+    #  Portée du scan : source unique dans conftest — un glob local ici avait
+    #  cessé de voir les scripts déplacés dans `scripts/` (#337).
+    scripts = {p.name: p.read_text(encoding="utf-8") for p in scripts_shell_versionnes()}
     assert len(scripts) >= 10, "chemin de scan cassé — ce test serait vert à vide"
 
     # Deux formes possibles : la charge utile mutualisée (`rapport_payload <tache>`,

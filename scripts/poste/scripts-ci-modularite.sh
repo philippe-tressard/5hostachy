@@ -82,6 +82,22 @@ if ! git rev-parse --verify -q "$BASE" >/dev/null; then
   exit 2
 fi
 
+#  Un fichier DÉPLACÉ n'est pas un fichier neuf.
+#
+#  Sans détection de renommage, `git show "$BASE:$f"` ne trouve rien au nouveau
+#  chemin et le fichier compte pour 0 ligne « avant » : ranger un script de 693
+#  lignes le fait alors apparaître comme une création au-dessus du plafond. Le
+#  rangement, qui ne change pas une seule ligne de code, devient une violation de
+#  la règle de modularité — et la seule issue serait de désarmer le contrôle.
+#  Vécu le 15/08/2026 en rangeant l'outillage du poste (#337).
+RENOMMAGES=$(git diff -M --name-status "$BASE" 2>/dev/null | awk '$1 ~ /^R/ {print $3"	"$2}') || RENOMMAGES=""
+
+#  Chemin qu'occupait $1 dans $BASE, ou rien si le fichier est réellement neuf.
+chemin_origine() {
+  printf '%s
+' "$RENOMMAGES" | awk -F'	' -v n="$1" '$1 == n { print $2; exit }'
+}
+
 fautifs=""
 while IFS= read -r f; do
   case "$f" in
@@ -91,6 +107,10 @@ while IFS= read -r f; do
   [ -f "$f" ] || continue                       # supprimé
   ap=$(wc -l < "$f")
   av=$(git show "$BASE:$f" 2>/dev/null | wc -l) || av=0
+  if [ "${av:-0}" -eq 0 ]; then                 # absent au nouveau chemin : déplacé ?
+    origine=$(chemin_origine "$f")
+    [ -n "$origine" ] && av=$(git show "$BASE:$origine" 2>/dev/null | wc -l)
+  fi
   case "$(verdict "${av:-0}" "$ap")" in
     grossit)        fautifs="$fautifs  $f : $av → $ap lignes (déjà au-dessus de $PLAFOND, et il grossit)\n" ;;
     neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $PLAFOND)\n" ;;

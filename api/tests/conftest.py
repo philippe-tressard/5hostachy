@@ -116,3 +116,35 @@ def arbre_vide():
     P.invalider_cache()
     yield
     P.invalider_cache()
+
+
+# ── Où vivent les scripts versionnés ─────────────────────────────────────────
+#
+#  Quatre tests scannaient les scripts, chacun avec son propre `RACINE.glob("*.sh")`.
+#  Le rangement du 15/08/2026 (#337) a déplacé l'outillage du poste dans
+#  `scripts/poste/` : les quatre globs ont cessé de le voir **en même temps**, et
+#  trois d'entre eux sont devenus faux sans rien dire de compréhensible — « aucun
+#  script ne poste export_hors_site », « endpoint orphelin ».
+#
+#  La leçon n'est pas « corriger quatre chemins » mais « il n'y en avait pas un
+#  seul » (`standards/02-factorisation.md`). La portée du scan est une notion :
+#  elle s'écrit ici, et les tests la lisent.
+
+def racine_depot():
+    from pathlib import Path
+    return Path(__file__).resolve().parents[2]
+
+
+def scripts_shell_versionnes() -> list:
+    """Tous les `.sh` du dépôt, où qu'ils soient rangés — plus les hooks git.
+
+    Les scripts d'exploitation (cron) sont restés à la racine : leurs chemins
+    absolus vivent dans des crontabs non versionnés, que ce dépôt ne peut pas
+    mettre à jour tout seul. Cette fonction ne fait aucune hypothèse là-dessus,
+    et c'est le but : elle survivra au jour où ils bougeront.
+    """
+    racine = racine_depot()
+    trouves = list(racine.glob("*.sh"))
+    trouves += list(racine.glob("scripts/**/*.sh"))
+    trouves += [p for p in racine.glob(".githooks/*") if p.is_file()]
+    return sorted(set(trouves))

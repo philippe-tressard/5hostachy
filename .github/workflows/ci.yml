@@ -141,11 +141,11 @@ jobs:
           bash boot-role-guard.sh   --selftest
           bash health-watch.sh      --selftest
           bash check-reliability.sh --selftest
-          bash export-hors-site.sh  --selftest
+          bash scripts/poste/export-hors-site.sh --selftest
           bash lib-rapport.sh       --selftest
-          bash precheck-mep.sh      --selftest
+          bash scripts/poste/precheck-mep.sh      --selftest
           bash maintenance.sh       --selftest
-          bash rejouer-ci.sh        --selftest
+          bash scripts/poste/rejouer-ci.sh        --selftest
 
       - name: Contrats d'infra (logs rotés, chemins de sortie datés)
         # Deux régressions vécues le 31/07/2026, toutes deux invisibles pendant
@@ -201,7 +201,7 @@ jobs:
           # comparaison au premier essai, et le contrôle avait conclu au vert sur
           # un diff vide. Le script refuse désormais de conclure dans ce cas.
           git fetch --no-tags --unshallow origin ${{ github.base_ref || 'main' }} 2>/dev/null             || git fetch --no-tags origin ${{ github.base_ref || 'main' }}
-          bash scripts-ci-modularite.sh origin/${{ github.base_ref || 'main' }}
+          bash scripts/poste/scripts-ci-modularite.sh origin/${{ github.base_ref || 'main' }}
 
       - name: Bits d'exécution versionnés
         # Étape 0b du pré-check MEP, jusqu'ici manuelle : `core.filemode=false`

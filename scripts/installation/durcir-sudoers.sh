@@ -30,7 +30,8 @@
 # =============================================================================
 set -uo pipefail
 
-REPO=$(cd "$(dirname "$0")" && pwd)
+#  `lib-sudoers.sh` est resté à la racine du dépôt (#337).
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
 # shellcheck source=lib-sudoers.sh
 . "$REPO/lib-sudoers.sh"
 
