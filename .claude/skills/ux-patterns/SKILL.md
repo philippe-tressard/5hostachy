@@ -73,6 +73,31 @@ de correspondance dans une page.
 - **Ligne 1** : icône + titre + badges clé
 - **Ligne 2 (méta)** : lieu + périmètre + auteur — **toujours visible** (collapsé ET expandé)
 
+### La source unique : `.carte-liste` (app.css) — depuis le 15/08/2026
+
+Le conteneur, son espacement, son survol et son état d'urgence vivent **une seule
+fois**, dans `front/src/app.css`. Actualités et tickets les redéfinissaient chacun
+de leur côté, avec les mêmes valeurs et un simple préfixe qui change — rien
+n'empêchait la troisième copie.
+
+```svelte
+<div class="carte-liste pub-expand" class:expanded class:urgent={item.urgente}>
+```
+
+La page ne garde chez elle que ses **différences** (`.pub-expand.brouillon`,
+`.tk-cat`…). Ne jamais y redéfinir marge, bordure gauche, rayon, fond ou ombre.
+
+**Espacement** : `.75rem` entre deux cartes (`.6rem` sous 640 px). Il était de
+`.3rem`, et l'aperçu tronqué **net** au ras du bord : deux cartes voisines
+formaient un pavé continu où l'œil ne trouvait plus la limite. Signalé par
+l'utilisateur, pas par un contrôle — aucun test ne dit qu'une liste est confuse.
+
+**Fin d'aperçu** : `ApercuActualite.svelte` estompe la dernière ligne par un
+dégradé, **et seulement si le texte déborde vraiment**. ⚠️ Appliqué sans
+condition, il efface la dernière ligne d'un aperçu court et annonce une suite qui
+n'existe pas — constaté à l'écran. Aucun sélecteur CSS ne sait dire « ce texte
+déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
+
 ### Règles
 - **Une seule** carte ouverte à la fois
 - Chargement lazy des détails au premier clic

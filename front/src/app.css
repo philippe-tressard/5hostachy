@@ -360,6 +360,43 @@ a:hover { text-decoration: underline; }
 .page-subtitle { font-size: .9rem; color: var(--color-text-muted); margin-bottom: 1.5rem; line-height: 1.55; padding-left: 1.25rem; }
 .tab-descriptif { font-size: .82rem; color: var(--color-text-muted); margin: -.75rem 0 1.5rem; padding-left: 1.25rem; line-height: 1.45; }
 
+/* ── Norme UX : carte de liste expansible ─────────────────────────────────
+
+   Actualités, tickets et calendrier affichent la même carte. Les trois la
+   redéfinissaient chacune de leur côté, avec les MÊMES valeurs et un simple
+   préfixe qui change (.pub- / .tk- / .ev-) : deux blocs de règles rigoureusement
+   identiques, plus un troisième partiel. Ils vivent ici désormais, une fois.
+
+   Les pages ajoutent `carte-liste` à côté de leur classe, et ne gardent chez
+   elles que leurs DIFFÉRENCES (brouillon en pointillés, catégorie de ticket…).
+   Une page nouvelle hérite ainsi du bon rendu sans rien recopier — c'était le
+   défaut de l'approche précédente : rien n'empêchait la quatrième copie.
+
+   Espacement (15/08/2026, sur retour utilisateur) : les cartes étaient séparées
+   de .3rem, et l'aperçu tronqué NET au bord. Deux cartes voisines formaient un
+   pavé continu où l'œil ne trouvait plus la limite. Le dégradé de fin d'aperçu
+   (voir ApercuActualite.svelte) dit que le texte continue, au lieu de le couper.
+   ────────────────────────────────────────────────────────────────────────── */
+.carte-liste {
+  margin-bottom: .75rem;
+  border-left: 4px solid var(--color-border);
+  border-radius: var(--radius);
+  position: relative;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .15s ease, border-left-color .15s ease;
+}
+.carte-liste:hover,
+.carte-liste.expanded { border-left-color: var(--color-primary); }
+/*  L'ombre ne se renforce qu'au survol : au repos, une ombre marquée sur chaque
+    carte fatigue une liste longue. Au survol elle isole celle qu'on vise. */
+.carte-liste:hover { box-shadow: 0 4px 14px rgba(30, 58, 95, .13); }
+.carte-liste.urgent { border-left-color: var(--color-danger); }
+
+@media (max-width: 640px) {
+  .carte-liste { margin-bottom: .6rem; }
+}
+
 /* ── Norme UX : prévisualisation 5 lignes (blocs expansibles repliés) ── */
 .clamp-5 {
   display: -webkit-box;
