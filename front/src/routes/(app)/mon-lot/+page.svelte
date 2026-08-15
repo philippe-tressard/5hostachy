@@ -683,7 +683,7 @@
 		<!-- ── Vue locataire : lot loué via bail ── -->
 		{#if monBailData}
 			<div class="lots-section-label">🏠 Lot loué</div>
-			<div class="card" style="max-width:640px;margin-bottom:1.5rem">
+			<div class="card largeur-saisie" style="margin-bottom:1.5rem">
 				<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">
 					<span class="lbc-lot-badge">{monBailData.lot_batiment_nom ?? '—'} / {monBailData.lot_numero ?? '—'}</span>
 					<span class="badge badge-green" style="font-size:.72rem">{monBailData.statut === 'actif' ? 'Bail actif' : monBailData.statut.replace('_', ' ')}</span>
@@ -715,7 +715,7 @@
 		{#if lots.length > 0}
 			<div class="lots-section-label" style="margin-top:1.5rem">🏢 Lots en propriété ({lots.length})</div>
 			{#each lots as lot (lot.id)}
-				<div class="card" style="max-width:640px;margin-bottom:1rem">
+				<div class="card largeur-saisie" style="margin-bottom:1rem">
 					<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">{lot.batiment_nom ?? '—'} / {lot.numero}</h2>
 					<dl class="details-grid">
 						<dt>Type</dt><dd style="text-transform:capitalize">{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}</dd>
@@ -828,7 +828,7 @@
 		{/if}
 
 		{#if selectedLot}
-			<div class="card" style="max-width:640px;margin-bottom:1.5rem">
+			<div class="card largeur-saisie" style="margin-bottom:1.5rem">
 				<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Caractéristiques</h2>
 				<dl class="details-grid">
 					<dt>Lot</dt><dd>{selectedLot.numero}</dd>

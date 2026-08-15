@@ -190,6 +190,21 @@ Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
 
 ## 9. Champs de formulaire
 
+**Largeur : `.largeur-saisie` (720 px), sur le conteneur du formulaire.** Vaut
+pour les pages dédiées *et* les formulaires intégrés à une liste — le même geste
+ne doit pas avoir deux largeurs selon l'écran.
+
+Trois pratiques coexistaient avant le 15/08/2026 : 640 px sur les pages dédiées et
+l'administration, pleine largeur sur les formulaires inline (actualités,
+sondages). Signalé par l'utilisateur, pas par un contrôle.
+
+⚠️ Les séparateurs `<hr>` d'un bloc de saisie portent la **même** classe : sinon
+le trait s'arrête avant le formulaire, ce qui se voit immédiatement.
+
+⚠️ Ne s'applique **pas aux modales**, qui ont leurs propres contraintes (celle du
+calendrier reste à 640 px, délibérément).
+
+
 - Champ requis : label suivi de ` *` — `Titre *`, `Périmètre *`
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit
 - Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**

@@ -120,7 +120,7 @@
 	<div class="alert alert-error">{error}</div>
 {/if}
 
-<div class="card" style="max-width:640px">
+<div class="card largeur-saisie">
 	<form on:submit|preventDefault={submit}>
 		<fieldset class="field" style="border:none;padding:0;margin:0">
 			<legend style="font-size:.875rem;font-weight:500;margin-bottom:.5rem;color:var(--color-text)">Catégorie *</legend>

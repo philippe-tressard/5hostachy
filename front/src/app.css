@@ -360,6 +360,19 @@ a:hover { text-decoration: underline; }
 .page-subtitle { font-size: .9rem; color: var(--color-text-muted); margin-bottom: 1.5rem; line-height: 1.55; padding-left: 1.25rem; }
 .tab-descriptif { font-size: .82rem; color: var(--color-text-muted); margin: -.75rem 0 1.5rem; padding-left: 1.25rem; line-height: 1.45; }
 
+/* ── Norme UX : largeur des formulaires de saisie ─────────────────────────
+
+   Un champ étalé sur toute la largeur d'un écran de bureau est pénible à relire :
+   au-delà d'environ 75 caractères, l'œil perd la ligne en revenant à la marge, et
+   un champ « Titre » de 1 100 px donne surtout une impression de vide.
+
+   Trois pratiques coexistaient : 640 px sur les pages dédiées (nouveau ticket, mon
+   lot) et l'administration, pleine largeur sur les formulaires intégrés à une
+   liste (actualités, sondages). Le même geste — créer un contenu — n'avait donc
+   pas la même largeur selon l'écran. Signalé par l'utilisateur le 15/08/2026.
+   ────────────────────────────────────────────────────────────────────────── */
+.largeur-saisie { max-width: 720px; }
+
 /* ── Norme UX : carte de liste expansible ─────────────────────────────────
 
    Actualités, tickets et calendrier affichent la même carte. Les trois la

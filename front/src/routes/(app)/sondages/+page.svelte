@@ -473,7 +473,7 @@ aria-expanded={showModeration}>
 
 {#if activeTab === 'sondages'}
 {#if showFormSondage && $isCS}
-<div class="card" style="padding:1.25rem;margin-bottom:1.5rem">
+<div class="card largeur-saisie" style="padding:1.25rem;margin-bottom:1.5rem">
 <h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Nouveau sondage</h2>
 <form on:submit|preventDefault={creerSondage}>
 <label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
@@ -630,7 +630,7 @@ Résultats visibles avant clôture
 {#if activeTab === 'idees'}
 
 {#if showFormIdee}
-<div class="card" style="padding:1.25rem;margin-bottom:1.5rem">
+<div class="card largeur-saisie" style="padding:1.25rem;margin-bottom:1.5rem">
 <form on:submit|preventDefault={creerIdee}>
 <label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
 Titre *
@@ -709,7 +709,7 @@ onReport={(rid) => signaler('reponse', rid)}
 
 {#if activeTab === 'annonces'}
 {#if showFormAnnonce}
-<div class="card" style="padding:1.25rem;margin-bottom:1.5rem">
+<div class="card largeur-saisie" style="padding:1.25rem;margin-bottom:1.5rem">
 <h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Déposer une annonce</h2>
 <form on:submit|preventDefault={creerAnnonce}>
 <label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
