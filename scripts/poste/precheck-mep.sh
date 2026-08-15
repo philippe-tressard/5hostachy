@@ -99,7 +99,7 @@ rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT")" "Clone à jour sur origin
 #      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI
 #      `test-scripts` les rejetait (email.py 656 → 663). Le contrôle existait,
 #      il n'était simplement pas dans le chemin qui précède le push.
-MOD=$(bash scripts-ci-modularite.sh origin/main 2>&1)
+MOD=$(bash scripts/poste/scripts-ci-modularite.sh origin/main 2>&1)
 case "$?" in
   0) V0B=OK ;;
   1) V0B=FAIL ;;
