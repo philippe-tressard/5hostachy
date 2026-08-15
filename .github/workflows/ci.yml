@@ -307,6 +307,16 @@ jobs:
         working-directory: front
         run: npm run lint:entetes
 
+      # Trois paradigmes coexistaient pour créer un objet : une boîte dans la
+      # page, une modale (deux largeurs), une page dédiée. L'utilisateur l'a
+      # signalé TROIS fois avant que ce soit traité (#367) — les deux premiers
+      # lots avaient corrigé des symptômes périphériques sans jamais ouvrir le
+      # formulaire. Ce contrôle a trouvé deux écrans que l'audit manuel avait
+      # manqués.
+      - name: Formulaires de création passant par le composant
+        working-directory: front
+        run: npm run lint:formulaires
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

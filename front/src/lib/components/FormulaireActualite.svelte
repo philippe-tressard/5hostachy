@@ -13,6 +13,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -100,8 +101,7 @@
 	}
 </script>
 
-<div class="card largeur-saisie" style="margin-bottom:1.5rem">
-	<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Nouvelle publication</h2>
+<FormulaireCreation titre="Nouvelle publication">
 	<form on:submit|preventDefault={publish}>
 		<div class="field">
 			<label for="new-titre">Titre *</label>
@@ -159,4 +159,4 @@
 			</button>
 		</div>
 	</form>
-</div>
+</FormulaireCreation>

@@ -8,6 +8,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { isCS } from '$lib/stores/auth';
@@ -118,7 +119,7 @@
 	<div class="alert alert-error">{error}</div>
 {/if}
 
-<div class="card largeur-saisie">
+<FormulaireCreation titre="Signaler un problème">
 	<form on:submit|preventDefault={submit}>
 		<fieldset class="field" style="border:none;padding:0;margin:0">
 			<legend style="font-size:.875rem;font-weight:500;margin-bottom:.5rem;color:var(--color-text)">Catégorie *</legend>
@@ -211,7 +212,7 @@
 			</button>
 		</div>
 	</form>
-</div>
+</FormulaireCreation>
 
 <style>
 	.cat-grid {

@@ -34,9 +34,18 @@
 	 *   ligne : la valeur est désormais explicite et centralisée, mais elle reste
 	 *   une dette — le bon écart se tranche à l'écran, pas dans le code. */
 	export let marge: string | null = null;
+	/**  Aligne l'en-tête sur la largeur de saisie (720 px) au lieu de la pleine
+	 *   largeur. À activer quand un formulaire est ouvert dans la page : sinon
+	 *   son bouton d'annulation se pose au bord droit de l'ÉCRAN, très loin de la
+	 *   boîte qu'il annule — signalé par l'utilisateur le 15/08/2026 (#367).
+	 *
+	 *   Réservé à ce cas : hors saisie, la liste occupe toute la largeur et
+	 *   contraindre l'en-tête décalerait le bouton par rapport à ce qu'il domine. */
+	export let alignerSaisie = false;
 </script>
 
-<div class="page-header" style={marge ? `margin-bottom:${marge}` : undefined}>
+<div class="page-header" class:largeur-saisie={alignerSaisie}
+	style={marge ? `margin-bottom:${marge}` : undefined}>
 	<div class="entete-principal">
 		{#if retour}
 			<a href={retour} class="btn btn-outline entete-retour">← Retour</a>
@@ -57,4 +66,8 @@
 	h1 { display: flex; align-items: center; gap: .4rem; font-size: 1.4rem; font-weight: 700; min-width: 0; }
 
 	.entete-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+
+	/*  Aucune largeur n'est écrite ici : c'est la classe globale `largeur-saisie`
+	    (app.css) qui est posée sur le conteneur. Recopier « 720 px » aurait créé
+	    la deuxième valeur qui dérive le jour où la première change. */
 </style>

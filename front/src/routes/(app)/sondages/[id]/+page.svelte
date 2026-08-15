@@ -6,6 +6,7 @@
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
@@ -284,9 +285,7 @@
 
 <!-- Modal édition sondage -->
 {#if showEditModal}
-<div class="modal-overlay" on:click|self={() => showEditModal = false} role="dialog" aria-modal="true" tabindex="-1">
-	<div class="modal-box card">
-		<h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Modifier le sondage</h2>
+<FormulaireCreation titre="Modifier le sondage">
 		<form on:submit|preventDefault={saveEdit}>
 			<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
 				Question *
@@ -309,8 +308,7 @@
 				<button type="submit" class="btn btn-primary" disabled={saving}>{saving ? 'Sauvegarde…' : 'Enregistrer'}</button>
 			</div>
 		</form>
-	</div>
-</div>
+</FormulaireCreation>
 {/if}
 
 <style>
