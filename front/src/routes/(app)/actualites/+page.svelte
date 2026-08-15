@@ -8,6 +8,7 @@
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import ApercuActualite from '$lib/components/ApercuActualite.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -122,9 +123,8 @@
 			if (idPub !== null) {
 				expandedPubs = new Set([idPub]);
 				revelerCible(`pub-${idPub}`);
-			} else if (pubList.length > 0) {
-				expandedPubs = new Set([pubList[0].id]);
 			}
+			//  Rien n'est déplié d'office : la page s'ouvre sur une LISTE. La branche du dessus reste — un lien `#pub-<id>` doit ouvrir l'article visé.
 			// Persist last-seen timestamp server-side
 			const now = new Date().toISOString();
 			authApi.updateMe({ last_seen_actualites: now }).then((u: any) => setUser(u)).catch(() => {});
@@ -460,7 +460,7 @@
 			</div>
 
 			{#if !expanded && !compactPubs}
-				<div class="pub-preview rich-content clamp-5">{@html safeHtml(pub.contenu)}</div>
+				<ApercuActualite contenu={pub.contenu} photos={pub.photos_urls ?? []} />
 			{/if}
 
 			{#if expanded}
@@ -525,10 +525,11 @@
 
 				{:else}
 						<!-- ── Corps normal ── -->
+						<!--  Texte AVANT les photos : une image en tête poussait le premier mot sous la ligne de flottaison. -->
+						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
 						{#if pub.photos_urls?.length}
 							<PiecesJointes urls={pub.photos_urls} format="grand" />
 						{/if}
-						<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
 						{#if pubFilesMap[pub.id]?.length > 0}
 							<div class="pub-attachments">
 								{#each pubFilesMap[pub.id] as doc}
@@ -650,11 +651,11 @@
 											</div>
 										</div>
 										{#if !expanded}
-											<div class="pub-preview rich-content clamp-5">{@html safeHtml(pub.contenu)}</div>
+											<ApercuActualite contenu={pub.contenu} photos={pub.photos_urls ?? []} />
 										{:else}
 											<div class="pub-body" on:click|stopPropagation on:keydown|stopPropagation>
-												{#if pub.photos_urls?.length}<PiecesJointes urls={pub.photos_urls} format="grand" />{/if}
 												<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
+												{#if pub.photos_urls?.length}<PiecesJointes urls={pub.photos_urls} format="grand" />{/if}
 												<small style="color:var(--color-text-muted);font-size:.78rem">
 												{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(pub.cree_le)}{/if}{#if pub.auteur_nom} · {pub.auteur_nom}{/if}
 												</small>
@@ -690,8 +691,6 @@
 	.pub-row-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
 	.pub-row-date { font-size: .78rem; color: var(--color-text-muted); margin-right: .3rem; white-space: nowrap; }
 
-	.pub-preview { padding: .4rem 1rem .6rem; font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); }
-	.pub-preview :global(p) { margin: 0 0 .4em; }
 	.pub-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.pub-img { width: 100%; max-height: 280px; object-fit: cover; display: block; border-radius: calc(var(--radius) - 2px); margin-bottom: .75rem; }
 	.pub-attachments { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 .25rem; }
