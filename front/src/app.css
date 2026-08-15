@@ -388,7 +388,7 @@ a:hover { text-decoration: underline; }
    Espacement (15/08/2026, sur retour utilisateur) : les cartes étaient séparées
    de .3rem, et l'aperçu tronqué NET au bord. Deux cartes voisines formaient un
    pavé continu où l'œil ne trouvait plus la limite. Le dégradé de fin d'aperçu
-   (voir ApercuActualite.svelte) dit que le texte continue, au lieu de le couper.
+   (voir ApercuCarte.svelte) dit que le texte continue, au lieu de le couper.
    ────────────────────────────────────────────────────────────────────────── */
 .carte-liste {
   margin-bottom: .75rem;

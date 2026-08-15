@@ -92,7 +92,7 @@ La page ne garde chez elle que ses **différences** (`.pub-expand.brouillon`,
 formaient un pavé continu où l'œil ne trouvait plus la limite. Signalé par
 l'utilisateur, pas par un contrôle — aucun test ne dit qu'une liste est confuse.
 
-**Fin d'aperçu** : `ApercuActualite.svelte` estompe la dernière ligne par un
+**Fin d'aperçu** : `ApercuCarte.svelte` estompe la dernière ligne par un
 dégradé, **et seulement si le texte déborde vraiment**. ⚠️ Appliqué sans
 condition, il efface la dernière ligne d'un aperçu court et annonce une suite qui
 n'existe pas — constaté à l'écran. Aucun sélecteur CSS ne sait dire « ce texte
@@ -128,10 +128,20 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 ### Préfixes par page
 | Page | Préfixe CSS | Référence |
 |------|------------|-----------|
-| Actualités | `.pub-` | `actualites/+page.svelte` |
+| Actualités | `.pub-` | **`CarteActualite.svelte`** — la page ne rend plus la carte |
 | Tickets | `.tk-` | `tickets/+page.svelte` |
 | Calendrier | `.ev-` | `calendrier/+page.svelte` |
 | Tableau de bord | `.pub-`, `.ev-`, `.tk-` | `tableau-de-bord/+page.svelte` |
+
+⚠️ **La carte des actualités est un composant depuis le 15/08/2026** (#356) :
+`CarteActualite.svelte` sert le fil **et** l'Historique, qui rendaient jusque-là
+le même balisage deux fois — le lot #351 avait dû y appliquer quatre
+modifications au lieu de deux. Toute évolution de la carte se fait là, une fois.
+
+Le balisage part **avec ses règles CSS** : Svelte scope les styles au composant.
+Ce qui reste dans la page (formulaires, fil d'évolutions) y est passé en **slots**
+— écrit dans la page, donc stylé par la page. Le signal qui dit que le découpage
+est correct est `svelte-check` : **aucun** « Unused CSS selector » nouveau.
 
 ## 4. Onglets (Tabs)
 
