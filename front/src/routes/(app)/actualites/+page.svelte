@@ -228,7 +228,10 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
+<!--  `alignerSaisie` quand le formulaire est ouvert : sans lui, « ✕ Annuler » se
+      pose au bord DROIT DE LA PAGE, à plusieurs centaines de pixels de la boîte
+      qu'il annule, laquelle s'arrête à 720 px (#367). -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'} alignerSaisie={showForm}>
 	{#if $isCS}
 		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = !showForm)}>
 			{showForm ? '✕ Annuler' : '+ Nouvelle publication'}

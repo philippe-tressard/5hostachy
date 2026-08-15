@@ -349,6 +349,58 @@ tranche **à l'écran**. Ne pas ajouter de cinquième valeur sans avoir regardé
 d'en-tête de page — leur `<h1>` est le titre de l'objet, dans sa carte. Ne pas les
 convertir mécaniquement : ce qu'il faut y mettre est instruit dans #365.
 
+## 14. Formulaire de création — `FormulaireCreation.svelte`, une boîte dans la page
+
+**Un seul paradigme sur tout le site : la boîte dans la page.** Les actualités
+sont le modèle, désigné par l'utilisateur.
+
+```svelte
+<EntetePage titre={_pc.titre} icone={_pc.icone} alignerSaisie={showForm}>
+  {#if $isCS}
+    <button class="btn btn-primary page-header-btn" on:click={() => (showForm = !showForm)}>
+      {showForm ? '✕ Annuler' : '+ Nouvelle publication'}
+    </button>
+  {/if}
+</EntetePage>
+
+{#if showForm}
+  <FormulaireCreation titre="Nouvelle publication">
+    <form on:submit|preventDefault={creer}> … </form>
+  </FormulaireCreation>
+{/if}
+```
+
+**Ce qui était faux avant le 15/08/2026** (#367), et que l'utilisateur a dû
+signaler **trois fois** :
+
+- **trois paradigmes** pour la même intention — boîte (actualités, sondages),
+  modale (calendrier, prestataires, accès & badges, fiche sondage), page dédiée
+  (nouveau ticket) ;
+- le bouton d'annulation **excentré** : il se posait au bord droit de l'ÉCRAN
+  alors que la boîte s'arrête à 720 px ;
+- sur le calendrier, **deux** commandes d'annulation — la croix de la modale et
+  le bouton d'en-tête, ce dernier sous l'overlay, visible et inutilisable.
+
+### Les trois règles
+
+1. **La commande d'annulation reste dans l'en-tête**, où le bouton d'ouverture
+   bascule en « ✕ Annuler ». Ne PAS en ajouter une seconde dans la boîte.
+2. **`alignerSaisie={showForm}` sur `EntetePage`** dès qu'un formulaire s'ouvre
+   dans la page — sans lui le bouton flotte loin de ce qu'il annule.
+3. **Jamais de modale pour un formulaire de création.** Les modales restent
+   légitimes pour une confirmation, un téléversement ponctuel ou la visionneuse —
+   ce qui les distingue : elles n'ont pas de `<form>`.
+
+**Garde-fou** : `npm run lint:formulaires` (job `build-frontend`). Il refuse un
+cadre `card largeur-saisie` enveloppant un `<form>`, et toute modale contenant un
+`<form>`. Il a trouvé **deux écrans que l'audit manuel avait manqués**.
+
+**Reste à traiter — `prestataires`**, déclaré en exception : quatre formulaires
+encore en modale dans un fichier de 2 182 lignes qui doit d'abord être découpé, et
+un écart de fond — le périmètre y est une **chaîne** dans un `<select>` là où
+`PerimetrePicker` travaille sur un tableau. C'est un changement de contrat, pas un
+remplacement de composant.
+
 ## Checklist UX (à vérifier avant commit)
 
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)

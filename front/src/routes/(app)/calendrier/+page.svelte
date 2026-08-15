@@ -1,5 +1,6 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -711,7 +712,10 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'} marge="1rem">
+<!--  Modèle des actualités (#367) : le bouton bascule, et l'en-tête s'aligne sur
+      la boîte de saisie pendant l'édition. La modale a disparu — sa croix aussi,
+      qui faisait DEUX commandes d'annulation dont une sous l'overlay. -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'} marge="1rem" alignerSaisie={showForm}>
 	{#if $isCS}
 		<button class="btn btn-primary page-header-btn" on:click={() => { showForm = !showForm; if (!showForm) resetForm(); }}>
 			{showForm ? '✕ Annuler' : '+ Nouvel événement'}
@@ -744,14 +748,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 <!-- Formulaire création/édition -->
 {#if showForm && $isCS}
-	<div class="modal-overlay" on:click|self={() => { showForm = false; resetForm(); }}>
-		<div class="modal" style="max-width:640px" on:click|stopPropagation>
-			<div class="modal-header">
-				<h2>{editId ? 'Modifier' : 'Nouvel événement'}</h2>
-				<button class="modal-close" on:click={() => { showForm = false; resetForm(); }}>×</button>
-			</div>
+	<FormulaireCreation titre={editId ? 'Modifier l’événement' : 'Nouvel événement'}>
 			<form on:submit|preventDefault={save}>
-				<div class="modal-body">
+				<div>
 					<div class="form-grid">
 						<label>Titre *<input bind:value={form.titre} required /></label>
 						<label>Type
@@ -847,13 +846,11 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 						<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
 					</div>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-outline" on:click={() => { showForm = false; resetForm(); }}>Annuler</button>
+				<div class="form-actions">
 					<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 				</div>
 			</form>
-		</div>
-	</div>
+	</FormulaireCreation>
 {/if}
 
 <!-- Contenu -->

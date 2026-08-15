@@ -1,5 +1,6 @@
 <script lang="ts">
 import EntetePage from '$lib/components/EntetePage.svelte';
+import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import AnnonceCard from '$lib/components/AnnonceCard.svelte';
@@ -403,7 +404,8 @@ if (idIdee !== null) {
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}
+	alignerSaisie={showFormSondage || showFormIdee || showFormAnnonce}>
 	{#if activeTab === 'sondages' && $isCS}
 		<button class="btn btn-primary page-header-btn" on:click={() => { showFormSondage = !showFormSondage; }}>
 			{showFormSondage ? '✕ Annuler' : '+ Nouveau sondage'}
@@ -472,8 +474,7 @@ aria-expanded={showModeration}>
 
 {#if activeTab === 'sondages'}
 {#if showFormSondage && $isCS}
-<div class="card largeur-saisie" style="padding:1.25rem;margin-bottom:1.5rem">
-<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Nouveau sondage</h2>
+<FormulaireCreation titre="Nouveau sondage">
 <form on:submit|preventDefault={creerSondage}>
 <label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
 Question *
@@ -568,7 +569,7 @@ Résultats visibles avant clôture
 </div>
 <button class="btn btn-primary" disabled={submittingSondage}>{submittingSondage ? '' : 'Créer le sondage'}</button>
 </form>
-</div>
+</FormulaireCreation>
 {/if}
 
 {#if sondagesLoading}
@@ -629,7 +630,7 @@ Résultats visibles avant clôture
 {#if activeTab === 'idees'}
 
 {#if showFormIdee}
-<div class="card largeur-saisie" style="padding:1.25rem;margin-bottom:1.5rem">
+<FormulaireCreation titre="Nouvelle idée">
 <form on:submit|preventDefault={creerIdee}>
 <label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
 Titre *
@@ -641,7 +642,7 @@ Titre *
 </div>
 <button class="btn btn-primary" disabled={submittingIdee}>{submittingIdee ? 'Envoi' : 'Soumettre'}</button>
 </form>
-</div>
+</FormulaireCreation>
 {/if}
 
 <div class="filters" style="margin-bottom:1.25rem">
@@ -708,8 +709,7 @@ onReport={(rid) => signaler('reponse', rid)}
 
 {#if activeTab === 'annonces'}
 {#if showFormAnnonce}
-<div class="card largeur-saisie" style="padding:1.25rem;margin-bottom:1.5rem">
-<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Déposer une annonce</h2>
+<FormulaireCreation titre="Déposer une annonce">
 <form on:submit|preventDefault={creerAnnonce}>
 <label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
 Titre *
@@ -751,7 +751,7 @@ Afficher mes coordonnées aux autres résidents
 </label>
 <button class="btn btn-primary" disabled={submittingAnnonce}>{submittingAnnonce ? '⏳' : "Publier l'annonce"}</button>
 </form>
-</div>
+</FormulaireCreation>
 {/if}
 
 <!-- Filtres annonces -->

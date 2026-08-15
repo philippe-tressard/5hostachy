@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.66.4",
+  "version": "2.67.0",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -15,7 +15,8 @@
     "lint:taches": "node scripts/check-libelles-taches.mjs",
     "lint:routes": "node scripts/check-routes-atteignables.mjs",
     "lint:perimetres": "node scripts/check-perimetres.mjs",
-    "lint:entetes": "node scripts/check-entete-page.mjs"
+    "lint:entetes": "node scripts/check-entete-page.mjs",
+    "lint:formulaires": "node scripts/check-formulaire-creation.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",

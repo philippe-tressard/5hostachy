@@ -1,5 +1,6 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 import { onMount } from 'svelte';
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -261,12 +262,7 @@ import { onMount } from 'svelte';
 </section>
 
 {#if showForm}
-	<div class="modal-overlay" on:click|self={() => showForm = false}>
-		<div class="modal modal-sm" on:click|stopPropagation>
-			<div class="modal-header">
-				<h2>Nouvelle demande d'accès</h2>
-				<button class="modal-close" on:click={() => showForm = false}>×</button>
-			</div>
+	<FormulaireCreation titre="Nouvelle demande d'accès">
 			<form on:submit|preventDefault={soumettreCommande}>
 				<div class="modal-body">
 					<div class="form-grid">
@@ -303,8 +299,7 @@ import { onMount } from 'svelte';
 					</button>
 				</div>
 			</form>
-		</div>
-	</div>
+	</FormulaireCreation>
 {/if}
 
 <!-- Déclarer un accès existant -->
@@ -318,12 +313,7 @@ import { onMount } from 'svelte';
 </section>
 
 {#if showDeclareForm}
-	<div class="modal-overlay" on:click|self={() => showDeclareForm = false}>
-		<div class="modal modal-sm" on:click|stopPropagation>
-			<div class="modal-header">
-				<h2>Déclarer un accès existant</h2>
-				<button class="modal-close" on:click={() => showDeclareForm = false}>×</button>
-			</div>
+	<FormulaireCreation titre="Déclarer un accès existant">
 			<form on:submit|preventDefault={declarerBadge}>
 				<div class="modal-body">
 					<div class="form-grid">
@@ -344,8 +334,7 @@ import { onMount } from 'svelte';
 					<button class="btn btn-primary" disabled={declaring}>{declaring ? 'Enregistrement…' : 'Enregistrer cet accès'}</button>
 				</div>
 			</form>
-		</div>
-	</div>
+	</FormulaireCreation>
 {/if}
 
 <!-- Historique des demandes -->
