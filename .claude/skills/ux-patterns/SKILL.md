@@ -10,10 +10,28 @@ Guide de référence des patterns UX établis. Tout pattern utilisé ≥ 2 fois 
 
 ## Règle d'uniformisation
 
+> 📖 **La règle générale est dans `standards/11-interface-et-ux.md` §1 et §1 bis** —
+> regarder les autres écrans **avant** d'écrire, y compris pour ce qui n'a pas de
+> nom (en-tête, titre, section, bloc, pied de page, espacement, ordre des boutons) ;
+> corriger l'écart trouvé s'il est simple, ouvrir un ticket sinon ; et se méfier de
+> l'**héritage partiel** quand on redéfinit localement une règle globale.
+> Ne pas la recopier ici : cette skill ne porte que son instanciation 5Hostachy.
+
 1. **Avant** d'implémenter, vérifier si un pattern similaire existe déjà (grep / semantic search)
 2. Si le pattern existe ≥ 2 fois → c'est un **pattern établi** → l'appliquer à l'identique
 3. Si la demande contredit un pattern → **signaler le conflit** et demander confirmation
 4. Après implémentation → mettre à jour **cette skill** si le pattern a évolué
+
+**Où chercher, ici** : `front/src/app.css` porte les règles globales (`.carte-liste`,
+`.page-header`, `.form-actions`, `.clamp-5`, `.chevron`, `.largeur-saisie`…) —
+c'est le premier endroit à lire, avant toute règle locale. Les composants partagés
+sont dans `front/src/lib/components/`.
+
+⚠️ **Deux fois déjà, une page a réécrit chez elle une règle qu'`app.css` portait
+déjà** : `.form-actions` (identique, donc inerte, supprimée le 15/08) et
+`.page-header` (réécrite dans six pages et surchargée en ligne dans six autres —
+issue #363, qui a projeté le titre de *Nouveau ticket* à droite de l'écran). Le
+réflexe n'est pas « qu'est-ce que j'ajoute ? » mais « de quoi est-ce que j'hérite ? ».
 
 ## 1. Icônes de contexte
 
@@ -92,7 +110,7 @@ La page ne garde chez elle que ses **différences** (`.pub-expand.brouillon`,
 formaient un pavé continu où l'œil ne trouvait plus la limite. Signalé par
 l'utilisateur, pas par un contrôle — aucun test ne dit qu'une liste est confuse.
 
-**Fin d'aperçu** : `ApercuActualite.svelte` estompe la dernière ligne par un
+**Fin d'aperçu** : `ApercuCarte.svelte` estompe la dernière ligne par un
 dégradé, **et seulement si le texte déborde vraiment**. ⚠️ Appliqué sans
 condition, il efface la dernière ligne d'un aperçu court et annonce une suite qui
 n'existe pas — constaté à l'écran. Aucun sélecteur CSS ne sait dire « ce texte
@@ -128,10 +146,20 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 ### Préfixes par page
 | Page | Préfixe CSS | Référence |
 |------|------------|-----------|
-| Actualités | `.pub-` | `actualites/+page.svelte` |
+| Actualités | `.pub-` | **`CarteActualite.svelte`** — la page ne rend plus la carte |
 | Tickets | `.tk-` | `tickets/+page.svelte` |
 | Calendrier | `.ev-` | `calendrier/+page.svelte` |
 | Tableau de bord | `.pub-`, `.ev-`, `.tk-` | `tableau-de-bord/+page.svelte` |
+
+⚠️ **La carte des actualités est un composant depuis le 15/08/2026** (#356) :
+`CarteActualite.svelte` sert le fil **et** l'Historique, qui rendaient jusque-là
+le même balisage deux fois — le lot #351 avait dû y appliquer quatre
+modifications au lieu de deux. Toute évolution de la carte se fait là, une fois.
+
+Le balisage part **avec ses règles CSS** : Svelte scope les styles au composant.
+Ce qui reste dans la page (formulaires, fil d'évolutions) y est passé en **slots**
+— écrit dans la page, donc stylé par la page. Le signal qui dit que le découpage
+est correct est `svelte-check` : **aucun** « Unused CSS selector » nouveau.
 
 ## 4. Onglets (Tabs)
 

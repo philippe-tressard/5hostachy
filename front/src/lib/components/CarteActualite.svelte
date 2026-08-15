@@ -1,0 +1,140 @@
+<!--
+  Une publication dans une liste : le conteneur dépliable, sa ligne d'en-tête,
+  son aperçu replié et son corps déplié.
+
+  Pourquoi ce composant (#356) : la page Actualités rendait la MÊME carte à deux
+  endroits — le fil principal et l'Historique. Le lot #351 a dû y appliquer
+  quatre modifications au lieu de deux (ordre photos/texte, puis vignette, deux
+  fois chacune), et c'est le genre d'écart qui finit par diverger le jour où l'on
+  ne pense qu'à l'un des deux.
+
+  ⚠️ Le balisage part AVEC ses règles CSS (`.pub-row*`, `.pub-body`,
+  `.pin-badge`…). Svelte scope les styles au composant : les laisser derrière
+  reproduirait la régression du 14/08/2026 (#344), où le balisage était parti
+  dans un composant et les règles étaient restées dans la page.
+
+  Ce que la page garde chez elle : ses formulaires et son fil d'évolutions,
+  passés en slots — ils sont écrits dans la page, donc leurs styles y restent.
+-->
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
+	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import { documents as docsApi, type Publication } from '$lib/api';
+	import { safeHtml } from '$lib/sanitize';
+	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
+	import { STATUT_LABELS, STATUT_BADGE } from '$lib/publications';
+	import { fmtDate2d as fmtDate, fmtDateLong, isNouveau } from '$lib/date';
+
+	export let pub: Publication;
+	export let expanded = false;
+	/**  `fil` : la liste principale. `historique` : les archives — atténuées, et
+	 *   sans épingle ni « New », qui n'ont plus de sens sur une publication rangée. */
+	export let variante: 'fil' | 'historique' = 'fil';
+	/** Aperçu replié — la page le masque quand la liste devient longue. */
+	export let apercu = true;
+	/** Documents joints, chargés par la page au premier dépliage. */
+	export let documents: any[] = [];
+	/**  Vrai quand la page affiche un formulaire à la place du contenu (édition,
+	 *   ajout d'évolution). Explicite, et non déduit de `$$slots` : un slot
+	 *   fourni mais vide masquerait le corps en permanence. */
+	export let formulaireOuvert = false;
+
+	const dispatch = createEventDispatcher<{ toggle: void }>();
+	const basculer = () => dispatch('toggle');
+
+	$: estFil = variante === 'fil';
+
+	//  L'ancre `#pub-<id>` est la MÊME dans les deux variantes, et c'est sans
+	//  risque de collision : le fil ne liste que les publications actives,
+	//  l'historique que les archivées — les deux ensembles sont disjoints. Elle
+	//  était préfixée `hist-pub-` dans l'historique, ce que rien ne ciblait.
+	//
+	//  Elle doit rester écrite en toutes lettres (`id="pub-…"`) : le garde-fou
+	//  `api/tests/test_liens_front.py` cherche cette chaîne pour vérifier qu'un
+	//  lien `/actualites#pub-42` tombe bien sur un élément existant. Un préfixe
+	//  calculé la rendrait invisible à l'analyse, et le contrôle échouerait sans
+	//  qu'aucun lien ne soit cassé.
+</script>
+
+<div class="carte-liste pub-expand" class:expanded class:urgent={pub.urgente}
+	class:brouillon={pub.brouillon} class:epingle={pub.epingle} class:attenue={!estFil}
+	id="pub-{pub.id}"
+	role="button" tabindex="0"
+	on:click={basculer}
+	on:keydown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) basculer(); }}>
+
+	{#if estFil && pub.epingle}<span class="pin-badge">&#x1F4CC;</span>{/if}
+
+	<div class="pub-row">
+		<div class="pub-row-inner">
+			{#if pub.brouillon}<span class="badge badge-gray" style="flex-shrink:0">✏️ Brouillon</span>{/if}
+			<span class="pub-row-titre">{pub.titre}
+			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+			</span>
+			{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
+{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}{#if pub.confidentiel}<span class="badge badge-gray" style="flex-shrink:0" title="Visible du seul périmètre sélectionné">&#x1F512; Confidentiel</span>{/if}
+		</div>
+		<div class="pub-row-right">
+			<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
+			<slot name="actions" />
+			<span class="chevron" class:open={expanded}>›</span>
+		</div>
+	</div>
+
+	{#if !expanded && apercu}
+		<ApercuCarte contenu={pub.contenu} photos={pub.photos_urls ?? []} />
+	{/if}
+
+	{#if expanded}
+		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
+		      impossible de sélectionner du texte, et un clic sur une photo ou un
+		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
+		<div class="pub-body" on:click|stopPropagation on:keydown|stopPropagation>
+			{#if formulaireOuvert}
+				<slot name="formulaire" />
+			{:else}
+				<!--  Texte AVANT les photos : une image en tête poussait le premier mot sous la ligne de flottaison. -->
+				<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
+				{#if pub.photos_urls?.length}
+					<PiecesJointes urls={pub.photos_urls} format="grand" />
+				{/if}
+				{#if documents.length > 0}
+					<div class="pub-attachments">
+						{#each documents as doc}
+							<a href={docsApi.downloadUrl(doc.id)} target="_blank" class="pub-attachment-link">
+								📎 {doc.titre || doc.fichier_nom}
+							</a>
+						{/each}
+					</div>
+				{/if}
+				<small style="color:var(--color-text-muted);font-size:.78rem">
+				{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(pub.cree_le)}{/if}{#if pub.auteur_nom} · {pub.auteur_nom}{/if}
+				</small>
+				<slot name="apres-corps" />
+			{/if}
+		</div>
+	{/if}
+</div>
+
+<style>
+	/*  Conteneur, survol, urgence et espacement : `.carte-liste` (app.css). Ne
+	    reste ici que ce qui est propre à la publication. */
+	.pin-badge { position: absolute; top: -9px; left: 8px; display: inline-flex; align-items: center; background: var(--color-primary); color: #fff; font-size: .65rem; padding: .1rem .35rem; border-radius: 8px; line-height: 1.6; z-index: 1; pointer-events: none; }
+
+	.pub-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; cursor: pointer; user-select: none; transition: background .12s; }
+	.pub-row:hover { background: var(--color-bg); }
+	.pub-row-inner { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; overflow: hidden; }
+	.pub-row-titre { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.pub-row-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
+	.pub-row-date { font-size: .78rem; color: var(--color-text-muted); margin-right: .3rem; white-space: nowrap; }
+
+	.pub-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
+	.pub-attachments { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 .25rem; }
+	.pub-attachment-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; padding: .25rem .55rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-primary); text-decoration: none; }
+	.pub-attachment-link:hover { background: var(--color-border); }
+
+	/*  Archives : la carte s'efface tant qu'on ne la vise pas. */
+	.attenue { opacity: .8; transition: opacity .15s; margin-bottom: .3rem; }
+	.attenue:hover, .attenue.expanded { opacity: 1; }
+</style>
