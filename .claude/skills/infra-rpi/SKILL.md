@@ -119,7 +119,7 @@ redémarrer la stack.
   synchronise que `uploads`, `whatsapp_auth` et `app_data`). Le rôle alternant chaque
   nuit, chaque nœud n'accumule qu'un jour sur deux, et `_rotate_backups()` ne voit que
   ses fichiers locaux → 7 versions ≈ 14 jours **à trous**, aucun nœud n'ayant celle de
-  la veille. Copie hors site : `export-hors-site.cmd` (voir ci-dessous)
+  la veille. Copie hors site : `scripts/poste/export-hors-site.cmd` (voir ci-dessous)
 - **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
 
 ## Copie hors site des sauvegardes (v2.37.0 — 04/08/2026)
@@ -130,8 +130,8 @@ nœud — jamais d'un `docker volume rm`, d'un rançongiciel ou d'un sinistre, q
 emportent base + uploads + toutes les sauvegardes d'un coup
 (`standards/06-donnees-et-integrite.md` §6).
 
-- **Lancement : MANUEL depuis le poste** — double-clic sur `export-hors-site.cmd`, ou
-  `bash /c/Dev/5hostachy/export-hors-site.sh`. Destination par défaut : `C:\Backup`
+- **Lancement : MANUEL depuis le poste** — double-clic sur `scripts/poste/export-hors-site.cmd`, ou
+  `bash /c/Dev/5hostachy/scripts/poste/export-hors-site.sh`. Destination par défaut : `C:\Backup`
   (`EXPORT_DEST`), 14 versions (`EXPORT_KEEP`).
 - Le script choisit sa source par **comportement** (qui répond sur `/api/health` en
   LAN), pas en lisant `.active` — et **s'abstient** en cas de split-brain : deux nœuds

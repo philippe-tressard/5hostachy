@@ -71,8 +71,16 @@
 ├── front/             # Frontend SvelteKit
 │   └── src/routes/    # Pages de l'application
 ├── whatsapp-bridge/   # Bridge WhatsApp (Node.js)
+├── scripts/           # Outillage
+│   ├── poste/         # Développeur et CI (pré-check, rejeu CI, export hors site)
+│   └── installation/  # À lancer une fois sur un nœud neuf
+├── infra/             # Code déployé ailleurs (worker Cloudflare)
 ├── specs/             # Spécifications fonctionnelles
 ├── docs/              # Documentation déploiement & ops
+├── *.sh               # Exploitation lancée par cron sur les RPi, et leurs
+│                      #   modules lib-*.sh. Ils restent à la RACINE : les
+│                      #   crontabs les désignent par chemin absolu, et ces
+│                      #   crontabs ne sont pas versionnés.
 └── docker-compose.yml
 ```
 

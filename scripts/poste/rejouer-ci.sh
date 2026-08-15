@@ -27,9 +27,9 @@
 #   - la parité entre les `run:` écrits et les étapes extraites est vérifiée
 #     AVANT tout : sans elle, le script rendrait un vert sur ce qu'il n'a pas lu.
 #
-#  Usage : bash rejouer-ci.sh                 # tous les jobs, écrit la trace
-#          bash rejouer-ci.sh lint-backend …  # un ou plusieurs jobs, sans trace
-#          bash rejouer-ci.sh --selftest      # éprouve l'extraction
+#  Usage : bash scripts/poste/rejouer-ci.sh                 # tous les jobs, écrit la trace
+#          bash scripts/poste/rejouer-ci.sh lint-backend …  # un ou plusieurs jobs, sans trace
+#          bash scripts/poste/rejouer-ci.sh --selftest      # éprouve l'extraction
 # =============================================================================
 set -uo pipefail
 
@@ -37,7 +37,10 @@ CI="${CI_FICHIER:-.github/workflows/ci.yml}"
 MARQUEUR="${MARQUEUR_CI:-.git/rejeu-ci.ok}"
 
 # shellcheck source=lib-ci-replay.sh
-. "$(dirname "$0")/lib-ci-replay.sh"
+#  Modules à la racine du dépôt — cf. le commentaire de precheck-mep.sh (#337).
+RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$RACINE_DEPOT" || exit 1   # le rejeu extrait .github/workflows/ci.yml en relatif
+. "$RACINE_DEPOT/lib-ci-replay.sh"
 
 if [ "${1:-}" = "--selftest" ]; then
   ci_replay_selftest

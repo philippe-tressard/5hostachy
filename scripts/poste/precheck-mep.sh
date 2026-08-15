@@ -21,8 +21,8 @@
 #     `||` ajoute une seconde valeur et le test devient inexploitable ;
 #   - jamais `docker exec` ni `sqlite3` sur app.db pendant que l'API tourne.
 #
-#  Usage : bash precheck-mep.sh            # déroule les 15 points
-#          bash precheck-mep.sh --selftest # éprouve les fonctions de décision
+#  Usage : bash scripts/poste/precheck-mep.sh   # déroule les 15 points
+#          bash scripts/poste/precheck-mep.sh --selftest # éprouve les fonctions de décision
 # =============================================================================
 set -uo pipefail
 
@@ -42,7 +42,12 @@ BATTEMENT_DEPLOY_MIN=20    # auto-deploy écrit ~12 lignes/h sur le standby
 # lignes en recevant 0f, et son PROPRE point 0b a refusé le push. Le self-test
 # est parti avec elles — il est leur contrat.
 # shellcheck source=lib-verdicts-mep.sh
-. "$(dirname "$0")/lib-verdicts-mep.sh"
+#  Les modules `lib-*.sh` restent à la RACINE du dépôt : ils sont partagés avec
+#  les scripts d'exploitation lancés par cron, dont les chemins absolus ne sont
+#  pas versionnés (#337). Les déplacer ici couperait la bascule et le failover.
+RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$RACINE_DEPOT" || exit 1   # les contrôles lisent api/, .git/ et front/ en relatif
+. "$RACINE_DEPOT/lib-verdicts-mep.sh"
 
 if [ "${1:-}" = "--selftest" ]; then
   verdicts_mep_selftest
@@ -237,7 +242,7 @@ V16=$(verdict_rejeu_ci "${R_SHA:-}" "$(git rev-parse HEAD 2>/dev/null)" "${R_FAI
 case "$V16" in
   OK)   D16="$R_OK étape(s) rejouée(s) sur ce commit" ;;
   FAIL) D16="$R_FAIL étape(s) en échec — la CI échouerait" ;;
-  *)    D16="lancer \`bash rejouer-ci.sh\` (trace absente ou d'un autre commit)" ;;
+  *)    D16="lancer \`bash scripts/poste/rejouer-ci.sh\` (trace absente ou d'un autre commit)" ;;
 esac
 rapporter 16 "$V16" "CI rejouée en local sur ce commit" "$D16"
 

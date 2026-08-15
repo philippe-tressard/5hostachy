@@ -240,7 +240,7 @@ sur le **standby** que le pré-check n'inspectait pas :
   `/var/log/hostachy-*.log`, donc sur tout log ajouté ensuite. **Un log hors de ce
   motif ne sera jamais roté** : le job CI `test-scripts` refuse désormais tout
   chemin `/var/log/…` qui n'y correspond pas (c'est ainsi qu'a été trouvé
-  `5hostachy-backup.log` dans `setup-rpi5.sh`).
+  `5hostachy-backup.log` dans `scripts/installation/setup-rpi5.sh`).
 - Le **cache de build BuildKit** n'était purgé par rien (`docker image prune` ne le
   touche pas) : 64 Go sur rpi1 (disque à 66 %) et 59 Go sur rpi2, à raison d'un
   rebuild du peer par nuit depuis la v2.20.19. Purgé à 10 Go

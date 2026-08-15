@@ -1,6 +1,6 @@
 ---
 name: mep-precheck
-description: "MEP 5Hostachy : lancer `bash rejouer-ci.sh` puis `bash precheck-mep.sh` (tous les points s'exécutent), lire ses verdicts, dérouler le post-check P1-P11 (dont la clôture des tickets, après vérification en production), rollback. Use when: AVANT tout `git push` sur dev ou main, avant de remettre une PR, après un merge vers main, pour diagnostiquer un déploiement qui n'a pas eu lieu ou vérifier qu'un correctif est réellement servi. L'histoire des incidents qui ont fait naître chaque contrôle est dans HISTORIQUE.md, à ouvrir seulement pour diagnostiquer."
+description: "MEP 5Hostachy : lancer `bash scripts/poste/rejouer-ci.sh` puis `bash scripts/poste/precheck-mep.sh` (tous les points s'exécutent), lire ses verdicts, dérouler le post-check P1-P11 (dont la clôture des tickets, après vérification en production), rollback. Use when: AVANT tout `git push` sur dev ou main, avant de remettre une PR, après un merge vers main, pour diagnostiquer un déploiement qui n'a pas eu lieu ou vérifier qu'un correctif est réellement servi. L'histoire des incidents qui ont fait naître chaque contrôle est dans HISTORIQUE.md, à ouvrir seulement pour diagnostiquer."
 argument-hint: "Décrire le lot à déployer ou le point à vérifier (ex. « pré-check avant MEP v2.31.3 », « post-check après merge »)"
 ---
 
@@ -134,7 +134,7 @@ ici et pas après.
 ## Pré-check obligatoire avant MEP — il s'exécute
 
 ```bash
-bash precheck-mep.sh          # à la racine du dépôt
+bash scripts/poste/precheck-mep.sh          # à la racine du dépôt
 ```
 
 **Ne pas dérouler la grille à la main.** Elle l'a été trop souvent de mémoire, en
@@ -157,7 +157,7 @@ elle.
 | 0d | **Un seul bump de version dans le lot** | OK · ÉCART · FAIL |
 | 0f | **Titre et descriptif de PR préparés** (`.git/pr-brief.md`) | OK · FAIL · INCONNU |
 | 15 | Aucun endpoint orphelin | OK · FAIL |
-| 16 | **CI rejouée en local sur ce commit** (`rejouer-ci.sh`) | OK · FAIL · INCONNU |
+| 16 | **CI rejouée en local sur ce commit** (`scripts/poste/rejouer-ci.sh`) | OK · FAIL · INCONNU |
 | 1 | Site public répond | OK · FAIL · INCONNU |
 | 2 | Rôle actif cohérent **et conforme au réel** | OK · FAIL |
 | 3 | Standby sans conteneur (pas de split-brain) | OK · FAIL |
@@ -207,12 +207,12 @@ elle.
   quand le lot repart : la version intermédiaire n'atteindra jamais la
   production et l'historique annoncera un déploiement qui n'a pas eu lieu
   (PR #297, 11/08/2026 — v2.49.1 jamais servie).
-- **16** → il ne mesure rien lui-même : il **lit la trace** que `rejouer-ci.sh`
+- **16** → il ne mesure rien lui-même : il **lit la trace** que `scripts/poste/rejouer-ci.sh`
   écrit dans `.git/rejeu-ci.ok`, et qui porte le commit couvert. Une trace d'un
   autre commit rend INCONNU — sinon un lot hériterait du vert du lot précédent.
 
   ```bash
-  bash rejouer-ci.sh
+  bash scripts/poste/rejouer-ci.sh
   ```
 
   Le script **extrait** les commandes de `.github/workflows/ci.yml` ; il n'en
@@ -229,7 +229,7 @@ elle.
   rejouer existait déjà, avec sa commande d'extraction ; rien ne forçait à
   l'exécuter, rien ne constatait qu'on l'avait fait.
 
-  Un seul job : `bash rejouer-ci.sh build-frontend` — utile en cours de
+  Un seul job : `bash scripts/poste/rejouer-ci.sh build-frontend` — utile en cours de
   correction, mais **aucune trace n'est écrite** et le point 16 reste INCONNU.
 - **INCONNU** → le contrôle n'a **pas pu** mesurer. Ce n'est jamais un vert. Le
   script sort en 2 au-delà d'un seul INCONNU.

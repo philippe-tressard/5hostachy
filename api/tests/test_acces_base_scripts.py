@@ -64,8 +64,34 @@ TOUJOURS_INTERDIT = (
 OUVERTURE = re.compile(r"sqlite3\s+\"?(\$?[^\s\"]*\.db)")
 
 
+#: Une ouverture de base en **Python** — `sqlite3.connect("…/app.db")`.
+#:
+#: Le motif shell ci-dessus ne pouvait pas la voir, et le scan ne regardait que
+#: les `*.sh` : deux fichiers Python versionnés à la racine ouvraient
+#: `/app/data/app.db` en direct depuis des mois (`debug_cc.py`,
+#: `_query_events.py`, supprimés le 15/08/2026). Le contrôle qui existe pour
+#: empêcher la corruption de base ne les voyait ni par son motif, ni par sa
+#: portée — « la portée du contrôle fait partie du contrôle »
+#: (standards/05 §9).
+OUVERTURE_PY = re.compile(r"sqlite3\.connect\(\s*\"?([^\s\"\)]*\.db)")
+
+
 def scripts_versionnes() -> list[Path]:
-    return sorted(RACINE.glob("*.sh")) + sorted(RACINE.glob(".githooks/*"))
+    """Tout ce qu'un humain peut lancer À CÔTÉ de l'API, quel que soit le langage.
+
+    `api/` en est exclu : ce code s'exécute DANS le process de l'application, où
+    l'accès passe par le pool SQLAlchemy — c'est un autre régime, couvert
+    ailleurs. Ce test-ci vise les process **tiers**.
+    """
+    from tests.conftest import scripts_shell_versionnes
+
+    fichiers = list(scripts_shell_versionnes())
+    #  Les `.py` lancés à la main comptent autant que les `.sh` : deux d'entre eux
+    #  ouvraient la base en direct sans que ce test les regarde.
+    fichiers += sorted(RACINE.glob("*.py"))
+    fichiers += sorted(RACINE.glob("scripts/**/*.py"))
+    fichiers += sorted(RACINE.glob("infra/**/*.py"))
+    return sorted(set(fichiers))
 
 
 def lignes_de_code(chemin: Path):
@@ -100,7 +126,7 @@ def test_aucune_ouverture_de_base_non_justifiee():
     fautes = []
     for script in scripts_versionnes():
         for numero, ligne in lignes_de_code(script):
-            for cible in OUVERTURE.findall(ligne):
+            for cible in OUVERTURE.findall(ligne) + OUVERTURE_PY.findall(ligne):
                 cle = (script.name, cible)
                 if cle in EXCEPTIONS_JUSTIFIEES:
                     trouvees.add(cle)
@@ -153,7 +179,7 @@ def test_installeur_ne_pose_aucun_cron_de_sauvegarde():
     c'est précisément parce que personne n'avait relu ce fichier depuis mars 2026
     que le piège y a survécu à la mise en haute disponibilité.
     """
-    installeur = RACINE / "setup-rpi5.sh"
+    installeur = RACINE / "scripts" / "installation" / "setup-rpi5.sh"
     contenu = installeur.read_text(encoding="utf-8")
     for interdit in ("scripts/backup.sh", "hostachy-backup", "5hostachy-backup"):
         for numero, ligne in lignes_de_code(installeur):

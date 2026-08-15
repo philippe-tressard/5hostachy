@@ -14,7 +14,7 @@ Visiteur â†’ Cloudflare Edge â†’ Worker â†’ Tunnel â†’ RPi
 
 ## Fichier source
 
-`cloudflare-worker.js` Ã  la racine du projet.
+`infra/cloudflare-worker.js` Ã  la racine du projet.
 
 ## DÃ©ploiement (une seule fois)
 
@@ -23,7 +23,7 @@ Visiteur â†’ Cloudflare Edge â†’ Worker â†’ Tunnel â†’ RPi
 1. Cloudflare Dashboard â†’ **Workers & Pages** â†’ **Create application** â†’ **Create Worker**
 2. Donner un nom : `hostachy-maintenance`
 3. Cliquer **Deploy** (page vide par dÃ©faut)
-4. Cliquer **Edit code** â†’ **remplacer tout** par le contenu de `cloudflare-worker.js` â†’ **Save and deploy**
+4. Cliquer **Edit code** â†’ **remplacer tout** par le contenu de `infra/cloudflare-worker.js` â†’ **Save and deploy**
 
 ### 2. Assigner une Route
 

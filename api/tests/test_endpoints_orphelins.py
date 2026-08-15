@@ -26,6 +26,7 @@ import pathlib
 import re
 
 import pytest
+from tests.conftest import scripts_shell_versionnes
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 ROUTEURS = RACINE / "api" / "app" / "routers"
@@ -131,7 +132,7 @@ def _sources_consommatrices() -> str:
     ]
     morceaux += [
         p.read_text(encoding="utf-8", errors="ignore")
-        for p in RACINE.glob("*.sh")
+        for p in scripts_shell_versionnes()
     ]
     morceaux.append((RACINE / "Caddyfile").read_text(encoding="utf-8", errors="ignore"))
     return "\n".join(morceaux)

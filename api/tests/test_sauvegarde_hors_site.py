@@ -37,7 +37,7 @@ from app.utils import health_monitor
 from app.utils.backup import PREFIXE_ARCHIVE, horodatage_archive
 
 RACINE = Path(__file__).resolve().parents[2]
-SCRIPT = RACINE / "export-hors-site.sh"
+SCRIPT = RACINE / "scripts" / "poste" / "export-hors-site.sh"
 
 
 def nom_archive(quand: datetime) -> str:

@@ -208,7 +208,7 @@ sudo systemctl enable --now fail2ban
 
 ```bash
 # Installer cloudflared
-sudo bash /opt/5hostachy/install-cloudflared.sh <VOTRE_TOKEN_TUNNEL>
+sudo bash /opt/5hostachy/scripts/installation/install-cloudflared.sh <VOTRE_TOKEN_TUNNEL>
 
 # Vérifier
 sudo systemctl status cloudflared
