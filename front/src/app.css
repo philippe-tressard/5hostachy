@@ -52,6 +52,39 @@ h1, h2, h3 {
   font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
 }
 
+/*  ⚠️ LES CONTRÔLES DE FORMULAIRE N'HÉRITENT PAS DE LA POLICE — il faut le leur
+    dire. C'est une règle de feuille de style d'agent utilisateur, pas une
+    particularité du site : `button`, `input`, `select` et `textarea` reçoivent
+    une police propre, et `font-family` ne descend pas dedans.
+
+    Mesuré dans un navigateur le 16/08/2026, sur cette feuille-ci :
+
+    | Élément                     | Police rendue |
+    |-----------------------------|---------------|
+    | texte de la page            | Segoe UI      |
+    | `<a class="btn">`           | Segoe UI      |
+    | `<button class="btn">`      | **Arial**     |
+    | `<input>`, `<select>`       | **Arial**     |
+    | `<textarea>`                | **monospace** |
+
+    Autrement dit : toute la couche de saisie du site était dans une autre police
+    que le site, et les zones de texte long en chasse fixe. `.btn` et `.tab-btn`
+    déclaraient `font-size` et `font-weight` — donc on croyait la question réglée —
+    mais jamais `font-family`.
+
+    Le défaut s'est vu là où un `<button>` et un `<a>` portent la MÊME classe et se
+    touchent : la rangée d'onglets de l'administration, où « Fiche copropriété »
+    (un lien) ne ressemblait pas à ses voisins (des boutons). Signalé par
+    l'utilisateur, capture à l'appui — après deux corrections de ma part qui
+    n'avaient traité que les icônes et le soulignement.
+
+    ⚠️ `font-family: inherit` et NON `font: inherit` : la forme courte écrase aussi
+    `font-size`, `font-weight` et `line-height`, donc les tailles déclarées juste
+    après dans ce fichier. Vérifié : la hauteur des boîtes ne change pas. */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 a {
   color: var(--color-primary);
   text-decoration: none;

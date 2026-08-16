@@ -8,6 +8,8 @@
 	 * se trouvaient sous 👥 Gestion utilisateurs, où ils n'ont rien à faire :
 	 * ils ne décrivent pas des personnes mais l'immeuble (signalé le 12/08/2026).
 	 */
+	import Onglet from '$lib/components/Onglet.svelte';
+
 	export let groupe: 'donnees' | 'configuration' = 'donnees';
 </script>
 
@@ -28,11 +30,11 @@
 	laisse les littéraux intacts.
 -->
 {#if groupe === 'donnees'}
-	<a href="/admin/lots-import" class="tab-btn">Import Lots</a>
-	<a href="/admin/telecommandes-import" class="tab-btn">Import TC</a>
-	<a href="/admin/vigiks-import" class="tab-btn">Import Vigik</a>
-	<a href="/admin/audit-lots" class="tab-btn">Audit lots</a>
+	<Onglet href="/admin/lots-import">Import Lots</Onglet>
+	<Onglet href="/admin/telecommandes-import">Import TC</Onglet>
+	<Onglet href="/admin/vigiks-import">Import Vigik</Onglet>
+	<Onglet href="/admin/audit-lots">Audit lots</Onglet>
 {:else}
-	<a href="/admin/copropriete" class="tab-btn">Fiche copropriété</a>
-	<a href="/admin/patrimoine" class="tab-btn">Périmètres</a>
+	<Onglet href="/admin/copropriete">Fiche copropriété</Onglet>
+	<Onglet href="/admin/patrimoine">Périmètres</Onglet>
 {/if}

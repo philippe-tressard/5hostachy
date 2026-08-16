@@ -1,0 +1,82 @@
+<!--
+  UN onglet — le bouton d'une rangée `.tabs`, qu'il change de panneau ou qu'il
+  mène ailleurs.
+
+  ## Pourquoi ce composant (16/08/2026)
+
+  La rangée d'onglets de l'administration mélange **deux mécanismes**, et c'est
+  légitime : « Comptes en attente » bascule un panneau **dans** la page, « Fiche
+  copropriété » **navigue** vers une autre route. Un `<button>` d'un côté, un
+  `<a>` de l'autre — on ne peut pas faire autrement sans perdre le clic milieu et
+  l'ouverture dans un nouvel onglet, ni sans aveugler
+  `scripts/check-routes-atteignables.mjs`, qui cherche le littéral `/admin/…`.
+
+  Ce qui n'était pas légitime, c'est que la différence **se voie**. Elle se voyait
+  de deux façons, toutes deux signalées par l'utilisateur :
+
+  1. la **police** — les contrôles de formulaire n'héritent pas de `font-family`,
+     donc les `<button>` sortaient en Arial et les `<a>` en Segoe UI. Corrigé à la
+     racine dans `app.css` (`button, input, select, textarea { font-family: inherit }`),
+     et ça dépassait de loin les onglets : toute la couche de saisie du site était
+     concernée, les zones de texte long en chasse fixe ;
+  2. le **soulignement au survol**, que la règle globale `a:hover` ajoutait aux
+     seuls liens.
+
+  Deux corrections successives, deux fois insuffisantes, parce qu'elles traitaient
+  les symptômes un par un. Verdict de l'utilisateur : *« je ne comprends pas
+  pourquoi ça n'utilise pas la même configuration que les autres sous-menus ;
+  encore une fois standardise »*. Il a raison : tant que quinze onglets sont écrits
+  à la main, le seizième réintroduira l'écart.
+
+  **Ce composant est donc le seul endroit qui décide de la forme d'un onglet.**
+  L'écran dit ce que l'onglet EST — actif ou non, avec un compte ou non, menant
+  ici ou là — jamais comment il se rend.
+
+  ## Le contrat
+
+  - `href` fourni → un `<a>` : l'onglet mène ailleurs ;
+  - `href` absent → un `<button type="button">` : l'onglet bascule un panneau,
+    et l'écran écoute `on:click`.
+
+  `type="button"` n'est pas décoratif : dans un `<form>`, un `<button>` sans type
+  vaut `submit` et enverrait le formulaire au premier clic.
+-->
+<script lang="ts">
+	/** Destination. Absent : l'onglet bascule un panneau au lieu de naviguer. */
+	export let href: string | null = null;
+
+	/** Onglet courant — souligné et coloré. */
+	export let actif = false;
+
+	/**  Compte à afficher en pastille rouge. `null` ou `0` : aucune pastille —
+	     un compteur à zéro n'apprend rien et fait du bruit. */
+	export let compte: number | null = null;
+</script>
+
+{#if href}
+	<a {href} class="tab-btn" class:active={actif}>
+		<slot />
+		{#if compte}<span class="badge-count">{compte}</span>{/if}
+	</a>
+{:else}
+	<button type="button" class="tab-btn" class:active={actif} on:click>
+		<slot />
+		{#if compte}<span class="badge-count">{compte}</span>{/if}
+	</button>
+{/if}
+
+<style>
+	/*  `.tabs` et `.tab-btn` restent dans `app.css` : la rangée est un conteneur
+	    de l'écran, et la classe est partagée par d'autres pages qui n'utilisent
+	    pas encore ce composant. Seule la pastille de compte vient ici, avec le
+	    balisage qu'elle habille — elle était définie dans le style scopé de
+	    `admin/+page.svelte`, donc inatteignable depuis tout autre écran. */
+	.badge-count {
+		background: var(--color-danger);
+		color: #fff;
+		border-radius: 999px;
+		font-size: .7rem;
+		padding: .1rem .45rem;
+		font-weight: 700;
+	}
+</style>
