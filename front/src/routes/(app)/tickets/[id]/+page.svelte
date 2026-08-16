@@ -328,11 +328,11 @@
 					</label>
 					{#if !newInterne}
 						<div style="margin:.4rem 0">
-							<FichiersUpload id="msg-photos" bind:urls={msgPhotos} max={5}
+							<FichiersUpload id="msg-photos" bind:urls={msgPhotos}
 								label="Ajouter une photo" accept={ACCEPT_PHOTOS} />
 						</div>
 						<div style="margin:.4rem 0">
-							<FichiersUpload id="msg-docs" bind:urls={msgDocs} max={5}
+							<FichiersUpload id="msg-docs" bind:urls={msgDocs}
 								label="Ajouter un document" />
 						</div>
 					{/if}

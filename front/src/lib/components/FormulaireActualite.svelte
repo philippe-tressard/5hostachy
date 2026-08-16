@@ -111,7 +111,6 @@
 			<PerimetrePicker bind:value={perimetreCible} />
 		</div>
 		<div class="field">
-			<label>Destinataires *</label>
 			<DestinatairePicker bind:value={publicCible} />
 		</div>
 		<div class="field">
@@ -119,7 +118,7 @@
 			<RichEditor id="actualite-contenu" bind:value={contenu} placeholder="Contenu de l'actualité…" minHeight="120px" />
 		</div>
 		<div class="field">
-			<FichiersUpload id="actualite-photos" bind:urls={photos} max={6} mode="photos" />
+			<FichiersUpload id="actualite-photos" bind:urls={photos} mode="photos" />
 		</div>
 		<div class="field">
 			<label>Documents</label>
@@ -129,15 +128,6 @@
 			{#if pendingFiles.length > 0}
 				<span style="font-size:.8rem;color:var(--color-text-muted)">📎 {pendingFiles.length} fichier{pendingFiles.length > 1 ? 's' : ''} sélectionné{pendingFiles.length > 1 ? 's' : ''}</span>
 			{/if}
-		</div>
-		<div class="field">
-			<label for="new-statut">État</label>
-			<select id="new-statut" bind:value={statut}>
-				<option value="publie">&#x1F535; Publié</option>
-				<option value="en_cours">&#x1F7E1; En cours</option>
-				<option value="resolu">&#x1F7E2; Résolu</option>
-				<option value="annule">⚫ Annulé</option>
-			</select>
 		</div>
 		<OptionsPublication
 			complet

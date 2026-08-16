@@ -113,11 +113,11 @@
 			<RichEditor id="ev-description" bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
 		</div>
 		<div class="field" style="margin-top:.75rem">
-			<FichiersUpload id="ev-photos" bind:urls={photosUrls} max={5}
+			<FichiersUpload id="ev-photos" bind:urls={photosUrls}
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
 		</div>
 		<div class="field" style="margin-top:.75rem">
-			<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
+			<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} />
 		</div>
 		<div class="field" style="margin-top:.75rem">
 			<label>Suivi Kanban</label>

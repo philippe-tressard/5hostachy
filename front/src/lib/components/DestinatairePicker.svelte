@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 
 	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidents'] ou ['copropriétaires','locataires'] */
 	export let value: string[] = ['résidents'];
+
+	/** Intitulé du champ — porté par l'objet, comme pour le périmètre. Les pages
+	    l'écrivaient chacune de leur côté. */
+	export let titre = 'Destinataires';
+
+	/** Astérisque des champs requis. */
+	export let requis = true;
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
@@ -41,22 +48,24 @@
 	}
 </script>
 
+{#if titre}
+	<!--  Badge d'état : « Tous les résidents » se lit sans dépiler les pastilles.
+	      Même règle que le périmètre (skill `ux-patterns` §9 quater). -->
+	<div class="destinataire-titre">
+		{titre}{#if requis} *{/if}
+		{#if isTous}<span class="badge badge-green destinataire-badge">Tous les résidents</span>{/if}
+	</div>
+{/if}
 <div class="destinataire-pills">
-	<button type="button" class="pill" class:pill-active={isTous}
-		on:click={selectTous}>
-		<Icon name="users-round" size={15} />Tous les résidents
-	</button>
+	<Pastille active={isTous} icone="users-round" on:click={selectTous}>Tous les résidents</Pastille>
 	{#each options as o (o.code)}
-		<button type="button" class="pill" class:pill-active={!isTous && selected.has(o.code)}
-			on:click={() => toggleItem(o.code)}>
-			<Icon name={o.icone} size={15} />{o.libelle}
-		</button>
+		<Pastille active={!isTous && selected.has(o.code)} icone={o.icone}
+			on:click={() => toggleItem(o.code)}>{o.libelle}</Pastille>
 	{/each}
 </div>
 
 <style>
 	.destinataire-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
-	.pill { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); font-size: .82rem; cursor: pointer; color: var(--color-text-muted); transition: all .12s; white-space: nowrap; }
-	.pill:hover { border-color: var(--color-primary); color: var(--color-text); }
-	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+	.destinataire-titre { font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
+	.destinataire-badge { font-size: .72rem; margin-left: .4rem; }
 </style>

@@ -275,27 +275,34 @@ donc à `PerimetrePicker` et au sélecteur de destinataires, partout.
 
 ### 9 sexies. L'ORDRE des champs est imposé — il ne se discute pas par écran
 
-| # | Champ |
+| # | Section |
 |---|---|
 | 1 | **Titre** |
 | 2 | **Champs spécifiques** à la page |
-| 3 | **Périmètre** |
-| 4 | **Destinataires** |
-| 5 | **Descriptif** |
-| 6 | **Photos** |
-| 7 | **Documents** |
-| 8 | **État** — dont la diffusion (épingler, partager, envoyer) fait partie |
+| 3 | **Workflow** — si l'objet en a un |
+| 4 | **Périmètre** |
+| 5 | **Destinataires** |
+| 6 | **Description** |
+| 7 | **Photos** |
+| 8 | **Documents** |
+| 9 | **Diffusion** |
 
-La **diffusion** n'est pas un bloc à part : épingler, partager sur le groupe,
-envoyer au syndic ou au conseil syndical sont des décisions de publication, donc
-de l'**État**. C'est un objet à part entière, modularisé par héritage.
+**Workflow et Diffusion sont deux notions distinctes**, et les confondre est
+l'erreur qui a fait poser la question :
 
-**Les actualités sont le modèle** : leur formulaire respectait déjà cet ordre
-quand la règle a été posée. Les autres écrans s'y alignent.
+| | Workflow | Diffusion |
+|---|---|---|
+| Répond à | *où en est cet objet ?* | *qui le voit, et où ?* |
+| Contient | Ouvert / En cours / Résolu (ticket), Suivi Kanban (événement, prestation) | affichage au fil, épinglage, WhatsApp, syndic, conseil syndical, Publié / Brouillon |
+| Se place | **avant** le Périmètre — c'est un champ spécifique de l'objet | **en fin**, après les documents |
 
-**Why (16/08/2026)** : le calendrier plaçait la diffusion AVANT le descriptif,
-seul de tout le site ; les prestations commençaient par « Prestataire » et non
-par le titre. Signalé à l'écran, écran par écran, faute d'une règle écrite.
+Une actualité **n'a pas de workflow** : elle n'a pas d'étapes de vie. Son
+Publié/Brouillon est une décision de **diffusion**. Un ticket, lui, en a un.
+
+**Why (16/08/2026)** : la section finale s'appelait « État », terme qui mélangeait
+l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu'il
+dit *où en est le travail*, pas *qui le voit*. Termes retenus par l'utilisateur
+après une première proposition inexacte de ma part.
 
 ### 9 quinquies. Le bouton de soumission est **à droite**, via `.form-actions`
 

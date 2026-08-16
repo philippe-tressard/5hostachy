@@ -187,16 +187,16 @@
 {#if showFiles && (editMode || evolType === 'commentaire')}
 	{#if separatePhotosAndDocs}
 		<div style="margin:.4rem 0">
-			<FichiersUpload id="evol-photos" bind:urls={photos} max={5}
+			<FichiersUpload id="evol-photos" bind:urls={photos}
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} />
 		</div>
 		<div style="margin:.4rem 0">
-			<FichiersUpload id="evol-docs" bind:urls={docs} max={5}
+			<FichiersUpload id="evol-docs" bind:urls={docs}
 				label="Ajouter un document" accept={ACCEPT_DOCUMENTS} />
 		</div>
 	{:else}
 		<div class="field" style="margin-bottom:.6rem">
-			<FichiersUpload id="evol-fichiers" bind:urls={fichiers} max={5}
+			<FichiersUpload id="evol-fichiers" bind:urls={fichiers}
 				label="Ajouter un fichier" accept={ACCEPT_FICHIERS} />
 			{#if partagerWhatsapp && fichiers.length > 0}
 				<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.3rem">

@@ -174,6 +174,13 @@ def create_ticket(
         batiment_id=body.batiment_id,
         perimetre_cible=json.dumps(body.perimetre_cible) if body.perimetre_cible else '["résidence"]',
         priorite="haute" if body.categorie == "urgence" else "normale",
+        #  Le workflow est saisissable dès la création, mais en LISTE BLANCHE et
+        #  réservé au CS : un résident qui déposerait un ticket déjà « résolu »
+        #  le sortirait du suivi. Une valeur inconnue retombe sur « ouvert »
+        #  plutôt que d'être refusée — le ticket doit exister même si le client
+        #  envoie n'importe quoi (socle 03 §2, liste blanche ancrée).
+        statut=(body.statut if est_cs and body.statut in {s.value for s in StatutTicket}
+               else StatutTicket.ouvert),
         destinataire_syndic=body.destinataire_syndic if est_cs else False,
         destinataire_cs=body.destinataire_cs if est_cs else False,
         saisi_pour_user_id=body.saisi_pour_user_id if est_cs else None,

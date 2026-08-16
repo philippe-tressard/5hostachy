@@ -40,10 +40,10 @@
 	import Vignette from './Vignette.svelte';
 	import { fichiersApi } from '$lib/api';
 	import { toast } from './Toast.svelte';
-	import { ACCEPT_DOCUMENTS, ACCEPT_FICHIERS, ACCEPT_PHOTOS, nomFichier, separerFichiers } from '$lib/fichiers';
+	import { ACCEPT_DOCUMENTS, ACCEPT_FICHIERS, ACCEPT_PHOTOS, MAX_FICHIERS, nomFichier, separerFichiers } from '$lib/fichiers';
 
 	export let urls: string[] = [];
-	export let max = 5;
+	export let max = MAX_FICHIERS;
 	/** 'photos' | 'documents' | 'mixte' — porte à la fois le filtre du sélecteur
 	 *  et le libellé par défaut : une page n'a ni import ni ligne de plus à écrire
 	 *  pour dire « ici, ce sont des photos ». */
