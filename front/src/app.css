@@ -59,6 +59,14 @@ a {
 
 a:hover { text-decoration: underline; }
 
+/*  Un lien STYLÉ EN BOUTON ne se souligne pas au survol. `.btn` pose bien
+    `text-decoration: none`, mais `a:hover` (0,1,1) l'emporte sur `.btn` (0,1,0) :
+    les 31 `<a class="btn …">` du site se soulignaient donc tous au survol, ce
+    qu'aucun `<button class="btn">` ne fait — deux rendus pour un même objet
+    visuel, selon la balise sous-jacente. Signalé sur « + Nouveau ticket »
+    (16/08/2026) ; corrigé ici, sur la classe, et non sur l'occurrence. */
+a.btn:hover { text-decoration: none; }
+
 /* ── Layout ── */
 .container {
   max-width: 1200px;

@@ -14,6 +14,7 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
+	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -23,6 +24,16 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	let filterStatut = '';
 	let disclaimerOpen = false;
 	let filterCat = '';
+
+	// Création : boîte dans la page, comme partout ailleurs sur le site (#367).
+	// Ce fut le dernier écran à créer un objet par page dédiée — cf. l'en-tête de
+	// FormulaireTicket.svelte.
+	let showForm = false;
+
+	function ticketCree(e: CustomEvent<Ticket>) {
+		ticketList = [e.detail, ...ticketList];
+		showForm = false;
+	}
 
 	// Expansion
 	let expandedTickets = new Set<number>();
@@ -60,8 +71,14 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	onMount(async () => {
 		try {
 			ticketList = await ticketsApi.list();
+			const params = new URLSearchParams(window.location.search);
+			// `?nouveau=1` ouvre directement la boîte de création. C'est ce qui
+			// remplace l'ancienne page `/tickets/nouveau` : les liens qui menaient
+			// à un écran de saisie doivent continuer à y mener, pas atterrir sur la
+			// liste en laissant l'utilisateur chercher le bouton.
+			if (params.get('nouveau')) showForm = true;
 			// Auto-ouverture depuis ?open=TK-XXXXX (lien profond depuis le tableau de bord)
-			const openNum = new URLSearchParams(window.location.search).get('open');
+			const openNum = params.get('open');
 			if (openNum) {
 				const target = ticketList.find(t => t.numero === openNum);
 				if (target) {
@@ -231,10 +248,19 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'message-square-text'}>
-	<a href="/tickets/nouveau" class="btn btn-primary page-header-btn">+ Nouveau ticket</a>
+<!--  `alignerSaisie` quand le formulaire est ouvert : sans lui, « ✕ Annuler » se
+      pose au bord DROIT DE LA PAGE, à plusieurs centaines de pixels de la boîte
+      qu'il annule, laquelle s'arrête à 720 px (#367). -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'message-square-text'} alignerSaisie={showForm}>
+	<button class="btn btn-primary page-header-btn" on:click={() => (showForm = !showForm)}>
+		{showForm ? '✕ Annuler' : '+ Nouveau ticket'}
+	</button>
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
+
+{#if showForm}
+	<FormulaireTicket on:cree={ticketCree} />
+{/if}
 
 <div class="urgence-disclaimer" role="note" aria-label="Avertissement tickets urgence">
 	<button class="urgence-disclaimer-toggle" on:click={() => disclaimerOpen = !disclaimerOpen} aria-expanded={disclaimerOpen}>
