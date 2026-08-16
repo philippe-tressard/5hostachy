@@ -16,6 +16,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.limiter import limiter
+from app.utils.telemetrie_calculs import uniques_par_page
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -231,12 +232,26 @@ def dashboard(
             daily_chart[r.jour]["total"] += r.total
 
         # Top pages
+        #  `uniques` ne s'ADDITIONNE pas : les agrégats journaliers portent des
+        #  cardinalités de distincts, et leur somme n'est pas la cardinalité de
+        #  l'union — la même personne revenue trois jours comptait pour trois
+        #  (#354). Les couples (page, utilisateur) distincts sont donc relus sur
+        #  la période, et `uniques_par_page()` les compte. `.distinct()` borne le
+        #  volume au nombre de couples, pas au nombre d'événements.
+        paires_page_user = session.exec(
+            select(TelemetryEvent.page, TelemetryEvent.user_id)
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+            .distinct()
+        ).all()
+        uniques_map = uniques_par_page(paires_page_user)
+
         top_pages: dict[str, dict] = {}
         for r in daily_rows:
             if r.page not in top_pages:
                 top_pages[r.page] = {"page": r.page, "total": 0, "uniques": 0}
             top_pages[r.page]["total"] += r.total
-            top_pages[r.page]["uniques"] += r.utilisateurs_uniques
+        for page in top_pages:
+            top_pages[page]["uniques"] = uniques_map.get(page, 0)
 
         # KPI agrégés
         total_vues = sum(d["total"] for d in daily_chart.values())
