@@ -56,6 +56,8 @@
 	import FichiersUpload from './FichiersUpload.svelte';
 	import CanauxNotification from './CanauxNotification.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
+	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
+	import { concerneTousLesResidents } from '$lib/destinataires';
 
 	/** Préfixe des `id` des champs — deux formulaires peuvent coexister à l'écran,
 	    et deux `<label for="…">` pointant le même id ne désignent plus rien. */
@@ -109,47 +111,70 @@
 	export let syndic = false;
 	export let cs = false;
 	export let aideWhatsapp = '';
+
+	//  ── Les badges d'état, portés par le TITRE de section ────────────────────
+	//  Ils vivaient dans les sélecteurs, avec leur intitulé. Depuis que le titre
+	//  de section porte le libellé, il porte aussi le badge — sinon on lirait
+	//  « PÉRIMÈTRE » puis « Périmètre * [Copropriété entière] », c'est-à-dire le
+	//  nom deux fois (signalé à l'écran le 16/08/2026, dès la mise en production).
+	//  Rien n'est recalculé : `estPerimetreParDefaut` et `concerneTousLesResidents`
+	//  sont les fonctions qu'utilisent déjà les sélecteurs eux-mêmes.
+	$: badgePerimetre = estPerimetreParDefaut(perimetre)
+		? perimetreLabelUn(perimetreParDefaut() ?? '')
+		: '';
+	$: badgeDestinataires = concerneTousLesResidents(destinataires) ? 'Tous les résidents' : '';
 </script>
 
 {#if avecPerimetre}
-	<SectionFormulaire titre="Périmètre">
-		<div class="field champ-large">
-			<PerimetrePicker bind:value={perimetre} mode={perimetreMode} />
+	<!--  Le sélecteur se tait (`titre=""`) : la section le nomme. Les pastilles ne
+	      sont pas un contrôle labelable — `for` n'y associerait rien —, d'où le
+	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
+	<SectionFormulaire titre="Périmètre" requis badge={badgePerimetre}
+		idTitre="{idPrefixe}-perimetre-titre">
+		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
+			<PerimetrePicker bind:value={perimetre} mode={perimetreMode} titre="" />
 		</div>
 	</SectionFormulaire>
 {/if}
 
 {#if avecDestinataires}
-	<SectionFormulaire titre="Destinataires">
-		<div class="field champ-large">
-			<DestinatairePicker bind:value={destinataires} />
+	<SectionFormulaire titre="Destinataires" requis badge={badgeDestinataires}
+		idTitre="{idPrefixe}-destinataires-titre">
+		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
+			<DestinatairePicker bind:value={destinataires} titre="" />
 		</div>
 	</SectionFormulaire>
 {/if}
 
 {#if avecDescription}
-	<SectionFormulaire titre="Description">
+	<!--  La zone de saisie est un `contenteditable`, donc PAS labelable : le titre
+	      reste un `<h4>` et l'éditeur s'y relie par `aria-labelledby`. Un
+	      `<label for>` n'aurait rien associé, et l'aurait fait en silence. -->
+	<SectionFormulaire titre="Description" requis={descriptionRequise}
+		idTitre="{idPrefixe}-description-titre">
 		<div class="field champ-large">
-			<label for="{idPrefixe}-description">Description{#if descriptionRequise} *{/if}</label>
 			<RichEditor id="{idPrefixe}-description" bind:value={description}
+				ariaLabelledby="{idPrefixe}-description-titre"
 				placeholder={descriptionPlaceholder} minHeight={descriptionHauteur} />
 		</div>
 	</SectionFormulaire>
 {/if}
 
 {#if avecPhotos}
-	<SectionFormulaire titre="Photos">
+	<!--  `pour` : l'intitulé devient un vrai `<label for>` — l'input fichier, lui,
+	      EST labelable, et le clic sur le titre ouvre donc le sélecteur. -->
+	<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
 		<div class="field champ-large">
-			<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos}
+			<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
 		</div>
 	</SectionFormulaire>
 {/if}
 
 {#if avecDocuments}
-	<SectionFormulaire titre="Documents">
+	<SectionFormulaire titre="Documents" pour="{idPrefixe}-documents">
 		<div class="field champ-large">
-			<FichiersUpload id="{idPrefixe}-documents" mode="documents"
+			<FichiersUpload id="{idPrefixe}-documents" mode="documents" titre=""
 				differe={documentsDifferes}
 				bind:urls={documents} bind:fichiers={documentsFichiers} />
 		</div>

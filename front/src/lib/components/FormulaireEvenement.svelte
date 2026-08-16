@@ -104,9 +104,8 @@
 	<!--  3. Workflow — où en est cet événement. Le Suivi Kanban était rangé avec
 	      l'affichage au fil et les canaux, c'est-à-dire dans la DIFFUSION : il
 	      dit où en est le travail, pas qui le voit (`ux-patterns` §9 sexies). -->
-	<SectionFormulaire titre="Workflow">
+	<SectionFormulaire titre="Suivi Kanban" pour="ev-kanban">
 		<div class="field champ-large">
-			<label for="ev-kanban">Suivi Kanban</label>
 			<select id="ev-kanban" bind:value={form.statut_kanban}>
 				<option value="">— Pas de suivi Kanban —</option>
 				{#each kanbanCols as col}

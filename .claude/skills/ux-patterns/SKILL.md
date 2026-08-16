@@ -327,6 +327,46 @@ composant, qui porte leur ordre, leurs intitulés et leurs séparations
 Les sections **1 à 3** (Titre, champs spécifiques, Workflow) restent dans l'écran :
 lui seul sait ce qu'elles portent.
 
+#### Une section à UN seul champ ne répète pas son nom
+
+Première livraison, l'écran affichait :
+
+```
+PÉRIMÈTRE
+Périmètre *                            [Copropriété entière]
+```
+
+Le nom deux fois, en deux typographies — signalé par l'utilisateur, capture à
+l'appui, **le jour même de la mise en production**. La cause est mécanique :
+`PerimetrePicker`, `DestinatairePicker` et `FichiersUpload` portent chacun leur
+intitulé (c'est justement leur point d'héritage, §9 quater), et la section en
+ajoutait un second.
+
+**Règle** : quand une section ne contient qu'un champ, le **titre de section EST
+le libellé**. Il porte l'astérisque (`requis`) et le badge d'état (`badge`) ; le
+champ reçoit `titre=""` et n'écrit plus rien.
+
+```
+PÉRIMÈTRE *                            [Copropriété entière]
+```
+
+Les sections à **plusieurs** champs (Détails, Clôture, Diffusion) gardent leur
+titre de groupe **et** les libellés de leurs champs : ce n'est pas une redite,
+c'est une hiérarchie.
+
+⚠️ **Le titre de section est un vrai libellé, donc il s'associe.** `SectionFormulaire`
+rend un `<label for>` quand la section porte un contrôle **labelable** (`<select>`,
+`<input>`) — prop `pour` —, et un `<h4 id>` sinon, l'appelant reliant son groupe par
+`aria-labelledby` (prop `idTitre`). Les pastilles et l'éditeur riche ne sont PAS
+labelables : un `for` posé dessus n'associe rien, **et le fait en silence**. C'est
+d'ailleurs ce qui existait avant — `Périmètre *` était un `<div>`, donc un groupe de
+boutons sans nom pour un lecteur d'écran.
+
+Corollaire appliqué au passage : le `(max N)` a quitté l'intitulé des pièces
+jointes. Le compteur `0/N` sous le bouton le dit déjà, et il le dit mieux — il se
+met à jour. Les types acceptés sont en aide grise à côté du compteur, déduits
+d'`ACCEPT_DOCUMENTS` et non récités.
+
 **Why.** L'ordre était écrit, `SectionFormulaire` savait séparer — et les six
 formulaires recomposaient quand même la suite à la main. L'utilisateur l'a
 signalé ainsi : *« Les objets ont l'air d'être dupliqués, pas instanciés, car ils
