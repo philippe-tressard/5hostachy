@@ -108,7 +108,6 @@
 			<input id="new-titre" type="text" bind:value={titre} required maxlength="200" />
 		</div>
 		<div class="field">
-			<label id="perimetre-label">Périmètre *</label>
 			<PerimetrePicker bind:value={perimetreCible} />
 		</div>
 		<div class="field">
@@ -116,11 +115,10 @@
 			<DestinatairePicker bind:value={publicCible} />
 		</div>
 		<div class="field">
-			<label for="actualite-contenu">Contenu *</label>
+			<label for="actualite-contenu">Description *</label>
 			<RichEditor id="actualite-contenu" bind:value={contenu} placeholder="Contenu de l'actualité…" minHeight="120px" />
 		</div>
 		<div class="field">
-			<label for="actualite-photos">Photos</label>
 			<FichiersUpload id="actualite-photos" bind:urls={photos} max={6} mode="photos" />
 		</div>
 		<div class="field">

@@ -101,9 +101,23 @@
 			{/if}
 		</div>
 		{/if}
+		<!--  ORDRE : Périmètre, Description, Photos, Documents, puis État —
+		      dont le Kanban, l'affichage au fil et la diffusion font partie.
+		      La diffusion était placée AVANT la description, seule de tout le
+		      site à l'être (signalé le 16/08/2026). -->
 		<div class="field" style="margin-top:.75rem">
-			<label>Périmètre *</label>
 			<PerimetrePicker bind:value={formPerimetreCible} />
+		</div>
+		<div class="field" style="margin-top:.75rem">
+			<label for="ev-description">Description</label>
+			<RichEditor id="ev-description" bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
+		</div>
+		<div class="field" style="margin-top:.75rem">
+			<FichiersUpload id="ev-photos" bind:urls={photosUrls} max={5}
+				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
+		</div>
+		<div class="field" style="margin-top:.75rem">
+			<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
 		</div>
 		<div class="field" style="margin-top:.75rem">
 			<label>Suivi Kanban</label>
@@ -144,19 +158,6 @@
 				bind:syndic={form.envoyer_syndic}
 				bind:cs={form.envoyer_cs}
 			/>
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<label for="ev-description">Description</label>
-			<RichEditor id="ev-description" bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<label for="ev-photos">Photos</label>
-			<FichiersUpload id="ev-photos" bind:urls={photosUrls} max={5}
-				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<label for="ev-documents">Documents <span style="font-weight:normal;color:var(--color-text-muted)">(PDF, Word, Excel)</span></label>
-			<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
 		</div>
 	</div>
 	<div class="form-actions">

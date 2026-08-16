@@ -27,6 +27,13 @@ ALLOWED_DOC_MIME = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    #  Texte brut ajouté le 16/08/2026 : l'écran Actualités le proposait déjà
+    #  dans son sélecteur, mais le serveur le refusait en 400 — l'utilisateur
+    #  pouvait choisir un fichier qui ne partait jamais. `.zip` était proposé de
+    #  la même façon et n'est PAS ajouté : une archive transporte un contenu
+    #  arbitraire que rien n'inspecte, et le fichier est ensuite servi aux
+    #  résidents. Décision explicite de l'utilisateur.
+    "text/plain",
 }
 DOC_EXTENSIONS = {
     "application/pdf": ".pdf",
@@ -34,6 +41,7 @@ DOC_EXTENSIONS = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
     "application/vnd.ms-excel": ".xls",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "text/plain": ".txt",
 }
 MAX_DOC_SIZE_MB = 15
 

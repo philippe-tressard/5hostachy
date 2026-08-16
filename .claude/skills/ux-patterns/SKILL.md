@@ -273,6 +273,30 @@ Quand un sélecteur multiple a un défaut ou une sélection résumable, il porte
 Inauguré par le sondage ; l'utilisateur a demandé de l'étendre au **standard** —
 donc à `PerimetrePicker` et au sélecteur de destinataires, partout.
 
+### 9 sexies. L'ORDRE des champs est imposé — il ne se discute pas par écran
+
+| # | Champ |
+|---|---|
+| 1 | **Titre** |
+| 2 | **Champs spécifiques** à la page |
+| 3 | **Périmètre** |
+| 4 | **Destinataires** |
+| 5 | **Descriptif** |
+| 6 | **Photos** |
+| 7 | **Documents** |
+| 8 | **État** — dont la diffusion (épingler, partager, envoyer) fait partie |
+
+La **diffusion** n'est pas un bloc à part : épingler, partager sur le groupe,
+envoyer au syndic ou au conseil syndical sont des décisions de publication, donc
+de l'**État**. C'est un objet à part entière, modularisé par héritage.
+
+**Les actualités sont le modèle** : leur formulaire respectait déjà cet ordre
+quand la règle a été posée. Les autres écrans s'y alignent.
+
+**Why (16/08/2026)** : le calendrier plaçait la diffusion AVANT le descriptif,
+seul de tout le site ; les prestations commençaient par « Prestataire » et non
+par le titre. Signalé à l'écran, écran par écran, faute d'une règle écrite.
+
 ### 9 quinquies. Le bouton de soumission est **à droite**, via `.form-actions`
 
 `.form-actions` (app.css) porte `justify-content: flex-end`. Un bouton posé nu dans

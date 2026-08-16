@@ -328,12 +328,10 @@
 					</label>
 					{#if !newInterne}
 						<div style="margin:.4rem 0">
-							<label for="msg-photos" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4F7; Photos</label>
 							<FichiersUpload id="msg-photos" bind:urls={msgPhotos} max={5}
 								label="Ajouter une photo" accept={ACCEPT_PHOTOS} />
 						</div>
 						<div style="margin:.4rem 0">
-							<label for="msg-docs" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">&#x1F4CE; Documents (PDF, Word, Excel)</label>
 							<FichiersUpload id="msg-docs" bind:urls={msgDocs} max={5}
 								label="Ajouter un document" />
 						</div>

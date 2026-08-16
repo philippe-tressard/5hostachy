@@ -162,11 +162,6 @@
 		</div>
 
 		<div class="field">
-			<!-- `<span>`, pas `<label>` : PerimetrePicker rend des boutons-pastilles,
-			     pas un contrôle de formulaire unique — un `<label for=…>` n'aurait
-			     rien à désigner. Le modèle des actualités utilise ici un `<label>`
-			     orphelin, ce qui lui vaut un avertissement a11y ; ne pas le recopier. -->
-			<span class="intitule-champ">Périmètre</span>
 			<PerimetrePicker bind:value={perimetreCible} />
 		</div>
 
@@ -176,15 +171,11 @@
 		</div>
 
 		<div class="field">
-			<label for="ticket-photos">Photos <span style="color:var(--color-text-muted);font-weight:normal">(max 5)</span></label>
 			<FichiersUpload id="ticket-photos" bind:urls={photosUrls} max={5}
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
 		</div>
 
 		<div class="field">
-			<label for="ticket-documents">
-				Documents <span style="color:var(--color-text-muted);font-weight:normal">(PDF, Word, Excel — max 5)</span>
-			</label>
 			<FichiersUpload id="ticket-documents" bind:urls={fichiersUrls} max={5} />
 		</div>
 

@@ -514,14 +514,14 @@ Résultats visibles avant clôture
       passent par `SelecteurCiblage`, qui porte le titre, le badge d'état, les
       pastilles et la réinitialisation : ils étaient écrits deux fois ici. -->
 {#if batimentsList.length > 0}
-<SelecteurCiblage titre="Périmètre géographique" libelleDefaut="Toute la résidence"
+<SelecteurCiblage titre="Périmètre" libelleDefaut="Toute la résidence"
 	options={batimentsList.map((b) => ({ val: b.id, label: `Bâtiment ${b.numero}` }))}
 	selection={selectedBatiments}
 	on:basculer={(e) => toggleBatiment(Number(e.detail))}
 	on:reinitialiser={() => (selectedBatiments = [])} />
 {/if}
 
-<SelecteurCiblage titre="Profils destinataires" libelleDefaut="Tous"
+<SelecteurCiblage titre="Destinataires" libelleDefaut="Tous"
 	options={PROFILS.map((p) => ({ val: p.val, label: p.label }))}
 	selection={selectedProfils}
 	on:basculer={(e) => toggleProfil(String(e.detail))}

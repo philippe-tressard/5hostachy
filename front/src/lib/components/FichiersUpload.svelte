@@ -60,6 +60,35 @@
 	/** Côté des vignettes d'image, en px. */
 	export let size = 64;
 
+	/** Intitulé affiché au-dessus du champ. Laisser vide : il est DÉDUIT du mode
+	    et de `max`. C'est tout l'objet de cette prop — le libellé vivait dans
+	    CHAQUE page appelante, et elles avaient divergé : « Photos » sur les
+	    actualités et le calendrier, « Photos (max 5) » sur les tickets ;
+	    « Documents (PDF, Word, Excel) » ici, « Documents (PDF, Word, Excel —
+	    max 5) » là (signalé le 16/08/2026).
+
+	    Le porter ici rend toute évolution HÉRITÉE : changer la formulation, ou
+	    les types acceptés, se répercute partout sans toucher une seule page.
+	    Ne le surcharger que pour une vraie spécificité d'écran. */
+	export let titre: string | null = null;
+
+	//  Les types annoncés ne sont pas récités à la main : ils DÉCOULENT de
+	//  `ACCEPT_DOCUMENTS` (pdf, doc, docx, xls, xlsx). Une extension ajoutée là-bas
+	//  se dit ici, au lieu de laisser un libellé mentir.
+	//  `mode` sert au rendu (vignettes ou liste). Quand il n'est pas donné, le
+	//  libellé se déduit d'`accept` plutôt que du défaut : plusieurs champs de
+	//  PHOTOS ne précisaient pas `mode`, et auraient annoncé « Documents » au-dessus
+	//  de leurs photos (constaté en relevant les 13 usages, 16/08/2026).
+	$: _nature = accept === ACCEPT_PHOTOS ? 'photos'
+		: accept === ACCEPT_DOCUMENTS ? 'documents'
+		: accept ? 'mixte'
+		: mode;
+	$: _titre = titre ?? (
+		_nature === 'photos'    ? `Photos (max ${max})`
+		: _nature === 'documents' ? `Documents (PDF, Word, Excel, texte — max ${max})`
+		: `Pièces jointes — photos et documents (max ${max})`
+	);
+
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
 	let envoi = false;
@@ -100,6 +129,9 @@
 </script>
 
 <div class="fichiers-upload">
+	{#if _titre}
+		<label class="fichiers-titre" for={id}>{_titre}</label>
+	{/if}
 	{#if photos.length}
 		<div class="fichiers-liste">
 			{#each photos as url (url)}
@@ -137,6 +169,9 @@
 </div>
 
 <style>
+	/*  Mêmes valeurs que `.field label` : l'œil doit lire la même chose qu'un
+	    intitulé de champ ordinaire. */
+	.fichiers-titre { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
 	.fichiers-upload { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
 	.fichiers-liste { display: flex; gap: .35rem; flex-wrap: wrap; }
 	.fichier-chip {

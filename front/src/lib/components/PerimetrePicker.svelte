@@ -11,6 +11,16 @@
 	    des pastilles — dans les deux cas, comme partout ailleurs sur le site. */
 	export let mode: 'multi' | 'single' = 'multi';
 
+	/** Intitulé du champ. Il était écrit par CHAQUE page appelante, et elles
+	    avaient divergé : « Périmètre * », « Périmètre » sans astérisque sur les
+	    tickets, « Périmètre d'affichage * » sur l'espace CS (16/08/2026). Le
+	    porter ici rend toute évolution héritée. Surcharger uniquement pour une
+	    vraie spécificité d'écran — c'est le point d'héritage. */
+	export let titre = 'Périmètre';
+
+	/** Ajoute l'astérisque des champs requis. */
+	export let requis = true;
+
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
@@ -115,6 +125,15 @@
       déroulante ne pouvait pas donner : les icônes, le second niveau, et la
       description du nœud choisi — l'information qu'AFUL notifie tout le
       conseil syndical, par exemple. -->
+{#if titre}
+	<!--  Le BADGE dit l'état retenu sans qu'on ait à lire les pastilles : « Toute
+	      la résidence » quand rien n'est précisé. Inauguré par le sondage, étendu
+	      au standard à la demande de l'utilisateur (skill ux-patterns §9 quater). -->
+	<div class="perimetre-titre">
+		{titre}{#if requis} *{/if}
+		{#if estDefaut && noeudDefaut}<span class="badge badge-green perimetre-badge">{noeudDefaut.libelle}</span>{/if}
+	</div>
+{/if}
 <div class="perimetre-pills">
 	{#if defaut}
 		<Pastille active={estDefaut} icone={noeudDefaut?.icone ?? ''} on:click={choisirDefaut}>
@@ -155,6 +174,8 @@
 	    Le CONTENEUR, lui, reste ici : c'est une mise en page, propre à cet
 	    écran — pas une propriété de la pastille. */
 	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+	.perimetre-titre { font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
+	.perimetre-badge { font-size: .72rem; margin-left: .4rem; }
 	.perimetre-niveau2 { margin-top: .6rem; padding-left: .1rem; }
 	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
 	.perimetre-facultatif { opacity: .75; }
