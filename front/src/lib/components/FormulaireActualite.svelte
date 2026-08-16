@@ -120,7 +120,6 @@
 			<RichEditor id="actualite-contenu" bind:value={contenu} placeholder="Contenu de l'actualité…" minHeight="120px" />
 		</div>
 		<div class="field">
-			<label for="actualite-photos">Photos</label>
 			<FichiersUpload id="actualite-photos" bind:urls={photos} max={6} mode="photos" />
 		</div>
 		<div class="field">

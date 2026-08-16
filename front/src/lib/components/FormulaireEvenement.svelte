@@ -150,12 +150,10 @@
 			<RichEditor id="ev-description" bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
 		</div>
 		<div class="field" style="margin-top:.75rem">
-			<label for="ev-photos">Photos</label>
 			<FichiersUpload id="ev-photos" bind:urls={photosUrls} max={5}
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
 		</div>
 		<div class="field" style="margin-top:.75rem">
-			<label for="ev-documents">Documents <span style="font-weight:normal;color:var(--color-text-muted)">(PDF, Word, Excel)</span></label>
 			<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} max={5} />
 		</div>
 	</div>

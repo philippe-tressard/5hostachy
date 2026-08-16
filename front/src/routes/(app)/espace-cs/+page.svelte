@@ -2353,7 +2353,6 @@
 						titre et message)
 					</p>
 
-					<label for="ah-photos" style="margin-top:.85rem">Photos</label>
 					<FichiersUpload
 						id="ah-photos"
 						bind:urls={ahPhotos}

@@ -18,7 +18,7 @@
 export const ACCEPT_PHOTOS = 'image/jpeg,image/png,image/webp,image/gif';
 
 /** Documents acceptés par `POST /uploads/fichier` (ALLOWED_DOC_MIME côté API). */
-export const ACCEPT_DOCUMENTS = 'application/pdf,.pdf,.doc,.docx,.xls,.xlsx';
+export const ACCEPT_DOCUMENTS = 'application/pdf,text/plain,.pdf,.doc,.docx,.xls,.xlsx,.txt';
 
 /** Les deux à la fois, pour un sélecteur unique « pièce jointe ». */
 export const ACCEPT_FICHIERS = `${ACCEPT_PHOTOS},${ACCEPT_DOCUMENTS}`;

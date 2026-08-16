@@ -176,15 +176,11 @@
 		</div>
 
 		<div class="field">
-			<label for="ticket-photos">Photos <span style="color:var(--color-text-muted);font-weight:normal">(max 5)</span></label>
 			<FichiersUpload id="ticket-photos" bind:urls={photosUrls} max={5}
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
 		</div>
 
 		<div class="field">
-			<label for="ticket-documents">
-				Documents <span style="color:var(--color-text-muted);font-weight:normal">(PDF, Word, Excel — max 5)</span>
-			</label>
 			<FichiersUpload id="ticket-documents" bind:urls={fichiersUrls} max={5} />
 		</div>
 
