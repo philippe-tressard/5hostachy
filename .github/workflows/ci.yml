@@ -318,6 +318,17 @@ jobs:
         working-directory: front
         run: npm run lint:formulaires
 
+      # Un `input, textarea { width: 100% }` posé dans le <style> d'UNE page
+      # atteignait toutes ses cases à cocher : chacune s'étirait sur la largeur du
+      # formulaire et son libellé partait à l'autre bout. Un sélecteur, deux
+      # écrans signalés séparément par l'utilisateur (« Nouveau sondage » et
+      # « Déposer une annonce », 16/08/2026), et aucun lien apparent entre eux.
+      # Quatre composants annulaient déjà ce genre de règle case par case, avec
+      # un `style="width:auto"` recopié — le signe qu'on soignait le symptôme.
+      - name: Aucun sélecteur d'élément de formulaire nu dans un composant
+        working-directory: front
+        run: npm run lint:styles
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

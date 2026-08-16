@@ -25,13 +25,9 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import { ACCEPT_PHOTOS } from '$lib/fichiers';
+	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
 
 	const dispatch = createEventDispatcher<{ cree: Ticket }>();
@@ -165,7 +161,7 @@
 			</div>
 		</fieldset>
 
-		<div class="field">
+		<div class="field champ-large">
 			<label for="titre">Titre *</label>
 			<input
 				id="titre"
@@ -178,9 +174,47 @@
 		</div>
 		</SectionFormulaire>
 
-		<SectionFormulaire>
-			<div class="field">
-				<label for="ticket-statut">Workflow</label>
+		<!--  2. Champs spécifiques. « Saisi pour » était rendu APRÈS les pièces
+		      jointes, entre les documents et la diffusion : le seul champ du site à
+		      être hors de sa section. C'est un champ SPÉCIFIQUE du ticket — il
+		      précède donc le workflow et le périmètre (`ux-patterns` §9 sexies,
+		      signalé par l'utilisateur le 16/08/2026). -->
+		{#if $isCS}
+			<SectionFormulaire titre="Saisi pour">
+				<div class="field champ-large saisi-pour-section">
+					<div class="saisi-pour-tabs">
+						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'moi'} on:click={() => modeSaisiPour = 'moi'}>
+							En mon nom
+						</button>
+						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'resident'} on:click={() => modeSaisiPour = 'resident'}>
+							Résident inscrit
+						</button>
+						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'exterieur'} on:click={() => modeSaisiPour = 'exterieur'}>
+							Personne extérieure
+						</button>
+					</div>
+					{#if modeSaisiPour === 'resident'}
+						<select bind:value={saisiPourUserId} style="margin-top:.5rem" aria-label="Résident concerné">
+							<option value={null}>— Sélectionner un résident —</option>
+							{#each usersActifs as u}
+								<option value={u.id}>{u.prenom} {u.nom}{u.email ? ` (${u.email})` : ''}</option>
+							{/each}
+						</select>
+					{:else if modeSaisiPour === 'exterieur'}
+						<div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.5rem">
+							<input type="text" bind:value={saisiPourNom} placeholder="Nom complet *" aria-label="Nom complet de la personne" required />
+							<input type="email" bind:value={saisiPourEmail} placeholder="Email (optionnel)" aria-label="Email de la personne" />
+						</div>
+					{/if}
+				</div>
+			</SectionFormulaire>
+		{/if}
+
+		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
+		      dit qui le voit et où (section 9). -->
+		<SectionFormulaire titre="Workflow">
+			<div class="field champ-large">
+				<label for="ticket-statut">Suivi</label>
 				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
 					{#each STATUTS as s}<option value={s.value}>{s.label}</option>{/each}
 				</select>
@@ -189,67 +223,22 @@
 				{/if}
 			</div>
 		</SectionFormulaire>
-		<SectionFormulaire>
-		<div class="field">
-			<PerimetrePicker bind:value={perimetreCible} />
-		</div>
-		</SectionFormulaire>
 
-		<SectionFormulaire>
-		<div class="field">
-			<label for="ticket-description">Description *</label>
-			<RichEditor id="ticket-description" bind:value={description} placeholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)" minHeight="120px" />
-		</div>
-		</SectionFormulaire>
-
-		<SectionFormulaire titre="Pièces jointes">
-		<div class="field">
-			<FichiersUpload id="ticket-photos" bind:urls={photosUrls}
-				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
-		</div>
-
-		<div class="field">
-			<FichiersUpload id="ticket-documents" bind:urls={fichiersUrls} />
-		</div>
-		</SectionFormulaire>
-
-		{#if $isCS}
-			<div class="field saisi-pour-section">
-				<span class="intitule-champ">Saisi pour</span>
-				<div class="saisi-pour-tabs">
-					<button type="button" class="tab-btn" class:active={modeSaisiPour === 'moi'} on:click={() => modeSaisiPour = 'moi'}>
-						En mon nom
-					</button>
-					<button type="button" class="tab-btn" class:active={modeSaisiPour === 'resident'} on:click={() => modeSaisiPour = 'resident'}>
-						Résident inscrit
-					</button>
-					<button type="button" class="tab-btn" class:active={modeSaisiPour === 'exterieur'} on:click={() => modeSaisiPour = 'exterieur'}>
-						Personne extérieure
-					</button>
-				</div>
-				{#if modeSaisiPour === 'resident'}
-					<select bind:value={saisiPourUserId} style="margin-top:.5rem" aria-label="Résident concerné">
-						<option value={null}>— Sélectionner un résident —</option>
-						{#each usersActifs as u}
-							<option value={u.id}>{u.prenom} {u.nom}{u.email ? ` (${u.email})` : ''}</option>
-						{/each}
-					</select>
-				{:else if modeSaisiPour === 'exterieur'}
-					<div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.5rem">
-						<input type="text" bind:value={saisiPourNom} placeholder="Nom complet *" aria-label="Nom complet de la personne" required />
-						<input type="email" bind:value={saisiPourEmail} placeholder="Email (optionnel)" aria-label="Email de la personne" />
-					</div>
-				{/if}
-			</div>
-			<SectionFormulaire titre="Diffusion">
-			<CanauxNotification
-				bind:whatsapp={partagerWhatsapp}
-				bind:syndic={destinataireSyndic}
-				bind:cs={destinataireCs}
-				aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
-			/>
-			</SectionFormulaire>
-		{/if}
+		<!--  4 à 9 : l'ordre, les intitulés et les séparations sont hérités du
+		      composant partagé — voir `ChampsCommuns.svelte`. -->
+		<ChampsCommuns
+			idPrefixe="ticket"
+			avecPerimetre bind:perimetre={perimetreCible}
+			avecDescription descriptionRequise bind:description
+			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
+			avecPhotos bind:photos={photosUrls}
+			avecDocuments bind:documents={fichiersUrls}
+			avecDiffusion={$isCS}
+			bind:whatsapp={partagerWhatsapp}
+			bind:syndic={destinataireSyndic}
+			bind:cs={destinataireCs}
+			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
+		/>
 
 		<!-- Pas de bouton « Annuler » ici : il vit dans l'en-tête de page (voir
 		     l'en-tête de ce fichier). `.form-actions` vient d'app.css. -->
@@ -286,12 +275,10 @@
 	.cat-label { font-weight: 600; font-size: .9rem; }
 	.cat-desc  { font-size: .78rem; color: var(--color-text-muted); }
 
-	/*  Intitulé d'un champ qui n'est PAS un contrôle unique (pastilles de
-	    périmètre, groupe d'onglets) : mêmes valeurs que `.field label` d'app.css,
-	    parce que l'œil doit lire la même chose. Pas nommé `.field-label` : cette
-	    classe existe ailleurs comme CONTENEUR flex enveloppant son champ, et
-	    réutiliser le nom pour un simple intitulé mélangerait deux sens. */
-	.intitule-champ { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+	/*  `.intitule-champ` a disparu d'ici : « Saisi pour » est devenu le TITRE de
+	    sa section (`SectionFormulaire`), qui porte déjà sa typographie. Un
+	    intitulé de champ posé au-dessus d'un titre de section aurait dit deux
+	    fois la même chose. */
 
 	/* `.form-actions` n'est PAS redéfini ici : app.css le porte (l. 533). La page
 	   dédiée en gardait une copie identique, donc inerte — même défaut que celui

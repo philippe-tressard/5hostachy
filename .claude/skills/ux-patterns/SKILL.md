@@ -304,6 +304,67 @@ l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu
 dit *où en est le travail*, pas *qui le voit*. Termes retenus par l'utilisateur
 après une première proposition inexacte de ma part.
 
+### 9 septies. Les sections 4 à 9 ne se réécrivent plus : `ChampsCommuns.svelte`
+
+**L'ordre ci-dessus a un point d'héritage depuis le 16/08/2026.** Périmètre,
+Destinataires, Description, Photos, Documents et Diffusion sont rendus par UN
+composant, qui porte leur ordre, leurs intitulés et leurs séparations
+(`SectionFormulaire`). Un écran déclare ce qu'il a, jamais où le mettre :
+
+```svelte
+<ChampsCommuns
+  idPrefixe="ticket"
+  avecPerimetre bind:perimetre={perimetreCible}
+  avecDescription descriptionRequise bind:description
+  avecPhotos bind:photos={photosUrls}
+  avecDocuments bind:documents={fichiersUrls}
+  avecDiffusion bind:whatsapp bind:syndic bind:cs
+>
+  <svelte:fragment slot="diffusion">…options propres à l'écran…</svelte:fragment>
+</ChampsCommuns>
+```
+
+Les sections **1 à 3** (Titre, champs spécifiques, Workflow) restent dans l'écran :
+lui seul sait ce qu'elles portent.
+
+**Why.** L'ordre était écrit, `SectionFormulaire` savait séparer — et les six
+formulaires recomposaient quand même la suite à la main. L'utilisateur l'a
+signalé ainsi : *« Les objets ont l'air d'être dupliqués, pas instanciés, car ils
+diffèrent selon les pages. »* Relevé avant correction :
+
+| Notion | Ce qui divergeait |
+|---|---|
+| Description | « Description » / « Description * » / « Notes » ; hauteur 60, 80, 90, 100 ou 120 px |
+| Documents | `FichiersUpload` sur tickets et calendrier, `<input type="file">` **nu** sur actualités et prestations |
+| Diffusion | aucune section nommée sur **4 écrans sur 6** |
+| Ordre | Périmètre au milieu de la grille des champs spécifiques (prestations) ; Kanban rangé dans la diffusion (calendrier) ; « Saisi pour » **après** les pièces jointes (tickets) |
+
+Aucune n'était voulue : ce sont les six recopies qui les produisent. La seule
+façon de ne pas les voir revenir est qu'un seul endroit les écrive.
+
+⚠️ **Une rubrique dont le parent n'existe pas encore** (documents d'actualité,
+fichiers de prestation : leur endpoint réclame l'identifiant) passe par le mode
+**différé** de `FichiersUpload` — `documentsDifferes` + `bind:documentsFichiers`.
+L'écran téléverse après création. Ne PAS retomber sur un `<input type="file">`
+nu : c'est ce qui produisait la deuxième apparence.
+
+### 9 octies. Jamais de sélecteur d'ÉLÉMENT nu dans un composant
+
+`input`, `textarea`, `select`, `button`, `label` seuls, dans un `<style>` de page
+ou de composant : **interdit**, et refusé par `npm run lint:styles`.
+
+**Why.** `sondages/+page.svelte` portait `input, textarea { width: 100% }`. Le
+sélecteur visait les champs de saisie et atteignait **toutes les cases à cocher
+de la page** : chacune s'étirait sur la largeur du formulaire et repoussait son
+libellé à l'autre bout. L'utilisateur l'a signalé sur **deux écrans distincts**
+(« Nouveau sondage » et « Déposer une annonce »), sans lien apparent entre eux —
+c'était une seule ligne. Quatre composants annulaient déjà ce genre de règle case
+par case avec un `style="width:auto"` recopié : le signe qu'on soignait le
+symptôme.
+
+Qualifier le sélecteur (`.case input[type="checkbox"]`) ou porter la règle dans
+`app.css`, où elle est globale et assumée.
+
 ### 9 quinquies. Le bouton de soumission est **à droite**, via `.form-actions`
 
 `.form-actions` (app.css) porte `justify-content: flex-end`. Un bouton posé nu dans
@@ -338,6 +399,7 @@ chacune avec sa propre expression régulière pour décider ce qui est une image
 | `$lib/components/Lightbox.svelte` | visionneuse plein écran | `photos`, `index` · événement `fermer` |
 | `$lib/components/Vignette.svelte` | vignette carrée (brique de bas niveau) | `src`, `alt`, `placeholder`, `count`, `size`, slot d'actions |
 | `$lib/components/PhotosUpload.svelte` | galerie **éditable** | `urls`, `max`, `readonly`, `upload`, `remove` |
+| `$lib/components/FichiersUpload.svelte` | **saisie** de pièces jointes ; `differe` retient les `File` quand le parent n'existe pas encore | `urls`, `fichiers`, `differe`, `mode`, `max`, `titre` |
 
 Le téléversement est **délégué par callback** : chaque rubrique garde son propre
 endpoint, le composant ne connaît pas l'API. La règle « qu'est-ce qu'une image, et

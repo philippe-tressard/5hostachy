@@ -6,7 +6,7 @@ from pydantic import BaseModel, BeforeValidator, field_validator
 from app.models.core import StatutUtilisateur, RoleUtilisateur
 
 
-def _liste_depuis_json(v):
+def liste_depuis_json(v):
     """Colonne texte contenant un tableau JSON → liste d'URLs.
 
     Quatre schémas portaient ce même validateur recopié (`photos_urls`,
@@ -16,6 +16,10 @@ def _liste_depuis_json(v):
 
     Ne lève jamais : une valeur illisible en base ne doit pas faire échouer la
     lecture de l'élément qui la porte. Le pire cas est une liste vide.
+
+    Publique (et non `_privée`) depuis le 16/08/2026 : le détail d'un sondage
+    construit sa réponse à la main, sans `response_model`, et devait donc appeler
+    la règle plutôt que la réécrire.
     """
     if v is None:
         return []
@@ -28,9 +32,15 @@ def _liste_depuis_json(v):
     return v
 
 
-#: Champ exposé en liste, stocké en colonne texte. `Optional[ListeUrls]` reste
+#: Champ exposé en liste, stocké en colonne texte. `Optional[ListeJson]` reste
 #: possible là où l'absence et la liste vide doivent se distinguer.
-ListeUrls = Annotated[List[str], BeforeValidator(_liste_depuis_json)]
+#:
+#: ⚠️ Ce type s'appelait `ListeJson` — un nom qui décrivait ses trois premiers
+#: usages (photos, fichiers) et non ce qu'il fait. Le ciblage des sondages avait
+#: exactement le même besoin pour des CODES de périmètre : soit on importait un
+#: type nommé « URLs » pour des périmètres, soit on en écrivait un second,
+#: identique. Renommé pour ce qu'il est — une liste sérialisée en JSON.
+ListeJson = Annotated[List[str], BeforeValidator(liste_depuis_json)]
 
 
 class UserCreate(BaseModel):
@@ -185,8 +195,8 @@ class TicketRead(BaseModel):
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
-    photos_urls: Optional[ListeUrls] = None
-    fichiers_urls: ListeUrls = []
+    photos_urls: Optional[ListeJson] = None
+    fichiers_urls: ListeJson = []
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     saisi_pour_user_id: Optional[int] = None
@@ -248,7 +258,7 @@ class MessageRead(BaseModel):
     contenu: str
     interne: bool
     cree_le: datetime
-    fichiers_urls: ListeUrls = []
+    fichiers_urls: ListeJson = []
 
     class Config:
         from_attributes = True
@@ -285,7 +295,7 @@ class TicketEvolutionRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     cree_le: datetime
-    fichiers_urls: ListeUrls = []
+    fichiers_urls: ListeJson = []
 
     class Config:
         from_attributes = True
@@ -298,7 +308,7 @@ class PublicationCreate(BaseModel):
     batiment_id: Optional[int] = None
     epingle: bool = False
     urgente: bool = False
-    photos_urls: ListeUrls = []
+    photos_urls: ListeJson = []
     perimetre_cible: List[str] = ["résidence"]
     public_cible: List[str] = ["résidents"]
     statut: Optional[str] = "publie"
@@ -316,7 +326,7 @@ class PublicationUpdate(BaseModel):
     contenu: Optional[str] = None
     epingle: Optional[bool] = None
     urgente: Optional[bool] = None
-    photos_urls: Optional[ListeUrls] = None
+    photos_urls: Optional[ListeJson] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
     public_cible: Optional[List[str]] = None
@@ -343,7 +353,7 @@ class EvolutionRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     cree_le: datetime
-    fichiers_urls: ListeUrls = []
+    fichiers_urls: ListeJson = []
 
     class Config:
         from_attributes = True
@@ -369,7 +379,7 @@ class PublicationRead(BaseModel):
     epingle: bool
     urgente: bool
     auteur_id: int
-    photos_urls: ListeUrls = []
+    photos_urls: ListeJson = []
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
     perimetre_cible: List[str] = ["résidence"]

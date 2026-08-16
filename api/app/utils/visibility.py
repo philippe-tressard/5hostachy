@@ -14,12 +14,16 @@ Règles métier appliquées :
       La liste des périmètres transverses n'est plus écrite ici : elle était en trois
       exemplaires (ici, `flux/evenements.py`, et le tableau de bord côté front) et
       c'est désormais le drapeau `portee_globale` de la table `perimetre`.
-  - public_cible (publications) : résidents = tous ; copropriétaires = statut copropriétaire_* ;
-      bailleurs = copropriétaire_bailleur uniquement ; locataires = statut locataire
-      uniquement ; conseil_syndical = CS/admin uniquement.
+  - public_cible : résidents = tous ; copropriétaires = statut copropriétaire_* ;
+      copropriétaires_occupants = copropriétaire_résident uniquement ; bailleurs =
+      copropriétaire_bailleur uniquement ; locataires = statut locataire uniquement ;
+      conseil_syndical = CS/admin uniquement.
       Si public_cible contient une valeur non reconnue ou non correspondante → non visible.
   - AG (événements) : visible uniquement par propriétaires, CS et admins.
-  - Sondages : profils_autorises (CSV statuts) + batiments_ids (CSV ids bâtiments).
+  - Sondages : MÊME règle que les publications — perimetre_cible + public_cible.
+      Ils ciblaient par `batiments_ids` + `profils_autorises`, seuls de tout le
+      site : une deuxième règle d'accès à maintenir, et un écran qui ne savait
+      cibler ni le parking, ni l'AFUL, ni un espace. Unifié le 16/08/2026.
 """
 from __future__ import annotations
 
@@ -51,13 +55,6 @@ def _parse_json_list(raw: Optional[str], default: list[str]) -> list[str]:
         return list(val) if isinstance(val, (list, tuple)) else default
     except Exception:
         return default
-
-
-def _parse_csv(raw: Optional[str]) -> list[str]:
-    """Parse un champ CSV (ex: 'bat:1,résidence')."""
-    if not raw:
-        return []
-    return [v.strip() for v in raw.split(",") if v.strip()]
 
 
 def _codes_json_pour_acces(raw: Optional[str]) -> Optional[list[str]]:
@@ -163,6 +160,78 @@ def perimetre_visible(
     return user.batiment_id in batiments_cibles(perimetres)
 
 
+# ── Règle « à qui ça s'adresse » ──────────────────────────────────────────────
+
+#: Le vocabulaire du public cible, dans l'ordre où il est proposé à l'écran.
+#:
+#: `résidents` n'y figure pas : ce n'est pas un profil mais l'ABSENCE de
+#: restriction, et le sélecteur le rend par une pastille à part.
+#:
+#: ⚠️ Cette liste ne fait pas foi à elle seule — c'est `public_cible_visible`
+#: ci-dessous qui décide. Elle sert à ce qu'un contrôle puisse comparer les deux
+#: côtés : `tests/test_destinataires_vocabulaire.py` vérifie que chaque code
+#: d'ici est réellement honoré par la fonction (donc que la liste ne ment pas),
+#: ET que `front/src/lib/destinataires.ts` propose exactement les mêmes. Sans
+#: cela, un code ajouté d'un seul côté produit une pastille qui ne cible rien,
+#: ou une règle que personne ne peut choisir.
+CODES_PUBLIC_CIBLE: tuple[str, ...] = (
+    "copropriétaires",
+    "copropriétaires_occupants",
+    "bailleurs",
+    "locataires",
+    "conseil_syndical",
+)
+
+
+def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
+    """L'utilisateur fait-il partie du public visé par `raw` (JSON de codes) ?
+
+    Écrite UNE fois : les publications et les sondages posent la même question,
+    et le sondage y répondait avec son propre vocabulaire (des `StatutUtilisateur`
+    bruts). Deux règles pour une notion, c'est deux règles qui divergent — celle
+    du sondage ne connaissait ni « bailleurs », ni le conseil syndical.
+
+    Vide ou absent = aucune restriction. Une valeur **non reconnue** ne donne
+    jamais l'accès : c'est ce qui permet à la migration 0147 de laisser passer un
+    résidu sans risque, puisqu'un résidu ne peut alors que restreindre.
+    """
+    public = _parse_json_list(raw, [])
+    if not public:
+        return True
+    if "résidents" in public:
+        return True
+    statut = user.statut.value if user.statut is not None else ""
+    if "copropriétaires" in public and statut.startswith("copropriétaire_"):
+        return True
+    if "locataires" in public and statut == "locataire":
+        return True
+    #  « Bailleurs » vise les copropriétaires qui LOUENT leur lot, et eux seuls ;
+    #  « copropriétaires occupants » est son exact symétrique. `copropriétaires`
+    #  ci-dessus couvre les deux statuts — mais rien ne permettait de s'adresser à
+    #  l'un SANS l'autre, alors que des pans entiers du produit leur sont propres
+    #  (baux et remise d'objets d'un côté, vie quotidienne de l'autre).
+    if "bailleurs" in public and statut == "copropriétaire_bailleur":
+        return True
+    if "copropriétaires_occupants" in public and statut == "copropriétaire_résident":
+        return True
+    #  Le SEUL code du catalogue qui se décide sur le rôle et non sur le statut.
+    #
+    #  ⚠️ Cette branche manquait, et rien ne le montrait : les deux appelants
+    #  (`publication_visible`, `sondage_accessible`) laissent sortir le CS et
+    #  l'admin AVANT d'arriver ici, si bien qu'un contenu ciblé « conseil
+    #  syndical » leur parvenait par ce chemin-là. Le comportement était donc
+    #  juste — mais la fonction ne l'était pas, et un troisième appelant qui
+    #  aurait oublié le court-circuit aurait caché au conseil syndical ce qui lui
+    #  était explicitement adressé. Trouvé par `test_destinataires_vocabulaire.py`
+    #  le 16/08/2026, qui interroge la règle SEULE.
+    if "conseil_syndical" in public and user.has_role(
+        RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical
+    ):
+        return True
+    # Valeur non reconnue, ou public dont l'utilisateur ne fait pas partie
+    return False
+
+
 # ── Règles publication ────────────────────────────────────────────────────────
 
 def publication_visible(pub: Publication, user: Utilisateur) -> bool:
@@ -202,28 +271,8 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
     ):
         return False
 
-    # 2. Public cible
-    public = _parse_json_list(pub.public_cible, ["résidents"])
-    if not public:
-        return True  # aucune restriction explicite
-    if "résidents" in public:
-        return True
-    statut = user.statut.value if user.statut is not None else ""
-    if "copropriétaires" in public and statut.startswith("copropriétaire_"):
-        return True
-    if "locataires" in public and statut == "locataire":
-        return True
-    #  « Bailleurs » vise les copropriétaires qui LOUENT leur lot, et eux seuls.
-    #  `copropriétaires` ci-dessus les inclut déjà — il couvre les deux statuts
-    #  `copropriétaire_*` — mais rien ne permettait de s'adresser à eux SANS
-    #  toucher les copropriétaires occupants, alors que tout un pan du produit
-    #  leur est propre (baux, remise d'objets, accès confiés aux locataires).
-    #  Ajout purement additif : une valeur inconnue tombait déjà sur le `return
-    #  False` final, donc aucune publication existante ne change de public.
-    if "bailleurs" in public and statut == "copropriétaire_bailleur":
-        return True
-    # Valeur non reconnue ou accès restreint (ex: conseil_syndical) → non visible
-    return False
+    # 2. Public cible — règle partagée avec les sondages, voir plus haut.
+    return public_cible_visible(pub.public_cible, user)
 
 
 # ── Règles sondage ────────────────────────────────────────────────────────────
@@ -233,18 +282,27 @@ def sondage_accessible(sondage: Sondage, user: Utilisateur) -> bool:
     Retourne True si l'utilisateur peut voir/voter à ce sondage.
 
     - CS / Admin : toujours True.
-    - profils_autorises (CSV de StatutUtilisateur) : vide = tous les profils.
-    - batiments_ids (CSV d'ids) : vide = toute la résidence.
+    - `perimetre_cible` (JSON de codes) : vide = aucune restriction géographique.
+    - `public_cible` (JSON de codes) : vide = tous les profils.
+
+    C'est **exactement** la règle des publications, à une exception près et elle
+    est délibérée : `ouvert_a_la_copropriete` reste à sa valeur par défaut, donc
+    faux. Une actualité ciblée sur un bâtiment reste lisible de toute la
+    copropriété (#339) parce qu'elle informe ; un sondage, lui, fait **voter** —
+    l'ouvrir changerait qui pèse sur le résultat. L'accès d'un sondage ciblé sur
+    un bâtiment est donc rigoureusement celui d'avant l'unification.
     """
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         return True
-    profils = _parse_csv(sondage.profils_autorises)
-    if profils and (user.statut is None or user.statut.value not in profils):
+    perims = _codes_json_pour_acces(sondage.perimetre_cible)
+    if perims is None:
+        #  Ciblage illisible : on refuse. Un contrôle qui ne peut pas s'exécuter
+        #  ne renvoie jamais OK (`standards/04`), et le CS est déjà sorti plus
+        #  haut — il garde donc de quoi corriger le sondage.
         return False
-    batiments = _parse_csv(sondage.batiments_ids)
-    if batiments and (user.batiment_id is None or str(user.batiment_id) not in batiments):
+    if not perimetre_visible(perims, user):
         return False
-    return True
+    return public_cible_visible(sondage.public_cible, user)
 
 
 # ── Règles événement ──────────────────────────────────────────────────────────

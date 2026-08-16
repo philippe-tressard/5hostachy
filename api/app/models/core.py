@@ -1012,99 +1012,25 @@ class Evenement(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
-#  Sondages
+#  Communauté (sondages, petites annonces, boîte à idées)
 # ──────────────────────────────────────────────
-
-class Sondage(SQLModel, table=True):
-    __tablename__ = "sondage"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    question: str
-    description: Optional[str] = None
-    cloture_le: Optional[datetime] = None
-    resultats_publics: bool = True  # visibles avant clôture
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    # Ciblage : None/vide = tous
-    profils_autorises: Optional[str] = Field(default=None)   # CSV de StatutUtilisateur
-    batiments_ids: Optional[str] = Field(default=None)       # CSV d'ids de Batiment
-    cloture_forcee: bool = Field(default=False)
-    partager_whatsapp: bool = False
-    envoyer_syndic: bool = False
-    envoyer_cs: bool = False
-
-    options: List["OptionSondage"] = Relationship(back_populates="sondage")
-    votes: List["VoteSondage"] = Relationship(back_populates="sondage")
-
-
-class OptionSondage(SQLModel, table=True):
-    __tablename__ = "option_sondage"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    sondage_id: int = Field(foreign_key="sondage.id")
-    libelle: str
-    ordre: int = 0
-    champ_libre: bool = Field(default=False)
-
-    sondage: Optional[Sondage] = Relationship(back_populates="options")
-    votes: List["VoteSondage"] = Relationship(back_populates="option")
-
-
-class VoteSondage(SQLModel, table=True):
-    __tablename__ = "vote_sondage"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    sondage_id: int = Field(foreign_key="sondage.id")
-    option_id: int = Field(foreign_key="option_sondage.id")
-    user_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    reponse_libre: Optional[str] = Field(default=None)
-
-    sondage: Optional[Sondage] = Relationship(back_populates="votes")
-    option: Optional[OptionSondage] = Relationship(back_populates="votes")
-
-
-# ──────────────────────────────────────────────
-#  Petites annonces
-# ──────────────────────────────────────────────
-
-class TypeAnnonce(str, Enum):
-    vente = "vente"
-    don = "don"
-    recherche = "recherche"
-
-
-class CategorieAnnonce(str, Enum):
-    appartement = "appartement"
-    parking_cave = "parking_cave"
-    mobilier = "mobilier"
-    electromenager = "electromenager"
-    high_tech = "high_tech"
-    vehicule = "vehicule"
-    vetements = "vetements"
-    services = "services"
-    divers = "divers"
-
-
-class StatutAnnonce(str, Enum):
-    disponible = "disponible"
-    reserve = "reserve"
-    vendu = "vendu"
-    archive = "archive"
-
-
-class PetiteAnnonce(SQLModel, table=True):
-    __tablename__ = "petite_annonce"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    titre: str
-    description: str  # rich-text HTML
-    type_annonce: TypeAnnonce = TypeAnnonce.vente
-    categorie: CategorieAnnonce = CategorieAnnonce.divers
-    prix: Optional[float] = None
-    negotiable: bool = False
-    photos_json: str = Field(default="[]")  # JSON array of up to 5 URLs
-    statut: StatutAnnonce = StatutAnnonce.disponible
-    contact_visible: bool = True  # autoriser affichage email/prénom-nom
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: Optional[datetime] = None
+#  Les tables vivent dans `models/communaute.py` depuis le 16/08/2026
+#  (modularité, rang 1). Ré-exportées ici : les imports existants ne bougent
+#  pas, et les modèles restent enregistrés auprès de SQLModel.
+from app.models.communaute import (  # noqa: E402,F401
+    CategorieAnnonce as CategorieAnnonce,
+    CommentaireSondage as CommentaireSondage,
+    Idee as Idee,
+    OptionSondage as OptionSondage,
+    PetiteAnnonce as PetiteAnnonce,
+    ReponseCommunaute as ReponseCommunaute,
+    Signalement as Signalement,
+    Sondage as Sondage,
+    StatutAnnonce as StatutAnnonce,
+    TypeAnnonce as TypeAnnonce,
+    VoteIdee as VoteIdee,
+    VoteSondage as VoteSondage,
+)
 
 
 # ──────────────────────────────────────────────
@@ -1166,15 +1092,6 @@ class MembreSyndic(SQLModel, table=True):
     cree_le:       datetime         = Field(default_factory=datetime.utcnow)
 
 
-class CommentaireSondage(SQLModel, table=True):
-    __tablename__ = "commentaire_sondage"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    sondage_id: int = Field(foreign_key="sondage.id")
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    contenu: str
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-
-
 # ──────────────────────────────────────────────
 #  Diagnostics et Contrôles Réglementaires
 # ──────────────────────────────────────────────
@@ -1208,69 +1125,6 @@ class DiagnosticRapport(SQLModel, table=True):
     publie_le: datetime = Field(default_factory=datetime.utcnow)
 
     type_diagnostic: Optional[DiagnosticType] = Relationship(back_populates="rapports")
-
-
-# ──────────────────────────────────────────────
-#  Boîte à idées
-# ──────────────────────────────────────────────
-
-class Idee(SQLModel, table=True):
-    __tablename__ = "idee"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    titre: str
-    description: str
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    statut: str = "ouverte"  # ouverte | retenue | rejetee | realisee
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-
-    votes: List["VoteIdee"] = Relationship(back_populates="idee")
-
-
-class VoteIdee(SQLModel, table=True):
-    __tablename__ = "vote_idee"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    idee_id: int = Field(foreign_key="idee.id")
-    user_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-
-    idee: Optional[Idee] = Relationship(back_populates="votes")
-
-
-class ReponseCommunaute(SQLModel, table=True):
-    """Réponse à un contenu de la Communauté — table générique factorisée.
-
-    rubrique = 'idee' | 'annonce' ; cible_id = id de l'idée ou de l'annonce.
-    Les commentaires de sondage restent dans CommentaireSondage (legacy, avec
-    sémantique « commentaire attaché au vote »), mais partagent les mêmes
-    helpers d'enrichissement/notification et le même composant front.
-    """
-    __tablename__ = "reponse_communaute"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    rubrique: str = Field(index=True)          # 'idee' | 'annonce'
-    cible_id: int = Field(index=True)          # id de l'idée / annonce (polymorphe)
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    contenu: str
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-
-
-class Signalement(SQLModel, table=True):
-    """Signalement d'un contenu Communauté inapproprié → file de modération CS.
-
-    cible_type : 'idee' | 'annonce' | 'sondage' | 'reponse' (ReponseCommunaute)
-                 | 'commentaire' (CommentaireSondage).
-    """
-    __tablename__ = "signalement"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    cible_type: str = Field(index=True)
-    cible_id: int = Field(index=True)
-    apercu: str = ""                            # extrait/titre du contenu (pour la file)
-    auteur_cible_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    signale_par_id: int = Field(foreign_key="utilisateur.id")
-    motif: str
-    statut: str = Field(default="en_attente")  # en_attente | traite | rejete
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    traite_le: Optional[datetime] = None
 
 
 # ──────────────────────────────────────────────
