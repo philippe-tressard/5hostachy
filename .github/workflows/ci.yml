@@ -143,6 +143,7 @@ jobs:
           bash scripts/exploitation/check-reliability.sh --selftest
           bash scripts/poste/export-hors-site.sh --selftest
           bash scripts/lib/lib-rapport.sh           --selftest
+          bash scripts/lib/lib-rotation.sh          --selftest
           bash scripts/poste/precheck-mep.sh      --selftest
           bash scripts/exploitation/maintenance.sh       --selftest
           bash scripts/poste/rejouer-ci.sh        --selftest
