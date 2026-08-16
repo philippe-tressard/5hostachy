@@ -108,7 +108,7 @@
 
 <svelte:head><title>Délégations aidant — {_siteNom}</title></svelte:head>
 
-<EntetePage titre="Délégations aidant" icone="heart-handshake" marge=".75rem" />
+<EntetePage titre="Délégations aidant" icone="heart-handshake" />
 <p class="page-subtitle" style="margin-bottom:1.5rem;color:var(--color-text-muted);font-size:.9rem">
 	Gestion des accès délégués pour les proches aidants.
 	<br /><em style="font-size:.82rem">L'accès aidant ne constitue pas une procuration d'AG.</em>

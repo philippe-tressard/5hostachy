@@ -1300,7 +1300,7 @@
 
 <svelte:head><title>{_pc.titre} · {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'shield-half'} marge=".5rem" />
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'shield-half'} />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- Onglets -->

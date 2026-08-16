@@ -750,7 +750,7 @@
 
 <!--  Bascule « + … » ⇆ « ✕ Annuler » portée par `BoutonNouveau` (voir son
       en-tête) ; `alignerSaisie` cale le bouton sur la boîte de 720 px. -->
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'hard-hat'} marge=".5rem"
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'hard-hat'}
 	alignerSaisie={showPrestForm || devisFormPrestId !== null || contratFormPrestId !== null || showReleveForm}>
 	{#if $isCS}
 		{#if onglet === 'prestataires'}

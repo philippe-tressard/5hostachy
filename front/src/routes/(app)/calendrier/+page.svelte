@@ -716,7 +716,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 <!--  Modèle des actualités (#367) : le bouton bascule, et l'en-tête s'aligne sur
       la boîte de saisie pendant l'édition. La modale a disparu — sa croix aussi,
       qui faisait DEUX commandes d'annulation dont une sous l'overlay. -->
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'} marge="1rem" alignerSaisie={showForm}>
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'} alignerSaisie={showForm}>
 	{#if $isCS}
 		<button class="btn btn-primary page-header-btn" on:click={() => { showForm = !showForm; if (!showForm) resetForm(); }}>
 			{showForm ? '✕ Annuler' : '+ Nouvel événement'}
