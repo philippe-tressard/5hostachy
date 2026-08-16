@@ -674,7 +674,7 @@
 			{:else}
 				<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem">
 					Si votre compte vient d'être validé, la liaison se fait automatiquement.<br>
-					Si aucun lot n'apparaît, contactez le gestionnaire du site ou <a href="/tickets/nouveau" style="color:var(--color-primary)">faites une nouvelle demande</a>.
+					Si aucun lot n'apparaît, contactez le gestionnaire du site ou <a href="/tickets?nouveau=1" style="color:var(--color-primary)">faites une nouvelle demande</a>.
 				</p>
 			{/if}
 		</div>
