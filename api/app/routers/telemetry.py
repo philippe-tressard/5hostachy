@@ -16,7 +16,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.limiter import limiter
-from app.utils.telemetrie_calculs import uniques_par_page
+from app.utils.telemetrie_calculs import uniques_par_page, vues_non_attribuees
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -245,6 +245,17 @@ def dashboard(
         ).all()
         uniques_map = uniques_par_page(paires_page_user)
 
+        #  Vues rattachées à un utilisateur, sur la même fenêtre que le tableau
+        #  des utilisateurs. La différence avec le total est le nombre de vues
+        #  qu'aucune session ne permet d'attribuer — enregistrées avant que la
+        #  session soit établie, ou après son expiration. C'est l'écart « 78 vs
+        #  74 » signalé par l'utilisateur (#354), rendu explicite ici.
+        vues_attribuees = session.exec(
+            select(func.count())
+            .select_from(TelemetryEvent)
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+        ).one()
+
         top_pages: dict[str, dict] = {}
         for r in daily_rows:
             if r.page not in top_pages:
@@ -320,6 +331,7 @@ def dashboard(
                 "moy_vues_jour": moy_vues_jour,
                 "moy_utilisateurs_jour": moy_utilisateurs_jour,
                 "jour_pointe": jour_pointe,
+                "vues_non_attribuees": vues_non_attribuees(total_vues, vues_attribuees),
             },
             "chart": sorted(daily_chart.values(), key=lambda x: x["label"]),
             "chart_label": "Vues par jour (30j)",

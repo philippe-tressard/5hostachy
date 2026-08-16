@@ -10,6 +10,13 @@
 	 */
 	export let pages: { page: string; total: number; uniques: number }[] = [];
 
+	/** Vues comptées ici mais rattachées à aucun utilisateur (#354).
+	    Ce tableau compte TOUTES les vues ; celui des utilisateurs n'en retient que
+	    les attribuables. Deux nombres côte à côte sur un même écran engagent une
+	    promesse de cohérence : quand ils diffèrent, l'écran doit le dire — c'est
+	    plus important que la cause. */
+	export let vuesNonAttribuees = 0;
+
 	//  Calculé UNE fois. Il l'était à l'intérieur de la boucle, donc recalculé
 	//  pour chaque ligne : sans effet visible, mais quadratique.
 	$: totalVues = pages.reduce((s, p) => s + p.total, 0);
@@ -60,6 +67,14 @@
 				</tr>
 			</tfoot>
 		</table>
+		{#if vuesNonAttribuees > 0}
+			<p class="tl-note">
+				Dont <strong>{vuesNonAttribuees}</strong> vue{vuesNonAttribuees > 1 ? 's' : ''}
+				non rattachée{vuesNonAttribuees > 1 ? 's' : ''} à un utilisateur — enregistrée{vuesNonAttribuees > 1 ? 's' : ''}
+				avant l'ouverture de la session ou après son expiration. C'est ce qui explique
+				l'écart avec le tableau « Utilisateurs les plus actifs ».
+			</p>
+		{/if}
 		<p class="muted" style="font-size:.78rem;margin:.5rem 0 0">
 			Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au
 			total du site.
@@ -68,6 +83,7 @@
 {/if}
 
 <style>
+	.tl-note { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
 	tfoot tr.total > td {
 		border-top: 2px solid var(--color-border);
 		font-weight: 700;
