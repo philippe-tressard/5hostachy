@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { perimetreParDefaut, type Perimetre } from '$lib/perimetres';
 
@@ -117,19 +117,13 @@
       conseil syndical, par exemple. -->
 <div class="perimetre-pills">
 	{#if defaut}
-		<button type="button" class="pill" class:pill-active={estDefaut} on:click={choisirDefaut}>
-			{#if noeudDefaut?.icone}<Icon name={noeudDefaut.icone} size={15} />{/if}{noeudDefaut?.libelle ?? defaut}
-		</button>
+		<Pastille active={estDefaut} icone={noeudDefaut?.icone ?? ''} on:click={choisirDefaut}>
+			{noeudDefaut?.libelle ?? defaut}
+		</Pastille>
 	{/if}
 	{#each niveau1 as n (n.code)}
-		<button
-			type="button"
-			class="pill"
-			class:pill-active={!estDefaut && selection.has(n.code)}
-			on:click={() => basculer(n.code)}
-		>
-			{#if n.icone}<Icon name={n.icone} size={15} />{/if}{n.libelle}{#if aDesEnfants.has(n.code)}<span class="pill-chevron" aria-hidden="true">›</span>{/if}
-		</button>
+		<Pastille active={!estDefaut && selection.has(n.code)} icone={n.icone ?? ''}
+			chevron={aDesEnfants.has(n.code)} on:click={() => basculer(n.code)}>{n.libelle}</Pastille>
 	{/each}
 </div>
 
@@ -141,14 +135,8 @@
 		</p>
 		<div class="perimetre-pills">
 			{#each niveau2 as espace (espace.code)}
-				<button
-					type="button"
-					class="pill pill-sm"
-					class:pill-active={selection.has(espace.code)}
-					on:click={() => basculer(espace.code)}
-				>
-					{espace.libelle}
-				</button>
+				<Pastille petite active={selection.has(espace.code)}
+					on:click={() => basculer(espace.code)}>{espace.libelle}</Pastille>
 			{/each}
 		</div>
 	</div>
@@ -159,12 +147,14 @@
 {/if}
 
 <style>
+	/*  La PASTILLE elle-même est un objet — `Pastille.svelte` — qui porte son
+	    balisage et son style ensemble : c'est ce qui les empêche de diverger, et
+	    ce qui garantit qu'un second écran ne pourra pas hériter de l'un sans
+	    l'autre (régression du 16/08/2026, pastilles nues sur les sondages).
+
+	    Le CONTENEUR, lui, reste ici : c'est une mise en page, propre à cet
+	    écran — pas une propriété de la pastille. */
 	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
-	.pill { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); font-size: .82rem; cursor: pointer; color: var(--color-text-muted); transition: all .12s; white-space: nowrap; }
-	.pill:hover { border-color: var(--color-primary); color: var(--color-text); }
-	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-	.pill-sm { font-size: .78rem; padding: .28rem .6rem; }
-	.pill-chevron { margin-left: .3rem; opacity: .6; }
 	.perimetre-niveau2 { margin-top: .6rem; padding-left: .1rem; }
 	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
 	.perimetre-facultatif { opacity: .75; }

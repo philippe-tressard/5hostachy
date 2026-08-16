@@ -226,6 +226,7 @@ a.btn:hover { text-decoration: none; }
     16/08/2026). À poser sur le champ, pas sur la grille — c'est le contenu qui
     décide de sa largeur, pas l'écran qui l'accueille. */
 .form-grid .champ-large, .field.champ-large { grid-column: 1 / -1; }
+
 /*  Le <label> peut ENVELOPPER son champ — c'est même la forme la plus sûre :
     l'association label/champ est alors implicite et native, rien ne peut la
     casser. Il porte lui-même `.field`, et le texte hérite de la même taille que

@@ -25,6 +25,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 
 	/** Intitulé du bloc — ex. « Profils destinataires ». */
 	export let titre: string;
@@ -50,10 +51,10 @@
 		{titre}
 		{#if estDefaut}<span class="badge badge-green ciblage-badge">{libelleDefaut}</span>{/if}
 	</div>
-	<div class="perimetre-pills">
+	<div class="pastilles">
 		{#each options as o (o.val)}
-			<button type="button" class="pill" class:pill-active={selection.includes(o.val)}
-				on:click={() => dispatch('basculer', o.val)}>{o.label}</button>
+			<Pastille active={selection.includes(o.val)}
+				on:click={() => dispatch('basculer', o.val)}>{o.label}</Pastille>
 		{/each}
 	</div>
 	{#if !estDefaut}
@@ -66,6 +67,9 @@
 
 <style>
 	.ciblage { margin-bottom: .75rem; }
+	/*  Conteneur propre à ce bloc : la mise en page appartient à l'écran, la
+	    pastille est l'objet partagé (`Pastille.svelte`). */
+	.pastilles { display: flex; flex-wrap: wrap; gap: .4rem; }
 	.ciblage-titre { font-size: .9rem; font-weight: 600; margin-bottom: .4rem; }
 	.ciblage-badge { font-size: .72rem; margin-left: .4rem; }
 	.ciblage-reinit { margin-top: .35rem; }
