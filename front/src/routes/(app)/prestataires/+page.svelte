@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulairePrestation from '$lib/components/FormulairePrestation.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -15,7 +16,6 @@
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { fmtMontant, perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/utils';
-	import { perimetresStore } from '$lib/stores/perimetres';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
@@ -130,13 +130,6 @@
 	let osUploadDevisId: number | null = null;
 	let osFile: File | null = null;
 	let osUploading = false;
-	//  Les options viennent de l'arborescence en base. Cette liste était la
-	//  troisième copie de la table de libellés (#316) ; elle est maintenant
-	//  réactive, et un périmètre ajouté depuis l'administration y apparaît seul.
-	$: devisPerimetreOptions = $perimetresStore
-		.filter((n) => n.actif && n.selectionnable)
-		.map((n) => ({ val: n.code, label: n.libelle }));
-
 	//  Le bâtiment se LIT dans l'arbre (clé étrangère) : le déduire du code supposait
 	//  la convention `bat:N` du seed, que l'administration peut ne pas suivre.
 	const devisBatimentIdFromPerimetre = (p: string) => noeudPerimetre(p)?.batiment_id ?? null;
@@ -755,20 +748,24 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'hard-hat'} marge=".5rem">
+<!--  Bascule « + … » ⇆ « ✕ Annuler » portée par `BoutonNouveau` (voir son
+      en-tête) ; `alignerSaisie` cale le bouton sur la boîte de 720 px. -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'hard-hat'} marge=".5rem"
+	alignerSaisie={showPrestForm || devisFormPrestId !== null || contratFormPrestId !== null || showReleveForm}>
 	{#if $isCS}
 		{#if onglet === 'prestataires'}
-			<button class="btn btn-primary page-header-btn" on:click={() => { showPrestForm = !showPrestForm; if (!showPrestForm) resetPrestForm(); }}>
-				{showPrestForm ? '✕ Annuler' : '+ Nouveau prestataire'}
-			</button>
+			<BoutonNouveau ouvert={showPrestForm} libelle="Nouveau prestataire"
+				on:basculer={() => { showPrestForm = !showPrestForm; if (!showPrestForm) resetPrestForm(); }} />
 		{:else if onglet === 'prestations'}
-			<button class="btn btn-primary page-header-btn" on:click={() => { resetDevisForm(); devisFormPrestId = -1; }}>+ Nouvelle prestation</button>
+			<BoutonNouveau ouvert={devisFormPrestId !== null} libelle="Nouvelle prestation"
+				on:basculer={() => { if (devisFormPrestId !== null) closeDevisForm(); else { resetDevisForm(); devisFormPrestId = -1; } }} />
 		{:else if onglet === 'contrats_tab'}
-			<button class="btn btn-primary page-header-btn" on:click={() => openAddContrat()}>+ Nouveau contrat</button>
+			<BoutonNouveau ouvert={contratFormPrestId !== null} libelle="Nouveau contrat"
+				on:basculer={() => { if (contratFormPrestId !== null) closeContratForm(); else openAddContrat(); }} />
 		{:else if onglet === 'consommations'}
-			<button class="btn btn-primary page-header-btn" on:click={() => { showReleveForm = !showReleveForm; if (!showReleveForm) resetReleveForm(); }}>
-				{showReleveForm ? '✕ Annuler' : currentCompteur ? `+ Nouveau relevé — ${currentCompteur.label}` : '+ Nouveau relevé'}
-			</button>
+			<BoutonNouveau ouvert={showReleveForm}
+				libelle={currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}
+				on:basculer={() => { showReleveForm = !showReleveForm; if (!showReleveForm) resetReleveForm(); }} />
 		{/if}
 	{/if}
 </EntetePage>
@@ -815,7 +812,7 @@
 		<FormulaireCreation titre={editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}>
 			<FormulairePrestation bind:devisForm {prestataires} {statutsDevis} {submitting}
 				{devisFichierKey} {devisFichierFiles}
-				onFilesChange={onDevisFilesChange} onSave={saveDevis} onCancel={closeDevisForm} />
+				onFilesChange={onDevisFilesChange} onSave={saveDevis} />
 		</FormulaireCreation>
 	{/if}
 
