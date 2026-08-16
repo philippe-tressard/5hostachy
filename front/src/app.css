@@ -686,5 +686,12 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
   margin-bottom: -2px; font-weight: 500; display: flex; align-items: center; gap: .4rem;
   transition: color .15s, border-color .15s; white-space: nowrap; text-decoration: none;
 }
-.tab-btn:hover { color: var(--color-text); }
+/*  ⚠️ `text-decoration: none` est répété au SURVOL, et ce n'est pas une redite.
+    Une rangée d'onglets mêle des `<button>` (onglets internes) et des `<a>`
+    (écrans sur leur propre route, cf. `LiensEcransAdmin`). La règle globale
+    `a:hover { text-decoration: underline }` n'est neutralisée par rien ici :
+    `.tab-btn:hover` ne déclarait que la couleur, si bien que la moitié d'une même
+    rangée se soulignait au survol et l'autre non. Invisible sur une capture,
+    visible à la souris. */
+.tab-btn:hover { color: var(--color-text); text-decoration: none; }
 .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }

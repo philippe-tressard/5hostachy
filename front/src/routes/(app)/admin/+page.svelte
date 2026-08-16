@@ -816,17 +816,15 @@ $: _siteNom = $siteNomStore;
     <button class="tab-btn" class:active={onglet === 'legal'} on:click={() => (onglet = 'legal')}>
       Pages légales
     </button>
-    <button class="tab-btn" class:active={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>
-      <Icon name="whatsapp" size={14} />
-      WhatsApp
-    </button>
-    <button class="tab-btn" class:active={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>
-      ✉️ SMTP
-    </button>
-    <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>
-      📊 Télémétrie
-    </button>
-    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>🔧 Maintenance</button>
+    <!--  Pas d'icône sur un onglet : 4 sur 15 en portaient une — une par le
+          composant `Icon`, trois en emoji — et les onze autres non. On uniformise
+          sur la forme la plus répandue (`standards/11` §1 bis), qui est aussi
+          celle du pattern d'onglets (`ux-patterns` §4). Signalé à l'écran le
+          16/08/2026, capture à l'appui. -->
+    <button class="tab-btn" class:active={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>WhatsApp</button>
+    <button class="tab-btn" class:active={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>SMTP</button>
+    <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>Télémétrie</button>
+    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>Maintenance</button>
   </div>
 </div>
 
