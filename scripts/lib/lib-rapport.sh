@@ -81,6 +81,32 @@ rapport_envoyer() { # $1=url_base $2=clé $3=charge $4=libellé
         log "  ⚠ $libelle non enregistré (cible ou clé manquante)"
         return 0
     fi
+    #  Valider AVANT d'envoyer, et dire POURQUOI (16/08/2026).
+    #  `rapport_payload` n'échappe que le champ `erreur` ; le fragment `details`
+    #  est fourni tout construit par l'appelant, et rien ne le vérifiait. La
+    #  maintenance hebdomadaire y injectait la sortie de `docker buildx prune`
+    #  — « Total:<TAB>5.122GB » — or JSON interdit les caractères de contrôle
+    #  non échappés dans une chaîne. Charge invalide → 422, et le journal ne
+    #  disait que « HTTP 422 » : impossible de distinguer un rejet de schéma
+    #  d'un JSON malformé, donc l'écran d'administration est resté figé sur un
+    #  rapport vieux de cinq jours pendant que la tâche tournait très bien.
+    #  Cf. `standards/07` §5 — ce qui échoue en silence ne se découvre jamais.
+    if command -v python3 >/dev/null 2>&1; then
+        local motif
+        if ! motif=$(printf '%s' "$charge" \
+                | python3 -c 'import json,sys
+try:
+    json.load(sys.stdin); print("")
+except Exception as e:
+    print(e)' 2>/dev/null); then
+            motif="validateur indisponible"
+        fi
+        if [ -n "$motif" ]; then
+            log "  ⚠ $libelle NON ENVOYÉ — charge utile JSON invalide : $motif"
+            log "     (le travail, lui, a bien eu lieu — seul le compte rendu est perdu)"
+            return 0
+        fi
+    fi
     http=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
         -X POST "$base/api/admin/maintenance/rapport" \
         -H "Content-Type: application/json" \
@@ -134,6 +160,29 @@ ligne' 'anti\slash'; do
                 echo "FAIL  JSON invalide — cas « $(printf '%s' "$cas" | tr '\n' ' ') »"; st_fail=1
             fi
         done
+        #  Le champ `details` est fourni TOUT CONSTRUIT par l'appelant : c'est
+        #  le seul endroit de la charge utile que `rapport_payload` n'échappe
+        #  pas, et donc le seul que les cas ci-dessus ne couvraient pas. La
+        #  maintenance hebdomadaire y a injecté cinq mois durant la sortie de
+        #  `docker buildx prune` — « Total:<TAB>5.122GB » — sans qu'aucun test
+        #  ne regarde : le 422 n'est apparu qu'en production, le 16/08/2026.
+        #  On vérifie ici les deux sens : le détail brut DOIT casser, et le
+        #  même détail échappé DOIT passer. Sans le premier, le test ne
+        #  prouverait pas qu'il sait détecter quoi que ce soit (§2 « cas zéro »).
+        brut=$(printf '{"cache":"Total:\t5.122GB"}')
+        if printf '%s' "$(rapport_payload t n applicative succes 1 "$brut" '' D F)" \
+             | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
+            echo "FAIL  details avec TABULATION accepté — le test ne détecte rien"; st_fail=1
+        else
+            echo "PASS  details avec tabulation → JSON invalide (cas zéro vérifié)"
+        fi
+        propre=$(printf '{"cache":"%s"}' "$(rapport_echapper "$(printf 'Total:\t5.122GB')")")
+        if printf '%s' "$(rapport_payload t n applicative succes 1 "$propre" '' D F)" \
+             | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
+            echo "PASS  details échappé → JSON valide"
+        else
+            echo "FAIL  details échappé refusé — rapport_echapper insuffisant"; st_fail=1
+        fi
     else
         # standards/04 §1 : un contrôle qui ne peut pas s'exécuter rend INCONNU.
         echo "FAIL  python3 absent — validité JSON NON vérifiée (INCONNU, pas OK)"; st_fail=1

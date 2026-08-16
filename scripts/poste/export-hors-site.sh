@@ -452,14 +452,21 @@ else
   # santé relit pour distinguer « l'export tourne » de « la copie est fraîche ».
   # Un export quotidien qui recopie fidèlement la même archive périmée est un
   # faux vert — c'est exactement ce cas que le champ permet de démasquer.
-  DETAILS=$(printf '{"archive":"%s","taille_octets":%s,"integrite":"%s","empreinte_verifiee":"%s","destination":"%s","versions_conservees":%s}' \
-    "$ARCHIVE" "${OCTETS:-0}" "${INTEGRITE//\"/}" "$EMPREINTES" "${EXPORT_DEST//\"/}" "${EXPORT_KEEP:-0}")
-
   # Construction et envoi mutualisés (lib-rapport.sh) : trois scripts rendent
   # compte, un seul sait fabriquer la charge utile. La clé, elle, est lue par
   # SSH sur le nœud ci-dessus et non dans un `.env` local — ce script tourne sur
   # le poste, qui n'en a pas.
+  #  ⚠ Sourcé AVANT de construire DETAILS : `rapport_echapper` y est utilisé.
   source "$SCRIPT_DIR/scripts/lib/lib-rapport.sh"
+
+  #  `integrite` est un MESSAGE renvoyé par SQLite ou Python en cas de base
+  #  corrompue — donc du texte libre, qui peut porter tabulations et guillemets.
+  #  Le laisser brut fabrique un JSON invalide que l'API rejette en 422 : c'est
+  #  ce qui est arrivé à la maintenance hebdomadaire le 16/08/2026, et le compte
+  #  rendu perdu aurait été précisément celui d'une sauvegarde corrompue.
+  DETAILS=$(printf '{"archive":"%s","taille_octets":%s,"integrite":"%s","empreinte_verifiee":"%s","destination":"%s","versions_conservees":%s}' \
+    "$(rapport_echapper "$ARCHIVE")" "${OCTETS:-0}" "$(rapport_echapper "${INTEGRITE:-}")" \
+    "$EMPREINTES" "$(rapport_echapper "${EXPORT_DEST:-}")" "${EXPORT_KEEP:-0}")
   rapport_envoyer "http://$SOURCE_IP" "$MAINTENANCE_KEY" \
     "$(rapport_payload export_hors_site "$SOURCE_NOEUD" applicative "$STATUT" \
         "$((SECONDS - T0))" "$DETAILS" \
