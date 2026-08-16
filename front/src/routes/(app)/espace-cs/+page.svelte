@@ -2327,8 +2327,7 @@
 					<label for="ah-message" style="margin-top:.85rem">Message *</label>
 					<RichEditor bind:value={ahMessage} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
 
-					<label style="margin-top:.85rem">Périmètre d'affichage *</label>
-					<PerimetrePicker bind:value={ahPerimetre} />
+					<PerimetrePicker titre="Périmètre d'affichage" bind:value={ahPerimetre} />
 					<p class="ah-aide">
 						L'annonce part par mail aux membres du CS rattachés à ce périmètre, qui l'impriment
 						et l'affichent. Copropriété entière, parking et cave notifient l'ensemble du CS.

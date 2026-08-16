@@ -294,7 +294,7 @@
 							<input id="edit-titre-{pub.id}" type="text" bind:value={editTitre} required maxlength="200" />
 						</div>
 						<div class="field">
-							<label for="edit-contenu-{pub.id}">Contenu *</label>
+							<label for="edit-contenu-{pub.id}">Description *</label>
 							<RichEditor bind:value={editContenu} minHeight="100px" />
 						</div>
 						<div class="field">

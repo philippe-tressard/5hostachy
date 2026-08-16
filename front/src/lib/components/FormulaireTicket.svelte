@@ -162,11 +162,6 @@
 		</div>
 
 		<div class="field">
-			<!-- `<span>`, pas `<label>` : PerimetrePicker rend des boutons-pastilles,
-			     pas un contrôle de formulaire unique — un `<label for=…>` n'aurait
-			     rien à désigner. Le modèle des actualités utilise ici un `<label>`
-			     orphelin, ce qui lui vaut un avertissement a11y ; ne pas le recopier. -->
-			<span class="intitule-champ">Périmètre</span>
 			<PerimetrePicker bind:value={perimetreCible} />
 		</div>
 

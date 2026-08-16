@@ -28,6 +28,7 @@
 <div>
 	<p class="devis-form-help">Les prestations ponctuelles alimentent le Calendrier et le Kanban selon leur statut.</p>
 	<div class="form-grid">
+		<label class="field champ-large">Titre *<input bind:value={devisForm.titre} required /></label>
 		<label class="field champ-large">Prestataire *
 			<select bind:value={devisForm.prestataire_id} required>
 				<option value="">— Sélectionner —</option>
@@ -35,12 +36,10 @@
 			</select>
 		</label>
 		<div class="field champ-large">
-			<label>Périmètre *</label>
 			<PerimetrePicker mode="single"
 				value={devisForm.perimetre ? [devisForm.perimetre] : []}
 				on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
 		</div>
-		<label class="field champ-large">Titre *<input bind:value={devisForm.titre} required /></label>
 		<label class="field">Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
 		<label class="field">Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} placeholder="Ex. 1200" /></label>
 		<label class="field">Suivi Kanban
@@ -71,8 +70,8 @@
 		</label>
 	</div>
 	<div style="margin-top:.6rem">
-		<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-		<RichEditor bind:value={devisForm.notes} placeholder="Notes…" minHeight="60px" />
+		<label for="presta-description" class="intitule-champ">Description</label>
+		<RichEditor id="presta-description" bind:value={devisForm.notes} placeholder="Description de la prestation…" minHeight="60px" />
 	</div>
 	<div style="margin-top:.6rem">
 		<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers</label>
@@ -103,6 +102,7 @@
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid .field { margin-bottom: 0; }
 
+	.intitule-champ { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
 	.devis-form-help { margin: 0 0 .75rem; font-size: .82rem; color: var(--color-text-muted); line-height: 1.45; }
 	.devis-file-note { display: inline-block; margin-top: .35rem; font-size: .8rem; color: var(--color-text-muted); }
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
