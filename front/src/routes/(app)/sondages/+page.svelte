@@ -1,6 +1,7 @@
 <script lang="ts">
 import EntetePage from '$lib/components/EntetePage.svelte';
 import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import AnnonceCard from '$lib/components/AnnonceCard.svelte';
@@ -152,8 +153,6 @@ async function supprimerSondage(s: any, e: Event) {
 let idees: any[] = [];
 let ideesLoading = true;
 let showFormIdee = false;
-let submittingIdee = false;
-let formIdee = { titre: '', description: '' };
 let filtreStatut = '';
 
 // Annonces
@@ -249,17 +248,11 @@ return { ouverte: 'badge-blue', retenue: 'badge-green', realisee: 'badge-purple'
 $: filteredIdees = filtreStatut ? idees.filter(i => i.statut === filtreStatut) : idees;
 $: sortedIdees = [...filteredIdees].sort((a, b) => b.nb_votes - a.nb_votes);
 
-async function creerIdee() {
-if (!formIdee.titre || !formIdee.description) { toast('error', 'Titre et description obligatoires'); return; }
-submittingIdee = true;
-try {
-await ideesApi.create(formIdee);
-idees = await ideesApi.list();
-showFormIdee = false;
-formIdee = { titre: '', description: '' };
-toast('success', 'Idée soumise !');
-} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
-finally { submittingIdee = false; }
+function ideeCreee() {
+	//  La liste est rechargée plutôt que complétée localement : le compteur de
+	//  votes et le statut sont calculés par le serveur.
+	ideesApi.list().then((l) => (idees = l));
+	showFormIdee = false;
 }
 
 async function voter(id: number) {
@@ -567,7 +560,9 @@ Résultats visibles avant clôture
 		bind:cs={formSondage.envoyer_cs}
 	/>
 </div>
-<button class="btn btn-primary" disabled={submittingSondage}>{submittingSondage ? '' : 'Créer le sondage'}</button>
+<div class="form-actions">
+	<button class="btn btn-primary" disabled={submittingSondage}>{submittingSondage ? '' : 'Créer le sondage'}</button>
+</div>
 </form>
 </FormulaireCreation>
 {/if}
@@ -630,19 +625,7 @@ Résultats visibles avant clôture
 {#if activeTab === 'idees'}
 
 {#if showFormIdee}
-<FormulaireCreation titre="Nouvelle idée">
-<form on:submit|preventDefault={creerIdee}>
-<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
-Titre *
-<input bind:value={formIdee.titre} placeholder="Ex. Vélos électriques en libre-service" required />
-</label>
-<div class="field">
-<label>Description *</label>
-<RichEditor bind:value={formIdee.description} placeholder="Décrivez votre idée…" minHeight="100px" />
-</div>
-<button class="btn btn-primary" disabled={submittingIdee}>{submittingIdee ? 'Envoi' : 'Soumettre'}</button>
-</form>
-</FormulaireCreation>
+<FormulaireIdee on:cree={ideeCreee} />
 {/if}
 
 <div class="filters" style="margin-bottom:1.25rem">
@@ -749,7 +732,9 @@ Prix négociable
 <input type="checkbox" bind:checked={formAnnonce.contact_visible} />
 Afficher mes coordonnées aux autres résidents
 </label>
-<button class="btn btn-primary" disabled={submittingAnnonce}>{submittingAnnonce ? '⏳' : "Publier l'annonce"}</button>
+<div class="form-actions">
+	<button class="btn btn-primary" disabled={submittingAnnonce}>{submittingAnnonce ? '⏳' : "Publier l'annonce"}</button>
+</div>
 </form>
 </FormulaireCreation>
 {/if}

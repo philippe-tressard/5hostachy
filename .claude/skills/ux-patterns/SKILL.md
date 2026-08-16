@@ -237,6 +237,55 @@ calendrier reste à 640 px, délibérément).
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit
 - Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**
 
+### 9 bis. Ce qui décide de la largeur d'un champ, c'est son CONTENU
+
+Les grilles (`.form-grid`) répartissent en colonnes de ~180-200 px. C'est juste
+pour un champ **court** — date, montant, statut, fréquence — et faux pour tout le
+reste : un titre y est écrasé dans le tiers le plus étroit, et un sélecteur de
+périmètre y empile ses dix pastilles **une par ligne**, description comprimée.
+
+**Ces champs prennent la LIGNE ENTIÈRE — `class="champ-large"` (app.css) :**
+
+| Champ | Pourquoi |
+|---|---|
+| **Titre**, **Libellé** | texte libre, souvent long |
+| **Description**, **Contenu**, **Notes** | éditeur riche, plusieurs lignes |
+| **Périmètre** | pastilles + second niveau + description du nœud |
+| **Destinataires** | pastilles de profils |
+
+La classe se pose **sur le champ**, jamais sur la grille : c'est le contenu qui
+décide de sa largeur, pas l'écran qui l'accueille.
+
+**Why (16/08/2026)** : signalé **trois fois de suite** par l'utilisateur, sur trois
+écrans différents — prestation, contrat, puis calendrier. Même défaut à chaque fois,
+et chaque fois trouvé à l'œil après livraison.
+
+### 9 ter. L'ordre est toujours : **Périmètre, puis Destinataires**
+
+Le périmètre dit *de quoi* il s'agit, les destinataires *à qui* on l'adresse — le
+premier cadre le second. Un écran qui les inverse fait relire deux fois.
+
+### 9 quater. Le badge d'état à côté du libellé
+
+Quand un sélecteur multiple a un défaut ou une sélection résumable, il porte un
+**badge** à droite de son libellé : `Profils destinataires [Tous]`,
+`Périmètre [Toute la résidence]`. On lit l'état sans dépiler les pastilles.
+Inauguré par le sondage ; l'utilisateur a demandé de l'étendre au **standard** —
+donc à `PerimetrePicker` et au sélecteur de destinataires, partout.
+
+### 9 quinquies. Le bouton de soumission est **à droite**, via `.form-actions`
+
+`.form-actions` (app.css) porte `justify-content: flex-end`. Un bouton posé nu dans
+un `<form>` se cale à **gauche** et détonne : c'était le cas des sondages (« Créer
+le sondage », « Publier l'annonce », « Soumettre » d'une idée), seuls de tout le
+site, jusqu'au 16/08/2026. Ne jamais écrire un bouton de soumission hors de
+`.form-actions`.
+
+> ⚠️ **Question de nommage ouverte** (posée le 16/08/2026, non tranchée) : unifier
+> **Libellé → Titre** et **Notes / Contenu → Description** ? C'est une décision
+> fonctionnelle qui touche les libellés vus par les résidents, pas un renommage
+> de classe.
+
 ## 10. Fil d'évolutions
 
 Structure pour les tickets/publications avec historique :
