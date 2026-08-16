@@ -58,7 +58,10 @@
 			</select>
 		</label>
 		{#if devisForm.frequence_type}
-			<label>Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
+			<!--  Champ conditionnel : il n'apparaît qu'une fois une fréquence choisie,
+			      ce qui explique qu'il ait échappé au premier passage — la capture qui
+			      a servi à signaler les champs blancs ne le montrait pas. -->
+			<label class="field">Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
 		{/if}
 	</div>
 	<div style="margin-top:.75rem">

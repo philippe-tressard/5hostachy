@@ -1787,7 +1787,7 @@ $: _siteNom = $siteNomStore;
     {/if}
 
     <!-- Top pages — tableau et total extraits en composant (#total des vues) -->
-    <TopPages pages={telemetryData.top_pages} />
+    <TopPages pages={telemetryData.top_pages} vuesNonAttribuees={telemetryData.kpi?.vues_non_attribuees ?? 0} />
 
     <!-- Utilisateurs les plus actifs (scope jour et mois) -->
     {#if telemetryData.top_users && telemetryData.top_users.length > 0}
