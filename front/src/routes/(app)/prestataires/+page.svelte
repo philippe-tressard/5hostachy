@@ -1311,6 +1311,82 @@
 <!-- ONGLET 3 : CONTRATS                                          -->
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'contrats_tab'}
+{#if contratFormPrestId === -1}
+	<FormulaireCreation titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}>
+			<div>
+				<div class="form-grid">
+					<label class="field champ-large">Libellé *<input bind:value={contratForm.libelle} required /></label>
+					<label class="field">Prestataire *
+						<select bind:value={contratForm.prestataire_id} required>
+							<option value="">— Sélectionner —</option>
+							{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+						</select>
+					</label>
+					<label class="field">Équipement
+						<select bind:value={contratForm.type_equipement}>
+							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+						</select>
+					</label>
+					<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
+					<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
+					<label class="field">Durée initiale
+						<div style="display:flex;gap:.4rem">
+							<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
+							<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
+								<option value="mois">mois</option>
+								<option value="ans">ans</option>
+							</select>
+						</div>
+					</label>
+					<label class="field">Fréquence
+						<select bind:value={contratForm.frequence_type}>
+							<option value="">— Aucune —</option>
+							<option value="semaines">Toutes les X semaines</option>
+							<option value="mois">Mensuelle</option>
+							<option value="fois_par_an">X fois par an</option>
+							<option value="ans">Tous les X ans</option>
+						</select>
+					</label>
+					{#if contratForm.frequence_type === 'semaines'}
+						<label class="field">Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+					{:else if contratForm.frequence_type === 'fois_par_an'}
+						<label class="field">… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+					{:else if contratForm.frequence_type === 'ans'}
+						<label class="field">Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
+					{/if}
+					<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
+				</div>
+				<div style="margin-top:.6rem">
+					<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
+					<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
+				</div>
+				{#if editContratId}
+					<div style="margin-top:.8rem">
+						<div style="font-size:.85rem;font-weight:600;margin-bottom:.4rem">📄 Documents ({contratDocsMap[editContratId]?.length ?? 0})</div>
+						{#if contratDocsMap[editContratId]?.length > 0}
+							{#each contratDocsMap[editContratId] as doc}
+								<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
+									<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
+									<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
+									<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(editContratId ?? 0, doc.id)}>🗑️</button>
+								</div>
+							{/each}
+						{:else}
+							<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
+						{/if}
+						<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
+							<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
+							{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
+							<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(editContratId ?? 0)}>{uploadingDoc ? '…' : '+ Document'}</button>
+						</div>
+					</div>
+				{/if}
+			</div>
+			<div class="form-actions">
+				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+			</div>
+	</FormulaireCreation>
+{/if}
 
 	<!-- Synthèse -->
 	<div class="contrats-summary">
@@ -1832,83 +1908,6 @@
 {/if}
 
 <!-- Modal contrat (global, hors onglets) -->
-{#if contratFormPrestId === -1}
-	<FormulaireCreation titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}>
-			<div>
-				<div class="form-grid">
-					<label class="field">Libellé *<input bind:value={contratForm.libelle} required /></label>
-					<label class="field">Prestataire *
-						<select bind:value={contratForm.prestataire_id} required>
-							<option value="">— Sélectionner —</option>
-							{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-						</select>
-					</label>
-					<label class="field">Équipement
-						<select bind:value={contratForm.type_equipement}>
-							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
-						</select>
-					</label>
-					<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-					<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-					<label class="field">Durée initiale
-						<div style="display:flex;gap:.4rem">
-							<input type="number" min="1" placeholder="Ex. 12" bind:value={contratForm.duree_initiale_valeur} style="flex:1" />
-							<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
-								<option value="mois">mois</option>
-								<option value="ans">ans</option>
-							</select>
-						</div>
-					</label>
-					<label class="field">Fréquence
-						<select bind:value={contratForm.frequence_type}>
-							<option value="">— Aucune —</option>
-							<option value="semaines">Toutes les X semaines</option>
-							<option value="mois">Mensuelle</option>
-							<option value="fois_par_an">X fois par an</option>
-							<option value="ans">Tous les X ans</option>
-						</select>
-					</label>
-					{#if contratForm.frequence_type === 'semaines'}
-						<label class="field">Toutes les … sem.<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-					{:else if contratForm.frequence_type === 'fois_par_an'}
-						<label class="field">… fois/an<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-					{:else if contratForm.frequence_type === 'ans'}
-						<label class="field">Tous les … ans<input type="number" min="1" bind:value={contratForm.frequence_valeur} /></label>
-					{/if}
-					<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-				</div>
-				<div style="margin-top:.6rem">
-					<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-					<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
-				</div>
-				{#if editContratId}
-					<div style="margin-top:.8rem">
-						<div style="font-size:.85rem;font-weight:600;margin-bottom:.4rem">📄 Documents ({contratDocsMap[editContratId]?.length ?? 0})</div>
-						{#if contratDocsMap[editContratId]?.length > 0}
-							{#each contratDocsMap[editContratId] as doc}
-								<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
-									<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
-									<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
-									<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(editContratId ?? 0, doc.id)}>🗑️</button>
-								</div>
-							{/each}
-						{:else}
-							<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-						{/if}
-						<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
-							<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
-							{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
-							<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(editContratId ?? 0)}>{uploadingDoc ? '…' : '+ Document'}</button>
-						</div>
-					</div>
-				{/if}
-			</div>
-			<div class="form-actions">
-				<button class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
-				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-			</div>
-	</FormulaireCreation>
-{/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->
 {#if showNotationForm}
