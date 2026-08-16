@@ -50,9 +50,9 @@ d'un fast-forward.) Contournement d'urgence : `ALLOW_STALE=1 git commit …`.
 
 - `main` = production protégé — toutes les modifications via PR vers `dev`
 - Prefixes commits : `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`
-- MEP : `MaJ-Hostachy.sh` sur le **RPi actif uniquement** — bloque automatiquement sur le standby
+- MEP : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif uniquement** — bloque automatiquement sur le standby
 - `.env` non versionné · `SECRET_KEY` min 32 chars · `ENABLE_API_DOCS=false` en prod
-- Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
+- Bascule manuelle (test) : `sudo bash /opt/5hostachy/scripts/exploitation/bascule.sh` depuis le RPi actif
 
 ## Trois règles qui priment sur la liste des contrôles
 

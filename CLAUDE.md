@@ -303,9 +303,9 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 - Préfixes de commit : `feat:` `fix:` `docs:` `refactor:` `test:` `chore:` `perf:`
 - Claude s'arrête au **push sur `dev`** : la PR `dev → main` est créée et fusionnée
   par l'utilisateur
-- MEP : `MaJ-Hostachy.sh` sur le **RPi actif** uniquement (le script bloque sur le standby)
+- MEP : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif** uniquement (le script bloque sur le standby)
 - `.env` non versionné · `SECRET_KEY` ≥ 32 caractères · `ENABLE_API_DOCS=false` en prod
-- Bascule manuelle (test) : `sudo bash /opt/5hostachy/bascule.sh` depuis le RPi actif
+- Bascule manuelle (test) : `sudo bash /opt/5hostachy/scripts/exploitation/bascule.sh` depuis le RPi actif
   (chemin de **relais** ; le script vit dans `scripts/exploitation/` — cf. #337)
 
 **Aucune MEP sans avoir chargé `.claude/skills/mep-precheck`.** Cette skill porte les

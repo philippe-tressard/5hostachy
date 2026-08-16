@@ -2,12 +2,15 @@
 # =============================================================================
 #  RELAIS PERMANENT — le script vit dans scripts/exploitation/.
 #
-#  Il n'existe que pour une raison : les tâches cron et l'unité systemd
-#  désignent CE chemin absolu, et rien dans un déploiement ne les met à jour.
-#  Sans ce relais, fusionner ferait pointer les six points d'entrée dans le vide
-#  sur les deux nœuds en cinq minutes — plus de bascule, plus de failover, plus
-#  de contrôles, et AUCUNE alerte, puisque le producteur d'alertes fait partie de
-#  ce qui ne démarre plus.
+#  Il n'existe que pour une raison : l'unité systemd désigne CE chemin absolu,
+#  et rien dans un déploiement ne la met à jour. Sans ce relais, le garde-fou de
+#  rôle au démarrage pointerait dans le vide sur les deux nœuds — donc plus
+#  aucune protection anti-split-brain APRÈS UNE COUPURE DE COURANT, précisément
+#  le moment où personne ne regarde.
+#
+#  Les six autres relais ont été retirés le 16/08/2026 : plus aucun cron ne
+#  désignait la racine, vérifié sur les deux nœuds (cron root, cron ptressard,
+#  unités systemd). Ce fichier est donc le SEUL survivant, et volontairement.
 #
 #  ⚠️ Celui-ci NE PART PAS, contrairement aux autres relais (#337, 15/08/2026).
 #  L'unité systemd le désigne, et la modifier demande d'écrire dans
