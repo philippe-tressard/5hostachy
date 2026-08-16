@@ -44,7 +44,7 @@
 <form on:submit|preventDefault={onSubmit}>
 	<div>
 		<div class="form-grid">
-			<div class="field">
+			<div class="field champ-large">
 				<label>Titre *</label>
 				<input bind:value={form.titre} required />
 			</div>
