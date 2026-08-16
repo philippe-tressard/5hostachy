@@ -102,15 +102,50 @@ def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
         "Aucune condition portant `partager_whatsapp` dans tickets/crud.py : le "
         "partage sur le groupe WhatsApp n'est plus gardé du tout."
     )
+    #  Deux formes valables du MÊME contrôle :
+    #    • `has_role(conseil_syndical, admin)` écrit sur place ;
+    #    • `peut_commander(user)`, le prédicat central d'`auth/deps.py`.
+    #  La seconde est arrivée le 16/08/2026 : la règle « ces champs sont réservés
+    #  au CS » était recopiée à côté de CHAQUE champ — cinq fois — et une règle
+    #  d'autorisation recopiée ne se durcit pas, on en corrige quatre sur six.
+    #  Ce test vérifiait la FORME (« le mot has_role est là ») et non le FAIT
+    #  (« un contrôle de rôle a lieu ») : il tombait donc sur une centralisation
+    #  qui renforce la garde au lieu de l'affaiblir. Il connaît maintenant les
+    #  deux formes — et reste rouge si AUCUNE n'est présente.
     for condition in conditions:
-        assert "has_role" in condition, (
+        centralise = "peut_commander" in condition
+        assert centralise or "has_role" in condition, (
             "Le partage sur le groupe WhatsApp n'est plus réservé au CS/admin — "
             f"condition sans contrôle de rôle : {condition}"
         )
-        for attendu in ("conseil_syndical", "admin"):
-            assert attendu in condition, (
-                f"Le garde du partage WhatsApp ne mentionne pas `{attendu}` : {condition}"
-            )
+        #  La forme écrite sur place doit nommer les deux rôles ; la forme
+        #  centralisée les porte dans `peut_commander`, dont le contenu est
+        #  vérifié par `test_peut_commander_est_reserve_au_cs` ci-dessous.
+        if not centralise:
+            for attendu in ("conseil_syndical", "admin"):
+                assert attendu in condition, (
+                    f"Le garde du partage WhatsApp ne mentionne pas `{attendu}` : {condition}"
+                )
+
+
+def test_peut_commander_est_reserve_au_cs():
+    """Le prédicat central contrôle bien les deux rôles, et rien d'autre.
+
+    Sans ce test, centraliser la règle la rendrait invérifiable : le test
+    ci-dessus accepterait `peut_commander` sans jamais regarder ce qu'il fait.
+    """
+    source = (_APP / "auth" / "deps.py").read_text(encoding="utf-8")
+    arbre = ast.parse(source)
+    fn = next(
+        (n for n in ast.walk(arbre)
+         if isinstance(n, ast.FunctionDef) and n.name == "peut_commander"),
+        None,
+    )
+    assert fn is not None, "`peut_commander` a disparu d'auth/deps.py"
+    corps = ast.unparse(fn)
+    assert "has_role" in corps, "`peut_commander` ne contrôle plus aucun rôle"
+    for attendu in ("conseil_syndical", "admin"):
+        assert attendu in corps, f"`peut_commander` ne mentionne plus `{attendu}`"
 
 
 def test_le_schema_de_creation_de_ticket_porte_le_canal_whatsapp():

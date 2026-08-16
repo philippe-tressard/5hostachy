@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlmodel import Session, or_, select
 
-from app.auth.deps import get_current_user, require_admin
+from app.auth.deps import get_current_user, require_admin, peut_commander
 from app.database import get_session
 from app.models.core import (
     Notification,
@@ -163,7 +163,7 @@ def create_ticket(
     #  Tous les champs « de commandement » (destinataires, saisie pour un tiers)
     #  sont neutralisés hors CS/admin. Le contrôle est ici, côté serveur : ce que
     #  l'interface masque n'est qu'un confort (socle 03 §1).
-    est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+    est_cs = peut_commander(user)
     ticket = Ticket(
         numero=generer_numero(),
         titre=body.titre,

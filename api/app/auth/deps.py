@@ -86,3 +86,28 @@ def require_admin(user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
     if not user.has_role(RoleUtilisateur.admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé à l'admin")
     return user
+
+
+def peut_commander(user: Utilisateur) -> bool:
+    """Cet utilisateur peut-il fixer les champs « de commandement » ?
+
+    Les champs de commandement sont ceux qui engagent autre chose que leur
+    auteur : à qui la demande est adressée (syndic, conseil syndical), pour qui
+    elle est saisie, et où elle en est dans son workflow. Un résident ne les
+    fixe pas — sinon il peut adresser un ticket au syndic sans passer par le CS,
+    ou déposer un signalement déjà « Résolu », donc hors du suivi, sans que
+    personne l'ait regardé.
+
+    POURQUOI ICI ET PAS DANS LE ROUTEUR (16/08/2026). Cette règle était écrite
+    en ligne, une fois par champ — `destinataire_syndic if est_cs else False`,
+    répété cinq fois — et j'allais en ajouter une sixième pour le workflow.
+    Une règle d'autorisation recopiée à côté de chaque champ ne se durcit pas :
+    on en corrige quatre sur six. Elle vit donc ici, avec les autres, où
+    `test_autorisation.py` la voit (socle 03 §1, exigence 0c du pré-check).
+
+    C'est un PRÉDICAT, pas une dépendance FastAPI : il ne refuse pas la requête,
+    il dit si l'on retient la valeur demandée ou le défaut. Refuser serait faux —
+    un résident a le droit de créer un ticket, simplement pas d'en fixer
+    l'adressage ni l'étape.
+    """
+    return user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
