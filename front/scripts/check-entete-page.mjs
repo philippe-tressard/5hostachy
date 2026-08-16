@@ -81,7 +81,11 @@ if (!existsSync(COMPOSANT)) {
 	process.exit(1);
 }
 const composant = readFileSync(COMPOSANT, 'utf8');
-const props = ['titre', 'icone', 'retour', 'marge'];
+//  `marge` a été RETIRÉE du composant le 17/08/2026 : six écrans en dérogeaient
+//  (0, .5rem, .75rem, 1rem contre 1.5rem), d'où le saut du titre en passant d'une
+//  page à l'autre (#372). Elle sort donc de ce contrôle — c'est ce que son propre
+//  message de cas zéro demandait de faire quand le contrat change.
+const props = ['titre', 'icone', 'retour'];
 const absentes = props.filter((p) => !new RegExp(`export let ${p}\\b`).test(composant));
 if (absentes.length > 0) {
 	console.error(

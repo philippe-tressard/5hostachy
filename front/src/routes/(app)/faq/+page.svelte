@@ -400,7 +400,7 @@ import { onMount } from 'svelte';
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'help-circle'} marge="0">
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'help-circle'}>
 	{#if canEdit}
 		{#if !reorderMode}
 			<button class="btn btn-outline page-header-btn" on:click={enterReorderMode}><Icon name="move" size={15} /> Réorganiser</button>

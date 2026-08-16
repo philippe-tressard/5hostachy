@@ -29,11 +29,21 @@
 	export let icone: string | null = null;
 	/** Cible du bouton de retour. Absent = pas de retour. */
 	export let retour: string | null = null;
-	/**  Marge basse, quand la page a besoin d'un écart plus serré (onglets ou
-	 *   descriptif juste dessous). Quatre pages divergeaient ainsi en `style=` en
-	 *   ligne : la valeur est désormais explicite et centralisée, mais elle reste
-	 *   une dette — le bon écart se tranche à l'écran, pas dans le code. */
-	export let marge: string | null = null;
+	/*  ⚠️ La prop `marge` A ÉTÉ RETIRÉE le 17/08/2026 — ne pas la réintroduire.
+	 *
+	 *   Elle existait parce que six pages voulaient un écart plus serré :
+	 *   0, .5rem, .75rem et 1rem, contre 1.5rem partout ailleurs. Centraliser les
+	 *   valeurs les avait rendues explicites sans les réduire — la dette était
+	 *   nommée dans `ux-patterns` §13, et elle a duré.
+	 *
+	 *   Le symptôme se voyait : en passant d'`/actualites` à `/calendrier`, le
+	 *   titre et le bouton SAUTAIENT de quelques pixels, alors que les deux pages
+	 *   utilisent le même composant (#372). Six valeurs pour une notion, c'est
+	 *   six façons d'avoir raison séparément et une seule d'avoir tort ensemble.
+	 *
+	 *   Arbitré par l'utilisateur : 1.5rem, la valeur de tous les autres écrans.
+	 *   Un écran qui aurait vraiment besoin d'autre chose doit d'abord expliquer
+	 *   pourquoi lui — pas recevoir une prop qui rouvre les six. */
 	/**  Aligne l'en-tête sur la largeur de saisie (720 px) au lieu de la pleine
 	 *   largeur. À activer quand un formulaire est ouvert dans la page : sinon
 	 *   son bouton d'annulation se pose au bord droit de l'ÉCRAN, très loin de la
@@ -44,8 +54,7 @@
 	export let alignerSaisie = false;
 </script>
 
-<div class="page-header" class:largeur-saisie={alignerSaisie}
-	style={marge ? `margin-bottom:${marge}` : undefined}>
+<div class="page-header" class:largeur-saisie={alignerSaisie}>
 	<div class="entete-principal">
 		{#if retour}
 			<a href={retour} class="btn btn-outline entete-retour">← Retour</a>

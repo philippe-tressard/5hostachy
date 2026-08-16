@@ -535,7 +535,7 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'building-2'} marge=".75rem" />
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'building-2'} />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}

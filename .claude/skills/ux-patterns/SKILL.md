@@ -507,7 +507,7 @@ conteneur, le titre (icône + libellé + taille), le retour et la zone d'actions
 | `titre` | obligatoire |
 | `icone` | nom Lucide du catalogue `$lib/icones-svg.json` |
 | `retour` | href — affiche `← Retour` **à gauche du titre** |
-| `marge` | marge basse dérogatoire (quatre écrans l'utilisent — dette, cf. plus bas) |
+| ~~`marge`~~ | **retirée le 17/08/2026** — voir ci-dessous |
 | slot par défaut | les actions, **à droite** |
 
 **Disposition, la même partout** : `[retour] titre` à gauche · actions à droite.
@@ -522,10 +522,30 @@ le dise (constaté le 15/08/2026).
 et un `<h1>` portant `font-size` en ligne. Les exceptions sont **nommées avec leur
 raison** dans le script, et le contrôle échoue si l'une devient inutile.
 
-**Dette assumée** : `marge` existe parce que quatre écrans divergeaient
-(`0`, `.5rem`, `.75rem`, `1rem` au lieu de `1.5rem`). La valeur est désormais
-explicite et centralisée au lieu d'être un `style=` en ligne, mais le bon écart se
-tranche **à l'écran**. Ne pas ajouter de cinquième valeur sans avoir regardé.
+**Dette soldée le 17/08/2026 — la marge d'en-tête vaut `1.5rem`, sans exception.**
+
+`marge` existait parce que **six** écrans divergeaient : `0` (FAQ), `.5rem`
+(espace CS, prestataires), `.75rem` (délégations, résidence), `1rem` (calendrier),
+contre `1.5rem` partout ailleurs. Centraliser les valeurs les avait rendues
+explicites **sans les réduire** — la dette était nommée ici, et elle a duré.
+
+Le symptôme se voyait : en passant d'`/actualites` à `/calendrier`, le titre et le
+bouton **sautaient** de quelques pixels, alors que les deux pages utilisent le même
+composant (#372). Arbitré par l'utilisateur : la valeur du plus grand nombre gagne.
+
+**La prop n'existe plus.** C'est le point important : la laisser en place aurait
+invité la septième valeur. Un écran qui aurait vraiment besoin d'autre chose doit
+d'abord expliquer pourquoi lui — pas recevoir une prop qui rouvre les six.
+
+⚠️ Le retrait a fait **échouer `lint:entetes`**, dont le cas zéro exige que
+`EntetePage` expose ses props connues. C'est voulu : son message dit « le contrat a
+changé — mettre ce contrôle à jour ». Un garde-fou qui n'aurait rien dit aurait
+laissé passer une prop disparue, et donc laissé le contrôle vérifier un contrat
+imaginaire.
+
+> **La leçon, générale** : nommer une divergence ne la corrige pas. Centraliser
+> six valeurs dans une prop les rend lisibles et **pérennes**. Tant que le
+> mécanisme d'exception existe, l'exception se reproduit.
 
 **Pages de détail** (`tickets/[id]`, `sondages/[id]`) : elles n'ont **pas**
 d'en-tête de page — leur `<h1>` est le titre de l'objet, dans sa carte. Ne pas les
