@@ -10,6 +10,7 @@ import Icon from '$lib/components/Icon.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import LiensEcransAdmin from '$lib/components/LiensEcransAdmin.svelte';
+import Onglet from '$lib/components/Onglet.svelte';
 import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
@@ -782,25 +783,25 @@ $: _siteNom = $siteNomStore;
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'sliders-horizontal'} />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
+<!--  Tous les onglets passent par `Onglet` — ceux qui basculent un panneau comme
+      ceux qui mènent ailleurs. C'est ce qui garantit qu'ils se ressemblent :
+      quinze onglets écrits à la main, et le seizième réintroduit l'écart. -->
 <div class="tabs-group">
   <div class="tabs-group-label">&#x1F465; Gestion utilisateurs</div>
   <div class="tabs">
-    <button class="tab-btn" class:active={onglet === 'comptes'} on:click={() => (onglet = 'comptes')}>
+    <Onglet actif={onglet === 'comptes'} compte={comptes.length} on:click={() => (onglet = 'comptes')}>
       Comptes en attente
-      {#if comptes.length > 0}<span class="badge-count">{comptes.length}</span>{/if}
-    </button>
-    <button class="tab-btn" class:active={onglet === 'acces'} on:click={() => (onglet = 'acces')}>
+    </Onglet>
+    <Onglet actif={onglet === 'acces'} compte={commandes.length} on:click={() => (onglet = 'acces')}>
       Commandes d'accès
-      {#if commandes.length > 0}<span class="badge-count">{commandes.length}</span>{/if}
-    </button>
-    <button class="tab-btn" class:active={onglet === 'utilisateurs'} on:click={() => { onglet = 'utilisateurs'; loadUtilisateurs(); }}>
+    </Onglet>
+    <Onglet actif={onglet === 'utilisateurs'} on:click={() => { onglet = 'utilisateurs'; loadUtilisateurs(); }}>
       Utilisateurs
-    </button>
-    <button class="tab-btn" class:active={onglet === 'demandes_profil'} on:click={() => (onglet = 'demandes_profil')}>
+    </Onglet>
+    <Onglet actif={onglet === 'demandes_profil'} compte={demandesProfil.length} on:click={() => (onglet = 'demandes_profil')}>
       Demandes profil
-      {#if demandesProfil.length > 0}<span class="badge-count">{demandesProfil.length}</span>{/if}
-    </button>
-    <button class="tab-btn" class:active={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</button>
+    </Onglet>
+    <Onglet actif={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</Onglet>
     <LiensEcransAdmin groupe="donnees" />
   </div>
 </div>
@@ -808,23 +809,19 @@ $: _siteNom = $siteNomStore;
 <div class="tabs-group" style="margin-top:.5rem;margin-bottom:1.5rem">
   <div class="tabs-group-label">⚙️ Configuration</div>
   <div class="tabs" style="margin-bottom:0">
-    <button class="tab-btn" class:active={onglet === 'site'} on:click={openSiteTab}>Paramétrage site</button>
+    <Onglet actif={onglet === 'site'} on:click={openSiteTab}>Paramétrage site</Onglet>
     <LiensEcransAdmin groupe="configuration" />
-    <button class="tab-btn" class:active={onglet === 'pages'} on:click={() => (onglet = 'pages')}>
-      Descriptif pages
-    </button>
-    <button class="tab-btn" class:active={onglet === 'legal'} on:click={() => (onglet = 'legal')}>
-      Pages légales
-    </button>
+    <Onglet actif={onglet === 'pages'} on:click={() => (onglet = 'pages')}>Descriptif pages</Onglet>
+    <Onglet actif={onglet === 'legal'} on:click={() => (onglet = 'legal')}>Pages légales</Onglet>
     <!--  Pas d'icône sur un onglet : 4 sur 15 en portaient une — une par le
           composant `Icon`, trois en emoji — et les onze autres non. On uniformise
           sur la forme la plus répandue (`standards/11` §1 bis), qui est aussi
           celle du pattern d'onglets (`ux-patterns` §4). Signalé à l'écran le
           16/08/2026, capture à l'appui. -->
-    <button class="tab-btn" class:active={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>WhatsApp</button>
-    <button class="tab-btn" class:active={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>SMTP</button>
-    <button class="tab-btn" class:active={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>Télémétrie</button>
-    <button class="tab-btn" class:active={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>Maintenance</button>
+    <Onglet actif={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>WhatsApp</Onglet>
+    <Onglet actif={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>SMTP</Onglet>
+    <Onglet actif={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>Télémétrie</Onglet>
+    <Onglet actif={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>Maintenance</Onglet>
   </div>
 </div>
 
@@ -1867,10 +1864,9 @@ $: _siteNom = $siteNomStore;
 }
 /*  `.tabs` et `.tab-btn` sont dans `app.css` : partagées avec
     `LiensEcransAdmin.svelte`, elles ne peuvent pas vivre dans un style scopé. */
-.badge-count {
-background: var(--color-danger); color: #fff; border-radius: 999px;
-font-size: .7rem; padding: .1rem .45rem; font-weight: 700;
-}
+/*  `.badge-count` est parti avec le balisage, dans `Onglet.svelte` : une règle
+    laissée ici ne s'appliquerait plus (Svelte scope au fichier) et tromperait le
+    prochain lecteur — c'est la régression du 14/08, deux fois répétée. */
 .action-row { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
 .btn-sm { padding: .3rem .7rem; font-size: .8rem; }
 .refus-inline { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
