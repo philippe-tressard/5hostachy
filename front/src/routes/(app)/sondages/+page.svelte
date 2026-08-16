@@ -1,8 +1,8 @@
 <script lang="ts">
 import EntetePage from '$lib/components/EntetePage.svelte';
-import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
-import SelecteurCiblage from '$lib/components/SelecteurCiblage.svelte';
+import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
+import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import AnnonceCard from '$lib/components/AnnonceCard.svelte';
@@ -19,6 +19,8 @@ import { safeHtml } from '$lib/sanitize';
 import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
+import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
+import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 
 $: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
 $: _siteNom = $siteNomStore;
@@ -30,103 +32,15 @@ type Tab = (typeof ONGLETS)[number];
 let activeTab: Tab = 'sondages';
 $: trackTabView(activeTab);
 
-// Bâtiments disponibles pour le ciblage
-let batimentsList: { id: number; numero: string }[] = [];
-
-// Profils disponibles
-const PROFILS = [
-	{ val: 'copropriétaire_résident', label: 'Copropriétaire résident' },
-	{ val: 'copropriétaire_bailleur', label: 'Copropriétaire bailleur' },
-	{ val: 'locataire', label: 'Locataire' },
-];
-
 // Ban communauté
 let banMessage = '';
 
-// Sondages
+// Sondages — l'état de SAISIE vit dans `FormulaireSondage.svelte` : le ciblage
+// (périmètre, destinataires), les options et les canaux y sont désormais, avec
+// le reste des formulaires du site. Ne restent ici que la LISTE et ses actions.
 let sondages: any[] = [];
 let sondagesLoading = true;
 let showFormSondage = false;
-let submittingSondage = false;
-type OptionForm = { libelle: string; champ_libre: boolean };
-let formSondage = {
-	question: '',
-	description: '',
-	cloture_le: '',
-	resultats_publics: true,
-	options: [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }] as OptionForm[],
-	partager_whatsapp: false,
-	envoyer_syndic: false,
-	envoyer_cs: false,
-};
-
-// Ciblage
-let selectedProfils: string[] = [];   // vide = tous
-let selectedBatiments: number[] = []; // vide = toute la résidence
-$: tousProfils = selectedProfils.length === 0;
-$: tousBatiments = selectedBatiments.length === 0;
-
-function toggleProfil(val: string) {
-	selectedProfils = selectedProfils.includes(val)
-		? selectedProfils.filter(p => p !== val)
-		: [...selectedProfils, val];
-}
-function toggleBatiment(id: number) {
-	selectedBatiments = selectedBatiments.includes(id)
-		? selectedBatiments.filter(b => b !== id)
-		: [...selectedBatiments, id];
-}
-
-function addOption() { formSondage.options = [...formSondage.options, { libelle: '', champ_libre: false }]; }
-function removeOption(i: number) { formSondage.options = formSondage.options.filter((_, idx) => idx !== i); }
-function moveOptionUp(i: number) {
-	if (i === 0) return;
-	const arr = [...formSondage.options];
-	[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
-	formSondage.options = arr;
-}
-function moveOptionDown(i: number) {
-	if (i === formSondage.options.length - 1) return;
-	const arr = [...formSondage.options];
-	[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
-	formSondage.options = arr;
-}
-
-async function creerSondage() {
-	const opts = formSondage.options.map((o, i) => ({ libelle: o.libelle, ordre: i, champ_libre: o.champ_libre })).filter(o => o.libelle.trim());
-	if (!formSondage.question || opts.length < 2) { toast('error', 'Question et au moins 2 options requises'); return; }
-	submittingSondage = true;
-	try {
-		await sondagesApi.create({
-			question: formSondage.question,
-			description: formSondage.description || undefined,
-			cloture_le: formSondage.cloture_le ? new Date(formSondage.cloture_le).toISOString() : undefined,
-			resultats_publics: formSondage.resultats_publics,
-			options: opts,
-			profils_autorises: selectedProfils.length > 0 ? selectedProfils : null,
-			batiments_ids: selectedBatiments.length > 0 ? selectedBatiments : null,
-			partager_whatsapp: formSondage.partager_whatsapp,
-			envoyer_syndic: formSondage.envoyer_syndic,
-			envoyer_cs: formSondage.envoyer_cs,
-		});
-		sondages = await sondagesApi.list();
-		showFormSondage = false;
-		formSondage = {
-			question: '',
-			description: '',
-			cloture_le: '',
-			resultats_publics: true,
-			options: [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }],
-			partager_whatsapp: false,
-			envoyer_syndic: false,
-			envoyer_cs: false,
-		};
-		selectedProfils = [];
-		selectedBatiments = [];
-		toast('success', 'Sondage créé');
-	} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
-	finally { submittingSondage = false; }
-}
 
 function estCloture(s: any) { return s.cloture_forcee || (s.cloture_le && new Date(s.cloture_le) < new Date()); }
 
@@ -360,13 +274,13 @@ if ($currentUser?.communaute_ban_jusqu_au && new Date($currentUser.communaute_ba
 	sondagesLoading = false; ideesLoading = false; annoncesLoading = false;
 	return;
 }
-[[sondages, idees, annonces], batimentsList] = await Promise.all([
-	Promise.all([
-		sondagesApi.list().catch(() => []),
-		ideesApi.list().catch(() => []),
-		annoncesApi.list().catch(() => []),
-	]),
-	api.get<{ id: number; numero: string }[]>('/auth/batiments').catch(() => []),
+//  La liste des bâtiments n'est plus chargée ici : le sélecteur de périmètre
+//  lit l'arbre complet depuis son store, comme sur tous les autres écrans — un
+//  bâtiment n'est qu'un nœud parmi le parking, l'AFUL et les espaces.
+[sondages, idees, annonces] = await Promise.all([
+	sondagesApi.list().catch(() => []),
+	ideesApi.list().catch(() => []),
+	annoncesApi.list().catch(() => []),
 ]);
 sondagesLoading = false;
 ideesLoading = false;
@@ -468,77 +382,7 @@ aria-expanded={showModeration}>
 
 {#if activeTab === 'sondages'}
 {#if showFormSondage && $isCS}
-<FormulaireCreation titre="Nouveau sondage">
-<form on:submit|preventDefault={creerSondage}>
-<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
-Question *
-<input bind:value={formSondage.question} required />
-</label>
-<div class="field">
-<label>Description</label>
-<RichEditor bind:value={formSondage.description} placeholder="Description du sondage…" minHeight="80px" />
-</div>
-<div class="form-row-2" style="margin-bottom:.75rem">
-<label style="display:flex;flex-direction:column;gap:.3rem">
-Date de clôture
-<input type="datetime-local" bind:value={formSondage.cloture_le} />
-</label>
-<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-<input type="checkbox" bind:checked={formSondage.resultats_publics} />
-Résultats visibles avant clôture
-</label>
-</div>
-<div style="margin-bottom:.75rem">
-<div style="font-size:.9rem;font-weight:600;margin-bottom:.4rem">Options ({formSondage.options.length})</div>
-{#each formSondage.options as opt, i}
-<div style="display:flex;flex-direction:column;gap:.25rem;margin-bottom:.5rem;padding:.6rem .75rem;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-subtle,#fafafa)">
-	<div style="display:flex;gap:.4rem;align-items:center">
-		<span style="font-size:.78rem;color:var(--color-text-muted);min-width:1.1rem;text-align:right">{i + 1}.</span>
-		<input class="flex1" bind:value={formSondage.options[i].libelle} placeholder="Option {i + 1}" />
-		<button type="button" class="btn btn-sm btn-outline" title="Monter" disabled={i === 0} on:click={() => moveOptionUp(i)}>↑</button>
-		<button type="button" class="btn btn-sm btn-outline" title="Descendre" disabled={i === formSondage.options.length - 1} on:click={() => moveOptionDown(i)}>↓</button>
-		{#if formSondage.options.length > 2}
-		<button type="button" class="btn btn-sm btn-outline" style="color:var(--color-danger,#dc2626)" title="Supprimer" on:click={() => removeOption(i)}>✕</button>
-		{/if}
-	</div>
-	<label style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--color-text-muted);cursor:pointer;padding-left:1.6rem">
-		<input type="checkbox" bind:checked={formSondage.options[i].champ_libre} />
-		Champ libre (le répondant pourra préciser sa réponse par écrit)
-	</label>
-</div>
-{/each}
-<button type="button" class="btn btn-sm btn-outline" on:click={addOption}>+ Ajouter une option</button>
-</div>
-
-<!--  Périmètre PUIS Destinataires — skill `ux-patterns` §9 ter. Les deux blocs
-      passent par `SelecteurCiblage`, qui porte le titre, le badge d'état, les
-      pastilles et la réinitialisation : ils étaient écrits deux fois ici. -->
-{#if batimentsList.length > 0}
-<SelecteurCiblage titre="Périmètre" libelleDefaut="Toute la résidence"
-	options={batimentsList.map((b) => ({ val: b.id, label: `Bâtiment ${b.numero}` }))}
-	selection={selectedBatiments}
-	on:basculer={(e) => toggleBatiment(Number(e.detail))}
-	on:reinitialiser={() => (selectedBatiments = [])} />
-{/if}
-
-<SelecteurCiblage titre="Destinataires" libelleDefaut="Tous"
-	options={PROFILS.map((p) => ({ val: p.val, label: p.label }))}
-	selection={selectedProfils}
-	on:basculer={(e) => toggleProfil(String(e.detail))}
-	on:reinitialiser={() => (selectedProfils = [])} />
-
-<div class="field" style="margin-bottom:.75rem">
-	<CanauxNotification
-		bind:whatsapp={formSondage.partager_whatsapp}
-		bind:syndic={formSondage.envoyer_syndic}
-		bind:cs={formSondage.envoyer_cs}
-	/>
-</div>
-<div class="form-actions">
-	<button class="btn btn-primary" disabled={submittingSondage}>{submittingSondage ? '' : 'Créer le sondage'}</button>
-</div>
-</form>
-</FormulaireCreation>
+<FormulaireSondage on:cree={async () => { sondages = await sondagesApi.list(); showFormSondage = false; }} />
 {/if}
 
 {#if sondagesLoading}
@@ -563,17 +407,18 @@ Résultats visibles avant clôture
 {/if}
 · <span class="sondage-votants">{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span>
 </small>
-{#if s.profils_autorises || s.batiments_ids}
+<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre logique
+      (jamais 📍, qui est réservé au lieu physique), et rien du tout quand le
+      ciblage est le défaut — le redire n'apprend rien. Les badges rendaient
+      jusqu'ici les valeurs BRUTES de la base (« copropriétaire_résident »,
+      « Bât. 3 » reconstitué à la main), faute de traduction disponible. -->
+{#if !estPerimetreParDefaut(s.perimetre_cible) || !concerneTousLesResidents(s.public_cible)}
 <div class="sondage-ciblage">
-	{#if s.profils_autorises}
-		{#each s.profils_autorises.split(',') as p}
-			<span class="badge badge-orange" style="font-size:.7rem">{p.trim()}</span>
-		{/each}
+	{#if !estPerimetreParDefaut(s.perimetre_cible)}
+		<span class="badge badge-blue sondage-badge">&#x1F539; {perimetreLabel(s.perimetre_cible)}</span>
 	{/if}
-	{#if s.batiments_ids}
-		{#each s.batiments_ids.split(',') as bid}
-			<span class="badge badge-blue" style="font-size:.7rem">Bât. {bid.trim()}</span>
-		{/each}
+	{#if !concerneTousLesResidents(s.public_cible)}
+		<span class="badge badge-orange sondage-badge">{destinatairesLabel(s.public_cible)}</span>
 	{/if}
 </div>
 {/if}
@@ -666,51 +511,7 @@ onReport={(rid) => signaler('reponse', rid)}
 
 {#if activeTab === 'annonces'}
 {#if showFormAnnonce}
-<FormulaireCreation titre="Déposer une annonce">
-<form on:submit|preventDefault={creerAnnonce}>
-<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
-Titre *
-<input bind:value={formAnnonce.titre} placeholder="Ex. Lave-linge Samsung presque neuf" required />
-</label>
-<div class="field" style="margin-bottom:.75rem">
-<label>Description *</label>
-<RichEditor bind:value={formAnnonce.description} placeholder="Décrivez l'objet, son état, conditions de remise…" minHeight="90px" />
-</div>
-<div class="form-row-2" style="margin-bottom:.75rem">
-<label style="display:flex;flex-direction:column;gap:.3rem">
-Type
-<select bind:value={formAnnonce.type_annonce}>
-{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}
-</select>
-</label>
-<label style="display:flex;flex-direction:column;gap:.3rem">
-Catégorie
-<select bind:value={formAnnonce.categorie}>
-{#each CATEGORIES_ANNONCE as c}<option value={c.val}>{c.label}</option>{/each}
-</select>
-</label>
-</div>
-{#if formAnnonce.type_annonce === 'vente'}
-<div class="form-row-2" style="margin-bottom:.75rem">
-<label style="display:flex;flex-direction:column;gap:.3rem">
-Prix (€)
-<input type="number" min="0" step="0.01" bind:value={formAnnonce.prix} placeholder="0.00" />
-</label>
-<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:1.6rem">
-<input type="checkbox" bind:checked={formAnnonce.negotiable} />
-Prix négociable
-</label>
-</div>
-{/if}
-<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-bottom:.75rem">
-<input type="checkbox" bind:checked={formAnnonce.contact_visible} />
-Afficher mes coordonnées aux autres résidents
-</label>
-<div class="form-actions">
-	<button class="btn btn-primary" disabled={submittingAnnonce}>{submittingAnnonce ? '⏳' : "Publier l'annonce"}</button>
-</div>
-</form>
-</FormulaireCreation>
+<FormulaireAnnonce on:cree={(e) => { annonces = [e.detail, ...annonces]; showFormAnnonce = false; expandedAnnonce = e.detail.id; }} />
 {/if}
 
 <!-- Filtres annonces -->
@@ -773,9 +574,6 @@ margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
 }
 .tabs button:hover { color: var(--color-text); background: var(--color-bg); }
 .tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
-.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.flex1 { flex: 1; padding: .45rem .6rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .9rem; background: var(--color-bg); }
-input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .9rem; background: var(--color-bg); width: 100%; }
 .sondage-card { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; text-decoration: none; color: var(--color-text); transition: border-color .12s; }
 .sondage-card:hover { border-color: var(--color-primary); }
 .sondage-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; flex-shrink: 0; }
@@ -783,6 +581,7 @@ input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); 
 .sondage-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
 .sondage-votants { font-weight: 600; }
 .sondage-ciblage { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
+.sondage-badge { font-size: .7rem; }
 .filters { display: flex; gap: .4rem; flex-wrap: wrap; }
 .idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
 .vote-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .6rem; cursor: pointer; transition: border-color .12s; min-width: 3.5rem; }

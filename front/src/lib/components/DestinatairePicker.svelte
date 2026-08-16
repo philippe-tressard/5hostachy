@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
+	import { DESTINATAIRES, TOUS_LES_RESIDENTS, concerneTousLesResidents } from '$lib/destinataires';
 
 	/** Valeurs sélectionnées — tableau de strings. Ex: ['résidents'] ou ['copropriétaires','locataires'] */
 	export let value: string[] = ['résidents'];
@@ -14,36 +15,33 @@
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
-	//  `code`, libellé, icône. Les icônes sont celles d'`Icon.svelte` ; un nom
-	//  absent de sa table s'afficherait avec le point d'interrogation du repli.
+	//  ⚠️ La table des profils n'est PLUS ici : elle vit dans `$lib/destinataires.ts`.
+	//  Écrite dans le sélecteur, elle n'était disponible que pour SÉLECTIONNER —
+	//  et la liste des sondages affichait donc les valeurs brutes de la base dans
+	//  ses badges, faute de pouvoir les traduire. Même partage que
+	//  `$lib/perimetres.ts` pour l'axe géographique.
 	//
-	//  « Bailleurs » est ajouté le 13/08/2026 : « Copropriétaires » couvre les DEUX
-	//  statuts `copropriétaire_*`, si bien que rien ne permettait de s'adresser aux
-	//  bailleurs sans toucher les copropriétaires occupants — alors que tout un pan
-	//  du produit leur est propre (baux, remise d'objets, accès confiés aux
-	//  locataires). L'ajout est purement additif côté serveur : une valeur inconnue
+	//  « Bailleurs » (13/08/2026) et « Copropriétaires occupants » (16/08/2026)
+	//  sont symétriques : « Copropriétaires » couvre les DEUX statuts
+	//  `copropriétaire_*`, si bien qu'on ne savait s'adresser ni aux uns ni aux
+	//  autres seuls — alors que des pans entiers du produit leur sont propres.
+	//  Les deux ajouts sont purement additifs côté serveur : une valeur inconnue
 	//  tombait déjà sur un refus, donc aucune publication existante ne change de
 	//  public.
-	const options: { code: string; libelle: string; icone: string }[] = [
-		{ code: 'copropriétaires', libelle: 'Copropriétaires', icone: 'key-round' },
-		{ code: 'bailleurs', libelle: 'Bailleurs', icone: 'home' },
-		{ code: 'locataires', libelle: 'Locataires', icone: 'user' },
-		{ code: 'conseil_syndical', libelle: 'Conseil syndical', icone: 'shield-check' },
-	];
 
-	$: isTous = value.length === 0 || (value.length === 1 && value[0] === 'résidents');
+	$: isTous = concerneTousLesResidents(value);
 	$: selected = new Set(value);
 
 	function selectTous() {
-		value = ['résidents'];
+		value = [TOUS_LES_RESIDENTS];
 		dispatch('change', value);
 	}
 
 	function toggleItem(val: string) {
-		const s = new Set(value.filter(v => v !== 'résidents'));
+		const s = new Set(value.filter(v => v !== TOUS_LES_RESIDENTS));
 		if (s.has(val)) s.delete(val);
 		else s.add(val);
-		value = s.size > 0 ? [...s] : ['résidents'];
+		value = s.size > 0 ? [...s] : [TOUS_LES_RESIDENTS];
 		dispatch('change', value);
 	}
 </script>
@@ -58,7 +56,7 @@
 {/if}
 <div class="destinataire-pills">
 	<Pastille active={isTous} icone="users-round" on:click={selectTous}>Tous les résidents</Pastille>
-	{#each options as o (o.code)}
+	{#each DESTINATAIRES as o (o.code)}
 		<Pastille active={!isTous && selected.has(o.code)} icone={o.icone}
 			on:click={() => toggleItem(o.code)}>{o.libelle}</Pastille>
 	{/each}

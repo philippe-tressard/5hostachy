@@ -14,12 +14,9 @@
   masqué par la modale ; le passage à la boîte dans la page l'a révélé.
 -->
 <script lang="ts">
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import { ACCEPT_PHOTOS } from '$lib/fichiers';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 
 	/** L'objet de saisie, lié en deux sens : la page porte son cycle de vie. */
 	export let form: any;
@@ -42,124 +39,120 @@
 </script>
 
 <form on:submit|preventDefault={onSubmit}>
-	<div>
+	<!--  1. Titre. -->
+	<SectionFormulaire premiere>
+		<div class="field champ-large">
+			<label for="ev-titre">Titre *</label>
+			<input id="ev-titre" bind:value={form.titre} required />
+		</div>
+	</SectionFormulaire>
+
+	<!--  2. Champs spécifiques de l'événement. -->
+	<SectionFormulaire titre="Détails">
 		<div class="form-grid">
-			<div class="field champ-large">
-				<label>Titre *</label>
-				<input bind:value={form.titre} required />
-			</div>
 			<div class="field">
-				<label>Type</label>
-				<select bind:value={form.type}>
+				<label for="ev-type">Type</label>
+				<select id="ev-type" bind:value={form.type}>
 					{#each types as t}<option value={t.val}>{t.label}</option>{/each}
 				</select>
 			</div>
 			<div class="field">
-				<label>Date de début *</label>
-				<input type="date" bind:value={form.debut} required />
+				<label for="ev-debut">Date de début *</label>
+				<input id="ev-debut" type="date" bind:value={form.debut} required />
 			</div>
 			<div class="field">
-				<label>Heure (optionnelle)</label>
-				<input type="time" bind:value={form.debut_heure} />
+				<label for="ev-heure">Heure (optionnelle)</label>
+				<input id="ev-heure" type="time" bind:value={form.debut_heure} />
 			</div>
 			<div class="field">
-				<label>Fin</label>
-				<input type="datetime-local" bind:value={form.fin} />
+				<label for="ev-fin">Fin</label>
+				<input id="ev-fin" type="datetime-local" bind:value={form.fin} />
 			</div>
 			<div class="field">
-				<label>Lieu</label>
-				<input bind:value={form.lieu} />
+				<label for="ev-lieu">Lieu</label>
+				<input id="ev-lieu" bind:value={form.lieu} />
 			</div>
 			<div class="field">
-				<label>Prestataire</label>
-				<select bind:value={form.prestataire_id}>
+				<label for="ev-prestataire">Prestataire</label>
+				<select id="ev-prestataire" bind:value={form.prestataire_id}>
 					<option value=''>— Aucun —</option>
 					{#each prestataires.filter(p => p.actif !== false) as p}
 						<option value={String(p.id)}>{p.nom}</option>
 					{/each}
 				</select>
 			</div>
-		</div>
-		{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
-		<!--  Conteneur de grille, pas un champ : il portait `.field` et contenait
-		      des `.field`, ce qui empilait deux fois le même style. -->
-		<div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-			<div class="field">
-				<label>Fréquence (optionnelle)</label>
-				<select bind:value={form.frequence_type}>
-					<option value=''>— Pas de récurrence —</option>
-					<option value='fois_par_an'>× / an</option>
-					<option value='mois'>Tous les N mois</option>
-					<option value='semaines'>Toutes les N semaines</option>
-				</select>
-			</div>
-			{#if form.frequence_type}
-			<div class="field">
-				<label>Valeur</label>
-				<input type="number" min="1" bind:value={form.frequence_valeur} placeholder="ex: 2" />
-			</div>
+			{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
+				<div class="field">
+					<label for="ev-frequence">Fréquence (optionnelle)</label>
+					<select id="ev-frequence" bind:value={form.frequence_type}>
+						<option value=''>— Pas de récurrence —</option>
+						<option value='fois_par_an'>× / an</option>
+						<option value='mois'>Tous les N mois</option>
+						<option value='semaines'>Toutes les N semaines</option>
+					</select>
+				</div>
+				{#if form.frequence_type}
+					<div class="field">
+						<label for="ev-frequence-valeur">Valeur</label>
+						<input id="ev-frequence-valeur" type="number" min="1" bind:value={form.frequence_valeur} placeholder="ex: 2" />
+					</div>
+				{/if}
 			{/if}
 		</div>
-		{/if}
-		<!--  ORDRE : Périmètre, Description, Photos, Documents, puis État —
-		      dont le Kanban, l'affichage au fil et la diffusion font partie.
-		      La diffusion était placée AVANT la description, seule de tout le
-		      site à l'être (signalé le 16/08/2026). -->
-		<div class="field" style="margin-top:.75rem">
-			<PerimetrePicker bind:value={formPerimetreCible} />
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<label for="ev-description">Description</label>
-			<RichEditor id="ev-description" bind:value={form.description} placeholder="Description de l'événement…" minHeight="80px" />
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<FichiersUpload id="ev-photos" bind:urls={photosUrls}
-				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={72} />
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<FichiersUpload id="ev-documents" bind:urls={fichiersUrls} />
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<label>Suivi Kanban</label>
-			<select bind:value={form.statut_kanban} style="max-width:280px;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:var(--radius);font-size:.875rem;background:var(--color-bg)">
+	</SectionFormulaire>
+
+	<!--  3. Workflow — où en est cet événement. Le Suivi Kanban était rangé avec
+	      l'affichage au fil et les canaux, c'est-à-dire dans la DIFFUSION : il
+	      dit où en est le travail, pas qui le voit (`ux-patterns` §9 sexies). -->
+	<SectionFormulaire titre="Workflow">
+		<div class="field champ-large">
+			<label for="ev-kanban">Suivi Kanban</label>
+			<select id="ev-kanban" bind:value={form.statut_kanban}>
 				<option value="">— Pas de suivi Kanban —</option>
 				{#each kanbanCols as col}
 					<option value={col.id}>{col.label}</option>
 				{/each}
 			</select>
 		</div>
-		<div class="field" style="margin-top:.75rem">
-			<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-				<input type="checkbox" bind:checked={form.affichable}
-					disabled={form.type === 'maintenance_recurrente'} style="width:auto;margin:0" />
-				<span>Afficher dans le fil d'activité du tableau de bord</span>
-			</label>
-			<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.4rem"
-				class:desactive={!form.affichable}>
-				<input type="checkbox" bind:checked={form.epingle}
-					disabled={!form.affichable} style="width:auto;margin:0" />
-				<span>📌 Épingler dans le fil d'activité</span>
-			</label>
-			<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
-			{#if !form.affichable}
-				<p style="margin:.2rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
-					Un événement absent du fil ne peut pas y être épinglé.
-				</p>
-			{/if}
-			{#if form.type === 'maintenance_recurrente'}
-				<p style="margin:.3rem 0 0 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
-					Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans le Kanban.
-				</p>
-			{/if}
-		</div>
-		<div class="field" style="margin-top:.75rem">
-			<CanauxNotification
-				bind:whatsapp={form.partager_whatsapp}
-				bind:syndic={form.envoyer_syndic}
-				bind:cs={form.envoyer_cs}
-			/>
-		</div>
-	</div>
+	</SectionFormulaire>
+
+	<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé. -->
+	<ChampsCommuns
+		idPrefixe="ev"
+		avecPerimetre bind:perimetre={formPerimetreCible}
+		avecDescription bind:description={form.description}
+		descriptionPlaceholder="Description de l'événement…"
+		avecPhotos bind:photos={photosUrls}
+		avecDocuments bind:documents={fichiersUrls}
+		avecDiffusion
+		bind:whatsapp={form.partager_whatsapp}
+		bind:syndic={form.envoyer_syndic}
+		bind:cs={form.envoyer_cs}
+	>
+		<svelte:fragment slot="diffusion">
+			<div class="field champ-large">
+				<label class="case">
+					<input type="checkbox" bind:checked={form.affichable}
+						disabled={form.type === 'maintenance_recurrente'} />
+					<span>Afficher dans le fil d'activité du tableau de bord</span>
+				</label>
+				<label class="case" class:desactive={!form.affichable}>
+					<input type="checkbox" bind:checked={form.epingle} disabled={!form.affichable} />
+					<span>📌 Épingler dans le fil d'activité</span>
+				</label>
+				<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
+				{#if !form.affichable}
+					<p class="aide-case">Un événement absent du fil ne peut pas y être épinglé.</p>
+				{/if}
+				{#if form.type === 'maintenance_recurrente'}
+					<p class="aide-case">
+						Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans le Kanban.
+					</p>
+				{/if}
+			</div>
+		</svelte:fragment>
+	</ChampsCommuns>
+
 	<div class="form-actions">
 		<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 	</div>
@@ -171,4 +164,15 @@
 	    s'affiche en une colonne écrasée (#344, reproduit le 15/08/2026). */
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
 	.form-grid .field { margin-bottom: 0; }
+
+	/*  Une case et son libellé : ils étaient écrits en `style=` en ligne, avec un
+	    `width:auto` posé à la main sur chaque `<input type="checkbox">` pour
+	    annuler le `width:100%` des champs de saisie. Nommés ici, ils cessent
+	    d'être à réécrire — c'est la même famille de défaut que le sélecteur nu
+	    qui a étiré les cases de l'écran Communauté (16/08/2026). */
+	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+	.case + .case { margin-top: .4rem; }
+	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
+	.desactive { opacity: .55; cursor: not-allowed; }
+	.aide-case { margin: .2rem 0 0 1.6rem; font-size: .8rem; color: var(--color-text-muted); }
 </style>

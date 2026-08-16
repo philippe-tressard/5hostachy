@@ -1,4 +1,5 @@
 """Router sondages — création, vote, résultats."""
+import json
 from datetime import datetime
 from typing import List, Optional
 
@@ -9,6 +10,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
+from app.schemas import ListeJson, liste_depuis_json
 from app.models.core import (
     CommentaireSondage, MembreSyndic, Notification, OptionSondage, Sondage, Utilisateur, VoteSondage, RoleUtilisateur, StatutUtilisateur
 )
@@ -24,12 +26,6 @@ from app.utils.whatsapp import config_whatsapp, whatsapp_actif
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
-
-def _parse_csv(val: Optional[str]) -> list[str]:
-    if not val:
-        return []
-    return [v.strip() for v in val.split(",") if v.strip()]
-
 
 def _deny_communaute_for_statut(user: Utilisateur) -> None:
     if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
@@ -54,8 +50,10 @@ class SondageCreate(BaseModel):
     cloture_le: Optional[datetime] = None
     resultats_publics: bool = True
     options: list[OptionCreate]
-    profils_autorises: Optional[List[str]] = None   # []  = tous les profils
-    batiments_ids: Optional[List[int]] = None       # []  = toute la résidence
+    #  MÊMES deux champs que les publications : codes de périmètre et codes de
+    #  public. `None`/vide = aucune restriction, des deux côtés.
+    perimetre_cible: Optional[List[str]] = None
+    public_cible: Optional[List[str]] = None
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
@@ -70,8 +68,11 @@ class SondageRead(BaseModel):
     resultats_publics: bool
     auteur_id: int
     cree_le: datetime
-    profils_autorises: Optional[str] = None
-    batiments_ids: Optional[str] = None
+    #  Exposés en LISTES, comme les publications et les tickets : la colonne est
+    #  du texte JSON, mais aucun appelant ne doit avoir à le savoir. La page des
+    #  sondages découpait la chaîne à la main et affichait les codes bruts.
+    perimetre_cible: ListeJson = []
+    public_cible: ListeJson = []
     nb_votants: int = 0
 
     class Config:
@@ -171,7 +172,11 @@ def get_sondage(
         "id": s.id, "question": s.question, "description": s.description,
         "cloture_le": s.cloture_le, "resultats_publics": s.resultats_publics,
         "auteur_id": s.auteur_id, "cree_le": s.cree_le,
-        "profils_autorises": s.profils_autorises, "batiments_ids": s.batiments_ids,
+        #  Cette réponse est construite à la main (pas de `response_model`) : la
+        #  conversion JSON → liste ne se fait donc pas toute seule. Même règle
+        #  que `ListeJson`, appelée et non recopiée.
+        "perimetre_cible": liste_depuis_json(s.perimetre_cible),
+        "public_cible": liste_depuis_json(s.public_cible),
         "options": options_out, "mon_vote": mon_vote.option_id if mon_vote else None,
         "cloture": cloture, "cloture_forcee": s.cloture_forcee, "commentaires": commentaires_out,
     }
@@ -184,8 +189,10 @@ def create_sondage(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    profils_csv = ",".join(body.profils_autorises) if body.profils_autorises else None
-    batiments_csv = ",".join(str(b) for b in body.batiments_ids) if body.batiments_ids else None
+    #  Sérialisation JSON, comme les publications. `None` quand la liste est vide :
+    #  un `"[]"` et un `None` répondraient à la même question de deux façons.
+    perimetre_json = json.dumps(body.perimetre_cible, ensure_ascii=False) if body.perimetre_cible else None
+    public_json = json.dumps(body.public_cible, ensure_ascii=False) if body.public_cible else None
 
     s = Sondage(
         question=body.question,
@@ -193,8 +200,8 @@ def create_sondage(
         cloture_le=body.cloture_le,
         resultats_publics=body.resultats_publics,
         auteur_id=user.id,
-        profils_autorises=profils_csv,
-        batiments_ids=batiments_csv,
+        perimetre_cible=perimetre_json,
+        public_cible=public_json,
         partager_whatsapp=body.partager_whatsapp,
         envoyer_syndic=body.envoyer_syndic,
         envoyer_cs=body.envoyer_cs,
@@ -205,15 +212,14 @@ def create_sondage(
     for opt in body.options:
         session.add(OptionSondage(sondage_id=s.id, **opt.model_dump()))
 
-    # Notifier uniquement les résidents ciblés
+    #  Notifier exactement ceux qui PEUVENT le voir. Cette boucle réappliquait à
+    #  la main les deux filtres de ciblage — une seconde écriture de la règle
+    #  d'accès, qui ne connaissait donc ni les périmètres transverses ni le CS.
+    #  `sondage_accessible` est désormais la seule à en décider.
     q = select(Utilisateur).where(Utilisateur.actif == True, Utilisateur.id != user.id)
     residents = session.exec(q).all()
-    profils_list = _parse_csv(profils_csv)
-    batiments_list = _parse_csv(batiments_csv)
     for r in residents:
-        if profils_list and r.statut.value not in profils_list:
-            continue
-        if batiments_list and str(r.batiment_id) not in batiments_list:
+        if not sondage_accessible(s, r):
             continue
         session.add(Notification(
             destinataire_id=r.id,

@@ -4,6 +4,7 @@
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulairePrestation from '$lib/components/FormulairePrestation.svelte';
+	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
@@ -113,8 +114,13 @@
 		envoyer_syndic: false,
 		envoyer_cs: false,
 	};
-	let devisFichierFiles: FileList | null = null;
-	let devisFichierKey = 0;
+	//  Fichiers RETENUS jusqu'à l'enregistrement : ils sont stockés dans le
+	//  répertoire privé et servis par une route authentifiée, ils ne peuvent donc
+	//  pas partir par l'endpoint générique à la sélection. `FichiersUpload` en
+	//  mode différé leur donne l'apparence qu'ils ont partout ailleurs — la
+	//  `FileList` et la clé de remontage d'un `<input type="file">` nu, qui les
+	//  faisaient ressembler à rien, ont disparu (signalé le 16/08/2026).
+	let devisFichiers: File[] = [];
 
 	// ── Devis colonnes kanban (reactive) ──────────────────────
 	$: devisSyndic = devis.filter((d: any) => d.actif !== false && d.statut === 'en_attente');
@@ -363,8 +369,7 @@
 			envoyer_syndic: false,
 			envoyer_cs: false,
 		};
-		devisFichierFiles = null;
-		devisFichierKey++;
+		devisFichiers = [];
 		editDevisId = null;
 	}
 
@@ -379,11 +384,6 @@
 		devisFormPrestId = null;
 		editDevisId = null;
 		resetDevisForm();
-	}
-
-	function onDevisFilesChange(event: Event) {
-		const input = event.currentTarget as HTMLInputElement | null;
-		devisFichierFiles = input?.files ?? null;
 	}
 
 	function onOsFileChange(event: Event) {
@@ -444,9 +444,9 @@
 				saved = await prestApi.createDevis(payload);
 				devis = [...devis, saved];
 			}
-			if (devisFichierFiles && devisFichierFiles.length > 0) {
+			if (devisFichiers.length > 0) {
 				let lastUpdated: any = saved;
-				for (const file of Array.from(devisFichierFiles)) {
+				for (const file of devisFichiers) {
 					try {
 						lastUpdated = await prestApi.uploadDevisFichier(saved.id, file);
 					} catch { toast('error', `Fichier « ${file.name} » non joint`); }
@@ -811,8 +811,7 @@
 	{#if devisFormPrestId === -1}
 		<FormulaireCreation titre={editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}>
 			<FormulairePrestation bind:devisForm {prestataires} {statutsDevis} {submitting}
-				{devisFichierKey} {devisFichierFiles}
-				onFilesChange={onDevisFilesChange} onSave={saveDevis} />
+				bind:devisFichiers onSave={saveDevis} />
 		</FormulaireCreation>
 	{/if}
 
@@ -1059,9 +1058,8 @@
 											{/each}
 										</div>
 									{/if}
-									{#key devisFichierKey}
-										<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" on:change={onDevisFilesChange} />
-									{/key}
+									<FichiersUpload id="devis-edit-fichiers" mode="documents" differe
+										titre="" bind:fichiers={devisFichiers} />
 								</div>
 								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
 									<button class="btn btn-sm btn-outline" on:click|stopPropagation={closeDevisForm}>Annuler</button>

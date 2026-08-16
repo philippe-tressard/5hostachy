@@ -21,8 +21,27 @@
   qui permet à un ticket envoyé au syndic de partir avec ses documents joints,
   ce que le flux « créer puis téléverser » des photos ne permet pas.
 
+  ## Le mode DIFFÉRÉ (`differe`), et pourquoi il existe
+
+  Deux rubriques ne peuvent PAS téléverser à la sélection : les documents d'une
+  actualité deviennent des entités `Document` rattachées à `publication_id`, qui
+  n'existe pas tant que l'actualité n'est pas créée. Elles utilisaient donc un
+  `<input type="file">` nu — d'où deux apparences pour une même notion sur le
+  site, signalé le 16/08/2026 (« le libellé fichier n'est pas conforme »).
+
+  En mode différé, le composant RETIENT les `File` sélectionnés au lieu de les
+  envoyer : même rendu, même compteur, même bouton, mêmes vignettes (par
+  `URL.createObjectURL`). Le parent lit `bind:fichiers` après la création et les
+  téléverse alors. L'apparence est identique — c'est tout l'objet.
+
+  ⚠️ Les URLs d'aperçu sont un **état global du navigateur** : elles sont
+  révoquées au retrait ET dans `onDestroy` (socle 11 §12 — la fonction de
+  libération est appelée depuis chaque sortie, pas seulement la sortie nominale).
+
   Props :
-    - urls     : liste des URLs (bindable)
+    - urls     : liste des URLs (bindable) — mode normal
+    - fichiers : liste des `File` retenus (bindable) — mode `differe`
+    - differe  : ne pas téléverser, retenir les fichiers pour le parent
     - max      : nombre maximum de documents
     - label    : libellé du bouton d'ajout
     - accept   : filtre du sélecteur de fichiers
@@ -33,10 +52,10 @@
     - remove   : (url) => Promise<url[] | void> — suppression serveur ; si elle
                  retourne une liste, elle fait foi
   Events :
-    - change(detail: string[]) — après ajout ou retrait
+    - change(detail: string[]) — après ajout ou retrait (mode normal)
 -->
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	import Vignette from './Vignette.svelte';
 	import { fichiersApi } from '$lib/api';
 	import { toast } from './Toast.svelte';
@@ -59,6 +78,11 @@
 	export let remove: ((url: string) => Promise<string[] | void>) | null = null;
 	/** Côté des vignettes d'image, en px. */
 	export let size = 64;
+
+	/** Retenir les fichiers au lieu de les téléverser (voir l'en-tête). */
+	export let differe = false;
+	/** Les `File` retenus en mode différé — à lier avec `bind:`. */
+	export let fichiers: File[] = [];
 
 	/** Intitulé affiché au-dessus du champ. Laisser vide : il est DÉDUIT du mode
 	    et de `max`. C'est tout l'objet de cette prop — le libellé vivait dans
@@ -93,20 +117,70 @@
 
 	let envoi = false;
 
-	$: complet = urls.length >= max;
-	$: ({ photos, documents } = separerFichiers(urls));
+	//  Aperçus des fichiers RETENUS (mode différé). Mémorisés dans une `Map` et
+	//  non recalculés : `apercuDe` est appelée depuis un bloc réactif, et créer
+	//  une URL d'objet à chaque recalcul fuirait une entrée par frappe clavier.
+	const apercus = new Map<File, string>();
+	function apercuDe(f: File): string | null {
+		if (!f.type.startsWith('image/')) return null;
+		let u = apercus.get(f);
+		if (!u) {
+			u = URL.createObjectURL(f);
+			apercus.set(f, u);
+		}
+		return u;
+	}
+	function oublier(f: File) {
+		const u = apercus.get(f);
+		if (u) {
+			URL.revokeObjectURL(u);
+			apercus.delete(f);
+		}
+	}
+	//  Sortie non nominale : l'utilisateur peut quitter l'écran sans jamais
+	//  soumettre ni retirer un fichier (socle 11 §12).
+	onDestroy(() => {
+		for (const u of apercus.values()) URL.revokeObjectURL(u);
+		apercus.clear();
+	});
+
+	//  UNE seule liste rendue, quelle que soit l'origine : c'est ce qui garantit
+	//  que le mode différé ne peut pas prendre une autre apparence.
+	//  `apercu` non nul ⇒ vignette d'image ; nul ⇒ pastille de document.
+	type Piece = { cle: string; nom: string; apercu: string | null; fichier: File | null };
+	$: pieces = differe
+		? fichiers.map((f, i): Piece => ({
+			cle: `${i} ${f.name} ${f.size}`,
+			nom: f.name,
+			apercu: apercuDe(f),
+			fichier: f,
+		}))
+		: (({ photos, documents }) => [
+			...photos.map((u): Piece => ({ cle: u, nom: nomFichier(u), apercu: u, fichier: null })),
+			...documents.map((u): Piece => ({ cle: u, nom: nomFichier(u), apercu: null, fichier: null })),
+		])(separerFichiers(urls));
+	$: vignettes = pieces.filter((p) => p.apercu !== null);
+	$: pastilles = pieces.filter((p) => p.apercu === null);
+	$: nombre = differe ? fichiers.length : urls.length;
+	$: complet = nombre >= max;
 
 	async function ajouter(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const fichiers = Array.from(input.files ?? []);
+		const choisis = Array.from(input.files ?? []);
 		input.value = '';
-		if (!fichiers.length || complet) return;
+		if (!choisis.length || complet) return;
+		//  `slice` borne à ce qui reste sous `max`, dans les deux modes.
+		const retenus = choisis.slice(0, max - nombre);
+		if (differe) {
+			fichiers = [...fichiers, ...retenus];
+			return;
+		}
 		envoi = true;
 		try {
 			// Séquentiel et non parallèle : l'API valide et redimensionne chaque
 			// fichier, et un RPi qui reçoit cinq images de 4 Mo en même temps sature
-			// sa mémoire. `slice` borne à ce qui reste sous `max`.
-			for (const file of fichiers.slice(0, max - urls.length)) {
+			// sa mémoire.
+			for (const file of retenus) {
 				urls = [...urls, upload ? await upload(file) : (await fichiersApi.upload(file)).url];
 			}
 			dispatch('change', urls);
@@ -117,10 +191,15 @@
 		}
 	}
 
-	async function retirer(url: string) {
+	async function retirer(p: Piece) {
+		if (p.fichier) {
+			oublier(p.fichier);
+			fichiers = fichiers.filter((f) => f !== p.fichier);
+			return;
+		}
 		try {
-			const maj = remove ? await remove(url) : null;
-			urls = Array.isArray(maj) ? maj : urls.filter((u) => u !== url);
+			const maj = remove ? await remove(p.cle) : null;
+			urls = Array.isArray(maj) ? maj : urls.filter((u) => u !== p.cle);
 			dispatch('change', urls);
 		} catch (err) {
 			toast('error', err instanceof Error ? err.message : 'Erreur lors de la suppression');
@@ -132,27 +211,27 @@
 	{#if _titre}
 		<label class="fichiers-titre" for={id}>{_titre}</label>
 	{/if}
-	{#if photos.length}
+	{#if vignettes.length}
 		<div class="fichiers-liste">
-			{#each photos as url (url)}
-				<Vignette src={url} alt="" {size} title={nomFichier(url)}>
+			{#each vignettes as p (p.cle)}
+				<Vignette src={p.apercu ?? ''} alt="" {size} title={p.nom}>
 					{#if !readonly}
 						<button type="button" class="photo-retirer" title="Retirer cette photo"
-							aria-label="Retirer {nomFichier(url)}" on:click={() => retirer(url)}>×</button>
+							aria-label="Retirer {p.nom}" on:click={() => retirer(p)}>×</button>
 					{/if}
 				</Vignette>
 			{/each}
 		</div>
 	{/if}
-	{#if documents.length}
+	{#if pastilles.length}
 		<div class="fichiers-liste">
-			{#each documents as url (url)}
+			{#each pastilles as p (p.cle)}
 				<span class="fichier-chip">
 					<span aria-hidden="true">&#x1F4C4;</span>
-					<span class="fichier-nom">{nomFichier(url)}</span>
+					<span class="fichier-nom">{p.nom}</span>
 					{#if !readonly}
 						<button type="button" class="fichier-retirer" title="Retirer ce document"
-							aria-label="Retirer {nomFichier(url)}" on:click={() => retirer(url)}>×</button>
+							aria-label="Retirer {p.nom}" on:click={() => retirer(p)}>×</button>
 					{/if}
 				</span>
 			{/each}
@@ -164,7 +243,7 @@
 		{envoi ? '⏳ Envoi…' : `\u{1F4CE} ${libelle}`}
 		<input {id} type="file" multiple accept={accepte} disabled={complet || envoi || disabled} on:change={ajouter} />
 	</label>
-	<span class="fichiers-compte">{urls.length}/{max}</span>
+	<span class="fichiers-compte">{nombre}/{max}</span>
 	{/if}
 </div>
 

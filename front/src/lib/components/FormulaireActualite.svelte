@@ -14,11 +14,9 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import DestinatairePicker from '$lib/components/DestinatairePicker.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { publications as pubsApi, documents as docsApi, ApiError, type Publication } from '$lib/api';
 	import { perimetreDefautListe } from '$lib/utils';
@@ -43,23 +41,23 @@
 	//  C'est ce qui supprime la danse « créer en brouillon → téléverser → publier »
 	//  qui n'existait que parce que l'image arrivait après coup.
 	let photos: string[] = [];
+	//  Les DOCUMENTS restent différés : ils deviennent des entités `Document`
+	//  rattachées à `publication_id`, qui n'existe pas tant que l'actualité n'est
+	//  pas créée. `FichiersUpload` les retient en mode `differe` — même apparence
+	//  que partout ailleurs, là où un `<input type="file">` nu était le seul du
+	//  site à ne ressembler à rien (signalé le 16/08/2026).
 	let pendingFiles: File[] = [];
-	let fileInputKey = 0;
 	let perimetreCible: string[] = perimetreDefautListe();
 	let publicCible: string[] = ['résidents'];
-
-	function handleFilesChange(e: Event) {
-		const input = e.currentTarget as HTMLInputElement;
-		pendingFiles = input.files ? Array.from(input.files) : [];
-	}
 
 	function reinitialiser() {
 		titre = ''; contenu = ''; urgente = false; epingle = false;
 		brouillon = false; statut = 'publie'; partagerWhatsapp = false; envoyerSyndic = false;
 		envoyerCs = false; annonceHall = false; confidentiel = false;
 		perimetreCible = perimetreDefautListe();
+		publicCible = ['résidents'];
 		photos = [];
-		pendingFiles = []; fileInputKey++;
+		pendingFiles = [];
 	}
 
 	async function publish() {
@@ -103,44 +101,48 @@
 
 <FormulaireCreation titre="Nouvelle publication">
 	<form on:submit|preventDefault={publish}>
-		<div class="field">
-			<label for="new-titre">Titre *</label>
-			<input id="new-titre" type="text" bind:value={titre} required maxlength="200" />
-		</div>
-		<div class="field">
-			<PerimetrePicker bind:value={perimetreCible} />
-		</div>
-		<div class="field">
-			<DestinatairePicker bind:value={publicCible} />
-		</div>
-		<div class="field">
-			<label for="actualite-contenu">Description *</label>
-			<RichEditor id="actualite-contenu" bind:value={contenu} placeholder="Contenu de l'actualité…" minHeight="120px" />
-		</div>
-		<div class="field">
-			<FichiersUpload id="actualite-photos" bind:urls={photos} mode="photos" />
-		</div>
-		<div class="field">
-			<label>Documents</label>
-			{#key fileInputKey}
-				<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.txt" on:change={handleFilesChange} style="font-size:.85rem" />
-			{/key}
-			{#if pendingFiles.length > 0}
-				<span style="font-size:.8rem;color:var(--color-text-muted)">📎 {pendingFiles.length} fichier{pendingFiles.length > 1 ? 's' : ''} sélectionné{pendingFiles.length > 1 ? 's' : ''}</span>
-			{/if}
-		</div>
-		<OptionsPublication
-			complet
-			{perimetreCible}
-			bind:epingle
-			bind:urgente
-			bind:brouillon
-			bind:confidentiel
-			bind:whatsapp={partagerWhatsapp}
-			bind:syndic={envoyerSyndic}
-			bind:cs={envoyerCs}
-			bind:annonceHall
-		/>
+		<!--  1. Titre. Une actualité n'a NI champ spécifique NI workflow : elle n'a
+		      pas d'étapes de vie, et son Publié/Brouillon est une décision de
+		      diffusion — il est donc en section 9, pas en 3. -->
+		<SectionFormulaire premiere>
+			<div class="field champ-large">
+				<label for="new-titre">Titre *</label>
+				<input id="new-titre" type="text" bind:value={titre} required maxlength="200" />
+			</div>
+		</SectionFormulaire>
+
+		<!--  4 à 9 : l'ordre, les intitulés et les séparations viennent du
+		      composant partagé — voir `ChampsCommuns.svelte`. -->
+		<ChampsCommuns
+			idPrefixe="actualite"
+			avecPerimetre bind:perimetre={perimetreCible}
+			avecDestinataires bind:destinataires={publicCible}
+			avecDescription descriptionRequise bind:description={contenu}
+			descriptionPlaceholder="Contenu de l'actualité…"
+			avecPhotos bind:photos
+			avecDocuments documentsDifferes bind:documentsFichiers={pendingFiles}
+			avecDiffusion
+			avecCanaux={false}
+		>
+			<!--  Les actualités rendent leurs canaux elles-mêmes : `OptionsPublication`
+			      porte en plus le confidentiel et l'affiche de hall, et les deux
+			      règles qui les lient. -->
+			<svelte:fragment slot="diffusion">
+				<OptionsPublication
+					complet
+					{perimetreCible}
+					bind:epingle
+					bind:urgente
+					bind:brouillon
+					bind:confidentiel
+					bind:whatsapp={partagerWhatsapp}
+					bind:syndic={envoyerSyndic}
+					bind:cs={envoyerCs}
+					bind:annonceHall
+				/>
+			</svelte:fragment>
+		</ChampsCommuns>
+
 		<div class="form-actions">
 			<button type="submit" class="btn btn-primary" disabled={saving}>
 				{saving ? 'Envoi…' : (brouillon ? 'Enregistrer brouillon' : 'Publier')}

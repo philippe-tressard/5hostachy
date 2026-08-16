@@ -5,9 +5,10 @@
 
   POURQUOI CE COMPOSANT EXISTE (16/08/2026, régression livrée en v2.67.11).
   Ces règles ne vivaient que dans `PerimetrePicker.svelte`, donc scopées à lui
-  par Svelte. Le jour où un second composant a repris le même balisage
-  (`SelecteurCiblage`, pour le ciblage des sondages), il a hérité de la structure
-  SANS le style : les pastilles sont parties en production nues, sous forme de
+  par Svelte. Le jour où un second composant a repris le même balisage (l'ancien
+  `SelecteurCiblage`, qui servait au ciblage des sondages avant que celui-ci
+  rejoigne le standard le 16/08/2026), il a hérité de la structure SANS le
+  style : les pastilles sont parties en production nues, sous forme de
   rectangles collés — « Bâtiment 1Bâtiment 2Bâtiment 3 ».
 
   ⚠️ RIEN NE L'AVAIT SIGNALÉ, et c'est le vrai enseignement. `svelte-check` sait
