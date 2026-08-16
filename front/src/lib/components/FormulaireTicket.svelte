@@ -30,6 +30,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { isCS } from '$lib/stores/auth';
 
@@ -38,6 +39,20 @@
 	let titre = '';
 	let description = '';
 	let categorie = 'panne';
+	let statut = 'ouvert';
+	//  Workflow du ticket, VISIBLE de tous dès la création : c'est une information
+	//  capitale pour le suivi, et la masquer laissait croire qu'un ticket n'a pas
+	//  d'état tant que le CS ne l'a pas touché. Seul le CS peut la MODIFIER — un
+	//  résident verrait sinon son signalement partir « Résolu », donc hors du
+	//  suivi, sans que personne l'ait regardé. Le serveur refait le contrôle :
+	//  liste blanche réservée au CS (socle 03 §1 — ce que l'interface grise n'est
+	//  qu'un confort).
+	const STATUTS = [
+		{ value: 'ouvert',   label: '\u{1F535} Ouvert' },
+		{ value: 'en_cours', label: '\u{1F7E1} En cours' },
+		{ value: 'résolu',   label: '\u{1F7E2} Résolu' },
+		{ value: 'annulé',   label: '⚫ Annulé' },
+	];
 	let perimetreCible: string[] = perimetreDefautListe();
 	let destinataireSyndic = false;
 	let destinataireCs = false;
@@ -136,6 +151,7 @@
 
 <FormulaireCreation titre="Signaler un problème">
 	<form on:submit|preventDefault={submit}>
+		<SectionFormulaire premiere>
 		<fieldset class="field" style="border:none;padding:0;margin:0">
 			<legend style="font-size:.875rem;font-weight:500;margin-bottom:.5rem;color:var(--color-text)">Catégorie *</legend>
 			<div class="cat-grid">
@@ -160,24 +176,42 @@
 				maxlength="200"
 			/>
 		</div>
+		</SectionFormulaire>
 
+		<SectionFormulaire>
+			<div class="field">
+				<label for="ticket-statut">Workflow</label>
+				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
+					{#each STATUTS as s}<option value={s.value}>{s.label}</option>{/each}
+				</select>
+				{#if !$isCS}
+					<p class="aide-champ">Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.</p>
+				{/if}
+			</div>
+		</SectionFormulaire>
+		<SectionFormulaire>
 		<div class="field">
 			<PerimetrePicker bind:value={perimetreCible} />
 		</div>
+		</SectionFormulaire>
 
+		<SectionFormulaire>
 		<div class="field">
 			<label for="ticket-description">Description *</label>
 			<RichEditor id="ticket-description" bind:value={description} placeholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)" minHeight="120px" />
 		</div>
+		</SectionFormulaire>
 
+		<SectionFormulaire titre="Pièces jointes">
 		<div class="field">
-			<FichiersUpload id="ticket-photos" bind:urls={photosUrls} max={5}
+			<FichiersUpload id="ticket-photos" bind:urls={photosUrls}
 				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
 		</div>
 
 		<div class="field">
-			<FichiersUpload id="ticket-documents" bind:urls={fichiersUrls} max={5} />
+			<FichiersUpload id="ticket-documents" bind:urls={fichiersUrls} />
 		</div>
+		</SectionFormulaire>
 
 		{#if $isCS}
 			<div class="field saisi-pour-section">
@@ -207,12 +241,14 @@
 					</div>
 				{/if}
 			</div>
+			<SectionFormulaire titre="Diffusion">
 			<CanauxNotification
 				bind:whatsapp={partagerWhatsapp}
 				bind:syndic={destinataireSyndic}
 				bind:cs={destinataireCs}
 				aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
 			/>
+			</SectionFormulaire>
 		{/if}
 
 		<!-- Pas de bouton « Annuler » ici : il vit dans l'en-tête de page (voir
@@ -226,6 +262,7 @@
 </FormulaireCreation>
 
 <style>
+	.aide-champ { font-size: .8rem; color: var(--color-text-muted); line-height: 1.45; margin: .25rem 0 0; }
 	.cat-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;

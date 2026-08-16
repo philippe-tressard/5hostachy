@@ -23,6 +23,19 @@ export const ACCEPT_DOCUMENTS = 'application/pdf,text/plain,.pdf,.doc,.docx,.xls
 /** Les deux à la fois, pour un sélecteur unique « pièce jointe ». */
 export const ACCEPT_FICHIERS = `${ACCEPT_PHOTOS},${ACCEPT_DOCUMENTS}`;
 
+/** Nombre maximum de pièces jointes par objet.
+ *
+ *  Il était écrit À LA MAIN dans chaque appel de `FichiersUpload` — 5 sur les
+ *  tickets, le calendrier et les évolutions, 6 sur les actualités, 2 sur les
+ *  petites annonces. Trois limites pour la même notion, qu'aucun écran
+ *  n'annonçait de la même façon (16/08/2026).
+ *
+ *  Porté ici, il se change une fois pour tout le site — et le libellé du
+ *  composant l'annonce, donc il ne peut plus mentir. Valeur retenue par
+ *  l'utilisateur : la plus disante des trois, élargie à 10.
+ */
+export const MAX_FICHIERS = 10;
+
 /** Extensions produites par nos propres endpoints d'upload d'image. */
 const EXTENSIONS_IMAGE = /\.(jpe?g|png|webp|gif)$/i;
 

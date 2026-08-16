@@ -142,6 +142,11 @@ class TicketCreate(BaseModel):
     titre: str
     description: str
     categorie: str = "panne"
+    #  Le workflow du ticket est saisissable DÈS la création (16/08/2026) : il
+    #  ne se changeait qu'après coup, depuis la carte, alors qu'un membre du CS
+    #  qui saisit un ticket déjà traité connaît son étape. Défaut inchangé —
+    #  « ouvert » — donc aucun appelant existant n'est affecté.
+    statut: Optional[str] = None
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
