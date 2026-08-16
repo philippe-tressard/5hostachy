@@ -23,7 +23,6 @@
 	export let submitting = false;
 	export let onFilesChange: (e: Event) => void;
 	export let onSave: () => void;
-	export let onCancel: () => void;
 </script>
 
 <div>
@@ -80,8 +79,10 @@
 		{#if devisFichierFiles && devisFichierFiles.length > 0}<span class="devis-file-note">📎 {devisFichierFiles.length} fichier{devisFichierFiles.length > 1 ? 's' : ''}</span>{/if}
 	</div>
 </div>
+<!--  PAS de bouton « Annuler » ici : la commande vit dans l'en-tête de page,
+      où le bouton d'ouverture bascule (`BoutonNouveau`). Deux commandes pour
+      un seul formulaire est le défaut relevé sur la modale du calendrier (#367). -->
 <div class="form-actions">
-	<button class="btn btn-outline" on:click={onCancel}>Annuler</button>
 	<button class="btn btn-primary" disabled={submitting} on:click={onSave}>{submitting ? '…' : 'Enregistrer'}</button>
 </div>
 

@@ -6,7 +6,9 @@
 	/** Valeurs sélectionnées — tableau de codes. Ex : ['résidence'] ou ['bat:1','parking'] */
 	export let value: string[] = [];
 
-	/** Mono-sélection (liste déroulante) ou multi (pastilles). Par défaut : multi. */
+	/** Exclusif (une seule valeur) ou multiple. Par défaut : multiple.
+	    Ne change QUE le comportement de sélection : le rendu est le même —
+	    des pastilles — dans les deux cas, comme partout ailleurs sur le site. */
 	export let mode: 'multi' | 'single' = 'multi';
 
 	import { createEventDispatcher } from 'svelte';
@@ -97,67 +99,63 @@
 		dispatch('change', value);
 	}
 
-	function changerListe(e: Event) {
-		value = [(e.target as HTMLSelectElement).value];
-		dispatch('change', value);
-	}
 </script>
 
-{#if mode === 'single'}
-	<select value={value[0] ?? defaut ?? ''} on:change={changerListe} class="perimetre-select">
-		{#if defaut}
-			<option value={defaut}>{parCode.get(defaut)?.libelle ?? defaut}</option>
-		{/if}
-		{#each niveau1 as n (n.code)}
-			<option value={n.code}>{n.libelle}</option>
-			{#each actifs.filter((e) => e.parent === n.code && e.selectionnable) as espace (espace.code)}
-				<option value={espace.code}>&nbsp;&nbsp;{n.libelle_court} › {espace.libelle}</option>
+<!--  UN SEUL RENDU pour les deux modes (16/08/2026).
+      `mode="single"` rendait ici une LISTE DÉROULANTE là où tout le reste du
+      site affiche des pastilles. Le composant était donc bien mutualisé — et
+      portait la divergence lui-même : même notion, deux apparences selon un
+      attribut, ce que `standards/11` §1 interdit (un pattern par notion).
+      Signalé sur l'écran Prestataires, seul utilisateur de ce mode avec le
+      formulaire d'édition du même écran.
+
+      Rien n'est perdu à la suppression : l'exclusivité du mode `single` vit
+      dans `basculer()` (elle remplace la valeur au lieu de l'ajouter), pas
+      dans le `<select>`. Le rendu en pastilles apporte en plus ce que la liste
+      déroulante ne pouvait pas donner : les icônes, le second niveau, et la
+      description du nœud choisi — l'information qu'AFUL notifie tout le
+      conseil syndical, par exemple. -->
+<div class="perimetre-pills">
+	{#if defaut}
+		<button type="button" class="pill" class:pill-active={estDefaut} on:click={choisirDefaut}>
+			{#if noeudDefaut?.icone}<Icon name={noeudDefaut.icone} size={15} />{/if}{noeudDefaut?.libelle ?? defaut}
+		</button>
+	{/if}
+	{#each niveau1 as n (n.code)}
+		<button
+			type="button"
+			class="pill"
+			class:pill-active={!estDefaut && selection.has(n.code)}
+			on:click={() => basculer(n.code)}
+		>
+			{#if n.icone}<Icon name={n.icone} size={15} />{/if}{n.libelle}{#if aDesEnfants.has(n.code)}<span class="pill-chevron" aria-hidden="true">›</span>{/if}
+		</button>
+	{/each}
+</div>
+
+{#if niveau2.length > 0}
+	<div class="perimetre-niveau2">
+		<p class="perimetre-precision">
+			Préciser dans {parCode.get(parentOuvert ?? '')?.libelle ?? ''}
+			<span class="perimetre-facultatif">— facultatif</span>
+		</p>
+		<div class="perimetre-pills">
+			{#each niveau2 as espace (espace.code)}
+				<button
+					type="button"
+					class="pill pill-sm"
+					class:pill-active={selection.has(espace.code)}
+					on:click={() => basculer(espace.code)}
+				>
+					{espace.libelle}
+				</button>
 			{/each}
-		{/each}
-	</select>
-{:else}
-	<div class="perimetre-pills">
-		{#if defaut}
-			<button type="button" class="pill" class:pill-active={estDefaut} on:click={choisirDefaut}>
-				{#if noeudDefaut?.icone}<Icon name={noeudDefaut.icone} size={15} />{/if}{noeudDefaut?.libelle ?? defaut}
-			</button>
-		{/if}
-		{#each niveau1 as n (n.code)}
-			<button
-				type="button"
-				class="pill"
-				class:pill-active={!estDefaut && selection.has(n.code)}
-				on:click={() => basculer(n.code)}
-			>
-				{#if n.icone}<Icon name={n.icone} size={15} />{/if}{n.libelle}{#if aDesEnfants.has(n.code)}<span class="pill-chevron" aria-hidden="true">›</span>{/if}
-			</button>
-		{/each}
-	</div>
-
-	{#if niveau2.length > 0}
-		<div class="perimetre-niveau2">
-			<p class="perimetre-precision">
-				Préciser dans {parCode.get(parentOuvert ?? '')?.libelle ?? ''}
-				<span class="perimetre-facultatif">— facultatif</span>
-			</p>
-			<div class="perimetre-pills">
-				{#each niveau2 as espace (espace.code)}
-					<button
-						type="button"
-						class="pill pill-sm"
-						class:pill-active={selection.has(espace.code)}
-						on:click={() => basculer(espace.code)}
-					>
-						{espace.libelle}
-					</button>
-				{/each}
-			</div>
 		</div>
-	{/if}
+	</div>
+{/if}
 
-	{#if descriptionActive}
-		<p class="perimetre-aide">{descriptionActive}</p>
-	{/if}
+{#if descriptionActive}
+	<p class="perimetre-aide">{descriptionActive}</p>
 {/if}
 
 <style>
@@ -171,5 +169,4 @@
 	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
 	.perimetre-facultatif { opacity: .75; }
 	.perimetre-aide { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
-	.perimetre-select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
 </style>
