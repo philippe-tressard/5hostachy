@@ -17,6 +17,12 @@
    * focus, et les lecteurs d'écran annonçaient un champ sans nom.
    */
   export let id: string | undefined = undefined;
+  /**  `id` de l'élément qui NOMME cette zone de saisie. Nécessaire parce que la
+   *   zone éditable est un `contenteditable`, pas un contrôle labelable : un
+   *   `<label for>` posé dessus n'associe rien, et le fait en silence. Depuis que
+   *   le titre de section porte le libellé (`SectionFormulaire`), c'est lui
+   *   qu'on désigne ici. */
+  export let ariaLabelledby: string | undefined = undefined;
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
@@ -31,9 +37,14 @@
         Underline,
         Placeholder.configure({ placeholder }),
       ],
-      // Tiptap remplace l'élément monté : l'id doit être posé sur la zone éditable
-      // qu'il génère, sinon `<label for>` désigne un nœud disparu.
-      editorProps: id ? { attributes: { id } } : {},
+      // Tiptap remplace l'élément monté : les attributs doivent être posés sur la
+      // zone éditable qu'il génère, sinon ils désignent un nœud disparu.
+      editorProps: {
+        attributes: {
+          ...(id ? { id } : {}),
+          ...(ariaLabelledby ? { 'aria-labelledby': ariaLabelledby } : {}),
+        },
+      },
       content: value,
       onUpdate: ({ editor }) => {
         const html = editor.getHTML();

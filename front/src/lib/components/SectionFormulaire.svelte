@@ -14,14 +14,40 @@
   (à qui ça s'adresse, comment ça se diffuse), le filet le sépare de ce qui suit.
 
   DEUX NIVEAUX DE MARQUAGE, volontairement discrets :
-    • un intitulé en petites capitales, gris — il structure sans concurrencer les
+    • un intitulé en petites capitales — il structure sans concurrencer les
       libellés de champs, qui restent l'information principale ;
     • un filet fin au-dessus, sauf pour la première section : un trait avant le
       premier groupe séparerait la section de son propre titre de formulaire.
 
-  Le composant ne décide de RIEN d'autre : ni de l'ordre (c'est l'écran qui le
-  porte, selon la skill `ux-patterns` §9 sexies), ni du contenu. Il ne fait que
-  rendre visible un groupement qui existait déjà dans l'intention.
+  ## Le titre EST le libellé quand la section n'a qu'un champ (16/08/2026)
+
+  Première livraison, l'écran affichait :
+
+      PÉRIMÈTRE
+      Périmètre *                      [Copropriété entière]
+
+  Le nom deux fois de suite, en deux typographies. Signalé par l'utilisateur,
+  capture à l'appui, dès la mise en production. La redondance venait de ce que le
+  champ portait déjà son intitulé (`PerimetrePicker`, `DestinatairePicker`,
+  `FichiersUpload` le portent tous) et que la section en ajoutait un second.
+
+  **Règle** : une section qui ne contient qu'UN champ ne répète pas son nom. Le
+  titre de section devient le libellé — il porte l'astérisque du requis (`requis`)
+  et le badge d'état (`badge`) —, et le champ n'écrit plus rien (`titre=""`).
+  Les sections à PLUSIEURS champs (Détails, Clôture, Diffusion) gardent leur
+  titre de groupe **et** les libellés de leurs champs : là, il n'y a pas
+  redondance mais hiérarchie.
+
+  ## L'accessibilité y gagne, et ce n'est pas un effet de bord
+
+  `Périmètre *` était un `<div>` : décoratif pour un lecteur d'écran, qui
+  annonçait donc un groupe de boutons sans nom. Le titre de section est
+  désormais :
+    • un vrai `<label for>` quand la section porte un contrôle labelable
+      (`<select>`, `<input>`) — l'association est alors native ;
+    • un `<h4 id>` sinon, l'appelant reliant son groupe par `aria-labelledby`.
+      C'est le cas des pastilles et de l'éditeur riche, qui ne sont PAS des
+      contrôles labelables : `for` n'y produirait aucune association, en silence.
 -->
 <script lang="ts">
 	/** Intitulé de la section — ex. « Diffusion ». Vide : aucun titre, mais la
@@ -30,10 +56,38 @@
 
 	/** Première section du formulaire : pas de filet au-dessus. */
 	export let premiere = false;
+
+	/** Ajoute l'astérisque des champs requis au titre. */
+	export let requis = false;
+
+	/** État résumé, à droite du titre — « Copropriété entière », « Tous les
+	    résidents ». On lit ce qui est retenu sans dépiler les pastilles
+	    (`ux-patterns` §9 quater). Vide : aucun badge. */
+	export let badge = '';
+
+	/** `id` du contrôle labelable unique de la section : le titre devient alors
+	    un `<label for>`. Ne l'utiliser QUE pour `<select>`, `<input>`, `<textarea>` —
+	    sur un `contenteditable` ou un groupe de boutons, `for` n'associe rien. */
+	export let pour = '';
+
+	/** `id` posé sur le titre, pour qu'un groupe s'y relie par `aria-labelledby`. */
+	export let idTitre = '';
 </script>
 
 <section class="section-formulaire" class:premiere>
-	{#if titre}<h4 class="section-titre">{titre}</h4>{/if}
+	{#if titre}
+		{#if pour}
+			<label class="section-titre" for={pour} id={idTitre || undefined}>
+				{titre}{#if requis} *{/if}
+				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
+			</label>
+		{:else}
+			<h4 class="section-titre" id={idTitre || undefined}>
+				{titre}{#if requis} *{/if}
+				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
+			</h4>
+		{/if}
+	{/if}
 	<slot />
 </section>
 
@@ -50,15 +104,32 @@
 		padding-top: 0;
 		margin-top: 0;
 	}
-	/*  Petites capitales grises : l'intitulé de section doit se lire comme un
-	    repère de structure, pas comme un libellé de champ — sinon il entre en
-	    concurrence avec « Titre », « Description » et le reste. */
+	/*  Petites capitales : l'intitulé de section se lit comme un repère de
+	    structure. Il était gris ; il reprend la couleur du texte depuis qu'il
+	    porte AUSSI le libellé du champ, l'astérisque du requis et le badge —
+	    un intitulé de champ en gris clair se lit moins bien que ce qu'il nomme. */
 	.section-titre {
+		display: flex;
+		align-items: center;
+		gap: .4rem;
+		flex-wrap: wrap;
 		margin: 0 0 .6rem;
 		font-size: .72rem;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: .06em;
-		color: var(--color-text-muted);
+		color: var(--color-text);
+	}
+	/*  Un `<label>` de section désigne un contrôle : il doit se cliquer. */
+	label.section-titre {
+		cursor: pointer;
+	}
+	/*  Le badge ne suit PAS les petites capitales du titre : c'est une valeur,
+	    pas un intitulé — la lire en majuscules espacées la rendrait illisible. */
+	.section-badge {
+		font-size: .72rem;
+		text-transform: none;
+		letter-spacing: normal;
+		font-weight: 600;
 	}
 </style>

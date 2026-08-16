@@ -96,9 +96,6 @@
 	    Ne le surcharger que pour une vraie spécificité d'écran. */
 	export let titre: string | null = null;
 
-	//  Les types annoncés ne sont pas récités à la main : ils DÉCOULENT de
-	//  `ACCEPT_DOCUMENTS` (pdf, doc, docx, xls, xlsx). Une extension ajoutée là-bas
-	//  se dit ici, au lieu de laisser un libellé mentir.
 	//  `mode` sert au rendu (vignettes ou liste). Quand il n'est pas donné, le
 	//  libellé se déduit d'`accept` plutôt que du défaut : plusieurs champs de
 	//  PHOTOS ne précisaient pas `mode`, et auraient annoncé « Documents » au-dessus
@@ -107,11 +104,20 @@
 		: accept === ACCEPT_DOCUMENTS ? 'documents'
 		: accept ? 'mixte'
 		: mode;
+	//  ⚠️ Le « (max N) » a QUITTÉ l'intitulé le 16/08/2026 : le compteur `0/N`
+	//  affiché sous le bouton le dit déjà, et le dit mieux — il se met à jour.
+	//  Deux façons d'énoncer la même limite, dont une figée, c'est la duplication
+	//  ordinaire (`standards/02` §2), en trois mots.
 	$: _titre = titre ?? (
-		_nature === 'photos'    ? `Photos (max ${max})`
-		: _nature === 'documents' ? `Documents (PDF, Word, Excel, texte — max ${max})`
-		: `Pièces jointes — photos et documents (max ${max})`
+		_nature === 'photos'    ? 'Photos'
+		: _nature === 'documents' ? 'Documents'
+		: 'Pièces jointes'
 	);
+	//  Les types acceptés ne sont pas récités à la main : ils DÉCOULENT de
+	//  `ACCEPT_DOCUMENTS`. Une extension ajoutée là-bas se dit ici, au lieu de
+	//  laisser un libellé mentir. En aide grise sous le bouton, et non dans
+	//  l'intitulé, qui est devenu le titre de section (`SectionFormulaire`).
+	$: _types = _nature === 'photos' ? '' : 'PDF, Word, Excel, texte';
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 
@@ -243,7 +249,9 @@
 		{envoi ? '⏳ Envoi…' : `\u{1F4CE} ${libelle}`}
 		<input {id} type="file" multiple accept={accepte} disabled={complet || envoi || disabled} on:change={ajouter} />
 	</label>
-	<span class="fichiers-compte">{nombre}/{max}</span>
+	<span class="fichiers-compte">
+		{nombre}/{max}{#if _types} · {_types}{/if}
+	</span>
 	{/if}
 </div>
 

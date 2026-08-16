@@ -99,9 +99,8 @@
 </SectionFormulaire>
 
 <!--  3. Workflow — où en est la prestation. -->
-<SectionFormulaire titre="Workflow">
+<SectionFormulaire titre="Suivi Kanban" pour="presta-kanban">
 	<div class="field champ-large">
-		<label for="presta-kanban">Suivi Kanban</label>
 		<select id="presta-kanban" bind:value={devisForm.statut}>
 			{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
 		</select>

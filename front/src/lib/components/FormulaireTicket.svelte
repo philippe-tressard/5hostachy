@@ -212,9 +212,8 @@
 
 		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
 		      dit qui le voit et où (section 9). -->
-		<SectionFormulaire titre="Workflow">
+		<SectionFormulaire titre="Workflow" pour="ticket-statut">
 			<div class="field champ-large">
-				<label for="ticket-statut">Suivi</label>
 				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
 					{#each STATUTS as s}<option value={s.value}>{s.label}</option>{/each}
 				</select>
