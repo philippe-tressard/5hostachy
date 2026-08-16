@@ -2,6 +2,7 @@
 import EntetePage from '$lib/components/EntetePage.svelte';
 import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
+import SelecteurCiblage from '$lib/components/SelecteurCiblage.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import AnnonceCard from '$lib/components/AnnonceCard.svelte';
@@ -509,49 +510,22 @@ Résultats visibles avant clôture
 <button type="button" class="btn btn-sm btn-outline" on:click={addOption}>+ Ajouter une option</button>
 </div>
 
-<!-- Ciblage profils -->
-<div style="margin-bottom:.75rem">
-	<div style="font-size:.9rem;font-weight:600;margin-bottom:.4rem">
-		Profils destinataires
-		{#if tousProfils}<span class="badge badge-green" style="font-size:.72rem;margin-left:.4rem">Tous</span>{/if}
-	</div>
-	<div class="ciblage-grid">
-		{#each PROFILS as p}
-			<label class="ciblage-option" class:selected={selectedProfils.includes(p.val)}>
-				<input type="checkbox" checked={selectedProfils.includes(p.val)} on:change={() => toggleProfil(p.val)} />
-				{p.label}
-			</label>
-		{/each}
-	</div>
-	{#if !tousProfils}
-		<button type="button" class="btn btn-sm btn-outline" style="margin-top:.35rem" on:click={() => selectedProfils = []}>
-			Réinitialiser (tous)
-		</button>
-	{/if}
-</div>
-
-<!-- Ciblage bâtiments -->
+<!--  Périmètre PUIS Destinataires — skill `ux-patterns` §9 ter. Les deux blocs
+      passent par `SelecteurCiblage`, qui porte le titre, le badge d'état, les
+      pastilles et la réinitialisation : ils étaient écrits deux fois ici. -->
 {#if batimentsList.length > 0}
-<div style="margin-bottom:.75rem">
-	<div style="font-size:.9rem;font-weight:600;margin-bottom:.4rem">
-		Périmètre géographique
-		{#if tousBatiments}<span class="badge badge-green" style="font-size:.72rem;margin-left:.4rem">Toute la résidence</span>{/if}
-	</div>
-	<div class="ciblage-grid">
-		{#each batimentsList as b}
-			<label class="ciblage-option" class:selected={selectedBatiments.includes(b.id)}>
-				<input type="checkbox" checked={selectedBatiments.includes(b.id)} on:change={() => toggleBatiment(b.id)} />
-				Bâtiment {b.numero}
-			</label>
-		{/each}
-	</div>
-	{#if !tousBatiments}
-		<button type="button" class="btn btn-sm btn-outline" style="margin-top:.35rem" on:click={() => selectedBatiments = []}>
-			Réinitialiser (toute la résidence)
-		</button>
-	{/if}
-</div>
+<SelecteurCiblage titre="Périmètre géographique" libelleDefaut="Toute la résidence"
+	options={batimentsList.map((b) => ({ val: b.id, label: `Bâtiment ${b.numero}` }))}
+	selection={selectedBatiments}
+	on:basculer={(e) => toggleBatiment(Number(e.detail))}
+	on:reinitialiser={() => (selectedBatiments = [])} />
 {/if}
+
+<SelecteurCiblage titre="Profils destinataires" libelleDefaut="Tous"
+	options={PROFILS.map((p) => ({ val: p.val, label: p.label }))}
+	selection={selectedProfils}
+	on:basculer={(e) => toggleProfil(String(e.detail))}
+	on:reinitialiser={() => (selectedProfils = [])} />
 
 <div class="field" style="margin-bottom:.75rem">
 	<CanauxNotification
@@ -834,17 +808,6 @@ input, textarea { padding: .45rem .6rem; border: 1px solid var(--color-border); 
 .moderation-motif { font-size: .82rem; margin-bottom: .4rem; }
 .moderation-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .moderation-aide { font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
-/* Ciblage */
-.ciblage-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
-.ciblage-option {
-	display: flex; align-items: center; gap: .35rem;
-	padding: .3rem .65rem; border: 1px solid var(--color-border); border-radius: 9999px;
-	font-size: .82rem; cursor: pointer; background: var(--color-bg);
-	transition: border-color .12s, background .12s;
-}
-.ciblage-option:hover { border-color: var(--color-primary); }
-.ciblage-option.selected { border-color: var(--color-primary); background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
-.ciblage-option input[type="checkbox"] { display: none; }
 /* Annonces */
 .filter-select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .85rem; background: var(--color-bg); }
 </style>
