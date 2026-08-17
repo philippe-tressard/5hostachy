@@ -19,6 +19,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
+	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketActif, estTicketClos } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, 'annonces-hall': { label: '\u{1F4C4} Annonces Hall', descriptif: 'Créez une annonce à afficher dans le hall des bâtiments : PDF à la charte de la résidence, envoyé par mail aux membres du CS concernés, puis conservé dans l\'historique.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
 	$: _siteNom = $siteNomStore;
@@ -127,7 +128,9 @@
 	let tkList: Ticket[] = [];
 	let tkLoading = false;
 	let tkLoaded = false;
-	let tkFilter: '' | 'ouvert' | 'en_cours' = '';
+	//  Type élargi : il énumérait les deux états filtrables, une écriture de plus
+	//  de la même liste. Options : `STATUTS_TICKET_FILTRE` ; `''` vaut « Tous ».
+	let tkFilter = '';
 	let tkExpandedId: number | null = null;
 	let tkEvolsMap: Record<number, TicketEvolution[]> = {};
 	let tkEvolsLoaded = new Set<number>();
@@ -136,12 +139,6 @@
 	let tkEditingEvolId: number | null = null;
 	let tkEditEvolSaving = false;
 
-	const TK_STATUT_OPTIONS = [
-		{ value: 'ouvert',   label: '🔵 Ouvert' },
-		{ value: 'en_cours', label: '🟡 En cours' },
-		{ value: 'résolu',   label: '🟢 Résolu' },
-		{ value: 'annulé',   label: '⚫ Annulé' },
-	];
 	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' | 'renouvellements' | 'relance' = 'kanban';
 	let reportPeriodDays: 30 | 90 | 365 = 90;
 	let reportingLoading = false;
@@ -169,21 +166,19 @@
 	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange', annule: 'badge-gray' };
 	const TYPE_LABELS: Record<string, string> = { travaux: 'Travaux', coupure: 'Coupure', ag: 'AG', maintenance: 'Maintenance', maintenance_recurrente: 'Maintenance récurrente', autre: 'Autre' };
 
-	const TK_STATUT_BADGE: Record<string, string> = { ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray', fermé: 'badge-gray' };
-	const TK_STATUT_LABELS: Record<string, string> = { ouvert: 'Ouvert', en_cours: 'En cours', résolu: 'Résolu', annulé: 'Annulé', fermé: 'Fermé' };
+	//  Badges, libellés et options du workflow : `$lib/tickets` (#415).
 	const TK_CAT_ICON: Record<string, string> = { panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}' };
 	const REPORT_DEVIS_LABELS: Record<string, string> = { en_attente: 'En attente', accepte: 'Accepté', realise: 'Réalisé', refuse: 'Refusé' };
 	const REPORT_DEVIS_BADGES: Record<string, string> = { en_attente: 'badge-blue', accepte: 'badge-orange', realise: 'badge-green', refuse: 'badge-gray' };
 
-	const TK_CLOSED = ['résolu', 'annulé', 'fermé'];
-	$: tkActive = tkList.filter(t => !TK_CLOSED.includes(t.statut));
+	$: tkActive = tkList.filter(t => !estTicketClos(t.statut));
 	$: tkFiltered = tkActive.filter(t => !tkFilter || t.statut === tkFilter);
 	$: tkPendingCount = tkList.filter(t => t.statut === 'ouvert').length;
 
 	const TK_THREE_YEARS_AGO = new Date();
 	TK_THREE_YEARS_AGO.setFullYear(TK_THREE_YEARS_AGO.getFullYear() - 3);
 	$: tkHistory = tkList
-		.filter(t => TK_CLOSED.includes(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= TK_THREE_YEARS_AGO)
+		.filter(t => estTicketClos(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= TK_THREE_YEARS_AGO)
 		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
 	$: tkHistoryByYear = (() => {
 		const groups = new Map<number, typeof tkHistory>();
@@ -368,14 +363,14 @@
 		const key = t.categorie || 'autre';
 		if (!acc[key]) acc[key] = { total: 0, ouverts: 0 };
 		acc[key].total += 1;
-		if (t.statut === 'ouvert' || t.statut === 'en_cours') acc[key].ouverts += 1;
+		if (estTicketActif(t.statut)) acc[key].ouverts += 1;
 		return acc;
 	}, {})).map(([categorie, data]) => ({ categorie, ...data })).sort((a, b) => b.total - a.total);
 	$: reportTicketBuildings = Object.entries(reportTicketSource.reduce((acc: Record<string, { total: number; ouverts: number }>, t) => {
 		const key = ticketScope(t);
 		if (!acc[key]) acc[key] = { total: 0, ouverts: 0 };
 		acc[key].total += 1;
-		if (t.statut === 'ouvert' || t.statut === 'en_cours') acc[key].ouverts += 1;
+		if (estTicketActif(t.statut)) acc[key].ouverts += 1;
 		return acc;
 	}, {})).map(([batiment, data]) => ({ batiment, ...data })).sort((a, b) => b.total - a.total);
 	$: reportDevisActifs = reportDevisList.filter((d) => d.statut === 'en_attente' || d.statut === 'accepte');
@@ -1403,8 +1398,10 @@
 {:else if onglet === 'tickets'}
 	<div style="margin-bottom:1.25rem;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
 		<button class="btn btn-sm" class:btn-primary={tkFilter === ''} on:click={() => tkFilter = ''}>Tous</button>
-		<button class="btn btn-sm" class:btn-primary={tkFilter === 'ouvert'} on:click={() => tkFilter = 'ouvert'}>&#x1F535; Ouvert</button>
-		<button class="btn btn-sm" class:btn-primary={tkFilter === 'en_cours'} on:click={() => tkFilter = 'en_cours'}>&#x1F7E1; En cours</button>
+		{#each STATUTS_TICKET_FILTRE as s}
+			<button class="btn btn-sm" class:btn-primary={tkFilter === s.value}
+				on:click={() => tkFilter = s.value}>{s.label}</button>
+		{/each}
 
 	</div>
 

@@ -12,6 +12,7 @@
  * Une seule fonction décide donc de chaque appartenance.
  */
 import type { FluxItem } from '$lib/api';
+import { estTicketClos } from '$lib/tickets';
 
 // ── Apparence par type d'élément ──────────────────────────────────────────
 //
@@ -151,7 +152,7 @@ export function isNew(item: { cree_le?: string; date: string }): boolean {
 //   3. Chronologie         — « quoi de neuf ? »
 //
 // Pourquoi épinglé n'est PAS fusionné dans les urgences : l'urgence s'auto-périme
-// (résolu/fermé sortent du filtre), pas l'épinglage. Un épinglé y resterait
+// (les états clos sortent du filtre), pas l'épinglage. Un épinglé y resterait
 // indéfiniment et le bandeau rouge mourrait d'habitude ; et le plafond de 3 des
 // urgences ferait évincer une urgence réelle par un élément épinglé.
 
@@ -173,8 +174,11 @@ export function estEpingle(item: FluxItem): boolean {
  *  n'est pas de l'histoire ancienne. */
 export function estNonResolu(item: FluxItem): boolean {
 	if (item.type === 'ticket_ouvert') {
-		const s = (item.meta?.statut as string) ?? '';
-		return !['résolu', 'fermé'].includes(s);
+		//  La cinquième liste de statuts de tickets, et la seule qui oubliait
+		//  `annulé` : un ticket annulé restait donc en tête de la chronologie
+		//  indéfiniment, comme s'il attendait encore quelque chose. `$lib/tickets`
+		//  porte la question une fois pour toutes (#415).
+		return !estTicketClos((item.meta?.statut as string) ?? '');
 	}
 	if (item.type === 'evenement') {
 		const k = (item.meta?.statut_kanban as string) ?? '';

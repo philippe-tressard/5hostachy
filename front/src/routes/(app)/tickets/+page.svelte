@@ -16,6 +16,13 @@
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
+	import {
+		STATUT_TICKET_BADGE as STATUT_BADGE,
+		STATUT_TICKET_LABELS as STATUT_LABELS,
+		STATUT_TICKET_OPTIONS as TICKET_STATUT_OPTIONS,
+		STATUTS_TICKET_FILTRE,
+		estTicketClos,
+	} from '$lib/tickets';
 
 $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
 	$: _siteNom = $siteNomStore;
@@ -45,24 +52,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	let showEvolForm: number | null = null;
 	let evolSaving = false;
 
-	const STATUT_BADGE: Record<string, string> = {
-		ouvert: 'badge-blue', en_cours: 'badge-orange', résolu: 'badge-green', annulé: 'badge-gray',
-	};
-	const STATUT_LABELS: Record<string, string> = {
-		ouvert: 'Ouvert', en_cours: 'En cours', résolu: 'Résolu', annulé: 'Annulé',
-	};
-	//  Les états proposés au changement, repris tels quels de la liste déroulante
-	//  écrite à la main que `EvolForm` remplace ici : aucun changement de
-	//  comportement dans ce lot.
-	//  ⚠️ La fiche détail (`tickets/[id]`) propose `fermé` là où cette page propose
-	//  `annulé` — divergence héritée de la duplication, signalée mais pas tranchée
-	//  ici : aligner les deux est une décision fonctionnelle, pas un refactor.
-	const TICKET_STATUT_OPTIONS = [
-		{ value: 'ouvert',   label: '🔵 Ouvert' },
-		{ value: 'en_cours', label: '🟡 En cours' },
-		{ value: 'résolu',   label: '🟢 Résolu' },
-		{ value: 'annulé',   label: '⚫ Annulé' },
-	];
+	//  Badges, libellés et options du workflow viennent de `$lib/tickets` — la
+	//  divergence que le commentaire d'ici signalait « sans la trancher » l'a été
+	//  le 17/08/2026 (#415) : elle est réglée à la source, pas écran par écran.
 	const CAT_ICON: Record<string, string> = {
 		panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}',
 	};
@@ -99,7 +91,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 	// pendant 7 jours après sa clôture, puis bascule dans l'Historique.
 	const HISTORIQUE_DELAI_MS = 7 * 24 * 60 * 60 * 1000;
 	function estArchive(t: { statut: string; mis_a_jour_le?: string; cree_le: string }): boolean {
-		if (!['résolu', 'annulé', 'fermé'].includes(t.statut)) return false;
+		if (!estTicketClos(t.statut)) return false;
 		return Date.now() - new Date(t.mis_a_jour_le ?? t.cree_le).getTime() > HISTORIQUE_DELAI_MS;
 	}
 
@@ -267,8 +259,10 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 <div class="filters">
 	<span class="filter-group">
 		<button class="btn btn-sm" class:btn-primary={filterStatut === ''} on:click={() => filterStatut = ''}>Tous</button>
-		<button class="btn btn-sm" class:btn-primary={filterStatut === 'ouvert'} on:click={() => filterStatut = 'ouvert'}>&#x1F535; Ouvert</button>
-		<button class="btn btn-sm" class:btn-primary={filterStatut === 'en_cours'} on:click={() => filterStatut = 'en_cours'}>&#x1F7E1; En cours</button>
+		{#each STATUTS_TICKET_FILTRE as s}
+			<button class="btn btn-sm" class:btn-primary={filterStatut === s.value}
+				on:click={() => filterStatut = s.value}>{s.label}</button>
+		{/each}
 	</span>
 	<span class="filter-sep"></span>
 	<span class="filter-group">

@@ -13,6 +13,8 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from app.models.core import (
+    STATUTS_TICKET_ACTIFS,
+    STATUTS_TICKET_CLOS,
     CommandeAcces,
     ConfigSite,
     ContratEntretien,
@@ -185,7 +187,7 @@ def _relances_syndic(ctx: ContexteFlux) -> int:
     return ctx.session.exec(
         select(func.count(Ticket.id)).where(
             Ticket.destinataire_syndic == True,  # noqa: E712  (colonne SQL, pas un booléen Python)
-            Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
+            Ticket.statut.notin_(STATUTS_TICKET_CLOS),
             Ticket.non_relancable == False,  # noqa: E712
             Ticket.mis_a_jour_le < seuil,
         )
@@ -200,7 +202,7 @@ def calculer(ctx: ContexteFlux) -> FluxSante:
     #  filtré — mais elle bougeait alors avec les filtres de l'utilisateur, seule
     #  de la rangée à le faire (#399).
     tous = [t for t in ctx.session.exec(select(Ticket)).all() if ticket_visible(t, ctx.user)]
-    ouverts = [t for t in tous if t.statut in ("ouvert", "en_cours")]
+    ouverts = [t for t in tous if t.statut in STATUTS_TICKET_ACTIFS]
     urgents = [t for t in ouverts if t.categorie == "urgence"]
 
     # Temps moyen de résolution sur les 30 derniers jours

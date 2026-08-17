@@ -30,9 +30,20 @@ from app.models.core import (
 )
 from app.schemas import TicketEvolutionRead, TicketRead
 
+#: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
+#:
+#: Les quatre premières clés sont les états du workflow (`StatutTicket`) ;
+#: `fermé` n'en est plus un depuis le 17/08/2026 (#415, migration 0149) mais
+#: reste **affichable** : le fil de tickets anciens raconte « Ouvert → Fermé »,
+#: et une ligne d'histoire ne se réécrit pas. Sans ce libellé, ces évolutions
+#: afficheraient la valeur brute.
+#:
+#: Un couvercle vérifie que ce dictionnaire couvre l'énumération et rien de
+#: fantaisiste : `api/tests/test_statuts_tickets.py`.
 STATUT_LABELS = {
     "ouvert": "Ouvert", "en_cours": "En cours",
-    "résolu": "Résolu", "annulé": "Annulé", "fermé": "Fermé",
+    "résolu": "Résolu", "annulé": "Annulé",
+    "fermé": "Fermé",  # historique seulement — cf. STATUTS_TICKET_HISTORIQUES
 }
 
 

@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Annotated, Optional, List
 from pydantic import BaseModel, BeforeValidator, field_validator
 
-from app.models.core import StatutUtilisateur, RoleUtilisateur
+from app.models.core import StatutTicket, StatutUtilisateur, RoleUtilisateur
 
 
 def liste_depuis_json(v):
@@ -156,6 +156,11 @@ class TicketCreate(BaseModel):
     #  ne se changeait qu'après coup, depuis la carte, alors qu'un membre du CS
     #  qui saisit un ticket déjà traité connaît son étape. Défaut inchangé —
     #  « ouvert » — donc aucun appelant existant n'est affecté.
+    #  Reste `str` — délibérément, et c'est le seul des trois : le routeur y
+    #  applique une liste blanche **dérivée de l'énumération** (aucune liste
+    #  écrite à la main, donc rien qui puisse en diverger) et retombe sur
+    #  « ouvert » au lieu de refuser. Un type refuserait la création entière
+    #  pour un champ accessoire.
     statut: Optional[str] = None
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
@@ -224,7 +229,12 @@ class TicketRead(BaseModel):
 
 
 class TicketUpdate(BaseModel):
-    statut: Optional[str] = None
+    #  ⚠️ `Optional[str]` jusqu'au 17/08/2026, et c'était la **seule** barrière :
+    #  `Ticket` est un modèle `table=True`, donc SQLModel ne valide rien à
+    #  l'affectation. `PATCH /tickets/{id}` écrivait en base la chaîne qu'on lui
+    #  donnait, quelle qu'elle soit. #415 décrivait ce chemin comme « validé par
+    #  le type » : il ne l'est que depuis cette ligne.
+    statut: Optional[StatutTicket] = None
     priorite: Optional[str] = None
     titre: Optional[str] = None
     description: Optional[str] = None
@@ -267,7 +277,11 @@ class MessageRead(BaseModel):
 class TicketEvolutionCreate(BaseModel):
     type: str  # commentaire | etat
     contenu: Optional[str] = None
-    nouveau_statut: Optional[str] = None
+    #  Même type que `TicketUpdate.statut`, donc **même verdict** : les deux
+    #  chemins de changement d'état d'un ticket valident désormais la même
+    #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
+    #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
+    nouveau_statut: Optional[StatutTicket] = None
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None

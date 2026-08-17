@@ -18,7 +18,7 @@ table, pas un quatrième bloc à recopier.
 """
 from sqlmodel import select
 
-from app.models.core import Ticket, TicketEvolution
+from app.models.core import STATUTS_TICKET_ACTIFS, Ticket, TicketEvolution
 from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
@@ -152,7 +152,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                     **_pieces_jointes(evol, tk),
                 },
             ))
-        elif nouveau in ("ouvert", "en_cours"):
+        elif nouveau in STATUTS_TICKET_ACTIFS:
             cartes.append(_carte_mise_a_jour(
                 ctx, evol, tk,
                 ident=f"tk_{tk.id}",

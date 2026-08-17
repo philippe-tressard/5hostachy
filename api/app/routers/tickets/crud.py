@@ -11,6 +11,7 @@ from sqlmodel import Session, or_, select
 from app.auth.deps import get_current_user, require_admin, peut_commander
 from app.database import get_session
 from app.models.core import (
+    STATUTS_TICKET_CLOS,
     Notification,
     RoleUtilisateur,
     StatutTicket,
@@ -321,7 +322,7 @@ def update_ticket(
             )
         if body.statut is not None:
             ticket.statut = body.statut
-            if body.statut in (StatutTicket.résolu, StatutTicket.annulé, StatutTicket.fermé):
+            if body.statut in STATUTS_TICKET_CLOS:
                 ticket.ferme_le = datetime.utcnow()
         if body.priorite is not None:
             ticket.priorite = body.priorite

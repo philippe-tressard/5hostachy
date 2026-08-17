@@ -10,7 +10,14 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Notification, RoleUtilisateur, Ticket, TicketEvolution, Utilisateur
+from app.models.core import (
+    STATUTS_TICKET_CLOS,
+    Notification,
+    RoleUtilisateur,
+    Ticket,
+    TicketEvolution,
+    Utilisateur,
+)
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
@@ -21,8 +28,12 @@ from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
 
 router = APIRouter()
 
-#: États qu'une évolution peut faire prendre à un ticket.
-_STATUTS_ADMIS = ("ouvert", "en_cours", "résolu", "fermé")
+#  `_STATUTS_ADMIS = ("ouvert", "en_cours", "résolu", "fermé")` vivait ici, et
+#  refusait `annulé` depuis le tout premier commit — le jour où les écrans se
+#  sont mis à le proposer, le même geste réussissait depuis la fiche du ticket
+#  et échouait depuis la liste (#415). La liste ne revient pas : le type
+#  `StatutTicket` porté par `TicketEvolutionCreate.nouveau_statut` valide, et il
+#  est le seul à le faire.
 
 
 @router.get("/{ticket_id}/evolutions", response_model=list[TicketEvolutionRead])
@@ -163,8 +174,6 @@ def add_evolution(
         raise HTTPException(422, "Type invalide (commentaire ou etat)")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
-    if body.type == "etat" and body.nouveau_statut not in _STATUTS_ADMIS:
-        raise HTTPException(422, "statut invalide")
 
     ancien_statut = ticket.statut if body.type == "etat" else None
     evol = TicketEvolution(
@@ -179,7 +188,11 @@ def add_evolution(
 
     if body.type == "etat":
         ticket.statut = body.nouveau_statut
-        if body.nouveau_statut in ("résolu", "fermé"):
+        #  `("résolu", "fermé")` ici contre `(résolu, annulé, fermé)` dans le
+        #  PATCH : les deux chemins ne dataient pas la même clôture, et annuler
+        #  un ticket depuis le fil ne posait aucun `ferme_le`. Une seule liste,
+        #  désormais — celle du modèle.
+        if body.nouveau_statut in STATUTS_TICKET_CLOS:
             ticket.ferme_le = datetime.utcnow()
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)

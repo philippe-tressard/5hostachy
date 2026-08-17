@@ -13,6 +13,12 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
 	import { perimetreLabel } from '$lib/utils';
+	import {
+		STATUTS_TICKET,
+		STATUT_TICKET_BADGE,
+		STATUT_TICKET_LABELS as STATUT_LABELS,
+		estTicketClos,
+	} from '$lib/tickets';
 
 	$: _siteNom = $siteNomStore;
 
@@ -77,24 +83,16 @@
 
 	$: ticketId = Number($page.params.id);
 
-	const STATUTS = [
-		{ value: 'ouvert',   label: 'Ouvert',   cls: 'badge-blue' },
-		{ value: 'en_cours', label: 'En cours', cls: 'badge-orange' },
-		{ value: 'résolu',   label: 'Résolu',   cls: 'badge-green' },
-		{ value: 'annulé',   label: 'Annulé',   cls: 'badge-gray' },
-	];
-
-	const STATUT_LABELS: Record<string, string> = {
-		ouvert: 'Ouvert', en_cours: 'En cours', 'résolu': 'Résolu', 'annulé': 'Annulé',
-	};
-
-	const TICKET_STATUT_OPTIONS = [
-		{ value: 'ouvert',   label: '🔵 Ouvert' },
-		{ value: 'en_cours', label: '🟡 En cours' },
-		{ value: 'résolu',   label: '🟢 Résolu' },
-		{ value: 'fermé',    label: '⚫ Fermé' },
-	];
-
+	//  ── Un seul geste pour changer d'état, sur cet écran comme ailleurs ──────
+	//  Cette page portait DEUX commandes pour le même geste, à quelques
+	//  centimètres l'une de l'autre : les boutons « Changer le statut » (qui
+	//  proposaient `annulé`) et le formulaire d'évolution (qui proposait `fermé`
+	//  à la place). Arbitré le 17/08/2026 (#415) : les boutons restent, le
+	//  formulaire d'évolution ne sert plus qu'au commentaire.
+	//
+	//  Le workflow ne disparaît pas du fil pour autant : un clic sur un bouton
+	//  écrit lui-même son évolution « Statut : X → Y » dans l'historique, à côté
+	//  des commentaires (`api/app/routers/tickets/crud.py`).
 	const CATEGORIES: Record<string, string> = {
 		panne:    '\u{1F6E0}️ Panne',
 		nuisance: '\u{1F4E2} Nuisance',
@@ -115,8 +113,13 @@
 		return safeHtml(raw);
 	}
 
-	$: statusInfo = STATUTS.find((s) => s.value === ticket?.statut) ?? STATUTS[0];
-	$: canReply = ticket && !['fermé'].includes(ticket.statut);
+	$: statutBadge = STATUT_TICKET_BADGE[ticket?.statut ?? ''] ?? 'badge-gray';
+	$: statutLabel = STATUT_LABELS[ticket?.statut ?? ''] ?? ticket?.statut ?? '';
+	//  `canReply` valait `statut !== 'fermé'` — le seul état qui interdisait de
+	//  répondre, et il n'existe plus (#415, migration 0149). La condition n'est
+	//  pas transposée à `clos` : elle fermerait la discussion sur les tickets
+	//  résolus, qui l'acceptent aujourd'hui. Répondre reste donc toujours
+	//  possible ; c'est `clos` qui change le libellé du bouton, plus bas.
 
 	// ── Lire d'abord, écrire ensuite ───────────────────────────────────────
 	// Cette page est atteinte surtout par un lien de notification (WhatsApp,
@@ -129,7 +132,7 @@
 	// notification ne portent pas.
 	let repondreOuvert = false;
 	let msgVise: number | null = null;
-	$: clos = ticket && ['résolu', 'annulé', 'fermé'].includes(ticket.statut);
+	$: clos = ticket && estTicketClos(ticket.statut);
 
 	async function loadEvolutions() {
 		try { evolutions = await ticketsApi.evolutions(ticketId); } catch { /* silencieux */ }
@@ -225,7 +228,7 @@
 {:else}
 	<div class="ticket-header card" style="max-width:720px;margin-bottom:1rem">
 		<div class="ticket-meta">
-			<span class="badge {statusInfo.cls}">{statusInfo.label}</span>
+			<span class="badge {statutBadge}">{statutLabel}</span>
 			<span class="badge badge-default">{CATEGORIES[ticket.categorie] ?? ticket.categorie}</span>
 			{#if ticket.priorite && ticket.priorite !== 'normale'}
 				<span class="badge {PRIORITE[ticket.priorite]?.cls ?? 'badge-default'}">{PRIORITE[ticket.priorite]?.label}</span>
@@ -276,7 +279,7 @@
 			<div class="status-actions" style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)">
 				<span style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">Changer le statut :</span>
 				<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem">
-					{#each STATUTS as s}
+					{#each STATUTS_TICKET as s}
 						<button
 							class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-secondary'}"
 							disabled={updatingStatus || ticket.statut === s.value}
@@ -310,7 +313,7 @@
 			{/if}
 		{/each}
 
-		{#if canReply && !repondreOuvert}
+		{#if !repondreOuvert}
 			<div class="card" style="text-align:center;padding:.9rem">
 				<button type="button" class="btn btn-outline" on:click={() => (repondreOuvert = true)}>
 					{clos ? '↩️ Rouvrir la discussion' : '💬 Répondre'}
@@ -318,7 +321,7 @@
 			</div>
 		{/if}
 
-		{#if canReply && repondreOuvert}
+		{#if repondreOuvert}
 			<form class="reply-form card" on:submit|preventDefault={sendMessage}>
 				<RichEditor bind:value={newContent} placeholder="Votre réponse…" minHeight="80px" />
 				{#if $isCS}
@@ -352,10 +355,6 @@
 					</button>
 				</div>
 			</form>
-		{:else}
-			<p style="font-size:.875rem;color:var(--color-text-muted);text-align:center;padding:1rem">
-				Ce ticket est fermé.
-			</p>
 		{/if}
 	</div>
 
@@ -365,17 +364,16 @@
 			<h2 style="font-size:1rem;font-weight:600;margin:0">&#x1F4CB; Fil de suivi</h2>
 			{#if $isCS}
 				<button class="btn btn-outline btn-sm" on:click={() => { showEvolForm = !showEvolForm; }}>
-					{showEvolForm ? '✕ Annuler' : '\u{1F4AC} Commenter / état'}
+					{showEvolForm ? '✕ Annuler' : '\u{1F4AC} Commenter'}
 				</button>
 			{/if}
 		</div>
 
 		{#if showEvolForm}
 			<div class="evol-form card" style="margin-bottom:.75rem">
-				<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter une évolution</h4>
+				<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter un commentaire</h4>
 				{#key showEvolForm}
 				<EvolForm
-					statutOptions={TICKET_STATUT_OPTIONS}
 					statutLabels={STATUT_LABELS}
 					currentStatut={ticket?.statut ?? ''}
 					showNotifs={$isCS}

@@ -25,6 +25,6 @@ FAQ_INITIALE = [
 ]
 
 FAQ_COMPLEMENTAIRE = [
-    ("\U0001f4f1 Application 5Hostachy", "Pourquoi mes anciens tickets n'apparaissent plus dans la liste principale ?", "Les tickets résolus, annulés ou fermés depuis plus de 48 h sont automatiquement déplacés dans la section <strong>Historique de mes tickets</strong>, en bas de la page Tickets. Cela permet de garder la liste principale centrée sur les demandes encore actives ou récentes.", 13),
+    ("\U0001f4f1 Application 5Hostachy", "Pourquoi mes anciens tickets n'apparaissent plus dans la liste principale ?", "Les tickets résolus ou annulés depuis plus de 7 jours sont automatiquement déplacés dans la section <strong>Historique de mes tickets</strong>, en bas de la page Tickets. Cela permet de garder la liste principale centrée sur les demandes encore actives ou récentes.", 13),
     ("\U0001f4f1 Application 5Hostachy", "Que voit le conseil syndical lorsqu'il traite mon ticket ?", "Dans l'<strong>Espace CS</strong>, le conseil syndical voit le détail du ticket, son historique, ainsi que le <strong>prénom / nom</strong> et le <strong>bâtiment</strong> du demandeur afin d'identifier plus rapidement le contexte de la demande. Le CS peut ensuite changer le statut et ajouter un commentaire de suivi.", 14),
 ]

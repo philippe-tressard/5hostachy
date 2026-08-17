@@ -29,6 +29,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
+	import { STATUT_TICKET_OPTIONS } from '$lib/tickets';
 
 	const dispatch = createEventDispatcher<{ cree: Ticket }>();
 
@@ -42,13 +43,8 @@
 	//  résident verrait sinon son signalement partir « Résolu », donc hors du
 	//  suivi, sans que personne l'ait regardé. Le serveur refait le contrôle :
 	//  liste blanche réservée au CS (socle 03 §1 — ce que l'interface grise n'est
-	//  qu'un confort).
-	const STATUTS = [
-		{ value: 'ouvert',   label: '\u{1F535} Ouvert' },
-		{ value: 'en_cours', label: '\u{1F7E1} En cours' },
-		{ value: 'résolu',   label: '\u{1F7E2} Résolu' },
-		{ value: 'annulé',   label: '⚫ Annulé' },
-	];
+	//  qu'un confort). Les options viennent de `$lib/tickets` — quatrième copie
+	//  de cette liste jusqu'au 17/08/2026 (#415).
 	let perimetreCible: string[] = perimetreDefautListe();
 	let destinataireSyndic = false;
 	let destinataireCs = false;
@@ -215,7 +211,7 @@
 		<SectionFormulaire titre="Workflow" pour="ticket-statut">
 			<div class="field champ-large">
 				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
-					{#each STATUTS as s}<option value={s.value}>{s.label}</option>{/each}
+					{#each STATUT_TICKET_OPTIONS as s}<option value={s.value}>{s.label}</option>{/each}
 				</select>
 				{#if !$isCS}
 					<p class="aide-champ">Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.</p>
