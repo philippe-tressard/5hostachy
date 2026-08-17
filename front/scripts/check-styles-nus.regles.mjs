@@ -111,9 +111,11 @@ export const TOLERANCES = {
 	//  (aucune — clé de la forme `chemin.svelte:input`)
 
 	//  ── libelle-champ : la typographie de `.field label` réécrite à la main ──
-	'lib/components/FormulaireTicket.svelte::libelle-champ':
-		'la typographie du libellé est recopiée sur un `<legend>` de fieldset (l. ~210) — ' +
-		'un `<legend>` n’est pas un `.field label` : il manque une classe pour lui, à décider',
+	//  ⚠️ `FormulaireTicket` a quitté cette liste le 18/08/2026 : le `<legend>` qui
+	//  recopiait la typographie a disparu avec le `<fieldset>` de la catégorie,
+	//  devenue une section à part entière dont le TITRE est le libellé (§9 septies).
+	//  La question « quelle classe pour un `<legend>` ? » ne se pose plus — il n'y
+	//  en a plus. Le contrôle l'a signalé de lui-même, comme il doit.
 	'routes/(app)/prestataires/+page.svelte::libelle-champ':
 		'deux libellés écrits à la main (l. ~1857 et ~1861) — écran de 2 182 lignes déjà ' +
 		'déclaré en exception de `lint:formulaires` et de `lint:soumission`, à découper avant',

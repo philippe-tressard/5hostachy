@@ -298,7 +298,13 @@ let consommateurs = 0;
 //  alors le libellé du champ — `SectionFormulaire`).
 const titresAdmis = new Set(Object.values(LIBELLES));
 for (const { decl } of entites) {
-	for (const s of decl.sections ?? []) if (s.titreEcran) titresAdmis.add(s.titreEcran);
+	//  `titreEcran` peut être une LISTE : une section qui groupe plusieurs champs
+	//  nommés en porte un par champ (la section 2 du ticket : « Catégorie » et
+	//  « Saisi pour »). Une section reste une section — c'est son contenu qui a
+	//  plusieurs noms, pas elle qui se scinde.
+	for (const s of decl.sections ?? []) {
+		for (const t of [s.titreEcran ?? []].flat()) titresAdmis.add(t);
+	}
 }
 
 for (const chemin of tousSvelte) {

@@ -64,14 +64,18 @@
 	/** Le lecteur peut-il corriger ou supprimer ? (administrateur) */
 	export let peutAdministrer = false;
 	/**  Ce que le corps de la carte montre. La page en est propriétaire : elle
-	     seule sait qu'un seul formulaire doit être ouvert à la fois. */
-	export let mode: 'lecture' | 'edition' | 'evolution' = 'lecture';
+	     seule sait qu'un seul formulaire doit être ouvert à la fois.
+	     ⚠️ `evolution` s'est scindé en `commentaire` et `etat` (#426) : le geste
+	     est déclaré par le bouton cliqué, et non redemandé par une pastille une
+	     fois le formulaire ouvert. */
+	export let mode: 'lecture' | 'edition' | 'commentaire' | 'etat' = 'lecture';
 	/** Enregistrement d'une évolution en cours — porté par la page (appel d'API). */
 	export let evolutionEnCours = false;
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
 		commenter: void;
+		changerEtat: void;
 		modifier: void;
 		supprimer: void;
 		annuler: void;
@@ -109,9 +113,14 @@
 		</div>
 		<div class="tk-row-right">
 			<span class="tk-row-date">{fmtDate(dateAffichee)}</span>
+			<!--  DEUX points d'entrée, et c'est le fond de #426 : le formulaire
+			      redemandait en pastilles ce que ce bouton venait de déclarer. Le
+			      geste se dit ici, une fois. -->
 			{#if peutCommenter}
-				<button class="btn-icon" aria-label="Commenter / changer état" title="Commenter / état"
+				<button class="btn-icon" aria-label="Commenter" title="Commenter"
 					on:click|stopPropagation={() => dispatch('commenter')}>&#x1F4AC;</button>
+				<button class="btn-icon" aria-label="Changer l’état" title="Changer l’état"
+					on:click|stopPropagation={() => dispatch('changerEtat')}>&#x1F504;</button>
 			{/if}
 			{#if peutAdministrer}
 				<button class="btn-icon" aria-label="Modifier" title="Modifier le ticket"
@@ -136,15 +145,15 @@
 				<div class="tk-formulaire">
 					<FormulaireTicket {ticket} on:modifie on:annule={() => dispatch('annuler')} />
 				</div>
-			{:else if mode === 'evolution'}
+			{:else if mode === 'commentaire' || mode === 'etat'}
 				<div class="tk-formulaire">
 					<EvolForm idPrefixe="tk-evol-{ticket.id}"
+						evolType={mode}
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
 						showNotifs={peutCommenter}
 						showFiles={true}
-						separatePhotosAndDocs={true}
 						saving={evolutionEnCours}
 						on:submit={(e) => dispatch('evoluer', e.detail)}
 						on:cancel={() => dispatch('annuler')}

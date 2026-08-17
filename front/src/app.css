@@ -454,7 +454,33 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
    liste (actualités, sondages). Le même geste — créer un contenu — n'avait donc
    pas la même largeur selon l'écran. Signalé par l'utilisateur le 15/08/2026.
    ────────────────────────────────────────────────────────────────────────── */
-.largeur-saisie { max-width: 720px; }
+/*  ⚠️ 18/08/2026 — la largeur de saisie devient une VARIABLE, parce qu'elle
+    appartient au SQUELETTE (R1) et non aux pages. Signalé par l'utilisateur :
+
+    > « les différents formulaires doivent avoir la même largeur, notamment la
+    >   création/édition (moins large) et Liste ; cette largeur, quelle que soit
+    >   la page et le formulaire, doit être fixe et responsive adaptée à la
+    >   largeur de l'écran du terminal avec une marge optimale. »
+
+    Le cap à 720 px était plus étroit que tout le reste de la page : sur un écran
+    large, la boîte de création s'arrêtait bien avant les cartes de la liste
+    posées juste en dessous, et le regard butait sur deux bords verticaux
+    différents pour le même contenu.
+
+    La valeur par défaut reste 720 px : elle vaut pour tous les écrans TANT QUE la
+    règle n'est pas généralisée. La page Tickets porte la nouvelle (`100%` du
+    conteneur, dont la marge est déjà responsive) — un écran d'abord, constaté,
+    puis étendu (R5). Le jour où elle est retenue partout, c'est cette ligne-ci
+    qui change, et l'exception de la page disparaît. */
+:root { --largeur-saisie: 720px; }
+.largeur-saisie { max-width: var(--largeur-saisie); }
+
+/*  L'écran pilote. L'attribut est posé par le SQUELETTE (`(app)/+layout.svelte`),
+    jamais par une page : une page qui déclarerait sa propre largeur divergerait au
+    premier changement — c'est ce que `.page-header` réécrite dans six pages a déjà
+    coûté (#363). La marge, elle, n'est pas redite : `.container` la porte, et elle
+    est déjà responsive. */
+.page[data-largeur-saisie='pleine'] { --largeur-saisie: 100%; }
 
 /* ── Norme UX : carte de liste expansible ─────────────────────────────────
 

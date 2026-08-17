@@ -54,6 +54,8 @@ router.include_router(crud.router)
 from .commun import (  # noqa: E402  (après le montage, pour la lisibilité)
     ARCHIVAGE_DELAI_HEURES,
     PUBLIE_VISIBILITE_JOURS,
+    STATUT_LABELS,
+    STATUTS_PUBLICATION,
     _is_archived,
 )
 
@@ -61,5 +63,7 @@ __all__ = [
     "router",
     "ARCHIVAGE_DELAI_HEURES",
     "PUBLIE_VISIBILITE_JOURS",
+    "STATUT_LABELS",
+    "STATUTS_PUBLICATION",
     "_is_archived",
 ]

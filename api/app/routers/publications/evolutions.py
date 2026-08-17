@@ -18,7 +18,7 @@ from app.schemas import EvolutionCreate, EvolutionRead, PublicationEvolutionUpda
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
-from .commun import evolution_read
+from .commun import STATUTS_PUBLICATION, evolution_read
 from .courriels import (
     _envoyer_email_externe_publication, _envoyer_email_syndic_publication,
 )
@@ -64,7 +64,7 @@ def add_evolution(
         raise HTTPException(404, "Publication introuvable")
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
-    if body.type == "etat" and body.nouveau_statut not in ("publie", "en_cours", "resolu", "annule"):
+    if body.type == "etat" and body.nouveau_statut not in STATUTS_PUBLICATION:
         raise HTTPException(422, "statut invalide")
 
     ancien_statut = pub.statut if body.type == "etat" else None

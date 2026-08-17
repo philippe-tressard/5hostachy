@@ -10,6 +10,7 @@
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
+	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { stripHtml, fmtMontant, perimetreDefautListe } from '$lib/utils';
@@ -135,6 +136,7 @@
 	let tkEvolsMap: Record<number, TicketEvolution[]> = {};
 	let tkEvolsLoaded = new Set<number>();
 	let tkShowForm: number | null = null;
+	let tkGeste: 'commentaire' | 'etat' = 'commentaire';
 	let tkEvolSaving = false;
 	let tkEditingEvolId: number | null = null;
 	let tkEditEvolSaving = false;
@@ -557,8 +559,10 @@
 		} catch { /* silencieux */ }
 	}
 
-	function tkOpenForm(id: number) {
+	//  Le geste vient du bouton cliqué, il n'est plus redemandé en pastilles (#426).
+	function tkOpenForm(id: number, geste: 'commentaire' | 'etat') {
 		tkShowForm = id;
+		tkGeste = geste;
 		tkExpandedId = id;
 	}
 
@@ -1436,8 +1440,8 @@
 					</div>
 					<div class="tk-row-right">
 						<span class="tk-row-date">{fmtDate(t.mis_a_jour_le ?? t.cree_le)}</span>
-						<button class="btn-icon" aria-label="Traiter" title="Changer état / commenter"
-							on:click|stopPropagation={() => tkOpenForm(t.id)}>&#x1F4AC;</button>
+						<button class="btn-icon" aria-label="Commenter" title="Commenter" on:click|stopPropagation={() => tkOpenForm(t.id, 'commentaire')}>&#x1F4AC;</button>
+						<button class="btn-icon" aria-label="Changer l’état" title="Changer l’état" on:click|stopPropagation={() => tkOpenForm(t.id, 'etat')}>&#x1F504;</button>
 						<span class="chevron" class:open={expanded}>›</span>
 					</div>
 				</div>
@@ -1452,13 +1456,13 @@
 						<div class="evol-form">
 							{#key tkShowForm}
 							<EvolForm idPrefixe="cs-tk-evol-{t.id}"
+								evolType={tkGeste}
 								statutOptions={TK_STATUT_OPTIONS}
 								statutLabels={TK_STATUT_LABELS}
 								currentStatut={t.statut ?? ''}
 								showNotifs={false}
 								showEmail={false}
 								showFiles={true}
-								separatePhotosAndDocs={true}
 								saving={tkEvolSaving}
 								on:submit={(e) => tkSubmitEvol(t, e)}
 								on:cancel={() => (tkShowForm = null)}
@@ -1477,58 +1481,43 @@
 							<small style="color:var(--color-text-muted);font-size:.78rem">
 								Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span>
 							</small>
+							<!--  L'HISTORIQUE — cinquième des six recopies du fil relevées par
+							      #431, remplacée ici (#433). Celle-ci n'avait PAS la
+							      pagination des autres : un ticket à trente entrées les
+							      déroulait toutes. Elle habillait aussi son bouton
+							      « Modifier » par six déclarations en ligne. Tout cela vit
+							      une fois, dans la rubrique, avec ses styles — Svelte les
+							      scope au composant qui rend le balisage. -->
 							{#if evols.length > 0}
-								{@const sorted = [...evols].sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())}
-								<div class="evol-list">
-									{#each sorted as evol, i (evol.id)}
-										{#if i > 0}<hr class="evol-sep" />{/if}
-										<div class="evol-item evol-{evol.type}">
-											<span class="evol-icon">{#if evol.type === 'etat'}&#x1F504;{:else if evol.type === 'reponse'}&#x1F4AC;{:else}&#x1F4DD;{/if}</span>
-											<div class="evol-body">
-												<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
-													<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
-													{#if (evol.type === 'commentaire' || (evol.type === 'etat' && evol.contenu)) && tkEditingEvolId !== evol.id}
-														<button type="button" on:click|stopPropagation={() => tkEditingEvolId = evol.id}
-															style="border:1px solid var(--color-border);background:var(--color-bg-alt);color:var(--color-text);cursor:pointer;padding:.15rem .4rem;font-size:.75rem;flex-shrink:0;border-radius:5px;line-height:1.4" aria-label="Modifier">✏️ Modifier</button>
-													{/if}
-												</div>
-												{#if evol.type === 'etat'}
-													<span class="evol-text">Statut : <strong>{TK_STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{TK_STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong></span>
-												{/if}
-												{#if evol.type === 'commentaire' || evol.type === 'etat'}
-													{#if tkEditingEvolId === evol.id}
-													<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
-														{#key tkEditingEvolId}
-														<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}"
-															editMode={true}
-															initialContenu={evol.contenu || ''}
-															initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-															showFiles={true}
-															separatePhotosAndDocs={true}
-															saving={tkEditEvolSaving}
-															on:submit={(e) => tkSaveEvolEdit(t.id, e)}
-															on:cancel={() => tkEditingEvolId = null}
-														/>
-														{/key}
-													</div>
-													{:else if evol.contenu}
-														<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
-													{/if}
-												{:else if evol.contenu}
-													<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
-												{/if}
-												{#if evol.fichiers_urls?.length && tkEditingEvolId !== evol.id}
-													<div style="margin-top:.3rem">
-														<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
-													</div>
-												{/if}
-											</div>
-										</div>
-									{/each}
+								<div class="cs-fil">
+									<RubriqueHistorique
+										evolutions={evols}
+										statutLabels={TK_STATUT_LABELS}
+										peutModifier={true}
+										enEdition={tkEditingEvolId}
+										on:modifier={(e) => (tkEditingEvolId = e.detail)}
+									>
+										<svelte:fragment slot="edition" let:evol>
+											{#key tkEditingEvolId}
+												<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}"
+													editMode={true}
+													initialContenu={evol.contenu || ''}
+													initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+													showFiles={true}
+													saving={tkEditEvolSaving}
+													on:submit={(e) => tkSaveEvolEdit(t.id, e)}
+													on:cancel={() => tkEditingEvolId = null}
+												/>
+											{/key}
+										</svelte:fragment>
+									</RubriqueHistorique>
 								</div>
 							{/if}
-							<div style="margin-top:.75rem">
-								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id)}>&#x1F504; Changer état / commenter</button>
+							<!--  Un bouton par geste (#426). ⚠️ Ils doublent ceux de l'en-tête
+							      de la carte — c'était déjà le cas avant ce lot ; à arbitrer. -->
+							<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id, 'commentaire')}>&#x1F4AC; Commenter</button>
+								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id, 'etat')}>&#x1F504; Changer l’état</button>
 							</div>
 						{/if}
 					</div>

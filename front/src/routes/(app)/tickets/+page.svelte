@@ -43,6 +43,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	let evolsMap: Record<number, TicketEvolution[]> = {};
 	let evolsLoaded = new Set<number>();
 	let showEvolForm: number | null = null;
+	let gesteEvol: 'commentaire' | 'etat' = 'commentaire';
 	let editingTicket: number | null = null;
 	let evolSaving = false;
 
@@ -148,9 +149,12 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	//  Ouvrir un formulaire déplie sa carte et referme l'autre : deux formulaires
 	//  ouverts sur le même écran, c'est deux « Enregistrer » pour deux gestes
 	//  différents à quelques centimètres.
-	function openEvolForm(t: Ticket) {
+	//  Le geste vient du bouton cliqué — `💬` commenter, `🔄` changer l'état — et
+	//  il n'est plus redemandé dans le formulaire (#426).
+	function openEvolForm(t: Ticket, geste: 'commentaire' | 'etat') {
 		editingTicket = null;
 		showEvolForm = t.id;
+		gesteEvol = geste;
 		expandedTickets = new Set([t.id]);
 	}
 
@@ -273,11 +277,13 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		{evolsMap}
 		ticketEnEdition={editingTicket}
 		ticketEnEvolution={showEvolForm}
+		gesteEvolution={gesteEvol}
 		evolutionEnCours={evolSaving}
 		peutCommenter={$isCS}
 		peutAdministrer={$isAdmin}
 		on:basculer={(e) => toggleTicket(e.detail)}
-		on:commenter={(e) => openEvolForm(e.detail)}
+		on:commenter={(e) => openEvolForm(e.detail, 'commentaire')}
+		on:changerEtat={(e) => openEvolForm(e.detail, 'etat')}
 		on:modifier={(e) => openEditForm(e.detail)}
 		on:supprimer={deleteTicket}
 		on:evoluer={addEvolution}
@@ -316,11 +322,13 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								{evolsMap}
 								ticketEnEdition={editingTicket}
 								ticketEnEvolution={showEvolForm}
+								gesteEvolution={gesteEvol}
 								evolutionEnCours={evolSaving}
 								peutCommenter={$isCS}
 								peutAdministrer={$isAdmin}
 								on:basculer={(e) => toggleTicket(e.detail)}
-								on:commenter={(e) => openEvolForm(e.detail)}
+								on:commenter={(e) => openEvolForm(e.detail, 'commentaire')}
+								on:changerEtat={(e) => openEvolForm(e.detail, 'etat')}
 								on:modifier={(e) => openEditForm(e.detail)}
 								on:supprimer={deleteTicket}
 								on:evoluer={addEvolution}
