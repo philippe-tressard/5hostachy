@@ -8,9 +8,7 @@
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
-	import { perimetreLabel, perimetreDefautListe, estPerimetreParDefaut } from '$lib/utils';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
+	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
@@ -193,48 +191,27 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	}
 
 	// ── Édition admin ──
+	//  Le formulaire est celui de la CRÉATION, paramétré par le ticket à modifier
+	//  (`FormulaireTicket ticket={t}`). Il était réécrit à la main ici : quatre
+	//  champs bruts, sans section nommée, avec « Périmètre » écrit deux fois et des
+	//  `style=` en ligne recomposant `.field` (#425). Ne restent dans la page que
+	//  l'ouverture, la fermeture, et ce qu'il faut rafraîchir après coup.
 	let editingTicket: number | null = null;
-	let editTitre = '';
-	let editDescription = '';
-	let editCategorie = '';
-	let editPerimetre: string[] = perimetreDefautListe();
-	let editSaving = false;
 
-	const CATEGORIES = [
-		{ value: 'panne', label: '🛠️ Panne' },
-		{ value: 'nuisance', label: '📢 Nuisance' },
-		{ value: 'question', label: '❓ Question' },
-		{ value: 'urgence', label: '🚨 Urgence' },
-		{ value: 'bug', label: '🐛 Bug' },
-	];
-
-	function openEditForm(t: Ticket) {
-		editingTicket = t.id;
-		editTitre = t.titre;
-		editDescription = t.description;
-		editCategorie = t.categorie;
-		editPerimetre = t.perimetre_cible ?? perimetreDefautListe();
-		expandedTickets = new Set([t.id]);
+	function openEditForm(id: number) {
+		editingTicket = id;
+		expandedTickets = new Set([id]);
 		showEvolForm = null;
 	}
 
-	async function saveEdit(t: Ticket) {
-		if (!editTitre.trim()) { toast('error', 'Le titre est obligatoire'); return; }
-		editSaving = true;
-		try {
-			const updated = await ticketsApi.update(t.id, {
-				titre: editTitre.trim(),
-				description: editDescription,
-				categorie: editCategorie,
-				perimetre_cible: editPerimetre,
-			});
-			ticketList = ticketList.map(x => x.id === t.id ? { ...x, ...updated } : x);
-			await loadEvolutions(t.id);
-			editingTicket = null;
-			toast('success', 'Ticket modifié');
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally { editSaving = false; }
+	//  Le PATCH inscrit une évolution « Modification : … » dans le fil : sans ce
+	//  rechargement, la carte affiche le ticket modifié au-dessus d'un historique
+	//  qui n'en dit rien.
+	async function ticketModifie(e: CustomEvent<Ticket>) {
+		const maj = e.detail;
+		ticketList = ticketList.map(x => x.id === maj.id ? { ...x, ...maj } : x);
+		await loadEvolutions(maj.id);
+		editingTicket = null;
 	}
 </script>
 
@@ -309,7 +286,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 							on:click|stopPropagation={() => openEvolForm(t.id)}>&#x1F4AC;</button>
 					{/if}
 					{#if $isAdmin}						<button class="btn-icon" aria-label="Modifier" title="Modifier le ticket"
-							on:click|stopPropagation={() => openEditForm(t)}>✏️</button>						<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
+							on:click|stopPropagation={() => openEditForm(t.id)}>✏️</button>						<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
 							on:click|stopPropagation={() => deleteTicket(t)}>&#x1F5D1;️</button>
 					{/if}
 					<span class="chevron" class:open={expanded}>›</span>
@@ -323,34 +300,17 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 			{#if expanded}
 				<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
 					{#if editingTicket === t.id}
-						<!-- Formulaire d'édition admin -->
+						<!--  Édition du ticket — LE MÊME formulaire que la création, paramétré
+						      par le ticket. `{#key}` le remonte à neuf d'un ticket à l'autre :
+						      ses valeurs initiales sont lues à la construction, comme pour
+						      `EvolForm` juste en dessous. -->
 						<div class="evol-form">
-							<div class="field">
-								<label for="edit-titre-{t.id}">Titre *</label>
-								<input id="edit-titre-{t.id}" type="text" bind:value={editTitre} maxlength="200"
-									style="width:100%;padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem" />
-							</div>
-							<div class="field">
-								<label for="edit-cat-{t.id}">Catégorie</label>
-								<select id="edit-cat-{t.id}" bind:value={editCategorie}
-									style="padding:.4rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.875rem">
-									{#each CATEGORIES as cat}
-										<option value={cat.value}>{cat.label}</option>
-									{/each}
-								</select>
-							</div>
-							<div class="field">
-								<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Périmètre</span>
-								<PerimetrePicker bind:value={editPerimetre} />
-							</div>
-							<div class="field">								<!-- svelte-ignore a11y-label-has-associated-control -->										<label>Description</label>
-										<RichEditor bind:value={editDescription} placeholder="Description du ticket…" minHeight="120px" />
-							</div>
-							<div class="form-actions" style="gap:.5rem">
-								<button type="button" class="btn btn-outline" on:click={() => (editingTicket = null)}>Annuler</button>
-								<button type="button" class="btn btn-primary" disabled={editSaving || !editTitre.trim()}
-									on:click={() => saveEdit(t)}>{editSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
-							</div>
+							{#key editingTicket}
+								<FormulaireTicket ticket={t}
+									on:modifie={ticketModifie}
+									on:annule={() => (editingTicket = null)}
+								/>
+							{/key}
 						</div>
 					{:else if showEvolForm === t.id}
 						<!-- Formulaire d'évolution — composant partagé `EvolForm` -->
@@ -613,7 +573,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	.evol-more { width: 100%; background: none; border: none; padding: .45rem; font-size: .8rem; color: var(--color-primary); cursor: pointer; text-align: center; }
 	.evol-more:hover { background: var(--color-bg); }
 
-	.form-actions { display: flex; justify-content: flex-end; }
+	/*  `.form-actions` n'est plus redéfini ici : la seule rangée de boutons de la
+	    page vivait dans le formulaire d'édition écrit à la main, parti dans
+	    `FormulaireTicket` (#425). app.css porte la règle pour tout le site. */
 	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
 	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
