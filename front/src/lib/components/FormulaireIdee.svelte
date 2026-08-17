@@ -66,7 +66,7 @@
 		<!--  Pas de bouton « Annuler » ici : la commande vit dans l'en-tête de page,
 		      où le bouton d'ouverture bascule (#367). -->
 		<div class="form-actions">
-			<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Envoi…' : 'Soumettre'}</button>
+			<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 		</div>
 	</form>
 </FormulaireCreation>

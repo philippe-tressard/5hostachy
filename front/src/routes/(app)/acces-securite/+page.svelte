@@ -295,7 +295,7 @@ import { onMount } from 'svelte';
 				<div class="modal-footer">
 					<button type="button" class="btn btn-outline" on:click={() => showForm = false}>Annuler</button>
 					<button class="btn btn-primary" disabled={submitting}>
-						{submitting ? 'Envoi…' : 'Soumettre la demande'}
+						{submitting ? 'Enregistrement…' : 'Enregistrer'}
 					</button>
 				</div>
 			</form>

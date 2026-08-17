@@ -251,6 +251,15 @@ a.btn:hover { text-decoration: none; }
     ici, aux valeurs effectives — l'écran ne change pas. */
 .field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
 .field label { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+/*  Dans une GRILLE, l'espacement vertical est porté par `gap` : le
+    `margin-bottom` de `.field` s'y ajoute et double l'interligne. Constaté en
+    finissant #374 — `.form-grid` gap `.75rem` + `.field` `.75rem` = 1,5 rem
+    entre deux rangées, sur un formulaire censé s'aligner sur les autres.
+    Le défaut existait déjà, non mesuré, sur les écrans convertis en v2.67.3
+    (prestataires : gap `.65rem` + `.75rem` = 1,4 rem). Le corriger ici plutôt
+    que d'annuler la marge écran par écran : une règle locale de plus serait
+    exactement la « seconde définition libre de diverger » que #374 supprime. */
+.form-grid .field { margin-bottom: 0; }
 /*  Un champ qui occupe la LIGNE ENTIÈRE d'une grille de formulaire.
     Les grilles répartissent en colonnes de ~180 px, ce qui convient aux champs
     courts (date, montant, statut) et écrase les autres : un sélecteur de

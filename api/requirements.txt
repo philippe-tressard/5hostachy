@@ -1,8 +1,8 @@
 fastapi==0.141.1
-uvicorn[standard]==0.52.1
+uvicorn[standard]==0.52.3
 slowapi==0.1.10
 sqlmodel==0.0.39
-alembic==1.19.0
+alembic==1.19.1
 PyJWT==2.13.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1

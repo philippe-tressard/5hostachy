@@ -137,7 +137,7 @@
 
 		<div class="form-actions">
 			<button class="btn btn-primary" disabled={submitting}>
-				{submitting ? 'Envoi…' : "Publier l'annonce"}
+				{submitting ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
 	</form>

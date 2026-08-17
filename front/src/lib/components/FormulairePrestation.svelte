@@ -136,7 +136,7 @@
       où le bouton d'ouverture bascule (`BoutonNouveau`). Deux commandes pour
       un seul formulaire est le défaut relevé sur la modale du calendrier (#367). -->
 <div class="form-actions">
-	<button class="btn btn-primary" disabled={submitting} on:click={onSave}>{submitting ? '…' : 'Enregistrer'}</button>
+	<button class="btn btn-primary" disabled={submitting} on:click={onSave}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 </div>
 
 <style>

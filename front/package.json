@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.68.5",
+  "version": "2.68.6",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -18,14 +18,15 @@
     "lint:entetes": "node scripts/check-entete-page.mjs",
     "lint:formulaires": "node scripts/check-formulaire-creation.mjs",
     "lint:styles": "node scripts/check-styles-nus.mjs",
-    "lint:session": "node scripts/check-renouvellement-session.mjs"
+    "lint:session": "node scripts/check-renouvellement-session.mjs",
+    "lint:soumission": "node scripts/check-libelles-soumission.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",
     "@sveltejs/kit": "^2.70.2",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "@types/node": "^26.1.2",
-    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@types/node": "^26.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
     "eslint": "^9.39.5",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",

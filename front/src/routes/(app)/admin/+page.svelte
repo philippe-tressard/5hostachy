@@ -1104,20 +1104,20 @@ $: _siteNom = $siteNomStore;
   <div class="modal-box card" style="max-width:520px">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Modifier l'utilisateur</h2>
     <div class="form-grid">
-      <label>Prénom<input class="input input-sm" type="text" bind:value={editForm.prenom} /></label>
-      <label>Nom<input class="input input-sm" type="text" bind:value={editForm.nom} /></label>
-      <label>E-mail<input class="input input-sm" type="email" bind:value={editForm.email} /></label>
-      <label>Téléphone<input class="input input-sm" type="text" bind:value={editForm.telephone} /></label>
-      <label>Société<input class="input input-sm" type="text" bind:value={editForm.societe} /></label>
-      <label>Statut
-        <select class="input input-sm" bind:value={editForm.statut}>
+      <label class="field">Prénom<input type="text" bind:value={editForm.prenom} /></label>
+      <label class="field">Nom<input type="text" bind:value={editForm.nom} /></label>
+      <label class="field">E-mail<input type="email" bind:value={editForm.email} /></label>
+      <label class="field">Téléphone<input type="text" bind:value={editForm.telephone} /></label>
+      <label class="field">Société<input type="text" bind:value={editForm.societe} /></label>
+      <label class="field">Statut
+        <select bind:value={editForm.statut}>
           {#each Object.entries(statutLabels) as [val, lbl]}
             <option value={val}>{lbl}</option>
           {/each}
         </select>
       </label>
-      <label>Bâtiment
-        <select class="input input-sm" bind:value={editForm.batiment_id}>
+      <label class="field">Bâtiment
+        <select bind:value={editForm.batiment_id}>
           <option value={null}>— Aucun —</option>
           {#each batimentsList as b}
             <option value={b.id}>Bât. {b.numero}</option>
