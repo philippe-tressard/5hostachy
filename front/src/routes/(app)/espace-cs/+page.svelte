@@ -1452,6 +1452,7 @@
 						<div class="evol-form">
 							{#key tkShowForm}
 							<EvolForm
+								idPrefixe="cs-tk-evol-{t.id}"
 								statutOptions={TK_STATUT_OPTIONS}
 								statutLabels={TK_STATUT_LABELS}
 								currentStatut={t.statut ?? ''}
@@ -1500,6 +1501,7 @@
 													<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
 														{#key tkEditingEvolId}
 														<EvolForm
+															idPrefixe="cs-tk-evol-edit-{evol.id}"
 															editMode={true}
 															initialContenu={evol.contenu || ''}
 															initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

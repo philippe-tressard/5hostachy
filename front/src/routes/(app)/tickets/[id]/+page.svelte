@@ -374,6 +374,7 @@
 				<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter un commentaire</h4>
 				{#key showEvolForm}
 				<EvolForm
+					idPrefixe="tk-evol"
 					statutLabels={STATUT_LABELS}
 					currentStatut={ticket?.statut ?? ''}
 					showNotifs={$isCS}
@@ -421,6 +422,7 @@
 								<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)">
 									{#key editingEvolId}
 									<EvolForm
+										idPrefixe="tk-evol-edit-{evol.id}"
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

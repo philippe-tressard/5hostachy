@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Garde-fou : les formulaires de création soumettent tous avec le MÊME verbe.
+ * Garde-fou : les formulaires soumettent tous avec le MÊME verbe, et leur bouton
+ * de soumission vit dans `.form-actions`.
  *
  * Relevé au 16/08/2026 (#396) — sept formulaires, six libellés différents :
  * « Publier » / « Enregistrer brouillon » (actualité), « Envoyer la demande »
@@ -15,42 +16,115 @@
  * « Enregistrement… », « Création… », et même « … » tout court. Ils sont alignés
  * ici aussi : c'est le même libellé, vu pendant la seconde où il compte le plus.
  *
+ * ## Pourquoi la portée a changé le 17/08/2026 (#416)
+ *
+ * Ce contrôle ne regardait que `src/lib/components/Formulaire*.svelte`, « les
+ * formulaires de création par convention de nommage ». La convention est bonne
+ * pour un formulaire NEUF ; elle ne dit rien des formulaires qui existaient
+ * avant elle. `EvolForm.svelte` — le formulaire le plus réutilisé du site, servi
+ * par quatre écrans — portait DEUX jeux de libellés dans la même ligne de code
+ * (« Valider » / « Envoi… » en création contre « Enregistrer » /
+ * « Enregistrement… » en édition) et ce contrôle n'a rien vu : il ne s'appelle
+ * pas `Formulaire…`.
+ *
+ * **Un contrôle dont la portée est plus étroite que la règle qu'il défend laisse
+ * passer exactement les cas qu'on ne pense pas à lui donner.** La portée est
+ * désormais tout `src/**\/*.svelte`, et le tri se fait sur ce que le fichier
+ * REND, pas sur son nom.
+ *
+ * ## Ce qu'est un « bouton de soumission », structurellement
+ *
+ * Deux marqueurs, et seulement eux — la règle §9 quinquies impose déjà le
+ * second, ce qui rend la définition vérifiable au lieu d'interprétable :
+ *
+ *   1. `type="submit"` — sans ambiguïté ;
+ *   2. un `btn-primary` À L'INTÉRIEUR d'un bloc `class="… form-actions …"`.
+ *
+ * Ce tri écarte les boutons d'ACTION, qui portent légitimement leur verbe métier
+ * (« + Nouvelle publication », « Accepter », « Imprimer / PDF », « Voter ») : ce
+ * ne sont pas des soumissions de formulaire. Un contrôle qui crie sur du
+ * légitime finit désarmé — c'est la leçon de `check-pages.mjs`.
+ *
+ * ## Les deux contrôles
+ *
+ *   A. §9 quinquies     — un `Formulaire*.svelte` sans AUCUN bouton de
+ *                         soumission détecté a écrit le sien hors de
+ *                         `.form-actions` et sans `type="submit"` : il est donc
+ *                         cadré à gauche, et invisible pour le contrôle B.
+ *   B. §9 quinquies bis — chaque bouton de soumission dit « Enregistrer » au
+ *                         repos et « Enregistrement… » pendant l'envoi.
+ *
  * Pourquoi un contrôle et pas une consigne : trancher n'aligne que les écrans
  * existants. C'est le SUIVANT qui réinvente — et c'est ce qui s'est produit pour
  * les en-têtes (#363) puis pour les formulaires (#367), les deux fois trouvé par
  * un contrôle et non par la relecture.
  *
- * Périmètre : `src/lib/components/Formulaire*.svelte`, les formulaires de création
- * par convention de nommage. Un nouveau formulaire suit cette convention, donc ce
- * contrôle le voit sans qu'on ait à l'inscrire quelque part.
- *
- * Hors périmètre volontairement : les écrans d'authentification (« Se connecter »,
- * « Créer mon compte »), les imports (« Importer ») et le changement de mot de
- * passe. Ce ne sont pas des créations d'objet, et leur verbe métier est le bon.
- *
  * Usage : npm run lint:soumission   (exit 1 si violation)
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
-const COMPOSANTS = join(RACINE, 'src', 'lib', 'components');
+const SOURCE = join(RACINE, 'src');
+const COMPOSANTS = join(SOURCE, 'lib', 'components');
 
 /** Le libellé unique, et son état d'attente. */
 const LIBELLE = 'Enregistrer';
 const ATTENTE = 'Enregistrement…';
 
 /**
- * Formulaires dispensés, avec leur raison.
+ * Référence canonique : ce fichier soumet avec le verbe commun depuis #396. S'il
+ * disparaît du relevé, c'est la DÉTECTION qui est cassée, pas le dépôt qui est
+ * devenu conforme — et le contrôle doit le dire plutôt que conclure au vert.
+ */
+const TEMOIN = 'lib/components/FormulaireTicket.svelte';
+
+/** En dessous, le motif de lecture ne correspond plus à rien (cas zéro). */
+const PLANCHER = 20;
+
+/**
+ * Fichiers dispensés, avec leur raison.
  *
  * Une tolérance sans raison devient un dépotoir : chacune est nommée, et le
- * contrôle échoue si l'une cesse de servir (règle posée en #374).
+ * contrôle échoue si l'une cesse de servir — c'est-à-dire dès que le fichier
+ * qu'elle protège devient conforme (règle posée en #374, reprise de
+ * `check-pages.mjs`). Une exception qui dort laisserait repasser une vraie
+ * divergence dans ce fichier sans que personne l'ait décidé.
  */
 const EXCEPTIONS = {
-	//  Enveloppe (titre + cadre) : elle ne porte aucun bouton de soumission,
-	//  chaque écran écrit le sien dans son `<form>`.
-	'FormulaireCreation.svelte': "c'est le cadre, pas un formulaire — aucun bouton de soumission",
+	//  ── Hors périmètre par la RÈGLE elle-même (§9 quinquies bis) ────────────
+	//  Ce ne sont pas des créations d'objet, et leur verbe métier est le bon.
+	'lib/components/FormulaireCreation.svelte':
+		"c'est le cadre (titre + boîte), pas un formulaire — chaque écran écrit son " +
+		"propre bouton dans son <form>",
+	'lib/components/ChangementMotDePasse.svelte':
+		'changement de mot de passe — hors périmètre explicite de la règle',
+	'routes/auth/connexion/+page.svelte': "écran d'authentification — « Se connecter »",
+	'routes/auth/inscription/+page.svelte': "écran d'authentification — « Créer mon compte »",
+	'routes/auth/mot-de-passe-oublie/+page.svelte':
+		"écran d'authentification — « Envoyer le lien » ne crée aucun objet",
+	'routes/auth/verifier-email/+page.svelte':
+		"écran d'authentification — « Renvoyer » relance un e-mail déjà parti",
+
+	//  ── RESTE À TRAITER — révélé par l'élargissement de portée (#416) ───────
+	//  Ces écarts sont réels et connus. Ils ne sont PAS corrigés dans #416, dont
+	//  le périmètre est `EvolForm` : les corriger au passage aurait mélangé deux
+	//  lots dans le même diff. Chaque ligne dit ce qu'on lit à l'écran ; l'entrée
+	//  disparaît d'elle-même quand l'écran est repris, sinon ce contrôle échoue
+	//  en réclamant sa suppression.
+	'routes/(app)/espace-cs/+page.svelte':
+		'annonce de hall : « Créer et envoyer au CS » / « Envoi… » (l. ~2373)',
+	'routes/(app)/prestataires/+page.svelte':
+		"attente réduite à « … » sur trois formulaires (contrats, prestations, relevés) — " +
+		'écran de 2 182 lignes déjà déclaré en exception de `lint:formulaires`',
+	'routes/(app)/profil/+page.svelte':
+		'« Envoyer la demande » / « Envoi… » (l. ~451) et « Je suis un nouvel arrivant » ' +
+		'/ « Envoi… » (l. ~526)',
+	'routes/(app)/sondages/[id]/+page.svelte': 'attente « Sauvegarde… » (l. ~328)',
+	'routes/(app)/tickets/[id]/+page.svelte':
+		'formulaire de message du fil de suivi : « Envoyer » / « Envoi… » (l. ~353) — ' +
+		"c'est une seconde écriture d'`EvolForm`, à fusionner avant d'aligner le verbe",
 };
 
 function abandonner(message) {
@@ -59,78 +133,225 @@ function abandonner(message) {
 	process.exit(1);
 }
 
-if (!existsSync(COMPOSANTS)) {
+// ── Lecture du balisage ──────────────────────────────────────────────────────
+
+/**
+ * Fin de la balise ouvrante commencée en `debut`. Un `>` ne ferme la balise que
+ * hors chaîne et hors expression Svelte : `on:click={() => saveEdit(t)}` en
+ * contient un, et le lire naïvement coupait le bouton en deux — le libellé
+ * passait alors pour un attribut, et le contrôle concluait « aucun libellé
+ * lisible » sur des boutons parfaitement corrects.
+ */
+function finBaliseOuvrante(src, debut) {
+	let profondeur = 0;
+	let guillemet = null;
+	for (let i = debut; i < src.length; i++) {
+		const c = src[i];
+		if (guillemet) {
+			if (c === guillemet) guillemet = null;
+		} else if (c === '"' || c === "'") {
+			guillemet = c;
+		} else if (c === '{') {
+			profondeur++;
+		} else if (c === '}') {
+			profondeur--;
+		} else if (c === '>' && profondeur === 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+/** Les blocs `<div class="… form-actions …">…</div>`, imbrication comprise. */
+function blocsFormActions(src) {
+	const zones = [];
+	const debut = /<div\b[^>]*class="[^"]*\bform-actions\b[^"]*"[^>]*>/g;
+	let m;
+	while ((m = debut.exec(src))) {
+		let profondeur = 1;
+		let fin = m.index + m[0].length;
+		const jetons = /<div\b|<\/div>/g;
+		jetons.lastIndex = fin;
+		let j;
+		while (profondeur > 0 && (j = jetons.exec(src))) {
+			profondeur += j[0] === '</div>' ? -1 : 1;
+			fin = jetons.lastIndex;
+		}
+		zones.push([m.index, fin]);
+	}
+	return zones;
+}
+
+/** Les boutons de soumission d'un fichier : `[{ ligne, contenu }]`. */
+function boutonsDeSoumission(src) {
+	const zones = blocsFormActions(src);
+	const trouves = [];
+	const ouverture = /<button\b/g;
+	let m;
+	while ((m = ouverture.exec(src))) {
+		const finOuvrante = finBaliseOuvrante(src, m.index);
+		if (finOuvrante < 0) continue;
+		const finContenu = src.indexOf('</button>', finOuvrante);
+		if (finContenu < 0) continue;
+		const balise = src.slice(m.index, finOuvrante + 1);
+		const submit = /type=["']submit["']/.test(balise);
+		const primaireDansActions =
+			/class="[^"]*\bbtn-primary\b/.test(balise) &&
+			zones.some(([a, z]) => m.index >= a && m.index < z);
+		if (!submit && !primaireDansActions) continue;
+		trouves.push({
+			ligne: src.slice(0, m.index).split('\n').length,
+			contenu: src.slice(finOuvrante + 1, finContenu),
+		});
+	}
+	return trouves;
+}
+
+/**
+ * Les libellés lisibles du contenu d'un bouton : le texte littéral d'une part,
+ * les chaînes des expressions Svelte de l'autre.
+ *
+ * ⚠️ Les chaînes ne sont lues QUE dans les expressions `{…}`. Les attributs des
+ * balises imbriquées (`<span class="spinner" aria-hidden="true">`) sont entre
+ * guillemets eux aussi, et les lire ferait échouer le contrôle sur sa propre
+ * imprécision — constaté au premier essai de #396, où il reprochait « submit »
+ * à deux formulaires corrects.
+ */
+function libellesDuBouton(contenu) {
+	let litteral = '';
+	const expressions = [];
+	let profondeur = 0;
+	let courante = '';
+	for (const c of contenu) {
+		if (c === '{') {
+			profondeur++;
+			if (profondeur === 1) {
+				courante = '';
+				continue;
+			}
+		} else if (c === '}') {
+			profondeur--;
+			if (profondeur === 0) {
+				expressions.push(courante);
+				continue;
+			}
+		}
+		if (profondeur > 0) courante += c;
+		else litteral += c;
+	}
+
+	const libelles = [];
+	const texte = litteral.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+	if (/[A-Za-zÀ-ÿ]/.test(texte)) libelles.push(texte);
+
+	const chaine = /'((?:[^'\\]|\\.){2,})'|"((?:[^"\\]|\\.){2,})"|`((?:[^`\\]|\\.){2,})`/g;
+	for (const expr of expressions) {
+		for (const s of expr.matchAll(chaine)) {
+			const t = (s[1] ?? s[2] ?? s[3]).replace(/\\(.)/g, '$1').trim();
+			if (/[A-Za-zÀ-ÿ]/.test(t)) libelles.push(t);
+		}
+	}
+	return libelles;
+}
+
+function fichiersSvelte(dir) {
+	const sortie = [];
+	for (const nom of readdirSync(dir)) {
+		const chemin = join(dir, nom);
+		if (statSync(chemin).isDirectory()) sortie.push(...fichiersSvelte(chemin));
+		else if (nom.endsWith('.svelte')) sortie.push(chemin);
+	}
+	return sortie;
+}
+
+// ── Cas zéro ─────────────────────────────────────────────────────────────────
+for (const [chemin, quoi] of [
+	[SOURCE, 'src'],
+	[COMPOSANTS, 'src/lib/components'],
+]) {
+	if (!existsSync(chemin)) {
+		abandonner(
+			`${quoi} est introuvable — l'arborescence a changé.` +
+				`\n  Ce contrôle ne sait plus où regarder : il ne peut pas conclure.`,
+		);
+	}
+}
+
+const tous = fichiersSvelte(SOURCE);
+if (tous.length === 0) abandonner("aucun fichier .svelte analysé — l'arborescence a changé.");
+
+// ── Relevé ───────────────────────────────────────────────────────────────────
+const releve = new Map(); // chemin relatif → boutons de soumission
+for (const chemin of tous) {
+	const rel = relative(SOURCE, chemin).split(sep).join('/');
+	const boutons = boutonsDeSoumission(readFileSync(chemin, 'utf-8'));
+	if (boutons.length > 0) releve.set(rel, boutons);
+}
+
+const nbBoutons = [...releve.values()].reduce((n, b) => n + b.length, 0);
+if (nbBoutons < PLANCHER) {
 	abandonner(
-		`${relative(RACINE, COMPOSANTS)} est introuvable — l'arborescence a changé.` +
-			`\n  Ce contrôle ne sait plus où regarder : il ne peut pas conclure.`,
+		`${nbBoutons} bouton(s) de soumission détecté(s) sur ${tous.length} fichiers,` +
+			`\n  au moins ${PLANCHER} attendus. Le motif de lecture ne correspond plus au` +
+			`\n  balisage — le contrôle ne mesure plus rien et conclurait au vert.`,
+	);
+}
+if (!releve.has(TEMOIN)) {
+	abandonner(
+		`${TEMOIN} n'apparaît plus dans le relevé.` +
+			`\n  Ce fichier soumet avec le verbe commun depuis #396 : son absence dit que la` +
+			`\n  DÉTECTION est cassée, pas que le dépôt est conforme.`,
 	);
 }
 
-const formulaires = readdirSync(COMPOSANTS).filter(
-	(f) => f.startsWith('Formulaire') && f.endsWith('.svelte'),
-);
-
-//  ── Cas zéro ────────────────────────────────────────────────────────────────
-//  Sans lui, un renommage de la convention viderait la liste et le contrôle
-//  annoncerait « tout est conforme » sur zéro fichier analysé.
-if (formulaires.length < 2) {
-	abandonner(
-		`${formulaires.length} composant(s) « Formulaire*.svelte » trouvé(s) — la convention` +
-			`\n  de nommage a changé. Le contrôle porterait sur rien et conclurait au vert :` +
-			`\n  mettre à jour son périmètre.`,
-	);
-}
-
+// ── Contrôles ────────────────────────────────────────────────────────────────
 const fautifs = [];
 const exceptionsUtiles = new Set();
 
-for (const nom of formulaires) {
-	if (EXCEPTIONS[nom]) {
-		exceptionsUtiles.add(nom);
+/** A. §9 quinquies — un formulaire de création sans bouton de soumission repérable. */
+for (const nom of readdirSync(COMPOSANTS)) {
+	if (!nom.startsWith('Formulaire') || !nom.endsWith('.svelte')) continue;
+	const rel = `lib/components/${nom}`;
+	if (releve.has(rel)) continue;
+	if (EXCEPTIONS[rel]) {
+		exceptionsUtiles.add(rel);
 		continue;
 	}
-	const src = readFileSync(join(COMPOSANTS, nom), 'utf-8');
+	fautifs.push(
+		`  ${rel}\n      aucun bouton de soumission repérable — il est écrit hors de` +
+			`\n      .form-actions ET sans type="submit", donc cadré à gauche et invisible` +
+			`\n      pour ce contrôle (ux-patterns §9 quinquies)`,
+	);
+}
 
-	//  Le bouton primaire vit dans `.form-actions` (ux-patterns §9 quinquies).
-	const bloc = src.match(/<div class="form-actions">([\s\S]*?)<\/div>/);
-	if (!bloc) {
-		fautifs.push(
-			`  ${nom}\n      aucun bloc .form-actions — le bouton de soumission est écrit hors` +
-				`\n      du conteneur commun, donc cadré à gauche (ux-patterns §9 quinquies)`,
-		);
+/** B. §9 quinquies bis — le verbe commun, au repos comme pendant l'envoi. */
+for (const [rel, boutons] of releve) {
+	const ecarts = [];
+	for (const { ligne, contenu } of boutons) {
+		const libelles = libellesDuBouton(contenu);
+		if (libelles.length === 0) {
+			ecarts.push(`l. ${ligne} : aucun libellé lisible — contrôle impossible`);
+			continue;
+		}
+		const inattendus = libelles.filter((t) => t !== LIBELLE && t !== ATTENTE);
+		if (inattendus.length > 0) {
+			ecarts.push(`l. ${ligne} : ${inattendus.map((t) => `« ${t} »`).join(', ')}`);
+		}
+	}
+	if (ecarts.length === 0) continue;
+	if (EXCEPTIONS[rel]) {
+		exceptionsUtiles.add(rel);
 		continue;
 	}
-
-	//  Le CONTENU des boutons, jamais leurs attributs : `type="submit"` et
-	//  `class="btn btn-primary"` sont des chaînes entre guillemets eux aussi, et
-	//  les lire ferait échouer le contrôle sur sa propre imprécision (constaté au
-	//  premier essai — il reprochait « submit » à deux formulaires corrects).
-	const contenus = [...bloc[1].matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]);
-	if (contenus.length === 0) {
-		fautifs.push(`  ${nom}\n      bloc .form-actions sans <button> — contrôle impossible`);
-		continue;
-	}
-	const libelles = contenus
-		.flatMap((c) => [...c.matchAll(/'([^']{2,})'|"([^"]{2,})"/g)].map((m) => m[1] ?? m[2]))
-		.filter((t) => /[A-Za-zÀ-ÿ]/.test(t));
-
-	if (libelles.length === 0) {
-		fautifs.push(`  ${nom}\n      bloc .form-actions sans libellé lisible — contrôle impossible`);
-		continue;
-	}
-
-	const inattendus = libelles.filter((t) => t !== LIBELLE && t !== ATTENTE);
-	if (inattendus.length > 0) {
-		fautifs.push(
-			`  ${nom}\n      ${inattendus.map((t) => `« ${t} »`).join(', ')}` +
-				`\n      attendu : « ${LIBELLE} » et « ${ATTENTE} »`,
-		);
-	}
+	fautifs.push(
+		`  ${rel}\n      ${ecarts.join('\n      ')}` +
+			`\n      attendu : « ${LIBELLE} » et « ${ATTENTE} »`,
+	);
 }
 
 if (fautifs.length > 0) {
 	console.error(
-		`\n✗ ${fautifs.length} formulaire(s) de création ne soumettent pas avec le verbe commun :\n\n` +
+		`\n✗ ${fautifs.length} fichier(s) ne soumettent pas avec le verbe commun :\n\n` +
 			fautifs.join('\n') +
 			`\n\n  Règle arbitrée le 17/08/2026 (#396) : verbe GÉNÉRIQUE partout.` +
 			`\n  Sept formulaires portaient six libellés différents — aucun faux, l'ensemble` +
@@ -141,19 +362,19 @@ if (fautifs.length > 0) {
 	process.exit(1);
 }
 
-const inutiles = Object.keys(EXCEPTIONS).filter((f) => !exceptionsUtiles.has(f));
+const inutiles = Object.keys(EXCEPTIONS).filter((rel) => !exceptionsUtiles.has(rel));
 if (inutiles.length > 0) {
 	console.error(
 		`\n✗ ${inutiles.length} exception(s) ne servent plus :\n\n` +
 			inutiles.map((f) => `  ${f} — « ${EXCEPTIONS[f]} »`).join('\n') +
-			`\n\n  Le fichier a disparu ou a été renommé. Retirer l'exception : reconduite` +
-			`\n  « au cas où », elle protège un écran qui n'existe plus et masque son` +
-			`\n  remplaçant.\n`,
+			`\n\n  Le fichier a disparu, n'a plus de bouton de soumission, ou est devenu` +
+			`\n  conforme. Retirer l'exception : reconduite « au cas où », elle protège un` +
+			`\n  écran qui n'en a plus besoin et masque la prochaine vraie divergence.\n`,
 	);
 	process.exit(1);
 }
 
 console.log(
-	`✓ ${formulaires.length - exceptionsUtiles.size} formulaire(s) de création soumettent tous ` +
-		`avec « ${LIBELLE} » / « ${ATTENTE} ».`,
+	`✓ ${nbBoutons} bouton(s) de soumission dans ${releve.size} fichier(s) disent tous ` +
+		`« ${LIBELLE} » / « ${ATTENTE} » (${Object.keys(EXCEPTIONS).length} exceptions nommées).`,
 );

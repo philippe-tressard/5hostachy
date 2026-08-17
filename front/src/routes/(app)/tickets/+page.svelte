@@ -357,6 +357,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 						<div class="evol-form">
 							{#key showEvolForm}
 								<EvolForm
+									idPrefixe="tk-evol-{t.id}"
 									statutOptions={TICKET_STATUT_OPTIONS}
 									statutLabels={STATUT_LABELS}
 									currentStatut={t.statut}
@@ -493,6 +494,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', nav
 										<div class="evol-form">
 											{#key showEvolForm}
 												<EvolForm
+													idPrefixe="tk-arch-evol-{t.id}"
 													statutOptions={TICKET_STATUT_OPTIONS}
 													statutLabels={STATUT_LABELS}
 													currentStatut={t.statut}

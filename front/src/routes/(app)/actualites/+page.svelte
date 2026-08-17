@@ -325,6 +325,7 @@
 						<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter une évolution</h4>
 						{#key showEvolForm}
 						<EvolForm
+							idPrefixe="pub-evol-{pub.id}"
 							statutOptions={PUB_STATUT_OPTIONS}
 							statutLabels={STATUT_LABELS}
 							currentStatut={pub.statut ?? ''}
@@ -374,6 +375,7 @@
 										<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
 											{#key editingEvolId}
 											<EvolForm
+												idPrefixe="pub-evol-edit-{evol.id}"
 												editMode={true}
 												initialContenu={evol.contenu || ''}
 												initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
