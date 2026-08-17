@@ -13,12 +13,13 @@
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { STATUT_LABELS, richEmpty } from '$lib/publications';
 	import { fmtDatetime2d as fmtDatetime } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'actualites', { titre: 'Actualités', navLabel: 'Actualités', icone: 'newspaper', descriptif: 'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.' });
+	$: _pc = getPageConfig($configStore, 'actualites', defautsDePage('actualites'));
 	$: _siteNom = $siteNomStore;
 
 	let pubList: Publication[] = [];

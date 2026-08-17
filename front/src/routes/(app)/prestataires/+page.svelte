@@ -13,13 +13,14 @@
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { fmtMontant, perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/utils';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
-	$: _pc = getPageConfig($configStore, 'prestataires', { titre: 'Prestataires', navLabel: 'Prestataires', icone: 'hard-hat', descriptif: 'Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.' });
+	$: _pc = getPageConfig($configStore, 'prestataires', defautsDePage('prestataires'));
 	$: _siteNom = $siteNomStore;
 
 	let prestataires: any[] = [];

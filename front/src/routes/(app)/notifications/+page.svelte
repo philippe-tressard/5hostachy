@@ -4,10 +4,11 @@ import { onMount } from 'svelte';
 	import { notifications as notifApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import { safeHtml, safeRichContent } from '$lib/sanitize';
 	import { fmtTime, fmtDateShort } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'notifications', { titre: 'Notifications', navLabel: 'Notifications', icone: 'bell', descriptif: 'Vos alertes et messages.' });
+	$: _pc = getPageConfig($configStore, 'notifications', defautsDePage('notifications'));
 	$: _siteNom = $siteNomStore;
 
 	let items: any[] = [];

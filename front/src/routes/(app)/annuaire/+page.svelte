@@ -7,10 +7,11 @@
 	import { annuaire as annuaireApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateLong as formatDate } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'annuaire', { titre: 'Annuaire', navLabel: 'Annuaire', icone: 'users', descriptif: "Coordonnées des membres du Conseil Syndical et du Syndic. En cas d'urgence, contactez le syndic directement par téléphone. Sinon, faites une demande depuis la plateforme." });
+	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
 
 	interface MembreCS  { id: number; genre: string; prenom: string; nom: string; batiment_nom: string | null; etage: number | null; est_gestionnaire_site: boolean; est_president: boolean; photo_url: string | null; }

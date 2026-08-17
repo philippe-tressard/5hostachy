@@ -5,6 +5,7 @@
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
@@ -24,7 +25,7 @@
 		estTicketClos,
 	} from '$lib/tickets';
 
-$: _pc = getPageConfig($configStore, 'mes-demandes', { titre: 'Mes Tickets', navLabel: 'Tickets', icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l’avancement de vos tickets." });
+$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
 
 	let ticketList: Ticket[] = [];

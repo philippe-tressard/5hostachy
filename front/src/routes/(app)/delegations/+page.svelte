@@ -11,15 +11,12 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
-	import { PAGES } from '$lib/pages';
-
-	const _def = PAGES.find((p) => p.id === 'delegations')!;
-	const PAGE_DELEGATIONS = { titre: _def.titre, descriptif: _def.descriptif, navLabel: _def.navLabel, icone: _def.icone };
+	import { defautsDePage } from '$lib/pages';
 
 	// Cette page importait déjà getPageConfig sans s'en servir : son titre était en
 	// dur, elle était donc la seule entrée du menu qu'on ne pouvait ni renommer ni
 	// positionner (#401).
-	$: _pc = getPageConfig($configStore, 'delegations', PAGE_DELEGATIONS);
+	$: _pc = getPageConfig($configStore, 'delegations', defautsDePage('delegations'));
 	$: _siteNom = $siteNomStore;
 
 	let delegations: any[] = [];

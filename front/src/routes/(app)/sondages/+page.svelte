@@ -15,6 +15,7 @@ import RichEditor from '$lib/components/RichEditor.svelte';
 import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 import { toast } from '$lib/components/Toast.svelte';
 import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+import { defautsDePage } from '$lib/pages';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
@@ -22,7 +23,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
 import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 
-$: _pc = getPageConfig($configStore, 'communaute', { titre: 'Communauté', navLabel: 'Communauté', icone: 'users-round', descriptif: 'Sondages, boîte à idées et petites annonces entre résidents.', onglets: { sondages: { label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, idees: { label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }, annonces: { label: '\u{1F3F7}\uFE0F Petites annonces', descriptif: 'Achetez, vendez ou donnez des objets entre résidents.' } } });
+$: _pc = getPageConfig($configStore, 'communaute', defautsDePage('communaute'));
 $: _siteNom = $siteNomStore;
 
 // Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond

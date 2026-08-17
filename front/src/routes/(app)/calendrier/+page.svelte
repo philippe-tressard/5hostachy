@@ -16,6 +16,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
@@ -23,7 +24,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { fmtMontant, perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 
-	$: _pc = getPageConfig($configStore, 'calendrier', { titre: 'Calendrier', navLabel: 'Calendrier', icone: 'calendar-days', descriptif: 'Agenda des événements et interventions de la résidence.', onglets: { liste: { label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, kanban: { label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, archives: { label: '\u{1F4C1} Archives', descriptif: 'Actualités et événements archivés.' } } });
+	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
 	$: _siteNom = $siteNomStore;
 
 	let evenements: any[] = [];

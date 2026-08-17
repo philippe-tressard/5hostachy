@@ -8,9 +8,10 @@ import { onMount } from 'svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { defautsDePage } from '$lib/pages';
 	import { safeHtml } from '$lib/sanitize';
 
-	$: _pc = getPageConfig($configStore, 'faq', { titre: 'FAQ', navLabel: 'FAQ', icone: 'help-circle', descriptif: 'Réponses aux questions fréquentes sur la vie en résidence, les services et la réglementation de la copropriété.' });
+	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
 	$: _siteNom = $siteNomStore;
 
 	let open: Record<number, boolean> = {};
