@@ -405,6 +405,38 @@ symptôme.
 Qualifier le sélecteur (`.case input[type="checkbox"]`) ou porter la règle dans
 `app.css`, où elle est globale et assumée.
 
+### 9 quinquies bis. Le bouton de soumission dit **« Enregistrer »**, partout
+
+Verbe **générique**, sur tous les formulaires de création. Arbitré par
+l'utilisateur le 17/08/2026 (#396), après un relevé de sept formulaires portant
+**six** libellés — « Publier » / « Enregistrer brouillon », « Envoyer la demande »,
+« Créer le sondage », « Publier l'annonce », « Soumettre », « Enregistrer » — plus
+« Soumettre la demande » sur accès & badges, que le relevé du ticket avait manqué.
+
+Aucun n'était faux ; l'ensemble n'avait pas de logique.
+
+| | |
+|---|---|
+| au repos | `Enregistrer` |
+| pendant l'envoi | `Enregistrement…` |
+
+L'état d'attente est **inclus dans la règle** : il divergeait pareillement
+(« Envoi… », « Création… », « Sauvegarde… », et même « … » tout court). C'est le
+même libellé, vu pendant la seconde où l'utilisateur se demande si son geste a été
+pris.
+
+⚠️ **Le mode brouillon ne se dit plus dans le bouton.** L'actualité affichait
+« Enregistrer brouillon » ou « Publier » selon la case cochée — or cette case est
+déjà visible dans la section Diffusion, juste au-dessus. Le bouton la répétait.
+
+**Hors périmètre, et volontairement** : les écrans d'authentification
+(« Se connecter », « Créer mon compte »), les imports (« Importer ») et le
+changement de mot de passe. Ce ne sont pas des créations d'objet.
+
+**Garde-fou** : `npm run lint:soumission` (job `build-frontend`), sur les
+composants `Formulaire*.svelte`. Les exceptions sont nommées avec leur raison et
+le contrôle échoue si l'une devient inutile.
+
 ### 9 quinquies. Le bouton de soumission est **à droite**, via `.form-actions`
 
 `.form-actions` (app.css) porte `justify-content: flex-end`. Un bouton posé nu dans

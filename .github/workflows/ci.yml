@@ -341,6 +341,17 @@ jobs:
         working-directory: front
         run: npm run lint:session
 
+      # Sept formulaires de création, six libellés de soumission : « Publier »,
+      # « Envoyer la demande », « Créer le sondage », « Publier l'annonce »,
+      # « Soumettre », « Enregistrer » — plus « Soumettre la demande » sur accès
+      # & badges, que le relevé du ticket n'avait pas vu. Aucun n'était faux ;
+      # l'ensemble n'avait pas de logique (#396). Trancher n'aligne que
+      # l'existant : c'est le formulaire SUIVANT qui réinvente son libellé, comme
+      # pour les en-têtes (#363) et les formulaires eux-mêmes (#367).
+      - name: Libellé de soumission unique sur les formulaires de création
+        working-directory: front
+        run: npm run lint:soumission
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le

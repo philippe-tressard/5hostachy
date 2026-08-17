@@ -243,7 +243,7 @@
 		     l'en-tête de ce fichier). `.form-actions` vient d'app.css. -->
 		<div class="form-actions">
 			<button type="submit" class="btn btn-primary" disabled={loading}>
-				{loading ? 'Envoi…' : 'Envoyer la demande'}
+				{loading ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
 	</form>

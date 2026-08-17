@@ -18,7 +18,8 @@
     "lint:entetes": "node scripts/check-entete-page.mjs",
     "lint:formulaires": "node scripts/check-formulaire-creation.mjs",
     "lint:styles": "node scripts/check-styles-nus.mjs",
-    "lint:session": "node scripts/check-renouvellement-session.mjs"
+    "lint:session": "node scripts/check-renouvellement-session.mjs",
+    "lint:soumission": "node scripts/check-libelles-soumission.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",

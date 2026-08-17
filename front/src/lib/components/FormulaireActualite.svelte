@@ -145,7 +145,7 @@
 
 		<div class="form-actions">
 			<button type="submit" class="btn btn-primary" disabled={saving}>
-				{saving ? 'Envoi…' : (brouillon ? 'Enregistrer brouillon' : 'Publier')}
+				{saving ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
 	</form>
