@@ -45,7 +45,10 @@
 		finally { loading = false; }
 	});
 
-	$: totalVotes = sondage?.options?.reduce((sum: number, o: any) => sum + o.nb_votes, 0) ?? 0;
+	//  `nb_votes` est ABSENT quand les résultats sont masqués (l'API ne l'envoie
+	//  pas, plutôt que d'envoyer 0 qui se lirait « personne n'a voté ») : sans ce
+	//  repli la somme vaudrait NaN et les pourcentages aussi.
+	$: totalVotes = sondage?.options?.reduce((sum: number, o: any) => sum + (o.nb_votes ?? 0), 0) ?? 0;
 
 	function pct(nb: number) {
 		if (totalVotes === 0) return 0;
@@ -140,7 +143,12 @@
 
 	$: peutVoter = sondage && !sondage.cloture && sondage.mon_vote === null;
 	$: aVote = sondage?.mon_vote !== null && sondage?.mon_vote !== undefined;
-	$: voirResultats = sondage?.resultats_publics || sondage?.cloture || aVote;
+	//  Décision prise par l'API, pas recomposée ici. Cette ligne valait
+	//  `resultats_publics || cloture || aVote` — et cinquante lignes plus bas un
+	//  second `&& sondage.resultats_publics` écrasait le tout, rendant les deux
+	//  dernières branches mortes : un sondage à case décochée ne montrait JAMAIS
+	//  ses résultats, pas même une fois clôturé (#397).
+	$: voirResultats = sondage?.resultats_visibles ?? false;
 </script>
 
 <svelte:head><title>{sondage ? sondage.question : 'Sondage'} — 5Hostachy</title></svelte:head>
@@ -192,8 +200,8 @@
 						<label class="option-label" class:selected={selectedOption === opt.id}>
 							<input type="radio" name="vote" value={opt.id} bind:group={selectedOption} on:change={() => reponseLibre = ''} />
 							<span>{opt.libelle}</span>
-							{#if opt.champ_libre}<span class="champ-libre-badge" title="Cette option inclut un champ de précision">✏️</span>{/if}
-							{#if voirResultats && sondage.resultats_publics}
+							{#if opt.champ_libre}<span class="champ-libre-badge" title="Cette réponse inclut un champ de précision">✏️</span>{/if}
+							{#if voirResultats}
 								<span style="margin-left:auto;font-size:.8rem;color:var(--color-text-muted)">{opt.nb_votes} vote{opt.nb_votes !== 1 ? 's' : ''}</span>
 							{/if}
 						</label>
@@ -217,7 +225,7 @@
 					<!-- Commentaire optionnel -->
 					<div style="margin-top:1rem">
 						<label style="display:block;font-size:.85rem;font-weight:500;margin-bottom:.3rem">
-							Commentaire <span style="color:var(--color-text-muted);font-weight:400">(optionnel)</span>
+							Commentaire
 						</label>
 						<textarea
 							bind:value={commentaireVote}
@@ -240,6 +248,14 @@
 						{voting ? 'Envoi…' : 'Voter'}
 					</button>
 				</form>
+			{:else if !voirResultats}
+				<!--  A voté (ou ne peut plus voter) mais les résultats sont masqués
+				      jusqu'à la clôture. Le dire, plutôt que d'afficher des barres
+				      vides : l'API n'envoie pas les décomptes dans ce cas, et un
+				      « 0 vote » se lirait comme « personne n'a voté ». -->
+				<p class="resultats-masques">
+					Les résultats de ce sondage ne seront visibles qu'après sa clôture.
+				</p>
 			{:else}
 				<!-- Mode résultats -->
 				{#each sondage.options as opt}
@@ -301,8 +317,12 @@
 			</label>
 			<label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer">
 				<input type="checkbox" bind:checked={editForm.resultats_publics} />
-				Résultats visibles avant clôture
+				Afficher les résultats avant la clôture
 			</label>
+			<p style="margin:-.6rem 0 1rem 1.6rem;font-size:.8rem;color:var(--color-text-muted)">
+				Ils seront lus par les destinataires du sondage. Sinon, ils n'apparaissent
+				qu'une fois le sondage clôturé.
+			</p>
 			<div style="display:flex;gap:.5rem;justify-content:flex-end">
 				<button type="button" class="btn btn-outline" on:click={() => showEditModal = false}>Annuler</button>
 				<button type="submit" class="btn btn-primary" disabled={saving}>{saving ? 'Sauvegarde…' : 'Enregistrer'}</button>
@@ -328,6 +348,11 @@
 	.result-bar { height: 100%; background: var(--color-primary); border-radius: 99px; transition: width .3s; }
 	.result-pct { min-width: 3rem; text-align: right; font-size: .85rem; font-weight: 600; }
 	.result-votes { min-width: 3rem; text-align: right; font-size: .8rem; color: var(--color-text-muted); }
+	.resultats-masques {
+		font-size: .875rem; color: var(--color-text-muted);
+		background: var(--color-bg); border-radius: var(--radius);
+		padding: .75rem 1rem; margin: 0;
+	}
 	.winner .result-bar { background: var(--color-success, #22c55e); }
 
 	/* Charte de respect */
