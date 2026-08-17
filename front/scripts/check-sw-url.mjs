@@ -137,7 +137,53 @@ if (repli) {
 	}
 }
 
+// ── Mise en cache d'une réponse d'API authentifiée ────────────────────────────
+//
+// Le service worker servait `/api/lots` et `/api/publications` en
+// `StaleWhileRevalidate` pendant une heure. Les deux exigent `get_current_user`
+// et leur contenu est filtré par utilisateur et par périmètre : ce cache
+// contenait donc des réponses authentifiées et personnalisées.
+//
+// `StaleWhileRevalidate` rend le cache D'ABORD et revalide après, en arrière-plan.
+// Une session expirée continuait d'afficher du contenu applicatif complet, et
+// c'est la revalidation — après le rendu — qui prenait le 401 : l'écran affirmait
+// une session qui n'existait plus (#379, signalé le 16/08/2026). Rien ne purgeait
+// ce cache à la déconnexion ni à l'expiration, si bien que le piège se réarmait
+// tout seul à chaque fois.
+//
+// Le contrôle porte sur le SW CONSTRUIT et non sur `vite.config.ts` : c'est
+// l'artefact livré qui compte, et `runtimeCaching` peut revenir d'un défaut de
+// plugin ou d'un changement de défaut amont autant que d'une ligne écrite à la
+// main — exactement comme le repli de navigation ci-dessus.
+//
+// Ce qui reste légitime : le precache des ressources STATIQUES (js, css, icônes,
+// polices), qui ne porte aucune donnée d'utilisateur.
+const MOTIFS_CACHE_API = [
+	{ motif: /["']api-cache["']/, quoi: `le cache nommé « api-cache »` },
+	{ motif: /\\?\/api\\?\/[a-z]/i, quoi: `une route /api/ référencée par le service worker` },
+];
+
+const cacheApi = MOTIFS_CACHE_API.map(({ motif, quoi }) => {
+	const m = sw.match(motif);
+	return m ? `  ${quoi}\n      ${m[0]}` : null;
+}).filter(Boolean);
+
+if (cacheApi.length > 0) {
+	console.error(
+		`\n✗ Le service worker met en cache des réponses d'API :\n\n` +
+			cacheApi.join('\n') +
+			`\n\n  /api/lots et /api/publications exigent une session et sont filtrés par` +
+			`\n  utilisateur : les mettre en cache fait afficher du contenu applicatif à` +
+			`\n  une session expirée, la revalidation ne prenant le 401 qu'APRÈS le rendu.` +
+			`\n  Rien ne purge ce cache à la déconnexion — le piège se réarme seul.` +
+			`\n\n  Retirer l'entrée \`runtimeCaching\` des options \`workbox\` de VitePWA` +
+			`\n  (front/vite.config.ts). Le precache des ressources statiques n'est pas` +
+			`\n  concerné.\n`,
+	);
+	process.exit(1);
+}
+
 console.log(
 	`✓ ${fichiers.length} fichiers du bundle analysés — service worker en URL absolue, ` +
-		`sans repli de navigation orphelin.`,
+		`sans repli de navigation orphelin, sans cache de réponse d'API.`,
 );

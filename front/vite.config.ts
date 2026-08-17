@@ -100,13 +100,34 @@ export default defineConfig({
 				// vérifie sur le bundle CONSTRUIT que le repli n'est pas réapparu.
 				navigateFallback: null,
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-				runtimeCaching: [
-					{
-						urlPattern: /^https?:\/\/.*\/api\/(lots|publications)/,
-						handler: 'StaleWhileRevalidate',
-						options: { cacheName: 'api-cache', expiration: { maxAgeSeconds: 60 * 60 } },
-					},
-				],
+				// PAS de mise en cache des réponses d'API — et donc pas de
+				// `runtimeCaching` du tout.
+				//
+				// `/api/lots` et `/api/publications` étaient servis en
+				// `StaleWhileRevalidate` pendant une heure. Or les deux exigent
+				// `get_current_user` et leur contenu est filtré par utilisateur et
+				// par périmètre (`api/app/routers/lots.py`,
+				// `api/app/routers/publications/crud.py`) : ce cache contenait des
+				// réponses authentifiées et personnalisées.
+				//
+				// `StaleWhileRevalidate` rend le cache D'ABORD et revalide ensuite,
+				// en arrière-plan. Une session expirée continuait donc d'afficher du
+				// contenu applicatif, et c'est la revalidation — après le rendu — qui
+				// prenait le 401 : l'écran affirmait une session qui n'existait plus
+				// (#379). Un cache applicatif qui survit à l'expiration de la session
+				// rejoue le même tour à chaque expiration.
+				//
+				// Ce qui n'est PAS touché : le precache des ressources statiques (js,
+				// css, icônes, polices) porté par `globPatterns` — c'est lui qui fait
+				// l'installation PWA et le bandeau de mise à jour. Ce qui disparaît,
+				// c'est la lecture hors ligne des actualités et des lots : une
+				// capacité qu'aucun écran n'annonçait, et qui ne peut pas être rendue
+				// correctement tant qu'elle sert du contenu authentifié depuis un
+				// cache que rien ne purge à la déconnexion.
+				//
+				// `npm run lint:sw` vérifie sur le bundle CONSTRUIT qu'aucune route
+				// `/api/` n'est remise en cache — la valeur fautive pouvant revenir
+				// d'un défaut du plugin autant que d'une ligne écrite à la main.
 			},
 		}),
 	],

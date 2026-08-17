@@ -27,6 +27,37 @@ export class ApiError extends Error {
 	}
 }
 
+/**
+ * Chemins où un 401 est une RÉPONSE DÉFINITIVE, et non une session à renouveler.
+ *
+ * Le renouvellement silencieux était jusqu'ici désactivé par le PRÉFIXE `/auth/`.
+ * Il attrapait donc `/auth/me` — l'appel qui charge l'utilisateur au démarrage de
+ * l'application. Or l'access token vit 120 min et le refresh token 7 jours
+ * (`api/app/config.py`) : il existe une fenêtre de sept jours pendant laquelle la
+ * session est parfaitement renouvelable et où `me()` était pourtant refusé sans
+ * qu'on ait seulement essayé. Les requêtes de la page, elles, se renouvelaient et
+ * s'affichaient — d'où du contenu à l'écran, `$currentUser` resté nul, et un menu
+ * vidé de ses quatorze entrées pour ne garder que la marque (#379).
+ *
+ * La liste est donc NOMINATIVE, jamais un préfixe. N'y figurent que les chemins
+ * dont l'API renvoie 401 comme réponse métier :
+ *   - `/auth/refresh` : c'est lui qui renouvelle — s'y rappeler serait une récursion ;
+ *   - `/auth/login`   : 401 = identifiants refusés, à afficher tel quel ;
+ *   - `/auth/logout`  : on quitte la session, la renouveler n'aurait aucun sens.
+ *
+ * Tout autre 401 signifie « cette session n'est plus valide » : on tente de la
+ * renouveler, et on n'envoie vers la mire que si le renouvellement échoue.
+ *
+ * `npm run lint:session` vérifie qu'aucun préfixe ne revient, que `/auth/me` n'y
+ * entre pas, et qu'une entrée devenue inutile fait échouer le contrôle.
+ */
+export const CHEMINS_SANS_RENOUVELLEMENT = ['/auth/refresh', '/auth/login', '/auth/logout'];
+
+/** Chemin sans sa chaîne de requête — `/auth/verifier-email?token=…` porte la sienne. */
+function cheminNu(path: string): string {
+	return path.split('?')[0];
+}
+
 // Guard pour éviter deux refreshes simultanés
 let _refreshing: Promise<boolean> | null = null;
 
@@ -53,8 +84,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 	let res = await fetch(`${BASE}${path}`, opts);
 
-	// Refresh silencieux sur 401 (sauf sur les routes d'auth elles-mêmes)
-	if (res.status === 401 && !path.startsWith('/auth/')) {
+	// Refresh silencieux sur 401, sauf là où le 401 est une réponse définitive
+	if (res.status === 401 && !CHEMINS_SANS_RENOUVELLEMENT.includes(cheminNu(path))) {
 		const ok = await tryRefresh();
 		if (ok) {
 			res = await fetch(`${BASE}${path}`, opts);
