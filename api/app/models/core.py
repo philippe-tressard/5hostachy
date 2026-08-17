@@ -424,7 +424,7 @@ class PublicationEvolution(SQLModel, table=True):
     __tablename__ = "publication_evolution"
     id: Optional[int] = Field(default=None, primary_key=True)
     publication_id: int = Field(foreign_key="publication.id")
-    # type : commentaire | etat | correction
+    # type : commentaire | etat — une correction est un `commentaire` préfixé « Correction : » (#433)
     type: str
     contenu: Optional[str] = None
     ancien_statut: Optional[str] = None

@@ -24,14 +24,37 @@ from app.utils.visibility import publication_visible
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
 from .commun import (
-    ARCHIVAGE_DELAI_HEURES, PUBLIE_VISIBILITE_JOURS, appliquer_confidentialite,
-    _generer_annonce_hall, _is_annule_expired, _is_archived, _pub_to_read,
+    ARCHIVAGE_DELAI_HEURES, PUBLIE_VISIBILITE_JOURS, STATUT_LABELS,
+    appliquer_confidentialite, _generer_annonce_hall, _is_annule_expired,
+    _is_archived, _pub_to_read,
 )
 from .courriels import (
     _envoyer_email_externe_publication, _envoyer_email_syndic_publication,
 )
 
 router = APIRouter(prefix="/publications", tags=["publications"])
+
+#  Ce qu'une correction RACONTE dans l'Historique, et sous quel nom à l'écran.
+#  Les libellés sont ceux des neuf sections du cadre (`SECTIONS_LIBELLE` côté
+#  front) : lire « Périmètre » dans le fil et « Périmètre » dans le formulaire
+#  qu'on vient de quitter est la moindre des choses (R3).
+#
+#  ⚠️ Les champs ABSENTS de cette table ne sont pas oubliés, ils sont exclus :
+#  `archivee` est un rangement, `batiment_id` une donnée dérivée, et les canaux
+#  (`partager_whatsapp`, `envoyer_syndic`, `envoyer_cs`, `annonce_hall`) sont des
+#  actes de diffusion que l'édition ne rejoue pas — section 9, absente en
+#  édition, motif `geste`.
+CHAMPS_CORRIGEABLES = {
+    'titre': 'Titre',
+    'epingle': 'Épinglage',
+    'urgente': 'Urgence',
+    'brouillon': 'Brouillon',
+    'confidentiel': 'Confidentiel',
+    'perimetre_cible': 'Périmètre',
+    'public_cible': 'Destinataires',
+    'contenu': 'Description',
+    'photos_urls': 'Photos',
+}
 
 
 @router.get("", response_model=list[PublicationRead])
@@ -151,24 +174,52 @@ def update_publication(
     ancien_statut = pub.statut
     nouveau_statut = data.get('statut')
 
+    #  L'état d'AVANT, relevé avant la boucle d'affectation : c'est lui qui dit
+    #  ce qui a réellement changé. Sans ce relevé, « corriger » une valeur en la
+    #  réenregistrant identique s'inscrirait quand même dans l'Historique.
+    avant = {champ: getattr(pub, champ, None) for champ in data}
+
     for k, v in data.items():
         setattr(pub, k, v)
     pub.mis_a_jour_le = datetime.utcnow()
 
-    # Changement de statut → enregistrer date + évolution auto
+    #  🔴 UNE ÉDITION ÉCRIT UNE CORRECTION, PAS UNE TRANSITION (cadre #430, #433)
+    #
+    #  Ce bloc écrivait une `PublicationEvolution(type="etat")` dès que le statut
+    #  changeait — la même forme, au même endroit du fil, que le changement d'état
+    #  volontaire du conseil syndical. Tant que l'édition ne rouvrait pas le
+    #  workflow, cela ne se voyait pas ; le cadre l'y rouvre (*l'édition corrige, et
+    #  l'état s'y corrige comme les autres champs*), et corriger un état mal saisi
+    #  apparaîtrait alors comme une ÉTAPE : la publication aurait « été » en cours
+    #  alors qu'elle n'y est jamais passée.
+    #
+    #  Correction identique à celle des tickets (`tickets/crud.py`, #431) — même
+    #  défaut, même remède, même forme de ligne : rien ne devient muet, mais ce
+    #  qui s'écrit se présente pour ce qu'il est. La vraie transition, elle, garde
+    #  son chemin : `POST /publications/{id}/evolutions` (`evolutions.py`), avec
+    #  sa date, son auteur et ses canaux.
     if nouveau_statut and nouveau_statut != ancien_statut:
         pub.statut_change_le = datetime.utcnow()
-        labels = {"publie": "Publié", "en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
-        evol = PublicationEvolution(
+
+    corrections = [
+        libelle
+        for champ, libelle in CHAMPS_CORRIGEABLES.items()
+        if champ in data and data[champ] != avant.get(champ)
+    ]
+    if nouveau_statut and nouveau_statut != ancien_statut:
+        corrections.insert(
+            0,
+            f"État : {STATUT_LABELS.get(ancien_statut or '', 'Aucun')} → "
+            f"{STATUT_LABELS.get(nouveau_statut, nouveau_statut)}",
+        )
+    if corrections:
+        session.add(PublicationEvolution(
             publication_id=pub.id,
-            type="etat",
-            contenu=f"Statut changé : {labels.get(ancien_statut or '', 'Aucun')} → {labels.get(nouveau_statut, nouveau_statut)}",
-            ancien_statut=ancien_statut,
-            nouveau_statut=nouveau_statut,
+            type="commentaire",
+            contenu="Correction : " + " ; ".join(corrections),
             auteur_id=user.id,
             cree_le=datetime.utcnow(),
-        )
-        session.add(evol)
+        ))
 
     # Publication du brouillon → date de publication
     was_brouillon_published = 'brouillon' in data and not data['brouillon'] and pub.publiee_le is None

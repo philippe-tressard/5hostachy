@@ -17,38 +17,55 @@
     7-8. Photos / Documents (ou Pièces jointes en mode unifié)
     9. Diffusion   →  message interne, canaux, adresse externe — EN DERNIER
 
-  ⚠️ **Ce composant n'est pas encore gouverné par la déclaration d'entité**
-  (`$lib/entites/`, cadre #430). Il sert quatre écrans — tickets, fiche de
-  ticket, actualités, espace CS — et l'y brancher les changerait tous les quatre
-  avant qu'on les ait regardés, ce que R5 interdit. Deux écarts connus, à traiter
-  avec #433 :
-    • le mode « pièces jointes unifiées » (`separatePhotosAndDocs = false`)
-      FUSIONNE les sections 7 et 8, ce que le cadre interdit. Les tickets ne
-      l'utilisent pas ; les actualités et l'espace CS, si. *Une variante ajoutée
-      pour accueillir un écart existant ne factorise pas : elle entérine* — le
-      remède est de remettre ces deux écrans en conformité, pas d'assouplir ;
-    • l'intitulé de la description bascule « Commentaire » / « Contenu » selon le
-      mode, là où R3 demande le MÊME libellé d'un formulaire à l'autre.
+  ## LE GESTE EST DÉCIDÉ PAR L'APPELANT (#426, 18/08/2026)
+
+  Ce formulaire commençait par une rangée de deux pastilles — « 💬 Commentaire »
+  et « 🔄 Changement d'état » — au-dessus d'un formulaire ouvert par un bouton
+  💬. L'utilisateur avait donc **déjà dit** ce qu'il voulait faire en cliquant, et
+  la première pastille était un choix sans objet : déjà sélectionnée, et la
+  sélectionner ne faisait rien.
+
+  > « le bouton commentaire n'a pas lieu d'être — il est présent sur le fil
+  >   principal pour ouvrir un *nouveau commentaire* » (17/08/2026)
+
+  La rangée a disparu, et le geste arrive en prop : `evolType`. Chaque écran
+  porte désormais **deux** points d'entrée — 💬 pour commenter, 🔄 pour changer
+  l'état —, ce qui était la forme recommandée par #426. On ne pouvait pas retirer
+  la pastille seule : « Changement d'état » n'avait aucun autre chemin depuis un
+  fil, et la supprimer aurait supprimé la fonction.
+
+  La section **Workflow** ne rend donc plus qu'un sélecteur d'état, et seulement
+  quand c'est le geste demandé.
+
+  ## Les pièces jointes sont DEUX sections, jamais une (#433)
+
+  Le mode « pièces jointes unifiées » (`separatePhotosAndDocs = false`) fusionnait
+  les sections 7 et 8, ce que le cadre #430 interdit dans tous les rendus. Il a
+  disparu le 18/08/2026, quand son dernier appelant l'a quitté : *une variante
+  ajoutée pour accueillir un écart existant ne factorise pas, elle entérine*.
+
+  ⚠️ **Ce composant n'est toujours pas gouverné par la déclaration d'entité**
+  (`$lib/entites/`) : il sert quatre écrans, et l'état `evolution` est déclaré
+  sans être encore confronté à son rendu. Un écart connu subsiste — l'intitulé de
+  la description bascule « Commentaire » / « Contenu » selon le mode, là où R3
+  demande le MÊME libellé d'un formulaire à l'autre.
 
   ⚠️ **Pourquoi `SectionFormulaire` et non `ChampsCommuns`.** `ChampsCommuns` est
   le point d'héritage des sections 4 à 9, et c'est lui qu'il faudrait utiliser —
-  il ne sait pas encore rendre une rubrique de pièces jointes **unifiée**
-  (`separatePhotosAndDocs = false` : photos ET documents dans un seul champ, ce
-  qu'attendent les actualités et l'espace CS), et son intitulé de description est
-  figé à « Description » là où l'évolution parle de « Commentaire ». Les sections
-  sont donc composées ici avec `SectionFormulaire`, dans le MÊME ordre et avec les
-  MÊMES intitulés que `ChampsCommuns` — toute évolution de l'un doit suivre dans
-  l'autre tant que la rubrique unifiée n'a pas rejoint le composant commun.
+  son intitulé de description est figé à « Description » là où l'évolution parle
+  de « Commentaire ». Les sections sont donc composées ici avec
+  `SectionFormulaire`, dans le MÊME ordre et avec les MÊMES intitulés que
+  `ChampsCommuns` — toute évolution de l'un doit suivre dans l'autre.
 
   Props clés :
-    statutOptions      – liste des options de statut disponibles
+    evolType           – LE GESTE, décidé par l'appelant : 'commentaire' | 'etat'
+    statutOptions      – liste des options de statut disponibles (geste 'etat')
     statutLabels       – map value→label pour afficher le statut actuel
     currentStatut      – statut actuel de l'item parent (badge du libellé)
     showNotifs         – afficher les cases WhatsApp/syndic/CS
     showEmail          – afficher le champ email externe
     showFiles          – afficher l'upload de fichiers
-    separatePhotosAndDocs – true=tickets (photos + docs séparés), false=publications (fichiers unifiés)
-    editMode           – masque le type/statut, pré-remplit contenu+fichiers
+    editMode           – masque le statut, pré-remplit contenu+fichiers
     initialContenu     – contenu initial (mode édition)
     initialFichiers    – fichiers initiaux (mode édition)
     saving             – contrôlé par le parent (en cours de sauvegarde API)
@@ -63,8 +80,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
-	import { ACCEPT_FICHIERS, ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
+	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	/** Préfixe des `id` des champs. Plusieurs formulaires d'évolution coexistent à
@@ -72,6 +88,12 @@
 	    même fil —, et deux `<label for="…">` pointant le même id ne désignent plus
 	    rien. Même contrat que `ChampsCommuns`. */
 	export let idPrefixe = 'evol';
+	/**  LE GESTE, décidé par l'appelant — c'est le bouton cliqué qui l'a dit
+	     (#426). `commentaire` : on ajoute une réponse au fil. `etat` : on fait
+	     avancer le workflow, et le sélecteur d'état apparaît. Il n'y a plus de
+	     rangée de pastilles : redemander ce que le clic vient de déclarer est un
+	     choix sans objet. */
+	export let evolType: 'commentaire' | 'etat' = 'commentaire';
 	/** Options affichées dans le select "Nouvel état" */
 	export let statutOptions: { value: string; label: string }[] = [];
 	/** Map value→label pour afficher le statut actuel */
@@ -95,9 +117,7 @@
 	export let interne = false;
 	/** Afficher l'upload de fichiers */
 	export let showFiles = false;
-	/** true = tickets (photos séparées des docs), false = publications (fichiers unifiés) */
-	export let separatePhotosAndDocs = false;
-	/** Mode édition : masque type/statut, pré-remplit contenu+fichiers */
+	/** Mode édition : masque le statut, pré-remplit contenu+fichiers */
 	export let editMode = false;
 	/** Contenu initial (mode édition) */
 	export let initialContenu = '';
@@ -123,7 +143,6 @@
 	}>();
 
 	// ── State ─────────────────────────────────────────────────────────────────
-	let evolType: 'commentaire' | 'etat' = 'commentaire';
 	let contenu = initialContenu;
 	let nouveauStatut = '';
 	let partagerWhatsapp = defaultPartagerWhatsapp;
@@ -131,27 +150,31 @@
 	let envoyerCs = defaultEnvoyerCs;
 	let emailExterne = '';
 
-	// Fichiers séparés (separatePhotosAndDocs = true — mode ticket)
-	let photos: string[] = editMode && separatePhotosAndDocs
+	//  7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430).
+	//  Le tri se fait à l'ouverture, sur ce que l'entrée portait déjà : les
+	//  évolutions ne stockent qu'une liste (`fichiers_urls`), et c'est `estImage`
+	//  qui décide de quel côté chaque pièce revient — la même règle que partout
+	//  ailleurs (`$lib/fichiers`), jamais réimplémentée dans un écran.
+	let photos: string[] = editMode
 		? initialFichiers.filter(f => estImage(f.url)).map(f => f.url)
 		: [];
-	let docs: string[] = editMode && separatePhotosAndDocs
+	let docs: string[] = editMode
 		? initialFichiers.filter(f => !estImage(f.url)).map(f => f.url)
 		: [];
-
-	// Fichiers unifiés (separatePhotosAndDocs = false — mode publication / espace-cs)
-	let fichiers: string[] =
-		editMode && !separatePhotosAndDocs ? initialFichiers.map(f => f.url) : [];
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
-	$: allFichiersUrls = separatePhotosAndDocs ? [...photos, ...docs] : fichiers;
+	$: allFichiersUrls = [...photos, ...docs];
 
 	//  Sections visibles. La PREMIÈRE section rendue ne porte pas de filet
 	//  au-dessus : un trait avant le premier groupe le séparerait du titre du
 	//  formulaire, qui joue déjà ce rôle (`SectionFormulaire`).
-	$: sectionWorkflow = !editMode && statutOptions.length > 0;
+	//  La section Workflow n'existe que pour le geste qui la concerne, et
+	//  seulement s'il y a un état à proposer : un choix à un seul choix n'est pas
+	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
+	//  la décide (#426).
+	$: sectionWorkflow = !editMode && evolType === 'etat' && statutOptions.length > 0;
 	$: sectionDiffusion = showNotifs || showEmail || avecInterne;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
@@ -199,35 +222,25 @@
       page dédiée s'arrête à 720 px. -->
 <div class="largeur-saisie">
 
-	<!-- ── 2-3. Nature de l'évolution et workflow ────────────────────────────
-	     La rangée de pastilles est masquée en mode édition, et quand il n'y a
-	     rien à choisir : sans option d'état, elle se réduisait à une pastille
-	     unique, active et sans alternative — un choix à un seul choix. C'est le
-	     cas de la fiche d'un ticket depuis #415, où le changement d'état a ses
-	     propres boutons. -->
+	<!-- ── 3. Workflow ───────────────────────────────────────────────────────
+	     Plus de rangée de pastilles : le geste a été déclaré par le bouton qui a
+	     ouvert ce formulaire (#426). Ne reste que ce qu'il faut encore préciser —
+	     vers quel état. Le libellé porte l'état ACTUEL en badge, à droite
+	     (`ux-patterns` §9 quater). -->
 	{#if sectionWorkflow}
-		<SectionFormulaire premiere titre="Workflow" idTitre="{idPrefixe}-workflow-titre">
-			<div class="evol-nature" role="group" aria-labelledby="{idPrefixe}-workflow-titre">
-				<Pastille active={evolType === 'commentaire'}
-					on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</Pastille>
-				<Pastille active={evolType === 'etat'}
-					on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</Pastille>
+		<!--  Section à UN champ : le titre EST le libellé, et le sélecteur ne
+		      réécrit rien (`ux-patterns` §9 septies). Même forme que la section
+		      Workflow de `FormulaireTicket`, au mot près. -->
+		<SectionFormulaire premiere titre="Workflow" requis badge={libelleStatutActuel}
+			pour="{idPrefixe}-statut">
+			<div class="field champ-large">
+				<select id="{idPrefixe}-statut" bind:value={nouveauStatut}>
+					<option value="">— Choisir le nouvel état —</option>
+					{#each statutOptions as opt (opt.value)}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
 			</div>
-
-			{#if evolType === 'etat'}
-				<div class="field champ-large">
-					<label for="{idPrefixe}-statut">
-						Nouvel état *
-						{#if libelleStatutActuel}<span class="badge badge-green">{libelleStatutActuel}</span>{/if}
-					</label>
-					<select id="{idPrefixe}-statut" bind:value={nouveauStatut}>
-						<option value="">— Choisir —</option>
-						{#each statutOptions as opt}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
-				</div>
-			{/if}
 		</SectionFormulaire>
 	{/if}
 
@@ -259,26 +272,17 @@
 	     « Résolu ». Laissée EN L'ÉTAT tant qu'elle n'est pas arbitrée — la
 	     question est posée dans #416. -->
 	{#if showFiles && (editMode || evolType === 'commentaire')}
-		{#if separatePhotosAndDocs}
-			<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
-				<div class="field champ-large">
-					<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
-						label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
-				</div>
-			</SectionFormulaire>
-			<SectionFormulaire titre="Documents" pour="{idPrefixe}-docs">
-				<div class="field champ-large">
-					<FichiersUpload id="{idPrefixe}-docs" mode="documents" titre="" bind:urls={docs} />
-				</div>
-			</SectionFormulaire>
-		{:else}
-			<SectionFormulaire titre="Pièces jointes" pour="{idPrefixe}-fichiers">
-				<div class="field champ-large">
-					<FichiersUpload id="{idPrefixe}-fichiers" mode="mixte" titre=""
-						accept={ACCEPT_FICHIERS} bind:urls={fichiers} size={80} />
-				</div>
-			</SectionFormulaire>
-		{/if}
+		<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
+			<div class="field champ-large">
+				<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
+					label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
+			</div>
+		</SectionFormulaire>
+		<SectionFormulaire titre="Documents" pour="{idPrefixe}-docs">
+			<div class="field champ-large">
+				<FichiersUpload id="{idPrefixe}-docs" mode="documents" titre="" bind:urls={docs} />
+			</div>
+		</SectionFormulaire>
 	{/if}
 
 	<!-- ── 9. Diffusion — EN DERNIER, après les pièces jointes ──────────────
@@ -332,17 +336,9 @@
 </div>
 
 <style>
-	/*  La rangée de pastilles. Les boutons eux-mêmes sont des `Pastille` : ils
-	    portaient `class="pill"`, dont la définition vit dans le `<style>` de
-	    CINQ pages appelantes — donc scopée à elles par Svelte, et sans effet sur
-	    le balisage d'un composant enfant. C'est très exactement la panne qui a
-	    fait créer `Pastille.svelte` (v2.67.11), et elle était ici aussi. */
-	.evol-nature {
-		display: flex;
-		gap: .5rem;
-		flex-wrap: wrap;
-		margin-bottom: .6rem;
-	}
+	/*  `.evol-nature` a disparu avec la rangée de pastilles qu'elle habillait
+	    (#426) : le geste est décidé par le bouton qui ouvre ce formulaire. */
+
 	/*  Définie ICI, avec le balisage qu'elle habille : `.checkbox-field` n'est pas
 	    une classe d'`app.css` — chaque composant qui l'emploie la style lui-même,
 	    et une classe seulement utilisée arrive nue à l'écran (v2.67.11). */

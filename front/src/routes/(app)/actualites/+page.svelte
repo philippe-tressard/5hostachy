@@ -8,15 +8,12 @@
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
 	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
 	import HistoriqueActualites from '$lib/components/HistoriqueActualites.svelte';
-	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
-	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
-	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { STATUT_LABELS, richEmpty } from '$lib/publications';
-	import { fmtDatetime2d as fmtDatetime } from '$lib/date';
+	import { STATUT_LABELS, STATUT_PUBLICATION_OPTIONS } from '$lib/publications';
 
 	$: _pc = getPageConfig($configStore, 'actualites', defautsDePage('actualites'));
 	$: _siteNom = $siteNomStore;
@@ -29,7 +26,6 @@
 	let pubFilesMap: Record<number, any[]> = {};
 	let loadedFilesFor = new Set<number>();
 	let expandedPubs = new Set<number>();
-	let expandedEvols = new Set<number>();
 
 	function togglePub(id: number) {
 		if (expandedPubs.has(id)) {
@@ -116,33 +112,30 @@
 		}
 	}
 
-	// ── Édition ───────────────────────────────────────────────────────────────
+	//  ── Édition ───────────────────────────────────────────────────────────────
+	//  La page ne porte plus QUE l'identité de la publication en cours de
+	//  correction : le formulaire lui-même est `FormulaireActualite`, le même
+	//  qu'à la création (#433). Les onze variables `edit*` qui vivaient ici
+	//  dupliquaient à la main un état que le composant tient déjà — et elles
+	//  avaient déjà divergé : cinq notions manquantes, une en trop.
 	let editingPub: Publication | null = null;
-	let editTitre = '';
-	let editContenu = '';
-	let editUrgente = false;
-	let editEpingle = false;
-	// Épinglage à l'ouverture du formulaire : évite que l'avertissement de
-	// plafond compte une seconde fois une publication déjà épinglée.
-	let editEpingleInitial = false;
-	let editStatut = '';
-	let editBrouillon = false;
-	let editConfidentiel = false;
-	let editSaving = false;
 
 	// ── Évolutions ──────────────────────────────────────────────────────
 	let showEvolForm: number | null = null;  // pub.id ouvert
+	//  Le geste vient du bouton cliqué — `💬` commenter, `🔄` changer l'état — et
+	//  il n'est plus redemandé une fois le formulaire ouvert (#426).
+	let gesteEvol: 'commentaire' | 'etat' = 'commentaire';
 	let evolSaving = false;
+
+	function ouvrirEvolution(pub: Publication, geste: 'commentaire' | 'etat') {
+		showEvolForm = pub.id;
+		gesteEvol = geste;
+		editingPub = null;
+		expandedPubs = new Set([pub.id]);
+	}
 	let editingEvolId: number | null = null;
 	let editingEvolPubId: number | null = null;
 	let editEvolSaving = false;
-
-	const PUB_STATUT_OPTIONS = [
-		{ value: 'publie',   label: '🔵 Publié' },
-		{ value: 'en_cours', label: '🟡 En cours' },
-		{ value: 'resolu',   label: '🟢 Résolu' },
-		{ value: 'annule',   label: '⚫ Annulé' },
-	];
 
 	async function addEvolFromForm(pub: Publication, e: CustomEvent) {
 		const data = e.detail;
@@ -191,37 +184,16 @@
 
 	function startEdit(pub: Publication) {
 		editingPub = pub;
-		editTitre = pub.titre;
-		editContenu = pub.contenu;
-		editUrgente = pub.urgente;
-		editEpingle = pub.epingle;
-		editEpingleInitial = pub.epingle;
-		editStatut = pub.statut ?? 'publie';
-		editBrouillon = pub.brouillon;
-		editConfidentiel = pub.confidentiel ?? false;
 		showEvolForm = null;
 		expandedPubs = new Set([pub.id]);
 	}
 
-	function cancelEdit() { editingPub = null; }
-
-	async function saveEdit() {
-		if (!editingPub || !editTitre.trim() || richEmpty(editContenu)) return;
-		editSaving = true;
-		try {
-			const updated = await pubsApi.update(editingPub.id, {
-				titre: editTitre, contenu: editContenu,
-				urgente: editUrgente, epingle: editEpingle,
-				statut: editStatut || null,
-				brouillon: editBrouillon,
-				confidentiel: editConfidentiel,
-			});
-			pubList = pubList.map(p => p.id === updated.id ? updated : p);
-			editingPub = null;
-			toast('success', 'Publication mise à jour');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally { editSaving = false; }
+	//  Le formulaire annonce ce qu'il a enregistré ; la page range. Elle ne
+	//  reconstruit rien : `modifie` porte la publication telle que le serveur l'a
+	//  relue, pièces jointes et corrections comprises.
+	function publicationModifiee(e: CustomEvent<Publication>) {
+		pubList = pubList.map((p) => (p.id === e.detail.id ? e.detail : p));
+		editingPub = null;
 	}
 
 </script>
@@ -264,8 +236,13 @@
 				{#if $isCS}
 					<button class="btn-icon-edit" aria-label="Modifier" title="Modifier"
 						on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
-					<button class="btn-icon" aria-label="Ajouter un commentaire / changer état" title="Commenter / état"
-						on:click|stopPropagation={() => { showEvolForm = pub.id; editingPub = null; expandedPubs = new Set([pub.id]); }}>&#x1F4AC;</button>
+					<!--  DEUX points d'entrée : le geste se déclare ici, une fois. Le
+					      formulaire le redemandait en pastilles alors que ce bouton
+					      venait de le dire (#426). -->
+					<button class="btn-icon" aria-label="Commenter" title="Commenter"
+						on:click|stopPropagation={() => ouvrirEvolution(pub, 'commentaire')}>&#x1F4AC;</button>
+					<button class="btn-icon" aria-label="Changer l’état" title="Changer l’état"
+						on:click|stopPropagation={() => ouvrirEvolution(pub, 'etat')}>&#x1F504;</button>
 					{#if pub.statut === 'resolu'}
 						<button class="btn-icon" aria-label="Archiver" title="Archiver"
 							on:click|stopPropagation={() => archivePub(pub)}>&#x1F4E6;</button>
@@ -287,45 +264,37 @@
 
 			<svelte:fragment slot="formulaire">
 				{#if editingPub?.id === pub.id}
-					<!-- ── Formulaire d'édition ── -->
-					<form on:submit|preventDefault={saveEdit} on:click|stopPropagation>
-						<div class="field">
-							<label for="edit-titre-{pub.id}">Titre *</label>
-							<input id="edit-titre-{pub.id}" type="text" bind:value={editTitre} required maxlength="200" />
-						</div>
-						<div class="field">
-							<label for="edit-contenu-{pub.id}">Description *</label>
-							<RichEditor bind:value={editContenu} minHeight="100px" />
-						</div>
-						<div class="field">
-							<label for="edit-statut-{pub.id}">État</label>
-							<select id="edit-statut-{pub.id}" bind:value={editStatut}>
-								<option value="publie">&#x1F535; Publié</option>
-								<option value="en_cours">&#x1F7E1; En cours</option>
-								<option value="resolu">&#x1F7E2; Résolu</option>
-								<option value="annule">⚫ Annulé</option>
-							</select>
-						</div>
-						<OptionsPublication
-							perimetreCible={pub.perimetre_cible}
-							dejaEpingle={editEpingleInitial}
-							bind:epingle={editEpingle}
-							bind:urgente={editUrgente}
-							bind:brouillon={editBrouillon}
-							bind:confidentiel={editConfidentiel}
+					<!--  ── Correction ──  LE MÊME formulaire qu'à la création, paramétré
+					      par la publication (#433). Il y en avait un second, écrit à la
+					      main sur 31 lignes, qui perdait cinq notions et en gagnait une
+					      que la création n'avait pas. `{#key}` : le mode et les valeurs
+					      initiales sont figés à la construction — passer d'une
+					      publication à l'autre doit remonter le composant à neuf. -->
+					{#key pub.id}
+						<FormulaireActualite
+							publication={pub}
+							on:modifie={publicationModifiee}
+							on:annule={() => (editingPub = null)}
 						/>
-						<div class="form-actions">
-							<button type="button" class="btn btn-outline" on:click={cancelEdit}>Annuler</button>
-							<button type="submit" class="btn btn-primary" disabled={editSaving}>{editSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
-						</div>
-					</form>
+					{/key}
 				{:else if showEvolForm === pub.id}
-					<!-- ── Formulaire d'évolution ── -->
-					<div class="evol-form" on:click|stopPropagation on:keydown|stopPropagation>
-						<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter une évolution</h4>
+					<!--  ── Commenter / changer l'état ──
+					      `role="presentation"` dit que ce conteneur n'est qu'un relais :
+					      il arrête la propagation pour que saisir dans le formulaire ne
+					      referme pas la carte, il n'est pas lui-même interactif. Même
+					      geste que `CarteTicket`, qui portait déjà le rôle — ici
+					      l'avertissement d'accessibilité traînait depuis l'origine. -->
+					<div class="evol-form" role="presentation"
+						on:click|stopPropagation on:keydown|stopPropagation>
 						{#key showEvolForm}
+						<!--  ⚠️ Les pièces jointes sont DEUX sections, 7 et 8, jamais
+						      fusionnées : c'est cet écran qui portait le mode « unifié »
+						      d'`EvolForm`, et le mode a disparu avec son dernier appelant
+						      (#433). *Une variante ajoutée pour accueillir un écart
+						      existant ne factorise pas, elle entérine.* -->
 						<EvolForm idPrefixe="pub-evol-{pub.id}"
-							statutOptions={PUB_STATUT_OPTIONS}
+							evolType={gesteEvol}
+							statutOptions={STATUT_PUBLICATION_OPTIONS}
 							statutLabels={STATUT_LABELS}
 							currentStatut={pub.statut ?? ''}
 							showNotifs={true}
@@ -334,7 +303,6 @@
 							defaultEnvoyerCs={pub.envoyer_cs ?? false}
 							showEmail={true}
 							showFiles={true}
-							separatePhotosAndDocs={false}
 							saving={evolSaving}
 							on:submit={(e) => addEvolFromForm(pub, e)}
 							on:cancel={() => (showEvolForm = null)}
@@ -345,63 +313,38 @@
 			</svelte:fragment>
 
 			<svelte:fragment slot="apres-corps">
-				<!-- ── Évolutions / historique ── -->
-				{#if pub.evolutions && pub.evolutions.length > 0}
-					{@const evolsSorted = [...pub.evolutions].sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())}
-					{@const evolCompact = evolsSorted.length > 7 && !expandedEvols.has(pub.id)}
-					{@const evolsVisible = evolCompact ? evolsSorted.slice(0, 5) : evolsSorted}
-					<div class="evol-list">
-						{#each evolsVisible as evol, i (evol.id)}
-							{#if i > 0}<hr class="evol-sep" />{/if}
-							<div class="evol-item evol-{evol.type}">
-								<span class="evol-icon">
-									{#if evol.type === 'etat'}&#x1F504;{:else if evol.type === 'correction'}✏️{:else}&#x1F4AC;{/if}
-								</span>
-								<div class="evol-body">
-									<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
-										<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
-										{#if (evol.type === 'commentaire' || (evol.type === 'etat' && evol.contenu)) && $isCS && editingEvolId !== evol.id}
-											<button type="button" on:click|stopPropagation={() => { editingEvolId = evol.id; editingEvolPubId = pub.id; }}
-												style="border:1px solid var(--color-border);background:var(--color-bg-alt);color:var(--color-text);cursor:pointer;padding:.15rem .4rem;font-size:.75rem;flex-shrink:0;border-radius:5px;line-height:1.4">✏️ Modifier</button>
-										{/if}
-									</div>
-									{#if evol.type === 'etat'}
-										<span class="evol-text">
-											Statut : <strong>{STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong>
-										</span>
-									{/if}
-									{#if evol.type === 'commentaire' || (evol.type === 'etat' && editingEvolId === evol.id)}
-										<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
-											{#key editingEvolId}
-											<EvolForm idPrefixe="pub-evol-edit-{evol.id}"
-												editMode={true}
-												initialContenu={evol.contenu || ''}
-												initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-												showFiles={true}
-												separatePhotosAndDocs={false}
-												saving={editEvolSaving}
-												on:submit={saveEvolEdit}
-												on:cancel={() => { editingEvolId = null; editingEvolPubId = null; }}
-											/>
-											{/key}
-										</div>
-									{:else if evol.contenu}
-										<div class="evol-text rich-content" style="font-size:.875rem">{@html safeHtml(evol.contenu)}</div>
-									{/if}
-									{#if (evol.fichiers_urls?.length ?? 0) > 0 && editingEvolId !== evol.id}
-										<div style="margin-top:.3rem">
-											<PiecesJointes urls={evol.fichiers_urls} size={72} compact />
-										</div>
-									{/if}
-								</div>
-							</div>
-						{/each}
-						{#if evolCompact}
-							<hr class="evol-sep" />
-							<button class="evol-more" on:click|stopPropagation={() => { expandedEvols.add(pub.id); expandedEvols = expandedEvols; }}>
-								Voir les {evolsSorted.length - 5} commentaires plus anciens
-							</button>
-						{/if}
+				<!--  ── L'HISTORIQUE ──  Le fil était écrit à la main ici, sur 58
+				      lignes : quatrième des six recopies relevées par #431, et déjà
+				      divergente — « Voir les N *commentaires* plus anciens » là où les
+				      tickets disent « entrées », un `<button>` habillé par six
+				      déclarations en ligne, et une branche pour un type `correction`
+				      que le serveur n'a JAMAIS écrit.
+				      La rubrique porte tout cela une fois, avec ses styles (Svelte les
+				      scope au composant qui rend le balisage — les laisser ici ne les
+				      atteindrait pas). -->
+				{#if pub.evolutions?.length}
+					<div class="pub-fil">
+						<RubriqueHistorique
+							evolutions={pub.evolutions}
+							statutLabels={STATUT_LABELS}
+							peutModifier={$isCS}
+							enEdition={editingEvolId}
+							on:modifier={(e) => { editingEvolId = e.detail; editingEvolPubId = pub.id; }}
+						>
+							<svelte:fragment slot="edition" let:evol>
+								{#key editingEvolId}
+									<EvolForm idPrefixe="pub-evol-edit-{evol.id}"
+										editMode={true}
+										initialContenu={evol.contenu || ''}
+										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+										showFiles={true}
+										saving={editEvolSaving}
+										on:submit={saveEvolEdit}
+										on:cancel={() => { editingEvolId = null; editingEvolPubId = null; }}
+									/>
+								{/key}
+							</svelte:fragment>
+						</RubriqueHistorique>
 					</div>
 				{/if}
 			</svelte:fragment>
@@ -414,19 +357,12 @@
 {/if}
 
 <style>
-	/* Évolutions */
-	.evol-list { margin-top: .9rem; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
-	.evol-sep { margin: 0; border: none; border-top: 1px solid var(--color-border); }
-	.evol-item { display: flex; gap: .5rem; padding: .5rem .75rem; font-size: .82rem; }
-	.evol-icon { flex-shrink: 0; font-size: .9rem; margin-top: .1rem; }
-	.evol-body { display: flex; flex-direction: column; gap: .15rem; }
-	.evol-meta { font-size: .75rem; color: var(--color-text-muted); }
-	.evol-text { color: var(--color-text); line-height: 1.5; }
-	.evol-etat { background: #f0f9ff; }
-	.evol-correction { background: #fefce8; }
+	/*  Le fil et son habillage vivent dans `RubriqueHistorique.svelte`, avec le
+	    balisage qui les porte (#433). Ne reste ici que ce que CETTE page rend :
+	    la marge qui sépare le fil de ce qu'il suit — le parent seul sait ce qu'il
+	    y a au-dessus. */
+	.pub-fil { margin-top: .9rem; }
 	.evol-form { padding: .5rem 0; }
-	.evol-more { width: 100%; background: none; border: none; padding: .45rem; font-size: .8rem; color: var(--color-primary); cursor: pointer; text-align: center; }
-	.evol-more:hover { background: var(--color-bg); }
 
 	/* Badges statut */
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }

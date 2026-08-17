@@ -129,8 +129,15 @@ export interface SectionDeclaree {
 	 * spécifiques » ne s'écrit jamais à l'écran — c'est « Saisi pour » qui s'y
 	 * lit. R3 demande que ce libellé soit le même d'un formulaire à l'autre :
 	 * il se déclare donc ici, et `lint:etats` refuse tout autre intitulé.
+	 *
+	 * ⚠️ **Une LISTE quand la section groupe plusieurs champs nommés.** La section 2
+	 * du ticket en porte deux — « Catégorie » et « Saisi pour » —, chacun avec son
+	 * intitulé : une section reste UNE section (elle ne se fusionne ni ne se
+	 * scinde), mais rien n'oblige son contenu à tenir sous un seul nom. Déclarer
+	 * les deux est ce qui permet à `lint:etats` de continuer à refuser un intitulé
+	 * inventé sur place.
 	 */
-	titreEcran?: string;
+	titreEcran?: string | readonly string[];
 	/**
 	 * Les états où la section est ABSENTE, chacun avec son motif.
 	 * Une absence non déclarée ici est un écart : `lint:etats` la refuse.

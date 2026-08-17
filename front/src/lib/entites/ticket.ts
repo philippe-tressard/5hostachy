@@ -35,8 +35,15 @@ export const TICKET: EntiteDeclaree = {
 	libelle: 'Ticket',
 	sections: [
 		{
+			//  🔴 Le TITRE, et lui seul. La catégorie a longtemps partagé cette
+			//  section — elle y était même rendue AVANT le titre, si bien que le
+			//  premier champ de la première section n'était pas le titre. Arbitré
+			//  par l'utilisateur le 18/08/2026 : *« dans Tickets, le titre est en
+			//  second, il devrait être en premier ; la catégorie fait partie des
+			//  champs spécifiques »*. La catégorie qualifie le ticket comme
+			//  « Saisi pour » : elle est en section 2.
 			id: 'titre',
-			objet: 'Catégorie + Titre',
+			objet: 'Titre',
 			requis: true,
 			absente: {
 				evolution: {
@@ -47,23 +54,30 @@ export const TICKET: EntiteDeclaree = {
 			},
 		},
 		{
+			//  DEUX champs nommés, d'où la liste d'intitulés : « Catégorie »,
+			//  toujours modifiable, et « Saisi pour », qui ne l'est qu'à la
+			//  création.
+			//
+			//  ⚠️ **Limite connue du cadre, et elle se voit ici.** La section est
+			//  PRÉSENTE en édition — la catégorie s'y corrige comme le titre —, mais
+			//  « Saisi pour » n'y est pas rendu : `TicketUpdate` accepte les trois
+			//  champs `saisi_pour_*` sans savoir les EFFACER (un `None` y est
+			//  indistinguable d'un champ non envoyé), et proposer « En mon nom »
+			//  serait offrir un choix qui ne fait rien, en silence.
+			//
+			//  R4 ne sait déclarer qu'une divergence de SECTION, pas de champ : ce
+			//  motif `api` (#431) ne peut donc pas s'écrire dans `absente`, et vit
+			//  ici, invisible à `lint:etats`. C'est le premier écart que le cadre ne
+			//  sait pas tenir — à instruire.
 			id: 'specifiques',
-			objet: 'Saisi pour (en mon nom / résident inscrit / personne extérieure)',
-			titreEcran: 'Saisi pour',
+			objet: 'Catégorie + Saisi pour (en mon nom / résident inscrit / personne extérieure)',
+			titreEcran: ['Catégorie', 'Saisi pour'],
 			absente: {
-				edition: {
-					motif: 'api',
-					ticket: DETTE_API,
-					explication:
-						"`TicketUpdate` accepte bien les trois champs `saisi_pour_*`, mais ne sait pas " +
-						"les EFFACER : un `None` y est indistinguable d'un champ non envoyé. Rouvrir la " +
-						"section proposerait « En mon nom » comme un choix qui ne fait rien, en silence — " +
-						'un contrôle qui ment est pire que son absence. À corriger côté API.',
-				},
 				evolution: {
 					motif: 'hérité',
 					explication:
-						"La personne pour qui le ticket a été saisi appartient au ticket, pas à l'entrée.",
+						'La catégorie et la personne pour qui le ticket a été saisi appartiennent au ' +
+						"ticket, pas à l'entrée du fil.",
 				},
 			},
 		},

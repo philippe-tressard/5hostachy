@@ -21,6 +21,7 @@ from app.utils.visibility import publication_visible
 from app.routers.publications import (
     ARCHIVAGE_DELAI_HEURES,
     PUBLIE_VISIBILITE_JOURS,
+    STATUT_LABELS,
     _is_archived,
 )
 
@@ -29,7 +30,10 @@ from app.utils.photos import parse_photos
 from .commun import ContexteFlux, auteur_nom, badges_marqueurs, perimetres_de, strip_html
 from .schemas import FluxItem
 
-_STATUT_LABELS = {"en_cours": "En cours", "resolu": "Résolu", "annule": "Annulé"}
+#  Les libellés viennent de `publications/commun.py` (#433). Cette copie-ci en
+#  omettait `publie` : sans effet tant que l'appelant filtre cet état juste
+#  au-dessus, mais c'est très exactement la forme d'une divergence qui attend son
+#  premier appelant distrait.
 
 
 def _seuil(session, cle: str, defaut: int) -> int:
@@ -67,7 +71,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
 
         badges = badges_marqueurs(p)
         if p.statut and p.statut != "publie":
-            badges.append(_STATUT_LABELS.get(p.statut, p.statut))
+            badges.append(STATUT_LABELS.get(p.statut, p.statut))
         auteur = auteur_nom(ctx.session, p.auteur_id)
         #  500 car. : assez pour déborder 3 lignes en pleine largeur → le clamp-3
         #  (front) coupe proprement en fin de 3ᵉ ligne. 300 laissait la 3ᵉ ligne

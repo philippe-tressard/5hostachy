@@ -331,7 +331,6 @@
 					<EvolForm idPrefixe="tk-msg"
 						showFiles={!newInterne}
 						showEmail={$isCS && !newInterne}
-						separatePhotosAndDocs={true}
 						avecInterne={$isCS}
 						bind:interne={newInterne}
 						saving={sending}
@@ -370,7 +369,6 @@
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
 					showFiles={true}
-					separatePhotosAndDocs={true}
 					saving={editEvolSaving}
 					on:submit={saveEvolEdit}
 					on:cancel={() => (editingEvolId = null)}
@@ -387,7 +385,6 @@
 						showNotifs={$isCS}
 						showEmail={$isCS}
 						showFiles={true}
-						separatePhotosAndDocs={true}
 						saving={evolSaving}
 						on:submit={addEvolFromForm}
 						on:cancel={() => (showEvolForm = false)}

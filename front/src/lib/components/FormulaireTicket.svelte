@@ -223,20 +223,11 @@
 
 <FormulaireCreation titre={titreBoite}>
 	<form on:submit|preventDefault={submit}>
+		<!--  1. Titre — et lui seul. La catégorie était rendue ICI, et AVANT le
+		      titre : le premier champ de la première section n'était pas le titre.
+		      Arbitré par l'utilisateur le 18/08/2026 — elle qualifie le ticket, elle
+		      est donc un champ spécifique (section 2). -->
 		<SectionFormulaire premiere>
-		<fieldset class="field" style="border:none;padding:0;margin:0">
-			<legend style="font-size:.875rem;font-weight:500;margin-bottom:.5rem;color:var(--color-text)">Catégorie *</legend>
-			<div class="cat-grid">
-				{#each CATEGORIES_TICKET as cat (cat.value)}
-					<label class="cat-option" class:selected={categorie === cat.value}>
-						<input type="radio" bind:group={categorie} value={cat.value} />
-						<span class="cat-label">{cat.emoji} {cat.label}</span>
-						<span class="cat-desc">{cat.description}</span>
-					</label>
-				{/each}
-			</div>
-		</fieldset>
-
 		<div class="field champ-large">
 			<label for="titre">Titre *</label>
 			<input
@@ -250,16 +241,32 @@
 		</div>
 		</SectionFormulaire>
 
-		<!--  2. Champs spécifiques. « Saisi pour » était rendu APRÈS les pièces
+		<!--  2. Champs spécifiques — DEUX champs nommés, dans cet ordre : la
+		      catégorie, puis « Saisi pour ». Ce dernier était rendu APRÈS les pièces
 		      jointes, entre les documents et la diffusion : le seul champ du site à
-		      être hors de sa section. C'est un champ SPÉCIFIQUE du ticket — il
-		      précède donc le workflow et le périmètre (`ux-patterns` §9 sexies,
-		      signalé par l'utilisateur le 16/08/2026).
-		      Sa présence par état est DÉCLARÉE (`$lib/entites/ticket`) : absente en
-		      édition, motif `api` citant #431 — `TicketUpdate` accepte bien les trois
-		      champs `saisi_pour_*` mais ne sait pas les EFFACER, et « En mon nom »
-		      serait alors un choix sans effet, en silence. -->
-		{#if $isCS && sectionPresente(TICKET, etat, 'specifiques')}
+		      être hors de sa section (signalé le 16/08/2026).
+		      ⚠️ La SECTION est présente en édition — la catégorie s'y corrige comme
+		      le titre —, mais « Saisi pour » n'y est pas : `TicketUpdate` ne sait pas
+		      EFFACER les `saisi_pour_*`, et « En mon nom » serait un choix sans effet.
+		      R4 ne déclare que des sections, pas des champs : ce motif `api` (#431)
+		      vit dans la déclaration en commentaire, faute de pouvoir s'y écrire. -->
+		{#if sectionPresente(TICKET, etat, 'specifiques')}
+			<SectionFormulaire titre="Catégorie" requis idTitre="ticket-categorie-titre">
+				<div class="field champ-large" role="radiogroup" aria-labelledby="ticket-categorie-titre">
+					<div class="cat-grid">
+						{#each CATEGORIES_TICKET as cat (cat.value)}
+							<label class="cat-option" class:selected={categorie === cat.value}>
+								<input type="radio" bind:group={categorie} value={cat.value} />
+								<span class="cat-label">{cat.emoji} {cat.label}</span>
+								<span class="cat-desc">{cat.description}</span>
+							</label>
+						{/each}
+					</div>
+				</div>
+			</SectionFormulaire>
+		{/if}
+
+		{#if $isCS && !modeEdition && sectionPresente(TICKET, etat, 'specifiques')}
 			<SectionFormulaire titre="Saisi pour">
 				<div class="field champ-large saisi-pour-section">
 					<div class="saisi-pour-tabs">

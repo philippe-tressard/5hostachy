@@ -1,37 +1,41 @@
 <!--
-  OptionsPublication.svelte — les options d'une actualité, écrites une fois.
+  OptionsPublication.svelte — les quatre options qui DÉCRIVENT une actualité :
+  épinglage, urgence, brouillon, confidentialité. **Section 2 du cadre #430**
+  (champs spécifiques), rendue à la création comme à l'édition.
 
-  Extrait de `routes/(app)/actualites/+page.svelte` le 15/08/2026, au fil de
-  l'eau : cette page tenait 750 lignes et le contrôle de modularité refuse qu'un
-  fichier déjà au-dessus de 500 grossisse (rang 1 §4). Il fallait y ajouter la
-  case « 🔒 Confidentiel » (#347) — et la rangée de cases était de toute façon
-  écrite DEUX fois dans la page, une pour la création, une pour l'édition, sans
-  que rien n'oblige les deux à rester d'accord.
+  Extrait de `routes/(app)/actualites/+page.svelte` le 15/08/2026 (la rangée de
+  cases y était écrite DEUX fois, sans que rien n'oblige les deux à rester
+  d'accord), puis **amputé de sa moitié « acte » le 18/08/2026** (#433).
 
-  Elles ne l'étaient déjà plus : la création montrait les canaux de notification
-  et l'affiche de hall, l'édition non. Cet écart-là est conservé (`complet`),
-  parce qu'il a une raison — on ne renvoie pas une notification en corrigeant une
-  faute de frappe — mais il est désormais **déclaré**, et non subi.
+  ## Pourquoi la coupure (#433)
 
-  ## Les deux règles que ce composant fait respecter à l'écran
+  Ce composant portait aussi les canaux de notification et l'affiche de hall,
+  sous un drapeau `complet` qui les réservait à la création. Le cadre a rendu ce
+  drapeau intenable : **les sections 1 à 8 décrivent l'entité, la 9 est un acte**,
+  et la 9 est absente de l'édition (*une correction n'est pas une nouvelle*). Un
+  composant à cheval sur les deux ne pouvait donc plus être rendu nulle part sans
+  mentir — dans la section 2 il aurait glissé des canaux là où on décrit ;
+  dans la 9, il aurait emporté avec lui les quatre options **et supprimé le seul
+  chemin qui permet de publier un brouillon**.
 
-  1. **« Confidentiel » exige un périmètre restreint.** Sur un périmètre qui
-     concerne déjà tous les résidents, il n'y a rien à restreindre : la case est
-     désactivée, et le texte dit pourquoi. Une case inerte sans explication laisse
-     l'utilisateur croire à un bug (`standards/11`, accessibilité).
-  2. **« Confidentiel » interdit l'affiche de hall.** Une affiche est punaisée
-     dans un hall et lue par n'importe qui : il n'y a aucun contrôle d'accès
-     derrière, contrairement au message WhatsApp dont le lien renvoie vers
-     l'application. Le blocage vaut dans les deux sens — cocher « Confidentiel »
-     sur une actualité déjà retenue pour le hall l'en retire.
+  Ce qui part : `CanauxNotification` et l'affiche de hall → `DiffusionPublication`.
+  Ce qui reste : ce qui se corrige.
 
-  ⚠️ Ces deux règles sont **aussi** tenues côté serveur
-  (`api/app/routers/publications/commun.py`, `appliquer_confidentialite`). Celles
-  d'ici ne sont qu'un confort d'écran : c'est le serveur qui décide.
+  ## La règle que ce composant fait respecter à l'écran
+
+  **« Confidentiel » exige un périmètre restreint.** Sur un périmètre qui concerne
+  déjà tous les résidents, il n'y a rien à restreindre : la case est désactivée, et
+  le texte dit pourquoi. Une case inerte sans explication laisse l'utilisateur
+  croire à un bug (`standards/11`, accessibilité).
+
+  ⚠️ La seconde règle — **« Confidentiel » interdit l'affiche de hall** — enjambe
+  désormais deux sections : elle vit chez l'hôte (`FormulaireActualite`), seul
+  endroit où les deux valeurs se rencontrent. Les deux sont **aussi** tenues côté
+  serveur (`api/app/routers/publications/commun.py`, `appliquer_confidentialite`) ;
+  celles d'ici ne sont qu'un confort d'écran — c'est le serveur qui décide.
 -->
 <script lang="ts">
 	import AlerteEpinglage from './AlerteEpinglage.svelte';
-	import CanauxNotification from './CanauxNotification.svelte';
 	import { concerneTous } from '$lib/utils';
 
 	/** Épingler en tête du fil. */
@@ -46,19 +50,11 @@
 	export let perimetreCible: string[] = [];
 	/** L'élément édité était-il DÉJÀ épinglé ? (évite un double comptage) */
 	export let dejaEpingle = false;
-	/** Canaux de notification et affiche de hall : création seulement. */
-	export let complet = false;
-	export let whatsapp = false;
-	export let syndic = false;
-	export let cs = false;
-	export let annonceHall = false;
 
-	//  Identifiants uniques : deux formulaires peuvent coexister à l'écran (la
+	//  Identifiant unique : deux formulaires peuvent coexister à l'écran (la
 	//  création est ouverte pendant qu'une actualité est dépliée), et deux
 	//  `aria-describedby` pointant sur le même id ne décrivent plus rien.
-	const suffixe = Math.random().toString(36).slice(2, 8);
-	const idAideConfidentiel = `aide-confidentiel-${suffixe}`;
-	const idAideHall = `aide-hall-${suffixe}`;
+	const idAideConfidentiel = `aide-confidentiel-${Math.random().toString(36).slice(2, 8)}`;
 
 	//  « Rien à restreindre » : le périmètre choisi concerne déjà tout le monde.
 	//  C'est le miroir exact de `a_portee_globale` côté serveur — la question
@@ -71,8 +67,6 @@
 	//  Le périmètre peut changer APRÈS que la case a été cochée : on ne laisse pas
 	//  une valeur devenue impossible partir dans la requête.
 	$: if (rienARestreindre && confidentiel) confidentiel = false;
-	//  Et la symétrie de la règle 2, dans le sens « je coche Confidentiel ».
-	$: if (confidentiel && annonceHall) annonceHall = false;
 </script>
 
 <div class="cases">
@@ -80,7 +74,7 @@
 	<label class="checkbox-field"><input type="checkbox" bind:checked={urgente} /> &#x1F6A8; Urgent</label>
 	<label class="checkbox-field">
 		<input type="checkbox" bind:checked={brouillon} />
-		✏️ Brouillon{complet ? ' (invisible pour les résidents)' : ''}
+		✏️ Brouillon (invisible pour les résidents)
 	</label>
 	<label
 		class="checkbox-field"
@@ -114,54 +108,6 @@
 
 <AlerteEpinglage coche={epingle} {dejaEpingle} />
 
-{#if complet}
-	<CanauxNotification
-		bind:whatsapp
-		bind:syndic
-		bind:cs
-		aideWhatsapp={confidentiel
-			? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
-			: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
-	/>
-
-	<!--  L'annonce de hall n'est PAS un canal de notification : elle produit
-	      une affiche PDF. Elle reste donc hors de `CanauxNotification`,
-	      dont le contrat est « qui est prévenu ? ». -->
-	<div class="bloc-hall">
-		<label
-			class="checkbox-field"
-			class:desactivee={confidentiel}
-			title={confidentiel
-				? "Indisponible : une actualité confidentielle ne peut pas être affichée dans un hall."
-				: "Génère l'affiche PDF à afficher dans le hall et l'envoie au CS du périmètre"}
-		>
-			<input
-				type="checkbox"
-				bind:checked={annonceHall}
-				disabled={confidentiel}
-				aria-describedby={confidentiel ? idAideHall : undefined}
-			/>
-			<span class="ico">&#x1F4C4;</span>
-			<span>Créer une annonce Hall</span>
-		</label>
-	</div>
-
-	{#if confidentiel}
-		<p class="aide" id={idAideHall}>
-			&#x1F4C4; L'affiche de hall est indisponible sur une actualité confidentielle : une
-			affiche est punaisée dans un hall et lue par n'importe qui, sans connexion. Le message
-			WhatsApp, lui, reste possible — il renvoie vers l'application, qui applique la règle.
-		</p>
-	{:else if annonceHall}
-		<p class="aide">
-			&#x1F4C4; Une affiche PDF sera générée à partir du titre, du contenu, du périmètre et de
-			l'image de cette actualité, puis envoyée aux membres du CS du périmètre. Elle sera
-			consultable dans <strong>Espace CS → Annonces Hall</strong>. Un brouillon ne déclenche
-			rien tant qu'il n'est pas publié.
-		</p>
-	{/if}
-{/if}
-
 <style>
 	.cases {
 		display: flex;
@@ -171,8 +117,7 @@
 	}
 	/*  `:global` parce que `.checkbox-field` est une classe partagée du thème —
 	    même raison que dans `CanauxNotification.svelte`. */
-	.cases :global(.checkbox-field),
-	.bloc-hall :global(.checkbox-field) {
+	.cases :global(.checkbox-field) {
 		display: flex;
 		align-items: center;
 		gap: .4rem;
@@ -180,17 +125,9 @@
 		cursor: pointer;
 	}
 	/*  Une case grisée doit se VOIR grisée, pas seulement refuser le clic. */
-	.cases .desactivee,
-	.bloc-hall .desactivee {
+	.cases .desactivee {
 		opacity: .5;
 		cursor: not-allowed;
-	}
-	.bloc-hall {
-		margin-bottom: 1rem;
-	}
-	.ico {
-		font-size: 1.1em;
-		line-height: 1;
 	}
 	.aide {
 		font-size: .78rem;

@@ -25,6 +25,29 @@ logger = logging.getLogger("publications")
 ARCHIVAGE_DELAI_HEURES = 48
 PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
 
+#  ── Le WORKFLOW d'une publication, écrit UNE fois (#433) ────────────────────
+#
+#  La liste des états et leurs libellés vivaient en trois exemplaires : le tuple
+#  de validation d'`evolutions.py`, un dictionnaire en clair dans le `PATCH` de
+#  `crud.py`, et un `_STATUT_LABELS` **amputé de `publie`** dans
+#  `flux/publications.py`. C'est la panne des statuts de ticket à l'identique
+#  (#415, quatre copies) : deux listes d'accord entre elles ne prouvent rien, et
+#  la copie la plus consultée est celle qui trompe le plus longtemps.
+#
+#  ⚠️ Le front en tient le pendant dans `front/src/lib/publications.ts`
+#  (`STATUT_LABELS`, `STATUT_BADGE`) : les contextes de build sont `./api` et
+#  `./front`, rien de la racine n'entre dans les images — le partage d'un fichier
+#  entre les deux est impossible, seule la copie l'est. Toute modification ici en
+#  appelle une là-bas.
+STATUTS_PUBLICATION = ("publie", "en_cours", "resolu", "annule")
+
+STATUT_LABELS = {
+    "publie": "Publié",
+    "en_cours": "En cours",
+    "resolu": "Résolu",
+    "annule": "Annulé",
+}
+
 
 def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
     """Construit un PublicationRead avec les évolutions et le nom auteur."""
