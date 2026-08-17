@@ -39,6 +39,7 @@ from app.models.core import (
     VoteSondage,
 )
 from app.schemas import UserRead
+from app.utils.comptes import marquer_decide
 from datetime import datetime
 from typing import Optional
 
@@ -219,6 +220,12 @@ def modifier_utilisateur(
             raise HTTPException(400, "Cet e-mail est déjà utilisé.")
     for field, val in body.model_dump(exclude_unset=True).items():
         setattr(user, field, val)
+    #  Basculer `actif` — dans un sens comme dans l'autre — EST une décision de
+    #  l'administration sur ce compte. Sans cette ligne, désactiver un résident
+    #  qui déménage le renvoyait dans la file des comptes à valider, où plus rien
+    #  ne le distinguait d'une inscription du jour (#399).
+    if body.actif is not None:
+        marquer_decide(user)
     session.add(user)
     session.commit()
     session.refresh(user)

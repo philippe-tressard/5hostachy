@@ -21,6 +21,7 @@ from app.models.core import (
     Vigik,
 )
 from app.schemas import UserRead
+from app.utils.comptes import comptes_en_attente as lister_comptes_en_attente, marquer_decide
 from typing import Any
 
 router = APIRouter()
@@ -45,7 +46,10 @@ def comptes_en_attente(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    return session.exec(select(Utilisateur).where(Utilisateur.actif == False)).all()
+    #  La définition de « en attente » vit dans `utils/comptes.py`, et nulle part
+    #  ailleurs : elle était écrite ici, dans la variante enrichie et dans le
+    #  compteur du tableau de bord — trois fois la même erreur (#399).
+    return lister_comptes_en_attente(session)
 
 
 @router.get("/comptes-en-attente/enrichis", response_model=list[CompteEnAttenteItem])
@@ -56,7 +60,7 @@ def comptes_en_attente_enrichis(
     """Comptes en attente enrichis du nombre de lots trouvés dans l'import.
     Permet à l'admin de vérifier si un copropriétaire est bien dans le fichier Lots."""
     from app.utils.auto_match_service import count_lots_for_user
-    users = session.exec(select(Utilisateur).where(Utilisateur.actif == False)).all()
+    users = lister_comptes_en_attente(session)
     return [
         CompteEnAttenteItem(
             user=UserRead.model_validate(u),
@@ -91,6 +95,12 @@ def traiter_compte(
         notif_corps = body.motif or "Contactez le conseil syndical pour plus d'informations."
     else:
         raise HTTPException(400, "Action invalide (valider | refuser)")
+
+    #  Les DEUX issues sont une décision. Le refus n'écrivait rien du tout : il
+    #  envoyait un e-mail, laissait `actif` à False, et le compte remontait dans
+    #  la file au chargement suivant — indéfiniment, sans qu'aucun écran ne
+    #  puisse distinguer « refusé » de « jamais traité » (#399).
+    marquer_decide(user)
 
     notif = Notification(
         destinataire_id=user.id,

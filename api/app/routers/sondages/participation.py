@@ -18,7 +18,7 @@ from app.models.core import (
     VoteSondage,
 )
 from app.utils.reponses import auteur_meta, notifier_nouvelle_reponse
-from app.utils.visibility import sondage_accessible
+from app.utils.visibility import sondage_accessible, sondage_clos
 
 from .commun import _deny_communaute_for_statut
 
@@ -47,7 +47,7 @@ def voter(
         raise HTTPException(404, "Sondage introuvable")
     if not sondage_accessible(s, user):
         raise HTTPException(403, "Vous n'\u00eates pas autoris\u00e9 \u00e0 participer \u00e0 ce sondage")
-    if s.cloture_forcee or (s.cloture_le and s.cloture_le < datetime.utcnow()):
+    if sondage_clos(s, datetime.utcnow()):
         raise HTTPException(400, "Ce sondage est clôturé")
 
     existant = session.exec(

@@ -150,7 +150,15 @@ class Utilisateur(SQLModel, table=True):
     statut: StatutUtilisateur = StatutUtilisateur.copropriétaire_résident
     role: RoleUtilisateur = RoleUtilisateur.résident  # rôle principal (legacy + fallback)
     roles_json: str = Field(default="")  # rôles cumulés, virgule-séparés : "résident,conseil_syndical"
-    actif: bool = Field(default=False)  # False = en attente de validation
+    actif: bool = Field(default=False)  # False = pas (ou plus) autorisé à se connecter
+    #  Quand l'administration a TRANCHÉ sur ce compte — validation, refus ou
+    #  désactivation. `actif == False` ne suffisait pas à dire « en attente » :
+    #  un compte refusé et un compte désactivé volontairement portent le même
+    #  drapeau, et gonflaient donc le décompte des validations indéfiniment
+    #  (#399). Le refus ne changeait d'ailleurs AUCUN état — le compte refusé
+    #  revenait à chaque chargement de l'écran. Ne jamais lire ce champ à la
+    #  main : `app/utils/comptes.py` porte la question et la réponse.
+    decision_compte_le: Optional[datetime] = Field(default=None)
     email_verifie: bool = Field(default=False)  # False = email non confirmé
     onboarding_complete: bool = False
     onboarding_etape: int = 0  # 0-4
@@ -299,28 +307,17 @@ class EmailVerificationToken(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
-#  Accès (Vigik / Télécommandes)
+#  Files de validation (accès, demandes de profil)
 # ──────────────────────────────────────────────
-
-class StatutCommande(str, Enum):
-    en_attente = "en_attente"
-    acceptee = "acceptee"
-    refusee = "refusee"
-
-
-class CommandeAcces(SQLModel, table=True):
-    __tablename__ = "commande_acces"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="utilisateur.id")
-    lot_id: int = Field(foreign_key="lot.id")
-    type: str  # vigik | telecommande
-    quantite: int = 1
-    motif: Optional[str] = None
-    statut: StatutCommande = StatutCommande.en_attente
-    traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    motif_refus: Optional[str] = None
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    traite_le: Optional[datetime] = None
+#  Les tables vivent dans `models/validations.py` depuis le 17/08/2026
+#  (modularité, rang 1). Ré-exportées ici : les imports existants ne bougent
+#  pas, et les modèles restent enregistrés auprès de SQLModel.
+from app.models.validations import (  # noqa: E402,F401
+    CommandeAcces as CommandeAcces,
+    DemandeModificationProfil as DemandeModificationProfil,
+    StatutCommande as StatutCommande,
+    StatutDemandeProfil as StatutDemandeProfil,
+)
 
 
 # ──────────────────────────────────────────────
@@ -1205,30 +1202,9 @@ class RemiseObjet(SQLModel, table=True):
     bail: Optional[LocationBail] = Relationship(back_populates="objets")
 
 
-# ──────────────────────────────────────────────
-#  Demandes de modification de profil
-# ──────────────────────────────────────────────
-
-class StatutDemandeProfil(str, Enum):
-    en_attente = "en_attente"
-    approuvee = "approuvee"
-    rejetee = "rejetee"
-
-
-class DemandeModificationProfil(SQLModel, table=True):
-    """Demande de modification du type de résident ou du bâtiment, soumise à validation CS."""
-    __tablename__ = "demande_modification_profil"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    utilisateur_id: int = Field(foreign_key="utilisateur.id", index=True)
-    statut_souhaite: Optional[str] = None      # valeur de StatutUtilisateur souhaitée
-    batiment_id_souhaite: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    motif: Optional[str] = None                # justification libre de l'utilisateur
-    statut_demande: StatutDemandeProfil = StatutDemandeProfil.en_attente
-    motif_refus: Optional[str] = None
-    traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    traite_le: Optional[datetime] = None
+#  `StatutDemandeProfil` et `DemandeModificationProfil` sont montés plus haut,
+#  avec `CommandeAcces` : les deux files vivaient à 900 lignes l'une de l'autre
+#  alors qu'elles sont la même notion (cf. `models/validations.py`).
 
 
 # ──────────────────────────────────────────────

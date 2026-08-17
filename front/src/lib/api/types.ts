@@ -184,7 +184,10 @@ export interface FluxSante {
 	tickets_urgents: number;
 	resolution_moyenne_heures: number | null;
 	sondages_actifs: number;
+	/** File de l'onglet « Comptes & accès » de l'Espace CS : comptes + demandes d'accès. */
 	validations_cs: number;
+	/** File de `/admin` : les deux mêmes, plus les demandes de modification de profil. */
+	validations_admin: number;
 	tickets_relance_syndic: number;
 	prochains: FluxProchain[];
 }

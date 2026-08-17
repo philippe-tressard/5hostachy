@@ -17,15 +17,22 @@ from app.models.core import (
     ConfigSite,
     ContratEntretien,
     Copropriete,
+    DemandeModificationProfil,
     Evenement,
     Prestataire,
     RoleUtilisateur,
     Sondage,
     StatutCommande,
+    StatutDemandeProfil,
     Ticket,
-    Utilisateur,
 )
-from app.utils.visibility import evenement_visible
+from app.utils.comptes import nb_comptes_en_attente
+from app.utils.visibility import (
+    evenement_visible,
+    sondage_accessible,
+    sondage_clos,
+    ticket_visible,
+)
 
 from app.utils.perimetres import perimetre_label
 from .commun import ContexteFlux
@@ -105,26 +112,77 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
     return prochains[:_MAX_PROCHAINS]
 
 
-def _validations_et_relances(ctx: ContexteFlux) -> tuple[int, int]:
-    """Compteurs réservés au CS et aux admins — (validations en attente, relances syndic)."""
-    if not ctx.user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        return 0, 0
-
-    comptes_attente = ctx.session.exec(
-        select(func.count(Utilisateur.id)).where(~Utilisateur.actif)
-    ).one()
-    commandes_attente = ctx.session.exec(
+def _nb_commandes_acces(ctx: ContexteFlux) -> int:
+    """Commandes d'accès (vigik, télécommande) en attente de traitement."""
+    return ctx.session.exec(
         select(func.count(CommandeAcces.id))
         .where(CommandeAcces.statut == StatutCommande.en_attente)
-    ).one()
+    ).one() or 0
 
-    # Tickets syndic éligibles à la relance (pas de modif depuis > délai)
+
+def _nb_demandes_profil(ctx: ContexteFlux) -> int:
+    """Demandes de modification de profil en attente.
+
+    Troisième tâche de la file d'administration, et la seule que l'Espace CS ne
+    montre pas : elle ne se traite que depuis `/admin`. Elle n'était comptée
+    **nulle part** avant #399 — l'admin ne pouvait l'apprendre qu'en ouvrant
+    l'écran.
+    """
+    return ctx.session.exec(
+        select(func.count(DemandeModificationProfil.id))
+        .where(DemandeModificationProfil.statut_demande == StatutDemandeProfil.en_attente)
+    ).one() or 0
+
+
+def _validations_cs(ctx: ContexteFlux) -> int:
+    """Ce que la pastille « Espace CS » annonce — et rien d'autre.
+
+    Exactement les deux sections de son onglet « ✅ Comptes & accès » : comptes en
+    attente de validation, et demandes d'accès. Un compteur ne se prouve que d'une
+    façon — ouvrir l'écran de destination et compter ce qu'on y voit (#399).
+
+    Le CS **a** le droit de traiter ces deux files : les trois endpoints
+    `/admin/*` correspondants sont protégés par `require_cs_or_admin`, et l'écran
+    existe. Ce n'est donc pas un décompte d'actions interdites, contrairement à ce
+    que laissait craindre la lecture des seules conditions du tableau de bord.
+    """
+    if not ctx.user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+        return 0
+    return nb_comptes_en_attente(ctx.session) + _nb_commandes_acces(ctx)
+
+
+def _validations_admin(ctx: ContexteFlux) -> int:
+    """Ce que la pastille « Admin » annonce — les trois files de son écran.
+
+    Elle recouvre `validations_cs` de deux tiers, et c'est voulu : les deux écrans
+    montrent réellement ces éléments, chacun annonce donc son propre contenu. Un
+    admin voit les deux pastilles, chacune fidèle à sa destination.
+
+    Réservé aux admins, comme la pastille : `/admin` est fermé au CS non-admin par
+    son layout. Calculer ce nombre pour quelqu'un qui ne voit pas la pastille
+    serait du travail serveur inutile — et l'afficher sans pouvoir le calculer
+    serait un mensonge à l'écran.
+    """
+    if not ctx.user.has_role(RoleUtilisateur.admin):
+        return 0
+    return (
+        nb_comptes_en_attente(ctx.session)
+        + _nb_commandes_acces(ctx)
+        + _nb_demandes_profil(ctx)
+    )
+
+
+def _relances_syndic(ctx: ContexteFlux) -> int:
+    """Tickets syndic éligibles à la relance (pas de modification depuis > délai)."""
+    if not ctx.user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
+        return 0
+
     cfg_delai = ctx.session.exec(
         select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
     ).first()
     delai_jours = int(cfg_delai.valeur) if cfg_delai else _RELANCE_SYNDIC_DEFAUT_J
     seuil = ctx.now - timedelta(days=delai_jours)
-    relances = ctx.session.exec(
+    return ctx.session.exec(
         select(func.count(Ticket.id)).where(
             Ticket.destinataire_syndic == True,  # noqa: E712  (colonne SQL, pas un booléen Python)
             Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
@@ -133,11 +191,15 @@ def _validations_et_relances(ctx: ContexteFlux) -> tuple[int, int]:
         )
     ).one() or 0
 
-    return (comptes_attente or 0) + (commandes_attente or 0), relances
-
 
 def calculer(ctx: ContexteFlux) -> FluxSante:
-    tous = ctx.session.exec(select(Ticket)).all()
+    #  `ticket_visible` AVANT tout décompte : `select(Ticket)` ramenait toute la
+    #  résidence, si bien qu'un indicateur du tableau de bord *personnel*
+    #  annonçait à un résident des tickets qu'il n'a pas le droit d'ouvrir. C'est
+    #  pour cette raison que la pastille comptait côté client sur le fil déjà
+    #  filtré — mais elle bougeait alors avec les filtres de l'utilisateur, seule
+    #  de la rangée à le faire (#399).
+    tous = [t for t in ctx.session.exec(select(Ticket)).all() if ticket_visible(t, ctx.user)]
     ouverts = [t for t in tous if t.statut in ("ouvert", "en_cours")]
     urgents = [t for t in ouverts if t.categorie == "urgence"]
 
@@ -152,18 +214,28 @@ def calculer(ctx: ContexteFlux) -> FluxSante:
         durees = [(t.ferme_le - t.cree_le).total_seconds() / 3600 for t in resolus]
         resolution_moy = round(sum(durees) / len(durees), 1)
 
-    sondages_actifs = ctx.session.exec(
-        select(func.count(Sondage.id)).where(~Sondage.cloture_forcee)
-    ).one()
-
-    validations_cs, relances_syndic = _validations_et_relances(ctx)
+    #  Deux filtres, tous deux absents avant #399, et le compteur était faux pour
+    #  chacun séparément :
+    #    • `sondage_accessible` — le décompte ignorait le ciblage (périmètre ET
+    #      public cible), donc la pastille pouvait annoncer « Sondages 2 » à un
+    #      résident dont l'écran /sondages n'en montre aucun ;
+    #    • `sondage_clos` — `~cloture_forcee` n'exclut que la clôture manuelle. Un
+    #      sondage dont l'échéance est passée est clos partout ailleurs, et resté
+    #      « actif » ici : la plus permissive des deux définitions alimentait la
+    #      pastille. Il n'y en a plus qu'une, dans `utils/visibility.py`.
+    sondages_actifs = sum(
+        1
+        for s in ctx.session.exec(select(Sondage)).all()
+        if not sondage_clos(s, ctx.now) and sondage_accessible(s, ctx.user)
+    )
 
     return FluxSante(
         tickets_ouverts=len(ouverts),
         tickets_urgents=len(urgents),
         resolution_moyenne_heures=resolution_moy,
         sondages_actifs=sondages_actifs,
-        validations_cs=validations_cs,
-        tickets_relance_syndic=relances_syndic,
+        validations_cs=_validations_cs(ctx),
+        validations_admin=_validations_admin(ctx),
+        tickets_relance_syndic=_relances_syndic(ctx),
         prochains=_prochains(ctx),
     )

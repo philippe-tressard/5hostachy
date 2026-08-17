@@ -28,6 +28,7 @@ Règles métier appliquées :
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Optional
 
 from app.models.core import (
@@ -276,6 +277,28 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
 
 
 # ── Règles sondage ────────────────────────────────────────────────────────────
+
+def sondage_clos(sondage: Sondage, maintenant: datetime) -> bool:
+    """Ce sondage est-il terminé — de force, ou parce que l'échéance est passée ?
+
+    Les DEUX voies comptent, et c'est tout l'intérêt d'une écriture unique : la
+    même expression était recopiée quatre fois côté API (fiche du sondage, vote,
+    modification, fil d'activité) et une cinquième côté front (`estCloture`).
+    Le compteur du tableau de bord, lui, ne regardait que `cloture_forcee` — il
+    annonçait donc « actifs » des sondages que tous les autres écrans donnaient
+    pour clos, jusqu'à ce que quelqu'un pense à cliquer sur « clôturer ». Deux
+    définitions coexistaient, et c'est la plus permissive qui alimentait la
+    pastille (#399).
+
+    `maintenant` est passé en paramètre, jamais lu ici : le fil calcule son
+    instant une fois par requête (`ContexteFlux.now`) et douze rubriques qui
+    appelleraient `utcnow()` chacune ne dateraient plus la même clôture.
+    """
+    return bool(
+        sondage.cloture_forcee
+        or (sondage.cloture_le is not None and sondage.cloture_le < maintenant)
+    )
+
 
 def resultats_sondage_visibles(resultats_publics: bool, cloture: bool) -> bool:
     """Les décomptes de ce sondage peuvent-ils quitter le serveur ?

@@ -20,7 +20,7 @@ from app.models.core import (
 )
 from app.schemas import liste_depuis_json
 from app.utils.reponses import enrich_reponse, tri_reponses
-from app.utils.visibility import resultats_sondage_visibles, sondage_accessible
+from app.utils.visibility import resultats_sondage_visibles, sondage_accessible, sondage_clos
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
 from .commun import (
@@ -80,7 +80,7 @@ def get_sondage(
         )
     ).first()
 
-    cloture = s.cloture_forcee or (s.cloture_le is not None and s.cloture_le < datetime.utcnow())
+    cloture = sondage_clos(s, datetime.utcnow())
 
     #  Le filtrage est ICI, pas côté front : un masquage d'affichage laisse les
     #  décomptes dans la réponse réseau. La règle elle-même vit dans
@@ -277,7 +277,7 @@ def modifier_sondage(
     est_admin = user.has_role(RoleUtilisateur.admin)
     if s.auteur_id != user.id and not est_admin:
         raise HTTPException(403, "Seul l'auteur ou un admin peut modifier ce sondage")
-    if s.cloture_forcee or (s.cloture_le and s.cloture_le < datetime.utcnow()):
+    if sondage_clos(s, datetime.utcnow()):
         raise HTTPException(400, "Ce sondage est clôturé et ne peut plus être modifié")
     for field, val in body.model_dump(exclude_unset=True).items():
         setattr(s, field, val)

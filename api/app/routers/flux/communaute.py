@@ -13,7 +13,7 @@ from app.models.core import Idee, OptionSondage, PetiteAnnonce, Sondage, VoteIde
 from app.utils.liens import lien_element
 from app.utils.montants import montant_fr
 from app.utils.photos import parse_photos
-from app.utils.visibility import sondage_accessible
+from app.utils.visibility import sondage_accessible, sondage_clos
 
 from .commun import ContexteFlux, auteur_nom, strip_html
 from .schemas import FluxItem
@@ -52,7 +52,7 @@ def _collecter_sondages(ctx: ContexteFlux) -> list[FluxItem]:
     for s in sondages:
         if not sondage_accessible(s, ctx.user):
             continue
-        cloture = s.cloture_forcee or (s.cloture_le is not None and s.cloture_le < ctx.now)
+        cloture = sondage_clos(s, ctx.now)
         nb_votants = ctx.session.exec(
             select(func.count(func.distinct(VoteSondage.user_id)))
             .where(VoteSondage.sondage_id == s.id)
