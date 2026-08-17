@@ -48,7 +48,10 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { STATUT_TICKET_OPTIONS, STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET } from '$lib/tickets';
+	import type { Etat } from '$lib/entites/types';
+	import { sectionPresente } from '$lib/entites/types';
+	import { TICKET } from '$lib/entites/ticket';
 
 	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
@@ -57,6 +60,12 @@
 	export let ticket: Ticket | null = null;
 
 	const modeEdition = ticket !== null;
+
+	/**  L'état du cadre #430 que ce formulaire rend. C'est LUI qui décide des
+	 *   sections, via `sectionPresente(TICKET, etat, …)` — plus aucune condition
+	 *   `!modeEdition` ne gouverne une section ici, et `npm run lint:etats` le
+	 *   refuse. Le mode ne change pas pendant la vie du composant. */
+	const etat: Etat = modeEdition ? 'edition' : 'creation';
 
 	const dispatch = createEventDispatcher<{ cree: Ticket; modifie: Ticket; annule: void }>();
 
@@ -73,13 +82,18 @@
 	//  qu'un confort). Les options viennent de `$lib/tickets` — quatrième copie
 	//  de cette liste jusqu'au 17/08/2026 (#415).
 	//
-	//  ⚠️ EN ÉDITION, l'état se LIT et ne se change pas : le formulaire n'envoie
-	//  pas `statut`, et c'est délibéré. Le changement d'état passe par une
-	//  évolution (`POST /tickets/{id}/evolutions`), qui l'inscrit dans le fil avec
-	//  sa date et son auteur et prévient l'auteur par courriel. Deux chemins pour
-	//  le même geste, c'est la porte ouverte à un état qui bouge sans que personne
-	//  ne sache quand ni pourquoi (#425, #426). La section le DIT à l'écran :
-	//  l'absence muette du champ se lisait comme un oubli.
+	//  ✅ EN ÉDITION AUSSI, depuis le cadre #430 (17/08/2026). L'édition CORRIGE :
+	//  une erreur, un oubli, un complément — et l'état s'y corrige comme les
+	//  autres champs. Le motif invoqué la veille (« l'état se change depuis le
+	//  fil, pour qu'il y laisse une trace ») n'existe pas dans le cadre : les
+	//  trois motifs sont `geste`, `hérité` et `api`, et aucun ne couvrait
+	//  celui-là.
+	//
+	//  La trace ne se perd pas pour autant — c'est le SERVEUR qui a changé :
+	//  `PATCH /tickets/{id}` n'écrit plus une transition de workflow mais une
+	//  **correction** (`crud.py`). Corriger une faute de frappe n'apparaît donc
+	//  plus dans l'Historique comme une étape du suivi, et le changement d'état
+	//  volontaire garde le sien, via les évolutions.
 
 	//  Copie défensive du périmètre : le tableau vient du ticket affiché dans la
 	//  liste. Lié tel quel, une sélection abandonnée resterait visible sur la carte
@@ -94,7 +108,11 @@
 	// les photos étaient téléversées APRÈS, l'e-mail était déjà construit et
 	// partait sans elles, sans que rien ne le signale.
 	let photosUrls: string[] = [];
-	let fichiersUrls: string[] = [];
+	//  Les documents déjà joints sont RECHARGÉS en édition : `PATCH` remplace la
+	//  liste entière (`ticket.fichiers_urls = body.fichiers_urls`). Partir d'un
+	//  tableau vide effacerait les pièces existantes au premier enregistrement —
+	//  silencieusement, et sans qu'on ait touché à la section.
+	let fichiersUrls: string[] = [...(ticket?.fichiers_urls ?? [])];
 	let error = '';
 	let loading = false;
 
@@ -107,8 +125,8 @@
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 
 	onMount(async () => {
-		// Rien à charger en édition : « Saisi pour » n'y est pas rendu.
-		if ($isCS && !modeEdition) {
+		// Rien à charger quand la section n'est pas rendue (cf. la déclaration).
+		if ($isCS && sectionPresente(TICKET, etat, 'specifiques')) {
 			try {
 				const all = await adminApi.utilisateurs();
 				usersActifs = all.filter((u: any) => u.actif).sort((a: any, b: any) =>
@@ -118,20 +136,14 @@
 		}
 	});
 
-	const categories = [
-		{ value: 'panne', label: '\u{1F6E0}️ Panne', description: 'Équipement défectueux, ascenseur, chauffage…' },
-		{ value: 'nuisance', label: '\u{1F4E2} Nuisance', description: 'Bruit, odeur, parking…' },
-		{ value: 'question', label: '❓ Question', description: 'Information, procédure…' },
-		{ value: 'urgence', label: '\u{1F6A8} Urgence', description: 'Inondation, panne majeure, danger immédiat' },
-		{ value: 'bug', label: '\u{1F41B} Bug', description: 'Problème technique sur le site ou l’application' },
-	];
+	//  Les catégories viennent de `$lib/tickets` — quatrième copie de cette liste
+	//  jusqu'au 17/08/2026, comme les statuts l'avaient été (#415).
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
 	$: titreBoite = modeEdition
 		? `Modifier le ticket #${ticket?.numero ?? ''}`
 		: 'Signaler un problème';
-	$: libelleStatut = STATUT_TICKET_LABELS[statut] ?? statut;
 
 	async function submit() {
 		if (!titre.trim() || richEmpty(description)) {
@@ -146,13 +158,18 @@
 		loading = true;
 		try {
 			if (ticket) {
-				//  Les quatre champs que `PATCH /tickets/{id}` sait écrire parmi ceux
-				//  rendus ici. `statut` en est volontairement absent (voir plus haut).
+				//  Tout ce que la déclaration rend en édition ET que `PATCH` sait
+				//  écrire. `statut` n'accompagne le lot que pour le conseil syndical :
+				//  le serveur répond 403 à quiconque d'autre le lui envoie, y compris
+				//  à l'auteur corrigeant son propre ticket — l'envoyer inconditionnellement
+				//  ferait échouer une correction de faute de frappe.
 				const maj = await ticketsApi.update(ticket.id, {
 					titre: titre.trim(),
 					description,
 					categorie,
 					perimetre_cible: perimetreCible,
+					fichiers_urls: fichiersUrls,
+					...($isCS ? { statut } : {}),
 				});
 				toast('success', 'Ticket modifié');
 				dispatch('modifie', maj);
@@ -210,10 +227,10 @@
 		<fieldset class="field" style="border:none;padding:0;margin:0">
 			<legend style="font-size:.875rem;font-weight:500;margin-bottom:.5rem;color:var(--color-text)">Catégorie *</legend>
 			<div class="cat-grid">
-				{#each categories as cat}
+				{#each CATEGORIES_TICKET as cat (cat.value)}
 					<label class="cat-option" class:selected={categorie === cat.value}>
 						<input type="radio" bind:group={categorie} value={cat.value} />
-						<span class="cat-label">{cat.label}</span>
+						<span class="cat-label">{cat.emoji} {cat.label}</span>
 						<span class="cat-desc">{cat.description}</span>
 					</label>
 				{/each}
@@ -238,9 +255,11 @@
 		      être hors de sa section. C'est un champ SPÉCIFIQUE du ticket — il
 		      précède donc le workflow et le périmètre (`ux-patterns` §9 sexies,
 		      signalé par l'utilisateur le 16/08/2026).
-		      Absent en édition : la personne pour qui le ticket a été saisi est une
-		      attribution posée à la création, que `saveEdit` n'a jamais envoyée. -->
-		{#if $isCS && !modeEdition}
+		      Sa présence par état est DÉCLARÉE (`$lib/entites/ticket`) : absente en
+		      édition, motif `api` citant #431 — `TicketUpdate` accepte bien les trois
+		      champs `saisi_pour_*` mais ne sait pas les EFFACER, et « En mon nom »
+		      serait alors un choix sans effet, en silence. -->
+		{#if $isCS && sectionPresente(TICKET, etat, 'specifiques')}
 			<SectionFormulaire titre="Saisi pour">
 				<div class="field champ-large saisi-pour-section">
 					<div class="saisi-pour-tabs">
@@ -272,47 +291,47 @@
 		{/if}
 
 		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
-		      dit qui le voit et où (section 9). En édition, l'état se LIT dans le
-		      badge de la section et la mention dit où on le change : la section
-		      reste, parce que son absence se lisait comme un oubli. -->
-		{#if modeEdition}
-			<SectionFormulaire titre="Workflow" badge={libelleStatut}>
-				<p class="aide-champ">
-					L'état se change depuis le fil (&#x1F4AC;), pour qu'il y laisse une trace datée.
-				</p>
-			</SectionFormulaire>
-		{:else}
-			<SectionFormulaire titre="Workflow" pour="ticket-statut">
-				<div class="field champ-large">
-					<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
-						{#each STATUT_TICKET_OPTIONS as s}<option value={s.value}>{s.label}</option>{/each}
-					</select>
-					{#if !$isCS}
-						<p class="aide-champ">Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.</p>
-					{/if}
-				</div>
-			</SectionFormulaire>
-		{/if}
+		      dit qui le voit et où (section 9). IDENTIQUE en création et en
+		      édition depuis le cadre #430 : une correction corrige l'état comme
+		      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
+		      côté serveur (voir le bloc de commentaires du script). -->
+		<SectionFormulaire titre="Workflow" pour="ticket-statut">
+			<div class="field champ-large">
+				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
+					{#each STATUT_TICKET_OPTIONS as s}<option value={s.value}>{s.label}</option>{/each}
+				</select>
+				{#if !$isCS}
+					<p class="aide-champ">
+						{modeEdition
+							? 'Seul le conseil syndical fait avancer le suivi d’un ticket.'
+							: 'Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.'}
+					</p>
+				{/if}
+			</div>
+		</SectionFormulaire>
 
 		<!--  4 à 9 : l'ordre, les intitulés et les séparations sont hérités du
 		      composant partagé — voir `ChampsCommuns.svelte`.
-		      En édition ne restent que les notions que `PATCH /tickets/{id}` sait
-		      écrire et qui étaient déjà modifiables : périmètre et description.
-		      • Photos — `photos_urls` n'est PAS dans `TicketUpdate` : les proposer
-		        ferait disparaître la sélection à l'enregistrement, en silence.
-		      • Documents — `fichiers_urls`, lui, est accepté ; les ouvrir à
-		        l'édition reste à arbitrer, ce lot ne change aucune capacité.
-		      • Diffusion — les canaux notifient à la CRÉATION. Les rouvrir ferait
-		        repartir un message WhatsApp à chaque correction de faute de frappe
-		        (cf. l'incident du triple envoi, 14/08/2026). -->
+		      ⚠️ Aucune de ces sections n'est gouvernée par `modeEdition` : elles le
+		      sont par la DÉCLARATION (`$lib/entites/ticket`), qui porte chaque
+		      divergence avec son motif — et `npm run lint:etats` refuse qu'on
+		      remette une condition en dur ici. Aujourd'hui :
+		      • Photos — absente en édition, motif `api` #431 (`TicketUpdate`
+		        n'accepte pas `photos_urls` : les proposer ferait disparaître la
+		        sélection à l'enregistrement, en silence) ;
+		      • Documents — OUVERTS à l'édition depuis #431 : `fichiers_urls` est
+		        accepté, et une liste vide efface sans ambiguïté ;
+		      • Diffusion — absente en édition, motif `geste` : les canaux
+		        notifient, et rejouer un envoi à chaque faute de frappe rattrapée
+		        est l'incident du triple envoi WhatsApp (14/08/2026). -->
 		<ChampsCommuns
 			idPrefixe="ticket"
-			avecPerimetre bind:perimetre={perimetreCible}
-			avecDescription descriptionRequise bind:description
+			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')} bind:perimetre={perimetreCible}
+			avecDescription={sectionPresente(TICKET, etat, 'description')} descriptionRequise bind:description
 			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
-			avecPhotos={!modeEdition} bind:photos={photosUrls}
-			avecDocuments={!modeEdition} bind:documents={fichiersUrls}
-			avecDiffusion={$isCS && !modeEdition}
+			avecPhotos={sectionPresente(TICKET, etat, 'photos')} bind:photos={photosUrls}
+			avecDocuments={sectionPresente(TICKET, etat, 'documents')} bind:documents={fichiersUrls}
+			avecDiffusion={$isCS && sectionPresente(TICKET, etat, 'diffusion')}
 			bind:whatsapp={partagerWhatsapp}
 			bind:syndic={destinataireSyndic}
 			bind:cs={destinataireCs}

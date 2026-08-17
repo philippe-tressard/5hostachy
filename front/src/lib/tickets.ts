@@ -84,6 +84,58 @@ export const STATUTS_TICKET_FILTRE = STATUT_TICKET_OPTIONS.filter((o) =>
 	STATUTS_TICKET_ACTIFS.includes(o.value),
 );
 
+//  ── Les catégories — même histoire que les statuts, un cran plus tard ────────
+//
+//  Elles vivaient en QUATRE endroits le 17/08/2026 : la grille de choix de
+//  `FormulaireTicket` (valeur + libellé + description), la table `CATEGORIES` de
+//  la fiche d'un ticket, la table `CAT_ICON` de la liste, et six boutons de
+//  filtre écrits en dur dans le balisage de cette même liste. Aucune n'était
+//  dérivée d'une autre — exactement le motif qui avait fait diverger les statuts
+//  (#415), à ceci près qu'ici l'écart n'a pas encore eu le temps de se produire.
+//
+//  ⚠️ La catégorie **qualifie le titre** : elle appartient à la section 1 du
+//  cadre (#430), pas à une section « Détails ».
+
+export interface CategorieTicket {
+	/** Valeur envoyée à l'API — jamais traduite. */
+	value: string;
+	/** Libellé seul. */
+	label: string;
+	/** Pastille de contexte. */
+	emoji: string;
+	/** Ce que la catégorie recouvre, pour aider à choisir à la création. */
+	description: string;
+}
+
+export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
+	{ value: 'panne', label: 'Panne', emoji: '\u{1F6E0}️', description: 'Équipement défectueux, ascenseur, chauffage…' },
+	{ value: 'nuisance', label: 'Nuisance', emoji: '\u{1F4E2}', description: 'Bruit, odeur, parking…' },
+	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
+	{ value: 'urgence', label: 'Urgence', emoji: '\u{1F6A8}', description: 'Inondation, panne majeure, danger immédiat' },
+	{ value: 'bug', label: 'Bug', emoji: '\u{1F41B}', description: 'Problème technique sur le site ou l’application' },
+];
+
+//: Emoji seul — la pastille de contexte d'une carte. Repli sur 📋 : une catégorie
+//: retirée du référentiel ne doit pas laisser une carte sans repère.
+export const CATEGORIE_TICKET_EMOJI: Record<string, string> = Object.fromEntries(
+	CATEGORIES_TICKET.map((c) => [c.value, c.emoji]),
+);
+
+//: « 🛠️ Panne » — la forme complète, celle des filtres, des badges et des choix.
+export const CATEGORIE_TICKET_LABELS: Record<string, string> = Object.fromEntries(
+	CATEGORIES_TICKET.map((c) => [c.value, `${c.emoji} ${c.label}`]),
+);
+
+/** Emoji d'une catégorie, jamais vide. */
+export function categorieTicketEmoji(categorie: string | undefined | null): string {
+	return CATEGORIE_TICKET_EMOJI[categorie ?? ''] ?? '\u{1F4CB}';
+}
+
+/** « 🛠️ Panne », valeur brute à défaut (jamais vide). */
+export function categorieTicketLabel(categorie: string | undefined | null): string {
+	return CATEGORIE_TICKET_LABELS[categorie ?? ''] ?? categorie ?? '';
+}
+
 /** Ce ticket demande-t-il encore du suivi ? */
 export function estTicketActif(statut: string | undefined | null): boolean {
 	return STATUTS_TICKET_ACTIFS.includes(statut ?? '');

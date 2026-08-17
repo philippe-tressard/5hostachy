@@ -49,10 +49,11 @@ const EXCEPTIONS = {
 	//  c'est voulu — elle vise le composant depuis l'extérieur pour masquer l'en-tête
 	//  sur le rapport papier, elle ne redéfinit pas la mise en page de l'écran. Une
 	//  tolérance inutile aurait été refusée par le contrôle lui-même, plus bas.
-	'(app)/tickets/[id]/+page.svelte':
-		"le `<h1>` y est le titre du TICKET, à l'intérieur de sa carte — pas l'en-tête " +
-		"de la page, qui n'existe pas sur cet écran (il n'a qu'un `.back-link` flottant). " +
-		'Lui en donner un est une décision de mise en page — instruit dans #365',
+	//  ⚠️ L'exception de `(app)/tickets/[id]` est tombée le 17/08/2026 (#431) : son
+	//  `<h1>` ne portait plus de `style=` en ligne une fois la fiche passée par
+	//  `FicheLecture` et son titre passé en classe. Le contrôle l'a REFUSÉE dès
+	//  qu'elle est devenue inutile — c'est ce qu'on attend d'une liste de
+	//  tolérances, et c'est ce qui empêche qu'elle devienne un dépotoir.
 	'(app)/sondages/[id]/+page.svelte':
 		'même cas : le `<h1>` porte la question du sondage, dans sa carte — instruit dans #365',
 };

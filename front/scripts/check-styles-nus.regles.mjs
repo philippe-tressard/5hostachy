@@ -149,14 +149,15 @@ export const TOLERANCES = {
 	'routes/(app)/sondages/[id]/+page.svelte::controle-saisie':
 		'deux `<textarea>` de réponse re-peints à la main (l. ~220 et ~234) ; celui de la l. ~220 ' +
 		'porte en plus une bordure `--color-primary` volontaire, à traduire en classe d’état',
-	'routes/(app)/tickets/[id]/+page.svelte::controle-saisie':
-		'champ de titre de la fiche re-peint à la main (l. ~348)',
+	//  ⚠️ Les deux tolérances de `tickets/[id]` sont tombées le 17/08/2026 (#431) :
+	//  le champ e-mail re-peint à la main est parti avec le formulaire de réponse
+	//  écrit à la main (remplacé par `EvolForm`), et les 720 px de quatre blocs
+	//  sont devenus une seule règle `.ticket-header, .messages, …`. Le contrôle
+	//  les a REFUSÉES dès qu'elles sont devenues inutiles.
 
 	//  ── largeur-saisie : les 720 px de `.largeur-saisie` écrits en dur ───────
 	'routes/(app)/espace-cs/+page.svelte::largeur-saisie':
 		'720 px écrits en dur sur deux `<section>` (l. ~1342 et ~1371)',
-	'routes/(app)/tickets/[id]/+page.svelte::largeur-saisie':
-		'720 px écrits en dur sur quatre blocs de la fiche (l. ~229, ~295, ~362, ~459)',
 
 	//  ── redite-classe : la classe est là, et le style en ligne la redit ──────
 	'routes/(app)/admin/lots-import/+page.svelte::redite-classe':

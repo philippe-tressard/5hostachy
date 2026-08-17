@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.71.0",
+  "version": "2.72.0",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -21,6 +21,7 @@
     "lint:session": "node scripts/check-renouvellement-session.mjs",
     "lint:soumission": "node scripts/check-libelles-soumission.mjs",
     "lint:audit": "node scripts/check-audit.mjs",
+    "lint:etats": "node scripts/check-etats.mjs",
     "lint:manuels": "node scripts/check-manuels.mjs",
     "lint:pages": "node scripts/check-pages.mjs"
   },

@@ -122,9 +122,11 @@ const EXCEPTIONS = {
 		'« Envoyer la demande » / « Envoi… » (l. ~451) et « Je suis un nouvel arrivant » ' +
 		'/ « Envoi… » (l. ~526)',
 	'routes/(app)/sondages/[id]/+page.svelte': 'attente « Sauvegarde… » (l. ~328)',
-	'routes/(app)/tickets/[id]/+page.svelte':
-		'formulaire de message du fil de suivi : « Envoyer » / « Envoi… » (l. ~353) — ' +
-		"c'est une seconde écriture d'`EvolForm`, à fusionner avant d'aligner le verbe",
+	//  ⚠️ L'exception de `tickets/[id]` disait « c'est une seconde écriture
+	//  d'`EvolForm`, à fusionner avant d'aligner le verbe ». La fusion a eu lieu le
+	//  17/08/2026 (#431) : le formulaire de réponse écrit à la main a disparu, le
+	//  geste n'a plus qu'un libellé, et le contrôle a REFUSÉ la tolérance dès
+	//  qu'elle est devenue inutile.
 };
 
 function abandonner(message) {

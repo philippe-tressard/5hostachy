@@ -33,6 +33,108 @@ déjà** : `.form-actions` (identique, donc inerte, supprimée le 15/08) et
 issue #363, qui a projeté le titre de *Nouveau ticket* à droite de l'écran). Le
 réflexe n'est pas « qu'est-ce que j'ajoute ? » mais « de quoi est-ce que j'hérite ? ».
 
+## 0. LE CADRE — une entité, quatre rendus (décidé le 17/08/2026)
+
+**C'est la règle qui gouverne toutes les suivantes.** Les sections §9, §10, §13 et
+§14 de cette skill en sont les instanciations ; en cas de désaccord, le cadre tranche.
+
+> 📐 **Le cadre et sa maquette** : https://claude.ai/code/artifact/ed8e5dd8-67f0-4fd3-a0bc-e80653bac686
+> 📊 **Le relevé des 42 couples menu/entité qui le fonde** : https://claude.ai/code/artifact/88087a21-8fe3-4463-8a35-a39f3032e5f3
+> 🧠 **Le pourquoi, avec ses contre-exemples chiffrés** : mémoire projet
+> `project_cadre_quatre_rendus` · 🎫 **#430**, lots #431 → #433 → #432
+
+### Les quatre états
+
+**Affichage** · **Création** · **Édition** · **Évolution** (une entrée de
+**l'Historique**). « Commentaire » est abandonné : trop étroit, l'entrée pouvant
+porter un changement d'état, des pièces jointes et une diffusion. C'est déjà le
+vocabulaire du code (`TicketEvolution`, `EvolForm`).
+⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** (« Commenter »,
+« Changer l'état »).
+
+### Les neuf sections, dans cet ordre — il ne se discute pas
+
+1. **Titre** (Catégorie *— elle qualifie le titre* + Titre) · 2. **Champs
+spécifiques** (Saisi pour) · 3. **Workflow** · 4. **Périmètre** · 5.
+**Destinataires** *(qui est concerné dans l'application)* · 6. **Description** ·
+7. **Photos** · 8. **Documents** · 9. **Diffusion** *(par quels canaux on prévient
+à l'extérieur)*.
+
+🔴 **Une section ne se fusionne JAMAIS avec une autre, dans aucun rendu.** Neuf
+déclarées, neuf rendues — même voisines, même courtes, même héritées. Fusionner
+« Photos · Documents » parce qu'elles tiennent sur une ligne crée une dixième
+section que rien ne déclare.
+
+### Un champ n'est pas un geste — d'où la seule différence création/édition
+
+Les sections **1 à 8 décrivent l'entité** ; la **9 est un acte**.
+
+| État | Contenu |
+|---|---|
+| Affichage | 1→8 en lecture · 9 absente |
+| Création | 1→9 en saisie |
+| **Édition** | **1→8 identiques à la création, workflow compris** · **9 absente**, motif `geste` |
+| **Évolution** | **création sans le titre** (hérité) · workflow **tracé** · périmètre et destinataires hérités · **9 rejouable** |
+
+**L'édition corrige** — une erreur, un oubli, un complément. **Une correction n'est
+pas une nouvelle** : c'est pourquoi la Diffusion tombe, et seulement elle. Le
+`PATCH` écrit une **correction**, jamais une transition.
+
+### Les six règles
+
+- **R1** squelette de page immuable (titre + action primaire en haut · corps ·
+  soumission en bas à droite) — **et c'est LUI qui porte la responsivité**, une
+  seule fois pour toutes les pages.
+- **R2** ordre des 9 sections immuable, **et valable pour l'affichage**.
+- **R3** un champ est un **objet** à trois rendus, qui se rend **toujours pareil**,
+  avec **le même libellé partout**, le requis marqué par **`*` et rien d'autre**
+  (jamais « (optionnel) »), **le fond de saisie** s'il est éditable — le mode se lit
+  alors sans lire un badge — et **toute sélection en pastilles arrondies, jamais un
+  `<select>` nu**. Une pastille qui se déplie porte un **chevron `›`**, seule marque
+  du second niveau, *qui annonce sans imposer*. **La hiérarchie est une DONNÉE**
+  (`parent` + `selectionnable`), administrée dans Admin → Patrimoine :
+  *« sans inventer de niveau dans les données »*.
+- **R3 bis** une **rubrique** groupe des objets et porte leur ordre, agencement et
+  allure — variantes **limitées et justifiées**. *Une variante ajoutée pour
+  accueillir un écart existant ne factorise pas : elle entérine.*
+- 🔴 **R4** toute divergence entre états **se déclare avec son motif** :
+  **`geste`** · **`hérité`** · **`api`** ⚠️ *motif de dette, qui doit citer un
+  ticket*. **Une divergence sans motif est refusée par la CI** (`lint:etats`).
+- 🔴 **R5** l'**enrichissement se propage** (squelette → toutes les pages ; rubrique
+  → toutes les pages hôtes ; objet → toutes les sections). **Donc il se propose sur
+  UN écran, se fait constater, puis se généralise.** Jamais l'inverse.
+
+### Où le cadre VIT dans le code (depuis #431, 17/08/2026)
+
+| Quoi | Où | À faire avant d'écrire un écran |
+|---|---|---|
+| Les 9 sections, leur ordre, leurs libellés, les 4 états, les 3 motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table |
+| La déclaration d'une entité et **ses divergences motivées** | `front/src/lib/entites/<entite>.ts` | la lire ; si elle n'existe pas, l'écrire |
+| Le squelette de **lecture** (R1 pour l'affichage) | `FicheLecture.svelte` | l'affichage passe par lui, il tient l'ordre |
+| Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |
+| La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | 3 recopies sur 6 remplacées ; les 3 autres attendent d'être constatées (R5) |
+| Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, et **une section rendue hors déclaration** |
+
+🔴 **La présence d'une section ne se décide plus dans l'écran.** `avecPhotos`,
+`avecDiffusion`… se gouvernent par `sectionPresente(ENTITE, etat, 'photos')` et
+par rien d'autre. Une condition en dur (`{!modeEdition}`) rouvre exactement la
+divergence silencieuse que le cadre supprime — et `lint:etats` la refuse.
+
+⚠️ **`EvolForm` n'est pas encore gouverné par la déclaration** : il sert quatre
+écrans, l'y brancher les changerait tous les quatre (R5). L'état `evolution` est
+donc déclaré, pas encore confronté à son rendu. Sujet de **#433**.
+
+### Ce que le cadre ne couvre pas
+
+**Document** (1 champ commun sur 5 entre création et édition, *et c'est juste*),
+**Utilisateur** (zéro champ commun), et **le moment du téléversement** — trois
+régimes, dont un existe **pour raison de sécurité**, et qui **ne se voit pas à
+l'écran**.
+
+> ⚠️ Cette skill fait plus de 500 lignes. Le cadre y est **résumé, pas recopié** —
+> le détail vit dans l'artefact et la mémoire. Prochaine évolution notable : la
+> découper (§9 « Champs de formulaire » fait à lui seul 230 lignes).
+
 ## 1. Icônes de contexte
 
 | Icône | Signification | Usage |

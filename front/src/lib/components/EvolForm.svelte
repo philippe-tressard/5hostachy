@@ -12,10 +12,23 @@
 
   L'ordre est désormais celui de tout le site :
 
-    2. Champs spécifiques + 3. Workflow  →  nature de l'évolution, nouvel état
-    6. Description                       →  le commentaire
+    3. Workflow    →  cette entrée change-t-elle l'état, et vers quoi ?
+    6. Description →  le commentaire
     7-8. Photos / Documents (ou Pièces jointes en mode unifié)
-    9. Diffusion                         →  canaux + adresse externe, EN DERNIER
+    9. Diffusion   →  message interne, canaux, adresse externe — EN DERNIER
+
+  ⚠️ **Ce composant n'est pas encore gouverné par la déclaration d'entité**
+  (`$lib/entites/`, cadre #430). Il sert quatre écrans — tickets, fiche de
+  ticket, actualités, espace CS — et l'y brancher les changerait tous les quatre
+  avant qu'on les ait regardés, ce que R5 interdit. Deux écarts connus, à traiter
+  avec #433 :
+    • le mode « pièces jointes unifiées » (`separatePhotosAndDocs = false`)
+      FUSIONNE les sections 7 et 8, ce que le cadre interdit. Les tickets ne
+      l'utilisent pas ; les actualités et l'espace CS, si. *Une variante ajoutée
+      pour accueillir un écart existant ne factorise pas : elle entérine* — le
+      remède est de remettre ces deux écrans en conformité, pas d'assouplir ;
+    • l'intitulé de la description bascule « Commentaire » / « Contenu » selon le
+      mode, là où R3 demande le MÊME libellé d'un formulaire à l'autre.
 
   ⚠️ **Pourquoi `SectionFormulaire` et non `ChampsCommuns`.** `ChampsCommuns` est
   le point d'héritage des sections 4 à 9, et c'est lui qu'il faudrait utiliser —
@@ -73,6 +86,13 @@
 	export let defaultEnvoyerCs = false;
 	/** Afficher le champ email externe */
 	export let showEmail = false;
+	/**  Proposer « Message interne ». C'est une décision de DIFFUSION — qui voit
+	     cette entrée —, donc elle est rendue en section 9, avec les canaux, et
+	     non au milieu du commentaire comme le faisait le formulaire de réponse
+	     écrit à la main de la fiche d'un ticket (#431). */
+	export let avecInterne = false;
+	/** Lié par le parent : lui seul sait ce qu'une entrée interne change chez lui. */
+	export let interne = false;
 	/** Afficher l'upload de fichiers */
 	export let showFiles = false;
 	/** true = tickets (photos séparées des docs), false = publications (fichiers unifiés) */
@@ -97,6 +117,7 @@
 			envoyer_syndic?: boolean;
 			envoyer_cs?: boolean;
 			email_externe?: string;
+			interne?: boolean;
 		};
 		cancel: void;
 	}>();
@@ -131,7 +152,7 @@
 	//  au-dessus : un trait avant le premier groupe le séparerait du titre du
 	//  formulaire, qui joue déjà ce rôle (`SectionFormulaire`).
 	$: sectionWorkflow = !editMode && statutOptions.length > 0;
-	$: sectionDiffusion = showNotifs || showEmail;
+	$: sectionDiffusion = showNotifs || showEmail || avecInterne;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
@@ -168,6 +189,7 @@
 			envoyer_syndic: showNotifs ? envoyerSyndic : undefined,
 			envoyer_cs: showNotifs ? envoyerCs : undefined,
 			email_externe: showEmail ? (emailExterne.trim() || undefined) : undefined,
+			interne: avecInterne ? interne : undefined,
 		});
 	}
 </script>
@@ -265,6 +287,12 @@
 	     séparé par toute la rubrique (#416). -->
 	{#if sectionDiffusion}
 		<SectionFormulaire titre="Diffusion">
+			{#if avecInterne}
+				<label class="case-interne">
+					<input type="checkbox" bind:checked={interne} />
+					<span>Message interne (visible par le conseil syndical uniquement)</span>
+				</label>
+			{/if}
 			{#if showNotifs}
 				<CanauxNotification
 					bind:whatsapp={partagerWhatsapp}
@@ -314,5 +342,22 @@
 		gap: .5rem;
 		flex-wrap: wrap;
 		margin-bottom: .6rem;
+	}
+	/*  Définie ICI, avec le balisage qu'elle habille : `.checkbox-field` n'est pas
+	    une classe d'`app.css` — chaque composant qui l'emploie la style lui-même,
+	    et une classe seulement utilisée arrive nue à l'écran (v2.67.11). */
+	.case-interne {
+		display: flex;
+		align-items: center;
+		gap: .4rem;
+		cursor: pointer;
+		font-size: .85rem;
+		margin: 0 0 .6rem;
+	}
+	.case-interne input[type='checkbox'] { width: auto; margin: 0; flex-shrink: 0; }
+	/*  Sous 480 px, la cible tactile d'une case ne faisait que 16 à 18 px de haut
+	    (socle 11 §10). */
+	@media (max-width: 480px) {
+		.case-interne { min-height: 44px; }
 	}
 </style>
