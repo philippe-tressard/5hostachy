@@ -137,6 +137,31 @@ if (!existsSync(APP_CSS)) {
 
 const REGLES_APP = reglesCss(readFileSync(APP_CSS, 'utf8'));
 
+/**
+ * Résout un `var(--jeton)` contre les variables de `:root`.
+ *
+ * ⚠️ **Pourquoi ce détour existe (18/08/2026).** `.largeur-saisie` portait
+ * `max-width: 720px` ; la valeur est devenue `var(--largeur-saisie)` quand la
+ * largeur de saisie est passée au squelette (R1). La référence lue ici valait
+ * alors la CHAÎNE « var(--largeur-saisie) », qu'aucune page n'écrit jamais : le
+ * contrôle a cessé de voir les 720 px en dur — et il l'a signalé de la seule
+ * façon dont il pouvait, en disant qu'une tolérance ne servait plus.
+ *
+ * C'est le piège du garde-fou dont on lit le VERDICT au lieu de la PORTÉE :
+ * « une tolérance de moins » se lit comme un progrès, alors que c'était une
+ * détection en moins. Ne jamais retirer une tolérance sans avoir vérifié que
+ * l'écran est devenu conforme.
+ */
+function resoudreVariables(decl) {
+	const racine = declarationsDe(REGLES_APP, ':root');
+	const resolue = new Map();
+	for (const [propriete, valeur] of decl) {
+		const m = /^var\(\s*(--[\w-]+)\s*\)$/.exec(valeur.trim());
+		resolue.set(propriete, m && racine.has(m[1]) ? racine.get(m[1]) : valeur);
+	}
+	return resolue;
+}
+
 for (const sig of SIGNATURES) {
 	const decl = declarationsDe(REGLES_APP, sig.regle);
 	const manquantes = sig.proprietes.filter((p) => !decl.has(p));
@@ -152,7 +177,20 @@ for (const sig of SIGNATURES) {
 				'  si la classe qu’elle défend n’existe plus.',
 		);
 	}
-	sig.reference = decl;
+	sig.reference = resoudreVariables(decl);
+
+	//  Cas zéro : une référence restée en `var(…)` ne correspondra à rien qu'une
+	//  page écrive — le contrôle passerait au vert sans rien contrôler.
+	for (const [propriete, valeur] of sig.reference) {
+		if (/^var\(/.test(String(valeur).trim())) {
+			abandonner(
+				`la valeur de \`${propriete}\` sur \`${sig.regle}\` reste « ${valeur} » après\n` +
+					'  résolution : le jeton n’est pas défini sur `:root`, ou il pointe sur un autre\n' +
+					'  jeton. La signature ne correspondrait à aucune valeur écrite en dur, et ce\n' +
+					'  contrôle se tairait en croyant tout aller bien.',
+			);
+		}
+	}
 }
 
 for (const classe of CLASSES_STRUCTURE) {

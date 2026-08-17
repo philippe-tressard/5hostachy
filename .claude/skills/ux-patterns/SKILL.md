@@ -54,8 +54,8 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 
 ### Les neuf sections, dans cet ordre — il ne se discute pas
 
-1. **Titre** (Catégorie *— elle qualifie le titre* + Titre) · 2. **Champs
-spécifiques** (Saisi pour) · 3. **Workflow** · 4. **Périmètre** · 5.
+1. **Titre** *(et lui seul)* · 2. **Champs spécifiques** (Catégorie, Saisi
+pour…) · 3. **Workflow** · 4. **Périmètre** · 5.
 **Destinataires** *(qui est concerné dans l'application)* · 6. **Description** ·
 7. **Photos** · 8. **Documents** · 9. **Diffusion** *(par quels canaux on prévient
 à l'extérieur)*.
@@ -114,6 +114,18 @@ pas une nouvelle** : c'est pourquoi la Diffusion tombe, et seulement elle. Le
 | Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |
 | La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | 3 recopies sur 6 remplacées ; les 3 autres attendent d'être constatées (R5) |
 | Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, et **une section rendue hors déclaration** |
+
+🔴 **La section 1 ne porte QUE le titre** (arbitré le 18/08/2026, sur les
+Tickets où la catégorie était rendue *avant* lui). Ce qui qualifie l'objet —
+catégorie, « Saisi pour » — est en **section 2**. Une section peut donc porter
+**plusieurs champs nommés** : `titreEcran` accepte une liste, et `lint:etats`
+continue de refuser un intitulé inventé sur place.
+
+⚠️ **Limite connue de R4, trouvée le 18/08/2026** : elle ne déclare qu'une
+divergence de **section**, pas de **champ**. Sur le ticket, la catégorie reste
+ouverte en édition quand « Saisi pour » y est fermé (motif `api`, #431) — ce
+motif ne peut pas s'écrire dans `absente` et vit en commentaire, **invisible au
+contrôle**. Premier écart que le cadre ne tient pas.
 
 🔴 **La présence d'une section ne se décide plus dans l'écran.** `avecPhotos`,
 `avecDiffusion`… se gouvernent par `sectionPresente(ENTITE, etat, 'photos')` et
@@ -320,7 +332,23 @@ Vue archives unifiée dans `calendrier/+page.svelte` (onglet Archives).
 
 ## 9. Champs de formulaire
 
-**Largeur : `.largeur-saisie` (720 px), sur le conteneur du formulaire.** Vaut
+> 🔴 **La largeur de saisie appartient au SQUELETTE, pas à la page (R1) — et elle
+> change (18/08/2026).** Elle est désormais une **variable**,
+> `--largeur-saisie`, définie dans `app.css` et posée par
+> `(app)/+layout.svelte` : *une largeur unique, quels que soient la page et le
+> formulaire, adaptée à l'écran du terminal avec une marge optimale* (arbitrage
+> utilisateur). Motif : le cap à 720 px était plus étroit que tout le reste de la
+> page — la boîte de création s'arrêtait bien avant les cartes de la liste posées
+> juste en dessous.
+>
+> **La nouvelle valeur (`100%` du conteneur) n'est active que sur `/tickets`**,
+> le temps d'être constatée à l'écran (R5) ; partout ailleurs le défaut reste
+> 720 px. Généraliser = changer la ligne de `app.css` et **supprimer** la liste
+> `ROUTES_LARGEUR_PLEINE` du squelette. Ne pas la laisser vivre : un mécanisme
+> d'exception qui survit invite la valeur suivante — c'est la leçon de la prop
+> `marge` d'`EntetePage` (§13). Ne **jamais** écrire une largeur dans une page.
+
+**Largeur : `.largeur-saisie`, sur le conteneur du formulaire.** Vaut
 pour les pages dédiées *et* les formulaires intégrés à une liste — le même geste
 ne doit pas avoir deux largeurs selon l'écran.
 

@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.39 · Août 2026</span>
+    <span class="topbar-badge">Version 3.40 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1649,8 +1649,8 @@
           <li class="step">
             <span class="step-num" style="background:var(--c-ticket)">1</span>
             <div class="step-content">
-              <strong>Choisissez une catégorie</strong>
-              <p>Sélectionnez le type de problème ci-dessous.</p>
+              <strong>Donnez un titre, puis choisissez une catégorie</strong>
+              <p>Le <strong>titre</strong> ouvre le formulaire ; la <strong>catégorie</strong> vient juste après, avec le type de problème ci-dessous.</p>
             </div>
           </li>
         </ul>
@@ -1760,7 +1760,7 @@
           <li><strong>Tous les tickets</strong> ouverts par les résidents sont visibles, quel que soit le bâtiment.</li>
           <li>Un filtre rapide permet d'afficher uniquement les tickets <em>Ouverts</em>, <em>En cours</em> ou <em>Tous</em>. Les tickets résolus ou annulés sont consultables dans la section <strong>Historique</strong> en bas de page.</li>
           <li>Le <strong>prénom / nom</strong> et le <strong>bâtiment du demandeur</strong> apparaissent directement sur chaque ticket pour faciliter l'identification par le CS.</li>
-          <li>Pour chaque ticket, le CS peut <strong>changer le statut</strong> (ex. : Ouvert → En cours → Résolu) et <strong>ajouter un commentaire</strong> pour informer le résident. Chaque changement d'état laisse une étape datée dans l'<strong>Historique</strong> du ticket.</li>
+          <li>Pour chaque ticket, <strong>deux boutons</strong> disent ce que vous allez faire : <strong>&#x1F4AC; Commenter</strong> pour informer le résident, <strong>&#x1F504; Changer l'état</strong> pour faire avancer le suivi (ex. : Ouvert → En cours → Résolu). Le formulaire qui s'ouvre ne vous redemande plus lequel des deux vous vouliez. Chaque changement d'état laisse une étape datée dans l'<strong>Historique</strong> du ticket.</li>
           <li>Un badge rouge sur l'onglet indique le nombre de tickets encore <em>Ouverts</em>.</li>
           <li><strong>Administrateurs uniquement</strong> : un bouton <strong>✏️ Modifier</strong> permet de <strong>corriger</strong> un ticket existant — titre, catégorie, <strong>état</strong>, périmètre, description et <strong>documents</strong>. La correction apparaît dans l'<strong>Historique</strong> pour ce qu'elle est, et non comme une étape du suivi : un état mal saisi qu'on rattrape ne fait plus croire que le ticket est passé par là. Les <strong>canaux de diffusion</strong> (WhatsApp, syndic, CS) n'y sont pas reproposés — corriger une faute de frappe ne doit renvoyer aucun message.</li>
         </ul>
@@ -1931,12 +1931,29 @@
 
       <div class="card">
         <h3>&#x1F535; État d'une publication &amp; Historique</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Chaque publication possède un <strong>état</strong>. Par défaut, une nouvelle publication est en état <strong>« Publié »</strong> : c'est une simple annonce, sans suivi.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Chaque publication possède un <strong>état</strong>, désormais <strong>proposé dès la création</strong> dans la section <strong>Workflow</strong> du formulaire. Il reste sur <strong>« Publié »</strong> par défaut : c'est une simple annonce, sans suivi.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
           <li><strong>&#x1F535; Publié</strong> (par défaut) — annonce hors suivi. Elle reste visible <strong>1 mois</strong>, puis bascule automatiquement dans la section <strong>Historique</strong>, en bas de la page Actualités (groupée par année).</li>
           <li><strong>&#x1F7E1; En cours / &#x1F7E2; Résolu / ⚫ Annulé</strong> — états de suivi. Dès qu'une publication passe dans l'un de ces états, elle quitte le fonctionnement « 1 mois » et suit le cycle de suivi (une publication résolue est archivée après le délai configuré).</li>
         </ul>
         <p style="font-size:.85rem; color:var(--muted); margin-top:.75rem">Le délai de visibilité des publications « Publié » (1 mois par défaut) est réglable par l'administrateur.</p>
+      </div>
+
+      <div class="card">
+        <h3>✏️ Corriger une actualité (conseil syndical)</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Le bouton <strong>✏️ Modifier</strong> d'une actualité rouvre <strong>le même formulaire</strong> que la création, garni de ce qui avait été saisi. Il ne proposait auparavant qu'une partie des champs&nbsp;: le périmètre, les destinataires et les photos y étaient perdus.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
+          <li>Tout se corrige&nbsp;: titre, options (épinglage, urgence, brouillon, confidentiel), <strong>état</strong>, périmètre, destinataires, contenu et photos.</li>
+          <li>Les <strong>canaux de diffusion</strong> (WhatsApp, syndic, conseil syndical, affiche de hall) n'y sont <strong>pas</strong> reproposés&nbsp;: corriger une faute de frappe ne doit renvoyer aucun message. Pour renvoyer volontairement, voir les deux boutons ci-dessous.</li>
+          <li>La correction apparaît dans l'<strong>Historique</strong> pour ce qu'elle est — «&nbsp;Correction&nbsp;: État&nbsp;: Publié → Résolu&nbsp;» — et non comme une étape du suivi.</li>
+          <li>Les <strong>documents</strong> ne sont pas modifiables après coup&nbsp;; ils s'ajoutent à la création.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F4AC; Commenter ou changer l'état</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Sur chaque actualité, <strong>deux boutons</strong> disent ce que vous allez faire&nbsp;: <strong>&#x1F4AC; Commenter</strong> et <strong>&#x1F504; Changer l'état</strong>. Le formulaire qui s'ouvre ne vous redemande plus lequel des deux vous vouliez.</p>
+        <p style="font-size:.9rem; color:var(--muted)">Les <strong>photos</strong> et les <strong>documents</strong> y sont deux rubriques distinctes, comme partout ailleurs.</p>
       </div>
       <div class="card">
         <h3>&#x1F504; Renvoyer une actualité (administrateur)</h3>
@@ -2898,7 +2915,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.39</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.40</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
