@@ -66,6 +66,17 @@ function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfi
 }
 
 // ── Store global alimenté depuis l'API ──────────────────────────────────────
+//  Ré-export : `getPageConfig` et `defautsDePage` sont les deux moitiés d'un même
+//  geste — « lis la configuration, avec ces défauts-là » — et `check-pages.mjs`
+//  impose déjà de les écrire ensemble. Une page ouvrait pourtant DEUX imports
+//  pour cela, ce qui faisait grossir d'une ligne dix fichiers déjà au-dessus du
+//  plafond de 500 lignes : le garde-fou de modularité l'a refusé, à raison. La
+//  table reste la source (`lib/pages.ts` expose toujours ces fonctions, ce que
+//  vérifie le cas zéro de `check-pages.mjs`) ; c'est la PORTE qui est unifiée.
+//  L'import de `pages.ts` vers ce fichier est un `import type`, effacé à la
+//  compilation : aucun cycle à l'exécution.
+export { defautsDePage, configDepuisPage } from '$lib/pages';
+
 export const configStore = writable<Record<string, string>>({});
 
 // Nom du site réactif

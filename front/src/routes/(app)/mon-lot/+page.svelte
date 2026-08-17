@@ -4,8 +4,7 @@
 	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { fmtDateShort as fmt } from '$lib/date';

@@ -6,8 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
@@ -1452,8 +1451,7 @@
 						{#if tkShowForm === t.id}
 						<div class="evol-form">
 							{#key tkShowForm}
-							<EvolForm
-								idPrefixe="cs-tk-evol-{t.id}"
+							<EvolForm idPrefixe="cs-tk-evol-{t.id}"
 								statutOptions={TK_STATUT_OPTIONS}
 								statutLabels={TK_STATUT_LABELS}
 								currentStatut={t.statut ?? ''}
@@ -1501,8 +1499,7 @@
 													{#if tkEditingEvolId === evol.id}
 													<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
 														{#key tkEditingEvolId}
-														<EvolForm
-															idPrefixe="cs-tk-evol-edit-{evol.id}"
+														<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}"
 															editMode={true}
 															initialContenu={evol.contenu || ''}
 															initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

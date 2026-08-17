@@ -12,8 +12,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';

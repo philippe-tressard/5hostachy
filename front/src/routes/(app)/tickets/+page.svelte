@@ -4,8 +4,7 @@
 	import { revelerCible } from '$lib/deepLink';
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate, fmtDatetime, isNouveau } from '$lib/date';
@@ -357,8 +356,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 						<!-- Formulaire d'évolution — composant partagé `EvolForm` -->
 						<div class="evol-form">
 							{#key showEvolForm}
-								<EvolForm
-									idPrefixe="tk-evol-{t.id}"
+								<EvolForm idPrefixe="tk-evol-{t.id}"
 									statutOptions={TICKET_STATUT_OPTIONS}
 									statutLabels={STATUT_LABELS}
 									currentStatut={t.statut}
@@ -494,8 +492,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 										<!-- Formulaire d'évolution — composant partagé `EvolForm` -->
 										<div class="evol-form">
 											{#key showEvolForm}
-												<EvolForm
-													idPrefixe="tk-arch-evol-{t.id}"
+												<EvolForm idPrefixe="tk-arch-evol-{t.id}"
 													statutOptions={TICKET_STATUT_OPTIONS}
 													statutLabels={STATUT_LABELS}
 													currentStatut={t.statut}

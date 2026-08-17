@@ -14,8 +14,7 @@
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';

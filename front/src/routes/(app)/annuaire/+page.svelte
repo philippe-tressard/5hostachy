@@ -6,8 +6,7 @@
 	import { onMount } from 'svelte';
 	import { annuaire as annuaireApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateLong as formatDate } from '$lib/date';
 

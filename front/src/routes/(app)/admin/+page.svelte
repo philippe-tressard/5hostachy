@@ -729,9 +729,7 @@ function togglePage(id: string) {
   expandedPages = expandedPages.has(id) ? new Set() : new Set([id]);
 }
 async function savePageConfig(pg: PageDef) {
-  // Conversion liste → dictionnaire partagée avec `defautsDePage` : elle vit dans
-  // `$lib/pages.ts` et nulle part ailleurs (#420). Ce sont les valeurs ÉDITÉES qui
-  // partent ici, pas celles de la table — d'où le passage de `pg` et non de son id.
+  // Conversion partagée avec `defautsDePage` (`$lib/pages.ts`, #420) ; `pg` et non son id : ce sont les valeurs ÉDITÉES qui partent.
   const val = JSON.stringify(configDepuisPage(pg));
   try {
     await configApi.save({ [`page_config_${pg.id}`]: val });

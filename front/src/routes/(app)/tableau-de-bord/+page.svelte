@@ -4,8 +4,7 @@
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import { perimetreLabel, concerneTous, batimentsCibles, estPerimetreParDefaut } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';

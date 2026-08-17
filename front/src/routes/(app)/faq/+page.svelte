@@ -7,8 +7,7 @@ import { onMount } from 'svelte';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import { defautsDePage } from '$lib/pages';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 
 	$: _pc = getPageConfig($configStore, 'faq', defautsDePage('faq'));
