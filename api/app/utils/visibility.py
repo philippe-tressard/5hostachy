@@ -277,6 +277,32 @@ def publication_visible(pub: Publication, user: Utilisateur) -> bool:
 
 # ── Règles sondage ────────────────────────────────────────────────────────────
 
+def resultats_sondage_visibles(resultats_publics: bool, cloture: bool) -> bool:
+    """Les décomptes de ce sondage peuvent-ils quitter le serveur ?
+
+    `resultats_publics` signifie « visibles **avant** la clôture » : une fois le
+    sondage clos, ils le sont dans tous les cas.
+
+    ⚠️ Cette règle décide de ce que l'API **envoie**, pas de ce que le front
+    affiche. Jusqu'au 17/08/2026 elle n'existait pas : `GET /sondages/{id}`
+    renvoyait `nb_votes` et les réponses en texte libre sans aucune condition, et
+    seul le front tentait de les masquer. Décocher la case ne cachait donc rien —
+    les résultats restaient lisibles dans la réponse réseau par tout destinataire
+    avant son vote, alors que la case existe précisément pour qu'un vote en cours
+    n'influence pas les suivants (#397).
+
+    L'audience, elle, n'est PAS gérée ici : c'est celle du sondage, décidée par
+    `sondage_accessible` (périmètre + public cible). Cette fonction ne répond
+    qu'à la question du calendrier — avant ou après la clôture.
+
+    Aucune exception pour l'auteur ni pour le conseil syndical : ils sont donc
+    aveugles à la participation jusqu'à la clôture quand la case est décochée.
+    C'est ce que l'option promet littéralement, et le défaut le plus sûr pour
+    l'intégrité du vote — à rouvrir si l'usage montre que c'est trop strict.
+    """
+    return bool(resultats_publics or cloture)
+
+
 def sondage_accessible(sondage: Sondage, user: Utilisateur) -> bool:
     """
     Retourne True si l'utilisateur peut voir/voter à ce sondage.

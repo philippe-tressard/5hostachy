@@ -520,25 +520,25 @@ import { onMount } from 'svelte';
 			{editingItem ? 'Modifier la question' : 'Nouvelle question'}
 		</h2>
 		<div class="form-grid">
-			<label class="field-label" for="faq-categorie">Catégorie *</label>
-			<select id="faq-categorie" class="input-field" bind:value={formCategorie} on:change={onCategorieSelectChange}>
-				<option value="" disabled>— Choisir une catégorie —</option>
-				{#each existingCategories as cat}
-					<option value={cat}>{cat}</option>
-				{/each}
-				<option value="__new__">➕ Nouvelle catégorie…</option>
-			</select>
+			<label class="field">Catégorie *
+				<select bind:value={formCategorie} on:change={onCategorieSelectChange}>
+					<option value="" disabled>— Choisir une catégorie —</option>
+					{#each existingCategories as cat}
+						<option value={cat}>{cat}</option>
+					{/each}
+					<option value="__new__">➕ Nouvelle catégorie…</option>
+				</select>
+			</label>
 			{#if formIsNewCategorie}
-				<label class="field-label" for="faq-new-categorie">Nom de la nouvelle catégorie *</label>
-				<input id="faq-new-categorie" class="input-field" type="text" bind:value={formNewCategorie} placeholder="Ex : 🗑️ Tri des déchets" />
+				<label class="field">Nom de la nouvelle catégorie *<input type="text" bind:value={formNewCategorie} placeholder="Ex : 🗑️ Tri des déchets" /></label>
 			{/if}
 
-			<label class="field-label" for="faq-question">Question *</label>
-			<input id="faq-question" class="input-field" type="text" bind:value={formQuestion} placeholder="La question…" />
+			<label class="field">Question *<input type="text" bind:value={formQuestion} placeholder="La question…" /></label>
 
-			<label class="field-label" for="faq-reponse">Réponse *</label>
-			<!-- RichEditor n'est pas un input natif, on ne peut pas utiliser for, mais on garde le label pour l'accessibilité -->
-			<RichEditor id="faq-reponse" bind:value={formReponse} placeholder="La réponse…" minHeight="120px" />
+			<div class="field">
+				<label for="faq-reponse">Réponse *</label><!-- RichEditor : pas labelable, donc pas d'enveloppement -->
+				<RichEditor id="faq-reponse" bind:value={formReponse} placeholder="La réponse…" minHeight="120px" />
+			</div>
 		</div>
 		<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
 			<button class="btn btn-outline" on:click={() => (showForm = false)} disabled={saving}>Annuler</button>
@@ -571,8 +571,8 @@ import { onMount } from 'svelte';
 	.modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
 	.modal-box { max-width: 500px; width: 92%; padding: 1.5rem; }
 	.form-grid { display: flex; flex-direction: column; gap: .5rem; }
-	.field-label { font-size: .8rem; font-weight: 500; color: var(--color-text-muted); margin-top: .25rem; }
-	.input-field { padding: .45rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; font-family: inherit; width: 100%; box-sizing: border-box; resize: vertical; }
+	/*  Ne sert plus qu'au renommage de catégorie EN LIGNE. Fond explicite : son absence rendait les champs blancs (#413). */
+	.input-field { padding: .45rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; font-family: inherit; width: 100%; box-sizing: border-box; resize: vertical; background: var(--color-bg); color: var(--color-text); }
 	.req { color: var(--color-danger); }
 	.btn-outline { background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .4rem .9rem; cursor: pointer; font-size: .875rem; }
 	.reorder-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .75rem 1rem; margin-bottom: .5rem; background: var(--color-bg-subtle); border-radius: var(--radius); border: 1px dashed var(--color-border); }

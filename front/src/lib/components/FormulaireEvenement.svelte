@@ -173,5 +173,7 @@
 	.case + .case { margin-top: .4rem; }
 	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 	.desactive { opacity: .55; cursor: not-allowed; }
-	.aide-case { margin: .2rem 0 0 1.6rem; font-size: .8rem; color: var(--color-text-muted); }
+	/*  `.aide-case` est passée dans app.css le 17/08/2026 : FormulaireSondage en
+	    avait besoin, et Svelte scope les styles — la reprendre ici en aurait fait
+	    une seconde définition libre de diverger. */
 </style>

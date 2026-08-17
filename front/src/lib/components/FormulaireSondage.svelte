@@ -138,16 +138,16 @@
 						<div class="option-ligne">
 							<span class="option-rang">{i + 1}.</span>
 							<input class="option-saisie" bind:value={options[i].libelle}
-								placeholder="Option {i + 1}" aria-label="Libellé de l'option {i + 1}" />
+								placeholder="Réponse {i + 1}" aria-label="Libellé de la réponse {i + 1}" />
 							<button type="button" class="btn btn-sm btn-outline" title="Monter"
-								aria-label="Monter l'option {i + 1}"
+								aria-label="Monter la réponse {i + 1}"
 								disabled={i === 0} on:click={() => monter(i)}>↑</button>
 							<button type="button" class="btn btn-sm btn-outline" title="Descendre"
-								aria-label="Descendre l'option {i + 1}"
+								aria-label="Descendre la réponse {i + 1}"
 								disabled={i === options.length - 1} on:click={() => descendre(i)}>↓</button>
 							{#if options.length > 2}
 								<button type="button" class="btn btn-sm btn-outline option-supprimer"
-									title="Supprimer" aria-label="Supprimer l'option {i + 1}"
+									title="Supprimer" aria-label="Supprimer la réponse {i + 1}"
 									on:click={() => retirerOption(i)}>✕</button>
 							{/if}
 						</div>
@@ -158,7 +158,7 @@
 					</div>
 				{/each}
 				<button type="button" class="btn btn-sm btn-outline" on:click={ajouterOption}>
-					+ Ajouter une option
+					+ Ajouter une autre réponse
 				</button>
 			</div>
 		</SectionFormulaire>
@@ -172,8 +172,16 @@
 				<div class="field">
 					<label class="case">
 						<input type="checkbox" bind:checked={resultatsPublics} />
-						<span>Résultats visibles avant clôture</span>
+						<span>Afficher les résultats avant la clôture</span>
 					</label>
+					<!--  L'ancien libellé, « Résultats visibles avant clôture », ne disait
+					      pas À QUI — or c'est toute la question : des résultats visibles
+					      pendant le vote influencent les votes suivants (#397). L'audience
+					      est celle du sondage : son périmètre et ses destinataires. -->
+					<p class="aide-case">
+						Ils seront lus par les destinataires du sondage. Sinon, ils n'apparaissent
+						qu'une fois le sondage clôturé.
+					</p>
 				</div>
 			</div>
 		</SectionFormulaire>
