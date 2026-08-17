@@ -6,6 +6,7 @@ import TopPages from '$lib/components/TopPages.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
+import { PAGES, type PageDef } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
@@ -691,7 +692,7 @@ async function sendSmtpTest() {
 }
 
 // ── Descriptif des pages ──────────────────────────────────────
-type PageDef = { id: string; nom: string; titre: string; descriptif: string; navLabel: string; icone: string; onglets?: { id: string; label: string; descriptif: string }[] };
+// PageDef et la table des pages viennent de la source unique `$lib/pages.ts` (#401).
 function stripHtmlPreview(html: string) {
   return (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -720,29 +721,12 @@ function normalizeSavedPageDef(saved: any, defaults: PageDef) {
   }
   return normalized;
 }
-const pagesDefaults: PageDef[] = [
-  { id: 'tableau-de-bord', nom: 'Tableau de bord',      titre: 'Tableau de bord',           navLabel: 'Accueil',        icone: 'layout-dashboard',    descriptif: "Votre espace numérique de résidence : actualités, demandes, accès et gouvernance de votre copropriété en un seul endroit." },
-  { id: 'actualites',      nom: 'Actualités',           titre: 'Actualités',                navLabel: 'Actualités',     icone: 'newspaper',           descriptif: "Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence." },
-  { id: 'calendrier',      nom: 'Calendrier',           titre: 'Calendrier',                navLabel: 'Calendrier',     icone: 'calendar-days',       descriptif: "Agenda des événements et interventions de la résidence.",
-    onglets: [{ id: 'liste', label: '\u{1F4CB} Liste', descriptif: 'Vue chronologique des événements à venir.' }, { id: 'kanban', label: '\u{1F5C3}️ Kanban', descriptif: 'Organisation visuelle des événements par statut.' }, { id: 'archives', label: '\u{1F4C1} Archives', descriptif: 'Événements passés classés par année.' }] },
-  { id: 'mes-demandes',    nom: 'Tickets',              titre: 'Mes Tickets',               navLabel: 'Tickets',        icone: 'message-square-text', descriptif: "Signalez un problème, une nuisance ou posez une question au conseil syndical. Suivez l'avancement de vos tickets." },
-  { id: 'annuaire',        nom: 'Annuaire',             titre: 'Annuaire',                  navLabel: 'Annuaire',       icone: 'users',               descriptif: "Coordonnées des membres du Conseil Syndical et du Syndic. En cas d'urgence, contactez le syndic directement par téléphone. Sinon, faites une demande depuis la plateforme." },
-  { id: 'residence',       nom: 'Ma résidence',         titre: 'Ma résidence',              navLabel: 'Résidence',      icone: 'building-2',          descriptif: "Documents et informations de la copropriété." },
-  { id: 'mon-lot',         nom: 'Mes lots',             titre: 'Mes lots',                  navLabel: 'Mes lots',       icone: 'door-closed',         descriptif: "Informations sur votre bien : situation de vos lots (appartement, cave & parkings) dans la résidence et gestion locative pour les copropriétaires mandataires.",
-    onglets: [{ id: 'lots', label: '\u{1F3E0} Mes lots', descriptif: 'Situation de vos lots dans la résidence : appartements, caves et parkings.' }, { id: 'location', label: '\u{1F4CB} Gestion locative', descriptif: 'Suivi de vos baux, locataires et documents de gestion locative.' }] },
-  { id: 'acces-badges',    nom: 'Accès & badges',       titre: 'Accès & badges',            navLabel: 'Accès & badges', icone: 'key-round',           descriptif: "Gestion de vos télécommandes parkings & Vigiks." },
-  { id: 'prestataires',    nom: 'Prestataires',         titre: 'Prestataires',              navLabel: 'Prestataires',   icone: 'hard-hat',            descriptif: "Intervenants de la résidence et leurs contrats de maintenance (avec synthèse IA du contrat) et documents contractuels.",
-    onglets: [{ id: 'prestataires', label: '\u{1F527} Prestataires', descriptif: 'Intervenants et contrats d\'entretien de la résidence.' }, { id: 'consommations', label: '\u{1F4A7} Consommations', descriptif: 'Suivi des relevés de compteurs et abonnements de la résidence.' }, { id: 'devis', label: '\u{1F4CB} Prestations', descriptif: 'Demandes de devis, prestations ponctuelles et suivi des interventions.' }] },
-  { id: 'communaute',      nom: 'Communauté',           titre: 'Communauté',                navLabel: 'Communauté',     icone: 'users-round',         descriptif: "Sondages et boîte à idées pour contribuer à la vie de la résidence.",
-    onglets: [{ id: 'sondages', label: '\u{1F4CA} Sondages', descriptif: 'Participez aux votes et consultations de la copropriété.' }, { id: 'idees', label: '\u{1F4A1} Boîte à idées', descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.' }] },
-  { id: 'faq',             nom: 'FAQ',                  titre: 'FAQ',                       navLabel: 'FAQ',            icone: 'help-circle',         descriptif: "Réponses aux questions fréquentes sur la vie en résidence, les services et la réglementation de la copropriété." },
-  { id: 'espace-cs',       nom: 'Espace CS',            titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS',      icone: 'shield-half',         descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting, relance syndic et demandes d'accès — réservé au Conseil Syndical.",
-    onglets: [{ id: 'validations', label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, { id: 'tickets', label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, { id: 'reporting', label: '\u{1F4CA} Reporting', descriptif: 'Synthèses et indicateurs : kanban, tableau des tickets, devis, prestataires, renouvellements de contrats et relance syndic.' }, { id: 'annuaire', label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' }] },
-  { id: 'admin',           nom: 'Paramétrage',          titre: 'Paramétrage',               navLabel: 'Admin',          icone: 'sliders-horizontal',  descriptif: "Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins." },
-  { id: 'profil',          nom: 'Mon profil',           titre: 'Mon profil',                navLabel: 'Profil',         icone: 'user',                descriptif: "Vos informations personnelles (mot de passe, lots...), sécurité du compte et préférences de notifications." },
-  { id: 'notifications',   nom: 'Notifications',        titre: 'Notifications',             navLabel: 'Notifications',  icone: 'bell',                descriptif: "Vos alertes et messages." },
-];
+const pagesDefaults: PageDef[] = PAGES;
 let pagesConfig: PageDef[] = pagesDefaults.map(pg => ({ ...pg }));
+// Seules les pages du menu s'ordonnent : « Mon profil » et « Notifications » sont
+// atteignables sans entrée de navigation. Elles portaient pourtant des flèches, et
+// leur déplacement était enregistré puis écarté en silence par le menu (#401).
+$: indicesMenu = pagesConfig.map((p, i) => (p.href !== null ? i : -1)).filter(i => i >= 0);
 let expandedPages = new Set<string>();
 function togglePage(id: string) {
   expandedPages = expandedPages.has(id) ? new Set() : new Set([id]);
@@ -760,14 +744,22 @@ async function savePageConfig(pg: PageDef) {
 }
 async function movePage(i: number, dir: number) {
   const arr = [...pagesConfig];
-  const j = i + dir;
-  if (j < 0 || j >= arr.length) return;
+  // On échange avec la page de menu voisine, pas avec la ligne voisine : une page
+  // sans entrée de navigation ne participe pas à l'ordre et ne doit pas s'intercaler.
+  const rang = indicesMenu.indexOf(i);
+  const j = indicesMenu[rang + dir];
+  if (rang < 0 || j === undefined) return;
   [arr[i], arr[j]] = [arr[j], arr[i]];
   pagesConfig = arr;
-  const ordered = JSON.stringify(pagesConfig.map(p => p.id));
+  // `pages_order` ne porte que les pages du menu : y écrire des identifiants que le
+  // menu ne connaît pas, c'était fabriquer l'incohérence que `Nav` signale désormais.
+  const ordered = JSON.stringify(pagesConfig.filter(p => p.href !== null).map(p => p.id));
   configStore.update((c: Record<string, string>) => ({ ...c, pages_order: ordered }));
   try {
     await configApi.save({ pages_order: ordered });
+    // Cet écran enregistre au fil de l'eau, sans bouton : jusqu'ici seul l'ÉCHEC
+    // parlait, et l'absence de retour laissait croire que rien n'était enregistré.
+    toast('success', 'Ordre enregistré.');
   } catch (e: any) {
     toast('error', e.message ?? "Erreur lors de la sauvegarde de l'ordre.");
   }
@@ -1426,8 +1418,12 @@ $: _siteNom = $siteNomStore;
     <div class="ref-item" class:expanded={expandedPages.has(pg.id)}>
       <div class="page-row">
         <div class="order-btns">
-          <button type="button" class="btn-order" disabled={i === 0} on:click={() => movePage(i, -1)} aria-label="Monter">▲</button>
-          <button type="button" class="btn-order" disabled={i === pagesConfig.length - 1} on:click={() => movePage(i, 1)} aria-label="Descendre">▼</button>
+          {#if pg.href !== null}
+            <button type="button" class="btn-order" disabled={indicesMenu[0] === i} on:click={() => movePage(i, -1)} aria-label="Monter {pg.nom} dans le menu">▲</button>
+            <button type="button" class="btn-order" disabled={indicesMenu[indicesMenu.length - 1] === i} on:click={() => movePage(i, 1)} aria-label="Descendre {pg.nom} dans le menu">▼</button>
+          {:else}
+            <span class="hors-menu" title="Cette page n'a pas d'entrée de menu : son ordre n'a pas de sens.">—</span>
+          {/if}
         </div>
         <button class="page-row-btn" on:click={() => togglePage(pg.id)} type="button">
           <span class="page-row-icon"><Icon name={pg.icone || 'help-circle'} size={16} /></span>
@@ -1923,6 +1919,7 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .btn-order { background: none; border: 1px solid var(--color-border); border-radius: 3px; cursor: pointer; font-size: .6rem; padding: 1px 4px; line-height: 1.5; color: var(--color-text-muted); }
 .btn-order:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-bg); }
 .btn-order:disabled { opacity: .3; cursor: default; }
+.hors-menu { color: var(--color-text-muted); opacity: .4; font-size: .7rem; line-height: 1.5; cursor: help; }
 .ref-item { border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; background: var(--color-surface); }
 .ref-item.expanded { border-color: var(--color-primary); }
 .ref-row { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .65rem 1rem; background: none; border: none; cursor: pointer; text-align: left; font-size: .875rem; }

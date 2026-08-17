@@ -21,7 +21,8 @@
     "lint:session": "node scripts/check-renouvellement-session.mjs",
     "lint:soumission": "node scripts/check-libelles-soumission.mjs",
     "lint:audit": "node scripts/check-audit.mjs",
-    "lint:manuels": "node scripts/check-manuels.mjs"
+    "lint:manuels": "node scripts/check-manuels.mjs",
+    "lint:pages": "node scripts/check-pages.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",

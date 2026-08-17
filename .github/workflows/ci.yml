@@ -325,6 +325,21 @@ jobs:
         working-directory: front
         run: npm run lint:routes
 
+      # L'identité des pages — identifiant, route, libellé de menu, icône,
+      # descriptif — vivait dans DEUX tables qui ne se connaissaient pas, et elles
+      # avaient déjà divergé de trois façons dont aucune n'était visible (#401) :
+      # les deux ordres par défaut différaient ; « Mon profil » et « Notifications »
+      # étaient réordonnables sans être dans le menu (geste enregistré, puis écarté
+      # en silence) ; et « Délégations » était dans le menu sans être dans l'écran,
+      # donc ni positionnable ni renommable.
+      # Le contrôle cherche les DÉCLARATIONS (`id:`, `configId:`, `'x': {`), pas les
+      # mentions : sans cette distinction il accusait un `'admin'` qui est un rôle,
+      # et l'exception qu'on lui aurait ajoutée aurait rendu aveugle le fichier même
+      # qui portait la table.
+      - name: Table des pages non recopiée
+        working-directory: front
+        run: npm run lint:pages
+
       # La table des périmètres avait QUATRE copies autour de lib/utils.ts, dont
       # deux qui avaient déjà divergé sans que personne le voie : l'une n'avait
       # pas `aful` (un événement AFUL affichait la clé brute), l'autre écrivait
