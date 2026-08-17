@@ -243,6 +243,42 @@ jobs:
         working-directory: front
         run: npm install
 
+      # Vulnérabilités connues des dépendances. Le 17/08/2026, `npm audit` en local
+      # en relevait QUATRE dont une haute, quand le bandeau GitHub n'en annonçait
+      # qu'une basse : Dependabot suit ses propres avis sur la branche par défaut,
+      # `npm audit` interroge le registre sur l'arbre réellement installé — et
+      # AUCUN des deux n'était un contrôle de CI (#411). Les quatre jobs requis
+      # étaient verts ; leur silence ressemblait à du calme, comme pour #409 et
+      # #410, même famille de contrôles qui existent et ne tournent pas.
+      # Le seuil est `low`, le plus strict : la seule des quatre qui atteignait les
+      # résidents était une BASSE (`cookie`, embarquée dans le serveur SSR), quand
+      # la haute était confinée à la chaîne de construction. La sévérité annoncée
+      # ne dit rien de l'atteignabilité ici. Ce qui rend ce seuil tenable est
+      # l'échappatoire nominative de `front/audit-exceptions.json` — motif,
+      # condition de levée et date de revue par avis — sans laquelle une
+      # vulnérabilité non corrigeable en amont mettrait toutes les PR au rouge et
+      # ce contrôle serait désactivé dans la semaine.
+      # Il sort en 2 (INCONNU, jamais OK) si le registre est injoignable : relancer.
+      - name: Audit des dépendances (seuil low, exceptions nominatives)
+        working-directory: front
+        run: npm run lint:audit
+
+      # Bonne formation du balisage des manuels — le document que lisent les
+      # résidents. Le 17/08/2026 (#410), les deux copies portaient un `</li>` qui ne
+      # fermait rien et un `<li>` jamais fermé, dans un `<div>` qui n'est pas une
+      # liste. Les navigateurs réparent ce balisage en silence : la page s'affiche,
+      # donc elle a l'air correcte — l'artefact est cassé et le comportement le
+      # masque. Seul un analyseur strict pouvait le dire, et le seul du dépôt
+      # (`npm run lint`) n'était dans aucun job.
+      # Ce contrôle valide sans exiger la mise en forme : les manuels sont dans
+      # `.prettierignore` (les reformater produirait un diff énorme et sans valeur,
+      # et les repasserait de CRLF en LF), mais c'était prettier qui voyait le
+      # défaut. Un ignore posé sans remplacer le contrôle qu'il éteint rend le
+      # défaut invisible à nouveau.
+      - name: Balisage des manuels bien formé
+        working-directory: front
+        run: npm run lint:manuels
+
       # Garde-fou dates : aucun formatage sans `timeZone` épinglé. Placé AVANT le
       # build (échoue en ~1 s, sans attendre la compilation). Pendant front du
       # `tests/test_dates_fr.py` côté API, qui ne scanne que `api/app/` — les deux
@@ -288,6 +324,21 @@ jobs:
       - name: Écrans admin atteignables depuis l'interface
         working-directory: front
         run: npm run lint:routes
+
+      # L'identité des pages — identifiant, route, libellé de menu, icône,
+      # descriptif — vivait dans DEUX tables qui ne se connaissaient pas, et elles
+      # avaient déjà divergé de trois façons dont aucune n'était visible (#401) :
+      # les deux ordres par défaut différaient ; « Mon profil » et « Notifications »
+      # étaient réordonnables sans être dans le menu (geste enregistré, puis écarté
+      # en silence) ; et « Délégations » était dans le menu sans être dans l'écran,
+      # donc ni positionnable ni renommable.
+      # Le contrôle cherche les DÉCLARATIONS (`id:`, `configId:`, `'x': {`), pas les
+      # mentions : sans cette distinction il accusait un `'admin'` qui est un rôle,
+      # et l'exception qu'on lui aurait ajoutée aurait rendu aveugle le fichier même
+      # qui portait la table.
+      - name: Table des pages non recopiée
+        working-directory: front
+        run: npm run lint:pages
 
       # La table des périmètres avait QUATRE copies autour de lib/utils.ts, dont
       # deux qui avaient déjà divergé sans que personne le voie : l'une n'avait

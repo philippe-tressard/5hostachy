@@ -163,6 +163,7 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 - Headers de sécurité via Caddy (HSTS, X-Frame-Options, CSP)
 - Sanitisation HTML côté client (DOMPurify)
 - Protection path traversal sur les uploads
+- **Vulnérabilités des dépendances vérifiées en CI** — `npm audit` sur tout l'arbre (`devDependencies` comprises : elles servent le site), seuil `low`, exceptions nominatives datées dans `front/audit-exceptions.json`
 
 Voir [SECURITY.md](SECURITY.md) pour la politique de signalement de vulnérabilités.
 

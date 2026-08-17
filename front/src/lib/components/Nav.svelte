@@ -7,44 +7,23 @@
 	import { setUser } from '$lib/stores/auth';
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
+	import { HREFS_DEFAUT, ID_VERS_HREF, HREF_VERS_PAGE } from '$lib/pages';
 
-	// ── Valeurs par défaut de chaque entrée de menu ────────────────────────
-	const NAV_DEFAULTS: Record<string, { configId: string; icon: string; navLabel: string }> = {
-		'/tableau-de-bord': { configId: 'tableau-de-bord', icon: 'layout-dashboard',    navLabel: 'Accueil' },
-		'/actualites':      { configId: 'actualites',       icon: 'newspaper',           navLabel: 'Actualités' },
-		'/calendrier':      { configId: 'calendrier',       icon: 'calendar-days',       navLabel: 'Calendrier' },
-		'/tickets':         { configId: 'mes-demandes',     icon: 'message-square-text', navLabel: 'Tickets' },
-		'/annuaire':        { configId: 'annuaire',         icon: 'users',               navLabel: 'Annuaire' },
-		'/residence':       { configId: 'residence',        icon: 'building-2',          navLabel: 'Résidence' },
-		'/mon-lot':         { configId: 'mon-lot',          icon: 'door-closed',         navLabel: 'Mes lots' },
-		'/acces-securite':  { configId: 'acces-badges',    icon: 'key-round',           navLabel: 'Accès & badges' },
-		'/prestataires':    { configId: 'prestataires',     icon: 'hard-hat',            navLabel: 'Prestataires' },
-		'/sondages':        { configId: 'communaute',       icon: 'users-round',         navLabel: 'Communauté' },
-		'/faq':             { configId: 'faq',              icon: 'help-circle',         navLabel: 'FAQ' },
-		'/espace-cs':       { configId: 'espace-cs',        icon: 'shield-half',         navLabel: 'Espace CS' },
-		'/delegations':     { configId: 'delegations',      icon: 'heart-handshake',     navLabel: 'Délégations' },
-		'/admin':           { configId: 'admin',            icon: 'sliders-horizontal',  navLabel: 'Admin' },
-	};
+	// Les valeurs par défaut, l'ordre et la correspondance identifiant → route
+	// viennent tous de `$lib/pages.ts` — voir l'en-tête de ce fichier pour les trois
+	// divergences qu'entretenaient les deux tables d'avant (#401).
 
 	function navItem(href: string, raw: Record<string, string>) {
-		const def = NAV_DEFAULTS[href] ?? { configId: '', icon: 'help-circle', navLabel: href };
-		const cfg = def.configId
-			? getPageConfig(raw, def.configId, { titre: def.navLabel, descriptif: '', navLabel: def.navLabel, icone: def.icon })
-			: { navLabel: def.navLabel, icone: def.icon };
-		return { href, icon: cfg.icone ?? def.icon, label: cfg.navLabel ?? def.navLabel };
+		const def = HREF_VERS_PAGE[href];
+		if (!def) return { href, icon: 'help-circle', label: href };
+		const cfg = getPageConfig(raw, def.id, {
+			titre: def.titre,
+			descriptif: def.descriptif,
+			navLabel: def.navLabel,
+			icone: def.icone,
+		});
+		return { href, icon: cfg.icone ?? def.icone, label: cfg.navLabel ?? def.navLabel };
 	}
-
-	// Ordre par défaut complet (toutes les entrées, filtrage par rôle ensuite)
-	const DEFAULT_HREFS = [
-		'/tableau-de-bord', '/residence', '/mon-lot', '/acces-securite',
-		'/annuaire', '/prestataires', '/calendrier', '/actualites',
-		'/tickets', '/sondages', '/faq', '/espace-cs', '/delegations', '/admin',
-	];
-
-	// Correspondance configId → href pour lire l'ordre stocké en backend
-	const idToHref: Record<string, string> = Object.fromEntries(
-		Object.entries(NAV_DEFAULTS).map(([href, def]) => [def.configId, href])
-	);
 
 	let menuOpen = false;
 
@@ -62,16 +41,28 @@
 	$: siteNom = $siteNomStore;
 
 	function computeOrderedHrefs(orderJson: string | undefined): string[] {
-		if (!orderJson) return DEFAULT_HREFS;
+		if (!orderJson) return HREFS_DEFAUT;
 		try {
 			const ids: string[] = JSON.parse(orderJson);
-			const ordered = ids.map(id => idToHref[id]).filter((h): h is string => !!h && h in NAV_DEFAULTS);
-			const remaining = DEFAULT_HREFS.filter(h => !ordered.includes(h));
+			// Un identifiant sans route est une INCOHÉRENCE DE DONNÉES, pas un cas
+			// normal : l'ordre enregistré nomme une page que le menu ne connaît pas.
+			// L'ancien `.filter()` les jetait sans un mot — il masquait précisément le
+			// défaut qu'on cherchait quand l'ordre ne semblait pas appliqué (#401).
+			const inconnus = ids.filter((id) => !(id in ID_VERS_HREF));
+			if (inconnus.length)
+				console.warn(
+					`[Nav] pages_order contient ${inconnus.length} identifiant(s) sans entrée de menu, ignoré(s) : ${inconnus.join(', ')}`
+				);
+			const ordered = ids.map((id) => ID_VERS_HREF[id]).filter((h): h is string => !!h);
+			const remaining = HREFS_DEFAUT.filter((h) => !ordered.includes(h));
 			return [...ordered, ...remaining];
-		} catch { return DEFAULT_HREFS; }
+		} catch {
+			console.warn('[Nav] pages_order illisible (JSON invalide) — ordre par défaut appliqué');
+			return HREFS_DEFAUT;
+		}
 	}
 
-	// Ordre lu depuis le backend (pages_order), fallback sur DEFAULT_HREFS
+	// Ordre lu depuis le backend (pages_order), repli sur l'ordre par défaut
 	$: _pagesOrderJson = $configStore['pages_order'];
 	$: orderedHrefs = computeOrderedHrefs(_pagesOrderJson);
 

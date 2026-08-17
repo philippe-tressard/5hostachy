@@ -459,6 +459,34 @@ Structure pour les tickets/publications avec historique :
 - Pagination : si > 7 → afficher 5 + bouton `.evol-more`
 - Formulaire inline : pills type + textarea + select statut → `.evol-form`
 
+### 10 bis. Le workflow d'un objet : UNE liste, et UN geste par écran
+
+**Les états proposables ne s'écrivent jamais dans un écran.** Pour un ticket, ils
+viennent de `$lib/tickets` (`STATUT_TICKET_OPTIONS`, `…_LABELS`, `…_BADGE`,
+`STATUTS_TICKET_FILTRE`, `estTicketActif`, `estTicketClos`), qui répond à
+`StatutTicket` côté serveur. `api/tests/test_statuts_tickets.py` échoue sur toute
+liste réécrite — y compris dans un fichier qui importe déjà le module.
+
+**Où se change l'état :**
+
+| Écran | Geste |
+|---|---|
+| `/tickets`, `/espace-cs` (listes) | formulaire d'évolution — état **et** commentaire en un envoi |
+| `/tickets/[id]` (fiche) | **boutons** « Changer le statut », un clic ; le formulaire n'y sert qu'au commentaire |
+
+La fiche portait **les deux**, à quelques centimètres l'une de l'autre, et elles
+ne proposaient pas les mêmes états (#415). Un geste, un endroit : quand deux
+commandes font la même chose sur un écran, ce n'est pas une commodité, c'est une
+question posée à l'utilisateur — et deux occasions de diverger.
+
+⚠️ `EvolForm` masque sa rangée de pastilles quand `statutOptions` est vide : un
+choix à un seul choix n'est pas un choix.
+
+**Ce qui a rendu la divergence invisible** : les cinq listes relevées étaient
+chacune cohérente avec elle-même. Deux listes d'accord entre elles ne prouvent
+rien — le seul contrôle qui vaille compare ce que l'écran **propose** à ce que
+l'endpoint **accepte**.
+
 ## 11. Vignette & galerie de photos
 
 Composants partagés. **Ne pas recréer** de `.xxx-thumb`, de rangée de photos ad hoc,

@@ -72,8 +72,12 @@ def _run_migrations():
                 pass  # colonne déjà présente
 
         # Normalisation des valeurs d'enum ticket (anciennes valeurs sans accents)
+        #  `ferme` visait `fermé` jusqu'au 17/08/2026 — donc vers une valeur que
+        #  l'énumération ne porte plus (#415, migration 0149). Cette ligne aurait
+        #  ressuscité l'état supprimé à chaque démarrage : elle vise `résolu`,
+        #  comme la migration.
         data_migrations = [
-            "UPDATE ticket SET statut = 'fermé'  WHERE statut = 'ferme'",
+            "UPDATE ticket SET statut = 'résolu' WHERE statut = 'ferme'",
             "UPDATE ticket SET statut = 'résolu' WHERE statut = 'resolu'",
             "UPDATE ticket SET statut = 'ouvert' WHERE statut = 'nouveau'",
             "UPDATE ticket SET statut = 'ouvert' WHERE statut = 'en_attente'",

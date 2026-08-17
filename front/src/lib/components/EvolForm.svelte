@@ -123,19 +123,20 @@
 	}
 </script>
 
-<!-- ── Sélection du type (masqué en mode édition) ──────────────────────── -->
-{#if !editMode}
+<!-- ── Sélection du type (masquée en mode édition, et quand il n'y a rien à
+     choisir : sans option d'état, la rangée se réduisait à une pastille unique,
+     active et sans alternative — un choix à un seul choix. C'est le cas de la
+     fiche d'un ticket depuis #415, où le changement d'état a ses boutons.) ── -->
+{#if !editMode && statutOptions.length > 0}
 	<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
 		<button type="button" class="pill" class:pill-active={evolType === 'commentaire'}
 			on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</button>
-		{#if statutOptions.length > 0}
-			<button type="button" class="pill" class:pill-active={evolType === 'etat'}
-				on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</button>
-		{/if}
+		<button type="button" class="pill" class:pill-active={evolType === 'etat'}
+			on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</button>
 	</div>
 
 	<!-- Sélecteur de statut -->
-	{#if evolType === 'etat' && statutOptions.length > 0}
+	{#if evolType === 'etat'}
 		<div class="field" style="margin-bottom:.6rem">
 			<label for="evol-statut">Nouvel état *</label>
 			{#if currentStatut}

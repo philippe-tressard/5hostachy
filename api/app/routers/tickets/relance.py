@@ -14,7 +14,14 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import ConfigSite, GenreCivilite, Ticket, TicketEvolution, Utilisateur
+from app.models.core import (
+    STATUTS_TICKET_CLOS,
+    ConfigSite,
+    GenreCivilite,
+    Ticket,
+    TicketEvolution,
+    Utilisateur,
+)
 from app.schemas import TicketRead
 from app.utils.dates_fr import date_courte, formule_anciennete, mois_ecoules
 from app.utils.destinataires import formule_appel, interlocuteurs_syndic
@@ -59,14 +66,14 @@ def list_relance_syndic(
 ):
     """Tickets ouverts susceptibles de relance syndic.
 
-    Non résolus/annulés/fermés, hors catégorie « bug » (technique/site, du
-    ressort admin), et non tagués `non_relancable`. Le frontend distingue les
-    tickets éligibles (passé le délai) des candidats (pas encore au délai).
+    Non résolus ni annulés, hors catégorie « bug » (technique/site, du ressort
+    admin), et non tagués `non_relancable`. Le frontend distingue les tickets
+    éligibles (passé le délai) des candidats (pas encore au délai).
     """
     tickets = session.exec(
         select(Ticket).where(
             Ticket.categorie != "bug",
-            Ticket.statut.notin_(["résolu", "annulé", "fermé"]),
+            Ticket.statut.notin_(STATUTS_TICKET_CLOS),
             Ticket.non_relancable == False,  # noqa: E712
         ).order_by(Ticket.mis_a_jour_le)
     ).all()

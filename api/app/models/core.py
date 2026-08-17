@@ -58,26 +58,18 @@ class TypeLien(str, Enum):
     mandataire   = "mandataire"     # mandataire de gestion (se substitue au bailleur)
 
 
-class StatutTicket(str, Enum):
-    ouvert = "ouvert"
-    en_cours = "en_cours"
-    résolu = "résolu"
-    annulé = "annulé"
-    fermé = "fermé"  # conservé pour compatibilité données existantes
-
-
-class CategorieTicket(str, Enum):
-    panne = "panne"
-    nuisance = "nuisance"
-    question = "question"
-    urgence = "urgence"
-    bug = "bug"
-
-
-class PrioriteTicket(str, Enum):
-    basse = "basse"
-    normale = "normale"
-    haute = "haute"
+#  Le vocabulaire du ticket — états, catégories, priorités — vit dans
+#  `tickets.py` depuis le 17/08/2026 (modularité, rang 1) : `core.py` ne
+#  pouvait plus grossir pour recevoir #415. Ré-exporté ici, donc aucun des
+#  dix-huit appelants ne change, et les valeurs restent connues de SQLModel.
+from app.models.tickets import (  # noqa: E402
+    STATUTS_TICKET_ACTIFS as STATUTS_TICKET_ACTIFS,
+    STATUTS_TICKET_CLOS as STATUTS_TICKET_CLOS,
+    STATUTS_TICKET_HISTORIQUES as STATUTS_TICKET_HISTORIQUES,
+    CategorieTicket as CategorieTicket,
+    PrioriteTicket as PrioriteTicket,
+    StatutTicket as StatutTicket,
+)
 
 
 class TypePrestataire(str, Enum):

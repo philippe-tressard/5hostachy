@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.69.0",
+  "version": "2.69.1",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -19,7 +19,10 @@
     "lint:formulaires": "node scripts/check-formulaire-creation.mjs",
     "lint:styles": "node scripts/check-styles-nus.mjs",
     "lint:session": "node scripts/check-renouvellement-session.mjs",
-    "lint:soumission": "node scripts/check-libelles-soumission.mjs"
+    "lint:soumission": "node scripts/check-libelles-soumission.mjs",
+    "lint:audit": "node scripts/check-audit.mjs",
+    "lint:manuels": "node scripts/check-manuels.mjs",
+    "lint:pages": "node scripts/check-pages.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",
@@ -46,7 +49,8 @@
     "workbox-window": "^7.4.1"
   },
   "overrides": {
-    "lodash": "4.17.21"
+    "lodash": "4.17.21",
+    "cookie": "^0.7.2"
   },
   "type": "module"
 }

@@ -11,7 +11,15 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
+	import { PAGES } from '$lib/pages';
 
+	const _def = PAGES.find((p) => p.id === 'delegations')!;
+	const PAGE_DELEGATIONS = { titre: _def.titre, descriptif: _def.descriptif, navLabel: _def.navLabel, icone: _def.icone };
+
+	// Cette page importait déjà getPageConfig sans s'en servir : son titre était en
+	// dur, elle était donc la seule entrée du menu qu'on ne pouvait ni renommer ni
+	// positionner (#401).
+	$: _pc = getPageConfig($configStore, 'delegations', PAGE_DELEGATIONS);
 	$: _siteNom = $siteNomStore;
 
 	let delegations: any[] = [];
@@ -108,7 +116,7 @@
 
 <svelte:head><title>Délégations aidant — {_siteNom}</title></svelte:head>
 
-<EntetePage titre="Délégations aidant" icone="heart-handshake" />
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'heart-handshake'} />
 <p class="page-subtitle" style="margin-bottom:1.5rem;color:var(--color-text-muted);font-size:.9rem">
 	Gestion des accès délégués pour les proches aidants.
 	<br /><em style="font-size:.82rem">L'accès aidant ne constitue pas une procuration d'AG.</em>
