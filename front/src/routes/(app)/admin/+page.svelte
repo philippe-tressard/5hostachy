@@ -6,7 +6,7 @@ import TopPages from '$lib/components/TopPages.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
-import { PAGES, type PageDef } from '$lib/pages';
+import { PAGES, ordonnerPages, type PageDef } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
@@ -584,11 +584,8 @@ pagesConfig = pagesDefaults.map(pg => {
 });
 // Restaurer l'ordre personnalisé depuis le backend
 const savedOrder = cfg['pages_order'];
-if (savedOrder) { try {
-  const ids: string[] = JSON.parse(savedOrder);
-  const map = Object.fromEntries(pagesConfig.map(p => [p.id, p]));
-  pagesConfig = [...ids.map(id => map[id]).filter(Boolean), ...pagesConfig.filter(p => !ids.includes(p.id))];
-} catch { /**/ } }
+//  `ordonnerPages` relègue les pages sans entrée de menu en fin : voir son en-tête.
+if (savedOrder) { try { pagesConfig = ordonnerPages(pagesConfig, JSON.parse(savedOrder)); } catch { /**/ } }
 // WhatsApp : la configuration part telle quelle vers l'onglet dédié.
 waCfgPublique = cfg;
 try {

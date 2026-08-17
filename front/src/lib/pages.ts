@@ -88,3 +88,35 @@ export const ID_VERS_HREF: Record<string, string> = Object.fromEntries(
 export const HREF_VERS_PAGE: Record<string, PageDef> = Object.fromEntries(
 	PAGES_MENU.map((p) => [p.href as string, p])
 );
+
+/**
+ * Range des pages selon un ordre enregistré (`pages_order`), en reléguant toujours
+ * en fin celles qui n'ont pas d'entrée de menu.
+ *
+ * Sans cette dernière règle, un ordre enregistré AVANT #401 — qui nommait encore
+ * `profil` et `notifications` — les replaçait à leur position stockée, tandis que
+ * `delegations`, absente de cet ordre puisqu'elle n'était pas proposée, tombait en
+ * dernier : une page ordonnable s'affichait sous deux pages qui ne le sont pas
+ * (constaté en production le 17/08/2026). Le premier déplacement réécrivait l'ordre
+ * et corrigeait l'affichage — donc cela se serait résorbé exactement quand personne
+ * n'en aurait plus eu besoin.
+ *
+ * Écrit ici plutôt que dans l'écran d'administration : c'est la table qui sait
+ * qu'une page sans route ne s'ordonne pas, et `admin/+page.svelte` est au-dessus du
+ * plafond de modularité — le contrôle a refusé qu'il grossisse, et il avait raison.
+ */
+export function ordonnerPages<T extends { id: string; href: string | null }>(
+	pages: T[],
+	idsEnregistres: string[]
+): T[] {
+	const parId = new Map(pages.map((p) => [p.id, p]));
+	const ordonnees = idsEnregistres
+		.map((id) => parId.get(id))
+		.filter((p): p is T => !!p && p.href !== null);
+	const placees = new Set(ordonnees);
+	return [
+		...ordonnees,
+		...pages.filter((p) => p.href !== null && !placees.has(p)),
+		...pages.filter((p) => p.href === null),
+	];
+}
