@@ -1,6 +1,6 @@
 <!--
-  Le formulaire de création d'un ticket — extrait de la page dédiée
-  `tickets/nouveau` le 16/08/2026.
+  Le formulaire d'un ticket — celui qu'on remplit pour le CRÉER, et celui qu'on
+  rouvre pour le MODIFIER. Un seul fichier pour les deux gestes.
 
   POURQUOI CE COMPOSANT EXISTE. `tickets/nouveau` était le dernier écran du site à
   créer un objet par **page dédiée**, le troisième paradigme que #367 avait éliminé
@@ -16,9 +16,28 @@
   ce composant en suit le contrat à la lettre : il porte lui-même sa boîte
   `FormulaireCreation` et signale la création par l'événement `cree`.
 
-  ⚠️ AUCUN bouton d'annulation ici. La commande vit dans l'en-tête de page, où le
-  bouton d'ouverture bascule en « ✕ Annuler » — deux commandes pour un formulaire
-  est précisément le défaut relevé sur la modale du calendrier (#367).
+  ## POURQUOI IL SERT AUSSI L'ÉDITION (17/08/2026, #425)
+
+  Le crayon ✏️ d'une carte de ticket ouvrait un SECOND formulaire, écrit à la main
+  dans la page : aucune section nommée, « Périmètre » écrit deux fois, des `style=`
+  en ligne recomposant `.field`, et un avertissement d'accessibilité désactivé par
+  `svelte-ignore` au lieu d'être corrigé. Le remettre au standard aurait produit
+  **deux formulaires corrects pour le même objet**, donc deux libellés, deux ordres
+  de champs et deux jeux de règles libres de diverger au premier lot suivant.
+  Arbitré par l'utilisateur :
+
+  > « je préfère que tu rendes paramétrable avec les valeurs déjà saisies le
+  >   formulaire d'édition plutôt que de le dupliquer »
+
+  D'où la prop `ticket` : `null` = création, un ticket = édition de ses valeurs.
+  C'est le contrat qu'`EvolForm` porte déjà pour les évolutions (`editMode` +
+  valeurs initiales), servi par quatre écrans.
+
+  ⚠️ AUCUN bouton d'annulation EN CRÉATION. La commande vit dans l'en-tête de page,
+  où le bouton d'ouverture bascule en « ✕ Annuler » — deux commandes pour un
+  formulaire est précisément le défaut relevé sur la modale du calendrier (#367).
+  En ÉDITION il n'y a pas d'en-tête pour la porter (le formulaire s'ouvre dans la
+  carte du ticket) : le bouton est alors rendu ici, comme le fait `EvolForm`.
 -->
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
@@ -29,14 +48,22 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { STATUT_TICKET_OPTIONS } from '$lib/tickets';
+	import { STATUT_TICKET_OPTIONS, STATUT_TICKET_LABELS } from '$lib/tickets';
 
-	const dispatch = createEventDispatcher<{ cree: Ticket }>();
+	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
+	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
+	 *   remonte à neuf (`{#key}`) quand il passe d'un ticket à l'autre, exactement
+	 *   comme il le fait pour `EvolForm`. */
+	export let ticket: Ticket | null = null;
 
-	let titre = '';
-	let description = '';
-	let categorie = 'panne';
-	let statut = 'ouvert';
+	const modeEdition = ticket !== null;
+
+	const dispatch = createEventDispatcher<{ cree: Ticket; modifie: Ticket; annule: void }>();
+
+	let titre = ticket?.titre ?? '';
+	let description = ticket?.description ?? '';
+	let categorie = ticket?.categorie ?? 'panne';
+	let statut = ticket?.statut ?? 'ouvert';
 	//  Workflow du ticket, VISIBLE de tous dès la création : c'est une information
 	//  capitale pour le suivi, et la masquer laissait croire qu'un ticket n'a pas
 	//  d'état tant que le CS ne l'a pas touché. Seul le CS peut la MODIFIER — un
@@ -45,7 +72,19 @@
 	//  liste blanche réservée au CS (socle 03 §1 — ce que l'interface grise n'est
 	//  qu'un confort). Les options viennent de `$lib/tickets` — quatrième copie
 	//  de cette liste jusqu'au 17/08/2026 (#415).
-	let perimetreCible: string[] = perimetreDefautListe();
+	//
+	//  ⚠️ EN ÉDITION, l'état se LIT et ne se change pas : le formulaire n'envoie
+	//  pas `statut`, et c'est délibéré. Le changement d'état passe par une
+	//  évolution (`POST /tickets/{id}/evolutions`), qui l'inscrit dans le fil avec
+	//  sa date et son auteur et prévient l'auteur par courriel. Deux chemins pour
+	//  le même geste, c'est la porte ouverte à un état qui bouge sans que personne
+	//  ne sache quand ni pourquoi (#425, #426). La section le DIT à l'écran :
+	//  l'absence muette du champ se lisait comme un oubli.
+
+	//  Copie défensive du périmètre : le tableau vient du ticket affiché dans la
+	//  liste. Lié tel quel, une sélection abandonnée resterait visible sur la carte
+	//  alors que rien n'a été enregistré.
+	let perimetreCible: string[] = [...(ticket?.perimetre_cible ?? perimetreDefautListe())];
 	let destinataireSyndic = false;
 	let destinataireCs = false;
 	let partagerWhatsapp = false;
@@ -68,7 +107,8 @@
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 
 	onMount(async () => {
-		if ($isCS) {
+		// Rien à charger en édition : « Saisi pour » n'y est pas rendu.
+		if ($isCS && !modeEdition) {
 			try {
 				const all = await adminApi.utilisateurs();
 				usersActifs = all.filter((u: any) => u.actif).sort((a: any, b: any) =>
@@ -88,20 +128,38 @@
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
+	$: titreBoite = modeEdition
+		? `Modifier le ticket #${ticket?.numero ?? ''}`
+		: 'Signaler un problème';
+	$: libelleStatut = STATUT_TICKET_LABELS[statut] ?? statut;
+
 	async function submit() {
 		if (!titre.trim() || richEmpty(description)) {
 			error = 'Titre et description sont obligatoires.';
 			return;
 		}
-		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
+		if (!modeEdition && $isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
 			error = 'Veuillez saisir le nom de la personne.';
 			return;
 		}
 		error = '';
 		loading = true;
 		try {
+			if (ticket) {
+				//  Les quatre champs que `PATCH /tickets/{id}` sait écrire parmi ceux
+				//  rendus ici. `statut` en est volontairement absent (voir plus haut).
+				const maj = await ticketsApi.update(ticket.id, {
+					titre: titre.trim(),
+					description,
+					categorie,
+					perimetre_cible: perimetreCible,
+				});
+				toast('success', 'Ticket modifié');
+				dispatch('modifie', maj);
+				return;
+			}
 			const payload: any = {
-				titre,
+				titre: titre.trim(),
 				description,
 				categorie,
 				perimetre_cible: perimetreCible,
@@ -123,14 +181,19 @@
 			toast('success', `Ticket ${t.numero} créé avec succès`);
 			dispatch('cree', t);
 		} catch (e) {
-			error = e instanceof ApiError ? e.message : 'Erreur lors de la création';
+			error = e instanceof ApiError
+				? e.message
+				: modeEdition ? 'Erreur lors de l’enregistrement' : 'Erreur lors de la création';
 		} finally {
 			loading = false;
 		}
 	}
 </script>
 
-{#if categorie === 'urgence'}
+<!--  L'avertissement n'est rendu qu'en création : c'est l'envoi du ticket qui
+      notifie. Requalifier un ticket existant en « Urgence » ne déclenche aucune
+      alerte — l'afficher ici promettrait une notification qui ne partira pas. -->
+{#if !modeEdition && categorie === 'urgence'}
 	<div class="alert alert-error largeur-saisie" style="margin-bottom:1rem">
 		&#x1F6A8; <strong>Urgence</strong> — Le conseil syndical et le syndic seront notifiés immédiatement.
 		En cas de danger immédiat, composez le <strong>15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong>.
@@ -141,7 +204,7 @@
 	<div class="alert alert-error largeur-saisie">{error}</div>
 {/if}
 
-<FormulaireCreation titre="Signaler un problème">
+<FormulaireCreation titre={titreBoite}>
 	<form on:submit|preventDefault={submit}>
 		<SectionFormulaire premiere>
 		<fieldset class="field" style="border:none;padding:0;margin:0">
@@ -174,8 +237,10 @@
 		      jointes, entre les documents et la diffusion : le seul champ du site à
 		      être hors de sa section. C'est un champ SPÉCIFIQUE du ticket — il
 		      précède donc le workflow et le périmètre (`ux-patterns` §9 sexies,
-		      signalé par l'utilisateur le 16/08/2026). -->
-		{#if $isCS}
+		      signalé par l'utilisateur le 16/08/2026).
+		      Absent en édition : la personne pour qui le ticket a été saisi est une
+		      attribution posée à la création, que `saveEdit` n'a jamais envoyée. -->
+		{#if $isCS && !modeEdition}
 			<SectionFormulaire titre="Saisi pour">
 				<div class="field champ-large saisi-pour-section">
 					<div class="saisi-pour-tabs">
@@ -207,37 +272,60 @@
 		{/if}
 
 		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
-		      dit qui le voit et où (section 9). -->
-		<SectionFormulaire titre="Workflow" pour="ticket-statut">
-			<div class="field champ-large">
-				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
-					{#each STATUT_TICKET_OPTIONS as s}<option value={s.value}>{s.label}</option>{/each}
-				</select>
-				{#if !$isCS}
-					<p class="aide-champ">Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.</p>
-				{/if}
-			</div>
-		</SectionFormulaire>
+		      dit qui le voit et où (section 9). En édition, l'état se LIT dans le
+		      badge de la section et la mention dit où on le change : la section
+		      reste, parce que son absence se lisait comme un oubli. -->
+		{#if modeEdition}
+			<SectionFormulaire titre="Workflow" badge={libelleStatut}>
+				<p class="aide-champ">
+					L'état se change depuis le fil (&#x1F4AC;), pour qu'il y laisse une trace datée.
+				</p>
+			</SectionFormulaire>
+		{:else}
+			<SectionFormulaire titre="Workflow" pour="ticket-statut">
+				<div class="field champ-large">
+					<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
+						{#each STATUT_TICKET_OPTIONS as s}<option value={s.value}>{s.label}</option>{/each}
+					</select>
+					{#if !$isCS}
+						<p class="aide-champ">Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.</p>
+					{/if}
+				</div>
+			</SectionFormulaire>
+		{/if}
 
 		<!--  4 à 9 : l'ordre, les intitulés et les séparations sont hérités du
-		      composant partagé — voir `ChampsCommuns.svelte`. -->
+		      composant partagé — voir `ChampsCommuns.svelte`.
+		      En édition ne restent que les notions que `PATCH /tickets/{id}` sait
+		      écrire et qui étaient déjà modifiables : périmètre et description.
+		      • Photos — `photos_urls` n'est PAS dans `TicketUpdate` : les proposer
+		        ferait disparaître la sélection à l'enregistrement, en silence.
+		      • Documents — `fichiers_urls`, lui, est accepté ; les ouvrir à
+		        l'édition reste à arbitrer, ce lot ne change aucune capacité.
+		      • Diffusion — les canaux notifient à la CRÉATION. Les rouvrir ferait
+		        repartir un message WhatsApp à chaque correction de faute de frappe
+		        (cf. l'incident du triple envoi, 14/08/2026). -->
 		<ChampsCommuns
 			idPrefixe="ticket"
 			avecPerimetre bind:perimetre={perimetreCible}
 			avecDescription descriptionRequise bind:description
 			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
-			avecPhotos bind:photos={photosUrls}
-			avecDocuments bind:documents={fichiersUrls}
-			avecDiffusion={$isCS}
+			avecPhotos={!modeEdition} bind:photos={photosUrls}
+			avecDocuments={!modeEdition} bind:documents={fichiersUrls}
+			avecDiffusion={$isCS && !modeEdition}
 			bind:whatsapp={partagerWhatsapp}
 			bind:syndic={destinataireSyndic}
 			bind:cs={destinataireCs}
 			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
 		/>
 
-		<!-- Pas de bouton « Annuler » ici : il vit dans l'en-tête de page (voir
-		     l'en-tête de ce fichier). `.form-actions` vient d'app.css. -->
+		<!-- Le bouton « Annuler » n'existe qu'en ÉDITION : en création, il vit dans
+		     l'en-tête de page (voir l'en-tête de ce fichier). `.form-actions` vient
+		     d'app.css. -->
 		<div class="form-actions">
+			{#if modeEdition}
+				<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
+			{/if}
 			<button type="submit" class="btn btn-primary" disabled={loading}>
 				{loading ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
