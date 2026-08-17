@@ -14,17 +14,12 @@
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';
 
-	$: _pc = getPageConfig($configStore, 'residence', {
-		titre: 'Ma résidence',
-		navLabel: 'Résidence',
-		icone: 'building-2',
-		descriptif: 'Informations, plans et documents de la copropriété.',
-	});
+	$: _pc = getPageConfig($configStore, 'residence', defautsDePage('residence'));
 	$: _siteNom = $siteNomStore;
 
 	// ── State ──────────────────────────────────────────────────────────────────

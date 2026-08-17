@@ -5,11 +5,11 @@ import { onMount } from 'svelte';
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'acces-badges', { titre: 'Accès & badges', navLabel: 'Accès & badges', icone: 'key-round', descriptif: 'Gestion de vos télécommandes parkings & Vigiks. <a href="/faq#badge-prix" style="font-size:.85rem">Quel prix pour un badge ?</a>' });
+	$: _pc = getPageConfig($configStore, 'acces-badges', defautsDePage('acces-badges'));
 	$: _siteNom = $siteNomStore;
 
 	let vigiks: any[] = [];

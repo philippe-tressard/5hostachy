@@ -12,13 +12,13 @@
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import RichEditor from '$lib/components/RichEditor.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { STATUT_LABELS, richEmpty } from '$lib/publications';
 	import { fmtDatetime2d as fmtDatetime } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'actualites', { titre: 'Actualités', navLabel: 'Actualités', icone: 'newspaper', descriptif: 'Publications officielles du conseil syndical : informations importantes, travaux et actualités de la résidence.' });
+	$: _pc = getPageConfig($configStore, 'actualites', defautsDePage('actualites'));
 	$: _siteNom = $siteNomStore;
 
 	let pubList: Publication[] = [];
@@ -324,7 +324,7 @@
 					<div class="evol-form" on:click|stopPropagation on:keydown|stopPropagation>
 						<h4 style="font-size:.875rem;font-weight:600;margin:0 0 .6rem">Ajouter une évolution</h4>
 						{#key showEvolForm}
-						<EvolForm
+						<EvolForm idPrefixe="pub-evol-{pub.id}"
 							statutOptions={PUB_STATUT_OPTIONS}
 							statutLabels={STATUT_LABELS}
 							currentStatut={pub.statut ?? ''}
@@ -373,7 +373,7 @@
 									{#if evol.type === 'commentaire' || (evol.type === 'etat' && editingEvolId === evol.id)}
 										<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
 											{#key editingEvolId}
-											<EvolForm
+											<EvolForm idPrefixe="pub-evol-edit-{evol.id}"
 												editMode={true}
 												initialContenu={evol.contenu || ''}
 												initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

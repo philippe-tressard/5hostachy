@@ -4,12 +4,12 @@
 	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { fmtDateShort as fmt } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'mon-lot', { titre: 'Mes lots', navLabel: 'Mes lots', icone: 'door-closed', descriptif: "Informations sur votre bien : situation de vos lots (appartement, cave & parkings) dans la résidence.", onglets: { lots: { label: '\u{1F3E0} Mes lots', descriptif: 'Situation de vos lots dans la résidence : appartements, caves et parkings.' }, location: { label: '\u{1F4CB} Gestion locative', descriptif: 'Suivi de vos baux, locataires et documents de gestion locative.' } } });
+	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
 	$: _siteNom = $siteNomStore;
 	$: isBailleur = $currentUser?.statut === 'copropriétaire_bailleur';
 	$: isResident = $currentUser?.statut === 'copropriétaire_résident';

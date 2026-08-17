@@ -1,11 +1,36 @@
 <!--
   EvolForm.svelte — Formulaire partagé d'ajout/édition d'évolution
-  Utilisé par : tickets/[id], actualites, espace-cs
+  Utilisé par : tickets/[id], tickets (liste), actualites, espace-cs
+
+  ## Il suit l'ORDRE et les SECTIONS communes (`ux-patterns` §9 sexies et septies)
+
+  Ce composant est antérieur aux règles posées les 15-17/08/2026, et n'avait été
+  repris par aucun des lots qui les ont établies (#416) : la **Diffusion** était
+  rendue AVANT les pièces jointes, aucune section n'était nommée, et le bouton de
+  soumission disait « Valider » en création contre « Enregistrer » en édition —
+  le même geste, deux libellés, dans la même ligne de code.
+
+  L'ordre est désormais celui de tout le site :
+
+    2. Champs spécifiques + 3. Workflow  →  nature de l'évolution, nouvel état
+    6. Description                       →  le commentaire
+    7-8. Photos / Documents (ou Pièces jointes en mode unifié)
+    9. Diffusion                         →  canaux + adresse externe, EN DERNIER
+
+  ⚠️ **Pourquoi `SectionFormulaire` et non `ChampsCommuns`.** `ChampsCommuns` est
+  le point d'héritage des sections 4 à 9, et c'est lui qu'il faudrait utiliser —
+  il ne sait pas encore rendre une rubrique de pièces jointes **unifiée**
+  (`separatePhotosAndDocs = false` : photos ET documents dans un seul champ, ce
+  qu'attendent les actualités et l'espace CS), et son intitulé de description est
+  figé à « Description » là où l'évolution parle de « Commentaire ». Les sections
+  sont donc composées ici avec `SectionFormulaire`, dans le MÊME ordre et avec les
+  MÊMES intitulés que `ChampsCommuns` — toute évolution de l'un doit suivre dans
+  l'autre tant que la rubrique unifiée n'a pas rejoint le composant commun.
 
   Props clés :
     statutOptions      – liste des options de statut disponibles
     statutLabels       – map value→label pour afficher le statut actuel
-    currentStatut      – statut actuel de l'item parent
+    currentStatut      – statut actuel de l'item parent (badge du libellé)
     showNotifs         – afficher les cases WhatsApp/syndic/CS
     showEmail          – afficher le champ email externe
     showFiles          – afficher l'upload de fichiers
@@ -24,14 +49,21 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
-	import { ACCEPT_DOCUMENTS, ACCEPT_FICHIERS, ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
+	import { ACCEPT_FICHIERS, ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
+	/** Préfixe des `id` des champs. Plusieurs formulaires d'évolution coexistent à
+	    l'écran — le formulaire d'ajout d'une carte et l'édition d'une évolution du
+	    même fil —, et deux `<label for="…">` pointant le même id ne désignent plus
+	    rien. Même contrat que `ChampsCommuns`. */
+	export let idPrefixe = 'evol';
 	/** Options affichées dans le select "Nouvel état" */
 	export let statutOptions: { value: string; label: string }[] = [];
 	/** Map value→label pour afficher le statut actuel */
 	export let statutLabels: Record<string, string> = {};
-	/** Statut actuel de l'objet parent (affiché sous le label) */
+	/** Statut actuel de l'objet parent (badge à droite de l'intitulé) */
 	export let currentStatut = '';
 	/** Afficher les cases de partage (WhatsApp / syndic / CS) */
 	export let showNotifs = false;
@@ -95,6 +127,23 @@
 
 	$: allFichiersUrls = separatePhotosAndDocs ? [...photos, ...docs] : fichiers;
 
+	//  Sections visibles. La PREMIÈRE section rendue ne porte pas de filet
+	//  au-dessus : un trait avant le premier groupe le séparerait du titre du
+	//  formulaire, qui joue déjà ce rôle (`SectionFormulaire`).
+	$: sectionWorkflow = !editMode && statutOptions.length > 0;
+	$: sectionDiffusion = showNotifs || showEmail;
+
+	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
+	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
+	//  ticket, deux centimètres plus haut.
+	$: libelleStatutActuel = currentStatut ? (statutLabels[currentStatut] || currentStatut) : '';
+
+	//  Le commentaire est REQUIS pour une évolution de type commentaire, facultatif
+	//  quand il accompagne un changement d'état. Pas de mention « (optionnel) » :
+	//  l'absence d'astérisque suffit (`ux-patterns` §9).
+	$: titreContenu = editMode ? 'Contenu' : 'Commentaire';
+	$: contenuRequis = !editMode && evolType === 'commentaire';
+
 	$: canSubmit = !saving && (
 		editMode
 			? !(richEmpty(contenu) && allFichiersUrls.length === 0)
@@ -123,107 +172,147 @@
 	}
 </script>
 
-<!-- ── Sélection du type (masquée en mode édition, et quand il n'y a rien à
-     choisir : sans option d'état, la rangée se réduisait à une pastille unique,
-     active et sans alternative — un choix à un seul choix. C'est le cas de la
-     fiche d'un ticket depuis #415, où le changement d'état a ses boutons.) ── -->
-{#if !editMode && statutOptions.length > 0}
-	<div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-		<button type="button" class="pill" class:pill-active={evolType === 'commentaire'}
-			on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</button>
-		<button type="button" class="pill" class:pill-active={evolType === 'etat'}
-			on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</button>
-	</div>
+<!--  Même largeur de saisie que partout ailleurs (`ux-patterns` §9) : le
+      formulaire s'étalait sur toute la carte, alors que le même geste sur une
+      page dédiée s'arrête à 720 px. -->
+<div class="largeur-saisie">
 
-	<!-- Sélecteur de statut -->
-	{#if evolType === 'etat'}
-		<div class="field" style="margin-bottom:.6rem">
-			<label for="evol-statut">Nouvel état *</label>
-			{#if currentStatut}
-				<div style="font-size:.8rem;color:var(--color-text-muted);margin-bottom:.35rem">
-					État actuel : <strong>{statutLabels[currentStatut] || currentStatut}</strong>
+	<!-- ── 2-3. Nature de l'évolution et workflow ────────────────────────────
+	     La rangée de pastilles est masquée en mode édition, et quand il n'y a
+	     rien à choisir : sans option d'état, elle se réduisait à une pastille
+	     unique, active et sans alternative — un choix à un seul choix. C'est le
+	     cas de la fiche d'un ticket depuis #415, où le changement d'état a ses
+	     propres boutons. -->
+	{#if sectionWorkflow}
+		<SectionFormulaire premiere titre="Workflow" idTitre="{idPrefixe}-workflow-titre">
+			<div class="evol-nature" role="group" aria-labelledby="{idPrefixe}-workflow-titre">
+				<Pastille active={evolType === 'commentaire'}
+					on:click={() => (evolType = 'commentaire')}>&#x1F4AC; Commentaire</Pastille>
+				<Pastille active={evolType === 'etat'}
+					on:click={() => (evolType = 'etat')}>&#x1F504; Changement d'état</Pastille>
+			</div>
+
+			{#if evolType === 'etat'}
+				<div class="field champ-large">
+					<label for="{idPrefixe}-statut">
+						Nouvel état *
+						{#if libelleStatutActuel}<span class="badge badge-green">{libelleStatutActuel}</span>{/if}
+					</label>
+					<select id="{idPrefixe}-statut" bind:value={nouveauStatut}>
+						<option value="">— Choisir —</option>
+						{#each statutOptions as opt}
+							<option value={opt.value}>{opt.label}</option>
+						{/each}
+					</select>
 				</div>
 			{/if}
-			<select id="evol-statut" bind:value={nouveauStatut}>
-				<option value="">— Choisir —</option>
-				{#each statutOptions as opt}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-		</div>
+		</SectionFormulaire>
 	{/if}
-{/if}
 
-<!-- ── Contenu RichEditor ─────────────────────────────────────────────── -->
-<div class="field" style="margin-bottom:.6rem">
-	<label>
-		{#if editMode}
-			Contenu
-		{:else if evolType === 'etat'}
-			Commentaire <span style="font-weight:normal;color:var(--color-text-muted)">(optionnel)</span>
+	<!-- ── 6. Description ───────────────────────────────────────────────────
+	     Section à UN champ : le titre EST le libellé, et l'éditeur ne réécrit
+	     rien (`ux-patterns` §9 septies). L'éditeur riche est un `contenteditable`,
+	     donc PAS labelable : le titre reste un `<h4>` et l'éditeur s'y relie par
+	     `aria-labelledby` — un `for` n'aurait rien associé, et en silence. -->
+	<SectionFormulaire premiere={!sectionWorkflow} titre={titreContenu} requis={contenuRequis}
+		idTitre="{idPrefixe}-contenu-titre">
+		<div class="field champ-large">
+			<RichEditor id="{idPrefixe}-contenu" bind:value={contenu}
+				ariaLabelledby="{idPrefixe}-contenu-titre"
+				placeholder={editMode
+					? 'Modifier le commentaire…'
+					: evolType === 'etat'
+						? 'Précisions sur ce changement…'
+						: 'Ajoutez un commentaire de suivi…'}
+				minHeight="90px" />
+		</div>
+	</SectionFormulaire>
+
+	<!-- ── 7-8. Photos et Documents ─────────────────────────────────────────
+	     ⚠️ `evolType === 'commentaire'` ferme les pièces jointes sur un
+	     CHANGEMENT D'ÉTAT. Cette condition est héritée du code d'avant
+	     l'extraction du composant (elle existait telle quelle dans
+	     `tickets/[id]` avant le 22b3828) : aucun commit ni aucune issue n'en
+	     porte la raison. Une photo justifie pourtant souvent un passage à
+	     « Résolu ». Laissée EN L'ÉTAT tant qu'elle n'est pas arbitrée — la
+	     question est posée dans #416. -->
+	{#if showFiles && (editMode || evolType === 'commentaire')}
+		{#if separatePhotosAndDocs}
+			<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
+				<div class="field champ-large">
+					<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
+						label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
+				</div>
+			</SectionFormulaire>
+			<SectionFormulaire titre="Documents" pour="{idPrefixe}-docs">
+				<div class="field champ-large">
+					<FichiersUpload id="{idPrefixe}-docs" mode="documents" titre="" bind:urls={docs} />
+				</div>
+			</SectionFormulaire>
 		{:else}
-			Commentaire *
+			<SectionFormulaire titre="Pièces jointes" pour="{idPrefixe}-fichiers">
+				<div class="field champ-large">
+					<FichiersUpload id="{idPrefixe}-fichiers" mode="mixte" titre=""
+						accept={ACCEPT_FICHIERS} bind:urls={fichiers} size={80} />
+				</div>
+			</SectionFormulaire>
 		{/if}
-	</label>
-	<RichEditor bind:value={contenu}
-		placeholder={editMode
-			? 'Modifier le commentaire…'
-			: evolType === 'etat'
-				? 'Précisions sur ce changement…'
-				: 'Ajoutez un commentaire de suivi…'}
-		minHeight="90px" />
-</div>
+	{/if}
 
-<!-- ── Notifications (WhatsApp / syndic / CS) ────────────────────────── -->
-{#if showNotifs}
-	<CanauxNotification
-		bind:whatsapp={partagerWhatsapp}
-		bind:syndic={envoyerSyndic}
-		bind:cs={envoyerCs}
-		compact
-	/>
-{/if}
+	<!-- ── 9. Diffusion — EN DERNIER, après les pièces jointes ──────────────
+	     L'avertissement sur les fichiers est rendu au CONTACT de la case
+	     WhatsApp qu'il commente : sous le sélecteur de fichiers, il en était
+	     séparé par toute la rubrique (#416). -->
+	{#if sectionDiffusion}
+		<SectionFormulaire titre="Diffusion">
+			{#if showNotifs}
+				<CanauxNotification
+					bind:whatsapp={partagerWhatsapp}
+					bind:syndic={envoyerSyndic}
+					bind:cs={envoyerCs}
+					compact
+				/>
+				{#if partagerWhatsapp && allFichiersUrls.length > 0}
+					<p class="aide-case">
+						⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.
+					</p>
+				{/if}
+			{/if}
 
-<!-- ── Fichiers (masqués si !showFiles ou si type=etat en mode ajout) ── -->
-{#if showFiles && (editMode || evolType === 'commentaire')}
-	{#if separatePhotosAndDocs}
-		<div style="margin:.4rem 0">
-			<FichiersUpload id="evol-photos" bind:urls={photos}
-				label="Ajouter une photo" accept={ACCEPT_PHOTOS} />
-		</div>
-		<div style="margin:.4rem 0">
-			<FichiersUpload id="evol-docs" bind:urls={docs}
-				label="Ajouter un document" accept={ACCEPT_DOCUMENTS} />
-		</div>
-	{:else}
-		<div class="field" style="margin-bottom:.6rem">
-			<FichiersUpload id="evol-fichiers" bind:urls={fichiers}
-				label="Ajouter un fichier" accept={ACCEPT_FICHIERS} />
-			{#if partagerWhatsapp && fichiers.length > 0}
-				<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.3rem">
-					⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.
+			{#if showEmail}
+				<div class="field champ-large">
+					<label for="{idPrefixe}-email-ext">&#x1F4E7; Notifier une adresse email externe</label>
+					<input id="{idPrefixe}-email-ext" type="email" bind:value={emailExterne}
+						placeholder="contact@exemple.fr" />
 				</div>
 			{/if}
-		</div>
+		</SectionFormulaire>
 	{/if}
-{/if}
 
-<!-- ── Email externe ─────────────────────────────────────────────────── -->
-{#if showEmail}
-	<div style="margin:.4rem 0 .6rem">
-		<label for="evol-email-ext" style="font-size:.8rem;font-weight:500;color:var(--color-text-muted)">
-			📧 Notifier une adresse email externe <span style="font-weight:normal">(optionnel)</span>
-		</label>
-		<input id="evol-email-ext" type="email" bind:value={emailExterne}
-			placeholder="contact@exemple.fr"
-			style="padding:.35rem .6rem;border:1px solid var(--color-border);border-radius:6px;font-size:.85rem;width:100%;max-width:320px;margin-top:.25rem;display:block" />
+	<!-- ── Actions ──────────────────────────────────────────────────────────
+	     `.form-actions` vient d'app.css : la disposition était recomposée ici en
+	     ligne, aux mêmes valeurs, donc libre de diverger (`ux-patterns` §9
+	     quinquies). Le verbe est GÉNÉRIQUE dans les deux modes — « Valider » /
+	     « Envoi… » en création contre « Enregistrer » / « Enregistrement… » en
+	     édition, c'était le même geste sous deux libellés (§9 quinquies bis). -->
+	<div class="form-actions">
+		<button type="button" class="btn btn-outline btn-sm" on:click={() => dispatch('cancel')}>Annuler</button>
+		<button type="button" class="btn btn-primary btn-sm" disabled={!canSubmit} on:click={handleSubmit}>
+			{saving ? 'Enregistrement…' : 'Enregistrer'}
+		</button>
 	</div>
-{/if}
-
-<!-- ── Actions ────────────────────────────────────────────────────────── -->
-<div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:.5rem">
-	<button type="button" class="btn btn-outline btn-sm" on:click={() => dispatch('cancel')}>Annuler</button>
-	<button type="button" class="btn btn-primary btn-sm" disabled={!canSubmit} on:click={handleSubmit}>
-		{saving ? (editMode ? 'Enregistrement…' : 'Envoi…') : (editMode ? 'Enregistrer' : 'Valider')}
-	</button>
 </div>
+
+<style>
+	/*  La rangée de pastilles. Les boutons eux-mêmes sont des `Pastille` : ils
+	    portaient `class="pill"`, dont la définition vit dans le `<style>` de
+	    CINQ pages appelantes — donc scopée à elles par Svelte, et sans effet sur
+	    le balisage d'un composant enfant. C'est très exactement la panne qui a
+	    fait créer `Pastille.svelte` (v2.67.11), et elle était ici aussi. */
+	.evol-nature {
+		display: flex;
+		gap: .5rem;
+		flex-wrap: wrap;
+		margin-bottom: .6rem;
+	}
+</style>

@@ -8,12 +8,12 @@ import { onMount } from 'svelte';
 	import { auth as authApi, lots as lotsApi, uploads as uploadsApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { setTelemetryOptOut } from '$lib/telemetry';
 	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 
-	$: _pc = getPageConfig($configStore, 'profil', { titre: 'Mon profil', navLabel: 'Profil', icone: 'user', descriptif: 'Vos informations personnelles (mot de passe, lots...), sécurité du compte et préférences de notifications.' });
+	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
 
 	// ── Infos personnelles ─────────────────────────────────────────────────────

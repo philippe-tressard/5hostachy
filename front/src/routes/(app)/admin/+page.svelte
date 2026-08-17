@@ -6,7 +6,7 @@ import TopPages from '$lib/components/TopPages.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
-import { PAGES, ordonnerPages, type PageDef } from '$lib/pages';
+import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
@@ -729,8 +729,8 @@ function togglePage(id: string) {
   expandedPages = expandedPages.has(id) ? new Set() : new Set([id]);
 }
 async function savePageConfig(pg: PageDef) {
-  const ongletsRecord = pg.onglets ? Object.fromEntries(pg.onglets.map(o => [o.id, { label: o.label, descriptif: o.descriptif }])) : undefined;
-  const val = JSON.stringify({ titre: pg.titre, descriptif: pg.descriptif, navLabel: pg.navLabel, icone: pg.icone, ...(ongletsRecord ? { onglets: ongletsRecord } : {}) });
+  // Conversion partagée avec `defautsDePage` (`$lib/pages.ts`, #420) ; `pg` et non son id : ce sont les valeurs ÉDITÉES qui partent.
+  const val = JSON.stringify(configDepuisPage(pg));
   try {
     await configApi.save({ [`page_config_${pg.id}`]: val });
     configStore.update((c: Record<string, string>) => ({ ...c, [`page_config_${pg.id}`]: val }));
@@ -763,7 +763,7 @@ async function movePage(i: number, dir: number) {
 }
 
 import { getPageConfig, configStore, siteNomStore, loadSiteConfig } from '$lib/stores/pageConfig';
-$: _pc = getPageConfig($configStore, 'admin', { titre: 'Paramétrage', navLabel: 'Admin', descriptif: 'Administration de la plateforme : comptes, utilisateurs, rôles, modèles e-mail, paramétrage et référentiels — réservés aux admins.' });
+$: _pc = getPageConfig($configStore, 'admin', defautsDePage('admin'));
 $: _siteNom = $siteNomStore;
 </script>
 

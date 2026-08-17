@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { getPageConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml, safeDescription } from '$lib/sanitize';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
@@ -21,7 +21,7 @@
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketActif, estTicketClos } from '$lib/tickets';
 
-	$: _pc = getPageConfig($configStore, 'espace-cs', { titre: 'Espace Conseil Syndical (CS)', navLabel: 'Espace CS', icone: 'shield-half', descriptif: "Tableau de bord des membres du Conseil Syndical (CS) : suivi des comptes, tickets résidence, reporting et demandes d'accès — réservé au Conseil Syndical.", onglets: { validations: { label: '✅ Comptes & accès', descriptif: 'Comptes en attente, demandes d\'accès et validations à traiter.' }, tickets: { label: '\u{1F3AB} Tickets résidence', descriptif: 'Tous les tickets de la résidence, avec le demandeur, son bâtiment et le suivi de traitement.' }, reporting: { label: '\u{1F4CA} Reporting', descriptif: 'Reportings prêts pour l’AG, les réunions CS et les échanges avec le syndic : dossiers en cours, analyse tickets, devis & interventions.' }, 'annonces-hall': { label: '\u{1F4C4} Annonces Hall', descriptif: 'Créez une annonce à afficher dans le hall des bâtiments : PDF à la charte de la résidence, envoyé par mail aux membres du CS concernés, puis conservé dans l\'historique.' }, annuaire: { label: '\u{1F4D2} Annuaire CS & Syndic', descriptif: 'Coordonnées des membres du CS et du syndic.' } } });
+	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
 
 	interface PendingUser {
@@ -1451,7 +1451,7 @@
 						{#if tkShowForm === t.id}
 						<div class="evol-form">
 							{#key tkShowForm}
-							<EvolForm
+							<EvolForm idPrefixe="cs-tk-evol-{t.id}"
 								statutOptions={TK_STATUT_OPTIONS}
 								statutLabels={TK_STATUT_LABELS}
 								currentStatut={t.statut ?? ''}
@@ -1499,7 +1499,7 @@
 													{#if tkEditingEvolId === evol.id}
 													<div style="margin:.4rem 0;border:1px solid var(--color-border);border-radius:8px;padding:.75rem;background:var(--color-bg)" on:click|stopPropagation on:keydown|stopPropagation>
 														{#key tkEditingEvolId}
-														<EvolForm
+														<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}"
 															editMode={true}
 															initialContenu={evol.contenu || ''}
 															initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
