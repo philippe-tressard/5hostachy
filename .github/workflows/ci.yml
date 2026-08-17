@@ -329,6 +329,18 @@ jobs:
         working-directory: front
         run: npm run lint:styles
 
+      # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
+      # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
+      # attrapait aussi `/auth/me` : pendant les sept jours où la session restait
+      # renouvelable, les requêtes de la page se renouvelaient et s'affichaient
+      # pendant que `me()` était refusé sans essai — contenu à l'écran, menu vidé
+      # de ses quatorze entrées, et un second rafraîchissement nécessaire pour
+      # voir la mire (#379, signalé le 16/08/2026). Une exception en préfixe est
+      # juste pour sa cible et fausse pour ses voisines, sans que rien ne le dise.
+      - name: Renouvellement de session par liste nominative
+        working-directory: front
+        run: npm run lint:session
+
       # Vérificateur de types. Il existait dans package.json depuis toujours et
       # n'était lancé par RIEN — un garde-fou présent mais non armé, comme un
       # hook versionné en 100644. Or **Vite transpile le TypeScript sans le
