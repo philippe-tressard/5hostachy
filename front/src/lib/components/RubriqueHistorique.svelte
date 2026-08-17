@@ -1,0 +1,208 @@
+<!--
+  RubriqueHistorique.svelte — LE FIL, écrit une fois.
+
+  ## Vocabulaire (cadre #430, tranché le 17/08/2026)
+
+  **Historique** = le fil. **Évolution** = une entrée du fil. « Commentaire » est
+  abandonné : le mot est trop étroit, l'entrée pouvant porter un changement
+  d'état, des pièces jointes et une diffusion. C'est déjà le vocabulaire du code
+  (`TicketEvolution`, `EvolForm`), et l'adopter *supprime* un troisième registre.
+
+  ⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** — « Commenter »,
+  « Changer l'état », « Modifier ». « Ajouter une évolution » ne veut rien dire
+  pour un résident, et ce composant n'écrit donc ce mot nulle part.
+
+  ## Pourquoi il naît (#431)
+
+  Le fil était rendu **à la main six fois** dans le produit, dont **trois fois
+  dans les deux seuls fichiers des tickets** : la liste (carte active), la liste
+  (carte d'archive) et la fiche. Le CSS `.evol-list` était redéfini quatre fois.
+
+  Et ces copies avaient **déjà divergé** :
+
+  | Écart | Où |
+  |---|---|
+  | pièces jointes des évolutions **absentes** | un des deux fils de l'Espace CS |
+  | marge haute du fil perdue | fiche du ticket |
+  | « Voir les N **entrées** » / « Voir les N **évolutions** » | liste / fiche |
+  | une réponse rendue en texte riche / réduite à « Nouvelle réponse (…) » | liste / fiche |
+
+  La dernière n'est pas cosmétique : sur la liste, le fil est le SEUL endroit où
+  le contenu d'une réponse apparaît. Retenu : le texte riche, partout — c'est la
+  forme qui ne perd jamais d'information.
+
+  ## R5 — cette rubrique ne s'est PAS généralisée dans ce lot
+
+  Trois recopies sur six sont remplacées ici. Les trois autres (Espace CS ×2,
+  Actualités) attendent que celle-ci se fasse constater à l'écran : *une rubrique
+  se propose sur un écran, se fait constater, puis se généralise*. Jamais
+  l'inverse — c'est la pastille partie nue en production qui a fait écrire cette
+  règle.
+-->
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	import PiecesJointes from './PiecesJointes.svelte';
+	import { safeDescription } from '$lib/sanitize';
+	import { fmtDatetime } from '$lib/date';
+
+	/**  Une entrée du fil. Volontairement structurel et non `TicketEvolution` :
+	     les actualités ont leur propre type d'évolution, et cette rubrique doit
+	     pouvoir les recevoir sans que le composant connaisse une seule entité. */
+	interface Entree {
+		id: number;
+		type: string;
+		contenu?: string;
+		ancien_statut?: string;
+		nouveau_statut?: string;
+		auteur_nom?: string;
+		cree_le: string;
+		fichiers_urls?: string[];
+	}
+
+	export let evolutions: Entree[] = [];
+	/** Libellés du workflow — `STATUT_TICKET_LABELS` et rien d'autre (#415). */
+	export let statutLabels: Record<string, string> = {};
+	/** En-tête de la rubrique. Vide : le fil s'insère dans un bloc déjà nommé. */
+	export let titre = '';
+	/** Texte affiché quand le fil est vide. Vide : la rubrique ne rend rien. */
+	export let vide = '';
+	/** Au-delà de ce nombre d'entrées, le fil se replie sur `apercu`. */
+	export let seuil = 7;
+	export let apercu = 5;
+	/** Le lecteur peut-il corriger une entrée ? (CS/admin) */
+	export let peutModifier = false;
+	/** Entrée actuellement ouverte en correction — le parent porte l'état. */
+	export let enEdition: number | null = null;
+
+	const dispatch = createEventDispatcher<{ modifier: number }>();
+
+	let deplie = false;
+
+	//  Le plus récent en premier : on vient lire ce qui vient d'arriver.
+	$: triees = [...evolutions].sort(
+		(a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime(),
+	);
+	$: replie = triees.length > seuil && !deplie;
+	$: visibles = replie ? triees.slice(0, apercu) : triees;
+</script>
+
+{#if titre || $$slots.action}
+	<div class="hist-entete">
+		{#if titre}<h2 class="hist-titre">{titre}</h2>{/if}
+		<slot name="action" />
+	</div>
+{/if}
+
+{#if triees.length === 0}
+	{#if vide}<p class="hist-vide">{vide}</p>{/if}
+{:else}
+	<div class="evol-list">
+		{#each visibles as evol, i (evol.id)}
+			{#if i > 0}<hr class="evol-sep" />{/if}
+			<div class="evol-item evol-{evol.type}">
+				<span class="evol-icon">
+					{#if evol.type === 'etat'}&#x1F504;{:else if evol.type === 'reponse'}&#x1F4AC;{:else}&#x1F4DD;{/if}
+				</span>
+				<div class="evol-body">
+					<div class="evol-ligne-meta">
+						<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+						{#if peutModifier && evol.type === 'commentaire' && enEdition !== evol.id}
+							<button type="button" class="evol-modifier" aria-label="Modifier"
+								title="Modifier" on:click={() => dispatch('modifier', evol.id)}>✏️ Modifier</button>
+						{/if}
+					</div>
+
+					{#if evol.type === 'etat'}
+						<span class="evol-text">
+							Statut : <strong>{statutLabels[evol.ancien_statut ?? ''] || 'Aucun'}</strong>
+							→ <strong>{statutLabels[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong>
+						</span>
+					{/if}
+
+					{#if enEdition === evol.id}
+						<!--  Le formulaire de correction vient de l'écran hôte : la rubrique
+						      ne connaît ni l'API ni l'entité qu'elle affiche. -->
+						<div class="evol-edition"><slot name="edition" {evol} /></div>
+					{:else}
+						{#if evol.contenu}
+							<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
+						{/if}
+						{#if evol.fichiers_urls?.length}
+							<div class="evol-pj"><PiecesJointes urls={evol.fichiers_urls} size={72} compact /></div>
+						{/if}
+					{/if}
+				</div>
+			</div>
+		{/each}
+
+		{#if replie}
+			<hr class="evol-sep" />
+			<button type="button" class="evol-more" on:click={() => (deplie = true)}>
+				Voir les {triees.length - apercu} entrées plus anciennes
+			</button>
+		{/if}
+	</div>
+{/if}
+
+<style>
+	.hist-entete {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: .5rem;
+		margin-bottom: .5rem;
+	}
+	.hist-titre { font-size: 1rem; font-weight: 600; margin: 0; }
+	.hist-vide { font-size: .85rem; color: var(--color-text-muted); }
+
+	/*  ⚠️ Ces classes sont définies ICI, avec le balisage qui les porte. Les
+	    laisser dans le `<style>` des pages hôtes ne les atteindrait pas : Svelte
+	    scope le style au composant qui l'écrit, et c'est très exactement la panne
+	    qui a envoyé des pastilles nues en production (v2.67.11). La marge haute
+	    (`margin-top`) revient au parent, qui seul sait ce que le fil suit. */
+	.evol-list { border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
+	.evol-sep { margin: 0; border: none; border-top: 1px solid var(--color-border); }
+	.evol-item { display: flex; gap: .5rem; padding: .5rem .75rem; font-size: .82rem; }
+	.evol-icon { flex-shrink: 0; font-size: .9rem; margin-top: .1rem; }
+	.evol-body { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
+	.evol-ligne-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+	.evol-meta { font-size: .75rem; color: var(--color-text-muted); }
+	.evol-text { color: var(--color-text); line-height: 1.5; }
+	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
+	.evol-content :global(p) { margin: 0 0 .3em; }
+	.evol-pj { margin-top: .4rem; }
+	.evol-edition {
+		margin: .4rem 0;
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: .75rem;
+		background: var(--color-bg);
+	}
+	.evol-modifier {
+		border: 1px solid var(--color-border);
+		background: var(--color-bg-alt);
+		color: var(--color-text);
+		cursor: pointer;
+		padding: .15rem .4rem;
+		font-size: .75rem;
+		flex-shrink: 0;
+		border-radius: 5px;
+		line-height: 1.4;
+	}
+	/*  Les trois teintes de fond disent le TYPE d'entrée sans lire un badge. */
+	.evol-etat { background: #f0f9ff; }
+	.evol-reponse { background: #f0fdf4; }
+	.evol-commentaire { background: #fafafa; }
+
+	.evol-more {
+		width: 100%;
+		background: none;
+		border: none;
+		padding: .45rem;
+		font-size: .8rem;
+		color: var(--color-primary);
+		cursor: pointer;
+		text-align: center;
+	}
+	.evol-more:hover { background: var(--color-bg); }
+</style>

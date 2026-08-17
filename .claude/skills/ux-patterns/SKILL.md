@@ -104,6 +104,26 @@ pas une nouvelle** : c'est pourquoi la Diffusion tombe, et seulement elle. Le
   → toutes les pages hôtes ; objet → toutes les sections). **Donc il se propose sur
   UN écran, se fait constater, puis se généralise.** Jamais l'inverse.
 
+### Où le cadre VIT dans le code (depuis #431, 17/08/2026)
+
+| Quoi | Où | À faire avant d'écrire un écran |
+|---|---|---|
+| Les 9 sections, leur ordre, leurs libellés, les 4 états, les 3 motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table |
+| La déclaration d'une entité et **ses divergences motivées** | `front/src/lib/entites/<entite>.ts` | la lire ; si elle n'existe pas, l'écrire |
+| Le squelette de **lecture** (R1 pour l'affichage) | `FicheLecture.svelte` | l'affichage passe par lui, il tient l'ordre |
+| Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |
+| La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | 3 recopies sur 6 remplacées ; les 3 autres attendent d'être constatées (R5) |
+| Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, et **une section rendue hors déclaration** |
+
+🔴 **La présence d'une section ne se décide plus dans l'écran.** `avecPhotos`,
+`avecDiffusion`… se gouvernent par `sectionPresente(ENTITE, etat, 'photos')` et
+par rien d'autre. Une condition en dur (`{!modeEdition}`) rouvre exactement la
+divergence silencieuse que le cadre supprime — et `lint:etats` la refuse.
+
+⚠️ **`EvolForm` n'est pas encore gouverné par la déclaration** : il sert quatre
+écrans, l'y brancher les changerait tous les quatre (R5). L'état `evolution` est
+donc déclaré, pas encore confronté à son rendu. Sujet de **#433**.
+
 ### Ce que le cadre ne couvre pas
 
 **Document** (1 champ commun sur 5 entre création et édition, *et c'est juste*),

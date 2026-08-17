@@ -29,7 +29,6 @@ from app.utils.visibility import ticket_visible
 from .commun import (
     STATUT_LABELS,
     config_site,
-    contexte_site,
     generer_numero,
     ticket_read,
 )
@@ -353,21 +352,35 @@ def update_ticket(
 
     ticket.mis_a_jour_le = datetime.utcnow()
 
-    # Auto-log évolution sur changement de statut
+    #  🔴 UNE ÉDITION ÉCRIT UNE CORRECTION, PAS UNE TRANSITION (cadre #430, #431)
+    #
+    #  Ce bloc écrivait une `TicketEvolution(type="etat")` dès que le statut
+    #  changeait — la même forme, au même endroit du fil, que le changement d'état
+    #  volontaire du conseil syndical. Tant que l'édition ne rouvrait pas le
+    #  workflow, cela ne se voyait pas. Depuis que le cadre l'y rouvre — *l'édition
+    #  corrige, et l'état s'y corrige comme les autres champs* —, corriger un état
+    #  mal saisi apparaîtrait dans l'Historique comme une ÉTAPE DU WORKFLOW : le
+    #  ticket aurait « été » en cours, alors qu'il n'y est jamais passé.
+    #
+    #  La correction reste **visible** — rien ne devient muet — mais elle se
+    #  présente pour ce qu'elle est : une ligne de correction parmi les autres,
+    #  sans `ancien_statut`/`nouveau_statut`, donc sans jalon de suivi.
+    #
+    #  La transition, elle, n'a pas disparu : elle passe par
+    #  `POST /tickets/{id}/evolutions` (`evolutions.py`), qui l'inscrit avec sa
+    #  date, son auteur, son courriel à l'auteur du ticket et ses canaux. C'est
+    #  désormais le seul chemin qui la produit — les boutons « Changer le statut »
+    #  de la fiche l'empruntent depuis #431.
     if body.statut is not None and body.statut != ancien_statut:
-        session.add(TicketEvolution(
-            ticket_id=ticket.id, type="etat",
-            contenu=(
-                f"Statut : {STATUT_LABELS.get(ancien_statut or '', 'Aucun')} → "
-                f"{STATUT_LABELS.get(body.statut, body.statut)}"
-            ),
-            ancien_statut=ancien_statut, nouveau_statut=body.statut,
-            auteur_id=user.id, cree_le=datetime.utcnow(),
-        ))
+        changes.insert(
+            0,
+            f"État : {STATUT_LABELS.get(ancien_statut or '', 'Aucun')} → "
+            f"{STATUT_LABELS.get(body.statut, body.statut)}",
+        )
 
-    # Auto-log évolution sur modification de contenu
+    # Auto-log de la correction
     if changes:
-        prefix = "Modification" if is_cs_admin else "Modification auteur"
+        prefix = "Correction" if is_cs_admin else "Correction auteur"
         session.add(TicketEvolution(
             ticket_id=ticket.id, type="commentaire",
             contenu=prefix + " : " + " ; ".join(changes),
@@ -385,31 +398,18 @@ def update_ticket(
         ))
     session.add(ticket)
 
-    # Notification auteur (email) — changement de statut par quelqu'un d'autre
-    if body.statut is not None and body.statut != ancien_statut and ticket.auteur_id != user.id:
-        auteur = session.get(Utilisateur, ticket.auteur_id)
-        if auteur and auteur.email:
-            from app.utils.email import send_email
-            cfg = config_site(session)
-            background_tasks.add_task(
-                send_email,
-                code="ticket_statut_change",
-                to=auteur.email,
-                context={
-                    "ticket": {
-                        "id": ticket.id,
-                        "numero": ticket.numero,
-                        "titre": ticket.titre,
-                        "statut": STATUT_LABELS.get(body.statut, body.statut),
-                        "ancien_statut": STATUT_LABELS.get(ancien_statut or "", "Aucun"),
-                    },
-                    "destinataire": {"prenom": auteur.prenom, "nom": auteur.nom},
-                    "auteur_action": {"prenom": user.prenom, "nom": user.nom},
-                    **contexte_site(cfg),
-                },
-                destinataire_id=ticket.auteur_id,
-            )
-
+    #  ⚠️ PLUS DE COURRIEL « changement de statut » ICI (#431).
+    #
+    #  Ce chemin envoyait `ticket_statut_change` à l'auteur du ticket dès que le
+    #  statut bougeait par un `PATCH`. Or un `PATCH` est désormais une
+    #  **correction** : la Diffusion est absente de l'édition, motif `geste` —
+    #  *une correction n'est pas une nouvelle*, et rejouer un canal à chaque
+    #  faute de frappe rattrapée est exactement l'incident du triple envoi
+    #  WhatsApp du 14/08/2026.
+    #
+    #  L'auteur n'est pas laissé dans le noir : la notification in-app ci-dessus
+    #  part toujours, et elle porte le détail des corrections. Le courriel, lui,
+    #  reste attaché à la vraie transition, dans `evolutions.py::_notifier_auteur`.
     session.commit()
     session.refresh(ticket)
     return ticket_read(ticket, session)

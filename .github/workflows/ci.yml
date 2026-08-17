@@ -369,6 +369,17 @@ jobs:
         working-directory: front
         run: npm run lint:formulaires
 
+      # R4 du cadre d'interface (#430) : une entité, quatre rendus, et **toute
+      # divergence entre deux états se déclare avec son motif**. Le relevé des 42
+      # couples menu/entité a mesuré 13 éditions sur 23 réinventant un motif que
+      # la création portait déjà, et 5 seulement portant une raison écrite — les
+      # cinq en commentaires, donc invisibles à tout contrôle. L'une d'elles
+      # invoquait un motif (`trace`) que le cadre n'a jamais reconnu.
+      # Refuse aussi un motif `api` sans ticket : c'est un marqueur de DETTE.
+      - name: Divergences entre états déclarées et motivées
+        working-directory: front
+        run: npm run lint:etats
+
       # Un `input, textarea { width: 100% }` posé dans le <style> d'UNE page
       # atteignait toutes ses cases à cocher : chacune s'étirait sur la largeur du
       # formulaire et son libellé partait à l'autre bout. Un sélecteur, deux
