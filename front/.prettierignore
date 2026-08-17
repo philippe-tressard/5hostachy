@@ -1,0 +1,23 @@
+# Périmètre de prettier — posé le 17/08/2026 (#410).
+#
+# Sans ce fichier, `prettier --check .` signalait 785 fichiers, dont 734 dans les
+# répertoires de SORTIE : le vrai défaut (un `</li>` orphelin dans le manuel des
+# résidents) était noyé, et le même fichier était compté trois fois — une fois à sa
+# place, deux fois recopié par le build.
+
+# ── Artefacts de build : ce sont des sorties, pas des sources ──────────────────
+build/
+.svelte-kit/
+node_modules/
+package-lock.json
+
+# ── Manuels : documents denses écrits à la main ────────────────────────────────
+# `prettier --write` les réécrirait de bout en bout pour un diff énorme et sans
+# valeur, et ils sont versionnés en CRLF (un reformatage les repasserait en LF).
+# ⚠️ Leur bonne formation N'EST PAS abandonnée pour autant : `npm run lint:manuels`
+# (scripts/check-manuels.mjs) les passe au même parseur, sans exiger la mise en
+# forme, et tourne en CI. Un ignore qui éteint le seul contrôle qui voyait un
+# défaut le rend invisible — c'est exactement comme ça que le `</li>` orphelin a
+# survécu.
+static/manuel-utilisateur.html
+static/manuel-utilisateur-1-page.html

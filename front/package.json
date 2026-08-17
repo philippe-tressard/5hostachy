@@ -20,7 +20,8 @@
     "lint:styles": "node scripts/check-styles-nus.mjs",
     "lint:session": "node scripts/check-renouvellement-session.mjs",
     "lint:soumission": "node scripts/check-libelles-soumission.mjs",
-    "lint:audit": "node scripts/check-audit.mjs"
+    "lint:audit": "node scripts/check-audit.mjs",
+    "lint:manuels": "node scripts/check-manuels.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",

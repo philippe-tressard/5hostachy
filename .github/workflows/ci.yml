@@ -263,6 +263,22 @@ jobs:
         working-directory: front
         run: npm run lint:audit
 
+      # Bonne formation du balisage des manuels — le document que lisent les
+      # résidents. Le 17/08/2026 (#410), les deux copies portaient un `</li>` qui ne
+      # fermait rien et un `<li>` jamais fermé, dans un `<div>` qui n'est pas une
+      # liste. Les navigateurs réparent ce balisage en silence : la page s'affiche,
+      # donc elle a l'air correcte — l'artefact est cassé et le comportement le
+      # masque. Seul un analyseur strict pouvait le dire, et le seul du dépôt
+      # (`npm run lint`) n'était dans aucun job.
+      # Ce contrôle valide sans exiger la mise en forme : les manuels sont dans
+      # `.prettierignore` (les reformater produirait un diff énorme et sans valeur,
+      # et les repasserait de CRLF en LF), mais c'était prettier qui voyait le
+      # défaut. Un ignore posé sans remplacer le contrôle qu'il éteint rend le
+      # défaut invisible à nouveau.
+      - name: Balisage des manuels bien formé
+        working-directory: front
+        run: npm run lint:manuels
+
       # Garde-fou dates : aucun formatage sans `timeZone` épinglé. Placé AVANT le
       # build (échoue en ~1 s, sans attendre la compilation). Pendant front du
       # `tests/test_dates_fr.py` côté API, qui ne scanne que `api/app/` — les deux
