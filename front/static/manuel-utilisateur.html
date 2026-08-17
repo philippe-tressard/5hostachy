@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.35 · Août 2026</span>
+    <span class="topbar-badge">Version 3.36 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1345,8 +1345,24 @@
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
           <li><strong>Hero</strong> — message de bienvenue avec votre nom, numéro de lot et rôle.</li>
           <li><strong>Consignes de la copropriété</strong> — ouvre la fiche d'accueil (format A4 imprimable) générée dynamiquement depuis l'annuaire : membres CS regroupés par bâtiment, syndic, QR codes, consignes de vie collective. Chaque bâtiment y est nommé et illustré comme dans l'application : le nom et l'icône viennent de l'arborescence des périmètres (Administration → Patrimoine), donc un bâtiment renommé l'est aussi sur le document imprimé. Mis en avant pour les locataires (encadré ambre pulsant). La notification de bienvenue reçue lors de votre déclaration d'arrivée renvoie directement vers cette fiche.</li>
-          <li><strong>Raccourcis rapides</strong> — pilules cliquables vers Tickets, Calendrier, Actualités, etc. avec compteurs.</li>
+          <li><strong>Raccourcis rapides</strong> — pilules cliquables vers Tickets, Calendrier, Sondages, Actualités, et selon vos droits Espace CS et Admin. Voir la carte ci-dessous pour ce que chaque compteur mesure.</li>
         </ul>
+      </div>
+
+      <div class="card">
+        <h3>&#x1F53D; Raccourcis rapides — ce que compte chaque pastille</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">La rangée de pilules sous le bandeau de bienvenue mène aux pages que vous consultez le plus. Quand il y a quelque chose à voir, un <strong>badge chiffré</strong> s'affiche ; quand il n'y a rien, aucun badge n'apparaît. <strong>Chaque badge annonce exactement ce que vous trouverez sur la page d'arrivée</strong>, pour vous et pas pour quelqu'un d'autre.</p>
+        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
+          <li><strong>Tickets</strong> — vos tickets encore ouverts ou en cours. Un résident y lit les siens ; un membre du CS, ceux de toute la résidence, puisque c'est ce qu'il voit sur la page.</li>
+          <li><strong>Sondages</strong> — les sondages <em>auxquels vous pouvez répondre</em> et qui ne sont pas terminés. Un sondage adressé à un autre bâtiment ou à un autre profil que le vôtre n'y est pas compté, et un sondage dont la date de clôture est passée n'y est plus compté non plus.</li>
+          <li><strong>Espace CS</strong> <span style="font-size:.75rem; background:#FFFBEB; color:#92400E; border:1px solid #F59E0B; border-radius:4px; padding:.1rem .45rem; vertical-align:middle">CS / Admin</span> — le badge rouge donne le nombre de dossiers de l'onglet <strong>✅ Comptes &amp; accès</strong> : comptes en attente de validation et demandes de badges ou télécommandes. Le badge orange, à côté, donne les tickets syndic à relancer.</li>
+          <li><strong>Admin</strong> <span style="font-size:.75rem; background:#F5F3FF; color:#5B21B6; border:1px solid #7C3AED; border-radius:4px; padding:.1rem .45rem; vertical-align:middle">Admin</span> — le nombre total de dossiers qui vous attendent dans <strong>Paramétrage → Gestion utilisateurs</strong> : les deux mêmes files que ci-dessus, plus les <strong>demandes de modification de profil</strong>, qui ne se traitent que là.</li>
+          <li><strong>Calendrier</strong> et <strong>Actualités</strong> n'ont pas de compteur.</li>
+        </ul>
+        <div class="callout info" style="margin-top:.75rem">
+          <strong>ℹ️ Pourquoi l'Admin et l'Espace CS annoncent des nombres différents</strong>
+          <p>Ce ne sont pas deux versions du même chiffre : chaque pastille compte ce que <em>sa</em> page contient. Les deux écrans partagent les comptes et les demandes d'accès — un administrateur peut les traiter des deux côtés, au choix — mais seules les demandes de modification de profil figurent dans Paramétrage. L'écart entre les deux badges, c'est exactement cela.</p>
+        </div>
       </div>
 
       <div class="card">
@@ -2774,6 +2790,7 @@
         <summary>Mon compte est « en attente de validation », que se passe-t-il ?</summary>
         <div class="faq-body">
           <p>Si votre nom ne figure pas automatiquement dans la liste des résidents, un membre du conseil syndical de votre bâtiment doit valider manuellement votre compte. Ce délai est généralement de 24 à 48 heures (hors week-end). Vous recevrez un e-mail dès que ce sera fait.</p>
+          <p style="margin-top:.5rem">Si votre demande est <strong>refusée</strong>, vous recevez également un e-mail, avec le motif quand il a été renseigné. Votre dossier quitte alors la file d'attente du conseil syndical : pour rouvrir la question, contactez-le directement plutôt que de vous réinscrire.</p>
         </div>
       </details>
 
@@ -2879,7 +2896,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.35</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.36</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

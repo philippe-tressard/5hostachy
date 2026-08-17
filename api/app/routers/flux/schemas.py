@@ -33,7 +33,13 @@ class FluxSante(BaseModel):
     tickets_urgents: int = 0
     resolution_moyenne_heures: Optional[float] = None
     sondages_actifs: int = 0
+    #  Deux compteurs et non un, parce qu'il y a deux écrans : `validations_cs`
+    #  annonce l'onglet « Comptes & accès » de l'Espace CS (comptes + demandes
+    #  d'accès), `validations_admin` la file de `/admin` — les deux mêmes, plus
+    #  les demandes de modification de profil, qui ne se traitent que là. Chacun
+    #  vaut 0 pour qui ne voit pas la pastille correspondante (#399).
     validations_cs: int = 0
+    validations_admin: int = 0
     tickets_relance_syndic: int = 0
     prochains: list[dict] = []
 

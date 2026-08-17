@@ -10,6 +10,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
+	import RaccourcisRapides from '$lib/components/RaccourcisRapides.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	// Toutes les règles du fil (apparence, liens, appartenance aux trois
 	// registres) vivent dans ce module — cf. `$lib/flux.ts`.
@@ -251,12 +252,11 @@
 	$: urgentItems = filteredItems.filter(estUrgent);
 	$: pinnedItems = filteredItems.filter(estEpingle);
 
-	// ── Compteurs rapides ──────────────────────────────────────────────────
-	$: countByType = (() => {
-		const c: Record<string, number> = {};
-		for (const item of filteredItems) c[item.type] = (c[item.type] ?? 0) + 1;
-		return c;
-	})();
+	//  `countByType` vivait ici et n'alimentait qu'une chose : la pastille
+	//  Tickets. Elle comptait donc les tickets ouverts **du fil affiché**, après
+	//  les filtres de l'utilisateur — la seule de la rangée à bouger avec eux,
+	//  sans que rien à l'écran ne le laisse deviner. Le nombre vient désormais du
+	//  serveur, comme ses voisines (#399).
 
 	// ── Helpers ────────────────────────────────────────────────────────────
 	function ouvrir(item: FluxItem) {
@@ -346,29 +346,10 @@
 	     précisément parce qu'il était cassé. -->
 
 	<!-- ═══ RACCOURCIS RAPIDES ═════════════════════════════════════════════ -->
-	<nav class="quick-nav" class:section-visible={ready}>
-		<a href="/tickets" class="quick-pill">
-			<Icon name="ticket" size={14} /> Tickets
-			{#if (countByType['ticket_ouvert'] ?? 0) > 0}<span class="quick-count">{countByType['ticket_ouvert']}</span>{/if}
-		</a>
-		<a href="/calendrier" class="quick-pill">
-			<Icon name="calendar" size={14} /> Calendrier
-		</a>
-		<a href="/sondages" class="quick-pill">
-			<Icon name="bar-chart-3" size={14} /> Sondages
-			{#if (data.sante.sondages_actifs ?? 0) > 0}<span class="quick-count">{data.sante.sondages_actifs}</span>{/if}
-		</a>
-		<a href="/actualites" class="quick-pill">
-			<Icon name="megaphone" size={14} /> Actualités
-		</a>
-		{#if $isCS || $isAdmin}
-		<a href="/espace-cs" class="quick-pill quick-pill-cs">
-			<Icon name="shield-check" size={14} /> Espace CS
-			{#if (data.sante.validations_cs ?? 0) > 0}<span class="quick-count quick-count-urgent">{data.sante.validations_cs}</span>{/if}
-			{#if (data.sante.tickets_relance_syndic ?? 0) > 0}<span class="quick-count quick-count-orange">{data.sante.tickets_relance_syndic} relance{(data.sante.tickets_relance_syndic ?? 0) > 1 ? 's' : ''}</span>{/if}
-		</a>
-		{/if}
-	</nav>
+	<!-- Qui voit quelle pastille, et d'où vient chaque nombre : `$lib/raccourcis.ts`,
+	     et nulle part ailleurs. La page recomposait ici la règle d'accès à
+	     l'Espace CS, que le serveur écrivait déjà de son côté (#399). -->
+	<RaccourcisRapides sante={data.sante} {ready} />
 
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
 	{#if ($isCS || $isAdmin) && (data.sante.tickets_relance_syndic ?? 0) > 0}
@@ -702,30 +683,8 @@
 	.consignes-arrow { flex-shrink: 0; color: var(--color-primary); opacity: .6; }
 	.consignes-prominent .consignes-arrow { color: #92400E; }
 
-	/* ═══ RACCOURCIS RAPIDES ═════════════════════════════════════════════ */
-	.quick-nav {
-		display: flex; gap: .5rem; flex-wrap: wrap; margin: .75rem 0; padding: 0;
-		opacity: 0; transform: translateY(8px);
-		transition: opacity .3s ease .08s, transform .3s ease .08s;
-	}
-	.quick-nav.section-visible { opacity: 1; transform: translateY(0); }
-	.quick-pill {
-		display: inline-flex; align-items: center; gap: .35rem;
-		padding: .4rem .8rem; border-radius: 2rem;
-		background: var(--color-surface); border: 1px solid var(--color-border);
-		font-size: .78rem; font-weight: 500; color: var(--color-text); text-decoration: none;
-		transition: border-color .15s, box-shadow .15s, background .15s; white-space: nowrap;
-	}
-	.quick-pill:hover { border-color: var(--color-primary); box-shadow: var(--shadow-sm); background: var(--color-primary-light); }
-	.quick-count {
-		background: var(--color-primary); color: #fff;
-		font-size: .65rem; font-weight: 700;
-		padding: .05rem .4rem; border-radius: 1rem; line-height: 1.3; min-width: 1.1rem; text-align: center;
-	}
-	.quick-pill-cs { border-color: #F59E0B; }
-	.quick-pill-cs:hover { border-color: #D97706; background: #FFFBEB; }
-	.quick-count-urgent { background: #DC2626; }
-	.quick-count-orange { background: #D97706; }
+	/* Les styles de la rangée de raccourcis sont partis avec leur balisage dans
+	   `RaccourcisRapides.svelte` — Svelte scope les styles au composant. */
 
 	/* ═══ ALERTE RELANCE SYNDIC ══════════════════════════════════════════ */
 	.relance-alerte-card {
@@ -933,8 +892,6 @@
 	@media (max-width: 767px) {
 		.hero { margin: -.75rem -.75rem 0; padding: 1.25rem 1rem 1rem; }
 		.kpi-grid { grid-template-columns: 1fr; }
-		.quick-nav { gap: .35rem; }
-		.quick-pill { font-size: .72rem; padding: .35rem .65rem; }
 		.flux-timeline { padding-left: 1.25rem; }
 		.flux-timeline::before { left: .35rem; }
 		.consignes-card { gap: .5rem; padding: .6rem .75rem; }

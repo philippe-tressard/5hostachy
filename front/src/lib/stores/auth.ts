@@ -14,16 +14,31 @@ export const isActingAsAidant = derived(actingAs, ($a) => $a !== null);
 
 export const isAuthenticated = derived(currentUser, ($u) => $u !== null);
 
-export const isAdmin = derived(currentUser, ($u) => !!$u?.roles?.includes('admin') || $u?.role === 'admin');
+/**
+ * Le pendant front de `Utilisateur.has_role` (`api/app/models/core.py`).
+ *
+ * Il n'en existait **aucun** : chaque store dérivé recomposait à la main la même
+ * cascade `roles.includes(x) || role === x`, et chaque écran recomposait par
+ * dessus sa propre condition de visibilité. Rien n'obligeait ces écritures à
+ * rester d'accord entre elles, ni avec le serveur — c'est ce qu'a montré la
+ * rangée de raccourcis du tableau de bord, où la règle « qui voit l'Espace CS »
+ * était écrite une fois dans la page et une fois dans le calcul de son compteur
+ * (#399).
+ *
+ * ⚠️ C'est une fonction, pas un store : elle se teste, se compose, et sert aussi
+ * bien dans un `$:` que dans une table de configuration (`$lib/raccourcis.ts`).
+ * Elle ne décide de **rien** côté serveur — le front n'est jamais le gardien
+ * d'un droit, il n'en est que le reflet.
+ */
+export function aRole(user: User | null, ...roles: string[]): boolean {
+	if (!user) return false;
+	const portes: string[] = user.roles?.length ? user.roles : user.role ? [user.role] : [];
+	return roles.some((r) => portes.includes(r));
+}
 
-export const isCS = derived(
-	currentUser,
-	($u) =>
-		!!$u?.roles?.includes('conseil_syndical') ||
-		!!$u?.roles?.includes('admin') ||
-		$u?.role === 'conseil_syndical' ||
-		$u?.role === 'admin',
-);
+export const isAdmin = derived(currentUser, ($u) => aRole($u, 'admin'));
+
+export const isCS = derived(currentUser, ($u) => aRole($u, 'conseil_syndical', 'admin'));
 
 // Vrai si l'utilisateur a au moins un rôle résidentiel (propriétaire, résident, ou aidant avec délégation active)
 export const hasResidentRole = derived(currentUser, ($u) => {
