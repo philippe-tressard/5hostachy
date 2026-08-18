@@ -94,6 +94,21 @@ MODELES = [
      '</td></tr></table>'
      '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
      True),
+    #  ⚠️ Modèle du SUIVI, distinct de la création (18/08/2026). Réutiliser
+    #  « Nouvel événement » pour un commentaire aurait annoncé une création à
+    #  chaque entrée d'Historique — le message aurait été faux, pas seulement
+    #  maladroit.
+    ("calendrier_evenement_suivi", "Événement calendrier — suivi", "Suivi : {{ evenement.titre }} — {{ residence.nom }}",
+     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">🔄 Suivi d’un événement</h2>'
+     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
+     '<td style="background:#F2EFE9;padding:16px">'
+     '<p style="margin:0 0 4px;font-size:13px;color:#C9983A;font-weight:600">{{ evenement.date }}</p>'
+     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ evenement.titre }}</p>'
+     '</td></tr></table>'
+     '{% if suivi.etat %}<p style="margin:0 0 12px"><strong>État :</strong> {{ suivi.etat }}</p>{% endif %}'
+     '{% if suivi.commentaire %}<div style="margin:0 0 20px">{{ suivi.commentaire|safe }}</div>{% endif %}'
+     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
+     True),
     ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c4 Nouveau document</h2>'
      '<p style="margin:0 0 16px">Un nouveau document a été publié sur l\u2019espace de votre résidence\u202f:</p>'

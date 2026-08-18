@@ -328,7 +328,7 @@
 		{:else}
 			<div class="card reply-form">
 				{#key repondreOuvert}
-					<EvolForm idPrefixe="tk-msg"
+					<EvolForm idPrefixe="tk-msg" titre="Répondre"
 						showFiles={!newInterne}
 						showEmail={$isCS && !newInterne}
 						avecInterne={$isCS}
@@ -364,7 +364,7 @@
 			</svelte:fragment>
 
 			<svelte:fragment slot="edition" let:evol>
-				<EvolForm idPrefixe="tk-evol-edit-{evol.id}"
+				<EvolForm idPrefixe="tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
@@ -379,7 +379,7 @@
 		{#if showEvolForm}
 			<div class="evol-form card">
 				{#key showEvolForm}
-					<EvolForm idPrefixe="tk-evol"
+					<EvolForm idPrefixe="tk-evol" titre="Commenter"
 						statutLabels={STATUT_LABELS}
 						currentStatut={ticket?.statut ?? ''}
 						showNotifs={$isCS}

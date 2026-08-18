@@ -84,6 +84,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 
@@ -93,6 +94,15 @@
 	    même fil —, et deux `<label for="…">` pointant le même id ne désignent plus
 	    rien. Même contrat que `ChampsCommuns`. */
 	export let idPrefixe = 'evol';
+	/**  CE QUE L'ON EST EN TRAIN DE FAIRE, écrit en toutes lettres (18/08/2026).
+	 *
+	 *   Ce formulaire était le SEUL du site sans en-tête : `FormulaireTicket` et
+	 *   `FormulaireActualite` passent par `FormulaireCreation`, qui leur donne un
+	 *   titre. Ici, le mode devait se deviner à partir de l'icône cliquée trois
+	 *   secondes plus tôt — signalé à l'écran : *« on ne sait pas si on est en
+	 *   mode édition, en mode suivi »*. R1 dit que le squelette porte
+	 *   *en-tête · corps · pied* : un formulaire sans nom viole le cadre. */
+	export let titre = 'Commenter';
 	/** Options affichées dans le select "Nouvel état" */
 	export let statutOptions: { value: string; label: string }[] = [];
 	/** Map value→label pour afficher le statut actuel */
@@ -227,7 +237,10 @@
 <!--  Même largeur de saisie que partout ailleurs (`ux-patterns` §9) : le
       formulaire s'étalait sur toute la carte, alors que le même geste sur une
       page dédiée s'arrête à 720 px. -->
-<div class="largeur-saisie">
+<!--  Pas de cadre : ce formulaire s'ouvre DÉJÀ dans une carte, et deux bordures
+      imbriquées pour un seul objet est le défaut signalé sur #425. Le titre,
+      lui, reste — c'est lui qui dit ce qu'on fait. -->
+<FormulaireCreation {titre} encadre={false}>
 
 	<!-- ── 3. Workflow ───────────────────────────────────────────────────────
 	     Plus de rangée de pastilles : le geste a été déclaré par le bouton qui a
@@ -346,7 +359,7 @@
 			{saving ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
 	</div>
-</div>
+</FormulaireCreation>
 
 <style>
 	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style

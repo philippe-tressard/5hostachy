@@ -152,10 +152,13 @@
 	}
 
 	//  ── 9. Diffusion ────────────────────────────────────────────────────────
-	let partagerWhatsapp = false;
-	let envoyerSyndic = false;
-	let envoyerCs = false;
-	let annonceHall = false;
+	//  ✅ Rouverte à l'édition (18/08/2026). Les cases reprennent les valeurs
+	//  enregistrées — « telle qu'à la création ». Ce qui rend la réouverture sûre
+	//  vit côté serveur : seule la transition décoché → coché envoie.
+	let partagerWhatsapp = publication?.partager_whatsapp ?? false;
+	let envoyerSyndic = publication?.envoyer_syndic ?? false;
+	let envoyerCs = publication?.envoyer_cs ?? false;
+	let annonceHall = publication?.annonce_hall ?? false;
 
 	//  ⚠️ La règle « Confidentiel interdit l'affiche de hall » enjambe les sections
 	//  2 et 9 : elle vit donc ici, seul endroit où les deux valeurs se rencontrent.
@@ -191,6 +194,13 @@
 					perimetre_cible: perimetreCible,
 					public_cible: publicCible,
 					photos_urls: photos,
+					//  Les canaux partent aussi : le serveur n'envoie que sur la
+					//  TRANSITION décoché → coché, donc réenregistrer sans y toucher
+					//  ne rejoue rien.
+					partager_whatsapp: partagerWhatsapp,
+					envoyer_syndic: envoyerSyndic,
+					envoyer_cs: envoyerCs,
+					annonce_hall: annonceHall,
 				});
 				toast('success', 'Publication mise à jour');
 				dispatch('modifie', maj);
@@ -230,7 +240,7 @@
 	}
 </script>
 
-<FormulaireCreation titre={titreBoite}>
+<FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
 	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre. -->
 		<SectionFormulaire premiere>

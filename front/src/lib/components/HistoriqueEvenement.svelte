@@ -70,6 +70,13 @@
 				contenu: data.contenu || undefined,
 				nouveau_statut: data.nouveau_statut,
 				fichiers_urls: data.fichiers_urls,
+				//  La DIFFUSION est un ACTE, rejouable à chaque entrée : chacune est
+				//  une nouvelle, à la différence d'une correction. Le serveur envoie
+				//  avec un modèle propre au SUIVI — réutiliser « Nouvel événement »
+				//  aurait annoncé une création à chaque commentaire.
+				partager_whatsapp: data.partager_whatsapp ?? false,
+				envoyer_syndic: data.envoyer_syndic ?? false,
+				envoyer_cs: data.envoyer_cs ?? false,
 			});
 			dispatch('fermer');
 			//  La page relit : le serveur a pu ajouter une ligne de correction, et
@@ -94,11 +101,12 @@
 
 	{#if ouvert}
 		{#key ouvert}
-			<EvolForm idPrefixe="ev-evol-{evenement.id}"
+			<EvolForm idPrefixe="ev-evol-{evenement.id}" titre="Commenter ou changer l’état"
 				statutOptions={options}
 				statutLabels={libelles}
 				currentStatut={evenement.statut_kanban ?? ''}
 				showFiles={true}
+				showNotifs={true}
 				saving={enCours}
 				on:submit={enregistrer}
 				on:cancel={() => dispatch('fermer')}

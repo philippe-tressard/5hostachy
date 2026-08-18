@@ -146,7 +146,7 @@
 				</div>
 			{:else if mode === 'evolution'}
 				<div class="tk-formulaire">
-					<EvolForm idPrefixe="tk-evol-{ticket.id}"
+					<EvolForm idPrefixe="tk-evol-{ticket.id}" titre="Commenter ou changer l’état"
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
