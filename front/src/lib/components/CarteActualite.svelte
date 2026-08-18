@@ -19,6 +19,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { documents as docsApi, type Publication } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
@@ -66,21 +67,24 @@
 
 	{#if estFil && pub.epingle}<span class="pin-badge">&#x1F4CC;</span>{/if}
 
-	<div class="pub-row">
-		<div class="pub-row-inner">
-			{#if pub.brouillon}<span class="badge badge-gray" style="flex-shrink:0">✏️ Brouillon</span>{/if}
-			<span class="pub-row-titre">{pub.titre}
-			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
-			</span>
-			{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}" style="flex-shrink:0">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray" style="flex-shrink:0">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}{#if pub.confidentiel}<span class="badge badge-gray" style="flex-shrink:0" title="Visible du seul périmètre sélectionné">&#x1F512; Confidentiel</span>{/if}
-		</div>
-		<div class="pub-row-right">
-			<span class="pub-row-date">{fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}</span>
-			<slot name="actions" />
-			<span class="chevron" class:open={expanded}>›</span>
-		</div>
-	</div>
+	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
+	      la norme de toutes les cartes du site depuis le 18/08/2026. Elle vit dans
+	      `EnteteCarte`, pas ici — chaque carte qui recomposait son en-tête avait sa
+	      propre façon de mal se replier, et sur téléphone le titre disparaissait. -->
+	<EnteteCarte titre={pub.titre} date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}>
+		<svelte:fragment slot="titre-suffixe">
+			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
+		</svelte:fragment>
+		<svelte:fragment slot="tags">
+			{#if pub.brouillon}<span class="badge badge-gray">✏️ Brouillon</span>{/if}
+			{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
+			{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
+			{#if pub.confidentiel}<span class="badge badge-gray" title="Visible du seul périmètre sélectionné">&#x1F512; Confidentiel</span>{/if}
+			{#if pub.auteur_nom}<span class="pub-auteur">{pub.auteur_nom}</span>{/if}
+		</svelte:fragment>
+		<svelte:fragment slot="actions"><slot name="actions" /></svelte:fragment>
+		<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
+	</EnteteCarte>
 
 	{#if !expanded && apercu}
 		<ApercuCarte contenu={pub.contenu} photos={pub.photos_urls ?? []} />
@@ -90,7 +94,7 @@
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
 		      impossible de sélectionner du texte, et un clic sur une photo ou un
 		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
-		<div class="pub-body" on:click|stopPropagation on:keydown|stopPropagation>
+		<div class="pub-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 			{#if formulaireOuvert}
 				<slot name="formulaire" />
 			{:else}
@@ -122,12 +126,10 @@
 	    reste ici que ce qui est propre à la publication. */
 	.pin-badge { position: absolute; top: -9px; left: 8px; display: inline-flex; align-items: center; background: var(--color-primary); color: #fff; font-size: .65rem; padding: .1rem .35rem; border-radius: 8px; line-height: 1.6; z-index: 1; pointer-events: none; }
 
-	.pub-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; cursor: pointer; user-select: none; transition: background .12s; }
-	.pub-row:hover { background: var(--color-bg); }
-	.pub-row-inner { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; overflow: hidden; }
-	.pub-row-titre { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.pub-row-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
-	.pub-row-date { font-size: .78rem; color: var(--color-text-muted); margin-right: .3rem; white-space: nowrap; }
+	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
+	    Ne reste ici que ce qui est propre à une publication. */
+	.pub-neuf { margin-left: .4em; font-size: .82em; font-weight: 500; vertical-align: middle; }
+	.pub-auteur { font-size: .78rem; color: var(--color-text-muted); }
 
 	.pub-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 	.pub-attachments { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 .25rem; }

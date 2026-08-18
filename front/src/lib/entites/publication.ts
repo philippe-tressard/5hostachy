@@ -63,12 +63,10 @@
 import type { EntiteDeclaree } from './types';
 
 /**
- * ⚠️ **Le ticket de dette du motif `api`.** Les documents d'une publication sont
- * des entités `Document` rattachées à `publication_id` : il n'existe aucun
- * endpoint qui en remplace la liste, donc rien à ouvrir en édition tant que #390
- * n'a pas unifié les pièces jointes.
+ * ⚠️ **Plus aucun motif `api` ici** depuis le 18/08/2026 : les documents ont
+ * rouvert à l'édition. Un motif `api` est une **dette, jamais un choix** — sa
+ * disparition est la preuve qu'elle a été payée.
  */
-const DETTE_API = '#390';
 
 /**
  * ⚠️ **Ne pas factoriser les explications derrière une fonction.** Les cinq
@@ -112,18 +110,26 @@ export const PUBLICATION: EntiteDeclaree = {
 			},
 		},
 		{
-			//  🔴 Présente aux QUATRE rendus, et c'est la correction due au cadre.
-			//  L'état n'existait qu'en édition : une publication naissait sans état
-			//  visible, alors que la création en envoyait un en silence
-			//  (`statut: statut || 'publie'`). Il est désormais proposé dès la
-			//  création, et son défaut reste `publie` — ce que le formulaire faisait
-			//  déjà, mais sans le dire.
+			//  🔴 UNE ACTUALITÉ N'A PAS DE WORKFLOW — arbitré le 18/08/2026, après
+			//  l'avoir ouvert la veille. Elle n'a pas d'étapes de vie : elle est
+			//  publiée, puis elle vieillit et bascule dans l'Historique toute seule.
+			//  « En cours », « Résolu », « Annulé » sont le vocabulaire d'un TICKET,
+			//  et les emprunter faisait ressembler une annonce à un dossier suivi.
 			//
-			//  La traçabilité ne se perd pas en le rouvrant à l'édition : c'est le
-			//  `PATCH` qui a changé de nature côté serveur — il écrit une
-			//  **correction**, pas une transition (`publications/crud.py`, #433).
+			//  Ce qui reste et qui n'est PAS un workflow : le Brouillon, qui décide
+			//  de la mise à disposition — il est en section 2, avec l'épinglage,
+			//  l'urgence et la confidentialité (« Publié/Brouillon est une décision
+			//  de diffusion », arbitrage du 16/08).
+			//
+			//  ⚠️ La colonne `statut` existe toujours en base et d'anciennes
+			//  publications en portent un : la carte l'affiche encore en badge, en
+			//  LECTURE. Rien ne permet plus d'en poser un — et l'archivage manuel,
+			//  qui exigeait « Résolu », a disparu avec lui.
 			id: 'workflow',
-			objet: 'Publié · En cours · Résolu · Annulé',
+			sansObjet:
+				"Une actualité n'a pas d'étapes de vie : elle est publiée, puis elle " +
+				"bascule dans l'Historique au bout de son délai. Le Brouillon, lui, n'est " +
+				'pas un workflow mais une décision de diffusion — il vit en section 2.',
 		},
 		{
 			id: 'perimetre',
@@ -159,20 +165,16 @@ export const PUBLICATION: EntiteDeclaree = {
 			objet: 'FichiersUpload mode photos',
 		},
 		{
+			//  ✅ OUVERTS à l'édition le 18/08/2026. La dette `api` qui les fermait
+			//  citait #390 — « aucun endpoint n'en remplace la liste » — mais la
+			//  demande était plus simple que la refonte : la publication EXISTE au
+			//  moment où on la corrige, donc on téléverse à l'unité (`POST
+			//  /documents`) et on retire à l'unité (`DELETE /documents/{id}`). Il n'y
+			//  a jamais eu besoin de remplacer une liste.
+			//  #390 reste ouvert pour ce qu'il vise vraiment : unifier les pièces
+			//  jointes derrière `FichiersUpload`, et non ce cas-ci.
 			id: 'documents',
-			objet: 'FichiersUpload mode documents (entités `Document` liées)',
-			absente: {
-				edition: {
-					motif: 'api',
-					ticket: DETTE_API,
-					explication:
-						"Les documents d'une publication ne sont pas une liste d'URLs mais des entités " +
-						'`Document` rattachées à `publication_id` : `PublicationUpdate` ne les porte pas, ' +
-						"et aucun endpoint n'en remplace la liste. Ouvrir la section laisserait ajouter " +
-						'des fichiers sans jamais pouvoir en retirer un — la moitié d’un geste. À ' +
-						'corriger côté API en unifiant les pièces jointes.',
-				},
-			},
+			objet: 'Documents joints (entités `Document` liées à la publication)',
 		},
 		{
 			id: 'diffusion',

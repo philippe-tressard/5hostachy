@@ -2,6 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -877,39 +878,35 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					on:click={() => expandedEvId = expanded ? null : ev.id}
 					on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedEvId = expanded ? null : ev.id; } }}
 				>
-					<div class="event-type">{typeLabel(ev.type)}</div>
-					<div class="event-body">
-						<strong class="event-titre">{ev.titre}</strong>
-						{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
-						{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
-					</div>
-					{#if !expanded}<FluxVignette photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} size={48} />{/if}
-					<div class="event-date">
-						<div>{formatDate(ev.debut)}</div>
-						{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
-						{#if !estPerimetreParDefaut(ev.perimetre)}
-							<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(ev.perimetre)}</span>
-						{/if}
-						<small class="ev-updated">
-							{#if ev.mis_a_jour_le}
-								Mise à jour le {fmtDateLong(ev.mis_a_jour_le)}
-							{:else}
-								Publié le {fmtDateLong(ev.cree_le)}
-							{/if}{#if ev.auteur_nom} · {ev.auteur_nom}{/if}
-						</small>
-					</div>
-					{#if $isCS && ev._source !== 'devis_ponctuel'}
-						<div class="event-actions" on:click|stopPropagation on:keydown|stopPropagation>
-							<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
-							{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
-								<button class="btn-icon" aria-label="Archiver" title="Archiver" on:click={() => archiveEv(ev.id)}>&#x1F4E6;</button>
+					<!--  La NORME de toutes les cartes du site (`EnteteCarte`, 18/08/2026) :
+					      titre sur sa propre ligne, puis tags à gauche / date et actions à
+					      droite. Cette carte les mettait sur UNE ligne, en trois colonnes —
+					      et sur téléphone le titre se réduisait à trois points.
+					      Le chevron dit que la carte s'ouvre (#362) ; sur tactile c'est LUI
+					      qui porte l'information, `:hover` ne s'y déclenchant pas. -->
+					<EnteteCarte titre={ev.titre} date={formatDate(ev.debut)}>
+						<svelte:fragment slot="tags">
+							<span class="badge badge-gray">{typeLabel(ev.type)}</span>
+							{#if ev.statut_kanban}<span class="badge badge-blue">{KANBAN_COLS.find((c) => c.id === ev.statut_kanban)?.label ?? ev.statut_kanban}</span>{/if}
+							{#if !estPerimetreParDefaut(ev.perimetre)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(ev.perimetre)}</span>{/if}
+							{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
+							{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
+							{#if ev.fin}<span class="event-meta">→ {formatDate(ev.fin)}</span>{/if}
+							{#if ev.auteur_nom}<span class="event-meta">{ev.auteur_nom}</span>{/if}
+						</svelte:fragment>
+						<svelte:fragment slot="actions">
+							{#if !expanded}<FluxVignette photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} size={32} />{/if}
+							{#if $isCS && ev._source !== 'devis_ponctuel'}
+								<span class="event-actions" on:click|stopPropagation on:keydown|stopPropagation role="presentation">
+									<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
+									{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
+										<button class="btn-icon" aria-label="Archiver" title="Archiver" on:click={() => archiveEv(ev.id)}>&#x1F4E6;</button>
+									{/if}
+								</span>
 							{/if}
-						</div>
-					{/if}
-					<!--  Le chevron dit que la carte s'ouvre (#362). Il manquait ici, seul
-					      écran dépliable du site sans lui — et sur tactile c'est LUI qui
-					      porte l'information, `:hover` ne s'y déclenchant pas. -->
-					<span class="chevron" class:open={expanded}>›</span>
+						</svelte:fragment>
+						<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
+					</EnteteCarte>
 					{#if expanded && (ev.description || ev.photos_urls?.length || ev.fichiers_urls?.length)}
 						<div class="ev-expanded-body rich-content" on:click|stopPropagation on:keydown|stopPropagation>
 							{#if ev.description}{@html safeHtml(ev.description)}{/if}

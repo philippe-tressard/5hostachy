@@ -100,6 +100,14 @@
 	     Voir l'en-tête de `FichiersUpload.svelte`. */
 	export let documentsDifferes = false;
 	export let documentsFichiers: File[] = [];
+	/**  Qui rend le CONTRÔLE des documents. `interne` (défaut) : `FichiersUpload`,
+	     comme partout. `slot` : l'écran fournit le sien — les documents d'une
+	     publication sont des entités `Document` avec un identifiant, qu'on ajoute
+	     et retire à l'unité. **La SECTION reste ici** dans les deux cas : son rang,
+	     son intitulé et sa séparation ne se négocient pas, seul le contrôle change.
+	     C'est le même contrat que la Diffusion, dont les actualités rendent déjà
+	     les canaux elles-mêmes. */
+	export let documentsControle: 'interne' | 'slot' = 'interne';
 
 	//  ── 9. Diffusion ──────────────────────────────────────────────────────────
 	export let avecDiffusion = false;
@@ -174,9 +182,19 @@
 {#if avecDocuments}
 	<SectionFormulaire titre="Documents" pour="{idPrefixe}-documents">
 		<div class="field champ-large">
-			<FichiersUpload id="{idPrefixe}-documents" mode="documents" titre=""
-				differe={documentsDifferes}
-				bind:urls={documents} bind:fichiers={documentsFichiers} />
+			<!--  L'écran peut fournir SON contrôle, comme pour la Diffusion : les
+			      documents d'une publication sont des entités `Document` avec un
+			      identifiant, pas une liste d'URLs — on les ajoute et on les retire à
+			      l'unité. Le régime de téléversement est un paramètre de l'objet, il
+			      ne s'uniformise pas ; ce qui s'uniformise, c'est la SECTION — son
+			      rang, son intitulé et sa séparation, qui restent ici. -->
+			{#if documentsControle === 'slot'}
+				<slot name="documents" />
+			{:else}
+				<FichiersUpload id="{idPrefixe}-documents" mode="documents" titre=""
+					differe={documentsDifferes}
+					bind:urls={documents} bind:fichiers={documentsFichiers} />
+			{/if}
 		</div>
 	</SectionFormulaire>
 {/if}

@@ -55,7 +55,8 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 ### Les neuf sections, dans cet ordre — il ne se discute pas
 
 1. **Titre** *(et lui seul)* · 2. **Champs spécifiques** (Catégorie, Saisi
-pour…) · 3. **Workflow** · 4. **Périmètre** · 5.
+pour…) · 3. **Workflow** *(quand l'entité en a un — voir ci-dessous)* · 4.
+**Périmètre** · 5.
 **Destinataires** *(qui est concerné dans l'application)* · 6. **Description** ·
 7. **Photos** · 8. **Documents** · 9. **Diffusion** *(par quels canaux on prévient
 à l'extérieur)*.
@@ -73,12 +74,22 @@ Les sections **1 à 8 décrivent l'entité** ; la **9 est un acte**.
 |---|---|
 | Affichage | 1→8 en lecture · 9 absente |
 | Création | 1→9 en saisie |
-| **Édition** | **1→8 identiques à la création, workflow compris** · **9 absente**, motif `geste` |
+| **Édition** | **1→9 identiques à la création** — la Diffusion y est **rouverte** (18/08), mais **seule la transition décoché → coché envoie** |
 | **Évolution** | **création sans le titre** (hérité) · workflow **tracé** · périmètre et destinataires hérités · **9 rejouable** |
 
-**L'édition corrige** — une erreur, un oubli, un complément. **Une correction n'est
-pas une nouvelle** : c'est pourquoi la Diffusion tombe, et seulement elle. Le
-`PATCH` écrit une **correction**, jamais une transition.
+**L'édition corrige** — une erreur, un oubli, un complément. Le `PATCH` écrit une
+**correction**, jamais une transition.
+
+🔴 **La Diffusion a rouvert à l'édition le 18/08/2026**, sur arbitrage : *le CS
+doit pouvoir décider d'envoyer au syndic un objet déjà saisi*. Ce qui rend la
+réouverture sûre n'est **pas** l'interface mais le **serveur** — seule la
+transition *décoché → coché* envoie. Un canal déjà coché ne repart pas à chaque
+enregistrement, donc corriger une faute de frappe reste silencieux.
+
+⚠️ **Sans ce mécanisme, rouvrir est PIRE que fermer** : le `PATCH` stockerait le
+drapeau sans rien envoyer, et la case promettrait un envoi qui n'a pas lieu.
+**Avant de rouvrir un champ dans l'interface, vérifier que le serveur le
+CONSOMME.**
 
 ### Les six règles
 
@@ -112,7 +123,9 @@ pas une nouvelle** : c'est pourquoi la Diffusion tombe, et seulement elle. Le
 | La déclaration d'une entité et **ses divergences motivées** | `front/src/lib/entites/<entite>.ts` | la lire ; si elle n'existe pas, l'écrire |
 | Le squelette de **lecture** (R1 pour l'affichage) | `FicheLecture.svelte` | l'affichage passe par lui, il tient l'ordre |
 | Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |
-| La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | 3 recopies sur 6 remplacées ; les 3 autres attendent d'être constatées (R5) |
+| La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | **6 recopies sur 6 remplacées** |
+| L'**en-tête d'une carte de liste** | `EnteteCarte.svelte` | titre / tags · date · actions — voir §3 |
+| La rangée d'**états en pastilles** | `WorkflowPastilles.svelte` | jamais un `<select>` nu (R3) |
 | Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, et **une section rendue hors déclaration** |
 
 🔴 **La section 1 ne porte QUE le titre** (arbitré le 18/08/2026, sur les
@@ -201,9 +214,35 @@ de correspondance dans une page.
 
 **Le pattern principal** pour les listes (tickets, publications, événements, prestataires).
 
-### Structure 2 lignes
-- **Ligne 1** : icône + titre + badges clé
-- **Ligne 2 (méta)** : lieu + périmètre + auteur — **toujours visible** (collapsé ET expandé)
+### 🔴 La structure d'en-tête — `EnteteCarte.svelte`, et elle vaut pour TOUT le site
+
+Posée le **18/08/2026**, après un constat à l'écran : le titre partageait sa ligne
+avec les tags, la date et les icônes, et **sur téléphone il disparaissait** — la
+ligne étant en `flex` avec `text-overflow: ellipsis`, les badges de largeur fixe
+gagnaient et le titre se réduisait à trois points. On lisait une liste sans savoir
+de quoi elle parlait.
+
+```
+┌──────────────────────────────────────────────┐
+│ Titre — sur 1 ou 2 lignes si nécessaire      │
+│ tags ················· date  actions  ›      │
+│ quatre lignes d'aperçu                       │
+└──────────────────────────────────────────────┘
+```
+
+- le **titre** occupe sa ou ses propres lignes (2 au maximum, puis coupé) ;
+- en dessous, **une seule ligne** : **tags à gauche** (workflow, périmètre,
+  confidentiel, auteur), **date puis actions puis chevron à droite** ;
+- puis l'aperçu.
+
+**Ne JAMAIS recomposer cet en-tête dans une page** : `EnteteCarte` le porte, avec
+son style et son repli. C'est **R1** au sens propre — la responsivité appartient
+au squelette, une seule fois pour toutes les pages ; chaque carte qui recomposait
+son en-tête avait sa propre façon de mal se replier.
+
+**L'ORDRE DES ICÔNES est celui de la carte de ticket**, désignée comme référence :
+**🔄 commenter · ✏️ modifier · 🗑️ supprimer**, puis le chevron. Il était inversé
+sur les actualités, et deux cartes du même site ne se lisaient pas pareil.
 
 ### La source unique : `.carte-liste` (app.css) — depuis le 15/08/2026
 
@@ -426,8 +465,21 @@ l'erreur qui a fait poser la question :
 | Contient | Ouvert / En cours / Résolu (ticket), Suivi Kanban (événement, prestation) | affichage au fil, épinglage, WhatsApp, syndic, conseil syndical, Publié / Brouillon |
 | Se place | **avant** le Périmètre — c'est un champ spécifique de l'objet | **en fin**, après les documents |
 
-Une actualité **n'a pas de workflow** : elle n'a pas d'étapes de vie. Son
-Publié/Brouillon est une décision de **diffusion**. Un ticket, lui, en a un.
+🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
+18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
+est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,
+« Résolu », « Annulé » sont le vocabulaire d'un **ticket**, et les emprunter
+faisait ressembler une annonce à un dossier suivi. Son Publié/Brouillon est une
+décision de **diffusion**, et vit en section 2.
+
+La déclaration le dit (`sansObjet`), et c'est elle qui l'impose : la section
+disparaît de la création, de l'édition **et** de l'Historique — dans ce dernier,
+parce que la liste d'états passée à `EvolForm` est **vide**, pas parce qu'une
+condition en dur le décide.
+
+⚠️ **Conséquence en cascade** : l'archivage manuel d'une actualité exigeait l'état
+« Résolu ». Sans workflow, il ne pouvait plus être atteint — l'icône 📦 a donc
+disparu avec lui. L'archivage **automatique**, lui, reste.
 
 **Why (16/08/2026)** : la section finale s'appelait « État », terme qui mélangeait
 l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu'il
