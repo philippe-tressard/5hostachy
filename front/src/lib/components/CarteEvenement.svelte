@@ -27,9 +27,9 @@
 	import { createEventDispatcher } from 'svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import ApercuCarte from './ApercuCarte.svelte';
-	import PiecesJointes from './PiecesJointes.svelte';
+	import FicheLecture from './FicheLecture.svelte';
 	import HistoriqueEvenement from './HistoriqueEvenement.svelte';
-	import { safeHtml } from '$lib/sanitize';
+	import { EVENEMENT } from '$lib/entites/evenement';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
 
 	export let ev: any;
@@ -111,12 +111,28 @@
 				photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} />
 		{/if}
 		{#if expanded}
-			<div class="carte-corps ev-expanded-body rich-content" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-				{#if ev.description}{@html safeHtml(ev.description)}{/if}
-				{#if ev.photos_urls?.length || ev.fichiers_urls?.length}
-					<PiecesJointes urls={[...(ev.photos_urls ?? []), ...(ev.fichiers_urls ?? [])]} format="grand" />
-				{/if}
-				<!--  L'HISTORIQUE — dernier écran à faire avancer un suivi en silence. -->
+			<div class="carte-corps ev-expanded-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+				<!--  🔴 Le corps n'écrit plus l'ordre de ses notions : `FicheLecture` le
+				      lit dans la déclaration `EVENEMENT` (#432). Il rendait
+				      `[...photos_urls, ...fichiers_urls]` dans UN seul bloc — la fusion
+				      des sections 7 et 8, que le cadre interdit. Elle avait déjà dû être
+				      défaite trois lignes plus haut, dans l'aperçu, parce qu'un devis PDF
+				      versé avec les photos sortait en image cassée ; elle survivait ici.
+
+				      ⚠️ Le PÉRIMÈTRE n'est pas passé à `FicheLecture`, et ce n'est pas un
+				      oubli : il est déjà rendu en tag d'`EnteteCarte`, au-dessus, où il
+				      reste lisible carte repliée (« la méta est toujours visible en mode
+				      collapsé »). Le lui redonner ici l'afficherait deux fois sur le même
+				      écran. C'est un choix de PLACEMENT dans un même état — la section 4
+				      est bien rendue en affichage —, et non une divergence entre états :
+				      R4 n'a rien à en dire, et rien n'est inventé pour le déclarer. -->
+				<FicheLecture entite={EVENEMENT}
+					description={ev.description ?? ''}
+					photos={ev.photos_urls ?? []}
+					documents={ev.fichiers_urls ?? []} />
+				<!--  L'HISTORIQUE — dernier écran à faire avancer un suivi en silence.
+				      Il n'est pas une des neuf sections : il vient après elles, comme le
+				      fil d'un ticket après sa fiche. -->
 				<HistoriqueEvenement evenement={ev} colonnes={colonnes} peutAgir={peutAgir}
 					ouvert={suiviOuvert} on:evolue on:fermer />
 			</div>
