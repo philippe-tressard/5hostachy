@@ -32,6 +32,8 @@
 -->
 <script lang="ts">
 	import RichEditor from '$lib/components/RichEditor.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { fmtDateShort } from '$lib/date';
@@ -111,77 +113,101 @@
 	<hr class="ah-separateur" />
 {/if}
 
-<!--  1. Titre. -->
-<label class="ah-label" for="ah-titre">Titre *</label>
-<input class="ah-champ" id="ah-titre" type="text" bind:value={titre} maxlength="120"
-	placeholder="Ex : Coupure d'eau — mardi 4 août" />
+<!--  1. Titre. `SectionFormulaire` porte le filet discret qui sépare les
+      sections — celui de Tickets, demandé à l'écran le 18/08/2026. La section
+      n'ayant qu'UN champ, son titre EST le libellé du champ (R3). -->
+<SectionFormulaire premiere titre="Titre" requis pour="ah-titre">
+	<input class="ah-champ" id="ah-titre" type="text" bind:value={titre} maxlength="120"
+		placeholder="Ex : Coupure d'eau — mardi 4 août" />
+</SectionFormulaire>
 
 <!--  2. Champs spécifiques : le format de l'affiche. -->
-<label class="ah-label ah-label-espace">Format</label>
-<div class="perimetre-pills">
-	{#each formats as f}
-		<button type="button" class="pill" class:pill-active={format === f.val}
-			on:click={() => (format = f.val)}>{f.label}</button>
-	{/each}
-</div>
-<p class="ah-aide">
-	{#if format === 'auto'}
-		Le plus petit format qui accueille le texte est retenu, pour occuper le moins
-		de place possible dans l'afficheur du hall. Sous l'A4, des pointillés de
-		découpe sont tracés sur l'affiche.
-	{:else}
-		Format imposé — le message sera mis en page en {format.toUpperCase()}.
-	{/if}
-	<strong>Prévu : {formatPrevu}</strong> ({longueur} caractère{longueur > 1 ? 's' : ''} —
-	titre et message)
-</p>
+<SectionFormulaire titre="Format">
+	<!--  🔴 `Pastille`, PAS `<button class="pill">` (18/08/2026, signalé à l'écran :
+	      « le format est illisible »). En sortant ce balisage de la page, j'y ai laissé
+	      `.pill` et `.pill-active` : les pastilles sont parties NUES en production —
+	      des rectangles collés, « Auto|A4|A5|A6 ».
+	
+	      C'est mot pour mot la régression v2.67.11, celle que ce dépôt cite dans une
+	      dizaine de commentaires, et je l'ai commise en déplaçant du balisage. Écrire
+	      la règle ne suffit pas : seul un composant qui porte son style AVEC son
+	      balisage l'empêche, et c'est très exactement la raison d'être de `Pastille`. -->
+	<div class="perimetre-pills">
+		{#each formats as f}
+			<Pastille petite active={format === f.val}
+				on:click={() => (format = f.val)}>{f.label}</Pastille>
+		{/each}
+	</div>
+	<p class="ah-aide">
+		{#if format === 'auto'}
+			Le plus petit format qui accueille le texte est retenu, pour occuper le moins
+			de place possible dans l'afficheur du hall. Sous l'A4, des pointillés de
+			découpe sont tracés sur l'affiche.
+		{:else}
+			Format imposé — le message sera mis en page en {format.toUpperCase()}.
+		{/if}
+		<strong>Prévu : {formatPrevu}</strong> ({longueur} caractère{longueur > 1 ? 's' : ''} —
+		titre et message)
+	</p>
+</SectionFormulaire>
 
-<!--  4. Périmètre. -->
-<PerimetrePicker titre="Périmètre d'affichage" bind:value={perimetre} />
-<!--  ⚠️ Cette aide annonçait « l'annonce part par mail aux membres du CS rattachés
-      à ce périmètre ». C'était vrai, et ça ne l'est plus : l'écran ne fait que
-      générer l'affiche (18/08/2026). Une aide qui décrit un envoi qui n'a pas lieu
-      est pire qu'une aide absente — on compte dessus. -->
-<p class="ah-aide">
-	Le périmètre est imprimé sur l'affiche : il dit où elle doit être posée. Aucun
-	message n'est envoyé — l'affiche se télécharge et se diffuse à votre main.
-</p>
+<SectionFormulaire>
+	<!--  4. Périmètre. -->
+	<PerimetrePicker titre="Périmètre d'affichage" bind:value={perimetre} />
+	<!--  ⚠️ CETTE AIDE A MENTI DEUX FOIS EN UN JOUR, dans les deux sens, et c'est
+	      instructif : elle annonçait d'abord un envoi automatique (vrai jusqu'au matin
+	      du 18/08), puis « aucun message n'est envoyé » — écrit quand l'envoi a été
+	      retiré, et devenu faux **quelques heures plus tard** avec la section
+	      Diffusion.
+	
+	      Une aide qui décrit le COMPORTEMENT d'un autre champ vieillit à chaque fois
+	      que ce champ bouge, sans que rien ne le signale. Elle ne dit donc plus que ce
+	      dont elle répond : à quoi sert le périmètre. L'envoi se lit là où il se
+	      décide — dans la section Diffusion, qui porte sa propre aide. -->
+	<p class="ah-aide">
+		Imprimé sur l'affiche : il dit où elle doit être posée.
+	</p>
+</SectionFormulaire>
 
 <!--  6. Description — ici, le message affiché. -->
-<label class="ah-label ah-label-espace" for="ah-message">Message *</label>
-<RichEditor bind:value={message} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
+<SectionFormulaire titre="Message" requis idTitre="ah-message-titre">
+	<RichEditor bind:value={message} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
+</SectionFormulaire>
 
-<!--  7. Photos. -->
-<FichiersUpload id="ah-photos" bind:urls={photos} max={maxPhotos} mode="photos"
-	upload={onUpload} on:change={onPhotosChange} />
-<p class="ah-aide">
-	Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de
-	l'annonce reste l'élément central. Une affiche avec photo ne descend jamais sous
-	l'{formatMinPhotos}.
-</p>
+<SectionFormulaire titre="Photos">
+	<!--  7. Photos. -->
+	<FichiersUpload id="ah-photos" bind:urls={photos} max={maxPhotos} mode="photos"
+		upload={onUpload} on:change={onPhotosChange} />
+	<p class="ah-aide">
+		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de
+		l'annonce reste l'élément central. Une affiche avec photo ne descend jamais sous
+		l'{formatMinPhotos}.
+	</p>
+</SectionFormulaire>
 
-<!--  9. Diffusion — le seul ACTE du formulaire, et le dernier, comme partout.
-
-      🔴 L'envoi au CS était AUTOMATIQUE le matin du 18/08 : il partait au moindre
-      essai de mise en page, pièce jointe comprise. Retiré dans la foulée, il revient
-      ici sous sa forme juste — une case, décochée par défaut.
-
-      ⚠️ Décochée, et c'est le point : la valeur par défaut d'un envoi est « ne pas
-      envoyer ». Un défaut à coché reproduirait l'automatisme qu'on vient de retirer,
-      en donnant l'illusion du choix.
-
-      ⚠️ UNE seule case, pas `CanauxNotification` : WhatsApp et le syndic n'ont pas
-      d'objet ici. Une affiche de hall s'imprime et se pose — le conseil syndical est
-      le seul destinataire qui en fasse quelque chose. -->
-<label class="ah-label ah-label-espace" for="ah-diffusion">Diffusion</label>
-<label class="case">
-	<input id="ah-diffusion" type="checkbox" bind:checked={envoyerCs} />
-	<span>Envoyer l'affiche au conseil syndical du périmètre, pour impression</span>
-</label>
-<p class="ah-aide">
-	Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis
-	l'historique — cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
-</p>
+<SectionFormulaire titre="Diffusion">
+	<!--  9. Diffusion — le seul ACTE du formulaire, et le dernier, comme partout.
+	
+	      🔴 L'envoi au CS était AUTOMATIQUE le matin du 18/08 : il partait au moindre
+	      essai de mise en page, pièce jointe comprise. Retiré dans la foulée, il revient
+	      ici sous sa forme juste — une case, décochée par défaut.
+	
+	      ⚠️ Décochée, et c'est le point : la valeur par défaut d'un envoi est « ne pas
+	      envoyer ». Un défaut à coché reproduirait l'automatisme qu'on vient de retirer,
+	      en donnant l'illusion du choix.
+	
+	      ⚠️ UNE seule case, pas `CanauxNotification` : WhatsApp et le syndic n'ont pas
+	      d'objet ici. Une affiche de hall s'imprime et se pose — le conseil syndical est
+	      le seul destinataire qui en fasse quelque chose. -->
+	<label class="case">
+		<input id="ah-diffusion" type="checkbox" bind:checked={envoyerCs} />
+		<span>Envoyer l'affiche au conseil syndical du périmètre, pour impression</span>
+	</label>
+	<p class="ah-aide">
+		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis
+		l'historique — cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
+	</p>
+</SectionFormulaire>
 
 <div class="form-actions">
 	<button type="button" class="btn btn-outline" disabled={!valide || apercuLoading}
@@ -226,7 +252,8 @@
 		border-radius: var(--radius); background: var(--color-bg); font-size: .9rem;
 	}
 	.ah-aide { font-size: .8rem; color: var(--color-text-muted); margin: .35rem 0 0; line-height: 1.5; }
-	.ah-label-espace { margin-top: .85rem; }
+	/*  `.ah-label-espace` a disparu : l'espacement entre sections est celui de
+	    `SectionFormulaire`, une seule fois pour tout le site. */
 	/*  Une case et son libellé. Le `width:auto` annule le `width:100%` des champs
 	    de saisie — sans lui, la case s'étire et repousse son texte à l'autre bout
 	    de la ligne (défaut signalé sur le sondage ET l'annonce, 16/08/2026). */

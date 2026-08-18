@@ -20,7 +20,7 @@
 	import Vignette from '$lib/components/Vignette.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
-	import { fichiersDepuisUrls } from '$lib/fichiers';
+	import { fichiersDepuisUrls, MAX_FICHIERS } from '$lib/fichiers';
 	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketActif, estTicketClos } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
@@ -626,7 +626,6 @@
 	let ahPhotos: string[] = [];
 	let ahEnvoyerCs = false;
 	let ahSaving = false;
-	const AH_MAX_PHOTOS = 2;
 
 	// Aperçu avant envoi
 	let ahApercuHtml = '';
@@ -682,7 +681,7 @@
 			ahTitre = src.titre;
 			ahMessage = src.message;
 			ahPerimetre = src.perimetre_cible?.length ? [...src.perimetre_cible] : perimetreDefautListe();
-			ahPhotos = (src.images ?? []).slice(0, AH_MAX_PHOTOS);
+			ahPhotos = (src.images ?? []).slice(0, MAX_FICHIERS);
 			ahFormat = 'auto';
 			ahApercuHtml = '';
 			ahApercuFormat = '';
@@ -2281,7 +2280,7 @@
 						bind:titre={ahTitre} bind:message={ahMessage}
 						bind:perimetre={ahPerimetre} bind:format={ahFormat} bind:photos={ahPhotos}
 						pubs={ahPubs} sourceId={ahSourceId} formats={AH_FORMATS}
-						maxPhotos={AH_MAX_PHOTOS}
+						maxPhotos={MAX_FICHIERS}
 						bind:envoyerCs={ahEnvoyerCs}
 						valide={ahFormulaireValide} saving={ahSaving} apercuLoading={ahApercuLoading}
 						onPrefill={ahPrefillDepuisPublication}
