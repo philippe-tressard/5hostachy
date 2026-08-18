@@ -447,6 +447,19 @@ jobs:
         working-directory: front
         run: npm run lint:titres
 
+      # Une section Workflow DÉCORATIVE : les pastilles s'affichaient en création
+      # d'un ticket, se cliquaient, et `statut` ne partait pas dans le POST — le
+      # ticket repartait toujours en « Ouvert » (#435). Le serveur l'acceptait
+      # pourtant depuis le 16/08 : c'est le front qui ne demandait rien. La même
+      # section fonctionnait sur les publications, si bien que deux entités
+      # divergeaient sur un champ que le cadre #430 déclare identique.
+      #
+      # Un champ qu'on voit et qui ne fait rien est la faute symétrique du 200 qui
+      # n'écrit rien : il fabrique la confiance qu'il devrait retirer.
+      - name: Aucune section Workflow décorative
+        working-directory: front
+        run: npm run lint:workflow
+
       # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
       # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
       # attrapait aussi `/auth/me` : pendant les sept jours où la session restait

@@ -225,6 +225,13 @@
 				fichiers_urls: fichiersUrls,
 			};
 			if ($isCS) {
+				//  Le Workflow était DÉCORATIF à la création : les pastilles s'affichaient,
+				//  se cliquaient, et `statut` ne partait pas — le ticket repartait toujours
+				//  en « Ouvert » (#435). Le serveur l'accepte pourtant depuis le 16/08, avec
+				//  une liste blanche DÉRIVÉE de l'énumération et réservée au CS ; seule la
+				//  charge utile l'avait oublié. Comme en édition, il n'accompagne le lot que
+				//  pour le CS : un résident ne doit pas ouvrir un ticket déjà « Résolu ».
+				payload.statut = statut;
 				if (modeSaisiPour === 'resident' && saisiPourUserId) {
 					payload.saisi_pour_user_id = saisiPourUserId;
 				} else if (modeSaisiPour === 'exterieur') {
