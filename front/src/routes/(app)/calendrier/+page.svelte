@@ -871,7 +871,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			{#each evs as ev}
 				{@const expanded = expandedEvId === ev.id}
 				<CarteEvenement {ev} {expanded} colonnes={KANBAN_COLS} peutAgir={$isCS}
-					suiviOuvert={evolOuverte === ev.id} {typeLabel} formatDate={formatDate}
+					suiviOuvert={evolOuverte === ev.id} editionOuverte={showForm && editId === ev.id} {typeLabel} formatDate={formatDate}
 					on:basculer={() => (expandedEvId = expanded ? null : ev.id)}
 					on:suivre={() => ouvrirSuivi(ev)}
 					on:modifier={() => startEdit(ev)}

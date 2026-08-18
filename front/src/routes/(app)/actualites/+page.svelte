@@ -231,10 +231,10 @@
 			      publication bascule dans l'Historique au bout de son délai. -->
 			<svelte:fragment slot="actions">
 				{#if $isCS}
-					<button class="btn-icon" aria-label="Commenter"
+					<button class="btn-icon" aria-pressed={showEvolForm === pub.id} aria-label="Commenter"
 						title="Commenter"
 						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button>
-					<button class="btn-icon-edit" aria-label="Modifier" title="Modifier"
+					<button class="btn-icon-edit" aria-pressed={editingPub?.id === pub.id} aria-label="Modifier" title="Modifier"
 						on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
 				{/if}
 				{#if $isAdmin}

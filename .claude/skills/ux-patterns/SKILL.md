@@ -885,31 +885,51 @@ imaginaire.
 d'en-tête de page — leur `<h1>` est le titre de l'objet, dans sa carte. Ne pas les
 convertir mécaniquement : ce qu'il faut y mettre est instruit dans #365.
 
-## 13 bis. 🔴 UN FORMULAIRE DIT TOUJOURS CE QU'IL FAIT
+## 13 bis. 🔴 LE MODE SE LIT SUR L'ICÔNE QUI L'A OUVERT
 
-**Tout formulaire porte un titre**, et c'est lui qui dit le mode. Posé le
-18/08/2026 après un constat à l'écran : *« sur toutes les pages on ne sait pas si
-on est en mode édition, en mode suivi »*.
+**Corrigé le 18/08/2026, le soir même où la règle inverse avait été posée.**
+Ce paragraphe disait : *« tout formulaire porte un titre, et c'est lui qui dit
+le mode »*. Le diagnostic d'origine était bon — le mode ne se lisait nulle part,
+signalé ainsi : *« on ne sait pas si on est en mode édition, en mode suivi »* —
+mais le remède était mauvais, et l'écran l'a dit :
 
-La cause n'était pas un manque de contraste : `EvolForm` était **le seul
-formulaire du site sans en-tête**. `FormulaireTicket` et `FormulaireActualite`
-passent par `FormulaireCreation`, qui leur donne un titre ; lui rendait ses
-sections à nu. Le mode devait donc se **deviner** à partir de l'icône cliquée
-trois secondes plus tôt — et **R1** dit que le squelette porte *en-tête · corps ·
-pied*. Un formulaire sans nom viole le cadre.
+> « les titres d'état je ne trouve pas ça beau : je mettrais l'icône concernée
+>   en plus gros ou inversée pour supprimer ce pseudo état qui éloigne du titre »
 
-| Geste | Titre |
+Un titre au-dessus du formulaire ajoute un **second en-tête** sous celui de la
+carte : il repousse le contenu et éloigne le formulaire de l'objet auquel il se
+rapporte. Le bon endroit pour dire « vous êtes en train de commenter » n'est pas
+au-dessus du formulaire, c'est **sur l'icône qui l'a ouvert** — elle est déjà là,
+déjà regardée, et son inversion se lit sans être lue.
+
+### La règle
+
+| Où | Ce qui dit le mode |
 |---|---|
-| création | « Nouveau ticket » · « Nouvelle publication » · « Nouvel événement » |
-| édition | « **Modifier** le ticket #123 » · « **Modifier** la publication » |
-| évolution | « **Commenter ou changer l'état** », ou « Commenter » sans workflow |
-| correction d'une entrée | « **Modifier le commentaire** » |
+| formulaire **encadré** (création) | son titre : c'est l'en-tête de SA carte, pas un doublon |
+| formulaire **dans la carte d'un objet** | l'icône qui l'a ouvert, **inversée** |
 
-⚠️ **`FormulaireCreation` porte une prop `encadre`.** À `false`, il rend le titre
-**sans la carte** — pour un formulaire qui s'ouvre déjà DANS une carte (ticket,
-actualité, événement). Deux bordures imbriquées pour un seul objet, c'est la
-« carte dans la carte » signalée sur #425 ; le titre, lui, reste dans les deux
-cas. C'est le composant qui décide, jamais l'écran.
+```svelte
+<button class="btn-icon" aria-pressed={mode === 'evolution'} …>🔄</button>
+<button class="btn-icon" aria-pressed={mode === 'edition'} …>✏️</button>
+```
+
+Le style vit dans `app.css`, une seule fois : fond plein en couleur primaire,
+glyphe blanc, `scale(1.15)`. ⚠️ **Un simple changement de teinte ne suffit pas** :
+il ne se distinguerait pas du survol, et l'on ne saurait plus si l'icône est
+active ou seulement pointée.
+
+⚠️ **`aria-pressed`, et non une classe.** L'état est alors annoncé par les
+lecteurs d'écran en même temps qu'il se voit, aucun écran n'a de classe de plus à
+penser — et un bouton bascule doit le porter de toute façon.
+
+⚠️ **Le titre ne disparaît pas, il devient invisible** : `FormulaireCreation` le
+passe en `aria-label` sur le groupe. Qui ne voit pas l'icône entend toujours
+« Modifier le commentaire » en entrant dans le formulaire.
+
+⚠️ `encadre` garde son autre rôle : à `false`, pas de carte imbriquée — deux
+bordures pour un seul objet, c'est la « carte dans la carte » de #425. C'est le
+composant qui décide, jamais l'écran.
 
 ## 14. Formulaire de création — `FormulaireCreation.svelte`, une boîte dans la page
 
