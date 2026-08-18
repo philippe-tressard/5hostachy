@@ -146,10 +146,29 @@
 			if (code === racineTouchee) parentTouche = null;
 		} else {
 			parentTouche = racineTouchee;
-			//  Choisir un espace remplace son bâtiment : « Bât. 2 » puis
-			//  « Bât. 2 › Hall » veut dire le hall, pas les deux.
-			const racine = racineDe(code, n1);
-			if (racine && racine !== code) s.delete(racine);
+			if (racineTouchee && racineTouchee !== code) {
+				//  Choisir un espace remplace son bâtiment : « Bât. 2 » puis
+				//  « Bât. 2 › Hall » veut dire le hall, pas les deux.
+				s.delete(racineTouchee);
+			} else {
+				//  🔴 ET LA RÉCIPROQUE (18/08/2026, signalée à l'écran) : choisir le
+				//  bâtiment ENTIER remplace les espaces qu'on y avait précisés.
+				//
+				//  Elle manquait, et le geste le plus naturel la déclenchait : après
+				//  « Bât. 3 › Toit », recliquer sur « Bât. 3 » — pour rouvrir sa
+				//  rangée, pour vérifier — AJOUTAIT le bâtiment entier sans retirer
+				//  son toit. On repartait avec « tout le bâtiment 3 ET son toit »,
+				//  deux cibles qui se contredisent, sans que rien ne le dise. C'est
+				//  ce que montrait la capture : « Toit · Toit · Bâtiment 3 ».
+				//
+				//  ⚠️ La règle n'est pas nouvelle, c'est sa MOITIÉ MANQUANTE : le
+				//  particulier remplaçait le général, le général ne remplaçait pas le
+				//  particulier. Une règle asymétrique donne un résultat qui dépend de
+				//  l'ordre des clics — et rien ne rattrape un ordre non prévu.
+				for (const v of [...s]) {
+					if (v !== code && racineDe(v, n1) === code) s.delete(v);
+				}
+			}
 			s.add(code);
 		}
 		value = s.size > 0 ? [...s] : defaut ? [defaut] : [];
@@ -203,7 +222,22 @@
 	      libellés longs la feraient déborder de la largeur du téléphone. -->
 	{#each niveau1 as n (n.code)}
 		{@const choisis = enfantsChoisis(n.code)}
-		{@const contracte = choisis.length > 0 && parentOuvert !== n.code}
+		<!--  🔴 LE RÉSUMÉ EST PERMANENT (18/08/2026, signalé à l'écran). Il
+		      n'apparaissait qu'une fois la rangée refermée : en précisant « Toit »
+		      dans le bâtiment 3, on ne voyait donc RIEN changer sur le bâtiment 3
+		      lui-même — « le dernier enfant sélectionné, on ne sait pas s'il a été
+		      sauvegardé ».
+
+		      Demandé ainsi : « dès qu'on clique sur un enfant, il est sélectionné,
+		      mais en plus il est AGRÉGÉ au niveau du parent — ou désagrégé si on le
+		      désélectionne ». L'agrégation devient l'accusé de réception du clic, et
+		      elle vaut rangée ouverte comme fermée.
+
+		      ⚠️ L'espace se lit alors deux fois quand la rangée est ouverte : dans le
+		      résumé et dans la rangée. Ce n'est pas une redite mais un RETOUR — la
+		      rangée dit ce qu'on PEUT choisir, le résumé ce qui EST retenu. C'est
+		      justement leur écart qui manquait. -->
+		{@const contracte = choisis.length > 0}
 		<!--  🔴 LA MÈRE RESTE PLEINE dès qu'un de ses espaces est retenu, rangée
 		      ouverte ou non (18/08/2026, ARBITRAGE CORRIGÉ PAR L'ÉCRAN).
 

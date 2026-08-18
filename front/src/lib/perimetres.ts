@@ -126,10 +126,33 @@ function normaliser(items: string[] | string | null | undefined): string[] {
 	return liste.map((i) => (i ?? '').trim()).filter(Boolean);
 }
 
-/** Libellé d'un périmètre isolé. Ne rend jamais un code brut à l'écran. */
+/**
+ * Libellé d'un périmètre isolé. Ne rend jamais un code brut à l'écran.
+ *
+ * 🔴 **Un espace de bâtiment est QUALIFIÉ par son bâtiment** (18/08/2026, signalé
+ * à l'écran). Le gabarit pose les mêmes neuf espaces sous chaque bâtiment — Hall,
+ * Paliers, Escaliers, Ascenseur, Caves, Toit… — si bien qu'un ticket ciblant les
+ * toits de deux bâtiments affichait :
+ *
+ *     Toit · Toit · Bâtiment 3
+ *
+ * Trois mentions dont deux identiques, et rien pour dire de quel bâtiment il
+ * s'agit. Le libellé rend donc « Bât. 3 › Toit », qui est la même écriture que le
+ * résumé des pastilles — un objet se lit partout de la même façon (R3).
+ *
+ * ⚠️ Seuls les espaces d'un BÂTIMENT sont qualifiés. Les enfants du parking, des
+ * espaces verts ou des locaux techniques portent déjà des libellés distincts
+ * (« Places », « Chaufferie »…) : les préfixer allongerait sans lever d'ambiguïté.
+ */
 export function perimetreLabelUn(code: string): string {
 	const n = carte[cle(code)];
-	if (n) return n.libelle;
+	if (n) {
+		const parent = n.parent ? carte[cle(n.parent)] : undefined;
+		if (parent && cle(parent.code).startsWith(PREFIXE_BATIMENT)) {
+			return `${parent.libelle_court || parent.libelle} › ${n.libelle}`;
+		}
+		return n.libelle;
+	}
 	//  Repli d'affichage, identique à celui du serveur : un contenu peut citer un
 	//  nœud supprimé depuis, et l'arborescence peut n'être pas encore chargée.
 	//  Ce n'est PAS une source de vérité — la convention `bat:N` est posée par le
