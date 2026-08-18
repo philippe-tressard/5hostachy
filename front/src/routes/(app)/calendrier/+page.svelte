@@ -3,7 +3,6 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
-	import HistoriqueEvenement from '$lib/components/HistoriqueEvenement.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -13,7 +12,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import FluxVignette from '$lib/components/FluxVignette.svelte';
+	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -452,7 +451,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	let showArchivedMaintenances = false;
 
 	// ── Kanban ────────────────────────────────────────────────
-	//  Le fil vit dans `HistoriqueEvenement` ; la page ne garde que le rechargement.
+	//  Le fil vit dans `HistoriqueEvenement` ; la page garde le geste et le rechargement.
+	let evolOuverte: number | null = null;
+
+	function ouvrirSuivi(ev: any) {
+		expandedEvId = ev.id;
+		evolOuverte = ev.id;
+	}
+
 	async function recharger() {
 		evenements = await calApi.list();
 	}
@@ -864,57 +870,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			<div class="month-label">&#x1F4C5; {annee}</div>
 			{#each evs as ev}
 				{@const expanded = expandedEvId === ev.id}
-				<div
-					class="event-row card"
-					id="ev-{ev.id}"
-					class:event-urgent={ev.type === 'coupure'}
-					class:expanded
-					style="cursor:pointer"
-					role="button"
-					tabindex="0"
-					on:click={() => expandedEvId = expanded ? null : ev.id}
-					on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedEvId = expanded ? null : ev.id; } }}
-				>
-					<!--  La NORME de toutes les cartes du site (`EnteteCarte`, 18/08/2026) :
-					      titre sur sa propre ligne, puis tags à gauche / date et actions à
-					      droite. Cette carte les mettait sur UNE ligne, en trois colonnes —
-					      et sur téléphone le titre se réduisait à trois points.
-					      Le chevron dit que la carte s'ouvre (#362) ; sur tactile c'est LUI
-					      qui porte l'information, `:hover` ne s'y déclenchant pas. -->
-					<EnteteCarte titre={ev.titre} date={formatDate(ev.debut)}>
-						<svelte:fragment slot="tags">
-							<span class="badge badge-gray">{typeLabel(ev.type)}</span>
-							{#if ev.statut_kanban}<span class="badge badge-blue">{KANBAN_COLS.find((c) => c.id === ev.statut_kanban)?.label ?? ev.statut_kanban}</span>{/if}
-							{#if !estPerimetreParDefaut(ev.perimetre)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(ev.perimetre)}</span>{/if}
-							{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
-							{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
-							{#if ev.fin}<span class="event-meta">→ {formatDate(ev.fin)}</span>{/if}
-							{#if ev.auteur_nom}<span class="event-meta">{ev.auteur_nom}</span>{/if}
-						</svelte:fragment>
-						<svelte:fragment slot="actions">
-							{#if !expanded}<FluxVignette photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} size={32} />{/if}
-							{#if $isCS && ev._source !== 'devis_ponctuel'}
-								<span class="event-actions" on:click|stopPropagation on:keydown|stopPropagation role="presentation">
-									<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
-									{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
-										<button class="btn-icon" aria-label="Archiver" title="Archiver" on:click={() => archiveEv(ev.id)}>&#x1F4E6;</button>
-									{/if}
-								</span>
-							{/if}
-						</svelte:fragment>
-						<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
-					</EnteteCarte>
-					{#if expanded}
-						<div class="ev-expanded-body rich-content" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-							{#if ev.description}{@html safeHtml(ev.description)}{/if}
-							{#if ev.photos_urls?.length || ev.fichiers_urls?.length}
-								<PiecesJointes urls={[...(ev.photos_urls ?? []), ...(ev.fichiers_urls ?? [])]} format="grand" />
-							{/if}
-							<!--  L'HISTORIQUE — dernier écran à faire avancer un suivi en silence. -->
-							<HistoriqueEvenement evenement={ev} colonnes={KANBAN_COLS} peutAgir={$isCS} on:evolue={recharger} />
-						</div>
-					{/if}
-				</div>
+				<CarteEvenement {ev} {expanded} colonnes={KANBAN_COLS} peutAgir={$isCS}
+					suiviOuvert={evolOuverte === ev.id} {typeLabel} formatDate={formatDate}
+					on:basculer={() => (expandedEvId = expanded ? null : ev.id)}
+					on:suivre={() => ouvrirSuivi(ev)}
+					on:modifier={() => startEdit(ev)}
+					on:archiver={() => archiveEv(ev.id)}
+					on:evolue={recharger}
+					on:fermer={() => (evolOuverte = null)} />
 			{/each}
 		</div>
 	{/each}
@@ -1092,8 +1055,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
 	.event-date { text-align: right; font-size: .85rem; min-width: 110px; }
 	.ev-updated { display: block; font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
-	.ev-expanded-body { flex-basis: 100%; padding: .6rem .75rem .25rem; font-size: .875rem; line-height: 1.6; border-top: 1px solid var(--color-border); margin-top: .4rem; }
-	.event-row.card.expanded { border-color: var(--color-primary, #2563eb); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #2563eb) 18%, transparent); }
+	/*  ⚠️ `.event-meta` et `.event-actions` existent AUSSI dans
+	    `CarteEvenement.svelte`, et ce n'est pas un oubli : Svelte scope le style au
+	    composant qui rend le balisage, et ces deux classes servent ici aux blocs
+	    Archives et Maintenances récurrentes, là-bas à la carte de la liste. Les
+	    unifier suppose de reprendre ces deux blocs — c'est le travail de #432.
+	    `.ev-expanded-body`, `.ev-norme` et `.event-row.card.expanded` sont partis
+	    avec la carte : `svelte-check` les a signalés inutilisés dès l'extraction,
+	    ce qui a dit exactement ce qui lui appartenait. */
 	.event-actions { display: flex; gap: .3rem; }
 	@media (max-width: 760px) {
 		.archive-row {

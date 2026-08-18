@@ -44,10 +44,14 @@
 	export let colonnes: { id: string; label: string }[] = [];
 	/** Le lecteur peut-il commenter ou faire avancer le suivi ? (CS/admin) */
 	export let peutAgir = false;
+	/**  Le formulaire est-il ouvert ? PORTÉ PAR LA PAGE (18/08/2026) : le geste se
+	     déclare depuis l'icône 🔄 de l'en-tête de carte, comme sur les tickets et
+	     les actualités. Un bouton ici, un autre là-haut, cela ferait deux commandes
+	     pour un seul geste — le défaut de #367, et #426 pour la redite. */
+	export let ouvert = false;
 
-	const dispatch = createEventDispatcher<{ evolue: void }>();
+	const dispatch = createEventDispatcher<{ evolue: void; fermer: void }>();
 
-	let ouvert = false;
 	let enCours = false;
 
 	//  DÉRIVÉES des colonnes, jamais réécrites : une seconde table divergerait à
@@ -67,7 +71,7 @@
 				nouveau_statut: data.nouveau_statut,
 				fichiers_urls: data.fichiers_urls,
 			});
-			ouvert = false;
+			dispatch('fermer');
 			//  La page relit : le serveur a pu ajouter une ligne de correction, et
 			//  la colonne a pu bouger. Recomposer le fil ici ferait diverger ce que
 			//  l'écran montre de ce que la base porte.
@@ -86,13 +90,6 @@
 		titre="&#x1F4CB; Historique"
 		vide={peutAgir ? 'Aucune entrée pour le moment.' : ''}
 	>
-		<svelte:fragment slot="action">
-			{#if peutAgir}
-				<button class="btn btn-outline btn-sm" on:click={() => (ouvert = !ouvert)}>
-					{ouvert ? '✕ Annuler' : '🔄 Commenter ou changer l’état'}
-				</button>
-			{/if}
-		</svelte:fragment>
 	</RubriqueHistorique>
 
 	{#if ouvert}
@@ -104,7 +101,7 @@
 				showFiles={true}
 				saving={enCours}
 				on:submit={enregistrer}
-				on:cancel={() => (ouvert = false)}
+				on:cancel={() => dispatch('fermer')}
 			/>
 		{/key}
 	{/if}
