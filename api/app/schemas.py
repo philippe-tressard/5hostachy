@@ -202,6 +202,11 @@ class TicketRead(BaseModel):
     perimetre_cible: Optional[List[str]] = None
     photos_urls: Optional[ListeJson] = None
     fichiers_urls: ListeJson = []
+    #  Ce que la carte REPLIÉE montre en vignette — dérivé, jamais saisi. Le
+    #  pourquoi et la règle du repli vivent avec le calcul, dans
+    #  `routers/tickets/commun.py::apercu_pieces` (#464) : les répéter ici en
+    #  ferait deux écritures libres de diverger.
+    apercu_pieces: ListeJson = []
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     saisi_pour_user_id: Optional[int] = None

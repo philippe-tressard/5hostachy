@@ -29,6 +29,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import TicketEvolutionRead, TicketRead
+from app.utils.photos import parse_photos
 
 #: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
 #:
@@ -168,6 +169,44 @@ def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
     )
 
 
+def apercu_pieces(ticket: Ticket, session: Session) -> list[str]:
+    """Les pièces à montrer en vignette sur la carte REPLIÉE (#464).
+
+    Celles du ticket si elle en porte ; sinon celles de l'entrée d'Historique **la
+    plus récente** qui en porte.
+
+    ## Pourquoi ce repli existe
+
+    Sur un ticket suivi, les photos arrivent souvent par le fil — « voici ce qu'a
+    constaté le plombier ». La carte restait alors nue, là où le même dossier saisi
+    avec ses photos dès l'ouverture montrait sa vignette. Deux tickets, même
+    contenu visible, deux apparences dans la liste.
+
+    Le calendrier faisait déjà ce repli côté front (`apercuAvecRepli`), parce que
+    son API livre le fil avec l'objet. Les tickets chargent leurs évolutions à la
+    demande : le repli se calcule donc **ici**, et ne transporte que les URLs.
+
+    ⚠️ La plus RÉCENTE, jamais la première : sinon un dossier qui a avancé
+    montrerait indéfiniment la photo du jour de son ouverture.
+    """
+    propres = parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+    if propres:
+        return propres
+    #  Une seule requête, triée par date décroissante, et on s'arrête à la
+    #  première entrée qui porte quelque chose. Pas de N+1 : c'est un `SELECT` par
+    #  ticket, comme les trois que `ticket_read` fait déjà.
+    evols = session.exec(
+        select(TicketEvolution)
+        .where(TicketEvolution.ticket_id == ticket.id)
+        .order_by(TicketEvolution.cree_le.desc())
+    ).all()
+    for evol in evols:
+        pieces = parse_photos(evol.fichiers_urls)
+        if pieces:
+            return pieces
+    return []
+
+
 def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     auteur = session.get(Utilisateur, ticket.auteur_id)
     auteur_batiment_id = ticket.batiment_id or (auteur.batiment_id if auteur else None)
@@ -196,6 +235,7 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         perimetre_cible=ticket.perimetre_cible,
         photos_urls=ticket.photos_urls,
         fichiers_urls=ticket.fichiers_urls,
+        apercu_pieces=apercu_pieces(ticket, session),
         destinataire_syndic=ticket.destinataire_syndic,
         destinataire_cs=ticket.destinataire_cs,
         saisi_pour_user_id=ticket.saisi_pour_user_id,
