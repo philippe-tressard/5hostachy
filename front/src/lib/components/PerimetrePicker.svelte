@@ -70,10 +70,34 @@
 	$: aDesEnfants = new Set(
 		actifs.filter((n) => n.selectionnable && n.parent && n1.has(n.parent)).map((n) => n.parent!),
 	);
-	$: parentOuvert = value.map((v) => racineDe(v, n1)).find(Boolean) ?? null;
+	//  🔴 Le second niveau suit le DERNIER nœud touché, pas le premier de la
+	//  sélection (18/08/2026, signalé à l'écran).
+	//
+	//  `value.map(racineDe).find(Boolean)` retenait la PREMIÈRE valeur qui a une
+	//  racine. Après « Bât. 3 › Caves, Toit » puis un clic sur « Bât. 4 », la
+	//  sélection vaut ['caves:3','toit:3','bat:4'] : la première a pour racine le
+	//  bâtiment 3, et la rangée de précision restait donc bloquée sur lui — on
+	//  cliquait sur un bâtiment et on voyait les espaces d'un autre.
+	//
+	//  ⚠️ L'état est nécessaire : `value` ne dit pas dans quel ORDRE on a cliqué.
+	//  Il reste dérivé quand personne n'a encore touché la rangée — à l'ouverture
+	//  d'un formulaire d'édition, le second niveau s'ouvre sur ce qui est
+	//  enregistré.
+	let parentTouche: string | null = null;
+	$: parentOuvert =
+		parentTouche && aDesEnfants.has(parentTouche)
+			? parentTouche
+			: (value.map((v) => racineDe(v, n1)).find(Boolean) ?? null);
 	$: niveau2 = parentOuvert
 		? actifs.filter((n) => n.parent === parentOuvert && n.selectionnable)
 		: [];
+
+	//  Ce qu'un nœud de premier niveau porte de sélectionné en second niveau.
+	//  Sert à le CONTRACTER quand sa rangée se referme : sans cela, choisir un
+	//  autre bâtiment faisait disparaître « Caves, Toit » de l'écran alors qu'ils
+	//  restent sélectionnés — la valeur était juste, l'écran mentait.
+	$: enfantsChoisis = (code: string) =>
+		actifs.filter((n) => n.parent === code && selection.has(n.code));
 
 	$: noeudDefaut = defaut ? parCode.get(defaut) : undefined;
 	$: estDefaut = value.length === 0 || (value.length === 1 && value[0] === defaut);
@@ -90,7 +114,14 @@
 	}
 
 	function basculer(code: string) {
+		//  Quel nœud de premier niveau ce clic met-il en avant ? Celui qu'on
+		//  touche, ou le parent de l'espace qu'on précise. C'est LUI qui ouvre sa
+		//  rangée de second niveau — le geste attendu est « je précise dans
+		//  celui-ci », et il vaut pour le dernier touché.
+		const racineTouchee = racineDe(code, n1);
+
 		if (mode === 'single') {
+			parentTouche = racineTouchee;
 			value = [code];
 			dispatch('change', value);
 			return;
@@ -98,7 +129,12 @@
 		const s = new Set(value.filter((v) => v !== defaut));
 		if (s.has(code)) {
 			s.delete(code);
+			//  Désélectionner le nœud de premier niveau LUI-MÊME referme sa rangée.
+			//  Désélectionner un de ses espaces, non : on en précise souvent
+			//  plusieurs à la suite, et refermer sous le doigt obligerait à rouvrir.
+			if (code === racineTouchee) parentTouche = null;
 		} else {
+			parentTouche = racineTouchee;
 			//  Choisir un espace remplace son bâtiment : « Bât. 2 » puis
 			//  « Bât. 2 › Hall » veut dire le hall, pas les deux.
 			const racine = racineDe(code, n1);
@@ -140,9 +176,35 @@
 			{noeudDefaut?.libelle ?? defaut}
 		</Pastille>
 	{/if}
+	<!--  🔴 La pastille se CONTRACTE quand sa rangée se referme (18/08/2026).
+	      Choisir un autre bâtiment fait disparaître la rangée de précision du
+	      précédent — et avec elle, à l'écran, les espaces qu'on venait d'y
+	      cocher. Ils restaient pourtant sélectionnés : la valeur était juste et
+	      l'écran mentait. Le nœud porte donc son résumé, « Bât. 3 › Caves · Toit ».
+
+	      Les séparateurs ne sont pas inventés ici : « › » est déjà la marque du
+	      second niveau (R3, le chevron des pastilles) et « · » celui du
+	      multi-périmètre (`perimetreLabel`). Le chevron final disparaît quand le
+	      résumé est là — il annonce « un second niveau existe », ce que le résumé
+	      dit déjà, et « Bât. 3 › Caves · Toit › » ne voudrait rien dire.
+
+	      `libelle_court` pour les enfants : la pastille est en `nowrap`, et trois
+	      libellés longs la feraient déborder de la largeur du téléphone. -->
 	{#each niveau1 as n (n.code)}
-		<Pastille active={!estDefaut && selection.has(n.code)} icone={n.icone ?? ''}
-			chevron={aDesEnfants.has(n.code)} on:click={() => basculer(n.code)}>{n.libelle}</Pastille>
+		{@const choisis = enfantsChoisis(n.code)}
+		{@const contracte = choisis.length > 0 && parentOuvert !== n.code}
+		<!--  ⚠️ `contracte` et non `choisis.length` : rangée OUVERTE, le parent doit
+		      rester creux, sinon on lit « tout le bâtiment 3 » ET « Caves » en même
+		      temps, alors que choisir un espace remplace son bâtiment. Contractée,
+		      la pastille porte son résumé — elle est pleine parce qu'elle EST la
+		      sélection. -->
+		<Pastille active={!estDefaut && (selection.has(n.code) || contracte)}
+			icone={n.icone ?? ''}
+			chevron={aDesEnfants.has(n.code) && !contracte}
+			on:click={() => basculer(n.code)}
+			>{n.libelle}{#if contracte}<span class="perimetre-resume"
+				> › {choisis.map((e) => e.libelle_court || e.libelle).join(' · ')}</span
+			>{/if}</Pastille>
 	{/each}
 </div>
 
@@ -176,6 +238,11 @@
 	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
 	.perimetre-titre { font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
 	.perimetre-badge { font-size: .72rem; margin-left: .4rem; }
+	/*  Le résumé d'une pastille contractée : légèrement en retrait pour qu'on lise
+	    d'abord le nœud, puis ce qu'il contient. Il est rendu ICI, donc stylé ici —
+	    une classe posée sur le contenu d'un slot appartient à l'appelant, jamais
+	    au composant qui l'accueille (v2.67.11). */
+	.perimetre-resume { opacity: .85; font-weight: 500; }
 	.perimetre-niveau2 { margin-top: .6rem; padding-left: .1rem; }
 	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
 	.perimetre-facultatif { opacity: .75; }
