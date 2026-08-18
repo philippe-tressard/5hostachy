@@ -126,7 +126,13 @@
 				{:else if item.detail}
 					<p class="flux-full-content">{item.detail}</p>
 				{/if}
-				{#if item.type === 'ticket_mis_a_jour' && item.meta?.evol_contenu}
+				<!--  La condition ne teste PLUS le type : `evol_contenu` n'est posé que
+				      par une carte de mise à jour, et le vérifier deux fois faisait de
+				      cette liste de types une seconde déclaration à tenir. Elle a
+				      immédiatement divergé : le calendrier a eu son Historique le
+				      18/08/2026, le fil a su le fournir, et RIEN ne s'affichait.
+				      La donnée décide, pas une énumération de types. -->
+				{#if item.meta?.evol_contenu}
 					<div class="flux-reaction">
 						<span class="flux-reaction-icon">💬</span>
 						<div class="flux-reaction-body">

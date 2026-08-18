@@ -62,7 +62,11 @@ EXPECTED_VARS: dict[str, set[str]] = {
     #  Le suivi porte EN PLUS `suivi` : l'état atteint et le commentaire. Sans
     #  cette ligne, un template pourrait citer une variable que l'appel ne
     #  fournit pas — c'est la panne `'evenement' is undefined` du 28/07/2026.
-    "calendrier_evenement_suivi": {"evenement", "suivi"},
+    #  `fichiers` s'y ajoute le 18/08/2026 : le modele annonce desormais les pieces
+    #  jointes de l'entree, comme le font ceux des tickets. Le garde-fou a REFUSE
+    #  le template avant cette ligne — c'est son travail, et c'est ce qui garantit
+    #  qu'aucune variable citee n'est absente du contexte de l'appel.
+    "calendrier_evenement_suivi": {"evenement", "suivi", "fichiers"},
     "document_publie": {"document"},
     "publication_syndic": {
         "date_publication", "evolutions", "commentaire", "is_commentaire",

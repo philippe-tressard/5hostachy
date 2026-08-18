@@ -477,6 +477,38 @@ avant et son après dans l'Historique ; toute autre modification reste une
 correction. Le calendrier était le dernier écran du site à faire avancer un suivi
 en silence.
 
+🔴 **Ce qu'une entrée d'Historique ENVOIE parle d'ELLE** (18/08/2026). Rouvrir
+la Diffusion sur un suivi ne suffit pas : il faut recâbler ce qui part. Le lot
+de la veille avait ouvert la section et laissé l'appel existant — le groupe
+WhatsApp recevait donc la description de l'ÉVÉNEMENT à chaque commentaire, le
+même texte indéfiniment, et l'e-mail attachait les pièces de l'événement au
+lieu de celles de l'entrée.
+
+⚠️ **C'est le défaut typique de l'ajout d'un canal à une entité existante** :
+on reprend l'appel qui marche, et l'appel qui marche parle de l'objet porteur.
+Rien ne lève, rien ne manque dans les journaux — le message part, il est
+simplement faux. Trois questions à se poser, dans cet ordre :
+
+1. **le contenu** — texte de l'entrée, pas de l'objet ;
+2. **les pièces** — celles de l'entrée, avec repli sur l'objet si elle n'en a
+   pas (même règle que `flux/tickets.py`) ;
+3. **le renvoi** — un commentaire se lit hors contexte : le message porte un
+   lien vers l'objet, sinon le lecteur ne sait pas sur quoi il porte.
+
+🔴 **Et le FIL doit apprendre la nouvelle table.** Le fil est une douzaine de
+rubriques indépendantes ; rien n'oblige une table neuve à s'y déclarer.
+`flux/evenements.py` ne lisait que `Evenement` et datait donc ses cartes de
+l'annonce — une affaire qui avançait aujourd'hui restait noyée dans les
+vieilles lignes. **Le fil date du dernier fait, jamais du premier.**
+
+⚠️ Ajouter un TYPE pour la mise à jour aurait été le réflexe (c'est ce que font
+les tickets, avec trois types). **Ne pas le faire ici** : le front teste
+`type === 'evenement'` à six endroits — libellé, couleur, fond, lien, urgence,
+et le filtre du tableau de bord qui **masque les AG** à qui n'y a pas droit. Un
+type neuf serait passé à côté des six, et une AG commentée serait devenue
+visible de tous, en silence. **C'est la donnée qui porte la différence** :
+`evol_contenu` présent ⇒ la carte rend le bloc de suivi.
+
 🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
 18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
 est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,

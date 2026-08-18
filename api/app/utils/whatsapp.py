@@ -140,8 +140,28 @@ def whatsapp_actif(config: dict) -> bool:
     return config.get("whatsapp_enabled") == "1"
 
 
-def _build_message(titre: str, contenu: str, urgente: bool, perimetre_cible: str | None, footer: str | None = None) -> str:
-    """Construit le texte du message WhatsApp."""
+def _build_message(
+    titre: str,
+    contenu: str,
+    urgente: bool,
+    perimetre_cible: str | None,
+    footer: str | None = None,
+    lien: str | None = None,
+) -> str:
+    """Construit le texte du message WhatsApp.
+
+    `lien` ajoute, avant la signature, un renvoi vers l'application — « voir
+    le contenu complet ». Demandé le 18/08/2026 pour le SUIVI d'un événement,
+    dont le commentaire est souvent lu hors de son contexte : sans lien, le
+    lecteur du groupe voit un commentaire sans savoir sur quoi il porte.
+
+    ⚠️ Le message **restreint** en portait déjà un, codé chez lui
+    (`_build_message_restreint`), et c'était le seul du site. Le paramètre est
+    donc facultatif et ne change RIEN aux appels existants : une actualité
+    ordinaire continue de partir sans lien tant que personne ne l'a demandé à
+    l'écran (R5 — un enrichissement se propage, donc il se constate d'abord
+    sur UN cas).
+    """
     # Périmètre
     try:
         lieux = json.loads(perimetre_cible) if isinstance(perimetre_cible, str) else (perimetre_cible or [])
@@ -176,7 +196,12 @@ def _build_message(titre: str, contenu: str, urgente: bool, perimetre_cible: str
     text = text.strip()
 
     footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
-    return f"{header}\n\n{text}\n\n{footer}"
+    #  Le lien vient APRÈS le texte et AVANT la signature : c'est la place
+    #  qu'il occupe déjà dans le message restreint, et le lecteur d'un groupe
+    #  WhatsApp cherche l'action en bas du message, jamais au milieu.
+    renvoi = f"\n\n👉 Voir le contenu complet :\n{(lien or chr(32)).strip()}"
+    renvoi = renvoi if (lien or "").strip() else ""
+    return f"{header}\n\n{text}{renvoi}\n\n{footer}"
 
 
 def _image_pour_bridge(image_url: str | None) -> str | None:
@@ -293,6 +318,8 @@ def construire_message(
     public_cible: str | None = None,
     pub_id: int | None = None,
     confidentiel: bool = False,
+    *,
+    lien: str | None = None,
 ) -> str:
     """Le texte du message, décidé **une seule fois**.
 
@@ -310,7 +337,10 @@ def construire_message(
         return _build_message_restreint(
             titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer
         )
-    return _build_message(titre, contenu, urgente, perimetre_cible, footer)
+    #  Le lien ne concerne QUE le message normal : le message restreint en porte
+    #  déjà un, qui renvoie vers l'application parce que le contenu n'y est pas.
+    #  Lui en ajouter un second en donnerait deux, dont l'un ferait double emploi.
+    return _build_message(titre, contenu, urgente, perimetre_cible, footer, lien)
 
 
 def envoyer_whatsapp(
@@ -323,6 +353,8 @@ def envoyer_whatsapp(
     public_cible: str | None = None,
     pub_id: int | None = None,
     confidentiel: bool = False,
+    *,
+    lien: str | None = None,
 ) -> None:
     """Envoie un message sur le groupe WhatsApp. Silencieux en cas d'échec."""
     if config.get('whatsapp_enabled') != '1':
@@ -339,6 +371,7 @@ def envoyer_whatsapp(
 
     message = construire_message(
         titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+        lien=lien,
     )
     payload = {"number": group_jid, "text": message}
     #  La photo ne part QUE avec le message complet : sur une actualité
@@ -379,6 +412,8 @@ def envoyer_whatsapp_avec_log(
     public_cible: str | None = None,
     pub_id: int | None = None,
     confidentiel: bool = False,
+    *,
+    lien: str | None = None,
 ) -> None:
     """Envoie un message WhatsApp et crée un log (pour background tasks)."""
     from app.database import SessionLocal
@@ -389,12 +424,18 @@ def envoyer_whatsapp_avec_log(
     try:
         message = construire_message(
             titre, contenu, urgente, perimetre_cible, config, public_cible, pub_id, confidentiel,
+            lien=lien,
         )
         log = WhatsAppLog(label=titre, message=message)
         log.statut, log.erreur = verdict_envoi(
+            #  ⚠️ `lien=lien` ICI AUSSI, et pas seulement au-dessus : le texte
+            #  journalisé et le texte envoyé sont deux constructions distinctes de
+            #  la même chose. L'oublier ferait apparaître dans le journal un lien
+            #  que le groupe n'a jamais reçu — et c'est le journal qu'on relit
+            #  quand on cherche ce qui est parti.
             lambda: envoyer_whatsapp(
                 titre, contenu, urgente, perimetre_cible, image_url, config,
-                public_cible, pub_id, confidentiel,
+                public_cible, pub_id, confidentiel, lien=lien,
             )
         )
         if log.statut == STATUT_ENVOYE:

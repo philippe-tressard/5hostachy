@@ -107,6 +107,13 @@ MODELES = [
      '</td></tr></table>'
      '{% if suivi.etat %}<p style="margin:0 0 12px"><strong>État :</strong> {{ suivi.etat }}</p>{% endif %}'
      '{% if suivi.commentaire %}<div style="margin:0 0 20px">{{ suivi.commentaire|safe }}</div>{% endif %}'
+     #  Le pied qui annonce les pieces : meme forme que `ticket_nouveau_message`
+     #  et `ticket_externe`. Il manquait ici, et les pieces elles-memes n'etaient
+     #  pas attachees (elles l'etaient depuis l'evenement, jamais depuis l'entree)
+     #  -- signale a l'ecran le 18/08/2026.
+     #  ⚠️ `fichiers` est calcule sur la liste REELLEMENT attachee, jamais sur
+     #  l'intention : ce que le courriel annonce doit etre ce qu'il transporte.
+     '{% if fichiers %}<p style="margin:0 0 16px;font-size:13px;color:#5A6070">📎 Pièces jointes ci-dessous.</p>{% endif %}'
      '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
      True),
     ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
