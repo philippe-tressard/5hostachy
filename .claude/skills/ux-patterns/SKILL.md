@@ -33,6 +33,62 @@ déjà** : `.form-actions` (identique, donc inerte, supprimée le 15/08) et
 issue #363, qui a projeté le titre de *Nouveau ticket* à droite de l'écran). Le
 réflexe n'est pas « qu'est-ce que j'ajoute ? » mais « de quoi est-ce que j'hérite ? ».
 
+## 🔴 CE QUI EST TRANCHÉ — à appliquer sans rediscuter
+
+Onze arbitrages en deux jours (17–18/08/2026), tous **constatés à l'écran** avant
+d'être écrits ici. Trois d'entre eux **contredisent** une version antérieure de
+cette skill : c'est normal, et c'est même le mécanisme — *une règle d'interface
+se vérifie sur un écran, pas sur du papier*.
+
+Ce bloc n'énonce que les décisions et renvoie à la section qui les développe.
+**Il ne recopie rien** : deux versions d'une même règle divergent au premier lot.
+
+| # | Ce qui est tranché | Développé en |
+|---|---|---|
+| 1 | **Le geste de dépliage est asymétrique** — carte repliée : clic n'importe où ; carte dépliée : **seul le titre** replie | §3 |
+| 2 | **Le survol colore le TITRE**, jamais le fond du bloc, et **sans soulignement** | §3 |
+| 3 | **Le liseré gauche** de `.carte-liste` qui passe au bleu est **la référence** — sauf sur le fil, où il porte déjà la couleur du type | §3 |
+| 4 | **L'en-tête de carte** : titre sur sa ligne, puis tags à gauche / date + actions + chevron à droite, **sur une seule ligne** | §3 |
+| 5 | **Ordre des icônes : 🔄 ✏️ 🗑️**, dans l'en-tête et jamais dans le corps | §3 |
+| 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
+| 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
+| 8 | **Un workflow se déclare, le tracer est une AUTRE décision** — cinq états sur une annonce, aucun fil | §16 |
+| 9 | **L'archivage se calcule, il ne se choisit pas** : 30 j après un état terminal, sur `statut_change_le`, jamais de bouton 📦 | §16 |
+| 10 | **Deux droits** : éditer = auteur · saisi_pour · admin ; commenter = les mêmes **+ CS** | §15 |
+| 11 | **L'écran dit ce que le serveur fait**, ni plus ni moins | §15 |
+
+### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
+
+**1. Une objection juste dans l'absolu peut être hors sujet ici.** J'ai refusé la
+carte entière comme cible de clic — « elle intercepte la sélection de texte ».
+L'argument est réel et ne s'appliquait pas : le corps déplié arrête déjà la
+propagation, et la zone repliée n'a rien à sélectionner. **Trois allers-retours**
+ont été perdus à défendre une objection valide au mauvais endroit.
+
+**2. Quand un écran sert de référence, il est le premier à devoir suivre la règle
+qu'on en tire.** Le fil d'activité a été désigné comme modèle du geste — et c'est
+lui qui a gardé l'ancien comportement le plus longtemps, parce que la règle a été
+appliquée à ses imitateurs sans être remontée au modèle.
+
+**3. Un garde-fou qui refuse dit souvent que le code est au MAUVAIS ENDROIT, pas
+qu'il est trop long.** Le contrôle de modularité a refusé cinq ajouts de deux
+lignes le 18/08 ; quatre fois j'ai raboté (#453), la cinquième la bonne réponse
+était de **remonter la règle dans `app.css`** — et les deux pages y ont perdu des
+lignes. Trois réponses possibles, une seule mauvaise :
+
+| Réponse | Quand |
+|---|---|
+| découper le fichier | l'ajout est propre à cet écran |
+| **remonter la règle d'un cran** | l'ajout dit quelque chose de **global** |
+| raboter pour passer sous le seuil | ❌ jamais |
+
+### Ce qui n'a PAS bougé
+
+Le cadre lui-même — **les 9 sections, les 4 rendus, les 3 motifs de divergence** —
+n'a pas changé d'une ligne en deux jours. Ce sont les **entités** qui ont appris,
+pas la grammaire. C'est le signe que la grammaire est la bonne.
+
+
 ## 0. LE CADRE — une entité, quatre rendus (décidé le 17/08/2026)
 
 **C'est la règle qui gouverne toutes les suivantes.** Les sections §9, §10, §13 et
@@ -314,6 +370,46 @@ Ce qui reste dans la page (formulaires, fil d'évolutions) y est passé en **slo
 — écrit dans la page, donc stylé par la page. Le signal qui dit que le découpage
 est correct est `svelte-check` : **aucun** « Unused CSS selector » nouveau.
 
+### Le GESTE de dépliage — il est ASYMÉTRIQUE (18/08/2026)
+
+```
+carte REPLIÉE  → toute la zone déplie · le fond change au survol
+carte DÉPLIÉE  → SEUL le titre replie · le corps se lit et se sélectionne
+```
+
+Formulé ainsi : *« applique partout la logique du fil d'actualité : cliquable
+sur toute la zone pour déplier, avec changement de couleur au survol »* puis
+*« clic sur le titre seul pour le repliement — pour permettre de sélectionner le
+texte sans le replier »*.
+
+🔴 **L'asymétrie résout le conflit**, elle ne l'arbitre pas : une grande cible
+pour ouvrir (au doigt, sur téléphone), aucune cible parasite une fois ouvert
+(pour lire, sélectionner, copier). Les deux exigences ne se contredisent pas —
+elles ne portent pas sur le même état.
+
+⚠️ **Trois allers-retours dans la même journée** avant d'y arriver, parce que je
+lisais chaque moitié de la règle sans l'autre : d'abord « le titre et lui seul »,
+puis « toute la carte », enfin les deux à leur moment. La leçon n'est pas qu'il
+fallait deviner — c'est qu'une objection juste dans l'absolu (« la carte entière
+intercepte la sélection ») peut être **hors sujet** ici : le corps déplié arrête
+déjà la propagation, et la zone repliée n'a rien à sélectionner.
+
+**Mise en œuvre**, une seule fois :
+
+| Où | Quoi |
+|---|---|
+| conteneur de la carte | `role="presentation"` + `on:click={() => { if (!expanded) basculer(); }}` |
+| `EnteteCarte` | `basculable` → le titre devient un `<button>` qui bascule, avec `stopPropagation` |
+| `app.css` | `.carte-liste:not(.expanded)` porte le curseur **et** le fond au survol |
+| corps déplié | `.carte-corps` + `role="presentation"` + `on:click\|stopPropagation` |
+
+⚠️ Le titre est un **vrai `<button>`** : il porte le clavier dans les deux sens.
+Le conteneur n'est donc pas interactif, et rien n'est imbriqué.
+
+⚠️ `:not(.expanded)` porte toute la règle de survol. Sans lui, le curseur
+promettrait partout un clic qui ne fait rien, et le fond se surlignerait sous un
+formulaire ouvert.
+
 ## 4. Onglets (Tabs)
 
 **Quand** : page avec 2+ vues ou sections distinctes.
@@ -508,117 +604,6 @@ et le filtre du tableau de bord qui **masque les AG** à qui n'y a pas droit. Un
 type neuf serait passé à côté des six, et une AG commentée serait devenue
 visible de tous, en silence. **C'est la donnée qui porte la différence** :
 `evol_contenu` présent ⇒ la carte rend le bloc de suivi.
-
-### Le GESTE de dépliage — il est ASYMÉTRIQUE (18/08/2026)
-
-```
-carte REPLIÉE  → toute la zone déplie · le fond change au survol
-carte DÉPLIÉE  → SEUL le titre replie · le corps se lit et se sélectionne
-```
-
-Formulé ainsi : *« applique partout la logique du fil d'actualité : cliquable
-sur toute la zone pour déplier, avec changement de couleur au survol »* puis
-*« clic sur le titre seul pour le repliement — pour permettre de sélectionner le
-texte sans le replier »*.
-
-🔴 **L'asymétrie résout le conflit**, elle ne l'arbitre pas : une grande cible
-pour ouvrir (au doigt, sur téléphone), aucune cible parasite une fois ouvert
-(pour lire, sélectionner, copier). Les deux exigences ne se contredisent pas —
-elles ne portent pas sur le même état.
-
-⚠️ **Trois allers-retours dans la même journée** avant d'y arriver, parce que je
-lisais chaque moitié de la règle sans l'autre : d'abord « le titre et lui seul »,
-puis « toute la carte », enfin les deux à leur moment. La leçon n'est pas qu'il
-fallait deviner — c'est qu'une objection juste dans l'absolu (« la carte entière
-intercepte la sélection ») peut être **hors sujet** ici : le corps déplié arrête
-déjà la propagation, et la zone repliée n'a rien à sélectionner.
-
-**Mise en œuvre**, une seule fois :
-
-| Où | Quoi |
-|---|---|
-| conteneur de la carte | `role="presentation"` + `on:click={() => { if (!expanded) basculer(); }}` |
-| `EnteteCarte` | `basculable` → le titre devient un `<button>` qui bascule, avec `stopPropagation` |
-| `app.css` | `.carte-liste:not(.expanded)` porte le curseur **et** le fond au survol |
-| corps déplié | `.carte-corps` + `role="presentation"` + `on:click\|stopPropagation` |
-
-⚠️ Le titre est un **vrai `<button>`** : il porte le clavier dans les deux sens.
-Le conteneur n'est donc pas interactif, et rien n'est imbriqué.
-
-⚠️ `:not(.expanded)` porte toute la règle de survol. Sans lui, le curseur
-promettrait partout un clic qui ne fait rien, et le fond se surlignerait sous un
-formulaire ouvert.
-
-### Qui peut ÉDITER, qui peut COMMENTER (18/08/2026)
-
-| Geste | Qui |
-|---|---|
-| **✏️ éditer** le contenu | l'auteur · le « saisi pour » · l'admin |
-| **🔄 commenter** et faire avancer le workflow | les mêmes **+ le conseil syndical** |
-
-> « Seul l'auteur peut l'éditer ou le commenter, avec l'admin (en cas de Pb),
->   mais aussi le CS peut commenter, pas éditer »
-
-🔴 **« Saisi pour » compte comme auteur**, et c'est la raison d'être du champ :
-un membre du CS qui dépose un ticket au nom d'un résident ne le dépossède pas de
-sa demande. Avant, ce résident était le **seul** à ne pas pouvoir corriger ce qui
-parle de lui — pendant que n'importe quel membre du CS le pouvait.
-
-Les deux règles vivent dans `auth/deps.py` (`peut_editer`, `peut_commenter`),
-jamais dans un routeur ni dans un écran. `test_droits_editer_commenter.py` les
-verrouille.
-
-⚠️ **L'écran doit dire la même chose que le serveur, ni plus ni moins.** Un
-bouton affiché plus largement que le droit produit un 403 sur un geste que
-l'interface a elle-même proposé ; plus étroitement, il rend une capacité
-introuvable. Les deux sont arrivés le même jour dans `RubriqueHistorique`.
-🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
-18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
-est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,
-« Résolu », « Annulé » sont le vocabulaire d'un **ticket**, et les emprunter
-faisait ressembler une annonce à un dossier suivi. Son Publié/Brouillon est une
-décision de **diffusion**, et vit en section 2.
-
-La déclaration le dit (`sansObjet`), et c'est elle qui l'impose : la section
-disparaît de la création, de l'édition **et** de l'Historique — dans ce dernier,
-parce que la liste d'états passée à `EvolForm` est **vide**, pas parce qu'une
-condition en dur le décide.
-
-⚠️ **Conséquence en cascade** : l'archivage manuel d'une actualité exigeait l'état
-« Résolu ». Sans workflow, il ne pouvait plus être atteint — l'icône 📦 a donc
-disparu avec lui. L'archivage **automatique**, lui, reste.
-
-🔴 **REVIREMENT — une PETITE ANNONCE A un workflow** (arbitré le 18/08/2026, le
-soir même où ce paragraphe affirmait le contraire). Cinq états : **En cours ·
-Réservé · Vendu · Donné · Annulé**.
-
-Ce paragraphe disait : *« l'annonce a un état, mais il lui manque la seconde
-moitié de la question — qui l'y a mis ; il n'y a qu'un acteur »*. Le
-raisonnement était cohérent et **faux** : il regardait **qui agit**, quand la
-question de la section 3 est d'abord **où en est l'objet**. Un vendeur qui a
-réservé, vendu ou renoncé a bien un cycle, et ses voisins ont besoin de le lire.
-
-⚠️ **Ce que le revirement ne remet pas en cause** : il n'y a toujours pas de fil
-d'évolutions sur une annonce. **Déclarer un workflow et le TRACER sont deux
-décisions distinctes** — la seconde n'a pas été demandée. Ne pas les confondre
-est ce qui évite d'importer un `RubriqueHistorique` par réflexe.
-
-⚠️ **L'archivage n'est PAS un état.** Une annonce conclue reste un mois puis
-bascule dans un Historique replié. C'est une conséquence du temps, pas une étape
-qu'on choisit : elle se **calcule** (`est_archivee`), et en faire une sixième
-pastille donnerait deux notions pour la même chose — celle qu'on pose et celle
-qui arrive. Même règle que les actualités.
-
-🔴 **La leçon de méthode, elle, tient** : c'est la deuxième fois en deux jours
-que l'écran réfute le papier (« une actualité n'a pas de workflow » allait dans
-l'autre sens). Il ne faut pas en conclure qu'il faut moins déclarer — **c'est la
-déclaration qui rend le désaccord visible et corrigeable en un seul endroit**.
-Sans elle, les deux raisonnements auraient coexisté dans deux écrans.
-
-**Why (16/08/2026)** : la section finale s'appelait « État », terme qui mélangeait
-l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu'il
-dit *où en est le travail*, pas *qui le voit*. Termes retenus par l'utilisateur
-après une première proposition inexacte de ma part.
 
 ### 9 septies. Les sections 4 à 9 ne se réécrivent plus : `ChampsCommuns.svelte`
 
@@ -1024,6 +1009,113 @@ encore en modale dans un fichier de 2 182 lignes qui doit d'abord être découp�
 un écart de fond — le périmètre y est une **chaîne** dans un `<select>` là où
 `PerimetrePicker` travaille sur un tableau. C'est un changement de contrat, pas un
 remplacement de composant.
+
+## 15. DROITS — qui peut éditer, qui peut commenter (18/08/2026)
+
+| Geste | Qui |
+|---|---|
+| **✏️ éditer** le contenu | l'auteur · le « saisi pour » · l'admin |
+| **🔄 commenter** et faire avancer le workflow | les mêmes **+ le conseil syndical** |
+
+> « Seul l'auteur peut l'éditer ou le commenter, avec l'admin (en cas de Pb),
+>   mais aussi le CS peut commenter, pas éditer »
+
+🔴 **« Saisi pour » compte comme auteur**, et c'est la raison d'être du champ :
+un membre du CS qui dépose un ticket au nom d'un résident ne le dépossède pas de
+sa demande. Avant, ce résident était le **seul** à ne pas pouvoir corriger ce qui
+parle de lui — pendant que n'importe quel membre du CS le pouvait.
+
+Les deux règles vivent dans `auth/deps.py` (`peut_editer`, `peut_commenter`),
+jamais dans un routeur ni dans un écran. `test_droits_editer_commenter.py` les
+verrouille.
+
+⚠️ **L'écran doit dire la même chose que le serveur, ni plus ni moins.** Un
+bouton affiché plus largement que le droit produit un 403 sur un geste que
+l'interface a elle-même proposé ; plus étroitement, il rend une capacité
+introuvable. Les deux sont arrivés le même jour dans `RubriqueHistorique`.
+## 16. WORKFLOW & ARCHIVAGE — ce qui a des étapes, et ce qui se range tout seul
+
+🔴 **Trois questions distinctes**, que le produit a confondues jusqu'au 18/08/2026 :
+
+| Question | Réponse |
+|---|---|
+| l'objet a-t-il des **étapes ordonnées franchies par plusieurs** ? | alors il a un **workflow** (section 3) |
+| ces mouvements doivent-ils **laisser une trace** ? | c'est une **AUTRE** décision — l'annonce a cinq états et aucun fil |
+| quand disparaît-il de la liste ? | **calculé**, jamais choisi — voir plus bas |
+
+⚠️ Le test n'est pas « y a-t-il un champ `statut` ? ». Trois entités en portent un
+et une seule a un workflow tracé. Confondre les deux fait importer un
+`RubriqueHistorique` par réflexe sur un objet qui n'a rien à raconter.
+
+### L'archivage se CALCULE, il ne se choisit pas
+
+**30 jours** après l'entrée dans un état **terminal** — mesuré sur
+`statut_change_le`, **jamais** sur `mis_a_jour_le`. *Annulé* disparaît
+**immédiatement**. **Aucun bouton 📦.**
+
+⚠️ `mis_a_jour_le` paraît équivalent et ne l'est pas : corriger une faute de
+frappe sur un objet conclu **repousserait son archivage d'un mois**, à chaque
+retouche. `Publication` porte `statut_change_le` pour exactement cette raison,
+et les tickets mesuraient encore sur `mis_a_jour_le` au 18/08.
+
+⚠️ Un bouton d'archivage crée **deux notions pour la même chose** — celle qu'on
+pose et celle qui arrive — libres de se contredire dès qu'on rouvre l'objet.
+L'archivage n'est pas une étape : c'est une conséquence du temps.
+
+🔴 **Calculé côté SERVEUR**, transporté dans un champ `archivee`. Jamais
+recalculé par un écran : sinon la liste et l'Historique tranchent différemment,
+et c'est le bug du 17/07/2026 sur les actualités — un élément visible dans une
+vue et pas dans l'autre.
+
+🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
+18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
+est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,
+« Résolu », « Annulé » sont le vocabulaire d'un **ticket**, et les emprunter
+faisait ressembler une annonce à un dossier suivi. Son Publié/Brouillon est une
+décision de **diffusion**, et vit en section 2.
+
+La déclaration le dit (`sansObjet`), et c'est elle qui l'impose : la section
+disparaît de la création, de l'édition **et** de l'Historique — dans ce dernier,
+parce que la liste d'états passée à `EvolForm` est **vide**, pas parce qu'une
+condition en dur le décide.
+
+⚠️ **Conséquence en cascade** : l'archivage manuel d'une actualité exigeait l'état
+« Résolu ». Sans workflow, il ne pouvait plus être atteint — l'icône 📦 a donc
+disparu avec lui. L'archivage **automatique**, lui, reste.
+
+🔴 **REVIREMENT — une PETITE ANNONCE A un workflow** (arbitré le 18/08/2026, le
+soir même où ce paragraphe affirmait le contraire). Cinq états : **En cours ·
+Réservé · Vendu · Donné · Annulé**.
+
+Ce paragraphe disait : *« l'annonce a un état, mais il lui manque la seconde
+moitié de la question — qui l'y a mis ; il n'y a qu'un acteur »*. Le
+raisonnement était cohérent et **faux** : il regardait **qui agit**, quand la
+question de la section 3 est d'abord **où en est l'objet**. Un vendeur qui a
+réservé, vendu ou renoncé a bien un cycle, et ses voisins ont besoin de le lire.
+
+⚠️ **Ce que le revirement ne remet pas en cause** : il n'y a toujours pas de fil
+d'évolutions sur une annonce. **Déclarer un workflow et le TRACER sont deux
+décisions distinctes** — la seconde n'a pas été demandée. Ne pas les confondre
+est ce qui évite d'importer un `RubriqueHistorique` par réflexe.
+
+⚠️ **L'archivage n'est PAS un état.** Une annonce conclue reste un mois puis
+bascule dans un Historique replié. C'est une conséquence du temps, pas une étape
+qu'on choisit : elle se **calcule** (`est_archivee`), et en faire une sixième
+pastille donnerait deux notions pour la même chose — celle qu'on pose et celle
+qui arrive. Même règle que les actualités.
+
+🔴 **La leçon de méthode, elle, tient** : c'est la deuxième fois en deux jours
+que l'écran réfute le papier (« une actualité n'a pas de workflow » allait dans
+l'autre sens). Il ne faut pas en conclure qu'il faut moins déclarer — **c'est la
+déclaration qui rend le désaccord visible et corrigeable en un seul endroit**.
+Sans elle, les deux raisonnements auraient coexisté dans deux écrans.
+
+**Why (16/08/2026)** : la section finale s'appelait « État », terme qui mélangeait
+l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu'il
+dit *où en est le travail*, pas *qui le voit*. Termes retenus par l'utilisateur
+après une première proposition inexacte de ma part.
+
+
 
 ## Checklist UX (à vérifier avant commit)
 
