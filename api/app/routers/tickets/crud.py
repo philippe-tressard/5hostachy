@@ -32,6 +32,7 @@ from .commun import (
     generer_numero,
     ticket_read,
 )
+from .correction import _appliquer_contenu, _appliquer_relations, _envoye
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
@@ -244,56 +245,6 @@ def get_ticket(
     return ticket_read(ticket, session)
 
 
-def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
-    """Champs de contenu, et la liste des changements qui alimentera l'historique."""
-    changes: list[str] = []
-    if body.titre is not None and body.titre != ticket.titre:
-        changes.append(f"Titre : {ticket.titre} → {body.titre}")
-        ticket.titre = body.titre
-    if body.description is not None:
-        changes.append("Description modifiée")
-        ticket.description = body.description
-    if body.categorie is not None and body.categorie != ticket.categorie:
-        changes.append(f"Catégorie : {ticket.categorie} → {body.categorie}")
-        ticket.categorie = body.categorie
-    if body.perimetre_cible is not None:
-        ticket.perimetre_cible = json.dumps(body.perimetre_cible)
-        changes.append("Périmètre modifié")
-    if body.fichiers_urls is not None:
-        ticket.fichiers_urls = json.dumps(
-            photos_internes(body.fichiers_urls), ensure_ascii=False
-        )
-        changes.append("Pièces jointes modifiées")
-    return changes
-
-
-def _appliquer_relations(body: TicketUpdate, ticket: Ticket) -> list[str]:
-    """Champs relationnels et destinataires — réservés au CS/admin."""
-    changes: list[str] = []
-    if body.lot_id is not None:
-        ticket.lot_id = body.lot_id
-        changes.append("Lot modifié")
-    if body.batiment_id is not None:
-        ticket.batiment_id = body.batiment_id
-        changes.append("Bâtiment modifié")
-    if body.destinataire_syndic is not None:
-        ticket.destinataire_syndic = body.destinataire_syndic
-    if body.destinataire_cs is not None:
-        ticket.destinataire_cs = body.destinataire_cs
-    if body.saisi_pour_user_id is not None:
-        ticket.saisi_pour_user_id = body.saisi_pour_user_id
-        changes.append("Résident concerné modifié")
-    if body.saisi_pour_nom is not None:
-        ticket.saisi_pour_nom = body.saisi_pour_nom
-    if body.saisi_pour_email is not None:
-        ticket.saisi_pour_email = body.saisi_pour_email
-    if body.non_relancable is not None:
-        ticket.non_relancable = body.non_relancable
-    if body.non_relancable_motif is not None:
-        ticket.non_relancable_motif = body.non_relancable_motif
-    return changes
-
-
 @router.patch("/{ticket_id}", response_model=TicketRead)
 def update_ticket(
     ticket_id: int,
@@ -312,6 +263,20 @@ def update_ticket(
         raise HTTPException(403, "Accès refusé")
 
     ancien_statut = ticket.statut
+    #  L'etat des CANAUX avant modification. La Diffusion est rouverte a
+    #  l'edition depuis le 18/08/2026 (arbitrage utilisateur) : le conseil
+    #  syndical doit pouvoir decider d'envoyer au syndic un ticket deja saisi.
+    #
+    #  Seule la TRANSITION decoche -> coche envoie. Un canal deja coche ne
+    #  repart pas a chaque enregistrement : c'est ce qui distingue « je decide
+    #  d'envoyer » de « je corrige une faute de frappe », et ce qui evite
+    #  l'incident du triple envoi WhatsApp du 14/08/2026.
+    #
+    #  Sans ce bloc, rouvrir la section serait pire que la fermer : la case
+    #  cocherait un drapeau que rien ne consommerait, et l'ecran promettrait un
+    #  envoi qui n'aurait pas lieu — le defaut de `non_relancable` (#435).
+    syndic_avant = ticket.destinataire_syndic
+    cs_avant = ticket.destinataire_cs
 
     # Statut et priorité : CS/admin uniquement
     if body.statut is not None or body.priorite is not None:
@@ -331,7 +296,7 @@ def update_ticket(
     content_fields = (
         body.titre is not None or body.description is not None
         or body.categorie is not None or body.perimetre_cible is not None
-        or body.fichiers_urls is not None
+        or body.fichiers_urls is not None or body.photos_urls is not None
     )
     if content_fields:
         if is_auteur and not is_cs_admin and ticket.statut != StatutTicket.ouvert:
@@ -339,16 +304,27 @@ def update_ticket(
         changes += _appliquer_contenu(body, ticket)
 
     # Champs relationnels/destinataires : CS/admin uniquement
-    extra_fields = (
-        body.lot_id is not None or body.batiment_id is not None
-        or body.destinataire_syndic is not None or body.destinataire_cs is not None
-        or body.saisi_pour_user_id is not None or body.saisi_pour_nom is not None
-        or body.saisi_pour_email is not None
+    #  ⚠️ `non_relancable` MANQUAIT à cette liste : un `PATCH` qui ne portait
+    #  que lui n'entrait jamais dans `_appliquer_relations`, et le bouton « ne
+    #  plus relancer » répondait 200 sans rien écrire (#435). Un 200 qui n'écrit
+    #  rien est pire qu'un 422 : il fabrique la confiance qu'il devrait retirer.
+    #  La liste teste la PRÉSENCE et non la non-nullité — sinon effacer un champ
+    #  (le remettre à `null`) n'y entrerait pas davantage.
+    extra_fields = any(
+        _envoye(body, c)
+        for c in (
+            'lot_id', 'batiment_id', 'destinataire_syndic', 'destinataire_cs',
+            'partager_whatsapp',
+            'saisi_pour_user_id', 'saisi_pour_nom', 'saisi_pour_email',
+            'non_relancable', 'non_relancable_motif',
+        )
     )
     if extra_fields:
         if not is_cs_admin:
             raise HTTPException(403, "Seul le CS ou un administrateur peut modifier ces champs")
         changes += _appliquer_relations(body, ticket)
+
+
 
     ticket.mis_a_jour_le = datetime.utcnow()
 
@@ -412,6 +388,33 @@ def update_ticket(
     #  reste attaché à la vraie transition, dans `evolutions.py::_notifier_auteur`.
     session.commit()
     session.refresh(ticket)
+
+    #  L'ENVOI, et seulement sur la transition decoche -> coche (voir plus haut).
+    #  Apres le commit : un courriel qui part sur une transaction annulee annonce
+    #  une decision qui n'a pas ete prise.
+    #  Le partage WhatsApp est un ACTE, pas un champ : `Ticket` n'a pas cette
+    #  colonne. Cocher la case demande un envoi, ici et maintenant — il n'y a rien
+    #  à comparer à un état antérieur, et rien ne repart tout seul au prochain
+    #  enregistrement puisque la case revient décochée.
+    #  Le contrôle de rôle est DANS la condition, et non chez l'appelant :
+    #  `test_canaux_notification` lit l'arbre syntaxique et refuse toute condition
+    #  portant `partager_whatsapp` sans rôle. Une garde qu'un contrôle ne peut pas
+    #  voir ne le protège pas de la refonte qui déplacera l'appel.
+    if body.partager_whatsapp and is_cs_admin:
+        _partager_sur_le_groupe(session, ticket, background_tasks)
+
+    if (ticket.destinataire_syndic and not syndic_avant) or (
+        ticket.destinataire_cs and not cs_avant
+    ):
+        envoyer_email_syndic_cs(
+            ticket, user, background_tasks, session,
+            syndic=ticket.destinataire_syndic and not syndic_avant,
+            cs=ticket.destinataire_cs and not cs_avant,
+            pieces_jointes=chemins_locaux(
+                parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
+            ),
+        )
+
     return ticket_read(ticket, session)
 
 

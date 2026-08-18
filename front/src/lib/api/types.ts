@@ -54,6 +54,11 @@ export interface Ticket {
 	fichiers_urls?: string[];
 	destinataire_syndic?: boolean;
 	destinataire_cs?: boolean;
+	/** « Saisi pour » — le CS peut ouvrir un ticket au nom d'un tiers (section 2). */
+	saisi_pour_user_id?: number | null;
+	saisi_pour_nom?: string | null;
+	saisi_pour_email?: string | null;
+	saisi_pour_affichage?: string | null;
 	non_relancable?: boolean;
 	non_relancable_motif?: string | null;
 	relance_count?: number;

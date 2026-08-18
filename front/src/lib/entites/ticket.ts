@@ -24,11 +24,15 @@
 import type { EntiteDeclaree } from './types';
 
 /**
- * ⚠️ **Le ticket de dette des motifs `api`.** Écrit une fois : les deux
- * divergences ci-dessous tombent le jour où l'API sait faire, et elles doivent
- * tomber ENSEMBLE — sinon la seconde survit à l'oubli de la première.
+ * ⚠️ **Plus aucun motif `api` ici, et c'est un événement.** Deux divergences en
+ * portaient un, citant #431 : les **photos** fermées en édition, et « Saisi
+ * pour » qu'on ne pouvait pas effacer. Un motif `api` est une **dette, jamais un
+ * choix** — il tombe le jour où l'API sait faire, et sa disparition est la preuve
+ * qu'elle a été payée. Les deux ont été soldées le 18/08/2026.
+ *
+ * `lint:etats` garde encore un cas vivant, côté publications (#390) : le contrôle
+ * du motif `api` n'est donc pas devenu aveugle faute de sujet.
  */
-const DETTE_API = '#431';
 
 export const TICKET: EntiteDeclaree = {
 	id: 'ticket',
@@ -54,21 +58,20 @@ export const TICKET: EntiteDeclaree = {
 			},
 		},
 		{
-			//  DEUX champs nommés, d'où la liste d'intitulés : « Catégorie »,
-			//  toujours modifiable, et « Saisi pour », qui ne l'est qu'à la
-			//  création.
+			//  DEUX champs nommés, d'où la liste d'intitulés : « Catégorie » et
+			//  « Saisi pour ». Tous deux **requis**, tous deux rendus aux mêmes
+			//  états — la section n'a plus de champ à géométrie variable.
 			//
-			//  ⚠️ **Limite connue du cadre, et elle se voit ici.** La section est
-			//  PRÉSENTE en édition — la catégorie s'y corrige comme le titre —, mais
-			//  « Saisi pour » n'y est pas rendu : `TicketUpdate` accepte les trois
-			//  champs `saisi_pour_*` sans savoir les EFFACER (un `None` y est
-			//  indistinguable d'un champ non envoyé), et proposer « En mon nom »
-			//  serait offrir un choix qui ne fait rien, en silence.
+			//  ✅ « Saisi pour » est OUVERT à l'édition depuis le 18/08/2026. Il en
+			//  était absent parce que `TicketUpdate` ne savait pas EFFACER les
+			//  `saisi_pour_*` — un `None` y était indistinguable d'un champ non
+			//  envoyé, et « En mon nom » aurait été un choix sans effet, en silence.
+			//  Le serveur lit désormais la PRÉSENCE du champ (`model_fields_set`)
+			//  et non sa non-nullité : effacer efface.
 			//
-			//  R4 ne sait déclarer qu'une divergence de SECTION, pas de champ : ce
-			//  motif `api` (#431) ne peut donc pas s'écrire dans `absente`, et vit
-			//  ici, invisible à `lint:etats`. C'est le premier écart que le cadre ne
-			//  sait pas tenir — à instruire.
+			//  C'est ce qui referme, pour cette entité, la limite décrite en #436 —
+			//  R4 ne déclarant qu'une divergence de SECTION, un champ fermé au sein
+			//  d'une section ouverte n'était déclarable nulle part.
 			id: 'specifiques',
 			objet: 'Catégorie + Saisi pour (en mon nom / résident inscrit / personne extérieure)',
 			titreEcran: ['Catégorie', 'Saisi pour'],
@@ -118,18 +121,13 @@ export const TICKET: EntiteDeclaree = {
 			requis: true,
 		},
 		{
+			//  ✅ OUVERTES à l'édition le 18/08/2026. La dette `api` qui les fermait
+			//  est soldée : `TicketUpdate` accepte `photos_urls`, et une liste vide
+			//  efface sans ambiguïté — exactement ce que la déclaration annonçait.
+			//  Un motif `api` est une DETTE, jamais un choix : il tombe quand elle est
+			//  payée, et sa disparition d'ici est la preuve qu'elle l'a été.
 			id: 'photos',
 			objet: 'FichiersUpload mode photos',
-			absente: {
-				edition: {
-					motif: 'api',
-					ticket: DETTE_API,
-					explication:
-						"`TicketUpdate` n'accepte pas `photos_urls`. Proposer le champ ferait " +
-						"disparaître la sélection à l'enregistrement, sans un mot. C'est un défaut à " +
-						'corriger côté API, pas un choix à entériner.',
-				},
-			},
 		},
 		{
 			//  Ouverts à l'édition depuis le cadre : `fichiers_urls` EST accepté par
@@ -145,13 +143,6 @@ export const TICKET: EntiteDeclaree = {
 				affichage: {
 					motif: 'geste',
 					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
-				},
-				edition: {
-					motif: 'geste',
-					explication:
-						"Une correction n'est pas une nouvelle. Rouvrir les canaux renverrait un " +
-						'message à chaque faute de frappe rattrapée — incident du triple envoi ' +
-						'WhatsApp du 14/08/2026, où « Encombrants » est parti trois fois.',
 				},
 			},
 		},

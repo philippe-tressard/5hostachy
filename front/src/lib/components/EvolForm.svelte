@@ -17,25 +17,30 @@
     7-8. Photos / Documents (ou Pièces jointes en mode unifié)
     9. Diffusion   →  message interne, canaux, adresse externe — EN DERNIER
 
-  ## LE GESTE EST DÉCIDÉ PAR L'APPELANT (#426, 18/08/2026)
+  ## UN SEUL POINT D'ENTRÉE, ET LE GESTE SE LIT DANS LES PASTILLES (#426)
 
   Ce formulaire commençait par une rangée de deux pastilles — « 💬 Commentaire »
   et « 🔄 Changement d'état » — au-dessus d'un formulaire ouvert par un bouton
-  💬. L'utilisateur avait donc **déjà dit** ce qu'il voulait faire en cliquant, et
-  la première pastille était un choix sans objet : déjà sélectionnée, et la
-  sélectionner ne faisait rien.
+  💬 : l'utilisateur avait **déjà dit** ce qu'il voulait faire en cliquant, et la
+  première pastille était un choix sans objet.
 
   > « le bouton commentaire n'a pas lieu d'être — il est présent sur le fil
   >   principal pour ouvrir un *nouveau commentaire* » (17/08/2026)
 
-  La rangée a disparu, et le geste arrive en prop : `evolType`. Chaque écran
-  porte désormais **deux** points d'entrée — 💬 pour commenter, 🔄 pour changer
-  l'état —, ce qui était la forme recommandée par #426. On ne pouvait pas retirer
-  la pastille seule : « Changement d'état » n'avait aucun autre chemin depuis un
-  fil, et la supprimer aurait supprimé la fonction.
+  Première tentative (18/08, matin) : deux boutons sur la carte, 💬 et 🔄, et le
+  geste figé par l'appelant. **Refusée à l'écran le 18/08** — *« l'icône commenter
+  est à retirer, devenue obsolète ; il manque le principal, la section Workflow
+  avec les différentes pastilles »*.
 
-  La section **Workflow** ne rend donc plus qu'un sélecteur d'état, et seulement
-  quand c'est le geste demandé.
+  La forme retenue est plus simple, et c'est **UN** point d'entrée : le bouton 🔄
+  ouvre le formulaire, dont la **section Workflow** porte les états en pastilles,
+  **celle de l'état courant active**. Laisser la pastille telle quelle ne change
+  rien : l'entrée est alors un commentaire. En choisir une autre fait avancer le
+  suivi. Le même formulaire sert les deux gestes sans jamais les redemander, parce
+  que **la réponse est déjà visible à l'écran**.
+
+  C'est aussi ce qui supprime la question « et si je veux commenter ET changer
+  l'état ? » : c'était déjà possible, mais il fallait le deviner.
 
   ## Les pièces jointes sont DEUX sections, jamais une (#433)
 
@@ -58,8 +63,7 @@
   `ChampsCommuns` — toute évolution de l'un doit suivre dans l'autre.
 
   Props clés :
-    evolType           – LE GESTE, décidé par l'appelant : 'commentaire' | 'etat'
-    statutOptions      – liste des options de statut disponibles (geste 'etat')
+    statutOptions      – états proposables, rendus en pastilles (section Workflow)
     statutLabels       – map value→label pour afficher le statut actuel
     currentStatut      – statut actuel de l'item parent (badge du libellé)
     showNotifs         – afficher les cases WhatsApp/syndic/CS
@@ -80,6 +84,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
@@ -88,12 +93,6 @@
 	    même fil —, et deux `<label for="…">` pointant le même id ne désignent plus
 	    rien. Même contrat que `ChampsCommuns`. */
 	export let idPrefixe = 'evol';
-	/**  LE GESTE, décidé par l'appelant — c'est le bouton cliqué qui l'a dit
-	     (#426). `commentaire` : on ajoute une réponse au fil. `etat` : on fait
-	     avancer le workflow, et le sélecteur d'état apparaît. Il n'y a plus de
-	     rangée de pastilles : redemander ce que le clic vient de déclarer est un
-	     choix sans objet. */
-	export let evolType: 'commentaire' | 'etat' = 'commentaire';
 	/** Options affichées dans le select "Nouvel état" */
 	export let statutOptions: { value: string; label: string }[] = [];
 	/** Map value→label pour afficher le statut actuel */
@@ -145,6 +144,7 @@
 	// ── State ─────────────────────────────────────────────────────────────────
 	let contenu = initialContenu;
 	let nouveauStatut = '';
+	let evolType: 'commentaire' | 'etat' = 'commentaire';
 	let partagerWhatsapp = defaultPartagerWhatsapp;
 	let envoyerSyndic = defaultEnvoyerSyndic;
 	let envoyerCs = defaultEnvoyerCs;
@@ -174,7 +174,7 @@
 	//  seulement s'il y a un état à proposer : un choix à un seul choix n'est pas
 	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
 	//  la décide (#426).
-	$: sectionWorkflow = !editMode && evolType === 'etat' && statutOptions.length > 0;
+	$: sectionWorkflow = !editMode && statutOptions.length > 0;
 	$: sectionDiffusion = showNotifs || showEmail || avecInterne;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
@@ -186,14 +186,21 @@
 	//  quand il accompagne un changement d'état. Pas de mention « (optionnel) » :
 	//  l'absence d'astérisque suffit (`ux-patterns` §9).
 	$: titreContenu = editMode ? 'Contenu' : 'Commentaire';
+	//  🔴 LE GESTE EST DÉDUIT, il ne se déclare plus. Une pastille laissée sur
+	//  l'état courant ne change rien : l'entrée est un commentaire. En choisir une
+	//  autre en fait un changement d'état. C'est ce qui permet UN seul point
+	//  d'entrée — la question « lequel des deux ? » a déjà sa réponse à l'écran.
+	$: evolType = (!editMode && nouveauStatut && nouveauStatut !== currentStatut)
+		? 'etat'
+		: 'commentaire';
+	//  Le commentaire est REQUIS quand l'entrée n'apporte que lui : sans texte ni
+	//  changement d'état, l'entrée ne dirait rien.
 	$: contenuRequis = !editMode && evolType === 'commentaire';
 
+	//  Une entrée vaut si elle apporte quelque chose : un changement d'état, un
+	//  texte, ou une pièce jointe. Rien des trois → rien à enregistrer.
 	$: canSubmit = !saving && (
-		editMode
-			? !(richEmpty(contenu) && allFichiersUrls.length === 0)
-			: evolType === 'etat'
-				? !!nouveauStatut
-				: !(richEmpty(contenu) && (!showFiles || allFichiersUrls.length === 0))
+		evolType === 'etat' || !(richEmpty(contenu) && allFichiersUrls.length === 0)
 	);
 
 	// Le téléversement lui-même vit dans `FichiersUpload` : trois copies de la
@@ -231,15 +238,22 @@
 		<!--  Section à UN champ : le titre EST le libellé, et le sélecteur ne
 		      réécrit rien (`ux-patterns` §9 septies). Même forme que la section
 		      Workflow de `FormulaireTicket`, au mot près. -->
+		<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). L'état COURANT est
+		      actif à l'ouverture : on voit où en est l'objet, et en changer est un
+		      clic. Laisser la pastille active telle quelle ne change rien — l'entrée
+		      est alors un simple commentaire, et c'est ce qui permet de n'avoir
+		      qu'UN point d'entrée sur la carte.
+		      Section à un champ : le titre EST le libellé, et il porte l'état actuel
+		      en badge (`ux-patterns` §9 septies et §9 quater). -->
 		<SectionFormulaire premiere titre="Workflow" requis badge={libelleStatutActuel}
-			pour="{idPrefixe}-statut">
-			<div class="field champ-large">
-				<select id="{idPrefixe}-statut" bind:value={nouveauStatut}>
-					<option value="">— Choisir le nouvel état —</option>
+			idTitre="{idPrefixe}-workflow-titre">
+			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-workflow-titre">
+				<div class="evol-pastilles">
 					{#each statutOptions as opt (opt.value)}
-						<option value={opt.value}>{opt.label}</option>
+						<Pastille active={(nouveauStatut || currentStatut) === opt.value}
+							on:click={() => (nouveauStatut = opt.value)}>{opt.label}</Pastille>
 					{/each}
-				</select>
+				</div>
 			</div>
 		</SectionFormulaire>
 	{/if}
@@ -264,14 +278,13 @@
 	</SectionFormulaire>
 
 	<!-- ── 7-8. Photos et Documents ─────────────────────────────────────────
-	     ⚠️ `evolType === 'commentaire'` ferme les pièces jointes sur un
-	     CHANGEMENT D'ÉTAT. Cette condition est héritée du code d'avant
-	     l'extraction du composant (elle existait telle quelle dans
-	     `tickets/[id]` avant le 22b3828) : aucun commit ni aucune issue n'en
-	     porte la raison. Une photo justifie pourtant souvent un passage à
-	     « Résolu ». Laissée EN L'ÉTAT tant qu'elle n'est pas arbitrée — la
-	     question est posée dans #416. -->
-	{#if showFiles && (editMode || evolType === 'commentaire')}
+	     ✅ Les pièces jointes ne dépendent PLUS du geste (18/08/2026). Une
+	     condition héritée les fermait sur un changement d'état — sans qu'aucun
+	     commit ni aucune issue n'en porte la raison, alors qu'une photo justifie
+	     souvent un passage à « Résolu ». Elle ne pouvait de toute façon pas
+	     survivre au point d'entrée unique : le geste n'est plus connu à
+	     l'ouverture du formulaire, il se déduit de ce qu'on y fait. -->
+	{#if showFiles}
 		<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
 			<div class="field champ-large">
 				<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
@@ -336,8 +349,9 @@
 </div>
 
 <style>
-	/*  `.evol-nature` a disparu avec la rangée de pastilles qu'elle habillait
-	    (#426) : le geste est décidé par le bouton qui ouvre ce formulaire. */
+	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
+	    (`Pastille.svelte`, v2.67.11) : ne vit ici que leur disposition. */
+	.evol-pastilles { display: flex; gap: .5rem; flex-wrap: wrap; }
 
 	/*  Définie ICI, avec le balisage qu'elle habille : `.checkbox-field` n'est pas
 	    une classe d'`app.css` — chaque composant qui l'emploie la style lui-même,

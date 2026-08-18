@@ -65,17 +65,16 @@
 	export let peutAdministrer = false;
 	/**  Ce que le corps de la carte montre. La page en est propriétaire : elle
 	     seule sait qu'un seul formulaire doit être ouvert à la fois.
-	     ⚠️ `evolution` s'est scindé en `commentaire` et `etat` (#426) : le geste
-	     est déclaré par le bouton cliqué, et non redemandé par une pastille une
-	     fois le formulaire ouvert. */
-	export let mode: 'lecture' | 'edition' | 'commentaire' | 'etat' = 'lecture';
+	     ⚠️ UN seul mode d'évolution (#426) : le geste ne se déclare plus au clic,
+	     il se lit dans les pastilles de la section Workflow, celle de l'état
+	     courant étant active. */
+	export let mode: 'lecture' | 'edition' | 'evolution' = 'lecture';
 	/** Enregistrement d'une évolution en cours — porté par la page (appel d'API). */
 	export let evolutionEnCours = false;
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
-		commenter: void;
-		changerEtat: void;
+		evoluer_ouvrir: void;
 		modifier: void;
 		supprimer: void;
 		annuler: void;
@@ -113,14 +112,13 @@
 		</div>
 		<div class="tk-row-right">
 			<span class="tk-row-date">{fmtDate(dateAffichee)}</span>
-			<!--  DEUX points d'entrée, et c'est le fond de #426 : le formulaire
-			      redemandait en pastilles ce que ce bouton venait de déclarer. Le
-			      geste se dit ici, une fois. -->
+			<!--  UN point d'entrée (#426). L'icône 💬 a été retirée le 18/08/2026 :
+			      elle doublait celle-ci, le formulaire portant désormais les DEUX
+			      gestes — commenter, et faire avancer le suivi. -->
 			{#if peutCommenter}
-				<button class="btn-icon" aria-label="Commenter" title="Commenter"
-					on:click|stopPropagation={() => dispatch('commenter')}>&#x1F4AC;</button>
-				<button class="btn-icon" aria-label="Changer l’état" title="Changer l’état"
-					on:click|stopPropagation={() => dispatch('changerEtat')}>&#x1F504;</button>
+				<button class="btn-icon" aria-label="Commenter ou changer l’état"
+					title="Commenter ou changer l’état"
+					on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button>
 			{/if}
 			{#if peutAdministrer}
 				<button class="btn-icon" aria-label="Modifier" title="Modifier le ticket"
@@ -145,10 +143,9 @@
 				<div class="tk-formulaire">
 					<FormulaireTicket {ticket} on:modifie on:annule={() => dispatch('annuler')} />
 				</div>
-			{:else if mode === 'commentaire' || mode === 'etat'}
+			{:else if mode === 'evolution'}
 				<div class="tk-formulaire">
 					<EvolForm idPrefixe="tk-evol-{ticket.id}"
-						evolType={mode}
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
