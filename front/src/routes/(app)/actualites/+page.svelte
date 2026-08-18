@@ -13,7 +13,7 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import { safeHtml } from '$lib/sanitize';
-	import { STATUT_LABELS, STATUT_PUBLICATION_OPTIONS } from '$lib/publications';
+	import { STATUT_LABELS } from '$lib/publications';
 
 	$: _pc = getPageConfig($configStore, 'actualites', defautsDePage('actualites'));
 	$: _siteNom = $siteNomStore;
@@ -71,17 +71,6 @@
 		showForm = false;
 	}
 
-	async function archivePub(pub: Publication) {
-		if (!confirm(`Archiver « ${pub.titre} » ?`)) return;
-		try {
-			await pubsApi.archive(pub.id);
-			pubList = pubList.filter((p) => p.id !== pub.id);
-			toast('success', 'Publication archivée');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Impossible d’archiver');
-		}
-	}
-
 	async function deletePub(pub: Publication) {
 		if (!confirm(`Supprimer définitivement « ${pub.titre} » ?`)) return;
 		try {
@@ -93,24 +82,18 @@
 		}
 	}
 
-	//  Un seul gestionnaire pour les deux canaux : le second aurait été la copie
-	//  du premier à trois mots près, et c'est ainsi que deux boutons finissent par
-	//  ne plus se comporter pareil.
-	const CANAUX = {
-		email: { quoi: "l'email au syndic/CS", ok: 'Email renvoyé', envoi: pubsApi.renvoyerEmail },
-		whatsapp: { quoi: "l'annonce sur le groupe WhatsApp", ok: 'Annonce renvoyée', envoi: pubsApi.renvoyerWhatsapp },
-	} as const;
-
-	async function renvoyerPub(pub: Publication, canal: keyof typeof CANAUX) {
-		const c = CANAUX[canal];
-		if (!confirm(`Renvoyer ${c.quoi} pour « ${pub.titre} » ?`)) return;
-		try {
-			await c.envoi(pub.id);
-			toast('success', c.ok);
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Impossible de renvoyer');
-		}
-	}
+	//  ⚠️ LE RENVOI D'UNE ANNONCE ET L'ARCHIVAGE MANUEL ONT ÉTÉ RETIRÉS DE CET
+	//  ÉCRAN le 18/08/2026, sur arbitrage. Les endpoints existent toujours
+	//  (`POST /publications/{id}/renvoyer-email` et `…/renvoyer-whatsapp`,
+	//  `PATCH {archivee:true}`) : c'est la commande qui disparaît, pas la
+	//  fonction.
+	//
+	//  Ce que cela retire concrètement : un envoi qui a échoué sans qu'on s'en
+	//  rende compte — groupe WhatsApp déconnecté, messagerie du syndic
+	//  indisponible — n'a plus de chemin de rattrapage depuis l'interface.
+	//  C'était la raison d'être du bouton WhatsApp (10/08/2026) : republier ne
+	//  déclenche rien, et ajouter un commentaire enverrait le commentaire, pas
+	//  l'annonce. À rouvrir ailleurs si le besoin se représente.
 
 	//  ── Édition ───────────────────────────────────────────────────────────────
 	//  La page ne porte plus QUE l'identité de la publication en cours de
@@ -233,31 +216,29 @@
 			formulaireOuvert={editingPub?.id === pub.id || showEvolForm === pub.id}
 			on:toggle={() => togglePub(pub.id)}>
 
+			<!--  L'ORDRE DES ICÔNES est celui de la carte de ticket, désigné comme
+			      référence le 18/08/2026 : 🔄 commenter · ✏️ modifier · 🗑️ supprimer.
+			      Il était inversé ici, et deux cartes du même site ne se lisaient pas
+			      pareil.
+
+			      ⚠️ TROIS GESTES ONT ÉTÉ RETIRÉS le 18/08/2026, sur arbitrage :
+			        • ✉️ renvoyer l'e-mail au syndic/CS ;
+			        • 💬 renvoyer l'annonce sur le groupe WhatsApp ;
+			        • 📦 archiver.
+			      Les deux premiers rejouaient un envoi ; l'archivage devient sans objet,
+			      la publication n'ayant plus d'état « Résolu » à atteindre (le workflow
+			      a disparu des actualités). L'archivage automatique, lui, reste : une
+			      publication bascule dans l'Historique au bout de son délai. -->
 			<svelte:fragment slot="actions">
 				{#if $isCS}
+					<button class="btn-icon" aria-label="Commenter"
+						title="Commenter"
+						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button>
 					<button class="btn-icon-edit" aria-label="Modifier" title="Modifier"
 						on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
-					<!--  UN point d'entrée (#426). L'icône 💬 a été retirée le 18/08/2026 :
-					      elle doublait celle-ci, le formulaire portant désormais les DEUX
-					      gestes — commenter, et faire avancer le suivi. -->
-					<button class="btn-icon" aria-label="Commenter ou changer l’état"
-						title="Commenter ou changer l’état"
-						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button>
-					{#if pub.statut === 'resolu'}
-						<button class="btn-icon" aria-label="Archiver" title="Archiver"
-							on:click|stopPropagation={() => archivePub(pub)}>&#x1F4E6;</button>
-					{/if}
 				{/if}
 				{#if $isAdmin}
-					{#if (pub.envoyer_syndic || pub.envoyer_cs) && !pub.brouillon}
-						<button class="btn-icon" aria-label="Renvoyer l'email" title="Renvoyer l'email au syndic/CS"
-							on:click|stopPropagation={() => renvoyerPub(pub, 'email')}>✉️</button>
-					{/if}
-					{#if pub.partager_whatsapp && !pub.brouillon}
-						<button class="btn-icon" aria-label="Renvoyer sur WhatsApp" title="Renvoyer l'annonce sur le groupe WhatsApp"
-							on:click|stopPropagation={() => renvoyerPub(pub, 'whatsapp')}>💬</button>
-					{/if}
-					<button class="btn-icon" aria-label="Supprimer" title="Supprimer définitivement" style="color:var(--color-danger)"
+					<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
 						on:click|stopPropagation={() => deletePub(pub)}>🗑️</button>
 				{/if}
 			</svelte:fragment>
@@ -292,10 +273,13 @@
 						      d'`EvolForm`, et le mode a disparu avec son dernier appelant
 						      (#433). *Une variante ajoutée pour accueillir un écart
 						      existant ne factorise pas, elle entérine.* -->
+						<!--  ⚠️ AUCUNE option d'état : une actualité n'a pas de workflow
+						      (arbitré le 18/08/2026). `EvolForm` ne rend donc pas la
+						      section Workflow, et l'entrée est toujours un commentaire —
+						      c'est la liste vide qui le dit, pas une condition en dur. -->
 						<EvolForm idPrefixe="pub-evol-{pub.id}"
-							statutOptions={STATUT_PUBLICATION_OPTIONS}
+							statutOptions={[]}
 							statutLabels={STATUT_LABELS}
-							currentStatut={pub.statut ?? ''}
 							showNotifs={true}
 							defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
 							defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}

@@ -48,7 +48,7 @@
   signale. Toute retouche ici se vérifie sur un envoi réel.
 -->
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
@@ -57,8 +57,8 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { publications as pubsApi, documents as docsApi, ApiError, type Publication } from '$lib/api';
 	import { perimetreDefautListe } from '$lib/utils';
-	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
-	import { richEmpty, STATUT_PUBLICATION_OPTIONS } from '$lib/publications';
+	import { richEmpty } from '$lib/publications';
+	import { ACCEPT_DOCUMENTS, nomFichier } from '$lib/fichiers';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { PUBLICATION } from '$lib/entites/publication';
@@ -91,12 +91,11 @@
 	let brouillon = publication?.brouillon ?? false;
 	let confidentiel = publication?.confidentiel ?? false;
 
-	//  ── 3. Workflow ─────────────────────────────────────────────────────────
-	//  Proposé DÈS LA CRÉATION depuis le cadre #430 : la valeur `publie` partait
-	//  déjà dans la charge utile, mais en silence — une publication naissait donc
-	//  avec un état que personne n'avait vu ni choisi. Le défaut ne change pas ;
-	//  il se montre.
-	let statut: string = publication?.statut ?? 'publie';
+	//  ⚠️ PLUS DE WORKFLOW — arbitré le 18/08/2026. Une actualité n'a pas d'étapes
+	//  de vie : elle est publiée, puis bascule dans l'Historique au bout de son
+	//  délai. Le `statut` n'est donc plus envoyé du tout — ni à la création, ni à
+	//  la correction —, et la colonne garde sa valeur d'origine pour les anciennes
+	//  publications (la carte l'affiche encore, en lecture).
 
 	//  ── 4 à 8 ───────────────────────────────────────────────────────────────
 	//  Copie défensive du périmètre et du public : les tableaux viennent de la
@@ -112,9 +111,45 @@
 	//  tableau vide effacerait les photos existantes au premier enregistrement,
 	//  silencieusement, et sans qu'on ait touché à la section.
 	let photos: string[] = [...(publication?.photos_urls ?? [])];
-	//  Les DOCUMENTS restent différés à la création : ils deviennent des entités
+	//  Les DOCUMENTS restent différés à la CRÉATION : ils deviennent des entités
 	//  `Document` rattachées à `publication_id`, qui n'existe pas encore.
 	let pendingFiles: File[] = [];
+
+	//  ✅ EN CORRECTION, la publication existe : on ajoute et on retire à l'unité,
+	//  tout de suite. C'est ce qui a permis de rouvrir la section sans attendre
+	//  #390 — il n'a jamais été nécessaire de « remplacer la liste ».
+	let docsExistants: { id: number; titre?: string; fichier_nom?: string }[] = [];
+	let docsEnCours = false;
+
+	onMount(async () => {
+		if (!publication) return;
+		try { docsExistants = await docsApi.listByPublication(publication.id); }
+		catch { /* la section reste vide plutôt que de bloquer la correction */ }
+	});
+
+	async function ajouterDocuments(e: Event) {
+		const input = e.target as HTMLInputElement;
+		if (!publication || !input.files?.length) return;
+		docsEnCours = true;
+		try {
+			for (const f of Array.from(input.files)) {
+				const doc = await docsApi.uploadForPublication(f.name, publication.id, f);
+				docsExistants = [...docsExistants, doc];
+			}
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Téléversement impossible');
+		} finally { docsEnCours = false; input.value = ''; }
+	}
+
+	async function retirerDocument(id: number) {
+		if (!confirm('Retirer ce document de la publication ?')) return;
+		try {
+			await docsApi.delete(id);
+			docsExistants = docsExistants.filter((d) => d.id !== id);
+		} catch (e: any) {
+			toast('error', e instanceof ApiError ? e.message : 'Suppression impossible');
+		}
+	}
 
 	//  ── 9. Diffusion ────────────────────────────────────────────────────────
 	let partagerWhatsapp = false;
@@ -134,7 +169,7 @@
 
 	function reinitialiser() {
 		titre = ''; contenu = ''; urgente = false; epingle = false;
-		brouillon = false; statut = 'publie'; partagerWhatsapp = false; envoyerSyndic = false;
+		brouillon = false; partagerWhatsapp = false; envoyerSyndic = false;
 		envoyerCs = false; annonceHall = false; confidentiel = false;
 		perimetreCible = perimetreDefautListe();
 		publicCible = ['résidents'];
@@ -153,7 +188,6 @@
 				const maj = await pubsApi.update(publication.id, {
 					titre: titre.trim(), contenu,
 					epingle, urgente, brouillon, confidentiel,
-					statut: statut || null,
 					perimetre_cible: perimetreCible,
 					public_cible: publicCible,
 					photos_urls: photos,
@@ -173,7 +207,6 @@
 				perimetre_cible: perimetreCible, public_cible: publicCible,
 				brouillon: publierApresDocuments ? true : brouillon,
 				photos_urls: photos,
-				statut: statut || 'publie',
 				partager_whatsapp: partagerWhatsapp,
 				envoyer_syndic: envoyerSyndic,
 				envoyer_cs: envoyerCs,
@@ -226,26 +259,6 @@
 			</SectionFormulaire>
 		{/if}
 
-		<!--  3. Workflow — où en est cette publication. À distinguer de la
-		      diffusion, qui dit qui la voit et où (section 9). Identique en
-		      création et en édition : une correction corrige l'état comme elle
-		      corrige un titre, et c'est le `PATCH` qui a changé de nature côté
-		      serveur — il écrit une CORRECTION, pas une transition (#433). -->
-		{#if sectionPresente(PUBLICATION, etat, 'workflow')}
-			<SectionFormulaire titre="Workflow" requis
-				idTitre="pub-workflow-{publication?.id ?? 'new'}">
-				<div class="field champ-large">
-					<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Publié » est
-					      active par défaut à la création — l'état de départ se voit au
-					      lieu de se deviner. Normalisé sur Tickets, constaté, puis
-					      étendu ici (R5). -->
-					<WorkflowPastilles options={STATUT_PUBLICATION_OPTIONS} valeur={statut}
-						idTitre="pub-workflow-{publication?.id ?? 'new'}"
-						on:choisir={(e) => (statut = e.detail)} />
-				</div>
-			</SectionFormulaire>
-		{/if}
-
 		<!--  4 à 9 : l'ordre, les intitulés et les séparations viennent du
 		      composant partagé — voir `ChampsCommuns.svelte`. Aucune de ces
 		      sections n'est gouvernée par `modeEdition` : elles le sont par la
@@ -257,10 +270,35 @@
 			avecDescription={sectionPresente(PUBLICATION, etat, 'description')} descriptionRequise bind:description={contenu}
 			descriptionPlaceholder="Contenu de l'actualité…"
 			avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')} bind:photos
-			avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')} documentsDifferes bind:documentsFichiers={pendingFiles}
+			avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')} documentsDifferes
+			documentsControle={modeEdition ? 'slot' : 'interne'} bind:documentsFichiers={pendingFiles}
 			avecDiffusion={sectionPresente(PUBLICATION, etat, 'diffusion')}
 			avecCanaux={false}
 		>
+			<!--  ✅ EN CORRECTION, les documents s'ajoutent et se retirent à l'unité :
+			      la publication existe, il n'y a rien à différer. Le contrôle vient
+			      d'ici parce que ce sont des entités `Document` avec un identifiant ;
+			      la SECTION, elle — son rang, son intitulé, sa séparation — reste
+			      celle de `ChampsCommuns`. -->
+			<svelte:fragment slot="documents">
+					{#if docsExistants.length}
+						<ul class="docs-liste">
+							{#each docsExistants as doc (doc.id)}
+								<li>
+									<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
+									<button type="button" class="btn-icon-danger" aria-label="Retirer ce document"
+										title="Retirer ce document" on:click={() => retirerDocument(doc.id)}>🗑️</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				<label class="btn btn-outline btn-sm docs-ajout">
+					{docsEnCours ? 'Téléversement…' : '+ Ajouter un document'}
+					<input type="file" multiple accept={ACCEPT_DOCUMENTS} disabled={docsEnCours}
+						on:change={ajouterDocuments} />
+				</label>
+			</svelte:fragment>
+
 			<!--  Les actualités rendent leurs canaux elles-mêmes : l'affiche de hall
 			      n'est pas un canal de notification, et `CanauxNotification` ne
 			      saurait pas la porter. -->
@@ -291,4 +329,15 @@
 		</div>
 	</form>
 </FormulaireCreation>
+
+<style>
+	/*  La liste des documents déjà joints, en correction. Elle porte son style ici,
+	    avec le balisage qui l'utilise — un style laissé chez le parent n'atteint pas
+	    le balisage d'un enfant (v2.67.11). */
+	.docs-liste { list-style: none; margin: 0 0 .6rem; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
+	.docs-liste li { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+	.docs-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.docs-ajout { display: inline-flex; cursor: pointer; }
+	.docs-ajout input[type='file'] { display: none; }
+</style>
 

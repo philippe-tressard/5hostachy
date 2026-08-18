@@ -40,6 +40,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from './ApercuCarte.svelte';
+	import EnteteCarte from './EnteteCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import FormulaireTicket from './FormulaireTicket.svelte';
@@ -95,26 +96,26 @@
 	on:click={() => dispatch('basculer')}
 	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && dispatch('basculer')}
 >
-	<div class="tk-row">
-		<div class="tk-row-inner">
+	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
+	      la norme de toutes les cartes du site (`EnteteCarte`, 18/08/2026). -->
+	<EnteteCarte titre={ticket.titre} date={fmtDate(dateAffichee)}>
+		<svelte:fragment slot="titre-suffixe">
+			{#if isNouveau(ticket.cree_le, ticket.mis_a_jour_le)}
+				<span class="badge badge-gray tk-neuf">NEW</span>
+			{/if}
+		</svelte:fragment>
+		<svelte:fragment slot="tags">
 			<span class="tk-cat" title={ticket.categorie}>{categorieTicketEmoji(ticket.categorie)}</span>
-			<span class="tk-row-titre">{ticket.titre}
-				{#if isNouveau(ticket.cree_le, ticket.mis_a_jour_le)}
-					<span class="badge badge-gray tk-neuf">NEW</span>
-				{/if}
-			</span>
-			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'} tk-badge">
+			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
-			{#if ticket.priorite === 'haute'}
-				<span class="badge badge-orange tk-badge">⚡ Urgente</span>
-			{/if}
-		</div>
-		<div class="tk-row-right">
-			<span class="tk-row-date">{fmtDate(dateAffichee)}</span>
-			<!--  UN point d'entrée (#426). L'icône 💬 a été retirée le 18/08/2026 :
-			      elle doublait celle-ci, le formulaire portant désormais les DEUX
-			      gestes — commenter, et faire avancer le suivi. -->
+			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
+			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
+		</svelte:fragment>
+		<svelte:fragment slot="actions">
+			<!--  UN point d'entrée (#426) : le formulaire porte les deux gestes.
+			      L'ordre des icônes — 🔄 puis ✏️ puis 🗑️ — est celui de toutes les
+			      cartes du site, arbitré le 18/08/2026 sur celle-ci. -->
 			{#if peutCommenter}
 				<button class="btn-icon" aria-label="Commenter ou changer l’état"
 					title="Commenter ou changer l’état"
@@ -126,9 +127,9 @@
 				<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
 					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button>
 			{/if}
-			<span class="chevron" class:open={expanded}>›</span>
-		</div>
-	</div>
+		</svelte:fragment>
+		<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
+	</EnteteCarte>
 
 	{#if !expanded}
 		<ApercuCarte contenu={ticket.description} photos={ticket.photos_urls ?? []} />
@@ -193,14 +194,10 @@
 	    `svelte-check` sait dire qu'un sélecteur défini n'est pas utilisé, pas
 	    l'inverse. La retirer ne change rien à l'écran : c'est bien la preuve
 	    qu'elle ne faisait rien. */
-	.tk-row:hover { background: var(--color-bg); }
-	.tk-row-inner { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; overflow: hidden; }
+	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
+	    Ne reste ici que ce qui est propre à un ticket. */
 	.tk-cat { flex-shrink: 0; font-size: .95rem; }
-	.tk-row-titre { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.tk-row-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
-	.tk-row-date { font-size: .78rem; color: var(--color-text-muted); margin-right: .3rem; white-space: nowrap; }
-	/*  Les badges de la rangée ne se compriment pas quand le titre est long. */
-	.tk-badge { flex-shrink: 0; }
+	.tk-auteur { font-size: .78rem; color: var(--color-text-muted); }
 	.tk-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
 
 	.tk-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }

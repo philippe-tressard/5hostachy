@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.42 · Août 2026</span>
+    <span class="topbar-badge">Version 3.43 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1933,7 +1933,7 @@
 
       <div class="card">
         <h3>&#x1F535; État d'une publication &amp; Historique</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Chaque publication possède un <strong>état</strong>, <strong>proposé dès la création</strong> dans la section <strong>Workflow</strong>, sous forme de <strong>pastilles</strong> — « Publié » est retenue par défaut : c'est une simple annonce, sans suivi.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Une actualité <strong>n'a pas d'état à choisir</strong> : elle est publiée, puis elle bascule automatiquement dans l'<strong>Historique</strong> en bas de page au bout de son délai de visibilité. « En cours », « Résolu » sont le vocabulaire des <strong>tickets</strong> — une annonce n'est pas un dossier suivi.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
           <li><strong>&#x1F535; Publié</strong> (par défaut) — annonce hors suivi. Elle reste visible <strong>1 mois</strong>, puis bascule automatiquement dans la section <strong>Historique</strong>, en bas de la page Actualités (groupée par année).</li>
           <li><strong>&#x1F7E1; En cours / &#x1F7E2; Résolu / ⚫ Annulé</strong> — états de suivi. Dès qu'une publication passe dans l'un de ces états, elle quitte le fonctionnement « 1 mois » et suit le cycle de suivi (une publication résolue est archivée après le délai configuré).</li>
@@ -1945,33 +1945,24 @@
         <h3>✏️ Corriger une actualité (conseil syndical)</h3>
         <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Le bouton <strong>✏️ Modifier</strong> d'une actualité rouvre <strong>le même formulaire</strong> que la création, garni de ce qui avait été saisi. Il ne proposait auparavant qu'une partie des champs&nbsp;: le périmètre, les destinataires et les photos y étaient perdus.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
-          <li>Tout se corrige&nbsp;: titre, options (épinglage, urgence, brouillon, confidentiel), <strong>état</strong>, périmètre, destinataires, contenu et photos.</li>
+          <li>Tout se corrige&nbsp;: titre, options (épinglage, urgence, brouillon, confidentiel), périmètre, destinataires, contenu, photos et documents.</li>
           <li>Les <strong>canaux de diffusion</strong> (WhatsApp, syndic, conseil syndical, affiche de hall) n'y sont <strong>pas</strong> reproposés&nbsp;: corriger une faute de frappe ne doit renvoyer aucun message. Pour renvoyer volontairement, voir les deux boutons ci-dessous.</li>
           <li>La correction apparaît dans l'<strong>Historique</strong> pour ce qu'elle est — «&nbsp;Correction&nbsp;: État&nbsp;: Publié → Résolu&nbsp;» — et non comme une étape du suivi.</li>
-          <li>Les <strong>documents</strong> ne sont pas modifiables après coup&nbsp;; ils s'ajoutent à la création.</li>
+          <li>Les <strong>documents</strong> se corrigent aussi&nbsp;: la section les liste, avec un 🗑️ pour en retirer un et un bouton pour en ajouter. Ils partent immédiatement, la publication existant déjà.</li>
         </ul>
       </div>
 
       <div class="card">
         <h3>&#x1F4AC; Commenter ou changer l'état</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Sur chaque actualité, le bouton <strong>&#x1F504;</strong> ouvre <strong>un seul formulaire</strong> qui fait les deux&nbsp;: commenter, et changer l'état. La section <strong>Workflow</strong> y présente les états en <strong>pastilles</strong>, celle de l'état actuel étant déjà retenue — la laisser telle quelle ajoute un commentaire, en choisir une autre change l'état.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Sur chaque actualité, le bouton <strong>&#x1F504;</strong> ouvre le formulaire de commentaire. Une actualité n'ayant pas d'état, il n'y a rien d'autre à y choisir&nbsp;: on écrit, on joint des fichiers si besoin, on enregistre.</p>
         <p style="font-size:.9rem; color:var(--muted)">Les <strong>photos</strong> et les <strong>documents</strong> y sont deux rubriques distinctes, comme partout ailleurs.</p>
       </div>
       <div class="card">
-        <h3>&#x1F504; Renvoyer une actualité (administrateur)</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Un envoi peut échouer sans que personne ne s'en rende compte sur le moment&nbsp;: groupe WhatsApp déconnecté, messagerie du syndic indisponible. Deux boutons, visibles des seuls administrateurs sur chaque actualité du fil, permettent de le rejouer sans rien recréer&nbsp;:</p>
-        <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
-          <li><strong>&#x2709;&#xFE0F; Renvoyer l'e-mail</strong> — réexpédie l'actualité au syndic et/ou au conseil syndical. Visible si l'actualité avait été envoyée à l'un des deux.</li>
-          <li><strong>&#x1F4AC; Renvoyer sur WhatsApp</strong> — republie l'annonce sur le groupe de la copropriété, avec sa première photo. Visible si l'actualité avait l'option <strong>«&nbsp;Partager sur le groupe&nbsp;»</strong> et que le partage WhatsApp est actif.</li>
-        </ul>
-        <div class="callout tip">
-          <strong>&#x1F4A1; Astuce</strong>
-          <p>Republier l'actualité ne relance rien&nbsp;: le partage n'a lieu qu'à la <strong>première</strong> publication. Ajouter un commentaire enverrait le commentaire, pas l'annonce. Ces deux boutons sont la seule façon de renvoyer l'annonce elle-même.</p>
-        </div>
+        <h3>&#x1F504; Renvoyer une actualité — retiré</h3>
+        <p style="font-size:.9rem; color:var(--muted)">Les deux boutons qui permettaient de <strong>rejouer un envoi</strong> — ✉️ vers le syndic et le conseil syndical, 💬 vers le groupe WhatsApp — ont été <strong>retirés de la page Actualités le 18 août 2026</strong>, en même temps que l'archivage manuel.</p>
         <div class="callout warning">
-          <strong>&#x26A0;&#xFE0F; Le statut «&nbsp;incertain&nbsp;» — vérifier avant de renvoyer</strong>
-          <p>Dans <strong>Administration &rsaquo; WhatsApp &rsaquo; Historique des envois</strong>, un message peut s'afficher en <strong>«&nbsp;incertain&nbsp;»</strong> (&#x26A0;&#xFE0F;) ou <strong>«&nbsp;en cours&nbsp;»</strong> (&#x23F3;)&nbsp;: le groupe n'a pas confirmé la réception à temps, mais le message est le plus souvent bien arrivé. <strong>Ouvrez le groupe WhatsApp avant de renvoyer</strong> — un doublon dans le groupe ne peut plus être retiré.</p>
-          <p style="margin-top:.5rem">Les <strong>messages planifiés</strong> (encombrants&hellip;) ne sont jamais renvoyés automatiquement dans ce cas&nbsp;: un e-mail prévient l'administrateur, à qui revient la décision.</p>
+          <span class="callout-icon">&#x26A0;&#xFE0F;</span>
+          <p>Il n'y a donc <strong>plus de moyen, depuis l'interface, de rattraper un envoi qui a échoué</strong> — groupe WhatsApp déconnecté, messagerie du syndic indisponible. Republier ne déclenche rien&nbsp;: le partage n'a lieu qu'à la première publication. Signalez-le à l'administrateur si le cas se présente.</p>
         </div>
       </div>
     </section>
@@ -2917,7 +2908,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.42</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.43</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

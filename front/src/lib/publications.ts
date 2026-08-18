@@ -18,28 +18,15 @@ export const STATUT_BADGE: Record<string, string> = {
 	publie: 'badge-blue', en_cours: 'badge-orange', resolu: 'badge-green', annule: 'badge-gray',
 };
 
-//: La pastille de couleur qui précède le libellé dans les listes de choix. Elle
-//: ne sert QU'À ça — le badge d'une carte, lui, se colore par `STATUT_BADGE`.
-const STATUT_PUCE: Record<string, string> = {
-	publie: '\u{1F535}', en_cours: '\u{1F7E1}', resolu: '\u{1F7E2}', annule: '⚫',
-};
-
 /**
- * Les états proposables d'une publication — **dérivés**, jamais réécrits.
+ * ⚠️ **Plus aucun écran ne propose ces états** depuis le 18/08/2026 : une actualité
+ * n'a pas de workflow, elle est publiée puis bascule dans l'Historique au bout de
+ * son délai. Cette liste n'est donc **plus exportée** — la garder aurait laissé
+ * croire qu'un écran pouvait s'en servir.
  *
- * Cette liste existait en clair dans `actualites/+page.svelte`, et le formulaire
- * d'édition en portait une **seconde** copie sous forme de quatre `<option>`
- * écrites à la main. C'est la panne des statuts de ticket à l'identique (#415,
- * quatre copies) : deux listes d'accord entre elles ne prouvent rien.
- *
- * ⚠️ Le pendant serveur est `api/app/routers/publications/commun.py`
- * (`STATUTS_PUBLICATION`, `STATUT_LABELS`). Les contextes de build sont `./api`
- * et `./front` : rien de la racine n'entre dans les images, le partage d'un
- * fichier est impossible — toute modification ici en appelle une là-bas.
+ * `STATUT_LABELS` et `STATUT_BADGE`, eux, restent : d'anciennes publications
+ * portent un état en base, et la carte l'affiche encore **en lecture**.
  */
-export const STATUT_PUBLICATION_OPTIONS = Object.entries(STATUT_LABELS).map(
-	([value, label]) => ({ value, label: `${STATUT_PUCE[value] ?? ''} ${label}`.trim() }),
-);
 
 /**
  * Vrai quand un contenu riche ne porte aucun texte — `<p></p>` en est un.
