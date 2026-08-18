@@ -4,11 +4,9 @@ import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 import { STATUTS_IDEE, STATUTS_IDEE_FILTRE, IDEE_BADGE } from '$lib/idees';
 import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
-import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
+import OngletAnnonces from '$lib/components/OngletAnnonces.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
 import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-import AnnonceCard from '$lib/components/AnnonceCard.svelte';
-import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
@@ -72,84 +70,14 @@ let ideesLoading = true;
 let showFormIdee = false;
 let filtreStatut = '';
 
-// Annonces
+//  Les annonces : la page les CHARGE (un seul `Promise.all` pour les trois
+//  rubriques) et les lie à `OngletAnnonces`, qui porte tout le reste — filtres,
+//  formulaires, gestes. `expandedAnnonce` reste ici parce qu'un lien profond
+//  (`#annonce-12`) la désigne avant que l'onglet ne soit monté.
 let annonces: any[] = [];
 let annoncesLoading = true;
 let showFormAnnonce = false;
-let submittingAnnonce = false;
-let formAnnonce = { titre: '', description: '', type_annonce: 'vente', categorie: 'divers', prix: '', negotiable: false, contact_visible: true };
-let filtreTypeAnnonce = '';
-let filtreCatAnnonce = '';
-let filtreTriAnnonce = 'recent';
 let expandedAnnonce: number | null = null;
-/** Annonce dont l'auteur a demandé à GÉRER les photos — voir le bloc de rendu. */
-let gestionPhotos: number | null = null;
-$: filteredAnnonces = annonces
-	.filter(a => !filtreTypeAnnonce || a.type_annonce === filtreTypeAnnonce)
-	.filter(a => !filtreCatAnnonce || a.categorie === filtreCatAnnonce);
-$: sortedAnnonces = [...filteredAnnonces].sort((a, b) => {
-	if (filtreTriAnnonce === 'prix_asc') return (a.prix ?? 999999) - (b.prix ?? 999999);
-	if (filtreTriAnnonce === 'prix_desc') return (b.prix ?? 0) - (a.prix ?? 0);
-	return new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime();
-});
-
-
-async function creerAnnonce() {
-	if (!formAnnonce.titre || !formAnnonce.description) { toast('error', 'Titre et description obligatoires'); return; }
-	submittingAnnonce = true;
-	try {
-		const created: any = await annoncesApi.create({
-			titre: formAnnonce.titre,
-			description: formAnnonce.description,
-			type_annonce: formAnnonce.type_annonce,
-			categorie: formAnnonce.categorie,
-			prix: formAnnonce.prix ? parseFloat(formAnnonce.prix) : null,
-			negotiable: formAnnonce.negotiable,
-			contact_visible: formAnnonce.contact_visible,
-		});
-		annonces = [created, ...annonces];
-		showFormAnnonce = false;
-		formAnnonce = { titre: '', description: '', type_annonce: 'vente', categorie: 'divers', prix: '', negotiable: false, contact_visible: true };
-		expandedAnnonce = created.id;
-		toast('success', 'Annonce publiée !');
-	} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
-	finally { submittingAnnonce = false; }
-}
-
-/** Téléverse une photo et retourne son URL (contrat attendu par FichiersUpload). */
-async function uploadPhotoAnnonce(id: number, file: File): Promise<string> {
-	const res: any = await annoncesApi.uploadPhoto(id, file);
-	annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
-	return res.url;
-}
-
-/** Supprime une photo et retourne la liste à jour (contrat attendu par FichiersUpload). */
-async function supprimerPhotoAnnonce(id: number, url: string): Promise<string[]> {
-	const res: any = await annoncesApi.deletePhoto(id, url);
-	annonces = annonces.map(a => a.id === id ? { ...a, photos: res.photos } : a);
-	return res.photos;
-}
-
-async function changeStatutAnnonce(id: number, statut: string) {
-	try {
-		await annoncesApi.updateStatut(id, statut);
-		if (statut === 'archive') {
-			annonces = annonces.filter(a => a.id !== id);
-		} else {
-			annonces = annonces.map(a => a.id === id ? { ...a, statut } : a);
-		}
-		toast('success', 'Statut mis à jour');
-	} catch { toast('error', 'Erreur'); }
-}
-
-async function supprimerAnnonce(id: number) {
-	if (!confirm('Supprimer définitivement cette annonce ?')) return;
-	try {
-		await annoncesApi.supprimer(id);
-		annonces = annonces.filter(a => a.id !== id);
-		toast('success', 'Annonce supprimée');
-	} catch { toast('error', 'Erreur'); }
-}
 
 const statuts = STATUTS_IDEE_FILTRE;
 const statutClass = (s: string) => IDEE_BADGE[s] ?? 'badge-gray';
@@ -202,22 +130,6 @@ async function supprimerReponseIdee(ideeId: number, repId: number) {
 try {
 await ideesApi.supprimerReponse(ideeId, repId);
 idees = await ideesApi.list();
-toast('success', 'Réponse supprimée');
-} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
-}
-
-async function repondreAnnonce(id: number, contenu: string) {
-try {
-await annoncesApi.repondre(id, contenu);
-annonces = await annoncesApi.list();
-toast('success', 'Réponse publiée');
-} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); throw e; }
-}
-
-async function supprimerReponseAnnonce(annonceId: number, repId: number) {
-try {
-await annoncesApi.supprimerReponse(annonceId, repId);
-annonces = await annoncesApi.list();
 toast('success', 'Réponse supprimée');
 } catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 }
@@ -503,57 +415,16 @@ on:choisir={(e) => changeStatut(idee.id, e.detail)} />
 {/if}
 
 {#if activeTab === 'annonces'}
-{#if showFormAnnonce}
-<FormulaireAnnonce on:cree={(e) => { annonces = [e.detail, ...annonces]; showFormAnnonce = false; expandedAnnonce = e.detail.id; }}
-	on:annule={() => (showFormAnnonce = false)} />
-{/if}
-
-<!-- Filtres annonces -->
-<div class="filters" style="margin-bottom:1.25rem">
-<select bind:value={filtreTypeAnnonce} class="filter-select">
-<option value="">Tous types</option>
-{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}
-</select>
-<select bind:value={filtreCatAnnonce} class="filter-select">
-<option value="">Toutes catégories</option>
-{#each CATEGORIES_ANNONCE as c}<option value={c.val}>{c.label}</option>{/each}
-</select>
-<select bind:value={filtreTriAnnonce} class="filter-select">
-<option value="recent">Plus récentes</option>
-<option value="prix_asc">Prix croissant</option>
-<option value="prix_desc">Prix décroissant</option>
-</select>
-</div>
-
-{#if annoncesLoading}
-<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if sortedAnnonces.length === 0}
-<div class="empty-state">
-<h3>Aucune annonce</h3>
-<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
-</div>
-{:else}
-{#each sortedAnnonces as annonce}
-<AnnonceCard
-	{annonce}
-	expanded={expandedAnnonce === annonce.id}
-	gestionOuverte={gestionPhotos === annonce.id}
+<OngletAnnonces
+	bind:annonces
+	chargement={annoncesLoading}
+	bind:showForm={showFormAnnonce}
+	bind:expandedAnnonce
 	estCS={$isCS}
 	estAdmin={$isAdmin}
 	currentUserId={$currentUser?.id}
-	onToggle={() => (expandedAnnonce = expandedAnnonce === annonce.id ? null : annonce.id)}
-	onToggleGestion={() => (gestionPhotos = gestionPhotos === annonce.id ? null : annonce.id)}
-	onUpload={(f) => uploadPhotoAnnonce(annonce.id, f)}
-	onRemove={(url) => supprimerPhotoAnnonce(annonce.id, url)}
-	onStatut={(statut) => changeStatutAnnonce(annonce.id, statut)}
-	onSupprimer={() => supprimerAnnonce(annonce.id)}
-	onRepondre={(c) => repondreAnnonce(annonce.id, c)}
-	onSupprimerReponse={(rid) => supprimerReponseAnnonce(annonce.id, rid)}
-	onSignalerAnnonce={() => signaler('annonce', annonce.id)}
-	onSignalerReponse={(rid) => signaler('reponse', rid)}
+	onSignaler={signaler}
 />
-{/each}
-{/if}
 {/if}
 
 {/if}
@@ -577,7 +448,6 @@ margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
 .sondage-votants { font-weight: 600; }
 .sondage-ciblage { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
 .sondage-badge { font-size: .7rem; }
-.filters { display: flex; gap: .4rem; flex-wrap: wrap; }
 .idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
 .vote-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .6rem; cursor: pointer; transition: border-color .12s; min-width: 3.5rem; }
 .vote-btn:hover { border-color: var(--color-primary); }
@@ -603,5 +473,4 @@ margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
 .moderation-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .moderation-aide { font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
 /* Annonces */
-.filter-select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .85rem; background: var(--color-bg); }
 </style>

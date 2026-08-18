@@ -493,6 +493,19 @@ condition en dur le décide.
 « Résolu ». Sans workflow, il ne pouvait plus être atteint — l'icône 📦 a donc
 disparu avec lui. L'archivage **automatique**, lui, reste.
 
+🔴 **Une PETITE ANNONCE n'a pas de workflow non plus — mais pas pour la même
+raison** (18/08/2026), et c'est la nuance qui compte. L'actualité n'a **aucun**
+état ; l'annonce en a un — Disponible · Réservé · Vendu · Archivé. Ce qui lui
+manque est la seconde moitié de la question de la section 3 : *« où en est cet
+objet, **et qui l'y a mis** »*. Il n'y a qu'un acteur, son auteur, et rien à
+tracer. Son statut est donc un **attribut** qu'on pose depuis la carte, pas un
+cycle suivi à plusieurs.
+
+⚠️ **Le réflexe à éviter** : *« il y a des états, donc il y a un workflow, donc
+il faut un fil d'évolutions »*. Trois entités du site ont un `statut` et une
+seule d'entre elles a un workflow. Le test n'est pas l'existence d'un champ,
+c'est l'existence d'**étapes ordonnées franchies par plusieurs acteurs**.
+
 **Why (16/08/2026)** : la section finale s'appelait « État », terme qui mélangeait
 l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu'il
 dit *où en est le travail*, pas *qui le voit*. Termes retenus par l'utilisateur

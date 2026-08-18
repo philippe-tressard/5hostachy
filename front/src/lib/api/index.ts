@@ -315,6 +315,9 @@ export const idees = {
 export const annonces = {
 	list: () => api.get<any[]>('/annonces'),
 	create: (data: unknown) => api.post<any>('/annonces', data),
+	//  La CORRECTION d'une annonce — `PATCH /annonces/{id}` existait depuis
+	//  toujours, avec ses sept champs, et aucun écran ne l'appelait (18/08/2026).
+	update: (id: number, data: unknown) => api.patch<any>(`/annonces/${id}`, data),
 	updateStatut: (id: number, statut: string) => api.patch(`/annonces/${id}/statut`, { statut }),
 	supprimer: (id: number) => api.delete(`/annonces/${id}`),
 	uploadPhoto: async (id: number, file: File): Promise<{ url: string; photos: string[] }> => {
