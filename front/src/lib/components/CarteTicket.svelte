@@ -43,6 +43,7 @@
 	import EnteteCarte from './EnteteCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
@@ -97,6 +98,7 @@
 	const dispatch = createEventDispatcher<{
 		basculer: void;
 		evol_modifier: number;
+		evol_supprimer: { ticket: Ticket; evolId: number };
 		evol_corriger: unknown;
 		evol_annuler: void;
 		evoluer_ouvrir: void;
@@ -133,12 +135,32 @@
 				<span class="badge badge-gray tk-neuf">NEW</span>
 			{/if}
 		</svelte:fragment>
+		<!--  🔴 L'EN-TÊTE PORTE LE PÉRIMÈTRE ET LE NUMÉRO (18/08/2026, signalé à
+		      l'écran) : *« le périmètre devrait s'afficher dans l'état sous le titre
+		      comme pour les actualités. Je ne comprends pas qu'il y ait une
+		      différence de comportement, cela devrait être un squelette standard »*.
+
+		      Le ticket était le SEUL des quatre écrans à cartes dépliables à ranger
+		      son périmètre dans le corps : actualité, annonce et événement le
+		      portaient déjà en tag. L'ordre des tags reprend celui de l'actualité —
+		      état, puis 🔹 périmètre, puis les marqueurs, puis l'auteur — pour que
+		      deux listes voisines se lisent de la même façon.
+
+		      ⚠️ Le périmètre n'est donc PLUS passé à `FicheLecture` : il s'afficherait
+		      deux fois sur la même carte. Le rendu de la section 4 en affichage, c'est
+		      l'en-tête — et c'est vrai des quatre entités, ce qui referme l'écart que
+		      le lot du calendrier avait laissé ouvert en le nommant.
+
+		      Le NUMÉRO monte aussi : il n'était lisible qu'une fois la carte dépliée,
+		      dans son pied, alors que c'est la référence qu'on cite au syndic. -->
 		<svelte:fragment slot="tags">
 			<span class="tk-cat" title={ticket.categorie}>{categorieTicketEmoji(ticket.categorie)}</span>
 			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
+			{#if !estPerimetreParDefaut(ticket.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(ticket.perimetre_cible)}</span>{/if}
 			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
+			<span class="tk-numero">#{ticket.numero}</span>
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
@@ -198,16 +220,14 @@
 			{:else}
 				<FicheLecture
 					entite={TICKET}
-					perimetre={ticket.perimetre_cible ?? []}
 					description={ticket.description}
 					photos={ticket.photos_urls ?? []}
 					documents={ticket.fichiers_urls ?? []}
 				>
 					<svelte:fragment slot="pied">
-						<small class="tk-meta">
-							Créé le {fmtDate(ticket.cree_le)}
-							<span class="tk-numero"> · #{ticket.numero}</span>
-						</small>
+						<!--  Le NUMÉRO est monté dans l'en-tête : le répéter ici en
+						      ferait deux mentions du même fait sur une carte déjà dense. -->
+						<small class="tk-meta">Créé le {fmtDate(ticket.cree_le)}</small>
 					</svelte:fragment>
 				</FicheLecture>
 
@@ -224,7 +244,8 @@
 						currentUserId={$currentUser?.id}
 						estAdmin={$isAdmin}
 						enEdition={evolEnEdition}
-						on:modifier={(e) => dispatch('evol_modifier', e.detail)}>
+						on:modifier={(e) => dispatch('evol_modifier', e.detail)}
+						on:supprimer={(e) => dispatch('evol_supprimer', { ticket, evolId: e.detail })}>
 						<svelte:fragment slot="edition" let:evol>
 							{#key evolEnEdition}
 								<EvolForm idPrefixe="tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
