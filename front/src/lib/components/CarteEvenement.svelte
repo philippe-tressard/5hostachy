@@ -55,7 +55,7 @@
 </script>
 
 	<div
-		class="card carte-evenement"
+		class="carte-liste carte-evenement"
 		id="ev-{ev.id}"
 		role="presentation"
 		class:event-urgent={ev.type === 'coupure'}
@@ -128,23 +128,17 @@
 	    `.event-body` et `.event-date` restent dans la page : les blocs Archives et
 	    Maintenances récurrentes les utilisent, et un style de page n'atteint pas le
 	    balisage d'un composant enfant (v2.67.11). */
+	/*  🔴 La carte du calendrier a REJOINT `.carte-liste` le 18/08/2026 : c'est
+	    elle qui porte le liseré gauche passant au bleu au survol — « plus chouette
+	    et discret », et désormais la référence UX du site.
+
+	    Fond, rayon, ombre, marge et transitions viennent donc de `app.css`. Ne
+	    reste ici que ce qui est PROPRE à un événement — sinon on redéclare la
+	    norme, et la copie diverge au premier ajustement. */
 	.carte-evenement {
-		margin-bottom: .4rem;
-		transition: background .12s;
 		display: block;
 		padding: 0;
 	}
-	/*  🔴 Le survol colore le TITRE, pas le bloc (18/08/2026) : « quand tout
-	    l'article change de couleur c'est moche ». Cette carte n'est PAS une
-	    `.carte-liste` — elle a son propre conteneur, donc la règle globale ne
-	    l'atteignait pas et elle gardait l'ancien aplat.
-
-	    ⚠️ `:global(.ec-titre)` : le titre est rendu par `EnteteCarte`, un
-	    composant ENFANT. Sans `:global`, Svelte scope le sélecteur à ce
-	    fichier-ci et la règle n'atteint rien — c'est la panne des pastilles
-	    parties nues en production (v2.67.11). */
-	.carte-evenement:hover :global(.ec-titre) { color: var(--color-primary); }
-	.carte-evenement :global(.ec-titre) { transition: color .12s ease; }
 	.carte-evenement.expanded {
 		border-color: var(--color-primary, #2563eb);
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #2563eb) 18%, transparent);
