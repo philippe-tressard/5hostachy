@@ -109,6 +109,17 @@
 	$: descriptionActive = value.length === 1 ? (parCode.get(value[0])?.description ?? '') : '';
 
 	function choisirDefaut() {
+		//  🔴 La rangée de précision se referme AUSSI (18/08/2026, signalé à
+		//  l'écran) : revenir à « Copropriété entière » vidait bien toutes les
+		//  pastilles, mais laissait « Préciser dans Bâtiment 1 » affiché sous elles,
+		//  avec ses espaces devenus sans objet. On proposait de préciser dans un
+		//  bâtiment qui n'était plus retenu.
+		//
+		//  ⚠️ C'est le pendant exact du défaut corrigé juste au-dessus : là,
+		//  `parentTouche` survivait au geste qui le rendait faux. Un état qu'on pose
+		//  se remet à zéro dans TOUS les chemins qui le contredisent — ici il n'y en
+		//  a qu'un, et il avait été oublié.
+		parentTouche = null;
 		value = defaut ? [defaut] : [];
 		dispatch('change', value);
 	}
@@ -193,12 +204,26 @@
 	{#each niveau1 as n (n.code)}
 		{@const choisis = enfantsChoisis(n.code)}
 		{@const contracte = choisis.length > 0 && parentOuvert !== n.code}
-		<!--  ⚠️ `contracte` et non `choisis.length` : rangée OUVERTE, le parent doit
-		      rester creux, sinon on lit « tout le bâtiment 3 » ET « Caves » en même
-		      temps, alors que choisir un espace remplace son bâtiment. Contractée,
-		      la pastille porte son résumé — elle est pleine parce qu'elle EST la
-		      sélection. -->
-		<Pastille active={!estDefaut && (selection.has(n.code) || contracte)}
+		<!--  🔴 LA MÈRE RESTE PLEINE dès qu'un de ses espaces est retenu, rangée
+		      ouverte ou non (18/08/2026, ARBITRAGE CORRIGÉ PAR L'ÉCRAN).
+
+		      J'avais conditionné cela à `contracte`, en craignant qu'une mère pleine
+		      au-dessus d'« Ascenseur » plein se lise « tout le bâtiment ET
+		      l'ascenseur ». L'utilisateur a réfuté, capture à l'appui : *« quand on
+		      sélectionne une catégorie de niveau 2, la pastille mère se
+		      désélectionne : elle ne devrait pas »*.
+
+		      Il a raison, et mon objection portait à faux : une mère creuse ne dit
+		      pas « le bâtiment n'est pas concerné », elle donne l'impression d'avoir
+		      PERDU le choix qu'on vient de faire — c'est le même défaut que la
+		      disparition du résumé, en plus discret. Ce qui lève l'ambiguïté n'est
+		      pas de vider la mère, c'est que la rangée ouverte montre lequel de ses
+		      espaces est retenu.
+
+		      ⚠️ La VALEUR ne change pas : `basculer()` retire toujours le bâtiment
+		      quand on précise un espace (`s.delete(racine)`). C'est bien l'ascenseur
+		      qui est ciblé, pas le bâtiment entier — seule la lecture est corrigée. -->
+		<Pastille active={!estDefaut && (selection.has(n.code) || choisis.length > 0)}
 			icone={n.icone ?? ''}
 			chevron={aDesEnfants.has(n.code) && !contracte}
 			on:click={() => basculer(n.code)}
