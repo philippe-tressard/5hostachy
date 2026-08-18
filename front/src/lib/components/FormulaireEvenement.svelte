@@ -105,10 +105,15 @@
 		</div>
 	</SectionFormulaire>
 
-	<!--  3. Workflow — où en est cet événement. Le Suivi Kanban était rangé avec
-	      l'affichage au fil et les canaux, c'est-à-dire dans la DIFFUSION : il
-	      dit où en est le travail, pas qui le voit (`ux-patterns` §9 sexies). -->
-	<SectionFormulaire titre="Suivi Kanban" idTitre="ev-kanban-titre">
+	<!--  3. Workflow — où en est cet événement.
+	      🔴 LE KANBAN *EST* LE WORKFLOW (18/08/2026) : ses colonnes répondent
+	      exactement à la question de la section 3 du cadre — « où en est cet
+	      objet ? ». La section s'appelait « Suivi Kanban », ce qui nommait
+	      l'écran où on le voit plutôt que la notion ; et avant cela elle était
+	      rangée dans la DIFFUSION, qui dit qui le voit et non où il en est.
+	      Aucun second champ d'état n'a été créé : deux notions de suivi sur le
+	      même objet se contredisent au premier écart. -->
+	<SectionFormulaire titre="Workflow" idTitre="ev-kanban-titre">
 		<div class="field champ-large">
 			<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
 			      Tickets, constatée, puis étendue ici (R5).

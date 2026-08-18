@@ -10,9 +10,15 @@ l'Historique une étape que l'objet n'a jamais franchie — le ticket aurait « 
 en cours alors qu'il n'y est jamais passé.
 
 Le remède a été posé sur les **tickets** par #431 et **n'était couvert par aucun
-test**. Il l'est ici, en même temps que son jumeau côté **publications** (#433) :
-même défaut, même remède, et donc un seul fichier — deux entités qui divergent
-sur ce point sont exactement ce que le cadre supprime.
+test**. Il l'est ici, avec ses jumeaux côté **publications** (#433) et
+**calendrier** (18/08/2026) : même défaut, même remède, et donc un seul fichier —
+trois entités qui divergeraient sur ce point sont exactement ce que le cadre
+supprime.
+
+⚠️ Le calendrier a une nuance, et elle est vérifiée : son **Kanban EST son
+workflow**, donc un changement de colonne est une **transition tracée** (avec son
+avant et son après), pendant que toute autre modification reste une correction.
+C'est la même règle vue des deux côtés.
 
 ⚠️ Ce test vérifie **le fait** (ce qui est écrit dans le fil), pas le symptôme
 attendu : il relit les évolutions en base après l'appel, au lieu de se fier au
@@ -23,6 +29,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 
 import pytest
 from fastapi import BackgroundTasks
@@ -30,9 +37,11 @@ from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
 from app.models.core import (
-    Publication, PublicationEvolution, RoleUtilisateur, Ticket, TicketEvolution,
-    Utilisateur,
+    Evenement, Publication, PublicationEvolution, RoleUtilisateur, Ticket,
+    TicketEvolution, TypeEvenement, Utilisateur,
 )
+from app.models.evenement import EvenementEvolution
+from app.routers.calendrier import EvenementUpdate, update_evenement
 from app.routers.publications.crud import update_publication
 from app.routers.tickets.crud import update_ticket
 from app.schemas import PublicationUpdate, TicketUpdate
@@ -176,4 +185,88 @@ def test_patch_ticket_ecrit_une_correction_et_pas_une_transition(cs):
         for e in evols:
             session.delete(e)
         session.delete(session.get(Ticket, ticket.id))
+        session.commit()
+
+
+# ── Calendrier — le Kanban EST le workflow, donc il se trace ──────────────────
+
+def test_patch_evenement_trace_la_colonne_et_corrige_le_reste(cs):
+    """Un changement de colonne est une TRANSITION ; le reste, une correction.
+
+    Le calendrier était le dernier écran du site à faire avancer un suivi en
+    silence : la colonne changeait sans que rien ne dise quand ni par qui. La
+    nuance vérifiée ici est celle qui distingue les deux lignes — une transition
+    porte son avant et son après, une correction n'en porte aucun.
+    """
+    with Session(engine) as session:
+        ev = Evenement(
+            titre="Ravalement bâtiment 2",
+            type=TypeEvenement.travaux,
+            debut=datetime(2026, 9, 1, 9, 0),
+            auteur_id=cs.id,
+            statut_kanban="syndic",
+        )
+        session.add(ev)
+        session.commit()
+        session.refresh(ev)
+
+        update_evenement(
+            ev.id,
+            EvenementUpdate(statut_kanban="fournisseur", titre="Ravalement bâtiment 2 et 3"),
+            session,
+            cs,
+        )
+
+        evols = session.exec(
+            select(EvenementEvolution).where(EvenementEvolution.evenement_id == ev.id)
+        ).all()
+        types = sorted(e.type for e in evols)
+        assert types == ["commentaire", "etat"], (
+            "Un changement de colonne doit laisser une TRANSITION, et le titre "
+            f"corrigé une CORRECTION : trouvé {types}."
+        )
+
+        transition = next(e for e in evols if e.type == "etat")
+        assert transition.ancien_statut == "syndic"
+        assert transition.nouveau_statut == "fournisseur"
+
+        correction = next(e for e in evols if e.type == "commentaire")
+        assert (correction.contenu or "").startswith(PREFIXE_CORRECTION), correction.contenu
+        assert "Titre" in (correction.contenu or ""), correction.contenu
+        #  Une correction ne dessine AUCUN jalon de suivi : sans ces deux
+        #  colonnes, le fil ne peut pas la confondre avec une étape.
+        assert correction.ancien_statut is None and correction.nouveau_statut is None
+
+        assert session.get(Evenement, ev.id).statut_kanban == "fournisseur"
+
+        for e in evols:
+            session.delete(e)
+        session.delete(session.get(Evenement, ev.id))
+        session.commit()
+
+
+def test_patch_evenement_sans_changement_n_ecrit_rien(cs):
+    """Réenregistrer les mêmes valeurs ne remplit pas l'Historique."""
+    with Session(engine) as session:
+        ev = Evenement(
+            titre="Assemblée générale",
+            type=TypeEvenement.ag,
+            debut=datetime(2026, 10, 3, 18, 30),
+            auteur_id=cs.id,
+            statut_kanban="ag",
+        )
+        session.add(ev)
+        session.commit()
+        session.refresh(ev)
+
+        update_evenement(
+            ev.id, EvenementUpdate(titre="Assemblée générale", statut_kanban="ag"), session, cs
+        )
+
+        evols = session.exec(
+            select(EvenementEvolution).where(EvenementEvolution.evenement_id == ev.id)
+        ).all()
+        assert evols == [], f"Aucune ligne attendue, trouvé : {[e.contenu for e in evols]}"
+
+        session.delete(session.get(Evenement, ev.id))
         session.commit()

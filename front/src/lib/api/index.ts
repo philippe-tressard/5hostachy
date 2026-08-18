@@ -142,6 +142,13 @@ export const calendrier = {
 	// Pas de `uploadPhoto` : comme pour les tickets, les pièces jointes sont
 	// téléversées par `fichiersApi.upload` avant la création et passent dans le
 	// payload ; le retrait passe par `update`, qui n'accepte que nos URLs.
+
+	//  L'HISTORIQUE d'un événement (18/08/2026). Le Kanban ÉTANT son workflow,
+	//  une entrée de type `etat` déplace aussi l'événement : le fil ne raconte
+	//  jamais un mouvement qui n'a pas eu lieu.
+	addEvolution: (id: number, data: unknown) => api.post<any>(`/calendrier/${id}/evolutions`, data),
+	updateEvolution: (id: number, evolId: number, data: unknown) =>
+		api.patch<any>(`/calendrier/${id}/evolutions/${evolId}`, data),
 };
 
 export const prestataires = {
