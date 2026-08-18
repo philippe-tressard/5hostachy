@@ -56,7 +56,16 @@ class AnnonceHallBase(BaseModel):
 
 
 class AnnonceHallCreate(AnnonceHallBase):
-    pass
+    #  🔴 La DIFFUSION est un ACTE, et elle se coche (section 9 du cadre #430).
+    #
+    #  L'envoi au CS était AUTOMATIQUE jusqu'au 18/08, puis supprimé le même jour
+    #  parce qu'il partait au moindre essai de mise en page. Il revient ici sous sa
+    #  forme juste : un choix, décoché par défaut.
+    #
+    #  ⚠️ Décoché par défaut, et c'est le point : la valeur par défaut d'un envoi
+    #  est « ne pas envoyer ». Un défaut à `True` reproduirait l'automatisme qu'on
+    #  vient de retirer, en donnant l'illusion du choix.
+    envoyer_cs: bool = False
 
 
 class AnnonceHallArchive(BaseModel):
@@ -284,6 +293,10 @@ def creer_annonce_hall(
     format_demande: str = "auto",
     images: Optional[list[str]] = None,
     publication_id: Optional[int] = None,
+    #  Décoché par défaut : la valeur par défaut d'un envoi est « ne pas envoyer ».
+    #  Les autres appelants (pré-remplissage depuis une actualité) n'envoient donc
+    #  rien sans le demander.
+    envoyer_cs: bool = False,
 ) -> AnnonceHall:
     """Génère le PDF et l'enregistre dans l'historique.
 
@@ -335,26 +348,33 @@ def creer_annonce_hall(
     session.commit()
     session.refresh(annonce)
 
-    #  🔴 PLUS AUCUN E-MAIL (18/08/2026, arbitré à l'écran : « ce menu ne doit pas
-    #  envoyer de mail au CS, juste générer un PDF »).
+    #  🔴 L'ENVOI EST UN CHOIX, jamais un automatisme (18/08/2026).
+    #
+    #  Il était automatique le matin — « ce menu ne doit pas envoyer de mail au CS,
+    #  juste générer un PDF » —, supprimé dans la foulée, puis rendu au CADRE : la
+    #  Diffusion est la section 9, elle se coche, et elle n'agit que cochée.
     #
     #  Cet écran FABRIQUE un document à imprimer. Qui l'imprime, quand, et à qui il
     #  l'envoie sont des décisions qui appartiennent à celui qui le génère — les
     #  prendre à sa place expédiait un courriel à tout le conseil syndical au moindre
     #  essai de mise en page, pièce jointe comprise.
     #
-    #  ⚠️ Le bouton disait « Créer et envoyer au CS » : il nommait donc correctement
-    #  ce que le code faisait. C'est le COMPORTEMENT qui a été jugé faux, pas son
-    #  libellé — et le bouton dit désormais « Générer une affiche ».
+    #  ⚠️ Le bouton dit « Générer une affiche », et c'est vrai dans les deux cas :
+    #  l'affiche est produite, l'envoi est une option qu'on ajoute. C'est ce qui
+    #  distingue cette section 9 d'un bouton « Envoyer » — le geste principal reste
+    #  la génération.
     #
-    #  ⚠️ `_envoyer_email_cs` et le modèle « annonce_hall » ne sont plus appelés par
-    #  ce chemin. Ils ne sont PAS supprimés ici : le modèle vit dans
-    #  `seed.EMAIL_TEMPLATES`, dont l'audit du 05/08 a montré qu'on n'y touche pas à
-    #  la légère, et un envoi explicite depuis l'historique reste une évolution
-    #  plausible. À trancher séparément.
-    #
-    #  `destinataires` et `envoye_le` restent donc vides : l'historique dit qu'une
-    #  affiche a été générée, et rien de plus — ce qui est exactement le fait.
+    #  Sans la case, `destinataires` et `envoye_le` restent vides : l'historique dit
+    #  qu'une affiche a été générée, et rien de plus — ce qui est exactement le fait.
+    if envoyer_cs:
+        emails = _envoyer_email_cs(annonce, user, background_tasks, session, _batiments(session))
+        if emails:
+            annonce.destinataires = json.dumps(emails, ensure_ascii=False)
+            annonce.envoye_le = datetime.utcnow()
+            session.add(annonce)
+            session.commit()
+            session.refresh(annonce)
+
     return annonce
 
 
@@ -375,6 +395,7 @@ def create_annonce_hall(
         perimetre_cible=body.perimetre_cible,
         format_demande=body.format_demande,
         images=body.images,
+        envoyer_cs=body.envoyer_cs,
     )
     return _to_read(annonce, session, _batiments(session))
 

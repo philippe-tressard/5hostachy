@@ -50,10 +50,33 @@
 	export let pubs: Publication[] = [];
 	export let sourceId: number | '' = '';
 	export let formats: { val: AhFormat; label: string }[] = [];
-	export let formatPrevu = '';
-	export let longueur = 0;
 	export let maxPhotos = 2;
-	export let formatMinPhotos = 'A5';
+
+	//  ⚠️ Calculs de PRÉSENTATION, remontés de la page (18/08/2026) : combien de
+	//  caractères, et quel format en découle. Ils ne servent qu'à l'aide affichée
+	//  sous les pastilles — la page, elle, garde la VALIDITÉ, qui commande son
+	//  bouton. Le format retenu reste celui que l'API calcule ; ceci n'est qu'une
+	//  prévision, et c'est écrit dans l'aide.
+	const SEUILS: [string, number][] = [['A8', 70], ['A7', 140], ['A6', 300], ['A5', 600]];
+	const ORDRE = ['A4', 'A5', 'A6', 'A7', 'A8'];
+	const formatMinPhotos = 'A5';
+
+	$: longueur = message.replace(/<[^>]*>/g, '').length + titre.trim().length;
+	$: formatPrevu = (() => {
+		if (format !== 'auto') return format.toUpperCase();
+		const trouve = SEUILS.find(([, seuil]) => longueur <= seuil);
+		const fmt = trouve ? trouve[0] : 'A4';
+		return photos.length && ORDRE.indexOf(fmt) > ORDRE.indexOf(formatMinPhotos)
+			? formatMinPhotos
+			: fmt;
+	})();
+
+	/**  9. DIFFUSION — l'envoi de l'affiche au conseil syndical.
+	 *
+	 *   ⚠️ Décoché par défaut, et le SERVEUR le consomme (`envoyer_cs`) : le cadre
+	 *   interdit d'ouvrir un champ que le serveur ignorerait — la case promettrait
+	 *   un envoi qui n'a pas lieu, ce qui est pire qu'une case absente. */
+	export let envoyerCs = false;
 
 	export let valide = false;
 	export let saving = false;
@@ -137,6 +160,29 @@
 	l'{formatMinPhotos}.
 </p>
 
+<!--  9. Diffusion — le seul ACTE du formulaire, et le dernier, comme partout.
+
+      🔴 L'envoi au CS était AUTOMATIQUE le matin du 18/08 : il partait au moindre
+      essai de mise en page, pièce jointe comprise. Retiré dans la foulée, il revient
+      ici sous sa forme juste — une case, décochée par défaut.
+
+      ⚠️ Décochée, et c'est le point : la valeur par défaut d'un envoi est « ne pas
+      envoyer ». Un défaut à coché reproduirait l'automatisme qu'on vient de retirer,
+      en donnant l'illusion du choix.
+
+      ⚠️ UNE seule case, pas `CanauxNotification` : WhatsApp et le syndic n'ont pas
+      d'objet ici. Une affiche de hall s'imprime et se pose — le conseil syndical est
+      le seul destinataire qui en fasse quelque chose. -->
+<label class="ah-label ah-label-espace" for="ah-diffusion">Diffusion</label>
+<label class="case">
+	<input id="ah-diffusion" type="checkbox" bind:checked={envoyerCs} />
+	<span>Envoyer l'affiche au conseil syndical du périmètre, pour impression</span>
+</label>
+<p class="ah-aide">
+	Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis
+	l'historique — cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
+</p>
+
 <div class="form-actions">
 	<button type="button" class="btn btn-outline" disabled={!valide || apercuLoading}
 		on:click={onApercu}>
@@ -181,6 +227,11 @@
 	}
 	.ah-aide { font-size: .8rem; color: var(--color-text-muted); margin: .35rem 0 0; line-height: 1.5; }
 	.ah-label-espace { margin-top: .85rem; }
+	/*  Une case et son libellé. Le `width:auto` annule le `width:100%` des champs
+	    de saisie — sans lui, la case s'étire et repousse son texte à l'autre bout
+	    de la ligne (défaut signalé sur le sondage ET l'annonce, 16/08/2026). */
+	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
+	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 	/*  Le filet qui sépare le raccourci de pré-remplissage du formulaire lui-même.
 	    Il était posé en `style=` en ligne — nommé ici, il cesse d'être à réécrire. */
 	.ah-separateur { border: none; border-top: 1px solid var(--color-border); margin: .9rem 0; }
