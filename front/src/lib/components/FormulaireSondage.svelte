@@ -34,7 +34,7 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 
 	//  L'API des sondages ne rend pas de type dédié : la page recharge sa liste.
-	const dispatch = createEventDispatcher<{ cree: unknown }>();
+	const dispatch = createEventDispatcher<{ cree: unknown; annule: void }>();
 
 	type OptionForm = { libelle: string; champ_libre: boolean };
 
@@ -202,7 +202,11 @@
 
 		<!--  Pas de bouton « Annuler » ici : la commande vit dans l'en-tête de page,
 		      où le bouton d'ouverture bascule (#367). -->
+		<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée
+		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
+		      de seconde commande d'annulation (#367). -->
 		<div class="form-actions">
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
 			<button class="btn btn-primary" disabled={submitting}>
 				{submitting ? 'Enregistrement…' : 'Enregistrer'}
 			</button>

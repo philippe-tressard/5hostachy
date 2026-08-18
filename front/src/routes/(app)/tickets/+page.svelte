@@ -228,9 +228,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<!--  `alignerSaisie` quand le formulaire est ouvert : sans lui, « ✕ Annuler » se
-      pose au bord DROIT DE LA PAGE, à plusieurs centaines de pixels de la boîte
-      qu'il annule, laquelle s'arrête à 720 px (#367). -->
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'message-square-text'}>
 	<!--  L'en-tête n'OUVRE plus que le formulaire : l'annulation vit à côté
 	      d'« Enregistrer », dans le formulaire (18/08/2026). Le bouton s'efface

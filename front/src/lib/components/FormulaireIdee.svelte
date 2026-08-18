@@ -28,7 +28,7 @@
 
 	//  L'API des idées ne rend pas de type dédié : l'événement porte l'objet créé
 	//  tel quel, et la page recharge sa liste depuis le serveur.
-	const dispatch = createEventDispatcher<{ cree: unknown }>();
+	const dispatch = createEventDispatcher<{ cree: unknown; annule: void }>();
 
 	let form = { titre: '', description: '' };
 	let submitting = false;
@@ -65,7 +65,11 @@
 		</div>
 		<!--  Pas de bouton « Annuler » ici : la commande vit dans l'en-tête de page,
 		      où le bouton d'ouverture bascule (#367). -->
+		<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée
+		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
+		      de seconde commande d'annulation (#367). -->
 		<div class="form-actions">
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
 			<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 		</div>
 	</form>

@@ -1342,7 +1342,7 @@
 		</div>
 
 		<!-- Comptes en attente -->
-		<section style="margin-bottom:2rem;max-width:720px">
+		<section class="largeur-saisie" style="margin-bottom:2rem">
 			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">
 				Comptes en attente de validation
 			</h2>
@@ -1371,7 +1371,7 @@
 		</section>
 
 		<!-- Commandes d'accès -->
-		<section style="max-width:720px">
+		<section class="largeur-saisie">
 			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">
 				Demandes d'accès (badges / télécommandes)
 			</h2>

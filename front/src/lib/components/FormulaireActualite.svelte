@@ -57,6 +57,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { publications as pubsApi, documents as docsApi, ApiError, type Publication } from '$lib/api';
 	import { perimetreDefautListe } from '$lib/utils';
+	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { richEmpty, STATUT_PUBLICATION_OPTIONS } from '$lib/publications';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
@@ -95,7 +96,7 @@
 	//  déjà dans la charge utile, mais en silence — une publication naissait donc
 	//  avec un état que personne n'avait vu ni choisi. Le défaut ne change pas ;
 	//  il se montre.
-	let statut = publication?.statut ?? 'publie';
+	let statut: string = publication?.statut ?? 'publie';
 
 	//  ── 4 à 8 ───────────────────────────────────────────────────────────────
 	//  Copie défensive du périmètre et du public : les tableaux viennent de la
@@ -231,13 +232,16 @@
 		      corrige un titre, et c'est le `PATCH` qui a changé de nature côté
 		      serveur — il écrit une CORRECTION, pas une transition (#433). -->
 		{#if sectionPresente(PUBLICATION, etat, 'workflow')}
-			<SectionFormulaire titre="Workflow" pour="pub-statut-{publication?.id ?? 'new'}">
+			<SectionFormulaire titre="Workflow" requis
+				idTitre="pub-workflow-{publication?.id ?? 'new'}">
 				<div class="field champ-large">
-					<select id="pub-statut-{publication?.id ?? 'new'}" bind:value={statut}>
-						{#each STATUT_PUBLICATION_OPTIONS as s (s.value)}
-							<option value={s.value}>{s.label}</option>
-						{/each}
-					</select>
+					<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Publié » est
+					      active par défaut à la création — l'état de départ se voit au
+					      lieu de se deviner. Normalisé sur Tickets, constaté, puis
+					      étendu ici (R5). -->
+					<WorkflowPastilles options={STATUT_PUBLICATION_OPTIONS} valeur={statut}
+						idTitre="pub-workflow-{publication?.id ?? 'new'}"
+						on:choisir={(e) => (statut = e.detail)} />
 				</div>
 			</SectionFormulaire>
 		{/if}
@@ -275,13 +279,16 @@
 		      vit dans l'en-tête de page, où le bouton d'ouverture bascule en
 		      « ✕ Annuler » — deux commandes pour un formulaire est le défaut relevé
 		      sur la modale du calendrier (#367). Même contrat que `FormulaireTicket`. -->
+		<!--  « Annuler » est À CÔTÉ d'« Enregistrer », dans les deux gestes — norme
+		      posée sur Tickets le 18/08/2026, constatée, puis étendue ici.
+		      ⚠️ Corollaire : l'en-tête de page ne porte plus « ✕ Annuler » quand le
+		      formulaire est ouvert (#367 — deux commandes pour un seul formulaire). -->
 		<div class="form-actions">
-			{#if modeEdition}
-				<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
-			{/if}
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
 			<button type="submit" class="btn btn-primary" disabled={saving}>
 				{saving ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
 	</form>
 </FormulaireCreation>
+

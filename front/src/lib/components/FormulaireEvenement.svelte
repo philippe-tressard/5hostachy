@@ -17,6 +17,10 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
+	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher<{ annule: void }>();
 
 	/** L'objet de saisie, lié en deux sens : la page porte son cycle de vie. */
 	export let form: any;
@@ -104,14 +108,19 @@
 	<!--  3. Workflow — où en est cet événement. Le Suivi Kanban était rangé avec
 	      l'affichage au fil et les canaux, c'est-à-dire dans la DIFFUSION : il
 	      dit où en est le travail, pas qui le voit (`ux-patterns` §9 sexies). -->
-	<SectionFormulaire titre="Suivi Kanban" pour="ev-kanban">
+	<SectionFormulaire titre="Suivi Kanban" idTitre="ev-kanban-titre">
 		<div class="field champ-large">
-			<select id="ev-kanban" bind:value={form.statut_kanban}>
-				<option value="">— Pas de suivi Kanban —</option>
-				{#each kanbanCols as col}
-					<option value={col.id}>{col.label}</option>
-				{/each}
-			</select>
+			<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
+			      Tickets, constatée, puis étendue ici (R5).
+			      ⚠️ « Pas de suivi » est une pastille comme les autres, et elle est
+			      active par défaut : l'absence de suivi est un choix qui se voit, pas
+			      une option vide en tête d'une liste déroulante. La section n'est
+			      donc PAS requise — un événement peut légitimement n'avoir aucun
+			      suivi, à la différence de l'état d'un ticket. -->
+			<WorkflowPastilles valeur={form.statut_kanban ?? ''} idTitre="ev-kanban-titre"
+				options={[{ value: '', label: '— Pas de suivi' },
+					...kanbanCols.map((c) => ({ value: c.id, label: c.label }))]}
+				on:choisir={(e) => (form.statut_kanban = e.detail)} />
 		</div>
 	</SectionFormulaire>
 
@@ -152,12 +161,17 @@
 		</svelte:fragment>
 	</ChampsCommuns>
 
+	<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée sur
+	      Tickets puis étendue. L'en-tête de page ne porte plus de seconde commande
+	      d'annulation (#367). -->
 	<div class="form-actions">
+		<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
 		<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 	</div>
 </form>
 
 <style>
+
 	/*  Mêmes règles, même raison que dans `FormulairePrestation` : le balisage
 	    part avec ses styles, sinon la grille reste dans la page et le formulaire
 	    s'affiche en une colonne écrasée (#344, reproduit le 15/08/2026). */
