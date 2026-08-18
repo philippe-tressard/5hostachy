@@ -40,6 +40,11 @@
 	export let peutAgir = false;
 	/** Le formulaire de suivi est-il ouvert ? La page le porte. */
 	export let suiviOuvert = false;
+	/**  L'événement est-il en cours de MODIFICATION ? Sert à inverser son ✏️ :
+	 *   le mode se lit sur l'icône qui l'a ouvert, plus sur un titre au-dessus
+	 *   du formulaire (18/08/2026). Le formulaire du calendrier vit dans la
+	 *   page, pas dans la carte — la carte ne peut donc pas le deviner. */
+	export let editionOuverte = false;
 	/** Libellés — la page les calcule déjà pour ses autres vues. */
 	export let typeLabel: (t: string) => string;
 	export let formatDate: (d: string) => string;
@@ -84,9 +89,9 @@
 					<span class="event-actions" on:click|stopPropagation on:keydown|stopPropagation role="presentation">
 						<!--  L'ordre du site : 🔄 commenter · ✏️ modifier · 🗑️/📦. Le 🔄
 						      manquait ici — le suivi n'avait aucun point d'entrée. -->
-						<button class="btn-icon" aria-label="Commenter ou changer l’état"
+						<button class="btn-icon" aria-pressed={suiviOuvert} aria-label="Commenter ou changer l’état"
 							title="Commenter ou changer l’état" on:click={() => dispatch('suivre')}>&#x1F504;</button>
-						<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => dispatch('modifier')}>✏️</button>
+						<button class="btn-icon-edit" aria-pressed={editionOuverte} aria-label="Modifier" title="Modifier" on:click={() => dispatch('modifier')}>✏️</button>
 						{#if ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule'}
 							<button class="btn-icon" aria-label="Archiver" title="Archiver" on:click={() => dispatch('archiver')}>&#x1F4E6;</button>
 						{/if}

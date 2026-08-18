@@ -129,13 +129,16 @@
 			<!--  UN point d'entrée (#426) : le formulaire porte les deux gestes.
 			      L'ordre des icônes — 🔄 puis ✏️ puis 🗑️ — est celui de toutes les
 			      cartes du site, arbitré le 18/08/2026 sur celle-ci. -->
+			<!--  `aria-pressed` : le MODE se lit sur l'icône qui l'a ouvert, pas sur un
+			      titre au-dessus du formulaire (18/08/2026). Elle s'inverse et grossit —
+			      style dans `app.css`, une seule fois pour tout le site. -->
 			{#if peutCommenter}
-				<button class="btn-icon" aria-label="Commenter ou changer l’état"
+				<button class="btn-icon" aria-pressed={mode === 'evolution'} aria-label="Commenter ou changer l’état"
 					title="Commenter ou changer l’état"
 					on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button>
 			{/if}
 			{#if peutAdministrer}
-				<button class="btn-icon" aria-label="Modifier" title="Modifier le ticket"
+				<button class="btn-icon" aria-pressed={mode === 'edition'} aria-label="Modifier" title="Modifier le ticket"
 					on:click|stopPropagation={() => dispatch('modifier')}>✏️</button>
 				<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
 					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button>

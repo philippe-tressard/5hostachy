@@ -33,15 +33,26 @@
 	 *   ticket, d'une actualité, d'un événement. Une carte dans une carte, c'est
 	 *   deux bordures imbriquées pour un seul objet — signalé à l'écran (#425).
 	 *
-	 *   ⚠️ Le TITRE, lui, reste dans les deux cas, et c'est le point : c'est lui
-	 *   qui dit **ce qu'on est en train de faire**. Sans en-tête, le mode ne se
-	 *   lit qu'en se rappelant l'icône cliquée trois secondes plus tôt — et R1
-	 *   dit que le squelette porte *en-tête · corps · pied*. */
+	 *   ⚠️ **Le TITRE suit le cadre** (corrigé le 18/08/2026, le soir même où il
+	 *   avait été rendu systématique). Un formulaire encadré EST une carte : son
+	 *   titre en est l'en-tête. Un formulaire qui s'ouvre dans la carte d'un objet
+	 *   n'a pas à en poser un second — signalé à l'écran : « ce pseudo état
+	 *   éloigne du titre ».
+	 *
+	 *   Le mode se lit alors sur **l'icône qui a ouvert le formulaire**, qui
+	 *   s'inverse (`aria-pressed`, style dans `app.css`). C'est le bon endroit :
+	 *   elle est déjà là, déjà regardée, et son inversion se lit sans être lue.
+	 *   `titre` reste requis — il sert d'`aria-label` au formulaire, donc le mode
+	 *   reste annoncé à qui ne voit pas l'icône. */
 	export let encadre = true;
 </script>
 
-<div class="formulaire-creation largeur-saisie" class:card={encadre}>
-	<h2>{titre}</h2>
+<!--  `aria-label` porte le titre dans TOUS les cas : ce qui disparaît est le
+      titre VISIBLE, pas l'information. Un lecteur d'écran continue d'annoncer
+      « Modifier le commentaire » en entrant dans le formulaire. -->
+<div class="formulaire-creation largeur-saisie" class:card={encadre}
+	role="group" aria-label={titre}>
+	{#if encadre}<h2>{titre}</h2>{/if}
 	<slot />
 </div>
 

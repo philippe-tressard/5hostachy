@@ -107,15 +107,23 @@
 		overflow: hidden;
 	}
 
-	/*  Tags à gauche, date + actions à droite. `flex-wrap` : sur un écran étroit
-	    la moitié droite passe à la ligne PLUTÔT QUE d'écraser les tags — c'est
-	    exactement ce que l'ancienne disposition faisait au titre. */
+	/*  Tags à gauche, date + actions à droite — sur UNE seule ligne.
+
+	    ⚠️ `flex-wrap: wrap` a été retiré le 18/08/2026 : signalé à l'écran, « sur
+	    smartphone l'état est en 2 lignes ». Le repli protégeait les tags d'un
+	    écrasement — un souci hérité de l'époque où le titre partageait cette
+	    ligne. Le titre ayant la sienne, il ne reste plus rien à protéger, et deux
+	    lignes de méta sous une carte repliée coûtent plus qu'elles ne rapportent.
+
+	    Les tags DÉFILENT horizontalement plutôt que de se replier : rien n'est
+	    perdu, la date et les actions restent ancrées à droite, et la carte garde
+	    sa hauteur. Même parti que la barre de filtres de /prestataires. */
 	.ec-meta {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: .4rem .6rem;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 	}
 	/*  🔴 LE GESTE. Le survol change la couleur ET souligne : la couleur seule
 	    ne se voit pas d'un daltonien, et un site dont on ne sait pas où cliquer
@@ -138,7 +146,17 @@
 	.ec-chevron-btn:hover { color: var(--color-primary); }
 	.ec-chevron-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 3px; }
 
-	.ec-tags { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; min-width: 0; }
+	.ec-tags {
+		display: flex; align-items: center; gap: .35rem;
+		flex-wrap: nowrap; min-width: 0;
+		/*  Barre de défilement masquée : elle apparaîtrait sous chaque carte et
+		    ferait du bruit pour trois badges. */
+		overflow-x: auto; scrollbar-width: none;
+	}
+	.ec-tags::-webkit-scrollbar { display: none; }
+	/*  Les badges ne se compriment pas : un « Confidentiel » réduit à « Confid… »
+	    ne dit plus rien, alors qu'un badge sorti du cadre se ramène d'un geste. */
+	.ec-tags :global(> *) { flex-shrink: 0; }
 	.ec-droite { display: flex; align-items: center; gap: .3rem; margin-left: auto; flex-shrink: 0; }
 	.ec-date { font-size: .78rem; color: var(--color-text-muted); white-space: nowrap; }
 

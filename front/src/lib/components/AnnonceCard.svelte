@@ -117,7 +117,7 @@
 		      conteneur redevenu cliquable. -->
 		<svelte:fragment slot="actions">
 			{#if peutModifier}
-				<button class="btn-icon" title="Modifier" aria-label="Modifier l'annonce"
+				<button class="btn-icon" aria-pressed={formulaireOuvert} title="Modifier" aria-label="Modifier l'annonce"
 					on:click|stopPropagation={onModifier}>&#x270F;&#xFE0F;</button>
 			{/if}
 			{#if peutSupprimer}
