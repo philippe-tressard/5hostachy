@@ -1,8 +1,9 @@
 <script lang="ts">
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 import EntetePage from '$lib/components/EntetePage.svelte';
 import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
-import { STATUTS_IDEE, STATUTS_IDEE_FILTRE, IDEE_BADGE } from '$lib/idees';
+import { STATUTS_IDEE, STATUTS_IDEE_FILTRE, IDEE_BADGE, STATUT_IDEE_LABELS } from '$lib/idees';
 import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
 import OngletAnnonces from '$lib/components/OngletAnnonces.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
@@ -377,14 +378,24 @@ title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
 <span class="vote-count">{idee.nb_votes}</span>
 </button>
 <div class="idee-body">
-<div class="idee-header">
-<strong class="idee-titre">{idee.titre}
-{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
-</strong>
-<span class="badge {statutClass(idee.statut)}">{idee.statut}</span>
-</div>
+<!--  🔴 L'EN-TÊTE DU SITE (18/08/2026, signalé à l'écran : « l'état sur une
+      2nde ligne après le titre »). Le titre et le badge d'état partageaient une
+      ligne en `space-between`, seule carte du produit dans ce cas — les quatre
+      autres passent par `EnteteCarte` : titre sur sa propre ligne, puis les tags.
+
+      ⚠️ L'en-tête vit DANS `.idee-body`, pas au-dessus : le bouton de vote reste
+      à gauche de l'ensemble, il n'est pas un tag. `basculable` reste faux — une
+      idée ne se déplie pas, elle montre tout. -->
+<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
+<svelte:fragment slot="titre-suffixe">
+{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
+</svelte:fragment>
+<svelte:fragment slot="tags">
+<span class="badge {statutClass(idee.statut)}">{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span>
+{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span>{/if}
+</svelte:fragment>
+</EnteteCarte>
 <div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
-<small style="color:var(--color-text-muted)">{fmtDateShort(idee.cree_le)}</small>
 {#if idee.auteur_id !== $currentUser?.id}
 <button class="signaler-inline" title="Signaler cette idée au conseil syndical" aria-label="Signaler cette idée" on:click={() => signaler('idee', idee.id)}>🚩</button>
 {/if}
@@ -455,6 +466,7 @@ margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
 .vote-icon { font-size: 1.1rem; }
 .vote-count { font-size: .85rem; font-weight: 700; color: var(--color-primary); }
 .idee-body { flex: 1; }
+.idee-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
 .idee-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .3rem; flex-wrap: wrap; gap: .4rem; }
 .idee-titre { font-size: .95rem; }
 .idee-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }

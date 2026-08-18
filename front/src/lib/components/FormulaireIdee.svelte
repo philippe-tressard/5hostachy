@@ -22,7 +22,10 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
+	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import { sectionPresente, type Etat } from '$lib/entites/types';
+	import { IDEE } from '$lib/entites/idee';
+	import { perimetreDefautListe } from '$lib/perimetres';
 	import { idees as ideesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -31,7 +34,13 @@
 	const dispatch = createEventDispatcher<{ cree: unknown; annule: void }>();
 
 	let form = { titre: '', description: '' };
+	let perimetreCible: string[] = perimetreDefautListe();
 	let submitting = false;
+
+	/**  Ce formulaire ne sert que le DÉPÔT. L'état est écrit en constante plutôt
+	 *   qu'en prop : corriger une idée déposée n'existe pas côté produit, et
+	 *   l'écrire ainsi rend le manque visible en relecture. */
+	const etat: Etat = 'creation';
 
 	async function creer() {
 		if (!form.titre || !form.description) {
@@ -40,8 +49,9 @@
 		}
 		submitting = true;
 		try {
-			const idee = await ideesApi.create(form);
+			const idee = await ideesApi.create({ ...form, perimetre_cible: perimetreCible });
 			form = { titre: '', description: '' };
+			perimetreCible = perimetreDefautListe();
 			toast('success', 'Idée soumise !');
 			dispatch('cree', idee);
 		} catch (e) {
@@ -58,11 +68,21 @@
 			Titre *
 			<input bind:value={form.titre} placeholder="Ex. Vélos électriques en libre-service" required />
 		</label>
-		<div class="field champ-large">
-			<label for="idee-description">Description *</label>
-			<RichEditor id="idee-description" bind:value={form.description}
-				placeholder="Décrivez votre idée…" minHeight="100px" />
-		</div>
+		<!--  4 et 6 : le PÉRIMÈTRE et la description, hérités du composant partagé.
+		      Le périmètre est arrivé le 18/08/2026 (migration 0153) — l'idée était la
+		      dernière entité de la Communauté sans aucune notion de lieu, alors que
+		      « un local à vélos dans le bâtiment 3 » et « l'éclairage du parking » ne
+		      concernent pas les mêmes voisins.
+
+		      Les sections 2, 5, 7, 8 et 9 sont `sansObjet` : la déclaration le dit, et
+		      c'est elle qui les fait disparaître — pas une condition écrite ici. -->
+		<ChampsCommuns
+			idPrefixe="idee"
+			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')} bind:perimetre={perimetreCible}
+			avecDescription={sectionPresente(IDEE, etat, 'description')} descriptionRequise
+			bind:description={form.description}
+			descriptionPlaceholder="Décrivez votre idée…"
+		/>
 		<!--  Pas de bouton « Annuler » ici : la commande vit dans l'en-tête de page,
 		      où le bouton d'ouverture bascule (#367). -->
 		<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée

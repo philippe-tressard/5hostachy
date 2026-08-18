@@ -177,6 +177,11 @@ class Idee(SQLModel, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     statut: str = "ouverte"  # ouverte | retenue | rejetee | realisee
     cree_le: datetime = Field(default_factory=datetime.utcnow)
+    #  ⚠️ MÊME forme que `Publication.perimetre_cible`, `PetiteAnnonce` et
+    #  `Sondage` : du JSON de codes. Une quatrième forme diverge — c'est ce que le
+    #  sondage avait fait (`batiments_ids`), et il a fallu une migration pour l'en
+    #  sortir (#316, 0147). Migration 0153.
+    perimetre_cible: Optional[str] = Field(default='["résidence"]')
 
     votes: List["VoteIdee"] = Relationship(back_populates="idee")
 

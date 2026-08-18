@@ -1,5 +1,7 @@
 """Router boîte à idées — idées + upvotes + réponses."""
+import json
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
@@ -55,6 +57,10 @@ def _deny_communaute_for_statut(user: Utilisateur) -> None:
 class IdeeCreate(BaseModel):
     titre: str
     description: str
+    #  Le périmètre arrive en LISTE de codes et se stocke en JSON : c'est la forme
+    #  que `PerimetrePicker` produit et que `perimetreLabel` sait lire, des deux
+    #  côtés. Vide vaut « toute la copropriété », comme partout ailleurs.
+    perimetre_cible: Optional[list[str]] = None
 
 
 class IdeeRead(BaseModel):
@@ -63,11 +69,29 @@ class IdeeRead(BaseModel):
     description: str
     auteur_id: int
     statut: str
+    perimetre_cible: list[str] = []
     nb_votes: int = 0
     mon_vote: bool = False
 
     class Config:
         from_attributes = True
+
+
+def _perimetre_liste(brut: Optional[str]) -> list[str]:
+    """La colonne stocke un tableau JSON ; l'API expose une liste.
+
+    ⚠️ Une valeur illisible rend le DÉFAUT et non une liste vide : `[]` signifierait
+    « aucune restriction » côté visibilité, ce qui est le même effet ici, mais
+    afficherait un badge 🔹 vide côté carte. Retomber sur le périmètre par défaut
+    est le comportement qu'avaient toutes les idées avant la migration 0153.
+    """
+    if not brut:
+        return ["résidence"]
+    try:
+        valeur = json.loads(brut)
+    except (TypeError, ValueError):
+        return ["résidence"]
+    return valeur if isinstance(valeur, list) else ["résidence"]
 
 
 def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
@@ -81,6 +105,9 @@ def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
         result.append({
             "id": idee.id, "titre": idee.titre, "description": idee.description,
             "auteur_id": idee.auteur_id, "statut": idee.statut,
+            #  Exposé en LISTE pour que le front n'ait rien à désérialiser — même
+            #  contrat que les événements et les annonces.
+            "perimetre_cible": _perimetre_liste(idee.perimetre_cible),
             "cree_le": idee.cree_le, "nb_votes": nb, "mon_vote": mon_vote,
             "reponses": reponses, "nb_reponses": len(reponses),
         })
@@ -106,7 +133,12 @@ def create_idee(
     _deny_communaute_for_statut(user)
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(403, "Les utilisateurs externes ne peuvent pas soumettre d'idées")
-    idee = Idee(titre=body.titre, description=body.description, auteur_id=user.id)
+    idee = Idee(
+        titre=body.titre, description=body.description, auteur_id=user.id,
+        #  Liste vide == aucune restriction : on retombe sur le défaut, comme le
+        #  serveur le fait déjà pour les publications et les sondages.
+        perimetre_cible=json.dumps(body.perimetre_cible or ["résidence"], ensure_ascii=False),
+    )
     session.add(idee)
     session.commit()
     session.refresh(idee)
