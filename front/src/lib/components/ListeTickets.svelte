@@ -30,6 +30,9 @@
 	/** Le ticket ouvert en nouvelle entrée d'Historique, s'il y en a un. */
 	export let ticketEnEvolution: number | null = null;
 	export let evolutionEnCours = false;
+	/** L'entrée du fil en cours de correction, et son enregistrement. */
+	export let evolEnEdition: number | null = null;
+	export let evolCorrectionEnCours = false;
 	export let peutCommenter = false;
 	export let peutAdministrer = false;
 
@@ -39,6 +42,10 @@
 		modifier: Ticket;
 		supprimer: Ticket;
 		evoluer: { ticket: Ticket; data: unknown };
+		//  La correction d'une ENTRÉE du fil — à ne pas confondre avec `modifier`,
+		//  qui vise le ticket. Deux gestes, deux noms.
+		evol_modifier: number;
+		evol_corriger: { ticket: Ticket; data: unknown };
 	}>();
 </script>
 
@@ -60,7 +67,12 @@
 		on:evoluer_ouvrir={() => dispatch('evoluer_ouvrir', t)}
 		on:modifier={() => dispatch('modifier', t)}
 		on:supprimer={() => dispatch('supprimer', t)}
+		{evolEnEdition}
+		{evolCorrectionEnCours}
 		on:evoluer={(e) => dispatch('evoluer', { ticket: t, data: e.detail })}
+		on:evol_modifier={(e) => dispatch('evol_modifier', e.detail)}
+		on:evol_corriger={(e) => dispatch('evol_corriger', { ticket: t, data: e.detail })}
+		on:evol_annuler
 		on:modifie
 		on:annuler
 	/>

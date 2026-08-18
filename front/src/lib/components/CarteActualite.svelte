@@ -60,10 +60,7 @@
 
 <div class="carte-liste pub-expand" class:expanded class:urgent={pub.urgente}
 	class:brouillon={pub.brouillon} class:epingle={pub.epingle} class:attenue={!estFil}
-	id="pub-{pub.id}"
-	role="button" tabindex="0"
-	on:click={basculer}
-	on:keydown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) basculer(); }}>
+	id="pub-{pub.id}">
 
 	{#if estFil && pub.epingle}<span class="pin-badge">&#x1F4CC;</span>{/if}
 
@@ -71,7 +68,13 @@
 	      la norme de toutes les cartes du site depuis le 18/08/2026. Elle vit dans
 	      `EnteteCarte`, pas ici — chaque carte qui recomposait son en-tête avait sa
 	      propre façon de mal se replier, et sur téléphone le titre disparaissait. -->
-	<EnteteCarte titre={pub.titre} date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}>
+	<!--  Le geste de dépliage vit dans `EnteteCarte` : le TITRE plie, avec un
+	      survol qui le dit (18/08/2026). Le conteneur ne porte plus
+	      `role="button"` — il interceptait la sélection de texte, et obligeait
+	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
+	      déplie pas la carte au même instant. -->
+	<EnteteCarte titre={pub.titre} date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}
+		basculable on:toggle={basculer}>
 		<svelte:fragment slot="titre-suffixe">
 			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
 		</svelte:fragment>

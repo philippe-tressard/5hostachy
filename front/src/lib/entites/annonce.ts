@@ -45,6 +45,20 @@
  * ## Qui consomme cette déclaration
  *
  *   • `FormulaireAnnonce.svelte` — dépôt ET correction (`sectionPresente`)
+ *   • `AnnonceCard.svelte` — l'affichage, et le raccourci de workflow
+ *
+ * ## ⚠️ Un revirement, et ce qu'il enseigne
+ *
+ * La section 3 portait `sansObjet` le 18/08 au matin — « une annonce n'a pas
+ * d'étapes de vie suivies à plusieurs » — et un workflow le soir même, sur
+ * arbitrage de l'utilisateur. Le raisonnement d'origine regardait **qui agit**
+ * quand la question de la section 3 est d'abord **où en est l'objet**.
+ *
+ * C'est la deuxième fois en deux jours que l'écran réfute le papier (la
+ * première : « une actualité n'a pas de workflow », dans l'autre sens). La
+ * leçon n'est pas qu'il faut moins déclarer — c'est que **la déclaration
+ * rend le désaccord visible et corrigeable en un endroit**. Sans elle, les
+ * deux raisonnements auraient coexisté dans deux écrans.
  */
 
 import type { EntiteDeclaree } from './types';
@@ -78,22 +92,43 @@ export const ANNONCE: EntiteDeclaree = {
 			},
 		},
 		{
-			//  🔴 UNE ANNONCE N'A PAS DE WORKFLOW — et ce n'est pas la même absence que
-			//  celle d'une actualité. L'annonce a bien un ÉTAT (Disponible · Réservé ·
-			//  Vendu · Archivé), mais il n'a ni étapes ordonnées, ni acteur qui change
-			//  d'une étape à l'autre, ni trace : c'est un attribut que l'auteur pose
-			//  depuis sa carte, pas un cycle de vie suivi à plusieurs.
+			//  🔴 REVIREMENT ASSUMÉ — l'utilisateur a tranché le 18/08/2026 :
+			//  « Ajouter une section workflow (En cours ; vendu, annuler) ».
 			//
-			//  ⚠️ Le distinguer du ticket est ce qui empêche d'importer par réflexe un
-			//  fil d'évolutions ici. La question de la section 3 est « où en est cet
-			//  objet, et qui l'y a mis » — la seconde moitié n'a pas de réponse pour
-			//  une annonce : il n'y a qu'un acteur, son auteur.
+			//  Ce fichier disait le contraire la veille, et le disait avec assurance :
+			//  « une annonce n'a pas d'étapes de vie suivies à plusieurs ». Le
+			//  raisonnement — un seul acteur, donc rien à tracer — était cohérent et
+			//  faux : il regardait QUI agit, alors que la question de la section 3 est
+			//  d'abord « où en est cet objet ? ». Un vendeur qui a réservé, vendu, ou
+			//  renoncé a bien un cycle — et ses voisins ont besoin de le lire.
+			//
+			//  ⚠️ Ce que le revirement NE remet pas en cause : il n'y a toujours pas de
+			//  fil d'évolutions ici. Un workflow se déclare parce que l'objet a des
+			//  états ordonnés ; le TRACER est une autre décision, et personne ne l'a
+			//  demandée. Les deux notions restent distinctes.
+			//
+			//  ⚠️ `archive` n'est PAS un de ces états : l'archivage est une conséquence
+			//  du temps (un mois), pas une étape qu'on choisit. Il se calcule côté
+			//  serveur (`est_archivee`). En faire une sixième pastille aurait donné deux
+			//  notions pour la même chose — celle qu'on pose et celle qui arrive.
 			id: 'workflow',
-			sansObjet:
-				"Une annonce n'a pas d'étapes de vie suivies à plusieurs : son statut " +
-				'(Disponible · Réservé · Vendu · Archivé) est un attribut que son auteur pose ' +
-				"depuis la carte, pas un cycle qui se trace. Il vit donc avec l'objet et non " +
-				'dans un workflow.',
+			objet: 'En cours · Réservé · Vendu · Donné · Annulé',
+			titreEcran: 'Où en est cette annonce ?',
+			absente: {
+				creation: {
+					motif: 'geste',
+					explication:
+						"Une annonce qu'on dépose est en cours, par construction : proposer l'état " +
+						"au dépôt reviendrait à demander si l'objet est déjà vendu avant de " +
+						"l'avoir annoncé.",
+				},
+				evolution: {
+					motif: 'hérité',
+					explication:
+						"L'état est celui de l'annonce. Une réponse de voisin ne la déclare ni " +
+						'vendue ni annulée — seul son auteur le peut.',
+				},
+			},
 		},
 		{
 			//  ✅ OUVERT le 18/08/2026 (migration 0151) — voir l'en-tête de ce fichier

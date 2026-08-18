@@ -43,6 +43,7 @@
 	import EnteteCarte from './EnteteCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
 	import { TICKET } from '$lib/entites/ticket';
@@ -72,9 +73,18 @@
 	export let mode: 'lecture' | 'edition' | 'evolution' = 'lecture';
 	/** Enregistrement d'une évolution en cours — porté par la page (appel d'API). */
 	export let evolutionEnCours = false;
+	/**  L'entrée du fil en cours de CORRECTION, `null` si aucune. Portée par la
+	 *   page : une seule entrée s'édite à la fois sur tout l'écran, sans quoi
+	 *   deux formulaires ouverts ne diraient pas lequel enregistre quoi. */
+	export let evolEnEdition: number | null = null;
+	/** La correction est-elle en cours d'enregistrement ? */
+	export let evolCorrectionEnCours = false;
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
+		evol_modifier: number;
+		evol_corriger: unknown;
+		evol_annuler: void;
 		evoluer_ouvrir: void;
 		modifier: void;
 		supprimer: void;
@@ -91,14 +101,17 @@
 	class:history-item={archive}
 	class:expanded
 	class:urgent={ticket.categorie === 'urgence'}
-	role="button"
-	tabindex="0"
-	on:click={() => dispatch('basculer')}
-	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && dispatch('basculer')}
+
 >
 	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
 	      la norme de toutes les cartes du site (`EnteteCarte`, 18/08/2026). -->
-	<EnteteCarte titre={ticket.titre} date={fmtDate(dateAffichee)}>
+	<!--  Le geste de dépliage vit dans `EnteteCarte` : le TITRE plie, avec un
+	      survol qui le dit (18/08/2026). Le conteneur ne porte plus
+	      `role="button"` — il interceptait la sélection de texte, et obligeait
+	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
+	      déplie pas la carte au même instant. -->
+	<EnteteCarte titre={ticket.titre} date={fmtDate(dateAffichee)}
+		basculable on:toggle={() => dispatch('basculer')}>
 		<svelte:fragment slot="titre-suffixe">
 			{#if isNouveau(ticket.cree_le, ticket.mis_a_jour_le)}
 				<span class="badge badge-gray tk-neuf">NEW</span>
@@ -175,7 +188,30 @@
 
 				{#if evolutions.length > 0}
 					<div class="tk-fil">
-						<RubriqueHistorique {evolutions} statutLabels={STATUT_TICKET_LABELS} />
+						<!--  Le crayon par entrée : il existait dans la rubrique depuis #431,
+					      et la fiche du ticket s'en servait — mais pas cette liste-ci.
+					      Un même fil modifiable sur un écran et pas sur l'autre.
+					      ⚠️ Les états ne sont PAS proposés en correction : corriger le
+					      texte d'une entrée ne rejoue pas la transition qu'elle a
+					      enregistrée (`test_correction_pas_transition.py`). -->
+					<RubriqueHistorique {evolutions} statutLabels={STATUT_TICKET_LABELS}
+						peutModifier={peutCommenter}
+						enEdition={evolEnEdition}
+						on:modifier={(e) => dispatch('evol_modifier', e.detail)}>
+						<svelte:fragment slot="edition" let:evol>
+							{#key evolEnEdition}
+								<EvolForm idPrefixe="tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
+									editMode={true}
+									initialContenu={evol.contenu || ''}
+									initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+									showFiles={true}
+									saving={evolCorrectionEnCours}
+									on:submit={(e) => dispatch('evol_corriger', e.detail)}
+									on:cancel={() => dispatch('evol_annuler')}
+								/>
+							{/key}
+						</svelte:fragment>
+					</RubriqueHistorique>
 					</div>
 				{/if}
 			{/if}

@@ -98,10 +98,25 @@ class CategorieAnnonce(str, Enum):
 
 
 class StatutAnnonce(str, Enum):
-    disponible = "disponible"
+    """Le WORKFLOW d'une annonce — arbitré le 18/08/2026.
+
+    🔴 Contredit la déclaration de la veille (`front/src/lib/entites/annonce.ts`),
+    qui posait `sansObjet` sur la section 3 : *« une annonce n'a pas d'étapes de
+    vie suivies à plusieurs »*. C'était mon arbitrage, pas celui du produit —
+    l'utilisateur a tranché l'inverse, et la déclaration a été corrigée avec.
+
+    ⚠️ `archive` n'en fait PAS partie, et c'est délibéré : l'archivage n'est pas
+    une étape que quelqu'un choisit, c'est une conséquence du temps. Il se
+    CALCULE (`_est_archivee`), comme pour les actualités. En faire un sixième
+    état aurait donné deux notions pour la même chose — celle qu'on pose et
+    celle qui arrive — libres de se contredire.
+    """
+
+    en_cours = "en_cours"
     reserve = "reserve"
     vendu = "vendu"
-    archive = "archive"
+    donne = "donne"
+    annule = "annule"
 
 
 class PetiteAnnonce(SQLModel, table=True):
@@ -126,7 +141,15 @@ class PetiteAnnonce(SQLModel, table=True):
     #  `PerimetrePicker` et `perimetreLabel` qui la lisent, et ils ne savent lire
     #  que celle-là.
     perimetre_cible: Optional[str] = Field(default='["résidence"]')
-    statut: StatutAnnonce = StatutAnnonce.disponible
+    statut: StatutAnnonce = StatutAnnonce.en_cours
+    #  🔴 L'horodatage du DERNIER CHANGEMENT D'ÉTAT, et non de la dernière
+    #  modification. C'est lui qui décide de l'archivage automatique à un mois.
+    #
+    #  ⚠️ Mesurer sur `mis_a_jour_le` aurait paru équivalent et ne l'est pas :
+    #  corriger une faute de frappe sur une annonce vendue repousserait son
+    #  archivage d'un mois, indéfiniment, à chaque retouche. `Publication` porte
+    #  le même champ (`statut_change_le`) pour exactement cette raison.
+    statut_change_le: Optional[datetime] = None
     contact_visible: bool = True  # autoriser affichage email/prénom-nom
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)

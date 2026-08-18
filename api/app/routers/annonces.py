@@ -1,6 +1,6 @@
 """Router petites annonces — communauté résidence."""
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
@@ -22,7 +22,39 @@ from app.utils.reponses import (
 router = APIRouter(prefix="/annonces", tags=["annonces"])
 
 MAX_PHOTOS = 5
+
+#: Combien de temps une annonce conclue reste visible dans la liste principale.
+#: Un mois, comme une actualité publiée — arbitré le 18/08/2026.
+ARCHIVAGE_JOURS = 30
+
+#: Les états TERMINAUX : ceux qui déclenchent le compte à rebours. Une annonce
+#: réservée ne s'archive pas — la réservation peut tomber, et l'annonce doit
+#: rester sous les yeux de son auteur.
+STATUTS_TERMINAUX = (StatutAnnonce.vendu, StatutAnnonce.donne, StatutAnnonce.annule)
 RUBRIQUE = "annonce"
+
+
+def est_archivee(annonce: PetiteAnnonce, jours: int = ARCHIVAGE_JOURS) -> bool:
+    """Cette annonce a-t-elle basculé dans l'Historique ?
+
+    🔴 **Calculée, jamais stockée.** L'archivage n'est pas une étape que
+    quelqu'un choisit, c'est une conséquence du temps : un sixième état aurait
+    donné deux notions pour la même chose, libres de se contredire.
+
+    ⚠️ La durée se mesure sur `statut_change_le`, **pas** sur `mis_a_jour_le` :
+    corriger une faute de frappe sur une annonce vendue repousserait sinon son
+    archivage d'un mois, à chaque retouche.
+
+    Pure et sans session : c'est ce qui la rend vérifiable sans base.
+    """
+    if annonce.statut not in STATUTS_TERMINAUX:
+        return False
+    #  Repli sur `mis_a_jour_le` puis `cree_le` : une annonce dont l'état est
+    #  terminal SANS horodatage ne doit pas rester éternellement en tête de
+    #  liste. La migration 0152 renseigne la colonne pour tout l'existant ; ce
+    #  repli couvre ce qui viendrait d'ailleurs.
+    ref = annonce.statut_change_le or annonce.mis_a_jour_le or annonce.cree_le
+    return bool(ref) and (datetime.utcnow() - ref) >= timedelta(days=jours)
 
 
 def _reponses_for(annonce_id: int, session: Session) -> list[dict]:
@@ -68,6 +100,11 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
         "auteur_nom": auteur.nom if auteur else "",
         "auteur_email": auteur.email if annonce.contact_visible and auteur else None,
         "est_auteur": annonce.auteur_id == user.id,
+        #  Calculé côté serveur et transporté : l'écran ne doit pas refaire la
+        #  règle, sinon la liste et l'Historique peuvent trancher différemment —
+        #  c'est le bug du 17/07/2026 sur les actualités, un élément visible dans
+        #  une vue et pas dans l'autre.
+        "archivee": est_archivee(annonce),
         "reponses": reponses,
         "nb_reponses": len(reponses),
     }
@@ -98,6 +135,9 @@ class AnnonceUpdate(BaseModel):
     prix: Optional[float] = None
     negotiable: Optional[bool] = None
     contact_visible: Optional[bool] = None
+    #  Section 3 du cadre : le workflow se corrige comme les autres champs.
+    #  Le raccourci de la carte (`PATCH /statut`) reste, pour le geste rapide.
+    statut: Optional[StatutAnnonce] = None
 
 
 class AnnonceStatutUpdate(BaseModel):
@@ -114,10 +154,12 @@ def list_annonces(
     user: Utilisateur = Depends(get_current_user),
 ):
     _deny_communaute_for_statut(user)
-    stmt = (
-        select(PetiteAnnonce)
-        .where(PetiteAnnonce.statut != StatutAnnonce.archive)
-        .order_by(PetiteAnnonce.cree_le.desc())  # type: ignore[arg-type]
+    #  ⚠️ Plus aucun filtre sur l'état : les annonces archivées sont RENDUES,
+    #  dans leur propre section repliée. Les exclure ici les rendrait
+    #  introuvables — or une annonce vendue le mois dernier est précisément ce
+    #  qu'on vient chercher quand on se demande à quel prix un voisin a vendu.
+    stmt = select(PetiteAnnonce).order_by(
+        PetiteAnnonce.cree_le.desc()  # type: ignore[arg-type]
     )
     annonces = session.exec(stmt).all()
     if type_annonce:
@@ -168,6 +210,11 @@ def update_annonce(
     #  ⚠️ Le périmètre arrive en LISTE et la colonne est du TEXTE : sans cette
     #  conversion, SQLite stockerait la repr Python d'une liste — que `json.loads`
     #  ne relit pas, et l'annonce perdrait son périmètre à la première correction.
+    #  Le formulaire de correction porte la section Workflow : un changement
+    #  d'état arrivant par `PATCH` doit s'horodater comme celui du raccourci de
+    #  la carte. Deux chemins vers le même fait, une seule règle.
+    if "statut" in maj and maj["statut"] != annonce.statut:
+        annonce.statut_change_le = datetime.utcnow()
     if "perimetre_cible" in maj:
         maj["perimetre_cible"] = json.dumps(maj["perimetre_cible"], ensure_ascii=False)
     for field, value in maj.items():
@@ -192,6 +239,11 @@ def update_statut(
         raise HTTPException(404, "Annonce introuvable")
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
+    #  🔴 `statut_change_le` ne bouge QUE sur un vrai changement. Le poser à
+    #  chaque appel ferait repartir le compte à rebours d'archivage même quand
+    #  on repose l'état déjà en place — un double-clic suffirait.
+    if annonce.statut != data.statut:
+        annonce.statut_change_le = datetime.utcnow()
     annonce.statut = data.statut
     annonce.mis_a_jour_le = datetime.utcnow()
     session.add(annonce)

@@ -37,6 +37,7 @@
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import EvolForm from './EvolForm.svelte';
 	import { calendrier as calApi, ApiError } from '$lib/api';
+	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { toast } from './Toast.svelte';
 
 	export let evenement: any;
@@ -53,6 +54,11 @@
 	const dispatch = createEventDispatcher<{ evolue: void; fermer: void }>();
 
 	let enCours = false;
+	//  L'entrée en cours de CORRECTION. `null` = aucune. Le fil n'en ouvre
+	//  qu'une à la fois — deux formulaires ouverts sur le même fil ne diraient
+	//  pas lequel enregistre quoi.
+	let enEdition: number | null = null;
+	let correctionEnCours = false;
 
 	//  DÉRIVÉES des colonnes, jamais réécrites : une seconde table divergerait à
 	//  la première colonne ajoutée. Le pendant serveur est `KANBAN_LABELS`
@@ -88,6 +94,27 @@
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
 		} finally { enCours = false; }
 	}
+	//  🔴 Une CORRECTION n'est pas une transition : elle ne porte pas de
+	//  `nouveau_statut`, et le serveur inscrit « Correction : … » plutôt qu'une
+	//  étape franchie. Sans cette distinction, corriger une faute de frappe
+	//  ferait apparaître dans l'Historique un mouvement qui n'a jamais eu lieu
+	//  (`test_correction_pas_transition.py`).
+	async function corriger(e: CustomEvent) {
+		if (enEdition === null) return;
+		const data = e.detail;
+		correctionEnCours = true;
+		try {
+			await calApi.updateEvolution(evenement.id, enEdition, {
+				contenu: data.contenu ?? '',
+				fichiers_urls: data.fichiers_urls,
+			});
+			enEdition = null;
+			dispatch('evolue');
+			toast('success', 'Entrée corrigée');
+		} catch (err: any) {
+			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+		} finally { correctionEnCours = false; }
+	}
 </script>
 
 <div class="ev-fil">
@@ -96,7 +123,26 @@
 		statutLabels={libelles}
 		titre="&#x1F4CB; Historique"
 		vide={peutAgir ? 'Aucune entrée pour le moment.' : ''}
+		peutModifier={peutAgir}
+		{enEdition}
+		on:modifier={(e) => (enEdition = e.detail)}
 	>
+		<!--  Le formulaire de correction prend la place de l'entrée qu'il corrige.
+		      Il ne propose PAS d'état : corriger le texte d'une entrée ne rejoue
+		      pas le mouvement de colonne qu'elle a enregistré. -->
+		<svelte:fragment slot="edition" let:evol>
+			{#key enEdition}
+				<EvolForm idPrefixe="ev-evol-edit-{evol.id}" titre="Modifier le commentaire"
+					editMode={true}
+					initialContenu={evol.contenu || ''}
+					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+					showFiles={true}
+					saving={correctionEnCours}
+					on:submit={corriger}
+					on:cancel={() => (enEdition = null)}
+				/>
+			{/key}
+		</svelte:fragment>
 	</RubriqueHistorique>
 
 	{#if ouvert}

@@ -45,7 +45,8 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
-	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
+	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+	import { CATEGORIES_ANNONCE, OPTIONS_STATUT_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/utils';
@@ -76,6 +77,11 @@
 	let categorie = annonce?.categorie ?? 'divers';
 	let prix = annonce?.prix !== null && annonce?.prix !== undefined ? String(annonce.prix) : '';
 	let negotiable = annonce?.negotiable ?? false;
+
+	//  ── 3. Workflow ─────────────────────────────────────────────────────────
+	//  Absent à la CRÉATION (motif `geste`) : une annonce qu'on dépose est en
+	//  cours par construction. La déclaration le dit, ce fichier ne le décide pas.
+	let statut = annonce?.statut ?? 'en_cours';
 
 	//  ── 4 à 9 ───────────────────────────────────────────────────────────────
 	//  Copie défensive du périmètre : le tableau vient de l'annonce affichée dans
@@ -121,6 +127,10 @@
 				negotiable: typeAnnonce === 'vente' ? negotiable : false,
 				contact_visible: contactVisible,
 				perimetre_cible: perimetreCible,
+				//  L'état ne part QU'EN correction : à la création, la section est
+				//  absente et le serveur pose le défaut. L'envoyer quand même ferait
+				//  écrire un `statut_change_le` pour une transition qui n'a pas eu lieu.
+				...(modeEdition ? { statut } : {}),
 			};
 			if (annonce) {
 				const maj: any = await annoncesApi.update(annonce.id, charge);
@@ -181,6 +191,16 @@
 						</div>
 					{/if}
 				</div>
+			</SectionFormulaire>
+		{/if}
+
+		<!--  3. Workflow — des PASTILLES, jamais un `<select>` nu (R3 / #423).
+		      La liste vient de `$lib/annonces`, source unique : la carte la rend
+		      aussi, dans son raccourci. -->
+		{#if sectionPresente(ANNONCE, etat, 'workflow')}
+			<SectionFormulaire titre="Où en est cette annonce ?">
+				<WorkflowPastilles options={OPTIONS_STATUT_ANNONCE} valeur={statut}
+					on:choisir={(e) => (statut = e.detail)} />
 			</SectionFormulaire>
 		{/if}
 
