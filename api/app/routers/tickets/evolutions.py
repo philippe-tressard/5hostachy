@@ -113,19 +113,35 @@ def delete_evolution(
     C'est la même frontière que pour la suppression d'un ticket, et la même règle
     que « archiver n'est pas supprimer » : le geste irréversible reste à l'admin.
 
-    ⚠️ **Une transition n'est PAS effaçable.** Un mouvement de workflow — le ticket
-    est passé « En cours » le 12 — est un fait de la vie du dossier, pas un texte
-    qu'on rature. L'effacer réécrirait l'histoire du suivi, et le fil cesserait
-    d'être une preuve de ce qui s'est passé. Seules les entrées de type
-    « commentaire » se retirent.
+    ## Les transitions aussi — arbitrage corrigé le 18/08/2026
+
+    Ce endpoint a d'abord refusé les entrées de type « etat », au motif qu'un
+    mouvement de workflow est un fait de la vie du dossier et non un texte qu'on
+    rature. **L'arbitrage était le mien, pas celui de l'utilisateur**, qui avait
+    demandé « une suppression pour les historiques » sans distinction — et qui a
+    constaté l'absence dès la première entrée d'état rencontrée.
+
+    Ce qui le rend acceptable : supprimer l'entrée **ne change pas l'état du
+    ticket**. `Ticket.statut` vit dans sa propre colonne ; le fil n'en est que le
+    récit. Le coût est donc une perte de TRAÇABILITÉ — on ne saura plus quand le
+    ticket est passé « En cours » —, pas une incohérence de données.
+
+    ⚠️ C'est un coût réel, et c'est la raison pour laquelle le geste reste réservé
+    à l'administrateur : le fil sert de preuve au conseil syndical face au syndic.
+    Une transition effacée ne se retrouve pas.
+
+    ⚠️ **Les RÉPONSES restent inaccessibles** (`type == "reponse"`) : elles
+    appartiennent à leur auteur, souvent un résident, et un administrateur qui les
+    effacerait supprimerait la parole de quelqu'un d'autre. Ce n'est pas la même
+    chose que retirer une ligne que le système a écrite ou qu'on a écrite soi-même.
     """
     evol = session.get(TicketEvolution, evol_id)
     if not evol or evol.ticket_id != ticket_id:
         raise HTTPException(404, "Évolution introuvable")
-    if evol.type != "commentaire":
+    if evol.type not in ("commentaire", "etat"):
         raise HTTPException(
             422,
-            "Un changement d'état ne s'efface pas : il dit ce qui est arrivé au ticket.",
+            "Cette entrée ne peut pas être supprimée : une réponse appartient à son auteur.",
         )
     session.delete(evol)
     session.commit()

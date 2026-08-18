@@ -99,14 +99,24 @@
 	//  le serveur la refuse déjà (« ce type d'évolution ne peut pas être modifié »).
 	const TYPES_CORRIGEABLES = ['commentaire', 'etat'];
 
-	/**  Ce qui s'EFFACE, et c'est plus étroit que ce qui se corrige.
+	/**  Ce qui s'EFFACE — les MÊMES types que le serveur, et dans le même ordre.
 	 *
-	 *   Une TRANSITION ne s'efface pas : « le ticket est passé En cours le 12 » est un
-	 *   fait de la vie du dossier, pas un texte qu'on rature. L'effacer réécrirait
-	 *   l'histoire du suivi, et le fil cesserait d'être une preuve de ce qui s'est
-	 *   passé. Le serveur refuse d'ailleurs (`422`) — l'écran dit donc la même chose
-	 *   que lui, ni plus ni moins (ux-patterns §15). */
-	const TYPES_EFFACABLES = ['commentaire'];
+	 *   ⚠️ Les transitions d'état en font partie depuis le 18/08/2026, et c'est un
+	 *   arbitrage CORRIGÉ : je les avais exclues de moi-même (« un mouvement de
+	 *   workflow est un fait, pas un texte qu'on rature »), alors que la demande
+	 *   était « une suppression pour les historiques », sans distinction. L'absence
+	 *   a été constatée dès la première entrée d'état rencontrée.
+	 *
+	 *   Ce qui la rend acceptable : supprimer l'entrée NE CHANGE PAS l'état du
+	 *   ticket — `statut` vit dans sa propre colonne, le fil n'en est que le récit.
+	 *   Le coût est une perte de traçabilité, pas une incohérence.
+	 *
+	 *   ⚠️ Les RÉPONSES restent hors de portée : elles appartiennent à leur auteur,
+	 *   souvent un résident. Les effacer supprimerait la parole de quelqu'un
+	 *   d'autre — ce n'est pas la même chose que retirer une ligne écrite par le
+	 *   système ou par soi-même. Le serveur les refuse (`422`), et l'écran dit la
+	 *   même chose que lui, ni plus ni moins (ux-patterns §15). */
+	const TYPES_EFFACABLES = ['commentaire', 'etat'];
 
 	/**  🔴 Effacer est réservé à l'ADMINISTRATEUR (18/08/2026, demandé à l'écran :
 	 *   « bon pour l'admin seul »).
