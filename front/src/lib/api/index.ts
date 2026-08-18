@@ -50,6 +50,10 @@ export const tickets = {
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	updateEvolution: (id: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
 		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
+	//  Réservé à l'ADMIN côté serveur (`require_admin`) : effacer une trace que
+	//  d'autres ont pu lire n'est pas corriger son propre texte.
+	deleteEvolution: (id: number, evolId: number) =>
+		api.delete<void>(`/tickets/${id}/evolutions/${evolId}`),
 	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
 	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	// Pas de `uploadPhoto` : photos et documents passent par `fichiersApi.upload`

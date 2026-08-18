@@ -124,53 +124,88 @@
 		dispatch('change', value);
 	}
 
+	/**
+	 * 🔴 **L'ALGORITHME, REMIS À PLAT** (18/08/2026, demandé à l'écran : *« le
+	 * périmètre ne fonctionne pas ; peux-tu remettre à plat l'algorithme »*).
+	 *
+	 * ## Ce qui n'allait pas, et qu'aucune rustine ne pouvait réparer
+	 *
+	 * **Une même pastille portait DEUX gestes** — « ouvrir pour préciser » et
+	 * « choisir tout le bâtiment » — et il fallait deviner lequel partirait. D'où
+	 * une série de symptômes qui semblaient sans rapport :
+	 *
+	 *   • rouvrir « Bât. 3 » pour vérifier son toit **effaçait** ce toit (le clic
+	 *     était compris comme « je veux tout le bâtiment ») ;
+	 *   • ou, la veille encore, **ajoutait** le bâtiment entier par-dessus son
+	 *     toit — « Toit · Toit · Bâtiment 3 » ;
+	 *   • et affecter un toit à deux bâtiments de suite devenait un jeu d'adresse.
+	 *
+	 * Chaque correctif déplaçait le défaut d'un cas à l'autre, parce que le
+	 * problème n'était pas dans le calcul : **deux intentions ne tiennent pas dans
+	 * un seul geste.**
+	 *
+	 * ## La règle, en entier — cinq lignes, aucun cas implicite
+	 *
+	 * | Clic sur | Sélection | Rangée |
+	 * |---|---|---|
+	 * | un nœud de 1ᵉʳ niveau **qui a des espaces retenus** | *inchangée* | s'ouvre |
+	 * | un nœud de 1ᵉʳ niveau sans espace retenu, non retenu | il est **ajouté** | s'ouvre |
+	 * | un nœud de 1ᵉʳ niveau **retenu lui-même** | il est **retiré** | se ferme |
+	 * | un **espace** | il est basculé ; son bâtiment entier est retiré | reste ouverte |
+	 * | « toute la copropriété » | tout est vidé | se ferme |
+	 *
+	 * **La première ligne est la clé** : quand un bâtiment porte déjà des espaces
+	 * précisés, le clic sur lui ne veut plus dire « je choisis tout le bâtiment »,
+	 * il veut dire « montre-moi ce que j'y ai mis ». On peut donc rouvrir, vérifier,
+	 * ajouter un second espace, sans jamais rien perdre.
+	 *
+	 * ⚠️ **Comment choisir « tout le bâtiment » quand on a déjà des espaces ?** En
+	 * les retirant. Ce n'est pas une lacune : « tout le bâtiment 3 » et « le toit du
+	 * bâtiment 3 » sont deux cibles **exclusives**, et l'écran ne doit pas laisser
+	 * croire qu'on peut les cumuler. Les retirer un à un EST la façon de dire qu'on
+	 * élargit.
+	 *
+	 * ⚠️ **Aucune règle ne dépend de l'ordre des clics.** C'est ce qui manquait :
+	 * une règle asymétrique donne un résultat différent selon le chemin suivi, et
+	 * rien ne rattrape un chemin qu'on n'avait pas prévu.
+	 */
 	function basculer(code: string) {
-		//  Quel nœud de premier niveau ce clic met-il en avant ? Celui qu'on
-		//  touche, ou le parent de l'espace qu'on précise. C'est LUI qui ouvre sa
-		//  rangée de second niveau — le geste attendu est « je précise dans
-		//  celui-ci », et il vaut pour le dernier touché.
-		const racineTouchee = racineDe(code, n1);
+		const racine = racineDe(code, n1);
+		const estNiveau1 = racine === code;
 
 		if (mode === 'single') {
-			parentTouche = racineTouchee;
+			parentTouche = racine;
 			value = [code];
 			dispatch('change', value);
 			return;
 		}
+
 		const s = new Set(value.filter((v) => v !== defaut));
+		const espacesRetenus = [...s].filter((v) => v !== code && racineDe(v, n1) === code);
+
+		if (estNiveau1 && espacesRetenus.length > 0 && !s.has(code)) {
+			//  1. Le nœud porte des espaces précisés : on vient les REVOIR, pas les
+			//     remplacer. La sélection ne bouge pas d'un iota.
+			parentTouche = code;
+			return;
+		}
+
 		if (s.has(code)) {
+			//  2 & 3. Retirer ce qui était retenu. Retirer le nœud de premier niveau
+			//     referme sa rangée ; retirer un espace la laisse ouverte — on en
+			//     précise souvent plusieurs à la suite, et refermer sous le doigt
+			//     obligerait à rouvrir.
 			s.delete(code);
-			//  Désélectionner le nœud de premier niveau LUI-MÊME referme sa rangée.
-			//  Désélectionner un de ses espaces, non : on en précise souvent
-			//  plusieurs à la suite, et refermer sous le doigt obligerait à rouvrir.
-			if (code === racineTouchee) parentTouche = null;
+			if (estNiveau1) parentTouche = null;
 		} else {
-			parentTouche = racineTouchee;
-			if (racineTouchee && racineTouchee !== code) {
-				//  Choisir un espace remplace son bâtiment : « Bât. 2 » puis
-				//  « Bât. 2 › Hall » veut dire le hall, pas les deux.
-				s.delete(racineTouchee);
-			} else {
-				//  🔴 ET LA RÉCIPROQUE (18/08/2026, signalée à l'écran) : choisir le
-				//  bâtiment ENTIER remplace les espaces qu'on y avait précisés.
-				//
-				//  Elle manquait, et le geste le plus naturel la déclenchait : après
-				//  « Bât. 3 › Toit », recliquer sur « Bât. 3 » — pour rouvrir sa
-				//  rangée, pour vérifier — AJOUTAIT le bâtiment entier sans retirer
-				//  son toit. On repartait avec « tout le bâtiment 3 ET son toit »,
-				//  deux cibles qui se contredisent, sans que rien ne le dise. C'est
-				//  ce que montrait la capture : « Toit · Toit · Bâtiment 3 ».
-				//
-				//  ⚠️ La règle n'est pas nouvelle, c'est sa MOITIÉ MANQUANTE : le
-				//  particulier remplaçait le général, le général ne remplaçait pas le
-				//  particulier. Une règle asymétrique donne un résultat qui dépend de
-				//  l'ordre des clics — et rien ne rattrape un ordre non prévu.
-				for (const v of [...s]) {
-					if (v !== code && racineDe(v, n1) === code) s.delete(v);
-				}
-			}
+			parentTouche = racine;
+			//  4. Un espace remplace son bâtiment : « Bât. 2 › Hall » veut dire le
+			//     hall, pas les deux. Le cas inverse — un bâtiment par-dessus ses
+			//     espaces — ne peut plus se produire : il est intercepté en 1.
+			if (!estNiveau1 && racine) s.delete(racine);
 			s.add(code);
 		}
+
 		value = s.size > 0 ? [...s] : defaut ? [defaut] : [];
 		dispatch('change', value);
 	}

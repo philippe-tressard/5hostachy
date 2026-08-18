@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin, peut_commenter
+from app.auth.deps import get_current_user, require_admin, require_cs_or_admin, peut_commenter
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
@@ -81,6 +81,56 @@ def update_evolution(
     session.commit()
     session.refresh(evol)
     return evol_read(evol, session)
+
+
+@router.delete("/{ticket_id}/evolutions/{evol_id}", status_code=204)
+def delete_evolution(
+    ticket_id: int,
+    evol_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_admin),
+):
+    """Retirer une entrée du fil — **administrateur seulement**.
+
+    ## Pourquoi cette capacité existe (18/08/2026)
+
+    Demandée à l'écran après le défaut des corrections auto-tracées : deux entrées
+    « Correction : Description modifiée ; Périmètre modifié ; … » s'étaient
+    inscrites sur un ticket alors qu'une seule catégorie avait changé. Elles ne
+    décrivent rien qui ait eu lieu, et **rien ne permettait de les retirer** — pas
+    même à l'administrateur : *« je ne peux le faire »*.
+
+    Le fil est une mémoire ; une mémoire qui garde des faits inventés vaut moins
+    qu'une mémoire trouée. La capacité manquait, et son absence obligeait à
+    envisager une intervention en base — ce que la règle d'or du projet interdit
+    tant que l'API tourne.
+
+    ## Pourquoi `require_admin` et non `require_cs_or_admin`
+
+    La correction d'une entrée (`PATCH`) est ouverte à son auteur : réécrire son
+    propre commentaire est un geste ordinaire. **Effacer** ne l'est pas — cela fait
+    disparaître une trace que d'autres ont pu lire et sur laquelle ils ont pu agir.
+    C'est la même frontière que pour la suppression d'un ticket, et la même règle
+    que « archiver n'est pas supprimer » : le geste irréversible reste à l'admin.
+
+    ⚠️ **Une transition n'est PAS effaçable.** Un mouvement de workflow — le ticket
+    est passé « En cours » le 12 — est un fait de la vie du dossier, pas un texte
+    qu'on rature. L'effacer réécrirait l'histoire du suivi, et le fil cesserait
+    d'être une preuve de ce qui s'est passé. Seules les entrées de type
+    « commentaire » se retirent.
+    """
+    evol = session.get(TicketEvolution, evol_id)
+    if not evol or evol.ticket_id != ticket_id:
+        raise HTTPException(404, "Évolution introuvable")
+    if evol.type != "commentaire":
+        raise HTTPException(
+            422,
+            "Un changement d'état ne s'efface pas : il dit ce qui est arrivé au ticket.",
+        )
+    session.delete(evol)
+    session.commit()
+    return None
+
 
 
 def _notifier_auteur(

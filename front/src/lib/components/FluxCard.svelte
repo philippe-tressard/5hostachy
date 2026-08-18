@@ -40,7 +40,15 @@
 	$: fichiers = (item.meta?.fichiers_urls as string[] | undefined) ?? [];
 
 	$: perimetre = item.meta?.perimetre as string | undefined;
-	// « Copropriété entière » n'apprend rien : c'est le cas par défaut.
+	//  « Copropriété entière » n'apprend rien : c'est le cas par défaut.
+	//
+	//  ⚠️ COMPARAISON DE LIBELLÉ EN DUR, et c'est une fragilité connue : `meta.perimetre`
+	//  arrive du serveur déjà mis en forme, si bien qu'`estPerimetreParDefaut()` — qui
+	//  travaille sur des CODES — ne s'applique pas ici. Renommer le nœud racine depuis
+	//  l'administration ferait donc réapparaître « 🔹 Toute la copropriété » sur chaque
+	//  ligne du fil. C'est la même famille de défaut que les tables de périmètres
+	//  recopiées (#316) ; le remède est côté API — ne pas envoyer le périmètre quand il
+	//  vaut le défaut —, pas ici.
 	$: perimetreAffiche = perimetre && perimetre !== 'Copropriété entière' ? perimetre : null;
 	$: debut = item.meta?.debut as string | undefined;
 	$: aVenir = item.type === 'evenement' && debut ? new Date(debut) > new Date() : false;
@@ -92,8 +100,14 @@
 				{#if aVenir}
 					<span class="badge badge-orange" style="font-size:.7rem">🗓️ prévu le {fmtDatetimeShort(String(debut))}</span>
 				{/if}
+				<!--  🔴 `badge-gray`, comme sur les CARTES (18/08/2026). Le fil le rendait
+				      en `badge-blue` : le même périmètre changeait donc de couleur selon
+				      qu'on le lisait dans le fil ou dans la liste d'où il vient. Un objet
+				      se rend toujours pareil (R3) — et le bleu, ici, servait à le
+				      distinguer des badges d'état voisins, ce que le 🔹 fait déjà.
+				      Le `font-size` en ligne part avec : il est dans `.flux-badges`. -->
 				{#if perimetreAffiche}
-					<span class="badge badge-blue" style="font-size:.7rem">🔹 {perimetreAffiche}</span>
+					<span class="badge badge-gray">🔹 {perimetreAffiche}</span>
 				{/if}
 				{#each item.badges as b}
 					<span class="badge {badgeClass(item.type, b)}">{b}</span>
@@ -104,7 +118,10 @@
 			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 			<div class="flux-body" on:click|stopPropagation>
 				{#if item.meta?.lieu}<p class="flux-meta-line">📍 {item.meta.lieu}</p>{/if}
-				{#if perimetreAffiche}<p class="flux-meta-line">🔹 {perimetreAffiche}</p>{/if}
+				<!--  ⚠️ Le périmètre n'est PAS répété ici : il est déjà en badge dans
+				      l'en-tête de la carte, visible replié comme déplié. Il s'affichait
+				      deux fois sur toute carte dépliée — le même défaut que celui corrigé
+				      sur les tickets le même jour, dans l'autre sens. -->
 				{#if item.meta?.prestataire}<p class="flux-meta-line">🔧 {item.meta.prestataire}</p>{/if}
 				<!-- `fin` est facultatif : l'exiger masquait la date de tenue de
 				     tout événement sans heure de fin — désormais l'information
