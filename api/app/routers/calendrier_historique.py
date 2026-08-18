@@ -26,7 +26,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -35,6 +35,7 @@ from app.database import get_session
 from app.models.core import Evenement, RoleUtilisateur, Utilisateur
 from app.models.evenement import EvenementEvolution
 from app.utils.photos import parse_photos, photos_internes
+from app.routers.calendrier_courriels import notifier_canaux
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -63,6 +64,12 @@ class EvolutionEvenementCreate(BaseModel):
     contenu: Optional[str] = None
     nouveau_statut: Optional[str] = None
     fichiers_urls: list[str] = []
+    #  La DIFFUSION d'une entrée (18/08/2026) — signalé à l'écran : « il manque en
+    #  mode suivi la section Diffusion ». Ce sont des ACTES, rejouables à chaque
+    #  entrée : chacune est une nouvelle, à la différence d'une correction.
+    partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
 
 #: Les libellés des colonnes du Kanban, écrits UNE fois côté serveur : ce sont
@@ -122,6 +129,7 @@ def _evolutions_de(ev_id: int, session: Session) -> list[EvolutionEvenementRead]
 def add_evolution_evenement(
     ev_id: int,
     body: EvolutionEvenementCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
@@ -164,6 +172,21 @@ def add_evolution_evenement(
         session.add(ev)
     session.commit()
     session.refresh(evol)
+
+    #  La DIFFUSION — après le commit : un courriel qui part sur une transaction
+    #  annulée annonce une décision qui n'a pas été prise. Le modèle est propre au
+    #  SUIVI : réutiliser « Nouvel événement » aurait annoncé une création à
+    #  chaque commentaire.
+    notifier_canaux(
+        ev, user, session, background_tasks,
+        whatsapp=body.partager_whatsapp,
+        syndic=body.envoyer_syndic,
+        cs=body.envoyer_cs,
+        suivi={
+            "commentaire": body.contenu or "",
+            "etat": KANBAN_LABELS.get(evol.nouveau_statut or "", ""),
+        },
+    )
     return _evolutions_de(ev_id, session)[-1]
 
 

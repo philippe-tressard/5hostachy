@@ -27,9 +27,20 @@
 -->
 <script lang="ts">
 	export let titre: string;
+	/**  Le cadre visible — une carte blanche avec sa bordure.
+	 *
+	 *   `false` quand le formulaire s'ouvre DÉJÀ dans une carte : celle d'un
+	 *   ticket, d'une actualité, d'un événement. Une carte dans une carte, c'est
+	 *   deux bordures imbriquées pour un seul objet — signalé à l'écran (#425).
+	 *
+	 *   ⚠️ Le TITRE, lui, reste dans les deux cas, et c'est le point : c'est lui
+	 *   qui dit **ce qu'on est en train de faire**. Sans en-tête, le mode ne se
+	 *   lit qu'en se rappelant l'icône cliquée trois secondes plus tôt — et R1
+	 *   dit que le squelette porte *en-tête · corps · pied*. */
+	export let encadre = true;
 </script>
 
-<div class="card largeur-saisie formulaire-creation">
+<div class="formulaire-creation largeur-saisie" class:card={encadre}>
 	<h2>{titre}</h2>
 	<slot />
 </div>

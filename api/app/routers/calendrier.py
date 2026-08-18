@@ -9,23 +9,20 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Evenement, Notification, TypeEvenement, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, MembreSyndic
+from app.models.core import Evenement, Notification, TypeEvenement, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien
 from app.models.evenement import EvenementEvolution
+from app.routers.calendrier_courriels import notifier_canaux
 from app.routers.calendrier_historique import (
     CHAMPS_CORRIGEABLES,
     EvolutionEvenementRead,
     _evolutions_de,
 )
-from app.utils.dates_fr import datetime_longue
-from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_element
-from app.utils.whatsapp import envoyer_whatsapp_avec_log
 from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import evenement_visible
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
-from app.utils.whatsapp import config_whatsapp, whatsapp_actif
 
 
 class EvenementCreate(BaseModel):
@@ -207,88 +204,15 @@ def create_evenement(
     session.commit()
     session.refresh(ev)
 
-    # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
-    if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
-        cfg_map = config_whatsapp(session, "reference_copro", "site_nom")
-
-        if body.partager_whatsapp:
-            if whatsapp_actif(cfg_map):
-                background_tasks.add_task(
-                    envoyer_whatsapp_avec_log,
-                    f"📅 {body.titre}", body.description or "", False, None, None, cfg_map,
-                )
-
-        if body.envoyer_syndic or body.envoyer_cs:
-            from app.utils.email import send_email_group
-
-            # Photos et documents de l'affaire, résolus en chemins locaux comme
-            # pour les tickets et les actualités.
-            pieces_jointes = chemins_locaux(
-                parse_photos(ev.photos_urls) + parse_photos(ev.fichiers_urls)
-            )
-
-            destinataires: list[tuple[int | None, str]] = []
-            seen_emails: set[str] = set()
-
-            if body.envoyer_syndic:
-                syndic_principal = session.exec(
-                    select(MembreSyndic).where(MembreSyndic.est_principal == True)
-                ).first()
-                if syndic_principal and syndic_principal.email:
-                    destinataires.append((syndic_principal.user_id, syndic_principal.email))
-                    seen_emails.add(syndic_principal.email.lower())
-
-            if body.envoyer_cs:
-                cs_users = session.exec(
-                    select(Utilisateur.id, Utilisateur.email)
-                    .where(
-                        Utilisateur.actif == True,
-                        Utilisateur.email.isnot(None),
-                        Utilisateur.roles_json.contains("conseil_syndical"),
-                    )
-                ).all()
-                for uid, email in cs_users:
-                    if email and email.lower() not in seen_emails:
-                        destinataires.append((uid, email))
-                        seen_emails.add(email.lower())
-
-            # Le template `calendrier_evenement_cree` attend `evenement`, pas
-            # `ticket` : ce contexte avait été repris du mail de ticket sans
-            # renommer la clé, d'où un `'evenement' is undefined` à chaque envoi
-            # — six membres du CS n'ont rien reçu le 28/07/2026, sans aucune
-            # trace ailleurs que dans `historique_email` (l'envoi est en
-            # BackgroundTask). Même cause racine que `reinitialisation_mdp`
-            # (03/06) et `ticket_statut_change` (15/06).
-            ctx = {
-                "evenement": {
-                    "id": ev.id,
-                    "titre": ev.titre,
-                    # `datetime_longue` et NON `datetime_longue_paris` : à la
-                    # différence des `cree_le` de la base, `debut` est l'heure de
-                    # tenue telle qu'elle a été saisie (le front envoie
-                    # `2026-08-05T14:00`, sans fuseau). La convertir depuis UTC
-                    # annoncerait 16:00 pour un événement à 14:00.
-                    "date": datetime_longue(ev.debut) if ev.debut else "",
-                    "description": ev.description or "",
-                    "type": ev.type.value if ev.type else "",
-                },
-                "auteur": {"prenom": user.prenom, "nom": user.nom},
-                "residence": {"nom": cfg_map.get("site_nom", "5Hostachy")},
-                "app": {"url": cfg_map.get("site_url", "https://localhost")},
-                "reference_copro": cfg_map.get("reference_copro", ""),
-                # Calculé sur la liste réellement attachée, jamais sur l'intention :
-                # ce que l'e-mail annonce doit être ce qu'il transporte.
-                "fichiers": bool(pieces_jointes),
-            }
-            if destinataires:
-                background_tasks.add_task(
-                    send_email_group, code="calendrier_evenement_cree",
-                    to_recipients=destinataires, context=ctx,
-                    session=session,
-                    # Cet envoi ne transportait AUCUNE pièce jointe : une affaire
-                    # créée avec son devis notifiait le syndic sans le devis.
-                    attachments=pieces_jointes or None,
-                )
+    #  Les envois vivent dans `calendrier_courriels` : ils servent AUSSI une
+    #  entrée d'Historique depuis le 18/08/2026, et une seconde copie du bloc
+    #  aurait divergé au premier template modifié.
+    notifier_canaux(
+        ev, user, session, background_tasks,
+        whatsapp=bool(body.partager_whatsapp),
+        syndic=bool(body.envoyer_syndic),
+        cs=bool(body.envoyer_cs),
+    )
 
     return _ev_to_read(ev, session)
 

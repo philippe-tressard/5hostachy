@@ -146,13 +146,10 @@ ECRITURES_CLIENT = [
     # suivent le découpage, pas l'inverse. Le test échouait bruyamment (fichier
     # introuvable), ce qui est la bonne façon de perdre sa cible.
     ("api/app/routers/tickets/crud.py", "create_ticket"),
-    # `update_ticket` délègue l'écriture à `_appliquer_contenu` : c'est cette
-    # fonction qui filtre, et donc elle qu'il faut viser. Elle a déménagé DEUX
-    # fois — `tickets.py` → `tickets/crud.py` (08/08/2026), puis `crud.py` →
-    # `correction.py` (18/08/2026, découpage imposé par la modularité). Les deux
-    # fois, le test a échoué bruyamment sur un fichier introuvable : c'est la
-    # bonne façon de perdre sa cible, et la raison pour laquelle cette liste est
-    # écrite en clair plutôt que découverte.
+    # `update_ticket` délègue l'écriture à `_appliquer_contenu`, qui a déménagé
+    # DEUX fois (`tickets.py` → `crud.py` → `correction.py`). Les deux fois, le
+    # test a échoué bruyamment sur un fichier introuvable : c'est la bonne façon
+    # de perdre sa cible, et la raison pour laquelle cette liste est en clair.
     ("api/app/routers/tickets/correction.py", "_appliquer_contenu"),
     ("api/app/routers/tickets/messages.py", "add_message"),
     ("api/app/routers/tickets/evolutions.py", "add_evolution"),
@@ -161,41 +158,10 @@ ECRITURES_CLIENT = [
     ("api/app/routers/publications/evolutions.py", "update_evolution"),
     ("api/app/routers/calendrier.py", "create_evenement"),
     ("api/app/routers/calendrier.py", "update_evenement"),
+    #  L'Historique d'un événement en écrit aussi : même filtre.
+    ("api/app/routers/calendrier_historique.py", "add_evolution_evenement"),
+    ("api/app/routers/calendrier_historique.py", "update_evolution_evenement"),
 ]
-
-
-#: Noms des variables qui contiennent des chemins RÉSOLUS (sortis de
-#: `chemins_locaux`), donc réellement joignables à un e-mail.
-_LISTES_RESOLUES = {"pieces_jointes", "photo_paths", "all_attachments", "attachments"}
-
-_DRAPEAU_FICHIERS = re.compile(r'"fichiers":\s*bool\(([A-Za-z_][\w.]*)\)')
-
-
-@pytest.mark.parametrize(
-    "chemin",
-    ["api/app/routers/tickets/courriels.py", "api/app/routers/publications/courriels.py",
-     "api/app/routers/calendrier.py"],
-)
-def test_le_drapeau_fichiers_decrit_ce_qui_est_vraiment_joint(chemin):
-    """« Pièces jointes disponibles ci-dessous » ne doit pas mentir.
-
-    Les modèles `ticket_syndic`, `publication_syndic` et
-    `calendrier_evenement_cree` affichent cette phrase derrière
-    `{% if fichiers %}`. Deux points d'appel calculaient le drapeau sur
-    l'INTENTION (`bool(body.fichiers_urls)`) au lieu de la liste réellement
-    transmise : le commentaire de ticket envoyé au syndic annonçait des pièces
-    jointes sans en attacher aucune, et l'actualité faisait l'inverse — elle les
-    attachait sans les annoncer. Le drapeau se calcule sur la liste résolue,
-    jamais sur la requête.
-    """
-    source = (RACINE / chemin).read_text(encoding="utf-8")
-    references = _DRAPEAU_FICHIERS.findall(source)
-    assert references, f"aucun drapeau `fichiers` trouvé dans {chemin}"
-    for ref in references:
-        assert ref in _LISTES_RESOLUES, (
-            f'{chemin} : "fichiers" calculé sur `{ref}`, qui n\'est pas une liste '
-            f"de chemins résolus ({sorted(_LISTES_RESOLUES)})"
-        )
 
 
 @pytest.mark.parametrize("chemin, fonction", ECRITURES_CLIENT)

@@ -177,20 +177,22 @@ export const PUBLICATION: EntiteDeclaree = {
 			objet: 'Documents joints (entités `Document` liées à la publication)',
 		},
 		{
+			//  ✅ ROUVERTE à l'édition le 18/08/2026, comme sur les tickets — signalé
+			//  à l'écran : « il manque la section notification en Diffusion, en mode
+			//  Édition ». Les boutons ✉️ et 💬 de renvoi avaient disparu de la carte
+			//  le matin même : sans cette section, plus AUCUN chemin ne permettait de
+			//  prévenir le syndic d'une actualité déjà publiée.
+			//
+			//  🔴 Ce qui rend la réouverture sûre vit côté serveur : seule la
+			//  transition décoché → coché envoie. Un canal déjà coché ne repart pas à
+			//  chaque enregistrement — sinon corriger une faute de frappe rejouerait
+			//  l'envoi, et c'est l'incident du triple envoi WhatsApp du 14/08/2026.
 			id: 'diffusion',
 			objet: 'CanauxNotification — WhatsApp, syndic, conseil syndical — et affiche de hall',
 			absente: {
 				affichage: {
 					motif: 'geste',
 					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",
-				},
-				edition: {
-					motif: 'geste',
-					explication:
-						"Une correction n'est pas une nouvelle. Rouvrir les canaux renverrait un " +
-						'message à chaque faute de frappe rattrapée — incident du triple envoi ' +
-						'WhatsApp du 14/08/2026, où « Encombrants » est parti trois fois. Le renvoi ' +
-						"délibéré garde son chemin : les boutons ✉️ et 💬 de la carte, réservés à l'admin.",
 				},
 			},
 		},

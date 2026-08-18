@@ -805,6 +805,32 @@ imaginaire.
 d'en-tête de page — leur `<h1>` est le titre de l'objet, dans sa carte. Ne pas les
 convertir mécaniquement : ce qu'il faut y mettre est instruit dans #365.
 
+## 13 bis. 🔴 UN FORMULAIRE DIT TOUJOURS CE QU'IL FAIT
+
+**Tout formulaire porte un titre**, et c'est lui qui dit le mode. Posé le
+18/08/2026 après un constat à l'écran : *« sur toutes les pages on ne sait pas si
+on est en mode édition, en mode suivi »*.
+
+La cause n'était pas un manque de contraste : `EvolForm` était **le seul
+formulaire du site sans en-tête**. `FormulaireTicket` et `FormulaireActualite`
+passent par `FormulaireCreation`, qui leur donne un titre ; lui rendait ses
+sections à nu. Le mode devait donc se **deviner** à partir de l'icône cliquée
+trois secondes plus tôt — et **R1** dit que le squelette porte *en-tête · corps ·
+pied*. Un formulaire sans nom viole le cadre.
+
+| Geste | Titre |
+|---|---|
+| création | « Nouveau ticket » · « Nouvelle publication » · « Nouvel événement » |
+| édition | « **Modifier** le ticket #123 » · « **Modifier** la publication » |
+| évolution | « **Commenter ou changer l'état** », ou « Commenter » sans workflow |
+| correction d'une entrée | « **Modifier le commentaire** » |
+
+⚠️ **`FormulaireCreation` porte une prop `encadre`.** À `false`, il rend le titre
+**sans la carte** — pour un formulaire qui s'ouvre déjà DANS une carte (ticket,
+actualité, événement). Deux bordures imbriquées pour un seul objet, c'est la
+« carte dans la carte » signalée sur #425 ; le titre, lui, reste dans les deux
+cas. C'est le composant qui décide, jamais l'écran.
+
 ## 14. Formulaire de création — `FormulaireCreation.svelte`, une boîte dans la page
 
 **Un seul paradigme sur tout le site : la boîte dans la page.** Les actualités

@@ -259,7 +259,7 @@
 	<div class="alert alert-error largeur-saisie">{error}</div>
 {/if}
 
-<FormulaireCreation titre={titreBoite}>
+<FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
 	<form on:submit|preventDefault={submit}>
 		<!--  1. Titre — et lui seul. La catégorie était rendue ICI, et AVANT le
 		      titre : le premier champ de la première section n'était pas le titre.

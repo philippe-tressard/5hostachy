@@ -1453,7 +1453,7 @@
 						{#if tkShowForm === t.id}
 						<div class="evol-form">
 							{#key tkShowForm}
-							<EvolForm idPrefixe="cs-tk-evol-{t.id}"
+							<EvolForm idPrefixe="cs-tk-evol-{t.id}" titre="Commenter ou changer l’état"
 								statutOptions={TK_STATUT_OPTIONS}
 								statutLabels={TK_STATUT_LABELS}
 								currentStatut={t.statut ?? ''}
@@ -1496,7 +1496,7 @@
 									>
 										<svelte:fragment slot="edition" let:evol>
 											{#key tkEditingEvolId}
-												<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}"
+												<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
 													editMode={true}
 													initialContenu={evol.contenu || ''}
 													initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

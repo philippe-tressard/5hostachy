@@ -277,7 +277,7 @@
 						      (arbitré le 18/08/2026). `EvolForm` ne rend donc pas la
 						      section Workflow, et l'entrée est toujours un commentaire —
 						      c'est la liste vide qui le dit, pas une condition en dur. -->
-						<EvolForm idPrefixe="pub-evol-{pub.id}"
+						<EvolForm idPrefixe="pub-evol-{pub.id}" titre="Commenter"
 							statutOptions={[]}
 							statutLabels={STATUT_LABELS}
 							showNotifs={true}
@@ -316,7 +316,7 @@
 						>
 							<svelte:fragment slot="edition" let:evol>
 								{#key editingEvolId}
-									<EvolForm idPrefixe="pub-evol-edit-{evol.id}"
+									<EvolForm idPrefixe="pub-evol-edit-{evol.id}" titre="Modifier le commentaire"
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}

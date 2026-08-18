@@ -59,6 +59,10 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "vigik_accepte": {"destinataire", "type"},
     "vigik_refuse": {"type", "destinataire", "motif"},
     "calendrier_evenement_cree": {"evenement"},
+    #  Le suivi porte EN PLUS `suivi` : l'état atteint et le commentaire. Sans
+    #  cette ligne, un template pourrait citer une variable que l'appel ne
+    #  fournit pas — c'est la panne `'evenement' is undefined` du 28/07/2026.
+    "calendrier_evenement_suivi": {"evenement", "suivi"},
     "document_publie": {"document"},
     "publication_syndic": {
         "date_publication", "evolutions", "commentaire", "is_commentaire",

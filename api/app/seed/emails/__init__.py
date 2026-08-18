@@ -79,6 +79,7 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "vigik_accepte": "information",
     "vigik_refuse": "information",
     "calendrier_evenement_cree": "information",
+    "calendrier_evenement_suivi": "information",
     "document_publie": "information",
     "publication_syndic": "information",
     "publication_externe": "information",
