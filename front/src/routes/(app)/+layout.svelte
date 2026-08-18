@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { afterNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
 	import Nav from '$lib/components/Nav.svelte';
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser, marquerAuthResolue } from '$lib/stores/auth';
@@ -56,29 +55,13 @@
 	$: instanceId = import.meta.env.VITE_INSTANCE_ID || '';
 	$: buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}${instanceId ? ` · RPi${instanceId}` : ''}`;
 	$: year     = new Date().getFullYear();
-
-	//  ── R1 — la largeur de saisie appartient au SQUELETTE ────────────────────
-	//
-	//  Les formulaires s'arrêtaient à 720 px quand les cartes de la liste, juste
-	//  en dessous, occupaient toute la page : deux bords verticaux différents pour
-	//  le même contenu. La règle retenue (18/08/2026) est une largeur UNIQUE,
-	//  quelle que soit la page et le formulaire, adaptée à l'écran du terminal —
-	//  ce que le conteneur `.container` fait déjà, avec sa marge responsive.
-	//
-	//  ⚠️ Elle n'est PAS encore généralisée : elle se propose sur UN écran, se
-	//  fait constater, puis s'étend (R5). Le jour où elle est retenue, cette liste
-	//  et l'attribut disparaissent, et c'est le défaut d'`app.css` qui change —
-	//  laisser vivre un mécanisme d'exception, c'est inviter la septième valeur
-	//  (leçon de la prop `marge` d'`EntetePage`, retirée le 17/08).
-	const ROUTES_LARGEUR_PLEINE = new Set(['/(app)/tickets']);
-	$: largeurPleine = ROUTES_LARGEUR_PLEINE.has($page.route.id ?? '');
 </script>
 
 <div class="app-shell">
 	<Nav />
 	<div class="app-content">
 		<main class="app-main">
-			<div class="container page" data-largeur-saisie={largeurPleine ? 'pleine' : null}>
+			<div class="container page">
 				<slot />
 			</div>
 		</main>

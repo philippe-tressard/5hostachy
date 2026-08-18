@@ -47,7 +47,7 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
+	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
@@ -341,19 +341,16 @@
 		      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
 		      côté serveur (voir le bloc de commentaires du script). -->
 		<SectionFormulaire titre="Workflow" requis idTitre="ticket-workflow-titre">
-			<div class="field champ-large" role="group" aria-labelledby="ticket-workflow-titre">
+			<div class="field champ-large">
 				<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est
 				      active par défaut à la création — l'état de départ se voit, il ne
 				      se devine pas. Un résident ne peut pas faire avancer le suivi :
-				      les pastilles sont alors en lecture, et le serveur refait le
-				      contrôle (liste blanche CS) — ce que l'interface grise n'est
-				      qu'un confort. -->
-				<div class="wf-pastilles">
-					{#each STATUT_TICKET_OPTIONS as s (s.value)}
-						<Pastille active={statut === s.value}
-							on:click={() => { if ($isCS) statut = s.value; }}>{s.label}</Pastille>
-					{/each}
-				</div>
+				      la rangée est alors en lecture, et le serveur refait le contrôle
+				      (liste blanche CS) — ce que l'interface interdit n'est qu'un
+				      confort. -->
+				<WorkflowPastilles options={STATUT_TICKET_OPTIONS} valeur={statut}
+					lecture={!$isCS} idTitre="ticket-workflow-titre"
+					on:choisir={(e) => (statut = e.detail)} />
 				{#if !$isCS}
 					<p class="aide-champ">
 						{modeEdition
@@ -412,9 +409,6 @@
 
 <style>
 	.aide-champ { font-size: .8rem; color: var(--color-text-muted); line-height: 1.45; margin: .25rem 0 0; }
-	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
-	    (`Pastille.svelte`) : ne vit ici que leur disposition. */
-	.wf-pastilles { display: flex; gap: .5rem; flex-wrap: wrap; }
 	.cat-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;

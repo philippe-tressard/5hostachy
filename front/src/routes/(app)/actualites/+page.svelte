@@ -199,20 +199,22 @@
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<!--  `alignerSaisie` quand le formulaire est ouvert : sans lui, « ✕ Annuler » se
-      pose au bord DROIT DE LA PAGE, à plusieurs centaines de pixels de la boîte
-      qu'il annule, laquelle s'arrête à 720 px (#367). -->
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'} alignerSaisie={showForm}>
-	{#if $isCS}
-		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = !showForm)}>
-			{showForm ? '✕ Annuler' : '+ Nouvelle publication'}
+<!--  L'en-tête n'OUVRE plus que le formulaire : l'annulation vit à côté
+      d'« Enregistrer », dans le formulaire (norme du 18/08/2026, posée sur
+      Tickets puis étendue). Le bouton s'efface pendant la saisie — le laisser en
+      « ✕ Annuler » ferait deux commandes d'annulation pour un seul formulaire
+      (#367). -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'newspaper'}>
+	{#if $isCS && !showForm}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = true)}>
+			+ Nouvelle publication
 		</button>
 	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if showForm && $isCS}
-	<FormulaireActualite on:cree={publicationCreee} />
+	<FormulaireActualite on:cree={publicationCreee} on:annule={() => (showForm = false)} />
 {/if}
 
 {#if loading}

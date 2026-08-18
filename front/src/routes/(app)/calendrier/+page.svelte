@@ -713,13 +713,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<!--  Modèle des actualités (#367) : le bouton bascule, et l'en-tête s'aligne sur
-      la boîte de saisie pendant l'édition. La modale a disparu — sa croix aussi,
-      qui faisait DEUX commandes d'annulation dont une sous l'overlay. -->
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'} alignerSaisie={showForm}>
-	{#if $isCS}
-		<button class="btn btn-primary page-header-btn" on:click={() => { showForm = !showForm; if (!showForm) resetForm(); }}>
-			{showForm ? '✕ Annuler' : '+ Nouvel événement'}
+<!--  L'en-tête n'OUVRE plus : l'annulation vit à côté d'« Enregistrer » (norme du
+      18/08/2026). La modale avait déjà perdu sa croix pour la même raison (#367). -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'calendar-days'}>
+	{#if $isCS && !showForm}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showForm = true)}>
+			+ Nouvel événement
 		</button>
 	{/if}
 </EntetePage>
@@ -752,7 +751,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	<FormulaireCreation titre={editId ? 'Modifier l’événement' : 'Nouvel événement'}>
 			<FormulaireEvenement bind:form bind:photosUrls bind:fichiersUrls
 				bind:formPerimetreCible {types} {prestataires} {submitting}
-				{epingleInitial} kanbanCols={KANBAN_COLS} onSubmit={save} />
+				{epingleInitial} kanbanCols={KANBAN_COLS} onSubmit={save}
+				on:annule={() => { showForm = false; resetForm(); }} />
 	</FormulaireCreation>
 {/if}
 

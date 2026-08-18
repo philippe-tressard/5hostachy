@@ -25,7 +25,7 @@
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 
-	const dispatch = createEventDispatcher<{ cree: any }>();
+	const dispatch = createEventDispatcher<{ cree: any; annule: void }>();
 
 	let titre = '';
 	let description = '';
@@ -135,7 +135,11 @@
 			</svelte:fragment>
 		</ChampsCommuns>
 
+		<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée
+		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
+		      de seconde commande d'annulation (#367). -->
 		<div class="form-actions">
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
 			<button class="btn btn-primary" disabled={submitting}>
 				{submitting ? 'Enregistrement…' : 'Enregistrer'}
 			</button>

@@ -467,20 +467,17 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     posées juste en dessous, et le regard butait sur deux bords verticaux
     différents pour le même contenu.
 
-    La valeur par défaut reste 720 px : elle vaut pour tous les écrans TANT QUE la
-    règle n'est pas généralisée. La page Tickets porte la nouvelle (`100%` du
-    conteneur, dont la marge est déjà responsive) — un écran d'abord, constaté,
-    puis étendu (R5). Le jour où elle est retenue partout, c'est cette ligne-ci
-    qui change, et l'exception de la page disparaît. */
-:root { --largeur-saisie: 720px; }
-.largeur-saisie { max-width: var(--largeur-saisie); }
+    ✅ **GÉNÉRALISÉE le 18/08/2026**, après constat à l'écran sur `/tickets`. La
+    valeur vaut désormais pour TOUS les écrans, et le mécanisme d'exception qui
+    l'avait portée en pilote a été SUPPRIMÉ avec elle — c'était la condition posée
+    en même temps que le pilote : un mécanisme d'exception qui survit à sa raison
+    invite la valeur suivante (leçon de la prop `marge` d'`EntetePage`, #372).
 
-/*  L'écran pilote. L'attribut est posé par le SQUELETTE (`(app)/+layout.svelte`),
-    jamais par une page : une page qui déclarerait sa propre largeur divergerait au
-    premier changement — c'est ce que `.page-header` réécrite dans six pages a déjà
-    coûté (#363). La marge, elle, n'est pas redite : `.container` la porte, et elle
-    est déjà responsive. */
-.page[data-largeur-saisie='pleine'] { --largeur-saisie: 100%; }
+    La marge n'est pas redite ici : `.container` la porte (`max-width: 1200px` et
+    `padding: 0 2rem`, réduit sous 640 px), et elle est déjà responsive. Un
+    formulaire s'arrête donc au même bord que les cartes de la liste sous lui. */
+:root { --largeur-saisie: 100%; }
+.largeur-saisie { max-width: var(--largeur-saisie); }
 
 /* ── Norme UX : carte de liste expansible ─────────────────────────────────
 

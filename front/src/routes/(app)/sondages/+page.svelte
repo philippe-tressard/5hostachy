@@ -1,6 +1,8 @@
 <script lang="ts">
 import EntetePage from '$lib/components/EntetePage.svelte';
 import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
+import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+import { STATUTS_IDEE, STATUTS_IDEE_FILTRE, IDEE_BADGE } from '$lib/idees';
 import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
 import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
@@ -149,16 +151,8 @@ async function supprimerAnnonce(id: number) {
 	} catch { toast('error', 'Erreur'); }
 }
 
-const statuts = [
-{ val: '', label: 'Toutes' },
-		{ val: 'ouverte', label: '\u{1F4A1} Ouverte' },
-		{ val: 'retenue', label: '✅ Retenue' },
-		{ val: 'realisee', label: '\u{1F389} Réalisée' },
-		{ val: 'rejetee', label: '❌ Rejetée' },
-];
-function statutClass(s: string) {
-return { ouverte: 'badge-blue', retenue: 'badge-green', realisee: 'badge-purple', rejetee: 'badge-gray' }[s] ?? 'badge-gray';
-}
+const statuts = STATUTS_IDEE_FILTRE;
+const statutClass = (s: string) => IDEE_BADGE[s] ?? 'badge-gray';
 
 $: filteredIdees = filtreStatut ? idees.filter(i => i.statut === filtreStatut) : idees;
 $: sortedIdees = [...filteredIdees].sort((a, b) => b.nb_votes - a.nb_votes);
@@ -312,19 +306,20 @@ if (idIdee !== null) {
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}
-	alignerSaisie={showFormSondage || showFormIdee || showFormAnnonce}>
-	{#if activeTab === 'sondages' && $isCS}
-		<button class="btn btn-primary page-header-btn" on:click={() => { showFormSondage = !showFormSondage; }}>
-			{showFormSondage ? '✕ Annuler' : '+ Nouveau sondage'}
+<!--  L'en-tête n'OUVRE plus : l'annulation vit à côté d'« Enregistrer » (norme du
+      18/08/2026). Deux commandes pour un formulaire, c'est #367. -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}>
+	{#if activeTab === 'sondages' && $isCS && !showFormSondage}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showFormSondage = true)}>
+			+ Nouveau sondage
 		</button>
-	{:else if activeTab === 'idees'}
-		<button class="btn btn-primary page-header-btn" on:click={() => { showFormIdee = !showFormIdee; }}>
-			{showFormIdee ? '✕ Annuler' : '+ Nouvelle idée'}
+	{:else if activeTab === 'idees' && !showFormIdee}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showFormIdee = true)}>
+			+ Nouvelle idée
 		</button>
-	{:else if activeTab === 'annonces'}
-		<button class="btn btn-primary page-header-btn" on:click={() => { showFormAnnonce = !showFormAnnonce; }}>
-			{showFormAnnonce ? '✕ Annuler' : '+ Déposer une annonce'}
+	{:else if activeTab === 'annonces' && !showFormAnnonce}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showFormAnnonce = true)}>
+			+ Déposer une annonce
 		</button>
 	{/if}
 </EntetePage>
@@ -382,7 +377,8 @@ aria-expanded={showModeration}>
 
 {#if activeTab === 'sondages'}
 {#if showFormSondage && $isCS}
-<FormulaireSondage on:cree={async () => { sondages = await sondagesApi.list(); showFormSondage = false; }} />
+<FormulaireSondage on:cree={async () => { sondages = await sondagesApi.list(); showFormSondage = false; }}
+	on:annule={() => (showFormSondage = false)} />
 {/if}
 
 {#if sondagesLoading}
@@ -444,7 +440,7 @@ aria-expanded={showModeration}>
 {#if activeTab === 'idees'}
 
 {#if showFormIdee}
-<FormulaireIdee on:cree={ideeCreee} />
+<FormulaireIdee on:cree={ideeCreee} on:annule={() => (showFormIdee = false)} />
 {/if}
 
 <div class="filters" style="margin-bottom:1.25rem">
@@ -493,12 +489,9 @@ onReport={(rid) => signaler('reponse', rid)}
 </div>
 {#if $isCS}
 <div class="idee-actions">
-<select value={idee.statut} on:change={e => changeStatut(idee.id, (e.target as HTMLSelectElement).value)}>
-<option value="ouverte">Ouverte</option>
-<option value="retenue">Retenue</option>
-<option value="realisee">Réalisée</option>
-<option value="rejetee">Rejetée</option>
-</select>
+<!--  Workflow en PASTILLES, jamais un `<select>` nu (R3, #423). -->
+<WorkflowPastilles options={STATUTS_IDEE} valeur={idee.statut}
+on:choisir={(e) => changeStatut(idee.id, e.detail)} />
 {#if $isAdmin}
 <button class="btn-icon-danger" title="Supprimer cette idée" on:click={() => deleteIdee(idee.id)}>🗑️</button>
 {/if}
@@ -511,7 +504,8 @@ onReport={(rid) => signaler('reponse', rid)}
 
 {#if activeTab === 'annonces'}
 {#if showFormAnnonce}
-<FormulaireAnnonce on:cree={(e) => { annonces = [e.detail, ...annonces]; showFormAnnonce = false; expandedAnnonce = e.detail.id; }} />
+<FormulaireAnnonce on:cree={(e) => { annonces = [e.detail, ...annonces]; showFormAnnonce = false; expandedAnnonce = e.detail.id; }}
+	on:annule={() => (showFormAnnonce = false)} />
 {/if}
 
 <!-- Filtres annonces -->
@@ -566,6 +560,7 @@ onReport={(rid) => signaler('reponse', rid)}
 <!-- /banMessage else -->
 
 <style>
+
 .tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
 .tabs button {
 padding: .45rem 1rem; border: none; background: none; cursor: pointer;

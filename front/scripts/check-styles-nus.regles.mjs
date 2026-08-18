@@ -157,9 +157,11 @@ export const TOLERANCES = {
 	//  sont devenus une seule règle `.ticket-header, .messages, …`. Le contrôle
 	//  les a REFUSÉES dès qu'elles sont devenues inutiles.
 
-	//  ── largeur-saisie : les 720 px de `.largeur-saisie` écrits en dur ───────
-	'routes/(app)/espace-cs/+page.svelte::largeur-saisie':
-		'720 px écrits en dur sur deux `<section>` (l. ~1342 et ~1371)',
+	//  ── largeur-saisie ───────────────────────────────────────────────────────
+	//  ✅ Plus aucune tolérance : les deux `<section>` de l'Espace CS qui
+	//  écrivaient 720 px en dur portent la classe depuis le 18/08/2026. Vérifié
+	//  en OUVRANT le fichier, et pas en lisant le verdict — c'est la règle que
+	//  ce contrôle a lui-même enseignée la veille (`standards/04` §21).
 
 	//  ── redite-classe : la classe est là, et le style en ligne la redit ──────
 	'routes/(app)/admin/lots-import/+page.svelte::redite-classe':
