@@ -45,10 +45,19 @@
 		//  qui vise le ticket. Deux gestes, deux noms.
 		evol_modifier: number;
 		evol_corriger: { ticket: Ticket; data: unknown };
+		evol_supprimer: { ticket: Ticket; evolId: number };
 	}>();
 </script>
 
 {#each tickets as t (t.id)}
+	<!--  ⚠️ CHAQUE événement de la carte doit être RELAYÉ ici, et un oubli ne se voit
+	      pas : le 18/08/2026, `evol_supprimer` manquait — la corbeille s'affichait,
+	      le clic partait, et l'événement mourait dans ce composant. Bouton
+	      parfaitement inerte, sans la moindre erreur.
+
+	      Trois niveaux — page → liste → carte — et il suffit qu'un maillon se taise.
+	      C'est le prix de ce relais ; il vaut la suppression des 115 lignes recopiées
+	      qui l'ont fait naître, mais il se paie à chaque nouvel événement. -->
 	<CarteTicket
 		ticket={t}
 		evolutions={evolsMap[t.id] ?? []}
@@ -70,6 +79,7 @@
 		on:evoluer={(e) => dispatch('evoluer', { ticket: t, data: e.detail })}
 		on:evol_modifier={(e) => dispatch('evol_modifier', e.detail)}
 		on:evol_corriger={(e) => dispatch('evol_corriger', { ticket: t, data: e.detail })}
+		on:evol_supprimer={(e) => dispatch('evol_supprimer', e.detail)}
 		on:evol_annuler
 		on:modifie
 		on:annuler

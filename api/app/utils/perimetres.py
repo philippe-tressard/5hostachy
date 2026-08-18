@@ -246,10 +246,38 @@ def perimetre_du_batiment(batiment_id: Optional[int]) -> Optional[Noeud]:
 # ── Libellés ──────────────────────────────────────────────────────────────────
 
 def perimetre_label_un(perim: str) -> str:
-    """Libellé d'un périmètre isolé. Ne renvoie jamais un code brut à l'écran."""
+    """Libellé d'un périmètre isolé. Ne renvoie jamais un code brut à l'écran.
+
+    🔴 **Un espace de BÂTIMENT est qualifié par son bâtiment** (18/08/2026, signalé
+    à l'écran). Le gabarit pose les mêmes neuf espaces sous chaque bâtiment — Hall,
+    Paliers, Escaliers, Ascenseur, Caves, Toit… — si bien qu'un ticket visant les
+    toits de deux bâtiments s'affichait « Toit · Toit », sans dire lesquels.
+
+    ⚠️ **Cette règle est écrite DEUX FOIS**, ici et dans `front/src/lib/perimetres.ts`,
+    et ce n'est pas un oubli : les contextes de build sont `./api` et `./front`, rien
+    de la racine n'entre dans les images, et le partage d'un fichier est impossible
+    (mémoire `project_partage_front_api_impossible`). Le seul pattern viable est la
+    copie — et elle se paie : la correction côté front, faite le matin même, n'a PAS
+    atteint le fil d'activité, dont les libellés sont calculés **ici**. C'est le
+    défaut que ce commentaire doit empêcher de reproduire une troisième fois.
+
+    Le test `api/tests/test_perimetre_label_batiment.py` verrouille les deux formes.
+    """
     noeuds = arbre()
     n = noeuds.get((perim or "").strip().lower())
     if n is not None:
+        parent = noeuds.get((n.parent or "").strip().lower()) if n.parent else None
+        #  ⚠️ On teste `batiment_id`, PAS le préfixe du code. La convention `bat:N`
+        #  est posée par le seed ; l'administration peut créer un bâtiment sous
+        #  n'importe quel code, et le préfixe cesserait alors de le reconnaître.
+        #  C'est la même leçon que `perimetre_du_batiment` côté front : on
+        #  interroge la donnée, pas le nom (#316).
+        if parent is not None and parent.batiment_id is not None:
+            #  Le libellé COURT du bâtiment (« Bât. 3 ») : le long (« Bâtiment 3 »)
+            #  allongerait un badge déjà à deux niveaux, sur des cartes où il est
+            #  posé à côté d'un état et d'un numéro.
+            court = parent.libelle_court or parent.libelle
+            return f"{court} › {n.libelle}"
         return n.libelle
     #  Repli d'affichage pour un contenu qui cite un nœud supprimé depuis. Ce n'est
     #  **pas** une source de vérité : la convention `bat:N` est posée par le seed,

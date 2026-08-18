@@ -148,7 +148,11 @@ export function perimetreLabelUn(code: string): string {
 	const n = carte[cle(code)];
 	if (n) {
 		const parent = n.parent ? carte[cle(n.parent)] : undefined;
-		if (parent && cle(parent.code).startsWith(PREFIXE_BATIMENT)) {
+		//  ⚠️ On teste `batiment_id`, PAS le préfixe du code : la convention `bat:N`
+		//  est posée par le seed, et l'administration peut créer un bâtiment sous
+		//  n'importe quel code. Interroger la donnée plutôt que le nom, comme
+		//  `perimetreDuBatiment` juste au-dessus (#316).
+		if (parent && parent.batiment_id !== null && parent.batiment_id !== undefined) {
 			return `${parent.libelle_court || parent.libelle} › ${n.libelle}`;
 		}
 		return n.libelle;
