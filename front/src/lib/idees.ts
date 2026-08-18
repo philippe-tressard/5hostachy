@@ -22,6 +22,15 @@ export const STATUTS_IDEE_FILTRE = [
 	...STATUTS_IDEE.map((s) => ({ val: s.value, label: s.label })),
 ];
 
+/** Le libellé d'un état, DÉRIVÉ de la liste — jamais une seconde table.
+
+    La carte affichait le code brut (`realisee`, sans accent ni majuscule) là où
+    les pastilles de la même carte montraient « 🎉 Réalisée » : deux écritures du
+    même état à quelques centimètres l'une de l'autre (18/08/2026). */
+export const STATUT_IDEE_LABELS: Record<string, string> = Object.fromEntries(
+	STATUTS_IDEE.map((s) => [s.value, s.label]),
+);
+
 /** La classe de badge d'un état. */
 export const IDEE_BADGE: Record<string, string> = {
 	ouverte: 'badge-blue',
