@@ -103,7 +103,11 @@
 		{#if !expanded}
 			<!--  L'aperçu replié — quatre lignes de texte et la vignette, comme
 			      sur Actualités et Tickets. La carte ne montrait que son titre. -->
-			<ApercuCarte contenu={ev.description ?? ''} photos={[...(ev.photos_urls ?? []), ...(ev.fichiers_urls ?? [])]} />
+			<!--  ⚠️ Photos et documents SÉPARÉS : la vignette pose `photos[0]` dans un
+			      `<img>`. Les verser ensemble faisait sortir un devis PDF en image
+			      cassée ; séparés, il devient une tuile 📎. -->
+			<ApercuCarte contenu={ev.description ?? ''}
+				photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} />
 		{/if}
 		{#if expanded}
 			<div class="ev-expanded-body rich-content" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>

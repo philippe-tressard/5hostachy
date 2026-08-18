@@ -54,6 +54,7 @@
 		contenu?: string;
 		ancien_statut?: string;
 		nouveau_statut?: string;
+		auteur_id?: number;
 		auteur_nom?: string;
 		cree_le: string;
 		fichiers_urls?: string[];
@@ -69,12 +70,43 @@
 	/** Au-delà de ce nombre d'entrées, le fil se replie sur `apercu`. */
 	export let seuil = 7;
 	export let apercu = 5;
-	/** Le lecteur peut-il corriger une entrée ? (CS/admin) */
+	/**  L'écran autorise-t-il la correction ? Interrupteur GÉNÉRAL : un écran de
+	 *   pure lecture le laisse à `false`. Il ne dit pas QUI peut corriger — cela
+	 *   se décide par entrée, ci-dessous. */
 	export let peutModifier = false;
+	/**  Qui regarde, et est-il administrateur ? La règle du serveur est « l'auteur
+	 *   de l'entrée, ou un admin » ; sans ces deux valeurs, l'écran ne peut que
+	 *   l'approximer — et il l'approximait par « membre du CS », donc trop large :
+	 *   le crayon s'affichait sur l'entrée d'un autre, le clic partait, le serveur
+	 *   répondait 403, et l'écran annonçait « Accès refusé » pour un geste qu'il
+	 *   avait lui-même proposé.
+	 *
+	 *   ⚠️ Le serveur refait le contrôle : ceci n'est qu'un confort d'écran
+	 *   (`standards/03` §1). Cacher un bouton n'a jamais protégé quoi que ce soit.
+	 */
+	export let currentUserId: number | undefined = undefined;
+	export let estAdmin = false;
 	/** Entrée actuellement ouverte en correction — le parent porte l'état. */
 	export let enEdition: number | null = null;
 
 	const dispatch = createEventDispatcher<{ modifier: number }>();
+
+	//  🔴 Les MÊMES MOTS que le serveur, et dans le même ordre — types puis
+	//  identité. Une règle d'écran qui paraphrase une règle de serveur finit
+	//  toujours par en dire autre chose ; ici on peut au moins les comparer.
+	//
+	//  `reponse` est exclu : une réponse du CS n'est pas une entrée de suivi, et
+	//  le serveur la refuse déjà (« ce type d'évolution ne peut pas être modifié »).
+	const TYPES_CORRIGEABLES = ['commentaire', 'etat'];
+
+	function peutCorriger(evol: Entree): boolean {
+		if (!peutModifier || !TYPES_CORRIGEABLES.includes(evol.type)) return false;
+		if (estAdmin) return true;
+		//  Sans `auteur_id` on ne peut pas trancher : on n'affiche pas un bouton
+		//  dont on ignore s'il aboutira. Un contrôle qui ne peut pas mesurer ne
+		//  conclut pas au vert (`standards/04` §2).
+		return evol.auteur_id !== undefined && evol.auteur_id === currentUserId;
+	}
 
 	let deplie = false;
 
@@ -106,7 +138,7 @@
 				<div class="evol-body">
 					<div class="evol-ligne-meta">
 						<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
-						{#if peutModifier && evol.type === 'commentaire' && enEdition !== evol.id}
+						{#if peutCorriger(evol) && enEdition !== evol.id}
 							<button type="button" class="evol-modifier" aria-label="Modifier"
 								title="Modifier" on:click={() => dispatch('modifier', evol.id)}>✏️ Modifier</button>
 						{/if}

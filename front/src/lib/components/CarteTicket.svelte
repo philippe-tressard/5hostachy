@@ -43,6 +43,7 @@
 	import EnteteCarte from './EnteteCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import { currentUser, isAdmin } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
@@ -199,6 +200,8 @@
 					      enregistrée (`test_correction_pas_transition.py`). -->
 					<RubriqueHistorique {evolutions} statutLabels={STATUT_TICKET_LABELS}
 						peutModifier={peutCommenter}
+						currentUserId={$currentUser?.id}
+						estAdmin={$isAdmin}
 						enEdition={evolEnEdition}
 						on:modifier={(e) => dispatch('evol_modifier', e.detail)}>
 						<svelte:fragment slot="edition" let:evol>

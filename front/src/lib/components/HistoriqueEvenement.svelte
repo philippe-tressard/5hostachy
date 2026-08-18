@@ -37,6 +37,7 @@
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import EvolForm from './EvolForm.svelte';
 	import { calendrier as calApi, ApiError } from '$lib/api';
+	import { currentUser, isAdmin } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { toast } from './Toast.svelte';
 
@@ -124,6 +125,8 @@
 		titre="&#x1F4CB; Historique"
 		vide={peutAgir ? 'Aucune entrée pour le moment.' : ''}
 		peutModifier={peutAgir}
+		currentUserId={$currentUser?.id}
+		estAdmin={$isAdmin}
 		{enEdition}
 		on:modifier={(e) => (enEdition = e.detail)}
 	>
