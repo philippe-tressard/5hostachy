@@ -87,6 +87,43 @@ class OptionRead(BaseModel):
         from_attributes = True
 
 
+class OptionCorrection(BaseModel):
+    """Correction du LIBELLÉ d'une option existante — et rien d'autre.
+
+    L'`id` est obligatoire et doit désigner une option **de ce sondage** : c'est ce
+    qui rend l'ajout et le retrait impossibles par construction, sans dépendre
+    d'une vérification qu'on pourrait oublier. Un schéma qui accepterait une
+    option sans `id` créerait une option ; un schéma qui accepterait une liste
+    complète en supprimerait les absentes.
+
+    🔴 Décision de l'utilisateur, 19/08/2026 (#467) : **le texte se corrige, la
+    liste des choix ne bouge pas**. Un vote sur une option retirée n'a pas de repli
+    honnête — le compter ailleurs fausse le résultat, le supprimer efface
+    l'expression de quelqu'un sans le lui dire. Aucune des deux issues n'est
+    acceptable pour un sondage qui prépare une décision de copropriété.
+    """
+
+    id: int
+    libelle: str
+
+
+class SondageUpdate(BaseModel):
+    """Ce qu'un sondage accepte de voir corrigé après sa création.
+
+    Les champs de CIBLAGE (`perimetre_cible`, `public_cible`) n'y sont
+    volontairement pas : restreindre un périmètre après coup masquerait le sondage
+    à des gens qui ont déjà voté. La question reste ouverte (#467), et tant
+    qu'elle n'est pas tranchée, l'absence du champ vaut refus — un champ qu'on
+    n'expose pas ne se contourne pas.
+    """
+
+    question: Optional[str] = None
+    description: Optional[str] = None
+    cloture_le: Optional[datetime] = None
+    resultats_publics: Optional[bool] = None
+    options: Optional[List[OptionCorrection]] = None
+
+
 class SondageDetail(SondageRead):
     options: list[OptionRead] = []
     mon_vote: Optional[int] = None

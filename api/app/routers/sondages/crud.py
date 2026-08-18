@@ -24,7 +24,7 @@ from app.utils.visibility import resultats_sondage_visibles, sondage_accessible,
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
 from .commun import (
-    SondageCreate, SondageRead, _deny_communaute_for_statut,
+    SondageCreate, SondageRead, SondageUpdate, _deny_communaute_for_statut,
 )
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
@@ -264,12 +264,6 @@ def create_sondage(
 
 # ── Édition / suppression / clôture anticipée ──────────────────────────────
 
-class SondageUpdate(BaseModel):
-    question: Optional[str] = None
-    description: Optional[str] = None
-    cloture_le: Optional[datetime] = None
-    resultats_publics: Optional[bool] = None
-
 
 @router.patch("/{sondage_id}")
 def modifier_sondage(
@@ -287,13 +281,65 @@ def modifier_sondage(
         raise HTTPException(403, "Seul l'auteur ou un admin peut modifier ce sondage")
     if sondage_clos(s, datetime.utcnow()):
         raise HTTPException(400, "Ce sondage est clôturé et ne peut plus être modifié")
-    for field, val in body.model_dump(exclude_unset=True).items():
+
+    #  Y a-t-il DÉJÀ des votes ? Tout ce qui suit en dépend : avant le premier
+    #  vote un sondage se corrige librement, après il engage des gens.
+    deja_vote = session.exec(
+        select(VoteSondage.id).where(VoteSondage.sondage_id == sondage_id).limit(1)
+    ).first() is not None
+
+    donnees = body.model_dump(exclude_unset=True)
+
+    #  ── La clôture recule, elle n'avance jamais (#467) ──────────────────────
+    #  Prolonger n'invalide rien ; raccourcir prive de leur voix ceux qui n'ont
+    #  pas encore voté. Poser une échéance là où il n'y en avait aucune est un
+    #  raccourcissement : le sondage n'avait pas de fin.
+    if "cloture_le" in donnees and deja_vote:
+        avant, apres = s.cloture_le, donnees["cloture_le"]
+        if apres is None:
+            pass  # retirer l'échéance = prolonger indéfiniment, donc reculer
+        elif avant is None or apres < avant:
+            raise HTTPException(
+                400,
+                "Des votes ont déjà été exprimés : la date de clôture peut être "
+                "reculée, jamais avancée.",
+            )
+
+    #  ── Les options : le LIBELLÉ se corrige, la liste ne bouge pas ───────────
+    #  Le schéma l'impose déjà (un `id` obligatoire, pas de liste complète) ;
+    #  ici on vérifie que l'`id` appartient bien À CE sondage — sans quoi on
+    #  renommerait l'option d'un autre.
+    corrections = donnees.pop("options", None)
+    if corrections:
+        siennes = {
+            o.id: o
+            for o in session.exec(
+                select(OptionSondage).where(OptionSondage.sondage_id == sondage_id)
+            ).all()
+        }
+        for corr in corrections:
+            option = siennes.get(corr["id"])
+            if option is None:
+                raise HTTPException(400, "Option inconnue pour ce sondage")
+            libelle = (corr["libelle"] or "").strip()
+            if not libelle:
+                raise HTTPException(400, "Le libellé d'une option ne peut pas être vide")
+            option.libelle = libelle
+            session.add(option)
+
+    for field, val in donnees.items():
         setattr(s, field, val)
     session.add(s)
     session.commit()
     session.refresh(s)
     return {"id": s.id, "question": s.question, "description": s.description,
-            "cloture_le": s.cloture_le, "resultats_publics": s.resultats_publics}
+            "cloture_le": s.cloture_le, "resultats_publics": s.resultats_publics,
+            #  Les libellés corrigés, dans l'ordre d'affichage : l'écran relit ce
+            #  qu'il vient d'écrire sans redemander la fiche entière.
+            "options": [
+                {"id": o.id, "libelle": o.libelle, "ordre": o.ordre}
+                for o in sorted(s.options, key=lambda o: o.ordre)
+            ]}
 
 
 @router.delete("/{sondage_id}", status_code=204)
