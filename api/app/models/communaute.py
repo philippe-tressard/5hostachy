@@ -114,6 +114,18 @@ class PetiteAnnonce(SQLModel, table=True):
     prix: Optional[float] = None
     negotiable: bool = False
     photos_json: str = Field(default="[]")  # JSON array of up to 5 URLs
+    #  Le PÉRIMÈTRE — section 4 du cadre #430. Ajouté le 18/08/2026 sur demande
+    #  utilisateur : une annonce n'était PAS sans périmètre, elle était sans
+    #  MOYEN d'en porter un. Le formulaire disait « l'annonce n'a ni périmètre
+    #  ni destinataires : elle s'adresse à tous les résidents par nature » — une
+    #  absence de notion que l'écran avait décrétée, pas le produit.
+    #
+    #  ⚠️ Même forme que `Publication.perimetre_cible` et `Evenement.perimetre` :
+    #  du JSON de codes (`["résidence"]`, `["bat:1","parking"]`), pas un texte
+    #  libre. La forme se recopie parce que la NOTION est la même — c'est
+    #  `PerimetrePicker` et `perimetreLabel` qui la lisent, et ils ne savent lire
+    #  que celle-là.
+    perimetre_cible: Optional[str] = Field(default='["résidence"]')
     statut: StatutAnnonce = StatutAnnonce.disponible
     contact_visible: bool = True  # autoriser affichage email/prénom-nom
     auteur_id: int = Field(foreign_key="utilisateur.id")

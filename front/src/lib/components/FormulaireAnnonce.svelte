@@ -1,20 +1,44 @@
 <!--
-  Le formulaire de dépôt d'une petite annonce — extrait de `sondages/+page.svelte`
-  le 16/08/2026, pour la même raison que `FormulaireSondage` : la page dépassait
-  le plafond de modularité (`standards/02` §6).
+  Le formulaire d'une petite annonce — celui qu'on remplit pour la DÉPOSER, et
+  celui qu'on rouvre pour la CORRIGER. Un seul fichier pour les deux gestes.
 
-  Deux défauts corrigés au passage, tous deux signalés par l'utilisateur :
+  Extrait de `sondages/+page.svelte` le 16/08/2026 (plafond de modularité), rendu
+  **paramétrable** le 18/08/2026 sur demande : *« pour les petites annonces tu
+  peux ajouter le périmètre et il manque le mode édition »*.
 
-    • les cases à cocher (« Prix négociable », « Afficher mes coordonnées ») étaient
-      séparées de leur libellé par toute la largeur du formulaire. Cause unique et
-      partagée avec le sondage : la page portait `input, textarea { width: 100% }`,
-      un sélecteur d'ÉLÉMENT nu qui atteignait aussi les cases à cocher ;
-    • les sections n'étaient ni nommées ni séparées, et « Afficher mes coordonnées »
-      — une décision de DIFFUSION — flottait après le prix.
+  ## Le mode édition n'existait pas du tout
 
-  L'annonce n'a ni périmètre ni destinataires : elle s'adresse à tous les résidents
-  par nature. Ses photos s'ajoutent après publication, depuis la carte de l'annonce
-  (l'endpoint a besoin de son identifiant) — c'est inchangé.
+  Une fois l'annonce déposée, on pouvait changer son statut, gérer ses photos, la
+  supprimer — mais **pas corriger une faute de frappe, ni baisser un prix**. Le
+  seul recours était supprimer et redéposer, ce qui perdait les réponses des
+  voisins.
+
+  Ce n'était pas une contrainte serveur : `PATCH /annonces/{id}` existait, avec
+  ses sept champs, **et personne ne l'appelait**.
+
+  ## Le périmètre : une absence de notion qu'un ÉCRAN avait décrétée
+
+  L'en-tête de ce fichier disait, jusqu'à aujourd'hui :
+
+  > « L'annonce n'a ni périmètre ni destinataires : elle s'adresse à tous les
+  >   résidents par nature. »
+
+  🔴 C'est ce que `sansObjet` sert à dire, et **ça se déclare dans l'entité, pas
+  dans un commentaire de formulaire** : un commentaire n'est lu par aucun
+  contrôle. Le périmètre est ouvert (migration 0151) ; les destinataires, eux,
+  restent `sansObjet` — et cette fois c'est écrit là où `lint:etats` le lit.
+
+  ## Ce qui n'est PAS gouverné par `modeEdition`
+
+  Aucune section. Les six props de `ChampsCommuns` passent par
+  `sectionPresente(ANNONCE, etat, …)`, et `npm run lint:etats` refuse qu'on
+  remette une condition en dur. Le mode ne décide plus que du **geste** : `POST`
+  ou `PATCH`, et l'intitulé de la boîte.
+
+  ⚠️ **Les PHOTOS ne sont pas ici, et c'est une dette déclarée** (motif `api`,
+  #441) : `POST /annonces/{id}/photo` exige l'identifiant de l'annonce. Elles se
+  gèrent depuis la carte, dans les deux gestes — la rouvrir ici en correction
+  donnerait deux chemins concurrents vers la même liste.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
@@ -24,17 +48,46 @@
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { perimetreDefautListe } from '$lib/utils';
+	import type { Etat } from '$lib/entites/types';
+	import { sectionPresente } from '$lib/entites/types';
+	import { ANNONCE } from '$lib/entites/annonce';
 
-	const dispatch = createEventDispatcher<{ cree: any; annule: void }>();
+	/**  L'annonce à CORRIGER, avec ses valeurs déjà saisies. `null` (défaut) =
+	 *   dépôt. Le mode ne change pas pendant la vie du composant : l'appelant la
+	 *   remonte à neuf (`{#key}`) quand il passe d'une annonce à l'autre — même
+	 *   contrat que `FormulaireActualite` et `FormulaireTicket`. */
+	export let annonce: any = null;
 
-	let titre = '';
-	let description = '';
-	let typeAnnonce = 'vente';
-	let categorie = 'divers';
-	let prix = '';
-	let negotiable = false;
-	let contactVisible = true;
+	const modeEdition = annonce !== null;
+
+	/**  L'état du cadre #430 que ce formulaire rend. C'est LUI qui décide des
+	 *   sections — voir `$lib/entites/annonce`, qui porte chaque divergence avec
+	 *   son motif. */
+	const etat: Etat = modeEdition ? 'edition' : 'creation';
+
+	const dispatch = createEventDispatcher<{ cree: any; modifie: any; annule: void }>();
+
+	//  ── 1. Titre ────────────────────────────────────────────────────────────
+	let titre = annonce?.titre ?? '';
+
+	//  ── 2. Champs spécifiques : ce qui décrit l'objet ───────────────────────
+	let typeAnnonce = annonce?.type_annonce ?? 'vente';
+	let categorie = annonce?.categorie ?? 'divers';
+	let prix = annonce?.prix !== null && annonce?.prix !== undefined ? String(annonce.prix) : '';
+	let negotiable = annonce?.negotiable ?? false;
+
+	//  ── 4 à 9 ───────────────────────────────────────────────────────────────
+	//  Copie défensive du périmètre : le tableau vient de l'annonce affichée dans
+	//  la liste. Lié tel quel, une sélection abandonnée resterait visible sur la
+	//  carte alors que rien n'a été enregistré.
+	let perimetreCible: string[] = [...(annonce?.perimetre_cible ?? perimetreDefautListe())];
+	let description = annonce?.description ?? '';
+	let contactVisible = annonce?.contact_visible ?? true;
+
 	let submitting = false;
+
+	$: titreBoite = modeEdition ? "Modifier l'annonce" : 'Déposer une annonce';
 
 	function reinitialiser() {
 		titre = '';
@@ -44,24 +97,38 @@
 		prix = '';
 		negotiable = false;
 		contactVisible = true;
+		perimetreCible = perimetreDefautListe();
 	}
 
-	async function creer() {
-		if (!titre || !description) {
+	async function enregistrer() {
+		if (!titre.trim() || !description) {
 			toast('error', 'Titre et description obligatoires');
 			return;
 		}
+		//  Le prix ne concerne que la vente : le champ disparaît pour un don ou une
+		//  recherche, et la valeur doit disparaître avec lui. Sans cette remise à
+		//  zéro, passer une vente en don garderait le montant en base — la carte
+		//  n'afficherait plus « Gratuit » mais l'ancien prix.
+		const prixEnvoye = typeAnnonce === 'vente' && prix ? parseFloat(prix) : null;
 		submitting = true;
 		try {
-			const cree: any = await annoncesApi.create({
-				titre,
+			const charge = {
+				titre: titre.trim(),
 				description,
 				type_annonce: typeAnnonce,
 				categorie,
-				prix: prix ? parseFloat(prix) : null,
-				negotiable,
+				prix: prixEnvoye,
+				negotiable: typeAnnonce === 'vente' ? negotiable : false,
 				contact_visible: contactVisible,
-			});
+				perimetre_cible: perimetreCible,
+			};
+			if (annonce) {
+				const maj: any = await annoncesApi.update(annonce.id, charge);
+				toast('success', 'Annonce mise à jour');
+				dispatch('modifie', maj);
+				return;
+			}
+			const cree: any = await annoncesApi.create(charge);
 			reinitialiser();
 			toast('success', 'Annonce publiée !');
 			dispatch('cree', cree);
@@ -73,56 +140,62 @@
 	}
 </script>
 
-<FormulaireCreation titre="Déposer une annonce">
-	<form on:submit|preventDefault={creer}>
+<FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
+	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre. -->
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
-				<label for="annonce-titre">Titre *</label>
-				<input id="annonce-titre" bind:value={titre} required
+				<label for="annonce-titre-{annonce?.id ?? 'new'}">Titre *</label>
+				<input id="annonce-titre-{annonce?.id ?? 'new'}" bind:value={titre} required
 					placeholder="Ex. Lave-linge Samsung presque neuf" />
 			</div>
 		</SectionFormulaire>
 
 		<!--  2. Champs spécifiques de l'annonce. -->
-		<SectionFormulaire titre="L'objet">
-			<div class="form-grid">
-				<div class="field">
-					<label for="annonce-type">Type</label>
-					<select id="annonce-type" bind:value={typeAnnonce}>
-						{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}
-					</select>
-				</div>
-				<div class="field">
-					<label for="annonce-categorie">Catégorie</label>
-					<select id="annonce-categorie" bind:value={categorie}>
-						{#each CATEGORIES_ANNONCE as c}<option value={c.val}>{c.label}</option>{/each}
-					</select>
-				</div>
-				{#if typeAnnonce === 'vente'}
+		{#if sectionPresente(ANNONCE, etat, 'specifiques')}
+			<SectionFormulaire titre="L'objet">
+				<div class="form-grid">
 					<div class="field">
-						<label for="annonce-prix">Prix (€)</label>
-						<input id="annonce-prix" type="number" min="0" step="0.01"
-							bind:value={prix} placeholder="0.00" />
+						<label for="annonce-type-{annonce?.id ?? 'new'}">Type</label>
+						<select id="annonce-type-{annonce?.id ?? 'new'}" bind:value={typeAnnonce}>
+							{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}
+						</select>
 					</div>
 					<div class="field">
-						<label class="case">
-							<input type="checkbox" bind:checked={negotiable} />
-							<span>Prix négociable</span>
-						</label>
+						<label for="annonce-categorie-{annonce?.id ?? 'new'}">Catégorie</label>
+						<select id="annonce-categorie-{annonce?.id ?? 'new'}" bind:value={categorie}>
+							{#each CATEGORIES_ANNONCE as c}<option value={c.val}>{c.label}</option>{/each}
+						</select>
 					</div>
-				{/if}
-			</div>
-		</SectionFormulaire>
+					{#if typeAnnonce === 'vente'}
+						<div class="field">
+							<label for="annonce-prix-{annonce?.id ?? 'new'}">Prix (€)</label>
+							<input id="annonce-prix-{annonce?.id ?? 'new'}" type="number" min="0" step="0.01"
+								bind:value={prix} placeholder="0.00" />
+						</div>
+						<div class="field">
+							<label class="case">
+								<input type="checkbox" bind:checked={negotiable} />
+								<span>Prix négociable</span>
+							</label>
+						</div>
+					{/if}
+				</div>
+			</SectionFormulaire>
+		{/if}
 
-		<!--  4 à 9 : le composant partagé. Une annonce n'a ni périmètre, ni
-		      destinataires, ni pièces jointes à la création — mais elle a bien une
-		      décision de diffusion, et c'est là qu'elle se range. -->
+		<!--  4 à 9 : le composant partagé. Aucune de ces sections n'est gouvernée
+		      par `modeEdition` — elles le sont par la DÉCLARATION, qui porte chaque
+		      divergence avec son motif. -->
 		<ChampsCommuns
-			idPrefixe="annonce"
-			avecDescription descriptionRequise bind:description
+			idPrefixe="annonce-{annonce?.id ?? 'new'}"
+			avecPerimetre={sectionPresente(ANNONCE, etat, 'perimetre')} bind:perimetre={perimetreCible}
+			avecDestinataires={sectionPresente(ANNONCE, etat, 'destinataires')}
+			avecDescription={sectionPresente(ANNONCE, etat, 'description')} descriptionRequise bind:description
 			descriptionPlaceholder="Décrivez l'objet, son état, conditions de remise…"
-			avecDiffusion
+			avecPhotos={sectionPresente(ANNONCE, etat, 'photos')}
+			avecDocuments={sectionPresente(ANNONCE, etat, 'documents')}
+			avecDiffusion={sectionPresente(ANNONCE, etat, 'diffusion')}
 			avecCanaux={false}
 		>
 			<svelte:fragment slot="diffusion">
@@ -151,8 +224,10 @@
 	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
 	.form-grid .field { margin-bottom: 0; }
 
-	/*  La case et son libellé, côte à côte — voir l'en-tête de ce fichier pour
-	    ce qui les séparait. */
+	/*  La case et son libellé, côte à côte. Ce qui les séparait : la page portait
+	    `input, textarea { width: 100% }`, un sélecteur d'ÉLÉMENT nu qui atteignait
+	    aussi les cases à cocher — c'est `npm run lint:styles` qui refuse désormais
+	    ce genre de sélecteur (v2.65.0). */
 	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
 	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 </style>

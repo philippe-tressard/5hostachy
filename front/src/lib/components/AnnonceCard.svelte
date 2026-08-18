@@ -23,7 +23,7 @@
 	import Vignette from './Vignette.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort, isNouveau } from '$lib/date';
-	import { fmtMontant } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
 	import {
 		MAX_PHOTOS_ANNONCE,
 		STATUTS_ANNONCE,
@@ -47,6 +47,7 @@
 	export let onUpload: (f: File) => Promise<string>;
 	export let onRemove: (url: string) => Promise<string[] | void>;
 	export let onStatut: (statut: string) => void;
+	export let onModifier: () => void;
 	export let onSupprimer: () => void;
 	export let onRepondre: (contenu: string) => void;
 	export let onSupprimerReponse: (id: number) => void;
@@ -67,6 +68,10 @@
 			<div class="annonce-header">
 				<span class="badge {typeAnnonceClass(annonce.type_annonce)}" style="font-size:.72rem">{typeAnnonceLabel(annonce.type_annonce)}</span>
 				<span class="badge {statutAnnonceClass(annonce.statut)}" style="font-size:.72rem">{annonce.statut}</span>
+				<!--  🔹 = périmètre LOGIQUE, et jamais affiché quand il vaut « résidence » :
+				      c'est la règle du produit, la même que sur les actualités et le
+				      calendrier. 📍 resterait réservé à un lieu physique. -->
+				{#if !estPerimetreParDefaut(annonce.perimetre_cible)}<span class="badge badge-gray" style="font-size:.72rem">&#x1F539; {perimetreLabel(annonce.perimetre_cible)}</span>{/if}
 			</div>
 			<strong class="annonce-titre">{annonce.titre}
 				{#if isNouveau(annonce.cree_le, annonce.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
@@ -142,6 +147,12 @@
 					<select value={annonce.statut} aria-label="Statut de l'annonce" on:change={(e) => onStatut((e.target as HTMLSelectElement).value)}>
 						{#each STATUTS_ANNONCE as s}<option value={s.val}>{s.label}</option>{/each}
 					</select>
+					<!--  ✏️ AVANT 🗑️ — l'ordre des icônes d'action est celui des tickets,
+					      qui sert de référence depuis le 18/08/2026. Le sélecteur de statut
+					      le précède : il n'est pas une action mais l'état de l'objet.
+					      🔄 (le suivi) n'existe pas ici — une annonce n'a pas de workflow,
+					      c'est déclaré dans `$lib/entites/annonce`. -->
+					<button class="btn-icon" title="Modifier" aria-label="Modifier l'annonce" on:click={onModifier}>&#x270F;&#xFE0F;</button>
 					<button class="btn-icon-danger" title="Supprimer" aria-label="Supprimer l'annonce" on:click={onSupprimer}>&#x1F5D1;&#xFE0F;</button>
 				</div>
 			{:else if estCS || estAdmin}

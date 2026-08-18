@@ -384,6 +384,22 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 }
 .empty-state h3 { font-size: 1rem; margin-bottom: .5rem; color: var(--color-text); }
 
+/* ── Barre de filtres ──
+   Remontée ici le 18/08/2026 en découpant l'onglet Annonces : le composant
+   extrait perdait les styles de sa page — un style laissé chez le parent
+   n'atteint pas le balisage d'un enfant (v2.67.11). Le recopier dans le
+   composant aurait fait une CINQUIÈME définition de `.filters`.
+
+   ⚠️ Trois pages en gardent une variante locale (tickets, calendrier,
+   prestataires) : leur sélecteur scopé par Svelte a une spécificité
+   supérieure, elles continuent donc de gagner et rien ne bouge à l'écran.
+   Les faire converger est un lot à part — suivi en #446. */
+.filters { display: flex; gap: .4rem; flex-wrap: wrap; }
+.filter-select {
+  padding: .35rem .5rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius); font-size: .85rem; background: var(--color-bg);
+}
+
 /* ── Modals (global) ── */
 .modal-overlay {
   position: fixed; top: 0; right: 0; bottom: 0; left: 0;

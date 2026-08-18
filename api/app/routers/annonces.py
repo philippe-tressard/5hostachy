@@ -1,7 +1,7 @@
 """Router petites annonces — communauté résidence."""
 import json
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -59,6 +59,11 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
     return {
         **annonce.model_dump(),
         "photos": json.loads(annonce.photos_json),
+        #  Le périmètre sort en LISTE de codes, jamais en JSON brut : c'est ce que
+        #  `PerimetrePicker` et `perimetreLabel` lisent côté front. Le `or` couvre les
+        #  annonces déposées AVANT la migration 0151 — elles valaient « résidence » de
+        #  fait, elles le valent explicitement.
+        "perimetre_cible": json.loads(annonce.perimetre_cible or '["résidence"]'),
         "auteur_prenom": auteur.prenom if auteur else "",
         "auteur_nom": auteur.nom if auteur else "",
         "auteur_email": auteur.email if annonce.contact_visible and auteur else None,
@@ -73,6 +78,10 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
 class AnnonceCreate(BaseModel):
     titre: str
     description: str
+    #  Section 4 du cadre #430. Reçu en LISTE, stocké en JSON — même contrat que
+    #  `PublicationCreate` : la conversion se fait ici, à la frontière, et une
+    #  seule fois.
+    perimetre_cible: List[str] = ["résidence"]
     type_annonce: TypeAnnonce = TypeAnnonce.vente
     categorie: CategorieAnnonce = CategorieAnnonce.divers
     prix: Optional[float] = None
@@ -82,6 +91,7 @@ class AnnonceCreate(BaseModel):
 
 class AnnonceUpdate(BaseModel):
     titre: Optional[str] = None
+    perimetre_cible: Optional[List[str]] = None
     description: Optional[str] = None
     type_annonce: Optional[TypeAnnonce] = None
     categorie: Optional[CategorieAnnonce] = None
@@ -132,6 +142,7 @@ def create_annonce(
         prix=data.prix,
         negotiable=data.negotiable,
         contact_visible=data.contact_visible,
+        perimetre_cible=json.dumps(data.perimetre_cible, ensure_ascii=False),
         auteur_id=user.id,
     )
     session.add(annonce)
@@ -153,7 +164,13 @@ def update_annonce(
         raise HTTPException(404, "Annonce introuvable")
     if not _can_manage(annonce, user):
         raise HTTPException(403, "Non autorisé")
-    for field, value in data.model_dump(exclude_none=True).items():
+    maj = data.model_dump(exclude_none=True)
+    #  ⚠️ Le périmètre arrive en LISTE et la colonne est du TEXTE : sans cette
+    #  conversion, SQLite stockerait la repr Python d'une liste — que `json.loads`
+    #  ne relit pas, et l'annonce perdrait son périmètre à la première correction.
+    if "perimetre_cible" in maj:
+        maj["perimetre_cible"] = json.dumps(maj["perimetre_cible"], ensure_ascii=False)
+    for field, value in maj.items():
         setattr(annonce, field, value)
     annonce.mis_a_jour_le = datetime.utcnow()
     session.add(annonce)
