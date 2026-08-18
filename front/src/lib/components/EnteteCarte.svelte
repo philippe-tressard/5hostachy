@@ -11,8 +11,7 @@
       │ quatre lignes d'aperçu                      │
       └─────────────────────────────────────────────┘
 
-  • le **titre** occupe sa ou ses propres lignes, rien ne le pousse — et
-    **c'est LUI qui plie et déplie**, avec un survol qui le dit ;
+  • le **titre** occupe sa ou ses propres lignes, et rien ne le pousse ;
   • en dessous, une ligne unique : **tags à gauche** (workflow, périmètre,
     confidentiel, auteur), **date puis actions puis chevron à droite** ;
   • puis l'aperçu, **quatre lignes**.
@@ -29,20 +28,27 @@
   seule fois pour toutes les pages. Chaque carte qui recomposait son en-tête
   avait sa propre façon de mal se replier.
 
-  ## Le geste : le TITRE, et lui seul (18/08/2026)
+  ## Le geste est ASYMÉTRIQUE (18/08/2026)
 
-  Trois gestes coexistaient : la carte entière (actualités, tickets,
-  événements), le seul chevron (annonces), rien du tout ailleurs. Signalé à
-  l'écran, unifié ici — le squelette porte le geste, comme il porte le repli.
+  **Repliée**, toute la carte se clique pour déplier, avec un changement de fond
+  au survol — la logique du fil d'activité, désignée comme référence.
 
-  ⚠️ **La carte entière était le pire des trois**, malgré sa grande cible : elle
-  interceptait la sélection de texte, et imposait un `stopPropagation` sur
-  chaque bouton d'action — sans quoi un clic sur ✏️ dépliait la carte au même
-  instant. Le titre supprime les deux à la fois.
+  **Dépliée**, seul le TITRE replie : le corps doit pouvoir se lire, se
+  sélectionner et se copier sans se refermer. C'est ce composant qui porte cette
+  seconde moitié — d'où le `<button>` sur le titre.
 
-  Un vrai `<button>` remplace `role="button" tabindex="0" on:keydown` : le
-  clavier vient avec, sans rien réimplémenter.
+  🔴 L'asymétrie **résout** le conflit que j'avais cru insoluble : une grande
+  cible pour ouvrir (au doigt), aucune cible parasite une fois ouvert. Les deux
+  exigences ne se contredisent pas, elles ne portent pas sur le même état.
 
+  Le titre est un vrai `<button>` : il porte le clavier dans les deux sens. Le
+  conteneur n'est donc pas interactif, et rien n'est imbriqué.
+
+  ⚠️ J'ai d'abord fait l'inverse, dans ce fichier même, en lisant « tout le titre
+  est sélectable » comme « le titre, et lui seul ». L'argument avancé — la carte
+  entière intercepte la sélection de texte — était réel mais hors sujet : le
+  CORPS déplié arrête déjà la propagation, et la zone repliée n'a rien à
+  sélectionner. Une objection juste dans l'absolu peut être fausse ici.
   ⚠️ Le composant porte son balisage **et** son style. C'est la leçon de
   `Pastille.svelte` (v2.67.11) : un style laissé dans la page hôte n'atteint pas
   le balisage d'un enfant, et le composant part nu en production.
@@ -55,22 +61,22 @@
 	/** La date affichée à droite. Déjà formatée : ce composant ne connaît pas
 	    `$lib/date`, et n'a donc aucun moyen d'en réinventer un format. */
 	export let date = '';
-	/**  Le titre plie-t-il la carte ? `false` laisse un simple texte — une fiche
-	 *   qui n'a rien à replier ne doit pas proposer un bouton qui ne fait rien.
+	/**  Le titre bascule-t-il la carte ? `false` laisse un simple texte — une
+	 *   fiche qui n'a rien à replier ne propose pas un bouton inerte.
 	 *   Explicite, et non déduit d'un écouteur : Svelte ne sait pas dire si le
-	 *   parent écoute `on:toggle`, et la déduction serait donc muette. */
+	 *   parent écoute `on:toggle`, et la déduction serait muette. */
 	export let basculable = false;
 
 	const dispatch = createEventDispatcher<{ toggle: void }>();
-	const basculer = () => dispatch('toggle');
 </script>
 
 <div class="entete">
-	<!--  Un `<button>` quand il plie, un `<div>` sinon. Pas de `role="button"`
-	      sur un div : l'élément natif apporte le clavier, le focus visible et
-	      l'annonce par les lecteurs d'écran, gratuitement et sans divergence. -->
+	<!--  Un vrai `<button>` : il porte le clavier dans les deux sens, et c'est la
+	      SEULE cible quand la carte est dépliée. `stopPropagation` l'isole du
+	      conteneur, qui ne déplie que depuis l'état replié. -->
 	{#if basculable}
-		<button type="button" class="ec-titre ec-titre-btn" on:click={basculer}>{titre}<slot name="titre-suffixe" /></button>
+		<button type="button" class="ec-titre ec-titre-btn"
+			on:click|stopPropagation={() => dispatch('toggle')}>{titre}<slot name="titre-suffixe" /></button>
 	{:else}
 		<div class="ec-titre">{titre}<slot name="titre-suffixe" /></div>
 	{/if}
@@ -79,15 +85,10 @@
 		<div class="ec-droite">
 			{#if date}<span class="ec-date">{date}</span>{/if}
 			<slot name="actions" />
-			<!--  Le chevron désigne le même geste que le titre : il doit donc l'exécuter.
-			      Il reste un slot — chaque carte dessine le sien — mais c'est ce
-			      composant qui lui donne son comportement, une fois. -->
-			{#if basculable}
-				<button type="button" class="ec-chevron-btn" on:click={basculer}
-					aria-label="Déplier ou replier"><slot name="chevron" /></button>
-			{:else}
-				<slot name="chevron" />
-			{/if}
+			<!--  Le chevron n'est qu'un INDICATEUR : c'est la carte entière qui reçoit
+			      le clic. Lui donner son propre bouton ferait un élément interactif
+			      imbriqué dans un autre — invalide, et le clavier s'y perdrait. -->
+			<slot name="chevron" />
 		</div>
 	</div>
 </div>
@@ -125,26 +126,16 @@
 		gap: .4rem .6rem;
 		flex-wrap: nowrap;
 	}
-	/*  🔴 LE GESTE. Le survol change la couleur ET souligne : la couleur seule
-	    ne se voit pas d'un daltonien, et un site dont on ne sait pas où cliquer
-	    se parcourt au hasard. Le `<button>` est remis à plat — il hérite du
-	    titre, il ne se déguise pas en contrôle de formulaire. */
+	/*  Le titre est un bouton, remis à plat : il hérite de son propre style et ne
+	    se déguise pas en contrôle de formulaire. Le survol le souligne — c'est le
+	    seul repère qui dise « ceci referme », une fois la carte ouverte. */
 	.ec-titre-btn {
 		appearance: none; background: none; border: 0; padding: 0; margin: 0;
 		font: inherit; color: inherit; text-align: left; width: 100%;
 		cursor: pointer;
 	}
-	.ec-titre-btn:hover { color: var(--color-primary); text-decoration: underline; }
+	.ec-titre-btn:hover { text-decoration: underline; }
 	.ec-titre-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 3px; }
-
-	/*  Le chevron : même geste, même curseur, aucune décoration propre. */
-	.ec-chevron-btn {
-		appearance: none; background: none; border: 0; padding: 0; margin: 0;
-		font: inherit; color: inherit; cursor: pointer; display: inline-flex;
-		align-items: center;
-	}
-	.ec-chevron-btn:hover { color: var(--color-primary); }
-	.ec-chevron-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 3px; }
 
 	.ec-tags {
 		display: flex; align-items: center; gap: .35rem;

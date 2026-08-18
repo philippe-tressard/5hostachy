@@ -111,3 +111,54 @@ def peut_commander(user: Utilisateur) -> bool:
     l'adressage ni l'étape.
     """
     return user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
+
+
+#  ── Qui peut ÉDITER, qui peut COMMENTER ─────────────────────────────────────
+#
+#  🔴 Deux droits distincts, arbitrés par l'utilisateur le 18/08/2026 :
+#
+#    > « Seul l'auteur peut l'éditer ou le commenter, avec l'admin (en cas de
+#    >   Pb), mais aussi le CS peut commenter, pas éditer (s'il est au courant de
+#    >   certaines choses et influer sur le workflow ou émettre un commentaire) »
+#
+#  Le conseil syndical sait des choses et doit pouvoir peser sur le suivi ;
+#  réécrire le ticket d'un résident n'est pas son rôle. C'était pourtant le cas :
+#  `update_ticket` acceptait tout membre du CS sur n'importe quel ticket.
+#
+#  ⚠️ Ces fonctions vivent ICI et nulle part ailleurs. L'audit du 26/07/2026 a
+#  trouvé trois dérives installées sans que rien ne les signale, dont un doublon
+#  de `require_proprietaire` écrit dans un routeur et documenté comme officiel
+#  dans les specs — la spec légitimait la dérive au lieu de la signaler.
+#
+#  Elles sont PURES (pas de `Depends`) : l'objet n'est connu qu'après lecture en
+#  base, une dépendance FastAPI ne peut donc pas trancher. C'est aussi ce qui les
+#  rend vérifiables sans monter d'application.
+
+
+def _est_concerne(objet, user: Utilisateur) -> bool:
+    """L'objet est-il *celui de* cet utilisateur ?
+
+    ⚠️ « Saisi pour » compte comme auteur, et c'est la raison d'être du champ :
+    un membre du CS qui dépose un ticket **au nom d'un résident** ne le dépossède
+    pas de sa demande. Sans cela, le résident concerné serait le seul à ne pas
+    pouvoir corriger ce qui parle de lui.
+    """
+    uid = user.id
+    return getattr(objet, "auteur_id", None) == uid or getattr(objet, "saisi_pour_user_id", None) == uid
+
+
+def peut_editer(objet, user: Utilisateur) -> bool:
+    """Corriger le CONTENU : titre, description, pièces, périmètre…
+
+    L'auteur (ou le « saisi pour »), et l'admin en cas de problème. **Pas le
+    conseil syndical** : il agit sur le suivi, il ne réécrit pas la demande.
+    """
+    return _est_concerne(objet, user) or user.has_role(RoleUtilisateur.admin)
+
+
+def peut_commenter(objet, user: Utilisateur) -> bool:
+    """Ajouter une entrée d'Historique, et faire avancer le workflow.
+
+    Les mêmes, **plus le conseil syndical** — c'est lui qui suit les dossiers.
+    """
+    return peut_editer(objet, user) or user.has_role(RoleUtilisateur.conseil_syndical)

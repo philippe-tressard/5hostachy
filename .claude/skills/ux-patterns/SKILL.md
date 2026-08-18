@@ -509,27 +509,69 @@ type neuf serait passé à côté des six, et une AG commentée serait devenue
 visible de tous, en silence. **C'est la donnée qui porte la différence** :
 `evol_contenu` présent ⇒ la carte rend le bloc de suivi.
 
-### Le GESTE de dépliage : le TITRE, et lui seul (18/08/2026)
+### Le GESTE de dépliage — il est ASYMÉTRIQUE (18/08/2026)
 
-Trois gestes coexistaient dans le produit — la carte entière (actualités,
-tickets, événements), le seul chevron (annonces), rien du tout ailleurs.
-Signalé à l'écran : *« la zone de prise en compte diffère ; l'unifier en
-cliquant sur le titre, avec un style de sélection qui change au survol »*.
+```
+carte REPLIÉE  → toute la zone déplie · le fond change au survol
+carte DÉPLIÉE  → SEUL le titre replie · le corps se lit et se sélectionne
+```
 
-La règle vit dans **`EnteteCarte`** (`basculable` + `on:toggle`) : une carte
-ne décide plus de son geste, elle le reçoit. Le titre change de couleur **et**
-se souligne au survol — la couleur seule ne se voit pas d'un daltonien.
+Formulé ainsi : *« applique partout la logique du fil d'actualité : cliquable
+sur toute la zone pour déplier, avec changement de couleur au survol »* puis
+*« clic sur le titre seul pour le repliement — pour permettre de sélectionner le
+texte sans le replier »*.
 
-⚠️ **La carte entière était le pire des trois**, malgré sa grande cible : elle
-interceptait la sélection de texte, et imposait un `stopPropagation` sur chaque
-bouton d'action — sans quoi un clic sur ✏️ dépliait la carte au même instant.
+🔴 **L'asymétrie résout le conflit**, elle ne l'arbitre pas : une grande cible
+pour ouvrir (au doigt, sur téléphone), aucune cible parasite une fois ouvert
+(pour lire, sélectionner, copier). Les deux exigences ne se contredisent pas —
+elles ne portent pas sur le même état.
 
-Bénéfice d'accessibilité : un vrai `<button>` remplace `role="button"
-tabindex="0" on:keydown`. Le clavier vient avec — et les trois écritures
-maison divergeaient déjà, `CarteEvenement` étant la seule à faire
-`preventDefault()`, si bien que la barre d'espace **faisait défiler la page**
-sur les deux autres.
+⚠️ **Trois allers-retours dans la même journée** avant d'y arriver, parce que je
+lisais chaque moitié de la règle sans l'autre : d'abord « le titre et lui seul »,
+puis « toute la carte », enfin les deux à leur moment. La leçon n'est pas qu'il
+fallait deviner — c'est qu'une objection juste dans l'absolu (« la carte entière
+intercepte la sélection ») peut être **hors sujet** ici : le corps déplié arrête
+déjà la propagation, et la zone repliée n'a rien à sélectionner.
 
+**Mise en œuvre**, une seule fois :
+
+| Où | Quoi |
+|---|---|
+| conteneur de la carte | `role="presentation"` + `on:click={() => { if (!expanded) basculer(); }}` |
+| `EnteteCarte` | `basculable` → le titre devient un `<button>` qui bascule, avec `stopPropagation` |
+| `app.css` | `.carte-liste:not(.expanded)` porte le curseur **et** le fond au survol |
+| corps déplié | `.carte-corps` + `role="presentation"` + `on:click\|stopPropagation` |
+
+⚠️ Le titre est un **vrai `<button>`** : il porte le clavier dans les deux sens.
+Le conteneur n'est donc pas interactif, et rien n'est imbriqué.
+
+⚠️ `:not(.expanded)` porte toute la règle de survol. Sans lui, le curseur
+promettrait partout un clic qui ne fait rien, et le fond se surlignerait sous un
+formulaire ouvert.
+
+### Qui peut ÉDITER, qui peut COMMENTER (18/08/2026)
+
+| Geste | Qui |
+|---|---|
+| **✏️ éditer** le contenu | l'auteur · le « saisi pour » · l'admin |
+| **🔄 commenter** et faire avancer le workflow | les mêmes **+ le conseil syndical** |
+
+> « Seul l'auteur peut l'éditer ou le commenter, avec l'admin (en cas de Pb),
+>   mais aussi le CS peut commenter, pas éditer »
+
+🔴 **« Saisi pour » compte comme auteur**, et c'est la raison d'être du champ :
+un membre du CS qui dépose un ticket au nom d'un résident ne le dépossède pas de
+sa demande. Avant, ce résident était le **seul** à ne pas pouvoir corriger ce qui
+parle de lui — pendant que n'importe quel membre du CS le pouvait.
+
+Les deux règles vivent dans `auth/deps.py` (`peut_editer`, `peut_commenter`),
+jamais dans un routeur ni dans un écran. `test_droits_editer_commenter.py` les
+verrouille.
+
+⚠️ **L'écran doit dire la même chose que le serveur, ni plus ni moins.** Un
+bouton affiché plus largement que le droit produit un 403 sur un geste que
+l'interface a elle-même proposé ; plus étroitement, il rend une capacité
+introuvable. Les deux sont arrivés le même jour dans `RubriqueHistorique`.
 🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
 18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
 est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,

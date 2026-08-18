@@ -57,10 +57,10 @@
 	<div
 		class="card carte-evenement"
 		id="ev-{ev.id}"
+		role="presentation"
 		class:event-urgent={ev.type === 'coupure'}
 		class:expanded
-		style="cursor:pointer"
-
+		on:click={() => { if (!expanded) dispatch('basculer'); }}
 	>
 		<!--  La NORME de toutes les cartes du site (`EnteteCarte`, 18/08/2026) :
 		      titre sur sa propre ligne, puis tags à gauche / date et actions à
@@ -74,7 +74,8 @@
 		      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 		      déplie pas la carte au même instant. -->
 		<EnteteCarte titre={ev.titre} date={formatDate(ev.debut)}
-			basculable on:toggle={() => dispatch('basculer')}>
+			basculable on:toggle={() => dispatch('basculer')}
+>
 			<svelte:fragment slot="tags">
 				<span class="badge badge-gray">{typeLabel(ev.type)}</span>
 				{#if ev.statut_kanban}<span class="badge badge-blue">{colonnes.find((c) => c.id === ev.statut_kanban)?.label ?? ev.statut_kanban}</span>{/if}
@@ -110,7 +111,7 @@
 				photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} />
 		{/if}
 		{#if expanded}
-			<div class="ev-expanded-body rich-content" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+			<div class="carte-corps ev-expanded-body rich-content" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 				{#if ev.description}{@html safeHtml(ev.description)}{/if}
 				{#if ev.photos_urls?.length || ev.fichiers_urls?.length}
 					<PiecesJointes urls={[...(ev.photos_urls ?? []), ...(ev.fichiers_urls ?? [])]} format="grand" />
