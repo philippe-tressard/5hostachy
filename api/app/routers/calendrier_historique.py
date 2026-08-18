@@ -186,6 +186,10 @@ def add_evolution_evenement(
             "commentaire": body.contenu or "",
             "etat": KANBAN_LABELS.get(evol.nouveau_statut or "", ""),
         },
+        #  Les fichiers de CETTE entrée, et non ceux de l'événement : une photo
+        #  jointe à un suivi n'atteignait ni le groupe WhatsApp ni le syndic,
+        #  alors que l'écran l'affichait dans le fil. Signalé le 18/08/2026.
+        fichiers_suivi=evol.fichiers_urls,
     )
     return _evolutions_de(ev_id, session)[-1]
 

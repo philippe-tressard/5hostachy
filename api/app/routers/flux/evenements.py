@@ -6,6 +6,14 @@ from sqlalchemy import or_
 from sqlmodel import select
 
 from app.models.core import Evenement, Prestataire
+from app.models.evenement import EvenementEvolution
+#  Les libellés du Kanban viennent de LEUR source — celle qui les valide à
+#  l'écriture (`calendrier_historique`). Les recopier ici en ferait une seconde
+#  table, et le fil afficherait « fournisseur » le jour où l'autre dirait
+#  « Prestataire ». Les périmètres (#316), les canaux, les statuts de ticket
+#  (#415) et les pages (#401) ont tous divergé de cette façon.
+from app.routers.calendrier_historique import KANBAN_LABELS
+from app.utils.fichiers import est_image
 from app.utils.liens import lien_element
 from app.utils.photos import parse_photos
 from app.utils.visibility import evenement_visible
@@ -16,7 +24,7 @@ from app.utils.perimetres import (
     parse_perimetres,
     perimetre_label,
 )
-from .commun import ContexteFlux, badges_marqueurs, strip_html
+from .commun import ContexteFlux, auteur_nom, badges_marqueurs, strip_html
 from .schemas import FluxItem
 
 #: Icône par type d'événement. Définie **ici** et importée par `sante.py`, qui
@@ -39,6 +47,42 @@ def perimetres_evenement(ev) -> list[str]:
     affiché dès qu'un bâtiment est renseigné. Cf. `commun.perimetres_de`.
     """
     return parse_perimetres(ev.perimetre)
+
+
+def _pieces_evolution(evol, ev) -> dict:
+    """Pièces à montrer sur une carte de suivi : celles de l'entrée, sinon
+    celles de l'événement.
+
+    Même règle et même raison que `flux/tickets.py` : la carte annonce une mise
+    à jour et affiche le commentaire du jour ; lui faire porter les photos
+    d'origine montrerait une image vieille de trois semaines à côté d'un texte
+    de ce matin. Repli sur l'événement pour ne rien retirer aux cartes qui
+    fonctionnaient.
+    """
+    urls = parse_photos(evol.fichiers_urls)
+    if not urls:
+        return {
+            "photos_urls": parse_photos(ev.photos_urls),
+            "fichiers_urls": parse_photos(ev.fichiers_urls),
+        }
+    return {
+        "photos_urls": [u for u in urls if est_image(u)],
+        "fichiers_urls": [u for u in urls if not est_image(u)],
+    }
+
+
+def _evolutions(ctx: ContexteFlux):
+    """Les entrées d'Historique de la fenêtre, événement joint, récentes d'abord."""
+    return ctx.session.exec(
+        select(EvenementEvolution, Evenement)
+        .join(Evenement, EvenementEvolution.evenement_id == Evenement.id)
+        .where(
+            EvenementEvolution.cree_le >= ctx.since,
+            ~Evenement.archivee,
+            Evenement.affichable,
+        )
+        .order_by(EvenementEvolution.cree_le.desc())
+    ).all()
 
 
 def collecter(ctx: ContexteFlux) -> list[FluxItem]:
@@ -115,4 +159,76 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                 "fichiers_urls": parse_photos(ev.fichiers_urls),
             },
         ))
-    return cartes
+
+    #  ── L'Historique ────────────────────────────────────────────────────────
+    #
+    #  🔴 Le fil est un JOURNAL : ce qui s'y produit doit être daté du jour où ça
+    #  s'est produit. Une affaire passée chez le prestataire ce matin restait
+    #  datée de son annonce, donc invisible parmi les nouveautés — alors que
+    #  c'est précisément le genre d'avancée qu'on vient y chercher.
+    for evol, ev in _evolutions(ctx):
+        if not evenement_visible(ev, ctx.user):
+            continue
+        etat = KANBAN_LABELS.get(evol.nouveau_statut or "", "")
+        #  Un `etat` porte sa colonne, un `commentaire` n'en a pas : c'est cette
+        #  absence qui distingue une étape franchie d'une simple mise à jour, et
+        #  c'est déjà ce que le fil de l'événement lit pour ne pas dessiner un
+        #  jalon là où il n'y en a pas.
+        detail = f"Suivi : {etat}" if etat else "Mise à jour"
+        prest = ctx.session.get(Prestataire, ev.prestataire_id) if ev.prestataire_id else None
+        cartes.append(FluxItem(
+            id=f"ev_evol_{evol.id}",
+            #  🔴 Le type reste `evenement`, et ce n'est PAS un raccourci.
+            #
+            #  Le front teste `item.type === 'evenement'` à SIX endroits : le
+            #  libellé, la couleur, le fond, le lien « Voir l'événement », la règle
+            #  d'urgence (une coupure), celle du « non résolu » (colonne Kanban) —
+            #  et, sur le tableau de bord, le filtre qui **masque les AG** à qui
+            #  n'y a pas droit. Un type neuf passerait à côté des six.
+            #
+            #  ⚠️ Le sixième est le seul qui compte vraiment : une AG mise à jour
+            #  serait devenue visible de tous, en silence. Les tickets ont trois
+            #  types et les listent partout ; c'est cette duplication-là qui vient
+            #  de coûter l'affichage du commentaire dans `FluxCard`.
+            #
+            #  C'est la DONNÉE qui porte la différence : `evol_contenu` est présent,
+            #  donc la carte rend le bloc de suivi. Rien à énumérer.
+            type="evenement",
+            #  Daté de l'ENTRÉE, pas de l'événement — c'est tout l'objet.
+            date=evol.cree_le,
+            cree_le=ev.cree_le,
+            titre=ev.titre,
+            detail=detail,
+            icon="\U0001f504" if etat else "\U0001f527",
+            badges=badges_marqueurs(ev) + [ev.type] + ([prest.nom] if prest else []),
+            lien=lien_element("ev", ev.id),
+            meta={
+                "ev_id": ev.id,
+                "type": ev.type,
+                "lieu": ev.lieu,
+                "perimetre": perimetre_label(perimetres_evenement(ev)),
+                "prestataire": prest.nom if prest else None,
+                "debut": ev.debut.isoformat() if ev.debut else None,
+                "fin": ev.fin.isoformat() if ev.fin else None,
+                "statut_kanban": ev.statut_kanban,
+                "epingle": ev.epingle,
+                #  `full_html` reste la description de l'ÉVÉNEMENT : la carte
+                #  dépliée doit rappeler de quoi il s'agit. Le texte du jour, lui,
+                #  vit dans `evol_contenu`, rendu à part — exactement comme sur un
+                #  ticket mis à jour.
+                "full_html": ev.description,
+                "evol_contenu": strip_html(evol.contenu, 300) if evol.contenu else None,
+                "evol_auteur": auteur_nom(ctx.session, evol.auteur_id),
+                **_pieces_evolution(evol, ev),
+            },
+        ))
+
+    #  Une seule ligne par événement : la plus récente. L'Historique complet reste
+    #  sur la fiche — le fil ne répond qu'à « quoi de neuf ». Même règle, et même
+    #  écriture, que pour les tickets.
+    dernier: dict[int, FluxItem] = {}
+    for carte in cartes:
+        eid = carte.meta.get("ev_id")
+        if eid not in dernier or carte.date > dernier[eid].date:
+            dernier[eid] = carte
+    return list(dernier.values())
