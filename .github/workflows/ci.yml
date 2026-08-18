@@ -391,6 +391,18 @@ jobs:
         working-directory: front
         run: npm run lint:styles
 
+      # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
+      # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
+      #
+      # `svelte-check` ne voit rien — un `class:x={…}` après le `>` est du texte,
+      # et du texte est valide. Build vert, types verts, tests verts, et la page
+      # montre du code. Constaté EN PRODUCTION le 18/08/2026, deux fois dans la
+      # même journée (CarteEvenement puis CarteTicket), à chaque fois après une
+      # réécriture automatisée de la balise.
+      - name: Aucune balise ouvrante fermée avant ses attributs
+        working-directory: front
+        run: npm run lint:balises
+
       # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
       # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
       # attrapait aussi `/auth/me` : pendant les sept jours où la session restait
