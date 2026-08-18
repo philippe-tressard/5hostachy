@@ -192,7 +192,23 @@
 	    « ceci s'ouvre », et l'utilisateur l'a signalé deux fois : une carte du fil
 	    restait blanche là où une actualité se teintait. La même valeur que
 	    `.pub-row:hover` et `.tk-row:hover`, pas une nuance de plus. */
-	.flux-item:hover .flux-card { box-shadow: var(--shadow); background: var(--color-bg); }
+	/*  🔴 Le survol colore le TITRE, pas le bloc — la règle du site depuis le
+	    18/08/2026, et le fil est le dernier à l'avoir reçue alors qu'il en est
+	    la référence : « quand tout l'article change de couleur c'est moche ».
+
+	    Un aplat sur toute la carte fait bouger la page à chaque passage de souris
+	    dans une liste longue. Le titre qui change de teinte dit la même chose —
+	    « ceci répond » — sans repeindre l'écran.
+
+	    ⚠️ Le titre change **où que soit la souris sur le bloc** : c'est bien le
+	    survol de `.flux-item` qui déclenche, pas celui du titre. Toute la carte
+	    reste la cible du clic.
+
+	    ⚠️ Pas de soulignement : le titre n'est pas un lien, c'est une zone
+	    cliquable — le souligner le ferait passer pour une navigation. */
+	.flux-item:hover .flux-card { box-shadow: var(--shadow); }
+	.flux-item:hover .flux-titre { color: var(--color-primary); }
+	.flux-titre { transition: color .12s ease; }
 	.flux-item.flux-urgent .flux-card { border-left-color: var(--color-danger) !important; }
 	.flux-item.flux-expanded .flux-card { box-shadow: var(--shadow); }
 

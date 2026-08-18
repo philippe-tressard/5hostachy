@@ -583,6 +583,20 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 /*  Dépliée, la carte n'est plus une cible : le titre se colore à son propre
     survol, puisqu'il est le seul à répondre. */
 .carte-liste.expanded .ec-titre:hover { color: var(--color-primary); }
+
+/*  Les listes qui portent ENCORE leur propre balisage de ligne, en attendant
+    leur découpage (#432 pour le calendrier, #453 pour l'Espace CS). Leur titre
+    ne s'appelle pas `.ec-titre` — mais la règle, elle, est la même.
+
+    ⚠️ Ces trois lignes vivent ICI et non dans les pages, et ce n'est pas un
+    contournement du garde-fou de modularité : la règle est **globale au site**
+    (« applique partout »). L'écrire dans chaque page en aurait fait une
+    troisième et une quatrième copie, libres de diverger — exactement ce que
+    `.carte-liste` a été créé pour supprimer. Elles disparaîtront avec les
+    balisages qu'elles servent. */
+.event-row:hover .event-titre,
+.tk-row:hover .tk-row-titre { color: var(--color-primary); }
+.event-titre, .tk-row-titre { transition: color .12s ease; }
 .carte-liste.urgent { border-left-color: var(--color-danger); }
 
 @media (max-width: 640px) {

@@ -151,6 +151,25 @@ def test_un_tiers_ne_commente_pas(acteurs):
 
 # ── Un objet SANS « saisi pour » ────────────────────────────────────────────
 
+def test_un_utilisateur_sans_identifiant_n_a_aucun_droit():
+    """⚠️ La garde `None == None`, dans l'autre sens.
+
+    Un utilisateur authentifié a toujours un `id` — c'est donc défensif. Mais
+    sans cette garde, `getattr(objet, "auteur_id", None) == uid` serait VRAI dès
+    que les deux valent `None`, et l'édition s'ouvrirait à qui n'a pas d'identité.
+
+    Le jumeau front (`$lib/droits.ts`) portait déjà la garde : les deux écritures
+    d'une même règle doivent dire la même chose **jusque dans leurs cas limites**,
+    sinon les comparer côte à côte ne prouve rien. C'est l'audit du 18/08/2026 qui
+    a relevé l'écart.
+    """
+    anonyme = _user(RoleUtilisateur.résident)   # jamais écrit en base : `id` est None
+    assert anonyme.id is None
+    orphelin = Ticket(numero=99998, titre="Sans auteur", description="x", auteur_id=None)
+    assert peut_editer(orphelin, anonyme) is False
+    assert peut_commenter(orphelin, anonyme) is False
+
+
 def test_sans_saisi_pour_la_regle_ne_s_elargit_pas(acteurs):
     """`saisi_pour_user_id` vaut `None` sur la plupart des objets — et sur TOUS
     ceux des autres entités (événement, annonce), qui n'ont pas ce champ.

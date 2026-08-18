@@ -76,8 +76,16 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 > · `standards/02-factorisation.md` §2 (pourquoi dates et montants sont les deux
 > récidivistes de la duplication).
 
-1. **XSS** : jamais `{@html contenu}`, toujours `{@html safeHtml(contenu)}`. Seule
-   exception : `Icon.svelte` (SVG codé en dur côté serveur).
+1. **XSS** : jamais `{@html contenu}`, toujours `{@html safeHtml(contenu)}`.
+   **Deux** exceptions, et deux seulement — relevées par l'audit du 18/08/2026,
+   qui en a trouvé une non déclarée :
+   - `Icon.svelte` — SVG codé en dur côté serveur ;
+   - `QRCode.svelte` — SVG produit **localement** par `qrcode-generator` à partir
+     d'une donnée encodée en modules, jamais interpolée dans le balisage.
+
+   ⚠️ Une exception non écrite n'est pas une exception, c'est un oubli qui
+   ressemble à une décision. Toute nouvelle exception s'ajoute **ici** avec sa
+   raison, sinon la règle devient « sauf quand on a jugé que ça allait ».
 2. **Dates et montants** : ne jamais réimplémenter un format dans une page.
    `$lib/date.ts` (`fmtDate`, `fmtDatetime`, `fmtMonthYear`…), `$lib/utils.ts`
    (`fmtMontant`, `perimetreLabel`), et côté API `app/utils/dates_fr.py`. Deux
