@@ -3,6 +3,7 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+	import HistoriqueEvenement from '$lib/components/HistoriqueEvenement.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -20,7 +21,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
+	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
 	import { fmtMontant, perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 
@@ -451,14 +452,10 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	let showArchivedMaintenances = false;
 
 	// ── Kanban ────────────────────────────────────────────────
-	const KANBAN_COLS = [
-		{ id: 'ag',           label: 'AG',                    color: '#8b5cf6' },
-		{ id: 'cs',           label: 'CS (en cours)',         color: '#3b82f6' },
-		{ id: 'syndic',       label: 'Syndic (en cours)',     color: '#f59e0b' },
-		{ id: 'fournisseur',  label: 'Prestataire (en cours)', color: '#f97316' },
-		{ id: 'termine',      label: 'Terminé',              color: '#22c55e' },
-		{ id: 'annule',       label: 'Annulé',               color: '#9ca3af' },
-	];
+	//  Le fil vit dans `HistoriqueEvenement` ; la page ne garde que le rechargement.
+	async function recharger() {
+		evenements = await calApi.list();
+	}
 
 	//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
 	//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
@@ -907,12 +904,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 						</svelte:fragment>
 						<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
 					</EnteteCarte>
-					{#if expanded && (ev.description || ev.photos_urls?.length || ev.fichiers_urls?.length)}
-						<div class="ev-expanded-body rich-content" on:click|stopPropagation on:keydown|stopPropagation>
+					{#if expanded}
+						<div class="ev-expanded-body rich-content" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 							{#if ev.description}{@html safeHtml(ev.description)}{/if}
 							{#if ev.photos_urls?.length || ev.fichiers_urls?.length}
 								<PiecesJointes urls={[...(ev.photos_urls ?? []), ...(ev.fichiers_urls ?? [])]} format="grand" />
 							{/if}
+							<!--  L'HISTORIQUE — dernier écran à faire avancer un suivi en silence. -->
+							<HistoriqueEvenement evenement={ev} colonnes={KANBAN_COLS} peutAgir={$isCS} on:evolue={recharger} />
 						</div>
 					{/if}
 				</div>

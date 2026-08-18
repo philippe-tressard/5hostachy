@@ -70,7 +70,7 @@ class UTCJSONResponse(JSONResponse):
 from app.database import _run_migrations, engine
 from app.routers import (
     auth, auth_mot_de_passe, tickets, publications, documents, lots, admin,
-    notifications, acces, calendrier, prestataires, sondages, idees, copropriete,
+    notifications, acces, calendrier, calendrier_historique, prestataires, sondages, idees, copropriete,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
 )
@@ -252,6 +252,8 @@ app.include_router(admin.router)
 app.include_router(notifications.router)
 app.include_router(acces.router)
 app.include_router(calendrier.router)
+#  L'Historique d'un événement — extrait le 18/08/2026 (modularité, rang 1).
+app.include_router(calendrier_historique.router)
 app.include_router(prestataires.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)

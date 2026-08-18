@@ -465,6 +465,18 @@ l'erreur qui a fait poser la question :
 | Contient | Ouvert / En cours / Résolu (ticket), Suivi Kanban (événement, prestation) | affichage au fil, épinglage, WhatsApp, syndic, conseil syndical, Publié / Brouillon |
 | Se place | **avant** le Périmètre — c'est un champ spécifique de l'objet | **en fin**, après les documents |
 
+🔴 **Le KANBAN du calendrier EST un workflow** (18/08/2026). Ses six colonnes —
+AG · CS · Syndic · Prestataire · Terminé · Annulé — répondent exactement à *« où
+en est cet objet ? »*. La section s'appelle donc **Workflow**, et non « Suivi
+Kanban » : ce dernier nommait l'écran où on le voit, pas la notion. **Aucun
+second champ d'état n'a été créé** — deux notions de suivi sur le même objet se
+contredisent au premier écart, et rien ne dirait laquelle fait foi.
+
+Corollaire : **un changement de colonne est une transition tracée**, avec son
+avant et son après dans l'Historique ; toute autre modification reste une
+correction. Le calendrier était le dernier écran du site à faire avancer un suivi
+en silence.
+
 🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
 18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
 est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,

@@ -10,6 +10,12 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, Notification, TypeEvenement, Utilisateur, RoleUtilisateur, Prestataire, ContratEntretien, MembreSyndic
+from app.models.evenement import EvenementEvolution
+from app.routers.calendrier_historique import (
+    CHAMPS_CORRIGEABLES,
+    EvolutionEvenementRead,
+    _evolutions_de,
+)
 from app.utils.dates_fr import datetime_longue
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_element
@@ -72,6 +78,10 @@ class EvenementRead(BaseModel):
     # exposé en liste pour que le front n'ait rien à désérialiser.
     photos_urls: list[str] = []
     fichiers_urls: list[str] = []
+    #  L'HISTORIQUE, livré avec l'événement : le fil est court (quelques entrées)
+    #  et la carte l'affiche dès qu'elle est dépliée. Un second appel par
+    #  événement aurait fait autant de requêtes que de lignes à l'écran.
+    evolutions: list["EvolutionEvenementRead"] = []
 
     class Config:
         from_attributes = True
@@ -112,6 +122,7 @@ def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     brut["photos_urls"] = parse_photos(ev.photos_urls)
     brut["fichiers_urls"] = parse_photos(ev.fichiers_urls)
     data = EvenementRead.model_validate(brut)
+    data.evolutions = _evolutions_de(ev.id, session)
     auteur = session.get(Utilisateur, ev.auteur_id)
     data.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
     if ev.prestataire_id:
@@ -338,7 +349,7 @@ def update_evenement(
     ev_id: int,
     body: EvenementUpdate,
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_cs_or_admin),
 ):
     ev = session.get(Evenement, ev_id)
     if not ev:
@@ -352,12 +363,47 @@ def update_evenement(
             # photos_internes). Ces champs ne servent qu'à retirer des fichiers.
             data[champ] = json.dumps(photos_internes(data[champ] or []))
     old_statut = ev.statut_kanban
+    #  L'état d'AVANT, relevé avant la boucle : c'est lui qui dit ce qui a
+    #  réellement changé. Sans ce relevé, réenregistrer une valeur identique
+    #  s'inscrirait quand même dans l'Historique.
+    avant = {champ: getattr(ev, champ, None) for champ in data}
     for k, v in data.items():
         setattr(ev, k, v)
     ev.mis_a_jour_le = datetime.utcnow()
     # Si le statut passe à "termine", mettre à jour la prochaine visite du contrat
     if data.get('statut_kanban') == 'termine' and old_statut != 'termine':
         _update_contrat_prochaine_visite(ev, session)
+
+    #  🔴 LE CHANGEMENT DE COLONNE EST UNE TRANSITION, LE RESTE UNE CORRECTION.
+    #
+    #  Le Kanban EST le workflow d'un événement — il répond à « où en est cet
+    #  objet ? ». Le faire avancer laisse donc un jalon daté dans l'Historique,
+    #  avec son avant et son après ; corriger un titre ou un lieu n'en laisse pas.
+    #  C'est la même distinction que sur les tickets (#431) et les publications
+    #  (#433), et elle porte ici la même forme de ligne : sans `ancien_statut` ni
+    #  `nouveau_statut`, une correction ne dessine aucune étape de suivi.
+    if 'statut_kanban' in data and data['statut_kanban'] != old_statut:
+        session.add(EvenementEvolution(
+            evenement_id=ev.id,
+            type="etat",
+            ancien_statut=old_statut,
+            nouveau_statut=ev.statut_kanban,
+            auteur_id=user.id,
+            cree_le=datetime.utcnow(),
+        ))
+    corrections = [
+        libelle
+        for champ, libelle in CHAMPS_CORRIGEABLES.items()
+        if champ in data and data[champ] != avant.get(champ)
+    ]
+    if corrections:
+        session.add(EvenementEvolution(
+            evenement_id=ev.id,
+            type="commentaire",
+            contenu="Correction : " + " ; ".join(corrections),
+            auteur_id=user.id,
+            cree_le=datetime.utcnow(),
+        ))
     session.add(ev)
     session.commit()
     session.refresh(ev)

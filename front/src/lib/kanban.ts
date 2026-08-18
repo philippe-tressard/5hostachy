@@ -2,6 +2,31 @@
 // Utilisé par calendrier/+page.svelte et tableau-de-bord/+page.svelte
 import { perimetreDuBatiment } from '$lib/perimetres';
 
+/**
+ * Les COLONNES du Kanban — la source unique, extraite de `calendrier/+page.svelte`
+ * le 18/08/2026.
+ *
+ * 🔴 **Ces colonnes SONT le workflow d'un événement** : elles répondent
+ * exactement à la question de la section 3 du cadre #430 — *« où en est cet
+ * objet ? »*. Arbitré ainsi : *« peut-être que le kanban tu le glisses dans
+ * Workflow ? »*. Aucun second champ d'état n'a été créé — deux notions de suivi
+ * sur le même objet se contredisent au premier écart.
+ *
+ * Elles alimentent trois choses qui doivent rester d'accord : la vue Kanban, les
+ * pastilles du formulaire d'événement, et les libellés de l'Historique
+ * (« État : X → Y »). Le pendant serveur est `KANBAN_LABELS` dans
+ * `calendrier_historique.py` — les contextes de build sont `./api` et `./front`,
+ * le partage d'un fichier est impossible, seule la copie l'est.
+ */
+export const KANBAN_COLS = [
+	{ id: 'ag', label: 'AG', color: '#8b5cf6' },
+	{ id: 'cs', label: 'CS (en cours)', color: '#3b82f6' },
+	{ id: 'syndic', label: 'Syndic (en cours)', color: '#f59e0b' },
+	{ id: 'fournisseur', label: 'Prestataire (en cours)', color: '#f97316' },
+	{ id: 'termine', label: 'Terminé', color: '#22c55e' },
+	{ id: 'annule', label: 'Annulé', color: '#9ca3af' },
+];
+
 export interface KanbanCtx {
 	isCS: boolean;
 	isAdmin: boolean;
