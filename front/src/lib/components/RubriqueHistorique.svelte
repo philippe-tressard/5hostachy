@@ -164,18 +164,31 @@
 				<div class="evol-body">
 					<div class="evol-ligne-meta">
 						<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
-						{#if peutCorriger(evol) && enEdition !== evol.id}
-							<!--  Le CRAYON SEUL, comme partout ailleurs sur le site : ce bouton
-							      portait « ✏️ Modifier » et était le dernier à écrire le mot.
-							      Le sens vit dans `title` et `aria-label`, pas dans le libellé. -->
-							<button type="button" class="btn-icon evol-modifier" aria-label="Modifier cette entrée"
-								title="Modifier" on:click={() => dispatch('modifier', evol.id)}>&#x270F;&#xFE0F;</button>
-						{/if}
-						{#if peutEffacer(evol) && enEdition !== evol.id}
-							<!--  ✏️ puis 🗑️ : l'ordre des icônes du site (ux-patterns §3), et la
-							      corbeille en dernier parce qu'elle est irréversible. -->
-							<button type="button" class="btn-icon-danger evol-modifier" aria-label="Supprimer cette entrée"
-								title="Supprimer cette entrée" on:click={() => dispatch('supprimer', evol.id)}>&#x1F5D1;&#xFE0F;</button>
+						<!--  🔴 LES DEUX ICÔNES DANS UN MÊME GROUPE, cadré à droite
+						      (18/08/2026, signalé à l'écran). Elles étaient enfants directs
+						      d'une ligne en `space-between` : à DEUX enfants — la méta et le
+						      crayon — cela donnait bien « méta à gauche, crayon à droite » ;
+						      la corbeille en a fait un TROISIÈME, et `space-between` l'a
+						      réparti au milieu. Le style n'avait pas changé, c'est son
+						      contenu qui avait cessé de lui correspondre.
+
+						      Groupées, elles suivent la norme de l'en-tête de carte : ✏️ puis
+						      🗑️, collées, à l'extrémité droite (ux-patterns §3). -->
+						{#if enEdition !== evol.id && (peutCorriger(evol) || peutEffacer(evol))}
+							<span class="evol-actions">
+								{#if peutCorriger(evol)}
+									<!--  Le CRAYON SEUL, comme partout ailleurs sur le site : ce
+									      bouton portait « ✏️ Modifier » et était le dernier à écrire
+									      le mot. Le sens vit dans `title` et `aria-label`. -->
+									<button type="button" class="btn-icon evol-modifier" aria-label="Modifier cette entrée"
+										title="Modifier" on:click={() => dispatch('modifier', evol.id)}>&#x270F;&#xFE0F;</button>
+								{/if}
+								{#if peutEffacer(evol)}
+									<!--  La corbeille EN DERNIER parce qu'elle est irréversible. -->
+									<button type="button" class="btn-icon-danger evol-modifier" aria-label="Supprimer cette entrée"
+										title="Supprimer cette entrée" on:click={() => dispatch('supprimer', evol.id)}>&#x1F5D1;&#xFE0F;</button>
+								{/if}
+							</span>
 						{/if}
 					</div>
 
@@ -250,6 +263,9 @@
 	.evol-icon { flex-shrink: 0; font-size: .9rem; margin-top: .1rem; }
 	.evol-body { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
 	.evol-ligne-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+	/*  Le groupe d'actions : collées entre elles, et poussé à droite par le
+	    `space-between` de la ligne — quel que soit le NOMBRE de boutons. */
+	.evol-actions { display: flex; gap: .3rem; flex-shrink: 0; }
 	.evol-meta { font-size: .75rem; color: var(--color-text-muted); }
 	.evol-text { color: var(--color-text); line-height: 1.5; }
 	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
