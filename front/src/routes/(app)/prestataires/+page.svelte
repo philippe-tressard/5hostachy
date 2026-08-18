@@ -1957,10 +1957,8 @@
 	/* ── Compteur config row ── */
 	.compteur-config-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .82rem; }
 
-	/*  Le défilement horizontal de ces deux barres n'est plus une redéfinition
-	    locale de `.filters` mais la variante NOMMÉE `.filters--defilante`
-	    (`app.css`, #446) : ce qui diffère se lit dans le balisage. La marge basse
-	    passe de .75rem à 1.25rem, celle de la norme. */
+	/*  Défilement horizontal : variante NOMMÉE `.filters--defilante` (app.css,
+	    #446), lisible dans le balisage. Marge basse .75rem → 1.25rem, la norme. */
 
 	/* Section type header */
 	.type-section-header { display: flex; align-items: baseline; gap: .5rem; margin: 1.25rem 0 .5rem; padding-bottom: .3rem; border-bottom: 2px solid var(--color-border); }
