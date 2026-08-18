@@ -27,8 +27,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const COMPOSANT = join('lib', 'components', 'CanauxNotification.svelte');
-const ICONE = join('lib', 'components', 'Icon.svelte');
+const COMPOSANT = 'lib/components/CanauxNotification.svelte';
+const ICONE = 'lib/components/Icon.svelte';
 
 /** Variables de canal, dans les deux conventions de nommage du dépôt. */
 const CANAUX = [
@@ -45,6 +45,27 @@ const CASE_DE_CANAL = new RegExp(
 	`bind:checked=\\{[^}]*\\b(${CANAUX.join('|')})\\b`,
 	'g',
 );
+/**
+ * Les écrans qui écrivent LÉGITIMEMENT une case de canal à la main, avec leur
+ * raison — comme `lint:soumission` et `lint:styles` le font déjà.
+ *
+ * ⚠️ Ce mécanisme n'existait pas : le contrôle refusait toute case hors du
+ * composant, sans recours. Un garde-fou sans exception déclarable pousse à le
+ * contourner — ici, il aurait suffi de renommer la variable pour lui échapper, ce
+ * qui est bien pire qu'une entrée écrite noir sur blanc.
+ *
+ * Une exception se JUSTIFIE, sinon elle ne sert qu'à se taire.
+ */
+const EXCEPTIONS = {
+	'lib/components/FormulaireAnnonceHall.svelte':
+		"affiche de hall : UN seul canal, et c'est un envoi INTERNE — le conseil " +
+		"syndical reçoit le PDF pour l'imprimer. `CanauxNotification` sert la " +
+		'diffusion EXTERNE (WhatsApp, syndic, CS) et ne sait pas masquer un canal ; ' +
+		"l'utiliser ici ouvrirait deux cases que le serveur n'accepte pas — ce que le " +
+		'cadre #430 interdit explicitement (vérifier que le serveur CONSOMME avant ' +
+		"d'ouvrir un champ).",
+};
+
 /** Deux fragments distinctifs, un par tracé WhatsApp trouvé dans l'historique. */
 const TRACES_WHATSAPP = ['M17.472 14.382', 'M12 2C6.477 2 2 6.237'];
 
@@ -64,12 +85,20 @@ let usagesDuComposant = 0;
 let composantPresent = false;
 
 for (const chemin of tous) {
-	const rel = relative(RACINE, chemin);
+	//  Normalisé en `/` : sur Windows, `relative()` rend des `\`, et une clé
+	//  d'exception écrite avec des `/` ne correspondrait jamais — l'exception
+	//  serait ignorée en silence, ce qui est le pire des deux mondes.
+	const rel = relative(RACINE, chemin).split(sep).join('/');
 	const source = readFileSync(chemin, 'utf8');
 
 	if (rel === COMPOSANT) {
 		composantPresent = true;
 		continue; // c'est LA définition : elle a le droit de tout faire
+	}
+	if (EXCEPTIONS[rel]) {
+		//  Déclarée et justifiée : on ne la relit pas, mais on la COMPTE — voir le
+		//  bilan, qui les nomme toutes.
+		continue;
 	}
 	if (source.includes('CanauxNotification')) usagesDuComposant++;
 

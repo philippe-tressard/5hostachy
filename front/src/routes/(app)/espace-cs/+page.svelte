@@ -624,6 +624,7 @@
 	let ahPerimetre: string[] = perimetreDefautListe();
 	let ahFormat: AhFormat = 'auto';
 	let ahPhotos: string[] = [];
+	let ahEnvoyerCs = false;
 	let ahSaving = false;
 	const AH_MAX_PHOTOS = 2;
 
@@ -650,20 +651,12 @@
 
 	// Miroir front des seuils serveur (app/utils/annonce_hall.py) — indicatif seulement,
 	// le format retenu est toujours celui calculé par l'API.
-	const AH_SEUILS: [string, number][] = [['A8', 70], ['A7', 140], ['A6', 300], ['A5', 600]];
-	const AH_FORMAT_MIN_PHOTOS = 'A5';
-	const AH_ORDRE = ['A4', 'A5', 'A6', 'A7', 'A8'];
-
-	$: ahLongueur = stripHtml(ahMessage).length + ahTitre.trim().length;
-	$: ahFormatPrevu = (() => {
-		if (ahFormat !== 'auto') return ahFormat.toUpperCase();
-		const trouve = AH_SEUILS.find(([, seuil]) => ahLongueur <= seuil);
-		const fmt = trouve ? trouve[0] : 'A4';
-		return ahPhotos.length && AH_ORDRE.indexOf(fmt) > AH_ORDRE.indexOf(AH_FORMAT_MIN_PHOTOS)
-			? AH_FORMAT_MIN_PHOTOS
-			: fmt;
-	})();
-	$: ahFormulaireValide = ahTitre.trim().length > 0 && ahLongueur > 0;
+	//  ⚠️ `ahLongueur` et `ahFormatPrevu` sont partis dans `FormulaireAnnonceHall` :
+	//  ce sont des calculs de PRÉSENTATION — combien de caractères, quel format en
+	//  résulte — et ils n'ont d'intérêt que pour l'aide affichée sous les pastilles.
+	//  La page garde ce qu'elle seule sait : la validité, qui commande son bouton.
+	$: ahFormulaireValide = ahTitre.trim().length > 0
+		&& (stripHtml(ahMessage).length + ahTitre.trim().length) > 0;
 
 	/** Les 10 actualités publiées les plus récentes, pour le pré-remplissage. */
 	async function loadAhPublications() {
@@ -720,6 +713,7 @@
 			titre: ahTitre.trim(),
 			message: ahMessage,
 			perimetre_cible: ahPerimetre,
+			envoyer_cs: ahEnvoyerCs,
 			format_demande: ahFormat,
 			images: ahPhotos,
 		};
@@ -2287,8 +2281,8 @@
 						bind:titre={ahTitre} bind:message={ahMessage}
 						bind:perimetre={ahPerimetre} bind:format={ahFormat} bind:photos={ahPhotos}
 						pubs={ahPubs} sourceId={ahSourceId} formats={AH_FORMATS}
-						formatPrevu={ahFormatPrevu} longueur={ahLongueur}
-						maxPhotos={AH_MAX_PHOTOS} formatMinPhotos={AH_FORMAT_MIN_PHOTOS}
+						maxPhotos={AH_MAX_PHOTOS}
+						bind:envoyerCs={ahEnvoyerCs}
 						valide={ahFormulaireValide} saving={ahSaving} apercuLoading={ahApercuLoading}
 						onPrefill={ahPrefillDepuisPublication}
 						onApercu={ahPrevisualiser}
