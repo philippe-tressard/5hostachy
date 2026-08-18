@@ -964,7 +964,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 {/if}
 
 <style>
-	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+	/*  `.filters` vient d'`app.css` depuis #446 — la marge basse y est. */
 	/*  ⚠️ `.form-grid` et `.form-grid .field` vivaient ici et ne s'appliquaient
 	    plus à rien depuis que le formulaire est parti dans
 	    `FormulaireEvenement.svelte` (15/08/2026) — `svelte-check` les signalait
