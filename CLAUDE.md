@@ -76,9 +76,24 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 > · `standards/02-factorisation.md` §2 (pourquoi dates et montants sont les deux
 > récidivistes de la duplication).
 
-1. **XSS** : jamais `{@html contenu}`, toujours `{@html safeHtml(contenu)}`.
+1. **XSS** : jamais `{@html contenu}`, toujours `{@html <assainisseur>(contenu)}`.
+   Ils sont **trois**, tous exportés par `$lib/sanitize.ts` et tous adossés à
+   DOMPurify : `safeHtml` (HTML riche), `safeRichContent` (riche ou texte, **sans**
+   enveloppe — appelé à l'intérieur d'un `<p>`), `safeDescription` (idem, **avec**
+   enveloppe `<p>`). Cette règle ne nommait que le premier alors que les trois
+   étaient en service : c'est ce qui a fait croire à 19 écarts qui n'en étaient pas
+   (#429).
+
+   🔒 **Garde-fou : `npm run lint:html`** (`front/scripts/check-html.mjs`), en CI
+   depuis le 18/08/2026. Il lit la liste des assainisseurs **dans `sanitize.ts`** —
+   une liste recopiée diverge au premier ajout — et exige que le nom vienne de
+   l'**import**, pas de la portée du fichier : une fonction locale homonyme qui ne
+   ferait rien passerait sinon. C'est ainsi qu'a été trouvée `renderContent`
+   (`tickets/[id]`), copie littérale de `safeDescription`, correcte par chance.
+
    **Deux** exceptions, et deux seulement — relevées par l'audit du 18/08/2026,
-   qui en a trouvé une non déclarée :
+   qui en a trouvé une non déclarée ; elles sont **déclarées dans le contrôle**
+   (`EXCEPTIONS`), qui échoue si l'une d'elles cesse de servir :
    - `Icon.svelte` — SVG codé en dur côté serveur ;
    - `QRCode.svelte` — SVG produit **localement** par `qrcode-generator` à partir
      d'une donnée encodée en modules, jamais interpolée dans le balisage.
@@ -162,7 +177,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
 - [ ] Méta toujours visible en mode collapsé
 - [ ] `.clamp-5` sur les aperçus
-- [ ] `safeHtml()` sur tout `{@html}`
+- [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
+      local, même correct (`npm run lint:html` le refuse)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
 - [ ] Périmètre : pas affiché si `'résidence'`
 - [ ] Archiver (pas supprimer) sur la vue principale

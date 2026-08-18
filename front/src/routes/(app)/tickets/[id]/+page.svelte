@@ -10,7 +10,7 @@
 	import HistoriqueTicket from '$lib/components/HistoriqueTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import { siteNomStore } from '$lib/stores/pageConfig';
-	import { safeHtml } from '$lib/sanitize';
+	import { safeDescription } from '$lib/sanitize';
 	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
 	import {
 		STATUTS_TICKET,
@@ -55,14 +55,10 @@
 	};
 
 	//  Les messages du fil sont d'anciens textes bruts pour certains : un contenu
-	//  qui ne commence pas par une balise est enveloppé avant assainissement.
-	//  La DESCRIPTION du ticket, elle, passe par `FicheLecture` — un objet se rend
-	//  toujours de la même façon (R3).
-	function renderContent(c: string): string {
-		const t = c.trimStart();
-		const raw = t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`;
-		return safeHtml(raw);
-	}
+	//  qui ne commence pas par une balise est enveloppé avant assainissement — c'est
+	//  exactement ce que fait `safeDescription`, qui portait ici une copie littérale
+	//  sous le nom `renderContent` (#429). La DESCRIPTION du ticket, elle, passe par
+	//  `FicheLecture` — un objet se rend toujours de la même façon (R3).
 
 	$: statutBadge = STATUT_TICKET_BADGE[ticket?.statut ?? ''] ?? 'badge-gray';
 	$: statutLabel = STATUT_LABELS[ticket?.statut ?? ''] ?? ticket?.statut ?? '';
@@ -268,7 +264,7 @@
 						{#if msg.interne}<span class="badge badge-yellow msg-badge">interne</span>{/if}
 						<span class="msg-time">{fmtDatetime(msg.cree_le)}</span>
 					</div>
-					<div class="msg-body">{@html renderContent(msg.contenu)}</div>
+					<div class="msg-body">{@html safeDescription(msg.contenu)}</div>
 					{#if msg.fichiers_urls?.length}
 						<div class="msg-pj">
 							<PiecesJointes urls={msg.fichiers_urls} size={80} />

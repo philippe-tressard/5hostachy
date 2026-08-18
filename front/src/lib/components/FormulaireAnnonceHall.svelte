@@ -174,9 +174,13 @@
 	<RichEditor bind:value={message} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
 </SectionFormulaire>
 
-<SectionFormulaire titre="Photos">
-	<!--  7. Photos. -->
-	<FichiersUpload id="ah-photos" bind:urls={photos} max={maxPhotos} mode="photos"
+<SectionFormulaire titre="Photos" pour="ah-photos">
+	<!--  7. Photos. Le champ n'écrit PAS son intitulé : la section le porte déjà,
+	     et `FichiersUpload` en pose un par défaut (« Photos ») — on lisait donc le
+	     mot deux fois, en deux typographies. C'est la règle que `SectionFormulaire`
+	     écrit noir sur blanc depuis le 16/08 (une section à UN champ ne répète pas
+	     son nom) ; seul cet écran l'avait manquée. Signalé par l'utilisateur. -->
+	<FichiersUpload id="ah-photos" bind:urls={photos} max={maxPhotos} mode="photos" titre=""
 		upload={onUpload} on:change={onPhotosChange} />
 	<p class="ah-aide">
 		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de

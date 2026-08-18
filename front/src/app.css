@@ -414,11 +414,30 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
    n'atteint pas le balisage d'un enfant (v2.67.11). Le recopier dans le
    composant aurait fait une CINQUIÈME définition de `.filters`.
 
-   ⚠️ Trois pages en gardent une variante locale (tickets, calendrier,
-   prestataires) : leur sélecteur scopé par Svelte a une spécificité
-   supérieure, elles continuent donc de gagner et rien ne bouge à l'écran.
-   Les faire converger est un lot à part — suivi en #446. */
-.filters { display: flex; gap: .4rem; flex-wrap: wrap; }
+   ✅ Les trois variantes locales (tickets, calendrier, prestataires) ont
+   convergé ici le 19/08/2026, avec les deux styles en ligne — #446. Ce qui
+   divergeait est désormais soit la norme, soit une variante NOMMÉE. */
+/*  La MARGE BASSE fait partie de la barre, et c'est le relevé qui l'a tranché :
+    quatre usages sur six la posaient — deux par une règle locale (tickets,
+    calendrier), deux par un style EN LIGNE (`OngletAnnonces`, `sondages`), et
+    prestataires par une valeur voisine. Aucun n'en voulait zéro. Une barre de
+    filtres est toujours suivie de la liste qu'elle filtre : laisser l'appelant
+    poser l'écart, c'est le lui faire réinventer six fois (#446).
+
+    `align-items: center` vient de tickets, seule page à l'avoir. Il n'y change
+    rien tant que les contrôles ont la même hauteur — et il est juste dès qu'un
+    seul est plus haut, ce qui arrive au premier bouton icône ajouté. */
+.filters { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
+
+/*  Variante NOMMÉE — une seule ligne qui défile, au lieu de passer à la ligne.
+    Prestataires la porte sur ses deux barres : elles ont assez de filtres pour
+    occuper trois lignes sur un téléphone, et pousser la liste hors de l'écran.
+
+    ⚠️ Ce n'est PAS le comportement par défaut, et c'est délibéré : un défilement
+    horizontal masque des filtres sans le dire, là où `flex-wrap: wrap` les montre
+    tous. La variante s'écrit donc là où on l'a voulue, elle ne s'hérite pas. */
+.filters--defilante { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
+.filters--defilante > * { flex-shrink: 0; }
 .filter-select {
   padding: .35rem .5rem; border: 1px solid var(--color-border);
   border-radius: var(--radius); font-size: .85rem; background: var(--color-bg);

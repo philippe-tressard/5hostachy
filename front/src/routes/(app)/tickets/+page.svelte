@@ -400,7 +400,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	.etat-chargement { color: var(--color-text-muted); }
 
 	/* Filtres (style identique à calendrier) */
-	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
+	/*  `.filters` vient d'`app.css` — sa marge basse et son `align-items` y sont
+	    remontés (#446). Ne restent ici que le groupe et le séparateur, qui n'ont
+	    pas d'équivalent ailleurs. */
 	.filter-group { display: flex; gap: .4rem; flex-wrap: wrap; }
 	.filter-sep { width: 1px; height: 1.2rem; background: var(--color-border); margin: 0 .3rem; }
 

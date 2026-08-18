@@ -166,7 +166,7 @@
 	/>
 {/if}
 
-<div class="filters" style="margin-bottom:1.25rem">
+<div class="filters">
 	<select bind:value={filtreType} class="filter-select" aria-label="Filtrer par type">
 		<option value="">Tous types</option>
 		{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}

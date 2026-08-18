@@ -48,10 +48,18 @@ def list_sondages(
         .group_by(VoteSondage.sondage_id)
     ).all()
     count_map = {row[0]: row[1] for row in counts}
+    #  UN seul instant pour toute la liste : douze sondages qui appelleraient
+    #  `utcnow()` chacun ne dateraient plus la même clôture. Même raison que
+    #  `ContexteFlux.now` — c'est d'ailleurs pourquoi `sondage_clos` prend
+    #  `maintenant` en paramètre au lieu de le lire lui-même.
+    maintenant = datetime.utcnow()
     result = []
     for s in accessible:
         d = SondageRead.model_validate(s)
         d.nb_votants = count_map.get(s.id, 0)
+        #  La liste ne laisse plus l'écran conclure : c'est la MÊME fonction que
+        #  la fiche, le vote, la modification et le fil (#468).
+        d.cloture = sondage_clos(s, maintenant)
         result.append(d)
     return result
 

@@ -43,14 +43,21 @@ let sondages: any[] = [];
 let sondagesLoading = true;
 let showFormSondage = false;
 
-function estCloture(s: any) { return s.cloture_forcee || (s.cloture_le && new Date(s.cloture_le) < new Date()); }
+//  « Ce sondage est-il clos ? » n'est PLUS calculé ici : le serveur le dit dans
+//  `s.cloture`, par la même `sondage_clos()` que la fiche, le vote et le fil
+//  (#468). La règle locale comparait `cloture_le` à l'heure LOCALE du
+//  navigateur quand le serveur date en UTC — un sondage clôturant à minuit
+//  était clos ou non selon le fuseau du lecteur. Un écran ne tranche pas ce
+//  genre de question (`ux-patterns` §16).
 
 async function arreterSondage(s: any, e: Event) {
 	e.preventDefault();
 	if (!confirm(`Stopper le sondage "${s.question}" maintenant ?`)) return;
 	try {
 		await sondagesApi.cloturer(s.id);
-		sondages = sondages.map(x => x.id === s.id ? { ...x, cloture_forcee: true } : x);
+		//  `cloture` AUSSI : c'est lui que l'affichage lit désormais. Ne poser que
+		//  `cloture_forcee` laisserait la carte inchangée jusqu'au rechargement.
+		sondages = sondages.map(x => x.id === s.id ? { ...x, cloture_forcee: true, cloture: true } : x);
 		toast('success', 'Sondage stoppé');
 	} catch (err) { toast('error', err instanceof ApiError ? err.message : 'Erreur'); }
 }
@@ -312,7 +319,7 @@ aria-expanded={showModeration}>
 <small style="color:var(--color-text-muted)">
 {fmtDateShort(s.cree_le)}
 {#if s.cloture_le}
-· {estCloture(s) ? '🔒 Clôturé' : `Clôture le ${fmtDateShort(s.cloture_le)}`}
+· {s.cloture ? '🔒 Clôturé' : `Clôture le ${fmtDateShort(s.cloture_le)}`}
 {/if}
 · <span class="sondage-votants">{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span>
 </small>
@@ -333,12 +340,12 @@ aria-expanded={showModeration}>
 {/if}
 </div>
 <div class="sondage-actions">
-  {#if estCloture(s) || s.cloture_forcee}
+  {#if s.cloture}
 <span class="badge badge-gray">Clôturé</span>
 {:else}
 <span class="badge badge-green">Ouvert</span>
 {/if}
-{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !(estCloture(s) || s.cloture_forcee)}
+{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
 <button class="btn-icon-warn" aria-label="Stopper ce sondage" title="Stopper" on:click={e => arreterSondage(s, e)}>⏹️</button>
 {/if}
 {#if $currentUser?.id === s.auteur_id || $isAdmin}
@@ -356,7 +363,7 @@ aria-expanded={showModeration}>
 <FormulaireIdee on:cree={ideeCreee} on:annule={() => (showFormIdee = false)} />
 {/if}
 
-<div class="filters" style="margin-bottom:1.25rem">
+<div class="filters">
 {#each statuts as s}
 <button class="btn btn-sm" class:btn-primary={filtreStatut === s.val} on:click={() => filtreStatut = s.val}>{s.label}</button>
 {/each}

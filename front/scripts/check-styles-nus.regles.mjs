@@ -71,7 +71,12 @@ export const SIGNATURES = [
  * `padding` sur une `.card` sont des variations légitimes, et les refuser noierait
  * le vrai signal (53 `.badge` et 14 `.card` dans l'arborescence).
  */
-export const CLASSES_STRUCTURE = ['field', 'form-actions', 'largeur-saisie'];
+/*  `filters` a rejoint la liste le 19/08/2026 (#446). Elle en relevait déjà :
+    quatre usages sur six posaient la MÊME marge basse — deux par une règle
+    locale, deux par un style en ligne — et une cinquième définition allait
+    naître au découpage suivant. La norme et sa variante `--defilante` vivent
+    maintenant dans `app.css` ; ce qui reste à empêcher, c'est la sixième. */
+export const CLASSES_STRUCTURE = ['field', 'form-actions', 'largeur-saisie', 'filters'];
 
 /**
  * Tolérances, chacune avec sa raison.

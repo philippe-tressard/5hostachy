@@ -1645,7 +1645,7 @@
 {:else if onglet === 'prestataires'}
 
 	<!-- Filtres par type -->
-	<div class="filters">
+	<div class="filters filters--defilante">
 		<button class="btn btn-sm" class:btn-primary={filtreType === ''} on:click={() => filtreType = ''}>Tous</button>
 		{#each typesPrestataire as t}
 			<button class="btn btn-sm" class:btn-primary={filtreType === t.val} on:click={() => filtreType = t.val} title={t.desc}>{t.label}</button>
@@ -1653,7 +1653,7 @@
 	</div>
 
 	<!-- Filtres par équipement -->
-	<div class="filters">
+	<div class="filters filters--defilante">
 		<button class="btn btn-sm" class:btn-primary={filtreEquipement === ''} on:click={() => filtreEquipement = ''}>Tous équipements</button>
 		{#each equipements as e}
 			<button class="btn btn-sm" class:btn-primary={filtreEquipement === e.val} on:click={() => filtreEquipement = e.val}>{e.label}</button>
@@ -1957,8 +1957,8 @@
 	/* ── Compteur config row ── */
 	.compteur-config-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .82rem; }
 
-	.filters { display: flex; gap: .4rem; flex-wrap: nowrap; overflow-x: auto; padding-bottom: .25rem; margin-bottom: .75rem; scrollbar-width: thin; }
-	.filters button { flex-shrink: 0; }
+	/*  Défilement horizontal : variante NOMMÉE `.filters--defilante` (app.css,
+	    #446), lisible dans le balisage. Marge basse .75rem → 1.25rem, la norme. */
 
 	/* Section type header */
 	.type-section-header { display: flex; align-items: baseline; gap: .5rem; margin: 1.25rem 0 .5rem; padding-bottom: .3rem; border-bottom: 2px solid var(--color-border); }

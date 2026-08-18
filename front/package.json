@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.89.2",
+  "version": "2.90.0",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -19,6 +19,9 @@
     "lint:formulaires": "node scripts/check-formulaire-creation.mjs",
     "lint:styles": "node scripts/check-styles-nus.mjs",
     "lint:balises": "node scripts/check-balises.mjs",
+    "lint:html": "node scripts/check-html.mjs",
+    "lint:titres": "node scripts/check-titre-double.mjs",
+    "lint:workflow": "node scripts/check-workflow-envoye.mjs",
     "lint:session": "node scripts/check-renouvellement-session.mjs",
     "lint:soumission": "node scripts/check-libelles-soumission.mjs",
     "lint:audit": "node scripts/check-audit.mjs",

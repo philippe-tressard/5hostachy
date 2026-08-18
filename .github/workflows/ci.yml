@@ -415,6 +415,51 @@ jobs:
         working-directory: front
         run: npm run lint:balises
 
+      # 🔴 LA règle la plus critique du front — `{@html}` sans assainissement —
+      # n'était vérifiée par AUCUN contrôle : ni un `lint:*`, ni un test d'`api/`.
+      # Elle reposait entièrement sur la vigilance de qui écrit la ligne, et
+      # `svelte/no-at-html-tags` avait été désactivée en v2.70.0 faute de savoir
+      # distinguer les 50 usages voulus d'un usage dangereux (#429).
+      #
+      # Le contrôle lit la liste des assainisseurs DANS `src/lib/sanitize.ts` —
+      # une liste recopiée aurait divergé au premier ajout, ce qui est exactement
+      # ce qui s'était produit : `CLAUDE.md` ne nommait que `safeHtml` quand trois
+      # fonctions étaient en service. Il exige aussi que le nom vienne de
+      # l'IMPORT : une fonction locale homonyme qui ne ferait rien passerait
+      # sinon. C'est ainsi qu'a été trouvée `renderContent` (tickets/[id]), copie
+      # littérale de `safeDescription` — correcte par chance.
+      - name: Aucun {@html} sans assainissement
+        working-directory: front
+        run: npm run lint:html
+
+      # Le nom d'une section de formulaire écrit DEUX FOIS à l'écran : la section
+      # le pose en petites capitales, et le champ qu'elle contient le repose en
+      # dessous — `FichiersUpload`, `PerimetrePicker` et `DestinatairePicker`
+      # portent tous un intitulé par défaut. `SectionFormulaire` en a tiré une
+      # règle écrite dans son propre en-tête le 16/08/2026, après le doublon
+      # « PÉRIMÈTRE / Périmètre * ». Le 18/08, le doublon « PHOTOS / Photos » est
+      # apparu sur l'annonce de hall — deux jours plus tard, sur une règle écrite,
+      # connue et déjà appliquée deux fois ailleurs.
+      #
+      # Les deux fois, c'est l'UTILISATEUR qui l'a vu, à l'écran, en production.
+      # Une règle sans garde-fou tient tant que celui qui écrit s'en souvient.
+      - name: Aucun intitulé de section écrit deux fois
+        working-directory: front
+        run: npm run lint:titres
+
+      # Une section Workflow DÉCORATIVE : les pastilles s'affichaient en création
+      # d'un ticket, se cliquaient, et `statut` ne partait pas dans le POST — le
+      # ticket repartait toujours en « Ouvert » (#435). Le serveur l'acceptait
+      # pourtant depuis le 16/08 : c'est le front qui ne demandait rien. La même
+      # section fonctionnait sur les publications, si bien que deux entités
+      # divergeaient sur un champ que le cadre #430 déclare identique.
+      #
+      # Un champ qu'on voit et qui ne fait rien est la faute symétrique du 200 qui
+      # n'écrit rien : il fabrique la confiance qu'il devrait retirer.
+      - name: Aucune section Workflow décorative
+        working-directory: front
+        run: npm run lint:workflow
+
       # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
       # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
       # attrapait aussi `/auth/me` : pendant les sept jours où la session restait
