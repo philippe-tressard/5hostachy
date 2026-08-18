@@ -21,35 +21,81 @@ from app.schemas import TicketUpdate
 from app.utils.photos import photos_internes
 
 
+def _liste_json(brut: str | None) -> list:
+    """Une colonne qui stocke un tableau JSON, lue comme liste. `[]` si vide ou illisible.
+
+    ⚠️ Une colonne illisible rend `[]`, donc « différent de tout » : la correction
+    sera annoncée, ce qui est le bon côté pour se tromper. L'inverse — avaler
+    l'erreur et conclure « rien n'a changé » — écrirait la modification sans la
+    tracer.
+    """
+    if not brut:
+        return []
+    try:
+        valeur = json.loads(brut)
+    except (TypeError, ValueError):
+        return []
+    return valeur if isinstance(valeur, list) else []
+
+
 def _appliquer_contenu(body: TicketUpdate, ticket: Ticket) -> list[str]:
-    """Champs de contenu, et la liste des changements qui alimentera l'historique."""
+    """Champs de contenu, et la liste des changements qui alimentera l'historique.
+
+    🔴 **CHAQUE champ est COMPARÉ à l'existant avant d'être annoncé** (18/08/2026,
+    signalé à l'écran). Quatre d'entre eux ne l'étaient pas — description,
+    périmètre, pièces jointes, photos : leur seule PRÉSENCE dans le `PATCH` suffisait
+    à écrire « modifié ». Or le formulaire d'édition envoie les neuf sections à
+    chaque enregistrement, par conception (c'est ce qui permet d'EFFACER un champ).
+    Corriger le seul périmètre inscrivait donc :
+
+        Correction : Description modifiée ; Périmètre modifié ;
+                     Pièces jointes modifiées ; Photos modifiées ; Saisi pour modifié
+
+    Cinq mentions dont **une** était vraie. Un Historique qui annonce des
+    modifications qui n'ont pas eu lieu est pire qu'un Historique muet : il fait
+    douter de ce qu'on lit, et il rend illisible la seule ligne qui comptait.
+
+    ⚠️ Le titre et la catégorie, eux, étaient corrects depuis toujours — ils
+    comparaient. C'est ce qui rendait le défaut discret : l'entrée n'était jamais
+    entièrement fausse, seulement gonflée.
+    """
     changes: list[str] = []
     if body.titre is not None and body.titre != ticket.titre:
         changes.append(f"Titre : {ticket.titre} → {body.titre}")
         ticket.titre = body.titre
-    if body.description is not None:
+    if body.description is not None and body.description != ticket.description:
         changes.append("Description modifiée")
         ticket.description = body.description
     if body.categorie is not None and body.categorie != ticket.categorie:
         changes.append(f"Catégorie : {ticket.categorie} → {body.categorie}")
         ticket.categorie = body.categorie
     if body.perimetre_cible is not None:
+        #  Comparaison sur des ENSEMBLES : le périmètre est une cible, pas une
+        #  séquence. Deux mêmes codes dans un autre ordre désignent le même
+        #  périmètre, et l'ordre dépend de celui des clics — l'annoncer comme une
+        #  modification serait faux.
+        if set(body.perimetre_cible) != set(_liste_json(ticket.perimetre_cible)):
+            changes.append("Périmètre modifié")
         ticket.perimetre_cible = json.dumps(body.perimetre_cible)
-        changes.append("Périmètre modifié")
     if body.fichiers_urls is not None:
-        ticket.fichiers_urls = json.dumps(
-            photos_internes(body.fichiers_urls), ensure_ascii=False
-        )
-        changes.append("Pièces jointes modifiées")
+        #  On compare ce qui sera RÉELLEMENT stocké : `photos_internes()` écarte
+        #  les URLs externes. Comparer avant le filtre annoncerait une
+        #  modification là où le serveur n'a rien retenu de neuf.
+        #  ⚠️ Ici l'ordre COMPTE — les pièces jointes s'affichent dans l'ordre
+        #  donné, et le réordonner est une modification visible.
+        retenus = photos_internes(body.fichiers_urls)
+        if retenus != _liste_json(ticket.fichiers_urls):
+            changes.append("Pièces jointes modifiées")
+        ticket.fichiers_urls = json.dumps(retenus, ensure_ascii=False)
     #  Les PHOTOS se corrigent comme les documents depuis le 18/08/2026 : la
     #  dette `api` que la déclaration citait (#431) est soldée. Deux sections
     #  distinctes à l'écran, deux colonnes distinctes ici — elles ne fusionnent
     #  nulle part.
     if body.photos_urls is not None:
-        ticket.photos_urls = json.dumps(
-            photos_internes(body.photos_urls), ensure_ascii=False
-        )
-        changes.append("Photos modifiées")
+        retenues = photos_internes(body.photos_urls)
+        if retenues != _liste_json(ticket.photos_urls):
+            changes.append("Photos modifiées")
+        ticket.photos_urls = json.dumps(retenues, ensure_ascii=False)
     return changes
 
 
@@ -83,10 +129,16 @@ def _appliquer_relations(body: TicketUpdate, ticket: Ticket) -> list[str]:
     #  doit les vider tous les trois, sinon un nom d'ancien destinataire
     #  survivrait à un résident inscrit désigné depuis.
     if any(_envoye(body, c) for c in ('saisi_pour_user_id', 'saisi_pour_nom', 'saisi_pour_email')):
-        ticket.saisi_pour_user_id = body.saisi_pour_user_id
-        ticket.saisi_pour_nom = body.saisi_pour_nom
-        ticket.saisi_pour_email = body.saisi_pour_email
-        changes.append("Saisi pour modifié")
+        #  🔴 La PRÉSENCE décide d'ÉCRIRE, la COMPARAISON décide d'ANNONCER
+        #  (18/08/2026). Les deux étaient confondues : le formulaire envoyant
+        #  toujours les trois champs — c'est ce qui permet de revenir à « En mon
+        #  nom » —, « Saisi pour modifié » apparaissait à chaque enregistrement,
+        #  même quand personne n'y avait touché.
+        avant = (ticket.saisi_pour_user_id, ticket.saisi_pour_nom, ticket.saisi_pour_email)
+        apres = (body.saisi_pour_user_id, body.saisi_pour_nom, body.saisi_pour_email)
+        ticket.saisi_pour_user_id, ticket.saisi_pour_nom, ticket.saisi_pour_email = apres
+        if avant != apres:
+            changes.append("Saisi pour modifié")
     if body.non_relancable is not None:
         ticket.non_relancable = body.non_relancable
     if body.non_relancable_motif is not None:

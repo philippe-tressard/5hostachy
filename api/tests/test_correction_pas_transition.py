@@ -188,6 +188,124 @@ def test_patch_ticket_ecrit_une_correction_et_pas_une_transition(cs):
         session.commit()
 
 
+def test_patch_ticket_corriger_un_champ_n_ecrit_rien_dans_le_fil(cs):
+    """Corriger la CATÉGORIE (ou tout autre champ) ne doit rien inscrire.
+
+    🔴 Signalé à l'écran le 18/08/2026 : *« j'ai fait une édition d'un ticket pour
+    corriger sa catégorie et ça m'a créé un historique ! c'est à supprimer »*.
+
+    L'Historique raconte la vie du dossier — ce que le conseil syndical a fait, où
+    en est la demande. Une faute de frappe rattrapée n'en fait pas partie : elle
+    ajoute une ligne qui n'apprend rien et pousse vers le bas celles qui apprennent
+    quelque chose.
+
+    ⚠️ Ce test vérifie AUSSI que la correction a bien été appliquée. Sans cela, il
+    passerait au vert sur un endpoint qui n'écrit plus rien du tout — un « rien dans
+    le fil » obtenu en ne faisant rien serait le pire des faux verts.
+    """
+    with Session(engine) as session:
+        ticket = Ticket(
+            numero=f"T-{uuid.uuid4().hex[:6]}",
+            titre="Ascenseur en panne",
+            description="<p>Bloqué au 3ᵉ.</p>",
+            categorie="panne",
+            statut="ouvert",
+            auteur_id=cs.id,
+            perimetre_cible=json.dumps(["résidence"], ensure_ascii=False),
+        )
+        session.add(ticket)
+        session.commit()
+        session.refresh(ticket)
+
+        #  Le formulaire d'édition renvoie TOUTES les sections à chaque
+        #  enregistrement — c'est ce qui permet d'effacer un champ. On reproduit ce
+        #  comportement : seule la catégorie diffère de l'existant.
+        update_ticket(
+            ticket.id,
+            TicketUpdate(
+                titre="Ascenseur en panne",
+                description="<p>Bloqué au 3ᵉ.</p>",
+                categorie="urgence",
+                perimetre_cible=["résidence"],
+                photos_urls=[],
+                fichiers_urls=[],
+            ),
+            BackgroundTasks(), session, cs,
+        )
+
+        evols = session.exec(
+            select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
+        ).all()
+        assert evols == [], (
+            "Corriger un champ ne doit RIEN écrire dans l'Historique : "
+            f"{[(e.type, e.contenu) for e in evols]}"
+        )
+        #  Le fait, pas le symptôme : la correction a-t-elle été appliquée ?
+        assert session.get(Ticket, ticket.id).categorie == "urgence"
+
+        session.delete(session.get(Ticket, ticket.id))
+        session.commit()
+
+
+def test_patch_ticket_sans_rien_changer_n_ecrit_rien(cs):
+    """Réenregistrer à l'identique n'écrit rien — même quand l'état est renvoyé.
+
+    C'est l'autre moitié du défaut du 18/08/2026 : quatre champs n'étaient PAS
+    comparés à l'existant (description, périmètre, pièces jointes, photos) et un
+    cinquième ne l'était pas non plus (« Saisi pour »). Leur seule présence dans le
+    `PATCH` suffisait à écrire « modifié ». Corriger le seul périmètre inscrivait
+    donc cinq mentions dont une seule était vraie.
+    """
+    with Session(engine) as session:
+        ticket = Ticket(
+            numero=f"T-{uuid.uuid4().hex[:6]}",
+            titre="Porte du hall",
+            description="<p>Grince.</p>",
+            categorie="panne",
+            #  « ouvert » et non « en_cours » : hors admin, le contenu d'un ticket
+            #  ne se corrige que tant qu'il est ouvert — une fois le suivi engagé,
+            #  réécrire le texte ferait mentir ce que le CS a lu avant d'agir.
+            #  C'est une règle voulue, et mon premier jet du test l'ignorait.
+            statut="ouvert",
+            auteur_id=cs.id,
+            perimetre_cible=json.dumps(["résidence"], ensure_ascii=False),
+            photos_urls=json.dumps([], ensure_ascii=False),
+            fichiers_urls=json.dumps([], ensure_ascii=False),
+        )
+        session.add(ticket)
+        session.commit()
+        session.refresh(ticket)
+
+        update_ticket(
+            ticket.id,
+            TicketUpdate(
+                titre="Porte du hall",
+                description="<p>Grince.</p>",
+                categorie="panne",
+                statut="ouvert",
+                perimetre_cible=["résidence"],
+                photos_urls=[],
+                fichiers_urls=[],
+                saisi_pour_user_id=None,
+                saisi_pour_nom=None,
+                saisi_pour_email=None,
+            ),
+            BackgroundTasks(), session, cs,
+        )
+
+        evols = session.exec(
+            select(TicketEvolution).where(TicketEvolution.ticket_id == ticket.id)
+        ).all()
+        assert evols == [], (
+            "Un enregistrement sans aucun changement ne doit rien écrire : "
+            f"{[(e.type, e.contenu) for e in evols]}"
+        )
+
+        session.delete(session.get(Ticket, ticket.id))
+        session.commit()
+
+
+
 # ── Calendrier — le Kanban EST le workflow, donc il se trace ──────────────────
 
 def test_patch_evenement_trace_la_colonne_et_corrige_le_reste(cs):
