@@ -352,6 +352,8 @@
 			titre="&#x1F4CB; Historique"
 			vide="Aucune évolution enregistrée."
 			peutModifier={$isCS}
+			currentUserId={$currentUser?.id}
+			estAdmin={$isAdmin}
 			enEdition={editingEvolId}
 			on:modifier={(e) => (editingEvolId = e.detail)}
 		>

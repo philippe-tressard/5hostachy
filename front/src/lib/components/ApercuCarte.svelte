@@ -30,6 +30,17 @@
 	export let contenu: string;
 	/** URLs des photos ; la première sert de vignette. */
 	export let photos: string[] = [];
+	/**  Documents joints, quand l'écran les connaît déjà. `FluxVignette` rend
+	 *   alors une tuile 📎 plutôt que rien.
+	 *
+	 *   ⚠️ NE PAS les verser dans `photos` : la vignette prend `photos[0]` et le
+	 *   pose dans un `<img>`. Un événement dont la seule pièce est un devis PDF
+	 *   sortait donc en image cassée — c'est ce que faisait `CarteEvenement`.
+	 *
+	 *   Les ACTUALITÉS n'en passent pas : leurs documents sont des entités
+	 *   `Document` chargées au dépliage, et les compter ici coûterait une requête
+	 *   par carte pour afficher un trombone. */
+	export let fichiers: string[] = [];
 
 	//  Le dégradé de fin ne doit apparaître QUE si le texte est réellement coupé.
 	//  Appliqué sans condition, il efface la dernière ligne d'un aperçu court —
@@ -45,7 +56,7 @@
 
 <div class="carte-apercu">
 	<div class="carte-preview rich-content clamp-5" class:tronque bind:this={bloc}>{@html safeDescription(contenu)}</div>
-	<FluxVignette {photos} />
+	<FluxVignette {photos} {fichiers} />
 </div>
 
 <style>

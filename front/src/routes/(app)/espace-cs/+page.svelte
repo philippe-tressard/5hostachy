@@ -2,7 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { isCS, isAdmin } from '$lib/stores/auth';
+	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -1490,7 +1490,7 @@
 									<RubriqueHistorique
 										evolutions={evols}
 										statutLabels={TK_STATUT_LABELS}
-										peutModifier={true}
+										peutModifier={true} currentUserId={$currentUser?.id} estAdmin={$isAdmin}
 										enEdition={tkEditingEvolId}
 										on:modifier={(e) => (tkEditingEvolId = e.detail)}
 									>

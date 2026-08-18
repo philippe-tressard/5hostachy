@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
-	import { isCS, isAdmin, setUser } from '$lib/stores/auth';
+	import { currentUser, isCS, isAdmin, setUser } from '$lib/stores/auth';
 	import { publications as pubsApi, documents as docsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
@@ -311,6 +311,8 @@
 							evolutions={pub.evolutions}
 							statutLabels={STATUT_LABELS}
 							peutModifier={$isCS}
+							currentUserId={$currentUser?.id}
+							estAdmin={$isAdmin}
 							enEdition={editingEvolId}
 							on:modifier={(e) => { editingEvolId = e.detail; editingEvolPubId = pub.id; }}
 						>
