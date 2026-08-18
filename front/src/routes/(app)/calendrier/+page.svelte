@@ -755,6 +755,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	<FormulaireCreation titre={editId ? 'Modifier l’événement' : 'Nouvel événement'}>
 			<FormulaireEvenement bind:form bind:photosUrls bind:fichiersUrls
 				bind:formPerimetreCible {types} {prestataires} {submitting}
+				modeEdition={editId !== null}
 				{epingleInitial} kanbanCols={KANBAN_COLS} onSubmit={save}
 				on:annule={() => { showForm = false; resetForm(); }} />
 	</FormulaireCreation>
@@ -1003,19 +1004,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 <style>
 	.filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
-
-	/*  `.form-grid` ne fait plus QUE la grille : le style des champs vient de
-	    `.field` (app.css), une seule fois pour tout le site. */
-	.form-grid .field { margin-bottom: 0; }
-	/*  ⚠️ Ici vivait `.form-grid input, .form-grid select,` — un sélecteur qui se
-	    terminait par une virgule et FUSIONNAIT avec la règle suivante. Les champs
-	    ne recevaient donc qu'une marge, et aucun style : ni fond, ni bordure, ni
-	    rayon. Ils s'affichaient avec l'apparence native du navigateur — blancs à
-	    bordure noire — là où tout le reste du site est gris et arrondi.
-	    Défaut présent depuis la v1.0, masqué par la modale et révélé par le
-	    passage à la boîte dans la page (#372). Il n'est pas réparé ici : les
-	    champs passent à `.field`, dont `app.css` porte déjà le style. */
+	/*  ⚠️ `.form-grid` et `.form-grid .field` vivaient ici et ne s'appliquaient
+	    plus à rien depuis que le formulaire est parti dans
+	    `FormulaireEvenement.svelte` (15/08/2026) — `svelte-check` les signalait
+	    « Unused CSS selector », et personne ne lit un avertissement qui existait
+	    déjà la veille. La leçon qu'elles portaient (le sélecteur terminé par une
+	    virgule qui fusionnait avec la règle suivante, #372) est partie AVEC la
+	    règle, dans le composant qui la rend. Une explication qui reste où le code
+	    n'est plus n'explique plus rien. */
 	.month-group { margin-bottom: 1.5rem; }
 	.month-label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
 	/*  `flex-wrap` : le corps déplié portait `grid-column`, sans effet en flex. */
@@ -1104,7 +1100,11 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.archive-year-header:hover { background: var(--color-bg); }
 	.archive-year-label { flex: 1; }
 	.archive-year-count { font-size: .8rem; font-weight: 400; color: var(--color-text-muted); }
-	.kanban-col { border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
+	/*  ⚠️ `.kanban-col` était défini DEUX fois, à quinze lignes d'intervalle, avec
+	    les mêmes quatre propriétés — la seconde n'ajoutait rien et masquait le
+	    `min-width` et le `flex` de la première à la lecture. Aucun contrôle ne dit
+	    qu'une règle est écrite deux fois dans le même bloc `<style>` : seule la
+	    relecture le voit. */
 	.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
 	.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }
 	.kanban-empty { padding: 1rem; font-size: .85rem; color: var(--color-text-muted); text-align: center; }
@@ -1131,12 +1131,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		display: flex; align-items: center; gap: .5rem;
 	}
 	.recurring-toggle:hover { background: #e0f2fe; }
-	.maintenance-archive-section { margin-top: 1.5rem; padding: .5rem 0; }
-	.maintenance-archive-toggle {
-		background: none; border: none; cursor: pointer;
-		font-size: .875rem; font-weight: 600;
-		color: var(--color-text-muted); padding: .25rem 0;
-		width: 100%; text-align: left;
-	}
-	.maintenance-archive-toggle:hover { color: var(--color-text); }
+	/*  ⚠️ `.maintenance-archive-section` et `.maintenance-archive-toggle` vivaient
+	    ici sans être posées sur aucun élément — signalées elles aussi par
+	    `svelte-check`. Supprimées avec #432. */
 </style>

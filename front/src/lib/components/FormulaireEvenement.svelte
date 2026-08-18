@@ -18,6 +18,8 @@
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+	import { sectionPresente, type Etat } from '$lib/entites/types';
+	import { EVENEMENT } from '$lib/entites/evenement';
 	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
@@ -40,6 +42,20 @@
 	export let kanbanCols: { id: string; label: string }[] = [];
 	/** Appelé à la soumission. La page garde la décision d'enregistrer. */
 	export let onSubmit: () => void;
+	/**  Corrige-t-on un événement existant, ou en crée-t-on un ? La page le sait
+	 *   (`editId`), le formulaire non — il reçoit le même `form` dans les deux cas.
+	 *   C'est le seul discriminant du cadre ici : création et édition ne divergent
+	 *   sur AUCUNE section (recouvrement de 100 %, mesuré par #432). La prop existe
+	 *   pour que ce fait soit **déclaré et vérifié**, et non simplement vrai. */
+	export let modeEdition = false;
+
+	/**  🔴 La présence d'une section ne se décide plus ici : elle se lit dans la
+	 *   déclaration `EVENEMENT`, via `sectionPresente(EVENEMENT, etat, …)`. Les six
+	 *   sections de `ChampsCommuns` étaient posées **en dur** — ce que `lint:etats`
+	 *   refuse, mais sans jamais le voir : le contrôle ignore les fichiers qui
+	 *   n'importent aucune entité. L'écran n'était pas conforme, il était hors de
+	 *   portée du contrôle (#432). */
+	$: etat = (modeEdition ? 'edition' : 'creation') as Etat;
 </script>
 
 <form on:submit|preventDefault={onSubmit}>
@@ -52,6 +68,7 @@
 	</SectionFormulaire>
 
 	<!--  2. Champs spécifiques de l'événement. -->
+	{#if sectionPresente(EVENEMENT, etat, 'specifiques')}
 	<SectionFormulaire titre="Détails">
 		<div class="form-grid">
 			<div class="field">
@@ -104,6 +121,7 @@
 			{/if}
 		</div>
 	</SectionFormulaire>
+	{/if}
 
 	<!--  3. Workflow — où en est cet événement.
 	      🔴 LE KANBAN *EST* LE WORKFLOW (18/08/2026) : ses colonnes répondent
@@ -113,6 +131,7 @@
 	      rangée dans la DIFFUSION, qui dit qui le voit et non où il en est.
 	      Aucun second champ d'état n'a été créé : deux notions de suivi sur le
 	      même objet se contredisent au premier écart. -->
+	{#if sectionPresente(EVENEMENT, etat, 'workflow')}
 	<SectionFormulaire titre="Workflow" idTitre="ev-kanban-titre">
 		<div class="field champ-large">
 			<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
@@ -128,16 +147,19 @@
 				on:choisir={(e) => (form.statut_kanban = e.detail)} />
 		</div>
 	</SectionFormulaire>
+	{/if}
 
-	<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé. -->
+	<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
+	      Leur PRÉSENCE, elle, se lit dans la déclaration — plus aucune n'est
+	      posée en dur (R4). -->
 	<ChampsCommuns
 		idPrefixe="ev"
-		avecPerimetre bind:perimetre={formPerimetreCible}
-		avecDescription bind:description={form.description}
+		avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')} bind:perimetre={formPerimetreCible}
+		avecDescription={sectionPresente(EVENEMENT, etat, 'description')} bind:description={form.description}
 		descriptionPlaceholder="Description de l'événement…"
-		avecPhotos bind:photos={photosUrls}
-		avecDocuments bind:documents={fichiersUrls}
-		avecDiffusion
+		avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')} bind:photos={photosUrls}
+		avecDocuments={sectionPresente(EVENEMENT, etat, 'documents')} bind:documents={fichiersUrls}
+		avecDiffusion={sectionPresente(EVENEMENT, etat, 'diffusion')}
 		bind:whatsapp={form.partager_whatsapp}
 		bind:syndic={form.envoyer_syndic}
 		bind:cs={form.envoyer_cs}
