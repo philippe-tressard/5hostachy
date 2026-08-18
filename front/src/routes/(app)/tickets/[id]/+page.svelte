@@ -7,9 +7,8 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import FicheLecture from '$lib/components/FicheLecture.svelte';
-	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
+	import HistoriqueTicket from '$lib/components/HistoriqueTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
-	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
@@ -35,51 +34,11 @@
 	let newInterne = false;
 
 	// Évolutions
-	let showEvolForm = false;
-	let evolSaving = false;
-	let editingEvolId: number | null = null;
-	let editEvolSaving = false;
-
-	async function addEvolFromForm(e: CustomEvent) {
-		const data = e.detail;
-		evolSaving = true;
-		try {
-			await ticketsApi.addEvolution(ticketId, {
-				type: data.type,
-				contenu: data.contenu || undefined,
-				nouveau_statut: data.nouveau_statut,
-				fichiers_urls: data.fichiers_urls,
-				email_externe: data.email_externe,
-				partager_whatsapp: data.partager_whatsapp || undefined,
-				envoyer_syndic: data.envoyer_syndic || undefined,
-				envoyer_cs: data.envoyer_cs || undefined,
-			});
-			await loadEvolutions();
-			if (data.type === 'etat') {
-				ticket = await ticketsApi.get(ticketId);
-			}
-			showEvolForm = false;
-			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (err: any) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { evolSaving = false; }
-	}
-
-	async function saveEvolEdit(e: CustomEvent) {
-		if (editingEvolId === null) return;
-		editEvolSaving = true;
-		try {
-			await ticketsApi.updateEvolution(ticketId, editingEvolId, {
-				contenu: e.detail.contenu || undefined,
-				fichiers_urls: e.detail.fichiers_urls,
-			});
-			await loadEvolutions();
-			editingEvolId = null;
-			toast('success', 'Commentaire mis à jour');
-		} catch { toast('error', 'Erreur de mise à jour'); }
-		finally { editEvolSaving = false; }
-	}
-
+	//  ⚠️ Les quatre états du fil (formulaire ouvert, entrée en correction, deux
+	//  drapeaux d'enregistrement) et leurs trois handlers vivaient ICI. Ils sont
+	//  partis dans `HistoriqueTicket` avec le balisage qu'ils servaient : c'est
+	//  ce qui garantit qu'un geste ajouté au fil arrivera sur les DEUX écrans, la
+	//  liste et cette fiche, au lieu d'un seul (18/08/2026).
 	$: ticketId = Number($page.params.id);
 
 	//  ── Un seul geste pour changer d'état, sur cet écran comme ailleurs ──────
@@ -342,59 +301,12 @@
 		{/if}
 	</div>
 
-	<!--  L'HISTORIQUE — le fil. Le mot est celui du cadre #430 ; l'écran, lui,
-	      parle de gestes : « Commenter », « Modifier ». « Ajouter une évolution »
-	      ne veut rien dire pour un résident. -->
-	<div class="bloc-historique">
-		<RubriqueHistorique
-			{evolutions}
-			statutLabels={STATUT_LABELS}
-			titre="&#x1F4CB; Historique"
-			vide="Aucune évolution enregistrée."
-			peutModifier={$isCS}
-			currentUserId={$currentUser?.id}
-			estAdmin={$isAdmin}
-			enEdition={editingEvolId}
-			on:modifier={(e) => (editingEvolId = e.detail)}
-		>
-			<svelte:fragment slot="action">
-				{#if $isCS}
-					<button class="btn btn-outline btn-sm" on:click={() => { showEvolForm = !showEvolForm; }}>
-						{showEvolForm ? '✕ Annuler' : '\u{1F4AC} Commenter'}
-					</button>
-				{/if}
-			</svelte:fragment>
-
-			<svelte:fragment slot="edition" let:evol>
-				<EvolForm idPrefixe="tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
-					editMode={true}
-					initialContenu={evol.contenu || ''}
-					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-					showFiles={true}
-					saving={editEvolSaving}
-					on:submit={saveEvolEdit}
-					on:cancel={() => (editingEvolId = null)}
-				/>
-			</svelte:fragment>
-		</RubriqueHistorique>
-
-		{#if showEvolForm}
-			<div class="evol-form card">
-				{#key showEvolForm}
-					<EvolForm idPrefixe="tk-evol" titre="Commenter"
-						statutLabels={STATUT_LABELS}
-						currentStatut={ticket?.statut ?? ''}
-						showNotifs={$isCS}
-						showEmail={$isCS}
-						showFiles={true}
-						saving={evolSaving}
-						on:submit={addEvolFromForm}
-						on:cancel={() => (showEvolForm = false)}
-					/>
-				{/key}
-			</div>
-		{/if}
-	</div>
+	<!--  L'HISTORIQUE — le fil, avec ses gestes. Extrait le 18/08/2026 dans
+	      `HistoriqueTicket` : la liste et cette fiche le rendaient chacune de
+	      leur côté, et les deux câblages ont divergé DEUX FOIS, dans les deux
+	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
+	<HistoriqueTicket ticketId={ticketId} statutCourant={ticket?.statut ?? ''}
+		{evolutions} on:change={loadEvolutions} />
 
 	<!-- Suppression admin -->
 	{#if $isAdmin}

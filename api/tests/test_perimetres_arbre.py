@@ -349,7 +349,10 @@ def test_espace_profond_concerne_son_batiment(batiments):
     #  Les destinataires suivent la même remontée.
     assert batiments_du_perimetre([hall]) == {second}
     #  Et le libellé du parent n'écrase pas celui de l'espace.
-    assert P.perimetre_label_un(hall) == "Hall d'entrée"
+    #  🔴 Le libellé QUALIFIE l'espace par son bâtiment depuis le 18/08/2026 : le
+    #  gabarit pose le même « Hall d'entrée » sous chaque bâtiment, et un ticket
+    #  visant deux d'entre eux affichait « Hall d'entrée · Hall d'entrée ».
+    assert P.perimetre_label_un(hall) == f"Bât. {second} › Hall d'entrée"
 
 
 def test_enfant_dun_perimetre_global_est_global(batiments):
