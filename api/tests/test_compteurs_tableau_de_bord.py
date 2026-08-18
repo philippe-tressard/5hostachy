@@ -111,17 +111,21 @@ def _sondage(session: Session, auteur_id: int, **kw) -> Sondage:
     return s
 
 
-#: La règle du front, `estCloture()` — réécrite ICI volontairement.
+#: Ce que l'écran retient comme clos — c'est-à-dire **le champ que l'API lui
+#: envoie**, plus aucune règle.
 #:
-#: Elle ne peut pas être importée : les contextes de build sont `./api` et
-#: `./front`, rien de la racine n'entre dans les images. C'est donc la seule
-#: façon de vérifier que les deux côtés s'accordent — si l'API changeait sa
-#: définition sans que le front suive, ce test tomberait, et c'est le but.
-def _clos_pour_l_ecran(sondage_lu, maintenant: datetime) -> bool:
-    return bool(
-        sondage_lu.cloture_forcee
-        or (sondage_lu.cloture_le is not None and sondage_lu.cloture_le < maintenant)
-    )
+#: Cette fonction réécrivait `estCloture()`, la règle que la page des sondages
+#: portait en JavaScript, parce qu'elle ne pouvait pas être importée (les
+#: contextes de build sont `./api` et `./front`, rien de la racine n'entre dans
+#: les images). C'était le seul moyen de vérifier que les deux côtés
+#: s'accordaient.
+#:
+#: Depuis #468, **le front ne calcule plus rien** : `GET /sondages` expose
+#: `cloture`, rempli par la même `sondage_clos()` que la fiche et le fil. Garder
+#: la copie ici reviendrait à vérifier une règle qui n'existe plus d'un côté —
+#: un contrôle qui ment, exactement la classe de défaut que ce fichier traque.
+def _clos_pour_l_ecran(sondage_lu) -> bool:
+    return bool(sondage_lu.cloture)
 
 
 # ── Sondages — (b) le ciblage, (c) la clôture ────────────────────────────────
@@ -138,11 +142,10 @@ def test_le_compteur_sondages_egale_ce_que_l_ecran_montre(base):
     _sondage(base, cs.id, cloture_forcee=True)  # clos à la main
 
     for user in (resident, cs):
-        maintenant = datetime.utcnow()
         annonce = calculer(_contexte(base, user)).sondages_actifs
         a_l_ecran = [
             s for s in list_sondages(session=base, user=user)
-            if not _clos_pour_l_ecran(s, maintenant)
+            if not _clos_pour_l_ecran(s)
         ]
         assert annonce == len(a_l_ecran), (
             f"{user.email} : pastille {annonce}, écran {len(a_l_ecran)}"

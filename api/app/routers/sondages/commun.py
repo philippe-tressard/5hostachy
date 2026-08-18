@@ -63,6 +63,14 @@ class SondageRead(BaseModel):
     perimetre_cible: ListeJson = []
     public_cible: ListeJson = []
     nb_votants: int = 0
+    #  « Ce sondage est-il terminé ? » — répondu par le SERVEUR, via l'unique
+    #  `sondage_clos()`, et transporté. Il n'était exposé que sur la fiche : la
+    #  liste n'avait donc pas le choix, elle recalculait la règle en JavaScript
+    #  (`estCloture`). Deux implémentations d'une même question, dont une seule
+    #  fait autorité — et elles divergeaient déjà sur le fuseau, le front
+    #  comparant à l'heure LOCALE du navigateur quand le serveur date en UTC
+    #  (#468). Un écran ne tranche pas ce genre de question (`ux-patterns` §16).
+    cloture: bool = False
 
     class Config:
         from_attributes = True
@@ -82,5 +90,6 @@ class OptionRead(BaseModel):
 class SondageDetail(SondageRead):
     options: list[OptionRead] = []
     mon_vote: Optional[int] = None
-    cloture: bool = False
+    #  `cloture` est HÉRITÉ de `SondageRead` depuis le 19/08/2026 — il y était
+    #  déclaré deux fois.
 
