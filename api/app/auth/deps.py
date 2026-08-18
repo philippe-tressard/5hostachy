@@ -144,6 +144,14 @@ def _est_concerne(objet, user: Utilisateur) -> bool:
     pouvoir corriger ce qui parle de lui.
     """
     uid = user.id
+    #  ⚠️ Sans identifiant, on ne compare rien : `None == None` rendrait VRAI sur
+    #  tout objet dont l'auteur est nul, et ouvrirait l'édition à qui n'a pas
+    #  d'identité. Un utilisateur authentifié en a toujours un — c'est donc une
+    #  garde défensive, et son jumeau `$lib/droits.ts` la portait déjà. Les deux
+    #  écritures d'une même règle doivent dire la même chose jusque dans leurs cas
+    #  limites, sinon les comparer côte à côte ne prouve rien.
+    if uid is None:
+        return False
     return getattr(objet, "auteur_id", None) == uid or getattr(objet, "saisi_pour_user_id", None) == uid
 
 
