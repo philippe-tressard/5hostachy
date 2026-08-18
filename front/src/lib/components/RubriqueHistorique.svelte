@@ -139,8 +139,11 @@
 					<div class="evol-ligne-meta">
 						<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
 						{#if peutCorriger(evol) && enEdition !== evol.id}
-							<button type="button" class="evol-modifier" aria-label="Modifier"
-								title="Modifier" on:click={() => dispatch('modifier', evol.id)}>✏️ Modifier</button>
+							<!--  Le CRAYON SEUL, comme partout ailleurs sur le site : ce bouton
+							      portait « ✏️ Modifier » et était le dernier à écrire le mot.
+							      Le sens vit dans `title` et `aria-label`, pas dans le libellé. -->
+							<button type="button" class="btn-icon evol-modifier" aria-label="Modifier cette entrée"
+								title="Modifier" on:click={() => dispatch('modifier', evol.id)}>&#x270F;&#xFE0F;</button>
 						{/if}
 					</div>
 

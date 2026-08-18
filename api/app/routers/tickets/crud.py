@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlmodel import Session, or_, select
 
-from app.auth.deps import get_current_user, require_admin, peut_commander
+from app.auth.deps import get_current_user, require_admin, peut_commander, peut_commenter, peut_editer
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
@@ -245,6 +245,25 @@ def get_ticket(
     return ticket_read(ticket, session)
 
 
+#: Les champs qui décrivent la DEMANDE, par opposition à ceux qui décrivent son
+#: suivi (`statut`, `priorite`) ou sa diffusion. Un membre du CS peut agir sur
+#: les seconds, jamais sur les premiers.
+#:
+#: ⚠️ Liste BLANCHE inversée : on énumère ce qui est du contenu, et tout champ
+#: ajouté demain y échappe par défaut. C'est le sens le moins risqué — un
+#: nouveau champ mal classé sera au pire trop ouvert au CS, jamais fermé à
+#: l'auteur. Le contraire bloquerait l'auteur en silence.
+CHAMPS_DE_CONTENU = (
+    "titre", "description", "categorie", "perimetre_cible",
+    "photos_urls", "fichiers_urls", "batiment_id",
+)
+
+
+def _touche_au_contenu(body) -> bool:
+    """Cette modification porte-t-elle sur la demande elle-même ?"""
+    return any(getattr(body, champ, None) is not None for champ in CHAMPS_DE_CONTENU)
+
+
 @router.patch("/{ticket_id}", response_model=TicketRead)
 def update_ticket(
     ticket_id: int,
@@ -257,10 +276,28 @@ def update_ticket(
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
 
+    #  🔴 DEUX droits, pas un — arbitré le 18/08/2026 : le conseil syndical
+    #  commente et fait avancer le suivi, mais **ne réécrit pas** la demande d'un
+    #  résident. Il le pouvait : `is_cs_admin` ouvrait TOUT le contenu de
+    #  n'importe quel ticket à n'importe quel membre du CS.
+    #
+    #  ⚠️ Et l'auteur ne pouvait pas toujours : « saisi pour » ne comptait pas.
+    #  Un ticket déposé par le CS AU NOM d'un résident échappait donc à ce
+    #  résident — le seul à ne pas pouvoir corriger ce qui parle de lui.
+    #
+    #  Les deux règles vivent dans `auth/deps.py`, jamais ici : l'audit du
+    #  26/07/2026 a trouvé trois dérives nées d'un contrôle écrit dans un routeur.
     is_cs_admin = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-    is_auteur = ticket.auteur_id == user.id
-    if not is_cs_admin and not is_auteur:
+    if not peut_commenter(ticket, user):
         raise HTTPException(403, "Accès refusé")
+    #  Le CS franchit la porte pour le statut et la priorité (plus bas), pas pour
+    #  le contenu.
+    if not peut_editer(ticket, user) and _touche_au_contenu(body):
+        raise HTTPException(
+            403,
+            "Le conseil syndical peut commenter et faire avancer le suivi, "
+            "mais seul l'auteur (ou un administrateur) modifie le contenu",
+        )
 
     ancien_statut = ticket.statut
     #  L'etat des CANAUX avant modification. La Diffusion est rouverte a
@@ -291,15 +328,17 @@ def update_ticket(
         if body.priorite is not None:
             ticket.priorite = body.priorite
 
-    # Champs du contenu : auteur (ticket ouvert uniquement) ou CS/admin
+    #  Champs du CONTENU — le droit a déjà été vérifié plus haut
+    #  (`peut_editer`) : auteur, « saisi pour », ou admin.
     changes: list[str] = []
-    content_fields = (
-        body.titre is not None or body.description is not None
-        or body.categorie is not None or body.perimetre_cible is not None
-        or body.fichiers_urls is not None or body.photos_urls is not None
-    )
+    content_fields = _touche_au_contenu(body)
     if content_fields:
-        if is_auteur and not is_cs_admin and ticket.statut != StatutTicket.ouvert:
+        #  Une contrainte de PLUS, et elle ne vise pas l'admin : celui qui a
+        #  déposé la demande ne la réécrit que tant qu'elle est ouverte. Une fois
+        #  le suivi engagé, corriger le texte ferait mentir ce que le CS a lu
+        #  avant d'agir. L'admin, lui, intervient précisément quand il y a un
+        #  problème — c'est sa raison d'être dans cette règle.
+        if not user.has_role(RoleUtilisateur.admin) and ticket.statut != StatutTicket.ouvert:
             raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
         changes += _appliquer_contenu(body, ticket)
 

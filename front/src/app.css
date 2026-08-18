@@ -550,6 +550,22 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 /*  L'ombre ne se renforce qu'au survol : au repos, une ombre marquée sur chaque
     carte fatigue une liste longue. Au survol elle isole celle qu'on vise. */
 .carte-liste:hover { box-shadow: 0 4px 14px rgba(30, 58, 95, .13); }
+/*  🔴 LE FOND CHANGE AU SURVOL — c'est ce qui dit « cette carte se déplie ».
+    Demandé le 18/08/2026 : « appliquer partout la logique du fil d'actualité,
+    cliquable sur toute la zone, avec changement de couleur au survol ».
+
+    La bordure gauche et l'ombre ne suffisaient pas : elles se voient quand on
+    sait déjà où regarder. Le fil d'activité change son fond depuis toujours
+    (`.flux-item:hover .flux-card`), et c'est lui la référence. */
+/*  🔴 Le survol et le curseur ne valent QUE sur une carte REPLIÉE — c'est elle
+    qui se clique en entier. Dépliée, la carte n'est plus une cible : seul son
+    titre replie, pour qu'on puisse lire et sélectionner son contenu.
+
+    `:not(.expanded)` porte donc toute la règle. Sans lui, le curseur
+    promettrait partout un clic qui ne fait rien, et le fond se surlignerait
+    sous un formulaire ouvert. */
+.carte-liste:not(.expanded) { cursor: pointer; }
+.carte-liste:not(.expanded):hover { background: var(--color-bg); }
 .carte-liste.urgent { border-left-color: var(--color-danger); }
 
 @media (max-width: 640px) {

@@ -60,7 +60,9 @@
 
 <div class="carte-liste pub-expand" class:expanded class:urgent={pub.urgente}
 	class:brouillon={pub.brouillon} class:epingle={pub.epingle} class:attenue={!estFil}
-	id="pub-{pub.id}">
+	id="pub-{pub.id}"
+	role="presentation"
+	on:click={() => { if (!expanded) basculer(); }}>
 
 	{#if estFil && pub.epingle}<span class="pin-badge">&#x1F4CC;</span>{/if}
 
@@ -74,7 +76,8 @@
 	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 	      déplie pas la carte au même instant. -->
 	<EnteteCarte titre={pub.titre} date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}
-		basculable on:toggle={basculer}>
+		basculable on:toggle={basculer}
+>
 		<svelte:fragment slot="titre-suffixe">
 			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
 		</svelte:fragment>
@@ -97,7 +100,7 @@
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
 		      impossible de sélectionner du texte, et un clic sur une photo ou un
 		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
-		<div class="pub-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div class="carte-corps pub-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 			{#if formulaireOuvert}
 				<slot name="formulaire" />
 			{:else}

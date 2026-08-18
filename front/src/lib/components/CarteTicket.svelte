@@ -99,6 +99,8 @@
 <div
 	id="ticket-{ticket.id}"
 	class:carte-liste={!archive}
+	role="presentation"
+	on:click={() => { if (!expanded) dispatch('basculer'); }}>
 	class:history-item={archive}
 	class:expanded
 	class:urgent={ticket.categorie === 'urgence'}
@@ -112,7 +114,8 @@
 	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 	      déplie pas la carte au même instant. -->
 	<EnteteCarte titre={ticket.titre} date={fmtDate(dateAffichee)}
-		basculable on:toggle={() => dispatch('basculer')}>
+		basculable on:toggle={() => dispatch('basculer')}
+>
 		<svelte:fragment slot="titre-suffixe">
 			{#if isNouveau(ticket.cree_le, ticket.mis_a_jour_le)}
 				<span class="badge badge-gray tk-neuf">NEW</span>
@@ -156,7 +159,7 @@
 		<!--  Le corps ne replie pas la carte : on y saisit, on y clique des
 		      vignettes. `role="presentation"` dit que ce conteneur n'est qu'un
 		      relais — l'élément interactif, c'est la carte. -->
-		<div class="tk-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div class="carte-corps tk-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 			{#if mode === 'edition'}
 				<div class="tk-formulaire">
 					<FormulaireTicket {ticket} on:modifie on:annule={() => dispatch('annuler')} />

@@ -84,12 +84,15 @@
 </script>
 
 <div class="carte-liste annonce-expand" class:expanded class:attenue={annonce.archivee}
-	id="annonce-{annonce.id}">
+	id="annonce-{annonce.id}"
+	role="presentation"
+	on:click={() => { if (!expanded) onToggle(); }}>
 
 	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
 	      la norme de toutes les cartes du site. Elle vit dans `EnteteCarte`. -->
 	<EnteteCarte titre={annonce.titre} date={fmtDate(annonce.cree_le)}
-		basculable on:toggle={onToggle}>
+		basculable on:toggle={onToggle}
+>
 		<svelte:fragment slot="titre-suffixe">
 			{#if !annonce.archivee && isNouveau(annonce.cree_le, annonce.mis_a_jour_le)}<span class="badge badge-gray annonce-neuf">New</span>{/if}
 		</svelte:fragment>
@@ -139,7 +142,7 @@
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
 		      impossible de sélectionner du texte, et un clic sur une photo ou un
 		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
-		<div class="annonce-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div class="carte-corps annonce-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 			{#if formulaireOuvert}
 				<slot name="formulaire" />
 			{:else}
