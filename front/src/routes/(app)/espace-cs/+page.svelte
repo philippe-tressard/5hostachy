@@ -15,7 +15,7 @@
 	import { trackTabView } from '$lib/telemetry';
 	import { stripHtml, fmtMontant, perimetreDefautListe } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
+	import ApercuTicket from '$lib/components/ApercuTicket.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
@@ -1445,7 +1445,7 @@
 				</div>
 
 				{#if !expanded}
-					<ApercuCarte contenu={t.description} photos={t.photos_urls ?? []} />
+					<ApercuTicket ticket={t} />
 				{/if}
 
 				{#if expanded}
@@ -1568,7 +1568,7 @@
 							</div>
 						</div>
 						{#if !hExpanded}
-							<ApercuCarte contenu={t.description} photos={t.photos_urls ?? []} />
+							<ApercuTicket ticket={t} />
 						{/if}
 						{#if hExpanded}
 							<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
