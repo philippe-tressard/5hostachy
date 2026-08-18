@@ -164,12 +164,18 @@ export const EVENEMENT: EntiteDeclaree = {
  * ait regardés, et c'est très exactement ce que R5 interdit : *l'enrichissement
  * se propose sur UN écran, se fait constater, puis se généralise*.
  *
- * La divergence connue et non gouvernée est la même que côté tickets, et le
- * calendrier est du mauvais côté : `HistoriqueEvenement` passe `showFiles`, et
- * `EvolForm` rend alors les pièces jointes **unifiées**
- * (`separatePhotosAndDocs = false`) — ce qui fusionne les sections 7 et 8, que
- * le cadre interdit. La remise en conformité est le travail de **#433**, pas de
- * celui-ci : *une variante ajoutée pour accueillir un écart existant ne
- * factorise pas, elle entérine* — mais la retirer d'ici toucherait trois écrans
- * que ce lot n'a pas mesurés.
+ * L'écart concret qui subsiste est l'intitulé de la description, qui bascule
+ * « Commentaire » / « Contenu » selon le mode — là où **R3** demande le même
+ * libellé d'un formulaire à l'autre. Et l'ordre des sections y est tenu **par
+ * recopie** de `ChampsCommuns`, donc par deux endroits qui doivent rester
+ * d'accord sans qu'aucun contrôle ne le vérifie. Suivi en **#463**.
+ *
+ * ⚠️ **Une note fausse a vécu ici entre la v2.87.2 et la v2.87.4**, et elle
+ * mérite d'être signalée plutôt qu'effacée : elle annonçait qu'`EvolForm` rendait
+ * les pièces jointes « unifiées » (`separatePhotosAndDocs = false`), fusionnant
+ * les sections 7 et 8. C'était vrai jusqu'au 18/08 au matin, et **faux au moment
+ * où je l'ai écrite** — le mode avait disparu le jour même, avec son dernier
+ * appelant. Je l'avais recopiée depuis `ticket.ts` sans la revérifier, et elle
+ * citait de surcroît #433, fermé depuis. Un commentaire qui décrit un état révolu
+ * coûte plus cher qu'un commentaire absent : il se cite avec assurance.
  */
