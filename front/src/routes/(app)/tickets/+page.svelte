@@ -184,6 +184,26 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	let evolEnEdition: number | null = null;
 	let evolCorrectionEnCours = false;
 
+	//  🔴 Effacer une entrée du fil — ADMIN seulement, et le serveur le revérifie
+	//  (`require_admin`). Une transition d'état est refusée côté serveur (422) et
+	//  n'affiche pas de corbeille côté écran : l'écran dit la même chose que le
+	//  serveur, ni plus ni moins.
+	//
+	//  ⚠️ Pas de confirmation : le geste est réservé à l'admin, porte une corbeille
+	//  explicite, et le fil se recharge aussitôt — l'effet est immédiatement
+	//  visible. Une modale de plus sur un geste déjà restreint et déjà rare
+	//  ajouterait un clic sans ajouter de sécurité.
+	async function supprimerEvolution(e: CustomEvent<{ ticket: Ticket; evolId: number }>) {
+		const { ticket: t, evolId } = e.detail;
+		try {
+			await ticketsApi.deleteEvolution(t.id, evolId);
+			await loadEvolutions(t.id);
+			toast('success', 'Entrée supprimée');
+		} catch (e2) {
+			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
+		}
+	}
+
 	async function corrigerEvolution(e: CustomEvent<{ ticket: Ticket; data: any }>) {
 		if (evolEnEdition === null) return;
 		const t = e.detail.ticket;
@@ -317,6 +337,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		on:evoluer={addEvolution}
 		on:evol_modifier={(e) => (evolEnEdition = e.detail)}
 		on:evol_corriger={corrigerEvolution}
+		on:evol_supprimer={supprimerEvolution}
 		on:modifie={ticketModifie}
 		on:annuler={fermerFormulaires}
 	/>
@@ -363,6 +384,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								on:evoluer={addEvolution}
 								on:evol_modifier={(e) => (evolEnEdition = e.detail)}
 								on:evol_corriger={corrigerEvolution}
+								on:evol_supprimer={supprimerEvolution}
 								on:modifie={ticketModifie}
 								on:annuler={fermerFormulaires}
 							/>

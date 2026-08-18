@@ -89,7 +89,7 @@
 	/** Entrée actuellement ouverte en correction — le parent porte l'état. */
 	export let enEdition: number | null = null;
 
-	const dispatch = createEventDispatcher<{ modifier: number }>();
+	const dispatch = createEventDispatcher<{ modifier: number; supprimer: number }>();
 
 	//  🔴 Les MÊMES MOTS que le serveur, et dans le même ordre — types puis
 	//  identité. Une règle d'écran qui paraphrase une règle de serveur finit
@@ -98,6 +98,32 @@
 	//  `reponse` est exclu : une réponse du CS n'est pas une entrée de suivi, et
 	//  le serveur la refuse déjà (« ce type d'évolution ne peut pas être modifié »).
 	const TYPES_CORRIGEABLES = ['commentaire', 'etat'];
+
+	/**  Ce qui s'EFFACE, et c'est plus étroit que ce qui se corrige.
+	 *
+	 *   Une TRANSITION ne s'efface pas : « le ticket est passé En cours le 12 » est un
+	 *   fait de la vie du dossier, pas un texte qu'on rature. L'effacer réécrirait
+	 *   l'histoire du suivi, et le fil cesserait d'être une preuve de ce qui s'est
+	 *   passé. Le serveur refuse d'ailleurs (`422`) — l'écran dit donc la même chose
+	 *   que lui, ni plus ni moins (ux-patterns §15). */
+	const TYPES_EFFACABLES = ['commentaire'];
+
+	/**  🔴 Effacer est réservé à l'ADMINISTRATEUR (18/08/2026, demandé à l'écran :
+	 *   « bon pour l'admin seul »).
+	 *
+	 *   Corriger son propre commentaire est un geste ordinaire, ouvert à son auteur.
+	 *   Effacer ne l'est pas : cela fait disparaître une trace que d'autres ont pu
+	 *   lire, et sur laquelle ils ont pu agir. Même frontière que la suppression d'un
+	 *   ticket, et même règle que « archiver n'est pas supprimer ».
+	 *
+	 *   La capacité est née d'un besoin réel : deux entrées « Correction : … »
+	 *   s'étaient inscrites sur un ticket alors qu'une seule catégorie avait changé,
+	 *   et RIEN ne permettait de les retirer — pas même à l'admin. Un fil est une
+	 *   mémoire ; une mémoire qui garde des faits inventés vaut moins qu'une mémoire
+	 *   trouée. */
+	function peutEffacer(evol: Entree): boolean {
+		return estAdmin && TYPES_EFFACABLES.includes(evol.type);
+	}
 
 	function peutCorriger(evol: Entree): boolean {
 		if (!peutModifier || !TYPES_CORRIGEABLES.includes(evol.type)) return false;
@@ -144,6 +170,12 @@
 							      Le sens vit dans `title` et `aria-label`, pas dans le libellé. -->
 							<button type="button" class="btn-icon evol-modifier" aria-label="Modifier cette entrée"
 								title="Modifier" on:click={() => dispatch('modifier', evol.id)}>&#x270F;&#xFE0F;</button>
+						{/if}
+						{#if peutEffacer(evol) && enEdition !== evol.id}
+							<!--  ✏️ puis 🗑️ : l'ordre des icônes du site (ux-patterns §3), et la
+							      corbeille en dernier parce qu'elle est irréversible. -->
+							<button type="button" class="btn-icon-danger evol-modifier" aria-label="Supprimer cette entrée"
+								title="Supprimer cette entrée" on:click={() => dispatch('supprimer', evol.id)}>&#x1F5D1;&#xFE0F;</button>
 						{/if}
 					</div>
 
