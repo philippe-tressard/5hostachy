@@ -2,7 +2,6 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
-	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -13,7 +12,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
-	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
+	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -784,74 +783,45 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 							<div class="month-label">{mois}</div>
 							{#each items as item}
 								{#if item._kind === 'pub'}
-									<!-- Publication archivée -->
-									<div class="event-row archive-row card" style="opacity:.85;border-left:3px solid #0ea5e9">
-									<div class="event-type archive-type">
-										&#x1F4F0;
-										<span class="badge" style="background:#0ea5e9;color:white;font-size:.65rem;white-space:nowrap">Actualité</span>
-									</div>
-									<div class="event-body">
-										<strong class="event-titre">{item.titre}</strong>
-										{#if !estPerimetreParDefaut(item.perimetre_cible)}
-											<span class="badge badge-gray" style="font-size:.7rem">&#x1F539; {perimetreLabel(item.perimetre_cible)}</span>
-										{/if}
-										{#if item.contenu}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.contenu)}</div>{/if}
-										</div>
-										<div class="event-date">
-											<div>{fmtDateShort(item._date)}</div>
-											{#if item.auteur_nom}<small style="color:var(--color-text-muted)">{item.auteur_nom}</small>{/if}
-										</div>
-										{#if $isAdmin}
-											<div class="event-actions">
-												<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button>
-											</div>
-										{/if}
-									</div>
+									<!--  Publication archivée. Les trois rangées d'archives et celle des
+									      maintenances passent par `RangeeCalendrier` : la structure
+									      *type · corps · date · actions* était recopiée quatre fois, et
+									      c'est ce partage qui interdisait de découper la page (#432). -->
+									<RangeeCalendrier archive bordure="#0ea5e9"
+										typeTexte="&#x1F4F0;" badgeType={{ texte: 'Actualité', couleur: '#0ea5e9' }}
+										titre={item.titre} description={item.contenu}
+										dates={[{ texte: fmtDateShort(item._date) },
+											...(item.auteur_nom ? [{ texte: item.auteur_nom, attenue: true }] : [])]}
+										perimetre={item.perimetre_cible}
+										avecActions={$isAdmin}>
+										<svelte:fragment slot="actions">
+											<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button>
+										</svelte:fragment>
+									</RangeeCalendrier>
 								{:else if item._kind === 'devis'}
 									<!-- Prestation réalisée -->
-									<div class="event-row archive-row card" style="opacity:.85;border-left:3px solid #7c3aed">
-										<div class="event-type archive-type">
-											&#x1F3C1;
-											<span class="badge" style="background:#7c3aed;color:white;font-size:.65rem;white-space:nowrap">Prestation</span>
-										</div>
-										<div class="event-body">
-											<strong class="event-titre">{item.titre}</strong>
-											{#if prestataireNom(item.prestataire_id)}<span class="event-meta">&#x1F3AF; {prestataireNom(item.prestataire_id)}</span>{/if}
-											{#if item.notes}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.notes)}</div>{/if}
-										</div>
-										<div class="event-date">
-											{#if item.date_prestation}<div>{fmtDateShort(item.date_prestation)}</div>{/if}
-											{#if item.montant_estime}<div style="font-size:.8rem;color:var(--color-text-muted)">{fmtMontant(item.montant_estime)}</div>{/if}
-										</div>
-									</div>
+									<RangeeCalendrier archive bordure="#7c3aed"
+										typeTexte="&#x1F3C1;" badgeType={{ texte: 'Prestation', couleur: '#7c3aed' }}
+										titre={item.titre} description={item.notes}
+										metas={prestataireNom(item.prestataire_id) ? [`\u{1F3AF} ${prestataireNom(item.prestataire_id)}`] : []}
+										dates={[...(item.date_prestation ? [{ texte: fmtDateShort(item.date_prestation) }] : []),
+											...(item.montant_estime ? [{ texte: fmtMontant(item.montant_estime), attenue: true }] : [])]} />
 								{:else}
 									<!-- Événement archivé -->
-									<div class="event-row archive-row card" class:event-urgent={item.type === 'coupure'} style="opacity:.85;border-left:3px solid #10b981">
-										<div class="event-type archive-type">
-											{typeLabel(item.type)}
-											<span class="badge" style="background:#10b981;color:white;font-size:.65rem;white-space:nowrap">Événement</span>
-										</div>
-										<div class="event-body">
-											<strong class="event-titre">{item.titre}</strong>
-											{#if item.lieu}<span class="event-meta">&#x1F4CD; {item.lieu}</span>{/if}
-											{#if item.description}<div class="event-desc rich-content clamp-5">{@html safeHtml(item.description)}</div>{/if}
-										</div>
-										<div class="event-date">
-											<div>{formatDate(item.debut)}</div>
-											{#if item.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(item.fin)}</div>{/if}
-											{#if !estPerimetreParDefaut(item.perimetre)}
-												<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(item.perimetre)}</span>
-											{/if}
-											<small class="ev-updated">
-											{#if item.mis_a_jour_le}Mise à jour le {fmtDateLong(item.mis_a_jour_le)}{:else}Publié le {fmtDateLong(item.cree_le)}{/if}{#if item.auteur_nom} · {item.auteur_nom}{/if}
-											</small>
-										</div>
-										{#if $isAdmin}
-											<div class="event-actions">
-												<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button>
-											</div>
-										{/if}
-									</div>
+									<RangeeCalendrier archive bordure="#10b981" urgent={item.type === 'coupure'}
+										typeTexte={typeLabel(item.type)} badgeType={{ texte: 'Événement', couleur: '#10b981' }}
+										titre={item.titre} description={item.description}
+										metas={item.lieu ? [`\u{1F4CD} ${item.lieu}`] : []}
+										dates={[{ texte: formatDate(item.debut) },
+											...(item.fin ? [{ texte: `→ ${formatDate(item.fin)}`, attenue: true }] : [])]}
+										perimetre={item.perimetre}
+										pied={(item.mis_a_jour_le ? `Mise à jour le ${fmtDateLong(item.mis_a_jour_le)}` : `Publié le ${fmtDateLong(item.cree_le)}`)
+											+ (item.auteur_nom ? ` · ${item.auteur_nom}` : '')}
+										avecActions={$isAdmin}>
+										<svelte:fragment slot="actions">
+											<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button>
+										</svelte:fragment>
+									</RangeeCalendrier>
 								{/if}
 							{/each}
 						</div>
@@ -891,30 +861,21 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			</button>
 			{#if showPeriodicSection}
 				{#each recurringMaintenances as ev}
-					<div class="event-row card">
-						<div class="event-type">{typeLabel(ev.type)}</div>
-						<div class="event-body">
-							<strong class="event-titre">{ev.titre}</strong>
-							{#if ev.prestataire_nom}<span class="event-meta">&#x1F3AF; {ev.prestataire_nom}</span>{/if}
-							{#if ev.lieu}<span class="event-meta">&#x1F4CD; {ev.lieu}</span>{/if}
-						</div>
-						<div class="event-date">
-							<div>{formatDate(ev.debut)}</div>
-							{#if ev.fin}<div style="color:var(--color-text-muted);font-size:.8rem">→ {formatDate(ev.fin)}</div>{/if}
-							{#if !estPerimetreParDefaut(ev.perimetre)}
-								<span class="badge badge-blue" style="margin-top:.3rem">&#x1F539; {perimetreLabel(ev.perimetre)}</span>
-							{/if}
-							{#if ev.statut_kanban}
-								{@const col = KANBAN_COLS.find(c => c.id === ev.statut_kanban)}
-								{#if col}<span class="badge" style="background:{col.color};color:white;font-size:.73rem;margin-top:.3rem">{col.label}</span>{/if}
-							{/if}
-						</div>
-						{#if $isCS}
-							<div class="event-actions">
-								<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
-							</div>
-						{/if}
-					</div>
+					{@const col = ev.statut_kanban ? KANBAN_COLS.find(c => c.id === ev.statut_kanban) : undefined}
+					<RangeeCalendrier
+						typeTexte={typeLabel(ev.type)}
+						titre={ev.titre}
+						metas={[...(ev.prestataire_nom ? [`\u{1F3AF} ${ev.prestataire_nom}`] : []),
+							...(ev.lieu ? [`\u{1F4CD} ${ev.lieu}`] : [])]}
+						dates={[{ texte: formatDate(ev.debut) },
+							...(ev.fin ? [{ texte: `→ ${formatDate(ev.fin)}`, attenue: true }] : [])]}
+						perimetre={ev.perimetre}
+						badgeKanban={col ? { texte: col.label, couleur: col.color } : null}
+						avecActions={$isCS}>
+						<svelte:fragment slot="actions">
+							<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
+						</svelte:fragment>
+					</RangeeCalendrier>
 				{/each}
 			{/if}
 		</div>
@@ -1014,71 +975,17 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    n'est plus n'explique plus rien. */
 	.month-group { margin-bottom: 1.5rem; }
 	.month-label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
-	/*  `flex-wrap` : le corps déplié portait `grid-column`, sans effet en flex. */
-	.event-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; transition: background .12s; }
-	/*  Même signal que `.pub-row:hover` et `.tk-row:hover` : le fond s'éclaircit
-	    au survol pour dire que la carte s'ouvre (#362). Le calendrier était le
-	    seul écran dépliable à n'avoir ni ce retour, ni le chevron. */
-	.event-urgent { border-left: 3px solid var(--color-danger); }
-	.event-type { min-width: 7rem; font-size: .8rem; font-weight: 600; padding-top: .1rem; }
-	.event-body { flex: 1; }
-	.archive-row {
-		display: grid;
-		grid-template-columns: 7.75rem minmax(0, 1fr) 8.5rem auto;
-		column-gap: 1rem;
-		align-items: start;
-	}
-	.archive-row .event-body { min-width: 0; }
-	.archive-type {
-		min-width: 0;
-		width: 7.75rem;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: .35rem;
-		text-align: center;
-		padding: .15rem .35rem;
-	}
-	.archive-type :global(.badge) {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 6.5rem;
-	}
-	.event-titre { font-size: .95rem; }
-	.event-meta { font-size: .8rem; color: var(--color-text-muted); margin-left: .5rem; }
-	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
-	.event-date { text-align: right; font-size: .85rem; min-width: 110px; }
-	.ev-updated { display: block; font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
-	/*  ⚠️ `.event-meta` et `.event-actions` existent AUSSI dans
-	    `CarteEvenement.svelte`, et ce n'est pas un oubli : Svelte scope le style au
-	    composant qui rend le balisage, et ces deux classes servent ici aux blocs
-	    Archives et Maintenances récurrentes, là-bas à la carte de la liste. Les
-	    unifier suppose de reprendre ces deux blocs — c'est le travail de #432.
-	    `.ev-expanded-body`, `.ev-norme` et `.event-row.card.expanded` sont partis
-	    avec la carte : `svelte-check` les a signalés inutilisés dès l'extraction,
-	    ce qui a dit exactement ce qui lui appartenait. */
-	.event-actions { display: flex; gap: .3rem; }
-	@media (max-width: 760px) {
-		.archive-row {
-			grid-template-columns: 1fr;
-			row-gap: .6rem;
-		}
-		.archive-type {
-			width: auto;
-			align-items: flex-start;
-			text-align: left;
-			padding: 0;
-		}
-		.archive-row .event-date {
-			text-align: left;
-			min-width: 0;
-		}
-		.archive-row .event-actions {
-			justify-content: flex-start;
-		}
-	}
+	/*  ✅ Les règles `.event-*` et `.archive-*` sont parties dans
+	    `RangeeCalendrier.svelte` (#432), AVEC le balisage qui les portait — la
+	    seule façon qu'elles s'appliquent encore, Svelte scopant le style au
+	    composant qui rend.
 
+	    C'est ce que la version précédente de ce commentaire annonçait : elles
+	    servaient QUATRE rangées écrites à la main ici et la carte de la liste
+	    là-bas, et « les unifier suppose de reprendre ces deux blocs — c'est le
+	    travail de #432 ». Reprendre les deux ENSEMBLE était la condition : n'en
+	    extraire qu'un aurait emporté les règles et laissé l'autre nu, ce qui est
+	    exactement la panne des pastilles de la v2.67.11. */
 
 	.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
 	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
