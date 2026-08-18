@@ -25,14 +25,36 @@
 -->
 <script lang="ts">
 	import ApercuCarte from './ApercuCarte.svelte';
+	import { separerFichiers } from '$lib/fichiers';
 
-	/** Le ticket, tel que l'API le renvoie (`photos_urls`, `fichiers_urls`). */
+	/** Le ticket, tel que l'API le renvoie (`apercu_pieces` compris). */
 	export let ticket: any;
+
+	//  `separerFichiers` refait le tri photos / documents : `apercu_pieces` est une
+	//  liste unique, et la vignette pose `photos[0]` dans un `<img>` — les verser
+	//  ensemble ferait sortir un devis PDF en image cassée.
+	$: pieces = separerFichiers(ticket.apercu_pieces ?? []);
 </script>
 
 <!--  Les documents sont passés, à la différence des ACTUALITÉS : ceux d'un ticket
       voyagent dans la charge utile (`fichiers_urls`), là où ceux d'une
       publication sont des entités `Document` chargées au dépliage — les compter
       en liste y coûterait une requête par carte pour afficher un trombone. -->
-<ApercuCarte contenu={ticket.description} photos={ticket.photos_urls ?? []}
-	fichiers={ticket.fichiers_urls ?? []} />
+<!--  🔴 `apercu_pieces` REMPLACE les deux listes du ticket (#464, 18/08/2026) :
+      c'est le serveur qui décide quoi montrer, en repliant sur l'entrée
+      d'Historique la plus récente quand le ticket lui-même ne porte rien.
+
+      Un ticket dont les photos arrivent par le suivi — « voici ce qu'a constaté
+      le plombier » — n'affichait aucune vignette, là où le même dossier saisi
+      avec ses photos dès l'ouverture en affichait une. Deux tickets, même contenu
+      visible, deux apparences dans la liste.
+
+      ⚠️ Le repli se calcule côté SERVEUR et non ici, contrairement au calendrier
+      (`apercuAvecRepli`) : la page des tickets charge ses évolutions à la demande,
+      et les réclamer en liste coûterait une requête par carte. Le serveur, lui,
+      ne transporte que les URLs affichées.
+
+      ⚠️ Le tri photos / documents se fait dans le `<script>` : `{@const}` n'est
+      permis qu'à l'intérieur d'un bloc, jamais à la racine d'un composant. -->
+<ApercuCarte contenu={ticket.description} photos={pieces.photos}
+	fichiers={pieces.documents} />

@@ -64,6 +64,10 @@ export interface Ticket {
 	relance_count?: number;
 	cree_le: string;
 	mis_a_jour_le: string;
+	/**  Ce que la carte repliée montre en vignette : les pièces du ticket, ou
+	     celles de l'entrée d'Historique la plus récente qui en porte. Calculé par
+	     le serveur (#464) — le front ne rejoue pas la règle. */
+	apercu_pieces?: string[];
 }
 
 export interface RelanceSyndicResponse {
