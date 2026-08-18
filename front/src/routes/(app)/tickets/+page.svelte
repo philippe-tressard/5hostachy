@@ -177,6 +177,33 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		envoyer_cs?: boolean;
 	};
 
+	//  ── Correction d'une entrée du fil ──────────────────────────────────────
+	//  Le crayon existait dans `RubriqueHistorique` depuis #431 et servait la
+	//  FICHE d'un ticket ; la liste ne le branchait pas. Même entité, deux
+	//  rendus, une capacité sur deux — signalé à l'écran le 18/08/2026.
+	let evolEnEdition: number | null = null;
+	let evolCorrectionEnCours = false;
+
+	async function corrigerEvolution(e: CustomEvent<{ ticket: Ticket; data: any }>) {
+		if (evolEnEdition === null) return;
+		const t = e.detail.ticket;
+		evolCorrectionEnCours = true;
+		try {
+			//  🔴 Ni `type` ni `nouveau_statut` : une CORRECTION n'est pas une
+			//  transition. Les envoyer ferait apparaître dans le fil une étape que le
+			//  ticket n'a jamais franchie (`test_correction_pas_transition.py`).
+			await ticketsApi.updateEvolution(t.id, evolEnEdition, {
+				contenu: e.detail.data.contenu ?? '',
+				fichiers_urls: e.detail.data.fichiers_urls,
+			});
+			await loadEvolutions(t.id);
+			evolEnEdition = null;
+			toast('success', 'Entrée corrigée');
+		} catch (e2) {
+			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
+		} finally { evolCorrectionEnCours = false; }
+	}
+
 	async function addEvolution(e: CustomEvent<{ ticket: Ticket; data: unknown }>) {
 		const t = e.detail.ticket;
 		const data = e.detail.data as PayloadEvolution;
@@ -280,6 +307,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		ticketEnEdition={editingTicket}
 		ticketEnEvolution={showEvolForm}
 		evolutionEnCours={evolSaving}
+		{evolEnEdition}
+		{evolCorrectionEnCours}
 		peutCommenter={$isCS}
 		peutAdministrer={$isAdmin}
 		on:basculer={(e) => toggleTicket(e.detail)}
@@ -287,6 +316,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		on:modifier={(e) => openEditForm(e.detail)}
 		on:supprimer={deleteTicket}
 		on:evoluer={addEvolution}
+		on:evol_modifier={(e) => (evolEnEdition = e.detail)}
+		on:evol_corriger={corrigerEvolution}
 		on:modifie={ticketModifie}
 		on:annuler={fermerFormulaires}
 	/>
@@ -323,6 +354,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								ticketEnEdition={editingTicket}
 								ticketEnEvolution={showEvolForm}
 								evolutionEnCours={evolSaving}
+								{evolEnEdition}
+								{evolCorrectionEnCours}
 								peutCommenter={$isCS}
 								peutAdministrer={$isAdmin}
 								on:basculer={(e) => toggleTicket(e.detail)}
@@ -330,6 +363,8 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								on:modifier={(e) => openEditForm(e.detail)}
 								on:supprimer={deleteTicket}
 								on:evoluer={addEvolution}
+								on:evol_modifier={(e) => (evolEnEdition = e.detail)}
+								on:evol_corriger={corrigerEvolution}
 								on:modifie={ticketModifie}
 								on:annuler={fermerFormulaires}
 							/>

@@ -1,19 +1,30 @@
 <!--
   L'onglet **Petites annonces** de la Communauté — ses filtres, sa liste, son
-  formulaire de dépôt et son formulaire de correction.
+  formulaire de dépôt et son Historique.
 
-  Extrait de `sondages/+page.svelte` le 18/08/2026. La page porte TROIS rubriques
-  (sondages, boîte à idées, petites annonces) et repassait au-dessus du plafond
-  de modularité (rang 1, `standards/02` §6) en ajoutant le mode édition. La règle
-  est « au fil de l'eau » : on découpe le fichier **quand on y touche**, et c'est
-  la rubrique touchée qui sort — pas un découpage de confort décidé ailleurs.
+  Extrait de `sondages/+page.svelte` le 18/08/2026 (plafond de modularité). La
+  page porte TROIS rubriques ; la règle est « au fil de l'eau », et c'est la
+  rubrique touchée qui sort.
 
   ⚠️ **26 lignes de code MORT sont parties avec ce déménagement** : `creerAnnonce()`,
   `formAnnonce` et `submittingAnnonce` étaient restés dans la page après
   l'extraction de `FormulaireAnnonce` le 16/08 — un second chemin de création,
-  complet et plausible, que plus rien n'appelait. C'est ce qu'un déménagement
-  rend visible et qu'une relecture ne voit pas : le code mort ressemble au code
-  vivant.
+  complet et plausible, que plus rien n'appelait. C'est ce qu'un déménagement rend
+  visible et qu'une relecture ne voit pas : le code mort ressemble au code vivant.
+
+  ## Deux listes, un seul rendu
+
+  Les annonces conclues depuis plus d'un mois basculent dans un **Historique
+  replié** — demandé le 18/08/2026. Les deux listes passent par le MÊME
+  `ListeAnnonces` : recopier le `{#each}` sous la section repliée aurait créé
+  deux rendus libres de diverger, ce qui est arrivé six fois au fil des tickets
+  (#431).
+
+  🔴 `annonce.archivee` est **calculé par le serveur**. Refaire la règle ici
+  (« vendu depuis plus de 30 jours ») en ferait une seconde, et les deux
+  trancheraient différemment le jour où le délai changerait — c'est le bug du
+  17/07/2026 sur les actualités, un élément visible dans une vue et pas dans
+  l'autre.
 
   ## Ce que ce composant ne fait pas
 
@@ -23,8 +34,9 @@
   commune aux trois rubriques et vit avec elles.
 -->
 <script lang="ts">
-	import AnnonceCard from '$lib/components/AnnonceCard.svelte';
 	import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
+	import ListeAnnonces from '$lib/components/ListeAnnonces.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -60,6 +72,10 @@
 		return new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime();
 	});
 
+	//  La partition vient du serveur, pas d'un calcul local — voir l'en-tête.
+	$: courantes = triees.filter((a) => !a.archivee);
+	$: archivees = triees.filter((a) => a.archivee);
+
 	/** Téléverse une photo et retourne son URL (contrat attendu par `FichiersUpload`). */
 	async function uploadPhoto(id: number, file: File): Promise<string> {
 		const res: any = await annoncesApi.uploadPhoto(id, file);
@@ -77,11 +93,12 @@
 	async function changerStatut(id: number, statut: string) {
 		try {
 			await annoncesApi.updateStatut(id, statut);
-			//  « Archivé » sort l'annonce de la liste : le serveur l'exclut déjà du
-			//  `GET`, la garder à l'écran ferait croire qu'elle est encore visible des
-			//  voisins.
-			if (statut === 'archive') annonces = annonces.filter((a) => a.id !== id);
-			else annonces = annonces.map((a) => (a.id === id ? { ...a, statut } : a));
+			//  🔴 La liste est RECHARGÉE, pas rapiécée localement : c'est le serveur qui
+			//  décide de `archivee`, et lui seul sait si ce changement d'état vient de
+			//  faire basculer l'annonce dans l'Historique. Poser `{...a, statut}` à la
+			//  main laisserait une annonce annulée dans la liste courante jusqu'au
+			//  prochain rechargement de page.
+			annonces = await annoncesApi.list();
 			toast('success', 'Statut mis à jour');
 		} catch {
 			toast('error', 'Erreur');
@@ -119,6 +136,23 @@
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
+
+	const basculer = (a: any) => (expandedAnnonce = expandedAnnonce === a.id ? null : a.id);
+	const basculerGestion = (a: any) => (gestionPhotos = gestionPhotos === a.id ? null : a.id);
+
+	function modifier(a: any) {
+		editAnnonce = editAnnonce?.id === a.id ? null : a;
+		//  Le formulaire prend la place du CORPS : sans déplier, le clic sur ✏️
+		//  n'aurait aucun effet visible.
+		if (editAnnonce) expandedAnnonce = a.id;
+	}
+
+	function appliquerModification(maj: any) {
+		//  Rechargée pour la même raison que le changement d'état : la correction
+		//  peut porter le workflow, donc décider de l'archivage.
+		annonces = annonces.map((a) => (a.id === maj.id ? maj : a));
+		editAnnonce = null;
+	}
 </script>
 
 {#if showForm}
@@ -150,50 +184,67 @@
 
 {#if chargement}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
-{:else if triees.length === 0}
+{:else if courantes.length === 0 && archivees.length === 0}
 	<div class="empty-state">
 		<h3>Aucune annonce</h3>
 		<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
 	</div>
 {:else}
-	{#each triees as annonce (annonce.id)}
-		<AnnonceCard
-			{annonce}
-			expanded={expandedAnnonce === annonce.id}
-			gestionOuverte={gestionPhotos === annonce.id}
-			{estCS}
-			{estAdmin}
-			{currentUserId}
-			onToggle={() => (expandedAnnonce = expandedAnnonce === annonce.id ? null : annonce.id)}
-			onToggleGestion={() => (gestionPhotos = gestionPhotos === annonce.id ? null : annonce.id)}
-			onUpload={(f) => uploadPhoto(annonce.id, f)}
-			onRemove={(url) => supprimerPhoto(annonce.id, url)}
-			onStatut={(statut) => changerStatut(annonce.id, statut)}
-			onSupprimer={() => supprimer(annonce.id)}
-			onModifier={() => {
-				editAnnonce = editAnnonce?.id === annonce.id ? null : annonce;
-				expandedAnnonce = annonce.id;
-			}}
-			onRepondre={(c) => repondre(annonce.id, c)}
-			onSupprimerReponse={(rid) => supprimerReponse(annonce.id, rid)}
-			onSignalerAnnonce={() => onSignaler('annonce', annonce.id)}
-			onSignalerReponse={(rid) => onSignaler('reponse', rid)}
-		/>
-		{#if editAnnonce?.id === annonce.id}
-			<!--  Le formulaire de CORRECTION s'ouvre sous la carte qu'il corrige — même
-			      geste que sur Tickets et Actualités. `{#key}` remonte le composant à
-			      neuf d'une annonce à l'autre : ses champs sont initialisés une fois, à
-			      la construction. -->
-			{#key editAnnonce.id}
-				<FormulaireAnnonce
-					annonce={editAnnonce}
-					on:modifie={(e) => {
-						annonces = annonces.map((a) => (a.id === e.detail.id ? e.detail : a));
-						editAnnonce = null;
-					}}
-					on:annule={() => (editAnnonce = null)}
-				/>
-			{/key}
-		{/if}
-	{/each}
+	{#if courantes.length === 0}
+		<div class="empty-state">
+			<h3>Aucune annonce en cours</h3>
+			<p>Les annonces conclues sont rangées dans l'Historique, ci-dessous.</p>
+		</div>
+	{/if}
+	<ListeAnnonces
+		liste={courantes}
+		expandedId={expandedAnnonce}
+		gestionPhotosId={gestionPhotos}
+		{editAnnonce}
+		{estCS}
+		{estAdmin}
+		{currentUserId}
+		onToggle={basculer}
+		onToggleGestion={basculerGestion}
+		onModifier={modifier}
+		onUpload={uploadPhoto}
+		onRemove={supprimerPhoto}
+		onStatut={changerStatut}
+		onSupprimer={supprimer}
+		onRepondre={repondre}
+		onSupprimerReponse={supprimerReponse}
+		{onSignaler}
+		onModifiee={appliquerModification}
+		onAnnulerEdition={() => (editAnnonce = null)}
+	/>
+
+	<!--  L'Historique : replié par défaut, même bandeau que celui des actualités
+	      (`SectionRepliee`, extrait dans ce lot pour ne pas en écrire un second).
+	      Les cartes y sont les MÊMES — `ListeAnnonces`, appelé une seconde fois —
+	      simplement atténuées par `annonce.archivee`. -->
+	{#if archivees.length}
+		<SectionRepliee titre="&#x1F4C1; Historique" compte={archivees.length}>
+			<ListeAnnonces
+				liste={archivees}
+				expandedId={expandedAnnonce}
+				gestionPhotosId={gestionPhotos}
+				{editAnnonce}
+				{estCS}
+				{estAdmin}
+				{currentUserId}
+				onToggle={basculer}
+				onToggleGestion={basculerGestion}
+				onModifier={modifier}
+				onUpload={uploadPhoto}
+				onRemove={supprimerPhoto}
+				onStatut={changerStatut}
+				onSupprimer={supprimer}
+				onRepondre={repondre}
+				onSupprimerReponse={supprimerReponse}
+				{onSignaler}
+				onModifiee={appliquerModification}
+				onAnnulerEdition={() => (editAnnonce = null)}
+			/>
+		</SectionRepliee>
+	{/if}
 {/if}

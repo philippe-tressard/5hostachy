@@ -509,6 +509,27 @@ type neuf serait passé à côté des six, et une AG commentée serait devenue
 visible de tous, en silence. **C'est la donnée qui porte la différence** :
 `evol_contenu` présent ⇒ la carte rend le bloc de suivi.
 
+### Le GESTE de dépliage : le TITRE, et lui seul (18/08/2026)
+
+Trois gestes coexistaient dans le produit — la carte entière (actualités,
+tickets, événements), le seul chevron (annonces), rien du tout ailleurs.
+Signalé à l'écran : *« la zone de prise en compte diffère ; l'unifier en
+cliquant sur le titre, avec un style de sélection qui change au survol »*.
+
+La règle vit dans **`EnteteCarte`** (`basculable` + `on:toggle`) : une carte
+ne décide plus de son geste, elle le reçoit. Le titre change de couleur **et**
+se souligne au survol — la couleur seule ne se voit pas d'un daltonien.
+
+⚠️ **La carte entière était le pire des trois**, malgré sa grande cible : elle
+interceptait la sélection de texte, et imposait un `stopPropagation` sur chaque
+bouton d'action — sans quoi un clic sur ✏️ dépliait la carte au même instant.
+
+Bénéfice d'accessibilité : un vrai `<button>` remplace `role="button"
+tabindex="0" on:keydown`. Le clavier vient avec — et les trois écritures
+maison divergeaient déjà, `CarteEvenement` étant la seule à faire
+`preventDefault()`, si bien que la barre d'espace **faisait défiler la page**
+sur les deux autres.
+
 🔴 **Une actualité n'a pas de workflow, et c'est définitif** (ré-arbitré le
 18/08/2026, après l'avoir ouvert la veille). Elle n'a pas d'étapes de vie : elle
 est publiée, puis bascule dans l'Historique au bout de son délai. « En cours »,
@@ -525,18 +546,32 @@ condition en dur le décide.
 « Résolu ». Sans workflow, il ne pouvait plus être atteint — l'icône 📦 a donc
 disparu avec lui. L'archivage **automatique**, lui, reste.
 
-🔴 **Une PETITE ANNONCE n'a pas de workflow non plus — mais pas pour la même
-raison** (18/08/2026), et c'est la nuance qui compte. L'actualité n'a **aucun**
-état ; l'annonce en a un — Disponible · Réservé · Vendu · Archivé. Ce qui lui
-manque est la seconde moitié de la question de la section 3 : *« où en est cet
-objet, **et qui l'y a mis** »*. Il n'y a qu'un acteur, son auteur, et rien à
-tracer. Son statut est donc un **attribut** qu'on pose depuis la carte, pas un
-cycle suivi à plusieurs.
+🔴 **REVIREMENT — une PETITE ANNONCE A un workflow** (arbitré le 18/08/2026, le
+soir même où ce paragraphe affirmait le contraire). Cinq états : **En cours ·
+Réservé · Vendu · Donné · Annulé**.
 
-⚠️ **Le réflexe à éviter** : *« il y a des états, donc il y a un workflow, donc
-il faut un fil d'évolutions »*. Trois entités du site ont un `statut` et une
-seule d'entre elles a un workflow. Le test n'est pas l'existence d'un champ,
-c'est l'existence d'**étapes ordonnées franchies par plusieurs acteurs**.
+Ce paragraphe disait : *« l'annonce a un état, mais il lui manque la seconde
+moitié de la question — qui l'y a mis ; il n'y a qu'un acteur »*. Le
+raisonnement était cohérent et **faux** : il regardait **qui agit**, quand la
+question de la section 3 est d'abord **où en est l'objet**. Un vendeur qui a
+réservé, vendu ou renoncé a bien un cycle, et ses voisins ont besoin de le lire.
+
+⚠️ **Ce que le revirement ne remet pas en cause** : il n'y a toujours pas de fil
+d'évolutions sur une annonce. **Déclarer un workflow et le TRACER sont deux
+décisions distinctes** — la seconde n'a pas été demandée. Ne pas les confondre
+est ce qui évite d'importer un `RubriqueHistorique` par réflexe.
+
+⚠️ **L'archivage n'est PAS un état.** Une annonce conclue reste un mois puis
+bascule dans un Historique replié. C'est une conséquence du temps, pas une étape
+qu'on choisit : elle se **calcule** (`est_archivee`), et en faire une sixième
+pastille donnerait deux notions pour la même chose — celle qu'on pose et celle
+qui arrive. Même règle que les actualités.
+
+🔴 **La leçon de méthode, elle, tient** : c'est la deuxième fois en deux jours
+que l'écran réfute le papier (« une actualité n'a pas de workflow » allait dans
+l'autre sens). Il ne faut pas en conclure qu'il faut moins déclarer — **c'est la
+déclaration qui rend le désaccord visible et corrigeable en un seul endroit**.
+Sans elle, les deux raisonnements auraient coexisté dans deux écrans.
 
 **Why (16/08/2026)** : la section finale s'appelait « État », terme qui mélangeait
 l'étape de vie et la mise à disposition. Le Suivi Kanban s'y trouvait alors qu'il

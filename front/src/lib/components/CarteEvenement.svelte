@@ -55,10 +55,7 @@
 		class:event-urgent={ev.type === 'coupure'}
 		class:expanded
 		style="cursor:pointer"
-		role="button"
-		tabindex="0"
-		on:click={() => dispatch('basculer')}
-		on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dispatch('basculer'); } }}
+
 	>
 		<!--  La NORME de toutes les cartes du site (`EnteteCarte`, 18/08/2026) :
 		      titre sur sa propre ligne, puis tags à gauche / date et actions à
@@ -66,7 +63,13 @@
 		      et sur téléphone le titre se réduisait à trois points.
 		      Le chevron dit que la carte s'ouvre (#362) ; sur tactile c'est LUI
 		      qui porte l'information, `:hover` ne s'y déclenchant pas. -->
-		<EnteteCarte titre={ev.titre} date={formatDate(ev.debut)}>
+		<!--  Le geste de dépliage vit dans `EnteteCarte` : le TITRE plie, avec un
+		      survol qui le dit (18/08/2026). Le conteneur ne porte plus
+		      `role="button"` — il interceptait la sélection de texte, et obligeait
+		      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
+		      déplie pas la carte au même instant. -->
+		<EnteteCarte titre={ev.titre} date={formatDate(ev.debut)}
+			basculable on:toggle={() => dispatch('basculer')}>
 			<svelte:fragment slot="tags">
 				<span class="badge badge-gray">{typeLabel(ev.type)}</span>
 				{#if ev.statut_kanban}<span class="badge badge-blue">{colonnes.find((c) => c.id === ev.statut_kanban)?.label ?? ev.statut_kanban}</span>{/if}

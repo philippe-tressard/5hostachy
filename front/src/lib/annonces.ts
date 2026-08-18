@@ -36,12 +36,41 @@ export const CATEGORIES_ANNONCE = [
 	{ val: 'divers', label: '\u{1F4E6} Divers' },
 ];
 
+/**
+ * 🔴 **LE WORKFLOW d'une annonce** — section 3 du cadre #430, arbitré par
+ * l'utilisateur le 18/08/2026.
+ *
+ * ⚠️ Contredit la déclaration de la veille (`entites/annonce.ts`), qui posait
+ * `sansObjet` : *« une annonce n'a pas d'étapes de vie suivies à plusieurs »*.
+ * C'était mon arbitrage, pas celui du produit. La déclaration a été corrigée
+ * avec — une entité ne peut pas dire une chose et son écran une autre, et
+ * `lint:etats` le refuserait.
+ *
+ * **Donné** est distinct de **Vendu** : le type « Don » n'aboutit pas à une
+ * vente, et « Vendu » sonnerait faux sur un objet donné.
+ *
+ * ⚠️ **`archive` n'est pas dans cette liste**, et c'est délibéré : l'archivage
+ * n'est pas une étape qu'on choisit, c'est une conséquence du temps. Il se
+ * calcule côté serveur (`est_archivee`) et arrive dans le champ `archivee`.
+ * En faire une pastille aurait donné deux notions pour la même chose.
+ */
 export const STATUTS_ANNONCE = [
-	{ val: 'disponible', label: 'Disponible' },
+	{ val: 'en_cours', label: 'En cours' },
 	{ val: 'reserve', label: 'Réservé' },
-	{ val: 'vendu', label: 'Vendu / Donné' },
-	{ val: 'archive', label: 'Archiver' },
+	{ val: 'vendu', label: 'Vendu' },
+	{ val: 'donne', label: 'Donné' },
+	{ val: 'annule', label: 'Annulé' },
 ];
+
+/** La forme attendue par `WorkflowPastilles`, sans la recopier chez l'appelant. */
+export const OPTIONS_STATUT_ANNONCE = STATUTS_ANNONCE.map((s) => ({
+	value: s.val,
+	label: s.label,
+}));
+
+export function statutAnnonceLabel(val: string) {
+	return STATUTS_ANNONCE.find((s) => s.val === val)?.label ?? val;
+}
 
 export function typeAnnonceLabel(val: string) {
 	return TYPES_ANNONCE.find((t) => t.val === val)?.label ?? val;
@@ -61,10 +90,11 @@ export function typeAnnonceClass(val: string) {
 export function statutAnnonceClass(val: string) {
 	return (
 		({
-			disponible: 'badge-green',
+			en_cours: 'badge-green',
 			reserve: 'badge-orange',
-			vendu: 'badge-gray',
-			archive: 'badge-gray',
+			vendu: 'badge-blue',
+			donne: 'badge-blue',
+			annule: 'badge-gray',
 		} as Record<string, string>)[val] ?? 'badge-gray'
 	);
 }

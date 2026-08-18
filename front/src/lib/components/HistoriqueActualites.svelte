@@ -13,6 +13,7 @@
 -->
 <script lang="ts">
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { isAdmin } from '$lib/stores/auth';
 	import { publications as pubsApi, ApiError, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -55,14 +56,17 @@
 	}
 </script>
 
-<div class="history-section">
-	<button class="history-header" on:click={() => (historyExpanded = !historyExpanded)} aria-expanded={historyExpanded}>
-		<span class="history-title">&#x1F4C1; Historique</span>
-		{#if archivedPubsLoaded}<span class="history-count">{archivedPubs.length}</span>{/if}
-		<span class="history-chevron">{historyExpanded ? '▲' : '▼'}</span>
-	</button>
-	{#if historyExpanded}
-		<div class="history-content">
+<!--  Le bandeau vient de `SectionRepliee` : les petites annonces en ont reçu
+      un le 18/08/2026, et deux définitions d'un même objet ne sont pas
+      livrables (rang 1). `ouvert` est LIÉ — c'est ce qui déclenche encore le
+      chargement différé au premier dépliage.
+
+      ⚠️ `compte` reste `null` tant que rien n'est chargé : annoncer « 0 » se
+      lirait « il n'y a rien » alors qu'on n'a pas encore regardé. -->
+<SectionRepliee titre="&#x1F4C1; Historique"
+	compte={archivedPubsLoaded ? archivedPubs.length : null}
+	bind:ouvert={historyExpanded}>
+	<div>
 			{#if archivedPubsLoaded && archivedPubs.length === 0}
 				<p style="color:var(--color-text-muted);font-size:.875rem;margin:.5rem 0 0">Aucune publication archivée.</p>
 			{:else}
@@ -90,19 +94,20 @@
 					</div>
 				{/each}
 			{/if}
-		</div>
-	{/if}
-</div>
+	</div>
+</SectionRepliee>
 
 <style>
-	.history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
-	.history-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: none; border: none; padding: 0; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--color-text); text-align: left; }
-	.history-header:hover { color: var(--color-primary); }
-	.history-title { flex: 1; }
+	/*  Le bandeau de section, son compteur et son chevron vivent dans
+	    `SectionRepliee`. Ne restent ici que les bandeaux PAR ANNÉE, qui sont
+	    imbriqués et propres à cet écran.
+
+	    ⚠️ Ils redéclarent leur compteur et leur chevron plutôt que d'emprunter
+	    ceux du composant parent : Svelte scope les styles au composant qui rend
+	    le balisage, et compter sur le style d'un autre est précisément ce qui a
+	    fait partir les pastilles nues en production (v2.67.11). */
 	.history-count { display: inline-flex; align-items: center; justify-content: center; background: var(--color-primary); color: white; font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 12px; min-width: 1.5rem; }
 	.history-chevron { font-size: .8rem; color: var(--color-text-muted); flex-shrink: 0; transition: transform .2s; }
-	.history-header[aria-expanded="true"] .history-chevron { transform: scaleY(-1); }
-	.history-content { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
 	.history-year { margin-bottom: .5rem; }
 	.history-year-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .75rem; cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--color-text); margin-bottom: .3rem; }
 	.history-year-header:hover { border-color: var(--color-primary); color: var(--color-primary); }
