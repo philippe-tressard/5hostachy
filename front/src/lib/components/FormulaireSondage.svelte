@@ -29,6 +29,8 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import { sectionPresente, type Etat } from '$lib/entites/types';
+	import { SONDAGE } from '$lib/entites/sondage';
 	import { sondages as sondagesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
@@ -52,6 +54,15 @@
 	let envoyerSyndic = false;
 	let envoyerCs = false;
 	let submitting = false;
+
+	/**  🔴 Ce formulaire ne sert QUE la création, et la déclaration le dit sans
+	 *   ambiguïté : `PATCH /sondages/{id}` existe côté serveur et personne ne
+	 *   l'appelle. Corriger une faute de frappe dans la question impose donc de
+	 *   supprimer et recréer — ce qui perd tous les votes déjà exprimés (#467).
+	 *
+	 *   L'état est donc une CONSTANTE, pas une prop : l'écrire ainsi rend le manque
+	 *   visible en relecture, là où l'absence de prop ne dit rien. */
+	const etat: Etat = 'creation';
 
 	function ajouterOption() {
 		options = [...options, { libelle: '', champ_libre: false }];
@@ -122,7 +133,8 @@
 
 <FormulaireCreation titre="Nouveau sondage">
 	<form on:submit|preventDefault={creer}>
-		<!--  1. Titre — ici, la question posée. -->
+		<!--  1. Titre — ici, la question posée, et le titre de la section EST son
+		      libellé (`titreEcran: 'Question'`). -->
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
 				<label for="sondage-question">Question *</label>
@@ -130,7 +142,11 @@
 			</div>
 		</SectionFormulaire>
 
-		<!--  2. Champs spécifiques du sondage : sa clôture et ses options. -->
+		<!--  2. Champs spécifiques du sondage : ses options et sa clôture. DEUX
+		      groupes nommés pour une seule section — la déclaration les annonce
+		      tous les deux (`titreEcran`), et `lint:etats` refuse tout intitulé
+		      inventé sur place. -->
+		{#if sectionPresente(SONDAGE, etat, 'specifiques')}
 		<SectionFormulaire titre="Réponses possibles">
 			<div class="options">
 				{#each options as opt, i (i)}
@@ -185,16 +201,17 @@
 				</div>
 			</div>
 		</SectionFormulaire>
+		{/if}
 
 		<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
 		      Le sondage n'a ni photos ni documents. -->
 		<ChampsCommuns
 			idPrefixe="sondage"
-			avecPerimetre bind:perimetre={perimetreCible}
-			avecDestinataires bind:destinataires={publicCible}
-			avecDescription bind:description
+			avecPerimetre={sectionPresente(SONDAGE, etat, 'perimetre')} bind:perimetre={perimetreCible}
+			avecDestinataires={sectionPresente(SONDAGE, etat, 'destinataires')} bind:destinataires={publicCible}
+			avecDescription={sectionPresente(SONDAGE, etat, 'description')} bind:description
 			descriptionPlaceholder="Description du sondage…"
-			avecDiffusion
+			avecDiffusion={sectionPresente(SONDAGE, etat, 'diffusion')}
 			bind:whatsapp={partagerWhatsapp}
 			bind:syndic={envoyerSyndic}
 			bind:cs={envoyerCs}
