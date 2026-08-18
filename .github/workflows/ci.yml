@@ -10,11 +10,20 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+#  ⚠️ Tout job porte un `timeout-minutes` (18/08/2026). Sans lui, GitHub laisse
+#  pendre jusqu'à SIX HEURES : le 18/08, « Tests Python » est resté bloqué deux
+#  fois sur l'installation des bibliothèques système PDF (apt-get), et comme ce
+#  check est requis, la PR est restée « BLOCKED » sans qu'aucun échec ne soit
+#  signalé. Un job qui PEND ne dit rien ; un job qui ÉCHOUE se relance d'un clic.
+#  C'est la règle du projet : un contrôle qui ne peut pas s'exécuter doit le DIRE
+#  (`standards/04`, INCONNU jamais OK). Les durées observées vont de 7 s à 57 s.
+
 jobs:
   # ── Backend: lint Python avec Ruff ───────────────────────────
   lint-backend:
     name: Lint Python (Ruff)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -49,6 +58,7 @@ jobs:
   test-backend:
     name: Tests Python (pytest)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -91,6 +101,7 @@ jobs:
   test-scripts:
     name: Scripts d'infra (syntaxe + self-tests)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -231,6 +242,7 @@ jobs:
   build-frontend:
     name: Build SvelteKit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
