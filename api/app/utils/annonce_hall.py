@@ -292,7 +292,12 @@ body {{
 .chip-perimetre {{
   font-size: {g['meta']}; font-weight: 700; color: var(--navy);
   background: #F0EDE6; border-left: 1.2mm solid var(--gold);
-  padding: 1.6mm 3.5mm; border-radius: 1mm;
+  /*  ⚠️ Le rayon n'arrondit QUE le côté opposé à la bordure (18/08/2026, signalé à
+      l'écran : « un double trait ou boîte »). Avec `border-radius` sur les quatre
+      coins et une bordure sur un SEUL côté, WeasyPrint trace les arrondis du côté
+      bordé comme deux segments détachés du trait droit — d'où l'impression de deux
+      barres. Côté gauche droit, le filet redevient continu. */
+  padding: 1.6mm 3.5mm; border-radius: 0 1mm 1mm 0;
   text-transform: uppercase; letter-spacing: .6px;
 }}
 .date-affichage {{ font-size: {g['meta']}; color: var(--muted); white-space: nowrap; }}
