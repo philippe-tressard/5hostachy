@@ -112,12 +112,11 @@
 <div
 	id="ticket-{ticket.id}"
 	class:carte-liste={!archive}
-	role="presentation"
-	on:click={() => { if (!expanded) dispatch('basculer'); }}>
 	class:history-item={archive}
 	class:expanded
 	class:urgent={ticket.categorie === 'urgence'}
-
+	role="presentation"
+	on:click={() => { if (!expanded) dispatch('basculer'); }}
 >
 	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
 	      la norme de toutes les cartes du site (`EnteteCarte`, 18/08/2026). -->
