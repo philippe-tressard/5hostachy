@@ -33,7 +33,6 @@
 	/** L'entrée du fil en cours de correction, et son enregistrement. */
 	export let evolEnEdition: number | null = null;
 	export let evolCorrectionEnCours = false;
-	export let peutCommenter = false;
 	export let peutAdministrer = false;
 
 	const dispatch = createEventDispatcher<{
@@ -56,7 +55,6 @@
 		expanded={expandedIds.has(t.id)}
 		{archive}
 		{evolutionEnCours}
-		{peutCommenter}
 		{peutAdministrer}
 		mode={ticketEnEdition === t.id
 			? 'edition'

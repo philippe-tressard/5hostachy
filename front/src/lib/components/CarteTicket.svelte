@@ -43,7 +43,8 @@
 	import EnteteCarte from './EnteteCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
-	import { currentUser, isAdmin } from '$lib/stores/auth';
+	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
+	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
@@ -63,7 +64,6 @@
 	/** Allure d'archive : le ticket est clos depuis plus du délai de grâce. */
 	export let archive = false;
 	/** Le lecteur peut-il commenter / changer l'état ? (conseil syndical) */
-	export let peutCommenter = false;
 	/** Le lecteur peut-il corriger ou supprimer ? (administrateur) */
 	export let peutAdministrer = false;
 	/**  Ce que le corps de la carte montre. La page en est propriétaire : elle
@@ -80,6 +80,19 @@
 	export let evolEnEdition: number | null = null;
 	/** La correction est-elle en cours d'enregistrement ? */
 	export let evolCorrectionEnCours = false;
+
+	//  🔴 Les deux droits, calculés SUR CE TICKET — l'appelant ne peut pas les
+	//  fournir : ils dépendent de qui l'a déposé, et une liste en affiche vingt.
+	//
+	//  Avant, `peutCommenter` valait « membre du CS » et `peutAdministrer`
+	//  « admin » : le crayon n'apparaissait donc JAMAIS à l'auteur d'un ticket,
+	//  ni à la personne pour qui il avait été saisi. Le serveur, lui, les accepte
+	//  depuis la v2.85.0 — la capacité existait sans être atteignable.
+	//
+	//  ⚠️ `peutAdministrer` reste ce qu'il est pour la SUPPRESSION : effacer
+	//  définitivement n'est pas éditer, et cela reste réservé à l'admin.
+	$: peutEditerCeTicket = peutEditer(ticket, $currentUser?.id, $isAdmin);
+	$: peutSuivreCeTicket = peutCommenterCe(ticket, $currentUser?.id, $isAdmin, $isCS);
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
@@ -136,14 +149,20 @@
 			<!--  `aria-pressed` : le MODE se lit sur l'icône qui l'a ouvert, pas sur un
 			      titre au-dessus du formulaire (18/08/2026). Elle s'inverse et grossit —
 			      style dans `app.css`, une seule fois pour tout le site. -->
-			{#if peutCommenter}
+			{#if peutSuivreCeTicket}
 				<button class="btn-icon" aria-pressed={mode === 'evolution'} aria-label="Commenter ou changer l’état"
 					title="Commenter ou changer l’état"
 					on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button>
 			{/if}
-			{#if peutAdministrer}
+			{#if peutEditerCeTicket}
 				<button class="btn-icon" aria-pressed={mode === 'edition'} aria-label="Modifier" title="Modifier le ticket"
 					on:click|stopPropagation={() => dispatch('modifier')}>✏️</button>
+			{/if}
+			<!--  ⚠️ La corbeille NE SUIT PAS le droit d'édition : supprimer
+			      définitivement est irréversible, et cela reste à l'administrateur.
+			      Elle s'était retrouvée dans le bloc du crayon en une passe de
+			      réécriture — trois lignes plus bas, et le geste changeait de main. -->
+			{#if peutAdministrer}
 				<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
 					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button>
 			{/if}
@@ -170,7 +189,7 @@
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
-						showNotifs={peutCommenter}
+						showNotifs={peutSuivreCeTicket}
 						showFiles={true}
 						saving={evolutionEnCours}
 						on:submit={(e) => dispatch('evoluer', e.detail)}
@@ -202,7 +221,7 @@
 					      texte d'une entrée ne rejoue pas la transition qu'elle a
 					      enregistrée (`test_correction_pas_transition.py`). -->
 					<RubriqueHistorique {evolutions} statutLabels={STATUT_TICKET_LABELS}
-						peutModifier={peutCommenter}
+						peutModifier={peutSuivreCeTicket}
 						currentUserId={$currentUser?.id}
 						estAdmin={$isAdmin}
 						enEdition={evolEnEdition}

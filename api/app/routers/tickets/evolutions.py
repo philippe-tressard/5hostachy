@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import get_current_user, require_cs_or_admin, peut_commenter
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
@@ -165,11 +165,19 @@ def add_evolution(
     body: TicketEvolutionCreate,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
+    #  ⚠️ `get_current_user` et non `require_cs_or_admin` : le droit dépend du
+    #  TICKET, qu'une dépendance FastAPI ne connaît pas encore. Il est vérifié
+    #  deux lignes plus bas, et refuser ici serait refuser à l'auteur.
+    user: Utilisateur = Depends(get_current_user),
 ):
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
+    #  🔴 Commenter et faire avancer le suivi : l'auteur, le « saisi pour »,
+    #  l'admin — et le conseil syndical, qui suit les dossiers (18/08/2026).
+    #  Avant, l'AUTEUR de la demande ne pouvait pas commenter sa propre demande.
+    if not peut_commenter(ticket, user):
+        raise HTTPException(403, "Accès refusé")
     if body.type not in ("commentaire", "etat"):
         raise HTTPException(422, "Type invalide (commentaire ou etat)")
     if body.type == "etat" and not body.nouveau_statut:
