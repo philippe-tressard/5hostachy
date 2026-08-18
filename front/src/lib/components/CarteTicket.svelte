@@ -39,7 +39,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import ApercuCarte from './ApercuCarte.svelte';
+	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
@@ -170,7 +170,7 @@
 	</EnteteCarte>
 
 	{#if !expanded}
-		<ApercuCarte contenu={ticket.description} photos={ticket.photos_urls ?? []} />
+		<ApercuTicket {ticket} />
 	{/if}
 
 	{#if expanded}
