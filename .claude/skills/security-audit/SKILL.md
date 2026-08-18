@@ -34,9 +34,9 @@ Get-ChildItem -Recurse -Filter "*.py" | Where-Object { $_.FullName -notmatch "__
 Get-ChildItem -Recurse -Filter "*.svelte" | Select-String -Pattern "@html"
 ```
 
-**Règle** : Tout `{@html}` DOIT passer par `safeHtml()` de `$lib/sanitize.ts`.
+**Règle** : Tout `{@html}` DOIT passer par une fonction de `$lib/sanitize.ts` — elles sont **trois** (`safeHtml`, `safeRichContent`, `safeDescription`), toutes adossées à DOMPurify. Vérifié en CI par `npm run lint:html` depuis le 19/08/2026, qui exige que le nom vienne de l'**import** : une fonction locale homonyme ne prouve rien (#429).
 **Exception** : `Icon.svelte` (SVG hardcodé côté serveur).
-**Fix** : `import { safeHtml } from '$lib/sanitize'` → `{@html safeHtml(content)}`
+**Fix** : `import { safeDescription } from '$lib/sanitize'` → `{@html safeDescription(contenu)}` — et jamais un helper local, fût-il correct : c'est ainsi que trois copies de `safeDescription` ont coexisté.
 
 Configuration DOMPurify (`src/lib/sanitize.ts`) :
 - ALLOWED_TAGS : `p br b i u s strong em ul ol li blockquote pre code h1-h6 a img hr span div`

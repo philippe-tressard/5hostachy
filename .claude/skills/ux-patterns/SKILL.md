@@ -1151,7 +1151,7 @@ après une première proposition inexacte de ma part.
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
 - [ ] Méta toujours visible en mode collapsé
 - [ ] `.clamp-5` sur les aperçus
-- [ ] `safeHtml()` sur tout `{@html}`
+- [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — `safeHtml`, `safeRichContent` ou `safeDescription`, jamais un helper local (`lint:html`)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
 - [ ] Périmètre : pas affiché si `'résidence'`
 - [ ] Archiver (pas supprimer) sur la vue principale

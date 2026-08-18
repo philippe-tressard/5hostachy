@@ -276,16 +276,31 @@ autorisés : `toISOString()` seul (sérialisation UTC d'un payload d'API) et
 Un alias local qui délègue au helper partagé (`const formatDate = fmtDatetimeShort`)
 est une indirection inutile : appeler directement le helper.
 
-Le seul helper qui reste légitimement local est le rendu d'une description mixte
-texte/HTML :
+🔴 **Et il n'y a plus d'exception.** Cette section en déclarait une — le rendu
+d'une description mixte texte/HTML, « le seul helper qui reste légitimement
+local » — dont le corps était :
 
 ```svelte
-<script lang="ts">
-	function renderDesc(c: string) {
+	function renderDesc(c: string) {          // ⚠️ NE PLUS ÉCRIRE CECI
 		const t = c.trimStart();
-		return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/\n/g, '<br>')}</p>`);
+		return safeHtml(t.startsWith('<') ? c : `<p>${c.replace(/
+/g, '<br>')}</p>`);
 	}
-</script>
+```
+
+C'est **exactement** `safeDescription`, exportée par `$lib/sanitize.ts` — laquelle
+a été créée pour supprimer ce helper, alors écrit en double sous le nom `renderDesc`
+dans deux pages. **La consigne a survécu à la factorisation qu'elle décrivait.**
+
+Le résultat était prévisible : `tickets/[id]` en portait une **troisième** copie,
+sous le nom `renderContent`, jusqu'au 19/08/2026 (#429). Une skill qui enseigne un
+motif supprimé le fait réapparaître — c'est la duplication qui se reproduit par sa
+propre documentation.
+
+```svelte
+	import { safeDescription } from '$lib/sanitize';
+	…
+	{@html safeDescription(contenu)}
 ```
 
 ## CSS : Variables globales disponibles
@@ -307,14 +322,33 @@ var(--shadow)              /* Box-shadow standard */
 
 ## Sécurité XSS
 
-**OBLIGATOIRE** : tout `{@html}` doit utiliser `safeHtml()` :
+**OBLIGATOIRE** : tout `{@html}` passe par une fonction de `$lib/sanitize.ts`.
+Elles sont **trois**, toutes adossées à DOMPurify — cette section n'en nommait
+qu'une alors que les trois étaient en service, ce qui faisait lire 19 usages
+conformes comme autant d'écarts (#429) :
+
+| Fonction | Quand |
+|---|---|
+| `safeHtml` | contenu déjà en HTML riche |
+| `safeRichContent` | riche **ou** texte simple, **sans** enveloppe — à l'intérieur d'un `<p>` |
+| `safeDescription` | riche **ou** texte simple, **avec** enveloppe `<p>` |
+
 ```svelte
 <!-- ✗ INTERDIT -->
 {@html contenu}
 
+<!-- ✗ INTERDIT AUSSI : une fonction locale, même correcte, même homonyme -->
+{@html monRenduLocal(contenu)}
+
 <!-- ✓ CORRECT -->
-{@html safeHtml(contenu)}
+{@html safeDescription(contenu)}
 ```
+
+🔒 **`npm run lint:html` le vérifie en CI** depuis le 19/08/2026 : il lit la liste
+des assainisseurs **dans `sanitize.ts`** (une liste recopiée diverge au premier
+ajout) et exige que le nom vienne de l'**import**. Deux exceptions nommées,
+`Icon.svelte` et `QRCode.svelte`, déclarées dans le contrôle avec leur raison — et
+une exception qui ne sert plus le fait échouer.
 
 ## Emojis non-BMP (U+10000 et au-delà)
 

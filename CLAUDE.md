@@ -177,7 +177,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - [ ] Pattern existant réutilisé (pas de variante ad hoc)
 - [ ] Méta toujours visible en mode collapsé
 - [ ] `.clamp-5` sur les aperçus
-- [ ] `safeHtml()` sur tout `{@html}`
+- [ ] un assainisseur de `$lib/sanitize` sur tout `{@html}` — jamais un helper
+      local, même correct (`npm run lint:html` le refuse)
 - [ ] Accessibilité : `role`, `tabindex`, `aria-label`, `on:keydown`
 - [ ] Périmètre : pas affiché si `'résidence'`
 - [ ] Archiver (pas supprimer) sur la vue principale
