@@ -5,10 +5,8 @@ lui-même — `participation`, dont les chemins sont nus, le reçoit du paquet.
 """
 import json
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy import func
 from sqlmodel import Session, select
 

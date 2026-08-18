@@ -24,7 +24,13 @@
 
 	// Édition
 	let showEditModal = false;
-	let editForm = { question: '', description: '', cloture_le: '', resultats_publics: true };
+	//  `options` ne porte que l'`id` et le LIBELLÉ : le serveur n'accepte rien
+	//  d'autre, et c'est ce qui rend l'ajout et le retrait impossibles par
+	//  construction plutôt que par un contrôle qu'on pourrait oublier (#467).
+	let editForm: {
+		question: string; description: string; cloture_le: string;
+		resultats_publics: boolean; options: { id: number; libelle: string }[];
+	} = { question: '', description: '', cloture_le: '', resultats_publics: true, options: [] };
 	let saving = false;
 	let deleting = false;
 
@@ -102,6 +108,7 @@
 			description: sondage.description ?? '',
 			cloture_le: sondage.cloture_le ? sondage.cloture_le.replace('Z','').slice(0,16) : '',
 			resultats_publics: sondage.resultats_publics,
+			options: (sondage.options ?? []).map((o: any) => ({ id: o.id, libelle: o.libelle })),
 		};
 		showEditModal = true;
 	}
@@ -114,6 +121,7 @@
 				description: editForm.description || null,
 				cloture_le: editForm.cloture_le ? new Date(editForm.cloture_le).toISOString() : null,
 				resultats_publics: editForm.resultats_publics,
+				options: editForm.options,
 			});
 			sondage = await sondagesApi.get(sondageId);
 			showEditModal = false;
@@ -311,10 +319,35 @@
 				Description
 				<RichEditor id="sondage-edit-description" bind:value={editForm.description} placeholder="Description du sondage…" minHeight="80px" />
 			</label>
+			<!--  Les RÉPONSES : leur libellé se corrige, la liste ne bouge pas.
+			      Ni ajout ni retrait — un vote déjà exprimé sur une option retirée n'a
+			      pas de repli honnête : le compter ailleurs fausse le résultat, le
+			      supprimer efface l'expression de quelqu'un sans le lui dire (#467).
+			      L'interface dit donc EXACTEMENT ce que le serveur accepte : pas de
+			      bouton « + », pas de croix, et l'ordre ne se change pas non plus. -->
+			{#if editForm.options.length}
+				<div class="field">
+					<span class="champ-titre">Réponses possibles</span>
+					{#each editForm.options as opt, i (opt.id)}
+						<input class="reponse-saisie" bind:value={editForm.options[i].libelle}
+							aria-label="Libellé de la réponse {i + 1}" required />
+					{/each}
+					<p class="aide-reponses">
+						Seul le <strong>texte</strong> se corrige. Ajouter ou retirer une réponse
+						invaliderait les votes déjà exprimés : il faudrait alors créer un nouveau
+						sondage.
+					</p>
+				</div>
+			{/if}
+
 			<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
 				Date de clôture
 				<input type="datetime-local" bind:value={editForm.cloture_le} />
 			</label>
+			<p class="aide-reponses">
+				Elle peut être <strong>reculée</strong>, jamais avancée une fois qu'un vote a
+				été exprimé — raccourcir priverait de leur voix ceux qui n'ont pas encore voté.
+			</p>
 			<label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer">
 				<input type="checkbox" bind:checked={editForm.resultats_publics} />
 				Afficher les résultats avant la clôture
@@ -332,6 +365,10 @@
 {/if}
 
 <style>
+	/*  Saisie des libellés de réponse dans la modale d'édition (#467). */
+	.champ-titre { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
+	.reponse-saisie { width: 100%; margin-bottom: .35rem; }
+	.aide-reponses { margin: .1rem 0 1rem; font-size: .8rem; color: var(--color-text-muted); }
 	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); text-decoration: none; margin-bottom: .75rem; }
 	.back-link:hover { color: var(--color-primary); }
 	.option-label {
