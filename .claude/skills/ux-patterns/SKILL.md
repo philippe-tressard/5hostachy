@@ -811,8 +811,37 @@ jamais réimplémentée dans une page.
 
 | `format` | Où | Pourquoi |
 |---|---|---|
-| `'vignette'` (défaut) | là où l'on **survole** : fils de messages, fils d'évolutions, listes | signale « il y a une photo » sans casser le rythme de lecture |
-| `'grand'` | là où l'on a **demandé à voir** : fil déplié, annonce dépliée, fiche ticket | l'utilisateur vient de déplier ; lui laisser un timbre-poste de 72 px lui impose un clic de plus pour ce qu'il demande |
+| `'vignette'` (défaut) | là où l'on **survole** : listes, fils de messages | signale « il y a une photo » sans casser le rythme de lecture |
+| `'grand'` | là où l'on a **demandé à voir** : fil déplié, annonce dépliée, fiche ticket, **et le fil d'évolutions** | l'utilisateur vient de déplier ; lui laisser un timbre-poste de 72 px lui impose un clic de plus pour ce qu'il demande |
+
+🔴 **Le fil d'évolutions est passé de `'vignette'` à `'grand'` le 18/08/2026**, sur
+constat à l'écran — ce tableau le rangeait du premier côté, avec un argument juste
+mais mal appliqué. Un fil d'Historique ne s'atteint qu'en **dépliant** une carte :
+quand on l'a sous les yeux, on a déjà demandé à voir. Et sur un événement de
+calendrier, les photos du suivi sont **tout le contenu** (« voici les anomalies
+relevées ») — elles étaient réduites à trois timbres-poste là où le même dossier,
+en ticket, les montrait en grand avec son compteur « 1 / 3 ».
+
+Le critère ne change pas : *survole-t-on, ou a-t-on demandé à voir ?* C'est son
+application à ce cas qui était fausse.
+
+### L'aperçu replié se REPLIE sur l'Historique (18/08/2026)
+
+Quand l'objet ne porte aucune pièce mais que son Historique en porte, la carte
+repliée montre celles de l'entrée **la plus récente** — `apercuAvecRepli()`
+(`$lib/fichiers.ts`).
+
+**Why** : un événement de calendrier n'a le plus souvent aucune photo propre, c'est
+le suivi qui en apporte. Sa carte restait donc nue là où un ticket illustré montre
+sa vignette d'un coup d'œil. La règle du repli existait déjà dans l'autre sens —
+ce qu'une entrée diffuse porte ses pièces, « avec repli sur l'objet si elle n'en a
+pas » (`flux/tickets.py`) — et elle suit la même logique que le fil, qui **date du
+dernier fait, jamais du premier**.
+
+⚠️ **Aucun chargement déclenché** : la fonction ne sert qu'aux écrans dont l'API
+livre déjà l'Historique avec l'objet (calendrier : `EvenementRead.evolutions`). Les
+**tickets** chargent leurs évolutions à la demande, au dépliage — les réclamer en
+liste coûterait une requête par carte. C'est un changement d'API, suivi à part.
 
 Le grand format **ne coûte aucun octet** : il n'existe pas de miniature côté serveur,
 les photos sont réduites à 1600 px / JPEG q85 au téléversement, et la vignette

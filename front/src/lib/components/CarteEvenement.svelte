@@ -30,6 +30,7 @@
 	import FicheLecture from './FicheLecture.svelte';
 	import HistoriqueEvenement from './HistoriqueEvenement.svelte';
 	import { EVENEMENT } from '$lib/entites/evenement';
+	import { apercuAvecRepli } from '$lib/fichiers';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
 
 	export let ev: any;
@@ -107,8 +108,15 @@
 			<!--  ⚠️ Photos et documents SÉPARÉS : la vignette pose `photos[0]` dans un
 			      `<img>`. Les verser ensemble faisait sortir un devis PDF en image
 			      cassée ; séparés, il devient une tuile 📎. -->
+			<!--  🔴 REPLI SUR L'HISTORIQUE (18/08/2026, constaté à l'écran). Un
+			      événement n'a le plus souvent aucune photo propre : c'est le suivi
+			      qui en apporte — « le technicien est intervenu ce matin, voici les
+			      anomalies ». La carte restait donc nue là où un ticket illustré
+			      montre sa vignette. Gratuit ici : l'API livre l'Historique AVEC
+			      l'événement (`EvenementRead.evolutions`), aucune requête de plus. -->
+			{@const apercu = apercuAvecRepli(ev.photos_urls, ev.fichiers_urls, ev.evolutions)}
 			<ApercuCarte contenu={ev.description ?? ''}
-				photos={ev.photos_urls ?? []} fichiers={ev.fichiers_urls ?? []} />
+				photos={apercu.photos} fichiers={apercu.fichiers} />
 		{/if}
 		{#if expanded}
 			<div class="carte-corps ev-expanded-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>

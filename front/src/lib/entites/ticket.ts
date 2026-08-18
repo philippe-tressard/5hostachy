@@ -13,7 +13,7 @@
  *   • `FormulaireTicket.svelte`  — création ET édition (`sectionPresente`)
  *   • `FicheLecture.svelte`      — affichage, via `sectionsDe(TICKET, 'affichage')`
  *   • `EvolForm.svelte`          — évolution *(pas encore : composant partagé par
- *     quatre écrans, il rejoindra le cadre avec #433 — cf. la note en fin de
+ *     quatre écrans, il rejoindra le cadre avec #463 — cf. la note en fin de
  *     fichier)*
  *
  * ⚠️ **Rien de spécifique au ticket ne doit s'écrire ailleurs.** Si un écran a
@@ -153,16 +153,26 @@ export const TICKET: EntiteDeclaree = {
  * ⚠️ **Ce que cette déclaration ne gouverne PAS encore, et pourquoi.**
  *
  * L'état `evolution` est déclaré ici, mais `EvolForm.svelte` ne le consomme pas :
- * ce composant sert **quatre écrans** (tickets, fiche de ticket, actualités,
- * espace CS) et l'y brancher changerait les trois autres avant qu'on les ait
- * regardés. C'est très exactement ce que R5 interdit : *l'enrichissement se
- * propose sur UN écran, se fait constater, puis se généralise*.
+ * ce composant sert **cinq écrans** — tickets, fiche de ticket, actualités,
+ * espace CS, et le **calendrier** depuis le 18/08/2026 (`HistoriqueEvenement`) —
+ * et l'y brancher changerait les quatre autres avant qu'on les ait regardés.
+ * C'est très exactement ce que R5 interdit : *l'enrichissement se propose sur UN
+ * écran, se fait constater, puis se généralise*.
  *
- * Il reste donc une divergence connue et non gouvernée : `EvolForm` sait rendre
- * les pièces jointes **unifiées** (`separatePhotosAndDocs = false`), ce qui
- * fusionne les sections 7 et 8 — interdit par le cadre. Les tickets ne l'utilisent
- * pas (`separatePhotosAndDocs = true`) ; les actualités et l'espace CS, si. La
- * remise en conformité est le travail de **#433**, pas de celui-ci : *une variante
- * ajoutée pour accueillir un écart existant ne factorise pas, elle entérine* — mais
- * la retirer d'ici toucherait deux écrans que ce lot n'a pas mesurés.
+ * ⚠️ Le compte était resté à « quatre » après l'arrivée du cinquième : un nombre
+ * écrit dans un commentaire ne se met pas à jour tout seul, et c'est précisément
+ * ce nombre qui justifie de ne pas brancher.
+ *
+ * ✅ **La divergence que cette note décrivait est SOLDÉE.** Elle disait qu'`EvolForm`
+ * savait rendre les pièces jointes « unifiées » (`separatePhotosAndDocs = false`),
+ * fusionnant les sections 7 et 8, et que les actualités et l'espace CS s'en
+ * servaient. Le mode a disparu le **18/08/2026**, quand son dernier appelant l'a
+ * quitté — mais la note, elle, est restée, et a été **recopiée telle quelle dans
+ * `evenement.ts`** le lendemain. Une affirmation périmée ne dort pas : elle se
+ * propage au fichier suivant.
+ *
+ * Ce qui subsiste réellement : `EvolForm` n'est gouverné par aucune déclaration,
+ * il sert **cinq** écrans, et l'intitulé de sa description bascule
+ * « Commentaire » / « Contenu » là où **R3** demande le même libellé partout.
+ * C'est **#463** — et non plus #433, fermé le 18/08 après constat en production.
  */

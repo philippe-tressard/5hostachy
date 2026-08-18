@@ -162,8 +162,25 @@
 						{#if evol.contenu}
 							<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 						{/if}
+						<!--  🔴 GRAND FORMAT, et c'est un REVIREMENT (18/08/2026).
+						      `ux-patterns` §11 rangeait les fils d'évolutions du côté
+						      « vignette », avec un argument juste : elle signale la photo
+						      sans casser le rythme de lecture d'une liste qu'on survole.
+
+						      L'écran l'a réfuté, capture à l'appui : un fil d'Historique
+						      ne s'atteint qu'en DÉPLIANT une carte. Quand on l'a sous les
+						      yeux, on a déjà demandé à voir — et sur un événement de
+						      calendrier, les photos du suivi sont TOUT le contenu (« voici
+						      les anomalies relevées »), réduites à trois timbres-poste de
+						      72 px là où le même dossier, s'il avait été un ticket, les
+						      montrait en grand avec son compteur « 1 / 3 ».
+
+						      La règle de §11 ne change pas, sa lecture si : le critère est
+						      « survole-t-on, ou a-t-on demandé à voir ? », et un fil déplié
+						      est du second côté. `compact` reste — il ne concerne que la
+						      typographie des liens de documents. -->
 						{#if evol.fichiers_urls?.length}
-							<div class="evol-pj"><PiecesJointes urls={evol.fichiers_urls} size={72} compact /></div>
+							<div class="evol-pj"><PiecesJointes urls={evol.fichiers_urls} format="grand" compact /></div>
 						{/if}
 					{/if}
 				</div>
