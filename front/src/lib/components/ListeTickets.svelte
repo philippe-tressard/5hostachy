@@ -29,18 +29,13 @@
 	export let ticketEnEdition: number | null = null;
 	/** Le ticket ouvert en nouvelle entrée d'Historique, s'il y en a un. */
 	export let ticketEnEvolution: number | null = null;
-	/**  Le GESTE demandé sur ce ticket — celui du bouton cliqué (#426). Il ne se
-	     redemande pas dans le formulaire : `💬` dit « commenter », `🔄` dit
-	     « changer l'état ». */
-	export let gesteEvolution: 'commentaire' | 'etat' = 'commentaire';
 	export let evolutionEnCours = false;
 	export let peutCommenter = false;
 	export let peutAdministrer = false;
 
 	const dispatch = createEventDispatcher<{
 		basculer: Ticket;
-		commenter: Ticket;
-		changerEtat: Ticket;
+		evoluer_ouvrir: Ticket;
 		modifier: Ticket;
 		supprimer: Ticket;
 		evoluer: { ticket: Ticket; data: unknown };
@@ -59,11 +54,10 @@
 		mode={ticketEnEdition === t.id
 			? 'edition'
 			: ticketEnEvolution === t.id
-				? gesteEvolution
+				? 'evolution'
 				: 'lecture'}
 		on:basculer={() => dispatch('basculer', t)}
-		on:commenter={() => dispatch('commenter', t)}
-		on:changerEtat={() => dispatch('changerEtat', t)}
+		on:evoluer_ouvrir={() => dispatch('evoluer_ouvrir', t)}
 		on:modifier={() => dispatch('modifier', t)}
 		on:supprimer={() => dispatch('supprimer', t)}
 		on:evoluer={(e) => dispatch('evoluer', { ticket: t, data: e.detail })}

@@ -244,6 +244,14 @@ class TicketUpdate(BaseModel):
     batiment_id: Optional[int] = None
     destinataire_syndic: Optional[bool] = None
     destinataire_cs: Optional[bool] = None
+    #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
+    #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le
+    #  groupe, maintenant » — et il ne se relit donc pas. La case repart décochée
+    #  à chaque ouverture du formulaire, et c'est juste : il n'y a pas d'état à
+    #  restaurer, seulement un envoi à demander. Trouvé le 18/08/2026 en écrivant
+    #  la réouverture de la Diffusion — le test `test_correction_pas_transition`
+    #  a refusé l'affectation d'un attribut qui n'existe pas.
+    partager_whatsapp: Optional[bool] = None
     saisi_pour_user_id: Optional[int] = None
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
@@ -252,6 +260,11 @@ class TicketUpdate(BaseModel):
     # Sert à retirer ou réordonner des pièces jointes déjà téléversées : l'ajout
     # passe par POST /uploads/fichier, seul endroit qui valide le type MIME.
     fichiers_urls: Optional[List[str]] = None
+    #  ✅ Ouvert à l'édition le 18/08/2026 : c'était la dette `api` que la
+    #  déclaration du cadre citait (#431, motif de DETTE jamais de conception).
+    #  Les photos se corrigent désormais comme les documents — même règle, même
+    #  endpoint de téléversement, et une liste vide efface sans ambiguïté.
+    photos_urls: Optional[List[str]] = None
 
 
 class MessageCreate(BaseModel):

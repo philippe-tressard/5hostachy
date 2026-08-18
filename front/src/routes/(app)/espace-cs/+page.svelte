@@ -136,7 +136,6 @@
 	let tkEvolsMap: Record<number, TicketEvolution[]> = {};
 	let tkEvolsLoaded = new Set<number>();
 	let tkShowForm: number | null = null;
-	let tkGeste: 'commentaire' | 'etat' = 'commentaire';
 	let tkEvolSaving = false;
 	let tkEditingEvolId: number | null = null;
 	let tkEditEvolSaving = false;
@@ -559,10 +558,10 @@
 		} catch { /* silencieux */ }
 	}
 
-	//  Le geste vient du bouton cliqué, il n'est plus redemandé en pastilles (#426).
-	function tkOpenForm(id: number, geste: 'commentaire' | 'etat') {
+	//  UN point d'entrée (#426) : le formulaire porte les deux gestes, et lequel a
+	//  été fait se lit dans les pastilles de la section Workflow.
+	function tkOpenForm(id: number) {
 		tkShowForm = id;
-		tkGeste = geste;
 		tkExpandedId = id;
 	}
 
@@ -1440,8 +1439,7 @@
 					</div>
 					<div class="tk-row-right">
 						<span class="tk-row-date">{fmtDate(t.mis_a_jour_le ?? t.cree_le)}</span>
-						<button class="btn-icon" aria-label="Commenter" title="Commenter" on:click|stopPropagation={() => tkOpenForm(t.id, 'commentaire')}>&#x1F4AC;</button>
-						<button class="btn-icon" aria-label="Changer l’état" title="Changer l’état" on:click|stopPropagation={() => tkOpenForm(t.id, 'etat')}>&#x1F504;</button>
+						<button class="btn-icon" aria-label="Commenter ou changer l’état" title="Commenter ou changer l’état" on:click|stopPropagation={() => tkOpenForm(t.id)}>&#x1F504;</button>
 						<span class="chevron" class:open={expanded}>›</span>
 					</div>
 				</div>
@@ -1456,7 +1454,6 @@
 						<div class="evol-form">
 							{#key tkShowForm}
 							<EvolForm idPrefixe="cs-tk-evol-{t.id}"
-								evolType={tkGeste}
 								statutOptions={TK_STATUT_OPTIONS}
 								statutLabels={TK_STATUT_LABELS}
 								currentStatut={t.statut ?? ''}
@@ -1513,11 +1510,10 @@
 									</RubriqueHistorique>
 								</div>
 							{/if}
-							<!--  Un bouton par geste (#426). ⚠️ Ils doublent ceux de l'en-tête
-							      de la carte — c'était déjà le cas avant ce lot ; à arbitrer. -->
-							<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
-								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id, 'commentaire')}>&#x1F4AC; Commenter</button>
-								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id, 'etat')}>&#x1F504; Changer l’état</button>
+							<!--  ⚠️ Cette commande double celle de l'en-tête de la carte —
+							      c'était déjà le cas avant #426 ; à arbitrer sur cet écran. -->
+							<div style="margin-top:.75rem">
+								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id)}>&#x1F504; Commenter ou changer l’état</button>
 							</div>
 						{/if}
 					</div>

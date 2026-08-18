@@ -146,10 +146,14 @@ ECRITURES_CLIENT = [
     # suivent le découpage, pas l'inverse. Le test échouait bruyamment (fichier
     # introuvable), ce qui est la bonne façon de perdre sa cible.
     ("api/app/routers/tickets/crud.py", "create_ticket"),
-    # `update_ticket` délègue l'écriture à `_appliquer_contenu` depuis le
-    # découpage : c'est cette fonction qui filtre, et donc elle qu'il faut viser.
-    # Le test a échoué bruyamment au découpage, ce qui est le comportement voulu.
-    ("api/app/routers/tickets/crud.py", "_appliquer_contenu"),
+    # `update_ticket` délègue l'écriture à `_appliquer_contenu` : c'est cette
+    # fonction qui filtre, et donc elle qu'il faut viser. Elle a déménagé DEUX
+    # fois — `tickets.py` → `tickets/crud.py` (08/08/2026), puis `crud.py` →
+    # `correction.py` (18/08/2026, découpage imposé par la modularité). Les deux
+    # fois, le test a échoué bruyamment sur un fichier introuvable : c'est la
+    # bonne façon de perdre sa cible, et la raison pour laquelle cette liste est
+    # écrite en clair plutôt que découverte.
+    ("api/app/routers/tickets/correction.py", "_appliquer_contenu"),
     ("api/app/routers/tickets/messages.py", "add_message"),
     ("api/app/routers/tickets/evolutions.py", "add_evolution"),
     ("api/app/routers/tickets/evolutions.py", "update_evolution"),

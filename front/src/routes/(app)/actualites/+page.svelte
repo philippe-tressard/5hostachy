@@ -122,14 +122,13 @@
 
 	// ── Évolutions ──────────────────────────────────────────────────────
 	let showEvolForm: number | null = null;  // pub.id ouvert
-	//  Le geste vient du bouton cliqué — `💬` commenter, `🔄` changer l'état — et
-	//  il n'est plus redemandé une fois le formulaire ouvert (#426).
-	let gesteEvol: 'commentaire' | 'etat' = 'commentaire';
 	let evolSaving = false;
 
-	function ouvrirEvolution(pub: Publication, geste: 'commentaire' | 'etat') {
+	//  UN point d'entrée (#426) : le formulaire porte les DEUX gestes, et lequel a
+	//  été fait se lit dans les pastilles de la section Workflow — celle de l'état
+	//  courant est active, la laisser telle quelle ne change rien.
+	function ouvrirEvolution(pub: Publication) {
 		showEvolForm = pub.id;
-		gesteEvol = geste;
 		editingPub = null;
 		expandedPubs = new Set([pub.id]);
 	}
@@ -236,13 +235,12 @@
 				{#if $isCS}
 					<button class="btn-icon-edit" aria-label="Modifier" title="Modifier"
 						on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
-					<!--  DEUX points d'entrée : le geste se déclare ici, une fois. Le
-					      formulaire le redemandait en pastilles alors que ce bouton
-					      venait de le dire (#426). -->
-					<button class="btn-icon" aria-label="Commenter" title="Commenter"
-						on:click|stopPropagation={() => ouvrirEvolution(pub, 'commentaire')}>&#x1F4AC;</button>
-					<button class="btn-icon" aria-label="Changer l’état" title="Changer l’état"
-						on:click|stopPropagation={() => ouvrirEvolution(pub, 'etat')}>&#x1F504;</button>
+					<!--  UN point d'entrée (#426). L'icône 💬 a été retirée le 18/08/2026 :
+					      elle doublait celle-ci, le formulaire portant désormais les DEUX
+					      gestes — commenter, et faire avancer le suivi. -->
+					<button class="btn-icon" aria-label="Commenter ou changer l’état"
+						title="Commenter ou changer l’état"
+						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button>
 					{#if pub.statut === 'resolu'}
 						<button class="btn-icon" aria-label="Archiver" title="Archiver"
 							on:click|stopPropagation={() => archivePub(pub)}>&#x1F4E6;</button>
@@ -293,7 +291,6 @@
 						      (#433). *Une variante ajoutée pour accueillir un écart
 						      existant ne factorise pas, elle entérine.* -->
 						<EvolForm idPrefixe="pub-evol-{pub.id}"
-							evolType={gesteEvol}
 							statutOptions={STATUT_PUBLICATION_OPTIONS}
 							statutLabels={STATUT_LABELS}
 							currentStatut={pub.statut ?? ''}

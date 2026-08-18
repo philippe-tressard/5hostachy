@@ -47,6 +47,7 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
@@ -99,15 +100,31 @@
 	//  liste. Lié tel quel, une sélection abandonnée resterait visible sur la carte
 	//  alors que rien n'a été enregistré.
 	let perimetreCible: string[] = [...(ticket?.perimetre_cible ?? perimetreDefautListe())];
-	let destinataireSyndic = false;
-	let destinataireCs = false;
+	//  ✅ La DIFFUSION est rouverte à l'édition (18/08/2026, arbitrage utilisateur) :
+	//  le conseil syndical doit pouvoir décider d'envoyer au syndic un ticket déjà
+	//  saisi. Les cases reprennent les valeurs enregistrées — « telle qu'à la
+	//  création ».
+	//
+	//  ⚠️ Ce qui rend la réouverture SANS RISQUE vit côté serveur : seule la
+	//  transition décoché → coché envoie. Un canal déjà coché ne repart pas à chaque
+	//  enregistrement — sinon corriger une faute de frappe rejouerait l'envoi, et
+	//  c'est l'incident du triple envoi WhatsApp du 14/08/2026.
+	let destinataireSyndic = ticket?.destinataire_syndic ?? false;
+	let destinataireCs = ticket?.destinataire_cs ?? false;
+	//  ⚠️ Le partage WhatsApp est un ACTE, pas un champ : `Ticket` n'a pas cette
+	//  colonne (à la différence de `Publication`). La case repart donc DÉCOCHÉE à
+	//  chaque ouverture — il n'y a pas d'état à restaurer, seulement un envoi à
+	//  demander. La cocher publie sur le groupe, une fois.
 	let partagerWhatsapp = false;
 	// Photos et documents sont téléversés dès leur sélection, avant que le ticket
 	// existe : `POST /uploads/fichier` rend l'URL immédiatement. Les envoyer avec
 	// la création est ce qui permet à l'e-mail syndic/CS de partir avec — quand
 	// les photos étaient téléversées APRÈS, l'e-mail était déjà construit et
 	// partait sans elles, sans que rien ne le signale.
-	let photosUrls: string[] = [];
+	//  RECHARGÉES en édition depuis le 18/08/2026, comme les documents : `PATCH`
+	//  remplace la liste entière, donc partir d'un tableau vide effacerait les photos
+	//  existantes au premier enregistrement — silencieusement.
+	let photosUrls: string[] = [...(ticket?.photos_urls ?? [])];
 	//  Les documents déjà joints sont RECHARGÉS en édition : `PATCH` remplace la
 	//  liste entière (`ticket.fichiers_urls = body.fichiers_urls`). Partir d'un
 	//  tableau vide effacerait les pièces existantes au premier enregistrement —
@@ -118,10 +135,18 @@
 
 	// Saisi pour (CS/Admin uniquement)
 	type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
-	let modeSaisiPour: ModeSaisiPour = 'moi';
-	let saisiPourUserId: number | null = null;
-	let saisiPourNom = '';
-	let saisiPourEmail = '';
+	//  L'état initial vient du ticket : la section est ouverte à l'édition depuis que
+	//  le serveur sait EFFACER les `saisi_pour_*` (il lit la PRÉSENCE du champ, pas
+	//  sa non-nullité). L'ouvrir sans pré-remplir aurait proposé « En mon nom » sur un
+	//  ticket saisi pour quelqu'un — et l'aurait effacé au premier enregistrement.
+	let modeSaisiPour: ModeSaisiPour = ticket?.saisi_pour_user_id
+		? 'resident'
+		: ticket?.saisi_pour_nom
+			? 'exterieur'
+			: 'moi';
+	let saisiPourUserId: number | null = ticket?.saisi_pour_user_id ?? null;
+	let saisiPourNom = ticket?.saisi_pour_nom ?? '';
+	let saisiPourEmail = ticket?.saisi_pour_email ?? '';
 	let usersActifs: { id: number; prenom: string; nom: string; email: string }[] = [];
 
 	onMount(async () => {
@@ -150,7 +175,7 @@
 			error = 'Titre et description sont obligatoires.';
 			return;
 		}
-		if (!modeEdition && $isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
+		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
 			error = 'Veuillez saisir le nom de la personne.';
 			return;
 		}
@@ -163,13 +188,26 @@
 				//  le serveur répond 403 à quiconque d'autre le lui envoie, y compris
 				//  à l'auteur corrigeant son propre ticket — l'envoyer inconditionnellement
 				//  ferait échouer une correction de faute de frappe.
+				//  Tout ce que la déclaration rend en édition — les neuf sections. Les
+				//  trois `saisi_pour_*` partent TOUJOURS ensemble, y compris à `null` :
+				//  c'est leur PRÉSENCE qui dit au serveur d'écrire, et c'est ce qui
+				//  permet de revenir à « En mon nom ».
 				const maj = await ticketsApi.update(ticket.id, {
 					titre: titre.trim(),
 					description,
 					categorie,
 					perimetre_cible: perimetreCible,
+					photos_urls: photosUrls,
 					fichiers_urls: fichiersUrls,
-					...($isCS ? { statut } : {}),
+					...($isCS ? {
+						statut,
+						destinataire_syndic: destinataireSyndic,
+						destinataire_cs: destinataireCs,
+						partager_whatsapp: partagerWhatsapp,
+						saisi_pour_user_id: modeSaisiPour === 'resident' ? saisiPourUserId : null,
+						saisi_pour_nom: modeSaisiPour === 'exterieur' ? saisiPourNom.trim() || null : null,
+						saisi_pour_email: modeSaisiPour === 'exterieur' ? saisiPourEmail.trim() || null : null,
+					} : {}),
 				});
 				toast('success', 'Ticket modifié');
 				dispatch('modifie', maj);
@@ -266,8 +304,8 @@
 			</SectionFormulaire>
 		{/if}
 
-		{#if $isCS && !modeEdition && sectionPresente(TICKET, etat, 'specifiques')}
-			<SectionFormulaire titre="Saisi pour">
+		{#if $isCS && sectionPresente(TICKET, etat, 'specifiques')}
+			<SectionFormulaire titre="Saisi pour" requis>
 				<div class="field champ-large saisi-pour-section">
 					<div class="saisi-pour-tabs">
 						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'moi'} on:click={() => modeSaisiPour = 'moi'}>
@@ -302,11 +340,20 @@
 		      édition depuis le cadre #430 : une correction corrige l'état comme
 		      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
 		      côté serveur (voir le bloc de commentaires du script). -->
-		<SectionFormulaire titre="Workflow" pour="ticket-statut">
-			<div class="field champ-large">
-				<select id="ticket-statut" bind:value={statut} disabled={!$isCS}>
-					{#each STATUT_TICKET_OPTIONS as s}<option value={s.value}>{s.label}</option>{/each}
-				</select>
+		<SectionFormulaire titre="Workflow" requis idTitre="ticket-workflow-titre">
+			<div class="field champ-large" role="group" aria-labelledby="ticket-workflow-titre">
+				<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est
+				      active par défaut à la création — l'état de départ se voit, il ne
+				      se devine pas. Un résident ne peut pas faire avancer le suivi :
+				      les pastilles sont alors en lecture, et le serveur refait le
+				      contrôle (liste blanche CS) — ce que l'interface grise n'est
+				      qu'un confort. -->
+				<div class="wf-pastilles">
+					{#each STATUT_TICKET_OPTIONS as s (s.value)}
+						<Pastille active={statut === s.value}
+							on:click={() => { if ($isCS) statut = s.value; }}>{s.label}</Pastille>
+					{/each}
+				</div>
 				{#if !$isCS}
 					<p class="aide-champ">
 						{modeEdition
@@ -345,13 +392,17 @@
 			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
 		/>
 
-		<!-- Le bouton « Annuler » n'existe qu'en ÉDITION : en création, il vit dans
-		     l'en-tête de page (voir l'en-tête de ce fichier). `.form-actions` vient
-		     d'app.css. -->
+		<!--  « Annuler » est À CÔTÉ d'« Enregistrer », dans les DEUX gestes
+		      (18/08/2026) : *« c'est plus logique à côté du bouton de l'action »*. Il
+		      vivait en création dans l'en-tête de page et en édition ici — le même
+		      geste avait deux emplacements selon l'écran.
+
+		      ⚠️ Corollaire non négociable : l'en-tête ne porte PLUS « ✕ Annuler »
+		      quand le formulaire est ouvert. Deux commandes d'annulation pour un seul
+		      formulaire est le défaut relevé sur la modale du calendrier (#367) —
+		      c'est la page qui masque son bouton d'ouverture. -->
 		<div class="form-actions">
-			{#if modeEdition}
-				<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
-			{/if}
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
 			<button type="submit" class="btn btn-primary" disabled={loading}>
 				{loading ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
@@ -361,6 +412,9 @@
 
 <style>
 	.aide-champ { font-size: .8rem; color: var(--color-text-muted); line-height: 1.45; margin: .25rem 0 0; }
+	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
+	    (`Pastille.svelte`) : ne vit ici que leur disposition. */
+	.wf-pastilles { display: flex; gap: .5rem; flex-wrap: wrap; }
 	.cat-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;

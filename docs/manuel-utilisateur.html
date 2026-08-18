@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.40 · Août 2026</span>
+    <span class="topbar-badge">Version 3.41 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1650,7 +1650,7 @@
             <span class="step-num" style="background:var(--c-ticket)">1</span>
             <div class="step-content">
               <strong>Donnez un titre, puis choisissez une catégorie</strong>
-              <p>Le <strong>titre</strong> ouvre le formulaire ; la <strong>catégorie</strong> vient juste après, avec le type de problème ci-dessous.</p>
+              <p>Le <strong>titre</strong> ouvre le formulaire ; la <strong>catégorie</strong> vient juste après, avec le type de problème ci-dessous. Les champs suivis d'un <strong>*</strong> sont obligatoires.</p>
             </div>
           </li>
         </ul>
@@ -1760,9 +1760,11 @@
           <li><strong>Tous les tickets</strong> ouverts par les résidents sont visibles, quel que soit le bâtiment.</li>
           <li>Un filtre rapide permet d'afficher uniquement les tickets <em>Ouverts</em>, <em>En cours</em> ou <em>Tous</em>. Les tickets résolus ou annulés sont consultables dans la section <strong>Historique</strong> en bas de page.</li>
           <li>Le <strong>prénom / nom</strong> et le <strong>bâtiment du demandeur</strong> apparaissent directement sur chaque ticket pour faciliter l'identification par le CS.</li>
-          <li>Pour chaque ticket, <strong>deux boutons</strong> disent ce que vous allez faire : <strong>&#x1F4AC; Commenter</strong> pour informer le résident, <strong>&#x1F504; Changer l'état</strong> pour faire avancer le suivi (ex. : Ouvert → En cours → Résolu). Le formulaire qui s'ouvre ne vous redemande plus lequel des deux vous vouliez. Chaque changement d'état laisse une étape datée dans l'<strong>Historique</strong> du ticket.</li>
+          <li>Pour chaque ticket, le bouton <strong>&#x1F504;</strong> ouvre <strong>un seul formulaire</strong> qui fait les deux : commenter, et faire avancer le suivi. La section <strong>Workflow</strong> y présente les états en <strong>pastilles</strong>, celle de l'état actuel étant déjà retenue — la laisser telle quelle ajoute un simple commentaire, en choisir une autre change l'état. Chaque changement laisse une étape datée dans l'<strong>Historique</strong>.</li>
+          <li>Le <strong>Workflow</strong> est aussi présent à la <strong>création</strong> d'un ticket, sur « <strong>Ouvert</strong> » par défaut : l'état de départ se voit au lieu de se deviner. Seul le conseil syndical peut le modifier.</li>
           <li>Un badge rouge sur l'onglet indique le nombre de tickets encore <em>Ouverts</em>.</li>
-          <li><strong>Administrateurs uniquement</strong> : un bouton <strong>✏️ Modifier</strong> permet de <strong>corriger</strong> un ticket existant — titre, catégorie, <strong>état</strong>, périmètre, description et <strong>documents</strong>. La correction apparaît dans l'<strong>Historique</strong> pour ce qu'elle est, et non comme une étape du suivi : un état mal saisi qu'on rattrape ne fait plus croire que le ticket est passé par là. Les <strong>canaux de diffusion</strong> (WhatsApp, syndic, CS) n'y sont pas reproposés — corriger une faute de frappe ne doit renvoyer aucun message.</li>
+          <li><strong>Administrateurs uniquement</strong> : un bouton <strong>✏️ Modifier</strong> permet de <strong>corriger</strong> un ticket existant. <strong>Toutes</strong> les rubriques y sont désormais : titre, catégorie, « Saisi pour », état, périmètre, description, <strong>photos</strong>, documents et <strong>diffusion</strong>. La correction apparaît dans l'<strong>Historique</strong> pour ce qu'elle est, et non comme une étape du suivi : un état mal saisi qu'on rattrape ne fait plus croire que le ticket est passé par là.</li>
+          <li>⚠️ <strong>La diffusion, en correction, n'envoie que ce qui change.</strong> Cocher « Envoyer au syndic » sur un ticket qui ne l'était pas déclenche l'envoi ; une case déjà cochée ne renvoie <strong>rien</strong> au prochain enregistrement. Corriger une faute de frappe reste donc silencieux. « Partager sur le groupe » repart toujours décoché : c'est une demande d'envoi, pas un réglage conservé.</li>
         </ul>
 
         <div class="callout tip" style="margin-top:1rem">
@@ -1952,7 +1954,7 @@
 
       <div class="card">
         <h3>&#x1F4AC; Commenter ou changer l'état</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Sur chaque actualité, <strong>deux boutons</strong> disent ce que vous allez faire&nbsp;: <strong>&#x1F4AC; Commenter</strong> et <strong>&#x1F504; Changer l'état</strong>. Le formulaire qui s'ouvre ne vous redemande plus lequel des deux vous vouliez.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Sur chaque actualité, le bouton <strong>&#x1F504;</strong> ouvre <strong>un seul formulaire</strong> qui fait les deux&nbsp;: commenter, et changer l'état. La section <strong>Workflow</strong> y présente les états en <strong>pastilles</strong>, celle de l'état actuel étant déjà retenue — la laisser telle quelle ajoute un commentaire, en choisir une autre change l'état.</p>
         <p style="font-size:.9rem; color:var(--muted)">Les <strong>photos</strong> et les <strong>documents</strong> y sont deux rubriques distinctes, comme partout ailleurs.</p>
       </div>
       <div class="card">
@@ -2915,7 +2917,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.40</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.41</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
