@@ -432,6 +432,21 @@ jobs:
         working-directory: front
         run: npm run lint:html
 
+      # Le nom d'une section de formulaire écrit DEUX FOIS à l'écran : la section
+      # le pose en petites capitales, et le champ qu'elle contient le repose en
+      # dessous — `FichiersUpload`, `PerimetrePicker` et `DestinatairePicker`
+      # portent tous un intitulé par défaut. `SectionFormulaire` en a tiré une
+      # règle écrite dans son propre en-tête le 16/08/2026, après le doublon
+      # « PÉRIMÈTRE / Périmètre * ». Le 18/08, le doublon « PHOTOS / Photos » est
+      # apparu sur l'annonce de hall — deux jours plus tard, sur une règle écrite,
+      # connue et déjà appliquée deux fois ailleurs.
+      #
+      # Les deux fois, c'est l'UTILISATEUR qui l'a vu, à l'écran, en production.
+      # Une règle sans garde-fou tient tant que celui qui écrit s'en souvient.
+      - name: Aucun intitulé de section écrit deux fois
+        working-directory: front
+        run: npm run lint:titres
+
       # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
       # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
       # attrapait aussi `/auth/me` : pendant les sept jours où la session restait
