@@ -309,7 +309,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		evolutionEnCours={evolSaving}
 		{evolEnEdition}
 		{evolCorrectionEnCours}
-		peutCommenter={$isCS}
 		peutAdministrer={$isAdmin}
 		on:basculer={(e) => toggleTicket(e.detail)}
 		on:evoluer_ouvrir={(e) => openEvolForm(e.detail)}
@@ -356,7 +355,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								evolutionEnCours={evolSaving}
 								{evolEnEdition}
 								{evolCorrectionEnCours}
-								peutCommenter={$isCS}
 								peutAdministrer={$isAdmin}
 								on:basculer={(e) => toggleTicket(e.detail)}
 								on:evoluer_ouvrir={(e) => openEvolForm(e.detail)}

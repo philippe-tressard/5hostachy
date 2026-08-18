@@ -565,7 +565,24 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     promettrait partout un clic qui ne fait rien, et le fond se surlignerait
     sous un formulaire ouvert. */
 .carte-liste:not(.expanded) { cursor: pointer; }
-.carte-liste:not(.expanded):hover { background: var(--color-bg); }
+
+/*  🔴 C'est le TITRE qui se colore au survol, jamais la carte entière.
+    Signalé le 18/08/2026 : « quand tout l'article change de couleur c'est
+    moche ». Un aplat sur toute la carte fait bouger la page à chaque passage
+    de souris dans une liste longue ; un titre qui change de teinte dit la même
+    chose — « ceci répond » — sans repeindre l'écran.
+
+    ⚠️ **Pas de soulignement** : demandé explicitement. Le titre n'est pas un
+    lien, c'est une zone cliquable ; le souligner le ferait passer pour une
+    navigation vers une autre page.
+
+    La règle vit ICI et non dans `EnteteCarte` : le déclencheur est le survol du
+    PARENT, qu'un composant enfant ne peut pas connaître. `.carte-liste` est déjà
+    une classe globale de ce fichier — les deux vont ensemble. */
+.carte-liste:not(.expanded):hover .ec-titre { color: var(--color-primary); }
+/*  Dépliée, la carte n'est plus une cible : le titre se colore à son propre
+    survol, puisqu'il est le seul à répondre. */
+.carte-liste.expanded .ec-titre:hover { color: var(--color-primary); }
 .carte-liste.urgent { border-left-color: var(--color-danger); }
 
 @media (max-width: 640px) {

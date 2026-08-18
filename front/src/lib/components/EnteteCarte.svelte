@@ -134,7 +134,13 @@
 		font: inherit; color: inherit; text-align: left; width: 100%;
 		cursor: pointer;
 	}
-	.ec-titre-btn:hover { text-decoration: underline; }
+	/*  ⚠️ NI soulignement NI couleur ici : le survol du titre est décidé par
+	    `.carte-liste` dans `app.css`, parce qu'il dépend de l'état — replié, on
+	    survole n'importe où ; déplié, le titre seul. Un composant enfant ne peut
+	    pas connaître le survol de son parent.
+	    Le soulignement est écarté sur demande : le titre n'est pas un lien, c'est
+	    une zone cliquable. */
+	.ec-titre-btn { transition: color .12s ease; }
 	.ec-titre-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 3px; }
 
 	.ec-tags {
