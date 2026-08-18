@@ -100,3 +100,50 @@ export function separerFichiers(urls: string[] | null | undefined): {
 		documents: liste.filter((u) => !estImage(u)),
 	};
 }
+
+/**
+ * Ce qu'une carte REPLIÉE doit montrer en vignette, quand l'objet lui-même ne
+ * porte rien mais que son Historique, si.
+ *
+ * ## Pourquoi (18/08/2026, constaté à l'écran)
+ *
+ * Un événement de calendrier n'a le plus souvent **aucune photo propre** : c'est
+ * le suivi qui en apporte — « le technicien est intervenu ce matin, voici les
+ * anomalies », avec trois clichés. La carte repliée n'affichait donc rien, là où
+ * un ticket illustré montre sa vignette d'un coup d'œil. Signalé ainsi :
+ * *« en plié pas de vignette »*.
+ *
+ * La règle du repli existait déjà dans le produit, dans l'autre sens : ce qu'une
+ * entrée d'Historique DIFFUSE porte ses propres pièces, « avec repli sur l'objet
+ * si elle n'en a pas » (`flux/tickets.py`). Ici c'est le même principe appliqué à
+ * l'aperçu, et il suit la même logique que le fil, qui **date du dernier fait et
+ * jamais du premier** : ce qu'on montre d'un objet suivi, c'est où il en est.
+ *
+ * ⚠️ **La plus RÉCENTE d'abord.** Prendre la première entrée montrerait
+ * indéfiniment la photo du jour de l'ouverture, sur un dossier qui a avancé.
+ *
+ * ⚠️ Cette fonction ne déclenche **aucun chargement** : elle ne sert qu'aux
+ * écrans dont l'API livre déjà l'Historique avec l'objet — le calendrier
+ * (`EvenementRead.evolutions`). Les tickets chargent leurs évolutions **à la
+ * demande**, au dépliage : les réclamer en liste coûterait une requête par carte,
+ * et c'est un changement d'API à trancher à part.
+ */
+export function apercuAvecRepli(
+	photos: string[] | null | undefined,
+	fichiers: string[] | null | undefined,
+	evolutions: { fichiers_urls?: string[] | null }[] | null | undefined,
+): { photos: string[]; fichiers: string[] } {
+	const propres = { photos: photos ?? [], fichiers: fichiers ?? [] };
+	if (propres.photos.length || propres.fichiers.length) return propres;
+
+	//  De la plus récente à la plus ancienne, la première entrée qui porte
+	//  quelque chose. `slice()` : `reverse()` mute, et le tableau appartient à
+	//  l'appelant — le muter réordonnerait SON fil à l'écran.
+	for (const evol of (evolutions ?? []).slice().reverse()) {
+		const pieces = separerFichiers(evol.fichiers_urls);
+		if (pieces.photos.length || pieces.documents.length) {
+			return { photos: pieces.photos, fichiers: pieces.documents };
+		}
+	}
+	return propres;
+}
