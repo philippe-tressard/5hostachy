@@ -393,8 +393,29 @@ def update_ticket(
             f"{STATUT_LABELS.get(body.statut, body.statut)}",
         )
 
-    # Auto-log de la correction
-    if changes:
+    #  🔴 CORRIGER UN CHAMP N'ÉCRIT PLUS RIEN DANS L'HISTORIQUE (18/08/2026).
+    #
+    #  Signalé à l'écran : « j'ai fait une édition d'un ticket pour corriger sa
+    #  catégorie et ça m'a créé un historique ! c'est à supprimer ». L'Historique
+    #  raconte la VIE du dossier — ce que le conseil syndical a fait, où en est la
+    #  demande. Une faute de frappe rattrapée n'en fait pas partie : elle ajoute une
+    #  ligne qui n'apprend rien, et pousse vers le bas celles qui apprennent quelque
+    #  chose.
+    #
+    #  ⚠️ Le changement d'ÉTAT, lui, continue de laisser une trace : ce n'est pas une
+    #  correction de saisie mais un mouvement de workflow, et savoir quand un ticket
+    #  est passé « En cours » est précisément ce que le fil sert à conserver. Il
+    #  reste inscrit comme une CORRECTION et non comme une transition — sans
+    #  `ancien_statut`/`nouveau_statut`, donc sans jalon de suivi — pour la raison
+    #  détaillée juste au-dessus : le ticket n'a pas « été » dans un état qu'on
+    #  corrige. C'est ce que `test_correction_pas_transition.py` verrouille.
+    #
+    #  ⚠️ Ce que ce lot NE fait pas : les publications et le calendrier gardent leur
+    #  auto-log de correction. R5 — un écran à la fois, constaté avant d'être
+    #  généralisé. La divergence est donc VOULUE et temporaire ; elle est nommée
+    #  dans le test, qui vérifie chaque entité séparément.
+    etat_a_change = body.statut is not None and body.statut != ancien_statut
+    if changes and etat_a_change:
         prefix = "Correction" if is_cs_admin else "Correction auteur"
         session.add(TicketEvolution(
             ticket_id=ticket.id, type="commentaire",
