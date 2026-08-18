@@ -285,7 +285,10 @@ def creer_annonce_hall(
     images: Optional[list[str]] = None,
     publication_id: Optional[int] = None,
 ) -> AnnonceHall:
-    """Génère le PDF, l'enregistre dans l'historique et l'envoie au CS du périmètre.
+    """Génère le PDF et l'enregistre dans l'historique.
+
+    ⚠️ Plus aucun envoi depuis le 18/08/2026 : cet écran fabrique un document à
+    imprimer, et sa diffusion appartient à celui qui le génère.
 
     Point d'entrée unique : utilisé par l'onglet Annonces Hall **et** par l'option
     « Annonce Hall » d'une actualité (`publications.py`).
@@ -332,14 +335,26 @@ def creer_annonce_hall(
     session.commit()
     session.refresh(annonce)
 
-    emails = _envoyer_email_cs(annonce, user, background_tasks, session, _batiments(session))
-    if emails:
-        annonce.destinataires = json.dumps(emails, ensure_ascii=False)
-        annonce.envoye_le = datetime.utcnow()
-        session.add(annonce)
-        session.commit()
-        session.refresh(annonce)
-
+    #  🔴 PLUS AUCUN E-MAIL (18/08/2026, arbitré à l'écran : « ce menu ne doit pas
+    #  envoyer de mail au CS, juste générer un PDF »).
+    #
+    #  Cet écran FABRIQUE un document à imprimer. Qui l'imprime, quand, et à qui il
+    #  l'envoie sont des décisions qui appartiennent à celui qui le génère — les
+    #  prendre à sa place expédiait un courriel à tout le conseil syndical au moindre
+    #  essai de mise en page, pièce jointe comprise.
+    #
+    #  ⚠️ Le bouton disait « Créer et envoyer au CS » : il nommait donc correctement
+    #  ce que le code faisait. C'est le COMPORTEMENT qui a été jugé faux, pas son
+    #  libellé — et le bouton dit désormais « Générer une affiche ».
+    #
+    #  ⚠️ `_envoyer_email_cs` et le modèle « annonce_hall » ne sont plus appelés par
+    #  ce chemin. Ils ne sont PAS supprimés ici : le modèle vit dans
+    #  `seed.EMAIL_TEMPLATES`, dont l'audit du 05/08 a montré qu'on n'y touche pas à
+    #  la légère, et un envoi explicite depuis l'historique reste une évolution
+    #  plausible. À trancher séparément.
+    #
+    #  `destinataires` et `envoye_le` restent donc vides : l'historique dit qu'une
+    #  affiche a été générée, et rien de plus — ce qui est exactement le fait.
     return annonce
 
 
@@ -350,7 +365,7 @@ def create_annonce_hall(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    """Génère le PDF, l'archive dans l'historique et l'envoie au CS du périmètre."""
+    """Génère le PDF et l'archive dans l'historique — sans aucun envoi (18/08/2026)."""
     annonce = creer_annonce_hall(
         session=session,
         user=user,

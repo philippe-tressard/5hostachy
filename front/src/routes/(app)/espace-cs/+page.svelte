@@ -15,6 +15,7 @@
 	import { trackTabView } from '$lib/telemetry';
 	import { stripHtml, fmtMontant, perimetreDefautListe } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
 	import ApercuTicket from '$lib/components/ApercuTicket.svelte';
 	import Vignette from '$lib/components/Vignette.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
@@ -2282,82 +2283,19 @@
 			<!-- ── Création d'une annonce ──────────────────────────────────── -->
 			<div class="ah-layout">
 				<section class="card ah-form">
-					{#if ahPubs.length}
-						<label for="ah-source">Pré-remplir depuis une actualité</label>
-						<select id="ah-source" class="ah-select" value={ahSourceId}
-							on:change={(e) => ahPrefillDepuisPublication(
-								(e.currentTarget as HTMLSelectElement).value === ''
-									? ''
-									: Number((e.currentTarget as HTMLSelectElement).value)
-							)}>
-							<option value="">— Saisie libre —</option>
-							{#each ahPubs as pub}
-								<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
-							{/each}
-						</select>
-						<p class="ah-aide">
-							Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste
-							modifiable ci-dessous : l'affiche est indépendante de l'actualité d'origine.
-						</p>
-						<hr style="border:none;border-top:1px solid var(--color-border);margin:.9rem 0" />
-					{/if}
-
-					<label for="ah-titre">Titre *</label>
-					<input id="ah-titre" type="text" bind:value={ahTitre} maxlength="120"
-						placeholder="Ex : Coupure d'eau — mardi 4 août" />
-
-					<label for="ah-message" style="margin-top:.85rem">Message *</label>
-					<RichEditor bind:value={ahMessage} placeholder="Rédigez l'annonce telle qu'elle sera affichée…" />
-
-					<PerimetrePicker titre="Périmètre d'affichage" bind:value={ahPerimetre} />
-					<p class="ah-aide">
-						L'annonce part par mail aux membres du CS rattachés à ce périmètre, qui l'impriment
-						et l'affichent. Copropriété entière, parking et cave notifient l'ensemble du CS.
-					</p>
-
-					<label style="margin-top:.85rem">Format</label>
-					<div class="perimetre-pills">
-						{#each AH_FORMATS as f}
-							<button type="button" class="pill" class:pill-active={ahFormat === f.val}
-								on:click={() => (ahFormat = f.val)}>{f.label}</button>
-						{/each}
-					</div>
-					<p class="ah-aide">
-						{#if ahFormat === 'auto'}
-							Le plus petit format qui accueille le texte est retenu, pour occuper le moins
-							de place possible dans l'afficheur du hall. Sous l'A4, des pointillés de
-							découpe sont tracés sur l'affiche.
-						{:else}
-							Format imposé — le message sera mis en page en {ahFormat.toUpperCase()}.
-						{/if}
-						<strong>Prévu : {ahFormatPrevu}</strong> ({ahLongueur} caractère{ahLongueur > 1 ? 's' : ''} —
-						titre et message)
-					</p>
-
-					<FichiersUpload
-						id="ah-photos"
-						bind:urls={ahPhotos}
-						max={AH_MAX_PHOTOS}
-						mode="photos"
-						upload={async (f) => (await fichiersApi.upload(f)).url}
-						on:change={() => { ahApercuHtml = ''; ahApercuFormat = ''; }}
+					<FormulaireAnnonceHall
+						bind:titre={ahTitre} bind:message={ahMessage}
+						bind:perimetre={ahPerimetre} bind:format={ahFormat} bind:photos={ahPhotos}
+						pubs={ahPubs} sourceId={ahSourceId} formats={AH_FORMATS}
+						formatPrevu={ahFormatPrevu} longueur={ahLongueur}
+						maxPhotos={AH_MAX_PHOTOS} formatMinPhotos={AH_FORMAT_MIN_PHOTOS}
+						valide={ahFormulaireValide} saving={ahSaving} apercuLoading={ahApercuLoading}
+						onPrefill={ahPrefillDepuisPublication}
+						onApercu={ahPrevisualiser}
+						onCreer={ahCreer}
+						onUpload={async (f) => (await fichiersApi.upload(f)).url}
+						onPhotosChange={() => { ahApercuHtml = ''; ahApercuFormat = ''; }}
 					/>
-					<p class="ah-aide">
-						Facultatives, {AH_MAX_PHOTOS} au maximum, placées en pied d'affiche : le texte de
-						l'annonce reste l'élément central. Une affiche avec photo ne descend jamais sous
-						l'{AH_FORMAT_MIN_PHOTOS}.
-					</p>
-
-					<div class="form-actions">
-						<button type="button" class="btn btn-outline" disabled={!ahFormulaireValide || ahApercuLoading}
-							on:click={ahPrevisualiser}>
-							{ahApercuLoading ? 'Génération…' : "Aperçu"}
-						</button>
-						<button type="button" class="btn btn-primary" disabled={!ahFormulaireValide || ahSaving}
-							on:click={ahCreer}>
-							{ahSaving ? 'Envoi…' : 'Créer et envoyer au CS'}
-						</button>
-					</div>
 				</section>
 
 				<section class="card ah-apercu">
@@ -2910,12 +2848,6 @@
 		background: var(--color-bg); box-shadow: 0 4px 12px rgba(0,0,0,.08);
 		max-height: 220px; overflow-y: auto; z-index: 10; position: relative;
 	}
-	.user-suggestions li button {
-		width: 100%; text-align: left; padding: .45rem .75rem;
-		border: none; background: none; cursor: pointer; font-size: .85rem;
-		display: flex; align-items: center; justify-content: space-between; gap: .5rem;
-	}
-	.user-suggestions li button:hover { background: var(--color-bg-secondary, #f8f9fa); }
 	.sugg-bat { font-size: .75rem; color: var(--color-text-muted); }
 	.user-no-result { font-size: .78rem; color: var(--color-text-muted); margin: .25rem 0 0; padding: .35rem .5rem; }
 	.user-link-indicator { margin-top: .5rem; }
@@ -3019,8 +2951,8 @@
 	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 	.field { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
-	.field label { font-weight: 500; font-size: .85rem; }
-	.field select, .field textarea { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
+	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
+	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
 	:global(.badge-red) { background: #fee2e2; color: #991b1b; }
 	:global(.badge-purple) { background: #ede9fe; color: #5b21b6; }
@@ -3030,11 +2962,8 @@
 	.ah-panel { display: flex; flex-direction: column; }
 	.ah-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
 	.ah-form { padding: 1rem 1.1rem; }
-	.ah-form label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
-	.ah-form input[type="text"] {
-		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);
-		border-radius: var(--radius); font-size: .9rem; background: var(--color-bg);
-	}
+	/*  `.ah-form label` et `.ah-form input` sont partis avec le formulaire, dans
+	    `FormulaireAnnonceHall` — un style n'atteint pas le balisage d'un enfant. */
 	.ah-aide { font-size: .76rem; color: var(--color-text-muted); margin-top: .35rem; line-height: 1.45; }
 	.ah-select {
 		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);

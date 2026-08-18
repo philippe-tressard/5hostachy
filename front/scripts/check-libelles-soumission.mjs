@@ -106,6 +106,14 @@ const EXCEPTIONS = {
 		"écran d'authentification — « Envoyer le lien » ne crée aucun objet",
 	'routes/auth/verifier-email/+page.svelte':
 		"écran d'authentification — « Renvoyer » relance un e-mail déjà parti",
+	//  🔴 Arbitré à l'écran le 18/08/2026 : « Créer et envoyer au CS me semble
+	//  bizarre : ça doit être plutôt Générer une affiche ». Cet écran ne crée pas un
+	//  objet qu'on retrouvera dans une liste — il FABRIQUE un document à imprimer,
+	//  et depuis le même jour il n'envoie plus rien. Même famille que les imports,
+	//  déjà hors périmètre de la règle.
+	'lib/components/FormulaireAnnonceHall.svelte':
+		'affiche de hall — « Générer une affiche » : on produit un document, on ne ' +
+		"crée pas un objet (et l'écran n'envoie plus d'e-mail depuis le 18/08/2026)",
 
 	//  ── RESTE À TRAITER — révélé par l'élargissement de portée (#416) ───────
 	//  Ces écarts sont réels et connus. Ils ne sont PAS corrigés dans #416, dont
@@ -113,8 +121,6 @@ const EXCEPTIONS = {
 	//  lots dans le même diff. Chaque ligne dit ce qu'on lit à l'écran ; l'entrée
 	//  disparaît d'elle-même quand l'écran est repris, sinon ce contrôle échoue
 	//  en réclamant sa suppression.
-	'routes/(app)/espace-cs/+page.svelte':
-		'annonce de hall : « Créer et envoyer au CS » / « Envoi… » (l. ~2373)',
 	'routes/(app)/prestataires/+page.svelte':
 		"attente réduite à « … » sur trois formulaires (contrats, prestations, relevés) — " +
 		'écran de 2 182 lignes déjà déclaré en exception de `lint:formulaires`',
