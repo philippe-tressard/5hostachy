@@ -134,9 +134,17 @@
 		display: block;
 		padding: 0;
 	}
-	/*  Même signal que sur les autres cartes du site : le fond s'éclaircit au
-	    survol pour dire qu'elle s'ouvre (#362). */
-	.carte-evenement:hover { background: var(--color-bg); }
+	/*  🔴 Le survol colore le TITRE, pas le bloc (18/08/2026) : « quand tout
+	    l'article change de couleur c'est moche ». Cette carte n'est PAS une
+	    `.carte-liste` — elle a son propre conteneur, donc la règle globale ne
+	    l'atteignait pas et elle gardait l'ancien aplat.
+
+	    ⚠️ `:global(.ec-titre)` : le titre est rendu par `EnteteCarte`, un
+	    composant ENFANT. Sans `:global`, Svelte scope le sélecteur à ce
+	    fichier-ci et la règle n'atteint rien — c'est la panne des pastilles
+	    parties nues en production (v2.67.11). */
+	.carte-evenement:hover :global(.ec-titre) { color: var(--color-primary); }
+	.carte-evenement :global(.ec-titre) { transition: color .12s ease; }
 	.carte-evenement.expanded {
 		border-color: var(--color-primary, #2563eb);
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #2563eb) 18%, transparent);

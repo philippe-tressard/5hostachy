@@ -2982,7 +2982,6 @@
 	.tk-expand:hover, .tk-expand.expanded { border-left-color: var(--color-primary); }
 	.tk-expand.urgent { border-left-color: var(--color-danger); }
 	.tk-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; cursor: pointer; user-select: none; transition: background .12s; }
-	.tk-row:hover { background: var(--color-bg); }
 	.tk-main { display: flex; flex-direction: column; gap: .25rem; flex: 1; min-width: 0; overflow: hidden; }
 	.tk-row-inner { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; overflow: hidden; }
 	.tk-cat { flex-shrink: 0; font-size: .95rem; }

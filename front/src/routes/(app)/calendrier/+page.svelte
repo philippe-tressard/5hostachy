@@ -1023,7 +1023,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	/*  Même signal que `.pub-row:hover` et `.tk-row:hover` : le fond s'éclaircit
 	    au survol pour dire que la carte s'ouvre (#362). Le calendrier était le
 	    seul écran dépliable à n'avoir ni ce retour, ni le chevron. */
-	.event-row:hover { background: var(--color-bg); }
 	.event-urgent { border-left: 3px solid var(--color-danger); }
 	.event-type { min-width: 7rem; font-size: .8rem; font-weight: 600; padding-top: .1rem; }
 	.event-body { flex: 1; }
