@@ -1,866 +1,495 @@
-"""
-Seeding initial — données de démarrage (à exécuter une seule fois).
-Lance avec : python -m app.seed
-"""
-import json
-from datetime import date
+<script lang="ts">
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+import EntetePage from '$lib/components/EntetePage.svelte';
+import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
+import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+import { STATUTS_IDEE, STATUTS_IDEE_FILTRE, IDEE_BADGE, STATUT_IDEE_LABELS } from '$lib/idees';
+import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
+import OngletAnnonces from '$lib/components/OngletAnnonces.svelte';
+import Reponses from '$lib/components/Reponses.svelte';
+import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
+import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
+import RichEditor from '$lib/components/RichEditor.svelte';
+import CanauxNotification from '$lib/components/CanauxNotification.svelte';
+import { toast } from '$lib/components/Toast.svelte';
+import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
+import { safeHtml } from '$lib/sanitize';
+import { fmtDateShort, isNouveau } from '$lib/date';
+import { trackTabView } from '$lib/telemetry';
+import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
+import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
+import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 
-from sqlmodel import Session, select
+$: _pc = getPageConfig($configStore, 'communaute', defautsDePage('communaute'));
+$: _siteNom = $siteNomStore;
 
-from app.database import engine, create_db_and_tables
-from app.auth.jwt import hash_password
-from app.models.core import (
-    Copropriete, Batiment, Utilisateur, StatutUtilisateur, RoleUtilisateur,
-    ProfilAccesDocument, CategorieDocument, ConfigSauvegarde,
-    ModeleEmail, FaqItem, ConfigSite, DiagnosticType,
-)
+// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
+// (fil d'activité, notification) — cf. $lib/deepLink.ts.
+const ONGLETS = ['sondages', 'idees', 'annonces'] as const;
+type Tab = (typeof ONGLETS)[number];
+let activeTab: Tab = 'sondages';
+$: trackTabView(activeTab);
 
+// Ban communauté
+let banMessage = '';
 
-PROFILS = [
-    {
-        "code": "résidence_tous",
-        "libelle": "Tous les résidents",
-        "description": "Copropriétaires, bailleurs, locataires",
-        "roles_autorises": json.dumps(["propriétaire", "résident"]),
-        "require_cs": True,
-    },
-    {
-        "code": "copropriétaires_et_cs",
-        "libelle": "Copropriétaires et CS",
-        "description": "Propriétaires uniquement — exclut les locataires",
-        "roles_autorises": json.dumps(["propriétaire"]),
-        "require_cs": True,
-    },
-    {
-        "code": "cs_syndic_uniquement",
-        "libelle": "CS et syndic uniquement",
-        "description": "Conseil syndical, syndic et admin uniquement",
-        "roles_autorises": json.dumps(["syndic"]),  # statut syndic ; CS bypassé en amont
-        "require_cs": True,
-    },
-    {
-        "code": "lot_occupants",
-        "libelle": "Occupants du lot",
-        "description": "Propriétaire + locataire actif du lot + CS + syndic",
-        "roles_autorises": json.dumps(["propriétaire", "résident"]),
-        "require_cs": True,
-    },
-    {
-        "code": "lot_propriétaires",
-        "libelle": "Propriétaires du lot",
-        "description": "Propriétaire du lot uniquement + CS + syndic — exclut le locataire",
-        "roles_autorises": json.dumps(["propriétaire"]),
-        "require_cs": True,
-    },
-]
+// Sondages — l'état de SAISIE vit dans `FormulaireSondage.svelte` : le ciblage
+// (périmètre, destinataires), les options et les canaux y sont désormais, avec
+// le reste des formulaires du site. Ne restent ici que la LISTE et ses actions.
+let sondages: any[] = [];
+let sondagesLoading = true;
+let showFormSondage = false;
 
-CATEGORIES = [
-    ("reglement_copropriete", "Règlement de copropriété", "résidence_tous", "résidence", False),
-    ("pv_ag",               "PV d'Assemblée Générale",  "résidence_tous", "bâtiment",  True),
-    ("fiche_synthetique",   "Fiche synthétique annuelle",  "résidence_tous",   "résidence", False),
-    ("plan_residence",      "Plan de la résidence",        "résidence_tous",   "résidence", False),
-    ("attestation_lot",     "Attestation (lot)",           "lot_occupants",    "lot",        True),
-    ("diagnostic_lot",      "Diagnostic",                  "copropriétaires_et_cs", "bâtiment", True),
-    ("contrat_fournisseur", "Contrat fournisseur",         "copropriétaires_et_cs", "bâtiment", True),
-    ("contrat_assurance",   "Contrat assurance",           "copropriétaires_et_cs", "résidence", True),
-    ("devis_travaux",       "Devis travaux",               "cs_syndic_uniquement", "bâtiment", True),
-    ("document_interne_cs", "Document interne CS",         "cs_syndic_uniquement", "résidence", False),
-]
+//  « Ce sondage est-il clos ? » n'est PLUS calculé ici : le serveur le dit dans
+//  `s.cloture`, par la même `sondage_clos()` que la fiche, le vote et le fil
+//  (#468). La règle locale comparait `cloture_le` à l'heure LOCALE du
+//  navigateur quand le serveur date en UTC — un sondage clôturant à minuit
+//  était clos ou non selon le fuseau du lecteur. Un écran ne tranche pas ce
+//  genre de question (`ux-patterns` §16).
 
-# ── Contenus légaux par défaut (réutilisé par config.py si absent en BDD) ──
-DEFAULT_LEGAL = {
-    'mentions_legales': (
-        '<h2>Éditeur du service</h2>'
-        '<p><strong>5Hostachy</strong><br>Application de gestion de copropriété — déployée en mode auto-hébergé.<br>'
-        "L'identité de l'éditeur correspond à la copropriété ou au syndic bénévole qui gère cette instance.</p>"
-        '<h2>Directeur de la publication</h2>'
-        "<p>Le directeur de la publication est l'administrateur désigné de l'instance.</p>"
-        '<h2>Hébergeur</h2>'
-        "<p>Cette application est auto-hébergée. L'hébergeur est l'organisation ou la personne physique "
-        "administrant le serveur sur lequel l'instance est déployée.</p>"
-        '<h2>Propriété intellectuelle</h2>'
-        '<p>Le code source de 5Hostachy est distribué sous licence <a href="https://spdx.org/licenses/MIT.html" target="_blank" rel="noopener noreferrer">MIT</a> (voir le fichier LICENSE du dépôt). '
-        "Les contenus publiés dans l'application restent la propriété de leurs auteurs respectifs.</p>"
-        '<h2>Responsabilité</h2>'
-        "<p>L'éditeur s'efforce de fournir des informations exactes et à jour. Il ne saurait être tenu responsable "
-        'des erreurs ou omissions dans les informations diffusées.</p>'
-        '<h2>Contact</h2>'
-        "<p>Pour toute question, contactez l'administrateur via la messagerie interne.</p>"
-    ),
-    'politique_confidentialite': (
-        '<h2>1. Responsable du traitement</h2>'
-        "<p>Le responsable du traitement est l'administrateur de cette instance 5Hostachy "
-        '(syndic bénévole ou conseil syndical). Toute demande relative à vos données peut lui être adressée '
-        "via la messagerie de l'application.</p>"
-        '<h2>2. Données collectées</h2>'
-        "<ul><li><strong>Données d'identification\u00a0:</strong> nom, prénom, adresse e-mail, téléphone (facultatif).</li>"
-        '<li><strong>Données de résidence\u00a0:</strong> lot(s) associé(s), bâtiment, tantièmes.</li>'
-        '<li><strong>Données d\'usage\u00a0:</strong> tickets soumis, messages échangés, documents téléchargés.</li>'
-        '<li><strong>Données techniques\u00a0:</strong> tokens d\'authentification (cookies HttpOnly), date de connexion.</li></ul>'
-        '<h2>3. Finalités et bases légales</h2>'
-        '<ul><li><strong>Gestion de la copropriété</strong> — base\u00a0: intérêt légitime (art.\u00a06-1-f).</li>'
-        '<li><strong>Authentification et sécurité</strong> — base\u00a0: intérêt légitime (art.\u00a06-1-f).</li>'
-        '<li><strong>Communication résidents/CS</strong> — base\u00a0: exécution du contrat (art.\u00a06-1-b).</li>'
-        '<li><strong>E-mails transactionnels</strong> — base\u00a0: intérêt légitime / consentement.</li></ul>'
-        '<h2>4. Destinataires</h2>'
-        "<p>Les données sont accessibles uniquement aux membres du conseil syndical et à l'administrateur. "
-        'Elles ne sont pas transférées à des tiers ni commercialisées. Aucun transfert hors UE.</p>'
-        '<h2>5. Durée de conservation</h2>'
-        '<ul><li>Données de compte actif\u00a0: durée de la relation + 2 ans.</li>'
-        '<li>Tokens de rafraîchissement\u00a0: 7 jours glissants.</li>'
-        '<li>Sauvegardes\u00a0: selon la configuration.</li></ul>'
-        '<h2>6. Vos droits</h2>'
-        '<p>Conformément au RGPD vous disposez des droits d\'accès (art.\u00a015), rectification (art.\u00a016), '
-        'effacement (art.\u00a017), portabilité (art.\u00a020), opposition (art.\u00a021) et retrait du consentement (art.\u00a07-3). '
-        "Contactez l'administrateur via la messagerie. En cas de litige\u00a0: <strong>CNIL</strong> — www.cnil.fr.</p>"
-        '<h2>7. Cookies</h2>'
-        "<p>L'application utilise exclusivement des cookies techniques d'authentification "
-        '(<code>access_token</code>, <code>refresh_token</code>) définis en '
-        '<code>HttpOnly; Secure; SameSite=Strict</code>. Aucun cookie publicitaire ou de traçage.</p>'
-    ),
+async function arreterSondage(s: any, e: Event) {
+	e.preventDefault();
+	if (!confirm(`Stopper le sondage "${s.question}" maintenant ?`)) return;
+	try {
+		await sondagesApi.cloturer(s.id);
+		//  `cloture` AUSSI : c'est lui que l'affichage lit désormais. Ne poser que
+		//  `cloture_forcee` laisserait la carte inchangée jusqu'au rechargement.
+		sondages = sondages.map(x => x.id === s.id ? { ...x, cloture_forcee: true, cloture: true } : x);
+		toast('success', 'Sondage stoppé');
+	} catch (err) { toast('error', err instanceof ApiError ? err.message : 'Erreur'); }
 }
 
-# Intention de chaque modèle : ce qui est attendu du destinataire, affiché en
-# tête du message par le gabarit commun (cf. `email.INTENTIONS`).
-#
-# Table séparée, et non sixième élément des tuples ci-dessous : les migrations
-# 0104 et 0108 déballent `EMAIL_TEMPLATES` en cinq valeurs. Leur ajouter un
-# élément les ferait lever `ValueError` sur une base neuve — et `start.sh` a
-# `set -e`, donc le conteneur resterait bloqué au démarrage. Une migration est
-# figée : c'est le code d'aujourd'hui qui doit rester compatible avec elle.
-INTENTIONS_PAR_MODELE: dict[str, str] = {
-    # On attend un geste du destinataire.
-    "reinitialisation_mdp": "action_requise",
-    "verification_email": "action_requise",
-    "compte_en_attente": "action_requise",
-    "ticket_bug_admin": "action_requise",
-    "vigik_commande_recue": "action_requise",
-    "annonce_hall": "action_requise",
-    "nouvel_arrivant_bal": "action_requise",
-    "alerte_systeme": "action_requise",
-    # On attend une réponse écrite — ce sont les envois vers l'extérieur, ceux
-    # dont le silence est justement le problème qu'on cherche à traiter.
-    "ticket_syndic": "reponse_attendue",
-    "ticket_externe": "reponse_attendue",
-    "relance_syndic": "reponse_attendue",
-    # On informe, sans rien attendre en retour.
-    "compte_active": "information",
-    "compte_refuse": "information",
-    "ticket_statut_change": "information",
-    "ticket_nouveau_message": "information",
-    "reponse_communaute": "information",
-    "idee_statut": "information",
-    "vigik_accepte": "information",
-    "vigik_refuse": "information",
-    "calendrier_evenement_cree": "information",
-    "document_publie": "information",
-    "publication_syndic": "information",
-    "publication_externe": "information",
-    "acces_apparies_auto": "information",
+async function supprimerSondage(s: any, e: Event) {
+	e.preventDefault();
+	if (!confirm(`Supprimer définitivement le sondage "${s.question}" ?`)) return;
+	try {
+		await sondagesApi.supprimer(s.id);
+		sondages = sondages.filter(x => x.id !== s.id);
+		toast('success', 'Sondage supprimé');
+	} catch (err) { toast('error', err instanceof ApiError ? err.message : 'Erreur'); }
 }
 
-EMAIL_TEMPLATES = [
-    # ── Styles inline mutualisés (CTA = Call-to-action button) ──
-    # Les templates sont encapsulés dans le gabarit email.py (_wrap_email)
-    # => pas besoin de <html>/<body>, juste le contenu riche.
+// Idées
+let idees: any[] = [];
+let ideesLoading = true;
+let showFormIdee = false;
+let filtreStatut = '';
 
+//  Les annonces : la page les CHARGE (un seul `Promise.all` pour les trois
+//  rubriques) et les lie à `OngletAnnonces`, qui porte tout le reste — filtres,
+//  formulaires, gestes. `expandedAnnonce` reste ici parce qu'un lien profond
+//  (`#annonce-12`) la désigne avant que l'onglet ne soit monté.
+let annonces: any[] = [];
+let annoncesLoading = true;
+let showFormAnnonce = false;
+let expandedAnnonce: number | null = null;
 
-    ("reinitialisation_mdp", "Réinitialisation mot de passe", "Réinitialisation de votre mot de passe — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Réinitialisation de votre mot de passe</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 24px">Une demande de réinitialisation a été effectuée pour votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.</p>'
-     '<p style="text-align:center;margin:0 0 16px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Réinitialiser mon mot de passe</a></p>'
-     '<p style="margin:0;font-size:13px;color:#5A6070">Ce lien est valable <strong>1 heure</strong>. Si vous n\u2019avez pas fait cette demande, ignorez cet e-mail.</p>',
-     False),
+const statuts = STATUTS_IDEE_FILTRE;
+const statutClass = (s: string) => IDEE_BADGE[s] ?? 'badge-gray';
 
-    ("compte_en_attente", "Compte en attente", "Nouvelle demande de compte — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouvelle demande de compte</h2>'
-     '<p style="margin:0 0 12px">Un nouveau résident souhaite rejoindre la résidence\u202f:</p>'
-     '<table role="presentation" style="margin:0 0 20px;border-left:4px solid #C9983A;padding-left:16px"><tr><td>'
-     '<p style="margin:0 0 4px;font-weight:600;font-size:16px">{{ utilisateur.prenom }} {{ utilisateur.nom }}</p>'
-     '<p style="margin:0;color:#5A6070">{{ utilisateur.email }}</p>'
-     '</td></tr></table>'
-     # `/admin/utilisateurs` n'existe pas : la page `/admin` s'ouvre d'elle-même
-     # sur l'onglet « Comptes en attente », et ne lit pas `?onglet=`. Ce bouton
-     # ouvrait un 404 depuis l'origine, dans un e-mail réellement envoyé.
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/admin" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Valider le compte</a></p>',
-     True),
+$: filteredIdees = filtreStatut ? idees.filter(i => i.statut === filtreStatut) : idees;
+$: sortedIdees = [...filteredIdees].sort((a, b) => b.nb_votes - a.nb_votes);
 
-    ("compte_active", "Compte activé", "Votre compte est activé — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Votre compte est activé\u202f!</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 24px">Votre compte sur <strong>{{ residence.nom }}</strong> est maintenant actif. Vous pouvez dès à présent accéder à l\u2019ensemble des services de votre résidence.</p>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Accéder à l\u2019application</a></p>',
-     True),
+function ideeCreee() {
+	//  La liste est rechargée plutôt que complétée localement : le compteur de
+	//  votes et le statut sont calculés par le serveur.
+	ideesApi.list().then((l) => (idees = l));
+	showFormIdee = false;
+}
 
-    ("compte_refuse", "Compte refusé", "Votre demande de compte — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Demande de compte non acceptée</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 12px">Votre demande de création de compte sur <strong>{{ residence.nom }}</strong> n\u2019a pas pu être acceptée.</p>'
-     '<p style="margin:0;color:#5A6070">Si vous pensez qu\u2019il s\u2019agit d\u2019une erreur, n\u2019hésitez pas à contacter le conseil syndical.</p>',
-     True),
+async function voter(id: number) {
+try {
+const res: any = await ideesApi.voter(id);
+idees = await ideesApi.list();
+toast('success', res.message ?? 'Vote enregistré');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
 
+async function changeStatut(id: number, statut: string) {
+try {
+await ideesApi.updateStatut(id, statut);
+idees = idees.map(i => i.id === id ? { ...i, statut } : i);
+toast('success', 'Statut mis à jour');
+} catch { toast('error', 'Erreur'); }
+}
 
+async function deleteIdee(id: number) {
+if (!confirm('Supprimer cette idée définitivement ?')) return;
+try {
+await ideesApi.delete(id);
+idees = idees.filter(i => i.id !== id);
+toast('success', 'Idée supprimée');
+} catch { toast('error', 'Erreur lors de la suppression'); }
+}
 
+// ── Réponses (idées + annonces) — composant partagé Reponses.svelte ──────────
+async function repondreIdee(id: number, contenu: string) {
+try {
+await ideesApi.repondre(id, contenu);
+idees = await ideesApi.list();
+toast('success', 'Réponse publiée');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); throw e; }
+}
 
+async function supprimerReponseIdee(ideeId: number, repId: number) {
+try {
+await ideesApi.supprimerReponse(ideeId, repId);
+idees = await ideesApi.list();
+toast('success', 'Réponse supprimée');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
 
-    ("ticket_bug_admin", "Ticket bug — notification admin site", "Bug signalé via Tickets — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#c0392b">\u26a0 Bug signalé</h2>'
-     '<p style="margin:0 0 12px">Un ticket de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.prenom }} {{ auteur.nom }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FDF0F0;padding:16px;border-left:4px solid #c0392b">'
-     '<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:#1A1A2E">{{ ticket.titre }}</p>'
-     '<p style="margin:0;font-size:14px;color:#5A6070">{{ ticket.description }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#c0392b;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Traiter le bug</a></p>',
-     True),
+// ── Signalements / modération ────────────────────────────────────────────────
+let signalements: any[] = [];
+let showModeration = false;
 
-    ("ticket_syndic", "Ticket transmis au syndic",
-     '{% if is_commentaire %}\U0001f4ac Commentaire \u2014 Ticket #{{ ticket.numero }} \u2014 {{ residence.nom }}{% else %}{% if reference_copro %}\U0001f3e2 {{ reference_copro }} \u2014 {% endif %}Ticket #{{ ticket.numero }} \u2014 {{ residence.nom }}{% endif %}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4cb Ticket transmis par le conseil syndical{% endif %}'
-     '</h2>'
-     '<p style="margin:0 0 16px">'
-     '{% if is_commentaire %}'
-     'Un nouveau commentaire a \u00e9t\u00e9 ajout\u00e9 sur le ticket <strong>#{{ ticket.numero }} \u2014 {{ ticket.titre }}</strong> par {{ auteur.prenom }} {{ auteur.nom }}{% if reference_copro %} \u2014 r\u00e9f. {{ reference_copro }}{% endif %}.'
-     '{% else %}'
-     'Un ticket a \u00e9t\u00e9 transmis \u00e0 votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} \u2014 r\u00e9f. {{ reference_copro }}{% endif %}.'
-     '{% endif %}'
-     '</p>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} \u2014 {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Pi\u00e8ces jointes disponibles ci-dessous.</p>{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:13px;font-weight:600;color:#8A8FA0;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} \u00b7 {{ ticket.categorie }}{% endif %}{% if is_commentaire %} \u2014 Soumis le {{ date_creation }}{% endif %}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '{% if ticket.description %}<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>{% endif %}'
-     '{% if not is_commentaire %}<p style="margin:8px 0 0;font-size:14px;color:#5A6070">Soumis par {{ auteur.prenom }} {{ auteur.nom }}</p>{% endif %}'
-     '</td></tr></table>'
-     '{% if is_commentaire and messages %}'
-     '{% for m in messages %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} \u2014 {{ m.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ m.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '{% if not is_commentaire and historique and historique|length > 1 %}'
-     '<h3 style="margin:0 0 8px;font-size:15px;color:#1E3A5F">Historique</h3>'
-     '<table role="presentation" style="border-collapse:collapse;width:100%;font-size:.88rem;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden">'
-     '{% for h in historique %}'
-     '<tr style="background:{% if loop.index is odd %}#F2EFE9{% else %}#FFFFFF{% endif %}">'
-     '<td style="padding:.35rem .75rem;border-bottom:1px solid #D0D8E4;white-space:nowrap;color:#5A6070;font-size:.82rem">{{ h.date }}</td>'
-     '<td style="padding:.35rem .75rem;border-bottom:1px solid #D0D8E4;color:#1A1A2E">{{ h.label }}</td>'
-     '</tr>{% endfor %}'
-     '</table>'
-     '{% endif %}'
-     '<p style="text-align:center;margin:{% if is_commentaire %}16{% else %}0{% endif %}px 0 0">'
-     '<a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le ticket</a></p>',
-     True),
+async function chargerSignalements() {
+if (!$isCS) return;
+try { signalements = await signalementsApi.liste('en_attente'); }
+catch { /* silencieux */ }
+}
 
-    ("ticket_statut_change", "Statut ticket modifié", "Ticket #{{ ticket.numero }} mis à jour — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Mise à jour de votre ticket</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 16px">Le statut de votre ticket a été mis à jour\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '<p style="margin:0"><span style="display:inline-block;background:#3D6B4F;color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;font-weight:600">{{ ticket.statut }}</span></p>'
-     '</td></tr></table>',
-     True),
+async function signaler(cibleType: string, cibleId: number) {
+const motif = prompt('Pourquoi signalez-vous ce contenu au conseil syndical ?');
+if (motif === null) return;
+if (!motif.trim()) { toast('error', 'Le motif est obligatoire'); return; }
+try {
+await signalementsApi.creer(cibleType, cibleId, motif.trim());
+toast('success', 'Signalement transmis au conseil syndical');
+if ($isCS) chargerSignalements();
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
 
-    ("ticket_nouveau_message", "Nouveau message sur un ticket", "Nouveau message — Ticket #{{ ticket.numero }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouveau message sur votre ticket</h2>'
-     '<p style="margin:0 0 16px">Un nouveau message a été ajouté sur le ticket <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur_action.prenom }} {{ auteur_action.nom }}\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ message.contenu }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/tickets/{{ ticket.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le ticket</a></p>',
-     True),
+async function resoudreSignalement(id: number, statut: 'traite' | 'rejete') {
+try {
+await signalementsApi.resoudre(id, statut);
+signalements = signalements.filter(s => s.id !== id);
+toast('success', statut === 'traite' ? 'Signalement traité' : 'Signalement ignoré');
+} catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
+}
 
-    ("reponse_communaute", "Nouvelle réponse (Communauté)", "💬 Nouvelle réponse sur {{ reponse.rubrique_label }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💬 Nouvelle réponse</h2>'
-     '<p style="margin:0 0 16px">{{ reponse.auteur }} a répondu à {{ reponse.rubrique_label }} <strong>« {{ reponse.sujet }} »</strong> :</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0;font-size:14px;color:#1A1A2E">{{ reponse.extrait }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ reponse.lien }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir et répondre</a></p>',
-     True),
+// Garde réactive : redirige dès que le user est connu (garde contre la race condition async layout)
+$: if ($currentUser && ($currentUser.statut === 'syndic' || $currentUser.statut === 'mandataire')) {
+	toast('error', 'La rubrique Communauté n\'est pas accessible à votre profil.');
+	goto('/tableau-de-bord', { replaceState: true });
+}
 
-    ("idee_statut", "Idée soutenue — changement de statut", "💡 L'idée « {{ idee.titre }} » est {{ idee.statut_label }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">💡 Une idée que vous avez soutenue avance</h2>'
-     '<p style="margin:0 0 16px">Bonne nouvelle : l\'idée <strong>« {{ idee.titre }} »</strong>, que vous avez soutenue, est désormais <strong>{{ idee.statut_label }}</strong>.</p>'
-     '<p style="text-align:center;margin:0"><a href="{{ idee.lien }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la boîte à idées</a></p>',
-     True),
+onMount(async () => {
+if ($currentUser?.communaute_interdit) {
+	banMessage = 'Votre accès à la Communauté a été définitivement suspendu.';
+	sondagesLoading = false; ideesLoading = false; annoncesLoading = false;
+	return;
+}
+if ($currentUser?.communaute_ban_jusqu_au && new Date($currentUser.communaute_ban_jusqu_au) > new Date()) {
+	banMessage = 'Votre accès à la Communauté est suspendu pour une période probatoire d\u2019un mois. À la 2ᵉ infraction, vous serez banni définitivement.';
+	sondagesLoading = false; ideesLoading = false; annoncesLoading = false;
+	return;
+}
+//  La liste des bâtiments n'est plus chargée ici : le sélecteur de périmètre
+//  lit l'arbre complet depuis son store, comme sur tous les autres écrans — un
+//  bâtiment n'est qu'un nœud parmi le parking, l'AFUL et les espaces.
+[sondages, idees, annonces] = await Promise.all([
+	sondagesApi.list().catch(() => []),
+	ideesApi.list().catch(() => []),
+	annoncesApi.list().catch(() => []),
+]);
+sondagesLoading = false;
+ideesLoading = false;
+annoncesLoading = false;
+chargerSignalements();
 
+// ── Lien profond ────────────────────────────────────────────────────────────
+// Trois rubriques cohabitent ici sous trois onglets. Sans cela, « Voir l'annonce → »
+// déposait l'utilisateur sur l'onglet Sondages (bug signalé le 26/07/2026) : la page
+// était la bonne, l'annonce introuvable. L'ancre prime sur `?onglet=`, elle est plus
+// précise.
+const ongletDemande = ongletDeLUrl(ONGLETS);
+if (ongletDemande) activeTab = ongletDemande;
 
-    ("relance_syndic", "Relance tickets syndic non résolus",
-     "[\U0001f3e2 {{ reference_copro }}] \u2013 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '\U0001f514 Relance ticket(s) sans avanc\u00e9e depuis {{ anciennete }}</h2>'
-     '<p style="margin:0 0 20px">{{ civilite }} {{ nom_gestionnaire }},</p>'
-     # Pr\u00e9ambule partenarial (choisi le 01/08/2026) : poser l\u2019anciennet\u00e9 r\u00e9elle
-     # et le m\u00e9contentement qu\u2019elle nourrit, sans mettre le gestionnaire en
-     # accusation \u2014 la relance reste un outil de travail, pas un grief.
-     '<p style="margin:0 0 16px">Le Conseil Syndical de la copropri\u00e9t\u00e9 <strong>{{ residence.nom }}</strong> '
-     'se permet de revenir vers vous concernant les tickets ci-dessous, transmis au syndic '
-     'et toujours <strong>sans avanc\u00e9e apr\u00e8s {{ anciennete }}</strong>.</p>'
-     '<p style="margin:0 0 16px">Nous mesurons la charge qui p\u00e8se sur la gestion d\u2019un '
-     'portefeuille de copropri\u00e9t\u00e9s. C\u2019est pr\u00e9cis\u00e9ment pour vous \u00e9viter des '
-     'sollicitations r\u00e9p\u00e9t\u00e9es que nous regroupons ici l\u2019ensemble des dossiers '
-     'en attente. Leur anciennet\u00e9 commence toutefois \u00e0 nourrir un m\u00e9contentement '
-     'que nous pr\u00e9f\u00e9rerions d\u00e9samorcer ensemble.</p>'
-     '<p style="margin:0 0 20px">Un simple point d\u2019\u00e9tape, m\u00eame succinct, sur chacun '
-     'd\u2019eux nous permettrait de rassurer les r\u00e9sidents.</p>'
-     '{% for item in tickets %}'
-     '<table role="presentation" style="width:100%;margin:0 0 24px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden">'
-     '<tr><td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:15px;color:#1E3A5F">'
-     '{{ item.numero }} \u2014 {{ item.titre }}'
-     '{% if item.relance_count > 0 %}'
-     ' <span style="background:#DC2626;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
-     'Relance n\u00b0{{ item.relance_count }}</span>'
-     '{% else %}'
-     ' <span style="background:#F59E0B;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">'
-     '1\u00e8re relance</span>'
-     '{% endif %}'
-     '</p>'
-     '<p style="margin:0 0 6px;font-size:12px;color:#4B5563">'
-     'Cat\u00e9gorie\u202f: {{ item.categorie | capitalize }} \u00b7 Priorit\u00e9\u202f: {{ item.priorite | capitalize }}'
-     '{% if item.perimetre %} \u00b7 P\u00e9rim\u00e8tre\u202f: {{ item.perimetre }}{% endif %}'
-     '</p>'
-     '<p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#374151">Description\u202f:</p>'
-     '<div style="font-size:13px;color:#1A1A2E;white-space:pre-line">{{ item.description }}</div>'
-     '<p style="margin:12px 0 6px;font-size:13px;font-weight:600;color:#374151">Historique\u202f:</p>'
-     '<ul style="margin:0;padding-left:1.2em;font-size:12px;color:#374151">'
-     '{% for h in item.historique %}'
-     '<li style="margin-bottom:3px">{{ h.date }} \u2014 {{ h.label }}</li>'
-     '{% endfor %}'
-     '</ul>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '<p style="margin:24px 0 0">Nous vous remercions de bien vouloir nous tenir inform\u00e9s '
-     'des actions engag\u00e9es sur ces dossiers.</p>'
-     # Signature sans le nom de la résidence : « Le Conseil Syndical de
-     # {{ residence.nom }} » rendait « … de Les Hostachy ». L'article du nom
-     # propre ne se contracte pas, et le destinataire sait déjà de quelle
-     # copropriété il s'agit — le préambule le dit, l'objet aussi.
-     '<p style="margin:8px 0 0">Cordialement,<br>'
-     '<strong>Le Conseil Syndical</strong></p>',
-     False),
+const idAnnonce = cibleDuHash('annonce');
+if (idAnnonce !== null) {
+	activeTab = 'annonces';
+	expandedAnnonce = idAnnonce; // détails dépliés, comme après un dépôt
+	revelerCible(`annonce-${idAnnonce}`);
+}
 
-    ("vigik_commande_recue", "Commande vigik reçue (CS)", "Nouvelle commande de {{ type }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Nouvelle demande de badge/clé</h2>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Type : {{ type }} · Lot {{ lot.numero }}</p>'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ demandeur.prenom }} {{ demandeur.nom }}</p>'
-     '</td></tr></table>',
-     True),
+const idIdee = cibleDuHash('idee');
+if (idIdee !== null) {
+	activeTab = 'idees';
+	revelerCible(`idee-${idIdee}`);
+}
+});
+</script>
 
-    ("vigik_accepte", "Commande vigik acceptée", "Votre demande de {{ type }} a été acceptée — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#3D6B4F">\u2705 Demande acceptée</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0">Votre demande de <strong>{{ type }}</strong> a été acceptée. Vous serez informé(e) de la suite à donner.</p>',
-     True),
+<svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
-    ("vigik_refuse", "Commande vigik refusée", "Votre demande de {{ type }} n'a pas été acceptée — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Demande non acceptée</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
-     '<p style="margin:0 0 8px">Votre demande de <strong>{{ type }}</strong> n\u2019a pas été acceptée.</p>'
-     '<p style="margin:0;color:#5A6070"><strong>Motif\u202f:</strong> {{ motif }}</p>',
-     True),
+<!--  L'en-tête n'OUVRE plus : l'annulation vit à côté d'« Enregistrer » (norme du
+      18/08/2026). Deux commandes pour un formulaire, c'est #367. -->
+<EntetePage titre={_pc.titre} icone={_pc.icone || 'users-round'}>
+	{#if activeTab === 'sondages' && $isCS && !showFormSondage}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showFormSondage = true)}>
+			+ Nouveau sondage
+		</button>
+	{:else if activeTab === 'idees' && !showFormIdee}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showFormIdee = true)}>
+			+ Nouvelle idée
+		</button>
+	{:else if activeTab === 'annonces' && !showFormAnnonce}
+		<button class="btn btn-primary page-header-btn" on:click={() => (showFormAnnonce = true)}>
+			+ Déposer une annonce
+		</button>
+	{/if}
+</EntetePage>
+<div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-    ("calendrier_evenement_cree", "Événement calendrier créé", "Nouvel événement : {{ evenement.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c5 Nouvel événement</h2>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#C9983A;font-weight:600">{{ evenement.date }}</p>'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ evenement.titre }}</p>'
-     '</td></tr></table>'
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}/calendrier" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir le calendrier</a></p>',
-     True),
+{#if banMessage}
+<div class="alert alert-danger" style="margin:2rem 0;padding:1.5rem;border-radius:10px;text-align:center;font-size:1.1rem">
+	⛔ {banMessage}
+</div>
+{:else}
+<!-- Onglets -->
+<div class="tabs" role="tablist" style="margin-bottom:1.5rem">
+<button role="tab" class:active={activeTab === 'sondages'} on:click={() => activeTab = 'sondages'}>
+	{_pc.onglets?.sondages?.label ?? '\u{1F4CA} Sondages'}
+</button>
+<button role="tab" class:active={activeTab === 'idees'} on:click={() => activeTab = 'idees'}>
+	{_pc.onglets?.idees?.label ?? '\u{1F4A1} Boîte à idées'}
+</button>
+<button role="tab" class:active={activeTab === 'annonces'} on:click={() => activeTab = 'annonces'}>
+	{_pc.onglets?.annonces?.label ?? '\u{1F3F7}\uFE0F Petites annonces'}
+</button>
+</div>
+{#if _pc.onglets?.[activeTab]?.descriptif}
+<p class="tab-descriptif">{@html safeHtml(_pc.onglets[activeTab].descriptif)}</p>
+{/if}
 
-    ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c4 Nouveau document</h2>'
-     '<p style="margin:0 0 16px">Un nouveau document a été publié sur l\u2019espace de votre résidence\u202f:</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ document.titre }}</p>'
-     '</td></tr></table>'
-     # `/documents` n'a jamais existé côté front : chaque document s'affiche là
-     # où il est rattaché. Le bouton menait donc à un 404 — le même que celui
-     # signalé depuis un PV d'AG le 26/07/2026, resté ici parce que ce modèle
-     # n'était envoyé par personne. Le lien vient de `app/utils/liens.py`.
-     '<p style="text-align:center;margin:0"><a href="{{ app.url }}{{ document.lien }}" style="display:inline-block;background:#3D6B4F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Consulter le document</a></p>',
-     True),
+{#if $isCS && signalements.length > 0}
+<div class="moderation-panel">
+<button type="button" class="moderation-tete" on:click={() => showModeration = !showModeration}
+aria-expanded={showModeration}>
+🚩 {signalements.length} signalement{signalements.length > 1 ? 's' : ''} à modérer
+<span class="moderation-chevron">{showModeration ? '▲' : '▼'}</span>
+</button>
+{#if showModeration}
+<div class="moderation-liste">
+{#each signalements as sig (sig.id)}
+<div class="moderation-item">
+<div class="moderation-meta">
+<span class="badge badge-blue">{sig.cible_type_label}</span>
+<strong>« {sig.apercu}</strong>
+{#if sig.auteur_cible}<span style="color:var(--color-text-muted)">— par {sig.auteur_cible}</span>{/if}
+</div>
+<div class="moderation-motif">Motif : {sig.motif} <span style="color:var(--color-text-muted)">(signalé par {sig.signale_par})</span></div>
+<div class="moderation-actions">
+<button class="btn btn-sm btn-outline" on:click={() => resoudreSignalement(sig.id, 'traite')}>✓ Marquer traité</button>
+<button class="btn btn-sm btn-outline" on:click={() => resoudreSignalement(sig.id, 'rejete')}>Ignorer</button>
+</div>
+</div>
+{/each}
+<p class="moderation-aide">Pour retirer un contenu, utilisez le bouton 🗑️ sur le contenu concerné, puis marquez le signalement « traité ». Les récidives se gèrent via Admin → bannissement Communauté.</p>
+</div>
+{/if}
+</div>
+{/if}
 
-    ("publication_syndic", "Publication transmise au syndic",
-     '{% if is_commentaire %}\U0001f4ac Commentaire sur « {{ publication.titre }} »{% else %}{% if reference_copro %}\U0001f3e2 {{ reference_copro }} — {% endif %}Nouvelle publication{% endif %} — {{ residence.nom }}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4e2 Publication du conseil syndical{% endif %}'
-     '</h2>'
-     '<p style="margin:0 0 16px">'
-     '{% if is_commentaire %}'
-     'Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.prenom }} {{ auteur.nom }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-     '{% else %}'
-     'Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.'
-     '{% endif %}'
-     '</p>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Pièces jointes disponibles ci-dessous.</p>{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:13px;font-weight:600;color:#8A8FA0;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '{% if is_commentaire %}<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Publication initiale — {{ date_publication }}</p>{% endif %}'
-     '<p style="margin:0 0 {% if is_commentaire %}8{% else %}12{% endif %}px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ publication.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% if is_commentaire and evolutions %}'
-     '{% for e in evolutions %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ e.auteur_nom }} — {{ e.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ e.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '<p style="text-align:center;margin:{% if is_commentaire %}16{% else %}0{% endif %}px 0 0">'
-     '<a href="{{ app.url }}/actualites#pub-{{ publication.id }}" style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Voir la publication</a></p>',
-     True),
+{#if activeTab === 'sondages'}
+{#if showFormSondage && $isCS}
+<FormulaireSondage on:cree={async () => { sondages = await sondagesApi.list(); showFormSondage = false; }}
+	on:annule={() => (showFormSondage = false)} />
+{/if}
 
+{#if sondagesLoading}
+<p style="color:var(--color-text-muted)">Chargement</p>
+{:else if sondages.length === 0}
+<div class="empty-state">
+<h3>Aucun sondage</h3>
+<p>Les sondages du conseil syndical apparaîtront ici.</p>
+</div>
+{:else}
+{#each sondages as s}
+<a href="/sondages/{s.id}" class="sondage-card card">
+<div class="sondage-body">
+<strong class="sondage-question">{s.question}
+{#if isNouveau(s.cree_le, s.mis_a_jour_le)}<span class="badge badge-gray" style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span>{/if}
+</strong>
+{#if s.description}<div class="sondage-desc rich-content clamp-5">{@html safeHtml(s.description)}</div>{/if}
+<small style="color:var(--color-text-muted)">
+{fmtDateShort(s.cree_le)}
+{#if s.cloture_le}
+· {s.cloture ? '🔒 Clôturé' : `Clôture le ${fmtDateShort(s.cloture_le)}`}
+{/if}
+· <span class="sondage-votants">{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span>
+</small>
+<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre logique
+      (jamais 📍, qui est réservé au lieu physique), et rien du tout quand le
+      ciblage est le défaut — le redire n'apprend rien. Les badges rendaient
+      jusqu'ici les valeurs BRUTES de la base (« copropriétaire_résident »,
+      « Bât. 3 » reconstitué à la main), faute de traduction disponible. -->
+{#if !estPerimetreParDefaut(s.perimetre_cible) || !concerneTousLesResidents(s.public_cible)}
+<div class="sondage-ciblage">
+	{#if !estPerimetreParDefaut(s.perimetre_cible)}
+		<span class="badge badge-blue sondage-badge">&#x1F539; {perimetreLabel(s.perimetre_cible)}</span>
+	{/if}
+	{#if !concerneTousLesResidents(s.public_cible)}
+		<span class="badge badge-orange sondage-badge">{destinatairesLabel(s.public_cible)}</span>
+	{/if}
+</div>
+{/if}
+</div>
+<div class="sondage-actions">
+  {#if s.cloture}
+<span class="badge badge-gray">Clôturé</span>
+{:else}
+<span class="badge badge-green">Ouvert</span>
+{/if}
+{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
+<button class="btn-icon-warn" aria-label="Stopper ce sondage" title="Stopper" on:click={e => arreterSondage(s, e)}>⏹️</button>
+{/if}
+{#if $currentUser?.id === s.auteur_id || $isAdmin}
+<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={e => supprimerSondage(s, e)}>&#x1F5D1;️</button>
+{/if}
+</div>
+</a>
+{/each}
+{/if}
+{/if}
 
+{#if activeTab === 'idees'}
 
+{#if showFormIdee}
+<FormulaireIdee on:cree={ideeCreee} on:annule={() => (showFormIdee = false)} />
+{/if}
 
-    ("alerte_systeme", "Alerte système (contrôle quotidien)",
-     "[{{ residence.nom }}] ⚠️ Alerte système — {{ nb_problemes }} problème(s) détecté(s)",
-     '<p style="margin:0 0 8px;font-size:15px;color:#4A5568">Bonjour,</p>'
-     '<p style="margin:0 0 24px;font-size:15px;color:#4A5568">'
-     'Le contrôle quotidien du <strong>{{ date_controle }}</strong> a détecté '
-     '<strong style="color:#E53E3E">{{ nb_problemes }} problème(s)</strong> :</p>'
-     '<table role="presentation" cellpadding="0" cellspacing="0" '
-     'style="width:100%;border:1px solid #FED7D7;border-radius:8px;'
-     'background:#FFF5F5;padding:16px 20px;margin-bottom:24px">'
-     '{% for probleme in problemes %}'
-     '<tr><td style="padding:10px 0 6px">'
-     '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">'
-     '<tr><td style="vertical-align:top;width:24px;padding-top:2px">'
-     '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;'
-     'background:#E53E3E;margin-top:4px"></span></td>'
-     '<td style="vertical-align:top;font-size:15px;color:#1A1A2E;line-height:1.5">'
-     '{{ probleme.titre }}</td></tr>'
-     '{% if probleme.details %}'
-     '<tr><td></td><td>'
-     '<table role="presentation" cellpadding="0" cellspacing="0" '
-     'style="width:100%;background:#F8F9FA;border-left:3px solid #E53E3E;'
-     'border-radius:4px;padding:10px 14px;margin-top:8px">'
-     '{% for detail in probleme.details %}'
-     '<tr><td style="padding:4px 0;font-size:13px;color:#4A5568;'
-     'font-family:monospace">{{ detail }}</td></tr>'
-     '{% endfor %}'
-     '</table></td></tr>'
-     '{% endif %}'
-     '</table></td></tr>'
-     '{% endfor %}'
-     '</table>'
-     '<p style="text-align:center;margin:0">'
-     '<a href="{{ app.url }}/admin" style="display:inline-block;background:#1E3A5F;'
-     'color:#ffffff;font-size:14px;font-weight:600;padding:12px 28px;'
-     'border-radius:6px;text-decoration:none;letter-spacing:0.3px">'
-     'Accéder à l’administration</a></p>',
-     False),
+<div class="filters">
+{#each statuts as s}
+<button class="btn btn-sm" class:btn-primary={filtreStatut === s.val} on:click={() => filtreStatut = s.val}>{s.label}</button>
+{/each}
+</div>
 
-    ("verification_email", "Vérification e-mail", "Vérifiez votre adresse e-mail — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Vérification de votre adresse e-mail</h2>'
-     '<p style="margin:0 0 12px">Bonjour {{ prenom }},</p>'
-     '<p style="margin:0 0 24px">Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.</p>'
-     '<p style="text-align:center;margin:0 0 16px"><a href="{{ lien }}" style="display:inline-block;background:#C9983A;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">Vérifier mon adresse</a></p>'
-     '<p style="margin:0;font-size:13px;color:#5A6070">Ce lien est valable <strong>{{ expire_heures }} heures</strong>. Si vous n\u2019êtes pas à l\u2019origine de cette demande, ignorez ce message.</p>',
-     False),
+{#if ideesLoading}
+<p style="color:var(--color-text-muted)">Chargement</p>
+{:else if sortedIdees.length === 0}
+<div class="empty-state">
+<h3>Aucune idée pour l'instant</h3>
+<p>Soyez le premier à proposer une idée !</p>
+</div>
+{:else}
+{#each sortedIdees as idee}
+<div class="idee-card card" id="idee-{idee.id}">
+<button class="vote-btn" class:voted={idee.mon_vote} on:click={() => voter(idee.id)}
+title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
+<span class="vote-icon">{idee.mon_vote ? '❤️' : '\u{1F90D}'}</span>
+<span class="vote-count">{idee.nb_votes}</span>
+</button>
+<div class="idee-body">
+<!--  🔴 L'EN-TÊTE DU SITE (18/08/2026, signalé à l'écran : « l'état sur une
+      2nde ligne après le titre »). Le titre et le badge d'état partageaient une
+      ligne en `space-between`, seule carte du produit dans ce cas — les quatre
+      autres passent par `EnteteCarte` : titre sur sa propre ligne, puis les tags.
 
-    ("annonce_hall", "Annonce hall (PDF à afficher)",
-     "\U0001f4c4 Annonce à afficher — {{ annonce.titre }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c4 Annonce à afficher dans le hall</h2>'
-     '<p style="margin:0 0 16px">{{ auteur.prenom }} {{ auteur.nom }} a préparé une annonce pour <strong>{{ annonce.perimetre }}</strong>. '
-     'Le PDF est en pièce jointe, prêt à imprimer au format <strong>{{ annonce.format }}</strong> et à afficher.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">{{ annonce.perimetre }} · Format {{ annonce.format }} · {{ annonce.date }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:17px;color:#1E3A5F">{{ annonce.titre }}</p>'
-     '{% if annonce.apercu %}<p style="margin:0;font-size:14px;color:#5A6070">{{ annonce.apercu }}</p>{% endif %}'
-     '</td></tr></table>'
-     '<p style="margin:0 0 20px;font-size:13px;color:#5A6070">\U0001f4ce Pièce jointe : <strong>{{ annonce.fichier }}</strong> '
-     '— imprimer en couleur, sans mise à l’échelle (100 %).</p>'
-     '<p style="text-align:center;margin:0">'
-     '<a href="{{ app.url }}/espace-cs?onglet=annonces-hall" '
-     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
-     'Voir l’historique des annonces</a></p>',
-     True),
+      ⚠️ L'en-tête vit DANS `.idee-body`, pas au-dessus : le bouton de vote reste
+      à gauche de l'ensemble, il n'est pas un tag. `basculable` reste faux — une
+      idée ne se déplie pas, elle montre tout. -->
+<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
+<svelte:fragment slot="titre-suffixe">
+{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
+</svelte:fragment>
+<svelte:fragment slot="tags">
+<span class="badge {statutClass(idee.statut)}">{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span>
+{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span>{/if}
+</svelte:fragment>
+</EnteteCarte>
+<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
+{#if idee.auteur_id !== $currentUser?.id}
+<button class="signaler-inline" title="Signaler cette idée au conseil syndical" aria-label="Signaler cette idée" on:click={() => signaler('idee', idee.id)}>🚩</button>
+{/if}
 
-    ("acces_apparies_auto", "Accès attribués automatiquement — gestionnaire du site",
-     "\U0001f511 {{ resultat.total_acces }} accès attribué{{ resultat.pluriel }} automatiquement à {{ utilisateur.prenom }} {{ utilisateur.nom }} — {{ residence.nom }}",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f511 Accès attribués automatiquement</h2>'
-     '<p style="margin:0 0 16px">L’activation du compte de <strong>{{ utilisateur.prenom }} {{ utilisateur.nom }}</strong>'
-     '{% if utilisateur.email %} (<a href="mailto:{{ utilisateur.email }}" style="color:#1E3A5F">{{ utilisateur.email }}</a>){% endif %} '
-     'a rattaché des accès <strong>sans validation préalable</strong>, par rapprochement de nom avec les fichiers du syndic.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">{{ utilisateur.statut }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">'
-     '{{ resultat.telecommandes }} télécommande{{ resultat.pluriel_tc }} · {{ resultat.vigiks }} badge{{ resultat.pluriel_vigik }} Vigik</p>'
-     '<p style="margin:0;font-size:13px;color:#5A6070">Lots rattachés : {{ resultat.lots }}</p>'
-     '</td></tr></table>'
-     '<p style="margin:0 0 20px;font-size:13px;color:#5A6070">Le rapprochement se fait sur le <strong>nom de famille</strong>, '
-     'volontairement — un foyer partage ses accès. Deux foyers homonymes sont donc indiscernables : '
-     'ce message est là pour que vous puissiez le vérifier.</p>'
-     '<p style="text-align:center;margin:0">'
-     '<a href="{{ app.url }}/admin/telecommandes-import" '
-     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
-     'Vérifier les imports</a></p>',
-     True),
+<Reponses
+reponses={idee.reponses ?? []}
+currentUserId={$currentUser?.id}
+isCS={$isCS}
+placeholder="Votre réponse à cette idée…"
+onSubmit={(c) => repondreIdee(idee.id, c)}
+onDelete={(rid) => supprimerReponseIdee(idee.id, rid)}
+onReport={(rid) => signaler('reponse', rid)}
+/>
+</div>
+{#if $isCS}
+<div class="idee-actions">
+<!--  Workflow en PASTILLES, jamais un `<select>` nu (R3, #423). -->
+<WorkflowPastilles options={STATUTS_IDEE} valeur={idee.statut}
+on:choisir={(e) => changeStatut(idee.id, e.detail)} />
+{#if $isAdmin}
+<button class="btn-icon-danger" title="Supprimer cette idée" on:click={() => deleteIdee(idee.id)}>🗑️</button>
+{/if}
+</div>
+{/if}
+</div>
+{/each}
+{/if}
+{/if}
 
-    # ── Modèles longtemps déclarés en migration seulement ────────────────────
-    # `nouvel_arrivant_bal` (0066, sujet corrigé en 0090), `publication_externe`
-    # et `ticket_externe` (0105) n'existaient QUE dans leur migration. Ils sont
-    # donc restés hors des deux garde-fous, qui itèrent sur cette liste : ni
-    # contrat de variables, ni vérification du contexte au point d'appel — alors
-    # que ce sont les trois modèles envoyés à des destinataires EXTERNES, syndic
-    # et tiers, où un envoi raté ne se voit pas depuis l'application.
-    # Le seed n'insère que ce qui manque : les rapatrier ici ne touche à aucune
-    # base existante, et rend une base neuve conforme à celles en service.
-    # Seul modèle resté en HTML brut, hérité de la migration 0066 : ni gabarit,
-    # ni encadré, un sujet en abrégé (« MaJ Boites aux lettres ») et une demande
-    # sèche. C'est pourtant un message adressé au syndic — même destinataire que
-    # `relance_syndic`, dont le préambule a été repris le 01/08/2026 pour dire ce
-    # qu'on attend sans mettre personne en cause.
-    ("nouvel_arrivant_bal", "Nouvel arrivant — Étiquette boîte aux lettres",
-     "{% if reference_copro %}\U0001f3e2 {{ reference_copro }} — {% endif %}"
-     "Nouvel arrivant — mise à jour des boîtes aux lettres",
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '\U0001f4ea Étiquette de boîte aux lettres à mettre à jour</h2>'
-     '<p style="margin:0 0 16px">Un nouveau résident vient d’emménager dans la '
-     'copropriété <strong>{{ residence.nom }}</strong>. Nous vous transmettons les '
-     'éléments nécessaires pour que son étiquette de boîte aux lettres soit à jour.</p>'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px;border-left:4px solid #C9983A">'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ nom_complet }}</p>'
-     '{% if batiment %}<p style="margin:0 0 4px;font-size:14px;color:#5A6070">'
-     'Bâtiment / appartement : <strong>{{ batiment }}</strong></p>{% endif %}'
-     '{% if ancien_resident %}<p style="margin:0;font-size:14px;color:#5A6070">'
-     'Occupant précédent : {{ ancien_resident }}</p>{% endif %}'
-     '</td></tr></table>'
-     '<p style="margin:0 0 16px">Une étiquette absente ou périmée fait revenir le '
-     'courrier à l’expéditeur, et c’est le résident qui nous le signale. Un '
-     'mot de votre part une fois la modification faite nous permettra de lui '
-     'répondre sans vous relancer.</p>'
-     '<p style="margin:8px 0 0">Cordialement,<br>'
-     '<strong>Le Conseil Syndical</strong></p>',
-     True),
+{#if activeTab === 'annonces'}
+<OngletAnnonces
+	bind:annonces
+	chargement={annoncesLoading}
+	bind:showForm={showFormAnnonce}
+	bind:expandedAnnonce
+	estCS={$isCS}
+	estAdmin={$isAdmin}
+	currentUserId={$currentUser?.id}
+	onSignaler={signaler}
+/>
+{/if}
 
-    ("publication_externe", "Notification publication (email externe)",
-     '{% if is_commentaire %}Relance {{ publication.titre }}{% else %}{{ publication.titre }} — {{ residence.nom }}{% endif %}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4e2 Publication{% endif %} : {{ publication.titre }}</h2>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}'
-     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Voir les pièces jointes ci-dessous.</p>'
-     '{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Publication initiale — {{ date_publication }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ publication.titre }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ publication.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% if is_commentaire and evolutions %}'
-     '{% for e in evolutions %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ e.auteur_nom }} — {{ e.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ e.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:20px 0 16px">'
-     '<p style="margin:0;font-size:13px;color:#5A6070;text-align:center">'
-     'Ce message vous a été transmis par le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong>.</p>',
-     False),
+{/if}
+<!-- /banMessage else -->
 
-    ("ticket_externe", "Notification ticket (email externe)",
-     '{% if is_commentaire %}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
-     '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f527 Ticket{% endif %} : {{ ticket.titre }}</h2>'
-     '{% if is_commentaire %}'
-     '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}'
-     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Voir les pièces jointes ci-dessous.</p>'
-     '{% endif %}'
-     '</td></tr></table>'
-     '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
-     '{% endif %}'
-     '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %} — {{ date_creation }}</p>'
-     '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>'
-     '</td></tr></table>'
-     '{% if is_commentaire and messages %}'
-     '{% for m in messages %}'
-     '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
-     '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} — {{ m.date }}</p>'
-     '<div style="font-size:14px;color:#1A1A2E">{{ m.contenu | safe }}</div>'
-     '</td></tr></table>'
-     '{% endfor %}'
-     '{% endif %}'
-     '<hr style="border:none;border-top:1px solid #D0D8E4;margin:20px 0 16px">'
-     '<p style="margin:0;font-size:13px;color:#5A6070;text-align:center">'
-     'Ce message vous a été transmis par le Conseil Syndical de la copropriété <strong>{{ residence.nom }}</strong>.</p>',
-     False),
-]
+<style>
 
-
-def seed():
-    create_db_and_tables()
-
-    with Session(engine) as session:
-        # Copropriété par défaut
-        if not session.exec(select(Copropriete)).first():
-            copro = Copropriete(
-                nom="Ma Résidence",
-                adresse="1 rue Exemple, 75000 Paris",
-                annee_construction=2000,
-                nb_lots_total=48,
-            )
-            session.add(copro)
-            session.flush()
-
-            for letter in ["1", "2", "3", "4"]:
-                session.add(Batiment(copropriete_id=copro.id, numero=letter, nb_etages=5))
-
-        # Admin par défaut — mot de passe aléatoire affiché dans les logs au 1er lancement
-        if not session.exec(select(Utilisateur).where(Utilisateur.role == RoleUtilisateur.admin)).first():
-            import secrets
-            temp_pwd = secrets.token_urlsafe(16)
-            admin = Utilisateur(
-                nom="Admin",
-                prenom="Site",
-                email="admin@localhost",
-                hashed_password=hash_password(temp_pwd),
-                statut=StatutUtilisateur.admin_technique,
-                role=RoleUtilisateur.admin,
-                roles_json="admin",
-                actif=True,
-                consentement_rgpd=True,
-            )
-            session.add(admin)
-            import logging
-            logging.getLogger("app.seed").warning(
-                "\n" + "=" * 60
-                + "\n  ADMIN INITIAL CRÉÉ"
-                + "\n  Email : admin@localhost"
-                + f"\n  Mot de passe temporaire : {temp_pwd}"
-                + "\n  ⚠ Changez-le immédiatement après la 1ʳᵉ connexion."
-                + "\n" + "=" * 60
-            )
-
-        # Profils d'accès documentaires
-        profil_map: dict[str, int] = {}
-        for p in PROFILS:
-            existing = session.exec(
-                select(ProfilAccesDocument).where(ProfilAccesDocument.code == p["code"])
-            ).first()
-            if not existing:
-                obj = ProfilAccesDocument(**p)
-                session.add(obj)
-                session.flush()
-                profil_map[obj.code] = obj.id
-            else:
-                profil_map[existing.code] = existing.id
-
-        # Catégories de documents
-        for code, libelle, profil_code, perimetre, surcharge in CATEGORIES:
-            if not session.exec(select(CategorieDocument).where(CategorieDocument.code == code)).first():
-                session.add(CategorieDocument(
-                    code=code,
-                    libelle=libelle,
-                    profil_acces_id=profil_map[profil_code],
-                    perimetre_defaut=perimetre,
-                    surcharge_autorisee=surcharge,
-                ))
-
-        # Configuration sauvegarde par défaut
-        if not session.exec(select(ConfigSauvegarde)).first():
-            session.add(ConfigSauvegarde())
-
-        # Configuration site par défaut
-        DEFAULT_CONFIG = {
-            'site_nom': 'Ma Résidence',
-            'site_url': 'https://example.com/',
-            'site_email': 'admin@example.com',
-            'site_manager_user_id': '',
-            'login_sous_titre': 'Votre espace numérique de résidence',
-            'notify_ticket_bug_email': '0',
-            'notify_new_user_created_email': '0',
-            'whatsapp_footer': '— Le Conseil Syndical',
-            'email_footer': '— ©2026-5Hostachy - Envoyé depuis 5hostachy.fr —',
-            'reference_copro': '',
-            **DEFAULT_LEGAL,
-        }
-        for cle, valeur in DEFAULT_CONFIG.items():
-            if not session.get(ConfigSite, cle):
-                session.add(ConfigSite(cle=cle, valeur=valeur))
-
-        # Templates email
-        for code, libelle, sujet, corps_html, desactivable in EMAIL_TEMPLATES:
-            if not session.exec(select(ModeleEmail).where(ModeleEmail.code == code)).first():
-                session.add(ModeleEmail(
-                    code=code,
-                    libelle=libelle,
-                    sujet=sujet,
-                    corps_html=corps_html,
-                    desactivable=desactivable,
-                    intention=INTENTIONS_PAR_MODELE.get(code, ""),
-                ))
-
-        session.commit()
-
-        # FAQ items par défaut
-        if not session.exec(select(FaqItem)).first():
-            faq_items = [
-                ("\U0001f5d1\ufe0f Tri des déchets", "Quels déchets vont dans le bac jaune ?", "Le bac jaune est réservé aux emballages recyclables : cartons, plastiques rigides (bouteilles, flacons), briques alimentaires, canettes. Ne pas y mettre le verre ni les sacs plastiques.", 1),
-                ("\U0001f5d1\ufe0f Tri des déchets", "Où sont les conteneurs à verre ?", "Les conteneurs à verre (vert) sont situés à l'entrée du parking, côté est. Merci de ne pas y déposer de vaisselle, vitres ou miroirs.", 2),
-                ("\U0001f5d1\ufe0f Tri des déchets", "Comment me débarrasser d'encombrants ?", "Pour les encombrants (meubles, appareils), il faut contacter la mairie ou solliciter une collecte spéciale. Ne pas laisser d'objets dans les parties communes.", 3),
-                ("\U0001f697 Stationnement", "Est-ce que je peux prêter ma place à un tiers ?", "Oui, un propriétaire peut mettre sa place à disposition d'un autre résident ou d'un tiers, mais il reste responsable de son usage. Toute location commerciale doit être signalée au syndic.", 4),
-                ("\U0001f697 Stationnement", "Un véhicule stationne illégalement dans ma place, que faire ?", "Signalez-le d'abord au conseil syndical via cette application (Tickets). En cas d'urgence, vous pouvez contacter directement la fourrière municipale.", 5),
-                ("\U0001f697 Stationnement", "Y a-t-il des bornes de recharge électrique ?", "Une étude de faisabilité est en cours pour l'installation de bornes IRVE. Consultez la rubrique Gouvernance pour suivre l'avancement du projet.", 6),
-                ("\U0001f528 Travaux", "Quels travaux nécessitent une autorisation de l'assemblée générale ?", "Tout travail sur les parties communes (façade, toiture) doit être voté en AG. Les travaux dans les parties privatives restent libres mais ne doivent pas modifier l'aspect extérieur.", 7),
-                ("\U0001f528 Travaux", "Quelles sont les plages horaires autorisées pour les travaux ?", "Les travaux bruyants sont autorisés du lundi au vendredi de 8h à 12h et de 14h à 19h, le samedi de 9h à 12h et de 15h à 18h. Pas de travaux le dimanche.", 8),
-                ("\U0001f4de Contacts d'urgence", "Qui contacter en cas de fuite d'eau ?", "En priorité, coupez l'eau au robinet d'arrêt de votre lot. Pour une fuite en parties communes, appelez immédiatement le syndic ou le gardien.", 9),
-                ("\U0001f4de Contacts d'urgence", "Numéros d'urgence importants", "SAMU : 15 | Pompiers : 18 | Police secours : 17 | Urgence européen : 112 | Urgences EDF/ENEDIS : 09 72 67 50 00", 10),
-                ("\U0001f4f1 Application 5Hostachy", "Comment changer mon mot de passe ?", "Rendez-vous dans Mon profil > Sécurité, puis cliquez sur Changer mon mot de passe.", 11),
-                ("\U0001f4f1 Application 5Hostachy", "L'application fonctionne-t-elle hors connexion ?", "5Hostachy est une application compatible PC, tablette et mobile nécessitant une connexion internet. Elle peut s'installer sur l'écran d'accueil de votre téléphone comme une vraie app, mais les fonctions principales (tickets, messagerie, documents) restent inaccessibles sans réseau.", 12),
-            ]
-            for cat, question, reponse, ordre in faq_items:
-                session.add(FaqItem(categorie=cat, question=question, reponse=reponse, ordre=ordre, actif=True))
-
-        extra_faq_items = [
-            ("\U0001f4f1 Application 5Hostachy", "Pourquoi mes anciens tickets n'apparaissent plus dans la liste principale ?", "Les tickets résolus, annulés ou fermés depuis plus de 48 h sont automatiquement déplacés dans la section <strong>Historique de mes tickets</strong>, en bas de la page Tickets. Cela permet de garder la liste principale centrée sur les demandes encore actives ou récentes.", 13),
-            ("\U0001f4f1 Application 5Hostachy", "Que voit le conseil syndical lorsqu'il traite mon ticket ?", "Dans l'<strong>Espace CS</strong>, le conseil syndical voit le détail du ticket, son historique, ainsi que le <strong>prénom / nom</strong> et le <strong>bâtiment</strong> du demandeur afin d'identifier plus rapidement le contexte de la demande. Le CS peut ensuite changer le statut et ajouter un commentaire de suivi.", 14),
-        ]
-        existing_questions = set(session.exec(select(FaqItem.question)).all())
-        for cat, question, reponse, ordre in extra_faq_items:
-            if question not in existing_questions:
-                session.add(FaqItem(categorie=cat, question=question, reponse=reponse, ordre=ordre, actif=True))
-
-        session.commit()
-
-        # Types de diagnostics réglementaires
-        DIAGNOSTIC_TYPES = [
-            {
-                "code": "dpe",
-                "nom": "DPE collectif",
-                "texte_legislatif": "Loi Grenelle II (2010) — obligatoire pour les copropriétés de plus de 50 lots avec équipements collectifs de chauffage ou de refroidissement. Valable 10 ans sauf réalisation de travaux importants.",
-                "frequence": "10 ans",
-                "ordre": 1,
-            },
-            {
-                "code": "amiante",
-                "nom": "Diagnostic amiante (DAPP)",
-                "texte_legislatif": "Loi du 02/08/1997 et Décret n°96-97 — obligatoire pour tout immeuble bâti avant le 01/07/1997. Permanent si aucune trace d'amiante détectée. Révision tous les 3 ans ou après travaux si présence constatée.",
-                "frequence": "Permanent (révision si amiante détecté)",
-                "ordre": 2,
-            },
-            {
-                "code": "plomb",
-                "nom": "Diagnostic plomb — CREP parties communes",
-                "texte_legislatif": "Décret n°99-483 du 09/06/1999 — obligatoire pour les parties communes d'immeubles construits avant le 01/01/1949. Permanent si aucun revêtement contenant du plomb au-dessus du seuil. Révision obligatoire si dépassement du seuil.",
-                "frequence": "Permanent (révision si plomb > seuil)",
-                "ordre": 3,
-            },
-            {
-                "code": "electricite",
-                "nom": "Diagnostic électricité — parties communes",
-                "texte_legislatif": "Décret n°2016-1092 du 08/08/2016 — contrôle des installations électriques des parties communes d'immeubles de plus de 15 ans. Réalisé par un diagnostiqueur certifié.",
-                "frequence": "3 ans",
-                "ordre": 4,
-            },
-            {
-                "code": "gaz",
-                "nom": "Diagnostic gaz — parties communes",
-                "texte_legislatif": "Décret n°2016-1250 du 22/09/2016 — contrôle des installations de gaz collectif dans les parties communes. Obligatoire si chaudière collective ou réseau gaz de plus de 15 ans.",
-                "frequence": "3 ans",
-                "ordre": 5,
-            },
-            {
-                "code": "ascenseur",
-                "nom": "CTQ ascenseurs",
-                "texte_legislatif": "Décret n°2004-964 du 09/09/2004 — contrôle technique quinquennal obligatoire pour tout ascenseur, réalisé par un organisme agréé indépendant de l'entreprise de maintenance. À compléter par une vérification annuelle.",
-                "frequence": "5 ans",
-                "ordre": 6,
-            },
-            {
-                "code": "pppt",
-                "nom": "Plan Pluriannuel de Travaux (PPPT)",
-                "texte_legislatif": "Loi Climat et Résilience du 22/08/2021 (art. 90) — obligatoire pour les copropriétés de plus de 15 ans. Réalisé par un professionnel qualifié, soumis au vote de l'AG et renouvelé tous les 10 ans.",
-                "frequence": "10 ans",
-                "ordre": 7,
-            },
-            {
-                "code": "audit_energetique",
-                "nom": "Audit énergétique global",
-                "texte_legislatif": "Loi Énergie-Climat du 08/11/2019 — obligatoire préalablement à la réalisation du PPPT pour les copropriétés classées D, E, F ou G au DPE collectif. Permet d'identifier les travaux prioritaires de rénovation.",
-                "frequence": "Selon DPE (avant PPPT)",
-                "ordre": 8,
-            },
-            {
-                "code": "erp",
-                "nom": "État des Risques et Pollutions (ERP)",
-                "texte_legislatif": "Loi Alur (2014) et Art. R125-26 CCH — obligatoire lors de toute vente ou mise en location d'un bien situé dans une zone à risques délimitée par arrêté préfectoral. Valable 6 mois. Document à annexer à toute promesse ou bail.",
-                "frequence": "6 mois (lors de mutations)",
-                "ordre": 9,
-            },
-            {
-                "code": "termites",
-                "nom": "Diagnostic termites",
-                "texte_legislatif": "Code de la construction L271-6 — obligatoire dans les zones géographiques délimitées par arrêté préfectoral. Valable 6 mois pour les transactions immobilières. À renouveler à chaque vente ou bail dans les zones concernées.",
-                "frequence": "6 mois (dans les zones à risque)",
-                "ordre": 10,
-            },
-        ]
-        for dt in DIAGNOSTIC_TYPES:
-            if not session.exec(select(DiagnosticType).where(DiagnosticType.code == dt["code"])).first():
-                session.add(DiagnosticType(**dt))
-
-        session.commit()
-        print("\u2705 Seed terminé.")
-
-
-if __name__ == "__main__":
-    seed()
+.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
+.tabs button {
+padding: .45rem 1rem; border: none; background: none; cursor: pointer;
+font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
+margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
+}
+.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
+.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
+.sondage-card { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; text-decoration: none; color: var(--color-text); transition: border-color .12s; }
+.sondage-card:hover { border-color: var(--color-primary); }
+.sondage-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; flex-shrink: 0; }
+.sondage-question { font-size: .95rem; font-weight: 600; display: block; margin-bottom: .2rem; }
+.sondage-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
+.sondage-votants { font-weight: 600; }
+.sondage-ciblage { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
+.sondage-badge { font-size: .7rem; }
+.idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
+.vote-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .6rem; cursor: pointer; transition: border-color .12s; min-width: 3.5rem; }
+.vote-btn:hover { border-color: var(--color-primary); }
+.vote-btn.voted { border-color: var(--color-primary); background: var(--color-primary-light); }
+.vote-icon { font-size: 1.1rem; }
+.vote-count { font-size: .85rem; font-weight: 700; color: var(--color-primary); }
+.idee-body { flex: 1; }
+.idee-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
+.idee-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .3rem; flex-wrap: wrap; gap: .4rem; }
+.idee-titre { font-size: .95rem; }
+.idee-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
+.idee-actions select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .8rem; background: var(--color-bg); }
+/* Les styles des réponses sont dans le composant partagé Reponses.svelte */
+/* Signalement + modération */
+.signaler-inline { background: none; border: none; cursor: pointer; font-size: .78rem; color: var(--color-text-muted); opacity: .7; padding: 0 0 0 .5rem; }
+.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
+.moderation-panel { border: 1px solid var(--color-warning); border-radius: var(--radius); background: #fffbeb; margin-bottom: 1.25rem; overflow: hidden; }
+.moderation-tete { width: 100%; text-align: left; background: none; border: none; padding: .7rem 1rem; font-weight: 600; font-size: .9rem; cursor: pointer; color: var(--color-text); display: flex; align-items: center; gap: .5rem; }
+.moderation-chevron { margin-left: auto; font-size: .75rem; }
+.moderation-liste { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.moderation-item { border: 1px solid var(--color-border); border-radius: var(--radius); padding: .6rem .8rem; background: var(--color-surface); }
+.moderation-meta { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; font-size: .85rem; margin-bottom: .25rem; }
+.moderation-motif { font-size: .82rem; margin-bottom: .4rem; }
+.moderation-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.moderation-aide { font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
+/* Annonces */
+</style>
