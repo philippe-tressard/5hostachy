@@ -54,7 +54,7 @@
 	import DestinatairePicker from './DestinatairePicker.svelte';
 	import RichEditor from './RichEditor.svelte';
 	import FichiersUpload from './FichiersUpload.svelte';
-	import CanauxNotification from './CanauxNotification.svelte';
+	import SectionDiffusion from './SectionDiffusion.svelte';
 	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 	import { concerneTousLesResidents } from '$lib/destinataires';
@@ -119,6 +119,13 @@
 	export let syndic = false;
 	export let cs = false;
 	export let aideWhatsapp = '';
+	/**  La fonction d'aperçu de l'écran — transmise TELLE QUELLE à l'objet
+	 *   Diffusion, qui porte l'état et la modale (#498). Absente = pas d'aperçu,
+	 *   ce qui est le cas des écrans sans endpoint. */
+	export let demanderApercu: (() => Promise<any>) | null = null;
+	//  Exposé au parent : c'est LUI qui déclenche l'aperçu au moment de soumettre.
+	export let refDiffusion: any = null;
+	export let envoiEnCours = false;
 
 	//  ── Les badges d'état, portés par le TITRE de section ────────────────────
 	//  Ils vivaient dans les sélecteurs, avec leur intitulé. Depuis que le titre
@@ -199,14 +206,23 @@
 	</SectionFormulaire>
 {/if}
 
+<!--  🔴 La section 9 vient de `SectionDiffusion`, elle n'est plus réécrite ici
+      (#498, 20/08/2026).
+
+      L'objet Diffusion existait en DOUBLE : `SectionDiffusion.svelte` d'un côté,
+      ces onze lignes de l'autre — et c'est la seconde que servaient les six
+      formulaires de création. D'où la question posée à l'écran : « je ne
+      comprends pas qu'une fonction dans un objet ne soit pas accessible sur
+      toutes ses implémentations ». Réponse : il y avait deux objets, et l'aperçu
+      n'avait été ajouté qu'à l'un des deux.
+
+      ⚠️ `demanderApercu` n'est PAS transmis ici : aucun de ces six écrans n'a
+      encore d'endpoint d'aperçu (seuls les tickets en ont un). L'objet le porte
+      désormais — le jour où un écran fournit sa fonction, il obtient l'aperçu
+      sans une ligne de plus. -->
 {#if avecDiffusion}
-	<SectionFormulaire titre="Diffusion">
-		<!--  Les options propres à l'écran (épingler, brouillon, afficher au fil…)
-		      passent AVANT les canaux : elles décident de ce qui est publié, les
-		      canaux de qui en est prévenu. -->
-		<slot name="diffusion" />
-		{#if avecCanaux}
-			<CanauxNotification bind:whatsapp bind:syndic bind:cs {aideWhatsapp} />
-		{/if}
-	</SectionFormulaire>
+	<SectionDiffusion {avecCanaux} bind:whatsapp bind:syndic bind:cs {aideWhatsapp}
+		bind:this={refDiffusion} {demanderApercu} {envoiEnCours} on:envoyer>
+		<svelte:fragment slot="options"><slot name="diffusion" /></svelte:fragment>
+	</SectionDiffusion>
 {/if}

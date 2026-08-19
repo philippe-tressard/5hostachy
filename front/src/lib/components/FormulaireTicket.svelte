@@ -43,8 +43,6 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
-	import ApercuDiffusionModale from '$lib/components/ApercuDiffusion.svelte';
-	import { creerApercu } from '$lib/apercu';
 	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -175,14 +173,18 @@
 	//  ⚠️ Création seulement. En édition, cocher un canal renvoie l'objet tel
 	//  qu'il est déjà : c'est un geste différent, il aura son propre lot.
 	$: aUneDiffusion = destinataireSyndic || destinataireCs || partagerWhatsapp;
-	const apercu = creerApercu(() => ticketsApi.apercuDiffusion({
+	//  L'état et la modale vivent dans `SectionDiffusion` depuis le 20/08/2026 —
+	//  l'aperçu appartient à l'objet Diffusion, pas à ses appelants (#498). Ne
+	//  reste ici que le BROUILLON, que ce formulaire seul connaît.
+	let refDiffusion: any = null;
+	const brouillonApercu = () => ticketsApi.apercuDiffusion({
 		titre: titre.trim(), description, categorie,
 		perimetre_cible: perimetreCible,
 		photos_urls: photosUrls, fichiers_urls: fichiersUrls,
 		destinataire_syndic: destinataireSyndic,
 		destinataire_cs: destinataireCs,
 		partager_whatsapp: partagerWhatsapp,
-	}));
+	});
 
 	$: titreBoite = modeEdition
 		? `Modifier le ticket #${ticket?.numero ?? ''}`
@@ -210,16 +212,13 @@
 	 *   leur côté finiraient par diverger. */
 	function soumettre() {
 		if (!saisieValide()) return;
-		if (!modeEdition && aUneDiffusion) {
-			void apercu.ouvrir();
-			return;
-		}
+		if (!modeEdition && refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
 		void submit();
 	}
 
 	async function submit() {
 		if (!saisieValide()) return;
-		apercu.fermer();
+		refDiffusion?.fermerApercu();
 		loading = true;
 		try {
 			if (ticket) {
@@ -402,6 +401,10 @@
 		        notifient, et rejouer un envoi à chaque faute de frappe rattrapée
 		        est l'incident du triple envoi WhatsApp (14/08/2026). -->
 		<ChampsCommuns
+			bind:refDiffusion
+			demanderApercu={brouillonApercu}
+			envoiEnCours={loading}
+			on:envoyer={() => void submit()}
 			idPrefixe="ticket"
 			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')} bind:perimetre={perimetreCible}
 			avecDescription={sectionPresente(TICKET, etat, 'description')} descriptionRequise bind:description
@@ -436,17 +439,6 @@
 <!--  L'aperçu s'ouvre PAR-DESSUS le formulaire, jamais à sa place : « Retour au
       formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
       remonté la perdrait. C'est la moitié de l'arbitrage du 19/08. -->
-{#if $apercu.ouvert}
-	<ApercuDiffusionModale
-		apercu={$apercu.donnees}
-		chargement={$apercu.chargement}
-		envoi={loading}
-		on:envoyer={() => void submit()}
-		on:retour={apercu.fermer}
-		on:annuler={apercu.fermer}
-	/>
-{/if}
-
 <style>
 	.aide-champ { font-size: .8rem; color: var(--color-text-muted); line-height: 1.45; margin: .25rem 0 0; }
 	.cat-grid {
