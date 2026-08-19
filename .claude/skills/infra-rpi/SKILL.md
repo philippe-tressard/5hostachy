@@ -220,6 +220,38 @@ fois.
 */5 * * * * health-watch.sh   # failover automatique si site HS
 ```
 
+## Le standby s'aligne tout seul (#448 — 19/08/2026)
+
+`auto-deploy.sh` (cron **utilisateur** `ptressard`, `*/5`) tourne sur les **deux**
+nœuds. Il sortait jusqu'ici avant le `git fetch` sur le standby : son code et ses
+images restaient figés au jour où il a cessé d'être actif.
+
+Le 19/08/2026, rpi2 était ainsi resté à **v2.90.0** pendant que la production
+servait **v2.102.2** — 13 commits, et la migration **0154 absente de son code**,
+alors que sa base est synchronisée à chaque bascule. Un failover cette nuit-là
+aurait servi du code v2.90.0 sur une base migrée en 0154.
+
+**Ce que fait le standby désormais** : `git reset --hard origin/main` puis
+`docker compose build`. Et rien d'autre — **aucun conteneur démarré** (ce serait
+le split-brain), **aucune migration appliquée** (sa base est une copie que la
+bascule écrase ; migrer ici divergerait en silence).
+
+⚠️ **La bascule de 02:00 n'a jamais aligné que le nœud ENTRANT.** La tolérance du
+point 10 du pré-check disait « le standby se resynchronise à la bascule » : c'était
+faux dans les deux sens — quand la bascule échoue, mais aussi quand elle réussit,
+puisque le sortant repart avec le retard. C'est pour cela que le retard revenait
+après chaque déploiement.
+
+🔒 **Verrou `flock`** posé au passage (`.auto-deploy.lock`) : un build de front sur
+RPi dépasse volontiers cinq minutes, donc le cron suivant tombait dans le
+précédent — le remède était noté depuis l'incident du 17/07/2026 sans avoir été
+posé. Le chemin « déjà en cours » écrit sa ligne datée : le CONTRAT DE BATTEMENT
+lu par C14 exige qu'aucun chemin ne soit muet.
+
+Si le build du standby échoue, une alerte part (cooldown 6 h) : c'est l'état le
+plus trompeur, la parité **git** devenant verte alors que les **images** sont
+restées vieilles — distinction que le point 10 ne sait pas faire.
+
 ## Monitoring APScheduler (tourne dans le conteneur API)
 | Heure | Job | Alerte email si… |
 |-------|-----|-----------------|

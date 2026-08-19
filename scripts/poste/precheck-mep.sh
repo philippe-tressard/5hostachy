@@ -300,9 +300,37 @@ else
 fi
 rapporter 5 "$V5" "Bridge WhatsApp connecté" "dernier état : ${WA:-?}"
 
-# 6 — erreurs API
+# 6 — erreurs API, hors celle que CE lot corrige (#502)
+#     Le 19/08/2026 ce point a trouvé un vrai 500 sur `/auth/refresh`, puis a
+#     refusé le push du correctif une heure durant — le contrôle bloquait la
+#     réparation de ce qu'il constatait. Le lot peut désormais DÉCLARER la
+#     signature qu'il corrige, dans `.git/erreur-corrigee` :
+#         commit: 6055161
+#         auth/refresh
+#     La déclaration meurt avec son objet : si la signature ne correspond plus à
+#     rien, le point ÉCHOUE (`verdict_erreurs_api`). Le raisonnement complet, et
+#     pourquoi la fenêtre glissante depuis le dernier déploiement a été écartée,
+#     sont dans `lib-verdicts-mep.sh`.
 ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "ERROR|CRITICAL"; true')
-rapporter 6 "$(verdict_compte "${ERR:-}" 0)" "Aucune ERROR/CRITICAL (1 h)" "compte=${ERR:-?}"
+SIG6=""; SIGC6=""; ECART6=""; DET6="compte=${ERR:-?}"
+if [ -f "$RACINE_DEPOT/.git/erreur-corrigee" ]; then
+  SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
+  SIG6=$(sed -n '2p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
+  #  Le motif est appliqué EN LOCAL sur les lignes rapatriées, jamais injecté
+  #  dans la commande SSH : l'oubli des guillemets autour d'un motif distant a
+  #  déjà coûté un correctif en trois passes (check-reliability, 11/08/2026).
+  LIG6=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -E "ERROR|CRITICAL" | head -500; true')
+  NBLIG6=$(printf '%s
+' "$LIG6" | grep -c . || true)
+  #  Moins de lignes rapatriées que comptées = troncature ou mesure partielle :
+  #  on ne filtre pas ce qu'on n'a pas lu, `verdict_erreurs_api` rendra INCONNU.
+  if [ -n "$SIG6" ] && [ "${NBLIG6:-0}" -ge "${ERR:-0}" ] 2>/dev/null; then
+    ECART6=$(printf '%s
+' "$LIG6" | grep -cE -- "$SIG6" || true)
+  fi
+  DET6="$DET6, écartées=${ECART6:-?} par « ${SIG6:-?} » (déclarée pour ${SIGC6:-?})"
+fi
+rapporter 6 "$(verdict_erreurs_api "${ERR:-}" "$ECART6" "$SIGC6" "$HEAD_COURT" "$SIG6")"           "Aucune ERROR/CRITICAL (1 h)" "$DET6"
 
 # 7 — bits d'exécution des scripts lancés par cron
 #
@@ -346,7 +374,8 @@ rapporter 8 "$(verdict_age_min "${AGE:-}" $BATTEMENT_DEPLOY_MIN)" "Battement aut
 #     Le compte n'est lu QUE sur un HTTP 200 — sans cette condition, une réponse
 #     vide (clé absente, API muette) se lirait comme « zéro échec », c'est-à-dire un
 #     vert obtenu par l'absence de mesure. C'est la leçon de C19, le 11/08/2026.
-REP9=$(sur "$ACTIF" 'MK=$(grep -E "^MAINTENANCE_KEY=" /opt/5hostachy/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' ");        [ -n "$MK" ] && curl -s --max-time 10 -w "|%{http_code}" -H "x-maintenance-key: $MK"          "http://localhost/api/admin/emails/echecs-recents?jours=7"')
+REP9=$(sur "$ACTIF" 'MK=$(grep -E "^MAINTENANCE_KEY=" /opt/5hostachy/.env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"' 
+");        [ -n "$MK" ] && curl -s --max-time 10 -w "|%{http_code}" -H "x-maintenance-key: $MK"          "http://localhost/api/admin/emails/echecs-recents?jours=7"')
 case "${REP9:-}" in
   *"|200") NB9=$(echo "$REP9" | grep -oE '"total"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')
            CODES9=$(echo "$REP9" | grep -oE '"par_code"[[:space:]]*:[[:space:]]*\{[^}]*\}' | cut -c1-90)
@@ -358,7 +387,7 @@ esac
 H1=$(sur "$RPI1" 'git -C /opt/5hostachy rev-parse --short HEAD')
 H2=$(sur "$RPI2" 'git -C /opt/5hostachy rev-parse --short HEAD')
 rapporter 10 "$(verdict_parite "$H1" "$H2")" "Parité de code actif ⇆ standby" \
-          "rpi1=${H1:-?} rpi2=${H2:-?} (écart résorbé à la bascule de 02:00)"
+          "rpi1=${H1:-?} rpi2=${H2:-?} (le standby s'aligne seul sous 5 min — auto-deploy, #448)"
 
 # 11 — auto-deploy de l'actif vivant
 PROPRIO=$(sur "$ACTIF" 'stat -c %U /var/log/hostachy-deploy.log 2>/dev/null')
