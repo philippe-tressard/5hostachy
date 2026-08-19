@@ -430,6 +430,24 @@ jobs:
         working-directory: front
         run: npm run lint:styles
 
+      # 🔴 SIX nomenclatures de champ coexistaient le 19/08/2026 — `.field-label`
+      # (3 définitions incompatibles), `.form-group` (3), `.champ`, `.ah-champ`,
+      # `.email-input`, et le `<label>` nu — et TROIS fichiers redéfinissaient
+      # `.field` elle-même, le nom canonique, avec d'autres valeurs.
+      #
+      # Deux d'entre elles ne renvoyaient à AUCUNE définition (`OngletWhatsApp`,
+      # `acces-securite`) : extraites d'`admin` sans ses styles, elles rendaient
+      # leurs champs nus en production — la régression des pastilles nues, sur un
+      # formulaire cette fois.
+      #
+      # Le relevé de #374 ne voyait qu'une des trois formes d'écriture ; les deux
+      # autres ont coûté un aller-retour chacune, dont un signalé EN PRODUCTION
+      # par l'utilisateur. Ce contrôle lit l'arbre des balises, où les trois se
+      # ramènent à une seule question. `--selftest` le montre les refuser (#413).
+      - name: Tout champ libellé vit dans un `.field`
+        working-directory: front
+        run: npm run lint:champs
+
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
       #

@@ -94,8 +94,9 @@
 
 <!--  L'EXCEPTION : le pré-remplissage vient avant le titre. Voir l'en-tête. -->
 {#if pubs.length}
-	<label class="ah-label" for="ah-source">Pré-remplir depuis une actualité</label>
-	<select id="ah-source" class="ah-select" value={sourceId}
+	<div class="field">
+	<label for="ah-source">Pré-remplir depuis une actualité</label>
+	<select id="ah-source" value={sourceId}
 		on:change={(e) => onPrefill(
 			(e.currentTarget as HTMLSelectElement).value === ''
 				? ''
@@ -106,6 +107,7 @@
 			<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
 		{/each}
 	</select>
+	</div>
 	<p class="ah-aide">
 		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste
 		modifiable ci-dessous : l'affiche est indépendante de l'actualité d'origine.
@@ -117,8 +119,10 @@
       sections — celui de Tickets, demandé à l'écran le 18/08/2026. La section
       n'ayant qu'UN champ, son titre EST le libellé du champ (R3). -->
 <SectionFormulaire premiere titre="Titre" requis pour="ah-titre">
-	<input class="ah-champ" id="ah-titre" type="text" bind:value={titre} maxlength="120"
-		placeholder="Ex : Coupure d'eau — mardi 4 août" />
+	<div class="field champ-large">
+		<input id="ah-titre" type="text" bind:value={titre} maxlength="120"
+			placeholder="Ex : Coupure d'eau — mardi 4 août" />
+	</div>
 </SectionFormulaire>
 
 <!--  2. Champs spécifiques : le format de l'affiche. -->
@@ -246,15 +250,6 @@
 	    raison — il aurait atteint TOUS les `<label>` du composant, y compris ceux
 	    d'un champ ajouté plus tard par quelqu'un qui ne lit pas ce bloc. C'est le
 	    défaut qui avait étiré les cases à cocher du sondage (16/08/2026). */
-	.ah-label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
-	.ah-champ {
-		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);
-		border-radius: var(--radius); font-size: .9rem; background: var(--color-bg);
-	}
-	.ah-select {
-		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);
-		border-radius: var(--radius); background: var(--color-bg); font-size: .9rem;
-	}
 	.ah-aide { font-size: .8rem; color: var(--color-text-muted); margin: .35rem 0 0; line-height: 1.5; }
 	/*  `.ah-label-espace` a disparu : l'espacement entre sections est celui de
 	    `SectionFormulaire`, une seule fois pour tout le site. */

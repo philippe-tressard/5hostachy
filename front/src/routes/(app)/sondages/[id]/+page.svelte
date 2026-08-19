@@ -313,7 +313,7 @@
 {#if showEditModal}
 <FormulaireCreation titre="Modifier le sondage">
 		<form on:submit|preventDefault={saveEdit}>
-			<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
+			<label class="field">
 				Question *
 				<input bind:value={editForm.question} required />
 			</label>
@@ -342,7 +342,7 @@
 				</div>
 			{/if}
 
-			<label style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">
+			<label class="field">
 				Date de clôture
 				<input type="datetime-local" bind:value={editForm.cloture_le} />
 			</label>

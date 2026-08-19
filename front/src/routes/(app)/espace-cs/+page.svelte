@@ -2561,15 +2561,15 @@
 
 			{#if syndicHeaderEditing}
 				<div class="form-grid header-edit-form" style="max-width:580px;margin-bottom:1rem">
-					<label style="grid-column:1/-1">
+					<label class="field champ-large">
 						Nom du syndic
 						<input type="text" bind:value={nomSyndic} placeholder="ex. Cabinet Bertrand" />
 					</label>
-					<label style="grid-column:1/-1">
+					<label class="field champ-large">
 						Adresse
 						<textarea rows="2" bind:value={adresseSyndic} placeholder="ex. 12 rue des Lilas, 75015 Paris"></textarea>
 					</label>
-					<label style="grid-column:1/-1">
+					<label class="field champ-large">
 						Espace client (site web)
 						<input type="url" bind:value={siteWebSyndic} placeholder="https://..." />
 					</label>
@@ -2764,7 +2764,7 @@
 	}
 
 	/* Form grid */
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .65rem; }
+	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select, .form-grid textarea {
 		padding: .4rem .55rem; border: 1px solid var(--color-border);
@@ -2943,7 +2943,6 @@
 	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
 	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-	.field { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
 	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }

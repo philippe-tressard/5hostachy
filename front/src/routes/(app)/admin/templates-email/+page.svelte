@@ -144,14 +144,14 @@
 		<div class="modal-overlay" on:click={cancelEdit} role="presentation">
 			<div class="modal" on:click|stopPropagation on:keydown role="dialog" aria-modal="true" tabindex="-1">
 				<h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Modifier — {editing.code ?? editing.nom}</h2>
-				<label class="form-group" style="margin-bottom:.75rem">
+				<label class="field">
 					<span>Sujet</span>
-					<input class="input" bind:value={editing.sujet} />
+					<input bind:value={editing.sujet} />
 				</label>
 
-				<label class="form-group" style="margin-bottom:.75rem">
+				<label class="field">
 					<span>Intention — ce que le message attend du destinataire</span>
-					<select class="input" bind:value={editing.intention}>
+					<select bind:value={editing.intention}>
 						{#each INTENTIONS as i}
 							<option value={i.valeur}>{i.label}</option>
 						{/each}
@@ -174,10 +174,10 @@
 						{@html safeHtml(previewHtml)}
 					</div>
 				{:else}
-					<textarea class="input" rows="12" bind:value={editing.corps_html} style="font-family:monospace;font-size:.8rem;margin-bottom:.75rem"></textarea>
+					<textarea rows="12" bind:value={editing.corps_html} style="font-family:monospace;font-size:.8rem;margin-bottom:.75rem"></textarea>
 				{/if}
 
-				<label class="form-group" style="flex-direction:row;align-items:center;gap:.5rem;margin-bottom:1rem">
+				<label class="case" style="margin-bottom:1rem">
 					<input type="checkbox" bind:checked={editing.actif} />
 					<span>Actif</span>
 				</label>
@@ -205,8 +205,6 @@
 	.template-row { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; margin-bottom: .35rem; }
 	.template-info { display: flex; flex-direction: column; gap: .1rem; }
 	.template-code { font-weight: 600; font-size: .9rem; }
-	.form-group { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
-	.form-group span { color: var(--color-text-muted); font-size: .8rem; }
 	.modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
 	.modal { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
 	.preview-frame { background: #F2EFE9; border: 1px solid var(--color-border); border-radius: 6px; padding: 20px; margin-bottom: .75rem; max-height: 400px; overflow-y: auto; font-size: 14px; line-height: 1.6; }

@@ -1113,7 +1113,7 @@ $: _siteNom = $siteNomStore;
           {/each}
         </select>
       </label>
-      <label style="display:flex;align-items:center;gap:.5rem;padding-top:1.2rem">
+      <label class="case" style="padding-top:1.2rem">
         <input type="checkbox" bind:checked={editForm.actif} />
         Compte actif
       </label>
@@ -1136,10 +1136,10 @@ $: _siteNom = $siteNomStore;
       avec copie des démarches au résident.
     </p>
     <div class="form-grid" style="margin-bottom:.75rem">
-      <label>Bâtiment / logement
+      <label class="field">Bâtiment / logement
         <input bind:value={accueilBatiment} placeholder="Ex: Bât. A, Apt. 12…" />
       </label>
-      <label>Ancien résident (optionnel)
+      <label class="field">Ancien résident (optionnel)
         <input bind:value={accueilAncienResident} placeholder="Nom de l'ancien occupant…" />
       </label>
     </div>
@@ -1285,19 +1285,19 @@ $: _siteNom = $siteNomStore;
       Modifier le modèle — <code style="font-size:.85rem">{emailEdit.code}</code>
     </h2>
     <div style="display:flex;flex-direction:column;gap:.6rem">
-      <div>
-        <label class="email-label" for="email-sujet">Sujet</label>
-        <input id="email-sujet" class="email-input" type="text" bind:value={emailSujet} />
+      <div class="field">
+        <label for="email-sujet">Sujet</label>
+        <input id="email-sujet" type="text" bind:value={emailSujet} style="font-family:monospace" />
       </div>
-      <div>
-        <label class="email-label" for="email-corps-html">Corps HTML</label>
-        <textarea id="email-corps-html" class="email-input" rows="10" bind:value={emailCorpsHtml}></textarea>
+      <div class="field">
+        <label for="email-corps-html">Corps HTML</label>
+        <textarea id="email-corps-html" rows="10" bind:value={emailCorpsHtml} style="font-family:monospace;resize:vertical"></textarea>
       </div>
-      <div>
-        <label class="email-label" for="email-corps-texte">Corps texte (fallback)</label>
-        <textarea id="email-corps-texte" class="email-input" rows="4" bind:value={emailCorpsTexte}></textarea>
+      <div class="field">
+        <label for="email-corps-texte">Corps texte (fallback)</label>
+        <textarea id="email-corps-texte" rows="4" bind:value={emailCorpsTexte} style="font-family:monospace;resize:vertical"></textarea>
       </div>
-      <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer">
+      <label class="case">
         <input type="checkbox" bind:checked={emailActif} />
         Actif
       </label>
@@ -1347,23 +1347,23 @@ $: _siteNom = $siteNomStore;
 <section class="config-section">
   <h2 class="config-section-title">⚙️ Paramètres généraux</h2>
   <div class="form-grid" style="max-width:600px">
-    <label class="field-label">
+    <label class="field">
       Nom de la plateforme
-      <input class="input input-sm" type="text" bind:value={siteConfig.nom} placeholder="5Hostachy" />
+      <input type="text" bind:value={siteConfig.nom} placeholder="5Hostachy" />
       <span class="field-hint">Affiché sur la page de connexion et dans le menu.</span>
     </label>
-    <label class="field-label">
+    <label class="field">
       URL publique
-      <input class="input input-sm" type="url" bind:value={siteConfig.url} placeholder="https://..." />
+      <input type="url" bind:value={siteConfig.url} placeholder="https://..." />
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       E-mail administrateur
-      <input class="input input-sm" type="email" bind:value={siteConfig.email_admin} placeholder="admin@example.com" />
+      <input type="email" bind:value={siteConfig.email_admin} placeholder="admin@example.com" />
       <span class="field-hint">Adresse de secours utilisée si aucun utilisateur gestionnaire du site n'est sélectionné.</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       Gestionnaire du site (utilisateur)
-      <select class="input input-sm" bind:value={siteConfig.site_manager_user_id}>
+      <select bind:value={siteConfig.site_manager_user_id}>
         <option value="">Aucun (utiliser l'e-mail administrateur)</option>
         {#each siteManagerUsers as u}
           <option value={String(u.id)}>{u.prenom} {u.nom} — {u.email}</option>
@@ -1371,31 +1371,31 @@ $: _siteNom = $siteNomStore;
       </select>
       <span class="field-hint">Cet utilisateur est considéré comme gestionnaire du site dans l'administration et reçoit les notifications e-mail « Bug » si l'option est activée.</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       Sous-titre de la page de connexion
-      <input class="input input-sm" type="text" bind:value={siteConfig.login_sous_titre} placeholder="Votre espace numérique de résidence" />
+      <input type="text" bind:value={siteConfig.login_sous_titre} placeholder="Votre espace numérique de résidence" />
       <span class="field-hint">Affiché sous le nom du site sur la page de connexion.</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       Délai d'archivage automatique (heures)
-      <input class="input input-sm" type="number" bind:value={siteConfig.archivage_delai_heures} min="1" max="8760" placeholder="48" style="width:120px" />
+      <input type="number" bind:value={siteConfig.archivage_delai_heures} min="1" max="8760" placeholder="48" style="width:120px" />
       <span class="field-hint">Délai après lequel une actualité « Résolue » est automatiquement archivée (défaut : 48h). Le bouton 📦 permet d'archiver immédiatement sans attendre ce délai.</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       Délai de relance syndic (jours)
-      <input class="input input-sm" type="number" bind:value={siteConfig.relance_syndic_delai_jours} min="1" max="365" placeholder="30" style="width:120px" />
+      <input type="number" bind:value={siteConfig.relance_syndic_delai_jours} min="1" max="365" placeholder="30" style="width:120px" />
       <span class="field-hint">Nombre de jours sans mise à jour d'un ticket destinataire-syndic avant qu'il apparaisse dans la liste de relance de l'Espace CS (défaut : 30 jours).</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
-      <span style="display:flex;align-items:center;gap:.5rem">
-        <input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} style="width:1rem;height:1rem" />
+    <label class="field" style="grid-column:span 2">
+      <span class="case">
+        <input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} />
         Notifier si un bug (Tickets)
       </span>
       <span class="field-hint">Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de secours) uniquement pour les tickets de catégorie « Bug ». Les tickets « Urgence » ne déclenchent pas cette notification.</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
-      <span style="display:flex;align-items:center;gap:.5rem">
-        <input type="checkbox" bind:checked={siteConfig.notify_new_user_created_email} style="width:1rem;height:1rem" />
+    <label class="field" style="grid-column:span 2">
+      <span class="case">
+        <input type="checkbox" bind:checked={siteConfig.notify_new_user_created_email} />
         Notifier si un nouvel utilisateur est créé
       </span>
       <span class="field-hint">Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de secours) lorsqu'un nouveau compte est créé et mis en attente de validation.</span>
@@ -1434,28 +1434,28 @@ $: _siteNom = $siteNomStore;
           <div class="pages-form-grid">
             <div class="pages-form-section">
               <div class="pages-form-section-title">Navigation (barre de menu)</div>
-              <label class="field-label">
+              <label class="field">
                 Icône Lucide
                 <div style="display:flex;align-items:center;gap:.5rem">
-                  <input class="input input-sm" style="flex:1" type="text" bind:value={pg.icone} placeholder="ex. : layout-dashboard" />
+                  <input style="flex:1" type="text" bind:value={pg.icone} placeholder="ex. : layout-dashboard" />
                   <span style="color:var(--color-text-muted);flex-shrink:0;display:flex;align-items:center"><Icon name={pg.icone || 'help-circle'} size={20} /></span>
                 </div>
                 <span class="field-hint">Cette icône s'affiche dans le menu <strong>et</strong> aussi avant le titre H1 en haut de la page (c'est la même icône, modifiable ici). <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer">Parcourir lucide.dev →</a></span>
               </label>
-              <label class="field-label">
+              <label class="field">
                 Label menu
-                <input class="input input-sm" type="text" bind:value={pg.navLabel} />
+                <input type="text" bind:value={pg.navLabel} />
                 <span class="field-hint">Texte affiché dans la barre de navigation.</span>
               </label>
             </div>
             <div class="pages-form-section">
               <div class="pages-form-section-title">Page</div>
-              <label class="field-label">
+              <label class="field">
                 Titre de la page
-                <input class="input input-sm" type="text" bind:value={pg.titre} />
+                <input type="text" bind:value={pg.titre} />
                 <span class="field-hint">Titre de Page avec reprise de l'icône (de navigation du menu associé).</span>
               </label>
-              <label class="field-label">
+              <label class="field">
                 Description
                 <RichEditor bind:value={pg.descriptif} minHeight="80px" />
                 <span class="field-hint">Sous-titre affiché sous le titre de page. Mise en forme riche supportée (gras, italique, listes, liens).</span>
@@ -1467,11 +1467,11 @@ $: _siteNom = $siteNomStore;
               <div class="onglets-cards">
                 {#each pg.onglets as o}
                 <div class="onglet-card">
-                  <label class="field-label">
+                  <label class="field">
                     Label « {o.id} »
-                    <input class="input input-sm" type="text" bind:value={o.label} />
+                    <input type="text" bind:value={o.label} />
                   </label>
-                  <label class="field-label">
+                  <label class="field">
                     Descriptif
                     <RichEditor bind:value={o.descriptif} minHeight="56px" />
                   </label>
@@ -1521,39 +1521,38 @@ $: _siteNom = $siteNomStore;
 <section class="config-section">
   <h2 class="config-section-title">✉️ Configuration SMTP (notifications e-mail)</h2>
   <div class="form-grid largeur-saisie">
-    <label class="field-label" style="grid-column:span 2">
-      <span style="display:flex;align-items:center;gap:.5rem">
-        <input type="checkbox" bind:checked={smtpConfig.enabled} style="width:1rem;height:1rem" />
+    <label class="field" style="grid-column:span 2">
+      <span class="case">
+        <input type="checkbox" bind:checked={smtpConfig.enabled} />
         Activer l'envoi d'e-mails
       </span>
       <span class="field-hint">Si activé, les notifications (réinitialisation de mot de passe, etc.) seront envoyées par e-mail.</span>
     </label>
-    <label class="field-label">
+    <label class="field">
       Serveur SMTP
-      <input class="input input-sm" type="text" bind:value={smtpConfig.server} placeholder="smtp.example.com" />
+      <input type="text" bind:value={smtpConfig.server} placeholder="smtp.example.com" />
     </label>
-    <label class="field-label">
+    <label class="field">
       Port
-      <input class="input input-sm" type="number" bind:value={smtpConfig.port} min="1" max="65535" placeholder="587" style="width:100px" />
+      <input type="number" bind:value={smtpConfig.port} min="1" max="65535" placeholder="587" style="width:100px" />
     </label>
-    <label class="field-label">
+    <label class="field">
       Adresse expéditeur (From)
-      <input class="input input-sm" type="email" bind:value={smtpConfig.from} placeholder="noreply@example.com" />
+      <input type="email" bind:value={smtpConfig.from} placeholder="noreply@example.com" />
     </label>
-    <label class="field-label">
+    <label class="field">
       Nom expéditeur
-      <input class="input input-sm" type="text" bind:value={smtpConfig.from_name} placeholder="Résidence du Parc" />
+      <input type="text" bind:value={smtpConfig.from_name} placeholder="Résidence du Parc" />
     </label>
-    <label class="field-label">
+    <label class="field">
       Nom d'utilisateur SMTP
-      <input class="input input-sm" type="text" bind:value={smtpConfig.username} placeholder="user@example.com" />
+      <input type="text" bind:value={smtpConfig.username} placeholder="user@example.com" />
       <span class="field-hint">Laisser vide si le serveur ne requiert pas d'authentification.</span>
     </label>
-    <label class="field-label">
+    <label class="field">
       Mot de passe SMTP
       <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
         <input
-          class="input input-sm"
           type="password"
           bind:value={smtpConfig.password}
           autocomplete="new-password"
@@ -1569,7 +1568,7 @@ $: _siteNom = $siteNomStore;
       </div>
       <span class="field-hint">{smtpPasswordSet ? (smtpEditingPassword ? 'Saisissez le nouveau mot de passe puis cliquez sur Enregistrer.' : 'Mot de passe déjà enregistré. Cliquez sur « Changer » pour le remplacer.') : 'Requis si le serveur exige une authentification.'}</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       <span style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
         <span style="display:flex;align-items:center;gap:.4rem">
           <input type="checkbox" bind:checked={smtpConfig.starttls} style="width:1rem;height:1rem" />
@@ -1612,9 +1611,8 @@ $: _siteNom = $siteNomStore;
   <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
   <div class="largeur-saisie">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">✉️ Signature des e-mails</p>
-    <label class="field-label">
+    <label class="field">
       <textarea
-        class="input input-sm"
         bind:value={siteConfig.email_footer}
         rows="2"
         placeholder="— Envoyé depuis 5hostachy.fr"
@@ -1625,9 +1623,8 @@ $: _siteNom = $siteNomStore;
   </div>
   <div class="largeur-saisie" style="margin-top:.75rem">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">🏢 Référence copropriété (syndic)</p>
-    <label class="field-label">
+    <label class="field">
       <input
-        class="input input-sm"
         type="text"
         bind:value={siteConfig.reference_copro}
         placeholder="00213"
@@ -1826,10 +1823,10 @@ $: _siteNom = $siteNomStore;
     </label>
     {#if cvNewArrivant}
     <div class="form-grid" style="margin-bottom:.75rem">
-      <label>Bâtiment / logement
+      <label class="field">Bâtiment / logement
         <input bind:value={cvBatiment} placeholder="Ex: Bât. A, Apt. 12…" />
       </label>
-      <label>Ancien résident (optionnel)
+      <label class="field">Ancien résident (optionnel)
         <input bind:value={cvAncienResident} placeholder="Nom de l'ancien occupant…" />
       </label>
     </div>
@@ -1896,12 +1893,7 @@ position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.4
 display: flex; align-items: center; justify-content: center; z-index: 200;
 }
 .modal-box { max-width: 420px; width: 90%; padding: 1.5rem; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .825rem; font-weight: 500; }
-.email-label { display: block; font-size: .78rem; font-weight: 500; color: var(--color-text-muted); margin-bottom: .25rem; }
-.email-input { width: 100%; padding: .4rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .85rem; font-family: monospace; box-sizing: border-box; resize: vertical; }
-.field-label { display: flex; flex-direction: column; gap: .25rem; font-size: .825rem; font-weight: 500; }
-.field-hint { font-size: .75rem; color: var(--color-text-muted); }
+.form-grid { grid-template-columns: 1fr 1fr; }
 .ref-list { display: flex; flex-direction: column; gap: .4rem; }
 .page-row { width: 100%; display: flex; align-items: center; gap: .4rem; padding: .4rem .5rem .4rem .75rem; }
 .page-row:hover { background: var(--color-bg); }

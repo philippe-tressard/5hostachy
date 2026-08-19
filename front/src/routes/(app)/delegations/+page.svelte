@@ -252,7 +252,4 @@
 	.modal-close:hover { color: var(--color-text); }
 	.modal-body { margin-bottom: 1rem; }
 	.modal-footer { display: flex; justify-content: flex-end; gap: .5rem; padding-top: .75rem; border-top: 1px solid var(--color-border); }
-	.field { display: flex; flex-direction: column; gap: .25rem; }
-	.field label { font-size: .8rem; font-weight: 500; color: var(--color-text-muted); }
-	.field input, .field select, .field textarea { padding: .4rem .6rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; background: var(--color-surface); }
 </style>

@@ -1930,9 +1930,9 @@
 					</div>
 					{#if notationNote > 0}<p style="margin:.25rem 0 0;font-size:.9rem;color:var(--color-text-muted)">{notationNote}/5</p>{/if}
 				</div>
-				<label style="display:block;margin-bottom:.75rem">
+				<label class="field">
 					Commentaire (optionnel)
-					<textarea bind:value={notationCommentaire} rows="3" style="width:100%;margin-top:.25rem;resize:vertical"></textarea>
+					<textarea bind:value={notationCommentaire} rows="3" style="resize:vertical"></textarea>
 				</label>
 			</div>
 			<div class="modal-footer">
@@ -2032,7 +2032,7 @@
 	.contrat-form-inline { margin-top: .75rem; padding: .85rem 1rem; background: var(--color-bg-secondary, #f8f9fa); border-radius: var(--radius); border: 1px solid var(--color-border); }
 	.add-contrat-btn { margin-top: .6rem; }
 
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
+	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
 	/*  `.devis-form-help` et `.devis-file-note` sont parties avec le formulaire,

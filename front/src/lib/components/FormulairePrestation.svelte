@@ -150,7 +150,7 @@
 	    `svelte-check` ne l'a PAS signalée : les sélecteurs restaient « utilisés »
 	    dans la page, qui porte d'autres `.form-grid`. Le signal « aucun sélecteur
 	    orphelin » ne dit donc rien quand la classe existe des deux côtés. */
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
+	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid .field { margin-bottom: 0; }
 
 	.devis-form-help { margin: 0 0 .75rem; font-size: .82rem; color: var(--color-text-muted); line-height: 1.45; }

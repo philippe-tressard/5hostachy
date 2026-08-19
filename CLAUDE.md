@@ -183,6 +183,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - [ ] Périmètre : pas affiché si `'résidence'`
 - [ ] Archiver (pas supprimer) sur la vue principale
 - [ ] Champs requis : label + ` *`
+- [ ] Tout champ libellé dans un `.field` — jamais une nomenclature locale
+      (`npm run lint:champs` ; il y en avait **six** avant #413)
 
 ### Backend (nouveau endpoint)
 - [ ] Modèle dans `models/core.py`

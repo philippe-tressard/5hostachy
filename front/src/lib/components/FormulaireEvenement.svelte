@@ -202,7 +202,7 @@
 	/*  Mêmes règles, même raison que dans `FormulairePrestation` : le balisage
 	    part avec ses styles, sinon la grille reste dans la page et le formulaire
 	    s'affiche en une colonne écrasée (#344, reproduit le 15/08/2026). */
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: .75rem; }
+	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }
 	.form-grid .field { margin-bottom: 0; }
 
 	/*  Une case et son libellé : ils étaient écrits en `style=` en ligne, avec un
