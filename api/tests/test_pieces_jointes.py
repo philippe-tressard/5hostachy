@@ -310,15 +310,43 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
 
     Le drapeau `fichiers` des modèles, lui, était calculé séparément — et deux
     points d'appel se sont trompés (annoncer sans joindre, joindre sans annoncer).
-    Ici la source est unique : `send_email` et `send_email_group` dérivent le
-    sommaire de la liste qu'ils transmettent au message.
+
+    ⚠️ **Ce test exigeait DEUX écritures de la même ligne** — une par fonction
+    d'envoi —, donc il verrouillait la duplication qu'il servait à surveiller. Il
+    a échoué le 19/08/2026 quand `composer_email` a réuni les deux (#498), et
+    c'est le bon moment pour renforcer l'invariant plutôt que d'ajuster le
+    compte : la composition est désormais **unique**, et l'aperçu avant envoi
+    montre donc exactement ce qui partira.
     """
     source = (RACINE / "api" / "app" / "utils" / "email" / "__init__.py").read_text(encoding="utf-8")
+
     appels = re.findall(r"pieces_jointes=\[nom_lisible\(p\) for p in \(attachments or \[\]\)\]", source)
-    assert len(appels) == 2, (
-        f"{len(appels)} point(s) d'envoi dérivent le sommaire de `attachments` — "
-        "il en faut 2 (send_email et send_email_group)"
+    assert len(appels) == 1, (
+        f"{len(appels)} écriture(s) du sommaire — il en faut UNE, dans `composer_email`. "
+        "Une seconde serait libre de diverger, et l'aperçu ne montrerait plus ce qui part."
     )
+
+    #  Le corollaire : personne ne compose en dehors d'elle. `_wrap_email` est la
+    #  mise en gabarit ; l'appeler ailleurs rendrait la règle invisible à l'aperçu.
+    hors = [
+        m.start() for m in re.finditer(r"_wrap_email\(", source)
+        if "def _wrap_email" not in source[max(0, m.start() - 200):m.start()]
+    ]
+    debut_composer = source.index("def composer_email(")
+    fin_composer = source.index("async def send_email(", debut_composer)
+    assert all(debut_composer < p < fin_composer for p in hors), (
+        "`_wrap_email` est appelée hors de `composer_email` : toute règle de "
+        "composition posée ailleurs serait absente de l'aperçu avant envoi (#498)."
+    )
+
+    for fonction in ("async def send_email(", "async def send_email_group("):
+        debut = source.index(fonction)
+        fin = source.find(chr(10) + "async def ", debut + 10)
+        corps = source[debut:fin if fin > 0 else len(source)]
+        assert "composer_email(" in corps, (
+            f"`{fonction.strip()}` ne passe plus par `composer_email` : elle "
+            "recomposerait le message de son côté, et l'aperçu mentirait."
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -97,6 +97,9 @@ export interface TicketEvolution {
 	auteur_nom?: string;
 	cree_le: string;
 	fichiers_urls?: string[];
+	/**  Le périmètre que CETTE entrée déclare — absent quand elle n'en parle pas,
+	     ce qui est le cas de l'immense majorité des commentaires (#497). */
+	perimetre_cible?: string[];
 }
 
 export interface PublicationEvolution {

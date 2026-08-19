@@ -180,6 +180,50 @@ def _sujet_sur_une_ligne(sujet: str) -> str:
     return propre[: _SUJET_MAX - 1].rstrip() + "…"
 
 
+def composer_email(
+    template: ModeleEmail,
+    ctx: dict,
+    *,
+    site_nom: str,
+    site_url: str,
+    email_footer: str,
+    attachments: list[str] | None = None,
+) -> tuple[str, str]:
+    """(objet, corps HTML complet) d'un e-mail — **la seule composition du projet**.
+
+    ## Pourquoi cette fonction existe (#498, 19/08/2026)
+
+    Deux raisons, et la seconde est la vraie.
+
+    1. `send_email` et `send_email_group` portaient ces onze lignes **à
+       l'identique**. Deux écritures d'une même règle sont deux valeurs libres de
+       diverger (`standards/02` §2).
+
+    2. 🔴 **L'aperçu avant envoi doit montrer ce qui partira, pas une
+       reconstitution.** Un aperçu recomposé « à peu près » deviendrait faux à la
+       première évolution d'un gabarit — et personne ne s'en apercevrait, puisque
+       c'est justement l'aperçu qu'on regarderait pour vérifier. C'est le faux-vert
+       de `standards/04` §14 : observer la chose, pas son enregistrement.
+
+    ⚠️ **Toute règle de composition s'écrit ICI.** En ajouter une dans un appelant
+    la rendrait invisible à l'aperçu, ce qui est exactement le défaut qu'on ferme.
+    `api/tests/test_apercu_diffusion.py` échoue si les deux divergent.
+
+    Ne touche ni au réseau ni à la base : elle reçoit tout ce dont elle a besoin.
+    """
+    corps = _render(template.corps_html, ctx)
+    html = _wrap_email(
+        corps,
+        site_nom=site_nom,
+        site_url=site_url,
+        footer=email_footer,
+        annee=ctx["annee"],
+        pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
+        intention=template.intention,
+    )
+    return _sujet_sur_une_ligne(_render(template.sujet, ctx)), html
+
+
 async def send_email(
     code: str,
     to: str,
@@ -242,17 +286,10 @@ async def send_email(
 
             cfg = connexion_smtp(smtp_cfg)
             fm = FastMail(cfg)
-            rendered_body = _render(template.corps_html, ctx)
-            full_html = _wrap_email(
-                rendered_body,
-                site_nom=site_nom,
-                site_url=site_url,
-                footer=email_footer,
-                annee=ctx["annee"],
-                pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
-                intention=template.intention,
+            rendered_subject, full_html = composer_email(
+                template, ctx, site_nom=site_nom, site_url=site_url,
+                email_footer=email_footer, attachments=attachments,
             )
-            rendered_subject = _sujet_sur_une_ligne(_render(template.sujet, ctx))
             msg_kwargs = dict(
                 subject=rendered_subject,
                 recipients=[to],
@@ -364,17 +401,10 @@ async def send_email_group(
 
             cfg = connexion_smtp(smtp_cfg)
             fm = FastMail(cfg)
-            rendered_body = _render(template.corps_html, ctx)
-            full_html = _wrap_email(
-                rendered_body,
-                site_nom=site_nom,
-                site_url=site_url,
-                footer=email_footer,
-                annee=ctx["annee"],
-                pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
-                intention=template.intention,
+            rendered_subject, full_html = composer_email(
+                template, ctx, site_nom=site_nom, site_url=site_url,
+                email_footer=email_footer, attachments=attachments,
             )
-            rendered_subject = _sujet_sur_une_ligne(_render(template.sujet, ctx))
             msg_kwargs: dict[str, Any] = dict(
                 subject=rendered_subject,
                 recipients=to_emails if to_emails else cc_emails,

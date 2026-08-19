@@ -1015,3 +1015,148 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     visible à la souris. */
 .tab-btn:hover { color: var(--color-text); text-decoration: none; }
 .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+
+/* ══ Vocabulaire du reporting CS, et trois notions que la page partage ══
+   Montés ici depuis `espace-cs/+page.svelte` en extrayant `OngletReporting`
+   et ses six vues (#453). Un style scopé par Svelte ne franchit pas la
+   frontière d'un composant : laissé dans la page, ce vocabulaire aurait sorti
+   les sept fichiers NUS — la panne des pastilles (v2.67.11), que
+   `npm run lint:classes-nues` refuse depuis. Le recopier dans chacun aurait
+   ouvert la divergence que #413 vient de fermer ailleurs.
+
+   `.kpi-*`, `.pill*` et `.text-muted-sm` servent AUSSI aux onglets Validations
+   et Annonces de hall, qui restent dans la page — ils ne pouvaient donc pas
+   suivre le balisage du reporting, et les laisser derrière l'aurait sorti nu.
+   ⚠️ `residence/+page.svelte` porte SA variante de `.pill` (bordure plus fine,
+   fond `--color-surface`). Elle reste locale et continue de gagner : Svelte
+   scope ses sélecteurs, ce qui les rend plus spécifiques que ceux d'ici.
+
+   Ce qui ne sert QU'À UNE vue voyage avec elle et n'est pas ici :
+   `.report-event-*` (VueKanban), `.frise-*` et `.audit-year-*`
+   (VueRenouvellements), `.relance-*` (VueRelanceSyndic). */
+.kpi-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.kpi-card {
+	flex: 1; min-width: 140px; background: var(--color-bg);
+	border: 1px solid var(--color-border); border-radius: var(--radius);
+	padding: 1rem 1.25rem; text-align: center;
+}
+.kpi-card.kpi-alert { border-color: var(--color-warning); background: #fffbeb; }
+.kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
+.kpi-card.kpi-alert .kpi-value { color: var(--color-warning); }
+.kpi-label { font-size: .8rem; color: var(--color-text-muted); margin-top: .2rem; }
+.text-muted-sm { font-size: .8rem; color: var(--color-text-muted); }
+.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
+.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
+.reporting-toolbar {
+	display: flex; justify-content: space-between; gap: .75rem;
+	align-items: center; flex-wrap: wrap;
+}
+.reporting-switch, .reporting-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.reporting-print-header { display: none; }
+.report-card {
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: 1rem 1.1rem;
+}
+.report-card h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
+.report-intro { font-size: .86rem; color: var(--color-text-muted); margin-bottom: .85rem; }
+.report-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.report-grid-2-wide { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+.report-table-wrap { overflow-x: auto; }
+.report-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.report-table th, .report-table td { padding: .65rem .7rem; border-bottom: 1px solid var(--color-border); vertical-align: top; text-align: left; }
+.report-table th { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
+.report-table.compact td, .report-table.compact th { padding: .55rem .6rem; }
+@media (max-width: 900px) {
+	.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
+}
+@page { margin: 10mm 10mm; }
+@media print {
+	.no-print { display: none !important; }
+	.reporting-print-header { display: block; margin-bottom: .5rem; }
+	.reporting-print-header h2 { font-size: 1.1rem; margin: 0 0 .15rem; }
+	.reporting-print-header p { font-size: .78rem; color: #666; margin: 0; }
+	.report-card { box-shadow: none; break-inside: auto; margin-bottom: .75rem !important; padding: .5rem .75rem !important; }
+	.report-card h3 { break-after: avoid; font-size: .95rem; margin-bottom: .3rem; }
+	.report-table th, .report-table td { font-size: .75rem; padding: .3rem .4rem !important; }
+	.reporting-panel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.kpi-card { border: 1px solid #ccc !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.kpi-card.kpi-alert { border-color: #d97706 !important; background: #fffbeb !important; }
+	.kpi-value { color: #1e3a5f !important; }
+	.kpi-card.kpi-alert .kpi-value { color: #d97706 !important; }
+	.frise-bar-track {
+		-webkit-print-color-adjust: exact; print-color-adjust: exact;
+		background: repeating-linear-gradient(90deg, transparent, transparent calc(100% / 12 - 1px), #ddd calc(100% / 12 - 1px), #ddd calc(100% / 12)) !important;
+	}
+	.frise-preavis-zone { -webkit-print-color-adjust: exact; print-color-adjust: exact; opacity: .5; }
+	.frise-marker { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-row-v2 { border-bottom-color: #ddd !important; }
+	.frise-months { color: #666 !important; border-bottom-color: #ddd !important; }
+	.frise-compact-item { background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-row-dates { color: #666 !important; }
+	.frise-marker-label { color: #666 !important; }
+	.frise-legend { color: #666 !important; }
+	.frise-legend-dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-stars { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-stars-bad { color: #dc2626 !important; }
+	.frise-stars-ok { color: #f59e0b !important; }
+	.frise-stars-good { color: #16a34a !important; }
+	.badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.report-card { background: #fff !important; border-color: #ddd !important; }
+	.report-intro { color: #666 !important; font-size: .78rem; margin: 0 0 .4rem !important; }
+	.kpi-row { gap: .5rem !important; margin-bottom: .5rem !important; }
+	.kpi-card { padding: .5rem .75rem !important; }
+	.kpi-value { font-size: 1.5rem !important; }
+	.kpi-label { font-size: .7rem !important; }
+	.frise-row-v2 { padding: .3rem 0 .8rem !important; }
+	.frise-row-title { font-size: .78rem !important; }
+	.frise-row-dates { font-size: .68rem !important; }
+	.frise-bar-track { height: 22px !important; }
+	.frise-legend { margin-top: .6rem !important; font-size: .72rem !important; }
+	.audit-year-group { margin-bottom: .7rem !important; }
+	.container.page { padding: 0 !important; }
+}
+/* ⚠️ Ces règles étaient HORS de tout `@media print` : elles masquaient donc la
+   barre de navigation À L'ÉCRAN dès que la classe était posée sur <body>.
+   Tant que tout se passait bien, l'effet durait 250 ms et ne se voyait pas ;
+   le jour où le nettoyage a été sauté, l'application est restée sans
+   navigation jusqu'à un rechargement complet (04/08/2026).
+   Elles ne servent qu'à la mise en page imprimée — aucune n'a de raison de
+   toucher l'écran. Les enfermer ici supprime le rayon de dégâts : même si la
+   classe restait collée, l'affichage serait intact. */
+@media print {
+	:global(body.print-reporting .page-header),
+	:global(body.print-reporting .page-subtitle),
+	:global(body.print-reporting .tabs),
+	:global(body.print-reporting .tab-descriptif),
+	:global(body.print-reporting .no-print) {
+		display: none !important;
+	}
+	:global(body.print-reporting .sidebar),
+	:global(body.print-reporting .mobile-topbar),
+	:global(body.print-reporting .app-footer) {
+		display: none !important;
+	}
+	:global(body.print-reporting .app-content) {
+		margin-left: 0 !important;
+		max-width: 100% !important;
+		overflow: visible !important;
+	}
+	:global(body.print-reporting) {
+		overflow: visible !important;
+	}
+	:global(body.print-reporting .app-shell) {
+		overflow: visible !important;
+		min-height: auto !important;
+	}
+	:global(body.print-reporting .app-main) {
+		overflow: visible !important;
+	}
+	:global(body.print-reporting .reporting-print-header) {
+		display: block !important;
+	}
+}

@@ -257,8 +257,31 @@ def add_evolution(
         nouveau_statut=body.nouveau_statut if body.type == "etat" else None,
         auteur_id=user.id, cree_le=datetime.utcnow(),
         fichiers_urls=json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False),
+        perimetre_cible=(
+            json.dumps(body.perimetre_cible, ensure_ascii=False)
+            if body.perimetre_cible else None
+        ),
     )
     session.add(evol)
+
+    #  🔴 Le périmètre déclaré devient celui du TICKET (#497).
+    #
+    #  Un ticket se signale avec ce qu'on sait au moment où on le signale — donc
+    #  souvent le périmètre le plus large, parce qu'on ignore d'où ça vient. Puis
+    #  on cherche : « bâtiment 2 » devient « bât. 2, 3ᵉ étage, cage B ».
+    #
+    #  Le reporter ici plutôt que de le recalculer à la lecture rend justes, du
+    #  même coup et SANS LES TOUCHER, toutes les vues qui lisent déjà
+    #  `ticket.perimetre_cible` : les cartes, les listes, les e-mails, et le
+    #  message WhatsApp envoyé quelques lignes plus bas. L'historique du
+    #  resserrement, lui, reste sur chaque évolution.
+    #
+    #  ⚠️ `body.perimetre_cible` vide ou absent ne touche à RIEN : une évolution
+    #  qui ne parle pas du périmètre ne l'élargit pas à la résidence entière.
+    if body.perimetre_cible:
+        ticket.perimetre_cible = json.dumps(body.perimetre_cible, ensure_ascii=False)
+        ticket.mis_a_jour_le = datetime.utcnow()
+        session.add(ticket)
 
     if body.type == "etat":
         ticket.statut = body.nouveau_statut

@@ -82,7 +82,8 @@ const TOLEREES = {
 	//  le `class:` est posé, la règle n’existe pas.
 	'routes/(app)/admin/+page.svelte': ['nouvel-arrivant-checked'],
 	//  Les libellés de mois de la frise, rendus en texte courant.
-	'routes/(app)/espace-cs/+page.svelte': ['frise-month-label'],
+	//  Suivi la frise dans `VueRenouvellements` en extrayant le reporting (#453).
+	'lib/components/reporting/VueRenouvellements.svelte': ['frise-month-label'],
 	//  🔴 La notation par étoiles : `class:active` sur chaque étoile, et aucune
 	//  règle — l’étoile choisie ne se distingue pas de celle qu’on n’a pas prise.
 	'routes/(app)/prestataires/+page.svelte': ['star-btn'],

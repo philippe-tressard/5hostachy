@@ -304,6 +304,7 @@
 	      leur côté, et les deux câblages ont divergé DEUX FOIS, dans les deux
 	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
 	<HistoriqueTicket ticketId={ticketId} statutCourant={ticket?.statut ?? ''}
+		perimetreCourant={ticket?.perimetre_cible ?? []}
 		{evolutions} on:change={loadEvolutions} />
 
 	<!-- Suppression admin -->

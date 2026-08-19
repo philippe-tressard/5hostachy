@@ -86,7 +86,9 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
+	import { perimetreLabel, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	/** Préfixe des `id` des champs. Plusieurs formulaires d'évolution coexistent à
@@ -132,6 +134,19 @@
 	export let initialContenu = '';
 	/** Fichiers initiaux (mode édition) */
 	export let initialFichiers: { url: string; nom: string; type?: string }[] = [];
+	/**  Proposer de PRÉCISER LE PÉRIMÈTRE dans cette entrée (#497).
+	 *
+	 *   Un ticket se signale avec ce qu'on sait au moment où on le signale — donc
+	 *   souvent le périmètre le plus large, parce qu'on ignore encore d'où ça
+	 *   vient. Puis on cherche : « bâtiment 2 » devient « bât. 2, 3ᵉ étage, cage B ».
+	 *   Jusqu'ici cette précision se perdait, ou se racontait en texte libre.
+	 *
+	 *   ⚠️ Facultatif, et **vide par défaut** : ne rien toucher ne change rien.
+	 *   Une entrée qui ne parle pas du périmètre n'en déclare aucun, elle ne
+	 *   l'élargit surtout pas à la résidence entière. */
+	export let avecPerimetre = false;
+	/** Périmètre courant de l'objet — affiché en badge, comme l'état courant. */
+	export let perimetreCourant: string[] = [];
 	/** Contrôlé par le parent : est-ce que la sauvegarde API est en cours */
 	export let saving = false;
 
@@ -147,6 +162,7 @@
 			envoyer_cs?: boolean;
 			email_externe?: string;
 			interne?: boolean;
+			perimetre_cible?: string[];
 		};
 		cancel: void;
 	}>();
@@ -159,6 +175,11 @@
 	let envoyerSyndic = defaultEnvoyerSyndic;
 	let envoyerCs = defaultEnvoyerCs;
 	let emailExterne = '';
+	//  Vide tant que personne n'y touche : c'est ce vide qui veut dire « cette
+	//  entrée ne dit rien du périmètre ». Le pré-remplir avec le périmètre courant
+	//  ferait déclarer un périmètre à chaque commentaire — donc écrire dans
+	//  l'historique un resserrement qui n'a pas eu lieu.
+	let perimetre: string[] = [];
 
 	//  7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430).
 	//  Le tri se fait à l'ouverture, sur ce que l'entrée portait déjà : les
@@ -185,12 +206,25 @@
 	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
 	//  la décide (#426).
 	$: sectionWorkflow = !editMode && statutOptions.length > 0;
+	//  Préciser le périmètre est un geste de SUIVI : il n'a pas de sens en
+	//  réécrivant une entrée passée, où il raturerait un fait daté (le serveur
+	//  refuse d'ailleurs `perimetre_cible` sur un PATCH).
+	$: sectionPerimetre = avecPerimetre && !editMode;
 	$: sectionDiffusion = showNotifs || showEmail || avecInterne;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
 	//  ticket, deux centimètres plus haut.
 	$: libelleStatutActuel = currentStatut ? (statutLabels[currentStatut] || currentStatut) : '';
+
+	//  Le périmètre COURANT en badge, même forme que l'état courant deux lignes
+	//  plus haut : on voit d'où l'on part avant de préciser. `ChampsCommuns`
+	//  n'affiche le badge que sur le périmètre par défaut, parce que le sélecteur
+	//  montre déjà la sélection ; ici le sélecteur part vide, donc le badge est le
+	//  SEUL endroit où l'on lit le périmètre actuel — il est toujours affiché.
+	$: libellePerimetreActuel = perimetreCourant.length
+		? perimetreLabel(perimetreCourant)
+		: perimetreLabelUn(perimetreParDefaut() ?? '');
 
 	//  Le commentaire est REQUIS pour une évolution de type commentaire, facultatif
 	//  quand il accompagne un changement d'état. Pas de mention « (optionnel) » :
@@ -230,6 +264,9 @@
 			envoyer_cs: showNotifs ? envoyerCs : undefined,
 			email_externe: showEmail ? (emailExterne.trim() || undefined) : undefined,
 			interne: avecInterne ? interne : undefined,
+			//  `undefined` et non `[]` : le serveur distingue « n'en parle pas » de
+			//  « plus aucun périmètre », et seul le premier laisse le ticket tranquille.
+			perimetre_cible: (sectionPerimetre && perimetre.length) ? perimetre : undefined,
 		});
 	}
 </script>
@@ -267,6 +304,28 @@
 							on:click={() => (nouveauStatut = opt.value)}>{opt.label}</Pastille>
 					{/each}
 				</div>
+			</div>
+		</SectionFormulaire>
+	{/if}
+
+	<!-- ── 4. Périmètre ─────────────────────────────────────────────────────
+	     Le périmètre d'un ticket n'est pas acquis à l'ouverture : il se précise à
+	     mesure qu'on cherche (#497). Cette section le laisse dire, sans jamais
+	     l'imposer — le sélecteur part VIDE, et ne rien y toucher ne change rien.
+	     Le badge porte le périmètre COURANT : on voit d'où l'on part.
+	     Section à UN champ : le titre EST le libellé, le sélecteur se tait
+	     (`ux-patterns` §9 septies). Les pastilles ne sont pas labelables, d'où le
+	     couple `idTitre` / `aria-labelledby`, comme dans `ChampsCommuns`. -->
+	{#if sectionPerimetre}
+		<SectionFormulaire titre="Périmètre" badge={libellePerimetreActuel}
+			idTitre="{idPrefixe}-perimetre-titre">
+			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
+				<PerimetrePicker bind:value={perimetre} titre="" />
+				<p class="evol-aide">
+					À renseigner seulement pour <strong>préciser</strong> le périmètre — par
+					exemple quand on a trouvé d'où vient la fuite. Laissé vide, le périmètre
+					du ticket ne bouge pas.
+				</p>
 			</div>
 		</SectionFormulaire>
 	{/if}
@@ -365,6 +424,16 @@
 	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
 	    (`Pastille.svelte`, v2.67.11) : ne vit ici que leur disposition. */
 	.evol-pastilles { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+	/*  Le texte d'aide sous le sélecteur de périmètre. Défini ICI, avec le
+	    balisage qu'il habille : un style de page n'atteint pas un composant, et
+	    une classe seulement employée arrive nue à l'écran (v2.67.11).
+	    ⚠️ C'est la TROISIÈME écriture de la même notion dans le dépôt —
+	    `.ah-aide` (FormulaireAnnonceHall) et `.perimetre-aide` (PerimetrePicker)
+	    disent la même chose aux mêmes valeurs. Suivi à part : les fusionner
+	    demande de reprendre les trois appelants, pas d'en ajouter une quatrième
+	    en douce ici. */
+	.evol-aide { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
 
 	/*  Définie ICI, avec le balisage qu'elle habille : `.checkbox-field` n'est pas
 	    une classe d'`app.css` — chaque composant qui l'emploie la style lui-même,

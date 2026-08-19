@@ -376,6 +376,11 @@ class TicketEvolution(SQLModel, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
+    #  Le périmètre que CETTE entrée déclare — `None` quand elle n'en parle pas,
+    #  ce qui est le cas de l'immense majorité des commentaires : une évolution
+    #  n'a pas de périmètre, elle en déclare un (migration 0154, #497).
+    #  Même forme JSON que partout ailleurs : `["résidence"]`, `["bat:1","cave"]`.
+    perimetre_cible: Optional[str] = None
 
     ticket: Optional[Ticket] = Relationship(back_populates="evolutions")
     auteur: Optional[Utilisateur] = Relationship()
@@ -951,53 +956,20 @@ class LotImport(SQLModel, table=True):
 #  Calendrier de la résidence
 # ──────────────────────────────────────────────
 
-class TypeEvenement(str, Enum):
-    travaux = "travaux"
-    coupure = "coupure"
-    ag = "ag"
-    maintenance = "maintenance"
-    maintenance_recurrente = "maintenance_recurrente"
-    autre = "autre"
-
-
-class StatutKanban(str, Enum):
-    ag = "ag"
-    cs = "cs"
-    syndic = "syndic"
-    fournisseur = "fournisseur"
-    termine = "termine"
-    annule = "annule"
-
-
-class Evenement(SQLModel, table=True):
-    __tablename__ = "evenement"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    titre: str
-    description: Optional[str] = None
-    type: TypeEvenement = TypeEvenement.autre
-    lieu: Optional[str] = None
-    debut: datetime
-    fin: Optional[datetime] = None
-    perimetre: str = "résidence"  # résidence | bâtiment
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: Optional[datetime] = None
-    archivee: bool = False
-    statut_kanban: Optional[str] = Field(default=None)  # ag|cs|syndic|fournisseur|termine|annule
-    prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
-    frequence_type: Optional[str] = Field(default=None)   # "semaines", "mois", "fois_par_an"
-    frequence_valeur: Optional[int] = Field(default=None)
-    affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
-    # Même convention que Ticket.photos_urls (tableau JSON d'URLs internes) : le
-    # modèle portait déjà trois noms pour la même notion, ne pas en créer un 4ᵉ.
-    photos_urls: Optional[str] = None  # JSON array of photo URLs
-    # Pièces jointes non-images, même convention que Ticket.fichiers_urls.
-    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
-    epingle: bool = False  # même notion que Publication.epingle
-    partager_whatsapp: bool = False
-    envoyer_syndic: bool = False
-    envoyer_cs: bool = False
+# ──────────────────────────────────────────────
+#  Calendrier
+# ──────────────────────────────────────────────
+#  Les tables vivent dans `models/evenement.py` depuis le 19/08/2026
+#  (modularité, rang 1) — le module ne portait jusque-là que l'HISTORIQUE d'un
+#  événement, pendant que l'événement lui-même restait ici : un module nommé
+#  d'après une entité qui ne la contient pas. Ré-exportées : les imports
+#  existants ne bougent pas, et les modèles restent enregistrés auprès de
+#  SQLModel.
+from app.models.evenement import (  # noqa: E402,F401
+    Evenement as Evenement,
+    StatutKanban as StatutKanban,
+    TypeEvenement as TypeEvenement,
+)
 
 
 # ──────────────────────────────────────────────

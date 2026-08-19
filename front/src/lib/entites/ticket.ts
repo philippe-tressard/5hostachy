@@ -97,15 +97,28 @@ export const TICKET: EntiteDeclaree = {
 			objet: 'Ouvert · En cours · Résolu · Annulé',
 		},
 		{
+			//  🔴 LA DIVERGENCE A ÉTÉ RETIRÉE LE 19/08/2026, et c'est un revirement.
+			//
+			//  Elle disait : *« Le périmètre est celui du ticket ; une entrée ne le
+			//  redéfinit pas »* — motif `hérité`. C'était juste tant qu'un périmètre
+			//  était acquis à l'ouverture. L'usage a réfuté la prémisse (#497) :
+			//
+			//  > *« le périmètre de la fuite pourrait être précisé et évolue »*
+			//
+			//  Un ticket se signale avec ce qu'on sait au moment où on le signale,
+			//  donc souvent avec le périmètre le plus large. Puis on cherche, et
+			//  « bâtiment 2 » devient « bât. 2, 3ᵉ étage, cage B ». Une entrée du fil
+			//  PEUT donc déclarer un périmètre — il devient alors celui du ticket.
+			//
+			//  ⚠️ Le champ reste **facultatif** dans ce seul état : y toucher est un
+			//  geste rare et volontaire, et ne rien dire ne change rien. C'est une
+			//  nuance que R4 ne sait pas déclarer (elle ne parle que de SECTIONS,
+			//  #436) — elle est portée par `EvolForm.avecPerimetre`, dont le nom dit
+			//  qu'elle est optionnelle, et par le test `test_evolution_perimetre.py`
+			//  qui vérifie qu'une entrée muette laisse le ticket tranquille.
 			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
-			absente: {
-				evolution: {
-					motif: 'hérité',
-					explication: 'Le périmètre est celui du ticket ; une entrée ne le redéfinit pas.',
-				},
-			},
 		},
 		{
 			id: 'destinataires',
