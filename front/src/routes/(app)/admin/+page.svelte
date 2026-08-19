@@ -10,10 +10,17 @@ import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } f
 	import EntetePage from '$lib/components/EntetePage.svelte';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
-import LiensEcransAdmin from '$lib/components/LiensEcransAdmin.svelte';
+import OngletCopropriete from '$lib/components/OngletCopropriete.svelte';
+import OngletPerimetres from '$lib/components/OngletPerimetres.svelte';
+import OngletAuditLots from '$lib/components/OngletAuditLots.svelte';
+import OngletImportLots from '$lib/components/OngletImportLots.svelte';
+import OngletImportTelecommandes from '$lib/components/OngletImportTelecommandes.svelte';
+import OngletImportVigik from '$lib/components/OngletImportVigik.svelte';
+import OngletDesignsEmail from '$lib/components/OngletDesignsEmail.svelte';
 import Onglet from '$lib/components/Onglet.svelte';
 import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 import OngletSmtp from '$lib/components/OngletSmtp.svelte';
+import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
 import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
@@ -23,7 +30,20 @@ import { trackTabView } from '$lib/telemetry';
 // 'sauvegardes' retiré le 02/08/2026 : ce bloc n'était accessible par AUCUN
 // bouton et dupliquait, dans une version divergente (accents perdus), celui de
 // « Paramétrage site ». Les deux vivent désormais dans le sous-onglet Maintenance.
-let onglet: 'comptes' | 'acces' | 'emails' | 'utilisateurs' | 'demandes_profil' | 'site' | 'pages' | 'legal' | 'whatsapp' | 'smtp' | 'telemetry' | 'maintenance' = 'comptes';
+//  🔴 La liste des onglets est écrite ICI et NULLE PART AILLEURS. Depuis le
+//  19/08/2026 elle couvre aussi les sept écrans qui vivaient sur leur propre
+//  route : on ne quitte plus Paramétrage, donc plus aucun « ← Retour ».
+//  `ONGLETS` sert au type ET à la lecture de `?onglet=` — deux listes
+//  divergeraient au premier onglet ajouté, et c’est l’adressage direct qui
+//  cesserait de fonctionner en silence.
+const ONGLETS = [
+  'comptes', 'acces', 'emails', 'utilisateurs', 'demandes_profil',
+  'site', 'pages', 'legal', 'whatsapp', 'smtp', 'telemetry', 'maintenance',
+  'copropriete', 'perimetres', 'audit_lots', 'import_lots', 'import_tc',
+  'import_vigik', 'designs_email',
+] as const;
+type OngletAdmin = (typeof ONGLETS)[number];
+let onglet: OngletAdmin = 'comptes';
 $: trackTabView(onglet);
 
 //  Bâtiments (pour affichage) 
@@ -144,23 +164,6 @@ toast('error', e.message ?? 'Erreur');
 //  déclencheurs — précharger ici des tableaux que plus personne n'affiche aurait
 //  laissé deux appels d'API sans lecteur.
 
-//  Télémétrie
-let telemetryData: any = null;
-let telemetryLoading = true;
-let tlScope: 'jour' | 'mois' | 'annee' = 'jour';
-
-async function loadTelemetry() {
-telemetryLoading = true;
-try {
-telemetryData = await api.get<any>(`/telemetry/dashboard?scope=${tlScope}`);
-} catch { telemetryData = null; }
-finally { telemetryLoading = false; }
-}
-
-function switchTlScope(s: 'jour' | 'mois' | 'annee') {
-tlScope = s;
-loadTelemetry();
-}
 
 //  Modeles e-mail 
 let emailTemplates: any[] = [];
@@ -537,6 +540,14 @@ async function rejeterDemande(id: number) {
 
 //  Montage 
 onMount(async () => {
+//  Adressage direct d’un onglet : `?onglet=perimetres`. Il remplace les sept
+//  routes `/admin/<ecran>` supprimées le 19/08/2026 — sans lui, un signet ou un
+//  lien vers un de ces écrans n’aurait plus AUCUN équivalent, et la conversion
+//  en onglets aurait retiré une capacité au lieu d’en uniformiser une.
+//  La validation se fait sur `ONGLETS`, la liste unique : une valeur inconnue
+//  est ignorée, jamais affichée.
+const demande = new URLSearchParams(window.location.search).get('onglet');
+if (demande && (ONGLETS as readonly string[]).includes(demande)) onglet = demande as OngletAdmin;
 await loadSiteConfig();
 // Paramétrage site — lu depuis `/config/admin` (require_admin) et NON depuis le
 // store : depuis l'audit de sécurité du 26/07/2026, `/api/config` est filtré par
@@ -601,7 +612,6 @@ loadComptes();
 loadCommandes();
 loadEmails();
 loadDemandesProfil();
-loadTelemetry();
 });
 
 // ── Paramétrage site ──────────────────────────────────────────
@@ -741,7 +751,11 @@ $: _siteNom = $siteNomStore;
       Demandes profil
     </Onglet>
     <Onglet actif={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</Onglet>
-    <LiensEcransAdmin groupe="donnees" />
+    <Onglet actif={onglet === 'import_lots'} on:click={() => (onglet = 'import_lots')}>Import Lots</Onglet>
+    <Onglet actif={onglet === 'import_tc'} on:click={() => (onglet = 'import_tc')}>Import TC</Onglet>
+    <Onglet actif={onglet === 'import_vigik'} on:click={() => (onglet = 'import_vigik')}>Import Vigik</Onglet>
+    <Onglet actif={onglet === 'audit_lots'} on:click={() => (onglet = 'audit_lots')}>Audit lots</Onglet>
+    <Onglet actif={onglet === 'designs_email'} on:click={() => (onglet = 'designs_email')}>Designs e-mail</Onglet>
   </div>
 </div>
 
@@ -749,7 +763,8 @@ $: _siteNom = $siteNomStore;
   <div class="tabs-group-label">⚙️ Configuration</div>
   <div class="tabs" style="margin-bottom:0">
     <Onglet actif={onglet === 'site'} on:click={openSiteTab}>Paramétrage site</Onglet>
-    <LiensEcransAdmin groupe="configuration" />
+    <Onglet actif={onglet === 'copropriete'} on:click={() => (onglet = 'copropriete')}>Fiche copropriété</Onglet>
+    <Onglet actif={onglet === 'perimetres'} on:click={() => (onglet = 'perimetres')}>Périmètres</Onglet>
     <Onglet actif={onglet === 'pages'} on:click={() => (onglet = 'pages')}>Descriptif pages</Onglet>
     <Onglet actif={onglet === 'legal'} on:click={() => (onglet = 'legal')}>Pages légales</Onglet>
     <!--  Pas d'icône sur un onglet : 4 sur 15 en portaient une — une par le
@@ -759,7 +774,7 @@ $: _siteNom = $siteNomStore;
           16/08/2026, capture à l'appui. -->
     <Onglet actif={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>WhatsApp</Onglet>
     <Onglet actif={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>SMTP</Onglet>
-    <Onglet actif={onglet === 'telemetry'} on:click={() => { onglet = 'telemetry'; loadTelemetry(); }}>Télémétrie</Onglet>
+    <Onglet actif={onglet === 'telemetry'} on:click={() => (onglet = 'telemetry')}>Télémétrie</Onglet>
     <Onglet actif={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}>Maintenance</Onglet>
   </div>
 </div>
@@ -1475,163 +1490,28 @@ $: _siteNom = $siteNomStore;
 />
 
 {:else if onglet === 'telemetry'}
-<section class="card config-section">
-  <h2 class="config-section-title"><Icon name="bar-chart-3" size={17} />Télémétrie — Utilisation de l'application</h2>
-  <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand.</p>
+<OngletTelemetrie />
 
-  <!-- Sélecteur Jour / Mois / Année -->
-  <div class="tl-scope-switch" style="margin:.75rem 0 1rem">
-    <button class="pill" class:pill-active={tlScope === 'jour'} on:click={() => switchTlScope('jour')}>📅 Jour</button>
-    <button class="pill" class:pill-active={tlScope === 'mois'} on:click={() => switchTlScope('mois')}>📆 Mois (30j)</button>
-    <button class="pill" class:pill-active={tlScope === 'annee'} on:click={() => switchTlScope('annee')}>📊 Année (10 ans)</button>
-  </div>
+{:else if onglet === 'copropriete'}
+<OngletCopropriete />
 
-  {#if telemetryLoading}
-    <p class="muted">Chargement des statistiques...</p>
-  {:else if !telemetryData}
-    <div class="empty-state">
-      <h3>Aucune donnée de télémétrie</h3>
-      <p>Les données apparaîtront après les premières visites.</p>
-    </div>
-  {:else}
-    <!-- KPI universels -->
-    <div class="tl-kpi-row">
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.vues ?? 0}</div>
-        <div class="tl-kpi-label">{tlScope === 'jour' ? 'Pages vues aujourd\'hui' : tlScope === 'mois' ? 'Pages vues (30j)' : 'Pages vues (total)'}</div>
-      </div>
-      {#if telemetryData.kpi.utilisateurs != null}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.utilisateurs}</div>
-        <div class="tl-kpi-label">{tlScope === 'jour' ? 'Utilisateurs actifs aujourd\'hui' : 'Utilisateurs uniques (pic)'}</div>
-      </div>
-      {/if}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.pages ?? 0}</div>
-        <div class="tl-kpi-label">Pages distinctes visitées</div>
-      </div>
-      {#if telemetryData.kpi.heure_pointe}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.heure_pointe}</div>
-        <div class="tl-kpi-label">🔺 Heure de pointe</div>
-      </div>
-      {/if}
-      {#if telemetryData.kpi.moy_vues_utilisateur != null}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.moy_vues_utilisateur}</div>
-        <div class="tl-kpi-label">Moy. vues / utilisateur</div>
-      </div>
-      {/if}
-      {#if telemetryData.kpi.moy_vues_jour != null}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.moy_vues_jour}</div>
-        <div class="tl-kpi-label">Moy. vues / jour</div>
-      </div>
-      {/if}
-      {#if telemetryData.kpi.moy_utilisateurs_jour != null}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.moy_utilisateurs_jour}</div>
-        <div class="tl-kpi-label">Moy. utilisateurs / jour</div>
-      </div>
-      {/if}
-      {#if telemetryData.kpi.mois_actifs != null}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.mois_actifs}</div>
-        <div class="tl-kpi-label">Mois avec activité</div>
-      </div>
-      {/if}
-      {#if telemetryData.kpi.moy_vues_mois != null}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.moy_vues_mois}</div>
-        <div class="tl-kpi-label">Moy. vues / mois</div>
-      </div>
-      {/if}
-    </div>
+{:else if onglet === 'perimetres'}
+<OngletPerimetres />
 
-    <!-- Jour le plus actif (scope mois) -->
-    {#if tlScope === 'mois' && telemetryData.kpi.jour_pointe}
-    <div class="tl-kpi-row" style="margin-top:.75rem">
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.jour_pointe.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
-        <div class="tl-kpi-label">🏆 Jour le plus actif — {telemetryData.kpi.jour_pointe.jour}</div>
-      </div>
-    </div>
-    {/if}
+{:else if onglet === 'audit_lots'}
+<OngletAuditLots />
 
-    <!-- Records (scope annee) -->
-    {#if tlScope === 'annee' && (telemetryData.kpi.record_jour || telemetryData.kpi.record_mois)}
-    <div class="tl-kpi-row" style="margin-top:.75rem">
-      {#if telemetryData.kpi.record_jour}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.record_jour.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
-        <div class="tl-kpi-label">🏆 Record jour — {telemetryData.kpi.record_jour.jour}</div>
-      </div>
-      {/if}
-      {#if telemetryData.kpi.record_mois}
-      <div class="tl-kpi">
-        <div class="tl-kpi-value">{telemetryData.kpi.record_mois.uniques} <span style="font-size:.6em;font-weight:400">utilisateurs</span></div>
-        <div class="tl-kpi-label">🏆 Record mois — {telemetryData.kpi.record_mois.mois}</div>
-      </div>
-      {/if}
-    </div>
-    {/if}
+{:else if onglet === 'import_lots'}
+<OngletImportLots />
 
-    <!-- Graphe (barres CSS) — adaptatif au scope -->
-    {#if telemetryData.chart.length > 0}
-      {@const maxVal = Math.max(...telemetryData.chart.map((x: { total: number }) => x.total), 1)}
-      {@const yTicks = (() => { const step = Math.ceil(maxVal / 4 / (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100)) * (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100); return [4,3,2,1,0].map(i => i * step); })()}
-    <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
-      <div class="tl-chart-wrap">
-        <div class="tl-y-axis">
-          {#each yTicks as tick}
-            <div class="tl-y-tick" style="bottom:{(tick / (yTicks[0] || 1)) * 100}%">{tick}</div>
-          {/each}
-        </div>
-        <div class="tl-chart-inner">
-          {#each yTicks as tick}
-            <div class="tl-y-gridline" style="bottom:{(tick / (yTicks[0] || 1)) * 120 + 18}px"></div>
-          {/each}
-          <div class="tl-chart">
-          {#each telemetryData.chart as d}
-            <div class="tl-bar-col {tlScope === 'annee' ? 'tl-bar-col-month' : ''}" title="{d.label} — {d.total} vues{d.uniques != null ? `, ${d.uniques} uniques` : ''}">
-              <div class="tl-bar {tlScope === 'annee' ? 'tl-bar-month' : ''}" style="height:{Math.max(4, (d.total / maxVal) * 100)}%"></div>
-              <div class="tl-bar-label">{d.label}</div>
-            </div>
-          {/each}
-          </div>
-        </div>
-      </div>
-    </div>
-    {/if}
+{:else if onglet === 'import_tc'}
+<OngletImportTelecommandes />
 
-    <!-- Top pages — tableau et total extraits en composant (#total des vues) -->
-    <TopPages pages={telemetryData.top_pages} vuesNonAttribuees={telemetryData.kpi?.vues_non_attribuees ?? 0} />
+{:else if onglet === 'import_vigik'}
+<OngletImportVigik />
 
-    <!-- Utilisateurs les plus actifs (scope jour et mois) -->
-    {#if telemetryData.top_users && telemetryData.top_users.length > 0}
-    <div class="card" style="margin-top:1.25rem">
-      <h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
-      <table class="table">
-        <thead><tr><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right">Vues</th><th style="text-align:right">Pages diff.</th><th style="text-align:right">Dernière connexion</th></tr></thead>
-        <tbody>
-          {#each telemetryData.top_users as u}
-            <tr>
-              <td style="font-size:.85rem">{u.nom}</td>
-              <td style="font-size:.8rem;color:var(--color-text-muted)">{u.statut ?? '—'}</td>
-              <td style="font-size:.8rem;color:var(--color-text-muted)">{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td>
-              <td style="text-align:right;font-weight:600">{u.total}</td>
-              <td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
-              <td style="text-align:right;font-size:.82rem;color:var(--color-text-muted)">{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    {/if}
-  {/if}
-</section>
-
+{:else if onglet === 'designs_email'}
+<OngletDesignsEmail />
 
 {/if}
 {#if cvModal}

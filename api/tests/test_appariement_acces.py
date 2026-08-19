@@ -288,9 +288,13 @@ def test_le_cs_voit_les_imports_auto_resolus():
         "plus à qui le badge a été attribué."
     )
 
+    #  L’écran a quitté sa route le 19/08/2026 : les sept écrans autonomes de
+    #  l’administration sont devenus des ONGLETS de `admin/+page.svelte`, pour
+    #  qu’on n’en sorte plus (donc plus de bouton « ← Retour »). Le fichier a
+    #  déménagé, la capacité qu’on vérifie ici n’a pas bougé.
     ecran = (
-        racine / "front" / "src" / "routes" / "(app)" / "admin"
-        / "telecommandes-import" / "+page.svelte"
+        racine / "front" / "src" / "lib" / "components"
+        / "OngletImportTelecommandes.svelte"
     ).read_text(encoding="utf-8")
     assert "'resolu'" in ecran, (
         "L'écran d'import ne propose plus le filtre « résolu » : les appariements "

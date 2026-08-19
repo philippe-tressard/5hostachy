@@ -4,7 +4,6 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -104,13 +103,11 @@
       doublon partiel : lui seul porte la réinitialisation des designs. Les fusionner
       est une décision fonctionnelle, instruite dans #307 — en attendant, deux écrans
       qui portent le MÊME nom seraient pris l'un pour l'autre. -->
-<EntetePage titre="Designs des modèles d'e-mail" icone="file-text" retour="/admin">
 	{#if templates.length > 0}
 		<button class="btn btn-secondary btn-sm" on:click={resetAll} disabled={resetting} title="Remet tous les modèles au design par défaut">
 			{resetting ? '⏳ Réinitialisation…' : '🔄 Réinitialiser les designs'}
 		</button>
 	{/if}
-</EntetePage>
 
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>

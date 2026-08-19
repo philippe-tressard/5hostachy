@@ -3,10 +3,9 @@
 	import { acces as accesApi, api } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
-	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
-	// ── Données ────────────────────────────────────────────────────────
+	// ── Données ────────────────────────────────────────────────────────────────
 	let imports: any[] = [];
 	let stats: any = null;
 	let utilisateurs: any[] = [];
@@ -14,7 +13,7 @@
 	let loading = true;
 	let filtre = '';
 
-	// ── Upload ───────────────────────────────────────────────────────────
+	// ── Upload ─────────────────────────────────────────────────────────────────
 	let uploadFile: FileList | null = null;
 	let remplacer = false;
 	let uploading = false;
@@ -23,7 +22,7 @@
 		if (!uploadFile?.length) { toast('error', 'Choisissez un fichier .xlsx'); return; }
 		uploading = true;
 		try {
-			const result = await accesApi.uploadImportTC(uploadFile[0], remplacer);
+			const result = await accesApi.uploadImportVigik(uploadFile[0], remplacer);
 			toast('success', `Import : ${result.importes} ajoutés, ${result.doublons} doublons, ${result.ignores} ignorés`);
 			await reload();
 		} catch (e: any) {
@@ -34,13 +33,13 @@
 		}
 	}
 
-	// ── Auto-match ───────────────────────────────────────────────────────
+	// ── Auto-match ─────────────────────────────────────────────────────────────
 	let autoMatching = false;
 
 	async function autoMatch() {
 		autoMatching = true;
 		try {
-			const r = await accesApi.autoMatchImportsTC();
+			const r = await accesApi.autoMatchImportsVigik();
 			toast('success', `${r.matches} liaison(s) automatique(s) trouvée(s)`);
 			await reload();
 		} catch (e: any) {
@@ -50,13 +49,12 @@
 		}
 	}
 
-	// ── Edition inline ───────────────────────────────────────────────────────────────────────────────
+	// ── Edition inline ─────────────────────────────────────────────────────────
 	let editId: number | null = null;
 	let editProprio = '';
 	let editLoc = '';
 	let editLot = '';
 	let editChezLoc = false;
-	let editRefusLoc = false;
 	let editNotes = '';
 	let saving = false;
 
@@ -66,7 +64,6 @@
 		editLoc = String(imp.user_locataire_id ?? '');
 		editLot = String(imp.lot_id ?? '');
 		editChezLoc = imp.chez_locataire;
-		editRefusLoc = imp.refuse_par_locataire ?? false;
 		editNotes = imp.notes_admin ?? '';
 	}
 
@@ -76,12 +73,11 @@
 		if (editId === null) return;
 		saving = true;
 		try {
-			await accesApi.patchImportTC(editId, {
+			await accesApi.patchImportVigik(editId, {
 				user_proprietaire_id: editProprio ? Number(editProprio) : null,
 				user_locataire_id: editLoc ? Number(editLoc) : null,
 				lot_id: editLot ? Number(editLot) : null,
 				chez_locataire: editChezLoc,
-				refuse_par_locataire: editRefusLoc,
 				notes_admin: editNotes || null,
 			});
 			toast('success', 'Liaisons mises à jour');
@@ -94,12 +90,12 @@
 		}
 	}
 
-	// ── Résolution / Ignorer ─────────────────────────────────────────────────────────────────────
+	// ── Résolution / Ignorer ───────────────────────────────────────────────────
 	async function resoudre(id: number) {
-		if (!confirm('Créer la télécommande et marquer cet import comme résolu ?')) return;
+		if (!confirm('Créer le badge Vigik et marquer cet import comme résolu ?')) return;
 		try {
-			await accesApi.resoudreImportTC(id);
-			toast('success', 'Télécommande créée et liée');
+			await accesApi.resoudreImportVigik(id);
+			toast('success', 'Badge Vigik créé et lié');
 			await reload();
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur résolution');
@@ -109,7 +105,7 @@
 	async function ignorer(id: number) {
 		if (!confirm('Ignorer cet import ?')) return;
 		try {
-			await accesApi.ignorerImportTC(id);
+			await accesApi.ignorerImportVigik(id);
 			toast('info', 'Import ignoré');
 			await reload();
 		} catch (e: any) {
@@ -117,21 +113,11 @@
 		}
 	}
 
-	async function remettreEnAttente(id: number) {
-		try {
-			await accesApi.remettreEnAttenteImportTC(id);
-			toast('success', 'Import remis en attente');
-			await reload();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	// ── Chargement ───────────────────────────────────────────────────────────────────────────────────
+	// ── Chargement ─────────────────────────────────────────────────────────────
 	async function reload() {
 		[imports, stats] = await Promise.all([
-			accesApi.listImportsTC(filtre || undefined),
-			accesApi.statsImportsTC(),
+			accesApi.listImportsVigik(filtre || undefined),
+			accesApi.statsImportsVigik(),
 		]);
 	}
 
@@ -150,7 +136,7 @@
 		}
 	});
 
-	// ── Helpers ──────────────────────────────────────────────────────────────────────────
+	// ── Helpers ────────────────────────────────────────────────────────────────
 	const statutBadge: Record<string, string> = {
 		en_attente: 'badge-orange',
 		proprietaire_lie: 'badge-blue',
@@ -163,13 +149,18 @@
 		resolu: 'Résolu',
 		ignore: 'Ignoré',
 	};
+
+	function userName(id: number | null) {
+		if (!id) return '—';
+		const u = utilisateurs.find(x => x.id === id);
+		return u ? `${u.prenom} ${u.nom}` : `#${id}`;
+	}
 </script>
 
-<svelte:head><title>Import Télécommandes — {_siteNom}</title></svelte:head>
+<svelte:head><title>Import Vigik — {_siteNom}</title></svelte:head>
 
-<EntetePage titre="Import Télécommandes" icone="car" retour="/admin" />
 
-<!-- ── Stats ──────────────────────────────────────────────────────────────────────────── -->
+<!-- ── Stats ──────────────────────────────────────────────────────────────── -->
 {#if stats}
 <div class="imp-stats-bar card">
 	<div class="imp-stat"><span class="imp-stat-val">{stats.total}</span><span class="imp-stat-lbl">Total</span></div>
@@ -177,16 +168,15 @@
 	<div class="imp-stat"><span class="imp-stat-val" style="color:#2563eb">{stats.proprietaire_lie}</span><span class="imp-stat-lbl">Proprio lié</span></div>
 	<div class="imp-stat"><span class="imp-stat-val" style="color:#16a34a">{stats.resolu}</span><span class="imp-stat-lbl">Résolus</span></div>
 	<div class="imp-stat"><span class="imp-stat-val" style="color:#6b7280">{stats.ignore}</span><span class="imp-stat-lbl">Ignorés</span></div>
-	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_reference}</span><span class="imp-stat-lbl">Avec réf.</span></div>
-	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_locataire}</span><span class="imp-stat-lbl">Avec locataire</span></div>
+	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_lot}</span><span class="imp-stat-lbl">Lot auto-lié</span></div>
 </div>
 {/if}
 
-<!-- ── Upload ─────────────────────────────────────────────────────────────────────────────────────────── -->
+<!-- ── Upload ─────────────────────────────────────────────────────────────── -->
 <div class="card imp-upload-section">
 	<h2 class="section-title">Importer un fichier Excel</h2>
 	<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
-		Colonnes attendues : <code>Copropriétaire | Locataire | Télécommandes</code>
+		Colonnes attendues : <code>BATIMENT | APPARTEMENT | NOM DU COPROPRIÉTAIRE | NOM LOCATAIRE | N° CLÉS</code>
 	</p>
 	<div class="imp-upload-row">
 		<input type="file" accept=".xlsx,.xls" bind:files={uploadFile} class="imp-file-input" />
@@ -200,10 +190,10 @@
 	</div>
 </div>
 
-<!-- ── Filtres + actions ──────────────────────────────────────────────────────────── -->
+<!-- ── Filtres + actions ──────────────────────────────────────────────────── -->
 <div class="imp-toolbar">
 	<div style="display:flex;gap:.5rem;align-items:center">
-		<span class="muted" style="font-size:.85rem">Filtrer :</span>
+		<span class="muted" style="font-size:.85rem">Filtrer :</span>
 		{#each ['', 'en_attente', 'proprietaire_lie', 'resolu', 'ignore'] as s}
 			<button
 				class="btn btn-sm {filtre === s ? 'btn-primary' : 'btn-outline'}"
@@ -217,7 +207,7 @@
 	</button>
 </div>
 
-<!-- ── Table ─────────────────────────────────────────────────────────────────────────────────────────── -->
+<!-- ── Table ──────────────────────────────────────────────────────────────── -->
 {#if loading}
 	<p class="muted">Chargement…</p>
 {:else if imports.length === 0}
@@ -230,8 +220,9 @@
 	<table class="table imp-table-dense">
 		<thead>
 			<tr>
+				<th>Bât.</th><th>Appt.</th>
 				<th>Propriétaire (Excel)</th><th>Locataire (Excel)</th>
-				<th>Référence</th><th>Lot lié</th>
+				<th>Code</th><th>Lot lié</th>
 				<th>Proprio lié</th><th>Locataire lié</th>
 				<th>Statut</th><th>Actions</th>
 			</tr>
@@ -239,9 +230,11 @@
 		<tbody>
 			{#each imports as imp (imp.id)}
 				<tr class:imp-row-resolu={imp.statut === 'resolu'} class:imp-row-ignore={imp.statut === 'ignore'}>
+					<td style="font-size:.8rem">{imp.batiment_raw ?? '—'}</td>
+					<td style="font-size:.8rem">{imp.appartement_raw ?? '—'}</td>
 					<td style="font-weight:500">{imp.nom_proprietaire}</td>
 					<td style="color:var(--color-text-muted)">{imp.nom_locataire ?? '—'}</td>
-					<td><code style="font-size:.8rem">{imp.reference ?? '—'}</code></td>
+					<td><code style="font-size:.8rem">{imp.code ?? '—'}</code></td>
 					<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.lot_label ?? '—'}</td>
 					<td style="font-size:.8rem">
 						{#if imp.proprietaire}
@@ -257,25 +250,19 @@
 							<span style="color:#d97706">Non lié</span>
 						{:else}—{/if}
 					</td>
-					<td>
-						<span class="badge {statutBadge[imp.statut] ?? 'badge-gray'}">{statutLabel[imp.statut] ?? imp.statut}</span>
-						{#if imp.refuse_par_locataire}<span title="Locataire a refusé" style="margin-left:.25rem">&#x1F6B7;</span>{/if}
-						{#if imp.chez_locataire && !imp.refuse_par_locataire}<span title="TC chez le locataire" style="margin-left:.25rem;font-size:.75rem;color:#2563eb">chez loc.</span>{/if}
-					</td>
+					<td><span class="badge {statutBadge[imp.statut] ?? 'badge-gray'}">{statutLabel[imp.statut] ?? imp.statut}</span></td>
 					<td>
 						{#if imp.statut !== 'resolu' && imp.statut !== 'ignore'}
 							<div class="action-row">
-								<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => openEdit(imp)}>✏️</button>
-								{#if imp.user_proprietaire_id && imp.reference}
-									<button class="btn btn-sm btn-primary" on:click={() => resoudre(imp.id)}>✓ Créer</button>
-								{/if}
-								<button class="btn-icon-warn" aria-label="Ignorer cet import" title="Ignorer" on:click={() => ignorer(imp.id)}>⊘</button>
+									<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => openEdit(imp)}>✏️</button>
+									{#if imp.user_proprietaire_id && imp.code}
+										<button class="btn btn-sm btn-primary" on:click={() => resoudre(imp.id)}>✓ Créer</button>
+									{/if}
+									<button class="btn-icon-warn" aria-label="Ignorer cet import" title="Ignorer" on:click={() => ignorer(imp.id)}>⊘</button>
 							</div>
-						{:else if imp.statut === 'ignore'}
-							<button class="btn-icon-success" aria-label="Remettre en attente" title="Remettre en attente" on:click={() => remettreEnAttente(imp.id)}>↩️</button>
 						{:else if imp.statut === 'resolu'}
 							<div class="action-row">
-								<span class="badge badge-green" style="font-size:.75rem">✓ TC #{imp.telecommande_id}</span>
+								<span class="badge badge-green" style="font-size:.75rem">✓ Badge #{imp.vigik_id}</span>
 								<button class="btn-icon-edit" aria-label="Corriger les liens" title="Corriger les liens" on:click={() => openEdit(imp)}>✏️</button>
 							</div>
 						{/if}
@@ -285,15 +272,15 @@
 				<!-- Formulaire d'édition inline -->
 				{#if editId === imp.id}
 				<tr class="imp-edit-row">
-					<td colspan="8">
+					<td colspan="10">
 						<div class="imp-edit-form card" style="margin:.5rem 0">
 							<h3 style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">
-								Lier : <em>{imp.nom_proprietaire}</em>
+								Lier : <em>{imp.nom_proprietaire}</em>
 							</h3>
 							<div class="imp-edit-grid">
 								<div class="field">
-									<label for="tc-proprio">Propriétaire *</label>
-									<select id="tc-proprio" bind:value={editProprio}>
+									<label for="vigik-proprio">Propriétaire *</label>
+									<select id="vigik-proprio" bind:value={editProprio}>
 										<option value="">— Non lié —</option>
 										{#each utilisateurs as u}
 											<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
@@ -301,8 +288,8 @@
 									</select>
 								</div>
 								<div class="field">
-									<label for="tc-loc">Locataire</label>
-									<select id="tc-loc" bind:value={editLoc}>
+									<label for="vigik-loc">Locataire</label>
+									<select id="vigik-loc" bind:value={editLoc}>
 										<option value="">— Aucun —</option>
 										{#each utilisateurs as u}
 											<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
@@ -310,8 +297,8 @@
 									</select>
 								</div>
 								<div class="field">
-									<label for="tc-lot">Lot</label>
-									<select id="tc-lot" bind:value={editLot}>
+									<label for="vigik-lot">Lot</label>
+									<select id="vigik-lot" bind:value={editLot}>
 										<option value="">— Auto / Inconnu —</option>
 										{#each lots as l}
 											<option value={String(l.id)}>Bât.{l.batiment_nom ?? l.batiment_id} — {l.numero} ({l.type})</option>
@@ -321,16 +308,12 @@
 								<div class="field imp-field-checkbox">
 									<label>
 										<input type="checkbox" bind:checked={editChezLoc} />
-										TC chez le locataire
-									</label>
-									<label>
-										<input type="checkbox" bind:checked={editRefusLoc} />
-										Locataire a refusé
+										Vigik chez le locataire
 									</label>
 								</div>
 								<div class="field" style="grid-column:span 2">
-									<label for="tc-notes">Notes admin</label>
-									<input id="tc-notes" type="text" bind:value={editNotes} placeholder="Note interne…" />
+									<label for="vigik-notes">Notes admin</label>
+									<input id="vigik-notes" type="text" bind:value={editNotes} placeholder="Note interne…" />
 								</div>
 							</div>
 							<div class="form-actions">
