@@ -36,6 +36,7 @@
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { evolutionIcone } from '$lib/evolutions';
 	import { TICKET } from '$lib/entites/ticket';
 	import { sectionPresente } from '$lib/entites/types';
 
@@ -136,7 +137,10 @@
 		<svelte:fragment slot="action">
 			{#if $isCS}
 				<button class="btn btn-outline btn-sm" on:click={() => (ouvert = !ouvert)}>
-					{ouvert ? '✕ Annuler' : '\u{1F4AC} Commenter'}
+					<!--  Le bouton et l'entrée qu'il produit lisent la MÊME table : c'est ce
+					      qui les empêche de diverger, et c'est précisément par là que
+					      l'écart est arrivé (19/08/2026). -->
+					{ouvert ? '✕ Annuler' : `${evolutionIcone('commentaire')} Commenter`}
 				</button>
 			{/if}
 		</svelte:fragment>

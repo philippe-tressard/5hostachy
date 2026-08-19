@@ -14,6 +14,7 @@
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
+	import { evolutionIcone } from '$lib/evolutions';
 	import { stripHtml, perimetreDefautListe } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
@@ -1162,24 +1163,17 @@
 								{/if}
 								<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
 								<small style="color:var(--color-text-muted);font-size:.78rem">Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span></small>
-								{#if evols.length > 0}
-									{@const sorted = [...evols].sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())}
-									<div class="evol-list">
-										{#each sorted as evol, i (evol.id)}
-											{#if i > 0}<hr class="evol-sep" />{/if}
-											<div class="evol-item evol-{evol.type}">
-												<span class="evol-icon">{#if evol.type === 'etat'}🔄{:else if evol.type === 'reponse'}💬{:else}📝{/if}</span>
-												<div class="evol-body">
-													<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
-													{#if evol.type === 'etat'}
-														<span class="evol-text">Statut : <strong>{TK_STATUT_LABELS[evol.ancien_statut ?? ''] || 'Aucun'}</strong> → <strong>{TK_STATUT_LABELS[evol.nouveau_statut ?? ''] || evol.nouveau_statut}</strong></span>
-													{/if}
-													{#if evol.contenu}<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>{/if}
-												</div>
-											</div>
-										{/each}
-									</div>
-								{/if}
+								<!--  🔴 Le fil passe par `RubriqueHistorique`, le composant qui le rend
+								      déjà pour la fiche et la carte d'un ticket. Il était RECOMPOSÉ ici
+								      à la main — même balisage, mêmes classes, et une icône qui avait
+								      divergé : 📝 pour un commentaire, là où le bouton dit « 💬 Commenter »
+								      (signalé à l'écran le 19/08/2026).
+								      Les gestes de correction ne sont PAS proposés ici : cet onglet est une
+								      vue de suivi, la correction se fait depuis la fiche du ticket. -->
+								<RubriqueHistorique
+									evolutions={[...evols].sort((x, y) => new Date(y.cree_le).getTime() - new Date(x.cree_le).getTime())}
+									statutLabels={TK_STATUT_LABELS}
+								/>
 							</div>
 						{/if}
 					</div>
@@ -1853,18 +1847,11 @@
 	}
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); }
 	.rich-content :global(p) { margin: 0 0 .5em; }
-	.evol-list { margin-top: .9rem; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
-	.evol-sep { margin: 0; border: none; border-top: 1px solid var(--color-border); }
-	.evol-item { display: flex; gap: .5rem; padding: .5rem .75rem; font-size: .82rem; }
-	.evol-icon { flex-shrink: 0; font-size: .9rem; margin-top: .1rem; }
-	.evol-body { display: flex; flex-direction: column; gap: .15rem; }
-	.evol-meta { font-size: .75rem; color: var(--color-text-muted); }
-	.evol-text { color: var(--color-text); line-height: 1.5; }
-	.evol-etat { background: #f0f9ff; }
-	.evol-reponse { background: #f0fdf4; }
-	.evol-commentaire { background: #fafafa; }
-	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
-	.evol-content :global(p) { margin: 0 0 .3em; }
+	/*  Les onze règles du FIL sont parties avec lui dans `RubriqueHistorique`
+	    (19/08/2026) : la page le recomposait à la main, jusqu'à l'icône. Les
+	    garder ici en ferait des règles orphelines — la moitié du défaut que
+	    `lint:classes-nues` surveille par l'autre bout. `.evol-form` reste : il
+	    habille le formulaire d'évolution, que cette page ouvre encore. */
 	.evol-form { padding: .25rem 0; }
 	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
 	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
