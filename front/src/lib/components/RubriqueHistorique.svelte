@@ -45,6 +45,7 @@
 	import { safeDescription } from '$lib/sanitize';
 	import { fmtDatetime } from '$lib/date';
 	import { perimetreLabel } from '$lib/perimetres';
+	import { evolutionIcone } from '$lib/evolutions';
 
 	/**  Une entrée du fil. Volontairement structurel et non `TicketEvolution` :
 	     les actualités ont leur propre type d'évolution, et cette rubrique doit
@@ -171,9 +172,13 @@
 		{#each visibles as evol, i (evol.id)}
 			{#if i > 0}<hr class="evol-sep" />{/if}
 			<div class="evol-item evol-{evol.type}">
-				<span class="evol-icon">
-					{#if evol.type === 'etat'}&#x1F504;{:else if evol.type === 'reponse'}&#x1F4AC;{:else}&#x1F4DD;{/if}
-				</span>
+				<!--  🔴 L'icône vient de `$lib/evolutions`, plus d'une chaîne écrite ici.
+				      Elle valait 📝 pour un commentaire alors que le bouton qui le crée
+				      dit « 💬 Commenter » — signalé à l'écran le 19/08/2026 : *« pourquoi
+				      mon commentaire a une icône de type relance ? »*. La bulle était
+				      prise par `reponse`. Le geste et son résultat portent désormais le
+				      même signe. -->
+				<span class="evol-icon">{evolutionIcone(evol.type)}</span>
 				<div class="evol-body">
 					<div class="evol-ligne-meta">
 						<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
