@@ -501,6 +501,14 @@ jobs:
         working-directory: front
         run: npm run lint:classes-nues
 
+      # Un événement Svelte non écouté n'est pas une erreur : c'est un silence.
+      # `evol_annuler` était dispatché, transféré, et traité par personne — le
+      # bouton Annuler ne faisait rien, neuf jours durant (#505). Le relevé qui a
+      # fondé ce contrôle a trouvé TROIS autres gestes morts que rien ne cherchait.
+      - name: Aucun événement dispatché sans personne pour le traiter
+        working-directory: front
+        run: npm run lint:evenements
+
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
       #

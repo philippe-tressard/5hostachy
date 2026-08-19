@@ -93,6 +93,25 @@
 	/** Entrée actuellement ouverte en correction — le parent porte l'état. */
 	export let enEdition: number | null = null;
 
+	/**  🔴 L'écran DÉCLARE qu'il sait effacer. Défaut `false` (#505, 19/08/2026).
+	 *
+	 *   Le bouton 🗑️ ne dépendait que de `estAdmin`. Or ce composant sert CINQ
+	 *   écrans, et seuls les deux du ticket écoutent `on:supprimer` — parce que
+	 *   seuls les tickets ont une route `DELETE /tickets/{id}/evolutions/{evolId}`.
+	 *   Sur le Calendrier, les Actualités et l'Espace CS, tout administrateur
+	 *   voyait donc le bouton, cliquait, et **rien ne se passait** : pas d'action,
+	 *   pas d'erreur, pas de trace.
+	 *
+	 *   Le remède n'est pas d'ajouter trois `on:supprimer` : le geste n'existe pas
+	 *   côté serveur pour ces entités, un écouteur n'aurait rien à appeler. C'est
+	 *   la symétrie exacte de l'interdiction du cadre — **on n'ouvre pas un geste
+	 *   que le serveur ne consomme pas** — appliquée cette fois à un bouton.
+	 *
+	 *   Un écran qui gagnera la capacité passera `avecSuppression` ET écoutera
+	 *   `on:supprimer` : les deux, ou aucun des deux. L'ouverture des routes
+	 *   manquantes (publications, événements) est suivie en #512. */
+	export let avecSuppression = false;
+
 	const dispatch = createEventDispatcher<{ modifier: number; supprimer: number }>();
 
 	//  🔴 Les MÊMES MOTS que le serveur, et dans le même ordre — types puis
@@ -136,7 +155,7 @@
 	 *   mémoire ; une mémoire qui garde des faits inventés vaut moins qu'une mémoire
 	 *   trouée. */
 	function peutEffacer(evol: Entree): boolean {
-		return estAdmin && TYPES_EFFACABLES.includes(evol.type);
+		return avecSuppression && estAdmin && TYPES_EFFACABLES.includes(evol.type);
 	}
 
 	function peutCorriger(evol: Entree): boolean {
