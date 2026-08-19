@@ -29,9 +29,24 @@ from .schemas import FluxItem
 
 #: Évolutions qui produisent une carte « ticket mis à jour » sans changer l'état.
 #: (type en base, préfixe d'identifiant, libellé, icône)
+#:
+#: 🔴 LES ICÔNES SONT CELLES DE `front/src/lib/evolutions.ts`, et elles doivent le
+#: rester. Le 19/08/2026, la même notion était écrite QUATRE fois avec TROIS
+#: valeurs : le bouton disait « 💬 Commenter », les deux fils affichaient 📝, et
+#: cette table 🔧. Signalé à l'écran — *« pourquoi mon commentaire a une icône de
+#: type relance ? »*.
+#:
+#: ⚠️ Front et API ne peuvent pas partager ce fichier : les contextes de build
+#: sont `./api` et `./front`, rien de la racine n'entre dans les images. Les deux
+#: écritures sont donc inévitables — c'est `api/tests/test_icones_evolution.py`
+#: qui les empêche de diverger, pas la bonne volonté.
+#:
+#: Le LIBELLÉ, lui, reste propre à cet écran : « Mise à jour » décrit une carte de
+#: flux, pas une entrée de fil. Ce sont deux rendus du même fait, et seule
+#: l'icône est commune.
 _MISES_A_JOUR = (
-    ("reponse", "tk_rep", "Réponse du CS", "💬"),
-    ("commentaire", "tk_com", "Mise à jour", "🔧"),
+    ("reponse", "tk_rep", "Réponse du CS", "↩️"),
+    ("commentaire", "tk_com", "Mise à jour", "💬"),
 )
 
 
