@@ -126,13 +126,6 @@ export const TOLERANCES = {
 		'déclaré en exception de `lint:formulaires` et de `lint:soumission`, à découper avant',
 
 	//  ── form-actions : la rangée d'actions alignée à droite, à la main ───────
-	'lib/components/OngletWhatsApp.svelte::form-actions':
-		'trois rangées d’actions alignées à la main (l. ~175, ~260, ~286)',
-	'routes/(app)/admin/+page.svelte::form-actions':
-		'neuf rangées d’actions alignées à la main (l. ~1082 à ~1639), dont plusieurs pieds ' +
-		'de modale qui relèvent de `.modal-footer`',
-	'routes/(app)/admin/templates-email/+page.svelte::form-actions':
-		'pied de modale aligné à la main (l. ~192)',
 	'routes/(app)/annuaire/+page.svelte::form-actions':
 		'rangée d’actions alignée à la main (l. ~198)',
 	'routes/(app)/espace-cs/+page.svelte::form-actions':

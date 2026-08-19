@@ -13,6 +13,8 @@ import RichEditor from '$lib/components/RichEditor.svelte';
 import LiensEcransAdmin from '$lib/components/LiensEcransAdmin.svelte';
 import Onglet from '$lib/components/Onglet.svelte';
 import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
+import OngletSmtp from '$lib/components/OngletSmtp.svelte';
+import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
@@ -592,16 +594,7 @@ try {
   const adminCfg = await api.get<Record<string, string>>('/config/admin');
   waApiKeySet = !!(adminCfg['whatsapp_api_key']);
   // SMTP config
-  smtpConfig.enabled = adminCfg['smtp_enabled'] === '1';
-  smtpConfig.server = adminCfg['smtp_server'] ?? '';
-  smtpConfig.port = parseInt(adminCfg['smtp_port'] ?? '587') || 587;
-  smtpConfig.from = adminCfg['smtp_from'] ?? '';
-  smtpConfig.from_name = adminCfg['smtp_from_name'] ?? '';
-  smtpConfig.username = adminCfg['smtp_username'] ?? '';
-  smtpConfig.starttls = adminCfg['smtp_starttls'] !== '0';
-  smtpConfig.ssl_tls = adminCfg['smtp_ssl_tls'] === '1';
-  smtpPasswordSet = !!(adminCfg['smtp_password']);
-  smtpEditingPassword = !smtpPasswordSet;
+  smtpValeurs = adminCfg;
 } catch { /**/ }
 loadBatiments();
 loadComptes();
@@ -639,54 +632,11 @@ async function saveSiteConfig() {
 let waCfgPublique: Record<string, string> = {};
 let waApiKeySet = false;
 
+
 // ── SMTP ────────────────────────────────────────────────────
-let smtpConfig = { enabled: false, server: '', port: 587, from: '', from_name: '', username: '', password: '', starttls: true, ssl_tls: false };
-let smtpSaving = false;
-let smtpPasswordSet = false;
-let smtpEditingPassword = true;
-let smtpTestEmail = '';
-let smtpTesting = false;
-async function saveSmtpConfig() {
-  smtpSaving = true;
-  try {
-    const payload: Record<string, string> = {
-      smtp_enabled: smtpConfig.enabled ? '1' : '0',
-      smtp_server: smtpConfig.server,
-      smtp_port: String(smtpConfig.port),
-      smtp_from: smtpConfig.from,
-      smtp_from_name: smtpConfig.from_name,
-      smtp_username: smtpConfig.username,
-      smtp_starttls: smtpConfig.starttls ? '1' : '0',
-      smtp_ssl_tls: smtpConfig.ssl_tls ? '1' : '0',
-      email_footer: siteConfig.email_footer,
-      reference_copro: siteConfig.reference_copro,
-    };
-    if (smtpConfig.password) payload['smtp_password'] = smtpConfig.password;
-    await configApi.save(payload);
-    if (smtpConfig.password) {
-      smtpPasswordSet = true;
-      smtpEditingPassword = false;
-    }
-    smtpConfig.password = '';
-    toast('success', 'Configuration SMTP enregistrée.');
-  } catch (e: any) {
-    toast('error', e.message ?? 'Erreur');
-  } finally {
-    smtpSaving = false;
-  }
-}
-async function sendSmtpTest() {
-  if (!smtpTestEmail) return;
-  smtpTesting = true;
-  try {
-    await api.post('/config/smtp-test', { email: smtpTestEmail });
-    toast('success', `E-mail de test envoyé à ${smtpTestEmail}`);
-  } catch (e: any) {
-    toast('error', e.message ?? 'Échec de l\'envoi');
-  } finally {
-    smtpTesting = false;
-  }
-}
+// L'onglet vit dans `OngletSmtp.svelte` ; la page ne garde que les valeurs
+// brutes qu'elle a lues, et lui laisse leur interprétation.
+let smtpValeurs: Record<string, string> = {};
 
 // ── Descriptif des pages ──────────────────────────────────────
 // PageDef et la table des pages viennent de la source unique `$lib/pages.ts` (#401).
@@ -1079,7 +1029,7 @@ $: _siteNom = $siteNomStore;
         Cette personne recevra une notification.
       </span>
     </p>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+    <div class="modal-footer">
       <button class="btn btn-outline" on:click={() => (roleEnCours = null)}>Annuler</button>
       <button class="btn btn-primary" on:click={confirmerRole}>Confirmer</button>
     </div>
@@ -1118,7 +1068,7 @@ $: _siteNom = $siteNomStore;
         Compte actif
       </label>
     </div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+    <div class="modal-footer">
       <button class="btn btn-outline" on:click={() => (editUser = null)}>Annuler</button>
       <button class="btn btn-primary" on:click={saveEdit}>Enregistrer</button>
     </div>
@@ -1143,7 +1093,7 @@ $: _siteNom = $siteNomStore;
         <input bind:value={accueilAncienResident} placeholder="Nom de l'ancien occupant…" />
       </label>
     </div>
-    <div class="modal-actions">
+    <div class="modal-footer">
       <button class="btn btn-outline" on:click={() => (accueilModal = null)}>Annuler</button>
       <button class="btn btn-primary" disabled={accueilSubmitting} on:click={confirmerAccueil}>
         {accueilSubmitting ? 'En cours…' : 'Lancer les actions d\'accueil'}
@@ -1162,7 +1112,7 @@ $: _siteNom = $siteNomStore;
       <strong>{deleteConfirm.prenom} {deleteConfirm.nom}</strong> ({deleteConfirm.email}).
       <br /><span style="color:var(--color-danger);font-size:.8rem">Cette action est irréversible.</span>
     </p>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+    <div class="modal-footer">
       <button class="btn btn-outline" on:click={() => (deleteConfirm = null)}>Annuler</button>
       <button class="btn btn-danger" on:click={confirmerDelete}>Supprimer définitivement</button>
     </div>
@@ -1302,10 +1252,10 @@ $: _siteNom = $siteNomStore;
         Actif
       </label>
     </div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+    <div class="modal-footer">
       <button class="btn btn-outline" on:click={() => (emailEdit = null)} disabled={emailSaving}>Annuler</button>
       <button class="btn btn-primary" on:click={saveEmailEdit} disabled={emailSaving}>
-        {emailSaving ? 'Enregistrement...' : 'Enregistrer'}
+        {emailSaving ? 'Enregistrement…' : 'Enregistrer'}
       </button>
     </div>
   </div>
@@ -1344,8 +1294,8 @@ $: _siteNom = $siteNomStore;
 {/if}
 
 {:else if onglet === 'site'}
-<section class="config-section">
-  <h2 class="config-section-title">⚙️ Paramètres généraux</h2>
+<section class="card config-section">
+  <h2 class="config-section-title"><Icon name="settings" size={17} />Paramètres généraux</h2>
   <div class="form-grid" style="max-width:600px">
     <label class="field">
       Nom de la plateforme
@@ -1401,9 +1351,9 @@ $: _siteNom = $siteNomStore;
       <span class="field-hint">Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de secours) lorsqu'un nouveau compte est créé et mis en attente de validation.</span>
     </label>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:.75rem;max-width:600px">
+  <div class="form-actions" style="max-width:600px">
     <button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
-      {siteSaving ? 'Enregistrement...' : 'Enregistrer'}
+      {siteSaving ? 'Enregistrement…' : 'Enregistrer'}
     </button>
   </div>
 
@@ -1482,7 +1432,7 @@ $: _siteNom = $siteNomStore;
             </div>
             {/if}
           </div>
-          <div style="display:flex;justify-content:flex-end;margin-top:.75rem">
+          <div class="form-actions">
             <button class="btn btn-primary btn-sm" on:click={() => savePageConfig(pg)}>Enregistrer</button>
           </div>
         </div>
@@ -1491,20 +1441,20 @@ $: _siteNom = $siteNomStore;
   {/each}
 </div>
 {:else if onglet === 'legal'}
-<section class="config-section">
-  <h2 class="config-section-title">&#x1F4C4; Mentions légales</h2>
+<section class="card config-section">
+  <h2 class="config-section-title"><Icon name="file-text" size={17} />Mentions légales</h2>
   <p class="muted" style="margin-bottom:1rem">Contenu affiché sur <code>/mentions-legales</code>.</p>
   <LegalEditor bind:value={siteConfig.mentions_legales} minHeight="380px" />
 </section>
 <hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-<section class="config-section">
-  <h2 class="config-section-title">&#x1F512; Politique de confidentialité</h2>
+<section class="card config-section">
+  <h2 class="config-section-title"><Icon name="shield" size={17} />Politique de confidentialité</h2>
   <p class="muted" style="margin-bottom:1rem">Contenu affiché sur <code>/politique-de-confidentialite</code>.</p>
   <LegalEditor bind:value={siteConfig.politique_confidentialite} minHeight="380px" />
 </section>
-<div style="display:flex;justify-content:flex-end;margin-top:1rem">
+<div class="form-actions">
   <button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
-    {siteSaving ? 'Enregistrement...' : 'Enregistrer'}
+    {siteSaving ? 'Enregistrement…' : 'Enregistrer'}
   </button>
 </div>
 
@@ -1518,131 +1468,15 @@ $: _siteNom = $siteNomStore;
 />
 
 {:else if onglet === 'smtp'}
-<section class="config-section">
-  <h2 class="config-section-title">✉️ Configuration SMTP (notifications e-mail)</h2>
-  <div class="form-grid largeur-saisie">
-    <label class="field" style="grid-column:span 2">
-      <span class="case">
-        <input type="checkbox" bind:checked={smtpConfig.enabled} />
-        Activer l'envoi d'e-mails
-      </span>
-      <span class="field-hint">Si activé, les notifications (réinitialisation de mot de passe, etc.) seront envoyées par e-mail.</span>
-    </label>
-    <label class="field">
-      Serveur SMTP
-      <input type="text" bind:value={smtpConfig.server} placeholder="smtp.example.com" />
-    </label>
-    <label class="field">
-      Port
-      <input type="number" bind:value={smtpConfig.port} min="1" max="65535" placeholder="587" style="width:100px" />
-    </label>
-    <label class="field">
-      Adresse expéditeur (From)
-      <input type="email" bind:value={smtpConfig.from} placeholder="noreply@example.com" />
-    </label>
-    <label class="field">
-      Nom expéditeur
-      <input type="text" bind:value={smtpConfig.from_name} placeholder="Résidence du Parc" />
-    </label>
-    <label class="field">
-      Nom d'utilisateur SMTP
-      <input type="text" bind:value={smtpConfig.username} placeholder="user@example.com" />
-      <span class="field-hint">Laisser vide si le serveur ne requiert pas d'authentification.</span>
-    </label>
-    <label class="field">
-      Mot de passe SMTP
-      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-        <input
-          type="password"
-          bind:value={smtpConfig.password}
-          autocomplete="new-password"
-          disabled={smtpPasswordSet && !smtpEditingPassword}
-          placeholder={smtpPasswordSet && !smtpEditingPassword ? 'Mot de passe masqué' : 'Nouveau mot de passe SMTP'}
-          style="flex:1;min-width:220px"
-        />
-        {#if smtpPasswordSet && !smtpEditingPassword}
-          <button class="btn btn-outline btn-sm" type="button" on:click={() => { smtpEditingPassword = true; smtpConfig.password = ''; }}>
-            Changer
-          </button>
-        {/if}
-      </div>
-      <span class="field-hint">{smtpPasswordSet ? (smtpEditingPassword ? 'Saisissez le nouveau mot de passe puis cliquez sur Enregistrer.' : 'Mot de passe déjà enregistré. Cliquez sur « Changer » pour le remplacer.') : 'Requis si le serveur exige une authentification.'}</span>
-    </label>
-    <label class="field" style="grid-column:span 2">
-      <span style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
-        <span style="display:flex;align-items:center;gap:.4rem">
-          <input type="checkbox" bind:checked={smtpConfig.starttls} style="width:1rem;height:1rem" />
-          STARTTLS (port 587)
-        </span>
-        <span style="display:flex;align-items:center;gap:.4rem">
-          <input type="checkbox" bind:checked={smtpConfig.ssl_tls} style="width:1rem;height:1rem" />
-          SSL/TLS (port 465)
-        </span>
-      </span>
-      <span class="field-hint">STARTTLS et SSL/TLS sont mutuellement exclusifs. Décocher les deux pour connexion non chiffrée.</span>
-    </label>
-  </div>
-  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.75rem">
-    <button class="btn btn-primary" on:click={saveSmtpConfig} disabled={smtpSaving}>
-      {smtpSaving ? 'Enregistrement...' : 'Enregistrer'}
-    </button>
-  </div>
-  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
-  <div class="largeur-saisie">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">🧪 Tester la configuration</p>
-    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-      <input
-        class="input input-sm"
-        type="email"
-        bind:value={smtpTestEmail}
-        placeholder="destinataire@example.com"
-        style="flex:1;min-width:220px"
-      />
-      <button
-        class="btn btn-outline"
-        on:click={sendSmtpTest}
-        disabled={smtpTesting || !smtpTestEmail}
-      >
-        {smtpTesting ? 'Envoi...' : '📨 Envoyer un e-mail de test'}
-      </button>
-    </div>
-    <p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">Envoie un e-mail de test avec la configuration SMTP actuellement enregistrée en base.</p>
-  </div>
-  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
-  <div class="largeur-saisie">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">✉️ Signature des e-mails</p>
-    <label class="field">
-      <textarea
-        bind:value={siteConfig.email_footer}
-        rows="2"
-        placeholder="— Envoyé depuis 5hostachy.fr"
-        style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace"
-      ></textarea>
-      <span class="field-hint">Texte ajouté automatiquement en bas de chaque e-mail envoyé par la plateforme.</span>
-    </label>
-  </div>
-  <div class="largeur-saisie" style="margin-top:.75rem">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">🏢 Référence copropriété (syndic)</p>
-    <label class="field">
-      <input
-        type="text"
-        bind:value={siteConfig.reference_copro}
-        placeholder="00213"
-        style="max-width:200px"
-      />
-      <span class="field-hint">Référence de la copropriété auprès du syndic. Utilisée en préfixe dans les sujets d'e-mails envoyés au syndic.</span>
-    </label>
-  </div>
-  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.5rem">
-    <button class="btn btn-primary" on:click={saveSmtpConfig} disabled={smtpSaving}>
-      {smtpSaving ? 'Enregistrement...' : 'Enregistrer'}
-    </button>
-  </div>
-</section>
+<OngletSmtp
+  bind:emailFooter={siteConfig.email_footer}
+  bind:referenceCopro={siteConfig.reference_copro}
+  valeurs={smtpValeurs}
+/>
 
 {:else if onglet === 'telemetry'}
-<section class="config-section">
-  <h2 class="config-section-title">📊 Télémétrie — Utilisation de l'application</h2>
+<section class="card config-section">
+  <h2 class="config-section-title"><Icon name="bar-chart-3" size={17} />Télémétrie — Utilisation de l'application</h2>
   <p class="muted" style="font-size:.85rem">Statistiques d'utilisation : qui utilise quoi et quand.</p>
 
   <!-- Sélecteur Jour / Mois / Année -->
@@ -1831,7 +1665,7 @@ $: _siteNom = $siteNomStore;
       </label>
     </div>
     {/if}
-    <div class="modal-actions">
+    <div class="modal-footer">
       <button class="btn btn-outline" on:click={() => (cvModal = null)}>Annuler</button>
       <button class="btn btn-primary" disabled={cvSubmitting} on:click={confirmerCompteValidation}>
         {cvSubmitting ? 'En cours…' : 'Valider le compte'}

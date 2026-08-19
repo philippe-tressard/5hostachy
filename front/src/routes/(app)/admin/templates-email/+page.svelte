@@ -189,7 +189,7 @@
 						{/each}
 					</div>
 				{/if}
-				<div style="display:flex;gap:.5rem;justify-content:flex-end">
+				<div class="form-actions">
 					<button class="btn btn-secondary" on:click={cancelEdit}>Annuler</button>
 					<button class="btn btn-primary" on:click={saveTemplate} disabled={saving}>
 						{saving ? 'Enregistrement…' : 'Enregistrer'}
