@@ -7,6 +7,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import FilAriane from '$lib/components/FilAriane.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
@@ -161,7 +162,8 @@
 
 <svelte:head><title>{sondage ? sondage.question : 'Sondage'} — 5Hostachy</title></svelte:head>
 
-<a href="/sondages" class="back-link">← Communauté</a>
+<FilAriane segments={[{ libelle: 'Communauté', href: '/sondages' }]}
+	courant={sondage?.question ?? 'Sondage'} />
 
 {#if loading}
 	<p style="color:var(--color-text-muted);margin-top:1rem">Chargement…</p>
@@ -369,8 +371,9 @@
 	.champ-titre { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
 	.reponse-saisie { width: 100%; margin-bottom: .35rem; }
 	.aide-reponses { margin: .1rem 0 1rem; font-size: .8rem; color: var(--color-text-muted); }
-	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); text-decoration: none; margin-bottom: .75rem; }
-	.back-link:hover { color: var(--color-primary); }
+	/*  `.back-link` est parti dans `FilAriane` (#365). Il disait « Communauté »
+	    ici et « Retour aux tickets » sur la fiche de ticket : deux pages du même
+	    site, deux conventions, aucune ne nommant la rubrique. */
 	.option-label {
 		display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem;
 		border: 1px solid var(--color-border); border-radius: var(--radius);
