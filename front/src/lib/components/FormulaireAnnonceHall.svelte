@@ -261,8 +261,6 @@
 	/*  Une case et son libellé. Le `width:auto` annule le `width:100%` des champs
 	    de saisie — sans lui, la case s'étire et repousse son texte à l'autre bout
 	    de la ligne (défaut signalé sur le sondage ET l'annonce, 16/08/2026). */
-	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
-	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 	/*  Le filet qui sépare le raccourci de pré-remplissage du formulaire lui-même.
 	    Il était posé en `style=` en ligne — nommé ici, il cesse d'être à réécrire. */
 	.ah-separateur { border: none; border-top: 1px solid var(--color-border); margin: .9rem 0; }

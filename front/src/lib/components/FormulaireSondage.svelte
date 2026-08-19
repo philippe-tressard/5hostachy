@@ -265,7 +265,5 @@
 	    texte à l'autre bout de la ligne. C'est le défaut que l'utilisateur a
 	    signalé sur le sondage ET sur l'annonce le 16/08/2026 — un seul sélecteur,
 	    deux écrans. `npm run lint:styles` le refuse désormais. */
-	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
-	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 	.case-secondaire { padding-left: 1.6rem; font-size: .8rem; color: var(--color-text-muted); }
 </style>

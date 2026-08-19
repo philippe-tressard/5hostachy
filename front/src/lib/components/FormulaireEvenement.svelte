@@ -210,9 +210,7 @@
 	    annuler le `width:100%` des champs de saisie. Nommés ici, ils cessent
 	    d'être à réécrire — c'est la même famille de défaut que le sélecteur nu
 	    qui a étiré les cases de l'écran Communauté (16/08/2026). */
-	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
 	.case + .case { margin-top: .4rem; }
-	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 	.desactive { opacity: .55; cursor: not-allowed; }
 	/*  `.aide-case` est passée dans app.css le 17/08/2026 : FormulaireSondage en
 	    avait besoin, et Svelte scope les styles — la reprendre ici en aurait fait

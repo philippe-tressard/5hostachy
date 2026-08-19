@@ -76,7 +76,7 @@ export const SIGNATURES = [
     locale, deux par un style en ligne — et une cinquième définition allait
     naître au découpage suivant. La norme et sa variante `--defilante` vivent
     maintenant dans `app.css` ; ce qui reste à empêcher, c'est la sixième. */
-export const CLASSES_STRUCTURE = ['field', 'form-actions', 'largeur-saisie', 'filters'];
+export const CLASSES_STRUCTURE = ['field', 'form-actions', 'largeur-saisie', 'filters', 'case'];
 
 /**
  * Tolérances, chacune avec sa raison.

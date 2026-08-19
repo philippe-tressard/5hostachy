@@ -248,6 +248,4 @@
 	    `input, textarea { width: 100% }`, un sélecteur d'ÉLÉMENT nu qui atteignait
 	    aussi les cases à cocher — c'est `npm run lint:styles` qui refuse désormais
 	    ce genre de sélecteur (v2.65.0). */
-	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
-	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 </style>

@@ -162,6 +162,4 @@
 
 	/*  Une case et son libellé, nommés au lieu d'être écrits en `style=` avec un
 	    `width:auto` posé à la main pour annuler le `width:100%` des champs. */
-	.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
-	.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
 </style>
