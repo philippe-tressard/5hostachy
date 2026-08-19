@@ -237,6 +237,38 @@ fois.
   ```
 - `bascule.sh` ne propage jamais un `creds.json` vide vers le peer
 
+#### Lire l’historique des envois — trois verdicts, pas deux (19/08/2026)
+
+`Admin → WhatsApp → Historique des envois` ne dit **pas** « parti / pas parti » :
+il en distingue **trois**, et la nuance est ce qui protège du doublon.
+
+| Verdict | Ce qu’on sait | Rejouable ? |
+|---|---|---|
+| **envoyé** | le serveur WhatsApp a acquitté | — |
+| **incertain** | le message a **pu** être remis | 🔴 **jamais** |
+| **échec** | on sait que rien n’est sorti (connexion refusée, 4xx) | oui, sans risque |
+
+🔴 **« incertain » n’est pas un échec.** Rejouer un envoi dont on ignore le sort
+fabrique un doublon dans le groupe des copropriétaires — et un doublon ne se
+retire pas. C’est le triple envoi du 14/08/2026.
+
+⚠️ **Deux causes très différentes produisent « incertain », et il faut les lire :**
+
+- **« message émis, accusé de réception non observé »** — `sendMessage()` a rendu
+  la main, donc **le message est parti** ; seul l’accusé du serveur WhatsApp a
+  tardé (15 s). Il a très probablement été remis : **vérifier dans WhatsApp avant
+  toute action**, c’est le cas le plus fréquent ;
+- **« réponse 500 du bridge »** — le bridge a échoué en cours de route sans dire
+  de quel côté de l’envoi. Là, on ne sait vraiment pas.
+
+**Why** : jusqu’au 19/08/2026 le bridge répondait `500` dans les DEUX cas — son
+`catch` était commun. L’utilisateur a comparé son fil WhatsApp et l’écran : deux
+messages **remis** (double coche) y figuraient en « incertain — réponse 500 du
+bridge ». Le bridge rend désormais **`202 Accepted`** avec `envoye: true` quand
+le message est parti sans accusé, et l’API le traduit en clair. Verrouillé par
+`api/tests/test_whatsapp_verdict_envoi.py`, qui éprouve les trois verdicts côte
+à côté — un test qui ne vérifierait qu’un seul ne prouverait pas qu’il distingue.
+
 #### Incident du 24/07/2026 — bridge bloqué 2h23, message mensuel manqué
 Le message WhatsApp planifié du 4ᵉ samedi (18h00) a échoué : le bridge était en
 boucle `stream:error conflict:replaced` ininterrompue depuis 14h28, sans jamais
