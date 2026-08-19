@@ -1,10 +1,10 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml, safeDescription } from '$lib/sanitize';
@@ -12,8 +12,9 @@
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
+	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
-	import { stripHtml, fmtMontant, perimetreDefautListe } from '$lib/utils';
+	import { stripHtml, perimetreDefautListe } from '$lib/utils';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
 	import ApercuTicket from '$lib/components/ApercuTicket.svelte';
@@ -21,7 +22,7 @@
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls, MAX_FICHIERS } from '$lib/fichiers';
-	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketActif, estTicketClos } from '$lib/tickets';
+	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketClos } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -57,77 +58,17 @@
 		id: number; numero: string; type: string;
 		etage: number | null; batiment_id: number | null; batiment_nom: string | null;
 	}
-	interface ReportEvenement {
-		id: number;
-		titre: string;
-		description?: string | null;
-		type: string;
-		debut: string;
-		fin?: string | null;
-		perimetre: string;
-		batiment_id?: number | null;
-		auteur_nom?: string | null;
-		cree_le: string;
-		mis_a_jour_le?: string | null;
-		statut_kanban?: string | null;
-		prestataire_nom?: string | null;
-	}
-	interface ReportPrestataire {
-		id: number;
-		nom: string;
-		specialite?: string | null;
-		type_prestataire?: string | null;
-	}
-	interface ReportDevis {
-		id: number;
-		prestataire_id: number;
-		batiment_id?: number | null;
-		perimetre: string;
-		titre: string;
-		date_prestation?: string | null;
-		montant_estime?: number | null;
-		statut: string;
-		frequence_type?: string | null;
-		frequence_valeur?: number | null;
-		notes?: string | null;
-		actif: boolean;
-		affichable: boolean;
-	}
-	interface ReportContrat {
-		id: number;
-		prestataire_id: number;
-		type_equipement: string;
-		libelle: string;
-		numero_contrat?: string | null;
-		date_debut: string;
-		duree_initiale_valeur?: number | null;
-		duree_initiale_unite?: string | null;
-		frequence_type?: string | null;
-		frequence_valeur?: number | null;
-		prochaine_visite?: string | null;
-		actif: boolean;
-	}
-	interface DiagRapport {
-		id: number;
-		titre: string;
-		date_rapport?: string | null;
-	}
-	interface DiagType {
-		id: number;
-		code: string;
-		nom: string;
-		texte_legislatif: string;
-		frequence?: string | null;
-		non_applicable: boolean;
-		rapports: DiagRapport[];
-	}
 
 	// -- Onglet -------------------------------------------------------------
 	let onglet: 'validations' | 'tickets' | 'reporting' | 'annonces-hall' | 'annuaire' = 'validations';
+	/** Vue de reporting demandée par l'URL — c'est `OngletReporting` qui la valide. */
+	let vueReporting: string | null = null;
 	$: trackTabView(onglet);
 
 	// -- Tickets ------------------------------------------------------------
-	let tkList: Ticket[] = [];
+	//  Renommée en extrayant le reporting (#453) : c'est la MÊME liste que lit
+	//  `OngletReporting`, passée en prop plutôt que rechargée de son côté.
+	let tickets: Ticket[] = [];
 	let tkLoading = false;
 	let tkLoaded = false;
 	//  Type élargi : il énumérait les deux états filtrables, une écriture de plus
@@ -141,45 +82,18 @@
 	let tkEditingEvolId: number | null = null;
 	let tkEditEvolSaving = false;
 
-	let reportView: 'kanban' | 'tickets' | 'devis' | 'prestataires' | 'renouvellements' | 'relance' = 'kanban';
-	let reportPeriodDays: 30 | 90 | 365 = 90;
-	let reportingLoading = false;
-	let reportingLoaded = false;
-	let reportDevisList: ReportDevis[] = [];
-	let reportPrestataires: ReportPrestataire[] = [];
-	let reportEvenements: ReportEvenement[] = [];
-	let reportPrintTitle = '';
-	let reportPrestSynth: any = null;
-	let reportPrestSynthLoading = false;
-	let reportPrestSynthId: number | null = null;
-	let relanceList: Ticket[] = [];
-	let relanceDelaiJours = 30;
-	let relanceLoading = false;
-	let relanceLoaded = false;
-	let relanceSelected: Set<number> = new Set();
-	let relanceSending = false;
-	let relanceNonRelancableEditing: number | null = null;
-	let relanceMotifTemp = '';
-	let reportContrats: ReportContrat[] = [];
-	let reportDiagTypes: DiagType[] = [];
-	let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
 
-	const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)', annule: 'Annulé' };
-	const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange', annule: 'badge-gray' };
-	const TYPE_LABELS: Record<string, string> = { travaux: 'Travaux', coupure: 'Coupure', ag: 'AG', maintenance: 'Maintenance', maintenance_recurrente: 'Maintenance récurrente', autre: 'Autre' };
 
 	//  Badges, libellés et options du workflow : `$lib/tickets` (#415).
 	const TK_CAT_ICON: Record<string, string> = { panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}' };
-	const REPORT_DEVIS_LABELS: Record<string, string> = { en_attente: 'En attente', accepte: 'Accepté', realise: 'Réalisé', refuse: 'Refusé' };
-	const REPORT_DEVIS_BADGES: Record<string, string> = { en_attente: 'badge-blue', accepte: 'badge-orange', realise: 'badge-green', refuse: 'badge-gray' };
 
-	$: tkActive = tkList.filter(t => !estTicketClos(t.statut));
+	$: tkActive = tickets.filter(t => !estTicketClos(t.statut));
 	$: tkFiltered = tkActive.filter(t => !tkFilter || t.statut === tkFilter);
-	$: tkPendingCount = tkList.filter(t => t.statut === 'ouvert').length;
+	$: tkPendingCount = tickets.filter(t => t.statut === 'ouvert').length;
 
 	const TK_THREE_YEARS_AGO = new Date();
 	TK_THREE_YEARS_AGO.setFullYear(TK_THREE_YEARS_AGO.getFullYear() - 3);
-	$: tkHistory = tkList
+	$: tkHistory = tickets
 		.filter(t => estTicketClos(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= TK_THREE_YEARS_AGO)
 		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
 	$: tkHistoryByYear = (() => {
@@ -194,355 +108,32 @@
 	let tkHistoryExpanded = false;
 	let tkExpandedYears = new Set<number>();
 
-	function apiMessage(e: unknown, fallback = 'Erreur') {
-		if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: unknown }).message ?? fallback);
-		return fallback;
-	}
-	function daysSince(d: string | null | undefined) {
-		if (!d) return 0;
-		const ts = new Date(d).getTime();
-		if (Number.isNaN(ts)) return 0;
-		return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
-	}
-	function ticketScope(t: Ticket) {
-		return t.auteur_batiment_nom ?? (t.batiment_id ? `Bât. ${t.batiment_id}` : 'Résidence');
-	}
-	function reportPrestataireName(prestataireId: number) {
-		return reportPrestataires.find((p) => p.id === prestataireId)?.nom ?? `Prestataire #${prestataireId}`;
-	}
 
-	/* La classe `print-reporting` vit sur <body> : tant qu'elle y reste, elle
-	   déborde de cette page. Le nettoyage ne peut donc PAS dépendre du chemin
-	   nominal — il était posé après `window.print()`, si bien qu'une exception
-	   levée là le sautait, la classe restait, et la barre de navigation
-	   disparaissait dans TOUTE l'application jusqu'à un rechargement complet
-	   (signalé par l'utilisateur le 04/08/2026 depuis la vue « Relance syndic »).
-	   Même classe que le bridge WhatsApp du 24/07 : une fonction `async` dont
-	   personne n'attrape le rejet meurt sans un mot.
-	   Trois filets désormais, et `restaurer` est idempotente : `afterprint`
-	   (le signal fiable), `finally` (même si `print()` lève), et `onDestroy`
-	   (si on quitte la page avant la fin). */
-	let annulerImpression: (() => void) | null = null;
 
-	async function printReporting(title: string) {
-		if (typeof window === 'undefined' || typeof document === 'undefined') return;
-		const titrePrecedent = document.title;
-		const dateStr = new Date().toISOString().slice(0, 10);
-		const slug = title.replace(/^Reporting CS — /, '').replace(/[^\w\dÀ-ÿ]+/g, '-').replace(/-+$/, '');
-		const titreImpression = `CS-${slug}-${dateStr}`;
 
-		let fait = false;
-		const restaurer = () => {
-			if (fait) return;
-			fait = true;
-			document.body.classList.remove('print-reporting');
-			// Ne rendre le titre que s'il est encore le nôtre : si l'utilisateur a
-			// navigué entre-temps, l'écraser afficherait le titre d'une autre page.
-			if (document.title === titreImpression) document.title = titrePrecedent;
-			window.removeEventListener('afterprint', restaurer);
-			annulerImpression = null;
-		};
-		annulerImpression = restaurer;
 
-		try {
-			reportPrintTitle = title;
-			document.body.classList.add('print-reporting');
-			document.title = titreImpression;
-			await tick();
-			window.addEventListener('afterprint', restaurer);
-			window.print();
-		} catch (e) {
-			toast('error', "Impression impossible — l'affichage a été rétabli.");
-		} finally {
-			// `afterprint` n'est pas garanti partout : filet de sécurité. Volontairement
-			// LONG — un délai court retirerait la classe pendant qu'un aperçu est encore
-			// ouvert et gâcherait la mise en page imprimée. Le retard est sans effet
-			// visible, les règles ci-dessous ne s'appliquant qu'à l'impression.
-			setTimeout(restaurer, 60000);
-		}
-	}
 
-	onDestroy(() => annulerImpression?.());
 
-	async function loadPrestSynthese(prestId: number) {
-		reportPrestSynthId = prestId;
-		reportPrestSynthLoading = true;
-		try {
-			reportPrestSynth = await prestApi.synthese(prestId);
-		} catch { toast('error', 'Erreur chargement synthèse'); reportPrestSynth = null; }
-		finally { reportPrestSynthLoading = false; }
-	}
-	function starsDisplay(note: number): string {
-		const full = Math.round(note);
-		return '★'.repeat(full) + '☆'.repeat(5 - full);
-	}
-	function printCurrentReporting() {
-		const titles: Record<typeof reportView, string> = {
-			kanban: 'Reporting CS — Dossiers AG / CS / Syndic',
-			tickets: 'Reporting CS — Analyse tickets',
-			devis: 'Reporting CS — Devis & interventions',
-			prestataires: 'Reporting CS — Synthèse prestataires',
-			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
-			relance: 'Reporting CS — Relance syndic',
-		};
-		// Rien à imprimer : le dire, plutôt qu'ouvrir la boîte de dialogue sur une
-		// page vide. C'est le cas qu'a rencontré l'utilisateur (04/08/2026) — la vue
-		// « Relance syndic » n'affichait qu'un état vide, sans aucun ticket.
-		if (reportView === 'relance' && !relanceLoading && relanceList.length === 0) {
-			toast('info', 'Aucun ticket syndic en cours — rien à imprimer.');
-			return;
-		}
-		void printReporting(titles[reportView]);
-	}
 
-	/* ── Renouvellements : calculs ──────────────────────────────────────── */
-	const PREAVIS_MOIS = 3;
-	const ANNEE_COURANTE = new Date().getFullYear();
-	const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
-	function contratDateFin(c: ReportContrat): { date: Date; reconduit: boolean } | null {
-		if (!c.date_debut) return null;
-		const d = new Date(c.date_debut);
-		if (c.duree_initiale_valeur && c.duree_initiale_unite) {
-			if (c.duree_initiale_unite === 'ans') d.setFullYear(d.getFullYear() + c.duree_initiale_valeur);
-			else if (c.duree_initiale_unite === 'mois') d.setMonth(d.getMonth() + c.duree_initiale_valeur);
-		} else {
-			// Durée inconnue → reconduction annuelle par défaut
-			d.setFullYear(d.getFullYear() + 1);
-		}
-		const now = new Date();
-		let reconduit = false;
-		while (d <= now) { d.setFullYear(d.getFullYear() + 1); reconduit = true; }
-		return { date: d, reconduit };
-	}
 
-	function contratDatePreavis(dateFin: Date): Date {
-		const d = new Date(dateFin);
-		d.setMonth(d.getMonth() - PREAVIS_MOIS);
-		return d;
-	}
 
-	function contratUrgence(dateFin: Date): 'preavis' | 'annee' | 'futur' {
-		const now = new Date();
-		const preavis = contratDatePreavis(dateFin);
-		if (preavis <= now) return 'preavis';
-		if (dateFin.getFullYear() === ANNEE_COURANTE) return 'annee';
-		// Préavis dans l'année courante même si fin l'année suivante
-		if (preavis.getFullYear() === ANNEE_COURANTE) return 'annee';
-		return 'futur';
-	}
 
-	function diagNextDate(dt: DiagType): Date | null {
-		if (!dt.frequence || dt.non_applicable) return null;
-		const match = dt.frequence.match(/(\d+)/);
-		if (!match) return null;
-		const freqAns = parseInt(match[1]);
-		const lastRapport = dt.rapports.find(r => r.date_rapport);
-		if (!lastRapport || !lastRapport.date_rapport) return null;
-		const d = new Date(lastRapport.date_rapport);
-		d.setFullYear(d.getFullYear() + freqAns);
-		return d;
-	}
 
-	function diagUrgence(nextDate: Date): 'depasse' | 'annee' | 'futur' {
-		const now = new Date();
-		if (nextDate <= now) return 'depasse';
-		if (nextDate.getFullYear() === ANNEE_COURANTE) return 'annee';
-		return 'futur';
-	}
-
-	$: reportKanbanEvents = reportEvenements
-		.filter((ev) => ev.statut_kanban === 'ag' || ev.statut_kanban === 'cs' || ev.statut_kanban === 'syndic' || ev.statut_kanban === 'annule')
-		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));
-	$: reportKanbanByCol = (['ag', 'cs', 'syndic', 'annule'] as const).map((col) => ({
-		col,
-		label: KANBAN_LABELS[col],
-		badge: KANBAN_COLORS[col],
-		items: reportKanbanEvents.filter((ev) => ev.statut_kanban === col),
-	}));
-	$: reportTicketSource = tkList.filter((t) => daysSince(t.cree_le) <= reportPeriodDays);
-	$: reportTicketCategories = Object.entries(reportTicketSource.reduce((acc: Record<string, { total: number; ouverts: number }>, t) => {
-		const key = t.categorie || 'autre';
-		if (!acc[key]) acc[key] = { total: 0, ouverts: 0 };
-		acc[key].total += 1;
-		if (estTicketActif(t.statut)) acc[key].ouverts += 1;
-		return acc;
-	}, {})).map(([categorie, data]) => ({ categorie, ...data })).sort((a, b) => b.total - a.total);
-	$: reportTicketBuildings = Object.entries(reportTicketSource.reduce((acc: Record<string, { total: number; ouverts: number }>, t) => {
-		const key = ticketScope(t);
-		if (!acc[key]) acc[key] = { total: 0, ouverts: 0 };
-		acc[key].total += 1;
-		if (estTicketActif(t.statut)) acc[key].ouverts += 1;
-		return acc;
-	}, {})).map(([batiment, data]) => ({ batiment, ...data })).sort((a, b) => b.total - a.total);
-	$: reportDevisActifs = reportDevisList.filter((d) => d.statut === 'en_attente' || d.statut === 'accepte');
-	$: reportDevisSummary = Object.entries(reportDevisList.reduce((acc: Record<string, number>, d) => {
-		acc[d.statut] = (acc[d.statut] ?? 0) + 1;
-		return acc;
-	}, {})).map(([statut, total]) => ({ statut, total })).sort((a, b) => b.total - a.total);
-
-	/* ── Reactives renouvellements ───────────────────────────────────── */
-	$: contratsAvecFin = reportContrats
-		.map(c => {
-			const result = contratDateFin(c);
-			const fin = result?.date ?? null;
-			const reconduit = result?.reconduit ?? false;
-			const preavis = fin ? contratDatePreavis(fin) : null;
-			const urgence: 'preavis' | 'annee' | 'futur' | 'inconnu' = fin ? contratUrgence(fin) : 'inconnu';
-			const prest = reportPrestataires.find(p => p.id === c.prestataire_id);
-			const noteInfo = reportNoteMoyParPrest.get(c.prestataire_id) ?? null;
-			return { ...c, dateFin: fin as Date | null, datePreavis: preavis, urgence, reconduit, prestataireNom: prest?.nom ?? `#${c.prestataire_id}`, noteMoy: noteInfo?.moy ?? null as number | null, nbNotations: noteInfo?.nb ?? 0 };
-		})
-		.sort((a, b) => {
-			// Tri prioritaire : pire note en premier (null = pas de note = en dernier)
-			const noteA = a.noteMoy ?? 6;
-			const noteB = b.noteMoy ?? 6;
-			if (noteA !== noteB) return noteA - noteB;
-			// Puis par date de fin
-			if (!a.dateFin && !b.dateFin) return 0;
-			if (!a.dateFin) return 1;
-			if (!b.dateFin) return -1;
-			return a.dateFin.getTime() - b.dateFin.getTime();
-		});
-
-	$: contratsAnneeCourante = contratsAvecFin.filter(c => {
-		if (!c.dateFin) return false;
-		// Inclure si la fin OU le préavis tombe dans l'année courante
-		if (c.dateFin.getFullYear() === ANNEE_COURANTE) return true;
-		if (c.datePreavis && c.datePreavis.getFullYear() === ANNEE_COURANTE) return true;
-		return false;
-	});
-
-	$: contratsFuturs = contratsAvecFin.filter(c => c.dateFin && c.urgence === 'futur' && !contratsAnneeCourante.includes(c));
-	$: contratsInconnus = contratsAvecFin.filter(c => c.urgence === 'inconnu');
-
-	$: diagsAvecNext = reportDiagTypes
-		.filter(dt => !dt.non_applicable)
-		.map(dt => {
-			const isPermanent = dt.frequence ? dt.frequence.toLowerCase().includes('permanent') : false;
-			const next = isPermanent ? null : diagNextDate(dt);
-			const urgence: 'depasse' | 'annee' | 'futur' | 'inconnu' = next ? diagUrgence(next) : 'inconnu';
-			const lastRapport = dt.rapports.find(r => r.date_rapport);
-			return { ...dt, nextDate: next as Date | null, urgence, lastRapportDate: lastRapport?.date_rapport ?? null, isPermanent };
-		})
-		.sort((a, b) => {
-			if (!a.nextDate && !b.nextDate) return 0;
-			if (!a.nextDate) return 1;
-			if (!b.nextDate) return -1;
-			return a.nextDate.getTime() - b.nextDate.getTime();
-		});
-
-	$: diagsAvecEcheance = diagsAvecNext.filter(d => d.nextDate !== null);
-	$: diagsSansEcheance = diagsAvecNext.filter(d => d.nextDate === null && !d.isPermanent);
-	$: diagsPermanents = diagsAvecNext.filter(d => d.isPermanent);
-
-	$: diagsParAnnee = (() => {
-		const map = new Map<number, typeof diagsAvecEcheance>();
-		for (const d of diagsAvecEcheance) {
-			const y = d.nextDate!.getFullYear();
-			if (y < ANNEE_COURANTE || y > ANNEE_COURANTE + 10) continue;
-			if (!map.has(y)) map.set(y, []);
-			map.get(y)!.push(d);
-		}
-		return [...map.entries()].sort((a, b) => a[0] - b[0]);
-	})();
-
-	$: renKpiContrats = contratsAnneeCourante.length;
-	$: renKpiPreavis = contratsAvecFin.filter(c => c.urgence === 'preavis' || c.urgence === 'inconnu').length;
-	$: renKpiDiags = diagsAvecNext.filter(d => d.urgence === 'depasse' || d.urgence === 'annee' || d.urgence === 'inconnu').length;
 
 	async function loadTickets() {
 		if (tkLoaded) return;
 		tkLoading = true;
 		try {
-			tkList = await ticketsApi.list();
+			tickets = await ticketsApi.list();
 			tkLoaded = true;
 		} catch { toast('error', 'Erreur chargement tickets'); }
 		finally { tkLoading = false; }
 	}
 
-	async function loadReporting(force = false) {
-		if (reportingLoaded && !force) return;
-		reportingLoading = true;
-		try {
-			await loadTickets();
-			const [devis, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
-				prestApi.devis(), prestApi.list(), calApi.list(),
-				prestApi.contrats(), diagnosticsApi.listTypes(),
-				prestApi.notations()
-			]);
-			reportDevisList = devis as ReportDevis[];
-			reportPrestataires = prestataires as ReportPrestataire[];
-			reportEvenements = evenements as ReportEvenement[];
-			reportContrats = contrats as ReportContrat[];
-			reportDiagTypes = diagTypes as DiagType[];
-			// Calcul note moyenne par prestataire
-			const noteMap = new Map<number, number[]>();
-			for (const n of notations as { prestataire_id: number; note: number }[]) {
-				if (!noteMap.has(n.prestataire_id)) noteMap.set(n.prestataire_id, []);
-				noteMap.get(n.prestataire_id)!.push(n.note);
-			}
-			reportNoteMoyParPrest = new Map();
-			for (const [pid, notes] of noteMap) {
-				reportNoteMoyParPrest.set(pid, { moy: Math.round(notes.reduce((a, b) => a + b, 0) / notes.length * 10) / 10, nb: notes.length });
-			}
-			reportingLoaded = true;
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur chargement reporting'));
-		} finally {
-			reportingLoading = false;
-		}
-	}
-	function refreshReporting() {
-		if (reportView === 'relance') {
-			loadRelanceSyndic(true);
-		} else {
-			loadReporting(true);
-		}
-	}
 
-	async function loadRelanceSyndic(force = false) {
-		if (relanceLoaded && !force) return;
-		relanceLoading = true;
-		try {
-			const resp = await ticketsApi.relanceSyndicList();
-			relanceDelaiJours = resp.delai_jours;
-			relanceList = resp.tickets;
-			// Pré-sélectionner uniquement les tickets éligibles (passé le délai)
-			relanceSelected = new Set(relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours).map(t => t.id));
-			relanceLoaded = true;
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur chargement relances syndic'));
-		} finally {
-			relanceLoading = false;
-		}
-	}
 
-	async function envoiRelance() {
-		const ids = Array.from(relanceSelected);
-		if (ids.length === 0) return;
-		if (!confirm(`Envoyer la relance pour ${ids.length} ticket(s) au syndic ?`)) return;
-		relanceSending = true;
-		try {
-			const res = await ticketsApi.envoiRelance(ids);
-			toast('success', `✅ Relance envoyée à ${res.relance_to}`);
-			await loadRelanceSyndic(true);
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur envoi relance'));
-		} finally {
-			relanceSending = false;
-		}
-	}
 
-	async function saveNonRelancable(t: Ticket, val: boolean, motif: string) {
-		try {
-			await ticketsApi.update(t.id, { non_relancable: val, non_relancable_motif: motif || null });
-			relanceNonRelancableEditing = null;
-			await loadRelanceSyndic(true);
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur mise à jour ticket'));
-		}
-	}
 
 	async function tkToggle(id: number) {
 		if (tkExpandedId === id) { tkExpandedId = null; return; }
@@ -577,7 +168,7 @@
 				fichiers_urls: data.fichiers_urls,
 			});
 			if (data.type === 'etat') {
-				tkList = tkList.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut } : x);
+				tickets = tickets.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut } : x);
 			}
 			await tkLoadEvols(t.id);
 			tkShowForm = null;
@@ -919,15 +510,12 @@
 		// Navigation depuis le dashboard via ?onglet=...&vue=...
 		const params = new URLSearchParams(window.location.search);
 		const pOnglet = params.get('onglet') as typeof onglet | null;
-		const pVue = params.get('vue') as typeof reportView | null;
+		const pVue = params.get('vue');
 		if (pOnglet && ['validations', 'tickets', 'reporting', 'annonces-hall', 'annuaire'].includes(pOnglet)) {
 			onglet = pOnglet;
 			if (onglet === 'annonces-hall') { loadAnnoncesHall(); loadAhPublications(); }
 		}
-		if (pVue && onglet === 'reporting') {
-			reportView = pVue as typeof reportView;
-			loadRelanceSyndic();
-		}
+		if (pVue && onglet === 'reporting') vueReporting = pVue;
 
 		try {
 			const [comptes, commandes, batList, users, lotsData, importsData] = await Promise.all([
@@ -1305,7 +893,7 @@
 		{_pc.onglets?.tickets?.label ?? '\u{1F3AB} Tickets résidence'}
 		{#if tkPendingCount > 0}<span class="badge-count">{tkPendingCount}</span>{/if}
 	</button>
-	<button class="tab-btn" class:active={onglet === 'reporting'} on:click={() => { onglet = 'reporting'; loadReporting(); }}>
+	<button class="tab-btn" class:active={onglet === 'reporting'} on:click={() => (onglet = 'reporting')}>
 		{_pc.onglets?.reporting?.label ?? '\u{1F4CA} Reporting'}
 	</button>
 	<button class="tab-btn" class:active={onglet === 'annonces-hall'} on:click={() => { onglet = 'annonces-hall'; loadAnnoncesHall(); loadAhPublications(); }}>
@@ -1606,662 +1194,12 @@
 	{/if}
 
 {:else if onglet === 'reporting'}
-	<div class="reporting-panel">
-		<div class="reporting-toolbar no-print">
-			<div class="reporting-switch">
-				<button class="pill" class:pill-active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
-					&#x1F4CC; AG / CS / Syndic
-				</button>
-				<button class="pill" class:pill-active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
-					&#x1F4CA; Analyse tickets
-				</button>
-				<button class="pill" class:pill-active={reportView === 'devis'} on:click={() => (reportView = 'devis')}>
-					&#x1F4CB; Devis & interventions
-				</button>
-				<button class="pill" class:pill-active={reportView === 'prestataires'} on:click={() => (reportView = 'prestataires')}>
-					&#x1F3E2; Prestataires
-				</button>
-				<button class="pill" class:pill-active={reportView === 'renouvellements'} on:click={() => (reportView = 'renouvellements')}>
-					&#x1F4C5; Renouvellements
-				</button>
-				<button class="pill" class:pill-active={reportView === 'relance'} on:click={() => { reportView = 'relance'; loadRelanceSyndic(); }}>
-					&#x1F514; Relance syndic
-				</button>
-			</div>
-			<div class="reporting-actions">
-				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportView === 'relance' ? relanceLoading : reportingLoading} title="Rafraîchir les données">
-					&#x1F504;{(reportView === 'relance' ? relanceLoading : reportingLoading) ? ' …' : ''}
-				</button>
-				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
-					&#x1F5A8; Imprimer / PDF
-				</button>
-			</div>
-		</div>
-
-		<div class="reporting-print-header">
-			<h2>{reportPrintTitle || (_pc.onglets?.reporting?.label ?? 'Reporting')}</h2>
-			<p>Édité le {fmtDatetime(new Date().toISOString())}</p>
-		</div>
-
-		{#if reportingLoading}
-			<p style="color:var(--color-text-muted)">Chargement des reportings…</p>
-		{:else if reportView === 'kanban'}
-			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card"><div class="kpi-value">{reportKanbanEvents.filter(ev => ev.statut_kanban !== 'annule').length}</div><div class="kpi-label">Dossiers en cours</div></div>
-				{#each reportKanbanByCol as col}
-					<div class="kpi-card"><div class="kpi-value">{col.items.length}</div><div class="kpi-label">{col.label}</div></div>
-				{/each}
-			</div>
-			{#each reportKanbanByCol as col}
-				<section class="report-card" style="margin-bottom:1.5rem">
-					<h3><span class="badge {col.badge}">{col.label}</span> — {col.items.length} dossier{col.items.length > 1 ? 's' : ''}</h3>
-					{#if col.items.length === 0}
-						<div class="empty-state"><h3>Aucun dossier dans cette colonne</h3></div>
-					{:else}
-						<div class="report-table-wrap">
-							<table class="report-table">
-								<thead>
-									<tr>
-										<th>Événement</th>
-										<th>Contexte</th>
-										<th>Dates</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each col.items as ev (ev.id)}
-										<tr>
-											<td>
-												<strong class="report-event-title">{ev.titre}</strong>
-												{#if ev.description}
-													<div class="report-event-desc rich-content">{@html safeDescription(ev.description)}</div>
-												{/if}
-											</td>
-											<td>
-												<div>{TYPE_LABELS[ev.type] ?? ev.type}</div>
-												{#if ev.prestataire_nom}<div class="text-muted-sm">{ev.prestataire_nom}</div>{/if}
-												<div class="text-muted-sm">{ev.perimetre}{#if ev.batiment_id} · Bât. {ev.batiment_id}{/if}</div>
-												{#if ev.auteur_nom}<div class="text-muted-sm">Par {ev.auteur_nom}</div>{/if}
-											</td>
-											<td>
-												<div>Créé le {fmtDate(ev.cree_le)}</div>
-												<div>{daysSince(ev.cree_le)} jour(s)</div>
-												<div class="text-muted-sm">MAJ : {fmtDate(ev.mis_a_jour_le ?? ev.cree_le)}</div>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</section>
-			{/each}
-
-		{:else if reportView === 'tickets'}
-			<div class="reporting-toolbar no-print" style="margin-top:0;margin-bottom:1rem">
-				<div class="reporting-switch">
-					<button class="pill" class:pill-active={reportPeriodDays === 30} on:click={() => (reportPeriodDays = 30)}>30 jours</button>
-					<button class="pill" class:pill-active={reportPeriodDays === 90} on:click={() => (reportPeriodDays = 90)}>90 jours</button>
-					<button class="pill" class:pill-active={reportPeriodDays === 365} on:click={() => (reportPeriodDays = 365)}>12 mois</button>
-				</div>
-			</div>
-
-			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card"><div class="kpi-value">{reportTicketSource.length}</div><div class="kpi-label">Tickets sur la période</div></div>
-				<div class="kpi-card"><div class="kpi-value">{reportTicketSource.filter((t) => t.categorie === 'urgence').length}</div><div class="kpi-label">Urgences</div></div>
-				<div class="kpi-card"><div class="kpi-value">{reportTicketBuildings.length}</div><div class="kpi-label">Périmètres / bâtiments touchés</div></div>
-			</div>
-
-			<div class="report-grid-2">
-				<section class="report-card">
-					<h3>Répartition par catégorie</h3>
-					<div class="report-table-wrap">
-						<table class="report-table compact">
-							<thead><tr><th>Catégorie</th><th>Total</th><th>Ouverts / en cours</th></tr></thead>
-							<tbody>
-								{#each reportTicketCategories as row}
-									<tr><td>{row.categorie}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				</section>
-
-				<section class="report-card">
-					<h3>Répartition par bâtiment / périmètre</h3>
-					<div class="report-table-wrap">
-						<table class="report-table compact">
-							<thead><tr><th>Bâtiment / périmètre</th><th>Total</th><th>Ouverts / en cours</th></tr></thead>
-							<tbody>
-								{#each reportTicketBuildings as row}
-									<tr><td>{row.batiment}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				</section>
-			</div>
-
-		{:else if reportView === 'devis'}
-			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card"><div class="kpi-value">{reportDevisActifs.length}</div><div class="kpi-label">Devis / interventions actifs</div></div>
-				<div class="kpi-card"><div class="kpi-value">{reportDevisList.filter((d) => d.statut === 'en_attente').length}</div><div class="kpi-label">En attente</div></div>
-				<div class="kpi-card"><div class="kpi-value">{reportDevisList.filter((d) => d.statut === 'accepte').length}</div><div class="kpi-label">Acceptés non clos</div></div>
-			</div>
-
-			<div class="report-grid-2 report-grid-2-wide">
-				<section class="report-card">
-					<h3>Suivi des devis et interventions</h3>
-					{#if reportDevisActifs.length === 0}
-						<div class="empty-state"><h3>Aucun devis actif</h3></div>
-					{:else}
-						<div class="report-table-wrap">
-							<table class="report-table">
-								<thead>
-									<tr>
-										<th>Objet</th>
-										<th>Prestataire</th>
-										<th>Périmètre</th>
-										<th>Échéance</th>
-										<th>Montant</th>
-										<th>Statut</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each reportDevisActifs as d}
-										<tr>
-											<td><strong>{d.titre}</strong>{#if d.frequence_type && d.frequence_valeur}<br /><span class="text-muted-sm">Récurrent : {d.frequence_valeur} {d.frequence_type}</span>{/if}</td>
-											<td>{reportPrestataireName(d.prestataire_id)}</td>
-											<td>{d.perimetre}{#if d.batiment_id}<br /><span class="text-muted-sm">Bât. {d.batiment_id}</span>{/if}</td>
-											<td>{d.date_prestation ? fmtDate(d.date_prestation) : 'Non planifiée'}</td>
-											<td>{fmtMontant(d.montant_estime)}</td>
-											<td><span class="badge {REPORT_DEVIS_BADGES[d.statut] ?? 'badge-gray'}">{REPORT_DEVIS_LABELS[d.statut] ?? d.statut}</span></td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</section>
-
-				<section class="report-card">
-					<h3>Répartition par statut</h3>
-					<div class="report-table-wrap">
-						<table class="report-table compact">
-							<thead><tr><th>Statut</th><th>Total</th></tr></thead>
-							<tbody>
-								{#each reportDevisSummary as row}
-									<tr><td>{REPORT_DEVIS_LABELS[row.statut] ?? row.statut}</td><td>{row.total}</td></tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				</section>
-			</div>
-
-		{:else if reportView === 'prestataires'}
-			<!-- ── Synthèse prestataires ─────────────────────────────────────────── -->
-			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card"><div class="kpi-value">{reportPrestataires.length}</div><div class="kpi-label">Prestataires actifs</div></div>
-				<div class="kpi-card"><div class="kpi-value">{reportDevisList.filter(d => d.statut === 'realise').length}</div><div class="kpi-label">Prestations réalisées</div></div>
-			</div>
-			<div class="report-table-wrap" style="margin-bottom:1.5rem">
-				<table class="report-table">
-					<thead>
-						<tr>
-							<th>Prestataire</th>
-							<th>Spécialité</th>
-							<th>Type</th>
-							<th>Devis actifs</th>
-							<th>Réalisés</th>
-							<th>Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each reportPrestataires as p (p.id)}
-							{@const pDevis = reportDevisList.filter(d => d.prestataire_id === p.id)}
-							{@const pActifs = pDevis.filter(d => d.statut === 'en_attente' || d.statut === 'accepte').length}
-							{@const pRealises = pDevis.filter(d => d.statut === 'realise').length}
-							<tr>
-								<td><strong>{p.nom}</strong></td>
-								<td>{p.specialite ?? '—'}</td>
-								<td>{p.type_prestataire ?? '—'}</td>
-								<td>{pActifs}</td>
-								<td>{pRealises}</td>
-								<td><button class="btn btn-sm btn-outline" on:click={() => loadPrestSynthese(p.id)}>Fiche synthèse</button></td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-
-			<!-- Fiche synthèse prestataire (modale inline) -->
-			{#if reportPrestSynthLoading}
-				<p style="color:var(--color-text-muted)">Chargement synthèse…</p>
-			{:else if reportPrestSynth}
-				<section class="report-card" style="margin-bottom:1.5rem">
-					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-						<h3 style="margin:0">&#x1F4C4; Fiche — {reportPrestSynth.nom}</h3>
-						<button class="btn btn-sm btn-outline" on:click={() => { reportPrestSynth = null; reportPrestSynthId = null; }}>✕ Fermer</button>
-					</div>
-					<div class="report-grid-2" style="margin-bottom:1rem">
-						<div>
-							<p><strong>Spécialité :</strong> {reportPrestSynth.specialite}</p>
-							<p><strong>Type :</strong> {reportPrestSynth.type_prestataire}</p>
-							{#if reportPrestSynth.email}<p><strong>Email :</strong> {reportPrestSynth.email}</p>{/if}
-							{#if reportPrestSynth.contacts && reportPrestSynth.contacts.length > 0}
-								<p><strong>Contacts :</strong></p>
-								{#each reportPrestSynth.contacts as c}
-									<p style="margin-left:1rem">📞 {c.telephone ?? '—'}{#if c.prenom || c.nom} — {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction} ({c.fonction}){/if}{#if c.email} · {c.email}{/if}</p>
-								{/each}
-							{/if}
-						</div>
-						<div>
-							<p><strong>Contrats actifs :</strong> {reportPrestSynth.nb_contrats}</p>
-							<p><strong>Devis / prestations :</strong> {reportPrestSynth.nb_devis}</p>
-							<p><strong>Note moyenne :</strong> {reportPrestSynth.note_moyenne != null ? `${starsDisplay(reportPrestSynth.note_moyenne)} ${reportPrestSynth.note_moyenne}/5 (${reportPrestSynth.nb_notations} avis)` : 'Aucune notation'}</p>
-							{#if reportPrestSynth.prochaines_visites && reportPrestSynth.prochaines_visites.length > 0}
-								<p><strong>Prochaines visites :</strong></p>
-								{#each reportPrestSynth.prochaines_visites as v}
-									<p style="margin-left:1rem">📅 {fmtDate(v.date)} — {v.contrat}</p>
-								{/each}
-							{/if}
-						</div>
-					</div>
-					{#if reportPrestSynth.notations && reportPrestSynth.notations.length > 0}
-						<h4 style="font-size:.9rem;font-weight:600;margin:1rem 0 .5rem">Historique des notations</h4>
-						<div class="report-table-wrap">
-							<table class="report-table compact">
-								<thead><tr><th>Date</th><th>Note</th><th>Commentaire</th><th>Par</th></tr></thead>
-								<tbody>
-									{#each reportPrestSynth.notations as n}
-										<tr>
-											<td>{fmtDate(n.cree_le)}</td>
-											<td style="color:#f59e0b">{starsDisplay(n.note)} {n.note}/5</td>
-											<td>{n.commentaire ?? '—'}</td>
-											<td>{n.auteur_nom}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-					{#if reportPrestSynth.devis && reportPrestSynth.devis.length > 0}
-						<h4 style="font-size:.9rem;font-weight:600;margin:1rem 0 .5rem">Devis & prestations</h4>
-						<div class="report-table-wrap">
-							<table class="report-table compact">
-								<thead><tr><th>Objet</th><th>Statut</th><th>Date</th><th>Montant</th></tr></thead>
-								<tbody>
-									{#each reportPrestSynth.devis as d}
-										<tr>
-											<td>{d.titre}</td>
-											<td><span class="badge {REPORT_DEVIS_BADGES[d.statut] ?? 'badge-gray'}">{REPORT_DEVIS_LABELS[d.statut] ?? d.statut}</span></td>
-											<td>{d.date_prestation ? fmtDate(d.date_prestation) : '—'}</td>
-											<td>{fmtMontant(d.montant_estime)}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-					{#if reportPrestSynth.contrats && reportPrestSynth.contrats.length > 0}
-						<h4 style="font-size:.9rem;font-weight:600;margin:1rem 0 .5rem">Contrats</h4>
-						<div class="report-table-wrap">
-							<table class="report-table compact">
-								<thead><tr><th>Libellé</th><th>Équipement</th><th>Début</th><th>Prochaine visite</th></tr></thead>
-								<tbody>
-									{#each reportPrestSynth.contrats as c}
-										<tr>
-											<td>{c.libelle}</td>
-											<td>{c.type_equipement}</td>
-											<td>{fmtDate(c.date_debut)}</td>
-											<td>{c.prochaine_visite ? fmtDate(c.prochaine_visite) : '—'}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</section>
-			{/if}
-
-		{:else if reportView === 'renouvellements'}
-			<!-- ── Renouvellement contrats & audits ──────────────────────────── -->
-			<div class="kpi-row" style="margin-bottom:1rem">
-				<div class="kpi-card" class:kpi-alert={renKpiPreavis > 0}>
-					<div class="kpi-value">{renKpiPreavis}</div>
-					<div class="kpi-label">Contrats en préavis</div>
-				</div>
-				<div class="kpi-card">
-					<div class="kpi-value">{renKpiContrats}</div>
-					<div class="kpi-label">Échéances contrats en {ANNEE_COURANTE}</div>
-				</div>
-				<div class="kpi-card" class:kpi-alert={renKpiDiags > 0}>
-					<div class="kpi-value">{renKpiDiags}</div>
-					<div class="kpi-label">Audits à (re)planifier</div>
-				</div>
-			</div>
-
-			<!-- Section 1 : Frise contrats -->
-			<section class="report-card" style="margin-bottom:1.5rem">
-				<h3>📋 Contrats prestataires — échéances {ANNEE_COURANTE}</h3>
-				<p class="report-intro">Contrats dont la fin ou le préavis tombe en {ANNEE_COURANTE}. La zone hachurée indique la période de préavis ({PREAVIS_MOIS} mois).</p>
-
-				{#if contratsAnneeCourante.length === 0}
-					<div class="empty-state"><h3>Aucune échéance de contrat en {ANNEE_COURANTE}</h3></div>
-				{:else}
-					<div class="frise-container">
-						<div class="frise-months">
-							{#each MOIS_LABELS as m}<div class="frise-month-label">{m}</div>{/each}
-						</div>
-						{#each contratsAnneeCourante.filter((x): x is typeof x & { dateFin: Date } => !!x.dateFin) as c (c.id)}
-							{@const finDansAnnee = c.dateFin.getFullYear() === ANNEE_COURANTE}
-							{@const moisFin = finDansAnnee ? c.dateFin.getMonth() : 11.9}
-							{@const moisPreavis = c.datePreavis && c.datePreavis.getFullYear() < ANNEE_COURANTE ? 0 : (c.datePreavis?.getMonth() ?? 0)}
-							{@const barStart = Math.max(0, moisPreavis)}
-							{@const barEnd = moisFin}
-							{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
-							{@const finPos = finDansAnnee ? ((moisFin + 0.5) / 12) * 100 : 99}
-							{@const friseStyle = c.reconduit ? 'reconduit' : c.urgence}
-							<div class="frise-row-v2">
-								<div class="frise-row-header">
-									<div class="frise-row-title">
-										<strong>{c.libelle}</strong>
-										<span class="text-muted-sm">{c.prestataireNom}</span>
-										<span class="text-muted-sm">· {c.type_equipement}</span>
-										{#if c.numero_contrat}<span class="text-muted-sm">· N° {c.numero_contrat}</span>{/if}
-										{#if c.noteMoy != null}
-											<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4} title="{c.noteMoy}/5 ({c.nbNotations} avis)">{starsDisplay(c.noteMoy)} {c.noteMoy}</span>
-										{/if}
-									</div>
-									<div class="frise-row-badges">
-										{#if c.urgence === 'preavis'}<span class="badge badge-orange">Préavis en cours</span>
-										{:else}<span class="badge badge-blue">Actif</span>
-										{/if}
-										{#if c.reconduit}<span class="badge badge-purple">♻ Reconduit</span>{/if}
-										<span class="frise-row-dates">
-											{fmtDate(c.date_debut)} → {fmtDate(c.dateFin.toISOString())}
-											{#if c.datePreavis}· préavis dès {fmtDate(c.datePreavis.toISOString())}{/if}
-										</span>
-									</div>
-								</div>
-								<div class="frise-bar-track">
-									{#if preavisWidth > 0}
-										<div class="frise-preavis-zone frise-urgence-{friseStyle}" style="left:{(barStart/12)*100}%;width:{preavisWidth}%"></div>
-									{/if}
-									{#if finDansAnnee}
-										<div class="frise-marker frise-marker-{friseStyle}" style="left:{finPos}%" title="Fin : {fmtDate(c.dateFin.toISOString())}">
-											<span class="frise-marker-label">{c.dateFin.getDate()}/{c.dateFin.getMonth()+1}</span>
-										</div>
-									{:else}
-										<div class="frise-marker frise-marker-{friseStyle}" style="left:98%;opacity:.7" title="Fin : {fmtDate(c.dateFin.toISOString())} ({c.dateFin.getFullYear()})">
-											<span class="frise-marker-label">→ {c.dateFin.getFullYear()}</span>
-										</div>
-									{/if}
-								</div>
-							</div>
-						{/each}
-						<div class="frise-legend">
-							<span><span class="frise-legend-dot" style="background:#dc2626"></span> Préavis en cours</span>
-							<span><span class="frise-legend-dot" style="background:#f59e0b"></span> Expire cette année</span>
-							<span><span class="frise-legend-dot" style="background:#8b5cf6"></span> Reconduit tacitement</span>
-							<span class="frise-legend-hatch">▧ Zone de préavis</span>
-							<span style="font-size:.75rem;color:var(--color-text-muted)">→ Fin en {ANNEE_COURANTE + 1}</span>
-						</div>
-					</div>
-				{/if}
-
-				<!-- Contrats futurs (hors exercice courant) -->
-				{#if contratsFuturs.length > 0}
-					<div style="margin-top:1.2rem">
-						<h4 style="font-size:.9rem;font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)">📅 Échéances futures ({contratsFuturs.length})</h4>
-						<div class="frise-compact-list">
-							{#each contratsFuturs as c (c.id)}
-								<div class="frise-compact-item">
-									<div class="frise-compact-info">
-										<strong>{c.libelle}</strong>
-										<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}</span>
-									</div>
-									<div class="frise-compact-meta">
-										{#if c.noteMoy != null}<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4}>{starsDisplay(c.noteMoy)} {c.noteMoy}</span>{/if}
-										<span>Fin : {c.dateFin ? fmtDate(c.dateFin.toISOString()) : 'N/A'}</span>
-										<span>Préavis : {c.datePreavis ? fmtDate(c.datePreavis.toISOString()) : 'N/A'}</span>
-										{#if c.reconduit}<span class="badge badge-purple">♻ Reconduit</span>{/if}
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
-				<!-- Contrats sans dates -->
-				{#if contratsInconnus.length > 0}
-					<div style="margin-top:1.2rem">
-						<h4 style="font-size:.9rem;font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)">⚠️ Dates manquantes ({contratsInconnus.length})</h4>
-						<div class="frise-compact-list">
-							{#each contratsInconnus as c (c.id)}
-								<div class="frise-compact-item">
-									<div class="frise-compact-info">
-										<strong>{c.libelle}</strong>
-										<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}{#if c.numero_contrat} · N° {c.numero_contrat}{/if}</span>
-									</div>
-									<div class="frise-compact-meta">
-										{#if c.noteMoy != null}<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4}>{starsDisplay(c.noteMoy)} {c.noteMoy}</span>{/if}
-										<span>Début : {c.date_debut ? fmtDate(c.date_debut) : 'N/A'}</span>
-										<span class="badge badge-gray">Durée non renseignée</span>
-									</div>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</section>
-
-			<!-- Section 2 : Diagnostics et Contrôles Réglementaires -->
-			<section class="report-card">
-				<h3>🔍 Diagnostics et Contrôles Réglementaires — {ANNEE_COURANTE}–{ANNEE_COURANTE + 10}</h3>
-				<p class="report-intro">Échéances issues de Résidence / Diagnostics et Contrôles Réglementaires, calculées depuis le dernier rapport + fréquence légale.</p>
-
-				{#if diagsAvecNext.length === 0}
-					<div class="empty-state"><h3>Aucun diagnostic applicable</h3><p>Tous les diagnostics sont non applicables.</p></div>
-				{:else}
-					<!-- Grille par année -->
-					{#each diagsParAnnee as [annee, diags]}
-						<div class="audit-year-group" class:audit-year-current={annee === ANNEE_COURANTE}>
-							<h4 class="audit-year-title">
-								{annee}
-								<span class="badge {annee === ANNEE_COURANTE ? 'badge-orange' : 'badge-blue'}">{diags.length} audit{diags.length > 1 ? 's' : ''}</span>
-							</h4>
-							<div class="report-table-wrap">
-								<table class="report-table compact">
-									<thead>
-										<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Prochaine échéance</th><th>Statut</th></tr>
-									</thead>
-									<tbody>
-										{#each diags as d (d.id)}
-											<tr>
-												<td><strong>{d.nom}</strong></td>
-												<td>{d.code}</td>
-												<td>{d.frequence ?? 'N/A'}</td>
-												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
-												<td>{d.nextDate ? fmtDate(d.nextDate.toISOString()) : 'N/A'}</td>
-												<td>
-													{#if d.urgence === 'depasse'}<span class="badge badge-red">Dépassé</span>
-													{:else if d.urgence === 'annee'}<span class="badge badge-orange">À faire en {ANNEE_COURANTE}</span>
-													{:else}<span class="badge badge-blue">{annee}</span>
-													{/if}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						</div>
-					{/each}
-
-					<!-- Diagnostics permanents -->
-					{#if diagsPermanents.length > 0}
-						<div class="audit-year-group" style="margin-top:1rem">
-							<h4 class="audit-year-title">
-								Permanent
-								<span class="badge badge-blue">{diagsPermanents.length}</span>
-							</h4>
-							<p class="report-intro">Diagnostics à validité permanente (sauf si révision nécessaire).</p>
-							<div class="report-table-wrap">
-								<table class="report-table compact">
-									<thead>
-										<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Statut</th></tr>
-									</thead>
-									<tbody>
-										{#each diagsPermanents as d (d.id)}
-											<tr>
-												<td><strong>{d.nom}</strong></td>
-												<td>{d.code}</td>
-												<td>{d.frequence ?? 'N/A'}</td>
-												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
-												<td><span class="badge badge-green">✓ Permanent</span></td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						</div>
-					{/if}
-
-					<!-- Diagnostics sans échéance calculable -->
-					{#if diagsSansEcheance.length > 0}
-						<div class="audit-year-group" style="margin-top:1rem">
-							<h4 class="audit-year-title">
-								Sans échéance calculable
-								<span class="badge badge-gray">{diagsSansEcheance.length}</span>
-							</h4>
-							<p class="report-intro">Diagnostics sans rapport initial ou sans fréquence définie.</p>
-							<div class="report-table-wrap">
-								<table class="report-table compact">
-									<thead>
-										<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Statut</th></tr>
-									</thead>
-									<tbody>
-										{#each diagsSansEcheance as d (d.id)}
-											<tr>
-												<td><strong>{d.nom}</strong></td>
-												<td>{d.code}</td>
-												<td>{d.frequence ?? 'N/A'}</td>
-												<td>{d.lastRapportDate ? fmtDate(d.lastRapportDate) : 'N/A'}</td>
-												<td>
-													{#if d.rapports.length === 0}<span class="badge badge-gray">Aucun rapport</span>
-													{:else}<span class="badge badge-gray">À planifier</span>
-													{/if}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						</div>
-					{/if}
-				{/if}
-			</section>
-		<!-- ══ RELANCE SYNDIC ══════════════════════════════════════════════ -->
-		{:else if reportView === 'relance'}
-		{#if relanceLoading}
-			<p style="color:var(--color-text-muted)">Chargement…</p>
-		{:else if relanceList.length === 0}
-			<div class="empty-state">
-				<h3>✅ Aucun ticket syndic en cours</h3>
-				<p>Aucun ticket adressé au syndic n'est actuellement ouvert ou en cours.</p>
-			</div>
-		{:else}
-			{@const eligibles = relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
-			{@const enAttente = relanceList.filter(t => daysSince(t.mis_a_jour_le) < relanceDelaiJours)}
-			<section class="report-card" style="margin-bottom:1.5rem">
-				<h3>🔔 Tickets syndic — suivi des relances</h3>
-				<p class="report-intro">
-					{relanceList.length} ticket(s) adressé(s) au syndic en cours.
-					{#if eligibles.length > 0}
-						<strong>{eligibles.length} éligible(s) à la relance</strong> (sans modification depuis plus de {relanceDelaiJours} jours).
-					{:else}
-						Aucun ticket ne dépasse le délai de {relanceDelaiJours} jours pour l'instant.
-					{/if}
-				</p>
-
-				<div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
-					{#each relanceList as t (t.id)}
-						{@const jours = daysSince(t.mis_a_jour_le)}
-						{@const eligible = jours >= relanceDelaiJours}
-						{@const selected = relanceSelected.has(t.id)}
-						{@const isEditingMotif = relanceNonRelancableEditing === t.id}
-						<div class="relance-item" class:relance-item-unselected={!selected} class:relance-item-pending={!eligible}>
-							<div class="relance-item-top">
-								<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0">
-									<input type="checkbox" checked={selected}
-										on:change={() => {
-											const s = new Set(relanceSelected);
-											if (s.has(t.id)) s.delete(t.id); else s.add(t.id);
-											relanceSelected = s;
-										}} />
-									<span class="relance-numero">{t.numero}</span>
-									<span class="relance-titre">{t.titre}</span>
-								</label>
-								<div class="relance-item-right">
-									{#if eligible}
-										{#if (t.relance_count ?? 0) > 0}
-											<span class="badge badge-red">Relance n°{(t.relance_count ?? 0) + 1}</span>
-										{:else}
-											<span class="badge badge-orange">1ère relance</span>
-										{/if}
-										<span class="relance-date relance-date-overdue" title="Dernière modification">{jours}j sans modif.</span>
-									{:else}
-										<span class="badge badge-gray">En attente</span>
-										<span class="relance-date" title="Dernière modification">{jours}j / {relanceDelaiJours}j</span>
-									{/if}
-								</div>
-							</div>
-							<!-- Tag non-relançable -->
-							<div class="relance-item-meta">
-								<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
-								<span class="badge badge-gray">{t.categorie}</span>
-								{#if t.non_relancable}
-									<span class="badge badge-red">🚫 Non relançable{t.non_relancable_motif ? ` — ${t.non_relancable_motif}` : ''}</span>
-								{/if}
-								{#if !isEditingMotif}
-									<!-- Libellé à l'infinitif : posé au milieu des badges d'état, « Non
-									     relançable » se lisait comme un ÉTAT alors que c'est l'ACTION de
-									     le poser. Les sept lignes l'affichaient sans qu'aucun ticket ne
-									     le soit (signalé le 04/08/2026). -->
-									<button class="btn-icon relance-tag-action no-print" title={t.non_relancable ? 'Retirer le tag non-relançable' : 'Marquer comme non-relançable'}
-										on:click={() => {
-											if (t.non_relancable) {
-												saveNonRelancable(t, false, '');
-											} else {
-												relanceNonRelancableEditing = t.id;
-												relanceMotifTemp = t.non_relancable_motif ?? '';
-											}
-										}}>
-										{t.non_relancable ? '✅ Réactiver' : '🚫 Marquer non relançable'}
-									</button>
-								{:else}
-									<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-										<input type="text" placeholder="Motif (optionnel)" bind:value={relanceMotifTemp}
-											style="font-size:.8rem;padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px" />
-										<button class="btn btn-sm btn-primary" on:click={() => saveNonRelancable(t, true, relanceMotifTemp)}>Confirmer</button>
-										<button class="btn btn-sm btn-outline" on:click={() => relanceNonRelancableEditing = null}>Annuler</button>
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-
-				<div class="no-print" style="display:flex;justify-content:flex-end">
-					<button class="btn btn-primary" disabled={relanceSending || relanceSelected.size === 0}
-						on:click={envoiRelance}>
-						{relanceSending ? '…' : `📧 Envoyer la relance (${relanceSelected.size} ticket${relanceSelected.size > 1 ? 's' : ''})`}
-					</button>
-				</div>
-			</section>
-		{/if}
-		{/if}
-	</div>
+	<OngletReporting
+		{tickets}
+		chargerTickets={loadTickets}
+		titreOnglet={_pc.onglets?.reporting?.label ?? 'Reporting'}
+		vueInitiale={vueReporting}
+	/>
 
 {:else if onglet === 'annonces-hall'}
 	<div class="ah-panel">
@@ -2728,16 +1666,6 @@
 	}
 
 	/* KPI */
-	.kpi-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-	.kpi-card {
-		flex: 1; min-width: 140px; background: var(--color-bg);
-		border: 1px solid var(--color-border); border-radius: var(--radius);
-		padding: 1rem 1.25rem; text-align: center;
-	}
-	.kpi-card.kpi-alert { border-color: var(--color-warning); background: #fffbeb; }
-	.kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
-	.kpi-card.kpi-alert .kpi-value { color: var(--color-warning); }
-	.kpi-label { font-size: .8rem; color: var(--color-text-muted); margin-top: .2rem; }
 
 	/* Validations */
 	.pending-row {
@@ -2746,7 +1674,6 @@
 	}
 	.pending-info { display: flex; flex-direction: column; gap: .15rem; }
 	.pending-actions { display: flex; gap: .5rem; flex-shrink: 0; }
-	.text-muted-sm { font-size: .8rem; color: var(--color-text-muted); }
 	.btn-success { background: #22c55e; color: #fff; border: none; }
 	.btn-success:hover:not(:disabled) { background: #16a34a; }
 	.btn-danger { background: var(--color-danger); color: #fff; border: none; }
@@ -2939,10 +1866,6 @@
 	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
 	.evol-content :global(p) { margin: 0 0 .3em; }
 	.evol-form { padding: .25rem 0; }
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
-	.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-	.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
 	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
 	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
@@ -2988,260 +1911,11 @@
 		.ah-apercu-frame { height: 460px; }
 	}
 
-	.reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
-	.reporting-toolbar {
-		display: flex; justify-content: space-between; gap: .75rem;
-		align-items: center; flex-wrap: wrap;
-	}
-	.reporting-switch, .reporting-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-	.reporting-print-header { display: none; }
-	.report-card {
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 1rem 1.1rem;
-	}
-	.report-card h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
-	.report-intro { font-size: .86rem; color: var(--color-text-muted); margin-bottom: .85rem; }
-	.report-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-	.report-grid-2-wide { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
-	.report-table-wrap { overflow-x: auto; }
-	.report-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-	.report-table th, .report-table td { padding: .65rem .7rem; border-bottom: 1px solid var(--color-border); vertical-align: top; text-align: left; }
-	.report-table th { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
-	.report-table.compact td, .report-table.compact th { padding: .55rem .6rem; }
-	.report-event-title { display: block; margin-bottom: .25rem; }
-	.report-event-desc { color: var(--color-text); }
-	.report-event-desc :global(p:last-child) { margin-bottom: 0; }
 
-	@media (max-width: 900px) {
-		.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
-	}
 
-	@page { margin: 10mm 10mm; }
-	@media print {
-		.no-print { display: none !important; }
-		.reporting-print-header { display: block; margin-bottom: .5rem; }
-		.reporting-print-header h2 { font-size: 1.1rem; margin: 0 0 .15rem; }
-		.reporting-print-header p { font-size: .78rem; color: #666; margin: 0; }
-		.report-card { box-shadow: none; break-inside: auto; margin-bottom: .75rem !important; padding: .5rem .75rem !important; }
-		.report-card h3 { break-after: avoid; font-size: .95rem; margin-bottom: .3rem; }
-		.report-table th, .report-table td { font-size: .75rem; padding: .3rem .4rem !important; }
-		.reporting-panel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.kpi-card { border: 1px solid #ccc !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.kpi-card.kpi-alert { border-color: #d97706 !important; background: #fffbeb !important; }
-		.kpi-value { color: #1e3a5f !important; }
-		.kpi-card.kpi-alert .kpi-value { color: #d97706 !important; }
-		.frise-bar-track {
-			-webkit-print-color-adjust: exact; print-color-adjust: exact;
-			background: repeating-linear-gradient(90deg, transparent, transparent calc(100% / 12 - 1px), #ddd calc(100% / 12 - 1px), #ddd calc(100% / 12)) !important;
-		}
-		.frise-preavis-zone { -webkit-print-color-adjust: exact; print-color-adjust: exact; opacity: .5; }
-		.frise-marker { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.frise-row-v2 { border-bottom-color: #ddd !important; }
-		.frise-months { color: #666 !important; border-bottom-color: #ddd !important; }
-		.frise-compact-item { background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.frise-row-dates { color: #666 !important; }
-		.frise-marker-label { color: #666 !important; }
-		.frise-legend { color: #666 !important; }
-		.frise-legend-dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.frise-stars { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.frise-stars-bad { color: #dc2626 !important; }
-		.frise-stars-ok { color: #f59e0b !important; }
-		.frise-stars-good { color: #16a34a !important; }
-		.badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-		.report-card { background: #fff !important; border-color: #ddd !important; }
-		.report-intro { color: #666 !important; font-size: .78rem; margin: 0 0 .4rem !important; }
-		.kpi-row { gap: .5rem !important; margin-bottom: .5rem !important; }
-		.kpi-card { padding: .5rem .75rem !important; }
-		.kpi-value { font-size: 1.5rem !important; }
-		.kpi-label { font-size: .7rem !important; }
-		.frise-row-v2 { padding: .3rem 0 .8rem !important; }
-		.frise-row-title { font-size: .78rem !important; }
-		.frise-row-dates { font-size: .68rem !important; }
-		.frise-bar-track { height: 22px !important; }
-		.frise-legend { margin-top: .6rem !important; font-size: .72rem !important; }
-		.audit-year-group { margin-bottom: .7rem !important; }
-		.container.page { padding: 0 !important; }
-	}
 
-	/* ⚠️ Ces règles étaient HORS de tout `@media print` : elles masquaient donc la
-	   barre de navigation À L'ÉCRAN dès que la classe était posée sur <body>.
-	   Tant que tout se passait bien, l'effet durait 250 ms et ne se voyait pas ;
-	   le jour où le nettoyage a été sauté, l'application est restée sans
-	   navigation jusqu'à un rechargement complet (04/08/2026).
-	   Elles ne servent qu'à la mise en page imprimée — aucune n'a de raison de
-	   toucher l'écran. Les enfermer ici supprime le rayon de dégâts : même si la
-	   classe restait collée, l'affichage serait intact. */
-	@media print {
-		:global(body.print-reporting .page-header),
-		:global(body.print-reporting .page-subtitle),
-		:global(body.print-reporting .tabs),
-		:global(body.print-reporting .tab-descriptif),
-		:global(body.print-reporting .no-print) {
-			display: none !important;
-		}
-		:global(body.print-reporting .sidebar),
-		:global(body.print-reporting .mobile-topbar),
-		:global(body.print-reporting .app-footer) {
-			display: none !important;
-		}
-		:global(body.print-reporting .app-content) {
-			margin-left: 0 !important;
-			max-width: 100% !important;
-			overflow: visible !important;
-		}
-		:global(body.print-reporting) {
-			overflow: visible !important;
-		}
-		:global(body.print-reporting .app-shell) {
-			overflow: visible !important;
-			min-height: auto !important;
-		}
-		:global(body.print-reporting .app-main) {
-			overflow: visible !important;
-		}
-		:global(body.print-reporting .reporting-print-header) {
-			display: block !important;
-		}
-	}
 
-	/* ── Renouvellements : frise contrats ─────────────────────────── */
-	.frise-container { margin-top: .5rem; }
-	.frise-months {
-		display: grid; grid-template-columns: repeat(12, 1fr);
-		font-size: .7rem; color: var(--color-text-muted); text-transform: uppercase;
-		letter-spacing: .03em; margin-bottom: .35rem; text-align: center;
-		border-bottom: 1px solid var(--color-border); padding-bottom: .3rem;
-	}
-	.frise-row-v2 {
-		padding: .5rem 0 1.2rem;
-		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
-	}
-	.frise-row-header {
-		display: flex; justify-content: space-between; align-items: baseline;
-		flex-wrap: wrap; gap: .15rem .8rem; margin-bottom: .3rem;
-	}
-	.frise-row-title {
-		display: flex; align-items: baseline; gap: .4rem; font-size: .82rem;
-		min-width: 0; flex-wrap: wrap;
-	}
-	.frise-row-badges {
-		display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
-	}
-	.frise-row-dates {
-		font-size: .72rem; color: var(--color-text-muted); white-space: nowrap;
-	}
-	.frise-bar-track {
-		position: relative; height: 28px;
-		background: repeating-linear-gradient(
-			90deg,
-			transparent, transparent calc(100% / 12 - 1px),
-			var(--color-border) calc(100% / 12 - 1px), var(--color-border) calc(100% / 12)
-		);
-		border-radius: 4px;
-	}
 
-	/* Compact list for future/unknown contracts */
-	.frise-compact-list { display: flex; flex-direction: column; gap: .4rem; }
-	.frise-compact-item {
-		display: flex; justify-content: space-between; align-items: center;
-		gap: .5rem; padding: .4rem .6rem; border-radius: 6px; font-size: .82rem;
-		background: color-mix(in srgb, var(--color-bg-card) 90%, var(--color-border));
-		flex-wrap: wrap;
-	}
-	.frise-compact-info { display: flex; align-items: baseline; gap: .4rem; min-width: 0; flex-wrap: wrap; }
-	.frise-compact-meta { display: flex; align-items: center; gap: .6rem; font-size: .75rem; color: var(--color-text-muted); flex-wrap: wrap; }
-
-	/* Stars rating display */
-	.frise-stars {
-		font-size: .78rem; white-space: nowrap; letter-spacing: -.02em;
-	}
-	.frise-stars-bad { color: #dc2626; }
-	.frise-stars-ok { color: #f59e0b; }
-	.frise-stars-good { color: #16a34a; }
-	.frise-preavis-zone {
-		position: absolute; top: 2px; bottom: 2px; border-radius: 3px; opacity: .35;
-		background: repeating-linear-gradient(
-			-45deg, transparent, transparent 4px, currentColor 4px, currentColor 6px
-		);
-	}
-	.frise-preavis-zone.frise-urgence-expire,
-	.frise-preavis-zone.frise-urgence-preavis { color: #dc2626; }
-	.frise-preavis-zone.frise-urgence-annee { color: #f59e0b; }
-	.frise-preavis-zone.frise-urgence-futur { color: #3b82f6; }
-	.frise-preavis-zone.frise-urgence-reconduit { color: #8b5cf6; }
-
-	.frise-marker {
-		position: absolute; top: 0; bottom: 0; width: 3px; transform: translateX(-50%);
-		border-radius: 2px;
-	}
-	.frise-marker-expire, .frise-marker-preavis { background: #dc2626; }
-	.frise-marker-annee { background: #f59e0b; }
-	.frise-marker-futur { background: #3b82f6; }
-	.frise-marker-reconduit { background: #8b5cf6; }
-
-	.frise-marker-label {
-		position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
-		font-size: .65rem; color: var(--color-text-muted); white-space: nowrap;
-	}
-	.frise-legend {
-		display: flex; gap: 1.2rem; font-size: .78rem; color: var(--color-text-muted);
-		margin-top: 1.2rem; flex-wrap: wrap;
-	}
-	.frise-legend span { display: flex; align-items: center; gap: .35rem; }
-	.frise-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
-	.frise-legend-hatch { font-style: italic; }
-
-	/* ── Renouvellements : audits par année ───────────────────────── */
-	.audit-year-group { margin-bottom: 1.2rem; }
-	.audit-year-group:last-child { margin-bottom: 0; }
-	.audit-year-title {
-		font-size: .95rem; font-weight: 700; margin: 0 0 .5rem;
-		display: flex; align-items: center; gap: .5rem;
-	}
-	.audit-year-current { border-left: 3px solid #f59e0b; padding-left: .75rem; }
-
-	@media (max-width: 700px) {
-		.frise-row-header { flex-direction: column; }
-		.frise-bar-track { min-height: 24px; }
-		.frise-months { font-size: .6rem; }
-		.frise-compact-item { flex-direction: column; align-items: flex-start; }
-	}
-
-	@media print {
-		.frise-container { break-inside: auto; }
-		.frise-row-v2 { break-inside: avoid; }
-		.audit-year-group { break-inside: auto; }
-		.audit-year-title { break-after: avoid; }
-		.report-table { break-inside: auto; }
-		.report-table tr { break-inside: avoid; }
-	}
-
-  /* ── Relance syndic ───────────────────────────────────────────────── */
-  .relance-item {
-          background: var(--color-surface);
-          border: 1px solid var(--color-border);
-          border-left: 4px solid var(--color-primary);
-          border-radius: var(--radius);
-          padding: .65rem .9rem;
-          transition: opacity .15s;
-  }
-  .relance-item-unselected { opacity: .5; border-left-color: var(--color-border); }
-  .relance-item-pending { border-left-color: var(--color-text-muted); background: var(--color-bg-subtle, #f9fafb); }
-  .relance-item-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-  .relance-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
-  /* `nowrap` comme `.relance-numero` juste en dessous : sans lui le libellé se
-     coupait entre « Non » et « relançable », et la seconde ligne chevauchait le
-     badge voisin — à l'écran comme à l'impression. */
-  .relance-tag-action { font-size: .75rem; padding: 1px 6px; white-space: nowrap; }
-  .relance-numero { font-size: .8rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
-  .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
-  .relance-item-right { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-shrink: 0; }
-  .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
-  .relance-date-overdue { color: #b45309; font-weight: 600; }
-  .badge-red { background: #fee2e2; color: #991b1b; }
-  .badge-orange { background: #fff7ed; color: #9a3412; }
 
   /* Historique tickets clos */
   .history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
