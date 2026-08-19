@@ -16,11 +16,11 @@ import OngletAuditLots from '$lib/components/OngletAuditLots.svelte';
 import OngletImportLots from '$lib/components/OngletImportLots.svelte';
 import OngletImportTelecommandes from '$lib/components/OngletImportTelecommandes.svelte';
 import OngletImportVigik from '$lib/components/OngletImportVigik.svelte';
-import OngletDesignsEmail from '$lib/components/OngletDesignsEmail.svelte';
 import Onglet from '$lib/components/Onglet.svelte';
 import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
+import OngletModelesEmail from '$lib/components/OngletModelesEmail.svelte';
 import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
@@ -40,7 +40,7 @@ const ONGLETS = [
   'comptes', 'acces', 'emails', 'utilisateurs', 'demandes_profil',
   'site', 'pages', 'legal', 'whatsapp', 'smtp', 'telemetry', 'maintenance',
   'copropriete', 'perimetres', 'audit_lots', 'import_lots', 'import_tc',
-  'import_vigik', 'designs_email',
+  'import_vigik',
 ] as const;
 type OngletAdmin = (typeof ONGLETS)[number];
 let onglet: OngletAdmin = 'comptes';
@@ -165,59 +165,6 @@ toast('error', e.message ?? 'Erreur');
 //  laissé deux appels d'API sans lecteur.
 
 
-//  Modeles e-mail 
-let emailTemplates: any[] = [];
-let emailsLoading = true;
-let emailEdit: any | null = null;
-let emailSujet = '';
-let emailCorpsHtml = '';
-let emailCorpsTexte = '';
-let emailActif = true;
-let emailSaving = false;
-let emailHistory: any[] = [];
-let emailHistoryLoading = true;
-
-async function loadEmails() {
-emailsLoading = true;
-emailHistoryLoading = true;
-try {
-[emailTemplates, emailHistory] = await Promise.all([
-api.get<any[]>('/admin/modeles-email'),
-api.get<any[]>('/admin/emails/historique'),
-]);
-} finally {
-emailsLoading = false;
-emailHistoryLoading = false;
-}
-}
-
-function openEmailEdit(tpl: any) {
-emailEdit = tpl;
-emailSujet = tpl.sujet ?? '';
-emailCorpsHtml = tpl.corps_html ?? '';
-emailCorpsTexte = tpl.corps_texte ?? '';
-emailActif = tpl.actif ?? true;
-}
-
-async function saveEmailEdit() {
-if (!emailEdit) return;
-emailSaving = true;
-try {
-const updated = await api.patch<any>(`/admin/modeles-email/${emailEdit.id}`, {
-sujet: emailSujet,
-corps_html: emailCorpsHtml,
-corps_texte: emailCorpsTexte,
-actif: emailActif,
-});
-emailTemplates = emailTemplates.map((t) => (t.id === emailEdit.id ? updated : t));
-toast('success', 'Modèle mis à jour.');
-emailEdit = null;
-} catch (e: any) {
-toast('error', e.message ?? 'Erreur');
-} finally {
-emailSaving = false;
-}
-}
 
 //  Utilisateurs & rôles 
 let utilisateurs: any[] = [];
@@ -610,7 +557,6 @@ try {
 loadBatiments();
 loadComptes();
 loadCommandes();
-loadEmails();
 loadDemandesProfil();
 });
 
@@ -755,7 +701,6 @@ $: _siteNom = $siteNomStore;
     <Onglet actif={onglet === 'import_tc'} on:click={() => (onglet = 'import_tc')}>Import TC</Onglet>
     <Onglet actif={onglet === 'import_vigik'} on:click={() => (onglet = 'import_vigik')}>Import Vigik</Onglet>
     <Onglet actif={onglet === 'audit_lots'} on:click={() => (onglet = 'audit_lots')}>Audit lots</Onglet>
-    <Onglet actif={onglet === 'designs_email'} on:click={() => (onglet = 'designs_email')}>Designs e-mail</Onglet>
   </div>
 </div>
 
@@ -1211,102 +1156,7 @@ $: _siteNom = $siteNomStore;
 <TachesPlanifiees />
 
 {:else if onglet === 'emails'}
-<p class="muted" style="margin-bottom:1rem">Modeles utilises pour les notifications automatiques.</p>
-{#if emailsLoading}
-<p class="muted">Chargement...</p>
-{:else if emailTemplates.length === 0}
-<div class="empty-state"><h3>Aucun modele trouve</h3></div>
-{:else}
-<div class="card" style="overflow:hidden">
-<table class="table">
-<thead>
-<tr><th>Code</th><th>Nom</th><th>Sujet</th><th>Actif</th><th>Action</th></tr>
-</thead>
-<tbody>
-{#each emailTemplates as tpl}
-<tr>
-<td><code style="font-size:.78rem">{tpl.code}</code></td>
-<td style="font-size:.875rem">{tpl.libelle ?? tpl.nom ?? '—'}</td>
-<td style="font-size:.8rem;color:var(--color-text-muted)">{tpl.sujet}</td>
-<td>
-{#if tpl.actif}<span class="badge badge-green">Oui</span>
-{:else}<span class="badge badge-gray">Non</span>{/if}
-</td>
-<td>
-<button class="btn-icon-edit" aria-label="Modifier ce modèle" title="Modifier" on:click={() => openEmailEdit(tpl)}>✏️</button>
-</td>
-</tr>
-{/each}
-</tbody>
-</table>
-</div>
-{/if}
-
-<!-- Modal édition modèle e-mail -->
-{#if emailEdit}
-<div class="modal-overlay" on:click|self={() => (emailEdit = null)} role="dialog" aria-modal="true">
-  <div class="modal-box card" style="max-width:680px">
-    <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">
-      Modifier le modèle — <code style="font-size:.85rem">{emailEdit.code}</code>
-    </h2>
-    <div style="display:flex;flex-direction:column;gap:.6rem">
-      <div class="field">
-        <label for="email-sujet">Sujet</label>
-        <input id="email-sujet" type="text" bind:value={emailSujet} style="font-family:monospace" />
-      </div>
-      <div class="field">
-        <label for="email-corps-html">Corps HTML</label>
-        <textarea id="email-corps-html" rows="10" bind:value={emailCorpsHtml} style="font-family:monospace;resize:vertical"></textarea>
-      </div>
-      <div class="field">
-        <label for="email-corps-texte">Corps texte (fallback)</label>
-        <textarea id="email-corps-texte" rows="4" bind:value={emailCorpsTexte} style="font-family:monospace;resize:vertical"></textarea>
-      </div>
-      <label class="case">
-        <input type="checkbox" bind:checked={emailActif} />
-        Actif
-      </label>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" on:click={() => (emailEdit = null)} disabled={emailSaving}>Annuler</button>
-      <button class="btn btn-primary" on:click={saveEmailEdit} disabled={emailSaving}>
-        {emailSaving ? 'Enregistrement…' : 'Enregistrer'}
-      </button>
-    </div>
-  </div>
-</div>
-{/if}
-
-<!-- Historique des emails envoyés -->
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-<h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">📬 Historique des envois</h3>
-<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">10 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.</p>
-{#if emailHistoryLoading}
-<p class="muted">Chargement...</p>
-{:else if emailHistory.length === 0}
-<div class="empty-state"><h3>Aucun email envoyé</h3><p>L'historique est vide.</p></div>
-{:else}
-<div class="card" style="overflow:auto;max-height:420px">
-<table class="table" style="font-size:.82rem">
-<thead class="sticky-head"><tr><th>Date</th><th>Template</th><th>Destinataire</th><th>Sujet</th><th>Statut</th></tr></thead>
-<tbody>
-{#each emailHistory as h}
-<tr>
-<td style="white-space:nowrap">{fmt(h.cree_le)}</td>
-<td><code style="font-size:.75rem">{h.code}</code></td>
-<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title={h.destinataire}>{h.destinataire}</td>
-<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title={h.sujet}>{h.sujet || '—'}</td>
-<td>
-{#if h.statut === 'succes'}<span class="badge badge-green">✓</span>
-{:else if h.statut === 'erreur'}<span class="badge badge-red" title={h.erreur ?? ''}>✗</span>
-{:else}<span class="badge badge-gray" title={h.erreur ?? ''}>ignoré</span>{/if}
-</td>
-</tr>
-{/each}
-</tbody>
-</table>
-</div>
-{/if}
+<OngletModelesEmail />
 
 {:else if onglet === 'site'}
 <section class="card config-section">
@@ -1510,9 +1360,6 @@ $: _siteNom = $siteNomStore;
 {:else if onglet === 'import_vigik'}
 <OngletImportVigik />
 
-{:else if onglet === 'designs_email'}
-<OngletDesignsEmail />
-
 {/if}
 {#if cvModal}
 <div class="modal-overlay" on:click|self={() => (cvModal = null)} role="dialog" aria-modal="true" tabindex="-1">
@@ -1642,25 +1489,4 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .onglets-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: .75rem; }
 .onglet-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
 
-/* Télémétrie */
-.tl-scope-switch { display: flex; gap: .5rem; flex-wrap: wrap; }
-.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-.tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 1rem; margin-top: 1.25rem; }
-.tl-kpi { background: var(--color-surface, #fff); border: 1px solid var(--color-border); border-radius: var(--radius, 8px); padding: 1.25rem 1rem; text-align: center; }
-.tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
-.tl-kpi-label { font-size: .82rem; color: var(--color-text-muted); margin-top: .3rem; }
-.tl-section-title { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
-.tl-chart-wrap { display: flex; gap: 0; position: relative; margin-top: .5rem; }
-.tl-y-axis { position: relative; width: 32px; flex-shrink: 0; height: 130px; margin-bottom: 18px; }
-.tl-y-tick { position: absolute; right: 4px; font-size: .6rem; color: var(--color-text-muted); transform: translateY(50%); line-height: 1; text-align: right; }
-.tl-chart-inner { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tl-chart-inner .tl-y-gridline { position: absolute; left: 0; right: 0; height: 1px; background: var(--color-border); opacity: .5; pointer-events: none; z-index: 0; }
-.tl-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0 .25rem .5rem 0; overflow-x: auto; position: relative; z-index: 1; flex: 1; }
-.tl-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 16px; height: 100%; justify-content: flex-end; }
-.tl-bar { background: var(--color-primary); border-radius: 3px 3px 0 0; width: 100%; min-height: 4px; transition: height .3s; }
-.tl-bar-month { background: var(--color-primary-light, #93c5fd); }
-.tl-bar-label { font-size: .6rem; color: var(--color-text-muted); margin-top: 2px; white-space: nowrap; }
-.tl-bar-col-month { min-width: 32px; }
 </style>

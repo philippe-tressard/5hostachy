@@ -171,13 +171,13 @@
   <SectionFormulaire icone="activity" titre="Tester la configuration">
   <div class="largeur-saisie">
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-      <input
-        class="input input-sm"
-        type="email"
-        bind:value={smtpTestEmail}
-        placeholder="destinataire@example.com"
-        style="flex:1;min-width:220px"
-      />
+      <div class="field champ-en-ligne" style="flex:1;min-width:220px">
+        <input
+          type="email"
+          bind:value={smtpTestEmail}
+          placeholder="destinataire@example.com"
+        />
+      </div>
       <button
         class="btn btn-outline"
         on:click={sendSmtpTest}

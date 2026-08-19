@@ -549,6 +549,33 @@ milieu d’un site beige. Un relevé par motif textuel ne prouve rien sur ce qu�
 n’a pas cherché : `lint:champs` lit l’**arbre des balises**, où les trois formes
 se ramènent à une seule question, et son `--selftest` le montre les refuser.
 
+### Fusionner deux écrans : une UNION, jamais un remplacement
+
+Deux écrans qui montrent la même donnée sous deux angles se fusionnent — mais la
+fusion se **prouve capacité par capacité**, sinon elle en retire en silence. Les
+« Modèles e-mail » et les « Designs des modèles d’e-mail » l’ont été le
+19/08/2026, après avoir coexisté depuis #299 et attendu leur arbitrage dans #307.
+
+Le geste, dans cet ordre :
+
+1. **Dresser le tableau des capacités** de chacun, à la lecture du code — pas de
+   mémoire. Ici : quatre venaient de l’écran secondaire (intention, aperçu du
+   rendu, variables du gabarit, réinitialisation des designs), trois du principal
+   (table, corps texte, historique des envois).
+2. **Vérifier que les deux parlent au même endpoint.** C’était le cas
+   (`/admin/modeles-email`), et le serveur acceptait déjà les cinq champs : la
+   fusion ne demandait aucun changement d’API.
+3. **Distinguer une capacité d’une promesse vide.** Le regroupement « par
+   domaine » n’a pas été repris : `ModeleEmail` n’a ni `domaine` ni `categorie`,
+   l’écran rangeait donc tout dans un unique groupe « général ».
+4. ⚠️ **Reprendre, c’est relire.** « Variables disponibles » découpait sur les
+   virgules un champ qui est un **tableau JSON**, et affichait `{{ ["civilite" }}`.
+   Recopier le geste aurait recopié le défaut ; il est corrigé en le reprenant,
+   avec un repli sur l’ancien format et cinq cas éprouvés.
+
+🔴 **Le compte final se vérifie**, capacité par capacité, avant de supprimer
+l’écran absorbé. C’est le seul moment où la perte est encore réversible.
+
 ### L’administration est UNE page — plus aucun écran autonome
 
 Arbitré à l’écran le 19/08/2026 : *« fiche copropriété et Périmètre sont des pages

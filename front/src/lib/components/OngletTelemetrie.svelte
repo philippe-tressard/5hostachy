@@ -17,6 +17,7 @@
   import { api } from '$lib/api';
   import Icon from '$lib/components/Icon.svelte';
   import TopPages from '$lib/components/TopPages.svelte';
+  import Pastille from '$lib/components/Pastille.svelte';
   import { fmtDatetimeShort as fmt } from '$lib/date';
 
   let telemetryData: any = null;
@@ -47,9 +48,9 @@
 
   <!-- Sélecteur Jour / Mois / Année -->
   <div class="tl-scope-switch" style="margin:.75rem 0 1rem">
-    <button class="pill" class:pill-active={tlScope === 'jour'} on:click={() => switchTlScope('jour')}>📅 Jour</button>
-    <button class="pill" class:pill-active={tlScope === 'mois'} on:click={() => switchTlScope('mois')}>📆 Mois (30j)</button>
-    <button class="pill" class:pill-active={tlScope === 'annee'} on:click={() => switchTlScope('annee')}>📊 Année (10 ans)</button>
+    <Pastille active={tlScope === 'jour'} on:click={() => switchTlScope('jour')}>Jour</Pastille>
+    <Pastille active={tlScope === 'mois'} on:click={() => switchTlScope('mois')}>Mois (30 j)</Pastille>
+    <Pastille active={tlScope === 'annee'} on:click={() => switchTlScope('annee')}>Année (10 ans)</Pastille>
   </div>
 
   {#if telemetryLoading}
@@ -197,3 +198,34 @@
     {/if}
   {/if}
 </section>
+<style>
+	/*  🔴 CES RÈGLES SONT RESTÉES DANS `admin/+page.svelte` À L'EXTRACTION, et le
+	    panneau est parti NU en production (v2.95.0) : les KPI empilés en texte
+	    brut, le graphe en colonne de chiffres. Signalé à l'écran, capture à
+	    l'appui, le 19/08/2026.
+
+	    Svelte scope ses styles au FICHIER. Déplacer du balisage sans ses règles
+	    est la régression que ce dépôt cite dans une dizaine de commentaires
+	    depuis la v2.67.11 — et `svelte-check` n'a signalé qu'UN sélecteur orphelin
+	    sur dix-sept : il ne protège pas de ce défaut.
+
+	    D'où `npm run lint:classes-nues`, écrit le même jour. La règle était
+	    partout ; il manquait le contrôle qui échoue. */
+.tl-scope-switch { display: flex; gap: .5rem; flex-wrap: wrap; }
+.tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 1rem; margin-top: 1.25rem; }
+.tl-kpi { background: var(--color-surface, #fff); border: 1px solid var(--color-border); border-radius: var(--radius, 8px); padding: 1.25rem 1rem; text-align: center; }
+.tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
+.tl-kpi-label { font-size: .82rem; color: var(--color-text-muted); margin-top: .3rem; }
+.tl-section-title { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
+.tl-chart-wrap { display: flex; gap: 0; position: relative; margin-top: .5rem; }
+.tl-y-axis { position: relative; width: 32px; flex-shrink: 0; height: 130px; margin-bottom: 18px; }
+.tl-y-tick { position: absolute; right: 4px; font-size: .6rem; color: var(--color-text-muted); transform: translateY(50%); line-height: 1; text-align: right; }
+.tl-chart-inner { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tl-chart-inner .tl-y-gridline { position: absolute; left: 0; right: 0; height: 1px; background: var(--color-border); opacity: .5; pointer-events: none; z-index: 0; }
+.tl-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0 .25rem .5rem 0; overflow-x: auto; position: relative; z-index: 1; flex: 1; }
+.tl-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 16px; height: 100%; justify-content: flex-end; }
+.tl-bar { background: var(--color-primary); border-radius: 3px 3px 0 0; width: 100%; min-height: 4px; transition: height .3s; }
+.tl-bar-month { background: var(--color-primary-light, #93c5fd); }
+.tl-bar-label { font-size: .6rem; color: var(--color-text-muted); margin-top: 2px; white-space: nowrap; }
+.tl-bar-col-month { min-width: 32px; }
+</style>
