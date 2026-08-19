@@ -8,6 +8,7 @@
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import { perimetreLabel, concerneTous, batimentsCibles, estPerimetreParDefaut } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
 	import RaccourcisRapides from '$lib/components/RaccourcisRapides.svelte';
@@ -558,15 +559,16 @@
 		<!-- Accordéon : anciens (>30 jours) -->
 		{#if olderItems.length > 0}
 			<div class="section-reveal" class:section-visible={ready} style="--delay:.35s">
-				<button
-					class="older-toggle"
-					on:click={() => olderOpen = !olderOpen}
-					aria-expanded={olderOpen}
-				>
-					<Icon name={olderOpen ? 'chevron-down' : 'chevron-right'} size={16} />
-					<span>Activité plus ancienne</span>
-					<span class="older-count">{olderItems.length}</span>
-				</button>
+				<!--  Le bandeau était réimplémenté ici (`.older-toggle`, `.older-count`,
+				      chevron à GAUCHE) — troisième écriture d'une même notion, avec un
+				      troisième aspect (#516). Il passe sur `SectionRepliee`, comme les
+				      Archives des Actualités et des Petites annonces.
+
+				      ⚠️ Le libellé, lui, ne devient PAS « Archives » : ceci n'est pas une
+				      pile d'objets rangés, c'est la SUITE du fil d'activité. Le look
+				      s'unifie, la notion reste distincte. -->
+				<SectionRepliee titre="&#x1F553; Activité plus ancienne" compte={olderItems.length}
+					bind:ouvert={olderOpen} />
 				{#if olderOpen}
 					<div class="flux-timeline older-timeline">
 						{#each olderDayGroups as group}
@@ -869,20 +871,6 @@
 	.epingle-timeline::before { display: none; }
 
 	/* ═══ ACCORDÉON ANCIENS ═════════════════════════════════════════════ */
-	.older-toggle {
-		display: flex; align-items: center; gap: .5rem;
-		width: 100%; padding: .7rem 1rem;
-		background: var(--color-surface); border: 1px solid var(--color-border);
-		border-radius: var(--radius); cursor: pointer;
-		font-size: .82rem; font-weight: 500; color: var(--color-text-muted);
-		transition: background .15s, border-color .15s;
-		margin-bottom: .75rem;
-	}
-	.older-toggle:hover { background: var(--color-bg); border-color: var(--color-primary); }
-	.older-count {
-		background: var(--color-border); color: var(--color-text-muted);
-		font-size: .65rem; font-weight: 700; padding: .1rem .4rem; border-radius: 1rem;
-	}
 	.older-timeline { opacity: .85; }
 
 	/* ═══ RESPONSIVE ════════════════════════════════════════════════════ */

@@ -14,7 +14,7 @@
 
   ## Deux listes, un seul rendu
 
-  Les annonces conclues depuis plus d'un mois basculent dans un **Historique
+  Les annonces conclues depuis plus d'un mois basculent dans des **Archives
   replié** — demandé le 18/08/2026. Les deux listes passent par le MÊME
   `ListeAnnonces` : recopier le `{#each}` sous la section repliée aurait créé
   deux rendus libres de diverger, ce qui est arrivé six fois au fil des tickets
@@ -44,6 +44,10 @@
 	/** La liste, tenue par la page — elle la charge avec les deux autres rubriques. */
 	export let annonces: any[] = [];
 	export let chargement = false;
+	/**  Non vide = on n'a PAS pu charger. À afficher AVANT « aucune annonce » :
+	 *   annoncer une absence qu'on n'a pas constatée, c'est ce qui a fait croire
+	 *   à trois annonces perdues (#519). */
+	export let erreur = '';
 	/** Le formulaire de dépôt est ouvert ? Lié : le bouton vit dans l'en-tête de page. */
 	export let showForm = false;
 	/** L'annonce dépliée — liée aussi : un lien profond (`#annonce-12`) la désigne. */
@@ -185,15 +189,22 @@
 {#if chargement}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if courantes.length === 0 && archivees.length === 0}
+	{#if erreur}
+	<div class="empty-state">
+		<h3>Impossible d'afficher les annonces</h3>
+		<p>{erreur}</p>
+	</div>
+	{:else}
 	<div class="empty-state">
 		<h3>Aucune annonce</h3>
 		<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
 	</div>
+	{/if}
 {:else}
 	{#if courantes.length === 0}
 		<div class="empty-state">
 			<h3>Aucune annonce en cours</h3>
-			<p>Les annonces conclues sont rangées dans l'Historique, ci-dessous.</p>
+			<p>Les annonces conclues sont rangées dans les Archives, ci-dessous.</p>
 		</div>
 	{/if}
 	<ListeAnnonces
@@ -223,7 +234,7 @@
 	      Les cartes y sont les MÊMES — `ListeAnnonces`, appelé une seconde fois —
 	      simplement atténuées par `annonce.archivee`. -->
 	{#if archivees.length}
-		<SectionRepliee titre="&#x1F4C1; Historique" compte={archivees.length}>
+		<SectionRepliee titre="&#x1F4C1; Archives" compte={archivees.length}>
 			<ListeAnnonces
 				liste={archivees}
 				expandedId={expandedAnnonce}

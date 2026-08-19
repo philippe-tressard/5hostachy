@@ -8,6 +8,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ListeTickets from '$lib/components/ListeTickets.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import {
@@ -344,18 +345,24 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	/>
 {/if}
 
-<!--  Section Historique — les tickets clos depuis plus du délai de grâce.
-      ⚠️ Ce mot désigne ici l'ARCHIVE d'une liste, et non le fil d'évolutions que
-      le cadre #430 appelle « Historique ». Les deux acceptions coexistent aussi
-      sur les Actualités : les départager est un renommage visible qui traverse
-      deux menus, il se propose (R5) et ne se décide pas dans ce lot. -->
+<!--  Section ARCHIVES — les tickets clos depuis plus du délai de grâce.
+      ⚠️ Elle s'appelait « Historique », et ce mot est réservé au FIL d'évolutions
+      d'un objet (cadre #430). Les deux acceptions coexistaient ici même, sur le
+      même écran : le fil d'un ticket et l'archive de la liste. Départagé le
+      20/08/2026 (#516).
+
+      Le bandeau vient de `SectionRepliee`, comme les Actualités, les Petites
+      annonces et le tableau de bord — il était réécrit ici pour la troisième
+      fois, et c'est l'audit de factorisation qui l'a dit.
+
+      ⚠️ Le groupement par ANNÉE, lui, reste écrit ici : cet écran ouvre une année
+      précise sur lien profond (l. 69-71), ce qu'`ArchivesParAnnee` ne sait pas
+      encore porter. Unifier les deux demande d'exposer l'année ouverte — ça se
+      fait, mais pas en même temps qu'un renommage. Suivi en #516. -->
 {#if historyTickets.length > 0}
 	<div class="history-section">
-		<button class="history-header" on:click={() => (historyExpanded = !historyExpanded)} aria-expanded={historyExpanded}>
-			<span class="history-title">&#x1F4AD; Historique</span>
-			<span class="history-count">{historyTickets.length}</span>
-			<span class="history-chevron">{historyExpanded ? '▲' : '▼'}</span>
-		</button>
+		<SectionRepliee titre="&#x1F4C1; Archives" compte={historyTickets.length}
+			bind:ouvert={historyExpanded} />
 		{#if historyExpanded}
 			<div class="history-content">
 				{#each historyByYear as [year, yearTickets] (year)}

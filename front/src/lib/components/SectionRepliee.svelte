@@ -45,13 +45,43 @@
 </div>
 
 <style>
+	/*  🔴 LE BANDEAU DE SECTION DU SITE — « le meilleur des trois mondes »
+	    (demandé à l'écran le 20/08/2026, #516).
+
+	    Trois écrans rendaient cette même notion de trois façons :
+	      • Tableau de bord — une CARTE cliquable (fond, bordure, survol), chevron
+	        à gauche, compteur gris pâle ;
+	      • Actualités — un titre nu avec son emoji, chevron à droite, sans compteur ;
+	      • Tickets — un titre avec un compteur BIEN VISIBLE.
+
+	    Ce qui est repris de chacun : la **carte cliquable** du tableau de bord (on
+	    voit que ça se clique, et la zone de clic est franche), le **badge coloré**
+	    des tickets (on sait combien avant d'ouvrir), le **chevron à droite qui
+	    pivote** des actualités (il suit l'état au lieu de changer de glyphe).
+
+	    ⚠️ L'emoji reste dans le `titre` : le catalogue d'icônes ne porte ni
+	    « dossier » ni « archive », et en ajouter une pour ce seul bandeau
+	    dépasserait le lot.
+
+	    🔴 CE COMMENTAIRE A MENTI, ET C'EST L'AUDIT QUI L'A DIT (20/08/2026).
+	    Il affirmait « tout cela vit désormais ici, et nulle part ailleurs ».
+	    Faux : `tickets/+page.svelte` garde un TROISIÈME bandeau fait main
+	    (`.history-header`, `.history-count`, `.history-chevron`, l. 354-357) ET
+	    son propre groupement par année (`.history-year-header`, l. 363-367).
+	    L'unification porte donc sur DEUX écrans sur trois.
+
+	    Le reste est suivi en #516. Un commentaire qui annonce une consolidation
+	    non faite est pire qu'aucun commentaire : il dispense de vérifier. */
 	.sr-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
 	.sr-entete {
-		display: flex; align-items: center; gap: .5rem; width: 100%;
-		background: none; border: none; padding: 0; cursor: pointer;
-		font-size: 1rem; font-weight: 600; color: var(--color-text); text-align: left;
+		display: flex; align-items: center; gap: .6rem; width: 100%;
+		padding: .7rem 1rem;
+		background: var(--color-surface); border: 1px solid var(--color-border);
+		border-radius: var(--radius); cursor: pointer;
+		font-size: .95rem; font-weight: 600; color: var(--color-text); text-align: left;
+		transition: background .15s, border-color .15s, color .15s;
 	}
-	.sr-entete:hover { color: var(--color-primary); }
+	.sr-entete:hover { background: var(--color-bg); border-color: var(--color-primary); color: var(--color-primary); }
 	.sr-titre { flex: 1; }
 	.sr-compte {
 		display: inline-flex; align-items: center; justify-content: center;
@@ -65,6 +95,6 @@
 
 	/*  Cible tactile (socle 11 §10) : le bandeau est le seul geste de la section. */
 	@media (max-width: 480px) {
-		.sr-entete { min-height: 40px; }
+		.sr-entete { min-height: 44px; }
 	}
 </style>

@@ -11,6 +11,7 @@ import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } f
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import OngletCopropriete from '$lib/components/OngletCopropriete.svelte';
+import OngletSite from '$lib/components/OngletSite.svelte';
 import OngletPerimetres from '$lib/components/OngletPerimetres.svelte';
 import OngletAuditLots from '$lib/components/OngletAuditLots.svelte';
 import OngletImportLots from '$lib/components/OngletImportLots.svelte';
@@ -523,7 +524,8 @@ siteConfig = {
   login_sous_titre: cfg['login_sous_titre'] ?? 'Votre espace numérique de résidence',
   mentions_legales: sMentions,
   politique_confidentialite: sPolitique,
-  archivage_delai_heures: parseInt(cfg['archivage_delai_heures'] ?? '48') || 48,
+  archivage_delai_jours: Math.max(1, Math.round((parseInt(cfg['archivage_delai_heures'] ?? '48') || 48) / 24)),
+  publie_visibilite_jours: parseInt(cfg['publie_visibilite_jours'] ?? '30') || 30,
   relance_syndic_delai_jours: parseInt(cfg['relance_syndic_delai_jours'] ?? '30') || 30,
   notify_ticket_bug_email: cfg['notify_ticket_bug_email'] === '1',
   notify_new_user_created_email: cfg['notify_new_user_created_email'] === '1',
@@ -561,7 +563,7 @@ loadDemandesProfil();
 });
 
 // ── Paramétrage site ──────────────────────────────────────────
-let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_heures: 48, relance_syndic_delai_jours: 30, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
+let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_jours: 2, publie_visibilite_jours: 30, relance_syndic_delai_jours: 30, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
 let siteSaving = false;
 $: siteManagerUsers = utilisateurs.filter((u) => !!u.email);
 function openSiteTab() {
@@ -571,8 +573,8 @@ function openSiteTab() {
 async function saveSiteConfig() {
   siteSaving = true;
   try {
-    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), relance_syndic_delai_jours: String(siteConfig.relance_syndic_delai_jours), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer, email_footer: siteConfig.email_footer, reference_copro: siteConfig.reference_copro });
-    configStore.update((c: Record<string, string>) => ({ ...c, site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String(siteConfig.archivage_delai_heures), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '' }));
+    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String((siteConfig.archivage_delai_jours || 2) * 24), publie_visibilite_jours: String(siteConfig.publie_visibilite_jours || 30), relance_syndic_delai_jours: String(siteConfig.relance_syndic_delai_jours), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer, email_footer: siteConfig.email_footer, reference_copro: siteConfig.reference_copro });
+    configStore.update((c: Record<string, string>) => ({ ...c, site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String((siteConfig.archivage_delai_jours || 2) * 24), publie_visibilite_jours: String(siteConfig.publie_visibilite_jours || 30), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '' }));
     toast('success', 'Paramètres sauvegardés.');
   } catch (e: any) {
     toast('error', e.message ?? 'Erreur lors de la sauvegarde.');
@@ -1159,70 +1161,7 @@ $: _siteNom = $siteNomStore;
 <OngletModelesEmail />
 
 {:else if onglet === 'site'}
-<section class="card config-section">
-  <h2 class="config-section-title"><Icon name="settings" size={17} />Paramètres généraux</h2>
-  <div class="form-grid" style="max-width:600px">
-    <label class="field">
-      Nom de la plateforme
-      <input type="text" bind:value={siteConfig.nom} placeholder="5Hostachy" />
-      <span class="field-hint">Affiché sur la page de connexion et dans le menu.</span>
-    </label>
-    <label class="field">
-      URL publique
-      <input type="url" bind:value={siteConfig.url} placeholder="https://..." />
-    </label>
-    <label class="field" style="grid-column:span 2">
-      E-mail administrateur
-      <input type="email" bind:value={siteConfig.email_admin} placeholder="admin@example.com" />
-      <span class="field-hint">Adresse de secours utilisée si aucun utilisateur gestionnaire du site n'est sélectionné.</span>
-    </label>
-    <label class="field" style="grid-column:span 2">
-      Gestionnaire du site (utilisateur)
-      <select bind:value={siteConfig.site_manager_user_id}>
-        <option value="">Aucun (utiliser l'e-mail administrateur)</option>
-        {#each siteManagerUsers as u}
-          <option value={String(u.id)}>{u.prenom} {u.nom} — {u.email}</option>
-        {/each}
-      </select>
-      <span class="field-hint">Cet utilisateur est considéré comme gestionnaire du site dans l'administration et reçoit les notifications e-mail « Bug » si l'option est activée.</span>
-    </label>
-    <label class="field" style="grid-column:span 2">
-      Sous-titre de la page de connexion
-      <input type="text" bind:value={siteConfig.login_sous_titre} placeholder="Votre espace numérique de résidence" />
-      <span class="field-hint">Affiché sous le nom du site sur la page de connexion.</span>
-    </label>
-    <label class="field champ-court" style="grid-column:span 2">
-      Délai d'archivage automatique (heures)
-      <input type="number" bind:value={siteConfig.archivage_delai_heures} min="1" max="8760" placeholder="48" />
-      <span class="field-hint">Délai après lequel une actualité « Résolue » est automatiquement archivée (défaut : 48h). Le bouton 📦 permet d'archiver immédiatement sans attendre ce délai.</span>
-    </label>
-    <label class="field champ-court" style="grid-column:span 2">
-      Délai de relance syndic (jours)
-      <input type="number" bind:value={siteConfig.relance_syndic_delai_jours} min="1" max="365" placeholder="30" />
-      <span class="field-hint">Nombre de jours sans mise à jour d'un ticket destinataire-syndic avant qu'il apparaisse dans la liste de relance de l'Espace CS (défaut : 30 jours).</span>
-    </label>
-    <label class="field" style="grid-column:span 2">
-      <span class="case">
-        <input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} />
-        Notifier si un bug (Tickets)
-      </span>
-      <span class="field-hint">Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de secours) uniquement pour les tickets de catégorie « Bug ». Les tickets « Urgence » ne déclenchent pas cette notification.</span>
-    </label>
-    <label class="field" style="grid-column:span 2">
-      <span class="case">
-        <input type="checkbox" bind:checked={siteConfig.notify_new_user_created_email} />
-        Notifier si un nouvel utilisateur est créé
-      </span>
-      <span class="field-hint">Envoie un e-mail au gestionnaire du site sélectionné (ou à l'adresse administrateur de secours) lorsqu'un nouveau compte est créé et mis en attente de validation.</span>
-    </label>
-  </div>
-  <div class="form-actions" style="max-width:600px">
-    <button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
-      {siteSaving ? 'Enregistrement…' : 'Enregistrer'}
-    </button>
-  </div>
-
-</section>
+<OngletSite bind:siteConfig {siteSaving} {siteManagerUsers} {saveSiteConfig} />
 {:else if onglet === 'pages'}
 <p class="muted" style="margin-bottom:1.25rem">Personnalisez l'icône, le label de navigation, le titre et la description de chaque page. Cliquer sur une entrée pour la modifier ; les autres se referment automatiquement.</p>
 <div class="ref-list">

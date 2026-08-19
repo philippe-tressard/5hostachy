@@ -11,6 +11,7 @@
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
@@ -1105,14 +1106,12 @@
 		{/each}
 	{/if}
 
-	<!-- Section Historique tickets clos -->
+	<!--  ARCHIVES des tickets clos. Bandeau réécrit ici une 4e fois, chevron figé
+	      à « ▼ » : il vient de `SectionRepliee`, qui porte le pourquoi (#516). -->
 	{#if tkHistory.length > 0}
 	<div class="history-section">
-		<button class="history-header" aria-expanded={tkHistoryExpanded} on:click={() => (tkHistoryExpanded = !tkHistoryExpanded)}>
-			<span class="history-title">Historique</span>
-			<span class="history-count">{tkHistory.length}</span>
-			<span class="history-chevron">▼</span>
-		</button>
+		<SectionRepliee titre="&#x1F4C1; Archives" compte={tkHistory.length}
+			bind:ouvert={tkHistoryExpanded} />
 		{#if tkHistoryExpanded}
 		<div class="history-content">
 			{#each tkHistoryByYear as [year, tickets]}
@@ -1201,7 +1200,7 @@
 			<button type="button" class="pill" class:pill-active={ahVue === 'nouvelle'}
 				on:click={() => (ahVue = 'nouvelle')}>&#x1F4DD; Nouvelle annonce</button>
 			<button type="button" class="pill" class:pill-active={ahVue === 'historique'}
-				on:click={() => { ahVue = 'historique'; loadAnnoncesHall(); }}>&#x1F4DA; Historique</button>
+				on:click={() => { ahVue = 'historique'; loadAnnoncesHall(); }}>&#x1F4C1; Archives</button>
 		</div>
 
 		{#if ahVue === 'nouvelle'}
