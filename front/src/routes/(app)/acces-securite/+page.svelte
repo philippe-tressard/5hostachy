@@ -337,9 +337,10 @@ import { onMount } from 'svelte';
 	</FormulaireCreation>
 {/if}
 
-<!-- Historique des demandes -->
+<!--  Archives — les demandes passées. « Historique » nomme le fil d'un objet
+      (cadre #430) ; ici ce sont des objets rangés (#516). -->
 <section class="section card" style="margin-top:1rem">
-	<h2 class="section-title">Historique de mes demandes</h2>
+	<h2 class="section-title">Archives de mes demandes</h2>
 	{#if commandes.length === 0}
 		<p style="color:var(--color-text-muted);font-size:.9rem">Aucune demande passée.</p>
 	{:else}

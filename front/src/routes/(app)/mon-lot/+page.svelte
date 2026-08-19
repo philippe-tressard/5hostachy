@@ -849,7 +849,7 @@
 				Baux actifs ({bauxActifs.length})
 			</button>
 			<button class:active={bailTab === 'historique'} on:click={() => (bailTab = 'historique')}>
-				Historique ({bauxTermines.length})
+				Archives ({bauxTermines.length})
 			</button>
 		</div>
 
