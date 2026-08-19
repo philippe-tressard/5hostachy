@@ -1,9 +1,6 @@
 <script lang="ts">
-	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
-import EntetePage from '$lib/components/EntetePage.svelte';
-import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
-import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
-import { STATUTS_IDEE, STATUTS_IDEE_FILTRE, IDEE_BADGE, STATUT_IDEE_LABELS } from '$lib/idees';
+	import EntetePage from '$lib/components/EntetePage.svelte';
+import { IDEE_BADGE } from '$lib/idees';
 import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
 import OngletAnnonces from '$lib/components/OngletAnnonces.svelte';
 import Reponses from '$lib/components/Reponses.svelte';
@@ -17,6 +14,9 @@ import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 import { toast } from '$lib/components/Toast.svelte';
 import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 import { safeHtml } from '$lib/sanitize';
+import { messageErreur } from '$lib/erreurs';
+import EtatListe from '$lib/components/EtatListe.svelte';
+import OngletIdees from '$lib/components/OngletIdees.svelte';
 import { fmtDateShort, isNouveau } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
@@ -40,14 +40,6 @@ let banMessage = '';
 let erreurSondages = '';
 let erreurIdees = '';
 let erreurAnnonces = '';
-
-function messageErreur(e: unknown): string {
-	if (e instanceof ApiError) {
-		if (e.status === 401) return 'Votre session a expiré — rechargez la page pour vous reconnecter.';
-		return e.message || 'Le serveur n’a pas répondu correctement.';
-	}
-	return 'Impossible de joindre le serveur.';
-}
 
 // Sondages — l'état de SAISIE vit dans `FormulaireSondage.svelte` : le ciblage
 // (périmètre, destinataires), les options et les canaux y sont désormais, avec
@@ -100,7 +92,6 @@ let annoncesLoading = true;
 let showFormAnnonce = false;
 let expandedAnnonce: number | null = null;
 
-const statuts = STATUTS_IDEE_FILTRE;
 const statutClass = (s: string) => IDEE_BADGE[s] ?? 'badge-gray';
 
 $: filteredIdees = filtreStatut ? idees.filter(i => i.statut === filtreStatut) : idees;
@@ -328,21 +319,11 @@ aria-expanded={showModeration}>
 	on:annule={() => (showFormSondage = false)} />
 {/if}
 
-{#if sondagesLoading}
-<p style="color:var(--color-text-muted)">Chargement</p>
-{:else if erreurSondages}
-<!--  🔴 L'échec passe AVANT le vide : dire « aucun sondage » quand on n'a pas
-      pu regarder, c'est affirmer une absence qu'on n'a pas constatée (#519). -->
-<div class="empty-state">
-<h3>Impossible d'afficher les sondages</h3>
-<p>{erreurSondages}</p>
-</div>
-{:else if sondages.length === 0}
-<div class="empty-state">
-<h3>Aucun sondage</h3>
-<p>Les sondages du conseil syndical apparaîtront ici.</p>
-</div>
-{:else}
+<EtatListe chargement={sondagesLoading} erreur={erreurSondages}
+	vide={sondages.length === 0}
+	titreErreur="Impossible d'afficher les sondages"
+	titreVide="Aucun sondage"
+	messageVide="Les sondages du conseil syndical apparaîtront ici.">
 {#each sondages as s}
 <a href="/sondages/{s.id}" class="sondage-card card">
 <div class="sondage-body">
@@ -388,87 +369,29 @@ aria-expanded={showModeration}>
 </div>
 </a>
 {/each}
-{/if}
+</EtatListe>
 {/if}
 
 {#if activeTab === 'idees'}
-
-{#if showFormIdee}
-<FormulaireIdee on:cree={ideeCreee} on:annule={() => (showFormIdee = false)} />
-{/if}
-
-<div class="filters">
-{#each statuts as s}
-<button class="btn btn-sm" class:btn-primary={filtreStatut === s.val} on:click={() => filtreStatut = s.val}>{s.label}</button>
-{/each}
-</div>
-
-{#if ideesLoading}
-<p style="color:var(--color-text-muted)">Chargement</p>
-{:else if erreurIdees}
-<div class="empty-state">
-<h3>Impossible d'afficher les idées</h3>
-<p>{erreurIdees}</p>
-</div>
-{:else if sortedIdees.length === 0}
-<div class="empty-state">
-<h3>Aucune idée pour l'instant</h3>
-<p>Soyez le premier à proposer une idée !</p>
-</div>
-{:else}
-{#each sortedIdees as idee}
-<div class="idee-card card" id="idee-{idee.id}">
-<button class="vote-btn" class:voted={idee.mon_vote} on:click={() => voter(idee.id)}
-title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
-<span class="vote-icon">{idee.mon_vote ? '❤️' : '\u{1F90D}'}</span>
-<span class="vote-count">{idee.nb_votes}</span>
-</button>
-<div class="idee-body">
-<!--  🔴 L'EN-TÊTE DU SITE (18/08/2026, signalé à l'écran : « l'état sur une
-      2nde ligne après le titre »). Le titre et le badge d'état partageaient une
-      ligne en `space-between`, seule carte du produit dans ce cas — les quatre
-      autres passent par `EnteteCarte` : titre sur sa propre ligne, puis les tags.
-
-      ⚠️ L'en-tête vit DANS `.idee-body`, pas au-dessus : le bouton de vote reste
-      à gauche de l'ensemble, il n'est pas un tag. `basculable` reste faux — une
-      idée ne se déplie pas, elle montre tout. -->
-<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
-<svelte:fragment slot="titre-suffixe">
-{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
-</svelte:fragment>
-<svelte:fragment slot="tags">
-<span class="badge {statutClass(idee.statut)}">{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span>
-{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span>{/if}
-</svelte:fragment>
-</EnteteCarte>
-<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
-{#if idee.auteur_id !== $currentUser?.id}
-<button class="signaler-inline" title="Signaler cette idée au conseil syndical" aria-label="Signaler cette idée" on:click={() => signaler('idee', idee.id)}>🚩</button>
-{/if}
-
-<Reponses
-reponses={idee.reponses ?? []}
-currentUserId={$currentUser?.id}
-isCS={$isCS}
-placeholder="Votre réponse à cette idée…"
-onSubmit={(c) => repondreIdee(idee.id, c)}
-onDelete={(rid) => supprimerReponseIdee(idee.id, rid)}
-onReport={(rid) => signaler('reponse', rid)}
+<OngletIdees
+	idees={sortedIdees}
+	chargement={ideesLoading}
+	erreur={erreurIdees}
+	bind:filtreStatut
+	showForm={showFormIdee}
+	currentUserId={$currentUser?.id}
+	estCS={$isCS}
+	estAdmin={$isAdmin}
+	{statutClass}
+	onVoter={voter}
+	onChangerStatut={changeStatut}
+	onSupprimer={deleteIdee}
+	onSignaler={signaler}
+	onRepondre={repondreIdee}
+	onSupprimerReponse={supprimerReponseIdee}
+	on:cree={ideeCreee}
+	on:annule={() => (showFormIdee = false)}
 />
-</div>
-{#if $isCS}
-<div class="idee-actions">
-<!--  Workflow en PASTILLES, jamais un `<select>` nu (R3, #423). -->
-<WorkflowPastilles options={STATUTS_IDEE} valeur={idee.statut}
-on:choisir={(e) => changeStatut(idee.id, e.detail)} />
-{#if $isAdmin}
-<button class="btn-icon-danger" title="Supprimer cette idée" on:click={() => deleteIdee(idee.id)}>🗑️</button>
-{/if}
-</div>
-{/if}
-</div>
-{/each}
-{/if}
 {/if}
 
 {#if activeTab === 'annonces'}
@@ -506,22 +429,8 @@ margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
 .sondage-votants { font-weight: 600; }
 .sondage-ciblage { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; }
 .sondage-badge { font-size: .7rem; }
-.idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
-.vote-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .6rem; cursor: pointer; transition: border-color .12s; min-width: 3.5rem; }
-.vote-btn:hover { border-color: var(--color-primary); }
-.vote-btn.voted { border-color: var(--color-primary); background: var(--color-primary-light); }
-.vote-icon { font-size: 1.1rem; }
-.vote-count { font-size: .85rem; font-weight: 700; color: var(--color-primary); }
-.idee-body { flex: 1; }
-.idee-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
-.idee-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .3rem; flex-wrap: wrap; gap: .4rem; }
-.idee-titre { font-size: .95rem; }
-.idee-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
-.idee-actions select { padding: .35rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .8rem; background: var(--color-bg); }
 /* Les styles des réponses sont dans le composant partagé Reponses.svelte */
 /* Signalement + modération */
-.signaler-inline { background: none; border: none; cursor: pointer; font-size: .78rem; color: var(--color-text-muted); opacity: .7; padding: 0 0 0 .5rem; }
-.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
 .moderation-panel { border: 1px solid var(--color-warning); border-radius: var(--radius); background: #fffbeb; margin-bottom: 1.25rem; overflow: hidden; }
 .moderation-tete { width: 100%; text-align: left; background: none; border: none; padding: .7rem 1rem; font-weight: 600; font-size: .9rem; cursor: pointer; color: var(--color-text); display: flex; align-items: center; gap: .5rem; }
 .moderation-chevron { margin-left: auto; font-size: .75rem; }
