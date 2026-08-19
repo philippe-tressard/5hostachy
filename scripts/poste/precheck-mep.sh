@@ -314,8 +314,8 @@ rapporter 5 "$V5" "Bridge WhatsApp connecté" "dernier état : ${WA:-?}"
 ERR=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -cE "ERROR|CRITICAL"; true')
 SIG6=""; SIGC6=""; ECART6=""; DET6="compte=${ERR:-?}"
 if [ -f "$RACINE_DEPOT/.git/erreur-corrigee" ]; then
-  SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '')
-  SIG6=$(sed -n '2p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '')
+  SIGC6=$(sed -n '1s/^commit:[[:space:]]*//p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
+  SIG6=$(sed -n '2p' "$RACINE_DEPOT/.git/erreur-corrigee" | tr -d '\r')
   #  Le motif est appliqué EN LOCAL sur les lignes rapatriées, jamais injecté
   #  dans la commande SSH : l'oubli des guillemets autour d'un motif distant a
   #  déjà coûté un correctif en trois passes (check-reliability, 11/08/2026).
@@ -387,7 +387,7 @@ esac
 H1=$(sur "$RPI1" 'git -C /opt/5hostachy rev-parse --short HEAD')
 H2=$(sur "$RPI2" 'git -C /opt/5hostachy rev-parse --short HEAD')
 rapporter 10 "$(verdict_parite "$H1" "$H2")" "Parité de code actif ⇆ standby" \
-          "rpi1=${H1:-?} rpi2=${H2:-?} (écart résorbé à la bascule de 02:00)"
+          "rpi1=${H1:-?} rpi2=${H2:-?} (le standby s'aligne seul sous 5 min — auto-deploy, #448)"
 
 # 11 — auto-deploy de l'actif vivant
 PROPRIO=$(sur "$ACTIF" 'stat -c %U /var/log/hostachy-deploy.log 2>/dev/null')

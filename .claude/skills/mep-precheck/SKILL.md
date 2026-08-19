@@ -178,7 +178,9 @@ elle.
 
 - **FAIL** → MEP non autorisée. Diagnostiquer, corriger, **relancer le script**.
 - **ÉCART** (points 10 et 0d) → toléré, mais à lire. Point 10 : le standby se
-  resynchronise à la bascule de 02:00 (`bascule.sh` phase 0). Point 0d : un lot
+  aligne seul sous 5 minutes (`auto-deploy.sh`, #448 — depuis le 19/08/2026 ;
+  avant, la bascule de 02:00 n'alignait que le nœud ENTRANT, donc le standby
+  accumulait le retard après chaque déploiement). Point 0d : un lot
   **sans** bump se déploie quand même — c'est P3 qui devient incapable de prouver
   que le déploiement a eu lieu, la version servie étant identique avant et après.
 - **0c** → il ne compte que les échecs de CI que ce lot **ne corrige pas**. Un
@@ -295,7 +297,7 @@ Attendre le tick, puis :
 | P6 | Aucune régression visible en logs | `docker logs hostachy_api --since 10m \| grep -cE 'ERROR\|CRITICAL'` | 0 |
 | P7 | **Le correctif est effectivement observable** | Vérifier le comportement corrigé sur le site réel | Le bug ne se reproduit plus |
 | P8 | Redondance intacte après MEP | Point 2 (rôle cohérent sur les 2 nœuds) | Inchangé et cohérent |
-| P9 | Parité du standby | Point 10 | HEAD identiques, **ou** noter que la resynchro aura lieu à la bascule de 02:00 (`bascule.sh` phase 0) |
+| P9 | Parité du standby | Point 10 | HEAD identiques, **ou** noter que le standby s'alignera seul au prochain passage d'`auto-deploy` (≤ 5 min, #448) |
 | P10 | **Bilan mémoire du lot** — 🟡 priorité 3 | Relire les activités de la PR : qu'a-t-on appris qui n'est écrit nulle part ? Voir « P10 » | Chaque leçon est **écrite** (socle ou banque projet), ou explicitement écartée |
 | P11 | **Clore les tickets du lot** — après P7, jamais avant | `gh issue close <n> --comment "…"` avec la preuve observée | Chaque ticket du lot est clos **ou** dit ce qu'il attend encore |
 
