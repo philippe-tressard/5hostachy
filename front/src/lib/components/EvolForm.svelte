@@ -82,11 +82,14 @@
 	import { createEventDispatcher } from 'svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
+	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import ApercuDiffusionModale from '$lib/components/ApercuDiffusion.svelte';
+	import { creerApercu } from '$lib/apercu';
+	import type { ApercuDiffusion } from '$lib/api';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 	import { perimetreLabel, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 
@@ -147,6 +150,27 @@
 	export let avecPerimetre = false;
 	/** Périmètre courant de l'objet — affiché en badge, comme l'état courant. */
 	export let perimetreCourant: string[] = [];
+	/**  Comment demander l'aperçu de ce qui partira — `null` = pas d'aperçu ici.
+	 *
+	 *   🔴 Fournie par l'APPELANT, jamais codée ici : ce formulaire sert quatre
+	 *   écrans (ticket, actualité, calendrier, espace CS), et chacun compose son
+	 *   message avec ses propres modèles. Un aperçu écrit ici ne pourrait montrer
+	 *   qu'un seul des quatre — donc mentir sur les trois autres.
+	 *
+	 *   ⚠️ AJOUTÉ le 19/08/2026 après un signalement : l'aperçu n'existait qu'à la
+	 *   création d'un ticket, et l'utilisateur l'a découvert en COMMENTANT — case
+	 *   « envoyer au syndic » cochée, rien ne s'est ouvert. Une fonctionnalité
+	 *   livrée à moitié ne se lit pas « la suite arrive », elle se lit « cassée »,
+	 *   et c'est la lecture juste du côté de l'écran. */
+	export let demanderApercu:
+		| ((saisie: {
+				contenu: string;
+				fichiers_urls: string[];
+				whatsapp: boolean;
+				syndic: boolean;
+				cs: boolean;
+		  }) => Promise<ApercuDiffusion>)
+		| null = null;
 	/** Contrôlé par le parent : est-ce que la sauvegarde API est en cours */
 	export let saving = false;
 
@@ -251,9 +275,38 @@
 	// même fonction (photo, document, fichier unifié) ne différaient que par la
 	// liste alimentée.
 
+	// ── Aperçu avant diffusion (#498) ─────────────────────────────────────────
+	//  Il ne s'interpose QUE si l'appelant sait le composer ET qu'un canal est
+	//  coché : sans canal il n'y a rien à montrer, et une modale de plus serait
+	//  une étape gratuite entre l'utilisateur et son commentaire.
+	$: aUneDiffusion = showNotifs && (partagerWhatsapp || envoyerSyndic || envoyerCs);
+	//  🔴 La saisie est PASSÉE à l'appelant, elle n'est pas lue depuis l'extérieur.
+	//  Ce formulaire tient son état ; une fermeture posée chez l'appelant lirait
+	//  des valeurs vides — première tentative, corrigée avant d'être livrée.
+	const apercu = creerApercu(async () => {
+		if (!demanderApercu) throw new Error('Aperçu non disponible sur cet écran.');
+		return demanderApercu({
+			contenu,
+			fichiers_urls: allFichiersUrls,
+			whatsapp: partagerWhatsapp,
+			syndic: envoyerSyndic,
+			cs: envoyerCs,
+		});
+	});
+
 	// ── Submit ────────────────────────────────────────────────────────────────
+	function soumettre() {
+		if (!canSubmit) return;
+		if (demanderApercu && aUneDiffusion) {
+			void apercu.ouvrir();
+			return;
+		}
+		handleSubmit();
+	}
+
 	function handleSubmit() {
 		if (!canSubmit) return;
+		apercu.fermer();
 		dispatch('submit', {
 			type: editMode ? 'commentaire' : evolType,
 			contenu,
@@ -370,41 +423,24 @@
 		</SectionFormulaire>
 	{/if}
 
-	<!-- ── 9. Diffusion — EN DERNIER, après les pièces jointes ──────────────
-	     L'avertissement sur les fichiers est rendu au CONTACT de la case
-	     WhatsApp qu'il commente : sous le sélecteur de fichiers, il en était
-	     séparé par toute la rubrique (#416). -->
-	{#if sectionDiffusion}
-		<SectionFormulaire titre="Diffusion">
-			{#if avecInterne}
-				<label class="case-interne">
-					<input type="checkbox" bind:checked={interne} />
-					<span>Message interne (visible par le conseil syndical uniquement)</span>
-				</label>
-			{/if}
-			{#if showNotifs}
-				<CanauxNotification
-					bind:whatsapp={partagerWhatsapp}
-					bind:syndic={envoyerSyndic}
-					bind:cs={envoyerCs}
-					compact
-				/>
-				{#if partagerWhatsapp && allFichiersUrls.length > 0}
-					<p class="aide-case">
-						⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.
-					</p>
-				{/if}
-			{/if}
-
-			{#if showEmail}
-				<div class="field champ-large">
-					<label for="{idPrefixe}-email-ext">&#x1F4E7; Notifier une adresse email externe</label>
-					<input id="{idPrefixe}-email-ext" type="email" bind:value={emailExterne}
-						placeholder="contact@exemple.fr" />
-				</div>
-			{/if}
-		</SectionFormulaire>
-	{/if}
+	<!-- ── 9. Diffusion — un OBJET du site, rendu partout pareil (#498) ─────
+	     Arbitré à l'écran le 19/08/2026 : *« C'est une évolution sur l'objet
+	     Diffusion, qu'il soit positionné sur n'importe quel formulaire. »* Le
+	     bloc était écrit ici ET dans `ChampsCommuns` — deux écritures d'une même
+	     notion, donc deux valeurs libres de diverger. -->
+	<SectionDiffusion
+		{idPrefixe}
+		avecCanaux={showNotifs}
+		bind:whatsapp={partagerWhatsapp}
+		bind:syndic={envoyerSyndic}
+		bind:cs={envoyerCs}
+		avecEmailExterne={showEmail}
+		bind:emailExterne
+		{avecInterne}
+		bind:interne
+		fichiers={allFichiersUrls}
+		compact
+	/>
 
 	<!-- ── Actions ──────────────────────────────────────────────────────────
 	     `.form-actions` vient d'app.css : la disposition était recomposée ici en
@@ -414,11 +450,25 @@
 	     édition, c'était le même geste sous deux libellés (§9 quinquies bis). -->
 	<div class="form-actions">
 		<button type="button" class="btn btn-outline btn-sm" on:click={() => dispatch('cancel')}>Annuler</button>
-		<button type="button" class="btn btn-primary btn-sm" disabled={!canSubmit} on:click={handleSubmit}>
+		<button type="button" class="btn btn-primary btn-sm" disabled={!canSubmit} on:click={soumettre}>
 			{saving ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
 	</div>
 </FormulaireCreation>
+
+<!--  L'aperçu s'ouvre PAR-DESSUS le formulaire, jamais à sa place : « Retour au
+      formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
+      remonté la perdrait. -->
+{#if $apercu.ouvert}
+	<ApercuDiffusionModale
+		apercu={$apercu.donnees}
+		chargement={$apercu.chargement}
+		envoi={saving}
+		on:envoyer={handleSubmit}
+		on:retour={apercu.fermer}
+		on:annuler={apercu.fermer}
+	/>
+{/if}
 
 <style>
 	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
@@ -435,21 +485,8 @@
 	    en douce ici. */
 	.evol-aide { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
 
-	/*  Définie ICI, avec le balisage qu'elle habille : `.checkbox-field` n'est pas
-	    une classe d'`app.css` — chaque composant qui l'emploie la style lui-même,
-	    et une classe seulement utilisée arrive nue à l'écran (v2.67.11). */
-	.case-interne {
-		display: flex;
-		align-items: center;
-		gap: .4rem;
-		cursor: pointer;
-		font-size: .85rem;
-		margin: 0 0 .6rem;
-	}
-	.case-interne input[type='checkbox'] { width: auto; margin: 0; flex-shrink: 0; }
-	/*  Sous 480 px, la cible tactile d'une case ne faisait que 16 à 18 px de haut
-	    (socle 11 §10). */
-	@media (max-width: 480px) {
-		.case-interne { min-height: 44px; }
-	}
+	/*  `.case-interne` est partie avec son balisage dans `SectionDiffusion.svelte`
+	    (#498), cible tactile de 44 px comprise : la garder ici en ferait une règle
+	    orpheline, c'est-à-dire la moitié du défaut que `lint:classes-nues`
+	    surveille par l'autre bout. */
 </style>

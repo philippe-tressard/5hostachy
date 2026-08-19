@@ -54,6 +54,27 @@
 	let enregistre = false;
 	let corrige = false;
 
+	//  L'aperçu d'un commentaire : le message part avec l'HISTORIQUE du ticket
+	//  derrière lui, et c'est justement ce que personne ne relit avant d'envoyer
+	//  (#498). Le brouillon est composé par le serveur, avec les fonctions de
+	//  l'envoi — l'écran n'en fabrique aucune partie.
+	//
+	//  La saisie vient du formulaire lui-même : lui seul la tient, et une lecture
+	//  depuis ici rendrait des valeurs vides.
+	function apercuDuCommentaire(saisie: {
+		contenu: string; fichiers_urls: string[];
+		whatsapp: boolean; syndic: boolean; cs: boolean;
+	}) {
+		return ticketsApi.apercuDiffusion({
+			ticket_id: ticketId,
+			commentaire: saisie.contenu,
+			fichiers_urls: saisie.fichiers_urls,
+			destinataire_syndic: saisie.syndic,
+			destinataire_cs: saisie.cs,
+			partager_whatsapp: saisie.whatsapp,
+		});
+	}
+
 	async function ajouter(e: CustomEvent) {
 		enregistre = true;
 		try {
@@ -139,6 +160,7 @@
 		<div class="evol-form card">
 			{#key ouvert}
 				<EvolForm idPrefixe="tk-evol" titre="Commenter"
+					demanderApercu={apercuDuCommentaire}
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
 					avecPerimetre={$isCS && sectionPresente(TICKET, 'evolution', 'perimetre')}
