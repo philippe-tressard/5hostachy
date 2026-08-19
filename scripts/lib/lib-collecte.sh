@@ -28,6 +28,25 @@
 # arriver : CI verte sur un script mort. Le gate est donc passé APRÈS, pour que la
 # CI paie le prix de l'assemblage exactement comme la production.
 # Émet des lignes key=value. Tout est tolérant aux erreurs (jamais d'exit ≠ 0).
+#
+# 🔴 CETTE CHAÎNE EST ENTRE GUILLEMETS SIMPLES : une apostrophe écrite à
+# l'intérieur, même dans un commentaire, la ferme. L'assemblage reste du shell
+# valide côté local et devient invalide côté distant — le défaut du 11/08/2026,
+# reproduit à l'identique le 19/08 en y ajoutant un commentaire en français.
+# `verdicts_selftest` l'attrape (« COLLECT assemblé est du shell INVALIDE »).
+# Toute explication va donc ICI, au-dessus ; en dessous, on écrit sans apostrophe.
+#
+# ── Le motif d'extraction des scripts planifiés (C18) ────────────────────────
+# Il doit rester IDENTIQUE à celui de `crontab_scripts()` dans `lib-verdicts.sh`,
+# qui est la version pure et testée. `verdicts_selftest` échoue si les deux
+# divergent — il ne s'agit pas d'un vœu, mais d'un contrôle.
+#
+# ⚠️ Pourquoi la barre oblique est dans la classe : #337 a rangé les scripts dans
+# `/opt/5hostachy/scripts/exploitation/` le 15/08/2026, et la classe ne l'admettait
+# pas. L'extraction rendait donc du VIDE sur les deux nœuds, et C18 a répondu
+# « Crontabs root INCONNUS » quatre jours durant. Il l'a dit — INCONNU jamais OK,
+# la règle a tenu — mais un INCONNU répété se lit « pas cette fois », jamais
+# « mort depuis quatre jours ».
 COLLECT='
 R=/opt/5hostachy
 echo "host=$(hostname)"
@@ -86,7 +105,9 @@ esac
 # donc la commande RÉUSSIRAIT en donnant la mauvaise réponse. Un faux vert par
 # succès, le pire des cas.
 if [ "$(id -u)" = "0" ]; then CRONRAW=$(crontab -l 2>/dev/null); else CRONRAW=$(sudo -n crontab -l 2>/dev/null); fi
-echo "cronscripts=$(echo "$CRONRAW" | grep -vE "^\s*(#|$)" | grep -oE "/opt/5hostachy/[A-Za-z0-9_.-]+\.sh" | sed "s#.*/##" | sort -u | paste -sd, - | tr -d " \n")"
+# Motif jumeau de crontab_scripts() dans lib-verdicts.sh — voir la note au-dessus
+# de COLLECT. La barre oblique dans la classe est indispensable depuis #337.
+echo "cronscripts=$(echo "$CRONRAW" | grep -vE "^\s*(#|$)" | grep -oE "/opt/5hostachy/[A-Za-z0-9_./-]+\.sh" | sed "s#.*/##" | sort -u | paste -sd, - | tr -d " \n")"
 # ── C20. Inventaire des permissions élevées — METADONNEES SEULES ─────────────
 # Nom, taille et mode de chaque fichier, JAMAIS son contenu. Le repertoire est
 # traversable par tous, donc ceci se lit sans le moindre privilege : c est ce qui
