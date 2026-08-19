@@ -141,8 +141,12 @@
 	$: filItems = filteredItems;
 
 	// ── Classement du fil : récent / ancien / masqué ───────────────────────
-	const THIRTY_DAYS = 30 * 86400000;
-	const YEAR_PLUS = 377 * 86400000;
+	//  🔴 UN SEUL délai, ADMINISTRABLE (#513) : il valait 30 j en dur ici, 30 en
+	//  dur pour les annonces, 377 pour la fenêtre du fil — quatre nombres pour
+	//  une seule question. `PLAFOND_CHARGEMENT` est une borne de chargement, pas
+	//  un second seuil de visibilité : les Archives couvrent tout l'intervalle.
+	$: SEUIL_RECENT = (parseInt($configStore?.['publie_visibilite_jours'] ?? '30') || 30) * 86400000;
+	const PLAFOND_CHARGEMENT = 377 * 86400000;
 
 	let recentItems: FluxItem[] = [];
 	let olderItems: FluxItem[] = [];
@@ -158,8 +162,8 @@
 			if (estEpingle(item)) continue;
 			const age = now - dateDeReference(item);
 			if (estNonResolu(item)) { _recent.push(item); continue; }
-			if (age > YEAR_PLUS) continue;
-			if (age < THIRTY_DAYS) _recent.push(item);
+			if (age > PLAFOND_CHARGEMENT) continue;
+			if (age < SEUIL_RECENT) _recent.push(item);
 			else _older.push(item);
 		}
 		recentItems = _recent;
@@ -559,15 +563,9 @@
 		<!-- Accordéon : anciens (>30 jours) -->
 		{#if olderItems.length > 0}
 			<div class="section-reveal" class:section-visible={ready} style="--delay:.35s">
-				<!--  Le bandeau était réimplémenté ici (`.older-toggle`, `.older-count`,
-				      chevron à GAUCHE) — troisième écriture d'une même notion, avec un
-				      troisième aspect (#516). Il passe sur `SectionRepliee`, comme les
-				      Archives des Actualités et des Petites annonces.
-
-				      ⚠️ Le libellé, lui, ne devient PAS « Archives » : ceci n'est pas une
-				      pile d'objets rangés, c'est la SUITE du fil d'activité. Le look
-				      s'unifie, la notion reste distincte. -->
-				<SectionRepliee titre="&#x1F553; Activité plus ancienne" compte={olderItems.length}
+				<!--  Bandeau réimplémenté ici jusqu'au 20/08, et libellé « Activité plus
+				      ancienne » : « Archives partout, même règle » (#516). -->
+				<SectionRepliee titre="&#x1F4C1; Archives" compte={olderItems.length}
 					bind:ouvert={olderOpen} />
 				{#if olderOpen}
 					<div class="flux-timeline older-timeline">

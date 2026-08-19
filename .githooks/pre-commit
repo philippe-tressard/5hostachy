@@ -16,6 +16,18 @@
 #
 # Contournement ponctuel (hors-ligne, urgence) : ALLOW_STALE=1 git commit ...
 
+# ── Fins de ligne : un diff gonflé par des terminaisons n'est plus relisible ──
+#  Quatrième récidive le 20/08/2026 : trois fichiers convertis de CRLF vers LF
+#  pendant des lots qui ne changeaient que quelques lignes. La PR annonçait
+#  2 998 ajouts / 2 743 suppressions pour un changement réel d'une dizaine de
+#  lignes — et c'est l'utilisateur qui l'a vu, juste avant de fusionner.
+#  `standards/10` réclamait ce contrôle ; le voici. Dérogation : ALLOW_EOL=1
+if command -v python >/dev/null 2>&1; then
+    python "$(git rev-parse --show-toplevel)/scripts/poste/verifier-fins-de-ligne.py" || exit 1
+elif command -v python3 >/dev/null 2>&1; then
+    python3 "$(git rev-parse --show-toplevel)/scripts/poste/verifier-fins-de-ligne.py" || exit 1
+fi
+
 [ -n "$ALLOW_STALE" ] && exit 0
 
 upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)

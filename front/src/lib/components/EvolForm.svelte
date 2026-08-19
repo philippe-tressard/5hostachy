@@ -87,8 +87,6 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import ApercuDiffusionModale from '$lib/components/ApercuDiffusion.svelte';
-	import { creerApercu } from '$lib/apercu';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
 	import { perimetreLabel, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
@@ -283,7 +281,11 @@
 	//  🔴 La saisie est PASSÉE à l'appelant, elle n'est pas lue depuis l'extérieur.
 	//  Ce formulaire tient son état ; une fermeture posée chez l'appelant lirait
 	//  des valeurs vides — première tentative, corrigée avant d'être livrée.
-	const apercu = creerApercu(async () => {
+	//  L'état et la modale vivent dans `SectionDiffusion` depuis le 20/08/2026 :
+	//  l'aperçu appartient à l'objet Diffusion, pas à ses appelants (#498). Ne
+	//  reste ici que la SAISIE à transmettre — ce formulaire seul la connaît.
+	let refDiffusion: SectionDiffusion;
+	const brouillonApercu = () => {
 		if (!demanderApercu) throw new Error('Aperçu non disponible sur cet écran.');
 		return demanderApercu({
 			contenu,
@@ -292,21 +294,18 @@
 			syndic: envoyerSyndic,
 			cs: envoyerCs,
 		});
-	});
+	};
 
 	// ── Submit ────────────────────────────────────────────────────────────────
 	function soumettre() {
 		if (!canSubmit) return;
-		if (demanderApercu && aUneDiffusion) {
-			void apercu.ouvrir();
-			return;
-		}
+		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
 		handleSubmit();
 	}
 
 	function handleSubmit() {
 		if (!canSubmit) return;
-		apercu.fermer();
+		refDiffusion?.fermerApercu();
 		dispatch('submit', {
 			type: editMode ? 'commentaire' : evolType,
 			contenu,
@@ -429,6 +428,10 @@
 	     bloc était écrit ici ET dans `ChampsCommuns` — deux écritures d'une même
 	     notion, donc deux valeurs libres de diverger. -->
 	<SectionDiffusion
+		bind:this={refDiffusion}
+		demanderApercu={demanderApercu ? brouillonApercu : null}
+		envoiEnCours={saving}
+		on:envoyer={handleSubmit}
 		{idPrefixe}
 		avecCanaux={showNotifs}
 		bind:whatsapp={partagerWhatsapp}
@@ -455,20 +458,6 @@
 		</button>
 	</div>
 </FormulaireCreation>
-
-<!--  L'aperçu s'ouvre PAR-DESSUS le formulaire, jamais à sa place : « Retour au
-      formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
-      remonté la perdrait. -->
-{#if $apercu.ouvert}
-	<ApercuDiffusionModale
-		apercu={$apercu.donnees}
-		chargement={$apercu.chargement}
-		envoi={saving}
-		on:envoyer={handleSubmit}
-		on:retour={apercu.fermer}
-		on:annuler={apercu.fermer}
-	/>
-{/if}
 
 <style>
 	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style

@@ -29,6 +29,12 @@
 <script lang="ts">
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
+	import ApercuDiffusionModale from '$lib/components/ApercuDiffusion.svelte';
+	import { creerApercu } from '$lib/apercu';
+	import type { ApercuDiffusion } from '$lib/api';
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher<{ envoyer: void }>();
 
 	/** Préfixe des `id` : plusieurs formulaires coexistent souvent à l'écran. */
 	export let idPrefixe = 'diffusion';
@@ -55,8 +61,63 @@
 	/** Rendu en version dense (fil d'évolution, devis). */
 	export let compact = false;
 
+	/**  🔴 L'APERÇU APPARTIENT À L'OBJET DIFFUSION (#498, 20/08/2026).
+	 *
+	 *   Question posée à l'écran : *« je ne comprends pas qu'une fonction dans un
+	 *   objet ne soit pas accessible sur toutes ses implémentations »*. Elle était
+	 *   fondée. L'aperçu existait — endpoint, composant, tests — mais il vivait
+	 *   chez DEUX appelants (`FormulaireTicket`, `EvolForm`), écrit deux fois,
+	 *   et zéro fois ici. Un écran qui posait cet objet obtenait trois cases et
+	 *   rien d'autre : il n'y avait **rien à hériter**.
+	 *
+	 *   C'est la classe de défaut du cadre #430 appliquée à un GESTE plutôt qu'à
+	 *   un champ — et le miroir de #505 : là un geste s'affichait sans exister,
+	 *   ici il existait sans pouvoir se propager.
+	 *
+	 *   L'appelant fournit la FONCTION (chaque entité a son endpoint), l'objet
+	 *   porte l'état, la modale et les trois sorties. Absente = pas d'aperçu, et
+	 *   c'est le comportement des sept écrans qui n'en ont pas encore. */
+	export let demanderApercu: (() => Promise<ApercuDiffusion>) | null = null;
+	/** Passé à la modale : elle grise « Envoyer » pendant l'enregistrement. */
+	export let envoiEnCours = false;
+
+	//  Le store vit ICI, plus dans chaque formulaire. `$lib/apercu` était déjà
+	//  partagé ; c'est son BRANCHEMENT qui était recopié.
+	const apercu = creerApercu(() => {
+		if (!demanderApercu) throw new Error('Aperçu non disponible sur cet écran.');
+		return demanderApercu();
+	});
+
+	/**  Appelé par le formulaire au moment de soumettre. Rend `true` si l'aperçu
+	 *   s'ouvre — le formulaire s'arrête alors et attend la confirmation.
+	 *
+	 *   ⚠️ L'aperçu s'intercale dans la SOUMISSION, il n'est pas un bouton à part :
+	 *   c'est ce qui garantit qu'on ne peut pas diffuser sans avoir vu. Le geste
+	 *   reste donc déclenché par le formulaire, l'objet ne fait que le porter. */
+	export function ouvrirSiDiffusion(diffusionCochee: boolean): boolean {
+		if (!demanderApercu || !diffusionCochee) return false;
+		void apercu.ouvrir();
+		return true;
+	}
+
+	/** Fermer depuis le parent (après enregistrement, ou sur annulation). */
+	export function fermerApercu(): void {
+		apercu.fermer();
+	}
+
 	$: visible = avecCanaux || avecEmailExterne || avecInterne;
 </script>
+
+{#if $apercu.ouvert}
+	<ApercuDiffusionModale
+		apercu={$apercu.donnees}
+		chargement={$apercu.chargement}
+		envoi={envoiEnCours}
+		on:envoyer={() => dispatch('envoyer')}
+		on:retour={apercu.fermer}
+		on:annuler={apercu.fermer}
+	/>
+{/if}
 
 {#if visible}
 	<!-- ── 9. Diffusion — EN DERNIER, après les pièces jointes ──────────────
@@ -64,6 +125,12 @@
 	     qu'il commente : sous le sélecteur de fichiers, il en était séparé par
 	     toute la rubrique (#416). -->
 	<SectionFormulaire titre="Diffusion">
+		<!--  Les options propres à l'écran (épingler, brouillon, afficher au fil…)
+		      passent AVANT les canaux : elles décident de ce qui est PUBLIÉ, les
+		      canaux de qui en est prévenu. Ce slot existait dans la seconde
+		      implémentation de cette section (`ChampsCommuns`) ; il rejoint l'objet
+		      avec elle (#498). -->
+		<slot name="options" />
 		{#if avecInterne}
 			<label class="case-interne">
 				<input type="checkbox" bind:checked={interne} />

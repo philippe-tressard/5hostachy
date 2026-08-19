@@ -181,6 +181,18 @@ export function estNonResolu(item: FluxItem): boolean {
 		return !estTicketClos((item.meta?.statut as string) ?? '');
 	}
 	if (item.type === 'evenement') {
+		//  🔴 Un événement PASSÉ n'attend plus rien, quel que soit son kanban
+		//  (20/08/2026, signalé à l'écran : « pourquoi des événements de plus de
+		//  30 j sont visibles ? »). L'AG du 1er mars était encore en tête du fil
+		//  cinq mois plus tard : personne ne l'avait passée en « terminé », et
+		//  ce seul oubli la rendait éternelle.
+		//
+		//  La règle du site est « après la date de l'événement » (#515) : c'est
+		//  la DATE qui décide, pas un clic dans le kanban. Un ticket ouvert, lui,
+		//  attend vraiment quelque chose — d'où la différence de traitement juste
+		//  au-dessus.
+		const debut = item.meta?.debut ?? item.date ?? item.cree_le;
+		if (debut && new Date(debut as string).getTime() < Date.now()) return false;
 		const k = (item.meta?.statut_kanban as string) ?? '';
 		return !['termine', 'annule'].includes(k);
 	}

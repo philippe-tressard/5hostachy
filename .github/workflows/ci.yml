@@ -223,6 +223,7 @@ jobs:
           bash scripts/poste/precheck-mep.sh      --selftest
           bash scripts/exploitation/maintenance.sh       --selftest
           bash scripts/poste/rejouer-ci.sh        --selftest
+          python scripts/poste/verifier-fins-de-ligne.py --selftest
           bash scripts/poste/verifier-points-entree.sh --selftest
 
       - name: Contrats d'infra (logs rotés, chemins de sortie datés)
