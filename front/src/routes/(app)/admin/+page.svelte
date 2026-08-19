@@ -1449,14 +1449,6 @@ padding: .3rem .7rem; color: var(--color-text);
 .btn-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .badge-orange { background: #fff7ed; color: #c2410c; }
 .badge-purple { background: #f5f3ff; color: #7c3aed; }
-/*  Aperçu du corps d’un modèle d’e-mail — le HTML rendu, pas son code.
-    Vient de l’écran « Designs », fusionné ici (#307). */
-.apercu-email {
-border: 1px solid var(--color-border); border-radius: var(--radius);
-padding: .75rem; background: #fff; max-height: 340px; overflow: auto;
-}
-.variables-modele { font-size: .8rem; color: var(--color-text-muted); margin: .25rem 0 0; line-height: 1.8; }
-.variables-modele code { margin-left: .25rem; }
 .modal-overlay {
 position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45);
 display: flex; align-items: center; justify-content: center; z-index: 200;
@@ -1497,25 +1489,4 @@ display: flex; align-items: center; justify-content: center; z-index: 200;
 .onglets-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: .75rem; }
 .onglet-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: .75rem; display: flex; flex-direction: column; gap: .5rem; }
 
-/* Télémétrie */
-.tl-scope-switch { display: flex; gap: .5rem; flex-wrap: wrap; }
-.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-.tl-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 1rem; margin-top: 1.25rem; }
-.tl-kpi { background: var(--color-surface, #fff); border: 1px solid var(--color-border); border-radius: var(--radius, 8px); padding: 1.25rem 1rem; text-align: center; }
-.tl-kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
-.tl-kpi-label { font-size: .82rem; color: var(--color-text-muted); margin-top: .3rem; }
-.tl-section-title { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
-.tl-chart-wrap { display: flex; gap: 0; position: relative; margin-top: .5rem; }
-.tl-y-axis { position: relative; width: 32px; flex-shrink: 0; height: 130px; margin-bottom: 18px; }
-.tl-y-tick { position: absolute; right: 4px; font-size: .6rem; color: var(--color-text-muted); transform: translateY(50%); line-height: 1; text-align: right; }
-.tl-chart-inner { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tl-chart-inner .tl-y-gridline { position: absolute; left: 0; right: 0; height: 1px; background: var(--color-border); opacity: .5; pointer-events: none; z-index: 0; }
-.tl-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; padding: 0 .25rem .5rem 0; overflow-x: auto; position: relative; z-index: 1; flex: 1; }
-.tl-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 16px; height: 100%; justify-content: flex-end; }
-.tl-bar { background: var(--color-primary); border-radius: 3px 3px 0 0; width: 100%; min-height: 4px; transition: height .3s; }
-.tl-bar-month { background: var(--color-primary-light, #93c5fd); }
-.tl-bar-label { font-size: .6rem; color: var(--color-text-muted); margin-top: 2px; white-space: nowrap; }
-.tl-bar-col-month { min-width: 32px; }
 </style>

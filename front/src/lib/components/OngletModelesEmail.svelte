@@ -281,3 +281,14 @@
 </table>
 </div>
 {/if}
+<style>
+	/*  Même cause que la télémétrie : ces règles étaient restées dans la page à
+	    l'extraction. Le style part AVEC le balisage — `lint:classes-nues`. */
+.modal-box { max-width: 420px; width: 90%; padding: 1.5rem; }
+.apercu-email {
+border: 1px solid var(--color-border); border-radius: var(--radius);
+padding: .75rem; background: #fff; max-height: 340px; overflow: auto;
+}
+.variables-modele { font-size: .8rem; color: var(--color-text-muted); margin: .25rem 0 0; line-height: 1.8; }
+.variables-modele code { margin-left: .25rem; }
+</style>
