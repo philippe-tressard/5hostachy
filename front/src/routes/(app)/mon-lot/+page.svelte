@@ -904,7 +904,7 @@
 						<!-- Détails par bail (lot) -->
 						{#each group.baux as bail (bail.id)}
 							{@const lot = lots.find(l => l.id === bail.lot_id)}
-							<div class="gl-bail-section" style="border-top:1px solid var(--color-border);padding-top:1rem;margin-top:1rem">
+							<div style="border-top:1px solid var(--color-border);padding-top:1rem;margin-top:1rem">
 								<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem">
 									<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 										{#if lot}

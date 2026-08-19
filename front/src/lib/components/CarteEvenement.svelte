@@ -119,7 +119,7 @@
 				photos={apercu.photos} fichiers={apercu.fichiers} />
 		{/if}
 		{#if expanded}
-			<div class="carte-corps ev-expanded-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+			<div class="ev-expanded-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 				<!--  🔴 Le corps n'écrit plus l'ordre de ses notions : `FicheLecture` le
 				      lit dans la déclaration `EVENEMENT` (#432). Il rendait
 				      `[...photos_urls, ...fichiers_urls]` dans UN seul bloc — la fusion

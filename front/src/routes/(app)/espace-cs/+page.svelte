@@ -1480,7 +1480,7 @@
 							      une fois, dans la rubrique, avec ses styles — Svelte les
 							      scope au composant qui rend le balisage. -->
 							{#if evols.length > 0}
-								<div class="cs-fil">
+								<div>
 									<RubriqueHistorique
 										evolutions={evols}
 										statutLabels={TK_STATUT_LABELS}
@@ -2192,7 +2192,7 @@
 						{@const isEditingMotif = relanceNonRelancableEditing === t.id}
 						<div class="relance-item" class:relance-item-unselected={!selected} class:relance-item-pending={!eligible}>
 							<div class="relance-item-top">
-								<label class="relance-check" style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0">
+								<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0">
 									<input type="checkbox" checked={selected}
 										on:change={() => {
 											const s = new Set(relanceSelected);
@@ -2421,7 +2421,7 @@
 			</div>
 
 			{#if csHeaderEditing}
-				<div class="form-grid header-edit-form" style="max-width:460px;margin-bottom:1rem">
+				<div class="form-grid" style="max-width:460px;margin-bottom:1rem">
 					<label class="field">
 						Voté en AG
 						<input type="number" min="2000" max="2099" placeholder="ex. 2024" bind:value={agAnnee} />
@@ -2560,7 +2560,7 @@
 			</div>
 
 			{#if syndicHeaderEditing}
-				<div class="form-grid header-edit-form" style="max-width:580px;margin-bottom:1rem">
+				<div class="form-grid" style="max-width:580px;margin-bottom:1rem">
 					<label class="field champ-large">
 						Nom du syndic
 						<input type="text" bind:value={nomSyndic} placeholder="ex. Cabinet Bertrand" />

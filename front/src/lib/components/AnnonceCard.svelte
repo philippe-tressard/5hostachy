@@ -83,7 +83,7 @@
 	$: peutSupprimer = annonce.est_auteur || estCS || estAdmin;
 </script>
 
-<div class="carte-liste annonce-expand" class:expanded class:attenue={annonce.archivee}
+<div class="carte-liste" class:expanded class:attenue={annonce.archivee}
 	id="annonce-{annonce.id}"
 	role="presentation"
 	on:click={() => { if (!expanded) onToggle(); }}>
@@ -142,7 +142,7 @@
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
 		      impossible de sélectionner du texte, et un clic sur une photo ou un
 		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
-		<div class="carte-corps annonce-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div class="annonce-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 			{#if formulaireOuvert}
 				<slot name="formulaire" />
 			{:else}

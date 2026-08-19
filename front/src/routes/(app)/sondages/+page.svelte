@@ -246,7 +246,7 @@ if (idIdee !== null) {
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if banMessage}
-<div class="alert alert-danger" style="margin:2rem 0;padding:1.5rem;border-radius:10px;text-align:center;font-size:1.1rem">
+<div class="alert" style="margin:2rem 0;padding:1.5rem;border-radius:10px;text-align:center;font-size:1.1rem">
 	⛔ {banMessage}
 </div>
 {:else}
