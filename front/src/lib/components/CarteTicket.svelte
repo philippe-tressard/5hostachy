@@ -50,6 +50,7 @@
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
 	import { TICKET } from '$lib/entites/ticket';
+	import { sectionPresente } from '$lib/entites/types';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import type { Ticket, TicketEvolution } from '$lib/api';
 	import {
@@ -210,6 +211,8 @@
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
+						avecPerimetre={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'perimetre')}
+						perimetreCourant={ticket.perimetre_cible ?? []}
 						showNotifs={peutSuivreCeTicket}
 						showFiles={true}
 						saving={evolutionEnCours}

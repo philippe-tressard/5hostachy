@@ -36,9 +36,14 @@
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import { STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { TICKET } from '$lib/entites/ticket';
+	import { sectionPresente } from '$lib/entites/types';
 
 	export let ticketId: number;
 	export let statutCourant = '';
+	/**  Périmètre courant du ticket — affiché en badge dans le formulaire, pour
+	     qu'on voie d'où l'on part avant de le préciser (#497). */
+	export let perimetreCourant: string[] = [];
 	export let evolutions: TicketEvolution[] = [];
 
 	/** Émis après toute écriture — la page recharge ce qu'elle affiche. */
@@ -136,6 +141,8 @@
 				<EvolForm idPrefixe="tk-evol" titre="Commenter"
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
+					avecPerimetre={$isCS && sectionPresente(TICKET, 'evolution', 'perimetre')}
+					{perimetreCourant}
 					showNotifs={$isCS}
 					showEmail={$isCS}
 					showFiles={true}

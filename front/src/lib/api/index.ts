@@ -46,7 +46,9 @@ export const tickets = {
 	addMessage: (id: number, data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post<TicketMessage>(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
-	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean }) =>
+	//  `perimetre_cible` : le périmètre que l'entrée PRÉCISE, absent quand elle
+	//  n'en parle pas — le serveur ne touche alors pas à celui du ticket (#497).
+	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; perimetre_cible?: string[] }) =>
 		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	updateEvolution: (id: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
 		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),

@@ -44,6 +44,7 @@
 	import PiecesJointes from './PiecesJointes.svelte';
 	import { safeDescription } from '$lib/sanitize';
 	import { fmtDatetime } from '$lib/date';
+	import { perimetreLabel } from '$lib/perimetres';
 
 	/**  Une entrée du fil. Volontairement structurel et non `TicketEvolution` :
 	     les actualités ont leur propre type d'évolution, et cette rubrique doit
@@ -58,6 +59,8 @@
 		auteur_nom?: string;
 		cree_le: string;
 		fichiers_urls?: string[];
+		/** Le périmètre que cette entrée déclare, quand elle en déclare un (#497). */
+		perimetre_cible?: string[];
 	}
 
 	export let evolutions: Entree[] = [];
@@ -209,6 +212,20 @@
 						</span>
 					{/if}
 
+					<!--  Le périmètre PRÉCISÉ par cette entrée (#497). Il se lit sur la même
+					      ligne que le changement d'état, parce que c'est le même genre de
+					      fait : ce que cette entrée a changé au dossier.
+					      🔹 = périmètre logique, jamais 📍 qui désigne un lieu physique. Et
+					      il est TOUJOURS affiché quand l'entrée en déclare un, même s'il
+					      vaut « résidence » — la règle « pas de badge sur le périmètre par
+					      défaut » vaut pour l'ÉTAT d'un objet, pas pour un CHANGEMENT :
+					      élargir un ticket à toute la résidence est un fait qui se dit. -->
+					{#if evol.perimetre_cible?.length}
+						<span class="evol-text evol-perimetre">
+							Périmètre précisé : <strong>&#x1F539; {perimetreLabel(evol.perimetre_cible)}</strong>
+						</span>
+					{/if}
+
 					{#if enEdition === evol.id}
 						<!--  Le formulaire de correction vient de l'écran hôte : la rubrique
 						      ne connaît ni l'API ni l'entité qu'elle affiche. -->
@@ -278,6 +295,9 @@
 	.evol-actions { display: flex; gap: .3rem; flex-shrink: 0; }
 	.evol-meta { font-size: .75rem; color: var(--color-text-muted); }
 	.evol-text { color: var(--color-text); line-height: 1.5; }
+	/*  Le périmètre précisé se lit SOUS le changement d'état quand les deux sont
+	    là : deux faits, deux lignes, plutôt qu'une phrase qui les enchaîne. */
+	.evol-perimetre { display: block; margin-top: .15rem; }
 	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
 	.evol-content :global(p) { margin: 0 0 .3em; }
 	.evol-pj { margin-top: .4rem; }

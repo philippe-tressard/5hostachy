@@ -1,4 +1,4 @@
-"""L'HISTORIQUE d'un événement de calendrier — le fil de son suivi.
+"""Le CALENDRIER — un événement, et le fil de son suivi.
 
 Créé le 18/08/2026, sur demande : *« pour Calendrier il doit y avoir un
 historique et workflow »*. Le **workflow existait déjà** sous un autre nom — les
@@ -8,6 +8,18 @@ objet ? »*. Ce qui manquait, c'était la **trace** : une colonne changeait sans
 que rien ne dise quand, par qui, ni pourquoi.
 
 ## Pourquoi un module à part
+
+⚠️ Ce module ne portait que l'HISTORIQUE jusqu'au 19/08/2026 — `Evenement`
+lui-même était resté dans `core.py`, qui a donc continué de grossir pendant
+qu'un module portant son nom existait à côté. Les trois déclarations
+(`TypeEvenement`, `StatutKanban`, `Evenement`) l’ont rejoint quand le garde-fou
+a de nouveau refusé une ligne à `core.py` (#497).
+
+⚠️ Aucun `Relationship` ici, et c'est ce qui rend le déplacement possible :
+`Evenement` ne référence les autres tables que par clé étrangère nommée
+(`batiment.id`, `utilisateur.id`, `prestataire.id`), ce qui n'impose aucun
+cycle d'import. C'est la raison exacte pour laquelle `Ticket` et
+`TicketEvolution`, eux, restent dans `core.py` (cf. `models/tickets.py`).
 
 `core.py` fait 1 237 lignes et le garde-fou de modularité (rang 1,
 `standards/02` §6) refuse qu'un fichier au-delà de 500 grossisse pour une
@@ -28,9 +40,59 @@ obligé à lui ajouter une variante, et *une variante ajoutée pour accueillir u
 écart existant ne factorise pas : elle entérine*.
 """
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+
+
+class TypeEvenement(str, Enum):
+    travaux = "travaux"
+    coupure = "coupure"
+    ag = "ag"
+    maintenance = "maintenance"
+    maintenance_recurrente = "maintenance_recurrente"
+    autre = "autre"
+
+
+class StatutKanban(str, Enum):
+    ag = "ag"
+    cs = "cs"
+    syndic = "syndic"
+    fournisseur = "fournisseur"
+    termine = "termine"
+    annule = "annule"
+
+
+class Evenement(SQLModel, table=True):
+    __tablename__ = "evenement"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    titre: str
+    description: Optional[str] = None
+    type: TypeEvenement = TypeEvenement.autre
+    lieu: Optional[str] = None
+    debut: datetime
+    fin: Optional[datetime] = None
+    perimetre: str = "résidence"  # résidence | bâtiment
+    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
+    auteur_id: int = Field(foreign_key="utilisateur.id")
+    cree_le: datetime = Field(default_factory=datetime.utcnow)
+    mis_a_jour_le: Optional[datetime] = None
+    archivee: bool = False
+    statut_kanban: Optional[str] = Field(default=None)  # ag|cs|syndic|fournisseur|termine|annule
+    prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
+    frequence_type: Optional[str] = Field(default=None)   # "semaines", "mois", "fois_par_an"
+    frequence_valeur: Optional[int] = Field(default=None)
+    affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
+    # Même convention que Ticket.photos_urls (tableau JSON d'URLs internes) : le
+    # modèle portait déjà trois noms pour la même notion, ne pas en créer un 4ᵉ.
+    photos_urls: Optional[str] = None  # JSON array of photo URLs
+    # Pièces jointes non-images, même convention que Ticket.fichiers_urls.
+    fichiers_urls: str = "[]"  # JSON array d'URLs de fichiers joints
+    epingle: bool = False  # même notion que Publication.epingle
+    partager_whatsapp: bool = False
+    envoyer_syndic: bool = False
+    envoyer_cs: bool = False
 
 
 class EvenementEvolution(SQLModel, table=True):

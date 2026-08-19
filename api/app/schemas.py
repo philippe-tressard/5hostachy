@@ -1,46 +1,18 @@
 import json
 from datetime import datetime, date
-from typing import Annotated, Optional, List
-from pydantic import BaseModel, BeforeValidator, field_validator
+from typing import Optional, List
+from pydantic import BaseModel, field_validator
 
 from app.models.core import StatutTicket, StatutUtilisateur, RoleUtilisateur
 
 
-def liste_depuis_json(v):
-    """Colonne texte contenant un tableau JSON → liste d'URLs.
-
-    Quatre schémas portaient ce même validateur recopié (`photos_urls`,
-    `fichiers_urls` × 3). C'est la contrepartie côté pydantic de
-    `app/utils/photos.parse_photos`, que les routeurs utilisent pour lire les
-    mêmes colonnes : deux points d'entrée, une seule règle.
-
-    Ne lève jamais : une valeur illisible en base ne doit pas faire échouer la
-    lecture de l'élément qui la porte. Le pire cas est une liste vide.
-
-    Publique (et non `_privée`) depuis le 16/08/2026 : le détail d'un sondage
-    construit sa réponse à la main, sans `response_model`, et devait donc appeler
-    la règle plutôt que la réécrire.
-    """
-    if v is None:
-        return []
-    if isinstance(v, str):
-        try:
-            charge = json.loads(v)
-        except Exception:
-            return []
-        return [str(u) for u in charge] if isinstance(charge, list) else []
-    return v
-
-
-#: Champ exposé en liste, stocké en colonne texte. `Optional[ListeJson]` reste
-#: possible là où l'absence et la liste vide doivent se distinguer.
-#:
-#: ⚠️ Ce type s'appelait `ListeJson` — un nom qui décrivait ses trois premiers
-#: usages (photos, fichiers) et non ce qu'il fait. Le ciblage des sondages avait
-#: exactement le même besoin pour des CODES de périmètre : soit on importait un
-#: type nommé « URLs » pour des périmètres, soit on en écrivait un second,
-#: identique. Renommé pour ce qu'il est — une liste sérialisée en JSON.
-ListeJson = Annotated[List[str], BeforeValidator(liste_depuis_json)]
+#  `liste_depuis_json` et `ListeJson` vivent dans `schemas_communs.py` depuis le
+#  19/08/2026 : `schemas_tickets` en a besoin et ne peut pas importer ce
+#  fichier-ci, qui l’importe. Ré-exportés, donc rien à changer ailleurs.
+from app.schemas_communs import (  # noqa: F401
+    ListeJson as ListeJson,
+    liste_depuis_json as liste_depuis_json,
+)
 
 
 class UserCreate(BaseModel):
@@ -292,45 +264,19 @@ class MessageRead(BaseModel):
         from_attributes = True
 
 
-class TicketEvolutionCreate(BaseModel):
-    type: str  # commentaire | etat
-    contenu: Optional[str] = None
-    #  Même type que `TicketUpdate.statut`, donc **même verdict** : les deux
-    #  chemins de changement d'état d'un ticket valident désormais la même
-    #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
-    #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
-    nouveau_statut: Optional[StatutTicket] = None
-    partager_whatsapp: Optional[bool] = None
-    envoyer_syndic: Optional[bool] = None
-    envoyer_cs: Optional[bool] = None
-    fichiers_urls: List[str] = []
-    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
-
-
-class TicketEvolutionUpdate(BaseModel):
-    contenu: Optional[str] = None
-    fichiers_urls: Optional[List[str]] = None
-
-
 class PublicationEvolutionUpdate(BaseModel):
     contenu: Optional[str] = None
     fichiers_urls: Optional[List[str]] = None
 
 
-class TicketEvolutionRead(BaseModel):
-    id: int
-    ticket_id: int
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int
-    auteur_nom: Optional[str] = None
-    cree_le: datetime
-    fichiers_urls: ListeJson = []
-
-    class Config:
-        from_attributes = True
+#  Les schémas du fil d’un ticket vivent dans `schemas_tickets.py` depuis le
+#  19/08/2026 (modularité, rang 1). Ré-exportés : les routeurs appelants ne
+#  changent pas d’import.
+from app.schemas_tickets import (  # noqa: E402,F401
+    TicketEvolutionCreate as TicketEvolutionCreate,
+    TicketEvolutionRead as TicketEvolutionRead,
+    TicketEvolutionUpdate as TicketEvolutionUpdate,
+)
 
 
 class PublicationCreate(BaseModel):

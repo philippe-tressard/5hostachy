@@ -166,6 +166,9 @@ def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
         auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
         cree_le=e.cree_le,
         fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
+        #  `None` — et non `[]` — quand l'entrée ne parle pas du périmètre : le
+        #  front distingue « n'en parle pas » de « plus aucun périmètre » (#497).
+        perimetre_cible=json.loads(e.perimetre_cible) if e.perimetre_cible else None,
     )
 
 
