@@ -52,7 +52,7 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { sectionPresente } from '$lib/entites/types';
 	import { fmtDate, isNouveau } from '$lib/date';
-	import type { Ticket, TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import {
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS,
@@ -208,6 +208,14 @@
 			{:else if mode === 'evolution'}
 				<div class="tk-formulaire">
 					<EvolForm idPrefixe="tk-evol-{ticket.id}" titre="Commenter ou changer l’état"
+						demanderApercu={(saisie) => ticketsApi.apercuDiffusion({
+							ticket_id: ticket.id,
+							commentaire: saisie.contenu,
+							fichiers_urls: saisie.fichiers_urls,
+							destinataire_syndic: saisie.syndic,
+							destinataire_cs: saisie.cs,
+							partager_whatsapp: saisie.whatsapp,
+						})}
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}

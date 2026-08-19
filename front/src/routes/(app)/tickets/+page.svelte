@@ -336,6 +336,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		on:supprimer={deleteTicket}
 		on:evoluer={addEvolution}
 		on:evol_modifier={(e) => (evolEnEdition = e.detail)}
+		on:evol_annuler={() => (evolEnEdition = null)}
 		on:evol_corriger={corrigerEvolution}
 		on:evol_supprimer={supprimerEvolution}
 		on:modifie={ticketModifie}
@@ -383,6 +384,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								on:supprimer={deleteTicket}
 								on:evoluer={addEvolution}
 								on:evol_modifier={(e) => (evolEnEdition = e.detail)}
+								on:evol_annuler={() => (evolEnEdition = null)}
 								on:evol_corriger={corrigerEvolution}
 								on:evol_supprimer={supprimerEvolution}
 								on:modifie={ticketModifie}

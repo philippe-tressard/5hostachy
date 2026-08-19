@@ -49,6 +49,8 @@ export const tickets = {
 	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498). Il ne
 	//  crée rien : le brouillon est composé par les MÊMES fonctions que l'envoi.
 	apercuDiffusion: (brouillon: {
+		/** Renseigné pour un COMMENTAIRE sur un ticket existant (#498). */
+		ticket_id?: number; commentaire?: string;
 		titre?: string; description?: string; categorie?: string;
 		perimetre_cible?: string[]; photos_urls?: string[]; fichiers_urls?: string[];
 		destinataire_syndic?: boolean; destinataire_cs?: boolean; partager_whatsapp?: boolean;

@@ -46,13 +46,13 @@ recevra à coup sûr* — la nuance est petite et réelle.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, peut_commenter
 from app.database import get_session
-from app.models.core import ModeleEmail, Ticket, Utilisateur
+from app.models.core import ModeleEmail, Ticket, TicketEvolution, Utilisateur
 from app.utils.fichiers import est_image
 from app.utils.photos import photos_internes
 
@@ -69,6 +69,18 @@ class BrouillonTicket(BaseModel):
     avant de compléter.
     """
 
+    #  🔴 Renseigné quand on commente un ticket EXISTANT (#498, 19/08/2026).
+    #
+    #  L'aperçu ne couvrait que la création, et l'utilisateur l'a découvert en
+    #  commentant : il avait coché « envoyer au syndic », rien ne s'est ouvert.
+    #  Une fonctionnalité livrée à moitié ne se lit pas comme « la suite arrive »,
+    #  elle se lit comme cassée — et c'est la lecture juste, du côté de l'écran.
+    #
+    #  Le fil est le cas où l'aperçu sert le PLUS : à la création on relit ce
+    #  qu'on vient d'écrire, alors qu'un commentaire part avec l'historique du
+    #  ticket derrière lui, que personne ne relit avant l'envoi.
+    ticket_id: Optional[int] = None
+    commentaire: str = ""
     titre: str = ""
     description: str = ""
     categorie: str = ""
@@ -152,7 +164,29 @@ def apercu_diffusion(
         whatsapp_actif,
     )
 
-    ticket = _ticket_previsionnel(brouillon, user)
+    #  Deux gestes, un seul endpoint : créer un ticket, ou commenter un ticket
+    #  existant. Le second lit l'objet RÉEL en base — son numéro, son titre et son
+    #  fil sont déjà attribués, donc rien n'est prévisionnel de ce côté-là.
+    evolutions = None
+    if brouillon.ticket_id is not None:
+        ticket = session.get(Ticket, brouillon.ticket_id)
+        if not ticket:
+            raise HTTPException(404, "Ticket introuvable")
+        #  ⚠️ Le droit de commenter, pas seulement de lire : l'aperçu montre le
+        #  contenu du ticket et son historique. Le refuser ici évite d'en faire
+        #  une voie de lecture détournée.
+        if not peut_commenter(ticket, user):
+            raise HTTPException(403, "Accès refusé")
+        #  L'historique part AVEC le message, et c'est précisément ce que
+        #  personne ne relit avant d'envoyer.
+        evolutions = session.exec(
+            select(TicketEvolution)
+            .where(TicketEvolution.ticket_id == ticket.id)
+            .order_by(TicketEvolution.cree_le)
+        ).all()
+    else:
+        ticket = _ticket_previsionnel(brouillon, user)
+
     canaux: list[ApercuCanal] = []
     pieces = photos_internes(brouillon.photos_urls) + photos_internes(brouillon.fichiers_urls)
 
@@ -179,6 +213,8 @@ def apercu_diffusion(
             else:
                 ctx_metier = contexte_ticket_syndic(
                     ticket, user, session, pieces_jointes=pieces,
+                    commentaire=brouillon.commentaire or None,
+                    evolutions=evolutions,
                 )
                 ctx, site_nom, site_url, footer = _contexte_rendu(session, ctx_metier)
                 sujet, html = composer_email(
@@ -225,9 +261,12 @@ def apercu_diffusion(
                 avec_photo=bool(photo) and not ampute,
             ))
 
+    #  Sur un ticket EXISTANT, rien n'est attribué plus tard : le numéro et le
+    #  lien sont déjà là. Annoncer le contraire ferait douter d'un aperçu exact.
+    a_attribuer = [] if brouillon.ticket_id is not None else ["numéro du ticket", "lien permanent"]
     return ApercuDiffusion(
         canaux=canaux,
-        attribues_a_la_creation=["numéro du ticket", "lien permanent"] if canaux else [],
+        attribues_a_la_creation=a_attribuer if canaux else [],
     )
 
 
