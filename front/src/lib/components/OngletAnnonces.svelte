@@ -44,6 +44,10 @@
 	/** La liste, tenue par la page — elle la charge avec les deux autres rubriques. */
 	export let annonces: any[] = [];
 	export let chargement = false;
+	/**  Non vide = on n'a PAS pu charger. À afficher AVANT « aucune annonce » :
+	 *   annoncer une absence qu'on n'a pas constatée, c'est ce qui a fait croire
+	 *   à trois annonces perdues (#519). */
+	export let erreur = '';
 	/** Le formulaire de dépôt est ouvert ? Lié : le bouton vit dans l'en-tête de page. */
 	export let showForm = false;
 	/** L'annonce dépliée — liée aussi : un lien profond (`#annonce-12`) la désigne. */
@@ -185,10 +189,17 @@
 {#if chargement}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if courantes.length === 0 && archivees.length === 0}
+	{#if erreur}
+	<div class="empty-state">
+		<h3>Impossible d'afficher les annonces</h3>
+		<p>{erreur}</p>
+	</div>
+	{:else}
 	<div class="empty-state">
 		<h3>Aucune annonce</h3>
 		<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
 	</div>
+	{/if}
 {:else}
 	{#if courantes.length === 0}
 		<div class="empty-state">

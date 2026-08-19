@@ -35,6 +35,19 @@ $: trackTabView(activeTab);
 
 // Ban communauté
 let banMessage = '';
+//  Vide = chargé sans encombre. Non vide = on n'a PAS pu regarder, et l'écran
+//  doit le dire au lieu d'annoncer « aucun » (#519).
+let erreurSondages = '';
+let erreurIdees = '';
+let erreurAnnonces = '';
+
+function messageErreur(e: unknown): string {
+	if (e instanceof ApiError) {
+		if (e.status === 401) return 'Votre session a expiré — rechargez la page pour vous reconnecter.';
+		return e.message || 'Le serveur n’a pas répondu correctement.';
+	}
+	return 'Impossible de joindre le serveur.';
+}
 
 // Sondages — l'état de SAISIE vit dans `FormulaireSondage.svelte` : le ciblage
 // (périmètre, destinataires), les options et les canaux y sont désormais, avec
@@ -191,11 +204,25 @@ if ($currentUser?.communaute_ban_jusqu_au && new Date($currentUser.communaute_ba
 //  La liste des bâtiments n'est plus chargée ici : le sélecteur de périmètre
 //  lit l'arbre complet depuis son store, comme sur tous les autres écrans — un
 //  bâtiment n'est qu'un nœud parmi le parking, l'AFUL et les espaces.
-[sondages, idees, annonces] = await Promise.all([
-	sondagesApi.list().catch(() => []),
-	ideesApi.list().catch(() => []),
-	annoncesApi.list().catch(() => []),
+//  🔴 Un échec de chargement N'EST PAS une liste vide (19/08/2026).
+//
+//  Ces trois appels portaient `.catch(() => [])` : toute erreur — session
+//  expirée, 500, réseau — devenait un tableau vide, et l'écran affichait
+//  « Aucun sondage » / « Aucune annonce », c'est-à-dire EXACTEMENT le même
+//  rendu que s'il n'y avait rien. L'utilisateur a cru ses données perdues :
+//  deux sondages et trois annonces en cours dormaient en base pendant que
+//  l'écran affirmait le contraire.
+//
+//  C'est la règle 1 du projet, côté écran : une sortie vide n'est pas un
+//  constat (`standards/04`). On distingue donc les deux, et on le DIT.
+const [rS, rI, rA] = await Promise.allSettled([
+	sondagesApi.list(),
+	ideesApi.list(),
+	annoncesApi.list(),
 ]);
+if (rS.status === 'fulfilled') sondages = rS.value; else erreurSondages = messageErreur(rS.reason);
+if (rI.status === 'fulfilled') idees = rI.value; else erreurIdees = messageErreur(rI.reason);
+if (rA.status === 'fulfilled') annonces = rA.value; else erreurAnnonces = messageErreur(rA.reason);
 sondagesLoading = false;
 ideesLoading = false;
 annoncesLoading = false;
@@ -303,6 +330,13 @@ aria-expanded={showModeration}>
 
 {#if sondagesLoading}
 <p style="color:var(--color-text-muted)">Chargement</p>
+{:else if erreurSondages}
+<!--  🔴 L'échec passe AVANT le vide : dire « aucun sondage » quand on n'a pas
+      pu regarder, c'est affirmer une absence qu'on n'a pas constatée (#519). -->
+<div class="empty-state">
+<h3>Impossible d'afficher les sondages</h3>
+<p>{erreurSondages}</p>
+</div>
 {:else if sondages.length === 0}
 <div class="empty-state">
 <h3>Aucun sondage</h3>
@@ -371,6 +405,11 @@ aria-expanded={showModeration}>
 
 {#if ideesLoading}
 <p style="color:var(--color-text-muted)">Chargement</p>
+{:else if erreurIdees}
+<div class="empty-state">
+<h3>Impossible d'afficher les idées</h3>
+<p>{erreurIdees}</p>
+</div>
 {:else if sortedIdees.length === 0}
 <div class="empty-state">
 <h3>Aucune idée pour l'instant</h3>
@@ -436,6 +475,7 @@ on:choisir={(e) => changeStatut(idee.id, e.detail)} />
 <OngletAnnonces
 	bind:annonces
 	chargement={annoncesLoading}
+	erreur={erreurAnnonces}
 	bind:showForm={showFormAnnonce}
 	bind:expandedAnnonce
 	estCS={$isCS}
