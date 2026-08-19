@@ -460,6 +460,23 @@ jobs:
         working-directory: front
         run: npm run lint:workflow
 
+      # 🔴 La CONSIGNE qui fabrique la duplication. La règle XSS s'appuie sur une
+      # liste de fonctions d'assainissement, écrite six fois — dont cinq copies ne
+      # nommaient qu'une fonction sur trois le 19/08/2026 (#482).
+      #
+      # Ce n'est pas resté théorique : `svelte-patterns` déclarait « légitimement
+      # local » un helper qui ÉTAIT `safeDescription`, laquelle avait été créée
+      # pour le supprimer. Une troisième copie est apparue dans le code sous le nom
+      # `renderContent`, écrite par quelqu'un qui suivait correctement la doc.
+      #
+      # Aucun contrôle ne pouvait le voir : `lint:html` regarde le code, et le code
+      # produit était CORRECT — c'est sa raison d'être qui était périmée. La CI ne
+      # lisait ni CLAUDE.md ni .claude/skills/. Celui-ci les lit, et compare à ce
+      # que `sanitize.ts` exporte réellement.
+      - name: Consignes complètes (assainisseurs réellement exportés)
+        working-directory: front
+        run: npm run lint:consignes
+
       # Le renouvellement silencieux de session était désactivé par le PRÉFIXE
       # `/auth/`, posé pour empêcher `/auth/refresh` de se rappeler lui-même. Il
       # attrapait aussi `/auth/me` : pendant les sept jours où la session restait
