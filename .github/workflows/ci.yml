@@ -1,11 +1,38 @@
 name: CI
 
+#  ⚠️ `push` ne porte QUE `main`, et c'est délibéré (19/08/2026).
+#
+#  Avant : `push: [main, dev]` + `pull_request: [main, dev]`. Un commit poussé sur
+#  `dev` puis mis en PR vers `main` déclenchait DEUX exécutions complètes du même
+#  workflow sur le MÊME sha — soit huit jobs pour quatre checks utiles. Les runners
+#  saturaient, « Tests Python » (qui installe pango/cairo par apt-get) partait en
+#  file d'attente, et la PR restait BLOCKED en attendant un exemplaire redondant
+#  d'un job déjà passé au vert quelques minutes plus tôt.
+#
+#  La protection de branche exige les checks de l'événement `pull_request` : c'est
+#  donc celui-là qu'il faut garder. Le run `push` sur `dev` ne servait à rien que
+#  personne d'autre ne fasse déjà — `scripts/poste/rejouer-ci.sh` rejoue les mêmes
+#  commandes AVANT le push (point 16 du pré-check, obligatoire).
+#
+#  Le point 0c du pré-check continue de fonctionner : `gh run list --branch dev`
+#  remonte aussi les exécutions `pull_request`, dont la branche de tête est `dev`.
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
+
+#  Un réalignement de `dev` (force-push après un squash) laissait tourner le run de
+#  l'ancien head : GitHub finissait par l'annuler, et un check requis restait
+#  « cancelled » — donc jamais satisfait, donc PR bloquée. Trois occurrences sur les
+#  huit derniers runs du 19/08.
+#
+#  Le groupe distingue la PR de la branche : deux contextes différents ne
+#  s'annulent jamais l'un l'autre, seul un run DEVENU OBSOLÈTE est interrompu.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
