@@ -232,7 +232,6 @@
 </FormulaireCreation>
 
 <style>
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
 	.form-grid .field { margin-bottom: 0; }
 
 	.options { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }

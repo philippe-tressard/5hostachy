@@ -502,6 +502,53 @@ calendrier reste à 640 px, délibérément).
 - **Pas** de mention « (optionnel) » : l'absence de `*` suffit
 - Actions : bouton secondaire / Annuler **à gauche**, action primaire **à droite**
 
+### Un champ, UNE nomenclature : `.field`
+
+🔴 **`.field` (`app.css`) est la définition unique du champ** — mise en page,
+fond beige, contour de focus, état lecture seule. Les deux écritures conviennent,
+et elles seules :
+
+```svelte
+<label class="field">Titre *<input type="text" bind:value={titre} /></label>
+
+<div class="field">
+  <label for="ah-source">Pré-remplir depuis une actualité</label>
+  <select id="ah-source" bind:value={source}>…</select>
+</div>
+```
+
+**Le champ ne porte aucune classe** : `.field input`, `.field select` et
+`.field textarea` le gouvernent. Deux modificateurs nommés, et rien d’autre :
+`champ-large` (§9 bis) et **`champ-en-ligne`**, pour un champ posé dans une
+rangée où le `gap` du parent porte déjà l’espacement.
+
+🔒 **Garde-fou : `npm run lint:champs`** (`front/scripts/check-champs.mjs`), en CI
+depuis le 19/08/2026. Tout `<input>` de saisie, `<select>` ou `<textarea>`
+**associé à un libellé** doit vivre dans un `.field`. Un contrôle **sans**
+libellé — filtre de barre d’outils, recherche, renommage en ligne — est hors
+périmètre : l’y forcer donnerait des dérogations à la pelle, donc un contrôle
+qu’on désarme.
+
+**Why (#413, 19/08/2026)** : **six** nomenclatures coexistaient — `.field-label`
+(3 définitions **incompatibles** : deux enveloppantes, une frère), `.form-group`
+(3), `.champ`, `.ah-champ`/`.ah-select`, `.email-label`/`.email-input`, et le
+`<label>` nu appuyé sur une règle `.form-grid label`. **Trois fichiers
+redéfinissaient `.field` elle-même**, le nom canonique, avec d’autres valeurs.
+
+⚠️ Et **deux ne renvoyaient à aucune définition** : `OngletWhatsApp` et
+`acces-securite`, extraits d’`admin` sans ses styles, rendaient leurs champs nus
+en production — `.form-grid` comprise, si bien que leurs formulaires n’étaient
+même pas des grilles. C’est la régression des pastilles nues (v2.67.11),
+appliquée au formulaire.
+
+⚠️ **La leçon du contrôle, et c’est la vraie.** Le relevé de #374 cherchait un
+`<label>` qui enveloppe son champ *sur une ligne*. Il a manqué la forme
+multi-lignes (deux champs d’Admin), puis la forme « libellé frère » reliée par
+`for=` — celle-là trouvée **en production par l’utilisateur**, un fond blanc au
+milieu d’un site beige. Un relevé par motif textuel ne prouve rien sur ce qu’il
+n’a pas cherché : `lint:champs` lit l’**arbre des balises**, où les trois formes
+se ramènent à une seule question, et son `--selftest` le montre les refuser.
+
 ### 9 bis. Ce qui décide de la largeur d'un champ, c'est son CONTENU
 
 Les grilles (`.form-grid`) répartissent en colonnes de ~180-200 px. C'est juste

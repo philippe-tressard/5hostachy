@@ -78,7 +78,7 @@
 		<p class="aide">Chargement…</p>
 	{:else}
 		<form on:submit|preventDefault={enregistrer} class="grille">
-			<label class="champ">
+			<label class="field champ-en-ligne">
 				<span>Heure d’exécution</span>
 				<select bind:value={heure_execution}>
 					{#each Array.from({ length: 24 }, (_, h) => h) as h}
@@ -86,7 +86,7 @@
 					{/each}
 				</select>
 			</label>
-			<label class="champ">
+			<label class="field champ-en-ligne">
 				<span>Versions conservées</span>
 				<input type="number" min="1" max="99" bind:value={nb_versions_conservees} />
 			</label>
@@ -116,6 +116,4 @@
 	.note { margin: .7rem 0 0; }
 	.avertissement { font-size: .82rem; line-height: 1.5; margin: .7rem 0 0; padding: .6rem .7rem; border-left: 3px solid var(--color-warning, #d97706); background: var(--color-bg); }
 	.grille { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
-	.champ { display: flex; flex-direction: column; gap: .2rem; font-size: .82rem; color: var(--color-text-muted); }
-	.champ select, .champ input { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); min-width: 9rem; }
 </style>

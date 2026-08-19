@@ -156,6 +156,35 @@ d'un nœud, le `docker volume rm` et le rançongiciel visant les RPi — **pas l
 ni le vol**. Une destination réellement distante (S3 UE chiffré, disque tournant) reste
 à ajouter ; `EXPORT_DEST` et la boucle de vérification sont écrits pour l'accueillir.
 
+## Qui reçoit les verdicts de `check-reliability.sh` (#449 — 19/08/2026)
+
+**Deux canaux, deux rythmes**, et la fréquence se règle par le **cooldown**, jamais
+en coupant le canal :
+
+| Verdict | Canal | Cooldown |
+|---|---|---|
+| au moins un **FAIL** | alerte e-mail « ❌ contrôle(s) en échec » | 1 h |
+| aucun FAIL, au moins un **WARN** | digest e-mail « ⚠️ point(s) de vigilance » | 24 h |
+| tout vert | rien | — |
+
+La décision est **pure** (`verdict_notification`, `lib-verdicts.sh`, couverte par
+`--selftest`) ; l’envoi vit dans `lib-notification.sh`.
+
+🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
+contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
+retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée) — au motif qu’un FAIL
+à `*/15` enverrait un mail par heure. Le raisonnement était juste sur la **fréquence**
+et faux sur la **conclusion** : on en a déduit « pas de mail » là où il fallait « pas
+ce mail-là ». Ces cinq contrôles n’avaient donc **aucun destinataire**.
+
+Ce que ça a coûté : le **16/08/2026 à 03:02**, le rapport de la maintenance a été
+refusé (HTTP 422). **C19 l’a vu** et a rendu WARN. Personne n’a été prévenu ; le défaut
+a été trouvé le **18** à l’œil, sur l’écran d’administration, **par l’utilisateur**.
+L’écran affichait « À jour » sur un rapport vieux de cinq jours.
+
+⚠️ **Un WARN sans destinataire est un contrôle mort** — `standards/04` §7. Poser un
+nouveau contrôle en WARN est légitime ; le laisser sans canal ne l’est pas.
+
 ## Sync DB manuelle (sans basculer)
 ⚠️ Copier `app.db` pendant que l'API écrit = copie potentiellement déchirée. On stoppe
 l'API le temps de la copie (≈ qq s) → fichier cohérent garanti (cf. règle d'or ci-dessus).

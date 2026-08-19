@@ -220,14 +220,14 @@
 				contenus déjà publiés.
 			</p>
 
-			<label class="field-label">Libellé *
+			<label class="field">Libellé *
 				<input bind:value={form.libelle} required />
 			</label>
-			<label class="field-label">Libellé court
+			<label class="field">Libellé court
 				<input bind:value={form.libelle_court} placeholder={edite.libelle} />
 				<span class="field-hint">Employé sur les pastilles étroites du calendrier.</span>
 			</label>
-			<div class="field-label">Icône
+			<div class="field">Icône
 				<div class="icones">
 					<button
 						type="button" class="icone" class:icone-active={!form.icone}
@@ -248,13 +248,13 @@
 				</span>
 			</div>
 
-			<label class="field-label">Description
+			<label class="field">Description
 				<textarea bind:value={form.description} rows="4"></textarea>
 				<span class="field-hint">
 					Affichée sous le sélecteur, au moment où l’on choisit ce périmètre.
 				</span>
 			</label>
-			<label class="field-label">Ordre
+			<label class="field">Ordre
 				<input type="number" bind:value={form.ordre} />
 			</label>
 
@@ -306,17 +306,17 @@
 		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:keydown|stopPropagation>
 			<h2>{creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}</h2>
 
-			<label class="field-label">Libellé *
+			<label class="field">Libellé *
 				<input bind:value={nouveau.libelle} required />
 			</label>
-			<label class="field-label">Code *
+			<label class="field">Code *
 				<input bind:value={nouveau.code} placeholder={codePropose} />
 				<span class="field-hint">
 					Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus
 					être modifié : c’est lui qui sera enregistré dans les contenus.
 				</span>
 			</label>
-			<label class="field-label">Description
+			<label class="field">Description
 				<textarea bind:value={nouveau.description} rows="3"></textarea>
 			</label>
 
@@ -356,9 +356,6 @@
 	.icone-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.modal-box { background: var(--color-surface); border-radius: var(--radius); padding: 1.25rem; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
 	.modal-code { font-size: .8rem; color: var(--color-text-muted); margin: -.4rem 0 1rem; }
-	.field-label { display: block; font-size: .85rem; margin-bottom: .8rem; }
-	.field-label input, .field-label textarea { width: 100%; padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; margin-top: .2rem; }
-	.field-hint { display: block; font-size: .78rem; color: var(--color-text-muted); margin-top: .25rem; line-height: 1.45; }
 	.field-check { display: block; font-size: .85rem; margin-bottom: .8rem; }
 	.herite { border-left: 2px solid var(--color-border); padding-left: .5rem; margin-top: .4rem; }
 	.field-check.danger { border-left: 3px solid var(--color-warning, #d97706); padding-left: .6rem; }

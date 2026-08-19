@@ -241,7 +241,6 @@
 </FormulaireCreation>
 
 <style>
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
 	.form-grid .field { margin-bottom: 0; }
 
 	/*  La case et son libellé, côte à côte. Ce qui les séparait : la page portait

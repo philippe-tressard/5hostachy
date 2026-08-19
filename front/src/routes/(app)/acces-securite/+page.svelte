@@ -266,14 +266,14 @@ import { onMount } from 'svelte';
 			<form on:submit|preventDefault={soumettreCommande}>
 				<div class="modal-body">
 					<div class="form-grid">
-						<label>
+						<label class="field">
 							Type d'accès *
 							<select bind:value={formType}>
 								<option value="vigik">Badge Vigik</option>
 								<option value="telecommande">Télécommande parking</option>
 							</select>
 						</label>
-						<label>
+						<label class="field">
 							Lot concerné *
 							<select bind:value={formLotId} required>
 								<option value="">— Sélectionner —</option>
@@ -282,11 +282,11 @@ import { onMount } from 'svelte';
 								{/each}
 							</select>
 						</label>
-						<label>
+						<label class="field">
 							Quantité *
 							<input type="number" bind:value={formQuantite} min="1" max="5" />
 						</label>
-						<label>
+						<label class="field">
 							Motif
 							<textarea bind:value={formMotif} rows="2" placeholder="Raison de la demande…"></textarea>
 						</label>
@@ -317,13 +317,13 @@ import { onMount } from 'svelte';
 			<form on:submit|preventDefault={declarerBadge}>
 				<div class="modal-body">
 					<div class="form-grid">
-						<label>Type d'accès *
+						<label class="field">Type d'accès *
 							<select bind:value={declareType}>
 								<option value="telecommande">Télécommande parking</option>
 								<option value="vigik">Badge Vigik</option>
 							</select>
 						</label>
-						<label>Code / référence *
+						<label class="field">Code / référence *
 							<input type="text" bind:value={declareCode} placeholder="Ex : 1234567890" style="font-family:monospace" required />
 						</label>
 					</div>

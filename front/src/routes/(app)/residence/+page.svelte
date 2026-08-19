@@ -1271,9 +1271,6 @@
 
 	/* ── Edit form ──────────────────────────────────────────────── */
 	.edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: .75rem; }
-	.field { display: flex; flex-direction: column; gap: .25rem; }
-	.field label { font-size: .8rem; font-weight: 500; color: var(--color-text-muted); }
-	.field input, .field select { padding: .4rem .6rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; background: var(--color-surface); }
 
 	/* ── badge-purple ───────────────────────────────────────────── */
 	:global(.badge-purple) { background: #ede9fe; color: #6d28d9; }

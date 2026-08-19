@@ -1023,7 +1023,7 @@
 			</div>
 			<div class="modal-body">
 				<!-- Sélection des lots -->
-				<div class="form-group">
+				<div class="field">
 					<label>Lot(s) concerné(s) *</label>
 					<div class="lot-checklist">
 						{#each lots as lot (lot.id)}
@@ -1095,33 +1095,33 @@
 				</fieldset>
 
 				<!-- Informations locataire (pré-remplies si compte sélectionné) -->
-				<div class="form-grid-2">
-					<div class="form-group">
+				<div class="form-grid form-grid-2">
+					<div class="field">
 						<label for="nb-prenom">Prénom</label>
 						<input id="nb-prenom" type="text" bind:value={newBail.locataire_prenom} placeholder="Prénom" readonly={!!locataireTrouve} />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="nb-nom">Nom</label>
 						<input id="nb-nom" type="text" bind:value={newBail.locataire_nom} placeholder="Nom" readonly={!!locataireTrouve} />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="nb-email">E-mail</label>
 						<input id="nb-email" type="email" bind:value={newBail.locataire_email} placeholder="email@exemple.fr" readonly={!!locataireTrouve} />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="nb-tel">Téléphone</label>
 						<input id="nb-tel" type="text" bind:value={newBail.locataire_telephone} placeholder="06 …" />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="nb-entree">Date d'entrée *</label>
 						<input id="nb-entree" type="date" bind:value={newBail.date_entree} />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="nb-sortie">Sortie prévue</label>
 						<input id="nb-sortie" type="date" bind:value={newBail.date_sortie_prevue} />
 					</div>
 				</div>
-				<div class="form-group">
+				<div class="field">
 					<label>Notes</label>
 					<RichEditor bind:value={newBail.notes} placeholder="Notes sur le bail…" minHeight="80px" />
 				</div>
@@ -1146,7 +1146,7 @@
 			</div>
 			<div class="modal-body">
 				<p style="margin-bottom:0.75rem">Confirmer la fin du bail de <strong>{nomLocataire(bailATerminer)}</strong> ?</p>
-				<div class="form-group">
+				<div class="field">
 					<label for="tb-sortie">Date de sortie réelle</label>
 					<input id="tb-sortie" type="date" bind:value={dateSortie} />
 				</div>
@@ -1249,28 +1249,28 @@
 					{/if}
 				</fieldset>
 
-				<div class="locataire-edit-grid">
-					<div class="form-group">
+				<div class="form-grid locataire-edit-grid">
+					<div class="field">
 						<label for="el-prenom">Prénom</label>
 						<input id="el-prenom" type="text" bind:value={editLocataire.locataire_prenom} placeholder="Prénom" />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="el-nom">Nom</label>
 						<input id="el-nom" type="text" bind:value={editLocataire.locataire_nom} placeholder="Nom" />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="el-email">E-mail</label>
 						<input id="el-email" type="email" bind:value={editLocataire.locataire_email} placeholder="email@exemple.fr" />
 					</div>
-					<div class="form-group">
+					<div class="field">
 						<label for="el-tel">Téléphone</label>
 						<input id="el-tel" type="text" bind:value={editLocataire.locataire_telephone} placeholder="06 …" />
 					</div>
-					<div class="form-group locataire-edit-full">
+					<div class="field champ-large">
 						<label for="el-sortie">Sortie prévue</label>
 						<input id="el-sortie" type="date" bind:value={editLocataire.date_sortie_prevue} />
 					</div>
-					<div class="form-group locataire-edit-full">
+					<div class="field champ-large">
 						<label>Notes</label>
 						<RichEditor bind:value={editLocataire.notes} placeholder="Notes sur le bail…" minHeight="120px" />
 					</div>
@@ -1293,7 +1293,7 @@
 				<button class="modal-close" on:click={() => (objetRetour = null)}>✕</button>
 			</div>
 			<div class="modal-body" style="display:flex;flex-direction:column;gap:0.75rem">
-				<div class="form-group">
+				<div class="field">
 					<label for="ro-date">Date de retour</label>
 					<input id="ro-date" type="date" bind:value={retourDate} />
 				</div>
@@ -1527,20 +1527,6 @@
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: .75rem;
 	}
-	.form-group { display: flex; flex-direction: column; gap: .3rem; }
-	.form-group label { font-size: .85rem; font-weight: 500; color: var(--color-text-muted); }
-	.form-group input,
-	.form-group select,
-	.form-group textarea {
-		padding: .42rem .6rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		font-size: .9rem;
-		background: var(--color-bg);
-		width: 100%;
-		box-sizing: border-box;
-	}
-	.form-group input[readonly] { background: var(--color-surface-alt, #f8f9fa); color: var(--color-text-muted); cursor: default; }
 
 	/* Bloc recherche locataire */
 	.search-locataire-box {
@@ -1612,9 +1598,6 @@
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: .8rem;
-	}
-	.locataire-edit-full {
-		grid-column: 1 / -1;
 	}
 	.acces-presets {
 		display: flex;

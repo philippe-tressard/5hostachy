@@ -62,34 +62,34 @@
 	<section class="form-section">
 		<h2 class="section-title">Identité</h2>
 		<div class="form-grid">
-			<label class="form-group">
+			<label class="field">
 				<span>Nom de la résidence *</span>
-				<input class="input" bind:value={form.nom} required />
+				<input bind:value={form.nom} required />
 			</label>
-			<label class="form-group">
+			<label class="field">
 				<span>Adresse</span>
-				<input class="input" bind:value={form.adresse} />
+				<input bind:value={form.adresse} />
 			</label>
 			<!--  Les DEUX décomptes de la fiche du registre national (ANAH). Un seul
 			      champ obligeait à choisir lequel perdre, et le chiffre saisi ne
 			      disait pas lequel il était : 195 ou 63 pour la même résidence. Les
 			      libellés reprennent mot pour mot ceux de la fiche, pour qu'on
 			      recopie sans avoir à interpréter. -->
-			<label class="form-group" title="Le « Nombre de lots » de la fiche d'immatriculation : tous les lots, caves et parkings compris.">
+			<label class="field" title="Le « Nombre de lots » de la fiche d'immatriculation : tous les lots, caves et parkings compris.">
 				<span>Nombre de lots — total, caves et parkings compris</span>
-				<input class="input" type="number" min="1" bind:value={form.nb_lots_total} />
+				<input type="number" min="1" bind:value={form.nb_lots_total} />
 			</label>
-			<label class="form-group" title="Le décompte qui porte les seuils réglementaires, et qui dit combien de foyers vivent ici.">
+			<label class="field" title="Le décompte qui porte les seuils réglementaires, et qui dit combien de foyers vivent ici.">
 				<span>Dont lots d'habitation, commerces et bureaux</span>
-				<input class="input" type="number" min="1" bind:value={form.nb_lots_principaux} />
+				<input type="number" min="1" bind:value={form.nb_lots_principaux} />
 			</label>
-			<label class="form-group">
+			<label class="field">
 				<span>Année de construction</span>
-				<input class="input" type="number" min="1800" max="2100" bind:value={form.annee_construction} />
+				<input type="number" min="1800" max="2100" bind:value={form.annee_construction} />
 			</label>
-			<label class="form-group" style="grid-column:1/-1">
+			<label class="field" style="grid-column:1/-1">
 				<span>N° immatriculation (ANAH)</span>
-				<input class="input" bind:value={form.numero_immatriculation} placeholder="ex : D75010800001" />
+				<input bind:value={form.numero_immatriculation} placeholder="ex : D75010800001" />
 			</label>
 		</div>
 	</section>
@@ -97,17 +97,17 @@
 	<section class="form-section">
 		<h2 class="section-title">Assurance</h2>
 		<div class="form-grid">
-			<label class="form-group">
+			<label class="field">
 				<span>Compagnie</span>
-				<input class="input" bind:value={form.assurance_compagnie} />
+				<input bind:value={form.assurance_compagnie} />
 			</label>
-			<label class="form-group">
+			<label class="field">
 				<span>N° de contrat</span>
-				<input class="input" bind:value={form.assurance_numero_police} />
+				<input bind:value={form.assurance_numero_police} />
 			</label>
-			<label class="form-group">
+			<label class="field">
 				<span>Échéance</span>
-				<input class="input" type="date" bind:value={form.assurance_echeance} />
+				<input type="date" bind:value={form.assurance_echeance} />
 			</label>
 		</div>
 	</section>
@@ -136,7 +136,5 @@
 	.renvoi { font-size: .85rem; color: var(--color-text-muted); margin: 0 0 1.5rem; }
 	.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
 	.form-section { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.25rem; }
-	.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
-	.form-group { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
-	.form-group span { color: var(--color-text-muted); font-size: .8rem; }
+	.form-grid { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); }
 </style>

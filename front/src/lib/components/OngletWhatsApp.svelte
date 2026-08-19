@@ -144,30 +144,30 @@
     Configuration WhatsApp
   </h2>
   <div class="form-grid largeur-saisie">
-    <label class="field-label" style="grid-column:span 2">
-      <span style="display:flex;align-items:center;gap:.5rem">
-        <input type="checkbox" bind:checked={waConfig.enabled} style="width:1rem;height:1rem" />
+    <label class="field" style="grid-column:span 2">
+      <span class="case">
+        <input type="checkbox" bind:checked={waConfig.enabled} />
         Activer l'envoi WhatsApp
       </span>
       <span class="field-hint">Si activé, les actualités avec "Partager sur le groupe" seront envoyées au groupe WhatsApp.</span>
     </label>
-    <label class="field-label">
+    <label class="field">
       Nom du canal
-      <input class="input input-sm" type="text" bind:value={waConfig.group_name} placeholder="Groupe WhatsApp" />
+      <input type="text" bind:value={waConfig.group_name} placeholder="Groupe WhatsApp" />
       <span class="field-hint">Nom affiché dans l'interface (informatif).</span>
     </label>
-    <label class="field-label">
+    <label class="field">
       URL du bridge WhatsApp
-      <input class="input input-sm" type="url" bind:value={waConfig.api_url} placeholder="http://whatsapp-bridge:8090" />
+      <input type="url" bind:value={waConfig.api_url} placeholder="http://whatsapp-bridge:8090" />
     </label>
-    <label class="field-label">
+    <label class="field">
       Group JID
-      <input class="input input-sm" type="text" bind:value={waConfig.group_jid} placeholder="1234567890@g.us" />
+      <input type="text" bind:value={waConfig.group_jid} placeholder="1234567890@g.us" />
       <span class="field-hint">Identifiant du groupe WhatsApp (format : 123...@g.us).</span>
     </label>
-    <label class="field-label" style="grid-column:span 2">
+    <label class="field" style="grid-column:span 2">
       Clé API
-      <input class="input input-sm" type="password" bind:value={waConfig.api_key}
+      <input type="password" bind:value={waConfig.api_key}
         placeholder={apiKeySet ? '••••••  (clé déjà configurée — laisser vide pour conserver)' : 'Entrez la clé API du bridge WhatsApp'} />
       <span class="field-hint">{apiKeySet ? 'Une clé est déjà configurée. Laissez ce champ vide pour la conserver.' : 'Requis pour l\'authentification au bridge WhatsApp.'}</span>
     </label>
@@ -214,13 +214,14 @@
       </div>
     {/if}
     <div style="display:flex;gap:.5rem;align-items:start;flex-wrap:wrap">
-      <textarea
-        class="input input-sm"
-        bind:value={waTestMessage}
-        rows="2"
-        placeholder="Message de test..."
-        style="flex:1;min-width:220px;resize:vertical"
-      ></textarea>
+      <div class="field champ-en-ligne" style="flex:1;min-width:220px">
+        <textarea
+          bind:value={waTestMessage}
+          rows="2"
+          placeholder="Message de test..."
+          style="resize:vertical"
+        ></textarea>
+        </div>
       <button
         class="btn btn-outline"
         on:click={sendWaTest}
@@ -248,12 +249,12 @@
       <div style="border:1px solid var(--color-border);border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:var(--color-surface)">
         <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
           <input type="checkbox" bind:checked={item.enabled} style="width:1rem;height:1rem" />
-          <input class="input input-sm" type="text" bind:value={item.label} style="flex:1;font-weight:600" placeholder="Titre du message" />
+          <div class="field champ-en-ligne" style="flex:1"><input type="text" bind:value={item.label} style="font-weight:600" placeholder="Titre du message" /></div>
           <span style="font-size:.75rem;padding:.1rem .4rem;border-radius:4px;background:#dbeafe;color:#1e40af">
             {item.cron_rule === '3eme_samedi' ? 'Vendredi avant le 3ᵉ samedi' : item.cron_rule === '4eme_samedi' ? 'Vendredi avant le 4ᵉ samedi' : item.cron_rule}
           </span>
         </div>
-        <textarea class="input input-sm" bind:value={item.message} rows="4" style="width:100%;resize:vertical;font-size:.85rem;font-family:monospace" placeholder="Contenu du message (markdown WhatsApp autorisé)"></textarea>
+        <div class="field champ-en-ligne"><textarea bind:value={item.message} rows="4" style="resize:vertical;font-size:.85rem;font-family:monospace" placeholder="Contenu du message (markdown WhatsApp autorisé)"></textarea></div>
         <div style="margin-top:.4rem;padding:.5rem;background:var(--color-bg);border-left:3px solid var(--color-border);border-radius:4px;font-size:.78rem;color:var(--color-text-muted);line-height:1.6;white-space:pre-wrap;word-wrap:break-word">
           {item.message || '— Aperçu du message'}
         </div>
@@ -271,9 +272,8 @@
   <!-- Footer des messages -->
   <div class="largeur-saisie">
     <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">&#x1F4DD; Footer des messages (markdown WhatsApp)</p>
-    <label class="field-label">
+    <label class="field">
       <textarea
-        class="input input-sm"
         bind:value={footer}
         rows="2"
         placeholder="— Le Conseil Syndical"

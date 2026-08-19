@@ -184,6 +184,22 @@ beat_verdict() {
   [ "$age" -le "$max" ] && echo ok || echo absent
 }
 
+# ── Que faut-il NOTIFIER de cette exécution ? ────────────────────────────────
+# Pure. Rend `critique`, `digest` ou `silence`. Le POURQUOI, l’incident qui l’a
+# fait naître et l’envoi lui-même vivent dans `lib-notification.sh` (#449).
+verdict_notification() { # $1=fails $2=warns → critique|digest|silence
+  local fails="${1-}" warns="${2-}" v
+  #  Cas zéro : un décompte VIDE ou illisible n’est PAS un zéro. On notifie,
+  #  quitte à déranger — le contraire ferait taire le canal sur une panne du
+  #  compteur, c’est-à-dire exactement quand on ne peut plus rien conclure.
+  for v in "$fails" "$warns"; do
+    case "$v" in ''|*[!0-9]*) echo critique; return ;; esac
+  done
+  if [ "$fails" -gt 0 ]; then echo critique
+  elif [ "$warns" -gt 0 ]; then echo digest
+  else echo silence; fi
+}
+
 # ── Self-test des fonctions pures (aucun effet de bord) ──────────────────────
 
 # ── Contrat du module ────────────────────────────────────────────────────────
@@ -213,6 +229,23 @@ verdicts_selftest() {
   [ "$AGE" = "-1" ] && echo "PASS  horodatage vide → inconnu (-1)" || { echo "FAIL  attendu=-1 obtenu=$AGE"; st_fail=1; }
   AGE=$(beat_age_min "pas une date" 0)
   [ "$AGE" = "-1" ] && echo "PASS  horodatage invalide → inconnu (-1)" || { echo "FAIL  attendu=-1 obtenu=$AGE"; st_fail=1; }
+  echo "-- verdict_notification --"
+  vn() { # description attendu fails warns
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(verdict_notification "$@")
+    [ "$got" = "$exp" ] && echo "PASS  $desc  → $got" \
+      || { echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; }
+  }
+  vn "tout vert"                        "silence"  0 0
+  vn "un FAIL"                          "critique" 1 0
+  vn "un FAIL et des WARN"              "critique" 1 3
+  #  LE cas de #449 : ce qui, le 16/08/2026, n'a atteint personne.
+  vn "aucun FAIL, un WARN (C19)"        "digest"   0 1
+  #  Cas zéro : un compteur vide ou illisible ne vaut PAS zéro. Sans ces trois
+  #  lignes, `${1:-0}` rabattrait une variable vide sur « tout va bien ».
+  vn "décompte vide"                    "critique" "" ""
+  vn "FAIL vide, WARN à 0"              "critique" "" 0
+  vn "décompte non numérique"           "critique" "n/a" 0
   echo "-- cache_go --"
   for c in "64.68GB:64" "11.16GB:11" "980MB:0" "512kB:0" "1.5TB:1024" ":-1" "n/a:-1"; do
     exp=${c##*:}; got=$(cache_go "${c%:*}")

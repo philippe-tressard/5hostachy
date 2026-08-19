@@ -260,12 +260,6 @@
 		cursor: pointer;
 	}
 
-	.field-hint {
-		font-size: .78rem;
-		color: var(--color-text-muted);
-		margin-top: .25rem;
-	}
-
 	.auth-links {
 		text-align: center;
 		margin-top: 1rem;
