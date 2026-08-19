@@ -11,6 +11,7 @@
 	import { TICKET } from '$lib/entites/ticket';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { safeDescription } from '$lib/sanitize';
+	import FilAriane from '$lib/components/FilAriane.svelte';
 	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
 	import {
 		STATUTS_TICKET,
@@ -176,7 +177,8 @@
 
 <svelte:head><title>Ticket #{ticketId} — {_siteNom}</title></svelte:head>
 
-<a href="/tickets" class="back-link">← Retour aux tickets</a>
+<FilAriane segments={[{ libelle: 'Tickets', href: '/tickets' }]}
+	courant={ticket?.titre ?? 'Ticket'} />
 
 {#if loading}
 	<p class="etat-chargement">Chargement…</p>
@@ -326,8 +328,9 @@
 	   situer, sans clignotement ni couleur criarde — on vient lire, pas être
 	   alerté une seconde fois. */
 	.message-vise { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 10px; }
-	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); text-decoration: none; margin-bottom: .75rem; }
-	.back-link:hover { color: var(--color-primary); }
+	/*  `.back-link` est parti dans `FilAriane` (#365) : il était défini trois
+	    fois à l'identique dans le dépôt, et disait « Retour aux tickets » là où
+	    le sondage disait « Communauté ». */
 
 	/*  La colonne de lecture : la même largeur pour la fiche, le fil et
 	    l'Historique — elle valait 720 px écrits en ligne quatre fois. */
