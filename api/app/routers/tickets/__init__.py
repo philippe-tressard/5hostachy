@@ -56,13 +56,16 @@ caractère près à ceux d'avant le découpage, vérifié par comparaison d'inve
 """
 from fastapi import APIRouter
 
-from . import crud, evolutions, messages, relance
+from . import apercu, crud, evolutions, messages, relance
 
 #  Les sous-modules à chemins nus reçoivent le préfixe ici. Ce littéral est aussi
 #  ce que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un
 #  paquet découpé : le garder en clair n'est pas cosmétique non plus.
 _a_prefixer = APIRouter(prefix="/tickets", tags=["tickets"])
-for _sous_router in (relance.router, messages.router, evolutions.router):
+#  `apercu` est monté avec les littéraux, AVANT `crud` : `/apercu-diffusion` est
+#  un chemin fixe, et `/{ticket_id}` le capterait — la route répondrait 422 sans
+#  qu'aucune erreur ne le dise. Même raison que `/relance-syndic`.
+for _sous_router in (apercu.router, relance.router, messages.router, evolutions.router):
     _a_prefixer.include_router(_sous_router)
 
 #  ⚠️ Les chemins littéraux d'abord — voir la docstring : `/relance-syndic` doit

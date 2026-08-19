@@ -43,13 +43,16 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
+	import ApercuDiffusionModale from '$lib/components/ApercuDiffusion.svelte';
+	import { creerApercu } from '$lib/apercu';
+	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET } from '$lib/tickets';
+	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET, type ModeSaisiPour } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -133,8 +136,7 @@
 	let error = '';
 	let loading = false;
 
-	// Saisi pour (CS/Admin uniquement)
-	type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
+	// Saisi pour (CS/Admin uniquement) — la saisie vit dans `ChampSaisiPour`.
 	//  L'état initial vient du ticket : la section est ouverte à l'édition depuis que
 	//  le serveur sait EFFACER les `saisi_pour_*` (il lit la PRÉSENCE du champ, pas
 	//  sa non-nullité). L'ouvrir sans pré-remplir aurait proposé « En mon nom » sur un
@@ -166,20 +168,58 @@
 
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
+	//  ── L'aperçu avant diffusion (#498) ───────────────────────────────────────
+	//  Il ne s'interpose QUE si un canal est coché : sans diffusion il n'y a rien
+	//  à prévisualiser, et une modale de plus serait une étape gratuite entre
+	//  l'utilisateur et son ticket.
+	//  ⚠️ Création seulement. En édition, cocher un canal renvoie l'objet tel
+	//  qu'il est déjà : c'est un geste différent, il aura son propre lot.
+	$: aUneDiffusion = destinataireSyndic || destinataireCs || partagerWhatsapp;
+	const apercu = creerApercu(() => ticketsApi.apercuDiffusion({
+		titre: titre.trim(), description, categorie,
+		perimetre_cible: perimetreCible,
+		photos_urls: photosUrls, fichiers_urls: fichiersUrls,
+		destinataire_syndic: destinataireSyndic,
+		destinataire_cs: destinataireCs,
+		partager_whatsapp: partagerWhatsapp,
+	}));
+
 	$: titreBoite = modeEdition
 		? `Modifier le ticket #${ticket?.numero ?? ''}`
 		: 'Signaler un problème';
 
-	async function submit() {
+	/** Contrôles de saisie — communs à la soumission directe et à l'aperçu. */
+	function saisieValide(): boolean {
 		if (!titre.trim() || richEmpty(description)) {
 			error = 'Titre et description sont obligatoires.';
-			return;
+			return false;
 		}
 		if ($isCS && modeSaisiPour === 'exterieur' && !saisiPourNom.trim()) {
 			error = 'Veuillez saisir le nom de la personne.';
-			return;
+			return false;
 		}
 		error = '';
+		return true;
+	}
+
+	/**  Le geste de soumission : aperçu d'abord si un canal est coché.
+	 *
+	 *   L'aperçu s'intercale ICI et non dans `submit` : celui-ci reste le chemin
+	 *   d'enregistrement, appelé aussi bien par le formulaire que par la
+	 *   confirmation de la modale. Deux chemins qui créeraient le ticket chacun de
+	 *   leur côté finiraient par diverger. */
+	function soumettre() {
+		if (!saisieValide()) return;
+		if (!modeEdition && aUneDiffusion) {
+			void apercu.ouvrir();
+			return;
+		}
+		void submit();
+	}
+
+	async function submit() {
+		if (!saisieValide()) return;
+		apercu.fermer();
 		loading = true;
 		try {
 			if (ticket) {
@@ -267,7 +307,7 @@
 {/if}
 
 <FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
-	<form on:submit|preventDefault={submit}>
+	<form on:submit|preventDefault={soumettre}>
 		<!--  1. Titre — et lui seul. La catégorie était rendue ICI, et AVANT le
 		      titre : le premier champ de la première section n'était pas le titre.
 		      Arbitré par l'utilisateur le 18/08/2026 — elle qualifie le ticket, elle
@@ -312,34 +352,13 @@
 		{/if}
 
 		{#if $isCS && sectionPresente(TICKET, etat, 'specifiques')}
-			<SectionFormulaire titre="Saisi pour" requis>
-				<div class="field champ-large saisi-pour-section">
-					<div class="saisi-pour-tabs">
-						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'moi'} on:click={() => modeSaisiPour = 'moi'}>
-							En mon nom
-						</button>
-						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'resident'} on:click={() => modeSaisiPour = 'resident'}>
-							Résident inscrit
-						</button>
-						<button type="button" class="tab-btn" class:active={modeSaisiPour === 'exterieur'} on:click={() => modeSaisiPour = 'exterieur'}>
-							Personne extérieure
-						</button>
-					</div>
-					{#if modeSaisiPour === 'resident'}
-						<select bind:value={saisiPourUserId} style="margin-top:.5rem" aria-label="Résident concerné">
-							<option value={null}>— Sélectionner un résident —</option>
-							{#each usersActifs as u}
-								<option value={u.id}>{u.prenom} {u.nom}{u.email ? ` (${u.email})` : ''}</option>
-							{/each}
-						</select>
-					{:else if modeSaisiPour === 'exterieur'}
-						<div style="margin-top:.5rem;display:flex;flex-direction:column;gap:.5rem">
-							<input type="text" bind:value={saisiPourNom} placeholder="Nom complet *" aria-label="Nom complet de la personne" required />
-							<input type="email" bind:value={saisiPourEmail} placeholder="Email (optionnel)" aria-label="Email de la personne" />
-						</div>
-					{/if}
-				</div>
-			</SectionFormulaire>
+			<ChampSaisiPour
+				bind:mode={modeSaisiPour}
+				bind:userId={saisiPourUserId}
+				bind:nom={saisiPourNom}
+				bind:email={saisiPourEmail}
+				residents={usersActifs}
+			/>
 		{/if}
 
 		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
@@ -414,6 +433,20 @@
 	</form>
 </FormulaireCreation>
 
+<!--  L'aperçu s'ouvre PAR-DESSUS le formulaire, jamais à sa place : « Retour au
+      formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
+      remonté la perdrait. C'est la moitié de l'arbitrage du 19/08. -->
+{#if $apercu.ouvert}
+	<ApercuDiffusionModale
+		apercu={$apercu.donnees}
+		chargement={$apercu.chargement}
+		envoi={loading}
+		on:envoyer={() => void submit()}
+		on:retour={apercu.fermer}
+		on:annuler={apercu.fermer}
+	/>
+{/if}
+
 <style>
 	.aide-champ { font-size: .8rem; color: var(--color-text-muted); line-height: 1.45; margin: .25rem 0 0; }
 	.cat-grid {
@@ -448,35 +481,10 @@
 	   dédiée en gardait une copie identique, donc inerte — même défaut que celui
 	   nettoyé le 15/08 sur les autres écrans. */
 
-	.saisi-pour-section {
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: .75rem;
-		margin-bottom: .5rem;
-	}
-
-	.saisi-pour-tabs {
-		display: flex;
-		gap: .25rem;
-		margin-top: .5rem;
-		flex-wrap: wrap;
-	}
-
-	.tab-btn {
-		padding: .375rem .75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: transparent;
-		cursor: pointer;
-		font-size: .85rem;
-		color: var(--color-text-muted);
-		transition: background .15s, color .15s, border-color .15s;
-	}
-	.tab-btn.active {
-		background: var(--color-primary);
-		color: #fff;
-		border-color: var(--color-primary);
-	}
+	/*  `.saisi-pour-*` et `.tab-btn` sont partis avec leur balisage dans
+	    `ChampSaisiPour.svelte` (#498) — les garder ici en ferait des règles
+	    orphelines, c'est-à-dire la moitié du défaut que `lint:classes-nues`
+	    surveille par l'autre bout. */
 
 	@media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
 </style>

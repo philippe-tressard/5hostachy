@@ -161,3 +161,13 @@ export function statutTicketLabel(statut: string | undefined | null): string {
 export function ticketScope(t: { auteur_batiment_nom?: string | null; batiment_id?: number | null }): string {
 	return t.auteur_batiment_nom ?? (t.batiment_id ? `Bât. ${t.batiment_id}` : 'Résidence');
 }
+
+/**
+ * Au nom de qui le conseil syndical ouvre un ticket.
+ *
+ * Le type vivait dans `FormulaireTicket.svelte`, d'où il n'était pas importable :
+ * un `export type` dans le `<script>` d'instance d'un composant n'est pas exporté.
+ * Il appartient de toute façon au vocabulaire du ticket, pas à l'écran qui le
+ * saisit — comme les statuts et les catégories juste au-dessus.
+ */
+export type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';

@@ -136,13 +136,19 @@
 		<div class="field champ-large">
 			<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
 			      Tickets, constatée, puis étendue ici (R5).
-			      ⚠️ « Pas de suivi » est une pastille comme les autres, et elle est
-			      active par défaut : l'absence de suivi est un choix qui se voit, pas
-			      une option vide en tête d'une liste déroulante. La section n'est
+			      ⚠️ « Pas de suivi Kanban » est une pastille comme les autres, et elle
+			      est active par défaut : l'absence de suivi est un choix qui se voit,
+			      pas une option vide en tête d'une liste déroulante. La section n'est
 			      donc PAS requise — un événement peut légitimement n'avoir aucun
-			      suivi, à la différence de l'état d'un ticket. -->
+			      suivi, à la différence de l'état d'un ticket.
+
+			      ⚠️ Le mot « Kanban » est dans le libellé depuis le 19/08/2026,
+			      demandé à l'écran. Sans lui, « Pas de suivi » se lisait comme « ce
+			      dossier n'est pas suivi » — alors que les six autres pastilles
+			      nomment des COLONNES du Kanban, et que l'événement reste évidemment
+			      suivi par son fil d'historique. -->
 			<WorkflowPastilles valeur={form.statut_kanban ?? ''} idTitre="ev-kanban-titre"
-				options={[{ value: '', label: '— Pas de suivi' },
+				options={[{ value: '', label: '— Pas de suivi Kanban' },
 					...kanbanCols.map((c) => ({ value: c.id, label: c.label }))]}
 				on:choisir={(e) => (form.statut_kanban = e.detail)} />
 		</div>

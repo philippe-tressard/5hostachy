@@ -29,7 +29,7 @@
 	/** Les états proposables. Jamais écrits ici : ils viennent de l'entité. */
 	export let options: { value: string; label: string }[] = [];
 	/** L'état retenu. Une chaîne vide est un état comme un autre — c'est ce qui
-	    permet au Calendrier d'offrir « — Pas de suivi » en première pastille. */
+	    permet au Calendrier d'offrir « — Pas de suivi Kanban » en première pastille. */
 	export let valeur = '';
 	/** Le lecteur peut-il changer l'état ? */
 	export let lecture = false;
