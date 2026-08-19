@@ -36,19 +36,3 @@ export const STATUT_BADGE: Record<string, string> = {
  */
 export const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
-/**
- * Groupe des publications par année, de la plus récente à la plus ancienne.
- *
- * L'année retenue est celle de la dernière mise à jour, et à défaut celle de la
- * création : une publication archivée après plusieurs relances appartient à
- * l'année où elle a vécu, pas à celle où elle a été ouverte.
- */
-export function grouperParAnnee(pubs: Publication[]): [number, Publication[]][] {
-	const groupes = new Map<number, Publication[]>();
-	for (const p of pubs ?? []) {
-		const annee = new Date(p.mis_a_jour_le ?? p.cree_le).getFullYear();
-		if (!groupes.has(annee)) groupes.set(annee, []);
-		groupes.get(annee)!.push(p);
-	}
-	return [...groupes.entries()].sort(([a], [b]) => b - a);
-}

@@ -61,7 +61,17 @@
 
 	    ⚠️ L'emoji reste dans le `titre` : le catalogue d'icônes ne porte ni
 	    « dossier » ni « archive », et en ajouter une pour ce seul bandeau
-	    dépasserait le lot. */
+	    dépasserait le lot.
+
+	    🔴 CE COMMENTAIRE A MENTI, ET C'EST L'AUDIT QUI L'A DIT (20/08/2026).
+	    Il affirmait « tout cela vit désormais ici, et nulle part ailleurs ».
+	    Faux : `tickets/+page.svelte` garde un TROISIÈME bandeau fait main
+	    (`.history-header`, `.history-count`, `.history-chevron`, l. 354-357) ET
+	    son propre groupement par année (`.history-year-header`, l. 363-367).
+	    L'unification porte donc sur DEUX écrans sur trois.
+
+	    Le reste est suivi en #516. Un commentaire qui annonce une consolidation
+	    non faite est pire qu'aucun commentaire : il dispense de vérifier. */
 	.sr-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
 	.sr-entete {
 		display: flex; align-items: center; gap: .6rem; width: 100%;
