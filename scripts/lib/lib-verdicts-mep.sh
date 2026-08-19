@@ -280,6 +280,68 @@ verdict_rejeu_ci() {       # $1 = sha de la trace, $2 = HEAD, $3 = nb FAIL, $4 =
   echo OK
 }
 
+# ── 6 : l'erreur que CE lot corrige ne doit pas bloquer son propre push ───────
+# Le 19/08/2026, le point 6 a trouvé un vrai 500 sur `/auth/refresh` — puis a
+# refusé le push du correctif pendant une heure, le temps que sa fenêtre se vide.
+# Même circularité que 0c avant #318, sur une autre mesure : le contrôle bloquait
+# la réparation de ce qu'il constatait, et la seule issue était `SKIP_PRECHECK=1`.
+# La leçon de #318 avait été tirée sur UN contrôle, pas sur la CLASSE (#502).
+#
+# ⚠️ La piste écartée mérite d'être écrite, parce qu'elle paraissait évidente :
+# compter depuis le DERNIER DÉPLOIEMENT plutôt que sur une heure fixe. Or
+# `auto-deploy.sh` fait `docker compose up -d`, qui ne recrée un conteneur que si
+# son image a changé. Un lot qui touche `api/` recrée donc l'API et purge ses
+# logs — la fenêtre glissante y est déjà le comportement effectif, elle n'aurait
+# rien apporté. Un lot qui ne touche que `front/` laisse le conteneur en place :
+# elle aurait alors fait TAIRE des erreurs API réelles que le lot ne corrige pas.
+# Aveugle exactement là où le contrôle doit voir, et OK là où la règle 1 impose
+# INCONNU. Elle échoue du mauvais côté.
+#
+# Le remède retenu est celui qui a déjà tenu ici (`check-champs.mjs`,
+# `lint:styles`) : le lot DÉCLARE la signature qu'il corrige, et **la déclaration
+# meurt avec son objet** — si la signature ne correspond plus à rien, le contrôle
+# échoue. Une dérogation qui survit à ce qu'elle couvre redevient l'angle mort
+# qu'on ferme.
+
+signature_ancree() {       # $1 = motif déclaré → oui/non
+  #  Une signature sans littéral (`.*`, `ERROR`) écarterait TOUT : la déclarer
+  #  reviendrait à désarmer le point en croyant l'assouplir. On exige donc un mot
+  #  d'au moins 4 caractères qui ne soit pas le niveau de log lui-même.
+  local mots m
+  [ -n "${1:-}" ] || { echo non; return; }
+  mots=$(printf '%s' "$1" | tr -c 'A-Za-z0-9_/' ' ')
+  for m in $mots; do
+    case "$m" in ERROR|CRITICAL|error|critical) continue ;; esac
+    [ "${#m}" -ge 4 ] && { echo oui; return; }
+  done
+  echo non
+}
+
+verdict_erreurs_api() {    # $1 = lignes ERROR/CRITICAL observées
+                           # $2 = lignes écartées par la signature ('' si aucune déclaration)
+                           # $3 = commit de la déclaration ('' si aucune)
+                           # $4 = HEAD
+                           # $5 = signature déclarée ('' si aucune)
+  case "${1:-}" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+  #  Aucune déclaration : comportement d'origine, aucune tolérance.
+  if [ -z "${3:-}" ] && [ -z "${5:-}" ]; then
+    [ "$1" -eq 0 ] && echo OK || echo FAIL; return
+  fi
+  #  Déclaration incomplète : on ne devine pas ce qu'elle voulait couvrir.
+  { [ -z "${3:-}" ] || [ -z "${5:-}" ] || [ -z "${4:-}" ]; } && { echo INCONNU; return; }
+  #  Datée par le commit, comme `.git/pr-brief.md` : une signature laissée par le
+  #  lot précédent décrirait une erreur qui n'est plus le sujet.
+  [ "$3" != "$4" ] && { echo FAIL; return; }
+  [ "$(signature_ancree "$5")" = "oui" ] || { echo FAIL; return; }
+  case "${2:-}" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+  #  🔴 L'exception qui ne sert plus fait échouer le contrôle : si la signature
+  #  déclarée ne correspond à aucune ligne, ou bien l'erreur a disparu — et la
+  #  déclaration doit partir — ou bien elle ne visait pas ce qu'on croyait.
+  [ "$2" -eq 0 ] && { echo FAIL; return; }
+  [ "$2" -gt "$1" ] && { echo INCONNU; return; }
+  [ "$(( $1 - $2 ))" -eq 0 ] && echo OK || echo FAIL
+}
+
 verdicts_mep_selftest() {
   st=0
   #  `"$@"` et non `$1 $2 …` : la découpe des mots supprimait les arguments VIDES,
@@ -400,6 +462,30 @@ verdicts_mep_selftest() {
   t "trace d'un autre commit"            INCONNU verdict_rejeu_ci deadbee abc123 0 0
   t "aucune trace"                       INCONNU verdict_rejeu_ci "" abc123 0 0
   t "comptes illisibles"                 INCONNU verdict_rejeu_ci abc123 abc123 "x" 0
+  #  ── #502 : l'erreur que CE lot corrige ─────────────────────────────────────
+  #  Sans déclaration, rien ne change : le point reste intransigeant.
+  t "prod saine, aucune déclaration"     OK      verdict_erreurs_api 0 "" "" abc123 ""
+  t "erreurs, aucune déclaration"        FAIL    verdict_erreurs_api 3 "" "" abc123 ""
+  t "logs non mesurés"                   INCONNU verdict_erreurs_api "" "" "" abc123 ""
+  #  Le cas du 19/08 : les 2 erreurs observées sont celles que ce lot corrige.
+  t "toutes les erreurs sont déclarées"  OK      verdict_erreurs_api 2 2 abc123 abc123 "auth/refresh"
+  #  Une erreur de PLUS que la signature ne couvre : elle, on ne la connaît pas.
+  t "une erreur hors signature"          FAIL    verdict_erreurs_api 3 2 abc123 abc123 "auth/refresh"
+  #  🔴 Le cœur du mécanisme : la dérogation ne survit pas à son objet.
+  t "signature qui ne sert plus"         FAIL    verdict_erreurs_api 0 0 abc123 abc123 "auth/refresh"
+  #  Désarmer le point en le déclarant : refusé, la signature n'ancre rien.
+  t "signature vide de littéral"         FAIL    verdict_erreurs_api 2 2 abc123 abc123 ".*"
+  t "signature = le niveau de log"       FAIL    verdict_erreurs_api 2 2 abc123 abc123 "ERROR"
+  #  Le faux vert par fichier périmé, cousin de celui de 0f.
+  t "déclaration d'un autre lot"         FAIL    verdict_erreurs_api 2 2 deadbee abc123 "auth/refresh"
+  #  On ne devine pas une déclaration à moitié écrite.
+  t "signature sans commit"              INCONNU verdict_erreurs_api 2 2 "" abc123 "auth/refresh"
+  t "écartées non mesurées"              INCONNU verdict_erreurs_api 2 "" abc123 abc123 "auth/refresh"
+  t "plus d'écartées que d'observées"    INCONNU verdict_erreurs_api 1 2 abc123 abc123 "auth/refresh"
+  t "ancrage : chemin"                   oui     signature_ancree "auth/refresh"
+  t "ancrage : joker seul"               non     signature_ancree ".*"
+  t "ancrage : motif vide"               non     signature_ancree ""
+  t "ancrage : mot trop court"           non     signature_ancree "db|io"
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st
 }

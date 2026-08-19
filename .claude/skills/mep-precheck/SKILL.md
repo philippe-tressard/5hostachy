@@ -163,7 +163,7 @@ elle.
 | 3 | Standby sans conteneur (pas de split-brain) | OK · FAIL |
 | 4 | Base saine — WAL présent, 0 `disk I/O error`, **sans ouvrir `app.db`** | OK · FAIL |
 | 5 | Bridge WhatsApp connecté | OK · FAIL |
-| 6 | Aucune ERROR/CRITICAL (1 h) | OK · FAIL |
+| 6 | Aucune ERROR/CRITICAL (1 h), **hors celle que ce lot corrige** | OK · FAIL · INCONNU |
 | 7 | Scripts cron exécutables | OK · FAIL |
 | 8 | Battement d'auto-deploy sur le standby | OK · FAIL |
 | 9 | **E-mails en échec** | **INCONNU — voir ci-dessous** |
@@ -194,6 +194,34 @@ elle.
   le script, et l'exigence d'**autorisation centralisée** de l'étape 0 bis
   ci-dessus, qui est vérifiée par `test_autorisation.py`. La collision est
   historique ; à renommer un jour, en attendant lire le contexte.
+- **6** → il compte les `ERROR`/`CRITICAL` de la dernière heure sur l'API de
+  production. Depuis le 19/08/2026 (#502), un lot peut **déclarer la signature de
+  l'erreur qu'il corrige**, dans `.git/erreur-corrigee` — même forme datée que le
+  brief de PR :
+
+  ```
+  commit: 6055161
+  auth/refresh
+  ```
+
+  Le point écarte alors les lignes qui correspondent, et **échoue si la signature
+  ne correspond plus à rien** : la dérogation ne survit pas à son objet. Elle
+  échoue aussi si le commit déclaré n'est pas HEAD (déclaration d'un lot
+  précédent), ou si le motif n'ancre rien (`.*`, `ERROR` — on ne désarme pas le
+  point en le déclarant). Le détail affiché dit toujours combien de lignes ont
+  été écartées et par quel motif : un contrôle qui tait ce qu'il ignore ment par
+  omission.
+
+  ⚠️ **Sans déclaration, rien ne change** — le point reste intransigeant, et
+  c'est le cas nominal. La déclaration est un geste explicite pour un lot qui
+  répare, pas une commodité.
+
+  Pourquoi ce mécanisme plutôt qu'une fenêtre glissante depuis le dernier
+  déploiement, qui semblait plus simple : `docker compose up -d` ne recrée un
+  conteneur que si son image a changé. Un lot qui touche `api/` purge donc déjà
+  les logs, et un lot qui ne touche que `front/` aurait vu ses erreurs API
+  réelles passer sous silence. La piste écartée échouait du côté dangereux.
+
 - **0f** → le lot doit porter son titre et son descriptif de PR **avant** le push,
   dans `.git/pr-brief.md` : première ligne `commit: <sha court de HEAD>`, deuxième
   ligne le titre en `# …`, puis le corps (5 lignes minimum). Un brief rédigé pour
