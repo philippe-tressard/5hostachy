@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.102.3",
+  "version": "2.102.4",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -20,6 +20,7 @@
     "lint:styles": "node scripts/check-styles-nus.mjs",
     "lint:champs": "node scripts/check-champs.mjs",
     "lint:classes-nues": "node scripts/check-classes-nues.mjs",
+		"lint:evenements": "node scripts/check-evenements.mjs",
     "lint:balises": "node scripts/check-balises.mjs",
     "lint:html": "node scripts/check-html.mjs",
     "lint:titres": "node scripts/check-titre-double.mjs",
