@@ -6,7 +6,6 @@
 	import { ICONES_PERIMETRE, type Perimetre } from '$lib/perimetres';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
-	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -139,7 +138,6 @@
 
 <svelte:head><title>Périmètres · {_siteNom}</title></svelte:head>
 
-<EntetePage titre="Périmètres" icone="layout-dashboard" retour="/admin" />
 <p class="page-desc">
 	L’arborescence qui sert à localiser une demande — un ticket, une actualité, un
 	événement. Elle est propre à cette copropriété : renommez, réorganisez, ajoutez

@@ -162,7 +162,7 @@ export const TOLERANCES = {
 	//  ce contrôle a lui-même enseignée la veille (`standards/04` §21).
 
 	//  ── redite-classe : la classe est là, et le style en ligne la redit ──────
-	'routes/(app)/admin/lots-import/+page.svelte::redite-classe':
+	'lib/components/OngletImportLots.svelte::redite-classe':
 		'`.field` avec `margin-bottom:.75rem` en ligne (l. ~346) — exactement la valeur que la ' +
 		'classe porte déjà : le style ne change rien, il fait seulement croire qu’il pourrait',
 };

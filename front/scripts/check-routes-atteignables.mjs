@@ -13,8 +13,29 @@
  * s'en servir. Rien ne pouvait le voir — ni la compilation, ni les tests, ni le
  * contrôle des endpoints orphelins, qui vérifie l'autre bout de la chaîne.
  *
- * LA RÈGLE : toute route sous `routes/(app)/admin/` est citée quelque part par
- * un `href=` ou un `goto(`, ailleurs que dans la route elle-même.
+ * 🔴 LE DÉFAUT A CHANGÉ DE FORME LE 19/08/2026, ET LE CONTRÔLE AVEC LUI.
+ *
+ * Les sept écrans qui vivaient sur leur propre route sont devenus des ONGLETS
+ * de `admin/+page.svelte` (arbitré à l'écran : « fiche copropriété et Périmètre
+ * sont des pages autonomes alors que les autres sont intégrées au menu
+ * Paramétrage »). Il ne reste plus une seule route sous `admin/` — et ce
+ * contrôle a fait exactement ce qu'il devait : son CAS ZÉRO a échoué, « 0 route
+ * trouvée, ce contrôle ne mesure plus rien ». Il ne s'est pas tu.
+ *
+ * Mais « un écran que rien ne permet d'atteindre » n'a pas disparu : un onglet
+ * rendu sans bouton pour l'ouvrir est le même défaut, à l'identique. Le contrôle
+ * couvre donc désormais LES DEUX formes.
+ *
+ * LA RÈGLE, EN DEUX VOLETS :
+ *   A. toute route sous `routes/(app)/admin/` est citée par un `href=` ou un
+ *      `goto(`, ailleurs que dans la route elle-même ;
+ *   B. dans `admin/+page.svelte`, les trois listes concordent EXACTEMENT —
+ *      `ONGLETS` (la déclaration), les boutons `<Onglet actif={onglet === …}>`,
+ *      et les blocs `{#if}` / `{:else if onglet === …}` qui rendent le panneau.
+ *
+ * Un onglet déclaré et non rendu affiche une page vide ; rendu sans bouton, il
+ * est inatteignable ; bouton sans rendu, il ne montre rien. Les trois sont
+ * silencieux, et aucun ne fait échouer la compilation.
  *
  * Une exception se déclare dans `TOLEREES`, avec sa raison. Si la raison ne tient
  * pas en une ligne, c'est probablement que la route doit être supprimée ou reliée.
@@ -36,13 +57,18 @@ const ADMIN = join(RACINE, 'routes', '(app)', 'admin');
  *
  * ⚠️ Une entrée ici est une décision consciente, pas un contournement.
  */
-const TOLEREES = {
-	'templates-email':
-		"doublon partiel de l'onglet « Modèles e-mail » de admin/+page.svelte, mais " +
-		"seul porteur du « remettre tous les modèles au design par défaut » : relier " +
-		'les deux écrans referait le doublon corrigé par #299, les fusionner est une ' +
-		'décision fonctionnelle — instruit dans #307',
-};
+/**
+ * Routes admin légitimement sans lien, avec la raison.
+ *
+ * ⚠️ Une entrée ici est une décision consciente, pas un contournement.
+ *
+ * VIDE depuis le 19/08/2026 : la seule entrée était `templates-email`, doublon
+ * partiel de l’onglet « Modèles e-mail ». Il est devenu l’onglet « Designs
+ * e-mail » — donc atteignable, donc plus rien à tolérer. La question du doublon,
+ * elle, reste entière et appartient à #307 : les deux écrans montrent la même
+ * donnée sous deux angles, et les fusionner est une décision fonctionnelle.
+ */
+const TOLEREES = {};
 
 function fichiers(dir) {
 	const sortie = [];
@@ -65,13 +91,14 @@ const routes = readdirSync(ADMIN).filter(
 );
 
 const tous = fichiers(RACINE);
-if (tous.length === 0 || routes.length === 0) {
-	console.error(
-		`✗ Cas zéro : ${tous.length} fichier(s) analysé(s), ${routes.length} route(s) admin trouvée(s) — ` +
-			"l'arborescence a changé, ce contrôle ne mesure plus rien.",
-	);
+if (tous.length === 0) {
+	console.error("✗ Cas zéro : aucun fichier analysé — l'arborescence a changé.");
 	process.exit(1);
 }
+
+//  ⚠️ `routes.length === 0` n'est PLUS un cas zéro : c'est l'état attendu depuis
+//  que les sept écrans sont devenus des onglets. Le cas zéro a déménagé avec le
+//  défaut — il porte maintenant sur le nombre d'ONGLETS (voir plus bas).
 
 const orphelines = [];
 const tolereesLiees = [];
@@ -99,15 +126,81 @@ if (orphelines.length > 0) {
 	);
 }
 
+const tolereesFantomes = Object.keys(TOLEREES).filter((r) => !routes.includes(r));
+if (tolereesFantomes.length > 0) {
+	echec = true;
+	console.error('\n✗ Tolérance(s) désignant une route qui n’existe plus :');
+	for (const r of tolereesFantomes) console.error(`    /admin/${r} — retirer l'entrée de TOLEREES`);
+	console.error('  Une dérogation pour un écran disparu ne protège rien et masque la suivante.');
+}
+
 if (tolereesLiees.length > 0) {
 	echec = true;
 	console.error('\n✗ Tolérance(s) devenue(s) inutile(s) — un lien existe désormais :');
 	for (const r of tolereesLiees) console.error(`    /admin/${r} — retirer l'entrée de TOLEREES`);
 }
 
+// ── Volet B : les onglets de `admin/+page.svelte` ───────────────────────────
+//  Trois listes doivent concorder. Elles sont lues À LA SOURCE, jamais recopiées
+//  ici : une quatrième liste dans le contrôle divergerait au premier ajout, et
+//  c'est exactement le défaut que `lint:consignes` garde ailleurs (#482).
+const ONGLETS_MINIMAUX = 15;
+const PAGE_ADMIN = join(ADMIN, '+page.svelte');
+if (!existsSync(PAGE_ADMIN)) {
+	console.error(`✗ INCONNU : ${PAGE_ADMIN} est introuvable — ce contrôle ne conclut pas.`);
+	process.exit(1);
+}
+const srcAdmin = readFileSync(PAGE_ADMIN, 'utf8');
+
+const bloc = srcAdmin.match(/const ONGLETS = \[([\s\S]*?)\] as const;/);
+if (!bloc) {
+	console.error("✗ INCONNU : la déclaration `const ONGLETS = [...] as const;` est introuvable dans");
+	console.error('  admin/+page.svelte. Sans elle, il n\'y a plus de liste qui fasse foi, et ce');
+	console.error('  contrôle ne saurait pas dire ce qui manque.');
+	process.exit(1);
+}
+const declares = [...bloc[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+const boutons = new Set([...srcAdmin.matchAll(/<Onglet[^>]*actif=\{onglet === '([a-z_]+)'\}/g)].map((m) => m[1]));
+const rendus = new Set([...srcAdmin.matchAll(/\{(?:#if|:else if) onglet === '([a-z_]+)'\}/g)].map((m) => m[1]));
+
+if (declares.length < ONGLETS_MINIMAUX) {
+	console.error(
+		`✗ Cas zéro : ${declares.length} onglet(s) déclaré(s), ${ONGLETS_MINIMAUX} attendus au minimum.`,
+	);
+	console.error(
+		"L'administration en portait 19 le 19/08/2026. Un effondrement du relevé dit que\n" +
+			"le contrôle a cessé de voir, pas que le défaut a disparu.",
+	);
+	process.exit(1);
+}
+
+const sansBouton = declares.filter((o) => !boutons.has(o));
+const sansRendu = declares.filter((o) => !rendus.has(o));
+const nonDeclares = [...new Set([...boutons, ...rendus])].filter((o) => !declares.includes(o));
+
+if (sansBouton.length) {
+	echec = true;
+	console.error("\n✗ Onglet(s) déclaré(s) qu'AUCUN bouton ne permet d'ouvrir :");
+	for (const o of sansBouton) console.error(`    ${o}`);
+	console.error("  → ajouter un <Onglet actif={onglet === '…'}> dans la barre, ou retirer l'entrée.");
+}
+if (sansRendu.length) {
+	echec = true;
+	console.error('\n✗ Onglet(s) déclaré(s) que RIEN ne rend — la page serait vide :');
+	for (const o of sansRendu) console.error(`    ${o}`);
+	console.error("  → ajouter un bloc {:else if onglet === '…'}, ou retirer l'entrée.");
+}
+if (nonDeclares.length) {
+	echec = true;
+	console.error("\n✗ Onglet(s) employé(s) sans figurer dans `ONGLETS` :");
+	for (const o of nonDeclares) console.error(`    ${o}`);
+	console.error("  → la liste fait foi : l'y ajouter, sinon `?onglet=` ne l'ouvrira pas.");
+}
+
 if (echec) process.exit(1);
 
 console.log(
-	`✓ Routes admin atteignables : ${routes.length - Object.keys(TOLEREES).length} liée(s), ` +
-		`${Object.keys(TOLEREES).length} tolérée(s) et justifiée(s).`,
+	`✓ Écrans d'administration atteignables : ${routes.length} route(s) ` +
+		`(${Object.keys(TOLEREES).length} tolérée(s)), et ${declares.length} onglet(s) ` +
+		'déclarés, tous munis de leur bouton et de leur rendu.',
 );

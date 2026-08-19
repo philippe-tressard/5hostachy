@@ -3,7 +3,6 @@
 	import { copropriete as coproprieteApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
-	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -52,7 +51,6 @@
 
 <svelte:head><title>Admin — Fiche copropriété — {_siteNom}</title></svelte:head>
 
-<EntetePage titre="Fiche copropriété" icone="building-2" retour="/admin" />
 
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>

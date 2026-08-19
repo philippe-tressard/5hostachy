@@ -3,7 +3,6 @@
 	import { admin as adminApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
-	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -87,7 +86,6 @@
 
 <svelte:head><title>Audit associations lots — {_siteNom}</title></svelte:head>
 
-<EntetePage titre="Audit associations lots" icone="search" retour="/admin" />
 <p style="color:var(--color-text-muted);font-size:.9rem;margin:0 0 1rem">
 	Liste toutes les associations utilisateur ↔ lot actives. Permet de repérer et supprimer les affectations erronées (faux positifs de l'auto-match).
 </p>

@@ -549,6 +549,35 @@ milieu d’un site beige. Un relevé par motif textuel ne prouve rien sur ce qu�
 n’a pas cherché : `lint:champs` lit l’**arbre des balises**, où les trois formes
 se ramènent à une seule question, et son `--selftest` le montre les refuser.
 
+### L’administration est UNE page — plus aucun écran autonome
+
+Arbitré à l’écran le 19/08/2026 : *« fiche copropriété et Périmètre sont des pages
+autonomes alors que les autres sont intégrées au menu Paramétrage : uniformise cela,
+cela évitera le retour que je t’ai demandé »*.
+
+🔴 **Un écran d’administration est un ONGLET de `admin/+page.svelte`, jamais une
+route.** Les sept qui vivaient sur `/admin/<écran>` — fiche copropriété, périmètres,
+audit lots, les trois imports, designs d’e-mail — sont devenus des composants
+`Onglet*.svelte`. On ne quitte plus Paramétrage : le bouton « ← Retour » posé la
+veille n’avait plus d’objet, et il a disparu.
+
+| Ce qui fait foi | Où |
+|---|---|
+| la liste des onglets | `const ONGLETS = [...] as const` — **une seule**, elle sert au type ET à `?onglet=` |
+| l’ouverture directe | `/admin?onglet=perimetres` — remplace les sept URL supprimées |
+| le panneau | un composant `Onglet*.svelte`, jamais du balisage dans la page |
+
+⚠️ **Trois listes doivent concorder** : `ONGLETS`, les boutons `<Onglet actif={onglet
+=== …}>`, et les blocs `{:else if onglet === …}`. Un onglet déclaré sans bouton est
+inatteignable ; sans rendu, il affiche une page vide ; employé hors de la liste, il ne
+s’ouvre pas par l’URL. **Les trois sont silencieux** — `npm run lint:routes` les
+refuse, et il a été vu échouer sur chacun.
+
+⚠️ **Un lien vers un écran d’admin s’écrit `/admin?onglet=<clé>`.** Un modèle
+d’e-mail pointait encore vers `/admin/telecommandes-import` : `test_liens_front.py`
+l’a attrapé — sans lui, le destinataire du message « Vérifier les imports » serait
+tombé sur une 404.
+
 ### L’anatomie d’un écran d’administration
 
 Arbitré à l’écran le 19/08/2026 : *« l’écran WhatsApp n’est pas très beau, fais
