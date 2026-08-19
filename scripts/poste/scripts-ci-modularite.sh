@@ -21,9 +21,24 @@
 # =============================================================================
 set -uo pipefail
 PLAFOND=500
+#  Les feuilles de style ont leur PROPRE plafond, et il est plus haut.
+#
+#  POURQUOI (19/08/2026, #499). Le filtre d'extensions ne connaissait que le
+#  CODE : `app.css` est passé de 1 017 à 1 160 lignes pendant le lot #453 et ce
+#  contrôle a affiché « aucun fichier n'a grossi ». Il disait vrai POUR CE QU'IL
+#  REGARDE — et c'est justement le problème : personne ne lit ce vert comme
+#  « sauf les feuilles de style ».
+#
+#  ⚠️ Un plafond identique à celui du code aurait été un faux remède. `app.css`
+#  est le SEUL endroit du front où un style se partage : la règle « le style part
+#  avec le balisage » y pousse mécaniquement du contenu à chaque extraction de
+#  composant. Le mesurer à 500 aurait transformé chaque factorisation réussie en
+#  violation — et ce contrôle aurait été désarmé dans la semaine, exactement pour
+#  la raison que l'en-tête de ce fichier donne à propos du plafond absolu.
+PLAFOND_STYLE=1500
 
-verdict() {  # $1 = lignes avant (0 = fichier neuf), $2 = lignes après
-  local av=$1 ap=$2
+verdict() {  # $1 = lignes avant (0 = fichier neuf), $2 = après, $3 = plafond (défaut PLAFOND)
+  local av=$1 ap=$2 PLAFOND=${3:-$PLAFOND}
   if [ "$av" -eq 0 ]; then
     [ "$ap" -gt "$PLAFOND" ] && echo neuf-trop-gros || echo ok
   elif [ "$ap" -le "$PLAFOND" ]; then
@@ -48,6 +63,25 @@ if [ "${1:-}" = "--selftest" ]; then
   t "gros fichier qui maigrit"              737 684 ok
   t "gros fichier inchangé"                 880 880 ok
   t "gros fichier qui repasse sous le plafond" 520 400 ok
+  #  ── Feuilles de style : même règle, autre plafond (#499) ────────────────
+  ts() { r=$(verdict "$2" "$3" "$PLAFOND_STYLE"); [ "$r" = "$4" ] && echo "PASS  $1 → $r" \
+         || { echo "FAIL  $1  attendu=$4 obtenu=$r"; st=1; }; }
+  ts "style sous son plafond, qui grossit"   1017 1160 ok
+  ts "style au-dessus, qui grossit"          1600 1700 grossit
+  ts "style au-dessus, qui maigrit"          1600 1520 ok
+  ts "style NEUF trop gros"                     0 1501 neuf-trop-gros
+  ts "style neuf pile au plafond"               0 1500 ok
+  #  🔴 CAS ZÉRO — le fait exact du 19/08/2026 : `app.css` 1 017 → 1 160 pendant
+  #  le lot #453. Il doit passer (c'est une centralisation voulue) MAIS il doit
+  #  désormais être MESURÉ : avec le plafond du code, il aurait été refusé, et
+  #  chaque factorisation réussie serait devenue une violation.
+  if [ "$(verdict 1017 1160 "$PLAFOND")" != "grossit" ]; then
+    echo "FAIL  CAS ZERO : app.css 1017→1160 devrait echouer au plafond du CODE"; st=1
+  elif [ "$(verdict 1017 1160 "$PLAFOND_STYLE")" != "ok" ]; then
+    echo "FAIL  CAS ZERO : app.css 1017→1160 devrait passer au plafond des STYLES"; st=1
+  else
+    echo "PASS  CAS ZERO : app.css 1017→1160 mesure, et juge au bon plafond"
+  fi
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st
 fi
@@ -100,8 +134,13 @@ chemin_origine() {
 
 fautifs=""
 while IFS= read -r f; do
+  #  Le plafond dépend de la NATURE du fichier. Une extension inconnue n'est pas
+  #  « sans risque » : elle est simplement hors de ce que ce contrôle sait juger,
+  #  et il le DIT en fin d'exécution plutôt que de laisser croire à l'exhaustivité
+  #  (`standards/04` : un contrôle muet sur son périmètre se lit comme complet).
   case "$f" in
-    *.py|*.ts|*.js|*.mjs|*.svelte|*.sh) ;;
+    *.py|*.ts|*.js|*.mjs|*.svelte|*.sh) plafond=$PLAFOND ;;
+    *.css)                              plafond=$PLAFOND_STYLE ;;
     *) continue ;;
   esac
   [ -f "$f" ] || continue                       # supprimé
@@ -111,9 +150,9 @@ while IFS= read -r f; do
     origine=$(chemin_origine "$f")
     [ -n "$origine" ] && av=$(git show "$BASE:$origine" 2>/dev/null | wc -l)
   fi
-  case "$(verdict "${av:-0}" "$ap")" in
-    grossit)        fautifs="$fautifs  $f : $av → $ap lignes (déjà au-dessus de $PLAFOND, et il grossit)\n" ;;
-    neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $PLAFOND)\n" ;;
+  case "$(verdict "${av:-0}" "$ap" "$plafond")" in
+    grossit)        fautifs="$fautifs  $f : $av → $ap lignes (déjà au-dessus de $plafond, et il grossit)\n" ;;
+    neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $plafond)\n" ;;
   esac
 done <<< "$CHANGES"
 
@@ -123,4 +162,9 @@ if [ -n "$fautifs" ]; then
   printf "\nLa règle est « au fil de l'eau » : on découpe le fichier QUAND on y touche.\n"
   exit 1
 fi
-echo "✓ Modularité : aucun fichier de plus de $PLAFOND lignes n'a grossi."
+#  🔴 DIRE CE QU'ON NE REGARDE PAS. « Aucun fichier n'a grossi », sans son
+#  périmètre, se lit comme exhaustif — c'est ainsi que 143 lignes de CSS sont
+#  passées inaperçues (#499). Deux mots de plus suppriment la lecture fausse
+#  (`standards/04` : un contrôle muet sur ses limites les fait oublier).
+echo "✓ Modularité : aucun fichier n'a grossi (code > $PLAFOND l. · styles > $PLAFOND_STYLE l.)."
+echo "  NON MESURÉ, faute de règle : .html .md .json .yml .sql, et toute autre extension."
