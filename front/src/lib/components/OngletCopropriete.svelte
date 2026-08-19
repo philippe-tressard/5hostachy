@@ -3,6 +3,8 @@
 	import { copropriete as coproprieteApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import Icon from '$lib/components/Icon.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 
 	$: _siteNom = $siteNomStore;
 
@@ -55,11 +57,12 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else}
-<form on:submit|preventDefault={save} class="largeur-saisie" style="display:flex;flex-direction:column;gap:1.25rem">
+<section class="card config-section">
+<h2 class="config-section-title"><Icon name="building-2" size={17} />Fiche de la copropriété</h2>
+<form on:submit|preventDefault={save}>
 
-	<section class="form-section">
-		<h2 class="section-title">Identité</h2>
-		<div class="form-grid">
+	<SectionFormulaire premiere icone="settings" titre="Identité">
+		<div class="form-grid largeur-saisie">
 			<label class="field">
 				<span>Nom de la résidence *</span>
 				<input bind:value={form.nom} required />
@@ -90,11 +93,10 @@
 				<input bind:value={form.numero_immatriculation} placeholder="ex : D75010800001" />
 			</label>
 		</div>
-	</section>
+	</SectionFormulaire>
 
-	<section class="form-section">
-		<h2 class="section-title">Assurance</h2>
-		<div class="form-grid">
+	<SectionFormulaire icone="shield" titre="Assurance">
+		<div class="form-grid largeur-saisie">
 			<label class="field">
 				<span>Compagnie</span>
 				<input bind:value={form.assurance_compagnie} />
@@ -108,7 +110,7 @@
 				<input type="date" bind:value={form.assurance_echeance} />
 			</label>
 		</div>
-	</section>
+	</SectionFormulaire>
 
 	<!--  La section « Syndic » vivait ici et n'enregistrait RIEN : ses quatre champs
 	      n'existent ni dans `CoproprieteUpdate` ni dans le modèle `Copropriete`,
@@ -122,17 +124,29 @@
 		c'est de là que partent les e-mails au cabinet.
 	</p>
 
-	<div>
+	<!--  🔴 `.form-actions` — l'action principale va à DROITE (app.css,
+	      `justify-content: flex-end`). Le bouton était dans un `<div>` NU, donc
+	      collé à gauche : c'est ce que #501 signalait.
+
+	      ⚠️ Pas de bouton « Annuler » ici, et c'est délibéré : AUCUN onglet
+	      d'administration n'en porte. En ajouter un sur celui-ci recréerait la
+	      divergence que ce lot corrige — l'écran rejoint les autres, il ne les
+	      devance pas. -->
+	<div class="largeur-saisie form-actions">
 		<button class="btn btn-primary" type="submit" disabled={saving}>
 			{saving ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
 	</div>
 </form>
+</section>
 {/if}
 
 <style>
 	.renvoi { font-size: .85rem; color: var(--color-text-muted); margin: 0 0 1.5rem; }
-	.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
-	.form-section { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.25rem; }
+	/*  `.form-section` et `.section-title` vivaient ici : ils REDÉFINISSAIENT la
+	    carte et le titre de sous-section que `card` / `config-section-title` et
+	    `SectionFormulaire` portent déjà (anatomie v2.94.0). Deux définitions d'un
+	    même objet ne sont pas livrables — cet écran était simplement resté hors
+	    du lot qui a aligné les huit autres onglets (#501). */
 	.form-grid { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); }
 </style>
