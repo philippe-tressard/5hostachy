@@ -64,6 +64,21 @@ def _poster_au_bridge(url: str, payload: dict, headers: dict, timeout: float = T
     try:
         with httpx.Client(timeout=timeout) as client:
             resp = client.post(url, json=payload, headers=headers)
+            #  202 : le bridge a ÉMIS le message et n'a pas vu l'accusé du serveur
+            #  WhatsApp dans son délai. Ce n'est ni un succès (rien n'est confirmé)
+            #  ni un échec (le message est parti) — et c'est le cas le plus
+            #  fréquent d'incertitude, pas un cas limite : il se produit chaque
+            #  fois que la session est lente à répondre.
+            #
+            #  Avant le 19/08/2026 le bridge répondait 500 ici, ce qui rendait ce
+            #  cas indistinguable d'un envoi jamais parti. L'historique affichait
+            #  « réponse 500 du bridge » sur des messages que WhatsApp montrait
+            #  remis — signalé à l'écran par l'utilisateur, double coche à l'appui.
+            if resp.status_code == 202:
+                raise EnvoiIncertain(
+                    "message émis, accusé de réception non observé — il a très "
+                    "probablement été remis au groupe"
+                )
             resp.raise_for_status()
             return resp
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):

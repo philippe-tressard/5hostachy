@@ -254,13 +254,45 @@ app.post("/send", async (req, res) => {
     // Wait for SERVER_ACK to confirm the message actually reached WhatsApp servers.
     // If no ACK within ACK_TIMEOUT_MS, the session is likely a ghost (connected
     // in appearance but silently rejected by WhatsApp). Reconnect automatically.
+    //
+    // 🔴 MAIS L'ABSENCE D'ACCUSÉ N'EST PAS UN ÉCHEC D'ENVOI (19/08/2026).
+    // `sendMessage()` a déjà rendu la main : le message est PARTI. Seule la
+    // confirmation du serveur manque. Jusqu'ici cette branche tombait dans le
+    // `catch` commun et répondait 500 — indistinguable d'un envoi qui n'a jamais
+    // eu lieu. L'historique de l'administration affichait donc « incertain —
+    // réponse 500 du bridge » sur deux messages que WhatsApp montrait remis,
+    // double coche à l'appui. Signalé à l'écran par l'utilisateur.
+    //
+    // 202 Accepted dit exactement ce qui s'est passé : reçu et traité, résultat
+    // non confirmé. L'API le traduit en « incertain », mais avec la bonne raison
+    // — et `envoye: true` distingue ce cas de tous les autres.
     const msgId = sentMsg?.key?.id;
     if (msgId) {
-      await waitForAck(msgId);
+      try {
+        await waitForAck(msgId);
+      } catch (errAck) {
+        logger.warn({ err: errAck, msgId }, "Message émis, accusé non observé — reconnexion");
+        try { if (sock) sock.end(); } catch (_) {}
+        connectionState = "disconnected";
+        reconnectAttempt = 0;
+        scheduleReconnect();
+        return res.status(202).json({
+          ok: false,
+          envoye: true,
+          acquitte: false,
+          id: msgId,
+          jid,
+          error: errAck.message,
+        });
+      }
     }
 
-    res.json({ ok: true, jid });
+    res.json({ ok: true, jid, id: msgId ?? null });
   } catch (err) {
+    // Ici, `sendMessage()` lui-même a échoué : RIEN n'est parti, et rejouer est
+    // sûr. Le cas « émis sans accusé » est traité plus haut et ne descend pas
+    // jusqu'ici — la garde ci-dessous reste par prudence si un autre chemin
+    // venait à lever la même erreur.
     logger.error(err, "Send failed");
     if (err.message.includes("ghost session") || err.message.includes("ACK timeout")) {
       logger.warn("Ghost session detected — triggering reconnect");

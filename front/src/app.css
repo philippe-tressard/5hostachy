@@ -391,6 +391,76 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 .badge-orange { background: #FDF3E0; color: #B07D1E; }
 .badge-red    { background: #FDEDEC; color: #C0392B; }
 .badge-gray   { background: #EAEDF1; color: var(--color-text-muted); }
+/*  Le jeu comptait six couleurs et le code en demandait une SEPTIÈME : douze
+    emplois de `.badge-yellow` — statut de bail « en cours de sortie », message
+    non lu — pour une classe définie nulle part. Le badge se rendait donc en gris
+    de base, et l’état « en cours » était indistinguable de « inactif ».
+    Valeurs prises dans la même échelle que `.badge-orange` (#495). */
+.badge-yellow { background: #FEF9E7; color: #A16207; }
+
+/* ── Intitulé d'une section dans une page ──
+   Écrit NEUF fois localement, avec neuf valeurs, et employé dans CINQ fichiers
+   de plus qui n'en portaient aucune : ceux-là rendaient donc leurs intitulés en
+   texte courant, sans repère de structure (#495).
+
+   Les valeurs sont celles de la forme majoritaire — petites capitales, gris de
+   structure — qui est aussi celle de `SectionFormulaire` : un intitulé de
+   section se lit comme un repère, il ne concurrence pas ce qu’il nomme.
+
+   ⚠️ Les neuf définitions locales ne sont PAS retirées ici : elles gagnent (un
+   style scopé est plus spécifique), donc rien ne change là où le style existait
+   déjà, et ce lot ne fait que combler les cinq trous. Les unifier est un
+   arbitrage — trois d’entre elles portent une AUTRE notion, un vrai titre en
+   1rem, qui mérite son propre nom. Suivi en #495. */
+.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
+
+/* ── Écrans d’authentification ──
+   Connexion, inscription et mot de passe oublié les définissaient chacun de son
+   côté ; `verifier-email` les employait sans aucune définition, et s’affichait
+   donc sans carte, sans centrage et sans logo (#495). */
+.auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg); padding: 1rem; }
+.auth-card { width: 100%; max-width: 400px; padding: 2rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.auth-header { text-align: center; margin-bottom: 1.5rem; }
+.auth-logo { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
+
+/* ── Six notions partagées, définies dans UN fichier et employées dans PLUSIEURS ──
+
+   Chacune était écrite chez un appelant, et un autre s’en servait sans l’avoir :
+   Svelte scope au fichier, donc ces éléments-là se rendaient nus. Elles montent
+   ici plutôt que d’être recopiées — recopier aurait fabriqué la divergence que
+   ce dépôt passe sa journée à supprimer (#495).
+
+   ⚠️ Les définitions locales existantes ne sont PAS retirées : un style scopé est
+   plus spécifique, il continue de gagner. Ce lot ne fait que combler les trous,
+   sans rien changer là où l’écran était déjà juste. Les unifier viendra après,
+   écran par écran, parce que les valeurs divergent (une boîte de dialogue fait
+   420 px ici et 560 px là — c’est une décision, pas une correction). */
+
+/*  Une rangée de pastilles de périmètre. Employée par `PerimetrePicker`, l’espace
+    CS, la résidence et l’annonce de hall — celle-ci ne l’avait pas. */
+.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/*  Boîte de dialogue. `espace-cs` l’employait sans aucune définition : sa modale
+    s’affichait sans fond ni cadre, à même la page assombrie. */
+.modal-box { background: var(--color-surface); border-radius: var(--radius); padding: 1.25rem; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
+/*  Le pied d’une boîte de dialogue à DEUX gestes opposés (annuler ↔ supprimer),
+    d’où `space-between` — à ne pas confondre avec `.modal-footer`, qui aligne à
+    droite, ni avec `.form-actions`, qui soumet un formulaire. */
+.modal-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: 1rem; }
+
+/*  Un événement urgent, marqué par un filet rouge à gauche. Défini par
+    `CarteEvenement`, employé aussi par la page du calendrier. */
+.event-urgent { border-left: 3px solid var(--color-danger); }
+
+/*  Un tableau kanban : des colonnes qui défilent horizontalement. Défini par le
+    calendrier, employé aussi par les prestataires. */
+.kanban { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: .5rem; }
+@media (max-width: 900px) { .kanban { flex-direction: column; } }
+
+/*  Le geste discret « signaler » au fil d’une carte. Défini par les sondages,
+    employé aussi par la carte d’annonce. */
+.signaler-inline { background: none; border: none; cursor: pointer; font-size: .78rem; color: var(--color-text-muted); opacity: .7; padding: 0 0 0 .5rem; }
+.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
 .badge-purple { background: #F3E8FF; color: #6B21A8; }
 /* Pastille de type du fil d'activité. Ici et pas dans un composant : elle est
    portée à la fois par les cartes du fil (FluxCard) et par le bandeau des

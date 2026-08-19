@@ -52,9 +52,43 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  * Classes employées sans définition, **avec la raison**.
  *
  * ⚠️ Une entrée qui ne sert plus fait échouer le contrôle : une dérogation
- * oubliée est une porte qu'on croit fermée.
+ * oubliée est une porte qu'on croit fermée. La liste ne peut donc que décroître —
+ * le jour où l'une de ces zones reçoit son style, le contrôle exige son retrait.
+ *
+ * ## Comment on est passé de 54 à 5 (#495)
+ *
+ * **34 réparations mécaniques** — une variante inexistante remplacée par celle qui
+ * existe (`.btn-secondary` → `.btn-outline`, `.badge-success` → `.badge-green`…),
+ * une notion partagée promue dans `app.css`.
+ *
+ * **15 crochets MORTS retirés du balisage.** Vérifiés un par un : leur élément
+ * était déjà stylé par une classe voisine, ou l'état qu'ils nommaient est rendu
+ * autrement. 🔴 Le cas exemplaire est `epingle` : une actualité épinglée **se
+ * voit** — badge 📌 sur la carte et rubrique « 📌 Épinglé » du tableau de bord,
+ * rendu validé à l'écran le 19/08/2026. La classe sur le conteneur ne portait
+ * aucune règle ; elle faisait croire à un accroche-style qui n’existait pas.
+ *
+ * ⚠️ **La leçon** : « classe sans définition » ne veut pas dire « intention
+ * perdue ». Il faut regarder si l'état est rendu AILLEURS avant de conclure —
+ * je l'avais d'abord classé à l'inverse, et l'écran m'a détrompé.
+ *
+ * **Les 5 qui restent** sont de vraies zones sans style, à trancher à l'écran.
  */
-const TOLEREES = {};
+const TOLEREES = {
+	//  Le libellé d’une entrée de navigation : sa mise en forme vient du `<a>`
+	//  parent. Le crochet est inoffensif, mais il attend sa règle ou son retrait.
+	'lib/components/Nav.svelte': ['nav-label'],
+	//  🔴 La carte « nouvel arrivant » COCHÉE ne se distingue pas de la décochée :
+	//  le `class:` est posé, la règle n’existe pas.
+	'routes/(app)/admin/+page.svelte': ['nouvel-arrivant-checked'],
+	//  Les libellés de mois de la frise, rendus en texte courant.
+	'routes/(app)/espace-cs/+page.svelte': ['frise-month-label'],
+	//  🔴 La notation par étoiles : `class:active` sur chaque étoile, et aucune
+	//  règle — l’étoile choisie ne se distingue pas de celle qu’on n’a pas prise.
+	'routes/(app)/prestataires/+page.svelte': ['star-btn'],
+	//  Le corps d’un sondage, sans mise en forme propre.
+	'routes/(app)/sondages/+page.svelte': ['sondage-body'],
+};
 
 /** Un composant sans aucune classe reconnue signalerait une analyse cassée. */
 const CLASSES_MINIMALES = 400;
@@ -109,9 +143,14 @@ for (const chemin of fichiers) {
 	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) || [, ''])[1];
 	const definiesLocal = new Set([...style.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
 
+	//  Les COMMENTAIRES sont retirés : ce dépôt en écrit de longs, qui citent le
+	//  balisage qu'ils interdisent — `FormulaireAnnonceHall` explique pourquoi il
+	//  n'emploie PAS `<button class="pill">`. Les lire comme du balisage produit un
+	//  faux positif, et un garde-fou qui crie sur du légitime finit désarmé.
 	const gabarit = source
 		.replace(/<script[\s\S]*?<\/script>/g, '')
-		.replace(/<style[\s\S]*?<\/style>/g, '');
+		.replace(/<style[\s\S]*?<\/style>/g, '')
+		.replace(/<!--[\s\S]*?-->/g, '');
 
 	//  `class="a b"` littéral, et `class:x={…}`. Les classes calculées
 	//  (`class="{expr}"`) ne sont PAS lues : on ne devine pas une expression.

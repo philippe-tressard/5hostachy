@@ -28,7 +28,7 @@
 
 {#if pages.length > 0}
 	<div class="card" style="margin-top:1.25rem">
-		<h3 class="tl-section-title">&#x1F3C6; Top pages</h3>
+		<h3 class="titre-panneau">&#x1F3C6; Top pages</h3>
 		<table class="table">
 			<thead>
 				<tr>
@@ -89,4 +89,9 @@
 		font-weight: 700;
 		padding-top: .5rem;
 	}
+	/*  L'intitulé d'un panneau de télémétrie. Il s'appelait `.tl-section-title`
+	    et sa règle vivait dans la PAGE : `TopPages` étant un composant à part, il
+	    ne l'a jamais reçue — un composant enfant n'hérite pas d'un style scopé
+	    (#495). Renommé pour ne pas laisser croire qu'il partage une définition. */
+	.titre-panneau { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
 </style>

@@ -410,7 +410,7 @@ import { onMount } from 'svelte';
 			</div>
 		{:else}
 			<button
-				class="btn btn-secondary btn-sm"
+				class="btn btn-outline btn-sm"
 				style="margin-top:1rem"
 				on:click={() => (showDemandeForm = !showDemandeForm)}
 			>

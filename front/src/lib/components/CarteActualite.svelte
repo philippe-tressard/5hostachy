@@ -58,8 +58,7 @@
 	//  qu'aucun lien ne soit cassé.
 </script>
 
-<div class="carte-liste pub-expand" class:expanded class:urgent={pub.urgente}
-	class:brouillon={pub.brouillon} class:epingle={pub.epingle} class:attenue={!estFil}
+<div class="carte-liste" class:expanded class:urgent={pub.urgente} class:attenue={!estFil}
 	id="pub-{pub.id}"
 	role="presentation"
 	on:click={() => { if (!expanded) basculer(); }}>
@@ -100,7 +99,7 @@
 		<!--  Le corps ne referme pas la carte : on referme par l'en-tête. Sans cela,
 		      impossible de sélectionner du texte, et un clic sur une photo ou un
 		      formulaire referme ce qu'on lisait (ux-patterns §3). -->
-		<div class="carte-corps pub-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div class="pub-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 			{#if formulaireOuvert}
 				<slot name="formulaire" />
 			{:else}

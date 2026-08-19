@@ -82,7 +82,7 @@ import { onMount } from 'svelte';
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'bell'}>
 	{#if unread > 0}
 		<span style="font-size:.85rem;color:var(--color-text-muted)">{unread} non lue{unread > 1 ? 's' : ''}</span>
-		<button class="btn btn-secondary btn-sm" on:click={markAll}>Tout marquer lu</button>
+		<button class="btn btn-outline btn-sm" on:click={markAll}>Tout marquer lu</button>
 	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
@@ -112,7 +112,7 @@ import { onMount } from 'svelte';
 				</div>
 				<div class="notif-actions">
 					{#if !n.lue}
-						<button class="btn btn-secondary btn-sm" on:click={() => markRead(n.id)}>Marquer lu</button>
+						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}>Marquer lu</button>
 					{/if}
 					<button class="btn btn-danger btn-sm" disabled={deleting.has(n.id)} on:click={() => remove(n.id)}>✕</button>
 				</div>
@@ -137,7 +137,7 @@ import { onMount } from 'svelte';
 				</div>
 				<div class="notif-actions">
 					{#if !n.lue}
-						<button class="btn btn-secondary btn-sm" on:click={() => markRead(n.id)}>Marquer lu</button>
+						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}>Marquer lu</button>
 					{/if}
 					<button class="btn btn-danger btn-sm" disabled={deleting.has(n.id)} on:click={() => remove(n.id)}>✕</button>
 				</div>

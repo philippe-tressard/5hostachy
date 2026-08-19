@@ -78,7 +78,9 @@
 					</div>
 				{:else}
 					<form on:submit|preventDefault={resend} style="display:flex; gap:.5rem">
-						<input type="email" bind:value={resendEmail} placeholder="Votre e-mail" required class="input" style="flex:1" />
+						<div class="field champ-en-ligne" style="flex:1">
+							<input type="email" bind:value={resendEmail} placeholder="Votre e-mail" required />
+						</div>
 						<button type="submit" class="btn btn-primary" disabled={resendLoading}>
 							{resendLoading ? 'Envoi…' : 'Renvoyer'}
 						</button>

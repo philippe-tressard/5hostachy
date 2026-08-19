@@ -1682,7 +1682,7 @@
 						<div style="margin-top:.75rem">
 							<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Contact{prestContacts.length > 1 ? 's' : ''}</div>
 							{#each prestContacts as contact, i}
-								<div class="contact-block" style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)">
+								<div style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)">
 									<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
 										<input style="flex:2;min-width:140px" bind:value={prestContacts[i].telephone} placeholder="Téléphone *" />
 										<input style="flex:1;min-width:100px" bind:value={prestContacts[i].prenom} placeholder="Prénom" />
@@ -1794,7 +1794,7 @@
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'consommations'}
 
-	<div class="compteur-selector" style="margin-bottom:1.25rem">
+	<div style="margin-bottom:1.25rem">
 		<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
 			{#each compteurConfigs as cfg}
 				<button class="btn btn-sm" class:btn-primary={typeCompteur === cfg.type_compteur}
@@ -1917,7 +1917,7 @@
 			</div>
 			<div class="modal-body">
 				<div style="text-align:center;margin-bottom:1rem">
-					<div class="star-picker" style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
+					<div style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
 						{#each [1,2,3,4,5] as s}
 							<button type="button" class="star-btn" class:active={notationNote >= s}
 								style="background:none;border:none;cursor:pointer;font-size:2rem;color:{notationNote >= s ? '#f59e0b' : '#d1d5db'};transition:color .15s"

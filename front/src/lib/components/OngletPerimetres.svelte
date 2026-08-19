@@ -290,7 +290,7 @@
 			</label>
 
 			<div class="modal-actions">
-				<button class="btn-secondary" on:click={() => (edite = null)}>Annuler</button>
+				<button class="btn btn-outline" on:click={() => (edite = null)}>Annuler</button>
 				<button class="btn-primary" disabled={enregistrement || !form.libelle.trim()} on:click={enregistrer}>
 					{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
@@ -320,7 +320,7 @@
 			</label>
 
 			<div class="modal-actions">
-				<button class="btn-secondary" on:click={() => (creation = null)}>Annuler</button>
+				<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
 				<button
 					class="btn-primary"
 					disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
