@@ -50,9 +50,17 @@
       contrôles labelables : `for` n'y produirait aucune association, en silence.
 -->
 <script lang="ts">
+	import Icon from './Icon.svelte';
+
 	/** Intitulé de la section — ex. « Diffusion ». Vide : aucun titre, mais la
 	    séparation reste, ce qui sert aux groupes évidents (le titre d'un objet). */
 	export let titre = '';
+
+	/** Icône du catalogue partagé (`$lib/icones-svg.json`), devant l’intitulé.
+	    Les titres portaient des ÉMOJI ; l’en-tête de page, lui, prenait déjà ses
+	    tracés dans le catalogue. Deux façons de désigner une section, dont une
+	    qui dépend de la police du système (19/08/2026). */
+	export let icone = '';
 
 	/** Première section du formulaire : pas de filet au-dessus. */
 	export let premiere = false;
@@ -78,12 +86,12 @@
 	{#if titre}
 		{#if pour}
 			<label class="section-titre" for={pour} id={idTitre || undefined}>
-				{titre}{#if requis} *{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis} *{/if}
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</label>
 		{:else}
 			<h4 class="section-titre" id={idTitre || undefined}>
-				{titre}{#if requis} *{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis} *{/if}
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</h4>
 		{/if}

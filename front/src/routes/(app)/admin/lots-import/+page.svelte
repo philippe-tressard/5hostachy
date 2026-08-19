@@ -3,6 +3,7 @@
 	import { lots as lotsApi, api } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import EntetePage from '$lib/components/EntetePage.svelte';
 
 	$: _siteNom = $siteNomStore;
 	// ── Données ─────────────────────────────────────────────────────────────
@@ -210,10 +211,7 @@
 
 <svelte:head><title>Import Lots — {_siteNom}</title></svelte:head>
 
-<div class="imp-header">
-	<a href="/admin" class="btn btn-outline btn-sm" style="margin-right:.75rem">← Paramétrage</a>
-	<h1>&#x1F3E0; Import Lots</h1>
-</div>
+<EntetePage titre="Import Lots" icone="home" retour="/admin" />
 
 <!-- ── Stats ─────────────────────────────────────────────────────────────── -->
 {#if stats}

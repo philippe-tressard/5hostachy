@@ -11,6 +11,7 @@
   import { toast } from '$lib/components/Toast.svelte';
   import { fmtDatetimeShort } from '$lib/date';
   import Icon from '$lib/components/Icon.svelte';
+  import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 
   /** Configuration publique déjà chargée par la page (préremplit le formulaire). */
   export let cfgPublique: Record<string, string> = {};
@@ -138,11 +139,12 @@
   }
 </script>
 
-<section class="config-section">
+<section class="card config-section">
   <h2 class="config-section-title">
     <Icon name="whatsapp" size={18} />
     Configuration WhatsApp
   </h2>
+  <SectionFormulaire premiere icone="settings" titre="Connexion au bridge">
   <div class="form-grid largeur-saisie">
     <label class="field" style="grid-column:span 2">
       <span class="case">
@@ -172,15 +174,16 @@
       <span class="field-hint">{apiKeySet ? 'Une clé est déjà configurée. Laissez ce champ vide pour la conserver.' : 'Requis pour l\'authentification au bridge WhatsApp.'}</span>
     </label>
   </div>
-  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.75rem">
+  <div class="largeur-saisie form-actions">
     <button class="btn btn-primary" on:click={saveWaConfig} disabled={waSaving}>
-      {waSaving ? 'Enregistrement...' : 'Enregistrer'}
+      {waSaving ? 'Enregistrement…' : 'Enregistrer'}
     </button>
   </div>
-  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:.75rem 0">
+  </SectionFormulaire>
+
+  <SectionFormulaire icone="activity" titre="Tester la configuration">
   <div class="largeur-saisie">
     <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
-      <p style="font-size:.85rem;font-weight:600;color:var(--color-text-muted);margin:0">&#x1F9EA; Tester la configuration</p>
       <button class="btn btn-outline" style="font-size:.75rem;padding:.15rem .5rem" on:click={checkWaStatus} disabled={waStatusLoading}>
         {waStatusLoading ? '...' : '\u{1F504} Statut'}
       </button>
@@ -233,12 +236,11 @@
     </div>
     <p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">Envoie le message ci-dessus sur le groupe WhatsApp configuré.</p>
   </div>
-
-  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:1rem 0">
+  </SectionFormulaire>
 
   <!-- Messages planifiés -->
+  <SectionFormulaire icone="calendar-days" titre="Messages planifiés (envoi automatique)">
   <div class="largeur-saisie">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">&#x1F4C5; Messages planifiés (envoi automatique)</p>
     <p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:1rem;line-height:1.5">
       &#x1F4A1; Markdown WhatsApp : <strong>*gras*</strong> | <em>_italique_</em> | <s>~barré~</s> | Sauts de ligne (Enter)
     </p>
@@ -258,20 +260,19 @@
         <div style="margin-top:.4rem;padding:.5rem;background:var(--color-bg);border-left:3px solid var(--color-border);border-radius:4px;font-size:.78rem;color:var(--color-text-muted);line-height:1.6;white-space:pre-wrap;word-wrap:break-word">
           {item.message || '— Aperçu du message'}
         </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:.4rem">
-          <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={() => saveWaScheduledItem(item)} disabled={waScheduledSaving[item.id]}>
-            {waScheduledSaving[item.id] ? '...' : '\u{1F4BE} Enregistrer'}
+        <div class="form-actions">
+          <button class="btn btn-primary" on:click={() => saveWaScheduledItem(item)} disabled={waScheduledSaving[item.id]}>
+            {waScheduledSaving[item.id] ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
       </div>
     {/each}
   </div>
-
-  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:1rem 0">
+  </SectionFormulaire>
 
   <!-- Footer des messages -->
+  <SectionFormulaire icone="pencil" titre="Footer des messages">
   <div class="largeur-saisie">
-    <p style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--color-text-muted)">&#x1F4DD; Footer des messages (markdown WhatsApp)</p>
     <label class="field">
       <textarea
         bind:value={footer}
@@ -283,18 +284,17 @@
     </label>
   </div>
 
-  <div class="largeur-saisie" style="display:flex;justify-content:flex-end;margin-top:.5rem">
-    <button class="btn btn-primary" style="font-size:.8rem;padding:.2rem .6rem" on:click={onSaveFooter} disabled={footerSaving}>
-      {footerSaving ? '...' : '\u{1F4BE} Enregistrer'}
+  <div class="largeur-saisie form-actions">
+    <button class="btn btn-primary" on:click={onSaveFooter} disabled={footerSaving}>
+      {footerSaving ? 'Enregistrement…' : 'Enregistrer'}
     </button>
   </div>
-
-  <hr class="largeur-saisie" style="border:none;border-top:1px solid var(--color-border);margin:1rem 0">
+  </SectionFormulaire>
 
   <!-- Historique des envois -->
+  <SectionFormulaire icone="clipboard-list" titre="Historique des envois (6 derniers)">
   <div class="largeur-saisie">
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-      <p style="font-size:.85rem;font-weight:600;color:var(--color-text-muted);margin:0">&#x1F4CB; Historique des envois (6 derniers)</p>
       <button class="btn btn-outline" style="font-size:.7rem;padding:.1rem .4rem" on:click={loadWaLogs} aria-label="Rafraîchir l'historique">&#x1F504;</button>
     </div>
     {#if waLogs.length === 0}
@@ -321,4 +321,5 @@
       </div>
     {/if}
   </div>
+  </SectionFormulaire>
 </section>

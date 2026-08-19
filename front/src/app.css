@@ -894,8 +894,21 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
    définition serait une duplication (rang 1), et elles ne sont définies nulle
    part ailleurs — aucun risque de collision.
    ────────────────────────────────────────────────────────────────────────── */
+/*  Un bloc de configuration de l’administration. Il ne porte QUE son
+    espacement : la surface vient de `.card`, posée à côté dans le balisage.
+
+    Elle n’y était pas jusqu’au 19/08/2026 — les blocs d’admin étaient posés à
+    même le fond de page. Or le fond de page et le fond d’un champ sont la MÊME
+    couleur (`--color-bg`, la pierre de taille) : un champ beige sur une page
+    beige n’a plus que sa bordure pour exister, et l’écran se lit comme une
+    suite de traits. Signalé à l’écran (« le look des formulaires ne correspond
+    pas à l’UX — fond de champ coloré »).
+
+    🔴 L’arbitrage est : le beige reste la couleur du CHAMP, et la carte devient
+    franchement blanche. Le champ se lit alors comme un creux dans la carte, ce
+    qui est sa fonction. Une couleur, un rôle. */
 .config-section { margin-bottom: 1.25rem; }
-.config-section-title { font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
+.config-section-title { display: flex; align-items: center; gap: .45rem; font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
 .muted { color: var(--color-text-muted); }
 /* `.backup-header` vivait ici : c'était l'en-tête des deux cartes de détail
    supprimées avec #299, et de rien d'autre. Elle est partie avec elles. */

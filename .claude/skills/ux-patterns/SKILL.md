@@ -549,6 +549,43 @@ milieu d’un site beige. Un relevé par motif textuel ne prouve rien sur ce qu�
 n’a pas cherché : `lint:champs` lit l’**arbre des balises**, où les trois formes
 se ramènent à une seule question, et son `--selftest` le montre les refuser.
 
+### L’anatomie d’un écran d’administration
+
+Arbitré à l’écran le 19/08/2026 : *« l’écran WhatsApp n’est pas très beau, fais
+ressortir les sections, on s’y perd visuellement »*, puis *« uniformise les
+en-têtes avec la possibilité d’un retour »*, *« uniformise le footer »*, *« le look
+des formulaires ne correspond pas à l’UX »*.
+
+Chaque fois, le motif **existait déjà** et n’était pas employé. C’est la forme la
+plus coûteuse du défaut : on croit avoir une charte, on a des copies.
+
+| Élément | Le motif | Il était écrit à la main… |
+|---|---|---|
+| en-tête de page | `EntetePage` + `retour="/admin"` | 4 écrans sur 8, dont un **sans aucun retour** |
+| bloc | `<section class="card config-section">` | `.config-section` n’avait **aucun fond** |
+| sous-section | `SectionFormulaire` (+ `icone`) | un `<p>` gris gras, **16 fois**, et un `<hr>` **8 fois** |
+| barre d’actions | `.form-actions` | **13 fois** en style en ligne, avec **4 marges différentes** |
+| pied de modale | `.modal-footer` | 4 en ligne, 2 sous `.modal-actions` — **définie nulle part** |
+
+🔴 **Le fond du champ est le BEIGE, celui de la carte est le BLANC.** Une couleur,
+un rôle : le champ se lit comme un creux dans la carte. Cela n’a de sens que si
+la carte est franchement blanche — les blocs d’admin étaient posés à même le fond
+de page, qui est **le même beige que les champs**, si bien qu’un champ n’avait plus
+que sa bordure pour exister. ⚠️ Ce beige n’avait jamais été décidé : `app.css`
+portait `.field input` **deux fois**, une version blanche et une beige, et c’est
+l’ordre de la cascade qui tranchait (#413).
+
+⚠️ **Pas d’émoji dans un titre de section ni de bloc** : le tracé vient du
+catalogue partagé `$lib/icones-svg.json`, via `icone` sur `SectionFormulaire` ou
+`<Icon>` sur `.config-section-title`. Un émoji dépend de la police du système ;
+l’en-tête de page prenait déjà ses tracés dans le catalogue — deux façons de
+désigner une section, dont une seule est stable.
+
+⚠️ **`.form-actions` n’est pas `.modal-footer`.** La première soumet un
+formulaire, la seconde ferme une boîte de dialogue — et `lint:soumission` ne
+regarde que la première, à raison : « Confirmer » est le bon verbe pour une
+confirmation, « Enregistrer » pour une soumission.
+
 ### 9 bis. Ce qui décide de la largeur d'un champ, c'est son CONTENU
 
 Les grilles (`.form-grid`) répartissent en colonnes de ~180-200 px. C'est juste

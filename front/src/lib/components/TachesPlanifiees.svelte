@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '$lib/components/Icon.svelte';
 	//  Extrait de `admin/+page.svelte` (2577 lignes) le 11/08/2026, au fil de
 	//  l'eau : y ajouter la colonne « Tâche » aurait fait grossir un fichier déjà
 	//  cinq fois au-dessus du plafond de modularité.
@@ -222,8 +223,8 @@
 	onMount(charger);
 </script>
 
-<section class="config-section">
-	<h2 class="config-section-title">&#x1F4CB; Santé des tâches planifiées</h2>
+<section class="card config-section">
+	<h2 class="config-section-title"><Icon name="clipboard-list" size={17} />Santé des tâches planifiées</h2>
 	<p class="muted" style="font-size:.85rem">
 		Synthèse : <strong>une ligne par tâche</strong>, portant la <strong>dernière
 		exécution réelle</strong> — quel que soit le nœud qui l'a faite. Quand une tâche
