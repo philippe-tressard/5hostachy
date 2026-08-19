@@ -429,6 +429,26 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     seul est plus haut, ce qui arrive au premier bouton icône ajouté. */
 .filters { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
 
+/* ── Case à cocher ──
+   Une case et son libellé sur une ligne, cliquables ensemble.
+
+   Définie CINQ fois localement jusqu'au 19/08/2026 — annonce, annonce de hall,
+   événement, prestation, sondage — et `.case input[type="checkbox"]` cinq fois
+   au caractère près. Même défaut que `.filters` avant #446, invisible pour la
+   même raison : les copies étaient d'accord entre elles (#397).
+
+   `font-size: .875rem` était présent dans TROIS des cinq. C'est la taille de
+   `.field label` : un libellé de case est un libellé de champ, il n'y a pas de
+   raison qu'il soit plus grand. Les deux qui ne le posaient pas héritaient donc
+   de leur contexte, sans que personne l'ait décidé.
+
+   Les variantes restent NOMMÉES et locales : `.case + .case` (espacement d'une
+   pile de cases, événement), `.case-secondaire` (case d'option sous un champ,
+   sondage). Ce qui diffère se lit dans le balisage. */
+.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
+.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
+
+
 /*  Variante NOMMÉE — une seule ligne qui défile, au lieu de passer à la ligne.
     Prestataires la porte sur ses deux barres : elles ont assez de filtres pour
     occuper trois lignes sur un téléphone, et pousser la liste hors de l'écran.
