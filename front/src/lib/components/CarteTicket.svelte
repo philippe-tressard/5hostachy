@@ -253,7 +253,7 @@
 					<RubriqueHistorique {evolutions} statutLabels={STATUT_TICKET_LABELS}
 						peutModifier={peutSuivreCeTicket}
 						currentUserId={$currentUser?.id}
-						estAdmin={$isAdmin}
+						estAdmin={$isAdmin} avecSuppression
 						enEdition={evolEnEdition}
 						on:modifier={(e) => dispatch('evol_modifier', e.detail)}
 						on:supprimer={(e) => dispatch('evol_supprimer', { ticket, evolId: e.detail })}>

@@ -129,7 +129,7 @@
 		vide="Aucune évolution enregistrée."
 		peutModifier={$isCS}
 		currentUserId={$currentUser?.id}
-		estAdmin={$isAdmin}
+		estAdmin={$isAdmin} avecSuppression
 		{enEdition}
 		on:modifier={(e) => (enEdition = e.detail)}
 		on:supprimer={supprimer}
