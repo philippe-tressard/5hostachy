@@ -1191,14 +1191,14 @@ $: _siteNom = $siteNomStore;
       <input type="text" bind:value={siteConfig.login_sous_titre} placeholder="Votre espace numérique de résidence" />
       <span class="field-hint">Affiché sous le nom du site sur la page de connexion.</span>
     </label>
-    <label class="field" style="grid-column:span 2">
+    <label class="field champ-court" style="grid-column:span 2">
       Délai d'archivage automatique (heures)
-      <input type="number" bind:value={siteConfig.archivage_delai_heures} min="1" max="8760" placeholder="48" style="width:120px" />
+      <input type="number" bind:value={siteConfig.archivage_delai_heures} min="1" max="8760" placeholder="48" />
       <span class="field-hint">Délai après lequel une actualité « Résolue » est automatiquement archivée (défaut : 48h). Le bouton 📦 permet d'archiver immédiatement sans attendre ce délai.</span>
     </label>
-    <label class="field" style="grid-column:span 2">
+    <label class="field champ-court" style="grid-column:span 2">
       Délai de relance syndic (jours)
-      <input type="number" bind:value={siteConfig.relance_syndic_delai_jours} min="1" max="365" placeholder="30" style="width:120px" />
+      <input type="number" bind:value={siteConfig.relance_syndic_delai_jours} min="1" max="365" placeholder="30" />
       <span class="field-hint">Nombre de jours sans mise à jour d'un ticket destinataire-syndic avant qu'il apparaisse dans la liste de relance de l'Espace CS (défaut : 30 jours).</span>
     </label>
     <label class="field" style="grid-column:span 2">

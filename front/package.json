@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "2.102.6",
+  "version": "2.102.7",
   "private": true,
   "scripts": {
     "dev": "vite dev",

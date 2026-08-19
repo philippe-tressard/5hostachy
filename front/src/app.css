@@ -273,7 +273,16 @@ a.btn:hover { text-decoration: none; }
     `display:block` + `margin-bottom:.3rem` puis un simple `font-size`+`weight`
     dans un parent devenu flex. Ce sont les secondes qui gagnaient. Fusionnées
     ici, aux valeurs effectives — l'écran ne change pas. */
-.field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
+/*  Densité d'un champ — arbitrée à l'écran le 19/08/2026 sur les deux extrêmes :
+    l'onglet SMTP (8 champs en grille, le plus dense) et la fiche copropriété
+    (11 champs). Verdict : « trop serré » (#489).
+
+    Les valeurs venaient de la consolidation de #374 et n'avaient jamais été
+    REGARDÉES sur un écran dense — elles étaient héritées, pas choisies.
+
+    ⚠️ Une seule valeur pour tout le site. Aérer ici allonge les écrans longs :
+    c'est le même arbitrage vu des deux bouts, et il se tranche une fois. */
+.field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
 .field label { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 /* ── Grille de formulaire ──
    Des champs courts côte à côte, qui repassent en colonne quand la place manque.
@@ -327,6 +336,23 @@ a.btn:hover { text-decoration: none; }
     16/08/2026). À poser sur le champ, pas sur la grille — c'est le contenu qui
     décide de sa largeur, pas l'écran qui l'accueille. */
 .form-grid .champ-large, .field.champ-large { grid-column: 1 / -1; }
+/*  TROIS largeurs, et trois seulement — arbitré à l'écran le 19/08/2026 (#489).
+    « Deux se retiennent, quatre se réinventent » : il y en avait quatre, toutes
+    écrites EN LIGNE dans les pages (120px, 100px, 200px, 9rem), chacune
+    défendable et l'ensemble sans logique.
+
+      `champ-court`  un nombre qui se lit d'un coup d'œil : un port, un délai
+      `champ-moyen`  une référence, une heure, une date
+      `champ-large`  le contenu prend la ligne entière (ci-dessus)
+
+    ⚠️ `max-width` et non `width` : sur téléphone le champ doit pouvoir rétrécir.
+    Une largeur fixe y déborde de sa grille — c'est la responsivité du squelette
+    (`standards/11` §10), pas une préférence.
+
+    ⚠️ À poser sur le CHAMP, jamais sur la grille : c'est le contenu qui décide
+    de sa largeur, pas l'écran qui l'accueille. */
+.field.champ-court input, .field.champ-court select, .input-champ-court { max-width: 8rem; }
+.field.champ-moyen input, .field.champ-moyen select, .input-champ-moyen { max-width: 14rem; }
 /*  Un champ posé dans une RANGÉE — barre d’outils, ligne d’action, formulaire
     en ligne — et non dans une pile : l’espacement y est porté par le `gap` du
     parent, exactement comme dans `.form-grid`. Sans ce modificateur, chaque

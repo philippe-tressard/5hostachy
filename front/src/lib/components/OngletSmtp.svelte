@@ -111,9 +111,9 @@
       Serveur SMTP
       <input type="text" bind:value={smtpConfig.server} placeholder="smtp.example.com" />
     </label>
-    <label class="field">
+    <label class="field champ-court">
       Port
-      <input type="number" bind:value={smtpConfig.port} min="1" max="65535" placeholder="587" style="width:100px" />
+      <input type="number" bind:value={smtpConfig.port} min="1" max="65535" placeholder="587" />
     </label>
     <label class="field">
       Adresse expéditeur (From)
@@ -206,12 +206,11 @@
 
   <SectionFormulaire icone="building-2" titre="Référence copropriété (syndic)">
   <div class="largeur-saisie">
-    <label class="field">
+    <label class="field champ-moyen">
       <input
         type="text"
         bind:value={referenceCopro}
         placeholder="00213"
-        style="max-width:200px"
       />
       <span class="field-hint">Référence de la copropriété auprès du syndic. Utilisée en préfixe dans les sujets d'e-mails envoyés au syndic.</span>
     </label>
