@@ -102,6 +102,30 @@ export interface TicketEvolution {
 	perimetre_cible?: string[];
 }
 
+/**  Un canal de diffusion, tel qu'il partira — ou pourquoi il ne partira pas (#498).
+ *
+ *   ⚠️ `inactif_motif` est ce qui distingue cet aperçu d'une maquette : bridge
+ *   éteint, aucun destinataire joignable, droit manquant. L'écran doit le dire
+ *   AVANT l'envoi plutôt que laisser croire à une diffusion qui n'aura pas lieu. */
+export interface ApercuCanal {
+	canal: 'email' | 'whatsapp';
+	actif: boolean;
+	inactif_motif?: string | null;
+	destinataires: string[];
+	sujet?: string | null;
+	corps_html?: string | null;
+	texte?: string | null;
+	/** Le message WhatsApp est réduit à « avertissement + périmètre + lien ». */
+	ampute: boolean;
+	avec_photo: boolean;
+}
+
+export interface ApercuDiffusion {
+	canaux: ApercuCanal[];
+	/** Champs qui n'existeront qu'après la création — nommés, jamais inventés. */
+	attribues_a_la_creation: string[];
+}
+
 export interface PublicationEvolution {
 	id: number;
 	publication_id: number;

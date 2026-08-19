@@ -99,11 +99,48 @@ jobs:
       # ne diraient rien. C'est le seul endroit où le rendu des documents
       # imprimables est réellement exercé (cf. api/tests/test_documents_pdf.py,
       # qui échoue exprès si ces bibliothèques manquent en intégration continue).
+      #  ⚠️ N'INSTALLE RIEN dans le cas normal, et c'est pour cela qu'on regarde
+      #  avant d'agir. Les cinq bibliothèques sont déjà présentes sur
+      #  `ubuntu-latest` — vérifié le 19/08/2026 dans les journaux du job :
+      #  « 0 upgraded, 0 newly installed, 0 to remove ». L'étape ne servait donc
+      #  qu'à exécuter `apt-get update`, qui contacte les miroirs Debian :
+      #  6 secondes d'habitude, **plus de dix minutes ce jour-là**, pendant que
+      #  pytest attendait son tour sans avoir démarré.
+      #
+      #  🔴 Ne PAS supprimer l'étape pour autant. Quatre fichiers de tests rendent
+      #  de vrais PDF (`test_documents_pdf`, `test_fiche_arrivant_batiments`,
+      #  `test_icones_svg`, `test_pieces_jointes`) : le jour où GitHub change son
+      #  image, ils échoueraient sur un défaut de bibliothèque système, avec un
+      #  message que personne ne relierait à la CI. S'appuyer sur une
+      #  préinstallation sans la vérifier est la dépendance implicite que
+      #  `standards/04` interdit — on la rend explicite, et on ne paie
+      #  l'installation que si elle manque réellement.
       - name: Bibliothèques système pour le rendu PDF
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libfribidi0 libcairo2
+          #  Hors Debian, cette étape n'a pas d'objet : ni bibliothèque à vérifier,
+          #  ni apt pour l'installer. Elle rend donc la main SANS ÉCHOUER quand
+          #  `dpkg-query` est absent — sinon `scripts/poste/rejouer-ci.sh` la
+          #  ferait échouer sur le poste Windows, où elle ne mesure rien.
+          #  ⚠️ Ce repli ne masque rien de ce que la CI vérifie : en intégration
+          #  continue, l'environnement est Ubuntu et le contrôle s'exécute
+          #  réellement. Il dit ce qu'il fait, plutôt que de rendre un vert muet.
+          if ! command -v dpkg-query >/dev/null 2>&1; then
+            echo "· dpkg absent : étape sans objet hors Debian, rien à vérifier ici."
+            exit 0
+          fi
+          PAQUETS="libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libfribidi0 libcairo2"
+          manquants=""
+          for p in $PAQUETS; do
+            dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" \
+              || manquants="$manquants $p"
+          done
+          if [ -z "$manquants" ]; then
+            echo "✓ Les 5 bibliothèques de rendu PDF sont déjà sur le runner — rien à installer."
+          else
+            echo "→ Manquant(s) :$manquants — installation depuis les miroirs."
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends $manquants
+          fi
 
       - name: Install dependencies
         working-directory: api

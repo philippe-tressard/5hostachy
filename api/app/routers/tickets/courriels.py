@@ -65,6 +65,48 @@ def envoyer_email_syndic_cs(
 
     from app.utils.email import send_email_group
 
+    ctx = contexte_ticket_syndic(
+        ticket, user, session,
+        pieces_jointes=pieces_jointes, commentaire=commentaire, evolutions=evolutions,
+    )
+
+    background_tasks.add_task(
+        send_email_group,
+        code="ticket_syndic",
+        to_recipients=destinataires,
+        context=ctx,
+        session=session,
+        attachments=pieces_jointes or None,
+    )
+
+
+def contexte_ticket_syndic(
+    ticket,
+    user: Utilisateur,
+    session: Session,
+    *,
+    pieces_jointes: list[str],
+    commentaire: Optional[str] = None,
+    evolutions: Optional[list[TicketEvolution]] = None,
+) -> dict:
+    """Le contexte du modèle `ticket_syndic` — **écrit une seule fois**.
+
+    ## Pourquoi il est sorti de l'envoi (#498, 19/08/2026)
+
+    L'aperçu avant diffusion doit montrer **ce qui partira**, pas une
+    reconstitution : un contexte rebâti de son côté deviendrait faux à la
+    première évolution du gabarit, et personne ne s'en apercevrait — puisque
+    c'est justement l'aperçu qu'on regarderait pour le vérifier
+    (`standards/04` §14).
+
+    L'envoi et l'aperçu appellent donc cette fonction, et
+    `api/tests/test_apercu_diffusion.py` échoue si l'un des deux s'en écarte.
+
+    ⚠️ Elle accepte un ticket **non persisté** — c'est tout l'intérêt : l'aperçu
+    est demandé avant que l'objet existe. Les champs attribués à la création
+    (`id`, `numero`) valent alors `None`, et c'est à l'écran de le dire plutôt
+    que d'inventer un numéro.
+    """
     cfg = config_site(session)
 
     messages_ctx = []
@@ -91,15 +133,7 @@ def envoyer_email_syndic_cs(
         "historique": historique,
         "fichiers": bool(pieces_jointes),
     }
-
-    background_tasks.add_task(
-        send_email_group,
-        code="ticket_syndic",
-        to_recipients=destinataires,
-        context=ctx,
-        session=session,
-        attachments=pieces_jointes or None,
-    )
+    return ctx
 
 
 def envoyer_email_externe(

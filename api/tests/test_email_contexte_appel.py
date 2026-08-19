@@ -252,13 +252,22 @@ def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[st
     dictionnaire = node_context
     if isinstance(node_context, ast.Name):
         dictionnaire = None
+        appel_fabrique = None
         for n in ast.walk(portee):
-            if (
-                isinstance(getattr(n, "value", None), ast.Dict)
-                and getattr(n, "lineno", 0) < ligne_appel
-                and any(c.id == node_context.id for c in _cibles_assignees(n))
-            ):
-                dictionnaire = n.value
+            if getattr(n, "lineno", 0) >= ligne_appel:
+                continue
+            if not any(c.id == node_context.id for c in _cibles_assignees(n)):
+                continue
+            valeur = getattr(n, "value", None)
+            if isinstance(valeur, ast.Dict):
+                dictionnaire = valeur
+                appel_fabrique = None
+            #  `ctx = contexte_xxx(…)` — une FONCTION DE CONTEXTE dédiée.
+            elif isinstance(valeur, ast.Call) and (_nom_appele(valeur) or "").startswith("contexte_"):
+                appel_fabrique = _nom_appele(valeur)
+                dictionnaire = None
+        if dictionnaire is None and appel_fabrique:
+            dictionnaire = _dict_rendu_par(appel_fabrique)
         if dictionnaire is None:
             return None
     if not isinstance(dictionnaire, ast.Dict):
@@ -297,6 +306,51 @@ def _cles_du_contexte(node_context, portee: ast.AST, ligne_appel: int) -> set[st
                     else:
                         return None  # mise à jour opaque : on ne conclut pas
     return cles
+
+
+#  ⚠️ AJOUTÉ LE 19/08/2026 (#498) — pourquoi ce test a dû apprendre une indirection.
+#
+#  L'aperçu avant diffusion doit composer le message avec **les mêmes fonctions**
+#  que l'envoi, sinon il montre autre chose que ce qui partira. Le contexte de
+#  `ticket_syndic` est donc sorti de la fonction d'envoi vers
+#  `contexte_ticket_syndic()`, appelée par les deux.
+#
+#  Ce test a immédiatement rendu l'envoi **opaque** — à raison : il ne savait
+#  suivre qu'un dictionnaire littéral. Mais sa remédiation documentée disait
+#  « déclarer le contexte en dictionnaire littéral dans la fonction d'envoi »,
+#  c'est-à-dire **interdire la factorisation qui rend l'aperçu honnête**.
+#
+#  Un garde-fou qui impose de garder deux écritures d'une même chose devient
+#  l'obstacle qu'il croyait empêcher. Il suit désormais une convention de nom :
+#  une fonction `contexte_*` qui rend un dictionnaire littéral est analysée comme
+#  si son corps était inline. La convention est étroite exprès — n'importe quel
+#  appel n'ouvrirait pas la porte.
+def _dict_rendu_par(nom_fonction: str) -> ast.Dict | None:
+    """Le `return {...}` d'une fonction `contexte_*` du paquet, ou None.
+
+    Cherche dans tout `app/` : la fonction de contexte et l'envoi vivent souvent
+    dans le même module, mais rien ne l'impose.
+    """
+    for chemin in sorted(_APP_DIR.rglob("*.py")):
+        arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+        for n in ast.walk(arbre):
+            if not isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if n.name != nom_fonction:
+                continue
+            #  Un `return ctx` où `ctx` est un littéral du corps compte aussi.
+            for r in ast.walk(n):
+                if not isinstance(r, ast.Return) or r.value is None:
+                    continue
+                if isinstance(r.value, ast.Dict):
+                    return r.value
+                if isinstance(r.value, ast.Name):
+                    for a in ast.walk(n):
+                        if isinstance(getattr(a, "value", None), ast.Dict) and any(
+                            c.id == r.value.id for c in _cibles_assignees(a)
+                        ):
+                            return a.value
+    return None
 
 
 def _portees(arbre: ast.AST):

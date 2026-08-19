@@ -1,6 +1,6 @@
 import { api, ApiError, BASE, buildQuery } from './client';
 import { uploadExcel } from './documents';
-import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
+import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, ApercuDiffusion, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
 //  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
@@ -46,6 +46,13 @@ export const tickets = {
 	addMessage: (id: number, data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
 		api.post<TicketMessage>(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
+	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498). Il ne
+	//  crée rien : le brouillon est composé par les MÊMES fonctions que l'envoi.
+	apercuDiffusion: (brouillon: {
+		titre?: string; description?: string; categorie?: string;
+		perimetre_cible?: string[]; photos_urls?: string[]; fichiers_urls?: string[];
+		destinataire_syndic?: boolean; destinataire_cs?: boolean; partager_whatsapp?: boolean;
+	}) => api.post<ApercuDiffusion>('/tickets/apercu-diffusion', brouillon),
 	//  `perimetre_cible` : le périmètre que l'entrée PRÉCISE, absent quand elle
 	//  n'en parle pas — le serveur ne touche alors pas à celui du ticket (#497).
 	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; perimetre_cible?: string[] }) =>

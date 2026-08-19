@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -39,9 +40,34 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def create_refresh_token(data: dict) -> str:
+    """Un jeton de rafraîchissement — **unique par construction**.
+
+    ## Pourquoi le `jti` (19/08/2026, trouvé par le point 6 du pré-check)
+
+    Le contenu était entièrement déterministe : `{"sub": …, "exp": …, "type": …}`.
+    `exp` a une résolution d'UNE SECONDE. Deux rafraîchissements du même
+    utilisateur dans la même seconde produisaient donc deux jetons **identiques
+    octet pour octet**, et la colonne `refresh_token.token` étant UNIQUE :
+
+        sqlite3.IntegrityError: UNIQUE constraint failed: refresh_token.token
+        POST /auth/refresh → 500
+
+    Ce n'était pas un cas de bord. Quand une page charge, plusieurs appels
+    reçoivent 401 **en même temps** et déclenchent chacun un rafraîchissement :
+    sur les dernières 24 h de production, **4 collisions pour 4 appels** — c'est
+    la totalité d'entre eux.
+
+    `jti` est le champ prévu pour cela par la RFC 7519 (« JWT ID ») : un
+    identifiant unique par jeton. `token_urlsafe(16)` donne 128 bits d'entropie,
+    tirés de `secrets` — le générateur cryptographique, jamais `random`.
+
+    ⚠️ Le jeton d'accès n'en a pas besoin : il n'est stocké nulle part, donc
+    aucune contrainte d'unicité ne le concerne. En ajouter un rallongerait chaque
+    en-tête de requête sans rien protéger.
+    """
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({"exp": expire, "type": "refresh", "jti": secrets.token_urlsafe(16)})
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 

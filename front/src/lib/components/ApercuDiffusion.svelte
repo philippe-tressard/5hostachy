@@ -1,0 +1,215 @@
+<!--
+  **Voir ce qui partira, avant de confirmer** — l'e-mail rendu dans son gabarit et
+  le message WhatsApp tel qu'il sera composé.
+
+  POURQUOI CE COMPOSANT (#498, 19/08/2026). Demandé à l'écran : *« avant la
+  diffusion il faudrait voir le mail (aperçu) avant de confirmer son envoi »*,
+  puis *« partout où l'objet diffusion par mail est concerné »*, puis *« l'aperçu
+  peut-il aussi englober WhatsApp ? »*. Jusqu'ici on cochait une case et on
+  découvrait le résultat en le recevant — quand on faisait partie des destinataires.
+
+  🔴 **Rien n'est composé ici.** Le serveur rend le message avec les MÊMES
+  fonctions que l'envoi (`composer_email`, `construire_message`) ; ce composant ne
+  fait que l'afficher. Un aperçu reconstruit côté écran deviendrait faux à la
+  première évolution d'un gabarit, et personne ne s'en apercevrait — puisque c'est
+  justement l'aperçu qu'on regarderait pour le vérifier (`standards/04` §14).
+
+  ## Trois issues, et « Retour au formulaire » n'est pas « Annuler »
+
+  Arbitrage du 19/08 : *« si l'aperçu de ce qui sera expédié est correct alors
+  envoi, sinon annulation ou retour au formulaire »*. Les deux sorties sont donc
+  distinctes — revenir au formulaire **garde la saisie intacte**, annuler ferme
+  tout. Un aperçu qui fait perdre le brouillon serait pire que pas d'aperçu.
+
+  ## Ce que l'aperçu ne peut pas savoir, et qu'il DIT
+
+  Le ticket n'existe pas encore : son **numéro** et son **lien permanent** sont
+  attribués à la création. Ils sont nommés en pied de modale plutôt qu'inventés.
+  Et sur WhatsApp, la ligne « 📷 Photos à voir sur le site » n'apparaît que si
+  l'encodage de la photo échoue à l'envoi : l'aperçu montre *le message tel qu'il
+  sera composé*, pas *ce que le groupe recevra à coup sûr*.
+-->
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	import Icon from '$lib/components/Icon.svelte';
+	import { safeHtml } from '$lib/sanitize';
+	import type { ApercuDiffusion } from '$lib/api';
+
+	export let apercu: ApercuDiffusion | null = null;
+	/** Chargement en cours côté serveur. */
+	export let chargement = false;
+	/** L'envoi est en cours : le bouton principal se verrouille. */
+	export let envoi = false;
+
+	const dispatch = createEventDispatcher<{
+		envoyer: void;
+		retour: void;
+		annuler: void;
+	}>();
+
+	$: canaux = apercu?.canaux ?? [];
+	//  Un canal coché mais inactif est le cas qui justifie cet écran : le bridge
+	//  est éteint, ou personne n'est joignable. On l'annonce avant l'envoi.
+	$: inactifs = canaux.filter((c) => !c.actif);
+	$: rienNePartira = canaux.length > 0 && inactifs.length === canaux.length;
+</script>
+
+<div
+	class="modal-overlay"
+	role="presentation"
+	on:click|self={() => dispatch('annuler')}
+	on:keydown={(e) => e.key === 'Escape' && dispatch('annuler')}
+>
+	<div class="modal apercu-modal" role="dialog" aria-modal="true" aria-labelledby="apercu-titre">
+		<h2 id="apercu-titre">&#x1F4E4; Avant d'envoyer</h2>
+		<p class="apercu-intro">
+			Voici ce qui partira, tel que les destinataires le recevront.
+		</p>
+
+		{#if chargement}
+			<p class="apercu-attente">Composition du message…</p>
+		{:else if canaux.length === 0}
+			<div class="empty-state">
+				<h3>Aucun canal de diffusion coché</h3>
+				<p>Le ticket sera créé sans notification.</p>
+			</div>
+		{:else}
+			{#each canaux as canal (canal.canal)}
+				<section class="apercu-canal" class:apercu-canal-inactif={!canal.actif}>
+					<h3 class="apercu-canal-titre">
+						{#if canal.canal === 'whatsapp'}
+							<Icon name="whatsapp" size={18} /> Groupe WhatsApp
+						{:else}
+							<span class="ico" aria-hidden="true">&#x2709;&#xFE0F;</span> E-mail
+						{/if}
+						{#if canal.actif}
+							<span class="badge badge-green">Partira</span>
+						{:else}
+							<span class="badge badge-red">Ne partira pas</span>
+						{/if}
+					</h3>
+
+					{#if !canal.actif}
+						<p class="apercu-motif">{canal.inactif_motif}</p>
+					{:else}
+						<p class="apercu-destinataires">
+							<strong>À :</strong> {canal.destinataires.join(' · ')}
+						</p>
+
+						{#if canal.canal === 'email'}
+							{#if canal.sujet}
+								<p class="apercu-sujet"><strong>Objet :</strong> {canal.sujet}</p>
+							{/if}
+							<!--  Le corps vient du serveur, rendu par le gabarit commun. Il
+							      passe par `safeHtml` comme tout rendu riche du site : le
+							      contenu du ticket y est interpolé, donc d'origine utilisateur. -->
+							<div class="apercu-corps">{@html safeHtml(canal.corps_html ?? '')}</div>
+						{:else}
+							{#if canal.ampute}
+								<p class="apercu-avertissement">
+									&#x26A0;&#xFE0F; Ce message partira <strong>sans son contenu</strong> :
+									le groupe est commun à toute la copropriété, et le périmètre visé
+									ne s'adresse pas à tous ceux qui le liraient.
+								</p>
+							{/if}
+							<pre class="apercu-whatsapp">{canal.texte}</pre>
+							<p class="apercu-note">
+								{#if canal.avec_photo}
+									&#x1F4F7; La première photo accompagnera le message.
+								{:else}
+									Aucune photo ne partira avec ce message.
+								{/if}
+							</p>
+						{/if}
+					{/if}
+				</section>
+			{/each}
+
+			{#if apercu?.attribues_a_la_creation?.length}
+				<p class="apercu-note apercu-attribues">
+					Attribués à la création, donc absents de cet aperçu :
+					<strong>{apercu.attribues_a_la_creation.join(', ')}</strong>.
+				</p>
+			{/if}
+		{/if}
+
+		<div class="modal-footer">
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annuler')}>
+				Annuler
+			</button>
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('retour')}>
+				&#x2190; Retour au formulaire
+			</button>
+			<button
+				type="button"
+				class="btn btn-primary"
+				disabled={envoi || chargement}
+				on:click={() => dispatch('envoyer')}
+			>
+				{#if envoi}
+					Envoi…
+				{:else if rienNePartira}
+					Créer sans notifier
+				{:else}
+					Confirmer et envoyer
+				{/if}
+			</button>
+		</div>
+	</div>
+</div>
+
+<style>
+	/*  Le style part avec le balisage : une classe posée ici et définie dans la
+	    page hôte ne serait pas atteinte (panne des pastilles nues, v2.67.11), et
+	    `npm run lint:classes-nues` le refuse. */
+	.apercu-modal { max-width: 720px; width: 100%; }
+	.apercu-intro { font-size: .875rem; color: var(--color-text-muted); margin: 0 0 1rem; }
+	.apercu-attente { color: var(--color-text-muted); font-size: .9rem; }
+	/*  L'émoji d'en-tête d'un canal, aligné sur l'icône SVG du canal voisin.
+	    Défini ICI : `.ico` n'est pas une classe d'`app.css`, et chaque composant
+	    qui l'emploie la style lui-même — sinon elle arrive nue (v2.67.11). */
+	.ico { font-size: 1.05rem; line-height: 1; }
+
+	.apercu-canal {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: .85rem 1rem;
+		margin-bottom: .85rem;
+	}
+	/*  Un canal qui ne partira pas se lit d'un coup d'œil, sans lire le badge. */
+	.apercu-canal-inactif { border-left: 4px solid var(--color-danger); opacity: .9; }
+	.apercu-canal-titre {
+		display: flex; align-items: center; gap: .45rem; flex-wrap: wrap;
+		font-size: .95rem; font-weight: 600; margin: 0 0 .6rem;
+	}
+	.apercu-motif { font-size: .85rem; color: var(--color-danger); margin: 0; }
+	.apercu-destinataires, .apercu-sujet {
+		font-size: .82rem; color: var(--color-text-muted); margin: 0 0 .4rem;
+		overflow-wrap: anywhere;
+	}
+	.apercu-corps {
+		border: 1px solid var(--color-border); border-radius: 6px;
+		padding: .5rem; max-height: 320px; overflow-y: auto;
+		background: #fff;
+	}
+	/*  Le message WhatsApp se lit en chasse fixe et EN CONSERVANT ses sauts de
+	    ligne : c'est exactement ce que le groupe verra, retours compris. */
+	.apercu-whatsapp {
+		white-space: pre-wrap; overflow-wrap: anywhere;
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: .82rem; line-height: 1.5;
+		background: var(--color-bg); border: 1px solid var(--color-border);
+		border-radius: 6px; padding: .6rem .7rem; margin: 0;
+	}
+	.apercu-avertissement {
+		font-size: .82rem; line-height: 1.5; margin: 0 0 .5rem;
+		padding: .5rem .6rem; border-radius: 6px;
+		background: #fff7ed; color: #9a3412;
+	}
+	.apercu-note { font-size: .78rem; color: var(--color-text-muted); margin: .4rem 0 0; }
+	.apercu-attribues { margin-top: .8rem; }
+
+	@media (max-width: 700px) {
+		.apercu-corps { max-height: 220px; }
+	}
+</style>
