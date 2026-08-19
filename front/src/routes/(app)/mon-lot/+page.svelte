@@ -1410,7 +1410,7 @@
 			<div class="modal-footer">
 				<button class="btn" on:click={() => (bailAcces = null)}>Fermer</button>
 				{#if nRecuperation > 0}
-					<button class="btn btn-warning" on:click={recupererSelection}>
+					<button class="btn btn-primary" on:click={recupererSelection}>
 						↩ Récupérer ({nRecuperation})
 					</button>
 				{/if}

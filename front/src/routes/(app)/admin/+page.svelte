@@ -763,9 +763,9 @@ $: _siteNom = $siteNomStore;
 <td style="color:var(--color-text-muted)">{u.batiment_id ? (batimentsMap[u.batiment_id] ?? `#${u.batiment_id}`) : '—'}</td>
 <td>
 {#if item.lots_prevus > 0}
-<span class="badge badge-success" title="{item.lots_prevus} lot(s) trouvé(s) dans l'import">✓ {item.lots_prevus}</span>
+<span class="badge badge-green" title="{item.lots_prevus} lot(s) trouvé(s) dans l'import">✓ {item.lots_prevus}</span>
 {:else if u.statut?.startsWith('copropriétaire')}
-<span class="badge badge-warning" title="Pas trouvé dans l'import Lots">⚠ 0</span>
+<span class="badge badge-orange" title="Pas trouvé dans l'import Lots">⚠ 0</span>
 {:else}
 <span style="color:var(--color-text-muted)">—</span>
 {/if}

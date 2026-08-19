@@ -306,7 +306,7 @@ import { onMount } from 'svelte';
 <section class="section card" style="margin-top:1rem">
 	<div class="section-header">
 		<h2 class="section-title">&#x1F4CB; J'ai déjà un accès non enregistré (ci-dessus)</h2>
-		<button class="btn btn-secondary btn-sm" on:click={() => (showDeclareForm = !showDeclareForm)}>
+		<button class="btn btn-outline btn-sm" on:click={() => (showDeclareForm = !showDeclareForm)}>
 			{showDeclareForm ? 'Annuler' : 'Ajouter'}
 		</button>
 	</div>

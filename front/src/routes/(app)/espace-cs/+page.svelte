@@ -2409,7 +2409,7 @@
 
 		<!-- ── Lien consignes de copropriété ─────────────────────────────────── -->
 		<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">
-			<a href="/api/admin/fiche-arrivant" target="_blank" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem">
+			<a href="/api/admin/fiche-arrivant" target="_blank" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem">
 				📄 Consignes de copropriété
 			</a>
 		</div>

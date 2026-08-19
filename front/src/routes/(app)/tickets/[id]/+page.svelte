@@ -51,7 +51,7 @@
 
 	const PRIORITE: Record<string, { label: string; cls: string }> = {
 		basse:   { label: 'Priorité basse',   cls: 'badge-gray' },
-		normale: { label: 'Priorité normale', cls: 'badge-default' },
+		normale: { label: 'Priorité normale', cls: 'badge-gray' },
 		haute:   { label: 'Priorité haute',   cls: 'badge-orange' },
 	};
 
@@ -201,7 +201,7 @@
 		>
 			<svelte:fragment slot="titre">
 				<div class="ticket-meta">
-					<span class="badge badge-default">{categorieTicketLabel(ticket.categorie)}</span>
+					<span class="badge badge-gray">{categorieTicketLabel(ticket.categorie)}</span>
 				</div>
 				<h1 class="ticket-titre">{ticket.titre}</h1>
 				<p class="ticket-dates">
@@ -227,7 +227,7 @@
 				<div class="ticket-meta">
 					<span class="badge {statutBadge}">{statutLabel}</span>
 					{#if ticket.priorite && ticket.priorite !== 'normale'}
-						<span class="badge {PRIORITE[ticket.priorite]?.cls ?? 'badge-default'}">{PRIORITE[ticket.priorite]?.label}</span>
+						<span class="badge {PRIORITE[ticket.priorite]?.cls ?? 'badge-gray'}">{PRIORITE[ticket.priorite]?.label}</span>
 					{/if}
 				</div>
 				{#if $isCS}
@@ -236,7 +236,7 @@
 						<div class="status-boutons">
 							{#each STATUTS_TICKET as s}
 								<button
-									class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-secondary'}"
+									class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-outline'}"
 									disabled={updatingStatus || ticket.statut === s.value}
 									on:click={() => updateStatus(s.value)}
 								>{s.label}</button>

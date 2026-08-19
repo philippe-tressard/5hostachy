@@ -91,7 +91,9 @@
 </p>
 
 <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
-	<input class="input" type="text" placeholder="Filtrer par nom, lot ou bâtiment…" bind:value={filtre} style="max-width:320px" />
+	<div class="field champ-en-ligne" style="max-width:320px">
+	<input type="text" placeholder="Filtrer par nom, lot ou bâtiment…" bind:value={filtre} />
+</div>
 	<span style="color:var(--color-text-muted);font-size:.85rem">{filtered.length} association{filtered.length > 1 ? 's' : ''} — {grouped.length} utilisateur{grouped.length > 1 ? 's' : ''}</span>
 </div>
 
@@ -104,7 +106,7 @@
 		<div class="card" style="margin-bottom:.75rem;padding:.75rem 1rem">
 			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
 				<strong>{g.user_nom}</strong>
-				<span class="badge badge-outline" style="font-size:.75rem">{g.user_statut}</span>
+				<span class="badge badge-gray" style="font-size:.75rem">{g.user_statut}</span>
 				<span style="color:var(--color-text-muted);font-size:.8rem">— {g.lots.length} lot{g.lots.length > 1 ? 's' : ''}</span>
 				<button
 					class="btn btn-sm btn-outline"

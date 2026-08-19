@@ -109,9 +109,14 @@ for (const chemin of fichiers) {
 	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) || [, ''])[1];
 	const definiesLocal = new Set([...style.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
 
+	//  Les COMMENTAIRES sont retirés : ce dépôt en écrit de longs, qui citent le
+	//  balisage qu'ils interdisent — `FormulaireAnnonceHall` explique pourquoi il
+	//  n'emploie PAS `<button class="pill">`. Les lire comme du balisage produit un
+	//  faux positif, et un garde-fou qui crie sur du légitime finit désarmé.
 	const gabarit = source
 		.replace(/<script[\s\S]*?<\/script>/g, '')
-		.replace(/<style[\s\S]*?<\/style>/g, '');
+		.replace(/<style[\s\S]*?<\/style>/g, '')
+		.replace(/<!--[\s\S]*?-->/g, '');
 
 	//  `class="a b"` littéral, et `class:x={…}`. Les classes calculées
 	//  (`class="{expr}"`) ne sont PAS lues : on ne devine pas une expression.

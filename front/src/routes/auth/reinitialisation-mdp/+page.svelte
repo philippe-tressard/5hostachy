@@ -84,7 +84,7 @@
 					erreur={confirmationDivergente ? 'Cette saisie diffère du nouveau mot de passe.' : ''}
 				/>
 				<div class="btn-wrapper">
-					<a href="/auth/connexion" class="btn btn-secondary">Annuler</a>
+					<a href="/auth/connexion" class="btn btn-outline">Annuler</a>
 					<button type="submit" class="btn btn-primary" disabled={saving}>
 						{saving ? 'Enregistrement…' : 'Enregistrer'}
 					</button>
