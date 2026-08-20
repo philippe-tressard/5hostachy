@@ -117,6 +117,22 @@ function expression(texte, debut) {
 	return null;
 }
 
+/**
+ * Remplace le contenu des commentaires par des espaces, en conservant la
+ * longueur — donc les index et les numéros de ligne.
+ *
+ * Trois formes, dont deux peuvent s'étendre sur plusieurs lignes : le
+ * commentaire HTML/Svelte, le commentaire de bloc JS/CSS, et le commentaire de
+ * fin de ligne. C'est le multi-lignes que l'ancienne détection ne voyait pas.
+ */
+function neutraliserCommentaires(source) {
+	return source.replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, (bloc) =>
+		bloc.replace(/[^\n]/g, ' '),
+	).replace(/(^|[^:])\/\/[^\n]*/g, (bloc, avant) =>
+		avant + ' '.repeat(bloc.length - avant.length),
+	);
+}
+
 const erreurs = [];
 const exceptionsServies = new Set();
 let prises = 0;
@@ -134,14 +150,25 @@ for (const chemin of fichiers) {
 		}
 	}
 
+	//  🔴 Les commentaires sont NEUTRALISÉS avant la recherche (20/08/2026).
+	//
+	//  Le contrôle regardait auparavant si la portion de LIGNE précédant
+	//  l'occurrence contenait `//`, `*` ou `<!--`. Cela ne voit qu'un commentaire
+	//  ouvert sur la MÊME ligne : un commentaire Svelte de plusieurs lignes qui
+	//  cite la balise en troisième ligne passait pour du rendu, et le contrôle
+	//  refusait alors le fichier qui EXPLIQUE la règle.
+	//
+	//  Un contrôle qui interdit d'en parler oblige à taire la raison — et c'est
+	//  la raison qui se perd en premier. Constaté sur `SectionDocuments.svelte`,
+	//  dont le commentaire dit précisément pourquoi il n'emploie PAS cette balise.
+	//
+	//  ⚠️ Le contenu est remplacé par des espaces, jamais supprimé : les index et
+	//  les numéros de ligne des occurrences RÉELLES doivent rester justes.
+	const neutre = neutraliserCommentaires(source);
+
 	const marqueur = /\{@html\b/g;
 	let m;
-	while ((m = marqueur.exec(source)) !== null) {
-		//  Une occurrence citée dans un commentaire n'est pas un rendu.
-		const debutLigne = source.lastIndexOf('\n', m.index) + 1;
-		const avant = source.slice(debutLigne, m.index);
-		if (/(\/\/|\*|<!--)/.test(avant)) continue;
-
+	while ((m = marqueur.exec(neutre)) !== null) {
 		prises++;
 		const ligne = source.slice(0, m.index).split('\n').length;
 		const brut = expression(source, m.index);

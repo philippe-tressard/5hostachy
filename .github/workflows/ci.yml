@@ -511,6 +511,32 @@ jobs:
         working-directory: front
         run: npm run lint:evenements
 
+      # 🔴 `.catch(() => [])` : trois caractères qui transforment une PANNE en
+      # ABSENCE. L'écran affiche « Aucun sondage » exactement comme s'il n'y en
+      # avait pas — et le 19/08/2026 l'utilisateur a cru ses données détruites et
+      # en a demandé la restauration. Elles étaient intactes.
+      #
+      # Le contrôle est ÉTROIT à dessein : il ne vise que le repli sur une
+      # COLLECTION vide, la seule forme qui se rende comme une absence. Les
+      # cinquante `catch` silencieux légitimes du dépôt (marquage de lecture,
+      # télémétrie, révocation de jeton) ne sont pas concernés — les refuser
+      # aurait fait désarmer le contrôle dans la semaine.
+      - name: Aucun échec d'appel rendu comme une absence
+        working-directory: front
+        run: npm run lint:catch-vide
+
+      # 🔴 Les garde-fous du front exposent un `--selftest` … que rien ne lançait.
+      # Un contrôle dont la logique n'est éprouvée nulle part peut devenir muet
+      # sans que personne ne le sache : il rend « aucune faute trouvée » aussi
+      # bien quand il n'y en a pas que quand il ne sait plus en trouver. C'est la
+      # leçon de `check-reliability` (11/08/2026), appliquée ici — les self-tests
+      # des scripts d'infra, eux, tournent depuis le 30/07.
+      - name: Auto-tests des garde-fous du front
+        working-directory: front
+        run: |
+          node scripts/check-evenements.mjs --selftest
+          node scripts/check-catch-vide.mjs --selftest
+
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
       #

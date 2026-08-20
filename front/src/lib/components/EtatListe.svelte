@@ -43,6 +43,22 @@
 	export let titreVide = 'Aucun élément';
 	export let messageVide = '';
 	export let messageChargement = 'Chargement…';
+	/**  Rendu d'une SEULE ligne au lieu du bloc `.empty-state` (#522).
+	 *
+	 *   ⚠️ Ce n'est pas un second pattern, c'est une **variante déclarée du
+	 *   même** : mêmes trois états, même ordre, même obligation de fournir
+	 *   `erreur`. Ce qui change est la place occupée.
+	 *
+	 *   Elle existe parce que la page Résidence porte CINQ sections courtes
+	 *   (plans, règlements, comptes-rendus, règles, diagnostics) qui annoncent
+	 *   leur vide en une ligne discrète. Cinq blocs `.empty-state` à la place
+	 *   auraient transformé une page de références en une page d'avertissements
+	 *   — et un écran qui crie partout ne se lit plus nulle part.
+	 *
+	 *   🔴 En mode compact, l'ÉCHEC reste visuellement distinct du vide (couleur
+	 *   d'alerte) : c'est toute la raison d'être du composant, et l'économie de
+	 *   place ne doit jamais la reprendre. */
+	export let compact = false;
 </script>
 
 {#if chargement}
@@ -50,15 +66,23 @@
 {:else if erreur}
 	<!--  🔴 AVANT le vide : dire « aucun » quand on n'a pas pu regarder, c'est
 	      affirmer une absence qu'on n'a pas constatée. -->
-	<div class="empty-state">
-		<h3>{titreErreur}</h3>
-		<p>{erreur}</p>
-	</div>
+	{#if compact}
+		<p class="etat-erreur">{erreur}</p>
+	{:else}
+		<div class="empty-state">
+			<h3>{titreErreur}</h3>
+			<p>{erreur}</p>
+		</div>
+	{/if}
 {:else if vide}
-	<div class="empty-state">
-		<h3>{titreVide}</h3>
-		{#if messageVide}<p>{messageVide}</p>{/if}
-	</div>
+	{#if compact}
+		<p class="etat-vide">{messageVide || titreVide}</p>
+	{:else}
+		<div class="empty-state">
+			<h3>{titreVide}</h3>
+			{#if messageVide}<p>{messageVide}</p>{/if}
+		</div>
+	{/if}
 {:else}
 	<slot />
 {/if}
@@ -66,5 +90,21 @@
 <style>
 	.etat-chargement {
 		color: var(--color-text-muted);
+	}
+	/*  Reprend `.empty-msg` de la page Résidence, d'où la variante est née : le
+	    vide y était déjà rendu ainsi, et le convertir aurait changé l'aspect de
+	    cinq sections pour un lot qui ne parle pas d'aspect. */
+	.etat-vide {
+		font-size: 0.875rem;
+		color: var(--color-text-muted);
+		padding: 0.5rem 0;
+	}
+	/*  🔴 L'échec ne ressemble PAS au vide, même en compact. Couleur d'alerte du
+	    site — la même que `.alert-warning`, sans le cadre qui ferait un bloc. */
+	.etat-erreur {
+		font-size: 0.875rem;
+		color: #b07d1e;
+		padding: 0.5rem 0;
+		font-weight: 500;
 	}
 </style>

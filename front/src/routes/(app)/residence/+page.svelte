@@ -18,6 +18,10 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';
+	import SectionDocuments from '$lib/components/SectionDocuments.svelte';
+	import EtatListe from '$lib/components/EtatListe.svelte';
+	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
+	import { essayer, messagePartiel } from '$lib/chargement';
 
 	$: _pc = getPageConfig($configStore, 'residence', defautsDePage('residence'));
 	$: _siteNom = $siteNomStore;
@@ -30,6 +34,14 @@
 	let crAg: any[] = [];
 	let regles: any[] = [];
 	let loading = true;
+	//  🔴 Une erreur PAR liste, et non une pour la page (#522). Ces cinq
+	//  rubriques se chargent indépendamment : dire « rien n'a marché » quand
+	//  seuls les diagnostics ont échoué serait aussi faux que de ne rien dire.
+	let ePlans = '', eReglements = '', eCrAg = '', eRegles = '', eDiagnostics = '';
+	//  Les bâtiments ne s'AFFICHENT pas : ils garnissent des menus déroulants et
+	//  la correspondance « Bât. n ». Leur absence ne vide pas l'écran, elle le
+	//  rend faux — d'où le bandeau plutôt qu'un état de liste.
+	let eReference = '';
 
 	let catIdPlan: number | null = null;
 	let catIdReglement: number | null = null;
@@ -134,30 +146,38 @@
 	// ── Init ───────────────────────────────────────────────────────────────────
 	onMount(async () => {
 		try {
-			const [copro, bats, cats] = await Promise.all([
-				coproprieteApi.get().catch(() => null),
-				coproprieteApi.batiments().catch(() => []),
-				documentsApi.listCategories().catch(() => []),
+			const [[copro, eCopro], [bats, eBats], [cats, eCats]] = await Promise.all([
+				essayer<any>(coproprieteApi.get(), null),
+				essayer<any[]>(coproprieteApi.batiments(), []),
+				essayer<any[]>(documentsApi.listCategories(), []),
 			]);
 			copropriete = copro;
 			batiments   = bats;
+			//  ⚠️ Les CATÉGORIES sont la donnée la plus traître des trois : sans
+			//  elles, `catIdPlan` & consorts valent `null`, les trois appels
+			//  suivants sont SAUTÉS, et les trois listes s'affichent vides sans
+			//  qu'aucun appel n'ait échoué. Une absence parfaitement silencieuse,
+			//  produite par une erreur survenue deux lignes plus haut.
+			eReference = messagePartiel(eCopro, eBats, eCats);
 
 			catIdPlan      = (cats as any[]).find((c) => c.code === 'plan_residence')?.id ?? null;
 			catIdReglement = (cats as any[]).find((c) => c.code === 'reglement_copropriete')?.id ?? null;
 			catIdCrAg      = (cats as any[]).find((c) => c.code === 'pv_ag')?.id ?? null;
 
-			const [p, r, ag, diag] = await Promise.all([
-				catIdPlan      ? documentsApi.list(catIdPlan).catch(() => [])      : Promise.resolve([]),
-				catIdReglement ? documentsApi.list(catIdReglement).catch(() => []) : Promise.resolve([]),
-				catIdCrAg      ? documentsApi.list(catIdCrAg).catch(() => [])      : Promise.resolve([]),
-				diagnosticsApi.listTypes().catch(() => []),
+			//  Une catégorie absente propage l'erreur des catégories : la liste
+			//  n'est pas vide, elle est indéterminée.
+			const [[p, ep], [r, er], [ag, eag], [diag, ediag]] = await Promise.all([
+				catIdPlan      ? essayer<any[]>(documentsApi.list(catIdPlan), [])      : Promise.resolve([[], eCats] as [any[], string]),
+				catIdReglement ? essayer<any[]>(documentsApi.list(catIdReglement), []) : Promise.resolve([[], eCats] as [any[], string]),
+				catIdCrAg      ? essayer<any[]>(documentsApi.list(catIdCrAg), [])      : Promise.resolve([[], eCats] as [any[], string]),
+				essayer<any[]>(diagnosticsApi.listTypes(), []),
 			]);
-			plans          = p as any[];
-			reglements     = r as any[];
-			crAg           = ag as any[];
-			diagnosticTypes = diag as any[];
+			plans          = p; ePlans      = ep;
+			reglements     = r; eReglements = er;
+			crAg           = ag; eCrAg      = eag;
+			diagnosticTypes = diag; eDiagnostics = ediag;
 
-			regles = await reglesApi.list().catch(() => []);
+			[regles, eRegles] = await essayer<any[]>(reglesApi.list(), []);
 
 			// Lien profond depuis le fil d'activité ou une notification :
 			// `#doc-<id>` (plan, règlement, PV d'AG) ou `#diag-<id>` (rapport de
@@ -531,6 +551,13 @@
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'building-2'} />
+
+<!--  ⚠️ En HAUT, avant tout le reste : les bâtiments et les catégories de
+      document garnissent les menus déroulants et la correspondance « Bât. n ».
+      Leur absence ne vide pas l'écran, elle le rend faux — et un avertissement
+      posé plus bas serait lu après ce qu'il devait qualifier (#522). -->
+<ChargementPartiel erreur={eReference}
+	consequence="Les numéros de bâtiment et les listes de documents peuvent être incomplets ou absents." />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}
@@ -601,9 +628,8 @@
 			{/if}
 		</div>
 
-		{#if regles.length === 0}
-			<p class="empty-msg">Aucune règle ajoutée.</p>
-		{:else}
+		<EtatListe compact erreur={eRegles} vide={regles.length === 0}
+			messageVide="Aucune règle ajoutée.">
 			<div class="doc-list">
 				{#each regles as regle (regle.id)}
 					<div class="doc-row card">
@@ -622,125 +648,53 @@
 					</div>
 				{/each}
 			</div>
-		{/if}
+		</EtatListe>
 	</section>
 
 	<!-- ── Section : Plans ───────────────────────────────────────────────── -->
-	<section style="margin-bottom:2.5rem">
-		<div class="section-header">
-			<h2 class="section-title">&#x1F5FA;️ Plans</h2>
-			{#if $isCS}
-				<button class="btn btn-sm" on:click={() => (showPlanForm = true)}>+ Ajouter</button>
-			{/if}
-		</div>
-
-		{#if sortedPlans.length === 0}
-			<p class="empty-msg">Aucun plan ajouté.</p>
-		{:else}
-			<div class="doc-list">
-				{#each sortedPlans as doc (doc.id)}
-					<div class="doc-row card" id="doc-{doc.id}">
-						<div class="doc-info">
-							<Icon name="file-text" size={16} />
-							<span class="doc-titre">{doc.titre}</span>
-							<span class="badge badge-blue">{doc.batiment_id ? batimentLabel(doc.batiment_id) : 'Copropriété'}</span>
-							<span class="doc-date">{fmt(doc.publie_le)}</span>
-						</div>
-						<div class="doc-actions">
-							<a href={documentsApi.downloadUrl(doc.id)} target="_blank" class="btn btn-sm" download>
-								⬇ Télécharger
-							</a>
-							{#if $isCS}
-								<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEditDoc(doc, 'plan')}>✏️</button>
-								<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={() => deletePlan(doc.id)}>&#x1F5D1;️</button>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</section>
+	<SectionDocuments titre="&#x1F5FA;️ Plans" documents={sortedPlans} erreur={ePlans}
+		messageVide="Aucun plan ajouté." peutModifier={$isCS}
+		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
+		dateDe={(d) => fmt(d.publie_le)}
+		onAjouter={() => (showPlanForm = true)}
+		onModifier={(d) => startEditDoc(d, 'plan')}
+		onSupprimer={deletePlan}>
+		<svelte:fragment slot="badges" let:doc>
+			<span class="badge badge-blue">{doc.batiment_id ? batimentLabel(doc.batiment_id) : 'Copropriété'}</span>
+		</svelte:fragment>
+	</SectionDocuments>
 
 	<!-- ── Section : Règlement de copropriété ────────────────────────────── -->
-	<section style="margin-bottom:2.5rem">
-		<div class="section-header">
-			<h2 class="section-title">&#x1F4D6; Règlement de copropriété</h2>
-			{#if $isCS}
-				<button class="btn btn-sm" on:click={() => (showReglementForm = true)}>+ Ajouter</button>
-			{/if}
-		</div>
-
-		{#if reglements.length === 0}
-			<p class="empty-msg">Aucun règlement ajouté.</p>
-		{:else}
-			<div class="doc-list">
-				{#each reglements as doc (doc.id)}
-					<div class="doc-row card" id="doc-{doc.id}">
-						<div class="doc-info">
-							<Icon name="file-text" size={16} />
-							<span class="doc-titre">{doc.titre}</span>
-							<span class="doc-date">{fmt(doc.publie_le)}</span>
-						</div>
-						<div class="doc-actions">
-							<a href={documentsApi.downloadUrl(doc.id)} target="_blank" class="btn btn-sm" download>
-								⬇ Télécharger
-							</a>
-							{#if $isCS}
-							<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEditDoc(doc, 'reglement')}>✏️</button>
-							<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={() => deleteReglement(doc.id)}>&#x1F5D1;️</button>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</section>
+	<SectionDocuments titre="&#x1F4D6; Règlement de copropriété" documents={reglements}
+		erreur={eReglements} messageVide="Aucun règlement ajouté." peutModifier={$isCS}
+		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
+		dateDe={(d) => fmt(d.publie_le)}
+		onAjouter={() => (showReglementForm = true)}
+		onModifier={(d) => startEditDoc(d, 'reglement')}
+		onSupprimer={deleteReglement} />
 
 	<!-- ── Section : Comptes-rendus d'AG ─────────────────────────────────── -->
 	{#if !isLocataire}
-	<section style="margin-bottom:2.5rem">
-		<div class="section-header">
-			<h2 class="section-title">&#x1F4CB; Comptes-rendus d'AG</h2>
-			{#if $isCS}
-				<button class="btn btn-sm" on:click={() => (showCrAgForm = true)}>+ Ajouter</button>
-			{/if}
-		</div>
-
-		{#if sortedCrAg.length === 0}
-			<p class="empty-msg">Aucun compte-rendu ajouté.</p>
-		{:else}
-			<div class="doc-list">
-				{#each sortedCrAg as doc (doc.id)}
-					<div class="doc-row card" id="doc-{doc.id}">
-						<div class="doc-info">
-							<Icon name="file-text" size={16} />
-							{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums">{doc.annee}</span>{/if}
-							<span class="doc-titre">{doc.titre}</span>
-							{#if doc.date_ag}<span class="doc-date">AG du {fmt(doc.date_ag)}</span>{/if}
-							{#if doc.batiments_ids_json}
-								{#each JSON.parse(doc.batiments_ids_json) as bid (bid)}
-									<span class="badge badge-purple">{batimentLabel(bid)}</span>
-								{/each}
-							{:else if doc.batiment_id}
-								<span class="badge badge-purple">{batimentLabel(doc.batiment_id)}</span>
-							{:else}
-								<span class="badge badge-green">Copropriété</span>
-							{/if}
-						</div>
-						<div class="doc-actions">
-							<a href={documentsApi.downloadUrl(doc.id)} target="_blank" class="btn btn-sm" download>
-								⬇ Télécharger
-							</a>
-							{#if $isCS}
-								<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEditDoc(doc, 'ag')}>✏️</button>
-								<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={() => deleteCrAg(doc.id)}>&#x1F5D1;️</button>
-							{/if}
-						</div>
-					</div>
+	<SectionDocuments titre="&#x1F4CB; Comptes-rendus d'AG" documents={sortedCrAg}
+		erreur={eCrAg} messageVide="Aucun compte-rendu ajouté." peutModifier={$isCS}
+		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
+		onAjouter={() => (showCrAgForm = true)}
+		onModifier={(d) => startEditDoc(d, 'ag')}
+		onSupprimer={deleteCrAg}>
+		<svelte:fragment slot="badges" let:doc>
+			{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums">{doc.annee}</span>{/if}
+			{#if doc.date_ag}<span class="doc-date">AG du {fmt(doc.date_ag)}</span>{/if}
+			{#if doc.batiments_ids_json}
+				{#each JSON.parse(doc.batiments_ids_json) as bid (bid)}
+					<span class="badge badge-purple">{batimentLabel(bid)}</span>
 				{/each}
-			</div>
-		{/if}
-	</section>
+			{:else if doc.batiment_id}
+				<span class="badge badge-purple">{batimentLabel(doc.batiment_id)}</span>
+			{:else}
+				<span class="badge badge-green">Copropriété</span>
+			{/if}
+		</svelte:fragment>
+	</SectionDocuments>
 	{/if}
 
 	<!-- ── Section : Diagnostics et Contrôles Réglementaires ────────────── -->
@@ -750,9 +704,8 @@
 			<h2 class="section-title">&#x1F50D; Diagnostics et Contrôles Réglementaires</h2>
 		</div>
 
-		{#if diagnosticTypes.length === 0}
-			<p class="empty-msg">Aucun diagnostic réglementaire disponible.</p>
-		{:else}
+		<EtatListe compact erreur={eDiagnostics} vide={diagnosticTypes.length === 0}
+			messageVide="Aucun diagnostic réglementaire disponible.">
 			<div class="diag-list">
 				{#each activeDiagTypes as dtype (dtype.id)}
 					<div class="diag-card card">
@@ -845,7 +798,7 @@
 					</div>
 				</details>
 			{/if}
-		{/if}
+		</EtatListe>
 	</section>
 	{/if}
 
@@ -1244,29 +1197,15 @@
 	.lot-counts span { color: var(--color-text-muted); font-size: .85rem; }
 
 	/* ── Documents ──────────────────────────────────────────────── */
-	.doc-list { display: flex; flex-direction: column; gap: .4rem; }
-	.doc-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: .7rem 1rem;
-		gap: .75rem;
-	}
-	.doc-info {
-		display: flex;
-		align-items: center;
-		gap: .5rem;
-		flex: 1;
-		min-width: 0;
-		flex-wrap: wrap;
-	}
-	.doc-titre {
-		font-weight: 500;
-		font-size: .9rem;
-	}
+	/*  🔴 `.doc-list`, `.doc-row`, `.doc-info`, `.doc-titre` et `.doc-actions`
+	    sont parties avec `SectionDocuments` : Svelte scope les styles au
+	    composant qui rend le balisage, et les laisser ici aurait livré les
+	    lignes NUES (panne des pastilles, v2.67.11).
+
+	    `.doc-date` reste, et ce n'est pas un oubli : elle habille le contenu du
+	    `slot` des comptes-rendus d'AG, qui est déclaré par CETTE page. Le slot
+	    est le seul endroit où les deux portées se croisent. */
 	.doc-date { font-size: .78rem; color: var(--color-text-muted); margin-left: auto; white-space: nowrap; }
-	.doc-actions { display: flex; gap: .35rem; flex-shrink: 0; }
-	.empty-msg { font-size: .875rem; color: var(--color-text-muted); padding: .5rem 0; }
 
 
 	/* ── Edit form ──────────────────────────────────────────────── */

@@ -12,6 +12,10 @@ import { onMount } from 'svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { setTelemetryOptOut } from '$lib/telemetry';
 	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
+	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
+	import HistoriqueDemandes from '$lib/components/HistoriqueDemandes.svelte';
+	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
+	import { essayer, messagePartiel } from '$lib/chargement';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -37,6 +41,8 @@ import { onMount } from 'svelte';
 	// ── Demandes de modif profil ───────────────────────────────────────────────
 	let demandes: any[] = [];
 	let demandesLoading = true;
+	/** Non vide = une des trois listes du profil n'a pas pu être chargée. */
+	let erreurChargement = '';
 	let showDemandeForm = false;
 	let batiments: { id: number; numero: string }[] = [];
 	let demandeStatut = '';
@@ -91,17 +97,9 @@ import { onMount } from 'svelte';
 		admin: 'badge-orange',
 	};
 
-	const statutDemandeBadge: Record<string, string> = {
-		en_attente: 'badge-yellow',
-		approuvee: 'badge-green',
-		rejetee: 'badge-red',
-	};
-
-	const statutDemandeLabel: Record<string, string> = {
-		en_attente: 'En attente',
-		approuvee: 'Approuvée',
-		rejetee: 'Rejetée',
-	};
+	//  ⚠️ Le vocabulaire d'une demande vit dans `$lib/demandes` : cette page ET
+	//  `HistoriqueDemandes` le lisent. Je l'avais d'abord emporté avec la table
+	//  extraite — la page s'en sert aussi, quarante lignes plus haut.
 	$: derniereConnexion = ($currentUser as any)?.derniere_connexion ?? null;
 
 
@@ -160,14 +158,22 @@ import { onMount } from 'svelte';
 	}
 
 	onMount(async () => {
-		[mesLots, batiments] = await Promise.all([
-			lotsApi.mesList().catch(() => []),
-			authApi.batiments().catch(() => []),
+		//  🔴 Aucune de ces trois listes n'a d'état « vide » à l'écran : elles se
+		//  rendent `{#if …length > 0}`. Un échec ne produisait donc RIEN — ni
+		//  liste, ni message —, et la ligne « Lot(s) » disparaissait comme si le
+		//  compte n'en avait aucun (#522). D'où le bandeau plutôt qu'un état de
+		//  liste : il n'y a pas de vide à distinguer, il y a un silence à rompre.
+		const [[lots, eLots], [bats, eBats]] = await Promise.all([
+			essayer<any[]>(lotsApi.mesList(), []),
+			essayer<any[]>(authApi.batiments(), []),
 		]);
+		mesLots = lots; batiments = bats;
 		lotsLoading = false;
 
-		demandes = await authApi.mesDemandes().catch(() => []);
+		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
+		demandes = dem;
 		demandesLoading = false;
+		erreurChargement = messagePartiel(eLots, eBats, eDem);
 	});
 
 	// ── Actions ───────────────────────────────────────────────────────────────
@@ -286,6 +292,9 @@ import { onMount } from 'svelte';
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'user'} />
+
+<ChargementPartiel erreur={erreurChargement}
+	consequence="Vos lots, la liste des bâtiments et l'historique de vos demandes peuvent être absents de cet écran." />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <div style="max-width:580px">
@@ -404,8 +413,8 @@ import { onMount } from 'svelte';
 				{#if demandePending.batiment_nom_souhaite}
 					déménagement vers {demandePending.batiment_nom_souhaite}
 				{/if}
-				<span class="badge {statutDemandeBadge[demandePending.statut_demande]}" style="margin-left:.5rem">
-					{statutDemandeLabel[demandePending.statut_demande]}
+				<span class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]}" style="margin-left:.5rem">
+					{STATUT_DEMANDE_LABEL[demandePending.statut_demande]}
 				</span>
 			</div>
 		{:else}
@@ -456,32 +465,7 @@ import { onMount } from 'svelte';
 		{/if}
 
 		<!-- Historique des demandes -->
-		{#if !demandesLoading && demandes.length > 0}
-			<details style="margin-top:1rem">
-				<summary style="cursor:pointer;font-size:0.85rem;color:var(--color-text-muted)">
-					Historique des demandes ({demandes.length})
-				</summary>
-				<table class="table" style="font-size:0.83rem;margin-top:0.5rem">
-					<thead>
-						<tr><th>Date</th><th>Changement demandé</th><th>Statut</th><th>Motif refus</th></tr>
-					</thead>
-					<tbody>
-						{#each demandes as d}
-							<tr>
-								<td>{fmtDate(d.cree_le)}</td>
-								<td>
-									{#if d.statut_souhaite}{statutLabels[d.statut_souhaite] ?? d.statut_souhaite}{/if}
-									{#if d.statut_souhaite && d.batiment_nom_souhaite}&nbsp;/ {/if}
-									{#if d.batiment_nom_souhaite}{d.batiment_nom_souhaite}{/if}
-								</td>
-								<td><span class="badge {statutDemandeBadge[d.statut_demande] ?? 'badge-gray'}">{statutDemandeLabel[d.statut_demande] ?? d.statut_demande}</span></td>
-								<td style="color:var(--color-text-muted)">{d.motif_refus ?? '—'}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</details>
-		{/if}
+		<HistoriqueDemandes {demandes} chargement={demandesLoading} {statutLabels} />
 	</section>
 
 	{#if !arrivantChoix}

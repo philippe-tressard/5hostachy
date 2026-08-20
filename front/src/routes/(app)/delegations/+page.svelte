@@ -11,6 +11,8 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
+	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
+	import { essayer } from '$lib/chargement';
 
 	// Cette page importait déjà getPageConfig sans s'en servir : son titre était en
 	// dur, elle était donc la seule entrée du menu qu'on ne pouvait ni renommer ni
@@ -21,6 +23,8 @@
 	let delegations: any[] = [];
 	let loading = true;
 	let users: any[] = []; // pour le formulaire CS
+	/** Non vide = la liste des résidents n'a pas pu être chargée (#522). */
+	let erreurUtilisateurs = '';
 
 	// Formulaire création
 	let showForm = false;
@@ -34,7 +38,10 @@
 		try {
 			delegations = await delegationsApi.list();
 			if ($isCS) {
-				users = await adminApi.utilisateurs().catch(() => []);
+				//  Donnée de RÉFÉRENCE : elle garnit deux menus déroulants. Un
+				//  échec les laissait vides, et l'écran donnait à croire qu'aucun
+				//  résident n'était délégable (#522).
+				[users, erreurUtilisateurs] = await essayer<any[]>(adminApi.utilisateurs(), []);
 			}
 		} catch {
 			toast('error', 'Erreur de chargement');
@@ -113,6 +120,9 @@
 <svelte:head><title>Délégations aidant — {_siteNom}</title></svelte:head>
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'heart-handshake'} />
+
+<ChargementPartiel erreur={erreurUtilisateurs}
+	consequence="Les menus « mandant » et « aidant » du formulaire de délégation sont vides : ce n'est pas qu'aucun résident n'est éligible." />
 <p class="page-subtitle" style="margin-bottom:1.5rem;color:var(--color-text-muted);font-size:.9rem">
 	Gestion des accès délégués pour les proches aidants.
 	<br /><em style="font-size:.82rem">L'accès aidant ne constitue pas une procuration d'AG.</em>
