@@ -1202,3 +1202,22 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 .toggle-arrow { font-size: .75rem; color: var(--color-primary); margin-left: .25rem; }
 .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .6rem; }
 .detail-label { display: block; font-size: .75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .1rem; }
+
+/*  ── `.muted-sm` — remontée le 20/08/2026 (#557) ─────────────────────────────
+    🔴 ELLE RENDAIT QUATRE ÉCRANS NUS.
+
+    Elle n'était définie QUE dans `prestataires/+page.svelte`, et employée par
+    `VueDevis`, `VueKanban`, `VueRenouvellements` et `espace-cs`. Svelte scope
+    les styles au FICHIER : ces quatre-là affichaient donc du texte brut, à la
+    taille et à la couleur par défaut, là où l'écran d'origine montre une
+    mention discrète.
+
+    ⚠️ Et `lint:classes-nues` ne pouvait pas le voir : il demande « cette classe
+    est-elle DÉFINIE quelque part ? » — elle l'était. La question qu'il ne pose
+    pas est « une définition S'APPLIQUE-t-elle à ce balisage ? ». C'est un angle
+    mort du contrôle, relevé en #562.
+
+    C'est le pendant exact de la régression des pastilles de la v2.67.11, mais
+    trouvé par l'autre bout : par le sélecteur ORPHELIN resté dans le fichier
+    d'origine, et non par l'écran nu. */
+.muted-sm { font-size: .85rem; color: var(--color-text-muted); padding: .4rem 0; }

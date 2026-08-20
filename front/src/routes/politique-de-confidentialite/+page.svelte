@@ -49,8 +49,6 @@
 	}
 	.back-link:hover { text-decoration: underline; }
 	h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 1rem; }
-	section { margin-bottom: 1.5rem; }
-	h2 { font-size: 1rem; font-weight: 600; margin-bottom: .5rem; }
 	p { font-size: .875rem; line-height: 1.7; color: var(--color-text); }
 	.custom-content { font-size: .875rem; line-height: 1.7; color: var(--color-text); }
 	:global(.custom-content ul), :global(.custom-content ol) { padding-left: 1.4rem; margin: .25rem 0; }

@@ -394,11 +394,6 @@
 	.ah-form { padding: 1rem 1.1rem; }
 	/*  `.ah-form label` et `.ah-form input` sont partis avec le formulaire, dans
 	    `FormulaireAnnonceHall` — un style n'atteint pas le balisage d'un enfant. */
-	.ah-aide { font-size: .76rem; color: var(--color-text-muted); margin-top: .35rem; line-height: 1.45; }
-	.ah-select {
-		width: 100%; padding: .45rem .6rem; border: 1px solid var(--color-border);
-		border-radius: var(--radius); font-size: .875rem; background: var(--color-bg);
-	}
 	.ah-apercu { padding: 1rem 1.1rem; }
 	.ah-apercu-titre {
 		display: flex; align-items: center; gap: .4rem;

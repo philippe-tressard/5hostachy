@@ -702,15 +702,6 @@
 	.urgence-progress-label { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
 
 	/* ═══ KPI CARDS ═════════════════════════════════════════════════════ */
-	.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: .75rem; margin-bottom: 1.25rem; }
-	.kpi-card { display: flex; align-items: stretch; text-decoration: none; color: inherit; overflow: hidden; padding: 0; transition: box-shadow .15s, transform .1s; }
-	.kpi-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
-	.kpi-icon-zone { width: 3.5rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-	.kpi-text-zone { flex: 1; padding: .65rem .75rem; display: flex; flex-direction: column; gap: .1rem; }
-	.kpi-value { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); line-height: 1.1; }
-	.kpi-label { font-size: .78rem; color: var(--color-text-muted); }
-	.kpi-badge { font-size: .62rem; width: fit-content; margin-top: .15rem; }
-	.kpi-link { font-size: .72rem; color: var(--color-primary); font-weight: 500; margin-top: auto; }
 
 	/* ═══ KANBAN WIDGET ═════════════════════════════════════════════════ */
 	.kb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
@@ -845,7 +836,6 @@
 	}
 	@media (max-width: 767px) {
 		.hero { margin: -.75rem -.75rem 0; padding: 1.25rem 1rem 1rem; }
-		.kpi-grid { grid-template-columns: 1fr; }
 		.flux-timeline { padding-left: 1.25rem; }
 		.flux-timeline::before { left: .35rem; }
 		.consignes-card { gap: .5rem; padding: .6rem .75rem; }

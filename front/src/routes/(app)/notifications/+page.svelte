@@ -143,7 +143,6 @@ import { onMount } from 'svelte';
 {/if}
 
 <style>
-	.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
 	.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
 	.notif-row { display: flex; justify-content: space-between; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; gap: .5rem; }
 	.notif-unread { border-left: 3px solid var(--color-primary); }
