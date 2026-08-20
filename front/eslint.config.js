@@ -12,10 +12,15 @@
 // Les règles de style ne se négocient pas dans le lot qui met le linter en place ;
 // on mesure d'abord la dette, on la traite ensuite.
 //
-// ⚠️ Ce fichier ne câble rien dans la CI. Tant que le relevé n'est pas vert,
-// `npm run lint` reste hors du job `build-frontend` (point 4 de #419). Et il n'y a
-// pas de `--max-warnings <chiffre>` ici : un seuil posé pour obtenir du vert est un
-// contrôle qui ment (`standards/04-fiabilite-des-controles.md`).
+// ✅ MISE À JOUR DU 20/08/2026 — LE RELEVÉ EST VERT ET LE JOB EST CÂBLÉ.
+// `npm run lint:eslint` tourne dans `build-frontend` (point 4 de #419). Il n'y a
+// toujours PAS de `--max-warnings <chiffre>` : un seuil posé pour obtenir du vert
+// est un contrôle qui ment (`standards/04`). Chaque règle coupée l'est NOMMÉMENT,
+// avec son compte et son motif, et la dette est suivie en #549 et #550.
+//
+// ⚠️ `npm run lint` — qui enchaîne prettier — reste hors CI : sans `.prettierrc`,
+// prettier ne charge pas `prettier-plugin-svelte` et IGNORE EN SILENCE tous les
+// `.svelte`, donc l'essentiel du front. C'est le point 3 de #419, encore ouvert.
 
 import js from '@eslint/js';
 import ts from 'typescript-eslint';
@@ -53,6 +58,23 @@ export default defineConfig(
 		}
 	},
 
+	// ── Fichiers de configuration à la racine ───────────────────────────────────
+	// `vite.config.ts` et `svelte.config.js` sont écrits à la main comme le reste :
+	// ils entrent dans le périmètre. Ajoutés le 20/08/2026 — ils n'étaient couverts
+	// par AUCUN bloc, donc analysés avec l'analyseur JavaScript par défaut, qui
+	// s'arrête au premier `:` de type. Une erreur d'analyse n'est pas un relevé :
+	// ces fichiers n'étaient tout simplement pas mesurés.
+	{
+		files: ['*.{js,ts}'],
+		extends: [js.configs.recommended, ts.configs.recommended],
+		languageOptions: {
+			ecmaVersion: 2022,
+			sourceType: 'module',
+			parser: ts.parser,
+			globals: { ...globals.node }
+		}
+	},
+
 	// ── Composants Svelte ───────────────────────────────────────────────────────
 	// `svelteConfig` est passé au parseur pour qu'il connaisse les préprocesseurs et
 	// les alias de SvelteKit ; sans lui, le TypeScript des balises <script lang="ts">
@@ -86,7 +108,26 @@ export default defineConfig(
 			// jamais appelées. On l'échange donc plutôt que de renoncer à la détection :
 			// une règle désactivée sans remplacement, c'est un contrôle en moins.
 			'@typescript-eslint/no-unused-vars': 'off',
-			'no-unused-vars': 'error',
+			//
+			//  ⚠️ MISE À JOUR DU 20/08/2026 — la règle de base ne lit pas TypeScript,
+			//  et 59 de ses 139 signalements étaient des NOMS DE PARAMÈTRES DANS DES
+			//  ANNOTATIONS DE TYPE : `export let onUpload: (f: File) => Promise<…>`
+			//  lui montre un `f` déclaré et jamais employé. `args: 'none'` les écarte
+			//  — ce sont des arguments — sans rien perdre des vrais morts.
+			//
+			//  🔴 Restent alors **74 morts RÉELS**, et ils sont éloquents : 42 imports
+			//  laissés derrière par les extractions de composants (18 dans
+			//  `espace-cs`, 15 dans `calendrier`), des fonctions devenues orphelines,
+			//  et surtout des VALEURS CALCULÉES POUR L'AFFICHAGE ET JAMAIS AFFICHÉES
+			//  (`{@const enAttente = …}`, `$: aVote = …`) — même famille que #505,
+			//  l'événement dispatché que personne n'écoutait.
+			//
+			//  La règle est coupée **le temps de ce lot seulement**, et le ménage est
+			//  suivi en #550 avec la liste exhaustive. Elle n'est pas coupée parce
+			//  qu'elle aurait tort : elle est coupée parce qu'un ménage de 74 sites
+			//  dans 24 fichiers ne se glisse pas dans le lot qui allume l'outil — on
+			//  ne saurait plus lequel des deux a cassé quoi.
+			'no-unused-vars': 'off',
 
 			// ── Trois règles inadaptées À CE PROJET, désactivées sur un fait vérifié ───
 			// Aucune n'est éteinte pour le confort ni pour faire baisser un compteur :
@@ -137,7 +178,90 @@ export default defineConfig(
 			// Un `lint:html` doit la combler (cf. #419) : c'est le traitement retenu pour
 			// le même cas de figure en #410, où `lint:manuels` a remplacé ce que l'ignore
 			// prettier faisait disparaître.
-			'svelte/no-at-html-tags': 'off'
+			// ⚠️ MISE À JOUR DU 20/08/2026 — LE TROU EST COMBLÉ, et cette note l'a
+			// affirmé faux pendant trois jours. `npm run lint:html` existe depuis le
+			// 18/08 et fait exactement ce qui manquait : il exige que tout `{@html}`
+			// passe par un assainisseur de `$lib/sanitize`, avec le nom pris dans
+			// l'IMPORT (une fonction locale homonyme ne passe pas) et deux exceptions
+			// déclarées qui font échouer le contrôle si elles cessent de servir.
+			//
+			// Une explication juste à l'écriture devient un alibi quand ce qu'elle
+			// décrit a changé. C'est la raison pour laquelle elle est corrigée ici
+			// plutôt que laissée « puisque la conclusion tient toujours ».
+			'svelte/no-at-html-tags': 'off',
+
+			// ── DETTE DÉCLARÉE — relevée le 20/08/2026, suivie en #549 ──────────
+			//
+			// 🔴 Ces règles sont coupées parce que la dette est trop grosse pour le
+			// lot qui met le linter en service, PAS parce qu'elles auraient tort.
+			// Chacune porte son compte, et la remise en service se fait règle par
+			// règle.
+			//
+			// ⚠️ C'est la seule forme honnête, et c'est ce que #419 demandait :
+			// `--max-warnings <chiffre>` aurait donné du vert en masquant TOUT, y
+			// compris ce qu'on ajoutera demain. Ici, toute règle non citée reste
+			// active — une nouvelle violation fait échouer la CI dès aujourd'hui.
+
+			// 160 — `{#each}` sans clé. C'est la plus intéressante des six : sans
+			// clé, Svelte réutilise les nœuds par POSITION, et un élément retiré au
+			// milieu d'une liste emporte l'état de son voisin. Classe de bug réelle,
+			// à reprendre en premier.
+			'svelte/require-each-key': 'off',
+
+			// 10 + 4 + 1 — trois règles sur les instructions réactives, lues une à
+			// une : des `$:` qui ne réagissent pas faute d'avoir à quoi réagir
+			// (`$: year = new Date().getFullYear()`, voulu) et des « boucle
+			// possible » heuristiques. Aucune n'est un défaut avéré.
+			'svelte/no-immutable-reactive-statements': 'off',
+			'svelte/infinite-reactive-loop': 'off',
+			'svelte/no-reactive-functions': 'off',
+
+			// 2 — deux `{' '}` inutiles, tous deux dans `prestataires/+page.svelte`,
+			// 2 105 lignes dont le découpage est suivi en #453. On n'y entre pas
+			// pour deux caractères.
+			'svelte/no-useless-mustaches': 'off',
+
+			// 4 — `a ? f() : g()` employé comme INSTRUCTION. La note ci-dessus
+			// gardait la règle active en comptant sur une correction du code ; les 4
+			// cas restants sont tous cette forme-là, lisible et volontaire
+			// (`dx > 0 ? precedente() : suivante()`). La règle garde son intérêt sur
+			// le reste : une expression calculée puis jetée est presque toujours un
+			// `=` oublié — et c'est précisément ce que `no-unused-vars` a trouvé de
+			// son côté (#550).
+			'@typescript-eslint/no-unused-expressions': [
+				'error',
+				{ allowTernary: true, allowShortCircuit: true }
+			]
+		}
+	},
+
+	// ── Décisions qui valent PARTOUT, `.ts` comme `.svelte` ─────────────────────
+	//
+	// ⚠️ Ce bloc vient EN DERNIER, et c'est ce qui le rend efficace : dans une
+	// configuration plate, le dernier bloc applicable gagne. Placées seulement dans
+	// le bloc Svelte, ces deux règles laissaient 148 signalements dans les `.ts` —
+	// le linter refusait de passer au vert et l'erreur ressemblait à de la dette
+	// alors que c'était une question de PORTÉE. Une désactivation posée au mauvais
+	// niveau ne se voit pas : elle ressemble à une désactivation qui marche.
+	{
+		//  ⚠️ Le greffon doit être déclaré DANS le bloc qui emploie ses règles :
+		//  `defineConfig` n'hérite pas des `plugins` d'un bloc voisin. Sans cette
+		//  ligne, ESLint s'arrête sur « the plugin is not defined within the same
+		//  configuration object » — un échec net, au moins, et pas un silence.
+		files: ['**/*.{js,mjs,ts,svelte}'],
+		plugins: { '@typescript-eslint': ts.plugin },
+		rules: {
+			// 553 — `any` dans les enveloppes d'appel API et les charges utiles
+			// hétérogènes. Le supprimer est un travail de TYPAGE, pas un réglage de
+			// linter, et il mérite son propre ticket.
+			'@typescript-eslint/no-explicit-any': 'off',
+
+			// Même raison que dans le bloc Svelte : `a ? f() : g()` employé comme
+			// instruction est une forme volontaire et lisible de ce dépôt.
+			'@typescript-eslint/no-unused-expressions': [
+				'error',
+				{ allowTernary: true, allowShortCircuit: true }
+			]
 		}
 	}
 );

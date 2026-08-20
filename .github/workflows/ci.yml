@@ -683,6 +683,26 @@ jobs:
       # exprès — un contrôle qu'on n'a pas vu rougir n'est pas un contrôle.
       # Les 171 avertissements restants ne le font pas échouer : seule une
       # ERREUR bloque. Les résorber est un lot à part.
+      # 🔴 PREMIÈRE EXÉCUTION D'ESLINT EN CI (#419, point 4 — 20/08/2026).
+      #
+      # La configuration existait depuis le 17/08 (#424) mais n'était câblée nulle
+      # part : le relevé n'était pas vert, et le ticket demandait à raison de ne
+      # câbler qu'ensuite. Un linter configuré et jamais exécuté ressemble à un
+      # linter — c'est le même défaut, une couche plus haut.
+      #
+      # ⚠️ Le job est vert SANS `--max-warnings <chiffre>`. Chaque règle coupée
+      # l'est NOMMÉMENT dans `eslint.config.js`, avec son compte et son motif ; la
+      # dette est suivie en #549 (six règles) et #550 (74 morts réels). Un seuil
+      # chiffré aurait masqué tout, y compris ce qu'on ajoutera demain.
+      #
+      # Ce que la première exécution a rapporté, et que rien d'autre ne pouvait
+      # voir : un caractère de recul U+0008 au milieu d'une expression régulière
+      # de `check-workflow-envoye.mjs`, invisible dans tout éditeur, qui rendait
+      # inerte l'étape « retirer la balise avant de chercher ailleurs ».
+      - name: ESLint (jeu de règles déclaré, sans seuil chiffré)
+        working-directory: front
+        run: npm run lint:eslint
+
       - name: Vérification des types (svelte-check)
         working-directory: front
         run: npm run check

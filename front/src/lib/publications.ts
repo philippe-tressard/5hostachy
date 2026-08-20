@@ -6,7 +6,6 @@
 //  de plus de 500 lignes grossisse. La règle est « on découpe le fichier QUAND on
 //  y touche » — la frontière retenue est la même que côté scripts d'infra : la
 //  décision d'un côté, testable seule ; le rendu de l'autre.
-import type { Publication } from '$lib/api';
 
 //: Statuts d'une PUBLICATION — à ne pas confondre avec ceux d'un ticket
 //: (`ouvert`/`résolu`/`annulé`), qui sont une autre notion et vivent ailleurs.

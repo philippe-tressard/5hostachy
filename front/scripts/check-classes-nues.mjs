@@ -141,7 +141,7 @@ for (const chemin of fichiers) {
 	const relatif = relative(RACINE, chemin).replace(/\\/g, '/');
 	const source = readFileSync(chemin, 'utf8');
 
-	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) || [, ''])[1];
+	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) || ['', ''])[1];
 	const definiesLocal = new Set([...style.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
 
 	//  Les COMMENTAIRES sont retirés : ce dépôt en écrit de longs, qui citent le

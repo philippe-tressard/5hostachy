@@ -11,7 +11,7 @@
 const FLUSH_INTERVAL = 30_000; // 30 secondes
 const ENDPOINT = '/api/telemetry/collect';
 
-let buffer: { page: string; action: string; detail?: string }[] = [];
+const buffer: { page: string; action: string; detail?: string }[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 let disabled = false;
 
