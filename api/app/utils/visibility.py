@@ -449,7 +449,32 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
             return False
         return publication_visible(pub, user)
 
-    profil_id = doc.profil_acces_override_id or doc.categorie.profil_acces_id
+    #  🔴 UN DOCUMENT SANS SOURCE DE PROTECTION NE SE LIT PAS.
+    #
+    #  Cette ligne s'écrivait `doc.profil_acces_override_id or doc.categorie.profil_acces_id`,
+    #  et déréférençait `doc.categorie` sans le tester. Un document sans catégorie
+    #  NI contrat NI publication y arrive — les trois branches précédentes l'ont
+    #  laissé passer — et `None.profil_acces_id` lève un `AttributeError`, donc un
+    #  **500 sur la liste des documents** pour tout utilisateur non CS/admin.
+    #
+    #  ⚠️ Le cas est INATTEIGNABLE aujourd'hui : `POST /documents` exige l'un des
+    #  trois, `PATCH` ne peut pas les vider, et aucun endpoint ne supprime une
+    #  catégorie. C'est un invariant tenu à UN endroit (la création) et SUPPOSÉ à
+    #  un autre (ici), sans rien qui relie les deux — la forme d'invariant qui se
+    #  brise au premier appelant nouveau.
+    #
+    #  Et cet appelant est déjà écrit : l'étape 1 de #390 crée justement une ligne
+    #  `Document` « sans publication_id, rattachée ensuite ». Elle aurait donc
+    #  produit exactement ce document-là, et le 500 avec.
+    #
+    #  Le repli est le REFUS, jamais l'autorisation : une pièce jointe dont on ne
+    #  sait pas de qui elle tire sa protection n'en a aucune (`standards/03` — en
+    #  cas de doute sur un droit, on refuse).
+    profil_id = doc.profil_acces_override_id or (
+        doc.categorie.profil_acces_id if doc.categorie else None
+    )
+    if not profil_id:
+        return False
     profil: ProfilAccesDocument = session.get(ProfilAccesDocument, profil_id)
     if not profil:
         return False

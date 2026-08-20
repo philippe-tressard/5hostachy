@@ -180,3 +180,70 @@ def test_la_branche_piece_jointe_consulte_bien_la_publication():
     assert consultations == [(Publication, 7)], (
         "la pièce jointe a été autorisée (ou refusée) sans regarder son actualité"
     )
+
+
+#  ── Un document SANS source de protection ────────────────────────────────────
+#
+#  Trouvé le 20/08/2026 en instruisant #390, dont l'étape 1 prévoit de créer une
+#  ligne `Document` « sans publication_id, rattachée ensuite ».
+
+
+def _document_orphelin() -> Document:
+    """Ni catégorie, ni contrat, ni publication — donc aucune règle applicable."""
+    return Document(
+        id=99,
+        titre="photo de ticket",
+        fichier_nom="degat.jpg",
+        fichier_chemin="/app/uploads/degat.jpg",
+        publication_id=None,
+        categorie_id=None,
+        contrat_id=None,
+    )
+
+
+def test_un_document_sans_source_de_protection_est_refuse():
+    """🔴 Le repli est le REFUS, jamais l'autorisation.
+
+    Une pièce jointe dont on ne sait pas de qui elle tire sa protection n'en a
+    aucune. Autoriser « par défaut » un document que le modèle ne sait pas
+    rattacher, c'est publier ce qu'on n'a pas su classer.
+    """
+    locataire = _utilisateur("locataire", StatutUtilisateur.locataire)
+    assert document_visible(locataire, _document_orphelin(), _SessionSansBase(None)) is False
+
+
+def test_un_document_sans_source_de_protection_ne_LÈVE_pas():
+    """⚠️ Et c'est le vrai défaut : ce n'était pas un refus, c'était un 500.
+
+    `doc.profil_acces_override_id or doc.categorie.profil_acces_id` déréférençait
+    `doc.categorie` sans le tester. Sur un document orphelin, `None.profil_acces_id`
+    lève un `AttributeError` — et `GET /documents` le rend en **500** pour tout
+    utilisateur non CS/admin, puisque le filtrage appelle cette fonction sur
+    CHAQUE document de la liste. Un seul orphelin suffisait à rendre l'écran
+    inaccessible à tous les résidents.
+
+    Le cas était inatteignable par l'API — `POST /documents` exige l'un des trois
+    rattachements — mais l'invariant était tenu à UN endroit et supposé à un
+    autre, sans rien qui relie les deux. #390 allait justement écrire l'appelant
+    qui le brise.
+    """
+    locataire = _utilisateur("locataire", StatutUtilisateur.locataire)
+    try:
+        document_visible(locataire, _document_orphelin(), _SessionSansBase(None))
+    except AttributeError as exc:  # pragma: no cover — c'est ce qu'on refuse
+        raise AssertionError(
+            f"document_visible lève au lieu de refuser : {exc}. "
+            "Une fonction de visibilité qui plante rend un écran inaccessible, "
+            "elle ne protège rien."
+        ) from exc
+
+
+def test_le_cs_voit_quand_meme_un_document_orphelin():
+    """Le refus ne doit pas déborder sur qui a le droit de tout voir.
+
+    Sans ce cas, on pourrait « corriger » le défaut par un refus placé trop haut,
+    et rendre invisible à l'administration un document qu'elle doit pouvoir
+    reclasser — le seul rôle capable de réparer l'orphelin.
+    """
+    cs = _utilisateur("conseil_syndical", StatutUtilisateur.copropriétaire_résident)
+    assert document_visible(cs, _document_orphelin(), _SessionSansBase(None)) is True
