@@ -209,3 +209,71 @@ def test_chaque_sous_ligne_porte_les_cles_attendues():
         "la synthèse et les sous-lignes partagent la même forme : l'écran les "
         "rend avec le même composant"
     )
+
+#  ── Le battement de début : la seconde sonde (#488) ─────────────────────────
+#
+#  🔴 L'écran lisait LES RAPPORTS et rien d'autre. Une tâche qui TOURNE et dont
+#  le rapport est refusé s'affichait « À jour » sur le rapport précédent, puis
+#  « en retard » — deux jours de faux vert, puis un faux rouge, du 16 au
+#  18/08/2026. Trois situations, deux états pour les dire.
+
+
+def test_un_battement_RECENT_se_lit_EN_COURS():
+    """La tâche a démarré il y a quelques minutes : elle travaille."""
+    res = _grouper([ligne("rpi1", 0, statut="en_cours", heure=16)])
+    assert res["detail"][0]["statut"] == "en_cours"
+
+
+def test_un_battement_SANS_FIN_DE_COURSE_se_lit_RAPPORT_PERDU():
+    """🔴 Le cas exact du 16/08 : la tâche a tourné, son rapport n'est pas arrivé.
+
+    Six heures après son démarrage, une maintenance qui tient en quelques
+    minutes n'est plus « en cours ». Et elle n'est pas « manquante » non plus :
+    on a la trace de son démarrage. Confondre les deux enverrait chercher au
+    mauvais endroit — du côté de la tâche, quand c'est la remontée qui est
+    cassée.
+    """
+    res = _grouper([ligne("rpi1", 0, statut="en_cours", heure=10)])
+    assert res["detail"][0]["statut"] == "rapport_perdu"
+
+
+def test_le_battement_prime_sur_l_AGE():
+    """⚠️ L'ordre des tests compte, et c'est tout le sujet.
+
+    Un battement vieux de trois jours dépasse largement la période : tester
+    « manquante » d'abord dirait « exécution manquante » d'une tâche dont on a
+    la PREUVE du démarrage. C'est le faux rouge qu'on vient de supprimer.
+    """
+    res = _grouper([ligne("rpi1", 3, statut="en_cours")], periode_h=24)
+    assert res["detail"][0]["statut"] == "rapport_perdu", (
+        "un battement de début doit rester lisible comme « a tourné », quel que "
+        "soit son âge"
+    )
+
+
+def test_un_rapport_de_FIN_efface_le_battement():
+    """Le cas nominal : la tâche a bat, puis rendu compte. On lit la fin.
+
+    Les deux lignes coexistent en base ; c'est la PLUS RÉCENTE qui parle, et
+    c'est le rapport de fin. Sans cela, le battement rendrait la tâche
+    éternellement « en cours ».
+    """
+    res = _grouper([
+        ligne("rpi1", 0, statut="succes", heure=4),
+        ligne("rpi1", 0, statut="en_cours", heure=3),
+    ])
+    assert res["detail"][0]["statut"] == "ok"
+
+
+def test_le_rapport_perdu_est_PLUS_GRAVE_qu_une_erreur():
+    """Une erreur se voit ; un rapport perdu rend l'écran MUET.
+
+    C'est ce silence qui a duré deux jours. La synthèse doit donc désigner le
+    nœud dont le rapport manque, pas celui qui a échoué bruyamment.
+    """
+    res = _grouper([
+        ligne("rpi2", 0, statut="echouee", heure=4),
+        ligne("rpi1", 0, statut="en_cours", heure=10),
+    ])
+    assert res["pire"]["noeud"] == "rpi1"
+    assert res["pire"]["statut"] == "rapport_perdu"

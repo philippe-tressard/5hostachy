@@ -14,6 +14,12 @@
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { LIBELLE_TACHE, LIBELLE_ACTION } from '$lib/taches';
+	//  🔴 Les trois tables de STATUT vivent dans `$lib/taches.ts`, à côté des
+	//  libellés de tâches — c'est la même notion, et les libellés y étaient déjà
+	//  pour la raison qui vaut ici : les redéfinir dans un écran est ce qui les
+	//  fait diverger. Le garde-fou de modularité a refusé leur croissance dans ce
+	//  fichier (#488) ; la bonne réponse n'était pas de raboter mais de remonter.
+	import { LIBELLE_STATUT, AIDE_STATUT, CLASSE_STATUT } from '$lib/taches';
 	import ConfigSauvegarde from '$lib/components/ConfigSauvegarde.svelte';
 
 	//  Le bouton dit ce qu'il FAIT, pas le nom de la tâche — voir LIBELLE_ACTION.
@@ -43,22 +49,15 @@
 	//  ont été confondus le 09/08/2026, la maintenance ayant tourné le matin même
 	//  sans que sa ligne survive à la rétention. Le libellé dit désormais ce qui
 	//  est mesuré (`standards/04-fiabilite-des-controles.md` §14).
-	const LIBELLE_STATUT: Record<string, string> = {
-		ok: 'À jour',
-		manquante: 'Exécution manquante',
-		erreur: 'En échec',
-		aucune_execution: 'Aucun rapport reçu'
-	};
+	//  🔴 CINQ états, pas trois (#488). « Exécutée, rapport non reçu » était
+	//  indiscernable d'« À jour », puis d'« Exécution manquante » : deux jours de
+	//  faux vert, puis un faux rouge, du 16 au 18/08/2026.
 
-	const AIDE_STATUT: Record<string, string> = {
-		ok: 'Un rapport est arrivé dans le délai attendu.',
-		manquante: "Aucun rapport depuis plus longtemps que la périodicité de la tâche.",
-		erreur: 'Le dernier rapport signale un échec.',
-		aucune_execution:
-			"Aucun rapport en base pour cette tâche. Cela ne prouve pas qu'elle n'a pas " +
-			'tourné : un rapport peut avoir échoué à remonter, ou avoir été purgé. ' +
-			'Vérifier le journal du nœud avant de conclure.'
-	};
+
+	//  ⚠️ La couleur suit la GRAVITÉ, pas le nom. « En cours » est vert : la tâche
+	//  fait ce qu'on attend d'elle. « Rapport non reçu » est orange et non rouge —
+	//  rien n'est cassé côté tâche, c'est la surveillance qui est aveugle, et un
+	//  rouge y enverrait chercher au mauvais endroit.
 
 	async function charger() {
 		santeLoading = true;
@@ -287,7 +286,7 @@
 								{/if}
 							</td>
 							<td>
-								<span class="badge {t.statut === 'ok' ? 'badge-green' : 'badge-red'}"
+								<span class="badge {CLASSE_STATUT[t.statut] ?? 'badge-red'}"
 									title={AIDE_STATUT[t.statut] ?? ''}>
 									{LIBELLE_STATUT[t.statut] ?? t.statut}
 								</span>
@@ -330,7 +329,7 @@
 									<td></td>
 									<td style="color:var(--color-text-muted)">↳ {n.noeud.toUpperCase()}</td>
 									<td>
-										<span class="badge {n.statut === 'ok' ? 'badge-green' : 'badge-red'}"
+										<span class="badge {CLASSE_STATUT[n.statut] ?? 'badge-red'}"
 											title={AIDE_STATUT[n.statut] ?? ''}>
 											{LIBELLE_STATUT[n.statut] ?? n.statut}
 										</span>

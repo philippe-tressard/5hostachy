@@ -198,7 +198,18 @@ def test_retention_bornee_et_purgee_in_process():
 
     from app.routers import admin
 
-    assert admin._RAPPORTS_CONSERVES == 10
+    #  ⚠️ On vérifie que le quota EXISTE et qu'il est borné, pas sa VALEUR.
+    #  Le test l'a recopiée — `== 10` — et il a donc échoué le jour où elle est
+    #  passée à 20, pour une raison parfaitement légitime : chaque exécution de
+    #  maintenance écrit désormais DEUX lignes (#488), et dix lignes ne valaient
+    #  plus dix exécutions.
+    #
+    #  Un test qui recopie une constante mesure la constante, pas la propriété.
+    #  Ce qui compte ici est qu'un quota s'applique — sinon la table croît sans
+    #  fin — et qu'il reste d'un ordre de grandeur raisonnable.
+    assert 5 <= admin._RAPPORTS_CONSERVES <= 100, (
+        f"quota de rétention aberrant : {admin._RAPPORTS_CONSERVES}"
+    )
     assert callable(admin._purger_anciens_rapports)
     # La purge est appelée à la réception d'un rapport, pas par un script externe.
     source = inspect.getsource(admin.maintenance_rapport)
@@ -316,7 +327,11 @@ def test_une_tache_hebdomadaire_survit_aux_quotidiennes(session_memoire):
     bascules = session_memoire.exec(
         select(HistoriqueMaintenance).where(HistoriqueMaintenance.tache == "bascule")
     ).all()
-    assert len(bascules) == 10, (
-        f"{len(bascules)} lignes de bascule conservées — le quota par tâche ne "
-        "s'applique plus, et la table croîtra sans fin."
+    #  Le quota se LIT, il ne se recopie pas — même raison que ci-dessus.
+    from app.routers import admin as _admin
+
+    assert len(bascules) == _admin._RAPPORTS_CONSERVES, (
+        f"{len(bascules)} lignes de bascule conservées pour un quota de "
+        f"{_admin._RAPPORTS_CONSERVES} — le quota par tâche ne s'applique plus, "
+        "et la table croîtra sans fin."
     )
