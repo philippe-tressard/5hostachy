@@ -11,6 +11,35 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-XSS-Protection "0"
         -Server
+
+        #  ── Content-Security-Policy : le SOUS-ENSEMBLE SÛR, et rien de plus ──
+        #
+        #  Le site n'en avait aucune. C'est le seul en-tête que l'audit de
+        #  sécurité réclame et qui manquait ici (20/08/2026).
+        #
+        #  🔴 Ces quatre directives sont posées parce qu'elles ne peuvent RIEN
+        #  casser : elles ne touchent ni aux scripts, ni aux styles, ni aux
+        #  images. Elles ferment pourtant quatre voies réelles :
+        #
+        #    frame-ancestors 'none'   personne ne peut enchâsser le site pour
+        #                             détourner un clic (doublon volontaire de
+        #                             X-Frame-Options, qui ne couvre pas tous
+        #                             les navigateurs de la même façon) ;
+        #    object-src 'none'        aucun greffon (Flash, applet) ne démarre ;
+        #    base-uri 'self'          une balise <base> injectée ne peut plus
+        #                             réécrire la cible de TOUTES les URL
+        #                             relatives de la page ;
+        #    form-action 'self'       un formulaire injecté ne peut plus poster
+        #                             les identifiants ailleurs.
+        #
+        #  ⚠️ `script-src` et `style-src` NE SONT PAS ici, et c'est délibéré.
+        #  Ce sont eux qui apportent l'essentiel de la protection, et eux qui
+        #  cassent une application SvelteKit si on les pose sans mesurer : styles
+        #  en ligne, hydratation, polices. Une CSP fausse rend le site blanc —
+        #  un remède plus grave que le mal, posé sans pouvoir l'observer.
+        #  Leur mise en place demande un déploiement suivi en `Report-Only`
+        #  d'abord. Suivi en issue.
+        Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
     }
 
     # API — proxy vers FastAPI

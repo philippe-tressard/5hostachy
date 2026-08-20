@@ -211,3 +211,38 @@ verdict_notification() { # $1=fails $2=warns → critique|digest|silence
   elif [ "$warns" -gt 0 ]; then echo digest
   else echo silence; fi
 }
+
+# ── C23. Les en-têtes de sécurité sont-ils RÉELLEMENT servis ? ───────────────
+#: $1 = les en-têtes reçus (sortie brute de `curl -sI`), $2 = la liste attendue
+#: (noms séparés par des espaces) → "OK" | "MANQUANT:<liste>" | "INCONNU"
+#:
+#: 🔴 POURQUOI CE CONTRÔLE EXISTE (20/08/2026)
+#:
+#: Un contrôle des en-têtes existait — dans `check-stack.sh`. Il a été RETIRÉ du
+#: cron de rpi2 le 06/08/2026 parce qu'il y échouait 144 fois par jour. Et il
+#: échouait pour une raison précise : il attendait `X-Frame-Options: SAMEORIGIN`
+#: là où le Caddyfile dit `DENY`.
+#:
+#: Autrement dit : le seul contrôle des en-têtes portait une attente FAUSSE, il
+#: criait, on l'a fait taire — et depuis, plus rien ne regarde. Un en-tête de
+#: sécurité peut disparaître d'un Caddyfile sans que personne ne le sache.
+#:
+#: ⚠️ Celui-ci ne vérifie que la PRÉSENCE, jamais la valeur. C'est ce qui l'avait
+#: tué : une valeur attendue se périme au premier ajustement de configuration,
+#: alors qu'un en-tête absent est un fait qui ne se discute pas. Un contrôle qui
+#: crie à tort est un contrôle qu'on désarme.
+verdict_entetes_securite() {
+  local recus="$1" attendus="$2" manquants="" nom
+  #  Aucune réponse : on n'a rien constaté. INCONNU, jamais OK.
+  [ -z "$recus" ] && { echo INCONNU; return; }
+  case "$recus" in
+    *HTTP*) : ;;
+    *) echo INCONNU; return ;;
+  esac
+  for nom in $attendus; do
+    #  Les en-têtes HTTP sont insensibles à la casse : `curl` rend ce que le
+    #  serveur envoie, et Caddy peut changer de casse d'une version à l'autre.
+    printf '%s' "$recus" | grep -qi "^${nom}:" || manquants="${manquants}${manquants:+,}${nom}"
+  done
+  [ -z "$manquants" ] && echo OK || echo "MANQUANT:$manquants"
+}
