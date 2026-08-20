@@ -36,6 +36,28 @@
 	$: typeColor = typeCouleur(item.type);
 	$: nouveau = isNew(item);
 	$: lien = typeLink(item);
+	/**
+	 *  L'extrait à montrer sous le libellé quand la carte est PLIÉE.
+	 *
+	 *  `evol_contenu` d'abord — c'est ce qui vient d'être dit, donc ce qu'on
+	 *  cherche en parcourant le fil. `description` en repli, pour les cartes qui
+	 *  n'annoncent pas une évolution.
+	 *
+	 *  ⚠️ Rien n'est affiché si l'extrait répète déjà `detail` : sur une carte
+	 *  d'actualité, `detail` EST l'extrait, et l'afficher deux fois serait pire
+	 *  que de ne rien ajouter. C'est la donnée qui tranche, pas le type de carte
+	 *  — énumérer les types est exactement ce qui a coûté l'affichage du
+	 *  commentaire d'un événement (cf. `flux/evenements.py`).
+	 */
+	$: extraitReplie = (() => {
+		const brut = (item.meta?.evol_contenu ?? item.meta?.description) as string | undefined;
+		const extrait = (brut ?? '').trim();
+		if (!extrait) return '';
+		const libelle = (item.detail ?? '').trim();
+		if (!libelle) return extrait;
+		return libelle.includes(extrait) || extrait.includes(libelle) ? '' : extrait;
+	})();
+
 	$: photos = (item.meta?.photos_urls as string[] | undefined) ?? [];
 	$: fichiers = (item.meta?.fichiers_urls as string[] | undefined) ?? [];
 
@@ -83,8 +105,19 @@
 			<span class="flux-icon">{item.icon}</span>
 			<div class="flux-card-text">
 				<span class="flux-titre">{item.titre}</span>
-				{#if !expanded && item.detail}
-					<p class="flux-detail clamp-3">{item.detail}</p>
+				{#if !expanded && (item.detail || extraitReplie)}
+					<!--  🔴 Le LIBELLÉ et l'EXTRAIT, pas seulement le libellé (#531).
+					      Signalé à l'écran, capture à l'appui : une carte « ticket mis à
+					      jour » n'affichait que « Mise à jour » ou « Pris en charge » —
+					      deux mots qui disent qu'il s'est passé quelque chose sans dire
+					      quoi. À côté, une carte d'actualité remplissait deux lignes.
+
+					      L'asymétrie ne venait pas des données : `evol_contenu` (300
+					      caractères) était déjà transporté et déjà rendu par la carte
+					      DÉPLIÉE. Seule la carte pliée l'ignorait. -->
+					<p class="flux-detail clamp-3">
+						{#if item.detail}<span class="flux-detail-libelle">{item.detail}</span>{/if}{#if item.detail && extraitReplie}&#8201;—&#8201;{/if}{extraitReplie}
+					</p>
 				{/if}
 			</div>
 			<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
@@ -136,19 +169,21 @@
 						<span class="badge {item.meta.statut === 'résolu' || item.meta.statut === 'réalisé' ? 'badge-green' : item.meta.statut === 'en_cours' || item.meta.statut === 'ouvert' ? 'badge-orange' : 'badge-gray'}">{item.meta.statut}</span>
 					</p>
 				{/if}
-				{#if item.meta?.full_html}
-					<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
-				{:else if item.meta?.description}
-					<p class="flux-full-content">{item.meta.description}</p>
-				{:else if item.detail}
-					<p class="flux-full-content">{item.detail}</p>
-				{/if}
-				<!--  La condition ne teste PLUS le type : `evol_contenu` n'est posé que
-				      par une carte de mise à jour, et le vérifier deux fois faisait de
-				      cette liste de types une seconde déclaration à tenir. Elle a
-				      immédiatement divergé : le calendrier a eu son Historique le
-				      18/08/2026, le fil a su le fournir, et RIEN ne s'affichait.
-				      La donnée décide, pas une énumération de types. -->
+				<!--  🔴 LA DERNIÈRE MISE À JOUR D'ABORD, le texte d'origine ensuite
+				      (#531, demandé à l'écran le 20/08/2026 sur la carte dépliée).
+
+				      Une carte du fil répond à « quoi de neuf ». Ce qui est neuf, c'est
+				      le commentaire du jour ; la description d'origine est le CONTEXTE
+				      qui permet de le comprendre. L'ordre inverse obligeait à lire un
+				      texte parfois vieux de plusieurs semaines avant d'atteindre la
+				      seule ligne qu'on venait chercher.
+
+				      ⚠️ La condition ne teste PAS le type : `evol_contenu` n'est posé
+				      que par une carte de mise à jour, et le vérifier deux fois ferait
+				      de cette liste de types une seconde déclaration à tenir. Elle a
+				      immédiatement divergé la première fois : le calendrier a eu son
+				      Historique le 18/08/2026, le fil a su le fournir, et RIEN ne
+				      s'affichait. La donnée décide, pas une énumération de types. -->
 				{#if item.meta?.evol_contenu}
 					<div class="flux-reaction">
 						<span class="flux-reaction-icon">💬</span>
@@ -157,6 +192,14 @@
 							<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
 						</div>
 					</div>
+				{/if}
+				<!--  Le texte d'origine, en dessous : il rappelle DE QUOI il s'agit. -->
+				{#if item.meta?.full_html}
+					<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
+				{:else if item.meta?.description}
+					<p class="flux-full-content">{item.meta.description}</p>
+				{:else if item.detail}
+					<p class="flux-full-content">{item.detail}</p>
 				{/if}
 				{#if photos.length || fichiers.length}
 					<!-- Les pièces jointes de devis sont des PDF : elles étaient
@@ -238,6 +281,9 @@
 	.flux-card-text { flex: 1; min-width: 0; }
 	.flux-titre { font-size: .88rem; font-weight: 500; line-height: 1.35; display: block; }
 	.flux-detail { font-size: .8rem; color: var(--color-text-muted); margin: .15rem 0 0; line-height: 1.4; }
+	/*  Le libellé garde le poids qu'il avait quand il était seul : c'est lui qui
+	    dit la NATURE de la mise à jour, l'extrait n'en donne que la teneur. */
+	.flux-detail-libelle { font-weight: 600; }
 	.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 	.flux-badges { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .35rem; }
 
