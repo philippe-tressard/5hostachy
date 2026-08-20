@@ -5,6 +5,7 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import { fmtDateShort as fmtDate } from '$lib/date';
 
 	$: _siteNom = $siteNomStore;
 
@@ -15,11 +16,19 @@
 	//  enregistrement qui n'avait pas lieu (signalé à l'usage le 13/08/2026).
 	//  `assurance_numero` était le plus traître : le champ existe, sous le nom
 	//  `assurance_numero_police`. Une lettre de plus et il ne s'enregistrait pas.
+	//
+	//  🔴 Les TROIS champs d'assurance ont quitté ce formulaire (#490) : ils
+	//  décrivaient un contrat avec un prestataire, notion que le projet possède
+	//  déjà. Les laisser ici referait exactement la faute décrite ci-dessus —
+	//  un formulaire qui promet un enregistrement que le serveur n'accepte plus.
 	let form: any = {
 		nom: '', adresse: '', nb_lots_total: '', nb_lots_principaux: '', nb_parkings_communs: '',
-		annee_construction: '', numero_immatriculation: '',
-		assurance_compagnie: '', assurance_numero_police: '', assurance_echeance: ''
+		annee_construction: '', numero_immatriculation: ''
 	};
+	/**  L'assurance, EN LECTURE : elle vient du contrat, et se modifie là où
+	 *   vivent les contrats. L'afficher ici garde la fiche complète sans
+	 *   rouvrir une seconde saisie du même objet. */
+	let assurance: { compagnie?: string; police?: string; echeance?: string } = {};
 	let loading = true;
 	let saving = false;
 
@@ -28,6 +37,12 @@
 			const data = await coproprieteApi.get();
 			if (data) {
 				Object.keys(form).forEach(k => { if (data[k] !== undefined) form[k] = data[k] ?? ''; });
+				//  Lu, jamais réécrit — cf. le commentaire de `assurance`.
+				assurance = {
+					compagnie: data.assurance_compagnie ?? '',
+					police: data.assurance_numero_police ?? '',
+					echeance: data.assurance_echeance ?? '',
+				};
 			}
 		} catch { /* first time — empty form */ }
 		finally { loading = false; }
@@ -95,21 +110,30 @@
 		</div>
 	</SectionFormulaire>
 
+	<!--  🔴 EN LECTURE. L'assurance est un CONTRAT avec un prestataire (#490) :
+	      trois champs de texte libre en décrivaient un second, qui ne renvoyait à
+	      rien. Le même assureur pouvait exister deux fois — une fois ici, une
+	      fois comme prestataire — sans que rien ne dise que c'était le même.
+
+	      ⚠️ Un sélecteur de prestataire aurait pu vivre ici. On ne l'y met PAS :
+	      un objet se modifie à UN endroit, et cet endroit existe déjà. Deux
+	      écrans d'édition pour le même contrat, c'est la promesse de deux
+	      vérités — celle que ce lot vient précisément de supprimer. -->
 	<SectionFormulaire icone="shield" titre="Assurance">
-		<div class="form-grid largeur-saisie">
-			<label class="field">
-				<span>Compagnie</span>
-				<input bind:value={form.assurance_compagnie} />
-			</label>
-			<label class="field">
-				<span>N° de contrat</span>
-				<input bind:value={form.assurance_numero_police} />
-			</label>
-			<label class="field">
-				<span>Échéance</span>
-				<input type="date" bind:value={form.assurance_echeance} />
-			</label>
-		</div>
+		{#if assurance.compagnie}
+			<dl class="fiche-lecture">
+				<dt>Compagnie</dt><dd>{assurance.compagnie}</dd>
+				{#if assurance.police}<dt>N° de contrat</dt><dd>{assurance.police}</dd>{/if}
+				{#if assurance.echeance}<dt>Échéance</dt><dd>{fmtDate(assurance.echeance)}</dd>{/if}
+			</dl>
+		{:else}
+			<p class="fiche-vide">Aucun contrat d'assurance enregistré.</p>
+		{/if}
+		<p class="fiche-renvoi">
+			L'assurance est un <strong>contrat</strong> : elle se modifie dans
+			<a href="/prestataires?onglet=contrats_tab">Prestataires → Contrats</a>, avec son
+			prestataire, son échéance et son attestation.
+		</p>
 	</SectionFormulaire>
 
 	<!--  La section « Syndic » vivait ici et n'enregistrait RIEN : ses quatre champs
@@ -142,6 +166,31 @@
 {/if}
 
 <style>
+	/*  L'assurance en LECTURE : une liste de définitions, pas un formulaire.
+	    La forme dit le régime — on lit ici, on modifie ailleurs (#490). */
+	.fiche-lecture {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: .3rem .75rem;
+		margin: 0;
+		font-size: .9rem;
+	}
+	.fiche-lecture dt { color: var(--color-text-muted); font-size: .82rem; }
+	.fiche-lecture dd { margin: 0; }
+	.fiche-vide { font-size: .875rem; color: var(--color-text-muted); margin: 0; }
+	.fiche-renvoi {
+		font-size: .82rem;
+		color: var(--color-text-muted);
+		margin: .75rem 0 0;
+		line-height: 1.5;
+	}
+	/*  ⚠️ Sur téléphone, deux colonnes serrent les valeurs longues (un nom de
+	    compagnie, un numéro de police) au point de les couper mot à mot. La
+	    liste passe alors en une colonne — `standards/11` §10. */
+	@media (max-width: 560px) {
+		.fiche-lecture { grid-template-columns: 1fr; gap: 0 0; }
+		.fiche-lecture dd { margin-bottom: .5rem; }
+	}
 	.renvoi { font-size: .85rem; color: var(--color-text-muted); margin: 0 0 1.5rem; }
 	/*  `.form-section` et `.section-title` vivaient ici : ils REDÉFINISSAIENT la
 	    carte et le titre de sous-section que `card` / `config-section-title` et

@@ -1,18 +1,31 @@
-"""La fiche copropriété s'enregistre — y compris son échéance d'assurance.
+"""La fiche copropriété : ce qu'elle enregistre, et d'où vient son assurance.
 
-`PATCH /copropriete` recevait `assurance_echeance` en **chaîne** (« 2026-12-17 »)
-et l'affectait telle quelle à une colonne `date`. SQLAlchemy levait alors
-« SQLite Date type only accepts Python date objects as input », et **toute la
+## Ce que ce fichier protégeait, et ce qu'il protège désormais
+
+À l'origine (13/08/2026) : `PATCH /copropriete` recevait `assurance_echeance` en
+**chaîne** et l'affectait à une colonne `date`. SQLAlchemy levait, et **toute la
 fiche devenait inenregistrable** — y compris quand seul le nom du syndic avait
-changé, puisque l'erreur tombe au `commit`.
+changé, puisque l'erreur tombe au `commit`. Un écran qui refuse d'enregistrer ne
+dit pas *pourquoi* : le front affichait « Erreur lors de la sauvegarde ».
 
-Signalé à l'usage le 13/08/2026. Le défaut existait depuis l'ajout du champ :
-personne n'avait retouché l'échéance, et un écran qui refuse d'enregistrer ne dit
-pas *pourquoi* — le front affichait « Erreur lors de la sauvegarde ».
+⚠️ **Ce champ n'existe plus dans le schéma d'entrée** (#490) : l'assurance est
+devenue un `ContratEntretien` rattaché à un `Prestataire`, parce que trois
+chaînes libres décrivaient un objet que le projet possédait déjà. Les tests qui
+éprouvaient la conversion de cette chaîne n'ont donc plus d'objet.
 
-Ce fichier couvre la **classe** du défaut, pas seulement le cas rencontré : une
-date valide, un champ vidé, une date illisible, et une modification qui ne touche
-pas du tout à la date (le cas qui échouait sans qu'on comprenne le lien).
+🔴 **Ils ne sont pas supprimés pour autant : ils sont DÉPLACÉS sur l'invariant
+qui reste.** Trois choses doivent rester vraies :
+
+1. la fiche s'enregistre toujours, et un champ n'en écrase pas un autre — c'est
+   le symptôme le plus déroutant du défaut d'origine, et il ne dépendait pas de
+   l'assurance ;
+2. les trois champs d'assurance ne s'écrivent **plus** par cette route — les
+   accepter en silence rouvrirait le doublon que #490 vient de fermer ;
+3. ce que la fiche AFFICHE vient du contrat, pas des colonnes conservées.
+
+Supprimer un test parce que son champ a bougé, c'est perdre la raison pour
+laquelle il existait. La classe d'erreur — une valeur mal typée qui emporte tout
+l'enregistrement — n'a pas disparu avec le champ.
 """
 from datetime import date
 
@@ -20,8 +33,12 @@ import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
-from app.models.core import Copropriete
-from app.routers.copropriete import CoproprieteUpdate, update_copropriete
+from app.models.core import (
+    ContratEntretien, Copropriete, Prestataire, TypeEquipement,
+)
+from app.routers.copropriete import (
+    CoproprieteUpdate, copropriete_lue, update_copropriete,
+)
 
 
 @pytest.fixture()
@@ -38,9 +55,14 @@ def copro() -> int:
         identifiant = c.id
     yield identifiant
     with Session(engine) as session:
-        for ligne in session.exec(select(Copropriete)).all():
-            session.delete(ligne)
-        session.commit()
+        #  ⚠️ Les CONTRATS d'abord. Sans cela, supprimer la copropriété fait
+        #  tenter à SQLAlchemy un `UPDATE contrat_entretien SET copropriete_id
+        #  = NULL`, refusé par la contrainte `NOT NULL` — et l'erreur tombe au
+        #  DÉMONTAGE, donc elle se lit comme un échec du test suivant.
+        for modele in (ContratEntretien, Prestataire, Copropriete):
+            for ligne in session.exec(select(modele)).all():
+                session.delete(ligne)
+            session.commit()
 
 
 def _patch(**champs):
@@ -51,51 +73,135 @@ def _patch(**champs):
         )
 
 
-def test_echeance_en_chaine_iso_est_convertie(copro):
-    """Le cas qui échouait : une date saisie dans le formulaire."""
-    lu = _patch(assurance_echeance="2026-12-17")
-    assert lu.assurance_echeance == date(2026, 12, 17)
+def test_modifier_un_champ_n_ecrase_pas_les_autres(copro):
+    """Le symptôme le plus déroutant du défaut d'origine, conservé.
 
-    with Session(engine) as session:
-        stocke = session.get(Copropriete, copro)
-        assert stocke.assurance_echeance == date(2026, 12, 17), (
-            "la valeur doit être un `date` en base, pas une chaîne"
-        )
-
-
-def test_modifier_un_autre_champ_n_echoue_plus(copro):
-    """Le symptôme le plus déroutant : changer le syndic échouait aussi.
-
-    L'erreur tombe au `commit`, donc elle emportait la requête entière quel que
-    soit le champ réellement modifié.
+    L'erreur du 13/08 tombait au `commit` : elle emportait la requête entière
+    quel que soit le champ réellement modifié. Ce test ne dépend pas de
+    l'assurance — il éprouve que la fiche s'enregistre par morceaux sans se
+    perdre, et c'est ce qui reste vrai après #490.
     """
-    _patch(assurance_echeance="2026-12-17")
+    _patch(nb_lots_total=195)
     lu = _patch(nom="Résidence du Parc")
     assert lu.nom == "Résidence du Parc"
-    assert lu.assurance_echeance == date(2026, 12, 17), "l'échéance ne doit pas être perdue"
+    assert lu.nb_lots_total == 195, "modifier le nom a écrasé un autre champ"
 
 
-def test_echeance_videe_remet_a_neant(copro):
-    """Effacer le champ dans le formulaire envoie une chaîne vide, pas `null`."""
-    _patch(assurance_echeance="2026-12-17")
-    lu = _patch(assurance_echeance="   ")
-    assert lu.assurance_echeance is None
+def test_les_champs_d_assurance_ne_s_ecrivent_plus_par_cette_route():
+    """🔴 Ils ont QUITTÉ le schéma d'entrée (#490), et cela se vérifie.
+
+    Les accepter « au cas où » aurait été pire que de les retirer : l'écran
+    aurait continué d'écrire du texte que plus personne ne lit, et la fiche
+    aurait pu afficher un assureur pendant que le contrat en désignait un autre.
+
+    ⚠️ Ce test lit le SCHÉMA, pas une réponse : un champ réaccepté ne casserait
+    aucun appel — il recréerait silencieusement le doublon.
+    """
+    champs = set(CoproprieteUpdate.model_fields)
+    fautifs = {c for c in champs if c.startswith("assurance_")}
+    assert not fautifs, (
+        f"{sorted(fautifs)} sont de nouveau acceptés en écriture : "
+        "l'assurance est un contrat depuis #490."
+    )
 
 
-def test_echeance_illisible_repond_422_et_ne_corrompt_rien(copro):
-    """Une saisie aberrante doit être refusée avec un message, pas avec un 500."""
-    from fastapi import HTTPException
+def test_l_assurance_affichee_vient_du_CONTRAT_pas_des_colonnes(copro):
+    """Ce que la fiche montre est celui du contrat, même si les colonnes diffèrent.
 
-    _patch(assurance_echeance="2026-12-17")
-    with pytest.raises(HTTPException) as erreur:
-        _patch(assurance_echeance="17/12/2026")
-    assert erreur.value.status_code == 422
-    assert "AAAA-MM-JJ" in str(erreur.value.detail)
-
+    Les trois colonnes `assurance_*` subsistent en base pour qu'un retour arrière
+    reste possible. Si la lecture retombait dessus, la fiche afficherait
+    l'ancienne saisie — donc un assureur qui n'est plus le bon, sans que rien ne
+    le signale. On les renseigne ici avec des valeurs VOLONTAIREMENT différentes
+    de celles du contrat : c'est le seul moyen de prouver laquelle est lue.
+    """
     with Session(engine) as session:
-        assert session.get(Copropriete, copro).assurance_echeance == date(2026, 12, 17), (
-            "un refus ne doit pas avoir écrasé la valeur précédente"
-        )
+        c = session.get(Copropriete, copro)
+        c.assurance_compagnie = "ANCIEN ASSUREUR"
+        c.assurance_numero_police = "VIEUX-000"
+        c.assurance_echeance = date(2020, 1, 1)
+        session.add(c)
+
+        presta = Prestataire(nom="Nouvel Assureur", specialite="Assurance")
+        session.add(presta)
+        session.commit()
+        session.refresh(presta)
+
+        session.add(ContratEntretien(
+            copropriete_id=copro, prestataire_id=presta.id,
+            type_equipement=TypeEquipement.assurance,
+            libelle="Assurance de la copropriété",
+            numero_contrat="POL-2026", date_debut=date(2026, 1, 1),
+            prochaine_visite=date(2027, 6, 30),
+        ))
+        session.commit()
+
+        lu = copropriete_lue(session, session.get(Copropriete, copro))
+
+    assert lu.assurance_compagnie == "Nouvel Assureur", "la fiche lit encore la colonne"
+    assert lu.assurance_numero_police == "POL-2026"
+    assert lu.assurance_echeance == date(2027, 6, 30)
+
+
+def test_sans_contrat_la_fiche_n_invente_rien(copro):
+    """Aucun contrat : la ligne se masque, comme le faisait un champ texte vide.
+
+    ⚠️ Et surtout : elle ne retombe PAS sur les colonnes conservées. Un repli
+    silencieux les remettrait en service sans que personne ne le décide.
+    """
+    with Session(engine) as session:
+        c = session.get(Copropriete, copro)
+        c.assurance_compagnie = "ANCIEN ASSUREUR"
+        session.add(c)
+        session.commit()
+        lu = copropriete_lue(session, session.get(Copropriete, copro))
+    assert lu.assurance_compagnie is None
+
+
+def test_le_contrat_le_plus_recent_gagne(copro):
+    """Une copropriété change d'assureur ; l'ancien contrat reste en base.
+
+    C'est même tout l'intérêt d'en avoir fait un contrat. Rendre le premier
+    trouvé afficherait l'assureur de l'an dernier sans que rien ne le dise.
+    """
+    with Session(engine) as session:
+        for nom, debut, police in (("Ancien", date(2024, 1, 1), "A-1"),
+                                   ("Récent", date(2026, 1, 1), "R-1")):
+            presta = Prestataire(nom=nom, specialite="Assurance")
+            session.add(presta)
+            session.commit()
+            session.refresh(presta)
+            session.add(ContratEntretien(
+                copropriete_id=copro, prestataire_id=presta.id,
+                type_equipement=TypeEquipement.assurance,
+                libelle="Assurance de la copropriété",
+                numero_contrat=police, date_debut=debut,
+            ))
+        session.commit()
+        lu = copropriete_lue(session, session.get(Copropriete, copro))
+    assert lu.assurance_compagnie == "Récent"
+
+
+def test_la_migration_0156_emploie_la_valeur_REELLE_de_l_enumeration():
+    """La migration écrit `type_equipement` en dur ; l'énumération le relit.
+
+    ⚠️ Une migration ne valide rien à l'insertion sous SQLite : une valeur
+    inventée passerait, et l'énumération la refuserait à la LECTURE — des
+    semaines plus tard, sur un écran qui n'a pas changé. C'est exactement ce qui
+    a failli arriver ici : la première version insérait un `type_prestataire`
+    « contrat » qui n'existe pas.
+    """
+    import importlib.util
+    import pathlib as _p
+
+    chemin = _p.Path(__file__).parent.parent / "alembic" / "versions" / "0156_assurance_contrat.py"
+    spec = importlib.util.spec_from_file_location("migration_0156", chemin)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    assert migration.TYPE_ASSURANCE == TypeEquipement.assurance.value
+    assert "'contrat_recurrent'" in chemin.read_text(encoding="utf-8"), (
+        "le type de prestataire inséré doit être une valeur réelle de TypePrestataire"
+    )
 
 
 def test_les_deux_decomptes_de_lots_sont_independants(copro):
