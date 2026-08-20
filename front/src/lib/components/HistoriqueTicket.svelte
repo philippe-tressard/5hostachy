@@ -30,6 +30,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
 	import { tickets as ticketsApi, ApiError, type TicketEvolution } from '$lib/api';
 	import { toast } from './Toast.svelte';
@@ -125,7 +126,7 @@
 	<RubriqueHistorique
 		{evolutions}
 		statutLabels={STATUT_TICKET_LABELS}
-		titre="&#x1F4CB; Historique"
+		titre={TITRE_HISTORIQUE}
 		vide="Aucune évolution enregistrée."
 		peutModifier={$isCS}
 		currentUserId={$currentUser?.id}

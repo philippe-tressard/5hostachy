@@ -8,7 +8,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ListeTickets from '$lib/components/ListeTickets.svelte';
-	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
+	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import {
@@ -68,8 +68,10 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 				if (target) {
 					if (estArchive(target)) {
 						historyExpanded = true;
-						const yr = new Date(target.mis_a_jour_le ?? target.cree_le).getFullYear();
-						expandedYears = new Set([yr]);
+						//  On DÉSIGNE l'année ; le composant l'ouvre. Cette page posait
+						//  auparavant l'état interne du groupement, ce qui l'obligeait
+						//  à en porter sa propre copie.
+						anneeVisee = new Date(target.mis_a_jour_le ?? target.cree_le).getFullYear();
 					}
 					await toggleTicket(target);
 					revelerCible(`ticket-${target.id}`);
@@ -102,24 +104,14 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		.filter((t) => estArchive(t) && new Date(t.mis_a_jour_le ?? t.cree_le) >= THREE_YEARS_AGO)
 		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
 
-	$: historyByYear = (() => {
-		const groups = new Map<number, typeof historyTickets>();
-		for (const t of historyTickets) {
-			const year = new Date(t.mis_a_jour_le ?? t.cree_le).getFullYear();
-			if (!groups.has(year)) groups.set(year, []);
-			groups.get(year)!.push(t);
-		}
-		return [...groups.entries()].sort(([a], [b]) => b - a);
-	})();
-
+	//  ⚠️ Le groupement par année vivait ici — troisième copie du même bloc,
+	//  avec l'Espace CS et `ArchivesParAnnee` lui-même. Il est parti dans le
+	//  composant ; ce qui reste est le FILTRE, propre à cet écran.
 	let historyExpanded = false;
-	let expandedYears = new Set<number>();
-
-	function basculerAnnee(year: number) {
-		if (expandedYears.has(year)) expandedYears.delete(year);
-		else expandedYears.add(year);
-		expandedYears = expandedYears;
-	}
+	/**  L'année à ouvrir, désignée par un lien profond `?open=TK-…`. C'est la
+	 *   SEULE chose que cette page ait besoin de dire au groupement — et la
+	 *   capacité qui lui manquait pour adopter le composant (#516). */
+	let anneeVisee: number | null = null;
 
 	async function toggleTicket(t: Ticket) {
 		if (expandedTickets.has(t.id)) {
@@ -361,21 +353,11 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
       fait, mais pas en même temps qu'un renommage. Suivi en #516. -->
 {#if historyTickets.length > 0}
 	<div class="history-section">
-		<SectionRepliee titre="&#x1F4C1; Archives" compte={historyTickets.length}
-			bind:ouvert={historyExpanded} />
-		{#if historyExpanded}
-			<div class="history-content">
-				{#each historyByYear as [year, yearTickets] (year)}
-					<div class="history-year">
-						<button class="history-year-header" on:click|stopPropagation={() => basculerAnnee(year)}
-							aria-expanded={expandedYears.has(year)}>
-							<span class="history-year-label">{year}</span>
-							<span class="history-count history-count-annee">{yearTickets.length}</span>
-							<span class="history-chevron">{expandedYears.has(year) ? '▲' : '▼'}</span>
-						</button>
-						{#if expandedYears.has(year)}
+		<ArchivesParAnnee items={historyTickets} dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
+			compte={historyTickets.length} charge anneeOuverte={anneeVisee}
+			bind:ouvert={historyExpanded} let:objet={ticketArchive}>
 							<ListeTickets
-								tickets={yearTickets}
+								tickets={[ticketArchive]}
 								archive
 								expandedIds={expandedTickets}
 								{evolsMap}
@@ -397,11 +379,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 								on:modifie={ticketModifie}
 								on:annuler={fermerFormulaires}
 							/>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		{/if}
+		</ArchivesParAnnee>
 	</div>
 {/if}
 
@@ -426,17 +404,11 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	/*  Section historique. L'allure des cartes d'archive, elle, vit dans
 	    `CarteTicket` : le `<style>` d'une page n'atteint pas le balisage d'un
 	    composant enfant — c'est la panne des pastilles nues (v2.67.11). */
+	/*  🔴 Douze règles sont parties avec `ArchivesParAnnee` : le bandeau, son
+	    compteur, son chevron, et tout le groupement par année. Elles décrivaient
+	    un balisage que cette page ne rend plus — et les laisser aurait entretenu
+	    l'illusion qu'on règle ici l'aspect des Archives (#516).
+
+	    Ne reste que l'encadré de la section, seul balisage encore rendu ici. */
 	.history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
-	.history-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: none; border: none; padding: 0; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--color-text); text-align: left; }
-	.history-header:hover { color: var(--color-primary); }
-	.history-title { flex: 1; }
-	.history-count { display: inline-flex; align-items: center; justify-content: center; background: var(--color-primary); color: white; font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 12px; min-width: 1.5rem; }
-	.history-count-annee { font-size: .7rem; }
-	.history-chevron { font-size: .8rem; color: var(--color-text-muted); flex-shrink: 0; transition: transform .2s; }
-	.history-header[aria-expanded="true"] .history-chevron { transform: scaleY(-1); }
-	.history-content { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
-	.history-year { margin-bottom: .5rem; }
-	.history-year-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .75rem; cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--color-text); }
-	.history-year-header:hover { border-color: var(--color-primary); color: var(--color-primary); }
-	.history-year-label { flex: 1; text-align: left; }
 </style>

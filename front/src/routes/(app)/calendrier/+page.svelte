@@ -1,6 +1,8 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { delaiArchivageMs, evenementArchive } from '$lib/archivage';
+	import { TITRE_ARCHIVES } from '$lib/archives';
+	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 import { onMount } from 'svelte';
@@ -728,7 +730,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	<button role="tab" class:active={onglet === 'liste'} on:click={() => onglet = 'liste'}>{_pc.onglets?.liste?.label ?? '\u{1F4CB} Liste'}</button>
 	{#if !isLocataire}
 	<button role="tab" class:active={onglet === 'kanban'} on:click={() => onglet = 'kanban'}>{_pc.onglets?.kanban?.label ?? '\u{1F5C3}️ Kanban'}</button>
-	<button role="tab" class:active={onglet === 'archives'} on:click={() => onglet = 'archives'}>{_pc.onglets?.archives?.label ?? '\u{1F4C1} Archives'}</button>
+	<button role="tab" class:active={onglet === 'archives'} on:click={() => onglet = 'archives'}>{_pc.onglets?.archives?.label ?? TITRE_ARCHIVES}</button>
 	{/if}
 </div>
 {#if _pc.onglets?.[onglet]?.descriptif}
@@ -760,72 +762,10 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if onglet === 'archives'}
-	{#if allArchiveItems.length === 0}
-		<div class="empty-state">
-			<h3>Aucune archive</h3>
-			<p>Les éléments archivés apparaîtront ici.</p>
-		</div>
-	{:else}
-		{#each archiveByYear as [year, monthGroups]}
-			<div class="archive-year-section">
-				<button class="archive-year-header" on:click={() => { if (expandedArchiveYears.has(year)) expandedArchiveYears.delete(year); else expandedArchiveYears.add(year); expandedArchiveYears = expandedArchiveYears; }}>
-					<span class="archive-year-label">&#x1F4C5; {year}</span>
-					<span class="archive-year-count">{monthGroups.reduce((s, [, items]) => s + items.length, 0)} élément{monthGroups.reduce((s, [, items]) => s + items.length, 0) > 1 ? 's' : ''}</span>
-					<span class="chevron" class:open={expandedArchiveYears.has(year)}>›</span>
-				</button>
-				{#if expandedArchiveYears.has(year)}
-					{#each monthGroups as [mois, items]}
-						<div class="month-group" style="padding-left:.75rem">
-							<div class="month-label">{mois}</div>
-							{#each items as item}
-								{#if item._kind === 'pub'}
-									<!--  Publication archivée. Les trois rangées d'archives et celle des
-									      maintenances passent par `RangeeCalendrier` : la structure
-									      *type · corps · date · actions* était recopiée quatre fois, et
-									      c'est ce partage qui interdisait de découper la page (#432). -->
-									<RangeeCalendrier archive bordure="#0ea5e9"
-										typeTexte="&#x1F4F0;" badgeType={{ texte: 'Actualité', couleur: '#0ea5e9' }}
-										titre={item.titre} description={item.contenu}
-										dates={[{ texte: fmtDateShort(item._date) },
-											...(item.auteur_nom ? [{ texte: item.auteur_nom, attenue: true }] : [])]}
-										perimetre={item.perimetre_cible}
-										avecActions={$isAdmin}>
-										<svelte:fragment slot="actions">
-											<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button>
-										</svelte:fragment>
-									</RangeeCalendrier>
-								{:else if item._kind === 'devis'}
-									<!-- Prestation réalisée -->
-									<RangeeCalendrier archive bordure="#7c3aed"
-										typeTexte="&#x1F3C1;" badgeType={{ texte: 'Prestation', couleur: '#7c3aed' }}
-										titre={item.titre} description={item.notes}
-										metas={prestataireNom(item.prestataire_id) ? [`\u{1F3AF} ${prestataireNom(item.prestataire_id)}`] : []}
-										dates={[...(item.date_prestation ? [{ texte: fmtDateShort(item.date_prestation) }] : []),
-											...(item.montant_estime ? [{ texte: fmtMontant(item.montant_estime), attenue: true }] : [])]} />
-								{:else}
-									<!-- Événement archivé -->
-									<RangeeCalendrier archive bordure="#10b981" urgent={item.type === 'coupure'}
-										typeTexte={typeLabel(item.type)} badgeType={{ texte: 'Événement', couleur: '#10b981' }}
-										titre={item.titre} description={item.description}
-										metas={item.lieu ? [`\u{1F4CD} ${item.lieu}`] : []}
-										dates={[{ texte: formatDate(item.debut) },
-											...(item.fin ? [{ texte: `→ ${formatDate(item.fin)}`, attenue: true }] : [])]}
-										perimetre={item.perimetre}
-										pied={(item.mis_a_jour_le ? `Mise à jour le ${fmtDateLong(item.mis_a_jour_le)}` : `Publié le ${fmtDateLong(item.cree_le)}`)
-											+ (item.auteur_nom ? ` · ${item.auteur_nom}` : '')}
-										avecActions={$isAdmin}>
-										<svelte:fragment slot="actions">
-											<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button>
-										</svelte:fragment>
-									</RangeeCalendrier>
-								{/if}
-							{/each}
-						</div>
-					{/each}
-				{/if}
-			</div>
-		{/each}
-	{/if}
+	<OngletArchivesCalendrier {allArchiveItems} {archiveByYear}
+		bind:expandedArchiveYears {prestataireNom} {typeLabel} {formatDate}
+		{deleteArchivedPub} {deleteEv} />
+
 {:else if listItems.length === 0 && !recurringMaintenances.length && !kanbanEvs.length}
 	<div class="empty-state">
 		<h3>Aucun événement</h3>
@@ -998,11 +938,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.kanban-init-btn { margin-left: auto; font-size: .8rem; padding: .3rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; white-space: nowrap; }
 	.kanban-init-btn:hover:not(:disabled) { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.kanban-init-btn:disabled { opacity: .5; cursor: not-allowed; }
-	.archive-year-section { margin-bottom: .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
-	.archive-year-header { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .65rem 1rem; background: var(--color-surface); border: none; cursor: pointer; font-size: .95rem; font-weight: 600; text-align: left; }
-	.archive-year-header:hover { background: var(--color-bg); }
-	.archive-year-label { flex: 1; }
-	.archive-year-count { font-size: .8rem; font-weight: 400; color: var(--color-text-muted); }
+	/*  Les cinq règles `.archive-year-*` sont parties avec
+	    `OngletArchivesCalendrier` : elles n'habillaient que son balisage. */
 	/*  ⚠️ `.kanban-col` était défini DEUX fois, à quinze lignes d'intervalle, avec
 	    les mêmes quatre propriétés — la seconde n'ajoutait rien et masquait le
 	    `min-width` et le `flex` de la première à la lecture. Aucun contrôle ne dit

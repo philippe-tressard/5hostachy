@@ -37,6 +37,7 @@
 	import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
 	import ListeAnnonces from '$lib/components/ListeAnnonces.svelte';
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
+	import { TITRE_ARCHIVES } from '$lib/archives';
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -234,7 +235,9 @@
 	      Les cartes y sont les MÊMES — `ListeAnnonces`, appelé une seconde fois —
 	      simplement atténuées par `annonce.archivee`. -->
 	{#if archivees.length}
-		<SectionRepliee titre="&#x1F4C1; Archives" compte={archivees.length}>
+		<!--  Titre depuis `$lib/archives` : il était en dur ici, comme dans
+		      quatre autres écrans (#516, point 4). -->
+		<SectionRepliee titre={TITRE_ARCHIVES} compte={archivees.length}>
 			<ListeAnnonces
 				liste={archivees}
 				expandedId={expandedAnnonce}

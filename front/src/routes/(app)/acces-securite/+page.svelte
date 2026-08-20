@@ -8,6 +8,7 @@ import { onMount } from 'svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort } from '$lib/date';
+	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 
 	$: _pc = getPageConfig($configStore, 'acces-badges', defautsDePage('acces-badges'));
 	$: _siteNom = $siteNomStore;
@@ -338,13 +339,14 @@ import { onMount } from 'svelte';
 {/if}
 
 <!--  Archives — les demandes passées. « Historique » nomme le fil d'un objet
-      (cadre #430) ; ici ce sont des objets rangés (#516). -->
+      (cadre #430) ; ici ce sont des objets rangés (#516).
+
+      C'était le seul écran dont la section n'était NI repliable NI groupée :
+      un `<h2>` et une liste à plat. Il adopte le rendu commun. -->
 <section class="section card" style="margin-top:1rem">
-	<h2 class="section-title">Archives de mes demandes</h2>
-	{#if commandes.length === 0}
-		<p style="color:var(--color-text-muted);font-size:.9rem">Aucune demande passée.</p>
-	{:else}
-		{#each commandes as cmd}
+	<ArchivesParAnnee items={commandes} dateDe={(c) => c.cree_le}
+		compte={commandes.length} charge messageVide="Aucune demande passée."
+		let:objet={cmd}>
 			<div class="commande-row">
 				<div>
 					<strong>{cmd.type === 'vigik' ? 'Badge Vigik' : 'Télécommande'}</strong>
@@ -355,8 +357,7 @@ import { onMount } from 'svelte';
 				</div>
 				<span class="badge {commandeStatutClass(cmd.statut)}">{cmd.statut.replace('_', ' ')}</span>
 			</div>
-		{/each}
-	{/if}
+	</ArchivesParAnnee>
 </section>
 
 <!-- Accès reçus du bailleur (locataires uniquement) -->
