@@ -108,7 +108,13 @@ def _carte_mise_a_jour(ctx: ContexteFlux, evol, tk, *, ident, detail, icon, stat
             **_meta_ticket(tk),
             "statut": statut,
             **_pieces_jointes(evol, tk),
-            "evol_contenu": strip_html(evol.contenu, 300) if evol.contenu else None,
+            #  ⚠️ 400 et non 300 (#531). La carte PLIÉE affiche désormais cet
+            #  extrait sous le libellé, sur trois lignes au plus (`clamp-3`).
+            #  300 caractères en remplissent 2,3 : la coupure venait de la
+            #  longueur, pas du gabarit — l'extrait s'arrêtait avant que les
+            #  trois lignes soient atteintes, et le réglage visible n'était
+            #  donc pas celui qui décidait.
+            "evol_contenu": strip_html(evol.contenu, 400) if evol.contenu else None,
             "evol_auteur": auteur_nom(ctx.session, evol.auteur_id),
         },
     )
