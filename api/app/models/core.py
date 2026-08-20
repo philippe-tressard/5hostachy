@@ -72,45 +72,9 @@ from app.models.tickets import (  # noqa: E402
 )
 
 
-class TypePrestataire(str, Enum):
-    contrat_recurrent = "contrat_recurrent"
-    ponctuel = "ponctuel"
-    travaux = "travaux"
-    reglementaire = "reglementaire"
-    etudes_expertise = "etudes_expertise"
-    gestion = "gestion"
-
-
-class StatutDevis(str, Enum):
-    en_attente = "en_attente"
-    accepte = "accepte"
-    refuse = "refuse"
-    realise = "realise"
-
-
-class TypeEquipement(str, Enum):
-    ascenseur = "ascenseur"
-    chauffage_collectif = "chauffage_collectif"
-    eau = "eau"
-    electricite = "electricite"
-    espaces_verts = "espaces_verts"
-    extincteurs = "extincteurs"
-    interphone_digicode = "interphone_digicode"
-    nettoyage = "nettoyage"
-    plomberie = "plomberie"
-    pompe = "pompe"
-    porte_parking = "porte_parking"
-    serrurerie = "serrurerie"
-    toiture = "toiture"
-    vmc = "vmc"
-    autre = "autre"
-
-
-
-
-# ──────────────────────────────────────────────
-#  FAQ
-# ──────────────────────────────────────────────
+#  `TypePrestataire`, `StatutDevis` et `TypeEquipement` sont parties avec
+#  leurs modèles dans `models/prestataires.py` ; elles sont réimportées plus
+#  bas, avec eux.
 
 class FaqItem(SQLModel, table=True):
     __tablename__ = "faq_item"
@@ -535,83 +499,18 @@ class Delegation(SQLModel, table=True):
 # ──────────────────────────────────────────────
 #  Prestataires / Contrats
 # ──────────────────────────────────────────────
-
-class Prestataire(SQLModel, table=True):
-    __tablename__ = "prestataire"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    nom: str
-    specialite: str
-    type_prestataire: TypePrestataire = TypePrestataire.ponctuel
-    telephone: Optional[str] = None
-    email: Optional[str] = None
-    contacts_json: Optional[str] = None  # JSON: [{prenom, nom, fonction, email, telephone}]
-    actif: bool = True
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-
-    contrats: List["ContratEntretien"] = Relationship(back_populates="prestataire")
-    devis: List["DevisPrestataire"] = Relationship(back_populates="prestataire")
-
-
-class ContratEntretien(SQLModel, table=True):
-    __tablename__ = "contrat_entretien"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    copropriete_id: int = Field(foreign_key="copropriete.id")
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    prestataire_id: int = Field(foreign_key="prestataire.id")
-
-    type_equipement: TypeEquipement = TypeEquipement.autre
-    libelle: str
-    numero_contrat: Optional[str] = None
-    date_debut: date = Field(default_factory=date.today)
-    duree_initiale_valeur: Optional[int] = None
-    duree_initiale_unite: Optional[str] = None  # "mois" ou "ans"
-    frequence_type: Optional[str] = None  # "semaines", "mois", "fois_par_an"
-    frequence_valeur: Optional[int] = None
-    prochaine_visite: Optional[date] = None
-    actif: bool = True
-    notes: Optional[str] = None
-    document_id: Optional[int] = Field(default=None, foreign_key="document.id")
-
-    copropriete: Optional[Copropriete] = Relationship(back_populates="contrats_entretien")
-    prestataire: Optional[Prestataire] = Relationship(back_populates="contrats")
-
-
-class DevisPrestataire(SQLModel, table=True):
-    __tablename__ = "devis_prestataire"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    copropriete_id: int = Field(foreign_key="copropriete.id")
-    prestataire_id: int = Field(foreign_key="prestataire.id")
-    titre: str
-    date_prestation: Optional[date] = None
-    montant_estime: Optional[float] = None
-    statut: StatutDevis = StatutDevis.en_attente
-    frequence_type: Optional[str] = None   # "semaines", "mois", "fois_par_an"
-    frequence_valeur: Optional[int] = None
-    notes: Optional[str] = None
-    perimetre: str = "résidence"
-    fichiers_urls: Optional[str] = None  # JSON array of file URLs
-    os_fichier_url: Optional[str] = None  # URL de l'ordre de service signé
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    actif: bool = True
-    affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: Optional[datetime] = Field(default=None)
-
-    prestataire: Optional[Prestataire] = Relationship(back_populates="devis")
-
-
-class NotationPrestataire(SQLModel, table=True):
-    """Notation d'un prestataire (1-5 étoiles) après une visite ou prestation ponctuelle."""
-    __tablename__ = "notation_prestataire"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    prestataire_id: int = Field(foreign_key="prestataire.id")
-    note: int  # 1 à 5
-    commentaire: Optional[str] = None
-    devis_id: Optional[int] = Field(default=None, foreign_key="devis_prestataire.id")
-    contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
-    auteur_id: int = Field(foreign_key="utilisateur.id")
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-
+#  Les quatre modèles vivent dans `models/prestataires.py` depuis le
+#  20/08/2026 (#490). L'import n'est PAS décoratif : c'est lui qui enregistre
+#  les tables auprès de SQLModel avant `create_all`.
+from app.models.prestataires import (  # noqa: E402,F401
+    ContratEntretien as ContratEntretien,
+    DevisPrestataire as DevisPrestataire,
+    NotationPrestataire as NotationPrestataire,
+    Prestataire as Prestataire,
+    StatutDevis as StatutDevis,
+    TypeEquipement as TypeEquipement,
+    TypePrestataire as TypePrestataire,
+)
 
 # ──────────────────────────────────────────────
 #  Relevés compteurs
