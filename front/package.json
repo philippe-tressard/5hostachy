@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -21,6 +21,7 @@
     "lint:champs": "node scripts/check-champs.mjs",
     "lint:classes-nues": "node scripts/check-classes-nues.mjs",
 		"lint:evenements": "node scripts/check-evenements.mjs",
+		"lint:catch-vide": "node scripts/check-catch-vide.mjs",
     "lint:balises": "node scripts/check-balises.mjs",
     "lint:html": "node scripts/check-html.mjs",
     "lint:titres": "node scripts/check-titre-double.mjs",
