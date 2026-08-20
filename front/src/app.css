@@ -1186,3 +1186,19 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 		display: block !important;
 	}
 }
+
+/*  ── Blocs de détail dépliés — grille, libellé, chevron ──────────────────────
+    Remontées de `prestataires/+page.svelte` le 20/08/2026 (#453).
+
+    🔴 Elles y servaient TROIS onglets — Prestations, Visites, Contrats — et
+    l'extraction de `CarteVisite` les aurait emportées, laissant les deux autres
+    nus. C'est la troisième réponse possible au garde-fou de modularité, celle
+    qu'`ux-patterns` nomme « remonter la règle d'un cran » : l'ajout ne dit rien
+    de propre à un écran, il décrit un motif de détail déplié.
+
+    ⚠️ Vérifié avant de les poser ici : aucune autre définition de ces trois noms
+    n'existait dans le dépôt. Une remontée qui écrase une règle locale change
+    l'apparence d'un écran qu'on ne regardait pas. */
+.toggle-arrow { font-size: .75rem; color: var(--color-primary); margin-left: .25rem; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .6rem; }
+.detail-label { display: block; font-size: .75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .1rem; }
