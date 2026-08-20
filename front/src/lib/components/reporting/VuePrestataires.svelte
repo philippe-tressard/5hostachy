@@ -7,6 +7,10 @@
   prestataire — les charger toutes d'avance n'aurait aucun sens.
 -->
 <script lang="ts">
+	//  ⚠️ Cet écran affichait la valeur BRUTE — `chauffage_collectif` — parce que
+	//  la table des libellés vivait dans `prestataires/+page.svelte` et qu'il n'y
+	//  avait pas accès. Une table qui vit dans UN écran, les autres s'en passent.
+	import { equipLabel } from '$lib/prestataires';
 	import { prestataires as prestApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate } from '$lib/date';
@@ -141,7 +145,7 @@
 						{#each reportPrestSynth.contrats as c}
 							<tr>
 								<td>{c.libelle}</td>
-								<td>{c.type_equipement}</td>
+								<td>{equipLabel(c.type_equipement)}</td>
 								<td>{fmtDate(c.date_debut)}</td>
 								<td>{c.prochaine_visite ? fmtDate(c.prochaine_visite) : '—'}</td>
 							</tr>
