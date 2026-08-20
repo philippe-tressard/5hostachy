@@ -1,5 +1,6 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import { delaiArchivageMs, evenementArchive } from '$lib/archivage';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 import { onMount } from 'svelte';
@@ -46,13 +47,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	const _now = new Date();
 	let expandedArchiveYears = new Set<number>();
 
-	// Délai en ms avant qu'un événement expiré bascule en Archives (configurable en admin, défaut 48 h)
-	$: archivageDelaiMs = (parseInt($configStore?.['archivage_delai_heures'] ?? '48') || 48) * 3600000;
-
-	function isExpired(ev: any, delaiMs: number = 48 * 3600000): boolean {
-		const endDate = new Date(ev.fin ?? ev.debut);
-		return endDate.getTime() + delaiMs < Date.now();
-	}
+	//  Le délai d'archivage du site — voir `$lib/archivage` (#515).
+	$: archivageDelaiMs = delaiArchivageMs($configStore);
 
 	let showForm = false;
 	let editId: number | null = null;
@@ -122,7 +118,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	onMount(async () => {
 		try {
 			evenements = await calApi.list();
-			const expiredYears = [...new Set(evenements.filter(e => isExpired(e, archivageDelaiMs)).map(e => new Date(e.fin ?? e.debut).getFullYear()))].sort((a, b) => b - a);
+			const expiredYears = [...new Set(evenements.filter(e => evenementArchive(e, archivageDelaiMs)).map(e => new Date(e.fin ?? e.debut).getFullYear()))].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
 			// Liens profonds : `?onglet=` pour la vue, `#ev-<id>` pour l'événement.
 			// L'ancre impose la vue liste — c'est la seule où un événement porte un id.
@@ -163,7 +159,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		evs = evs.filter(e => {
 			if (e.archivee) return false;
 			const kanbanActif = e.statut_kanban && !['termine', 'annule'].includes(e.statut_kanban);
-			return !isExpired(e, archivageDelaiMs) || kanbanActif;
+			return !evenementArchive(e, archivageDelaiMs) || kanbanActif;
 		});
 		// Les maintenances récurrentes restent hors vue Liste.
 		// Exception métier: les prestations ponctuelles (non récurrentes) avec workflow restent visibles en Liste ET Kanban.
@@ -229,7 +225,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: allArchiveEvs = (() => {
 		let evs = canSeeAG ? evenements : evenements.filter(e => e.type !== 'ag');
-		evs = evs.filter(e => isExpired(e, archivageDelaiMs) || e.archivee);
+		evs = evs.filter(e => evenementArchive(e, archivageDelaiMs) || e.archivee);
 		// Règle métier : un événement avec suivi kanban ne peut figurer en archives
 		// que s'il est Terminé ou Annulé. Les statuts actifs (ag, cs, syndic, fournisseur)
 		// restent dans la vue Kanban jusqu'à leur clôture.
@@ -436,7 +432,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return evenements.filter((e: any) =>
 			e.type === 'maintenance_recurrente'
 			&& e.statut_kanban && e.statut_kanban !== 'annule'
-			&& !e.archivee && !isExpired(e, archivageDelaiMs));
+			&& !e.archivee && !evenementArchive(e, archivageDelaiMs));
 	})();
 	let showPeriodicSection = false;
 	let openEvIds = new Set<number>();

@@ -52,17 +52,15 @@ router.include_router(crud.router)
 #  vues doivent trancher pareil, sinon un élément apparaît dans l'une et pas dans
 #  l'autre (bug du 17/07/2026). Le découpage ne doit pas rouvrir cette porte.
 from .commun import (  # noqa: E402  (après le montage, pour la lisibilité)
-    ARCHIVAGE_DELAI_HEURES,
-    PUBLIE_VISIBILITE_JOURS,
     STATUT_LABELS,
     STATUTS_PUBLICATION,
     _is_archived,
 )
 
+#  ⚠️ Les deux seuils ne sont plus exportés : ils n'existent plus. Le délai du
+#  site se lit par `app.utils.archivage.seuil_archivage_jours`, et par lui seul.
 __all__ = [
     "router",
-    "ARCHIVAGE_DELAI_HEURES",
-    "PUBLIE_VISIBILITE_JOURS",
     "STATUT_LABELS",
     "STATUTS_PUBLICATION",
     "_is_archived",

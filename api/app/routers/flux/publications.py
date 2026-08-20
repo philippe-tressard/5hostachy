@@ -9,7 +9,7 @@ donc sans ambiguïté pour Python — la précision est là pour le lecteur.
 from sqlalchemy import or_
 from sqlmodel import select
 
-from app.models.core import ConfigSite, Publication
+from app.models.core import Publication
 from app.utils.liens import lien_element
 from app.utils.visibility import publication_visible
 
@@ -19,11 +19,10 @@ from app.utils.visibility import publication_visible
 #  /actualités. Cf. bug 17/07/2026 (pub « Services techniques » visible seulement
 #  au dashboard). Pas de cycle : le router publications n'importe pas le flux.
 from app.routers.publications import (
-    ARCHIVAGE_DELAI_HEURES,
-    PUBLIE_VISIBILITE_JOURS,
     STATUT_LABELS,
     _is_archived,
 )
+from app.utils.archivage import seuil_archivage_jours
 
 from app.utils.perimetres import perimetre_label
 from app.utils.photos import parse_photos
@@ -36,10 +35,11 @@ from .schemas import FluxItem
 #  premier appelant distrait.
 
 
-def _seuil(session, cle: str, defaut: int) -> int:
-    """Seuil d'archivage, surchargeable en configuration comme dans /actualités."""
-    row = session.get(ConfigSite, cle)
-    return int(row.valeur) if row and row.valeur.isdigit() else defaut
+#  ⚠️ `_seuil` a disparu : il lisait DEUX clés de configuration, et son
+#  jumeau vivait dans `publications/crud.py`. Le fil et /actualités lisaient
+#  ainsi le même réglage par deux chemins différents — la configuration exacte
+#  qui, le 17/07/2026, a fait apparaître un élément dans une vue et pas dans
+#  l'autre. Un seul lecteur désormais : `seuil_archivage_jours`.
 
 
 def collecter(ctx: ContexteFlux) -> list[FluxItem]:
@@ -56,15 +56,14 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
         .order_by(Publication.cree_le.desc())
     ).all()
 
-    delai_heures = _seuil(ctx.session, "archivage_delai_heures", ARCHIVAGE_DELAI_HEURES)
-    publie_jours = _seuil(ctx.session, "publie_visibilite_jours", PUBLIE_VISIBILITE_JOURS)
+    seuil_jours = seuil_archivage_jours(ctx.session)
 
     cartes: list[FluxItem] = []
     for p in pubs:
         #  Exclut les publications archivées dynamiquement (résolues/anciennes) —
         #  cohérence avec /actualités : sinon elles restent au dashboard sans être
         #  accessibles depuis la liste principale.
-        if _is_archived(p, delai_heures, publie_jours):
+        if _is_archived(p, seuil_jours):
             continue
         if not publication_visible(p, ctx.user):
             continue

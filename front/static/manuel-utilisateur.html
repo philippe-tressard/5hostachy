@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.53 · Août 2026</span>
+    <span class="topbar-badge">Version 3.54 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1777,6 +1777,18 @@
           <span class="callout-icon">ℹ️</span>
           <p>Dans <strong>Admin → Paramétrage site</strong>, l'administrateur peut activer l'option <strong>« Notifier si un bug (Tickets) »</strong>. Cette option envoie un e-mail au contact administrateur du site uniquement lorsqu'un ticket de catégorie <strong>Bug</strong> est créé. Les tickets <strong>Urgence</strong> ne déclenchent pas cet e-mail.</p>
           <p style="margin-top:.5rem">Dans le même écran, l'option <strong>« Notifier si un nouvel utilisateur est créé »</strong> permet d'envoyer un e-mail au gestionnaire du site dès qu'un nouveau compte est créé et placé en attente de validation.</p>
+          <p style="margin-top:.5rem">Toujours dans <strong>Admin → Paramétrage site</strong>, le <strong>Délai d'archivage automatique</strong> (30&nbsp;jours par défaut) est désormais <strong>unique et vaut pour tout le site</strong>. Un contenu terminé quitte les listes actives et rejoint la section <strong>&#x1F4C1;&nbsp;Archives</strong> de sa page après ce délai&nbsp;:</p>
+          <ul style="font-size:.9rem; margin:.35rem 0 0 1.1rem; line-height:1.7">
+            <li><strong>Actualités</strong> — après la publication.</li>
+            <li><strong>Tickets</strong> — après le passage en « Résolu ».</li>
+            <li><strong>Petites annonces</strong> — après « Vendu » ou « Donné » (une annonce <em>réservée</em> reste visible&nbsp;: la réservation peut tomber).</li>
+            <li><strong>Idées</strong> — après la décision (retenue, réalisée ou rejetée), pour laisser à chacun le temps de la voir.</li>
+            <li><strong>Sondages</strong> — après la date de clôture.</li>
+            <li><strong>Calendrier</strong> — après la date de l'événement.</li>
+            <li><strong>Affiches de hall</strong> — après l'envoi.</li>
+          </ul>
+          <p style="margin-top:.5rem; font-size:.9rem">Deux exceptions, dans les deux sens&nbsp;: un contenu <strong>annulé</strong> est archivé <strong>immédiatement</strong>, sans attendre le délai&nbsp;; un contenu <strong>épinglé</strong> ne s'archive <strong>jamais</strong> tout seul — c'est le sens du marqueur. Le bouton <strong>&#x1F4E6;&nbsp;Archiver</strong> reste disponible à tout moment, et prime sur le réglage.</p>
+          <p style="margin-top:.5rem; font-size:.9rem">Jusqu'à la version&nbsp;3.1.0, ce réglage n'existait que pour les actualités — et sous <em>deux</em> champs différents. Les autres pages appliquaient chacune leur propre durée, dont certaines n'étaient pas modifiables.</p>
         </div>
       </div>
 
@@ -1938,7 +1950,7 @@
         <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Une actualité <strong>n'a pas d'état à choisir</strong> : elle est publiée, puis elle bascule automatiquement dans l'<strong>Historique</strong> en bas de page au bout de son délai de visibilité. « En cours », « Résolu » sont le vocabulaire des <strong>tickets</strong> — une annonce n'est pas un dossier suivi.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.8">
           <li><strong>&#x1F535; Publié</strong> (par défaut) — annonce hors suivi. Elle reste visible <strong>1 mois</strong>, puis bascule automatiquement dans la section <strong>Historique</strong>, en bas de la page Actualités (groupée par année).</li>
-          <li><strong>&#x1F7E1; En cours / &#x1F7E2; Résolu / ⚫ Annulé</strong> — états de suivi. Dès qu'une publication passe dans l'un de ces états, elle quitte le fonctionnement « 1 mois » et suit le cycle de suivi (une publication résolue est archivée après le délai configuré).</li>
+          <li><strong>&#x1F7E1; En cours / &#x1F7E2; Résolu / ⚫ Annulé</strong> — états de suivi. Dès qu'une publication passe dans l'un de ces états, elle quitte le fonctionnement « 1 mois » et suit le cycle de suivi (une publication résolue est archivée après le délai d'archivage du site — voir <em>Admin → Paramétrage site</em>).</li>
         </ul>
         <p style="font-size:.85rem; color:var(--muted); margin-top:.75rem">Le délai de visibilité des publications « Publié » (1 mois par défaut) est réglable par l'administrateur.</p>
       </div>
@@ -2946,7 +2958,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.53</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.54</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

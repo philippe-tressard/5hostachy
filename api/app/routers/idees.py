@@ -189,6 +189,13 @@ def update_statut(
         raise HTTPException(404, "Idée introuvable")
     ancien = idee.statut
     idee.statut = body.statut
+    if body.statut != ancien:
+        #  ⚠️ Horodater le CHANGEMENT, pas la requête : c'est cette date que lit
+        #  l'archivage automatique (`app/utils/archivage.py`). La renseigner à
+        #  chaque appel, même sans changement, repousserait l'archivage d'un mois
+        #  à chaque clic — le défaut que `PetiteAnnonce` évite déjà en se datant
+        #  sur `statut_change_le` et non sur `mis_a_jour_le`.
+        idee.statut_change_le = datetime.utcnow()
     session.add(idee)
     # Passage à un statut positif (retenue/réalisée) → prévenir les votants.
     if body.statut != ancien and body.statut in _STATUT_NOTIF_LABELS:
