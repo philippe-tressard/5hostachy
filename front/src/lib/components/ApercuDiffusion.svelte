@@ -32,7 +32,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { safeHtml } from '$lib/sanitize';
 	import type { ApercuDiffusion } from '$lib/api';
 
 	export let apercu: ApercuDiffusion | null = null;
@@ -100,10 +99,30 @@
 							{#if canal.sujet}
 								<p class="apercu-sujet"><strong>Objet :</strong> {canal.sujet}</p>
 							{/if}
-							<!--  Le corps vient du serveur, rendu par le gabarit commun. Il
-							      passe par `safeHtml` comme tout rendu riche du site : le
-							      contenu du ticket y est interpolé, donc d'origine utilisateur. -->
-							<div class="apercu-corps">{@html safeHtml(canal.corps_html ?? '')}</div>
+							<!--  🔴 Un IFRAME CLOISONNÉ, et non `{@html safeHtml(...)}` (#529).
+							      Signalé à l'écran : *« le style de l'aperçu n'est pas celui du
+							      mail, plus difficile à valider »*.
+
+							      La cause : `safeHtml` fait son travail. Il retire `<style>`,
+							      les attributs `style=`, et n'autorise ni `<table>` ni `<tr>` ni
+							      `<td>` — or un e-mail est bâti ENTIÈREMENT de tables et de
+							      styles en ligne, seule mise en forme que les clients de
+							      messagerie honorent. L'aperçu montrait donc le texte du mail,
+							      pas le mail.
+
+							      ⚠️ Et un aperçu qui ne ressemble pas à ce qui partira ne
+							      remplit pas son office : on le regarde POUR valider la mise en
+							      forme. C'est la règle du projet — observer la chose, pas son
+							      approximation (`standards/04` §14).
+
+							      🔒 Le cloisonnement est PLUS strict qu'avant, pas moins :
+							      `sandbox` sans `allow-scripts` interdit tout script (là où
+							      DOMPurify se contentait de nettoyer), et sans
+							      `allow-same-origin` le document n'a accès ni au DOM parent, ni
+							      aux cookies, ni au stockage. Le `srcdoc` ne peut donc rien
+							      faire d'autre que s'afficher. -->
+							<iframe class="apercu-corps-cadre" title="Aperçu de l'e-mail"
+								sandbox="" srcdoc={canal.corps_html ?? ''}></iframe>
 						{:else}
 							{#if canal.ampute}
 								<p class="apercu-avertissement">
@@ -187,9 +206,13 @@
 		font-size: .82rem; color: var(--color-text-muted); margin: 0 0 .4rem;
 		overflow-wrap: anywhere;
 	}
-	.apercu-corps {
+	/*  Le corps de l'e-mail est rendu dans un IFRAME cloisonné : il apporte ses
+	    propres styles (tables, couleurs, marges), et c'est le but. La hauteur est
+	    FIXE et non `max-height` : un iframe ne s'adapte pas à son contenu depuis
+	    l'extérieur, et une hauteur trop courte transforme l'aperçu en fente. */
+	.apercu-corps-cadre {
+		width: 100%; height: 420px; display: block;
 		border: 1px solid var(--color-border); border-radius: 6px;
-		padding: .5rem; max-height: 320px; overflow-y: auto;
 		background: #fff;
 	}
 	/*  Le message WhatsApp se lit en chasse fixe et EN CONSERVANT ses sauts de
@@ -210,6 +233,6 @@
 	.apercu-attribues { margin-top: .8rem; }
 
 	@media (max-width: 700px) {
-		.apercu-corps { max-height: 220px; }
+		.apercu-corps-cadre { height: 300px; }
 	}
 </style>

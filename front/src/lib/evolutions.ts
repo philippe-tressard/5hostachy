@@ -65,3 +65,45 @@ export const EVOLUTION_ICONE: Record<string, string> = {
 export function evolutionIcone(type: string | undefined | null): string {
 	return EVOLUTION_ICONE[type ?? ''] ?? EVOLUTION_ICONE.commentaire;
 }
+
+/**
+ * **La charge utile qu'un formulaire d'évolution émet** — le contrat entre
+ * `EvolForm` et ceux qui la relaient à l'API.
+ *
+ * ## Pourquoi ce type existe (#529, 20/08/2026)
+ *
+ * Signalé à l'écran : *« j'ai créé une réponse au ticket en changeant le
+ * périmètre, celui-ci n'a pas été pris en compte »*.
+ *
+ * `CarteTicket` proposait bien la section Périmètre, `EvolForm` la collectait et
+ * l'émettait — et `tickets/+page.svelte` la **jetait** en recopiant la charge
+ * utile champ par champ, à partir d'un type local qui l'ignorait. Ce type local
+ * portait pourtant le commentaire *« même contrat que la fiche détail »*, ce qui
+ * était faux : la fiche, elle, relaie la charge entière.
+ *
+ * 🔴 **Le défaut ne lève rien.** Le formulaire annonce l'enregistrement, le
+ * serveur enregistre une évolution parfaitement valide, et seul le périmètre
+ * affiché ensuite trahit la perte. C'est le profil d'erreur qu'aucun test
+ * fonctionnel ne voit et qu'une relecture ne trouve pas — il faut comparer deux
+ * fichiers distants de quatre cents lignes.
+ *
+ * ⚠️ Un champ ajouté ici doit l'être **aussi** dans le `dispatch` d'`EvolForm` et
+ * dans le client d'API. `npm run lint:charge-utile` échoue si un relais oublie
+ * un champ que le formulaire émet.
+ */
+export interface ChargeUtileEvolution {
+	type: string;
+	contenu?: string;
+	nouveau_statut?: string;
+	fichiers_urls?: string[];
+	email_externe?: string;
+	partager_whatsapp?: boolean;
+	envoyer_syndic?: boolean;
+	envoyer_cs?: boolean;
+	/**  Le périmètre que l'entrée PRÉCISE — absent quand elle n'en parle pas, et
+	 *   le serveur ne touche alors pas à celui de l'objet (#497). */
+	perimetre_cible?: string[];
+	/**  Message interne : proposé seulement là où `avecInterne` est activé, donc
+	 *   aujourd'hui la seule fiche d'un ticket. */
+	interne?: boolean;
+}

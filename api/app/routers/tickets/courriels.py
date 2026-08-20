@@ -129,7 +129,19 @@ def contexte_ticket_syndic(
         "commentaire": commentaire or "",
         "date_commentaire": fmt_paris(datetime.utcnow()),
         "date_creation": date_courte(ticket.cree_le),
-        "messages": messages_ctx,
+        #  🔴 Du PLUS RÉCENT au plus ancien (#529, signalé à l'écran : « le
+        #  dernier message n'est pas inclus en premier »).
+        #
+        #  L'historique est construit en ordre chronologique — c'est le bon ordre
+        #  pour une frise. Mais le bloc « messages » d'un e-mail se lit comme un
+        #  fil de discussion : on veut d'abord ce à quoi on répond, pas l'échange
+        #  d'il y a trois semaines. Le destinataire de ce mail est le SYNDIC, qui
+        #  reçoit une reprise de sa propre réponse : la remonter en tête est
+        #  exactement ce qu'il cherche.
+        #
+        #  ⚠️ `historique` garde l'ordre chronologique : c'est une frise, et une
+        #  frise à l'envers ne se lit pas. Deux blocs, deux ordres, deux raisons.
+        "messages": list(reversed(messages_ctx)),
         "historique": historique,
         "fichiers": bool(pieces_jointes),
     }
