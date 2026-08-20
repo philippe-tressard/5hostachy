@@ -1,0 +1,24 @@
+{
+  "_lisezMoi": [
+    "Vulnérabilités Python connues et DÉLIBÉRÉMENT tolérées, chacune avec son motif,",
+    "sa condition de levée et sa date de revue.",
+    "",
+    "🔴 Une exception qui ne sert PLUS fait ÉCHOUER le contrôle : le jour où l'avis",
+    "disparaît, c'est le moment de retirer la ligne, pas trois mois plus tard. Une",
+    "dérogation oubliée est une porte qu'on croit fermée.",
+    "",
+    "⚠️ `motif` doit dire pourquoi l'avis n'atteint PAS cette application — un fait",
+    "vérifiable, pas une impression. « Sévérité basse » n'est pas un motif : la",
+    "sévérité annoncée par un avis ne dit rien de l'atteignabilité ici.",
+    "",
+    "Le pendant Node vit dans `front/audit-exceptions.json`, même mécanique (#411)."
+  ],
+  "exceptions": {
+    "PYSEC-2026-3552": {
+      "paquet": "cryptography",
+      "motif": "Oracle de Bleichenbacher sur le déchiffrement PKCS#7 (pkcs7_decrypt_der / _pem / _smime), introduit en 44.0.0. VÉRIFIÉ : ce dépôt n'appelle AUCUNE de ces trois fonctions — `grep -rn 'pkcs7|EnvelopedData|smime' api/app/` ne rend rien —, et il ne déchiffre nulle part une enveloppe fournie par un tiers. L'exploitation demande une application qui déchiffre un EnvelopedData attaquant ET en reflète l'issue ; le chemin n'existe pas ici. cryptography n'est d'ailleurs pas une dépendance directe : elle est tirée par fastapi-mail.",
+      "leveeSi": "fastapi-mail relâche son épinglage `cryptography (>=49.0.0,<50.0.0)`. La 1.6.5 est la DERNIÈRE version publiée au 20/08/2026, et elle porte cette contrainte : monter cryptography à 50.0.0 casserait la résolution. Vérifier par `python -m pip index versions fastapi-mail` puis `python -c \"import importlib.metadata as m; print([r for r in m.requires('fastapi-mail') if 'crypt' in r])\"`.",
+      "revoirLe": "2026-09-20"
+    }
+  }
+}

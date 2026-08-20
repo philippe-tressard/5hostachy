@@ -62,6 +62,34 @@ jobs:
       - name: Install Ruff
         run: pip install ruff
 
+      # 🔴 PREMIÈRE MESURE DES DÉPENDANCES PYTHON (#537, 20/08/2026).
+      #
+      # La passe de sécurité du 20/08 couvrait les dix points de l'OWASP Top 10.
+      # NEUF ont été mesurés ; le dixième ne l'a pas été — `pip-audit` n'était
+      # installé nulle part. Le versant Node l'était depuis #411 : deux moitiés
+      # du même contrôle, dont une seule existait.
+      #
+      # ⚠️ Un audit qui ne peut pas s'exécuter rend INCONNU et sort en 2 — jamais
+      # OK. C'est exactement le défaut que ce ticket corrigeait.
+      - name: Installer pip-audit
+        run: pip install pip-audit
+
+      # La première exécution a trouvé une vulnérabilité RÉELLE : PYSEC-2026-3552
+      # sur `cryptography` 49.0.0 — un oracle de Bleichenbacher sur le
+      # déchiffrement PKCS#7. Elle est TOLÉRÉE, pas ignorée : `fastapi-mail`
+      # épingle `cryptography <50.0.0` et sa 1.6.5 est la dernière publiée, donc
+      # aucun correctif n'est atteignable ; et ce dépôt n'appelle aucune des trois
+      # fonctions concernées — vérifié, pas supposé.
+      #
+      # Chaque exception nomme son avis, son motif, sa condition de levée et sa
+      # date de revue. Elle EXPIRE, et une exception devenue inutile fait échouer
+      # le contrôle pour forcer son retrait. Même mécanique que `lint:audit` côté
+      # front — un contrôle sans porte de sortie finit désactivé la semaine où un
+      # avis non corrigeable bloque toutes les PR.
+      - name: Audit des dépendances Python (exceptions nominatives)
+        working-directory: api
+        run: python scripts/check_audit_python.py
+
       - name: Run Ruff
         # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
         # ce n'est pas du style. Une factorisation se termine par la suppression
