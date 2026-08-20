@@ -5,6 +5,7 @@
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionContratReference from '$lib/components/SectionContratReference.svelte';
 	import { fmtDateShort as fmtDate } from '$lib/date';
 
 	$: _siteNom = $siteNomStore;
@@ -23,12 +24,20 @@
 	//  un formulaire qui promet un enregistrement que le serveur n'accepte plus.
 	let form: any = {
 		nom: '', adresse: '', nb_lots_total: '', nb_lots_principaux: '', nb_parkings_communs: '',
-		annee_construction: '', numero_immatriculation: ''
+		annee_construction: '', numero_immatriculation: '',
+		//  Les deux DÉSIGNATIONS, seuls champs que la fiche écrit sur une section
+		//  adossée à un contrat. `null` = aucun contrat désigné.
+		assurance_contrat_id: null, syndic_contrat_id: null
 	};
-	/**  L'assurance, EN LECTURE : elle vient du contrat, et se modifie là où
-	 *   vivent les contrats. L'afficher ici garde la fiche complète sans
-	 *   rouvrir une seconde saisie du même objet. */
-	let assurance: { compagnie?: string; police?: string; echeance?: string } = {};
+	/**  Ce que la fiche AFFICHE des deux sections adossées à un contrat.
+	 *
+	 *   🔴 Lu, jamais réécrit — sauf la DÉSIGNATION (`*_contrat_id`), qui dit
+	 *   lequel des contrats existants fait foi. Saisir ici la compagnie ou le
+	 *   cabinet recréerait le doublon que #490 a supprimé.
+	 *
+	 *   ⚠️ Un seul objet pour les deux sections : deux objets auraient donné deux
+	 *   façons de lire la même réponse. */
+	let fiche: any = {};
 	let loading = true;
 	let saving = false;
 
@@ -37,12 +46,10 @@
 			const data = await coproprieteApi.get();
 			if (data) {
 				Object.keys(form).forEach(k => { if (data[k] !== undefined) form[k] = data[k] ?? ''; });
-				//  Lu, jamais réécrit — cf. le commentaire de `assurance`.
-				assurance = {
-					compagnie: data.assurance_compagnie ?? '',
-					police: data.assurance_numero_police ?? '',
-					echeance: data.assurance_echeance ?? '',
-				};
+				//  Lu, jamais réécrit — cf. le commentaire de `fiche`.
+				fiche = data;
+				form.assurance_contrat_id = data.assurance_contrat_id ?? null;
+				form.syndic_contrat_id = data.syndic_contrat_id ?? null;
 			}
 		} catch { /* first time — empty form */ }
 		finally { loading = false; }
@@ -59,7 +66,11 @@
 			for (const champ of ['nb_lots_total', 'nb_lots_principaux', 'annee_construction']) {
 				payload[champ] = payload[champ] === '' ? null : Number(payload[champ]);
 			}
-			await coproprieteApi.update(payload);
+			//  ⚠️ La réponse du PATCH est RELUE, pas ignorée : changer le contrat
+			//  désigné change tout ce que les deux sections affichent. Garder
+			//  l'ancien affichage montrerait l'assureur précédent sous le nouveau
+			//  choix, jusqu'au prochain rechargement de page.
+			fiche = await coproprieteApi.update(payload);
 			toast('success', 'Fiche enregistrée');
 		} catch { toast('error', 'Erreur lors de la sauvegarde'); }
 		finally { saving = false; }
@@ -110,43 +121,74 @@
 		</div>
 	</SectionFormulaire>
 
-	<!--  🔴 EN LECTURE. L'assurance est un CONTRAT avec un prestataire (#490) :
-	      trois champs de texte libre en décrivaient un second, qui ne renvoyait à
-	      rien. Le même assureur pouvait exister deux fois — une fois ici, une
-	      fois comme prestataire — sans que rien ne dise que c'était le même.
+	<!--  🔴 DEUX SECTIONS, UN SEUL COMPOSANT (#553).
+	      L'assurance et le syndic posent la même question — lequel des contrats
+	      existants cette fiche désigne-t-elle ? — et affichent la même chose.
+	      Les écrire deux fois aurait donné deux sections libres de diverger au
+	      premier enrichissement demandé d'un seul côté.
 
-	      ⚠️ Un sélecteur de prestataire aurait pu vivre ici. On ne l'y met PAS :
-	      un objet se modifie à UN endroit, et cet endroit existe déjà. Deux
-	      écrans d'édition pour le même contrat, c'est la promesse de deux
-	      vérités — celle que ce lot vient précisément de supprimer. -->
-	<SectionFormulaire icone="shield" titre="Assurance">
-		{#if assurance.compagnie}
-			<dl class="fiche-lecture">
-				<dt>Compagnie</dt><dd>{assurance.compagnie}</dd>
-				{#if assurance.police}<dt>N° de contrat</dt><dd>{assurance.police}</dd>{/if}
-				{#if assurance.echeance}<dt>Échéance</dt><dd>{fmtDate(assurance.echeance)}</dd>{/if}
-			</dl>
-		{:else}
-			<p class="fiche-vide">Aucun contrat d'assurance enregistré.</p>
-		{/if}
-		<p class="fiche-renvoi">
+	      ⚠️ On DÉSIGNE ici, on MODIFIE dans Prestataires → Contrats. Le
+	      sélecteur ne crée ni ne modifie un contrat : il dit lequel fait foi. -->
+	<SectionContratReference
+		titre="Assurance"
+		icone="shield"
+		section="assurance"
+		bind:contratId={form.assurance_contrat_id}
+		documentId={fiche.assurance_document_id ?? null}
+		lignes={[
+			['Compagnie', fiche.assurance_compagnie],
+			['Téléphone', fiche.assurance_telephone],
+			['Courriel', fiche.assurance_email],
+			['N° de police', fiche.assurance_numero_police],
+			['Début', fiche.assurance_debut ? fmtDate(fiche.assurance_debut) : null],
+			['Échéance', fiche.assurance_echeance ? fmtDate(fiche.assurance_echeance) : null]
+		]}
+	>
+		<svelte:fragment slot="renvoi">
 			L'assurance est un <strong>contrat</strong> : elle se modifie dans
 			<a href="/prestataires?onglet=contrats_tab">Prestataires → Contrats</a>, avec son
 			prestataire, son échéance et son attestation.
-		</p>
-	</SectionFormulaire>
+		</svelte:fragment>
+	</SectionContratReference>
 
-	<!--  La section « Syndic » vivait ici et n'enregistrait RIEN : ses quatre champs
-	      n'existent ni dans `CoproprieteUpdate` ni dans le modèle `Copropriete`,
-	      donc Pydantic les jetait en silence. Le syndic se décrit dans l'Annuaire,
-	      sur `SyndicInfo` et `MembreSyndic` — et c'est cette donnée-là qui sert
-	      réellement : `utils/destinataires.interlocuteurs_syndic()` s'en sert pour
-	      choisir à qui partent les e-mails du cabinet. Deux saisies pour une seule
-	      notion, dont une inerte. -->
-	<p class="renvoi">
-		Le syndic se décrit dans <a href="/espace-cs">Espace CS &rsaquo; Annuaire</a> :
-		c'est de là que partent les e-mails au cabinet.
-	</p>
+	<!--  ⚠️ L'INTERLOCUTEUR ne vient PAS du prestataire, mais de l'annuaire
+	      (`MembreSyndic`). Le prestataire porte le CABINET, l'annuaire garde les
+	      PERSONNES — et c'est de l'annuaire que partent les courriels, lu par dix
+	      modules côté serveur. Recopier ces personnes dans les contacts du
+	      prestataire aurait donné deux listes des mêmes gens : la faute de #490
+	      transposée au circuit des notifications, où elle ne se verrait que le
+	      jour où un message ne partirait pas. -->
+	<!--  ⚠️ L'ICÔNE EST VÉRIFIÉE DANS LE CATALOGUE avant d'être écrite.
+	      `briefcase` — le premier choix — n'existe pas dans
+	      `$lib/icones-svg.json` : `Icon` serait retombé EN SILENCE sur
+	      `help-circle`, et la section aurait porté un point d'interrogation sans
+	      qu'aucun contrôle ne le dise. `users-round` dit « un cabinet, des
+	      gens », et il est là. -->
+	<SectionContratReference
+		titre="Syndic"
+		icone="users-round"
+		section="syndic"
+		bind:contratId={form.syndic_contrat_id}
+		documentId={fiche.syndic_document_id ?? null}
+		lignes={[
+			['Cabinet', fiche.syndic_cabinet],
+			['Téléphone', fiche.syndic_telephone],
+			['Courriel', fiche.syndic_email],
+			['N° de mandat', fiche.syndic_numero_mandat],
+			['Début', fiche.syndic_debut ? fmtDate(fiche.syndic_debut) : null],
+			['Échéance', fiche.syndic_echeance ? fmtDate(fiche.syndic_echeance) : null],
+			['Interlocuteur', fiche.syndic_interlocuteur],
+			['Courriel direct', fiche.syndic_interlocuteur_email]
+		]}
+	>
+		<svelte:fragment slot="renvoi">
+			Le cabinet et son mandat se modifient dans
+			<a href="/prestataires?onglet=contrats_tab">Prestataires → Contrats</a>. Ses
+			<strong>membres</strong>, eux, vivent dans
+			<a href="/espace-cs">Espace CS &rsaquo; Annuaire</a> — c'est de là que partent
+			les courriels au cabinet.
+		</svelte:fragment>
+	</SectionContratReference>
 
 	<!--  🔴 `.form-actions` — l'action principale va à DROITE (app.css,
 	      `justify-content: flex-end`). Le bouton était dans un `<div>` NU, donc

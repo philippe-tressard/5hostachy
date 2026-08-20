@@ -58,6 +58,23 @@ class Copropriete(SQLModel, table=True):
     nb_lots_total: Optional[int] = None
     nb_lots_principaux: Optional[int] = None
     numero_immatriculation: Optional[str] = None  # ANAH/ALUR
+    #: 🔴 LES DEUX CONTRATS DE RÉFÉRENCE DE LA FICHE.
+    #:
+    #: L'assurance était DÉDUITE (« le contrat actif le plus récent gagne »,
+    #: #490) : une règle juste et implicite, que rien à l'écran n'énonçait. Elle
+    #: devient un choix, et le syndic entre dans le même moule — le prestataire
+    #: porte le CABINET, `MembreSyndic` garde les PERSONNES et le routage des
+    #: courriels ne bouge pas.
+    #:
+    #: ⚠️ Ces deux champs désignent un contrat, jamais un prestataire. Pointer
+    #: le prestataire rouvrirait la divergence que #490 a fermée : le
+    #: prestataire choisi pourrait cesser d'être celui du contrat affiché, et
+    #: rien ne dirait lequel fait foi.
+    assurance_contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
+    syndic_contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
+
+    #: Conservées depuis #490 pour qu'un retour arrière reste possible. RIEN ne
+    #: les lit — `copropriete_lue` les efface avant de composer sa réponse.
     assurance_compagnie: Optional[str] = None
     assurance_numero_police: Optional[str] = None
     assurance_echeance: Optional[date] = None
@@ -65,7 +82,21 @@ class Copropriete(SQLModel, table=True):
     nb_parkings_communs: int = 0
 
     batiments: List["Batiment"] = Relationship(back_populates="copropriete")
-    contrats_entretien: List["ContratEntretien"] = Relationship(back_populates="copropriete")
+    #  🔴 `foreign_keys` EST OBLIGATOIRE ICI depuis que la copropriété désigne
+    #  ses deux contrats de référence (#553). Trois chemins relient désormais les
+    #  deux tables — `contrat.copropriete_id`, `copropriete.assurance_contrat_id`
+    #  et `copropriete.syndic_contrat_id` — et SQLAlchemy refuse de choisir :
+    #
+    #      AmbiguousForeignKeysError: there are multiple foreign key paths
+    #
+    #  ⚠️ Le défaut ne se voit pas à l'import : il éclate à la PREMIÈRE requête,
+    #  et il emporte tout le mappage — 103 tests tombés d'un coup, dont ceux du
+    #  planificateur WhatsApp, qui n'ont rien à voir. C'est la bonne façon
+    #  d'échouer : bruyante et immédiate.
+    contrats_entretien: List["ContratEntretien"] = Relationship(
+        back_populates="copropriete",
+        sa_relationship_kwargs={"foreign_keys": "[ContratEntretien.copropriete_id]"},
+    )
 
 
 class Batiment(SQLModel, table=True):

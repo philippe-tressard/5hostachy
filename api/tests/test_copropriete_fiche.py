@@ -87,8 +87,18 @@ def test_modifier_un_champ_n_ecrase_pas_les_autres(copro):
     assert lu.nb_lots_total == 195, "modifier le nom a écrasé un autre champ"
 
 
-def test_les_champs_d_assurance_ne_s_ecrivent_plus_par_cette_route():
-    """🔴 Ils ont QUITTÉ le schéma d'entrée (#490), et cela se vérifie.
+#: Ce qu'une fiche a le droit d'écrire sur une section adossée à un contrat :
+#: la DÉSIGNATION du contrat, et rien d'autre.
+#:
+#: 🔴 La distinction est tout le sujet. Écrire `assurance_compagnie = "AXA"`
+#: crée un second assureur qui ne renvoie à rien (#490). Écrire
+#: `assurance_contrat_id = 12` dit lequel des contrats EXISTANTS fait foi : la
+#: donnée reste unique, côté contrat.
+DESIGNATIONS_AUTORISEES = {"assurance_contrat_id", "syndic_contrat_id"}
+
+
+def test_les_VALEURS_d_assurance_ne_s_ecrivent_plus_par_cette_route():
+    """🔴 Elles ont QUITTÉ le schéma d'entrée (#490), et cela se vérifie.
 
     Les accepter « au cas où » aurait été pire que de les retirer : l'écran
     aurait continué d'écrire du texte que plus personne ne lit, et la fiche
@@ -96,12 +106,37 @@ def test_les_champs_d_assurance_ne_s_ecrivent_plus_par_cette_route():
 
     ⚠️ Ce test lit le SCHÉMA, pas une réponse : un champ réaccepté ne casserait
     aucun appel — il recréerait silencieusement le doublon.
+
+    ⚠️ **Précisé le 20/08/2026 (#553)**, et le garde-fou avait raison de crier :
+    il refusait `assurance_contrat_id`, que ce lot venait d'ajouter. Le motif
+    « tout ce qui commence par `assurance_` » confondait la VALEUR et la
+    DÉSIGNATION. Élargir le test à la liste blanche, plutôt que d'y ajouter une
+    exception, garde la règle lisible — et il couvre maintenant le syndic, qui
+    n'existait pas quand il a été écrit.
     """
-    champs = set(CoproprieteUpdate.model_fields)
-    fautifs = {c for c in champs if c.startswith("assurance_")}
+    fautifs = {
+        c
+        for c in CoproprieteUpdate.model_fields
+        if c.startswith(("assurance_", "syndic_")) and c not in DESIGNATIONS_AUTORISEES
+    }
     assert not fautifs, (
-        f"{sorted(fautifs)} sont de nouveau acceptés en écriture : "
-        "l'assurance est un contrat depuis #490."
+        f"{sorted(fautifs)} sont de nouveau acceptés en écriture : une section "
+        "adossée à un contrat ne se SAISIT pas, elle se DÉSIGNE."
+    )
+
+
+def test_les_designations_sont_bien_acceptees():
+    """⚠️ Le cas zéro du test ci-dessus, et il compte.
+
+    Un `CoproprieteUpdate` amputé de ses deux désignations rendrait le test
+    précédent vert — il ne trouverait plus rien de fautif — pendant que l'écran
+    ne pourrait plus rien choisir. Un contrôle qui passe parce qu'il n'y a plus
+    rien à contrôler n'est pas un contrôle (`standards/04` §2).
+    """
+    manquantes = DESIGNATIONS_AUTORISEES - set(CoproprieteUpdate.model_fields)
+    assert not manquantes, (
+        f"{sorted(manquantes)} ne sont plus acceptées : la fiche ne peut plus "
+        "désigner son contrat, et le test ci-dessus ne mesure plus rien."
     )
 
 
