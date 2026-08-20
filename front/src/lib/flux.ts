@@ -199,11 +199,46 @@ export function estNonResolu(item: FluxItem): boolean {
 	return false;
 }
 
-/** Date qui décide de l'ancienneté : la clôture prime, sinon la création. */
+/**
+ * Date qui décide de l'ancienneté d'une ligne du fil.
+ *
+ * ## 🔴 Elle lisait la NAISSANCE de l'objet, pas la date de l'annonce (#529)
+ *
+ * Signalé à l'écran le 20/08/2026 : *« le dernier commentaire semble ne pas être
+ * visible »*. Un commentaire ajouté aujourd'hui sur un ticket ouvert en mars
+ * était classé **en mars** — donc rangé dans les Archives (au-delà de trente
+ * jours), voire hors de la fenêtre de chargement.
+ *
+ * La cause : cette fonction rendait `item.cree_le`, la naissance de l'OBJET,
+ * alors que `item.date` porte celle de l'ANNONCE — ce que le commentaire de
+ * `isNew`, vingt lignes plus haut, disait déjà en toutes lettres.
+ *
+ * ⚠️ **Six producteurs sur dix calculent une `date` différente de `cree_le`**,
+ * et chacun l'a fait exprès :
+ *
+ * | Carte | `date` | `cree_le` |
+ * |---|---|---|
+ * | ticket mis à jour | l'évolution | l'ouverture du ticket |
+ * | évolution d'événement | l'évolution | la création de l'événement |
+ * | sondage clos | la clôture | la création |
+ * | petite annonce | la mise à jour | le dépôt |
+ * | prestation | la date de prestation | la saisie du devis |
+ * | actualité | la publication | la rédaction |
+ *
+ * Le serveur faisait donc le bon calcul, six fois, et l'écran le jetait.
+ *
+ * ⚠️ Ce qui n'est **pas** traité ici : un événement du calendrier reste classé
+ * sur sa date d'annonce et non sur sa date de tenue. C'est une autre question —
+ * elle demande de trancher, entité par entité, entre « quoi de neuf » et « quoi
+ * ensuite » — et elle reste suivie en **#524**.
+ */
 export function dateDeReference(item: FluxItem): number {
 	const cloture = (item.meta?.cloture_le || item.meta?.ferme_le) as string | undefined;
 	if (cloture) return new Date(cloture).getTime();
-	return new Date(item.cree_le || item.date).getTime();
+	//  `date` d'abord : c'est la date de l'ANNONCE, celle que le serveur a
+	//  calculée pour cette carte. `cree_le` n'est qu'un repli pour les cartes
+	//  qui ne portent pas de date propre.
+	return new Date(item.date || item.cree_le || 0).getTime();
 }
 
 /** Plafond SOUPLE : on avertit celui qui épingle, on ne masque jamais un

@@ -534,6 +534,15 @@ jobs:
         working-directory: front
         run: npm run lint:archives
 
+      # 🔴 Un formulaire collecte un champ, l'écran l'affiche, et le relais le
+      # JETTE en recopiant la charge utile champ par champ. Rien ne lève : le
+      # formulaire annonce l'enregistrement, le serveur enregistre un objet
+      # valide, et seul l'écran — plus tard — trahit la perte. Constaté sur le
+      # périmètre d'une évolution de ticket, signalé à l'écran (#529).
+      - name: Aucun champ perdu entre un formulaire et son relais
+        working-directory: front
+        run: npm run lint:charge-utile
+
       # 🔴 Les garde-fous du front exposent un `--selftest` … que rien ne lançait.
       # Un contrôle dont la logique n'est éprouvée nulle part peut devenir muet
       # sans que personne ne le sache : il rend « aucune faute trouvée » aussi
@@ -546,6 +555,7 @@ jobs:
           node scripts/check-evenements.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
+          node scripts/check-charge-utile.mjs --selftest
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.

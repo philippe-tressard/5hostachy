@@ -9,6 +9,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import ListeTickets from '$lib/components/ListeTickets.svelte';
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
+	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import {
@@ -156,19 +157,11 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 		expandedTickets = new Set([t.id]);
 	}
 
-	//  Reçoit l'événement `evoluer` de la carte — même contrat que la fiche détail
-	//  (`tickets/[id]`), y compris `fichiers_urls` : c'est ce qui apporte les pièces
-	//  jointes à une réaction depuis cette page.
-	type PayloadEvolution = {
-		type: string;
-		contenu?: string;
-		nouveau_statut?: string;
-		fichiers_urls?: string[];
-		email_externe?: string;
-		partager_whatsapp?: boolean;
-		envoyer_syndic?: boolean;
-		envoyer_cs?: boolean;
-	};
+	//  🔴 Ce type était RÉÉCRIT ici, et il lui manquait `perimetre_cible` — alors
+	//  que son commentaire affirmait « même contrat que la fiche détail ». Deux
+	//  contrats d'accord sur le papier et divergents dans les faits : c'est le
+	//  défaut de #415 (statuts) et #413 (champs), sur un troisième objet (#529).
+	//  Il vit désormais dans `$lib/evolutions`, avec le reste du vocabulaire.
 
 	//  ── Correction d'une entrée du fil ──────────────────────────────────────
 	//  Le crayon existait dans `RubriqueHistorique` depuis #431 et servait la
@@ -219,7 +212,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 
 	async function addEvolution(e: CustomEvent<{ ticket: Ticket; data: unknown }>) {
 		const t = e.detail.ticket;
-		const data = e.detail.data as PayloadEvolution;
+		const data = e.detail.data as ChargeUtileEvolution;
 		evolSaving = true;
 		try {
 			await ticketsApi.addEvolution(t.id, {
@@ -231,6 +224,18 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 				partager_whatsapp: data.partager_whatsapp || undefined,
 				envoyer_syndic: data.envoyer_syndic || undefined,
 				envoyer_cs: data.envoyer_cs || undefined,
+				//  🔴 MANQUAIT jusqu'au 20/08/2026, et cela se voyait à l'écran :
+				//  `CarteTicket` propose bien la section Périmètre
+				//  (`avecPerimetre`), `EvolForm` la collecte et l'émet — et cette
+				//  ligne-ci la jetait avant l'appel. Le périmètre resserré ne
+				//  parvenait donc JAMAIS au serveur depuis la liste des tickets,
+				//  alors qu'il y parvient depuis la fiche, qui relaie la charge
+				//  utile entière (`HistoriqueTicket`).
+				//
+				//  ⚠️ Le défaut ne lève rien : le formulaire dit avoir enregistré,
+				//  le serveur enregistre une évolution valide, et seul le périmètre
+				//  affiché ensuite trahit la perte. Signalé à l'écran (#529).
+				perimetre_cible: data.perimetre_cible,
 			});
 			if (data.type === 'etat') {
 				ticketList = ticketList.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut ?? x.statut } : x);
