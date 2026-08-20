@@ -232,7 +232,6 @@
 	//  réécrivant une entrée passée, où il raturerait un fait daté (le serveur
 	//  refuse d'ailleurs `perimetre_cible` sur un PATCH).
 	$: sectionPerimetre = avecPerimetre && !editMode;
-	$: sectionDiffusion = showNotifs || showEmail || avecInterne;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du

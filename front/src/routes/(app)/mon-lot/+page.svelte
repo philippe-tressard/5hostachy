@@ -394,7 +394,7 @@
 		try {
 			accesListe = await bailApi.accesBail(bail.id);
 			preselectionRecommandee();
-		} catch (e: any) {
+		} catch {
 			toast('error', 'Impossible de charger les accès');
 		} finally {
 			loadingAcces = false;
@@ -451,17 +451,6 @@
 		selectionTc = new Set(selectionTc);
 	}
 
-	function preselectionParTypeLot(typeLot: 'appartement' | 'parking') {
-		clearSelection();
-		for (const a of accesListe) {
-			if (!isSelectable(a) || a.chez_locataire) continue;
-			if (a.lot_type !== typeLot) continue;
-			if (a.type === 'vigik') selectionVigik.add(a.id);
-			else selectionTc.add(a.id);
-		}
-		selectionVigik = new Set(selectionVigik);
-		selectionTc = new Set(selectionTc);
-	}
 
 	function toggleFiltreLot(lotId: number) {
 		if (filtreLotsAcces.has(lotId)) filtreLotsAcces.delete(lotId);

@@ -36,7 +36,6 @@ import { onMount } from 'svelte';
 
 	// ── Lots ──────────────────────────────────────────────────────────────────
 	let mesLots: any[] = [];
-	let lotsLoading = true;
 
 	// ── Demandes de modif profil ───────────────────────────────────────────────
 	let demandes: any[] = [];
@@ -168,7 +167,6 @@ import { onMount } from 'svelte';
 			essayer<any[]>(authApi.batiments(), []),
 		]);
 		mesLots = lots; batiments = bats;
-		lotsLoading = false;
 
 		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
 		demandes = dem;

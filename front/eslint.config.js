@@ -127,7 +127,7 @@ export default defineConfig(
 			//  qu'elle aurait tort : elle est coupée parce qu'un ménage de 74 sites
 			//  dans 24 fichiers ne se glisse pas dans le lot qui allume l'outil — on
 			//  ne saurait plus lequel des deux a cassé quoi.
-			'no-unused-vars': 'off',
+			'no-unused-vars': ['error', { args: 'none', varsIgnorePattern: '^_' }],
 
 			// ── Trois règles inadaptées À CE PROJET, désactivées sur un fait vérifié ───
 			// Aucune n'est éteinte pour le confort ni pour faire baisser un compteur :

@@ -18,10 +18,8 @@
 
 	let reportPrestSynth: any = null;
 	let reportPrestSynthLoading = false;
-	let reportPrestSynthId: number | null = null;
 
 	async function loadPrestSynthese(prestId: number) {
-		reportPrestSynthId = prestId;
 		reportPrestSynthLoading = true;
 		try {
 			reportPrestSynth = await prestApi.synthese(prestId);
@@ -72,7 +70,7 @@
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
 			<h3 style="margin:0">&#x1F4C4; Fiche — {reportPrestSynth.nom}</h3>
-			<button class="btn btn-sm btn-outline" on:click={() => { reportPrestSynth = null; reportPrestSynthId = null; }}>✕ Fermer</button>
+			<button class="btn btn-sm btn-outline" on:click={() => (reportPrestSynth = null)}>✕ Fermer</button>
 		</div>
 		<div class="report-grid-2" style="margin-bottom:1rem">
 			<div>

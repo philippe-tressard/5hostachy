@@ -7,23 +7,17 @@
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 import { onMount } from 'svelte';
 import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
 	import { calendrier as calApi, publications as pubsApi, prestataires as prestApi, ApiError, type Publication } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
-	import RichEditor from '$lib/components/RichEditor.svelte';
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
-	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import { fmtDatetimeShort, fmtDateShort, fmtDateLong, fmtMonthYear } from '$lib/date';
+	import { fmtDatetimeShort, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban, devisStatutToKanban } from '$lib/kanban';
-	import { fmtMontant, perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
+	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisStatutToKanban } from '$lib/kanban';
+	import { perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
@@ -315,7 +309,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		if (!form.titre || !form.debut) { toast('error', 'Titre et date de début obligatoires'); return; }
 		submitting = true;
 		const perimetre = formPerimetreCible.join(',');
-		const { debut_heure, frequence_type: ft, frequence_valeur: fv, ...formData } = form;
+		//  `debut_heure` est écarté DÉLIBÉRÉMENT de `formData` : il est recomposé
+		//  dans `debut` ci-dessous. Le préfixe `_` dit que l'inemploi est voulu.
+		const { debut_heure: _debut_heure, frequence_type: ft, frequence_valeur: fv, ...formData } = form;
 		const payload = {
 			...formData,
 			perimetre,
@@ -437,15 +433,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			&& !e.archivee && !evenementArchive(e, archivageDelaiMs));
 	})();
 	let showPeriodicSection = false;
-	let openEvIds = new Set<number>();
-	function toggleEvRow(id: number) {
-		if (openEvIds.has(id)) openEvIds.delete(id); else openEvIds.add(id);
-		openEvIds = openEvIds;
-	}
-	$: archivedMaintenances = evenements
-		.filter((e: any) => e.type === 'maintenance_recurrente' && e.archivee)
-		.sort((a: any, b: any) => new Date(b.debut).getTime() - new Date(a.debut).getTime());
-	let showArchivedMaintenances = false;
 
 	// ── Kanban ────────────────────────────────────────────────
 	//  Le fil vit dans `HistoriqueEvenement` ; la page garde le geste et le rechargement.
@@ -563,10 +550,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		if (estPerimetreParDefaut(p)) return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
 		return p.split(',').map(s => s.trim()).filter(Boolean)
 			.map(s => ({ label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s), color: couleurPerimetre(s) }));
-	}
-
-	function kanbanYear(ev: any): string {
-		return String(new Date(ev.debut).getFullYear());
 	}
 
 	// Couleur dégradée par année : teinte HSL qui tourne de 52° par an à partir de 2024

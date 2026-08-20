@@ -142,7 +142,7 @@
 				api.get<any[]>('/copropriete/lots'),
 			]);
 			await reload();
-		} catch (e) {
+		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;

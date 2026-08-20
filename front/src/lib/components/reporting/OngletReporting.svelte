@@ -105,7 +105,7 @@
 			await tick();
 			window.addEventListener('afterprint', restaurer);
 			window.print();
-		} catch (e) {
+		} catch {
 			toast('error', "Impression impossible — l'affichage a été rétabli.");
 		} finally {
 			// `afterprint` n'est pas garanti partout : filet de sécurité. Volontairement

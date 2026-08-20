@@ -450,7 +450,6 @@ import { onMount } from 'svelte';
 	{/each}
 {:else}
 	{#each Object.entries(filteredGrouped) as [categorie, catItems]}
-        {@const compact = catItems.length > 7}
 		<div style="display:flex;justify-content:space-between;align-items:center">
 			{#if canEdit && editingCategory === categorie}
 				<div class="categorie-edit">

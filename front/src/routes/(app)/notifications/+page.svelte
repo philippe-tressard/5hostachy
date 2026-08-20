@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 import { onMount } from 'svelte';
-	import { notifications as notifApi, ApiError } from '$lib/api';
+	import { notifications as notifApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml, safeRichContent } from '$lib/sanitize';
@@ -69,10 +69,6 @@ import { onMount } from 'svelte';
 		return { today, older };
 	}
 
-	function urgenceClass(n: any) {
-		if (n.urgente) return 'badge badge-red';
-		return '';
-	}
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
