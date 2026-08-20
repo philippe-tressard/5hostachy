@@ -81,13 +81,21 @@ for _sous_router in (
     router.include_router(_sous_router)
 
 #  Surface publique conservée pour les importateurs externes (cf. docstring).
-from .exploitation import (  # noqa: E402  (après le montage du router, pour la lisibilité)
+#
+#  ⚠️ Les seuils et les fonctions de décision ne viennent plus du routeur mais de
+#  `app/utils/sante_taches.py` (#542). La surface publique, elle, ne bouge pas :
+#  `health_monitor` et deux tests importent toujours `from app.routers.admin`.
+#  Une extraction qui casse ses importateurs n'est pas une extraction, c'est un
+#  déménagement à leurs frais.
+from app.utils.sante_taches import (  # noqa: E402
     _PERIODICITE_ATTENDUE_H,
     _PERIODICITE_SAUVEGARDE_H,
     _PERIODICITE_TELEMETRIE_H,
-    _RAPPORTS_CONSERVES,
     _TOLERANCE_H,
     _etat_tache_a_table_propre,
+)
+from .exploitation import (  # noqa: E402  (après le montage du router, pour la lisibilité)
+    _RAPPORTS_CONSERVES,
     _purger_anciens_rapports,
 )
 #  Le canal des scripts vit dans son propre module depuis le 11/08/2026 ;
