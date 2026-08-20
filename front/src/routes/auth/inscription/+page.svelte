@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';

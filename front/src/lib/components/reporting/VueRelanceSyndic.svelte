@@ -92,7 +92,6 @@
 	</div>
 {:else}
 	{@const eligibles = relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
-	{@const enAttente = relanceList.filter(t => daysSince(t.mis_a_jour_le) < relanceDelaiJours)}
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<h3>🔔 Tickets syndic — suivi des relances</h3>
 		<p class="report-intro">

@@ -8,25 +8,16 @@
 	import { onMount } from 'svelte';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, annoncesHall as annoncesHallApi, publications as pubsApi, fichiersApi, ApiError, type Ticket, type TicketEvolution, type AnnonceHall, type Publication } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml, safeDescription } from '$lib/sanitize';
-	import RichEditor from '$lib/components/RichEditor.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
-	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
-	import { fmtDate, fmtDatetime, fmtDateShort } from '$lib/date';
+	import { fmtDate, fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
-	import { evolutionIcone } from '$lib/evolutions';
-	import { stripHtml, perimetreDefautListe } from '$lib/utils';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
-	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
 	import ApercuTicket from '$lib/components/ApercuTicket.svelte';
-	import Vignette from '$lib/components/Vignette.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { fichiersDepuisUrls, MAX_FICHIERS } from '$lib/fichiers';
 	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketClos } from '$lib/tickets';
 
@@ -207,7 +198,6 @@
 	// -- Annuaire -----------------------------------------------------------
 	/** Non vide = une donnée de référence manque : l'écran est faux, pas vide. */
 	let erreurReference = '';
-	let batimentsList: { id: number; numero: string }[] = [];
 	let allUsers: SimpleUser[] = [];
 	let allLots: LotRow[] = [];
 	let annuaireLoading = false;
@@ -345,7 +335,6 @@
 			erreurReference = messagePartiel(eBat, eUsers, eLots, eImports);
 			comptesEnAttente = comptes;
 			commandesEnAttente = commandes;
-			batimentsList = batList;
 			batimentsMap = Object.fromEntries((batList as any[]).map((b) => [b.id, `Bât. ${b.numero}`]));
 			allUsers = (users as any[]).map((u) => ({
 				id: u.id, prenom: u.prenom, nom: u.nom,
@@ -353,7 +342,7 @@
 			}));
 			allLots = lotsData as LotRow[];
 			lotImports = importsData as any[];
-		} catch (e: any) {
+		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;

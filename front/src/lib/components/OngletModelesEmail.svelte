@@ -46,7 +46,6 @@
   let emailActif = true;
   let emailIntention = '';
   let emailApercu = false;
-  let emailReset = false;
 
   //  L’INTENTION — ce que le message attend de son destinataire, rendu en
   //  bandeau au-dessus du corps par le gabarit commun. Les valeurs sont celles

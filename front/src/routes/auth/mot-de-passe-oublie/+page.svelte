@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { auth as authApi, ApiError } from '$lib/api';
-	import { toast } from '$lib/components/Toast.svelte';
+	import { auth as authApi } from '$lib/api';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 
 	const _siteNom = getSiteNom();
@@ -15,7 +14,7 @@
 		try {
 			await authApi.requestPasswordReset({ email });
 			done = true;
-		} catch (e) {
+		} catch {
 			// Ne pas révéler si l'e-mail existe ou non (sécurité)
 			done = true;
 		} finally {

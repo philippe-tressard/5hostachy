@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
-	import { isCS, isAdmin } from '$lib/stores/auth';
+	import { isAdmin } from '$lib/stores/auth';
 	import { tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';

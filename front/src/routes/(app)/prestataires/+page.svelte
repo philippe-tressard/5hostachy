@@ -373,12 +373,6 @@
 		editDevisId = null;
 	}
 
-	function openAddDevis(prestId: number) {
-		resetDevisForm();
-		devisForm.prestataire_id = String(prestId);
-		devisFormPrestId = prestId;
-		editDevisId = null;
-	}
 
 	function closeDevisForm() {
 		devisFormPrestId = null;
@@ -1937,7 +1931,7 @@
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-outline" on:click={() => { showNotationForm = null; }}>Annuler</button>
-				<button class="btn btn-primary" disabled={notationNote === 0} on:click={saveNotation}>💾 Enregistrer</button>
+				<button class="btn btn-primary" disabled={notationNote === 0 || notationSaving} on:click={saveNotation}>{notationSaving ? '…' : 'Enregistrer'}</button>
 			</div>
 		</div>
 	</div>

@@ -3,14 +3,13 @@
 	import { delaiArchivageMs } from '$lib/archivage';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
-	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
-	import { flux, lots, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
+	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
+	import { flux, lots, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxResponse } from '$lib/api';
 	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
-	import { perimetreLabel, concerneTous, batimentsCibles, estPerimetreParDefaut } from '$lib/utils';
+	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
 	import Icon from '$lib/components/Icon.svelte';
-	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FluxCard from '$lib/components/FluxCard.svelte';
 	import RaccourcisRapides from '$lib/components/RaccourcisRapides.svelte';
@@ -54,28 +53,12 @@
 		['propriétaire', 'conseil_syndical', 'admin'].includes(r)
 	);
 	$: isLocataire = $currentUser?.statut === 'locataire';
-	$: userBatimentId = $currentUser?.batiment_id ?? null;
-	$: isSyndicUser = $currentUser?.statut === 'syndic' || ($currentUser?.roles ?? []).includes('syndic');
 
 	//  Ce filtre réimplémentait la règle du serveur : un motif `bat:(\d+)` analysé à
 	//  la main et la liste des périmètres transverses écrite en dur — troisième
 	//  copie de la même énumération. Il s'appuie désormais sur l'arborescence, comme
 	//  `api/app/utils/visibility.py`. Ce n'est qu'un filtre d'AFFICHAGE : le serveur
 	//  a déjà écarté ce que l'utilisateur n'a pas le droit de voir.
-	function isInUserPerimeter(perimetres: string[] | null | undefined): boolean {
-		if ($isAdmin || $isCS || isSyndicUser) return true;
-		const perims = perimetres ?? [];
-		if (perims.length === 0) return true;
-		if (concerneTous(perims)) return true;
-		if (userBatimentId == null) return true;
-		return batimentsCibles(perims).includes(userBatimentId);
-	}
-	function parseItemPerimetres(item: FluxItem): string[] {
-		const m = item.meta;
-		if (m.perimetre_cible && Array.isArray(m.perimetre_cible)) return m.perimetre_cible as string[];
-		if (typeof m.perimetre === 'string' && m.perimetre) return (m.perimetre as string).split(',').map(s => s.trim());
-		return [];
-	}
 
 	// ── Salutation contextuelle ────────────────────────────────────────────
 	$: greeting = (() => {

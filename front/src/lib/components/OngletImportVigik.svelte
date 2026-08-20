@@ -129,7 +129,7 @@
 				api.get<any[]>('/copropriete/lots'),
 			]);
 			await reload();
-		} catch (e) {
+		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;
@@ -150,11 +150,6 @@
 		ignore: 'Ignoré',
 	};
 
-	function userName(id: number | null) {
-		if (!id) return '—';
-		const u = utilisateurs.find(x => x.id === id);
-		return u ? `${u.prenom} ${u.nom}` : `#${id}`;
-	}
 </script>
 
 <svelte:head><title>Import Vigik — {_siteNom}</title></svelte:head>

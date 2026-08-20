@@ -45,7 +45,7 @@ import { onMount } from 'svelte';
 			[vigiks, telecommandes, commandes, mesLots] = results;
 			if (isLocataire) accesRecus = results[4] ?? [];
 			if (isBailleur) mesBaux = results[4] ?? [];
-		} catch (e) {
+		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;
@@ -84,7 +84,7 @@ import { onMount } from 'svelte';
 				telecommandes = telecommandes.map(t => t.id === id ? { ...t, statut: 'perdu' } : t);
 			}
 			toast('success', 'Signalement enregistré');
-		} catch (e) {
+		} catch {
 			toast('error', 'Erreur');
 		}
 	}

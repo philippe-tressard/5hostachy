@@ -10,7 +10,6 @@
 	let stats: any = null;
 	let utilisateurs: any[] = [];
 	let lots: any[] = [];
-	let batiments: any[] = [];
 	let loading = true;
 	let filtre = '';
 	let tri = 'copro'; // copro | batiment | numero
@@ -178,13 +177,15 @@
 	onMount(async () => {
 		loading = true;
 		try {
-			[utilisateurs, lots, batiments] = await Promise.all([
+			//  ⚠️ `/copropriete/batiments` était appelé ici et son résultat JETÉ :
+			//  `batiments` n'était lu nulle part. Une requête à chaque ouverture de
+			//  l'onglet, pour rien — invisible, puisqu'elle réussissait.
+			[utilisateurs, lots] = await Promise.all([
 				api.get<any[]>('/admin/utilisateurs'),
 				lotsApi.tous(),
-				api.get<any[]>('/copropriete/batiments'),
 			]);
 			await reload();
-		} catch (e) {
+		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;

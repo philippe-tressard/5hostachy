@@ -3,14 +3,10 @@
 import { IDEE_BADGE } from '$lib/idees';
 import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
 import OngletAnnonces from '$lib/components/OngletAnnonces.svelte';
-import Reponses from '$lib/components/Reponses.svelte';
-import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { api, sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
+import { sondages as sondagesApi, idees as ideesApi, annonces as annoncesApi, signalements as signalementsApi, ApiError } from '$lib/api';
 import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
-import RichEditor from '$lib/components/RichEditor.svelte';
-import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 import { toast } from '$lib/components/Toast.svelte';
 import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 import { safeHtml } from '$lib/sanitize';

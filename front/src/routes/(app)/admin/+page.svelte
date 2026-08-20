@@ -2,7 +2,6 @@
 import { onMount } from 'svelte';
 import { get } from 'svelte/store';
 import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
-import TopPages from '$lib/components/TopPages.svelte';
 import { api, config as configApi } from '$lib/api';
 import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -23,7 +22,6 @@ import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
 import OngletModelesEmail from '$lib/components/OngletModelesEmail.svelte';
-import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 import { safeHtml } from '$lib/sanitize';
 import { fmtDatetimeShort as fmt } from '$lib/date';
 import { trackTabView } from '$lib/telemetry';
@@ -74,28 +72,6 @@ comptesLoading = false;
 }
 }
 
-async function validerCompte(id: number) {
-try {
-const res = await api.post<any>(`/admin/comptes/${id}/traiter`, { action: 'valider' });
-const lots = res?.auto_match?.lots_resolus ?? 0;
-const lotsMatches = res?.auto_match?.lots ?? 0;
-if (lots > 0) {
-toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
-} else if (lotsMatches > 0) {
-toast('success', `Compte activé — ${lotsMatches} lot(s) trouvé(s) dans l'import (en attente de résolution).`);
-} else {
-const statut = comptes.find(c => c.user?.id === id)?.user?.statut ?? '';
-if (statut.startsWith('copropriétaire')) {
-toast('warning', `Compte activé — ⚠️ Aucun lot trouvé dans l'import pour ce copropriétaire.`);
-} else {
-toast('success', 'Compte activé.');
-}
-}
-comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== id);
-} catch (e: any) {
-toast('error', e.message ?? 'Erreur');
-}
-}
 
 async function refuserCompte(id: number) {
 try {
@@ -438,11 +414,6 @@ let demandesProfilLoading = true;
 let refusDemande: Record<number, string> = {};
 let refusDemandeOpen: Record<number, boolean> = {};
 
-const statutDemandeLabel: Record<string, string> = {
-	en_attente: 'En attente',
-	approuvee: 'Approvée',
-	rejetee: 'Rejetée',
-};
 
 const statutLabelsAdmin: Record<string, string> = {
 	'copropriétaire_résident': 'Copro. résident',

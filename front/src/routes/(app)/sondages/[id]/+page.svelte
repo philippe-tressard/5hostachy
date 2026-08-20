@@ -151,7 +151,6 @@
 	}
 
 	$: peutVoter = sondage && !sondage.cloture && sondage.mon_vote === null;
-	$: aVote = sondage?.mon_vote !== null && sondage?.mon_vote !== undefined;
 	//  Décision prise par l'API, pas recomposée ici. Cette ligne valait
 	//  `resultats_publics || cloture || aVote` — et cinquante lignes plus bas un
 	//  second `&& sondage.resultats_publics` écrasait le tout, rendant les deux
