@@ -1183,18 +1183,6 @@
 
 
 	/* ── Bâtiments / lot counts ─────────────────────────────────── */
-	.batiment-row {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		padding: .35rem 0;
-		border-bottom: 1px solid var(--color-border);
-		font-size: .875rem;
-	}
-	.batiment-row:last-child { border-bottom: none; }
-	.total-row { padding-top: .6rem; }
-	.lot-counts { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-	.lot-counts span { color: var(--color-text-muted); font-size: .85rem; }
 
 	/* ── Documents ──────────────────────────────────────────────── */
 	/*  🔴 `.doc-list`, `.doc-row`, `.doc-info`, `.doc-titre` et `.doc-actions`

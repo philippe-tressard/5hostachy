@@ -545,6 +545,23 @@ jobs:
         working-directory: front
         run: npm run lint:modificateurs
 
+      # L'AUTRE SENS de la relation : un sélecteur DÉFINI est-il EMPLOYÉ ?
+      # `lint:classes-nues` demande l'inverse. Une relation a deux sens de
+      # rupture, et un contrôle qui n'en garde qu'un laisse passer l'autre.
+      #
+      # 🔴 `svelte-check` le disait déjà — pour 33 sélecteurs dans 9 fichiers, à
+      # chaque exécution, depuis des semaines. Noyés parmi 95 avertissements que
+      # le job ne regarde pas (`--threshold error`), et à raison : les rendre
+      # bloquants d'un coup rendrait le job rouge en permanence, donc désarmé.
+      #
+      # Le relevé a donc été ramené à ZÉRO d'abord, et ce contrôle rend cette
+      # famille-là bloquante. Les autres restent des avertissements tant qu'on ne
+      # les a pas soldées — c'est la seule façon d'en faire des contrôles plutôt
+      # que du bruit (#557, et #561 pour les 45 défauts d'accessibilité).
+      - name: Aucun sélecteur CSS orphelin
+        working-directory: front
+        run: npm run lint:css-orphelin
+
       # Un événement Svelte non écouté n'est pas une erreur : c'est un silence.
       # `evol_annuler` était dispatché, transféré, et traité par personne — le
       # bouton Annuler ne faisait rien, neuf jours durant (#505). Le relevé qui a

@@ -427,13 +427,4 @@
 	.owner-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
 
 	/* Modal */
-	.modal-overlay {
-		position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45); z-index: 50;
-		display: flex; align-items: center; justify-content: center; padding: 1rem;
-	}
-	.modal-box { max-width: 30rem; width: 100%; padding: 1.5rem; }
-	.modal-box input, .modal-box textarea {
-		padding: .45rem .6rem; border: 1px solid var(--color-border); border-radius: var(--radius);
-		font-size: .9rem; background: var(--color-bg); width: 100%;
-	}
 </style>

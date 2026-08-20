@@ -572,7 +572,6 @@ import { onMount } from 'svelte';
 	.form-grid { display: flex; flex-direction: column; gap: .5rem; }
 	/*  Ne sert plus qu'au renommage de catégorie EN LIGNE. Fond explicite : son absence rendait les champs blancs (#413). */
 	.input-field { padding: .45rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; font-family: inherit; width: 100%; box-sizing: border-box; resize: vertical; background: var(--color-bg); color: var(--color-text); }
-	.req { color: var(--color-danger); }
 	.btn-outline { background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .4rem .9rem; cursor: pointer; font-size: .875rem; }
 	.reorder-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .75rem 1rem; margin-bottom: .5rem; background: var(--color-bg-subtle); border-radius: var(--radius); border: 1px dashed var(--color-border); }
 	.reorder-item { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; cursor: grab; user-select: none; }

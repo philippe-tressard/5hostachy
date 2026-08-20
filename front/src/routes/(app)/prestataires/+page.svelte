@@ -1892,8 +1892,6 @@
 	.contrat-infos { text-align: right; font-size: .82rem; min-width: 100px; flex-shrink: 0; }
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }
 
-	.contrat-form-inline { margin-top: .75rem; padding: .85rem 1rem; background: var(--color-bg-secondary, #f8f9fa); border-radius: var(--radius); border: 1px solid var(--color-border); }
-	.add-contrat-btn { margin-top: .6rem; }
 
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
@@ -1903,7 +1901,6 @@
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 
-	.muted-sm { font-size: .85rem; color: var(--color-text-muted); padding: .4rem 0; }
 	.danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); margin-bottom: .5rem; }
 	.rich-content :global(p) { margin: 0 0 .5em; }
@@ -1929,7 +1926,6 @@
 	}
 
 	/* ── Devis kanban ───────────── */
-	.devis-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; flex-wrap: wrap; }
 	.kanban-count-total { font-size: .8rem; color: var(--color-text-muted); }
 	.devis-kanban { display: flex; gap: .6rem; align-items: flex-start; overflow-x: auto; padding-bottom: .5rem; margin-bottom: 1.5rem; }
 	.kanban-col { min-width: 230px; flex: 1; border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
