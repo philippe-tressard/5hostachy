@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.59 · Août 2026</span>
+    <span class="topbar-badge">Version 3.60 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1777,7 +1777,13 @@
           <span class="callout-icon">ℹ️</span>
           <p>Dans <strong>Admin → Paramétrage site</strong>, l'administrateur peut activer l'option <strong>« Notifier si un bug (Tickets) »</strong>. Cette option envoie un e-mail au contact administrateur du site uniquement lorsqu'un ticket de catégorie <strong>Bug</strong> est créé. Les tickets <strong>Urgence</strong> ne déclenchent pas cet e-mail.</p>
           <p style="margin-top:.5rem"><strong>L'assurance de la copropriété est désormais un contrat.</strong> Elle se saisissait dans <em>Fiche copropriété</em> sous forme de trois champs de texte — compagnie, n° de contrat, échéance — qui ne renvoyaient à rien&nbsp;: le même assureur pouvait exister deux fois, une fois en texte et une fois comme prestataire, sans que rien ne dise que c'était le même.</p>
-          <p style="margin-top:.5rem">Depuis la version&nbsp;3.2.0, elle vit dans <strong>Prestataires → Contrats</strong>, comme les autres contrats — avec son prestataire, son échéance (qui remonte donc dans les relances) et la possibilité d'y joindre l'attestation, le document qu'on cherche le jour où on en a besoin. La <em>Fiche copropriété</em> continue de l'afficher, en lecture, et renvoie vers l'écran des contrats pour la modifier.</p>
+          <p style="margin-top:.5rem">Depuis la version&nbsp;3.2.0, elle vit dans <strong>Prestataires → Contrats</strong>, comme les autres contrats — avec son prestataire, son échéance (qui remonte donc dans les relances) et la possibilité d'y joindre l'attestation, le document qu'on cherche le jour où on en a besoin.</p>
+          <p style="margin-top:.5rem">Depuis la version&nbsp;3.3.0, la <em>Fiche copropriété</em> ne se contente plus de l'afficher&nbsp;: elle <strong>désigne</strong> le contrat qui fait foi, dans une liste déroulante. Jusque-là, la fiche montrait automatiquement le contrat d'assurance le plus récent — une règle juste, mais que rien à l'écran n'énonçait. Une copropriété qui change d'assureur garde son ancien contrat en base&nbsp;; c'est maintenant vous qui dites lequel des deux est le bon.</p>
+          <p style="margin-top:.5rem"><strong>Une section <em>Syndic</em> apparaît, sur le même principe.</strong> Le cabinet devient un prestataire et son mandat un contrat&nbsp;: la fiche affiche alors son nom, son téléphone, son courriel, le numéro et les dates du mandat, et le document signé. L'échéance du mandat remonte, comme les autres, dans les relances — de quoi anticiper son renouvellement en assemblée générale.</p>
+          <div class="callout tip" style="margin-top:.6rem">
+            <span class="callout-icon">💡</span>
+            <p><strong>Les <em>membres</em> du syndic, eux, ne bougent pas.</strong> Ils restent dans <strong>Espace CS &rsaquo; Annuaire</strong>, et c'est toujours de là que partent les e-mails au cabinet. La fiche affiche simplement l'interlocuteur principal, pour éviter d'avoir à changer d'écran quand on cherche à qui s'adresser.</p>
+          </div>
           <p style="margin-top:.5rem">Dans le même écran, l'option <strong>« Notifier si un nouvel utilisateur est créé »</strong> permet d'envoyer un e-mail au gestionnaire du site dès qu'un nouveau compte est créé et placé en attente de validation.</p>
           <p style="margin-top:.5rem">Toujours dans <strong>Admin → Paramétrage site</strong>, le <strong>Délai d'archivage automatique</strong> (30&nbsp;jours par défaut) est désormais <strong>unique et vaut pour tout le site</strong>. Un contenu terminé quitte les listes actives et rejoint la section <strong>&#x1F4C1;&nbsp;Archives</strong> de sa page après ce délai&nbsp;:</p>
           <ul style="font-size:.9rem; margin:.35rem 0 0 1.1rem; line-height:1.7">
@@ -2275,7 +2281,7 @@
             <span style="font-size:1.3rem">&#x1F4CB;</span>
             <div>
               <strong>Informations générales</strong>
-              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Nom, adresse, année de construction, numéro d'immatriculation, assurance — et les <strong>deux décomptes de lots</strong> de la fiche du registre national : le total (caves et parkings compris) et, séparément, les seuls lots d'habitation, commerces et bureaux. Ils ne se déduisent pas l'un de l'autre et sont désormais affichés sur la page Résidence.</p>
+              <p style="font-size:.85rem; color:var(--muted); margin-top:2px">Nom, adresse, année de construction, numéro d'immatriculation, <strong>assurance</strong> et <strong>syndic</strong> (chacun rattaché à son contrat, choisi dans une liste) — et les <strong>deux décomptes de lots</strong> de la fiche du registre national : le total (caves et parkings compris) et, séparément, les seuls lots d'habitation, commerces et bureaux. Ils ne se déduisent pas l'un de l'autre et sont désormais affichés sur la page Résidence.</p>
             </div>
           </div>
           <div style="display:flex; gap:12px; align-items:flex-start; padding:.8rem; background:#f0fdfa; border-radius:8px">
@@ -2985,7 +2991,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.59</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.60</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

@@ -64,6 +64,13 @@ class TypeEquipement(str, Enum):
     #  que ce lot supprime ; renommer le champ toucherait quinze appels pour un
     #  gain cosmétique. On écrit la tension plutôt que de la contourner.
     assurance = "assurance"
+    #: Le MANDAT du syndic. Ce n'est pas un équipement, et le nom de
+    #: l'énumération est donc un peu court — mais elle porte déjà `assurance`,
+    #: qui n'en est pas un non plus. Ce qu'elle classe réellement, c'est
+    #: « de quoi parle ce contrat », et le mandat de syndic en relève.
+    #: En ajouter une seconde pour deux valeurs aurait donné deux
+    #: nomenclatures à tenir d'accord.
+    syndic = "syndic"
     autre = "autre"
 
 
@@ -116,7 +123,13 @@ class ContratEntretien(SQLModel, table=True):
     #  fonctionne aujourd'hui — SQLModel n'évalue pas cette annotation-là —
     #  mais elle dépend d'un détail d'implémentation et d'un ordre d'import.
     #  La citer coûte deux guillemets et supprime la question.
-    copropriete: Optional["Copropriete"] = Relationship(back_populates="contrats_entretien")
+    #  Le pendant du `foreign_keys` posé côté `Copropriete` : les deux bouts
+    #  d'une relation doivent désigner le MÊME chemin, sinon SQLAlchemy en
+    #  déduit deux relations qui se contredisent.
+    copropriete: Optional["Copropriete"] = Relationship(
+        back_populates="contrats_entretien",
+        sa_relationship_kwargs={"foreign_keys": "[ContratEntretien.copropriete_id]"},
+    )
     prestataire: Optional[Prestataire] = Relationship(back_populates="contrats")
 
 

@@ -9,7 +9,8 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
 from app.models.core import (
-    Batiment, ContratEntretien, Copropriete, Lot, Prestataire, TypeEquipement, Utilisateur,
+    Batiment, ContratEntretien, Copropriete, Lot, MembreSyndic, Prestataire,
+    TypeEquipement, Utilisateur,
 )
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
@@ -39,6 +40,12 @@ class CoproprieteUpdate(BaseModel):
     #  contrat d'entrée, pas y rester par prudence.
     #
     #  L'assurance se modifie désormais là où vivent les contrats.
+    #
+    #  ✅ Ce que la fiche accepte à nouveau, et qui n'est PAS un retour arrière :
+    #  la DÉSIGNATION du contrat. On n'y saisit pas un assureur, on y dit lequel
+    #  des contrats existants fait foi. La donnée reste unique, côté contrat.
+    assurance_contrat_id: Optional[int] = None
+    syndic_contrat_id: Optional[int] = None
 
 
 class CoproprieteRead(BaseModel):
@@ -59,6 +66,32 @@ class CoproprieteRead(BaseModel):
     assurance_compagnie: Optional[str] = None
     assurance_numero_police: Optional[str] = None
     assurance_echeance: Optional[date] = None
+    #: Enrichissement demandé le 20/08/2026 : la fiche montrait trois champs sur
+    #: une notion qui en porte dix. Ce qu'on lit ici vient du prestataire ET du
+    #: contrat, jamais d'une saisie propre à la fiche.
+    assurance_contrat_id: Optional[int] = None
+    assurance_telephone: Optional[str] = None
+    assurance_email: Optional[str] = None
+    assurance_debut: Optional[date] = None
+    assurance_document_id: Optional[int] = None
+
+    #: 🔴 Le SYNDIC, même moule que l'assurance — un contrat de référence.
+    #:
+    #: ⚠️ `syndic_interlocuteur` vient de `MembreSyndic`, PAS du prestataire :
+    #: le cabinet est l'organisation, les personnes restent dans l'annuaire, et
+    #: c'est de là que partent les courriels. Deux listes des mêmes gens, c'est
+    #: la faute de #490 transposée au circuit des notifications.
+    syndic_contrat_id: Optional[int] = None
+    syndic_cabinet: Optional[str] = None
+    syndic_telephone: Optional[str] = None
+    syndic_email: Optional[str] = None
+    syndic_numero_mandat: Optional[str] = None
+    syndic_debut: Optional[date] = None
+    syndic_echeance: Optional[date] = None
+    syndic_document_id: Optional[int] = None
+    syndic_interlocuteur: Optional[str] = None
+    syndic_interlocuteur_email: Optional[str] = None
+
     photo_url: Optional[str] = None
     nb_parkings_communs: int = 0
 
@@ -95,39 +128,132 @@ class LotRead(BaseModel):
 
 
 
-def assurance_du_contrat(session: Session, copro: Copropriete) -> dict:
-    """Ce que la fiche affiche comme « assurance » — lu sur le CONTRAT (#490).
+#: Les deux sections de la fiche adossées à un contrat, et ce qui les distingue.
+#:
+#: 🔴 UNE SEULE FONCTION LES SERT. Écrire `assurance_du_contrat` puis
+#: `syndic_du_contrat` aurait donné deux copies du même geste — lire un contrat,
+#: lire son prestataire, composer un préfixe — libres de diverger au premier
+#: enrichissement demandé d'un seul côté (`standards/02` §2).
+#:
+#: `champ_id` est la colonne qui DÉSIGNE le contrat ; `type_equipement` sert
+#: uniquement au repli et à la liste proposée à l'écran.
+SECTIONS_CONTRAT = {
+    "assurance": ("assurance_contrat_id", TypeEquipement.assurance),
+    "syndic": ("syndic_contrat_id", TypeEquipement.syndic),
+}
 
-    Les trois colonnes `assurance_*` de `copropriete` ne sont plus la source :
-    elles subsistent pour qu'un retour arrière reste possible, mais plus rien ne
-    les lit. La vérité est le contrat de catégorie « assurance » rattaché à cette
-    copropriété, avec son prestataire.
 
-    ⚠️ **Le contrat le plus récent gagne**, et c'est délibéré : une copropriété
-    change d'assureur, et l'ancien contrat reste en base — c'est même tout
-    l'intérêt d'en avoir fait un contrat. Rendre le premier trouvé afficherait
-    l'assureur de l'an dernier sans que rien ne le dise.
+def contrat_de_reference(session: Session, copro: Copropriete, section: str):
+    """Le contrat que la fiche DÉSIGNE pour cette section, ou `None`.
 
-    Rend un dictionnaire vide si aucun contrat n'existe : la fiche masque alors
-    la ligne, exactement comme lorsque le champ texte était vide.
+    ## Le choix a remplacé la déduction (20/08/2026)
+
+    L'assurance venait d'une règle implicite — *« le contrat actif le plus récent
+    gagne »* (#490). La règle était juste : une copropriété change d'assureur et
+    l'ancien contrat reste en base, c'est tout l'intérêt d'en avoir fait un
+    contrat. Mais **rien à l'écran ne disait laquelle des lignes faisait foi**,
+    et la fiche dépendait d'une comparaison de dates.
+
+    ⚠️ **Le repli sur l'ancienne règle est conservé**, et il n'est pas de la
+    prudence : la migration 0157 renseigne `assurance_contrat_id` sur les bases
+    existantes, mais une copropriété créée après coup, ou un contrat saisi avant
+    qu'on ait pensé à le désigner, laisserait la fiche VIDE alors que le contrat
+    existe. Un écran qui dit « aucun contrat » devant un contrat est pire qu'une
+    règle implicite.
+
+    Le repli ne s'applique que si aucun contrat n'est désigné — un contrat
+    désigné puis supprimé rend `None`, et l'écran le dit.
     """
-    contrat = session.exec(
+    champ_id, type_equipement = SECTIONS_CONTRAT[section]
+    contrat_id = getattr(copro, champ_id, None)
+    if contrat_id:
+        return session.get(ContratEntretien, contrat_id)
+    return session.exec(
         select(ContratEntretien)
         .where(
             ContratEntretien.copropriete_id == copro.id,
-            ContratEntretien.type_equipement == TypeEquipement.assurance,
+            ContratEntretien.type_equipement == type_equipement,
             ContratEntretien.actif == True,  # noqa: E712
         )
         .order_by(ContratEntretien.date_debut.desc(), ContratEntretien.id.desc())
     ).first()
+
+
+def assurance_du_contrat(session: Session, copro: Copropriete) -> dict:
+    """Ce que la fiche affiche comme « assurance » — lu sur le CONTRAT (#490).
+
+    Les colonnes `assurance_*` de `copropriete` ne sont plus la source : elles
+    subsistent pour qu'un retour arrière reste possible, mais plus rien ne les
+    lit.
+
+    Rend un dictionnaire vide si aucun contrat n'est trouvé : la fiche masque
+    alors la section, exactement comme lorsque le champ texte était vide.
+    """
+    contrat = contrat_de_reference(session, copro, "assurance")
     if not contrat:
         return {}
     presta = session.get(Prestataire, contrat.prestataire_id)
     return {
+        "assurance_contrat_id": contrat.id,
         "assurance_compagnie": presta.nom if presta else None,
+        "assurance_telephone": presta.telephone if presta else None,
+        "assurance_email": presta.email if presta else None,
         "assurance_numero_police": contrat.numero_contrat,
+        "assurance_debut": contrat.date_debut,
         "assurance_echeance": contrat.prochaine_visite,
+        "assurance_document_id": contrat.document_id,
     }
+
+
+def syndic_du_contrat(session: Session, copro: Copropriete) -> dict:
+    """Le cabinet de syndic, son mandat, et son interlocuteur principal.
+
+    ## Deux sources, et c'est voulu
+
+    Le **cabinet** vient du prestataire désigné par le contrat de mandat ;
+    l'**interlocuteur** vient de `MembreSyndic`, la table de l'annuaire.
+
+    ⚠️ Ce n'est pas une inconséquence : `MembreSyndic` est lu par **dix
+    modules**, dont `utils/destinataires.py`, `tickets/commun.py` et les trois
+    routeurs de courriels. C'est de là que partent les messages au cabinet.
+    Recopier ces personnes dans les contacts du prestataire aurait donné deux
+    listes des mêmes gens — la faute de #490 transposée au circuit des
+    notifications, où elle ne se verrait que le jour où un courriel ne partirait
+    pas.
+
+    Le prestataire porte donc l'ORGANISATION, l'annuaire garde les PERSONNES.
+    """
+    contrat = contrat_de_reference(session, copro, "syndic")
+    principal = session.exec(
+        select(MembreSyndic).where(MembreSyndic.est_principal == True)  # noqa: E712
+    ).first()
+
+    lu: dict = {}
+    if principal:
+        lu["syndic_interlocuteur"] = " ".join(
+            x for x in (principal.prenom, principal.nom, f"({principal.fonction})" if principal.fonction else "") if x
+        ).strip()
+        lu["syndic_interlocuteur_email"] = principal.email
+
+    if not contrat:
+        #  ⚠️ On rend quand même l'interlocuteur : le cabinet peut n'avoir pas
+        #  encore de contrat saisi alors que ses membres sont dans l'annuaire
+        #  depuis des mois. Rendre un dictionnaire vide effacerait de la fiche
+        #  une information qu'on POSSÈDE.
+        return lu
+
+    presta = session.get(Prestataire, contrat.prestataire_id)
+    lu.update({
+        "syndic_contrat_id": contrat.id,
+        "syndic_cabinet": presta.nom if presta else None,
+        "syndic_telephone": presta.telephone if presta else None,
+        "syndic_email": presta.email if presta else None,
+        "syndic_numero_mandat": contrat.numero_contrat,
+        "syndic_debut": contrat.date_debut,
+        "syndic_echeance": contrat.prochaine_visite,
+        "syndic_document_id": contrat.document_id,
+    })
+    return lu
 
 
 def copropriete_lue(session: Session, copro: Copropriete) -> CoproprieteRead:
@@ -149,10 +275,15 @@ def copropriete_lue(session: Session, copro: Copropriete) -> CoproprieteRead:
     #
     #  ⚠️ Trouvé par `test_sans_contrat_la_fiche_n_invente_rien`, écrit dans le
     #  même lot : le test a attrapé le défaut du code qu'il accompagnait.
-    for cle in ("assurance_compagnie", "assurance_numero_police", "assurance_echeance"):
-        setattr(lue, cle, None)
-    for cle, valeur in assurance_du_contrat(session, copro).items():
-        setattr(lue, cle, valeur)
+    #  ⚠️ La liste des champs à effacer se DÉDUIT du schéma : les nommer ici en
+    #  aurait fait une seconde liste, et l'enrichissement du 20/08 (dix champs de
+    #  plus) l'aurait laissée en arrière au premier ajout oublié.
+    for cle in CoproprieteRead.model_fields:
+        if cle.startswith(("assurance_", "syndic_")):
+            setattr(lue, cle, None)
+    for source in (assurance_du_contrat, syndic_du_contrat):
+        for cle, valeur in source(session, copro).items():
+            setattr(lue, cle, valeur)
     return lue
 
 
@@ -194,6 +325,73 @@ def update_copropriete(
     session.commit()
     session.refresh(copro)
     return copropriete_lue(session, copro)
+
+
+class ContratCandidat(BaseModel):
+    """Un contrat proposable comme référence de la fiche.
+
+    ⚠️ Volontairement PAUVRE : de quoi reconnaître le contrat dans une liste, et
+    rien de plus. La fiche lit les détails par `contrat_de_reference` une fois le
+    choix fait — deux chemins pour la même donnée en feraient deux vérités.
+    """
+    id: int
+    libelle: str
+    prestataire: Optional[str] = None
+    numero_contrat: Optional[str] = None
+    date_debut: date
+    actif: bool
+
+
+@router.get("/contrats-candidats/{section}", response_model=list[ContratCandidat])
+def contrats_candidats(
+    section: str,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """Les contrats parmi lesquels la fiche désigne sa référence.
+
+    🔴 `section` est validé contre `SECTIONS_CONTRAT` — liste blanche, jamais
+    l'entrée brute : sans elle, `TypeEquipement(section)` lèverait un `ValueError`
+    rendu en 500, et le paramètre deviendrait un moyen d'énumérer l'énumération
+    (`standards/03` §2).
+
+    Les contrats INACTIFS sont rendus, avec leur drapeau. Une copropriété désigne
+    parfois un mandat échu le temps d'en signer un nouveau, et les masquer
+    obligerait à les réactiver pour les choisir — donc à mentir sur leur état.
+    """
+    if section not in SECTIONS_CONTRAT:
+        raise HTTPException(404, "Section inconnue")
+    _, type_equipement = SECTIONS_CONTRAT[section]
+    copro = session.exec(select(Copropriete)).first()
+    if not copro:
+        raise HTTPException(404, "Copropriété non configurée")
+    contrats = session.exec(
+        select(ContratEntretien)
+        .where(
+            ContratEntretien.copropriete_id == copro.id,
+            ContratEntretien.type_equipement == type_equipement,
+        )
+        .order_by(ContratEntretien.date_debut.desc(), ContratEntretien.id.desc())
+    ).all()
+    noms = {
+        p.id: p.nom
+        for p in session.exec(
+            select(Prestataire).where(
+                Prestataire.id.in_([c.prestataire_id for c in contrats] or [0])
+            )
+        ).all()
+    }
+    return [
+        ContratCandidat(
+            id=c.id,
+            libelle=c.libelle,
+            prestataire=noms.get(c.prestataire_id),
+            numero_contrat=c.numero_contrat,
+            date_debut=c.date_debut,
+            actif=c.actif,
+        )
+        for c in contrats
+    ]
 
 
 @router.get("/batiments", response_model=list[BatimentRead])

@@ -340,6 +340,26 @@ export const copropriete = {
 	batiments: () => api.get<any[]>('/copropriete/batiments'),
 	lots: (batiment_id?: number) =>
 		api.get<any[]>(`/copropriete/lots${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
+	/**  Les contrats parmi lesquels la fiche DÉSIGNE sa référence.
+	 *
+	 *   `section` vaut `'assurance'` ou `'syndic'` — le serveur la valide contre
+	 *   une liste blanche, jamais contre l'énumération brute. */
+	contratsCandidats: (section: 'assurance' | 'syndic') =>
+		api.get<ContratCandidat[]>(`/copropriete/contrats-candidats/${section}`),
+};
+
+/**  Un contrat proposable comme référence de la fiche de copropriété.
+ *
+ *   ⚠️ Volontairement pauvre : de quoi reconnaître le contrat dans une liste, et
+ *   rien de plus. Les détails viennent de la fiche elle-même une fois le choix
+ *   fait — deux chemins pour la même donnée en feraient deux vérités. */
+export type ContratCandidat = {
+	id: number;
+	libelle: string;
+	prestataire?: string | null;
+	numero_contrat?: string | null;
+	date_debut: string;
+	actif: boolean;
 };
 
 /**
