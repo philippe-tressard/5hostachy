@@ -1,6 +1,6 @@
 """Router petites annonces — communauté résidence."""
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
@@ -14,6 +14,11 @@ from app.models.core import (
     ReponseCommunaute, Utilisateur, StatutUtilisateur, RoleUtilisateur,
 )
 from app.routers.uploads import _save_image
+from app.utils.archivage import (
+    ARCHIVAGE_DELAI_JOURS,
+    est_archivable,
+    seuil_archivage_jours,
+)
 from app.utils.liens import lien_element
 from app.utils.reponses import (
     auteur_meta, enrich_reponse, notifier_nouvelle_reponse, tri_reponses,
@@ -23,38 +28,26 @@ router = APIRouter(prefix="/annonces", tags=["annonces"])
 
 MAX_PHOTOS = 5
 
-#: Combien de temps une annonce conclue reste visible dans la liste principale.
-#: Un mois, comme une actualité publiée — arbitré le 18/08/2026.
-ARCHIVAGE_JOURS = 30
-
-#: Les états TERMINAUX : ceux qui déclenchent le compte à rebours. Une annonce
-#: réservée ne s'archive pas — la réservation peut tomber, et l'annonce doit
-#: rester sous les yeux de son auteur.
-STATUTS_TERMINAUX = (StatutAnnonce.vendu, StatutAnnonce.donne, StatutAnnonce.annule)
 RUBRIQUE = "annonce"
 
 
-def est_archivee(annonce: PetiteAnnonce, jours: int = ARCHIVAGE_JOURS) -> bool:
-    """Cette annonce a-t-elle basculé dans l'Historique ?
+def est_archivee(annonce: PetiteAnnonce, jours: int = ARCHIVAGE_DELAI_JOURS) -> bool:
+    """Cette annonce a-t-elle basculé dans les Archives ?
 
-    🔴 **Calculée, jamais stockée.** L'archivage n'est pas une étape que
-    quelqu'un choisit, c'est une conséquence du temps : un sixième état aurait
-    donné deux notions pour la même chose, libres de se contredire.
+    🔴 **Ne décide plus rien** — la règle vit dans `app/utils/archivage.py`,
+    avec celle des six autres objets du site (#515).
 
-    ⚠️ La durée se mesure sur `statut_change_le`, **pas** sur `mis_a_jour_le` :
-    corriger une faute de frappe sur une annonce vendue repousserait sinon son
-    archivage d'un mois, à chaque retouche.
+    Ce qui a disparu d'ici mérite d'être nommé : un `ARCHIVAGE_JOURS = 30`
+    **codé en dur**. Il ne se voyait pas depuis l'écran d'administration, et
+    valait par coïncidence la même chose que le délai des actualités. Le jour
+    où l'un des deux aurait bougé, l'autre non — et rien ne l'aurait signalé.
+    C'était le troisième des « trois délais » que le ticket dénonçait.
 
-    Pure et sans session : c'est ce qui la rend vérifiable sans base.
+    Les deux arbitrages qui vivaient dans ce commentaire sont conservés dans la
+    déclaration `REGLES["annonce"]` : `reserve` n'est pas terminal, et la durée
+    se mesure sur `statut_change_le` et non sur `mis_a_jour_le`.
     """
-    if annonce.statut not in STATUTS_TERMINAUX:
-        return False
-    #  Repli sur `mis_a_jour_le` puis `cree_le` : une annonce dont l'état est
-    #  terminal SANS horodatage ne doit pas rester éternellement en tête de
-    #  liste. La migration 0152 renseigne la colonne pour tout l'existant ; ce
-    #  repli couvre ce qui viendrait d'ailleurs.
-    ref = annonce.statut_change_le or annonce.mis_a_jour_le or annonce.cree_le
-    return bool(ref) and (datetime.utcnow() - ref) >= timedelta(days=jours)
+    return est_archivable("annonce", annonce, seuil_jours=jours)
 
 
 def _reponses_for(annonce_id: int, session: Session) -> list[dict]:
@@ -104,7 +97,7 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
         #  règle, sinon la liste et l'Historique peuvent trancher différemment —
         #  c'est le bug du 17/07/2026 sur les actualités, un élément visible dans
         #  une vue et pas dans l'autre.
-        "archivee": est_archivee(annonce),
+        "archivee": est_archivee(annonce, seuil_archivage_jours(session)),
         "reponses": reponses,
         "nb_reponses": len(reponses),
     }

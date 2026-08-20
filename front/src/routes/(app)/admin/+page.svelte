@@ -8,6 +8,7 @@ import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
 import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
 import OngletCopropriete from '$lib/components/OngletCopropriete.svelte';
@@ -517,23 +518,7 @@ try {
   const r = await fetch('/api/config/legal');
   if (r.ok) { const legal = await r.json(); sMentions = legal['mentions_legales'] ?? ''; sPolitique = legal['politique_confidentialite'] ?? ''; }
 } catch { /**/ }
-siteConfig = {
-  nom: cfg['site_nom'] ?? '5Hostachy',
-  url: cfg['site_url'] ?? '',
-  email_admin: cfg['site_email'] ?? '',
-  login_sous_titre: cfg['login_sous_titre'] ?? 'Votre espace numérique de résidence',
-  mentions_legales: sMentions,
-  politique_confidentialite: sPolitique,
-  archivage_delai_jours: Math.max(1, Math.round((parseInt(cfg['archivage_delai_heures'] ?? '48') || 48) / 24)),
-  publie_visibilite_jours: parseInt(cfg['publie_visibilite_jours'] ?? '30') || 30,
-  relance_syndic_delai_jours: parseInt(cfg['relance_syndic_delai_jours'] ?? '30') || 30,
-  notify_ticket_bug_email: cfg['notify_ticket_bug_email'] === '1',
-  notify_new_user_created_email: cfg['notify_new_user_created_email'] === '1',
-  site_manager_user_id: cfg['site_manager_user_id'] ?? '',
-  whatsapp_footer: cfg['whatsapp_footer'] ?? '— Le Conseil Syndical',
-  email_footer: cfg['email_footer'] ?? '— Envoyé depuis 5hostachy.fr',
-  reference_copro: cfg['reference_copro'] ?? '',
-};
+siteConfig = lireConfigSite(cfg, { mentions_legales: sMentions, politique_confidentialite: sPolitique });
 // Config des pages
 pagesConfig = pagesDefaults.map(pg => {
   const s = cfg[`page_config_${pg.id}`];
@@ -563,7 +548,7 @@ loadDemandesProfil();
 });
 
 // ── Paramétrage site ──────────────────────────────────────────
-let siteConfig = { nom: '5Hostachy', url: '', email_admin: '', login_sous_titre: 'Votre espace numérique de résidence', mentions_legales: '', politique_confidentialite: '', archivage_delai_jours: 2, publie_visibilite_jours: 30, relance_syndic_delai_jours: 30, notify_ticket_bug_email: false, notify_new_user_created_email: false, site_manager_user_id: '', whatsapp_footer: '— Le Conseil Syndical', email_footer: '— Envoyé depuis 5hostachy.fr', reference_copro: '' };
+let siteConfig = { ...CONFIG_SITE_DEFAUT };
 let siteSaving = false;
 $: siteManagerUsers = utilisateurs.filter((u) => !!u.email);
 function openSiteTab() {
@@ -573,8 +558,13 @@ function openSiteTab() {
 async function saveSiteConfig() {
   siteSaving = true;
   try {
-    await configApi.save({ site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String((siteConfig.archivage_delai_jours || 2) * 24), publie_visibilite_jours: String(siteConfig.publie_visibilite_jours || 30), relance_syndic_delai_jours: String(siteConfig.relance_syndic_delai_jours), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '', whatsapp_footer: siteConfig.whatsapp_footer, email_footer: siteConfig.email_footer, reference_copro: siteConfig.reference_copro });
-    configStore.update((c: Record<string, string>) => ({ ...c, site_nom: siteConfig.nom, site_url: siteConfig.url, site_email: siteConfig.email_admin, login_sous_titre: siteConfig.login_sous_titre, mentions_legales: siteConfig.mentions_legales, politique_confidentialite: siteConfig.politique_confidentialite, archivage_delai_heures: String((siteConfig.archivage_delai_jours || 2) * 24), publie_visibilite_jours: String(siteConfig.publie_visibilite_jours || 30), notify_ticket_bug_email: siteConfig.notify_ticket_bug_email ? '1' : '0', notify_new_user_created_email: siteConfig.notify_new_user_created_email ? '1' : '0', site_manager_user_id: siteConfig.site_manager_user_id || '' }));
+    //  🔴 Le MÊME payload part à l'API et rafraîchit le store. Les deux étaient
+    //  écrits séparément, et le second oubliait quatre réglages : après
+    //  sauvegarde, le store gardait leurs anciennes valeurs jusqu'au
+    //  rechargement de la page (#515).
+    const payload = ecrireConfigSite(siteConfig);
+    await configApi.save(payload);
+    configStore.update((c: Record<string, string>) => ({ ...c, ...payload }));
     toast('success', 'Paramètres sauvegardés.');
   } catch (e: any) {
     toast('error', e.message ?? 'Erreur lors de la sauvegarde.');

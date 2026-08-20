@@ -57,19 +57,18 @@
       <input type="text" bind:value={siteConfig.login_sous_titre} placeholder="Votre espace numérique de résidence" />
       <span class="field-hint">Affiché sous le nom du site sur la page de connexion.</span>
     </label>
-    <!--  DEUX délais, et l'écran n'en montrait qu'UN — c'est ce qui a fait dire
-          « je croyais qu'il était de 30 » (#513). Ils gouvernent la même chose du
-          point de vue du résident : quand une actualité disparaît du fil.
-          Tous deux en JOURS, arbitré à l'écran le 19/08/2026. -->
+    <!--  🔴 UN SEUL délai, pour tout le site (#515). Il y en avait TROIS : deux
+          affichés ici — dont un qui ne concernait plus qu'un statut devenu
+          inatteignable — et un troisième CODÉ EN DUR dans `annonces.py`, que
+          l'écran n'a jamais montré. C'est le mélange qui a fait dire « je
+          croyais qu'il était de 30 » (#513).
+
+          ⚠️ Ce champ gouverne SEPT objets, pas seulement les actualités : le
+          texte d'aide doit le dire, sinon on croira régler une seule page. -->
     <label class="field champ-court" style="grid-column:span 2">
-      Délai d'archivage d'une actualité « Résolue » (jours)
-      <input type="number" bind:value={siteConfig.archivage_delai_jours} min="1" max="365" placeholder="2" />
-      <span class="field-hint">Une actualité passée en « Résolue » est archivée après ce délai (défaut : 2 jours). Le bouton 📦 archive immédiatement, sans attendre. ⚠️ Ce statut n'est plus atteignable depuis le 18/08/2026 : ce réglage ne concerne plus que les anciennes actualités.</span>
-    </label>
-    <label class="field champ-court" style="grid-column:span 2">
-      Délai d'archivage d'une actualité « Publiée » (jours)
-      <input type="number" bind:value={siteConfig.publie_visibilite_jours} min="1" max="365" placeholder="30" />
-      <span class="field-hint">Une actualité publiée reste visible dans le fil et dans la liste pendant ce délai, puis bascule dans les Archives (défaut : 30 jours). C'est le réglage qui s'applique à toutes les actualités d'aujourd'hui.</span>
+      Délai d'archivage automatique (jours)
+      <input type="number" bind:value={siteConfig.archivage_delai_jours} min="1" max="365" placeholder="30" />
+      <span class="field-hint">Un contenu terminé quitte les listes actives et bascule dans les <strong>Archives</strong> après ce délai (défaut : 30 jours). Il s'applique à <strong>tout le site</strong> : actualités, tickets résolus, petites annonces vendues ou données, idées décidées, sondages clôturés, événements passés et affiches de hall envoyées. Un contenu <strong>annulé</strong> est archivé immédiatement, sans attendre — et le bouton 📦 archive à la main, quel que soit ce réglage.</span>
     </label>
     <label class="field champ-court" style="grid-column:span 2">
       Délai de relance syndic (jours)

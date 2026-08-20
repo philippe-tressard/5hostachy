@@ -16,15 +16,17 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    ConfigSite, Publication, PublicationEvolution, RoleUtilisateur, Utilisateur,
+    Publication, PublicationEvolution, RoleUtilisateur, Utilisateur,
 )
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate
 from app.utils.photos import photos_json, premiere_photo
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
+from app.utils.archivage import seuil_archivage_jours
+
 from .commun import (
-    ARCHIVAGE_DELAI_HEURES, PUBLIE_VISIBILITE_JOURS, STATUT_LABELS,
+    STATUT_LABELS,
     appliquer_confidentialite, _generer_annonce_hall, _is_annule_expired,
     _is_archived, _pub_to_read,
 )
@@ -75,14 +77,12 @@ def list_publications(
 
     is_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
 
-    delai_row = session.get(ConfigSite, 'archivage_delai_heures')
-    delai_heures = int(delai_row.valeur) if delai_row and delai_row.valeur.isdigit() else ARCHIVAGE_DELAI_HEURES
+    seuil_jours = seuil_archivage_jours(session)
 
-    publie_row = session.get(ConfigSite, 'publie_visibilite_jours')
-    publie_jours = int(publie_row.valeur) if publie_row and publie_row.valeur.isdigit() else PUBLIE_VISIBILITE_JOURS
-
-    # Purge automatique : supprimer les publications annulées depuis > 48h
-    to_delete = [p for p in pubs if _is_annule_expired(p, delai_heures)]
+    #  ⚠️ La purge garde SON délai, en heures, et il n'est pas réglable par
+    #  l'écran d'administration : elle SUPPRIME. Le réglage unique gouverne
+    #  l'archivage, pas la destruction (cf. `PURGE_ANNULE_HEURES`).
+    to_delete = [p for p in pubs if _is_annule_expired(p)]
     for pub in to_delete:
         evols = session.exec(
             select(PublicationEvolution).where(PublicationEvolution.publication_id == pub.id)
@@ -96,7 +96,7 @@ def list_publications(
 
     result = []
     for pub in pubs:
-        arch = _is_archived(pub, delai_heures, publie_jours)
+        arch = _is_archived(pub, seuil_jours)
         if archived and not arch:
             continue
         if not archived and arch:

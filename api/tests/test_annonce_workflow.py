@@ -31,7 +31,19 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.models.core import PetiteAnnonce, StatutAnnonce
-from app.routers.annonces import ARCHIVAGE_JOURS, STATUTS_TERMINAUX, est_archivee
+from app.routers.annonces import est_archivee
+from app.utils.archivage import ARCHIVAGE_DELAI_JOURS, REGLES
+
+#  ⚠️ Les deux noms importés d'`annonces` ont disparu avec la règle unique
+#  (#515) : le délai est celui du site, et la liste des états terminaux vit dans
+#  `REGLES["annonce"]`. Les lire ICI plutôt que de les recopier est le point :
+#  si l'arbitrage change, ces tests suivent — ou échouent en le disant.
+ARCHIVAGE_JOURS = ARCHIVAGE_DELAI_JOURS
+#  🔴 `annule` n'en fait PLUS partie : « Annulé = immédiat quel que soit le
+#  type » (arbitré à l'écran le 19/08/2026). Il attendait trente jours comme les
+#  autres jusqu'à la v3.1.0 — c'est un CHANGEMENT DE COMPORTEMENT, éprouvé plus
+#  bas par son propre test plutôt que dissous dans un paramétrage.
+STATUTS_TERMINAUX = REGLES["annonce"].statuts_terminaux
 
 
 def _annonce(statut: StatutAnnonce, jours: float | None, **kw) -> PetiteAnnonce:
@@ -108,9 +120,28 @@ def test_sans_horodatage_le_repli_ne_bloque_pas_l_archivage():
     ce qui viendrait d'ailleurs. Sans lui, une ligne sans horodatage resterait
     éternellement en tête de liste — le cas zéro appliqué à une donnée manquante.
     """
-    annonce = _annonce(StatutAnnonce.annule, None)
+    annonce = _annonce(StatutAnnonce.vendu, None)
     annonce.mis_a_jour_le = datetime.utcnow() - timedelta(days=ARCHIVAGE_JOURS + 5)
     assert est_archivee(annonce) is True
+
+
+# ── Le changement de comportement de la v3.1.0 ──────────────────────────────
+
+def test_une_annonce_annulee_est_archivee_IMMEDIATEMENT():
+    """🔴 Nouveau (#515) : `annule` n'attend plus le délai.
+
+    Jusqu'ici une annonce annulée restait trente jours dans la liste principale,
+    comme une annonce vendue. L'arbitrage du 19/08/2026 l'a tranché autrement, et
+    pour les sept objets à la fois : *« Annulé = immédiat quel que soit le
+    type »*. Une annulation n'est pas une conclusion qu'on donne à voir, c'est un
+    retrait.
+
+    Ce test existe pour que le changement soit **visible** : sans lui, il se
+    serait produit à l'occasion d'un paramétrage, et personne n'aurait pu dire
+    quand ni pourquoi le comportement avait bougé.
+    """
+    assert est_archivee(_annonce(StatutAnnonce.annule, 0)) is True
+    assert est_archivee(_annonce(StatutAnnonce.annule, ARCHIVAGE_JOURS - 1)) is True
 
 
 def test_archive_n_est_pas_un_etat():

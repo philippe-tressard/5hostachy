@@ -177,6 +177,14 @@ class Idee(SQLModel, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     statut: str = "ouverte"  # ouverte | retenue | rejetee | realisee
     cree_le: datetime = Field(default_factory=datetime.utcnow)
+    #  Quand la décision a été prise — pas quand l'idée a été déposée. C'est
+    #  cette date, et elle seule, qui déclenche l'archivage automatique
+    #  (`app/utils/archivage.py`) : une idée retenue en janvier ne doit pas
+    #  s'archiver à l'anniversaire de son dépôt. `PetiteAnnonce` et
+    #  `Publication` portent le même champ, sous le même nom, pour la même
+    #  raison. Ajoutée par la migration 0155 ; six objets sur sept l'avaient
+    #  déjà, et c'est le test de concordance qui a montré le manque.
+    statut_change_le: Optional[datetime] = None
     #  ⚠️ MÊME forme que `Publication.perimetre_cible`, `PetiteAnnonce` et
     #  `Sondage` : du JSON de codes. Une quatrième forme diverge — c'est ce que le
     #  sondage avait fait (`batiments_ids`), et il a fallu une migration pour l'en

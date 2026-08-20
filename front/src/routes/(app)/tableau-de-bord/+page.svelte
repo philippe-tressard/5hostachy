@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { delaiArchivageMs } from '$lib/archivage';
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
@@ -141,11 +142,10 @@
 	$: filItems = filteredItems;
 
 	// ── Classement du fil : récent / ancien / masqué ───────────────────────
-	//  🔴 UN SEUL délai, ADMINISTRABLE (#513) : il valait 30 j en dur ici, 30 en
-	//  dur pour les annonces, 377 pour la fenêtre du fil — quatre nombres pour
-	//  une seule question. `PLAFOND_CHARGEMENT` est une borne de chargement, pas
-	//  un second seuil de visibilité : les Archives couvrent tout l'intervalle.
-	$: SEUIL_RECENT = (parseInt($configStore?.['publie_visibilite_jours'] ?? '30') || 30) * 86400000;
+	//  🔴 UN SEUL délai, pour tout le site (#513 puis #515) — voir `$lib/archivage`.
+	//  `PLAFOND_CHARGEMENT` est une borne de CHARGEMENT, pas un second seuil de
+	//  visibilité : les Archives couvrent tout l'intervalle.
+	$: SEUIL_RECENT = delaiArchivageMs($configStore);
 	const PLAFOND_CHARGEMENT = 377 * 86400000;
 
 	let recentItems: FluxItem[] = [];

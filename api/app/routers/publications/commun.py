@@ -14,6 +14,11 @@ from app.models.core import (
     AnnonceHall, Publication, PublicationEvolution, Utilisateur,
 )
 from app.schemas import EvolutionRead, PublicationRead
+from app.utils.archivage import (
+    ARCHIVAGE_DELAI_JOURS,
+    PURGE_ANNULE_HEURES,
+    est_archivable,
+)
 from app.utils.perimetres import a_portee_globale
 
 #  `_generer_annonce_hall` journalise l'échec de génération sans le propager :
@@ -22,8 +27,14 @@ from app.utils.perimetres import a_portee_globale
 #  ruff au découpage, jamais par un test — aucun n'emprunte ce chemin.
 logger = logging.getLogger("publications")
 
-ARCHIVAGE_DELAI_HEURES = 48
-PUBLIE_VISIBILITE_JOURS = 30  # une publication « publié » reste visible 1 mois puis est archivée
+#  ⚠️ Les deux seuils de publication ont disparu d'ici (#515). Il n'y en a plus
+#  qu'un pour tout le site — `ARCHIVAGE_DELAI_JOURS` — et il vit dans
+#  `app/utils/archivage.py` avec la règle qui l'emploie. `PURGE_ANNULE_HEURES`
+#  est l'autre notion, celle qui supprime : elle a gardé son délai propre.
+#
+#  Les noms `ARCHIVAGE_DELAI_HEURES` et `PUBLIE_VISIBILITE_JOURS` sont
+#  volontairement supprimés plutôt que conservés en alias : un alias aurait
+#  laissé le code appelant croire qu'il gouverne encore quelque chose.
 
 #  ── Le WORKFLOW d'une publication, écrit UNE fois (#433) ────────────────────
 #
@@ -157,38 +168,36 @@ def _generer_annonce_hall(
         logger.error("Annonce de hall non générée pour la publication %s : %s", pub.id, exc)
 
 
-def _is_archived(
-    pub: Publication,
-    delai_heures: int = ARCHIVAGE_DELAI_HEURES,
-    publie_jours: int = PUBLIE_VISIBILITE_JOURS,
-) -> bool:
-    """True si la publication doit être considérée comme archivée."""
-    if pub.archivee:
-        # L'archivage explicite prime sur tout : c'est une décision humaine.
-        return True
-    if pub.epingle:
-        # Épinglé = « garder en vue » ; s'auto-archiver au bout de 30 jours
-        # contredirait le marqueur. Décision du 01/08/2026, prise avec le
-        # bandeau « Épinglé » du fil d'activité. Pour retirer la publication,
-        # on la dépingle (ou on l'archive à la main) — l'action reste explicite.
-        # Volontairement ici et non côté fil : /actualités et le tableau de bord
-        # doivent trancher pareil, sous peine de voir un élément dans une vue et
-        # pas dans l'autre (bug du 17/07/2026).
-        return False
-    if pub.statut == "resolu" and pub.statut_change_le:
-        delta = datetime.utcnow() - pub.statut_change_le
-        return delta >= timedelta(hours=delai_heures)
-    # État « publié » (défaut, hors workflow) : visible publie_jours puis archivé.
-    # Les brouillons (non encore publiés) ne sont jamais concernés.
-    if pub.statut in ("publie", None) and not pub.brouillon:
-        ref = pub.statut_change_le or pub.publiee_le or pub.cree_le
-        if ref:
-            return (datetime.utcnow() - ref) >= timedelta(days=publie_jours)
-    return False
+def _is_archived(pub: Publication, seuil_jours: int = ARCHIVAGE_DELAI_JOURS) -> bool:
+    """True si la publication doit être considérée comme archivée.
+
+    🔴 **Ne décide plus rien.** Toute la logique — archivage manuel, épinglage,
+    brouillon, états terminaux, dates de repli — vit dans
+    `app/utils/archivage.py`, avec celle des six autres objets du site.
+
+    Cette fonction reste comme **point d'entrée nommé** : elle est appelée par
+    `/actualités` et par le fil d'activité, et c'est ce partage qui garantit
+    qu'ils tranchent pareil. Le jour où ils ont décidé séparément (17/07/2026),
+    un élément apparaissait dans l'une des deux vues et pas dans l'autre.
+
+    ⚠️ Elle prenait DEUX seuils — 48 h pour « résolu », 30 j pour « publié ».
+    Un seul demeure : `archivage_delai_jours`, arbitré à l'écran le 19/08/2026.
+    """
+    return est_archivable("publication", pub, seuil_jours=seuil_jours)
 
 
-def _is_annule_expired(pub: Publication, delai_heures: int = ARCHIVAGE_DELAI_HEURES) -> bool:
-    """True si la publication annulée a dépassé le délai et doit être supprimée."""
+def _is_annule_expired(pub: Publication, delai_heures: int = PURGE_ANNULE_HEURES) -> bool:
+    """True si la publication annulée a dépassé le délai et doit être SUPPRIMÉE.
+
+    ⚠️ **Ce n'est pas de l'archivage**, et le délai n'est pas le même — il ne
+    l'a jamais été, mais les deux partageaient la constante
+    `ARCHIVAGE_DELAI_HEURES`, ce qui le laissait croire. Une actualité annulée
+    ne part pas aux archives : elle **disparaît**, avec ses évolutions.
+
+    C'est la raison pour laquelle ce délai n'a pas été absorbé par le réglage
+    unique : y porter 30 jours aurait retardé d'un mois une suppression de
+    données, sans que personne ne l'ait demandé.
+    """
     if pub.statut == "annule" and pub.statut_change_le:
         return (datetime.utcnow() - pub.statut_change_le) >= timedelta(hours=delai_heures)
     return False
