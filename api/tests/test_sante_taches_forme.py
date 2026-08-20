@@ -43,7 +43,10 @@ import pathlib
 
 import pytest
 
-SOURCE = pathlib.Path(__file__).parent.parent / "app" / "routers" / "admin" / "exploitation.py"
+#  ⚠️ La décision a été extraite du routeur le 20/08/2026 (#542). Ce chemin
+#  suit le CODE, pas le fichier d'origine : pointé sur l'ancien, l'analyse
+#  trouverait zéro affectation et ce fichier passerait au vert sans rien lire.
+SOURCE = pathlib.Path(__file__).parent.parent / "app" / "utils" / "sante_taches.py"
 
 #: Les clés qu'une entrée de `noeuds` doit porter, quelle que soit sa provenance.
 #: `portee` et `retard_heures` s'y ajoutent ; ce sont les trois ci-dessous que
@@ -107,32 +110,32 @@ def test_le_champ_noeuds_est_assemble_a_UN_SEUL_endroit():
     )
 
 
-@pytest.mark.parametrize("indice", range(10))
-def test_aucune_branche_ne_rend_une_liste_de_chaines(indice):
+def test_aucune_branche_ne_rend_une_liste_de_chaines():
     """🔴 Le défaut exact : `["rpi2"]` au lieu de `[{"noeud": "rpi2", …}]`.
 
     Une liste de chaînes est indiscernable d'une liste d'objets tant qu'on ne la
     parcourt pas. C'est ce qui l'a rendue invisible pendant des semaines.
+
+    ⚠️ Ce test était `parametrize(range(10))` + `skip` quand l'indice dépassait
+    le nombre d'affectations trouvées. Depuis l'assemblage unique il n'en reste
+    que deux : **huit cas sautaient à chaque exécution**, et huit SKIP permanents
+    se lisent exactement comme « rien à signaler » (`standards/04` §18). Une
+    boucle dit la même chose sans rien taire.
     """
-    valeurs = _litteraux_noeuds()
-    if indice >= len(valeurs):
-        pytest.skip("moins d'affectations que de cas paramétrés")
-    valeur = valeurs[indice]
-
-    #  Une compréhension de liste dont l'élément est un nom nu (`[n for n in …]`)
-    #  produit des chaînes : c'était exactement la forme fautive.
-    if isinstance(valeur, ast.ListComp):
-        assert not isinstance(valeur.elt, ast.Name), (
-            "cette branche rend une liste de CHAÎNES ; l'écran attend des objets "
-            "portant au moins " + ", ".join(sorted(CLES_ATTENDUES))
-        )
-
-    #  Une liste littérale d'éléments non-dictionnaires, même défaut.
-    if isinstance(valeur, ast.List):
-        for element in valeur.elts:
-            assert isinstance(element, ast.Dict), (
-                "cette branche rend une liste dont un élément n'est pas un objet"
+    for valeur in _litteraux_noeuds():
+        #  Une compréhension de liste dont l'élément est un nom nu
+        #  (`[n for n in …]`) produit des chaînes : la forme fautive.
+        if isinstance(valeur, ast.ListComp):
+            assert not isinstance(valeur.elt, ast.Name), (
+                "cette branche rend une liste de CHAÎNES ; l'écran attend des "
+                "objets portant au moins " + ", ".join(sorted(CLES_ATTENDUES))
             )
+        #  Une liste littérale d'éléments non-dictionnaires, même défaut.
+        if isinstance(valeur, ast.List):
+            for element in valeur.elts:
+                assert isinstance(element, ast.Dict), (
+                    "cette branche rend une liste dont un élément n'est pas un objet"
+                )
 
 
 def test_toute_entree_litterale_porte_les_cles_attendues():
@@ -140,6 +143,13 @@ def test_toute_entree_litterale_porte_les_cles_attendues():
 
     Moins spectaculaire qu'une exception, et plus durable : la ligne s'affiche,
     sans son état ni sa date, et se lit comme « rien à signaler ».
+
+    ⚠️ **Ce test ne voit plus l'assemblage principal**, et c'est voulu : depuis
+    l'assemblage unique, `noeuds` reçoit un NOM (`detail`), pas un littéral —
+    l'analyse statique n'a plus de dictionnaire à inspecter. Les clés sont
+    désormais vérifiées **à l'exécution**, sur la fonction pure, par
+    `test_sante_taches_periodes.py::test_chaque_sous_ligne_porte_les_cles_attendues`.
+    Il reste ici pour refuser qu'un littéral incomplet réapparaisse.
     """
     manques = []
     for valeur in _litteraux_noeuds():

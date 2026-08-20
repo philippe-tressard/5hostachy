@@ -261,13 +261,23 @@
 								{LIBELLE_TACHE[t.tache] ?? t.tache}
 							</td>
 							<td style="color:var(--color-text-muted)">
-								{#if !t.noeud_enregistre}
-									<span style="font-style:italic"
-										title="Cette exécution est antérieure à la v2.53.0, qui a ajouté la colonne : on ne sait pas quel nœud l'a faite. Afficher le nœud qui répond aujourd'hui serait faux — le rôle alterne chaque nuit. La colonne se remplira à la prochaine exécution.">non enregistré</span>
-								{:else if t.statut === 'aucune_execution'}
+								<!--  ⚠️ « Aucune exécution » se teste EN PREMIER (#542).
+								      `noeud_enregistre` vaut faux dans ce cas aussi — faute
+								      d'exécution, il n'y a pas de nœud à enregistrer — et l'ordre
+								      inverse faisait afficher « non enregistré » à une tâche qui
+								      n'avait jamais tourné. Deux états distincts, un seul libellé :
+								      celui qui alarme le moins gagnait.
+
+								      Et il n'y a plus qu'UNE branche « non enregistré ». Il y en
+								      avait deux, avec deux infobulles qui se contredisaient (« avant
+								      la v2.53.0 » / « avant la v2.32.0 ») — la seconde était
+								      inatteignable. Une explication fausse mais jamais lue reste
+								      fausse le jour où on la lit. -->
+								{#if t.statut === 'aucune_execution'}
 									—
-								{:else if t.noeud === 'inconnu' || !t.noeud}
-									<span title="Le nœud n'était pas enregistré avant la v2.32.0" style="font-style:italic">non enregistré</span>
+								{:else if !t.noeud_enregistre}
+									<span style="font-style:italic"
+										title="Cette exécution est antérieure à la migration 0137, qui a ajouté la colonne : on ne sait pas quel nœud l'a faite. Afficher le nœud qui répond aujourd'hui serait faux — le rôle alterne chaque nuit. La colonne se remplit à chaque exécution depuis.">non enregistré</span>
 								{:else}
 									<!-- Le nœud de la DERNIÈRE exécution. Les autres ont leur propre
 									     sous-ligne ci-dessous : plus rien n'est élu ni masqué (#331). -->
