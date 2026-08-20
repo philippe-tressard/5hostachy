@@ -40,6 +40,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SRC = join(RACINE, 'src');
@@ -86,11 +87,7 @@ function fichiers(dossier) {
  * parler oblige à taire la raison, et c'est la raison qui se perd en premier.
  */
 export function occurrences(contenu) {
-	const sansCommentaires = contenu
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-	return [...sansCommentaires.matchAll(MOTIF)].map((m) => m[0]);
+	return [...neutraliserCommentaires(contenu).matchAll(MOTIF)].map((m) => m[0]);
 }
 
 function selftest() {

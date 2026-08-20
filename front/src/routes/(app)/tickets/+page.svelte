@@ -357,7 +357,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
       encore porter. Unifier les deux demande d'exposer l'année ouverte — ça se
       fait, mais pas en même temps qu'un renommage. Suivi en #516. -->
 {#if historyTickets.length > 0}
-	<div class="history-section">
+	<div>
 		<ArchivesParAnnee items={historyTickets} dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
 			compte={historyTickets.length} charge anneeOuverte={anneeVisee}
 			bind:ouvert={historyExpanded} let:objet={ticketArchive}>
@@ -415,5 +415,6 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	    l'illusion qu'on règle ici l'aspect des Archives (#516).
 
 	    Ne reste que l'encadré de la section, seul balisage encore rendu ici. */
-	.history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
+	/*  Le séparateur est celui de `SectionRepliee` — il était dessiné ici AUSSI,
+	    d'où deux traits (#536). Le pourquoi est dans le composant. */
 </style>

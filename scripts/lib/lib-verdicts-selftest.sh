@@ -315,6 +315,29 @@ verdicts_selftest() {
     fi
   fi
 
+  echo "-- C23 : les en-tetes de securite reellement servis --"
+  ve() { # description attendu recus liste
+    local desc="$1" exp="$2" recus="$3" liste="$4"
+    local got; got=$(verdict_entetes_securite "$recus" "$liste")
+    if [ "$got" = "$exp" ]; then echo "PASS  $desc"
+    else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
+  }
+  _TOUS=$'HTTP/1.1 200 OK\nX-Content-Type-Options: nosniff\nX-Frame-Options: DENY\nContent-Security-Policy: frame-ancestors'
+  ve "les trois en-têtes présents"        "OK" "$_TOUS" \
+     "X-Content-Type-Options X-Frame-Options Content-Security-Policy"
+  #  Les en-têtes HTTP sont insensibles à la casse ; Caddy peut en changer.
+  ve "casse différente acceptée"          "OK" $'HTTP/2 200\nx-frame-options: DENY' "X-Frame-Options"
+  ve "un en-tête retiré du Caddyfile"     "MANQUANT:Content-Security-Policy" \
+     $'HTTP/1.1 200 OK\nX-Frame-Options: DENY' "X-Frame-Options Content-Security-Policy"
+  #  🔴 Les deux cas qui doivent rendre INCONNU. Répondre OK ferait d'un site
+  #  injoignable un site conforme — le cas zéro, `standards/04` §1.
+  ve "aucune réponse (site injoignable)"  "INCONNU" "" "X-Frame-Options"
+  ve "réponse illisible"                  "INCONNU" "curl: (7) Failed to connect" "X-Frame-Options"
+  #  ⚠️ La VALEUR n'est pas vérifiée, à dessein : c'est une attente de valeur
+  #  périmée (« SAMEORIGIN » contre « DENY ») qui a fait désarmer le contrôle
+  #  précédent, retiré du cron de rpi2 le 06/08/2026 après 144 échecs par jour.
+  ve "valeur inattendue, en-tête présent" "OK" $'HTTP/1.1 200 OK\nX-Frame-Options: SAMEORIGIN' "X-Frame-Options"
+
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail
 }

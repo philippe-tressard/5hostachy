@@ -38,6 +38,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -78,16 +79,6 @@ const RELAIS = [
 	},
 ];
 
-/**
- * Remplace le contenu des commentaires par des espaces, en conservant la
- * longueur — donc les positions. Trois formes, dont deux multi-lignes.
- */
-function neutraliser(source) {
-	return source
-		.replace(/\/\*[\s\S]*?\*\//g, (b) => b.replace(/[^\n]/g, ' '))
-		.replace(/(^|[^:])\/\/[^\n]*/g, (b, avant) => avant + ' '.repeat(b.length - avant.length));
-}
-
 /** Les clés d'un objet littéral, à partir de la position d'une parenthèse ouvrante. */
 export function clesDeLObjet(source, depuis) {
 	const debut = source.indexOf('{', depuis);
@@ -117,7 +108,7 @@ export function clesDeLObjet(source, depuis) {
 	//
 	//  Le contenu est remplacé par des espaces et non supprimé : les positions
 	//  restent justes, donc les fragments aussi.
-	const corps = neutraliser(source.slice(debut + 1, fin));
+	const corps = neutraliserCommentaires(source.slice(debut + 1, fin));
 	//  Seulement les clés du PREMIER niveau : une clé imbriquée appartient à un
 	//  autre objet et n'a rien à voir avec le contrat de ce relais.
 	const cles = [];

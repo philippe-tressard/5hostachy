@@ -928,7 +928,7 @@
 	      viennent tous d'`ArchivesParAnnee` (#516). Le bandeau était réécrit ici
 	      une 4e fois (chevron figé à « ▼ »), et le groupement une 3e. -->
 	{#if tkHistory.length > 0}
-	<div class="history-section">
+	<div>
 		<ArchivesParAnnee items={tkHistory} dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
 			compte={tkHistory.length} charge bind:ouvert={tkHistoryExpanded}
 			let:objet={t}>
@@ -1545,7 +1545,7 @@
       Ne restent que les deux qui habillent ce que CETTE page rend encore :
       l'encadré de la section, et la ligne d'un ticket archivé (contenu du
       `slot`, donc dans la portée de la page). */
-  .history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
+  /*  Séparateur : celui de `SectionRepliee`, dessiné ici AUSSI jusqu'au 20/08 (#536). */
   .history-item { border-left: 4px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); opacity: .8; transition: opacity .15s, border-left-color .15s; }
   .history-item:hover { opacity: 1; }
   .history-item.expanded { opacity: 1; }
