@@ -54,25 +54,32 @@ def upgrade() -> None:
     #  ⚠️ Idempotent PAR COLONNE, et non par migration : une base rejouée ou
     #  partiellement migrée existe dans ce projet (dette connue). Une seule des
     #  deux colonnes peut donc être là.
-    with op.batch_alter_table("copropriete") as batch:
-        if "assurance_contrat_id" not in presentes:
-            batch.add_column(
-                sa.Column(
-                    "assurance_contrat_id",
-                    sa.Integer(),
-                    sa.ForeignKey("contrat_entretien.id"),
-                    nullable=True,
-                )
-            )
-        if "syndic_contrat_id" not in presentes:
-            batch.add_column(
-                sa.Column(
-                    "syndic_contrat_id",
-                    sa.Integer(),
-                    sa.ForeignKey("contrat_entretien.id"),
-                    nullable=True,
-                )
-            )
+    #
+    #  🔴 DEUX COLONNES ENTIÈRES, SANS CONTRAINTE — et les deux tentatives
+    #  précédentes ont été MESURÉES, pas supposées.
+    #
+    #  1. `batch_alter_table` + clé étrangère anonyme →
+    #     `ValueError: Constraint must have a name`
+    #  2. `op.add_column` + clé étrangère nommée →
+    #     `NotImplementedError: No support for ALTER of constraints in SQLite`
+    #
+    #  ⚠️ `start.sh` a `set -e` : l'une comme l'autre aurait planté au démarrage
+    #  et **bloqué le conteneur**, donc le site. Trouvé en faisant tourner la
+    #  migration sur une base jetable AVANT de livrer — aucun test de la CI ne
+    #  l'aurait vu, `test_migrations.py` ne vérifiant que la chaîne des révisions.
+    #
+    #  La contrainte reste DÉCLARÉE côté modèle (`Copropriete.assurance_contrat_id`
+    #  porte son `foreign_key=`) : c'est là qu'elle documente la relation, et
+    #  c'est de là qu'elle serait matérialisée le jour d'une reconstruction de
+    #  table. Elle ne serait de toute façon pas VÉRIFIÉE : cette base tourne avec
+    #  `PRAGMA foreign_keys=OFF` — mesuré, et suivi en #546.
+    #
+    #  Le mode « batch » aurait en outre RECRÉÉ `copropriete`, que `batiment` et
+    #  `contrat_entretien` référencent. Éviter cette recréation pour deux colonnes
+    #  nullables est un gain en soi.
+    for nom in ("assurance_contrat_id", "syndic_contrat_id"):
+        if nom not in presentes:
+            op.add_column("copropriete", sa.Column(nom, sa.Integer(), nullable=True))
 
     #  🔴 REPRISE DE L'EXISTANT — sans elle, la fiche perdrait son assurance le
     #  jour du déploiement, et le défaut ressemblerait à « il n'y a plus de
@@ -104,6 +111,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("copropriete") as batch:
-        batch.drop_column("syndic_contrat_id")
-        batch.drop_column("assurance_contrat_id")
+    #  Sans contrainte à défaire, le retrait est direct — pas de mode « batch »
+    #  ici non plus, donc pas de recréation de table.
+    for nom in ("syndic_contrat_id", "assurance_contrat_id"):
+        op.drop_column("copropriete", nom)
