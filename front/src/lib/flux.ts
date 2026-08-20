@@ -227,19 +227,53 @@ export function estNonResolu(item: FluxItem): boolean {
  *
  * Le serveur faisait donc le bon calcul, six fois, et l'écran le jetait.
  *
- * ⚠️ Ce qui n'est **pas** traité ici : un événement du calendrier reste classé
- * sur sa date d'annonce et non sur sa date de tenue. C'est une autre question —
- * elle demande de trancher, entité par entité, entre « quoi de neuf » et « quoi
- * ensuite » — et elle reste suivie en **#524**.
+ * ## ✅ L'événement classe sur sa TENUE depuis le 20/08/2026 (#524)
+ *
+ * Il restait classé sur sa date d'annonce. L'AG du **22 juin** s'affichait et se
+ * rangeait au **1er mars**, jour de sa saisie — donc elle descendait dans le fil
+ * à mesure qu'elle APPROCHAIT, et disparaissait de la fenêtre de chargement
+ * alors qu'elle n'avait pas encore eu lieu.
+ *
+ * 🔴 Toutes les entités n'ont pas la même « bonne » date, et c'est le fond du
+ * sujet. Une règle unique serait fausse pour au moins un type :
+ *
+ * | Objet | Ce qui le classe | Pourquoi |
+ * |---|---|---|
+ * | **événement** | `meta.debut` | on cherche « quoi ENSUITE » |
+ * | publication | l'annonce | on cherche « quoi de NEUF » |
+ * | ticket | la clôture, sinon la dernière activité | idem |
+ *
+ * D'où une **table déclarative** plutôt qu'une cascade de `if` : le jour où une
+ * entité veut une autre date, elle le DIT, et la fonction ne bouge pas. C'est la
+ * forme retenue pour l'archivage (#515) et pour les périodes par nœud (#542).
  */
+const DATE_QUI_CLASSE: Record<string, (item: FluxItem) => string | undefined> = {
+	//  ⚠️ `estNonResolu` lit DÉJÀ `meta.debut` pour décider qu'un événement passé
+	//  n'attend plus rien. Les deux règles lisaient donc deux dates différentes
+	//  pour le même objet — ce qui ne pouvait pas durer, et c'est ce que ce
+	//  ticket a corrigé en les faisant converger sur `debut`.
+	evenement: (item) => item.meta?.debut as string | undefined,
+};
+
 export function dateDeReference(item: FluxItem): number {
 	const cloture = (item.meta?.cloture_le || item.meta?.ferme_le) as string | undefined;
 	if (cloture) return new Date(cloture).getTime();
+
+	//  La date DÉCLARÉE par le type, quand il en déclare une.
+	const declaree = DATE_QUI_CLASSE[item.type]?.(item);
+	if (declaree) return new Date(declaree).getTime();
+
 	//  `date` d'abord : c'est la date de l'ANNONCE, celle que le serveur a
 	//  calculée pour cette carte. `cree_le` n'est qu'un repli pour les cartes
 	//  qui ne portent pas de date propre.
 	return new Date(item.date || item.cree_le || 0).getTime();
 }
+
+/**  Les types qui déclarent une date de classement propre.
+ *
+ *   Exporté pour le garde-fou : sans lui, vider `DATE_QUI_CLASSE` rendrait tous
+ *   les tests verts en ramenant silencieusement l'ancien comportement. */
+export const TYPES_A_DATE_DECLAREE = Object.keys(DATE_QUI_CLASSE);
 
 /** Plafond SOUPLE : on avertit celui qui épingle, on ne masque jamais un
  *  élément épinglé — le cacher trahirait la promesse du marqueur. Au-delà,
