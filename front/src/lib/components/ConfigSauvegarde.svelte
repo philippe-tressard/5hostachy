@@ -33,6 +33,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { admin, ApiError } from '$lib/api';
+	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	//  Les NOMS DU MODÈLE, pas des noms inventés : c'est ce qui manquait.
@@ -68,7 +69,12 @@
 </script>
 
 <section class="config-sauvegarde">
-	<h3 class="titre">💾 Réglage de la sauvegarde quotidienne</h3>
+	<!--  L'en-tête est celui du bloc voisin, à l'identique : `config-section-title`
+	      et un tracé du catalogue. Il portait un émoji 💾 et une classe `.titre`
+	      locale, à trois centimètres d'un « Santé des tâches planifiées » rendu
+	      par le motif partagé — deux blocs du même onglet, deux façons de titrer.
+	      Un émoji dépend en plus de la police du système. -->
+	<h3 class="config-section-title"><Icon name="sliders-horizontal" size={17} />Réglage de la sauvegarde quotidienne</h3>
 	<p class="aide">
 		La sauvegarde s’exécute <strong>tous les jours</strong>. Son historique et son
 		déclenchement manuel sont dans le tableau ci-dessus, avec les autres tâches.
@@ -77,7 +83,7 @@
 	{#if chargement}
 		<p class="aide">Chargement…</p>
 	{:else}
-		<form on:submit|preventDefault={enregistrer} class="grille">
+		<form id="config-sauvegarde" on:submit|preventDefault={enregistrer} class="grille">
 			<label class="field champ-en-ligne">
 				<span>Heure d’exécution</span>
 				<select bind:value={heure_execution}>
@@ -90,9 +96,6 @@
 				<span>Versions conservées</span>
 				<input type="number" min="1" max="99" bind:value={nb_versions_conservees} />
 			</label>
-			<button class="btn-primary" type="submit" disabled={enregistrement}>
-				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
 		</form>
 		<p class="aide note">
 			Au-delà de {nb_versions_conservees} versions, la plus ancienne est effacée.
@@ -106,12 +109,28 @@
 				base en cours de réorganisation. Préférez une heure creuse — 01 h ou 04 h.
 			</p>
 		{/if}
+		<!--  🔴 `.form-actions` — barre de soumission alignée à DROITE, comme partout
+		      (`ux-patterns` §9 quinquies). Le bouton vivait DANS la grille des
+		      champs, donc collé au dernier champ et calé à gauche : il ne se lisait
+		      pas comme la validation du formulaire mais comme un troisième champ.
+		      Et il n'avait que `btn-primary`, sans `btn` : tout le style vit dans la
+		      base, il sortait en bouton natif gris. Signalé à l'écran le 20/08/2026.
+		      `form="config-sauvegarde"` le rattache au formulaire qu'il soumet — il
+		      n'est plus dedans, la soumission au clavier doit le rester.
+
+		      ⚠️ Et il vient EN DERNIER, après les deux explications : on lit ce que
+		      les champs font, puis on valide. Placé juste sous la grille, il coupait
+		      la note qui explique le champ qu'on vient de régler. -->
+		<div class="form-actions">
+			<button class="btn btn-primary" type="submit" form="config-sauvegarde" disabled={enregistrement}>
+				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
 	{/if}
 </section>
 
 <style>
 	.config-sauvegarde { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
-	.titre { font-size: .95rem; margin: 0 0 .35rem; }
 	.aide { font-size: .82rem; color: var(--color-text-muted); line-height: 1.5; margin: 0 0 .9rem; }
 	.note { margin: .7rem 0 0; }
 	.avertissement { font-size: .82rem; line-height: 1.5; margin: .7rem 0 0; padding: .6rem .7rem; border-left: 3px solid var(--color-warning, #d97706); background: var(--color-bg); }
