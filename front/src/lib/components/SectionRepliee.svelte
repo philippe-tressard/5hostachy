@@ -72,6 +72,18 @@
 
 	    Le reste est suivi en #516. Un commentaire qui annonce une consolidation
 	    non faite est pire qu'aucun commentaire : il dispense de vérifier. */
+	/*  🔴 LE séparateur du bloc, et le seul. Il était écrit une seconde fois dans
+	    les pages qui enveloppent ce composant (`.history-section`, Tickets et
+	    Espace CS) : deux règles identiques, donc deux traits séparés par
+	    l'espacement de l'autre. Signalé à l'écran le 20/08/2026 (#536).
+
+	    ⚠️ Le doublon PRÉCÉDAIT la migration vers `ArchivesParAnnee` — ces pages
+	    enveloppaient déjà `SectionRepliee` ainsi. Le lot #516 ne l'a pas créé, il
+	    l'a rendu visible.
+
+	    Un séparateur appartient au composant qui rend ce qu'il sépare. Une page
+	    qui en pose un second ne le sait pas : elle ne voit pas le balisage de son
+	    enfant. */
 	.sr-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
 	.sr-entete {
 		display: flex; align-items: center; gap: .6rem; width: 100%;
