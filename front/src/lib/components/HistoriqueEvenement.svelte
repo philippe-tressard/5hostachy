@@ -116,6 +116,19 @@
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
 		} finally { correctionEnCours = false; }
 	}
+
+	//  Effacer — ADMIN seulement, et le serveur le revérifie (`require_admin`).
+	//  Le bouton s'affichait ici sans route derrière : on cliquait, rien ne se
+	//  passait (#505). La route existe depuis #512, le geste peut revenir.
+	async function supprimer(e: CustomEvent<number>) {
+		try {
+			await calApi.deleteEvolution(evenement.id, e.detail);
+			dispatch('evolue');
+			toast('success', 'Entrée supprimée');
+		} catch (err: any) {
+			toast('error', err instanceof ApiError ? err.message : 'Erreur');
+		}
+	}
 </script>
 
 <div class="ev-fil">
@@ -126,9 +139,10 @@
 		vide={peutAgir ? 'Aucune entrée pour le moment.' : ''}
 		peutModifier={peutAgir}
 		currentUserId={$currentUser?.id}
-		estAdmin={$isAdmin}
+		estAdmin={$isAdmin} avecSuppression
 		{enEdition}
 		on:modifier={(e) => (enEdition = e.detail)}
+		on:supprimer={supprimer}
 	>
 		<!--  Le formulaire de correction prend la place de l'entrée qu'il corrige.
 		      Il ne propose PAS d'état : corriger le texte d'une entrée ne rejoue

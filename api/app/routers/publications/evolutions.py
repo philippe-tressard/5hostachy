@@ -9,12 +9,13 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import require_cs_or_admin
+from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Publication, PublicationEvolution, RoleUtilisateur, Utilisateur,
 )
 from app.schemas import EvolutionCreate, EvolutionRead, PublicationEvolutionUpdate
+from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
@@ -49,6 +50,31 @@ def update_evolution(
     session.commit()
     session.refresh(evol)
     return evolution_read(evol, session)
+
+
+@router.delete("/{pub_id}/evolutions/{evol_id}", status_code=204)
+def delete_evolution(
+    pub_id: int,
+    evol_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_admin),
+):
+    """Retirer une entrée du fil d'une actualité — **administrateur seulement**.
+
+    Le bouton 🗑️ existait à l'écran depuis longtemps ; la route, non. Un
+    administrateur cliquait, et **rien ne se passait** — pas d'action, pas
+    d'erreur, pas de trace (#505 puis #512). L'écran a été corrigé d'abord (le
+    bouton a disparu là où il ne pouvait rien), parce qu'un geste proposé et non
+    consommé est pire qu'un geste absent. Voici le geste.
+
+    Le contrat est celui des tickets, **littéralement** : même code, même liste
+    de types effaçables, même message de refus — voir `app/utils/evolutions.py`.
+    """
+    supprimer_evolution(
+        session, PublicationEvolution, evol_id,
+        champ_parent="publication_id", parent_id=pub_id,
+    )
+    return None
 
 
 @router.post("/{pub_id}/evolutions", response_model=EvolutionRead, status_code=201)

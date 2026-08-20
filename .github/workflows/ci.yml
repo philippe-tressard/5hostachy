@@ -213,6 +213,7 @@ jobs:
         # moyen de tester une décision d'infra sans les deux RPi.
         run: |
           bash scripts/lib/lib-role.sh              --selftest
+          bash scripts/lib/lib-parite.sh            --selftest
           bash scripts/exploitation/boot-role-guard.sh   --selftest
           bash scripts/exploitation/health-watch.sh      --selftest
           bash scripts/exploitation/auto-deploy.sh       --selftest

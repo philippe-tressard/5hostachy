@@ -13,6 +13,7 @@ export type { Perimetre } from '$lib/perimetres';
 export * from './client';
 export * from './types';
 export * from './documents';
+export * from './communaute';
 
 export const auth = {
 	me: () => api.get<User>('/auth/me'),
@@ -83,6 +84,9 @@ export const publications = {
 		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
 	updateEvolution: (pubId: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
 		api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
+	//  Même contrat que celui des tickets — même code côté serveur (#512).
+	deleteEvolution: (pubId: number, evolId: number) =>
+		api.delete<void>(`/publications/${pubId}/evolutions/${evolId}`),
 };
 
 
@@ -164,6 +168,9 @@ export const calendrier = {
 	addEvolution: (id: number, data: unknown) => api.post<any>(`/calendrier/${id}/evolutions`, data),
 	updateEvolution: (id: number, evolId: number, data: unknown) =>
 		api.patch<any>(`/calendrier/${id}/evolutions/${evolId}`, data),
+	//  Même contrat que celui des tickets — même code côté serveur (#512).
+	deleteEvolution: (id: number, evolId: number) =>
+		api.delete<void>(`/calendrier/${id}/evolutions/${evolId}`),
 };
 
 export const prestataires = {
@@ -237,20 +244,7 @@ export const prestataires = {
 	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),
 };
 
-export const sondages = {
-	list: () => api.get<any[]>('/sondages'),
-	get: (id: number) => api.get<any>(`/sondages/${id}`),
-	create: (data: unknown) => api.post<any>('/sondages', data),
-	modifier: (id: number, data: unknown) => api.patch<any>(`/sondages/${id}`, data),
-	supprimer: (id: number) => api.delete(`/sondages/${id}`),
-	cloturer: (id: number) => api.patch<any>(`/sondages/${id}/cloturer`, {}),
-	voter: (id: number, option_id: number, commentaire?: string, reponse_libre?: string) =>
-		api.post(`/sondages/${id}/voter`, { option_id, commentaire: commentaire || null, reponse_libre: reponse_libre || null }),
-	commenter: (id: number, contenu: string) =>
-		api.post<any>(`/sondages/${id}/commenter`, { contenu }),
-	supprimerCommentaire: (sondageId: number, commentaireId: number) =>
-		api.delete(`/sondages/${sondageId}/commentaires/${commentaireId}`),
-};
+
 
 // ── Flux temps réel (dashboard pouls) ───────────────────────────────────────
 
@@ -316,41 +310,9 @@ export const annuaireAdmin = {
 };
 
 
-export const idees = {
-	list: () => api.get<any[]>('/idees'),
-	create: (data: unknown) => api.post<any>('/idees', data),
-	voter: (id: number) => api.post(`/idees/${id}/voter`),
-	updateStatut: (id: number, statut: string) => api.patch(`/idees/${id}/statut`, { statut }),
-	delete: (id: number) => api.delete(`/idees/${id}`),
-	listReponses: (id: number) => api.get<any[]>(`/idees/${id}/reponses`),
-	repondre: (id: number, contenu: string) => api.post<any>(`/idees/${id}/reponses`, { contenu }),
-	supprimerReponse: (id: number, repId: number) => api.delete(`/idees/${id}/reponses/${repId}`),
-};
 
-export const annonces = {
-	list: () => api.get<any[]>('/annonces'),
-	create: (data: unknown) => api.post<any>('/annonces', data),
-	//  La CORRECTION d'une annonce — `PATCH /annonces/{id}` existait depuis
-	//  toujours, avec ses sept champs, et aucun écran ne l'appelait (18/08/2026).
-	update: (id: number, data: unknown) => api.patch<any>(`/annonces/${id}`, data),
-	updateStatut: (id: number, statut: string) => api.patch(`/annonces/${id}/statut`, { statut }),
-	supprimer: (id: number) => api.delete(`/annonces/${id}`),
-	uploadPhoto: async (id: number, file: File): Promise<{ url: string; photos: string[] }> => {
-		const form = new FormData();
-		form.append('file', file);
-		const res = await fetch(`${BASE}/annonces/${id}/photo`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	deletePhoto: (id: number, url: string) => api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
-	listReponses: (id: number) => api.get<any[]>(`/annonces/${id}/reponses`),
-	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
-	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),
-};
+
+
 
 
 export const annoncesHall = {
@@ -370,14 +332,7 @@ export const annoncesHall = {
 	pdfUrl: (id: number) => `${BASE}/annonces-hall/${id}/pdf`,
 };
 
-export const signalements = {
-	creer: (cible_type: string, cible_id: number, motif: string) =>
-		api.post('/signalements', { cible_type, cible_id, motif }),
-	liste: (statut = 'en_attente') => api.get<any[]>(`/signalements?statut=${statut}`),
-	count: () => api.get<{ en_attente: number }>('/signalements/count'),
-	resoudre: (id: number, statut: 'traite' | 'rejete') =>
-		api.patch(`/signalements/${id}`, { statut }),
-};
+
 
 export const copropriete = {
 	get: () => api.get<any>('/copropriete'),

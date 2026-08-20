@@ -164,6 +164,19 @@
 		finally { editEvolSaving = false; }
 	}
 
+	//  Effacer une entrée du fil — ADMIN seulement, revérifié par le serveur
+	//  (`require_admin`). Le bouton s'affichait ici sans route derrière : on
+	//  cliquait, rien ne se passait (#505). La route existe depuis #512.
+	async function supprimerEvol(pub: Publication, evolId: number) {
+		try {
+			await pubsApi.deleteEvolution(pub.id, evolId);
+			pubList = pubList.map(p => p.id !== pub.id
+				? p
+				: { ...p, evolutions: (p.evolutions ?? []).filter(ev => ev.id !== evolId) });
+			toast('success', 'Entrée supprimée');
+		} catch { toast('error', 'Erreur de suppression'); }
+	}
+
 	function startEdit(pub: Publication) {
 		editingPub = pub;
 		showEvolForm = null;
@@ -312,9 +325,10 @@
 							statutLabels={STATUT_LABELS}
 							peutModifier={$isCS}
 							currentUserId={$currentUser?.id}
-							estAdmin={$isAdmin}
+							estAdmin={$isAdmin} avecSuppression
 							enEdition={editingEvolId}
 							on:modifier={(e) => { editingEvolId = e.detail; editingEvolPubId = pub.id; }}
+							on:supprimer={(e) => supprimerEvol(pub, e.detail)}
 						>
 							<svelte:fragment slot="edition" let:evol>
 								{#key editingEvolId}
