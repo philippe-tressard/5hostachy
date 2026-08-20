@@ -169,19 +169,21 @@
 						<span class="badge {item.meta.statut === 'résolu' || item.meta.statut === 'réalisé' ? 'badge-green' : item.meta.statut === 'en_cours' || item.meta.statut === 'ouvert' ? 'badge-orange' : 'badge-gray'}">{item.meta.statut}</span>
 					</p>
 				{/if}
-				{#if item.meta?.full_html}
-					<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
-				{:else if item.meta?.description}
-					<p class="flux-full-content">{item.meta.description}</p>
-				{:else if item.detail}
-					<p class="flux-full-content">{item.detail}</p>
-				{/if}
-				<!--  La condition ne teste PLUS le type : `evol_contenu` n'est posé que
-				      par une carte de mise à jour, et le vérifier deux fois faisait de
-				      cette liste de types une seconde déclaration à tenir. Elle a
-				      immédiatement divergé : le calendrier a eu son Historique le
-				      18/08/2026, le fil a su le fournir, et RIEN ne s'affichait.
-				      La donnée décide, pas une énumération de types. -->
+				<!--  🔴 LA DERNIÈRE MISE À JOUR D'ABORD, le texte d'origine ensuite
+				      (#531, demandé à l'écran le 20/08/2026 sur la carte dépliée).
+
+				      Une carte du fil répond à « quoi de neuf ». Ce qui est neuf, c'est
+				      le commentaire du jour ; la description d'origine est le CONTEXTE
+				      qui permet de le comprendre. L'ordre inverse obligeait à lire un
+				      texte parfois vieux de plusieurs semaines avant d'atteindre la
+				      seule ligne qu'on venait chercher.
+
+				      ⚠️ La condition ne teste PAS le type : `evol_contenu` n'est posé
+				      que par une carte de mise à jour, et le vérifier deux fois ferait
+				      de cette liste de types une seconde déclaration à tenir. Elle a
+				      immédiatement divergé la première fois : le calendrier a eu son
+				      Historique le 18/08/2026, le fil a su le fournir, et RIEN ne
+				      s'affichait. La donnée décide, pas une énumération de types. -->
 				{#if item.meta?.evol_contenu}
 					<div class="flux-reaction">
 						<span class="flux-reaction-icon">💬</span>
@@ -190,6 +192,14 @@
 							<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
 						</div>
 					</div>
+				{/if}
+				<!--  Le texte d'origine, en dessous : il rappelle DE QUOI il s'agit. -->
+				{#if item.meta?.full_html}
+					<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
+				{:else if item.meta?.description}
+					<p class="flux-full-content">{item.meta.description}</p>
+				{:else if item.detail}
+					<p class="flux-full-content">{item.detail}</p>
 				{/if}
 				{#if photos.length || fichiers.length}
 					<!-- Les pièces jointes de devis sont des PDF : elles étaient
