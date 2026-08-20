@@ -34,6 +34,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SRC = join(RACINE, 'src');
@@ -88,9 +89,7 @@ export function titresSuspects(contenu) {
 	//  Les commentaires ne rendent rien. Neutralisés en conservant la longueur,
 	//  pour que les positions restent justes — la leçon de `check-html.mjs`, dont
 	//  la détection line-locale refusait le fichier qui EXPLIQUE la règle.
-	const neutre = contenu
-		.replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, (b) => b.replace(/[^\n]/g, ' '))
-		.replace(/(^|[^:])\/\/[^\n]*/g, (b, avant) => avant + ' '.repeat(b.length - avant.length));
+	const neutre = neutraliserCommentaires(contenu);
 
 	const trouves = [];
 	for (const motif of MOTIFS) {

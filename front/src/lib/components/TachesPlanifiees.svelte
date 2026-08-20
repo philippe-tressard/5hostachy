@@ -227,10 +227,14 @@
 	<h2 class="config-section-title"><Icon name="clipboard-list" size={17} />Santé des tâches planifiées</h2>
 	<p class="muted" style="font-size:.85rem">
 		Synthèse : <strong>une ligne par tâche</strong>, portant la <strong>dernière
-		exécution réelle</strong> — quel que soit le nœud qui l'a faite. Quand une tâche
-		tourne sur les deux, chacun a sa <strong>propre sous-ligne</strong> : un nœud sain
-		ne compense pas un nœud muet, et l'on voit lequel décroche sans avoir à cliquer.
+		exécution réelle</strong> — quel que soit le nœud qui l'a faite. En dessous,
+		<strong>une sous-ligne par nœud ayant rendu compte</strong> : un nœud sain ne
+		compense pas un nœud muet, et l'on voit lequel décroche sans avoir à cliquer.
 		Sans ce contrôle, une absence de ligne se lirait comme « tout va bien ».
+		<br />
+		⚠️ Une tâche qui n'affiche <strong>qu'une seule</strong> sous-ligne n'a été
+		rapportée que par ce nœud-là. Selon la tâche, c'est normal (elle ne tourne que
+		sur l'actif) ou c'est le signe que l'autre nœud ne rend pas compte.
 	</p>
 	{#if santeLoading}
 		<p class="muted">Chargement...</p>
@@ -267,7 +271,7 @@
 								{:else}
 									<!-- Le nœud de la DERNIÈRE exécution. Les autres ont leur propre
 									     sous-ligne ci-dessous : plus rien n'est élu ni masqué (#331). -->
-									<span title={t.noeuds?.length > 1
+									<span title={t.noeuds?.length
 										? `Nœud de la dernière exécution. L'état de chaque nœud est détaillé sous cette ligne.`
 										: ''}>{t.noeud.toUpperCase()}</span>
 								{/if}
@@ -289,13 +293,28 @@
 							</td>
 							<td style="color:var(--color-text-muted)">{t.derniere ? fmtDatetime(t.derniere) : '—'}</td>
 						</tr>
-						{#if t.noeuds?.length > 1}
+						{#if t.noeuds?.length}
 							<!--  UNE SOUS-LIGNE PAR NŒUD, toujours visible (#331).
-							      C'est elle, et non l'état de synthèse, qui garantit désormais qu'un
-							      nœud sain ne compense pas un nœud muet. Toujours visible et non
-							      dépliable : ce qu'il faut voir sans cliquer ne se range pas derrière
-							      un clic. Rendue seulement au-delà d'un nœud — une sous-ligne unique
-							      qui répète la synthèse serait du bruit. -->
+							      C'est elle, et non l'état de synthèse, qui garantit qu'un nœud sain
+							      ne compense pas un nœud muet. Toujours visible et non dépliable : ce
+							      qu'il faut voir sans cliquer ne se range pas derrière un clic.
+
+							      🔴 RENDUE MÊME POUR UN SEUL NŒUD depuis le 20/08/2026, demandé à
+							      l'écran : *« Uniformise le visuel à toutes les tâches »*. La règle
+							      d'avant — « au-delà d'un nœud, sinon c'est du bruit » — reposait sur
+							      une idée juste et une conclusion fausse.
+
+							      Juste : une sous-ligne unique répète la synthèse. Fausse : elle
+							      n'en est pas moins une INFORMATION, et c'est même la plus utile du
+							      tableau. « Sauvegarde quotidienne · RPI2 » seul ne dit pas
+							      « tout va bien sur rpi2 » — il dit *« rpi1 n'a JAMAIS rendu compte
+							      de cette tâche »*. Le masquer faisait disparaître le seul indice
+							      d'un nœud qui ne parle pas, exactement ce que #331 voulait empêcher.
+
+							      ⚠️ Et l'écran ne peut pas encore dire quels nœuds étaient ATTENDUS :
+							      rien ne le déclare. Un nœud qui n'a jamais écrit reste donc absent
+							      du tableau plutôt qu'affiché en creux. C'est #488, et c'est ce qui
+							      reste à faire. -->
 							{#each t.noeuds as n}
 								<tr class="par-noeud">
 									<td></td>

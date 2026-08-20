@@ -41,6 +41,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -115,22 +116,6 @@ function expression(texte, debut) {
 		}
 	}
 	return null;
-}
-
-/**
- * Remplace le contenu des commentaires par des espaces, en conservant la
- * longueur — donc les index et les numéros de ligne.
- *
- * Trois formes, dont deux peuvent s'étendre sur plusieurs lignes : le
- * commentaire HTML/Svelte, le commentaire de bloc JS/CSS, et le commentaire de
- * fin de ligne. C'est le multi-lignes que l'ancienne détection ne voyait pas.
- */
-function neutraliserCommentaires(source) {
-	return source.replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, (bloc) =>
-		bloc.replace(/[^\n]/g, ' '),
-	).replace(/(^|[^:])\/\/[^\n]*/g, (bloc, avant) =>
-		avant + ' '.repeat(bloc.length - avant.length),
-	);
 }
 
 const erreurs = [];

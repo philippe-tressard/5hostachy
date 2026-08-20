@@ -27,6 +27,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SOURCE = join('lib', 'taches.ts');
@@ -77,12 +78,22 @@ const fautes = [];
 for (const chemin of tous) {
 	const rel = relative(RACINE, chemin);
 	if (rel === SOURCE) continue;
-	const lignes = readFileSync(chemin, 'utf8').split('\n');
+	//  🔴 Les commentaires sont NEUTRALISÉS avant l'analyse, et non détectés
+	//  ligne par ligne.
+	//
+	//  La forme d'avant regardait si la ligne COMMENCE par `//`, `*` ou `<!--`.
+	//  Elle ne voyait donc qu'un commentaire dont chaque ligne s'ouvre ainsi —
+	//  or un commentaire Svelte de plusieurs lignes ne réouvre rien, et sa
+	//  deuxième ligne passait pour du code. C'est exactement ce qui a fait
+	//  refuser un lot le 20/08/2026, sur une phrase qui nommait
+	//  « Sauvegarde quotidienne » pour EXPLIQUER la règle.
+	//
+	//  Un contrôle qui interdit d'en parler oblige à taire la raison — et c'est
+	//  la raison qui se perd en premier. La parade vit dans
+	//  `lib-commentaires.mjs`, partagée par les cinq contrôles qui en ont besoin
+	//  (elle en avait quatre copies, écrites le même jour).
+	const lignes = neutraliserCommentaires(readFileSync(chemin, 'utf8')).split('\n');
 	lignes.forEach((ligne, i) => {
-		//  Un commentaire qui CITE un libellé pour expliquer l'historique n'est pas
-		//  un affichage : c'est même ce qui rend la règle compréhensible.
-		const nue = ligne.trim();
-		if (nue.startsWith('//') || nue.startsWith('*') || nue.startsWith('<!--')) return;
 		for (const libelle of LIBELLES) {
 			if (ligne.includes(libelle)) {
 				fautes.push(`${rel.split(sep).join('/')}:${i + 1}  « ${libelle} »`);

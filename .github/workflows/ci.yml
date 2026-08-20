@@ -556,6 +556,7 @@ jobs:
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
           node scripts/check-charge-utile.mjs --selftest
+          node scripts/lib-commentaires.mjs --selftest
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
