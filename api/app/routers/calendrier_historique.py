@@ -30,10 +30,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import require_cs_or_admin
+from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Evenement, RoleUtilisateur, Utilisateur
 from app.models.evenement import EvenementEvolution
+from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import parse_photos, photos_internes
 from app.routers.calendrier_courriels import notifier_canaux
 
@@ -223,3 +224,29 @@ def update_evolution_evenement(
     return next(e for e in _evolutions_de(ev_id, session) if e.id == evol_id)
 
 
+@router.delete("/{ev_id}/evolutions/{evol_id}", status_code=204)
+def delete_evolution_evenement(
+    ev_id: int,
+    evol_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_admin),
+):
+    """Retirer une entrée du fil d'un événement — **administrateur seulement**.
+
+    Troisième et dernier fil du site à recevoir ce geste (#512). Le bouton 🗑️
+    s'affichait sur cinq écrans alors que la route n'existait que pour les
+    tickets ; l'écran a été corrigé d'abord (v2.102.4), le serveur maintenant.
+
+    ⚠️ Le contrat n'est pas *inspiré* de celui des tickets, il **est** le même —
+    `app/utils/evolutions.py`. Trois copies auraient chacune porté leur liste de
+    types et leur message, et un administrateur ne compare pas le refus d'un
+    écran à celui d'un autre : la divergence serait passée inaperçue.
+
+    Comme ailleurs, supprimer une entrée d'état ne modifie PAS `statut_kanban` —
+    la colonne vit sa vie, le fil n'en est que le récit.
+    """
+    supprimer_evolution(
+        session, EvenementEvolution, evol_id,
+        champ_parent="evenement_id", parent_id=ev_id,
+    )
+    return None

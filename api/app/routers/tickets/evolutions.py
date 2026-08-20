@@ -19,6 +19,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
+from app.utils.evolutions import supprimer_evolution
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
 from app.utils.photos import photos_internes
@@ -135,16 +136,14 @@ def delete_evolution(
     effacerait supprimerait la parole de quelqu'un d'autre. Ce n'est pas la même
     chose que retirer une ligne que le système a écrite ou qu'on a écrite soi-même.
     """
-    evol = session.get(TicketEvolution, evol_id)
-    if not evol or evol.ticket_id != ticket_id:
-        raise HTTPException(404, "Évolution introuvable")
-    if evol.type not in ("commentaire", "etat"):
-        raise HTTPException(
-            422,
-            "Cette entrée ne peut pas être supprimée : une réponse appartient à son auteur.",
-        )
-    session.delete(evol)
-    session.commit()
+    #  🔴 La décision a quitté ce fichier (#512) : les actualités et les
+    #  événements ont désormais le même geste, et trois copies auraient divergé
+    #  au premier ajustement de la liste des types. Ce qui reste ici est le
+    #  contrôle d'accès — c'est au routeur de dire qui il laisse entrer.
+    supprimer_evolution(
+        session, TicketEvolution, evol_id,
+        champ_parent="ticket_id", parent_id=ticket_id,
+    )
     return None
 
 
