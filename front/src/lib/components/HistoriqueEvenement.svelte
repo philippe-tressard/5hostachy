@@ -35,6 +35,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
 	import { calendrier as calApi, ApiError } from '$lib/api';
 	import { currentUser, isAdmin } from '$lib/stores/auth';
@@ -135,7 +136,7 @@
 	<RubriqueHistorique
 		evolutions={evenement.evolutions ?? []}
 		statutLabels={libelles}
-		titre="&#x1F4CB; Historique"
+		titre={TITRE_HISTORIQUE}
 		vide={peutAgir ? 'Aucune entrée pour le moment.' : ''}
 		peutModifier={peutAgir}
 		currentUserId={$currentUser?.id}

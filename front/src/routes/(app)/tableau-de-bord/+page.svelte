@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { delaiArchivageMs } from '$lib/archivage';
+	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin, isProprio } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxProchain, type FluxResponse } from '$lib/api';
@@ -563,24 +564,8 @@
 		<!-- Accordéon : anciens (>30 jours) -->
 		{#if olderItems.length > 0}
 			<div class="section-reveal" class:section-visible={ready} style="--delay:.35s">
-				<!--  Bandeau réimplémenté ici jusqu'au 20/08, et libellé « Activité plus
-				      ancienne » : « Archives partout, même règle » (#516). -->
-				<SectionRepliee titre="&#x1F4C1; Archives" compte={olderItems.length}
-					bind:ouvert={olderOpen} />
-				{#if olderOpen}
-					<div class="flux-timeline older-timeline">
-						{#each olderDayGroups as group}
-							<div class="flux-day-label">{group.label}</div>
-							{#each group.items as item (item.id)}
-								<FluxCard
-									{item}
-									expanded={expandedItem === item.id}
-									on:toggle={(e) => toggleItem(e.detail)}
-								/>
-							{/each}
-						{/each}
-					</div>
-				{/if}
+				<ArchivesDuFil groupesParJour={olderDayGroups} compte={olderItems.length}
+					bind:ouvert={olderOpen} itemDeplie={expandedItem} onBasculer={toggleItem} />
 			</div>
 		{/if}
 	{/if}
@@ -868,8 +853,8 @@
 	.epingle-timeline { padding-left: 1.5rem; }
 	.epingle-timeline::before { display: none; }
 
-	/* ═══ ACCORDÉON ANCIENS ═════════════════════════════════════════════ */
-	.older-timeline { opacity: .85; }
+	/*  `.older-timeline` est partie avec `ArchivesDuFil` — elle n'habillait que
+	    son balisage. */
 
 	/* ═══ RESPONSIVE ════════════════════════════════════════════════════ */
 	@media (min-width: 768px) {

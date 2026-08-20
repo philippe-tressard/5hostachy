@@ -2,6 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
+	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { onMount } from 'svelte';
@@ -101,17 +102,11 @@
 	$: tkHistory = tickets
 		.filter(t => estTicketClos(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= TK_THREE_YEARS_AGO)
 		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
-	$: tkHistoryByYear = (() => {
-		const groups = new Map<number, typeof tkHistory>();
-		for (const t of tkHistory) {
-			const year = new Date(t.mis_a_jour_le ?? t.cree_le).getFullYear();
-			if (!groups.has(year)) groups.set(year, []);
-			groups.get(year)!.push(t);
-		}
-		return [...groups.entries()].sort(([a], [b]) => b - a);
-	})();
+	//  ⚠️ Le groupement par année et l'état des années ouvertes sont partis dans
+	//  `ArchivesParAnnee` : ce bloc en était la TROISIÈME copie, avec l'écran
+	//  Tickets et le composant lui-même. Ce qui reste ici est le FILTRE — quels
+	//  tickets sont archivés —, qui est propre à cet onglet.
 	let tkHistoryExpanded = false;
-	let tkExpandedYears = new Set<number>();
 
 
 
@@ -929,24 +924,14 @@
 		{/each}
 	{/if}
 
-	<!--  ARCHIVES des tickets clos. Bandeau réécrit ici une 4e fois, chevron figé
-	      à « ▼ » : il vient de `SectionRepliee`, qui porte le pourquoi (#516). -->
+	<!--  ARCHIVES des tickets clos — bandeau, groupement par année et titre
+	      viennent tous d'`ArchivesParAnnee` (#516). Le bandeau était réécrit ici
+	      une 4e fois (chevron figé à « ▼ »), et le groupement une 3e. -->
 	{#if tkHistory.length > 0}
 	<div class="history-section">
-		<SectionRepliee titre="&#x1F4C1; Archives" compte={tkHistory.length}
-			bind:ouvert={tkHistoryExpanded} />
-		{#if tkHistoryExpanded}
-		<div class="history-content">
-			{#each tkHistoryByYear as [year, tickets]}
-			<div class="history-year">
-				<button class="history-year-header" on:click={() => { if (tkExpandedYears.has(year)) { tkExpandedYears.delete(year); } else { tkExpandedYears.add(year); } tkExpandedYears = new Set(tkExpandedYears); }}>
-					<span class="history-year-label">{year}</span>
-					<span class="history-count">{tickets.length}</span>
-					<span class="history-chevron">{tkExpandedYears.has(year) ? '▲' : '▼'}</span>
-				</button>
-				{#if tkExpandedYears.has(year)}
-				<div>
-					{#each tickets as t (t.id)}
+		<ArchivesParAnnee items={tkHistory} dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
+			compte={tkHistory.length} charge bind:ouvert={tkHistoryExpanded}
+			let:objet={t}>
 					{@const hExpanded = tkExpandedId === t.id}
 					{@const evols = tkEvolsMap[t.id] ?? []}
 					<div class="tk-expand history-item" class:expanded={hExpanded} class:urgent={t.categorie === 'urgence'}
@@ -999,13 +984,7 @@
 							</div>
 						{/if}
 					</div>
-					{/each}
-				</div>
-				{/if}
-			</div>
-			{/each}
-		</div>
-		{/if}
+		</ArchivesParAnnee>
 	</div>
 	{/if}
 
@@ -1556,19 +1535,17 @@
 
 
 
-  /* Historique tickets clos */
+  /* Archives des tickets clos */
+  /*  🔴 Onze règles sont parties avec `ArchivesParAnnee` et `SectionRepliee` :
+      le bandeau, son compteur, son chevron, et tout le groupement par année.
+      Svelte scope les styles au composant qui rend le balisage — les laisser
+      ici les aurait rendues inertes, pas dangereuses, mais elles auraient
+      continué d'être lues comme la référence du rendu (#516).
+
+      Ne restent que les deux qui habillent ce que CETTE page rend encore :
+      l'encadré de la section, et la ligne d'un ticket archivé (contenu du
+      `slot`, donc dans la portée de la page). */
   .history-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
-  .history-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: none; border: none; padding: 0; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--color-text); text-align: left; }
-  .history-header:hover { color: var(--color-primary); }
-  .history-title { flex: 1; }
-  .history-count { display: inline-flex; align-items: center; justify-content: center; background: var(--color-primary); color: white; font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 12px; min-width: 1.5rem; }
-  .history-chevron { font-size: .8rem; color: var(--color-text-muted); flex-shrink: 0; transition: transform .2s; }
-  .history-header[aria-expanded="true"] .history-chevron { transform: scaleY(-1); }
-  .history-content { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
-  .history-year { margin-bottom: .5rem; }
-  .history-year-header { display: flex; align-items: center; gap: .5rem; width: 100%; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .75rem; cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--color-text); }
-  .history-year-header:hover { border-color: var(--color-primary); color: var(--color-primary); }
-  .history-year-label { flex: 1; text-align: left; }
   .history-item { border-left: 4px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); opacity: .8; transition: opacity .15s, border-left-color .15s; }
   .history-item:hover { opacity: 1; }
   .history-item.expanded { opacity: 1; }

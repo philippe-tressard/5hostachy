@@ -42,6 +42,7 @@
 -->
 <script lang="ts" generics="T">
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
+	import { TITRE_ARCHIVES } from '$lib/archives';
 
 	/** Les objets archivés. Vide tant que rien n'est chargé. */
 	export let items: T[] = [];
@@ -52,7 +53,10 @@
 	/**  ⚠️ `null` tant que rien n'a été chargé : annoncer « 0 » se lirait
 	 *   « il n'y a rien » alors qu'on n'a pas encore regardé. */
 	export let compte: number | null = null;
-	export let titre = '\u{1F4C1} Archives';
+	/**  Le titre vient de `$lib/archives` et non d'une chaîne écrite ici : cinq
+	 *   écrans l'avaient en dur, et concordaient parce qu'on venait de les
+	 *   aligner à la main (#516, point 4). */
+	export let titre = TITRE_ARCHIVES;
 	export let messageVide = 'Aucun élément archivé.';
 	/** Affiche le message de vide : l'appelant sait s'il a fini de charger. */
 	export let charge = false;
@@ -81,12 +85,35 @@
 		return [...groupes.entries()].sort(([a], [b]) => b - a);
 	})();
 
+	/**  L'année à ouvrir au premier dépliage, quand l'appelant en connaît une —
+	 *   un lien profond vers un objet archivé, par exemple. `null` = la plus
+	 *   récente.
+	 *
+	 *   ⚠️ Sans ce point d'entrée, l'écran Tickets ne pouvait pas adopter ce
+	 *   composant : il ouvre l'année de l'objet visé, et son groupement par
+	 *   année était donc réécrit à la main — la TROISIÈME copie du même bloc,
+	 *   avec l'Espace CS. La capacité manquante était la vraie cause du doublon,
+	 *   pas la paresse (#516). */
+	export let anneeOuverte: number | null = null;
+
 	//  La plus récente s'ouvre seule au premier dépliage : une section qui
 	//  s'ouvre sur rien de visible donne l'impression d'être vide.
 	let premierDepliage = true;
 	$: if (ouvert && premierDepliage && parAnnee.length > 0) {
-		anneesOuvertes = new Set([parAnnee[0][0]]);
+		const visee = anneeOuverte !== null && parAnnee.some(([a]) => a === anneeOuverte)
+			? anneeOuverte
+			: parAnnee[0][0];
+		anneesOuvertes = new Set([visee]);
 		premierDepliage = false;
+	}
+
+	//  Une année désignée APRÈS le premier dépliage (second lien profond, sans
+	//  rechargement de la page) doit s'ouvrir aussi — sinon le lien mène à une
+	//  section ouverte sur une AUTRE année, ce qui se lit « l'objet n'existe
+	//  plus ».
+	$: if (!premierDepliage && anneeOuverte !== null && !anneesOuvertes.has(anneeOuverte)
+	       && parAnnee.some(([a]) => a === anneeOuverte)) {
+		anneesOuvertes = new Set([...anneesOuvertes, anneeOuverte]);
 	}
 </script>
 
