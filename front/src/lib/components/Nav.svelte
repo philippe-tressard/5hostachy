@@ -82,8 +82,17 @@
 		return $page.url.pathname.startsWith(href);
 	}
 
-	// Fermer le menu lors d'un changement de page
-	$: $page.url.pathname, closeMenu();
+	//  Fermer le menu lors d'un changement de page.
+	//
+	//  ⚠️ La dépendance passe en ARGUMENT plutôt qu'en expression séquentielle
+	//  (`$: $page.url.pathname, closeMenu()`). Les deux formes ont le même effet,
+	//  mais la seconde se lit comme une valeur calculée puis jetée — ce qui est
+	//  presque toujours un `=` oublié, et ce qu'ESLint signale à raison. Ici
+	//  l'argument DIT ce qui déclenche : le chemin change, le menu se ferme.
+	function fermerAuChangementDePage(_chemin: string) {
+		closeMenu();
+	}
+	$: fermerAuChangementDePage($page.url.pathname);
 </script>
 
 <!-- ─── Sidebar desktop ─────────────────────────────────────────────────── -->

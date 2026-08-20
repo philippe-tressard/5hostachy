@@ -100,7 +100,7 @@ for (const chemin of fichiers) {
 		//  On retire la balise elle-même et la déclaration `let nom = …` avant de
 		//  chercher : sinon le rendu se répondrait à lui-même.
 		const sansRendu = source
-			.replace(/<WorkflowPastilles[^>]*>/g, '')
+			.replace(/<WorkflowPastilles[^>]*>/g, '')
 			.replace(new RegExp(`\\blet\\s+${nom}\\b[^;\\n]*`, 'g'), '')
 			.replace(new RegExp(`\\bexport\\s+let\\s+${nom}\\b[^;\\n]*`, 'g'), '');
 
