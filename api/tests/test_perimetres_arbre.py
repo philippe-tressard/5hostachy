@@ -465,11 +465,25 @@ def test_les_regles_de_decision_ne_citent_aucun_code_de_perimetre():
     peuvent donc pas nommer ces périmètres dans une décision. Sans ce contrôle, la
     tentation de « juste ajouter le cas » ferait revenir la liste par petits bouts.
     """
+    #  ⚠️ `visibility` est un PAQUET depuis le 20/08/2026 (#547) : on surveille
+    #  TOUS ses fragments, pas un fichier nommé. Pointer le seul `socle.py`
+    #  laisserait une règle sortir du contrôle en changeant simplement de
+    #  fragment — « la portée du contrôle fait partie du contrôle »
+    #  (`standards/05` §9).
     surveilles = [
-        RACINE_API / "app" / "utils" / "visibility.py",
+        *sorted((RACINE_API / "app" / "utils" / "visibility").glob("*.py")),
         RACINE_API / "app" / "utils" / "destinataires.py",
         RACINE_API / "app" / "routers" / "flux" / "evenements.py",
     ]
+    #  🔴 CAS ZÉRO — un chemin qui ne désigne plus rien rendrait ce test vert sans
+    #  rien lire. C'est arrivé au découpage : le fichier surveillé avait disparu.
+    #  Il a échoué bruyamment ce jour-là ; qu'il continue de le faire.
+    manquants = [f for f in surveilles if not f.is_file()]
+    assert not manquants, f"fichier surveillé introuvable : {manquants}"
+    assert len(surveilles) >= 5, (
+        f"{len(surveilles)} fichier(s) surveillé(s) : le paquet `visibility` a-t-il "
+        "été renommé ? Ce test ne mesurerait plus grand-chose."
+    )
     codes = {"résidence", "parking", "cave", "aful"}
     fautifs = []
     for fichier in surveilles:
