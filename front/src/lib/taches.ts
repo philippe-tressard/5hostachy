@@ -44,3 +44,44 @@ export const LIBELLE_TACHE: Record<string, string> = {
 export const LIBELLE_ACTION: Record<string, string> = {
 	maintenance: 'Lancer la purge applicative'
 };
+
+/*  ── Les STATUTS d'une tâche planifiée ───────────────────────────────────────
+    Remontés de `TachesPlanifiees.svelte` le 20/08/2026 (#488).
+
+    🔴 Ils y ont grossi de trois à cinq états, et le garde-fou de modularité a
+    refusé la croissance du fichier. Trois réponses possibles — découper,
+    remonter la règle d'un cran, raboter (jamais) : c'est la deuxième, parce que
+    ces tables ne disent rien de PROPRE à cet écran. Ce sont des données sur les
+    statuts, et les libellés de TÂCHES vivaient déjà ici pour exactement cette
+    raison — les redéfinir dans un écran est ce qui les fait diverger.  */
+export const LIBELLE_STATUT: Record<string, string> = {
+ok: 'À jour',
+en_cours: 'En cours',
+rapport_perdu: 'Rapport non reçu',
+manquante: 'Exécution manquante',
+erreur: 'En échec',
+aucune_execution: 'Aucun rapport reçu'
+};
+export const AIDE_STATUT: Record<string, string> = {
+ok: 'Un rapport est arrivé dans le délai attendu.',
+manquante: "Aucun rapport depuis plus longtemps que la périodicité de la tâche.",
+erreur: 'Le dernier rapport signale un échec.',
+aucune_execution:
+"Aucun rapport en base pour cette tâche. Cela ne prouve pas qu'elle n'a pas " +
+'tourné : un rapport peut avoir échoué à remonter, ou avoir été purgé. ' +
+'Vérifier le journal du nœud avant de conclure.',
+en_cours: 'La tâche a signalé son démarrage et n’a pas encore rendu son compte rendu.',
+rapport_perdu:
+'La tâche a DÉMARRÉ — elle a écrit son battement de début — mais son ' +
+"compte rendu n'est jamais arrivé. Le ménage a donc bien eu lieu ; c'est " +
+'la chaîne de remontée qui est rompue. Chercher du côté du réseau, de la ' +
+"clé de maintenance ou du format de la charge utile, pas du côté de la tâche."
+};
+export const CLASSE_STATUT: Record<string, string> = {
+ok: 'badge-green',
+en_cours: 'badge-green',
+rapport_perdu: 'badge-orange',
+erreur: 'badge-red',
+manquante: 'badge-red',
+aucune_execution: 'badge-red'
+};

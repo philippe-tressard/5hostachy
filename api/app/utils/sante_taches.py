@@ -82,7 +82,40 @@ _TOLERANCE_H = 6                   # marge avant de déclarer un retard
 #  Gravité croissante : sert à choisir l'état d'une tâche qui s'exécute sur les
 #  DEUX nœuds. C'est toujours le PIRE qui doit remonter — un nœud sain ne
 #  compense pas un nœud muet, il le masque.
-_GRAVITE = {"ok": 0, "erreur": 1, "manquante": 2, "aucune_execution": 3}
+#: 🔴 LE STATUT QU'UN SCRIPT ÉCRIT AVANT DE TRAVAILLER (#488).
+#:
+#: L'écran lisait LES RAPPORTS et rien d'autre : il répondait donc à « ai-je un
+#: compte rendu récent ? » quand la question posée est « la tâche a-t-elle
+#: tourné ? ». Une tâche qui tourne et dont le rapport est refusé s'affichait
+#: « À jour » sur le rapport précédent, puis « en retard » — deux jours de faux
+#: vert puis un faux rouge, du 16 au 18/08/2026.
+#:
+#: `maintenance.sh` écrit désormais une ligne AVANT son travail. Si le rapport
+#: de fin n'arrive pas, la dernière ligne du nœud reste `en_cours`, et l'écart
+#: devient lisible en base.
+STATUT_EN_COURS = "en_cours"
+
+#: ⚠️ Au-delà de ce délai, un battement sans fin de course n'est plus « en
+#: cours » : c'est un rapport PERDU. La maintenance la plus longue tient en
+#: quelques minutes — deux heures sont larges, et le fait qu'elles soient larges
+#: est le but : on ne veut pas signaler une exécution qui traîne.
+#:
+#: 🔴 Un battement de démarrage sans fin de course ne doit JAMAIS se lire comme
+#: un succès (`standards/04` §4). Les deux états ci-dessous existent pour cela,
+#: et ils sont DISTINCTS de « manquante » : la tâche a tourné, c'est sa remontée
+#: qui est cassée. Confondre les deux enverrait chercher au mauvais endroit.
+_DELAI_FIN_DE_COURSE_H = 2
+
+#: `rapport_perdu` est plus grave qu'une erreur : une erreur, on la voit ; un
+#: rapport perdu rend l'écran MUET, et c'est ce silence qui a duré deux jours.
+_GRAVITE = {
+    "ok": 0,
+    "en_cours": 0,
+    "erreur": 1,
+    "rapport_perdu": 2,
+    "manquante": 3,
+    "aucune_execution": 4,
+}
 
 
 #: Combien de lignes remonter pour retrouver les deux nœuds d'une tâche.
@@ -152,7 +185,13 @@ def _sante_par_noeud(
 
     def _etat(ligne, seuil_h):
         age_h = (maintenant - ligne.cree_le).total_seconds() / 3600
-        if age_h > seuil_h + _TOLERANCE_H:
+        #  🔴 Le battement de début se lit AVANT tout le reste : une tâche qui a
+        #  démarré a TOURNÉ, quoi qu'en dise l'âge de son dernier rapport.
+        #  L'ordre compte — tester « manquante » d'abord dirait « jamais
+        #  exécutée » d'une tâche dont on a la trace du démarrage.
+        if ligne.statut == STATUT_EN_COURS:
+            statut = "en_cours" if age_h <= _DELAI_FIN_DE_COURSE_H else "rapport_perdu"
+        elif age_h > seuil_h + _TOLERANCE_H:
             statut = "manquante"
         elif ligne.statut == statut_erreur:
             statut = "erreur"
@@ -183,7 +222,7 @@ def _sante_par_noeud(
 
     #  La SYNTHÈSE porte la dernière exécution réelle, nœud enregistré ou non,
     #  et se juge sur la période de la TÂCHE.
-    plus_recente = max(lignes, key=lambda l: l.cree_le)
+    plus_recente = max(lignes, key=lambda ligne: ligne.cree_le)
     statut_s, retard_s = _etat(plus_recente, periode_h)
     synthese = {
         "noeud": getattr(plus_recente, "noeud", None),
