@@ -29,6 +29,12 @@ parfaitement valide, simplement pas homogène.
 Un contrat qui varie selon la ligne n'est pas un contrat. Le consommateur qui
 l'ignore ne tombe pas tout de suite — il tombe le jour où il regarde le cas qu'on
 n'avait jamais servi.
+
+⚠️ **Mis à jour le 20/08/2026 (#540).** Les deux branches passent désormais par
+un assemblage unique (`_entree_sante`). Ce fichier ne vérifie donc plus qu'elles
+se *ressemblent* — il vérifie qu'il n'existe **pas d'autre** point d'assemblage.
+C'est la mesure la plus forte des deux : deux formes ne peuvent pas diverger si
+un seul endroit les produit.
 """
 from __future__ import annotations
 
@@ -71,9 +77,33 @@ def test_le_champ_noeuds_existe_bien_dans_ce_module():
     Une liste vide ferait passer tous les paramétrages ci-dessous sans rien
     vérifier — c'est `standards/04` §2, appliqué à un test.
     """
-    assert len(_litteraux_noeuds()) >= 3, (
-        "moins de trois affectations de « noeuds » trouvées : le champ a-t-il "
-        "changé de nom ? Ce fichier ne mesurerait plus rien."
+    assert _litteraux_noeuds(), (
+        "aucune affectation de « noeuds » trouvée : le champ a-t-il changé de "
+        "nom ? Ce fichier ne mesurerait plus rien."
+    )
+
+
+def test_le_champ_noeuds_est_assemble_a_UN_SEUL_endroit():
+    """🔴 L'invariant qui rend la divergence impossible, et non improbable.
+
+    Ce fichier exigeait d'abord **au moins trois** affectations de `noeuds` — une
+    par branche de calcul. C'était la bonne mesure tant que les branches
+    composaient chacune leur réponse : il fallait alors vérifier qu'elles se
+    ressemblaient.
+
+    Depuis #540, elles passent toutes par `_entree_sante`. Il ne reste que deux
+    affectations littérales : la liste vide du cas « aucune exécution », et
+    l'assemblage unique. Vérifier qu'elles se ressemblent n'a plus de sens —
+    vérifier qu'il n'y en a **pas d'autres** en a un.
+
+    ⚠️ Ce test est plus fort que celui qu'il remplace : deux formes ne peuvent
+    plus diverger si un seul endroit les produit. Un troisième point
+    d'assemblage rouvrirait #538 à l'identique, et c'est ce qu'il refuse.
+    """
+    valeurs = _litteraux_noeuds()
+    assert len(valeurs) <= 2, (
+        f"{len(valeurs)} endroits construisent « noeuds » : la réponse peut de "
+        "nouveau porter deux formes (#538). Passer par `_entree_sante`."
     )
 
 
