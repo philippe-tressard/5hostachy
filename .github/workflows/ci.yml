@@ -503,6 +503,20 @@ jobs:
         working-directory: front
         run: npm run lint:classes-nues
 
+      # La même famille de défaut, par l'autre bout : la classe EST définie, mais
+      # c'est un modificateur — elle ne peint qu'un fond et une couleur, et sans
+      # sa base l'élément sort en rendu natif du navigateur. Un bouton
+      # « Enregistrer » gris carré au milieu de la charte, signalé à l'écran le
+      # 20/08/2026 ; le relevé en a trouvé TROIS autres, dans un écran d'admin
+      # que personne ne regardait.
+      #
+      # Le contrôle ne tient aucune liste : il DÉDUIT de `app.css` quelles classes
+      # `btn-*` se suffisent à elles-mêmes. Une liste divergerait au premier
+      # modificateur ajouté — et c'est le nouveau que personne n'a en tête.
+      - name: Aucun modificateur employé sans sa classe de base
+        working-directory: front
+        run: npm run lint:modificateurs
+
       # Un événement Svelte non écouté n'est pas une erreur : c'est un silence.
       # `evol_annuler` était dispatché, transféré, et traité par personne — le
       # bouton Annuler ne faisait rien, neuf jours durant (#505). Le relevé qui a
@@ -556,6 +570,7 @@ jobs:
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
           node scripts/check-charge-utile.mjs --selftest
+          node scripts/check-modificateurs.mjs --selftest
           node scripts/lib-commentaires.mjs --selftest
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs

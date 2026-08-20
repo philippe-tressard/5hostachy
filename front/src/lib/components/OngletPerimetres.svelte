@@ -145,7 +145,7 @@
 </p>
 
 <div class="barre">
-	<button class="btn-primary" on:click={() => creer(null)}>+ Périmètre de premier niveau</button>
+	<button class="btn btn-primary" on:click={() => creer(null)}>+ Périmètre de premier niveau</button>
 </div>
 
 {#if chargement}
@@ -291,7 +291,7 @@
 
 			<div class="modal-actions">
 				<button class="btn btn-outline" on:click={() => (edite = null)}>Annuler</button>
-				<button class="btn-primary" disabled={enregistrement || !form.libelle.trim()} on:click={enregistrer}>
+				<button class="btn btn-primary" disabled={enregistrement || !form.libelle.trim()} on:click={enregistrer}>
 					{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
@@ -322,7 +322,7 @@
 			<div class="modal-actions">
 				<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
 				<button
-					class="btn-primary"
+					class="btn btn-primary"
 					disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
 					on:click={enregistrerNouveau}
 				>
