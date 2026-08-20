@@ -11,6 +11,10 @@
   nues (v2.67.11) qu'on évite, et que `npm run lint:classes-nues` refuse depuis.
 -->
 <script lang="ts">
+	//  ⚠️ Cet écran affichait la valeur BRUTE — `chauffage_collectif` — parce que
+	//  la table des libellés vivait dans `prestataires/+page.svelte` et qu'il n'y
+	//  avait pas accès. Une table qui vit dans UN écran, les autres s'en passent.
+	import { equipLabel } from '$lib/prestataires';
 	import { fmtDate } from '$lib/date';
 	import { starsDisplay } from '$lib/utils';
 	import {
@@ -142,7 +146,7 @@
 						<div class="frise-row-title">
 							<strong>{c.libelle}</strong>
 							<span class="text-muted-sm">{c.prestataireNom}</span>
-							<span class="text-muted-sm">· {c.type_equipement}</span>
+							<span class="text-muted-sm">· {equipLabel(c.type_equipement)}</span>
 							{#if c.numero_contrat}<span class="text-muted-sm">· N° {c.numero_contrat}</span>{/if}
 							{#if c.noteMoy != null}
 								<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4} title="{c.noteMoy}/5 ({c.nbNotations} avis)">{starsDisplay(c.noteMoy)} {c.noteMoy}</span>
@@ -194,7 +198,7 @@
 					<div class="frise-compact-item">
 						<div class="frise-compact-info">
 							<strong>{c.libelle}</strong>
-							<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}</span>
+							<span class="text-muted-sm">{c.prestataireNom} · {equipLabel(c.type_equipement)}</span>
 						</div>
 						<div class="frise-compact-meta">
 							{#if c.noteMoy != null}<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4}>{starsDisplay(c.noteMoy)} {c.noteMoy}</span>{/if}
@@ -217,7 +221,7 @@
 					<div class="frise-compact-item">
 						<div class="frise-compact-info">
 							<strong>{c.libelle}</strong>
-							<span class="text-muted-sm">{c.prestataireNom} · {c.type_equipement}{#if c.numero_contrat} · N° {c.numero_contrat}{/if}</span>
+							<span class="text-muted-sm">{c.prestataireNom} · {equipLabel(c.type_equipement)}{#if c.numero_contrat} · N° {c.numero_contrat}{/if}</span>
 						</div>
 						<div class="frise-compact-meta">
 							{#if c.noteMoy != null}<span class="frise-stars" class:frise-stars-bad={c.noteMoy < 3} class:frise-stars-ok={c.noteMoy >= 3 && c.noteMoy < 4} class:frise-stars-good={c.noteMoy >= 4}>{starsDisplay(c.noteMoy)} {c.noteMoy}</span>{/if}

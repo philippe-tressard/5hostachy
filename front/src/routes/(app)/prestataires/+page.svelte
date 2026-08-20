@@ -14,6 +14,14 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	//  🔴 Le vocabulaire des prestataires vit dans `$lib/prestataires.ts`, pas
+	//  ici. La table des équipements écrite dans cet écran recopiait
+	//  `TypeEquipement` et en OUBLIAIT deux valeurs — `assurance` et `syndic`,
+	//  précisément celles que la fiche de copropriété désigne (#553). Et les
+	//  deux écrans de reporting, n'y ayant pas accès, affichaient la valeur
+	//  brute : `chauffage_collectif`.
+	import { EQUIPEMENTS as equipements, TYPES_PRESTATAIRE as typesPrestataire,
+		equipLabel, frequenceLabel } from '$lib/prestataires';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { fmtMontant, perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/utils';
@@ -494,36 +502,8 @@
 
 	$: orphanContrats = contrats.filter(c => !c.prestataire_id);
 
-	const equipements = [
-		{ val: 'ascenseur', label: '\u{1F6D7} Ascenseur' },
-		{ val: 'chauffage_collectif', label: '\u{1F525} Chauffage collectif' },
-		{ val: 'eau', label: '\u{1F4A7} Eau' },
-		{ val: 'electricite', label: '⚡ Électricité' },
-		{ val: 'espaces_verts', label: '\u{1F33F} Espaces verts' },
-		{ val: 'extincteurs', label: '\u{1F9EF} Extincteurs' },
-		{ val: 'interphone_digicode', label: '\u{1F4DE} Interphone/Digicode' },
-		{ val: 'nettoyage', label: '\u{1F9F9} Nettoyage' },
-		{ val: 'plomberie', label: '\u{1F6BF} Plomberie' },
-		{ val: 'pompe', label: '⚙️ Pompe' },
-		{ val: 'porte_parking', label: '\u{1F697} Porte parking' },
-		{ val: 'serrurerie', label: '\u{1F511} Serrurerie' },
-		{ val: 'toiture', label: '\u{1F3E0} Toiture' },
-		{ val: 'vmc', label: '\u{1F4A8} VMC' },
-		{ val: 'autre', label: '\u{1F527} Autre' },
-	];
 
-	function equipLabel(v: string) {
-		return equipements.find(e => e.val === v)?.label ?? v;
-	}
 
-	const typesPrestataire = [
-		{ val: 'contrat_recurrent', label: '\u{1F504} Contrat récurrent', desc: 'Entretien, maintenance' },
-		{ val: 'ponctuel', label: '\u{1F4CD} Dépannage', desc: 'Interventions ponctuelles' },
-		{ val: 'travaux', label: '\u{1F3D7}️ Travaux', desc: 'Interventions importantes' },
-		{ val: 'reglementaire', label: '\u{1F4CB} Réglementaire', desc: 'Contrôles obligatoires' },
-		{ val: 'etudes_expertise', label: '\u{1F52C} Études / Expertise', desc: 'Analyses techniques' },
-		{ val: 'gestion', label: '\u{1F5C2}️ Gestion', desc: 'Services administratifs (dont assurance)' },
-	];
 
 	function typeLabel(v: string) {
 		return typesPrestataire.find(t => t.val === v)?.label ?? v;
@@ -559,13 +539,6 @@
 		return dates[0] ?? null;
 	}
 
-	function frequenceLabel(c: any): string {
-		if (c.frequence_type === 'semaines') return `↺ ${c.frequence_valeur} sem.`;
-		if (c.frequence_type === 'mois') return '↺ Mensuel';
-		if (c.frequence_type === 'fois_par_an') return `↺ ${c.frequence_valeur}×/an`;
-		if (c.frequence_type === 'ans') return `↺ tous les ${c.frequence_valeur} an${c.frequence_valeur > 1 ? 's' : ''}`;
-		return '';
-	}
 
 	onMount(async () => {
 		try {
