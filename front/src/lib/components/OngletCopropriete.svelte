@@ -210,30 +210,11 @@
 <style>
 	/*  L'assurance en LECTURE : une liste de définitions, pas un formulaire.
 	    La forme dit le régime — on lit ici, on modifie ailleurs (#490). */
-	.fiche-lecture {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: .3rem .75rem;
-		margin: 0;
-		font-size: .9rem;
-	}
-	.fiche-lecture dt { color: var(--color-text-muted); font-size: .82rem; }
-	.fiche-lecture dd { margin: 0; }
-	.fiche-vide { font-size: .875rem; color: var(--color-text-muted); margin: 0; }
-	.fiche-renvoi {
-		font-size: .82rem;
-		color: var(--color-text-muted);
-		margin: .75rem 0 0;
-		line-height: 1.5;
-	}
 	/*  ⚠️ Sur téléphone, deux colonnes serrent les valeurs longues (un nom de
 	    compagnie, un numéro de police) au point de les couper mot à mot. La
 	    liste passe alors en une colonne — `standards/11` §10. */
 	@media (max-width: 560px) {
-		.fiche-lecture { grid-template-columns: 1fr; gap: 0 0; }
-		.fiche-lecture dd { margin-bottom: .5rem; }
 	}
-	.renvoi { font-size: .85rem; color: var(--color-text-muted); margin: 0 0 1.5rem; }
 	/*  `.form-section` et `.section-title` vivaient ici : ils REDÉFINISSAIENT la
 	    carte et le titre de sous-section que `card` / `config-section-title` et
 	    `SectionFormulaire` portent déjà (anatomie v2.94.0). Deux définitions d'un

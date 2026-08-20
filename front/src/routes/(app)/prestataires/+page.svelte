@@ -14,6 +14,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
+	import OngletVisites from '$lib/components/OngletVisites.svelte';
 	//  🔴 Le vocabulaire des prestataires vit dans `$lib/prestataires.ts`, pas
 	//  ici. La table des équipements écrite dans cet écran recopiait
 	//  `TypeEquipement` et en OUBLIAIT deux valeurs — `assurance` et `syndic`,
@@ -1165,113 +1166,24 @@
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'visites'}
 
-	<div class="visites-summary">
-		<div class="visites-kpi">
-			<span class="visites-kpi-value">{visites.length}</span>
-			<span class="visites-kpi-label">visites planifiées</span>
-		</div>
-		{#if visitesEnRetard.length > 0}
-			<div class="visites-kpi visites-kpi--danger">
-				<span class="visites-kpi-value">{visitesEnRetard.length}</span>
-				<span class="visites-kpi-label">en retard</span>
-			</div>
-		{/if}
-		<div class="visites-kpi visites-kpi--ok">
-			<span class="visites-kpi-value">{visitesAJour.length}</span>
-			<span class="visites-kpi-label">en cours</span>
-		</div>
-	</div>
+	<!--  🔴 L'onglet vit dans `OngletVisites.svelte` (#453). Ses deux listes
+	      étaient QUARANTE LIGNES RECOPIÉES à deux différences près : elles
+	      passent maintenant par `CarteVisite`, écrite une fois.
 
-	{#if visites.length === 0}
-		<div class="empty-state card"><h3>Aucune visite planifiée</h3><p>Les visites récurrentes apparaîtront ici dès qu'un contrat avec fréquence sera créé.</p></div>
-	{:else}
-		<!-- En retard d'abord -->
-		{#if visitesEnRetard.length > 0}
-			<h2 class="section-title" style="color:var(--color-danger)">⚠️ Visites en retard</h2>
-			{#each visitesEnRetard as c (c.id)}
-				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
-				{@const contratExpanded = expandedContrats.has(c.id)}
-				<div class="visite-card card visite-card--retard" class:expanded={contratExpanded}>
-					<div class="visite-row"
-						role="button" tabindex="0"
-						on:click={() => toggleContrat(c.id)}
-						on:keydown={e => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
-						<div class="visite-main">
-							<strong>{prest?.nom ?? '—'}</strong>
-							<span class="badge badge-blue">{equipLabel(c.type_equipement)}</span>
-						</div>
-						<div class="visite-freq">
-							{#if c.frequence_type}<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>{/if}
-						</div>
-						<div class="visite-date visite-date--retard">
-							🗓 {fmtDateShort(c.prochaine_visite)}
-						</div>
-						<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-					</div>
-					{#if contratExpanded}
-						<div class="visite-detail">
-							<div class="detail-grid">
-								<div><span class="detail-label">Contrat</span>{c.libelle}</div>
-								{#if c.numero_contrat}<div><span class="detail-label">N° contrat</span>{c.numero_contrat}</div>{/if}
-								<div><span class="detail-label">Date début</span>📅 {fmtDateShort(c.date_debut)}</div>
-								{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
-							</div>
-							{#if $isCS}
-								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
-									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
-									<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(c.prestataire_id, undefined, c.id)}>⭐ Noter</button>
-								</div>
-							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
-
-		<!-- En cours -->
-		{#if visitesAJour.length > 0}
-			<h2 class="section-title" style="margin-top:1rem">✅ Visites en cours</h2>
-			{#each visitesAJour as c (c.id)}
-				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
-				{@const contratExpanded = expandedContrats.has(c.id)}
-				<div class="visite-card card" class:expanded={contratExpanded}>
-					<div class="visite-row"
-						role="button" tabindex="0"
-						on:click={() => toggleContrat(c.id)}
-						on:keydown={e => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
-						<div class="visite-main">
-							<strong>{prest?.nom ?? '—'}</strong>
-							<span class="badge badge-blue">{equipLabel(c.type_equipement)}</span>
-						</div>
-						<div class="visite-freq">
-							{#if c.frequence_type}<span class="badge badge-blue" style="font-size:.75rem">{frequenceLabel(c)}</span>{/if}
-						</div>
-						<div class="visite-date">
-							{#if c.prochaine_visite}🗓 {fmtDateShort(c.prochaine_visite)}{:else}<span style="color:var(--color-text-muted)">Non planifiée</span>{/if}
-						</div>
-						<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-					</div>
-					{#if contratExpanded}
-						<div class="visite-detail">
-							<div class="detail-grid">
-								<div><span class="detail-label">Contrat</span>{c.libelle}</div>
-								{#if c.numero_contrat}<div><span class="detail-label">N° contrat</span>{c.numero_contrat}</div>{/if}
-								<div><span class="detail-label">Date début</span>📅 {fmtDateShort(c.date_debut)}</div>
-								{#if c.duree_initiale_valeur}<div><span class="detail-label">Durée</span>{c.duree_initiale_valeur} {c.duree_initiale_unite}</div>{/if}
-							</div>
-							{#if $isCS}
-								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
-									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
-									<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(c.prestataire_id, undefined, c.id)}>⭐ Noter</button>
-								</div>
-							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
-	{/if}
-
+	      ⚠️ Les données, l'état déplié et les gestes RESTENT ICI : quatre onglets
+	      partagent `contrats`, `prestataires` et `expandedContrats`. Déplacer cet
+	      état dans le composant en ferait une seconde source. On extrait un
+	      RENDU, pas une moitié de logique. -->
+	<OngletVisites
+		{visites}
+		{visitesEnRetard}
+		{visitesAJour}
+		{prestataires}
+		{expandedContrats}
+		on:basculer={(e) => toggleContrat(e.detail)}
+		on:modifier={(e) => startEditContrat(e.detail)}
+		on:noter={(e) => openNotationForm(e.detail.prestataire_id, undefined, e.detail.id)}
+	/>
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- ONGLET 3 : CONTRATS                                          -->
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1943,25 +1855,9 @@
 	.prest-contacts { display: flex; flex-wrap: wrap; gap: .4rem .75rem; flex: 1; }
 	.prest-contact { font-size: .82rem; color: var(--color-text-muted); }
 	.prest-meta { display: flex; align-items: center; gap: .4rem; margin-left: auto; }
-	.toggle-arrow { font-size: .75rem; color: var(--color-primary); margin-left: .25rem; }
 	.prest-body { padding: .25rem 1rem 1rem 1rem; border-top: 1px solid var(--color-border); }
 
 	/* ── Visites ── */
-	.visites-summary { display: flex; gap: .75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
-	.visites-kpi { display: flex; flex-direction: column; align-items: center; padding: .6rem 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); min-width: 90px; }
-	.visites-kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--color-primary); }
-	.visites-kpi-label { font-size: .75rem; color: var(--color-text-muted); }
-	.visites-kpi--danger .visites-kpi-value { color: var(--color-danger, #dc2626); }
-	.visites-kpi--ok .visites-kpi-value { color: #16a34a; }
-	.visite-card { margin-bottom: .5rem; border-left: 3px solid var(--color-border); overflow: hidden; transition: border-color .12s; }
-	.visite-card:hover, .visite-card.expanded { border-left-color: var(--color-primary); }
-	.visite-card--retard { border-left-color: var(--color-danger, #dc2626) !important; }
-	.visite-row { display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; cursor: pointer; flex-wrap: wrap; }
-	.visite-main { display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 150px; flex-wrap: wrap; }
-	.visite-freq { flex-shrink: 0; }
-	.visite-date { font-size: .85rem; font-weight: 600; color: var(--color-primary); flex-shrink: 0; }
-	.visite-date--retard { color: var(--color-danger, #dc2626) !important; }
-	.visite-detail { padding: .75rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
 
 	/* ── Contrats summary ── */
 	.contrats-summary { margin-bottom: 1rem; }
@@ -2006,8 +1902,6 @@
 	    dans `FormulairePrestation.svelte` — les laisser ici les rendait inertes. */
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
-	.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .6rem; }
-	.detail-label { display: block; font-size: .75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .1rem; }
 
 	.muted-sm { font-size: .85rem; color: var(--color-text-muted); padding: .4rem 0; }
 	.danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
@@ -2031,7 +1925,6 @@
 	@media (max-width: 600px) {
 		.prest-header { gap: .5rem; }
 		.contrat-infos { min-width: 80px; }
-		.visite-row { gap: .4rem; }
 		.tabs button { padding: .4rem .55rem; font-size: .78rem; }
 	}
 
