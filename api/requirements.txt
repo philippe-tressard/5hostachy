@@ -1,5 +1,5 @@
 fastapi==0.141.1
-uvicorn[standard]==0.52.3
+uvicorn[standard]==0.52.4
 slowapi==0.1.10
 sqlmodel==0.0.39
 alembic==1.19.1
@@ -10,7 +10,7 @@ python-multipart==0.0.32
 fastapi-mail==1.6.5
 apscheduler==3.11.3
 httpx==0.28.1
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 aiofiles==25.1.0
 Pillow==12.3.0
 qrcode[pil]==8.2
