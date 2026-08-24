@@ -40,7 +40,7 @@
     "lint:pages": "node scripts/check-pages.mjs"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@sveltejs/adapter-node": "^5.5.7",
     "@sveltejs/kit": "^2.70.2",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
