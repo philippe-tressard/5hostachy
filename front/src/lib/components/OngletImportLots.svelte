@@ -3,6 +3,7 @@
 	import { lots as lotsApi, api } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
+	import BarreImport from '$lib/components/BarreImport.svelte';
 
 	$: _siteNom = $siteNomStore;
 	// ── Données ─────────────────────────────────────────────────────────────
@@ -15,15 +16,15 @@
 	let tri = 'copro'; // copro | batiment | numero
 
 	// ── Upload ───────────────────────────────────────────────────────────────
-	let uploadFile: FileList | null = null;
-	let remplacer = false;
+	//  Le FORMULAIRE de téléversement vit dans `BarreImport`, comme sur l'écran
+	//  d'import d'accès : il ne reste ici que le compte rendu, qui est propre aux
+	//  lots (erreurs de ligne, imports écartés, parkings sans lot).
 	let uploading = false;
 
-	async function uploadExcel() {
-		if (!uploadFile?.length) { toast('error', 'Choisissez un fichier .xlsx'); return; }
+	async function uploadExcel(fichier: File, remplacer: boolean) {
 		uploading = true;
 		try {
-			const result = await lotsApi.uploadImport(uploadFile[0], remplacer);
+			const result = await lotsApi.uploadImport(fichier, remplacer);
 			toast('success', `Import : ${result.importes} ajoutés, ${result.doublons} doublons, ${result.ignores} ignorés${result.auto_resolus ? ` — ${result.auto_resolus} copropriétaire(s) résolu(s) automatiquement` : ''}`);
 			if (result.erreurs?.length) toast('error', result.erreurs.slice(0, 3).join('\n'));
 			if (result.auto_skipped_locataire) toast('info', `${result.auto_skipped_locataire} import(s) avec locataire à traiter manuellement`);
@@ -33,7 +34,6 @@
 			toast('error', e.message ?? 'Erreur import');
 		} finally {
 			uploading = false;
-			uploadFile = null;
 		}
 	}
 
@@ -212,58 +212,36 @@
 <svelte:head><title>Import Lots — {_siteNom}</title></svelte:head>
 
 
-<!-- ── Stats ─────────────────────────────────────────────────────────────── -->
-{#if stats}
-<div class="imp-stats-bar card">
-	<div class="imp-stat"><span class="imp-stat-val">{stats.total}</span><span class="imp-stat-lbl">Total</span></div>
-	<div class="imp-stat"><span class="imp-stat-val" style="color:#d97706">{stats.en_attente}</span><span class="imp-stat-lbl">En attente</span></div>
-	<div class="imp-stat"><span class="imp-stat-val" style="color:#7c3aed">{stats.utilisateur_lie ?? 0}</span><span class="imp-stat-lbl">Occupant lié</span></div>
-	<div class="imp-stat"><span class="imp-stat-val" style="color:#2563eb">{stats.lot_lie}</span><span class="imp-stat-lbl">Lot lié</span></div>
-	<div class="imp-stat"><span class="imp-stat-val" style="color:#16a34a">{stats.resolu}</span><span class="imp-stat-lbl">Résolus</span></div>
-	<div class="imp-stat"><span class="imp-stat-val" style="color:#6b7280">{stats.ignore}</span><span class="imp-stat-lbl">Ignorés</span></div>
-	<div class="imp-stat"><span class="imp-stat-val">{stats.avec_user}</span><span class="imp-stat-lbl">Copro lié</span></div>
-</div>
-{/if}
-
-<!-- ── Upload ────────────────────────────────────────────────────────────── -->
-<div class="card imp-upload-section">
-	<h2 class="section-title">Importer un fichier Excel</h2>
-	<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
-		Colonnes attendues : <code>ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE</code>
-	</p>
-	<div class="imp-upload-row">
-		<input type="file" accept=".xlsx,.xls" bind:files={uploadFile} class="imp-file-input" />
-		<label class="imp-checkbox-label">
-			<input type="checkbox" bind:checked={remplacer} />
-			Remplacer les imports non résolus
-		</label>
-		<button class="btn btn-primary" on:click={uploadExcel} disabled={uploading || !uploadFile?.length}>
-			{uploading ? 'Import…' : 'Importer'}
-		</button>
-	</div>
-</div>
-
-<!-- ── Filtres + actions ─────────────────────────────────────────────────── -->
-<div class="imp-toolbar">
-	<div style="display:flex;gap:.5rem;align-items:center">
-		<span class="muted" style="font-size:.85rem">Filtrer :</span>
-		{#each ['', 'en_attente', 'utilisateur_lie', 'lot_lie', 'resolu', 'ignore'] as s}
-			<button
-				class="btn btn-sm {filtre === s ? 'btn-primary' : 'btn-outline'}"
-				on:click={async () => { filtre = s; await reload(); }}>
-				{s === '' ? 'Tous' : statutLabel[s]}
-			</button>
-		{/each}
-	</div>
-	<div style="display:flex;gap:.35rem;align-items:center">
+<BarreImport
+	tuiles={stats
+		? [
+				{ valeur: stats.total, libelle: 'Total' },
+				{ valeur: stats.en_attente, libelle: 'En attente', couleur: '#d97706' },
+				{ valeur: stats.utilisateur_lie ?? 0, libelle: 'Occupant lié', couleur: '#7c3aed' },
+				{ valeur: stats.lot_lie, libelle: 'Lot lié', couleur: '#2563eb' },
+				{ valeur: stats.resolu, libelle: 'Résolus', couleur: '#16a34a' },
+				{ valeur: stats.ignore, libelle: 'Ignorés', couleur: '#6b7280' },
+				{ valeur: stats.avec_user, libelle: 'Copro lié' },
+			]
+		: []}
+	colonnesAttendues={'ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE'}
+	libelleRemplacer="Remplacer les imports non résolus"
+	enCours={uploading}
+	statuts={['', 'en_attente', 'utilisateur_lie', 'lot_lie', 'resolu', 'ignore']}
+	libellesStatuts={statutLabel}
+	bind:filtre
+	on:importer={(e) => uploadExcel(e.detail.fichier, e.detail.remplacer)}
+	on:filtrer={reload}
+>
+	<svelte:fragment slot="actions">
 		<button class="btn btn-outline btn-sm" on:click={autoMatch} disabled={autoMatching}>
 			{autoMatching ? 'Recherche…' : '\u{1F517} Auto-match'}
 		</button>
 		<button class="btn btn-outline btn-sm" on:click={autoResoudre} disabled={autoResolving}>
 			{autoResolving ? 'Résolution…' : '✅ Auto-résoudre copropriétaires'}
 		</button>
-	</div>
-</div>
+	</svelte:fragment>
+</BarreImport>
 
 <!-- ── Table ─────────────────────────────────────────────────────────────── -->
 {#if loading}
