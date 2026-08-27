@@ -9,6 +9,13 @@
 #    bash durcir-sudoers.sh --appliquer       # installe (demande confirmation)
 #    bash durcir-sudoers.sh --nettoyer        # retire les fichiers hérités
 #
+#  Toutes ces commandes acceptent `--noeud <ip>` pour ne viser QU'UN nœud, et
+#  c'est ainsi qu'il faut s'en servir : le STANDBY d'abord, vérifier, puis
+#  l'actif. Sans filtre, une règle mauvaise abîme les deux moitiés de la paire
+#  dans la même seconde — c'est-à-dire exactement ce que la paire existe pour
+#  éviter. Une IP inconnue fait ÉCHOUER le script, elle ne le fait pas boucler
+#  sur rien en annonçant un succès.
+#
 #  ⚠️ À N'EXÉCUTER QU'AVEC UNE SESSION ROOT OUVERTE EN PARALLÈLE sur le nœud
 #  visé. Une règle sudoers invalide rend `sudo` inutilisable, donc le nœud
 #  inadministrable autrement que par cette session déjà ouverte — ou un clavier.
@@ -40,7 +47,26 @@ if [ "${1:-}" = "--selftest" ]; then
   exit $?
 fi
 
-NOEUDS="192.168.1.222 192.168.1.223"
+TOUS_NOEUDS="192.168.1.222 192.168.1.223"
+
+#  `--noeud <ip>` peut suivre la commande : on le retire des arguments avant de
+#  lire l'action, pour que l'ordre des deux n'ait pas d'importance.
+FILTRE=""
+ARGS=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --noeud) FILTRE="${2:-}"; shift 2 || shift ;;
+    *)       ARGS="$ARGS $1"; shift ;;
+  esac
+done
+# shellcheck disable=SC2086
+set -- $ARGS
+
+if ! NOEUDS=$(sudoers_noeuds_cibles "$FILTRE" "$TOUS_NOEUDS"); then
+  echo "Nœud inconnu : '$FILTRE'. Nœuds connus : $TOUS_NOEUDS" >&2
+  exit 2
+fi
+[ -n "$FILTRE" ] && echo "→ Ce lancement ne vise QUE $FILTRE."
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=10"
 COMPTE=ptressard
 ATTENDU=$(sudoers_regle "$COMPTE")
@@ -49,10 +75,25 @@ log() { printf '%s\n' "$*"; }
 
 # Lit la règle installée sur un nœud. Rend un marqueur explicite plutôt qu'une
 # chaîne vide : « je n'ai pas pu lire » n'est pas « le fichier est vide ».
+#
+# 🔴 DEUX VOIES DE LECTURE, et la seconde n'est pas un luxe (27/08/2026).
+# La première (`sudo -n cat`) ne fonctionne que sur un nœud QUI N'EST PAS ENCORE
+# DURCI : dès que la règle unique est en place, `cat` n'y est plus NOPASSWD — et
+# c'est voulu, l'y ajouter rendrait tout le disque lisible en root. Le script se
+# retrouvait alors incapable de relire ce qu'il venait d'écrire : conformité
+# INCONNU pour toujours, donc `--nettoyer` bloqué à jamais et C20 jamais vert.
+# Un outil qui ne peut plus mesurer l'état qu'il vient de poser n'achève pas son
+# travail — il l'abandonne au milieu, dans l'état le plus fragile des trois.
+#
+# La seconde voie passe par un conteneur jetable : `ptressard` est dans le groupe
+# `docker`, ce qui est déjà un équivalent root (voir l'avertissement en tête de
+# `lib-sudoers.sh`). Elle n'ouvre donc AUCUN privilège nouveau — c'est le canal
+# qui a servi à installer le fichier.
 lire_regle() {  # $1 = ip
   local sortie
-  sortie=$($SSH "$COMPTE@$1" "sudo -n cat $SUDOERS_CIBLE 2>/dev/null || \
-                              { [ -e $SUDOERS_CIBLE ] && echo __ILLISIBLE__ || echo __ABSENT__; }" 2>/dev/null)
+  sortie=$($SSH "$COMPTE@$1" "sudo -n cat $SUDOERS_CIBLE 2>/dev/null \
+    || docker run --rm -v /etc/sudoers.d:/s:ro alpine cat /s/${SUDOERS_CIBLE##*/} 2>/dev/null \
+    || { [ -e $SUDOERS_CIBLE ] && echo __ILLISIBLE__ || echo __ABSENT__; }" 2>/dev/null)
   printf '%s' "${sortie:-__ILLISIBLE__}"
 }
 
@@ -83,10 +124,20 @@ etat() {
     #  sonde utilisable pour `systemctl start`, qu'on ne peut évidemment pas
     #  essayer sur un standby — ce serait provoquer un split-brain pour vérifier
     #  qu'on a le droit d'en provoquer un.
-    for c in "/usr/bin/systemctl start cloudflared" "/usr/bin/crontab -l" "/usr/bin/rsync"; do
-      printf '   permission %-38s ' "$c"
-      $SSH "$COMPTE@$ip" "sudo -n -l $c" >/dev/null 2>&1 && echo "AUTORISÉE" || echo "refusée"
-    done
+    #  ⚠️ On lit la LISTE une fois, puis on conclut dessus — `sudo -n -l <cmd>`
+    #  répondrait « oui » pour tout ce que la ligne `(ALL : ALL) ALL` couvre,
+    #  mot de passe compris (voir `sudoers_est_nopasswd`).
+    local liste; liste=$($SSH "$COMPTE@$ip" "sudo -n -l 2>/dev/null" 2>/dev/null)
+    if [ -z "$liste" ]; then
+      log "   surface NOPASSWD : INCONNUE (sudo -n -l muet) — aucune conclusion"
+    else
+      log "   surface NOPASSWD réelle :"
+      sudoers_surface_nopasswd "$liste" | sed 's/^/     · /'
+      for c in "/usr/bin/systemctl start cloudflared" "/usr/bin/crontab -l" "/usr/bin/rsync"; do
+        printf '   sans mot de passe %-32s ' "$c"
+        sudoers_est_nopasswd "$liste" "$c" && echo "oui" || echo "NON"
+      done
+    fi
   done
 }
 
@@ -132,16 +183,39 @@ nettoyer() {
     #  Même sonde de PERMISSION qu'en `--etat`, et pour la même raison : on ne
     #  peut pas essayer `systemctl start cloudflared` sur un standby pour
     #  vérifier qu'on en a le droit.
-    local ko=0
+    local ko=0 liste
+    liste=$($SSH "$COMPTE@$ip" "sudo -n -l 2>/dev/null" 2>/dev/null)
+    if [ -z "$liste" ]; then
+      log "   surface NOPASSWD illisible → on ne retire RIEN (INCONNU n est pas OK)."
+      continue
+    fi
     for c in "/usr/bin/systemctl start cloudflared" "/usr/bin/systemctl stop cloudflared" "/usr/bin/crontab -l" "/usr/bin/rsync"; do
-      $SSH "$COMPTE@$ip" "sudo -n -l $c" >/dev/null 2>&1 || { log "   permission MANQUANTE : $c"; ko=1; }
+      sudoers_est_nopasswd "$liste" "$c" || { log "   permission MANQUANTE : $c"; ko=1; }
     done
     [ "$ko" -eq 1 ] && { log "   → on ne retire RIEN."; continue; }
+    #  🔴 Le retrait passe par le conteneur jetable, PAS par `sudo -n rm`
+    #  (27/08/2026). La permission `rm` que le retrait emploierait est portée
+    #  par l'un des fichiers qu'il retire : l'opération se coupait donc le bras
+    #  en cours de route, et l'ordre de la liste était le seul garde-fou — un
+    #  garde-fou invisible, que le premier réarrangement alphabétique aurait
+    #  emporté. Le canal docker ne dépend d'aucune des règles en jeu.
     for f in $SUDOERS_HERITES; do
-      $SSH "$COMPTE@$ip" "[ -e /etc/sudoers.d/$f ] && sudo -n rm -f /etc/sudoers.d/$f && echo '   retiré : $f'" 2>/dev/null
+      $SSH "$COMPTE@$ip" "[ -e /etc/sudoers.d/$f ] &&         docker run --rm -v /etc/sudoers.d:/s alpine rm -f /s/$f && echo '   retiré : $f'" 2>/dev/null
     done
-    $SSH "$COMPTE@$ip" "sudo -n visudo -c >/dev/null" 2>/dev/null \
-      && log "   visudo -c : OK" || log "   ⚠ visudo -c ÉCHOUE — intervenir depuis la session root"
+    #  🔴 On ne vérifie PAS avec `visudo -c` : il n'est plus NOPASSWD sur un nœud
+    #  durci, et son échec se lisait « sudoers cassé » alors qu'il signifiait
+    #  « je n'ai pas le droit de vérifier ». TROISIÈME fois que ce script se sert
+    #  d'une permission que le durcissement retire — c'est le motif à retenir,
+    #  pas les trois cas.
+    #
+    #  La preuve qui vaut : `sudo -n -l` répond. sudo relit TOUT l'arbre sudoers
+    #  à chaque invocation ; s'il répond, c'est qu'il l'a analysé en entier.
+    if $SSH "$COMPTE@$ip" "sudo -n -l >/dev/null 2>&1"; then
+      log "   sudo répond encore → l'arbre sudoers est valide"
+    else
+      log "   🔴 sudo NE RÉPOND PLUS. Retirer le fichier par le canal docker :"
+      log "      ssh $COMPTE@$ip 'docker run --rm -v /etc/sudoers.d:/s alpine rm -f /s/${SUDOERS_CIBLE##*/}'"
+    fi
   done
 }
 

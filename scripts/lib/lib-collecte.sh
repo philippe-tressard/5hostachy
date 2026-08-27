@@ -127,7 +127,14 @@ if [ "$(id -u)" = "0" ]; then
   RISK=""
   RULES=$(grep -rhE "NOPASSWD" /etc/sudoers.d/ /etc/sudoers 2>/dev/null | grep -vE "^[[:space:]]*#")
   # Une regle bornee a aucune commande : le cas le plus grave, et le plus discret.
-  case "$RULES" in *NOPASSWD:*ALL*) RISK="ALL" ;; esac
+  # On teste LIGNE PAR LIGNE. Un case sur la chaine entiere trouvait NOPASSWD:
+  # sur une ligne et ALL sur la suivante (ptressard ALL=(root) NOPASSWD: ...),
+  # donc il posait le marqueur des quun noeud portait deux regles nominatives —
+  # faux positif permanent, et donc controle incapable de virer au vert.
+  # Jumeau teste : sudo_sans_borne(), dans lib-verdicts-sudo.sh. Les deux
+  # expressions doivent rester identiques (meme contrainte que le motif de C18).
+  RISK=$(printf "%s
+" "$RULES" | sed -n "s/.*NOPASSWD:[[:space:]]*//p" | grep -qE "^ALL([,[:space:]]|$)" && echo ALL || echo "")
   for c in $(echo "$RULES" | grep -oE "/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+" | sort -u); do
     [ -e "$c" ] || continue
     M=$(stat -c %A "$c" 2>/dev/null); O=$(stat -c %U "$c" 2>/dev/null); D=$(stat -c %U "$(dirname "$c")" 2>/dev/null)

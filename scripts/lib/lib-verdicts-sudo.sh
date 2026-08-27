@@ -65,6 +65,32 @@ sudo_ecarts() {  # $1 = inventaire A, $2 = inventaire B → "a:1,b:2" | ""
 # C'est le fait de #302 : une règle qui a l'air scopée à un script, alors que le
 # compte appelant peut réécrire ce script. La permission porte sur un CHEMIN, pas
 # sur le code qu'il contiendra au moment de l'exécution.
+# Une règle NOPASSWD est-elle bornée à AUCUNE commande ? Rend "ALL" ou "".
+#
+# 🔴 CE CONTRÔLE NE POUVAIT PLUS JAMAIS ÊTRE VERT (trouvé le 27/08/2026, en
+# traitant #302). La collecte testait :
+#
+#     case "$RULES" in *NOPASSWD:*ALL*) RISK="ALL" ;; esac
+#
+# `$RULES` est MULTILIGNE, et `case` compare la chaîne ENTIÈRE : « NOPASSWD: »
+# vient d une ligne, « ALL » de la suivante — `ptressard ALL=(root) NOPASSWD:
+# …` en contient un au début. Dès qu un nœud portait DEUX règles nominatives,
+# le marqueur se posait tout seul. Il était juste tant que le blanc-seing
+# existait vraiment ; il est devenu un faux positif à la seconde où on l a
+# retiré, c est-à-dire au moment précis où le contrôle devait enfin servir.
+#
+# ⚠️ Un contrôle en WARN dont personne ne peut obtenir le vert finit par se lire
+# comme un décor. Ici il aurait masqué le retour d un vrai `NOPASSWD: ALL`.
+#
+# ⚠️ L expression ci-dessous est RECOPIÉE dans le snippet de `lib-collecte.sh`,
+# qui ne peut sourcer aucun module (il s exécute sur le peer par SSH). Les deux
+# doivent rester identiques — même contrainte que le motif de C18, déjà notée
+# là-bas. C est ce self-test qui éprouve la forme.
+sudo_sans_borne() {  # $1 = lignes NOPASSWD → "ALL" | ""
+  printf '%s
+' "${1:-}"     | sed -n 's/.*NOPASSWD:[[:space:]]*//p'     | grep -qE '^ALL([,[:space:]]|$)' && echo ALL || echo ""
+}
+
 verdict_sudo_risque() {  # $1 = champ collecté → OK | RISQUE | INCONNU
   #  Le peer ne rend rien (il n'est pas root) : INCONNU, jamais OK. Ce contrôle
   #  couvre quand même les deux nœuds, puisqu'il tourne sur chacun d'eux.
@@ -97,6 +123,21 @@ sudo_selftest() {
   sp "aucun des deux n a pu être listé" INCONNU "" ""
   sp "un seul des deux a pu être listé" INCONNU "ok:README:1068:440" ""
   sp "inventaire vide mais MESURÉ (aucun fichier)" OK "ok:" "ok:"
+  echo "-- C21 : une règle sans borne, et rien d autre --"
+  b() {  # $1 = libellé, $2 = attendu, $3 = lignes
+    local got; got=$(sudo_sans_borne "$3")
+    if [ "$got" = "$2" ]; then echo "PASS  $1 → '$got'"
+    else echo "FAIL  $1  attendu='$2' obtenu='$got'"; SUDO_ST=1; fi
+  }
+  b "un vrai blanc-seing"       "ALL" "ptressard ALL=(ALL) NOPASSWD: ALL"
+  b "blanc-seing en tête de liste" "ALL" "ptressard ALL=(ALL) NOPASSWD: ALL, /usr/bin/ls"
+  #  🔴 LE FAUX POSITIF QUI A COÛTÉ SON VERT À CE CONTRÔLE : deux règles
+  #  nominatives, aucune sans borne — et l ancien `case` répondait ALL.
+  b "deux règles bornées"       ""    "ptressard ALL=(root) NOPASSWD: /usr/bin/crontab -l
+ptressard ALL=(root) NOPASSWD: /usr/bin/rsync"
+  b "une seule règle bornée"    ""    "ptressard ALL=(root) NOPASSWD: /usr/bin/rsync"
+  b "aucune règle"              ""    ""
+
   echo "-- C20 : ce qui diverge --"
   E=$(sudo_ecarts "ok:a:1:440,b:2:440" "ok:a:1:440")
   [ "$E" = "b:2:440" ] && echo "PASS  écart nommé → '$E'" \
