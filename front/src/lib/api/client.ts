@@ -142,6 +142,69 @@ export function buildQuery(params: Record<string, string | undefined | null>): s
 	return q ? `?${q}` : '';
 }
 
+/**
+ * Envoi MULTIPART — le seul chemin du site pour poster un fichier.
+ *
+ * ## Pourquoi cette fonction existe (27/08/2026, #453)
+ *
+ * `request()` sérialise en JSON : un `FormData` ne peut pas passer par lui. Chaque
+ * appelant avait donc réécrit son propre `fetch`, et ils étaient **NEUF**, répartis
+ * dans trois fichiers — `api/index.ts` (devis, OS, photo de relevé, rapport de
+ * diagnostic), `api/documents.ts` (catégorie, contrat, publication, `uploadFile`,
+ * `uploadExcel`) et `api/communaute.ts` (photo d'annonce).
+ *
+ * Neuf copies du même bloc de six lignes :
+ *
+ *     if (!res.ok) {
+ *       let detail = 'Erreur upload';
+ *       try { const err = await res.json(); detail = err.detail ?? detail; } catch {}
+ *       throw new ApiError(res.status, detail);
+ *     }
+ *
+ * Et elles avaient déjà divergé — sur le LIBELLÉ, seul point où c'était visible :
+ * « Erreur upload », « Erreur upload fichier », « Erreur upload OS », « Erreur
+ * upload photo », « Erreur import ». Cinq façons de dire la même chose à
+ * l'utilisateur selon le bouton sur lequel il a cliqué.
+ *
+ * ⚠️ Ce qu'une copie coûte VRAIMENT ici : `request()` a reçu depuis le
+ * renouvellement silencieux de session (#379), le masquage des détails techniques
+ * sur les 5xx, et la lecture des erreurs de validation Pydantic. **Aucune des neuf
+ * copies n'en a rien reçu.** Un 500 sur un téléversement expose donc encore son
+ * détail technique, et une session expirée pendant un envoi échoue au lieu de se
+ * renouveler. Ce lot ne corrige pas ces deux écarts — il crée l'endroit UNIQUE
+ * d'où ils pourront l'être une fois pour toutes.
+ *
+ * @param champs  les champs du formulaire ; `undefined` et `null` sont écartés,
+ *                pour que l'appelant n'ait pas à écrire `if (x) form.append(…)`.
+ */
+export async function postFormData<T = any>(
+	path: string,
+	champs: Record<string, string | Blob | undefined | null>,
+	options: { libelleErreur?: string } = {},
+): Promise<T> {
+	const form = new FormData();
+	for (const [cle, valeur] of Object.entries(champs)) {
+		if (valeur === undefined || valeur === null) continue;
+		form.append(cle, valeur);
+	}
+	const res = await fetch(`${BASE}${path}`, {
+		method: 'POST',
+		body: form,
+		credentials: 'include',
+	});
+	if (!res.ok) {
+		let detail = options.libelleErreur ?? 'Erreur lors de l’envoi du fichier';
+		try {
+			const err = await res.json();
+			detail = err.detail ?? detail;
+		} catch {
+			/* le corps n'est pas du JSON : on garde le libellé par défaut */
+		}
+		throw new ApiError(res.status, detail);
+	}
+	return res.json() as Promise<T>;
+}
+
 export const api = {
 	get: <T>(path: string) => request<T>('GET', path),
 	post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
