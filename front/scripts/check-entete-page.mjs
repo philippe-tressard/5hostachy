@@ -31,11 +31,13 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { cssGlobal } from './lib-css-global.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ROUTES = join(RACINE, 'routes');
 const COMPOSANT = join(RACINE, 'lib', 'components', 'EntetePage.svelte');
-const APP_CSS = join(RACINE, 'app.css');
+//  `.page-header` a suivi le découpage d'`app.css` (#453) : on cherche dans
+//  TOUS les fragments de style, pas dans le fichier qui les importe.
 
 /**
  * Emplois légitimes de `.page-header` hors du composant, avec leur raison.
@@ -95,7 +97,7 @@ if (absentes.length > 0) {
 	);
 	process.exit(1);
 }
-if (!existsSync(APP_CSS) || !/^\.page-header\s*\{/m.test(readFileSync(APP_CSS, 'utf8'))) {
+if (!/^\.page-header\s*\{/m.test(cssGlobal(RACINE))) {
 	console.error(
 		"✗ Cas zéro : `app.css` ne porte plus la règle `.page-header`. Elle a déménagé, et " +
 			"interdire les redéfinitions locales n'aurait plus de sens.",

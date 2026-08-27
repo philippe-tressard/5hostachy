@@ -61,6 +61,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { cssGlobal } from './lib-css-global.mjs';
 import { balisageSeul, baliseAvant, classesDe, reglesCss, decouperDeclarations } from './lib-analyse-styles.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -153,7 +154,9 @@ function fichiers(dir, sortie = []) {
 }
 
 function principal() {
-	const css = readFileSync(join(RACINE, 'app.css'), 'utf8');
+	//  Tous les fragments de style, pas le seul `app.css` qui ne fait plus
+	//  qu'importer (#453).
+	const css = cssGlobal(RACINE);
 	const defauts = [];
 	let modificateursTotal = 0;
 

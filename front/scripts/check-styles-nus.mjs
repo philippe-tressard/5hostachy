@@ -82,7 +82,7 @@
  *
  * Usage : npm run lint:styles   (exit 1 si violation)
  */
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 //  La RÈGLE (ce qui est refusé, et les écarts déjà connus) vit à côté ; ce fichier-ci
 //  porte la DÉTECTION. La première bouge à chaque écran repris, la seconde ne bouge pas.
@@ -99,9 +99,12 @@ import {
 	reglesCss,
 	selecteursNus,
 } from './lib-analyse-styles.mjs';
+import { cssGlobal } from './lib-css-global.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const APP_CSS = join(RACINE, 'app.css');
+//  Le CSS global vit dans PLUSIEURS fragments depuis le découpage d'`app.css`
+//  (#453) : `lib-css-global.mjs` les concatène, et ce contrôle n'a plus à
+//  connaître leur nombre.
 
 /** En dessous, le motif de lecture ne correspond plus au balisage (cas zéro). */
 const PLANCHER_STYLES = 200;
@@ -127,15 +130,16 @@ function fichiersSvelte(dossier) {
 
 // ── Cas zéro : un contrôle qui n'a rien lu ne dit pas « tout va bien » ───────
 
-if (!existsSync(APP_CSS)) {
+const CSS_GLOBAL = cssGlobal(RACINE);
+if (!CSS_GLOBAL.trim()) {
 	abandonner(
-		`${APP_CSS} est introuvable.\n` +
-			'  Les valeurs de référence des signatures y sont lues : sans lui, ce contrôle ne\n' +
-			'  sait plus ce qu’est une recomposition, et se taire reviendrait à conclure au vert.',
+		`Aucun CSS global lisible dans ${RACINE} (app.css + styles/). Les valeurs de ` +
+			'référence des signatures y sont lues : sans elles, ce contrôle ne sait plus ' +
+			'ce qui est une recomposition, et se taire vaudrait un vert.',
 	);
 }
 
-const REGLES_APP = reglesCss(readFileSync(APP_CSS, 'utf8'));
+const REGLES_APP = reglesCss(CSS_GLOBAL);
 
 /**
  * Résout un `var(--jeton)` contre les variables de `:root`.
