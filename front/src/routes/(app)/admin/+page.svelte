@@ -15,8 +15,8 @@ import OngletSite from '$lib/components/OngletSite.svelte';
 import OngletPerimetres from '$lib/components/OngletPerimetres.svelte';
 import OngletAuditLots from '$lib/components/OngletAuditLots.svelte';
 import OngletImportLots from '$lib/components/OngletImportLots.svelte';
-import OngletImportTelecommandes from '$lib/components/OngletImportTelecommandes.svelte';
-import OngletImportVigik from '$lib/components/OngletImportVigik.svelte';
+import OngletImportAcces from '$lib/components/OngletImportAcces.svelte';
+import { IMPORT_TELECOMMANDES, IMPORT_VIGIK } from '$lib/imports-acces';
 import Onglet from '$lib/components/Onglet.svelte';
 import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 import OngletSmtp from '$lib/components/OngletSmtp.svelte';
@@ -1255,10 +1255,10 @@ $: _siteNom = $siteNomStore;
 <OngletImportLots />
 
 {:else if onglet === 'import_tc'}
-<OngletImportTelecommandes />
+<OngletImportAcces modele={IMPORT_TELECOMMANDES} />
 
 {:else if onglet === 'import_vigik'}
-<OngletImportVigik />
+<OngletImportAcces modele={IMPORT_VIGIK} />
 
 {/if}
 {#if cvModal}

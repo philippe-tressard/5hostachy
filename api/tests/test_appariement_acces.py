@@ -290,11 +290,19 @@ def test_le_cs_voit_les_imports_auto_resolus():
 
     #  L’écran a quitté sa route le 19/08/2026 : les sept écrans autonomes de
     #  l’administration sont devenus des ONGLETS de `admin/+page.svelte`, pour
-    #  qu’on n’en sorte plus (donc plus de bouton « ← Retour »). Le fichier a
-    #  déménagé, la capacité qu’on vérifie ici n’a pas bougé.
+    #  qu’on n’en sorte plus (donc plus de bouton « ← Retour »).
+    #
+    #  Puis il a FUSIONNÉ avec celui des badges Vigik le 27/08/2026 (#453) : les
+    #  deux étaient identiques à 87 %, et il n'y a plus qu'un écran piloté par un
+    #  modèle. Le fichier a déménagé deux fois, la capacité vérifiée ici n'a pas
+    #  bougé — et c'est bien ce que ce test doit continuer de dire.
+    #
+    #  ⚠️ Ce test lit un fichier PAR SON CHEMIN : il a échoué en `FileNotFoundError`
+    #  au moment de la fusion, ce qui est la bonne façon d'échouer. Un contrôle qui
+    #  aurait cherché le filtre « ailleurs dans le front » serait resté vert sur un
+    #  écran disparu.
     ecran = (
-        racine / "front" / "src" / "lib" / "components"
-        / "OngletImportTelecommandes.svelte"
+        racine / "front" / "src" / "lib" / "components" / "OngletImportAcces.svelte"
     ).read_text(encoding="utf-8")
     assert "'resolu'" in ecran, (
         "L'écran d'import ne propose plus le filtre « résolu » : les appariements "
