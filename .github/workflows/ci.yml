@@ -456,6 +456,18 @@ jobs:
         working-directory: front
         run: npm run lint:perimetres
 
+      # Et le RENDU d'un périmètre, exécuté. La règle « un espace est qualifié par
+      # son parent » est écrite deux fois — front et API — parce que les contextes
+      # de build l'imposent. Le 18/08 elle n'a été corrigée que d'un côté, et le fil
+      # d'activité a continué d'afficher « Toit · Toit » : le test ajouté ce jour-là
+      # ne pouvait vérifier le front que par présence de MOTS dans le fichier.
+      # Celui-ci transpile `lib/perimetres.ts`, l'exécute sur l'arbre du ticket
+      # signalé, et exige que le test Python attende la même chaîne — une seule
+      # attente pour les deux implémentations.
+      - name: Rendu des périmètres identique front/API
+        working-directory: front
+        run: npm run lint:libelle-perimetre
+
       # L'en-tête de page était écrit de DOUZE façons : `.page-header` redéfini en
       # CSS local dans six pages, surchargé en ligne dans six autres, et le style du
       # <h1> recopié en ligne dans onze. Une page l'avait réécrit sans redéclarer

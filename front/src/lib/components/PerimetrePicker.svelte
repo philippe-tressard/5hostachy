@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { perimetresStore } from '$lib/stores/perimetres';
-	import { perimetreParDefaut, type Perimetre } from '$lib/perimetres';
+	import { SEPARATEUR_ELEMENT, perimetreParDefaut, type Perimetre } from '$lib/perimetres';
 
 	/** Valeurs sélectionnées — tableau de codes. Ex : ['résidence'] ou ['bat:1','parking'] */
 	export let value: string[] = [];
@@ -297,7 +297,9 @@
 			chevron={aDesEnfants.has(n.code) && !contracte}
 			on:click={() => basculer(n.code)}
 			>{n.libelle}{#if contracte}<span class="perimetre-resume"
-				> › {choisis.map((e) => e.libelle_court || e.libelle).join(' · ')}</span
+				> › {choisis
+					.map((e) => e.libelle_court || e.libelle)
+					.join(SEPARATEUR_ELEMENT)}</span
 			>{/if}</Pastille>
 	{/each}
 </div>

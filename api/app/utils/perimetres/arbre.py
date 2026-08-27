@@ -1,4 +1,15 @@
-"""Périmètres — l'arbre en base, lu et rendu au même endroit partout.
+"""Périmètres — l'arbre en base, lu et parcouru au même endroit partout.
+
+⚠️ **Ce module est la moitié « arbre » du paquet `app.utils.perimetres`.** Il ne
+rend aucun libellé : le rendu vit dans `libelles.py`, qui importe celui-ci. La
+dépendance est à sens unique, et elle doit le rester — l'arbre n'a pas à savoir
+comment on l'affiche.
+
+Le découpage date du 27/08/2026 : le fichier unique passait 500 lignes, seuil de
+la règle de modularité (rang 1). La frontière suit celle que ce docstring
+énonçait déjà — « Les primitives » ici, « Libellés » là-bas. La surface publique,
+elle, N'A PAS BOUGÉ : `from app.utils.perimetres import …` continue de tout
+trouver, via `__init__.py`.
 
 ## Ce que ce module remplaçait
 
@@ -31,8 +42,8 @@ désigné par les données — voir `code_par_defaut`.
 
 ## Les primitives
 
-`a_portee_globale`, `batiments_cibles`, `perimetre_du_batiment` et
-`perimetre_label` sont les seules fonctions qui parcourent l'arbre. Leurs
+`a_portee_globale`, `batiments_cibles` et `perimetre_du_batiment` sont les
+seules fonctions qui parcourent l'arbre. Leurs
 consommateurs — `utils/visibility.py` (qui voit), `utils/destinataires.py` (qui
 est notifié), `routers/flux/evenements.py` (le badge « concerne mon bâtiment ») et
 `utils/fiche_arrivant.py` (le document imprimé) — portaient auparavant chacun sa
@@ -243,56 +254,6 @@ def perimetre_du_batiment(batiment_id: Optional[int]) -> Optional[Noeud]:
     return min(candidats, key=lambda n: (n.ordre, n.code))
 
 
-# ── Libellés ──────────────────────────────────────────────────────────────────
-
-def perimetre_label_un(perim: str) -> str:
-    """Libellé d'un périmètre isolé. Ne renvoie jamais un code brut à l'écran.
-
-    🔴 **Un espace de BÂTIMENT est qualifié par son bâtiment** (18/08/2026, signalé
-    à l'écran). Le gabarit pose les mêmes neuf espaces sous chaque bâtiment — Hall,
-    Paliers, Escaliers, Ascenseur, Caves, Toit… — si bien qu'un ticket visant les
-    toits de deux bâtiments s'affichait « Toit · Toit », sans dire lesquels.
-
-    ⚠️ **Cette règle est écrite DEUX FOIS**, ici et dans `front/src/lib/perimetres.ts`,
-    et ce n'est pas un oubli : les contextes de build sont `./api` et `./front`, rien
-    de la racine n'entre dans les images, et le partage d'un fichier est impossible
-    (mémoire `project_partage_front_api_impossible`). Le seul pattern viable est la
-    copie — et elle se paie : la correction côté front, faite le matin même, n'a PAS
-    atteint le fil d'activité, dont les libellés sont calculés **ici**. C'est le
-    défaut que ce commentaire doit empêcher de reproduire une troisième fois.
-
-    Le test `api/tests/test_perimetre_label_batiment.py` verrouille les deux formes.
-    """
-    noeuds = arbre()
-    n = noeuds.get((perim or "").strip().lower())
-    if n is not None:
-        parent = noeuds.get((n.parent or "").strip().lower()) if n.parent else None
-        #  ⚠️ On teste `batiment_id`, PAS le préfixe du code. La convention `bat:N`
-        #  est posée par le seed ; l'administration peut créer un bâtiment sous
-        #  n'importe quel code, et le préfixe cesserait alors de le reconnaître.
-        #  C'est la même leçon que `perimetre_du_batiment` côté front : on
-        #  interroge la donnée, pas le nom (#316).
-        if parent is not None and parent.batiment_id is not None:
-            #  Le libellé COURT du bâtiment (« Bât. 3 ») : le long (« Bâtiment 3 »)
-            #  allongerait un badge déjà à deux niveaux, sur des cartes où il est
-            #  posé à côté d'un état et d'un numéro.
-            court = parent.libelle_court or parent.libelle
-            return f"{court} › {n.libelle}"
-        return n.libelle
-    #  Repli d'affichage pour un contenu qui cite un nœud supprimé depuis. Ce n'est
-    #  **pas** une source de vérité : la convention `bat:N` est posée par le seed,
-    #  l'arbre reste seul juge. Elle survit ici parce qu'un badge vide ou un
-    #  `bat:5` brut sont deux façons de se voir en production.
-    if perim and perim.lower().startswith(_PREFIXE_BATIMENT):
-        return f"Bât. {perim[len(_PREFIXE_BATIMENT):]}"
-    return perim
-
-
-def perimetre_label(perims: list[str]) -> str:
-    """« Bât. 1 · Parking » — le rendu commun à toutes les rubriques."""
-    return " · ".join(perimetre_label_un(p) for p in perims)
-
-
 # ── Analyse des champs stockés ────────────────────────────────────────────────
 
 def code_par_defaut() -> Optional[str]:
@@ -348,16 +309,3 @@ def parse_json_perimetres(perimetre_cible: Optional[str]) -> list[str]:
     except Exception:
         codes = []
     return _avec_defaut(codes)
-
-
-def perimetre_label_json(perimetre_cible: Optional[str], *, vide: str = "") -> str:
-    """Libellé direct depuis un champ JSON.
-
-    `vide` est rendu quand le champ est absent — l'e-mail de relance syndic
-    n'affiche alors aucune ligne « périmètre », là où le fil affiche
-    « Copropriété entière ». Deux besoins légitimes, un seul paramètre, plutôt
-    que deux tables.
-    """
-    if not perimetre_cible:
-        return vide
-    return perimetre_label(parse_json_perimetres(perimetre_cible))

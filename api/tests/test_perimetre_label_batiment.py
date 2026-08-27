@@ -1,4 +1,22 @@
-"""Un espace de bâtiment se lit avec son bâtiment — des DEUX côtés.
+"""Un espace se lit avec son parent, et les espaces d'un même parent se suivent.
+
+## L'élargissement du 27/08/2026 — signalé à l'écran
+
+La règle ci-dessous ne qualifiait un espace que si son parent portait un
+`batiment_id`, au motif — écrit dans son commentaire — que les enfants du parking
+ou des locaux techniques « portent déjà des libellés distincts ». C'était vrai du
+**seed**, et de lui seul : une « Voie d'accès » créée depuis `/admin/patrimoine`
+sous AFUL s'affichait nue, alors que le sélecteur, lui, écrivait « AFUL › Voie
+d'accès ». Le même objet avait deux écritures selon l'écran.
+
+Et l'ordre affiché était celui des CLICS, jamais trié : les deux espaces d'un même
+bâtiment se retrouvaient séparés par un périmètre étranger —
+
+    Bât. 4 › Logement · Voie d'accès · Bât. 4 › Jardin Bâtiment
+
+au lieu de ce que l'utilisateur a validé, et que le sélecteur affichait déjà :
+
+    Bât. 4 › Logement · Jardin Bâtiment — AFUL › Voie d'accès
 
 ## Pourquoi ce garde-fou (18/08/2026)
 
@@ -104,13 +122,161 @@ def test_un_batiment_entier_garde_son_libelle(arbre_deux_batiments):
     assert P.perimetre_label_un(bat3) == "Bâtiment 3"
 
 
+@pytest.fixture()
+def arbre_du_ticket():
+    """L'arbre EXACT du ticket signalé le 27/08/2026.
+
+    Un regroupement « Bâtiments » qui ne se cible pas, un bâtiment qui porte deux
+    espaces, et un nœud transverse (AFUL) qui en porte un — c'est la combinaison
+    qui produisait les deux défauts à la fois.
+    """
+    SQLModel.metadata.create_all(engine)
+    suffixe = uuid.uuid4().hex[:6]
+    with Session(engine) as session:
+        session.exec(delete(Perimetre))
+        session.commit()
+
+        #  Un REGROUPEMENT : racine, non sélectionnable. Il ne doit jamais préfixer
+        #  ses enfants — « Bâtiments › Bât. 4 » n'apprendrait rien.
+        groupe = Perimetre(
+            code=f"batiments{suffixe}", libelle="Bâtiments", libelle_court="Bâtiments",
+            description="", profondeur=0, ordre=10, actif=True, selectionnable=False,
+        )
+        aful = Perimetre(
+            code=f"aful{suffixe}", libelle="AFUL", libelle_court="AFUL",
+            description="", profondeur=0, ordre=40, actif=True, selectionnable=True,
+            portee_globale=True,
+        )
+        #  La racine par défaut : c'est elle qu'un contenu SANS périmètre désigne,
+        #  et c'est son libellé — pas la chaîne « Copropriété entière » écrite dans
+        #  le code — que l'affiche de hall doit imprimer.
+        racine = Perimetre(
+            code=f"residence{suffixe}", libelle="Copropriété entière",
+            libelle_court="Copropriété", description="", profondeur=0, ordre=0,
+            actif=True, selectionnable=True, portee_globale=True,
+        )
+        session.add_all([groupe, aful, racine])
+        session.commit()
+        session.refresh(groupe)
+        session.refresh(aful)
+
+        bat = Perimetre(
+            code=f"bat{suffixe}:4", parent_id=groupe.id, libelle="Bâtiment 4",
+            libelle_court="Bât. 4", description="", batiment_id=4,
+            profondeur=1, ordre=3, actif=True, selectionnable=True,
+        )
+        session.add(bat)
+        session.commit()
+        session.refresh(bat)
+
+        #  `ordre` volontairement NON contigu : c'est la position dans le gabarit
+        #  (Logement en 2ᵉ, Jardin Bâtiment en 9ᵉ), et le tri doit s'y conformer.
+        espaces = {
+            "logement": Perimetre(
+                code=f"{bat.code}/logement", parent_id=bat.id, libelle="Logement",
+                libelle_court="Logement", description="", profondeur=2, ordre=1,
+                actif=True, selectionnable=True,
+            ),
+            "jardin": Perimetre(
+                code=f"{bat.code}/jardin", parent_id=bat.id, libelle="Jardin Bâtiment",
+                libelle_court="Jardin Bât.", description="", profondeur=2, ordre=7,
+                actif=True, selectionnable=True,
+            ),
+            "voie": Perimetre(
+                code=f"{aful.code}/voie", parent_id=aful.id, libelle="Voie d'accès",
+                libelle_court="Voie d'accès", description="", profondeur=1, ordre=0,
+                actif=True, selectionnable=True,
+            ),
+        }
+        session.add_all(espaces.values())
+        session.commit()
+        codes = {nom: n.code for nom, n in espaces.items()}
+        codes["bat"] = bat.code
+        codes["aful"] = aful.code
+    P.invalider_cache()
+    yield codes
+    with Session(engine) as session:
+        session.exec(delete(Perimetre))
+        session.commit()
+    P.invalider_cache()
+
+
+def test_un_espace_transverse_est_qualifie_par_son_parent(arbre_du_ticket):
+    """« Voie d'accès » ne se lit plus nue : rien ne disait qu'elle est à l'AFUL."""
+    assert P.perimetre_label_un(arbre_du_ticket["voie"]) == "AFUL › Voie d'accès"
+
+
+def test_un_regroupement_ne_prefixe_pas_ses_enfants(arbre_du_ticket):
+    """« Bâtiments » est un nœud d'organisation, pas une cible : il ne se dit pas.
+
+    C'est la borne de l'élargissement — sans elle, qualifier « par le parent quel
+    qu'il soit » produirait « Bâtiments › Bâtiment 4 » sur tous les écrans.
+    """
+    assert P.perimetre_label_un(arbre_du_ticket["bat"]) == "Bâtiment 4"
+
+
+def test_le_rendu_du_ticket_signale(arbre_du_ticket):
+    """La chaîne validée par l'utilisateur, au caractère près."""
+    codes = [arbre_du_ticket["logement"], arbre_du_ticket["voie"], arbre_du_ticket["jardin"]]
+
+    assert P.perimetre_label(codes) == (
+        "Bât. 4 › Logement · Jardin Bâtiment — AFUL › Voie d'accès"
+    )
+
+
+def test_l_ordre_des_clics_n_a_plus_d_effet(arbre_du_ticket):
+    """Le fait, pas le symptôme : TOUTES les permutations rendent la même chaîne.
+
+    Le défaut venait de là — `PerimetrePicker` stocke l'ordre des clics, et rien
+    ne triait ensuite. Un test sur un seul ordre serait passé au vert sur la
+    moitié des saisies.
+    """
+    import itertools
+
+    codes = [arbre_du_ticket["logement"], arbre_du_ticket["voie"], arbre_du_ticket["jardin"]]
+    rendus = {P.perimetre_label(list(p)) for p in itertools.permutations(codes)}
+
+    assert len(rendus) == 1, f"le rendu dépend encore de l'ordre de saisie : {rendus}"
+
+
+def test_un_code_inconnu_est_conserve_et_rejete_a_la_fin(arbre_du_ticket):
+    """Un nœud supprimé depuis ne fait pas perdre son badge au contenu."""
+    rendu = P.perimetre_label([arbre_du_ticket["voie"], "bat:99"])
+
+    assert rendu == "AFUL › Voie d'accès · Bât. 99", rendu
+
+
+def test_l_affiche_de_hall_ne_peut_plus_imprimer_un_code_brut(arbre_du_ticket):
+    """`perimetre_libelle` — QUATRIÈME table écrite en dur — imprimait le code.
+
+    Elle vivait dans `utils/annonce_hall.py`, connaissait cinq codes (`résidence`,
+    `parking`, `cave`, `aful`, le préfixe `bat:`) et rendait `else: le code tel
+    quel` : une « Voie d'accès » créée depuis l'administration s'imprimait
+    `aful/voie` sur l'affiche du hall, **sur papier**. Elle avait échappé à la
+    fusion des trois autres (#316) parce qu'elle portait un autre nom.
+
+    Ce test verrouille le remplacement, y compris son cas vide : « aucun périmètre
+    précisé » se lit avec le libellé de la racine par défaut, pris dans l'arbre —
+    une copropriété qui la renomme voit son affiche suivre.
+    """
+    assert P.perimetre_label_liste([arbre_du_ticket["voie"]]) == "AFUL › Voie d'accès"
+    assert P.perimetre_label_liste([]) == "Copropriété entière"
+
+
 def test_le_front_porte_la_meme_regle():
-    """Le jumeau TypeScript existe et qualifie, lui aussi, par le parent.
+    """Le jumeau TypeScript existe et porte, lui aussi, les deux règles.
 
     ⚠️ Contrôle de PRÉSENCE, pas d'exécution : ce test ne peut pas lancer le
     module front. Il vérifie que la règle y est écrite et signale son absence —
     ce qui est déjà plus que rien, puisque c'est justement l'oubli d'un des deux
     côtés qui a produit le défaut deux fois.
+
+    ⚠️ Ce qui est cherché doit être ce qui a CHANGÉ. La version précédente
+    cherchait `batiment_id` — un mot que `perimetres.ts` porte encore ailleurs
+    (l'interface, `perimetreDuBatiment`, `batimentsCibles`) : le jour où la
+    qualification a cessé de s'appuyer dessus, ce contrôle serait resté vert en
+    affirmant une règle qui n'existait plus. On cherche donc les deux noms qui
+    portent réellement la décision.
 
     Un contrôle qui ne peut pas mesurer doit le DIRE : si le fichier est
     introuvable, ce test échoue au lieu de conclure au vert (`standards/04` §2).
@@ -123,8 +289,17 @@ def test_le_front_porte_la_meme_regle():
         "Ne pas lire son silence comme un succès."
     )
     source = jumeau.read_text(encoding="utf-8")
-    assert "batiment_id" in source and "›" in source, (
-        "La qualification d'un espace par son bâtiment a disparu du front. "
-        "Les deux implémentations doivent rester d'accord — la copie est le seul "
-        "pattern viable entre `./api` et `./front`, et elle se vérifie ici."
+    manquants = [
+        nom for nom in ("parentQualifiant", "estGroupeRacine", "cheminOrdre",
+                        "SEPARATEUR_GROUPE", "›")
+        if nom not in source
+    ]
+    assert not manquants, (
+        f"Le front ne porte plus : {', '.join(manquants)}. Les deux implémentations "
+        "doivent rester d'accord — la copie est le seul pattern viable entre "
+        "`./api` et `./front`, et elle se vérifie ici."
+    )
+    assert P.SEPARATEUR_GROUPE.strip() in source, (
+        "Le séparateur de groupe diffère entre les deux implémentations : le même "
+        "contenu se lirait autrement selon l'écran qui l'affiche."
     )
