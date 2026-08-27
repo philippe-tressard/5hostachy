@@ -108,6 +108,52 @@ sudoers_peut_nettoyer() {  # $1 = verdict de conformité
   [ "${1:-}" = "OK" ] && echo oui || echo non
 }
 
+# Quels nœuds cette invocation vise-t-elle ?
+#
+# 🔴 UN NŒUD À LA FOIS, et ce n'est pas une préférence de style. Poser la même
+# règle sudoers sur les DEUX moitiés d'une paire HA dans la même seconde, c'est
+# renoncer à ce que la paire apporte : si la règle est mauvaise, les deux nœuds
+# le deviennent ensemble. La discipline est déjà celle des points d'entrée
+# (`verifier-points-entree.sh` : « installer reste un geste explicite, un nœud à
+# la fois ») ; elle manquait ici.
+#
+# Un filtre qui ne correspond à AUCUN nœud connu rend une liste vide ET un code
+# d'erreur : sans cela, une IP mal tapée ferait boucler sur rien et le script
+# annoncerait un succès sans avoir rien touché (`standards/04` §2, cas zéro).
+sudoers_noeuds_cibles() {  # $1 = filtre (vide = tous), $2 = liste connue
+  local filtre="${1:-}" connus="${2:-}" n
+  [ -z "$connus" ] && return 1
+  if [ -z "$filtre" ]; then printf '%s' "$connus"; return 0; fi
+  for n in $connus; do
+    [ "$n" = "$filtre" ] && { printf '%s' "$n"; return 0; }
+  done
+  return 1
+}
+
+# Cette commande est-elle exécutable SANS MOT DE PASSE ?
+#
+# 🔴 `sudo -n -l <cmd>` ne répond PAS à cette question, et je l'ai cru
+# (27/08/2026). Il répond « ce compte peut-il lancer cette commande », mot de
+# passe compris — donc il rend 0 pour `docker` sur un nœud durci, où `docker`
+# n'est plus NOPASSWD mais reste couvert par la ligne `(ALL : ALL) ALL`. La
+# sonde annonçait « AUTORISÉE » sur exactement ce que le durcissement venait de
+# fermer : un faux vert sur la mesure qui compte.
+#
+# La seule source fiable est la LISTE des lignes NOPASSWD que `sudo -n -l`
+# imprime. On la lit, on n'interroge pas commande par commande.
+sudoers_est_nopasswd() {  # $1 = sortie de `sudo -n -l`, $2 = commande cherchée
+  [ -z "${1:-}" ] && return 1          # rien lu : on ne conclut pas
+  printf '%s
+' "$1" | grep -q "NOPASSWD:.*${2}"
+}
+
+# La surface NOPASSWD réellement en place, une commande par ligne — c'est ce
+# qu'on compare au versionné, et ce que C20 doit remonter.
+sudoers_surface_nopasswd() {  # $1 = sortie de `sudo -n -l`
+  printf '%s
+' "${1:-}" | sed -n 's/.*NOPASSWD: *//p' | sed 's/[[:space:]]*$//' | sort
+}
+
 sudoers_selftest() {
   local st=0 got
   c() {  # $1 = libellé, $2 = attendu, $3 = lu, $4 = attendu(contenu)
@@ -160,6 +206,52 @@ sudoers_selftest() {
   else
     echo "PASS  aucune règle sans borne de commande"
   fi
+
+  echo "-- NOPASSWD : « peut » n'est pas « peut sans mot de passe » --"
+  #  Sortie réelle d'un nœud durci : la ligne `(ALL : ALL) ALL` couvre TOUT avec
+  #  mot de passe, et c'est elle qui faisait dire « AUTORISÉE » à l'ancienne sonde.
+  local sortie_durcie="User ptressard may run the following commands on n1:
+    (ALL : ALL) ALL
+    (root) NOPASSWD: /usr/bin/systemctl start cloudflared
+    (root) NOPASSWD: /usr/bin/crontab -l
+    (root) NOPASSWD: /usr/bin/rsync"
+  p() {  # $1 = libellé, $2 = attendu(oui/non), $3 = commande
+    if sudoers_est_nopasswd "$sortie_durcie" "$3"; then got=oui; else got=non; fi
+    if [ "$got" = "$2" ]; then echo "PASS  $1 → $got"
+    else echo "FAIL  $1  attendu=$2 obtenu=$got"; st=1; fi
+  }
+  p "rsync est sans mot de passe"          oui "/usr/bin/rsync"
+  p "crontab -l est sans mot de passe"     oui "/usr/bin/crontab -l"
+  #  LE CAS QUI COMPTE : couvert par `(ALL : ALL) ALL`, donc exécutable — mais
+  #  AVEC mot de passe. L'ancienne sonde répondait « autorisée » ici.
+  p "docker n est PAS sans mot de passe"   non "/usr/bin/docker"
+  p "rm n est PAS sans mot de passe"       non "/usr/bin/rm"
+  #  Et le cas zéro : rien lu ne vaut pas « rien d autorisé ».
+  if sudoers_est_nopasswd "" "/usr/bin/rsync"; then
+    echo "FAIL  sortie vide traitée comme une permission"; st=1
+  else
+    echo "PASS  sortie vide : aucune conclusion"
+  fi
+  got=$(sudoers_surface_nopasswd "$sortie_durcie" | tr '
+' '|')
+  if [ "$got" = "/usr/bin/crontab -l|/usr/bin/rsync|/usr/bin/systemctl start cloudflared|" ]; then
+    echo "PASS  surface NOPASSWD extraite → 3 entrées"
+  else
+    echo "FAIL  surface NOPASSWD  obtenu=$got"; st=1
+  fi
+
+  echo "-- le filtre de nœud --"
+  f() {  # $1 = libellé, $2 = attendu, $3 = filtre, $4 = connus
+    if got=$(sudoers_noeuds_cibles "$3" "$4"); then :; else got="__ERREUR__"; fi
+    if [ "$got" = "$2" ]; then echo "PASS  $1 → $got"
+    else echo "FAIL  $1  attendu=$2 obtenu=$got"; st=1; fi
+  }
+  f "sans filtre : les deux"        "1.1.1.1 2.2.2.2" ""        "1.1.1.1 2.2.2.2"
+  f "un nœud nomme"                 "2.2.2.2"         "2.2.2.2" "1.1.1.1 2.2.2.2"
+  #  LE CAS ZÉRO du filtre : une IP inconnue ne doit pas rendre une liste vide
+  #  avec un code 0 — le script boucherait sur rien et conclurait au succès.
+  f "IP inconnue : ERREUR, pas vide" "__ERREUR__"     "9.9.9.9" "1.1.1.1 2.2.2.2"
+  f "aucun nœud connu : ERREUR"      "__ERREUR__"     ""        ""
 
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st
