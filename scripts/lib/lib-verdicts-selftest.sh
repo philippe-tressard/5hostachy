@@ -316,9 +316,9 @@ verdicts_selftest() {
   fi
 
   echo "-- C23 : les en-tetes de securite reellement servis --"
-  ve() { # description attendu recus liste
-    local desc="$1" exp="$2" recus="$3" liste="$4"
-    local got; got=$(verdict_entetes_securite "$recus" "$liste")
+  ve() { # description attendu recus liste [role]
+    local desc="$1" exp="$2" recus="$3" liste="$4" role="${5:-actif}"
+    local got; got=$(verdict_entetes_securite "$recus" "$liste" "$role")
     if [ "$got" = "$exp" ]; then echo "PASS  $desc"
     else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
   }
@@ -337,6 +337,17 @@ verdicts_selftest() {
   #  périmée (« SAMEORIGIN » contre « DENY ») qui a fait désarmer le contrôle
   #  précédent, retiré du cron de rpi2 le 06/08/2026 après 144 échecs par jour.
   ve "valeur inattendue, en-tête présent" "OK" $'HTTP/1.1 200 OK\nX-Frame-Options: SAMEORIGIN' "X-Frame-Options"
+  #  🔴 LE STANDBY N'A RIEN À MESURER, et ce n'est pas une panne (27/08/2026).
+  #  Les conteneurs ne tournent que sur l'actif : c'est l'invariant, pas un
+  #  incident. Ce contrôle rendait pourtant INCONNU toutes les quinze minutes sur
+  #  la moitié du parc, et un digest partait chaque jour. Un contrôle dont le vert
+  #  est inatteignable finit par se contourner (`standards/04` §25).
+  ve "standby : rien à constater"         "SANS_OBJET" "" "X-Frame-Options" "standby"
+  #  ⚠️ Et il le reste même si quelque chose répondait : ce n'est pas le site.
+  ve "standby, réponse parasite"          "SANS_OBJET" "$_TOUS" "X-Frame-Options" "standby"
+  #  ⚠️ Sur l'ACTIF, l'absence de réponse reste INCONNU — là, c'est un fait à
+  #  regarder. La distinction est tout l'objet du correctif.
+  ve "actif muet : toujours INCONNU"      "INCONNU" "" "X-Frame-Options" "actif"
 
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail
