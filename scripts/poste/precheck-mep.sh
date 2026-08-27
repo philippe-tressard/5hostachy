@@ -90,13 +90,26 @@ RETARD=$(git rev-list --count "HEAD..origin/$BRANCHE" 2>/dev/null)
 #  la dérive que ce point existe pour attraper.
 #  `origin/dev` n'apporte rien que `origin/main` n'ait déjà, ET nous descendons
 #  de `origin/main` : le retard est le réalignement post-squash, pas une dérive.
-if git diff --quiet "origin/$BRANCHE" origin/main 2>/dev/null    && git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then IDENT=oui; else IDENT=non; fi
-if [ "${RETARD:-0}" != "0" ] && [ "$IDENT" = "oui" ]; then
+#  La branche amont peut avoir été SUPPRIMÉE à la fusion de la PR : `origin/dev`
+#  disparaît alors, et il n'y a rien à rattraper. On distingue donc les trois
+#  états — présente, absente, indéterminable — au lieu de lire une mesure vide
+#  comme un INCONNU.
+if git rev-parse --verify --quiet "origin/$BRANCHE" >/dev/null 2>&1; then AMONT=present
+elif git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then AMONT=absent
+else AMONT=inconnu; fi
+if [ "$AMONT" = "absent" ]; then
+  #  Rien à comparer à l'amont : ce qui compte est de descendre de `origin/main`.
+  git merge-base --is-ancestor origin/main HEAD 2>/dev/null && IDENT=oui || IDENT=non
+elif git diff --quiet "origin/$BRANCHE" origin/main 2>/dev/null && git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then IDENT=oui; else IDENT=non; fi
+if [ "$AMONT" = "absent" ]; then
+  DETAIL0A="origin/$BRANCHE supprimée à la fusion — HEAD descend d'origin/main"
+  [ "$IDENT" = "oui" ] || DETAIL0A="origin/$BRANCHE absente ET le clone a divergé d'origin/main"
+elif [ "${RETARD:-0}" != "0" ] && [ "$IDENT" = "oui" ]; then
   DETAIL0A="retard=$RETARD commit(s) sans apport (réalignement post-squash)"
 else
   DETAIL0A="retard=${RETARD:-?} commit(s)"
 fi
-rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT")" "Clone à jour sur origin/$BRANCHE" "$DETAIL0A"
+rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT" "$AMONT")" "Clone à jour sur origin/$BRANCHE" "$DETAIL0A"
 
 # 0b — modularité : rejouer ici ce que la CI refusera
 #      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI

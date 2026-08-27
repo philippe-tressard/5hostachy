@@ -80,7 +80,27 @@ verdict_standby() {       # $1 = .active (qui DIT être l'actif), $2/$3 = conten
 #    • notre HEAD descend de `origin/main` (donc nous avons bien ce contenu).
 #  Un contrôle qui crie au loup à chaque livraison finit contourné, et c'est le
 #  contournement qui devient l'habitude (socle 04 §18).
+# $3 = état de la branche AMONT : present | absent | inconnu (défaut : present)
+#
+# 🔴 CE POINT NE POUVAIT PLUS ÊTRE VERT APRÈS UNE FUSION (27/08/2026).
+# Le dépôt supprime la branche à la fusion de la PR. `origin/dev` disparaît donc,
+# `git rev-list HEAD..origin/dev` rend une chaîne vide, et le point concluait
+# INCONNU — ce qui est honnête sur la MESURE (« je n ai pas pu compter ») mais
+# faux sur le FAIT : il n y a rien à rattraper, la branche n existe plus.
+#
+# Conséquence pratique : le pré-check ne pouvait plus passer, donc le hook
+# `pre-push` refusait le premier push suivant chaque fusion — l état le plus
+# courant du dépôt. Un contrôle dont le vert est inatteignable finit par se
+# contourner, et c est le troisième de la journée (C21, `visudo -c`, celui-ci).
+#
+# ⚠️ « Absente » n est OK QUE si l on descend de `origin/main`. Une branche
+# amont absente sur un clone qui a divergé reste un FAIL : c est alors une
+# dérive, pas un post-fusion.
 verdict_clone() {          # $1 = commits de retard, $2 = upstream sans apport (oui/non)
+  case "${3:-present}" in
+    inconnu) echo INCONNU; return ;;
+    absent)  [ "${2:-non}" = "oui" ] && echo OK || echo FAIL; return ;;
+  esac
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
   [ "$1" -eq 0 ] && { echo OK; return; }
