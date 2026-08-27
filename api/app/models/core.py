@@ -406,60 +406,17 @@ class PublicationEvolution(SQLModel, table=True):
     auteur: Optional[Utilisateur] = Relationship()
 
 
-# ──────────────────────────────────────────────
-#  Documents
-# ──────────────────────────────────────────────
-
-class ProfilAccesDocument(SQLModel, table=True):
-    __tablename__ = "profil_acces_document"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    code: str = Field(unique=True)
-    libelle: str
-    description: str = ""
-    roles_autorises: str  # JSON array des statuts
-    require_cs: bool = False
-    actif: bool = True
-
-    categories: List["CategorieDocument"] = Relationship(back_populates="profil_acces")
+#  Réexportation : la bibliothèque documentaire vit dans `documents.py` depuis le
+#  27/08/2026 (modularité, rang 1). Ces trois classes restent importables ici —
+#  une vingtaine de modules écrivent `from app.models.core import Document`, et un
+#  découpage qui casse ses importateurs n'est pas un découpage.
+from app.models.documents import (
+    CategorieDocument as CategorieDocument,
+    Document as Document,
+    ProfilAccesDocument as ProfilAccesDocument,
+)
 
 
-class CategorieDocument(SQLModel, table=True):
-    __tablename__ = "categorie_document"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    code: str = Field(unique=True)
-    libelle: str
-    profil_acces_id: int = Field(foreign_key="profil_acces_document.id")
-    perimetre_defaut: str = "résidence"
-    surcharge_autorisee: bool = False
-    actif: bool = True
-
-    profil_acces: Optional[ProfilAccesDocument] = Relationship(back_populates="categories")
-    documents: List["Document"] = Relationship(back_populates="categorie")
-
-
-class Document(SQLModel, table=True):
-    __tablename__ = "document"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    titre: str
-    fichier_nom: str
-    fichier_chemin: str
-    taille_octets: Optional[int] = None
-    mime_type: str = "application/octet-stream"
-    categorie_id: Optional[int] = Field(default=None, foreign_key="categorie_document.id")
-    contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
-    publication_id: Optional[int] = Field(default=None, foreign_key="publication.id")
-    profil_acces_override_id: Optional[int] = Field(default=None, foreign_key="profil_acces_document.id")
-    perimetre: str = "résidence"
-    batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
-    publie_par_id: int = Field(foreign_key="utilisateur.id")
-    publie_le: datetime = Field(default_factory=datetime.utcnow)
-    # Champs spécifiques aux CR d'AG
-    annee: Optional[int] = None
-    date_ag: Optional[date] = Field(default=None)
-    batiments_ids_json: Optional[str] = None  # JSON array ex: "[1,2]" pour AG multi-bâtiments
-
-    categorie: Optional[CategorieDocument] = Relationship(back_populates="documents")
 
 
 # ──────────────────────────────────────────────

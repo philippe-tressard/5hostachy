@@ -20,10 +20,12 @@ from app.models.core import (
     ProfilAccesDocument,
     Publication,
     RoleUtilisateur,
+    Ticket,
     Utilisateur,
 )
+from app.models.evenement import Evenement
 
-from .objets import publication_visible
+from .objets import evenement_visible, publication_visible, ticket_visible
 
 # ── Règles document ───────────────────────────────────────────────────────────
 
@@ -62,6 +64,30 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
         if not pub or pub.brouillon:
             return False
         return publication_visible(pub, user)
+
+    #  Pièce jointe de TICKET ou d'ÉVÉNEMENT (#390) : même règle, même raison.
+    #
+    #  🔴 « Qui voit le porteur », et rien d'autre — décision prise le 27/08/2026.
+    #  Le régime actuel de ces fichiers est celui de l'objet qui les porte ; leur
+    #  donner au passage le contrôle à trois couches des documents casserait des
+    #  accès qui marchent aujourd'hui, sans que personne soit prévenu. Le gain de
+    #  #390 est de fermer l'URL BRUTE, pas de changer qui voit quoi.
+    #
+    #  ⚠️ Porteur introuvable → on REFUSE. Une pièce jointe dont le ticket a été
+    #  supprimé n'a plus de règle à appliquer, et « aucune règle » n'est jamais une
+    #  autorisation (`standards/04` — un contrôle qui ne peut pas s'exécuter ne
+    #  rend pas OK). C'est la même branche que pour la publication ci-dessus.
+    if doc.ticket_id and not doc.categorie_id:
+        ticket = session.get(Ticket, doc.ticket_id)
+        if not ticket:
+            return False
+        return ticket_visible(ticket, user)
+
+    if doc.evenement_id and not doc.categorie_id:
+        ev = session.get(Evenement, doc.evenement_id)
+        if not ev:
+            return False
+        return evenement_visible(ev, user)
 
     #  🔴 UN DOCUMENT SANS SOURCE DE PROTECTION NE SE LIT PAS.
     #
