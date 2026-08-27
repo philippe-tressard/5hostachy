@@ -5,6 +5,8 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulairePrestation from '$lib/components/FormulairePrestation.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
+	import ModaleOrdreService from '$lib/components/ModaleOrdreService.svelte';
+	import AjoutDocumentContrat from '$lib/components/AjoutDocumentContrat.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
@@ -143,7 +145,6 @@
 
 	// ── Devis OS upload ─────────────────────────────────────────
 	let osUploadDevisId: number | null = null;
-	let osFile: File | null = null;
 	let osUploading = false;
 	//  Le bâtiment se LIT dans l'arbre (clé étrangère) : le déduire du code supposait
 	//  la convention `bat:N` du seed, que l'administration peut ne pas suivre.
@@ -159,10 +160,11 @@
 
 	// ── Documents ─────────────────────────────────────────────────
 	let contratDocsMap: Record<number, any[]> = {};
-	let contratUploadFile: File | null = null;
-	let contratUploadTitre = '';
-	let uploadingDoc = false;
-	let uploadInputKey = 0;
+	//  ⚠️ `contratUploadFile`, `contratUploadTitre`, `uploadingDoc` et
+	//  `uploadInputKey` ont disparu avec le bloc dupliqué (#370). Ils étaient
+	//  UNIQUES pour toute la page alors que le bloc était affiché à deux endroits :
+	//  choisir un fichier dans le formulaire d'édition le faisait apparaître dans
+	//  la carte dépliée. Chaque `AjoutDocumentContrat` porte désormais le sien.
 
 	let filtreEquipement = '';
 	let filtreType = '';
@@ -195,8 +197,11 @@
 	let showReleveForm = false;
 	let editReleveId: number | null = null;
 	let releveForm = { date_releve: new Date().toISOString().slice(0, 10), index: '', note: '' };
-	let relevePhotoFile: File | null = null;
-	let relevePhotoKey = 0;
+	let relevePhotoFichiers: File[] = [];
+	//  ⚠️ `relevePhotoKey` a disparu (#370) : la clé de remontage n'existait que
+	//  pour vider un `<input type="file">` nu, qu'aucune affectation ne remet à
+	//  zéro. `FichiersUpload` se vide en vidant sa liste.
+	$: relevePhotoFile = relevePhotoFichiers[0] ?? null;
 	let releveSaving = false;
 
 	let editCompteurId: number | null = null;
@@ -237,8 +242,7 @@
 
 	function resetReleveForm() {
 		releveForm = { date_releve: new Date().toISOString().slice(0, 10), index: '', note: '' };
-		relevePhotoFile = null;
-		relevePhotoKey++;
+		relevePhotoFichiers = [];
 		editReleveId = null;
 		showReleveForm = false;
 	}
@@ -249,8 +253,7 @@
 			index: r.index != null ? String(r.index) : '',
 			note: r.note ?? '',
 		};
-		relevePhotoFile = null;
-		relevePhotoKey++;
+		relevePhotoFichiers = [];
 		editReleveId = r.id;
 		showReleveForm = true;
 	}
@@ -389,10 +392,10 @@
 		resetDevisForm();
 	}
 
-	function onOsFileChange(event: Event) {
-		const input = event.currentTarget as HTMLInputElement | null;
-		osFile = input?.files?.[0] ?? null;
-	}
+	//  ⚠️ `onOsFileChange` et `osFile` ont disparu avec l'`<input type="file">` nu
+	//  (#370) : le fichier retenu appartient à `ModaleOrdreService`, qui le rend
+	//  dans son événement `confirmer`. La page n'a plus d'état de saisie à tenir.
+
 
 	function startEditDevis(d: any, openInModal = false) {
 		       devisForm = {
@@ -484,7 +487,7 @@
 		} catch { toast('error', 'Erreur mise à jour statut'); }
 	}
 
-	async function acceptDevisWithOs() {
+	async function acceptDevisWithOs(osFile: File | null) {
 		if (!osUploadDevisId) return;
 		osUploading = true;
 		try {
@@ -497,7 +500,7 @@
 			devis = devis.map(d => d.id === osUploadDevisId ? updated : d);
 			toast('success', 'Devis accepté — passé chez le prestataire');
 		} catch { toast('error', 'Erreur'); } finally {
-			osUploadDevisId = null; osFile = null; osUploading = false;
+			osUploadDevisId = null; osUploading = false;
 		}
 	}
 
@@ -684,18 +687,10 @@
 		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
 	}
 
-	async function uploadDoc(contratId: number) {
-		if (!contratUploadFile) return;
-		const titre = contratUploadTitre.trim() || contratUploadFile.name;
-		uploadingDoc = true;
-		try {
-			await docsApi.uploadForContrat(titre, contratId, contratUploadFile);
-			contratDocsMap = { ...contratDocsMap, [contratId]: await docsApi.list(undefined, contratId) };
-			contratUploadFile = null;
-			contratUploadTitre = '';
-			uploadInputKey++;
-			toast('success', 'Document ajouté');
-		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { uploadingDoc = false; }
+	//  L'ENVOI vit dans `AjoutDocumentContrat` ; il ne reste ici que le rechargement
+	//  de la liste, qui appartient à la page puisque c'est elle qui l'affiche.
+	async function rechargerDocs(contratId: number) {
+		contratDocsMap = { ...contratDocsMap, [contratId]: await docsApi.list(undefined, contratId) };
 	}
 
 	async function deleteDoc(contratId: number, docId: number) {
@@ -812,7 +807,7 @@
 								{#if $isCS}
 									<div class="kanban-card-actions">
 										<button class="devis-step-btn devis-step-btn--primary" title="Passer l'OS et transmettre au prestataire"
-											on:click={() => { osUploadDevisId = d.id; osFile = null; }}>→ OS</button>
+											on:click={() => { osUploadDevisId = d.id; }}>→ OS</button>
 										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
 										<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
 									</div>
@@ -1053,7 +1048,7 @@
 									<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
 										<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditDevis(d)}>✏️ Modifier</button>
 										{#if d.statut === 'en_attente'}
-											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => { osUploadDevisId = d.id; osFile = null; }}>→ Prestataire</button>
+											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => { osUploadDevisId = d.id; }}>→ Prestataire</button>
 											<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
 										{:else if d.statut === 'accepte'}
 											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => moveDevisStatut(d.id, 'realise')}>✅ Réalisée</button>
@@ -1139,27 +1134,16 @@
 		{/if}
 	{/if}
 
-	<!-- Modal OS upload -->
-	{#if osUploadDevisId}
-		<div class="modal-overlay" on:click={() => { osUploadDevisId = null; osFile = null; }}>
-			<div class="modal modal-sm" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>Ordre de service</h2>
-					<button class="modal-close" on:click={() => { osUploadDevisId = null; osFile = null; }}>×</button>
-				</div>
-				<div class="modal-body">
-					<p style="font-size:.875rem;color:var(--color-text-muted)">Joindre l'OS signé (optionnel) — le statut passera en <strong>Accepté</strong>.</p>
-					<input type="file" accept=".pdf,.jpg,.jpeg,.png" on:change={onOsFileChange} style="margin-top:.5rem" />
-				</div>
-				<div class="modal-footer">
-					<button class="btn" on:click={() => { osUploadDevisId = null; osFile = null; }}>Annuler</button>
-					<button class="btn btn-primary" disabled={osUploading} on:click={acceptDevisWithOs}>
-						{osUploading ? 'Enregistrement...' : "Confirmer l'OS"}
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<!--  🔴 La modale vit dans `ModaleOrdreService.svelte` (#370 et #453) : cette
+	      page frôle les 2 000 lignes et le garde-fou de modularité refuse qu'elle
+	      grossisse. On sort un OBJET complet plutôt que de comprimer des attributs
+	      pour repasser sous le seuil — c'est le contournement que #453 nomme. -->
+	<ModaleOrdreService
+		devisId={osUploadDevisId}
+		envoi={osUploading}
+		on:fermer={() => (osUploadDevisId = null)}
+		on:confirmer={(e) => acceptDevisWithOs(e.detail)}
+	/>
 
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- ONGLET 2 : VISITES                                           -->
@@ -1251,11 +1235,11 @@
 						{:else}
 							<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
 						{/if}
-						<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
-							<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
-							{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
-							<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(editContratId ?? 0)}>{uploadingDoc ? '…' : '+ Document'}</button>
-						</div>
+						<AjoutDocumentContrat
+							id="contrat-edit-doc"
+							contratId={editContratId ?? 0}
+							on:ajoute={() => rechargerDocs(editContratId ?? 0)}
+						/>
 					</div>
 				{/if}
 			</div>
@@ -1369,11 +1353,11 @@
 									{:else}
 										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
 									{/if}
-									<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
-										<input type="text" placeholder="Titre" bind:value={contratUploadTitre} style="font-size:.82rem;flex:1;min-width:110px" />
-										{#key uploadInputKey}<input type="file" on:change={(e) => contratUploadFile = e.currentTarget.files?.[0] ?? null} style="font-size:.82rem" />{/key}
-										<button class="btn btn-sm btn-primary" disabled={!contratUploadFile || uploadingDoc} on:click|stopPropagation={() => uploadDoc(c.id)}>{uploadingDoc ? '…' : '+ Document'}</button>
-									</div>
+									<AjoutDocumentContrat
+										id="contrat-{c.id}-doc"
+										contratId={c.id}
+										on:ajoute={() => rechargerDocs(c.id)}
+									/>
 								</div>
 								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
 									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
@@ -1738,9 +1722,16 @@
 						</div>
 						<div class="field" style="margin-top:.6rem">
 							<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem">Photo du relevé (optionnel)</span>
-							{#key relevePhotoKey}
-								<input type="file" accept="image/*" on:change={(e) => relevePhotoFile = e.currentTarget.files?.[0] ?? null} style="font-size:.875rem" />
-							{/key}
+							<!--  Différé : la photo part par `prestApi.uploadRelevePhoto`,
+							      une fois le relevé créé. -->
+							<FichiersUpload
+								id="releve-photo"
+								mode="photos"
+								differe
+								max={1}
+								label="Choisir une photo"
+								bind:fichiers={relevePhotoFichiers}
+							/>
 						</div>
 					</div>
 					<div class="form-actions">

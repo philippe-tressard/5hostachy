@@ -99,6 +99,12 @@ verdicts_mep_selftest() {
   t "retard avec apport manquant"        FAIL    verdict_clone 2 non
   t "retard non mesuré"                  INCONNU verdict_clone "" oui
   t "retard non numérique"               INCONNU verdict_clone "abc" oui
+  #  🔴 La branche amont SUPPRIMÉE à la fusion : rien à rattraper, à condition de
+  #  descendre de `origin/main`. Sans ce cas, le pré-check ne pouvait plus passer
+  #  après aucune fusion — donc le hook pre-push refusait le push suivant.
+  t "amont supprimée, aligné sur main"   OK      verdict_clone "" oui absent
+  t "amont supprimée, clone divergent"   FAIL    verdict_clone "" non absent
+  t "amont non déterminable"             INCONNU verdict_clone 0 oui inconnu
   t "HEAD identiques"                    OK      verdict_parite abc123 abc123
   t "standby en retard : toléré"         ECART   verdict_parite abc123 def456
   #  🔴 #511 — le point 18 : la parité de CODE ci-dessus rend OK là où les
