@@ -21,7 +21,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import AnnonceHall, Batiment, ConfigSite, Document, Publication, Utilisateur
+from app.models.core import AnnonceHall, ConfigSite, Document, Publication, Utilisateur
 from app.utils.annonce_hall import (
     FORMATS,
     MAX_PHOTOS,
@@ -31,11 +31,11 @@ from app.utils.annonce_hall import (
     format_libelle,
     generer_pdf,
     nom_fichier,
-    perimetre_libelle,
     texte_brut,
 )
 from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiables
 from app.utils.email import send_email_group
+from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
 from app.utils.photos import parse_photos
 
 router = APIRouter(prefix="/annonces-hall", tags=["annonces-hall"])
@@ -81,9 +81,10 @@ def _config_site(session: Session) -> dict[str, str]:
     return {r.cle: (r.valeur or "") for r in rows}
 
 
-def _batiments(session: Session) -> dict[int, str]:
-    """`{id: numero}` — pour libeller `bat:1` en `Bât. A`."""
-    return {b.id: b.numero for b in session.exec(select(Batiment)).all() if b.id is not None}
+#  ⚠️ `_batiments()` a disparu avec `perimetre_libelle` (27/08/2026) : il ne
+#  servait qu'à fabriquer « Bât. {numero} » en dehors de l'arbre. Le libellé d'un
+#  bâtiment vient désormais de la table `perimetre`, donc de l'administration —
+#  un renommage l'atteint, ce que cette table-là ne permettait pas.
 
 
 def _valider(body: AnnonceHallBase) -> None:
@@ -105,7 +106,7 @@ def _html_params(body: AnnonceHallBase, session: Session, *, format_effectif: st
     return {
         "titre": body.titre.strip(),
         "message_html": body.message,
-        "perimetre_label": perimetre_libelle(body.perimetre_cible, _batiments(session)),
+        "perimetre_label": perimetre_label_liste(body.perimetre_cible),
         "format_effectif": format_effectif,
         "site_nom": cfg.get("site_nom") or "5Hostachy",
         "site_url": cfg.get("site_url") or "https://5hostachy.fr",
@@ -114,16 +115,16 @@ def _html_params(body: AnnonceHallBase, session: Session, *, format_effectif: st
     }
 
 
-def _to_read(annonce: AnnonceHall, session: Session, batiments: dict[int, str]) -> dict:
+def _to_read(annonce: AnnonceHall, session: Session) -> dict:
     auteur = session.get(Utilisateur, annonce.auteur_id)
-    perimetres = json.loads(annonce.perimetre_cible or '["résidence"]')
+    perimetres = parse_json_perimetres(annonce.perimetre_cible)
     return {
         "id": annonce.id,
         "titre": annonce.titre,
         "message": annonce.message,
         "apercu": texte_brut(annonce.message)[:APERCU_MAX],
         "perimetre_cible": perimetres,
-        "perimetre_label": perimetre_libelle(perimetres, batiments),
+        "perimetre_label": perimetre_label_liste(perimetres),
         "format_demande": annonce.format_demande,
         "format_effectif": annonce.format_effectif,
         "format_label": format_libelle(annonce.format_effectif),
@@ -141,10 +142,10 @@ def _to_read(annonce: AnnonceHall, session: Session, batiments: dict[int, str]) 
 
 def _envoyer_email_cs(
     annonce: AnnonceHall, user: Utilisateur, background_tasks: BackgroundTasks,
-    session: Session, batiments: dict[int, str],
+    session: Session,
 ) -> list[str]:
     """Programme l'envoi de l'annonce au CS du périmètre. Retourne les e-mails visés."""
-    perimetres = json.loads(annonce.perimetre_cible or '["résidence"]')
+    perimetres = parse_json_perimetres(annonce.perimetre_cible)
     destinataires = membres_cs_notifiables(session, batiments_du_perimetre(perimetres))
     if not destinataires:
         return []
@@ -153,7 +154,7 @@ def _envoyer_email_cs(
         "annonce": {
             "id": annonce.id,
             "titre": annonce.titre,
-            "perimetre": perimetre_libelle(perimetres, batiments),
+            "perimetre": perimetre_label_liste(perimetres),
             "format": format_libelle(annonce.format_effectif),
             "date": date_longue(annonce.cree_le),
             "apercu": texte_brut(annonce.message)[:APERCU_MAX],
@@ -235,8 +236,7 @@ def list_annonces_hall(
         .where(AnnonceHall.archivee == archivees)
         .order_by(AnnonceHall.cree_le.desc())  # type: ignore[arg-type]
     ).all()
-    batiments = _batiments(session)
-    return [_to_read(a, session, batiments) for a in annonces]
+    return [_to_read(a, session) for a in annonces]
 
 
 @router.get("/depuis-publication/{pub_id}",
@@ -367,7 +367,7 @@ def creer_annonce_hall(
     #  Sans la case, `destinataires` et `envoye_le` restent vides : l'historique dit
     #  qu'une affiche a été générée, et rien de plus — ce qui est exactement le fait.
     if envoyer_cs:
-        emails = _envoyer_email_cs(annonce, user, background_tasks, session, _batiments(session))
+        emails = _envoyer_email_cs(annonce, user, background_tasks, session)
         if emails:
             annonce.destinataires = json.dumps(emails, ensure_ascii=False)
             annonce.envoye_le = datetime.utcnow()
@@ -397,7 +397,7 @@ def create_annonce_hall(
         images=body.images,
         envoyer_cs=body.envoyer_cs,
     )
-    return _to_read(annonce, session, _batiments(session))
+    return _to_read(annonce, session)
 
 
 @router.get("/{annonce_id}/pdf", summary="Télécharger le PDF d'une annonce (CS/Admin)")
@@ -429,7 +429,7 @@ def renvoyer_email(
     annonce = session.get(AnnonceHall, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
-    emails = _envoyer_email_cs(annonce, user, background_tasks, session, _batiments(session))
+    emails = _envoyer_email_cs(annonce, user, background_tasks, session)
     if not emails:
         raise HTTPException(
             422,
@@ -455,7 +455,7 @@ def archiver_annonce(
     session.add(annonce)
     session.commit()
     session.refresh(annonce)
-    return _to_read(annonce, session, _batiments(session))
+    return _to_read(annonce, session)
 
 
 @router.delete("/{annonce_id}", status_code=204,

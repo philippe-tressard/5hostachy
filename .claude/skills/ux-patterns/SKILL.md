@@ -252,7 +252,32 @@ dessus. Utiliser, depuis `$lib/perimetres` :
 **Condition d'affichage** : ne jamais afficher le badge si `estPerimetreParDefaut()`
 est vrai (c'est le défaut, le redire n'apprend rien).
 
-Séparateur multi-périmètre : ` · ` (espace · espace) — porté par `perimetreLabel()`.
+### Comment un périmètre S'ÉCRIT — trois règles, portées par `perimetreLabel()`
+
+1. **Un espace est qualifié par son parent** — « Bât. 3 › Toit », « AFUL › Voie
+   d'accès ». Sans cela, le gabarit posant les mêmes neuf espaces sous chaque
+   bâtiment, un ticket visant deux toits affichait « Toit · Toit » (18/08/2026).
+   ⚠️ La qualification s'est arrêtée aux **bâtiments** pendant neuf jours, au motif
+   que les enfants du parking ou des locaux techniques « portent déjà des libellés
+   distincts ». C'était vrai du **seed**, pas de l'administration : une « Voie
+   d'accès » créée sous AFUL s'affichait nue (27/08/2026). La condition porte
+   désormais sur ce que le parent EST — une cible, ou un simple **regroupement**
+   (« Bâtiments », `selectionnable = false`), qui lui ne préfixe jamais.
+2. **Deux séparateurs, deux sens.** ` · ` sépare deux éléments ; ` — ` borne un
+   groupe qui en contient plusieurs, et n'apparaît que là — sinon le « · » d'un
+   groupe se confond avec celui qui sépare les groupes :
+   `Bât. 4 › Logement · Jardin Bâtiment — AFUL › Voie d'accès`.
+   Les deux constantes sont exportées (`SEPARATEUR_ELEMENT`, `SEPARATEUR_GROUPE`) —
+   **les importer, jamais les retaper**, le sélecteur le fait.
+3. **L'ordre affiché est celui de l'arbre, jamais celui des clics.** Le sélecteur
+   stocke l'ordre de sélection ; `perimetreLabel()` trie et regroupe. Un rendu qui
+   dépend du chemin de saisie n'est pas un rendu, c'est un hasard.
+
+🔒 **Deux garde-fous en CI, tenus par la MÊME chaîne attendue** : la règle est
+écrite deux fois (front et API — les contextes de build interdisent le partage), et
+le 18/08 elle n'a été corrigée que d'un côté. `api/tests/test_perimetre_label_batiment.py`
+exécute la forme serveur ; `npm run lint:libelle-perimetre` transpile et exécute la
+forme front, puis vérifie que le test Python attend la même chaîne.
 
 **Sélecteur** : `PerimetrePicker.svelte`, alimenté par le store — premier niveau de
 pastilles, second niveau facultatif quand un bâtiment est choisi, et la

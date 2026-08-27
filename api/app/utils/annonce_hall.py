@@ -191,27 +191,17 @@ def format_libelle(fmt: str) -> str:
     return (fmt or "a4").upper()
 
 
-def perimetre_libelle(perimetres: list[str], batiments: dict[int, str] | None = None) -> str:
-    """`['bat:1','parking']` → `Bât. 1 · Parking` (séparateur ` · ` de la charte)."""
-    if not perimetres or perimetres == ["résidence"]:
-        return "Copropriété entière"
-    noms = batiments or {}
-    libelles: list[str] = []
-    for p in perimetres:
-        if p == "résidence":
-            libelles.append("Copropriété entière")
-        elif p.startswith("bat:"):
-            ident = p.split(":", 1)[1]
-            libelles.append(f"Bât. {noms.get(int(ident), ident)}" if ident.isdigit() else f"Bât. {ident}")
-        elif p == "parking":
-            libelles.append("Parking")
-        elif p == "cave":
-            libelles.append("Cave")
-        elif p == "aful":
-            libelles.append("AFUL")
-        else:
-            libelles.append(p)
-    return " · ".join(libelles)
+#  ⚠️ `perimetre_libelle()` vivait ici — QUATRIÈME table de périmètres écrite en
+#  dur, retirée le 27/08/2026. Elle connaissait cinq codes (`résidence`, `parking`,
+#  `cave`, `aful`, le préfixe `bat:`) et rendait **le code brut** pour tout le
+#  reste : une « Voie d'accès » créée depuis `/admin/patrimoine` s'imprimait
+#  `aful/voie-acces` sur l'affiche du hall, en toutes lettres et sur papier.
+#
+#  C'est très exactement ce que `utils/perimetres.py` a été écrit pour abolir
+#  (#316) — trois copies avaient alors été fusionnées, celle-ci n'avait pas été
+#  vue parce qu'elle porte un AUTRE NOM. Les appelants passent désormais par
+#  `perimetre_label_liste`, qui lit l'arbre.
+
 
 
 

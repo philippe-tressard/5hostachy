@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -16,6 +16,7 @@
     "lint:taches": "node scripts/check-libelles-taches.mjs",
     "lint:routes": "node scripts/check-routes-atteignables.mjs",
     "lint:perimetres": "node scripts/check-perimetres.mjs",
+    "lint:libelle-perimetre": "node scripts/check-libelle-perimetre.mjs",
     "lint:entetes": "node scripts/check-entete-page.mjs",
     "lint:formulaires": "node scripts/check-formulaire-creation.mjs",
     "lint:styles": "node scripts/check-styles-nus.mjs",
