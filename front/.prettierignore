@@ -21,3 +21,13 @@ package-lock.json
 # survécu.
 static/manuel-utilisateur.html
 static/manuel-utilisateur-1-page.html
+
+# ── Catalogue d'icônes : une COPIE, pas une source ────────────────────────────
+# `src/lib/icones-svg.json` et `api/app/utils/icones-svg.json` doivent rester
+# identiques À L'OCTET — c'est `api/tests/test_icones_svg.py` qui le vérifie, et
+# c'est le seul pattern viable entre `./api` et `./front`, dont les contextes de
+# build sont disjoints (mémoire `project_partage_front_api_impossible`).
+# Le reformater ici le ferait diverger de son jumeau au premier `--write`, et la
+# CI le dirait — mais après coup, sur un diff de 800 lignes sans objet.
+# Son autorité est l'égalité octet pour octet, pas une convention de mise en forme.
+src/lib/icones-svg.json
