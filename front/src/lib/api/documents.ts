@@ -1,6 +1,6 @@
 //  Documents, fichiers et téléversements : trois clients qui manipulent la
 //  même notion et vivaient à 400 lignes d'écart.
-import { api, ApiError, BASE } from './client';
+import { api, BASE, postFormData } from './client';
 import type { Document } from './types';
 
 export const documents = {
@@ -25,49 +25,23 @@ export const documents = {
 		dateAg?: string,
 		batimentsIdsJson?: string,
 	): Promise<Document> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		form.append('categorie_id', String(categorieId));
-		form.append('perimetre', perimetre);
-		if (batimentId) form.append('batiment_id', String(batimentId));
-		if (annee) form.append('annee', String(annee));
-		if (dateAg) form.append('date_ag', dateAg);
-		if (batimentsIdsJson) form.append('batiments_ids_json', batimentsIdsJson);
-		form.append('file', file);
-		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
+		//  `postFormData` écarte lui-même les champs absents : plus de `if (x)`
+		//  répété pour chaque champ facultatif.
+		return postFormData<Document>('/documents', {
+			titre,
+			categorie_id: String(categorieId),
+			perimetre,
+			batiment_id: batimentId ? String(batimentId) : undefined,
+			annee: annee ? String(annee) : undefined,
+			date_ag: dateAg,
+			batiments_ids_json: batimentsIdsJson,
+			file,
+		});
 	},
-	uploadForContrat: async (titre: string, contratId: number, file: File): Promise<any> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		form.append('contrat_id', String(contratId));
-		form.append('file', file);
-		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	uploadForPublication: async (titre: string, publicationId: number, file: File): Promise<any> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		form.append('publication_id', String(publicationId));
-		form.append('file', file);
-		const res = await fetch(`${BASE}/documents`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	uploadForContrat: (titre: string, contratId: number, file: File): Promise<any> =>
+		postFormData('/documents', { titre, contrat_id: String(contratId), file }),
+	uploadForPublication: (titre: string, publicationId: number, file: File): Promise<any> =>
+		postFormData('/documents', { titre, publication_id: String(publicationId), file }),
 	listByPublication: (publicationId: number) => api.get<any[]>(`/documents?publication_id=${publicationId}`),
 	downloadUrl: (docId: number) => `${BASE}/documents/${docId}/télécharger`,
 	delete: (id: number) => api.delete(`/documents/${id}`),
@@ -82,46 +56,21 @@ export const fichiersApi = {
 	 * payload — et donc de la joindre à l'e-mail envoyé au syndic.
 	 * Retourne { url, nom, type }
 	 */
-	upload: async (file: File): Promise<{ url: string; nom: string; type: string }> => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/uploads/fichier`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload fichier';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	upload: (file: File): Promise<{ url: string; nom: string; type: string }> =>
+		postFormData('/uploads/fichier', { file }),
 };
 
 async function uploadFile(path: string, file: File): Promise<{ url: string }> {
-	const form = new FormData();
-	form.append('file', file);
-	const res = await fetch(`${BASE}${path}`, {
-		method: 'POST',
-		body: form,
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		let detail = 'Erreur upload';
-		try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-		throw new ApiError(res.status, detail);
-	}
-	return res.json();
+	return postFormData(path, { file });
 }
 
-export async function uploadExcel<T = any>(path: string, file: File, remplacer = false): Promise<T> {
-	const form = new FormData();
-	form.append('file', file);
-	const url = `${BASE}${path}${remplacer ? '?remplacer=true' : ''}`;
-	const res = await fetch(url, { method: 'POST', body: form, credentials: 'include' });
-	if (!res.ok) {
-		let detail = 'Erreur import';
-		try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-		throw new ApiError(res.status, detail);
-	}
-	return res.json();
+export function uploadExcel<T = any>(path: string, file: File, remplacer = false): Promise<T> {
+	//  Le libellé reste distinct : un import de tableur qui échoue ne se raconte pas
+	//  comme un téléversement de pièce jointe. C'est la SEULE des cinq divergences
+	//  de libellé qui portait un sens ; les quatre autres disaient la même chose.
+	return postFormData<T>(`${path}${remplacer ? '?remplacer=true' : ''}`, { file }, {
+		libelleErreur: 'Erreur import',
+	});
 }
 
 

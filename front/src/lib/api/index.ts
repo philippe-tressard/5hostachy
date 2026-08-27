@@ -1,4 +1,4 @@
-import { api, ApiError, BASE, buildQuery } from './client';
+import { api, ApiError, BASE, buildQuery, postFormData } from './client';
 import { uploadExcel } from './documents';
 import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, ApercuDiffusion, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
@@ -186,17 +186,8 @@ export const prestataires = {
 	createDevis: (data: unknown) => api.post<any>('/prestataires/devis', data),
 	updateDevis: (id: number, data: unknown) => api.patch<any>(`/prestataires/devis/${id}`, data),
 	deleteDevis: (id: number) => api.delete(`/prestataires/devis/${id}`),
-	uploadDevisFichier: async (id: number, file: File) => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/prestataires/devis/${id}/fichier`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload fichier';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	uploadDevisFichier: (id: number, file: File) =>
+		postFormData(`/prestataires/devis/${id}/fichier`, { file }),
 	deleteDevisFichier: async (id: number, url: string) => {
 		const res = await fetch(`${BASE}/prestataires/devis/${id}/fichier?url=${encodeURIComponent(url)}`, { method: 'DELETE', credentials: 'include' });
 		if (!res.ok) {
@@ -206,32 +197,13 @@ export const prestataires = {
 		}
 		return res.json();
 	},
-	uploadDevisOs: async (id: number, file: File) => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/prestataires/devis/${id}/os`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload OS';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	uploadDevisOs: (id: number, file: File) => postFormData(`/prestataires/devis/${id}/os`, { file }),
 	releves: (type_compteur?: string) => api.get<any[]>(`/prestataires/releves${type_compteur ? '?type_compteur=' + encodeURIComponent(type_compteur) : ''}`),
 	createReleve: (data: unknown) => api.post<any>('/prestataires/releves', data),
 	updateReleve: (id: number, data: unknown) => api.patch<any>(`/prestataires/releves/${id}`, data),
 	deleteReleve: (id: number) => api.delete(`/prestataires/releves/${id}`),
-	uploadRelevePhoto: async (id: number, file: File) => {
-		const fd = new FormData();
-		fd.append('file', file);
-		const res = await fetch(`${BASE}/prestataires/releves/${id}/photo`, { method: 'POST', body: fd, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload photo';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	uploadRelevePhoto: (id: number, file: File) =>
+		postFormData(`/prestataires/releves/${id}/photo`, { file }),
 	compteurConfigs: () => api.get<any[]>('/prestataires/compteurs-config'),
 	createCompteurConfig: (data: unknown) => api.post<any>('/prestataires/compteurs-config', data),
 	updateCompteurConfig: (id: number, data: unknown) => api.patch<any>(`/prestataires/compteurs-config/${id}`, data),
@@ -272,21 +244,11 @@ export const faq = {
 export const diagnostics = {
 	listTypes: () => api.get<any[]>('/diagnostics/types'),
 	uploadRapport: async (typeId: number, titre: string, dateRapport: string | undefined, file: File): Promise<any> => {
-		const form = new FormData();
-		form.append('titre', titre);
-		if (dateRapport) form.append('date_rapport', dateRapport);
-		form.append('file', file);
-		const res = await fetch(`${BASE}/diagnostics/types/${typeId}/rapports`, {
-			method: 'POST',
-			body: form,
-			credentials: 'include',
+		return postFormData(`/diagnostics/types/${typeId}/rapports`, {
+			titre,
+			date_rapport: dateRapport,
+			file,
 		});
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
 	},
 	// `synthese` est bien géré par l'API (`if "synthese" in body.model_fields_set`)
 	// et stocké sur le modèle : c'est la signature d'ici qui était en retard.

@@ -6,7 +6,7 @@
 //  lignes en recevant `deleteEvolution` (#512). Le refus disait vrai : un
 //  fichier qui expose vingt-six domaines n'a pas un problème de taille, il a un
 //  problème de découpage — et `documents.ts` avait déjà montré la voie.
-import { api, ApiError, BASE } from './client';
+import { api, postFormData } from './client';
 
 export const sondages = {
 	list: () => api.get<any[]>('/sondages'),
@@ -42,17 +42,8 @@ export const annonces = {
 	update: (id: number, data: unknown) => api.patch<any>(`/annonces/${id}`, data),
 	updateStatut: (id: number, statut: string) => api.patch(`/annonces/${id}/statut`, { statut }),
 	supprimer: (id: number) => api.delete(`/annonces/${id}`),
-	uploadPhoto: async (id: number, file: File): Promise<{ url: string; photos: string[] }> => {
-		const form = new FormData();
-		form.append('file', file);
-		const res = await fetch(`${BASE}/annonces/${id}/photo`, { method: 'POST', body: form, credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur upload';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
+	uploadPhoto: (id: number, file: File): Promise<{ url: string; photos: string[] }> =>
+		postFormData(`/annonces/${id}/photo`, { file }),
 	deletePhoto: (id: number, url: string) => api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
 	listReponses: (id: number) => api.get<any[]>(`/annonces/${id}/reponses`),
 	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
