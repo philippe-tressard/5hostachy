@@ -1,0 +1,326 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   5Hostachy — Les ECRANS particuliers : imports Excel, administration, blocs de detail
+deplies.
+
+   ⚠️ Fragment d'`app.css`, decoupe le 27/08/2026 (#453). Ce fichier faisait
+   1 223 lignes — 1 961 une fois reformate — et le garde-fou de modularite
+   (rang 1) refuse qu'il grossisse.
+
+   🔴 L'ORDRE EST LA CASCADE. `app.css` importe les quatre fragments dans
+   l'ordre exact ou leurs regles se trouvaient : le bundle produit est
+   identique, et ce decoupage ne peut donc pas changer un rendu. Reordonner
+   les `@import`, si.
+
+   ⚠️ Ces regles ne servent qu'a une poignee d'ecrans. Elles sont globales
+parce que PLUSIEURS composants se les partagent — une regle qui ne sert
+qu'a un seul doit vivre dans son `<style>`, avec son balisage.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Écrans d'import (lots · télécommandes · vigiks) ──────────────────────
+   Ces quinze règles étaient recopiées à l'identique dans les <style> des trois
+   pages d'import — vérifié règle par règle avant regroupement : aucune ne
+   divergeait. Environ 150 lignes pour une seule mise en forme.
+
+   Le préfixe `imp-` n'est pas décoratif. Trois de ces noms — `toolbar`,
+   `edit-form`, `edit-grid` — sont DÉJÀ employés par d'autres écrans (admin,
+   calendrier, espace-cs, mon-lot, residence) avec leurs propres définitions
+   scopées : les globaliser tels quels y aurait fait fuiter ce style. Et
+   `page-header` existe déjà plus haut dans ce fichier, avec des valeurs
+   DIFFÉRENTES (justify-content, gap, padding) — l'override local des imports
+   était donc voulu, pas une redite.
+
+   Préfixer sans exception évite d'avoir à trancher au cas par cas, et empêche
+   la prochaine collision. */
+.imp-header { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.5rem; }
+.imp-header h1 { font-size: 1.4rem; font-weight: 700; }
+
+.imp-stats-bar {
+  display: flex;
+  gap: 1.5rem;
+  padding: .75rem 1.25rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.imp-stat { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.imp-stat-val { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
+.imp-stat-lbl { font-size: .75rem; color: var(--color-text-muted); }
+
+.imp-upload-section { padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.imp-upload-row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.imp-file-input { flex: 1; min-width: 200px; }
+.imp-checkbox-label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
+
+.imp-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+}
+
+.imp-table-dense td, .imp-table-dense th { padding: .35rem .55rem; }
+.imp-row-resolu td { opacity: .55; }
+.imp-row-ignore td { opacity: .4; }
+
+.imp-edit-row td { background: var(--color-bg-secondary, #f8f9fa); padding: 0; }
+.imp-edit-form { padding: .75rem 1rem; border-left: 3px solid var(--color-primary, #1a56db); }
+.imp-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: .5rem .75rem;
+  margin-bottom: .75rem;
+}
+.imp-field-checkbox { display: flex; align-items: flex-end; }
+.imp-field-checkbox label { display: flex; align-items: center; gap: .4rem; font-size: .875rem; }
+
+@media (max-width: 900px) {
+  .imp-edit-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .imp-edit-grid { grid-template-columns: 1fr; }
+  .imp-stats-bar { gap: 1rem; }
+}
+
+/* ── Écrans d'administration : cadre de section et en-tête d'action ───────────
+   Ces cinq classes vivaient dans le <style> de `admin/+page.svelte`, donc
+   SCOPÉ par Svelte. En extrayant `TachesPlanifiees.svelte` (v2.49.0) le
+   composant les a perdues sans un mot : plus de cadre, plus de texte atténué,
+   et surtout plus d'en-tête flex — le bouton « Lancer la maintenance
+   applicative » se retrouvait collé au milieu du texte, aligné à gauche.
+   Signalé par l'utilisateur le 11/08/2026.
+   Rendues globales plutôt que recopiées dans le composant : une seconde
+   définition serait une duplication (rang 1), et elles ne sont définies nulle
+   part ailleurs — aucun risque de collision.
+   ────────────────────────────────────────────────────────────────────────── */
+/*  Un bloc de configuration de l’administration. Il ne porte QUE son
+    espacement : la surface vient de `.card`, posée à côté dans le balisage.
+
+    Elle n’y était pas jusqu’au 19/08/2026 — les blocs d’admin étaient posés à
+    même le fond de page. Or le fond de page et le fond d’un champ sont la MÊME
+    couleur (`--color-bg`, la pierre de taille) : un champ beige sur une page
+    beige n’a plus que sa bordure pour exister, et l’écran se lit comme une
+    suite de traits. Signalé à l’écran (« le look des formulaires ne correspond
+    pas à l’UX — fond de champ coloré »).
+
+    🔴 L’arbitrage est : le beige reste la couleur du CHAMP, et la carte devient
+    franchement blanche. Le champ se lit alors comme un creux dans la carte, ce
+    qui est sa fonction. Une couleur, un rôle. */
+.config-section { margin-bottom: 1.25rem; }
+.config-section-title { display: flex; align-items: center; gap: .45rem; font-size: .95rem; font-weight: 700; margin-bottom: .75rem; }
+.muted { color: var(--color-text-muted); }
+/* `.backup-header` vivait ici : c'était l'en-tête des deux cartes de détail
+   supprimées avec #299, et de rien d'autre. Elle est partie avec elles. */
+/* En-tête de tableau qui reste visible au défilement.
+   Le `z-index` n'est PAS optionnel : sans lui, les cellules du corps se
+   dessinent PAR-DESSUS l'en-tête collé, qui réapparaît alors au milieu du
+   tableau (constaté le 02/08/2026 sur l'historique des sauvegardes). */
+.sticky-head { position: sticky; top: 0; z-index: 2; background: var(--color-surface); }
+
+/* Onglets d'administration — GLOBAL, et ce n'est pas un détail.
+   Ces règles vivaient dans le `<style>` scopé d'`admin/+page.svelte`. Depuis que
+   les écrans sur route propre ont été extraits dans `LiensEcransAdmin.svelte`
+   (#307, 12/08/2026), leurs `<a class="tab-btn">` appartiennent à un AUTRE
+   composant : le scope Svelte ne les atteignait plus, et ces liens s'affichaient
+   sans aucun style. Le défaut ne sautait pas aux yeux tant qu'ils étaient tous en
+   bout de rangée ; il est devenu criant dès qu'un lien s'est retrouvé au milieu
+   des onglets (signalé le 13/08/2026).
+   Remonter la règle ici plutôt que la recopier dans le composant : une classe
+   partagée par deux composants n'a rien à faire dans le style scopé de l'un
+   d'eux (`standards/02-factorisation.md`). */
+.tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; }
+.tab-btn {
+  padding: .45rem .9rem; border: none; background: none; cursor: pointer;
+  font-size: .875rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
+  margin-bottom: -2px; font-weight: 500; display: flex; align-items: center; gap: .4rem;
+  transition: color .15s, border-color .15s; white-space: nowrap; text-decoration: none;
+}
+/*  ⚠️ `text-decoration: none` est répété au SURVOL, et ce n'est pas une redite.
+    Une rangée d'onglets mêle des `<button>` (onglets internes) et des `<a>`
+    (écrans sur leur propre route, cf. `LiensEcransAdmin`). La règle globale
+    `a:hover { text-decoration: underline }` n'est neutralisée par rien ici :
+    `.tab-btn:hover` ne déclarait que la couleur, si bien que la moitié d'une même
+    rangée se soulignait au survol et l'autre non. Invisible sur une capture,
+    visible à la souris. */
+.tab-btn:hover { color: var(--color-text); text-decoration: none; }
+.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+
+/* ══ Vocabulaire du reporting CS, et trois notions que la page partage ══
+   Montés ici depuis `espace-cs/+page.svelte` en extrayant `OngletReporting`
+   et ses six vues (#453). Un style scopé par Svelte ne franchit pas la
+   frontière d'un composant : laissé dans la page, ce vocabulaire aurait sorti
+   les sept fichiers NUS — la panne des pastilles (v2.67.11), que
+   `npm run lint:classes-nues` refuse depuis. Le recopier dans chacun aurait
+   ouvert la divergence que #413 vient de fermer ailleurs.
+
+   `.kpi-*`, `.pill*` et `.text-muted-sm` servent AUSSI aux onglets Validations
+   et Annonces de hall, qui restent dans la page — ils ne pouvaient donc pas
+   suivre le balisage du reporting, et les laisser derrière l'aurait sorti nu.
+   ⚠️ `residence/+page.svelte` porte SA variante de `.pill` (bordure plus fine,
+   fond `--color-surface`). Elle reste locale et continue de gagner : Svelte
+   scope ses sélecteurs, ce qui les rend plus spécifiques que ceux d'ici.
+
+   Ce qui ne sert QU'À UNE vue voyage avec elle et n'est pas ici :
+   `.report-event-*` (VueKanban), `.frise-*` et `.audit-year-*`
+   (VueRenouvellements), `.relance-*` (VueRelanceSyndic). */
+.kpi-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.kpi-card {
+	flex: 1; min-width: 140px; background: var(--color-bg);
+	border: 1px solid var(--color-border); border-radius: var(--radius);
+	padding: 1rem 1.25rem; text-align: center;
+}
+.kpi-card.kpi-alert { border-color: var(--color-warning); background: #fffbeb; }
+.kpi-value { font-size: 2rem; font-weight: 700; color: var(--color-primary); }
+.kpi-card.kpi-alert .kpi-value { color: var(--color-warning); }
+.kpi-label { font-size: .8rem; color: var(--color-text-muted); margin-top: .2rem; }
+.text-muted-sm { font-size: .8rem; color: var(--color-text-muted); }
+.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
+.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
+.reporting-toolbar {
+	display: flex; justify-content: space-between; gap: .75rem;
+	align-items: center; flex-wrap: wrap;
+}
+.reporting-switch, .reporting-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.reporting-print-header { display: none; }
+.report-card {
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: 1rem 1.1rem;
+}
+.report-card h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
+.report-intro { font-size: .86rem; color: var(--color-text-muted); margin-bottom: .85rem; }
+.report-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.report-grid-2-wide { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+.report-table-wrap { overflow-x: auto; }
+.report-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.report-table th, .report-table td { padding: .65rem .7rem; border-bottom: 1px solid var(--color-border); vertical-align: top; text-align: left; }
+.report-table th { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); }
+.report-table.compact td, .report-table.compact th { padding: .55rem .6rem; }
+@media (max-width: 900px) {
+	.report-grid-2, .report-grid-2-wide { grid-template-columns: 1fr; }
+}
+@page { margin: 10mm 10mm; }
+@media print {
+	.no-print { display: none !important; }
+	.reporting-print-header { display: block; margin-bottom: .5rem; }
+	.reporting-print-header h2 { font-size: 1.1rem; margin: 0 0 .15rem; }
+	.reporting-print-header p { font-size: .78rem; color: #666; margin: 0; }
+	.report-card { box-shadow: none; break-inside: auto; margin-bottom: .75rem !important; padding: .5rem .75rem !important; }
+	.report-card h3 { break-after: avoid; font-size: .95rem; margin-bottom: .3rem; }
+	.report-table th, .report-table td { font-size: .75rem; padding: .3rem .4rem !important; }
+	.reporting-panel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.kpi-card { border: 1px solid #ccc !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.kpi-card.kpi-alert { border-color: #d97706 !important; background: #fffbeb !important; }
+	.kpi-value { color: #1e3a5f !important; }
+	.kpi-card.kpi-alert .kpi-value { color: #d97706 !important; }
+	.frise-bar-track {
+		-webkit-print-color-adjust: exact; print-color-adjust: exact;
+		background: repeating-linear-gradient(90deg, transparent, transparent calc(100% / 12 - 1px), #ddd calc(100% / 12 - 1px), #ddd calc(100% / 12)) !important;
+	}
+	.frise-preavis-zone { -webkit-print-color-adjust: exact; print-color-adjust: exact; opacity: .5; }
+	.frise-marker { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-row-v2 { border-bottom-color: #ddd !important; }
+	.frise-months { color: #666 !important; border-bottom-color: #ddd !important; }
+	.frise-compact-item { background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-row-dates { color: #666 !important; }
+	.frise-marker-label { color: #666 !important; }
+	.frise-legend { color: #666 !important; }
+	.frise-legend-dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-stars { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.frise-stars-bad { color: #dc2626 !important; }
+	.frise-stars-ok { color: #f59e0b !important; }
+	.frise-stars-good { color: #16a34a !important; }
+	.badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.report-card { background: #fff !important; border-color: #ddd !important; }
+	.report-intro { color: #666 !important; font-size: .78rem; margin: 0 0 .4rem !important; }
+	.kpi-row { gap: .5rem !important; margin-bottom: .5rem !important; }
+	.kpi-card { padding: .5rem .75rem !important; }
+	.kpi-value { font-size: 1.5rem !important; }
+	.kpi-label { font-size: .7rem !important; }
+	.frise-row-v2 { padding: .3rem 0 .8rem !important; }
+	.frise-row-title { font-size: .78rem !important; }
+	.frise-row-dates { font-size: .68rem !important; }
+	.frise-bar-track { height: 22px !important; }
+	.frise-legend { margin-top: .6rem !important; font-size: .72rem !important; }
+	.audit-year-group { margin-bottom: .7rem !important; }
+	.container.page { padding: 0 !important; }
+}
+/* ⚠️ Ces règles étaient HORS de tout `@media print` : elles masquaient donc la
+   barre de navigation À L'ÉCRAN dès que la classe était posée sur <body>.
+   Tant que tout se passait bien, l'effet durait 250 ms et ne se voyait pas ;
+   le jour où le nettoyage a été sauté, l'application est restée sans
+   navigation jusqu'à un rechargement complet (04/08/2026).
+   Elles ne servent qu'à la mise en page imprimée — aucune n'a de raison de
+   toucher l'écran. Les enfermer ici supprime le rayon de dégâts : même si la
+   classe restait collée, l'affichage serait intact. */
+@media print {
+	:global(body.print-reporting .page-header),
+	:global(body.print-reporting .page-subtitle),
+	:global(body.print-reporting .tabs),
+	:global(body.print-reporting .tab-descriptif),
+	:global(body.print-reporting .no-print) {
+		display: none !important;
+	}
+	:global(body.print-reporting .sidebar),
+	:global(body.print-reporting .mobile-topbar),
+	:global(body.print-reporting .app-footer) {
+		display: none !important;
+	}
+	:global(body.print-reporting .app-content) {
+		margin-left: 0 !important;
+		max-width: 100% !important;
+		overflow: visible !important;
+	}
+	:global(body.print-reporting) {
+		overflow: visible !important;
+	}
+	:global(body.print-reporting .app-shell) {
+		overflow: visible !important;
+		min-height: auto !important;
+	}
+	:global(body.print-reporting .app-main) {
+		overflow: visible !important;
+	}
+	:global(body.print-reporting .reporting-print-header) {
+		display: block !important;
+	}
+}
+
+/*  ── Blocs de détail dépliés — grille, libellé, chevron ──────────────────────
+    Remontées de `prestataires/+page.svelte` le 20/08/2026 (#453).
+
+    🔴 Elles y servaient TROIS onglets — Prestations, Visites, Contrats — et
+    l'extraction de `CarteVisite` les aurait emportées, laissant les deux autres
+    nus. C'est la troisième réponse possible au garde-fou de modularité, celle
+    qu'`ux-patterns` nomme « remonter la règle d'un cran » : l'ajout ne dit rien
+    de propre à un écran, il décrit un motif de détail déplié.
+
+    ⚠️ Vérifié avant de les poser ici : aucune autre définition de ces trois noms
+    n'existait dans le dépôt. Une remontée qui écrase une règle locale change
+    l'apparence d'un écran qu'on ne regardait pas. */
+.toggle-arrow { font-size: .75rem; color: var(--color-primary); margin-left: .25rem; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .6rem; }
+.detail-label { display: block; font-size: .75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .1rem; }
+
+/*  ── `.muted-sm` — remontée le 20/08/2026 (#557) ─────────────────────────────
+    🔴 ELLE RENDAIT QUATRE ÉCRANS NUS.
+
+    Elle n'était définie QUE dans `prestataires/+page.svelte`, et employée par
+    `VueDevis`, `VueKanban`, `VueRenouvellements` et `espace-cs`. Svelte scope
+    les styles au FICHIER : ces quatre-là affichaient donc du texte brut, à la
+    taille et à la couleur par défaut, là où l'écran d'origine montre une
+    mention discrète.
+
+    ⚠️ Et `lint:classes-nues` ne pouvait pas le voir : il demande « cette classe
+    est-elle DÉFINIE quelque part ? » — elle l'était. La question qu'il ne pose
+    pas est « une définition S'APPLIQUE-t-elle à ce balisage ? ». C'est un angle
+    mort du contrôle, relevé en #562.
+
+    C'est le pendant exact de la régression des pastilles de la v2.67.11, mais
+    trouvé par l'autre bout : par le sélecteur ORPHELIN resté dans le fichier
+    d'origine, et non par l'écran nu. */
+.muted-sm { font-size: .85rem; color: var(--color-text-muted); padding: .4rem 0; }

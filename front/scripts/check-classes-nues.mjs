@@ -45,6 +45,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { cssGlobal, fichiersCssGlobal } from './lib-css-global.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -117,14 +118,16 @@ if (fichiers.length === 0) {
 // ── 1. Ce qui est défini globalement ─────────────────────────────────────────
 let global;
 try {
-	global = readFileSync(join(RACINE, 'app.css'), 'utf8');
+	//  `app.css` ne porte plus de règle : il importe `styles/*.css` (#453). Le
+	//  module lit l'ensemble, donc ajouter un fragment ne demande rien ici.
+	global = cssGlobal(RACINE);
 } catch {
-	console.error('✗ INCONNU : `app.css` est illisible — ce contrôle ne conclut pas.');
+	console.error('✗ INCONNU : le CSS global est illisible — ce contrôle ne conclut pas.');
 	process.exit(1);
 }
 const definiesGlobal = new Set([...global.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
 if (definiesGlobal.size === 0) {
-	console.error('✗ Cas zéro : aucune classe trouvée dans `app.css`.');
+	console.error(`✗ Cas zéro : aucune classe trouvée dans ${fichiersCssGlobal(RACINE).join(', ') || '(aucun fichier)'}.`);
 	process.exit(1);
 }
 

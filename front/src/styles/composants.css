@@ -1,0 +1,537 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   5Hostachy — Les COMPOSANTS communs : carte, boutons, formulaires, badges, tableau,
+alertes, etat vide, filtres, cases a cocher, modales.
+
+   ⚠️ Fragment d'`app.css`, decoupe le 27/08/2026 (#453). Ce fichier faisait
+   1 223 lignes — 1 961 une fois reformate — et le garde-fou de modularite
+   (rang 1) refuse qu'il grossisse.
+
+   🔴 L'ORDRE EST LA CASCADE. `app.css` importe les quatre fragments dans
+   l'ordre exact ou leurs regles se trouvaient : le bundle produit est
+   identique, et ce decoupage ne peut donc pas changer un rendu. Reordonner
+   les `@import`, si.
+
+   ⚠️ Ce fichier vient APRES le socle et AVANT les normes : l'ordre est la
+cascade. Le deplacer changerait le rendu sans changer une regle.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Card ── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem 1rem;
+  border-radius: var(--radius);
+  border: none;
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s, background .15s;
+  text-decoration: none;
+}
+
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+
+.btn-danger { background: var(--color-danger); color: #fff; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.btn-outline:hover:not(:disabled) { background: var(--color-bg); }
+
+.btn-sm { padding: .25rem .6rem; font-size: .875rem; }
+
+/* Boutons icône (modifier · supprimer · action) */
+.btn-icon, .btn-icon-edit, .btn-icon-danger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: .9rem;
+  padding: .25rem;
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  line-height: 1;
+}
+.btn-icon:hover, .btn-icon-edit:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); }
+.btn-icon-danger:hover { color: var(--color-danger); background: #fee2e2; }
+
+/* ── L'icône ACTIVE : le mode en cours ───────────────────────────────────
+   Signalé le 18/08/2026 : un titre de formulaire au-dessus du contenu faisait
+   « un pseudo état qui éloigne du titre ». Le mode se lit désormais LÀ OÙ ON
+   A CLIQUÉ — l'icône s'inverse et grossit légèrement.
+
+   `aria-pressed` et non une classe : l'état est annoncé par les lecteurs
+   d'écran en même temps qu'il se voit, et aucun écran n'a de classe de plus à
+   penser. Un bouton bascule DOIT le porter de toute façon.
+
+   ⚠️ Le fond est plein : un simple changement de teinte ne se distingue pas
+   du survol, et l'on ne saurait plus si l'icône est active ou seulement
+   pointée. */
+.btn-icon[aria-pressed="true"],
+.btn-icon-edit[aria-pressed="true"] {
+  background: var(--color-primary);
+  color: #fff;
+  transform: scale(1.15);
+}
+.btn-icon[aria-pressed="true"]:hover,
+.btn-icon-edit[aria-pressed="true"]:hover {
+  background: var(--color-primary-dark, var(--color-primary));
+  color: #fff;
+}
+
+/* ── Chevron d'ouverture ─────────────────────────────────────────────────
+   « cette ligne se déplie » est UN geste d'interface ; il était pourtant
+   redéclaré dans 8 fichiers, qui avaient divergé sur la durée de transition,
+   la graisse et la couleur (#317). Base commune ici, dans la variante
+   majoritaire (5 des 8).
+
+   Les composants qui s'en écartent VRAIMENT gardent leur seule différence en
+   local : Svelte scope ses styles avec une classe supplémentaire, donc une
+   règle locale l'emporte toujours sur celle-ci — c'est prévisible, et c'est
+   ce qui rend ce découpage sûr. */
+.chevron {
+	font-size: 1.1rem;
+	color: var(--color-text-muted);
+	transition: transform .15s;
+	display: inline-block;
+	line-height: 1;
+}
+.chevron.open { transform: rotate(90deg); }
+.btn-icon-warn { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: #d97706; line-height: 1; }
+.btn-icon-warn:hover { background: #fef3c7; }
+.btn-icon-success { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: var(--color-success); line-height: 1; }
+.btn-icon-success:hover { background: #e6f4ee; }
+
+/* ── Indicateur d'attente ────────────────────────────────────────────────
+   « une action est en cours » est UN geste d'interface. Il n'existait qu'en un
+   exemplaire (`ImageUpload`) ; le deuxième usage — le bouton du changement de
+   mot de passe — le fait passer le seuil de mutualisation (`standards/02` §1),
+   d'où cette base commune plutôt qu'une seconde copie.
+
+   Elle est neutre exprès : dimensionnée en `em` et teintée par `currentColor`,
+   donc lisible dans un bouton comme sur un aplat sombre. Un composant qui s'en
+   écarte VRAIMENT ne garde en local que sa différence — même mécanique que
+   `.chevron` ci-dessus, et c'est ce qui rend le découpage sûr. */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Une rotation perpétuelle est exactement ce que ce réglage vise ; on la
+   ralentit au lieu de la couper — l'attente doit rester signalée. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.5s; }
+}
+
+/* Tooltip CSS immédiat sur boutons icône portant un attribut title */
+.btn-icon[title], .btn-icon-edit[title], .btn-icon-danger[title],
+.btn-icon-warn[title], .btn-icon-success[title] { position: relative; }
+
+.btn-icon[title]::after, .btn-icon-edit[title]::after, .btn-icon-danger[title]::after,
+.btn-icon-warn[title]::after, .btn-icon-success[title]::after {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: #f2efe9;
+  font-size: .7rem;
+  font-family: var(--font-ui, system-ui, sans-serif);
+  white-space: nowrap;
+  padding: .2rem .5rem;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 200;
+}
+.btn-icon[title]:hover::after, .btn-icon-edit[title]:hover::after, .btn-icon-danger[title]:hover::after,
+.btn-icon-warn[title]:hover::after, .btn-icon-success[title]:hover::after { opacity: 1; }
+
+/* ── Forms ── */
+/*  `.field` et `.field label` étaient eux aussi déclarés DEUX fois, avec des
+    valeurs contradictoires : `margin-bottom: 1rem` puis `.75rem`, et un label
+    `display:block` + `margin-bottom:.3rem` puis un simple `font-size`+`weight`
+    dans un parent devenu flex. Ce sont les secondes qui gagnaient. Fusionnées
+    ici, aux valeurs effectives — l'écran ne change pas. */
+/*  Densité d'un champ — arbitrée à l'écran le 19/08/2026 sur les deux extrêmes :
+    l'onglet SMTP (8 champs en grille, le plus dense) et la fiche copropriété
+    (11 champs). Verdict : « trop serré » (#489).
+
+    Les valeurs venaient de la consolidation de #374 et n'avaient jamais été
+    REGARDÉES sur un écran dense — elles étaient héritées, pas choisies.
+
+    ⚠️ Une seule valeur pour tout le site. Aérer ici allonge les écrans longs :
+    c'est le même arbitrage vu des deux bouts, et il se tranche une fois. */
+.field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+.field label { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+/* ── Grille de formulaire ──
+   Des champs courts côte à côte, qui repassent en colonne quand la place manque.
+
+   Définie NEUF fois localement jusqu’au 19/08/2026, et employée dans DEUX
+   fichiers qui n’en portaient aucune définition — `acces-securite` et
+   `OngletWhatsApp` : leurs formulaires n’étaient donc pas des grilles en
+   production, les champs s’empilaient. `app.css` citait pourtant `.form-grid`
+   depuis toujours (`.form-grid .field`, `.champ-large`, le passage à une colonne
+   sur téléphone) : la classe était traitée comme partagée par tout le monde,
+   sauf par sa définition (#413).
+
+   Les valeurs sont celles des DEUX définitions qui étaient d’accord (annonce et
+   sondage). Les écrans qui répartissent autrement ne gardent QUE ce qui diffère —
+   une colonne, un espacement — jamais la règle entière. */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
+/*  Dans une GRILLE, l'espacement vertical est porté par `gap` : le
+    `margin-bottom` de `.field` s'y ajoute et double l'interligne. Constaté en
+    finissant #374 — `.form-grid` gap `.75rem` + `.field` `.75rem` = 1,5 rem
+    entre deux rangées, sur un formulaire censé s'aligner sur les autres.
+    Le défaut existait déjà, non mesuré, sur les écrans convertis en v2.67.3
+    (prestataires : gap `.65rem` + `.75rem` = 1,4 rem). Le corriger ici plutôt
+    que d'annuler la marge écran par écran : une règle locale de plus serait
+    exactement la « seconde définition libre de diverger » que #374 supprime. */
+.form-grid .field { margin-bottom: 0; }
+/*  Aide sous une case à cocher. Alignée sur le libellé, donc décalée de la
+    largeur de la case. Définie ICI et non dans un composant : Svelte scope ses
+    styles, si bien qu'un second écran qui reprend la classe hérite du balisage
+    SANS le style — c'est ce qui a produit des pastilles nues en production le
+    16/08 et fait créer `Pastille.svelte`. Elle vivait dans FormulaireEvenement ;
+    FormulaireSondage en avait besoin (#397). */
+.aide-case { margin: .2rem 0 0 1.6rem; font-size: .8rem; color: var(--color-text-muted); }
+/*  Aide sous un champ — la phrase qui dit ce qu’on attend, ou ce que la
+    valeur entraîne.
+
+    Définie TROIS fois jusqu’au 19/08/2026 — admin, admin/patrimoine,
+    inscription — avec trois tailles ; et employée dans DEUX fichiers qui n’en
+    portaient AUCUNE définition, `OngletWhatsApp` et `LegalEditor`, qui la
+    rendaient donc en texte nu à la taille du corps de page. Le premier avait été
+    extrait d’`admin` sans ses styles : c’est encore la régression des pastilles
+    nues, sur une classe de texte cette fois (#413).
+
+    Les valeurs retenues sont celles des DEUX définitions qui étaient d’accord
+    (patrimoine et inscription) ; `admin` disait `.75rem`, seule. */
+.field-hint { display: block; font-size: .78rem; color: var(--color-text-muted); margin-top: .25rem; line-height: 1.45; }
+/*  Un champ qui occupe la LIGNE ENTIÈRE d'une grille de formulaire.
+    Les grilles répartissent en colonnes de ~180 px, ce qui convient aux champs
+    courts (date, montant, statut) et écrase les autres : un sélecteur de
+    périmètre y empilait ses dix pastilles une par ligne, et un titre en texte
+    libre se retrouvait dans le tiers le plus étroit (signalé à l'écran le
+    16/08/2026). À poser sur le champ, pas sur la grille — c'est le contenu qui
+    décide de sa largeur, pas l'écran qui l'accueille. */
+.form-grid .champ-large, .field.champ-large { grid-column: 1 / -1; }
+/*  TROIS largeurs, et trois seulement — arbitré à l'écran le 19/08/2026 (#489).
+    « Deux se retiennent, quatre se réinventent » : il y en avait quatre, toutes
+    écrites EN LIGNE dans les pages (120px, 100px, 200px, 9rem), chacune
+    défendable et l'ensemble sans logique.
+
+      `champ-court`  un nombre qui se lit d'un coup d'œil : un port, un délai
+      `champ-moyen`  une référence, une heure, une date
+      `champ-large`  le contenu prend la ligne entière (ci-dessus)
+
+    ⚠️ `max-width` et non `width` : sur téléphone le champ doit pouvoir rétrécir.
+    Une largeur fixe y déborde de sa grille — c'est la responsivité du squelette
+    (`standards/11` §10), pas une préférence.
+
+    ⚠️ À poser sur le CHAMP, jamais sur la grille : c'est le contenu qui décide
+    de sa largeur, pas l'écran qui l'accueille. */
+.field.champ-court input, .field.champ-court select, .input-champ-court { max-width: 8rem; }
+.field.champ-moyen input, .field.champ-moyen select, .input-champ-moyen { max-width: 14rem; }
+/*  Un champ posé dans une RANGÉE — barre d’outils, ligne d’action, formulaire
+    en ligne — et non dans une pile : l’espacement y est porté par le `gap` du
+    parent, exactement comme dans `.form-grid`. Sans ce modificateur, chaque
+    appelant écrivait `style="margin-bottom:0"`, c’est-à-dire une seconde valeur
+    libre de diverger de celle de `.field` (#413, refusé par `lint:styles`). */
+.field.champ-en-ligne { margin-bottom: 0; }
+
+/*  Le <label> peut ENVELOPPER son champ — c'est même la forme la plus sûre :
+    l'association label/champ est alors implicite et native, rien ne peut la
+    casser. Il porte lui-même `.field`, et le texte hérite de la même taille que
+    le label d'un `.field` en div. Constaté en convertissant #374 : séparer le
+    label du champ avait produit 39 avertissements « a form label must be
+    associated with a control » — l'inverse du but recherché. */
+label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+/*  ⚠️ DÉFINITION UNIQUE du champ de saisie. Elle l'était si peu qu'`app.css`
+    la portait DEUX FOIS — ici et 300 lignes plus bas — avec des valeurs
+    différentes : `.5rem .75rem` contre `.45rem .6rem`, et surtout un fond blanc
+    (`--color-surface`) contre un fond beige (`--color-bg`). La seconde gagnait,
+    étant plus basse dans la cascade ; la première ne servait donc à rien, sauf à
+    faire croire à qui la lisait que les champs étaient blancs.
+
+    Les valeurs retenues sont celles qui GAGNAIENT — l'écran ne change pas.
+    Trouvé le 15/08/2026 en instruisant #374 : le site reprochait aux pages de
+    redéfinir localement ce que le global portait déjà, et le global se
+    contredisait lui-même. */
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: .45rem .6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: border-color .15s;
+}
+/*  Champ en LECTURE SEULE — il se voit, il ne se saisit pas. Écrit une seule
+    fois dans `mon-lot` (les champs du locataire, verrouillés dès qu’un compte
+    existant est reconnu) ; c’est une notion du champ, pas de cette page (#413). */
+.field input[readonly],
+.field textarea[readonly] { background: var(--color-surface-alt, #f8f9fa); color: var(--color-text-muted); cursor: default; }
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 9999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.badge-blue   { background: var(--color-primary-light); color: var(--color-primary); }
+.badge-green  { background: #E6F4EE; color: #2E7D52; }
+.badge-orange { background: #FDF3E0; color: #B07D1E; }
+.badge-red    { background: #FDEDEC; color: #C0392B; }
+.badge-gray   { background: #EAEDF1; color: var(--color-text-muted); }
+/*  Le jeu comptait six couleurs et le code en demandait une SEPTIÈME : douze
+    emplois de `.badge-yellow` — statut de bail « en cours de sortie », message
+    non lu — pour une classe définie nulle part. Le badge se rendait donc en gris
+    de base, et l’état « en cours » était indistinguable de « inactif ».
+    Valeurs prises dans la même échelle que `.badge-orange` (#495). */
+.badge-yellow { background: #FEF9E7; color: #A16207; }
+
+/* ── Intitulé d'une section dans une page ──
+   Écrit NEUF fois localement, avec neuf valeurs, et employé dans CINQ fichiers
+   de plus qui n'en portaient aucune : ceux-là rendaient donc leurs intitulés en
+   texte courant, sans repère de structure (#495).
+
+   Les valeurs sont celles de la forme majoritaire — petites capitales, gris de
+   structure — qui est aussi celle de `SectionFormulaire` : un intitulé de
+   section se lit comme un repère, il ne concurrence pas ce qu’il nomme.
+
+   ⚠️ Les neuf définitions locales ne sont PAS retirées ici : elles gagnent (un
+   style scopé est plus spécifique), donc rien ne change là où le style existait
+   déjà, et ce lot ne fait que combler les cinq trous. Les unifier est un
+   arbitrage — trois d’entre elles portent une AUTRE notion, un vrai titre en
+   1rem, qui mérite son propre nom. Suivi en #495. */
+.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
+
+/* ── Écrans d’authentification ──
+   Connexion, inscription et mot de passe oublié les définissaient chacun de son
+   côté ; `verifier-email` les employait sans aucune définition, et s’affichait
+   donc sans carte, sans centrage et sans logo (#495). */
+.auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg); padding: 1rem; }
+.auth-card { width: 100%; max-width: 400px; padding: 2rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.auth-header { text-align: center; margin-bottom: 1.5rem; }
+.auth-logo { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
+
+/* ── Six notions partagées, définies dans UN fichier et employées dans PLUSIEURS ──
+
+   Chacune était écrite chez un appelant, et un autre s’en servait sans l’avoir :
+   Svelte scope au fichier, donc ces éléments-là se rendaient nus. Elles montent
+   ici plutôt que d’être recopiées — recopier aurait fabriqué la divergence que
+   ce dépôt passe sa journée à supprimer (#495).
+
+   ⚠️ Les définitions locales existantes ne sont PAS retirées : un style scopé est
+   plus spécifique, il continue de gagner. Ce lot ne fait que combler les trous,
+   sans rien changer là où l’écran était déjà juste. Les unifier viendra après,
+   écran par écran, parce que les valeurs divergent (une boîte de dialogue fait
+   420 px ici et 560 px là — c’est une décision, pas une correction). */
+
+/*  Une rangée de pastilles de périmètre. Employée par `PerimetrePicker`, l’espace
+    CS, la résidence et l’annonce de hall — celle-ci ne l’avait pas. */
+.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/*  Boîte de dialogue. `espace-cs` l’employait sans aucune définition : sa modale
+    s’affichait sans fond ni cadre, à même la page assombrie. */
+.modal-box { background: var(--color-surface); border-radius: var(--radius); padding: 1.25rem; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
+/*  Le pied d’une boîte de dialogue à DEUX gestes opposés (annuler ↔ supprimer),
+    d’où `space-between` — à ne pas confondre avec `.modal-footer`, qui aligne à
+    droite, ni avec `.form-actions`, qui soumet un formulaire. */
+.modal-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: 1rem; }
+
+/*  Un événement urgent, marqué par un filet rouge à gauche. Défini par
+    `CarteEvenement`, employé aussi par la page du calendrier. */
+.event-urgent { border-left: 3px solid var(--color-danger); }
+
+/*  Un tableau kanban : des colonnes qui défilent horizontalement. Défini par le
+    calendrier, employé aussi par les prestataires. */
+.kanban { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: .5rem; }
+@media (max-width: 900px) { .kanban { flex-direction: column; } }
+
+/*  Le geste discret « signaler » au fil d’une carte. Défini par les sondages,
+    employé aussi par la carte d’annonce. */
+.signaler-inline { background: none; border: none; cursor: pointer; font-size: .78rem; color: var(--color-text-muted); opacity: .7; padding: 0 0 0 .5rem; }
+.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
+.badge-purple { background: #F3E8FF; color: #6B21A8; }
+/* Pastille de type du fil d'activité. Ici et pas dans un composant : elle est
+   portée à la fois par les cartes du fil (FluxCard) et par le bandeau des
+   urgences du tableau de bord — deux composants, donc deux portées Svelte
+   distinctes, pour une seule et même pastille. */
+.flux-type-chip {
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: .12rem .5rem;
+  border-radius: 1rem;
+}
+
+/* ── Table ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+.table th {
+  padding: .5rem .75rem;
+  text-align: left;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: .75rem;
+}
+.table td {
+  padding: .75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.table tbody tr:hover { background: var(--color-bg); }
+
+/* ── Alerts ── */
+.alert {
+  padding: .75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: .875rem;
+}
+.alert-error   { background: #FDEDEC; color: #C0392B; border: 1px solid #E8A99D; }
+.alert-success { background: #E6F4EE; color: #2E7D52; border: 1px solid #9DCFB3; }
+.alert-warning { background: #FDF3E0; color: #B07D1E; border: 1px solid #E8C87A; }
+.alert-info    { background: var(--color-primary-light); color: var(--color-primary-dark); border: 1px solid #9BB3CC; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-muted);
+}
+.empty-state h3 { font-size: 1rem; margin-bottom: .5rem; color: var(--color-text); }
+
+/* ── Barre de filtres ──
+   Remontée ici le 18/08/2026 en découpant l'onglet Annonces : le composant
+   extrait perdait les styles de sa page — un style laissé chez le parent
+   n'atteint pas le balisage d'un enfant (v2.67.11). Le recopier dans le
+   composant aurait fait une CINQUIÈME définition de `.filters`.
+
+   ✅ Les trois variantes locales (tickets, calendrier, prestataires) ont
+   convergé ici le 19/08/2026, avec les deux styles en ligne — #446. Ce qui
+   divergeait est désormais soit la norme, soit une variante NOMMÉE. */
+/*  La MARGE BASSE fait partie de la barre, et c'est le relevé qui l'a tranché :
+    quatre usages sur six la posaient — deux par une règle locale (tickets,
+    calendrier), deux par un style EN LIGNE (`OngletAnnonces`, `sondages`), et
+    prestataires par une valeur voisine. Aucun n'en voulait zéro. Une barre de
+    filtres est toujours suivie de la liste qu'elle filtre : laisser l'appelant
+    poser l'écart, c'est le lui faire réinventer six fois (#446).
+
+    `align-items: center` vient de tickets, seule page à l'avoir. Il n'y change
+    rien tant que les contrôles ont la même hauteur — et il est juste dès qu'un
+    seul est plus haut, ce qui arrive au premier bouton icône ajouté. */
+.filters { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
+
+/* ── Case à cocher ──
+   Une case et son libellé sur une ligne, cliquables ensemble.
+
+   Définie CINQ fois localement jusqu'au 19/08/2026 — annonce, annonce de hall,
+   événement, prestation, sondage — et `.case input[type="checkbox"]` cinq fois
+   au caractère près. Même défaut que `.filters` avant #446, invisible pour la
+   même raison : les copies étaient d'accord entre elles (#397).
+
+   `font-size: .875rem` était présent dans TROIS des cinq. C'est la taille de
+   `.field label` : un libellé de case est un libellé de champ, il n'y a pas de
+   raison qu'il soit plus grand. Les deux qui ne le posaient pas héritaient donc
+   de leur contexte, sans que personne l'ait décidé.
+
+   Les variantes restent NOMMÉES et locales : `.case + .case` (espacement d'une
+   pile de cases, événement), `.case-secondaire` (case d'option sous un champ,
+   sondage). Ce qui diffère se lit dans le balisage. */
+.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
+.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
+
+
+/*  Variante NOMMÉE — une seule ligne qui défile, au lieu de passer à la ligne.
+    Prestataires la porte sur ses deux barres : elles ont assez de filtres pour
+    occuper trois lignes sur un téléphone, et pousser la liste hors de l'écran.
+
+    ⚠️ Ce n'est PAS le comportement par défaut, et c'est délibéré : un défilement
+    horizontal masque des filtres sans le dire, là où `flex-wrap: wrap` les montre
+    tous. La variante s'écrit donc là où on l'a voulue, elle ne s'hérite pas. */
+.filters--defilante { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
+.filters--defilante > * { flex-shrink: 0; }
+.filter-select {
+  padding: .35rem .5rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius); font-size: .85rem; background: var(--color-bg);
+}
+
+/* ── Modals (global) ── */
+.modal-overlay {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 1rem;
+  animation: fadeIn .15s ease;
+}
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  max-width: 600px; width: 100%;
+  max-height: 90vh; overflow-y: auto;
+  animation: slideUp .2s ease;
+}
+.modal-sm { max-width: 420px; }
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);
+}
+.modal-header h2 { font-size: 1.1rem; margin: 0; }
+.modal-close {
+  background: none; border: none; font-size: 1.5rem; cursor: pointer;
+  color: var(--color-text-muted); padding: .25rem; line-height: 1;
+}
+.modal-close:hover { color: var(--color-text); }
+.modal-body { padding: 1.25rem; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: .5rem;
+  padding: 1rem 1.25rem; border-top: 1px solid var(--color-border);
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
