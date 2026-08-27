@@ -1,10 +1,8 @@
-import { api, ApiError, BASE, buildQuery, postFormData } from './client';
-import { uploadExcel } from './documents';
+import { api, BASE } from './client';
 import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, ApercuDiffusion, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
 //  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
-import type { Perimetre as PerimetreDTO } from '$lib/perimetres';
 
 export type { Perimetre } from '$lib/perimetres';
 
@@ -14,6 +12,10 @@ export * from './client';
 export * from './types';
 export * from './documents';
 export * from './communaute';
+export * from './patrimoine';
+export * from './acces';
+export * from './prestataires';
+export * from './administration';
 
 export const auth = {
 	me: () => api.get<User>('/auth/me'),
@@ -90,24 +92,6 @@ export const publications = {
 };
 
 
-export const lots = {
-	mesList: () => api.get<any[]>('/lots/mes-lots'),
-	get: (id: number) => api.get<any>(`/lots/${id}`),
-	mesCommandes: () => api.get<any[]>('/lots/commandes-acces/mes-commandes'),
-	creerCommande: (data: unknown) => api.post<any>('/lots/commandes-acces', data),
-	// Admin — tous les lots
-	tous: () => api.get<any[]>('/lots/admin/tous'),
-	// Admin — import staging
-	uploadImport: (file: File, remplacer = false) => uploadExcel('/lots/admin/imports/upload', file, remplacer),
-	listImports: (statut?: string, tri?: string) =>
-		api.get<any[]>(`/lots/admin/imports${buildQuery({ statut, tri })}`),
-	statsImports: () => api.get<any>('/lots/admin/imports/stats'),
-	autoMatchImports: () => api.post<any>('/lots/admin/imports/auto-match', {}),
-	autoResoudreImports: () => api.post<any>('/lots/admin/imports/auto-resoudre', {}),
-	patchImport: (id: number, data: { lot_id?: number | null; utilisateurs?: {user_id: number; type_lien: string}[]; notes_admin?: string | null }) => api.patch<any>(`/lots/admin/imports/${id}`, data),
-	resoudreImport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/resoudre`, {}),
-	ignorerimport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/ignorer`, {}),
-};
 
 export const notifications = {
 	list: () => api.get<Notification[]>('/notifications'),
@@ -116,40 +100,6 @@ export const notifications = {
 	delete: (id: number) => api.delete(`/notifications/${id}`),
 };
 
-export const acces = {
-	mesVigiks: () => api.get<any[]>('/acces/mes-vigiks'),
-	mesTelecommandes: () => api.get<any[]>('/acces/mes-telecommandes'),
-	mesCommandes: () => api.get<any[]>('/acces/mes-commandes'),
-	creerCommande: (data: unknown) => api.post<any>('/acces/commandes', data),
-	signalerVigiKPerdu: (id: number) => api.patch(`/acces/vigiks/${id}/perdu`, {}),
-	signalerTcPerdu: (id: number) => api.patch(`/acces/telecommandes/${id}/perdu`, {}),
-	supprimerVigik: (id: number) => api.delete(`/acces/vigiks/${id}`),
-	supprimerTc: (id: number) => api.delete(`/acces/telecommandes/${id}`),
-	declarerBadge: (data: { type: string; code: string }) => api.post<any>('/acces/declarer-badge', data),
-	// CS/Admin — badges individuels
-	listVigiks: () => api.get<any[]>('/acces/admin/vigiks'),
-	listTelecommandes: () => api.get<any[]>('/acces/admin/telecommandes'),
-	updateVigik: (id: number, data: unknown) => api.patch(`/acces/admin/vigiks/${id}`, data),
-	creerVigik: (data: unknown) => api.post('/acces/admin/vigiks', data),
-	creerTelecommande: (data: unknown) => api.post('/acces/admin/telecommandes', data),
-	// CS/Admin — import vigik
-	uploadImportVigik: (file: File, remplacer = false) => uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),
-	listImportsVigik: (statut?: string) => api.get<any[]>(`/acces/admin/imports-vigik${statut ? `?statut=${statut}` : ''}`),
-	statsImportsVigik: () => api.get<any>('/acces/admin/imports-vigik/stats'),
-	autoMatchImportsVigik: () => api.post<any>('/acces/admin/imports-vigik/auto-match', {}),
-	patchImportVigik: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports-vigik/${id}`, data),
-	resoudreImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/resoudre`, {}),
-	ignorerImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/ignorer`, {}),
-	// CS/Admin — import télécommandes
-	uploadImportTC: (file: File, remplacer = false) => uploadExcel('/acces/admin/imports/upload', file, remplacer),
-	listImportsTC: (statut?: string) => api.get<any[]>(`/acces/admin/imports${statut ? `?statut=${statut}` : ''}`),
-	statsImportsTC: () => api.get<any>('/acces/admin/imports/stats'),
-	autoMatchImportsTC: () => api.post<any>('/acces/admin/imports/auto-match', {}),
-	patchImportTC: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports/${id}`, data),
-	resoudreImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/resoudre`, {}),
-	ignorerImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/ignorer`, {}),
-	remettreEnAttenteImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/remettre-en-attente`, {}),
-};
 
 export const calendrier = {
 	list: () => api.get<any[]>('/calendrier'),
@@ -173,48 +123,6 @@ export const calendrier = {
 		api.delete<void>(`/calendrier/${id}/evolutions/${evolId}`),
 };
 
-export const prestataires = {
-	list: () => api.get<any[]>('/prestataires'),
-	create: (data: unknown) => api.post<any>('/prestataires', data),
-	update: (id: number, data: unknown) => api.patch<any>(`/prestataires/${id}`, data),
-	delete: (id: number) => api.delete(`/prestataires/${id}`),
-	contrats: () => api.get<any[]>('/prestataires/contrats'),
-	createContrat: (data: unknown) => api.post<any>('/prestataires/contrats', data),
-	updateContrat: (id: number, data: unknown) => api.patch<any>(`/prestataires/contrats/${id}`, data),
-	deleteContrat: (id: number) => api.delete(`/prestataires/contrats/${id}`),
-	devis: () => api.get<any[]>('/prestataires/devis'),
-	createDevis: (data: unknown) => api.post<any>('/prestataires/devis', data),
-	updateDevis: (id: number, data: unknown) => api.patch<any>(`/prestataires/devis/${id}`, data),
-	deleteDevis: (id: number) => api.delete(`/prestataires/devis/${id}`),
-	uploadDevisFichier: (id: number, file: File) =>
-		postFormData(`/prestataires/devis/${id}/fichier`, { file }),
-	deleteDevisFichier: async (id: number, url: string) => {
-		const res = await fetch(`${BASE}/prestataires/devis/${id}/fichier?url=${encodeURIComponent(url)}`, { method: 'DELETE', credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur suppression fichier';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	uploadDevisOs: (id: number, file: File) => postFormData(`/prestataires/devis/${id}/os`, { file }),
-	releves: (type_compteur?: string) => api.get<any[]>(`/prestataires/releves${type_compteur ? '?type_compteur=' + encodeURIComponent(type_compteur) : ''}`),
-	createReleve: (data: unknown) => api.post<any>('/prestataires/releves', data),
-	updateReleve: (id: number, data: unknown) => api.patch<any>(`/prestataires/releves/${id}`, data),
-	deleteReleve: (id: number) => api.delete(`/prestataires/releves/${id}`),
-	uploadRelevePhoto: (id: number, file: File) =>
-		postFormData(`/prestataires/releves/${id}/photo`, { file }),
-	compteurConfigs: () => api.get<any[]>('/prestataires/compteurs-config'),
-	createCompteurConfig: (data: unknown) => api.post<any>('/prestataires/compteurs-config', data),
-	updateCompteurConfig: (id: number, data: unknown) => api.patch<any>(`/prestataires/compteurs-config/${id}`, data),
-	deleteCompteurConfig: (id: number) => api.delete(`/prestataires/compteurs-config/${id}`),
-	// Notations
-	notations: (prestataireId?: number) => api.get<any[]>(`/prestataires/notations${prestataireId ? '?prestataire_id=' + prestataireId : ''}`),
-	createNotation: (data: { prestataire_id: number; note: number; commentaire?: string; devis_id?: number; contrat_id?: number }) => api.post<any>('/prestataires/notations', data),
-	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
-	// Synthèse
-	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),
-};
 
 
 
@@ -241,35 +149,11 @@ export const faq = {
 	delete: (id: number) => api.delete(`/faq/${id}`),
 };
 
-export const diagnostics = {
-	listTypes: () => api.get<any[]>('/diagnostics/types'),
-	uploadRapport: async (typeId: number, titre: string, dateRapport: string | undefined, file: File): Promise<any> => {
-		return postFormData(`/diagnostics/types/${typeId}/rapports`, {
-			titre,
-			date_rapport: dateRapport,
-			file,
-		});
-	},
-	// `synthese` est bien géré par l'API (`if "synthese" in body.model_fields_set`)
-	// et stocké sur le modèle : c'est la signature d'ici qui était en retard.
-	updateRapport: (id: number, data: { titre?: string; date_rapport?: string | null; synthese?: string | null }) =>
-		api.patch<any>(`/diagnostics/rapports/${id}`, data),
-	deleteRapport: (id: number) => api.delete(`/diagnostics/rapports/${id}`),
-	downloadUrl: (id: number) => `${BASE}/diagnostics/rapports/${id}/télécharger`,
-	toggleNonApplicable: (typeId: number, nonApplicable: boolean) =>
-		api.patch<any>(`/diagnostics/types/${typeId}/non-applicable`, { non_applicable: nonApplicable }),
-};
 
 export const annuaire = {
 	get: () => api.get<{ cs: { ag_annee: number | null; ag_date: string | null; membres: any[] }; syndic: { nom_syndic: string; adresse: string; membres: any[] } }>('/admin/annuaire'),
 };
 
-export const annuaireAdmin = {
-	getCS:     () => api.get<any>('/admin/annuaire/cs'),
-	putCS:     (data: unknown) => api.put<any>('/admin/annuaire/cs', data),
-	getSyndic: () => api.get<any>('/admin/annuaire/syndic'),
-	putSyndic: (data: unknown) => api.put<any>('/admin/annuaire/syndic', data),
-};
 
 
 
@@ -296,141 +180,10 @@ export const annoncesHall = {
 
 
 
-export const copropriete = {
-	get: () => api.get<any>('/copropriete'),
-	update: (data: unknown) => api.patch<any>('/copropriete', data),
-	batiments: () => api.get<any[]>('/copropriete/batiments'),
-	lots: (batiment_id?: number) =>
-		api.get<any[]>(`/copropriete/lots${batiment_id ? `?batiment_id=${batiment_id}` : ''}`),
-	/**  Les contrats parmi lesquels la fiche DÉSIGNE sa référence.
-	 *
-	 *   `section` vaut `'assurance'` ou `'syndic'` — le serveur la valide contre
-	 *   une liste blanche, jamais contre l'énumération brute. */
-	contratsCandidats: (section: 'assurance' | 'syndic') =>
-		api.get<ContratCandidat[]>(`/copropriete/contrats-candidats/${section}`),
-};
 
-/**  Un contrat proposable comme référence de la fiche de copropriété.
- *
- *   ⚠️ Volontairement pauvre : de quoi reconnaître le contrat dans une liste, et
- *   rien de plus. Les détails viennent de la fiche elle-même une fois le choix
- *   fait — deux chemins pour la même donnée en feraient deux vérités. */
-export type ContratCandidat = {
-	id: number;
-	libelle: string;
-	prestataire?: string | null;
-	numero_contrat?: string | null;
-	date_debut: string;
-	actif: boolean;
-};
 
-/**
- * Périmètres — l'arborescence « où se situe une demande ».
- *
- * Lecture pour tout utilisateur connecté, écriture réservée à l'administration.
- * Le type `Perimetre` vit dans `$lib/perimetres`, qui n'importe rien : c'est ce
- * qui permet à `perimetreLabel()` de rester synchrone dans les gabarits.
- */
-export const perimetres = {
-	list: () => api.get<PerimetreDTO[]>('/perimetres'),
-	create: (data: Partial<PerimetreDTO> & { code: string; libelle: string }) =>
-		api.post<PerimetreDTO>('/perimetres', data),
-	update: (id: number, data: Partial<PerimetreDTO>) =>
-		api.patch<PerimetreDTO>(`/perimetres/${id}`, data),
-	remove: (id: number) => api.delete(`/perimetres/${id}`),
-};
 
-export const reglesResidence = {
-	list: () => api.get<any[]>('/regles-residence'),
-	create: (data: { titre: string; contenu?: string }) => api.post<any>('/regles-residence', data),
-	update: (id: number, data: { titre?: string; contenu?: string; ordre?: number }) =>
-		api.patch<any>(`/regles-residence/${id}`, data),
-	remove: (id: number) => api.delete(`/regles-residence/${id}`),
-};
 
-export const delegations = {
-	list: () => api.get<any[]>('/delegations'),
-	create: (data: { mandant_id: number; aidant_id: number; motif?: string; date_fin?: string }) =>
-		api.post<any>('/delegations', data),
-	update: (id: number, data: { motif?: string; date_fin?: string }) =>
-		api.patch<any>(`/delegations/${id}`, data),
-	accepter: (id: number) => api.post<any>(`/delegations/${id}/accepter`),
-	revoquer: (id: number) => api.post<any>(`/delegations/${id}/revoquer`),
-	mesMandants: () => api.get<any[]>('/delegations/mes-mandants'),
-};
 
-export const bailleur = {
-	mesBaux: () => api.get<any[]>('/bailleur/mes-baux'),
-	creerBail: (lot_id: number, data: unknown) => api.post<any>(`/bailleur/lots/${lot_id}/bail`, data),
-	creerBailMulti: (data: unknown) => api.post<any[]>('/bailleur/baux/creer-multi', data),
-	getBail: (id: number) => api.get<any>(`/bailleur/baux/${id}`),
-	updateBail: (id: number, data: unknown) => api.patch<any>(`/bailleur/baux/${id}`, data),
-	terminerBail: (id: number, data: unknown) => api.post<any>(`/bailleur/baux/${id}/terminer`, data),
-	ajouterObjet: (bail_id: number, data: unknown) => api.post<any>(`/bailleur/baux/${bail_id}/objets`, data),
-	updateObjet: (bail_id: number, obj_id: number, data: unknown) =>
-		api.patch<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}`, data),
-	retourObjet: (bail_id: number, obj_id: number, data: unknown) =>
-		api.post<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}/retour`, data),
-	supprimerObjet: (bail_id: number, obj_id: number) =>
-		api.delete(`/bailleur/baux/${bail_id}/objets/${obj_id}`),
-	supprimerBail: (bail_id: number) =>
-		api.delete(`/bailleur/baux/${bail_id}`),
-	tousBaux: () => api.get<any[]>('/bailleur/tous-les-baux'),
-	// Recherche locataire & gestion accès
-	searchLocataire: (q: string) =>
-		api.get<any[]>(`/bailleur/search-locataire?q=${encodeURIComponent(q)}`),
-	locatairesSuggeres: () => api.get<any[]>('/bailleur/locataires-suggeres'),
-	accesBail: (bail_id: number) =>
-		api.get<any[]>(`/bailleur/baux/${bail_id}/acces`),
-	transfererAcces: (bail_id: number, data: { vigik_ids: number[]; tc_ids: number[] }) => 
-		api.post<any[]>(`/bailleur/baux/${bail_id}/transferer-acces`, data),
-	recupererAcces: (bail_id: number, data?: { vigik_ids: number[]; tc_ids: number[] }) =>
-		api.post<any[]>(`/bailleur/baux/${bail_id}/recuperer-acces`, data ?? {}),
-	mesAccesRecus: () => api.get<any[]>('/bailleur/mes-acces-recus'),
-	monBail: () => api.get<any>('/bailleur/mon-bail'),
-};
 
-export const admin = {
-	// Comptes
-	comptesEnAttente: () => api.get<any[]>('/admin/comptes-en-attente'),
-	pendingAccounts: () => api.get<any[]>('/admin/comptes-en-attente'),
-	traiterCompte: (id: number, data: { action: string; motif?: string }) =>
-		api.post(`/admin/comptes/${id}/traiter`, data),
-	// Commandes accès
-	commandesAccesEnAttente: () => api.get<any[]>('/admin/commandes-acces'),
-	traiterCommandeAcces: (id: number, data: { action: string; motif_refus?: string }) =>
-		api.post(`/admin/commandes-acces/${id}/traiter`, data),
-	// Sauvegardes
-	backupConfig: () => api.get<any>('/admin/sauvegardes/config'),
-	updateBackupConfig: (data: unknown) => api.put<any>('/admin/sauvegardes/config', data),
-	// Modèles e-mail
-	emailTemplates: () => api.get<any[]>('/admin/modeles-email'),
-	updateEmailTemplate: (id: number, data: unknown) => api.patch(`/admin/modeles-email/${id}`, data),
-	resetEmailTemplates: () => api.post<{ message: string }>('/admin/modeles-email/reinitialiser'),
-	// Utilisateurs & rôles
-	utilisateurs: () => api.get<any[]>('/admin/utilisateurs'),
-	changerRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/changer-role`, { role }),
-	ajouterRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/ajouter-role`, { role }),
-	retirerRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/retirer-role`, { role }),
-	// Demandes de modification de profil
-	demandesProfil: () => api.get<any[]>('/admin/demandes-profil'),
-	traiterDemandeProfil: (id: number, data: { action: string; motif_refus?: string }) =>
-		api.post(`/admin/demandes-profil/${id}/traiter`, data),
-	// Baux locatifs
-	baux: () => api.get<any[]>('/admin/baux'),
-	lierLocataire: (bail_id: number, user_id: number) =>
-		api.post(`/admin/baux/${bail_id}/lier-locataire/${user_id}`, {}),
-	// Audit associations user-lot
-	auditUserLots: () => api.get<any[]>('/admin/audit/user-lots'),
-	supprimerUserLot: (id: number) => api.delete(`/admin/user-lots/${id}`),
-	// Télémétrie
-	telemetryDashboard: () => api.get<any>('/telemetry/dashboard'),
-	telemetryUsersActive: () => api.get<any[]>('/telemetry/users-active'),
-	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
-	telemetryHistorique: () => api.get<any[]>('/admin/telemetry/historique'),
-};
 
-export const config = {
-        get: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config'),
-        save: (data: Record<string, string>): Promise<void> => api.put('/config', data),
-};
