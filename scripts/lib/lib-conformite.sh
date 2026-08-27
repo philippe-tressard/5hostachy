@@ -93,11 +93,18 @@ conformite_verdicts() {
   # WARN et non FAIL : un en-tête manquant n'interrompt pas le service, il retire
   # une protection. Le distinguer d'une panne évite de noyer les FAIL.
   ENTETES_ATTENDUS="X-Content-Type-Options X-Frame-Options Referrer-Policy Strict-Transport-Security Content-Security-Policy"
+  #  ⚠️ Le RÔLE est passé à la décision : sur le standby, les conteneurs ne
+  #  tournent pas (c'est l'invariant, pas un incident), donc il n'y a rien à
+  #  constater. Sans cela, le contrôle rendait INCONNU toutes les quinze minutes
+  #  sur la moitié du parc et un digest partait chaque jour — un contrôle dont le
+  #  vert est inatteignable finit par se contourner (`standards/04` §25).
   ENTETES_RECUS=$(curl -sI --max-time 8 http://localhost/ 2>/dev/null)
-  case "$(verdict_entetes_securite "$ENTETES_RECUS" "$ENTETES_ATTENDUS")" in
+  ENTETES_ROLE=$([ "${S_active:-}" = "${SELF:-}" ] && echo actif || echo standby)
+  case "$(verdict_entetes_securite "$ENTETES_RECUS" "$ENTETES_ATTENDUS" "$ENTETES_ROLE")" in
     OK)          ok   "En-têtes de sécurité servis (${ENTETES_ATTENDUS// /, })" ;;
-    MANQUANT:*)  V23=$(verdict_entetes_securite "$ENTETES_RECUS" "$ENTETES_ATTENDUS")
+    SANS_OBJET)  ok   "En-têtes de sécurité : sans objet sur le standby (aucun conteneur n'y sert)" ;;
+    MANQUANT:*)  V23=$(verdict_entetes_securite "$ENTETES_RECUS" "$ENTETES_ATTENDUS" "$ENTETES_ROLE")
                  warn "En-tête(s) de sécurité ABSENT(S) de la réponse : ${V23#MANQUANT:} — la protection correspondante ne s'applique plus, et le Caddyfile peut dire le contraire" ;;
-    *)           warn "En-têtes de sécurité non mesurables (aucune réponse locale) — ni vert ni rouge" ;;
+    *)           warn "En-têtes de sécurité non mesurables sur l'ACTIF (aucune réponse locale) — le site ne répond plus en local, ni vert ni rouge" ;;
   esac
 }

@@ -231,9 +231,26 @@ verdict_notification() { # $1=fails $2=warns → critique|digest|silence
 #: tué : une valeur attendue se périme au premier ajustement de configuration,
 #: alors qu'un en-tête absent est un fait qui ne se discute pas. Un contrôle qui
 #: crie à tort est un contrôle qu'on désarme.
+#:
+#: 🔴 LE STANDBY N'A RIEN À MESURER, ET CE N'EST PAS UNE PANNE (27/08/2026).
+#: Ce contrôle interrogeait `http://localhost/` sur les DEUX nœuds. Or les
+#: conteneurs ne tournent que sur l'actif — c'est l'invariant de l'infrastructure,
+#: pas un incident. Le standby ne répondait donc jamais, rendait INCONNU toutes
+#: les quinze minutes, et un digest partait chaque jour : « En-têtes de sécurité
+#: non mesurables ».
+#:
+#: ⚠️ Un contrôle dont le vert est INATTEIGNABLE finit par se contourner
+#: (`standards/04` §25). Celui-ci l'était sur la moitié du parc, par
+#: construction. Le rôle est donc un ARGUMENT, et « standby » a son propre
+#: verdict : `SANS_OBJET`, qui ne se signale pas.
+#:
+#: ⚠️ Sur l'ACTIF, en revanche, une absence de réponse reste INCONNU — et là
+#: c'est un fait à regarder : le site ne répond plus en local.
 verdict_entetes_securite() {
-  local recus="$1" attendus="$2" manquants="" nom
-  #  Aucune réponse : on n'a rien constaté. INCONNU, jamais OK.
+  local recus="$1" attendus="$2" role="${3:-actif}" manquants="" nom
+  #  Le standby ne sert rien : il n'y a pas d'en-tête à constater chez lui.
+  [ "$role" = "standby" ] && { echo SANS_OBJET; return; }
+  #  Aucune réponse sur l'actif : on n'a rien constaté. INCONNU, jamais OK.
   [ -z "$recus" ] && { echo INCONNU; return; }
   case "$recus" in
     *HTTP*) : ;;
