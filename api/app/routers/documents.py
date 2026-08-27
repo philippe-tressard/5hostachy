@@ -138,6 +138,8 @@ def list_documents(
     categorie_id: int | None = None,
     contrat_id: int | None = None,
     publication_id: int | None = None,
+    ticket_id: int | None = None,
+    evenement_id: int | None = None,
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
@@ -148,6 +150,24 @@ def list_documents(
         stmt = stmt.where(Document.contrat_id == contrat_id)
     if publication_id:
         stmt = stmt.where(Document.publication_id == publication_id)
+    if ticket_id:
+        stmt = stmt.where(Document.ticket_id == ticket_id)
+    if evenement_id:
+        stmt = stmt.where(Document.evenement_id == evenement_id)
+
+    #  🔴 UNE PIÈCE JOINTE N'EST PAS UN DOCUMENT DE LA BIBLIOTHÈQUE (#390).
+    #
+    #  Cet endpoint SANS filtre rend toutes les lignes, et c'est ce que l'écran
+    #  Résidence appelle pour son dépôt de plans et de règlements. Sans cette
+    #  exclusion, chaque photo jointe à un ticket s'y afficherait dès le premier
+    #  écran basculé — la faille exacte que #390 existe pour fermer, retournée.
+    #
+    #  ⚠️ On exclut au niveau de la REQUÊTE et non du filtrage par visibilité :
+    #  `document_visible` répondrait « oui » pour l'auteur du ticket, ce qui est
+    #  juste — la pièce jointe lui est bien lisible — mais elle n'a rien à faire
+    #  dans la bibliothèque pour autant. Ce sont deux questions différentes.
+    if not ticket_id and not evenement_id:
+        stmt = stmt.where(Document.ticket_id.is_(None), Document.evenement_id.is_(None))
 
     docs = session.exec(stmt.order_by(Document.publie_le.desc())).all()
 
@@ -209,6 +229,8 @@ async def upload_document(
     categorie_id: int | None = Form(None),
     contrat_id: int | None = Form(None),
     publication_id: int | None = Form(None),
+    ticket_id: int | None = Form(None),
+    evenement_id: int | None = Form(None),
     perimetre: str = Form("résidence"),
     batiment_id: int | None = Form(None),
     lot_id: int | None = Form(None),
@@ -220,8 +242,18 @@ async def upload_document(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    if not categorie_id and not contrat_id and not publication_id:
-        raise HTTPException(400, "categorie_id, contrat_id ou publication_id obligatoire")
+    #  🔴 L'INVARIANT : une ligne `document` porte TOUJOURS un rattachement.
+    #  C'est lui qui garantit qu'aucune ligne orpheline n'existe, et donc que
+    #  `document_visible` a toujours une source de protection à consulter. Il
+    #  S'ÉTEND aux pièces jointes de ticket et d'événement (#390) plutôt que de se
+    #  relâcher : le découpage d'origine proposait de créer la ligne « sans
+    #  rattachement, rattachée ensuite », ce qui l'aurait violé le temps d'un
+    #  formulaire abandonné — c'est-à-dire pour toujours.
+    if not categorie_id and not contrat_id and not publication_id             and not ticket_id and not evenement_id:
+        raise HTTPException(
+            400,
+            "categorie_id, contrat_id, publication_id, ticket_id ou evenement_id obligatoire",
+        )
 
     if categorie_id:
         categorie = session.get(CategorieDocument, categorie_id)
@@ -260,6 +292,8 @@ async def upload_document(
         categorie_id=categorie_id,
         contrat_id=contrat_id,
         publication_id=publication_id,
+        ticket_id=ticket_id,
+        evenement_id=evenement_id,
         perimetre=perimetre,
         batiment_id=batiment_id,
         lot_id=lot_id,

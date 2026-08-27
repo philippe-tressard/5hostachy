@@ -396,6 +396,10 @@ class DocumentRead(BaseModel):
     categorie_id: Optional[int] = None
     contrat_id: Optional[int] = None
     publication_id: Optional[int] = None
+    #  Rattachements des pièces jointes (#390) : le front en a besoin pour savoir
+    #  à quel porteur une ligne appartient sans refaire la requête.
+    ticket_id: Optional[int] = None
+    evenement_id: Optional[int] = None
     perimetre: str
     batiment_id: Optional[int] = None
     publie_le: datetime

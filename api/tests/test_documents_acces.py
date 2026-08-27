@@ -33,13 +33,19 @@ from app.utils.visibility import document_visible
 
 
 class _SessionSansBase:
-    """`session.get(Publication, id)` — seul appel fait par la branche testée."""
+    """`session.get(<modèle>, id)` — seuls appels faits par les branches testées.
 
-    def __init__(self, publication: Publication | None):
-        self._publication = publication
+    ⚠️ Elle rend le porteur qu'on lui a donné, quel que soit le modèle demandé :
+    chaque test n'exerce qu'UNE branche à la fois, et le modèle y est déterminé
+    par le champ `*_id` du document. Rendre `None` permet d'éprouver le cas
+    « porteur introuvable », qui doit refuser (#390).
+    """
+
+    def __init__(self, porteur=None):
+        self._porteur = porteur
 
     def get(self, _modele, _id):
-        return self._publication
+        return self._porteur
 
 
 def _utilisateur(role: str, statut: StatutUtilisateur, batiment_id=None) -> Utilisateur:
@@ -247,3 +253,88 @@ def test_le_cs_voit_quand_meme_un_document_orphelin():
     """
     cs = _utilisateur("conseil_syndical", StatutUtilisateur.copropriétaire_résident)
     assert document_visible(cs, _document_orphelin(), _SessionSansBase(None)) is True
+
+
+# ── Pièces jointes de TICKET et d'ÉVÉNEMENT (#390, 27/08/2026) ───────────────
+#
+# Décision du 27/08/2026 : « qui voit le porteur », et rien de plus. Le régime
+# actuel de ces fichiers est celui de l'objet qui les porte ; leur donner au
+# passage le contrôle à trois couches des documents casserait des accès qui
+# marchent aujourd'hui, sans que personne soit prévenu.
+#
+# ⚠️ Ce que ces règles ne ferment PAS : le fichier lui-même. Une pièce jointe
+# écrite dans `uploads/fichiers/` reste servie par Caddy sous `forward_auth`,
+# donc lisible de toute session qui connaît l'URL. C'est le régime de RÉPERTOIRE
+# qui protège, pas le modèle — et c'est le lot suivant de #390.
+
+from app.models.core import Ticket  # noqa: E402
+from app.models.evenement import Evenement  # noqa: E402
+
+
+def _piece_jointe_ticket() -> Document:
+    return Document(
+        id=51, titre="Photo de la fuite", fichier_nom="fuite.jpg",
+        fichier_chemin="/app/uploads/prive/fuite.jpg",
+        ticket_id=11, categorie_id=None,
+    )
+
+
+def _piece_jointe_evenement() -> Document:
+    return Document(
+        id=52, titre="Plan d'accès", fichier_nom="plan.pdf",
+        fichier_chemin="/app/uploads/prive/plan.pdf",
+        evenement_id=22, categorie_id=None,
+    )
+
+
+def test_piece_jointe_de_ticket_suit_son_ticket():
+    """Le fichier hérite du verdict du ticket, jamais d'un droit propre."""
+    resident = _utilisateur("résident", StatutUtilisateur.locataire, batiment_id=1)
+    ticket = Ticket(id=11, titre="Fuite", description="", auteur_id=1, batiment_id=1)
+    session = _SessionSansBase(ticket)
+
+    from app.utils.visibility import ticket_visible
+    assert document_visible(resident, _piece_jointe_ticket(), session) is ticket_visible(
+        ticket, resident
+    )
+
+
+def test_piece_jointe_de_ticket_supprime_est_refusee():
+    """🔴 Porteur introuvable → REFUS. « Aucune règle » n'est pas une autorisation.
+
+    C'est le cas zéro de cette branche : un ticket supprimé laisse une pièce
+    jointe sans source de protection, et le repli permissif serait invisible —
+    le fichier resterait lisible pour toujours.
+    """
+    resident = _utilisateur("résident", StatutUtilisateur.locataire, batiment_id=1)
+
+    assert document_visible(resident, _piece_jointe_ticket(), _SessionSansBase(None)) is False
+
+
+def test_piece_jointe_d_evenement_supprime_est_refusee():
+    resident = _utilisateur("résident", StatutUtilisateur.locataire, batiment_id=1)
+
+    assert document_visible(resident, _piece_jointe_evenement(), _SessionSansBase(None)) is False
+
+
+def test_le_cs_garde_acces_aux_pieces_jointes_de_ticket():
+    """Le CS sort avant toute branche : il ne dépend d'aucun porteur."""
+    cs = _utilisateur("conseil_syndical", StatutUtilisateur.copropriétaire_résident)
+
+    assert document_visible(cs, _piece_jointe_ticket(), _SessionSansBase(None)) is True
+
+
+def test_une_piece_jointe_de_ticket_avec_categorie_ne_passe_pas_par_cette_branche():
+    """⚠️ La borne des branches : `not doc.categorie_id`.
+
+    Un document CATÉGORISÉ tire sa protection de son profil d'accès, même s'il
+    porte aussi un `ticket_id`. Sans cette borne, ranger une pièce jointe dans
+    une catégorie changerait silencieusement son régime d'accès.
+    """
+    resident = _utilisateur("résident", StatutUtilisateur.locataire, batiment_id=1)
+    doc = _piece_jointe_ticket()
+    doc.categorie_id = 3
+
+    #  La branche ticket est court-circuitée : on tombe dans l'algorithme du
+    #  profil d'accès, qui refuse faute de profil chargeable ici.
+    assert document_visible(resident, doc, _SessionSansBase(None)) is False
