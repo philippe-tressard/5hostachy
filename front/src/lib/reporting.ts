@@ -145,3 +145,118 @@ export function diagUrgence(nextDate: Date): 'depasse' | 'annee' | 'futur' {
 	if (nextDate.getFullYear() === anneeCourante()) return 'annee';
 	return 'futur';
 }
+
+
+// ── Dérivations partagées (#453, 27/08/2026) ─────────────────────────────────
+//
+// Ces deux fonctions vivaient en `$:` dans `VueRenouvellements.svelte`. Le
+// découpage de ce fichier en trois — les compteurs, la frise, les audits — les
+// aurait fait recopier DEUX fois : le parent en a besoin pour ses compteurs,
+// chaque enfant pour son tableau.
+//
+// ⚠️ Un découpage qui duplique n'est pas un découpage. Elles montent donc ici,
+// avec le reste des calculs purs : lisibles et testables sans écran, comme le
+// dit l'en-tête de ce module.
+
+/** Un contrat enrichi de son échéance, de son préavis et de sa note. */
+export interface ContratAvecEcheance extends ReportContrat {
+	dateFin: Date | null;
+	datePreavis: Date | null;
+	urgence: 'preavis' | 'annee' | 'futur' | 'inconnu';
+	reconduit: boolean;
+	prestataireNom: string;
+	noteMoy: number | null;
+	nbNotations: number;
+}
+
+/**
+ * Les contrats, enrichis et TRIÉS — la pire note d'abord, puis par date de fin.
+ *
+ * Le tri par note est délibéré et vient avant la date : un contrat mal noté qui
+ * arrive à échéance est la décision la plus urgente à prendre, pas la plus
+ * proche. Une note absente vaut 6, donc passe en dernier — jamais devant un
+ * prestataire réellement mal noté.
+ */
+export function contratsAvecEcheance(
+	contrats: ReportContrat[],
+	prestataires: ReportPrestataire[],
+	notes: Map<number, { moy: number; nb: number }>,
+): ContratAvecEcheance[] {
+	return contrats
+		.map((c) => {
+			const result = contratDateFin(c);
+			const fin = result?.date ?? null;
+			const reconduit = result?.reconduit ?? false;
+			const preavis = fin ? contratDatePreavis(fin) : null;
+			const urgence: 'preavis' | 'annee' | 'futur' | 'inconnu' = fin
+				? contratUrgence(fin)
+				: 'inconnu';
+			const prest = prestataires.find((p) => p.id === c.prestataire_id);
+			const noteInfo = notes.get(c.prestataire_id) ?? null;
+			return {
+				...c,
+				dateFin: fin as Date | null,
+				datePreavis: preavis,
+				urgence,
+				reconduit,
+				prestataireNom: prest?.nom ?? `#${c.prestataire_id}`,
+				noteMoy: noteInfo?.moy ?? (null as number | null),
+				nbNotations: noteInfo?.nb ?? 0,
+			};
+		})
+		.sort((a, b) => {
+			//  Pire note en premier ; `null` = pas de note = en dernier.
+			const noteA = a.noteMoy ?? 6;
+			const noteB = b.noteMoy ?? 6;
+			if (noteA !== noteB) return noteA - noteB;
+			if (!a.dateFin && !b.dateFin) return 0;
+			if (!a.dateFin) return 1;
+			if (!b.dateFin) return -1;
+			return a.dateFin.getTime() - b.dateFin.getTime();
+		});
+}
+
+/** Un diagnostic enrichi de sa prochaine échéance. */
+export interface DiagAvecEcheance extends DiagType {
+	nextDate: Date | null;
+	urgence: 'depasse' | 'annee' | 'futur' | 'inconnu';
+	lastRapportDate: string | null;
+	isPermanent: boolean;
+}
+
+/**
+ * Les diagnostics APPLICABLES, enrichis et triés par prochaine échéance.
+ *
+ * ⚠️ Un diagnostic « permanent » n'a pas d'échéance : il est marqué comme tel
+ * plutôt qu'écarté, sinon il disparaîtrait de l'écran sans que rien ne dise
+ * pourquoi. Les non applicables, eux, sont bien exclus — c'est une décision de
+ * la copropriété, pas une absence de donnée.
+ */
+export function diagnosticsAvecEcheance(types: DiagType[]): DiagAvecEcheance[] {
+	return types
+		.filter((dt) => !dt.non_applicable)
+		.map((dt) => {
+			const isPermanent = dt.frequence
+				? dt.frequence.toLowerCase().includes('permanent')
+				: false;
+			const next = isPermanent ? null : diagNextDate(dt);
+			const urgence: 'depasse' | 'annee' | 'futur' | 'inconnu' = next
+				? diagUrgence(next)
+				: 'inconnu';
+			const lastRapport = dt.rapports.find((r) => r.date_rapport);
+			return {
+				...dt,
+				nextDate: next as Date | null,
+				urgence,
+				lastRapportDate: lastRapport?.date_rapport ?? null,
+				isPermanent,
+			};
+		})
+		.sort((a, b) => {
+			if (!a.nextDate && !b.nextDate) return 0;
+			if (!a.nextDate) return 1;
+			if (!b.nextDate) return -1;
+			return a.nextDate.getTime() - b.nextDate.getTime();
+		});
+}
+
