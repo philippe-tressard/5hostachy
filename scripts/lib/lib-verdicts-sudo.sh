@@ -87,8 +87,7 @@ sudo_ecarts() {  # $1 = inventaire A, $2 = inventaire B → "a:1,b:2" | ""
 # doivent rester identiques — même contrainte que le motif de C18, déjà notée
 # là-bas. C est ce self-test qui éprouve la forme.
 sudo_sans_borne() {  # $1 = lignes NOPASSWD → "ALL" | ""
-  printf '%s
-' "${1:-}"     | sed -n 's/.*NOPASSWD:[[:space:]]*//p'     | grep -qE '^ALL([,[:space:]]|$)' && echo ALL || echo ""
+  echo "${1:-}"     | sed -n 's/.*NOPASSWD:[[:space:]]*//p'     | grep -qE '^ALL([,[:space:]]|$)' && echo ALL || echo ""
 }
 
 verdict_sudo_risque() {  # $1 = champ collecté → OK | RISQUE | INCONNU
