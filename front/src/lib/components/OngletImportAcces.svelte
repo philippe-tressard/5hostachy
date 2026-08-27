@@ -22,6 +22,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { STATUT_BADGE, STATUT_LABEL, type ModeleImportAcces } from '$lib/imports-acces';
+	import BarreImport from '$lib/components/BarreImport.svelte';
 
 	export let modele: ModeleImportAcces;
 
@@ -36,25 +37,20 @@
 	let filtre = '';
 
 	// ── Téléversement ──────────────────────────────────────────────────────────
-	let fichier: FileList | null = null;
-	let remplacer = false;
+	//  Le FORMULAIRE vit dans `BarreImport` ; il ne reste ici que ce qui dépend du
+	//  modèle : l'appel et son compte rendu.
 	let televersement = false;
 
-	async function televerser() {
-		if (!fichier?.length) {
-			toast('error', 'Choisissez un fichier .xlsx');
-			return;
-		}
+	async function televerser(fichier: File, remplacer: boolean) {
 		televersement = true;
 		try {
-			const r = await modele.api.upload(fichier[0], remplacer);
+			const r = await modele.api.upload(fichier, remplacer);
 			toast('success', `Import : ${r.importes} ajoutés, ${r.doublons} doublons, ${r.ignores} ignorés`);
 			await recharger();
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur import');
 		} finally {
 			televersement = false;
-			fichier = null;
 		}
 	}
 
@@ -190,82 +186,32 @@
 
 <svelte:head><title>{modele.titre} — {_siteNom}</title></svelte:head>
 
-<!-- ── Statistiques ────────────────────────────────────────────────────────── -->
-{#if stats}
-	<div class="imp-stats-bar card">
-		<div class="imp-stat">
-			<span class="imp-stat-val">{stats.total}</span><span class="imp-stat-lbl">Total</span>
-		</div>
-		<div class="imp-stat">
-			<span class="imp-stat-val" style="color:#d97706">{stats.en_attente}</span><span
-				class="imp-stat-lbl">En attente</span
-			>
-		</div>
-		<div class="imp-stat">
-			<span class="imp-stat-val" style="color:#2563eb">{stats.proprietaire_lie}</span><span
-				class="imp-stat-lbl">Proprio lié</span
-			>
-		</div>
-		<div class="imp-stat">
-			<span class="imp-stat-val" style="color:#16a34a">{stats.resolu}</span><span
-				class="imp-stat-lbl">Résolus</span
-			>
-		</div>
-		<div class="imp-stat">
-			<span class="imp-stat-val" style="color:#6b7280">{stats.ignore}</span><span
-				class="imp-stat-lbl">Ignorés</span
-			>
-		</div>
-		<div class="imp-stat">
-			<span class="imp-stat-val">{stats[modele.statSupplementaire.cle]}</span><span
-				class="imp-stat-lbl">{modele.statSupplementaire.libelle}</span
-			>
-		</div>
-	</div>
-{/if}
-
-<!-- ── Téléversement ───────────────────────────────────────────────────────── -->
-<div class="card imp-upload-section">
-	<h2 class="section-title">Importer un fichier Excel</h2>
-	<p class="muted" style="font-size:.85rem;margin-bottom:.75rem">
-		Colonnes attendues : <code>{modele.colonnesAttendues}</code>
-	</p>
-	<div class="imp-upload-row">
-		<input type="file" accept=".xlsx,.xls" bind:files={fichier} class="imp-file-input" />
-		<label class="imp-checkbox-label">
-			<input type="checkbox" bind:checked={remplacer} />
-			Remplacer les imports en attente existants
-		</label>
-		<button
-			class="btn btn-primary"
-			on:click={televerser}
-			disabled={televersement || !fichier?.length}
-		>
-			{televersement ? 'Import…' : 'Importer'}
-		</button>
-	</div>
-</div>
-
-<!-- ── Filtres et rapprochement ────────────────────────────────────────────── -->
-<div class="imp-toolbar">
-	<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-		<span class="muted" style="font-size:.85rem">Filtrer :</span>
-		{#each ['', 'en_attente', 'proprietaire_lie', 'resolu', 'ignore'] as s}
-			<button
-				class="btn btn-sm {filtre === s ? 'btn-primary' : 'btn-outline'}"
-				on:click={async () => {
-					filtre = s;
-					await recharger();
-				}}
-			>
-				{s === '' ? 'Tous' : STATUT_LABEL[s]}
-			</button>
-		{/each}
-	</div>
-	<button class="btn btn-outline btn-sm" on:click={autoMatch} disabled={rapprochement}>
+<BarreImport
+	tuiles={stats
+		? [
+				{ valeur: stats.total, libelle: 'Total' },
+				{ valeur: stats.en_attente, libelle: 'En attente', couleur: '#d97706' },
+				{ valeur: stats.proprietaire_lie, libelle: 'Proprio lié', couleur: '#2563eb' },
+				{ valeur: stats.resolu, libelle: 'Résolus', couleur: '#16a34a' },
+				{ valeur: stats.ignore, libelle: 'Ignorés', couleur: '#6b7280' },
+				{
+					valeur: stats[modele.statSupplementaire.cle],
+					libelle: modele.statSupplementaire.libelle,
+				},
+			]
+		: []}
+	colonnesAttendues={modele.colonnesAttendues}
+	enCours={televersement}
+	statuts={['', 'en_attente', 'proprietaire_lie', 'resolu', 'ignore']}
+	libellesStatuts={STATUT_LABEL}
+	bind:filtre
+	on:importer={(e) => televerser(e.detail.fichier, e.detail.remplacer)}
+	on:filtrer={recharger}
+>
+	<button slot="actions" class="btn btn-outline btn-sm" on:click={autoMatch} disabled={rapprochement}>
 		{rapprochement ? 'Recherche…' : '\u{1F517} Auto-match'}
 	</button>
-</div>
+</BarreImport>
 
 <!-- ── Tableau ─────────────────────────────────────────────────────────────── -->
 {#if loading}
