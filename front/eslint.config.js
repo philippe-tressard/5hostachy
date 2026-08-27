@@ -216,6 +216,39 @@ export default defineConfig(
 			'svelte/infinite-reactive-loop': 'off',
 			'svelte/no-reactive-functions': 'off',
 
+			// ── ESLint 10 : `no-useless-assignment` ne connaît pas `$:` ──────────
+			// Entrée dans le preset « recommended » d'ESLint 10 (27/08/2026, montée
+			// 9.39.5 → 10.8.1). Elle produit ici **6 signalements, 6 faux positifs**,
+			// tous de la même cause : son analyse de flux lit un composant Svelte 4
+			// comme du code linéaire, alors qu'une instruction `$:` **se rejoue** à
+			// chaque changement de ses dépendances.
+			//
+			// Les quatre premiers sont des DRAPEAUX D'INITIALISATION UNIQUE — le
+			// motif exact que `profil/+page.svelte` porte depuis le 14/08/2026 pour
+			// ne pas écraser une saisie en cours :
+			//
+			//     let champsInitialises = false;
+			//     $: if ($currentUser && !champsInitialises) {
+			//         champsInitialises = true;   // ← « valeur jamais relue »
+			//         initialiserDepuis($currentUser);
+			//     }
+			//
+			// Elle EST relue : au passage suivant, par la garde du `if`. Suivre la
+			// règle supprimerait le drapeau et rendrait le bloc rejouable — c'est
+			// exactement le défaut qu'il empêche.
+			//
+			// Les deux derniers (`recentItems`, `olderItems` au tableau de bord) sont
+			// des valeurs initiales `[]` qu'un `$:` remplace avant le premier rendu :
+			// techniquement « inutiles », mais les retirer laisserait deux variables
+			// non initialisées pour gagner zéro.
+			//
+			// → Coupée sur les `.svelte` UNIQUEMENT. Elle reste active sur les `.ts`
+			//   et les `.js`, où elle mesure ce qu'elle prétend mesurer (relevé :
+			//   0 signalement, donc aucune dette masquée).
+			// → À réactiver le jour de la migration aux runes, où `$state` remplace
+			//   `$:` et où l'analyse de flux redevient juste.
+			'no-useless-assignment': 'off',
+
 			// 2 — deux `{' '}` inutiles, tous deux dans `prestataires/+page.svelte`,
 			// 2 105 lignes dont le découpage est suivi en #453. On n'y entre pas
 			// pour deux caractères.
