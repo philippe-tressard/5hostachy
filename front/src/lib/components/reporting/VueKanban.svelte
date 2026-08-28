@@ -1,10 +1,18 @@
 <!--
-  Reporting CS — **dossiers AG / CS / Syndic** : les événements du calendrier
+  Reporting CS — **suivi des dossiers** : les événements du calendrier
   rangés par colonne de kanban, avec l'ancienneté de chacun.
 
   Extrait d'`espace-cs/+page.svelte` avec #453. Il ne charge rien : les événements
   arrivent en prop d'`OngletReporting`, qui les a demandés une seule fois pour les
   vues qui les partagent.
+
+  ⚠️ Cette vue s'appelait « Dossiers AG / CS / Syndic », ici, sur sa pastille et
+  dans son titre d'impression — trois énumérations figées d'une liste qui vient
+  de changer : la colonne « Prestataire (en cours) », rétablie avec
+  `REPORT_KANBAN_COLS`, les rendait toutes les trois fausses. Un libellé qui
+  ÉNUMÈRE ce qu'un écran contient diverge au premier ajout, et rien ne le
+  signale — c'est la même faute que la liste de colonnes recopiée, un cran plus
+  haut. Le nom ne décrit donc plus le contenu mais l'usage (#603).
 -->
 <script lang="ts">
 	import { safeDescription } from '$lib/sanitize';
