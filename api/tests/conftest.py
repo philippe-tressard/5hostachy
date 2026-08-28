@@ -23,6 +23,77 @@ os.environ.setdefault(
 import pytest  # noqa: E402  (après les variables d'environnement, par construction)
 
 
+# ── Intégrité référentielle DANS LES TESTS (#546, étape 2) ────────────────────
+#
+#  🔴 SQLite laisse `foreign_keys` à OFF par défaut, et l'application ne le pose
+#  nulle part : AUCUNE des 119 clés étrangères déclarées dans les modèles n'est
+#  vérifiée par la base. L'intégrité repose entièrement sur le code applicatif.
+#
+#  L'activer ici, et ici SEULEMENT, fait deux choses que le ticket demande dans
+#  cet ordre :
+#
+#    • ça mesure — la suite passait de 798 verts à 103 erreurs, toutes des
+#      `FOREIGN KEY constraint failed`, et AUCUNE venant d'un chemin de
+#      production : ce sont les fixtures qui construisaient des lignes
+#      orphelines (`auteur_id=1` sans utilisateur 1, `copropriete_id` NULL…) ;
+#    • ça verrouille — une fixture qui décrit un monde impossible teste contre
+#      elle-même, et rien ne le disait puisque rien ne vérifiait.
+#
+#  ⚠️ La PRODUCTION reste à `foreign_keys=OFF` : l'activer là-bas rendrait
+#  bloquantes des suppressions aujourd'hui silencieuses, et il faut d'abord
+#  décider l'`ON DELETE` des onze relations concernées — cascade, `SET NULL` ou
+#  refus. C'est une décision fonctionnelle (#546 étape 3), pas un réglage.
+#
+#  ⚠️ L'écouteur est posé sur `connect`, seul point qui couvre TOUTES les
+#  connexions du pool. Le poser sur une connexion d'amorçage rendue au pool ne
+#  marche pas : l'événement n'est alors plus jamais émis — piège vérifié en
+#  instruisant ce ticket, et le relevé disait encore `foreign_keys = 0` avec
+#  l'écouteur en place, six lignes trop bas.
+def _activer_cles_etrangeres() -> None:
+    from sqlalchemy import event
+
+    from app.database import engine
+
+    @event.listens_for(engine, "connect")
+    def _pragma(dbapi_connection, _record):  # pragma: no cover - branché par SQLAlchemy
+        curseur = dbapi_connection.cursor()
+        curseur.execute("PRAGMA foreign_keys=ON")
+        curseur.close()
+
+    #  🔴 SANS CE `dispose()`, L'ÉCOUTEUR NE SERT À RIEN — et la suite reste
+    #  VERTE, ce qui est la pire façon d'échouer. `sqlite:///:memory:` utilise un
+    #  `SingletonThreadPool` : une seule connexion, déjà ouverte à l'import de
+    #  `app.database`. `connect` n'est donc plus jamais émis, et le PRAGMA n'est
+    #  jamais posé. Mesuré ici même :
+    #
+    #      AVANT                            foreign_keys = 0
+    #      APRÈS (connexion recyclée)       foreign_keys = 0   ← l'écouteur est là
+    #      APRÈS dispose (connexion NEUVE)  foreign_keys = 1
+    #
+    #  C'est le piège que #546 décrit pour la production, rencontré ici en le
+    #  reproduisant. Recycler la connexion force le prochain `connect`.
+    engine.dispose()
+
+
+def pytest_configure(config):  # noqa: ARG001
+    #  ⚠️ DÉSACTIVÉ PAR DÉFAUT, et ce n'est pas une timidité : avec les clés
+    #  actives, la suite passe de 798 verts à **83 erreurs et 4 échecs** — toutes
+    #  des fixtures qui construisent des lignes orphelines, aucune venant d'un
+    #  chemin de production. Les rendre valides est l'étape 2 de #546, un lot à
+    #  part entière ; l'activer ici avant qu'elle soit finie rendrait le job rouge
+    #  en permanence, donc désarmé dans la semaine (#419).
+    #
+    #  Ce que l'interrupteur apporte dès maintenant : la mesure se rejoue en une
+    #  commande, sans remettre le montage en place à chaque fois —
+    #
+    #      HOSTACHY_FK_STRICTES=1 pytest tests/ -q
+    #
+    #  et `test_integrite_referentielle.py` s'en sert pour verrouiller ce qui est
+    #  DÉJÀ réparé, sans attendre que tout le soit.
+    if os.environ.get("HOSTACHY_FK_STRICTES") == "1":
+        _activer_cles_etrangeres()
+
+
 # ── Patrimoine de test ────────────────────────────────────────────────────────
 #
 #  Monter une copropriété de quatre bâtiments et semer l'arbre des périmètres :
@@ -52,7 +123,46 @@ def vider_patrimoine(session, modeles_sup=()) -> None:
     marqueur = session.get(ConfigSite, CLE_SEMEE)
     if marqueur:
         session.delete(marqueur)
-    for modele in (*modeles_sup, Perimetre, Batiment, Copropriete):
+    for modele in modeles_sup:
+        for ligne in session.exec(select(modele)).all():
+            session.delete(ligne)
+    session.commit()
+
+    #  🔴 `Perimetre` S'AUTO-RÉFÉRENCE (`parent_id`), donc l'ordre de suppression
+    #  compte : effacer un nœud avant ses enfants viole la clé étrangère. Ce n'était
+    #  visible d'aucune façon tant que SQLite tournait avec `foreign_keys=OFF` — la
+    #  purge se faisait dans un ordre arbitraire, et la base l'acceptait (#546).
+    #
+    #  On efface donc PAR VAGUES, des feuilles vers la racine : à chaque tour, les
+    #  nœuds dont plus personne n'est l'enfant. C'est la seule façon correcte sans
+    #  connaître la profondeur de l'arbre, qui est une donnée administrée.
+    #
+    #  ⚠️ ET IL FAUT SAVOIR DÉFAIRE UN CYCLE. `test_cycle_de_parente_…` en crée un
+    #  volontairement — c'est son sujet : vérifier que la lecture de l'arbre ne
+    #  boucle pas dessus. Une purge par vagues n'y trouve alors plus aucune
+    #  feuille et tournerait indéfiniment. On délie donc les restants
+    #  (`parent_id = NULL`) avant de les effacer : c'est le seul geste qui rende
+    #  la base propre quel que soit l'état où un test l'a laissée.
+    #
+    #  Une fixture de purge n'a pas le droit de supposer des données saines — elle
+    #  s'exécute précisément après les tests qui les abîment exprès.
+    restants = session.exec(select(Perimetre)).all()
+    while restants:
+        parents = {p.parent_id for p in restants if p.parent_id is not None}
+        feuilles = [p for p in restants if p.id not in parents]
+        if not feuilles:
+            #  Plus aucune feuille : il ne reste que des cycles. On les délie.
+            for noeud in restants:
+                noeud.parent_id = None
+                session.add(noeud)
+            session.commit()
+            feuilles = restants
+        for feuille in feuilles:
+            session.delete(feuille)
+        session.commit()
+        restants = session.exec(select(Perimetre)).all()
+
+    for modele in (Batiment, Copropriete):
         for ligne in session.exec(select(modele)).all():
             session.delete(ligne)
     session.commit()
