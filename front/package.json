@@ -42,6 +42,7 @@
     "lint:etats": "node scripts/check-etats.mjs",
     "lint:manuels": "node scripts/check-manuels.mjs",
     "lint:pages": "node scripts/check-pages.mjs",
+    "lint:ci": "node scripts/check-ci-complete.mjs",
     "lint:a11y": "node scripts/check-a11y.mjs",
     "lint:charte": "node scripts/check-charte-recomposee.mjs",
     "lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest"

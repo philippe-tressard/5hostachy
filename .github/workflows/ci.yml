@@ -549,6 +549,24 @@ jobs:
       # autres écrans — elle fait rendre CELUI-CI autrement, sans décision, et
       # elle gagne (Svelte ajoute sa classe de portée au sélecteur). Le relevé
       # de #607 en comptait 54 ; 35 sont parties, 19 sont déclarées.
+      # 🔴 L'accessibilité est une exigence PERMANENTE du projet, écrite dans
+      # CLAUDE.md, dans ux-patterns §3 et dans standards/11 — et rien ne
+      # l'appliquait : le job ne bloque que sur les ERREURS, et 45 avertissements
+      # a11y défilaient depuis des semaines sans que personne ne les lise (#561).
+      # Liste d'exceptions nommées, jamais de seuil chiffré (#419).
+      # 🔴 Le contrôle des contrôles : tout `lint:*` déclaré dans package.json
+      # doit être lancé ICI. Écrit après que l'étape de `lint:a11y` ne soit PAS
+      # partie dans son commit — `git add -A front` ne prend pas `.github/`. Le
+      # contrôle existait, il était juste, et rien ne l'exécutait : le pire des
+      # faux verts, parce qu'il ne ressemble pas à une panne (#561).
+      - name: Tout contrôle déclaré est lancé par la CI
+        working-directory: front
+        run: npm run lint:ci
+
+      - name: Aucun avertissement d'accessibilité non déclaré
+        working-directory: front
+        run: npm run lint:a11y
+
       - name: Aucune redéfinition scopée de la charte
         working-directory: front
         run: npm run lint:charte
