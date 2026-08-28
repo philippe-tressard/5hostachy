@@ -86,6 +86,15 @@ _PUBLICS_ASSUMES = {
     # Télémétrie par `sendBeacon`, visiteurs anonymes inclus : rate-limité
     # (60/min), plafonné à 50 événements, champs tronqués, opt-out RGPD honoré.
     ("telemetry.py", "collect"),
+    #  Rapport de violation CSP : le NAVIGATEUR le poste, sans cookie ni en-tête
+    #  d'authentification — c'est la spécification, pas un choix. Ce point n'existe
+    #  que pour MESURER avant de poser une CSP bloquante (#536).
+    #
+    #  Ses bornes, chacune éprouvée par `test_csp_report.py` : limite de débit
+    #  60/min, plafond de 200 clés distinctes, URL tronquées, AUCUNE écriture en
+    #  base, et rien qui soit renvoyé à l'appelant. Le relevé, lui, est réservé
+    #  aux administrateurs — il expose des URL de pages visitées.
+    ("csp.py", "recevoir_rapport"),
     # Rapport de maintenance machine-à-machine : authentifié par secret partagé
     # (en-tête `x-maintenance-key`), et refuse tout si la clé n'est pas configurée.
     ("rapports_scripts.py", "maintenance_rapport"),
