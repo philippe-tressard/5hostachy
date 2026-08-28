@@ -13,7 +13,6 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import OngletVisites from '$lib/components/OngletVisites.svelte';
 	//  🔴 Le vocabulaire des prestataires vit dans `$lib/prestataires.ts`, pas
 	//  ici. La table des équipements écrite dans cet écran recopiait
 	//  `TypeEquipement` et en OUBLIAIT deux valeurs — `assurance` et `syndic`,
@@ -77,16 +76,16 @@
 		return '★'.repeat(Math.round(note)) + '☆'.repeat(5 - Math.round(note));
 	}
 
-	// ── Onglets (4) ────────────────────────────────────────────────
+	// ── Onglets (3) ────────────────────────────────────────────────
 	// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
 	// (même convention que /calendrier et /sondages, cf. `$lib/deepLink.ts`).
 	//
-	// ⚠️ `'prestations'` a disparu (#602). Un lien profond qui le demande encore
+	// ⚠️ `'prestations'` et `'visites'` ont disparu (#602). Un lien profond qui les demande encore
 	// — un favori, un vieux courriel — n'appartient plus à cette liste, donc
 	// `ongletDeLUrl` rend `null` et la page s'ouvre sur son défaut. C'est
 	// exactement le service que rend une liste explicite ; une validation par
 	// `startsWith` ou par `in` aurait laissé passer un onglet qui n'existe plus.
-	const ONGLETS = ['visites', 'contrats_tab', 'prestataires', 'consommations'] as const;
+	const ONGLETS = ['contrats_tab', 'prestataires', 'consommations'] as const;
 	let onglet: (typeof ONGLETS)[number] = 'contrats_tab';
 	$: trackTabView(onglet);
 
@@ -134,15 +133,35 @@
 	);
 	$: compactPrests = filteredPrests.length > 7;
 
-	// ── Visites : contrats actifs avec fréquence, exercice en cours ──
-	$: visites = (() => {
-		const year = new Date().getFullYear();
-		return contrats.filter(c => c.actif && (c.frequence_type || c.prochaine_visite) && (
-			!c.prochaine_visite || new Date(c.prochaine_visite).getFullYear() <= year
-		));
-	})();
-	$: visitesEnRetard = visites.filter(c => c.prochaine_visite && new Date(c.prochaine_visite) < new Date());
-	$: visitesAJour = visites.filter(c => !c.prochaine_visite || new Date(c.prochaine_visite) >= new Date());
+	// ── Échéances des contrats ────────────────────────────────────
+	//  🔴 L'onglet « Visites » lisait ces mêmes contrats dans un écran à part
+	//  (#602). Une visite n'est pas un objet : c'est la PROCHAINE ÉCHÉANCE d'un
+	//  contrat, et elle avait deux définitions qui ne donnaient pas la même
+	//  réponse — ici `prochaine_visite`, une date posée à la main ; dans le
+	//  calendrier, `frequence_type` réparti sur les mois de l'exercice. Le
+	//  décompte reste, l'écran séparé part.
+	//
+	//  ⚠️ `enRetard` compare à MINUIT, pas à l'instant : une visite prévue
+	//  aujourd'hui n'est pas en retard, et elle l'aurait été dès 00 h 01 avec un
+	//  `new Date()` nu — c'est la comparaison qu'écrivait l'ancien onglet.
+	$: minuit = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+	$: contratEnRetard = (c: any) => !!c.prochaine_visite && new Date(c.prochaine_visite) < minuit;
+	$: echeancesEnRetard = contrats.filter(contratEnRetard);
+	$: echeancesAVenir = contrats.filter(c => c.prochaine_visite && !contratEnRetard(c));
+	$: contratsSansEcheance = contrats.filter(c => !c.prochaine_visite);
+
+	/**  Les contrats d'un groupe, la prochaine échéance d'abord.
+	 *
+	 *   ⚠️ Sans échéance = en FIN de liste, jamais en tête : `null` se compare mal
+	 *   et un tri naïf les aurait remontés devant les retards. */
+	function parEcheance(liste: any[]): any[] {
+		return [...liste].sort((a, b) => {
+			if (!a.prochaine_visite && !b.prochaine_visite) return 0;
+			if (!a.prochaine_visite) return 1;
+			if (!b.prochaine_visite) return -1;
+			return a.prochaine_visite < b.prochaine_visite ? -1 : 1;
+		});
+	}
 
 	// ── Consommations ─────────────────────────────────────────────
 	let compteurConfigs: any[] = [];
@@ -309,7 +328,6 @@
 		return contrats.filter(c => c.prestataire_id === prestId);
 	}
 
-	$: orphanContrats = contrats.filter(c => !c.prestataire_id);
 
 
 
@@ -525,9 +543,6 @@
 
 <!-- ── Onglets ─────────────────────────────────────────────────── -->
 <div class="tabs" role="tablist">
-	<button role="tab" class:active={onglet === 'visites'} on:click={() => onglet = 'visites'}>
-		<Icon name="calendar-days" size={15} /> Visites
-	</button>
 	<button role="tab" class:active={onglet === 'contrats_tab'} on:click={() => onglet = 'contrats_tab'}>
 		<Icon name="file-text" size={15} /> Contrats
 	</button>
@@ -542,29 +557,6 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!-- ONGLET 2 : VISITES                                           -->
-<!-- ══════════════════════════════════════════════════════════════ -->
-{:else if onglet === 'visites'}
-
-	<!--  🔴 L'onglet vit dans `OngletVisites.svelte` (#453). Ses deux listes
-	      étaient QUARANTE LIGNES RECOPIÉES à deux différences près : elles
-	      passent maintenant par `CarteVisite`, écrite une fois.
-
-	      ⚠️ Les données, l'état déplié et les gestes RESTENT ICI : quatre onglets
-	      partagent `contrats`, `prestataires` et `expandedContrats`. Déplacer cet
-	      état dans le composant en ferait une seconde source. On extrait un
-	      RENDU, pas une moitié de logique. -->
-	<OngletVisites
-		{visites}
-		{visitesEnRetard}
-		{visitesAJour}
-		{prestataires}
-		{expandedContrats}
-		on:basculer={(e) => toggleContrat(e.detail)}
-		on:modifier={(e) => startEditContrat(e.detail)}
-		on:noter={(e) => openNotationForm(e.detail.prestataire_id, e.detail.id)}
-	/>
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- ONGLET 3 : CONTRATS                                          -->
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -646,9 +638,20 @@
 	</FormulaireCreation>
 {/if}
 
-	<!-- Synthèse -->
+	<!--  Synthèse — les trois décomptes viennent de l'onglet « Visites » retiré
+	      (#602). Ils portent sur les MÊMES contrats qu'il lisait ; ils sont
+	      seulement rendus là où vivent les contrats. -->
 	<div class="contrats-summary">
 		<span class="contrats-summary-count">{contrats.length} contrat{contrats.length !== 1 ? 's' : ''} actif{contrats.length !== 1 ? 's' : ''}</span>
+		{#if echeancesEnRetard.length > 0}
+			<span class="badge echeance-badge echeance-badge--retard">⚠️ {echeancesEnRetard.length} visite{echeancesEnRetard.length > 1 ? 's' : ''} en retard</span>
+		{/if}
+		{#if echeancesAVenir.length > 0}
+			<span class="badge echeance-badge echeance-badge--ok">🗓 {echeancesAVenir.length} à venir</span>
+		{/if}
+		{#if contratsSansEcheance.length > 0}
+			<span class="badge echeance-badge">{contratsSansEcheance.length} sans échéance</span>
+		{/if}
 	</div>
 
 	<!-- Groupé par spécialité du prestataire -->
@@ -659,22 +662,33 @@
 			<div class="type-section-header">
 				<span class="type-section-label">{specGroup.label}</span>
 			</div>
-			{#each contrats.filter(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === specGroup.val; }) as c (c.id)}
+			{#each parEcheance(contrats.filter(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === specGroup.val; })) as c (c.id)}
 				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
-				<div class="contrat-expand" class:expanded={contratExpanded}>
+				{@const enRetard = contratEnRetard(c)}
+				<div class="contrat-expand" class:expanded={contratExpanded} class:contrat-expand--retard={enRetard}>
 					<div class="contrat-row"
 						role="button" tabindex="0"
 						on:click|stopPropagation={() => toggleContrat(c.id)}
 						on:keydown|stopPropagation={e => e.key === 'Enter' && toggleContrat(c.id)}>
 						<div class="contrat-body-inner">
 							<strong class="contrat-titre">{c.libelle}</strong>
-							{#if prest}<span class="contrat-meta">— {prest.nom}</span>{/if}
+							{#if prest}
+								<span class="contrat-meta">— {prest.nom}</span>
+							{:else}
+								<!--  Un contrat sans intervenant avait sa propre section, qui le
+								      rendait une SECONDE fois : le groupement par équipement
+								      retombe déjà sur `type_equipement` quand le prestataire
+								      manque. Le fait se dit ici, sur la ligne (#602). -->
+								<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
+							{/if}
 							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
 						</div>
 						<div class="contrat-infos">
 							{#if c.prochaine_visite}
-								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {fmtDateShort(c.prochaine_visite)}</div>
+								<div class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
+									{enRetard ? '⚠️' : '🗓'} {fmtDateShort(c.prochaine_visite)}
+								</div>
 							{:else}
 								<div>📅 {fmtDateShort(c.date_debut)}</div>
 							{/if}
@@ -799,6 +813,19 @@
 								{#if $isCS}
 									<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
 										<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+										<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
+										      seul onglet Visites : retirer cet onglet sans porter le geste
+										      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
+										      saisir, alors que la fiche et le reporting continuaient d'en
+										      afficher la moyenne. Un affichage sans son geste de saisie ne
+										      se voit pas — rien ne lève, la note reste simplement à jamais
+										      celle d'hier (#602).
+										      Sans intervenant, il n'y a personne à noter : le bouton
+										      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
+										{#if c.prestataire_id}
+											<button class="btn btn-sm btn-outline contrat-noter"
+												on:click|stopPropagation={() => openNotationForm(c.prestataire_id, c.id)}>⭐ Noter</button>
+										{/if}
 									</div>
 								{/if}
 							{/if}
@@ -807,96 +834,6 @@
 				</div>
 			{/each}
 		{/each}
-
-		<!-- Contrats orphelins -->
-		{#if orphanContrats.length > 0}
-			<h2 style="font-size:1rem;font-weight:600;margin-top:1.5rem;margin-bottom:.75rem">Contrats sans intervenant</h2>
-			{#each orphanContrats as c (c.id)}
-				{@const contratExpanded = expandedContrats.has(c.id)}
-				<div class="contrat-expand card" class:expanded={contratExpanded}>
-					<div class="contrat-row"
-						role="button" tabindex="0"
-						on:click={() => toggleContrat(c.id)}
-						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
-						<div class="contrat-body-inner">
-							<strong class="contrat-titre">{c.libelle}</strong>
-							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
-						</div>
-						<div class="contrat-infos">
-							{#if c.prochaine_visite}
-								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {fmtDateShort(c.prochaine_visite)}</div>
-							{:else}
-								<div>📅 {fmtDateShort(c.date_debut)}</div>
-							{/if}
-						</div>
-						<div class="contrat-meta-right">
-							<span class="badge" style="font-size:.8rem">📄 {contratDocsMap[c.id]?.length ?? 0}</span>
-							<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-						</div>
-					</div>
-					{#if contratExpanded}
-						<div class="contrat-detail-body">
-							{#if editContratId === c.id && contratFormPrestId !== -1}
-								<div class="form-grid" style="margin-bottom:.6rem">
-									<label class="field">Libellé *<input bind:value={contratForm.libelle} required /></label>
-									<label class="field">Prestataire *
-										<select bind:value={contratForm.prestataire_id} required>
-											<option value="">— Sélectionner —</option>
-											{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-										</select>
-									</label>
-									<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-									<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-									<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-								</div>
-								<div style="display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap">
-									<button class="btn btn-sm btn-outline" on:click={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
-									<button class="btn btn-sm btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-								</div>
-							{:else}
-								<div class="contrat-section">
-									<div class="contrat-section-title">Infos contrat</div>
-									<div class="detail-grid">
-										<div><span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}</div>
-										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(c.prochaine_visite)}</span></div>{/if}
-									</div>
-								</div>
-								{#if c.notes}
-									<div class="contrat-section">
-										<div class="contrat-section-title clickable" role="button" tabindex="0" on:click|stopPropagation={() => { expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id); expandedNotes = expandedNotes; }} on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id), expandedNotes = expandedNotes)}>Synthèse {expandedNotes.has(c.id) ? '▲' : '▼'}</div>
-										{#if expandedNotes.has(c.id)}
-											<div class="rich-content" style="font-size:.875rem">{@html safeHtml(c.notes)}</div>
-										{/if}
-									</div>
-								{/if}
-								<div class="contrat-section">
-									<div class="contrat-section-title">📄 Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
-									{#if contratDocsMap[c.id]?.length > 0}
-										{#each contratDocsMap[c.id] as doc}
-											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
-												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
-												<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
-												{#if $isCS}
-													<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
-												{/if}
-											</div>
-										{/each}
-									{:else}
-										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-									{/if}
-								</div>
-								{#if $isCS}
-									<div style="display:flex;gap:.4rem;margin-top:.25rem">
-										<button class="btn btn-sm btn-outline" on:click={() => startEditContrat(c)}>✏️ Modifier</button>
-										<button class="btn btn-sm btn-outline danger" on:click={() => deleteContrat(c.id)}>🗑️ Archiver</button>
-									</div>
-								{/if}
-							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
 	{/if}
 
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1245,10 +1182,25 @@
 	/* ── Visites ── */
 
 	/* ── Contrats summary ── */
+	.contrats-summary { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 	.contrats-summary-count { font-size: .85rem; color: var(--color-text-muted); }
+
+	/*  Les trois décomptes d'échéance, repris de l'onglet « Visites » retiré. */
+	.echeance-badge { font-size: .78rem; }
+	.echeance-badge--retard { color: var(--color-danger); border-color: var(--color-danger); }
+	.echeance-badge--ok { color: var(--color-primary); border-color: var(--color-primary); }
 
 	/* Contrat expansible */
 	.contrat-expand:hover, .contrat-expand.expanded { border-left-color: var(--color-primary); }
+	/*  L'accent de retard, repris de `CarteVisite.visite-card--retard` À LA LETTRE :
+	    un déplacement de balisage ne change pas l'apparence. `!important` parce que
+	    la règle de survol ci-dessus a la même spécificité et gagnerait autrement au
+	    passage de la souris — c'est-à-dire que le retard disparaîtrait justement
+	    quand on s'apprête à cliquer dessus. */
+	.contrat-expand--retard { border-left-color: var(--color-danger) !important; }
+	.contrat-echeance { font-size: .82rem; font-weight: 600; color: var(--color-primary); }
+	.contrat-echeance--retard { color: var(--color-danger); }
+	.contrat-noter { color: #f59e0b; }
 
 	.contrat-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.contrat-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
@@ -1273,7 +1225,6 @@
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 
-	.danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); margin-bottom: .5rem; }
 	.rich-content :global(p) { margin: 0 0 .5em; }
 	.rich-content :global(ul), .rich-content :global(ol) { padding-left: 1.4em; margin: 0 0 .5em; }
