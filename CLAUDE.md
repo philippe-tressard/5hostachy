@@ -327,9 +327,25 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   « Branch not protected » : rien n'empêchait de fusionner une CI rouge — ce qui
   est arrivé trois fois le 08/08. Une consigne fausse est pire qu'absente.
 - Préfixes de commit : `feat:` `fix:` `docs:` `refactor:` `test:` `chore:` `perf:`
-- Claude s'arrête au **push sur `dev`** : la PR `dev → main` est créée et fusionnée
-  par l'utilisateur
-- MEP : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif** uniquement (le script bloque sur le standby)
+- 🔴 **Claude crée ET fusionne la PR `dev → main`, et conduit la MEP** (28/08/2026).
+  Cette ligne disait le contraire jusque-là — « Claude s'arrête au push sur `dev` » —
+  et c'était l'exemple même de la consigne fausse que le point ci-dessus dénonce.
+  La contrepartie demandée n'est pas une validation *avant*, c'est un **compte rendu
+  après** : à chaque MEP, **la version et les fonctionnalités apportées**.
+  Le pré-check ne s'allège pas pour autant : c'est lui qui remplace la relecture.
+  `gh pr create` → attendre les **4 checks requis** → `gh pr merge --squash
+  --delete-branch` → **réaligner `dev` sur `origin/main`** (la fusion est un squash
+  et supprime la branche distante).
+  ⚠️ `gh pr merge --delete-branch` supprime aussi la branche **locale** et bascule
+  sur `main` : committer sans regarder `git branch --show-current` met le lot suivant
+  sur `main`, où le push est refusé.
+- MEP : elle n'est **pas** la fusion. `auto-deploy.sh` (cron `*/5`) fait le `git pull`
+  **puis** le build : entre les deux, les points 12 et 18 du pré-check échouent
+  légitimement — le code est à jour, l'image ne l'est pas. Attendre la ligne
+  `Déployé: <sha>` dans `/var/log/hostachy-deploy.log` **sur l'actif**, puis
+  post-check. Ne jamais conclure sur le seul `git log` du nœud.
+  Reprise en main : `scripts/exploitation/MaJ-Hostachy.sh` sur le **RPi actif**
+  uniquement (le script bloque sur le standby)
 - `.env` non versionné · `SECRET_KEY` ≥ 32 caractères · `ENABLE_API_DOCS=false` en prod
 - Bascule manuelle (test) : `sudo bash /opt/5hostachy/scripts/exploitation/bascule.sh` depuis le RPi actif
   (chemin de **relais** ; le script vit dans `scripts/exploitation/` — cf. #337)

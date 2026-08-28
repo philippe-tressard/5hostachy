@@ -147,6 +147,40 @@ elle.
 `origin/main` toutes les 5 minutes. Le pré-check se passe donc **avant le push sur
 `dev`**, pas après la fusion.
 
+🔴 **Depuis le 28/08/2026, c'est Claude qui crée et fusionne la PR, et qui conduit
+la MEP** — l'utilisateur n'intervient plus. Le pré-check ne s'allège pas pour
+autant : il est désormais **le seul** filtre entre un lot et la production, là où
+il n'était qu'un préalable à une relecture. La contrepartie demandée est un
+**compte rendu après** : version servie et fonctionnalités apportées.
+
+Le déroulé complet, une fois le pré-check vert :
+
+```
+gh pr create --base main --head dev …
+gh pr checks <n> --watch          # les 4 checks REQUIS, pas un de moins
+gh pr merge <n> --squash --delete-branch
+git fetch --prune && git checkout -B dev origin/main
+```
+
+⚠️ **Trois pièges, tous rencontrés le 28/08 :**
+
+1. `--delete-branch` supprime aussi la branche **locale** et bascule sur `main`.
+   Committer ensuite sans regarder `git branch --show-current` met le lot suivant
+   sur `main`, où le push est refusé. Recréer `dev` **avant** de committer.
+2. `origin/dev` **n'existe plus** après la fusion. Un `git fetch` sans `--prune`
+   laisse une ref fantôme, et `--force-with-lease` échoue alors en « stale info »
+   sur ce qui n'est en réalité qu'une **création** de branche.
+3. **La fusion n'est pas le déploiement.** `auto-deploy.sh` fait le `git pull`
+   **puis** le build : entre les deux, les points **12** et **18** échouent
+   légitimement — le code est à jour, l'image ne l'est pas encore. Attendre la
+   ligne `Déployé: <sha>` dans `/var/log/hostachy-deploy.log` sur l'**actif**.
+   Le `git log` du nœud passe au vert **avant** que l'image soit bâtie : s'y fier
+   fait annoncer une MEP qui n'a pas eu lieu.
+
+⚠️ Après la MEP, les points **0d, 0f et 16** échouent **par construction** —
+version inchangée, brief d'un commit déjà fusionné, trace d'un autre commit. Ce
+sont des points *pré*-push. Lire les points **1 à 18**, qui sont le post-check.
+
 ### Ce que le script couvre
 
 | # | Contrôle | Verdict possible |
