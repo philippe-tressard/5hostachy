@@ -108,6 +108,40 @@ def pytest_configure(config):  # noqa: ARG001
 #  jamais la base, et importer l'application ici changerait leur ordre d'import.
 
 
+def delier_references(session, modele) -> int:
+    """Met à NULL toutes les colonnes NULLABLES qui pointent vers `modele`.
+
+    Les colonnes sont **déduites des métadonnées SQLModel**, jamais énumérées :
+    une liste tenue à la main diverge au premier champ ajouté, et c'est justement
+    celui-là qui manquerait (`standards/05` §9).
+
+    ⚠️ **Les colonnes NOT NULL sont laissées telles quelles, et c'est délibéré.**
+    On ne peut pas les délier ; les porteurs doivent partir avant. Le taire
+    donnerait une purge qui « marche » jusqu'au jour où la clé mord — et le
+    diagnostic serait alors à refaire. Le compte rendu permet à l'appelant de
+    savoir ce qui a bougé.
+
+    @returns le nombre de lignes déliées.
+    """
+    from sqlalchemy import update
+    from sqlmodel import SQLModel
+
+    cible = modele.__tablename__
+    deliees = 0
+    for table in SQLModel.metadata.tables.values():
+        for colonne in table.columns:
+            if not colonne.nullable:
+                continue
+            if not any(fk.column.table.name == cible for fk in colonne.foreign_keys):
+                continue
+            resultat = session.exec(
+                update(table).where(colonne.isnot(None)).values({colonne.name: None})
+            )
+            deliees += resultat.rowcount or 0
+    session.commit()
+    return deliees
+
+
 def vider_patrimoine(session, modeles_sup=()) -> None:
     """Purge copropriété, bâtiments et périmètres — plus les modèles demandés.
 
@@ -162,9 +196,31 @@ def vider_patrimoine(session, modeles_sup=()) -> None:
         session.commit()
         restants = session.exec(select(Perimetre)).all()
 
-    for modele in (Batiment, Copropriete):
-        for ligne in session.exec(select(modele)).all():
-            session.delete(ligne)
+    #  🔴 Les bâtiments sont référencés par ONZE colonnes — utilisateur, ticket,
+    #  document, lot, publication, événement, contrat, devis, membre CS, périmètre,
+    #  demande de modification. La purge les effaçait sans s'en soucier : c'est la
+    #  famille la plus nombreuse du relevé de #546, **132 violations**.
+    #
+    #  Les onze sont NULLABLES : on délie, on ne supprime pas. Supprimer les
+    #  porteurs serait faux — un ticket ne cesse pas d'exister parce que le
+    #  patrimoine de test est démonté, et une fixture qui l'effacerait retirerait
+    #  des données que le test suivant attend peut-être.
+    #
+    #  ⚠️ La liste des colonnes est DÉDUITE des métadonnées, jamais écrite ici :
+    #  une liste tenue à la main diverge au premier champ ajouté, et c'est
+    #  justement le champ ajouté qui manquerait (`standards/05` §9).
+    delier_references(session, Batiment)
+    for ligne in session.exec(select(Batiment)).all():
+        session.delete(ligne)
+    session.commit()
+
+    #  Les trois colonnes qui pointent vers `copropriete` sont NOT NULL : on ne
+    #  peut pas les délier. Les porteurs (bâtiment, contrat, devis) doivent donc
+    #  partir avant — les bâtiments viennent de le faire ; les deux autres ne sont
+    #  pas montés par cette fixture, et le jour où ils le seraient, la clé le dira
+    #  au lieu de laisser une ligne orpheline en silence.
+    for ligne in session.exec(select(Copropriete)).all():
+        session.delete(ligne)
     session.commit()
 
 

@@ -7,8 +7,8 @@ pose nulle part. **Aucune** des clés étrangères déclarées dans les modèles
 donc vérifiée par la base : l'intégrité repose entièrement sur le code applicatif.
 
 L'étape 2 de #546 — rendre les fixtures référentiellement valides — est un lot à
-part entière : avec les clés actives, la suite passe de **798 verts** à **83
-erreurs et 4 échecs**, toutes des fixtures qui construisent des lignes orphelines.
+part entière : avec les clés actives, la suite passe de **798 verts** à **39
+erreurs et 6 échecs**, toutes des fixtures qui construisent des lignes orphelines.
 Tant qu'elle n'est pas finie, activer les clés partout rendrait le job rouge en
 permanence, donc désarmé (#419).
 
@@ -33,18 +33,18 @@ import pytest  # noqa: E402
 from sqlalchemy import event, text  # noqa: E402
 from sqlmodel import Session, SQLModel, create_engine, select  # noqa: E402
 
-from app.models.core import Batiment, Copropriete  # noqa: E402
+from app.models.core import Batiment, Copropriete, Utilisateur  # noqa: E402
 from app.models.perimetre import Perimetre  # noqa: E402
-from tests.conftest import vider_patrimoine  # noqa: E402
+from tests.conftest import delier_references, vider_patrimoine  # noqa: E402
 
 
 @pytest.fixture()
 def moteur_strict():
     """Un moteur JETABLE avec `foreign_keys=ON`, isolé de celui de la suite.
 
-    ⚠️ On ne touche pas au moteur partagé : l'activer là rendrait rouges les 83
+    ⚠️ On ne touche pas au moteur partagé : l'activer là rendrait rouges les 39
     montages que l'étape 2 doit encore réparer, et ces tests-ci ne pourraient plus
-    rien affirmer — un test noyé dans 83 erreurs voisines ne se lit pas.
+    rien affirmer — un test noyé dans 39 erreurs voisines ne se lit pas.
     """
     moteur = create_engine("sqlite://", connect_args={"check_same_thread": False})
 
@@ -149,3 +149,66 @@ def test_un_noeud_qui_se_designe_lui_meme_ne_bloque_pas(moteur_strict):
 
         vider_patrimoine(session)
         assert session.exec(select(Perimetre)).all() == []
+
+
+def test_la_purge_delie_les_references_au_batiment(moteur_strict):
+    """Un bâtiment est référencé par ONZE colonnes, toutes nullables.
+
+    La purge les effaçait sans s'en soucier : **132 violations**, la famille la
+    plus nombreuse du relevé de #546. On délie, on ne supprime pas — un
+    utilisateur ne cesse pas d'exister parce que le patrimoine de test est
+    démonté, et une fixture qui l'effacerait retirerait des données que le test
+    suivant attend peut-être.
+    """
+    with Session(moteur_strict) as session:
+        copro = Copropriete(nom="Test", adresse="1 rue Test")
+        session.add(copro)
+        session.flush()
+        bat = Batiment(copropriete_id=copro.id, numero="1")
+        session.add(bat)
+        session.flush()
+        session.add(
+            Utilisateur(
+                email="resident@test.fr",
+                mot_de_passe_hash="x",
+                nom="Résident",
+                prenom="Test",
+                batiment_id=bat.id,
+            )
+        )
+        session.commit()
+
+        vider_patrimoine(session)
+
+        #  Le bâtiment est parti, l'utilisateur est resté — délié.
+        assert session.exec(select(Batiment)).all() == []
+        restant = session.exec(select(Utilisateur)).one()
+        assert restant.batiment_id is None
+
+
+def test_delier_ne_touche_PAS_les_colonnes_non_nullables(moteur_strict):
+    """🔴 Le garde-fou du garde-fou.
+
+    `delier_references` met à NULL ce qui est nullable. Une version qui
+    tenterait aussi les colonnes NOT NULL échouerait — ou pire, les
+    contournerait. `batiment.copropriete_id` est NOT NULL : délier les
+    références à la copropriété doit le laisser intact.
+
+    C'est ce qui distingue « délier » de « casser » : les porteurs NOT NULL
+    doivent partir AVANT, et le contrôle doit le rendre visible plutôt que de le
+    contourner en silence.
+    """
+    with Session(moteur_strict) as session:
+        copro = Copropriete(nom="Test", adresse="1 rue Test")
+        session.add(copro)
+        session.flush()
+        session.add(Batiment(copropriete_id=copro.id, numero="1"))
+        session.commit()
+
+        delier_references(session, Copropriete)
+
+        bat = session.exec(select(Batiment)).one()
+        assert bat.copropriete_id == copro.id, (
+            "une colonne NOT NULL a été déliée — la purge masquerait alors un "
+            "ordre de suppression faux au lieu de le révéler"
+        )
