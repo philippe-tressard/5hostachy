@@ -491,7 +491,7 @@ import { onMount } from 'svelte';
 					{/if}
 				</div>
 				{#if open[item.id]}
-						<div class="faq-a rich-content" on:click|stopPropagation>
+						<div class="faq-a rich-content" role="presentation" on:click|stopPropagation>
 							{@html safeHtml(item.reponse)}
 							{#if isBadgePrixQuestion(item.question)}
 								<div class="faq-cta-row">

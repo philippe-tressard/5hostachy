@@ -1091,7 +1091,7 @@
 						{/if}
 						{#if r.photo_url}
 							<a href={r.photo_url} target="_blank" rel="noopener">
-								<img src={r.photo_url} alt="Photo relevé" class="releve-photo-thumb" />
+								<img src={r.photo_url} alt="Relevé de compteur" class="releve-photo-thumb" />
 							</a>
 						{/if}
 					</div>

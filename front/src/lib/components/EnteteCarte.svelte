@@ -75,10 +75,10 @@
 	      SEULE cible quand la carte est dépliée. `stopPropagation` l'isole du
 	      conteneur, qui ne déplie que depuis l'état replié. -->
 	{#if basculable}
-		<button type="button" class="ec-titre ec-titre-btn"
+		<button type="button" class="ec-titre clamp-2 ec-titre-btn"
 			on:click|stopPropagation={() => dispatch('toggle')}>{titre}<slot name="titre-suffixe" /></button>
 	{:else}
-		<div class="ec-titre">{titre}<slot name="titre-suffixe" /></div>
+		<div class="ec-titre clamp-2">{titre}<slot name="titre-suffixe" /></div>
 	{/if}
 	<div class="ec-meta">
 		<div class="ec-tags"><slot name="tags" /></div>
@@ -98,14 +98,12 @@
 
 	/*  Deux lignes au maximum : un titre long est coupé, il ne déforme pas la
 	    carte et ne repousse pas ce qui suit. */
+	/*  La troncature à deux lignes vit dans `.clamp-2` (normes.css) : elle était
+	    écrite ici ET dans le kanban du tableau de bord (#561). */
 	.ec-titre {
 		font-size: .9rem;
 		font-weight: 500;
 		line-height: 1.35;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
 	}
 
 	/*  Tags à gauche, date + actions à droite — sur UNE seule ligne.
