@@ -638,6 +638,10 @@ jobs:
           # expose un `--selftest` depuis sa création… que RIEN ne lançait (#562).
           # Le module le plus partagé du lot était le seul non éprouvé.
           node scripts/lib-analyse-styles.mjs --selftest
+          # La passe `EvolForm` de `lint:etats` (#463) — et son relevé, qui ne
+          # peut que décroître. Ajouté ICI le jour même où le module naît :
+          # c'est l'oubli d'hier qui a laissé `lib-analyse-styles` non éprouvé.
+          node scripts/lib-etats-evolution.mjs --selftest
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.

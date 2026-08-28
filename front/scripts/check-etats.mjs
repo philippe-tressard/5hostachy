@@ -31,14 +31,27 @@
  *      que la déclaration annonce (`titreEcran`) — R3 : le même libellé d'un
  *      formulaire à l'autre.
  *
- * ## Ce qu'il ne regarde PAS encore, et pourquoi c'est dit ici
+ *   7. **une prop d'`EvolForm` qui ouvre une section hors déclaration** — l'état
+ *      `evolution`, ajouté le 28/08/2026 (#463). Voir `lib-etats-evolution.mjs`.
  *
- * `EvolForm.svelte` n'est pas un consommateur : il sert quatre écrans et le
- * brancher sur la déclaration les changerait tous les quatre avant qu'on les ait
- * regardés (R5). L'état `evolution` est donc déclaré et vérifié **en tant que
- * déclaration**, pas encore confronté à son rendu. Ce contrôle naît avec sa
- * première entité — un garde-fou qui n'a rien à garder est prématuré ; celui-ci
- * grandira avec #432 et #433.
+ * ## Ce que ce paragraphe disait, et qui était devenu FAUX
+ *
+ * Il annonçait : *« `EvolForm.svelte` n'est pas un consommateur (…) l'état
+ * `evolution` est donc déclaré et vérifié en tant que déclaration, pas encore
+ * confronté à son rendu »*. C'était exact quand il a été écrit — et c'est resté
+ * là après que six entités eurent déclaré l'état, sans que rien ne le confronte.
+ *
+ * 🔴 La portée du contrôle était plus étroite que la règle qu'il défend, et il
+ * rendait **vert**. Même faiblesse que #562, à l'autre bout du dépôt
+ * (`standards/05` §9 et §9 ter). Le relevé a trouvé **onze** props hors
+ * déclaration dans **six** écrans, dont un écart que personne ne voyait : l'espace
+ * CS ne propose aucune diffusion sur un commentaire de ticket là où la carte de
+ * ticket la propose au même utilisateur.
+ *
+ * ⚠️ R5 interdisant de brancher les cinq écrans d'un coup, le relevé est **figé
+ * en tolérances nommées** : il vit dans le code, ne peut que décroître, et le
+ * contrôle échoue dès qu'une entrée cesse de servir. Le message de succès **dit**
+ * ce qui reste — un contrôle qui tait sa dette se lit « tout est branché ».
  *
  * Le contrôle s'auto-contrôle : plus de types, plus d'entité, plus de
  * consommateur, une entité que personne ne consomme, un littéral qu'il n'arrive
@@ -47,6 +60,7 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { analyserEvolForm, tolerancesMortes, EVOLFORM_TOLEREES } from './lib-etats-evolution.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const DOSSIER_ENTITES = join(RACINE, 'lib', 'entites');
@@ -369,6 +383,35 @@ for (const chemin of tousSvelte) {
 	}
 }
 
+//  ── 8. `EvolForm` — le quatrième état, confronté à son rendu (#463) ─────────
+//
+//  Ce contrôle ne regardait QUE les six props de `ChampsCommuns`. `EvolForm`
+//  compose ses sections avec `SectionFormulaire` directement, et lui échappait
+//  ENTIÈREMENT : l'état `evolution` était déclaré par six entités et confronté à
+//  son rendu par aucune. La décision et son relevé vivent dans
+//  `lib-etats-evolution.mjs`, avec leur `--selftest`.
+//
+//  ⚠️ La passe est SÉPARÉE de la boucle ci-dessus, et c'est le point : celle-ci
+//  ne visite que les fichiers qui importent une déclaration. Trois des cinq
+//  écrans qui rendent `EvolForm` n'en importent aucune — les mettre dans la même
+//  boucle les aurait laissés hors de portée une seconde fois.
+const evolformServies = [];
+for (const chemin of tousSvelte) {
+	//  Chemin NORMALISÉ : sur ce poste Windows `relative()` rend des `\`, et une
+	//  clé de tolérance écrite avec des `/` ne correspondrait alors jamais — le
+	//  contrôle serait vert par accident, pas par mérite.
+	const court = relative(RACINE, chemin).replace(/\\/g, '/');
+	const { ecarts, servies } = analyserEvolForm(court, sansCommentaires(readFileSync(chemin, 'utf8')));
+	for (const e of ecarts) echec(e);
+	evolformServies.push(...servies);
+}
+for (const m of tolerancesMortes(evolformServies)) {
+	echec(
+		`tolérance \`EVOLFORM_TOLEREES\` devenue inutile : ${m}. La retirer — une dérogation ` +
+			"oubliée est une porte qu'on croit fermée, et cette liste ne peut que DÉCROÎTRE.",
+	);
+}
+
 if (consommateurs === 0) {
 	casZero(
 		"aucun écran ne consomme une déclaration d'entité. Une déclaration que personne ne lit " +
@@ -401,3 +444,11 @@ console.log(
 	`✓ Cadre d'interface : ${entites.length} entité(s) déclarée(s) sur les 9 sections, ` +
 		`${consommateurs} écran(s) gouverné(s) par la déclaration, toutes divergences motivées.`,
 );
+//  🔴 Le vert DIT ce qu'il ne couvre pas encore. Un contrôle qui tait sa dette
+//  se lit « tout est branché », et le chantier s'endort — `standards/04` §12.
+if (evolformServies.length) {
+	console.log(
+		`  ⏳ État \`evolution\` : ${new Set(evolformServies).size} prop(s) d'EvolForm encore hors ` +
+			`déclaration dans ${Object.keys(EVOLFORM_TOLEREES).length} écran(s), tolérées et suivies en #463.`,
+	);
+}
