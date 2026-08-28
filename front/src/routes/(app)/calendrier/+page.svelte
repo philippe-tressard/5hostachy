@@ -17,6 +17,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { fmtDatetimeShort, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
+	import { clePlanifiee, planifier, resumePlan, type SourceRecurrente } from '$lib/init-prestataires';
 	import { perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 
@@ -485,19 +486,25 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return `hsl(${hue},55%,32%)`;
 	}
 
-	// ── Init prestataires ────────────────────────────────────
+	// ── Init prestataires ────────────────────────────
+	//  La DÉCISION vit dans `$lib/init-prestataires` : deux boucles quasi
+	//  identiques la portaient ici, et elles avaient déjà divergé sur le
+	//  périmètre (#605). Ce qui reste ici est l'entrée/sortie — lire, demander,
+	//  écrire — et la résolution du périmètre, qui dépend des données chargées.
 	let initLoading = false;
 
-	function annualFreq(type: string, val: number): number {
-		if (type === 'fois_par_an') return val;
-		if (type === 'mois') return Math.floor(12 / val);
-		if (type === 'semaines') return Math.floor(52 / val);
-		return 0;
-	}
-
-	function spreadMonth(total: number, index: number): number {
-		const interval = Math.floor(12 / total);
-		return 1 + index * interval;
+	/** Les événements déjà posés pour l'exercice, sous forme de clés. */
+	function clesExistantes(exercice: number): Set<string> {
+		return new Set(
+			evenements
+				.filter(
+					(ev: any) =>
+						ev.type === 'maintenance_recurrente' &&
+						!ev.archivee &&
+						new Date(ev.debut).getFullYear() === exercice,
+				)
+				.map((ev: any) => clePlanifiee(ev.titre, new Date(ev.debut).getMonth())),
+		);
 	}
 
 	async function initPrestataires() {
@@ -506,84 +513,44 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			const [contrats, prests] = await Promise.all([prestApi.contrats(), prestApi.list()]);
 			const prestMap = new Map(prests.map((p: any) => [p.id, p.nom]));
 
-			const qualifying = contrats.filter((c: any) => {
-				if (!c.frequence_type || !c.frequence_valeur) return false;
-				const n = annualFreq(c.frequence_type, c.frequence_valeur);
-				return n > 0 && n <= 4;
-			});
-
-			const eventsWithFreq = evenements.filter((ev: any) =>
-				ev.type === 'maintenance' && ev.frequence_type && ev.frequence_valeur && ev.prestataire_id && !ev.archivee
-			);
-
-			const existingTitles = new Set(
-				evenements
-					.filter(ev => ev.type === 'maintenance_recurrente' && !ev.archivee && new Date(ev.debut).getFullYear() === kanbanExercice)
-					.map(ev => `${ev.titre}||${new Date(ev.debut).getMonth()}`)
-			);
-
-			const toCreate: any[] = [];
-			let skipped = 0;
-			for (const c of qualifying) {
-				const n = annualFreq(c.frequence_type, c.frequence_valeur);
-				const prestNom = prestMap.get(c.prestataire_id) ?? 'Prestataire';
-				const perimetre = perimetreDuBatiment(c.batiment_id);
-				const titre = `${prestNom} — ${c.libelle}`;
-				for (let i = 0; i < n; i++) {
-					const month = spreadMonth(n, i);
-					const key = `${titre}||${month - 1}`;
-					if (existingTitles.has(key)) { skipped++; continue; }
-					toCreate.push({
-						titre,
-						type: 'maintenance_recurrente',
-						perimetre,
-						batiment_id: null,
-						statut_kanban: 'fournisseur',
-						prestataire_id: c.prestataire_id || null,
-						debut: `${kanbanExercice}-${String(month).padStart(2, '0')}-15T09:00`,
-						description: c.notes || null,
-						affichable: false,
-					});
-				}
-			}
-
-			for (const ev of eventsWithFreq) {
-				const n = annualFreq(ev.frequence_type, ev.frequence_valeur);
-				if (n <= 0 || n > 4) continue;
-				for (let i = 0; i < n; i++) {
-					const month = spreadMonth(n, i);
-					const key = `${ev.titre}||${month - 1}`;
-					if (existingTitles.has(key)) { skipped++; continue; }
-					toCreate.push({
+			//  Les deux sources deviennent UNE liste normalisée : c'est ce qui
+			//  supprime la seconde boucle, et avec elle la divergence du périmètre.
+			const sources: SourceRecurrente[] = [
+				...contrats.map((c: any) => ({
+					titre: `${prestMap.get(c.prestataire_id) ?? 'Prestataire'} — ${c.libelle}`,
+					frequence_type: c.frequence_type ?? null,
+					frequence_valeur: c.frequence_valeur ?? null,
+					prestataire_id: c.prestataire_id ?? null,
+					perimetre: perimetreDuBatiment(c.batiment_id),
+					description: c.notes ?? null,
+				})),
+				...evenements
+					.filter((ev: any) => ev.type === 'maintenance' && ev.prestataire_id && !ev.archivee)
+					.map((ev: any) => ({
 						titre: ev.titre,
-						type: 'maintenance_recurrente',
-						perimetre: ev.perimetre ?? '',
-						batiment_id: null,
-						statut_kanban: 'fournisseur',
-						prestataire_id: ev.prestataire_id || null,
-						debut: `${kanbanExercice}-${String(month).padStart(2, '0')}-15T09:00`,
-						description: ev.description || null,
-						affichable: false,
-					});
-				}
-			}
+						frequence_type: ev.frequence_type ?? null,
+						frequence_valeur: ev.frequence_valeur ?? null,
+						prestataire_id: ev.prestataire_id ?? null,
+						//  ⚠️ Ce repli est le correctif de #605 : la branche
+						//  événement posait `ev.perimetre ?? ''`, donc une chaîne VIDE
+						//  quand la source n'en portait pas, là où l'autre calculait
+						//  celui du bâtiment. Les deux le calculent désormais.
+						perimetre: ev.perimetre || perimetreDuBatiment(ev.batiment_id),
+						description: ev.description ?? null,
+					})),
+			];
 
-			if (toCreate.length === 0) {
-				const total = qualifying.length + eventsWithFreq.length;
-				toast('info', total === 0
-					? 'Aucune source éligible (contrats ou événements avec fréquence ≤ 4/an)'
-					: `Tous les événements prestataires ${kanbanExercice} existent déjà (${skipped} trouvés)`);
+			const plan = planifier(sources, clesExistantes(kanbanExercice), kanbanExercice);
+			const message = resumePlan(plan, kanbanExercice);
+			if (plan.aCreer.length === 0) {
+				toast('info', message);
 				return;
 			}
+			if (!confirm(message)) return;
 
-			const msg = skipped > 0
-				? `Créer ${toCreate.length} événement(s) pour ${kanbanExercice} ?\n(${skipped} existant(s) ignorés)`
-				: `Créer ${toCreate.length} événement(s) prestataire pour ${kanbanExercice} ?`;
-			if (!confirm(msg)) return;
-
-			for (const ev of toCreate) await calApi.create(ev);
+			for (const ev of plan.aCreer) await calApi.create(ev);
 			evenements = await calApi.list();
-			toast('success', `${toCreate.length} événement(s) créé(s)`);
+			toast('success', `${plan.aCreer.length} événement(s) créé(s)`);
 		} catch {
 			toast('error', "Erreur lors de l'initialisation");
 		} finally {

@@ -656,6 +656,12 @@ jobs:
           # svelte-check, retirer les couleurs, apparier chaque message à son
           # emplacement. Deux de ces gestes ont déjà coûté un défaut ici.
           node scripts/lib-svelte-check.mjs --selftest
+          # Le pré-remplissage du kanban par les prestataires (#605) : deux
+          # boucles quasi identiques dans une page de 848 lignes, qu'aucun
+          # contrôle ne touchait. Les fonctions pures vivent désormais dans
+          # `$lib/init-prestataires.ts` — que Node lit directement, donc le
+          # module éprouvé est CELUI QUE LE SITE EMBARQUE, pas une copie.
+          npm run lint:init-prestataires
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.
