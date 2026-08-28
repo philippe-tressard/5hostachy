@@ -143,9 +143,6 @@
 	}
 
 	async function remettreEnAttente(id: number) {
-		//  ⚠️ Le bouton n'est rendu que si le modèle porte la fonction : la garde
-		//  n'est pas défensive, elle rend le code lisible sans le modèle sous les yeux.
-		if (!modele.api.remettreEnAttente) return;
 		try {
 			await modele.api.remettreEnAttente(id);
 			toast('success', 'Import remis en attente');
@@ -307,11 +304,10 @@
 										on:click={() => ouvrirEdition(imp)}>✏️</button
 									>
 								</div>
-							{:else if imp.statut === 'ignore' && modele.api.remettreEnAttente}
-								<!--  ⚠️ Ce bouton n'existe que si le modèle porte le geste. Côté Vigik,
-								      l'endpoint n'existe pas côté serveur : un import ignoré par erreur
-								      y est définitivement perdu. Divergence déclarée dans
-								      `$lib/imports-acces.ts`. -->
+							{:else if imp.statut === 'ignore'}
+								<!--  Le geste vaut pour LES DEUX types depuis #576 : la condition sur le
+								      modèle est tombée avec la divergence. Un mécanisme d'exception qui
+								      survit à son exception invite la suivante (`ux-patterns` §13). -->
 								<div class="action-row">
 									<button
 										class="btn-icon-success"

@@ -36,6 +36,8 @@ export const acces = {
 	patchImportVigik: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports-vigik/${id}`, data),
 	resoudreImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/resoudre`, {}),
 	ignorerImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/ignorer`, {}),
+	remettreEnAttenteImportVigik: (id: number) =>
+		api.post<any>(`/acces/admin/imports-vigik/${id}/remettre-en-attente`, {}),
 	// CS/Admin — import télécommandes
 	uploadImportTC: (file: File, remplacer = false) => uploadExcel('/acces/admin/imports/upload', file, remplacer),
 	listImportsTC: (statut?: string) => api.get<any[]>(`/acces/admin/imports${statut ? `?statut=${statut}` : ''}`),
