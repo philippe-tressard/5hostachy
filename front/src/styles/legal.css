@@ -1,0 +1,78 @@
+/* ─────────────────────────────────────────
+   Les pages LÉGALES — mentions légales, politique de confidentialité (#583)
+
+   🔴 Ces trente-huit règles étaient écrites DEUX FOIS, à l'identique. Le style
+   de `politique-de-confidentialite` était même intégralement contenu dans celui
+   de `mentions-legales` — 38 lignes sur 38.
+
+   Rang 1 : aucun code dupliqué n'est livrable, même correct. Et deux copies
+   divergent — c'est ce qui venait d'être constaté sur `.badge-purple`, qui
+   portait TROIS valeurs (#562).
+
+   ⚠️ DEUX PIÈGES, tous deux évités en montant les règles ici.
+
+   1. `h1` et `p` étaient des sélecteurs NUS. Svelte les scopait au fichier ;
+      dans une feuille globale ils s'appliqueraient à TOUT le site. Ils sont
+      donc qualifiés par `.legal-page`, l'enveloppe que les deux pages portent
+      déjà. C'est la seule transformation du lot — les valeurs sont inchangées.
+
+   2. Les huit `:global(.custom-content …)` DISPARAISSENT. Elles existaient
+      parce qu'un composant Svelte ne peut pas atteindre du HTML injecté
+      autrement ; dans une feuille globale, la règle EST globale. Elles étaient
+      par ailleurs des fuites : écrites en double, elles s'appliquaient au site
+      entier dès qu'on visitait l'une OU l'autre page, avec la valeur de celle
+      chargée en dernier.
+
+   ⚠️ `.custom-content` habille le contenu ADMINISTRÉ de ces deux pages, saisi
+   par l'éditeur riche. Le monter ici le rend disponible partout — vérifié : les
+   deux pages sont ses seuls emplois aujourd'hui.
+
+   ⚠️ Ces pages sont PUBLIQUES (hors session) et portent des mentions à valeur
+   juridique (`standards/14`). Ce fichier ne touche que la mise en forme.
+   ───────────────────────────────────────── */
+
+.legal-page {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1.5rem 1.5rem;
+  font-family: inherit;
+}
+.legal-page h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 1rem; }
+.legal-page p { font-size: .875rem; line-height: 1.7; color: var(--color-text); }
+
+.back-link {
+  display: inline-block;
+  font-size: .875rem;
+  color: var(--color-primary, #3b82f6);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+}
+.back-link:hover { text-decoration: underline; }
+
+/*  Le contenu administré, saisi dans l'éditeur riche : le balisage n'existe pas
+    à la compilation, aucune règle scopée ne peut l'atteindre. */
+.custom-content { font-size: .875rem; line-height: 1.7; color: var(--color-text); }
+.custom-content ul, .custom-content ol { padding-left: 1.4rem; margin: .25rem 0; }
+.custom-content li { font-size: .875rem; line-height: 1.7; color: var(--color-text); margin-bottom: .25rem; }
+.custom-content p { margin-bottom: .5rem; }
+.custom-content h2 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 .4rem; }
+.custom-content h3 { font-size: .9rem; font-weight: 600; margin: 1rem 0 .3rem; }
+.custom-content code { font-size: .78rem; background: var(--color-primary-light); padding: .1em .3em; border-radius: 3px; }
+.custom-content a { color: var(--color-primary); }
+
+/*  Le pied de page est le FRÈRE de `.legal-page`, pas son enfant : il reprend
+    donc sa largeur et ses marges plutôt que d'en hériter. */
+.legal-footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  letter-spacing: 0.02em;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.legal-footer a { color: var(--color-text-muted); }
+.legal-footer a:hover { color: var(--color-primary); }
