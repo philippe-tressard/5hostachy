@@ -381,10 +381,51 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     `CarteEvenement`, employé aussi par la page du calendrier. */
 .event-urgent { border-left: 3px solid var(--color-danger); }
 
-/*  Un tableau kanban : des colonnes qui défilent horizontalement. Défini par le
-    calendrier, employé aussi par les prestataires. */
+/* ── Le tableau kanban ────────────────────────────────────────────────────────
+
+   Deux écrans en rendent un — le calendrier (6 colonnes) et les prestations
+   (4 colonnes). Seul `.kanban` vivait ici ; les ONZE autres classes étaient
+   écrites DEUX FOIS, une copie dans chaque page.
+
+   🔴 Sept des dix avaient DIVERGÉ (#453, 28/08/2026), toutes par des micro-écarts
+   qu'aucune décision n'explique : 230 px contre 220, .78rem contre .75, `flex-end`
+   contre `center`, `.2rem` contre `.3rem`. Deux kanbans du même site ne se
+   rendaient donc pas pareil, et personne ne pouvait le voir — les deux écrans ne
+   se regardent jamais côte à côte.
+
+   ⚠️ `.devis-card-prest` et `.kanban-card-prest` étaient la MÊME règle sous deux
+   noms. Un second nom pour une notion existante est une divergence en attente :
+   il n'y a plus qu'un nom.
+
+   Arbitrage, quand les deux valeurs différaient — dans l'ordre : la contrainte la
+   plus forte gagne (le calendrier a plus de colonnes), le superset gagne quand
+   l'écart est un ajout, et la plus lisible gagne sur le titre, qui est l'élément
+   principal de la carte.
+
+   Ce qui reste LOCAL, à raison : la barre d'outils et l'exercice du calendrier,
+   ses cartes dépliables et son glisser-déposer ; les boutons d'étape et la méta
+   d'un devis. Ce sont des gestes propres à chaque écran, pas la grille commune. */
 .kanban { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: .5rem; }
-@media (max-width: 900px) { .kanban { flex-direction: column; } }
+.kanban-col { min-width: 220px; flex: 1; border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
+/*  Une colonne pleine largeur sous 900 px : empilées, elles se lisent ; côte à
+    côte, elles imposent un défilement horizontal sur un téléphone. */
+@media (max-width: 900px) { .kanban { flex-direction: column; } .kanban-col { min-width: 100%; } }
+.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }
+.kanban-count-total { font-size: .8rem; color: var(--color-text-muted); }
+.kanban-empty { padding: 1rem; font-size: .85rem; color: var(--color-text-muted); text-align: center; }
+/*  `opacity` dans la transition sert le glisser-déposer du calendrier ; elle est
+    sans effet là où rien ne se glisse — d'où le superset plutôt qu'une variante. */
+.kanban-card { margin: .3rem; padding: .4rem .55rem; display: flex; flex-direction: column; gap: .15rem; cursor: pointer; transition: box-shadow .15s, opacity .15s; }
+.kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.10); }
+/*  `min-height` réserve la place de la rangée de tags : sans elle, deux cartes
+    voisines dont l'une n'a aucun tag ne s'alignent pas. */
+.kanban-card-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .15rem; min-height: .1rem; }
+.kb-tag { font-size: .65rem; font-weight: 600; padding: .1rem .4rem; border-radius: 3px; color: #fff; line-height: 1.4; }
+.kanban-card-prest { font-size: .68rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-card-titre { font-size: .78rem; line-height: 1.3; }
+.kanban-card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: .25rem; gap: .3rem; }
+.kanban-card-actions { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
 
 /*  Le geste discret « signaler » au fil d’une carte. Défini par les sondages,
     employé aussi par la carte d’annonce. */
