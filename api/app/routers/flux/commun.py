@@ -53,12 +53,13 @@ def perimetres_de(obj) -> list[str]:
     comportement d'avant le découpage, où les quatre blocs de ticket écrivaient
     cette cascade à la main, à l'identique.
 
-    ⚠️ **Ne pas étendre aux événements ni aux devis.** Ces deux-là n'ont pas de
-    `perimetre_cible` et leur règle ignore volontairement `batiment_id` : les
-    faire passer ici changerait le périmètre affiché dès qu'un bâtiment est
-    renseigné. Deux règles qui se ressemblent ne sont pas la même règle
+    ⚠️ **Ne pas étendre aux événements.** Ceux-là n'ont pas de `perimetre_cible`
+    et leur règle ignore volontairement `batiment_id` : les faire passer ici
+    changerait le périmètre affiché dès qu'un bâtiment est renseigné. Deux règles
+    qui se ressemblent ne sont pas la même règle
     (`standards/02-factorisation.md` §4) — d'où l'appel direct à
-    `parse_perimetres` conservé dans `evenements.py` et `prestataires.py`.
+    `parse_perimetres` conservé dans `evenements.py`. Le devis relevait de la même
+    exception jusqu'à son retrait ; `prestataires.py` ne lit plus aucun périmètre.
     """
     cible = getattr(obj, "perimetre_cible", None)
     if cible:

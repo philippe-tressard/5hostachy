@@ -32,13 +32,14 @@ import { estTicketClos } from '$lib/tickets';
 // n'était que le cas extrême. Les textes sont passés en teintes foncées (700/800)
 // sur des fonds clairs (50) : les douze sont désormais entre 4,75 et 10,2.
 //
-// DIFFÉRENCIATION. Les douze teintes sont réparties sur la roue, écart minimal
-// 17°, sauf `devis` ⇄ `prestataire` (12°) — volontaire : ce sont les deux
-// rubriques de la page /prestataires, leur parenté se lit.
+// DIFFÉRENCIATION. Les onze teintes sont réparties sur la roue, écart minimal
+// 17°. L'émeraude 163° a été libérée avec la rubrique « devis » ; elle était à
+// 12° de la sarcelle de `prestataire`, un rapprochement voulu tant que les deux
+// rubriques partageaient la page /prestataires.
 export const TYPE_LABELS: Record<string, string> = {
 	ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
 	publication: 'Actualité', evenement: 'Événement',
-	devis: 'Devis', sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
+	sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
 	annonce: 'Petite annonce', idee: 'Boîte à idées',
 	prestataire: 'Prestataire', document: 'Document', diagnostic: 'Diagnostic',
 	faq: 'Question fréquente', annuaire: 'Annuaire',
@@ -52,8 +53,7 @@ export const TYPE_COLORS: Record<string, string> = {
 	evenement: '#A16207',              //  35° ambre
 	diagnostic: '#4D7C0F',             //  86° olive
 	annuaire: '#15803D',               // 142° vert
-	devis: '#047857',                  // 163° émeraude ┐ page /prestataires
-	prestataire: '#0F766E',            // 175° sarcelle ┘
+	prestataire: '#0F766E',            // 175° sarcelle
 	idee: '#0E7490',                   // 193° cyan
 	publication: 'var(--color-primary)', // 214° bleu Seine, couleur de la charte
 	document: '#4338CA',               // 245° indigo
@@ -70,7 +70,6 @@ export const TYPE_BG: Record<string, string> = {
 	evenement: '#FFFBEB',
 	diagnostic: '#F7FEE7',
 	annuaire: '#F0FDF4',
-	devis: '#ECFDF5',
 	prestataire: '#F0FDFA',
 	idee: '#ECFEFF',
 	publication: '#EEF2F7',
@@ -126,7 +125,6 @@ export function typeVoirLabel(item: FluxItem): string {
 	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) return 'Voir le ticket →';
 	if (item.type === 'publication') return "Voir l'actualité →";
 	if (item.type === 'evenement') return "Voir l'événement →";
-	if (item.type === 'devis') return 'Voir le devis →';
 	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';
 	if (item.type === 'annonce') return "Voir l'annonce →";
 	if (item.type === 'idee') return "Voir l'idée →";
@@ -222,7 +220,6 @@ export function estNonResolu(item: FluxItem): boolean {
  * | évolution d'événement | l'évolution | la création de l'événement |
  * | sondage clos | la clôture | la création |
  * | petite annonce | la mise à jour | le dépôt |
- * | prestation | la date de prestation | la saisie du devis |
  * | actualité | la publication | la rédaction |
  *
  * Le serveur faisait donc le bon calcul, six fois, et l'écran le jetait.

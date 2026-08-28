@@ -24,7 +24,7 @@ treizième section à intercaler au milieu de 780 lignes.
 | `tickets` | ouvertures, changements d'état, réponses du CS, commentaires |
 | `publications` | actualités, et leur règle d'archivage partagée avec /actualités |
 | `evenements` | calendrier ; porte `TYPE_EMOJI`, réutilisé par l'agenda |
-| `prestataires` | devis et nouvelles fiches — page réservée au CS/admin |
+| `prestataires` | nouvelles fiches — page réservée au CS/admin |
 | `communaute` | sondages, petites annonces, boîte à idées |
 | `ressources` | questions fréquentes, documents partagés, diagnostics |
 | `annuaire` | nouveaux membres du conseil syndical et du syndic |
@@ -45,11 +45,11 @@ treizième section à intercaler au milieu de 780 lignes.
   07/08/2026 : la clé de pièce jointe ajoutée d'un côté, oubliée de l'autre ;
 - `TYPE_EMOJI`, défini une fois et partagé entre le fil et l'agenda.
 
-**Laissé en double, volontairement** : les événements et les devis continuent
-d'appeler `parse_perimetres(x.perimetre)` en direct. Ils n'ont pas de
-`perimetre_cible` et leur règle ignore `batiment_id` — les faire passer par
-`perimetres_de` changerait leur périmètre affiché dès qu'un bâtiment est
-renseigné. Deux règles qui se ressemblent ne sont pas la même règle
+**Laissé en double, volontairement** : les événements continuent d'appeler
+`parse_perimetres(x.perimetre)` en direct. Ils n'ont pas de `perimetre_cible` et
+leur règle ignore `batiment_id` — les faire passer par `perimetres_de` changerait
+leur périmètre affiché dès qu'un bâtiment est renseigné. Le devis partageait cette
+exception ; il n'y a plus qu'un cas, et une exception unique reste une exception. Deux règles qui se ressemblent ne sont pas la même règle
 (`standards/02-factorisation.md` §4). Que `Evenement` ignore `batiment_id` est
 peut-être un défaut en soi ; ce n'est pas à un découpage de le trancher.
 

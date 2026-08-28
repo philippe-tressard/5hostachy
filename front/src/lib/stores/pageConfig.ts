@@ -20,6 +20,24 @@ function decodeEscapedHtml(input: string): string {
 		.replace(/&amp;/gi, '&');
 }
 
+/**  Ôte la clé d'un onglet d'une configuration ENREGISTRÉE.
+ *
+ *   Un onglet retiré du code laisse sa clé dans `page_config_<id>` chez tous ceux
+ *   qui ont ouvert la page avant : sans ce retrait, « Descriptif pages »
+ *   continuerait d'en proposer le libellé et le descriptif — une case à remplir
+ *   qui ne commande plus rien.
+ *
+ *   ⚠️ Écrite une fois pour les TROIS appels ci-dessous (`consommation` renommé,
+ *   `tickets` retiré le 28/08/2026, `devis` retiré avec les prestations
+ *   ponctuelles). Le cast verbeux était recopié à chaque fois : au troisième, il
+ *   valait mieux le nommer. Un quatrième onglet retiré n'ajoutera qu'une ligne.
+ */
+function oterOnglet(config: PageConfig, cle: string): void {
+	if (config.onglets?.[cle]) {
+		delete (config.onglets as Record<string, { label: string; descriptif: string }>)[cle];
+	}
+}
+
 function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfig): PageConfig {
 	const next: PageConfig = {
 		...parsed,
@@ -43,22 +61,18 @@ function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfi
 	if (id === 'prestataires') {
 		if (next.onglets?.consommation && !next.onglets?.consommations) {
 			next.onglets.consommations = next.onglets.consommation;
-			delete (next.onglets as Record<string, { label: string; descriptif: string }>).consommation;
+			oterOnglet(next, 'consommation');
 		}
-		if (!next.onglets?.devis && defaults.onglets?.devis) {
-			next.onglets = { ...(next.onglets ?? {}), devis: defaults.onglets.devis };
-		}
+		//  L'onglet « Prestations ponctuelles » a disparu avec l'objet qu'il
+		//  rendait : le rattrapage inverse — qui le RÉINJECTAIT depuis les défauts —
+		//  aurait ressuscité sa clé à chaque ouverture de la page.
+		oterOnglet(next, 'devis');
 	}
 
 	if (id === 'espace-cs') {
-		//  🔴 L'onglet « Tickets résidence » a été retiré le 28/08/2026, redondant
-		//  avec la page /tickets. Sa clé SURVIT dans la configuration enregistrée —
-		//  le rattrapage inverse l'y avait mise chez tous ceux qui ont ouvert la
-		//  page depuis. Sans ce `delete`, « Descriptif pages » proposerait encore
-		//  d'en changer le libellé : une case à remplir qui ne commande rien.
-		if (next.onglets?.tickets) {
-			delete (next.onglets as Record<string, { label: string; descriptif: string }>).tickets;
-		}
+		//  L'onglet « Tickets résidence » a été retiré le 28/08/2026, redondant avec
+		//  la page /tickets — même raison que les deux retraits ci-dessus.
+		oterOnglet(next, 'tickets');
 		if (next.onglets?.validations?.label === '✅ Validations') {
 			next.onglets.validations.label = defaults.onglets?.validations?.label ?? next.onglets.validations.label;
 		}

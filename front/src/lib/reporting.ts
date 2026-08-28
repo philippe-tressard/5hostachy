@@ -76,8 +76,14 @@ export interface DiagType {
 
 /**  Les cinq vues du reporting — la liste sert aussi à valider un `?vue=` d'URL,
  *   et c'est ce qui fait retomber sans bruit un lien `?vue=devis` d'avant le
- *   28/08/2026 : « Devis & interventions » a été retirée, redondante avec
- *   l'onglet « Prestations » de la page Prestataires. */
+ *   28/08/2026, date du retrait de « Devis & interventions ».
+ *
+ *   ⚠️ Ce commentaire a d'abord justifié le retrait par la redondance avec
+ *   l'onglet « Prestations » de la page Prestataires — écrit le matin même où un
+ *   autre lot supprimait cet onglet. La raison est plus simple, et elle ne
+ *   dépend d'aucun autre écran : la prestation ponctuelle n'existe plus comme
+ *   objet. Une justification qui s'appuie sur un écran voisin devient fausse
+ *   quand celui-ci bouge, sans que rien ne le signale. */
 export const REPORT_VUES = ['kanban', 'tickets', 'prestataires', 'renouvellements', 'relance'] as const;
 export type ReportVue = (typeof REPORT_VUES)[number];
 

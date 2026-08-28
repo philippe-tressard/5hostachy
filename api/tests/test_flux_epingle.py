@@ -94,9 +94,6 @@ _DATATION_SUR_MISE_A_JOUR_ADMISE = {
     "communaute.py":
         "PetiteAnnonce ne porte ni `epingle` ni `urgente` : son `mis_a_jour_le` "
         "n'est écrit que par une modification réelle (prix, passage à « Vendu »)",
-    "prestataires.py":
-        "DevisPrestataire ne porte aucun marqueur, et `mis_a_jour_le` n'y sert "
-        "que de repli quand `date_prestation` est absente",
 }
 
 
