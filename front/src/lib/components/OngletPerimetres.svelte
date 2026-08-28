@@ -343,7 +343,6 @@
 	.ref-tete:hover { background: var(--color-bg); }
 	.ref-titre { font-size: .9rem; }
 	.ref-code { font-size: .72rem; color: var(--color-text-muted); margin-left: auto; }
-	.chevron { transition: transform .15s; color: var(--color-text-muted); }
 	.chevron.open { transform: rotate(90deg); }
 	.ref-corps { padding: .2rem 1rem .8rem 1.6rem; border-top: 1px dashed var(--color-border); }
 	.ref-desc { font-size: .84rem; color: var(--color-text-muted); line-height: 1.55; margin: .5rem 0; }
@@ -356,5 +355,4 @@
 	.field-check { display: block; font-size: .85rem; margin-bottom: .8rem; }
 	.herite { border-left: 2px solid var(--color-border); padding-left: .5rem; margin-top: .4rem; }
 	.field-check.danger { border-left: 3px solid var(--color-warning, #d97706); padding-left: .6rem; }
-	.modal-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: 1rem; }
 </style>

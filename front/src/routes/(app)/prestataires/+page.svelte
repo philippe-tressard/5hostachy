@@ -1217,7 +1217,6 @@
 	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
 	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
-	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); margin-bottom: .5rem; }

@@ -228,10 +228,8 @@
 		padding: 2rem;
 	}
 
-	.auth-header {
-		text-align: center;
-		margin-bottom: 1.5rem;
-	}
+	/*  `.auth-header` : copie au caractère près de `styles/composants.css`,
+	    donc inerte. Retirée le 28/08/2026. */
 
 	.auth-logo { font-size: 2rem; display: block; margin-bottom: .4rem; }
 	.auth-header h1 { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); }
