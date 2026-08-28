@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
+	import Modale from '$lib/components/Modale.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
@@ -812,8 +813,9 @@
 
 <!-- ── Modal : ajouter un plan ────────────────────────────────────────── -->
 {#if showPlanForm}
-	<div class="modal-overlay" on:click|self={() => (showPlanForm = false)} role="dialog" aria-modal="true" aria-label="Ajouter un plan" tabindex="-1">
-		<div class="modal" style="width:min(480px,95vw)">
+	<!--  Fond, rôle, `Échap` et verrou de défilement : cf. `Modale.svelte` (#561). -->
+	<Modale titre="Ajouter un plan" styleBoite="width:min(480px,95vw)"
+		on:fermer={() => (showPlanForm = false)}>
 			<div class="modal-header">
 				<h3>Ajouter un plan</h3>
 				<button class="modal-close" on:click={() => (showPlanForm = false)}>✕</button>
@@ -859,14 +861,13 @@
 					{savingPlan ? 'Ajout…' : 'Ajouter'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter un règlement ───────────────────────────────────── -->
 {#if showReglementForm}
-	<div class="modal-overlay" on:click|self={() => (showReglementForm = false)} role="dialog" aria-modal="true" aria-label="Ajouter un règlement" tabindex="-1">
-		<div class="modal" style="width:min(440px,95vw)">
+	<Modale titre="Ajouter un règlement" styleBoite="width:min(440px,95vw)"
+		on:fermer={() => (showReglementForm = false)}>
 			<div class="modal-header">
 				<h3>Ajouter un règlement</h3>
 				<button class="modal-close" on:click={() => (showReglementForm = false)}>✕</button>
@@ -891,14 +892,13 @@
 					{savingReglement ? 'Ajout…' : 'Ajouter'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter un CR d'AG ─────────────────────────────────────── -->
 {#if showCrAgForm}
-	<div class="modal-overlay" on:click|self={() => (showCrAgForm = false)} role="dialog" aria-modal="true" aria-label="Ajouter un CR d'AG" tabindex="-1">
-		<div class="modal" style="width:min(520px,95vw)">
+	<Modale titre="Ajouter un CR d'AG" styleBoite="width:min(520px,95vw)"
+		on:fermer={() => (showCrAgForm = false)}>
 			<div class="modal-header">
 				<h3>Ajouter un CR d'AG</h3>
 				<button class="modal-close" on:click={() => (showCrAgForm = false)}>✕</button>
@@ -957,14 +957,13 @@
 					{savingCrAg ? 'Ajout…' : 'Ajouter'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : modifier un document ────────────────────────────────────────────────── -->
 {#if editingDocId !== null}
-	<div class="modal-overlay" on:click|self={() => (editingDocId = null)} role="dialog" aria-modal="true" aria-label="Modifier le document" tabindex="-1">
-		<div class="modal" style="width:min(440px,95vw)">
+	<Modale titre="Modifier le document" styleBoite="width:min(440px,95vw)"
+		on:fermer={() => (editingDocId = null)}>
 			<div class="modal-header">
 				<h3>Modifier le document</h3>
 				<button class="modal-close" on:click={() => (editingDocId = null)}>✕</button>
@@ -995,14 +994,13 @@
 					{savingDoc ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter un rapport diagnostique ───────────────────────────────── -->
 {#if showDiagForm !== null}
-	<div class="modal-overlay" on:click|self={() => (showDiagForm = null)} role="dialog" aria-modal="true" aria-label="Ajouter un rapport" tabindex="-1">
-		<div class="modal" style="width:min(460px,95vw)">
+	<Modale titre="Ajouter un rapport" styleBoite="width:min(460px,95vw)"
+		on:fermer={() => (showDiagForm = null)}>
 			<div class="modal-header">
 				<h3>Ajouter un rapport</h3>
 				<button class="modal-close" on:click={() => (showDiagForm = null)}>✕</button>
@@ -1035,14 +1033,13 @@
 					{savingDiag ? 'Ajout…' : 'Ajouter'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : modifier un rapport diagnostique ──────────────────────────────── -->
 {#if editingRapportId !== null}
-	<div class="modal-overlay" on:click|self={() => (editingRapportId = null)} role="dialog" aria-modal="true" aria-label="Modifier le rapport" tabindex="-1">
-		<div class="modal" style="width:min(440px,95vw)">
+	<Modale titre="Modifier le rapport" styleBoite="width:min(440px,95vw)"
+		on:fermer={() => (editingRapportId = null)}>
 			<div class="modal-header">
 				<h3>Modifier le rapport</h3>
 				<button class="modal-close" on:click={() => (editingRapportId = null)}>✕</button>
@@ -1071,14 +1068,13 @@
 					{savingRapport ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter / modifier une règle ──────────────────────────────────── -->
 {#if showRegleForm}
-	<div class="modal-overlay" on:click|self={() => (showRegleForm = false)} role="dialog" aria-modal="true" aria-label="Règle" tabindex="-1">
-		<div class="modal" style="width:min(480px,95vw)">
+	<Modale titre="Règle" styleBoite="width:min(480px,95vw)"
+		on:fermer={() => (showRegleForm = false)}>
 			<div class="modal-header">
 				<h3>{editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}</h3>
 				<button class="modal-close" on:click={() => (showRegleForm = false)}>✕</button>
@@ -1103,8 +1099,7 @@
 					{savingRegle ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>
@@ -1219,8 +1214,9 @@
 	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
 	/* ── Modals ─────────────────────────────────────────────────── */
-	.modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
-	.modal { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
+	/*  `.modal-overlay` et `.modal` retirées (#561) : copies LOCALES qui avaient
+	    divergé de `styles/composants.css` — ni ombre ni animation ici, plus une
+	    bordure que les autres modales n'ont pas. Révélées en extrayant `Modale`. */
 	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
 	.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); padding: 0; line-height: 1; }
