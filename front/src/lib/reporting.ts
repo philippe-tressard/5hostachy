@@ -74,8 +74,11 @@ export interface DiagType {
 	rapports: DiagRapport[];
 }
 
-/** Les six vues du reporting — la liste sert aussi à valider un `?vue=` d'URL. */
-export const REPORT_VUES = ['kanban', 'tickets', 'devis', 'prestataires', 'renouvellements', 'relance'] as const;
+/**  Les cinq vues du reporting — la liste sert aussi à valider un `?vue=` d'URL,
+ *   et c'est ce qui fait retomber sans bruit un lien `?vue=devis` d'avant le
+ *   28/08/2026 : « Devis & interventions » a été retirée, redondante avec
+ *   l'onglet « Prestations » de la page Prestataires. */
+export const REPORT_VUES = ['kanban', 'tickets', 'prestataires', 'renouvellements', 'relance'] as const;
 export type ReportVue = (typeof REPORT_VUES)[number];
 
 export const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)', annule: 'Annulé' };

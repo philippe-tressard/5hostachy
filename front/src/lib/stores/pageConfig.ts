@@ -51,8 +51,13 @@ function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfi
 	}
 
 	if (id === 'espace-cs') {
-		if (!next.onglets?.tickets && defaults.onglets?.tickets) {
-			next.onglets = { ...(next.onglets ?? {}), tickets: defaults.onglets.tickets };
+		//  🔴 L'onglet « Tickets résidence » a été retiré le 28/08/2026, redondant
+		//  avec la page /tickets. Sa clé SURVIT dans la configuration enregistrée —
+		//  le rattrapage inverse l'y avait mise chez tous ceux qui ont ouvert la
+		//  page depuis. Sans ce `delete`, « Descriptif pages » proposerait encore
+		//  d'en changer le libellé : une case à remplir qui ne commande rien.
+		if (next.onglets?.tickets) {
+			delete (next.onglets as Record<string, { label: string; descriptif: string }>).tickets;
 		}
 		if (next.onglets?.validations?.label === '✅ Validations') {
 			next.onglets.validations.label = defaults.onglets?.validations?.label ?? next.onglets.validations.label;

@@ -62,21 +62,13 @@ const RELAIS = [
 				'activé) — seule la fiche du ticket le fait.',
 		},
 	},
-	{
-		nom: 'ticket — Espace CS',
-		source: 'src/lib/components/EvolForm.svelte',
-		emission: "dispatch('submit'",
-		relais: 'src/routes/(app)/espace-cs/+page.svelte',
-		appel: 'ticketsApi.addEvolution(',
-		absents: {
-			partager_whatsapp: 'cet onglet ouvre le formulaire avec `showNotifs={false}`.',
-			envoyer_syndic: 'idem — la diffusion ne s’y propose pas.',
-			envoyer_cs: 'idem.',
-			email_externe: 'cet onglet ouvre le formulaire avec `showEmail={false}`.',
-			interne: '« message interne » n’y est pas proposé.',
-			perimetre_cible: '`avecPerimetre` n’y est pas activé : la section n’apparaît pas.',
-		},
-	},
+	//  ✅ « ticket — Espace CS » a quitté ce relevé le 28/08/2026 : le relais
+	//  n'existe plus. L'onglet « Tickets résidence » — redondant avec `/tickets`,
+	//  et second rendu à la main d'une entité déclarée — a été retiré, et avec lui
+	//  le formulaire d'évolution qu'il ouvrait. Ses SIX champs déclarés absents
+	//  disaient à eux seuls l'écart : un commentaire posé depuis l'Espace CS ne
+	//  pouvait ni se diffuser, ni préciser un périmètre, là où le même geste sur
+	//  `/tickets` le peut. C'est cet écran-là qui avait tort.
 ];
 
 /** Les clés d'un objet littéral, à partir de la position d'une parenthèse ouvrante. */

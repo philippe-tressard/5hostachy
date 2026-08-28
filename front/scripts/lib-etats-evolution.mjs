@@ -85,12 +85,15 @@ export const EVOLFORM_TOLEREES = {
 	//  fait constater les tickets (R5).
 	'lib/components/HistoriqueEvenement.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
 	'routes/(app)/actualites/+page.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
-	//  ⚠️ `showNotifs={false}` en dur : l'espace CS ne propose AUCUNE diffusion
-	//  sur un commentaire de ticket, là où la carte de ticket la propose au même
-	//  utilisateur. Deux écrans montrent le même objet et ne s'accordent pas —
-	//  c'est le genre d'écart que le cadre existe pour faire remonter, et il
-	//  n'était visible nulle part avant ce contrôle.
-	'routes/(app)/espace-cs/+page.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
+	//  ✅ `routes/(app)/espace-cs/+page.svelte` a QUITTÉ ce relevé le 28/08/2026,
+	//  et pas parce qu'on l'a branché : l'écran a disparu. Sa ligne disait
+	//  *« `showNotifs={false}` en dur : l'espace CS ne propose AUCUNE diffusion sur
+	//  un commentaire de ticket, là où la carte de ticket la propose au même
+	//  utilisateur. Deux écrans montrent le même objet et ne s'accordent pas. »*
+	//  Le cadre demande alors lequel des deux a tort — la réponse était : le
+	//  second écran n'avait pas lieu d'être. L'onglet « Tickets résidence » de
+	//  l'Espace CS, redondant avec `/tickets`, a été retiré, et la divergence avec
+	//  lui. Une divergence se solde aussi en supprimant l'un des deux rendus.
 };
 
 /**

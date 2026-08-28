@@ -162,7 +162,18 @@
 			{#if !estPerimetreParDefaut(ticket.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(ticket.perimetre_cible)}</span>{/if}
 			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
 			<span class="tk-numero">#{ticket.numero}</span>
+			<!--  🔴 LE BÂTIMENT DU DEMANDEUR, à côté de son nom (28/08/2026).
+			      Il n'était lisible que dans l'onglet « Tickets résidence » de
+			      l'Espace CS, qui rendait le ticket à la main. Cet onglet est parti
+			      — redondant avec cet écran-ci — et son information devait donc
+			      arriver ici, sinon la simplification aurait retiré une capacité au
+			      passage : le manuel dit depuis toujours que le CS identifie le
+			      contexte au bâtiment du demandeur avant d'agir.
+			      📍 = lieu physique, jamais 🔹 (réservé au périmètre logique, tag
+			      ci-dessus). Rien à cacher à un résident : il ne voit que SES
+			      tickets, donc son propre bâtiment. -->
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
+			{#if ticket.auteur_batiment_nom}<span class="tk-auteur">&#x1F4CD; {ticket.auteur_batiment_nom}</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<!--  UN point d'entrée (#426) : le formulaire porte les deux gestes.
