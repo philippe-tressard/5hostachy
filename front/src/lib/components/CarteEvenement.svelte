@@ -87,7 +87,12 @@
 				{#if ev.auteur_nom}<span class="event-meta">{ev.auteur_nom}</span>{/if}
 			</svelte:fragment>
 			<svelte:fragment slot="actions">
-				{#if peutAgir && ev._source !== 'devis_ponctuel'}
+				<!--  🔴 La garde `_source !== 'devis_ponctuel'` a disparu avec les
+				      prestations ponctuelles (#602). Elle privait d'actions les cartes
+				      fabriquées à la volée depuis un devis : identifiant négatif, aucune
+				      ligne derrière, donc aucun geste possible. Toutes les cartes
+				      correspondent désormais à un événement réel. -->
+				{#if peutAgir}
 					<span class="event-actions" on:click|stopPropagation on:keydown|stopPropagation role="presentation">
 						<!--  L'ordre du site : 🔄 commenter · ✏️ modifier · 🗑️/📦. Le 🔄
 						      manquait ici — le suivi n'avait aucun point d'entrée. -->

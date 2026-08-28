@@ -9,6 +9,11 @@
 //  ⚠️ Aucune fonction d'ici ne touche au réseau ni au DOM. Les chargements
 //  vivent dans `OngletReporting.svelte`, la mise en forme dans les vues.
 
+//  ⚠️ `KANBAN_COLS` est importé, pas recopié : les colonnes du suivi ont UNE
+//  définition, dans `$lib/kanban`. Aucun cycle — `kanban.ts` ne connaît pas ce
+//  module.
+import { KANBAN_COLS } from '$lib/kanban';
+
 export interface ReportEvenement {
 	id: number;
 	titre: string;
@@ -29,21 +34,6 @@ export interface ReportPrestataire {
 	nom: string;
 	specialite?: string | null;
 	type_prestataire?: string | null;
-}
-export interface ReportDevis {
-	id: number;
-	prestataire_id: number;
-	batiment_id?: number | null;
-	perimetre: string;
-	titre: string;
-	date_prestation?: string | null;
-	montant_estime?: number | null;
-	statut: string;
-	frequence_type?: string | null;
-	frequence_valeur?: number | null;
-	notes?: string | null;
-	actif: boolean;
-	affichable: boolean;
 }
 export interface ReportContrat {
 	id: number;
@@ -87,11 +77,37 @@ export interface DiagType {
 export const REPORT_VUES = ['kanban', 'tickets', 'prestataires', 'renouvellements', 'relance'] as const;
 export type ReportVue = (typeof REPORT_VUES)[number];
 
-export const KANBAN_LABELS: Record<string, string> = { ag: 'AG', cs: 'CS (en cours)', syndic: 'Syndic (en cours)', annule: 'Annulé' };
-export const KANBAN_COLORS: Record<string, string> = { ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange', annule: 'badge-gray' };
+/**  Les colonnes du kanban du REPORTING, dérivées de celles du calendrier.
+ *
+ *   🔴 Elles étaient recopiées, et la copie avait perdu DEUX colonnes :
+ *   `fournisseur` et `termine`. Le suivi du CS ne montrait donc aucun dossier
+ *   passé chez le prestataire — l'étape la plus longue de la vie d'un dossier.
+ *   Personne ne pouvait le voir : une colonne absente ne laisse pas de trou à
+ *   l'écran, elle ne s'affiche simplement pas.
+ *
+ *   ⚠️ `termine` reste EXCLU, et c'est un choix, pas un oubli : cette vue compte
+ *   des dossiers EN COURS (son premier indicateur s'appelle « Dossiers en
+ *   cours »). L'exclusion est écrite ici, une fois, plutôt que rejouée par une
+ *   liste littérale dans chaque composant qui les parcourt.
+ *
+ *   `KANBAN_COLS` (`$lib/kanban`) reste l'unique arbitre des identifiants et des
+ *   libellés : ajouter une colonne là-bas la fait apparaître ici. */
+export const REPORT_KANBAN_COLS = KANBAN_COLS.filter((c) => c.id !== 'termine');
+
+export const KANBAN_LABELS: Record<string, string> = Object.fromEntries(
+	KANBAN_COLS.map((c) => [c.id, c.label]),
+);
+
+/**  La classe de badge par colonne — une notion propre au reporting : les autres
+ *   écrans peignent la colonne avec la couleur littérale de `KANBAN_COLS`, celui-ci
+ *   passe par les badges de la charte. La table reste donc explicite, mais elle
+ *   doit couvrir toutes les colonnes rendues ; le repli `badge-gray` masquerait un
+ *   nouvel identifiant sans rien dire. */
+export const KANBAN_COLORS: Record<string, string> = {
+	ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange',
+	fournisseur: 'badge-yellow', termine: 'badge-green', annule: 'badge-gray',
+};
 export const TYPE_LABELS: Record<string, string> = { travaux: 'Travaux', coupure: 'Coupure', ag: 'AG', maintenance: 'Maintenance', maintenance_recurrente: 'Maintenance récurrente', autre: 'Autre' };
-export const REPORT_DEVIS_LABELS: Record<string, string> = { en_attente: 'En attente', accepte: 'Accepté', realise: 'Réalisé', refuse: 'Refusé' };
-export const REPORT_DEVIS_BADGES: Record<string, string> = { en_attente: 'badge-blue', accepte: 'badge-orange', realise: 'badge-green', refuse: 'badge-gray' };
 
 /* ── Renouvellements : calculs ────────────────────────────────────────────
    L'année de référence est une FONCTION, pas une constante. Elle était figée au

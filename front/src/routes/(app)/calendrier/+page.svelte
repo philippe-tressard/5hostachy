@@ -16,8 +16,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisStatutToKanban } from '$lib/kanban';
-	import { perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre, perimetreParDefaut } from '$lib/utils';
+	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
+	import { perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
@@ -36,9 +36,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	let archivedPubs: Publication[] = [];
 	let archivedPubsLoaded = false;
-	let archivedDevis: any[] = [];
-	let archivedDevisLoaded = false;
-	let calDevis: any[] = [];
 
 	const _now = new Date();
 	let expandedArchiveYears = new Set<number>();
@@ -106,10 +103,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return types.find(x => x.val === t)?.label ?? t;
 	}
 
-	function prestataireNom(prestataireId: number | null | undefined) {
-		return prestataires.find(p => p.id === prestataireId)?.nom ?? '';
-	}
-
 
 	onMount(async () => {
 		try {
@@ -138,11 +131,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	let _prestLoaded = false;
 	$: if ($currentUser && !_prestLoaded) {
 		_prestLoaded = true;
-		// prestApi.list() restreint CS/admin ; prestApi.devis() ouvert à tous (backend filtre sur affichable pour non-CS)
-		const prestListPromise = ($isCS || $isAdmin) ? prestApi.list() : Promise.resolve([]);
-		Promise.all([prestListPromise, prestApi.devis()])
-			.then(([p, d]) => { prestataires = p; calDevis = d; })
-			.catch(() => {});
+		//  `prestApi.list()` est restreint au CS et aux admins : un résident qui
+		//  reçoit `[]` voit les cartes sans le nom du prestataire, et non une erreur.
+		if ($isCS || $isAdmin) prestApi.list().then((p) => { prestataires = p; }).catch(() => {});
 	}
 
 	// AG visibles uniquement par propriétaires, CS et admin
@@ -170,55 +161,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		});
 		return filtreType ? evs.filter(e => e.type === filtreType) : evs;
 	})();
-	$: prestationsPonctuellesListe = calDevis
-		.filter((d: any) => !['realise', 'refuse'].includes(d.statut) && !d.frequence_type && !d.frequence_valeur)
-		.map((d: any) => {
-			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
-			const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-			const perimetre = d.perimetre ?? perimetreDuBatiment(d.batiment_id);
-			return {
-				id: -(100000 + Number(d.id)),
-				_source: 'devis_ponctuel',
-				type: 'maintenance',
-				titre: d.titre,
-				debut,
-				fin: null,
-				statut_kanban: devisStatutToKanban(d.statut),
-				archivee: false,
-				perimetre,
-				prestataire_id: d.prestataire_id ?? null,
-				prestataire_nom: prestataireNom(d.prestataire_id),
-				description: d.notes ?? null,
-				cree_le: d.cree_le ?? debut,
-				mis_a_jour_le: d.mis_a_jour_le ?? null,
-				auteur_nom: d.auteur_nom ?? null,
-			};
-		});
-	$: prestationsPonctuellesKanban = calDevis
-		.filter((d: any) => !d.frequence_type && !d.frequence_valeur)
-		.map((d: any) => {
-			const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
-			const debut = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-			const perimetre = d.perimetre ?? perimetreDuBatiment(d.batiment_id);
-			return {
-				id: -(100000 + Number(d.id)),
-				_source: 'devis_ponctuel',
-				type: 'maintenance',
-				titre: d.titre,
-				debut,
-				fin: null,
-				statut_kanban: devisStatutToKanban(d.statut),
-				archivee: false,
-				perimetre,
-				prestataire_id: d.prestataire_id ?? null,
-				prestataire_nom: prestataireNom(d.prestataire_id),
-				description: d.notes ?? null,
-				cree_le: d.cree_le ?? debut,
-				mis_a_jour_le: d.mis_a_jour_le ?? null,
-				auteur_nom: d.auteur_nom ?? null,
-			};
-		});
-
 	$: allArchiveEvs = (() => {
 		let evs = canSeeAG ? evenements : evenements.filter(e => e.type !== 'ag');
 		evs = evs.filter(e => evenementArchive(e, archivageDelaiMs) || e.archivee);
@@ -236,7 +178,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		const items: any[] = [
 			...allArchiveEvs.map(ev => ({ ...ev, _kind: 'ev', _date: ev.fin ?? ev.debut })),
 			...archivedPubs.map(pub => ({ ...pub, _kind: 'pub', _date: pub.mis_a_jour_le ?? pub.cree_le })),
-			...archivedDevis.map(d => ({ ...d, _kind: 'devis', _date: d.date_prestation ?? d.cree_le ?? new Date().toISOString() })),
 		];
 		items.sort((a, b) => new Date(b._date).getTime() - new Date(a._date).getTime());
 		return items;
@@ -384,16 +325,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		} catch { toast('error', 'Erreur'); }
 	}
 
-	async function loadArchivedDevis() {
-		if (archivedDevisLoaded) return;
-		archivedDevisLoaded = true;
-		try {
-			const all = await prestApi.devis();
-			archivedDevis = all.filter((d: any) => d.statut === 'realise');
-		} catch { /* silencieux */ }
-	}
-
-	$: if (onglet === 'archives') { loadArchivedPubs(); loadArchivedDevis(); }
+	$: if (onglet === 'archives') loadArchivedPubs();
 
 	function formatDate(d: string) {
 		return fmtDatetimeShort(d);
@@ -419,10 +351,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return result;
 	}
 
-	$: listItems = (() => {
-		const ponctuelles = prestationsPonctuellesListe.filter((p: any) => !filtreType || p.type === filtreType);
-		return [...filtered, ...ponctuelles].sort((a, b) => new Date(a.debut).getTime() - new Date(b.debut).getTime());
-	})();
+	$: listItems = [...filtered].sort((a, b) => new Date(a.debut).getTime() - new Date(b.debut).getTime());
 	$: groups = groupByYear(listItems);
 	// Maintenances récurrentes trackées dans le workflow Kanban (statut_kanban actif, non archivées, non périmées)
 	$: recurringMaintenances = (() => {
@@ -478,8 +407,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		const baseEvents = evenements.filter(ev =>
 			ev.statut_kanban && kanbanEvVisible(ev, _kanbanCtx)
 		);
-		const merged = [...baseEvents, ...prestationsPonctuellesKanban];
-		return merged.filter(ev => {
+		return baseEvents.filter(ev => {
 			if (!kanbanEvMatchesYear(ev, kanbanExercice)) return false;
 			if (kanbanBatiment) {
 				const p = ev.perimetre ?? '';
@@ -504,7 +432,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	$: kanbanExerciceOptions = (() => {
 		const years = new Set<number>();
 		evenements.forEach(ev => { if (ev.statut_kanban) years.add(new Date(ev.debut).getFullYear()); });
-		prestationsPonctuellesKanban.forEach((p: any) => years.add(new Date(p.debut).getFullYear()));
 		years.add(defaultExercice);
 		return [...years].sort((a, b) => b - a);
 	})();
@@ -576,18 +503,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	async function initPrestataires() {
 		initLoading = true;
 		try {
-			const [contrats, prests, tousDevis] = await Promise.all([prestApi.contrats(), prestApi.list(), prestApi.devis()]);
+			const [contrats, prests] = await Promise.all([prestApi.contrats(), prestApi.list()]);
 			const prestMap = new Map(prests.map((p: any) => [p.id, p.nom]));
 
 			const qualifying = contrats.filter((c: any) => {
 				if (!c.frequence_type || !c.frequence_valeur) return false;
 				const n = annualFreq(c.frequence_type, c.frequence_valeur);
-				return n > 0 && n <= 4;
-			});
-
-			const qualifyingDevis = tousDevis.filter((d: any) => {
-				if (!d.frequence_type || !d.frequence_valeur) return false;
-				const n = annualFreq(d.frequence_type, d.frequence_valeur);
 				return n > 0 && n <= 4;
 			});
 
@@ -647,34 +568,10 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 				}
 			}
 
-			// Source 3 : Prestations (devis) avec fréquence
-			for (const d of qualifyingDevis) {
-				const n = annualFreq(d.frequence_type, d.frequence_valeur);
-				if (n <= 0 || n > 4) continue;
-				const prestNom = prestMap.get(d.prestataire_id) ?? 'Prestataire';
-				const titre = d.titre ?? `${prestNom} — Prestation`;
-				for (let i = 0; i < n; i++) {
-					const month = spreadMonth(n, i);
-					const key = `${titre}||${month - 1}`;
-					if (existingTitles.has(key)) { skipped++; continue; }
-					toCreate.push({
-						titre,
-						type: 'maintenance_recurrente',
-						perimetre: perimetreParDefaut() ?? '',
-						batiment_id: null,
-						statut_kanban: 'fournisseur',
-						prestataire_id: d.prestataire_id || null,
-						debut: `${kanbanExercice}-${String(month).padStart(2, '0')}-15T09:00`,
-						description: d.notes || null,
-						affichable: false,
-					});
-				}
-			}
-
 			if (toCreate.length === 0) {
-				const total = qualifying.length + eventsWithFreq.length + qualifyingDevis.length;
+				const total = qualifying.length + eventsWithFreq.length;
 				toast('info', total === 0
-					? 'Aucune source éligible (contrats/prestations/événements avec fréquence ≤ 4/an)'
+					? 'Aucune source éligible (contrats ou événements avec fréquence ≤ 4/an)'
 					: `Tous les événements prestataires ${kanbanExercice} existent déjà (${skipped} trouvés)`);
 				return;
 			}
@@ -746,7 +643,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if onglet === 'archives'}
 	<OngletArchivesCalendrier {allArchiveItems} {archiveByYear}
-		bind:expandedArchiveYears {prestataireNom} {typeLabel} {formatDate}
+		bind:expandedArchiveYears {typeLabel} {formatDate}
 		{deleteArchivedPub} {deleteEv} />
 
 {:else if listItems.length === 0 && !recurringMaintenances.length && !kanbanEvs.length}
@@ -839,7 +736,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 						<div class="kanban-card card"
 							class:event-urgent={ev.type === 'coupure'}
 							class:kanban-card-expanded={expandedKanbanId === ev.id}
-							draggable={$isCS && ev._source !== 'devis_ponctuel' && expandedKanbanId !== ev.id ? 'true' : 'false'}
+							draggable={$isCS && expandedKanbanId !== ev.id ? 'true' : 'false'}
 							on:dragstart={(e) => onDragStart(e, ev.id)}
 							on:click={() => expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id}
 							on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id; } }}
@@ -856,7 +753,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 							<strong class="kanban-card-titre">{ev.titre}</strong>
 							<div class="kanban-card-footer">
 								<span class="kanban-card-type">{typeLabel(ev.type)}</span>
-								{#if $isCS && ev._source !== 'devis_ponctuel'}
+								{#if $isCS}
 									<div class="kanban-card-actions" on:click|stopPropagation on:keydown|stopPropagation>
 										<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
 									{#if $isAdmin}

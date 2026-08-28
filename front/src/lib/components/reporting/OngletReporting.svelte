@@ -32,7 +32,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDatetime } from '$lib/date';
 	import { apiMessage } from '$lib/utils';
-	import { REPORT_VUES, type ReportVue, type ReportEvenement, type ReportPrestataire, type ReportDevis, type ReportContrat, type DiagType } from '$lib/reporting';
+	import { REPORT_VUES, type ReportVue, type ReportEvenement, type ReportPrestataire, type ReportContrat, type DiagType } from '$lib/reporting';
 	import VueKanban from './VueKanban.svelte';
 	import VueTickets from './VueTickets.svelte';
 	import VuePrestataires from './VuePrestataires.svelte';
@@ -49,7 +49,6 @@
 	let reportingLoading = false;
 	let reportingLoaded = false;
 	let reportPrintTitle = '';
-	let reportDevisList: ReportDevis[] = [];
 	let reportPrestataires: ReportPrestataire[] = [];
 	let reportEvenements: ReportEvenement[] = [];
 	let reportContrats: ReportContrat[] = [];
@@ -139,16 +138,12 @@
 		if (reportingLoaded && !force) return;
 		reportingLoading = true;
 		try {
-			const [ticketsList, devis, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
-				ticketsApi.list(), prestApi.devis(), prestApi.list(), calApi.list(),
+			const [ticketsList, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
+				ticketsApi.list(), prestApi.list(), calApi.list(),
 				prestApi.contrats(), diagnosticsApi.listTypes(),
 				prestApi.notations()
 			]);
 			tickets = ticketsList;
-			//  `reportDevisList` alimente encore « Prestataires » (devis actifs et
-			//  prestations réalisées par intervenant) : c'est la vue « Devis &
-			//  interventions » qui est partie le 28/08/2026, pas la donnée.
-			reportDevisList = devis as ReportDevis[];
 			reportPrestataires = prestataires as ReportPrestataire[];
 			reportEvenements = evenements as ReportEvenement[];
 			reportContrats = contrats as ReportContrat[];
@@ -229,7 +224,7 @@
 	{:else if reportView === 'tickets'}
 		<VueTickets {tickets} />
 	{:else if reportView === 'prestataires'}
-		<VuePrestataires {reportPrestataires} {reportDevisList} />
+		<VuePrestataires {reportPrestataires} />
 	{:else if reportView === 'renouvellements'}
 		<VueRenouvellements {reportContrats} {reportPrestataires} {reportDiagTypes} {reportNoteMoyParPrest} />
 	{:else if reportView === 'relance'}
