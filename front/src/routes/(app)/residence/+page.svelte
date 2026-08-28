@@ -1201,17 +1201,13 @@
 	/*  `.perimetre-pills` retirée (#561) : copie identique au caractère près de
 	    celle de `styles/composants.css`, donc inerte — révélée en passant la
 	    classe en PROP. Un composant partagé montre ce qu'une page gardait. */
-	.pill {
-		padding: .3rem .85rem;
-		border-radius: 999px;
-		border: 1px solid var(--color-border);
-		background: var(--color-surface);
-		font-size: .8rem;
-		cursor: pointer;
-		transition: background .12s, color .12s, border-color .12s;
-	}
-	.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-	.pill-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+	/*  🔴 `.pill`, `.pill:hover` et `.pill-active` retirées le 28/08/2026 (#491).
+	    Cet écran portait SA variante — bordure 1px au lieu de 1.5px, fond
+	    `surface` au lieu de `bg`, taille .8rem au lieu de .85rem — et elle
+	    GAGNAIT, par la classe de portée que Svelte ajoute au sélecteur. Deux
+	    styles de pastille coexistaient donc sciemment. `ecrans.css` portait
+	    l'avertissement en toutes lettres : un commentaire n'est pas un
+	    garde-fou. */
 
 	/* ── Modals ─────────────────────────────────────────────────── */
 	/*  `.modal-overlay` et `.modal` retirées (#561) : copies LOCALES qui avaient

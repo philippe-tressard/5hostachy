@@ -174,7 +174,12 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 .kpi-card.kpi-alert .kpi-value { color: var(--color-warning); }
 .kpi-label { font-size: .8rem; color: var(--color-text-muted); margin-top: .2rem; }
 .text-muted-sm { font-size: .8rem; color: var(--color-text-muted); }
-.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+/*  🔴 `.perimetre-pills` retirée d'ICI le 28/08/2026 : elle était définie DEUX
+    fois dans la charte elle-même, à l'identique — ici et dans `composants.css`,
+    où elle reste. Une charte qui se duplique ne peut rien reprocher aux écrans,
+    et c'est exactement ce qu'elle faisait : `PerimetrePicker` gardait sa propre
+    copie, la troisième, parce qu'aucune des deux ne s'imposait comme LA
+    définition. C'est une notion de composant, elle vit avec les composants. */
 .pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
 .pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
