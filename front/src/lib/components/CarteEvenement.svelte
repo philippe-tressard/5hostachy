@@ -172,7 +172,6 @@
 		border-color: var(--color-primary, #2563eb);
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #2563eb) 18%, transparent);
 	}
-	.event-urgent { border-left: 3px solid var(--color-danger); }
 	.event-meta { font-size: .8rem; color: var(--color-text-muted); }
 	.event-actions { display: flex; gap: .3rem; }
 	.ev-expanded-body {

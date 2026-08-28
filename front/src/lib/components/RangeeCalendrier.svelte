@@ -125,7 +125,6 @@
 	    page n'atteint pas le balisage d'un composant enfant (v2.67.11). */
 	/*  `flex-wrap` : le corps déplié portait `grid-column`, sans effet en flex. */
 	.event-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; transition: background .12s; }
-	.event-urgent { border-left: 3px solid var(--color-danger); }
 	.event-type { min-width: 7rem; font-size: .8rem; font-weight: 600; padding-top: .1rem; }
 	.event-body { flex: 1; }
 	.event-titre { font-size: .95rem; }

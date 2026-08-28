@@ -971,17 +971,8 @@
 {/if}
 
 <style>
-	/* Tabs */
-	.tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid var(--color-border); }
-	.tab-btn {
-		padding: .45rem .9rem; border: none; background: none; cursor: pointer;
-		font-size: .875rem; color: var(--color-text-muted);
-		border-bottom: 2px solid transparent; margin-bottom: -2px;
-		font-weight: 500; display: flex; align-items: center; gap: .4rem;
-		transition: color .15s, border-color .15s; white-space: nowrap;
-	}
-	.tab-btn:hover { color: var(--color-text); }
-	.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+	/*  `.tabs`, `.tab-btn` et ses deux états : copies au caractère près de
+	    `styles/ecrans.css`, donc inertes. Retirées le 28/08/2026. */
 	.badge-count {
 		background: var(--color-danger); color: #fff; border-radius: 999px;
 		font-size: .7rem; padding: .1rem .45rem; font-weight: 700;

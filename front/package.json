@@ -1,6 +1,6 @@
 {
   "name": "hostachy-front",
-  "version": "3.6.2",
+  "version": "3.7.0",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -41,7 +41,8 @@
     "lint:audit": "node scripts/check-audit.mjs",
     "lint:etats": "node scripts/check-etats.mjs",
     "lint:manuels": "node scripts/check-manuels.mjs",
-    "lint:pages": "node scripts/check-pages.mjs"
+    "lint:pages": "node scripts/check-pages.mjs",
+    "lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

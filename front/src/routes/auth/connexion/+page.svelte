@@ -118,28 +118,9 @@
 </div>
 
 <style>
-	.auth-page {
-		min-height: 100vh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-bg);
-		padding: 1rem;
-	}
-
-	.auth-card {
-		width: 100%;
-		max-width: 400px;
-		padding: 2rem;
-	}
-
-	.auth-header {
-		text-align: center;
-		margin-bottom: 1.5rem;
-	}
-
-	.auth-logo { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
-
+	/*  `.auth-page`, `.auth-card`, `.auth-header` et `.auth-logo` : copies au
+	    caractère près de `styles/composants.css`, donc inertes. Retirées le
+	    28/08/2026. Ce qui suit habille le CONTENU de l'en-tête, pas la carte. */
 	.auth-header h1 {
 		font-size: 1.5rem;
 		font-weight: 700;

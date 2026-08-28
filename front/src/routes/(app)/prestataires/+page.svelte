@@ -85,7 +85,8 @@
 	// `ongletDeLUrl` rend `null` et la page s'ouvre sur son défaut. C'est
 	// exactement le service que rend une liste explicite ; une validation par
 	// `startsWith` ou par `in` aurait laissé passer un onglet qui n'existe plus.
-	const ONGLETS = ['contrats_tab', 'prestataires', 'consommations'] as const;
+	//  L'ordre EST celui de la barre ; le DÉFAUT reste « Contrats », 2ᵉ onglet.
+	const ONGLETS = ['prestataires', 'contrats_tab', 'consommations'] as const;
 	let onglet: (typeof ONGLETS)[number] = 'contrats_tab';
 	$: trackTabView(onglet);
 
@@ -543,11 +544,11 @@
 
 <!-- ── Onglets ─────────────────────────────────────────────────── -->
 <div class="tabs" role="tablist">
-	<button role="tab" class:active={onglet === 'contrats_tab'} on:click={() => onglet = 'contrats_tab'}>
-		<Icon name="file-text" size={15} /> Contrats
-	</button>
 	<button role="tab" class:active={onglet === 'prestataires'} on:click={() => onglet = 'prestataires'}>
 		<Icon name="hard-hat" size={15} /> Prestataires
+	</button>
+	<button role="tab" class:active={onglet === 'contrats_tab'} on:click={() => onglet = 'contrats_tab'}>
+		<Icon name="file-text" size={15} /> Contrats
 	</button>
 	<button role="tab" class:active={onglet === 'consommations'} on:click={() => onglet = 'consommations'}>
 		💧 Consommations
@@ -1217,7 +1218,6 @@
 	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
 	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
-	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); margin-bottom: .5rem; }
