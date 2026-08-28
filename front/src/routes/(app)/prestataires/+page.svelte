@@ -1783,7 +1783,6 @@
 	/* ── Visites ── */
 
 	/* ── Contrats summary ── */
-	.contrats-summary { margin-bottom: 1rem; }
 	.contrats-summary-count { font-size: .85rem; color: var(--color-text-muted); }
 
 	/* Contrat expansible */
@@ -1794,13 +1793,11 @@
 	.devis-expand:hover, .devis-expand.expanded { border-left-color: #7c3aed; }
 	.devis-row { display: flex; gap: .75rem; align-items: center; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.devis-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-	.devis-body-inner { flex: 1; min-width: 0; }
-	.devis-titre { font-size: .9rem; }
 	.devis-infos { text-align: right; font-size: .82rem; min-width: 90px; flex-shrink: 0; }
 	.devis-meta-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
 	.devis-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
 	.contrat-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
-	.contrat-section { margin-bottom: 1rem; }
+	.contrats-summary, .contrat-section { margin-bottom: 1rem; }
 	.contrat-section:last-child { margin-bottom: 0; }
 	.contrat-section-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); margin-bottom: .4rem; padding-bottom: .25rem; border-bottom: 1px solid var(--color-border); }
 	.contrat-section-title.clickable { cursor: pointer; user-select: none; }
@@ -1808,8 +1805,8 @@
 
 	.contrat-row { display: flex; gap: .75rem; align-items: flex-start; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.contrat-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-	.contrat-body-inner { flex: 1; min-width: 0; }
-	.contrat-titre { font-size: .9rem; }
+	.devis-body-inner, .contrat-body-inner { flex: 1; min-width: 0; }
+	.devis-titre, .contrat-titre { font-size: .9rem; }
 	.contrat-meta { font-size: .78rem; color: var(--color-text-muted); margin-left: .5rem; }
 	.contrat-infos { text-align: right; font-size: .82rem; min-width: 100px; flex-shrink: 0; }
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }
