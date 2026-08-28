@@ -88,8 +88,16 @@
 			{/each}
 
 			{#if canRespond}
+				<!--  Le champ vit dans un `.field` : c'est la définition unique du champ,
+				      fond beige compris. Il recomposait sa peau à la main — bordure, rayon,
+				      remplissage, taille — donc un fond BLANC au milieu d'un site beige.
+				      Signalé à l'écran le 28/08/2026, sur la page d'un sondage.
+				      ⚠️ `lint:styles` ne l'a pas vu : il refuse un sélecteur d'élément NU,
+				      et `.reponse-form textarea` est qualifié. Angle mort suivi en #593. -->
 				<div class="reponse-form">
-					<textarea bind:value={content} rows="2" placeholder={placeholder}></textarea>
+					<div class="field champ-en-ligne">
+						<textarea bind:value={content} rows="2" placeholder={placeholder}></textarea>
+					</div>
 					<button class="btn btn-primary" disabled={submitting} on:click={submit}>
 						{submitting ? 'Envoi…' : 'Répondre'}
 					</button>
@@ -178,13 +186,9 @@
 		align-items: flex-start;
 		margin-top: 0.3rem;
 	}
-	.reponse-form textarea {
-		flex: 1;
-		padding: 0.45rem 0.6rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		font-size: 0.85rem;
-		font-family: inherit;
-		resize: vertical;
-	}
+	/*  La PEAU du champ vient de `.field textarea` (composants.css). Ne restent
+	    ici que la disposition — largeur dans la rangée — et le redimensionnement,
+	    qui sont propres à ce contexte et ne recomposent rien. */
+	.reponse-form .field { flex: 1; }
+	.reponse-form textarea { resize: vertical; }
 </style>
