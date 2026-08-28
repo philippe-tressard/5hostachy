@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import Modale from '$lib/components/Modale.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
@@ -653,8 +654,8 @@
 </script>
 
 {#if cvModal}
-<div class="modal-overlay" on:click|self={() => (cvModal = null)} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card" style="max-width:460px">
+<Modale titre="Valider le compte" classeBoite="modal-box card" styleBoite="max-width:460px"
+	on:fermer={() => (cvModal = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Valider le compte de {cvModal.prenom} {cvModal.nom}</h2>
     <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;border:1.5px solid var(--color-border);border-radius:var(--radius);padding:.75rem;margin-bottom:.75rem">
       <input type="checkbox" bind:checked={cvNewArrivant} style="margin-top:.2rem;flex-shrink:0" />
@@ -680,8 +681,7 @@
         {cvSubmitting ? 'En cours…' : '✓ Valider le compte'}
       </button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 <svelte:head><title>{_pc.titre} · {_siteNom}</title></svelte:head>

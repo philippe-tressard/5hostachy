@@ -31,6 +31,7 @@
   `{{ ["civilite" }}`. Recopier le geste aurait recopié le défaut.
 -->
 <script lang="ts">
+  import Modale from '$lib/components/Modale.svelte';
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
   import { toast } from '$lib/components/Toast.svelte';
@@ -191,10 +192,8 @@
 
 <!-- Modal édition modèle e-mail -->
 {#if emailEdit}
-<div class="modal-overlay" on:click|self={() => (emailEdit = null)}
-  on:keydown={(e) => e.key === 'Escape' && (emailEdit = null)}
-  role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card" style="max-width:680px">
+<Modale titre="Modifier le modèle d'e-mail" classeBoite="modal-box card" styleBoite="max-width:680px"
+  on:fermer={() => (emailEdit = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">
       Modifier le modèle — <code style="font-size:.85rem">{emailEdit.code}</code>
     </h2>
@@ -246,8 +245,7 @@
         {emailSaving ? 'Enregistrement…' : 'Enregistrer'}
       </button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 <!-- Historique des emails envoyés -->
@@ -283,7 +281,6 @@
 <style>
 	/*  Même cause que la télémétrie : ces règles étaient restées dans la page à
 	    l'extraction. Le style part AVEC le balisage — `lint:classes-nues`. */
-.modal-box { max-width: 420px; width: 90%; padding: 1.5rem; }
 .apercu-email {
 border: 1px solid var(--color-border); border-radius: var(--radius);
 padding: .75rem; background: #fff; max-height: 340px; overflow: auto;

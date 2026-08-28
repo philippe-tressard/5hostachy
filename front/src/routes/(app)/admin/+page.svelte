@@ -7,6 +7,7 @@ import { toast } from '$lib/components/Toast.svelte';
 import Icon from '$lib/components/Icon.svelte';
 import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import Modale from '$lib/components/Modale.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
 import LegalEditor from '$lib/components/LegalEditor.svelte';
 import RichEditor from '$lib/components/RichEditor.svelte';
@@ -939,8 +940,8 @@ $: _siteNom = $siteNomStore;
 
 <!-- Modal de confirmation rôle -->
 {#if roleEnCours}
-<div class="modal-overlay" on:click|self={() => (roleEnCours = null)} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card">
+<Modale titre="Confirmer" classeBoite="modal-box card modal-sm"
+	on:fermer={() => (roleEnCours = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Confirmer</h2>
     <p style="font-size:.875rem;margin-bottom:1rem">
       {roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
@@ -956,14 +957,13 @@ $: _siteNom = $siteNomStore;
       <button class="btn btn-outline" on:click={() => (roleEnCours = null)}>Annuler</button>
       <button class="btn btn-primary" on:click={confirmerRole}>Confirmer</button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 <!-- Modal édition utilisateur -->
 {#if editUser}
-<div class="modal-overlay" on:click|self={() => (editUser = null)} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card" style="max-width:520px">
+<Modale titre="Modifier l'utilisateur" classeBoite="modal-box card" styleBoite="max-width:520px"
+	on:fermer={() => (editUser = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Modifier l'utilisateur</h2>
     <div class="form-grid">
       <label class="field">Prénom<input type="text" bind:value={editForm.prenom} /></label>
@@ -995,13 +995,12 @@ $: _siteNom = $siteNomStore;
       <button class="btn btn-outline" on:click={() => (editUser = null)}>Annuler</button>
       <button class="btn btn-primary" on:click={saveEdit}>Enregistrer</button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 {#if accueilModal}
-<div class="modal-overlay" on:click|self={() => (accueilModal = null)} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card" style="max-width:480px">
+<Modale titre="Accueil nouvel arrivant" classeBoite="modal-box card" styleBoite="max-width:480px"
+	on:fermer={() => (accueilModal = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">&#x1F3E0; Accueil nouvel arrivant</h2>
     <p style="font-size:.85rem;margin-bottom:.1rem"><strong>{accueilModal.user.prenom} {accueilModal.user.nom}</strong></p>
     <p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.75rem">
@@ -1022,13 +1021,12 @@ $: _siteNom = $siteNomStore;
         {accueilSubmitting ? 'En cours…' : 'Lancer les actions d\'accueil'}
       </button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 {#if deleteConfirm}
-<div class="modal-overlay" on:click|self={() => (deleteConfirm = null)} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card">
+<Modale titre="Supprimer l'utilisateur" classeBoite="modal-box card modal-sm"
+	on:fermer={() => (deleteConfirm = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Supprimer l'utilisateur ?</h2>
     <p style="font-size:.875rem;margin-bottom:1rem">
       Vous êtes sur le point de supprimer définitivement le compte de
@@ -1039,8 +1037,7 @@ $: _siteNom = $siteNomStore;
       <button class="btn btn-outline" on:click={() => (deleteConfirm = null)}>Annuler</button>
       <button class="btn btn-danger" on:click={confirmerDelete}>Supprimer définitivement</button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 {:else if onglet === 'demandes_profil'}
@@ -1262,8 +1259,8 @@ $: _siteNom = $siteNomStore;
 
 {/if}
 {#if cvModal}
-<div class="modal-overlay" on:click|self={() => (cvModal = null)} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-box card" style="max-width:480px">
+<Modale titre="Valider le compte" classeBoite="modal-box card" styleBoite="max-width:480px"
+	on:fermer={() => (cvModal = null)}>
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Valider le compte de {cvModal.user.prenom} {cvModal.user.nom}</h2>
     <p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:1rem">
       {cvModal.user.statut ? (statutLabels[cvModal.user.statut] ?? cvModal.user.statut) : ''}
@@ -1298,8 +1295,7 @@ $: _siteNom = $siteNomStore;
         {cvSubmitting ? 'En cours…' : 'Valider le compte'}
       </button>
     </div>
-  </div>
-</div>
+</Modale>
 {/if}
 
 <style>
@@ -1349,11 +1345,6 @@ padding: .3rem .7rem; color: var(--color-text);
 .btn-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .badge-orange { background: #fff7ed; color: #c2410c; }
 .badge-purple { background: #f5f3ff; color: #7c3aed; }
-.modal-overlay {
-position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45);
-display: flex; align-items: center; justify-content: center; z-index: 200;
-}
-.modal-box { max-width: 420px; width: 90%; padding: 1.5rem; }
 .form-grid { grid-template-columns: 1fr 1fr; }
 .ref-list { display: flex; flex-direction: column; gap: .4rem; }
 .page-row { width: 100%; display: flex; align-items: center; gap: .4rem; padding: .4rem .5rem .4rem .75rem; }

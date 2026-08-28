@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
@@ -897,9 +898,10 @@
 									<label class="field">Titre *<input bind:value={devisForm.titre} required /></label>
 									<label class="field">Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
 									<label class="field">Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
-									<div class="field" role="group" aria-labelledby="devis-perimetre-titre">
+									<!--  `titre=""` (§9 septies) et `champ-large` (§9 bis) — les deux manquaient. -->
+									<div class="field champ-large" role="group" aria-labelledby="devis-perimetre-titre">
 										<span class="libelle-groupe" id="devis-perimetre-titre">Périmètre *</span>
-										<PerimetrePicker mode="single"
+										<PerimetrePicker mode="single" titre=""
 											value={devisForm.perimetre ? [devisForm.perimetre] : []}
 											on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
 									</div>
@@ -1708,8 +1710,8 @@
 
 <!-- Modal notation prestataire (global, hors onglets) -->
 {#if showNotationForm}
-	<div class="modal-overlay" on:click={() => { showNotationForm = null; }}>
-		<div class="modal" style="max-width:420px" on:click|stopPropagation>
+	<Modale titre="Noter le prestataire" styleBoite="max-width:420px"
+		on:fermer={() => { showNotationForm = null; }}>
 			<div class="modal-header">
 				<h2>⭐ Noter le prestataire</h2>
 				<button class="modal-close" on:click={() => { showNotationForm = null; }}>×</button>
@@ -1738,8 +1740,7 @@
 				<button class="btn btn-outline" on:click={() => { showNotationForm = null; }}>Annuler</button>
 				<button class="btn btn-primary" disabled={notationNote === 0 || notationSaving} on:click={saveNotation}>{notationSaving ? '…' : 'Enregistrer'}</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>
@@ -1766,7 +1767,9 @@
 	.type-section-desc { font-size: .82rem; color: var(--color-text-muted); font-style: italic; }
 
 	/* Carte prestataire expansible */
-	.prest-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); transition: border-left-color .12s; padding: 0; overflow: hidden; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); border-radius: var(--radius); }
+	/*  ⚠️ `overflow: hidden` retiré des trois cartes : il rognait l'infobulle des
+	    boutons, posée sous eux donc hors de la carte (#598). */
+	.prest-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); transition: border-left-color .12s; padding: 0; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); border-radius: var(--radius); }
 	.prest-expand:hover, .prest-expand.expanded { border-left-color: var(--color-primary); }
 	.prest-header { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; cursor: pointer; flex-wrap: wrap; }
 	.prest-main { display: flex; align-items: center; min-width: 160px; flex-wrap: wrap; gap: .25rem; }
@@ -1780,25 +1783,21 @@
 	/* ── Visites ── */
 
 	/* ── Contrats summary ── */
-	.contrats-summary { margin-bottom: 1rem; }
 	.contrats-summary-count { font-size: .85rem; color: var(--color-text-muted); }
 
 	/* Contrat expansible */
-	.contrat-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: hidden; transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.contrat-expand:hover, .contrat-expand.expanded { border-left-color: var(--color-primary); }
 
 	/* Devis expansible */
-	.devis-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: hidden; transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
+	.contrat-expand, .devis-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.devis-expand:hover, .devis-expand.expanded { border-left-color: #7c3aed; }
 	.devis-row { display: flex; gap: .75rem; align-items: center; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.devis-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-	.devis-body-inner { flex: 1; min-width: 0; }
-	.devis-titre { font-size: .9rem; }
 	.devis-infos { text-align: right; font-size: .82rem; min-width: 90px; flex-shrink: 0; }
 	.devis-meta-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
 	.devis-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
 	.contrat-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
-	.contrat-section { margin-bottom: 1rem; }
+	.contrats-summary, .contrat-section { margin-bottom: 1rem; }
 	.contrat-section:last-child { margin-bottom: 0; }
 	.contrat-section-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); margin-bottom: .4rem; padding-bottom: .25rem; border-bottom: 1px solid var(--color-border); }
 	.contrat-section-title.clickable { cursor: pointer; user-select: none; }
@@ -1806,8 +1805,8 @@
 
 	.contrat-row { display: flex; gap: .75rem; align-items: flex-start; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.contrat-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-	.contrat-body-inner { flex: 1; min-width: 0; }
-	.contrat-titre { font-size: .9rem; }
+	.devis-body-inner, .contrat-body-inner { flex: 1; min-width: 0; }
+	.devis-titre, .contrat-titre { font-size: .9rem; }
 	.contrat-meta { font-size: .78rem; color: var(--color-text-muted); margin-left: .5rem; }
 	.contrat-infos { text-align: right; font-size: .82rem; min-width: 100px; flex-shrink: 0; }
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }

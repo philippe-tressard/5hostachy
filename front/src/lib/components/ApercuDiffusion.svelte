@@ -30,6 +30,7 @@
   sera composé*, pas *ce que le groupe recevra à coup sûr*.
 -->
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import type { ApercuDiffusion } from '$lib/api';
@@ -53,13 +54,8 @@
 	$: rienNePartira = canaux.length > 0 && inactifs.length === canaux.length;
 </script>
 
-<div
-	class="modal-overlay"
-	role="presentation"
-	on:click|self={() => dispatch('annuler')}
-	on:keydown={(e) => e.key === 'Escape' && dispatch('annuler')}
->
-	<div class="modal apercu-modal" role="dialog" aria-modal="true" aria-labelledby="apercu-titre">
+<Modale titre="Avant d'envoyer" styleBoite="max-width:720px;width:100%"
+	on:fermer={() => dispatch('annuler')}>
 		<h2 id="apercu-titre">&#x1F4E4; Avant d'envoyer</h2>
 		<p class="apercu-intro">
 			Voici ce qui partira, tel que les destinataires le recevront.
@@ -174,14 +170,12 @@
 				{/if}
 			</button>
 		</div>
-	</div>
-</div>
+</Modale>
 
 <style>
 	/*  Le style part avec le balisage : une classe posée ici et définie dans la
 	    page hôte ne serait pas atteinte (panne des pastilles nues, v2.67.11), et
 	    `npm run lint:classes-nues` le refuse. */
-	.apercu-modal { max-width: 720px; width: 100%; }
 	.apercu-intro { font-size: .875rem; color: var(--color-text-muted); margin: 0 0 1rem; }
 	.apercu-attente { color: var(--color-text-muted); font-size: .9rem; }
 	/*  L'émoji d'en-tête d'un canal, aligné sur l'icône SVG du canal voisin.
