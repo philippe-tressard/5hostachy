@@ -134,10 +134,26 @@
 	let devisFichiers: File[] = [];
 
 	// ── Devis colonnes kanban (reactive) ──────────────────────
-	$: devisSyndic = devis.filter((d: any) => d.actif !== false && d.statut === 'en_attente');
-	$: devisPrestataire = devis.filter((d: any) => d.actif !== false && d.statut === 'accepte');
-	$: devisRealise = devis.filter((d: any) => d.actif !== false && d.statut === 'realise');
-	$: devisRefuse = devis.filter((d: any) => d.actif !== false && d.statut === 'refuse');
+	/*  Les quatre colonnes du kanban des prestations, DÉCRITES une fois (#453).
+	    Elles étaient écrites quatre fois dans le balisage — 147 lignes qui ne
+	    différaient que par la couleur, le libellé, la liste et les boutons — et
+	    elles avaient divergé : l'ordre de service n'était ouvrable que dans deux
+	    colonnes sur quatre, et la colonne « Prestataire » ANNONÇAIT un OS qu'elle
+	    ne laissait pas ouvrir.
+
+	    C'est le motif que le calendrier emploie déjà pour ses six colonnes
+	    (`KANBAN_COLS` + un seul `{#each}`) : il était à un écran de distance. */
+	const COLONNES_DEVIS = [
+		{ statut: 'en_attente', libelle: '⏳ Syndic', couleur: '#f59e0b' },
+		{ statut: 'accepte', libelle: '🔧 Prestataire', couleur: '#f97316' },
+		{ statut: 'realise', libelle: '🏁 Réalisé', couleur: '#22c55e' },
+		{ statut: 'refuse', libelle: '🚫 Refusé', couleur: '#9ca3af' },
+	] as const;
+
+	$: colonnesDevis = COLONNES_DEVIS.map((c) => ({
+		...c,
+		items: devis.filter((d: any) => d.actif !== false && d.statut === c.statut),
+	}));
 
 	// Séparation actifs / réalisés pour la vue liste
 	$: devisActifs = devis.filter((d: any) => d.actif !== false && d.statut !== 'realise' && d.statut !== 'refuse');
@@ -781,151 +797,65 @@
 	{#if prestationsVue === 'kanban'}
 		<!-- ── Kanban ─────────────────────────────────── -->
 		<div class="kanban devis-kanban">
-			<!-- Colonne : Syndic -->
-			<div class="kanban-col">
-				<div class="kanban-col-header" style="border-top-color:#f59e0b">
-					<span>⏳ Syndic</span>
-					<span class="kanban-count">{devisSyndic.length}</span>
-				</div>
-				{#if devisSyndic.length === 0}
-					<p class="kanban-empty">Aucune prestation</p>
-				{:else}
-					{#each devisSyndic as d (d.id)}
-						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-						<div class="kanban-card card">
-							<div class="kanban-card-tags">
-								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-							</div>
-							<span class="devis-card-prest">{prestNom}</span>
-							<strong class="kanban-card-titre">{d.titre}</strong>
-							<div class="kanban-card-footer">
-								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
-									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
+			{#each colonnesDevis as col (col.statut)}
+				<div class="kanban-col">
+					<div class="kanban-col-header" style="border-top-color:{col.couleur}">
+						<span>{col.libelle}</span>
+						<span class="kanban-count">{col.items.length}</span>
+					</div>
+					{#if col.items.length === 0}
+						<p class="kanban-empty">Aucune prestation</p>
+					{:else}
+						{#each col.items as d (d.id)}
+							{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
+							<div class="kanban-card card">
+								<div class="kanban-card-tags">
+									{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
 								</div>
-								{#if $isCS}
-									<div class="kanban-card-actions">
-										<button class="devis-step-btn devis-step-btn--primary" title="Passer l'OS et transmettre au prestataire"
-											on:click={() => { osUploadDevisId = d.id; }}>→ OS</button>
-										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-										<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
+								<span class="kanban-card-prest">{prestNom}</span>
+								<strong class="kanban-card-titre">{d.titre}</strong>
+								<div class="kanban-card-footer">
+									<div class="devis-card-meta">
+										{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
+										{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
+										<!--  L'ordre de service se montre PARTOUT où il existe, et il s'ouvre.
+										     Avant #453, les quatre copies l'affichaient chacune à sa façon : lien
+										     dans « Syndic » et « Réalisé », simple tag « 📎 OS joint » — donc NON
+										     ouvrable — dans « Prestataire », et rien du tout dans « Refusé ».
+										     Le tag a disparu : le lien dit déjà qu'il y a un OS, et lui se clique. -->
+										{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" rel="noopener" class="devis-os-link">📎 OS</a>{/if}
 									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-			<!-- Colonne : Prestataire -->
-			<div class="kanban-col">
-				<div class="kanban-col-header" style="border-top-color:#f97316">
-					<span>🔧 Prestataire</span>
-					<span class="kanban-count">{devisPrestataire.length}</span>
-				</div>
-				{#if devisPrestataire.length === 0}
-					<p class="kanban-empty">Aucune prestation</p>
-				{:else}
-					{#each devisPrestataire as d (d.id)}
-						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-						<div class="kanban-card card">
-							<div class="kanban-card-tags">
-								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-								{#if d.os_fichier_url}<span class="kb-tag" style="background:#0ea5e9">📎 OS joint</span>{/if}
-							</div>
-							<span class="devis-card-prest">{prestNom}</span>
-							<strong class="kanban-card-titre">{d.titre}</strong>
-							<div class="kanban-card-footer">
-								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
+									{#if $isCS}
+										<div class="kanban-card-actions">
+											{#if col.statut === 'en_attente'}
+												<button class="devis-step-btn devis-step-btn--primary" title="Passer l'OS et transmettre au prestataire"
+													on:click={() => { osUploadDevisId = d.id; }}>→ OS</button>
+											{:else if col.statut === 'accepte'}
+												<button class="devis-step-btn devis-step-btn--success" title="Marquer comme réalisé"
+													on:click={() => moveDevisStatut(d.id, 'realise')}>✅</button>
+												<button class="devis-step-btn" title="Retour Syndic"
+													on:click={() => moveDevisStatut(d.id, 'en_attente')}>←</button>
+											{:else if col.statut === 'realise'}
+												<button class="devis-step-btn" title="Retour chez le prestataire"
+													on:click={() => moveDevisStatut(d.id, 'accepte')}>←</button>
+												<button class="devis-step-btn" title="Noter" style="color:#f59e0b"
+													on:click={() => openNotationForm(d.prestataire_id, d.id)}>⭐</button>
+											{:else}
+												<button class="devis-step-btn" title="Remettre en attente syndic"
+													on:click={() => moveDevisStatut(d.id, 'en_attente')}>↩</button>
+											{/if}
+											<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
+											{#if col.statut !== 'realise' && col.statut !== 'refuse'}
+												<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
+											{/if}
+										</div>
+									{/if}
 								</div>
-								{#if $isCS}
-									<div class="kanban-card-actions">
-										<button class="devis-step-btn devis-step-btn--success" title="Marquer comme réalisé"
-											on:click={() => moveDevisStatut(d.id, 'realise')}>✅</button>
-										<button class="devis-step-btn" title="Retour Syndic"
-											on:click={() => moveDevisStatut(d.id, 'en_attente')}>←</button>
-										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-										<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
-									</div>
-								{/if}
 							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-			<!-- Colonne : Réalisé -->
-			<div class="kanban-col">
-				<div class="kanban-col-header" style="border-top-color:#22c55e">
-					<span>🏁 Réalisé</span>
-					<span class="kanban-count">{devisRealise.length}</span>
+						{/each}
+					{/if}
 				</div>
-				{#if devisRealise.length === 0}
-					<p class="kanban-empty">Aucune prestation</p>
-				{:else}
-					{#each devisRealise as d (d.id)}
-						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-						<div class="kanban-card card">
-							<div class="kanban-card-tags">
-								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-							</div>
-							<span class="devis-card-prest">{prestNom}</span>
-							<strong class="kanban-card-titre">{d.titre}</strong>
-							<div class="kanban-card-footer">
-								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
-									{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" class="devis-os-link">📎 OS</a>{/if}
-								</div>
-								{#if $isCS}
-									<div class="kanban-card-actions">
-										<button class="devis-step-btn" title="Retour chez le prestataire"
-											on:click={() => moveDevisStatut(d.id, 'accepte')}>←</button>
-										<button class="devis-step-btn" title="Noter" style="color:#f59e0b"
-											on:click={() => openNotationForm(d.prestataire_id, d.id)}>⭐</button>
-										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-			<!-- Colonne : Refusé -->
-			<div class="kanban-col">
-				<div class="kanban-col-header" style="border-top-color:#9ca3af">
-					<span>🚫 Refusé</span>
-					<span class="kanban-count">{devisRefuse.length}</span>
-				</div>
-				{#if devisRefuse.length === 0}
-					<p class="kanban-empty">Aucune prestation</p>
-				{:else}
-					{#each devisRefuse as d (d.id)}
-						{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-						<div class="kanban-card card">
-							<div class="kanban-card-tags">
-								{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-							</div>
-							<span class="devis-card-prest">{prestNom}</span>
-							<strong class="kanban-card-titre">{d.titre}</strong>
-							<div class="kanban-card-footer">
-								<div class="devis-card-meta">
-									{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-									{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
-								</div>
-								{#if $isCS}
-									<div class="kanban-card-actions">
-										<button class="devis-step-btn" title="Remettre en attente syndic"
-											on:click={() => moveDevisStatut(d.id, 'en_attente')}>↩</button>
-										<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
+			{/each}
 		</div>
 	{:else}
 		<!-- ── Vue liste ─────────────────────────────── -->
@@ -941,7 +871,7 @@
 						on:click|stopPropagation={() => toggleDevis(d.id)}
 						on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
 						<div class="devis-body-inner">
-							<span class="devis-card-prest">{prestNom}</span>
+							<span class="kanban-card-prest">{prestNom}</span>
 							<strong class="devis-titre">{d.titre}</strong>
 						</div>
 						<div class="devis-infos">
@@ -1085,7 +1015,7 @@
 									on:click|stopPropagation={() => toggleDevis(d.id)}
 									on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
 									<div class="devis-body-inner">
-										<span class="devis-card-prest">{prestNom}</span>
+										<span class="kanban-card-prest">{prestNom}</span>
 										<strong class="devis-titre">{d.titre}</strong>
 									</div>
 									<div class="devis-infos">
@@ -1917,25 +1847,12 @@
 	}
 
 	/* ── Devis kanban ───────────── */
-	.kanban-count-total { font-size: .8rem; color: var(--color-text-muted); }
 	.devis-kanban { display: flex; gap: .6rem; align-items: flex-start; overflow-x: auto; padding-bottom: .5rem; margin-bottom: 1.5rem; }
-	.kanban-col { min-width: 230px; flex: 1; border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
 	@media (max-width: 900px) { .devis-kanban { flex-direction: column; } .kanban-col { min-width: 100%; } }
-	.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
-	.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }
-	.kanban-empty { padding: 1rem; font-size: .85rem; color: var(--color-text-muted); text-align: center; }
-	.kanban-card { margin: .3rem; padding: .4rem .55rem; display: flex; flex-direction: column; gap: .15rem; cursor: pointer; transition: box-shadow .15s; }
-	.kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.10); }
-	.kanban-card-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .1rem; min-height: .1rem; }
-	.kb-tag { font-size: .65rem; font-weight: 600; padding: .1rem .4rem; border-radius: 3px; color: #fff; line-height: 1.4; }
-	.devis-card-prest { font-size: .68rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.kanban-card-titre { font-size: .78rem; line-height: 1.3; }
-	.kanban-card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: .25rem; gap: .3rem; }
 	.devis-card-meta { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
 	.devis-montant { font-size: .75rem; color: var(--color-primary); font-weight: 600; }
 	.devis-date { font-size: .7rem; color: var(--color-text-muted); }
 	.devis-os-link { font-size: .7rem; color: var(--color-primary); }
-	.kanban-card-actions { display: flex; gap: .2rem; align-items: center; flex-shrink: 0; }
 	.devis-step-btn { padding: .15rem .45rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); font-size: .72rem; cursor: pointer; color: var(--color-text-muted); transition: background .12s, color .12s, border-color .12s; line-height: 1.4; white-space: nowrap; }
 	.devis-step-btn:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); border-color: var(--color-text-muted); }
 	.devis-step-btn--primary { background: #fff7ed; border-color: #f97316; color: #c2410c; }

@@ -911,13 +911,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
 	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
 
-	.kanban { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: .5rem; }
-	.kanban-col { min-width: 220px; flex: 1; border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
-	@media (max-width: 900px) { .kanban { flex-direction: column; } .kanban-col { min-width: 100%; } }
 	.kanban-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; flex-wrap: wrap; }
 	.kanban-exercice-label { font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: .4rem; }
 	.kanban-exercice-select { padding: .25rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); font-size: .85rem; }
-	.kanban-count-total { font-size: .8rem; color: var(--color-text-muted); }
 	.kanban-init-btn { margin-left: auto; font-size: .8rem; padding: .3rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; white-space: nowrap; }
 	.kanban-init-btn:hover:not(:disabled) { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.kanban-init-btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -928,23 +924,18 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    `min-width` et le `flex` de la première à la lecture. Aucun contrôle ne dit
 	    qu'une règle est écrite deux fois dans le même bloc `<style>` : seule la
 	    relecture le voit. */
-	.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
-	.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }
-	.kanban-empty { padding: 1rem; font-size: .85rem; color: var(--color-text-muted); text-align: center; }
-	.kanban-card { margin: .3rem; padding: .35rem .55rem; display: flex; flex-direction: column; gap: .15rem; cursor: pointer; transition: box-shadow .15s, opacity .15s; }
+	/*  ⚠️ La SEULE variante locale du kanban : les tags du calendrier sont des
+	    périmètres et des années, que la minuscule harmonise. Elle n'est PAS montée
+	    dans `composants.css` parce que les tags des prestations portent un sigle —
+	    « OS joint » deviendrait « os joint » (#453, 28/08/2026). */
+	.kb-tag { text-transform: lowercase; }
 	.kanban-card-expanded { cursor: default; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 	.kanban-card-detail { border-top: 1px solid var(--color-border); margin-top: .3rem; padding-top: .35rem; }
 	.kanban-card-detail-row { font-size: .72rem; color: var(--color-text-muted); line-height: 1.5; }
 	.kanban-card-detail-desc { font-size: .72rem; line-height: 1.5; margin-top: .25rem; }
 	.kanban-card:active { cursor: grabbing; }
 	.kanban-card[draggable="true"]:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-	.kanban-card-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .15rem; }
-	.kb-tag { font-size: .65rem; font-weight: 600; padding: .1rem .4rem; border-radius: 3px; color: #fff; line-height: 1.4; text-transform: lowercase; }
-	.kanban-card-titre { font-size: .75rem; line-height: 1.25; }
-	.kanban-card-prest { font-size: .68rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.kanban-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: .2rem; }
 	.kanban-card-type { font-size: .72rem; font-weight: 600; color: var(--color-text-muted); }
-	.kanban-card-actions { display: flex; gap: .3rem; }
 	.recurring-section { margin-top: 1.5rem; padding: .5rem 0; }
 	.recurring-toggle {
 		background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius);
