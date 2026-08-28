@@ -73,14 +73,15 @@
 	    nommée se relit, se surcharge et se contrôle — un `style=` ne fait rien de
 	    tout cela (`lint:styles`). */
 	.saisi-pour-exterieur { margin-top: .5rem; display: flex; flex-direction: column; gap: .5rem; }
+	/*  Ces onglets-ci sont ENCADRES et non soulignes : ce sont des boutons de
+	    bascule dans un champ, pas la barre d'onglets d'une page. Bordure, rayon,
+	    fond et densite leur sont propres ; le reste vient de la charte (#607). */
 	.tab-btn {
 		padding: .375rem .75rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		background: transparent;
-		cursor: pointer;
 		font-size: .85rem;
-		color: var(--color-text-muted);
 		transition: background .15s, color .15s, border-color .15s;
 	}
 	.tab-btn.active {

@@ -65,6 +65,28 @@ export function selftest() {
 		declarationsDe(regles, '.largeur-saisie').get('max-width'),
 		'720px',
 	);
+	//  #607 — le pendant exact, et c'est ce qui distingue les deux usages : pour
+	//  COMPARER une règle d'écran à la charte, il faut la valeur de BASE. Le
+	//  relevé du 28/08 comparait à la règle du téléphone et annonçait des
+	//  recompositions qui n'existaient pas.
+	const horsMedia = reglesCss(
+		`.form-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; }
+		 @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr !important; } }`,
+		{ horsMedia: true },
+	);
+	verifier(
+		'reglesCss horsMedia : la valeur de BASE, pas celle du téléphone',
+		declarationsDe(horsMedia, '.form-grid').get('grid-template-columns'),
+		'repeat(auto-fit, minmax(220px, 1fr))',
+	);
+	verifier(
+		'reglesCss horsMedia : un @media imbriqué est sauté ENTIER, pas à moitié',
+		reglesCss(
+			`@media print { @media (min-width: 40em) { .x { color: red } } } .y { color: blue }`,
+			{ horsMedia: true },
+		).map(([s]) => s),
+		['.y'],
+	);
 	verifier(
 		'declarationsDe : un sélecteur absent ne rend rien (cas zéro de l’appelant)',
 		declarationsDe(regles, '.form-actions').size,

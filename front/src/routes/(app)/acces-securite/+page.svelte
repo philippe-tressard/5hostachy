@@ -443,9 +443,11 @@ import { onMount } from 'svelte';
 
 <style>
 	.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
-	.section-title { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); margin: 0; }
+	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
+	.section-title { margin: 0; }
 	.section { padding: 1.25rem; }
-	.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+	/*  Seule la taille differe de `.table` (#607, 28/08/2026). */
+	.table { font-size: .9rem; }
 	.table th { text-align: left; padding: .4rem .5rem; font-size: .8rem; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); }
 	.table td { padding: .5rem; border-bottom: 1px solid var(--color-border); }
 	.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 1rem; margin-bottom: 1rem; }

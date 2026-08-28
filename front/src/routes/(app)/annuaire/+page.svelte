@@ -204,7 +204,7 @@
 {/if}
 
 <style>
-	.section-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
+	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.contact-loc { font-size: .78rem; color: var(--color-text-muted); margin-top: .1rem; }
 	.ag-info { font-size: .8rem; color: var(--color-text-muted); }
 	.syndic-header { margin-bottom: .75rem; display: flex; flex-direction: column; gap: .15rem; }

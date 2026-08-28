@@ -1165,14 +1165,8 @@
 		justify-content: space-between;
 		margin-bottom: .75rem;
 	}
-	.section-title {
-		font-size: .85rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: .05em;
-		color: var(--color-text-muted);
-		margin: 0;
-	}
+	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
+	.section-title { margin: 0; }
 
 
 	/* ── Bâtiments / lot counts ─────────────────────────────────── */
@@ -1213,12 +1207,12 @@
 	/*  `.modal-overlay` et `.modal` retirées (#561) : copies LOCALES qui avaient
 	    divergé de `styles/composants.css` — ni ombre ni animation ici, plus une
 	    bordure que les autres modales n'ont pas. Révélées en extrayant `Modale`. */
-	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+	/*  🔴 `.modal-header`, `.modal-close` et `.modal-footer` retirees le 28/08/2026
+	    (#607) : le MEME bloc, au caractere pres, vivait dans trois ecrans, et il
+	    divergeait de `composants.css` (croix 1.3rem au lieu de 1.5, marges au lieu
+	    des remplissages). `prestataires` emploie ce balisage SANS aucune regle
+	    locale : c'est lui la reference, et il est en production. */
 	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
-	.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); padding: 0; line-height: 1; }
-	.modal-close:hover { color: var(--color-text); }
-	.modal-body { margin-bottom: 1rem; }
-	.modal-footer { display: flex; justify-content: flex-end; gap: .5rem; padding-top: .75rem; border-top: 1px solid var(--color-border); }
 
 	/* ── Diagnostics ─────────────────────────────────────────────── */
 	.diag-list { display: flex; flex-direction: column; gap: 1rem; }

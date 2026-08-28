@@ -59,8 +59,9 @@
 </section>
 
 <style>
-	.section-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
-	.form-actions { display: flex; justify-content: flex-end; margin-top: 1rem; gap: .5rem; flex-wrap: wrap; }
+	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
+	/*  Seul `flex-wrap` differe de la charte (#607, 28/08/2026). */
+	.form-actions { flex-wrap: wrap; }
 	.checkbox-field { display: flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
 	.checkbox-field input { margin: 0; flex-shrink: 0; }
 	/*  L'aide s'aligne sur le LIBELLÉ, pas sur le bord de la carte : largeur de la

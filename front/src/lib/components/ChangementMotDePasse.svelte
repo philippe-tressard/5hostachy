@@ -101,7 +101,7 @@
 </section>
 
 <style>
-	.section-title { font-size:1rem; font-weight:600; margin-bottom:.25rem; }
+	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.section-aide {
 		font-size: .8rem;
 		color: var(--color-text-muted);
@@ -117,12 +117,10 @@
 	/* Le dernier champ du bloc ne pousse pas : la marge est portée par le bloc. */
 	.bloc-nouveau > :global(.field:last-child) { margin-bottom: 0; }
 
+	/*  La charte porte l'alignement, l'ecart et la marge ; seuls
+    `align-items` et `flex-wrap` sont propres a cette rangee (#607, 28/08/2026). */
 	.form-actions {
-		display: flex;
-		justify-content: flex-end;
 		align-items: center;
-		margin-top: .5rem;
-		gap: .75rem;
 		flex-wrap: wrap;
 	}
 	.aide {

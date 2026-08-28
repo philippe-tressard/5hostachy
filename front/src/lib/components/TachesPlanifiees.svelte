@@ -465,6 +465,8 @@
 	/*  Écart assumé : plus petit et en couleur primaire — il ouvre une ligne
 	    de tableau, pas une carte, et doit se voir (il était invisible avant
 	    le 11/08, cf. #299). */
+	/*  Le chevron d'une tache est plus petit et de la couleur primaire : il annonce
+	    une action, pas un depliage neutre (#607, 28/08/2026). */
 	.chevron { font-size: .9rem; color: var(--color-primary); margin-right: .4rem; }
 	/*  Aide propre à une tâche, en tête de son détail — recueillie des deux cartes
 	    supprimées avec #299. */

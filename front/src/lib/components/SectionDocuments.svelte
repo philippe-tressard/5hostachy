@@ -102,14 +102,8 @@
 		justify-content: space-between;
 		margin-bottom: 0.75rem;
 	}
-	.section-title {
-		font-size: 0.85rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--color-text-muted);
-		margin: 0;
-	}
+	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
+	.section-title { margin: 0; }
 	.doc-list { display: flex; flex-direction: column; gap: 0.4rem; }
 	.doc-row {
 		display: flex;

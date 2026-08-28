@@ -213,25 +213,17 @@
 </div>
 
 <style>
-	.auth-page {
-		min-height: 100vh;
-		display: flex;
-		align-items: flex-start;
-		justify-content: center;
-		background: var(--color-bg);
-		padding: 2rem 1rem;
-	}
-
-	.auth-card {
-		width: 100%;
-		max-width: 480px;
-		padding: 2rem;
-	}
+	/*  Le formulaire d'inscription est LONG : il s'aligne en haut au lieu d'etre
+	    centre, respire davantage, et sa carte est plus large que les 400 px de la
+	    charte. Variations assumees ; le reste vient de `composants.css` (#607). */
+	.auth-page { align-items: flex-start; padding: 2rem 1rem; }
+	.auth-card { max-width: 480px; }
 
 	/*  `.auth-header` : copie au caractère près de `styles/composants.css`,
 	    donc inerte. Retirée le 28/08/2026. */
 
-	.auth-logo { font-size: 2rem; display: block; margin-bottom: .4rem; }
+	/*  Logo reduit : la page est deja longue (#607, 28/08/2026). */
+	.auth-logo { font-size: 2rem; margin-bottom: .4rem; }
 	.auth-header h1 { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); }
 	.auth-header p  { color: var(--color-text-muted); font-size: .875rem; }
 

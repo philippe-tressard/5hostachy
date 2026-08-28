@@ -544,6 +544,15 @@ jobs:
       # `svelte-check` garde l’autre sens — « sélecteur inutilisé », une règle sans
       # balisage. Sur dix-sept règles orphelines, il en a signalé UNE. Une relation
       # a deux sens de rupture (`standards/05` §9 bis).
+      # 🔴 Le pendant de `lint:classes-nues` : celui-ci refuse une redéfinition
+      # SCOPÉE d'une classe de la charte. Une règle scopée ne déborde pas sur les
+      # autres écrans — elle fait rendre CELUI-CI autrement, sans décision, et
+      # elle gagne (Svelte ajoute sa classe de portée au sélecteur). Le relevé
+      # de #607 en comptait 54 ; 35 sont parties, 19 sont déclarées.
+      - name: Aucune redéfinition scopée de la charte
+        working-directory: front
+        run: npm run lint:charte
+
       - name: Aucune classe employée sans définition
         working-directory: front
         run: npm run lint:classes-nues

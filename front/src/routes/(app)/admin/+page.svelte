@@ -1337,14 +1337,13 @@ border-radius: var(--radius); font-size: .875rem;
 }
 .row-cs td { background: #eff6ff; }
 .row-inactive td { opacity: .6; }
-.btn-outline {
-background: none; border: 1px solid var(--color-border);
-border-radius: var(--radius); cursor: pointer; font-size: .8rem;
-padding: .3rem .7rem; color: var(--color-text);
-}
+/*  La charte porte fond, bordure, rayon, curseur et couleur ;
+    seuls la taille et le remplissage sont propres a cet ecran (#607, 28/08/2026). */
+.btn-outline { font-size: .8rem; padding: .3rem .7rem; }
 .btn-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.badge-orange { background: #fff7ed; color: #c2410c; }
-.badge-purple { background: #f5f3ff; color: #7c3aed; }
+/*  🔴 `.badge-orange` et `.badge-purple` retirees le 28/08/2026 (#607) :
+    la charte les porte, et cet ecran en donnait une TROISIEME teinte —
+    `delegations` en avait une deuxieme. Meme notion, trois couleurs. */
 .form-grid { grid-template-columns: 1fr 1fr; }
 .ref-list { display: flex; flex-direction: column; gap: .4rem; }
 .page-row { width: 100%; display: flex; align-items: center; gap: .4rem; padding: .4rem .5rem .4rem .75rem; }

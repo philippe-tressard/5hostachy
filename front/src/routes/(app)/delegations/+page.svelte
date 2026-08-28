@@ -245,19 +245,20 @@
 	.deleg-motif { font-size: .85rem; color: var(--color-text-muted); margin: .25rem 0 0; font-style: italic; }
 	.deleg-actions { display: flex; gap: .35rem; flex-shrink: 0; align-items: flex-start; padding-top: .25rem; }
 
-	.badge-orange { background: #fef3c7; color: #92400e; }
-	.badge-green { background: #dcfce7; color: #166534; }
-	.badge-red { background: #fee2e2; color: #991b1b; }
+	/*  🔴 `.badge-orange`, `.badge-green` et `.badge-red` retirees le 28/08/2026
+	    (#607) : la charte les porte. `.badge-grey` reste — elle n'y est pas. */
 	.badge-grey { background: #f3f4f6; color: #6b7280; }
 
-	.btn-danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+	/*  La charte porte `.btn-danger` ; cet ecran ecrivait `#dc2626`
+    EN DUR au lieu du jeton, donc hors du theme (#607, 28/08/2026). */
+	.btn-danger { border-color: var(--color-danger); }
 	.btn-danger:hover { background: #b91c1c; }
 
 	/* Modals & forms — réutilise les styles globaux */
-	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+	/*  🔴 `.modal-header`, `.modal-close` et `.modal-footer` retirees le 28/08/2026
+	    (#607) : le MEME bloc, au caractere pres, vivait dans trois ecrans, et il
+	    divergeait de `composants.css` (croix 1.3rem au lieu de 1.5, marges au lieu
+	    des remplissages). `prestataires` emploie ce balisage SANS aucune regle
+	    locale : c'est lui la reference, et il est en production. */
 	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
-	.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); padding: 0; line-height: 1; }
-	.modal-close:hover { color: var(--color-text); }
-	.modal-body { margin-bottom: 1rem; }
-	.modal-footer { display: flex; justify-content: flex-end; gap: .5rem; padding-top: .75rem; border-top: 1px solid var(--color-border); }
 </style>

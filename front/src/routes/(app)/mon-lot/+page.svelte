@@ -1452,7 +1452,7 @@
 	.loc-lot-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .3rem .5rem; background: var(--color-bg-alt, #f8fafc); border-radius: var(--radius); }
 
 	/* Main tabs (like communauté) */
-	.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
+	.tabs { padding-bottom: .1rem; }  /* le reste vient de la charte (#607) */
 	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
 	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
 	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
@@ -1500,12 +1500,11 @@
 	}
 
 	/* Modal overlay + structure */
-	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+	/*  🔴 Le bloc `.modal-*` retiré le 28/08/2026 (#607) : le MÊME, au caractère
+	    près, vivait dans trois écrans et divergeait de la charte. `prestataires`
+	    emploie ce balisage SANS règle locale — c'est lui la référence. */
 	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
-	.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); padding: 0; line-height: 1; }
-	.modal-close:hover { color: var(--color-text); }
 	.modal-body { margin-bottom: 1rem; display: flex; flex-direction: column; gap: .85rem; }
-	.modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
 
 	/* Grille 2 colonnes pour les champs de formulaire */
 	.form-grid-2 {
