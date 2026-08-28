@@ -37,15 +37,57 @@
  * le style — et sa détection est partielle. Ce contrôle-ci prend le problème par
  * le côté qui se voit à l'écran.
  *
- * ## Ce qu'il cherche
+ * ## Deux volets, une seule notion : la PORTÉE d'une définition CSS
+ *
+ * ### Volet A — une classe employée doit être définie LÀ OÙ ELLE EST EMPLOYÉE
  *
  * Toute classe écrite dans le balisage d'un composant, qui n'est définie **ni**
- * dans son propre `<style>`, **ni** dans `app.css`, **ni** en `:global(…)` par un
- * autre composant.
+ * dans son propre `<style>`, **ni** dans le CSS global (`app.css` + `styles/`).
+ *
+ * ### Volet B — une définition ne déborde pas sur le reste du site
+ *
+ * Un `:global(.x)` de **premier niveau** dans un composant, quand `.x` est déjà
+ * portée par le CSS global : c'est une redéfinition de la charte, écrite depuis
+ * un écran, qui s'applique à tous les autres.
+ *
+ * ## Pourquoi le volet B a été ajouté (#562, 28/08/2026)
+ *
+ * 🔴 **Le volet A demandait la mauvaise question, et elle avait un nom trompeur.**
+ * Il acceptait qu'une classe soit fournie par le `:global(…)` de **n'importe quel
+ * autre fichier du dépôt** — un sac où tout se valait. Or Svelte n'y met aucune
+ * barrière et SvelteKit charge la CSS **à la visite** de la page : une règle
+ * écrite dans une page ne protège aucune autre page tant qu'on n'y est pas passé,
+ * et **continue** de s'appliquer partout une fois qu'on y est passé.
+ *
+ * Le sac ne servait à personne : le relevé du 28/08/2026 n'a trouvé **aucune**
+ * classe qui en dépendait. Il ne couvrait donc rien — il masquait. Retiré.
+ *
+ * Ce qu'il masquait, le volet B le nomme : **huit** `:global(.badge-*)` écrits
+ * dans quatre pages, redéfinissant les couleurs de la charte de `composants.css`
+ * avec d'autres valeurs. Conséquence à l'écran : la teinte d'un badge dépendait
+ * des pages **déjà visitées dans la session**. Le fichier `tickets/+page.svelte`
+ * portait le diagnostic écrit en commentaire depuis #431 — la règle est restée.
+ *
+ * ⚠️ Une règle décrite dans un commentaire n'est pas un garde-fou : elle a été
+ * lue, comprise, laissée en place, et rien n'a échoué (`standards/05` §1).
+ *
+ * ## Ce qui reste autorisé, et pourquoi
+ *
+ * `:global(.custom-content p)`, `:global(.rich-content-editable .tiptap)` — le
+ * HTML **injecté** par un éditeur riche, qu'aucune règle scopée ne peut atteindre
+ * puisque Svelte ne connaît pas ce balisage à la compilation. Le volet B ne vise
+ * que le sélecteur réduit à **une classe seule**, donc à une pure redéfinition.
+ *
+ * ⚠️ La logique de lecture des `:global(…)` vit dans `lib-analyse-styles.mjs`, et
+ * c'est là qu'elle s'éprouve : `node scripts/lib-analyse-styles.mjs --selftest`.
+ * Ce module exposait un `--selftest` que **rien ne lançait** — ni la CI, ni
+ * `rejouer-ci.sh` — alors qu'il porte les fonctions pures de deux contrôles.
+ * Ajouté au job « Auto-tests des garde-fous du front » le 28/08/2026.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { cssGlobal, fichiersCssGlobal } from './lib-css-global.mjs';
+import { globalesDeFeuille } from './lib-analyse-styles.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -131,16 +173,9 @@ if (definiesGlobal.size === 0) {
 	process.exit(1);
 }
 
-//  Les classes qu'un composant expose en `:global(…)` pour ses enfants.
-const globalesDeComposants = new Set();
-for (const f of fichiers) {
-	for (const m of readFileSync(f, 'utf8').matchAll(/:global\(([^)]*)\)/g)) {
-		for (const c of m[1].matchAll(/\.([a-zA-Z][\w-]*)/g)) globalesDeComposants.add(c[1]);
-	}
-}
-
 // ── 2. Le relevé ─────────────────────────────────────────────────────────────
 const erreurs = [];
+const fuites = [];
 const toleranceServies = new Set();
 let employeesTotal = 0;
 
@@ -150,6 +185,13 @@ for (const chemin of fichiers) {
 
 	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) || ['', ''])[1];
 	const definiesLocal = new Set([...style.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
+
+	//  Volet B — une définition qui déborde. Seule la fuite réduite à UNE classe
+	//  déjà portée par la charte est refusée : c'est une redéfinition, pas un
+	//  besoin. Voir `globalesDeFeuille` pour les trois formes et leurs portées.
+	for (const { selecteur, classeSeule } of globalesDeFeuille(style).fuites) {
+		if (classeSeule && definiesGlobal.has(classeSeule)) fuites.push(`${relatif} — ${selecteur}`);
+	}
 
 	//  Les COMMENTAIRES sont retirés : ce dépôt en écrit de longs, qui citent le
 	//  balisage qu'ils interdisent — `FormulaireAnnonceHall` explique pourquoi il
@@ -171,7 +213,7 @@ for (const chemin of fichiers) {
 
 	const tolerees = TOLEREES[relatif] ?? [];
 	for (const c of employees) {
-		if (definiesLocal.has(c) || definiesGlobal.has(c) || globalesDeComposants.has(c)) continue;
+		if (definiesLocal.has(c) || definiesGlobal.has(c)) continue;
 		if (tolerees.includes(c)) { toleranceServies.add(`${relatif}::${c}`); continue; }
 		erreurs.push(`${relatif} — .${c}`);
 	}
@@ -202,18 +244,42 @@ if (erreurs.length) {
 	for (const e of erreurs) console.error(`  • ${e}`);
 	console.error(
 		'\n🔴 Svelte scope ses styles au FICHIER. Une classe écrite ici doit être définie\n' +
-			'   ici, dans `app.css`, ou exposée en `:global(…)` par un composant.\n\n' +
+			'   ICI, ou dans le CSS global (`app.css` + `styles/`). Le `:global(…)` d’un AUTRE\n' +
+			'   fichier ne compte pas : sa feuille n’est chargée qu’avec lui (#562).\n\n' +
 			'   Le cas le plus fréquent est un DÉPLACEMENT de balisage : le style est resté\n' +
 			'   dans le fichier d’origine. Il part AVEC le balisage — c’est la régression des\n' +
 			'   pastilles nues (v2.67.11), et elle s’est reproduite trois fois le 19/08/2026,\n' +
 			'   dont une constatée en production par l’utilisateur.\n\n' +
+			'   Une notion PARTAGÉE par plusieurs écrans se remonte dans `src/styles/` — c’est\n' +
+			'   ce qui a été fait pour `.text-muted-sm`, définie dans une page et employée par\n' +
+			'   quatre autres, qui la rendaient nue (#557).\n\n' +
 			'   Si la classe est portée par une bibliothèque tierce, la déclarer dans\n' +
 			'   `TOLEREES` avec sa raison.\n',
 	);
 	process.exit(1);
 }
 
+if (fuites.length) {
+	console.error('✗ Redéfinition(s) de la charte depuis un écran — elles débordent sur tout le site :\n');
+	for (const f of fuites) console.error(`  • ${f}`);
+	console.error(
+		'\n🔴 Un `:global(.x)` de PREMIER NIVEAU n’est pas scopé, et SvelteKit charge la\n' +
+			'   feuille d’une page à la VISITE sans la décharger ensuite. Quand `.x` est déjà\n' +
+			'   portée par le CSS global, la teinte vue par le résident dépend donc des pages\n' +
+			'   par lesquelles il est passé — huit `:global(.badge-*)` faisaient exactement\n' +
+			'   cela dans quatre écrans (#562).\n\n' +
+			'   Le geste : SUPPRIMER la règle et laisser la charte de `styles/composants.css`\n' +
+			'   s’appliquer. Si la teinte doit vraiment différer, c’est une VARIANTE — elle se\n' +
+			'   nomme et se définit dans `styles/`, pas en écrasant la classe commune.\n\n' +
+			'   Reste autorisé : un `:global(…)` IMBRIQUÉ sous un ancêtre scopé, et un\n' +
+			'   `:global(…)` qui vise du HTML injecté (`.custom-content p`, `.tiptap`) —\n' +
+			'   aucune règle scopée ne peut atteindre un balisage que Svelte ne compile pas.\n',
+	);
+	process.exit(1);
+}
+
 console.log(
 	`✓ Classes : ${employeesTotal} employées dans ${fichiers.length} composants — ` +
-		`toutes définies, ${Object.keys(TOLEREES).length} tolérance(s) déclarée(s) et servie(s).`,
+		`toutes définies, ${Object.keys(TOLEREES).length} tolérance(s) déclarée(s) et servie(s), ` +
+		'aucune redéfinition de la charte depuis un écran.',
 );

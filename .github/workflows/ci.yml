@@ -629,6 +629,10 @@ jobs:
           node scripts/check-charge-utile.mjs --selftest
           node scripts/check-modificateurs.mjs --selftest
           node scripts/lib-commentaires.mjs --selftest
+          # 🔴 Porte les fonctions pures de `lint:styles` ET de `lint:classes-nues`,
+          # expose un `--selftest` depuis sa création… que RIEN ne lançait (#562).
+          # Le module le plus partagé du lot était le seul non éprouvé.
+          node scripts/lib-analyse-styles.mjs --selftest
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.

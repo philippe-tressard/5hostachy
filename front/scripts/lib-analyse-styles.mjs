@@ -145,6 +145,49 @@ export function declarationsDe(regles, selecteur) {
 	return sortie;
 }
 
+/**
+ * Les `:global(…)` d'une feuille, **triés par ce qu'ils atteignent réellement**.
+ *
+ * 🔴 C'est la distinction que `lint:classes-nues` ne faisait pas (#562), et elle
+ * n'est pas cosmétique — les deux formes n'ont pas la même portée :
+ *
+ * | Écrit dans un composant | Ce que la règle atteint |
+ * |---|---|
+ * | `.carte :global(.titre)` | les `.titre` **descendants d'un `.carte` de ce composant** |
+ * | `:global(.titre)` | **tous les `.titre` du site**, dès que la CSS du composant est chargée |
+ *
+ * La seconde forme est une **fuite** : Svelte n'y met aucune barrière, et
+ * SvelteKit charge la CSS d'une page à la visite — sans la décharger ensuite. Une
+ * règle écrite là redéfinit donc la charte pour tout le reste de la session, et
+ * pour lui seul. Le badge « ⚡ Urgente » n'avait pas la même teinte selon qu'on
+ * était passé par `tickets` ou non.
+ *
+ * `classeSeule` porte le nom quand le sélecteur est **exactement** `:global(.x)` —
+ * le cas où la fuite est une pure redéfinition. `:global(.custom-content p)` cible
+ * du HTML injecté par un éditeur riche, qu'aucune règle scopée ne peut atteindre :
+ * c'est le besoin légitime, et il rend `classeSeule: null`.
+ *
+ * @param css le contenu d'un bloc `<style>`
+ * @returns `{ fuites: [{ selecteur, classeSeule }], imbriquees: [{ selecteur }] }`
+ */
+export function globalesDeFeuille(css) {
+	const fuites = [];
+	const imbriquees = [];
+	for (const [tete] of reglesCss(css)) {
+		for (const part of tete.split(',')) {
+			const selecteur = part.trim().replace(/\s+/g, ' ');
+			if (!selecteur.includes(':global(')) continue;
+			if (!selecteur.startsWith(':global(')) {
+				imbriquees.push({ selecteur });
+				continue;
+			}
+			const m = /^:global\(\s*\.([A-Za-z][\w-]*)\s*\)$/.exec(selecteur);
+			fuites.push({ selecteur, classeSeule: m ? m[1] : null });
+		}
+	}
+	return { fuites, imbriquees };
+}
+
 // ── Balisage ─────────────────────────────────────────────────────────────────
 
 /** Neutralise ce qui n'est pas du balisage, en gardant le compte des lignes. */
@@ -232,6 +275,46 @@ function selftest() {
 		'declarationsDe : un sélecteur absent ne rend rien (cas zéro de l’appelant)',
 		declarationsDe(regles, '.form-actions').size,
 		0,
+	);
+
+	//  #562 — les trois formes qui cohabitaient dans le dépôt le 28/08/2026, et
+	//  qu'un seul regex `:global\(…\)` confondait : la fuite pure (les huit badges
+	//  qui redéfinissaient la charte depuis quatre pages), la fuite légitime (le
+	//  HTML injecté par l'éditeur riche, qu'aucune règle scopée n'atteint) et
+	//  l'imbriquée (un composant qui habille l'élément d'un enfant).
+	const glob = globalesDeFeuille(`
+		:global(.badge-orange) { background: #fef3c7; }
+		:global(.custom-content p) { margin-bottom: .5rem; }
+		.history-item:hover :global(.ec-titre) { color: red; }
+		.bloc > :global(.field:last-child) { margin-bottom: 0; }
+	`);
+	verifier(
+		'globalesDeFeuille : une REDÉFINITION pure est nommée',
+		glob.fuites.filter((f) => f.classeSeule).map((f) => f.classeSeule),
+		['badge-orange'],
+	);
+	verifier(
+		'globalesDeFeuille : une fuite qui vise du contenu injecté n’est pas une redéfinition',
+		glob.fuites.filter((f) => !f.classeSeule).map((f) => f.selecteur),
+		[':global(.custom-content p)'],
+	);
+	verifier(
+		'globalesDeFeuille : un :global() SOUS un ancêtre scopé n’est pas une fuite',
+		glob.imbriquees.map((i) => i.selecteur),
+		['.history-item:hover :global(.ec-titre)', '.bloc > :global(.field:last-child)'],
+	);
+	//  Cas zéro de l'appelant : une feuille sans `:global()` ne doit rien inventer.
+	verifier(
+		'globalesDeFeuille : cas zéro',
+		globalesDeFeuille('.a { color: red } @media (max-width: 640px) { .b { color: blue } }').fuites.length,
+		0,
+	);
+	//  Un sélecteur en LISTE : chaque partie se juge séparément, sinon la fuite se
+	//  cache derrière une partie scopée écrite avant elle.
+	verifier(
+		'globalesDeFeuille : la fuite se voit même en 2ᵉ position d’une liste',
+		globalesDeFeuille('.a, :global(.badge-red) { color: red }').fuites.map((f) => f.classeSeule),
+		['badge-red'],
 	);
 
 	//  `var(--x, var(--y))` contient une virgule ET des parenthèses ; un découpage
