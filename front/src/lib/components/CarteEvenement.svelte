@@ -88,7 +88,7 @@
 			</svelte:fragment>
 			<svelte:fragment slot="actions">
 				<!--  🔴 La garde `_source !== 'devis_ponctuel'` a disparu avec les
-				      prestations ponctuelles (#602). Elle privait d'actions les cartes
+				      prestations ponctuelles (#603). Elle privait d'actions les cartes
 				      fabriquées à la volée depuis un devis : identifiant négatif, aucune
 				      ligne derrière, donc aucun geste possible. Toutes les cartes
 				      correspondent désormais à un événement réel. -->
