@@ -1,5 +1,6 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -1013,8 +1014,7 @@
 			<div class="modal-body">
 				<!-- Sélection des lots -->
 				<div class="field">
-					<label>Lot(s) concerné(s) *</label>
-					<div class="lot-checklist">
+					<LibelleGroupe titre="Lot(s) concerné(s) *" id="bail-lots" classe="lot-checklist">
 						{#each lots as lot (lot.id)}
 							{@const occupied = !!bauxActifs.find(b => b.lot_id === lot.id)}
 							<label class="lot-check-item" class:disabled={occupied} title={occupied ? 'Ce lot a déjà un bail actif' : undefined}>
@@ -1030,7 +1030,7 @@
 								</span>
 							</label>
 						{/each}
-					</div>
+					</LibelleGroupe>
 					{#if newBailLotIds.size > 0}
 						<p class="lot-selection-hint">{newBailLotIds.size} lot{newBailLotIds.size > 1 ? 's' : ''} sélectionné{newBailLotIds.size > 1 ? 's' : ''} — un bail sera créé pour chacun</p>
 					{/if}
@@ -1111,8 +1111,8 @@
 					</div>
 				</div>
 				<div class="field">
-					<label>Notes</label>
-					<RichEditor bind:value={newBail.notes} placeholder="Notes sur le bail…" minHeight="80px" />
+					<span class="libelle-groupe" id="bail-notes-titre">Notes</span>
+					<RichEditor bind:value={newBail.notes} ariaLabelledby="bail-notes-titre" placeholder="Notes sur le bail…" minHeight="80px" />
 				</div>
 			</div>
 			<div class="modal-footer">
@@ -1260,8 +1260,8 @@
 						<input id="el-sortie" type="date" bind:value={editLocataire.date_sortie_prevue} />
 					</div>
 					<div class="field champ-large">
-						<label>Notes</label>
-						<RichEditor bind:value={editLocataire.notes} placeholder="Notes sur le bail…" minHeight="120px" />
+						<span class="libelle-groupe" id="bail-edit-notes-titre">Notes</span>
+						<RichEditor bind:value={editLocataire.notes} ariaLabelledby="bail-edit-notes-titre" placeholder="Notes sur le bail…" minHeight="120px" />
 					</div>
 				</div>
 			</div>

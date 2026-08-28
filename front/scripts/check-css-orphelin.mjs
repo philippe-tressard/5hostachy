@@ -51,7 +51,7 @@
  *   exit 1 = sélecteur orphelin, ou exception devenue inutile
  *   exit 2 = INCONNU (svelte-check n'a pas pu être mesuré)
  */
-import { spawnSync } from 'node:child_process';
+import { avertissements, lignesDuRapport } from './lib-svelte-check.mjs';
 
 /**
  * Sélecteurs orphelins TOLÉRÉS, avec leur raison.
@@ -65,55 +65,16 @@ import { spawnSync } from 'node:child_process';
  */
 const TOLERANCES = {};
 
-function inconnu(raison, detail) {
-	console.error(`\n⚠️  INCONNU — ${raison}`);
-	if (detail) console.error(`   ${String(detail).trim().split('\n').slice(0, 5).join('\n   ')}`);
-	console.error(
-		"   Le relevé n'a PAS été mesuré : ce n'est ni un succès ni un échec. Relancer le job.\n"
-	);
-	process.exit(2);
-}
-
-//  ⚠️ `svelte-check` sort en 1 dès qu'il trouve une ERREUR, et en 0 avec des
-//  avertissements. Son code de sortie ne dit donc rien sur ce qui nous intéresse :
-//  c'est sa SORTIE qui fait foi, et son illisibilité qui vaut INCONNU.
-const res = spawnSync('npx svelte-check --output human', {
-	encoding: 'utf8',
-	shell: true,
-	maxBuffer: 32 * 1024 * 1024,
+//  ⚠️ Le TUYAU — lancer `svelte-check`, retirer les couleurs, reconnaître un
+//  rapport valide, apparier chaque message à son emplacement — vivait ICI, et il
+//  a été extrait dans `lib-svelte-check.mjs` quand un SECOND contrôle en a eu
+//  besoin (`lint:libelles`, #561). Deux de ces quatre gestes ont déjà coûté un
+//  défaut à ce dépôt : recopiés, ils divergent, et c'est du côté non testé qu'ils
+//  sont faux. Le module porte leur `--selftest`.
+const orphelins = avertissements(lignesDuRapport(), 'Unused CSS selector').map((a) => {
+	const selecteur = /"([^"]+)"/.exec(a.message);
+	return { fichier: a.fichier, ligne: a.ligne, selecteur: selecteur ? selecteur[1] : a.message };
 });
-
-if (res.error) inconnu('`svelte-check` n\'a pas pu être lancé', res.error.message);
-
-//  ⚠️ Les codes de couleur ANSI se retirent par une expression construite À
-//  L'EXÉCUTION. Écrire le caractère d'échappement en clair dans un littéral
-//  régulier y met un CARACTÈRE DE CONTRÔLE INVISIBLE — c'est exactement le
-//  défaut trouvé le matin même dans `check-workflow-envoye.mjs` (un U+0008
-//  au milieu d'un motif, qui le rendait inerte). ESLint le refuse, à raison.
-const ANSI = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g');
-const sortie = `${res.stdout || ''}${res.stderr || ''}`.replace(ANSI, '');
-
-//  🔴 CAS ZÉRO — une sortie qui ne ressemble pas à un rapport `svelte-check`
-//  rendrait « aucun orphelin » sans avoir rien lu.
-if (!/svelte-check found/.test(sortie)) {
-	inconnu('sortie de `svelte-check` non reconnue', sortie.slice(-400));
-}
-
-const lignes = sortie.split('\n');
-const orphelins = [];
-for (let i = 0; i < lignes.length; i++) {
-	if (!lignes[i].includes('Unused CSS selector')) continue;
-	//  L'emplacement est sur la ligne non vide qui précède.
-	let j = i - 1;
-	while (j >= 0 && !lignes[j].trim()) j--;
-	const emplacement = /front[\\/](src[^\s:]+):(\d+)/.exec(lignes[j] ?? '');
-	const selecteur = /"([^"]+)"/.exec(lignes[i]);
-	orphelins.push({
-		fichier: emplacement ? emplacement[1].replace(/\\/g, '/') : '?',
-		ligne: emplacement ? emplacement[2] : '?',
-		selecteur: selecteur ? selecteur[1] : lignes[i].trim(),
-	});
-}
 
 const fautifs = orphelins.filter((o) => !(o.selecteur in TOLERANCES));
 const inutiles = Object.keys(TOLERANCES).filter(

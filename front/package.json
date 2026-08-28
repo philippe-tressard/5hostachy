@@ -24,6 +24,7 @@
     "lint:champs": "node scripts/check-champs.mjs",
     "lint:classes-nues": "node scripts/check-classes-nues.mjs",
     "lint:css-orphelin": "node scripts/check-css-orphelin.mjs",
+    "lint:libelles": "node scripts/check-libelles-associes.mjs",
     "lint:modificateurs": "node scripts/check-modificateurs.mjs",
 		"lint:evenements": "node scripts/check-evenements.mjs",
 		"lint:catch-vide": "node scripts/check-catch-vide.mjs",

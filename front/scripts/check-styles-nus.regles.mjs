@@ -150,9 +150,12 @@ export const TOLERANCES = {
 	'routes/(app)/prestataires/+page.svelte::controle-saisie':
 		'un `<select>` et un `<input>` re-peints à la main (l. ~1815 et ~1840) — même écran de ' +
 		'2 182 lignes que ci-dessus',
-	'routes/(app)/sondages/[id]/+page.svelte::controle-saisie':
-		'deux `<textarea>` de réponse re-peints à la main (l. ~220 et ~234) ; celui de la l. ~220 ' +
-		'porte en plus une bordure `--color-primary` volontaire, à traduire en classe d’état',
+	//  ✅ Tolérance TOMBÉE le 28/08/2026 (#561). Les deux `<textarea>` sont dans un
+	//  `.field` et ne repeignent plus rien — non par un lot de style, mais parce
+	//  qu'associer leur libellé les a fait entrer dans le champ de `lint:champs`,
+	//  qui a exigé le `.field`, lequel a rendu la peinture inutile.
+	//  Trois contrôles se sont relayés sans se connaître : c'est ce que produit
+	//  une charte tenue par des garde-fous plutôt que par la mémoire.
 	//  ⚠️ Les deux tolérances de `tickets/[id]` sont tombées le 17/08/2026 (#431) :
 	//  le champ e-mail re-peint à la main est parti avec le formulaire de réponse
 	//  écrit à la main (remplacé par `EvolForm`), et les 720 px de quatre blocs

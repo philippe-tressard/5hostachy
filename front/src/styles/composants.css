@@ -187,6 +187,20 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     c'est le même arbitrage vu des deux bouts, et il se tranche une fois. */
 .field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
 .field label { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+/*  Le libellé d'un GROUPE de contrôles — pastilles, cases à cocher, boutons
+    radio, éditeur riche. Un `<label>` ne sait pas nommer un groupe : posé
+    dessus, il n'associe rien, ET IL LE FAIT EN SILENCE. C'est le défaut des
+    quinze libellés de #561, et `ux-patterns` §9 septies le disait déjà pour
+    `SectionFormulaire` : « les pastilles et l'éditeur riche ne sont PAS
+    labelables ».
+
+    Le motif est donc : un `<span class="libelle-groupe" id="…">` suivi d'un
+    conteneur `role="group" aria-labelledby="…"`. Même rendu qu'un `.field label`
+    — c'est le même objet à l'écran, seule l'attache change.
+
+    ⚠️ Elle vit ICI et non dans les six pages qui l'emploient : une notion
+    partagée écrite dans une page est nue partout ailleurs (#562). */
+.libelle-groupe { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); }
 /* ── Grille de formulaire ──
    Des champs courts côte à côte, qui repassent en colonne quand la place manque.
 
