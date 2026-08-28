@@ -363,6 +363,7 @@
 	.pub-fil { margin-top: .9rem; }
 	.evol-form { padding: .5rem 0; }
 
-	/* Badges statut */
-	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
+	/*  Les couleurs de badge vivent dans `styles/composants.css`. Cette page les
+	    réécrivait en `:global(…)` — donc pour tout le site une fois sa feuille
+	    chargée. Retiré avec les sept autres (#562). */
 </style>

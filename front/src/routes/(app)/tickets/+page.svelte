@@ -398,13 +398,12 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	.filter-group { display: flex; gap: .4rem; flex-wrap: wrap; }
 	.filter-sep { width: 1px; height: 1.2rem; background: var(--color-border); margin: 0 .3rem; }
 
-	/*  ⚠️ HÉRITÉ, ET SUSPECT. `app.css` définit déjà `.badge-orange` (#FDF3E0 /
-	    #B07D1E) ; cette règle la réécrit en GLOBAL depuis une page, donc pour
-	    tout l'onglet une fois le style de cette page chargé — le badge « ⚡ Urgente »
-	    n'a pas la même teinte selon qu'on soit passé par cette page ou non. Elle est
-	    conservée telle quelle : la retirer change ce que voit le résident, et cela se
-	    constate à l'écran avant de se décider. Signalé dans le lot #431. */
-	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
+	/*  Le badge « ⚡ Urgente » réécrivait ici `.badge-orange` en `:global(…)`, donc
+	    pour tout le site une fois la feuille de cette page chargée : sa teinte
+	    dépendait des écrans déjà visités. Le diagnostic était écrit ici depuis #431
+	    et la règle est quand même restée — un commentaire n'est pas un garde-fou.
+	    Retiré (#562) ; la charte de `styles/composants.css` s'applique désormais
+	    seule, et `lint:classes-nues` refuse le retour de cette forme. */
 
 	/*  Section historique. L'allure des cartes d'archive, elle, vit dans
 	    `CarteTicket` : le `<style>` d'une page n'atteint pas le balisage d'un

@@ -1509,9 +1509,9 @@
 	.evol-form { padding: .25rem 0; }
 	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
 	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
-	:global(.badge-orange) { background: #fef3c7; color: #92400e; }
-	:global(.badge-red) { background: #fee2e2; color: #991b1b; }
-	:global(.badge-purple) { background: #ede9fe; color: #5b21b6; }
+	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
+	    site une fois cette feuille chargée. Retirées (#562) : la charte de
+	    `styles/composants.css` les porte déjà. */
 
 	/* Reporting */
 	/*  Les trente-six règles `.ah-*` sont parties avec `OngletAnnoncesHall` :

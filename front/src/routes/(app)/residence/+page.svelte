@@ -1199,10 +1199,10 @@
 	/* ── Edit form ──────────────────────────────────────────────── */
 	.edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: .75rem; }
 
-	/* ── badge-purple ───────────────────────────────────────────── */
-	:global(.badge-purple) { background: #ede9fe; color: #6d28d9; }
-	:global(.badge-green) { background: #dcfce7; color: #166534; }
-	:global(.badge-blue) { background: #dbeafe; color: #1d4ed8; }
+	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
+	    site une fois cette feuille chargée — et `.badge-purple` y prenait encore
+	    une quatrième valeur, différente de celle d'`espace-cs`. Retirées (#562) :
+	    la charte de `styles/composants.css` les porte déjà. */
 
 	/* ── Pills périmètre ────────────────────────────────────────── */
 	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
