@@ -1335,7 +1335,7 @@
 						<div class="acces-filters">
 							<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span>
 							{#each lotsSourcesAcces as ls}
-								<button class="chip-btn" class:active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}>{ls.label}</button>
+								<button class="pill" class:pill-active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}>{ls.label}</button>
 							{/each}
 						</div>
 					{/if}
@@ -1594,19 +1594,11 @@
 		gap: .35rem;
 		margin-bottom: .7rem;
 	}
-	.chip-btn {
-		border: 1px solid var(--color-border);
-		background: var(--color-bg);
-		padding: .2rem .55rem;
-		border-radius: 999px;
-		font-size: .78rem;
-		cursor: pointer;
-	}
-	.chip-btn.active {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-		background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg));
-	}
+	/*  🔴 `.chip-btn` retirée le 28/08/2026 (#491) : c'était la pastille de la
+	    charte, sous un AUTRE NOM — donc invisible à toute recherche sur `pill`,
+	    et libre de diverger sans que personne ne la rapproche de son modèle.
+	    Elle avait déjà divergé : `.78rem`, `.2rem .55rem`, et un état actif en
+	    teinte pâle là où la charte remplit la pastille. */
 
 	@media (max-width: 680px) {
 		.locataire-edit-grid { grid-template-columns: 1fr; }

@@ -920,7 +920,7 @@
 				{@const expanded = expandedPrests.has(p.id)}
 				{@const cs = contratsForPrest(p.id)}
 				{@const nextVisit = nextVisitForPrest(p.id)}
-				<div class="prest-expand card" class:expanded id="presta-{p.id}">
+				<div class="carte-liste" class:expanded id="presta-{p.id}">
 					<div class="prest-header"
 						role="button" tabindex="0"
 						on:click={() => togglePrest(p.id)}
@@ -1169,8 +1169,8 @@
 	/* Carte prestataire expansible */
 	/*  ⚠️ `overflow: hidden` retiré des trois cartes : il rognait l'infobulle des
 	    boutons, posée sous eux donc hors de la carte (#598). */
-	.prest-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); transition: border-left-color .12s; padding: 0; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); border-radius: var(--radius); }
-	.prest-expand:hover, .prest-expand.expanded { border-left-color: var(--color-primary); }
+	/*  `.carte-liste` depuis le 28/08/2026 (#598) : la carte combinait `.card`
+	    et en ANNULAIT le remplissage — ce que la norme donne sans annuler. */
 	.prest-header { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; cursor: pointer; flex-wrap: wrap; }
 	.prest-main { display: flex; align-items: center; min-width: 160px; flex-wrap: wrap; gap: .25rem; }
 	.prest-nom { font-size: .95rem; }

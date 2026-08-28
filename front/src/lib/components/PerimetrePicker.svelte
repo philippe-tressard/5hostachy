@@ -329,9 +329,12 @@
 	    ce qui garantit qu'un second écran ne pourra pas hériter de l'un sans
 	    l'autre (régression du 16/08/2026, pastilles nues sur les sondages).
 
-	    Le CONTENEUR, lui, reste ici : c'est une mise en page, propre à cet
-	    écran — pas une propriété de la pastille. */
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+	    Le CONTENEUR est parti le 28/08/2026 (#491) : il était déjà dans la
+	    charte — et même DEUX fois, `composants.css` et `ecrans.css`, à
+	    l'identique. Cette copie-ci était la troisième, et elle se justifiait
+	    par « c'est une mise en page propre à cet écran », ce qui était faux :
+	    quatre écrans emploient la classe. La charte a été dédoublonnée dans le
+	    même lot ; sans cela, aucune des deux ne s'imposait comme LA définition. */
 	.perimetre-titre { font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
 	.perimetre-badge { font-size: .72rem; margin-left: .4rem; }
 	/*  Le résumé d'une pastille contractée : légèrement en retrait pour qu'on lise
