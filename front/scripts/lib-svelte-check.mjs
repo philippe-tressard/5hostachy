@@ -45,7 +45,29 @@ export function inconnu(raison, detail) {
  * sa SORTIE qui fait foi, et son illisibilité qui vaut INCONNU.
  */
 export function lignesDuRapport() {
-	const res = spawnSync('npx svelte-check --output human', {
+	//  🔴 `svelte-kit sync` D'ABORD, et le MÊME `--tsconfig` que le script `check`
+	//  du package.json (28/08/2026).
+	//
+	//  Sans le sync, `.svelte-kit/tsconfig.json` n'existe pas, `svelte-check`
+	//  n'analyse AUCUN fichier — et rend « 0 errors and 0 warnings » en une
+	//  seconde. Sur le poste on ne le voyait jamais : le répertoire `.svelte-kit`
+	//  y traîne depuis un build précédent. En intégration continue, où le dépôt
+	//  est neuf et où ces étapes passent AVANT le build, les trois contrôles qui
+	//  s'appuient sur ce module rendaient donc « aucun défaut » sans avoir rien
+	//  analysé.
+	//
+	//  ⚠️ C'est la definition même du faux vert, et il a tenu parce que le
+	//  résultat attendu de deux d'entre eux est ZÉRO : « rien lu » y ressemble
+	//  trait pour trait. Seul `lint:a11y`, qui porte une exception à SERVIR, a pu
+	//  le révéler — il a cru l'écran devenu conforme.
+	const sync = spawnSync('npx svelte-kit sync', { encoding: 'utf8', shell: true });
+	if (sync.status !== 0) {
+		inconnu(
+			'`svelte-kit sync` a échoué — `svelte-check` n\'analyserait aucun fichier',
+			`${sync.stdout || ''}${sync.stderr || ''}`.slice(-400),
+		);
+	}
+	const res = spawnSync('npx svelte-check --tsconfig ./tsconfig.json --output human', {
 		encoding: 'utf8',
 		shell: true,
 		maxBuffer: 32 * 1024 * 1024,
@@ -54,10 +76,37 @@ export function lignesDuRapport() {
 	const sortie = `${res.stdout || ''}${res.stderr || ''}`.replace(motifAnsi(), '');
 	//  🔴 CAS ZÉRO — une sortie qui ne ressemble pas à un rapport rendrait
 	//  « aucun défaut » sans avoir rien lu.
-	if (!/svelte-check found/.test(sortie)) {
+	const bilan = /svelte-check found (\d+) errors? and (\d+) warnings?/.exec(sortie);
+	if (!bilan) {
 		inconnu('sortie de `svelte-check` non reconnue', sortie.slice(-400));
 	}
-	return sortie.split('\n');
+	const lignes = sortie.split('\n');
+
+	//  🔴 CAS ZÉRO, SECOND ÉTAGE — le rapport ANNONCE un nombre d'avertissements ;
+	//  si on n'arrive pas à les lire, on ne dit pas « aucun ».
+	//
+	//  Trouvé le 28/08/2026, et c'était un faux vert en production. En intégration
+	//  continue, `lint:css-orphelin` et `lint:libelles` rendaient « aucun » — non
+	//  parce que le dépôt était conforme, mais parce que RIEN n'était extrait de la
+	//  sortie. Sur le poste (terminal interactif) le format est bloc par bloc ;
+	//  ailleurs il peut différer, et le premier étage ci-dessus ne voyait rien : la
+	//  ligne de bilan, elle, était bien là.
+	//
+	//  Les deux contrôles ne pouvaient PAS s'en apercevoir : leur relevé légitime
+	//  est vide, et « rien lu » y ressemble trait pour trait. C'est `lint:a11y`,
+	//  qui porte une exception à servir, qui l'a révélé — il a cru l'écran devenu
+	//  conforme. Un contrôle dont le résultat attendu est « zéro » a besoin d'un
+	//  témoin extérieur ; celui-ci est le compte que l'outil annonce lui-même.
+	const annonces = Number(bilan[2]);
+	const lus = lignes.filter((l) => /\bWarn:/.test(l)).length;
+	if (annonces > 0 && lus === 0) {
+		inconnu(
+			`\`svelte-check\` annonce ${annonces} avertissement(s) et aucun n'a pu être lu`,
+			`Le format du rapport ne correspond plus au motif de lecture (\`Warn:\`).\n` +
+				`   Extrait :\n${sortie.slice(-600)}`,
+		);
+	}
+	return lignes;
 }
 
 /**
@@ -158,6 +207,16 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 		//  Les couleurs se retirent sans laisser de caractère de contrôle.
 		const colore = String.fromCharCode(27) + '[31mWarn' + String.fromCharCode(27) + '[0m';
 		verifier('les codes ANSI sont retirés', colore.replace(motifAnsi(), ''), 'Warn');
+
+		//  🔴 Le cas zéro du SECOND étage (28/08/2026) : un rapport qui ANNONCE des
+		//  avertissements dont aucun n'est lisible. C'était un faux vert réel — en
+		//  intégration continue, deux contrôles rendaient « aucun » sans rien avoir
+		//  extrait. On éprouve ici la DÉCISION (les deux comptes divergent), pas le
+		//  `process.exit` qui la suit.
+		const divergent = (annonces, lignes) => annonces > 0 && lignes.filter((l) => /\bWarn:/.test(l)).length === 0;
+		verifier('bilan annoncé mais rien de lisible → anomalie', divergent(2, ['svelte-check found 0 errors and 2 warnings']), true);
+		verifier('bilan annoncé ET lisible → normal', divergent(2, rapport), false);
+		verifier('aucun avertissement annoncé → normal, pas une anomalie', divergent(0, ['svelte-check found 0 errors and 0 warnings']), false);
 
 		if (fail) { console.error('\n✗ lib-svelte-check --selftest : des cas échouent.'); process.exit(1); }
 		console.log('✓ lib-svelte-check --selftest : le rapport se lit comme on croit.');
