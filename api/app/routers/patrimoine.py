@@ -36,7 +36,6 @@ from app.database import get_session
 from app.models.perimetre import Perimetre
 from app.models.core import (
     AnnonceHall,
-    DevisPrestataire,
     Evenement,
     Publication,
     Ticket,
@@ -110,8 +109,14 @@ class PerimetreUpdate(BaseModel):
 def _codes_cites(session: Session) -> set[str]:
     """Tous les codes de périmètre cités par un contenu, quel que soit le format.
 
-    Les cinq entités qui portent un périmètre utilisent trois formats — JSON pour
-    `perimetre_cible`, CSV pour `perimetre`. On les analyse avec les mêmes fonctions
+    Les quatre entités qui portent un périmètre utilisent deux formats — JSON pour
+    `perimetre_cible`, CSV pour `perimetre`.
+
+    ⚠️ `DevisPrestataire` en faisait partie, et ne le fait plus (#603) : son modèle
+    a disparu. Sa table subsiste, non lue — un périmètre cité UNIQUEMENT par un
+    devis dormant redevient donc supprimable. C'est voulu : plus rien n'affiche
+    ces lignes, et les retenir ferait dépendre l'arborescence d'un contenu que
+    personne ne peut plus voir ni corriger. On les analyse avec les mêmes fonctions
     que le reste du produit plutôt qu'avec un `LIKE` sur du JSON, qui donnerait des
     correspondances partielles (« bat:1 » trouvé dans « bat:12 »).
     """
@@ -121,7 +126,6 @@ def _codes_cites(session: Session) -> set[str]:
         (Publication, "perimetre_cible", True),
         (AnnonceHall, "perimetre_cible", True),
         (Evenement, "perimetre", False),
-        (DevisPrestataire, "perimetre", False),
     ):
         #  `session.exec(select(<colonne>))` rend des SCALAIRES, pas des tuples à un
         #  élément — contrairement à `session.execute`. La première écriture

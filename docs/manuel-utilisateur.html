@@ -981,7 +981,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.63 · Août 2026</span>
+    <span class="topbar-badge">Version 3.64 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1410,7 +1410,7 @@
         <h3>&#x1F4F0; Fil d'activité</h3>
         <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Timeline chronologique regroupée par jour, couvrant les 12 derniers mois.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
-          <li>Chaque élément a une <strong>couleur distinctive</strong> par type : <span style="color:#DC2626">&#x25CF; tickets (rouge)</span>, <span style="color:#1B9F5A">&#x25CF; publications (vert)</span>, <span style="color:#F59E0B">&#x25CF; événements (ambre)</span>, <span style="color:#8B5CF6">&#x25CF; sondages (violet)</span>, <span style="color:#10B981">&#x25CF; devis (émeraude)</span>.</li>
+          <li>Chaque élément a une <strong>couleur distinctive</strong> par type : <span style="color:#DC2626">&#x25CF; tickets (rouge)</span>, <span style="color:#1B9F5A">&#x25CF; publications (vert)</span>, <span style="color:#F59E0B">&#x25CF; événements (ambre)</span>, <span style="color:#8B5CF6">&#x25CF; sondages (violet)</span>, <span style="color:#0F766E">&#x25CF; prestataires (sarcelle)</span>.</li>
           <li>Le fil couvre aussi la <strong>vie de la communauté et de la copropriété</strong> : petites annonces, boîte à idées, nouveaux articles de <strong>FAQ</strong>, <strong>documents</strong> et rapports de <strong>diagnostic</strong> partagés, nouvelles fiches <strong>prestataires</strong> (CS/admin) et nouveaux membres de l'<strong>annuaire</strong> (conseil syndical, syndic).</li>
           <li>Un badge <strong style="color:#EF4444">NEW</strong> pulsant signale les éléments de moins de <strong>48 heures</strong>.</li>
           <li><strong>Cliquez</strong> sur un élément pour voir son contenu complet (description, image, métadonnées) sans quitter la page.</li>
@@ -1823,7 +1823,7 @@
             <strong>&#x1F4CA; Analyse tickets</strong> — synthèse des tickets sur 30 jours, 90 jours ou 12 mois, par catégorie et par bâtiment / périmètre.
           </div>
           <div style="padding:.8rem; background:#fdf4ff; border-radius:8px">
-            <strong>&#x1F3E2; Prestataires</strong> — synthèse de chaque prestataire : nom, spécialité, nombre de devis actifs/réalisés. Cliquez <strong>« Fiche synthèse »</strong> pour accéder à l'historique complet (contrats, prestations, notations, prochaines visites).
+            <strong>&#x1F3E2; Prestataires</strong> — synthèse de chaque prestataire : nom, spécialité et type. Cliquez <strong>« Fiche synthèse »</strong> pour accéder à l'historique complet (contrats, notations, prochaines visites).
           </div>
           <div style="padding:.8rem; background:#fefce8; border-radius:8px">
             <strong>&#x1F4C5; Renouvellements</strong> — vue complète des contrats prestataires et des diagnostics réglementaires.
@@ -2059,7 +2059,7 @@
             <p style="color:var(--muted); margin-top:2px">Entretien ascenseur, VMC, chaufferie…</p>
           </div>
           <div style="padding:.75rem; background:#fff8f0; border-radius:8px; font-size:.85rem">
-            <strong>&#x1F6E0;️ Prestations prestataires</strong>
+            <strong>&#x1F6E0;️ Interventions</strong>
             <p style="color:var(--muted); margin-top:2px">Passages planifiés des intervenants extérieurs</p>
           </div>
         </div>
@@ -2077,12 +2077,12 @@
           </div>
           <div style="padding:.75rem; background:#f0fdf4; border-radius:8px; font-size:.85rem">
             <strong>📁 Archives</strong>
-            <p style="color:var(--muted); margin-top:2px">Historique des événements et prestations réalisées par année. Utile pour justifier, comparer et retrouver un précédent.</p>
+            <p style="color:var(--muted); margin-top:2px">Historique des événements par année. Utile pour justifier, comparer et retrouver un précédent.</p>
           </div>
         </div>
         <div class="callout tip">
           <span class="callout-icon">&#x1F4C2;</span>
-          <p><strong>Historique fiable</strong> — L'onglet <em>Archives</em> conserve les événements passés (y compris les prestations réalisées). Les événements annulés n'y sont pas affichés.</p>
+          <p><strong>Historique fiable</strong> — L'onglet <em>Archives</em> conserve les événements passés. Les événements annulés n'y sont pas affichés.</p>
         </div>
         <div class="callout tip" style="margin-top:.8rem">
           <span class="callout-icon">&#x1F4CE;</span>
@@ -2090,7 +2090,6 @@
         </div>
         <div class="callout tip" style="margin-top:.8rem">
           <span class="callout-icon">&#x1F4CC;</span>
-          <p><strong>Prestations ponctuelles</strong> — En vue <em>Liste</em>, seules les prestations ponctuelles acceptées apparaissent dans la chronologie. En vue <em>Kanban</em>, elles sont positionnées automatiquement dans la colonne correspondant à leur statut&nbsp;: attente syndic, prestataire, terminé ou annulé.</p>
         </div>
         <div class="callout tip" style="margin-top:.8rem">
           <span class="callout-icon">&#x1F514;</span>
@@ -2555,7 +2554,7 @@
         <div class="chapter-icon" style="background:#fff8f0; color:var(--c-presta)">⛑️</div>
         <div>
           <h2>Prestataires</h2>
-          <p>Intervenants de la résidence, contrats de maintenance et suivi des prestations.</p>
+          <p>Intervenants de la résidence, contrats de maintenance et échéances de visite.</p>
         </div>
       </div>
 
@@ -2566,17 +2565,11 @@
 
       <div class="card">
         <h3>Les prestataires de la résidence</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Prestataires</strong> dans le menu. Cinq onglets sont disponibles :</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:1rem">Accédez à <strong>Prestataires</strong> dans le menu. Trois onglets sont disponibles :</p>
 
         <div style="display:flex; flex-direction:column; gap:.65rem">
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F4CB; Prestations ponctuelles</strong> — suivi des travaux et interventions sous forme de tableau kanban, avec 4 colonnes&nbsp;: <em>⏳ Syndic</em>, <em>🔧 Prestataire</em>, <em>🏁 Réalisé</em>, <em>🚫 Refusé</em>.
-          </div>
-          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F4C5; Visites</strong> — planification et suivi des visites d'entretien ou de contrôle (chaudières, ascenseurs, espaces verts…).
-          </div>
-          <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
-            <strong>&#x1F4C4; Contrats</strong> — liste centralisée de tous les contrats de maintenance et de service, avec dates, montants et renouvellements.
+            <strong>&#x1F4C4; Contrats</strong> — liste centralisée des contrats de maintenance et de service, groupés par équipement. C'est l'onglet qui s'ouvre par défaut. Chaque contrat affiche sa <strong>prochaine échéance de visite</strong> ; les plus proches sont en tête, celles qui sont <strong>en retard</strong> portent un liseré rouge. En haut de la liste, trois compteurs résument la situation&nbsp;: <em>en retard</em>, <em>à venir</em>, <em>sans échéance</em>.
           </div>
           <div style="padding:.8rem; background:#fff8f0; border-radius:8px; font-size:.9rem">
             <strong>&#x1F3E2; Prestataires</strong> — liste des entreprises intervenant sur la résidence, avec leur spécialité, type (ponctuel / récurrent) et coordonnées. Chaque prestataire peut avoir <strong>plusieurs contacts téléphoniques</strong>, chacun associé à un prénom, nom, fonction et email (tous optionnels). La <strong>note moyenne</strong> (1 à 5 étoiles) s'affiche directement sur la fiche.
@@ -2588,51 +2581,30 @@
       </div>
 
       <div class="card">
-        <h3>Comprendre les prestations (kanban)</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Les prestations correspondent aux devis et ordres de service envoyés aux prestataires. Elles circulent de gauche à droite :</p>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem">
-          <div style="padding:.7rem; background:#eff6ff; border-radius:8px; font-size:.85rem; border-left:3px solid #3b82f6">
-            <strong>⏳ En attente</strong>
-            <p style="color:var(--muted); margin-top:2px">Prestation soumise, en attente de réponse du prestataire</p>
+        <h3>Suivre une intervention</h3>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Cet écran décrit <strong>qui</strong> intervient et <strong>avec quel engagement</strong>. Tout ce qui a une date et un suivi se traite là où le suivi existe déjà :</p>
+        <div style="display:flex; flex-direction:column; gap:.65rem">
+          <div style="padding:.8rem; background:#eff6ff; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F3AB; Une demande au syndic</strong> — ouvrez un <strong>ticket</strong> et cochez « Envoyer au syndic ». Vous y suivez les réponses, joignez le devis reçu et relancez si besoin.
           </div>
-          <div style="padding:.7rem; background:#f0fdf4; border-radius:8px; font-size:.85rem; border-left:3px solid #22c55e">
-            <strong>✅ Accepté</strong>
-            <p style="color:var(--muted); margin-top:2px">Prestataire a accepté — en cours de planification</p>
+          <div style="padding:.8rem; background:#fffbeb; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F4C5; Une intervention planifiée</strong> — créez un <strong>événement</strong> dans le Calendrier, en choisissant le prestataire. Le kanban du calendrier la fait avancer de <em>AG</em> à <em>Terminé</em>, en passant par <em>CS</em>, <em>Syndic</em> et <em>Prestataire</em>.
           </div>
-          <div style="padding:.7rem; background:#fdf4ff; border-radius:8px; font-size:.85rem; border-left:3px solid #a21caf">
-            <strong>&#x1F3C1; Réalisé</strong>
-            <p style="color:var(--muted); margin-top:2px">Intervention effectuée — visible dans les archives calendrier</p>
+          <div style="padding:.8rem; background:#f0fdf4; border-radius:8px; font-size:.9rem">
+            <strong>&#x1F504; Une intervention qui revient</strong> — renseignez la <strong>fréquence</strong> sur le contrat. Le bouton « Init. prestataires » du Calendrier crée alors les rendez-vous de l'exercice.
           </div>
-          <div style="padding:.7rem; background:#fef2f2; border-radius:8px; font-size:.85rem; border-left:3px solid #ef4444">
-            <strong>❌ Refusé</strong>
-            <p style="color:var(--muted); margin-top:2px">Prestation non retenue</p>
-          </div>
-        </div>
-
-        <div class="callout tip" style="margin-top:1rem">
-          <span class="callout-icon">&#x1F4A1;</span>
-          <p>Les prestations récurrentes (contrats annuels) génèrent automatiquement des événements dans le <strong>Calendrier</strong>.</p>
-        </div>
-        <div class="callout tip" style="margin-top:1rem">
-          <span class="callout-icon">&#x270D;&#xFE0F;</span>
-          <p>Le formulaire <strong>Nouvelle prestation</strong> permet maintenant de renseigner dès la création le statut workflow, la date prévue, le montant, la fréquence éventuelle, les notes et les fichiers utiles pour préparer le suivi dans le kanban et le calendrier.</p>
-        </div>
-        <div class="callout tip" style="margin-top:.8rem">
-          <span class="callout-icon">&#x1F514;</span>
-          <p><strong>Options de notification :</strong> lors de la création ou modification d'une prestation, trois cases à cocher sont disponibles — <strong>« Partager sur le groupe »</strong>, <strong>« Envoyer au syndic »</strong> et <strong>« Envoyer au Conseil Syndical »</strong>. Cochez celles souhaitées pour diffuser l'information aux destinataires concernés.</p>
         </div>
         <div class="callout info" style="margin-top:1rem">
-          <span class="callout-icon">📅</span>
-          <p>Sur le <strong>Tableau de bord</strong>, la zone « Événements récents » affiche aussi les <strong>prestations ponctuelles non terminées</strong> (en attente / acceptées), pour garder une vision opérationnelle rapide.</p>
+          <span class="callout-icon">&#x2139;&#xFE0F;</span>
+          <p>L'onglet « Prestations ponctuelles » et son kanban à quatre colonnes ont été retirés&nbsp;: ils faisaient double emploi avec le ticket et le calendrier, qui offrent le même suivi avec deux étapes de plus (<em>AG</em> et <em>CS</em>) et des cartes que l'on peut déplacer.</p>
         </div>
       </div>
 
       <div class="card">
         <h3>⭐ Notation des prestataires</h3>
-        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Lorsqu'une visite ou prestation ponctuelle est terminée (statut <strong>Réalisé</strong>), le CS peut <strong>noter le prestataire de 1 à 5 étoiles</strong> avec un commentaire optionnel.</p>
+        <p style="font-size:.9rem; color:var(--muted); margin-bottom:.75rem">Après une visite, le CS peut <strong>noter le prestataire de 1 à 5 étoiles</strong> avec un commentaire optionnel.</p>
         <ul style="font-size:.9rem; margin:.5rem 0 0 1.1rem; line-height:1.7">
-          <li>Un bouton <strong>⭐ Noter</strong> apparaît sur les prestations réalisées et les visites terminées.</li>
+          <li>Dépliez un contrat dans l'onglet <strong>Contrats</strong>&nbsp;: le bouton <strong>⭐ Noter</strong> s'y trouve, à côté de « Modifier ». Il n'apparaît pas si le contrat n'a pas d'intervenant — il n'y aurait personne à noter.</li>
           <li>La <strong>note moyenne</strong> est affichée directement sur la fiche du prestataire (onglet Prestataires).</li>
           <li>L'historique complet des notations est consultable dans <strong>Espace CS → Reporting → Prestataires → Fiche synthèse</strong>.</li>
         </ul>
@@ -2988,7 +2960,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.63</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.64</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

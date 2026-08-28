@@ -72,9 +72,9 @@ from app.models.tickets import (  # noqa: E402
 )
 
 
-#  `TypePrestataire`, `StatutDevis` et `TypeEquipement` sont parties avec
-#  leurs modèles dans `models/prestataires.py` ; elles sont réimportées plus
-#  bas, avec eux.
+#  `TypePrestataire` et `TypeEquipement` sont parties avec leurs modèles dans
+#  `models/prestataires.py` ; elles sont réimportées plus bas, avec eux.
+#  `StatutDevis` a suivi la prestation ponctuelle (#603) et n'existe plus.
 
 class FaqItem(SQLModel, table=True):
     __tablename__ = "faq_item"
@@ -461,10 +461,8 @@ class Delegation(SQLModel, table=True):
 #  les tables auprès de SQLModel avant `create_all`.
 from app.models.prestataires import (  # noqa: E402,F401
     ContratEntretien as ContratEntretien,
-    DevisPrestataire as DevisPrestataire,
     NotationPrestataire as NotationPrestataire,
     Prestataire as Prestataire,
-    StatutDevis as StatutDevis,
     TypeEquipement as TypeEquipement,
     TypePrestataire as TypePrestataire,
 )
