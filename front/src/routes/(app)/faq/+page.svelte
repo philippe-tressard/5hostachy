@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 import { onMount } from 'svelte';
@@ -513,8 +514,8 @@ import { onMount } from 'svelte';
 
 <!-- Modal ajout / édition -->
 {#if showForm}
-<div class="modal-overlay" on:click|self={() => (showForm = false)} role="dialog" aria-modal="true" tabindex="-1">
-	<div class="modal-box card">
+<Modale titre="Question de la FAQ" classeBoite="modal-box card" styleBoite="max-width:500px"
+	on:fermer={() => (showForm = false)}>
 		<h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">
 			{editingItem ? 'Modifier la question' : 'Nouvelle question'}
 		</h2>
@@ -545,8 +546,7 @@ import { onMount } from 'svelte';
 				{saving ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
-	</div>
-</div>
+</Modale>
 {/if}
 
 <style>
@@ -567,8 +567,6 @@ import { onMount } from 'svelte';
 	.faq-actions { display: flex; gap: .15rem; padding-right: .5rem; }
 	.still-need-help { margin-top: 2rem; padding: 1.25rem; }
 	.still-need-help p { margin: .5rem 0 0; font-size: .875rem; color: var(--color-text-muted); }
-	.modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
-	.modal-box { max-width: 500px; width: 92%; padding: 1.5rem; }
 	.form-grid { display: flex; flex-direction: column; gap: .5rem; }
 	/*  Ne sert plus qu'au renommage de catégorie EN LIGNE. Fond explicite : son absence rendait les champs blancs (#413). */
 	.input-field { padding: .45rem .65rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: .875rem; font-family: inherit; width: 100%; box-sizing: border-box; resize: vertical; background: var(--color-bg); color: var(--color-text); }

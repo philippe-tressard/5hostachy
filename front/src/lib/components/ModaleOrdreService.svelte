@@ -23,6 +23,7 @@
   à l'API du métier de la page qui l'héberge.
 -->
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -44,15 +45,7 @@
 </script>
 
 {#if devisId}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-	<div class="modal-overlay" on:click={fermer}>
-		<div
-			class="modal modal-sm"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="modale-os-titre"
-			on:click|stopPropagation
-		>
+	<Modale titre="Ordre de service" classeBoite="modal modal-sm" on:fermer={fermer}>
 			<div class="modal-header">
 				<h2 id="modale-os-titre">Ordre de service</h2>
 				<button class="modal-close" aria-label="Fermer" on:click={fermer}>×</button>
@@ -83,8 +76,7 @@
 					{envoi ? 'Enregistrement...' : "Confirmer l'OS"}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>

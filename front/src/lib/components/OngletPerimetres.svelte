@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import { onMount } from 'svelte';
 	import { perimetres as perimetresApi, ApiError } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
@@ -211,8 +212,8 @@
 	<!--  Pas de fermeture au clic sur le fond : on saisit ici un libellé et une
 	      description, et un clic à côté effaçait tout sans prévenir. `Échap` et
 	      « Annuler » suffisent, et sont des gestes voulus. -->
-	<div class="modal-overlay" on:keydown={(e) => e.key === 'Escape' && (edite = null)} role="presentation">
-		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:keydown|stopPropagation>
+	<Modale titre="Modifier le périmètre" classeBoite="modal-box" fermetureAuFond={false}
+		on:fermer={() => (edite = null)}>
 			<h2>{edite.libelle}</h2>
 			<p class="modal-code">
 				Code <code>{edite.code}</code> — non modifiable : il est enregistré dans les
@@ -295,14 +296,13 @@
 					{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Création ────────────────────────────────────────────────────────────── -->
 {#if creation}
-	<div class="modal-overlay" on:keydown={(e) => e.key === 'Escape' && (creation = null)} role="presentation">
-		<div class="modal-box" role="dialog" aria-modal="true" tabindex="-1" on:keydown|stopPropagation>
+	<Modale titre="Nouveau périmètre" classeBoite="modal-box" fermetureAuFond={false}
+		on:fermer={() => (creation = null)}>
 			<h2>{creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}</h2>
 
 			<label class="field">Libellé *
@@ -329,8 +329,7 @@
 					{enregistrement ? 'Création…' : 'Créer'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>
@@ -353,7 +352,6 @@
 	.icone { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: var(--color-text-muted); font-size: .8rem; }
 	.icone:hover { border-color: var(--color-primary); color: var(--color-text); }
 	.icone-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-	.modal-box { background: var(--color-surface); border-radius: var(--radius); padding: 1.25rem; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
 	.modal-code { font-size: .8rem; color: var(--color-text-muted); margin: -.4rem 0 1rem; }
 	.field-check { display: block; font-size: .85rem; margin-bottom: .8rem; }
 	.herite { border-left: 2px solid var(--color-border); padding-left: .5rem; margin-top: .4rem; }

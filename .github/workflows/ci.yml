@@ -701,6 +701,21 @@ jobs:
         working-directory: front
         run: npm run lint:titres
 
+      # `Modale.svelte` a été créé le 28/08/2026 pour porter le fond, le rôle,
+      # `Échap` et le verrou de défilement UNE fois. Le lot qui l'a créé a
+      # converti UN écran sur dix : les dix-neuf autres modales sont restées
+      # écrites à la main, et SEIZE d'entre elles ne se fermaient toujours qu'à
+      # la souris — le défaut même que le composant venait corriger (#561).
+      #
+      # La CI était verte : rien ne rapproche un composant neuf des copies qu'il
+      # remplace. C'est le motif « le paquet est ajouté, le monolithe reste ».
+      # Le contrôle refuse aussi les copies LOCALES de `.modal-overlay`,
+      # `.modal` et `.modal-box` : les quatre qui existaient avaient toutes
+      # divergé de la feuille commune, sans que personne l'ait décidé.
+      - name: Fond de modale passant par le composant
+        working-directory: front
+        run: npm run lint:modales
+
       # Une section Workflow DÉCORATIVE : les pastilles s'affichaient en création
       # d'un ticket, se cliquaient, et `statut` ne partait pas dans le POST — le
       # ticket repartait toujours en « Ouvert » (#435). Le serveur l'acceptait

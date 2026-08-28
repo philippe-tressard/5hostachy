@@ -1,6 +1,7 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
+	import Modale from '$lib/components/Modale.svelte';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -1005,8 +1006,8 @@
 
 <!-- ── Modal : nouveau bail ─────────────────────────────────────────── -->
 {#if showNewBail}
-	<div class="modal-overlay" on:click|self={() => (showNewBail = false)} role="dialog" aria-modal="true" aria-label="Nouveau bail" tabindex="-1">
-		<div class="modal" style="width:min(560px,95vw)">
+	<Modale titre="Nouveau bail" styleBoite="width:min(560px,95vw)"
+		on:fermer={() => (showNewBail = false)}>
 			<div class="modal-header">
 				<h3>Nouveau bail</h3>
 				<button class="modal-close" on:click={() => (showNewBail = false)}>✕</button>
@@ -1121,14 +1122,13 @@
 					{savingBail ? 'Création…' : 'Créer le bail'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : terminer bail ────────────────────────────────────────── -->
 {#if bailATerminer}
-	<div class="modal-overlay" on:click|self={() => (bailATerminer = null)} role="dialog" aria-modal="true" aria-label="Terminer le bail" tabindex="-1">
-		<div class="modal" style="width:min(400px,95vw)">
+	<Modale titre="Terminer le bail" styleBoite="width:min(400px,95vw)"
+		on:fermer={() => (bailATerminer = null)}>
 			<div class="modal-header">
 				<h3>Terminer le bail</h3>
 				<button class="modal-close" on:click={() => (bailATerminer = null)}>✕</button>
@@ -1144,14 +1144,13 @@
 				<button class="btn" on:click={() => (bailATerminer = null)}>Annuler</button>
 				<button class="btn btn-danger" on:click={confirmerTerminer}>Terminer</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : supprimer bail (admin) ──────────────────────────────── -->
 {#if bailASupprimer}
-	<div class="modal-overlay" on:click|self={() => (bailASupprimer = null)} role="dialog" aria-modal="true" aria-label="Supprimer le bail" tabindex="-1">
-		<div class="modal" style="width:min(400px,95vw)">
+	<Modale titre="Supprimer le bail" styleBoite="width:min(400px,95vw)"
+		on:fermer={() => (bailASupprimer = null)}>
 			<div class="modal-header">
 				<h3>Supprimer le bail</h3>
 				<button class="modal-close" on:click={() => (bailASupprimer = null)}>✕</button>
@@ -1164,14 +1163,13 @@
 				<button class="btn" on:click={() => (bailASupprimer = null)}>Annuler</button>
 				<button class="btn btn-danger" on:click={confirmerSupprimer}>Supprimer</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : modifier locataire ───────────────────────────────────── -->
 {#if bailEdite}
-	<div class="modal-overlay" on:click|self={() => (bailEdite = null)} role="dialog" aria-modal="true" aria-label="Modifier locataire" tabindex="-1">
-		<div class="modal" style="width:min(560px,95vw)">
+	<Modale titre="Modifier locataire" styleBoite="width:min(560px,95vw)"
+		on:fermer={() => (bailEdite = null)}>
 			<div class="modal-header">
 				<h3>Modifier les informations</h3>
 				<button class="modal-close" on:click={() => (bailEdite = null)}>✕</button>
@@ -1269,14 +1267,13 @@
 				<button class="btn" on:click={() => (bailEdite = null)}>Annuler</button>
 				<button class="btn btn-primary" on:click={sauvegarderLocataire}>Enregistrer</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
 {#if objetRetour}
-	<div class="modal-overlay" on:click|self={() => (objetRetour = null)} role="dialog" aria-modal="true" aria-label="Retour objet" tabindex="-1">
-		<div class="modal" style="width:min(380px,95vw)">
+	<Modale titre="Retour objet" styleBoite="width:min(380px,95vw)"
+		on:fermer={() => (objetRetour = null)}>
 			<div class="modal-header">
 				<h3>Retour — {objetRetour.libelle}</h3>
 				<button class="modal-close" on:click={() => (objetRetour = null)}>✕</button>
@@ -1300,14 +1297,13 @@
 					{retourPerdu ? 'Perdu' : 'Retour confirmé'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
 {#if bailAcces}
-	<div class="modal-overlay" on:click|self={() => (bailAcces = null)} role="dialog" aria-modal="true" aria-label="Accès du bail" tabindex="-1">
-		<div class="modal" style="width:min(620px,95vw)">
+	<Modale titre="Accès du bail" styleBoite="width:min(620px,95vw)"
+		on:fermer={() => (bailAcces = null)}>
 			<div class="modal-header">
 				<h3>Accès — {nomLocataire(bailAcces)}</h3>
 				<button class="modal-close" on:click={() => (bailAcces = null)}>✕</button>
@@ -1409,8 +1405,7 @@
 					</button>
 				{/if}
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>
@@ -1501,8 +1496,6 @@
 	}
 
 	/* Modal overlay + structure */
-	.modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
-	.modal { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
 	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
 	.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); padding: 0; line-height: 1; }

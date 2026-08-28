@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
@@ -1709,8 +1710,8 @@
 
 <!-- Modal notation prestataire (global, hors onglets) -->
 {#if showNotationForm}
-	<div class="modal-overlay" on:click={() => { showNotationForm = null; }}>
-		<div class="modal" style="max-width:420px" on:click|stopPropagation>
+	<Modale titre="Noter le prestataire" styleBoite="max-width:420px"
+		on:fermer={() => { showNotationForm = null; }}>
 			<div class="modal-header">
 				<h2>⭐ Noter le prestataire</h2>
 				<button class="modal-close" on:click={() => { showNotationForm = null; }}>×</button>
@@ -1739,8 +1740,7 @@
 				<button class="btn btn-outline" on:click={() => { showNotationForm = null; }}>Annuler</button>
 				<button class="btn btn-primary" disabled={notationNote === 0 || notationSaving} on:click={saveNotation}>{notationSaving ? '…' : 'Enregistrer'}</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
@@ -182,8 +183,8 @@
 
 <!-- ── Modal : créer une délégation ──────────────────────────────────── -->
 {#if showForm}
-	<div class="modal-overlay" on:click|self={() => (showForm = false)} role="dialog" aria-modal="true" aria-label="Nouvelle délégation" tabindex="-1">
-		<div class="modal" style="width:min(500px,95vw)">
+	<Modale titre="Nouvelle délégation" styleBoite="width:min(500px,95vw)"
+		on:fermer={() => (showForm = false)}>
 			<div class="modal-header">
 				<h3>Nouvelle délégation aidant</h3>
 				<button class="modal-close" on:click={() => (showForm = false)}>✕</button>
@@ -227,8 +228,7 @@
 					{saving ? 'Création…' : 'Créer'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modale>
 {/if}
 
 <style>
@@ -254,8 +254,6 @@
 	.btn-danger:hover { background: #b91c1c; }
 
 	/* Modals & forms — réutilise les styles globaux */
-	.modal-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
-	.modal { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
 	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
 	.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--color-text-muted); padding: 0; line-height: 1; }
