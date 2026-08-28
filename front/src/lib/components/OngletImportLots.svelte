@@ -319,8 +319,8 @@
 							</h3>
 							<!-- Lot en base -->
 							<div class="field" style="margin-bottom:.75rem">
-								<label>Lot en base</label>
-								<select bind:value={editLot}>
+								<label for="imp-lot-{imp.id}">Lot en base</label>
+								<select id="imp-lot-{imp.id}" bind:value={editLot}>
 									<option value="">— Non lié —</option>
 									{#each lots as l}
 										<option value={String(l.id)}>{l.batiment_nom ?? `Bât.${l.batiment_id}`} — {l.numero} ({l.type})</option>
@@ -352,8 +352,8 @@
 							</div>
 							<!-- Notes -->
 							<div class="field" style="margin-top:.75rem">
-								<label>Notes admin</label>
-								<input type="text" bind:value={editNotes} placeholder="Note interne…" />
+								<label for="imp-notes-{imp.id}">Notes admin</label>
+								<input id="imp-notes-{imp.id}" type="text" bind:value={editNotes} placeholder="Note interne…" />
 							</div>
 							<div class="form-actions">
 								<button class="btn btn-outline" on:click={cancelEdit} disabled={saving}>Annuler</button>

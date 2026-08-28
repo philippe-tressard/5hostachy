@@ -579,6 +579,16 @@ jobs:
         working-directory: front
         run: npm run lint:css-orphelin
 
+      # 🔴 Un `<label>` qui nomme un GROUPE n'associe rien — et il le fait en
+      # silence : le lecteur d'écran n'annonce pas le champ. Quinze écrans dans
+      # ce cas (#561), tous réparés avant que ce contrôle ne devienne bloquant.
+      # Deuxième famille d'avertissements `svelte-check` ramenée à zéro puis
+      # rendue bloquante, après les sélecteurs orphelins (#557) — c'est la seule
+      # façon d'en faire des contrôles plutôt que du bruit.
+      - name: Aucun libellé sans contrôle associé
+        working-directory: front
+        run: npm run lint:libelles
+
       # Un événement Svelte non écouté n'est pas une erreur : c'est un silence.
       # `evol_annuler` était dispatché, transféré, et traité par personne — le
       # bouton Annuler ne faisait rien, neuf jours durant (#505). Le relevé qui a
@@ -642,6 +652,10 @@ jobs:
           # peut que décroître. Ajouté ICI le jour même où le module naît :
           # c'est l'oubli d'hier qui a laissé `lib-analyse-styles` non éprouvé.
           node scripts/lib-etats-evolution.mjs --selftest
+          # Le tuyau partagé par `lint:css-orphelin` et `lint:libelles` : lancer
+          # svelte-check, retirer les couleurs, apparier chaque message à son
+          # emplacement. Deux de ces gestes ont déjà coûté un défaut ici.
+          node scripts/lib-svelte-check.mjs --selftest
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.

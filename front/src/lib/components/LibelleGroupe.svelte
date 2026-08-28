@@ -1,0 +1,44 @@
+<!--
+  LibelleGroupe.svelte — nommer un GROUPE de contrôles, une fois pour toutes.
+
+  ## Pourquoi (#561, 28/08/2026)
+
+  Un `<label>` ne sait nommer QU'UN contrôle. Posé devant un groupe — des
+  pastilles, des cases à cocher, deux champs sous un même intitulé — il n'associe
+  rien, **et il le fait en silence** : un lecteur d'écran n'annonce rien en
+  entrant dans le groupe. Quinze écrans étaient dans ce cas.
+
+  Le remède tient en trois éléments qui doivent s'accorder — un titre, un `id`,
+  et un `aria-labelledby` qui les relie. Recopiés sept fois, ils se seraient
+  désaccordés au premier renommage : c'est le motif même de la duplication, où
+  chaque copie est correcte et l'ensemble faux.
+
+  ⚠️ **Ce composant ne sert PAS aux contrôles labelables.** Un `<input>`, un
+  `<select>`, un `<textarea>` se nomment par `<label for>` — c'est plus simple et
+  mieux supporté. Le forcer ici les priverait de l'association native.
+
+  Pour un éditeur riche, employer sa prop `ariaLabelledby` avec un
+  `<span class="libelle-groupe" id="…">` : `RichEditor` la porte déjà.
+
+  Garde-fou : `npm run lint:libelles`.
+
+  Usage :
+
+      <LibelleGroupe titre="Périmètre *" id="crag-perimetre" classe="perimetre-pills">
+        <button class="pill">…</button>
+        <button class="pill">…</button>
+      </LibelleGroupe>
+-->
+<script lang="ts">
+	/** L'intitulé affiché. Le `*` du requis s'écrit dedans, comme sur un `.field`. */
+	export let titre: string;
+	/** Racine des identifiants — le titre porte `<id>-titre`. Doit être unique. */
+	export let id: string;
+	/** Classes du conteneur, quand le groupe a une mise en page à lui. */
+	export let classe = '';
+	/** Style du conteneur. ⚠️ Une mise en page ponctuelle, jamais une recomposition. */
+	export let style = '';
+</script>
+
+<span class="libelle-groupe" id="{id}-titre">{titre}</span>
+<div class={classe} role="group" aria-labelledby="{id}-titre" {style}><slot /></div>

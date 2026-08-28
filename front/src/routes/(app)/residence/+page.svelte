@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
@@ -823,15 +824,14 @@
 					<input id="plan-titre" type="text" bind:value={newPlanTitre} placeholder="ex : Plan de masse résidence" />
 				</div>
 				<div class="field">
-					<label>Périmètre *</label>
-					<div style="display:flex;gap:1rem;margin-top:.25rem">
+					<LibelleGroupe titre="Périmètre *" id="plan-perimetre" style="display:flex;gap:1rem;margin-top:.25rem">
 						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
 							<input type="radio" bind:group={newPlanPerimetre} value="résidence" /> Résidence entière
 						</label>
 						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
 							<input type="radio" bind:group={newPlanPerimetre} value="bâtiment" /> Bâtiment spécifique
 						</label>
-					</div>
+					</LibelleGroupe>
 				</div>
 				{#if newPlanPerimetre === 'bâtiment'}
 					<div class="field">
@@ -919,8 +919,7 @@
 					<input id="ag-titre" type="text" bind:value={newCrAgTitre} placeholder="ex : PV AG ordinaire 2025" />
 				</div>
 				<div class="field">
-					<label>Périmètre *</label>
-					<div class="perimetre-pills" style="margin-top:.25rem">
+					<LibelleGroupe titre="Périmètre *" id="crag-perimetre" classe="perimetre-pills" style="margin-top:.25rem">
 						<button type="button" class="pill" class:pill-active={newCrAgScope === 'copropriété'}
 							on:click={() => { newCrAgScope = 'copropriété'; newCrAgBatimentIds = []; }}>
 							Copropriété entière
@@ -929,19 +928,18 @@
 							on:click={() => (newCrAgScope = 'bâtiment')}>
 							Bâtiment(s) spécifique(s)
 						</button>
-					</div>
+					</LibelleGroupe>
 				</div>
 				{#if newCrAgScope === 'bâtiment'}
 					<div class="field">
-						<label>Bâtiment(s) *</label>
-						<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem">
+						<LibelleGroupe titre="Bâtiment(s) *" id="crag-batiments" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem">
 							{#each batiments as b}
 								<label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.875rem">
 									<input type="checkbox" bind:group={newCrAgBatimentIds} value={b.id} />
 									Bâtiment {b.numero}
 								</label>
 							{/each}
-						</div>
+						</LibelleGroupe>
 					</div>
 				{/if}
 				<div class="field">
@@ -1205,7 +1203,9 @@
 	    la charte de `styles/composants.css` les porte déjà. */
 
 	/* ── Pills périmètre ────────────────────────────────────────── */
-	.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+	/*  `.perimetre-pills` retirée (#561) : copie identique au caractère près de
+	    celle de `styles/composants.css`, donc inerte — révélée en passant la
+	    classe en PROP. Un composant partagé montre ce qu'une page gardait. */
 	.pill {
 		padding: .3rem .85rem;
 		border-radius: 999px;

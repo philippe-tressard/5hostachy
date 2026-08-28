@@ -218,29 +218,32 @@
 
 					<!-- Champ libre conditionnel -->
 					{#if champLibreActif}
+					<!--  `.field` exigé par `lint:champs` dès le libellé associé (#561). -->
 					<div class="champ-libre-box">
-						<label style="display:block;font-size:.85rem;font-weight:600;margin-bottom:.3rem">
-							Précisez votre réponse <span style="color:var(--color-danger)">*</span>
-						</label>
-						<textarea
-							bind:value={reponseLibre}
-							placeholder="Décrivez votre réponse…"
-							rows="3"
-							style="width:100%;padding:.5rem .75rem;border:1px solid var(--color-primary);border-radius:var(--radius);font-size:.875rem;resize:vertical"
-						></textarea>
+						<div class="field">
+							<label for="sondage-reponse-libre" style="font-weight:600">
+								Précisez votre réponse <span style="color:var(--color-danger)">*</span>
+							</label>
+							<textarea
+								id="sondage-reponse-libre"
+								bind:value={reponseLibre}
+								placeholder="Décrivez votre réponse…"
+								rows="3"
+								style="border-color:var(--color-primary);resize:vertical"
+							></textarea>
+						</div>
 					</div>
 					{/if}
 
 					<!-- Commentaire optionnel -->
-					<div style="margin-top:1rem">
-						<label style="display:block;font-size:.85rem;font-weight:500;margin-bottom:.3rem">
-							Commentaire
-						</label>
+					<div class="field" style="margin-top:1rem">
+						<label for="sondage-commentaire-vote">Commentaire</label>
 						<textarea
+							id="sondage-commentaire-vote"
 							bind:value={commentaireVote}
 							placeholder="Partagez votre point de vue…"
 							rows="3"
-							style="width:100%;padding:.5rem .75rem;border:1px solid var(--color-border);border-radius:var(--radius);font-size:.875rem;resize:vertical"
+							style="resize:vertical"
 						></textarea>
 					</div>
 

@@ -897,8 +897,8 @@
 									<label class="field">Titre *<input bind:value={devisForm.titre} required /></label>
 									<label class="field">Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
 									<label class="field">Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
-									<div class="field">
-										<label class="field">Périmètre *</label>
+									<div class="field" role="group" aria-labelledby="devis-perimetre-titre">
+										<span class="libelle-groupe" id="devis-perimetre-titre">Périmètre *</span>
 										<PerimetrePicker mode="single"
 											value={devisForm.perimetre ? [devisForm.perimetre] : []}
 											on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
@@ -936,11 +936,11 @@
 									   />
 								   </div>
 								<div style="margin-top:.5rem">
-									<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-									<RichEditor bind:value={devisForm.notes} placeholder="Notes…" minHeight="60px" />
+									<span class="libelle-groupe" id="devis-notes-titre" style="font-weight:600;margin-bottom:.3rem">Notes</span>
+									<RichEditor bind:value={devisForm.notes} ariaLabelledby="devis-notes-titre" placeholder="Notes…" minHeight="60px" />
 								</div>
-								<div style="margin-top:.5rem">
-									<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Fichiers</label>
+								<div style="margin-top:.5rem" role="group" aria-labelledby="devis-fichiers-titre">
+									<span class="libelle-groupe" id="devis-fichiers-titre" style="font-weight:600;margin-bottom:.3rem">Fichiers</span>
 									{#if d.fichiers_urls && d.fichiers_urls.length > 0}
 										<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem">
 											{#each d.fichiers_urls as url, i}
@@ -1148,8 +1148,8 @@
 					<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
 				</div>
 				<div style="margin-top:.6rem">
-					<label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.3rem">Notes</label>
-					<RichEditor bind:value={contratForm.notes} placeholder="Notes sur le contrat…" minHeight="60px" />
+					<span class="libelle-groupe" id="contrat-notes-titre" style="font-weight:600;margin-bottom:.3rem">Notes</span>
+					<RichEditor bind:value={contratForm.notes} ariaLabelledby="contrat-notes-titre" placeholder="Notes sur le contrat…" minHeight="60px" />
 				</div>
 				{#if editContratId}
 					<div style="margin-top:.8rem">

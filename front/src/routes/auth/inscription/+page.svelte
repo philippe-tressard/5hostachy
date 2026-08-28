@@ -3,6 +3,7 @@
 	import { auth as authApi, ApiError } from '$lib/api';
 	import { getSiteNom } from '$lib/stores/pageConfig';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
+	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 
 	const _siteNom = getSiteNom();
 
@@ -145,8 +146,7 @@
 				{/if}
 
 				{#if isAidantOrMandataire}
-				<label style="margin-bottom:0">Copropriétaire aidé *</label>
-				<div class="field-row">
+				<LibelleGroupe titre="Copropriétaire aidé *" id="coproprietaire-aide" classe="field-row">
 					<div class="field">
 						<input id="prenom-aide" type="text" bind:value={prenom_aide} required placeholder="Prénom" />
 					</div>
@@ -154,7 +154,7 @@
 						<input id="nom-aide" type="text" bind:value={nom_aide} required placeholder="NOM"
 							style="text-transform:uppercase" on:input={() => nom_aide = nom_aide.toUpperCase()} />
 					</div>
-				</div>
+				</LibelleGroupe>
 				<p class="field-hint">Permet au conseil syndical de rattacher votre compte au bon copropriétaire.</p>
 				{/if}
 
