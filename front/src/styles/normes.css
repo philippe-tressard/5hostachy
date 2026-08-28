@@ -159,13 +159,21 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
   .carte-liste { margin-bottom: .6rem; }
 }
 
-/* ── Norme UX : prévisualisation 5 lignes (blocs expansibles repliés) ── */
-.clamp-5 {
+/* ── Norme UX : troncature à N lignes ──
+   `.clamp-5` : l'aperçu d'un bloc expansible replié.
+   `.clamp-2` : un TITRE de carte, qui doit rester sur deux lignes au plus.
+
+   ⚠️ Cette seconde taille était écrite DEUX fois, dans `EnteteCarte` et dans le
+   kanban du tableau de bord (#561, 28/08/2026), et les trois écritures de la
+   notion omettaient toutes `line-clamp` — la propriété STANDARD, que les
+   navigateurs non-WebKit lisent. Elles tronquaient donc par chance. */
+.clamp-5, .clamp-2 {
   display: -webkit-box;
-  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.clamp-5 { -webkit-line-clamp: 5; line-clamp: 5; }
+.clamp-2 { -webkit-line-clamp: 2; line-clamp: 2; }
 
 @media (min-width: 1024px) {
   .container { padding: 0 2.5rem; }

@@ -721,7 +721,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 							<div class="kanban-card-footer">
 								<span class="kanban-card-type">{typeLabel(ev.type)}</span>
 								{#if $isCS}
-									<div class="kanban-card-actions" on:click|stopPropagation on:keydown|stopPropagation>
+									<div class="kanban-card-actions" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 										<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
 									{#if $isAdmin}
 										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(ev.id)}>&#x1F5D1;️</button>
@@ -730,7 +730,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 								{/if}
 							</div>
 							{#if expandedKanbanId === ev.id}
-								<div class="kanban-card-detail" on:click|stopPropagation on:keydown|stopPropagation>
+								<div class="kanban-card-detail" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
 									<div class="kanban-card-detail-row">📅 {formatDate(ev.debut)}{#if ev.fin} → {formatDate(ev.fin)}{/if}</div>
 									{#if ev.lieu}<div class="kanban-card-detail-row">📍 {ev.lieu}</div>{/if}
 									{#if ev.description}

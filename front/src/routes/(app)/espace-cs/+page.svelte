@@ -708,15 +708,15 @@
 			{/if}
 
 			{#each membresCS as m, i}
-				<div class="membre-card" class:membre-president={m.est_president} style="cursor:pointer"
-					on:click={() => { if (csEditIdx !== i) csOpenIdx = csOpenIdx === i ? null : i; }}>
+				<div class="membre-card" class:membre-president={m.est_president} style="cursor:pointer" role="button" tabindex="0"
+					on:click={() => { if (csEditIdx !== i) csOpenIdx = csOpenIdx === i ? null : i; }} on:keydown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && csEditIdx !== i) { e.preventDefault(); csOpenIdx = csOpenIdx === i ? null : i; } }}>
 					<!-- Header fiche -->
 					<div class="membre-card-header">
 						<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 							{#if m.est_president}<span class="badge-president">👑 Président</span>{/if}
 							<span class="membre-card-title">{m.genre} {m.prenom || '…'} <span class="nom-upper">{m.nom || ''}</span></span>
 						</div>
-						<div class="membre-card-actions" on:click|stopPropagation>
+						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
 							{#if csEditIdx === i}
 								<button type="button" class="btn-icon btn-icon-save" title="Enregistrer ce membre"
 									disabled={savingCSIdx === i}
@@ -847,15 +847,15 @@
 			{/if}
 
 			{#each membresSyndic as m, i}
-				<div class="membre-card" class:membre-principal={m.est_principal} style="cursor:pointer"
-					on:click={() => { if (syndicEditIdx !== i) syndicOpenIdx = syndicOpenIdx === i ? null : i; }}>
+				<div class="membre-card" class:membre-principal={m.est_principal} style="cursor:pointer" role="button" tabindex="0"
+					on:click={() => { if (syndicEditIdx !== i) syndicOpenIdx = syndicOpenIdx === i ? null : i; }} on:keydown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && syndicEditIdx !== i) { e.preventDefault(); syndicOpenIdx = syndicOpenIdx === i ? null : i; } }}>
 					<!-- Header avec badge principal + actions -->
 					<div class="membre-card-header">
 						<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 							{#if m.est_principal}<span class="badge-principal">Interlocuteur principal</span>{/if}
 							<span class="membre-card-title">{m.genre} {m.prenom || '…'} <span class="nom-upper">{m.nom || ''}</span></span>
 						</div>
-						<div class="membre-card-actions" on:click|stopPropagation>
+						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
 							{#if i > 0}
 								<button type="button" class="btn-icon btn-icon-move" title="Monter" on:click={() => moveMembreSyndic(i, -1)}>↑</button>
 							{/if}

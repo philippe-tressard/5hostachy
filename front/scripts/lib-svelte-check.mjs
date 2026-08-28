@@ -79,9 +79,15 @@ export function motifAnsi() {
  * la même. Un motif qui les chercherait sur une seule ligne ne trouverait aucun
  * fichier et rapporterait tout en « ? » — vert de forme, muet sur le fond.
  *
+ * ⚠️ `indice` est rendu parce que le rapport est MULTILIGNE : le message tient sur
+ * la ligne `Warn:`, mais le code stable de la règle (`a11y_no_static_…`) est sur
+ * la ligne SUIVANTE, dans l'URL de documentation. Un contrôle qui veut trier par
+ * code doit pouvoir lire autour — sinon il recopierait ce tuyau pour deux lignes,
+ * et c'est exactement ce que ce module existe pour empêcher (#561).
+ *
  * @param lignes   la sortie découpée
  * @param marqueur le texte qui identifie la famille (ex. `Unused CSS selector`)
- * @returns `[{ fichier, ligne, message }]`, chemins normalisés en `/`
+ * @returns `[{ fichier, ligne, message, indice }]`, chemins normalisés en `/`
  */
 export function avertissements(lignes, marqueur) {
 	const trouves = [];
@@ -94,6 +100,7 @@ export function avertissements(lignes, marqueur) {
 			fichier: emplacement ? emplacement[1].replace(/\\/g, '/').replace(/"$/, '') : '?',
 			ligne: emplacement ? emplacement[2] : '?',
 			message: lignes[i].trim(),
+			indice: i,
 		});
 	}
 	return trouves;
@@ -133,6 +140,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 				fichier: 'src/lib/components/Nav.svelte',
 				ligne: '12',
 				message: 'Warn: A form label must be associated with a control (svelte)',
+				//  `indice` est rendu depuis #561 : le rapport est MULTILIGNE, et le code
+				//  stable d'une règle a11y vit sur la ligne SUIVANTE. Ce cas-ci a refusé
+				//  l'ajout tant qu'il n'était pas déclaré — c'est ce qu'on lui demande.
+				indice: 4,
 			},
 		);
 		//  Cas zéro de l'appelant : une famille absente ne doit rien inventer.

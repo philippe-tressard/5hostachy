@@ -451,7 +451,7 @@
 									on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}>
 									<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
 									<div class="kb-item-text">
-										<span class="kb-item-titre">{item.titre}</span>
+										<span class="kb-item-titre clamp-2">{item.titre}</span>
 										{#if !estPerimetreParDefaut(item.perimetre)}
 											<span class="kb-item-perim">&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span>
 										{/if}
@@ -491,7 +491,7 @@
 									on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}>
 									<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
 									<div class="kb-item-text">
-										<span class="kb-item-titre">{item.titre}</span>
+										<span class="kb-item-titre clamp-2">{item.titre}</span>
 										{#if !estPerimetreParDefaut(item.perimetre)}
 											<span class="kb-item-perim">&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span>
 										{/if}
@@ -742,7 +742,7 @@
 	.kb-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 	.kb-item-icon { flex-shrink: 0; font-size: .85rem; line-height: 1.3; }
 	.kb-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
-	.kb-item-titre { font-size: .8rem; color: var(--color-text); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+	.kb-item-titre { font-size: .8rem; color: var(--color-text); line-height: 1.3; }  /* troncature : `.clamp-2` (#561) */
 	.kb-item-perim { font-size: .68rem; color: var(--color-text-muted); }
 
 	/* Mobile */
