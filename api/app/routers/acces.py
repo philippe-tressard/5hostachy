@@ -409,36 +409,7 @@ def list_imports(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Liste les imports, optionnellement filtrés par statut."""
-    q = select(TelecommandeImport)
-    if statut:
-        q = q.where(TelecommandeImport.statut == statut)
-    q = q.order_by(TelecommandeImport.nom_proprietaire)
-    items = session.exec(q).all()
-    # Enrichir avec les utilisateurs liés
-    result = []
-    for item in items:
-        d = item.model_dump()
-        if item.user_proprietaire_id:
-            u = session.get(Utilisateur, item.user_proprietaire_id)
-            d["proprietaire"] = {"id": u.id, "nom": u.nom, "prenom": u.prenom} if u else None
-        else:
-            d["proprietaire"] = None
-        if item.user_locataire_id:
-            u = session.get(Utilisateur, item.user_locataire_id)
-            d["locataire"] = {"id": u.id, "nom": u.nom, "prenom": u.prenom} if u else None
-        else:
-            d["locataire"] = None
-        if item.lot_id:
-            lot = session.get(Lot, item.lot_id)
-            if lot:
-                bat = session.get(Batiment, lot.batiment_id)
-                d["lot_label"] = f"Bât.{bat.numero} — {lot.numero}" if bat else lot.numero
-            else:
-                d["lot_label"] = None
-        else:
-            d["lot_label"] = None
-        result.append(d)
-    return result
+    return _lister_imports(TelecommandeImport, statut, session)
 
 
 @router.post("/admin/imports/auto-match")
@@ -629,137 +600,14 @@ def resoudre_import(
     return {"telecommande": tc, "import_id": imp.id}
 
 
-@router.post("/admin/imports/{import_id}/ignorer")
-def ignorer_import(
-    import_id: int,
-    body: BaseModel = None,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Marque un import comme ignoré (accès non-résidentiel, doublon, etc.)."""
-    imp = session.get(TelecommandeImport, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
-    if imp.statut == StatutImport.resolu:
-        raise HTTPException(400, "Import déjà résolu — ne peut être ignoré")
-    imp.statut = StatutImport.ignore
-    session.add(imp)
-    session.commit()
-    return {"statut": imp.statut}
-
-
-@router.post("/admin/imports/{import_id}/remettre-en-attente")
-def remettre_en_attente_import(
-    import_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Remet un import ignoré en statut 'en attente' pour traitement ultérieur."""
-    imp = session.get(TelecommandeImport, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
-    if imp.statut != StatutImport.ignore:
-        raise HTTPException(400, "Seuls les imports ignorés peuvent être remis en attente")
-    imp.statut = StatutImport.en_attente
-    session.add(imp)
-    session.commit()
-    return {"statut": imp.statut}
-
-
-@router.post("/admin/imports/{import_id}/refuser-locataire")
-def refuser_telecommande_locataire(
-    import_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Le locataire a refusé la télécommande — elle reste/revient chez le propriétaire."""
-    imp = session.get(TelecommandeImport, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
-    imp.refuse_par_locataire = True
-    imp.chez_locataire = False
-    session.add(imp)
-    session.commit()
-    return {"refuse_par_locataire": True, "chez_locataire": False}
-
-
-@router.get("/admin/imports/stats")
-def stats_imports(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Statistiques synthétiques sur les imports."""
-    all_imports = session.exec(select(TelecommandeImport)).all()
-    total = len(all_imports)
-    par_statut = {}
-    for s in StatutImport:
-        par_statut[s.value] = sum(1 for i in all_imports if i.statut == s)
-    avec_reference = sum(1 for i in all_imports if i.reference)
-    avec_locataire = sum(1 for i in all_imports if i.nom_locataire)
-    return {
-        "total": total,
-        "en_attente": par_statut.get("en_attente", 0),
-        "proprietaire_lie": par_statut.get("proprietaire_lie", 0),
-        "resolu": par_statut.get("resolu", 0),
-        "ignore": par_statut.get("ignore", 0),
-        "avec_reference": avec_reference,
-        "avec_locataire": avec_locataire,
-    }
-
-
-# ── Import Excel vigiks ────────────────────────────────────────────────────
-
-@router.post("/admin/imports-vigik/upload", status_code=201)
-async def upload_import_vigik_excel(
-    file: UploadFile = File(...),
-    remplacer: bool = Query(False, description="Supprimer les imports en_attente avant ré-import"),
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Upload un fichier Excel et importe les vigiks dans la table de staging."""
-    from app.utils.import_vigiks import importer_depuis_bytes
-    contenu = await file.read()
-    stats = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
-    return stats
-
-
-@router.get("/admin/imports-vigik/stats")
-def stats_imports_vigik(
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Statistiques synthétiques sur les imports vigik."""
-    all_imports = session.exec(select(VigikImport)).all()
-    total = len(all_imports)
-    par_statut = {}
-    for s in StatutImport:
-        par_statut[s.value] = sum(1 for i in all_imports if i.statut == s)
-    avec_code = sum(1 for i in all_imports if i.code)
-    avec_locataire = sum(1 for i in all_imports if i.nom_locataire)
-    avec_lot = sum(1 for i in all_imports if i.lot_id)
-    return {
-        "total": total,
-        "en_attente": par_statut.get("en_attente", 0),
-        "proprietaire_lie": par_statut.get("proprietaire_lie", 0),
-        "resolu": par_statut.get("resolu", 0),
-        "ignore": par_statut.get("ignore", 0),
-        "avec_code": avec_code,
-        "avec_locataire": avec_locataire,
-        "avec_lot": avec_lot,
-    }
-
-
-@router.get("/admin/imports-vigik")
-def list_imports_vigik(
-    statut: str = Query(None),
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Liste les imports vigik, optionnellement filtrés par statut."""
-    q = select(VigikImport)
+#  Lister les imports d'un type, avec leurs liaisons résolues. Les deux corps
+#  étaient IDENTIQUES au modèle près — vérifié ligne à ligne avant extraction,
+#  jamais supposé (#576).
+def _lister_imports(modele, statut, session: Session):
+    q = select(modele)
     if statut:
-        q = q.where(VigikImport.statut == statut)
-    q = q.order_by(VigikImport.nom_proprietaire)
+        q = q.where(modele.statut == statut)
+    q = q.order_by(modele.nom_proprietaire)
     items = session.exec(q).all()
     result = []
     for item in items:
@@ -785,6 +633,139 @@ def list_imports_vigik(
             d["lot_label"] = None
         result.append(d)
     return result
+
+
+#  Le SOCLE des statistiques : total et statuts, communs aux deux types. Chaque
+#  endpoint l'ENRICHIT de ses compteurs propres (référence, code, lot).
+def _stats_socle(modele, session: Session) -> tuple[list, dict]:
+    lignes = session.exec(select(modele)).all()
+    socle = {"total": len(lignes)}
+    for statut in StatutImport:
+        socle[statut.value] = sum(1 for i in lignes if i.statut == statut)
+    socle["avec_locataire"] = sum(1 for i in lignes if i.nom_locataire)
+    return lignes, socle
+
+
+#  ── Les gestes de STATUT d'un import, écrits UNE fois (#576) ────────────────
+#  Deux tables, un seul CYCLE. Écrits deux fois, ils ont produit le défaut de
+#  #576 : `remettre-en-attente` n'existait que côté télécommandes, et un import
+#  Vigik ignoré par erreur était définitivement perdu. Écrits une fois, la
+#  symétrie est STRUCTURELLE ; `test_symetrie_imports_acces.py` garde le reste.
+def _ignorer_import(modele, import_id: int, session: Session):
+    """Écarte un import du traitement — accès non résidentiel, doublon…"""
+    imp = session.get(modele, import_id)
+    if not imp:
+        raise HTTPException(404, "Import introuvable")
+    if imp.statut == StatutImport.resolu:
+        raise HTTPException(400, "Import déjà résolu — ne peut être ignoré")
+    imp.statut = StatutImport.ignore
+    session.add(imp)
+    session.commit()
+    return {"statut": imp.statut}
+
+
+def _remettre_en_attente_import(modele, import_id: int, session: Session):
+    """Rattrape un import ignoré par erreur.
+
+    ⚠️ Seul un import IGNORÉ peut revenir : un import RÉSOLU a créé un objet, et
+    le remettre en attente le laisserait sans import pour le porter (#576).
+    """
+    imp = session.get(modele, import_id)
+    if not imp:
+        raise HTTPException(404, "Import introuvable")
+    if imp.statut != StatutImport.ignore:
+        raise HTTPException(400, "Seuls les imports ignorés peuvent être remis en attente")
+    imp.statut = StatutImport.en_attente
+    session.add(imp)
+    session.commit()
+    return {"statut": imp.statut}
+
+
+@router.post("/admin/imports/{import_id}/ignorer")
+def ignorer_import(
+    import_id: int,
+    body: BaseModel = None,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Marque un import comme ignoré (accès non-résidentiel, doublon, etc.)."""
+    return _ignorer_import(TelecommandeImport, import_id, session)
+
+
+@router.post("/admin/imports/{import_id}/remettre-en-attente")
+def remettre_en_attente_import(
+    import_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Remet un import ignoré en statut 'en attente' pour traitement ultérieur."""
+    return _remettre_en_attente_import(TelecommandeImport, import_id, session)
+
+
+@router.post("/admin/imports/{import_id}/refuser-locataire")
+def refuser_telecommande_locataire(
+    import_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Le locataire a refusé la télécommande — elle reste/revient chez le propriétaire."""
+    imp = session.get(TelecommandeImport, import_id)
+    if not imp:
+        raise HTTPException(404, "Import introuvable")
+    imp.refuse_par_locataire = True
+    imp.chez_locataire = False
+    session.add(imp)
+    session.commit()
+    return {"refuse_par_locataire": True, "chez_locataire": False}
+
+
+@router.get("/admin/imports/stats")
+def stats_imports(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Statistiques synthétiques sur les imports."""
+    lignes, stats = _stats_socle(TelecommandeImport, session)
+    stats["avec_reference"] = sum(1 for i in lignes if i.reference)
+    return stats
+
+
+# ── Import Excel vigiks ────────────────────────────────────────────────────
+
+@router.post("/admin/imports-vigik/upload", status_code=201)
+async def upload_import_vigik_excel(
+    file: UploadFile = File(...),
+    remplacer: bool = Query(False, description="Supprimer les imports en_attente avant ré-import"),
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Upload un fichier Excel et importe les vigiks dans la table de staging."""
+    from app.utils.import_vigiks import importer_depuis_bytes
+    contenu = await file.read()
+    stats = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
+    return stats
+
+
+@router.get("/admin/imports-vigik/stats")
+def stats_imports_vigik(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Statistiques synthétiques sur les imports vigik."""
+    lignes, stats = _stats_socle(VigikImport, session)
+    stats["avec_code"] = sum(1 for i in lignes if i.code)
+    stats["avec_lot"] = sum(1 for i in lignes if i.lot_id)
+    return stats
+
+
+@router.get("/admin/imports-vigik")
+def list_imports_vigik(
+    statut: str = Query(None),
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Liste les imports vigik, optionnellement filtrés par statut."""
+    return _lister_imports(VigikImport, statut, session)
 
 
 @router.post("/admin/imports-vigik/auto-match")
@@ -974,6 +955,16 @@ def resoudre_import_vigik(
     return {"vigik": vigik, "import_id": imp.id}
 
 
+@router.post("/admin/imports-vigik/{import_id}/remettre-en-attente")
+def remettre_en_attente_import_vigik(
+    import_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Remet un import vigik ignoré en 'en attente' — absent jusqu'à #576."""
+    return _remettre_en_attente_import(VigikImport, import_id, session)
+
+
 @router.post("/admin/imports-vigik/{import_id}/ignorer")
 def ignorer_import_vigik(
     import_id: int,
@@ -981,12 +972,4 @@ def ignorer_import_vigik(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Marque un import vigik comme ignoré."""
-    imp = session.get(VigikImport, import_id)
-    if not imp:
-        raise HTTPException(404, "Import introuvable")
-    if imp.statut == StatutImport.resolu:
-        raise HTTPException(400, "Import déjà résolu — ne peut être ignoré")
-    imp.statut = StatutImport.ignore
-    session.add(imp)
-    session.commit()
-    return {"statut": imp.statut}
+    return _ignorer_import(VigikImport, import_id, session)

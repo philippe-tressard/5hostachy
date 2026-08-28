@@ -14,19 +14,21 @@
  * vocabulaire (« la télécommande » / « le badge Vigik »), et une tuile de
  * statistique. C'est donc une table, et l'écran devient unique.
  *
- * ## 🔴 La divergence que la factorisation a révélée
+ * ## ✅ La divergence que la factorisation a révélée — et qui est comblée
  *
- * `remettreEnAttente` n'existe **que pour les télécommandes**, côté front comme
- * côté serveur (`POST /acces/admin/imports/{id}/remettre-en-attente` n'a pas
- * d'équivalent Vigik). Autrement dit : **un import Vigik ignoré par erreur est
- * définitivement perdu**, alors que le même geste se rattrape sur une
- * télécommande.
+ * `remettreEnAttente` n'existait **que pour les télécommandes**, côté front comme
+ * côté serveur : un import Vigik ignoré par erreur était **définitivement perdu**,
+ * là où le même geste se rattrape sur une télécommande.
  *
- * Ce n'est pas une décision, c'est un oubli — et il est resté invisible tant que
- * les deux écrans étaient deux fichiers. Le champ est donc **optionnel et
- * déclaré** : l'écran n'affiche le bouton que si le modèle porte la fonction.
- * Le combler est un changement de comportement, qui ne se mêle pas à une
- * factorisation : suivi séparément.
+ * Ce n'était pas une décision mais un oubli, resté invisible tant que les deux
+ * écrans étaient deux fichiers — chacun paraissait complet. **Comblé le
+ * 28/08/2026 (#576)**, en miroir exact de l'endpoint des télécommandes.
+ *
+ * ⚠️ Le champ est redevenu **OBLIGATOIRE**, et c'est le point : tant qu'il restait
+ * optionnel, le mécanisme d'exception survivait à l'exception, et le prochain
+ * type d'import pouvait l'omettre sans que rien ne le dise. C'est la leçon de la
+ * prop `marge` d'`EntetePage` (`ux-patterns` §13) : *tant que le mécanisme
+ * d'exception existe, l'exception se reproduit.*
  */
 import { acces as accesApi } from '$lib/api';
 
@@ -74,8 +76,9 @@ export interface ModeleImportAcces {
 		patch: (id: number, data: unknown) => Promise<any>;
 		resoudre: (id: number) => Promise<any>;
 		ignorer: (id: number) => Promise<any>;
-		/** ⚠️ ABSENT pour Vigik — voir la divergence déclarée en tête de fichier. */
-		remettreEnAttente?: (id: number) => Promise<any>;
+		/**  Rattrape un import ignoré par erreur. OBLIGATOIRE depuis #576 : les
+		 *   deux objets ont le même cycle d'import, donc les mêmes gestes. */
+		remettreEnAttente: (id: number) => Promise<any>;
 	};
 }
 
@@ -129,9 +132,11 @@ export const IMPORT_VIGIK: ModeleImportAcces = {
 		patch: accesApi.patchImportVigik,
 		resoudre: accesApi.resoudreImportVigik,
 		ignorer: accesApi.ignorerImportVigik,
-		//  ⚠️ Pas de `remettreEnAttente` : l'endpoint n'existe pas côté serveur.
-		//  Un import Vigik ignoré par erreur est définitivement perdu. Divergence
-		//  DÉCLARÉE, motif `api` — c'est une dette, pas un choix d'écran.
+		//  ✅ Divergence COMBLÉE le 28/08/2026 (#576) : l'endpoint existe désormais,
+		//  en miroir exact de celui des télécommandes. Les deux objets ont le même
+		//  cycle d'import, donc les mêmes gestes — l'asymétrie venait de l'ordre
+		//  dans lequel les deux écrans ont été écrits, pas d'un arbitrage.
+		remettreEnAttente: accesApi.remettreEnAttenteImportVigik,
 	},
 };
 
