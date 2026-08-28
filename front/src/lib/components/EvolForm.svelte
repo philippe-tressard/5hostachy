@@ -68,7 +68,8 @@
     currentStatut      – statut actuel de l'item parent (badge du libellé)
     showNotifs         – afficher les cases WhatsApp/syndic/CS
     showEmail          – afficher le champ email externe
-    showFiles          – afficher l'upload de fichiers
+    showPhotos         – ouvrir la section 7 (Photos)
+    showDocuments      – ouvrir la section 8 (Documents)
     editMode           – masque le statut, pré-remplit contenu+fichiers
     initialContenu     – contenu initial (mode édition)
     initialFichiers    – fichiers initiaux (mode édition)
@@ -127,8 +128,15 @@
 	export let avecInterne = false;
 	/** Lié par le parent : lui seul sait ce qu'une entrée interne change chez lui. */
 	export let interne = false;
-	/** Afficher l'upload de fichiers */
-	export let showFiles = false;
+	/**
+	 * Section 7 — Photos. Séparée de la 8 le 28/08/2026 (#463) : une prop
+	 * unique ouvrait les DEUX sections d'un coup, ce que le cadre interdit
+	 * (« une section ne se fusionne JAMAIS avec une autre »). Un écran ne
+	 * pouvait donc pas déclarer les Photos présentes et les Documents absents.
+	 */
+	export let showPhotos = false;
+	/** Section 8 — Documents. Voir `showPhotos` : les deux sont indépendantes. */
+	export let showDocuments = false;
 	/** Mode édition : masque le statut, pré-remplit contenu+fichiers */
 	export let editMode = false;
 	/** Contenu initial (mode édition) */
@@ -407,13 +415,15 @@
 	     souvent un passage à « Résolu ». Elle ne pouvait de toute façon pas
 	     survivre au point d'entrée unique : le geste n'est plus connu à
 	     l'ouverture du formulaire, il se déduit de ce qu'on y fait. -->
-	{#if showFiles}
+	{#if showPhotos}
 		<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
 			<div class="field champ-large">
 				<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
 					label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
 			</div>
 		</SectionFormulaire>
+	{/if}
+	{#if showDocuments}
 		<SectionFormulaire titre="Documents" pour="{idPrefixe}-docs">
 			<div class="field champ-large">
 				<FichiersUpload id="{idPrefixe}-docs" mode="documents" titre="" bind:urls={docs} />

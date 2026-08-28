@@ -286,7 +286,8 @@
 			<div class="card reply-form">
 				{#key repondreOuvert}
 					<EvolForm idPrefixe="tk-msg" titre="Répondre"
-						showFiles={!newInterne}
+						showPhotos={!newInterne}
+						showDocuments={!newInterne}
 						showEmail={$isCS && !newInterne}
 						avecInterne={$isCS}
 						bind:interne={newInterne}

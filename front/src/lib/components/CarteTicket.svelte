@@ -221,8 +221,9 @@
 						currentStatut={ticket.statut}
 						avecPerimetre={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'perimetre')}
 						perimetreCourant={ticket.perimetre_cible ?? []}
-						showNotifs={peutSuivreCeTicket}
-						showFiles={true}
+						showNotifs={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'diffusion')}
+						showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
+						showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 						saving={evolutionEnCours}
 						on:submit={(e) => dispatch('evoluer', e.detail)}
 						on:cancel={() => dispatch('annuler')}
@@ -263,7 +264,8 @@
 									editMode={true}
 									initialContenu={evol.contenu || ''}
 									initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-									showFiles={true}
+									showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
+									showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 									saving={evolCorrectionEnCours}
 									on:submit={(e) => dispatch('evol_corriger', e.detail)}
 									on:cancel={() => dispatch('evol_annuler')}

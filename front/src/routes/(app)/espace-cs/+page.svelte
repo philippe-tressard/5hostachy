@@ -522,6 +522,29 @@
 		membresSyndic = membresSyndic.map((m, j) => ({ ...m, est_principal: j === i }));
 	}
 
+	/**
+	 * La charge utile de `putSyndic`, écrite UNE fois.
+	 *
+	 * Elle l'était **trois** — réordonnancement d'un membre, enregistrement de
+	 * l'en-tête, enregistrement d'un membre — à l'identique au caractère près.
+	 * Trois copies d'une charge utile, c'est trois endroits où un champ ajouté au
+	 * modèle peut manquer : `check-charge-utile` existe précisément pour ce défaut,
+	 * et il ne voit pas une recopie interne à un fichier.
+	 */
+	function chargeUtileSyndic() {
+		return {
+			nom_syndic: nomSyndic,
+			adresse: adresseSyndic,
+			site_web: siteWebSyndic || null,
+			membres: membresSyndic.map((m) => ({
+				genre: m.genre, prenom: m.prenom, nom: m.nom,
+				fonction: m.fonction || null, email: m.email || null,
+				telephone: m.telephones.map((t) => t.trim()).filter(Boolean).join(',') || null,
+				est_principal: m.est_principal, user_id: m.user_id,
+			})),
+		};
+	}
+
 	async function moveMembreSyndic(i: number, dir: -1 | 1) {
 		const j = i + dir;
 		if (j < 0 || j >= membresSyndic.length) return;
@@ -531,15 +554,7 @@
 		syndicOpenIdx = null; syndicEditIdx = null;
 		// Sauvegarde silencieuse de l'ordre
 		try {
-			await annuaireAdmin.putSyndic({
-				nom_syndic: nomSyndic, adresse: adresseSyndic, site_web: siteWebSyndic || null,
-				membres: membresSyndic.map((m) => ({
-					genre: m.genre, prenom: m.prenom, nom: m.nom,
-					fonction: m.fonction || null, email: m.email || null,
-					telephone: m.telephones.map((t) => t.trim()).filter(Boolean).join(',') || null,
-					est_principal: m.est_principal, user_id: m.user_id,
-				})),
-			});
+			await annuaireAdmin.putSyndic(chargeUtileSyndic());
 		} catch { /* silencieux */ }
 	}
 
@@ -552,17 +567,7 @@
 		}
 		savingSyndic = true;
 		try {
-			await annuaireAdmin.putSyndic({
-				nom_syndic: nomSyndic,
-				adresse: adresseSyndic,
-				site_web: siteWebSyndic || null,
-				membres: membresSyndic.map((m) => ({
-					genre: m.genre, prenom: m.prenom, nom: m.nom,
-					fonction: m.fonction || null, email: m.email || null,
-					telephone: m.telephones.map((t) => t.trim()).filter(Boolean).join(',') || null,
-					est_principal: m.est_principal, user_id: m.user_id,
-				})),
-			});
+			await annuaireAdmin.putSyndic(chargeUtileSyndic());
 			toast('success', 'Syndic enregistré');
 			syndicHeaderEditing = false;
 		} catch (e: any) {
@@ -577,17 +582,7 @@
 		}
 		savingSyndicIdx = i;
 		try {
-			await annuaireAdmin.putSyndic({
-				nom_syndic: nomSyndic,
-				adresse: adresseSyndic,
-				site_web: siteWebSyndic || null,
-				membres: membresSyndic.map((m) => ({
-					genre: m.genre, prenom: m.prenom, nom: m.nom,
-					fonction: m.fonction || null, email: m.email || null,
-					telephone: m.telephones.map((t) => t.trim()).filter(Boolean).join(',') || null,
-					est_principal: m.est_principal, user_id: m.user_id,
-				})),
-			});
+			await annuaireAdmin.putSyndic(chargeUtileSyndic());
 			syndicOpenIdx = null; syndicEditIdx = null;
 			toast('success', `${membresSyndic[i].prenom} ${membresSyndic[i].nom} enregistré`);
 		} catch (e: any) {
@@ -850,7 +845,8 @@
 								currentStatut={t.statut ?? ''}
 								showNotifs={false}
 								showEmail={false}
-								showFiles={true}
+								showPhotos={true}
+								showDocuments={true}
 								saving={tkEvolSaving}
 								on:submit={(e) => tkSubmitEvol(t, e)}
 								on:cancel={() => (tkShowForm = null)}
@@ -891,7 +887,8 @@
 													editMode={true}
 													initialContenu={evol.contenu || ''}
 													initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-													showFiles={true}
+													showPhotos={true}
+													showDocuments={true}
 													saving={tkEditEvolSaving}
 													on:submit={(e) => tkSaveEvolEdit(t.id, e)}
 													on:cancel={() => tkEditingEvolId = null}
