@@ -40,6 +40,7 @@ from app.models.core import (
 )
 from app.schemas import UserRead
 from app.utils.comptes import marquer_decide
+from app.utils.purge_referentielle import purger
 from datetime import datetime
 from typing import Optional
 
@@ -361,7 +362,23 @@ def supprimer_utilisateur(
         h.declenchee_par_user_id = None
         session.add(h)
 
-    session.delete(user)
+    #  🔴 Le reste — et « le reste » est la majorité (#546, 28/08/2026).
+    #
+    #  Les onze étapes ci-dessus portent des règles MÉTIER : remettre un statut
+    #  d'import, retirer une entrée d'un `..._json`, choisir entre délier et
+    #  supprimer un bail. Elles restent, et elles passent en premier.
+    #
+    #  Mais le modèle compte CINQUANTE-SIX références à `utilisateur`, dont
+    #  trente-sept obligatoires. Vingt-six tables n'étaient nettoyées nulle part —
+    #  publications, tickets, messages, idées, sondages, signalements… La
+    #  suppression réussissait quand même, parce que SQLite tournait avec
+    #  `foreign_keys=OFF`, et laissait en base des lignes pointant vers un compte
+    #  disparu.
+    #
+    #  ⚠️ Une liste tenue à la main ne peut pas suivre : c'est bien ce qui s'est
+    #  passé. `purger` LIT les métadonnées au lieu de les réciter.
+    session.flush()
+    purger(session, "utilisateur", user_id)
     session.commit()
 
 

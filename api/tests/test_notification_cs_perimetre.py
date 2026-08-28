@@ -29,17 +29,26 @@ from app.database import engine
 from app.seed.patrimoine import CLE_SEMEE, poser_arborescence
 from app.utils import perimetres as P
 from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiables
+from app.utils.purge_referentielle import purger
+from tests.purge_test import vider_patrimoine
 
 
 def _vider(session: Session) -> None:
-    marqueur = session.get(ConfigSite, CLE_SEMEE)
-    if marqueur:
-        session.delete(marqueur)
-    for modele in (MembreCS, Perimetre, Batiment, Copropriete):
-        for ligne in session.exec(select(modele)).all():
-            session.delete(ligne)
+    """Démonte le patrimoine de test et les comptes qu'il a créés.
+
+    🔴 Le corps de cette fonction était une COPIE de `vider_patrimoine`
+    (conftest) — celle-là même que la conftest dit avoir factorisée « parce
+    qu'une fixture recopiée diverge comme n'importe quel autre code ». La copie
+    avait effectivement divergé : elle effaçait `Perimetre` sans passer par les
+    vagues feuilles-vers-racine, ce que `foreign_keys=ON` refuse (#546).
+
+    Les comptes partent par `purger`, qui LIT les métadonnées : les supprimer
+    directement laissait leurs publications et leurs tickets pointer vers un
+    identifiant disparu — invisible tant que les clés n'étaient pas vérifiées.
+    """
+    vider_patrimoine(session, modeles_sup=(MembreCS,))
     for u in session.exec(select(Utilisateur).where(Utilisateur.email.like("%@cs.test"))).all():
-        session.delete(u)
+        purger(session, "utilisateur", u.id)
     session.commit()
 
 

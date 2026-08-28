@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.exc import OperationalError
 from sqlmodel import create_engine, Session, SQLModel
 from app.config import get_settings
@@ -18,6 +18,55 @@ engine = create_engine(
 
 # SessionLocal pour les tâches asynchrones et les contextes hors requête HTTP
 SessionLocal = lambda: Session(engine)
+
+
+def activer_cles_etrangeres(moteur) -> None:
+    """Fait poser `PRAGMA foreign_keys=ON` sur CHAQUE connexion de `moteur`.
+
+    🔴 **Pas encore appelé sur le moteur de l'application (#546).** Ce n'est pas
+    un oubli, c'est l'état du chantier, et le dire vaut mieux que le taire.
+
+    ## Ce que l'absence de ce PRAGMA coûte
+
+    SQLite ne vérifie **aucune** clé étrangère par défaut, et le réglage n'est
+    **pas** persisté dans le fichier — contrairement à `journal_mode=WAL`. Il vaut
+    pour la connexion, pas pour la base. Aucune des FK déclarées dans les modèles
+    n'est donc vérifiée : une ligne peut référencer un parent supprimé, et rien ne
+    l'empêche ni ne le signale. L'intégrité repose entièrement sur le code
+    applicatif — ce qui est tenable, et n'est pas une bonne surprise à découvrir
+    le jour d'un incident.
+
+    ## Pourquoi l'écouteur doit être posé ICI et pas plus bas
+
+    Le bloc d'amorçage ci-dessous ouvre une connexion et la **rend au pool**, où
+    elle est réutilisée : l'événement `connect` n'est alors plus jamais émis. Un
+    écouteur enregistré six lignes trop bas laisse le relevé dire `foreign_keys =
+    0` alors qu'il est « en place ». Vérifié.
+
+    ## Pourquoi l'activation n'a pas eu lieu le 28/08/2026
+
+    Activer le PRAGMA ne valide **pas** l'existant : SQLite ne relit pas la base,
+    une ligne orpheline reste lisible, et seules les écritures futures sont
+    refusées. Le risque n'est donc pas au démarrage — la crainte inverse avait
+    immobilisé ce ticket depuis le 20/08, et elle était fausse.
+
+    Le vrai coût est ailleurs : **40 tests s'appuient sur l'absence de
+    vérification**. Leurs fixtures montent et démontent le patrimoine dans un
+    ordre que les clés refusent, et créent des lignes que la base rejetterait.
+    Les activer sans les avoir repris ferait échouer la suite, et un contrôle
+    rouge en permanence est désarmé dans la semaine.
+
+    ⚠️ La fonction est déjà éprouvée par `test_purge_referentielle.py`, qui
+    l'applique à un moteur **dédié** : la purge y est vérifiée avec les clés
+    ACTIVES, sur la vraie déclaration des modèles. Ce n'est pas l'application,
+    mais ce n'est pas non plus une maquette.
+    """
+
+    @event.listens_for(moteur, "connect")
+    def _poser(dbapi_connection, _record):  # pragma: no cover — appelé par SQLAlchemy
+        curseur = dbapi_connection.cursor()
+        curseur.execute("PRAGMA foreign_keys=ON")
+        curseur.close()
 
 # WAL mode : lectures et écritures concurrentes sans blocage mutuel
 # synchronous=FULL : chaque commit est fsync'd intégralement (WAL + en-tête).
