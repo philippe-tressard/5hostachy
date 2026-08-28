@@ -140,6 +140,16 @@
 
 		{#if avecCanaux}
 			<CanauxNotification bind:whatsapp bind:syndic bind:cs {compact} {aideWhatsapp} />
+			<!--  🔴 L'aide propre au contexte est AFFICHÉE, plus seulement en infobulle.
+			      `CanauxNotification` en fait un `title=` — invisible au doigt, invisible
+			      au lecteur d'écran tant qu'on ne survole pas. Or sur une actualité
+			      confidentielle, elle dit « le message ne portera ni le titre ni le
+			      contenu » : c'est ce que l'auteur doit savoir AVANT de cocher.
+			      Deux poids deux mesures dans la même section, signalé à l'écran le
+			      28/08/2026 — l'annonce de hall explique en clair, juste au-dessus. -->
+			{#if aideWhatsapp}
+				<p class="aide-case">{aideWhatsapp}</p>
+			{/if}
 			{#if whatsapp && fichiers.length > 0}
 				<p class="aide-case">
 					⚠️ Les fichiers ne sont pas envoyés via WhatsApp, uniquement le texte.
