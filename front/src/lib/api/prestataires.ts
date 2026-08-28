@@ -1,5 +1,9 @@
-//  Les PRESTATAIRES : fiches, contrats d'entretien, devis, interventions,
-//  relevés de compteurs et notations.
+//  Les PRESTATAIRES : fiches, contrats d'entretien, relevés de compteurs et
+//  notations.
+//
+//  ⚠️ Les huit méthodes « devis » sont parties avec la prestation ponctuelle
+//  (#603). `ApiError` et `BASE` les ont suivies : ils ne servaient qu'à
+//  `deleteDevisFichier`, seul appel de ce fichier à ne pas passer par `api`.
 //
 //  ⚠️ Fragment de `lib/api/` — extrait de `index.ts` le 27/08/2026 (#453). Ce
 //  fichier portait VINGT ET UN domaines et 437 lignes ; `client.ts`, `types.ts`,
@@ -8,7 +12,7 @@
 //
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
-import { api, postFormData, ApiError, BASE } from './client';
+import { api, postFormData } from './client';
 
 export const prestataires = {
 	list: () => api.get<any[]>('/prestataires'),
@@ -19,22 +23,6 @@ export const prestataires = {
 	createContrat: (data: unknown) => api.post<any>('/prestataires/contrats', data),
 	updateContrat: (id: number, data: unknown) => api.patch<any>(`/prestataires/contrats/${id}`, data),
 	deleteContrat: (id: number) => api.delete(`/prestataires/contrats/${id}`),
-	devis: () => api.get<any[]>('/prestataires/devis'),
-	createDevis: (data: unknown) => api.post<any>('/prestataires/devis', data),
-	updateDevis: (id: number, data: unknown) => api.patch<any>(`/prestataires/devis/${id}`, data),
-	deleteDevis: (id: number) => api.delete(`/prestataires/devis/${id}`),
-	uploadDevisFichier: (id: number, file: File) =>
-		postFormData(`/prestataires/devis/${id}/fichier`, { file }),
-	deleteDevisFichier: async (id: number, url: string) => {
-		const res = await fetch(`${BASE}/prestataires/devis/${id}/fichier?url=${encodeURIComponent(url)}`, { method: 'DELETE', credentials: 'include' });
-		if (!res.ok) {
-			let detail = 'Erreur suppression fichier';
-			try { const err = await res.json(); detail = err.detail ?? detail; } catch { /* ignore */ }
-			throw new ApiError(res.status, detail);
-		}
-		return res.json();
-	},
-	uploadDevisOs: (id: number, file: File) => postFormData(`/prestataires/devis/${id}/os`, { file }),
 	releves: (type_compteur?: string) => api.get<any[]>(`/prestataires/releves${type_compteur ? '?type_compteur=' + encodeURIComponent(type_compteur) : ''}`),
 	createReleve: (data: unknown) => api.post<any>('/prestataires/releves', data),
 	updateReleve: (id: number, data: unknown) => api.patch<any>(`/prestataires/releves/${id}`, data),
@@ -47,7 +35,7 @@ export const prestataires = {
 	deleteCompteurConfig: (id: number) => api.delete(`/prestataires/compteurs-config/${id}`),
 	// Notations
 	notations: (prestataireId?: number) => api.get<any[]>(`/prestataires/notations${prestataireId ? '?prestataire_id=' + prestataireId : ''}`),
-	createNotation: (data: { prestataire_id: number; note: number; commentaire?: string; devis_id?: number; contrat_id?: number }) => api.post<any>('/prestataires/notations', data),
+	createNotation: (data: { prestataire_id: number; note: number; commentaire?: string; contrat_id?: number }) => api.post<any>('/prestataires/notations', data),
 	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
 	// Synthèse
 	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),

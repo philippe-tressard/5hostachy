@@ -11,9 +11,13 @@ import json
 from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select
 
-from app.auth.deps import require_cs_or_admin, get_current_user
+#  ⚠️ `get_current_user` n'est plus importé : il ne servait qu'à `list_devis`,
+#  le SEUL endpoint de ce router ouvert à tous les comptes (les résidents y
+#  voyaient les devis marqués `affichable`). Tous ceux qui restent exigent le
+#  rôle CS ou admin — la page qu'ils servent leur est réservée (#603).
+from app.auth.deps import require_cs_or_admin
 from app.database import get_session
-from app.models.core import CompteurConfig, ContratEntretien, DevisPrestataire, NotationPrestataire, Prestataire, ReleveCompteur, TypeEquipement, TypePrestataire, Utilisateur, RoleUtilisateur
+from app.models.core import CompteurConfig, ContratEntretien, NotationPrestataire, Prestataire, ReleveCompteur, TypeEquipement, TypePrestataire, Utilisateur
 from app.utils.fichiers import (
     REPERTOIRE_PRIVE, extension_assainie, nom_lisible, nom_stocke,
 )
@@ -240,224 +244,6 @@ def archive_contrat(
     session.commit()
 
 
-# ── Devis prestataires ──────────────────────────────────────────────────
-
-class DevisCreate(BaseModel):
-    copropriete_id: int = 1
-    prestataire_id: int
-    batiment_id: Optional[int] = None
-    perimetre: str = "résidence"
-    titre: str
-    date_prestation: Optional[date] = None
-    montant_estime: Optional[float] = None
-    statut: str = "en_attente"
-    frequence_type: Optional[str] = None
-    frequence_valeur: Optional[int] = None
-    notes: Optional[str] = None
-    affichable: bool = False
-
-
-class DevisUpdate(BaseModel):
-    prestataire_id: Optional[int] = None
-    batiment_id: Optional[int] = None
-    perimetre: Optional[str] = None
-    titre: Optional[str] = None
-    date_prestation: Optional[date] = None
-    montant_estime: Optional[float] = None
-    statut: Optional[str] = None
-    frequence_type: Optional[str] = None
-    frequence_valeur: Optional[int] = None
-    notes: Optional[str] = None
-    affichable: Optional[bool] = None
-
-
-class DevisRead(BaseModel):
-    id: int
-    copropriete_id: int
-    prestataire_id: int
-    batiment_id: Optional[int] = None
-    perimetre: str = "résidence"
-    titre: str
-    date_prestation: Optional[date] = None
-    montant_estime: Optional[float] = None
-    statut: str
-    frequence_type: Optional[str] = None
-    frequence_valeur: Optional[int] = None
-    notes: Optional[str] = None
-    fichiers_urls: list[str] = []
-    os_fichier_url: Optional[str] = None
-    actif: bool
-    affichable: bool = False
-    cree_le: Optional[datetime] = None
-    mis_a_jour_le: Optional[datetime] = None
-
-    @field_validator('fichiers_urls', mode='before')
-    @classmethod
-    def parse_fichiers_json(cls, v: object) -> list[str]:
-        if v is None:
-            return []
-        if isinstance(v, str):
-            try:
-                parsed = json.loads(v)
-                return parsed if isinstance(parsed, list) else []
-            except Exception:
-                return []
-        if isinstance(v, list):
-            return v
-        return []
-
-    class Config:
-        from_attributes = True
-
-
-@router.get("/devis", response_model=list[DevisRead])
-def list_devis(
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    stmt = select(DevisPrestataire).where(DevisPrestataire.actif == True)
-    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        # Résidents et locataires ne voient que les devis marqués affichable
-        stmt = stmt.where(DevisPrestataire.affichable == True)
-    return session.exec(stmt).all()
-
-
-@router.post("/devis", response_model=DevisRead, status_code=201)
-def create_devis(
-    body: DevisCreate,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    d = DevisPrestataire(**body.model_dump())
-    session.add(d)
-    session.commit()
-    session.refresh(d)
-    return d
-
-
-@router.patch("/devis/{d_id}", response_model=DevisRead)
-def update_devis(
-    d_id: int,
-    body: DevisUpdate,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    d = session.get(DevisPrestataire, d_id)
-    if not d:
-        raise HTTPException(404, "Devis introuvable")
-    for k, v in body.model_dump(exclude_unset=True).items():
-        setattr(d, k, v)
-    d.mis_a_jour_le = datetime.utcnow()
-    session.add(d)
-    session.commit()
-    session.refresh(d)
-    return d
-
-
-@router.delete("/devis/{d_id}", status_code=204)
-def archive_devis(
-    d_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    d = session.get(DevisPrestataire, d_id)
-    if not d:
-        raise HTTPException(404, "Devis introuvable")
-    d.actif = False
-    session.add(d)
-    session.commit()
-
-
-@router.post("/devis/{d_id}/fichier", response_model=DevisRead)
-async def upload_devis_fichier(
-    d_id: int,
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    d = session.get(DevisPrestataire, d_id)
-    if not d:
-        raise HTTPException(404, "Devis introuvable")
-    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
-    raw_name = file.filename or "fichier"
-    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    try:
-        fichiers = json.loads(d.fichiers_urls or "[]")
-        if not isinstance(fichiers, list):
-            fichiers = []
-    except Exception:
-        fichiers = []
-    fichiers.append(f"/api/prestataires/devis/{d.id}/fichier/{os.path.basename(dest)}")
-    d.fichiers_urls = json.dumps(fichiers)
-    d.mis_a_jour_le = datetime.utcnow()
-    session.add(d)
-    session.commit()
-    session.refresh(d)
-    return d
-
-
-@router.delete("/devis/{d_id}/fichier", response_model=DevisRead)
-def delete_devis_fichier(
-    d_id: int,
-    url: str,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    d = session.get(DevisPrestataire, d_id)
-    if not d:
-        raise HTTPException(404, "Devis introuvable")
-    try:
-        fichiers = json.loads(d.fichiers_urls or "[]")
-        if not isinstance(fichiers, list):
-            fichiers = []
-    except Exception:
-        fichiers = []
-    if url in fichiers:
-        fichiers.remove(url)
-        filename = os.path.basename(url)
-        filepath = os.path.join(REPERTOIRE_PRIVE, filename)
-        if os.path.exists(filepath):
-            os.remove(filepath)
-    d.fichiers_urls = json.dumps(fichiers) if fichiers else None
-    d.mis_a_jour_le = datetime.utcnow()
-    session.add(d)
-    session.commit()
-    session.refresh(d)
-    return d
-
-
-@router.post("/devis/{d_id}/os", response_model=DevisRead)
-async def upload_devis_os(
-    d_id: int,
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Upload de l'ordre de service (OS) signé. Passe automatiquement le devis en 'accepte'."""
-    d = session.get(DevisPrestataire, d_id)
-    if not d:
-        raise HTTPException(404, "Devis introuvable")
-    os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
-    raw_name = file.filename or "os"
-    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    # Supprimer l'ancien OS si remplacé
-    if d.os_fichier_url:
-        old_path = os.path.join(REPERTOIRE_PRIVE, os.path.basename(d.os_fichier_url))
-        if os.path.exists(old_path):
-            os.remove(old_path)
-    d.os_fichier_url = f"/api/prestataires/devis/{d.id}/fichier/{os.path.basename(dest)}"
-    d.statut = "accepte"
-    d.mis_a_jour_le = datetime.utcnow()
-    session.add(d)
-    session.commit()
-    session.refresh(d)
-    return d
-
-
 # ── Relevés compteurs ────────────────────────────────────────────────────────
 
 class ReleveCreate(BaseModel):
@@ -661,10 +447,13 @@ def delete_compteur_config(
 # ── Notations prestataires ─────────────────────────────────────────────────
 
 class NotationCreate(BaseModel):
+    #  ⚠️ `devis_id` a disparu avec la prestation ponctuelle (#603). La COLONNE,
+    #  elle, reste en base : les notations deja posees sur un devis gardent leur
+    #  rattachement, et un retour arriere du code doit les retrouver. Le schema
+    #  ne l'expose simplement plus — on ne peut plus en creer, on n'efface rien.
     prestataire_id: int
     note: int  # 1-5
     commentaire: Optional[str] = None
-    devis_id: Optional[int] = None
     contrat_id: Optional[int] = None
 
     @field_validator('note')
@@ -680,7 +469,6 @@ class NotationRead(BaseModel):
     prestataire_id: int
     note: int
     commentaire: Optional[str] = None
-    devis_id: Optional[int] = None
     contrat_id: Optional[int] = None
     auteur_id: int
     auteur_nom: Optional[str] = None
@@ -723,7 +511,6 @@ def create_notation(
         prestataire_id=body.prestataire_id,
         note=body.note,
         commentaire=body.commentaire,
-        devis_id=body.devis_id,
         contrat_id=body.contrat_id,
         auteur_id=user.id,
     )
@@ -762,9 +549,6 @@ def get_prestataire_synthese(
     contrats = session.exec(
         select(ContratEntretien).where(ContratEntretien.prestataire_id == p_id, ContratEntretien.actif == True)
     ).all()
-    devis_list = session.exec(
-        select(DevisPrestataire).where(DevisPrestataire.prestataire_id == p_id, DevisPrestataire.actif == True)
-    ).all()
     notations = session.exec(
         select(NotationPrestataire).where(NotationPrestataire.prestataire_id == p_id).order_by(NotationPrestataire.cree_le.desc())
     ).all()
@@ -775,7 +559,7 @@ def get_prestataire_synthese(
         auteur = session.get(Utilisateur, n.auteur_id)
         notations_read.append({
             "id": n.id, "note": n.note, "commentaire": n.commentaire,
-            "devis_id": n.devis_id, "contrat_id": n.contrat_id,
+            "contrat_id": n.contrat_id,
             "auteur_nom": f"{auteur.prenom} {auteur.nom}" if auteur else "?",
             "cree_le": n.cree_le.isoformat(),
         })
@@ -784,16 +568,10 @@ def get_prestataire_synthese(
     return {
         **prest_data,
         "contrats": [ContratRead.model_validate(c).model_dump() for c in contrats],
-        "devis": [{
-            "id": d.id, "titre": d.titre, "statut": d.statut,
-            "date_prestation": d.date_prestation.isoformat() if d.date_prestation else None,
-            "montant_estime": d.montant_estime, "perimetre": d.perimetre,
-        } for d in devis_list],
         "notations": notations_read,
         "note_moyenne": note_moy,
         "nb_notations": len(notations),
         "nb_contrats": len(contrats),
-        "nb_devis": len(devis_list),
         "prochaines_visites": [
             {"contrat": c.libelle, "date": c.prochaine_visite.isoformat()}
             for c in contrats if c.prochaine_visite
@@ -804,7 +582,7 @@ def get_prestataire_synthese(
 
 # ── Téléchargement des pièces (CS/admin) ─────────────────────────────────────
 #
-# Ces fichiers — devis, ordres de service, conditions d'assurance, relevés de
+# Ces fichiers — conditions d'assurance, relevés de
 # compteur — vivaient à la racine du volume `uploads`, servi en statique. Deux
 # conséquences, corrigées ici le 03/08/2026 :
 #
@@ -832,33 +610,6 @@ def _servir_fichier_prive(nom: str, noms_autorises: set[str], libelle: str) -> F
     return FileResponse(chemin, filename=nom_lisible(nom))
 
 
-def _noms_du_devis(d: DevisPrestataire) -> set[str]:
-    """Noms de fichiers rattachés à ce devis : pièces jointes et ordre de service."""
-    noms: set[str] = set()
-    try:
-        for url in json.loads(d.fichiers_urls or "[]") or []:
-            noms.add(os.path.basename(str(url)))
-    except Exception:
-        pass
-    if d.os_fichier_url:
-        noms.add(os.path.basename(d.os_fichier_url))
-    return noms
-
-
-@router.get("/devis/{d_id}/fichier/{nom}")
-def download_fichier_devis(
-    nom: str,
-    d_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    """Pièce jointe ou ordre de service d'un devis — CS et admin uniquement."""
-    d = session.get(DevisPrestataire, d_id)
-    if not d:
-        raise HTTPException(404, "Devis introuvable")
-    return _servir_fichier_prive(nom, _noms_du_devis(d), "Pièce")
-
-
 @router.get("/releves/{r_id}/photo/{nom}")
 def download_photo_releve(
     nom: str,
@@ -868,7 +619,7 @@ def download_photo_releve(
 ):
     """Photo d'un relevé de compteur — CS et admin uniquement.
 
-    Le nom du fichier est DANS l'URL, comme pour les pièces de devis. La
+    Le nom du fichier est DANS l'URL. La
     première version stockait `/releves/{id}/photo` puis redemandait le nom à
     cette même URL : `basename` rendait alors « photo », et la migration 0125
     avait détruit la seule copie du vrai nom. Toutes les photos de relevé sont

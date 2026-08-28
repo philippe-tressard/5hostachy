@@ -45,11 +45,6 @@ SANS_CONSOMMATEUR_FRONT = {
     "/acces/admin/imports/{import_id}/refuser-locataire":
         "pendant de `resoudre` documenté dans specs/architecture/api.md, "
         "conservé pour l'exploitation manuelle des imports Vigik",
-    "/prestataires/devis/{d_id}/fichier/{nom}":
-        "URL construite côté serveur et STOCKÉE en base (`fichiers_urls`, "
-        "`os_fichier_url`) ; le front la rend depuis la donnée, elle n'apparaît "
-        "donc jamais dans son code source — troisième famille de consommateur, "
-        "après l'interface et les scripts",
     "/prestataires/releves/{r_id}/photo/{nom}":
         "idem, pour `releve_compteur.photo_url` — le GET passait auparavant par "
         "coïncidence, le POST d'upload partageant son chemin (cf. limite de "
