@@ -152,7 +152,8 @@
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-					showFiles={true}
+					showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
+					showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 					saving={corrige}
 					on:submit={corriger}
 					on:cancel={() => (enEdition = null)}
@@ -170,9 +171,10 @@
 					currentStatut={statutCourant}
 					avecPerimetre={$isCS && sectionPresente(TICKET, 'evolution', 'perimetre')}
 					{perimetreCourant}
-					showNotifs={$isCS}
+					showNotifs={$isCS && sectionPresente(TICKET, 'evolution', 'diffusion')}
 					showEmail={$isCS}
-					showFiles={true}
+					showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
+					showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 					saving={enregistre}
 					on:submit={ajouter}
 					on:cancel={() => (ouvert = false)}

@@ -298,7 +298,8 @@
 							defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
 							defaultEnvoyerCs={pub.envoyer_cs ?? false}
 							showEmail={true}
-							showFiles={true}
+							showPhotos={true}
+							showDocuments={true}
 							saving={evolSaving}
 							on:submit={(e) => addEvolFromForm(pub, e)}
 							on:cancel={() => (showEvolForm = null)}
@@ -336,7 +337,8 @@
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-										showFiles={true}
+										showPhotos={true}
+										showDocuments={true}
 										saving={editEvolSaving}
 										on:submit={saveEvolEdit}
 										on:cancel={() => { editingEvolId = null; editingEvolPubId = null; }}

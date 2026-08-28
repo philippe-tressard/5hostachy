@@ -37,14 +37,17 @@
 /**
  * Les props d'`EvolForm` qui OUVRENT une section du cadre, et laquelle.
  *
- * ⚠️ `showFiles` en ouvre **deux** — Photos et Documents —, ce que le cadre
+ * ✅ `showFiles` en ouvrait **deux** — Photos et Documents —, ce que le cadre
  * interdit (« une section ne se fusionne JAMAIS avec une autre »). Le contrôle la
- * rattache aux Photos et le **dit ici** plutôt que de le taire : scinder la prop
- * est un travail de #463, pas de ce garde-fou.
+ * rattachait aux Photos et le **disait ici** plutôt que de le taire. Elle a été
+ * **scindée** le 28/08/2026 en `showPhotos` et `showDocuments` : un écran peut
+ * désormais déclarer les Photos présentes et les Documents absents, et les deux
+ * sections se suivent séparément.
  */
 export const PROPS_EVOLFORM = {
 	avecPerimetre: 'perimetre',
-	showFiles: 'photos',
+	showPhotos: 'photos',
+	showDocuments: 'documents',
 	showNotifs: 'diffusion',
 };
 
@@ -62,31 +65,32 @@ export const PROPS_EVOLFORM = {
  * qu'une entrée cesse de servir. C'est ce qui garantit qu'on ne pourra pas
  * « oublier » de la retirer.
  *
- * ✅ Ce que le relevé a trouvé de **bon** : `avecPerimetre` passe déjà par la
- * déclaration sur les deux écrans de ticket. Ce n'est donc pas un chantier neuf —
- * c'est un chantier commencé que rien ne surveillait.
+ * ✅ Ce que le relevé a trouvé de **bon** : `avecPerimetre` passait déjà par la
+ * déclaration sur les deux écrans de ticket. Ce n'était donc pas un chantier neuf
+ * — c'était un chantier commencé que rien ne surveillait. Il est **terminé pour
+ * les tickets** depuis le 28/08/2026, et leurs deux lignes ont quitté ce relevé,
+ * qui ne peut que décroître.
  */
 export const EVOLFORM_TOLEREES = {
-	//  Les tickets sont l'écran dont la déclaration est la plus aboutie, et le
-	//  point 1 de #463 les désigne comme premiers à brancher. Les deux composants
-	//  vont ensemble : ils rendent la MÊME carte de ticket, en liste et en fiche.
-	'lib/components/CarteTicket.svelte': ['showFiles', 'showNotifs'],
-	'lib/components/HistoriqueTicket.svelte': ['showFiles', 'showNotifs'],
-	//  `showFiles={!newInterne}` — un message interne n'accepte pas de pièce
+	//  ✅ `CarteTicket` et `HistoriqueTicket` ont QUITTÉ ce relevé le 28/08/2026 :
+	//  leurs quatre props passent par la déclaration. Les deux allaient ensemble —
+	//  ils rendent la MÊME carte de ticket, en liste et en fiche, et les brancher
+	//  séparément aurait rouvert la divergence que #431 avait fermée.
+	//  `showPhotos={!newInterne}` — un message interne n'accepte pas de pièce
 	//  jointe. C'est une règle MÉTIER, qui devra se lire dans la déclaration et
 	//  non se perdre : la brancher demande d'abord de trancher comment le cadre
 	//  dit « cette section dépend d'un choix fait dans le formulaire ».
-	'routes/(app)/tickets/[id]/+page.svelte': ['showFiles'],
-	//  Le calendrier, constaté et stable depuis #432 — n'y toucher qu'après les
-	//  tickets (R5).
-	'lib/components/HistoriqueEvenement.svelte': ['showFiles', 'showNotifs'],
-	'routes/(app)/actualites/+page.svelte': ['showFiles', 'showNotifs'],
+	'routes/(app)/tickets/[id]/+page.svelte': ['showPhotos', 'showDocuments'],
+	//  Le calendrier, constaté et stable depuis #432 — n'y toucher qu'après avoir
+	//  fait constater les tickets (R5).
+	'lib/components/HistoriqueEvenement.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
+	'routes/(app)/actualites/+page.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
 	//  ⚠️ `showNotifs={false}` en dur : l'espace CS ne propose AUCUNE diffusion
 	//  sur un commentaire de ticket, là où la carte de ticket la propose au même
 	//  utilisateur. Deux écrans montrent le même objet et ne s'accordent pas —
 	//  c'est le genre d'écart que le cadre existe pour faire remonter, et il
 	//  n'était visible nulle part avant ce contrôle.
-	'routes/(app)/espace-cs/+page.svelte': ['showFiles', 'showNotifs'],
+	'routes/(app)/espace-cs/+page.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
 };
 
 /**
@@ -150,10 +154,11 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 	};
 
 	//  🔴 LE cas du ticket : une prop posée en dur. C'est la forme exacte qui
-	//  échappait au contrôle — `showFiles={true}`, six fois dans le dépôt.
+	//  échappait au contrôle — `showFiles={true}`, six fois dans le dépôt avant sa
+	//  scission en `showPhotos` / `showDocuments`.
 	verifier(
 		'une prop en dur est un écart',
-		analyserEvolForm('x.svelte', '<EvolForm showFiles={true} />').ecarts.length,
+		analyserEvolForm('x.svelte', '<EvolForm showPhotos={true} />').ecarts.length,
 		1,
 	);
 	//  La forme conforme, celle que `avecPerimetre` emploie déjà sur les tickets.
@@ -172,14 +177,14 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 		'sectionPresente sur la MAUVAISE section reste un écart',
 		analyserEvolForm(
 			'x.svelte',
-			"<EvolForm showFiles={sectionPresente(TICKET, 'evolution', 'perimetre')} />",
+			"<EvolForm showPhotos={sectionPresente(TICKET, 'evolution', 'perimetre')} />",
 		).ecarts.length,
 		1,
 	);
-	//  Une prop sans accolade (`showFiles` seul) vaut `true` en Svelte.
+	//  Une prop sans accolade (`showPhotos` seul) vaut `true` en Svelte.
 	verifier(
 		'une prop sans valeur vaut true, donc écart',
-		analyserEvolForm('x.svelte', '<EvolForm showFiles />').ecarts.length,
+		analyserEvolForm('x.svelte', '<EvolForm showPhotos />').ecarts.length,
 		1,
 	);
 	//  Les attributs s'écrivent sur plusieurs lignes dans tout ce dépôt : un motif
@@ -190,24 +195,51 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 		1,
 	);
 	//  Une tolérance couvre la prop pour TOUT le fichier, et se déclare servie.
+	//  L'exemple ne peut plus etre `CarteTicket` : il est BRANCHE depuis le
+	//  28/08/2026, donc sorti du releve. Un self-test qui citerait un fichier
+	//  sorti du releve passerait au vert en ne mesurant plus rien.
 	const tol = analyserEvolForm(
-		'lib/components/CarteTicket.svelte',
-		'<EvolForm showFiles={true} showNotifs={peutSuivre} />',
+		'routes/(app)/actualites/+page.svelte',
+		'<EvolForm showPhotos={true} showNotifs={peutSuivre} />',
 	);
 	verifier('un fichier toléré ne produit aucun écart', tol.ecarts.length, 0);
 	verifier(
 		'et il déclare ses tolérances SERVIES',
 		tol.servies,
-		['lib/components/CarteTicket.svelte::showFiles', 'lib/components/CarteTicket.svelte::showNotifs'],
+		[
+			'routes/(app)/actualites/+page.svelte::showPhotos',
+			'routes/(app)/actualites/+page.svelte::showNotifs',
+		],
 	);
 	//  🔴 L'autre sens de rupture : une tolérance que plus personne ne sert.
 	//  Sans lui, la liste ne décroîtrait jamais et le contrôle s'endormirait.
 	verifier(
 		'une tolérance non servie est signalée',
-		tolerancesMortes(['lib/components/CarteTicket.svelte::showFiles']).includes(
-			'lib/components/CarteTicket.svelte — showNotifs',
+		tolerancesMortes(['routes/(app)/actualites/+page.svelte::showPhotos']).includes(
+			'routes/(app)/actualites/+page.svelte — showNotifs',
 		),
 		true,
+	);
+	//  Les sections 7 et 8 sont INDEPENDANTES depuis la scission : une balise qui
+	//  ne brancherait que les photos doit rester en ecart sur les documents. Sans
+	//  ce cas, la scission pourrait etre a moitie faite sans que rien ne le dise.
+	verifier(
+		'photos branchées, documents en dur : l’écart reste sur les documents',
+		analyserEvolForm(
+			'x.svelte',
+			"<EvolForm showPhotos={sectionPresente(TICKET, 'evolution', 'photos')} "
+				+ 'showDocuments={true} />',
+		).ecarts.length,
+		1,
+	);
+	//  Le fichier BRANCHE n'a plus de filet : une prop qui y reviendrait en dur
+	//  doit echouer. Sans ce cas, retirer une ligne du releve pourrait n'avoir
+	//  aucun effet et personne ne le saurait.
+	verifier(
+		'un fichier sorti du relévé n’est plus toléré',
+		analyserEvolForm('lib/components/CarteTicket.svelte', '<EvolForm showPhotos />')
+			.ecarts.length,
+		1,
 	);
 	//  Cas zéro : aucune balise `<EvolForm>` ne doit rien inventer.
 	verifier('cas zéro : pas d’EvolForm, pas d’écart', analyserEvolForm('x.svelte', '<div />').ecarts.length, 0);

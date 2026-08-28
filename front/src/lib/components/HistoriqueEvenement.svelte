@@ -154,7 +154,8 @@
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-					showFiles={true}
+					showPhotos={true}
+					showDocuments={true}
 					saving={correctionEnCours}
 					on:submit={corriger}
 					on:cancel={() => (enEdition = null)}
@@ -169,7 +170,8 @@
 				statutOptions={options}
 				statutLabels={libelles}
 				currentStatut={evenement.statut_kanban ?? ''}
-				showFiles={true}
+				showPhotos={true}
+				showDocuments={true}
 				showNotifs={true}
 				saving={enCours}
 				on:submit={enregistrer}
