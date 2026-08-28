@@ -989,7 +989,7 @@
 	.pending-actions { display: flex; gap: .5rem; flex-shrink: 0; }
 	.btn-success { background: #22c55e; color: #fff; border: none; }
 	.btn-success:hover:not(:disabled) { background: #16a34a; }
-	.btn-danger { background: var(--color-danger); color: #fff; border: none; }
+	.btn-danger { border: none; }  /* fond et couleur : charte (#607) */
 	.btn-danger:hover:not(:disabled) { background: #b91c1c; }
 
 	/* Annuaire sections */
@@ -998,10 +998,7 @@
 		display: flex; align-items: center; justify-content: space-between;
 		margin-bottom: .75rem;
 	}
-	.section-title {
-		font-size: .85rem; font-weight: 700; text-transform: uppercase;
-		letter-spacing: .06em; color: var(--color-text-muted); margin: 0;
-	}
+	.section-title { margin: 0; }  /* la charte pose `margin-bottom` (#607) */
 
 	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
 	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
@@ -1032,10 +1029,13 @@
 	.membre-card-actions { display: flex; gap: .3rem; align-items: center; }
 
 	/* Boutons icône */
+	/*  Ces boutons-icones sont CERCLES et carres (2rem) : ils forment une barre
+	    d'actions, la ou la charte habille une icone nue. Bordure, fond, taille et
+	    remplissage sont donc propres a cet ecran ; le reste vient d'elle (#607). */
 	.btn-icon {
-		width: 2rem; height: 2rem; border-radius: var(--radius);
+		width: 2rem; height: 2rem;
 		border: 1px solid var(--color-border); background: var(--color-bg);
-		cursor: pointer; font-size: 1rem; display: flex; align-items: center;
+		font-size: 1rem; display: flex; align-items: center;
 		justify-content: center; transition: background .15s, border-color .15s;
 		padding: 0;
 	}

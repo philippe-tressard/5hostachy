@@ -332,15 +332,15 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return fmtDatetimeShort(d);
 	}
 
-	// Regroupement pour la vue liste :
-	// - années passées → clé "2025" (regroupement annuel)
-	// - année courante → clé "mars 2026" (regroupement mensuel, comme avant)
+	/*  Vue liste : années passées → « 2025 », année courante → « mars 2026 ».
+	    ⚠️ L'ORDRE vit ici, une seule fois : il était écrit DEUX fois (28/08/2026). */
+	const duPlusRecent = (a: any, b: any) => new Date(b.debut).getTime() - new Date(a.debut).getTime();
+
 	function groupByYear(evs: any[]) {
 		const currentYear = new Date().getFullYear();
 		const result: [string, any[]][] = [];
 		const indexMap = new Map<string, number>();
-		const sorted = [...evs].sort((a, b) => new Date(a.debut).getTime() - new Date(b.debut).getTime());
-		for (const ev of sorted) {
+		for (const ev of [...evs].sort(duPlusRecent)) {
 			const d = new Date(ev.debut);
 			const year = d.getFullYear();
 			const key = year < currentYear
@@ -352,7 +352,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		return result;
 	}
 
-	$: listItems = [...filtered].sort((a, b) => new Date(a.debut).getTime() - new Date(b.debut).getTime());
+	$: listItems = [...filtered].sort(duPlusRecent);
 	$: groups = groupByYear(listItems);
 	// Maintenances récurrentes trackées dans le workflow Kanban (statut_kanban actif, non archivées, non périmées)
 	$: recurringMaintenances = (() => {
@@ -770,7 +770,7 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    extraire qu'un aurait emporté les règles et laissé l'autre nu, ce qui est
 	    exactement la panne des pastilles de la v2.67.11. */
 
-	.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
+	.tabs { padding-bottom: .1rem; }  /* le reste vient de la charte (#607) */
 	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
 	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
 	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }

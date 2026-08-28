@@ -641,9 +641,9 @@ import { onMount } from 'svelte';
 </div>
 
 <style>
-	.section-title { font-size:1rem; font-weight:600; margin-bottom:1rem; }
+	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-	.form-actions { display: flex; justify-content: flex-end; margin-top: .5rem; gap: .5rem; flex-wrap: wrap; }
+	.form-actions { flex-wrap: wrap; }  /* le reste vient de la charte (#607) */
 	.checkbox-field { display: flex; align-items: center; gap: .5rem; font-size: .875rem; cursor: pointer; }
 	.hint { font-size: 0.78rem; color: var(--color-text-muted); }
 	.info-grid {

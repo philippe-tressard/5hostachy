@@ -68,15 +68,11 @@
 		background: var(--color-bg-alt, #f9fafb);
 		padding: 1.5rem;
 	}
-	.auth-card {
-		background: #fff;
-		border: 1px solid var(--color-border, #e5e7eb);
-		border-radius: .75rem;
-		padding: 2rem;
-		width: 100%;
-		max-width: 400px;
-		box-shadow: 0 2px 12px rgba(0,0,0,.06);
-	}
+	/*  🔴 Cette carte ecrivait `#fff` EN DUR et un rayon `.75rem` au lieu des
+	    jetons : elle ne suivait donc NI le theme NI la charte, sur un ecran
+	    d'authentification qu'on ne regarde jamais (#607, 28/08/2026).
+	    Seule l'ombre lui est propre. */
+	.auth-card { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
 	h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: .25rem; }
 	.success-box {
 		background: #f0fdf4;

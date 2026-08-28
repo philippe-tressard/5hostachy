@@ -1147,7 +1147,7 @@
 <style>
 
 	/* ── Onglets ── */
-	.tabs { display: flex; gap: .25rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; margin-bottom: 1.5rem; overflow-x: auto; scrollbar-width: thin; }
+	.tabs { padding-bottom: .1rem; overflow-x: auto; scrollbar-width: thin; }  /* le reste : charte (#607) */
 	.tabs button { padding: .45rem .75rem; border: none; background: none; cursor: pointer; font-size: .85rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; white-space: nowrap; display: inline-flex; align-items: center; gap: .3rem; }
 	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
 	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }

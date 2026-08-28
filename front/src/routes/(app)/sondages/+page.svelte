@@ -409,7 +409,9 @@ aria-expanded={showModeration}>
 
 <style>
 
-.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
+/*  `.tabs` : la charte porte display, gap et bordure. Seul le retrait bas
+    est propre a cet ecran (#607, 28/08/2026). */
+.tabs { padding-bottom: .1rem; }
 .tabs button {
 padding: .45rem 1rem; border: none; background: none; cursor: pointer;
 font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;

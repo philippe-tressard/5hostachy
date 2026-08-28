@@ -143,7 +143,8 @@ import { onMount } from 'svelte';
 {/if}
 
 <style>
-	.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
+	/*  Seul l'espacement bas differe de la charte (#607, 28/08/2026). */
+	.section-title { margin-bottom: .5rem; }
 	.notif-row { display: flex; justify-content: space-between; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; gap: .5rem; }
 	.notif-unread { border-left: 3px solid var(--color-primary); }
 	.notif-read { opacity: .7; }
@@ -152,6 +153,8 @@ import { onMount } from 'svelte';
 	.notif-actions { display: flex; gap: .35rem; flex-shrink: 0; }
 	.unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); margin-top: 6px; flex-shrink: 0; }
 
-	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); text-decoration: none; margin-bottom: .75rem; }
+	/*  Ce lien de retour est plus discret et plus proche du contenu que la norme :
+	    variation assumee, le reste vient de la charte (#607, 28/08/2026). */
+	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); margin-bottom: .75rem; }
 	.back-link:hover { color: var(--color-primary); }
 </style>

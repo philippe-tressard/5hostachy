@@ -156,8 +156,19 @@ function elementCible(selecteur, elements) {
  * recomposer. Écrit à la main plutôt qu'en expression régulière : les accolades
  * s'imbriquent (`@keyframes`, `@media`), et un motif qui les compterait sans savoir
  * où il est se tromperait de fin de règle, donc de valeurs de référence.
+ *
+ * 🔴 `{ horsMedia: true }` fait le contraire, et il y a une raison précise (#607).
+ * Pour comparer une règle d'écran à **la** valeur de la charte, il faut la valeur
+ * de BASE : en descendant dans les `@media`, la dernière lue gagne, et c'est la
+ * valeur **mobile** qui sert alors de référence. Le relevé du 28/08/2026 annonçait
+ * ainsi `.form-grid` recomposé partout, parce qu'il comparait à
+ * `grid-template-columns: 1fr !important` — la règle du téléphone, qu'aucun écran
+ * de bureau n'écrit jamais.
+ *
+ * Un relevé qui compte des cas inexistants fait perdre confiance dans les vrais :
+ * c'est pour cela que la correction précède la correction.
  */
-export function reglesCss(source) {
+export function reglesCss(source, { horsMedia = false } = {}) {
 	const src = source.replace(/\/\*[\s\S]*?\*\//g, '');
 	const regles = [];
 	let tete = '';
@@ -168,7 +179,20 @@ export function reglesCss(source) {
 			const selecteur = tete.trim();
 			tete = '';
 			if (selecteur.startsWith('@')) {
-				i++; // on entre dans le bloc pour lire les règles qu'il contient
+				if (!horsMedia) {
+					i++; // on entre dans le bloc pour lire les règles qu'il contient
+					continue;
+				}
+				//  On SAUTE le bloc entier : sa fin se trouve en comptant les
+				//  accolades, `@media` pouvant en contenir d'autres.
+				let profondeur = 1;
+				let j = i + 1;
+				while (j < src.length && profondeur > 0) {
+					if (src[j] === '{') profondeur++;
+					else if (src[j] === '}') profondeur--;
+					j++;
+				}
+				i = j;
 				continue;
 			}
 			let profondeur = 1;
