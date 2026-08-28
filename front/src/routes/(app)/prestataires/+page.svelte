@@ -12,7 +12,7 @@
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
+	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -921,20 +921,19 @@
 										<label class="field">Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
 									{/if}
 								</div>
-								   <div style="margin-top:.75rem">
-									   <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-										   <input type="checkbox" bind:checked={devisForm.affichable} style="width:auto;margin:0" />
-										   <span style="font-size:.875rem">Afficher dans le tableau de bord</span>
-									   </label>
-								   </div>
-								   <div style="margin-top:.5rem">
-									   <CanauxNotification
-										   bind:whatsapp={devisForm.partager_whatsapp}
-										   bind:syndic={devisForm.envoyer_syndic}
-										   bind:cs={devisForm.envoyer_cs}
-										   compact
-									   />
-								   </div>
+								<!--  Les canaux passent par l'OBJET Diffusion (#498) — cet écran était le
+								      dernier à le contourner librement. « Afficher dans le tableau de bord »
+								      va dans `options` : elle dit ce qui est PUBLIÉ, les canaux qui en est prévenu. -->
+								<SectionDiffusion idPrefixe="devis" avecCanaux compact
+									bind:whatsapp={devisForm.partager_whatsapp}
+									bind:syndic={devisForm.envoyer_syndic} bind:cs={devisForm.envoyer_cs}>
+									<svelte:fragment slot="options">
+										<label class="case">
+											<input type="checkbox" bind:checked={devisForm.affichable} />
+											<span>Afficher dans le tableau de bord</span>
+										</label>
+									</svelte:fragment>
+								</SectionDiffusion>
 								<div style="margin-top:.5rem">
 									<span class="libelle-groupe" id="devis-notes-titre" style="font-weight:600;margin-bottom:.3rem">Notes</span>
 									<RichEditor bind:value={devisForm.notes} ariaLabelledby="devis-notes-titre" placeholder="Notes…" minHeight="60px" />
