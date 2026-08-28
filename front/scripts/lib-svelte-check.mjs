@@ -45,7 +45,29 @@ export function inconnu(raison, detail) {
  * sa SORTIE qui fait foi, et son illisibilité qui vaut INCONNU.
  */
 export function lignesDuRapport() {
-	const res = spawnSync('npx svelte-check --output human', {
+	//  🔴 `svelte-kit sync` D'ABORD, et le MÊME `--tsconfig` que le script `check`
+	//  du package.json (28/08/2026).
+	//
+	//  Sans le sync, `.svelte-kit/tsconfig.json` n'existe pas, `svelte-check`
+	//  n'analyse AUCUN fichier — et rend « 0 errors and 0 warnings » en une
+	//  seconde. Sur le poste on ne le voyait jamais : le répertoire `.svelte-kit`
+	//  y traîne depuis un build précédent. En intégration continue, où le dépôt
+	//  est neuf et où ces étapes passent AVANT le build, les trois contrôles qui
+	//  s'appuient sur ce module rendaient donc « aucun défaut » sans avoir rien
+	//  analysé.
+	//
+	//  ⚠️ C'est la definition même du faux vert, et il a tenu parce que le
+	//  résultat attendu de deux d'entre eux est ZÉRO : « rien lu » y ressemble
+	//  trait pour trait. Seul `lint:a11y`, qui porte une exception à SERVIR, a pu
+	//  le révéler — il a cru l'écran devenu conforme.
+	const sync = spawnSync('npx svelte-kit sync', { encoding: 'utf8', shell: true });
+	if (sync.status !== 0) {
+		inconnu(
+			'`svelte-kit sync` a échoué — `svelte-check` n\'analyserait aucun fichier',
+			`${sync.stdout || ''}${sync.stderr || ''}`.slice(-400),
+		);
+	}
+	const res = spawnSync('npx svelte-check --tsconfig ./tsconfig.json --output human', {
 		encoding: 'utf8',
 		shell: true,
 		maxBuffer: 32 * 1024 * 1024,
