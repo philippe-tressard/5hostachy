@@ -1219,9 +1219,9 @@
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }
 
 
+	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
+	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
-	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
-	.form-grid input, .form-grid select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 

@@ -1012,14 +1012,10 @@
 		letter-spacing: .06em; color: var(--color-text-muted); margin: 0;
 	}
 
-	/* Form grid */
+	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
+	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .65rem; }
-	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
-	.form-grid input, .form-grid select, .form-grid textarea {
-		padding: .4rem .55rem; border: 1px solid var(--color-border);
-		border-radius: var(--radius); font-size: .875rem;
-		background: var(--color-bg); width: 100%; box-sizing: border-box;
-	}
+	/*  `resize` n'est porté par aucune classe de la charte : pas une recomposition. */
 	.form-grid textarea { resize: vertical; }
 	.input-nom { text-transform: uppercase; }
 
@@ -1157,8 +1153,9 @@
 	    avec lui le 28/08/2026 : `.tk-*`, `.context-chip`, `.rich-content`,
 	    `.evol-form` et `.history-item` n'habillaient que ce balisage-là. Cette
 	    page ne rend plus aucun ticket — `/tickets` le fait, avec `CarteTicket`. */
-	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
-	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
+	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026.
+	    `.field select` : il repeignait la règle du même nom de `composants.css`,
+	    et gagnait par la classe de portée de Svelte — retiré le 28/08 (#593). */
 	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
 	    site une fois cette feuille chargée. Retirées (#562) : la charte de
 	    `styles/composants.css` les porte déjà. */
