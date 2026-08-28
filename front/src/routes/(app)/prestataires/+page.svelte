@@ -897,9 +897,10 @@
 									<label class="field">Titre *<input bind:value={devisForm.titre} required /></label>
 									<label class="field">Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
 									<label class="field">Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
-									<div class="field" role="group" aria-labelledby="devis-perimetre-titre">
+									<!--  `titre=""` (§9 septies) et `champ-large` (§9 bis) — les deux manquaient. -->
+									<div class="field champ-large" role="group" aria-labelledby="devis-perimetre-titre">
 										<span class="libelle-groupe" id="devis-perimetre-titre">Périmètre *</span>
-										<PerimetrePicker mode="single"
+										<PerimetrePicker mode="single" titre=""
 											value={devisForm.perimetre ? [devisForm.perimetre] : []}
 											on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
 									</div>
@@ -1766,7 +1767,9 @@
 	.type-section-desc { font-size: .82rem; color: var(--color-text-muted); font-style: italic; }
 
 	/* Carte prestataire expansible */
-	.prest-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); transition: border-left-color .12s; padding: 0; overflow: hidden; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); border-radius: var(--radius); }
+	/*  ⚠️ `overflow: hidden` retiré des trois cartes : il rognait l'infobulle des
+	    boutons, posée sous eux donc hors de la carte (#598). */
+	.prest-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); transition: border-left-color .12s; padding: 0; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); border-radius: var(--radius); }
 	.prest-expand:hover, .prest-expand.expanded { border-left-color: var(--color-primary); }
 	.prest-header { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; cursor: pointer; flex-wrap: wrap; }
 	.prest-main { display: flex; align-items: center; min-width: 160px; flex-wrap: wrap; gap: .25rem; }
@@ -1784,11 +1787,10 @@
 	.contrats-summary-count { font-size: .85rem; color: var(--color-text-muted); }
 
 	/* Contrat expansible */
-	.contrat-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: hidden; transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.contrat-expand:hover, .contrat-expand.expanded { border-left-color: var(--color-primary); }
 
 	/* Devis expansible */
-	.devis-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: hidden; transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
+	.contrat-expand, .devis-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.devis-expand:hover, .devis-expand.expanded { border-left-color: #7c3aed; }
 	.devis-row { display: flex; gap: .75rem; align-items: center; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.devis-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
