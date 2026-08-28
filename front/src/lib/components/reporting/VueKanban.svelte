@@ -9,18 +9,26 @@
 <script lang="ts">
 	import { safeDescription } from '$lib/sanitize';
 	import { fmtDate, daysSince } from '$lib/date';
-	import { KANBAN_LABELS, KANBAN_COLORS, TYPE_LABELS, type ReportEvenement } from '$lib/reporting';
+	import { REPORT_KANBAN_COLS, KANBAN_COLORS, TYPE_LABELS, type ReportEvenement } from '$lib/reporting';
 
 	export let reportEvenements: ReportEvenement[] = [];
 
+	//  🔴 Les colonnes étaient écrites en dur ICI, deux fois — dans le filtre et
+	//  dans la boucle —, et il en manquait une : `fournisseur`. Un dossier passé
+	//  chez le prestataire n'apparaissait donc NULLE PART dans le suivi du CS, et
+	//  ne comptait pas non plus dans « Dossiers en cours ». Une colonne absente ne
+	//  laisse pas de trou à l'écran : rien ne pouvait le signaler.
+	//  `REPORT_KANBAN_COLS` dérive de `KANBAN_COLS` — une seule liste, un seul
+	//  endroit où l'oubli serait visible.
+	$: colonnesSuivies = REPORT_KANBAN_COLS.map((c) => c.id);
 	$: reportKanbanEvents = reportEvenements
-		.filter((ev) => ev.statut_kanban === 'ag' || ev.statut_kanban === 'cs' || ev.statut_kanban === 'syndic' || ev.statut_kanban === 'annule')
+		.filter((ev) => !!ev.statut_kanban && colonnesSuivies.includes(ev.statut_kanban))
 		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));
-	$: reportKanbanByCol = (['ag', 'cs', 'syndic', 'annule'] as const).map((col) => ({
-		col,
-		label: KANBAN_LABELS[col],
-		badge: KANBAN_COLORS[col],
-		items: reportKanbanEvents.filter((ev) => ev.statut_kanban === col),
+	$: reportKanbanByCol = REPORT_KANBAN_COLS.map((c) => ({
+		col: c.id,
+		label: c.label,
+		badge: KANBAN_COLORS[c.id],
+		items: reportKanbanEvents.filter((ev) => ev.statut_kanban === c.id),
 	}));
 </script>
 

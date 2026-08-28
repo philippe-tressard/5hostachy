@@ -32,7 +32,6 @@
 	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
 	import { isAdmin } from '$lib/stores/auth';
 	import { fmtDateShort, fmtDateLong } from '$lib/date';
-	import { fmtMontant } from '$lib/utils';
 
 	/** Tous les objets archivés, tous types confondus. */
 	export let allArchiveItems: any[] = [];
@@ -43,7 +42,6 @@
 
 	//  Les gestes restent chez la page : ils appellent l'API et rechargent les
 	//  listes. Les dupliquer ici donnerait deux vérités sur l'état d'un objet.
-	export let prestataireNom: (id: number) => string;
 	export let typeLabel: (type: string) => string;
 	export let formatDate: (d: string) => string;
 	export let deleteArchivedPub: (item: any) => void;
@@ -84,14 +82,6 @@
 										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button>
 									</svelte:fragment>
 								</RangeeCalendrier>
-							{:else if item._kind === 'devis'}
-								<!-- Prestation réalisée -->
-								<RangeeCalendrier archive bordure="#7c3aed"
-									typeTexte="&#x1F3C1;" badgeType={{ texte: 'Prestation', couleur: '#7c3aed' }}
-									titre={item.titre} description={item.notes}
-									metas={prestataireNom(item.prestataire_id) ? [`\u{1F3AF} ${prestataireNom(item.prestataire_id)}`] : []}
-									dates={[...(item.date_prestation ? [{ texte: fmtDateShort(item.date_prestation) }] : []),
-										...(item.montant_estime ? [{ texte: fmtMontant(item.montant_estime), attenue: true }] : [])]} />
 							{:else}
 								<!-- Événement archivé -->
 								<RangeeCalendrier archive bordure="#10b981" urgent={item.type === 'coupure'}

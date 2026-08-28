@@ -4,8 +4,8 @@
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { flux, lots, calendrier as calApi, prestataires as prestApi, type FluxItem, type FluxResponse } from '$lib/api';
-	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear, devisPonctuelToKanban } from '$lib/kanban';
+	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
+	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
@@ -29,17 +29,15 @@
 	let loading = true;
 	let ready = false;
 	let kanbanRawEvs: any[] = [];
-	let dashDevis: any[] = [];
 	let mobileKanbanIdx = 0;
 
 	onMount(async () => {
 		try {
-			const [fluxRes, lotsRes, calRes, devisRes] = await Promise.allSettled([flux.get(), lots.mesList(), calApi.list(), prestApi.devis()]);
+			const [fluxRes, lotsRes, calRes] = await Promise.allSettled([flux.get(), lots.mesList(), calApi.list()]);
 			if (fluxRes.status === 'fulfilled') data = fluxRes.value;
 			else toast('error', 'Erreur chargement du flux');
 			if (lotsRes.status === 'fulfilled') userLots = lotsRes.value;
 			if (calRes.status === 'fulfilled') kanbanRawEvs = calRes.value;
-			if (devisRes.status === 'fulfilled') dashDevis = devisRes.value;
 		} catch (e: any) {
 			toast('error', 'Erreur chargement : ' + (e?.message ?? String(e)));
 		} finally {
@@ -180,10 +178,6 @@
 	// ── Kanban widget ──────────────────────────────────────────────────────
 	const _kanbanYear = new Date().getMonth() < 1 ? new Date().getFullYear() - 1 : new Date().getFullYear();
 
-	$: dashDevisPonctuels = dashDevis
-		.filter((d: any) => !d.frequence_type && !d.frequence_valeur)
-		.map((d: any) => devisPonctuelToKanban(d));
-
 	const DASH_KANBAN_COLS = [
 		{ id: 'ag',          label: 'AG',          color: '#8b5cf6' },
 		{ id: 'cs',          label: 'CS',           color: '#3b82f6' },
@@ -206,7 +200,7 @@
 
 	$: _dashKanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
 
-	$: dashKanbanEvs = [...kanbanRawEvs, ...dashDevisPonctuels].filter(ev => {
+	$: dashKanbanEvs = kanbanRawEvs.filter(ev => {
 		if (!ev.statut_kanban || ev.statut_kanban === 'annule') return false;
 		if (!kanbanEvVisible(ev, _dashKanbanCtx)) return false;
 		if (!kanbanEvMatchesYear(ev, _kanbanYear)) return false;

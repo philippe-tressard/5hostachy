@@ -30,7 +30,7 @@ from .schemas import FluxItem
 # `/documents`, une route qui n'a jamais existé côté front → 404 sur « Voir → »,
 # signalé le 26/07/2026 depuis un PV d'AG. Les catégories absentes de cet ensemble ne
 # sont affichées nulle part (fiche synthétique, attestation de lot, diagnostic de lot,
-# devis, document interne CS) : dans ce cas le fil ne propose aucun lien plutôt qu'un
+# devis travaux, document interne CS) : dans ce cas le fil ne propose aucun lien plutôt qu'un
 # lien qui ne mène nulle part. Cf. `api/tests/test_liens_front.py`.
 #
 # La page et l'onglet, eux, ne sont plus écrits ici : ils viennent de

@@ -34,7 +34,6 @@ from typing import Optional
 EMPLACEMENTS: dict[str, tuple[str, Optional[str]]] = {
     "pub": ("/actualites", None),
     "ev": ("/calendrier", "liste"),
-    "dv": ("/prestataires", "prestations"),
     "presta": ("/prestataires", "prestataires"),
     "annonce": ("/sondages", "annonces"),
     "idee": ("/sondages", "idees"),

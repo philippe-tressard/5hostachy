@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 class FluxItem(BaseModel):
     id: str = ""         # e.g. "ev_42", "tk_15", "pub_7", "dv_3", "sond_1"
-    type: str            # ticket_resolu, ticket_ouvert, publication, evenement, devis, sondage_clos, sondage_ouvert
+    type: str            # ticket_resolu, ticket_ouvert, publication, evenement, sondage_clos, sondage_ouvert
     date: datetime
     cree_le: Optional[datetime] = None
     titre: str

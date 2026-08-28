@@ -13,11 +13,13 @@
   l'autre. Ce qui est partagé monte d'un cran — les types et les calculs dans
   `$lib/reporting.ts`, le vocabulaire de style dans `app.css`.
 
-  🔴 **Les tickets arrivent en prop, ils ne sont pas rechargés ici.**
-  `loadReporting` s'assure d'abord que la page a les siens (`chargerTickets`, qui
-  mémorise) : l'onglet Tickets et l'analyse du reporting lisent la MÊME liste.
-  Deux requêtes pour la même donnée, ce serait aussi deux vérités le jour où
-  l'une des deux échoue.
+  🔴 **Les tickets sont chargés ICI depuis le 28/08/2026.** Ils arrivaient en
+  prop de la page, avec cette raison : « l'onglet Tickets et l'analyse du
+  reporting lisent la MÊME liste ». L'onglet « Tickets résidence » a été retiré
+  (redondant avec `/tickets`), et sa disparition emporte la prémisse : il ne
+  reste qu'un consommateur, et la page n'a plus aucune raison de tenir une liste
+  qu'elle n'affiche pas. Un passe-plat gardé après la mort de son motif se lit
+  comme une contrainte encore vraie.
 
   ⚠️ La classe `print-reporting` posée sur <body> est une mutation d'état global
   (`standards/11` §12) : elle est posée ET retirée ici, sur le cycle de vie de ce
@@ -26,32 +28,27 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, type Ticket } from '$lib/api';
+	import { prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, tickets as ticketsApi, type Ticket } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDatetime } from '$lib/date';
 	import { apiMessage } from '$lib/utils';
-	import { REPORT_VUES, type ReportVue, type ReportEvenement, type ReportPrestataire, type ReportDevis, type ReportContrat, type DiagType } from '$lib/reporting';
+	import { REPORT_VUES, type ReportVue, type ReportEvenement, type ReportPrestataire, type ReportContrat, type DiagType } from '$lib/reporting';
 	import VueKanban from './VueKanban.svelte';
 	import VueTickets from './VueTickets.svelte';
-	import VueDevis from './VueDevis.svelte';
 	import VuePrestataires from './VuePrestataires.svelte';
 	import VueRenouvellements from './VueRenouvellements.svelte';
 	import VueRelanceSyndic from './VueRelanceSyndic.svelte';
 
-	/** Tickets de la page — source unique, partagée avec l'onglet Tickets. */
-	export let tickets: Ticket[] = [];
-	/** Chargement mémorisé des tickets, tenu par la page (`loadTickets`). */
-	export let chargerTickets: () => Promise<void> = async () => {};
 	/** Libellé de l'onglet, pour l'en-tête d'impression. */
 	export let titreOnglet = 'Reporting';
 	/** Vue demandée par l'URL (`?vue=…`), à l'arrivée depuis le tableau de bord. */
 	export let vueInitiale: string | null = null;
 
+	let tickets: Ticket[] = [];
 	let reportView: ReportVue = 'kanban';
 	let reportingLoading = false;
 	let reportingLoaded = false;
 	let reportPrintTitle = '';
-	let reportDevisList: ReportDevis[] = [];
 	let reportPrestataires: ReportPrestataire[] = [];
 	let reportEvenements: ReportEvenement[] = [];
 	let reportContrats: ReportContrat[] = [];
@@ -123,7 +120,6 @@
 		const titles: Record<ReportVue, string> = {
 			kanban: 'Reporting CS — Dossiers AG / CS / Syndic',
 			tickets: 'Reporting CS — Analyse tickets',
-			devis: 'Reporting CS — Devis & interventions',
 			prestataires: 'Reporting CS — Synthèse prestataires',
 			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
 			relance: 'Reporting CS — Relance syndic',
@@ -142,13 +138,12 @@
 		if (reportingLoaded && !force) return;
 		reportingLoading = true;
 		try {
-			await chargerTickets();
-			const [devis, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
-				prestApi.devis(), prestApi.list(), calApi.list(),
+			const [ticketsList, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
+				ticketsApi.list(), prestApi.list(), calApi.list(),
 				prestApi.contrats(), diagnosticsApi.listTypes(),
 				prestApi.notations()
 			]);
-			reportDevisList = devis as ReportDevis[];
+			tickets = ticketsList;
 			reportPrestataires = prestataires as ReportPrestataire[];
 			reportEvenements = evenements as ReportEvenement[];
 			reportContrats = contrats as ReportContrat[];
@@ -181,7 +176,7 @@
 			reportView = vueInitiale as ReportVue;
 		}
 		//  La page appelait `loadRelanceSyndic()` dès qu'un `?vue=` était présent,
-		//  quelle que soit la vue demandée : `?vue=devis` chargeait donc les relances
+		//  quelle que soit la vue demandée : `?vue=kanban` chargeait donc les relances
 		//  et laissait la vue affichée VIDE. On charge ce que la vue montre — la
 		//  relance, elle, se charge d'elle-même à son montage.
 		if (reportView !== 'relance') loadReporting();
@@ -196,9 +191,6 @@
 				</button>
 				<button class="pill" class:pill-active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
 					&#x1F4CA; Analyse tickets
-				</button>
-				<button class="pill" class:pill-active={reportView === 'devis'} on:click={() => (reportView = 'devis')}>
-					&#x1F4CB; Devis & interventions
 				</button>
 				<button class="pill" class:pill-active={reportView === 'prestataires'} on:click={() => (reportView = 'prestataires')}>
 					&#x1F3E2; Prestataires
@@ -231,10 +223,8 @@
 		<VueKanban {reportEvenements} />
 	{:else if reportView === 'tickets'}
 		<VueTickets {tickets} />
-	{:else if reportView === 'devis'}
-		<VueDevis {reportDevisList} {reportPrestataires} />
 	{:else if reportView === 'prestataires'}
-		<VuePrestataires {reportPrestataires} {reportDevisList} />
+		<VuePrestataires {reportPrestataires} />
 	{:else if reportView === 'renouvellements'}
 		<VueRenouvellements {reportContrats} {reportPrestataires} {reportDiagTypes} {reportNoteMoyParPrest} />
 	{:else if reportView === 'relance'}

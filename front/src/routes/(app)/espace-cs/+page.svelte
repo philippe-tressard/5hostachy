@@ -3,24 +3,19 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
-	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { onMount } from 'svelte';
-	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
+	import { isCS } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, tickets as ticketsApi, ApiError, type Ticket, type TicketEvolution } from '$lib/api';
+	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { safeHtml, safeDescription } from '$lib/sanitize';
-	import EvolForm from '$lib/components/EvolForm.svelte';
-	import RubriqueHistorique from '$lib/components/RubriqueHistorique.svelte';
-	import { fmtDate, fmtDateShort } from '$lib/date';
+	import { safeHtml } from '$lib/sanitize';
+	import { fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
-	import ApercuTicket from '$lib/components/ApercuTicket.svelte';
-	import { fichiersDepuisUrls, MAX_FICHIERS } from '$lib/fichiers';
-	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS, STATUT_TICKET_OPTIONS as TK_STATUT_OPTIONS, STATUTS_TICKET_FILTRE, estTicketClos } from '$lib/tickets';
+	import { MAX_FICHIERS } from '$lib/fichiers';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -58,132 +53,10 @@
 	}
 
 	// -- Onglet -------------------------------------------------------------
-	let onglet: 'validations' | 'tickets' | 'reporting' | 'annonces-hall' | 'annuaire' = 'validations';
+	let onglet: 'validations' | 'reporting' | 'annonces-hall' | 'annuaire' = 'validations';
 	/** Vue de reporting demandée par l'URL — c'est `OngletReporting` qui la valide. */
 	let vueReporting: string | null = null;
 	$: trackTabView(onglet);
-
-	// -- Tickets ------------------------------------------------------------
-	//  Renommée en extrayant le reporting (#453) : c'est la MÊME liste que lit
-	//  `OngletReporting`, passée en prop plutôt que rechargée de son côté.
-	let tickets: Ticket[] = [];
-	let tkLoading = false;
-	let tkLoaded = false;
-	//  Type élargi : il énumérait les deux états filtrables, une écriture de plus
-	//  de la même liste. Options : `STATUTS_TICKET_FILTRE` ; `''` vaut « Tous ».
-	let tkFilter = '';
-	let tkExpandedId: number | null = null;
-	let tkEvolsMap: Record<number, TicketEvolution[]> = {};
-	let tkEvolsLoaded = new Set<number>();
-	let tkShowForm: number | null = null;
-	let tkEvolSaving = false;
-	let tkEditingEvolId: number | null = null;
-	let tkEditEvolSaving = false;
-
-
-
-	//  Badges, libellés et options du workflow : `$lib/tickets` (#415).
-	const TK_CAT_ICON: Record<string, string> = { panne: '\u{1F6E0}️', nuisance: '\u{1F4E2}', question: '❓', urgence: '\u{1F6A8}', bug: '\u{1F41B}' };
-
-	$: tkActive = tickets.filter(t => !estTicketClos(t.statut));
-	$: tkFiltered = tkActive.filter(t => !tkFilter || t.statut === tkFilter);
-	$: tkPendingCount = tickets.filter(t => t.statut === 'ouvert').length;
-
-	const TK_THREE_YEARS_AGO = new Date();
-	TK_THREE_YEARS_AGO.setFullYear(TK_THREE_YEARS_AGO.getFullYear() - 3);
-	$: tkHistory = tickets
-		.filter(t => estTicketClos(t.statut) && new Date(t.mis_a_jour_le ?? t.cree_le) >= TK_THREE_YEARS_AGO)
-		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
-	//  ⚠️ Le groupement par année et l'état des années ouvertes sont partis dans
-	//  `ArchivesParAnnee` : ce bloc en était la TROISIÈME copie, avec l'écran
-	//  Tickets et le composant lui-même. Ce qui reste ici est le FILTRE — quels
-	//  tickets sont archivés —, qui est propre à cet onglet.
-	let tkHistoryExpanded = false;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	async function loadTickets() {
-		if (tkLoaded) return;
-		tkLoading = true;
-		try {
-			tickets = await ticketsApi.list();
-			tkLoaded = true;
-		} catch { toast('error', 'Erreur chargement tickets'); }
-		finally { tkLoading = false; }
-	}
-
-
-
-
-
-	async function tkToggle(id: number) {
-		if (tkExpandedId === id) { tkExpandedId = null; return; }
-		tkExpandedId = id;
-		tkShowForm = null;
-		if (!tkEvolsLoaded.has(id)) await tkLoadEvols(id);
-	}
-
-	async function tkLoadEvols(id: number) {
-		try {
-			tkEvolsMap[id] = await ticketsApi.evolutions(id);
-			tkEvolsLoaded = new Set([...tkEvolsLoaded, id]);
-			tkEvolsMap = { ...tkEvolsMap };
-		} catch { /* silencieux */ }
-	}
-
-	//  UN point d'entrée (#426) : le formulaire porte les deux gestes, et lequel a
-	//  été fait se lit dans les pastilles de la section Workflow.
-	function tkOpenForm(id: number) {
-		tkShowForm = id;
-		tkExpandedId = id;
-	}
-
-	async function tkSubmitEvol(t: Ticket, e: CustomEvent) {
-		const data = e.detail;
-		tkEvolSaving = true;
-		try {
-			await ticketsApi.addEvolution(t.id, {
-				type: data.type,
-				contenu: data.contenu || undefined,
-				nouveau_statut: data.type === 'etat' ? data.nouveau_statut : undefined,
-				fichiers_urls: data.fichiers_urls,
-			});
-			if (data.type === 'etat') {
-				tickets = tickets.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut } : x);
-			}
-			await tkLoadEvols(t.id);
-			tkShowForm = null;
-			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
-		} catch (err: any) {
-			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { tkEvolSaving = false; }
-	}
-
-	async function tkSaveEvolEdit(ticketId: number, e: CustomEvent) {
-		if (tkEditingEvolId === null) return;
-		tkEditEvolSaving = true;
-		try {
-			await ticketsApi.updateEvolution(ticketId, tkEditingEvolId, {
-				contenu: e.detail.contenu || undefined,
-				fichiers_urls: e.detail.fichiers_urls,
-			});
-			await tkLoadEvols(ticketId);
-			tkEditingEvolId = null;
-			toast('success', 'Commentaire mis à jour');
-		} catch { toast('error', 'Erreur de mise à jour'); }
-		finally { tkEditEvolSaving = false; }
-	}
 
 	// -- Validations --------------------------------------------------------
 	let batimentsMap: Record<number, string> = {};
@@ -314,7 +187,7 @@
 		const params = new URLSearchParams(window.location.search);
 		const pOnglet = params.get('onglet') as typeof onglet | null;
 		const pVue = params.get('vue');
-		if (pOnglet && ['validations', 'tickets', 'reporting', 'annonces-hall', 'annuaire'].includes(pOnglet)) {
+		if (pOnglet && ['validations', 'reporting', 'annonces-hall', 'annuaire'].includes(pOnglet)) {
 			onglet = pOnglet;
 		}
 		if (pVue && onglet === 'reporting') vueReporting = pVue;
@@ -693,10 +566,6 @@
 		{_pc.onglets?.validations?.label ?? '✅ Comptes & accès'}
 		{#if nbComptes + nbCommandes > 0}<span class="badge-count">{nbComptes + nbCommandes}</span>{/if}
 	</button>
-	<button class="tab-btn" class:active={onglet === 'tickets'} on:click={() => { onglet = 'tickets'; loadTickets(); }}>
-		{_pc.onglets?.tickets?.label ?? '\u{1F3AB} Tickets résidence'}
-		{#if tkPendingCount > 0}<span class="badge-count">{tkPendingCount}</span>{/if}
-	</button>
 	<button class="tab-btn" class:active={onglet === 'reporting'} on:click={() => (onglet = 'reporting')}>
 		{_pc.onglets?.reporting?.label ?? '\u{1F4CA} Reporting'}
 	</button>
@@ -784,200 +653,8 @@
 		</section>
 	{/if}
 
-{:else if onglet === 'tickets'}
-	<div style="margin-bottom:1.25rem;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
-		<button class="btn btn-sm" class:btn-primary={tkFilter === ''} on:click={() => tkFilter = ''}>Tous</button>
-		{#each STATUTS_TICKET_FILTRE as s}
-			<button class="btn btn-sm" class:btn-primary={tkFilter === s.value}
-				on:click={() => tkFilter = s.value}>{s.label}</button>
-		{/each}
-
-	</div>
-
-	{#if tkLoading}
-		<p style="color:var(--color-text-muted)">Chargement…</p>
-	{:else if tkFiltered.length === 0}
-		<div class="empty-state">
-			<h3>Aucun ticket{tkFilter ? ' dans ce statut' : ''}</h3>
-		</div>
-	{:else}
-		{#each tkFiltered as t (t.id)}
-			{@const expanded = tkExpandedId === t.id}
-			{@const evols = tkEvolsMap[t.id] ?? []}
-			<div class="carte-liste tk-expand" class:expanded class:urgent={t.categorie === 'urgence'}
-				role="button" tabindex="0"
-				on:click={() => tkToggle(t.id)}
-				on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && tkToggle(t.id)}>
-				<div class="tk-row">
-					<div class="tk-main">
-						<div class="tk-row-inner">
-							<span class="tk-cat">{TK_CAT_ICON[t.categorie] ?? '\u{1F4CB}'}</span>
-							<span class="tk-row-titre">{t.titre}</span>
-							<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}" style="flex-shrink:0">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
-							{#if t.priorite === 'haute'}<span class="badge badge-orange" style="flex-shrink:0">⚡ Urgente</span>{/if}
-						</div>
-						{#if t.auteur_nom || t.auteur_batiment_nom}
-							<div class="tk-ticket-meta">
-								{#if t.auteur_nom}<span>&#x1F464; {t.auteur_nom}</span>{/if}
-								{#if t.auteur_batiment_nom}<span>&#x1F4CD; {t.auteur_batiment_nom}</span>{/if}
-							</div>
-						{/if}
-					</div>
-					<div class="tk-row-right">
-						<span class="tk-row-date">{fmtDate(t.mis_a_jour_le ?? t.cree_le)}</span>
-						<button class="btn-icon" aria-label="Commenter ou changer l’état" title="Commenter ou changer l’état" on:click|stopPropagation={() => tkOpenForm(t.id)}>&#x1F504;</button>
-						<span class="chevron" class:open={expanded}>›</span>
-					</div>
-				</div>
-
-				{#if !expanded}
-					<ApercuTicket ticket={t} />
-				{/if}
-
-				{#if expanded}
-					<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
-						{#if tkShowForm === t.id}
-						<div class="evol-form">
-							{#key tkShowForm}
-							<EvolForm idPrefixe="cs-tk-evol-{t.id}" titre="Commenter ou changer l’état"
-								statutOptions={TK_STATUT_OPTIONS}
-								statutLabels={TK_STATUT_LABELS}
-								currentStatut={t.statut ?? ''}
-								showNotifs={false}
-								showEmail={false}
-								showPhotos={true}
-								showDocuments={true}
-								saving={tkEvolSaving}
-								on:submit={(e) => tkSubmitEvol(t, e)}
-								on:cancel={() => (tkShowForm = null)}
-							/>
-							{/key}
-						</div>
-
-					{:else}
-							{#if t.auteur_nom || t.auteur_batiment_nom}
-								<div class="tk-context-meta">
-									{#if t.auteur_nom}<span class="context-chip">Demandeur : {t.auteur_nom}</span>{/if}
-									{#if t.auteur_batiment_nom}<span class="context-chip">Bâtiment : {t.auteur_batiment_nom}</span>{/if}
-								</div>
-							{/if}
-							<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
-							<small style="color:var(--color-text-muted);font-size:.78rem">
-								Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span>
-							</small>
-							<!--  L'HISTORIQUE — cinquième des six recopies du fil relevées par
-							      #431, remplacée ici (#433). Celle-ci n'avait PAS la
-							      pagination des autres : un ticket à trente entrées les
-							      déroulait toutes. Elle habillait aussi son bouton
-							      « Modifier » par six déclarations en ligne. Tout cela vit
-							      une fois, dans la rubrique, avec ses styles — Svelte les
-							      scope au composant qui rend le balisage. -->
-							{#if evols.length > 0}
-								<div>
-									<RubriqueHistorique
-										evolutions={evols}
-										statutLabels={TK_STATUT_LABELS}
-										peutModifier={true} currentUserId={$currentUser?.id} estAdmin={$isAdmin}
-										enEdition={tkEditingEvolId}
-										on:modifier={(e) => (tkEditingEvolId = e.detail)}
-									>
-										<svelte:fragment slot="edition" let:evol>
-											{#key tkEditingEvolId}
-												<EvolForm idPrefixe="cs-tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
-													editMode={true}
-													initialContenu={evol.contenu || ''}
-													initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-													showPhotos={true}
-													showDocuments={true}
-													saving={tkEditEvolSaving}
-													on:submit={(e) => tkSaveEvolEdit(t.id, e)}
-													on:cancel={() => tkEditingEvolId = null}
-												/>
-											{/key}
-										</svelte:fragment>
-									</RubriqueHistorique>
-								</div>
-							{/if}
-							<!--  ⚠️ Cette commande double celle de l'en-tête de la carte —
-							      c'était déjà le cas avant #426 ; à arbitrer sur cet écran. -->
-							<div style="margin-top:.75rem">
-								<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => tkOpenForm(t.id)}>&#x1F504; Commenter ou changer l’état</button>
-							</div>
-						{/if}
-					</div>
-				{/if}
-			</div>
-		{/each}
-	{/if}
-
-	<!--  ARCHIVES des tickets clos — bandeau, groupement par année et titre
-	      viennent tous d'`ArchivesParAnnee` (#516). Le bandeau était réécrit ici
-	      une 4e fois (chevron figé à « ▼ »), et le groupement une 3e. -->
-	{#if tkHistory.length > 0}
-	<div>
-		<ArchivesParAnnee items={tkHistory} dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
-			compte={tkHistory.length} charge bind:ouvert={tkHistoryExpanded}
-			let:objet={t}>
-					{@const hExpanded = tkExpandedId === t.id}
-					{@const evols = tkEvolsMap[t.id] ?? []}
-					<div class="tk-expand history-item" class:expanded={hExpanded} class:urgent={t.categorie === 'urgence'}
-						role="button" tabindex="0"
-						on:click={() => tkToggle(t.id)}
-						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && tkToggle(t.id)}>
-						<div class="tk-row">
-							<div class="tk-main">
-								<div class="tk-row-inner">
-									<span class="tk-cat">{TK_CAT_ICON[t.categorie] ?? '📋'}</span>
-									<span class="tk-row-titre">{t.titre}</span>
-									<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}" style="flex-shrink:0">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
-								</div>
-								{#if t.auteur_nom || t.auteur_batiment_nom}
-									<div class="tk-ticket-meta">
-										{#if t.auteur_nom}<span>👤 {t.auteur_nom}</span>{/if}
-										{#if t.auteur_batiment_nom}<span>📍 {t.auteur_batiment_nom}</span>{/if}
-									</div>
-								{/if}
-							</div>
-							<div class="tk-row-right">
-								<span class="tk-row-date">{fmtDate(t.mis_a_jour_le ?? t.cree_le)}</span>
-								<span class="chevron" class:open={hExpanded}>›</span>
-							</div>
-						</div>
-						{#if !hExpanded}
-							<ApercuTicket ticket={t} />
-						{/if}
-						{#if hExpanded}
-							<div class="tk-body" on:click|stopPropagation on:keydown|stopPropagation>
-								{#if t.auteur_nom || t.auteur_batiment_nom}
-									<div class="tk-context-meta">
-										{#if t.auteur_nom}<span class="context-chip">Demandeur : {t.auteur_nom}</span>{/if}
-										{#if t.auteur_batiment_nom}<span class="context-chip">Bâtiment : {t.auteur_batiment_nom}</span>{/if}
-									</div>
-								{/if}
-								<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeDescription(t.description)}</div>
-								<small style="color:var(--color-text-muted);font-size:.78rem">Créé le {fmtDate(t.cree_le)} · <span style="font-family:monospace">#{t.numero}</span></small>
-								<!--  🔴 Le fil passe par `RubriqueHistorique`, le composant qui le rend
-								      déjà pour la fiche et la carte d'un ticket. Il était RECOMPOSÉ ici
-								      à la main — même balisage, mêmes classes, et une icône qui avait
-								      divergé : 📝 pour un commentaire, là où le bouton dit « 💬 Commenter »
-								      (signalé à l'écran le 19/08/2026).
-								      Les gestes de correction ne sont PAS proposés ici : cet onglet est une
-								      vue de suivi, la correction se fait depuis la fiche du ticket. -->
-								<RubriqueHistorique
-									evolutions={[...evols].sort((x, y) => new Date(y.cree_le).getTime() - new Date(x.cree_le).getTime())}
-									statutLabels={TK_STATUT_LABELS}
-								/>
-							</div>
-						{/if}
-					</div>
-		</ArchivesParAnnee>
-	</div>
-	{/if}
-
 {:else if onglet === 'reporting'}
 	<OngletReporting
-		{tickets}
-		chargerTickets={loadTickets}
 		titreOnglet={_pc.onglets?.reporting?.label ?? 'Reporting'}
 		vueInitiale={vueReporting}
 	/>
@@ -1403,18 +1080,20 @@
 		border-radius: var(--radius); display: inline-block;
 	}
 
-	/* Recherche inscrit */
-	.user-search-wrap { margin-top: .65rem; position: relative; }
-	.user-search-label { font-size: .8rem; color: var(--color-text-muted); display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-	.user-search-input { font-size: .8rem; padding: .25rem .4rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-bg); min-width: 180px; }
-	.user-suggestions {
-		list-style: none; margin: .25rem 0 0; padding: 0;
-		border: 1px solid var(--color-border); border-radius: var(--radius);
-		background: var(--color-bg); box-shadow: 0 4px 12px rgba(0,0,0,.08);
-		max-height: 220px; overflow-y: auto; z-index: 10; position: relative;
-	}
-	.sugg-bat { font-size: .75rem; color: var(--color-text-muted); }
-	.user-no-result { font-size: .78rem; color: var(--color-text-muted); margin: .25rem 0 0; padding: .35rem .5rem; }
+	/*  🔴 Six sélecteurs morts retirés le 28/08/2026 — `.user-search-wrap`,
+	    `.user-search-label`, `.user-search-input`, `.user-suggestions`,
+	    `.sugg-bat`, `.user-no-result`. Ils l'étaient DEPUIS LONGTEMPS, et
+	    `lint:css-orphelin` ne les voyait pas.
+
+	    ⚠️ Pourquoi il ne les voyait pas, parce que ça vaut pour tout le dépôt :
+	    ce contrôle lit les avertissements de `svelte-check`, et Svelte ne peut
+	    élaguer un sélecteur de classe nue que s'il prouve qu'AUCUN élément du
+	    composant ne peut le porter. Deux `class="… {expression}"` suffisaient à
+	    lui ôter cette preuve — pour le fichier entier. Les deux vivaient dans
+	    l'onglet « Tickets résidence » ; il part, et six règles mortes
+	    apparaissent d'un coup. Le garde-fou n'était donc pas vert ici : il était
+	    AVEUGLE, et un seul attribut de classe dynamique suffit à aveugler un
+	    écran entier. */
 	.user-link-indicator { margin-top: .5rem; }
 	.user-no-match { font-size: .78rem; color: var(--color-text-muted); font-style: italic; }
 	.cs-role-flags {
@@ -1474,36 +1153,10 @@
 	.btn-icon-move:hover:not(:disabled) { background: var(--color-bg-secondary, #f8f9fa); color: var(--color-text); }
 	.btn-icon-move:disabled { opacity: .25; cursor: not-allowed; }
 
-	/* Tickets CS */
-	.tk-expand { margin-bottom: .3rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); overflow: visible; position: relative; background: var(--color-surface); transition: border-left-color .12s; }
-	.tk-expand:hover, .tk-expand.expanded { border-left-color: var(--color-primary); }
-	.tk-expand.urgent { border-left-color: var(--color-danger); }
-	.tk-row { display: flex; align-items: center; gap: .6rem; padding: .6rem .9rem; cursor: pointer; user-select: none; transition: background .12s; }
-	.tk-main { display: flex; flex-direction: column; gap: .25rem; flex: 1; min-width: 0; overflow: hidden; }
-	.tk-row-inner { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; overflow: hidden; }
-	.tk-cat { flex-shrink: 0; font-size: .95rem; }
-	.tk-row-titre { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.tk-row-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
-	.tk-row-date { font-size: .78rem; color: var(--color-text-muted); margin-right: .3rem; white-space: nowrap; }
-	.tk-ticket-meta { display: flex; gap: .6rem; flex-wrap: wrap; font-size: .78rem; color: var(--color-text-muted); }
-	.tk-preview { padding: .4rem 1rem .6rem; font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); }
-	.tk-preview :global(p) { margin: 0 0 .4em; }
-	.tk-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
-	.tk-context-meta { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .65rem; }
-	.context-chip {
-		display: inline-flex; align-items: center; gap: .25rem;
-		padding: .2rem .55rem; border-radius: 999px;
-		background: var(--color-bg); border: 1px solid var(--color-border);
-		font-size: .78rem; color: var(--color-text-muted);
-	}
-	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); }
-	.rich-content :global(p) { margin: 0 0 .5em; }
-	/*  Les onze règles du FIL sont parties avec lui dans `RubriqueHistorique`
-	    (19/08/2026) : la page le recomposait à la main, jusqu'à l'icône. Les
-	    garder ici en ferait des règles orphelines — la moitié du défaut que
-	    `lint:classes-nues` surveille par l'autre bout. `.evol-form` reste : il
-	    habille le formulaire d'évolution, que cette page ouvre encore. */
-	.evol-form { padding: .25rem 0; }
+	/*  🔴 Les vingt-huit règles de l'onglet « Tickets résidence » sont parties
+	    avec lui le 28/08/2026 : `.tk-*`, `.context-chip`, `.rich-content`,
+	    `.evol-form` et `.history-item` n'habillaient que ce balisage-là. Cette
+	    page ne rend plus aucun ticket — `/tickets` le fait, avec `CarteTicket`. */
 	/*  `.field label` et `.field textarea` : morts, retirés le 18/08/2026. */
 	.field select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); }
 	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
@@ -1514,26 +1167,4 @@
 	/*  Les trente-six règles `.ah-*` sont parties avec `OngletAnnoncesHall` :
 	    Svelte scope les styles au composant qui rend le balisage, et les laisser
 	    ici aurait livré l'onglet entièrement NU (v2.67.11). */
-
-
-
-
-
-
-
-  /* Archives des tickets clos */
-  /*  🔴 Onze règles sont parties avec `ArchivesParAnnee` et `SectionRepliee` :
-      le bandeau, son compteur, son chevron, et tout le groupement par année.
-      Svelte scope les styles au composant qui rend le balisage — les laisser
-      ici les aurait rendues inertes, pas dangereuses, mais elles auraient
-      continué d'être lues comme la référence du rendu (#516).
-
-      Ne restent que les deux qui habillent ce que CETTE page rend encore :
-      l'encadré de la section, et la ligne d'un ticket archivé (contenu du
-      `slot`, donc dans la portée de la page). */
-  /*  Séparateur : celui de `SectionRepliee`, dessiné ici AUSSI jusqu'au 20/08 (#536). */
-  .history-item { border-left: 4px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); opacity: .8; transition: opacity .15s, border-left-color .15s; }
-  .history-item:hover { opacity: 1; }
-  .history-item.expanded { opacity: 1; }
-
 </style>

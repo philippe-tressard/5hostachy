@@ -1,6 +1,5 @@
 // Règles de visibilité kanban — source unique de vérité
 // Utilisé par calendrier/+page.svelte et tableau-de-bord/+page.svelte
-import { perimetreDuBatiment } from '$lib/perimetres';
 
 /**
  * Les COLONNES du Kanban — la source unique, extraite de `calendrier/+page.svelte`
@@ -80,43 +79,3 @@ export function kanbanEvMatchesYear(ev: any, exercice: number): boolean {
 	return isOverdue || year === exercice;
 }
 
-const _DEVIS_STATUT_MAP: Record<string, string> = {
-	en_attente: 'syndic',
-	accepte: 'fournisseur',
-	realise: 'termine',
-	refuse: 'annule',
-};
-
-/** Mappe le statut d'un devis vers la colonne kanban correspondante. */
-export function devisStatutToKanban(statut: string | null | undefined): string {
-	return _DEVIS_STATUT_MAP[statut ?? ''] ?? 'syndic';
-}
-
-/** Transforme un devis ponctuel en item kanban compatible avec les événements calendrier. */
-export function devisPonctuelToKanban(
-	d: any,
-	opts?: { prestataireNom?: (id: number | null) => string }
-): any {
-	const rawDate = d.date_prestation ?? d.cree_le ?? new Date().toISOString();
-	const debut =
-		typeof rawDate === 'string' && rawDate.includes('T') ? rawDate : `${rawDate}T09:00`;
-	const perimetre = d.perimetre ?? perimetreDuBatiment(d.batiment_id);
-	return {
-		id: -(100000 + Number(d.id)),
-		_source: 'devis_ponctuel',
-		type: 'maintenance',
-		titre: d.titre,
-		debut,
-		fin: null,
-		statut_kanban: devisStatutToKanban(d.statut),
-		archivee: false,
-		perimetre,
-		affichable: true,
-		prestataire_id: d.prestataire_id ?? null,
-		prestataire_nom: opts?.prestataireNom?.(d.prestataire_id) ?? null,
-		description: d.notes ?? null,
-		cree_le: d.cree_le ?? debut,
-		mis_a_jour_le: d.mis_a_jour_le ?? null,
-		auteur_nom: d.auteur_nom ?? null,
-	};
-}

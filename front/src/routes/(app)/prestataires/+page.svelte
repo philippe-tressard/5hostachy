@@ -4,20 +4,15 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import FormulairePrestation from '$lib/components/FormulairePrestation.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import ModaleOrdreService from '$lib/components/ModaleOrdreService.svelte';
 	import AjoutDocumentContrat from '$lib/components/AjoutDocumentContrat.svelte';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import RichEditor from '$lib/components/RichEditor.svelte';
-	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import OngletVisites from '$lib/components/OngletVisites.svelte';
 	//  🔴 Le vocabulaire des prestataires vit dans `$lib/prestataires.ts`, pas
 	//  ici. La table des équipements écrite dans cet écran recopiait
 	//  `TypeEquipement` et en OUBLIAIT deux valeurs — `assurance` et `syndic`,
@@ -28,7 +23,6 @@
 		equipLabel, frequenceLabel } from '$lib/prestataires';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { fmtMontant, perimetreLabel, perimetreDuBatiment, perimetreParDefaut, noeudPerimetre } from '$lib/utils';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', defautsDePage('prestataires'));
@@ -36,19 +30,21 @@
 
 	let prestataires: any[] = [];
 	let contrats: any[] = [];
-	let devis: any[] = [];
 	let notations: any[] = [];
 	let loading = true;
 
 	// ── Notation ──────────────────────────────────────────────────
-	let showNotationForm: { prestataireId: number; devisId?: number; contratId?: number } | null = null;
+	//  ⚠️ La notation SURVIT au retrait des prestations ponctuelles (#602) : elle
+	//  se saisit depuis la fiche du prestataire, et son seul rattachement restant
+	//  est le CONTRAT. Le rattachement à un devis part avec l'objet qui le portait.
+	let showNotationForm: { prestataireId: number; contratId?: number } | null = null;
 	let notationNote = 0;
 	let notationCommentaire = '';
 	let notationSaving = false;
 	let notationHover = 0;
 
-	function openNotationForm(prestataireId: number, devisId?: number, contratId?: number) {
-		showNotationForm = { prestataireId, devisId, contratId };
+	function openNotationForm(prestataireId: number, contratId?: number) {
+		showNotationForm = { prestataireId, contratId };
 		notationNote = 0;
 		notationCommentaire = '';
 	}
@@ -61,7 +57,6 @@
 				prestataire_id: showNotationForm.prestataireId,
 				note: notationNote,
 				commentaire: notationCommentaire.trim() || undefined,
-				devis_id: showNotationForm.devisId,
 				contrat_id: showNotationForm.contratId,
 			});
 			notations = [n, ...notations];
@@ -81,11 +76,17 @@
 		return '★'.repeat(Math.round(note)) + '☆'.repeat(5 - Math.round(note));
 	}
 
-	// ── Onglets (5) ────────────────────────────────────────────────
+	// ── Onglets (3) ────────────────────────────────────────────────
 	// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
 	// (même convention que /calendrier et /sondages, cf. `$lib/deepLink.ts`).
-	const ONGLETS = ['prestations', 'visites', 'contrats_tab', 'prestataires', 'consommations'] as const;
-	let onglet: (typeof ONGLETS)[number] = 'prestations';
+	//
+	// ⚠️ `'prestations'` et `'visites'` ont disparu (#602). Un lien profond qui les demande encore
+	// — un favori, un vieux courriel — n'appartient plus à cette liste, donc
+	// `ongletDeLUrl` rend `null` et la page s'ouvre sur son défaut. C'est
+	// exactement le service que rend une liste explicite ; une validation par
+	// `startsWith` ou par `in` aurait laissé passer un onglet qui n'existe plus.
+	const ONGLETS = ['contrats_tab', 'prestataires', 'consommations'] as const;
+	let onglet: (typeof ONGLETS)[number] = 'contrats_tab';
 	$: trackTabView(onglet);
 
 	// Expand prestataire cards
@@ -106,66 +107,6 @@
 	let contratFormPrestId: number | null = null;
 	let editContratId: number | null = null;
 
-	// ── Devis form ────────────────────────────────────────────────
-	let devisFormPrestId: number | null = null;
-	let editDevisId: number | null = null;
-	let expandedDevis = new Set<number>();
-	let devisForm = {
-		copropriete_id: 1,
-		prestataire_id: '',
-		perimetre: perimetreParDefaut() ?? '',
-		titre: '',
-		date_prestation: '',
-		montant_estime: '',
-		statut: 'en_attente',
-		notes: '',
-		frequence_type: '',
-		frequence_valeur: '',
-		affichable: false,
-		partager_whatsapp: false,
-		envoyer_syndic: false,
-		envoyer_cs: false,
-	};
-	//  Fichiers RETENUS jusqu'à l'enregistrement : ils sont stockés dans le
-	//  répertoire privé et servis par une route authentifiée, ils ne peuvent donc
-	//  pas partir par l'endpoint générique à la sélection. `FichiersUpload` en
-	//  mode différé leur donne l'apparence qu'ils ont partout ailleurs — la
-	//  `FileList` et la clé de remontage d'un `<input type="file">` nu, qui les
-	//  faisaient ressembler à rien, ont disparu (signalé le 16/08/2026).
-	let devisFichiers: File[] = [];
-
-	// ── Devis colonnes kanban (reactive) ──────────────────────
-	/*  Les quatre colonnes du kanban des prestations, DÉCRITES une fois (#453).
-	    Elles étaient écrites quatre fois dans le balisage — 147 lignes qui ne
-	    différaient que par la couleur, le libellé, la liste et les boutons — et
-	    elles avaient divergé : l'ordre de service n'était ouvrable que dans deux
-	    colonnes sur quatre, et la colonne « Prestataire » ANNONÇAIT un OS qu'elle
-	    ne laissait pas ouvrir.
-
-	    C'est le motif que le calendrier emploie déjà pour ses six colonnes
-	    (`KANBAN_COLS` + un seul `{#each}`) : il était à un écran de distance. */
-	const COLONNES_DEVIS = [
-		{ statut: 'en_attente', libelle: '⏳ Syndic', couleur: '#f59e0b' },
-		{ statut: 'accepte', libelle: '🔧 Prestataire', couleur: '#f97316' },
-		{ statut: 'realise', libelle: '🏁 Réalisé', couleur: '#22c55e' },
-		{ statut: 'refuse', libelle: '🚫 Refusé', couleur: '#9ca3af' },
-	] as const;
-
-	$: colonnesDevis = COLONNES_DEVIS.map((c) => ({
-		...c,
-		items: devis.filter((d: any) => d.actif !== false && d.statut === c.statut),
-	}));
-
-	// Séparation actifs / réalisés pour la vue liste
-	$: devisActifs = devis.filter((d: any) => d.actif !== false && d.statut !== 'realise' && d.statut !== 'refuse');
-	$: devisRealises = devis.filter((d: any) => d.actif !== false && d.statut === 'realise');
-
-	// ── Devis OS upload ─────────────────────────────────────────
-	let osUploadDevisId: number | null = null;
-	let osUploading = false;
-	//  Le bâtiment se LIT dans l'arbre (clé étrangère) : le déduire du code supposait
-	//  la convention `bat:N` du seed, que l'administration peut ne pas suivre.
-	const devisBatimentIdFromPerimetre = (p: string) => noeudPerimetre(p)?.batiment_id ?? null;
 	let contratForm = {
 		copropriete_id: 1, batiment_id: '', prestataire_id: '',
 		type_equipement: 'autre', libelle: '', numero_contrat: '',
@@ -186,25 +127,41 @@
 	let filtreEquipement = '';
 	let filtreType = '';
 
-	// ── Sous-vue dans onglet Prestations ──────────────────────────
-	let prestationsVue: 'kanban' | 'liste' = 'liste';
-	let showRealisees = false;
-
 	$: filteredPrests = prestataires.filter(p =>
 		(!filtreEquipement || p.specialite === filtreEquipement) &&
 		(!filtreType || p.type_prestataire === filtreType)
 	);
 	$: compactPrests = filteredPrests.length > 7;
 
-	// ── Visites : contrats actifs avec fréquence, exercice en cours ──
-	$: visites = (() => {
-		const year = new Date().getFullYear();
-		return contrats.filter(c => c.actif && (c.frequence_type || c.prochaine_visite) && (
-			!c.prochaine_visite || new Date(c.prochaine_visite).getFullYear() <= year
-		));
-	})();
-	$: visitesEnRetard = visites.filter(c => c.prochaine_visite && new Date(c.prochaine_visite) < new Date());
-	$: visitesAJour = visites.filter(c => !c.prochaine_visite || new Date(c.prochaine_visite) >= new Date());
+	// ── Échéances des contrats ────────────────────────────────────
+	//  🔴 L'onglet « Visites » lisait ces mêmes contrats dans un écran à part
+	//  (#602). Une visite n'est pas un objet : c'est la PROCHAINE ÉCHÉANCE d'un
+	//  contrat, et elle avait deux définitions qui ne donnaient pas la même
+	//  réponse — ici `prochaine_visite`, une date posée à la main ; dans le
+	//  calendrier, `frequence_type` réparti sur les mois de l'exercice. Le
+	//  décompte reste, l'écran séparé part.
+	//
+	//  ⚠️ `enRetard` compare à MINUIT, pas à l'instant : une visite prévue
+	//  aujourd'hui n'est pas en retard, et elle l'aurait été dès 00 h 01 avec un
+	//  `new Date()` nu — c'est la comparaison qu'écrivait l'ancien onglet.
+	$: minuit = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+	$: contratEnRetard = (c: any) => !!c.prochaine_visite && new Date(c.prochaine_visite) < minuit;
+	$: echeancesEnRetard = contrats.filter(contratEnRetard);
+	$: echeancesAVenir = contrats.filter(c => c.prochaine_visite && !contratEnRetard(c));
+	$: contratsSansEcheance = contrats.filter(c => !c.prochaine_visite);
+
+	/**  Les contrats d'un groupe, la prochaine échéance d'abord.
+	 *
+	 *   ⚠️ Sans échéance = en FIN de liste, jamais en tête : `null` se compare mal
+	 *   et un tri naïf les aurait remontés devant les retards. */
+	function parEcheance(liste: any[]): any[] {
+		return [...liste].sort((a, b) => {
+			if (!a.prochaine_visite && !b.prochaine_visite) return 0;
+			if (!a.prochaine_visite) return 1;
+			if (!b.prochaine_visite) return -1;
+			return a.prochaine_visite < b.prochaine_visite ? -1 : 1;
+		});
+	}
 
 	// ── Consommations ─────────────────────────────────────────────
 	let compteurConfigs: any[] = [];
@@ -371,157 +328,6 @@
 		return contrats.filter(c => c.prestataire_id === prestId);
 	}
 
-	function devisForPrest(prestId: number): any[] {
-		return devis.filter(d => d.prestataire_id === prestId);
-	}
-
-	function toggleDevis(id: number) {
-		if (expandedDevis.has(id)) expandedDevis.delete(id);
-		else { expandedDevis.clear(); expandedDevis.add(id); }
-		expandedDevis = expandedDevis;
-	}
-
-	function resetDevisForm() {
-		devisForm = {
-			copropriete_id: 1,
-			prestataire_id: '',
-			perimetre: perimetreParDefaut() ?? '',
-			titre: '',
-			date_prestation: '',
-			montant_estime: '',
-			statut: 'en_attente',
-			notes: '',
-			frequence_type: '',
-			frequence_valeur: '',
-			affichable: false,
-			partager_whatsapp: false,
-			envoyer_syndic: false,
-			envoyer_cs: false,
-		};
-		devisFichiers = [];
-		editDevisId = null;
-	}
-
-
-	function closeDevisForm() {
-		devisFormPrestId = null;
-		editDevisId = null;
-		resetDevisForm();
-	}
-
-	//  ⚠️ `onOsFileChange` et `osFile` ont disparu avec l'`<input type="file">` nu
-	//  (#370) : le fichier retenu appartient à `ModaleOrdreService`, qui le rend
-	//  dans son événement `confirmer`. La page n'a plus d'état de saisie à tenir.
-
-
-	function startEditDevis(d: any, openInModal = false) {
-		       devisForm = {
-			       copropriete_id: d.copropriete_id,
-			       prestataire_id: String(d.prestataire_id),
-			       perimetre: d.perimetre ?? perimetreDuBatiment(d.batiment_id),
-			       titre: d.titre,
-			       date_prestation: d.date_prestation ?? '',
-			       montant_estime: d.montant_estime != null ? String(d.montant_estime) : '',
-			       statut: d.statut,
-			       notes: d.notes ?? '',
-			       frequence_type: d.frequence_type ?? '',
-			       frequence_valeur: d.frequence_valeur ? String(d.frequence_valeur) : '',
-			       affichable: d.affichable ?? false,
-			       partager_whatsapp: d.partager_whatsapp ?? false,
-			       envoyer_syndic: d.envoyer_syndic ?? false,
-			       envoyer_cs: d.envoyer_cs ?? false,
-		       };
-		editDevisId = d.id;
-		devisFormPrestId = openInModal ? -1 : d.prestataire_id;
-		if (!expandedDevis.has(d.id)) { expandedDevis.clear(); expandedDevis.add(d.id); expandedDevis = expandedDevis; }
-	}
-
-	async function saveDevis() {
-		if (!devisForm.titre.trim()) { toast('error', 'Titre obligatoire'); return; }
-		if (!devisForm.prestataire_id) { toast('error', 'Prestataire obligatoire'); return; }
-		submitting = true;
-		try {
-			const perimetre = devisForm.perimetre || (perimetreParDefaut() ?? '');
-			       const payload = {
-				       copropriete_id: devisForm.copropriete_id,
-				       prestataire_id: Number(devisForm.prestataire_id),
-				       perimetre,
-				       batiment_id: devisBatimentIdFromPerimetre(perimetre),
-				       titre: devisForm.titre.trim(),
-				       date_prestation: devisForm.date_prestation || null,
-				       montant_estime: devisForm.montant_estime !== '' ? Number(devisForm.montant_estime) : null,
-				       statut: devisForm.statut,
-				       notes: devisForm.notes.trim() || null,
-				       frequence_type: devisForm.frequence_type || null,
-				       frequence_valeur: devisForm.frequence_valeur ? Number(devisForm.frequence_valeur) : null,
-				       affichable: devisForm.affichable,
-				       partager_whatsapp: devisForm.partager_whatsapp,
-				       envoyer_syndic: devisForm.envoyer_syndic,
-				       envoyer_cs: devisForm.envoyer_cs,
-			       };
-			let saved: any;
-			if (editDevisId) {
-				saved = await prestApi.updateDevis(editDevisId, payload);
-				devis = devis.map(d => d.id === editDevisId ? saved : d);
-			} else {
-				saved = await prestApi.createDevis(payload);
-				devis = [...devis, saved];
-			}
-			if (devisFichiers.length > 0) {
-				let lastUpdated: any = saved;
-				for (const file of devisFichiers) {
-					try {
-						lastUpdated = await prestApi.uploadDevisFichier(saved.id, file);
-					} catch { toast('error', `Fichier « ${file.name} » non joint`); }
-				}
-				devis = devis.map(d => d.id === saved.id ? lastUpdated : d);
-			}
-			closeDevisForm();
-			toast('success', editDevisId ? 'Prestation modifiée' : 'Prestation ajoutée');
-		} catch (e: any) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); } finally { submitting = false; }
-	}
-
-	async function deleteDevis(id: number) {
-		if (!confirm('Supprimer cette prestation ?')) return;
-		try { await prestApi.deleteDevis(id); devis = devis.filter(d => d.id !== id); toast('success', 'Prestation supprimée'); }
-		catch { toast('error', 'Erreur'); }
-	}
-
-	async function deleteDevisFichier(devisId: number, url: string) {
-		if (!confirm('Supprimer ce fichier ?')) return;
-		try {
-			const updated = await prestApi.deleteDevisFichier(devisId, url);
-			devis = devis.map(d => d.id === devisId ? updated : d);
-			toast('success', 'Fichier supprimé');
-		} catch { toast('error', 'Erreur suppression fichier'); }
-	}
-
-	async function moveDevisStatut(id: number, newStatut: string) {
-		try {
-			const updated = await prestApi.updateDevis(id, { statut: newStatut });
-			devis = devis.map(d => d.id === id ? updated : d);
-			toast('success', 'Statut mis à jour');
-		} catch { toast('error', 'Erreur mise à jour statut'); }
-	}
-
-	async function acceptDevisWithOs(osFile: File | null) {
-		if (!osUploadDevisId) return;
-		osUploading = true;
-		try {
-			let updated: any;
-			if (osFile) {
-				updated = await prestApi.uploadDevisOs(osUploadDevisId, osFile);
-			} else {
-				updated = await prestApi.updateDevis(osUploadDevisId, { statut: 'accepte' });
-			}
-			devis = devis.map(d => d.id === osUploadDevisId ? updated : d);
-			toast('success', 'Devis accepté — passé chez le prestataire');
-		} catch { toast('error', 'Erreur'); } finally {
-			osUploadDevisId = null; osUploading = false;
-		}
-	}
-
-	$: orphanContrats = contrats.filter(c => !c.prestataire_id);
 
 
 
@@ -529,15 +335,6 @@
 	function typeLabel(v: string) {
 		return typesPrestataire.find(t => t.val === v)?.label ?? v;
 	}
-
-	const statutsDevis = [
-		{ val: 'en_attente', label: '⏳ En attente', color: 'var(--color-text-muted)' },
-		{ val: 'accepte', label: '✅ Accepté', color: '#16a34a' },
-		{ val: 'refuse', label: '❌ Refusé', color: '#dc2626' },
-		{ val: 'realise', label: '\u{1F3C1} Réalisé', color: '#7c3aed' },
-	];
-	function statutDevisLabel(v: string) { return statutsDevis.find(s => s.val === v)?.label ?? v; }
-	function statutDevisColor(v: string) { return statutsDevis.find(s => s.val === v)?.color ?? 'var(--color-text-muted)'; }
 
 	// ── Toggle expand ──────────────────────────────────────────────
 	function togglePrest(id: number) {
@@ -563,7 +360,7 @@
 
 	onMount(async () => {
 		try {
-			[prestataires, contrats, devis, notations] = await Promise.all([prestApi.list(), prestApi.contrats(), prestApi.devis(), prestApi.notations()]);
+			[prestataires, contrats, notations] = await Promise.all([prestApi.list(), prestApi.contrats(), prestApi.notations()]);
 		} catch { toast('error', 'Erreur de chargement'); } finally { loading = false; }
 
 		if (contrats.length > 0) {
@@ -577,23 +374,19 @@
 			contratDocsMap = map;
 		}
 
-		// Liens profonds : `?onglet=` pour la vue, `#dv-<id>` / `#presta-<id>` pour l'élément.
-		// Cette page a CINQ onglets et s'ouvre sur « Prestations ponctuelles » : une fiche
+		// Liens profonds : `?onglet=` pour la vue, `#presta-<id>` pour l'élément.
+		// Cette page a QUATRE onglets et s'ouvre sur « Contrats » : une fiche
 		// prestataire visée sans onglet restait invisible, l'ancre ne désignant aucun
 		// élément rendu (`/prestataires#presta-23`, signalé le 28/07/2026).
 		// L'ancre prime sur `?onglet=` : elle est plus précise que la vue demandée.
+		//
+		// ⚠️ L'ancre `#dv-<id>` d'une prestation ponctuelle est partie avec elle
+		// (#602). Un lien qui la porte encore ne désigne plus rien : la page
+		// s'ouvre sur son défaut, sans erreur — `cibleDuHash` n'est simplement
+		// plus interrogé pour ce préfixe.
 		const urlOnglet = ongletDeLUrl(ONGLETS);
 		if (urlOnglet) onglet = urlOnglet;
 
-		// La vue liste est la seule où chaque élément porte un id — le kanban
-		// n'affiche qu'une colonne de statut à la fois.
-		const idDevis = cibleDuHash('dv');
-		if (idDevis !== null) {
-			onglet = 'prestations';
-			prestationsVue = 'liste';
-			expandedDevis = new Set([...expandedDevis, idDevis]);
-			revelerCible(`dv-${idDevis}`);
-		}
 		const idPresta = cibleDuHash('presta');
 		if (idPresta !== null) {
 			onglet = 'prestataires';
@@ -731,14 +524,11 @@
 <!--  Bascule « + … » ⇆ « ✕ Annuler » portée par `BoutonNouveau` (voir son
       en-tête) ; `alignerSaisie` cale le bouton sur la boîte de 720 px. -->
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'hard-hat'}
-	alignerSaisie={showPrestForm || devisFormPrestId !== null || contratFormPrestId !== null || showReleveForm}>
+	alignerSaisie={showPrestForm || contratFormPrestId !== null || showReleveForm}>
 	{#if $isCS}
 		{#if onglet === 'prestataires'}
 			<BoutonNouveau ouvert={showPrestForm} libelle="Nouveau prestataire"
 				on:basculer={() => { showPrestForm = !showPrestForm; if (!showPrestForm) resetPrestForm(); }} />
-		{:else if onglet === 'prestations'}
-			<BoutonNouveau ouvert={devisFormPrestId !== null} libelle="Nouvelle prestation"
-				on:basculer={() => { if (devisFormPrestId !== null) closeDevisForm(); else { resetDevisForm(); devisFormPrestId = -1; } }} />
 		{:else if onglet === 'contrats_tab'}
 			<BoutonNouveau ouvert={contratFormPrestId !== null} libelle="Nouveau contrat"
 				on:basculer={() => { if (contratFormPrestId !== null) closeContratForm(); else openAddContrat(); }} />
@@ -753,12 +543,6 @@
 
 <!-- ── Onglets ─────────────────────────────────────────────────── -->
 <div class="tabs" role="tablist">
-	<button role="tab" class:active={onglet === 'prestations'} on:click={() => onglet = 'prestations'}>
-		<Icon name="clipboard-list" size={15} /> Prestations ponctuelles
-	</button>
-	<button role="tab" class:active={onglet === 'visites'} on:click={() => onglet = 'visites'}>
-		<Icon name="calendar-days" size={15} /> Visites
-	</button>
 	<button role="tab" class:active={onglet === 'contrats_tab'} on:click={() => onglet = 'contrats_tab'}>
 		<Icon name="file-text" size={15} /> Contrats
 	</button>
@@ -773,332 +557,6 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!-- ONGLET 1 : PRESTATIONS (kanban + liste)                      -->
-<!-- ══════════════════════════════════════════════════════════════ -->
-{:else if onglet === 'prestations'}
-
-	<!-- Toggle liste / kanban -->
-	<div class="sous-vue-toggle">
-		<button class="btn btn-sm" class:btn-primary={prestationsVue === 'liste'} on:click={() => prestationsVue = 'liste'}>Liste</button>
-		{#if $isCS}<button class="btn btn-sm" class:btn-primary={prestationsVue === 'kanban'} on:click={() => prestationsVue = 'kanban'}>Kanban</button>{/if}
-		<span class="kanban-count-total">{devis.filter(d => d.actif !== false).length} prestation{devis.filter(d => d.actif !== false).length > 1 ? 's' : ''}</span>
-	</div>
-
-	<!--  Le formulaire s'affiche AU-DESSUS de la liste, comme sur toutes les autres
-	      rubriques (#372). Il était rendu APRÈS elle : sur un onglet qui liste six
-	      prestations, on ouvrait un formulaire qu'on ne voyait pas. -->
-	{#if devisFormPrestId === -1}
-		<FormulaireCreation titre={editDevisId ? 'Modifier la prestation' : 'Nouvelle prestation'}>
-			<FormulairePrestation bind:devisForm {prestataires} {statutsDevis} {submitting}
-				bind:devisFichiers onSave={saveDevis} />
-		</FormulaireCreation>
-	{/if}
-
-	{#if prestationsVue === 'kanban'}
-		<!-- ── Kanban ─────────────────────────────────── -->
-		<div class="kanban devis-kanban">
-			{#each colonnesDevis as col (col.statut)}
-				<div class="kanban-col">
-					<div class="kanban-col-header" style="border-top-color:{col.couleur}">
-						<span>{col.libelle}</span>
-						<span class="kanban-count">{col.items.length}</span>
-					</div>
-					{#if col.items.length === 0}
-						<p class="kanban-empty">Aucune prestation</p>
-					{:else}
-						{#each col.items as d (d.id)}
-							{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-							<div class="kanban-card card">
-								<div class="kanban-card-tags">
-									{#if d.frequence_type}<span class="kb-tag" style="background:#6366f1">↺ récurrent</span>{/if}
-								</div>
-								<span class="kanban-card-prest">{prestNom}</span>
-								<strong class="kanban-card-titre">{d.titre}</strong>
-								<div class="kanban-card-footer">
-									<div class="devis-card-meta">
-										{#if d.date_prestation}<span class="devis-date">📅 {fmtDateShort(d.date_prestation)}</span>{/if}
-										{#if d.montant_estime != null}<span class="devis-montant">💶 {fmtMontant(d.montant_estime)}</span>{/if}
-										<!--  L'ordre de service se montre PARTOUT où il existe, et il s'ouvre.
-										     Avant #453, les quatre copies l'affichaient chacune à sa façon : lien
-										     dans « Syndic » et « Réalisé », simple tag « 📎 OS joint » — donc NON
-										     ouvrable — dans « Prestataire », et rien du tout dans « Refusé ».
-										     Le tag a disparu : le lien dit déjà qu'il y a un OS, et lui se clique. -->
-										{#if d.os_fichier_url}<a href={d.os_fichier_url} target="_blank" rel="noopener" class="devis-os-link">📎 OS</a>{/if}
-									</div>
-									{#if $isCS}
-										<div class="kanban-card-actions">
-											{#if col.statut === 'en_attente'}
-												<button class="devis-step-btn devis-step-btn--primary" title="Passer l'OS et transmettre au prestataire"
-													on:click={() => { osUploadDevisId = d.id; }}>→ OS</button>
-											{:else if col.statut === 'accepte'}
-												<button class="devis-step-btn devis-step-btn--success" title="Marquer comme réalisé"
-													on:click={() => moveDevisStatut(d.id, 'realise')}>✅</button>
-												<button class="devis-step-btn" title="Retour Syndic"
-													on:click={() => moveDevisStatut(d.id, 'en_attente')}>←</button>
-											{:else if col.statut === 'realise'}
-												<button class="devis-step-btn" title="Retour chez le prestataire"
-													on:click={() => moveDevisStatut(d.id, 'accepte')}>←</button>
-												<button class="devis-step-btn" title="Noter" style="color:#f59e0b"
-													on:click={() => openNotationForm(d.prestataire_id, d.id)}>⭐</button>
-											{:else}
-												<button class="devis-step-btn" title="Remettre en attente syndic"
-													on:click={() => moveDevisStatut(d.id, 'en_attente')}>↩</button>
-											{/if}
-											<button class="btn-icon-edit" title="Modifier" on:click={() => startEditDevis(d, true)}>✏️</button>
-											{#if col.statut !== 'realise' && col.statut !== 'refuse'}
-												<button class="btn-icon-danger" title="Refuser" on:click={() => moveDevisStatut(d.id, 'refuse')}>❌</button>
-											{/if}
-										</div>
-									{/if}
-								</div>
-							</div>
-						{/each}
-					{/if}
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<!-- ── Vue liste ─────────────────────────────── -->
-		{#if devisActifs.length === 0 && devisRealises.length === 0}
-			<div class="empty-state card"><h3>Aucune prestation</h3><p>Ajoutez la première via le bouton ci-dessus.</p></div>
-		{:else}
-			{#each devisActifs as d (d.id)}
-				{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-				{@const devisExpanded = expandedDevis.has(d.id)}
-				<div class="devis-expand" class:expanded={devisExpanded} id="dv-{d.id}">
-					<div class="devis-row"
-						role="button" tabindex="0"
-						on:click|stopPropagation={() => toggleDevis(d.id)}
-						on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
-						<div class="devis-body-inner">
-							<span class="kanban-card-prest">{prestNom}</span>
-							<strong class="devis-titre">{d.titre}</strong>
-						</div>
-						<div class="devis-infos">
-							{#if d.date_prestation}
-								<span style="font-size:.82rem;font-weight:600;color:var(--color-primary)">📅 {fmtDateShort(d.date_prestation)}</span>
-							{/if}
-						</div>
-						<div class="devis-meta-right">
-							<span class="badge" style="font-size:.78rem;color:{statutDevisColor(d.statut)}">{statutDevisLabel(d.statut)}</span>
-							{#if d.montant_estime != null}
-								<span class="badge badge-gray" style="font-size:.78rem">💶 {fmtMontant(d.montant_estime)}</span>
-							{/if}
-							{#if $isCS}
-								<button class="btn-icon-danger" title="Supprimer" on:click|stopPropagation={() => deleteDevis(d.id)}>🗑️</button>
-							{/if}
-							<span class="toggle-arrow">{devisExpanded ? '▲' : '▼'}</span>
-						</div>
-					</div>
-					{#if devisExpanded}
-						<div class="devis-detail-body">
-							{#if editDevisId === d.id}
-								<div class="form-grid" style="margin-bottom:.6rem">
-									<label class="field">Titre *<input bind:value={devisForm.titre} required /></label>
-									<label class="field">Date de prestation<input type="date" bind:value={devisForm.date_prestation} /></label>
-									<label class="field">Montant estimé (€)<input type="number" min="0" step="0.01" bind:value={devisForm.montant_estime} /></label>
-									<!--  `titre=""` (§9 septies) et `champ-large` (§9 bis) — les deux manquaient. -->
-									<div class="field champ-large" role="group" aria-labelledby="devis-perimetre-titre">
-										<span class="libelle-groupe" id="devis-perimetre-titre">Périmètre *</span>
-										<PerimetrePicker mode="single" titre=""
-											value={devisForm.perimetre ? [devisForm.perimetre] : []}
-											on:change={(e) => (devisForm.perimetre = e.detail[0] ?? '')} />
-									</div>
-									<label class="field">Suivi Kanban
-										<select bind:value={devisForm.statut}>
-											{#each statutsDevis as s}<option value={s.val}>{s.label}</option>{/each}
-										</select>
-									</label>
-									<label class="field">Fréquence
-										<select bind:value={devisForm.frequence_type}>
-											<option value=''>— Ponctuelle —</option>
-											<option value='fois_par_an'>× / an</option>
-											<option value='mois'>Tous les N mois</option>
-											<option value='semaines'>Toutes les N semaines</option>
-											<option value='ans'>Tous les N ans</option>
-										</select>
-									</label>
-									{#if devisForm.frequence_type}
-										<label class="field">Valeur<input type="number" min="1" bind:value={devisForm.frequence_valeur} /></label>
-									{/if}
-								</div>
-								<!--  Les canaux passent par l'OBJET Diffusion (#498) — cet écran était le
-								      dernier à le contourner librement. « Afficher dans le tableau de bord »
-								      va dans `options` : elle dit ce qui est PUBLIÉ, les canaux qui en est prévenu. -->
-								<SectionDiffusion idPrefixe="devis" avecCanaux compact
-									bind:whatsapp={devisForm.partager_whatsapp}
-									bind:syndic={devisForm.envoyer_syndic} bind:cs={devisForm.envoyer_cs}>
-									<svelte:fragment slot="options">
-										<label class="case">
-											<input type="checkbox" bind:checked={devisForm.affichable} />
-											<span>Afficher dans le tableau de bord</span>
-										</label>
-									</svelte:fragment>
-								</SectionDiffusion>
-								<div style="margin-top:.5rem">
-									<span class="libelle-groupe" id="devis-notes-titre" style="font-weight:600;margin-bottom:.3rem">Notes</span>
-									<RichEditor bind:value={devisForm.notes} ariaLabelledby="devis-notes-titre" placeholder="Notes…" minHeight="60px" />
-								</div>
-								<div style="margin-top:.5rem" role="group" aria-labelledby="devis-fichiers-titre">
-									<span class="libelle-groupe" id="devis-fichiers-titre" style="font-weight:600;margin-bottom:.3rem">Fichiers</span>
-									{#if d.fichiers_urls && d.fichiers_urls.length > 0}
-										<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem">
-											{#each d.fichiers_urls as url, i}
-												<div style="display:flex;align-items:center;gap:.2rem">
-													<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline" style="font-size:.8rem">📎 Fichier {i + 1}</a>
-													<button type="button" class="btn btn-sm btn-outline" style="color:var(--color-danger);padding:.15rem .35rem" on:click|stopPropagation={() => deleteDevisFichier(d.id, url)}>✕</button>
-												</div>
-											{/each}
-										</div>
-									{/if}
-									<FichiersUpload id="devis-edit-fichiers" mode="documents" differe
-										titre="" bind:fichiers={devisFichiers} />
-								</div>
-								<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
-									<button class="btn btn-sm btn-outline" on:click|stopPropagation={closeDevisForm}>Annuler</button>
-									<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveDevis}>{submitting ? '…' : 'Enregistrer'}</button>
-								</div>
-							{:else}
-								<div class="detail-grid">
-									<div><span class="detail-label">Périmètre</span>{perimetreLabel(d.perimetre ?? perimetreDuBatiment(d.batiment_id))}</div>
-									{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
-									{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {fmtMontant(d.montant_estime)}</div>{/if}
-								</div>
-								{#if d.notes}
-									<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>
-								{/if}
-								{#if d.fichiers_urls && d.fichiers_urls.length > 0}
-									<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem">
-										{#each d.fichiers_urls as url, i}
-											<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline">📎 Fichier {i + 1}</a>
-										{/each}
-									</div>
-								{/if}
-								{#if $isCS}
-									<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
-										<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditDevis(d)}>✏️ Modifier</button>
-										{#if d.statut === 'en_attente'}
-											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => { osUploadDevisId = d.id; }}>→ Prestataire</button>
-											<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
-										{:else if d.statut === 'accepte'}
-											<button class="btn btn-sm btn-primary" on:click|stopPropagation={() => moveDevisStatut(d.id, 'realise')}>✅ Réalisée</button>
-											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Syndic</button>
-											<button class="btn btn-sm btn-outline" style="color:var(--color-danger)" on:click|stopPropagation={() => moveDevisStatut(d.id, 'refuse')}>❌ Refuser</button>
-										{:else if d.statut === 'realise'}
-											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
-											<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(d.prestataire_id, d.id)}>⭐ Noter</button>
-										{:else if d.statut === 'refuse'}
-											<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'en_attente')}>← Remettre en attente</button>
-										{/if}
-									</div>
-								{/if}
-							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-
-			<!-- Réalisées (accordion fermé) -->
-			{#if devisRealises.length > 0}
-				<div class="realisees-accordion" style="margin-top:1rem">
-					<button class="realisees-toggle" on:click={() => showRealisees = !showRealisees}>
-						<span>🏁 Prestations réalisées ({devisRealises.length})</span>
-						<span class="toggle-arrow">{showRealisees ? '▲' : '▼'}</span>
-					</button>
-					{#if showRealisees}
-						{#each devisRealises as d (d.id)}
-							{@const prestNom = prestataires.find(p => p.id === d.prestataire_id)?.nom ?? '—'}
-							{@const devisExpanded = expandedDevis.has(d.id)}
-							<div class="devis-expand devis-expand--done" class:expanded={devisExpanded} id="dv-{d.id}">
-								<div class="devis-row"
-									role="button" tabindex="0"
-									on:click|stopPropagation={() => toggleDevis(d.id)}
-									on:keydown|stopPropagation={e => (e.key === 'Enter' || e.key === ' ') && toggleDevis(d.id)}>
-									<div class="devis-body-inner">
-										<span class="kanban-card-prest">{prestNom}</span>
-										<strong class="devis-titre">{d.titre}</strong>
-									</div>
-									<div class="devis-infos">
-										{#if d.date_prestation}
-											<span style="font-size:.82rem;font-weight:600;color:var(--color-text-muted)">📅 {fmtDateShort(d.date_prestation)}</span>
-										{/if}
-									</div>
-									<div class="devis-meta-right">
-										<span class="badge" style="font-size:.78rem;color:#7c3aed">🏁 Réalisé</span>
-										{#if d.montant_estime != null}
-											<span class="badge badge-gray" style="font-size:.78rem">💶 {fmtMontant(d.montant_estime)}</span>
-										{/if}
-										<span class="toggle-arrow">{devisExpanded ? '▲' : '▼'}</span>
-									</div>
-								</div>
-								{#if devisExpanded}
-									<div class="devis-detail-body">
-										<div class="detail-grid">
-											<div><span class="detail-label">Périmètre</span>{perimetreLabel(d.perimetre ?? perimetreDuBatiment(d.batiment_id))}</div>
-											{#if d.date_prestation}<div><span class="detail-label">Date</span>📅 {fmtDateShort(d.date_prestation)}</div>{/if}
-											{#if d.montant_estime != null}<div><span class="detail-label">Montant</span>💶 {fmtMontant(d.montant_estime)}</div>{/if}
-										</div>
-										{#if d.notes}
-											<div class="rich-content" style="font-size:.875rem;margin-top:.5rem">{@html safeHtml(d.notes)}</div>
-										{/if}
-										{#if d.fichiers_urls && d.fichiers_urls.length > 0}
-											<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem">
-												{#each d.fichiers_urls as url, i}
-													<a href={url} target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline">📎 Fichier {i + 1}</a>
-												{/each}
-											</div>
-										{/if}
-										{#if $isCS}
-											<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
-												<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => moveDevisStatut(d.id, 'accepte')}>← Chez prestataire</button>
-												<button class="btn btn-sm" style="color:#f59e0b" on:click|stopPropagation={() => openNotationForm(d.prestataire_id, d.id)}>⭐ Noter</button>
-											</div>
-										{/if}
-									</div>
-								{/if}
-							</div>
-						{/each}
-					{/if}
-				</div>
-			{/if}
-		{/if}
-	{/if}
-
-	<!--  🔴 La modale vit dans `ModaleOrdreService.svelte` (#370 et #453) : cette
-	      page frôle les 2 000 lignes et le garde-fou de modularité refuse qu'elle
-	      grossisse. On sort un OBJET complet plutôt que de comprimer des attributs
-	      pour repasser sous le seuil — c'est le contournement que #453 nomme. -->
-	<ModaleOrdreService
-		devisId={osUploadDevisId}
-		envoi={osUploading}
-		on:fermer={() => (osUploadDevisId = null)}
-		on:confirmer={(e) => acceptDevisWithOs(e.detail)}
-	/>
-
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!-- ONGLET 2 : VISITES                                           -->
-<!-- ══════════════════════════════════════════════════════════════ -->
-{:else if onglet === 'visites'}
-
-	<!--  🔴 L'onglet vit dans `OngletVisites.svelte` (#453). Ses deux listes
-	      étaient QUARANTE LIGNES RECOPIÉES à deux différences près : elles
-	      passent maintenant par `CarteVisite`, écrite une fois.
-
-	      ⚠️ Les données, l'état déplié et les gestes RESTENT ICI : quatre onglets
-	      partagent `contrats`, `prestataires` et `expandedContrats`. Déplacer cet
-	      état dans le composant en ferait une seconde source. On extrait un
-	      RENDU, pas une moitié de logique. -->
-	<OngletVisites
-		{visites}
-		{visitesEnRetard}
-		{visitesAJour}
-		{prestataires}
-		{expandedContrats}
-		on:basculer={(e) => toggleContrat(e.detail)}
-		on:modifier={(e) => startEditContrat(e.detail)}
-		on:noter={(e) => openNotationForm(e.detail.prestataire_id, undefined, e.detail.id)}
-	/>
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- ONGLET 3 : CONTRATS                                          -->
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1180,9 +638,20 @@
 	</FormulaireCreation>
 {/if}
 
-	<!-- Synthèse -->
+	<!--  Synthèse — les trois décomptes viennent de l'onglet « Visites » retiré
+	      (#602). Ils portent sur les MÊMES contrats qu'il lisait ; ils sont
+	      seulement rendus là où vivent les contrats. -->
 	<div class="contrats-summary">
 		<span class="contrats-summary-count">{contrats.length} contrat{contrats.length !== 1 ? 's' : ''} actif{contrats.length !== 1 ? 's' : ''}</span>
+		{#if echeancesEnRetard.length > 0}
+			<span class="badge echeance-badge echeance-badge--retard">⚠️ {echeancesEnRetard.length} visite{echeancesEnRetard.length > 1 ? 's' : ''} en retard</span>
+		{/if}
+		{#if echeancesAVenir.length > 0}
+			<span class="badge echeance-badge echeance-badge--ok">🗓 {echeancesAVenir.length} à venir</span>
+		{/if}
+		{#if contratsSansEcheance.length > 0}
+			<span class="badge echeance-badge">{contratsSansEcheance.length} sans échéance</span>
+		{/if}
 	</div>
 
 	<!-- Groupé par spécialité du prestataire -->
@@ -1193,22 +662,33 @@
 			<div class="type-section-header">
 				<span class="type-section-label">{specGroup.label}</span>
 			</div>
-			{#each contrats.filter(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === specGroup.val; }) as c (c.id)}
+			{#each parEcheance(contrats.filter(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === specGroup.val; })) as c (c.id)}
 				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
-				<div class="contrat-expand" class:expanded={contratExpanded}>
+				{@const enRetard = contratEnRetard(c)}
+				<div class="contrat-expand" class:expanded={contratExpanded} class:contrat-expand--retard={enRetard}>
 					<div class="contrat-row"
 						role="button" tabindex="0"
 						on:click|stopPropagation={() => toggleContrat(c.id)}
 						on:keydown|stopPropagation={e => e.key === 'Enter' && toggleContrat(c.id)}>
 						<div class="contrat-body-inner">
 							<strong class="contrat-titre">{c.libelle}</strong>
-							{#if prest}<span class="contrat-meta">— {prest.nom}</span>{/if}
+							{#if prest}
+								<span class="contrat-meta">— {prest.nom}</span>
+							{:else}
+								<!--  Un contrat sans intervenant avait sa propre section, qui le
+								      rendait une SECONDE fois : le groupement par équipement
+								      retombe déjà sur `type_equipement` quand le prestataire
+								      manque. Le fait se dit ici, sur la ligne (#602). -->
+								<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
+							{/if}
 							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
 						</div>
 						<div class="contrat-infos">
 							{#if c.prochaine_visite}
-								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {fmtDateShort(c.prochaine_visite)}</div>
+								<div class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
+									{enRetard ? '⚠️' : '🗓'} {fmtDateShort(c.prochaine_visite)}
+								</div>
 							{:else}
 								<div>📅 {fmtDateShort(c.date_debut)}</div>
 							{/if}
@@ -1333,6 +813,19 @@
 								{#if $isCS}
 									<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
 										<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button>
+										<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
+										      seul onglet Visites : retirer cet onglet sans porter le geste
+										      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
+										      saisir, alors que la fiche et le reporting continuaient d'en
+										      afficher la moyenne. Un affichage sans son geste de saisie ne
+										      se voit pas — rien ne lève, la note reste simplement à jamais
+										      celle d'hier (#602).
+										      Sans intervenant, il n'y a personne à noter : le bouton
+										      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
+										{#if c.prestataire_id}
+											<button class="btn btn-sm btn-outline contrat-noter"
+												on:click|stopPropagation={() => openNotationForm(c.prestataire_id, c.id)}>⭐ Noter</button>
+										{/if}
 									</div>
 								{/if}
 							{/if}
@@ -1341,96 +834,6 @@
 				</div>
 			{/each}
 		{/each}
-
-		<!-- Contrats orphelins -->
-		{#if orphanContrats.length > 0}
-			<h2 style="font-size:1rem;font-weight:600;margin-top:1.5rem;margin-bottom:.75rem">Contrats sans intervenant</h2>
-			{#each orphanContrats as c (c.id)}
-				{@const contratExpanded = expandedContrats.has(c.id)}
-				<div class="contrat-expand card" class:expanded={contratExpanded}>
-					<div class="contrat-row"
-						role="button" tabindex="0"
-						on:click={() => toggleContrat(c.id)}
-						on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleContrat(c.id)}>
-						<div class="contrat-body-inner">
-							<strong class="contrat-titre">{c.libelle}</strong>
-							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
-						</div>
-						<div class="contrat-infos">
-							{#if c.prochaine_visite}
-								<div style="font-size:.82rem;font-weight:600;color:var(--color-primary)">🗓 {fmtDateShort(c.prochaine_visite)}</div>
-							{:else}
-								<div>📅 {fmtDateShort(c.date_debut)}</div>
-							{/if}
-						</div>
-						<div class="contrat-meta-right">
-							<span class="badge" style="font-size:.8rem">📄 {contratDocsMap[c.id]?.length ?? 0}</span>
-							<span class="toggle-arrow">{contratExpanded ? '▲' : '▼'}</span>
-						</div>
-					</div>
-					{#if contratExpanded}
-						<div class="contrat-detail-body">
-							{#if editContratId === c.id && contratFormPrestId !== -1}
-								<div class="form-grid" style="margin-bottom:.6rem">
-									<label class="field">Libellé *<input bind:value={contratForm.libelle} required /></label>
-									<label class="field">Prestataire *
-										<select bind:value={contratForm.prestataire_id} required>
-											<option value="">— Sélectionner —</option>
-											{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-										</select>
-									</label>
-									<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-									<label class="field">Début *<input type="date" bind:value={contratForm.date_debut} required /></label>
-									<label class="field">Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label>
-								</div>
-								<div style="display:flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap">
-									<button class="btn btn-sm btn-outline" on:click={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
-									<button class="btn btn-sm btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
-								</div>
-							{:else}
-								<div class="contrat-section">
-									<div class="contrat-section-title">Infos contrat</div>
-									<div class="detail-grid">
-										<div><span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}</div>
-										{#if c.prochaine_visite}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(c.prochaine_visite)}</span></div>{/if}
-									</div>
-								</div>
-								{#if c.notes}
-									<div class="contrat-section">
-										<div class="contrat-section-title clickable" role="button" tabindex="0" on:click|stopPropagation={() => { expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id); expandedNotes = expandedNotes; }} on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (expandedNotes.has(c.id) ? expandedNotes.delete(c.id) : expandedNotes.add(c.id), expandedNotes = expandedNotes)}>Synthèse {expandedNotes.has(c.id) ? '▲' : '▼'}</div>
-										{#if expandedNotes.has(c.id)}
-											<div class="rich-content" style="font-size:.875rem">{@html safeHtml(c.notes)}</div>
-										{/if}
-									</div>
-								{/if}
-								<div class="contrat-section">
-									<div class="contrat-section-title">📄 Documents ({contratDocsMap[c.id]?.length ?? 0})</div>
-									{#if contratDocsMap[c.id]?.length > 0}
-										{#each contratDocsMap[c.id] as doc}
-											<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap">
-												<a href={docsApi.downloadUrl(doc.id)} target="_blank">📎 {doc.titre || doc.fichier_nom}</a>
-												<span style="font-size:.75rem;color:var(--color-text-muted)">{fmtDateShort(doc.publie_le)}</span>
-												{#if $isCS}
-													<button class="btn-icon-danger" title="Supprimer" style="margin-left:auto" on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button>
-												{/if}
-											</div>
-										{/each}
-									{:else}
-										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-									{/if}
-								</div>
-								{#if $isCS}
-									<div style="display:flex;gap:.4rem;margin-top:.25rem">
-										<button class="btn btn-sm btn-outline" on:click={() => startEditContrat(c)}>✏️ Modifier</button>
-										<button class="btn btn-sm btn-outline danger" on:click={() => deleteContrat(c.id)}>🗑️ Archiver</button>
-									</div>
-								{/if}
-							{/if}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
 	{/if}
 
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1515,7 +918,6 @@
 			{#each filteredPrests.filter(p => p.type_prestataire === typeGroup.val) as p (p.id)}
 				{@const expanded = expandedPrests.has(p.id)}
 				{@const cs = contratsForPrest(p.id)}
-				{@const dv = devisForPrest(p.id)}
 				{@const nextVisit = nextVisitForPrest(p.id)}
 				<div class="prest-expand card" class:expanded id="presta-{p.id}">
 					<div class="prest-header"
@@ -1551,7 +953,6 @@
 						<div class="prest-meta">
 							{#if !compactPrests || expanded}
 								<span class="badge badge-gray">{cs.length} contrat{cs.length !== 1 ? 's' : ''}</span>
-								<span class="badge badge-gray">{dv.length} prestation{dv.length !== 1 ? 's' : ''}</span>
 								{#if nextVisit}<span class="badge" style="font-size:.75rem;color:var(--color-primary)">🗓 {fmtDateShort(nextVisit)}</span>{/if}
 							{/if}
 							{#if $isCS}
@@ -1573,7 +974,6 @@
 								{/if}
 								{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
 								<div><span class="detail-label">Contrats</span>{cs.length}</div>
-								<div><span class="detail-label">Prestations</span>{dv.length}</div>
 								{#if nextVisit}<div><span class="detail-label">Prochaine visite</span><span style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(nextVisit)}</span></div>{/if}
 							</div>
 						</div>
@@ -1752,7 +1152,6 @@
 	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
 
 	/* ── Sous-vue toggle ── */
-	.sous-vue-toggle { display: flex; gap: .4rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
 
 	/* ── Compteur config row ── */
 	.compteur-config-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .82rem; }
@@ -1783,19 +1182,27 @@
 	/* ── Visites ── */
 
 	/* ── Contrats summary ── */
+	.contrats-summary { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 	.contrats-summary-count { font-size: .85rem; color: var(--color-text-muted); }
+
+	/*  Les trois décomptes d'échéance, repris de l'onglet « Visites » retiré. */
+	.echeance-badge { font-size: .78rem; }
+	.echeance-badge--retard { color: var(--color-danger); border-color: var(--color-danger); }
+	.echeance-badge--ok { color: var(--color-primary); border-color: var(--color-primary); }
 
 	/* Contrat expansible */
 	.contrat-expand:hover, .contrat-expand.expanded { border-left-color: var(--color-primary); }
+	/*  L'accent de retard, repris de `CarteVisite.visite-card--retard` À LA LETTRE :
+	    un déplacement de balisage ne change pas l'apparence. `!important` parce que
+	    la règle de survol ci-dessus a la même spécificité et gagnerait autrement au
+	    passage de la souris — c'est-à-dire que le retard disparaîtrait justement
+	    quand on s'apprête à cliquer dessus. */
+	.contrat-expand--retard { border-left-color: var(--color-danger) !important; }
+	.contrat-echeance { font-size: .82rem; font-weight: 600; color: var(--color-primary); }
+	.contrat-echeance--retard { color: var(--color-danger); }
+	.contrat-noter { color: #f59e0b; }
 
-	/* Devis expansible */
-	.contrat-expand, .devis-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
-	.devis-expand:hover, .devis-expand.expanded { border-left-color: #7c3aed; }
-	.devis-row { display: flex; gap: .75rem; align-items: center; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
-	.devis-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-	.devis-infos { text-align: right; font-size: .82rem; min-width: 90px; flex-shrink: 0; }
-	.devis-meta-right { display: flex; align-items: center; gap: .3rem; flex-shrink: 0; }
-	.devis-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
+	.contrat-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.contrat-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
 	.contrats-summary, .contrat-section { margin-bottom: 1rem; }
 	.contrat-section:last-child { margin-bottom: 0; }
@@ -1805,8 +1212,8 @@
 
 	.contrat-row { display: flex; gap: .75rem; align-items: flex-start; padding: .55rem .75rem; cursor: pointer; transition: background .12s; }
 	.contrat-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
-	.devis-body-inner, .contrat-body-inner { flex: 1; min-width: 0; }
-	.devis-titre, .contrat-titre { font-size: .9rem; }
+	.contrat-body-inner { flex: 1; min-width: 0; }
+	.contrat-titre { font-size: .9rem; }
 	.contrat-meta { font-size: .78rem; color: var(--color-text-muted); margin-left: .5rem; }
 	.contrat-infos { text-align: right; font-size: .82rem; min-width: 100px; flex-shrink: 0; }
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }
@@ -1815,12 +1222,9 @@
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
 	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
 	.form-grid input, .form-grid select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
-	/*  `.devis-form-help` et `.devis-file-note` sont parties avec le formulaire,
-	    dans `FormulairePrestation.svelte` — les laisser ici les rendait inertes. */
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 
-	.danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
 	.rich-content { font-size: .85rem; line-height: 1.6; color: var(--color-text); margin-bottom: .5rem; }
 	.rich-content :global(p) { margin: 0 0 .5em; }
 	.rich-content :global(ul), .rich-content :global(ol) { padding-left: 1.4em; margin: 0 0 .5em; }
@@ -1844,24 +1248,5 @@
 		.tabs button { padding: .4rem .55rem; font-size: .78rem; }
 	}
 
-	/* ── Devis kanban ───────────── */
-	.devis-kanban { display: flex; gap: .6rem; align-items: flex-start; overflow-x: auto; padding-bottom: .5rem; margin-bottom: 1.5rem; }
-	@media (max-width: 900px) { .devis-kanban { flex-direction: column; } .kanban-col { min-width: 100%; } }
-	.devis-card-meta { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
-	.devis-montant { font-size: .75rem; color: var(--color-primary); font-weight: 600; }
-	.devis-date { font-size: .7rem; color: var(--color-text-muted); }
-	.devis-os-link { font-size: .7rem; color: var(--color-primary); }
-	.devis-step-btn { padding: .15rem .45rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); font-size: .72rem; cursor: pointer; color: var(--color-text-muted); transition: background .12s, color .12s, border-color .12s; line-height: 1.4; white-space: nowrap; }
-	.devis-step-btn:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); border-color: var(--color-text-muted); }
-	.devis-step-btn--primary { background: #fff7ed; border-color: #f97316; color: #c2410c; }
-	.devis-step-btn--primary:hover { background: #f97316; color: #fff; border-color: #f97316; }
-	.devis-step-btn--success { background: #f0fdf4; border-color: #22c55e; color: #16a34a; }
-	.devis-step-btn--success:hover { background: #22c55e; color: #fff; border-color: #22c55e; }
 
-	/* Réalisées accordion */
-	.realisees-accordion { border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
-	.realisees-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .65rem 1rem; border: none; background: var(--color-bg-secondary, #f8f9fa); cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--color-text-muted); }
-	.realisees-toggle:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); }
-	.devis-expand--done { opacity: .75; }
-	.devis-expand--done:hover { opacity: 1; }
 </style>
