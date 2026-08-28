@@ -11,7 +11,7 @@
 export const ELEMENTS = ['input', 'textarea', 'select', 'button', 'label'];
 
 /** Les éléments qui portent la peau définie par `.field input, .field select, …`. */
-const CONTROLES = ['input', 'select', 'textarea'];
+export const CONTROLES = ['input', 'select', 'textarea'];
 
 /**
  * Volet B — ce qu'une signature refuse, et par quelle classe on la remplace.
@@ -85,6 +85,15 @@ export const CLASSES_STRUCTURE = ['field', 'form-actions', 'largeur-saisie', 'fi
  * entrée de `SIGNATURES` (ou `redite-classe`). Une clé qui nomme une signature
  * inexistante fait ÉCHOUER le contrôle : une tolérance qui ne protège rien, en
  * silence, est pire qu'absente.
+ *
+ * ⚠️ Le volet C — une recomposition écrite dans un `<style>` sous sélecteur
+ * qualifié — se tolère sous `chemin.svelte::style:signature`. Deux espaces de clés
+ * distincts EXPRÈS : tolérer un `style="…"` en ligne dans un fichier ne doit pas
+ * couvrir en silence une seconde recomposition, écrite ailleurs et sous une autre
+ * forme. La contrepartie assumée (une tolérance vaut pour tout le fichier) est
+ * déjà large ; l'étendre à deux volets à la fois la rendrait aveugle.
+ * Il n'y en a AUCUNE aujourd'hui : le relevé de #593 est tombé à zéro le jour où
+ * le volet est né. Son témoin est donc un PLANCHER de règles lues, pas cette liste.
  *
  * Trois règles, et elles ne se négocient pas :
  *
