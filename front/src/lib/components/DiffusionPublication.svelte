@@ -1,6 +1,8 @@
 <!--
-  DiffusionPublication.svelte — ce qu'une actualité ENVOIE : les trois canaux et
-  l'affiche de hall. **Section 9 du cadre #430**, et elle seule.
+  DiffusionPublication.svelte — ce qu'une actualité publie EN PLUS des trois
+  canaux : l'affiche de hall. Une **option** de la section 9 du cadre #430, rendue
+  dans le créneau `options` de `SectionDiffusion` — les canaux, eux, appartiennent
+  à l'objet.
 
   Née le 18/08/2026 (#433) de la coupure d'`OptionsPublication`, qui portait à la
   fois ce qui décrit une publication (épinglage, urgence, brouillon,
@@ -19,6 +21,21 @@
   PDF punaisé dans un hall, lu sans connexion. Elle reste donc hors de
   `CanauxNotification`, dont le contrat est « qui est prévenu ? ».
 
+  🔴 **Ce composant ne rend PLUS les canaux (#498, 28/08/2026).** Il les rendait
+  lui-même, et `FormulaireActualite` passait `avecCanaux={false}` pour éviter le
+  doublon : les actualités étaient donc DANS l'objet Diffusion, mais leurs canaux
+  le court-circuitaient. Conséquence — toute capacité ajoutée à l'objet ne les
+  atteignait jamais. C'est le mécanisme exact que #498 décrit : *« tant qu'ils
+  appellent le canal sans passer par l'objet, ajouter une capacité à l'objet ne
+  les atteindra jamais »*.
+
+  Ce composant ne porte donc plus que **la différence de l'actualité** — l'affiche
+  de hall —, et il la rend dans le créneau `options` de `SectionDiffusion`, qui
+  est sa place : *les options décident de ce qui est PUBLIÉ, les canaux de qui en
+  est prévenu*. Ce que l'actualité gagne au passage, sans une ligne : l'avertissement
+  « les fichiers ne partent pas par WhatsApp », et l'aperçu le jour où la
+  publication aura son endpoint de composition.
+
   ⚠️ **« Confidentiel » interdit l'affiche de hall**, et la case le montre. La
   valeur arrive en lecture seule : la règle qui la fait retomber vit chez l'hôte
   (`FormulaireActualite`), seul endroit où les sections 2 et 9 se rencontrent — et
@@ -26,26 +43,16 @@
   décide.
 -->
 <script lang="ts">
-	import CanauxNotification from './CanauxNotification.svelte';
-
-	export let whatsapp = false;
-	export let syndic = false;
-	export let cs = false;
+	//  ⚠️ `whatsapp`, `syndic` et `cs` ont disparu avec le rendu des canaux (#498).
+	//  Les laisser en props inertes aurait été pire que de les retirer : l'appelant
+	//  aurait continué de les lier, en croyant que ce composant en fait quelque
+	//  chose, et le jour où l'objet aurait divergé rien ne l'aurait dit.
 	export let annonceHall = false;
 	/** Lecture seule : décidée en section 2, elle ferme l'affiche de hall ici. */
 	export let confidentiel = false;
 
 	const idAideHall = `aide-hall-${Math.random().toString(36).slice(2, 8)}`;
 </script>
-
-<CanauxNotification
-	bind:whatsapp
-	bind:syndic
-	bind:cs
-	aideWhatsapp={confidentiel
-		? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
-		: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
-/>
 
 <div class="bloc-hall">
 	<label

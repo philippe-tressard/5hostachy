@@ -283,7 +283,10 @@
 			avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')} documentsDifferes
 			documentsControle={modeEdition ? 'slot' : 'interne'} bind:documentsFichiers={pendingFiles}
 			avecDiffusion={sectionPresente(PUBLICATION, etat, 'diffusion')}
-			avecCanaux={false}
+			bind:whatsapp={partagerWhatsapp} bind:syndic={envoyerSyndic} bind:cs={envoyerCs}
+			aideWhatsapp={confidentiel
+				? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
+				: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
 		>
 			<!--  ✅ EN CORRECTION, les documents s'ajoutent et se retirent à l'unité :
 			      la publication existe, il n'y a rien à différer. Le contrôle vient
@@ -309,17 +312,17 @@
 				</label>
 			</svelte:fragment>
 
-			<!--  Les actualités rendent leurs canaux elles-mêmes : l'affiche de hall
-			      n'est pas un canal de notification, et `CanauxNotification` ne
-			      saurait pas la porter. -->
+			<!--  🔴 Les canaux appartiennent à l'OBJET, plus à cet écran (#498).
+			      Ce commentaire disait « les actualités rendent leurs canaux
+			      elles-mêmes : l'affiche de hall n'est pas un canal, et
+			      `CanauxNotification` ne saurait pas la porter ». La prémisse est
+			      juste — l'affiche n'est pas un canal —, la conclusion ne l'était
+			      pas : sa place est le créneau `options` de `SectionDiffusion`,
+			      qui existe pour ça. Rendre les canaux ici obligeait à passer
+			      `avecCanaux={false}`, et les actualités se retrouvaient DANS
+			      l'objet avec des canaux qui le contournaient. -->
 			<svelte:fragment slot="diffusion">
-				<DiffusionPublication
-					{confidentiel}
-					bind:whatsapp={partagerWhatsapp}
-					bind:syndic={envoyerSyndic}
-					bind:cs={envoyerCs}
-					bind:annonceHall
-				/>
+				<DiffusionPublication {confidentiel} bind:annonceHall />
 			</svelte:fragment>
 		</ChampsCommuns>
 
