@@ -1054,14 +1054,16 @@
 						</div>
 					{:else}
 						<div class="search-locataire-row">
-							<input
-								type="search"
-								id="nb-recherche"
-								placeholder="Nom, prénom ou email…"
-								bind:value={rechercheLocataire}
-								on:keydown={(e) => e.key === 'Enter' && chercherLocataire()}
-								autocomplete="off"
-							/>
+							<div class="field champ-en-ligne">
+								<input
+									type="search"
+									id="nb-recherche"
+									placeholder="Nom, prénom ou email…"
+									bind:value={rechercheLocataire}
+									on:keydown={(e) => e.key === 'Enter' && chercherLocataire()}
+									autocomplete="off"
+								/>
+							</div>
 							<button class="btn btn-sm" disabled={cherchantLocataire || !rechercheLocataire.trim()} on:click={chercherLocataire}>
 								{cherchantLocataire ? '…' : '🔍 Chercher'}
 							</button>
@@ -1207,13 +1209,15 @@
 							<p style="font-size:.75rem;color:var(--color-text-muted);margin-bottom:.35rem">Ou recherchez un autre compte :</p>
 						{/if}
 						<div class="search-locataire-row">
-							<input
-								type="search"
-								placeholder="Nom, prénom ou email…"
-								bind:value={editRechercheLocataire}
-								on:keydown={(e) => e.key === 'Enter' && editChercherLocataire()}
-								autocomplete="off"
-							/>
+							<div class="field champ-en-ligne">
+								<input
+									type="search"
+									placeholder="Nom, prénom ou email…"
+									bind:value={editRechercheLocataire}
+									on:keydown={(e) => e.key === 'Enter' && editChercherLocataire()}
+									autocomplete="off"
+								/>
+							</div>
 							<button class="btn btn-sm" disabled={editCherchant || !editRechercheLocataire.trim()} on:click={editChercherLocataire}>
 								{editCherchant ? '…' : '🔍 Chercher'}
 							</button>
@@ -1526,14 +1530,10 @@
 	}
 	.optional-hint { font-weight: 400; color: var(--color-text-muted); }
 	.search-locataire-row { display: flex; gap: .5rem; margin-top: .4rem; }
-	.search-locataire-row input {
-		flex: 1;
-		padding: .42rem .6rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		font-size: .9rem;
-		background: var(--color-bg);
-	}
+	/*  Le champ vit dans un `.field champ-en-ligne` depuis le 28/08/2026 : il
+	    repeignait `.field input` et perdait le focus de la charte (#593, volet
+	    C). Ne reste ici que la répartition, propre à cette rangée. */
+	.search-locataire-row .field { flex: 1; }
 	.search-no-result { font-size: .82rem; color: var(--color-danger, #dc2626); margin-top: .45rem; }
 	.locataire-resultats {
 		list-style: none;

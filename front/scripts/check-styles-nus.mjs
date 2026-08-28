@@ -1,11 +1,13 @@
 /**
  * Garde-fou : on ne réécrit pas à la main ce qu'`app.css` porte déjà.
  *
- * Deux volets, nés du même défaut à deux endroits différents :
+ * Trois volets, nés du même défaut à trois endroits différents :
  *
  *   A. dans un `<style>` de composant — un sélecteur d'ÉLÉMENT nu ;
  *   B. dans le balisage d'une PAGE comme d'un composant — un `style="…"` en ligne
- *      qui RECOMPOSE une classe déjà offerte par `app.css`.
+ *      qui RECOMPOSE une classe déjà offerte par `app.css` ;
+ *   C. dans un `<style>` de composant — une règle sous sélecteur QUALIFIÉ qui
+ *      recompose la même chose que B.
  *
  * ## Volet A — le défaut qui a fait naître ce contrôle (16/08/2026)
  *
@@ -32,6 +34,33 @@
  * nommés `Formulaire*.svelte` (#416), et a laissé passer le formulaire le plus
  * réutilisé du site. Même remède ici : **le tri se fait sur ce que le balisage
  * FAIT, pas sur le fichier où il est écrit**.
+ *
+ * ## Volet C — pourquoi qualifier ne suffit pas (28/08/2026, #593)
+ *
+ * `Reponses.svelte` portait `.reponse-form textarea { padding … border … }` : la
+ * peau de `.field textarea`, repeinte à la main, d'où un champ BLANC au milieu
+ * d'un site aux champs beiges. Signalé à l'écran par l'utilisateur. **Le contrôle
+ * était vert.**
+ *
+ * Le volet A refuse `textarea` NU, et c'est sa raison d'être. Mais qualifier un
+ * sélecteur le rend inoffensif pour les VOISINS, **pas conforme à la charte** — et
+ * les deux questions sont distinctes :
+ *
+ * | Question | Volet |
+ * |---|---|
+ * | ce sélecteur déborde-t-il sur ce qu'il ne vise pas ? | A |
+ * | ce sélecteur recompose-t-il une classe de la charte ? | B (en ligne) — et désormais C |
+ *
+ * C'est la troisième fois qu'un garde-fou de ce dépôt a une PORTÉE plus étroite
+ * que la règle qu'il défend, après `lint:soumission` (#416) et le volet B lui-même
+ * (#425). Le tri se fait sur ce que le CSS FAIT, pas sur la forme où il est écrit.
+ *
+ * Le relevé était de SEPT règles, sur trois écrans, et il est tombé à zéro dans le
+ * même lot : `.form-grid input, .form-grid select, .form-grid textarea` écrit deux
+ * fois — espace-cs et prestataires — et déjà divergent, `.field select` qui se
+ * redéfinissait lui-même, et le champ de recherche de `mon-lot`. ⚠️ Toutes
+ * GAGNAIENT contre `app.css` : Svelte ajoute sa classe de portée au sélecteur, ce
+ * qui le rend plus spécifique que la charte à égalité de sélecteur.
  *
  * ### Recomposition ≠ variation légitime
  *
@@ -86,7 +115,13 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 //  La RÈGLE (ce qui est refusé, et les écarts déjà connus) vit à côté ; ce fichier-ci
 //  porte la DÉTECTION. La première bouge à chaque écran repris, la seconde ne bouge pas.
-import { SIGNATURES, CLASSES_STRUCTURE, ELEMENTS, TOLERANCES } from './check-styles-nus.regles.mjs';
+import {
+	SIGNATURES,
+	CLASSES_STRUCTURE,
+	CONTROLES,
+	ELEMENTS,
+	TOLERANCES,
+} from './check-styles-nus.regles.mjs';
 //  Les fonctions d’ANALYSE sont PURES et vivent à part : elles ne touchent ni au
 //  disque ni à la sortie, et s’éprouvent seules — `--selftest` sur ce module.
 import {
@@ -97,6 +132,7 @@ import {
 	declarationsDe,
 	decouperDeclarations,
 	reglesCss,
+	reglesDeSaisie,
 	selecteursNus,
 } from './lib-analyse-styles.mjs';
 import { cssGlobal } from './lib-css-global.mjs';
@@ -108,6 +144,17 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
 
 /** En dessous, le motif de lecture ne correspond plus au balisage (cas zéro). */
 const PLANCHER_STYLES = 200;
+
+/**
+ * Cas zéro du volet C : en dessous, le motif ne lit plus les feuilles de style.
+ *
+ * ⚠️ Ce volet-ci n'a AUCUNE tolérance — le relevé était à sept, il est à zéro. Il
+ * perd donc le témoin que les tolérances jouent pour les volets A et B (« si
+ * elles se périment toutes, c'est la détection qui est cassée »), et c'est ce
+ * plancher qui le remplace : il compte les règles de saisie qualifiées LUES,
+ * qu'elles soient fautives ou non. 12 au 28/08/2026.
+ */
+const PLANCHER_REGLES_SAISIE = 8;
 
 
 // ── Entrées/sorties : tout ce qui touche le disque ou la sortie vit ICI ─────
@@ -219,7 +266,11 @@ if (fichiers.length < 20) {
 }
 
 const inconnues = Object.keys(TOLERANCES).filter((cle) => {
-	const sig = cle.split('::')[1];
+	//  `style:` préfixe les tolérances du volet C — la MÊME signature, vue dans un
+	//  bloc `<style>` plutôt qu'en ligne. Deux clés distinctes exprès : tolérer une
+	//  recomposition en ligne dans un fichier ne doit pas couvrir en silence une
+	//  seconde, écrite ailleurs et sous une autre forme.
+	const sig = cle.split('::')[1]?.replace(/^style:/, '');
 	return sig !== undefined && sig !== 'redite-classe' && !SIGNATURES.some((s) => s.nom === sig);
 });
 if (inconnues.length) {
@@ -234,7 +285,29 @@ if (inconnues.length) {
 const fautes = [];
 const tolerancesVues = new Set();
 let stylesLus = 0;
+let reglesSaisieLues = 0;
 const balisesIllisibles = [];
+
+/**
+ * Les propriétés par lesquelles `declarations` recompose `sig`, ou `[]`.
+ *
+ * ⚠️ Écrit une seule fois pour les DEUX volets qui comparent à `app.css` — le
+ * `style="…"` en ligne (B) et la règle de feuille (C). C'est la demande explicite
+ * de #593 : *« c'est la distinction que le volet B fait déjà pour les styles en
+ * ligne — la REPRENDRE, pas en inventer une seconde »*. Deux copies de ce tri
+ * divergeraient, et le jour où elles divergent l'une des deux se tait.
+ */
+function recompose(sig, parPropriete) {
+	if (sig.mode === 'valeurs') {
+		//  Toutes les propriétés, ET la même valeur qu'`app.css` : c'est cette
+		//  double exigence qui distingue la recomposition de l'ajustement.
+		const identiques = sig.proprietes.filter(
+			(p) => parPropriete.has(p) && parPropriete.get(p) === sig.reference.get(p),
+		);
+		return identiques.length === sig.proprietes.length ? identiques : [];
+	}
+	return sig.proprietes.filter((p) => parPropriete.has(p));
+}
 
 /** Enregistre une faute, ou la tolérance qui la couvre. */
 function signaler(relatif, cle, ligne, quoi, remede, detail) {
@@ -265,6 +338,31 @@ for (const fichier of fichiers) {
 					'      → qualifier le sélecteur (`.mon-champ input`, `input[type="range"]`) ou porter la règle dans `app.css`',
 			);
 		}
+
+		//  Volet C — la même comparaison que le volet B, mais sur une RÈGLE de la
+		//  feuille dont le sélecteur est qualifié (#593). Qualifier un sélecteur le
+		//  rend inoffensif pour les voisins ; ça ne le rend pas conforme à la charte.
+		for (const { selecteur, element, declarations, ligne } of reglesDeSaisie(contenu, CONTROLES)) {
+			reglesSaisieLues++;
+			const parPropriete = new Map(declarations.map((d) => [d.propriete, d.valeur]));
+			for (const sig of SIGNATURES) {
+				//  Seules les signatures qui visent un élément de saisie s'appliquent ici :
+				//  `.field label` ou `.form-actions` ne se recomposent pas sur un `<input>`.
+				if (!sig.elements || !sig.elements.includes(element)) continue;
+				const touchees = recompose(sig, parPropriete);
+				if (!touchees.length) continue;
+				signaler(
+					relatif,
+					`${relatif}::style:${sig.nom}`,
+					ligneDebut + ligne - 1,
+					`« ${selecteur} » recompose ${sig.quoi}`,
+					sig.remede,
+					`${touchees.map((p) => `${p}:${parPropriete.get(p)}`).join(' ; ')}  ` +
+						`(déjà porté par \`${sig.regle}\` dans app.css — et la classe de portée que Svelte ` +
+						'ajoute rend cette règle-ci PLUS spécifique, donc gagnante)',
+				);
+			}
+		}
 	}
 
 	//  Volet B — les `style="…"` en ligne du balisage.
@@ -284,17 +382,7 @@ for (const fichier of fichiers) {
 
 		for (const sig of SIGNATURES) {
 			if (sig.elements && !sig.elements.includes(balise.nom)) continue;
-			let touchees;
-			if (sig.mode === 'valeurs') {
-				//  Toutes les propriétés, ET la même valeur qu'`app.css` : c'est cette
-				//  double exigence qui distingue la recomposition de l'ajustement.
-				const identiques = sig.proprietes.filter(
-					(p) => parPropriete.has(p) && parPropriete.get(p) === sig.reference.get(p),
-				);
-				touchees = identiques.length === sig.proprietes.length ? identiques : [];
-			} else {
-				touchees = sig.proprietes.filter((p) => parPropriete.has(p));
-			}
+			const touchees = recompose(sig, parPropriete);
 			if (!touchees.length) continue;
 			signaler(
 				relatif,
@@ -338,6 +426,20 @@ if (stylesLus < PLANCHER_STYLES) {
 	);
 }
 
+//  Cas zéro du volet C. Il n'a aucune tolérance — le relevé de #593 est tombé à
+//  zéro le jour de sa mise en service — donc aucun TÉMOIN de son bon
+//  fonctionnement. Sans ce plancher, une régression de `reglesDeSaisie()` (un
+//  sélecteur mal découpé, un `@media` mal traversé) le rendrait muet, et muet
+//  ressemble à conforme.
+if (reglesSaisieLues < PLANCHER_REGLES_SAISIE) {
+	abandonner(
+		`${reglesSaisieLues} règle(s) de saisie qualifiée(s) lue(s) dans les blocs \`<style>\`, au\n` +
+			`  moins ${PLANCHER_REGLES_SAISIE} attendues. Le volet « recomposition sous sélecteur\n` +
+			'  qualifié » ne mesure alors plus rien — et il n’a pas de tolérance pour le dire à sa\n' +
+			'  place.',
+	);
+}
+
 //  Une balise qu'on n'arrive pas à nommer, c'est une signature qu'on n'applique
 //  pas — et un silence qui ressemble à un feu vert. On le dit.
 if (balisesIllisibles.length) {
@@ -377,7 +479,7 @@ if (fautes.length) {
 }
 
 console.log(
-	`✓ lint:styles — ${fichiers.length} fichiers, ${stylesLus} styles en ligne lus : ` +
-		'aucun sélecteur d’élément nu, aucune recomposition de classe ' +
-		`(${Object.keys(TOLERANCES).length} tolérances nommées).`,
+	`✓ lint:styles — ${fichiers.length} fichiers, ${stylesLus} styles en ligne et ` +
+		`${reglesSaisieLues} règles de saisie qualifiées lus : aucun sélecteur d’élément nu, ` +
+		`aucune recomposition de classe (${Object.keys(TOLERANCES).length} tolérances nommées).`,
 );

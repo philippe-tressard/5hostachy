@@ -57,6 +57,100 @@ export function selecteursNus(css, elements) {
 }
 
 /**
+ * Les règles d'un bloc `<style>` dont le sélecteur se termine par un élément de
+ * SAISIE **qualifié** — `.reponse-form textarea`, `.filtres > select:focus`.
+ *
+ * 🔴 Pourquoi cette fonction existe (#593, 28/08/2026). `selecteursNus()` refuse
+ * `textarea` nu, et c'est sa raison d'être : il déborderait sur les voisins. Mais
+ * qualifier un sélecteur le rend inoffensif pour les VOISINS, **pas conforme à la
+ * charte**. `.reponse-form textarea` repeignait à la main la peau de `.field
+ * textarea` — un champ blanc au milieu d'un site aux champs beiges — et le
+ * contrôle était vert : le volet qui compare les propriétés à `app.css` ne
+ * regardait que les `style="…"` EN LIGNE.
+ *
+ * Les deux questions sont distinctes, et il en fallait deux fonctions :
+ *
+ * | Question | Fonction |
+ * |---|---|
+ * | ce sélecteur déborde-t-il sur ce qu'il ne vise pas ? | `selecteursNus` |
+ * | ce sélecteur **recompose**-t-il une classe de la charte ? | celle-ci |
+ *
+ * Un sélecteur NU est volontairement exclu ici : `selecteursNus` le refuse déjà,
+ * et le signaler deux fois ferait deux verdicts pour un seul défaut.
+ *
+ * @param css le contenu d'un bloc `<style>`
+ * @param elements les noms d'éléments à surveiller (`['input','select','textarea']`)
+ * @returns `[{ selecteur, element, declarations, ligne }]`, ligne relative au bloc
+ */
+export function reglesDeSaisie(css, elements) {
+	const src = css.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
+	const trouvees = [];
+	let tete = '';
+	let i = 0;
+	while (i < src.length) {
+		const c = src[i];
+		if (c === '{') {
+			const selecteur = tete.trim();
+			const ligne = src.slice(0, i).split('\n').length;
+			tete = '';
+			if (selecteur.startsWith('@')) {
+				i++; // on descend : une règle en @media reste une règle
+				continue;
+			}
+			let profondeur = 1;
+			let j = i + 1;
+			while (j < src.length && profondeur > 0) {
+				if (src[j] === '{') profondeur++;
+				else if (src[j] === '}') profondeur--;
+				j++;
+			}
+			const corps = src.slice(i + 1, j - 1);
+			for (const part of selecteur.split(',')) {
+				const propre = part.trim().replace(/\s+/g, ' ');
+				//  Nu : c'est le domaine de `selecteursNus`, pas le nôtre.
+				if (!propre || elements.includes(propre)) continue;
+				const element = elementCible(propre, elements);
+				if (!element) continue;
+				trouvees.push({
+					selecteur: propre,
+					element,
+					declarations: decouperDeclarations(corps),
+					ligne,
+				});
+			}
+			i = j;
+			continue;
+		}
+		if (c === '}') {
+			tete = '';
+			i++;
+			continue;
+		}
+		tete += c;
+		i++;
+	}
+	return trouvees;
+}
+
+/**
+ * L'élément que vise le DERNIER compound d'un sélecteur, ou `null`.
+ *
+ * `.f textarea:focus` → `textarea` · `.f > input[type=x]` → `input` ·
+ * `.f .champ` → `null` (c'est une classe, pas un élément) ·
+ * `label input` → `input` (on juge la CIBLE, pas l'ancêtre).
+ *
+ * ⚠️ `:global(input)` rend `input` : la portée y est plus large encore, jamais
+ * plus étroite — l'exclure ferait un angle mort à l'endroit le plus exposé.
+ */
+function elementCible(selecteur, elements) {
+	const dernier = selecteur.split(/\s*[>+~]\s*|\s+/).filter(Boolean).pop();
+	if (!dernier) return null;
+	const nu = dernier.replace(/^:global\(/, '').replace(/\)$/, '');
+	const m = /^([A-Za-z][\w-]*)/.exec(nu);
+	return m && elements.includes(m[1]) ? m[1] : null;
+}
+
+/**
  * Les règles `sélecteur { corps }` d'une feuille, `@media` compris — on y descend :
  * une règle qui n'existe qu'en responsive reste une règle qu'on ne doit pas
  * recomposer. Écrit à la main plutôt qu'en expression régulière : les accolades
@@ -233,146 +327,18 @@ export function classesDe(attributs) {
 		.filter(Boolean);
 }
 
-// ── Self-test ────────────────────────────────────────────────────────────────
+// ── Self-test ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Chaque cas est un défaut RÉEL de l'historique, pas un exemple inventé : c'est ce
- * qui fait la différence entre un test qui rassure et un test qui attrape.
- */
-function selftest() {
-	const echecs = [];
-	const verifier = (nom, obtenu, attendu) => {
-		const a = JSON.stringify(attendu);
-		const o = JSON.stringify(obtenu);
-		if (o !== a) echecs.push(`${nom}\n      attendu ${a}\n      obtenu  ${o}`);
-	};
-
-	//  Les valeurs de référence se lisent, y compris sur un sélecteur en liste et
-	//  sur plusieurs lignes — c'est la forme exacte de `.field input, …` d'app.css.
-	const regles = reglesCss(`
-		/* commentaire { piégeux } */
-		.field label { font-size: .875rem; font-weight: 500; }
-		.field input,
-		.field select { padding: 0.45rem .6rem; border: 1px solid var(--color-border); }
-		@media (max-width: 640px) { .largeur-saisie { max-width: 720px; } }
-	`);
-	verifier(
-		'reglesCss + declarationsDe : sélecteur en liste',
-		[...declarationsDe(regles, '.field select').keys()],
-		['padding', 'border'],
-	);
-	verifier(
-		'declarationsDe : la valeur est normalisée (0.45 → .45)',
-		declarationsDe(regles, '.field input').get('padding'),
-		'.45rem .6rem',
-	);
-	verifier(
-		'reglesCss : on descend dans les @media',
-		declarationsDe(regles, '.largeur-saisie').get('max-width'),
-		'720px',
-	);
-	verifier(
-		'declarationsDe : un sélecteur absent ne rend rien (cas zéro de l’appelant)',
-		declarationsDe(regles, '.form-actions').size,
-		0,
-	);
-
-	//  #562 — les trois formes qui cohabitaient dans le dépôt le 28/08/2026, et
-	//  qu'un seul regex `:global\(…\)` confondait : la fuite pure (les huit badges
-	//  qui redéfinissaient la charte depuis quatre pages), la fuite légitime (le
-	//  HTML injecté par l'éditeur riche, qu'aucune règle scopée n'atteint) et
-	//  l'imbriquée (un composant qui habille l'élément d'un enfant).
-	const glob = globalesDeFeuille(`
-		:global(.badge-orange) { background: #fef3c7; }
-		:global(.custom-content p) { margin-bottom: .5rem; }
-		.history-item:hover :global(.ec-titre) { color: red; }
-		.bloc > :global(.field:last-child) { margin-bottom: 0; }
-	`);
-	verifier(
-		'globalesDeFeuille : une REDÉFINITION pure est nommée',
-		glob.fuites.filter((f) => f.classeSeule).map((f) => f.classeSeule),
-		['badge-orange'],
-	);
-	verifier(
-		'globalesDeFeuille : une fuite qui vise du contenu injecté n’est pas une redéfinition',
-		glob.fuites.filter((f) => !f.classeSeule).map((f) => f.selecteur),
-		[':global(.custom-content p)'],
-	);
-	verifier(
-		'globalesDeFeuille : un :global() SOUS un ancêtre scopé n’est pas une fuite',
-		glob.imbriquees.map((i) => i.selecteur),
-		['.history-item:hover :global(.ec-titre)', '.bloc > :global(.field:last-child)'],
-	);
-	//  Cas zéro de l'appelant : une feuille sans `:global()` ne doit rien inventer.
-	verifier(
-		'globalesDeFeuille : cas zéro',
-		globalesDeFeuille('.a { color: red } @media (max-width: 640px) { .b { color: blue } }').fuites.length,
-		0,
-	);
-	//  Un sélecteur en LISTE : chaque partie se juge séparément, sinon la fuite se
-	//  cache derrière une partie scopée écrite avant elle.
-	verifier(
-		'globalesDeFeuille : la fuite se voit même en 2ᵉ position d’une liste',
-		globalesDeFeuille('.a, :global(.badge-red) { color: red }').fuites.map((f) => f.classeSeule),
-		['badge-red'],
-	);
-
-	//  `var(--x, var(--y))` contient une virgule ET des parenthèses ; un découpage
-	//  naïf y perdait la propriété suivante.
-	verifier(
-		'decouperDeclarations : var() imbriqué',
-		decouperDeclarations('background:var(--a, var(--b));color:red').map((d) => d.propriete),
-		['background', 'color'],
-	);
-
-	//  Le défaut du 17/08 : `{() => { a; b; }}` s'imbrique, et le `>` de la flèche
-	//  faisait croire la balise fermée — l'`<input>` passait pour un `<div>`.
-	const bal = '<input on:input={() => { v = v.trim(); }} class="a b" style="x">';
-	//  Null-safe : une mutation qui casse `baliseAvant` doit produire un VERDICT
-	//  lisible, pas une exception — un contrôle qui plante en dit moins qu'un
-	//  contrôle qui nomme le cas en échec.
-	const porteuse = baliseAvant(bal, bal.indexOf('style="')) ?? {};
-	verifier('baliseAvant : flèche dans une expression imbriquée', porteuse.nom, 'input');
-	verifier('classesDe : les classes littérales', classesDe(porteuse.attributs ?? ''), ['a', 'b']);
-	verifier(
-		'classesDe : une classe calculée ne se lit pas, et ne doit pas mentir',
-		classesDe('<div class="carte {actif ? \'on\' : \'\'}"'),
-		['carte'],
-	);
-
-	//  Le pendant du cas précédent, et le seul que le garde `>` protège : un
-	//  `style="…"` qui n'est PAS un attribut — cité dans du texte, ou dans une
-	//  chaîne du balisage. Sans ce garde, il serait attribué à la balise ouvrante
-	//  la plus proche, donc rapporté sur un élément qui ne le porte pas.
-	const texte = '<p>ne jamais écrire style="border:1px" à la main</p>';
-	verifier('baliseAvant : un style= en TEXTE n’est pas un attribut', baliseAvant(texte, texte.indexOf('style="')), null);
-	const apresFermeture = '<span class="x"></span> style="color:red"';
-	verifier(
-		'baliseAvant : un style= après une balise fermée n’est attribué à personne',
-		baliseAvant(apresFermeture, apresFermeture.indexOf('style="')),
-		null,
-	);
-
-	//  Ce qui n'est pas du balisage ne doit produire aucune prise, et les numéros
-	//  de ligne doivent rester justes après neutralisation.
-	const src = '<div>\n<!-- <input style="border:1px"> -->\n<style>\ninput { width: 100% }\n</style>\n<p style="color:red">x</p>';
-	const propre = balisageSeul(src);
-	verifier('balisageSeul : le commentaire et le <style> sont neutralisés', propre.match(/style="/g).length, 1);
-	verifier('balisageSeul : le compte des lignes est préservé', propre.split('\n').length, src.split('\n').length);
-	verifier(
-		'selecteursNus : l’élément nu est vu, le sélecteur qualifié ne l’est pas',
-		selecteursNus('input { a:1 } .f input { b:2 } input[type="range"] { c:3 }', ['input']).map(
-			(s) => s.selecteur,
-		),
-		['input'],
-	);
-
-	if (echecs.length) {
-		console.error(`\n✗ lib-analyse-styles --selftest : ${echecs.length} cas en échec\n`);
-		for (const e of echecs) console.error(`   ${e}\n`);
-		process.exit(1);
-	}
-	console.log('✓ lib-analyse-styles --selftest : les fonctions d’analyse lisent ce qu’on croit.');
+//  Les cas vivent dans `lib-analyse-styles.selftest.mjs` depuis le 28/08/2026
+//  (#593) : ce fichier a dépassé 500 lignes et la modularité est de rang 1.
+//  L'import est DYNAMIQUE et sous l'option — sinon les trois contrôles qui
+//  importent ce module chargeraient aussi 200 lignes de cas de test.
+//
+//  ⚠️ `.then(…)` et NON `await` : le module de test importe celui-ci en retour, et
+//  un `await` au niveau supérieur suspendrait l'évaluation d'ici pendant que
+//  l'autre l'attend. Node l'a dit sans ambiguïté à l'écriture — « unsettled
+//  top-level await », code 13, aucun cas exécuté. Sans le `.then`, la commande
+//  que lance la CI ne testerait plus rien, et le dirait à peine.
+if (process.argv.includes('--selftest')) {
+	import('./lib-analyse-styles.selftest.mjs').then((m) => m.selftest());
 }
-
-if (process.argv.includes('--selftest')) selftest();

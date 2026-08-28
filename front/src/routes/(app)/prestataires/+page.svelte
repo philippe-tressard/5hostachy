@@ -666,7 +666,7 @@
 				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
 				{@const enRetard = contratEnRetard(c)}
-				<div class="contrat-expand" class:expanded={contratExpanded} class:contrat-expand--retard={enRetard}>
+				<div class="carte-liste" class:expanded={contratExpanded} class:urgent={enRetard}>
 					<div class="contrat-row"
 						role="button" tabindex="0"
 						on:click|stopPropagation={() => toggleContrat(c.id)}
@@ -1190,19 +1190,14 @@
 	.echeance-badge--retard { color: var(--color-danger); border-color: var(--color-danger); }
 	.echeance-badge--ok { color: var(--color-primary); border-color: var(--color-primary); }
 
-	/* Contrat expansible */
-	.contrat-expand:hover, .contrat-expand.expanded { border-left-color: var(--color-primary); }
-	/*  L'accent de retard, repris de `CarteVisite.visite-card--retard` À LA LETTRE :
-	    un déplacement de balisage ne change pas l'apparence. `!important` parce que
-	    la règle de survol ci-dessus a la même spécificité et gagnerait autrement au
-	    passage de la souris — c'est-à-dire que le retard disparaîtrait justement
-	    quand on s'apprête à cliquer dessus. */
-	.contrat-expand--retard { border-left-color: var(--color-danger) !important; }
+	/*  Contrat expansible — `.carte-liste` depuis le 28/08/2026 (#598). Il en
+	    recomposait la définition avec un espacement, une ombre et un `position`
+	    différents, et l'accent de retard redisait `.carte-liste.urgent`, à un
+	    `!important` près que l'ordre de la charte rend inutile. */
 	.contrat-echeance { font-size: .82rem; font-weight: 600; color: var(--color-primary); }
 	.contrat-echeance--retard { color: var(--color-danger); }
 	.contrat-noter { color: #f59e0b; }
 
-	.contrat-expand { margin-bottom: .5rem; border-left: 4px solid var(--color-border); border-radius: var(--radius); transition: border-left-color .12s; background: var(--color-surface); box-shadow: 0 1px 2px rgba(30,58,95,.04); }
 	.contrat-detail-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); background: var(--color-bg-secondary, #f8f9fa); }
 	.contrats-summary, .contrat-section { margin-bottom: 1rem; }
 	.contrat-section:last-child { margin-bottom: 0; }
@@ -1219,9 +1214,9 @@
 	.contrat-meta-right { display: flex; align-items: flex-start; gap: .3rem; flex-shrink: 0; }
 
 
+	/*  Seuls la répartition et l'espacement : la peau des contrôles est partie
+	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: .65rem; }
-	.form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .875rem; }
-	.form-grid input, .form-grid select { padding: .4rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: .875rem; background: var(--color-bg); width: 100%; }
 	.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 
