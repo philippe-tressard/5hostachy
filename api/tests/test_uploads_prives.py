@@ -283,15 +283,19 @@ def test_les_fichiers_de_prestataires_exigent_le_role_cs():
         RACINE / "api" / "app" / "routers" / "prestataires.py"
     ).read_text(encoding="utf-8")
 
-    for endpoint in ("/devis/{d_id}/fichier/{nom}", "/releves/{r_id}/photo/{nom}"):
+    #  ⚠️ `/devis/{d_id}/fichier/{nom}` est parti avec la prestation ponctuelle
+    #  (#603). Le contrôle NE PERD RIEN : il portait sur deux endpoints qui
+    #  partagent `_servir_fichier_prive`, et c'est cette fonction — donc la
+    #  validation d'appartenance — qui est l'objet réel du test.
+    for endpoint in ("/releves/{r_id}/photo/{nom}",):
         assert f'@router.get("{endpoint}")' in source, (
             f"L'endpoint {endpoint} a disparu : les URLs stockées en base "
             "pointent dans le vide et les pièces jointes deviennent illisibles."
         )
 
     bloc = source[source.index("def _servir_fichier_prive"):]
-    assert "require_cs_or_admin" in source[source.index("download_fichier_devis") - 400:], (
-        "Le téléchargement des pièces de devis n'exige plus le rôle CS/admin."
+    assert "require_cs_or_admin" in source[source.index("download_photo_releve") - 400:], (
+        "Le téléchargement des photos de relevé n'exige plus le rôle CS/admin."
     )
     assert "noms_autorises" in bloc, "la validation d'appartenance a disparu"
 
@@ -313,7 +317,7 @@ def test_un_endpoint_prestataire_ne_peut_pas_servir_un_pv_dag():
         "n'importe quel fichier de prive/, PV d'assemblée générale compris."
     )
     # Les noms proposés viennent des colonnes de la ressource, jamais de l'URL.
-    assert "_noms_du_devis" in source and "d.fichiers_urls" in source
+    assert "os.path.basename(r.photo_url)" in source
 
 
 def test_les_urls_stockees_pointent_vers_les_endpoints_authentifies():
@@ -331,7 +335,6 @@ def test_les_urls_stockees_pointent_vers_les_endpoints_authentifies():
     assert not fautifs, (
         f"{len(fautifs)} URL(s) publique(s) encore écrite(s) en base : {fautifs}"
     )
-    assert '/api/prestataires/devis/' in source
     assert '/api/prestataires/releves/' in source
 
 

@@ -118,7 +118,7 @@
 
 	function printCurrentReporting() {
 		const titles: Record<ReportVue, string> = {
-			kanban: 'Reporting CS — Dossiers AG / CS / Syndic',
+			kanban: 'Reporting CS — Suivi des dossiers',
 			tickets: 'Reporting CS — Analyse tickets',
 			prestataires: 'Reporting CS — Synthèse prestataires',
 			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
@@ -187,7 +187,7 @@
 		<div class="reporting-toolbar no-print">
 			<div class="reporting-switch">
 				<button class="pill" class:pill-active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
-					&#x1F4CC; AG / CS / Syndic
+					&#x1F4CC; Suivi des dossiers
 				</button>
 				<button class="pill" class:pill-active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
 					&#x1F4CA; Analyse tickets

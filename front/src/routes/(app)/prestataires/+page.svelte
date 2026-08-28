@@ -34,7 +34,7 @@
 	let loading = true;
 
 	// ── Notation ──────────────────────────────────────────────────
-	//  ⚠️ La notation SURVIT au retrait des prestations ponctuelles (#602) : elle
+	//  ⚠️ La notation SURVIT au retrait des prestations ponctuelles (#603) : elle
 	//  se saisit depuis la fiche du prestataire, et son seul rattachement restant
 	//  est le CONTRAT. Le rattachement à un devis part avec l'objet qui le portait.
 	let showNotationForm: { prestataireId: number; contratId?: number } | null = null;
@@ -80,7 +80,7 @@
 	// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
 	// (même convention que /calendrier et /sondages, cf. `$lib/deepLink.ts`).
 	//
-	// ⚠️ `'prestations'` et `'visites'` ont disparu (#602). Un lien profond qui les demande encore
+	// ⚠️ `'prestations'` et `'visites'` ont disparu (#603). Un lien profond qui les demande encore
 	// — un favori, un vieux courriel — n'appartient plus à cette liste, donc
 	// `ongletDeLUrl` rend `null` et la page s'ouvre sur son défaut. C'est
 	// exactement le service que rend une liste explicite ; une validation par
@@ -135,7 +135,7 @@
 
 	// ── Échéances des contrats ────────────────────────────────────
 	//  🔴 L'onglet « Visites » lisait ces mêmes contrats dans un écran à part
-	//  (#602). Une visite n'est pas un objet : c'est la PROCHAINE ÉCHÉANCE d'un
+	//  (#603). Une visite n'est pas un objet : c'est la PROCHAINE ÉCHÉANCE d'un
 	//  contrat, et elle avait deux définitions qui ne donnaient pas la même
 	//  réponse — ici `prochaine_visite`, une date posée à la main ; dans le
 	//  calendrier, `frequence_type` réparti sur les mois de l'exercice. Le
@@ -381,7 +381,7 @@
 		// L'ancre prime sur `?onglet=` : elle est plus précise que la vue demandée.
 		//
 		// ⚠️ L'ancre `#dv-<id>` d'une prestation ponctuelle est partie avec elle
-		// (#602). Un lien qui la porte encore ne désigne plus rien : la page
+		// (#603). Un lien qui la porte encore ne désigne plus rien : la page
 		// s'ouvre sur son défaut, sans erreur — `cibleDuHash` n'est simplement
 		// plus interrogé pour ce préfixe.
 		const urlOnglet = ongletDeLUrl(ONGLETS);
@@ -639,7 +639,7 @@
 {/if}
 
 	<!--  Synthèse — les trois décomptes viennent de l'onglet « Visites » retiré
-	      (#602). Ils portent sur les MÊMES contrats qu'il lisait ; ils sont
+	      (#603). Ils portent sur les MÊMES contrats qu'il lisait ; ils sont
 	      seulement rendus là où vivent les contrats. -->
 	<div class="contrats-summary">
 		<span class="contrats-summary-count">{contrats.length} contrat{contrats.length !== 1 ? 's' : ''} actif{contrats.length !== 1 ? 's' : ''}</span>
@@ -679,7 +679,7 @@
 								<!--  Un contrat sans intervenant avait sa propre section, qui le
 								      rendait une SECONDE fois : le groupement par équipement
 								      retombe déjà sur `type_equipement` quand le prestataire
-								      manque. Le fait se dit ici, sur la ligne (#602). -->
+								      manque. Le fait se dit ici, sur la ligne (#603). -->
 								<span class="badge badge-gray" style="font-size:.72rem">sans intervenant</span>
 							{/if}
 							{#if c.numero_contrat}<span class="contrat-meta">🔖 {c.numero_contrat}</span>{/if}
@@ -819,7 +819,7 @@
 										      saisir, alors que la fiche et le reporting continuaient d'en
 										      afficher la moyenne. Un affichage sans son geste de saisie ne
 										      se voit pas — rien ne lève, la note reste simplement à jamais
-										      celle d'hier (#602).
+										      celle d'hier (#603).
 										      Sans intervenant, il n'y a personne à noter : le bouton
 										      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
 										{#if c.prestataire_id}
