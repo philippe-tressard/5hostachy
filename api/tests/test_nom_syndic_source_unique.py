@@ -154,3 +154,108 @@ def test_les_exceptions_declarees_servent_encore():
         elif "nom_syndic" not in chemin.read_text(encoding="utf-8"):
             mortes.append(f"{rel} (ne touche plus au champ — {motif})")
     assert not mortes, f"Exceptions à retirer : {mortes}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  La saisie de repli ne se fait pas écraser par le nom du contrat
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  🔴 Le piège, trouvé en finissant l'écran (29/08/2026) : le champ est DÉSACTIVÉ
+#  quand le contrat fait foi, mais un formulaire désactivé renvoie quand même sa
+#  valeur — celle du contrat, puisque c'est elle qui a été affichée.
+#
+#  L'enregistrer remplacerait la saisie d'origine par le nom du contrat. Le repli
+#  cesserait d'être un repli : retirer le contrat plus tard ferait réapparaître
+#  une valeur que personne n'a jamais saisie, et qui aurait l'air d'une saisie.
+#
+#  ⚠️ La règle vit côté SERVEUR, pas dans l'écran : un second écran, ou un appel
+#  direct à l'API, contournerait un garde posé côté front.
+
+def test_le_serveur_refuse_d_ecraser_la_saisie_quand_le_contrat_fait_foi():
+    """Le contrôle porte sur le CODE : l'écriture est gardée par la source."""
+    chemin = APP / "routers" / "admin" / "annuaire.py"
+    arbre = ast.parse(chemin.read_text(encoding="utf-8"))
+
+    #  On cherche l'affectation `syndic.nom_syndic = …` et on vérifie qu'elle est
+    #  sous un `if` qui interroge `source_du_nom`.
+    gardees = []
+    for noeud in ast.walk(arbre):
+        if not isinstance(noeud, ast.If):
+            continue
+        condition = ast.unparse(noeud.test)
+        if "source_du_nom" not in condition:
+            continue
+        for enfant in ast.walk(noeud):
+            if (
+                isinstance(enfant, ast.Assign)
+                and any(
+                    isinstance(c, ast.Attribute) and c.attr == "nom_syndic"
+                    for c in enfant.targets
+                )
+            ):
+                gardees.append(condition)
+
+    assert gardees, (
+        "`syndic.nom_syndic = …` n'est plus gardé par `source_du_nom` "
+        "(`routers/admin/annuaire.py`). Sans ce garde, enregistrer l'annuaire "
+        "remplace la saisie de repli par le nom du contrat — et retirer le "
+        "contrat ferait réapparaître une valeur jamais saisie."
+    )
+
+
+
+def _base_avec_copro(nom_saisi: str | None):
+    """Base jetable portant une copropriété, et la saisie libre si on en veut une.
+
+    ⚠️ Une base RÉELLE, pas le double `_Session` du reste du fichier : ce qu'on
+    éprouve ici est justement l'enchaînement des deux requêtes — le contrat
+    d'abord, la saisie ensuite. Un double qui rend ce qu'on lui a préparé
+    prouverait seulement qu'on sait préparer un double.
+    """
+    from sqlmodel import Session, SQLModel, create_engine
+
+    from app.models.copropriete import Copropriete
+    from app.models.core import SyndicInfo
+
+    moteur = create_engine("sqlite://")
+    SQLModel.metadata.create_all(moteur)
+    session = Session(moteur)
+    copro = Copropriete(nom="Résidence d'essai", adresse="1 rue d'essai")
+    session.add(copro)
+    if nom_saisi is not None:
+        session.add(SyndicInfo(nom_syndic=nom_saisi))
+    session.commit()
+    session.refresh(copro)
+    return session, copro
+
+
+def test_la_fiche_de_la_residence_replie_sur_la_saisie_quand_aucun_contrat():
+    """Sans contrat désigné, la fiche affiche la saisie — pas un vide.
+
+    🔴 C'est le défaut trouvé le 29/08/2026 en ajoutant le syndic à la fiche de
+    la résidence : `syndic_du_contrat` ne lit que le CONTRAT, si bien que la
+    fiche restait muette là où l'ANNUAIRE, lui, affichait la saisie libre. Deux
+    écrans, deux réponses à la même question — le doublon que #535 ferme,
+    reconstitué un étage plus haut.
+
+    Le repli vit dans `copropriete_lue`, le point de composition, et il passe par
+    `nom_du_syndic` : la hiérarchie des deux sources n'est écrite qu'une fois.
+    """
+    from app.routers.copropriete import copropriete_lue
+
+    session, copro = _base_avec_copro("Cabinet de repli")
+    assert copropriete_lue(session, copro).syndic_cabinet == "Cabinet de repli"
+
+
+def test_sans_contrat_NI_saisie_la_fiche_n_invente_aucun_syndic():
+    """Le cas zéro : rien en base, donc rien à l'écran.
+
+    ⚠️ Sans ce test, le précédent passerait tout aussi bien sur un repli qui
+    rendrait une chaîne vide, un nom par défaut, ou le nom du site — et la fiche
+    afficherait un « syndic » que personne n'a saisi. Un repli qui répond
+    toujours n'est plus un repli (`standards/04` §2).
+    """
+    from app.routers.copropriete import copropriete_lue
+
+    session, copro = _base_avec_copro(None)
+    assert copropriete_lue(session, copro).syndic_cabinet is None

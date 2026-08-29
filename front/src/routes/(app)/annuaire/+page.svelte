@@ -149,7 +149,9 @@
 </section>
 
 <section>
-	<h2 class="section-title">Syndic</h2>
+	<!--  Ancre visée par la fiche de la résidence (« Syndic » → ici). Le
+	      `scroll-margin-top` évite que le titre se range sous l'en-tête collant. -->
+	<h2 class="section-title" id="syndic">Syndic</h2>
 	{#if data.syndic.nom_syndic}
 		<p class="syndic-header">
 			<strong>{data.syndic.nom_syndic}</strong>
@@ -207,6 +209,7 @@
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.contact-loc { font-size: .78rem; color: var(--color-text-muted); margin-top: .1rem; }
 	.ag-info { font-size: .8rem; color: var(--color-text-muted); }
+	#syndic { scroll-margin-top: 5rem; }
 	.syndic-header { margin-bottom: .75rem; display: flex; flex-direction: column; gap: .15rem; }
 
 	.batiment-section { margin-bottom: 1.5rem; }

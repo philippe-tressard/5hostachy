@@ -225,6 +225,14 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     que d'annuler la marge écran par écran : une règle locale de plus serait
     exactement la « seconde définition libre de diverger » que #374 supprime. */
 .form-grid .field { margin-bottom: 0; }
+
+/*  Un champ multiligne se redimensionne À LA VERTICALE seulement : l'étirer en
+    largeur déborderait de la colonne de grille et casserait l'alignement des
+    champs voisins. La règle vivait dans `espace-cs`, où elle est devenue
+    orpheline le 29/08/2026 quand l'en-tête du syndic est parti en composant —
+    elle n'y était déjà pas à sa place : elle vaut pour tout `.form-grid`, qui
+    est défini ici. */
+.form-grid textarea { resize: vertical; }
 /*  Aide sous une case à cocher. Alignée sur le libellé, donc décalée de la
     largeur de la case. Définie ICI et non dans un composant : Svelte scope ses
     styles, si bien qu'un second écran qui reprend la classe hérite du balisage
@@ -637,3 +645,21 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 	.doc-row { flex-direction: column; align-items: stretch; gap: .5rem; }
 	.doc-actions { justify-content: flex-end; }
 }
+
+/*  En-tête d'une section administrable : le résumé en lecture, et la rangée de
+    commandes en saisie.
+
+    🔴 Remontées ici le 29/08/2026. Elles vivaient dans `espace-cs`, seul écran à
+    les employer — jusqu'à ce que l'en-tête du syndic parte en composant
+    (`EnteteSyndic.svelte`, #535) et les rende NUES là-bas : Svelte scope au
+    fichier, et le style ne suit pas le balisage tout seul. C'est la régression
+    des pastilles nues (#557), et `lint:classes-nues` l'a refusée avant l'écran.
+
+    Deux fichiers les emploient : les recopier aurait donné deux sources pour la
+    même règle, qui divergent au premier ajustement. */
+.header-summary {
+display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+font-size: .875rem; color: var(--color-text-muted);
+margin-bottom: 1rem; padding: .4rem 0;
+}
+.header-edit-actions { display: flex; gap: .5rem; align-items: center; padding-top: .25rem; }

@@ -13,6 +13,8 @@ from app.models.core import (
     TypeEquipement, Utilisateur,
 )
 
+from app.utils.syndic import nom_du_syndic
+
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
 
 
@@ -284,6 +286,24 @@ def copropriete_lue(session: Session, copro: Copropriete) -> CoproprieteRead:
     for source in (assurance_du_contrat, syndic_du_contrat):
         for cle, valeur in source(session, copro).items():
             setattr(lue, cle, valeur)
+
+    #  🔴 LE REPLI, et il n'a sa place qu'ICI.
+    #
+    #  `syndic_du_contrat` lit ce que porte le CONTRAT — c'est son nom, et le
+    #  test `…_meme_SANS_contrat` tient à ce qu'elle n'invente rien. Mais la
+    #  règle arbitrée le 29/08/2026 (#535) dit que le nom du syndic a DEUX
+    #  sources, le contrat puis la saisie libre, et qu'une seule répond à la
+    #  fois. Cette hiérarchie est écrite une seule fois, dans `utils/syndic.py`.
+    #
+    #  ⚠️ Sans ce repli, la fiche de la résidence n'affichait aucun syndic pour
+    #  une copropriété sans contrat désigné, alors que l'ANNUAIRE affichait la
+    #  saisie : deux écrans, deux réponses à la même question — exactement le
+    #  doublon que #535 ferme, reconstitué un étage plus haut.
+    #
+    #  ⚠️ Et c'est bien un repli, jamais une seconde vérité : il ne s'applique
+    #  que là où la première est absente (`if not lue.syndic_cabinet`).
+    if not lue.syndic_cabinet:
+        lue.syndic_cabinet = nom_du_syndic(session) or None
     return lue
 
 

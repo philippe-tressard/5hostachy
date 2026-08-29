@@ -33,7 +33,7 @@
 		</div>
 	{/if}
 
-	{#if copropriete.numero_immatriculation || copropriete.assurance_compagnie || copropriete.nb_lots_total || copropriete.nb_lots_principaux}
+	{#if copropriete.numero_immatriculation || copropriete.assurance_compagnie || copropriete.syndic_cabinet || copropriete.nb_lots_total || copropriete.nb_lots_principaux}
 		<div class="info-grid" style="margin-bottom:1.25rem">
 			{#if copropriete.numero_immatriculation}
 				<div class="info-item">
@@ -57,6 +57,18 @@
 				<div class="info-item">
 					<span class="info-label">Assurance</span>
 					<span class="info-value">{copropriete.assurance_compagnie}{#if copropriete.assurance_echeance} — échéance {fmt(copropriete.assurance_echeance)}{/if}</span>
+				</div>
+			{/if}
+			{#if copropriete.syndic_cabinet}
+				<!--  Le syndic manquait à cette fiche alors que l'assurance y était :
+				      deux contrats de même nature, un seul affiché. Le lien mène à
+				      l'annuaire, qui porte les PERSONNES — la fiche ne les recopie
+				      pas (`syndic_du_contrat` : l'organisation ici, les gens là-bas). -->
+				<div class="info-item">
+					<span class="info-label">Syndic</span>
+					<span class="info-value">
+						<a href="/annuaire#syndic">{copropriete.syndic_cabinet}</a>{#if copropriete.syndic_echeance} — échéance {fmt(copropriete.syndic_echeance)}{/if}
+					</span>
 				</div>
 			{/if}
 		</div>

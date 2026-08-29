@@ -564,7 +564,7 @@
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'contrats_tab'}
 {#if contratFormPrestId === -1}
-	<FormulaireCreation titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}>
+	<FormulaireCreation cle={editContratId} titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}>
 			<div>
 				<div class="form-grid">
 					<label class="field champ-large">Libellé *<input bind:value={contratForm.libelle} required /></label>
@@ -854,7 +854,7 @@
 		tous="Tous équipements" libelle="Filtrer par équipement" />
 
 	{#if $isCS && showPrestForm}
-		<FormulaireCreation titre={editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}>
+		<FormulaireCreation cle={editPrestId} titre={editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}>
 				<form on:submit|preventDefault={savePrest}>
 					<div>
 						<div class="form-grid">
@@ -1036,7 +1036,7 @@
 	</div>
 
 	{#if showReleveForm && $isCS}
-		<FormulaireCreation titre={editReleveId ? 'Modifier le relevé' : currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}>
+		<FormulaireCreation cle={editReleveId} titre={editReleveId ? 'Modifier le relevé' : currentCompteur ? `Nouveau relevé — ${currentCompteur.label}` : 'Nouveau relevé'}>
 				<form on:submit|preventDefault={saveReleve}>
 					<div>
 						<div class="form-grid">

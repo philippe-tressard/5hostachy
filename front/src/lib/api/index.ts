@@ -151,7 +151,7 @@ export const faq = {
 
 
 export const annuaire = {
-	get: () => api.get<{ cs: { ag_annee: number | null; ag_date: string | null; membres: any[] }; syndic: { nom_syndic: string; adresse: string; membres: any[] } }>('/admin/annuaire'),
+	get: () => api.get<{ cs: { ag_annee: number | null; ag_date: string | null; membres: any[] }; syndic: { nom_syndic: string; nom_syndic_source?: 'contrat' | 'saisie' | 'aucune'; adresse: string; membres: any[] } }>('/admin/annuaire'),
 };
 
 

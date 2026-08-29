@@ -1,4 +1,6 @@
 <script lang="ts">
+	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
+	import Onglet from '$lib/components/Onglet.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
@@ -87,6 +89,8 @@
 
 	// Syndic
 	let nomSyndic = '';
+	/** D'où vient le nom affiché — le contrat fait foi (#535, `utils/syndic.py`). */
+	let nomSyndicSource: 'contrat' | 'saisie' | 'aucune' = 'aucune';
 	let adresseSyndic = '';
 	let siteWebSyndic = '';
 	let membresSyndic: MembreSyndicForm[] = [];
@@ -253,6 +257,7 @@
 			csOpenIdx = null; csEditIdx = null;
 			csHeaderEditing = false;
 			nomSyndic = syndicData.nom_syndic ?? '';
+			nomSyndicSource = syndicData.nom_syndic_source ?? 'aucune';
 			adresseSyndic = syndicData.adresse ?? '';
 			siteWebSyndic = syndicData.site_web ?? '';
 			membresSyndic = (syndicData.membres ?? []).map((m: any): MembreSyndicForm => ({
@@ -562,19 +567,18 @@
 
 <!-- Onglets -->
 <div class="tabs" style="margin-bottom:1.5rem">
-	<button class="tab-btn" class:active={onglet === 'validations'} on:click={() => (onglet = 'validations')}>
+	<Onglet actif={onglet === 'validations'} compte={nbComptes + nbCommandes} on:click={() => (onglet = 'validations')}>
 		{_pc.onglets?.validations?.label ?? '✅ Comptes & accès'}
-		{#if nbComptes + nbCommandes > 0}<span class="badge-count">{nbComptes + nbCommandes}</span>{/if}
-	</button>
-	<button class="tab-btn" class:active={onglet === 'reporting'} on:click={() => (onglet = 'reporting')}>
+	</Onglet>
+	<Onglet actif={onglet === 'reporting'} on:click={() => (onglet = 'reporting')}>
 		{_pc.onglets?.reporting?.label ?? '\u{1F4CA} Reporting'}
-	</button>
-	<button class="tab-btn" class:active={onglet === 'annonces-hall'} on:click={() => (onglet = 'annonces-hall')}>
+	</Onglet>
+	<Onglet actif={onglet === 'annonces-hall'} on:click={() => (onglet = 'annonces-hall')}>
 		{_pc.onglets?.['annonces-hall']?.label ?? '\u{1F4C4} Annonces Hall'}
-	</button>
-	<button class="tab-btn" class:active={onglet === 'annuaire'} on:click={() => (onglet = 'annuaire')}>
+	</Onglet>
+	<Onglet actif={onglet === 'annuaire'} on:click={() => (onglet = 'annuaire')}>
 		{_pc.onglets?.annuaire?.label ?? '\u{1F4D2} Annuaire CS & Syndic'}
-	</button>
+	</Onglet>
 </div>
 {#if _pc.onglets?.[onglet]?.descriptif}
 <p class="tab-descriptif">{@html safeHtml(_pc.onglets[onglet].descriptif)}</p>
@@ -819,32 +823,11 @@
 				<h2 class="section-title">Syndic</h2>
 			</div>
 
-			{#if syndicHeaderEditing}
-				<div class="form-grid" style="max-width:580px;margin-bottom:1rem">
-					<label class="field champ-large">
-						Nom du syndic
-						<input type="text" bind:value={nomSyndic} placeholder="ex. Cabinet Bertrand" />
-					</label>
-					<label class="field champ-large">
-						Adresse
-						<textarea rows="2" bind:value={adresseSyndic} placeholder="ex. 12 rue des Lilas, 75015 Paris"></textarea>
-					</label>
-					<label class="field champ-large">
-						Espace client (site web)
-						<input type="url" bind:value={siteWebSyndic} placeholder="https://..." />
-					</label>
-					<div class="header-edit-actions" style="grid-column:1/-1">
-						<button class="btn btn-primary btn-sm" on:click={saveSyndic} disabled={savingSyndic}>{savingSyndic ? '…' : '\u{1F4BE} Enregistrer'}</button>
-						<button class="btn btn-sm btn-outline" on:click={() => syndicHeaderEditing = false}>Annuler</button>
-					</div>
-				</div>
-			{:else}
-				<div class="header-summary">
-					<span>{nomSyndic || 'Nom du syndic non renseigné'}{adresseSyndic ? ` · ${adresseSyndic}` : ''}</span>
-					{#if siteWebSyndic}<span style="margin-left:.5rem">· <a href={siteWebSyndic} target="_blank" rel="noopener">Espace client</a></span>{/if}
-					<button type="button" class="btn-icon btn-icon-edit" title="Modifier" on:click={() => syndicHeaderEditing = true}><Icon name="pencil" size={13} /></button>
-				</div>
-			{/if}
+			<!--  L'en-tête vit dans son composant (#535) : c'est lui qui porte la
+			      règle « le contrat fait foi », et le champ désactivé qui la montre. -->
+			<EnteteSyndic bind:nom={nomSyndic} bind:adresse={adresseSyndic}
+				bind:siteWeb={siteWebSyndic} bind:edition={syndicHeaderEditing}
+				source={nomSyndicSource} enregistrement={savingSyndic} onEnregistrer={saveSyndic} />
 
 			{#each membresSyndic as m, i}
 				<div class="membre-card" class:membre-principal={m.est_principal} style="cursor:pointer" role="button" tabindex="0"
@@ -973,10 +956,7 @@
 <style>
 	/*  `.tabs`, `.tab-btn` et ses deux états : copies au caractère près de
 	    `styles/ecrans.css`, donc inertes. Retirées le 28/08/2026. */
-	.badge-count {
-		background: var(--color-danger); color: #fff; border-radius: 999px;
-		font-size: .7rem; padding: .1rem .45rem; font-weight: 700;
-	}
+	/*  `.badge-count` retirée : portée par `Onglet.svelte`, avec son balisage. */
 
 	/* KPI */
 
@@ -1004,7 +984,6 @@
 	    le 28/08/2026 — le pourquoi vit dans `check-styles-nus.mjs`, volet C. */
 	.form-grid { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: .65rem; }
 	/*  `resize` n'est porté par aucune classe de la charte : pas une recomposition. */
-	.form-grid textarea { resize: vertical; }
 	.input-nom { text-transform: uppercase; }
 
 	/* Membre card */
@@ -1109,12 +1088,6 @@
 	.btn-unlink:hover { color: var(--color-danger); }
 
 	/* Header inline-edit */
-	.header-summary {
-		display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
-		font-size: .875rem; color: var(--color-text-muted);
-		margin-bottom: 1rem; padding: .4rem 0;
-	}
-	.header-edit-actions { display: flex; gap: .5rem; align-items: center; padding-top: .25rem; }
 
 	/* Mode replié */
 	.membre-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .25rem; }
