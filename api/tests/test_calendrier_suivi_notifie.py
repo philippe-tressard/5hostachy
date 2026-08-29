@@ -26,6 +26,7 @@ fond — et non le code de retour de l'endpoint (`standards/04` §14).
 """
 from __future__ import annotations
 
+
 import json
 import uuid
 from datetime import datetime
@@ -37,6 +38,10 @@ from sqlmodel import Session, SQLModel
 from app.database import engine
 from app.models.core import ConfigSite, Evenement, RoleUtilisateur, TypeEvenement, Utilisateur
 from app.routers.calendrier_courriels import notifier_canaux
+
+#  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
+#  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.purge_test import purger_ligne
 
 COMMENTAIRE = "Le prestataire est passé, la vanne est remplacée."
 DESCRIPTION_EVENEMENT = "<p>Coupure d'eau programmée dans le bâtiment C.</p>"
@@ -87,8 +92,8 @@ def contexte():
 
         yield session, ev, user
 
-        session.delete(session.get(Evenement, ev.id))
-        session.delete(session.get(Utilisateur, user.id))
+        purger_ligne(session, Evenement, ev.id)
+        purger_ligne(session, Utilisateur, user.id)
         session.commit()
 
 

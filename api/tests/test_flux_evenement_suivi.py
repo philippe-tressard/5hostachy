@@ -21,6 +21,7 @@ Il vérifie **le fait** : les cartes réellement produites par `collecter`.
 """
 from __future__ import annotations
 
+
 import uuid
 from datetime import datetime, timedelta
 
@@ -32,6 +33,10 @@ from app.models.core import Evenement, RoleUtilisateur, TypeEvenement, Utilisate
 from app.models.evenement import EvenementEvolution
 from app.routers.flux.commun import ContexteFlux
 from app.routers.flux.evenements import collecter
+
+#  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
+#  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.purge_test import purger_ligne
 
 COMMENTAIRE = "Le prestataire est passé, la vanne est remplacée."
 
@@ -85,8 +90,8 @@ def contexte():
             )
         ).all():
             session.delete(e)
-        session.delete(session.get(Evenement, ev.id))
-        session.delete(session.get(Utilisateur, user.id))
+        purger_ligne(session, Evenement, ev.id)
+        purger_ligne(session, Utilisateur, user.id)
         session.commit()
 
 

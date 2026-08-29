@@ -27,6 +27,7 @@ enregistrement).
 """
 from __future__ import annotations
 
+
 import json
 import uuid
 from datetime import datetime
@@ -45,6 +46,10 @@ from app.routers.calendrier import EvenementUpdate, update_evenement
 from app.routers.publications.crud import update_publication
 from app.routers.tickets.crud import update_ticket
 from app.schemas import PublicationUpdate, TicketUpdate
+
+#  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
+#  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.purge_test import purger_ligne
 
 PREFIXE_CORRECTION = "Correction"
 
@@ -65,7 +70,7 @@ def cs() -> Utilisateur:
         session.commit()
         session.refresh(membre)
         yield membre
-        session.delete(session.get(Utilisateur, membre.id))
+        purger_ligne(session, Utilisateur, membre.id)
         session.commit()
 
 
@@ -111,7 +116,7 @@ def test_patch_publication_ecrit_une_correction_et_pas_une_transition(cs):
 
         for e in evols:
             session.delete(e)
-        session.delete(session.get(Publication, pub.id))
+        purger_ligne(session, Publication, pub.id)
         session.commit()
 
 
@@ -146,7 +151,7 @@ def test_patch_publication_sans_changement_n_ecrit_rien(cs):
         ).all()
         assert evols == [], f"Aucune ligne attendue, trouvé : {[e.contenu for e in evols]}"
 
-        session.delete(session.get(Publication, pub.id))
+        purger_ligne(session, Publication, pub.id)
         session.commit()
 
 
@@ -184,7 +189,7 @@ def test_patch_ticket_ecrit_une_correction_et_pas_une_transition(cs):
 
         for e in evols:
             session.delete(e)
-        session.delete(session.get(Ticket, ticket.id))
+        purger_ligne(session, Ticket, ticket.id)
         session.commit()
 
 
@@ -243,7 +248,7 @@ def test_patch_ticket_corriger_un_champ_n_ecrit_rien_dans_le_fil(cs):
         #  Le fait, pas le symptôme : la correction a-t-elle été appliquée ?
         assert session.get(Ticket, ticket.id).categorie == "urgence"
 
-        session.delete(session.get(Ticket, ticket.id))
+        purger_ligne(session, Ticket, ticket.id)
         session.commit()
 
 
@@ -301,7 +306,7 @@ def test_patch_ticket_sans_rien_changer_n_ecrit_rien(cs):
             f"{[(e.type, e.contenu) for e in evols]}"
         )
 
-        session.delete(session.get(Ticket, ticket.id))
+        purger_ligne(session, Ticket, ticket.id)
         session.commit()
 
 
@@ -359,7 +364,7 @@ def test_patch_evenement_trace_la_colonne_et_corrige_le_reste(cs):
 
         for e in evols:
             session.delete(e)
-        session.delete(session.get(Evenement, ev.id))
+        purger_ligne(session, Evenement, ev.id)
         session.commit()
 
 
@@ -386,5 +391,5 @@ def test_patch_evenement_sans_changement_n_ecrit_rien(cs):
         ).all()
         assert evols == [], f"Aucune ligne attendue, trouvé : {[e.contenu for e in evols]}"
 
-        session.delete(session.get(Evenement, ev.id))
+        purger_ligne(session, Evenement, ev.id)
         session.commit()

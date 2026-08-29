@@ -212,3 +212,43 @@ def test_delier_ne_touche_PAS_les_colonnes_non_nullables(moteur_strict):
             "une colonne NOT NULL a été déliée — la purge masquerait alors un "
             "ordre de suppression faux au lieu de le révéler"
         )
+
+
+# ── Le garde-fou du garde-fou (#546, 29/08/2026) ─────────────────────────────
+
+def test_la_suite_TOURNE_avec_les_cles_actives():
+    """🔴 Sans ce test, tout le chantier peut redevenir inutile en silence.
+
+    Les clés sont posées par un écouteur `connect` que `pytest_configure`
+    enregistre sur le moteur de la suite. Si cet écouteur cesse d'être branché —
+    une variable renommée, un `engine.dispose()` retiré, un import réordonné — la
+    suite **reste verte** : elle se remet simplement à ne rien vérifier, comme
+    avant les quatre lots.
+
+    C'est exactement le faux vert que `standards/04` §1 décrit : un contrôle qui
+    ne peut pas s'exécuter doit le DIRE, jamais conclure au succès. Ici, ce test
+    est ce qui le fait dire.
+
+    ⚠️ Il porte sur le moteur DE LA SUITE, pas sur un moteur jetable : les autres
+    tests de ce fichier montent le leur, ce qui prouve la purge mais ne prouve
+    rien du régime dans lequel les 870 autres tournent.
+
+    ⚠️ Il tolère la porte de diagnostic `HOSTACHY_FK_STRICTES=0`, et seulement
+    elle. Un lot qui a besoin de la fermer pour passer a un défaut à corriger.
+    """
+    import os
+
+    from sqlmodel import Session, text
+
+    from app.database import engine
+
+    if os.environ.get("HOSTACHY_FK_STRICTES") == "0":
+        pytest.skip("porte de diagnostic ouverte explicitement — régime non nominal")
+
+    with Session(engine) as session:
+        actif = session.exec(text("PRAGMA foreign_keys")).one()[0]
+    assert actif == 1, (
+        "les clés étrangères ne sont PAS actives sur le moteur de la suite : "
+        "les 873 tests tournent sans vérifier une seule des 119 clés déclarées, "
+        "et rien d'autre ne le dirait (#546)."
+    )

@@ -24,6 +24,7 @@ enregistrement).
 """
 from __future__ import annotations
 
+
 import json
 import uuid
 
@@ -40,6 +41,10 @@ from app.models.core import (
 )
 from app.routers.tickets.evolutions import add_evolution
 from app.schemas import TicketEvolutionCreate, TicketEvolutionUpdate
+
+#  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
+#  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.purge_test import purger_ligne
 
 BAT_2 = ["bat:2"]
 PRECIS = ["bat:2", "cave"]
@@ -61,7 +66,7 @@ def cs() -> Utilisateur:
         session.commit()
         session.refresh(membre)
         yield membre
-        session.delete(session.get(Utilisateur, membre.id))
+        purger_ligne(session, Utilisateur, membre.id)
         session.commit()
 
 
@@ -86,7 +91,7 @@ def _nettoyer(session: Session, ticket_id: int) -> None:
         select(TicketEvolution).where(TicketEvolution.ticket_id == ticket_id)
     ).all():
         session.delete(e)
-    session.delete(session.get(Ticket, ticket_id))
+    purger_ligne(session, Ticket, ticket_id)
     session.commit()
 
 

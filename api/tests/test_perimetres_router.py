@@ -32,6 +32,7 @@ from app.routers.patrimoine import _codes_cites, _en_lecture
 from app.seed.patrimoine import poser_arborescence
 from app.utils import perimetres as P
 from tests.conftest import vider_patrimoine
+from tests.purge_test import purger_ligne
 
 
 #  Le montage (quatre bâtiments + arbre semé) vit dans `conftest.py` depuis le
@@ -139,12 +140,15 @@ def test_le_seed_ne_repose_pas_ce_qui_a_ete_supprime(batiments):
         )
 
         #  L'administrateur supprime un périmètre, et en ajoute un à lui.
+        #
+        #  🔴 La suppression passe par le code de PRODUCTION. Le test descendait
+        #  d'UN niveau — les enfants directs, puis le nœud — et laissait les
+        #  petits-enfants derrière : sous `foreign_keys=ON` la base refuse, et
+        #  elle a raison (#546). `purger_ligne` lit les métadonnées et descend
+        #  l'arbre entier, quelle que soit sa profondeur, qui est une donnée
+        #  administrée et non une constante du test.
         cible = session.exec(select(Perimetre).where(Perimetre.code == "cheminements")).one()
-        for enfant in session.exec(
-            select(Perimetre).where(Perimetre.parent_id == cible.id)
-        ).all():
-            session.delete(enfant)
-        session.delete(cible)
+        purger_ligne(session, Perimetre, cible.id)
         session.add(Perimetre(code="piscine", libelle="Piscine", portee_globale=True))
         session.commit()
 

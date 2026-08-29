@@ -26,6 +26,7 @@ serait juste alors que la base serait fausse.
 """
 from __future__ import annotations
 
+
 import json
 import uuid
 
@@ -35,6 +36,10 @@ from sqlmodel import Session, SQLModel
 from app.database import engine
 from app.models.core import PetiteAnnonce, RoleUtilisateur, Utilisateur
 from app.routers.annonces import AnnonceCreate, AnnonceUpdate, create_annonce, update_annonce
+
+#  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
+#  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.purge_test import purger_ligne
 
 
 @pytest.fixture()
@@ -52,7 +57,7 @@ def resident() -> Utilisateur:
         session.commit()
         session.refresh(u)
         yield u
-        session.delete(session.get(Utilisateur, u.id))
+        purger_ligne(session, Utilisateur, u.id)
         session.commit()
 
 
@@ -80,7 +85,7 @@ def test_depot_ecrit_du_json_relisible(resident):
         assert cree["perimetre_cible"] == ["bat:1", "parking"]
     finally:
         with Session(engine) as session:
-            session.delete(session.get(PetiteAnnonce, cree["id"]))
+            purger_ligne(session, PetiteAnnonce, cree["id"])
             session.commit()
 
 
@@ -108,7 +113,7 @@ def test_correction_ecrit_du_json_relisible(resident):
         assert maj["perimetre_cible"] == ["cave"]
     finally:
         with Session(engine) as session:
-            session.delete(session.get(PetiteAnnonce, cree["id"]))
+            purger_ligne(session, PetiteAnnonce, cree["id"])
             session.commit()
 
 
@@ -136,7 +141,7 @@ def test_correction_sans_perimetre_ne_l_efface_pas(resident):
         assert json.loads(_colonne_brute(cree["id"])) == ["bat:3"]
     finally:
         with Session(engine) as session:
-            session.delete(session.get(PetiteAnnonce, cree["id"]))
+            purger_ligne(session, PetiteAnnonce, cree["id"])
             session.commit()
 
 
@@ -167,5 +172,5 @@ def test_annonce_anterieure_a_la_migration_se_lit_comme_residence(resident):
         assert lue["perimetre_cible"] == ["résidence"]
     finally:
         with Session(engine) as session:
-            session.delete(session.get(PetiteAnnonce, annonce_id))
+            purger_ligne(session, PetiteAnnonce, annonce_id)
             session.commit()

@@ -26,6 +26,7 @@ acceptait tout membre du CS sur **n'importe quel** ticket — donc réécrire la
 demande d'un résident — pendant que le résident pour qui un ticket avait été
 saisi ne pouvait, lui, rien corriger. Les deux erreurs étaient symétriques.
 
+
 ⚠️ Les fonctions sont PURES et vivent dans `auth/deps.py` : l'objet n'est connu
 qu'après lecture en base, une dépendance FastAPI ne peut donc pas trancher. Ce
 sont elles qu'on teste — pas leur recopie.
@@ -40,6 +41,10 @@ from sqlmodel import Session, SQLModel
 from app.auth.deps import peut_commenter, peut_editer
 from app.database import engine
 from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+
+#  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
+#  qui la référence est ce que les clés étrangères refusent (#546).
+from tests.purge_test import purger_ligne
 
 
 def _user(role: RoleUtilisateur) -> Utilisateur:
@@ -86,9 +91,9 @@ def acteurs():
 
         yield ticket, auteur, beneficiaire, cs, admin, tiers
 
-        session.delete(session.get(Ticket, ticket.id))
+        purger_ligne(session, Ticket, ticket.id)
         for u in (auteur, beneficiaire, cs, admin, tiers):
-            session.delete(session.get(Utilisateur, u.id))
+            purger_ligne(session, Utilisateur, u.id)
         session.commit()
 
 
