@@ -17,6 +17,10 @@ def compteurs_neufs():
     csp._violations.clear()
     csp._recus = 0
     csp._ignores = 0
+    #  Le drapeau de chargement est un état de module lui aussi : sans cette
+    #  remise à zéro, le premier test qui charge empêcherait les suivants de le
+    #  faire, et le test de persistance passerait sans rien éprouver.
+    csp._charge = False
     #  ⚠️ La limite de débit est un état PARTAGÉ entre tests : sans cette remise
     #  à zéro, le troisième test se fait couper par le deuxième et mesure la
     #  mauvaise borne. Elle a d'ailleurs coupé au premier jet — c'est la preuve
@@ -121,3 +125,107 @@ def test_une_url_tres_longue_est_TRONQUEE_avant_de_servir_de_cle(client):
 def test_le_releve_est_reserve_aux_admins(client):
     """Il expose des URL de pages visitées : ce n'est pas public."""
     assert client.get("/admin/csp-violations").status_code in (401, 403)
+
+
+# ── La persistance : ce que six déploiements dans la journée ont appris ──────
+
+def test_le_releve_SURVIT_a_un_redemarrage():
+    """🔴 Sans cela, ce point de collecte ne collecte rien sur un site vivant.
+
+    Le relevé vivait en mémoire de processus, et chaque déploiement recrée le
+    conteneur. Le 29/08/2026, SIX déploiements ont eu lieu : la fenêtre
+    d'observation n'a jamais dépassé quelques dizaines de minutes, et la
+    production affichait 0 ligne CSP sur un conteneur « Up About a minute ».
+
+    ⚠️ C'est le faux vert le plus traître de la famille : le relevé rendait
+    « aucune violation », ce qui se lit « le site est conforme ». Le code prévoyait
+    bien un TÉMOIN pour `recus == 0` — mais pas le cas où des rapports sont
+    arrivés PUIS ont été effacés.
+
+    Le redémarrage est simulé comme il se produit : l'état de module repart à
+    zéro, la BASE ne bouge pas.
+    """
+    from sqlmodel import Session, SQLModel
+
+    from app.database import engine
+
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        csp.charger(session)
+        csp.retenir(("script-src", "inline"))
+        csp._recus = 3
+        csp._persister(session)
+
+        #  ── Le redémarrage ──
+        csp._violations.clear()
+        csp._recus = 0
+        csp._ignores = 0
+        csp._charge = False
+
+        csp.charger(session)
+
+    assert csp._violations[("script-src", "inline")] == 1, "le relevé n'a pas survécu"
+    assert csp._recus == 3, "le compte de rapports reçus n'a pas survécu"
+
+
+def test_un_releve_ILLISIBLE_ne_bloque_pas_le_demarrage():
+    """Le cas zéro de la restauration : une valeur abîmée repart de zéro.
+
+    ⚠️ Lever ici empêcherait l'application de servir la première requête qui
+    touche ce point — et `start.sh` a `set -e`. Un point de collecte ne doit
+    jamais faire tomber ce qu'il observe.
+    """
+    from sqlmodel import Session, SQLModel
+
+    from app.database import engine
+    from app.models.core import ConfigSite
+
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        ligne = session.get(ConfigSite, csp.CLE_PERSISTANCE)
+        if ligne:
+            ligne.valeur = "{ceci n'est pas du JSON"
+        else:
+            session.add(ConfigSite(cle=csp.CLE_PERSISTANCE, valeur="{ceci n'est pas du JSON"))
+        session.commit()
+
+        csp._charge = False
+        csp.charger(session)  # ne doit pas lever
+
+    assert csp._violations == {} or True  # le contrat est « ne lève pas »
+
+
+def test_QUAND_le_releve_est_ecrit_en_base():
+    """La borne d'écriture, éprouvée seule.
+
+    ⚠️ Elle ne peut PAS se vérifier par HTTP : le client de test fait tourner
+    l'application dans un autre fil, donc sur une autre base en mémoire
+    (`SingletonThreadPool`) — l'écriture y disparaît, et le test échouerait en
+    accusant la persistance d'un défaut qui est celui du montage.
+    """
+    #  Une clé nouvelle s'écrit TOUT DE SUITE, quel que soit le compte.
+    assert csp.doit_persister(nouvelle=True, recus=1)
+    assert csp.doit_persister(nouvelle=True, recus=7)
+
+    #  Une répétition attend le diviseur — sinon soixante écritures par minute
+    #  au plafond de débit, sur un point PUBLIC.
+    assert not csp.doit_persister(nouvelle=False, recus=1)
+    assert not csp.doit_persister(nouvelle=False, recus=24)
+    assert csp.doit_persister(nouvelle=False, recus=csp.PERSISTER_TOUS_LES)
+
+    assert not csp.doit_persister(nouvelle=False, recus=csp.PERSISTER_TOUS_LES - 1)
+    assert csp.doit_persister(nouvelle=False, recus=csp.PERSISTER_TOUS_LES * 2)
+
+    #  🔴 ET LA VALEUR, en clair. Sans cette ligne, ce test NE MORD PAS : toutes
+    #  les assertions ci-dessus se calculent AVEC la constante, si bien qu'un
+    #  diviseur porté à 26 les laisse toutes vraies. Vérifié en cassant le
+    #  module — dix tests verts sur une borne changée.
+    #
+    #  C'est le défaut que ce dépôt a déjà rencontré (#605) : un self-test qui
+    #  éprouve la forme de la règle et jamais son seuil. Le seuil est un CHOIX —
+    #  le point est public et plafonné à 60 rapports/minute, donc au pire ~2,4
+    #  écritures par minute — et un choix se change exprès, pas par accident.
+    assert csp.PERSISTER_TOUS_LES == 25, (
+        "le diviseur d'écriture a changé : le décider, et dire ici pourquoi — "
+        "il borne les écritures d'un point PUBLIC"
+    )

@@ -33,11 +33,15 @@ Il n'est jamais interprété : ni évalué, ni rendu en HTML, ni écrit en base.
 tronqué, compté, et lu par un administrateur.
 """
 
+import json
 import logging
 from collections import Counter
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
+from sqlmodel import Session
+
+from app.database import get_session
 
 from app.auth.deps import require_admin
 from app.models.core import Utilisateur
@@ -60,6 +64,104 @@ LONGUEUR_MAX = 200
 _violations: Counter = Counter()
 _recus = 0
 _ignores = 0
+
+#  ── PERSISTANCE ──────────────────────────────────────────────────────────────
+#
+#  🔴 Sans elle, ce point de collecte ne collecte RIEN sur un site en cours de
+#  développement. Le relevé vivait en mémoire de processus, et chaque
+#  déploiement recrée le conteneur : le 29/08/2026, SIX déploiements ont eu lieu
+#  dans la journée, et la fenêtre d'observation n'a jamais dépassé quelques
+#  dizaines de minutes. Constaté sur la production — `docker logs` : 0 ligne CSP,
+#  conteneur « Up About a minute ».
+#
+#  ⚠️ C'est un faux vert de la famille la plus traître : le relevé rendait
+#  « aucune violation », ce qui se lit « le site est conforme ». Le code avait
+#  bien prévu le TÉMOIN pour `recus == 0`… mais pas le cas où des rapports sont
+#  arrivés et ont été effacés. `standards/04` §2 — un contrôle doit dire quand il
+#  n'a pas pu mesurer, et « effacé au dernier déploiement » en fait partie.
+#
+#  ⚠️ On écrit dans `config_site`, la table clé/valeur déjà employée pour les
+#  marqueurs de semis — pas de migration, et la donnée voyage avec la base lors
+#  d'une bascule. C'est une écriture IN-PROCESS : la règle d'or sur `app.db` est
+#  respectée (`standards/06` §1).
+CLE_PERSISTANCE = "csp_violations"
+
+#  Une écriture toutes les N conservations, EN PLUS de chaque clé nouvelle. Le
+#  point est PUBLIC : écrire à chaque rapport donnerait 60 écritures/minute au
+#  plafond de débit. Les clés nouvelles sont bornées par `PLAFOND_CLES` (200
+#  écritures au total, quoi qu'il arrive) ; le diviseur borne le reste.
+PERSISTER_TOUS_LES = 25
+
+_charge = False
+
+
+def _etat() -> dict:
+    return {
+        "recus": _recus,
+        "ignores": _ignores,
+        "violations": [[d, b, n] for (d, b), n in _violations.items()],
+    }
+
+
+def doit_persister(nouvelle: bool, recus: int) -> bool:
+    """Faut-il écrire le relevé maintenant ?
+
+    Une BORNE, donc une fonction pure et testée seule — le motif du dépôt pour
+    les décisions d'infra. Elle ne peut pas se vérifier par HTTP : le client de
+    test fait tourner l'application dans un autre fil, donc sur une autre base
+    en mémoire (`SingletonThreadPool`), et l'écriture y disparaît. Éprouver la
+    décision ici, l'écriture par `_persister`, chacune pour ce qu'elle est.
+
+    ⚠️ Une clé NOUVELLE s'écrit tout de suite : c'est ce qu'on vient chercher.
+    Une répétition n'apprend rien et attend le diviseur — le point est PUBLIC,
+    et écrire à chaque rapport donnerait soixante écritures par minute au
+    plafond de débit.
+    """
+    return nouvelle or recus % PERSISTER_TOUS_LES == 0
+
+
+def _persister(session) -> None:
+    """Écrit le relevé dans `config_site`. Silencieux en cas d'échec — un point
+    de collecte ne doit jamais faire échouer la page qui l'appelle."""
+    from app.models.core import ConfigSite
+
+    try:
+        ligne = session.get(ConfigSite, CLE_PERSISTANCE)
+        valeur = json.dumps(_etat(), ensure_ascii=False)
+        if ligne:
+            ligne.valeur = valeur
+        else:
+            ligne = ConfigSite(cle=CLE_PERSISTANCE, valeur=valeur)
+        session.add(ligne)
+        session.commit()
+    except Exception:  # pragma: no cover - défense, jamais atteinte en essai
+        logger.warning("CSP — relevé non persisté", exc_info=True)
+
+
+def charger(session) -> None:
+    """Restaure le relevé du dernier redémarrage. Idempotent.
+
+    ⚠️ Appelée à la PREMIÈRE utilisation et non au démarrage : le module est
+    importé avant que la base soit prête, et un chargement en tête ferait échouer
+    le démarrage du conteneur — `start.sh` a `set -e`.
+    """
+    global _recus, _ignores, _charge
+    if _charge:
+        return
+    _charge = True
+    from app.models.core import ConfigSite
+
+    try:
+        ligne = session.get(ConfigSite, CLE_PERSISTANCE)
+        if not ligne:
+            return
+        etat = json.loads(ligne.valeur)
+        _recus = int(etat.get("recus", 0))
+        _ignores = int(etat.get("ignores", 0))
+        for d, bloque, n in etat.get("violations", []):
+            _violations[(d, bloque)] = int(n)
+    except Exception:  # pragma: no cover - une valeur illisible ne bloque rien
+        logger.warning("CSP — relevé illisible, on repart de zéro", exc_info=True)
 
 
 def _extraire(rapport: dict[str, Any]) -> tuple[str, str] | None:
@@ -101,7 +203,7 @@ def retenir(cle: tuple[str, str]) -> bool:
 
 @router.post("/csp-report", status_code=204)
 @limiter.limit("60/minute")
-async def recevoir_rapport(request: Request):
+async def recevoir_rapport(request: Request, session: Session = Depends(get_session)):
     """Reçoit un rapport de violation. **Ne rend rien** — 204, toujours.
 
     Un rapport illisible n'est pas une erreur du client : c'est un format qu'on ne
@@ -109,6 +211,7 @@ async def recevoir_rapport(request: Request):
     réessayer le navigateur en boucle.
     """
     global _recus, _ignores
+    charger(session)
     _recus += 1
     try:
         rapport = await request.json()
@@ -119,12 +222,21 @@ async def recevoir_rapport(request: Request):
     if extrait is None:
         _ignores += 1
         return
+    nouvelle = extrait not in _violations
     if not retenir(extrait):
         _ignores += 1
+        return
+    #  Une clé NOUVELLE est ce qu'on vient chercher : elle se persiste tout de
+    #  suite. Les répétitions attendent le diviseur — elles n'apprennent rien.
+    if doit_persister(nouvelle, _recus):
+        _persister(session)
 
 
 @router.get("/admin/csp-violations")
-def lire_violations(_admin: Utilisateur = Depends(require_admin)) -> dict[str, Any]:
+def lire_violations(
+    session: Session = Depends(get_session),
+    _admin: Utilisateur = Depends(require_admin),
+) -> dict[str, Any]:
     """Le relevé agrégé, du plus fréquent au moins fréquent.
 
     ⚠️ `ignores` n'est pas du bruit : un chiffre élevé veut dire que des rapports
@@ -141,6 +253,7 @@ def lire_violations(_admin: Utilisateur = Depends(require_admin)) -> dict[str, A
     #  quelques visites est donc SUSPECT, pas rassurant — et le contrôle C23 ne
     #  peut pas le dire à notre place : exiger un en-tête temporaire recréerait le
     #  faux positif qui a fait retirer `check-stack.sh` du cron (#301).
+    charger(session)
     note = (
         "aucun rapport reçu — vérifier que l'en-tête Content-Security-Policy-Report-Only "
         "est bien servi (curl -sI) AVANT de conclure que le site est conforme"
