@@ -77,6 +77,18 @@ class Document(SQLModel, table=True):
     # Champs spécifiques aux CR d'AG
     annee: Optional[int] = None
     date_ag: Optional[date] = Field(default=None)
-    batiments_ids_json: Optional[str] = None  # JSON array ex: "[1,2]" pour AG multi-bâtiments
+    #  🔴 DÉPRÉCIÉE au profit de `perimetre_cible` (#470, migration 0160). Elle
+    #  n'est plus LUE par le code applicatif ; elle reste comme trace de ce que le
+    #  CS avait choisi — l'arborescence des périmètres est administrée, elle bouge,
+    #  et l'identifiant de bâtiment reste vrai quand un code est renommé.
+    batiments_ids_json: Optional[str] = None  # JSON array ex: "[1,2]" — historique
+    #  De quoi PARLE ce document, en codes de périmètre (`["bat:3"]`). Même
+    #  convention que `publication.perimetre_cible`.
+    #
+    #  ⚠️ Descriptif, JAMAIS restrictif : ce sont `perimetre` / `batiment_id` /
+    #  `lot_id` qui gouvernent les droits de lecture (`utils/visibility`). La
+    #  distinction est l'arbitrage du 29/08/2026 — une AG est visible de tous les
+    #  copropriétaires, quel que soit le bâtiment dont elle parle (#617).
+    perimetre_cible: Optional[str] = None
 
     categorie: Optional[CategorieDocument] = Relationship(back_populates="documents")

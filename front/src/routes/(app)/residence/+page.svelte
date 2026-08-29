@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
+	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
@@ -83,8 +83,15 @@
 	let newCrAgTitre = '';
 	let newCrAgAnnee: string | number = '';
 	let newCrAgDateAg = '';
-	let newCrAgScope: 'copropriété' | 'bâtiment' = 'copropriété';
-	let newCrAgBatimentIds: number[] = [];
+	//  🔴 Des CODES de périmètre, plus des identifiants de bâtiments (#470).
+	//  L'écran parlait `number[]`, c'est-à-dire en clés primaires : il ne pouvait
+	//  cibler ni le parking, ni les caves, ni l'AFUL, ni un espace de bâtiment —
+	//  toute l'arborescence administrée lui était inaccessible.
+	//
+	//  ⚠️ Descriptif, jamais un droit : une AG est visible de TOUS les
+	//  copropriétaires quel que soit le bâtiment dont elle parle (#617). C'est
+	//  cet arbitrage qui a rendu la migration possible sans toucher aux accès.
+	let newCrAgPerimetre: string[] = [];
 	let newCrAgFile: File | null = null;
 	let savingCrAg = false;
 
@@ -375,28 +382,22 @@
 	async function addCrAg() {
 		if (!catIdCrAg || !newCrAgTitre.trim() || !newCrAgFile) return;
 		if (!newCrAgAnnee || !newCrAgDateAg) return;
-		if (newCrAgScope === 'bâtiment' && newCrAgBatimentIds.length === 0) return;
 		savingCrAg = true;
 		try {
 			//  🔴 UN PV D'AG N'EST JAMAIS RESTREINT PAR SON PÉRIMÈTRE : le ciblage
 			//  dit de quoi il parle, pas qui peut le lire. Il part donc toujours en
-			//  `résidence`, les bâtiments dans `batiments_ids_json` — le seul des
-			//  deux champs que `document_visible` ne consulte pas.
-			//  Le pourquoi et les trois écarts mesurés : migration 0159.
-			const perimetre = 'résidence';
-			const batimentId: number | undefined = undefined;
-			const batimentsJson =
-				newCrAgScope === 'copropriété' ? undefined : JSON.stringify(newCrAgBatimentIds);
+			//  `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
+			//  Le pourquoi : migration 0159.
 			const doc = await documentsApi.upload(
-				newCrAgTitre.trim(), catIdCrAg, newCrAgFile, perimetre, batimentId,
+				newCrAgTitre.trim(), catIdCrAg, newCrAgFile, 'résidence', undefined,
 				newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
 				newCrAgDateAg || undefined,
-				batimentsJson,
+				newCrAgPerimetre,
 			);
 			crAg = [doc, ...crAg];
 			showCrAgForm = false;
 			newCrAgTitre = ''; newCrAgAnnee = ''; newCrAgDateAg = '';
-			newCrAgScope = 'copropriété'; newCrAgBatimentIds = []; newCrAgFile = null;
+			newCrAgPerimetre = []; newCrAgFile = null;
 			toast('success', 'CR d\'AG ajouté');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -684,12 +685,14 @@
 		<svelte:fragment slot="badges" let:doc>
 			{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums">{doc.annee}</span>{/if}
 			{#if doc.date_ag}<span class="doc-date">AG du {fmt(doc.date_ag)}</span>{/if}
-			{#if doc.batiments_ids_json}
-				{#each JSON.parse(doc.batiments_ids_json) as bid (bid)}
-					<span class="badge badge-purple">{batimentLabel(bid)}</span>
-				{/each}
-			{:else if doc.batiment_id}
-				<span class="badge badge-purple">{batimentLabel(doc.batiment_id)}</span>
+			<!--  🔴 `perimetreLabel` sur des CODES, plus `batimentLabel` sur des
+			      identifiants (#470). Trois branches se sont réduites à une : le
+			      libellé d'un périmètre se calcule, il ne se décide pas ici.
+			      L'ancien rendu ne savait dire que « Bât. N » ou « Copropriété » ;
+			      celui-ci nomme le parking, les caves, l'AFUL et les espaces —
+			      et suit l'arbre quand un nœud est renommé. -->
+			{#if doc.perimetre_cible && !estPerimetreParDefaut(doc.perimetre_cible)}
+				<span class="badge badge-purple">&#x1F539; {perimetreLabel(doc.perimetre_cible)}</span>
 			{:else}
 				<span class="badge badge-green">Copropriété</span>
 			{/if}
@@ -823,27 +826,16 @@
 					<label for="plan-titre">Titre *</label>
 					<input id="plan-titre" type="text" bind:value={newPlanTitre} placeholder="ex : Plan de masse résidence" />
 				</div>
+				<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
+				      main (#470). L'écran parlait en identifiants de bâtiments : il ne
+				      pouvait cibler ni le parking, ni les caves, ni l'AFUL, ni un
+				      espace de bâtiment, et ne recevait aucune des corrections
+				      apportées à l'objet depuis. C'était le DERNIER des dix points
+				      d'usage à ne pas en hériter.
+				      `requis={false}` : une AG de toute la copropriété ne cible rien. -->
 				<div class="field">
-					<LibelleGroupe titre="Périmètre *" id="plan-perimetre" style="display:flex;gap:1rem;margin-top:.25rem">
-						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
-							<input type="radio" bind:group={newPlanPerimetre} value="résidence" /> Résidence entière
-						</label>
-						<label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
-							<input type="radio" bind:group={newPlanPerimetre} value="bâtiment" /> Bâtiment spécifique
-						</label>
-					</LibelleGroupe>
+					<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
 				</div>
-				{#if newPlanPerimetre === 'bâtiment'}
-					<div class="field">
-						<label for="plan-bat">Bâtiment *</label>
-						<select id="plan-bat" bind:value={newPlanBatimentId}>
-							<option value={0}>— Sélectionner —</option>
-							{#each batiments as b}
-								<option value={b.id}>Bâtiment {b.numero}</option>
-							{/each}
-						</select>
-					</div>
-				{/if}
 				<div class="field">
 					<label for="plan-file">Fichier *</label>
 					<input id="plan-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
@@ -916,32 +908,18 @@
 					<label for="ag-titre">Titre *</label>
 					<input id="ag-titre" type="text" bind:value={newCrAgTitre} placeholder="ex : PV AG ordinaire 2025" />
 				</div>
+				<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
+				      main (#470). L'écran parlait en identifiants de bâtiments : il ne
+				      pouvait cibler ni le parking, ni les caves, ni l'AFUL, ni un espace
+				      de bâtiment, et ne recevait aucune des corrections apportées à
+				      l'objet depuis. C'était le DERNIER des dix points d'usage à ne pas
+				      en hériter.
+
+				      ⚠️ `requis={false}` : une AG de toute la copropriété ne cible rien,
+				      et l'absence de périmètre est ici une réponse valide. -->
 				<div class="field">
-					<!--  `Pastille` et non un `.pill` réécrit : le composant porte son
-					      balisage ET son style, donc ils ne divergent pas (#470, #491). -->
-					<LibelleGroupe titre="Périmètre *" id="crag-perimetre" classe="perimetre-pills" style="margin-top:.25rem">
-						<Pastille active={newCrAgScope === 'copropriété'}
-							on:click={() => { newCrAgScope = 'copropriété'; newCrAgBatimentIds = []; }}
-						>Copropriété entière</Pastille>
-						<Pastille active={newCrAgScope === 'bâtiment'}
-							on:click={() => (newCrAgScope = 'bâtiment')}
-						>Bâtiment(s) spécifique(s)</Pastille>
-					</LibelleGroupe>
+					<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
 				</div>
-				{#if newCrAgScope === 'bâtiment'}
-					<div class="field">
-						<!--  Des pastilles, pas des cases : ce bloc CHOISIT (critère de #491). -->
-						<LibelleGroupe titre="Bâtiment(s) *" id="crag-batiments" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem">
-							{#each batiments as b (b.id)}
-								<Pastille active={newCrAgBatimentIds.includes(b.id)}
-									on:click={() => (newCrAgBatimentIds = newCrAgBatimentIds.includes(b.id)
-										? newCrAgBatimentIds.filter((i) => i !== b.id)
-										: [...newCrAgBatimentIds, b.id])}
-								>Bâtiment {b.numero}</Pastille>
-							{/each}
-						</LibelleGroupe>
-					</div>
-				{/if}
 				<div class="field">
 					<label for="ag-file">Fichier *</label>
 					<input id="ag-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
@@ -952,7 +930,7 @@
 			<div class="modal-footer">
 				<button class="btn" on:click={() => (showCrAgForm = false)}>Annuler</button>
 				<button class="btn btn-primary"
-					disabled={savingCrAg || !newCrAgAnnee || !newCrAgDateAg || !newCrAgTitre.trim() || !newCrAgFile || (newCrAgScope === 'bâtiment' && newCrAgBatimentIds.length === 0)}
+					disabled={savingCrAg || !newCrAgAnnee || !newCrAgDateAg || !newCrAgTitre.trim() || !newCrAgFile}
 					on:click={addCrAg}>
 					{savingCrAg ? 'Ajout…' : 'Ajouter'}
 				</button>
