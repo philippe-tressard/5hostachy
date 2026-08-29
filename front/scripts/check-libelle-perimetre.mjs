@@ -109,7 +109,8 @@ definirPerimetres([
 
 const echecs = [];
 const verifier = (quoi, obtenu, attendu) => {
-	if (obtenu !== attendu) echecs.push(`${quoi}\n        attendu : ${attendu}\n        obtenu  : ${obtenu}`);
+	if (obtenu !== attendu)
+		echecs.push(`${quoi}\n        attendu : ${attendu}\n        obtenu  : ${obtenu}`);
 };
 
 //  1. Un espace transverse est qualifié par son parent — le défaut signalé.
@@ -133,7 +134,11 @@ if (rendus.size !== 1) {
 	echecs.push(`le rendu dépend encore de l'ordre de saisie : ${[...rendus].join(' | ')}`);
 }
 //  5. Un nœud supprimé depuis ne fait pas perdre son badge au contenu.
-verifier('un code inconnu', perimetreLabel(['aful/voie', 'bat:99']), "AFUL › Voie d'accès · Bât. 99");
+verifier(
+	'un code inconnu',
+	perimetreLabel(['aful/voie', 'bat:99']),
+	"AFUL › Voie d'accès · Bât. 99",
+);
 
 if (echecs.length > 0) {
 	console.error('✗ Le rendu des périmètres côté front ne correspond plus :');

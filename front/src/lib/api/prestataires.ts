@@ -21,9 +21,13 @@ export const prestataires = {
 	delete: (id: number) => api.delete(`/prestataires/${id}`),
 	contrats: () => api.get<any[]>('/prestataires/contrats'),
 	createContrat: (data: unknown) => api.post<any>('/prestataires/contrats', data),
-	updateContrat: (id: number, data: unknown) => api.patch<any>(`/prestataires/contrats/${id}`, data),
+	updateContrat: (id: number, data: unknown) =>
+		api.patch<any>(`/prestataires/contrats/${id}`, data),
 	deleteContrat: (id: number) => api.delete(`/prestataires/contrats/${id}`),
-	releves: (type_compteur?: string) => api.get<any[]>(`/prestataires/releves${type_compteur ? '?type_compteur=' + encodeURIComponent(type_compteur) : ''}`),
+	releves: (type_compteur?: string) =>
+		api.get<any[]>(
+			`/prestataires/releves${type_compteur ? '?type_compteur=' + encodeURIComponent(type_compteur) : ''}`,
+		),
 	createReleve: (data: unknown) => api.post<any>('/prestataires/releves', data),
 	updateReleve: (id: number, data: unknown) => api.patch<any>(`/prestataires/releves/${id}`, data),
 	deleteReleve: (id: number) => api.delete(`/prestataires/releves/${id}`),
@@ -31,11 +35,20 @@ export const prestataires = {
 		postFormData(`/prestataires/releves/${id}/photo`, { file }),
 	compteurConfigs: () => api.get<any[]>('/prestataires/compteurs-config'),
 	createCompteurConfig: (data: unknown) => api.post<any>('/prestataires/compteurs-config', data),
-	updateCompteurConfig: (id: number, data: unknown) => api.patch<any>(`/prestataires/compteurs-config/${id}`, data),
+	updateCompteurConfig: (id: number, data: unknown) =>
+		api.patch<any>(`/prestataires/compteurs-config/${id}`, data),
 	deleteCompteurConfig: (id: number) => api.delete(`/prestataires/compteurs-config/${id}`),
 	// Notations
-	notations: (prestataireId?: number) => api.get<any[]>(`/prestataires/notations${prestataireId ? '?prestataire_id=' + prestataireId : ''}`),
-	createNotation: (data: { prestataire_id: number; note: number; commentaire?: string; contrat_id?: number }) => api.post<any>('/prestataires/notations', data),
+	notations: (prestataireId?: number) =>
+		api.get<any[]>(
+			`/prestataires/notations${prestataireId ? '?prestataire_id=' + prestataireId : ''}`,
+		),
+	createNotation: (data: {
+		prestataire_id: number;
+		note: number;
+		commentaire?: string;
+		contrat_id?: number;
+	}) => api.post<any>('/prestataires/notations', data),
 	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
 	// Synthèse
 	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),

@@ -65,12 +65,7 @@
 		</div>
 	</div>
 
-	<button
-		type="button"
-		class="btn-link"
-		on:click={() => input.click()}
-		disabled={uploading}
-	>
+	<button type="button" class="btn-link" on:click={() => input.click()} disabled={uploading}>
 		{uploading ? 'Chargement…' : label}
 	</button>
 
@@ -89,7 +84,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: .5rem;
+		gap: 0.5rem;
 	}
 
 	.preview {
@@ -104,11 +99,15 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: border-color .2s;
+		transition: border-color 0.2s;
 	}
 
-	.preview:hover { border-color: var(--color-primary, #2563eb); }
-	.preview.circle { border-radius: 50%; }
+	.preview:hover {
+		border-color: var(--color-primary, #2563eb);
+	}
+	.preview.circle {
+		border-radius: 50%;
+	}
 
 	.preview img {
 		width: 100%;
@@ -116,23 +115,33 @@
 		object-fit: cover;
 	}
 
-	.placeholder { font-size: 2rem; opacity: .4; }
+	.placeholder {
+		font-size: 2rem;
+		opacity: 0.4;
+	}
 
 	.overlay {
 		position: absolute;
-		top: 0; right: 0; bottom: 0; left: 0;
-		background: rgba(0,0,0,.35);
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		background: rgba(0, 0, 0, 0.35);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		opacity: 0;
-		transition: opacity .2s;
+		transition: opacity 0.2s;
 	}
 
 	.preview:hover .overlay,
-	.preview:focus-visible .overlay { opacity: 1; }
+	.preview:focus-visible .overlay {
+		opacity: 1;
+	}
 
-	.overlay-label { font-size: 1.5rem; }
+	.overlay-label {
+		font-size: 1.5rem;
+	}
 
 	/* Base commune dans `app.css` : forme, rotation et durée viennent de là. Ne
 	   restent ici que les deux vraies différences — la taille fixe et le blanc
@@ -141,7 +150,7 @@
 		width: 24px;
 		height: 24px;
 		border-width: 3px;
-		border-color: rgba(255,255,255,.4);
+		border-color: rgba(255, 255, 255, 0.4);
 		border-top-color: #fff;
 	}
 
@@ -149,11 +158,14 @@
 		background: none;
 		border: none;
 		color: var(--color-primary, #2563eb);
-		font-size: .8rem;
+		font-size: 0.8rem;
 		cursor: pointer;
 		padding: 0;
 		text-decoration: underline;
 	}
 
-	.btn-link:disabled { opacity: .5; cursor: default; }
+	.btn-link:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
 </style>

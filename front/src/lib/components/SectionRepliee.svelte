@@ -84,29 +84,70 @@
 	    Un séparateur appartient au composant qui rend ce qu'il sépare. Une page
 	    qui en pose un second ne le sait pas : elle ne voit pas le balisage de son
 	    enfant. */
-	.sr-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--color-border); }
+	.sr-section {
+		margin-top: 2rem;
+		padding-top: 1.5rem;
+		border-top: 2px solid var(--color-border);
+	}
 	.sr-entete {
-		display: flex; align-items: center; gap: .6rem; width: 100%;
-		padding: .7rem 1rem;
-		background: var(--color-surface); border: 1px solid var(--color-border);
-		border-radius: var(--radius); cursor: pointer;
-		font-size: .95rem; font-weight: 600; color: var(--color-text); text-align: left;
-		transition: background .15s, border-color .15s, color .15s;
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		padding: 0.7rem 1rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		cursor: pointer;
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--color-text);
+		text-align: left;
+		transition:
+			background 0.15s,
+			border-color 0.15s,
+			color 0.15s;
 	}
-	.sr-entete:hover { background: var(--color-bg); border-color: var(--color-primary); color: var(--color-primary); }
-	.sr-titre { flex: 1; }
+	.sr-entete:hover {
+		background: var(--color-bg);
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+	.sr-titre {
+		flex: 1;
+	}
 	.sr-compte {
-		display: inline-flex; align-items: center; justify-content: center;
-		background: var(--color-primary); color: #fff;
-		font-size: .75rem; font-weight: 700; padding: .15rem .5rem;
-		border-radius: 12px; min-width: 1.5rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--color-primary);
+		color: #fff;
+		font-size: 0.75rem;
+		font-weight: 700;
+		padding: 0.15rem 0.5rem;
+		border-radius: 12px;
+		min-width: 1.5rem;
 	}
-	.sr-chevron { font-size: .8rem; color: var(--color-text-muted); flex-shrink: 0; transition: transform .2s; }
-	.sr-entete[aria-expanded='true'] .sr-chevron { transform: scaleY(-1); }
-	.sr-contenu { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
+	.sr-chevron {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		flex-shrink: 0;
+		transition: transform 0.2s;
+	}
+	.sr-entete[aria-expanded='true'] .sr-chevron {
+		transform: scaleY(-1);
+	}
+	.sr-contenu {
+		margin-top: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
 
 	/*  Cible tactile (socle 11 §10) : le bandeau est le seul geste de la section. */
 	@media (max-width: 480px) {
-		.sr-entete { min-height: 44px; }
+		.sr-entete {
+			min-height: 44px;
+		}
 	}
 </style>

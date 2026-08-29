@@ -34,13 +34,28 @@
 <SectionFormulaire titre="Saisi pour" requis>
 	<div class="field champ-large saisi-pour-section">
 		<div class="saisi-pour-tabs">
-			<button type="button" class="tab-btn" class:active={mode === 'moi'} on:click={() => (mode = 'moi')}>
+			<button
+				type="button"
+				class="tab-btn"
+				class:active={mode === 'moi'}
+				on:click={() => (mode = 'moi')}
+			>
 				En mon nom
 			</button>
-			<button type="button" class="tab-btn" class:active={mode === 'resident'} on:click={() => (mode = 'resident')}>
+			<button
+				type="button"
+				class="tab-btn"
+				class:active={mode === 'resident'}
+				on:click={() => (mode = 'resident')}
+			>
 				Résident inscrit
 			</button>
-			<button type="button" class="tab-btn" class:active={mode === 'exterieur'} on:click={() => (mode = 'exterieur')}>
+			<button
+				type="button"
+				class="tab-btn"
+				class:active={mode === 'exterieur'}
+				on:click={() => (mode = 'exterieur')}
+			>
 				Personne extérieure
 			</button>
 		</div>
@@ -53,8 +68,19 @@
 			</select>
 		{:else if mode === 'exterieur'}
 			<div class="saisi-pour-exterieur">
-				<input type="text" bind:value={nom} placeholder="Nom complet *" aria-label="Nom complet de la personne" required />
-				<input type="email" bind:value={email} placeholder="Email (optionnel)" aria-label="Email de la personne" />
+				<input
+					type="text"
+					bind:value={nom}
+					placeholder="Nom complet *"
+					aria-label="Nom complet de la personne"
+					required
+				/>
+				<input
+					type="email"
+					bind:value={email}
+					placeholder="Email (optionnel)"
+					aria-label="Email de la personne"
+				/>
 			</div>
 		{/if}
 	</div>
@@ -64,25 +90,38 @@
 	.saisi-pour-section {
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		padding: .75rem;
-		margin-bottom: .5rem;
+		padding: 0.75rem;
+		margin-bottom: 0.5rem;
 	}
-	.saisi-pour-tabs { display: flex; gap: .25rem; margin-top: .5rem; flex-wrap: wrap; }
+	.saisi-pour-tabs {
+		display: flex;
+		gap: 0.25rem;
+		margin-top: 0.5rem;
+		flex-wrap: wrap;
+	}
 	/*  Les deux champs de la personne extérieure. Le `style=` en ligne qu'ils
 	    portaient dans le formulaire est devenu une classe en sortant : une règle
 	    nommée se relit, se surcharge et se contrôle — un `style=` ne fait rien de
 	    tout cela (`lint:styles`). */
-	.saisi-pour-exterieur { margin-top: .5rem; display: flex; flex-direction: column; gap: .5rem; }
+	.saisi-pour-exterieur {
+		margin-top: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
 	/*  Ces onglets-ci sont ENCADRES et non soulignes : ce sont des boutons de
 	    bascule dans un champ, pas la barre d'onglets d'une page. Bordure, rayon,
 	    fond et densite leur sont propres ; le reste vient de la charte (#607). */
 	.tab-btn {
-		padding: .375rem .75rem;
+		padding: 0.375rem 0.75rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		background: transparent;
-		font-size: .85rem;
-		transition: background .15s, color .15s, border-color .15s;
+		font-size: 0.85rem;
+		transition:
+			background 0.15s,
+			color 0.15s,
+			border-color 0.15s;
 	}
 	.tab-btn.active {
 		background: var(--color-primary);

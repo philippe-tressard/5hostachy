@@ -52,8 +52,7 @@ export const TOLERANCES = {
 		'formulaire LONG : aligné en haut au lieu d’être centré, et plus aéré',
 	'routes/auth/inscription/+page.svelte::auth-card':
 		'480 px au lieu de 400 — l’inscription porte deux fois plus de champs',
-	'routes/auth/inscription/+page.svelte::auth-logo':
-		'logo réduit sur une page déjà longue',
+	'routes/auth/inscription/+page.svelte::auth-logo': 'logo réduit sur une page déjà longue',
 
 	//  ── Boutons ──────────────────────────────────────────────────────────────
 	'routes/(app)/admin/+page.svelte::btn-sm':

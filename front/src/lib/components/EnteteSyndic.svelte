@@ -37,14 +37,23 @@
 	<div class="form-grid" style="max-width:580px;margin-bottom:1rem">
 		<label class="field champ-large">
 			Nom du syndic
-			<input type="text" bind:value={nom} placeholder="ex. Cabinet Bertrand"
-				disabled={source === 'contrat'} />
-			<AideSource active={source === 'contrat'} origine="contrat de syndic"
-				ou="Prestataires → Contrats" repli="Aucun contrat désigné : cette saisie s'affiche." />
+			<input
+				type="text"
+				bind:value={nom}
+				placeholder="ex. Cabinet Bertrand"
+				disabled={source === 'contrat'}
+			/>
+			<AideSource
+				active={source === 'contrat'}
+				origine="contrat de syndic"
+				ou="Prestataires → Contrats"
+				repli="Aucun contrat désigné : cette saisie s'affiche."
+			/>
 		</label>
 		<label class="field champ-large">
 			Adresse
-			<textarea rows="2" bind:value={adresse} placeholder="ex. 12 rue des Lilas, 75015 Paris"></textarea>
+			<textarea rows="2" bind:value={adresse} placeholder="ex. 12 rue des Lilas, 75015 Paris"
+			></textarea>
 		</label>
 		<label class="field champ-large">
 			Espace client (site web)
@@ -52,15 +61,22 @@
 		</label>
 		<div class="header-edit-actions" style="grid-column:1/-1">
 			<button class="btn btn-primary btn-sm" on:click={onEnregistrer} disabled={enregistrement}
-			>{enregistrement ? '…' : '\u{1F4BE} Enregistrer'}</button>
+				>{enregistrement ? '…' : '\u{1F4BE} Enregistrer'}</button
+			>
 			<button class="btn btn-sm btn-outline" on:click={() => (edition = false)}>Annuler</button>
 		</div>
 	</div>
 {:else}
 	<div class="header-summary">
 		<span>{nom || 'Nom du syndic non renseigné'}{adresse ? ` · ${adresse}` : ''}</span>
-		{#if siteWeb}<span style="margin-left:.5rem">· <a href={siteWeb} target="_blank" rel="noopener">Espace client</a></span>{/if}
-		<button type="button" class="btn-icon btn-icon-edit" title="Modifier"
-			on:click={() => (edition = true)}><Icon name="pencil" size={13} /></button>
+		{#if siteWeb}<span style="margin-left:.5rem"
+				>· <a href={siteWeb} target="_blank" rel="noopener">Espace client</a></span
+			>{/if}
+		<button
+			type="button"
+			class="btn-icon btn-icon-edit"
+			title="Modifier"
+			on:click={() => (edition = true)}><Icon name="pencil" size={13} /></button
+		>
 	</div>
 {/if}

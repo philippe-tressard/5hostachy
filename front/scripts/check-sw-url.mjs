@@ -122,8 +122,13 @@ const repli = sw.match(/createHandlerBoundToURL\(\s*["']([^"']+)["']\s*\)/);
 if (repli) {
 	const cible = repli[1];
 	//  Le repli n'est acceptable que si sa cible est RÉELLEMENT précachée.
-	const precachee = new RegExp(`["']url["']\\s*:\\s*["']${cible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`).test(sw)
-		|| new RegExp(`["']${cible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']\\s*,\\s*["']revision["']`).test(sw);
+	const precachee =
+		new RegExp(`["']url["']\\s*:\\s*["']${cible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`).test(
+			sw,
+		) ||
+		new RegExp(
+			`["']${cible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']\\s*,\\s*["']revision["']`,
+		).test(sw);
 	if (!precachee) {
 		console.error(
 			`\n✗ Le service worker replie les navigations sur « ${cible} », qui n'est PAS` +

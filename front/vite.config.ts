@@ -29,8 +29,12 @@ function buildDate(): string {
 	// recompose explicitement, sans dépendre du format d'une locale.
 	const parts = new Intl.DateTimeFormat('fr-FR', {
 		timeZone: 'Europe/Paris',
-		year: 'numeric', month: '2-digit', day: '2-digit',
-		hour: '2-digit', minute: '2-digit', hour12: false,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
 	}).formatToParts(new Date());
 	const p = (type: string) => parts.find((x) => x.type === type)?.value ?? '00';
 	return `${p('year')}/${p('month')}/${p('day')}-${p('hour')}:${p('minute')}`;

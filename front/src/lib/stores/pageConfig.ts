@@ -48,7 +48,10 @@ function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfi
 	if (next.onglets) {
 		for (const [k, v] of Object.entries(next.onglets)) {
 			if (typeof v === 'string') {
-				(next.onglets as any)[k] = { label: v, descriptif: decodeEscapedHtml((defaults.onglets as any)?.[k]?.descriptif ?? '') };
+				(next.onglets as any)[k] = {
+					label: v,
+					descriptif: decodeEscapedHtml((defaults.onglets as any)?.[k]?.descriptif ?? ''),
+				};
 			} else if (v && typeof v === 'object') {
 				(next.onglets as any)[k] = {
 					...v,
@@ -74,10 +77,15 @@ function normalizePageConfig(id: string, parsed: PageConfig, defaults: PageConfi
 		//  la page /tickets — même raison que les deux retraits ci-dessus.
 		oterOnglet(next, 'tickets');
 		if (next.onglets?.validations?.label === '✅ Validations') {
-			next.onglets.validations.label = defaults.onglets?.validations?.label ?? next.onglets.validations.label;
+			next.onglets.validations.label =
+				defaults.onglets?.validations?.label ?? next.onglets.validations.label;
 		}
-		if (next.onglets?.validations?.descriptif === 'Comptes en attente de validation et demandes d\'accès à traiter.') {
-			next.onglets.validations.descriptif = defaults.onglets?.validations?.descriptif ?? next.onglets.validations.descriptif;
+		if (
+			next.onglets?.validations?.descriptif ===
+			"Comptes en attente de validation et demandes d'accès à traiter."
+		) {
+			next.onglets.validations.descriptif =
+				defaults.onglets?.validations?.descriptif ?? next.onglets.validations.descriptif;
 		}
 	}
 
@@ -130,14 +138,20 @@ export async function loadSiteConfig(): Promise<void> {
  * Retourne la config d'une page à partir du store brut (réactif via $configStore).
  * Utiliser : $: _pc = getPageConfig($configStore, 'id', defaults)
  */
-export function getPageConfig(raw: Record<string, string>, id: string, defaults: PageConfig): PageConfig {
+export function getPageConfig(
+	raw: Record<string, string>,
+	id: string,
+	defaults: PageConfig,
+): PageConfig {
 	try {
 		const s = raw[`page_config_${id}`];
 		if (s) {
 			const parsed = normalizePageConfig(id, JSON.parse(s), defaults);
 			return { ...defaults, ...parsed };
 		}
-	} catch { /* ignore */ }
+	} catch {
+		/* ignore */
+	}
 	return defaults;
 }
 

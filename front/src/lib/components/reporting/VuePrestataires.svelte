@@ -26,14 +26,21 @@
 		reportPrestSynthLoading = true;
 		try {
 			reportPrestSynth = await prestApi.synthese(prestId);
-		} catch { toast('error', 'Erreur chargement synthèse'); reportPrestSynth = null; }
-		finally { reportPrestSynthLoading = false; }
+		} catch {
+			toast('error', 'Erreur chargement synthèse');
+			reportPrestSynth = null;
+		} finally {
+			reportPrestSynthLoading = false;
+		}
 	}
 </script>
 
 <!-- ── Synthèse prestataires ─────────────────────────────────────────── -->
 <div class="kpi-row" style="margin-bottom:1rem">
-	<div class="kpi-card"><div class="kpi-value">{reportPrestataires.length}</div><div class="kpi-label">Prestataires actifs</div></div>
+	<div class="kpi-card">
+		<div class="kpi-value">{reportPrestataires.length}</div>
+		<div class="kpi-label">Prestataires actifs</div>
+	</div>
 </div>
 <div class="report-table-wrap" style="margin-bottom:1.5rem">
 	<table class="report-table">
@@ -51,7 +58,11 @@
 					<td><strong>{p.nom}</strong></td>
 					<td>{p.specialite ?? '—'}</td>
 					<td>{p.type_prestataire ?? '—'}</td>
-					<td><button class="btn btn-sm btn-outline" on:click={() => loadPrestSynthese(p.id)}>Fiche synthèse</button></td>
+					<td
+						><button class="btn btn-sm btn-outline" on:click={() => loadPrestSynthese(p.id)}
+							>Fiche synthèse</button
+						></td
+					>
 				</tr>
 			{/each}
 		</tbody>
@@ -65,7 +76,9 @@
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
 			<h3 style="margin:0">&#x1F4C4; Fiche — {reportPrestSynth.nom}</h3>
-			<button class="btn btn-sm btn-outline" on:click={() => (reportPrestSynth = null)}>✕ Fermer</button>
+			<button class="btn btn-sm btn-outline" on:click={() => (reportPrestSynth = null)}
+				>✕ Fermer</button
+			>
 		</div>
 		<div class="report-grid-2" style="margin-bottom:1rem">
 			<div>
@@ -75,13 +88,23 @@
 				{#if reportPrestSynth.contacts && reportPrestSynth.contacts.length > 0}
 					<p><strong>Contacts :</strong></p>
 					{#each reportPrestSynth.contacts as c}
-						<p style="margin-left:1rem">📞 {c.telephone ?? '—'}{#if c.prenom || c.nom} — {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction} ({c.fonction}){/if}{#if c.email} · {c.email}{/if}</p>
+						<p style="margin-left:1rem">
+							📞 {c.telephone ?? '—'}{#if c.prenom || c.nom}
+								— {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction}
+								({c.fonction}){/if}{#if c.email}
+								· {c.email}{/if}
+						</p>
 					{/each}
 				{/if}
 			</div>
 			<div>
 				<p><strong>Contrats actifs :</strong> {reportPrestSynth.nb_contrats}</p>
-				<p><strong>Note moyenne :</strong> {reportPrestSynth.note_moyenne != null ? `${starsDisplay(reportPrestSynth.note_moyenne)} ${reportPrestSynth.note_moyenne}/5 (${reportPrestSynth.nb_notations} avis)` : 'Aucune notation'}</p>
+				<p>
+					<strong>Note moyenne :</strong>
+					{reportPrestSynth.note_moyenne != null
+						? `${starsDisplay(reportPrestSynth.note_moyenne)} ${reportPrestSynth.note_moyenne}/5 (${reportPrestSynth.nb_notations} avis)`
+						: 'Aucune notation'}
+				</p>
 				{#if reportPrestSynth.prochaines_visites && reportPrestSynth.prochaines_visites.length > 0}
 					<p><strong>Prochaines visites :</strong></p>
 					{#each reportPrestSynth.prochaines_visites as v}
@@ -112,7 +135,10 @@
 			<h4 style="font-size:.9rem;font-weight:600;margin:1rem 0 .5rem">Contrats</h4>
 			<div class="report-table-wrap">
 				<table class="report-table compact">
-					<thead><tr><th>Libellé</th><th>Équipement</th><th>Début</th><th>Prochaine visite</th></tr></thead>
+					<thead
+						><tr><th>Libellé</th><th>Équipement</th><th>Début</th><th>Prochaine visite</th></tr
+						></thead
+					>
 					<tbody>
 						{#each reportPrestSynth.contrats as c}
 							<tr>

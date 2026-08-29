@@ -26,7 +26,11 @@
 	async function loadArchivedPubs() {
 		if (archivedPubsLoaded) return;
 		archivedPubsLoaded = true;
-		try { archivedPubs = await pubsApi.list(true); } catch { /* silencieux */ }
+		try {
+			archivedPubs = await pubsApi.list(true);
+		} catch {
+			/* silencieux */
+		}
 	}
 
 	$: if (historyExpanded) loadArchivedPubs();
@@ -39,7 +43,7 @@
 		if (!confirm(`Supprimer définitivement « ${pub.titre} » ?`)) return;
 		try {
 			await pubsApi.delete(pub.id);
-			archivedPubs = archivedPubs.filter(p => p.id !== pub.id);
+			archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
 			toast('success', 'Publication supprimée');
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Impossible de supprimer');
@@ -64,13 +68,21 @@
 	bind:ouvert={historyExpanded}
 	let:objet={pub}
 >
-	<CarteActualite {pub} variante="historique"
+	<CarteActualite
+		{pub}
+		variante="historique"
 		expanded={expandedHistoryItems.has(pub.id)}
-		on:toggle={() => toggleHistoryItem(pub.id)}>
+		on:toggle={() => toggleHistoryItem(pub.id)}
+	>
 		<svelte:fragment slot="actions">
 			{#if $isAdmin}
-				<button class="btn-icon" aria-label="Supprimer" title="Supprimer définitivement" style="color:var(--color-danger)"
-					on:click|stopPropagation={() => deleteArchivedPub(pub)}>&#x1F5D1;&#xFE0F;</button>
+				<button
+					class="btn-icon"
+					aria-label="Supprimer"
+					title="Supprimer définitivement"
+					style="color:var(--color-danger)"
+					on:click|stopPropagation={() => deleteArchivedPub(pub)}>&#x1F5D1;&#xFE0F;</button
+				>
 			{/if}
 		</svelte:fragment>
 	</CarteActualite>

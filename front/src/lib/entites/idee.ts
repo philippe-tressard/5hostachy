@@ -45,10 +45,10 @@ export const IDEE: EntiteDeclaree = {
 			id: 'specifiques',
 			sansObjet:
 				"Une idée n'a rien à qualifier : ni catégorie, ni date, ni destinataire nommé. " +
-				'Elle se pose en un titre et une description, et c\'est le vote des voisins qui ' +
-				'la qualifie ensuite. C\'est la plus dépouillée des six entités du cadre, et ce ' +
+				"Elle se pose en un titre et une description, et c'est le vote des voisins qui " +
+				"la qualifie ensuite. C'est la plus dépouillée des six entités du cadre, et ce " +
 				'dépouillement est voulu — une boîte à idées qui demande de remplir un formulaire ' +
-				'ne reçoit pas d\'idées.',
+				"ne reçoit pas d'idées.",
 		},
 		{
 			//  🔴 L'idée A un workflow — Ouverte · Retenue · Réalisée · Rejetée — et il
@@ -67,7 +67,7 @@ export const IDEE: EntiteDeclaree = {
 				creation: {
 					motif: 'geste',
 					explication:
-						"On ne dépose pas une idée en la déclarant réalisée : elle naît « Ouverte ». " +
+						'On ne dépose pas une idée en la déclarant réalisée : elle naît « Ouverte ». ' +
 						"L'état se pose ensuite depuis la carte, et c'est le conseil syndical qui " +
 						"l'arbitre — pas l'auteur.",
 				},

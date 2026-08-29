@@ -55,7 +55,12 @@
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { publications as pubsApi, documents as docsApi, ApiError, type Publication } from '$lib/api';
+	import {
+		publications as pubsApi,
+		documents as docsApi,
+		ApiError,
+		type Publication,
+	} from '$lib/api';
 	import { perimetreDefautListe } from '$lib/utils';
 	import { richEmpty } from '$lib/publications';
 	import { ACCEPT_DOCUMENTS, nomFichier } from '$lib/fichiers';
@@ -77,7 +82,11 @@
 	 *   avec son motif. */
 	const etat: Etat = modeEdition ? 'edition' : 'creation';
 
-	const dispatch = createEventDispatcher<{ cree: Publication; modifie: Publication; annule: void }>();
+	const dispatch = createEventDispatcher<{
+		cree: Publication;
+		modifie: Publication;
+		annule: void;
+	}>();
 
 	//  ── 1. Titre ────────────────────────────────────────────────────────────
 	let titre = publication?.titre ?? '';
@@ -123,8 +132,11 @@
 
 	onMount(async () => {
 		if (!publication) return;
-		try { docsExistants = await docsApi.listByPublication(publication.id); }
-		catch { /* la section reste vide plutôt que de bloquer la correction */ }
+		try {
+			docsExistants = await docsApi.listByPublication(publication.id);
+		} catch {
+			/* la section reste vide plutôt que de bloquer la correction */
+		}
 	});
 
 	async function ajouterDocuments(e: Event) {
@@ -138,7 +150,10 @@
 			}
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Téléversement impossible');
-		} finally { docsEnCours = false; input.value = ''; }
+		} finally {
+			docsEnCours = false;
+			input.value = '';
+		}
 	}
 
 	async function retirerDocument(id: number) {
@@ -171,9 +186,16 @@
 	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
 
 	function reinitialiser() {
-		titre = ''; contenu = ''; urgente = false; epingle = false;
-		brouillon = false; partagerWhatsapp = false; envoyerSyndic = false;
-		envoyerCs = false; annonceHall = false; confidentiel = false;
+		titre = '';
+		contenu = '';
+		urgente = false;
+		epingle = false;
+		brouillon = false;
+		partagerWhatsapp = false;
+		envoyerSyndic = false;
+		envoyerCs = false;
+		annonceHall = false;
+		confidentiel = false;
 		perimetreCible = perimetreDefautListe();
 		publicCible = ['résidents'];
 		photos = [];
@@ -189,8 +211,12 @@
 				//  canaux ne sont pas renvoyés (section 9 absente, motif `geste`), les
 				//  documents pas non plus (motif `api`, #390).
 				const maj = await pubsApi.update(publication.id, {
-					titre: titre.trim(), contenu,
-					epingle, urgente, brouillon, confidentiel,
+					titre: titre.trim(),
+					contenu,
+					epingle,
+					urgente,
+					brouillon,
+					confidentiel,
 					perimetre_cible: perimetreCible,
 					public_cible: publicCible,
 					photos_urls: photos,
@@ -213,8 +239,12 @@
 			//  l'affiche de hall les voie. Divergence connue, suivie en #390.
 			const publierApresDocuments = !brouillon && annonceHall && pendingFiles.length > 0;
 			let pub = await pubsApi.create({
-				titre: titre.trim(), contenu, urgente, epingle,
-				perimetre_cible: perimetreCible, public_cible: publicCible,
+				titre: titre.trim(),
+				contenu,
+				urgente,
+				epingle,
+				perimetre_cible: perimetreCible,
+				public_cible: publicCible,
 				brouillon: publierApresDocuments ? true : brouillon,
 				photos_urls: photos,
 				partager_whatsapp: partagerWhatsapp,
@@ -225,7 +255,11 @@
 			});
 			if (pendingFiles.length > 0) {
 				for (const f of pendingFiles) {
-					try { await docsApi.uploadForPublication(f.name, pub.id, f); } catch { /* ignoré */ }
+					try {
+						await docsApi.uploadForPublication(f.name, pub.id, f);
+					} catch {
+						/* ignoré */
+					}
 				}
 			}
 			if (publierApresDocuments) {
@@ -236,7 +270,9 @@
 			dispatch('cree', pub);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		} finally { saving = false; }
+		} finally {
+			saving = false;
+		}
 	}
 </script>
 
@@ -246,8 +282,13 @@
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
 				<label for="pub-titre-{publication?.id ?? 'new'}">Titre *</label>
-				<input id="pub-titre-{publication?.id ?? 'new'}" type="text"
-					bind:value={titre} required maxlength="200" />
+				<input
+					id="pub-titre-{publication?.id ?? 'new'}"
+					type="text"
+					bind:value={titre}
+					required
+					maxlength="200"
+				/>
 			</div>
 		</SectionFormulaire>
 
@@ -275,15 +316,24 @@
 		      DÉCLARATION, qui porte chaque divergence avec son motif. -->
 		<ChampsCommuns
 			idPrefixe="pub-{publication?.id ?? 'new'}"
-			avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')} bind:perimetre={perimetreCible}
-			avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')} bind:destinataires={publicCible}
-			avecDescription={sectionPresente(PUBLICATION, etat, 'description')} descriptionRequise bind:description={contenu}
+			avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
+			bind:perimetre={perimetreCible}
+			avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
+			bind:destinataires={publicCible}
+			avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
+			descriptionRequise
+			bind:description={contenu}
 			descriptionPlaceholder="Contenu de l'actualité…"
-			avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')} bind:photos
-			avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')} documentsDifferes
-			documentsControle={modeEdition ? 'slot' : 'interne'} bind:documentsFichiers={pendingFiles}
+			avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')}
+			bind:photos
+			avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')}
+			documentsDifferes
+			documentsControle={modeEdition ? 'slot' : 'interne'}
+			bind:documentsFichiers={pendingFiles}
 			avecDiffusion={sectionPresente(PUBLICATION, etat, 'diffusion')}
-			bind:whatsapp={partagerWhatsapp} bind:syndic={envoyerSyndic} bind:cs={envoyerCs}
+			bind:whatsapp={partagerWhatsapp}
+			bind:syndic={envoyerSyndic}
+			bind:cs={envoyerCs}
 			aideWhatsapp={confidentiel
 				? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
 				: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
@@ -294,21 +344,31 @@
 			      la SECTION, elle — son rang, son intitulé, sa séparation — reste
 			      celle de `ChampsCommuns`. -->
 			<svelte:fragment slot="documents">
-					{#if docsExistants.length}
-						<ul class="docs-liste">
-							{#each docsExistants as doc (doc.id)}
-								<li>
-									<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
-									<button type="button" class="btn-icon-danger" aria-label="Retirer ce document"
-										title="Retirer ce document" on:click={() => retirerDocument(doc.id)}>🗑️</button>
-								</li>
-							{/each}
-						</ul>
-					{/if}
+				{#if docsExistants.length}
+					<ul class="docs-liste">
+						{#each docsExistants as doc (doc.id)}
+							<li>
+								<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
+								<button
+									type="button"
+									class="btn-icon-danger"
+									aria-label="Retirer ce document"
+									title="Retirer ce document"
+									on:click={() => retirerDocument(doc.id)}>🗑️</button
+								>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				<label class="btn btn-outline btn-sm docs-ajout">
 					{docsEnCours ? 'Téléversement…' : '+ Ajouter un document'}
-					<input type="file" multiple accept={ACCEPT_DOCUMENTS} disabled={docsEnCours}
-						on:change={ajouterDocuments} />
+					<input
+						type="file"
+						multiple
+						accept={ACCEPT_DOCUMENTS}
+						disabled={docsEnCours}
+						on:change={ajouterDocuments}
+					/>
 				</label>
 			</svelte:fragment>
 
@@ -335,7 +395,9 @@
 		      ⚠️ Corollaire : l'en-tête de page ne porte plus « ✕ Annuler » quand le
 		      formulaire est ouvert (#367 — deux commandes pour un seul formulaire). -->
 		<div class="form-actions">
-			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+				>Annuler</button
+			>
 			<button type="submit" class="btn btn-primary" disabled={saving}>
 				{saving ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
@@ -347,10 +409,32 @@
 	/*  La liste des documents déjà joints, en correction. Elle porte son style ici,
 	    avec le balisage qui l'utilise — un style laissé chez le parent n'atteint pas
 	    le balisage d'un enfant (v2.67.11). */
-	.docs-liste { list-style: none; margin: 0 0 .6rem; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
-	.docs-liste li { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
-	.docs-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.docs-ajout { display: inline-flex; cursor: pointer; }
-	.docs-ajout input[type='file'] { display: none; }
+	.docs-liste {
+		list-style: none;
+		margin: 0 0 0.6rem;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+	.docs-liste li {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.85rem;
+	}
+	.docs-nom {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.docs-ajout {
+		display: inline-flex;
+		cursor: pointer;
+	}
+	.docs-ajout input[type='file'] {
+		display: none;
+	}
 </style>
-

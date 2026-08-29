@@ -191,15 +191,15 @@
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if courantes.length === 0 && archivees.length === 0}
 	{#if erreur}
-	<div class="empty-state">
-		<h3>Impossible d'afficher les annonces</h3>
-		<p>{erreur}</p>
-	</div>
+		<div class="empty-state">
+			<h3>Impossible d'afficher les annonces</h3>
+			<p>{erreur}</p>
+		</div>
 	{:else}
-	<div class="empty-state">
-		<h3>Aucune annonce</h3>
-		<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
-	</div>
+		<div class="empty-state">
+			<h3>Aucune annonce</h3>
+			<p>Déposez la première annonce en cliquant sur « Déposer une annonce ».</p>
+		</div>
 	{/if}
 {:else}
 	{#if courantes.length === 0}

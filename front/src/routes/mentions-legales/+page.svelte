@@ -11,10 +11,16 @@
 		loadSiteConfig();
 		try {
 			const r = await fetch('/api/config/legal');
-			if (r.ok) { const d = await r.json(); customHtml = d['mentions_legales'] ?? ''; }
-		} catch { /* silencieux */ }
+			if (r.ok) {
+				const d = await r.json();
+				customHtml = d['mentions_legales'] ?? '';
+			}
+		} catch {
+			/* silencieux */
+		}
 	});
 </script>
+
 <svelte:head><title>Mentions légales — {_siteNom}</title></svelte:head>
 
 <main class="legal-page">
@@ -30,10 +36,13 @@
 	<section class="oss-section">
 		<h2>Logiciel libre</h2>
 		<p>
-			Ce site est propulsé par <strong>5Hostachy</strong>, une application open source de gestion de copropriété
-			publiée sous licence <strong>MIT</strong>.
-			Le code source est disponible sur
-			<a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer">GitHub&nbsp;→</a>
+			Ce site est propulsé par <strong>5Hostachy</strong>, une application open source de gestion de
+			copropriété publiée sous licence <strong>MIT</strong>. Le code source est disponible sur
+			<a
+				href="https://github.com/philippe-tressard/5hostachy"
+				target="_blank"
+				rel="noopener noreferrer">GitHub&nbsp;→</a
+			>
 		</p>
 	</section>
 </main>
@@ -41,14 +50,29 @@
 <footer class="legal-footer">
 	© {year}
 	&nbsp;·&nbsp; <a href={siteUrl} target="_blank" rel="noopener noreferrer">{siteNom}</a>
-	&nbsp;·&nbsp; <a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer">GitHub</a>
+	&nbsp;·&nbsp;
+	<a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer"
+		>GitHub</a
+	>
 </footer>
 
 <style>
 	/*  Ce qui est PROPRE aux mentions légales : la section « Logiciel libre »
 	    et ses intertitres. Le reste vit dans `styles/legal.css` (#583). */
-	.legal-page section { margin-bottom: 1.5rem; }
-	.legal-page h2 { font-size: 1rem; font-weight: 600; margin-bottom: .5rem; }
-	.oss-section { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
-	.oss-section a { color: var(--color-primary); }
+	.legal-page section {
+		margin-bottom: 1.5rem;
+	}
+	.legal-page h2 {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+	}
+	.oss-section {
+		margin-top: 2rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.oss-section a {
+		color: var(--color-primary);
+	}
 </style>

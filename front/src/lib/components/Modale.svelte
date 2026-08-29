@@ -1,3 +1,9 @@
+<script context="module" lang="ts">
+	/**  Combien de modales tiennent actuellement le défilement. Vit dans le MODULE :
+	 *   c'est un état du document, pas d'une instance. */
+	let compteurVerrous = 0;
+</script>
+
 <!--
   Modale.svelte — le fond, le rôle, `Échap` et le verrou de défilement, UNE fois.
 
@@ -104,20 +110,17 @@
 	if (typeof document !== 'undefined') poserVerrou();
 </script>
 
-<script context="module" lang="ts">
-	/**  Combien de modales tiennent actuellement le défilement. Vit dans le MODULE :
-	 *   c'est un état du document, pas d'une instance. */
-	let compteurVerrous = 0;
-</script>
-
 <svelte:window on:keydown={auClavier} />
 
-<div
-	class="modal-overlay"
-	role="presentation"
-	on:click|self={() => fermetureAuFond && fermer()}
->
-	<div class={classeBoite} style={styleBoite} role="dialog" aria-modal="true" aria-label={titre} tabindex="-1">
+<div class="modal-overlay" role="presentation" on:click|self={() => fermetureAuFond && fermer()}>
+	<div
+		class={classeBoite}
+		style={styleBoite}
+		role="dialog"
+		aria-modal="true"
+		aria-label={titre}
+		tabindex="-1"
+	>
 		<slot {fermer} />
 	</div>
 </div>

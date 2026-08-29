@@ -80,7 +80,7 @@ export function delaiArchivageMs(config: Record<string, string> | null | undefin
  */
 export function evenementArchive(
 	ev: { debut?: string | Date; fin?: string | Date | null },
-	delaiMs: number
+	delaiMs: number,
 ): boolean {
 	const fin = new Date((ev.fin ?? ev.debut) as string | Date);
 	return fin.getTime() + delaiMs < Date.now();

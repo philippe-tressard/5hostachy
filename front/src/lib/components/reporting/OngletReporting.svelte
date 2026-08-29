@@ -29,11 +29,24 @@
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, tickets as ticketsApi, type Ticket } from '$lib/api';
+	import {
+		prestataires as prestApi,
+		calendrier as calApi,
+		diagnostics as diagnosticsApi,
+		tickets as ticketsApi,
+		type Ticket,
+	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDatetime } from '$lib/date';
 	import { apiMessage } from '$lib/utils';
-	import { REPORT_VUES, type ReportVue, type ReportEvenement, type ReportPrestataire, type ReportContrat, type DiagType } from '$lib/reporting';
+	import {
+		REPORT_VUES,
+		type ReportVue,
+		type ReportEvenement,
+		type ReportPrestataire,
+		type ReportContrat,
+		type DiagType,
+	} from '$lib/reporting';
 	import VueKanban from './VueKanban.svelte';
 	import VueTickets from './VueTickets.svelte';
 	import VuePrestataires from './VuePrestataires.svelte';
@@ -80,7 +93,10 @@
 		if (typeof window === 'undefined' || typeof document === 'undefined') return;
 		const titrePrecedent = document.title;
 		const dateStr = new Date().toISOString().slice(0, 10);
-		const slug = title.replace(/^Reporting CS — /, '').replace(/[^\w\dÀ-ÿ]+/g, '-').replace(/-+$/, '');
+		const slug = title
+			.replace(/^Reporting CS — /, '')
+			.replace(/[^\w\dÀ-ÿ]+/g, '-')
+			.replace(/-+$/, '');
 		const titreImpression = `CS-${slug}-${dateStr}`;
 
 		let fait = false;
@@ -139,11 +155,15 @@
 		if (reportingLoaded && !force) return;
 		reportingLoading = true;
 		try {
-			const [ticketsList, prestataires, evenements, contrats, diagTypes, notations] = await Promise.all([
-				ticketsApi.list(), prestApi.list(), calApi.list(),
-				prestApi.contrats(), diagnosticsApi.listTypes(),
-				prestApi.notations()
-			]);
+			const [ticketsList, prestataires, evenements, contrats, diagTypes, notations] =
+				await Promise.all([
+					ticketsApi.list(),
+					prestApi.list(),
+					calApi.list(),
+					prestApi.contrats(),
+					diagnosticsApi.listTypes(),
+					prestApi.notations(),
+				]);
 			tickets = ticketsList;
 			reportPrestataires = prestataires as ReportPrestataire[];
 			reportEvenements = evenements as ReportEvenement[];
@@ -157,7 +177,10 @@
 			}
 			reportNoteMoyParPrest = new Map();
 			for (const [pid, notes] of noteMap) {
-				reportNoteMoyParPrest.set(pid, { moy: Math.round(notes.reduce((a, b) => a + b, 0) / notes.length * 10) / 10, nb: notes.length });
+				reportNoteMoyParPrest.set(pid, {
+					moy: Math.round((notes.reduce((a, b) => a + b, 0) / notes.length) * 10) / 10,
+					nb: notes.length,
+				});
 			}
 			reportingLoaded = true;
 		} catch (e: any) {
@@ -185,33 +208,44 @@
 </script>
 
 <div class="reporting-panel">
-		<div class="reporting-toolbar no-print">
-			<div class="reporting-switch">
-				<Pastille active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
-					&#x1F4CC; Suivi des dossiers
-				</Pastille>
-				<Pastille active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
-					&#x1F4CA; Analyse tickets
-				</Pastille>
-				<Pastille active={reportView === 'prestataires'} on:click={() => (reportView = 'prestataires')}>
-					&#x1F3E2; Prestataires
-				</Pastille>
-				<Pastille active={reportView === 'renouvellements'} on:click={() => (reportView = 'renouvellements')}>
-					&#x1F4C5; Renouvellements
-				</Pastille>
-				<Pastille active={reportView === 'relance'} on:click={() => (reportView = 'relance')}>
-					&#x1F514; Relance syndic
-				</Pastille>
-			</div>
-			<div class="reporting-actions">
-				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportView === 'relance' ? relanceChargement : reportingLoading} title="Rafraîchir les données">
-					&#x1F504;{(reportView === 'relance' ? relanceChargement : reportingLoading) ? ' …' : ''}
-				</button>
-				<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
-					&#x1F5A8; Imprimer / PDF
-				</button>
-			</div>
+	<div class="reporting-toolbar no-print">
+		<div class="reporting-switch">
+			<Pastille active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
+				&#x1F4CC; Suivi des dossiers
+			</Pastille>
+			<Pastille active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
+				&#x1F4CA; Analyse tickets
+			</Pastille>
+			<Pastille
+				active={reportView === 'prestataires'}
+				on:click={() => (reportView = 'prestataires')}
+			>
+				&#x1F3E2; Prestataires
+			</Pastille>
+			<Pastille
+				active={reportView === 'renouvellements'}
+				on:click={() => (reportView = 'renouvellements')}
+			>
+				&#x1F4C5; Renouvellements
+			</Pastille>
+			<Pastille active={reportView === 'relance'} on:click={() => (reportView = 'relance')}>
+				&#x1F514; Relance syndic
+			</Pastille>
 		</div>
+		<div class="reporting-actions">
+			<button
+				class="btn btn-sm btn-outline"
+				on:click={refreshReporting}
+				disabled={reportView === 'relance' ? relanceChargement : reportingLoading}
+				title="Rafraîchir les données"
+			>
+				&#x1F504;{(reportView === 'relance' ? relanceChargement : reportingLoading) ? ' …' : ''}
+			</button>
+			<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
+				&#x1F5A8; Imprimer / PDF
+			</button>
+		</div>
+	</div>
 
 	<div class="reporting-print-header">
 		<h2>{reportPrintTitle || titreOnglet}</h2>
@@ -227,8 +261,17 @@
 	{:else if reportView === 'prestataires'}
 		<VuePrestataires {reportPrestataires} />
 	{:else if reportView === 'renouvellements'}
-		<VueRenouvellements {reportContrats} {reportPrestataires} {reportDiagTypes} {reportNoteMoyParPrest} />
+		<VueRenouvellements
+			{reportContrats}
+			{reportPrestataires}
+			{reportDiagTypes}
+			{reportNoteMoyParPrest}
+		/>
 	{:else if reportView === 'relance'}
-		<VueRelanceSyndic bind:this={vueRelance} bind:chargement={relanceChargement} bind:estVide={relanceVide} />
+		<VueRelanceSyndic
+			bind:this={vueRelance}
+			bind:chargement={relanceChargement}
+			bind:estVide={relanceVide}
+		/>
 	{/if}
 </div>

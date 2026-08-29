@@ -34,7 +34,8 @@
 
 <span class="aide-source">
 	{#if active}
-		&#x1F517; Vient du <strong>{origine}</strong>{#if ou} — se change dans {ou}{/if}.
+		&#x1F517; Vient du <strong>{origine}</strong>{#if ou}
+			— se change dans {ou}{/if}.
 	{:else}
 		&#x2139;&#xFE0F; {repli}
 	{/if}
@@ -45,8 +46,8 @@
 	    déjà ; ce texte dit seulement POURQUOI. */
 	.aide-source {
 		display: block;
-		margin-top: .3rem;
-		font-size: .75rem;
+		margin-top: 0.3rem;
+		font-size: 0.75rem;
 		line-height: 1.45;
 		color: var(--color-text-muted);
 	}

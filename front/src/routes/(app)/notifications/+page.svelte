@@ -1,6 +1,6 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
-import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { notifications as notifApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -32,16 +32,20 @@ import { onMount } from 'svelte';
 	async function markRead(id: number) {
 		try {
 			await notifApi.markRead(id);
-			items = items.map(n => n.id === id ? { ...n, lue: true } : n);
-		} catch { toast('error', 'Erreur'); }
+			items = items.map((n) => (n.id === id ? { ...n, lue: true } : n));
+		} catch {
+			toast('error', 'Erreur');
+		}
 	}
 
 	async function markAll() {
 		try {
 			await notifApi.markAllRead();
-			items = items.map(n => ({ ...n, lue: true }));
+			items = items.map((n) => ({ ...n, lue: true }));
 			toast('success', 'Toutes les notifications marquées comme lues');
-		} catch { toast('error', 'Erreur'); }
+		} catch {
+			toast('error', 'Erreur');
+		}
 	}
 
 	async function remove(id: number) {
@@ -49,26 +53,29 @@ import { onMount } from 'svelte';
 		deleting = new Set([...deleting, id]);
 		try {
 			await notifApi.delete(id);
-			items = items.filter(n => n.id !== id);
-		} catch { toast('error', 'Erreur lors de la suppression'); }
-		finally { deleting.delete(id); deleting = deleting; }
+			items = items.filter((n) => n.id !== id);
+		} catch {
+			toast('error', 'Erreur lors de la suppression');
+		} finally {
+			deleting.delete(id);
+			deleting = deleting;
+		}
 	}
 
-	$: unread = items.filter(n => !n.lue).length;
+	$: unread = items.filter((n) => !n.lue).length;
 	$: grouped = group(items);
 
 	function group(notifs: any[]) {
 		const today: any[] = [];
 		const older: any[] = [];
 		const now = Date.now();
-		notifs.forEach(n => {
+		notifs.forEach((n) => {
 			const age = now - new Date(n.cree_le).getTime();
 			if (age < 86400000) today.push(n);
 			else older.push(n);
 		});
 		return { today, older };
 	}
-
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -77,7 +84,9 @@ import { onMount } from 'svelte';
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'bell'}>
 	{#if unread > 0}
-		<span style="font-size:.85rem;color:var(--color-text-muted)">{unread} non lue{unread > 1 ? 's' : ''}</span>
+		<span style="font-size:.85rem;color:var(--color-text-muted)"
+			>{unread} non lue{unread > 1 ? 's' : ''}</span
+		>
 		<button class="btn btn-outline btn-sm" on:click={markAll}>Tout marquer lu</button>
 	{/if}
 </EntetePage>
@@ -102,15 +111,25 @@ import { onMount } from 'svelte';
 							<strong style="font-size:.95rem">{n.titre}</strong>
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
-						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">{@html safeRichContent(n.corps)}</p>
-						<small style="color:var(--color-text-muted);font-size:.75rem">{fmtTime(n.cree_le)}</small>
+						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
+							{@html safeRichContent(n.corps)}
+						</p>
+						<small style="color:var(--color-text-muted);font-size:.75rem"
+							>{fmtTime(n.cree_le)}</small
+						>
 					</div>
 				</div>
 				<div class="notif-actions">
 					{#if !n.lue}
-						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}>Marquer lu</button>
+						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}
+							>Marquer lu</button
+						>
 					{/if}
-					<button class="btn btn-danger btn-sm" disabled={deleting.has(n.id)} on:click={() => remove(n.id)}>✕</button>
+					<button
+						class="btn btn-danger btn-sm"
+						disabled={deleting.has(n.id)}
+						on:click={() => remove(n.id)}>✕</button
+					>
 				</div>
 			</div>
 		{/each}
@@ -127,15 +146,25 @@ import { onMount } from 'svelte';
 							<strong style="font-size:.95rem">{n.titre}</strong>
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
-						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">{@html safeRichContent(n.corps)}</p>
-						<small style="color:var(--color-text-muted);font-size:.75rem">{fmtDateShort(n.cree_le)}</small>
+						<p style="font-size:.875rem;color:var(--color-text-muted);margin:0">
+							{@html safeRichContent(n.corps)}
+						</p>
+						<small style="color:var(--color-text-muted);font-size:.75rem"
+							>{fmtDateShort(n.cree_le)}</small
+						>
 					</div>
 				</div>
 				<div class="notif-actions">
 					{#if !n.lue}
-						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}>Marquer lu</button>
+						<button class="btn btn-outline btn-sm" on:click={() => markRead(n.id)}
+							>Marquer lu</button
+						>
 					{/if}
-					<button class="btn btn-danger btn-sm" disabled={deleting.has(n.id)} on:click={() => remove(n.id)}>✕</button>
+					<button
+						class="btn btn-danger btn-sm"
+						disabled={deleting.has(n.id)}
+						on:click={() => remove(n.id)}>✕</button
+					>
 				</div>
 			</div>
 		{/each}
@@ -144,17 +173,59 @@ import { onMount } from 'svelte';
 
 <style>
 	/*  Seul l'espacement bas differe de la charte (#607, 28/08/2026). */
-	.section-title { margin-bottom: .5rem; }
-	.notif-row { display: flex; justify-content: space-between; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; gap: .5rem; }
-	.notif-unread { border-left: 3px solid var(--color-primary); }
-	.notif-read { opacity: .7; }
-	.notif-body { display: flex; align-items: flex-start; gap: .6rem; flex: 1; min-width: 0; }
-	.notif-content { flex: 1; min-width: 0; }
-	.notif-actions { display: flex; gap: .35rem; flex-shrink: 0; }
-	.unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); margin-top: 6px; flex-shrink: 0; }
+	.section-title {
+		margin-bottom: 0.5rem;
+	}
+	.notif-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		padding: 0.85rem 1rem;
+		margin-bottom: 0.4rem;
+		gap: 0.5rem;
+	}
+	.notif-unread {
+		border-left: 3px solid var(--color-primary);
+	}
+	.notif-read {
+		opacity: 0.7;
+	}
+	.notif-body {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+		flex: 1;
+		min-width: 0;
+	}
+	.notif-content {
+		flex: 1;
+		min-width: 0;
+	}
+	.notif-actions {
+		display: flex;
+		gap: 0.35rem;
+		flex-shrink: 0;
+	}
+	.unread-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--color-primary);
+		margin-top: 6px;
+		flex-shrink: 0;
+	}
 
 	/*  Ce lien de retour est plus discret et plus proche du contenu que la norme :
 	    variation assumee, le reste vient de la charte (#607, 28/08/2026). */
-	.back-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--color-text-muted); margin-bottom: .75rem; }
-	.back-link:hover { color: var(--color-primary); }
+	.back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.back-link:hover {
+		color: var(--color-primary);
+	}
 </style>

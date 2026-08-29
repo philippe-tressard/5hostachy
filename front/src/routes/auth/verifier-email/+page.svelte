@@ -53,17 +53,16 @@
 
 		{#if status === 'loading'}
 			<p style="text-align:center; color:var(--color-text-muted)">Vérification en cours…</p>
-
 		{:else if status === 'success'}
 			<div class="alert alert-success">
 				<strong>Adresse e-mail vérifiée !</strong><br />
-				Votre adresse a été confirmée. Votre compte est maintenant en attente de validation par le conseil syndical.<br />
+				Votre adresse a été confirmée. Votre compte est maintenant en attente de validation par le conseil
+				syndical.<br />
 				Vous recevrez un e-mail dès qu'il sera activé.
 			</div>
 			<div style="text-align:center; margin-top:1rem">
 				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>
 			</div>
-
 		{:else if status === 'expired'}
 			<div class="alert alert-error">
 				{errorMessage}
@@ -88,9 +87,10 @@
 				{/if}
 			</div>
 			<div style="text-align:center; margin-top:1rem">
-				<a href="/auth/connexion" style="font-size:.85rem; color:var(--color-text-muted)">Retour à la connexion</a>
+				<a href="/auth/connexion" style="font-size:.85rem; color:var(--color-text-muted)"
+					>Retour à la connexion</a
+				>
 			</div>
-
 		{:else}
 			<div class="alert alert-error">{errorMessage}</div>
 			<div style="text-align:center; margin-top:1rem">

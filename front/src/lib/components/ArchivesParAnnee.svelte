@@ -100,9 +100,10 @@
 	//  s'ouvre sur rien de visible donne l'impression d'être vide.
 	let premierDepliage = true;
 	$: if (ouvert && premierDepliage && parAnnee.length > 0) {
-		const visee = anneeOuverte !== null && parAnnee.some(([a]) => a === anneeOuverte)
-			? anneeOuverte
-			: parAnnee[0][0];
+		const visee =
+			anneeOuverte !== null && parAnnee.some(([a]) => a === anneeOuverte)
+				? anneeOuverte
+				: parAnnee[0][0];
 		anneesOuvertes = new Set([visee]);
 		premierDepliage = false;
 	}
@@ -111,8 +112,12 @@
 	//  rechargement de la page) doit s'ouvrir aussi — sinon le lien mène à une
 	//  section ouverte sur une AUTRE année, ce qui se lit « l'objet n'existe
 	//  plus ».
-	$: if (!premierDepliage && anneeOuverte !== null && !anneesOuvertes.has(anneeOuverte)
-	       && parAnnee.some(([a]) => a === anneeOuverte)) {
+	$: if (
+		!premierDepliage &&
+		anneeOuverte !== null &&
+		!anneesOuvertes.has(anneeOuverte) &&
+		parAnnee.some(([a]) => a === anneeOuverte)
+	) {
 		anneesOuvertes = new Set([...anneesOuvertes, anneeOuverte]);
 	}
 </script>

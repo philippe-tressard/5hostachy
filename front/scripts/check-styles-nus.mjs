@@ -156,7 +156,6 @@ const PLANCHER_STYLES = 200;
  */
 const PLANCHER_REGLES_SAISIE = 8;
 
-
 // ── Entrées/sorties : tout ce qui touche le disque ou la sortie vit ICI ─────
 
 function abandonner(message) {
@@ -315,9 +314,7 @@ function signaler(relatif, cle, ligne, quoi, remede, detail) {
 		tolerancesVues.add(cle);
 		return;
 	}
-	fautes.push(
-		`${relatif}:${ligne} — ${quoi}\n      ${detail}\n      → ${remede}`,
-	);
+	fautes.push(`${relatif}:${ligne} — ${quoi}\n      ${detail}\n      → ${remede}`);
 }
 
 for (const fichier of fichiers) {
@@ -399,9 +396,7 @@ for (const fichier of fichiers) {
 		for (const classe of classesDe(balise.attributs)) {
 			const portees = PROPS_STRUCTURE[classe];
 			if (!portees) continue;
-			const redites = declarations
-				.map((d) => d.propriete)
-				.filter((p) => portees.includes(p));
+			const redites = declarations.map((d) => d.propriete).filter((p) => portees.includes(p));
 			if (!redites.length) continue;
 			signaler(
 				relatif,

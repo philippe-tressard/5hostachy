@@ -54,22 +54,35 @@
 	</p>
 
 	<div class="form-actions">
-		<button type="button" class="btn btn-primary" on:click={() => onSave(valeurs, restreindre)}>Enregistrer</button>
+		<button type="button" class="btn btn-primary" on:click={() => onSave(valeurs, restreindre)}
+			>Enregistrer</button
+		>
 	</div>
 </section>
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	/*  Seul `flex-wrap` differe de la charte (#607, 28/08/2026). */
-	.form-actions { flex-wrap: wrap; }
-	.checkbox-field { display: flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
-	.checkbox-field input { margin: 0; flex-shrink: 0; }
+	.form-actions {
+		flex-wrap: wrap;
+	}
+	.checkbox-field {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+	.checkbox-field input {
+		margin: 0;
+		flex-shrink: 0;
+	}
 	/*  L'aide s'aligne sur le LIBELLÉ, pas sur le bord de la carte : largeur de la
 	    case (~1rem) plus l'écart (.5rem). */
 	.aide {
-		font-size: .82rem;
+		font-size: 0.82rem;
 		color: var(--color-text-muted);
-		margin: .35rem 0 0;
+		margin: 0.35rem 0 0;
 		padding-left: 1.5rem;
 		line-height: 1.45;
 	}

@@ -47,10 +47,12 @@
 	export let batiments: any[] = [];
 
 	$: hasOrphanLots = (copropriete?.nb_parkings_communs ?? 0) > 0;
-	$: totalAppart  = batiments.reduce((s, b) => s + (b.nb_appartements ?? 0), 0);
-	$: totalCave    = batiments.reduce((s, b) => s + (b.nb_caves ?? 0), 0);
-	$: totalParking = batiments.reduce((s, b) => s + (b.nb_parkings ?? 0), 0) + (copropriete?.nb_parkings_communs ?? 0);
-	$: totalLocaux  = batiments.reduce((s, b) => s + (b.nb_locaux_commerciaux ?? 0), 0);
+	$: totalAppart = batiments.reduce((s, b) => s + (b.nb_appartements ?? 0), 0);
+	$: totalCave = batiments.reduce((s, b) => s + (b.nb_caves ?? 0), 0);
+	$: totalParking =
+		batiments.reduce((s, b) => s + (b.nb_parkings ?? 0), 0) +
+		(copropriete?.nb_parkings_communs ?? 0);
+	$: totalLocaux = batiments.reduce((s, b) => s + (b.nb_locaux_commerciaux ?? 0), 0);
 </script>
 
 <div class="card" style="padding:1.25rem">
@@ -100,7 +102,12 @@
 			{#if copropriete.assurance_compagnie}
 				<div class="info-item">
 					<span class="info-label">🛡️ Assurance</span>
-					<span class="info-value">{copropriete.assurance_compagnie}{echeance(copropriete.assurance_echeance, copropriete.assurance_reconduit)}</span>
+					<span class="info-value"
+						>{copropriete.assurance_compagnie}{echeance(
+							copropriete.assurance_echeance,
+							copropriete.assurance_reconduit,
+						)}</span
+					>
 				</div>
 			{/if}
 			{#if copropriete.syndic_cabinet}
@@ -110,7 +117,10 @@
 				<div class="info-item">
 					<span class="info-label">🏢 Syndic</span>
 					<span class="info-value">
-						<a href="/annuaire#syndic">{copropriete.syndic_cabinet}</a><span class:mandat-echu={copropriete.syndic_echu}>{mandat(copropriete.syndic_echeance, copropriete.syndic_echu)}</span>
+						<a href="/annuaire#syndic">{copropriete.syndic_cabinet}</a><span
+							class:mandat-echu={copropriete.syndic_echu}
+							>{mandat(copropriete.syndic_echeance, copropriete.syndic_echu)}</span
+						>
 					</span>
 				</div>
 			{/if}
@@ -169,9 +179,13 @@
 	.info-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-		gap: .6rem;
+		gap: 0.6rem;
 	}
-	.info-item { display: flex; flex-direction: column; gap: .1rem; }
+	.info-item {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
 
 	/*  Les contrats : deux colonnes, séparés du bloc d'identité par un filet.
 	    Le filet dit que ce sont deux natures d'information, là où un simple
@@ -179,39 +193,62 @@
 	.contrats-grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: .6rem 1.5rem;
+		gap: 0.6rem 1.5rem;
 		margin-top: 1rem;
-		padding-top: .9rem;
+		padding-top: 0.9rem;
 		border-top: 1px solid var(--color-border);
 	}
 	@media (max-width: 560px) {
-		.contrats-grid { grid-template-columns: 1fr; }
+		.contrats-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 	.info-label {
-		font-size: .72rem;
+		font-size: 0.72rem;
 		color: var(--color-text-muted);
 		text-transform: uppercase;
-		letter-spacing: .04em;
+		letter-spacing: 0.04em;
 		font-weight: 600;
 	}
-	.info-value { font-size: .9rem; font-weight: 500; }
-	.info-highlight { color: var(--color-primary); font-weight: 700; }
+	.info-value {
+		font-size: 0.9rem;
+		font-weight: 500;
+	}
+	.info-highlight {
+		color: var(--color-primary);
+		font-weight: 700;
+	}
 	/*  Un mandat échu n'est pas une information de plus : c'est une décision en
 	    attente. La couleur d'alerte le sort de la lecture ordinaire. */
-	.mandat-echu { color: var(--color-danger, #dc2626); font-weight: 600; }
+	.mandat-echu {
+		color: var(--color-danger, #dc2626);
+		font-weight: 600;
+	}
 
 	/* ── Tableau bâtiments ────────────────────────────────────────────── */
-	.batiment-table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-top: .25rem; }
+	.batiment-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.875rem;
+		margin-top: 0.25rem;
+	}
 	.batiment-table th {
 		text-align: left;
-		padding: .4rem .75rem;
-		font-size: .72rem;
+		padding: 0.4rem 0.75rem;
+		font-size: 0.72rem;
 		text-transform: uppercase;
-		letter-spacing: .04em;
+		letter-spacing: 0.04em;
 		color: var(--color-text-muted);
 		border-bottom: 2px solid var(--color-border);
 		font-weight: 600;
 	}
-	.batiment-table td { padding: .4rem .75rem; border-bottom: 1px solid var(--color-border); }
-	.batiment-table tfoot td { font-weight: 700; border-top: 2px solid var(--color-border); border-bottom: none; }
+	.batiment-table td {
+		padding: 0.4rem 0.75rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+	.batiment-table tfoot td {
+		font-weight: 700;
+		border-top: 2px solid var(--color-border);
+		border-bottom: none;
+	}
 </style>

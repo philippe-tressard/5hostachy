@@ -189,7 +189,9 @@ const definiesGlobal = new Set(
 	[...sansCommentairesCss(global).matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]),
 );
 if (definiesGlobal.size === 0) {
-	console.error(`✗ Cas zéro : aucune classe trouvée dans ${fichiersCssGlobal(RACINE).join(', ') || '(aucun fichier)'}.`);
+	console.error(
+		`✗ Cas zéro : aucune classe trouvée dans ${fichiersCssGlobal(RACINE).join(', ') || '(aucun fichier)'}.`,
+	);
 	process.exit(1);
 }
 
@@ -238,7 +240,10 @@ for (const chemin of fichiers) {
 	const tolerees = TOLEREES[relatif] ?? [];
 	for (const c of employees) {
 		if (definiesLocal.has(c) || definiesGlobal.has(c)) continue;
-		if (tolerees.includes(c)) { toleranceServies.add(`${relatif}::${c}`); continue; }
+		if (tolerees.includes(c)) {
+			toleranceServies.add(`${relatif}::${c}`);
+			continue;
+		}
 		erreurs.push(`${relatif} — .${c}`);
 	}
 }
@@ -248,8 +253,8 @@ if (employeesTotal < CLASSES_MINIMALES) {
 		`✗ Cas zéro : ${employeesTotal} classe(s) employée(s) relevée(s), ${CLASSES_MINIMALES} attendues au minimum.`,
 	);
 	console.error(
-		"Le front en portait plus de 900 le 19/08/2026. Un effondrement du relevé dit\n" +
-			"que le contrôle a cessé de voir, pas que le défaut a disparu.",
+		'Le front en portait plus de 900 le 19/08/2026. Un effondrement du relevé dit\n' +
+			'que le contrôle a cessé de voir, pas que le défaut a disparu.',
 	);
 	process.exit(1);
 }
@@ -284,7 +289,9 @@ if (erreurs.length) {
 }
 
 if (fuites.length) {
-	console.error('✗ Redéfinition(s) de la charte depuis un écran — elles débordent sur tout le site :\n');
+	console.error(
+		'✗ Redéfinition(s) de la charte depuis un écran — elles débordent sur tout le site :\n',
+	);
 	for (const f of fuites) console.error(`  • ${f}`);
 	console.error(
 		'\n🔴 Un `:global(.x)` de PREMIER NIVEAU n’est pas scopé, et SvelteKit charge la\n' +

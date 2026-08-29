@@ -171,21 +171,23 @@
 		flex-wrap: wrap;
 		justify-content: center;
 		max-width: min(560px, calc(100vw - 2rem));
-		padding: .75rem 1rem;
+		padding: 0.75rem 1rem;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-left: 4px solid var(--color-primary);
 		border-radius: var(--radius);
 		box-shadow: var(--shadow);
-		font-size: .875rem;
+		font-size: 0.875rem;
 		color: var(--color-text);
 	}
 
-	.maj-texte { flex: 1 1 auto; }
+	.maj-texte {
+		flex: 1 1 auto;
+	}
 
 	.maj-actions {
 		display: flex;
-		gap: .5rem;
+		gap: 0.5rem;
 		flex: 0 0 auto;
 	}
 </style>

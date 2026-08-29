@@ -146,14 +146,18 @@ export function tolerancesMortes(servies) {
 // 🔴 `${BASH_SOURCE}` de bash n'a pas d'équivalent ici : on compare l'URL du
 // module au chemin lancé. Sans ce garde, un contrôle qui importe ce module en
 // ayant reçu `--selftest` verrait ces tests s'exécuter à sa place.
-const lanceDirectement = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
+const lanceDirectement =
+	process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
 if (lanceDirectement && process.argv.includes('--selftest')) {
 	let fail = 0;
 	const verifier = (nom, obtenu, attendu) => {
 		const a = JSON.stringify(attendu);
 		const o = JSON.stringify(obtenu);
 		if (o === a) console.log(`PASS  ${nom}`);
-		else { console.error(`FAIL  ${nom}\n      attendu ${a}\n      obtenu  ${o}`); fail = 1; }
+		else {
+			console.error(`FAIL  ${nom}\n      attendu ${a}\n      obtenu  ${o}`);
+			fail = 1;
+		}
 	};
 
 	//  🔴 LE cas du ticket : une prop posée en dur. C'est la forme exacte qui
@@ -194,7 +198,8 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 	//  qui s'arrêterait à la fin de ligne ne verrait presque aucune balise réelle.
 	verifier(
 		'balise sur plusieurs lignes',
-		analyserEvolForm('x.svelte', '<EvolForm\n\tidPrefixe="a"\n\tshowNotifs={true}\n/>').ecarts.length,
+		analyserEvolForm('x.svelte', '<EvolForm\n\tidPrefixe="a"\n\tshowNotifs={true}\n/>').ecarts
+			.length,
 		1,
 	);
 	//  Une tolérance couvre la prop pour TOUT le fichier, et se déclare servie.
@@ -206,14 +211,10 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 		'<EvolForm showPhotos={true} showNotifs={peutSuivre} />',
 	);
 	verifier('un fichier toléré ne produit aucun écart', tol.ecarts.length, 0);
-	verifier(
-		'et il déclare ses tolérances SERVIES',
-		tol.servies,
-		[
-			'routes/(app)/actualites/+page.svelte::showPhotos',
-			'routes/(app)/actualites/+page.svelte::showNotifs',
-		],
-	);
+	verifier('et il déclare ses tolérances SERVIES', tol.servies, [
+		'routes/(app)/actualites/+page.svelte::showPhotos',
+		'routes/(app)/actualites/+page.svelte::showNotifs',
+	]);
 	//  🔴 L'autre sens de rupture : une tolérance que plus personne ne sert.
 	//  Sans lui, la liste ne décroîtrait jamais et le contrôle s'endormirait.
 	verifier(
@@ -230,8 +231,8 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 		'photos branchées, documents en dur : l’écart reste sur les documents',
 		analyserEvolForm(
 			'x.svelte',
-			"<EvolForm showPhotos={sectionPresente(TICKET, 'evolution', 'photos')} "
-				+ 'showDocuments={true} />',
+			"<EvolForm showPhotos={sectionPresente(TICKET, 'evolution', 'photos')} " +
+				'showDocuments={true} />',
 		).ecarts.length,
 		1,
 	);
@@ -240,16 +241,22 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 	//  aucun effet et personne ne le saurait.
 	verifier(
 		'un fichier sorti du relévé n’est plus toléré',
-		analyserEvolForm('lib/components/CarteTicket.svelte', '<EvolForm showPhotos />')
-			.ecarts.length,
+		analyserEvolForm('lib/components/CarteTicket.svelte', '<EvolForm showPhotos />').ecarts.length,
 		1,
 	);
 	//  Cas zéro : aucune balise `<EvolForm>` ne doit rien inventer.
-	verifier('cas zéro : pas d’EvolForm, pas d’écart', analyserEvolForm('x.svelte', '<div />').ecarts.length, 0);
+	verifier(
+		'cas zéro : pas d’EvolForm, pas d’écart',
+		analyserEvolForm('x.svelte', '<div />').ecarts.length,
+		0,
+	);
 	//  Et le relevé lui-même ne doit pas s'être vidé par accident : un contrôle
 	//  dont la liste tombe à zéro se confondrait avec un chantier terminé.
 	verifier('le relevé est non vide', Object.keys(EVOLFORM_TOLEREES).length > 0, true);
 
-	if (fail) { console.error('\n✗ lib-etats-evolution --selftest : des cas échouent.'); process.exit(1); }
+	if (fail) {
+		console.error('\n✗ lib-etats-evolution --selftest : des cas échouent.');
+		process.exit(1);
+	}
 	console.log('✓ lib-etats-evolution --selftest : la passe voit ce qu’on croit.');
 }

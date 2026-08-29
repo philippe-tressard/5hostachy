@@ -59,7 +59,7 @@
 		class="checkbox-field"
 		class:desactivee={confidentiel}
 		title={confidentiel
-			? "Indisponible : une actualité confidentielle ne peut pas être affichée dans un hall."
+			? 'Indisponible : une actualité confidentielle ne peut pas être affichée dans un hall.'
 			: "Génère l'affiche PDF à afficher dans le hall et l'envoie au CS du périmètre"}
 	>
 		<input
@@ -75,16 +75,16 @@
 
 {#if confidentiel}
 	<p class="aide" id={idAideHall}>
-		&#x1F4C4; L'affiche de hall est indisponible sur une actualité confidentielle : une
-		affiche est punaisée dans un hall et lue par n'importe qui, sans connexion. Le message
-		WhatsApp, lui, reste possible — il renvoie vers l'application, qui applique la règle.
+		&#x1F4C4; L'affiche de hall est indisponible sur une actualité confidentielle : une affiche est
+		punaisée dans un hall et lue par n'importe qui, sans connexion. Le message WhatsApp, lui, reste
+		possible — il renvoie vers l'application, qui applique la règle.
 	</p>
 {:else if annonceHall}
 	<p class="aide">
-		&#x1F4C4; Une affiche PDF sera générée à partir du titre, du contenu, du périmètre et de
-		l'image de cette actualité, puis envoyée aux membres du CS du périmètre. Elle sera
-		consultable dans <strong>Espace CS → Annonces Hall</strong>. Un brouillon ne déclenche
-		rien tant qu'il n'est pas publié.
+		&#x1F4C4; Une affiche PDF sera générée à partir du titre, du contenu, du périmètre et de l'image
+		de cette actualité, puis envoyée aux membres du CS du périmètre. Elle sera consultable dans <strong
+			>Espace CS → Annonces Hall</strong
+		>. Un brouillon ne déclenche rien tant qu'il n'est pas publié.
 	</p>
 {/if}
 
@@ -94,13 +94,13 @@
 	.bloc-hall :global(.checkbox-field) {
 		display: flex;
 		align-items: center;
-		gap: .4rem;
-		font-size: .875rem;
+		gap: 0.4rem;
+		font-size: 0.875rem;
 		cursor: pointer;
 	}
 	/*  Une case grisée doit se VOIR grisée, pas seulement refuser le clic. */
 	.bloc-hall .desactivee {
-		opacity: .5;
+		opacity: 0.5;
 		cursor: not-allowed;
 	}
 	.bloc-hall {
@@ -111,9 +111,9 @@
 		line-height: 1;
 	}
 	.aide {
-		font-size: .78rem;
+		font-size: 0.78rem;
 		color: var(--color-text-muted);
-		margin: -.5rem 0 1rem;
+		margin: -0.5rem 0 1rem;
 		line-height: 1.45;
 	}
 	@media (max-width: 480px) {

@@ -21,7 +21,8 @@ export const acces = {
 	signalerTcPerdu: (id: number) => api.patch(`/acces/telecommandes/${id}/perdu`, {}),
 	supprimerVigik: (id: number) => api.delete(`/acces/vigiks/${id}`),
 	supprimerTc: (id: number) => api.delete(`/acces/telecommandes/${id}`),
-	declarerBadge: (data: { type: string; code: string }) => api.post<any>('/acces/declarer-badge', data),
+	declarerBadge: (data: { type: string; code: string }) =>
+		api.post<any>('/acces/declarer-badge', data),
 	// CS/Admin — badges individuels
 	listVigiks: () => api.get<any[]>('/acces/admin/vigiks'),
 	listTelecommandes: () => api.get<any[]>('/acces/admin/telecommandes'),
@@ -29,22 +30,29 @@ export const acces = {
 	creerVigik: (data: unknown) => api.post('/acces/admin/vigiks', data),
 	creerTelecommande: (data: unknown) => api.post('/acces/admin/telecommandes', data),
 	// CS/Admin — import vigik
-	uploadImportVigik: (file: File, remplacer = false) => uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),
-	listImportsVigik: (statut?: string) => api.get<any[]>(`/acces/admin/imports-vigik${statut ? `?statut=${statut}` : ''}`),
+	uploadImportVigik: (file: File, remplacer = false) =>
+		uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),
+	listImportsVigik: (statut?: string) =>
+		api.get<any[]>(`/acces/admin/imports-vigik${statut ? `?statut=${statut}` : ''}`),
 	statsImportsVigik: () => api.get<any>('/acces/admin/imports-vigik/stats'),
 	autoMatchImportsVigik: () => api.post<any>('/acces/admin/imports-vigik/auto-match', {}),
-	patchImportVigik: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports-vigik/${id}`, data),
-	resoudreImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/resoudre`, {}),
+	patchImportVigik: (id: number, data: unknown) =>
+		api.patch<any>(`/acces/admin/imports-vigik/${id}`, data),
+	resoudreImportVigik: (id: number) =>
+		api.post<any>(`/acces/admin/imports-vigik/${id}/resoudre`, {}),
 	ignorerImportVigik: (id: number) => api.post<any>(`/acces/admin/imports-vigik/${id}/ignorer`, {}),
 	remettreEnAttenteImportVigik: (id: number) =>
 		api.post<any>(`/acces/admin/imports-vigik/${id}/remettre-en-attente`, {}),
 	// CS/Admin — import télécommandes
-	uploadImportTC: (file: File, remplacer = false) => uploadExcel('/acces/admin/imports/upload', file, remplacer),
-	listImportsTC: (statut?: string) => api.get<any[]>(`/acces/admin/imports${statut ? `?statut=${statut}` : ''}`),
+	uploadImportTC: (file: File, remplacer = false) =>
+		uploadExcel('/acces/admin/imports/upload', file, remplacer),
+	listImportsTC: (statut?: string) =>
+		api.get<any[]>(`/acces/admin/imports${statut ? `?statut=${statut}` : ''}`),
 	statsImportsTC: () => api.get<any>('/acces/admin/imports/stats'),
 	autoMatchImportsTC: () => api.post<any>('/acces/admin/imports/auto-match', {}),
 	patchImportTC: (id: number, data: unknown) => api.patch<any>(`/acces/admin/imports/${id}`, data),
 	resoudreImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/resoudre`, {}),
 	ignorerImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/ignorer`, {}),
-	remettreEnAttenteImportTC: (id: number) => api.post<any>(`/acces/admin/imports/${id}/remettre-en-attente`, {}),
+	remettreEnAttenteImportTC: (id: number) =>
+		api.post<any>(`/acces/admin/imports/${id}/remettre-en-attente`, {}),
 };

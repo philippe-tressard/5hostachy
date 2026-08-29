@@ -2,7 +2,12 @@
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
-	import { tickets as ticketsApi, ApiError, type TicketEvolution, type TicketMessage } from '$lib/api';
+	import {
+		tickets as ticketsApi,
+		ApiError,
+		type TicketEvolution,
+		type TicketMessage,
+	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import EvolForm from '$lib/components/EvolForm.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
@@ -50,9 +55,9 @@
 	//  formulaire d'évolution ne sert plus qu'au commentaire.
 
 	const PRIORITE: Record<string, { label: string; cls: string }> = {
-		basse:   { label: 'Priorité basse',   cls: 'badge-gray' },
+		basse: { label: 'Priorité basse', cls: 'badge-gray' },
 		normale: { label: 'Priorité normale', cls: 'badge-gray' },
-		haute:   { label: 'Priorité haute',   cls: 'badge-orange' },
+		haute: { label: 'Priorité haute', cls: 'badge-orange' },
 	};
 
 	//  Les messages du fil sont d'anciens textes bruts pour certains : un contenu
@@ -83,7 +88,11 @@
 	$: clos = ticket && estTicketClos(ticket.statut);
 
 	async function loadEvolutions() {
-		try { evolutions = await ticketsApi.evolutions(ticketId); } catch { /* silencieux */ }
+		try {
+			evolutions = await ticketsApi.evolutions(ticketId);
+		} catch {
+			/* silencieux */
+		}
 	}
 
 	onMount(async () => {
@@ -164,7 +173,12 @@
 	}
 
 	async function deleteTicket() {
-		if (!confirm(`Supprimer définitivement le ticket #${ticket.numero} ? Cette action est irréversible.`)) return;
+		if (
+			!confirm(
+				`Supprimer définitivement le ticket #${ticket.numero} ? Cette action est irréversible.`,
+			)
+		)
+			return;
 		try {
 			await ticketsApi.delete(ticketId);
 			toast('success', 'Ticket supprimé');
@@ -177,8 +191,10 @@
 
 <svelte:head><title>Ticket #{ticketId} — {_siteNom}</title></svelte:head>
 
-<FilAriane segments={[{ libelle: 'Tickets', href: '/tickets' }]}
-	courant={ticket?.titre ?? 'Ticket'} />
+<FilAriane
+	segments={[{ libelle: 'Tickets', href: '/tickets' }]}
+	courant={ticket?.titre ?? 'Ticket'}
+/>
 
 {#if loading}
 	<p class="etat-chargement">Chargement…</p>
@@ -215,7 +231,8 @@
 			<svelte:fragment slot="specifiques">
 				{#if ticket.saisi_pour_affichage && $isCS}
 					<p class="ticket-saisi-pour">
-						👤 Saisi par <strong>{ticket.auteur_nom ?? 'inconnu'}</strong> pour <strong>{ticket.saisi_pour_affichage}</strong>
+						👤 Saisi par <strong>{ticket.auteur_nom ?? 'inconnu'}</strong> pour
+						<strong>{ticket.saisi_pour_affichage}</strong>
 						{#if ticket.saisi_pour_email}
 							· <a href="mailto:{ticket.saisi_pour_email}">{ticket.saisi_pour_email}</a>
 						{/if}
@@ -227,7 +244,9 @@
 				<div class="ticket-meta">
 					<span class="badge {statutBadge}">{statutLabel}</span>
 					{#if ticket.priorite && ticket.priorite !== 'normale'}
-						<span class="badge {PRIORITE[ticket.priorite]?.cls ?? 'badge-gray'}">{PRIORITE[ticket.priorite]?.label}</span>
+						<span class="badge {PRIORITE[ticket.priorite]?.cls ?? 'badge-gray'}"
+							>{PRIORITE[ticket.priorite]?.label}</span
+						>
 					{/if}
 				</div>
 				{#if $isCS}
@@ -238,8 +257,8 @@
 								<button
 									class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-outline'}"
 									disabled={updatingStatus || ticket.statut === s.value}
-									on:click={() => updateStatus(s.value)}
-								>{s.label}</button>
+									on:click={() => updateStatus(s.value)}>{s.label}</button
+								>
 							{/each}
 						</div>
 					</div>
@@ -259,8 +278,13 @@
 		{#each messages as msg}
 			{@const isOwn = msg.auteur?.id === $currentUser?.id}
 			{#if !msg.interne || $isCS}
-				<div id="msg-{msg.id}" class="message-bubble" class:own={isOwn} class:interne={msg.interne}
-					class:message-vise={msgVise === msg.id}>
+				<div
+					id="msg-{msg.id}"
+					class="message-bubble"
+					class:own={isOwn}
+					class:interne={msg.interne}
+					class:message-vise={msgVise === msg.id}
+				>
 					<div class="msg-header">
 						<strong>{msg.auteur?.prenom} {msg.auteur?.nom}</strong>
 						{#if msg.interne}<span class="badge badge-yellow msg-badge">interne</span>{/if}
@@ -285,7 +309,9 @@
 		{:else}
 			<div class="card reply-form">
 				{#key repondreOuvert}
-					<EvolForm idPrefixe="tk-msg" titre="Répondre"
+					<EvolForm
+						idPrefixe="tk-msg"
+						titre="Répondre"
 						showPhotos={!newInterne}
 						showDocuments={!newInterne}
 						showEmail={$isCS && !newInterne}
@@ -304,9 +330,13 @@
 	      `HistoriqueTicket` : la liste et cette fiche le rendaient chacune de
 	      leur côté, et les deux câblages ont divergé DEUX FOIS, dans les deux
 	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
-	<HistoriqueTicket ticketId={ticketId} statutCourant={ticket?.statut ?? ''}
+	<HistoriqueTicket
+		{ticketId}
+		statutCourant={ticket?.statut ?? ''}
 		perimetreCourant={ticket?.perimetre_cible ?? []}
-		{evolutions} on:change={loadEvolutions} />
+		{evolutions}
+		on:change={loadEvolutions}
+	/>
 
 	<!-- Suppression admin -->
 	{#if $isAdmin}
@@ -324,42 +354,89 @@
 	    habillent. Les laisser ici en aurait fait la quatrième copie d'un même
 	    bloc, et Svelte ne les aurait de toute façon pas appliqués au composant. */
 
-	.etat-chargement { color: var(--color-text-muted); }
+	.etat-chargement {
+		color: var(--color-text-muted);
+	}
 
 	/* Message pointé par l'ancre d'une notification : un cadre suffit à le
 	   situer, sans clignotement ni couleur criarde — on vient lire, pas être
 	   alerté une seconde fois. */
-	.message-vise { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 10px; }
+	.message-vise {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 3px;
+		border-radius: 10px;
+	}
 	/*  `.back-link` est parti dans `FilAriane` (#365) : il était défini trois
 	    fois à l'identique dans le dépôt, et disait « Retour aux tickets » là où
 	    le sondage disait « Communauté ». */
 
 	/*  La colonne de lecture : la même largeur pour la fiche, le fil et
 	    l'Historique — elle valait 720 px écrits en ligne quatre fois. */
-	.ticket-header, .messages, .bloc-historique, .zone-suppression { max-width: 720px; }
-	.ticket-header { border-left: 4px solid var(--color-primary); margin-bottom: 1rem; }
-	.ticket-meta { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .4rem; }
-	.ticket-titre { font-size: 1.1rem; font-weight: 700; margin: .6rem 0 .3rem; }
-	.ticket-dates { font-size: .875rem; color: var(--color-text-muted); }
-	.ticket-envoi { font-size: .8rem; color: var(--color-text-muted); margin-top: .5rem; }
-	.ticket-saisi-pour {
-		font-size: .85rem;
+	.ticket-header,
+	.messages,
+	.bloc-historique,
+	.zone-suppression {
+		max-width: 720px;
+	}
+	.ticket-header {
+		border-left: 4px solid var(--color-primary);
+		margin-bottom: 1rem;
+	}
+	.ticket-meta {
+		display: flex;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.4rem;
+	}
+	.ticket-titre {
+		font-size: 1.1rem;
+		font-weight: 700;
+		margin: 0.6rem 0 0.3rem;
+	}
+	.ticket-dates {
+		font-size: 0.875rem;
 		color: var(--color-text-muted);
-		margin: .5rem 0;
-		padding: .5rem .75rem;
+	}
+	.ticket-envoi {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.5rem;
+	}
+	.ticket-saisi-pour {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		margin: 0.5rem 0;
+		padding: 0.5rem 0.75rem;
 		background: var(--color-bg-muted, #f5f5f5);
 		border-radius: var(--radius);
 	}
-	.status-actions { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--color-border); }
-	.status-label { font-size: .8rem; font-weight: 500; color: var(--color-text-muted); }
-	.status-boutons { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .3rem; }
+	.status-actions {
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.status-label {
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: var(--color-text-muted);
+	}
+	.status-boutons {
+		display: flex;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+		margin-top: 0.3rem;
+	}
 
-	.messages { display: flex; flex-direction: column; gap: .75rem; }
+	.messages {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
 	.message-bubble {
 		background: var(--color-bg);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		padding: .75rem 1rem;
+		padding: 0.75rem 1rem;
 		align-self: flex-start;
 		max-width: 90%;
 	}
@@ -371,32 +448,72 @@
 	.message-bubble.interne {
 		background: #fefce8;
 		border-color: #fef08a;
-		opacity: .9;
+		opacity: 0.9;
 	}
 	.msg-header {
 		display: flex;
 		align-items: center;
-		gap: .4rem;
-		font-size: .78rem;
-		margin-bottom: .3rem;
+		gap: 0.4rem;
+		font-size: 0.78rem;
+		margin-bottom: 0.3rem;
 		flex-wrap: wrap;
 	}
-	.msg-header strong { font-size: .85rem; }
-	.msg-badge { font-size: .65rem; }
-	.msg-time { color: var(--color-text-muted); margin-left: auto; }
-	.msg-body { font-size: .875rem; line-height: 1.55; margin: 0; }
-	.msg-body :global(p) { margin: 0 0 .4em; }
-	.msg-body :global(p:last-child) { margin-bottom: 0; }
-	.msg-body :global(ul), .msg-body :global(ol) { padding-left: 1.3em; margin: 0 0 .4em; }
-	.msg-body :global(strong) { font-weight: 600; }
-	.msg-pj { margin-top: .4rem; }
+	.msg-header strong {
+		font-size: 0.85rem;
+	}
+	.msg-badge {
+		font-size: 0.65rem;
+	}
+	.msg-time {
+		color: var(--color-text-muted);
+		margin-left: auto;
+	}
+	.msg-body {
+		font-size: 0.875rem;
+		line-height: 1.55;
+		margin: 0;
+	}
+	.msg-body :global(p) {
+		margin: 0 0 0.4em;
+	}
+	.msg-body :global(p:last-child) {
+		margin-bottom: 0;
+	}
+	.msg-body :global(ul),
+	.msg-body :global(ol) {
+		padding-left: 1.3em;
+		margin: 0 0 0.4em;
+	}
+	.msg-body :global(strong) {
+		font-weight: 600;
+	}
+	.msg-pj {
+		margin-top: 0.4rem;
+	}
 
-	.carte-repondre { text-align: center; padding: .9rem; }
-	.reply-form { margin-top: .5rem; }
+	.carte-repondre {
+		text-align: center;
+		padding: 0.9rem;
+	}
+	.reply-form {
+		margin-top: 0.5rem;
+	}
 
-	.bloc-historique { margin-top: 1.5rem; }
-	.evol-form { padding: .75rem; margin-top: .75rem; }
+	.bloc-historique {
+		margin-top: 1.5rem;
+	}
+	.evol-form {
+		padding: 0.75rem;
+		margin-top: 0.75rem;
+	}
 
-	.zone-suppression { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
-	.btn-supprimer { color: var(--color-danger); border-color: var(--color-danger); }
+	.zone-suppression {
+		margin-top: 2rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.btn-supprimer {
+		color: var(--color-danger);
+		border-color: var(--color-danger);
+	}
 </style>

@@ -58,7 +58,7 @@
 	//  C'est le geste qu'on tente en plein écran, et il manquait : seules les
 	//  flèches et le clavier naviguaient. `pointer*` couvre le doigt, le stylet et
 	//  le glisser-souris d'un seul jeu d'écouteurs.
-	const SEUIL_GLISSEMENT = 45;   // px — sous ce seuil, c'est un clic qui a tremblé
+	const SEUIL_GLISSEMENT = 45; // px — sous ce seuil, c'est un clic qui a tremblé
 	let departX: number | null = null;
 	let aGlisse = false;
 
@@ -79,7 +79,10 @@
 	//  Un glissement amorcé sur le fond produit AUSSI un `click` en fin de geste :
 	//  sans ce garde-fou, naviguer d'une photo à l'autre refermerait la visionneuse.
 	function fondClique(e: MouseEvent) {
-		if (aGlisse) { aGlisse = false; return; }
+		if (aGlisse) {
+			aGlisse = false;
+			return;
+		}
 		if (e.target === e.currentTarget) fermer();
 	}
 
@@ -114,15 +117,23 @@
 	aria-label="Photo en plein écran"
 	tabindex="-1"
 	on:click={fondClique}
-	on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && fermer()}
+	on:keydown={(e) =>
+		(e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && fermer()}
 	on:pointerdown={debutGeste}
 	on:pointerup={finGeste}
 >
-	<button class="lb-fermer" aria-label="Fermer la photo" on:click|stopPropagation={fermer}>×</button>
+	<button class="lb-fermer" aria-label="Fermer la photo" on:click|stopPropagation={fermer}>×</button
+	>
 
 	{#if photos.length > 1}
-		<button class="lb-nav lb-prec" aria-label="Photo précédente" on:click|stopPropagation={precedente}>‹</button>
-		<button class="lb-nav lb-suiv" aria-label="Photo suivante" on:click|stopPropagation={suivante}>›</button>
+		<button
+			class="lb-nav lb-prec"
+			aria-label="Photo précédente"
+			on:click|stopPropagation={precedente}>‹</button
+		>
+		<button class="lb-nav lb-suiv" aria-label="Photo suivante" on:click|stopPropagation={suivante}
+			>›</button
+		>
 	{/if}
 
 	<!-- Aucun écouteur sur l'image : la fermeture ne se déclenche que si la cible
@@ -143,7 +154,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 200;
-		background: rgba(0, 0, 0, .88);
+		background: rgba(0, 0, 0, 0.88);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -159,7 +170,7 @@
 	.lb-fermer,
 	.lb-nav {
 		position: absolute;
-		background: rgba(0, 0, 0, .45);
+		background: rgba(0, 0, 0, 0.45);
 		color: #fff;
 		border: none;
 		border-radius: 50%;
@@ -186,10 +197,16 @@
 		height: 44px;
 		font-size: 2rem;
 	}
-	.lb-prec { left: .75rem; }
-	.lb-suiv { right: .75rem; }
+	.lb-prec {
+		left: 0.75rem;
+	}
+	.lb-suiv {
+		right: 0.75rem;
+	}
 	.lb-fermer:hover,
-	.lb-nav:hover { background: rgba(0, 0, 0, .75); }
+	.lb-nav:hover {
+		background: rgba(0, 0, 0, 0.75);
+	}
 	.lb-compteur {
 		position: absolute;
 		bottom: 1rem;
@@ -197,9 +214,9 @@
 		transform: translateX(-50%);
 		margin: 0;
 		color: #fff;
-		font-size: .85rem;
-		background: rgba(0, 0, 0, .45);
-		padding: .2rem .7rem;
+		font-size: 0.85rem;
+		background: rgba(0, 0, 0, 0.45);
+		padding: 0.2rem 0.7rem;
 		border-radius: 999px;
 	}
 </style>

@@ -112,7 +112,11 @@ verifier(
 	titreBase('Otis — Ascenseur A (2/4)'),
 	'Otis — Ascenseur A',
 );
-verifier('titreBase : un titre sans numéro ne bouge pas', titreBase('Otis — Ascenseur A'), 'Otis — Ascenseur A');
+verifier(
+	'titreBase : un titre sans numéro ne bouge pas',
+	titreBase('Otis — Ascenseur A'),
+	'Otis — Ascenseur A',
+);
 verifier(
 	'clePlanifiee : un ancien titre NON numéroté et le nouveau donnent la MÊME clé',
 	clePlanifiee('Otis — Ascenseur A', 3),
@@ -170,7 +174,11 @@ verifier(
 );
 
 //  Une source sans fréquence n'est pas une source écartée : elle n'en est pas une.
-const planSansFreq = planifier([source({ frequence_type: null, frequence_valeur: null })], new Set(), 2027);
+const planSansFreq = planifier(
+	[source({ frequence_type: null, frequence_valeur: null })],
+	new Set(),
+	2027,
+);
 verifier('planifier : sans fréquence, comptée à part', planSansFreq.sansFrequence, 1);
 verifier('planifier : sans fréquence, rien à créer', planSansFreq.aCreer.length, 0);
 

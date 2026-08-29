@@ -76,16 +76,16 @@
 		margin-bottom: 1rem;
 	}
 	.canaux.compact {
-		gap: .75rem;
-		margin-bottom: .6rem;
-		font-size: .82rem;
+		gap: 0.75rem;
+		margin-bottom: 0.6rem;
+		font-size: 0.82rem;
 	}
 	/*  `:global` parce que `.checkbox-field` est une classe partagée du thème :
 	    la styler localement seule laisserait Svelte la considérer inutilisée. */
 	.canaux :global(.checkbox-field) {
 		display: flex;
 		align-items: center;
-		gap: .4rem;
+		gap: 0.4rem;
 		cursor: pointer;
 		margin: 0;
 		white-space: nowrap;
@@ -106,7 +106,7 @@
 	@media (max-width: 480px) {
 		.canaux {
 			flex-direction: column;
-			gap: .25rem;
+			gap: 0.25rem;
 		}
 		.canaux :global(.checkbox-field) {
 			min-height: 44px;

@@ -10,11 +10,17 @@
 //: Statuts d'une PUBLICATION — à ne pas confondre avec ceux d'un ticket
 //: (`ouvert`/`résolu`/`annulé`), qui sont une autre notion et vivent ailleurs.
 export const STATUT_LABELS: Record<string, string> = {
-	publie: 'Publié', en_cours: 'En cours', resolu: 'Résolu', annule: 'Annulé',
+	publie: 'Publié',
+	en_cours: 'En cours',
+	resolu: 'Résolu',
+	annule: 'Annulé',
 };
 
 export const STATUT_BADGE: Record<string, string> = {
-	publie: 'badge-blue', en_cours: 'badge-orange', resolu: 'badge-green', annule: 'badge-gray',
+	publie: 'badge-blue',
+	en_cours: 'badge-orange',
+	resolu: 'badge-green',
+	annule: 'badge-gray',
 };
 
 /**
@@ -34,4 +40,3 @@ export const STATUT_BADGE: Record<string, string> = {
  * laisserait passer un formulaire vide.
  */
 export const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
-

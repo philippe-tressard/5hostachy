@@ -58,7 +58,22 @@
 		loading = true;
 		email = email.trim().toLowerCase();
 		try {
-			await authApi.register({ nom, prenom, email, telephone, societe: societe || null, fonction: fonction || null, password, statut, batiment_id: showBatiment ? batiment_id : null, consentement_rgpd, consentement_communications, nom_proprietaire: isLocataire ? nom_proprietaire : null, nom_aide: isAidantOrMandataire ? nom_aide : null, prenom_aide: isAidantOrMandataire ? prenom_aide : null });
+			await authApi.register({
+				nom,
+				prenom,
+				email,
+				telephone,
+				societe: societe || null,
+				fonction: fonction || null,
+				password,
+				statut,
+				batiment_id: showBatiment ? batiment_id : null,
+				consentement_rgpd,
+				consentement_communications,
+				nom_proprietaire: isLocataire ? nom_proprietaire : null,
+				nom_aide: isAidantOrMandataire ? nom_aide : null,
+				prenom_aide: isAidantOrMandataire ? prenom_aide : null,
+			});
 			success = true;
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Erreur lors de la création du compte';
@@ -75,7 +90,7 @@
 		<div class="auth-header">
 			<span class="auth-logo">&#x1F3E2;</span>
 			<h1>Créer un compte</h1>
-				<p>{_siteNom}</p>
+			<p>{_siteNom}</p>
 		</div>
 
 		{#if success}
@@ -100,10 +115,15 @@
 						<input id="prenom" type="text" bind:value={prenom} required />
 					</div>
 					<div class="field">
-					<label for="nom">NOM *</label>
-					<input id="nom" type="text" bind:value={nom} required
-						style="text-transform:uppercase"
-						on:input={() => nom = nom.toUpperCase()} />
+						<label for="nom">NOM *</label>
+						<input
+							id="nom"
+							type="text"
+							bind:value={nom}
+							required
+							style="text-transform:uppercase"
+							on:input={() => (nom = nom.toUpperCase())}
+						/>
 					</div>
 				</div>
 
@@ -127,47 +147,82 @@
 				</div>
 
 				{#if isProfessional}
-				<div class="field">
-					<label for="societe">Société *</label>
-					<input id="societe" type="text" bind:value={societe} required placeholder="Cabinet de gestion, agence…" />
-				</div>
-				<div class="field">
-					<label for="fonction">Fonction *</label>
-					<input id="fonction" type="text" bind:value={fonction} required placeholder="Gestionnaire, Mandataire…" />
-				</div>
+					<div class="field">
+						<label for="societe">Société *</label>
+						<input
+							id="societe"
+							type="text"
+							bind:value={societe}
+							required
+							placeholder="Cabinet de gestion, agence…"
+						/>
+					</div>
+					<div class="field">
+						<label for="fonction">Fonction *</label>
+						<input
+							id="fonction"
+							type="text"
+							bind:value={fonction}
+							required
+							placeholder="Gestionnaire, Mandataire…"
+						/>
+					</div>
 				{/if}
 
 				{#if isLocataire}
-				<div class="field">
-					<label for="nom-proprietaire">Nom du propriétaire *</label>
-					<input id="nom-proprietaire" type="text" bind:value={nom_proprietaire} required placeholder="Nom du propriétaire bailleur" />
-					<p class="field-hint">Permet au conseil syndical de rattacher votre compte au bon lot.</p>
-				</div>
+					<div class="field">
+						<label for="nom-proprietaire">Nom du propriétaire *</label>
+						<input
+							id="nom-proprietaire"
+							type="text"
+							bind:value={nom_proprietaire}
+							required
+							placeholder="Nom du propriétaire bailleur"
+						/>
+						<p class="field-hint">
+							Permet au conseil syndical de rattacher votre compte au bon lot.
+						</p>
+					</div>
 				{/if}
 
 				{#if isAidantOrMandataire}
-				<LibelleGroupe titre="Copropriétaire aidé *" id="coproprietaire-aide" classe="field-row">
-					<div class="field">
-						<input id="prenom-aide" type="text" bind:value={prenom_aide} required placeholder="Prénom" />
-					</div>
-					<div class="field">
-						<input id="nom-aide" type="text" bind:value={nom_aide} required placeholder="NOM"
-							style="text-transform:uppercase" on:input={() => nom_aide = nom_aide.toUpperCase()} />
-					</div>
-				</LibelleGroupe>
-				<p class="field-hint">Permet au conseil syndical de rattacher votre compte au bon copropriétaire.</p>
+					<LibelleGroupe titre="Copropriétaire aidé *" id="coproprietaire-aide" classe="field-row">
+						<div class="field">
+							<input
+								id="prenom-aide"
+								type="text"
+								bind:value={prenom_aide}
+								required
+								placeholder="Prénom"
+							/>
+						</div>
+						<div class="field">
+							<input
+								id="nom-aide"
+								type="text"
+								bind:value={nom_aide}
+								required
+								placeholder="NOM"
+								style="text-transform:uppercase"
+								on:input={() => (nom_aide = nom_aide.toUpperCase())}
+							/>
+						</div>
+					</LibelleGroupe>
+					<p class="field-hint">
+						Permet au conseil syndical de rattacher votre compte au bon copropriétaire.
+					</p>
 				{/if}
 
 				{#if showBatiment}
-				<div class="field">
-					<label for="batiment">Bâtiment *</label>
-					<select id="batiment" bind:value={batiment_id} required>
-						<option value={null}>-- Sélectionnez votre bâtiment --</option>
-						{#each batiments as b}
-							<option value={b.id}>Bâtiment {b.numero}</option>
-						{/each}
-					</select>
-				</div>
+					<div class="field">
+						<label for="batiment">Bâtiment *</label>
+						<select id="batiment" bind:value={batiment_id} required>
+							<option value={null}>-- Sélectionnez votre bâtiment --</option>
+							{#each batiments as b}
+								<option value={b.id}>Bâtiment {b.numero}</option>
+							{/each}
+						</select>
+					</div>
 				{/if}
 
 				<ChampMotDePasse
@@ -181,15 +236,25 @@
 
 				<div class="rgpd-box">
 					<p class="rgpd-info">
-						<strong>Responsable du traitement :</strong> Admin de 5Hostachy (CS de la copropriété).<br />
+						<strong>Responsable du traitement :</strong> Admin de 5Hostachy (CS de la copropriété).<br
+						/>
 						<strong>Finalité :</strong> Gestion de la copropriété (Art. 6.1.b RGPD).<br />
 						<strong>Conservation :</strong> Durée de résidence + 3 ans.<br />
-						<a href="/politique-de-confidentialite" target="_blank" rel="noopener">Voir la politique complète</a> · <a href="/mentions-legales" target="_blank" rel="noopener">Mentions légales</a>
+						<a href="/politique-de-confidentialite" target="_blank" rel="noopener"
+							>Voir la politique complète</a
+						>
+						· <a href="/mentions-legales" target="_blank" rel="noopener">Mentions légales</a>
 					</p>
 
 					<label class="checkbox-field">
 						<input type="checkbox" bind:checked={consentement_rgpd} required />
-						J'ai lu et j'accepte la <a href="/politique-de-confidentialite" target="_blank" rel="noopener" on:click|stopPropagation>politique de confidentialité</a>*
+						J'ai lu et j'accepte la
+						<a
+							href="/politique-de-confidentialite"
+							target="_blank"
+							rel="noopener"
+							on:click|stopPropagation>politique de confidentialité</a
+						>*
 					</label>
 
 					<label class="checkbox-field">
@@ -199,9 +264,9 @@
 				</div>
 
 				<div class="btn-wrapper">
-				<button class="btn btn-primary" type="submit" disabled={loading}>
-					{loading ? 'Création…' : 'Créer mon compte'}
-				</button>
+					<button class="btn btn-primary" type="submit" disabled={loading}>
+						{loading ? 'Création…' : 'Créer mon compte'}
+					</button>
 				</div>
 			</form>
 
@@ -216,35 +281,59 @@
 	/*  Le formulaire d'inscription est LONG : il s'aligne en haut au lieu d'etre
 	    centre, respire davantage, et sa carte est plus large que les 400 px de la
 	    charte. Variations assumees ; le reste vient de `composants.css` (#607). */
-	.auth-page { align-items: flex-start; padding: 2rem 1rem; }
-	.auth-card { max-width: 480px; }
+	.auth-page {
+		align-items: flex-start;
+		padding: 2rem 1rem;
+	}
+	.auth-card {
+		max-width: 480px;
+	}
 
 	/*  `.auth-header` : copie au caractère près de `styles/composants.css`,
 	    donc inerte. Retirée le 28/08/2026. */
 
 	/*  Logo reduit : la page est deja longue (#607, 28/08/2026). */
-	.auth-logo { font-size: 2rem; margin-bottom: .4rem; }
-	.auth-header h1 { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); }
-	.auth-header p  { color: var(--color-text-muted); font-size: .875rem; }
+	.auth-logo {
+		font-size: 2rem;
+		margin-bottom: 0.4rem;
+	}
+	.auth-header h1 {
+		font-size: 1.4rem;
+		font-weight: 700;
+		color: var(--color-primary);
+	}
+	.auth-header p {
+		color: var(--color-text-muted);
+		font-size: 0.875rem;
+	}
 
-	.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+	.field-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.75rem;
+	}
 
 	.rgpd-box {
 		background: var(--color-bg);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		padding: .75rem;
+		padding: 0.75rem;
 		margin-bottom: 1rem;
 	}
 
-	.rgpd-info { font-size: .78rem; color: var(--color-text-muted); margin-bottom: .5rem; line-height: 1.5; }
+	.rgpd-info {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		margin-bottom: 0.5rem;
+		line-height: 1.5;
+	}
 
 	.checkbox-field {
 		display: flex;
 		align-items: flex-start;
-		gap: .5rem;
-		font-size: .85rem;
-		margin-top: .4rem;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+		margin-top: 0.4rem;
 		line-height: 1.4;
 		cursor: pointer;
 	}
@@ -252,7 +341,7 @@
 	.auth-links {
 		text-align: center;
 		margin-top: 1rem;
-		font-size: .875rem;
+		font-size: 0.875rem;
 		color: var(--color-text-muted);
 	}
 
@@ -260,7 +349,7 @@
 		display: flex;
 		justify-content: center;
 		margin-top: 1.25rem;
-		margin-bottom: .25rem;
+		margin-bottom: 0.25rem;
 	}
 	.btn-wrapper .btn {
 		padding-left: 2.5rem;

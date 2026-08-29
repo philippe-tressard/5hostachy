@@ -62,7 +62,10 @@ export function creerApercu(charger: () => Promise<ApercuDiffusion>): Apercu {
 			//  de retenir l'utilisateur devant une modale vide dont il ne saurait
 			//  pas quoi faire.
 			set({ ...VIDE });
-			toast('error', e instanceof ApiError ? e.message : "Aperçu indisponible — l'envoi reste possible.");
+			toast(
+				'error',
+				e instanceof ApiError ? e.message : "Aperçu indisponible — l'envoi reste possible.",
+			);
 		}
 	}
 

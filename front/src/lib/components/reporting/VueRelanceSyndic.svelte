@@ -14,7 +14,10 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { apiMessage } from '$lib/utils';
 	import { daysSince } from '$lib/date';
-	import { STATUT_TICKET_BADGE as TK_STATUT_BADGE, STATUT_TICKET_LABELS as TK_STATUT_LABELS } from '$lib/tickets';
+	import {
+		STATUT_TICKET_BADGE as TK_STATUT_BADGE,
+		STATUT_TICKET_LABELS as TK_STATUT_LABELS,
+	} from '$lib/tickets';
 
 	let relanceList: Ticket[] = [];
 	let relanceDelaiJours = 30;
@@ -40,7 +43,9 @@
 			relanceDelaiJours = resp.delai_jours;
 			relanceList = resp.tickets;
 			// Pré-sélectionner uniquement les tickets éligibles (passé le délai)
-			relanceSelected = new Set(relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours).map(t => t.id));
+			relanceSelected = new Set(
+				relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours).map((t) => t.id),
+			);
 			relanceLoaded = true;
 		} catch (e: any) {
 			toast('error', apiMessage(e, 'Erreur chargement relances syndic'));
@@ -91,13 +96,14 @@
 		<p>Aucun ticket adressé au syndic n'est actuellement ouvert ou en cours.</p>
 	</div>
 {:else}
-	{@const eligibles = relanceList.filter(t => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
+	{@const eligibles = relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<h3>🔔 Tickets syndic — suivi des relances</h3>
 		<p class="report-intro">
 			{relanceList.length} ticket(s) adressé(s) au syndic en cours.
 			{#if eligibles.length > 0}
-				<strong>{eligibles.length} éligible(s) à la relance</strong> (sans modification depuis plus de {relanceDelaiJours} jours).
+				<strong>{eligibles.length} éligible(s) à la relance</strong> (sans modification depuis plus
+				de {relanceDelaiJours} jours).
 			{:else}
 				Aucun ticket ne dépasse le délai de {relanceDelaiJours} jours pour l'instant.
 			{/if}
@@ -109,15 +115,25 @@
 				{@const eligible = jours >= relanceDelaiJours}
 				{@const selected = relanceSelected.has(t.id)}
 				{@const isEditingMotif = relanceNonRelancableEditing === t.id}
-				<div class="relance-item" class:relance-item-unselected={!selected} class:relance-item-pending={!eligible}>
+				<div
+					class="relance-item"
+					class:relance-item-unselected={!selected}
+					class:relance-item-pending={!eligible}
+				>
 					<div class="relance-item-top">
-						<label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0">
-							<input type="checkbox" checked={selected}
+						<label
+							style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0"
+						>
+							<input
+								type="checkbox"
+								checked={selected}
 								on:change={() => {
 									const s = new Set(relanceSelected);
-									if (s.has(t.id)) s.delete(t.id); else s.add(t.id);
+									if (s.has(t.id)) s.delete(t.id);
+									else s.add(t.id);
 									relanceSelected = s;
-								}} />
+								}}
+							/>
 							<span class="relance-numero">{t.numero}</span>
 							<span class="relance-titre">{t.titre}</span>
 						</label>
@@ -128,26 +144,40 @@
 								{:else}
 									<span class="badge badge-orange">1ère relance</span>
 								{/if}
-								<span class="relance-date relance-date-overdue" title="Dernière modification">{jours}j sans modif.</span>
+								<span class="relance-date relance-date-overdue" title="Dernière modification"
+									>{jours}j sans modif.</span
+								>
 							{:else}
 								<span class="badge badge-gray">En attente</span>
-								<span class="relance-date" title="Dernière modification">{jours}j / {relanceDelaiJours}j</span>
+								<span class="relance-date" title="Dernière modification"
+									>{jours}j / {relanceDelaiJours}j</span
+								>
 							{/if}
 						</div>
 					</div>
 					<!-- Tag non-relançable -->
 					<div class="relance-item-meta">
-						<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}">{TK_STATUT_LABELS[t.statut] ?? t.statut}</span>
+						<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}"
+							>{TK_STATUT_LABELS[t.statut] ?? t.statut}</span
+						>
 						<span class="badge badge-gray">{t.categorie}</span>
 						{#if t.non_relancable}
-							<span class="badge badge-red">🚫 Non relançable{t.non_relancable_motif ? ` — ${t.non_relancable_motif}` : ''}</span>
+							<span class="badge badge-red"
+								>🚫 Non relançable{t.non_relancable_motif
+									? ` — ${t.non_relancable_motif}`
+									: ''}</span
+							>
 						{/if}
 						{#if !isEditingMotif}
 							<!-- Libellé à l'infinitif : posé au milieu des badges d'état, « Non
 							     relançable » se lisait comme un ÉTAT alors que c'est l'ACTION de
 							     le poser. Les sept lignes l'affichaient sans qu'aucun ticket ne
 							     le soit (signalé le 04/08/2026). -->
-							<button class="btn-icon relance-tag-action no-print" title={t.non_relancable ? 'Retirer le tag non-relançable' : 'Marquer comme non-relançable'}
+							<button
+								class="btn-icon relance-tag-action no-print"
+								title={t.non_relancable
+									? 'Retirer le tag non-relançable'
+									: 'Marquer comme non-relançable'}
 								on:click={() => {
 									if (t.non_relancable) {
 										saveNonRelancable(t, false, '');
@@ -155,15 +185,26 @@
 										relanceNonRelancableEditing = t.id;
 										relanceMotifTemp = t.non_relancable_motif ?? '';
 									}
-								}}>
+								}}
+							>
 								{t.non_relancable ? '✅ Réactiver' : '🚫 Marquer non relançable'}
 							</button>
 						{:else}
 							<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-								<input type="text" placeholder="Motif (optionnel)" bind:value={relanceMotifTemp}
-									style="font-size:.8rem;padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px" />
-								<button class="btn btn-sm btn-primary" on:click={() => saveNonRelancable(t, true, relanceMotifTemp)}>Confirmer</button>
-								<button class="btn btn-sm btn-outline" on:click={() => relanceNonRelancableEditing = null}>Annuler</button>
+								<input
+									type="text"
+									placeholder="Motif (optionnel)"
+									bind:value={relanceMotifTemp}
+									style="font-size:.8rem;padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px"
+								/>
+								<button
+									class="btn btn-sm btn-primary"
+									on:click={() => saveNonRelancable(t, true, relanceMotifTemp)}>Confirmer</button
+								>
+								<button
+									class="btn btn-sm btn-outline"
+									on:click={() => (relanceNonRelancableEditing = null)}>Annuler</button
+								>
 							</div>
 						{/if}
 					</div>
@@ -172,35 +213,87 @@
 		</div>
 
 		<div class="form-actions no-print">
-			<button class="btn btn-primary" disabled={relanceSending || relanceSelected.size === 0}
-				on:click={envoiRelance}>
-				{relanceSending ? '…' : `📧 Envoyer la relance (${relanceSelected.size} ticket${relanceSelected.size > 1 ? 's' : ''})`}
+			<button
+				class="btn btn-primary"
+				disabled={relanceSending || relanceSelected.size === 0}
+				on:click={envoiRelance}
+			>
+				{relanceSending
+					? '…'
+					: `📧 Envoyer la relance (${relanceSelected.size} ticket${relanceSelected.size > 1 ? 's' : ''})`}
 			</button>
 		</div>
 	</section>
 {/if}
 
 <style>
-  /* ── Relance syndic ───────────────────────────────────────────────── */
-  .relance-item {
-          background: var(--color-surface);
-          border: 1px solid var(--color-border);
-          border-left: 4px solid var(--color-primary);
-          border-radius: var(--radius);
-          padding: .65rem .9rem;
-          transition: opacity .15s;
-  }
-  .relance-item-unselected { opacity: .5; border-left-color: var(--color-border); }
-  .relance-item-pending { border-left-color: var(--color-text-muted); background: var(--color-bg-subtle, #f9fafb); }
-  .relance-item-top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-  .relance-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
-  /* `nowrap` comme `.relance-numero` juste en dessous : sans lui le libellé se
+	/* ── Relance syndic ───────────────────────────────────────────────── */
+	.relance-item {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-left: 4px solid var(--color-primary);
+		border-radius: var(--radius);
+		padding: 0.65rem 0.9rem;
+		transition: opacity 0.15s;
+	}
+	.relance-item-unselected {
+		opacity: 0.5;
+		border-left-color: var(--color-border);
+	}
+	.relance-item-pending {
+		border-left-color: var(--color-text-muted);
+		background: var(--color-bg-subtle, #f9fafb);
+	}
+	.relance-item-top {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.relance-item-meta {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+		margin-top: 0.4rem;
+	}
+	/* `nowrap` comme `.relance-numero` juste en dessous : sans lui le libellé se
      coupait entre « Non » et « relançable », et la seconde ligne chevauchait le
      badge voisin — à l'écran comme à l'impression. */
-  .relance-tag-action { font-size: .75rem; padding: 1px 6px; white-space: nowrap; }
-  .relance-numero { font-size: .8rem; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
-  .relance-titre { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
-  .relance-item-right { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-shrink: 0; }
-  .relance-date { font-size: .75rem; color: var(--color-text-muted); white-space: nowrap; }
-  .relance-date-overdue { color: #b45309; font-weight: 600; }
+	.relance-tag-action {
+		font-size: 0.75rem;
+		padding: 1px 6px;
+		white-space: nowrap;
+	}
+	.relance-numero {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: var(--color-primary);
+		white-space: nowrap;
+	}
+	.relance-titre {
+		font-size: 0.88rem;
+		font-weight: 600;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		min-width: 0;
+		flex: 1;
+	}
+	.relance-item-right {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+	.relance-date {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		white-space: nowrap;
+	}
+	.relance-date-overdue {
+		color: #b45309;
+		font-weight: 600;
+	}
 </style>

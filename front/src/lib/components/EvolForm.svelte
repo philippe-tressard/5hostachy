@@ -217,10 +217,10 @@
 	//  qui décide de quel côté chaque pièce revient — la même règle que partout
 	//  ailleurs (`$lib/fichiers`), jamais réimplémentée dans un écran.
 	let photos: string[] = editMode
-		? initialFichiers.filter(f => estImage(f.url)).map(f => f.url)
+		? initialFichiers.filter((f) => estImage(f.url)).map((f) => f.url)
 		: [];
 	let docs: string[] = editMode
-		? initialFichiers.filter(f => !estImage(f.url)).map(f => f.url)
+		? initialFichiers.filter((f) => !estImage(f.url)).map((f) => f.url)
 		: [];
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
 	//  ticket, deux centimètres plus haut.
-	$: libelleStatutActuel = currentStatut ? (statutLabels[currentStatut] || currentStatut) : '';
+	$: libelleStatutActuel = currentStatut ? statutLabels[currentStatut] || currentStatut : '';
 
 	//  Le périmètre COURANT en badge, même forme que l'état courant deux lignes
 	//  plus haut : on voit d'où l'on part avant de préciser. `ChampsCommuns`
@@ -263,18 +263,16 @@
 	//  l'état courant ne change rien : l'entrée est un commentaire. En choisir une
 	//  autre en fait un changement d'état. C'est ce qui permet UN seul point
 	//  d'entrée — la question « lequel des deux ? » a déjà sa réponse à l'écran.
-	$: evolType = (!editMode && nouveauStatut && nouveauStatut !== currentStatut)
-		? 'etat'
-		: 'commentaire';
+	$: evolType =
+		!editMode && nouveauStatut && nouveauStatut !== currentStatut ? 'etat' : 'commentaire';
 	//  Le commentaire est REQUIS quand l'entrée n'apporte que lui : sans texte ni
 	//  changement d'état, l'entrée ne dirait rien.
 	$: contenuRequis = !editMode && evolType === 'commentaire';
 
 	//  Une entrée vaut si elle apporte quelque chose : un changement d'état, un
 	//  texte, ou une pièce jointe. Rien des trois → rien à enregistrer.
-	$: canSubmit = !saving && (
-		evolType === 'etat' || !(richEmpty(contenu) && allFichiersUrls.length === 0)
-	);
+	$: canSubmit =
+		!saving && (evolType === 'etat' || !(richEmpty(contenu) && allFichiersUrls.length === 0));
 
 	// Le téléversement lui-même vit dans `FichiersUpload` : trois copies de la
 	// même fonction (photo, document, fichier unifié) ne différaient que par la
@@ -316,16 +314,16 @@
 		dispatch('submit', {
 			type: editMode ? 'commentaire' : evolType,
 			contenu,
-			nouveau_statut: (!editMode && evolType === 'etat') ? nouveauStatut : undefined,
+			nouveau_statut: !editMode && evolType === 'etat' ? nouveauStatut : undefined,
 			fichiers_urls: allFichiersUrls,
 			partager_whatsapp: showNotifs ? partagerWhatsapp : undefined,
 			envoyer_syndic: showNotifs ? envoyerSyndic : undefined,
 			envoyer_cs: showNotifs ? envoyerCs : undefined,
-			email_externe: showEmail ? (emailExterne.trim() || undefined) : undefined,
+			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
 			//  `undefined` et non `[]` : le serveur distingue « n'en parle pas » de
 			//  « plus aucun périmètre », et seul le premier laisse le ticket tranquille.
-			perimetre_cible: (sectionPerimetre && perimetre.length) ? perimetre : undefined,
+			perimetre_cible: sectionPerimetre && perimetre.length ? perimetre : undefined,
 		});
 	}
 </script>
@@ -337,7 +335,6 @@
       imbriquées pour un seul objet est le défaut signalé sur #425. Le titre,
       lui, reste — c'est lui qui dit ce qu'on fait. -->
 <FormulaireCreation {titre} encadre={false}>
-
 	<!-- ── 3. Workflow ───────────────────────────────────────────────────────
 	     Plus de rangée de pastilles : le geste a été déclaré par le bouton qui a
 	     ouvert ce formulaire (#426). Ne reste que ce qu'il faut encore préciser —
@@ -354,13 +351,20 @@
 		      qu'UN point d'entrée sur la carte.
 		      Section à un champ : le titre EST le libellé, et il porte l'état actuel
 		      en badge (`ux-patterns` §9 septies et §9 quater). -->
-		<SectionFormulaire premiere titre="Workflow" requis badge={libelleStatutActuel}
-			idTitre="{idPrefixe}-workflow-titre">
+		<SectionFormulaire
+			premiere
+			titre="Workflow"
+			requis
+			badge={libelleStatutActuel}
+			idTitre="{idPrefixe}-workflow-titre"
+		>
 			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-workflow-titre">
 				<div class="evol-pastilles">
 					{#each statutOptions as opt (opt.value)}
-						<Pastille active={(nouveauStatut || currentStatut) === opt.value}
-							on:click={() => (nouveauStatut = opt.value)}>{opt.label}</Pastille>
+						<Pastille
+							active={(nouveauStatut || currentStatut) === opt.value}
+							on:click={() => (nouveauStatut = opt.value)}>{opt.label}</Pastille
+						>
 					{/each}
 				</div>
 			</div>
@@ -376,14 +380,16 @@
 	     (`ux-patterns` §9 septies). Les pastilles ne sont pas labelables, d'où le
 	     couple `idTitre` / `aria-labelledby`, comme dans `ChampsCommuns`. -->
 	{#if sectionPerimetre}
-		<SectionFormulaire titre="Périmètre" badge={libellePerimetreActuel}
-			idTitre="{idPrefixe}-perimetre-titre">
+		<SectionFormulaire
+			titre="Périmètre"
+			badge={libellePerimetreActuel}
+			idTitre="{idPrefixe}-perimetre-titre"
+		>
 			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
 				<PerimetrePicker bind:value={perimetre} titre="" />
 				<p class="evol-aide">
-					À renseigner seulement pour <strong>préciser</strong> le périmètre — par
-					exemple quand on a trouvé d'où vient la fuite. Laissé vide, le périmètre
-					du ticket ne bouge pas.
+					À renseigner seulement pour <strong>préciser</strong> le périmètre — par exemple quand on a
+					trouvé d'où vient la fuite. Laissé vide, le périmètre du ticket ne bouge pas.
 				</p>
 			</div>
 		</SectionFormulaire>
@@ -394,17 +400,24 @@
 	     rien (`ux-patterns` §9 septies). L'éditeur riche est un `contenteditable`,
 	     donc PAS labelable : le titre reste un `<h4>` et l'éditeur s'y relie par
 	     `aria-labelledby` — un `for` n'aurait rien associé, et en silence. -->
-	<SectionFormulaire premiere={!sectionWorkflow} titre={titreContenu} requis={contenuRequis}
-		idTitre="{idPrefixe}-contenu-titre">
+	<SectionFormulaire
+		premiere={!sectionWorkflow}
+		titre={titreContenu}
+		requis={contenuRequis}
+		idTitre="{idPrefixe}-contenu-titre"
+	>
 		<div class="field champ-large">
-			<RichEditor id="{idPrefixe}-contenu" bind:value={contenu}
+			<RichEditor
+				id="{idPrefixe}-contenu"
+				bind:value={contenu}
 				ariaLabelledby="{idPrefixe}-contenu-titre"
 				placeholder={editMode
 					? 'Modifier le commentaire…'
 					: evolType === 'etat'
 						? 'Précisions sur ce changement…'
 						: 'Ajoutez un commentaire de suivi…'}
-				minHeight="90px" />
+				minHeight="90px"
+			/>
 		</div>
 	</SectionFormulaire>
 
@@ -418,8 +431,14 @@
 	{#if showPhotos}
 		<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
 			<div class="field champ-large">
-				<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
-					label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
+				<FichiersUpload
+					id="{idPrefixe}-photos"
+					bind:urls={photos}
+					titre=""
+					label="Ajouter une photo"
+					accept={ACCEPT_PHOTOS}
+					size={80}
+				/>
 			</div>
 		</SectionFormulaire>
 	{/if}
@@ -461,7 +480,9 @@
 	     « Envoi… » en création contre « Enregistrer » / « Enregistrement… » en
 	     édition, c'était le même geste sous deux libellés (§9 quinquies bis). -->
 	<div class="form-actions">
-		<button type="button" class="btn btn-outline btn-sm" on:click={() => dispatch('cancel')}>Annuler</button>
+		<button type="button" class="btn btn-outline btn-sm" on:click={() => dispatch('cancel')}
+			>Annuler</button
+		>
 		<button type="button" class="btn btn-primary btn-sm" disabled={!canSubmit} on:click={soumettre}>
 			{saving ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
@@ -471,7 +492,11 @@
 <style>
 	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
 	    (`Pastille.svelte`, v2.67.11) : ne vit ici que leur disposition. */
-	.evol-pastilles { display: flex; gap: .5rem; flex-wrap: wrap; }
+	.evol-pastilles {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
 
 	/*  Le texte d'aide sous le sélecteur de périmètre. Défini ICI, avec le
 	    balisage qu'il habille : un style de page n'atteint pas un composant, et
@@ -481,7 +506,12 @@
 	    disent la même chose aux mêmes valeurs. Suivi à part : les fusionner
 	    demande de reprendre les trois appelants, pas d'en ajouter une quatrième
 	    en douce ici. */
-	.evol-aide { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
+	.evol-aide {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin: 0.6rem 0 0;
+	}
 
 	/*  `.case-interne` est partie avec son balisage dans `SectionDiffusion.svelte`
 	    (#498), cible tactile de 44 px comprise : la garder ici en ferait une règle

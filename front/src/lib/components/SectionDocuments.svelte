@@ -82,10 +82,18 @@
 							⬇ Télécharger
 						</a>
 						{#if peutModifier}
-							<button class="btn-icon-edit" aria-label="Modifier" title="Modifier"
-								on:click={() => onModifier(doc)}>✏️</button>
-							<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer"
-								on:click={() => onSupprimer(doc.id)}>&#x1F5D1;️</button>
+							<button
+								class="btn-icon-edit"
+								aria-label="Modifier"
+								title="Modifier"
+								on:click={() => onModifier(doc)}>✏️</button
+							>
+							<button
+								class="btn-icon-danger"
+								aria-label="Supprimer"
+								title="Supprimer"
+								on:click={() => onSupprimer(doc.id)}>&#x1F5D1;️</button
+							>
 						{/if}
 					</div>
 				</div>
@@ -95,7 +103,9 @@
 </section>
 
 <style>
-	.section-documents { margin-bottom: 2.5rem; }
+	.section-documents {
+		margin-bottom: 2.5rem;
+	}
 	.section-header {
 		display: flex;
 		align-items: center;
@@ -103,7 +113,9 @@
 		margin-bottom: 0.75rem;
 	}
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
-	.section-title { margin: 0; }
+	.section-title {
+		margin: 0;
+	}
 	/*  🔴 `.doc-*` REMONTÉES dans `styles/composants.css` le 29/08/2026 (#491).
 	    Elles étaient scopées ici, et `residence` employait le même vocabulaire
 	    dans SON balisage — trois blocs y sortaient nus. Une notion partagée par

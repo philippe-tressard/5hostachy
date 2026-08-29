@@ -4,7 +4,14 @@
  * Compatible SSR (pas de dépendance DOM).
  */
 export function stripHtml(html: string): string {
-	return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+	return html
+		.replace(/<[^>]*>/g, '')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.trim();
 }
 
 /**
@@ -98,7 +105,8 @@ export function capsLockActif(e: KeyboardEvent | FocusEvent): boolean | null {
  * dans un toast — le seul endroit où l'utilisateur regarde quand ça a échoué.
  */
 export function apiMessage(e: unknown, fallback = 'Erreur'): string {
-	if (e && typeof e === 'object' && 'message' in e) return String((e as { message?: unknown }).message ?? fallback);
+	if (e && typeof e === 'object' && 'message' in e)
+		return String((e as { message?: unknown }).message ?? fallback);
 	return fallback;
 }
 
@@ -112,7 +120,6 @@ export function starsDisplay(note: number): string {
 	const pleines = Math.round(note);
 	return '★'.repeat(pleines) + '☆'.repeat(5 - pleines);
 }
-
 
 /**
  * Relie un calcul SANS dépendance réactive à ce qui doit le déclencher.
@@ -149,4 +156,3 @@ export function relire<T>(dependance: unknown, calcul: () => T): T {
 	void dependance;
 	return calcul();
 }
-

@@ -214,7 +214,6 @@
 		value = s.size > 0 ? [...s] : defaut ? [defaut] : [];
 		dispatch('change', value);
 	}
-
 </script>
 
 <!--  UN SEUL RENDU pour les deux modes (16/08/2026).
@@ -236,8 +235,11 @@
 	      la résidence » quand rien n'est précisé. Inauguré par le sondage, étendu
 	      au standard à la demande de l'utilisateur (skill ux-patterns §9 quater). -->
 	<div class="perimetre-titre">
-		{titre}{#if requis} *{/if}
-		{#if estDefaut && noeudDefaut}<span class="badge badge-green perimetre-badge">{noeudDefaut.libelle}</span>{/if}
+		{titre}{#if requis}
+			*{/if}
+		{#if estDefaut && noeudDefaut}<span class="badge badge-green perimetre-badge"
+				>{noeudDefaut.libelle}</span
+			>{/if}
 	</div>
 {/if}
 <div class="perimetre-pills">
@@ -297,15 +299,15 @@
 		      ⚠️ La VALEUR ne change pas : `basculer()` retire toujours le bâtiment
 		      quand on précise un espace (`s.delete(racine)`). C'est bien l'ascenseur
 		      qui est ciblé, pas le bâtiment entier — seule la lecture est corrigée. -->
-		<Pastille active={!estDefaut && (selection.has(n.code) || choisis.length > 0)}
+		<Pastille
+			active={!estDefaut && (selection.has(n.code) || choisis.length > 0)}
 			icone={n.icone ?? ''}
 			chevron={aDesEnfants.has(n.code) && !contracte}
 			on:click={() => basculer(n.code)}
-			>{n.libelle}{#if contracte}<span class="perimetre-resume"
-				> › {choisis
-					.map((e) => e.libelle_court || e.libelle)
-					.join(SEPARATEUR_ELEMENT)}</span
-			>{/if}</Pastille>
+			>{n.libelle}{#if contracte}<span class="perimetre-resume">
+					› {choisis.map((e) => e.libelle_court || e.libelle).join(SEPARATEUR_ELEMENT)}</span
+				>{/if}</Pastille
+		>
 	{/each}
 </div>
 
@@ -317,8 +319,9 @@
 		</p>
 		<div class="perimetre-pills">
 			{#each niveau2 as espace (espace.code)}
-				<Pastille petite active={selection.has(espace.code)}
-					on:click={() => basculer(espace.code)}>{espace.libelle}</Pastille>
+				<Pastille petite active={selection.has(espace.code)} on:click={() => basculer(espace.code)}
+					>{espace.libelle}</Pastille
+				>
 			{/each}
 		</div>
 	</div>
@@ -340,15 +343,40 @@
 	    par « c'est une mise en page propre à cet écran », ce qui était faux :
 	    quatre écrans emploient la classe. La charte a été dédoublonnée dans le
 	    même lot ; sans cela, aucune des deux ne s'imposait comme LA définition. */
-	.perimetre-titre { font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
-	.perimetre-badge { font-size: .72rem; margin-left: .4rem; }
+	.perimetre-titre {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-text);
+		margin-bottom: 0.3rem;
+	}
+	.perimetre-badge {
+		font-size: 0.72rem;
+		margin-left: 0.4rem;
+	}
 	/*  Le résumé d'une pastille contractée : légèrement en retrait pour qu'on lise
 	    d'abord le nœud, puis ce qu'il contient. Il est rendu ICI, donc stylé ici —
 	    une classe posée sur le contenu d'un slot appartient à l'appelant, jamais
 	    au composant qui l'accueille (v2.67.11). */
-	.perimetre-resume { opacity: .85; font-weight: 500; }
-	.perimetre-niveau2 { margin-top: .6rem; padding-left: .1rem; }
-	.perimetre-precision { font-size: .8rem; color: var(--color-text-muted); margin: 0 0 .35rem; }
-	.perimetre-facultatif { opacity: .75; }
-	.perimetre-aide { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
+	.perimetre-resume {
+		opacity: 0.85;
+		font-weight: 500;
+	}
+	.perimetre-niveau2 {
+		margin-top: 0.6rem;
+		padding-left: 0.1rem;
+	}
+	.perimetre-precision {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin: 0 0 0.35rem;
+	}
+	.perimetre-facultatif {
+		opacity: 0.75;
+	}
+	.perimetre-aide {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin: 0.6rem 0 0;
+	}
 </style>

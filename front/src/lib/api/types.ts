@@ -7,9 +7,11 @@ export interface User {
 	prenom: string;
 	email: string;
 	telephone?: string | null;
-	societe?: string | null;	fonction?: string | null;	statut: string;
+	societe?: string | null;
+	fonction?: string | null;
+	statut: string;
 	role: string;
-	roles: string[];  // multi-rôles cumulables
+	roles: string[]; // multi-rôles cumulables
 	actif: boolean;
 	opt_out_telemetrie?: boolean;
 	// Modération de la Communauté. Ces champs étaient absents de l'interface
@@ -37,7 +39,7 @@ export interface User {
 	restreindre_a_mes_batiments?: boolean;
 	demarche_arrivant?: string | null;
 	batiment_id?: number | null;
-	batiment_nom?: string | null;  // "Bât. A"
+	batiment_nom?: string | null; // "Bât. A"
 	last_seen_actualites?: string | null;
 	delegations_aidant?: { delegation_id: number; mandant_id: number; mandant_nom: string }[];
 	cree_le: string;
@@ -196,7 +198,6 @@ export interface Notification {
 	urgente: boolean;
 	cree_le: string;
 }
-
 
 export interface FluxItem {
 	id: string;

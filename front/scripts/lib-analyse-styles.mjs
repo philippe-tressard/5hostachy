@@ -143,7 +143,10 @@ export function reglesDeSaisie(css, elements) {
  * plus étroite — l'exclure ferait un angle mort à l'endroit le plus exposé.
  */
 function elementCible(selecteur, elements) {
-	const dernier = selecteur.split(/\s*[>+~]\s*|\s+/).filter(Boolean).pop();
+	const dernier = selecteur
+		.split(/\s*[>+~]\s*|\s+/)
+		.filter(Boolean)
+		.pop();
 	if (!dernier) return null;
 	const nu = dernier.replace(/^:global\(/, '').replace(/\)$/, '');
 	const m = /^([A-Za-z][\w-]*)/.exec(nu);
@@ -331,7 +334,7 @@ export function baliseAvant(source, pos) {
 	let zone = source.slice(debut, pos).replace(/"[^"]*"|'[^']*'/g, ' ');
 	//  Du plus profond vers le plus large : `{() => { a; b; }}` s'imbrique, et une
 	//  seule passe laisserait le `>` de la flèche — donc croirait la balise fermée.
-	for (let precedent = ''; precedent !== zone; ) {
+	for (let precedent = ''; precedent !== zone;) {
 		precedent = zone;
 		zone = zone.replace(/\{[^{}]*\}/g, ' ');
 	}

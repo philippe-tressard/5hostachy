@@ -41,7 +41,8 @@ export function kanbanEvVisible(ev: any, ctx: KanbanCtx): boolean {
 		ev.archivee &&
 		ev.statut_kanban !== 'annule' &&
 		!(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')
-	) return false;
+	)
+		return false;
 	// CS / Admin : voient tout
 	if (ctx.isCS || ctx.isAdmin) return true;
 	// Maintenance récurrente : toujours visible
@@ -61,9 +62,7 @@ export function kanbanColVisible(colId: string, ctx: KanbanCtx): boolean {
 /** Retourne l'année de référence d'un événement kanban (pour le filtre exercice). */
 export function kanbanEvYear(ev: any): number {
 	const refDate =
-		(ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule') && ev.fin
-			? ev.fin
-			: ev.debut;
+		(ev.statut_kanban === 'termine' || ev.statut_kanban === 'annule') && ev.fin ? ev.fin : ev.debut;
 	return new Date(refDate).getFullYear();
 }
 
@@ -78,4 +77,3 @@ export function kanbanEvMatchesYear(ev: any, exercice: number): boolean {
 		ev.statut_kanban !== 'annule';
 	return isOverdue || year === exercice;
 }
-

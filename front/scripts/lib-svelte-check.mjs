@@ -63,7 +63,7 @@ export function lignesDuRapport() {
 	const sync = spawnSync('npx svelte-kit sync', { encoding: 'utf8', shell: true });
 	if (sync.status !== 0) {
 		inconnu(
-			'`svelte-kit sync` a échoué — `svelte-check` n\'analyserait aucun fichier',
+			"`svelte-kit sync` a échoué — `svelte-check` n'analyserait aucun fichier",
 			`${sync.stdout || ''}${sync.stderr || ''}`.slice(-400),
 		);
 	}
@@ -72,7 +72,7 @@ export function lignesDuRapport() {
 		shell: true,
 		maxBuffer: 32 * 1024 * 1024,
 	});
-	if (res.error) inconnu('`svelte-check` n\'a pas pu être lancé', res.error.message);
+	if (res.error) inconnu("`svelte-check` n'a pas pu être lancé", res.error.message);
 	const sortie = `${res.stdout || ''}${res.stderr || ''}`.replace(motifAnsi(), '');
 	//  🔴 CAS ZÉRO — une sortie qui ne ressemble pas à un rapport rendrait
 	//  « aucun défaut » sans avoir rien lu.
@@ -155,14 +155,20 @@ export function avertissements(lignes, marqueur) {
 	return trouves;
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
+if (
+	process.argv[1] &&
+	import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())
+) {
 	if (process.argv.includes('--selftest')) {
 		let fail = 0;
 		const verifier = (nom, obtenu, attendu) => {
 			const a = JSON.stringify(attendu);
 			const o = JSON.stringify(obtenu);
 			if (o === a) console.log(`PASS  ${nom}`);
-			else { console.error(`FAIL  ${nom}\n      attendu ${a}\n      obtenu  ${o}`); fail = 1; }
+			else {
+				console.error(`FAIL  ${nom}\n      attendu ${a}\n      obtenu  ${o}`);
+				fail = 1;
+			}
 		};
 
 		//  Un extrait RÉEL de la sortie, forme comprise : l'emplacement une ligne
@@ -201,7 +207,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 		//  au fichier précédent — qui n'a rien à voir.
 		verifier(
 			'emplacement illisible → « ? », jamais un fichier au hasard',
-			avertissements(['(pas un chemin)', 'Warn: Unused CSS selector ".x" (svelte)'], 'Unused CSS')[0].fichier,
+			avertissements(
+				['(pas un chemin)', 'Warn: Unused CSS selector ".x" (svelte)'],
+				'Unused CSS',
+			)[0].fichier,
 			'?',
 		);
 		//  Les couleurs se retirent sans laisser de caractère de contrôle.
@@ -213,12 +222,24 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
 		//  intégration continue, deux contrôles rendaient « aucun » sans rien avoir
 		//  extrait. On éprouve ici la DÉCISION (les deux comptes divergent), pas le
 		//  `process.exit` qui la suit.
-		const divergent = (annonces, lignes) => annonces > 0 && lignes.filter((l) => /\bWarn:/.test(l)).length === 0;
-		verifier('bilan annoncé mais rien de lisible → anomalie', divergent(2, ['svelte-check found 0 errors and 2 warnings']), true);
+		const divergent = (annonces, lignes) =>
+			annonces > 0 && lignes.filter((l) => /\bWarn:/.test(l)).length === 0;
+		verifier(
+			'bilan annoncé mais rien de lisible → anomalie',
+			divergent(2, ['svelte-check found 0 errors and 2 warnings']),
+			true,
+		);
 		verifier('bilan annoncé ET lisible → normal', divergent(2, rapport), false);
-		verifier('aucun avertissement annoncé → normal, pas une anomalie', divergent(0, ['svelte-check found 0 errors and 0 warnings']), false);
+		verifier(
+			'aucun avertissement annoncé → normal, pas une anomalie',
+			divergent(0, ['svelte-check found 0 errors and 0 warnings']),
+			false,
+		);
 
-		if (fail) { console.error('\n✗ lib-svelte-check --selftest : des cas échouent.'); process.exit(1); }
+		if (fail) {
+			console.error('\n✗ lib-svelte-check --selftest : des cas échouent.');
+			process.exit(1);
+		}
 		console.log('✓ lib-svelte-check --selftest : le rapport se lit comme on croit.');
 	}
 }

@@ -166,8 +166,12 @@
 		{#if avecEmailExterne}
 			<div class="field champ-large">
 				<label for="{idPrefixe}-email-ext">&#x1F4E7; Notifier une adresse email externe</label>
-				<input id="{idPrefixe}-email-ext" type="email" bind:value={emailExterne}
-					placeholder="contact@exemple.fr" />
+				<input
+					id="{idPrefixe}-email-ext"
+					type="email"
+					bind:value={emailExterne}
+					placeholder="contact@exemple.fr"
+				/>
 			</div>
 		{/if}
 	</SectionFormulaire>
@@ -180,15 +184,21 @@
 	.case-interne {
 		display: flex;
 		align-items: center;
-		gap: .4rem;
+		gap: 0.4rem;
 		cursor: pointer;
-		font-size: .85rem;
-		margin: 0 0 .6rem;
+		font-size: 0.85rem;
+		margin: 0 0 0.6rem;
 	}
-	.case-interne input[type='checkbox'] { width: auto; margin: 0; flex-shrink: 0; }
+	.case-interne input[type='checkbox'] {
+		width: auto;
+		margin: 0;
+		flex-shrink: 0;
+	}
 	/*  Sous 480 px, la cible tactile d'une case ne faisait que 16 à 18 px de haut
 	    (socle 11 §10). */
 	@media (max-width: 480px) {
-		.case-interne { min-height: 44px; }
+		.case-interne {
+			min-height: 44px;
+		}
 	}
 </style>

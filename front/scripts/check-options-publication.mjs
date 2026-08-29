@@ -88,7 +88,10 @@ function sansCommentaires(texte) {
 		const i = sortie.indexOf(OUVRE_BLOC);
 		if (i === -1) break;
 		const j = sortie.indexOf(FERME_BLOC, i + 2);
-		if (j === -1) { sortie = sortie.slice(0, i); break; }
+		if (j === -1) {
+			sortie = sortie.slice(0, i);
+			break;
+		}
 		sortie = sortie.slice(0, i) + ' ' + sortie.slice(j + 2);
 	}
 	return sortie

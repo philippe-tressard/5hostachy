@@ -35,7 +35,8 @@ import { join, relative } from 'node:path';
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
 /** Ce par quoi une ligne d'ATTRIBUT peut commencer, et jamais une ligne de contenu. */
-const DEBUT_ATTRIBUT = /^\s*(class:|on:|bind:|use:|transition:|role=|aria-[\w-]+=|style=|id=|tabindex=|\{\.\.\.)/;
+const DEBUT_ATTRIBUT =
+	/^\s*(class:|on:|bind:|use:|transition:|role=|aria-[\w-]+=|style=|id=|tabindex=|\{\.\.\.)/;
 
 /** Une ligne qui ferme une balise ouvrante : se termine par `>` sans être `/>`. */
 const FIN_DE_BALISE = /[^/\s]>\s*$/;
@@ -56,7 +57,7 @@ const fichiers = svelte(RACINE);
 //  (`standards/04-fiabilite-des-controles.md` §2).
 if (fichiers.length === 0) {
 	console.error("✗ Cas zéro : aucun composant analysé — l'arborescence a changé.");
-	console.error("Ne pas lire ceci comme un succès.");
+	console.error('Ne pas lire ceci comme un succès.');
 	process.exit(1);
 }
 
@@ -87,11 +88,13 @@ for (const chemin of fichiers) {
 }
 
 if (erreurs.length) {
-	console.error('✗ Balise ouvrante fermée trop tôt — les attributs suivants partiront en texte brut :\n');
+	console.error(
+		'✗ Balise ouvrante fermée trop tôt — les attributs suivants partiront en texte brut :\n',
+	);
 	for (const e of erreurs) console.error(`  • ${e}`);
 	console.error(
-		"\n⚠️ `svelte-check` ne voit rien : un attribut après le `>` est du texte, et du\n" +
-			"texte est valide. Le build passe, la page affiche du code. Constaté en\n" +
+		'\n⚠️ `svelte-check` ne voit rien : un attribut après le `>` est du texte, et du\n' +
+			'texte est valide. Le build passe, la page affiche du code. Constaté en\n' +
 			'production le 18/08/2026, sur deux cartes.\n',
 	);
 	process.exit(1);

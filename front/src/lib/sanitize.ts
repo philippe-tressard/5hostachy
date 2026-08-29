@@ -10,14 +10,37 @@
 let _purify: { sanitize: (html: string, cfg: object) => string } | null = null;
 
 if (typeof window !== 'undefined') {
-	import('dompurify').then(mod => { _purify = mod.default; });
+	import('dompurify').then((mod) => {
+		_purify = mod.default;
+	});
 }
 
 const ALLOWED_TAGS = [
-	'p', 'br', 'b', 'i', 'u', 's', 'strong', 'em',
-	'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-	'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-	'a', 'img', 'hr', 'span', 'div',
+	'p',
+	'br',
+	'b',
+	'i',
+	'u',
+	's',
+	'strong',
+	'em',
+	'ul',
+	'ol',
+	'li',
+	'blockquote',
+	'pre',
+	'code',
+	'h1',
+	'h2',
+	'h3',
+	'h4',
+	'h5',
+	'h6',
+	'a',
+	'img',
+	'hr',
+	'span',
+	'div',
 ];
 
 const ALLOWED_ATTR = ['href', 'src', 'alt', 'title', 'class', 'target', 'rel'];
@@ -36,8 +59,7 @@ function _serverSanitize(input: string): string {
 			if (!_allowedTagSet.has(tagLower)) return '';
 			const cleanAttrs = (attrs || '').replace(
 				/\s([a-z][a-z-]*)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?/gi,
-				(_: string, attrName: string) =>
-					_allowedAttrSet.has(attrName.toLowerCase()) ? _ : ''
+				(_: string, attrName: string) => (_allowedAttrSet.has(attrName.toLowerCase()) ? _ : ''),
 			);
 			return match.startsWith('</') ? `</${tagLower}>` : `<${tagLower}${cleanAttrs}>`;
 		});

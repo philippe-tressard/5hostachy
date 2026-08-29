@@ -25,7 +25,7 @@ export const LIBELLE_TACHE: Record<string, string> = {
 	auto_deploy: 'Déploiement automatique',
 	//  Seule tâche lancée à la main depuis le poste : le libellé le dit, sinon une
 	//  « exécution manquante » se lirait comme une panne alors qu'il s'agit d'un oubli.
-	export_hors_site: 'Copie hors site (manuelle)'
+	export_hors_site: 'Copie hors site (manuelle)',
 };
 
 //  Libellé du BOUTON qui lance une tâche à la main — quand il diffère du nom de
@@ -42,7 +42,7 @@ export const LIBELLE_TACHE: Record<string, string> = {
 //  écrite : en petit, à côté. Le libellé est ce qu'on lit avant d'agir ; une note
 //  posée à côté ne corrige pas une promesse portée par le bouton lui-même.
 export const LIBELLE_ACTION: Record<string, string> = {
-	maintenance: 'Lancer la purge applicative'
+	maintenance: 'Lancer la purge applicative',
 };
 
 /*  ── Les STATUTS d'une tâche planifiée ───────────────────────────────────────
@@ -55,33 +55,33 @@ export const LIBELLE_ACTION: Record<string, string> = {
     statuts, et les libellés de TÂCHES vivaient déjà ici pour exactement cette
     raison — les redéfinir dans un écran est ce qui les fait diverger.  */
 export const LIBELLE_STATUT: Record<string, string> = {
-ok: 'À jour',
-en_cours: 'En cours',
-rapport_perdu: 'Rapport non reçu',
-manquante: 'Exécution manquante',
-erreur: 'En échec',
-aucune_execution: 'Aucun rapport reçu'
+	ok: 'À jour',
+	en_cours: 'En cours',
+	rapport_perdu: 'Rapport non reçu',
+	manquante: 'Exécution manquante',
+	erreur: 'En échec',
+	aucune_execution: 'Aucun rapport reçu',
 };
 export const AIDE_STATUT: Record<string, string> = {
-ok: 'Un rapport est arrivé dans le délai attendu.',
-manquante: "Aucun rapport depuis plus longtemps que la périodicité de la tâche.",
-erreur: 'Le dernier rapport signale un échec.',
-aucune_execution:
-"Aucun rapport en base pour cette tâche. Cela ne prouve pas qu'elle n'a pas " +
-'tourné : un rapport peut avoir échoué à remonter, ou avoir été purgé. ' +
-'Vérifier le journal du nœud avant de conclure.',
-en_cours: 'La tâche a signalé son démarrage et n’a pas encore rendu son compte rendu.',
-rapport_perdu:
-'La tâche a DÉMARRÉ — elle a écrit son battement de début — mais son ' +
-"compte rendu n'est jamais arrivé. Le ménage a donc bien eu lieu ; c'est " +
-'la chaîne de remontée qui est rompue. Chercher du côté du réseau, de la ' +
-"clé de maintenance ou du format de la charge utile, pas du côté de la tâche."
+	ok: 'Un rapport est arrivé dans le délai attendu.',
+	manquante: 'Aucun rapport depuis plus longtemps que la périodicité de la tâche.',
+	erreur: 'Le dernier rapport signale un échec.',
+	aucune_execution:
+		"Aucun rapport en base pour cette tâche. Cela ne prouve pas qu'elle n'a pas " +
+		'tourné : un rapport peut avoir échoué à remonter, ou avoir été purgé. ' +
+		'Vérifier le journal du nœud avant de conclure.',
+	en_cours: 'La tâche a signalé son démarrage et n’a pas encore rendu son compte rendu.',
+	rapport_perdu:
+		'La tâche a DÉMARRÉ — elle a écrit son battement de début — mais son ' +
+		"compte rendu n'est jamais arrivé. Le ménage a donc bien eu lieu ; c'est " +
+		'la chaîne de remontée qui est rompue. Chercher du côté du réseau, de la ' +
+		'clé de maintenance ou du format de la charge utile, pas du côté de la tâche.',
 };
 export const CLASSE_STATUT: Record<string, string> = {
-ok: 'badge-green',
-en_cours: 'badge-green',
-rapport_perdu: 'badge-orange',
-erreur: 'badge-red',
-manquante: 'badge-red',
-aucune_execution: 'badge-red'
+	ok: 'badge-green',
+	en_cours: 'badge-green',
+	rapport_perdu: 'badge-orange',
+	erreur: 'badge-red',
+	manquante: 'badge-red',
+	aucune_execution: 'badge-red',
 };

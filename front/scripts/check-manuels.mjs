@@ -72,8 +72,8 @@ if (echecs.length) {
 	for (const l of echecs) console.error(`   ${l}`);
 	console.error(
 		"\nLes navigateurs réparent ce genre de balisage en silence : la page s'affiche quand même.\n" +
-			'Corriger dans `docs/`, puis resynchroniser vers `front/static/` (copie à l\'octet).\n' +
-			'⚠️ Jamais avec `sed -i` : ces fichiers sont versionnés en CRLF, que sed réécrit en LF.\n'
+			"Corriger dans `docs/`, puis resynchroniser vers `front/static/` (copie à l'octet).\n" +
+			'⚠️ Jamais avec `sed -i` : ces fichiers sont versionnés en CRLF, que sed réécrit en LF.\n',
 	);
 	process.exit(1);
 }

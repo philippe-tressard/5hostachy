@@ -11,8 +11,8 @@
 import { api } from './client';
 
 export const annuaireAdmin = {
-	getCS:     () => api.get<any>('/admin/annuaire/cs'),
-	putCS:     (data: unknown) => api.put<any>('/admin/annuaire/cs', data),
+	getCS: () => api.get<any>('/admin/annuaire/cs'),
+	putCS: (data: unknown) => api.put<any>('/admin/annuaire/cs', data),
 	getSyndic: () => api.get<any>('/admin/annuaire/syndic'),
 	putSyndic: (data: unknown) => api.put<any>('/admin/annuaire/syndic', data),
 };
@@ -47,9 +47,12 @@ export const admin = {
 	resetEmailTemplates: () => api.post<{ message: string }>('/admin/modeles-email/reinitialiser'),
 	// Utilisateurs & rôles
 	utilisateurs: () => api.get<any[]>('/admin/utilisateurs'),
-	changerRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/changer-role`, { role }),
-	ajouterRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/ajouter-role`, { role }),
-	retirerRole: (id: number, role: string) => api.post(`/admin/utilisateurs/${id}/retirer-role`, { role }),
+	changerRole: (id: number, role: string) =>
+		api.post(`/admin/utilisateurs/${id}/changer-role`, { role }),
+	ajouterRole: (id: number, role: string) =>
+		api.post(`/admin/utilisateurs/${id}/ajouter-role`, { role }),
+	retirerRole: (id: number, role: string) =>
+		api.post(`/admin/utilisateurs/${id}/retirer-role`, { role }),
 	// Demandes de modification de profil
 	demandesProfil: () => api.get<any[]>('/admin/demandes-profil'),
 	traiterDemandeProfil: (id: number, data: { action: string; motif_refus?: string }) =>
@@ -69,6 +72,6 @@ export const admin = {
 };
 
 export const config = {
-        get: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config'),
-        save: (data: Record<string, string>): Promise<void> => api.put('/config', data),
+	get: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config'),
+	save: (data: Record<string, string>): Promise<void> => api.put('/config', data),
 };

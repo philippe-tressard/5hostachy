@@ -42,11 +42,19 @@
 
 <div class="wf-pastilles" role="group" aria-labelledby={idTitre || undefined}>
 	{#each options as o (o.value)}
-		<Pastille active={valeur === o.value}
-			on:click={() => { if (!lecture) dispatch('choisir', o.value); }}>{o.label}</Pastille>
+		<Pastille
+			active={valeur === o.value}
+			on:click={() => {
+				if (!lecture) dispatch('choisir', o.value);
+			}}>{o.label}</Pastille
+		>
 	{/each}
 </div>
 
 <style>
-	.wf-pastilles { display: flex; gap: .5rem; flex-wrap: wrap; }
+	.wf-pastilles {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
 </style>

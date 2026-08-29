@@ -49,41 +49,49 @@ export const lots = {
 	// Admin — tous les lots
 	tous: () => api.get<any[]>('/lots/admin/tous'),
 	// Admin — import staging
-	uploadImport: (file: File, remplacer = false) => uploadExcel('/lots/admin/imports/upload', file, remplacer),
+	uploadImport: (file: File, remplacer = false) =>
+		uploadExcel('/lots/admin/imports/upload', file, remplacer),
 	listImports: (statut?: string, tri?: string) =>
 		api.get<any[]>(`/lots/admin/imports${buildQuery({ statut, tri })}`),
 	statsImports: () => api.get<any>('/lots/admin/imports/stats'),
 	autoMatchImports: () => api.post<any>('/lots/admin/imports/auto-match', {}),
 	autoResoudreImports: () => api.post<any>('/lots/admin/imports/auto-resoudre', {}),
-	patchImport: (id: number, data: { lot_id?: number | null; utilisateurs?: {user_id: number; type_lien: string}[]; notes_admin?: string | null }) => api.patch<any>(`/lots/admin/imports/${id}`, data),
+	patchImport: (
+		id: number,
+		data: {
+			lot_id?: number | null;
+			utilisateurs?: { user_id: number; type_lien: string }[];
+			notes_admin?: string | null;
+		},
+	) => api.patch<any>(`/lots/admin/imports/${id}`, data),
 	resoudreImport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/resoudre`, {}),
 	ignorerimport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/ignorer`, {}),
 };
 
 export const bailleur = {
 	mesBaux: () => api.get<any[]>('/bailleur/mes-baux'),
-	creerBail: (lot_id: number, data: unknown) => api.post<any>(`/bailleur/lots/${lot_id}/bail`, data),
+	creerBail: (lot_id: number, data: unknown) =>
+		api.post<any>(`/bailleur/lots/${lot_id}/bail`, data),
 	creerBailMulti: (data: unknown) => api.post<any[]>('/bailleur/baux/creer-multi', data),
 	getBail: (id: number) => api.get<any>(`/bailleur/baux/${id}`),
 	updateBail: (id: number, data: unknown) => api.patch<any>(`/bailleur/baux/${id}`, data),
 	terminerBail: (id: number, data: unknown) => api.post<any>(`/bailleur/baux/${id}/terminer`, data),
-	ajouterObjet: (bail_id: number, data: unknown) => api.post<any>(`/bailleur/baux/${bail_id}/objets`, data),
+	ajouterObjet: (bail_id: number, data: unknown) =>
+		api.post<any>(`/bailleur/baux/${bail_id}/objets`, data),
 	updateObjet: (bail_id: number, obj_id: number, data: unknown) =>
 		api.patch<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}`, data),
 	retourObjet: (bail_id: number, obj_id: number, data: unknown) =>
 		api.post<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}/retour`, data),
 	supprimerObjet: (bail_id: number, obj_id: number) =>
 		api.delete(`/bailleur/baux/${bail_id}/objets/${obj_id}`),
-	supprimerBail: (bail_id: number) =>
-		api.delete(`/bailleur/baux/${bail_id}`),
+	supprimerBail: (bail_id: number) => api.delete(`/bailleur/baux/${bail_id}`),
 	tousBaux: () => api.get<any[]>('/bailleur/tous-les-baux'),
 	// Recherche locataire & gestion accès
 	searchLocataire: (q: string) =>
 		api.get<any[]>(`/bailleur/search-locataire?q=${encodeURIComponent(q)}`),
 	locatairesSuggeres: () => api.get<any[]>('/bailleur/locataires-suggeres'),
-	accesBail: (bail_id: number) =>
-		api.get<any[]>(`/bailleur/baux/${bail_id}/acces`),
-	transfererAcces: (bail_id: number, data: { vigik_ids: number[]; tc_ids: number[] }) => 
+	accesBail: (bail_id: number) => api.get<any[]>(`/bailleur/baux/${bail_id}/acces`),
+	transfererAcces: (bail_id: number, data: { vigik_ids: number[]; tc_ids: number[] }) =>
 		api.post<any[]>(`/bailleur/baux/${bail_id}/transferer-acces`, data),
 	recupererAcces: (bail_id: number, data?: { vigik_ids: number[]; tc_ids: number[] }) =>
 		api.post<any[]>(`/bailleur/baux/${bail_id}/recuperer-acces`, data ?? {}),
@@ -117,7 +125,12 @@ export const reglesResidence = {
 
 export const diagnostics = {
 	listTypes: () => api.get<any[]>('/diagnostics/types'),
-	uploadRapport: async (typeId: number, titre: string, dateRapport: string | undefined, file: File): Promise<any> => {
+	uploadRapport: async (
+		typeId: number,
+		titre: string,
+		dateRapport: string | undefined,
+		file: File,
+	): Promise<any> => {
 		return postFormData(`/diagnostics/types/${typeId}/rapports`, {
 			titre,
 			date_rapport: dateRapport,
@@ -126,10 +139,14 @@ export const diagnostics = {
 	},
 	// `synthese` est bien géré par l'API (`if "synthese" in body.model_fields_set`)
 	// et stocké sur le modèle : c'est la signature d'ici qui était en retard.
-	updateRapport: (id: number, data: { titre?: string; date_rapport?: string | null; synthese?: string | null }) =>
-		api.patch<any>(`/diagnostics/rapports/${id}`, data),
+	updateRapport: (
+		id: number,
+		data: { titre?: string; date_rapport?: string | null; synthese?: string | null },
+	) => api.patch<any>(`/diagnostics/rapports/${id}`, data),
 	deleteRapport: (id: number) => api.delete(`/diagnostics/rapports/${id}`),
 	downloadUrl: (id: number) => `${BASE}/diagnostics/rapports/${id}/télécharger`,
 	toggleNonApplicable: (typeId: number, nonApplicable: boolean) =>
-		api.patch<any>(`/diagnostics/types/${typeId}/non-applicable`, { non_applicable: nonApplicable }),
+		api.patch<any>(`/diagnostics/types/${typeId}/non-applicable`, {
+			non_applicable: nonApplicable,
+		}),
 };

@@ -88,7 +88,10 @@
 		description = '';
 		clotureLe = '';
 		resultatsPublics = true;
-		options = [{ libelle: '', champ_libre: false }, { libelle: '', champ_libre: false }];
+		options = [
+			{ libelle: '', champ_libre: false },
+			{ libelle: '', champ_libre: false },
+		];
 		perimetreCible = perimetreDefautListe();
 		publicCible = ['résidents'];
 		partagerWhatsapp = false;
@@ -147,69 +150,90 @@
 		      tous les deux (`titreEcran`), et `lint:etats` refuse tout intitulé
 		      inventé sur place. -->
 		{#if sectionPresente(SONDAGE, etat, 'specifiques')}
-		<SectionFormulaire titre="Réponses possibles">
-			<div class="options">
-				{#each options as _opt, i (i)}
-					<div class="option">
-						<div class="option-ligne">
-							<span class="option-rang">{i + 1}.</span>
-							<input class="option-saisie" bind:value={options[i].libelle}
-								placeholder="Réponse {i + 1}" aria-label="Libellé de la réponse {i + 1}" />
-							<button type="button" class="btn btn-sm btn-outline" title="Monter"
-								aria-label="Monter la réponse {i + 1}"
-								disabled={i === 0} on:click={() => monter(i)}>↑</button>
-							<button type="button" class="btn btn-sm btn-outline" title="Descendre"
-								aria-label="Descendre la réponse {i + 1}"
-								disabled={i === options.length - 1} on:click={() => descendre(i)}>↓</button>
-							{#if options.length > 2}
-								<button type="button" class="btn btn-sm btn-outline option-supprimer"
-									title="Supprimer" aria-label="Supprimer la réponse {i + 1}"
-									on:click={() => retirerOption(i)}>✕</button>
-							{/if}
+			<SectionFormulaire titre="Réponses possibles">
+				<div class="options">
+					{#each options as _opt, i (i)}
+						<div class="option">
+							<div class="option-ligne">
+								<span class="option-rang">{i + 1}.</span>
+								<input
+									class="option-saisie"
+									bind:value={options[i].libelle}
+									placeholder="Réponse {i + 1}"
+									aria-label="Libellé de la réponse {i + 1}"
+								/>
+								<button
+									type="button"
+									class="btn btn-sm btn-outline"
+									title="Monter"
+									aria-label="Monter la réponse {i + 1}"
+									disabled={i === 0}
+									on:click={() => monter(i)}>↑</button
+								>
+								<button
+									type="button"
+									class="btn btn-sm btn-outline"
+									title="Descendre"
+									aria-label="Descendre la réponse {i + 1}"
+									disabled={i === options.length - 1}
+									on:click={() => descendre(i)}>↓</button
+								>
+								{#if options.length > 2}
+									<button
+										type="button"
+										class="btn btn-sm btn-outline option-supprimer"
+										title="Supprimer"
+										aria-label="Supprimer la réponse {i + 1}"
+										on:click={() => retirerOption(i)}>✕</button
+									>
+								{/if}
+							</div>
+							<label class="case case-secondaire">
+								<input type="checkbox" bind:checked={options[i].champ_libre} />
+								<span>Champ libre (le répondant pourra préciser sa réponse par écrit)</span>
+							</label>
 						</div>
-						<label class="case case-secondaire">
-							<input type="checkbox" bind:checked={options[i].champ_libre} />
-							<span>Champ libre (le répondant pourra préciser sa réponse par écrit)</span>
-						</label>
-					</div>
-				{/each}
-				<button type="button" class="btn btn-sm btn-outline" on:click={ajouterOption}>
-					+ Ajouter une autre réponse
-				</button>
-			</div>
-		</SectionFormulaire>
-
-		<SectionFormulaire titre="Clôture">
-			<div class="form-grid">
-				<div class="field">
-					<label for="sondage-cloture">Date de clôture</label>
-					<input id="sondage-cloture" type="datetime-local" bind:value={clotureLe} />
+					{/each}
+					<button type="button" class="btn btn-sm btn-outline" on:click={ajouterOption}>
+						+ Ajouter une autre réponse
+					</button>
 				</div>
-				<div class="field">
-					<label class="case">
-						<input type="checkbox" bind:checked={resultatsPublics} />
-						<span>Afficher les résultats avant la clôture</span>
-					</label>
-					<!--  L'ancien libellé, « Résultats visibles avant clôture », ne disait
+			</SectionFormulaire>
+
+			<SectionFormulaire titre="Clôture">
+				<div class="form-grid">
+					<div class="field">
+						<label for="sondage-cloture">Date de clôture</label>
+						<input id="sondage-cloture" type="datetime-local" bind:value={clotureLe} />
+					</div>
+					<div class="field">
+						<label class="case">
+							<input type="checkbox" bind:checked={resultatsPublics} />
+							<span>Afficher les résultats avant la clôture</span>
+						</label>
+						<!--  L'ancien libellé, « Résultats visibles avant clôture », ne disait
 					      pas À QUI — or c'est toute la question : des résultats visibles
 					      pendant le vote influencent les votes suivants (#397). L'audience
 					      est celle du sondage : son périmètre et ses destinataires. -->
-					<p class="aide-case">
-						Ils seront lus par les destinataires du sondage. Sinon, ils n'apparaissent
-						qu'une fois le sondage clôturé.
-					</p>
+						<p class="aide-case">
+							Ils seront lus par les destinataires du sondage. Sinon, ils n'apparaissent qu'une fois
+							le sondage clôturé.
+						</p>
+					</div>
 				</div>
-			</div>
-		</SectionFormulaire>
+			</SectionFormulaire>
 		{/if}
 
 		<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
 		      Le sondage n'a ni photos ni documents. -->
 		<ChampsCommuns
 			idPrefixe="sondage"
-			avecPerimetre={sectionPresente(SONDAGE, etat, 'perimetre')} bind:perimetre={perimetreCible}
-			avecDestinataires={sectionPresente(SONDAGE, etat, 'destinataires')} bind:destinataires={publicCible}
-			avecDescription={sectionPresente(SONDAGE, etat, 'description')} bind:description
+			avecPerimetre={sectionPresente(SONDAGE, etat, 'perimetre')}
+			bind:perimetre={perimetreCible}
+			avecDestinataires={sectionPresente(SONDAGE, etat, 'destinataires')}
+			bind:destinataires={publicCible}
+			avecDescription={sectionPresente(SONDAGE, etat, 'description')}
+			bind:description
 			descriptionPlaceholder="Description du sondage…"
 			avecDiffusion={sectionPresente(SONDAGE, etat, 'diffusion')}
 			bind:whatsapp={partagerWhatsapp}
@@ -223,7 +247,9 @@
 		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
 		      de seconde commande d'annulation (#367). -->
 		<div class="form-actions">
-			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+				>Annuler</button
+			>
 			<button class="btn btn-primary" disabled={submitting}>
 				{submitting ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
@@ -232,31 +258,49 @@
 </FormulaireCreation>
 
 <style>
-	.form-grid .field { margin-bottom: 0; }
+	.form-grid .field {
+		margin-bottom: 0;
+	}
 
-	.options { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
+	.options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: flex-start;
+	}
 	.option {
 		width: 100%;
 		display: flex;
 		flex-direction: column;
-		gap: .25rem;
-		padding: .6rem .75rem;
+		gap: 0.25rem;
+		padding: 0.6rem 0.75rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		background: var(--color-bg-subtle, #fafafa);
 	}
-	.option-ligne { display: flex; gap: .4rem; align-items: center; }
-	.option-rang { font-size: .78rem; color: var(--color-text-muted); min-width: 1.1rem; text-align: right; }
+	.option-ligne {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+	}
+	.option-rang {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		min-width: 1.1rem;
+		text-align: right;
+	}
 	.option-saisie {
 		flex: 1;
 		min-width: 0;
-		padding: .45rem .6rem;
+		padding: 0.45rem 0.6rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		font-size: .9rem;
+		font-size: 0.9rem;
 		background: var(--color-bg);
 	}
-	.option-supprimer { color: var(--color-danger, #dc2626); }
+	.option-supprimer {
+		color: var(--color-danger, #dc2626);
+	}
 
 	/*  ⚠️ Une case et son libellé, NOMMÉS. La page portait un `input, textarea {
 	    width: 100% }` — un sélecteur d'ÉLÉMENT nu, qui atteignait donc aussi les
@@ -264,5 +308,9 @@
 	    texte à l'autre bout de la ligne. C'est le défaut que l'utilisateur a
 	    signalé sur le sondage ET sur l'annonce le 16/08/2026 — un seul sélecteur,
 	    deux écrans. `npm run lint:styles` le refuse désormais. */
-	.case-secondaire { padding-left: 1.6rem; font-size: .8rem; color: var(--color-text-muted); }
+	.case-secondaire {
+		padding-left: 1.6rem;
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+	}
 </style>

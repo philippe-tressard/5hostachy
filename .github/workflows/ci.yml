@@ -879,6 +879,21 @@ jobs:
         working-directory: front
         run: npm run lint:eslint
 
+      - name: Formatage (prettier --check)
+        # 🔴 Le dernier point de #419, et sans lui les trois autres ne servent
+        # à rien : le dépôt vient d'être reformaté, et un format que rien ne
+        # vérifie rediverge au premier fichier écrit à la main.
+        #
+        # ⚠️ Il est placé APRÈS ESLint et non avant : quand les deux échouent,
+        # c'est la faute de logique qu'on veut lire en premier, pas la virgule
+        # mal placée. Un formatage rouge en tête de journal fait scroller.
+        #
+        # ⚠️ `endOfLine: "auto"` dans `.prettierrc` — ce dépôt est légitimement
+        # MIXTE CRLF/LF, et un `lf` forcé aurait converti 200 fichiers en un
+        # commit illisible, exactement ce que `.githooks/pre-commit` refuse.
+        working-directory: front
+        run: npx prettier --check .
+
       - name: Vérification des types (svelte-check)
         working-directory: front
         run: npm run check

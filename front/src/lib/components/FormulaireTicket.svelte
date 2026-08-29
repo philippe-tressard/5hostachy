@@ -154,10 +154,12 @@
 		if ($isCS && sectionPresente(TICKET, etat, 'specifiques')) {
 			try {
 				const all = await adminApi.utilisateurs();
-				usersActifs = all.filter((u: any) => u.actif).sort((a: any, b: any) =>
-					`${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`)
-				);
-			} catch { /* ignore */ }
+				usersActifs = all
+					.filter((u: any) => u.actif)
+					.sort((a: any, b: any) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`));
+			} catch {
+				/* ignore */
+			}
 		}
 	});
 
@@ -177,14 +179,18 @@
 	//  l'aperçu appartient à l'objet Diffusion, pas à ses appelants (#498). Ne
 	//  reste ici que le BROUILLON, que ce formulaire seul connaît.
 	let refDiffusion: any = null;
-	const brouillonApercu = () => ticketsApi.apercuDiffusion({
-		titre: titre.trim(), description, categorie,
-		perimetre_cible: perimetreCible,
-		photos_urls: photosUrls, fichiers_urls: fichiersUrls,
-		destinataire_syndic: destinataireSyndic,
-		destinataire_cs: destinataireCs,
-		partager_whatsapp: partagerWhatsapp,
-	});
+	const brouillonApercu = () =>
+		ticketsApi.apercuDiffusion({
+			titre: titre.trim(),
+			description,
+			categorie,
+			perimetre_cible: perimetreCible,
+			photos_urls: photosUrls,
+			fichiers_urls: fichiersUrls,
+			destinataire_syndic: destinataireSyndic,
+			destinataire_cs: destinataireCs,
+			partager_whatsapp: partagerWhatsapp,
+		});
 
 	$: titreBoite = modeEdition
 		? `Modifier le ticket #${ticket?.numero ?? ''}`
@@ -238,15 +244,18 @@
 					perimetre_cible: perimetreCible,
 					photos_urls: photosUrls,
 					fichiers_urls: fichiersUrls,
-					...($isCS ? {
-						statut,
-						destinataire_syndic: destinataireSyndic,
-						destinataire_cs: destinataireCs,
-						partager_whatsapp: partagerWhatsapp,
-						saisi_pour_user_id: modeSaisiPour === 'resident' ? saisiPourUserId : null,
-						saisi_pour_nom: modeSaisiPour === 'exterieur' ? saisiPourNom.trim() || null : null,
-						saisi_pour_email: modeSaisiPour === 'exterieur' ? saisiPourEmail.trim() || null : null,
-					} : {}),
+					...($isCS
+						? {
+								statut,
+								destinataire_syndic: destinataireSyndic,
+								destinataire_cs: destinataireCs,
+								partager_whatsapp: partagerWhatsapp,
+								saisi_pour_user_id: modeSaisiPour === 'resident' ? saisiPourUserId : null,
+								saisi_pour_nom: modeSaisiPour === 'exterieur' ? saisiPourNom.trim() || null : null,
+								saisi_pour_email:
+									modeSaisiPour === 'exterieur' ? saisiPourEmail.trim() || null : null,
+							}
+						: {}),
 				});
 				toast('success', 'Ticket modifié');
 				dispatch('modifie', maj);
@@ -282,9 +291,12 @@
 			toast('success', `Ticket ${t.numero} créé avec succès`);
 			dispatch('cree', t);
 		} catch (e) {
-			error = e instanceof ApiError
-				? e.message
-				: modeEdition ? 'Erreur lors de l’enregistrement' : 'Erreur lors de la création';
+			error =
+				e instanceof ApiError
+					? e.message
+					: modeEdition
+						? 'Erreur lors de l’enregistrement'
+						: 'Erreur lors de la création';
 		} finally {
 			loading = false;
 		}
@@ -296,8 +308,9 @@
       alerte — l'afficher ici promettrait une notification qui ne partira pas. -->
 {#if !modeEdition && categorie === 'urgence'}
 	<div class="alert alert-error largeur-saisie" style="margin-bottom:1rem">
-		&#x1F6A8; <strong>Urgence</strong> — Le conseil syndical et le syndic seront notifiés immédiatement.
-		En cas de danger immédiat, composez le <strong>15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong>.
+		&#x1F6A8; <strong>Urgence</strong> — Le conseil syndical et le syndic seront notifiés
+		immédiatement. En cas de danger immédiat, composez le
+		<strong>15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong>.
 	</div>
 {/if}
 
@@ -312,17 +325,17 @@
 		      Arbitré par l'utilisateur le 18/08/2026 — elle qualifie le ticket, elle
 		      est donc un champ spécifique (section 2). -->
 		<SectionFormulaire premiere>
-		<div class="field champ-large">
-			<label for="titre">Titre *</label>
-			<input
-				id="titre"
-				type="text"
-				bind:value={titre}
-				required
-				placeholder="Ex : Ascenseur bâtiment A en panne"
-				maxlength="200"
-			/>
-		</div>
+			<div class="field champ-large">
+				<label for="titre">Titre *</label>
+				<input
+					id="titre"
+					type="text"
+					bind:value={titre}
+					required
+					placeholder="Ex : Ascenseur bâtiment A en panne"
+					maxlength="200"
+				/>
+			</div>
 		</SectionFormulaire>
 
 		<!--  2. Champs spécifiques — DEUX champs nommés, dans cet ordre : la
@@ -373,9 +386,13 @@
 				      la rangée est alors en lecture, et le serveur refait le contrôle
 				      (liste blanche CS) — ce que l'interface interdit n'est qu'un
 				      confort. -->
-				<WorkflowPastilles options={STATUT_TICKET_OPTIONS} valeur={statut}
-					lecture={!$isCS} idTitre="ticket-workflow-titre"
-					on:choisir={(e) => (statut = e.detail)} />
+				<WorkflowPastilles
+					options={STATUT_TICKET_OPTIONS}
+					valeur={statut}
+					lecture={!$isCS}
+					idTitre="ticket-workflow-titre"
+					on:choisir={(e) => (statut = e.detail)}
+				/>
 				{#if !$isCS}
 					<p class="aide-champ">
 						{modeEdition
@@ -406,11 +423,16 @@
 			envoiEnCours={loading}
 			on:envoyer={() => void submit()}
 			idPrefixe="ticket"
-			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')} bind:perimetre={perimetreCible}
-			avecDescription={sectionPresente(TICKET, etat, 'description')} descriptionRequise bind:description
+			avecPerimetre={sectionPresente(TICKET, etat, 'perimetre')}
+			bind:perimetre={perimetreCible}
+			avecDescription={sectionPresente(TICKET, etat, 'description')}
+			descriptionRequise
+			bind:description
 			descriptionPlaceholder="Décrivez le problème avec le maximum de détails (localisation, depuis quand, fréquence…)"
-			avecPhotos={sectionPresente(TICKET, etat, 'photos')} bind:photos={photosUrls}
-			avecDocuments={sectionPresente(TICKET, etat, 'documents')} bind:documents={fichiersUrls}
+			avecPhotos={sectionPresente(TICKET, etat, 'photos')}
+			bind:photos={photosUrls}
+			avecDocuments={sectionPresente(TICKET, etat, 'documents')}
+			bind:documents={fichiersUrls}
 			avecDiffusion={$isCS && sectionPresente(TICKET, etat, 'diffusion')}
 			bind:whatsapp={partagerWhatsapp}
 			bind:syndic={destinataireSyndic}
@@ -428,7 +450,9 @@
 		      formulaire est le défaut relevé sur la modale du calendrier (#367) —
 		      c'est la page qui masque son bouton d'ouverture. -->
 		<div class="form-actions">
-			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+				>Annuler</button
+			>
 			<button type="submit" class="btn btn-primary" disabled={loading}>
 				{loading ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
@@ -440,29 +464,47 @@
       formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
       remonté la perdrait. C'est la moitié de l'arbitrage du 19/08. -->
 <style>
-	.aide-champ { font-size: .8rem; color: var(--color-text-muted); line-height: 1.45; margin: .25rem 0 0; }
+	.aide-champ {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		line-height: 1.45;
+		margin: 0.25rem 0 0;
+	}
 	.cat-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: .5rem;
+		gap: 0.5rem;
 	}
 
 	.cat-option {
 		display: flex;
 		flex-direction: column;
-		gap: .15rem;
-		padding: .75rem;
+		gap: 0.15rem;
+		padding: 0.75rem;
 		border: 2px solid var(--color-border);
 		border-radius: var(--radius);
 		cursor: pointer;
-		transition: border-color .15s, background .15s;
+		transition:
+			border-color 0.15s,
+			background 0.15s;
 	}
 
-	.cat-option input[type="radio"] { display: none; }
-	.cat-option.selected { border-color: var(--color-primary); background: var(--color-primary-light); }
+	.cat-option input[type='radio'] {
+		display: none;
+	}
+	.cat-option.selected {
+		border-color: var(--color-primary);
+		background: var(--color-primary-light);
+	}
 
-	.cat-label { font-weight: 600; font-size: .9rem; }
-	.cat-desc  { font-size: .78rem; color: var(--color-text-muted); }
+	.cat-label {
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
+	.cat-desc {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+	}
 
 	/*  `.intitule-champ` a disparu d'ici : « Saisi pour » est devenu le TITRE de
 	    sa section (`SectionFormulaire`), qui porte déjà sa typographie. Un
@@ -478,5 +520,9 @@
 	    orphelines, c'est-à-dire la moitié du défaut que `lint:classes-nues`
 	    surveille par l'autre bout. */
 
-	@media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
+	@media (max-width: 480px) {
+		.cat-grid {
+			grid-template-columns: 1fr;
+		}
+	}
 </style>

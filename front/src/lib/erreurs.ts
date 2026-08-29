@@ -21,7 +21,8 @@ export function messageErreur(e: unknown): string {
 	if (e instanceof ApiError) {
 		//  401 : le cas le plus fréquent, et le seul que l'utilisateur peut régler
 		//  lui-même. Le nommer évite de chercher une panne qui n'existe pas.
-		if (e.status === 401) return 'Votre session a expiré — rechargez la page pour vous reconnecter.';
+		if (e.status === 401)
+			return 'Votre session a expiré — rechargez la page pour vous reconnecter.';
 		//  403 : le serveur a répondu et refuse. Son message est plus précis que
 		//  tout ce qu'on pourrait écrire ici (accès suspendu, profil non autorisé).
 		if (e.status === 403) return e.message || 'Vous n’avez pas accès à cette rubrique.';

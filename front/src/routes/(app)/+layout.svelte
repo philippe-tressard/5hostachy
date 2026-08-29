@@ -49,8 +49,8 @@
 		trackPageView(window.location.pathname);
 	});
 
-	$: siteNom  = $siteNomStore;
-	$: siteUrl  = $configStore['site_url'] ?? '';
+	$: siteNom = $siteNomStore;
+	$: siteUrl = $configStore['site_url'] ?? '';
 	const buildVerShort = `v${pkg.version}-${import.meta.env.VITE_GIT_HASH ?? 'dev'}`;
 	const instanceId = import.meta.env.VITE_INSTANCE_ID || '';
 	const buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}${instanceId ? ` · RPi${instanceId}` : ''}`;
@@ -69,7 +69,12 @@
 			© {year} &nbsp;·&nbsp;
 			<a href={siteUrl} target="_blank" rel="noopener noreferrer">{siteNom}</a>
 			&nbsp;·&nbsp; {buildVer}
-			&nbsp;·&nbsp; <a href="https://github.com/philippe-tressard/5hostachy" target="_blank" rel="noopener noreferrer">GitHub</a>
+			&nbsp;·&nbsp;
+			<a
+				href="https://github.com/philippe-tressard/5hostachy"
+				target="_blank"
+				rel="noopener noreferrer">GitHub</a
+			>
 			&nbsp;·&nbsp; <a href="/mentions-legales">Mentions légales</a>
 			&nbsp;·&nbsp; <a href="/politique-de-confidentialite">Politique de confidentialité</a>
 		</footer>

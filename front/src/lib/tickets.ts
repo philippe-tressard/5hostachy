@@ -51,16 +51,12 @@ const STATUTS_TICKET_HISTORIQUES: Record<string, { label: string; badge: string 
 
 export const STATUT_TICKET_LABELS: Record<string, string> = {
 	...Object.fromEntries(STATUTS_TICKET.map((s) => [s.value, s.label])),
-	...Object.fromEntries(
-		Object.entries(STATUTS_TICKET_HISTORIQUES).map(([v, h]) => [v, h.label]),
-	),
+	...Object.fromEntries(Object.entries(STATUTS_TICKET_HISTORIQUES).map(([v, h]) => [v, h.label])),
 };
 
 export const STATUT_TICKET_BADGE: Record<string, string> = {
 	...Object.fromEntries(STATUTS_TICKET.map((s) => [s.value, s.badge])),
-	...Object.fromEntries(
-		Object.entries(STATUTS_TICKET_HISTORIQUES).map(([v, h]) => [v, h.badge]),
-	),
+	...Object.fromEntries(Object.entries(STATUTS_TICKET_HISTORIQUES).map(([v, h]) => [v, h.badge])),
 };
 
 //: Un ticket dans l'un de ces états ne demande plus de suivi : il quitte la liste
@@ -72,9 +68,9 @@ export const STATUTS_TICKET_CLOS: readonly string[] = ['résolu', 'annulé', 'fe
 //: `t.statut === 'ouvert' || t.statut === 'en_cours'`, deux fois dans le même
 //: fichier — trouvée par le garde-fou, pas à la relecture.
 //: Déclaré après `STATUTS_TICKET_CLOS`, dont il dépend à l'initialisation.
-export const STATUTS_TICKET_ACTIFS: readonly string[] = STATUTS_TICKET.map(
-	(s) => s.value,
-).filter((v) => !STATUTS_TICKET_CLOS.includes(v));
+export const STATUTS_TICKET_ACTIFS: readonly string[] = STATUTS_TICKET.map((s) => s.value).filter(
+	(v) => !STATUTS_TICKET_CLOS.includes(v),
+);
 
 //: Le filtre rapide des deux listes (Tickets, Espace CS) ne propose QUE les états
 //: actifs : « Tous » couvre le reste, et les clos ont leur section Historique.
@@ -108,11 +104,31 @@ export interface CategorieTicket {
 }
 
 export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
-	{ value: 'panne', label: 'Panne', emoji: '\u{1F6E0}️', description: 'Équipement défectueux, ascenseur, chauffage…' },
-	{ value: 'nuisance', label: 'Nuisance', emoji: '\u{1F4E2}', description: 'Bruit, odeur, parking…' },
+	{
+		value: 'panne',
+		label: 'Panne',
+		emoji: '\u{1F6E0}️',
+		description: 'Équipement défectueux, ascenseur, chauffage…',
+	},
+	{
+		value: 'nuisance',
+		label: 'Nuisance',
+		emoji: '\u{1F4E2}',
+		description: 'Bruit, odeur, parking…',
+	},
 	{ value: 'question', label: 'Question', emoji: '❓', description: 'Information, procédure…' },
-	{ value: 'urgence', label: 'Urgence', emoji: '\u{1F6A8}', description: 'Inondation, panne majeure, danger immédiat' },
-	{ value: 'bug', label: 'Bug', emoji: '\u{1F41B}', description: 'Problème technique sur le site ou l’application' },
+	{
+		value: 'urgence',
+		label: 'Urgence',
+		emoji: '\u{1F6A8}',
+		description: 'Inondation, panne majeure, danger immédiat',
+	},
+	{
+		value: 'bug',
+		label: 'Bug',
+		emoji: '\u{1F41B}',
+		description: 'Problème technique sur le site ou l’application',
+	},
 ];
 
 //: Emoji seul — la pastille de contexte d'une carte. Repli sur 📋 : une catégorie
@@ -158,7 +174,10 @@ export function statutTicketLabel(statut: string | undefined | null): string {
  * L'ordre compte — un ticket saisi par un résident du bâtiment 2 concerne le
  * bâtiment 2, même quand il ne cible aucun bâtiment en particulier.
  */
-export function ticketScope(t: { auteur_batiment_nom?: string | null; batiment_id?: number | null }): string {
+export function ticketScope(t: {
+	auteur_batiment_nom?: string | null;
+	batiment_id?: number | null;
+}): string {
 	return t.auteur_batiment_nom ?? (t.batiment_id ? `Bât. ${t.batiment_id}` : 'Résidence');
 }
 

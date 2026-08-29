@@ -74,9 +74,9 @@ if (fautifs.length || inutiles.length) {
 		console.error(`   ✗ tolérance « ${k} » devenue inutile : la retirer de TOLERANCES`);
 	}
 	console.error(
-		'\n  Un `<label>` ne sait nommer QU\'UN contrôle, et un seul. Posé devant un\n' +
-			'  groupe — pastilles, cases à cocher, éditeur riche — il n\'associe rien,\n' +
-			'  ET IL LE FAIT EN SILENCE : le lecteur d\'écran n\'annonce pas le champ.\n\n' +
+		"\n  Un `<label>` ne sait nommer QU'UN contrôle, et un seul. Posé devant un\n" +
+			"  groupe — pastilles, cases à cocher, éditeur riche — il n'associe rien,\n" +
+			"  ET IL LE FAIT EN SILENCE : le lecteur d'écran n'annonce pas le champ.\n\n" +
 			'  Deux remèdes, tous deux DÉJÀ en service dans ce dépôt :\n\n' +
 			'   • contrôle labelable (`input`, `select`, `textarea`) →\n' +
 			'       <label for="x">…</label> <input id="x" …>\n\n' +
@@ -84,7 +84,7 @@ if (fautifs.length || inutiles.length) {
 			'       <span class="libelle-groupe" id="x-titre">…</span>\n' +
 			'       <div role="group" aria-labelledby="x-titre"> … </div>\n\n' +
 			'     `RichEditor` expose `ariaLabelledby`, et `SectionFormulaire` `idTitre` :\n' +
-			'     s\'en servir plutôt que d\'inventer un second mécanisme.\n\n' +
+			"     s'en servir plutôt que d'inventer un second mécanisme.\n\n" +
 			'  ⚠️ `.libelle-groupe` vit dans `styles/composants.css`, PAS dans la page :\n' +
 			'     une notion partagée écrite dans un écran est nue partout ailleurs (#562).\n',
 	);

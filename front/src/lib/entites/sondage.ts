@@ -59,7 +59,8 @@ export const SONDAGE: EntiteDeclaree = {
 			//  voient pendant le vote. Des résultats visibles influencent les votes
 			//  suivants (#397) — c'est une propriété du sondage.
 			id: 'specifiques',
-			objet: 'Réponses possibles (2 minimum, champ libre facultatif) · Date de clôture · Résultats visibles avant la clôture',
+			objet:
+				'Réponses possibles (2 minimum, champ libre facultatif) · Date de clôture · Résultats visibles avant la clôture',
 			titreEcran: ['Réponses possibles', 'Clôture'],
 			absente: {
 				evolution: {

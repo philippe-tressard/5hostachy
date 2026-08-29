@@ -200,7 +200,10 @@
 				<span class="evol-icon">{evolutionIcone(evol.type)}</span>
 				<div class="evol-body">
 					<div class="evol-ligne-meta">
-						<span class="evol-meta">{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom} · {evol.auteur_nom}{/if}</span>
+						<span class="evol-meta"
+							>{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom}
+								· {evol.auteur_nom}{/if}</span
+						>
 						<!--  🔴 LES DEUX ICÔNES DANS UN MÊME GROUPE, cadré à droite
 						      (18/08/2026, signalé à l'écran). Elles étaient enfants directs
 						      d'une ligne en `space-between` : à DEUX enfants — la méta et le
@@ -217,13 +220,23 @@
 									<!--  Le CRAYON SEUL, comme partout ailleurs sur le site : ce
 									      bouton portait « ✏️ Modifier » et était le dernier à écrire
 									      le mot. Le sens vit dans `title` et `aria-label`. -->
-									<button type="button" class="btn-icon evol-modifier" aria-label="Modifier cette entrée"
-										title="Modifier" on:click={() => dispatch('modifier', evol.id)}>&#x270F;&#xFE0F;</button>
+									<button
+										type="button"
+										class="btn-icon evol-modifier"
+										aria-label="Modifier cette entrée"
+										title="Modifier"
+										on:click={() => dispatch('modifier', evol.id)}>&#x270F;&#xFE0F;</button
+									>
 								{/if}
 								{#if peutEffacer(evol)}
 									<!--  La corbeille EN DERNIER parce qu'elle est irréversible. -->
-									<button type="button" class="btn-icon-danger evol-modifier" aria-label="Supprimer cette entrée"
-										title="Supprimer cette entrée" on:click={() => dispatch('supprimer', evol.id)}>&#x1F5D1;&#xFE0F;</button>
+									<button
+										type="button"
+										class="btn-icon-danger evol-modifier"
+										aria-label="Supprimer cette entrée"
+										title="Supprimer cette entrée"
+										on:click={() => dispatch('supprimer', evol.id)}>&#x1F5D1;&#xFE0F;</button
+									>
 								{/if}
 							</span>
 						{/if}
@@ -276,7 +289,9 @@
 						      est du second côté. `compact` reste — il ne concerne que la
 						      typographie des liens de documents. -->
 						{#if evol.fichiers_urls?.length}
-							<div class="evol-pj"><PiecesJointes urls={evol.fichiers_urls} format="grand" compact /></div>
+							<div class="evol-pj">
+								<PiecesJointes urls={evol.fichiers_urls} format="grand" compact />
+							</div>
 						{/if}
 					{/if}
 				</div>
@@ -297,39 +312,96 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: .5rem;
-		margin-bottom: .5rem;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
 	}
-	.hist-titre { font-size: 1rem; font-weight: 600; margin: 0; }
-	.hist-vide { font-size: .85rem; color: var(--color-text-muted); }
+	.hist-titre {
+		font-size: 1rem;
+		font-weight: 600;
+		margin: 0;
+	}
+	.hist-vide {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+	}
 
 	/*  ⚠️ Ces classes sont définies ICI, avec le balisage qui les porte. Les
 	    laisser dans le `<style>` des pages hôtes ne les atteindrait pas : Svelte
 	    scope le style au composant qui l'écrit, et c'est très exactement la panne
 	    qui a envoyé des pastilles nues en production (v2.67.11). La marge haute
 	    (`margin-top`) revient au parent, qui seul sait ce que le fil suit. */
-	.evol-list { border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
-	.evol-sep { margin: 0; border: none; border-top: 1px solid var(--color-border); }
-	.evol-item { display: flex; gap: .5rem; padding: .5rem .75rem; font-size: .82rem; }
-	.evol-icon { flex-shrink: 0; font-size: .9rem; margin-top: .1rem; }
-	.evol-body { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
-	.evol-ligne-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+	.evol-list {
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		overflow: hidden;
+	}
+	.evol-sep {
+		margin: 0;
+		border: none;
+		border-top: 1px solid var(--color-border);
+	}
+	.evol-item {
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.82rem;
+	}
+	.evol-icon {
+		flex-shrink: 0;
+		font-size: 0.9rem;
+		margin-top: 0.1rem;
+	}
+	.evol-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		flex: 1;
+		min-width: 0;
+	}
+	.evol-ligne-meta {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
 	/*  Le groupe d'actions : collées entre elles, et poussé à droite par le
 	    `space-between` de la ligne — quel que soit le NOMBRE de boutons. */
-	.evol-actions { display: flex; gap: .3rem; flex-shrink: 0; }
-	.evol-meta { font-size: .75rem; color: var(--color-text-muted); }
-	.evol-text { color: var(--color-text); line-height: 1.5; }
+	.evol-actions {
+		display: flex;
+		gap: 0.3rem;
+		flex-shrink: 0;
+	}
+	.evol-meta {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+	}
+	.evol-text {
+		color: var(--color-text);
+		line-height: 1.5;
+	}
 	/*  Le périmètre précisé se lit SOUS le changement d'état quand les deux sont
 	    là : deux faits, deux lignes, plutôt qu'une phrase qui les enchaîne. */
-	.evol-perimetre { display: block; margin-top: .15rem; }
-	.evol-content { margin-top: .2rem; color: var(--color-text); line-height: 1.6; font-size: .85rem; }
-	.evol-content :global(p) { margin: 0 0 .3em; }
-	.evol-pj { margin-top: .4rem; }
+	.evol-perimetre {
+		display: block;
+		margin-top: 0.15rem;
+	}
+	.evol-content {
+		margin-top: 0.2rem;
+		color: var(--color-text);
+		line-height: 1.6;
+		font-size: 0.85rem;
+	}
+	.evol-content :global(p) {
+		margin: 0 0 0.3em;
+	}
+	.evol-pj {
+		margin-top: 0.4rem;
+	}
 	.evol-edition {
-		margin: .4rem 0;
+		margin: 0.4rem 0;
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
-		padding: .75rem;
+		padding: 0.75rem;
 		background: var(--color-bg);
 	}
 	.evol-modifier {
@@ -337,26 +409,34 @@
 		background: var(--color-bg-alt);
 		color: var(--color-text);
 		cursor: pointer;
-		padding: .15rem .4rem;
-		font-size: .75rem;
+		padding: 0.15rem 0.4rem;
+		font-size: 0.75rem;
 		flex-shrink: 0;
 		border-radius: 5px;
 		line-height: 1.4;
 	}
 	/*  Les trois teintes de fond disent le TYPE d'entrée sans lire un badge. */
-	.evol-etat { background: #f0f9ff; }
-	.evol-reponse { background: #f0fdf4; }
-	.evol-commentaire { background: #fafafa; }
+	.evol-etat {
+		background: #f0f9ff;
+	}
+	.evol-reponse {
+		background: #f0fdf4;
+	}
+	.evol-commentaire {
+		background: #fafafa;
+	}
 
 	.evol-more {
 		width: 100%;
 		background: none;
 		border: none;
-		padding: .45rem;
-		font-size: .8rem;
+		padding: 0.45rem;
+		font-size: 0.8rem;
 		color: var(--color-primary);
 		cursor: pointer;
 		text-align: center;
 	}
-	.evol-more:hover { background: var(--color-bg); }
+	.evol-more:hover {
+		background: var(--color-bg);
+	}
 </style>

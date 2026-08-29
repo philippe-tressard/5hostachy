@@ -56,19 +56,30 @@
 
 <div class="filters">
 	{#each STATUTS_IDEE_FILTRE as s}
-		<button class="btn btn-sm" class:btn-primary={filtreStatut === s.val}
-			on:click={() => (filtreStatut = s.val)}>{s.label}</button>
+		<button
+			class="btn btn-sm"
+			class:btn-primary={filtreStatut === s.val}
+			on:click={() => (filtreStatut = s.val)}>{s.label}</button
+		>
 	{/each}
 </div>
 
-<EtatListe {chargement} {erreur} vide={idees.length === 0}
+<EtatListe
+	{chargement}
+	{erreur}
+	vide={idees.length === 0}
 	titreErreur="Impossible d'afficher les idées"
 	titreVide="Aucune idée pour l'instant"
-	messageVide="Soyez le premier à proposer une idée !">
+	messageVide="Soyez le premier à proposer une idée !"
+>
 	{#each idees as idee (idee.id)}
 		<div class="idee-card card" id="idee-{idee.id}">
-			<button class="vote-btn" class:voted={idee.mon_vote} on:click={() => onVoter(idee.id)}
-				title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}>
+			<button
+				class="vote-btn"
+				class:voted={idee.mon_vote}
+				on:click={() => onVoter(idee.id)}
+				title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}
+			>
 				<span class="vote-icon">{idee.mon_vote ? '❤️' : '\u{1F90D}'}</span>
 				<span class="vote-count">{idee.nb_votes}</span>
 			</button>
@@ -83,17 +94,27 @@
 				      idée ne se déplie pas, elle montre tout. -->
 				<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
 					<svelte:fragment slot="titre-suffixe">
-						{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
+						{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span
+								class="badge badge-gray idee-neuf">New</span
+							>{/if}
 					</svelte:fragment>
 					<svelte:fragment slot="tags">
-						<span class="badge {statutClass(idee.statut)}">{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span>
-						{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span>{/if}
+						<span class="badge {statutClass(idee.statut)}"
+							>{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span
+						>
+						{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray"
+								>&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span
+							>{/if}
 					</svelte:fragment>
 				</EnteteCarte>
 				<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
 				{#if idee.auteur_id !== currentUserId}
-					<button class="signaler-inline" title="Signaler cette idée au conseil syndical"
-						aria-label="Signaler cette idée" on:click={() => onSignaler('idee', idee.id)}>🚩</button>
+					<button
+						class="signaler-inline"
+						title="Signaler cette idée au conseil syndical"
+						aria-label="Signaler cette idée"
+						on:click={() => onSignaler('idee', idee.id)}>🚩</button
+					>
 				{/if}
 
 				<Reponses
@@ -109,11 +130,17 @@
 			{#if estCS}
 				<div class="idee-actions">
 					<!--  Workflow en PASTILLES, jamais un `<select>` nu (R3, #423). -->
-					<WorkflowPastilles options={STATUTS_IDEE} valeur={idee.statut}
-						on:choisir={(e) => onChangerStatut(idee.id, e.detail)} />
+					<WorkflowPastilles
+						options={STATUTS_IDEE}
+						valeur={idee.statut}
+						on:choisir={(e) => onChangerStatut(idee.id, e.detail)}
+					/>
 					{#if estAdmin}
-						<button class="btn-icon-danger" title="Supprimer cette idée"
-							on:click={() => onSupprimer(idee.id)}>🗑️</button>
+						<button
+							class="btn-icon-danger"
+							title="Supprimer cette idée"
+							on:click={() => onSupprimer(idee.id)}>🗑️</button
+						>
 					{/if}
 				</div>
 			{/if}
@@ -141,16 +168,61 @@
 	    comme des définitions : cette phrase-ci, qui cite `.idee-actions` pour
 	    expliquer son retrait, la faisait passer pour définie. Le contrôle était
 	    aveuglé par la documentation de son propre sujet. */
-	.idee-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-	.idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
-	.vote-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .6rem; cursor: pointer; transition: border-color .12s; min-width: 3.5rem; }
-	.vote-btn:hover { border-color: var(--color-primary); }
-	.vote-btn.voted { border-color: var(--color-primary); background: var(--color-primary-light); }
-	.vote-icon { font-size: 1.1rem; }
-	.vote-count { font-size: .85rem; font-weight: 700; color: var(--color-primary); }
-	.idee-body { flex: 1; }
-	.idee-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
-	.idee-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
+	.idee-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.idee-card {
+		display: flex;
+		gap: 1rem;
+		align-items: flex-start;
+		padding: 1rem 1.25rem;
+		margin-bottom: 0.5rem;
+	}
+	.vote-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.2rem;
+		background: none;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: 0.5rem 0.6rem;
+		cursor: pointer;
+		transition: border-color 0.12s;
+		min-width: 3.5rem;
+	}
+	.vote-btn:hover {
+		border-color: var(--color-primary);
+	}
+	.vote-btn.voted {
+		border-color: var(--color-primary);
+		background: var(--color-primary-light);
+	}
+	.vote-icon {
+		font-size: 1.1rem;
+	}
+	.vote-count {
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--color-primary);
+	}
+	.idee-body {
+		flex: 1;
+	}
+	.idee-neuf {
+		margin-left: 0.5em;
+		font-size: 0.82em;
+		font-weight: 500;
+		vertical-align: middle;
+	}
+	.idee-desc {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		margin: 0.2rem 0 0.3rem;
+	}
 	/*  `:hover` vient de `styles/composants.css` — la redéfinir à l'identique
 	    ne servait à rien (29/08/2026). */
 </style>

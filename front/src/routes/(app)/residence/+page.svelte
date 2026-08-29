@@ -41,7 +41,11 @@
 	//  🔴 Une erreur PAR liste, et non une pour la page (#522). Ces cinq
 	//  rubriques se chargent indépendamment : dire « rien n'a marché » quand
 	//  seuls les diagnostics ont échoué serait aussi faux que de ne rien dire.
-	let ePlans = '', eReglements = '', eCrAg = '', eRegles = '', eDiagnostics = '';
+	let ePlans = '',
+		eReglements = '',
+		eCrAg = '',
+		eRegles = '',
+		eDiagnostics = '';
 	//  Les bâtiments ne s'AFFICHENT pas : ils garnissent des menus déroulants et
 	//  la correspondance « Bât. n ». Leur absence ne vide pas l'écran, elle le
 	//  rend faux — d'où le bandeau plutôt qu'un état de liste.
@@ -103,7 +107,7 @@
 
 	// Diagnostics réglementaires
 	let diagnosticTypes: any[] = [];
-	let showDiagForm: number | null = null;  // id du type en cours d'ajout
+	let showDiagForm: number | null = null; // id du type en cours d'ajout
 	let newDiagTitre = '';
 	let newDiagDate = '';
 	let newDiagFiles: FileList | null = null;
@@ -126,7 +130,7 @@
 	// ── Derived ────────────────────────────────────────────────────────────────
 	// Composition depuis les champs stockés sur Batiment et Copropriete
 
-	$: activeDiagTypes       = diagnosticTypes.filter((t) => !t.non_applicable);
+	$: activeDiagTypes = diagnosticTypes.filter((t) => !t.non_applicable);
 	$: nonApplicableDiagTypes = diagnosticTypes.filter((t) => t.non_applicable);
 
 	$: sortedPlans = [...plans].sort((a, b) => {
@@ -160,7 +164,7 @@
 				essayer<any[]>(documentsApi.listCategories(), []),
 			]);
 			copropriete = copro;
-			batiments   = bats;
+			batiments = bats;
 			//  ⚠️ Les CATÉGORIES sont la donnée la plus traître des trois : sans
 			//  elles, `catIdPlan` & consorts valent `null`, les trois appels
 			//  suivants sont SAUTÉS, et les trois listes s'affichent vides sans
@@ -168,22 +172,32 @@
 			//  produite par une erreur survenue deux lignes plus haut.
 			eReference = messagePartiel(eCopro, eBats, eCats);
 
-			catIdPlan      = (cats as any[]).find((c) => c.code === 'plan_residence')?.id ?? null;
+			catIdPlan = (cats as any[]).find((c) => c.code === 'plan_residence')?.id ?? null;
 			catIdReglement = (cats as any[]).find((c) => c.code === 'reglement_copropriete')?.id ?? null;
-			catIdCrAg      = (cats as any[]).find((c) => c.code === 'pv_ag')?.id ?? null;
+			catIdCrAg = (cats as any[]).find((c) => c.code === 'pv_ag')?.id ?? null;
 
 			//  Une catégorie absente propage l'erreur des catégories : la liste
 			//  n'est pas vide, elle est indéterminée.
 			const [[p, ep], [r, er], [ag, eag], [diag, ediag]] = await Promise.all([
-				catIdPlan      ? essayer<any[]>(documentsApi.list(catIdPlan), [])      : Promise.resolve([[], eCats] as [any[], string]),
-				catIdReglement ? essayer<any[]>(documentsApi.list(catIdReglement), []) : Promise.resolve([[], eCats] as [any[], string]),
-				catIdCrAg      ? essayer<any[]>(documentsApi.list(catIdCrAg), [])      : Promise.resolve([[], eCats] as [any[], string]),
+				catIdPlan
+					? essayer<any[]>(documentsApi.list(catIdPlan), [])
+					: Promise.resolve([[], eCats] as [any[], string]),
+				catIdReglement
+					? essayer<any[]>(documentsApi.list(catIdReglement), [])
+					: Promise.resolve([[], eCats] as [any[], string]),
+				catIdCrAg
+					? essayer<any[]>(documentsApi.list(catIdCrAg), [])
+					: Promise.resolve([[], eCats] as [any[], string]),
 				essayer<any[]>(diagnosticsApi.listTypes(), []),
 			]);
-			plans          = p; ePlans      = ep;
-			reglements     = r; eReglements = er;
-			crAg           = ag; eCrAg      = eag;
-			diagnosticTypes = diag; eDiagnostics = ediag;
+			plans = p;
+			ePlans = ep;
+			reglements = r;
+			eReglements = er;
+			crAg = ag;
+			eCrAg = eag;
+			diagnosticTypes = diag;
+			eDiagnostics = ediag;
 
 			[regles, eRegles] = await essayer<any[]>(reglesApi.list(), []);
 
@@ -205,12 +219,12 @@
 	// ── Édition résidence ──────────────────────────────────────────────────────
 	function startEdit() {
 		if (!copropriete) return;
-		editNom               = copropriete.nom ?? '';
-		editAdresse           = copropriete.adresse ?? '';
-		editAnnee             = copropriete.annee_construction ?? '';
-		editNbLots            = copropriete.nb_lots_total ?? '';
-		editNbLotsPrincipaux  = copropriete.nb_lots_principaux ?? '';
-		editImmatriculation   = copropriete.numero_immatriculation ?? '';
+		editNom = copropriete.nom ?? '';
+		editAdresse = copropriete.adresse ?? '';
+		editAnnee = copropriete.annee_construction ?? '';
+		editNbLots = copropriete.nb_lots_total ?? '';
+		editNbLotsPrincipaux = copropriete.nb_lots_principaux ?? '';
+		editImmatriculation = copropriete.numero_immatriculation ?? '';
 		editing = true;
 	}
 
@@ -218,12 +232,12 @@
 		saving = true;
 		try {
 			copropriete = await coproprieteApi.update({
-				nom:                     editNom || undefined,
-				adresse:                 editAdresse || undefined,
-				annee_construction:      editAnnee ? Number(editAnnee) : undefined,
-				nb_lots_total:           editNbLots ? Number(editNbLots) : undefined,
-				nb_lots_principaux:      editNbLotsPrincipaux ? Number(editNbLotsPrincipaux) : undefined,
-				numero_immatriculation:  editImmatriculation || undefined,
+				nom: editNom || undefined,
+				adresse: editAdresse || undefined,
+				annee_construction: editAnnee ? Number(editAnnee) : undefined,
+				nb_lots_total: editNbLots ? Number(editNbLots) : undefined,
+				nb_lots_principaux: editNbLotsPrincipaux ? Number(editNbLotsPrincipaux) : undefined,
+				numero_immatriculation: editImmatriculation || undefined,
 			});
 			editing = false;
 			toast('success', 'Résidence mise à jour');
@@ -320,7 +334,10 @@
 			);
 			plans = [doc, ...plans];
 			showPlanForm = false;
-			newPlanTitre = ''; newPlanPerimetre = 'résidence'; newPlanBatimentId = 0; newPlanFile = null;
+			newPlanTitre = '';
+			newPlanPerimetre = 'résidence';
+			newPlanBatimentId = 0;
+			newPlanFile = null;
 			toast('success', 'Plan ajouté');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -345,10 +362,16 @@
 		if (!catIdReglement || !newReglementTitre.trim() || !newReglementFile) return;
 		savingReglement = true;
 		try {
-			const doc = await documentsApi.upload(newReglementTitre.trim(), catIdReglement, newReglementFile, 'résidence');
+			const doc = await documentsApi.upload(
+				newReglementTitre.trim(),
+				catIdReglement,
+				newReglementFile,
+				'résidence',
+			);
 			reglements = [doc, ...reglements];
 			showReglementForm = false;
-			newReglementTitre = ''; newReglementFile = null;
+			newReglementTitre = '';
+			newReglementFile = null;
 			toast('success', 'Règlement ajouté');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -379,16 +402,23 @@
 			//  `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
 			//  Le pourquoi : migration 0159.
 			const doc = await documentsApi.upload(
-				newCrAgTitre.trim(), catIdCrAg, newCrAgFile, 'résidence', undefined,
+				newCrAgTitre.trim(),
+				catIdCrAg,
+				newCrAgFile,
+				'résidence',
+				undefined,
 				newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
 				newCrAgDateAg || undefined,
 				newCrAgPerimetre,
 			);
 			crAg = [doc, ...crAg];
 			showCrAgForm = false;
-			newCrAgTitre = ''; newCrAgAnnee = ''; newCrAgDateAg = '';
-			newCrAgPerimetre = []; newCrAgFile = null;
-			toast('success', 'CR d\'AG ajouté');
+			newCrAgTitre = '';
+			newCrAgAnnee = '';
+			newCrAgDateAg = '';
+			newCrAgPerimetre = [];
+			newCrAgFile = null;
+			toast('success', "CR d'AG ajouté");
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
@@ -466,9 +496,7 @@
 				newRapports.push(rapport);
 			}
 			diagnosticTypes = diagnosticTypes.map((t) =>
-				t.id === showDiagForm
-					? { ...t, rapports: [...newRapports, ...t.rapports] }
-					: t
+				t.id === showDiagForm ? { ...t, rapports: [...newRapports, ...t.rapports] } : t,
 			);
 			showDiagForm = null;
 			toast('success', files.length > 1 ? `${files.length} rapports ajoutés` : 'Rapport ajouté');
@@ -513,9 +541,7 @@
 		try {
 			await diagnosticsApi.deleteRapport(rapportId);
 			diagnosticTypes = diagnosticTypes.map((t) =>
-				t.id === typeId
-					? { ...t, rapports: t.rapports.filter((r: any) => r.id !== rapportId) }
-					: t
+				t.id === typeId ? { ...t, rapports: t.rapports.filter((r: any) => r.id !== rapportId) } : t,
 			);
 			toast('success', 'Rapport supprimé');
 		} catch (e) {
@@ -528,7 +554,7 @@
 		try {
 			const updated = await diagnosticsApi.toggleNonApplicable(typeId, value);
 			diagnosticTypes = diagnosticTypes.map((t) =>
-				t.id === typeId ? { ...t, non_applicable: updated.non_applicable } : t
+				t.id === typeId ? { ...t, non_applicable: updated.non_applicable } : t,
 			);
 			toast('success', value ? 'Diagnostic masqué (non applicable)' : 'Diagnostic réactivé');
 		} catch (e) {
@@ -547,14 +573,15 @@
       document garnissent les menus déroulants et la correspondance « Bât. n ».
       Leur absence ne vide pas l'écran, elle le rend faux — et un avertissement
       posé plus bas serait lu après ce qu'il devait qualifier (#522). -->
-<ChargementPartiel erreur={eReference}
-	consequence="Les numéros de bâtiment et les listes de documents peuvent être incomplets ou absents." />
+<ChargementPartiel
+	erreur={eReference}
+	consequence="Les numéros de bâtiment et les listes de documents peuvent être incomplets ou absents."
+/>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if copropriete}
-
 	<!-- ── Photo Bannière ─────────────────────────────────────────────────── -->
 	<figure class="photo-figure">
 		<div class="photo-banner">
@@ -589,12 +616,48 @@
 			<div class="card" style="padding:1.25rem;max-width:700px">
 				<form on:submit|preventDefault={saveEdit}>
 					<div class="edit-grid">
-						<div class="field"><label for="e-nom">Nom</label><input id="e-nom" type="text" bind:value={editNom} /></div>
-						<div class="field"><label for="e-adr">Adresse</label><input id="e-adr" type="text" bind:value={editAdresse} /></div>
-						<div class="field"><label for="e-ann">Année de construction</label><input id="e-ann" type="number" bind:value={editAnnee} min="1800" max="2100" /></div>
-						<div class="field"><label for="e-lots">Lots — total, caves et parkings compris</label><input id="e-lots" type="number" bind:value={editNbLots} min="1" /></div>
-						<div class="field"><label for="e-lots-p">Dont habitation, commerces et bureaux</label><input id="e-lots-p" type="number" bind:value={editNbLotsPrincipaux} min="1" /></div>
-						<div class="field"><label for="e-imm">N° immatriculation (ANAH)</label><input id="e-imm" type="text" bind:value={editImmatriculation} /></div>
+						<div class="field">
+							<label for="e-nom">Nom</label><input id="e-nom" type="text" bind:value={editNom} />
+						</div>
+						<div class="field">
+							<label for="e-adr">Adresse</label><input
+								id="e-adr"
+								type="text"
+								bind:value={editAdresse}
+							/>
+						</div>
+						<div class="field">
+							<label for="e-ann">Année de construction</label><input
+								id="e-ann"
+								type="number"
+								bind:value={editAnnee}
+								min="1800"
+								max="2100"
+							/>
+						</div>
+						<div class="field">
+							<label for="e-lots">Lots — total, caves et parkings compris</label><input
+								id="e-lots"
+								type="number"
+								bind:value={editNbLots}
+								min="1"
+							/>
+						</div>
+						<div class="field">
+							<label for="e-lots-p">Dont habitation, commerces et bureaux</label><input
+								id="e-lots-p"
+								type="number"
+								bind:value={editNbLotsPrincipaux}
+								min="1"
+							/>
+						</div>
+						<div class="field">
+							<label for="e-imm">N° immatriculation (ANAH)</label><input
+								id="e-imm"
+								type="text"
+								bind:value={editImmatriculation}
+							/>
+						</div>
 						<!--  🔴 Compagnie, n° de police et échéance ONT ÉTÉ RETIRÉS d'ici.
 						      Depuis #490 la fiche les lit sur le CONTRAT d'assurance, et
 						      `copropriete_lue` efface ces colonnes : les saisir ici
@@ -605,13 +668,19 @@
 						      fois — un formulaire qui survit à sa source se lit comme une
 						      commande, pas comme un vestige. -->
 						<div class="field" style="grid-column:1/-1">
-							<AideSource active origine="contrat d'assurance"
-								ou="Prestataires → Contrats" repli="" />
+							<AideSource
+								active
+								origine="contrat d'assurance"
+								ou="Prestataires → Contrats"
+								repli=""
+							/>
 						</div>
 					</div>
 					<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
 						<button type="button" class="btn" on:click={() => (editing = false)}>Annuler</button>
-						<button type="submit" class="btn btn-primary" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+						<button type="submit" class="btn btn-primary" disabled={saving}
+							>{saving ? 'Enregistrement…' : 'Enregistrer'}</button
+						>
 					</div>
 				</form>
 			</div>
@@ -629,21 +698,37 @@
 			{/if}
 		</div>
 
-		<EtatListe compact erreur={eRegles} vide={regles.length === 0}
-			messageVide="Aucune règle ajoutée.">
+		<EtatListe
+			compact
+			erreur={eRegles}
+			vide={regles.length === 0}
+			messageVide="Aucune règle ajoutée."
+		>
 			<div class="doc-list">
 				{#each regles as regle (regle.id)}
 					<div class="doc-row card">
 						<div class="doc-info" style="flex-direction:column;align-items:flex-start;gap:.25rem">
 							<span class="doc-titre">{regle.titre}</span>
 							{#if regle.contenu}
-								<span style="font-size:.85rem;color:var(--color-text-muted);white-space:pre-wrap">{regle.contenu}</span>
+								<span style="font-size:.85rem;color:var(--color-text-muted);white-space:pre-wrap"
+									>{regle.contenu}</span
+								>
 							{/if}
 						</div>
 						{#if $isCS}
 							<div class="doc-actions">
-								<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => openRegleForm(regle)}>✏️</button>
-								<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={() => deleteRegle(regle.id)}>&#x1F5D1;️</button>
+								<button
+									class="btn-icon-edit"
+									aria-label="Modifier"
+									title="Modifier"
+									on:click={() => openRegleForm(regle)}>✏️</button
+								>
+								<button
+									class="btn-icon-danger"
+									aria-label="Supprimer"
+									title="Supprimer"
+									on:click={() => deleteRegle(regle.id)}>&#x1F5D1;️</button
+								>
 							</div>
 						{/if}
 					</div>
@@ -653,158 +738,210 @@
 	</section>
 
 	<!-- ── Section : Plans ───────────────────────────────────────────────── -->
-	<SectionDocuments titre="&#x1F5FA;️ Plans" documents={sortedPlans} erreur={ePlans}
-		messageVide="Aucun plan ajouté." peutModifier={$isCS}
+	<SectionDocuments
+		titre="&#x1F5FA;️ Plans"
+		documents={sortedPlans}
+		erreur={ePlans}
+		messageVide="Aucun plan ajouté."
+		peutModifier={$isCS}
 		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
 		dateDe={(d) => fmt(d.publie_le)}
 		onAjouter={() => (showPlanForm = true)}
 		onModifier={(d) => startEditDoc(d, 'plan')}
-		onSupprimer={deletePlan}>
+		onSupprimer={deletePlan}
+	>
 		<svelte:fragment slot="badges" let:doc>
-			<span class="badge badge-blue">{doc.batiment_id ? batimentLabel(doc.batiment_id) : 'Copropriété'}</span>
+			<span class="badge badge-blue"
+				>{doc.batiment_id ? batimentLabel(doc.batiment_id) : 'Copropriété'}</span
+			>
 		</svelte:fragment>
 	</SectionDocuments>
 
 	<!-- ── Section : Règlement de copropriété ────────────────────────────── -->
-	<SectionDocuments titre="&#x1F4D6; Règlement de copropriété" documents={reglements}
-		erreur={eReglements} messageVide="Aucun règlement ajouté." peutModifier={$isCS}
+	<SectionDocuments
+		titre="&#x1F4D6; Règlement de copropriété"
+		documents={reglements}
+		erreur={eReglements}
+		messageVide="Aucun règlement ajouté."
+		peutModifier={$isCS}
 		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
 		dateDe={(d) => fmt(d.publie_le)}
 		onAjouter={() => (showReglementForm = true)}
 		onModifier={(d) => startEditDoc(d, 'reglement')}
-		onSupprimer={deleteReglement} />
+		onSupprimer={deleteReglement}
+	/>
 
 	<!-- ── Section : Comptes-rendus d'AG ─────────────────────────────────── -->
 	{#if !isLocataire}
-	<SectionDocuments titre="&#x1F4CB; Comptes-rendus d'AG" documents={sortedCrAg}
-		erreur={eCrAg} messageVide="Aucun compte-rendu ajouté." peutModifier={$isCS}
-		urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
-		onAjouter={() => (showCrAgForm = true)}
-		onModifier={(d) => startEditDoc(d, 'ag')}
-		onSupprimer={deleteCrAg}>
-		<svelte:fragment slot="badges" let:doc>
-			{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums">{doc.annee}</span>{/if}
-			{#if doc.date_ag}<span class="doc-date">AG du {fmt(doc.date_ag)}</span>{/if}
-			<!--  🔴 `perimetreLabel` sur des CODES, plus `batimentLabel` sur des
+		<SectionDocuments
+			titre="&#x1F4CB; Comptes-rendus d'AG"
+			documents={sortedCrAg}
+			erreur={eCrAg}
+			messageVide="Aucun compte-rendu ajouté."
+			peutModifier={$isCS}
+			urlTelechargement={(d) => documentsApi.downloadUrl(d.id)}
+			onAjouter={() => (showCrAgForm = true)}
+			onModifier={(d) => startEditDoc(d, 'ag')}
+			onSupprimer={deleteCrAg}
+		>
+			<svelte:fragment slot="badges" let:doc>
+				{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums"
+						>{doc.annee}</span
+					>{/if}
+				{#if doc.date_ag}<span class="doc-date">AG du {fmt(doc.date_ag)}</span>{/if}
+				<!--  🔴 `perimetreLabel` sur des CODES, plus `batimentLabel` sur des
 			      identifiants (#470). Trois branches se sont réduites à une : le
 			      libellé d'un périmètre se calcule, il ne se décide pas ici.
 			      L'ancien rendu ne savait dire que « Bât. N » ou « Copropriété » ;
 			      celui-ci nomme le parking, les caves, l'AFUL et les espaces —
 			      et suit l'arbre quand un nœud est renommé. -->
-			{#if doc.perimetre_cible && !estPerimetreParDefaut(doc.perimetre_cible)}
-				<span class="badge badge-purple">&#x1F539; {perimetreLabel(doc.perimetre_cible)}</span>
-			{:else}
-				<span class="badge badge-green">Copropriété</span>
-			{/if}
-		</svelte:fragment>
-	</SectionDocuments>
+				{#if doc.perimetre_cible && !estPerimetreParDefaut(doc.perimetre_cible)}
+					<span class="badge badge-purple">&#x1F539; {perimetreLabel(doc.perimetre_cible)}</span>
+				{:else}
+					<span class="badge badge-green">Copropriété</span>
+				{/if}
+			</svelte:fragment>
+		</SectionDocuments>
 	{/if}
 
 	<!-- ── Section : Diagnostics et Contrôles Réglementaires ────────────── -->
 	{#if !isLocataire}
-	<section style="margin-bottom:2.5rem">
-		<div class="section-header">
-			<h2 class="section-title">&#x1F50D; Diagnostics et Contrôles Réglementaires</h2>
-		</div>
-
-		<EtatListe compact erreur={eDiagnostics} vide={diagnosticTypes.length === 0}
-			messageVide="Aucun diagnostic réglementaire disponible.">
-			<div class="diag-list">
-				{#each activeDiagTypes as dtype (dtype.id)}
-					<div class="diag-card card">
-						<div class="diag-header">
-							<div class="diag-title-row">
-								<span class="diag-nom">{dtype.nom}</span>
-								{#if dtype.frequence}
-									<span class="badge badge-blue">{dtype.frequence}</span>
-								{/if}
-								{#if $isCS && dtype.rapports.length === 0}
-									<button
-										class="btn-icon"
-										style="margin-left:auto"
-										aria-label="Non applicable à cette copropriété"
-										title="Non applicable à cette copropriété"
-										disabled={togglingNonApplicableId === dtype.id}
-										on:click={() => toggleNonApplicable(dtype.id, true)}
-									><Icon name="eye-off" size={14} /></button>
-								{/if}
-							</div>
-							<p class="diag-texte">{dtype.texte_legislatif}</p>
-						</div>
-
-						{#if dtype.rapports.length > 0}
-							<div class="diag-rapports">
-								{#each dtype.rapports as rapport (rapport.id)}
-									<div class="diag-rapport-block" id="diag-{rapport.id}">
-										<div class="doc-row">
-											<div class="doc-info">
-												<Icon name="file-text" size={16} />
-												<span class="doc-titre">{rapport.titre}</span>
-												{#if rapport.date_rapport}
-													<span class="doc-date">{fmt(rapport.date_rapport)}</span>
-												{/if}
-												{#if rapport.synthese}
-													<button class="synthese-toggle" aria-label="Afficher la synthèse"
-														on:click={() => { if (expandedSynths.has(rapport.id)) expandedSynths.delete(rapport.id); else expandedSynths.add(rapport.id); expandedSynths = expandedSynths; }}
-													>&#x1F4A1; Synthèse {expandedSynths.has(rapport.id) ? '▲' : '▼'}</button>
-												{/if}
-											</div>
-											<div class="doc-actions">
-												<a href={diagnosticsApi.downloadUrl(rapport.id)} target="_blank" class="btn btn-sm" download>
-													⬇ Télécharger
-												</a>
-												{#if $isCS}
-													<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEditRapport(rapport)}>✏️</button>
-													<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer" on:click={() => deleteRapport(dtype.id, rapport.id)}>&#x1F5D1;️</button>
-												{/if}
-											</div>
-										</div>
-										{#if rapport.synthese && expandedSynths.has(rapport.id)}
-											<div class="synthese-body rich-content">{@html safeHtml(rapport.synthese)}</div>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						{/if}
-
-						{#if $isCS}
-							<div class="diag-add">
-								<button class="btn btn-sm" on:click={() => startAddRapport(dtype.id)}>+ Ajouter un rapport</button>
-							</div>
-						{/if}
-					</div>
-				{/each}
+		<section style="margin-bottom:2.5rem">
+			<div class="section-header">
+				<h2 class="section-title">&#x1F50D; Diagnostics et Contrôles Réglementaires</h2>
 			</div>
 
-			{#if $isCS && nonApplicableDiagTypes.length > 0}
-				<details class="diag-non-applicable-section">
-					<summary>Diagnostics non applicables ({nonApplicableDiagTypes.length})</summary>
-					<div class="diag-list" style="margin-top:.75rem">
-						{#each nonApplicableDiagTypes as dtype (dtype.id)}
-							<div class="diag-card card diag-card-disabled">
-								<div class="diag-header">
-									<div class="diag-title-row">
-										<span class="diag-nom">{dtype.nom}</span>
-										{#if dtype.frequence}
-											<span class="badge badge-blue">{dtype.frequence}</span>
-										{/if}
+			<EtatListe
+				compact
+				erreur={eDiagnostics}
+				vide={diagnosticTypes.length === 0}
+				messageVide="Aucun diagnostic réglementaire disponible."
+			>
+				<div class="diag-list">
+					{#each activeDiagTypes as dtype (dtype.id)}
+						<div class="diag-card card">
+							<div class="diag-header">
+								<div class="diag-title-row">
+									<span class="diag-nom">{dtype.nom}</span>
+									{#if dtype.frequence}
+										<span class="badge badge-blue">{dtype.frequence}</span>
+									{/if}
+									{#if $isCS && dtype.rapports.length === 0}
 										<button
-											class="btn btn-sm"
+											class="btn-icon"
+											style="margin-left:auto"
+											aria-label="Non applicable à cette copropriété"
+											title="Non applicable à cette copropriété"
 											disabled={togglingNonApplicableId === dtype.id}
-											on:click={() => toggleNonApplicable(dtype.id, false)}
-										>↩ Réactiver</button>
-									</div>
-									<p class="diag-texte">{dtype.texte_legislatif}</p>
+											on:click={() => toggleNonApplicable(dtype.id, true)}
+											><Icon name="eye-off" size={14} /></button
+										>
+									{/if}
 								</div>
+								<p class="diag-texte">{dtype.texte_legislatif}</p>
 							</div>
-						{/each}
-					</div>
-				</details>
-			{/if}
-		</EtatListe>
-	</section>
-	{/if}
 
+							{#if dtype.rapports.length > 0}
+								<div class="diag-rapports">
+									{#each dtype.rapports as rapport (rapport.id)}
+										<div class="diag-rapport-block" id="diag-{rapport.id}">
+											<div class="doc-row">
+												<div class="doc-info">
+													<Icon name="file-text" size={16} />
+													<span class="doc-titre">{rapport.titre}</span>
+													{#if rapport.date_rapport}
+														<span class="doc-date">{fmt(rapport.date_rapport)}</span>
+													{/if}
+													{#if rapport.synthese}
+														<button
+															class="synthese-toggle"
+															aria-label="Afficher la synthèse"
+															on:click={() => {
+																if (expandedSynths.has(rapport.id))
+																	expandedSynths.delete(rapport.id);
+																else expandedSynths.add(rapport.id);
+																expandedSynths = expandedSynths;
+															}}
+															>&#x1F4A1; Synthèse {expandedSynths.has(rapport.id)
+																? '▲'
+																: '▼'}</button
+														>
+													{/if}
+												</div>
+												<div class="doc-actions">
+													<a
+														href={diagnosticsApi.downloadUrl(rapport.id)}
+														target="_blank"
+														class="btn btn-sm"
+														download
+													>
+														⬇ Télécharger
+													</a>
+													{#if $isCS}
+														<button
+															class="btn-icon-edit"
+															aria-label="Modifier"
+															title="Modifier"
+															on:click={() => startEditRapport(rapport)}>✏️</button
+														>
+														<button
+															class="btn-icon-danger"
+															aria-label="Supprimer"
+															title="Supprimer"
+															on:click={() => deleteRapport(dtype.id, rapport.id)}>&#x1F5D1;️</button
+														>
+													{/if}
+												</div>
+											</div>
+											{#if rapport.synthese && expandedSynths.has(rapport.id)}
+												<div class="synthese-body rich-content">
+													{@html safeHtml(rapport.synthese)}
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							{#if $isCS}
+								<div class="diag-add">
+									<button class="btn btn-sm" on:click={() => startAddRapport(dtype.id)}
+										>+ Ajouter un rapport</button
+									>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+
+				{#if $isCS && nonApplicableDiagTypes.length > 0}
+					<details class="diag-non-applicable-section">
+						<summary>Diagnostics non applicables ({nonApplicableDiagTypes.length})</summary>
+						<div class="diag-list" style="margin-top:.75rem">
+							{#each nonApplicableDiagTypes as dtype (dtype.id)}
+								<div class="diag-card card diag-card-disabled">
+									<div class="diag-header">
+										<div class="diag-title-row">
+											<span class="diag-nom">{dtype.nom}</span>
+											{#if dtype.frequence}
+												<span class="badge badge-blue">{dtype.frequence}</span>
+											{/if}
+											<button
+												class="btn btn-sm"
+												disabled={togglingNonApplicableId === dtype.id}
+												on:click={() => toggleNonApplicable(dtype.id, false)}>↩ Réactiver</button
+											>
+										</div>
+										<p class="diag-texte">{dtype.texte_legislatif}</p>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</details>
+				{/if}
+			</EtatListe>
+		</section>
+	{/if}
 {:else}
 	<div class="empty-state">
 		<h3>Résidence non configurée</h3>
@@ -815,100 +952,156 @@
 <!-- ── Modal : ajouter un plan ────────────────────────────────────────── -->
 {#if showPlanForm}
 	<!--  Fond, rôle, `Échap` et verrou de défilement : cf. `Modale.svelte` (#561). -->
-	<Modale titre="Ajouter un plan" styleBoite="width:min(480px,95vw)"
-		on:fermer={() => (showPlanForm = false)}>
-			<div class="modal-header">
-				<h3>Ajouter un plan</h3>
-				<button class="modal-close" on:click={() => (showPlanForm = false)}>✕</button>
+	<Modale
+		titre="Ajouter un plan"
+		styleBoite="width:min(480px,95vw)"
+		on:fermer={() => (showPlanForm = false)}
+	>
+		<div class="modal-header">
+			<h3>Ajouter un plan</h3>
+			<button class="modal-close" on:click={() => (showPlanForm = false)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="plan-titre">Titre *</label>
+				<input
+					id="plan-titre"
+					type="text"
+					bind:value={newPlanTitre}
+					placeholder="ex : Plan de masse résidence"
+				/>
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="plan-titre">Titre *</label>
-					<input id="plan-titre" type="text" bind:value={newPlanTitre} placeholder="ex : Plan de masse résidence" />
-				</div>
-				<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
+			<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
 				      main (#470). L'écran parlait en identifiants de bâtiments : il ne
 				      pouvait cibler ni le parking, ni les caves, ni l'AFUL, ni un
 				      espace de bâtiment, et ne recevait aucune des corrections
 				      apportées à l'objet depuis. C'était le DERNIER des dix points
 				      d'usage à ne pas en hériter.
 				      `requis={false}` : une AG de toute la copropriété ne cible rien. -->
-				<div class="field">
-					<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
-				</div>
-				<div class="field">
-					<label for="plan-file">Fichier *</label>
-					<input id="plan-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
-						on:change={(e) => { newPlanFile = (e.target as HTMLInputElement).files?.[0] ?? null; }} />
-					{#if newPlanFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">{newPlanFile.name}</p>{/if}
-				</div>
+			<div class="field">
+				<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showPlanForm = false)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingPlan || !newPlanTitre.trim() || !newPlanFile || (newPlanPerimetre === 'bâtiment' && !newPlanBatimentId)}
-					on:click={addPlan}>
-					{savingPlan ? 'Ajout…' : 'Ajouter'}
-				</button>
+			<div class="field">
+				<label for="plan-file">Fichier *</label>
+				<input
+					id="plan-file"
+					type="file"
+					accept=".pdf,.jpg,.jpeg,.png,.webp"
+					on:change={(e) => {
+						newPlanFile = (e.target as HTMLInputElement).files?.[0] ?? null;
+					}}
+				/>
+				{#if newPlanFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
+						{newPlanFile.name}
+					</p>{/if}
 			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showPlanForm = false)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingPlan ||
+					!newPlanTitre.trim() ||
+					!newPlanFile ||
+					(newPlanPerimetre === 'bâtiment' && !newPlanBatimentId)}
+				on:click={addPlan}
+			>
+				{savingPlan ? 'Ajout…' : 'Ajouter'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter un règlement ───────────────────────────────────── -->
 {#if showReglementForm}
-	<Modale titre="Ajouter un règlement" styleBoite="width:min(440px,95vw)"
-		on:fermer={() => (showReglementForm = false)}>
-			<div class="modal-header">
-				<h3>Ajouter un règlement</h3>
-				<button class="modal-close" on:click={() => (showReglementForm = false)}>✕</button>
+	<Modale
+		titre="Ajouter un règlement"
+		styleBoite="width:min(440px,95vw)"
+		on:fermer={() => (showReglementForm = false)}
+	>
+		<div class="modal-header">
+			<h3>Ajouter un règlement</h3>
+			<button class="modal-close" on:click={() => (showReglementForm = false)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="regl-titre">Titre *</label>
+				<input
+					id="regl-titre"
+					type="text"
+					bind:value={newReglementTitre}
+					placeholder="ex : Règlement de copropriété 2024"
+				/>
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="regl-titre">Titre *</label>
-					<input id="regl-titre" type="text" bind:value={newReglementTitre} placeholder="ex : Règlement de copropriété 2024" />
-				</div>
-				<div class="field">
-					<label for="regl-file">Fichier *</label>
-					<input id="regl-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
-						on:change={(e) => { newReglementFile = (e.target as HTMLInputElement).files?.[0] ?? null; }} />
-					{#if newReglementFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">{newReglementFile.name}</p>{/if}
-				</div>
+			<div class="field">
+				<label for="regl-file">Fichier *</label>
+				<input
+					id="regl-file"
+					type="file"
+					accept=".pdf,.jpg,.jpeg,.png,.webp"
+					on:change={(e) => {
+						newReglementFile = (e.target as HTMLInputElement).files?.[0] ?? null;
+					}}
+				/>
+				{#if newReglementFile}<p
+						style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem"
+					>
+						{newReglementFile.name}
+					</p>{/if}
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showReglementForm = false)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingReglement || !newReglementTitre.trim() || !newReglementFile}
-					on:click={addReglement}>
-					{savingReglement ? 'Ajout…' : 'Ajouter'}
-				</button>
-			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showReglementForm = false)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingReglement || !newReglementTitre.trim() || !newReglementFile}
+				on:click={addReglement}
+			>
+				{savingReglement ? 'Ajout…' : 'Ajouter'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter un CR d'AG ─────────────────────────────────────── -->
 {#if showCrAgForm}
-	<Modale titre="Ajouter un CR d'AG" styleBoite="width:min(520px,95vw)"
-		on:fermer={() => (showCrAgForm = false)}>
-			<div class="modal-header">
-				<h3>Ajouter un CR d'AG</h3>
-				<button class="modal-close" on:click={() => (showCrAgForm = false)}>✕</button>
-			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-					<div class="field">
-						<label for="ag-annee">Année *</label>
-						<input id="ag-annee" type="number" bind:value={newCrAgAnnee} min="1900" max="2100" placeholder="2025" />
-					</div>
-					<div class="field">
-						<label for="ag-date">Date de l'AG *</label>
-						<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
-					</div>
+	<Modale
+		titre="Ajouter un CR d'AG"
+		styleBoite="width:min(520px,95vw)"
+		on:fermer={() => (showCrAgForm = false)}
+	>
+		<div class="modal-header">
+			<h3>Ajouter un CR d'AG</h3>
+			<button class="modal-close" on:click={() => (showCrAgForm = false)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+				<div class="field">
+					<label for="ag-annee">Année *</label>
+					<input
+						id="ag-annee"
+						type="number"
+						bind:value={newCrAgAnnee}
+						min="1900"
+						max="2100"
+						placeholder="2025"
+					/>
 				</div>
 				<div class="field">
-					<label for="ag-titre">Titre *</label>
-					<input id="ag-titre" type="text" bind:value={newCrAgTitre} placeholder="ex : PV AG ordinaire 2025" />
+					<label for="ag-date">Date de l'AG *</label>
+					<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
 				</div>
-				<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
+			</div>
+			<div class="field">
+				<label for="ag-titre">Titre *</label>
+				<input
+					id="ag-titre"
+					type="text"
+					bind:value={newCrAgTitre}
+					placeholder="ex : PV AG ordinaire 2025"
+				/>
+			</div>
+			<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
 				      main (#470). L'écran parlait en identifiants de bâtiments : il ne
 				      pouvait cibler ni le parking, ni les caves, ni l'AFUL, ni un espace
 				      de bâtiment, et ne recevait aucune des corrections apportées à
@@ -917,166 +1110,237 @@
 
 				      ⚠️ `requis={false}` : une AG de toute la copropriété ne cible rien,
 				      et l'absence de périmètre est ici une réponse valide. -->
-				<div class="field">
-					<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
-				</div>
-				<div class="field">
-					<label for="ag-file">Fichier *</label>
-					<input id="ag-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
-						on:change={(e) => { newCrAgFile = (e.target as HTMLInputElement).files?.[0] ?? null; }} />
-					{#if newCrAgFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">{newCrAgFile.name}</p>{/if}
-				</div>
+			<div class="field">
+				<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showCrAgForm = false)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingCrAg || !newCrAgAnnee || !newCrAgDateAg || !newCrAgTitre.trim() || !newCrAgFile}
-					on:click={addCrAg}>
-					{savingCrAg ? 'Ajout…' : 'Ajouter'}
-				</button>
+			<div class="field">
+				<label for="ag-file">Fichier *</label>
+				<input
+					id="ag-file"
+					type="file"
+					accept=".pdf,.jpg,.jpeg,.png,.webp"
+					on:change={(e) => {
+						newCrAgFile = (e.target as HTMLInputElement).files?.[0] ?? null;
+					}}
+				/>
+				{#if newCrAgFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
+						{newCrAgFile.name}
+					</p>{/if}
 			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showCrAgForm = false)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingCrAg ||
+					!newCrAgAnnee ||
+					!newCrAgDateAg ||
+					!newCrAgTitre.trim() ||
+					!newCrAgFile}
+				on:click={addCrAg}
+			>
+				{savingCrAg ? 'Ajout…' : 'Ajouter'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : modifier un document ────────────────────────────────────────────────── -->
 {#if editingDocId !== null}
-	<Modale titre="Modifier le document" styleBoite="width:min(440px,95vw)"
-		on:fermer={() => (editingDocId = null)}>
-			<div class="modal-header">
-				<h3>Modifier le document</h3>
-				<button class="modal-close" on:click={() => (editingDocId = null)}>✕</button>
+	<Modale
+		titre="Modifier le document"
+		styleBoite="width:min(440px,95vw)"
+		on:fermer={() => (editingDocId = null)}
+	>
+		<div class="modal-header">
+			<h3>Modifier le document</h3>
+			<button class="modal-close" on:click={() => (editingDocId = null)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="edit-doc-titre">Titre *</label>
+				<input id="edit-doc-titre" type="text" bind:value={editingDocTitre} />
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="edit-doc-titre">Titre *</label>
-					<input id="edit-doc-titre" type="text" bind:value={editingDocTitre} />
-				</div>
-				{#if editingDocMode === 'ag'}
-					<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-						<div class="field">
-							<label for="edit-doc-annee">Année</label>
-							<input id="edit-doc-annee" type="number" bind:value={editingDocAnnee} min="1900" max="2100" />
-						</div>
-						<div class="field">
-							<label for="edit-doc-date">Date de l'AG</label>
-							<input id="edit-doc-date" type="date" bind:value={editingDocDate} />
-						</div>
+			{#if editingDocMode === 'ag'}
+				<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+					<div class="field">
+						<label for="edit-doc-annee">Année</label>
+						<input
+							id="edit-doc-annee"
+							type="number"
+							bind:value={editingDocAnnee}
+							min="1900"
+							max="2100"
+						/>
 					</div>
-				{/if}
-			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (editingDocId = null)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingDoc || !editingDocTitre.trim()}
-					on:click={saveEditDoc}>
-					{savingDoc ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
-			</div>
+					<div class="field">
+						<label for="edit-doc-date">Date de l'AG</label>
+						<input id="edit-doc-date" type="date" bind:value={editingDocDate} />
+					</div>
+				</div>
+			{/if}
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (editingDocId = null)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingDoc || !editingDocTitre.trim()}
+				on:click={saveEditDoc}
+			>
+				{savingDoc ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter un rapport diagnostique ───────────────────────────────── -->
 {#if showDiagForm !== null}
-	<Modale titre="Ajouter un rapport" styleBoite="width:min(460px,95vw)"
-		on:fermer={() => (showDiagForm = null)}>
-			<div class="modal-header">
-				<h3>Ajouter un rapport</h3>
-				<button class="modal-close" on:click={() => (showDiagForm = null)}>✕</button>
+	<Modale
+		titre="Ajouter un rapport"
+		styleBoite="width:min(460px,95vw)"
+		on:fermer={() => (showDiagForm = null)}
+	>
+		<div class="modal-header">
+			<h3>Ajouter un rapport</h3>
+			<button class="modal-close" on:click={() => (showDiagForm = null)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="diag-titre"
+					>Titre <span style="color:var(--color-text-muted);font-size:.8rem"
+						>(optionnel si multi-fichiers)</span
+					></label
+				>
+				<input
+					id="diag-titre"
+					type="text"
+					bind:value={newDiagTitre}
+					placeholder="Rapport DPE 2024… (auto si vide)"
+				/>
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="diag-titre">Titre <span style="color:var(--color-text-muted);font-size:.8rem">(optionnel si multi-fichiers)</span></label>
-					<input id="diag-titre" type="text" bind:value={newDiagTitre} placeholder="Rapport DPE 2024… (auto si vide)" />
-				</div>
-				<div class="field">
-					<label for="diag-date">Date du diagnostic</label>
-					<input id="diag-date" type="date" bind:value={newDiagDate} />
-				</div>
-				<div class="field">
-					<label for="diag-file">Fichier(s) *</label>
-					<input id="diag-file" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp"
-						on:change={(e) => { newDiagFiles = (e.target as HTMLInputElement).files; }} />
-					{#if newDiagFiles?.length}
-						<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
-							{#if newDiagFiles.length === 1}{newDiagFiles[0].name}{:else}{newDiagFiles.length} fichiers sélectionnés{/if}
-						</p>
-					{/if}
-				</div>
+			<div class="field">
+				<label for="diag-date">Date du diagnostic</label>
+				<input id="diag-date" type="date" bind:value={newDiagDate} />
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showDiagForm = null)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingDiag || !newDiagFiles?.length}
-					on:click={addRapport}>
-					{savingDiag ? 'Ajout…' : 'Ajouter'}
-				</button>
+			<div class="field">
+				<label for="diag-file">Fichier(s) *</label>
+				<input
+					id="diag-file"
+					type="file"
+					multiple
+					accept=".pdf,.jpg,.jpeg,.png,.webp"
+					on:change={(e) => {
+						newDiagFiles = (e.target as HTMLInputElement).files;
+					}}
+				/>
+				{#if newDiagFiles?.length}
+					<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
+						{#if newDiagFiles.length === 1}{newDiagFiles[0].name}{:else}{newDiagFiles.length} fichiers
+							sélectionnés{/if}
+					</p>
+				{/if}
 			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showDiagForm = null)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingDiag || !newDiagFiles?.length}
+				on:click={addRapport}
+			>
+				{savingDiag ? 'Ajout…' : 'Ajouter'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : modifier un rapport diagnostique ──────────────────────────────── -->
 {#if editingRapportId !== null}
-	<Modale titre="Modifier le rapport" styleBoite="width:min(440px,95vw)"
-		on:fermer={() => (editingRapportId = null)}>
-			<div class="modal-header">
-				<h3>Modifier le rapport</h3>
-				<button class="modal-close" on:click={() => (editingRapportId = null)}>✕</button>
+	<Modale
+		titre="Modifier le rapport"
+		styleBoite="width:min(440px,95vw)"
+		on:fermer={() => (editingRapportId = null)}
+	>
+		<div class="modal-header">
+			<h3>Modifier le rapport</h3>
+			<button class="modal-close" on:click={() => (editingRapportId = null)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="edit-r-titre">Titre *</label>
+				<input id="edit-r-titre" type="text" bind:value={editingRapportTitre} />
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="edit-r-titre">Titre *</label>
-					<input id="edit-r-titre" type="text" bind:value={editingRapportTitre} />
-				</div>
-				<div class="field">
-					<label for="edit-r-date">Date du diagnostic</label>
-					<input id="edit-r-date" type="date" bind:value={editingRapportDate} />
-				</div>
-				<div class="field">
-					<label for="edit-r-synthese">Synthèse <span style="color:var(--color-text-muted);font-size:.8rem">(optionnel)</span></label>
-					<textarea id="edit-r-synthese" bind:value={editingRapportSynthese}
-						placeholder="Conclusions clés, points d'attention, recommandations…"
-						rows="4" style="width:100%;resize:vertical"></textarea>
-				</div>
+			<div class="field">
+				<label for="edit-r-date">Date du diagnostic</label>
+				<input id="edit-r-date" type="date" bind:value={editingRapportDate} />
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (editingRapportId = null)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingRapport || !editingRapportTitre.trim()}
-					on:click={saveRapport}>
-					{savingRapport ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
+			<div class="field">
+				<label for="edit-r-synthese"
+					>Synthèse <span style="color:var(--color-text-muted);font-size:.8rem">(optionnel)</span
+					></label
+				>
+				<textarea
+					id="edit-r-synthese"
+					bind:value={editingRapportSynthese}
+					placeholder="Conclusions clés, points d'attention, recommandations…"
+					rows="4"
+					style="width:100%;resize:vertical"></textarea>
 			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (editingRapportId = null)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingRapport || !editingRapportTitre.trim()}
+				on:click={saveRapport}
+			>
+				{savingRapport ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : ajouter / modifier une règle ──────────────────────────────────── -->
 {#if showRegleForm}
-	<Modale titre="Règle" styleBoite="width:min(480px,95vw)"
-		on:fermer={() => (showRegleForm = false)}>
-			<div class="modal-header">
-				<h3>{editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}</h3>
-				<button class="modal-close" on:click={() => (showRegleForm = false)}>✕</button>
+	<Modale
+		titre="Règle"
+		styleBoite="width:min(480px,95vw)"
+		on:fermer={() => (showRegleForm = false)}
+	>
+		<div class="modal-header">
+			<h3>{editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}</h3>
+			<button class="modal-close" on:click={() => (showRegleForm = false)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="regle-titre">Titre *</label>
+				<input
+					id="regle-titre"
+					type="text"
+					bind:value={regleTitre}
+					placeholder="Ex : RAL menuiseries façade bâtiment A"
+				/>
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="regle-titre">Titre *</label>
-					<input id="regle-titre" type="text" bind:value={regleTitre} placeholder="Ex : RAL menuiseries façade bâtiment A" />
-				</div>
-				<div class="field">
-					<label for="regle-contenu">Détail / valeur</label>
-					<textarea id="regle-contenu" bind:value={regleContenu}
-						placeholder="Ex : Façade extérieure RAL 6021 vert clair"
-						rows="3" style="width:100%;resize:vertical"></textarea>
-				</div>
+			<div class="field">
+				<label for="regle-contenu">Détail / valeur</label>
+				<textarea
+					id="regle-contenu"
+					bind:value={regleContenu}
+					placeholder="Ex : Façade extérieure RAL 6021 vert clair"
+					rows="3"
+					style="width:100%;resize:vertical"></textarea>
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showRegleForm = false)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={savingRegle || !regleTitre.trim()}
-					on:click={saveRegle}>
-					{savingRegle ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
-			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showRegleForm = false)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={savingRegle || !regleTitre.trim()}
+				on:click={saveRegle}
+			>
+				{savingRegle ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
@@ -1088,9 +1352,9 @@
 		text-align: center;
 	}
 	.photo-caption {
-		font-size: .875rem;
+		font-size: 0.875rem;
 		color: var(--color-text-muted);
-		padding: .35rem 0;
+		padding: 0.35rem 0;
 		font-style: italic;
 	}
 	.photo-banner {
@@ -1114,38 +1378,44 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: .5rem;
+		gap: 0.5rem;
 		color: var(--color-text-muted);
 		background: var(--color-bg);
-		font-size: .9rem;
+		font-size: 0.9rem;
 	}
 	.photo-change-btn {
 		position: absolute;
-		bottom: .75rem;
-		right: .75rem;
-		background: rgba(0,0,0,.55);
+		bottom: 0.75rem;
+		right: 0.75rem;
+		background: rgba(0, 0, 0, 0.55);
 		color: #fff;
 		border: none;
 		border-radius: var(--radius);
-		padding: .35rem .75rem;
-		font-size: .8rem;
+		padding: 0.35rem 0.75rem;
+		font-size: 0.8rem;
 		cursor: pointer;
 		backdrop-filter: blur(4px);
-		transition: background .15s;
+		transition: background 0.15s;
 	}
-	.photo-change-btn:hover { background: rgba(0,0,0,.75); }
-	.photo-change-btn.uploading { opacity: .6; pointer-events: none; }
+	.photo-change-btn:hover {
+		background: rgba(0, 0, 0, 0.75);
+	}
+	.photo-change-btn.uploading {
+		opacity: 0.6;
+		pointer-events: none;
+	}
 
 	/* ── Sections ───────────────────────────────────────────────── */
 	.section-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: .75rem;
+		margin-bottom: 0.75rem;
 	}
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
-	.section-title { margin: 0; }
-
+	.section-title {
+		margin: 0;
+	}
 
 	/* ── Bâtiments / lot counts ─────────────────────────────────── */
 
@@ -1154,9 +1424,12 @@
 	    cette page l'emploie dans SON balisage, et trois blocs en sortaient NUS.
 	    Le récit — et pourquoi `lint:classes-nues` ne le voyait pas — est là-bas. */
 
-
 	/* ── Edit form ──────────────────────────────────────────────── */
-	.edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: .75rem; }
+	.edit-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+		gap: 0.75rem;
+	}
 
 	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
 	    site une fois cette feuille chargée — et `.badge-purple` y prenait encore
@@ -1184,50 +1457,100 @@
 	    divergeait de `composants.css` (croix 1.3rem au lieu de 1.5, marges au lieu
 	    des remplissages). `prestataires` emploie ce balisage SANS aucune regle
 	    locale : c'est lui la reference, et il est en production. */
-	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+	.modal-header h3 {
+		font-size: 1.05rem;
+		font-weight: 600;
+		margin: 0;
+	}
 
 	/* ── Diagnostics ─────────────────────────────────────────────── */
-	.diag-list { display: flex; flex-direction: column; gap: 1rem; }
-	.diag-card { padding: 1rem 1.25rem; }
-	.diag-header { margin-bottom: .75rem; }
-	.diag-title-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .4rem; }
-	.diag-nom { font-weight: 600; font-size: .975rem; }
-	.diag-texte { font-size: .82rem; color: var(--color-text-muted); line-height: 1.5; margin: 0; }
-	.diag-rapports { border-top: 1px solid var(--color-border); padding-top: .6rem; margin-bottom: .6rem; display: flex; flex-direction: column; gap: .35rem; }
-	.diag-add { padding-top: .4rem; }
-	.diag-card-disabled { opacity: .65; }
+	.diag-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.diag-card {
+		padding: 1rem 1.25rem;
+	}
+	.diag-header {
+		margin-bottom: 0.75rem;
+	}
+	.diag-title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.4rem;
+	}
+	.diag-nom {
+		font-weight: 600;
+		font-size: 0.975rem;
+	}
+	.diag-texte {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin: 0;
+	}
+	.diag-rapports {
+		border-top: 1px solid var(--color-border);
+		padding-top: 0.6rem;
+		margin-bottom: 0.6rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+	.diag-add {
+		padding-top: 0.4rem;
+	}
+	.diag-card-disabled {
+		opacity: 0.65;
+	}
 	.diag-non-applicable-section {
 		margin-top: 1rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		padding: .6rem 1rem;
+		padding: 0.6rem 1rem;
 		background: var(--color-surface);
 	}
 	.diag-non-applicable-section > summary {
 		cursor: pointer;
-		font-size: .85rem;
+		font-size: 0.85rem;
 		color: var(--color-text-muted);
 		font-weight: 500;
 		user-select: none;
 	}
-	.diag-non-applicable-section > summary:hover { color: var(--color-text); }
+	.diag-non-applicable-section > summary:hover {
+		color: var(--color-text);
+	}
 
 	/* ── Synthèse rapport diagnostique ────────────────────── */
-	.diag-rapport-block { border-bottom: 1px solid var(--color-border); }
-	.diag-rapport-block:last-child { border-bottom: none; }
-	.synthese-toggle {
-		background: none; border: none; cursor: pointer;
-		font-size: .78rem; color: var(--color-primary);
-		padding: .1rem .3rem; border-radius: var(--radius);
-		white-space: nowrap; flex-shrink: 0;
+	.diag-rapport-block {
+		border-bottom: 1px solid var(--color-border);
 	}
-	.synthese-toggle:hover { background: var(--color-bg); }
+	.diag-rapport-block:last-child {
+		border-bottom: none;
+	}
+	.synthese-toggle {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 0.78rem;
+		color: var(--color-primary);
+		padding: 0.1rem 0.3rem;
+		border-radius: var(--radius);
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.synthese-toggle:hover {
+		background: var(--color-bg);
+	}
 	.synthese-body {
-		padding: .5rem 1rem .75rem;
-		font-size: .875rem;
+		padding: 0.5rem 1rem 0.75rem;
+		font-size: 0.875rem;
 		background: var(--color-bg);
 		border-left: 3px solid var(--color-primary);
-		margin: 0 .5rem .35rem;
+		margin: 0 0.5rem 0.35rem;
 		border-radius: 0 var(--radius) var(--radius) 0;
 	}
 </style>

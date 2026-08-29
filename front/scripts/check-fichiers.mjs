@@ -117,14 +117,12 @@ for (const p of cibles) {
 		);
 	}
 
-	contenu
-		.split('\n')
-		.forEach((ligne, i) => {
-			if (estCommentaire(ligne)) return;
-			for (const { regex, message } of MOTIFS) {
-				if (regex.test(ligne)) fautifs.push(`  ${rel}:${i + 1} — ${message}\n      ${ligne.trim()}`);
-			}
-		});
+	contenu.split('\n').forEach((ligne, i) => {
+		if (estCommentaire(ligne)) return;
+		for (const { regex, message } of MOTIFS) {
+			if (regex.test(ligne)) fautifs.push(`  ${rel}:${i + 1} — ${message}\n      ${ligne.trim()}`);
+		}
+	});
 }
 
 if (fautifs.length > 0) {

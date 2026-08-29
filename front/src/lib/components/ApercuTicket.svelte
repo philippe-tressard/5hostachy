@@ -56,5 +56,4 @@
 
       ⚠️ Le tri photos / documents se fait dans le `<script>` : `{@const}` n'est
       permis qu'à l'intérieur d'un bloc, jamais à la racine d'un composant. -->
-<ApercuCarte contenu={ticket.description} photos={pieces.photos}
-	fichiers={pieces.documents} />
+<ApercuCarte contenu={ticket.description} photos={pieces.photos} fichiers={pieces.documents} />

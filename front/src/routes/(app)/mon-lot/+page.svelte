@@ -90,7 +90,7 @@
 
 	$: selectedLot = lots.find((l) => l.id === selectedLotId) ?? null;
 	$: bailAccesLot = bailAcces
-		? lots.find((l) => l.id === (bailAcces?.lot_id ?? -1)) ?? null
+		? (lots.find((l) => l.id === (bailAcces?.lot_id ?? -1)) ?? null)
 		: null;
 
 	// ── State (gestion locative) ──────────────────────────────────────────────
@@ -101,11 +101,31 @@
 	// Nouveau bail
 	let showNewBail = false;
 	let newBailLotIds = new Set<number>();
-	let newBail = { locataire_nom: '', locataire_prenom: '', locataire_email: '', locataire_telephone: '', date_entree: '', date_sortie_prevue: '', notes: '' };
+	let newBail = {
+		locataire_nom: '',
+		locataire_prenom: '',
+		locataire_email: '',
+		locataire_telephone: '',
+		date_entree: '',
+		date_sortie_prevue: '',
+		notes: '',
+	};
 	let savingBail = false;
 	let rechercheLocataire = '';
-	let locataireTrouve: { id: number; nom: string; prenom: string; email: string; actif: boolean } | null = null;
-	let locataireResultats: { id: number; nom: string; prenom: string; email: string; actif: boolean }[] = [];
+	let locataireTrouve: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	} | null = null;
+	let locataireResultats: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	}[] = [];
 	let locataireRechercheFaite = false;
 	let cherchantLocataire = false;
 	let newBailLocataireId: number | null = null;
@@ -124,15 +144,40 @@
 
 	// Edition locataire
 	let bailEdite: Bail | null = null;
-	let editLocataire = { locataire_nom: '', locataire_prenom: '', locataire_email: '', locataire_telephone: '', date_sortie_prevue: '', notes: '' };
+	let editLocataire = {
+		locataire_nom: '',
+		locataire_prenom: '',
+		locataire_email: '',
+		locataire_telephone: '',
+		date_sortie_prevue: '',
+		notes: '',
+	};
 	let editLocataireId: number | null = null;
 	// Recherche / suggestions dans le modal d'édition
 	let editRechercheLocataire = '';
 	let editCherchant = false;
-	let editLocataireResultats: { id: number; nom: string; prenom: string; email: string; actif: boolean }[] = [];
+	let editLocataireResultats: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	}[] = [];
 	let editLocataireRechercheFaite = false;
-	let editLocataireTrouve: { id: number; nom: string; prenom: string; email: string; actif: boolean } | null = null;
-	let editSuggestions: { id: number; nom: string; prenom: string; email: string; actif: boolean }[] = [];
+	let editLocataireTrouve: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	} | null = null;
+	let editSuggestions: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	}[] = [];
 	let editSuggestionsLoaded = false;
 
 	// Gestion des accès (Vigik / TC) par bail
@@ -160,7 +205,9 @@
 		if ($currentUser?.statut === 'locataire') {
 			try {
 				monBailData = await bailApi.monBail();
-			} catch { /* pas de bail */ }
+			} catch {
+				/* pas de bail */
+			}
 		}
 		if ($currentUser?.statut === 'copropriétaire_bailleur' || isResident) {
 			try {
@@ -186,7 +233,7 @@
 	// ── Actions bail ───────────────────────────────────────────────────────────
 	async function creerBail() {
 		if (newBailLotIds.size === 0 || !newBail.date_entree) {
-			toast('error', 'Sélectionnez au moins un lot et renseignez la date d\'entrée');
+			toast('error', "Sélectionnez au moins un lot et renseignez la date d'entrée");
 			return;
 		}
 		savingBail = true;
@@ -200,13 +247,24 @@
 			baux = [...nouvellesBaux, ...baux];
 			showNewBail = false;
 			newBailLotIds = new Set();
-			newBail = { locataire_nom: '', locataire_prenom: '', locataire_email: '', locataire_telephone: '', date_entree: '', date_sortie_prevue: '', notes: '' };
+			newBail = {
+				locataire_nom: '',
+				locataire_prenom: '',
+				locataire_email: '',
+				locataire_telephone: '',
+				date_entree: '',
+				date_sortie_prevue: '',
+				notes: '',
+			};
 			rechercheLocataire = '';
 			locataireTrouve = null;
 			locataireResultats = [];
 			locataireRechercheFaite = false;
 			newBailLocataireId = null;
-			toast('success', nouvellesBaux.length > 1 ? `${nouvellesBaux.length} baux créés` : 'Bail créé');
+			toast(
+				'success',
+				nouvellesBaux.length > 1 ? `${nouvellesBaux.length} baux créés` : 'Bail créé',
+			);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
@@ -217,7 +275,9 @@
 	async function confirmerTerminer() {
 		if (!bailATerminer) return;
 		try {
-			const updated = await bailApi.terminerBail(bailATerminer.id, { date_sortie_reelle: dateSortie || null });
+			const updated = await bailApi.terminerBail(bailATerminer.id, {
+				date_sortie_reelle: dateSortie || null,
+			});
 			baux = baux.map((b) => (b.id === updated.id ? updated : b));
 			bailATerminer = null;
 			toast('success', 'Bail terminé');
@@ -249,16 +309,36 @@
 			date_sortie_prevue: bail.date_sortie_prevue ?? '',
 			notes: bail.notes ?? '',
 		};
-		editLocataireTrouve = bail.locataire_id ? { id: bail.locataire_id, nom: bail.locataire_nom ?? '', prenom: bail.locataire_prenom ?? '', email: bail.locataire_email ?? '', actif: true } : null;
+		editLocataireTrouve = bail.locataire_id
+			? {
+					id: bail.locataire_id,
+					nom: bail.locataire_nom ?? '',
+					prenom: bail.locataire_prenom ?? '',
+					email: bail.locataire_email ?? '',
+					actif: true,
+				}
+			: null;
 		editRechercheLocataire = '';
 		editLocataireResultats = [];
 		editLocataireRechercheFaite = false;
 		if (!editSuggestionsLoaded) {
-			bailApi.locatairesSuggeres().then(r => { editSuggestions = r; editSuggestionsLoaded = true; }).catch(() => {});
+			bailApi
+				.locatairesSuggeres()
+				.then((r) => {
+					editSuggestions = r;
+					editSuggestionsLoaded = true;
+				})
+				.catch(() => {});
 		}
 	}
 
-	function editSelectionnerLocataire(l: { id: number; nom: string; prenom: string; email: string; actif: boolean }) {
+	function editSelectionnerLocataire(l: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	}) {
 		editLocataireTrouve = l;
 		editLocataireId = l.id;
 		editLocataire.locataire_nom = l.nom;
@@ -343,7 +423,13 @@
 	}
 
 	// ── Recherche locataire ────────────────────────────────────────────────────
-	function selectionnerLocataire(l: { id: number; nom: string; prenom: string; email: string; actif: boolean }) {
+	function selectionnerLocataire(l: {
+		id: number;
+		nom: string;
+		prenom: string;
+		email: string;
+		actif: boolean;
+	}) {
 		locataireTrouve = l;
 		newBailLocataireId = l.id;
 		newBail.locataire_email = l.email;
@@ -427,7 +513,10 @@
 				baux = await bailApi.tousBaux();
 			}
 		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors de l\'affectation automatique');
+			toast(
+				'error',
+				e instanceof ApiError ? e.message : "Erreur lors de l'affectation automatique",
+			);
 		}
 	}
 
@@ -454,7 +543,6 @@
 		selectionTc = new Set(selectionTc);
 	}
 
-
 	function toggleFiltreLot(lotId: number) {
 		if (filtreLotsAcces.has(lotId)) filtreLotsAcces.delete(lotId);
 		else filtreLotsAcces.add(lotId);
@@ -463,12 +551,12 @@
 
 	async function transfererAcces() {
 		if (!bailAcces) return;
-		const tVigik = [...selectionVigik].filter(id => {
-			const a = accesListe.find(x => x.type === 'vigik' && x.id === id);
+		const tVigik = [...selectionVigik].filter((id) => {
+			const a = accesListe.find((x) => x.type === 'vigik' && x.id === id);
 			return a && !a.chez_locataire;
 		});
-		const tTc = [...selectionTc].filter(id => {
-			const a = accesListe.find(x => x.type === 'telecommande' && x.id === id);
+		const tTc = [...selectionTc].filter((id) => {
+			const a = accesListe.find((x) => x.type === 'telecommande' && x.id === id);
 			return a && !a.chez_locataire;
 		});
 		if (tVigik.length === 0 && tTc.length === 0) {
@@ -494,12 +582,12 @@
 
 	async function recupererSelection() {
 		if (!bailAcces) return;
-		const rVigik = [...selectionVigik].filter(id => {
-			const a = accesListe.find(x => x.type === 'vigik' && x.id === id);
+		const rVigik = [...selectionVigik].filter((id) => {
+			const a = accesListe.find((x) => x.type === 'vigik' && x.id === id);
 			return a?.chez_locataire;
 		});
-		const rTc = [...selectionTc].filter(id => {
-			const a = accesListe.find(x => x.type === 'telecommande' && x.id === id);
+		const rTc = [...selectionTc].filter((id) => {
+			const a = accesListe.find((x) => x.type === 'telecommande' && x.id === id);
 			return a?.chez_locataire;
 		});
 		if (rVigik.length === 0 && rTc.length === 0) {
@@ -562,12 +650,26 @@
 		}
 		return [...map.entries()].map(([id, label]) => ({ id, label }));
 	})();
-	$: accesFiltres = accesListe.filter((a) => filtreLotsAcces.size === 0 || (a.lot_id != null && filtreLotsAcces.has(a.lot_id)));
+	$: accesFiltres = accesListe.filter(
+		(a) => filtreLotsAcces.size === 0 || (a.lot_id != null && filtreLotsAcces.has(a.lot_id)),
+	);
 
-	$: nTransfert = [...selectionVigik].filter(id => { const a = accesListe.find(x => x.type === 'vigik' && x.id === id); return a && !a.chez_locataire; }).length
-		+ [...selectionTc].filter(id => { const a = accesListe.find(x => x.type === 'telecommande' && x.id === id); return a && !a.chez_locataire; }).length;
-	$: nRecuperation = [...selectionVigik].filter(id => accesListe.find(x => x.type === 'vigik' && x.id === id)?.chez_locataire).length
-		+ [...selectionTc].filter(id => accesListe.find(x => x.type === 'telecommande' && x.id === id)?.chez_locataire).length;
+	$: nTransfert =
+		[...selectionVigik].filter((id) => {
+			const a = accesListe.find((x) => x.type === 'vigik' && x.id === id);
+			return a && !a.chez_locataire;
+		}).length +
+		[...selectionTc].filter((id) => {
+			const a = accesListe.find((x) => x.type === 'telecommande' && x.id === id);
+			return a && !a.chez_locataire;
+		}).length;
+	$: nRecuperation =
+		[...selectionVigik].filter(
+			(id) => accesListe.find((x) => x.type === 'vigik' && x.id === id)?.chez_locataire,
+		).length +
+		[...selectionTc].filter(
+			(id) => accesListe.find((x) => x.type === 'telecommande' && x.id === id)?.chez_locataire,
+		).length;
 
 	// ── Helpers affichage ──────────────────────────────────────────────────────
 	const typeLabel: Record<string, string> = {
@@ -632,22 +734,28 @@
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'door-closed'}>
 	{#if mainTab === 'location'}
-		<button class="btn btn-primary page-header-btn" on:click={() => (showNewBail = true)}>+ Nouveau bail</button>
+		<button class="btn btn-primary page-header-btn" on:click={() => (showNewBail = true)}
+			>+ Nouveau bail</button
+		>
 	{/if}
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 {#if isBailleur || $isAdmin || $isCS || (isResident && bauxTermines.length > 0)}
 	<div class="tabs" role="tablist" style="margin-bottom:1.5rem">
-		<button role="tab" class:active={mainTab === 'lots'} on:click={() => mainTab = 'lots'}>
+		<button role="tab" class:active={mainTab === 'lots'} on:click={() => (mainTab = 'lots')}>
 			{_pc.onglets?.lots?.label ?? '\u{1F3E0} Mes lots'}
 		</button>
-		<button role="tab" class:active={mainTab === 'location'} on:click={() => mainTab = 'location'}>
+		<button
+			role="tab"
+			class:active={mainTab === 'location'}
+			on:click={() => (mainTab = 'location')}
+		>
 			{_pc.onglets?.location?.label ?? '\u{1F4CB} Gestion locative'}
 		</button>
 	</div>
 	{#if _pc.onglets?.[mainTab]?.descriptif}
-	<p class="tab-descriptif">{@html safeHtml(_pc.onglets[mainTab].descriptif)}</p>
+		<p class="tab-descriptif">{@html safeHtml(_pc.onglets[mainTab].descriptif)}</p>
 	{/if}
 {/if}
 
@@ -661,12 +769,16 @@
 			<p>Votre compte n'est pas encore lié à un lot.</p>
 			{#if $currentUser?.statut === 'locataire'}
 				<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem">
-					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de son espace.
+					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de
+					son espace.
 				</p>
 			{:else}
 				<p style="font-size:.85rem;color:var(--color-text-muted);margin-top:.5rem">
-					Si votre compte vient d'être validé, la liaison se fait automatiquement.<br>
-					Si aucun lot n'apparaît, contactez le gestionnaire du site ou <a href="/tickets?nouveau=1" style="color:var(--color-primary)">faites une nouvelle demande</a>.
+					Si votre compte vient d'être validé, la liaison se fait automatiquement.<br />
+					Si aucun lot n'apparaît, contactez le gestionnaire du site ou
+					<a href="/tickets?nouveau=1" style="color:var(--color-primary)"
+						>faites une nouvelle demande</a
+					>.
 				</p>
 			{/if}
 		</div>
@@ -676,49 +788,87 @@
 			<div class="lots-section-label">🏠 Lot loué</div>
 			<div class="card largeur-saisie" style="margin-bottom:1.5rem">
 				<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">
-					<span class="lbc-lot-badge">{monBailData.lot_batiment_nom ?? '—'} / {monBailData.lot_numero ?? '—'}</span>
-					<span class="badge badge-green" style="font-size:.72rem">{monBailData.statut === 'actif' ? 'Bail actif' : monBailData.statut.replace('_', ' ')}</span>
+					<span class="lbc-lot-badge"
+						>{monBailData.lot_batiment_nom ?? '—'} / {monBailData.lot_numero ?? '—'}</span
+					>
+					<span class="badge badge-green" style="font-size:.72rem"
+						>{monBailData.statut === 'actif'
+							? 'Bail actif'
+							: monBailData.statut.replace('_', ' ')}</span
+					>
 				</div>
 				<dl class="details-grid">
-					<dt>Bâtiment</dt><dd>{monBailData.lot_batiment_nom ?? '—'}</dd>
-					{#if monBailData.lot_type}<dt>Type</dt><dd style="text-transform:capitalize">{monBailData.lot_type.replace('_', ' ')}{monBailData.lot_type_appartement ? ` – ${monBailData.lot_type_appartement}` : ''}</dd>{/if}
-					{#if monBailData.lot_etage !== null && monBailData.lot_etage !== undefined}<dt>Étage</dt><dd>{monBailData.lot_etage === 0 ? 'RDC' : monBailData.lot_etage}</dd>{/if}
-					{#if monBailData.lot_superficie}<dt>Superficie</dt><dd>{monBailData.lot_superficie} m²</dd>{/if}
-					<dt>Entrée</dt><dd>{fmt(monBailData.date_entree)}</dd>
-					{#if monBailData.date_sortie_prevue}<dt>Sortie prévue</dt><dd>{fmt(monBailData.date_sortie_prevue)}</dd>{/if}
+					<dt>Bâtiment</dt>
+					<dd>{monBailData.lot_batiment_nom ?? '—'}</dd>
+					{#if monBailData.lot_type}<dt>Type</dt>
+						<dd style="text-transform:capitalize">
+							{monBailData.lot_type.replace('_', ' ')}{monBailData.lot_type_appartement
+								? ` – ${monBailData.lot_type_appartement}`
+								: ''}
+						</dd>{/if}
+					{#if monBailData.lot_etage !== null && monBailData.lot_etage !== undefined}<dt>Étage</dt>
+						<dd>{monBailData.lot_etage === 0 ? 'RDC' : monBailData.lot_etage}</dd>{/if}
+					{#if monBailData.lot_superficie}<dt>Superficie</dt>
+						<dd>{monBailData.lot_superficie} m²</dd>{/if}
+					<dt>Entrée</dt>
+					<dd>{fmt(monBailData.date_entree)}</dd>
+					{#if monBailData.date_sortie_prevue}<dt>Sortie prévue</dt>
+						<dd>{fmt(monBailData.date_sortie_prevue)}</dd>{/if}
 				</dl>
 				{#if monBailData.bailleur_nom || monBailData.bailleur_prenom}
 					<div style="margin-top:.75rem;font-size:.85rem;color:var(--color-text-muted)">
-						🏢 Propriétaire : <strong>{[monBailData.bailleur_prenom, monBailData.bailleur_nom].filter(Boolean).join(' ')}</strong>
-						{#if monBailData.bailleur_email}<br>📬 <a href="mailto:{monBailData.bailleur_email}" style="color:var(--color-primary)">{monBailData.bailleur_email}</a>{/if}
-						{#if monBailData.bailleur_telephone}<br>📞 {monBailData.bailleur_telephone}{/if}
+						🏢 Propriétaire : <strong
+							>{[monBailData.bailleur_prenom, monBailData.bailleur_nom]
+								.filter(Boolean)
+								.join(' ')}</strong
+						>
+						{#if monBailData.bailleur_email}<br />📬
+							<a href="mailto:{monBailData.bailleur_email}" style="color:var(--color-primary)"
+								>{monBailData.bailleur_email}</a
+							>{/if}
+						{#if monBailData.bailleur_telephone}<br />📞 {monBailData.bailleur_telephone}{/if}
 					</div>
 				{/if}
 			</div>
 		{:else}
 			<div class="empty-state">
 				<h3>Aucun bail actif</h3>
-				<p>Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de son espace.</p>
+				<p>
+					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de
+					son espace.
+				</p>
 			</div>
 		{/if}
 
 		<!-- Lots en propre du locataire (s'il en possède aussi) -->
 		{#if lots.length > 0}
-			<div class="lots-section-label" style="margin-top:1.5rem">🏢 Lots en propriété ({lots.length})</div>
+			<div class="lots-section-label" style="margin-top:1.5rem">
+				🏢 Lots en propriété ({lots.length})
+			</div>
 			{#each lots as lot (lot.id)}
 				<div class="card largeur-saisie" style="margin-bottom:1rem">
-					<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">{lot.batiment_nom ?? '—'} / {lot.numero}</h2>
+					<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">
+						{lot.batiment_nom ?? '—'} / {lot.numero}
+					</h2>
 					<dl class="details-grid">
-						<dt>Type</dt><dd style="text-transform:capitalize">{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}</dd>
-						{#if lot.etage !== null}<dt>Étage</dt><dd>{lot.etage === 0 ? 'RDC' : lot.etage}</dd>{/if}
-						{#if lot.superficie}<dt>Superficie</dt><dd>{lot.superficie} m²</dd>{/if}
+						<dt>Type</dt>
+						<dd style="text-transform:capitalize">
+							{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}
+						</dd>
+						{#if lot.etage !== null}<dt>Étage</dt>
+							<dd>{lot.etage === 0 ? 'RDC' : lot.etage}</dd>{/if}
+						{#if lot.superficie}<dt>Superficie</dt>
+							<dd>{lot.superficie} m²</dd>{/if}
 					</dl>
 				</div>
 			{/each}
 		{/if}
 	{:else if isBailleur}
 		<!-- ── Vue bailleur : lots possédés + locataires ── -->
-		{@const lotsAvecBail = lots.map(l => ({ ...l, bail: bauxActifs.find(b => b.lot_id === l.id) ?? null }))}
+		{@const lotsAvecBail = lots.map((l) => ({
+			...l,
+			bail: bauxActifs.find((b) => b.lot_id === l.id) ?? null,
+		}))}
 		{@const locatairesMap = (() => {
 			const map = new Map();
 			for (const b of bauxActifs) {
@@ -728,80 +878,137 @@
 			}
 			return [...map.values()];
 		})()}
-		{@const lotsVacants = lots.filter(l => !bauxActifs.find(b => b.lot_id === l.id))}
+		{@const lotsVacants = lots.filter((l) => !bauxActifs.find((b) => b.lot_id === l.id))}
 
 		<!-- Section 1 : Tous les lots possédés -->
 		<div class="lots-section-label">🏢 Lots possédés ({lots.length})</div>
 		<div class="lots-possedes-grid">
-		{#each lotsAvecBail as lot}
-			<div class="lot-possede-card card" class:lot-occupe={!!lot.bail} class:lot-vacant={!lot.bail}>
-				<div class="lpc-header">
-					<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
+			{#each lotsAvecBail as lot}
+				<div
+					class="lot-possede-card card"
+					class:lot-occupe={!!lot.bail}
+					class:lot-vacant={!lot.bail}
+				>
+					<div class="lpc-header">
+						<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
+						{#if lot.bail}
+							<span class="badge badge-green" style="font-size:.7rem">Occupé</span>
+						{:else}
+							<span class="badge badge-gray" style="font-size:.7rem">Vacant</span>
+						{/if}
+					</div>
+					<div class="lpc-details">
+						<span class="badge badge-gray" style="font-size:.72rem;text-transform:capitalize"
+							>{lot.type.replace('_', ' ')}{lot.type_appartement
+								? ` – ${lot.type_appartement}`
+								: ''}</span
+						>
+						{#if lot.etage !== null}<span style="font-size:.78rem;color:var(--color-text-muted)"
+								>Étage {lot.etage === 0 ? 'RDC' : lot.etage}</span
+							>{/if}
+						{#if lot.superficie}<span style="font-size:.78rem;color:var(--color-text-muted)"
+								>{lot.superficie} m²</span
+							>{/if}
+					</div>
 					{#if lot.bail}
-						<span class="badge badge-green" style="font-size:.7rem">Occupé</span>
+						<div class="lpc-occupant">👤 {nomLocataire(lot.bail)}</div>
 					{:else}
-						<span class="badge badge-gray" style="font-size:.7rem">Vacant</span>
+						<button
+							class="btn btn-sm btn-primary"
+							style="margin-top:.4rem"
+							on:click={() => {
+								mainTab = 'location';
+								newBailLotIds = new Set([lot.id]);
+								showNewBail = true;
+							}}
+						>
+							+ Créer un bail
+						</button>
 					{/if}
 				</div>
-				<div class="lpc-details">
-					<span class="badge badge-gray" style="font-size:.72rem;text-transform:capitalize">{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}</span>
-					{#if lot.etage !== null}<span style="font-size:.78rem;color:var(--color-text-muted)">Étage {lot.etage === 0 ? 'RDC' : lot.etage}</span>{/if}
-					{#if lot.superficie}<span style="font-size:.78rem;color:var(--color-text-muted)">{lot.superficie} m²</span>{/if}
-				</div>
-				{#if lot.bail}
-					<div class="lpc-occupant">👤 {nomLocataire(lot.bail)}</div>
-				{:else}
-					<button class="btn btn-sm btn-primary" style="margin-top:.4rem" on:click={() => { mainTab = 'location'; newBailLotIds = new Set([lot.id]); showNewBail = true; }}>
-						+ Créer un bail
-					</button>
-				{/if}
-			</div>
-		{/each}
+			{/each}
 		</div>
 
 		<!-- Section 2 : Locataires (lots regroupés par locataire) -->
 		{#if locatairesMap.length > 0}
-		<div class="lots-section-label" style="margin-top:1.8rem">👥 Locataires ({locatairesMap.length})</div>
-		{#each locatairesMap as loc}
-			{@const premierBail = loc.bail}
-			<div class="locataire-card card">
-				<div class="loc-header">
-					<div class="loc-name">
-						👤 <strong>{nomLocataire(premierBail)}</strong>
-						<span class="badge {premierBail.statut === 'actif' ? 'badge-green' : 'badge-yellow'}" style="font-size:.7rem">{statutBailLabel[premierBail.statut] ?? premierBail.statut}</span>
-					</div>
-					<div class="loc-contact">
-						{#if premierBail.locataire_email}<a href="mailto:{premierBail.locataire_email}" style="color:var(--color-primary);font-size:.82rem">📬 {premierBail.locataire_email}</a>{/if}
-						{#if premierBail.locataire_telephone}<span style="font-size:.82rem;color:var(--color-text-muted)">📞 {premierBail.locataire_telephone}</span>{/if}
-					</div>
-				</div>
-				<div class="loc-lots">
-					{#each loc.baux as bail}
-						{@const lot = lots.find(l => l.id === bail.lot_id)}
-						{#if lot}
-						<div class="loc-lot-row">
-							<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-							<span class="badge badge-gray" style="font-size:.7rem;text-transform:capitalize">{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}</span>
-							<span style="font-size:.78rem;color:var(--color-text-muted)">Depuis le {fmt(bail.date_entree)}{bail.date_sortie_prevue ? ` · Sortie prévue ${fmt(bail.date_sortie_prevue)}` : ''}</span>
-						</div>
-						{/if}
-					{/each}
-				</div>
-				<div class="lbc-actions">
-					<button class="btn btn-sm btn-outline" on:click={() => { mainTab = 'location'; bailTab = 'actif'; }}>📋 Gestion locative</button>
-					<button class="btn btn-sm btn-outline" on:click={() => ouvrirAccesBail(premierBail)}>🔑 Accès</button>
-					<button class="btn btn-sm btn-outline" on:click={() => ouvrirEditionLocataire(premierBail)}>✏️ Modifier</button>
-				</div>
+			<div class="lots-section-label" style="margin-top:1.8rem">
+				👥 Locataires ({locatairesMap.length})
 			</div>
-		{/each}
+			{#each locatairesMap as loc}
+				{@const premierBail = loc.bail}
+				<div class="locataire-card card">
+					<div class="loc-header">
+						<div class="loc-name">
+							👤 <strong>{nomLocataire(premierBail)}</strong>
+							<span
+								class="badge {premierBail.statut === 'actif' ? 'badge-green' : 'badge-yellow'}"
+								style="font-size:.7rem"
+								>{statutBailLabel[premierBail.statut] ?? premierBail.statut}</span
+							>
+						</div>
+						<div class="loc-contact">
+							{#if premierBail.locataire_email}<a
+									href="mailto:{premierBail.locataire_email}"
+									style="color:var(--color-primary);font-size:.82rem"
+									>📬 {premierBail.locataire_email}</a
+								>{/if}
+							{#if premierBail.locataire_telephone}<span
+									style="font-size:.82rem;color:var(--color-text-muted)"
+									>📞 {premierBail.locataire_telephone}</span
+								>{/if}
+						</div>
+					</div>
+					<div class="loc-lots">
+						{#each loc.baux as bail}
+							{@const lot = lots.find((l) => l.id === bail.lot_id)}
+							{#if lot}
+								<div class="loc-lot-row">
+									<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
+									<span class="badge badge-gray" style="font-size:.7rem;text-transform:capitalize"
+										>{lot.type.replace('_', ' ')}{lot.type_appartement
+											? ` – ${lot.type_appartement}`
+											: ''}</span
+									>
+									<span style="font-size:.78rem;color:var(--color-text-muted)"
+										>Depuis le {fmt(bail.date_entree)}{bail.date_sortie_prevue
+											? ` · Sortie prévue ${fmt(bail.date_sortie_prevue)}`
+											: ''}</span
+									>
+								</div>
+							{/if}
+						{/each}
+					</div>
+					<div class="lbc-actions">
+						<button
+							class="btn btn-sm btn-outline"
+							on:click={() => {
+								mainTab = 'location';
+								bailTab = 'actif';
+							}}>📋 Gestion locative</button
+						>
+						<button class="btn btn-sm btn-outline" on:click={() => ouvrirAccesBail(premierBail)}
+							>🔑 Accès</button
+						>
+						<button
+							class="btn btn-sm btn-outline"
+							on:click={() => ouvrirEditionLocataire(premierBail)}>✏️ Modifier</button
+						>
+					</div>
+				</div>
+			{/each}
 		{/if}
 
 		<!-- Lots vacants (rappel rapide) -->
 		{#if lotsVacants.length > 0}
-		<div class="lots-section-label" style="margin-top:1.8rem">🔓 Lots vacants ({lotsVacants.length})</div>
-		<p style="font-size:.85rem;color:var(--color-text-muted);margin:0 0 .6rem">Ces lots n'ont pas de bail actif. Créez un bail depuis la fiche du lot ci-dessus ou l'onglet <strong>Gestion locative</strong>.</p>
+			<div class="lots-section-label" style="margin-top:1.8rem">
+				🔓 Lots vacants ({lotsVacants.length})
+			</div>
+			<p style="font-size:.85rem;color:var(--color-text-muted);margin:0 0 .6rem">
+				Ces lots n'ont pas de bail actif. Créez un bail depuis la fiche du lot ci-dessus ou l'onglet <strong
+					>Gestion locative</strong
+				>.
+			</p>
 		{/if}
-
 	{:else}
 		<!-- ── Vue standard (non bailleur) : sélecteur lot + carte ── -->
 		{#if lots.length > 1}
@@ -822,11 +1029,20 @@
 			<div class="card largeur-saisie" style="margin-bottom:1.5rem">
 				<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Caractéristiques</h2>
 				<dl class="details-grid">
-					<dt>Lot</dt><dd>{selectedLot.numero}</dd>
-					<dt>Bâtiment</dt><dd>{selectedLot.batiment_nom ?? '—'}</dd>
-					<dt>Type</dt><dd style="text-transform:capitalize">{selectedLot.type.replace('_', ' ')}{selectedLot.type_appartement ? ` – ${selectedLot.type_appartement}` : ''}</dd>
-					{#if selectedLot.etage !== null}<dt>Étage</dt><dd>{selectedLot.etage === 0 ? 'RDC' : selectedLot.etage}</dd>{/if}
-					{#if selectedLot.superficie}<dt>Superficie</dt><dd>{selectedLot.superficie} m²</dd>{/if}
+					<dt>Lot</dt>
+					<dd>{selectedLot.numero}</dd>
+					<dt>Bâtiment</dt>
+					<dd>{selectedLot.batiment_nom ?? '—'}</dd>
+					<dt>Type</dt>
+					<dd style="text-transform:capitalize">
+						{selectedLot.type.replace('_', ' ')}{selectedLot.type_appartement
+							? ` – ${selectedLot.type_appartement}`
+							: ''}
+					</dd>
+					{#if selectedLot.etage !== null}<dt>Étage</dt>
+						<dd>{selectedLot.etage === 0 ? 'RDC' : selectedLot.etage}</dd>{/if}
+					{#if selectedLot.superficie}<dt>Superficie</dt>
+						<dd>{selectedLot.superficie} m²</dd>{/if}
 				</dl>
 			</div>
 		{/if}
@@ -868,18 +1084,30 @@
 					{@const premierBail = group.bail}
 					<div class="card" style="margin-bottom:1.5rem;padding:1.25rem">
 						<!-- En-tête locataire -->
-						<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem">
+						<div
+							style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem"
+						>
 							<div>
 								<div style="font-weight:700;font-size:1rem">{nomLocataire(premierBail)}</div>
 								{#if premierBail.locataire_email}
-									<div style="font-size:0.82rem;color:var(--color-text-muted)">{premierBail.locataire_email}</div>
+									<div style="font-size:0.82rem;color:var(--color-text-muted)">
+										{premierBail.locataire_email}
+									</div>
 								{/if}
 								{#if premierBail.locataire_telephone}
-									<div style="font-size:0.82rem;color:var(--color-text-muted)">{premierBail.locataire_telephone}</div>
+									<div style="font-size:0.82rem;color:var(--color-text-muted)">
+										{premierBail.locataire_telephone}
+									</div>
 								{/if}
 							</div>
 							<div style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end">
-								<span class="badge {premierBail.statut === 'actif' ? 'badge-green' : premierBail.statut === 'en_cours_sortie' ? 'badge-yellow' : 'badge-gray'}">
+								<span
+									class="badge {premierBail.statut === 'actif'
+										? 'badge-green'
+										: premierBail.statut === 'en_cours_sortie'
+											? 'badge-yellow'
+											: 'badge-gray'}"
+								>
 									{statutBailLabel[premierBail.statut] ?? premierBail.statut}
 								</span>
 							</div>
@@ -888,43 +1116,81 @@
 						<!-- Actions globales locataire -->
 						{#if premierBail.statut !== 'termine'}
 							<div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
-								<button class="btn btn-sm" on:click={() => ouvrirEditionLocataire(premierBail)}>✏️ Modifier</button>
-								<button class="btn btn-sm" on:click={() => ouvrirAccesBail(premierBail)}>&#x1F511; Accès</button>
+								<button class="btn btn-sm" on:click={() => ouvrirEditionLocataire(premierBail)}
+									>✏️ Modifier</button
+								>
+								<button class="btn btn-sm" on:click={() => ouvrirAccesBail(premierBail)}
+									>&#x1F511; Accès</button
+								>
 							</div>
 						{/if}
 
 						<!-- Détails par bail (lot) -->
 						{#each group.baux as bail (bail.id)}
-							{@const lot = lots.find(l => l.id === bail.lot_id)}
-							<div style="border-top:1px solid var(--color-border);padding-top:1rem;margin-top:1rem">
-								<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem">
+							{@const lot = lots.find((l) => l.id === bail.lot_id)}
+							<div
+								style="border-top:1px solid var(--color-border);padding-top:1rem;margin-top:1rem"
+							>
+								<div
+									style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem"
+								>
 									<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 										{#if lot}
 											<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-											<span class="badge badge-gray" style="font-size:.72rem;text-transform:capitalize">{lot.type.replace('_', ' ')}{lot.type_appartement ? ` – ${lot.type_appartement}` : ''}</span>
+											<span
+												class="badge badge-gray"
+												style="font-size:.72rem;text-transform:capitalize"
+												>{lot.type.replace('_', ' ')}{lot.type_appartement
+													? ` – ${lot.type_appartement}`
+													: ''}</span
+											>
 										{/if}
 										{#if group.baux.length > 1}
-											<span class="badge {bail.statut === 'actif' ? 'badge-green' : bail.statut === 'en_cours_sortie' ? 'badge-yellow' : 'badge-gray'}" style="font-size:.7rem">
+											<span
+												class="badge {bail.statut === 'actif'
+													? 'badge-green'
+													: bail.statut === 'en_cours_sortie'
+														? 'badge-yellow'
+														: 'badge-gray'}"
+												style="font-size:.7rem"
+											>
 												{statutBailLabel[bail.statut] ?? bail.statut}
 											</span>
 										{/if}
 									</div>
 									{#if bail.statut !== 'termine'}
-										<button class="btn btn-xs btn-outline" on:click={() => affecterAuto(bail)} title="Affecter automatiquement les accès recommandés">
+										<button
+											class="btn btn-xs btn-outline"
+											on:click={() => affecterAuto(bail)}
+											title="Affecter automatiquement les accès recommandés"
+										>
 											⚡ Auto
 										</button>
-										<button class="btn btn-xs btn-danger" on:click={() => { bailATerminer = bail; dateSortie = ''; }}>
+										<button
+											class="btn btn-xs btn-danger"
+											on:click={() => {
+												bailATerminer = bail;
+												dateSortie = '';
+											}}
+										>
 											Terminer
 										</button>
 									{/if}
 									{#if $isAdmin || $isCS}
-										<button class="btn btn-xs btn-danger" on:click={() => { bailASupprimer = bail; }}>
+										<button
+											class="btn btn-xs btn-danger"
+											on:click={() => {
+												bailASupprimer = bail;
+											}}
+										>
 											🗑️ Supprimer
 										</button>
 									{/if}
 								</div>
 
-								<div style="display:flex;gap:2rem;font-size:0.85rem;margin-bottom:.75rem;flex-wrap:wrap">
+								<div
+									style="display:flex;gap:2rem;font-size:0.85rem;margin-bottom:.75rem;flex-wrap:wrap"
+								>
 									<span><strong>Entrée :</strong> {fmt(bail.date_entree)}</span>
 									<span><strong>Sortie prévue :</strong> {fmt(bail.date_sortie_prevue)}</span>
 									{#if bail.date_sortie_reelle}
@@ -933,7 +1199,12 @@
 								</div>
 
 								{#if bail.notes}
-									<div class="rich-content" style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:.75rem;font-style:italic">{@html safeHtml(bail.notes)}</div>
+									<div
+										class="rich-content"
+										style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:.75rem;font-style:italic"
+									>
+										{@html safeHtml(bail.notes)}
+									</div>
 								{/if}
 
 								<div>
@@ -941,7 +1212,9 @@
 										Inventaire ({bail.objets.length} objet{bail.objets.length !== 1 ? 's' : ''})
 									</div>
 									{#if bail.objets.length === 0}
-										<p style="font-size:0.83rem;color:var(--color-text-muted)">Aucun objet enregistré.</p>
+										<p style="font-size:0.83rem;color:var(--color-text-muted)">
+											Aucun objet enregistré.
+										</p>
 									{:else}
 										<table class="table" style="font-size:0.85rem">
 											<thead>
@@ -979,14 +1252,18 @@
 																		<button
 																			class="btn btn-xs"
 																			title="Enregistrer retour / perte"
-																			on:click={() => { objetRetour = objet; retourDate = ''; retourPerdu = false; }}
-																		>↩</button>
+																			on:click={() => {
+																				objetRetour = objet;
+																				retourDate = '';
+																				retourPerdu = false;
+																			}}>↩</button
+																		>
 																	{/if}
 																	<button
 																		class="btn btn-xs btn-danger"
 																		title="Supprimer"
-																		on:click={() => supprimerObjet(bail, objet)}
-																	>✕</button>
+																		on:click={() => supprimerObjet(bail, objet)}>✕</button
+																	>
 																</div>
 															</td>
 														{/if}
@@ -1007,465 +1284,773 @@
 
 <!-- ── Modal : nouveau bail ─────────────────────────────────────────── -->
 {#if showNewBail}
-	<Modale titre="Nouveau bail" styleBoite="width:min(560px,95vw)"
-		on:fermer={() => (showNewBail = false)}>
-			<div class="modal-header">
-				<h3>Nouveau bail</h3>
-				<button class="modal-close" on:click={() => (showNewBail = false)}>✕</button>
+	<Modale
+		titre="Nouveau bail"
+		styleBoite="width:min(560px,95vw)"
+		on:fermer={() => (showNewBail = false)}
+	>
+		<div class="modal-header">
+			<h3>Nouveau bail</h3>
+			<button class="modal-close" on:click={() => (showNewBail = false)}>✕</button>
+		</div>
+		<div class="modal-body">
+			<!-- Sélection des lots -->
+			<div class="field">
+				<LibelleGroupe titre="Lot(s) concerné(s) *" id="bail-lots" classe="lot-checklist">
+					{#each lots as lot (lot.id)}
+						{@const occupied = !!bauxActifs.find((b) => b.lot_id === lot.id)}
+						<label
+							class="lot-check-item"
+							class:disabled={occupied}
+							title={occupied ? 'Ce lot a déjà un bail actif' : undefined}
+						>
+							<input
+								type="checkbox"
+								checked={newBailLotIds.has(lot.id)}
+								disabled={occupied}
+								on:change={() => toggleNewBailLot(lot.id)}
+							/>
+							<span class="lot-check-label">
+								<span class="lot-check-name">{lotLabel(lot)}</span>
+								{#if occupied}<span class="badge badge-yellow" style="font-size:.68rem"
+										>Bail actif</span
+									>{/if}
+							</span>
+						</label>
+					{/each}
+				</LibelleGroupe>
+				{#if newBailLotIds.size > 0}
+					<p class="lot-selection-hint">
+						{newBailLotIds.size} lot{newBailLotIds.size > 1 ? 's' : ''} sélectionné{newBailLotIds.size >
+						1
+							? 's'
+							: ''} — un bail sera créé pour chacun
+					</p>
+				{/if}
 			</div>
-			<div class="modal-body">
-				<!-- Sélection des lots -->
-				<div class="field">
-					<LibelleGroupe titre="Lot(s) concerné(s) *" id="bail-lots" classe="lot-checklist">
-						{#each lots as lot (lot.id)}
-							{@const occupied = !!bauxActifs.find(b => b.lot_id === lot.id)}
-							<label class="lot-check-item" class:disabled={occupied} title={occupied ? 'Ce lot a déjà un bail actif' : undefined}>
-								<input
-									type="checkbox"
-									checked={newBailLotIds.has(lot.id)}
-									disabled={occupied}
-									on:change={() => toggleNewBailLot(lot.id)}
-								/>
-								<span class="lot-check-label">
-									<span class="lot-check-name">{lotLabel(lot)}</span>
-									{#if occupied}<span class="badge badge-yellow" style="font-size:.68rem">Bail actif</span>{/if}
-								</span>
-							</label>
-						{/each}
-					</LibelleGroupe>
-					{#if newBailLotIds.size > 0}
-						<p class="lot-selection-hint">{newBailLotIds.size} lot{newBailLotIds.size > 1 ? 's' : ''} sélectionné{newBailLotIds.size > 1 ? 's' : ''} — un bail sera créé pour chacun</p>
-					{/if}
-				</div>
 
-				<!-- Recherche locataire inscrit -->
-				<fieldset class="search-locataire-box">
-					<legend>Associer un compte existant <span class="optional-hint">(optionnel)</span></legend>
-					{#if locataireTrouve}
-						<!-- Locataire sélectionné -->
-						<div class="locataire-selected">
-							<div class="locataire-selected-info">
-								<span class="locataire-selected-name">✓ {locataireTrouve.prenom} {locataireTrouve.nom}</span>
-								<span class="locataire-selected-email">{locataireTrouve.email}</span>
-								{#if !locataireTrouve.actif}
-									<span class="badge badge-yellow" style="font-size:.72rem">En attente d'activation</span>
-								{/if}
-							</div>
-							<button class="btn btn-xs btn-outline" on:click={reinitialiserLocataire} title="Changer de locataire">✕ Changer</button>
+			<!-- Recherche locataire inscrit -->
+			<fieldset class="search-locataire-box">
+				<legend>Associer un compte existant <span class="optional-hint">(optionnel)</span></legend>
+				{#if locataireTrouve}
+					<!-- Locataire sélectionné -->
+					<div class="locataire-selected">
+						<div class="locataire-selected-info">
+							<span class="locataire-selected-name"
+								>✓ {locataireTrouve.prenom} {locataireTrouve.nom}</span
+							>
+							<span class="locataire-selected-email">{locataireTrouve.email}</span>
+							{#if !locataireTrouve.actif}
+								<span class="badge badge-yellow" style="font-size:.72rem"
+									>En attente d'activation</span
+								>
+							{/if}
 						</div>
-					{:else}
-						<div class="search-locataire-row">
-							<div class="field champ-en-ligne">
-								<input
-									type="search"
-									id="nb-recherche"
-									placeholder="Nom, prénom ou email…"
-									bind:value={rechercheLocataire}
-									on:keydown={(e) => e.key === 'Enter' && chercherLocataire()}
-									autocomplete="off"
-								/>
-							</div>
-							<button class="btn btn-sm" disabled={cherchantLocataire || !rechercheLocataire.trim()} on:click={chercherLocataire}>
-								{cherchantLocataire ? '…' : '🔍 Chercher'}
-							</button>
+						<button
+							class="btn btn-xs btn-outline"
+							on:click={reinitialiserLocataire}
+							title="Changer de locataire">✕ Changer</button
+						>
+					</div>
+				{:else}
+					<div class="search-locataire-row">
+						<div class="field champ-en-ligne">
+							<input
+								type="search"
+								id="nb-recherche"
+								placeholder="Nom, prénom ou email…"
+								bind:value={rechercheLocataire}
+								on:keydown={(e) => e.key === 'Enter' && chercherLocataire()}
+								autocomplete="off"
+							/>
 						</div>
-						{#if locataireRechercheFaite && locataireResultats.length === 0 && !cherchantLocataire}
-							<p class="search-no-result">Aucun compte trouvé — renseignez manuellement ci-dessous.</p>
-						{:else if locataireResultats.length > 1}
-							<ul class="locataire-resultats">
-								{#each locataireResultats as r (r.id)}
-									<li>
-										<button class="locataire-resultat-btn" on:click={() => selectionnerLocataire(r)}>
-											<span class="lr-name">{r.prenom} {r.nom}</span>
-											<span class="lr-email">{r.email}</span>
-											{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem">En attente</span>{/if}
-										</button>
-									</li>
-								{/each}
-							</ul>
-						{/if}
+						<button
+							class="btn btn-sm"
+							disabled={cherchantLocataire || !rechercheLocataire.trim()}
+							on:click={chercherLocataire}
+						>
+							{cherchantLocataire ? '…' : '🔍 Chercher'}
+						</button>
+					</div>
+					{#if locataireRechercheFaite && locataireResultats.length === 0 && !cherchantLocataire}
+						<p class="search-no-result">
+							Aucun compte trouvé — renseignez manuellement ci-dessous.
+						</p>
+					{:else if locataireResultats.length > 1}
+						<ul class="locataire-resultats">
+							{#each locataireResultats as r (r.id)}
+								<li>
+									<button class="locataire-resultat-btn" on:click={() => selectionnerLocataire(r)}>
+										<span class="lr-name">{r.prenom} {r.nom}</span>
+										<span class="lr-email">{r.email}</span>
+										{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
+												>En attente</span
+											>{/if}
+									</button>
+								</li>
+							{/each}
+						</ul>
 					{/if}
-				</fieldset>
+				{/if}
+			</fieldset>
 
-				<!-- Informations locataire (pré-remplies si compte sélectionné) -->
-				<div class="form-grid form-grid-2">
-					<div class="field">
-						<label for="nb-prenom">Prénom</label>
-						<input id="nb-prenom" type="text" bind:value={newBail.locataire_prenom} placeholder="Prénom" readonly={!!locataireTrouve} />
-					</div>
-					<div class="field">
-						<label for="nb-nom">Nom</label>
-						<input id="nb-nom" type="text" bind:value={newBail.locataire_nom} placeholder="Nom" readonly={!!locataireTrouve} />
-					</div>
-					<div class="field">
-						<label for="nb-email">E-mail</label>
-						<input id="nb-email" type="email" bind:value={newBail.locataire_email} placeholder="email@exemple.fr" readonly={!!locataireTrouve} />
-					</div>
-					<div class="field">
-						<label for="nb-tel">Téléphone</label>
-						<input id="nb-tel" type="text" bind:value={newBail.locataire_telephone} placeholder="06 …" />
-					</div>
-					<div class="field">
-						<label for="nb-entree">Date d'entrée *</label>
-						<input id="nb-entree" type="date" bind:value={newBail.date_entree} />
-					</div>
-					<div class="field">
-						<label for="nb-sortie">Sortie prévue</label>
-						<input id="nb-sortie" type="date" bind:value={newBail.date_sortie_prevue} />
-					</div>
+			<!-- Informations locataire (pré-remplies si compte sélectionné) -->
+			<div class="form-grid form-grid-2">
+				<div class="field">
+					<label for="nb-prenom">Prénom</label>
+					<input
+						id="nb-prenom"
+						type="text"
+						bind:value={newBail.locataire_prenom}
+						placeholder="Prénom"
+						readonly={!!locataireTrouve}
+					/>
 				</div>
 				<div class="field">
-					<span class="libelle-groupe" id="bail-notes-titre">Notes</span>
-					<RichEditor bind:value={newBail.notes} ariaLabelledby="bail-notes-titre" placeholder="Notes sur le bail…" minHeight="80px" />
+					<label for="nb-nom">Nom</label>
+					<input
+						id="nb-nom"
+						type="text"
+						bind:value={newBail.locataire_nom}
+						placeholder="Nom"
+						readonly={!!locataireTrouve}
+					/>
+				</div>
+				<div class="field">
+					<label for="nb-email">E-mail</label>
+					<input
+						id="nb-email"
+						type="email"
+						bind:value={newBail.locataire_email}
+						placeholder="email@exemple.fr"
+						readonly={!!locataireTrouve}
+					/>
+				</div>
+				<div class="field">
+					<label for="nb-tel">Téléphone</label>
+					<input
+						id="nb-tel"
+						type="text"
+						bind:value={newBail.locataire_telephone}
+						placeholder="06 …"
+					/>
+				</div>
+				<div class="field">
+					<label for="nb-entree">Date d'entrée *</label>
+					<input id="nb-entree" type="date" bind:value={newBail.date_entree} />
+				</div>
+				<div class="field">
+					<label for="nb-sortie">Sortie prévue</label>
+					<input id="nb-sortie" type="date" bind:value={newBail.date_sortie_prevue} />
 				</div>
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showNewBail = false)}>Annuler</button>
-				<button class="btn btn-primary" disabled={savingBail} on:click={creerBail}>
-					{savingBail ? 'Création…' : 'Créer le bail'}
-				</button>
+			<div class="field">
+				<span class="libelle-groupe" id="bail-notes-titre">Notes</span>
+				<RichEditor
+					bind:value={newBail.notes}
+					ariaLabelledby="bail-notes-titre"
+					placeholder="Notes sur le bail…"
+					minHeight="80px"
+				/>
 			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showNewBail = false)}>Annuler</button>
+			<button class="btn btn-primary" disabled={savingBail} on:click={creerBail}>
+				{savingBail ? 'Création…' : 'Créer le bail'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : terminer bail ────────────────────────────────────────── -->
 {#if bailATerminer}
-	<Modale titre="Terminer le bail" styleBoite="width:min(400px,95vw)"
-		on:fermer={() => (bailATerminer = null)}>
-			<div class="modal-header">
-				<h3>Terminer le bail</h3>
-				<button class="modal-close" on:click={() => (bailATerminer = null)}>✕</button>
+	<Modale
+		titre="Terminer le bail"
+		styleBoite="width:min(400px,95vw)"
+		on:fermer={() => (bailATerminer = null)}
+	>
+		<div class="modal-header">
+			<h3>Terminer le bail</h3>
+			<button class="modal-close" on:click={() => (bailATerminer = null)}>✕</button>
+		</div>
+		<div class="modal-body">
+			<p style="margin-bottom:0.75rem">
+				Confirmer la fin du bail de <strong>{nomLocataire(bailATerminer)}</strong> ?
+			</p>
+			<div class="field">
+				<label for="tb-sortie">Date de sortie réelle</label>
+				<input id="tb-sortie" type="date" bind:value={dateSortie} />
 			</div>
-			<div class="modal-body">
-				<p style="margin-bottom:0.75rem">Confirmer la fin du bail de <strong>{nomLocataire(bailATerminer)}</strong> ?</p>
-				<div class="field">
-					<label for="tb-sortie">Date de sortie réelle</label>
-					<input id="tb-sortie" type="date" bind:value={dateSortie} />
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (bailATerminer = null)}>Annuler</button>
-				<button class="btn btn-danger" on:click={confirmerTerminer}>Terminer</button>
-			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (bailATerminer = null)}>Annuler</button>
+			<button class="btn btn-danger" on:click={confirmerTerminer}>Terminer</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : supprimer bail (admin) ──────────────────────────────── -->
 {#if bailASupprimer}
-	<Modale titre="Supprimer le bail" styleBoite="width:min(400px,95vw)"
-		on:fermer={() => (bailASupprimer = null)}>
-			<div class="modal-header">
-				<h3>Supprimer le bail</h3>
-				<button class="modal-close" on:click={() => (bailASupprimer = null)}>✕</button>
-			</div>
-			<div class="modal-body">
-				<p>Supprimer définitivement le bail de <strong>{nomLocataire(bailASupprimer)}</strong> et tous ses objets associés ?</p>
-				<p style="color:var(--color-danger);font-size:0.85rem;margin-top:0.5rem">Cette action est irréversible.</p>
-			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (bailASupprimer = null)}>Annuler</button>
-				<button class="btn btn-danger" on:click={confirmerSupprimer}>Supprimer</button>
-			</div>
+	<Modale
+		titre="Supprimer le bail"
+		styleBoite="width:min(400px,95vw)"
+		on:fermer={() => (bailASupprimer = null)}
+	>
+		<div class="modal-header">
+			<h3>Supprimer le bail</h3>
+			<button class="modal-close" on:click={() => (bailASupprimer = null)}>✕</button>
+		</div>
+		<div class="modal-body">
+			<p>
+				Supprimer définitivement le bail de <strong>{nomLocataire(bailASupprimer)}</strong> et tous ses
+				objets associés ?
+			</p>
+			<p style="color:var(--color-danger);font-size:0.85rem;margin-top:0.5rem">
+				Cette action est irréversible.
+			</p>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (bailASupprimer = null)}>Annuler</button>
+			<button class="btn btn-danger" on:click={confirmerSupprimer}>Supprimer</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : modifier locataire ───────────────────────────────────── -->
 {#if bailEdite}
-	<Modale titre="Modifier locataire" styleBoite="width:min(560px,95vw)"
-		on:fermer={() => (bailEdite = null)}>
-			<div class="modal-header">
-				<h3>Modifier les informations</h3>
-				<button class="modal-close" on:click={() => (bailEdite = null)}>✕</button>
-			</div>
-			<div class="modal-body">
-				<!-- Associer un compte locataire -->
-				<fieldset class="search-locataire-box" style="margin-bottom:1rem">
-					<legend>Compte locataire associé <span class="optional-hint">(optionnel)</span></legend>
-					{#if editLocataireTrouve}
-						<div class="locataire-selected">
-							<div class="locataire-selected-info">
-								<span class="locataire-selected-name">✓ {editLocataireTrouve.prenom} {editLocataireTrouve.nom}</span>
-								<span class="locataire-selected-email">{editLocataireTrouve.email}</span>
-								{#if !editLocataireTrouve.actif}
-									<span class="badge badge-yellow" style="font-size:.72rem">En attente d'activation</span>
-								{/if}
-							</div>
-							<button class="btn btn-xs btn-outline" on:click={editDissocierLocataire} title="Dissocier ce compte">✕ Dissocier</button>
+	<Modale
+		titre="Modifier locataire"
+		styleBoite="width:min(560px,95vw)"
+		on:fermer={() => (bailEdite = null)}
+	>
+		<div class="modal-header">
+			<h3>Modifier les informations</h3>
+			<button class="modal-close" on:click={() => (bailEdite = null)}>✕</button>
+		</div>
+		<div class="modal-body">
+			<!-- Associer un compte locataire -->
+			<fieldset class="search-locataire-box" style="margin-bottom:1rem">
+				<legend>Compte locataire associé <span class="optional-hint">(optionnel)</span></legend>
+				{#if editLocataireTrouve}
+					<div class="locataire-selected">
+						<div class="locataire-selected-info">
+							<span class="locataire-selected-name"
+								>✓ {editLocataireTrouve.prenom} {editLocataireTrouve.nom}</span
+							>
+							<span class="locataire-selected-email">{editLocataireTrouve.email}</span>
+							{#if !editLocataireTrouve.actif}
+								<span class="badge badge-yellow" style="font-size:.72rem"
+									>En attente d'activation</span
+								>
+							{/if}
 						</div>
-					{:else}
-						<!-- Suggestions : locataires ayant déclaré ce bailleur -->
-						{#if editSuggestions.length > 0}
-							<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.4rem">Locataires ayant déclaré votre nom :</p>
-							<ul class="locataire-resultats" style="margin-bottom:.65rem">
-								{#each editSuggestions as s (s.id)}
-									<li>
-										<button class="locataire-resultat-btn" on:click={() => editSelectionnerLocataire(s)}>
-											<span class="lr-name">{s.prenom} {s.nom}</span>
-											<span class="lr-email">{s.email}</span>
-											{#if !s.actif}<span class="badge badge-yellow" style="font-size:.68rem">En attente</span>{/if}
-										</button>
-									</li>
-								{/each}
-							</ul>
-							<p style="font-size:.75rem;color:var(--color-text-muted);margin-bottom:.35rem">Ou recherchez un autre compte :</p>
-						{/if}
-						<div class="search-locataire-row">
-							<div class="field champ-en-ligne">
-								<input
-									type="search"
-									placeholder="Nom, prénom ou email…"
-									bind:value={editRechercheLocataire}
-									on:keydown={(e) => e.key === 'Enter' && editChercherLocataire()}
-									autocomplete="off"
-								/>
-							</div>
-							<button class="btn btn-sm" disabled={editCherchant || !editRechercheLocataire.trim()} on:click={editChercherLocataire}>
-								{editCherchant ? '…' : '🔍 Chercher'}
-							</button>
-						</div>
-						{#if editLocataireRechercheFaite && editLocataireResultats.length === 0 && !editCherchant}
-							<p class="search-no-result">Aucun compte trouvé.</p>
-						{:else if editLocataireResultats.length > 0}
-							<ul class="locataire-resultats">
-								{#each editLocataireResultats as r (r.id)}
-									<li>
-										<button class="locataire-resultat-btn" on:click={() => editSelectionnerLocataire(r)}>
-											<span class="lr-name">{r.prenom} {r.nom}</span>
-											<span class="lr-email">{r.email}</span>
-											{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem">En attente</span>{/if}
-										</button>
-									</li>
-								{/each}
-							</ul>
-						{/if}
+						<button
+							class="btn btn-xs btn-outline"
+							on:click={editDissocierLocataire}
+							title="Dissocier ce compte">✕ Dissocier</button
+						>
+					</div>
+				{:else}
+					<!-- Suggestions : locataires ayant déclaré ce bailleur -->
+					{#if editSuggestions.length > 0}
+						<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.4rem">
+							Locataires ayant déclaré votre nom :
+						</p>
+						<ul class="locataire-resultats" style="margin-bottom:.65rem">
+							{#each editSuggestions as s (s.id)}
+								<li>
+									<button
+										class="locataire-resultat-btn"
+										on:click={() => editSelectionnerLocataire(s)}
+									>
+										<span class="lr-name">{s.prenom} {s.nom}</span>
+										<span class="lr-email">{s.email}</span>
+										{#if !s.actif}<span class="badge badge-yellow" style="font-size:.68rem"
+												>En attente</span
+											>{/if}
+									</button>
+								</li>
+							{/each}
+						</ul>
+						<p style="font-size:.75rem;color:var(--color-text-muted);margin-bottom:.35rem">
+							Ou recherchez un autre compte :
+						</p>
 					{/if}
-				</fieldset>
+					<div class="search-locataire-row">
+						<div class="field champ-en-ligne">
+							<input
+								type="search"
+								placeholder="Nom, prénom ou email…"
+								bind:value={editRechercheLocataire}
+								on:keydown={(e) => e.key === 'Enter' && editChercherLocataire()}
+								autocomplete="off"
+							/>
+						</div>
+						<button
+							class="btn btn-sm"
+							disabled={editCherchant || !editRechercheLocataire.trim()}
+							on:click={editChercherLocataire}
+						>
+							{editCherchant ? '…' : '🔍 Chercher'}
+						</button>
+					</div>
+					{#if editLocataireRechercheFaite && editLocataireResultats.length === 0 && !editCherchant}
+						<p class="search-no-result">Aucun compte trouvé.</p>
+					{:else if editLocataireResultats.length > 0}
+						<ul class="locataire-resultats">
+							{#each editLocataireResultats as r (r.id)}
+								<li>
+									<button
+										class="locataire-resultat-btn"
+										on:click={() => editSelectionnerLocataire(r)}
+									>
+										<span class="lr-name">{r.prenom} {r.nom}</span>
+										<span class="lr-email">{r.email}</span>
+										{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
+												>En attente</span
+											>{/if}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				{/if}
+			</fieldset>
 
-				<div class="form-grid locataire-edit-grid">
-					<div class="field">
-						<label for="el-prenom">Prénom</label>
-						<input id="el-prenom" type="text" bind:value={editLocataire.locataire_prenom} placeholder="Prénom" />
-					</div>
-					<div class="field">
-						<label for="el-nom">Nom</label>
-						<input id="el-nom" type="text" bind:value={editLocataire.locataire_nom} placeholder="Nom" />
-					</div>
-					<div class="field">
-						<label for="el-email">E-mail</label>
-						<input id="el-email" type="email" bind:value={editLocataire.locataire_email} placeholder="email@exemple.fr" />
-					</div>
-					<div class="field">
-						<label for="el-tel">Téléphone</label>
-						<input id="el-tel" type="text" bind:value={editLocataire.locataire_telephone} placeholder="06 …" />
-					</div>
-					<div class="field champ-large">
-						<label for="el-sortie">Sortie prévue</label>
-						<input id="el-sortie" type="date" bind:value={editLocataire.date_sortie_prevue} />
-					</div>
-					<div class="field champ-large">
-						<span class="libelle-groupe" id="bail-edit-notes-titre">Notes</span>
-						<RichEditor bind:value={editLocataire.notes} ariaLabelledby="bail-edit-notes-titre" placeholder="Notes sur le bail…" minHeight="120px" />
-					</div>
+			<div class="form-grid locataire-edit-grid">
+				<div class="field">
+					<label for="el-prenom">Prénom</label>
+					<input
+						id="el-prenom"
+						type="text"
+						bind:value={editLocataire.locataire_prenom}
+						placeholder="Prénom"
+					/>
+				</div>
+				<div class="field">
+					<label for="el-nom">Nom</label>
+					<input
+						id="el-nom"
+						type="text"
+						bind:value={editLocataire.locataire_nom}
+						placeholder="Nom"
+					/>
+				</div>
+				<div class="field">
+					<label for="el-email">E-mail</label>
+					<input
+						id="el-email"
+						type="email"
+						bind:value={editLocataire.locataire_email}
+						placeholder="email@exemple.fr"
+					/>
+				</div>
+				<div class="field">
+					<label for="el-tel">Téléphone</label>
+					<input
+						id="el-tel"
+						type="text"
+						bind:value={editLocataire.locataire_telephone}
+						placeholder="06 …"
+					/>
+				</div>
+				<div class="field champ-large">
+					<label for="el-sortie">Sortie prévue</label>
+					<input id="el-sortie" type="date" bind:value={editLocataire.date_sortie_prevue} />
+				</div>
+				<div class="field champ-large">
+					<span class="libelle-groupe" id="bail-edit-notes-titre">Notes</span>
+					<RichEditor
+						bind:value={editLocataire.notes}
+						ariaLabelledby="bail-edit-notes-titre"
+						placeholder="Notes sur le bail…"
+						minHeight="120px"
+					/>
 				</div>
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (bailEdite = null)}>Annuler</button>
-				<button class="btn btn-primary" on:click={sauvegarderLocataire}>Enregistrer</button>
-			</div>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (bailEdite = null)}>Annuler</button>
+			<button class="btn btn-primary" on:click={sauvegarderLocataire}>Enregistrer</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
 {#if objetRetour}
-	<Modale titre="Retour objet" styleBoite="width:min(380px,95vw)"
-		on:fermer={() => (objetRetour = null)}>
-			<div class="modal-header">
-				<h3>Retour — {objetRetour.libelle}</h3>
-				<button class="modal-close" on:click={() => (objetRetour = null)}>✕</button>
+	<Modale
+		titre="Retour objet"
+		styleBoite="width:min(380px,95vw)"
+		on:fermer={() => (objetRetour = null)}
+	>
+		<div class="modal-header">
+			<h3>Retour — {objetRetour.libelle}</h3>
+			<button class="modal-close" on:click={() => (objetRetour = null)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:0.75rem">
+			<div class="field">
+				<label for="ro-date">Date de retour</label>
+				<input id="ro-date" type="date" bind:value={retourDate} />
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:0.75rem">
-				<div class="field">
-					<label for="ro-date">Date de retour</label>
-					<input id="ro-date" type="date" bind:value={retourDate} />
-				</div>
-				<label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem">
-					<input type="checkbox" bind:checked={retourPerdu} />
-					Marquer comme perdu
-				</label>
-			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (objetRetour = null)}>Annuler</button>
-				<button
-					class="btn {retourPerdu ? 'btn-danger' : 'btn-primary'}"
-					on:click={confirmerRetour}
-				>
-					{retourPerdu ? 'Perdu' : 'Retour confirmé'}
-				</button>
-			</div>
+			<label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem">
+				<input type="checkbox" bind:checked={retourPerdu} />
+				Marquer comme perdu
+			</label>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (objetRetour = null)}>Annuler</button>
+			<button class="btn {retourPerdu ? 'btn-danger' : 'btn-primary'}" on:click={confirmerRetour}>
+				{retourPerdu ? 'Perdu' : 'Retour confirmé'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
 {#if bailAcces}
-	<Modale titre="Accès du bail" styleBoite="width:min(620px,95vw)"
-		on:fermer={() => (bailAcces = null)}>
-			<div class="modal-header">
-				<h3>Accès — {nomLocataire(bailAcces)}</h3>
-				<button class="modal-close" on:click={() => (bailAcces = null)}>✕</button>
-			</div>
-			<div class="modal-body">
-				{#if loadingAcces}
-					<p style="color:var(--color-text-muted)">Chargement…</p>
-				{:else if bailAccesLot && (bailAccesLot.type === 'parking' || bailAccesLot.type === 'cave')}
-					<p style="font-size:0.85rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem">
-						Ce bail concerne un {bailAccesLot.type}. <strong>TC uniquement</strong> : les Vigik ne sont pas autorisés.
-					</p>
-				{:else if accesListe.length === 0}
-					<p style="color:var(--color-text-muted);font-size:0.9rem">
-						Aucun Vigik ni télécommande rattaché à ce lot.
-					</p>
-				{:else}
-					<p style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.6rem">
-						Sélection intelligente : utilisez un préréglage puis ajustez manuellement. Les règles de cohérence sont appliquées automatiquement (ex. pas de Vigik pour un bail parking seul).
-					</p>
-					<div class="acces-presets">
-						<button class="btn btn-sm" on:click={preselectionRecommandee}>✨ Préselection recommandée</button>
-						<button class="btn btn-sm btn-outline" on:click={clearSelection}>Effacer</button>
+	<Modale
+		titre="Accès du bail"
+		styleBoite="width:min(620px,95vw)"
+		on:fermer={() => (bailAcces = null)}
+	>
+		<div class="modal-header">
+			<h3>Accès — {nomLocataire(bailAcces)}</h3>
+			<button class="modal-close" on:click={() => (bailAcces = null)}>✕</button>
+		</div>
+		<div class="modal-body">
+			{#if loadingAcces}
+				<p style="color:var(--color-text-muted)">Chargement…</p>
+			{:else if bailAccesLot && (bailAccesLot.type === 'parking' || bailAccesLot.type === 'cave')}
+				<p
+					style="font-size:0.85rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:.5rem .65rem;margin-bottom:.7rem"
+				>
+					Ce bail concerne un {bailAccesLot.type}. <strong>TC uniquement</strong> : les Vigik ne sont
+					pas autorisés.
+				</p>
+			{:else if accesListe.length === 0}
+				<p style="color:var(--color-text-muted);font-size:0.9rem">
+					Aucun Vigik ni télécommande rattaché à ce lot.
+				</p>
+			{:else}
+				<p style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.6rem">
+					Sélection intelligente : utilisez un préréglage puis ajustez manuellement. Les règles de
+					cohérence sont appliquées automatiquement (ex. pas de Vigik pour un bail parking seul).
+				</p>
+				<div class="acces-presets">
+					<button class="btn btn-sm" on:click={preselectionRecommandee}
+						>✨ Préselection recommandée</button
+					>
+					<button class="btn btn-sm btn-outline" on:click={clearSelection}>Effacer</button>
+				</div>
+				{#if lotsSourcesAcces.length > 1}
+					<div class="acces-filters">
+						<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span
+						>
+						{#each lotsSourcesAcces as ls}
+							<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}
+								>{ls.label}</Pastille
+							>
+						{/each}
 					</div>
-					{#if lotsSourcesAcces.length > 1}
-						<div class="acces-filters">
-							<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span>
-							{#each lotsSourcesAcces as ls}
-								<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}>{ls.label}</Pastille>
-							{/each}
-						</div>
-					{/if}
-					<table class="table" style="font-size:0.85rem">
-						<thead>
+				{/if}
+				<table class="table" style="font-size:0.85rem">
+					<thead>
+						<tr>
+							<th style="width:2rem"></th>
+							<th>Lot source</th>
+							<th>Type</th>
+							<th>Code</th>
+							<th>Statut</th>
+							<th>Localisation</th>
+							<th>Info</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each accesFiltres as acces (acces.type + acces.id)}
 							<tr>
-								<th style="width:2rem"></th>
-								<th>Lot source</th>
-								<th>Type</th>
-								<th>Code</th>
-								<th>Statut</th>
-								<th>Localisation</th>
-								<th>Info</th>
+								<td>
+									{#if isSelectable(acces)}
+										<input
+											type="checkbox"
+											checked={acces.type === 'vigik'
+												? selectionVigik.has(acces.id)
+												: selectionTc.has(acces.id)}
+											on:change={() => toggleAcces(acces.type, acces.id)}
+										/>
+									{/if}
+								</td>
+								<td
+									>{acces.lot_label ?? '—'}
+									<span class="badge badge-gray" style="margin-left:.25rem"
+										>{lotTypeLabel(acces.lot_type)}</span
+									></td
+								>
+								<td>{acces.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
+								<td style="font-family:monospace">{acces.code}</td>
+								<td>
+									<span class="badge {acces.statut === 'actif' ? 'badge-green' : 'badge-gray'}">
+										{acces.statut}
+									</span>
+								</td>
+								<td>
+									{#if acces.chez_locataire}
+										<span class="badge badge-yellow">Chez locataire</span>
+									{:else}
+										<span class="badge badge-blue">Chez bailleur</span>
+									{/if}
+								</td>
+								<td>
+									{#if acces.recommande}
+										<span class="badge badge-green">Recommandé</span>
+									{:else if acces.motif_non_eligible}
+										<span class="badge badge-gray" title={acces.motif_non_eligible}
+											>{acces.motif_non_eligible}</span
+										>
+									{/if}
+								</td>
 							</tr>
-						</thead>
-						<tbody>
-							{#each accesFiltres as acces (acces.type + acces.id)}
-								<tr>
-									<td>
-										{#if isSelectable(acces)}
-											<input
-												type="checkbox"
-												checked={acces.type === 'vigik' ? selectionVigik.has(acces.id) : selectionTc.has(acces.id)}
-												on:change={() => toggleAcces(acces.type, acces.id)}
-											/>
-										{/if}
-									</td>
-									<td>{acces.lot_label ?? '—'} <span class="badge badge-gray" style="margin-left:.25rem">{lotTypeLabel(acces.lot_type)}</span></td>
-									<td>{acces.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
-									<td style="font-family:monospace">{acces.code}</td>
-									<td>
-										<span class="badge {acces.statut === 'actif' ? 'badge-green' : 'badge-gray'}">
-											{acces.statut}
-										</span>
-									</td>
-									<td>
-										{#if acces.chez_locataire}
-											<span class="badge badge-yellow">Chez locataire</span>
-										{:else}
-											<span class="badge badge-blue">Chez bailleur</span>
-										{/if}
-									</td>
-									<td>
-										{#if acces.recommande}
-											<span class="badge badge-green">Recommandé</span>
-										{:else if acces.motif_non_eligible}
-											<span class="badge badge-gray" title={acces.motif_non_eligible}>{acces.motif_non_eligible}</span>
-										{/if}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-					{#if accesListe.some((a) => a.chez_locataire)}
-						<button class="btn btn-sm" style="margin-top:0.75rem" on:click={recupererAcces}>
-							↩ Tout récupérer
-						</button>
-					{/if}
-				{/if}
-			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (bailAcces = null)}>Fermer</button>
-				{#if nRecuperation > 0}
-					<button class="btn btn-primary" on:click={recupererSelection}>
-						↩ Récupérer ({nRecuperation})
+						{/each}
+					</tbody>
+				</table>
+				{#if accesListe.some((a) => a.chez_locataire)}
+					<button class="btn btn-sm" style="margin-top:0.75rem" on:click={recupererAcces}>
+						↩ Tout récupérer
 					</button>
 				{/if}
-				{#if nTransfert > 0}
-					<button class="btn btn-primary" on:click={transfererAcces}>
-						Transférer ({nTransfert})
-					</button>
-				{/if}
-			</div>
+			{/if}
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (bailAcces = null)}>Fermer</button>
+			{#if nRecuperation > 0}
+				<button class="btn btn-primary" on:click={recupererSelection}>
+					↩ Récupérer ({nRecuperation})
+				</button>
+			{/if}
+			{#if nTransfert > 0}
+				<button class="btn btn-primary" on:click={transfererAcces}>
+					Transférer ({nTransfert})
+				</button>
+			{/if}
+		</div>
 	</Modale>
 {/if}
 
 <style>
 	/* Lot tabs (multi-lot selector) */
-	.lot-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-	.lot-tabs button { padding: .4rem .9rem; border: 1px solid var(--color-border); background: var(--color-bg); border-radius: var(--radius); cursor: pointer; font-size: .875rem; color: var(--color-text); }
-	.lot-tabs button.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+	.lot-tabs {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+	}
+	.lot-tabs button {
+		padding: 0.4rem 0.9rem;
+		border: 1px solid var(--color-border);
+		background: var(--color-bg);
+		border-radius: var(--radius);
+		cursor: pointer;
+		font-size: 0.875rem;
+		color: var(--color-text);
+	}
+	.lot-tabs button.active {
+		background: var(--color-primary);
+		color: #fff;
+		border-color: var(--color-primary);
+	}
 
 	/* Lot characteristics */
-	.details-grid { display: grid; grid-template-columns: auto 1fr; gap: .4rem .8rem; font-size: .875rem; }
-	.details-grid dt { font-weight: 500; color: var(--color-text-muted); }
-	.details-grid dd { margin: 0; }
+	.details-grid {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.4rem 0.8rem;
+		font-size: 0.875rem;
+	}
+	.details-grid dt {
+		font-weight: 500;
+		color: var(--color-text-muted);
+	}
+	.details-grid dd {
+		margin: 0;
+	}
 	/* Bailleur lot cards */
-	.lots-section-label { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .6rem; }
-	.lot-bailleur-card { padding: 1rem 1.2rem; margin-bottom: .6rem; }
-	.lot-vacant { opacity: .8; border-style: dashed; }
-	.lbc-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
-	.lbc-lot-id { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-	.lbc-lot-badge { font-weight: 700; font-size: .92rem; }
-	.lbc-tenant { border-top: 1px solid var(--color-border); padding-top: .6rem; display: flex; flex-direction: column; gap: .3rem; }
-	.lbc-tenant-name { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .92rem; }
-	.lbc-tenant-meta { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
-	.lbc-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .3rem; }
+	.lots-section-label {
+		font-size: 0.78rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+		margin-bottom: 0.6rem;
+	}
+	.lot-bailleur-card {
+		padding: 1rem 1.2rem;
+		margin-bottom: 0.6rem;
+	}
+	.lot-vacant {
+		opacity: 0.8;
+		border-style: dashed;
+	}
+	.lbc-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.5rem;
+	}
+	.lbc-lot-id {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.lbc-lot-badge {
+		font-weight: 700;
+		font-size: 0.92rem;
+	}
+	.lbc-tenant {
+		border-top: 1px solid var(--color-border);
+		padding-top: 0.6rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+	.lbc-tenant-name {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		font-size: 0.92rem;
+	}
+	.lbc-tenant-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		align-items: center;
+	}
+	.lbc-actions {
+		display: flex;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+		margin-top: 0.3rem;
+	}
 
 	/* Lots possédés grid */
-	.lots-possedes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: .6rem; margin-bottom: .6rem; }
-	.lot-possede-card { padding: .85rem 1rem; display: flex; flex-direction: column; gap: .35rem; }
-	.lot-possede-card.lot-occupe { border-left: 3px solid var(--color-success, #22c55e); }
-	.lot-possede-card.lot-vacant { border-left: 3px dashed var(--color-border); opacity: .8; }
-	.lpc-header { display: flex; justify-content: space-between; align-items: center; gap: .4rem; }
-	.lpc-details { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
-	.lpc-occupant { font-size: .82rem; color: var(--color-text-muted); }
+	.lots-possedes-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+		gap: 0.6rem;
+		margin-bottom: 0.6rem;
+	}
+	.lot-possede-card {
+		padding: 0.85rem 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+	.lot-possede-card.lot-occupe {
+		border-left: 3px solid var(--color-success, #22c55e);
+	}
+	.lot-possede-card.lot-vacant {
+		border-left: 3px dashed var(--color-border);
+		opacity: 0.8;
+	}
+	.lpc-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.lpc-details {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		align-items: center;
+	}
+	.lpc-occupant {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+	}
 
 	/* Locataire cards */
-	.locataire-card { padding: 1rem 1.2rem; margin-bottom: .6rem; }
-	.loc-header { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .6rem; }
-	.loc-name { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .95rem; }
-	.loc-contact { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
-	.loc-lots { border-top: 1px solid var(--color-border); padding-top: .5rem; display: flex; flex-direction: column; gap: .35rem; margin-bottom: .5rem; }
-	.loc-lot-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .3rem .5rem; background: var(--color-bg-alt, #f8fafc); border-radius: var(--radius); }
+	.locataire-card {
+		padding: 1rem 1.2rem;
+		margin-bottom: 0.6rem;
+	}
+	.loc-header {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		margin-bottom: 0.6rem;
+	}
+	.loc-name {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		font-size: 0.95rem;
+	}
+	.loc-contact {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		align-items: center;
+	}
+	.loc-lots {
+		border-top: 1px solid var(--color-border);
+		padding-top: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		margin-bottom: 0.5rem;
+	}
+	.loc-lot-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		padding: 0.3rem 0.5rem;
+		background: var(--color-bg-alt, #f8fafc);
+		border-radius: var(--radius);
+	}
 
 	/* Main tabs (like communauté) */
-	.tabs { padding-bottom: .1rem; }  /* le reste vient de la charte (#607) */
+	.tabs {
+		padding-bottom: 0.1rem;
+	} /* le reste vient de la charte (#607) */
 
 	/* Bail sub-tabs */
-	.bail-tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--color-border); }
-	.bail-tabs button { background: none; border: none; padding: 0.5rem 1rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
-	.bail-tabs button:hover { color: var(--color-text); background: var(--color-bg); }
-	.bail-tabs button.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 600; }
+	.bail-tabs {
+		display: flex;
+		gap: 0.25rem;
+		border-bottom: 2px solid var(--color-border);
+	}
+	.bail-tabs button {
+		background: none;
+		border: none;
+		padding: 0.5rem 1rem;
+		cursor: pointer;
+		font-size: 0.9rem;
+		color: var(--color-text-muted);
+		border-bottom: 2px solid transparent;
+		margin-bottom: -2px;
+		transition: color 0.15s;
+	}
+	.bail-tabs button:hover {
+		color: var(--color-text);
+		background: var(--color-bg);
+	}
+	.bail-tabs button.active {
+		color: var(--color-primary);
+		border-bottom-color: var(--color-primary);
+		font-weight: 600;
+	}
 
 	/* Lot multi-checklist */
 	.lot-checklist {
 		display: flex;
 		flex-direction: column;
-		gap: .25rem;
+		gap: 0.25rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		overflow: hidden;
@@ -1473,23 +2058,43 @@
 	.lot-check-item {
 		display: flex;
 		align-items: center;
-		gap: .65rem;
-		padding: .5rem .75rem;
+		gap: 0.65rem;
+		padding: 0.5rem 0.75rem;
 		cursor: pointer;
 		background: var(--color-bg);
 		border-bottom: 1px solid var(--color-border);
-		transition: background .1s;
+		transition: background 0.1s;
 	}
-	.lot-check-item:last-child { border-bottom: none; }
-	.lot-check-item:hover:not(.disabled) { background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg)); }
-	.lot-check-item.disabled { opacity: .55; cursor: default; }
-	.lot-check-label { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .9rem; line-height: 1.3; }
-	.lot-check-name { flex: 1; }
-	.lot-selection-hint { font-size: .8rem; color: var(--color-primary); margin-top: .35rem; }
+	.lot-check-item:last-child {
+		border-bottom: none;
+	}
+	.lot-check-item:hover:not(.disabled) {
+		background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg));
+	}
+	.lot-check-item.disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+	.lot-check-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		font-size: 0.9rem;
+		line-height: 1.3;
+	}
+	.lot-check-name {
+		flex: 1;
+	}
+	.lot-selection-hint {
+		font-size: 0.8rem;
+		color: var(--color-primary);
+		margin-top: 0.35rem;
+	}
 	.mode-personnel-note {
-		margin: .6rem 0 .9rem;
-		padding: .55rem .75rem;
-		font-size: .84rem;
+		margin: 0.6rem 0 0.9rem;
+		padding: 0.55rem 0.75rem;
+		font-size: 0.84rem;
 		color: var(--color-text-muted);
 		background: var(--color-bg-alt, #f8fafc);
 		border: 1px solid var(--color-border);
@@ -1501,95 +2106,137 @@
 	/*  🔴 Le bloc `.modal-*` retiré le 28/08/2026 (#607) : le MÊME, au caractère
 	    près, vivait dans trois écrans et divergeait de la charte. `prestataires`
 	    emploie ce balisage SANS règle locale — c'est lui la référence. */
-	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
-	.modal-body { margin-bottom: 1rem; display: flex; flex-direction: column; gap: .85rem; }
+	.modal-header h3 {
+		font-size: 1.05rem;
+		font-weight: 600;
+		margin: 0;
+	}
+	.modal-body {
+		margin-bottom: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
 
 	/* Grille 2 colonnes pour les champs de formulaire */
 	.form-grid-2 {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: .75rem;
+		gap: 0.75rem;
 	}
 
 	/* Bloc recherche locataire */
 	.search-locataire-box {
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
-		padding: .75rem .85rem;
+		padding: 0.75rem 0.85rem;
 		background: var(--color-surface-alt, #f8f9fa);
 		margin: 0;
 	}
 	.search-locataire-box legend {
-		font-size: .82rem;
+		font-size: 0.82rem;
 		font-weight: 600;
-		padding: 0 .3rem;
+		padding: 0 0.3rem;
 		color: var(--color-text);
 	}
-	.optional-hint { font-weight: 400; color: var(--color-text-muted); }
-	.search-locataire-row { display: flex; gap: .5rem; margin-top: .4rem; }
+	.optional-hint {
+		font-weight: 400;
+		color: var(--color-text-muted);
+	}
+	.search-locataire-row {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.4rem;
+	}
 	/*  Le champ vit dans un `.field champ-en-ligne` depuis le 28/08/2026 : il
 	    repeignait `.field input` et perdait le focus de la charte (#593, volet
 	    C). Ne reste ici que la répartition, propre à cette rangée. */
-	.search-locataire-row .field { flex: 1; }
-	.search-no-result { font-size: .82rem; color: var(--color-danger, #dc2626); margin-top: .45rem; }
+	.search-locataire-row .field {
+		flex: 1;
+	}
+	.search-no-result {
+		font-size: 0.82rem;
+		color: var(--color-danger, #dc2626);
+		margin-top: 0.45rem;
+	}
 	.locataire-resultats {
 		list-style: none;
-		margin: .5rem 0 0;
+		margin: 0.5rem 0 0;
 		padding: 0;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		overflow: hidden;
 	}
-	.locataire-resultats li + li { border-top: 1px solid var(--color-border); }
+	.locataire-resultats li + li {
+		border-top: 1px solid var(--color-border);
+	}
 	.locataire-resultat-btn {
 		width: 100%;
 		text-align: left;
 		background: var(--color-bg);
 		border: none;
-		padding: .5rem .75rem;
+		padding: 0.5rem 0.75rem;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
-		gap: .75rem;
+		gap: 0.75rem;
 		flex-wrap: wrap;
-		transition: background .1s;
+		transition: background 0.1s;
 	}
-	.locataire-resultat-btn:hover { background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg)); }
-	.lr-name { font-weight: 600; font-size: .88rem; }
-	.lr-email { font-size: .8rem; color: var(--color-text-muted); }
+	.locataire-resultat-btn:hover {
+		background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+	}
+	.lr-name {
+		font-weight: 600;
+		font-size: 0.88rem;
+	}
+	.lr-email {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+	}
 	.locataire-selected {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: .5rem;
+		gap: 0.5rem;
 		flex-wrap: wrap;
-		margin-top: .4rem;
-		padding: .45rem .6rem;
+		margin-top: 0.4rem;
+		padding: 0.45rem 0.6rem;
 		background: color-mix(in srgb, var(--color-success, #16a34a) 8%, var(--color-bg));
 		border: 1px solid color-mix(in srgb, var(--color-success, #16a34a) 35%, transparent);
 		border-radius: var(--radius);
 	}
-	.locataire-selected-info { display: flex; flex-direction: column; gap: .1rem; }
-	.locataire-selected-name { font-weight: 600; font-size: .88rem; }
-	.locataire-selected-email { font-size: .78rem; color: var(--color-text-muted); }
+	.locataire-selected-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+	.locataire-selected-name {
+		font-weight: 600;
+		font-size: 0.88rem;
+	}
+	.locataire-selected-email {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+	}
 
 	.locataire-edit-grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: .8rem;
+		gap: 0.8rem;
 	}
 	.acces-presets {
 		display: flex;
 		flex-wrap: wrap;
-		gap: .45rem;
-		margin-bottom: .7rem;
+		gap: 0.45rem;
+		margin-bottom: 0.7rem;
 	}
 	.acces-filters {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: .35rem;
-		margin-bottom: .7rem;
+		gap: 0.35rem;
+		margin-bottom: 0.7rem;
 	}
 	/*  🔴 `.chip-btn` retirée le 28/08/2026 (#491) : c'était la pastille de la
 	    charte, sous un AUTRE NOM — donc invisible à toute recherche sur `pill`,
@@ -1598,11 +2245,19 @@
 	    teinte pâle là où la charte remplit la pastille. */
 
 	@media (max-width: 680px) {
-		.locataire-edit-grid { grid-template-columns: 1fr; }
-		.form-grid-2 { grid-template-columns: 1fr; }
-		.search-locataire-row { flex-direction: column; }
+		.locataire-edit-grid {
+			grid-template-columns: 1fr;
+		}
+		.form-grid-2 {
+			grid-template-columns: 1fr;
+		}
+		.search-locataire-row {
+			flex-direction: column;
+		}
 	}
 
-	.btn-xs { padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+	.btn-xs {
+		padding: 0.15rem 0.4rem;
+		font-size: 0.75rem;
+	}
 </style>
-

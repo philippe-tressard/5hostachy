@@ -14,20 +14,49 @@
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
 
-	interface MembreCS  { id: number; genre: string; prenom: string; nom: string; batiment_nom: string | null; etage: number | null; est_gestionnaire_site: boolean; est_president: boolean; photo_url: string | null; }
-	interface MembreSyndic { id: number; genre: string; prenom: string; nom: string; fonction: string | null; email: string | null; telephone: string | null; est_principal: boolean; photo_url: string | null; }
+	interface MembreCS {
+		id: number;
+		genre: string;
+		prenom: string;
+		nom: string;
+		batiment_nom: string | null;
+		etage: number | null;
+		est_gestionnaire_site: boolean;
+		est_president: boolean;
+		photo_url: string | null;
+	}
+	interface MembreSyndic {
+		id: number;
+		genre: string;
+		prenom: string;
+		nom: string;
+		fonction: string | null;
+		email: string | null;
+		telephone: string | null;
+		est_principal: boolean;
+		photo_url: string | null;
+	}
 	interface AnnuaireData {
 		cs: { ag_annee: number | null; ag_date: string | null; membres: MembreCS[] };
-		syndic: { nom_syndic: string; adresse: string; site_web: string | null; membres: MembreSyndic[] };
+		syndic: {
+			nom_syndic: string;
+			adresse: string;
+			site_web: string | null;
+			membres: MembreSyndic[];
+		};
 		whatsapp_url: string | null;
 	}
 
-	let data: AnnuaireData = { cs: { ag_annee: null, ag_date: null, membres: [] }, syndic: { nom_syndic: '', adresse: '', site_web: null, membres: [] }, whatsapp_url: null };
+	let data: AnnuaireData = {
+		cs: { ag_annee: null, ag_date: null, membres: [] },
+		syndic: { nom_syndic: '', adresse: '', site_web: null, membres: [] },
+		whatsapp_url: null,
+	};
 	let loading = true;
 
 	onMount(async () => {
 		try {
-			data = await annuaireApi.get() as AnnuaireData;
+			data = (await annuaireApi.get()) as AnnuaireData;
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
@@ -55,10 +84,10 @@
 			if (!groups.has(key)) groups.set(key, []);
 			groups.get(key)!.push(m);
 		}
-		const genreOrder = (g: string) => g === 'Mme' ? 0 : g === 'Mlle' ? 1 : 2;
+		const genreOrder = (g: string) => (g === 'Mme' ? 0 : g === 'Mlle' ? 1 : 2);
 		return [...groups.entries()]
 			.sort(([a], [b]) => {
-				if (!a && b) return 1;   // sans bâtiment en dernier
+				if (!a && b) return 1; // sans bâtiment en dernier
 				if (a && !b) return -1;
 				return a.localeCompare(b, 'fr');
 			})
@@ -81,158 +110,227 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else}
-
-<section style="margin-bottom:2rem">
-	<div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
-		<h2 class="section-title" style="margin-bottom:0">Conseil Syndical</h2>
-		{#if data.cs.ag_annee}
-			<span class="ag-info">
-				Voté en AG {data.cs.ag_annee}{#if data.cs.ag_date} - {formatDate(data.cs.ag_date)}{/if}
-			</span>
-		{/if}
-	</div>
-	{#if data.whatsapp_url}
-		<div class="url-block" style="margin-bottom:.75rem">
-			<QRCode data={data.whatsapp_url} size={45} />
-			<div>
-				<strong>Groupe WhatsApp copropriété</strong>
-				<span class="contact-societe"><a href={data.whatsapp_url} target="_blank" rel="noopener">{data.whatsapp_url}</a></span>
-			</div>
+	<section style="margin-bottom:2rem">
+		<div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
+			<h2 class="section-title" style="margin-bottom:0">Conseil Syndical</h2>
+			{#if data.cs.ag_annee}
+				<span class="ag-info">
+					Voté en AG {data.cs.ag_annee}{#if data.cs.ag_date}
+						- {formatDate(data.cs.ag_date)}{/if}
+				</span>
+			{/if}
 		</div>
-	{/if}
-	{#if data.cs.membres.length === 0}
-		<p style="color:var(--color-text-muted);font-size:.9rem">Aucun membre CS enregistré.</p>
-	{:else if batimentsCS.length > 1}
-		{#each batimentsCS as groupe}
-			<div class="batiment-section">
-				<div class="batiment-label">
-					<Icon name="building-2" size={12} />
-					{groupe.batiment ? `Bâtiment ${groupe.batiment}` : 'Sans bâtiment'}
-				</div>
-				<div class="contact-grid">
-					{#each groupe.membres as m}
-						<div class="contact-card card">
-							{#if m.est_gestionnaire_site}
-								<span class="site-manager-icon" title="Gestionnaire {_siteNom}" aria-label="Gestionnaire de {_siteNom}">
-									<Icon name="building-2" size={12} />
-								</span>
-							{/if}
-							{#if m.est_president}
-								<span class="president-icon" title="Président du Conseil Syndical" aria-label="Président du Conseil Syndical">
-									<Icon name="shield" size={12} />
-								</span>
-							{/if}
-							<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
-							<div>
-								<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
-								{#if m.etage != null}
-									<div class="contact-loc">Étage {m.etage}</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
-		{/each}
-	{:else}
-		<div class="contact-grid">
-			{#each data.cs.membres as m}
-				<div class="contact-card card">
-					{#if m.est_gestionnaire_site}
-						<span class="site-manager-icon" title="Gestionnaire {_siteNom}" aria-label="Gestionnaire de {_siteNom}">
-							<Icon name="building-2" size={12} />
-						</span>
-					{/if}
-					{#if m.est_president}
-						<span class="president-icon" title="Président du Conseil Syndical" aria-label="Président du Conseil Syndical">
-							<Icon name="shield" size={12} />
-						</span>
-					{/if}
-					<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
-					<div>
-						<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
-						{#if m.batiment_nom || m.etage != null}
-							<div class="contact-loc">{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null} - {/if}{#if m.etage != null}Étage {m.etage}{/if}</div>
-						{/if}
-					</div>
-				</div>
-			{/each}
-		</div>
-	{/if}
-
-</section>
-
-<section>
-	<!--  Ancre visée par la fiche de la résidence (« Syndic » → ici). Le
-	      `scroll-margin-top` évite que le titre se range sous l'en-tête collant. -->
-	<h2 class="section-title" id="syndic">Syndic</h2>
-	{#if data.syndic.nom_syndic}
-		<p class="syndic-header">
-			<strong>{data.syndic.nom_syndic}</strong>
-			{#if data.syndic.adresse}<span class="contact-societe">{data.syndic.adresse}</span>{/if}
-		</p>
-		{#if data.syndic.site_web}
-			<div class="url-block">
-				<QRCode data={data.syndic.site_web} size={45} />
+		{#if data.whatsapp_url}
+			<div class="url-block" style="margin-bottom:.75rem">
+				<QRCode data={data.whatsapp_url} size={45} />
 				<div>
-					<strong>Espace client</strong>
-					<span class="contact-societe"><a href={data.syndic.site_web} target="_blank" rel="noopener">{data.syndic.site_web}</a></span>
+					<strong>Groupe WhatsApp copropriété</strong>
+					<span class="contact-societe"
+						><a href={data.whatsapp_url} target="_blank" rel="noopener">{data.whatsapp_url}</a
+						></span
+					>
 				</div>
 			</div>
 		{/if}
-	{/if}
-	{#if data.syndic.membres.length === 0}
-		<p style="color:var(--color-text-muted);font-size:.9rem">Aucun contact syndic enregistré.</p>
-	{:else}
-		<div class="contact-grid">
-			{#each data.syndic.membres as m}
-				<div class="contact-card card" class:card-principal={m.est_principal}>
-					{#if m.est_principal}
-						<span class="star-principal-badge" title="Gestionnaire principal">
-							★
-						</span>
-					{/if}
-					<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
-					<div>
-						<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
-						{#if m.fonction}<div class="contact-role">{m.fonction}</div>{/if}
-						{#if m.email}
-							<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
-						{/if}
-						{#if m.telephone}
-							{#each m.telephone.split(',').filter(t => t.trim()) as tel}
-								<a href="tel:{tel.trim()}" class="contact-email">&#x1F4DE; {tel.trim()}</a>
-							{/each}
-						{/if}
+		{#if data.cs.membres.length === 0}
+			<p style="color:var(--color-text-muted);font-size:.9rem">Aucun membre CS enregistré.</p>
+		{:else if batimentsCS.length > 1}
+			{#each batimentsCS as groupe}
+				<div class="batiment-section">
+					<div class="batiment-label">
+						<Icon name="building-2" size={12} />
+						{groupe.batiment ? `Bâtiment ${groupe.batiment}` : 'Sans bâtiment'}
+					</div>
+					<div class="contact-grid">
+						{#each groupe.membres as m}
+							<div class="contact-card card">
+								{#if m.est_gestionnaire_site}
+									<span
+										class="site-manager-icon"
+										title="Gestionnaire {_siteNom}"
+										aria-label="Gestionnaire de {_siteNom}"
+									>
+										<Icon name="building-2" size={12} />
+									</span>
+								{/if}
+								{#if m.est_president}
+									<span
+										class="president-icon"
+										title="Président du Conseil Syndical"
+										aria-label="Président du Conseil Syndical"
+									>
+										<Icon name="shield" size={12} />
+									</span>
+								{/if}
+								<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
+								<div>
+									<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
+									{#if m.etage != null}
+										<div class="contact-loc">Étage {m.etage}</div>
+									{/if}
+								</div>
+							</div>
+						{/each}
 					</div>
 				</div>
 			{/each}
-		</div>
-	{/if}
-</section>
+		{:else}
+			<div class="contact-grid">
+				{#each data.cs.membres as m}
+					<div class="contact-card card">
+						{#if m.est_gestionnaire_site}
+							<span
+								class="site-manager-icon"
+								title="Gestionnaire {_siteNom}"
+								aria-label="Gestionnaire de {_siteNom}"
+							>
+								<Icon name="building-2" size={12} />
+							</span>
+						{/if}
+						{#if m.est_president}
+							<span
+								class="president-icon"
+								title="Président du Conseil Syndical"
+								aria-label="Président du Conseil Syndical"
+							>
+								<Icon name="shield" size={12} />
+							</span>
+						{/if}
+						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
+						<div>
+							<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
+							{#if m.batiment_nom || m.etage != null}
+								<div class="contact-loc">
+									{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null}
+										-
+									{/if}{#if m.etage != null}Étage {m.etage}{/if}
+								</div>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
 
-<div style="display:flex;justify-content:flex-end;margin-top:0.5rem">
-	<a href="/api/admin/fiche-arrivant" target="_blank" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem">
-		📄 Consignes de copropriété
-	</a>
-</div>
+	<section>
+		<!--  Ancre visée par la fiche de la résidence (« Syndic » → ici). Le
+	      `scroll-margin-top` évite que le titre se range sous l'en-tête collant. -->
+		<h2 class="section-title" id="syndic">Syndic</h2>
+		{#if data.syndic.nom_syndic}
+			<p class="syndic-header">
+				<strong>{data.syndic.nom_syndic}</strong>
+				{#if data.syndic.adresse}<span class="contact-societe">{data.syndic.adresse}</span>{/if}
+			</p>
+			{#if data.syndic.site_web}
+				<div class="url-block">
+					<QRCode data={data.syndic.site_web} size={45} />
+					<div>
+						<strong>Espace client</strong>
+						<span class="contact-societe"
+							><a href={data.syndic.site_web} target="_blank" rel="noopener"
+								>{data.syndic.site_web}</a
+							></span
+						>
+					</div>
+				</div>
+			{/if}
+		{/if}
+		{#if data.syndic.membres.length === 0}
+			<p style="color:var(--color-text-muted);font-size:.9rem">Aucun contact syndic enregistré.</p>
+		{:else}
+			<div class="contact-grid">
+				{#each data.syndic.membres as m}
+					<div class="contact-card card" class:card-principal={m.est_principal}>
+						{#if m.est_principal}
+							<span class="star-principal-badge" title="Gestionnaire principal"> ★ </span>
+						{/if}
+						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
+						<div>
+							<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
+							{#if m.fonction}<div class="contact-role">{m.fonction}</div>{/if}
+							{#if m.email}
+								<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
+							{/if}
+							{#if m.telephone}
+								{#each m.telephone.split(',').filter((t) => t.trim()) as tel}
+									<a href="tel:{tel.trim()}" class="contact-email">&#x1F4DE; {tel.trim()}</a>
+								{/each}
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
 
+	<div style="display:flex;justify-content:flex-end;margin-top:0.5rem">
+		<a
+			href="/api/admin/fiche-arrivant"
+			target="_blank"
+			class="btn btn-outline"
+			style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem"
+		>
+			📄 Consignes de copropriété
+		</a>
+	</div>
 {/if}
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
-	.contact-loc { font-size: .78rem; color: var(--color-text-muted); margin-top: .1rem; }
-	.ag-info { font-size: .8rem; color: var(--color-text-muted); }
-	#syndic { scroll-margin-top: 5rem; }
-	.syndic-header { margin-bottom: .75rem; display: flex; flex-direction: column; gap: .15rem; }
+	.contact-loc {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		margin-top: 0.1rem;
+	}
+	.ag-info {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+	}
+	#syndic {
+		scroll-margin-top: 5rem;
+	}
+	.syndic-header {
+		margin-bottom: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
 
-	.batiment-section { margin-bottom: 1.5rem; }
-	.batiment-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-primary); border-left: 3px solid var(--color-primary); padding-left: .5rem; margin-bottom: .6rem; display: flex; align-items: center; gap: .3rem; }
-	.contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 1rem; }
-	.contact-card { display: flex; align-items: flex-start; gap: 1rem; padding: 1.4rem 1rem .9rem; position: relative; }
+	.batiment-section {
+		margin-bottom: 1.5rem;
+	}
+	.batiment-label {
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+		color: var(--color-primary);
+		border-left: 3px solid var(--color-primary);
+		padding-left: 0.5rem;
+		margin-bottom: 0.6rem;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.contact-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+		gap: 1rem;
+	}
+	.contact-card {
+		display: flex;
+		align-items: flex-start;
+		gap: 1rem;
+		padding: 1.4rem 1rem 0.9rem;
+		position: relative;
+	}
 	/* La variable cascade jusqu'au fond de repli d'`Avatar` (initiales) : le
 	   gestionnaire principal garde sa pastille dorée sans classe dédiée. */
-	.card-principal { border-left: 3px solid var(--color-accent, #C9983A); --avatar-bg: var(--color-accent, #C9983A); }
+	.card-principal {
+		border-left: 3px solid var(--color-accent, #c9983a);
+		--avatar-bg: var(--color-accent, #c9983a);
+	}
 	.site-manager-icon,
 	.president-icon {
 		position: absolute;
@@ -245,7 +343,7 @@
 		align-items: center;
 		justify-content: center;
 		color: #fff;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 		z-index: 1;
 	}
 	.site-manager-icon {
@@ -265,32 +363,57 @@
 		align-items: center;
 		justify-content: center;
 		color: #fff;
-		background: var(--color-accent, #C9983A);
-		box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
-		font-size: .9rem;
+		background: var(--color-accent, #c9983a);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+		font-size: 0.9rem;
 		z-index: 1;
 	}
 
-
-
-	.nom-upper { text-transform: uppercase; }
-	.contact-societe { font-size: .8rem; font-style: italic; color: var(--color-text-muted); margin: .1rem 0; display: block; }
-	.contact-role { font-size: .8rem; color: var(--color-text-muted); margin: .1rem 0; }
-	.contact-email { display: block; font-size: .85rem; color: var(--color-primary); text-decoration: none; margin-top: .1rem; }
-	.contact-email:hover { text-decoration: underline; }
+	.nom-upper {
+		text-transform: uppercase;
+	}
+	.contact-societe {
+		font-size: 0.8rem;
+		font-style: italic;
+		color: var(--color-text-muted);
+		margin: 0.1rem 0;
+		display: block;
+	}
+	.contact-role {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin: 0.1rem 0;
+	}
+	.contact-email {
+		display: block;
+		font-size: 0.85rem;
+		color: var(--color-primary);
+		text-decoration: none;
+		margin-top: 0.1rem;
+	}
+	.contact-email:hover {
+		text-decoration: underline;
+	}
 
 	.url-block {
 		display: flex;
 		align-items: center;
-		gap: .75rem;
-		margin-top: .75rem;
-		padding: .6rem .75rem;
+		gap: 0.75rem;
+		margin-top: 0.75rem;
+		padding: 0.6rem 0.75rem;
 		background: var(--color-bg);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		max-width: 520px;
 	}
-	.url-block strong { font-size: .85rem; display: block; }
-	.url-block .contact-societe { margin: 0; }
-	.url-block a { word-break: break-all; }
+	.url-block strong {
+		font-size: 0.85rem;
+		display: block;
+	}
+	.url-block .contact-societe {
+		margin: 0;
+	}
+	.url-block a {
+		word-break: break-all;
+	}
 </style>

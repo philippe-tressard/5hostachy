@@ -1,5 +1,20 @@
 import { api, BASE } from './client';
-import type { AnnonceHall, AnnonceHallInput, AnnonceHallPrefill, ApercuDiffusion, EpinglesCompte, FluxResponse, Notification, Publication, PublicationEvolution, RelanceSyndicResponse, Ticket, TicketEvolution, TicketMessage, User } from './types';
+import type {
+	AnnonceHall,
+	AnnonceHallInput,
+	AnnonceHallPrefill,
+	ApercuDiffusion,
+	EpinglesCompte,
+	FluxResponse,
+	Notification,
+	Publication,
+	PublicationEvolution,
+	RelanceSyndicResponse,
+	Ticket,
+	TicketEvolution,
+	TicketMessage,
+	User,
+} from './types';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
 //  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
@@ -26,17 +41,23 @@ export const auth = {
 	updateMe: (data: unknown) => api.patch<User>('/auth/me', data),
 	changePassword: (data: unknown) => api.post('/auth/change-password', data),
 	requestPasswordReset: (data: unknown) => api.post('/auth/mot-de-passe-oublie', data),
-	resetPassword: (data: { token: string; nouveau_mot_de_passe: string }) => api.post('/auth/reinitialiser-mot-de-passe', data),
-	verifierEmail: (token: string) => api.get<{ message: string }>(`/auth/verifier-email?token=${encodeURIComponent(token)}`),
+	resetPassword: (data: { token: string; nouveau_mot_de_passe: string }) =>
+		api.post('/auth/reinitialiser-mot-de-passe', data),
+	verifierEmail: (token: string) =>
+		api.get<{ message: string }>(`/auth/verifier-email?token=${encodeURIComponent(token)}`),
 	renvoyerVerification: (email: string) => api.post('/auth/renvoyer-verification', { email }),
 	batiments: () => api.get<{ id: number; numero: string }[]>('/auth/batiments'),
 	mesDemandes: () => api.get<any[]>('/auth/me/demandes-modification'),
 	demanderModification: (data: unknown) => api.post<any>('/auth/me/demande-modification', data),
-	declarerNouvelArrivant: (data: { batiment?: string | null; ancien_resident?: string | null; ancien_resident_inconnu?: boolean }) =>
-		api.post<any>('/admin/me/accueil-arrivant', data),
+	declarerNouvelArrivant: (data: {
+		batiment?: string | null;
+		ancien_resident?: string | null;
+		ancien_resident_inconnu?: boolean;
+	}) => api.post<any>('/admin/me/accueil-arrivant', data),
 	exportTelemetrie: () => api.get<any[]>('/auth/me/telemetrie'),
 	effacerTelemetrie: () => api.delete('/auth/me/telemetrie'),
-	toggleOptOutTelemetrie: (data: { opt_out_telemetrie: boolean }) => api.patch('/auth/me/opt-out-telemetrie', data),
+	toggleOptOutTelemetrie: (data: { opt_out_telemetrie: boolean }) =>
+		api.patch('/auth/me/opt-out-telemetrie', data),
 };
 
 export const tickets = {
@@ -46,52 +67,90 @@ export const tickets = {
 	update: (id: number, data: unknown) => api.patch<Ticket>(`/tickets/${id}`, data),
 	delete: (id: number) => api.delete(`/tickets/${id}`),
 	messages: (id: number) => api.get<TicketMessage[]>(`/tickets/${id}/messages`),
-	addMessage: (id: number, data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
-		api.post<TicketMessage>(`/tickets/${id}/messages`, data),
+	addMessage: (
+		id: number,
+		data: { contenu: string; interne?: boolean; fichiers_urls?: string[]; email_externe?: string },
+	) => api.post<TicketMessage>(`/tickets/${id}/messages`, data),
 	evolutions: (id: number) => api.get<TicketEvolution[]>(`/tickets/${id}/evolutions`),
 	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498). Il ne
 	//  crée rien : le brouillon est composé par les MÊMES fonctions que l'envoi.
 	apercuDiffusion: (brouillon: {
 		/** Renseigné pour un COMMENTAIRE sur un ticket existant (#498). */
-		ticket_id?: number; commentaire?: string;
-		titre?: string; description?: string; categorie?: string;
-		perimetre_cible?: string[]; photos_urls?: string[]; fichiers_urls?: string[];
-		destinataire_syndic?: boolean; destinataire_cs?: boolean; partager_whatsapp?: boolean;
+		ticket_id?: number;
+		commentaire?: string;
+		titre?: string;
+		description?: string;
+		categorie?: string;
+		perimetre_cible?: string[];
+		photos_urls?: string[];
+		fichiers_urls?: string[];
+		destinataire_syndic?: boolean;
+		destinataire_cs?: boolean;
+		partager_whatsapp?: boolean;
 	}) => api.post<ApercuDiffusion>('/tickets/apercu-diffusion', brouillon),
 	//  `perimetre_cible` : le périmètre que l'entrée PRÉCISE, absent quand elle
 	//  n'en parle pas — le serveur ne touche alors pas à celui du ticket (#497).
-	addEvolution: (id: number, data: { type: string; contenu?: string; nouveau_statut?: string; fichiers_urls?: string[]; email_externe?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; perimetre_cible?: string[] }) =>
-		api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
-	updateEvolution: (id: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
-		api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
+	addEvolution: (
+		id: number,
+		data: {
+			type: string;
+			contenu?: string;
+			nouveau_statut?: string;
+			fichiers_urls?: string[];
+			email_externe?: string;
+			partager_whatsapp?: boolean;
+			envoyer_syndic?: boolean;
+			envoyer_cs?: boolean;
+			perimetre_cible?: string[];
+		},
+	) => api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
+	updateEvolution: (
+		id: number,
+		evolId: number,
+		data: { contenu?: string; fichiers_urls?: string[] },
+	) => api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
 	//  Réservé à l'ADMIN côté serveur (`require_admin`) : effacer une trace que
 	//  d'autres ont pu lire n'est pas corriger son propre texte.
 	deleteEvolution: (id: number, evolId: number) =>
 		api.delete<void>(`/tickets/${id}/evolutions/${evolId}`),
 	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
-	envoiRelance: (ticket_ids: number[]) => api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
+	envoiRelance: (ticket_ids: number[]) =>
+		api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	// Pas de `uploadPhoto` : photos et documents passent par `fichiersApi.upload`
 	// AVANT la création, et voyagent dans `photos_urls` / `fichiers_urls`.
 };
 
 export const publications = {
-	list: (archived = false) => api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
+	list: (archived = false) =>
+		api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
 	create: (data: unknown) => api.post<Publication>('/publications', data),
 	update: (id: number, data: unknown) => api.patch<Publication>(`/publications/${id}`, data),
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
 	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
 	renvoyerWhatsapp: (id: number) => api.post(`/publications/${id}/renvoyer-whatsapp`, {}),
-	addEvolution: (pubId: number, data: { type: string; contenu?: string; nouveau_statut?: string; partager_whatsapp?: boolean; envoyer_syndic?: boolean; envoyer_cs?: boolean; fichiers_urls?: string[]; email_externe?: string }) =>
-		api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
-	updateEvolution: (pubId: number, evolId: number, data: { contenu?: string; fichiers_urls?: string[] }) =>
-		api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
+	addEvolution: (
+		pubId: number,
+		data: {
+			type: string;
+			contenu?: string;
+			nouveau_statut?: string;
+			partager_whatsapp?: boolean;
+			envoyer_syndic?: boolean;
+			envoyer_cs?: boolean;
+			fichiers_urls?: string[];
+			email_externe?: string;
+		},
+	) => api.post<PublicationEvolution>(`/publications/${pubId}/evolutions`, data),
+	updateEvolution: (
+		pubId: number,
+		evolId: number,
+		data: { contenu?: string; fichiers_urls?: string[] },
+	) => api.patch<PublicationEvolution>(`/publications/${pubId}/evolutions/${evolId}`, data),
 	//  Même contrat que celui des tickets — même code côté serveur (#512).
 	deleteEvolution: (pubId: number, evolId: number) =>
 		api.delete<void>(`/publications/${pubId}/evolutions/${evolId}`),
 };
-
-
 
 export const notifications = {
 	list: () => api.get<Notification[]>('/notifications'),
@@ -99,7 +158,6 @@ export const notifications = {
 	markAllRead: () => api.post('/notifications/tout-marquer-lu'),
 	delete: (id: number) => api.delete(`/notifications/${id}`),
 };
-
 
 export const calendrier = {
 	list: () => api.get<any[]>('/calendrier'),
@@ -123,9 +181,6 @@ export const calendrier = {
 		api.delete<void>(`/calendrier/${id}/evolutions/${evolId}`),
 };
 
-
-
-
 // ── Flux temps réel (dashboard pouls) ───────────────────────────────────────
 
 export const flux = {
@@ -137,7 +192,6 @@ export const flux = {
 
 // ── Upload fichiers ─────────────────────────────────────────────────────────
 
-
 export const faq = {
 	list: () => api.get<any[]>('/faq'),
 	listAll: () => api.get<any[]>('/faq/all'),
@@ -145,45 +199,39 @@ export const faq = {
 	create: (data: unknown) => api.post<any>('/faq', data),
 	update: (id: number, data: unknown) => api.patch<any>(`/faq/${id}`, data),
 	reorder: (data: { id: number; ordre: number }[]) => api.patch<void>('/faq/reorder', data),
-	renameCategory: (old_name: string, new_name: string) => api.patch<any>('/faq/categories/rename', { old_name, new_name }),
+	renameCategory: (old_name: string, new_name: string) =>
+		api.patch<any>('/faq/categories/rename', { old_name, new_name }),
 	delete: (id: number) => api.delete(`/faq/${id}`),
 };
 
-
 export const annuaire = {
-	get: () => api.get<{ cs: { ag_annee: number | null; ag_date: string | null; membres: any[] }; syndic: { nom_syndic: string; nom_syndic_source?: 'contrat' | 'saisie' | 'aucune'; adresse: string; membres: any[] } }>('/admin/annuaire'),
+	get: () =>
+		api.get<{
+			cs: { ag_annee: number | null; ag_date: string | null; membres: any[] };
+			syndic: {
+				nom_syndic: string;
+				nom_syndic_source?: 'contrat' | 'saisie' | 'aucune';
+				adresse: string;
+				membres: any[];
+			};
+		}>('/admin/annuaire'),
 };
 
-
-
-
-
-
-
-
 export const annoncesHall = {
-	list: (archivees = false) =>
-		api.get<AnnonceHall[]>(`/annonces-hall?archivees=${archivees}`),
+	list: (archivees = false) => api.get<AnnonceHall[]>(`/annonces-hall?archivees=${archivees}`),
 	create: (data: AnnonceHallInput) => api.post<AnnonceHall>('/annonces-hall', data),
 	depuisPublication: (pubId: number) =>
 		api.get<AnnonceHallPrefill>(`/annonces-hall/depuis-publication/${pubId}`),
 	previsualiser: (data: AnnonceHallInput) =>
-		api.post<{ format_effectif: string; format_label: string; perimetre_label: string; html: string }>(
-			'/annonces-hall/previsualiser', data,
-		),
+		api.post<{
+			format_effectif: string;
+			format_label: string;
+			perimetre_label: string;
+			html: string;
+		}>('/annonces-hall/previsualiser', data),
 	archiver: (id: number, archivee: boolean) =>
 		api.patch<AnnonceHall>(`/annonces-hall/${id}`, { archivee }),
 	renvoyerEmail: (id: number) => api.post(`/annonces-hall/${id}/renvoyer-email`, {}),
 	delete: (id: number) => api.delete(`/annonces-hall/${id}`),
 	pdfUrl: (id: number) => `${BASE}/annonces-hall/${id}/pdf`,
 };
-
-
-
-
-
-
-
-
-
-

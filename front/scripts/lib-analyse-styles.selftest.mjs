@@ -122,7 +122,8 @@ export function selftest() {
 	//  Cas zéro de l'appelant : une feuille sans `:global()` ne doit rien inventer.
 	verifier(
 		'globalesDeFeuille : cas zéro',
-		globalesDeFeuille('.a { color: red } @media (max-width: 640px) { .b { color: blue } }').fuites.length,
+		globalesDeFeuille('.a { color: red } @media (max-width: 640px) { .b { color: blue } }').fuites
+			.length,
 		0,
 	);
 	//  Un sélecteur en LISTE : chaque partie se juge séparément, sinon la fuite se
@@ -152,7 +153,7 @@ export function selftest() {
 	verifier('classesDe : les classes littérales', classesDe(porteuse.attributs ?? ''), ['a', 'b']);
 	verifier(
 		'classesDe : une classe calculée ne se lit pas, et ne doit pas mentir',
-		classesDe('<div class="carte {actif ? \'on\' : \'\'}"'),
+		classesDe("<div class=\"carte {actif ? 'on' : ''}\""),
 		['carte'],
 	);
 
@@ -161,7 +162,11 @@ export function selftest() {
 	//  chaîne du balisage. Sans ce garde, il serait attribué à la balise ouvrante
 	//  la plus proche, donc rapporté sur un élément qui ne le porte pas.
 	const texte = '<p>ne jamais écrire style="border:1px" à la main</p>';
-	verifier('baliseAvant : un style= en TEXTE n’est pas un attribut', baliseAvant(texte, texte.indexOf('style="')), null);
+	verifier(
+		'baliseAvant : un style= en TEXTE n’est pas un attribut',
+		baliseAvant(texte, texte.indexOf('style="')),
+		null,
+	);
 	const apresFermeture = '<span class="x"></span> style="color:red"';
 	verifier(
 		'baliseAvant : un style= après une balise fermée n’est attribué à personne',
@@ -171,10 +176,19 @@ export function selftest() {
 
 	//  Ce qui n'est pas du balisage ne doit produire aucune prise, et les numéros
 	//  de ligne doivent rester justes après neutralisation.
-	const src = '<div>\n<!-- <input style="border:1px"> -->\n<style>\ninput { width: 100% }\n</style>\n<p style="color:red">x</p>';
+	const src =
+		'<div>\n<!-- <input style="border:1px"> -->\n<style>\ninput { width: 100% }\n</style>\n<p style="color:red">x</p>';
 	const propre = balisageSeul(src);
-	verifier('balisageSeul : le commentaire et le <style> sont neutralisés', propre.match(/style="/g).length, 1);
-	verifier('balisageSeul : le compte des lignes est préservé', propre.split('\n').length, src.split('\n').length);
+	verifier(
+		'balisageSeul : le commentaire et le <style> sont neutralisés',
+		propre.match(/style="/g).length,
+		1,
+	);
+	verifier(
+		'balisageSeul : le compte des lignes est préservé',
+		propre.split('\n').length,
+		src.split('\n').length,
+	);
 	verifier(
 		'selecteursNus : l’élément nu est vu, le sélecteur qualifié ne l’est pas',
 		selecteursNus('input { a:1 } .f input { b:2 } input[type="range"] { c:3 }', ['input']).map(
@@ -242,5 +256,3 @@ export function selftest() {
 	}
 	console.log('✓ lib-analyse-styles --selftest : les fonctions d’analyse lisent ce qu’on croit.');
 }
-
-

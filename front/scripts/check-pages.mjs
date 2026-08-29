@@ -192,7 +192,7 @@ for (const attendu of [
 	if (!source.includes(attendu)) {
 		console.error(
 			`✗ Cas zéro : lib/pages.ts n'expose plus \`${attendu}\`. La source a changé de ` +
-				'forme — mettre ce contrôle à jour, sinon il laisse repasser toutes les recopies.'
+				'forme — mettre ce contrôle à jour, sinon il laisse repasser toutes les recopies.',
 		);
 		process.exit(1);
 	}
@@ -205,7 +205,7 @@ const IDS = valeursDeclarees(source, 'id', { valeur: '[a-z0-9-]+', suivi: 'href'
 if (IDS.length < 10) {
 	console.error(
 		`✗ Cas zéro : ${IDS.length} identifiant(s) extrait(s) de lib/pages.ts, au moins 10 attendus. ` +
-			'Le motif de lecture ne correspond plus à la table — le contrôle ne mesure plus rien.'
+			'Le motif de lecture ne correspond plus à la table — le contrôle ne mesure plus rien.',
 	);
 	process.exit(1);
 }
@@ -236,7 +236,8 @@ for (const chemin of tous) {
 			defautsRecopies.push({
 				rel,
 				motif: `page « ${id} » absente de la table`,
-				remede: 'lui ajouter une entrée dans `lib/pages.ts` — sinon elle est ni ordonnable ni renommable',
+				remede:
+					'lui ajouter une entrée dans `lib/pages.ts` — sinon elle est ni ordonnable ni renommable',
 			});
 		}
 		if (LITTERAL.test(defauts) || ONGLETS_SUR_PLACE.test(defauts)) {
@@ -271,7 +272,7 @@ if (appelsVus < APPELS_MINIMUM) {
 	console.error(
 		`✗ Cas zéro : ${appelsVus} appel(s) à getPageConfig reconnu(s), au moins ${APPELS_MINIMUM} attendus.\n` +
 			"  Les pages ne l'appellent plus sous cette forme — mettre ce contrôle à jour, sinon il\n" +
-			'  laisse repasser toutes les valeurs par défaut recopiées.'
+			'  laisse repasser toutes les valeurs par défaut recopiées.',
 	);
 	process.exit(1);
 }
@@ -295,8 +296,8 @@ if (violations.length || inutiles.length || defautsRecopies.length) {
 		console.error('      → la retirer de EXCEPTIONS dans ce script\n');
 	}
 	console.error(
-		'Rappel : deux listes d\'accord entre elles ne prouvent rien. Les trois divergences\n' +
-			"de #401 étaient chacune cohérente de son côté, et aucune n'était juste.\n"
+		"Rappel : deux listes d'accord entre elles ne prouvent rien. Les trois divergences\n" +
+			"de #401 étaient chacune cohérente de son côté, et aucune n'était juste.\n",
 	);
 	process.exit(1);
 }
@@ -304,5 +305,5 @@ if (violations.length || inutiles.length || defautsRecopies.length) {
 console.log(
 	`✓ ${tous.length} fichiers analysés — ${IDS.length} pages définies une seule fois, ` +
 		`${appelsVus} appels à getPageConfig sans valeur recopiée ` +
-		`(${Object.keys(EXCEPTIONS).length} exceptions nommées).`
+		`(${Object.keys(EXCEPTIONS).length} exceptions nommées).`,
 );

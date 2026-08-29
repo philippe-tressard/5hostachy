@@ -62,7 +62,13 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { cssGlobal } from './lib-css-global.mjs';
-import { balisageSeul, baliseAvant, classesDe, reglesCss, decouperDeclarations } from './lib-analyse-styles.mjs';
+import {
+	balisageSeul,
+	baliseAvant,
+	classesDe,
+	reglesCss,
+	decouperDeclarations,
+} from './lib-analyse-styles.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -166,7 +172,9 @@ function principal() {
 		//  rien lire. Une famille disparue est un renommage à répercuter, pas un
 		//  succès (`standards/04` §2).
 		if (!vues.size) {
-			console.error(`✗ famille « ${prefixe}* » introuvable dans app.css : ce contrôle ne mesure plus rien.`);
+			console.error(
+				`✗ famille « ${prefixe}* » introuvable dans app.css : ce contrôle ne mesure plus rien.`,
+			);
 			process.exit(1);
 		}
 		if (!modificateurs.length) {
@@ -181,7 +189,9 @@ function principal() {
 
 		for (const chemin of fichiers(RACINE)) {
 			for (const t of emploisNus(readFileSync(chemin, 'utf8'), modificateurs, base)) {
-				defauts.push(`${relative(RACINE, chemin)}:${t.ligne} — « ${t.classes.join(' ')} » sans « ${base} »`);
+				defauts.push(
+					`${relative(RACINE, chemin)}:${t.ligne} — « ${t.classes.join(' ')} » sans « ${base} »`,
+				);
 			}
 		}
 	}
@@ -196,7 +206,9 @@ function principal() {
 		);
 		process.exit(1);
 	}
-	console.log(`✓ aucun modificateur employé sans sa base (${modificateursTotal} modificateur(s) surveillé(s))`);
+	console.log(
+		`✓ aucun modificateur employé sans sa base (${modificateursTotal} modificateur(s) surveillé(s))`,
+	);
 }
 
 // ── Self-test ────────────────────────────────────────────────────────────────
@@ -220,7 +232,10 @@ function selftest() {
 	const { modificateurs, vues } = classerFamille(css, 'btn-');
 	verifier('btn-primary est un modificateur', modificateurs.includes('btn-primary'));
 	verifier('btn-icon est autonome', !modificateurs.includes('btn-icon'));
-	verifier('btn-icon-edit est autonome (sélecteur groupé)', !modificateurs.includes('btn-icon-edit'));
+	verifier(
+		'btn-icon-edit est autonome (sélecteur groupé)',
+		!modificateurs.includes('btn-icon-edit'),
+	);
 	//  🔴 Les deux que le premier critère laissait passer : `.btn-sm` déclare
 	//  `padding`, `.btn-outline` déclare `border` — aucune ne pose un bouton.
 	verifier('btn-sm est un modificateur', modificateurs.includes('btn-sm'));
@@ -235,16 +250,25 @@ function selftest() {
 	verifier('la forme correcte passe', emploisNus(correct, modificateurs, 'btn').length === 0);
 
 	const inverse = `<button class="btn-primary btn">Enregistrer</button>`;
-	verifier('l’ordre des classes n’a pas d’importance', emploisNus(inverse, modificateurs, 'btn').length === 0);
+	verifier(
+		'l’ordre des classes n’a pas d’importance',
+		emploisNus(inverse, modificateurs, 'btn').length === 0,
+	);
 
 	//  Un commentaire qui CITE la forme fautive ne doit pas la déclencher — c'est
 	//  le défaut qu'ont eu quatre de ces contrôles avant que `balisageSeul` existe.
 	const cite = `<!-- ne jamais écrire class="btn-primary" seul -->\n<button class="btn btn-primary">ok</button>`;
-	verifier('un commentaire qui cite la faute ne la déclenche pas', emploisNus(cite, modificateurs, 'btn').length === 0);
+	verifier(
+		'un commentaire qui cite la faute ne la déclenche pas',
+		emploisNus(cite, modificateurs, 'btn').length === 0,
+	);
 
 	//  Un bouton icône n'a pas de base à porter.
 	const icone = `<button class="btn-icon" aria-label="Modifier">✏️</button>`;
-	verifier('un bouton icône n’est pas réclamé', emploisNus(icone, modificateurs, 'btn').length === 0);
+	verifier(
+		'un bouton icône n’est pas réclamé',
+		emploisNus(icone, modificateurs, 'btn').length === 0,
+	);
 
 	if (echecs.length) {
 		console.error('✗ self-test : ' + echecs.length + ' cas en échec :');

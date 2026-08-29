@@ -88,7 +88,9 @@
 	<div class="event-type" class:archive-type={archive}>
 		{typeTexte}
 		{#if badgeType}
-			<span class="badge rangee-badge" style="background:{badgeType.couleur}">{badgeType.texte}</span>
+			<span class="badge rangee-badge" style="background:{badgeType.couleur}"
+				>{badgeType.texte}</span
+			>
 		{/if}
 	</div>
 
@@ -105,10 +107,14 @@
 			<div class:date-attenuee={ligne.attenue}>{ligne.texte}</div>
 		{/each}
 		{#if perimetreVisible}
-			<span class="badge badge-blue rangee-perimetre">&#x1F539; {perimetreLabel(perimetre ?? [])}</span>
+			<span class="badge badge-blue rangee-perimetre"
+				>&#x1F539; {perimetreLabel(perimetre ?? [])}</span
+			>
 		{/if}
 		{#if badgeKanban}
-			<span class="badge rangee-badge rangee-kanban" style="background:{badgeKanban.couleur}">{badgeKanban.texte}</span>
+			<span class="badge rangee-badge rangee-kanban" style="background:{badgeKanban.couleur}"
+				>{badgeKanban.texte}</span
+			>
 		{/if}
 		{#if pied}<small class="ev-updated">{pied}</small>{/if}
 	</div>
@@ -124,24 +130,75 @@
 	    qui les porte — c'est la seule façon qu'elles s'appliquent : un style de
 	    page n'atteint pas le balisage d'un composant enfant (v2.67.11). */
 	/*  `flex-wrap` : le corps déplié portait `grid-column`, sans effet en flex. */
-	.event-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; margin-bottom: .4rem; transition: background .12s; }
-	.event-type { min-width: 7rem; font-size: .8rem; font-weight: 600; padding-top: .1rem; }
-	.event-body { flex: 1; }
-	.event-titre { font-size: .95rem; }
-	.event-meta { font-size: .8rem; color: var(--color-text-muted); margin-left: .5rem; }
-	.event-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 0; }
-	.event-date { text-align: right; font-size: .85rem; min-width: 110px; }
-	.event-actions { display: flex; gap: .3rem; }
-	.ev-updated { display: block; font-size: .75rem; color: var(--color-text-muted); margin-top: .3rem; }
+	.event-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		align-items: flex-start;
+		padding: 0.85rem 1rem;
+		margin-bottom: 0.4rem;
+		transition: background 0.12s;
+	}
+	.event-type {
+		min-width: 7rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		padding-top: 0.1rem;
+	}
+	.event-body {
+		flex: 1;
+	}
+	.event-titre {
+		font-size: 0.95rem;
+	}
+	.event-meta {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-left: 0.5rem;
+	}
+	.event-desc {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		margin: 0.2rem 0 0;
+	}
+	.event-date {
+		text-align: right;
+		font-size: 0.85rem;
+		min-width: 110px;
+	}
+	.event-actions {
+		display: flex;
+		gap: 0.3rem;
+	}
+	.ev-updated {
+		display: block;
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-top: 0.3rem;
+	}
 
 	/*  L'atténuation des archives était posée en `style="opacity:.85"` sur les
 	    trois rangées — une valeur recopiée trois fois, qu'une quatrième aurait
 	    fait diverger. Elle est ici, avec sa variante. */
-	.archive-attenuee { opacity: .85; }
-	.date-attenuee { color: var(--color-text-muted); font-size: .8rem; }
-	.rangee-badge { color: #fff; font-size: .65rem; white-space: nowrap; }
-	.rangee-kanban { font-size: .73rem; }
-	.rangee-perimetre, .rangee-kanban { margin-top: .3rem; }
+	.archive-attenuee {
+		opacity: 0.85;
+	}
+	.date-attenuee {
+		color: var(--color-text-muted);
+		font-size: 0.8rem;
+	}
+	.rangee-badge {
+		color: #fff;
+		font-size: 0.65rem;
+		white-space: nowrap;
+	}
+	.rangee-kanban {
+		font-size: 0.73rem;
+	}
+	.rangee-perimetre,
+	.rangee-kanban {
+		margin-top: 0.3rem;
+	}
 
 	.archive-row {
 		display: grid;
@@ -149,16 +206,18 @@
 		column-gap: 1rem;
 		align-items: start;
 	}
-	.archive-row .event-body { min-width: 0; }
+	.archive-row .event-body {
+		min-width: 0;
+	}
 	.archive-type {
 		min-width: 0;
 		width: 7.75rem;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: .35rem;
+		gap: 0.35rem;
 		text-align: center;
-		padding: .15rem .35rem;
+		padding: 0.15rem 0.35rem;
 	}
 	.archive-type .rangee-badge {
 		display: inline-flex;
@@ -169,7 +228,7 @@
 	@media (max-width: 760px) {
 		.archive-row {
 			grid-template-columns: 1fr;
-			row-gap: .6rem;
+			row-gap: 0.6rem;
 		}
 		.archive-type {
 			width: auto;

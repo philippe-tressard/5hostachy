@@ -107,7 +107,9 @@ for (const route of routes) {
 	//  On cherche le lien PARTOUT sauf dans la route elle-même : une page qui
 	//  se cite (un onglet interne, un retour) ne la rend pas atteignable.
 	const dossier = join(ADMIN, route) + '/';
-	const motif = new RegExp(`(href=["'\`][^"'\`]*|goto\\(\\s*["'\`][^"'\`]*)/admin/${route}(?![\\w-])`);
+	const motif = new RegExp(
+		`(href=["'\`][^"'\`]*|goto\\(\\s*["'\`][^"'\`]*)/admin/${route}(?![\\w-])`,
+	);
 	const lie = tous.some((f) => !f.startsWith(dossier) && motif.test(readFileSync(f, 'utf8')));
 
 	if (!lie && !(route in TOLEREES)) orphelines.push(route);
@@ -154,14 +156,20 @@ const srcAdmin = readFileSync(PAGE_ADMIN, 'utf8');
 
 const bloc = srcAdmin.match(/const ONGLETS = \[([\s\S]*?)\] as const;/);
 if (!bloc) {
-	console.error("✗ INCONNU : la déclaration `const ONGLETS = [...] as const;` est introuvable dans");
-	console.error('  admin/+page.svelte. Sans elle, il n\'y a plus de liste qui fasse foi, et ce');
+	console.error(
+		'✗ INCONNU : la déclaration `const ONGLETS = [...] as const;` est introuvable dans',
+	);
+	console.error("  admin/+page.svelte. Sans elle, il n'y a plus de liste qui fasse foi, et ce");
 	console.error('  contrôle ne saurait pas dire ce qui manque.');
 	process.exit(1);
 }
 const declares = [...bloc[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
-const boutons = new Set([...srcAdmin.matchAll(/<Onglet[^>]*actif=\{onglet === '([a-z_]+)'\}/g)].map((m) => m[1]));
-const rendus = new Set([...srcAdmin.matchAll(/\{(?:#if|:else if) onglet === '([a-z_]+)'\}/g)].map((m) => m[1]));
+const boutons = new Set(
+	[...srcAdmin.matchAll(/<Onglet[^>]*actif=\{onglet === '([a-z_]+)'\}/g)].map((m) => m[1]),
+);
+const rendus = new Set(
+	[...srcAdmin.matchAll(/\{(?:#if|:else if) onglet === '([a-z_]+)'\}/g)].map((m) => m[1]),
+);
 
 if (declares.length < ONGLETS_MINIMAUX) {
 	console.error(
@@ -169,7 +177,7 @@ if (declares.length < ONGLETS_MINIMAUX) {
 	);
 	console.error(
 		"L'administration en portait 19 le 19/08/2026. Un effondrement du relevé dit que\n" +
-			"le contrôle a cessé de voir, pas que le défaut a disparu.",
+			'le contrôle a cessé de voir, pas que le défaut a disparu.',
 	);
 	process.exit(1);
 }
@@ -182,7 +190,9 @@ if (sansBouton.length) {
 	echec = true;
 	console.error("\n✗ Onglet(s) déclaré(s) qu'AUCUN bouton ne permet d'ouvrir :");
 	for (const o of sansBouton) console.error(`    ${o}`);
-	console.error("  → ajouter un <Onglet actif={onglet === '…'}> dans la barre, ou retirer l'entrée.");
+	console.error(
+		"  → ajouter un <Onglet actif={onglet === '…'}> dans la barre, ou retirer l'entrée.",
+	);
 }
 if (sansRendu.length) {
 	echec = true;
@@ -192,7 +202,7 @@ if (sansRendu.length) {
 }
 if (nonDeclares.length) {
 	echec = true;
-	console.error("\n✗ Onglet(s) employé(s) sans figurer dans `ONGLETS` :");
+	console.error('\n✗ Onglet(s) employé(s) sans figurer dans `ONGLETS` :');
 	for (const o of nonDeclares) console.error(`    ${o}`);
 	console.error("  → la liste fait foi : l'y ajouter, sinon `?onglet=` ne l'ouvrira pas.");
 }

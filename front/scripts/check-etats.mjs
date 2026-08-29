@@ -267,12 +267,14 @@ for (const nomFichier of fichiersEntites) {
 				);
 			}
 			if (!div.explication || !String(div.explication).trim()) {
-				echec(`${ou} — divergence en « ${etat} » sans \`explication\` : un motif nu ne se relit pas.`);
+				echec(
+					`${ou} — divergence en « ${etat} » sans \`explication\` : un motif nu ne se relit pas.`,
+				);
 			}
 			if (div.motif === 'api' && !/^#\d+$/.test(String(div.ticket ?? ''))) {
 				echec(
 					`${ou} — motif \`api\` en « ${etat} » SANS TICKET. C'est un marqueur de DETTE, jamais ` +
-						'de conception : il doit citer l\'issue qui la fera tomber (forme « #431 »).',
+						"de conception : il doit citer l'issue qui la fera tomber (forme « #431 »).",
 				);
 			}
 		}
@@ -325,7 +327,9 @@ for (const chemin of tousSvelte) {
 	const brut = readFileSync(chemin, 'utf8');
 	//  `import type` ne consomme rien : seul un import de VALEUR fait de ce
 	//  fichier un rendu gouverné par la déclaration.
-	const importe = [...brut.matchAll(/import\s+(?!type\b)\{([^}]*)\}\s+from\s+'\$lib\/entites\/[^']+'/g)];
+	const importe = [
+		...brut.matchAll(/import\s+(?!type\b)\{([^}]*)\}\s+from\s+'\$lib\/entites\/[^']+'/g),
+	];
 	if (importe.length === 0) continue;
 	consommateurs += 1;
 	const court = relative(RACINE, chemin);
@@ -361,7 +365,9 @@ for (const chemin of tousSvelte) {
 	}
 
 	// 7. l'état et la section cités doivent exister
-	for (const m of texte.matchAll(/sectionPresente\(\s*([A-Za-z_$][\w$]*)\s*,\s*([^,]+),\s*'([^']+)'\s*\)/g)) {
+	for (const m of texte.matchAll(
+		/sectionPresente\(\s*([A-Za-z_$][\w$]*)\s*,\s*([^,]+),\s*'([^']+)'\s*\)/g,
+	)) {
 		if (!ORDRE.includes(m[3])) {
 			echec(`${court} — \`sectionPresente(…, '${m[3]}')\` : section inconnue du cadre.`);
 		}
@@ -376,7 +382,7 @@ for (const chemin of tousSvelte) {
 		if (titre && !titresAdmis.has(titre)) {
 			echec(
 				`${court} — intitulé de section « ${titre} » absent de la déclaration. ` +
-					'R3 : le libellé est le même d\'un formulaire à l\'autre — le nommer dans ' +
+					"R3 : le libellé est le même d'un formulaire à l'autre — le nommer dans " +
 					'`SECTIONS_LIBELLE` ou dans le `titreEcran` de la section.',
 			);
 		}
@@ -401,7 +407,10 @@ for (const chemin of tousSvelte) {
 	//  clé de tolérance écrite avec des `/` ne correspondrait alors jamais — le
 	//  contrôle serait vert par accident, pas par mérite.
 	const court = relative(RACINE, chemin).replace(/\\/g, '/');
-	const { ecarts, servies } = analyserEvolForm(court, sansCommentaires(readFileSync(chemin, 'utf8')));
+	const { ecarts, servies } = analyserEvolForm(
+		court,
+		sansCommentaires(readFileSync(chemin, 'utf8')),
+	);
 	for (const e of ecarts) echec(e);
 	evolformServies.push(...servies);
 }
@@ -429,12 +438,12 @@ for (const { nom, court } of entites) {
 
 //  ── Verdict ────────────────────────────────────────────────────────────────
 if (erreurs.length) {
-	console.error('✗ Cadre d\'interface (#430) — R4 : une divergence sans motif est refusée.\n');
+	console.error("✗ Cadre d'interface (#430) — R4 : une divergence sans motif est refusée.\n");
 	for (const e of erreurs) console.error(`  • ${e}`);
 	console.error(
-		'\nLes trois motifs, et il n\'y en a pas d\'autre :\n' +
-			'  geste  — la section est un ACTE qui n\'a pas lieu dans cet état\n' +
-			'  hérité — la valeur vient de l\'objet porteur\n' +
+		"\nLes trois motifs, et il n'y en a pas d'autre :\n" +
+			"  geste  — la section est un ACTE qui n'a pas lieu dans cet état\n" +
+			"  hérité — la valeur vient de l'objet porteur\n" +
 			'  api    — DETTE, jamais conception : doit citer un ticket\n',
 	);
 	process.exit(1);

@@ -59,7 +59,14 @@
 	import Vignette from './Vignette.svelte';
 	import { fichiersApi } from '$lib/api';
 	import { toast } from './Toast.svelte';
-	import { ACCEPT_DOCUMENTS, ACCEPT_FICHIERS, ACCEPT_PHOTOS, MAX_FICHIERS, nomFichier, separerFichiers } from '$lib/fichiers';
+	import {
+		ACCEPT_DOCUMENTS,
+		ACCEPT_FICHIERS,
+		ACCEPT_PHOTOS,
+		MAX_FICHIERS,
+		nomFichier,
+		separerFichiers,
+	} from '$lib/fichiers';
 
 	export let urls: string[] = [];
 	export let max = MAX_FICHIERS;
@@ -69,8 +76,13 @@
 	export let mode: 'photos' | 'documents' | 'mixte' = 'documents';
 	export let label: string | null = null;
 	export let accept: string | null = null;
-	$: accepte = accept ?? { photos: ACCEPT_PHOTOS, documents: ACCEPT_DOCUMENTS, mixte: ACCEPT_FICHIERS }[mode];
-	$: libelle = label ?? { photos: 'Ajouter des photos', documents: 'Ajouter un document', mixte: 'Ajouter un fichier' }[mode];
+	$: accepte =
+		accept ?? { photos: ACCEPT_PHOTOS, documents: ACCEPT_DOCUMENTS, mixte: ACCEPT_FICHIERS }[mode];
+	$: libelle =
+		label ??
+		{ photos: 'Ajouter des photos', documents: 'Ajouter un document', mixte: 'Ajouter un fichier' }[
+			mode
+		];
 	export let id: string | undefined = undefined;
 	export let disabled = false;
 	export let readonly = false;
@@ -100,19 +112,21 @@
 	//  libellé se déduit d'`accept` plutôt que du défaut : plusieurs champs de
 	//  PHOTOS ne précisaient pas `mode`, et auraient annoncé « Documents » au-dessus
 	//  de leurs photos (constaté en relevant les 13 usages, 16/08/2026).
-	$: _nature = accept === ACCEPT_PHOTOS ? 'photos'
-		: accept === ACCEPT_DOCUMENTS ? 'documents'
-		: accept ? 'mixte'
-		: mode;
+	$: _nature =
+		accept === ACCEPT_PHOTOS
+			? 'photos'
+			: accept === ACCEPT_DOCUMENTS
+				? 'documents'
+				: accept
+					? 'mixte'
+					: mode;
 	//  ⚠️ Le « (max N) » a QUITTÉ l'intitulé le 16/08/2026 : le compteur `0/N`
 	//  affiché sous le bouton le dit déjà, et le dit mieux — il se met à jour.
 	//  Deux façons d'énoncer la même limite, dont une figée, c'est la duplication
 	//  ordinaire (`standards/02` §2), en trois mots.
-	$: _titre = titre ?? (
-		_nature === 'photos'    ? 'Photos'
-		: _nature === 'documents' ? 'Documents'
-		: 'Pièces jointes'
-	);
+	$: _titre =
+		titre ??
+		(_nature === 'photos' ? 'Photos' : _nature === 'documents' ? 'Documents' : 'Pièces jointes');
 	//  Les types acceptés ne sont pas récités à la main : ils DÉCOULENT de
 	//  `ACCEPT_DOCUMENTS`. Une extension ajoutée là-bas se dit ici, au lieu de
 	//  laisser un libellé mentir. En aide grise sous le bouton, et non dans
@@ -156,15 +170,20 @@
 	type Piece = { cle: string; nom: string; apercu: string | null; fichier: File | null };
 	$: pieces = differe
 		? fichiers.map((f, i): Piece => ({
-			cle: `${i} ${f.name} ${f.size}`,
-			nom: f.name,
-			apercu: apercuDe(f),
-			fichier: f,
-		}))
+				cle: `${i} ${f.name} ${f.size}`,
+				nom: f.name,
+				apercu: apercuDe(f),
+				fichier: f,
+			}))
 		: (({ photos, documents }) => [
-			...photos.map((u): Piece => ({ cle: u, nom: nomFichier(u), apercu: u, fichier: null })),
-			...documents.map((u): Piece => ({ cle: u, nom: nomFichier(u), apercu: null, fichier: null })),
-		])(separerFichiers(urls));
+				...photos.map((u): Piece => ({ cle: u, nom: nomFichier(u), apercu: u, fichier: null })),
+				...documents.map((u): Piece => ({
+					cle: u,
+					nom: nomFichier(u),
+					apercu: null,
+					fichier: null,
+				})),
+			])(separerFichiers(urls));
 	$: vignettes = pieces.filter((p) => p.apercu !== null);
 	$: pastilles = pieces.filter((p) => p.apercu === null);
 	$: nombre = differe ? fichiers.length : urls.length;
@@ -222,8 +241,13 @@
 			{#each vignettes as p (p.cle)}
 				<Vignette src={p.apercu ?? ''} alt="" {size} title={p.nom}>
 					{#if !readonly}
-						<button type="button" class="photo-retirer" title="Retirer cette photo"
-							aria-label="Retirer {p.nom}" on:click={() => retirer(p)}>×</button>
+						<button
+							type="button"
+							class="photo-retirer"
+							title="Retirer cette photo"
+							aria-label="Retirer {p.nom}"
+							on:click={() => retirer(p)}>×</button
+						>
 					{/if}
 				</Vignette>
 			{/each}
@@ -236,8 +260,13 @@
 					<span aria-hidden="true">&#x1F4C4;</span>
 					<span class="fichier-nom">{p.nom}</span>
 					{#if !readonly}
-						<button type="button" class="fichier-retirer" title="Retirer ce document"
-							aria-label="Retirer {p.nom}" on:click={() => retirer(p)}>×</button>
+						<button
+							type="button"
+							class="fichier-retirer"
+							title="Retirer ce document"
+							aria-label="Retirer {p.nom}"
+							on:click={() => retirer(p)}>×</button
+						>
 					{/if}
 				</span>
 			{/each}
@@ -245,32 +274,58 @@
 	{/if}
 
 	{#if !readonly}
-	<label class="btn btn-sm btn-outline fichiers-ajout" class:disabled={complet || envoi || disabled}>
-		{envoi ? '⏳ Envoi…' : `\u{1F4CE} ${libelle}`}
-		<input {id} type="file" multiple accept={accepte} disabled={complet || envoi || disabled} on:change={ajouter} />
-	</label>
-	<span class="fichiers-compte">
-		{nombre}/{max}{#if _types} · {_types}{/if}
-	</span>
+		<label
+			class="btn btn-sm btn-outline fichiers-ajout"
+			class:disabled={complet || envoi || disabled}
+		>
+			{envoi ? '⏳ Envoi…' : `\u{1F4CE} ${libelle}`}
+			<input
+				{id}
+				type="file"
+				multiple
+				accept={accepte}
+				disabled={complet || envoi || disabled}
+				on:change={ajouter}
+			/>
+		</label>
+		<span class="fichiers-compte">
+			{nombre}/{max}{#if _types}
+				· {_types}{/if}
+		</span>
 	{/if}
 </div>
 
 <style>
 	/*  Mêmes valeurs que `.field label` : l'œil doit lire la même chose qu'un
 	    intitulé de champ ordinaire. */
-	.fichiers-titre { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
-	.fichiers-upload { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
-	.fichiers-liste { display: flex; gap: .35rem; flex-wrap: wrap; }
+	.fichiers-titre {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-text);
+		margin-bottom: 0.3rem;
+	}
+	.fichiers-upload {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: flex-start;
+	}
+	.fichiers-liste {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
 	.fichier-chip {
 		display: inline-flex;
 		align-items: center;
-		gap: .3rem;
+		gap: 0.3rem;
 		max-width: 100%;
-		padding: .2rem .45rem;
+		padding: 0.2rem 0.45rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		background: var(--color-bg-alt, #f5f5f5);
-		font-size: .8rem;
+		font-size: 0.8rem;
 	}
 	.fichier-nom {
 		overflow: hidden;
@@ -291,24 +346,39 @@
 		position: absolute;
 		top: 2px;
 		right: 2px;
-		background: rgba(0, 0, 0, .6);
+		background: rgba(0, 0, 0, 0.6);
 		color: #fff;
 		border: none;
 		border-radius: 50%;
 		width: 18px;
 		height: 18px;
-		font-size: .75rem;
+		font-size: 0.75rem;
 		cursor: pointer;
 		line-height: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
-	.fichiers-ajout { cursor: pointer; display: inline-flex; align-items: center; gap: .3rem; }
-	.fichiers-ajout.disabled { opacity: .5; cursor: default; }
-	.fichiers-ajout input { display: none; }
-	.fichiers-compte { font-size: .72rem; color: var(--color-text-muted); }
+	.fichiers-ajout {
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.fichiers-ajout.disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.fichiers-ajout input {
+		display: none;
+	}
+	.fichiers-compte {
+		font-size: 0.72rem;
+		color: var(--color-text-muted);
+	}
 	@media (max-width: 480px) {
-		.fichier-nom { max-width: 58vw; }
+		.fichier-nom {
+			max-width: 58vw;
+		}
 	}
 </style>

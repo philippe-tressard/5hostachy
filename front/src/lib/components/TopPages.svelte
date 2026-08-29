@@ -45,7 +45,7 @@
 						<td style="text-align:right;font-weight:600">{p.total}</td>
 						<td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
 						<td style="text-align:right;color:var(--color-text-muted)">
-							{(p.total / diviseur * 100).toFixed(1)}%
+							{((p.total / diviseur) * 100).toFixed(1)}%
 						</td>
 					</tr>
 				{/each}
@@ -59,7 +59,10 @@
 						      dans chaque page qu'il a vue, et la somme dirait « 17 personnes »
 						      là où il n'y en a qu'une. Le nombre réel d'utilisateurs distincts
 						      est celui de l'indicateur en tête d'écran. -->
-						<span title="La somme des utilisateurs par page compterait plusieurs fois la même personne. Le nombre d'utilisateurs distincts est donné par l'indicateur « Utilisateurs » en haut de cette page.">—</span>
+						<span
+							title="La somme des utilisateurs par page compterait plusieurs fois la même personne. Le nombre d'utilisateurs distincts est donné par l'indicateur « Utilisateurs » en haut de cette page."
+							>—</span
+						>
 					</td>
 					<td style="text-align:right;color:var(--color-text-muted)">
 						{totalVues > 0 ? '100.0%' : '—'}
@@ -70,28 +73,40 @@
 		{#if vuesNonAttribuees > 0}
 			<p class="tl-note">
 				Dont <strong>{vuesNonAttribuees}</strong> vue{vuesNonAttribuees > 1 ? 's' : ''}
-				non rattachée{vuesNonAttribuees > 1 ? 's' : ''} à un utilisateur — enregistrée{vuesNonAttribuees > 1 ? 's' : ''}
-				avant l'ouverture de la session ou après son expiration. C'est ce qui explique
-				l'écart avec le tableau « Utilisateurs les plus actifs ».
+				non rattachée{vuesNonAttribuees > 1 ? 's' : ''} à un utilisateur — enregistrée{vuesNonAttribuees >
+				1
+					? 's'
+					: ''}
+				avant l'ouverture de la session ou après son expiration. C'est ce qui explique l'écart avec le
+				tableau « Utilisateurs les plus actifs ».
 			</p>
 		{/if}
 		<p class="muted" style="font-size:.78rem;margin:.5rem 0 0">
-			Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au
-			total du site.
+			Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au total du site.
 		</p>
 	</div>
 {/if}
 
 <style>
-	.tl-note { font-size: .8rem; color: var(--color-text-muted); line-height: 1.5; margin: .6rem 0 0; }
+	.tl-note {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin: 0.6rem 0 0;
+	}
 	tfoot tr.total > td {
 		border-top: 2px solid var(--color-border);
 		font-weight: 700;
-		padding-top: .5rem;
+		padding-top: 0.5rem;
 	}
 	/*  L'intitulé d'un panneau de télémétrie. Il s'appelait `.tl-section-title`
 	    et sa règle vivait dans la PAGE : `TopPages` étant un composant à part, il
 	    ne l'a jamais reçue — un composant enfant n'hérite pas d'un style scopé
 	    (#495). Renommé pour ne pas laisser croire qu'il partage une définition. */
-	.titre-panneau { font-size: .95rem; font-weight: 600; margin: 0 0 .75rem; padding: .75rem 1rem 0; }
+	.titre-panneau {
+		font-size: 0.95rem;
+		font-weight: 600;
+		margin: 0 0 0.75rem;
+		padding: 0.75rem 1rem 0;
+	}
 </style>

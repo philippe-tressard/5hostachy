@@ -129,9 +129,11 @@
 		cursor: pointer;
 		color: var(--color-text-muted);
 		border-radius: var(--radius);
-		transition: color .15s;
+		transition: color 0.15s;
 	}
-	.oeil:hover { color: var(--color-text); }
+	.oeil:hover {
+		color: var(--color-text);
+	}
 	/* Le survol ne suffit pas : au doigt comme au clavier, il n'existe pas. */
 	.oeil:focus-visible {
 		color: var(--color-text);
@@ -140,13 +142,15 @@
 	}
 
 	.message {
-		margin-top: .4rem;
-		font-size: .8rem;
+		margin-top: 0.4rem;
+		font-size: 0.8rem;
 		line-height: 1.4;
 	}
-	.erreur { color: var(--color-danger); }
+	.erreur {
+		color: var(--color-danger);
+	}
 	.verrou-maj {
-		padding: .45rem .7rem;
+		padding: 0.45rem 0.7rem;
 		background: #fffbeb;
 		border: 1px solid #fcd34d;
 		border-radius: var(--radius);
