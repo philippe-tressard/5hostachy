@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import get_current_user, peut_commenter, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Idee,
@@ -300,8 +300,8 @@ def delete_reponse(
     rep = session.get(ReponseCommunaute, rep_id)
     if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != idee_id:
         raise HTTPException(404, "Réponse introuvable")
-    est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-    if rep.auteur_id != user.id and not est_cs:
+    #  L'auteur, ou un modérateur — règle du module central.
+    if not peut_commenter(rep, user):
         raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
     session.delete(rep)
     session.commit()
