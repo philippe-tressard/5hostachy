@@ -32,6 +32,7 @@
   refaite deux fois depuis.
 -->
 <script lang="ts">
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
@@ -309,6 +310,16 @@
 				</div>
 			{:else}
 				{#each ahList as annonce}
+					<!--  🔴 `EnteteCarte` + `Vignette`, la NORME des cartes du site depuis le
+					      18/08/2026 (#480). Cette liste recomposait son en-tête à la main —
+					      titre après les badges, méta sur sa propre ligne — alors que les cinq
+					      autres listes passent par le composant. Deux cartes du même site ne
+					      se lisaient pas pareil, et surtout : c'est en recomposant un en-tête
+					      que le titre avait disparu sur téléphone.
+
+					      ⚠️ `basculable` : le titre déplie, comme partout ailleurs. Le bouton
+					      ▼ reste — il porte l'affordance pour qui ne devine pas qu'un titre
+					      clique —, mais il n'est plus le seul chemin. -->
 					<div class="card ah-card">
 						<div class="ah-card-top">
 							<Vignette
@@ -319,32 +330,38 @@
 								title="Format {annonce.format_label}"
 							/>
 							<div class="ah-card-body">
-								<div class="ah-card-badges">
-									<span class="badge badge-blue">{annonce.format_label}</span>
-									<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
-									{#if annonce.publication_id}<span class="badge badge-gray" title="Générée depuis une actualité">&#x1F4F0; Actualité</span>{/if}
-									{#if annonce.archivee}<span class="badge badge-gray">Archivée</span>{/if}
-								</div>
-								<strong class="ah-card-titre">{annonce.titre}</strong>
+								<EnteteCarte titre={annonce.titre} date={fmtDate(annonce.cree_le)}
+									basculable
+									on:toggle={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
+								>
+									<svelte:fragment slot="tags">
+										<span class="badge badge-blue">{annonce.format_label}</span>
+										<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
+										{#if annonce.publication_id}<span class="badge badge-gray" title="Générée depuis une actualité">&#x1F4F0; Actualité</span>{/if}
+										{#if annonce.archivee}<span class="badge badge-gray">Archivée</span>{/if}
+									</svelte:fragment>
+									<svelte:fragment slot="actions">
+										<a class="btn btn-sm btn-outline" href={annoncesHallApi.pdfUrl(annonce.id)} target="_blank" rel="noopener">
+											&#x1F4C4; PDF{#if annonce.taille_octets} <span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
+										</a>
+										<button class="btn btn-sm btn-outline"
+											aria-label={ahExpandedId === annonce.id ? 'Replier' : 'Déplier'}
+											on:click|stopPropagation={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}>
+											{ahExpandedId === annonce.id ? '▲' : '▼'}
+										</button>
+									</svelte:fragment>
+								</EnteteCarte>
+								<!--  La méta reste SOUS l'en-tête : elle porte l'envoi, qui n'est ni
+								      un tag ni une date de création. -->
 								<small class="ah-card-meta">
-									{fmtDate(annonce.cree_le)}
-									{#if annonce.auteur_nom} · {annonce.auteur_nom}{/if}
+									{#if annonce.auteur_nom}{annonce.auteur_nom} · {/if}
 									{#if annonce.destinataires.length}
-										· &#x2709; {annonce.destinataires.length} destinataire{annonce.destinataires.length > 1 ? 's' : ''}
+										&#x2709; {annonce.destinataires.length} destinataire{annonce.destinataires.length > 1 ? 's' : ''}
 									{:else}
-										· <span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
+										<span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
 									{/if}
 								</small>
 								<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
-							</div>
-							<div class="ah-card-actions">
-								<a class="btn btn-sm btn-outline" href={annoncesHallApi.pdfUrl(annonce.id)} target="_blank" rel="noopener">
-									&#x1F4C4; PDF{#if annonce.taille_octets} <span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
-								</a>
-								<button class="btn btn-sm btn-outline"
-									on:click={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}>
-									{ahExpandedId === annonce.id ? '▲' : '▼'}
-								</button>
 							</div>
 						</div>
 
@@ -405,8 +422,9 @@
 	.ah-card { padding: .85rem 1.1rem; margin-bottom: .5rem; }
 	.ah-card-top { display: flex; gap: .85rem; align-items: flex-start; }
 	.ah-card-body { flex: 1; min-width: 0; }
-	.ah-card-badges { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .25rem; }
-	.ah-card-titre { font-size: .95rem; font-weight: 600; display: block; margin-bottom: .15rem; }
+	/*  `.ah-card-badges` et `.ah-card-titre` retirées le 29/08/2026 (#480) :
+	    `EnteteCarte` porte désormais les tags et le titre, avec leur mise en
+	    forme. Les laisser aurait fait deux vocabulaires pour une seule notion. */
 	.ah-card-meta { color: var(--color-text-muted); font-size: .78rem; }
 	.ah-card-apercu { font-size: .82rem; color: var(--color-text-muted); margin-top: .35rem; }
 	.ah-card-actions { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
