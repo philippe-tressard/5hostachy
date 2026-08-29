@@ -22,7 +22,7 @@ import pytest
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models.core import AnnonceHall, Publication
+from app.models.core import AnnonceHall, Publication, Utilisateur
 from app.routers.publications.commun import appliquer_confidentialite
 from app.utils.whatsapp import TITRE_CONFIDENTIEL, construire_message
 
@@ -36,20 +36,28 @@ CONFIG = {
 }
 
 
-#: La publication n'est **jamais** confiée à la session, et c'est délibéré :
-#: `appliquer_confidentialite` consulte l'arborescence des périmètres, qui ouvre
-#: sa propre session. Sur `sqlite:///:memory:` les deux partagent la même
-#: connexion, et la fermeture de la seconde annule la transaction de la première
-#: — une ligne insérée sans `commit` disparaît alors sous les pieds du test.
-#: Seule l'affiche a besoin d'exister en base ; la publication est un objet
-#: détaché portant un identifiant fixe.
-ID_PUBLICATION = 90_347
+#: L'objet passé à `appliquer_confidentialite` reste **détaché**, et c'est
+#: délibéré : la fonction consulte l'arborescence des périmètres, qui ouvre sa
+#: propre session. Sur `sqlite:///:memory:` les deux partagent la même connexion,
+#: et la fermeture de la seconde annule la transaction de la première — une ligne
+#: insérée sans `commit` disparaît alors sous les pieds du test.
+#:
+#: 🔴 Mais l'AFFICHE, elle, est bien écrite en base, et elle portait
+#: `publication_id = 90_347` — un identifiant inventé, sur une publication qui
+#: n'existait pas. Sous `foreign_keys=ON` la base le refuse (#546), et elle a
+#: raison : ce n'était pas le sujet du test, c'était un accident de montage.
+#:
+#: La publication est donc COMMITTÉE (le grief du commentaire d'origine portait
+#: sur les lignes non committées, pas sur les autres), et l'objet détaché reprend
+#: son identifiant. Le test mesure la même chose, sur un état qui peut exister.
 
 
 def _publication(*, perimetre: list[str], confidentiel: bool,
-                 annonce_hall: bool = False) -> Publication:
+                 annonce_hall: bool = False, porteurs=None) -> Publication:
     return Publication(
-        id=ID_PUBLICATION, titre=VRAI_TITRE, contenu=VRAI_CONTENU, auteur_id=1,
+        id=porteurs["publication"] if porteurs else None,
+        titre=VRAI_TITRE, contenu=VRAI_CONTENU,
+        auteur_id=porteurs["auteur"] if porteurs else None,
         perimetre_cible=json.dumps(perimetre, ensure_ascii=False),
         public_cible='["résidents"]',
         confidentiel=confidentiel, annonce_hall=annonce_hall,
@@ -58,22 +66,43 @@ def _publication(*, perimetre: list[str], confidentiel: bool,
 
 @pytest.fixture
 def session_affiches():
-    """Une session propre, débarrassée de ses affiches à la sortie."""
+    """Une session, un auteur et une publication RÉELS — purgés à la sortie.
+
+    ⚠️ La fixture rend `(session, porteurs)` là où elle ne rendait que la
+    session : les porteurs sont désormais montés, donc leurs identifiants sont
+    attribués par la base et ne peuvent plus être écrits en dur.
+    """
+    import uuid
+
+    from tests.purge_test import purger_ligne
+
     with Session(engine) as session:
+        auteur = Utilisateur(
+            email=f"affiche-{uuid.uuid4().hex[:8]}@exemple.test",
+            mot_de_passe_hash="x", prenom="A", nom="H", actif=True,
+        )
+        session.add(auteur)
+        session.commit()
+        session.refresh(auteur)
+        pub = Publication(titre=VRAI_TITRE, contenu=VRAI_CONTENU, auteur_id=auteur.id)
+        session.add(pub)
+        session.commit()
+        session.refresh(pub)
+        porteurs = {"auteur": auteur.id, "publication": pub.id}
         try:
-            yield session
+            yield session, porteurs
         finally:
             session.rollback()
-            for a in session.exec(
-                select(AnnonceHall).where(AnnonceHall.publication_id == ID_PUBLICATION)
-            ).all():
-                session.delete(a)
-            session.commit()
+            #  La purge passe par le code de production : elle emporte l'affiche
+            #  avec la publication, sans que la fixture ait à connaître le graphe.
+            purger_ligne(session, Publication, pub.id)
+            purger_ligne(session, Utilisateur, auteur.id)
 
 
-def _affiche(session: Session) -> AnnonceHall:
+def _affiche(session: Session, porteurs) -> AnnonceHall:
     affiche = AnnonceHall(titre=VRAI_TITRE, message=VRAI_CONTENU,
-                          publication_id=ID_PUBLICATION, auteur_id=1)
+                          publication_id=porteurs["publication"],
+                          auteur_id=porteurs["auteur"])
     session.add(affiche)
     session.commit()
     return affiche
@@ -83,9 +112,10 @@ def _affiche(session: Session) -> AnnonceHall:
 
 def test_confidentiel_retire_l_option_affiche_de_hall(batiments, session_affiches):
     """Cocher les deux est contradictoire : c'est la confidentialité qui gagne."""
+    session, porteurs = session_affiches
     pub = _publication(perimetre=[f"bat:{batiments[0]}"], confidentiel=True,
-                       annonce_hall=True)
-    appliquer_confidentialite(pub, session_affiches)
+                       annonce_hall=True, porteurs=porteurs)
+    appliquer_confidentialite(pub, session)
     assert pub.annonce_hall is False
 
 
@@ -96,12 +126,13 @@ def test_une_affiche_deja_generee_est_archivee(batiments, session_affiches):
     retirer. L'affiche existante est **archivée** et non supprimée : le PDF a été
     envoyé au CS et fait foi (archiver ≠ supprimer, `standards/11`).
     """
-    affiche = _affiche(session_affiches)
+    session, porteurs = session_affiches
+    affiche = _affiche(session, porteurs)
     pub = _publication(perimetre=[f"bat:{batiments[0]}"], confidentiel=True,
-                       annonce_hall=True)
+                       annonce_hall=True, porteurs=porteurs)
 
-    appliquer_confidentialite(pub, session_affiches)
-    session_affiches.commit()
+    appliquer_confidentialite(pub, session)
+    session.commit()
 
     assert pub.annonce_hall is False
     assert affiche.archivee is True
@@ -109,12 +140,13 @@ def test_une_affiche_deja_generee_est_archivee(batiments, session_affiches):
 
 def test_l_affiche_survit_a_une_actualite_qui_reste_publique(batiments, session_affiches):
     """Le contrôle sait aussi ne RIEN faire — sinon il archiverait tout."""
-    affiche = _affiche(session_affiches)
+    session, porteurs = session_affiches
+    affiche = _affiche(session, porteurs)
     pub = _publication(perimetre=[f"bat:{batiments[0]}"], confidentiel=False,
-                       annonce_hall=True)
+                       annonce_hall=True, porteurs=porteurs)
 
-    appliquer_confidentialite(pub, session_affiches)
-    session_affiches.commit()
+    appliquer_confidentialite(pub, session)
+    session.commit()
 
     assert pub.annonce_hall is True
     assert affiche.archivee is False
@@ -128,21 +160,23 @@ def test_un_perimetre_qui_concerne_tout_le_monde_decoche_la_case(batiments, sess
     regarder le bâtiment. Conserver la case cochée afficherait un 🔒 sur une
     publication que tout le monde lit.
     """
+    session, porteurs = session_affiches
     from app.utils.perimetres import code_par_defaut
 
     pub = _publication(perimetre=[code_par_defaut()], confidentiel=True)
-    appliquer_confidentialite(pub, session_affiches)
+    appliquer_confidentialite(pub, session)
     assert pub.confidentiel is False
 
     vide = _publication(perimetre=[], confidentiel=True)
-    appliquer_confidentialite(vide, session_affiches)
+    appliquer_confidentialite(vide, session)
     assert vide.confidentiel is False
 
 
 def test_un_perimetre_de_batiment_conserve_la_case(batiments, session_affiches):
     """Le pendant du précédent : là, la confidentialité mord vraiment."""
+    session, porteurs = session_affiches
     pub = _publication(perimetre=[f"bat:{batiments[1]}"], confidentiel=True)
-    appliquer_confidentialite(pub, session_affiches)
+    appliquer_confidentialite(pub, session)
     assert pub.confidentiel is True
 
 

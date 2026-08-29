@@ -41,7 +41,8 @@ import pytest  # noqa: E402  (après les variables d'environnement, par construc
 #
 #  ⚠️ La PRODUCTION reste à `foreign_keys=OFF` : l'activer là-bas rendrait
 #  bloquantes des suppressions aujourd'hui silencieuses, et il faut d'abord
-#  décider l'`ON DELETE` des onze relations concernées — cascade, `SET NULL` ou
+#  relever les `session.delete()` applicatifs qui ne passent pas par
+#  `purge_referentielle`, puis décider par relation — cascade, `SET NULL` ou
 #  refus. C'est une décision fonctionnelle (#546 étape 3), pas un réglage.
 #
 #  ⚠️ L'écouteur est posé sur `connect`, seul point qui couvre TOUTES les
@@ -76,21 +77,29 @@ def _activer_cles_etrangeres() -> None:
 
 
 def pytest_configure(config):  # noqa: ARG001
-    #  ⚠️ DÉSACTIVÉ PAR DÉFAUT, et ce n'est pas une timidité : avec les clés
-    #  actives, la suite passe de 798 verts à **83 erreurs et 4 échecs** — toutes
-    #  des fixtures qui construisent des lignes orphelines, aucune venant d'un
-    #  chemin de production. Les rendre valides est l'étape 2 de #546, un lot à
-    #  part entière ; l'activer ici avant qu'elle soit finie rendrait le job rouge
-    #  en permanence, donc désarmé dans la semaine (#419).
+    #  🔴 ACTIF PAR DÉFAUT depuis le 29/08/2026 (#546, fin de l'étape 2).
     #
-    #  Ce que l'interrupteur apporte dès maintenant : la mesure se rejoue en une
-    #  commande, sans remettre le montage en place à chaque fois —
+    #  Il ne l'était pas : la suite passait de 798 verts à 103 erreurs sous les
+    #  clés, toutes des fixtures qui construisaient des lignes orphelines, et un
+    #  contrôle rouge en permanence est désarmé dans la semaine.
     #
-    #      HOSTACHY_FK_STRICTES=1 pytest tests/ -q
+    #  Quatre lots plus tard, il n'en reste **aucune** — 873 verts dans les deux
+    #  régimes. L'interrupteur devient donc le régime NORMAL, et c'est le seul
+    #  moyen que le travail tienne : une fixture écrite demain qui invente un
+    #  `auteur_id` échoue tout de suite, au lieu de rejoindre en silence les cent
+    #  trois d'hier (`standards/05` — un défaut corrigé sans garde-fou revient).
     #
-    #  et `test_integrite_referentielle.py` s'en sert pour verrouiller ce qui est
-    #  DÉJÀ réparé, sans attendre que tout le soit.
-    if os.environ.get("HOSTACHY_FK_STRICTES") == "1":
+    #  ⚠️ La PRODUCTION reste à `foreign_keys=OFF`. Ce qui manque n'est plus la
+    #  propreté des données mais le RELEVÉ des suppressions applicatives : chaque
+    #  `session.delete()` qui ne passe pas par `purge_referentielle` peut devenir
+    #  bloquant, et il faut décider par relation — cascade, `SET NULL` ou refus.
+    #  C'est #546 étape 3, une décision fonctionnelle et non un réglage.
+    #
+    #  🔓 Pour revoir le monde d'avant — mesurer ce que les clés apportent, ou
+    #  isoler un échec qui n'a rien à voir : `HOSTACHY_FK_STRICTES=0 pytest`.
+    #  ⚠️ Cette porte n'existe QUE pour le diagnostic. Un lot qui a besoin de la
+    #  fermer pour passer a un défaut à corriger, pas un réglage à changer.
+    if os.environ.get("HOSTACHY_FK_STRICTES") != "0":
         _activer_cles_etrangeres()
 
 

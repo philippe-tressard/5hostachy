@@ -35,6 +35,7 @@ from app.utils import perimetres as P
 from tests.conftest import vider_patrimoine
 from app.utils.destinataires import batiments_du_perimetre
 from app.utils.visibility import perimetre_visible, publication_visible
+from tests.purge_test import etat_invalide
 
 RACINE_API = Path(__file__).resolve().parents[1]
 
@@ -253,7 +254,11 @@ def test_cycle_de_parente_ne_suspend_pas_et_refuse(batiments):
 
 def test_parent_orphelin_ne_suspend_pas_et_refuse(batiments):
     """Un `parent_id` qui ne pointe sur rien arrête la remontée sans lever."""
-    with Session(engine) as session:
+    #  🔴 L'état corrompu est le SUJET de ce test : il faut donc le fabriquer,
+    #  et sous `foreign_keys=ON` la base le refuse (#546). La porte est locale et
+    #  nommée — supprimer le test aurait retiré le contrôle qui protège d'une
+    #  corruption au moment même où l'on active le mécanisme censé la prévenir.
+    with Session(engine) as session, etat_invalide(session):
         session.add(Perimetre(code="orphelin", libelle="Orphelin", parent_id=999_999))
         session.commit()
     P.invalider_cache()

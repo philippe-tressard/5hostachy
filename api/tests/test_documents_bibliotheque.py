@@ -27,12 +27,15 @@ pour autant. Deux questions différentes, deux mécanismes.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 import pytest
-from sqlmodel import Session, SQLModel, delete
+from sqlmodel import SQLModel, Session, delete, select
 
 from app.database import engine
-from app.models.core import Document, RoleUtilisateur, Utilisateur
+from app.models.core import (
+    Document, Evenement, RoleUtilisateur, Ticket, Utilisateur,
+)
 from app.routers.documents import list_documents, upload_document
 
 
@@ -51,6 +54,33 @@ def bibliotheque():
         session.commit()
         session.refresh(admin)
 
+        #  🔴 Les PORTEURS sont montés, pas inventés. La fixture écrivait
+        #  `ticket_id=11` et `evenement_id=22` — deux identifiants tirés au
+        #  hasard, sur des lignes qui n'existaient pas. Tant que SQLite ne
+        #  vérifiait pas ses clés, la pièce jointe pointait dans le vide et le
+        #  test passait quand même (#546).
+        #
+        #  ⚠️ Et ce n'est pas qu'une question de propreté : ce fichier éprouve
+        #  précisément que la bibliothèque distingue un document de DÉPÔT d'une
+        #  pièce JOINTE à un porteur. Faire reposer cette distinction sur un
+        #  rattachement fictif, c'était mesurer la règle sur un cas qui ne peut
+        #  pas se produire en production.
+        #
+        #  ⚠️ `ticket.numero` est UNIQUE — et c'est une CHAÎNE, pas un entier :
+        #  la fixture tourne une fois par test, un numéro en dur passe au premier
+        #  et refuse au second.
+        porteur_ticket = Ticket(
+            numero=uuid.uuid4().hex[:8], titre="Fuite au sous-sol",
+            description="…", auteur_id=admin.id,
+        )
+        porteur_evenement = Evenement(
+            titre="Visite de l'ascensoriste", debut=datetime.utcnow(), auteur_id=admin.id,
+        )
+        session.add_all([porteur_ticket, porteur_evenement])
+        session.commit()
+        session.refresh(porteur_ticket)
+        session.refresh(porteur_evenement)
+
         #  Le document de dépôt porte une catégorie — c'est ce qui en fait un
         #  document de la bibliothèque, et non le fait d'exister.
         depot = Document(
@@ -62,16 +92,23 @@ def bibliotheque():
         jointe_ticket = Document(
             titre="Photo de la fuite", fichier_nom="fuite.jpg",
             fichier_chemin="/app/uploads/prive/fuite.jpg",
-            ticket_id=11, publie_par_id=admin.id,
+            ticket_id=porteur_ticket.id, publie_par_id=admin.id,
         )
         jointe_evenement = Document(
             titre="Plan d'accès", fichier_nom="plan.pdf",
             fichier_chemin="/app/uploads/prive/plan.pdf",
-            evenement_id=22, publie_par_id=admin.id,
+            evenement_id=porteur_evenement.id, publie_par_id=admin.id,
         )
         session.add_all([depot, jointe_ticket, jointe_evenement])
         session.commit()
-        ids = {"depot": depot.id, "ticket": jointe_ticket.id, "evenement": jointe_evenement.id}
+        #  Les identifiants des PORTEURS sont rendus eux aussi : le test les
+        #  écrivait en dur (11 et 22), donc il pariait sur les mêmes valeurs
+        #  inventées que la fixture. Deux endroits à corriger ensemble, et rien
+        #  ne le disait.
+        ids = {
+            "depot": depot.id, "ticket": jointe_ticket.id, "evenement": jointe_evenement.id,
+            "porteur_ticket": porteur_ticket.id, "porteur_evenement": porteur_evenement.id,
+        }
         yield admin, ids
     with Session(engine) as session:
         session.exec(delete(Document))
@@ -97,8 +134,8 @@ def test_les_pieces_jointes_se_lisent_par_leur_porteur(bibliotheque):
     """
     admin, ids = bibliotheque
     with Session(engine) as session:
-        du_ticket = {d.id for d in list_documents(ticket_id=11, session=session, user=admin)}
-        de_l_evenement = {d.id for d in list_documents(evenement_id=22, session=session, user=admin)}
+        du_ticket = {d.id for d in list_documents(ticket_id=ids["porteur_ticket"], session=session, user=admin)}
+        de_l_evenement = {d.id for d in list_documents(evenement_id=ids["porteur_evenement"], session=session, user=admin)}
 
     assert du_ticket == {ids["ticket"]}
     assert de_l_evenement == {ids["evenement"]}

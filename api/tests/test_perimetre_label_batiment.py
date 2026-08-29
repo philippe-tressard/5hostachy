@@ -59,7 +59,7 @@ from app.models.perimetre import Perimetre
 #  `perimetre.modifie_par_id` sans le modèle `Utilisateur` en mémoire.
 from app.models.core import Utilisateur  # noqa: F401
 from app.utils import perimetres as P
-from tests.purge_test import vider_perimetres
+from tests.purge_test import monter_batiments, vider_perimetres
 
 
 @pytest.fixture()
@@ -72,12 +72,22 @@ def arbre_deux_batiments():
         #  Par VAGUES : `perimetre` s'auto-référence, un DELETE global viole la
         #  clé sur les enfants dès que `foreign_keys=ON` (#546).
         vider_perimetres(session)
-        for numero in (3, 4):
+        #  🔴 Les bâtiments sont MONTÉS, pas supposés. `Perimetre.batiment_id`
+        #  est une clé étrangère : la fixture posait `batiment_id=3` sur un
+        #  bâtiment qui n'existait pas, et la base ne disait rien tant qu'elle ne
+        #  vérifiait pas ses clés (#546).
+        #  ⚠️ Le NUMÉRO du bâtiment et son IDENTIFIANT sont deux choses. Le
+        #  premier est ce que le résident lit (« Bât. 3 ») ; le second est la
+        #  clé étrangère. La fixture les confondait — elle écrivait
+        #  `batiment_id=3` — et ça tenait tant que la base ne vérifiait rien et
+        #  que l'auto-incrément partait de 1 sur une table vide. Deux paris, et
+        #  le second faussait le libellé dès qu'on montait les bâtiments.
+        for numero, batiment_id in zip(("3", "4"), monter_batiments(session, ("3", "4"))):
             bat = f"bat{suffixe}:{numero}"
             noeud_bat = Perimetre(
                 code=bat, libelle=f"Bâtiment {numero}",
-                libelle_court=f"Bât. {numero}", description="", batiment_id=numero,
-                profondeur=0, ordre=numero, actif=True, selectionnable=True,
+                libelle_court=f"Bât. {numero}", description="", batiment_id=batiment_id,
+                profondeur=0, ordre=int(numero), actif=True, selectionnable=True,
             )
             session.add(noeud_bat)
             #  ⚠️ Le lien de parenté est `parent_id`, un ENTIER — pas un code. Mon
@@ -90,7 +100,7 @@ def arbre_deux_batiments():
             toit = f"{bat}/toit"
             session.add(Perimetre(
                 code=toit, parent_id=noeud_bat.id, libelle="Toit",
-                libelle_court="Toit", description="", batiment_id=numero,
+                libelle_court="Toit", description="", batiment_id=batiment_id,
                 profondeur=1, ordre=1, actif=True, selectionnable=True,
             ))
             codes.append((bat, toit))
