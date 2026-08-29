@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BarreFiltres from '$lib/components/BarreFiltres.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
@@ -842,21 +843,15 @@
 <!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'prestataires'}
 
-	<!-- Filtres par type -->
-	<div class="filters filters--defilante">
-		<button class="btn btn-sm" class:btn-primary={filtreType === ''} on:click={() => filtreType = ''}>Tous</button>
-		{#each typesPrestataire as t}
-			<button class="btn btn-sm" class:btn-primary={filtreType === t.val} on:click={() => filtreType = t.val} title={t.desc}>{t.label}</button>
-		{/each}
-	</div>
-
-	<!-- Filtres par équipement -->
-	<div class="filters filters--defilante">
-		<button class="btn btn-sm" class:btn-primary={filtreEquipement === ''} on:click={() => filtreEquipement = ''}>Tous équipements</button>
-		{#each equipements as e}
-			<button class="btn btn-sm" class:btn-primary={filtreEquipement === e.val} on:click={() => filtreEquipement = e.val}>{e.label}</button>
-		{/each}
-	</div>
+	<!--  Deux rangées, UN motif : `BarreFiltres` le porte (#491). Il était écrit
+	      deux fois ici, à trois mots près — la duplication la plus discrète, celle
+	      qu'aucun contrôle inter-fichiers ne voit.
+	      `avecDetail` sur les types seuls : leur description vivait dans un `title`,
+	      donc invisible au tactile. Les douze équipements n'en portent pas. -->
+	<BarreFiltres options={typesPrestataire} bind:valeur={filtreType} avecDetail
+		libelle="Filtrer par type de prestataire" />
+	<BarreFiltres options={equipements} bind:valeur={filtreEquipement}
+		tous="Tous équipements" libelle="Filtrer par équipement" />
 
 	{#if $isCS && showPrestForm}
 		<FormulaireCreation titre={editPrestId ? 'Modifier le prestataire' : 'Nouveau prestataire'}>
@@ -1149,8 +1144,9 @@
 	/* ── Onglets ── */
 	.tabs { padding-bottom: .1rem; overflow-x: auto; scrollbar-width: thin; }  /* le reste : charte (#607) */
 	.tabs button { padding: .45rem .75rem; border: none; background: none; cursor: pointer; font-size: .85rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; white-space: nowrap; display: inline-flex; align-items: center; gap: .3rem; }
-	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
-	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
+	/*  `:hover` et `.active` viennent de la charte (#491) : cet écran ne garde
+	    que son ÉCART — des onglets à icône, plus compacts, qui tiennent sur
+	    une ligne. Les redéfinir à l'identique ne servait à rien. */
 
 	/* ── Sous-vue toggle ── */
 

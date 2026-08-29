@@ -151,5 +151,6 @@
 	.idee-body { flex: 1; }
 	.idee-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
 	.idee-desc { font-size: .85rem; color: var(--color-text-muted); margin: .2rem 0 .3rem; }
-	.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
+	/*  `:hover` vient de `styles/composants.css` — la redéfinir à l'identique
+	    ne servait à rien (29/08/2026). */
 </style>
