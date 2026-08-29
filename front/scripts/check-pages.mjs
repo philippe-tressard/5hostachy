@@ -66,6 +66,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { valeursDeclarees } from './lib-lecture-source.mjs';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SOURCE = join(RACINE, 'lib', 'pages.ts');
@@ -112,12 +113,6 @@ function declare(texte, id) {
 }
 
 /** Retire commentaires et docstrings : expliquer la règle ne doit pas la violer. */
-function sansCommentaires(texte) {
-	return texte
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
-}
 
 /**
  * Découpe chaque appel `getPageConfig(…)` en ses arguments de premier niveau.

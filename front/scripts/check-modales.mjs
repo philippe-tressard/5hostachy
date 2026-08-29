@@ -27,6 +27,24 @@
  *      elles perdaient le `padding` et l'animation du fond, et l'une réduisait
  *      la boîte de 560 à 420 px sans que personne l'ait décidé.
  *
+ * ## Ce qui s'y ajoute le 29/08/2026 — l'EN-TÊTE et le TITRE
+ *
+ * Le contrôle ne regardait que le fond, et il était vert sur trois défauts que
+ * la même famille produit un cran plus bas :
+ *
+ *   3. `class="modal-header"` écrit à la main — **15 recopies** ;
+ *   4. le TITRE réécrit dans le contenu, alors que `<Modale>` le reçoit DÉJÀ en
+ *      prop pour l'`aria-label`. Deux écritures pour un objet, donc deux textes
+ *      libres de diverger : **onze des vingt-six avaient divergé**, et ce qu'un
+ *      lecteur d'écran annonçait n'était pas ce que l'écran affichait ;
+ *   5. toute règle `.modal-…` **déjà portée par la feuille commune**, redéfinie
+ *      localement. ⚠️ L'ancien motif n'acceptait que `.modal`, `.modal-overlay`
+ *      et `.modal-box` : `.modal-header h3` a donc survécu à l'identique dans
+ *      trois écrans, seule règle du bloc que #607 n'a pas pu solder — un
+ *      contrôle qui énumère les noms qu'il connaît est aveugle au suivant.
+ *      Une classe `.modal-…` **absente** du global reste permise : c'est une
+ *      classe propre à l'écran, pas un héritage partiel (`.modal-code`).
+ *
  * Le contrôle s'auto-contrôle : si le composant disparaît, change de contrat ou
  * n'est plus employé, il ÉCHOUE au lieu de conclure au vert
  * (`standards/04-fiabilite-des-controles.md` §2, cas zéro).
@@ -35,6 +53,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { cssGlobal } from './lib-css-global.mjs';
 import { emploieComposant } from './lib-lecture-source.mjs';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const COMPOSANT = join(RACINE, 'lib', 'components', 'Modale.svelte');
@@ -49,12 +68,6 @@ const COMPOSANT = join(RACINE, 'lib', 'components', 'Modale.svelte');
 const EXCEPTIONS = {};
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */
-function sansCommentaires(texte) {
-	return texte
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
-}
 
 function fichiers(dir) {
 	const sortie = [];
@@ -90,6 +103,9 @@ for (const [motif, quoi] of [
 	[/class="modal-overlay"/, 'le fond'],
 	[/role="dialog"/, 'le rôle de dialogue'],
 	[/'Escape'/, 'la fermeture au clavier'],
+	[/class="modal-header"/, "l'en-tête"],
+	[/class="modal-titre"/, 'le titre affiché'],
+	[/class="modal-close"/, 'le bouton de fermeture'],
 ]) {
 	if (!motif.test(composant)) {
 		console.error(`✗ Cas zéro : Modale ne porte plus ${quoi} — ce contrôle ne mesure plus rien.`);
@@ -120,17 +136,82 @@ const MOTIFS = [
 		remede: '<Modale titre="…" on:fermer={…}> … </Modale>',
 	},
 	{
-		//  Les trois règles ensemble : une copie locale de la boîte est le même
-		//  défaut qu'une copie locale du fond, et c'est celle qui avait divergé.
-		regex: /^[\t ]*\.modal(-overlay|-box)?[\s.,:[{]/gm,
-		quoi: 'une règle de modale est redéfinie en CSS local',
-		remede: 'elle vit dans `styles/composants.css` — passer par `classeBoite`/`styleBoite`',
+		regex: /class="[^"]*\bmodal-header\b/g,
+		quoi: "l'en-tête de modale est rendu à la main",
+		remede: 'le titre passe par la prop `titre` de <Modale> — ou par son slot `titre`',
 	},
 ];
+
+/**
+ * Toute règle `.modal-…` que la feuille commune porte DÉJÀ, redéfinie en local.
+ *
+ * Le motif se construit à partir du global plutôt que d'énumérer les noms
+ * connus : c'est l'énumération qui avait laissé passer `.modal-header h3`.
+ */
+function reglesRedefinies(contenu, classesGlobales) {
+	const trouves = [];
+	for (const m of contenu.matchAll(/^[\t ]*\.(modal[\w-]*)(?=[\s.,:[{])/gm)) {
+		if (classesGlobales.has(m[1])) trouves.push(m[0].trim());
+	}
+	return trouves;
+}
+
+/** Les `<Modale …>` d'un fichier, chacune réduite au début de son contenu. */
+function ouverturesModale(contenu) {
+	const sorties = [];
+	for (const m of contenu.matchAll(/<Modale(?=[\s>])/g)) {
+		//  Fin de la balise ouvrante : le premier `>` hors accolade — un attribut
+		//  peut contenir `=>` ou un objet, que suivre naïvement couperait trop tôt.
+		let i = m.index + '<Modale'.length;
+		let accolades = 0;
+		for (; i < contenu.length; i++) {
+			const c = contenu[i];
+			if (c === '{') accolades++;
+			else if (c === '}') accolades--;
+			else if (c === '>' && accolades === 0) break;
+		}
+		sorties.push(contenu.slice(i + 1, i + 400));
+	}
+	return sorties;
+}
+
+const compterModales = (contenu) => ouverturesModale(contenu).length;
+
+/**
+ * Un titre réécrit : un `<h1>`–`<h3>` en **premier** élément du contenu.
+ *
+ * Volontairement étroit — c'est la position qui trahit la recopie. Un `<h3>`
+ * plus bas nomme une section du contenu (`ApercuDiffusion` en a quatre), et
+ * l'interdire ferait de ce contrôle un contrôle qu'on désarme.
+ */
+function titresReecrits(contenu) {
+	const trouves = [];
+	for (const debut of ouverturesModale(contenu)) {
+		const m = debut.match(/^\s*<(h[1-3])\b[^>]*>([\s\S]*?)<\/\1>/);
+		if (m) trouves.push(`<${m[1]}> ${m[2].trim().split(/\s+/).slice(0, 6).join(' ')}`);
+	}
+	return trouves;
+}
+
+//  Les classes `.modal-…` que la feuille commune définit. Redéfinir l'une d'elles
+//  dans un écran, c'est l'héritage PARTIEL que `standards/11` §1 bis décrit ;
+//  en définir une qu'elle ignore, c'est une classe propre à l'écran — permis.
+const CSS_COMMUN = cssGlobal(RACINE);
+const classesGlobalesModal = new Set(
+	[...CSS_COMMUN.matchAll(/^[\t ]*\.(modal[\w-]*)(?=[\s.,:[{])/gm)].map((m) => m[1]),
+);
+if (classesGlobalesModal.size < 4) {
+	console.error(
+		`✗ Cas zéro : ${classesGlobalesModal.size} classe(s) \`.modal-…\` dans la feuille commune. ` +
+			'Elles ont déménagé — ce contrôle ne saurait plus dire ce qui est une redéfinition.',
+	);
+	process.exit(1);
+}
 
 const fautifs = [];
 const exceptionsUtiles = new Set();
 let fichiersAvecModale = 0;
+let titresRendus = 0;
 
 for (const f of tous) {
 	const rel = relative(RACINE, f).split(sep).join('/');
@@ -144,6 +225,23 @@ for (const f of tous) {
 	for (const motif of MOTIFS) {
 		const m = contenu.match(motif.regex);
 		if (m) trouves.push({ ...motif, exemples: [...new Set(m.map((s) => s.trim()))].slice(0, 3) });
+	}
+	const redefinies = reglesRedefinies(contenu, classesGlobalesModal);
+	if (redefinies.length > 0) {
+		trouves.push({
+			quoi: 'une règle de modale est redéfinie en CSS local',
+			remede: 'elle vit dans `styles/composants.css` — passer par `classeBoite`/`styleBoite`',
+			exemples: [...new Set(redefinies)].slice(0, 3),
+		});
+	}
+	const reecrits = titresReecrits(contenu);
+	titresRendus += compterModales(contenu);
+	if (reecrits.length > 0) {
+		trouves.push({
+			quoi: 'le titre est réécrit dans le contenu, alors que <Modale> le reçoit déjà',
+			remede: 'le supprimer — la prop `titre` est affichée ; pour un rendu riche, le slot `titre`',
+			exemples: reecrits.slice(0, 3),
+		});
 	}
 	if (trouves.length === 0) continue;
 	if (rel in EXCEPTIONS) {
@@ -164,8 +262,19 @@ if (fichiersAvecModale < 2) {
 	process.exit(1);
 }
 
+//  Le contrôle du titre ne vaut que s'il a des modales à regarder : sans ce
+//  compte, un jour où plus rien n'emploierait `<Modale>` il annoncerait « aucun
+//  titre réécrit » — vrai, et sans aucun rapport avec ce qu'il prétend garder.
+if (titresRendus < 25) {
+	console.error(
+		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), 25 attendues au minimum. ` +
+			'Le repérage des balises ouvrantes ne mord plus — ne pas lire ce contrôle comme vert.',
+	);
+	process.exit(1);
+}
+
 if (fautifs.length > 0) {
-	console.error('✗ Fond(s) de modale écrit(s) hors du composant :');
+	console.error('✗ Modale(s) recomposée(s) hors du composant :');
 	for (const { fichier, trouves } of fautifs) {
 		for (const t of trouves) {
 			console.error(`    ${fichier} — ${t.exemples.join(' · ')}`);
@@ -175,7 +284,9 @@ if (fautifs.length > 0) {
 	}
 	console.error(
 		"\n  Une copie du fond n'emporte pas ce qui compte : `Échap`, le rôle et le verrou de\n" +
-			"  défilement. Seize modales sur vingt-six ne se fermaient qu'à la souris (#561).",
+			"  défilement. Seize modales sur vingt-six ne se fermaient qu'à la souris (#561).\n" +
+			'  Et un titre écrit deux fois finit par dire deux choses : onze des vingt-six\n' +
+			"  annonçaient au lecteur d'écran autre chose que ce qu'elles affichaient.",
 	);
 	process.exit(1);
 }
@@ -188,6 +299,7 @@ if (inutiles.length > 0) {
 }
 
 console.log(
-	`✓ Modales : ${fichiersAvecModale} fichier(s) passent par Modale, ${tous.length} fichier(s) ` +
+	`✓ Modales : ${fichiersAvecModale} fichier(s) passent par Modale, ${titresRendus} modale(s) dont le ` +
+		`titre n'est écrit qu'une fois, ${tous.length} fichier(s) ` +
 		`vérifié(s), ${Object.keys(EXCEPTIONS).length} exception(s) déclarée(s) et justifiée(s).`,
 );

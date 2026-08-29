@@ -233,12 +233,11 @@
 	      description, et un clic à côté effaçait tout sans prévenir. `Échap` et
 	      « Annuler » suffisent, et sont des gestes voulus. -->
 	<Modale
-		titre="Modifier le périmètre"
+		titre={edite.libelle}
 		classeBoite="modal-box"
 		fermetureAuFond={false}
 		on:fermer={() => (edite = null)}
 	>
-		<h2>{edite.libelle}</h2>
 		<p class="modal-code">
 			Code <code>{edite.code}</code> — non modifiable : il est enregistré dans les contenus déjà publiés.
 		</p>
@@ -339,13 +338,11 @@
 <!-- ── Création ────────────────────────────────────────────────────────────── -->
 {#if creation}
 	<Modale
-		titre="Nouveau périmètre"
+		titre={creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}
 		classeBoite="modal-box"
 		fermetureAuFond={false}
 		on:fermer={() => (creation = null)}
 	>
-		<h2>{creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}</h2>
-
 		<label class="field"
 			>Libellé *
 			<input bind:value={nouveau.libelle} required />

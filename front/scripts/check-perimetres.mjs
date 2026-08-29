@@ -41,6 +41,7 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SOURCE = join(RACINE, 'lib', 'perimetres.ts');
@@ -86,12 +87,6 @@ const EXCEPTIONS = {
  * ce qu'il protège — c'est la même correction que celle faite côté Python, où
  * l'analyse passe par l'AST pour la même raison.
  */
-function sansCommentaires(texte) {
-	return texte
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
-}
 
 function fichiers(dir) {
 	const sortie = [];

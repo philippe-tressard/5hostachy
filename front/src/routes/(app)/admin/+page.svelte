@@ -1192,7 +1192,6 @@
 			classeBoite="modal-box card modal-sm"
 			on:fermer={() => (roleEnCours = null)}
 		>
-			<h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Confirmer</h2>
 			<p style="font-size:.875rem;margin-bottom:1rem">
 				{roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
 				<strong>{roleLabels[roleEnCours.role] ?? roleEnCours.role}</strong>
@@ -1218,7 +1217,6 @@
 			styleBoite="max-width:520px"
 			on:fermer={() => (editUser = null)}
 		>
-			<h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Modifier l'utilisateur</h2>
 			<div class="form-grid">
 				<label class="field">Prénom<input type="text" bind:value={editForm.prenom} /></label>
 				<label class="field">Nom<input type="text" bind:value={editForm.nom} /></label>
@@ -1256,14 +1254,11 @@
 
 	{#if accueilModal}
 		<Modale
-			titre="Accueil nouvel arrivant"
+			titre="🏠 Accueil nouvel arrivant"
 			classeBoite="modal-box card"
 			styleBoite="max-width:480px"
 			on:fermer={() => (accueilModal = null)}
 		>
-			<h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">
-				&#x1F3E0; Accueil nouvel arrivant
-			</h2>
 			<p style="font-size:.85rem;margin-bottom:.1rem">
 				<strong>{accueilModal.user.prenom} {accueilModal.user.nom}</strong>
 			</p>
@@ -1292,11 +1287,10 @@
 
 	{#if deleteConfirm}
 		<Modale
-			titre="Supprimer l'utilisateur"
+			titre="Supprimer l'utilisateur ?"
 			classeBoite="modal-box card modal-sm"
 			on:fermer={() => (deleteConfirm = null)}
 		>
-			<h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">Supprimer l'utilisateur ?</h2>
 			<p style="font-size:.875rem;margin-bottom:1rem">
 				Vous êtes sur le point de supprimer définitivement le compte de
 				<strong>{deleteConfirm.prenom} {deleteConfirm.nom}</strong> ({deleteConfirm.email}).
@@ -1597,15 +1591,11 @@
 {/if}
 {#if cvModal}
 	<Modale
-		titre="Valider le compte"
+		titre={`Valider le compte de ${cvModal.user.prenom} ${cvModal.user.nom}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:480px"
 		on:fermer={() => (cvModal = null)}
 	>
-		<h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">
-			Valider le compte de {cvModal.user.prenom}
-			{cvModal.user.nom}
-		</h2>
 		<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:1rem">
 			{cvModal.user.statut ? (statutLabels[cvModal.user.statut] ?? cvModal.user.statut) : ''}
 			{cvModal.lotsPrevus > 0 ? ` — ${cvModal.lotsPrevus} lot(s) détecté(s) dans l'import` : ''}

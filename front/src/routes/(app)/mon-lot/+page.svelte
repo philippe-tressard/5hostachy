@@ -1289,10 +1289,6 @@
 		styleBoite="width:min(560px,95vw)"
 		on:fermer={() => (showNewBail = false)}
 	>
-		<div class="modal-header">
-			<h3>Nouveau bail</h3>
-			<button class="modal-close" on:click={() => (showNewBail = false)}>✕</button>
-		</div>
 		<div class="modal-body">
 			<!-- Sélection des lots -->
 			<div class="field">
@@ -1470,10 +1466,6 @@
 		styleBoite="width:min(400px,95vw)"
 		on:fermer={() => (bailATerminer = null)}
 	>
-		<div class="modal-header">
-			<h3>Terminer le bail</h3>
-			<button class="modal-close" on:click={() => (bailATerminer = null)}>✕</button>
-		</div>
 		<div class="modal-body">
 			<p style="margin-bottom:0.75rem">
 				Confirmer la fin du bail de <strong>{nomLocataire(bailATerminer)}</strong> ?
@@ -1497,10 +1489,6 @@
 		styleBoite="width:min(400px,95vw)"
 		on:fermer={() => (bailASupprimer = null)}
 	>
-		<div class="modal-header">
-			<h3>Supprimer le bail</h3>
-			<button class="modal-close" on:click={() => (bailASupprimer = null)}>✕</button>
-		</div>
 		<div class="modal-body">
 			<p>
 				Supprimer définitivement le bail de <strong>{nomLocataire(bailASupprimer)}</strong> et tous ses
@@ -1520,14 +1508,10 @@
 <!-- ── Modal : modifier locataire ───────────────────────────────────── -->
 {#if bailEdite}
 	<Modale
-		titre="Modifier locataire"
+		titre="Modifier les informations"
 		styleBoite="width:min(560px,95vw)"
 		on:fermer={() => (bailEdite = null)}
 	>
-		<div class="modal-header">
-			<h3>Modifier les informations</h3>
-			<button class="modal-close" on:click={() => (bailEdite = null)}>✕</button>
-		</div>
 		<div class="modal-body">
 			<!-- Associer un compte locataire -->
 			<fieldset class="search-locataire-box" style="margin-bottom:1rem">
@@ -1680,15 +1664,11 @@
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
 {#if objetRetour}
 	<Modale
-		titre="Retour objet"
+		titre={`Retour — ${objetRetour.libelle}`}
 		styleBoite="width:min(380px,95vw)"
 		on:fermer={() => (objetRetour = null)}
 	>
-		<div class="modal-header">
-			<h3>Retour — {objetRetour.libelle}</h3>
-			<button class="modal-close" on:click={() => (objetRetour = null)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:0.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="ro-date">Date de retour</label>
 				<input id="ro-date" type="date" bind:value={retourDate} />
@@ -1710,14 +1690,10 @@
 <!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
 {#if bailAcces}
 	<Modale
-		titre="Accès du bail"
+		titre={`Accès — ${nomLocataire(bailAcces)}`}
 		styleBoite="width:min(620px,95vw)"
 		on:fermer={() => (bailAcces = null)}
 	>
-		<div class="modal-header">
-			<h3>Accès — {nomLocataire(bailAcces)}</h3>
-			<button class="modal-close" on:click={() => (bailAcces = null)}>✕</button>
-		</div>
 		<div class="modal-body">
 			{#if loadingAcces}
 				<p style="color:var(--color-text-muted)">Chargement…</p>
@@ -2102,21 +2078,12 @@
 		border-radius: var(--radius);
 	}
 
-	/* Modal overlay + structure */
-	/*  🔴 Le bloc `.modal-*` retiré le 28/08/2026 (#607) : le MÊME, au caractère
-	    près, vivait dans trois écrans et divergeait de la charte. `prestataires`
-	    emploie ce balisage SANS règle locale — c'est lui la référence. */
-	.modal-header h3 {
-		font-size: 1.05rem;
-		font-weight: 600;
-		margin: 0;
-	}
-	.modal-body {
-		margin-bottom: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-	}
+	/*  🔴 L'EN-TÊTE d'une modale ne s'écrit plus ici : `Modale.svelte` le rend, et
+	    `styles/composants.css` le style (`.modal-titre`). #607 avait retiré
+	    `.modal-header`, `.modal-close` et `.modal-footer` de ces trois écrans en
+	    laissant `.modal-header h3` — la seule des quatre qui n'existait PAS en
+	    global, donc la seule que le retrait ne pouvait pas solder. Elle a survécu
+	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
 
 	/* Grille 2 colonnes pour les champs de formulaire */
 	.form-grid-2 {

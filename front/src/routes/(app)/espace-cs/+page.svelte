@@ -672,15 +672,11 @@
 
 {#if cvModal}
 	<Modale
-		titre="Valider le compte"
+		titre={`Valider le compte de ${cvModal.prenom} ${cvModal.nom}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:460px"
 		on:fermer={() => (cvModal = null)}
 	>
-		<h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">
-			Valider le compte de {cvModal.prenom}
-			{cvModal.nom}
-		</h2>
 		<label
 			style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;border:1.5px solid var(--color-border);border-radius:var(--radius);padding:.75rem;margin-bottom:.75rem"
 		>

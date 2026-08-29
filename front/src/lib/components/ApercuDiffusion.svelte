@@ -55,11 +55,10 @@
 </script>
 
 <Modale
-	titre="Avant d'envoyer"
+	titre="📤 Avant d'envoyer"
 	styleBoite="max-width:720px;width:100%"
 	on:fermer={() => dispatch('annuler')}
 >
-	<h2 id="apercu-titre">&#x1F4E4; Avant d'envoyer</h2>
 	<p class="apercu-intro">Voici ce qui partira, tel que les destinataires le recevront.</p>
 
 	{#if chargement}

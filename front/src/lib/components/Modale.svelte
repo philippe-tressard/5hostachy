@@ -50,16 +50,60 @@
   long ne se ferme pas au clic ; une confirmation, si. C'est une décision d'écran,
   pas une valeur par défaut à imposer.
 
+  ## L'EN-TÊTE aussi — le titre s'écrivait DEUX fois (29/08/2026)
+
+  Le composant recevait `titre` pour l'`aria-label`, et chaque écran réécrivait
+  ensuite le titre visible dans son balisage. Deux écritures pour un seul objet,
+  donc deux textes libres de diverger — et **onze des vingt-six** avaient
+  divergé : ce qu'un lecteur d'écran annonçait n'était pas ce que l'écran
+  affichait. « Règle » pour *Modifier la règle*, « Modifier locataire » pour
+  *Modifier les informations*, « Valider le compte » pour *Valider le compte de
+  Jean Dupont*. Aucune n'est une décision.
+
+  C'est le défaut que `lint:titres` refuse déjà pour `SectionFormulaire` — *le
+  nom écrit deux fois* — appliqué aux modales, où rien ne le regardait.
+
+  Le titre affiché **est** la prop : il ne peut plus diverger de ce qui est
+  annoncé. Un titre riche (une interpolation, un `<code>`) passe par le slot
+  nommé `titre`, la prop restant le texte pour le lecteur d'écran.
+
+  ## Ce que l'en-tête retire aux écrans
+
+  | | Avant | Après |
+  |---|---|---|
+  | `.modal-header` + croix, recopiés | 15 fois | 0 |
+  | `<h2 style="font-size:1rem;font-weight:700;…">` en ligne | 8 fois, 2 marges | 0 |
+  | `.modal-header h3` redéfini localement | 3 fichiers, à l'identique | 0 |
+  | niveaux de titre | `h2` **et** `h3` | `h2` |
+  | modales sans bouton de fermeture | 11 sur 26 | 0 |
+
+  ⚠️ **Les deux boîtes gardent leur mise en page**, et c'est structurel : `.modal`
+  porte son padding dans l'en-tête et le corps, `.modal-box` le porte sur la
+  boîte. L'en-tête s'y adapte par UNE règle CSS (`.modal-box > .modal-header`),
+  pas par une seconde écriture dans les écrans.
+
   Usage :
 
-      <Modale titre="Ajouter un plan" ouverte={showPlanForm} on:fermer={() => (showPlanForm = false)}>
+      <Modale titre="Ajouter un plan" on:fermer={() => (showPlanForm = false)}>
+        … contenu …
+      </Modale>
+
+      <Modale titre="Modifier le périmètre" classeBoite="modal-box">
+        <span slot="titre">{edite.libelle}</span>
         … contenu …
       </Modale>
 -->
 <script lang="ts">
 	import { createEventDispatcher, onDestroy } from 'svelte';
 
-	/** Nomme la boîte pour un lecteur d'écran. Obligatoire : sans lui, elle est « dialogue ». */
+	/**
+	 * Le titre de la boîte — **affiché ET annoncé**. Obligatoire : sans lui, un
+	 * lecteur d'écran ne dit que « dialogue ».
+	 *
+	 * ⚠️ Ne PAS réécrire ce titre dans le contenu : c'est ce qui produisait les
+	 * onze divergences. Pour un rendu riche, utiliser le slot `titre` — la prop
+	 * reste alors le texte annoncé.
+	 */
 	export let titre: string;
 	/** Classes de la boîte — `modal`, `modal-box`, `modal-sm`… selon l'écran. */
 	export let classeBoite = 'modal';
@@ -121,6 +165,17 @@
 		aria-label={titre}
 		tabindex="-1"
 	>
+		<div class="modal-header">
+			<h2 class="modal-titre">
+				{#if $$slots.titre}<slot name="titre" />{:else}{titre}{/if}
+			</h2>
+			<!--  ⚠️ `aria-label` et non le seul glyphe : « ✕ » se lit « multiplication »
+			      chez plusieurs lecteurs d'écran. Onze modales n'avaient AUCUN bouton
+			      de fermeture — dont les deux d'`OngletPerimetres`, qui refusent aussi
+			      la fermeture au fond : elles ne se fermaient qu'à `Échap`, geste qui
+			      n'existe pas au doigt. -->
+			<button type="button" class="modal-close" aria-label="Fermer" on:click={fermer}>✕</button>
+		</div>
 		<slot {fermer} />
 	</div>
 </div>
