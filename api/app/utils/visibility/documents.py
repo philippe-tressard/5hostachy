@@ -127,20 +127,17 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
 
     # Vérifier le périmètre
     #
-    #  🔴 LES DEUX FORMES DE CIBLAGE PAR BÂTIMENT, et il y en a bien deux (#617).
+    #  🔴 `perimetre='bâtiment'` RESTREINT la lecture, et c'est son rôle : un
+    #  diagnostic, un contrat ou une attestation ne concernent que les détenteurs
+    #  d'un lot dans le bâtiment visé.
     #
-    #  L'écran des CR d'AG écrit `perimetre='bâtiment'` + `batiment_id` quand UN
-    #  seul bâtiment est coché, mais `perimetre='résidence'` + `batiments_ids_json`
-    #  dès qu'il y en a DEUX. Ce contrôle ne lisait que la première forme : cocher
-    #  un bâtiment de plus repassait par « résidence », donc plus aucune
-    #  restriction — et le seul champ qui portait encore le ciblage n'était jamais
-    #  lu. Mesuré le 29/08/2026 : un résident du bâtiment 3 ne voyait pas le CR
-    #  d'AG du bâtiment 1, mais voyait celui des bâtiments 1 et 2.
-    #
-    #  On lit donc les DEUX, et l'on n'exige PAS que `perimetre` vaille
-    #  « bâtiment » pour la seconde : c'est la présence d'un ciblage qui compte,
-    #  pas l'étiquette posée à côté. Exiger la forme aurait laissé passer
-    #  exactement le cas qui a produit le défaut.
+    #  ⚠️ Ce n'est PAS le cas des comptes-rendus d'AG, dont le ciblage est
+    #  descriptif — voir le bloc suivant. L'écran leur posait pourtant ce
+    #  `perimetre='bâtiment'` dès qu'un seul bâtiment était coché, ce qui rendait
+    #  une AG invisible aux copropriétaires des autres bâtiments (mesuré le
+    #  29/08/2026). Corrigé à la source : l'écran n'en pose plus, et la migration
+    #  0159 reverse les documents déjà en base.
+
     user_batiments = {
         ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
     }
@@ -148,22 +145,24 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
         if doc.batiment_id not in user_batiments:
             return False
 
-    #  Ciblage MULTI-bâtiments : le lecteur doit avoir un lot dans l'UN d'eux.
+    #  ── `batiments_ids_json` NE RESTREINT PAS, et c'est une décision ─────────
     #
-    #  ⚠️ Une liste illisible ne vaut pas autorisation : replier sur « aucune
-    #  restriction » rouvrirait le document à tout le monde au premier JSON cassé
-    #  (`standards/03` — en cas de doute sur un droit, on refuse). Une liste VIDE,
-    #  en revanche, ne cible personne : elle ne restreint rien de ce côté, et c'est
-    #  l'état d'un CR d'AG de toute la copropriété.
-    if getattr(doc, "batiments_ids_json", None):
-        try:
-            cibles = json.loads(doc.batiments_ids_json)
-        except (ValueError, TypeError):
-            return False
-        if not isinstance(cibles, list):
-            return False
-        if cibles and not (set(cibles) & user_batiments):
-            return False
+    #  Ce champ ne sert qu'aux comptes-rendus d'AG, et il y dit **de quoi parle**
+    #  le document — pas qui a le droit de le lire. C'est l'arbitrage rendu par
+    #  l'utilisateur le 29/08/2026 : *« une AG doit être visible par tous les
+    #  copropriétaires, syndic et CS »*.
+    #
+    #  🔴 Un premier correctif (#617) avait fait l'inverse : il l'avait rendu
+    #  restrictif, pour aligner les deux formes de ciblage que l'écran écrit
+    #  (`perimetre='bâtiment'` pour un bâtiment, `batiments_ids_json` pour
+    #  plusieurs). L'incohérence était réelle — mais elle a été refermée du
+    #  mauvais côté : c'est `perimetre='bâtiment'` qui n'avait rien à faire sur
+    #  un PV d'AG, pas l'inverse. La migration 0159 reverse les documents
+    #  existants, et l'écran n'en pose plus.
+    #
+    #  ⚠️ Ne PAS ajouter ici de restriction sur ce champ sans revenir sur cet
+    #  arbitrage : la cohérence des deux formes est désormais tenue en amont, par
+    #  l'écran et la migration, et non par un second filtre ici.
 
     if doc.perimetre == "lot" and doc.lot_id:
         user_lots = {ul.lot_id for ul in user.user_lots if ul.actif}

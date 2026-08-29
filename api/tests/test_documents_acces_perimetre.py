@@ -22,7 +22,7 @@ from app.models.core import StatutUtilisateur
 from app.utils.visibility import document_visible
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  #617 — le ciblage MULTI-bâtiments d'un CR d'AG ne protégeait rien
+#  #617 — le ciblage d'un PV d'AG est DESCRIPTIF, jamais restrictif
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 #  POURQUOI (29/08/2026, trouvé en instruisant #470). L'écran des comptes-rendus
@@ -127,56 +127,121 @@ def _resident_du_batiment(numero: int) -> _ResidentDuBatiment:
 
 # ── Ce qui doit être REFUSÉ ──────────────────────────────────────────────────
 
-def test_cr_ag_multi_batiments_refuse_a_un_resident_d_ailleurs():
-    """🔴 LE défaut de #617 : deux bâtiments cochés ouvraient à toute la copro."""
-    doc = _cr_ag(batiments_ids_json="[1,2]")
-    assert document_visible(_resident_du_batiment(3), doc, _SessionProfil()) is False
+def test_document_de_batiment_refuse_a_un_resident_d_ailleurs():
+    """`perimetre='bâtiment'` RESTREINT — c'est son rôle, et il le garde.
 
-
-def test_cr_ag_mono_batiment_refuse_a_un_resident_d_ailleurs():
-    """La forme qui marchait déjà — elle doit continuer."""
+    Diagnostics, contrats, attestations : ces documents-là ne concernent que les
+    détenteurs d'un lot dans le bâtiment visé. Ce test protège ce mécanisme d'un
+    assouplissement collatéral au moment où l'on retire les PV d'AG de son champ.
+    """
     doc = _cr_ag(perimetre="bâtiment", batiment_id=1)
     assert document_visible(_resident_du_batiment(3), doc, _SessionProfil()) is False
-
-
-def test_cr_ag_liste_de_batiments_illisible_refuse():
-    """Un JSON cassé n'autorise pas : en cas de doute sur un droit, on refuse.
-
-    Sans ce cas, replier sur « aucune restriction » rouvrirait le document à tout
-    le monde à la première donnée abîmée — et le contrôle serait vert.
-    """
-    doc = _cr_ag(batiments_ids_json="[1,2")  # JSON tronqué
-    assert document_visible(_resident_du_batiment(1), doc, _SessionProfil()) is False
-
-
-def test_cr_ag_liste_de_batiments_qui_n_est_pas_une_liste_refuse():
-    doc = _cr_ag(batiments_ids_json='{"bat": 1}')
-    assert document_visible(_resident_du_batiment(1), doc, _SessionProfil()) is False
 
 
 # ── Ce qui doit RESTER lisible ───────────────────────────────────────────────
 
-def test_cr_ag_multi_batiments_lisible_par_un_resident_cible():
-    """Le lecteur a un lot dans L'UN des bâtiments visés : il lit."""
+def test_pv_ag_multi_batiments_lisible_par_tout_copropriétaire():
+    """🔴 LA règle : « une AG doit être visible par tous les copropriétaires ».
+
+    Un premier correctif avait rendu ce ciblage RESTRICTIF, pour aligner les deux
+    formes que l'écran écrivait. L'incohérence était réelle, mais refermée du
+    mauvais côté : c'est `perimetre='bâtiment'` qui n'avait rien à faire sur un
+    PV d'AG. Ce test fixe le sens définitif.
+    """
+    doc = _cr_ag(batiments_ids_json="[1,2]")
+    assert document_visible(_resident_du_batiment(3), doc, _SessionProfil()) is True
+
+
+def test_pv_ag_multi_batiments_lisible_par_un_copropriétaire_cible():
     doc = _cr_ag(batiments_ids_json="[1,2]")
     assert document_visible(_resident_du_batiment(2), doc, _SessionProfil()) is True
 
 
-def test_cr_ag_de_toute_la_copropriete_reste_lisible():
-    """Le cas le plus courant — aucun ciblage, aucune restriction géographique."""
+def test_pv_ag_de_toute_la_copropriete_reste_lisible():
     assert document_visible(_resident_du_batiment(3), _cr_ag(), _SessionProfil()) is True
 
 
-def test_cr_ag_liste_vide_ne_cible_personne_donc_ne_restreint_rien():
-    """Cas zéro : une liste VIDE n'est pas un ciblage, c'est l'absence de ciblage.
+def test_pv_ag_ciblage_illisible_ne_ferme_rien():
+    """Un JSON abîmé ne doit ni ouvrir ni FERMER : ce champ ne décide de rien.
 
-    La confondre avec « personne n'a le droit » rendrait invisibles des documents
-    dont la liste a été vidée — un refus silencieux, le pire des deux.
+    ⚠️ Le raisonnement « en cas de doute on refuse » ne s'applique pas ici, et
+    c'est le piège : il vaut pour un champ qui PORTE un droit. Celui-ci n'en
+    porte aucun — le refus sur donnée abîmée rendrait des AG invisibles sans que
+    personne comprenne pourquoi.
     """
-    doc = _cr_ag(batiments_ids_json="[]")
-    assert document_visible(_resident_du_batiment(3), doc, _SessionProfil()) is True
+    doc = _cr_ag(batiments_ids_json="[1,2")  # tronqué
+    assert document_visible(_resident_du_batiment(9), doc, _SessionProfil()) is True
 
 
-def test_cr_ag_mono_batiment_lisible_par_son_batiment():
+def test_document_de_batiment_lisible_par_son_batiment():
     doc = _cr_ag(perimetre="bâtiment", batiment_id=1)
     assert document_visible(_resident_du_batiment(1), doc, _SessionProfil()) is True
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Le SYNDIC voit les PV d'AG — il ne les voyait pas du tout (29/08/2026)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  La catégorie `pv_ag` pointe sur le profil `résidence_tous`, dont les rôles
+#  autorisés étaient `["propriétaire", "résident"]`. Le syndic n'a ni l'un ni
+#  l'autre : son STATUT vaut `syndic`, et `document_visible` compare
+#  `roles ∪ {statut}` à cette liste. Il tombait au premier filtre — y compris sur
+#  le PV de l'assemblée de TOUTE la copropriété.
+#
+#  Ce n'était pas un choix : la description du profil dit « Copropriétaires,
+#  bailleurs, locataires », et le profil voisin `cs_syndic_uniquement` nomme le
+#  syndic explicitement. L'omission touchait les quatre catégories qui s'appuient
+#  sur `résidence_tous` — règlement, PV d'AG, fiche synthétique, plan.
+#
+#  Migration 0159. Ce test vérifie la RÈGLE ; que la migration l'ait bien posée
+#  en base est vérifié par `test_migrations.py` (chaîne) et constaté en production.
+
+class _ProfilAvecSyndic:
+    """`résidence_tous` après la migration 0159."""
+
+    roles_autorises = '["propriétaire", "résident", "syndic"]'
+    profil_acces_id = 1
+
+
+class _SessionProfilAvecSyndic:
+    def get(self, _modele, _id):
+        return _ProfilAvecSyndic()
+
+
+def _syndic():
+    """Le syndic : un STATUT, aucun rôle de copropriétaire, et AUCUN LOT.
+
+    L'absence de lot est le point : elle rend `user_batiments` vide, donc tout
+    document restreint par bâtiment lui serait refusé même s'il passait le filtre
+    de rôle. C'est pourquoi retirer `perimetre='bâtiment'` des PV d'AG et ouvrir
+    le profil sont **deux** correctifs, pas un.
+    """
+    return type(
+        "Syndic",
+        (),
+        {
+            "user_lots": [],
+            "statut": StatutUtilisateur.syndic,
+            "roles": [],
+            "has_role": lambda *_: False,
+        },
+    )()
+
+
+def test_le_syndic_voit_le_pv_d_ag_de_la_copropriete():
+    assert document_visible(_syndic(), _cr_ag(), _SessionProfilAvecSyndic()) is True
+
+
+def test_le_syndic_voit_un_pv_d_ag_cible_sur_des_batiments():
+    """Le ciblage étant descriptif, l'absence de lot ne lui ferme plus rien."""
+    doc = _cr_ag(batiments_ids_json="[1,2]")
+    assert document_visible(_syndic(), doc, _SessionProfilAvecSyndic()) is True
+
+
+def test_sans_la_migration_le_syndic_ne_voyait_rien():
+    """Le cas AVANT, gardé pour que la raison du correctif reste lisible.
+
+    Un test qui ne montre que l'état corrigé laisse croire qu'il n'y avait rien à
+    corriger — et le prochain qui touchera au profil ne saura pas ce qu'il défait.
+    """
+    assert document_visible(_syndic(), _cr_ag(), _SessionProfil()) is False

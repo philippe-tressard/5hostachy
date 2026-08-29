@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
+	import Pastille from '$lib/components/Pastille.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
@@ -377,18 +378,15 @@
 		if (newCrAgScope === 'bâtiment' && newCrAgBatimentIds.length === 0) return;
 		savingCrAg = true;
 		try {
-			let perimetre: string;
-			let batimentId: number | undefined;
-			let batimentsJson: string | undefined;
-			if (newCrAgScope === 'copropriété') {
-				perimetre = 'résidence';
-			} else if (newCrAgBatimentIds.length === 1) {
-				perimetre = 'bâtiment';
-				batimentId = newCrAgBatimentIds[0];
-			} else {
-				perimetre = 'résidence';
-				batimentsJson = JSON.stringify(newCrAgBatimentIds);
-			}
+			//  🔴 UN PV D'AG N'EST JAMAIS RESTREINT PAR SON PÉRIMÈTRE : le ciblage
+			//  dit de quoi il parle, pas qui peut le lire. Il part donc toujours en
+			//  `résidence`, les bâtiments dans `batiments_ids_json` — le seul des
+			//  deux champs que `document_visible` ne consulte pas.
+			//  Le pourquoi et les trois écarts mesurés : migration 0159.
+			const perimetre = 'résidence';
+			const batimentId: number | undefined = undefined;
+			const batimentsJson =
+				newCrAgScope === 'copropriété' ? undefined : JSON.stringify(newCrAgBatimentIds);
 			const doc = await documentsApi.upload(
 				newCrAgTitre.trim(), catIdCrAg, newCrAgFile, perimetre, batimentId,
 				newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
@@ -919,25 +917,27 @@
 					<input id="ag-titre" type="text" bind:value={newCrAgTitre} placeholder="ex : PV AG ordinaire 2025" />
 				</div>
 				<div class="field">
+					<!--  `Pastille` et non un `.pill` réécrit : le composant porte son
+					      balisage ET son style, donc ils ne divergent pas (#470, #491). -->
 					<LibelleGroupe titre="Périmètre *" id="crag-perimetre" classe="perimetre-pills" style="margin-top:.25rem">
-						<button type="button" class="pill" class:pill-active={newCrAgScope === 'copropriété'}
-							on:click={() => { newCrAgScope = 'copropriété'; newCrAgBatimentIds = []; }}>
-							Copropriété entière
-						</button>
-						<button type="button" class="pill" class:pill-active={newCrAgScope === 'bâtiment'}
-							on:click={() => (newCrAgScope = 'bâtiment')}>
-							Bâtiment(s) spécifique(s)
-						</button>
+						<Pastille active={newCrAgScope === 'copropriété'}
+							on:click={() => { newCrAgScope = 'copropriété'; newCrAgBatimentIds = []; }}
+						>Copropriété entière</Pastille>
+						<Pastille active={newCrAgScope === 'bâtiment'}
+							on:click={() => (newCrAgScope = 'bâtiment')}
+						>Bâtiment(s) spécifique(s)</Pastille>
 					</LibelleGroupe>
 				</div>
 				{#if newCrAgScope === 'bâtiment'}
 					<div class="field">
+						<!--  Des pastilles, pas des cases : ce bloc CHOISIT (critère de #491). -->
 						<LibelleGroupe titre="Bâtiment(s) *" id="crag-batiments" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem">
-							{#each batiments as b}
-								<label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.875rem">
-									<input type="checkbox" bind:group={newCrAgBatimentIds} value={b.id} />
-									Bâtiment {b.numero}
-								</label>
+							{#each batiments as b (b.id)}
+								<Pastille active={newCrAgBatimentIds.includes(b.id)}
+									on:click={() => (newCrAgBatimentIds = newCrAgBatimentIds.includes(b.id)
+										? newCrAgBatimentIds.filter((i) => i !== b.id)
+										: [...newCrAgBatimentIds, b.id])}
+								>Bâtiment {b.numero}</Pastille>
 							{/each}
 						</LibelleGroupe>
 					</div>
