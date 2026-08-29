@@ -65,6 +65,7 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { valeursDeclarees } from './lib-lecture-source.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SOURCE = join(RACINE, 'lib', 'pages.ts');
@@ -196,7 +197,11 @@ for (const attendu of [
 		process.exit(1);
 	}
 }
-const IDS = [...source.matchAll(/^\t\{ id: '([a-z0-9-]+)', href:/gm)].map((m) => m[1]);
+//  ⚠️ La lecture ne suppose plus une DISPOSITION. Le motif d'avant exigeait
+//  une tabulation puis tout sur une ligne : Prettier passé sur le dépôt, la
+//  table devenait illisible et ce contrôle annonçait « 0 identifiant » —
+//  son cas zéro a bien parlé, mais il ne mesurait plus rien (#419).
+const IDS = valeursDeclarees(source, 'id', { valeur: '[a-z0-9-]+', suivi: 'href' });
 if (IDS.length < 10) {
 	console.error(
 		`✗ Cas zéro : ${IDS.length} identifiant(s) extrait(s) de lib/pages.ts, au moins 10 attendus. ` +

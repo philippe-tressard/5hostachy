@@ -34,6 +34,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { cssGlobal } from './lib-css-global.mjs';
+import { emploieComposant } from './lib-lecture-source.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const COMPOSANT = join(RACINE, 'lib', 'components', 'Modale.svelte');
@@ -134,7 +135,10 @@ let fichiersAvecModale = 0;
 for (const f of tous) {
 	const rel = relative(RACINE, f).split(sep).join('/');
 	const brut = readFileSync(f, 'utf8');
-	if (brut.includes('<Modale ')) fichiersAvecModale++;
+	//  ⚠️ `includes('<Modale ')` exigeait une ESPACE littérale : Prettier écrit
+	//  `<Modale` puis l'attribut à la ligne dès qu'il y en a plusieurs, et le
+	//  contrôle annonçait alors « 0 fichier emploie <Modale> » (#419).
+	if (emploieComposant(brut, 'Modale')) fichiersAvecModale++;
 	const contenu = sansCommentaires(brut);
 	const trouves = [];
 	for (const motif of MOTIFS) {

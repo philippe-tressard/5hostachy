@@ -82,6 +82,8 @@
  * Usage : npm run lint:soumission   (exit 1 si violation)
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+
+import { baliseFermante } from './lib-lecture-source.mjs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -207,11 +209,12 @@ function blocsFormActions(src) {
 	while ((m = debut.exec(src))) {
 		let profondeur = 1;
 		let fin = m.index + m[0].length;
-		const jetons = /<div\b|<\/div>/g;
+		//  Même raison : `</div>` peut être coupé par le formatage.
+		const jetons = /<div\b|<\/div\s*>/g;
 		jetons.lastIndex = fin;
 		let j;
 		while (profondeur > 0 && (j = jetons.exec(src))) {
-			profondeur += j[0] === '</div>' ? -1 : 1;
+			profondeur += j[0].startsWith('</') ? -1 : 1;
 			fin = jetons.lastIndex;
 		}
 		zones.push([m.index, fin]);
@@ -228,8 +231,12 @@ function boutonsDeSoumission(src) {
 	while ((m = ouverture.exec(src))) {
 		const finOuvrante = finBaliseOuvrante(src, m.index);
 		if (finOuvrante < 0) continue;
-		const finContenu = src.indexOf('</button>', finOuvrante);
-		if (finContenu < 0) continue;
+		//  ⚠️ `indexOf('</button>')` supposait la balise fermante D'UN SEUL
+		//  TENANT. Prettier écrit `</button` puis `>` à la ligne quand l'ouvrante
+		//  déborde, et ce contrôle annonçait alors « aucun bouton repérable » (#419).
+		const fermante = baliseFermante(src, 'button', finOuvrante);
+		if (!fermante) continue;
+		const finContenu = fermante.debut;
 		const balise = src.slice(m.index, finOuvrante + 1);
 		const submit = /type=["']submit["']/.test(balise);
 		const primaireDansActions =

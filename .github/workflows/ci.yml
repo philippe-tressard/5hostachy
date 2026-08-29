@@ -227,6 +227,34 @@ jobs:
           done
           exit $st
 
+      - name: Aucun caractère de contrôle invisible dans le code
+        # 🔴 Un caractère de RECUL (U+0008) collé au milieu d'une expression
+        # régulière : invisible dans tout éditeur, il change le motif sans que
+        # rien ne le montre. Trouvé une première fois par ESLint
+        # (`no-control-regex`) à sa mise en service — puis DEUX fois de plus le
+        # 29/08/2026, glissés en écrivant les garde-fous eux-mêmes (#419).
+        #
+        # ESLint ne voit que les littéraux d'expression régulière ; le piège vaut
+        # pour n'importe quelle chaîne, et le motif construit par `new RegExp` en
+        # est une. Ce contrôle-ci porte donc sur TOUT le texte du fichier.
+        #
+        # ⚠️ Tabulation, saut de ligne et retour chariot sont les seuls tolérés :
+        # ce sont ceux qu'on écrit exprès.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.py' '*.ts' '*.js' '*.mjs' '*.svelte' '*.sh' '*.yml'); do
+            # `[[:cntrl:]]` et non `grep -P` : le PCRE de Git Bash refuse de
+            # tourner hors locale unibyte, et le contrôle serait alors muet sur
+            # le poste — donc INCONNU pris pour un vert. Les trois caractères
+            # volontaires (tabulation, saut de ligne, retour chariot) sont
+            # retirés avant la lecture.
+            if tr -d '\n\r\t' < "$f" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+              echo "::error file=$f::caractère de contrôle invisible (U+0008 et voisins) — il change un motif sans se voir"
+              st=1
+            fi
+          done
+          exit $st
+
       - name: Syntaxe de tous les scripts shell
         run: |
           st=0
@@ -692,6 +720,13 @@ jobs:
           # svelte-check, retirer les couleurs, apparier chaque message à son
           # emplacement. Deux de ces gestes ont déjà coûté un défaut ici.
           node scripts/lib-svelte-check.mjs --selftest
+          # La lecture d'une source SANS supposer sa mise en forme — partagée par
+          # `lint:pages`, `lint:taches`, `lint:modales` et `lint:soumission`. Les
+          # quatre lisaient le code avec des motifs ancrés sur une disposition et
+          # tombaient au premier passage de Prettier (#419). Chaque cas y est
+          # écrit DEUX fois, resserré et reformaté : un test d'une seule forme ne
+          # dirait rien, et c'est l'angle mort d'où ils venaient.
+          node scripts/lib-lecture-source.mjs --selftest
           # Le pré-remplissage du kanban par les prestataires (#605) : deux
           # boucles quasi identiques dans une page de 848 lignes, qu'aucun
           # contrôle ne touchait. Les fonctions pures vivent désormais dans
