@@ -1172,15 +1172,9 @@
 	/* ── Bâtiments / lot counts ─────────────────────────────────── */
 
 	/* ── Documents ──────────────────────────────────────────────── */
-	/*  🔴 `.doc-list`, `.doc-row`, `.doc-info`, `.doc-titre` et `.doc-actions`
-	    sont parties avec `SectionDocuments` : Svelte scope les styles au
-	    composant qui rend le balisage, et les laisser ici aurait livré les
-	    lignes NUES (panne des pastilles, v2.67.11).
-
-	    `.doc-date` reste, et ce n'est pas un oubli : elle habille le contenu du
-	    `slot` des comptes-rendus d'AG, qui est déclaré par CETTE page. Le slot
-	    est le seul endroit où les deux portées se croisent. */
-	.doc-date { font-size: .78rem; color: var(--color-text-muted); margin-left: auto; white-space: nowrap; }
+	/*  🔴 TOUTE la « ligne de document » vit dans `styles/composants.css` (#491) :
+	    cette page l'emploie dans SON balisage, et trois blocs en sortaient NUS.
+	    Le récit — et pourquoi `lint:classes-nues` ne le voyait pas — est là-bas. */
 
 
 	/* ── Edit form ──────────────────────────────────────────────── */

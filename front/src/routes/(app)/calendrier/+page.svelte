@@ -771,9 +771,6 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    exactement la panne des pastilles de la v2.67.11. */
 
 	.tabs { padding-bottom: .1rem; }  /* le reste vient de la charte (#607) */
-	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
-	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
-	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
 
 	.kanban-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; flex-wrap: wrap; }
 	.kanban-exercice-label { font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: .4rem; }

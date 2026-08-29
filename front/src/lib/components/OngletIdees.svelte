@@ -130,7 +130,18 @@
 	    `.filters` n'est pas ici : elle vient d'`app.css`, partagée par plusieurs
 	    écrans. Trois orphelines sont restées derrière (`.idee-header`,
 	    `.idee-titre`, `.idee-actions select`) : leur balisage avait disparu avec
-	    `EnteteCarte` et `WorkflowPastilles`, elles n'habillaient plus rien. */
+	    `EnteteCarte` et `WorkflowPastilles`, elles n'habillaient plus rien.
+
+	    ⚠️ 29/08/2026 — ce commentaire était FAUX pour `.idee-actions` : son
+	    balisage n'avait pas disparu (l. 110), seule la règle `.idee-actions select`
+	    l'avait. La rangée sortait donc nue, les pastilles de workflow empilées
+	    au-dessus du bouton de suppression au lieu d'être alignées avec.
+
+	    🔴 Personne ne l'a vu parce que `lint:classes-nues` lisait les COMMENTAIRES
+	    comme des définitions : cette phrase-ci, qui cite `.idee-actions` pour
+	    expliquer son retrait, la faisait passer pour définie. Le contrôle était
+	    aveuglé par la documentation de son propre sujet. */
+	.idee-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 	.idee-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; }
 	.vote-btn { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: none; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .5rem .6rem; cursor: pointer; transition: border-color .12s; min-width: 3.5rem; }
 	.vote-btn:hover { border-color: var(--color-primary); }

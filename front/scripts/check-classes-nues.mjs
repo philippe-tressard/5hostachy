@@ -167,7 +167,27 @@ try {
 	console.error('✗ INCONNU : le CSS global est illisible — ce contrôle ne conclut pas.');
 	process.exit(1);
 }
-const definiesGlobal = new Set([...global.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
+/**
+ * Le CSS SANS ses commentaires.
+ *
+ * 🔴 Trouvé le 29/08/2026 en retirant `.pill` de la charte (#491). Les
+ * commentaires étaient déjà décapés du côté EMPLOYÉ (le balisage, plus bas) mais
+ * PAS du côté DÉFINI : un commentaire qui cite `.pill` pour expliquer qu'on l'a
+ * retirée la faisait passer pour définie. Le contrôle restait vert sur un
+ * `class="pill"` réintroduit — c'est-à-dire exactement l'écran nu qu'il existe
+ * pour empêcher.
+ *
+ * ⚠️ L'asymétrie est le vrai défaut : décaper d'un seul côté produit un FAUX
+ * VERT, et c'est le côté dangereux. Ce dépôt écrit de longs commentaires qui
+ * citent le vocabulaire qu'ils retirent — plus il documente, plus il s'aveuglait.
+ */
+function sansCommentairesCss(css) {
+	return css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+}
+
+const definiesGlobal = new Set(
+	[...sansCommentairesCss(global).matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]),
+);
 if (definiesGlobal.size === 0) {
 	console.error(`✗ Cas zéro : aucune classe trouvée dans ${fichiersCssGlobal(RACINE).join(', ') || '(aucun fichier)'}.`);
 	process.exit(1);
@@ -184,7 +204,11 @@ for (const chemin of fichiers) {
 	const source = readFileSync(chemin, 'utf8');
 
 	const style = (source.match(/<style[^>]*>([\s\S]*?)<\/style>/) || ['', ''])[1];
-	const definiesLocal = new Set([...style.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
+	//  Commentaires retirés ici AUSSI : un composant qui explique pourquoi il
+	//  n'emploie pas une classe la ferait passer pour définie chez lui.
+	const definiesLocal = new Set(
+		[...sansCommentairesCss(style).matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]),
+	);
 
 	//  Volet B — une définition qui déborde. Seule la fuite réduite à UNE classe
 	//  déjà portée par la charte est refusée : c'est une redéfinition, pas un

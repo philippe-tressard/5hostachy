@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Pastille from '$lib/components/Pastille.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 	import Modale from '$lib/components/Modale.svelte';
@@ -1335,7 +1336,7 @@
 						<div class="acces-filters">
 							<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span>
 							{#each lotsSourcesAcces as ls}
-								<button class="pill" class:pill-active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}>{ls.label}</button>
+								<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}>{ls.label}</Pastille>
 							{/each}
 						</div>
 					{/if}
@@ -1453,9 +1454,6 @@
 
 	/* Main tabs (like communauté) */
 	.tabs { padding-bottom: .1rem; }  /* le reste vient de la charte (#607) */
-	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
-	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
-	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
 
 	/* Bail sub-tabs */
 	.bail-tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--color-border); }

@@ -416,13 +416,6 @@ aria-expanded={showModeration}>
 /*  `.tabs` : la charte porte display, gap et bordure. Seul le retrait bas
     est propre a cet ecran (#607, 28/08/2026). */
 .tabs { padding-bottom: .1rem; }
-.tabs button {
-padding: .45rem 1rem; border: none; background: none; cursor: pointer;
-font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
-margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0;
-}
-.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
-.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
 .sondage-card { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 1.25rem; margin-bottom: .5rem; text-decoration: none; color: var(--color-text); transition: border-color .12s; }
 .sondage-card:hover { border-color: var(--color-primary); }
 .sondage-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; flex-shrink: 0; }

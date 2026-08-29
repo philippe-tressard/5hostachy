@@ -27,6 +27,7 @@
   changement d'onglet. Elle vivait dans la page, qui, elle, restait montée.
 -->
 <script lang="ts">
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { prestataires as prestApi, calendrier as calApi, diagnostics as diagnosticsApi, tickets as ticketsApi, type Ticket } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -186,21 +187,21 @@
 <div class="reporting-panel">
 		<div class="reporting-toolbar no-print">
 			<div class="reporting-switch">
-				<button class="pill" class:pill-active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
+				<Pastille active={reportView === 'kanban'} on:click={() => (reportView = 'kanban')}>
 					&#x1F4CC; Suivi des dossiers
-				</button>
-				<button class="pill" class:pill-active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
+				</Pastille>
+				<Pastille active={reportView === 'tickets'} on:click={() => (reportView = 'tickets')}>
 					&#x1F4CA; Analyse tickets
-				</button>
-				<button class="pill" class:pill-active={reportView === 'prestataires'} on:click={() => (reportView = 'prestataires')}>
+				</Pastille>
+				<Pastille active={reportView === 'prestataires'} on:click={() => (reportView = 'prestataires')}>
 					&#x1F3E2; Prestataires
-				</button>
-				<button class="pill" class:pill-active={reportView === 'renouvellements'} on:click={() => (reportView = 'renouvellements')}>
+				</Pastille>
+				<Pastille active={reportView === 'renouvellements'} on:click={() => (reportView = 'renouvellements')}>
 					&#x1F4C5; Renouvellements
-				</button>
-				<button class="pill" class:pill-active={reportView === 'relance'} on:click={() => (reportView = 'relance')}>
+				</Pastille>
+				<Pastille active={reportView === 'relance'} on:click={() => (reportView = 'relance')}>
 					&#x1F514; Relance syndic
-				</button>
+				</Pastille>
 			</div>
 			<div class="reporting-actions">
 				<button class="btn btn-sm btn-outline" on:click={refreshReporting} disabled={reportView === 'relance' ? relanceChargement : reportingLoading} title="Rafraîchir les données">

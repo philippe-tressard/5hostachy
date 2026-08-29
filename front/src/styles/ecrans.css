@@ -129,6 +129,29 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
    partagée par deux composants n'a rien à faire dans le style scopé de l'un
    d'eux (`standards/02-factorisation.md`). */
 .tabs { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; }
+/*  🔴 Le BOUTON d'onglet, remonté ici le 29/08/2026 (#491). `.tabs` était déjà
+    dans la charte ; son bouton, lui, était réécrit dans QUATRE écrans —
+    `calendrier`, `mon-lot` et `sondages` au caractère près, `prestataires` avec
+    une variante (plus compact, icône alignée). Trois copies identiques et une
+    divergente : la forme habituelle de la duplication d'affichage, celle qui ne
+    casse rien et fait seulement dire deux choses au même produit.
+
+    ⚠️ `prestataires` GARDE sa variante et la surcharge : elle est assumée (des
+    onglets à icône, plus nombreux, qui doivent tenir sur une ligne). Ce qui
+    change, c'est qu'elle ne redéfinit plus que son ÉCART. */
+.tabs button {
+	padding: .45rem 1rem;
+	border: none;
+	background: none;
+	cursor: pointer;
+	font-size: .9rem;
+	color: var(--color-text-muted);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	border-radius: var(--radius) var(--radius) 0 0;
+}
+.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
+.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
 .tab-btn {
   padding: .45rem .9rem; border: none; background: none; cursor: pointer;
   font-size: .875rem; color: var(--color-text-muted); border-bottom: 2px solid transparent;
@@ -153,12 +176,10 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
    `npm run lint:classes-nues` refuse depuis. Le recopier dans chacun aurait
    ouvert la divergence que #413 vient de fermer ailleurs.
 
-   `.kpi-*`, `.pill*` et `.text-muted-sm` servent AUSSI aux onglets Validations
-   et Annonces de hall, qui restent dans la page — ils ne pouvaient donc pas
-   suivre le balisage du reporting, et les laisser derrière l'aurait sorti nu.
-   ⚠️ `residence/+page.svelte` porte SA variante de `.pill` (bordure plus fine,
-   fond `--color-surface`). Elle reste locale et continue de gagner : Svelte
-   scope ses sélecteurs, ce qui les rend plus spécifiques que ceux d'ici.
+   `.kpi-*` et `.text-muted-sm` servent AUSSI aux onglets Validations et Annonces
+   de hall, qui restent dans la page — ils ne pouvaient donc pas suivre le
+   balisage du reporting, et les laisser derrière l'aurait sorti nu.
+   ⚠️ `.pill*` était dans cette liste ; elle n'y est plus (#491, voir plus bas).
 
    Ce qui ne sert QU'À UNE vue voyage avec elle et n'est pas ici :
    `.report-event-*` (VueKanban), `.frise-*` et `.audit-year-*`
@@ -180,9 +201,24 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
     et c'est exactement ce qu'elle faisait : `PerimetrePicker` gardait sa propre
     copie, la troisième, parce qu'aucune des deux ne s'imposait comme LA
     définition. C'est une notion de composant, elle vit avec les composants. */
-.pill { padding: .3rem .85rem; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-bg); font-size: .85rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; line-height: 1.6; }
-.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.pill-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+/*  🔴 `.pill`, `.pill:hover` et `.pill-active` RETIRÉES le 29/08/2026 (#491).
+    Les treize derniers boutons qui les portaient — annonces de hall, reporting,
+    analyse tickets, mon-lot — appellent désormais `Pastille.svelte`.
+
+    C'est la fin d'un motif qui a coûté une régression en production : ces règles
+    vivaient en GLOBAL, donc n'importe quel balisage pouvait s'y accrocher — et
+    le jour où un composant a repris la structure sans elles, les pastilles sont
+    parties NUES (v2.67.11, « Bâtiment 1Bâtiment 2Bâtiment 3 »).
+
+    ⚠️ Un style global ne peut pas manquer à l'appel tant qu'il est là ; il ne
+    peut pas non plus voyager avec le balisage qui en dépend. Réunis dans un
+    composant, les deux ne peuvent plus être séparés — c'est l'arbitrage rendu le
+    16/08/2026 : « le CSS doit être associé à l'objet pour ne pas avoir des
+    divergences ».
+
+    `npm run lint:classes-nues` refuse désormais tout `class="pill"` : la classe
+    n'est plus définie nulle part, donc l'écrire échoue en CI au lieu de sortir
+    nu en production. */
 .reporting-panel { display: flex; flex-direction: column; gap: 1rem; }
 .reporting-toolbar {
 	display: flex; justify-content: space-between; gap: .75rem;

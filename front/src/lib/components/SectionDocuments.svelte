@@ -104,28 +104,8 @@
 	}
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
 	.section-title { margin: 0; }
-	.doc-list { display: flex; flex-direction: column; gap: 0.4rem; }
-	.doc-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.7rem 1rem;
-		gap: 0.75rem;
-	}
-	.doc-info {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex: 1;
-		min-width: 0;
-		flex-wrap: wrap;
-	}
-	.doc-titre { font-weight: 500; font-size: 0.9rem; }
-	.doc-date {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		margin-left: auto;
-		white-space: nowrap;
-	}
-	.doc-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+	/*  🔴 `.doc-*` REMONTÉES dans `styles/composants.css` le 29/08/2026 (#491).
+	    Elles étaient scopées ici, et `residence` employait le même vocabulaire
+	    dans SON balisage — trois blocs y sortaient nus. Une notion partagée par
+	    plusieurs écrans vit dans la charte, elle ne se recopie pas. */
 </style>
