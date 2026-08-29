@@ -23,6 +23,7 @@
 	import { EQUIPEMENTS as equipements, TYPES_PRESTATAIRE as typesPrestataire,
 		equipLabel, frequenceLabel } from '$lib/prestataires';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
+	import { typeEquipementDuContrat } from '$lib/reporting';
 	import { trackTabView } from '$lib/telemetry';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
@@ -454,7 +455,7 @@
 	function startEditContrat(c: any) {
 		contratForm = {
 			copropriete_id: c.copropriete_id, batiment_id: c.batiment_id ?? '', prestataire_id: String(c.prestataire_id ?? ''),
-			type_equipement: c.type_equipement, libelle: c.libelle, numero_contrat: c.numero_contrat ?? '',
+			type_equipement: typeEquipementDuContrat(c, prestataires), libelle: c.libelle, numero_contrat: c.numero_contrat ?? '',
 			date_debut: c.date_debut,
 			duree_initiale_valeur: c.duree_initiale_valeur ?? '',
 			duree_initiale_unite: c.duree_initiale_unite ?? 'mois',
@@ -469,12 +470,11 @@
 	async function saveContrat() {
 		if (!contratForm.libelle || !contratForm.prestataire_id) { toast('error', 'Libellé et prestataire obligatoires'); return; }
 		submitting = true;
-		// Si l'équipement est "autre", prendre la spécialité du prestataire
-		let resolvedType = contratForm.type_equipement;
-		if (resolvedType === 'autre' && contratForm.prestataire_id) {
-			const p = prestataires.find(pr => pr.id === Number(contratForm.prestataire_id));
-			if (p?.specialite && p.specialite !== 'autre') resolvedType = p.specialite;
-		}
+		//  La règle vit dans `reporting.ts` — elle était écrite ici, dans le
+		//  groupement des cartes et dans le chargement du formulaire, avec trois
+		//  résultats différents sur le même contrat (29/08/2026).
+		const resolvedType = typeEquipementDuContrat(
+			{ ...contratForm, prestataire_id: Number(contratForm.prestataire_id) }, prestataires);
 		const payload = {
 			...contratForm,
 			type_equipement: resolvedType,
@@ -635,7 +635,8 @@
 				{/if}
 			</div>
 			<div class="form-actions">
-				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+				<button type="button" class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
+				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 			</div>
 	</FormulaireCreation>
 {/if}
@@ -660,11 +661,11 @@
 	{#if contrats.length === 0}
 		<div class="empty-state card"><h3>Aucun contrat</h3><p>Ajoutez le premier contrat via le bouton ci-dessus.</p></div>
 	{:else}
-		{#each equipements.filter(e => contrats.some(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === e.val; })) as specGroup (specGroup.val)}
+		{#each equipements.filter(e => contrats.some(c => typeEquipementDuContrat(c, prestataires) === e.val)) as specGroup (specGroup.val)}
 			<div class="type-section-header">
 				<span class="type-section-label">{specGroup.label}</span>
 			</div>
-			{#each parEcheance(contrats.filter(c => { const p = prestataires.find(pr => pr.id === c.prestataire_id); return (p?.specialite ?? c.type_equipement) === specGroup.val; })) as c (c.id)}
+			{#each parEcheance(contrats.filter(c => typeEquipementDuContrat(c, prestataires) === specGroup.val)) as c (c.id)}
 				{@const prest = prestataires.find(p => p.id === c.prestataire_id)}
 				{@const contratExpanded = expandedContrats.has(c.id)}
 				{@const enRetard = contratEnRetard(c)}
@@ -774,7 +775,7 @@
 								</div>
 								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
 									<button class="btn btn-sm btn-outline" on:click|stopPropagation={() => { editContratId = null; resetContratForm(); }}>Annuler</button>
-									<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveContrat}>{submitting ? '…' : 'Enregistrer'}</button>
+									<button class="btn btn-sm btn-primary" disabled={submitting} on:click|stopPropagation={saveContrat}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 								</div>
 							{:else}
 								<div class="contrat-section">
@@ -895,7 +896,7 @@
 					</div>
 					<div class="form-actions">
 						<button type="button" class="btn btn-outline" on:click={() => { showPrestForm = false; resetPrestForm(); }}>Annuler</button>
-						<button class="btn btn-primary" disabled={submitting}>{submitting ? '…' : 'Enregistrer'}</button>
+						<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
 					</div>
 				</form>
 		</FormulaireCreation>
@@ -1006,8 +1007,8 @@
 						<option value="">— Aucun —</option>
 						{#each prestataires as p}<option value={String(p.id)}>{p.nom}</option>{/each}
 					</select>
-					<button class="btn btn-sm btn-primary" on:click={() => saveCompteurPrestataire(currentCompteur)}>Enregistrer</button>
 					<button class="btn btn-sm btn-outline" on:click={() => editCompteurId = null}>Annuler</button>
+					<button class="btn btn-sm btn-primary" on:click={() => saveCompteurPrestataire(currentCompteur)}>Enregistrer</button>
 					{#if compteurConfigs.length > 1}
 						<button class="btn btn-sm btn-outline" style="color:var(--color-danger);border-color:var(--color-danger);margin-left:auto"
 							on:click={() => deleteCompteurConfig(currentCompteur)}>🗑️</button>
@@ -1063,7 +1064,7 @@
 					</div>
 					<div class="form-actions">
 						<button type="button" class="btn btn-outline" on:click={resetReleveForm}>Annuler</button>
-						<button type="submit" class="btn btn-primary" disabled={releveSaving}>{releveSaving ? '…' : 'Enregistrer'}</button>
+						<button type="submit" class="btn btn-primary" disabled={releveSaving}>{releveSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
 					</div>
 				</form>
 		</FormulaireCreation>

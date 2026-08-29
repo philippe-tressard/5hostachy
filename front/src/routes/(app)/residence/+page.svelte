@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AideSource from '$lib/components/AideSource.svelte';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -59,9 +60,6 @@
 	let editNbLots: string | number = '';
 	let editNbLotsPrincipaux: string | number = '';
 	let editImmatriculation = '';
-	let editAssuranceCompagnie = '';
-	let editAssuranceNumero = '';
-	let editAssuranceEcheance = '';
 
 	// Photo bannière
 	let uploadingPhoto = false;
@@ -213,11 +211,6 @@
 		editNbLots            = copropriete.nb_lots_total ?? '';
 		editNbLotsPrincipaux  = copropriete.nb_lots_principaux ?? '';
 		editImmatriculation   = copropriete.numero_immatriculation ?? '';
-		editAssuranceCompagnie = copropriete.assurance_compagnie ?? '';
-		editAssuranceNumero   = copropriete.assurance_numero_police ?? '';
-		editAssuranceEcheance = copropriete.assurance_echeance
-			? String(copropriete.assurance_echeance).substring(0, 10)
-			: '';
 		editing = true;
 	}
 
@@ -231,9 +224,6 @@
 				nb_lots_total:           editNbLots ? Number(editNbLots) : undefined,
 				nb_lots_principaux:      editNbLotsPrincipaux ? Number(editNbLotsPrincipaux) : undefined,
 				numero_immatriculation:  editImmatriculation || undefined,
-				assurance_compagnie:     editAssuranceCompagnie || undefined,
-				assurance_numero_police: editAssuranceNumero || undefined,
-				assurance_echeance:      editAssuranceEcheance || undefined,
 			});
 			editing = false;
 			toast('success', 'Résidence mise à jour');
@@ -605,9 +595,19 @@
 						<div class="field"><label for="e-lots">Lots — total, caves et parkings compris</label><input id="e-lots" type="number" bind:value={editNbLots} min="1" /></div>
 						<div class="field"><label for="e-lots-p">Dont habitation, commerces et bureaux</label><input id="e-lots-p" type="number" bind:value={editNbLotsPrincipaux} min="1" /></div>
 						<div class="field"><label for="e-imm">N° immatriculation (ANAH)</label><input id="e-imm" type="text" bind:value={editImmatriculation} /></div>
-						<div class="field"><label for="e-ass">Assurance – compagnie</label><input id="e-ass" type="text" bind:value={editAssuranceCompagnie} /></div>
-						<div class="field"><label for="e-pol">Assurance – n° police</label><input id="e-pol" type="text" bind:value={editAssuranceNumero} /></div>
-						<div class="field"><label for="e-ech">Assurance – échéance</label><input id="e-ech" type="date" bind:value={editAssuranceEcheance} /></div>
+						<!--  🔴 Compagnie, n° de police et échéance ONT ÉTÉ RETIRÉS d'ici.
+						      Depuis #490 la fiche les lit sur le CONTRAT d'assurance, et
+						      `copropriete_lue` efface ces colonnes : les saisir ici
+						      corrigeait donc une valeur que plus aucun écran n'affiche.
+						      Trouvé le 29/08/2026 en instruisant la remarque sur la
+						      reconduction tacite. C'est le défaut que `source_du_nom` a
+						      fermé pour le nom du syndic (#535), sur trois champs cette
+						      fois — un formulaire qui survit à sa source se lit comme une
+						      commande, pas comme un vestige. -->
+						<div class="field" style="grid-column:1/-1">
+							<AideSource active origine="contrat d'assurance"
+								ou="Prestataires → Contrats" repli="" />
+						</div>
 					</div>
 					<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
 						<button type="button" class="btn" on:click={() => (editing = false)}>Annuler</button>

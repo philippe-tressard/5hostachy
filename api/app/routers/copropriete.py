@@ -13,6 +13,7 @@ from app.models.core import (
     TypeEquipement, Utilisateur,
 )
 
+from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.syndic import nom_du_syndic
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
@@ -76,6 +77,10 @@ class CoproprieteRead(BaseModel):
     assurance_email: Optional[str] = None
     assurance_debut: Optional[date] = None
     assurance_document_id: Optional[int] = None
+    #: `True` quand le terme initial est passé : le contrat court par
+    #: RECONDUCTION TACITE. L'écran le dit, sinon l'échéance affichée ne se
+    #: distingue pas d'un terme négocié (`utils/echeance_contrat.py`).
+    assurance_reconduit: bool = False
 
     #: 🔴 Le SYNDIC, même moule que l'assurance — un contrat de référence.
     #:
@@ -91,6 +96,7 @@ class CoproprieteRead(BaseModel):
     syndic_debut: Optional[date] = None
     syndic_echeance: Optional[date] = None
     syndic_document_id: Optional[int] = None
+    syndic_reconduit: bool = False
     syndic_interlocuteur: Optional[str] = None
     syndic_interlocuteur_email: Optional[str] = None
 
@@ -181,6 +187,33 @@ def contrat_de_reference(session: Session, copro: Copropriete, section: str):
     ).first()
 
 
+def _echeance_lue(prefixe: str, contrat) -> dict:
+    """`<prefixe>_echeance` et `<prefixe>_reconduit`, déduits du contrat.
+
+    🔴 L'échéance NE VIENT PLUS de `prochaine_visite`. Ce champ s'appelle
+    « Prochaine visite » dans le formulaire, et c'est la bonne notion pour un
+    contrat d'entretien — une chaudière se visite. Une assurance et un mandat de
+    syndic n'ont pas de visite : ils ont un terme, qui se déduit de la date de
+    début et de la durée initiale, et qui se reporte d'un an tant qu'il est passé
+    (`utils/echeance_contrat.py`).
+
+    ⚠️ Signalé par l'utilisateur le 29/08/2026 : une assurance non dénoncée est
+    reconduite, si bien que l'échéance affichée devenait fausse le lendemain de
+    sa date — et s'affichait comme un terme DÉPASSÉ. La date reste complète,
+    année comprise : c'est elle qui dit si le préavis tombe cette année ou la
+    suivante. Ce qui manquait n'était pas l'année, c'était le report.
+
+    Un helper commun aux deux sections, et non deux écritures : l'invariant du
+    fichier est que l'assurance et le syndic sont LE MÊME GESTE — un
+    enrichissement donné à l'un doit l'être à l'autre (`test_contrats_de_reference`).
+    """
+    e = echeance_du_contrat(contrat)
+    return {
+        f"{prefixe}_echeance": e.date if e else None,
+        f"{prefixe}_reconduit": bool(e and e.reconduit),
+    }
+
+
 def assurance_du_contrat(session: Session, copro: Copropriete) -> dict:
     """Ce que la fiche affiche comme « assurance » — lu sur le CONTRAT (#490).
 
@@ -202,7 +235,7 @@ def assurance_du_contrat(session: Session, copro: Copropriete) -> dict:
         "assurance_email": presta.email if presta else None,
         "assurance_numero_police": contrat.numero_contrat,
         "assurance_debut": contrat.date_debut,
-        "assurance_echeance": contrat.prochaine_visite,
+        **_echeance_lue("assurance", contrat),
         "assurance_document_id": contrat.document_id,
     }
 
@@ -252,7 +285,7 @@ def syndic_du_contrat(session: Session, copro: Copropriete) -> dict:
         "syndic_email": presta.email if presta else None,
         "syndic_numero_mandat": contrat.numero_contrat,
         "syndic_debut": contrat.date_debut,
-        "syndic_echeance": contrat.prochaine_visite,
+        **_echeance_lue("syndic", contrat),
         "syndic_document_id": contrat.document_id,
     })
     return lu

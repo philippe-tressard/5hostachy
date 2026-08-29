@@ -27,11 +27,31 @@ import pytest
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 CADDYFILE = RACINE / "Caddyfile"
 
-#: Routeurs qui écrivent des fichiers à accès restreint. `prestataires.py` les a
-#: rejoints le 03/08/2026 (migration 0125) : ses devis étaient consommés par une
-#: URL publique stockée en base, ce qui imposait d'abord un endpoint de
-#: téléchargement authentifié. Plus aucune exception à ce jour.
-ROUTEURS_PRIVES = ("documents.py", "diagnostics.py", "prestataires.py")
+def _routeurs_prives() -> tuple:
+    """Les routeurs qui écrivent dans le répertoire privé — DÉDUITS, pas listés.
+
+    🔴 La liste était écrite à la main, et elle a dérivé au premier découpage :
+    le 29/08/2026, les relevés de compteurs sont sortis de `prestataires.py`
+    vers `compteurs.py` et ont emporté l'écriture de fichiers avec eux. Le
+    contrôle a continué de fouiller l'ancien module — il a échoué, ce qui est le
+    bon comportement, mais une liste qui doit être corrigée à chaque
+    réorganisation finit par l'être en la raccourcissant.
+
+    ⚠️ « La portée du contrôle fait partie du contrôle » (`standards/05` §9) :
+    un routeur créé demain qui écrit un fichier privé entre ici tout seul.
+    """
+    routeurs = sorted(
+        f.name
+        for f in (RACINE / "api" / "app" / "routers").glob("*.py")
+        if "REPERTOIRE_PRIVE" in f.read_text(encoding="utf-8")
+    )
+    #  Cas zéro : aucun routeur trouvé ⇒ le glob ou le motif a changé, et tous
+    #  les tests qui s'appuient dessus passeraient au vert SANS RIEN VÉRIFIER.
+    assert routeurs, "aucun routeur privé trouvé — contrôle impossible, pas vert"
+    return tuple(routeurs)
+
+
+ROUTEURS_PRIVES = _routeurs_prives()
 
 
 def _caddyfile() -> str:
@@ -280,7 +300,7 @@ def test_les_fichiers_de_prestataires_exigent_le_role_cs():
     enfin de `require_cs_or_admin`.
     """
     source = (
-        RACINE / "api" / "app" / "routers" / "prestataires.py"
+        RACINE / "api" / "app" / "routers" / "compteurs.py"
     ).read_text(encoding="utf-8")
 
     #  ⚠️ `/devis/{d_id}/fichier/{nom}` est parti avec la prestation ponctuelle
@@ -309,7 +329,7 @@ def test_un_endpoint_prestataire_ne_peut_pas_servir_un_pv_dag():
     condition de sécurité, pas une commodité — et un `basename` ne suffit pas.
     """
     source = (
-        RACINE / "api" / "app" / "routers" / "prestataires.py"
+        RACINE / "api" / "app" / "routers" / "compteurs.py"
     ).read_text(encoding="utf-8")
 
     assert "if nom not in noms_autorises:" in source, (
@@ -328,7 +348,7 @@ def test_les_urls_stockees_pointent_vers_les_endpoints_authentifies():
     casserait sans erreur serveur.
     """
     source = (
-        RACINE / "api" / "app" / "routers" / "prestataires.py"
+        RACINE / "api" / "app" / "routers" / "compteurs.py"
     ).read_text(encoding="utf-8")
 
     fautifs = re.findall(r'f"/uploads/\{[^"]*\}"', source)
@@ -351,7 +371,7 @@ def test_les_urls_de_fichiers_portent_le_nom_du_fichier():
     par une valeur qui en dépend**. Le circuit était fermé sur lui-même.
     """
     source = (
-        RACINE / "api" / "app" / "routers" / "prestataires.py"
+        RACINE / "api" / "app" / "routers" / "compteurs.py"
     ).read_text(encoding="utf-8")
 
     urls = re.findall(r'= f"(/api/prestataires/[^"]+)"', source)

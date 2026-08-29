@@ -141,7 +141,7 @@
 			['Courriel', fiche.assurance_email],
 			['N° de police', fiche.assurance_numero_police],
 			['Début', fiche.assurance_debut ? fmtDate(fiche.assurance_debut) : null],
-			['Échéance', fiche.assurance_echeance ? fmtDate(fiche.assurance_echeance) : null]
+			['Échéance', fiche.assurance_echeance ? fmtDate(fiche.assurance_echeance) + (fiche.assurance_reconduit ? ' (reconduit tacitement)' : '') : null]
 		]}
 	>
 		<svelte:fragment slot="renvoi">
@@ -176,7 +176,7 @@
 			['Courriel', fiche.syndic_email],
 			['N° de mandat', fiche.syndic_numero_mandat],
 			['Début', fiche.syndic_debut ? fmtDate(fiche.syndic_debut) : null],
-			['Échéance', fiche.syndic_echeance ? fmtDate(fiche.syndic_echeance) : null],
+			['Échéance', fiche.syndic_echeance ? fmtDate(fiche.syndic_echeance) + (fiche.syndic_reconduit ? ' (reconduit tacitement)' : '') : null],
 			['Interlocuteur', fiche.syndic_interlocuteur],
 			['Courriel direct', fiche.syndic_interlocuteur_email]
 		]}

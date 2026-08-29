@@ -70,7 +70,7 @@ class UTCJSONResponse(JSONResponse):
 from app.database import _run_migrations, engine
 from app.routers import (
     auth, auth_mot_de_passe, tickets, publications, documents, lots, admin,
-    notifications, acces, calendrier, calendrier_historique, prestataires, sondages, idees, copropriete,
+    notifications, acces, calendrier, calendrier_historique, prestataires, compteurs, sondages, idees, copropriete,
     bailleur, config, diagnostics, annonces, regles_residence, delegations,
     telemetry, flux,
 )
@@ -256,6 +256,9 @@ app.include_router(calendrier.router)
 #  L'Historique d'un événement — extrait le 18/08/2026 (modularité, rang 1).
 app.include_router(calendrier_historique.router)
 app.include_router(prestataires.router)
+#  Même préfixe : les relevés de compteurs sont sortis de `prestataires.py`
+#  (modularité, 29/08/2026), pas de l'API — les chemins n'ont pas bougé.
+app.include_router(compteurs.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)
