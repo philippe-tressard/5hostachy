@@ -42,6 +42,76 @@ def delier_references(session, modele) -> int:
     return deliees
 
 
+def purger_referentiellement(session, modele) -> int:
+    """Supprime TOUTES les lignes de `modele`, avec ce qui en dépend.
+
+    🔴 Elle appelle `app.utils.purge_referentielle.purger` — **le code de
+    production**, celui qui sert à supprimer un compte depuis l'administration.
+    Les fixtures réécrivaient cette logique à la main, et c'est ce qui produisait
+    la moitié des refus de clés étrangères (#546) : `DELETE FROM utilisateur`
+    (16 refus) et `UPDATE publication` (13, tentative de délier une colonne
+    `NOT NULL`).
+
+    Le module lit les MÉTADONNÉES : une table créée demain est traitée sans
+    qu'on y pense. C'est précisément ce qu'une purge écrite à la main ne peut pas
+    faire — `supprimer_utilisateur` en énumérait onze familles quand le modèle en
+    comptait cinquante-six.
+
+    ⚠️ Il ne fait pas de `commit` : c'est l'appelant qui décide de la
+    transaction. On le fait ici, la fixture n'ayant rien à annuler ensuite.
+
+    @returns le nombre de lignes supprimées, toutes tables confondues.
+    """
+    from sqlmodel import select
+
+    from app.utils.purge_referentielle import purger
+
+    total = 0
+    for ligne in session.exec(select(modele)).all():
+        for compte in purger(session, modele.__tablename__, ligne.id).values():
+            total += compte
+    session.commit()
+    return total
+
+
+def vider_perimetres(session) -> None:
+    """Vide `perimetre` en respectant son AUTO-RÉFÉRENCE (`parent_id`).
+
+    🔴 `session.exec(delete(Perimetre))` ne marche pas : la table se référence
+    elle-même, et supprimer tous les nœuds d'un coup viole la clé sur les enfants
+    dès que `foreign_keys=ON`. Quatre fixtures l'écrivaient ainsi (#546), et rien
+    ne le signalait tant que SQLite ne vérifiait rien.
+
+    On efface PAR VAGUES, des feuilles vers la racine : à chaque tour, les nœuds
+    dont plus personne n'est l'enfant. C'est la seule façon correcte sans
+    connaître la profondeur de l'arbre, qui est une donnée administrée.
+
+    ⚠️ ET IL FAUT SAVOIR DÉFAIRE UN CYCLE. `test_cycle_de_parente_…` en crée un
+    volontairement — c'est son sujet. Une purge par vagues n'y trouve alors plus
+    aucune feuille et tournerait indéfiniment. On délie donc les restants avant
+    de les effacer : une fixture de purge n'a pas le droit de supposer des
+    données saines, elle s'exécute précisément après les tests qui les abîment.
+    """
+    from sqlmodel import select
+
+    from app.models.perimetre import Perimetre
+
+    restants = session.exec(select(Perimetre)).all()
+    while restants:
+        parents = {p.parent_id for p in restants if p.parent_id is not None}
+        feuilles = [p for p in restants if p.id not in parents]
+        if not feuilles:
+            for noeud in restants:
+                noeud.parent_id = None
+                session.add(noeud)
+            session.commit()
+            feuilles = restants
+        for feuille in feuilles:
+            session.delete(feuille)
+        session.commit()
+        restants = session.exec(select(Perimetre)).all()
+
+
 def vider_patrimoine(session, modeles_sup=()) -> None:
     """Purge copropriété, bâtiments et périmètres — plus les modèles demandés.
 
@@ -57,44 +127,16 @@ def vider_patrimoine(session, modeles_sup=()) -> None:
     marqueur = session.get(ConfigSite, CLE_SEMEE)
     if marqueur:
         session.delete(marqueur)
+    #  🔴 `purger_referentiellement` et non `session.delete` : supprimer une ligne
+    #  sans ce qui la référence est exactement ce que les clés étrangères
+    #  refusent (#546). Le module de production sait le faire, et il lit les
+    #  métadonnées — la fixture n'a pas à connaître le graphe.
     for modele in modeles_sup:
-        for ligne in session.exec(select(modele)).all():
-            session.delete(ligne)
-    session.commit()
+        purger_referentiellement(session, modele)
 
-    #  🔴 `Perimetre` S'AUTO-RÉFÉRENCE (`parent_id`), donc l'ordre de suppression
-    #  compte : effacer un nœud avant ses enfants viole la clé étrangère. Ce n'était
-    #  visible d'aucune façon tant que SQLite tournait avec `foreign_keys=OFF` — la
-    #  purge se faisait dans un ordre arbitraire, et la base l'acceptait (#546).
-    #
-    #  On efface donc PAR VAGUES, des feuilles vers la racine : à chaque tour, les
-    #  nœuds dont plus personne n'est l'enfant. C'est la seule façon correcte sans
-    #  connaître la profondeur de l'arbre, qui est une donnée administrée.
-    #
-    #  ⚠️ ET IL FAUT SAVOIR DÉFAIRE UN CYCLE. `test_cycle_de_parente_…` en crée un
-    #  volontairement — c'est son sujet : vérifier que la lecture de l'arbre ne
-    #  boucle pas dessus. Une purge par vagues n'y trouve alors plus aucune
-    #  feuille et tournerait indéfiniment. On délie donc les restants
-    #  (`parent_id = NULL`) avant de les effacer : c'est le seul geste qui rende
-    #  la base propre quel que soit l'état où un test l'a laissée.
-    #
-    #  Une fixture de purge n'a pas le droit de supposer des données saines — elle
-    #  s'exécute précisément après les tests qui les abîment exprès.
-    restants = session.exec(select(Perimetre)).all()
-    while restants:
-        parents = {p.parent_id for p in restants if p.parent_id is not None}
-        feuilles = [p for p in restants if p.id not in parents]
-        if not feuilles:
-            #  Plus aucune feuille : il ne reste que des cycles. On les délie.
-            for noeud in restants:
-                noeud.parent_id = None
-                session.add(noeud)
-            session.commit()
-            feuilles = restants
-        for feuille in feuilles:
-            session.delete(feuille)
-        session.commit()
-        restants = session.exec(select(Perimetre)).all()
+    #  Les périmètres partent par vagues — voir `vider_perimetres`, qui porte
+    #  la raison et le cas du cycle.
+    vider_perimetres(session)
 
     #  🔴 Les bâtiments sont référencés par ONZE colonnes — utilisateur, ticket,
     #  document, lot, publication, événement, contrat, devis, membre CS, périmètre,
