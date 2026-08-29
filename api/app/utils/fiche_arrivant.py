@@ -200,6 +200,8 @@ def _build_cs_section(cs_data: dict) -> str:
 
 def _build_syndic_section(syndic_data: dict) -> str:
     """Section Syndic."""
+    #  Le nom vient de `nom_du_syndic` en amont (#535) : il n'est plus lu
+    #  dans `SyndicInfo`, qui pouvait diverger du contrat désigné.
     nom = syndic_data.get("nom_syndic", "")
     adresse = syndic_data.get("adresse", "")
     site_web = syndic_data.get("site_web")

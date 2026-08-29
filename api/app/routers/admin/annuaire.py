@@ -22,6 +22,7 @@ from app.models.core import (
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
+from app.utils.syndic import nom_du_syndic, source_du_nom
 from typing import Optional
 
 router = APIRouter()
@@ -113,7 +114,14 @@ def annuaire(
             "membres": cs_out,
         },
         "syndic": {
-            "nom_syndic": syndic_info.nom_syndic if syndic_info else "",
+            #  🔴 Le CONTRAT fait foi (#535) : le nom vivait ici en texte libre
+            #  ET dans `syndic_contrat_id → ContratEntretien → Prestataire.nom`.
+            #  Changer de syndic dans Prestataires ne mettait à jour ni cet
+            #  écran ni la fiche arrivant. Une seule source désormais.
+            "nom_syndic": nom_du_syndic(session),
+            #  L'écran doit savoir si la saisie sert encore : un champ sans
+            #  effet qui ne le dit pas fait corriger un texte que personne ne lit.
+            "nom_syndic_source": source_du_nom(session),
             "adresse": syndic_info.adresse if syndic_info else "",
             "site_web": syndic_info.site_web if syndic_info else None,
             "membres": syndic_membres_out,
@@ -261,7 +269,8 @@ def get_syndic_info(
     syndic = session.exec(select(SyndicInfo)).first()
     membres = session.exec(select(MembreSyndic).order_by(MembreSyndic.ordre)).all()
     return {
-        "nom_syndic": syndic.nom_syndic if syndic else "",
+        "nom_syndic": nom_du_syndic(session),
+        "nom_syndic_source": source_du_nom(session),
         "adresse": syndic.adresse if syndic else "",
         "site_web": syndic.site_web if syndic else None,
         "membres": [

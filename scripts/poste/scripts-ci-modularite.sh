@@ -37,14 +37,51 @@ PLAFOND=500
 #  la raison que l'en-tête de ce fichier donne à propos du plafond absolu.
 PLAFOND_STYLE=1500
 
-verdict() {  # $1 = lignes avant (0 = fichier neuf), $2 = après, $3 = plafond (défaut PLAFOND)
-  local av=$1 ap=$2 PLAFOND=${3:-$PLAFOND}
+#  🔴 « GROSSIR » SE MESURE EN VOLUME, PAS EN LIGNES (29/08/2026, #419).
+#
+#  Le décompte de lignes mesure la DENSITÉ D'ÉCRITURE autant que la taille : il
+#  pénalise le formatage standard et récompense l'écriture dense — l'inverse de
+#  ce qu'il cherche. Mesuré en exécutant réellement `prettier --write` :
+#
+#      mon-lot        1608 → 2263 lignes (+41 %)   52454 → 52615 car. (+0,3 %)
+#      prestataires   1243 → 2053 lignes (+65 %)   50567 → 50737 car. (+0,3 %)
+#      admin          1382 → 1957 lignes (+42 %)   51301 → 51371 car. (+0,1 %)
+#
+#  Le reformatage aurait fait échouer TREIZE fichiers d'un coup, dont sept
+#  conformes avant — pour zéro ligne de code ajoutée. Deux exigences de rang 1
+#  s'opposaient alors (modularité contre format uniforme), et la seule issue
+#  aurait été d'en sacrifier une.
+#
+#  Le VOLUME — caractères hors espaces — est insensible aux retours à la ligne et
+#  à l'indentation. Le plafond, lui, reste en LIGNES : c'est ce que dit la règle
+#  du socle, et c'est lisible. Seule la question « a-t-il grossi ? » change de
+#  mesure.
+verdict() {  # $1 = lignes avant (0 = neuf), $2 = lignes après, $3 = plafond,
+             # $4 = volume avant, $5 = volume après — facultatifs : sans eux, on
+             #      retombe exactement sur l'ancien comportement.
+  local av=$1 ap=$2 PLAFOND=${3:-$PLAFOND} vav=${4:-} vap=${5:-} marge
   if [ "$av" -eq 0 ]; then
     [ "$ap" -gt "$PLAFOND" ] && echo neuf-trop-gros || echo ok
   elif [ "$ap" -le "$PLAFOND" ]; then
     echo ok
   elif [ "$ap" -gt "$av" ]; then
-    echo grossit
+    #  Il gagne des lignes. Est-ce du CODE, ou de la mise en forme ?
+    if [ -n "$vav" ] && [ -n "$vap" ]; then
+      #  ⚠️ « Volume inchangé » n'est pas « à l'octet près » : le formatage AJOUTE
+      #  quelques caractères — points-virgules, guillemets, parenthèses de
+      #  sûreté. Mesuré ci-dessus : +0,1 % à +0,3 %. D'où 0,5 %, qui couvre le
+      #  mesuré avec marge.
+      #
+      #  🔴 L'ANGLE MORT EST ASSUMÉ ET CHIFFRÉ : sur 50 000 caractères, 0,5 % =
+      #  250 caractères, soit environ huit lignes denses qui passeraient. C'est
+      #  le prix pour que le formatage ne soit pas pénalisé, et il est petit
+      #  devant les 655 lignes qu'un reformatage ajoute. Un contrôle qui tait son
+      #  angle mort ment ; celui-ci le dit, ici et dans sa sortie.
+      marge=$(( vav / 200 ))
+      if [ "$vap" -gt "$(( vav + marge ))" ]; then echo grossit; else echo reformate; fi
+    else
+      echo grossit
+    fi
   else
     echo ok
   fi
@@ -63,6 +100,28 @@ if [ "${1:-}" = "--selftest" ]; then
   t "gros fichier qui maigrit"              737 684 ok
   t "gros fichier inchangé"                 880 880 ok
   t "gros fichier qui repasse sous le plafond" 520 400 ok
+
+  #  ── #419 : le VOLUME distingue le reformatage du vrai ajout ─────────────
+  #  Sans ces cas, `prettier --write` ferait échouer TREIZE fichiers d'un coup
+  #  pour zéro ligne de code ajoutée — deux exigences de rang 1 s'opposeraient,
+  #  et il faudrait en sacrifier une.
+  tv() { r=$(verdict "$2" "$3" "$PLAFOND" "$4" "$5"); [ "$r" = "$6" ] && echo "PASS  $1 → $r"          || { echo "FAIL  $1  attendu=$6 obtenu=$r"; st=1; }; }
+  #  Le cas RÉEL, mesuré : mon-lot reformaté par prettier.
+  tv "reformatage pur : +41 % de lignes, +0 % de volume" 1608 2263 52454 52615 reformate
+  #  Un vrai ajout augmente les DEUX.
+  tv "vrai ajout : lignes ET volume montent"             996 1044 30000 31500 grossit
+  #  🔴 Le piège inverse, et c'est lui qui compte : ajouter du code en le
+  #  RESSERRANT. Les lignes montent peu, le volume monte : c'est un ajout.
+  tv "ajout dense : +2 lignes mais +3000 caractères"     996  998 30000 33000 grossit
+  #  Reformatage qui REDUIT le volume (commentaires retirés) : ce n'est pas un ajout.
+  tv "lignes montent, volume baisse"                    1000 1400 40000 39500 reformate
+  #  La tolérance est BORNÉE, et ces deux cas la tiennent : sans eux, on pourrait
+  #  l'élargir sans que rien ne rougisse.
+  tv "pile à la marge de 0,5 %"                         1000 1400 40000 40200 reformate
+  tv "juste au-dessus de la marge"                      1000 1400 40000 40300 grossit
+  #  Sans volume fourni, l'ancien comportement est intact : un appelant qui ne
+  #  mesure pas le volume ne doit pas devenir soudain permissif.
+  t  "sans volume : comportement d'origine"              996 1044 grossit
   #  ── Feuilles de style : même règle, autre plafond (#499) ────────────────
   ts() { r=$(verdict "$2" "$3" "$PLAFOND_STYLE"); [ "$r" = "$4" ] && echo "PASS  $1 → $r" \
          || { echo "FAIL  $1  attendu=$4 obtenu=$r"; st=1; }; }
@@ -133,6 +192,7 @@ chemin_origine() {
 }
 
 fautifs=""
+reformates=""
 while IFS= read -r f; do
   #  Le plafond dépend de la NATURE du fichier. Une extension inconnue n'est pas
   #  « sans risque » : elle est simplement hors de ce que ce contrôle sait juger,
@@ -145,14 +205,26 @@ while IFS= read -r f; do
   esac
   [ -f "$f" ] || continue                       # supprimé
   ap=$(wc -l < "$f")
+  #  Le VOLUME : caractères hors espaces. `tr -d '[:space:]'` retire retours à la
+  #  ligne, tabulations et espaces d'un coup — c'est exactement ce que le
+  #  formatage déplace, et rien d'autre.
+  vap=$(tr -d '[:space:]' < "$f" | wc -c)
   av=$(git show "$BASE:$f" 2>/dev/null | wc -l) || av=0
+  vav=$(git show "$BASE:$f" 2>/dev/null | tr -d '[:space:]' | wc -c) || vav=0
   if [ "${av:-0}" -eq 0 ]; then                 # absent au nouveau chemin : déplacé ?
     origine=$(chemin_origine "$f")
-    [ -n "$origine" ] && av=$(git show "$BASE:$origine" 2>/dev/null | wc -l)
+    if [ -n "$origine" ]; then
+      av=$(git show "$BASE:$origine" 2>/dev/null | wc -l)
+      vav=$(git show "$BASE:$origine" 2>/dev/null | tr -d '[:space:]' | wc -c)
+    fi
   fi
-  case "$(verdict "${av:-0}" "$ap" "$plafond")" in
-    grossit)        fautifs="$fautifs  $f : $av → $ap lignes (déjà au-dessus de $plafond, et il grossit)\n" ;;
-    neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $plafond)\n" ;;
+  case "$(verdict "${av:-0}" "$ap" "$plafond" "${vav:-}" "${vap:-}")" in
+    grossit)        fautifs="$fautifs  $f : $av → $ap lignes, $vav → $vap caracteres (deja au-dessus de $plafond, et il grossit)
+" ;;
+    neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $plafond)
+" ;;
+    reformate)      reformates="$reformates  $f : $av → $ap lignes, volume inchange ($vav → $vap car.)
+" ;;
   esac
 done <<< "$CHANGES"
 
@@ -166,5 +238,13 @@ fi
 #  périmètre, se lit comme exhaustif — c'est ainsi que 143 lignes de CSS sont
 #  passées inaperçues (#499). Deux mots de plus suppriment la lecture fausse
 #  (`standards/04` : un contrôle muet sur ses limites les fait oublier).
-echo "✓ Modularité : aucun fichier n'a grossi (code > $PLAFOND l. · styles > $PLAFOND_STYLE l.)."
+#  🔴 Un contrôle qui TAIT ce qu'il a laissé passer ment par omission. Une
+#  croissance en lignes tolérée parce que le volume n'a pas bougé doit se voir.
+if [ -n "$reformates" ]; then
+  printf "
+  Croissance en LIGNES toleree (volume de code inchange -- reformatage) :
+"
+  printf "%b" "$reformates"
+fi
+echo "✓ Modularité : aucun fichier n'a grossi EN VOLUME (code > $PLAFOND l. · styles > $PLAFOND_STYLE l.)."
 echo "  NON MESURÉ, faute de règle : .html .md .json .yml .sql, et toute autre extension."
