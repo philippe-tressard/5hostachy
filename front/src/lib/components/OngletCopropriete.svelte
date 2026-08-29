@@ -176,7 +176,8 @@
 			['Courriel', fiche.syndic_email],
 			['N° de mandat', fiche.syndic_numero_mandat],
 			['Début', fiche.syndic_debut ? fmtDate(fiche.syndic_debut) : null],
-			['Échéance', fiche.syndic_echeance ? fmtDate(fiche.syndic_echeance) + (fiche.syndic_reconduit ? ' (reconduit tacitement)' : '') : null],
+			//  Un mandat ne se reconduit pas : échu, il appelle une AG (#628).
+			['Mandat', fiche.syndic_echeance ? fmtDate(fiche.syndic_echeance) + (fiche.syndic_echu ? ' — ÉCHU, à renouveler en AG' : '') : null],
 			['Interlocuteur', fiche.syndic_interlocuteur],
 			['Courriel direct', fiche.syndic_interlocuteur_email]
 		]}

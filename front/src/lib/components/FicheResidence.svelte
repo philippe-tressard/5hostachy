@@ -31,6 +31,18 @@
 		return ` — échéance ${fmt(date)}${reconduit ? ' (reconduit tacitement)' : ''}`;
 	}
 
+	/**  Le mandat de syndic ne se reconduit pas : échu, il appelle une AG.
+	 *
+	 *   🔴 Signalé le 29/08/2026 : *« c'est l'assurance qui est reconduite
+	 *   tacitement, pas le syndic »*. Un mandat est voté en assemblée générale
+	 *   pour un terme ; passé ce terme il a CESSÉ. L'afficher comme une échéance
+	 *   ordinaire — pire, reportée — supprimait de la fiche le seul signal qui
+	 *   demande une décision. */
+	function mandat(date: string | null | undefined, echu: boolean): string {
+		if (!date) return '';
+		return echu ? ` — mandat échu depuis le ${fmt(date)}` : ` — mandat jusqu'au ${fmt(date)}`;
+	}
+
 	export let copropriete: any;
 	export let batiments: any[] = [];
 
@@ -98,7 +110,7 @@
 				<div class="info-item">
 					<span class="info-label">🏢 Syndic</span>
 					<span class="info-value">
-						<a href="/annuaire#syndic">{copropriete.syndic_cabinet}</a>{echeance(copropriete.syndic_echeance, copropriete.syndic_reconduit)}
+						<a href="/annuaire#syndic">{copropriete.syndic_cabinet}</a><span class:mandat-echu={copropriete.syndic_echu}>{mandat(copropriete.syndic_echeance, copropriete.syndic_echu)}</span>
 					</span>
 				</div>
 			{/if}
@@ -184,6 +196,9 @@
 	}
 	.info-value { font-size: .9rem; font-weight: 500; }
 	.info-highlight { color: var(--color-primary); font-weight: 700; }
+	/*  Un mandat échu n'est pas une information de plus : c'est une décision en
+	    attente. La couleur d'alerte le sort de la lecture ordinaire. */
+	.mandat-echu { color: var(--color-danger, #dc2626); font-weight: 600; }
 
 	/* ── Tableau bâtiments ────────────────────────────────────────────── */
 	.batiment-table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-top: .25rem; }

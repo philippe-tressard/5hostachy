@@ -23,10 +23,14 @@ REFERENCE = date(2026, 8, 29)
 
 
 class _Contrat:
-    def __init__(self, debut, valeur=None, unite=None):
+    #  `assurance` par défaut : le cas de la reconduction tacite, qui est la
+    #  règle. Les cas du mandat de syndic passent le type explicitement — le
+    #  lecteur voit alors tout de suite ce qui distingue le test.
+    def __init__(self, debut, valeur=None, unite=None, type_equipement="assurance"):
         self.date_debut = debut
         self.duree_initiale_valeur = valeur
         self.duree_initiale_unite = unite
+        self.type_equipement = type_equipement
 
 
 def test_sans_date_de_debut_aucune_echeance():
@@ -135,3 +139,71 @@ def test_les_deux_sections_de_la_fiche_recoivent_LE_MEME_enrichissement():
     }
     assert appels.get("assurance_du_contrat") == ["assurance"], appels
     assert appels.get("syndic_du_contrat") == ["syndic"], appels
+
+
+# ── Ce qui NE se reconduit pas : le mandat de syndic (#628) ──────────────────
+#
+# 🔴 Signalé par l'utilisateur le 29/08/2026 : *« c'est l'assurance qui est
+# reconduite tacitement, pas le syndic »*. La première version reportait le terme
+# de TOUS les contrats — un mandat expiré s'affichait donc valide, et le seul
+# signal qui appelle une assemblée générale disparaissait de la fiche.
+
+
+def test_un_mandat_de_syndic_en_cours_affiche_son_terme_reel():
+    """Mandat de trois ans voté en 2024 : terme en 2027, ni reconduit ni échu."""
+    e = echeance_du_contrat(_Contrat(date(2024, 6, 1), 3, "ans", "syndic"), REFERENCE)
+    assert e.date == date(2027, 6, 1)
+    assert (e.reconduit, e.echu) == (False, False)
+
+
+def test_un_mandat_de_syndic_expire_est_ECHU_et_ne_se_reporte_PAS():
+    """🔴 LE CŒUR DE LA CORRECTION. Mandat 2021–2024 : il a cessé, il le dit.
+
+    Avant, le report donnait 01/06/2027 avec `reconduit=True` — une date
+    d'avenir sur un mandat mort depuis deux ans. C'est le contrat le plus
+    important de la copropriété, et l'écran affirmait le contraire du vrai.
+    """
+    e = echeance_du_contrat(_Contrat(date(2021, 6, 1), 3, "ans", "syndic"), REFERENCE)
+    assert e.date == date(2024, 6, 1), "le terme d'un mandat ne bouge pas"
+    assert e.echu is True
+    assert e.reconduit is False, "un mandat échu n'est pas un contrat reconduit"
+
+
+def test_un_mandat_sans_duree_ne_rend_AUCUNE_echeance():
+    """Le cas zéro du mandat : durée inconnue ⇒ terme inconnu, pas terme inventé.
+
+    ⚠️ Le repli annuel serait ici une fausse alerte : il déclarerait « échu » un
+    mandat de trois ans dès sa deuxième année. Ce repli n'est légitime que là où
+    la date est un ANNIVERSAIRE qui revient — c'est-à-dire sous reconduction
+    tacite, et nulle part ailleurs.
+    """
+    assert echeance_du_contrat(_Contrat(date(2022, 6, 17), None, None, "syndic"), REFERENCE) is None
+
+
+def test_une_assurance_du_meme_age_est_reconduite_et_NON_echue():
+    """Le témoin qui prouve que le test précédent mesure bien le TYPE.
+
+    Même date de début, même durée : seul le type change. Sans ce couple, les
+    trois tests ci-dessus passeraient aussi sur un code qui aurait simplement
+    cessé de reporter TOUT LE MONDE.
+    """
+    syndic = echeance_du_contrat(_Contrat(date(2021, 6, 1), 3, "ans", "syndic"), REFERENCE)
+    assurance = echeance_du_contrat(_Contrat(date(2021, 6, 1), 3, "ans", "assurance"), REFERENCE)
+    assert (syndic.date, syndic.echu) == (date(2024, 6, 1), True)
+    assert (assurance.date, assurance.reconduit, assurance.echu) == (date(2027, 6, 1), True, False)
+
+
+def test_l_exception_est_ENUMEREE_et_le_cas_general_est_la_reconduction():
+    """La liste des types sans reconduction reste courte — et non vide.
+
+    ⚠️ Vidée, tous les contrats se reporteraient à nouveau et les trois tests
+    ci-dessus tomberaient : celui-ci n'ajoute donc rien de ce côté. Il tient
+    l'autre bord — qu'on n'y verse pas les types au fil de l'eau, ce qui
+    reviendrait à faire de l'exception le cas général sans jamais le décider.
+    """
+    from app.utils.echeance_contrat import SANS_RECONDUCTION_TACITE
+
+    assert SANS_RECONDUCTION_TACITE == {"syndic"}, (
+        "la liste a changé : un type qui la rejoint doit d'abord dire POURQUOI "
+        "il échappe à la reconduction tacite, qui est la règle."
+    )

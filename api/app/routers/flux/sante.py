@@ -123,7 +123,16 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
             #  ⚠️ « reconduit tacitement » se dit ICI aussi : une échéance de
             #  reconduction ne se relance pas comme un terme négocié, et le
             #  taire donnerait au CS deux lignes qu'il ne saurait pas départager.
-            suffixe = " (reconduction tacite)" if e.reconduit else ""
+            #  ⚠️ TROIS états, pas deux. « Échu » n'est pas une échéance à
+            #  venir : c'est un mandat qui a CESSÉ, et la copropriété doit voter.
+            #  Le confondre avec une reconduction — ce que faisait la première
+            #  version — supprimait le seul signal qui appelle une AG (#628).
+            if e.echu:
+                suffixe = " — MANDAT ÉCHU, à renouveler en AG"
+            elif e.reconduit:
+                suffixe = " (reconduction tacite)"
+            else:
+                suffixe = ""
             prochains.append({
                 "id": section,
                 "date": e.date.isoformat(),
