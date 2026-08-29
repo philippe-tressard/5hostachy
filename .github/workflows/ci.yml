@@ -504,6 +504,15 @@ jobs:
         working-directory: front
         run: npm run lint:etats
 
+      # Les quatre options d'une publication — épinglage, urgence, brouillon,
+      # confidentialité — étaient écrites à TROIS endroits et avaient déjà
+      # divergé : la punaise sur la carte et rien sur la case ; le CRAYON pour le
+      # brouillon, alors qu'il est l'icône « Modifier » de toutes les barres
+      # d'actions. Rien ne cassait — chaque écran était correct isolément.
+      - name: Options de publication non recopiées
+        working-directory: front
+        run: npm run lint:options-publication
+
       # Un `input, textarea { width: 100% }` posé dans le <style> d'UNE page
       # atteignait toutes ses cases à cocher : chacune s'étirait sur la largeur du
       # formulaire et son libellé partait à l'autre bout. Un sélecteur, deux

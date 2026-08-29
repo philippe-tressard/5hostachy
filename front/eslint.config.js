@@ -107,7 +107,33 @@ export default defineConfig(
 			// trouve de vrais morts — imports de composants jamais rendus, fonctions
 			// jamais appelées. On l'échange donc plutôt que de renoncer à la détection :
 			// une règle désactivée sans remplacement, c'est un contrôle en moins.
-			'@typescript-eslint/no-unused-vars': 'off',
+			//
+			//  ✅ **ELLE NE PLANTE PLUS — vérifié le 29/08/2026**, et c'est
+			//  exactement la condition de réactivation écrite ci-dessus. Le relevé
+			//  complet tient en **6 signalements** (contre 139 pour la règle de base
+			//  en août), dont **4** sont des variables volontairement inutilisées et
+			//  préfixées `_` : la convention existait, elle n'était simplement pas
+			//  déclarée à l'outil.
+			//
+			//  On rétablit donc la version TypeScript, qui est la bonne : elle LIT les
+			//  annotations de type, là où la règle de base y voyait 59 faux morts —
+			//  `export let onUpload: (f: File) => …` lui montrait un `f` jamais employé.
+			//  `args: 'none'` était le pansement de cette cécité ; il n'est plus utile,
+			//  et il masquait au passage les vrais paramètres morts.
+			'@typescript-eslint/no-unused-vars': ['error', {
+				//  Les quatre portées où la convention `_` dit « je sais, et c'est
+				//  voulu ». Sans elles, l'outil punit une intention explicite.
+				argsIgnorePattern: '^_',
+				varsIgnorePattern: '^_',
+				caughtErrorsIgnorePattern: '^_',
+				//  `{#each xs as _opt, i}` — le tableau est parcouru pour son INDEX,
+				//  et c'est nécessaire : dans un formulaire, la liaison doit viser
+				//  `options[i].libelle` et non la variable de boucle, sinon
+				//  `bind:value` écrit dans une copie locale et la saisie est perdue.
+				//  Deux composants le font (`FormulaireSondage`, `prestataires`) ; le
+				//  motif est écrit ICI, une fois, et pas en commentaire dans chacun.
+				destructuredArrayIgnorePattern: '^_',
+			}],
 			//
 			//  ⚠️ MISE À JOUR DU 20/08/2026 — la règle de base ne lit pas TypeScript,
 			//  et 59 de ses 139 signalements étaient des NOMS DE PARAMÈTRES DANS DES
@@ -127,7 +153,13 @@ export default defineConfig(
 			//  qu'elle aurait tort : elle est coupée parce qu'un ménage de 74 sites
 			//  dans 24 fichiers ne se glisse pas dans le lot qui allume l'outil — on
 			//  ne saurait plus lequel des deux a cassé quoi.
-			'no-unused-vars': ['error', { args: 'none', varsIgnorePattern: '^_' }],
+			//
+			//  🔴 LA RÈGLE DE BASE EST DÉSORMAIS COUPÉE, et ce n'est pas un renoncement :
+			//  c'est la version TypeScript ci-dessus qui la remplace, en strictement
+			//  plus fine. Les garder toutes les deux ferait signaler chaque mort DEUX
+			//  fois et, pire, ferait dépendre le verdict de la moins informée des deux.
+			//  #550 a fait le ménage des 74 morts réels qu'elle avait révélés.
+			'no-unused-vars': 'off',
 
 			// ── Trois règles inadaptées À CE PROJET, désactivées sur un fait vérifié ───
 			// Aucune n'est éteinte pour le confort ni pour faire baisser un compteur :
@@ -149,10 +181,18 @@ export default defineConfig(
 			// → À réactiver le jour où un `paths.base` apparaît dans `svelte.config.js`.
 			'svelte/no-navigation-without-resolve': 'off',
 
-			// `no-irregular-whitespace` (10 signalements) : les 10 sont des U+00A0,
-			// espaces INSÉCABLES de typographie française dans du texte affiché —
-			// « Ex : », « N° 12 », « 34 m² ». Les retirer abîmerait l'affichage. La règle
-			// ignore les chaînes JS par défaut, mais pas le texte d'un template Svelte.
+			// `no-irregular-whitespace` (**7** signalements au 29/08/2026, contre 10)
+			// : les sept sont des U+00A0, espaces INSÉCABLES de typographie française
+			// dans du texte affiché — « Ex : », « N° 12 », « 45 m² », tous relus un par
+			// un ce jour-là. Les retirer abîmerait l'affichage. La règle ignore les
+			// chaînes JS par défaut, mais pas le texte d'un template Svelte.
+			//
+			// ⚠️ Elle est coupée **ici seulement**, sur les `.svelte`. Elle reste ACTIVE
+			// sur les `.ts` / `.js` (bloc du haut), où le relevé est à **zéro** et où un
+			// caractère invisible n'est jamais de la typographie : c'est là que vivait
+			// le U+0008 qui rendait une expression régulière inerte sans que personne
+			// puisse le voir. Couper une règle partout parce qu'elle a tort quelque
+			// part, c'est perdre les endroits où elle a raison.
 			'no-irregular-whitespace': 'off',
 
 			// NB : `@typescript-eslint/no-unused-expressions` (5 signalements) est
@@ -214,6 +254,19 @@ export default defineConfig(
 			// possible » heuristiques. Aucune n'est un défaut avéré.
 			'svelte/no-immutable-reactive-statements': 'off',
 			'svelte/infinite-reactive-loop': 'off',
+			//
+			//  🔴 `no-reactive-functions` ne peut PAS être réactivée aujourd'hui, et ce
+			//  n'est plus une question de dette : elle FAIT TOMBER ESLINT 10.
+			//  Mesuré le 29/08/2026 en tentant de relever son compte —
+			//
+			//      TypeError: source.isSpaceBetweenTokens is not a function
+			//      Occurred while linting …/PerimetrePicker.svelte:99
+			//      Rule: "svelte/no-reactive-functions"
+			//
+			//  Son correcteur automatique appelle une API retirée d'ESLint 10.
+			//  → À réactiver quand `eslint-plugin-svelte` aura corrigé son `fix()`.
+			//  ⚠️ Tant que ce bug tient, la réactiver rendrait la CI rouge par CRASH,
+			//  pas par violation : un échec qu'on lirait comme une panne d'outillage.
 			'svelte/no-reactive-functions': 'off',
 
 			// ── ESLint 10 : `no-useless-assignment` ne connaît pas `$:` ──────────

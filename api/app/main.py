@@ -75,6 +75,7 @@ from app.routers import (
     telemetry, flux,
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
+from app.routers import csp
 from app.seed import seed
 from app.utils.backup import setup_scheduler
 
@@ -271,6 +272,9 @@ app.include_router(telemetry.router)
 app.include_router(flux.router)
 app.include_router(signalements.router)
 app.include_router(patrimoine.router)
+#  Collecte des violations de CSP (#536) : point PUBLIC — le navigateur poste
+#  sans cookie. Borné par une limite de débit et un plafond de clés.
+app.include_router(csp.router)
 
 # Fichiers statiques (photos uploadées)
 #  `UPLOADS_DIR` plutôt qu'un chemin figé : le motif existe déjà dans

@@ -40,6 +40,40 @@
         #  Leur mise en place demande un déploiement suivi en `Report-Only`
         #  d'abord. Suivi en issue.
         Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+
+        #  ── L'étape suivante, en MODE OBSERVATION (#536, 28/08/2026) ──
+        #
+        #  `Report-Only` ne bloque RIEN. Le navigateur applique la politique
+        #  ci-dessous en pensée, et poste un rapport à chaque violation. C'est le
+        #  seul moyen de savoir ce que `script-src` casserait avant de le poser :
+        #  le site n'est accessible que derrière une connexion, et une CSP fausse
+        #  ne se voit qu'à l'exécution, dans la console de quelqu'un d'autre.
+        #
+        #  ⚠️ Les rapports vont à `/api/csp-report`, un point de collecte PUBLIC
+        #  — le navigateur poste sans cookie. Il est borné : limite de débit,
+        #  plafond de clés, aucune écriture en base, rien qui soit renvoyé. Le
+        #  relevé se lit sur `GET /api/admin/csp-violations` (admin).
+        #
+        #  La politique visée, et pourquoi chaque morceau :
+        #
+        #    script-src 'self'          la vraie protection contre le XSS. On
+        #                               s'attend à des violations : SvelteKit
+        #                               insère un script d'hydratation EN LIGNE.
+        #                               C'est précisément ce qu'on veut compter
+        #                               avant de choisir entre nonce et sha256.
+        #    style-src … 'unsafe-inline'  le dépôt porte plus de 700 attributs
+        #                               `style=` ; les retirer est un autre
+        #                               chantier (#607). Sans cette tolérance la
+        #                               mesure serait noyée par du bruit connu.
+        #    img-src … data: blob:      QR codes et aperçus sont produits en
+        #                               `data:`/`blob:` côté navigateur.
+        #    connect-src 'self'         l'API est servie sur la même origine.
+        #
+        #  🔴 Ne PAS passer en mode bloquant tant que le relevé n'est pas à zéro,
+        #  ni sans avoir regardé le site après. Un remède posé sans pouvoir
+        #  l'observer serait pire que le mal — c'est ce que dit #536, et c'est ce
+        #  que ce mode-ci évite.
+        Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; report-uri /api/csp-report"
     }
 
     # API — proxy vers FastAPI

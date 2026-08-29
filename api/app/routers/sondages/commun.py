@@ -7,22 +7,13 @@ Ce module ne porte AUCUN endpoint : il est importé par `crud` et par
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import HTTPException
 from pydantic import BaseModel
 
-from app.models.core import StatutUtilisateur, Utilisateur
 from app.schemas import ListeJson
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def _deny_communaute_for_statut(user: Utilisateur) -> None:
-    if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
-        raise HTTPException(403, "La rubrique Communauté n'est pas accessible à votre profil")
-    if user.communaute_interdit:
-        raise HTTPException(403, "Votre accès à la Communauté a été définitivement suspendu.")
-    if user.communaute_ban_jusqu_au and user.communaute_ban_jusqu_au > datetime.utcnow():
-        raise HTTPException(403, "Votre accès à la Communauté est suspendu pour une période probatoire d\u2019un mois. À la 2\u1d49 infraction, vous serez banni définitivement.")
 
 
 # ── schémas ──────────────────────────────────────────────────────────────────

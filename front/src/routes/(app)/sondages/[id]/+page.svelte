@@ -42,7 +42,9 @@
 
 	onMount(async () => {
 		if ($currentUser?.statut === 'syndic' || $currentUser?.statut === 'mandataire') {
-			toast('error', 'La rubrique Communauté n\'est pas accessible à votre profil.');
+			//  Le motif vient de l'API : cet écran ne réécrit pas la règle
+			//  d'accès à la Communauté (29/08/2026).
+			toast('error', $currentUser.communaute_motif_refus ?? "La rubrique Communauté n'est pas accessible à votre profil.");
 			goto('/tableau-de-bord', { replaceState: true });
 			loading = false;
 			return;

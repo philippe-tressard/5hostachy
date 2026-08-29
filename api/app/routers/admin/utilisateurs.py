@@ -43,6 +43,7 @@ from app.utils.comptes import marquer_decide
 from app.utils.purge_referentielle import purger
 from datetime import datetime
 from typing import Optional
+from app.utils.communaute import notification_de_ban
 
 router = APIRouter()
 
@@ -434,7 +435,7 @@ def ban_communaute(
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_admin),
 ):
-    """Bannir ou débannir un utilisateur de la section Communauté.
+    """Bannir ou débannir un utilisateur de la rubrique Communauté.
 
     1er ban → probatoire 1 mois. 2e ban → définitif.
     """
@@ -451,16 +452,11 @@ def ban_communaute(
             # 2e infraction → ban permanent
             user.communaute_interdit = True
             user.communaute_ban_jusqu_au = None
-            notif_corps = "Votre accès à la section Communauté a été définitivement suspendu suite à une 2ᵉ infraction."
-            notif_titre = "Accès à la Communauté suspendu définitivement"
+            notif_titre, notif_corps = notification_de_ban(definitif=True)
         else:
             # 1re infraction → ban 1 mois (30 jours)
             user.communaute_ban_jusqu_au = datetime.utcnow() + timedelta(days=30)
-            notif_corps = (
-                "Votre accès à la section Communauté est suspendu pour une période probatoire d'un mois. "
-                "À la 2ᵉ infraction, vous serez banni définitivement."
-            )
-            notif_titre = "Accès à la Communauté suspendu (1 mois)"
+            notif_titre, notif_corps = notification_de_ban(definitif=False)
         notif = Notification(
             destinataire_id=user.id, type="system",
             titre=notif_titre, corps=notif_corps, lien="/sondages",

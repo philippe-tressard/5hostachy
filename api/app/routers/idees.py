@@ -13,10 +13,10 @@ from app.models.core import (
     Idee,
     ReponseCommunaute,
     RoleUtilisateur,
-    StatutUtilisateur,
     Utilisateur,
     VoteIdee,
 )
+from app.utils.communaute import exiger_acces
 from app.utils.liens import lien_element
 from app.utils.reponses import (
     auteur_meta,
@@ -43,15 +43,6 @@ def _reponses_for(idee_id: int, session: Session) -> list[dict]:
         )
     ).all()
     return tri_reponses([enrich_reponse(r, session) for r in reps])
-
-
-def _deny_communaute_for_statut(user: Utilisateur) -> None:
-    if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
-        raise HTTPException(403, "La rubrique Communauté n'est pas accessible à votre profil")
-    if user.communaute_interdit:
-        raise HTTPException(403, "Votre accès à la Communauté a été définitivement suspendu.")
-    if user.communaute_ban_jusqu_au and user.communaute_ban_jusqu_au > datetime.utcnow():
-        raise HTTPException(403, "Votre accès à la Communauté est suspendu pour une période probatoire d’un mois. À la 2ᵉ infraction, vous serez banni définitivement.")
 
 
 class IdeeCreate(BaseModel):
@@ -119,7 +110,7 @@ def list_idees(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     idees = session.exec(select(Idee).order_by(Idee.cree_le.desc())).all()
     return _enrich(idees, user.id, session)
 
@@ -130,7 +121,7 @@ def create_idee(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(403, "Les utilisateurs externes ne peuvent pas soumettre d'idées")
     idee = Idee(
@@ -151,7 +142,7 @@ def voter(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(403, "Les utilisateurs externes ne peuvent pas voter")
     idee = session.get(Idee, idee_id)
@@ -256,7 +247,7 @@ def list_reponses(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     idee = session.get(Idee, idee_id)
     if not idee:
         raise HTTPException(404, "Idée introuvable")
@@ -271,7 +262,7 @@ def create_reponse(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(
         RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
     ):
@@ -305,7 +296,7 @@ def delete_reponse(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Supprimer une réponse : son auteur, ou un CS/admin."""
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     rep = session.get(ReponseCommunaute, rep_id)
     if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != idee_id:
         raise HTTPException(404, "Réponse introuvable")

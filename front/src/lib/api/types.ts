@@ -20,6 +20,15 @@ export interface User {
 	communaute_interdit?: boolean;
 	communaute_ban_count?: number;
 	communaute_ban_jusqu_au?: string | null;
+	/**
+	 * Le MOTIF du refus d'accès à la Communauté, ou `null` si l'accès est ouvert.
+	 *
+	 * Calculé par l'API (`app/utils/communaute.py`), qui est la seule à porter la
+	 * règle. Le front l'AFFICHE, il ne le recalcule pas : il en portait sa propre
+	 * copie dans `sondages/+page.svelte`, avec un libellé encore différent de
+	 * celui de l'API et de celui de l'administration (29/08/2026).
+	 */
+	communaute_motif_refus?: string | null;
 	onboarding_complete: boolean;
 	onboarding_etape: number;
 	photo_url?: string;
