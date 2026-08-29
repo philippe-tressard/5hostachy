@@ -308,7 +308,7 @@
 />
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-<div style="max-width:580px">
+<div class="largeur-saisie">
 	<!-- ── Avatar + Infos personnelles ──────────────────────────────────────── -->
 	<section class="card" style="margin-bottom:1.5rem">
 		<h2 class="section-title">Informations personnelles</h2>

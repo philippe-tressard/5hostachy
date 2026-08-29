@@ -712,6 +712,8 @@ jobs:
           # expose un `--selftest` depuis sa création… que RIEN ne lançait (#562).
           # Le module le plus partagé du lot était le seul non éprouvé.
           node scripts/lib-analyse-styles.mjs --selftest
+          node scripts/check-largeur-saisie.mjs --selftest
+          node scripts/check-version-servie.mjs --selftest
           # La passe `EvolForm` de `lint:etats` (#463) — et son relevé, qui ne
           # peut que décroître. Ajouté ICI le jour même où le module naît :
           # c'est l'oubli d'hier qui a laissé `lib-analyse-styles` non éprouvé.
@@ -879,6 +881,24 @@ jobs:
         working-directory: front
         run: npm run lint:eslint
 
+      - name: Aucune largeur de saisie écrite dans un écran
+        # 🔴 Signalé à l'écran le 30/08/2026 : « sur admin / paramétrage le texte
+        # ne prend pas la bonne largeur ». La carte occupait toute la page, ses
+        # champs s'arrêtaient à 600 px, et les aides se repliaient sur quatre
+        # lignes en laissant la moitié droite vide.
+        #
+        # `--largeur-saisie` a été généralisée à 100 % le 18/08/2026 — mais SIX
+        # écrans portaient encore leur propre `max-width` en ligne (600, 600, 580,
+        # 460, 700, 580), donc six valeurs que la généralisation ne pouvait pas
+        # atteindre : aucun n'employait la classe. C'est le défaut de la prop
+        # `marge` d'`EntetePage` (#372), reproduit sur le conteneur.
+        #
+        # ⚠️ `ux-patterns` §9 le disait déjà — « ne jamais écrire une largeur dans
+        # une page » — et le défaut a quand même été trouvé par l'utilisateur, en
+        # production. Une règle sans garde-fou tient tant qu'on s'en souvient.
+        working-directory: front
+        run: npm run lint:largeur-saisie
+
       - name: Confirmation dans la charte (plafond décroissant)
         # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
         # navigateur bloque le fil d'exécution, ignore la charte, et donne le
@@ -929,3 +949,24 @@ jobs:
       - name: Lint service worker (URL absolue)
         working-directory: front
         run: npm run lint:sw
+
+      # Garde-fou P3 : APRÈS le build, pour la même raison que celui du service
+      # worker — il inspecte l'ARTEFACT livré, pas une ligne de configuration.
+      #
+      # 🔴 P3 est le contrôle du post-check qui prouve qu'un déploiement a eu
+      # lieu : il lit la version dans le bundle que le navigateur reçoit. Son
+      # ancrage était le NOM du paquet (`"hostachy-front",VAR="x.y.z"`), choisi
+      # en 2026 au motif qu'il « survit à la minification ». Rollup élague
+      # désormais l'import JSON du layout : le nom a disparu, le bundle ne porte
+      # plus que `const fn="3.20.0",hn={version:fn}`, et P3 a rendu INCONNU à la
+      # MEP v3.20.0 — la version a dû être retrouvée à la main.
+      #
+      # Il a échoué du BON côté (jamais un faux vert). Le vrai défaut est que
+      # RIEN ne regardait si son ancrage marchait encore : le premier à
+      # l'apprendre était le post-check, en production, une fois la MEP faite.
+      # Cette étape exerce l'extracteur sur le build local et exige qu'il y
+      # retrouve la version de `package.json` — donc la prochaine évolution de la
+      # chaîne d'outils échoue ICI, avant la MEP, et non en production après.
+      - name: Version lisible dans le bundle (l'extracteur de P3 mesure encore)
+        working-directory: front
+        run: npm run lint:version-servie

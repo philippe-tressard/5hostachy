@@ -388,32 +388,45 @@ c'est aussi le seul point de mesure qui reflète ce qu'un **navigateur reçoit
 vraiment**, là où lire `package.json` dans le conteneur ne décrirait que l'image.
 
 ```bash
-#!/usr/bin/env bash
-# Version réellement servie, ou INCONNU. Code 0 = mesurée, 2 = non mesurable.
-set -uo pipefail
-SITE="${1:-https://5hostachy.fr}"
-entry=$(curl -sL --max-time 15 "$SITE/" \
-        | grep -oE '/_app/immutable/entry/app\.[A-Za-z0-9_-]+\.js' | head -1)
-[ -n "$entry" ] || { echo "INCONNU: point d'entrée introuvable"; exit 2; }
-for n in $(curl -s --max-time 15 "$SITE$entry" \
-           | grep -oE 'nodes/[0-9]+\.[A-Za-z0-9_-]+\.js' | sort -u); do
-  v=$(curl -s --max-time 12 "$SITE/_app/immutable/$n" \
-      | grep -oE '"hostachy-front",[A-Za-z_$]+="[0-9]+\.[0-9]+\.[0-9]+"' \
-      | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-  [ -n "$v" ] && { echo "$v"; exit 0; }
-done
-echo "INCONNU: version absente du bundle servi"; exit 2
+node front/scripts/check-version-servie.mjs --site https://5hostachy.fr
 ```
 
-L'ancrage est `"hostachy-front"`, le **nom** du paquet : il précède immédiatement la
-version et survit à la minification, contrairement aux noms de variables (`_n=` au
-03/08) et au numéro du chunk. Ne pas se contenter d'un `grep '2\.[0-9]'` sur le
-chunk : `package.json` y est intégré **en entier**, dépendances comprises — on
-récupérerait la version de Tiptap ou de SvelteKit.
+La version sur la sortie standard (code 0), ou `INCONNU: <raison>` et **code 2**.
+Jamais une sortie vide — c'est la règle 1 de cette skill.
 
-Les deux chemins d'échec ont été éprouvés (site sans bundle, hôte injoignable) :
-`INCONNU` et code 2. Un contrôle qui ne sait pas dire qu'il n'a pas pu mesurer est
-un contrôle qui ment.
+🔴 **Le script ne vit plus dans ce fichier, et c'est la leçon du 30/08/2026.**
+
+Il y a été recopié deux fois, avec deux ancrages successifs, et les deux se sont
+périmés en silence :
+
+| Ancrage | Périmé par | Constaté |
+|---|---|---|
+| `[0-9]+\.[0-9]+\.[0-9]+` sur la racine | la racine redirige vers `/auth/connexion` | 03/08/2026 |
+| `"hostachy-front",VAR="x.y.z"` | Rollup élague l'import JSON : le **nom du paquet** a disparu du bundle, qui ne porte plus que `const fn="3.20.0",hn={version:fn}` | 30/08/2026, MEP v3.20.0 |
+
+Le second avait été choisi *parce que* le nom « survit à la minification,
+contrairement aux noms de variables ». C'était vrai, et insuffisant : ce n'est pas
+la minification qui l'a effacé, c'est l'élagage.
+
+⚠️ **Le défaut n'est pas l'ancrage, c'est qu'aucun contrôle ne regardait s'il
+marchait encore.** Le premier à l'apprendre était le post-check, en production,
+une fois la MEP faite — trop tard pour que cela serve. Un script recopié dans une
+documentation ne s'exécute que le jour où l'on en a besoin.
+
+**L'extracteur est donc versionné**, et la CI l'exerce à chaque PR sur le build
+local (`npm run lint:version-servie`, job `build-frontend`) : il doit y retrouver
+exactement la version de `package.json`. La prochaine évolution de la chaîne
+d'outils échouera **là**, avant la MEP.
+
+C'est `standards/04` §2 retourné contre le contrôle lui-même — *ce qui est
+critique ne se vérifie pas seulement en MEP* — et la règle que #498 énonce pour
+l'aperçu des e-mails : **la fonction qui vérifie doit être celle qui sert.**
+
+Le module rend `null` plutôt qu'une version quand deux formes du bundle
+**divergent** : `package.json` peut être partiellement élagué et la version d'une
+dépendance traîner dans le même chunk. Trancher au hasard entre deux candidates,
+c'est mentir une fois sur deux. Son `--selftest` couvre les deux formes, les deux
+cas ambigus et le renvoi arrière qui les distingue.
 
 ⚠️ **P3 mesure le serveur, pas le client.** Un onglet PWA resté ouvert peut servir
 l'ancienne version depuis son cache — c'est ce qui s'est produit le 26/07/2026, le

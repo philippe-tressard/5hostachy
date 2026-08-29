@@ -1,5 +1,6 @@
 <script lang="ts">
-	import BarreFiltres from '$lib/components/BarreFiltres.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
+	import ChampsContrat from '$lib/components/ChampsContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
@@ -10,7 +11,6 @@
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
-	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -759,95 +759,7 @@
 			titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}
 		>
 			<div>
-				<div class="form-grid">
-					<label class="field champ-large"
-						>Libellé *<input bind:value={contratForm.libelle} required /></label
-					>
-					<label class="field"
-						>Prestataire *
-						<select bind:value={contratForm.prestataire_id} required>
-							<option value="">— Sélectionner —</option>
-							{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
-						</select>
-					</label>
-					<label class="field"
-						>Équipement
-						<select bind:value={contratForm.type_equipement}>
-							{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
-						</select>
-					</label>
-					<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>
-					<label class="field"
-						>Début *<input type="date" bind:value={contratForm.date_debut} required /></label
-					>
-					<label class="field"
-						>Durée initiale
-						<div style="display:flex;gap:.4rem">
-							<input
-								type="number"
-								min="1"
-								placeholder="Ex. 12"
-								bind:value={contratForm.duree_initiale_valeur}
-								style="flex:1"
-							/>
-							<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
-								<option value="mois">mois</option>
-								<option value="ans">ans</option>
-							</select>
-						</div>
-					</label>
-					<label class="field"
-						>Fréquence
-						<select bind:value={contratForm.frequence_type}>
-							<option value="">— Aucune —</option>
-							<option value="semaines">Toutes les X semaines</option>
-							<option value="mois">Mensuelle</option>
-							<option value="fois_par_an">X fois par an</option>
-							<option value="ans">Tous les X ans</option>
-						</select>
-					</label>
-					{#if contratForm.frequence_type === 'semaines'}
-						<label class="field"
-							>Toutes les … sem.<input
-								type="number"
-								min="1"
-								bind:value={contratForm.frequence_valeur}
-							/></label
-						>
-					{:else if contratForm.frequence_type === 'fois_par_an'}
-						<label class="field"
-							>… fois/an<input
-								type="number"
-								min="1"
-								bind:value={contratForm.frequence_valeur}
-							/></label
-						>
-					{:else if contratForm.frequence_type === 'ans'}
-						<label class="field"
-							>Tous les … ans<input
-								type="number"
-								min="1"
-								bind:value={contratForm.frequence_valeur}
-							/></label
-						>
-					{/if}
-					<label class="field"
-						>Prochaine visite<input type="date" bind:value={contratForm.prochaine_visite} /></label
-					>
-				</div>
-				<div style="margin-top:.6rem">
-					<span
-						class="libelle-groupe"
-						id="contrat-notes-titre"
-						style="font-weight:600;margin-bottom:.3rem">Notes</span
-					>
-					<RichEditor
-						bind:value={contratForm.notes}
-						ariaLabelledby="contrat-notes-titre"
-						placeholder="Notes sur le contrat…"
-						minHeight="60px"
-					/>
-				</div>
+				<ChampsContrat bind:contratForm {prestataires} {equipements} />
 				{#if editContratId}
 					<div style="margin-top:.8rem">
 						<div style="font-size:.85rem;font-weight:600;margin-bottom:.4rem">
@@ -984,94 +896,7 @@
 							{#if editContratId === c.id && contratFormPrestId !== -1}
 								<div class="contrat-section">
 									<div class="contrat-section-title">Infos contrat</div>
-									<div class="form-grid">
-										<label class="field"
-											>Libellé *<input bind:value={contratForm.libelle} required /></label
-										>
-										<label class="field"
-											>Prestataire *
-											<select bind:value={contratForm.prestataire_id} required>
-												<option value="">— Sélectionner —</option>
-												{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option
-													>{/each}
-											</select>
-										</label>
-										<label class="field"
-											>N° contrat<input bind:value={contratForm.numero_contrat} /></label
-										>
-										<label class="field"
-											>Début *<input
-												type="date"
-												bind:value={contratForm.date_debut}
-												required
-											/></label
-										>
-										<label class="field"
-											>Durée initiale
-											<div style="display:flex;gap:.4rem">
-												<input
-													type="number"
-													min="1"
-													placeholder="Ex. 12"
-													bind:value={contratForm.duree_initiale_valeur}
-													style="flex:1"
-												/>
-												<select bind:value={contratForm.duree_initiale_unite} style="width:auto">
-													<option value="mois">mois</option>
-													<option value="ans">ans</option>
-												</select>
-											</div>
-										</label>
-										<label class="field"
-											>Fréquence
-											<select bind:value={contratForm.frequence_type}>
-												<option value="">— Aucune —</option>
-												<option value="semaines">Toutes les X semaines</option>
-												<option value="mois">Mensuelle</option>
-												<option value="fois_par_an">X fois par an</option>
-												<option value="ans">Tous les X ans</option>
-											</select>
-										</label>
-										{#if contratForm.frequence_type === 'semaines'}
-											<label class="field"
-												>Toutes les … sem.<input
-													type="number"
-													min="1"
-													bind:value={contratForm.frequence_valeur}
-												/></label
-											>
-										{:else if contratForm.frequence_type === 'fois_par_an'}
-											<label class="field"
-												>… fois/an<input
-													type="number"
-													min="1"
-													bind:value={contratForm.frequence_valeur}
-												/></label
-											>
-										{:else if contratForm.frequence_type === 'ans'}
-											<label class="field"
-												>Tous les … ans<input
-													type="number"
-													min="1"
-													bind:value={contratForm.frequence_valeur}
-												/></label
-											>
-										{/if}
-										<label class="field"
-											>Prochaine visite<input
-												type="date"
-												bind:value={contratForm.prochaine_visite}
-											/></label
-										>
-									</div>
-								</div>
-								<div class="contrat-section">
-									<div class="contrat-section-title">Notes</div>
-									<RichEditor
-										bind:value={contratForm.notes}
-										placeholder="Notes…"
-										minHeight="60px"
-									/>
+									<ChampsContrat bind:contratForm {prestataires} {equipements} />
 								</div>
 								<div class="contrat-section">
 									<div class="contrat-section-title">
@@ -1239,18 +1064,21 @@
 	<!-- ONGLET 4 : PRESTATAIRES (annuaire)                           -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'prestataires'}
-	<!--  Deux rangées, UN motif : `BarreFiltres` le porte (#491). Il était écrit
-	      deux fois ici, à trois mots près — la duplication la plus discrète, celle
-	      qu'aucun contrôle inter-fichiers ne voit.
+	<!--  Deux rangées et le champ « Type » du formulaire ci-dessous : UN motif,
+	      porté par `ChoixPastilles` (#491). Il était écrit deux fois ici, à trois
+	      mots près — la duplication la plus discrète, celle qu'aucun contrôle
+	      inter-fichiers ne voit — et le composant qui l'a absorbée annonçait
+	      lui-même qu'une troisième copie viendrait. Elle est venue le lendemain,
+	      dans le formulaire : c'est ce qui a fait généraliser le composant.
 	      `avecDetail` sur les types seuls : leur description vivait dans un `title`,
 	      donc invisible au tactile. Les douze équipements n'en portent pas. -->
-	<BarreFiltres
+	<ChoixPastilles
 		options={typesPrestataire}
 		bind:valeur={filtreType}
 		avecDetail
 		libelle="Filtrer par type de prestataire"
 	/>
-	<BarreFiltres
+	<ChoixPastilles
 		options={equipements}
 		bind:valeur={filtreEquipement}
 		tous="Tous équipements"
@@ -1266,12 +1094,23 @@
 				<div>
 					<div class="form-grid">
 						<label class="field">Nom *<input bind:value={prestForm.nom} required /></label>
-						<label class="field"
-							>Type *
-							<select bind:value={prestForm.type_prestataire} required>
-								{#each typesPrestataire as t}<option value={t.val}>{t.label}</option>{/each}
-							</select>
-						</label>
+						<!--  🔴 Six entrées portant chacune une description : c'est le cas
+						      qui a fait donner un sous-texte à `Pastille` (#491, seuil arbitré
+						      à 6). Le FILTRE de cette même liste la montre depuis le 29/08 —
+						      le formulaire, lui, gardait un `<select>` où la description ne
+						      s'affichait nulle part. Deux rendus du même objet, et c'est
+						      celui qui sert à CHOISIR qui perdait ce qui aide à choisir.
+						      `champ-large` : dix pastilles à sous-texte dans une colonne de
+						      grille s'empileraient une par ligne (`ux-patterns` §9 bis). -->
+						<ChoixPastilles
+							options={typesPrestataire}
+							bind:valeur={prestForm.type_prestataire}
+							tous={false}
+							libelle="Type"
+							libelleVisible
+							requis
+							avecDetail
+						/>
 						<label class="field"
 							>Spécialité *
 							<select bind:value={prestForm.specialite} required>

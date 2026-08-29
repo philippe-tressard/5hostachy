@@ -613,7 +613,7 @@
 		</div>
 
 		{#if editing}
-			<div class="card" style="padding:1.25rem;max-width:700px">
+			<div class="card" style="padding:1.25rem">
 				<form on:submit|preventDefault={saveEdit}>
 					<div class="edit-grid">
 						<div class="field">
