@@ -47,6 +47,12 @@ export interface ReportContrat {
 	frequence_type?: string | null;
 	frequence_valeur?: number | null;
 	prochaine_visite?: string | null;
+	/**  L'échéance DÉDUITE par l'API (`utils/echeance_contrat.py`), reportée d'un
+	 *   an tant qu'elle est passée. À ne pas confondre avec `prochaine_visite`,
+	 *   qui est une date de visite saisie à la main. */
+	date_fin?: string | null;
+	/**  Le terme initial est passé : le contrat court par reconduction tacite. */
+	reconduit?: boolean;
 	actif: boolean;
 }
 export interface DiagRapport {
@@ -120,20 +126,27 @@ export function anneeCourante(): number {
 }
 export const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
+/**
+ * L'échéance du contrat — LUE, non plus calculée ici.
+ *
+ * 🔴 Ce calcul vivait dans ce fichier, et l'API en ignorait tout : la fiche de la
+ * résidence affichait `prochaine_visite` sous le mot « échéance » et le tableau
+ * de bord lisait une colonne héritée. Trois valeurs pour une même question, sur
+ * le même contrat (relevé le 29/08/2026, sur une remarque de l'utilisateur à
+ * propos de la reconduction tacite).
+ *
+ * La règle vit maintenant dans `api/app/utils/echeance_contrat.py`, seule
+ * écriture, éprouvée par `api/tests/test_echeance_contrat.py` — y compris les
+ * cas que cette version-ci traitait mal : le 31 janvier + 1 mois, et le terme
+ * qui tombe le jour même.
+ *
+ * ⚠️ Cette fonction reste, et c'est délibéré : elle est le point où l'on
+ * convertit la chaîne ISO en `Date`, ce dont le reste du module a besoin. La
+ * supprimer aurait dispersé ce `new Date(…)` dans les appelants.
+ */
 export function contratDateFin(c: ReportContrat): { date: Date; reconduit: boolean } | null {
-	if (!c.date_debut) return null;
-	const d = new Date(c.date_debut);
-	if (c.duree_initiale_valeur && c.duree_initiale_unite) {
-		if (c.duree_initiale_unite === 'ans') d.setFullYear(d.getFullYear() + c.duree_initiale_valeur);
-		else if (c.duree_initiale_unite === 'mois') d.setMonth(d.getMonth() + c.duree_initiale_valeur);
-	} else {
-		// Durée inconnue → reconduction annuelle par défaut
-		d.setFullYear(d.getFullYear() + 1);
-	}
-	const now = new Date();
-	let reconduit = false;
-	while (d <= now) { d.setFullYear(d.getFullYear() + 1); reconduit = true; }
-	return { date: d, reconduit };
+	if (!c.date_fin) return null;
+	return { date: new Date(c.date_fin), reconduit: c.reconduit ?? false };
 }
 
 export function contratDatePreavis(dateFin: Date): Date {
@@ -285,3 +298,36 @@ export function diagnosticsAvecEcheance(types: DiagType[]): DiagAvecEcheance[] {
 		});
 }
 
+
+
+/**
+ * De quel ÉQUIPEMENT parle un contrat — une seule règle, pour tous les usages.
+ *
+ * 🔴 Il y en avait TROIS, et elles se contredisaient (signalé à l'écran le
+ * 29/08/2026, sur deux symptômes qui n'avaient pas l'air liés) :
+ *
+ * | Endroit | Règle appliquée | Ce que ça donnait |
+ * |---|---|---|
+ * | Groupement des cartes | `prestataire.specialite ?? contrat.type_equipement` | un contrat **Syndic** rangé sous « Autre », le cabinet ayant gardé sa spécialité `autre` |
+ * | Formulaire d'édition | `contrat.type_equipement`, brut | un contrat de **VMC** affiché « Autre » en édition, alors que sa carte disait VMC |
+ * | Enregistrement | le contrat, sauf `autre` → la spécialité | la seule des trois qui était juste |
+ *
+ * ⚠️ **Le CONTRAT fait foi, le prestataire est un repli.** Un contrat dit ce
+ * qu'il couvre ; une entreprise dit ce qu'elle sait faire. Quand l'utilisateur
+ * range un contrat sous « Syndic », c'est une décision — la spécialité du
+ * cabinet ne doit pas la recouvrir. Le groupement faisait l'inverse, si bien
+ * qu'aucune correction du contrat ne pouvait se voir.
+ *
+ * ⚠️ Le repli reste utile : la plupart des contrats sont créés avec la valeur
+ * par défaut `autre`, et la spécialité du prestataire est alors la meilleure
+ * information disponible. Il ne s'applique QUE là — jamais par-dessus un choix.
+ */
+export function typeEquipementDuContrat(
+	contrat: { type_equipement?: string | null; prestataire_id?: number | null },
+	prestataires: { id: number; specialite?: string | null }[],
+): string {
+	const propre = contrat.type_equipement;
+	if (propre && propre !== 'autre') return propre;
+	const prest = prestataires.find((p) => p.id === contrat.prestataire_id);
+	return prest?.specialite || propre || 'autre';
+}

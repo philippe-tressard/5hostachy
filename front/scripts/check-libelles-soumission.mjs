@@ -53,6 +53,26 @@
  *                         cadré à gauche, et invisible pour le contrôle B.
  *   B. §9 quinquies bis — chaque bouton de soumission dit « Enregistrer » au
  *                         repos et « Enregistrement… » pendant l'envoi.
+ *   C. §9 quinquies ter — chaque `.form-actions` porte « Annuler » AVANT son
+ *                         bouton de soumission.
+ *
+ * ## Pourquoi le contrôle C existe (29/08/2026)
+ *
+ * Norme posée le 18/08/2026 sur Tickets, constatée, puis étendue : « Annuler »
+ * est **à côté** d'« Enregistrer », et l'en-tête de page ne porte plus de
+ * seconde commande d'annulation. Elle a été appliquée à quatre formulaires — et
+ * à aucun autre. Signalé à l'écran : sur la page Prestataires, le formulaire de
+ * contrat était le SEUL des cinq à n'avoir pas d'Annuler, si bien que la seule
+ * façon de renoncer était le bouton flottant de l'en-tête, à l'autre bout de
+ * l'écran. Deux autres rangées y mettaient Enregistrer AVANT Annuler.
+ *
+ * 🔴 Trois variantes sur une seule page, et le composant `FormulaireCreation`
+ * documentait encore la règle d'AVANT, celle que le 18/08 a remplacée. Une
+ * consigne périmée est pire qu'absente : elle légitime la divergence.
+ *
+ * ⚠️ L'ORDRE compte autant que la présence. Annuler à droite du bouton primaire
+ * met la commande destructrice là où le pouce se pose ; et un ordre qui change
+ * d'un écran à l'autre fait cliquer au mauvais endroit par mémoire du geste.
  *
  * Pourquoi un contrôle et pas une consigne : trancher n'aligne que les écrans
  * existants. C'est le SUIVANT qui réinvente — et c'est ce qui s'est produit pour
@@ -82,6 +102,9 @@ const TEMOIN = 'lib/components/FormulaireTicket.svelte';
 
 /** En dessous, le motif de lecture ne correspond plus à rien (cas zéro). */
 const PLANCHER = 20;
+
+/** Le saut de ligne, nommé : ce fichier est lu par des scripts qui le réécrivent. */
+const LF = String.fromCharCode(10);
 
 /**
  * Fichiers dispensés, avec leur raison.
@@ -130,9 +153,6 @@ const EXCEPTIONS = {
 	//  lots dans le même diff. Chaque ligne dit ce qu'on lit à l'écran ; l'entrée
 	//  disparaît d'elle-même quand l'écran est repris, sinon ce contrôle échoue
 	//  en réclamant sa suppression.
-	'routes/(app)/prestataires/+page.svelte':
-		"attente réduite à « … » sur trois formulaires (contrats, prestations, relevés) — " +
-		'écran de 2 182 lignes déjà déclaré en exception de `lint:formulaires`',
 	'routes/(app)/profil/+page.svelte':
 		'« Envoyer la demande » / « Envoi… » (l. ~451) et « Je suis un nouvel arrivant » ' +
 		'/ « Envoi… » (l. ~526)',
@@ -364,6 +384,42 @@ for (const [rel, boutons] of releve) {
 		`  ${rel}\n      ${ecarts.join('\n      ')}` +
 			`\n      attendu : « ${LIBELLE} » et « ${ATTENTE} »`,
 	);
+}
+
+/** C. §9 quinquies ter — « Annuler » à côté de la soumission, et AVANT elle.
+ *
+ * ⚠️ PORTÉE : les formulaires qui S'OUVRENT, c'est-à-dire ceux rendus dans un
+ * `<FormulaireCreation>`. Un panneau de réglages affiché en permanence — SMTP,
+ * WhatsApp, sauvegarde, préférences d'affichage — n'a rien à annuler : on le
+ * quitte, on ne le referme pas. La première version de ce contrôle les visait
+ * aussi et sortait neuf fichiers, dont six légitimes. **Un contrôle qui crie sur
+ * du légitime finit désarmé** — c'est la leçon rappelée en tête de ce fichier,
+ * et elle vaut pour le contrôle qu'on vient d'écrire.
+ */
+for (const rel of releve.keys()) {
+	const src = readFileSync(join(SOURCE, rel), 'utf8');
+	if (!src.includes('<FormulaireCreation')) continue;
+	const ecarts = [];
+	for (const [debut, fin] of blocsFormActions(src)) {
+		const bloc = src.slice(debut, fin);
+		const ligne = src.slice(0, debut).split(LF).length;
+		const posSoumission = bloc.indexOf('btn-primary');
+		//  Une rangée sans bouton primaire n'est pas une rangée de soumission
+		//  (barre d'outils, actions d'une carte) : rien à exiger d'elle.
+		if (posSoumission === -1) continue;
+		const posAnnuler = bloc.indexOf('>Annuler<');
+		if (posAnnuler === -1) {
+			ecarts.push(`l. ${ligne} : pas de bouton « Annuler » à côté d'« Enregistrer »`);
+		} else if (posAnnuler > posSoumission) {
+			ecarts.push(`l. ${ligne} : « Annuler » est APRÈS « Enregistrer » — il vient avant`);
+		}
+	}
+	if (ecarts.length === 0) continue;
+	if (EXCEPTIONS[rel]) {
+		exceptionsUtiles.add(rel);
+		continue;
+	}
+	fautifs.push('  ' + rel + LF + '      ' + ecarts.join(LF + '      '));
 }
 
 if (fautifs.length > 0) {

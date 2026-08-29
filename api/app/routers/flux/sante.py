@@ -28,7 +28,9 @@ from app.models.core import (
     StatutDemandeProfil,
     Ticket,
 )
+from app.routers.copropriete import contrat_de_reference
 from app.utils.comptes import nb_comptes_en_attente
+from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.visibility import (
     evenement_visible,
     sondage_accessible,
@@ -100,15 +102,35 @@ def _prochains(ctx: ContexteFlux) -> list[dict]:
             "prestataire": prest.nom,
         })
 
+    #  🔴 L'échéance d'assurance venait de `Copropriete.assurance_echeance` — la
+    #  COLONNE HÉRITÉE, hors du circuit depuis #490. `copropriete_lue` l'efface
+    #  précisément pour que l'ancienne saisie libre ne réapparaisse pas derrière
+    #  le contrat ; la relance, elle, continuait de la lire. Le tableau de bord
+    #  annonçait donc une échéance que plus aucun écran n'affiche et que
+    #  personne ne met à jour — trouvé le 29/08/2026 en instruisant la remarque
+    #  de l'utilisateur sur la reconduction tacite.
+    #
+    #  Elle se déduit désormais du CONTRAT, par la même fonction que la fiche
+    #  (`utils/echeance_contrat.py`), et elle se reporte donc d'elle-même.
     copro = ctx.session.exec(select(Copropriete)).first()
-    if copro and copro.assurance_echeance:
-        prochains.append({
-            "id": "assurance",
-            "date": copro.assurance_echeance.isoformat(),
-            "titre": f"Échéance assurance {copro.assurance_compagnie or ''}".strip(),
-            "type": "assurance",
-            "icon": "🛡️",
-        })
+    if copro:
+        for section, icone in (("assurance", "🛡️"), ("syndic", "🏢")):
+            contrat = contrat_de_reference(ctx.session, copro, section)
+            e = echeance_du_contrat(contrat) if contrat else None
+            if not e:
+                continue
+            presta = ctx.session.get(Prestataire, contrat.prestataire_id)
+            #  ⚠️ « reconduit tacitement » se dit ICI aussi : une échéance de
+            #  reconduction ne se relance pas comme un terme négocié, et le
+            #  taire donnerait au CS deux lignes qu'il ne saurait pas départager.
+            suffixe = " (reconduction tacite)" if e.reconduit else ""
+            prochains.append({
+                "id": section,
+                "date": e.date.isoformat(),
+                "titre": f"Échéance {section} {presta.nom if presta else ''}".strip() + suffixe,
+                "type": section,
+                "icon": icone,
+            })
 
     prochains.sort(key=lambda x: x.get("date", ""))
     return prochains[:_MAX_PROCHAINS]

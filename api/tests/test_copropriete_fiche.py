@@ -174,7 +174,17 @@ def test_l_assurance_affichee_vient_du_CONTRAT_pas_des_colonnes(copro):
 
     assert lu.assurance_compagnie == "Nouvel Assureur", "la fiche lit encore la colonne"
     assert lu.assurance_numero_police == "POL-2026"
-    assert lu.assurance_echeance == date(2027, 6, 30)
+
+    #  🔴 L'échéance se DÉDUIT (`utils/echeance_contrat.py`), elle ne recopie
+    #  plus `prochaine_visite` — un champ qui s'appelle « Prochaine visite »
+    #  dans le formulaire et qui n'a pas de sens pour une assurance.
+    #
+    #  Contrat commencé le 01/01/2026, sans durée saisie → annuel, donc terme au
+    #  01/01/2027, reporté tant qu'il est passé. La valeur de `prochaine_visite`
+    #  (30/06/2027) est posée DIFFÉRENTE exprès : c'est le seul moyen de prouver
+    #  laquelle des deux est lue.
+    assert lu.assurance_echeance != date(2027, 6, 30), "la fiche lit encore prochaine_visite"
+    assert lu.assurance_echeance == date(2027, 1, 1)
 
 
 def test_sans_contrat_la_fiche_n_invente_rien(copro):

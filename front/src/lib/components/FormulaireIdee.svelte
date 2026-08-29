@@ -83,8 +83,6 @@
 			bind:description={form.description}
 			descriptionPlaceholder="Décrivez votre idée…"
 		/>
-		<!--  Pas de bouton « Annuler » ici : la commande vit dans l'en-tête de page,
-		      où le bouton d'ouverture bascule (#367). -->
 		<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée
 		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
 		      de seconde commande d'annulation (#367). -->

@@ -9,6 +9,7 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateLong as formatDate } from '$lib/date';
+	import { revelerCible } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
@@ -31,6 +32,19 @@
 			toast('error', 'Erreur de chargement');
 		} finally {
 			loading = false;
+		}
+
+		//  🔴 L'ancre `#syndic` ne suffit pas. Le navigateur applique le hash à
+		//  l'ARRIVÉE, alors que cette page monte vide et se remplit ensuite : la
+		//  section visée n'existe pas encore, le saut ne trouve rien, et l'on
+		//  reste en haut. Signalé à l'écran le 29/08/2026 depuis le lien « IFF
+		//  Gestion » de la fiche de la résidence — l'ancre ÉTAIT là.
+		//
+		//  ⚠️ Le défaut est propre à toute page qui charge après le montage :
+		//  `revelerCible` existe pour ça (#453) et attend le rendu. C'est aussi
+		//  ce qui met le titre sous l'en-tête plutôt que derrière.
+		if (typeof window !== 'undefined' && window.location.hash === '#syndic') {
+			revelerCible('syndic');
 		}
 	});
 

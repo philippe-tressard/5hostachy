@@ -14,16 +14,25 @@
   qui n'escamote pas l'écran pendant la saisie, et celui que suivaient déjà les
   rubriques les plus utilisées.
 
-  ⚠️ CE QUE CE COMPOSANT NE PORTE PAS : la commande d'annulation. Elle reste dans
-  l'en-tête de page, où le bouton d'ouverture bascule en « ✕ Annuler » — c'est le
-  modèle des actualités, et il est conservé tel quel. Le défaut signalé n'était
-  pas son emplacement mais son **alignement** : il se posait au bord droit de
-  l'ÉCRAN alors que la boîte s'arrête à 720 px. C'est `EntetePage` qui le corrige,
-  via `alignerSaisie`.
+  ⚠️ CE QUE CE COMPOSANT NE PORTE PAS, ET CE QUE L'APPELANT DOIT PORTER.
 
-  Ne pas ajouter de second bouton d'annulation ici : deux commandes pour un seul
-  formulaire, c'est précisément ce que la modale du calendrier faisait — sa croix
-  ET le bouton d'en-tête, ce dernier sous l'overlay, visible et inutilisable.
+  🔴 Ce paragraphe disait l'inverse jusqu'au 29/08/2026 : « la commande
+  d'annulation reste dans l'en-tête de page ». C'était la règle de #367, et elle
+  a été REMPLACÉE le 18/08/2026 — « Annuler » est **à côté** d'« Enregistrer »,
+  norme posée sur Tickets, constatée à l'écran, puis étendue. La consigne d'ici
+  n'a pas suivi, et pendant onze jours elle a légitimé la divergence : quatre
+  formulaires suivaient la nouvelle règle, les autres l'ancienne, et la page
+  Prestataires en portait TROIS variantes à elle seule. Une consigne périmée est
+  pire qu'absente.
+
+  **Ce que l'appelant doit écrire**, dans un `<div class="form-actions">` :
+  « Annuler » en `btn-outline` PUIS la soumission en `btn-primary`. L'ordre
+  compte : la commande destructrice ne se met pas là où le pouce se pose, et un
+  ordre qui change d'un écran à l'autre fait cliquer de travers par mémoire du
+  geste. 🔒 Vérifié par `npm run lint:soumission` (contrôle C).
+
+  Le composant, lui, ne pose aucun bouton : il ne connaît ni l'enregistrement ni
+  ce qu'annuler veut dire pour l'écran qui l'emploie.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
