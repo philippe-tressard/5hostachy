@@ -259,13 +259,11 @@ def _is_restreint(public_cible: str | list | None) -> bool:
     return "résidents" not in lst
 
 
-#: Titre affiché à la place du vrai quand l'actualité est **confidentielle**.
+#: Titre de repli, employé quand une actualité n'en a pas.
 #:
-#: Le groupe WhatsApp est commun à toute la copropriété : y écrire le vrai titre
-#: révélerait précisément ce que la confidentialité protège — « Fuite chez M. X,
-#: bât. 3 » en dit déjà l'essentiel. Le message garde en revanche le **périmètre**
-#: (c'est lui qui fait venir les bons résidents) et le **lien**, qui renvoie vers
-#: l'application où la règle d'accès s'applique normalement (arbitrage #347).
+#: 🔴 **CE N'EST PLUS LE TITRE DES CONFIDENTIELLES** — #347 renversé par #623
+#: le 29/08/2026 : le titre part, et l'écran avertit son auteur de n'y rien
+#: mettre de confidentiel. Le contenu, lui, ne sort jamais.
 TITRE_CONFIDENTIEL = "Information réservée au périmètre concerné"
 
 
@@ -348,7 +346,9 @@ def construire_message(
     footer = config.get('whatsapp_footer', '').strip()
     if message_sans_contenu(public_cible, confidentiel):
         site_url = (config.get('site_url') or '').strip()
-        titre_affiche = TITRE_CONFIDENTIEL if confidentiel else titre
+        #  🔴 Le titre PART, confidentiel compris (#623) ; le repli ne sert
+        #  plus qu'aux actualités sans titre.
+        titre_affiche = titre or TITRE_CONFIDENTIEL
         return _build_message_restreint(
             titre_affiche, urgente, perimetre_cible, site_url, pub_id, footer
         )
