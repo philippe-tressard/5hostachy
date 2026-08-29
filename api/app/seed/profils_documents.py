@@ -10,18 +10,15 @@ PROFILS = [
     {
         "code": "résidence_tous",
         "libelle": "Tous les résidents",
-        "description": "Copropriétaires, bailleurs, locataires, syndic",
-        #  ⚠️ `syndic` est un STATUT, pas un rôle — et c'est voulu :
-        #  `document_visible` compare `roles ∪ {statut}` à cette liste, et le
-        #  syndic ne porte aucun rôle de copropriétaire. C'est déjà ainsi que
-        #  fonctionne `cs_syndic_uniquement` plus bas.
-        #
-        #  🔴 Il manquait, et le syndic ne voyait donc RIEN des quatre catégories
-        #  qui s'appuient sur ce profil — règlement de copropriété, PV d'AG, fiche
-        #  synthétique, plan de la résidence. Pas même le PV de l'assemblée de
-        #  toute la copropriété. Mesuré le 29/08/2026 ; migration 0159 pour les
-        #  bases existantes, puisque le seed ne pose que les profils ABSENTS.
-        "roles_autorises": json.dumps(["propriétaire", "résident", "syndic"]),
+        "description": "Copropriétaires, bailleurs, locataires",
+        #  ⚠️ LE SYNDIC N'Y EST PAS, et c'est un choix — arbitré le 29/08/2026.
+        #  Il ne voit donc ni le règlement, ni les PV d'AG, ni la fiche
+        #  synthétique, ni le plan. La question a été posée explicitement et
+        #  tranchée : les comptes-rendus d'assemblée sont une affaire de
+        #  copropriétaires. Ne pas « corriger » cette absence en la prenant pour
+        #  un oubli : le profil `cs_syndic_uniquement` existe pour ce qui le
+        #  regarde.
+        "roles_autorises": json.dumps(["propriétaire", "résident"]),
         "require_cs": True,
     },
     {

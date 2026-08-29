@@ -179,43 +179,27 @@ def test_document_de_batiment_lisible_par_son_batiment():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Le SYNDIC voit les PV d'AG — il ne les voyait pas du tout (29/08/2026)
+#  Le SYNDIC ne voit PAS les PV d'AG — et c'est une décision (29/08/2026)
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 #  La catégorie `pv_ag` pointe sur le profil `résidence_tous`, dont les rôles
-#  autorisés étaient `["propriétaire", "résident"]`. Le syndic n'a ni l'un ni
+#  autorisés sont `["propriétaire", "résident"]`. Le syndic n'a ni l'un ni
 #  l'autre : son STATUT vaut `syndic`, et `document_visible` compare
-#  `roles ∪ {statut}` à cette liste. Il tombait au premier filtre — y compris sur
+#  `roles ∪ {statut}` à cette liste. Il tombe au premier filtre — y compris sur
 #  le PV de l'assemblée de TOUTE la copropriété.
 #
-#  Ce n'était pas un choix : la description du profil dit « Copropriétaires,
-#  bailleurs, locataires », et le profil voisin `cs_syndic_uniquement` nomme le
-#  syndic explicitement. L'omission touchait les quatre catégories qui s'appuient
-#  sur `résidence_tous` — règlement, PV d'AG, fiche synthétique, plan.
+#  🔴 Cela ressemble à un oubli, et ç'a été traité comme tel dans une première
+#  version de ce lot : la description du profil dit « Copropriétaires, bailleurs,
+#  locataires », et le profil voisin `cs_syndic_uniquement` nomme le syndic
+#  explicitement. **La question a été posée et tranchée : le syndic n'a pas à
+#  voir les comptes-rendus d'assemblée.**
 #
-#  Migration 0159. Ce test vérifie la RÈGLE ; que la migration l'ait bien posée
-#  en base est vérifié par `test_migrations.py` (chaîne) et constaté en production.
-
-class _ProfilAvecSyndic:
-    """`résidence_tous` après la migration 0159."""
-
-    roles_autorises = '["propriétaire", "résident", "syndic"]'
-    profil_acces_id = 1
-
-
-class _SessionProfilAvecSyndic:
-    def get(self, _modele, _id):
-        return _ProfilAvecSyndic()
-
+#  Ce test existe pour que la prochaine lecture du profil ne « corrige » pas une
+#  décision en la prenant pour une omission. C'est le sens inverse de l'habitude
+#  — on verrouille ici une ABSENCE d'accès, pas un accès.
 
 def _syndic():
-    """Le syndic : un STATUT, aucun rôle de copropriétaire, et AUCUN LOT.
-
-    L'absence de lot est le point : elle rend `user_batiments` vide, donc tout
-    document restreint par bâtiment lui serait refusé même s'il passait le filtre
-    de rôle. C'est pourquoi retirer `perimetre='bâtiment'` des PV d'AG et ouvrir
-    le profil sont **deux** correctifs, pas un.
-    """
+    """Le syndic : un STATUT, aucun rôle de copropriétaire, et aucun lot."""
     return type(
         "Syndic",
         (),
@@ -228,20 +212,11 @@ def _syndic():
     )()
 
 
-def test_le_syndic_voit_le_pv_d_ag_de_la_copropriete():
-    assert document_visible(_syndic(), _cr_ag(), _SessionProfilAvecSyndic()) is True
-
-
-def test_le_syndic_voit_un_pv_d_ag_cible_sur_des_batiments():
-    """Le ciblage étant descriptif, l'absence de lot ne lui ferme plus rien."""
-    doc = _cr_ag(batiments_ids_json="[1,2]")
-    assert document_visible(_syndic(), doc, _SessionProfilAvecSyndic()) is True
-
-
-def test_sans_la_migration_le_syndic_ne_voyait_rien():
-    """Le cas AVANT, gardé pour que la raison du correctif reste lisible.
-
-    Un test qui ne montre que l'état corrigé laisse croire qu'il n'y avait rien à
-    corriger — et le prochain qui touchera au profil ne saura pas ce qu'il défait.
-    """
+def test_le_syndic_ne_voit_pas_le_pv_d_ag_de_la_copropriete():
+    """Décision du 29/08/2026, verrouillée — ce n'est pas un oubli à réparer."""
     assert document_visible(_syndic(), _cr_ag(), _SessionProfil()) is False
+
+
+def test_le_syndic_ne_voit_pas_un_pv_d_ag_cible_sur_des_batiments():
+    doc = _cr_ag(batiments_ids_json="[1,2]")
+    assert document_visible(_syndic(), doc, _SessionProfil()) is False
