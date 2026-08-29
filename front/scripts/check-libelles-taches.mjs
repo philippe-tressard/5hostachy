@@ -28,6 +28,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { neutraliserCommentaires } from './lib-commentaires.mjs';
+import { corpsDesTables, valeursDeclarees } from './lib-lecture-source.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SOURCE = join('lib', 'taches.ts');
@@ -65,7 +66,26 @@ try {
 //  `LIBELLE_TACHE` — depuis le 11/08/2026 il y a aussi `LIBELLE_ACTION`, le nom
 //  du BOUTON quand il diffère du nom de la tâche. C'est voulu : un libellé
 //  d'action recopié dans un écran diverge exactement comme un nom de tâche.
-const LIBELLES = [...source.matchAll(/^\t[a-z_]+: '([^']+)'/gm)].map((m) => m[1]);
+//  ⚠️ Sans supposer la mise en page : le motif d'avant exigeait une
+//  tabulation et une seule ligne, si bien qu'un fichier reformaté rendait un
+//  relevé FAUX — des libellés « écrits en dur » qui ne l'étaient pas (#419).
+//  🔴 DEUX tables, nommées — et non « toutes celles qui commencent par
+//  LIBELLE_ ». `taches.ts` en porte cinq : `LIBELLE_STATUT`, `AIDE_STATUT` et
+//  `CLASSE_STATUT` sont arrivées après, et décrivent l'état d'EXÉCUTION d'une
+//  tâche planifiée — pas son nom.
+//
+//  ⚠️ Les inclure produit un faux positif sur un mot français courant : onze
+//  écrans écrivent « En cours » pour un TICKET ou une ANNONCE, notion sans
+//  rapport avec l'exécution d'un cron. Les leur faire remplacer par
+//  `LIBELLE_STATUT.en_cours` coupleraient deux vocabulaires qui ne partagent
+//  qu'un mot — et la première divergence légitime de l'un casserait l'autre.
+//
+//  ⚠️ Le motif d'origine (`^	[a-z_]+: '…'`) les ramassait toutes, mais ne
+//  voyait que les guillemets simples : le dépôt en portait de doubles à ces
+//  endroits-là, et le contrôle était vert par accident de citation. Prettier
+//  normalise les guillemets, ce qui a révélé l'angle mort (#419).
+const LIBELLES = corpsDesTables(source, /export const (LIBELLE_TACHE|LIBELLE_ACTION)\b/g)
+	.flatMap((corps) => valeursDeclarees(corps, '[a-z_]+'));
 if (LIBELLES.length < 5) {
 	console.error(
 		`✗ check-libelles-taches : ${LIBELLES.length} libellé(s) extrait(s) de ${SOURCE} — ` +
