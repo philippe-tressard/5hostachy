@@ -237,6 +237,8 @@ async def upload_document(
     annee: int | None = Form(None),
     date_ag: str | None = Form(None),
     batiments_ids_json: str | None = Form(None),
+    #  Codes de périmètre, ce que l'écran envoie depuis `PerimetrePicker` (#470).
+    perimetre_cible: str | None = Form(None),
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = None,
     session: Session = Depends(get_session),
@@ -301,6 +303,7 @@ async def upload_document(
         annee=annee,
         date_ag=parsed_date_ag,
         batiments_ids_json=batiments_ids_json,
+        perimetre_cible=perimetre_cible,
     )
     session.add(doc)
     session.commit()

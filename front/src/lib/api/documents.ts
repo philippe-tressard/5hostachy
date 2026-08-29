@@ -23,7 +23,12 @@ export const documents = {
 		batimentId?: number,
 		annee?: number,
 		dateAg?: string,
-		batimentsIdsJson?: string,
+		/**  De quoi PARLE le document, en codes de périmètre (`["bat:3"]`).
+		 *
+		 *   Remplace `batimentsIdsJson`, qui parlait en identifiants de lignes
+		 *   (#470). ⚠️ Descriptif, jamais un droit : ce sont `perimetre` et
+		 *   `batimentId` qui gouvernent la lecture. */
+		perimetreCible?: string[],
 	): Promise<Document> => {
 		//  `postFormData` écarte lui-même les champs absents : plus de `if (x)`
 		//  répété pour chaque champ facultatif.
@@ -34,7 +39,7 @@ export const documents = {
 			batiment_id: batimentId ? String(batimentId) : undefined,
 			annee: annee ? String(annee) : undefined,
 			date_ag: dateAg,
-			batiments_ids_json: batimentsIdsJson,
+			perimetre_cible: perimetreCible?.length ? JSON.stringify(perimetreCible) : undefined,
 			file,
 		});
 	},
