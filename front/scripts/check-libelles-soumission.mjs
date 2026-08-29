@@ -118,6 +118,16 @@ const LF = String.fromCharCode(10);
  * divergence dans ce fichier sans que personne l'ait décidé.
  */
 const EXCEPTIONS = {
+	//  🔴 Une CONFIRMATION n'est pas une soumission de formulaire, et son verbe
+	//  ne doit surtout pas être générique : « Enregistrer » sur une boîte qui
+	//  supprime définitivement serait un piège. Le libellé y nomme le GESTE —
+	//  « Supprimer », « Archiver » — et c'est ce qui rend la boîte sûre.
+	//
+	//  ⚠️ L'exception porte sur le VERBE (contrôle B), pas sur l'ordre des
+	//  boutons : « Annuler » y vient bien avant l'action, comme partout ailleurs
+	//  (contrôle C), et c'est délibérément la même main.
+	'lib/components/Confirmation.svelte':
+		'boîte de confirmation : le verbe nomme le geste (« Supprimer »), il ne peut pas être générique',
 	//  ── Hors périmètre par la RÈGLE elle-même (§9 quinquies bis) ────────────
 	//  Ce ne sont pas des créations d'objet, et leur verbe métier est le bon.
 	'lib/components/FormulaireCreation.svelte':
