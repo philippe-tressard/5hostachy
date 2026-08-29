@@ -182,7 +182,38 @@ CONSOMME.**
 | La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | **6 recopies sur 6 remplacées** |
 | L'**en-tête d'une carte de liste** | `EnteteCarte.svelte` | titre / tags · date · actions — voir §3 |
 | La rangée d'**états en pastilles** | `WorkflowPastilles.svelte` | jamais un `<select>` nu (R3) |
+| **Toute** pastille de sélection | `Pastille.svelte` | jamais un `<button class="pill">` — voir le seuil ci-dessous |
 | Le garde-fou R4 | `npm run lint:etats` | il refuse une divergence sans motif, un motif `api` sans ticket, et **une section rendue hors déclaration** |
+
+### Le seuil des listes courtes : **6** (arbitré le 29/08/2026, #491)
+
+Une liste de **6 entrées ou moins** qui fait CHOISIR se rend en pastilles
+(`Pastille.svelte`). Au-delà, elle reste ce qu'elle est.
+
+Le chiffre n'est pas arbitraire : les usages existants allaient de 2 à 6, et deux
+cas se posaient juste au-dessus — `CATEGORIES_ANNONCE` (9) et les statuts
+utilisateur (7). Le seuil les exclut, et il est **écrit ici pour que la question
+ne se repose pas à chaque écran** : c'est en y répondant au cas par cas qu'on a
+obtenu sept pastilles réécrites à la main.
+
+⚠️ **Le seuil décide d'une CONVERSION, il n'impose pas de revenir en arrière.**
+Les douze filtres d'équipement de `prestataires` restent des pastilles : ils
+l'étaient déjà en substance, et les défaire n'apporterait rien.
+
+**Une pastille peut porter un SOUS-TEXTE** (`<span slot="detail">`), et c'est ce
+qui a débloqué la conversion des listes qui portaient une description. Sans lui,
+elles restaient en cartes maison — ou perdaient l'information.
+
+🔴 Le cas qui l'a rendu nécessaire : les six types de prestataire portaient leur
+description dans un `title`, donc **invisible au tactile** — un survol n'existe
+pas sur téléphone, et c'est là que ces types sont le plus difficiles à
+distinguer.
+
+⚠️ **Ce qui NE se convertit PAS** : un vrai `radiogroup` avec des
+`<input type="radio">`, comme les catégories de ticket. `Pastille` rend un
+`<button>` : la navigation par flèches et l'annonce par le lecteur d'écran y
+seraient perdues. L'uniformité ne se paie pas en accessibilité
+(`standards/11` §2).
 
 🔴 **La section 1 ne porte QUE le titre** (arbitré le 18/08/2026, sur les
 Tickets où la catégorie était rendue *avant* lui). Ce qui qualifie l'objet —

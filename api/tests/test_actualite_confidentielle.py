@@ -156,16 +156,37 @@ def message_confidentiel() -> str:
     )
 
 
-def test_le_message_whatsapp_ne_porte_ni_le_titre_ni_le_contenu(message_confidentiel):
-    """Le vrai titre trahirait précisément ce qu'on protège.
+def test_le_message_whatsapp_porte_le_titre_mais_JAMAIS_le_contenu(message_confidentiel):
+    """🔴 ARBITRAGE RENVERSÉ le 29/08/2026 (#623), après celui de #347.
 
-    « Dégât des eaux chez M. Durand » en dit déjà l'essentiel au groupe entier :
-    un titre est une phrase, pas une étiquette.
+    #347 masquait le titre, au motif que « Dégât des eaux chez M. Durand » en dit
+    déjà l'essentiel au groupe entier. Le raisonnement était juste, mais il
+    traitait le titre comme une donnée SUBIE. Le nouvel arbitrage le traite comme
+    une donnée **écrite** : le titre part, et son auteur est averti à l'écran de
+    n'y rien mettre de confidentiel.
+
+    ⚠️ Ce qui n'a pas bougé, et qui est le cœur de la protection : le **contenu**
+    ne part jamais. C'est lui qui porte le détail — « l'appartement du 3ᵉ étage ».
+    Les deux assertions ci-dessous ne sont pas redondantes : la première dit ce
+    qui a changé, la seconde ce qui ne doit pas changer avec.
     """
-    assert VRAI_TITRE not in message_confidentiel
-    assert "Durand" not in message_confidentiel
+    assert VRAI_TITRE in message_confidentiel
     assert "3ᵉ étage" not in message_confidentiel
-    assert TITRE_CONFIDENTIEL in message_confidentiel
+    assert "sinistre concerne" not in message_confidentiel
+
+
+def test_le_titre_de_repli_ne_sert_QUE_aux_actualites_sans_titre():
+    """`TITRE_CONFIDENTIEL` n'est plus le titre des confidentielles.
+
+    Il reste comme repli — une actualité sans titre ne doit pas produire un
+    message qui commence par un tiret. Ce test empêche qu'on le supprime en
+    croyant l'arbitrage clos, et qu'on obtienne alors un message décapité.
+    """
+    message = construire_message(
+        "", VRAI_CONTENU, urgente=False, perimetre_cible='["bat:3"]',
+        config=CONFIG, public_cible='["résidents"]', pub_id=42, confidentiel=True,
+    )
+    assert TITRE_CONFIDENTIEL in message
 
 
 def test_le_message_whatsapp_garde_le_perimetre_et_le_lien(message_confidentiel):

@@ -26,6 +26,10 @@
     <Pastille active={…} on:click={…}>Bâtiment 1</Pastille>
     <Pastille active icone="building-2" chevron>Bâtiment 2</Pastille>
     <Pastille petite active={…}>Hall</Pastille>
+    <Pastille active={…}>
+      Plomberie
+      <span slot="detail">fuites, sanitaires</span>
+    </Pastille>
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
@@ -45,8 +49,17 @@
 	export let chevron = false;
 </script>
 
-<button type="button" class="pastille" class:active class:petite on:click>
-	{#if icone}<Icon name={icone} size={15} />{/if}<slot />{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
+<!--  ⚠️ `$$slots.detail` et non une prop : c'est le SEUL moyen pour Svelte de
+      savoir si l'appelant a fourni un sous-texte. Sans cette condition, la
+      pastille passerait en deux lignes chez tout le monde — y compris là où il
+      n'y a rien à mettre dessous. -->
+<button type="button" class="pastille" class:active class:petite class:avec-detail={$$slots.detail} on:click>
+	{#if icone}<Icon name={icone} size={15} />{/if}
+	<span class="pastille-corps">
+		<span class="pastille-libelle"><slot /></span>
+		{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
+	</span>
+	{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
 </button>
 
 <style>
@@ -68,4 +81,40 @@
 	.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 	.petite { font-size: .78rem; padding: .28rem .6rem; }
 	.pastille-chevron { margin-left: .3rem; opacity: .6; }
+
+	/*  ── Le SOUS-TEXTE (29/08/2026, arbitré avec l'utilisateur) ──────────────
+	    Deux listes portaient une description par option — type de prestataire,
+	    catégorie de ticket — et étaient rendues en cartes maison pour cette
+	    seule raison. La pastille les accueille désormais plutôt que d'être
+	    contournée : c'est l'objet qui s'enrichit, pas un second motif qui naît.
+
+	    ⚠️ Sans `detail`, RIEN ne change : `.pastille-corps` reste en ligne et la
+	    pastille garde sa hauteur. Un enrichissement qui modifierait les appelants
+	    existants ne serait pas un enrichissement. */
+	/*  Le libellé porte le poids ; le sous-texte s'en distingue par la taille et
+	    l'opacité, jamais par une couleur qui deviendrait illisible en actif. */
+	.pastille-libelle { font-weight: inherit; }
+	.pastille-corps { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+	.avec-detail {
+		align-items: flex-start;
+		padding: .45rem .8rem;
+		border-radius: var(--radius);
+		/*  Le sous-texte est une phrase : elle doit pouvoir se replier. */
+		white-space: normal;
+		text-align: left;
+	}
+	.pastille-detail {
+		font-size: .72rem;
+		opacity: .75;
+		font-weight: 400;
+	}
+	/*  Sur fond plein, le sous-texte reste lisible : c'est l'opacité qui le
+	    distingue, jamais une couleur fixe qui deviendrait illisible en actif. */
+	.active .pastille-detail { opacity: .85; }
+
+	/*  Sous 480 px, une pastille à sous-texte prend toute la largeur : côte à
+	    côte, deux phrases de six mots débordent (socle 11 §10). */
+	@media (max-width: 480px) {
+		.avec-detail { width: 100%; }
+	}
 </style>

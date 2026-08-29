@@ -125,6 +125,31 @@
 		&#x1F512; Seuls les résidents du périmètre sélectionné verront cette actualité — ni dans le
 		fil, ni par un lien direct pour les autres. Le réglage reste modifiable après publication.
 	</p>
+	<!--  🔴 CE QUI SORT, canal par canal (#623, 29/08/2026).
+	      L'auteur découvrait la conséquence après l'envoi, ou jamais. Et elle
+	      n'est PAS la même partout : le titre part sur WhatsApp, tout part par
+	      e-mail. Un avertissement qui dirait « le contenu ne sort pas » serait
+	      faux sur un canal sur deux — et une assurance fausse au moment précis
+	      où l'auteur décide est pire que pas d'avertissement.
+
+	      ⚠️ Il s'affiche dès que « Confidentiel » est coché, sans attendre que
+	      les canaux le soient : c'est en écrivant le TITRE qu'il faut le savoir,
+	      pas au moment de cocher un envoi. -->
+	<div class="avert-diffusion" role="note">
+		<p class="avert-titre">&#x26A0;&#xFE0F; Ce qui sortira de l'application</p>
+		<ul class="avert-liste">
+			<li>
+				<strong>Groupe WhatsApp</strong> — le <strong>titre</strong> et le périmètre
+				partent, avec un lien vers l'application. Le contenu, lui, ne sort pas.
+				<span class="avert-consigne">Le groupe est commun à toute la copropriété :
+				n'écrivez rien de confidentiel dans le titre.</span>
+			</li>
+			<li>
+				<strong>Syndic et conseil syndical</strong> — l'e-mail part
+				<strong>en entier</strong>, titre et contenu, sans restriction.
+			</li>
+		</ul>
+	</div>
 {/if}
 
 <AlerteEpinglage coche={epingle} {dejaEpingle} />
@@ -150,6 +175,29 @@
 		opacity: .5;
 		cursor: not-allowed;
 	}
+	/*  L'avertissement de diffusion : encadré, pas un simple paragraphe d'aide.
+	    Il annonce une conséquence IRRÉVERSIBLE — un message parti ne se retire
+	    pas d'un groupe — là où `.aide` explique un réglage. Deux niveaux de
+	    gravité, deux rendus. */
+	.avert-diffusion {
+		border-left: 3px solid var(--color-warning, #B07D1E);
+		background: var(--color-warning-light, #FFFBEB);
+		border-radius: var(--radius);
+		padding: .6rem .8rem;
+		margin: -.25rem 0 1rem;
+	}
+	.avert-titre { margin: 0 0 .35rem; font-size: .8rem; font-weight: 600; }
+	.avert-liste {
+		margin: 0;
+		padding-left: 1.1rem;
+		font-size: .78rem;
+		line-height: 1.5;
+		color: var(--color-text);
+	}
+	.avert-liste li + li { margin-top: .3rem; }
+	/*  La consigne d'écriture sur sa propre ligne : c'est la SEULE phrase qui
+	    demande une action de l'auteur, les autres décrivent. */
+	.avert-consigne { display: block; margin-top: .15rem; font-style: italic; }
 	.aide {
 		font-size: .78rem;
 		color: var(--color-text-muted);
