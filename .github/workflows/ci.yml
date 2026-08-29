@@ -879,6 +879,19 @@ jobs:
         working-directory: front
         run: npm run lint:eslint
 
+      - name: Confirmation dans la charte (plafond décroissant)
+        # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
+        # navigateur bloque le fil d'exécution, ignore la charte, et donne le
+        # MÊME aspect à « archiver » et à « supprimer définitivement » — alors
+        # que l'un se défait et l'autre non.
+        #
+        # Un plafond et non une interdiction : convertir les vingt-cinq écrans
+        # d'un coup toucherait tout avant qu'on en ait regardé un, ce que R5 du
+        # cadre #430 interdit. Le plafond empêche d'en AJOUTER et baisse à chaque
+        # écran repris — il échoue aussi s'il reste au-dessus du réel.
+        working-directory: front
+        run: npm run lint:confirmation
+
       - name: Formatage (prettier --check)
         # 🔴 Le dernier point de #419, et sans lui les trois autres ne servent
         # à rien : le dépôt vient d'être reformaté, et un format que rien ne

@@ -38,6 +38,7 @@
 		noeudPerimetre,
 	} from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
 	$: _siteNom = $siteNomStore;
@@ -155,8 +156,7 @@
 	let _prestLoaded = false;
 
 	//  Hors du bloc réactif : dedans, l'affectation faisait signaler une « boucle
-	//  possible » — faux positif que le `eslint-disable-next-line` taisait, et un
-	//  tel commentaire se décroche au reformatage (#419).
+	//  possible », et le commentaire qui le taisait se décroche au reformatage.
 	function chargerPrestataires() {
 		if (!$isCS && !$isAdmin) return;
 		prestApi
@@ -367,7 +367,7 @@
 	}
 
 	async function archiveEv(id: number) {
-		if (!confirm('Archiver cet événement ?')) return;
+		if (!(await confirmer('Archiver cet événement ?'))) return;
 		try {
 			await calApi.archive(id);
 			evenements = evenements.map((e) => (e.id === id ? { ...e, archivee: true } : e));
@@ -378,7 +378,7 @@
 	}
 
 	async function deleteEv(id: number) {
-		if (!confirm('Supprimer définitivement cet événement ? Cette action est irréversible.')) return;
+		if (!(await confirmer(SUPPRESSION('Cet événement')))) return;
 		try {
 			await calApi.delete(id);
 			evenements = evenements.filter((e) => e.id !== id);
@@ -399,8 +399,7 @@
 	}
 
 	async function deleteArchivedPub(pub: Publication) {
-		if (!confirm(`Supprimer définitivement « ${pub.titre} » ? Cette action est irréversible.`))
-			return;
+		if (!(await confirmer(SUPPRESSION(`« ${pub.titre} »`)))) return;
 		try {
 			await pubsApi.delete(pub.id);
 			archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
@@ -636,14 +635,18 @@
 			//  Les deux sources deviennent UNE liste normalisée : c'est ce qui
 			//  supprime la seconde boucle, et avec elle la divergence du périmètre.
 			const sources: SourceRecurrente[] = [
-				...contrats.map((c: any) => ({
-					titre: `${prestMap.get(c.prestataire_id) ?? 'Prestataire'} — ${c.libelle}`,
-					frequence_type: c.frequence_type ?? null,
-					frequence_valeur: c.frequence_valeur ?? null,
-					prestataire_id: c.prestataire_id ?? null,
-					perimetre: perimetreDuBatiment(c.batiment_id),
-					description: c.notes ?? null,
-				})),
+				//  Un contrat ÉCHU ne génère plus de visites (#605). ⚠️ `echu` est FAUX
+				//  sous reconduction tacite — voir `utils/echeance_contrat.py`.
+				...contrats
+					.filter((c: any) => !c.echu)
+					.map((c: any) => ({
+						titre: `${prestMap.get(c.prestataire_id) ?? 'Prestataire'} — ${c.libelle}`,
+						frequence_type: c.frequence_type ?? null,
+						frequence_valeur: c.frequence_valeur ?? null,
+						prestataire_id: c.prestataire_id ?? null,
+						perimetre: perimetreDuBatiment(c.batiment_id),
+						description: c.notes ?? null,
+					})),
 				...evenements
 					.filter((ev: any) => ev.type === 'maintenance' && ev.prestataire_id && !ev.archivee)
 					.map((ev: any) => ({
@@ -666,7 +669,7 @@
 				toast('info', message);
 				return;
 			}
-			if (!confirm(message)) return;
+			if (!(await confirmer({ titre: 'Initialiser les prestataires', message }))) return;
 
 			for (const ev of plan.aCreer) await calApi.create(ev);
 			evenements = await calApi.list();
