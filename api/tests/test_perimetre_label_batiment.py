@@ -51,7 +51,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from sqlmodel import Session, SQLModel, delete
+from sqlmodel import Session, SQLModel
 
 from app.database import engine
 from app.models.perimetre import Perimetre
@@ -59,6 +59,7 @@ from app.models.perimetre import Perimetre
 #  `perimetre.modifie_par_id` sans le modèle `Utilisateur` en mémoire.
 from app.models.core import Utilisateur  # noqa: F401
 from app.utils import perimetres as P
+from tests.purge_test import vider_perimetres
 
 
 @pytest.fixture()
@@ -68,8 +69,9 @@ def arbre_deux_batiments():
     suffixe = uuid.uuid4().hex[:6]
     codes = []
     with Session(engine) as session:
-        session.exec(delete(Perimetre))
-        session.commit()
+        #  Par VAGUES : `perimetre` s'auto-référence, un DELETE global viole la
+        #  clé sur les enfants dès que `foreign_keys=ON` (#546).
+        vider_perimetres(session)
         for numero in (3, 4):
             bat = f"bat{suffixe}:{numero}"
             noeud_bat = Perimetre(
@@ -96,8 +98,9 @@ def arbre_deux_batiments():
     P.invalider_cache()
     yield codes
     with Session(engine) as session:
-        session.exec(delete(Perimetre))
-        session.commit()
+        #  Par VAGUES : `perimetre` s'auto-référence, un DELETE global viole la
+        #  clé sur les enfants dès que `foreign_keys=ON` (#546).
+        vider_perimetres(session)
     P.invalider_cache()
 
 
@@ -133,8 +136,9 @@ def arbre_du_ticket():
     SQLModel.metadata.create_all(engine)
     suffixe = uuid.uuid4().hex[:6]
     with Session(engine) as session:
-        session.exec(delete(Perimetre))
-        session.commit()
+        #  Par VAGUES : `perimetre` s'auto-référence, un DELETE global viole la
+        #  clé sur les enfants dès que `foreign_keys=ON` (#546).
+        vider_perimetres(session)
 
         #  Un REGROUPEMENT : racine, non sélectionnable. Il ne doit jamais préfixer
         #  ses enfants — « Bâtiments › Bât. 4 » n'apprendrait rien.
@@ -196,8 +200,9 @@ def arbre_du_ticket():
     P.invalider_cache()
     yield codes
     with Session(engine) as session:
-        session.exec(delete(Perimetre))
-        session.commit()
+        #  Par VAGUES : `perimetre` s'auto-référence, un DELETE global viole la
+        #  clé sur les enfants dès que `foreign_keys=ON` (#546).
+        vider_perimetres(session)
     P.invalider_cache()
 
 
