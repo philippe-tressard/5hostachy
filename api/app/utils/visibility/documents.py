@@ -126,11 +126,43 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
         return False
 
     # Vérifier le périmètre
+    #
+    #  🔴 LES DEUX FORMES DE CIBLAGE PAR BÂTIMENT, et il y en a bien deux (#617).
+    #
+    #  L'écran des CR d'AG écrit `perimetre='bâtiment'` + `batiment_id` quand UN
+    #  seul bâtiment est coché, mais `perimetre='résidence'` + `batiments_ids_json`
+    #  dès qu'il y en a DEUX. Ce contrôle ne lisait que la première forme : cocher
+    #  un bâtiment de plus repassait par « résidence », donc plus aucune
+    #  restriction — et le seul champ qui portait encore le ciblage n'était jamais
+    #  lu. Mesuré le 29/08/2026 : un résident du bâtiment 3 ne voyait pas le CR
+    #  d'AG du bâtiment 1, mais voyait celui des bâtiments 1 et 2.
+    #
+    #  On lit donc les DEUX, et l'on n'exige PAS que `perimetre` vaille
+    #  « bâtiment » pour la seconde : c'est la présence d'un ciblage qui compte,
+    #  pas l'étiquette posée à côté. Exiger la forme aurait laissé passer
+    #  exactement le cas qui a produit le défaut.
+    user_batiments = {
+        ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
+    }
     if doc.perimetre == "bâtiment" and doc.batiment_id:
-        user_batiments = {
-            ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
-        }
         if doc.batiment_id not in user_batiments:
+            return False
+
+    #  Ciblage MULTI-bâtiments : le lecteur doit avoir un lot dans l'UN d'eux.
+    #
+    #  ⚠️ Une liste illisible ne vaut pas autorisation : replier sur « aucune
+    #  restriction » rouvrirait le document à tout le monde au premier JSON cassé
+    #  (`standards/03` — en cas de doute sur un droit, on refuse). Une liste VIDE,
+    #  en revanche, ne cible personne : elle ne restreint rien de ce côté, et c'est
+    #  l'état d'un CR d'AG de toute la copropriété.
+    if getattr(doc, "batiments_ids_json", None):
+        try:
+            cibles = json.loads(doc.batiments_ids_json)
+        except (ValueError, TypeError):
+            return False
+        if not isinstance(cibles, list):
+            return False
+        if cibles and not (set(cibles) & user_batiments):
             return False
 
     if doc.perimetre == "lot" and doc.lot_id:
