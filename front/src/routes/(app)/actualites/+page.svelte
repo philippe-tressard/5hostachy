@@ -4,6 +4,8 @@
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { currentUser, isCS, isAdmin, setUser } from '$lib/stores/auth';
 	import { publications as pubsApi, documents as docsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
+	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
+	import { optionsActives, libelleOptionsActives } from '$lib/options-publication';
 	import { toast } from '$lib/components/Toast.svelte';
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
 	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
@@ -177,6 +179,60 @@
 		} catch { toast('error', 'Erreur de suppression'); }
 	}
 
+	// ── Options de publication : le raccourci vers la SECTION 2 ─────────
+	//
+	//  Ce n'est PAS un cinquième état de l'entité (cadre #430) : c'est un chemin
+	//  d'accès rapide à la section 2 de l'ÉDITION, celle qui porte épinglage,
+	//  urgence, brouillon et confidentialité. La déclaration
+	//  (`$lib/entites/publication`) est donc inchangée — rien de nouveau n'est
+	//  montré, c'est le même contenu atteint plus vite.
+	//
+	//  🔴 IL ÉCRIT PAR LE MÊME CHEMIN QUE L'ÉDITION — `pubsApi.update`, les quatre
+	//  champs. Un raccourci qui enregistrerait autrement finirait par diverger de
+	//  l'écran long : c'est exactement le motif que ce dépôt a payé plusieurs fois
+	//  (l'édition d'actualité écrite à la main perdait cinq notions, #433).
+	//
+	//  Droits : `$isCS`, les MÊMES que le crayon. L'auteur seul n'ouvre pas ce
+	//  panneau — seuls le CS et les admins publient, donc tout auteur en exercice
+	//  y a déjà droit ; ouvrir à « l'auteur » n'aurait élargi qu'aux anciens
+	//  membres du conseil (arbitrage du 29/08/2026).
+	let optionsPub: Publication | null = null;
+	let optionsSaving = false;
+	//  Copie de travail : on n'écrit dans la publication qu'après la réponse du
+	//  serveur. Modifier `pub` en place montrerait un état enregistré qui ne l'est
+	//  pas encore — et le laisserait faux si la requête échoue.
+	let optionsBrouillon = { epingle: false, urgente: false, brouillon: false, confidentiel: false };
+
+	function ouvrirOptions(pub: Publication) {
+		optionsPub = pub;
+		editingPub = null;
+		showEvolForm = null;
+		optionsBrouillon = {
+			epingle: pub.epingle ?? false,
+			urgente: pub.urgente ?? false,
+			brouillon: pub.brouillon ?? false,
+			confidentiel: pub.confidentiel ?? false,
+		};
+		expandedPubs = new Set([pub.id]);
+	}
+
+	async function enregistrerOptions(pub: Publication) {
+		optionsSaving = true;
+		try {
+			const maj = await pubsApi.update(pub.id, { ...optionsBrouillon });
+			//  Le serveur a le dernier mot : il peut refuser « confidentiel » sur un
+			//  périmètre à portée globale (`appliquer_confidentialite`). On range CE
+			//  qu'il rend, jamais ce qu'on lui a demandé.
+			pubList = pubList.map((p) => (p.id === maj.id ? maj : p));
+			optionsPub = null;
+			toast('success', 'Options mises à jour');
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : "Erreur d'enregistrement");
+		} finally {
+			optionsSaving = false;
+		}
+	}
+
 	function startEdit(pub: Publication) {
 		editingPub = pub;
 		showEvolForm = null;
@@ -226,7 +282,7 @@
 		<CarteActualite {pub} {expanded}
 			apercu={!compactPubs}
 			documents={pubFilesMap[pub.id] ?? []}
-			formulaireOuvert={editingPub?.id === pub.id || showEvolForm === pub.id}
+			formulaireOuvert={editingPub?.id === pub.id || showEvolForm === pub.id || optionsPub?.id === pub.id}
 			on:toggle={() => togglePub(pub.id)}>
 
 			<!--  L'ORDRE DES ICÔNES est celui de la carte de ticket, désigné comme
@@ -249,6 +305,19 @@
 						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button>
 					<button class="btn-icon-edit" aria-pressed={editingPub?.id === pub.id} aria-label="Modifier" title="Modifier"
 						on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
+					<!--  Le bouton n'existe QUE si la publication porte au moins une
+					      option : sur une actualité ordinaire il n'y a rien à faire
+					      évoluer, et un bouton inerte se lit comme une panne.
+					      Il montre les glyphes des options ACTIVES, dans l'ordre de la
+					      table — c'est ce qui le rend lisible sans l'ouvrir. -->
+					{#if optionsActives(pub).length > 0}
+						{@const actives = optionsActives(pub)}
+						<button class="btn-icon btn-icon-options" aria-pressed={optionsPub?.id === pub.id}
+							aria-label={libelleOptionsActives(pub)}
+							title="{libelleOptionsActives(pub)} — cliquer pour les modifier"
+							on:click|stopPropagation={() => ouvrirOptions(pub)}
+						>{#each actives as o (o.cle)}<span class="opt-glyphe">{o.glyphe}</span>{/each}</button>
+					{/if}
 				{/if}
 				{#if $isAdmin}
 					<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
@@ -271,6 +340,35 @@
 							on:annule={() => (editingPub = null)}
 						/>
 					{/key}
+				{:else if optionsPub?.id === pub.id}
+					<!--  ── Options de publication ──
+					      LE MÊME composant qu'à la création et à l'édition
+					      (`OptionsPublication`, section 2 du cadre #430) : ni copie, ni
+					      variante. Il porte déjà la règle « Confidentiel exige un
+					      périmètre restreint », qu'un panneau réécrit n'aurait pas eue.
+					      `role="presentation"` : ce conteneur n'est qu'un relais, il
+					      arrête la propagation pour que cocher ne referme pas la carte. -->
+					<div class="options-form" role="presentation"
+						on:click|stopPropagation on:keydown|stopPropagation>
+						<h4 class="options-titre">Options de publication</h4>
+						<OptionsPublication
+							perimetreCible={pub.perimetre_cible ?? []}
+							dejaEpingle={pub.epingle ?? false}
+							bind:epingle={optionsBrouillon.epingle}
+							bind:urgente={optionsBrouillon.urgente}
+							bind:brouillon={optionsBrouillon.brouillon}
+							bind:confidentiel={optionsBrouillon.confidentiel}
+						/>
+						<!--  L'annulation vit à côté d'« Enregistrer » — norme du
+						      18/08/2026, la même que sur Tickets et sur l'édition. -->
+						<div class="options-actions">
+							<button class="btn btn-primary btn-sm" disabled={optionsSaving}
+								on:click={() => enregistrerOptions(pub)}
+							>{optionsSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
+							<button class="btn btn-outline btn-sm" disabled={optionsSaving}
+								on:click={() => (optionsPub = null)}>Annuler</button>
+						</div>
+					</div>
 				{:else if showEvolForm === pub.id}
 					<!--  ── Commenter / changer l'état ──
 					      `role="presentation"` dit que ce conteneur n'est qu'un relais :
@@ -364,6 +462,34 @@
 	    y a au-dessus. */
 	.pub-fil { margin-top: .9rem; }
 	.evol-form { padding: .5rem 0; }
+
+	/*  ── Bouton « options » ────────────────────────────────────────────────
+	    Il porte de un à quatre glyphes, donc sa largeur varie. `btn-icon` fixe
+	    une cible carrée : on la laisse s'étendre horizontalement sans jamais
+	    descendre sous la cible tactile de 44 px (socle 11 §10), sinon un bouton
+	    à un seul glyphe serait plus petit que ses voisins. */
+	.btn-icon-options {
+		display: inline-flex;
+		align-items: center;
+		gap: .1rem;
+		width: auto;
+		min-width: 44px;
+		min-height: 44px;
+		padding: 0 .35rem;
+	}
+	/*  Les glyphes se serrent quand ils sont quatre : à taille pleine, le bouton
+	    dépasserait la rangée d'actions sur téléphone. */
+	.btn-icon-options .opt-glyphe { font-size: .8em; line-height: 1; }
+
+	.options-form { padding: .5rem 0; }
+	.options-titre { margin: 0 0 .6rem; font-size: .9rem; font-weight: 600; }
+	.options-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+	/*  Sur téléphone, les deux boutons prennent toute la largeur plutôt que de
+	    se serrer — même règle que les autres formulaires du site. */
+	@media (max-width: 480px) {
+		.options-actions { flex-direction: column; }
+		.options-actions :global(.btn) { width: 100%; min-height: 44px; }
+	}
 
 	/*  Les couleurs de badge vivent dans `styles/composants.css`. Cette page les
 	    réécrivait en `:global(…)` — donc pour tout le site une fois sa feuille

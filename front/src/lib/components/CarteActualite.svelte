@@ -25,6 +25,9 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
 	import { STATUT_LABELS, STATUT_BADGE } from '$lib/publications';
+	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
+	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
+	import { optionPublication } from '$lib/options-publication';
 	import { fmtDate2d as fmtDate, fmtDateLong, isNouveau } from '$lib/date';
 
 	export let pub: Publication;
@@ -63,7 +66,10 @@
 	role="presentation"
 	on:click={() => { if (!expanded) basculer(); }}>
 
-	{#if estFil && pub.epingle}<span class="pin-badge">&#x1F4CC;</span>{/if}
+	{#if estFil && pub.epingle}
+		{@const o = optionPublication('epingle')}
+		<span class="pin-badge" title={o?.aide} aria-label={o?.etat}>{o?.glyphe}</span>
+	{/if}
 
 	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
 	      la norme de toutes les cartes du site depuis le 18/08/2026. Elle vit dans
@@ -81,10 +87,19 @@
 			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
-			{#if pub.brouillon}<span class="badge badge-gray">✏️ Brouillon</span>{/if}
+			<!--  ⚠️ Le brouillon portait ✏️ — le crayon qui EST l'icône « Modifier »
+			      de toutes les barres d'actions du site. Deux notions, un glyphe : il
+			      porte 📝 depuis le 29/08/2026, et le glyphe vient de la table. -->
+			{#if pub.brouillon}
+				{@const o = optionPublication('brouillon')}
+				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
+			{/if}
 			{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
 			{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
-			{#if pub.confidentiel}<span class="badge badge-gray" title="Visible du seul périmètre sélectionné">&#x1F512; Confidentiel</span>{/if}
+			{#if pub.confidentiel}
+				{@const o = optionPublication('confidentiel')}
+				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
+			{/if}
 			{#if pub.auteur_nom}<span class="pub-auteur">{pub.auteur_nom}</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions"><slot name="actions" /></svelte:fragment>

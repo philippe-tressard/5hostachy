@@ -40,6 +40,7 @@
     "lint:soumission": "node scripts/check-libelles-soumission.mjs",
     "lint:audit": "node scripts/check-audit.mjs",
     "lint:etats": "node scripts/check-etats.mjs",
+    "lint:options-publication": "node scripts/check-options-publication.mjs",
     "lint:manuels": "node scripts/check-manuels.mjs",
     "lint:pages": "node scripts/check-pages.mjs",
     "lint:ci": "node scripts/check-ci-complete.mjs",

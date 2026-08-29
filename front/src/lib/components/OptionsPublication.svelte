@@ -37,6 +37,10 @@
 <script lang="ts">
 	import AlerteEpinglage from './AlerteEpinglage.svelte';
 	import { concerneTous } from '$lib/utils';
+	//  Glyphes et libellés : la table est la source unique (`$lib/options-publication`).
+	//  Ils étaient écrits ici ET dans les badges de `CarteActualite`, et avaient
+	//  divergé — l'épinglage n'avait pas de glyphe ici et 📌 là-bas.
+	import { optionPublication } from '$lib/options-publication';
 
 	/** Épingler en tête du fil. */
 	export let epingle = false;
@@ -62,6 +66,14 @@
 	//  changerait quelque chose ? ». Sur un nœud à portée globale, non : le
 	//  serveur laisse passer tout le monde avant même de regarder le bâtiment, et
 	//  le cadenas affiché ne protégerait rien.
+	//  Les quatre options, lues UNE fois dans la table. Constantes de module et
+	//  non `{@const}` de balisage : Svelte ne l'admet pas comme enfant direct
+	//  d'un `<div>`, et ces valeurs ne dépendent d'aucun état.
+	const optEpingle = optionPublication('epingle');
+	const optUrgente = optionPublication('urgente');
+	const optBrouillon = optionPublication('brouillon');
+	const optConfidentiel = optionPublication('confidentiel');
+
 	$: rienARestreindre = concerneTous(perimetreCible);
 
 	//  Le périmètre peut changer APRÈS que la case a été cochée : on ne laisse pas
@@ -70,18 +82,27 @@
 </script>
 
 <div class="cases">
-	<label class="checkbox-field"><input type="checkbox" bind:checked={epingle} /> Épingler</label>
-	<label class="checkbox-field"><input type="checkbox" bind:checked={urgente} /> &#x1F6A8; Urgent</label>
-	<label class="checkbox-field">
+	<!--  Les glyphes et les intitulés viennent de la table, jamais du balisage :
+	      c'est ce qui garantit qu'une case et le badge correspondant montrent la
+	      même chose. Les LIAISONS, elles, restent explicites — `bind:checked` a
+	      besoin d'une variable nommée, et une boucle générique obligerait à un
+	      objet intermédiaire que l'hôte devrait ensuite redéfaire. -->
+	<label class="checkbox-field" title={optEpingle?.aide}>
+		<input type="checkbox" bind:checked={epingle} /> {optEpingle?.glyphe} {optEpingle?.action}
+	</label>
+	<label class="checkbox-field" title={optUrgente?.aide}>
+		<input type="checkbox" bind:checked={urgente} /> {optUrgente?.glyphe} {optUrgente?.action}
+	</label>
+	<label class="checkbox-field" title={optBrouillon?.aide}>
 		<input type="checkbox" bind:checked={brouillon} />
-		✏️ Brouillon (invisible pour les résidents)
+		{optBrouillon?.glyphe} {optBrouillon?.action} (invisible pour les résidents)
 	</label>
 	<label
 		class="checkbox-field"
 		class:desactivee={rienARestreindre}
 		title={rienARestreindre
 			? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
-			: "Seuls les résidents du périmètre sélectionné verront cette actualité."}
+			: optConfidentiel?.aide}
 	>
 		<input
 			type="checkbox"
@@ -89,7 +110,7 @@
 			disabled={rienARestreindre}
 			aria-describedby={rienARestreindre ? idAideConfidentiel : undefined}
 		/>
-		&#x1F512; Confidentiel — visible du seul périmètre sélectionné
+		{optConfidentiel?.glyphe} {optConfidentiel?.action} — visible du seul périmètre sélectionné
 	</label>
 </div>
 
