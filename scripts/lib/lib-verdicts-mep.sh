@@ -96,7 +96,23 @@ verdict_standby() {       # $1 = .active (qui DIT être l'actif), $2/$3 = conten
 # ⚠️ « Absente » n est OK QUE si l on descend de `origin/main`. Une branche
 # amont absente sur un clone qui a divergé reste un FAIL : c est alors une
 # dérive, pas un post-fusion.
+#  $4 — RÉÉCRITURE DÉCLARÉE (#616, 29/08/2026). Voir `verdict_reecriture` pour ce
+#  que cette valeur vaut et ce qui l'établit ; ici on ne fait que la consommer.
+#
+#  🔴 Pourquoi ce quatrième cas existe. Le point 0d prescrit textuellement de
+#  RETIRER un bump surnuméraire (« reset --soft puis push --force-with-lease »).
+#  Une fois le remède appliqué, `origin/dev` porte un commit que HEAD n'a plus, et
+#  0a le comptait comme un retard : corriger 0d faisait échouer 0a, et les deux ne
+#  pouvaient pas être verts en même temps avant le push. Or `.githooks/pre-push`
+#  exige une trace de pré-check vert. La seule issue était `SKIP_PRECHECK=1` —
+#  désarmer VINGT-QUATRE contrôles pour en contourner un qui a tort.
+#
+#  C'est le §25 du socle : « un contrôle dont le vert est INATTEIGNABLE finit par
+#  se contourner ». Et c'est la deuxième fois sur ce fichier — #318 l'avait déjà
+#  corrigé sur le point 0c.
 verdict_clone() {          # $1 = commits de retard, $2 = upstream sans apport (oui/non)
+                           # $3 = état de l'amont (present/absent/inconnu)
+                           # $4 = réécriture déclarée ET recouverte (oui/non/inconnu/'')
   case "${3:-present}" in
     inconnu) echo INCONNU; return ;;
     absent)  [ "${2:-non}" = "oui" ] && echo OK || echo FAIL; return ;;
@@ -104,8 +120,16 @@ verdict_clone() {          # $1 = commits de retard, $2 = upstream sans apport (
   [ -z "$1" ] && { echo INCONNU; return; }
   case "$1" in (*[!0-9]*) echo INCONNU; return ;; esac
   [ "$1" -eq 0 ] && { echo OK; return; }
-  [ "${2:-non}" = "oui" ] && echo OK || echo FAIL
+  [ "${2:-non}" = "oui" ] && { echo OK; return; }
+  #  Le retard n'est PAS un réalignement post-squash. Reste la réécriture
+  #  volontaire — mais seulement si elle est déclarée et prouvée sans perte.
+  case "${4:-}" in
+    oui)     echo OK ;;
+    inconnu) echo INCONNU ;;
+    *)       echo FAIL ;;
+  esac
 }
+
 
 verdict_bumps() {          # $1 = nombre de commits `chore(version)` du lot
                            # $2 = version dans origin/main · $3 = version dans HEAD

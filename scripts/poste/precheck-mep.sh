@@ -48,6 +48,8 @@ BATTEMENT_DEPLOY_MIN=20    # auto-deploy écrit ~12 lignes/h sur le standby
 RACINE_DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$RACINE_DEPOT" || exit 1   # les contrôles lisent api/, .git/ et front/ en relatif
 . "$RACINE_DEPOT/scripts/lib/lib-verdicts-mep.sh"
+# shellcheck source=../lib/lib-reecriture.sh
+. "$RACINE_DEPOT/scripts/lib/lib-reecriture.sh"
 
 if [ "${1:-}" = "--selftest" ]; then
   #  Les auto-tests vivent à part depuis le 20/08/2026 (#511) : ils ne sont
@@ -109,7 +111,44 @@ elif [ "${RETARD:-0}" != "0" ] && [ "$IDENT" = "oui" ]; then
 else
   DETAIL0A="retard=${RETARD:-?} commit(s)"
 fi
-rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT" "$AMONT")" "Clone à jour sur origin/$BRANCHE" "$DETAIL0A"
+#  ── Réécriture volontaire de la branche, déclarée (#616) ────────────────────
+#  Le point 0d prescrit de RETIRER un bump surnuméraire ; une fois fait,
+#  `origin/$BRANCHE` porte un commit que HEAD n'a plus, et 0a le comptait comme
+#  un retard. Corriger 0d faisait donc échouer 0a, sans que les deux puissent
+#  être verts avant le push — et la seule issue était de désarmer les 24 points.
+#
+#  Format de `.git/reecriture-dev`, même forme datée que `.git/erreur-corrigee` :
+#      commit: 601477b
+#      137cab0
+#
+#  ⚠️ Déclarer ne suffit PAS. On vérifie que les commits déclarés sont exactement
+#  ceux qui manquent, et surtout que **chaque fichier qu'ils touchent a été
+#  réécrit par HEAD** : c'est ce recouvrement, et lui seul, qui prouve qu'aucun
+#  contenu n'est perdu. Sans lui, ce serait une case à cocher pour écraser le
+#  travail d'une autre session.
+DECL0A=""; DECL0A_SHAS=""; MANQUANTS0A=""; NON_RECOUVERTS=""
+if [ -f "$RACINE_DEPOT/.git/reecriture-dev" ] && [ "$AMONT" = "present" ]; then
+  #  Le parsing vit dans `lib-reecriture.sh`, où il est éprouvé — CRLF, lignes
+  #  vides et sha tronqués s'y traitent, et aucun de ces défauts ne lève.
+  DECL0A=$(lire_declaration_reecriture "$RACINE_DEPOT/.git/reecriture-dev" | sed -n 1p)
+  DECL0A_SHAS=$(lire_declaration_reecriture "$RACINE_DEPOT/.git/reecriture-dev" | sed -n 2p)
+  MANQUANTS0A=$(git rev-list "HEAD..origin/$BRANCHE" 2>/dev/null | cut -c1-7 | tr '
+' ' ')
+  #  Un fichier touché par un commit retiré et que HEAD n'a pas réécrit depuis
+  #  la base commune : son apport serait PERDU. La mesure vit dans
+  #  `lib-reecriture.sh`, où elle est éprouvée sur un dépôt jetable.
+  if NON_RECOUVERTS=$(fichiers_non_recouverts "origin/$BRANCHE"); then :; else
+    #  Mesure impossible (pas de base commune) : on ne conclut pas.
+    DECL0A_SHAS=""; MANQUANTS0A=""
+  fi
+fi
+REECR0A=$(verdict_reecriture "${DECL0A:-}" "${HEAD_COURT0A:-$(git rev-parse --short HEAD 2>/dev/null)}"                              "${DECL0A_SHAS:-}" "${MANQUANTS0A:-}" "${NON_RECOUVERTS:-}")
+case "$REECR0A" in
+  oui) DETAIL0A="retard=$RETARD commit(s) RETIRÉ(S) volontairement et déclaré(s) — rien de perdu (fichiers tous réécrits par HEAD)" ;;
+  inconnu) DETAIL0A="$DETAIL0A — déclaration de réécriture incomplète" ;;
+  *) [ -n "$DECL0A$DECL0A_SHAS" ] && DETAIL0A="$DETAIL0A — déclaration de réécriture REFUSÉE${NON_RECOUVERTS:+ (perdrait :${NON_RECOUVERTS})}" ;;
+esac
+rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT" "$AMONT" "$REECR0A")" "Clone à jour sur origin/$BRANCHE" "$DETAIL0A"
 
 # 0b — modularité : rejouer ici ce que la CI refusera
 #      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI

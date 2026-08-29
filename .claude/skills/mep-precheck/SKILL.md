@@ -258,6 +258,34 @@ sont des points *pré*-push. Lire les points **1 à 18**, qui sont le post-check
   les logs, et un lot qui ne touche que `front/` aurait vu ses erreurs API
   réelles passer sous silence. La piste écartée échouait du côté dangereux.
 
+- **0a en FAIL après avoir corrigé 0d** → c'est le cas prévu depuis le
+  29/08/2026 (#616), et il a une déclaration, pas un contournement.
+
+  Retirer un bump surnuméraire (ce que 0d prescrit) laisse sur `origin/dev` un
+  commit que HEAD n'a plus : 0a le comptait comme un retard, et les deux points ne
+  pouvaient pas être verts en même temps avant le push. La seule issue était
+  `SKIP_PRECHECK=1` — désarmer vingt-quatre contrôles pour en contourner un
+  (socle 04 §25, et deuxième occurrence après #318 sur le point 0c).
+
+  Déclarer la réécriture dans `.git/reecriture-dev`, même forme datée que le
+  brief de PR et que `.git/erreur-corrigee` :
+
+  ```
+  commit: 601477b
+  137cab0
+  ```
+
+  🔴 **Déclarer ne suffit pas** — sinon ce serait une case à cocher pour écraser
+  le travail d'une autre session. Le point vérifie que les commits déclarés sont
+  **exactement** ceux qui manquent, et surtout que **chaque fichier qu'ils
+  touchent a été réécrit par HEAD**. Un seul fichier non recouvert, et il refuse
+  en le nommant : c'est ce recouvrement, et lui seul, qui prouve qu'aucun contenu
+  n'est perdu.
+
+  Comme les autres dérogations : elle est **datée par le commit** (une
+  déclaration du lot précédent est refusée), et elle **ne survit pas à son
+  objet** (déclarer un commit qui ne manque pas, ou en oublier un, refuse aussi).
+
 - **0f** → le lot doit porter son titre et son descriptif de PR **avant** le push,
   dans `.git/pr-brief.md` : première ligne `commit: <sha court de HEAD>`, deuxième
   ligne le titre en `# …`, puis le corps (5 lignes minimum). Un brief rédigé pour

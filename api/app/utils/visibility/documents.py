@@ -126,12 +126,43 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
         return False
 
     # Vérifier le périmètre
+    #
+    #  🔴 `perimetre='bâtiment'` RESTREINT la lecture, et c'est son rôle : un
+    #  diagnostic, un contrat ou une attestation ne concernent que les détenteurs
+    #  d'un lot dans le bâtiment visé.
+    #
+    #  ⚠️ Ce n'est PAS le cas des comptes-rendus d'AG, dont le ciblage est
+    #  descriptif — voir le bloc suivant. L'écran leur posait pourtant ce
+    #  `perimetre='bâtiment'` dès qu'un seul bâtiment était coché, ce qui rendait
+    #  une AG invisible aux copropriétaires des autres bâtiments (mesuré le
+    #  29/08/2026). Corrigé à la source : l'écran n'en pose plus, et la migration
+    #  0159 reverse les documents déjà en base.
+
+    user_batiments = {
+        ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
+    }
     if doc.perimetre == "bâtiment" and doc.batiment_id:
-        user_batiments = {
-            ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot
-        }
         if doc.batiment_id not in user_batiments:
             return False
+
+    #  ── `batiments_ids_json` NE RESTREINT PAS, et c'est une décision ─────────
+    #
+    #  Ce champ ne sert qu'aux comptes-rendus d'AG, et il y dit **de quoi parle**
+    #  le document — pas qui a le droit de le lire. C'est l'arbitrage rendu par
+    #  l'utilisateur le 29/08/2026 : *« une AG doit être visible par tous les
+    #  copropriétaires, syndic et CS »*.
+    #
+    #  🔴 Un premier correctif (#617) avait fait l'inverse : il l'avait rendu
+    #  restrictif, pour aligner les deux formes de ciblage que l'écran écrit
+    #  (`perimetre='bâtiment'` pour un bâtiment, `batiments_ids_json` pour
+    #  plusieurs). L'incohérence était réelle — mais elle a été refermée du
+    #  mauvais côté : c'est `perimetre='bâtiment'` qui n'avait rien à faire sur
+    #  un PV d'AG, pas l'inverse. La migration 0159 reverse les documents
+    #  existants, et l'écran n'en pose plus.
+    #
+    #  ⚠️ Ne PAS ajouter ici de restriction sur ce champ sans revenir sur cet
+    #  arbitrage : la cohérence des deux formes est désormais tenue en amont, par
+    #  l'écran et la migration, et non par un second filtre ici.
 
     if doc.perimetre == "lot" and doc.lot_id:
         user_lots = {ul.lot_id for ul in user.user_lots if ul.actif}

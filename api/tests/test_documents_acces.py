@@ -267,8 +267,11 @@ def test_le_cs_voit_quand_meme_un_document_orphelin():
 # donc lisible de toute session qui connaît l'URL. C'est le régime de RÉPERTOIRE
 # qui protège, pas le modèle — et c'est le lot suivant de #390.
 
+#  `Evenement` n'était importé que pour la forme : le test du porteur supprimé
+#  passe une session qui rend `None`, et ne construit aucun événement. Import mort
+#  retiré le 29/08/2026 — Ruff en CI ne couvre que `api/app/`, jamais `api/tests/`,
+#  donc rien ne le signalait (il y en a 20 autres du même genre).
 from app.models.core import Ticket  # noqa: E402
-from app.models.evenement import Evenement  # noqa: E402
 
 
 def _piece_jointe_ticket() -> Document:

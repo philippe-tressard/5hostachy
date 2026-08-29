@@ -105,6 +105,39 @@ verdicts_mep_selftest() {
   t "amont supprimée, aligné sur main"   OK      verdict_clone "" oui absent
   t "amont supprimée, clone divergent"   FAIL    verdict_clone "" non absent
   t "amont non déterminable"             INCONNU verdict_clone 0 oui inconnu
+
+  # ── #616 : la réécriture volontaire de `dev`, déclarée et prouvée sans perte ──
+  #  Sans ces cas, corriger le point 0d (retirer un bump surnuméraire) faisait
+  #  échouer le point 0a, et la seule issue était `SKIP_PRECHECK=1` — désarmer
+  #  vingt-quatre contrôles pour en contourner un. Socle 04 §25.
+  t "réécriture déclarée et recouverte"   OK      verdict_clone 1 non present oui
+  t "réécriture non déclarée : inchangé"  FAIL    verdict_clone 1 non present non
+  t "réécriture indécidable"              INCONNU verdict_clone 1 non present inconnu
+  #  🔴 Le 4e argument ne doit JAMAIS rattraper un vrai retard sur une branche
+  #  supprimée ni sur un amont indéterminable : ces deux cas se tranchent avant.
+  t "amont supprimée : la déclaration ne rattrape rien" FAIL verdict_clone 1 non absent oui
+  t "amont inconnu : la déclaration ne rattrape rien"   INCONNU verdict_clone 1 non inconnu oui
+  #  Rétro-compatibilité : les appels à trois arguments gardent leur verdict.
+  t "sans 4e argument, comportement d'origine" FAIL verdict_clone 2 non
+
+  # ── `verdict_reecriture` — ce qui autorise, et surtout ce qui refuse ──
+  t "aucune déclaration : cas nominal"    non     verdict_reecriture "" "" "" "137cab0" ""
+  t "déclarée, concordante, recouverte"   oui     verdict_reecriture 601477b 601477b "137cab0" "137cab0" ""
+  #  Datée par le commit : une déclaration du lot précédent ne vaut plus.
+  t "déclarée pour un AUTRE commit"       non     verdict_reecriture abc1234 601477b "137cab0" "137cab0" ""
+  #  🔴 Le cœur du garde-fou : un fichier non réécrit par HEAD serait PERDU.
+  t "un fichier ne serait pas recouvert"  non     verdict_reecriture 601477b 601477b "137cab0" "137cab0" "api/app/main.py"
+  #  La dérogation ne survit pas à son objet — dans les deux sens.
+  t "déclare moins que ce qui manque"     non     verdict_reecriture 601477b 601477b "137cab0" "137cab0 999aaaa" ""
+  t "déclare plus que ce qui manque"      non     verdict_reecriture 601477b 601477b "137cab0 999aaaa" "137cab0" ""
+  t "déclare un commit qui ne manque pas" non     verdict_reecriture 601477b 601477b "999aaaa" "137cab0" ""
+  #  Déclaration partielle : on ne complète pas ce qu'elle ne dit pas.
+  t "déclaration sans commit"             inconnu verdict_reecriture "" 601477b "137cab0" "137cab0" ""
+  t "déclaration sans sha retiré"         inconnu verdict_reecriture 601477b 601477b "" "137cab0" ""
+  t "HEAD non mesuré"                     inconnu verdict_reecriture 601477b "" "137cab0" "137cab0" ""
+  #  Cas zéro : rien ne manque, mais une déclaration traîne. On ne peut pas dire
+  #  qu'elle est concordante — elle ne décrit plus rien.
+  t "rien ne manque, déclaration résiduelle" inconnu verdict_reecriture 601477b 601477b "137cab0" "" ""
   t "HEAD identiques"                    OK      verdict_parite abc123 abc123
   t "standby en retard : toléré"         ECART   verdict_parite abc123 def456
   #  🔴 #511 — le point 18 : la parité de CODE ci-dessus rend OK là où les
@@ -174,6 +207,84 @@ verdicts_mep_selftest() {
   t "ancrage : joker seul"               non     signature_ancree ".*"
   t "ancrage : motif vide"               non     signature_ancree ""
   t "ancrage : mot trop court"           non     signature_ancree "db|io"
+
+  # ═══ Banc d'essai sur un dépôt JETABLE — la mesure, pas la décision ═══
+  #
+  #  🔴 Tout ce qui précède éprouve des VERDICTS : des fonctions pures à qui l'on
+  #  donne des nombres. Aucun ne dit si `fichiers_non_recouverts` sait lire un
+  #  vrai dépôt — et c'est là que vivent les défauts qui se relisent comme
+  #  corrects (socle 04 §11 et §22). On rejoue donc le scénario du 29/08/2026,
+  #  celui qui a coûté un `SKIP_PRECHECK=1`, sur un dépôt construit pour ça.
+  if command -v git >/dev/null 2>&1; then
+    _banc=$(mktemp -d 2>/dev/null) || _banc=""
+    if [ -n "$_banc" ]; then
+      (
+        cd "$_banc" || exit 1
+        git init -q . && git config user.email t@t && git config user.name t
+        #  Base commune : la version 1.0.0.
+        printf '1.0.0
+' > version.txt && printf 'contenu
+' > autre.txt
+        git add -A && git commit -qm base
+        git branch -q amont
+        #  Sur l'amont : un bump qui sera RETIRÉ (le cas de #616).
+        git checkout -q amont && printf '1.0.1
+' > version.txt
+        git add -A && git commit -qm "bump 1.0.1"
+        #  Sur HEAD : le lot, qui réécrit le MÊME fichier avec une autre version.
+        git checkout -q master 2>/dev/null || git checkout -q main
+        printf '1.1.0
+' > version.txt && git add -A && git commit -qm "bump 1.1.0"
+      ) >/dev/null 2>&1
+      _mesure() { local d=$1 a=$2 o c; o=$(cd "$d" && fichiers_non_recouverts "$a" 2>/dev/null); c=$?; printf '%s|%s' "$c" "$o"; }
+      t "banc : bump retiré, fichier réécrit → rien de perdu" "0|" _mesure "$_banc" amont
+
+      #  Et le cas DANGEREUX : l'amont porte un commit sur un fichier que HEAD
+      #  n'a pas touché. C'est du travail d'ailleurs — il serait écrasé.
+      (
+        cd "$_banc" && git checkout -q amont && printf 'travail
+' > ailleurs.txt
+        git add -A && git commit -qm "travail d'une autre session"
+        git checkout -q master 2>/dev/null || git checkout -q main
+      ) >/dev/null 2>&1
+      t "banc : travail d'ailleurs → nommé comme perdu" "0|ailleurs.txt" _mesure "$_banc" amont
+
+      #  Cas zéro de la mesure : sans base commune, elle ne conclut pas.
+      t "banc : amont inconnu → code d'erreur, pas une sortie vide" "1|" _mesure "$_banc" branche-absente
+      t "banc : amont non fourni → code d'erreur" "1|" _mesure "$_banc" ""
+      # ── Le PARSING de `.git/reecriture-dev`, sur de vrais fichiers ──────────
+      #  Le CRLF est le piège numéro un de ce poste (socle 10) : un retour
+      #  chariot collé au sha, et plus aucune comparaison ne correspond — sans
+      #  erreur, sans trace.
+      #
+      #  ⚠️ Ces `printf` portent des échappements LITTÉRAUX (barre oblique
+      #  inverse + n). Une réécriture qui les résoudrait à l'écriture du fichier
+      #  casserait le cas CRLF en silence : le test resterait vert en ne testant
+      #  plus rien. C'est arrivé le 29/08/2026, en écrivant ce banc.
+      _porte_cr() { if od -c "$1" 2>/dev/null | grep -q '\\r'; then echo oui; else echo non; fi; }
+      _lire() { lire_declaration_reecriture "$1" | tr '\n' '/'; }
+      printf 'commit: 601477b\n137cab0\n' > "$_banc/d1"
+      t "parsing : déclaration simple"            "601477b/137cab0/" _lire "$_banc/d1"
+      printf 'commit: 601477b\r\n137cab0\r\n' > "$_banc/d2"
+      t "parsing : fichier en CRLF"               "601477b/137cab0/" _lire "$_banc/d2"
+      printf 'commit: 601477b\n\n137cab0\n# note\n999aaaa\n' > "$_banc/d3"
+      t "parsing : lignes vides et commentaires ignorés" "601477b/137cab0 999aaaa/" _lire "$_banc/d3"
+      #  Un sha trop court n'est pas un sha : le compter fausserait le décompte
+      #  qui sert justement à refuser une déclaration périmée.
+      printf 'commit: 601477b\n137c\n' > "$_banc/d4"
+      t "parsing : sha tronqué rejeté"            "601477b//" _lire "$_banc/d4"
+      #  Cas nominal : pas de fichier, pas de déclaration — et surtout pas une
+      #  erreur (le pré-check tourne sans déclaration 99 fois sur 100).
+      t "parsing : fichier absent → vide, sans erreur" "//" _lire "$_banc/pas-de-fichier"
+      #  🔴 Le test du CRLF ne prouve rien s'il n'écrit pas de CRLF : on le
+      #  vérifie, plutôt que de le supposer.
+      t "parsing : le cas CRLF contient bien un CR" "oui" _porte_cr "$_banc/d2"
+      rm -rf "$_banc"
+    else
+      echo "SKIP  banc d'essai : pas de répertoire temporaire"
+    fi
+  fi
+
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st
 }
