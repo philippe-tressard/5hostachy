@@ -301,7 +301,19 @@ def put_syndic_info(
     if syndic is None:
         syndic = SyndicInfo()
         session.add(syndic)
-    syndic.nom_syndic = body.nom_syndic
+    #  🔴 La saisie n'écrase PAS le repli quand le contrat fait foi (#535).
+    #
+    #  L'écran désactive le champ dans ce cas, et renvoie donc la valeur qu'il a
+    #  reçue — celle du CONTRAT. L'enregistrer ici remplacerait la saisie
+    #  d'origine par le nom du contrat : le repli cesserait d'être un repli, et
+    #  retirer le contrat plus tard ferait réapparaître une valeur qui n'a jamais
+    #  été saisie.
+    #
+    #  ⚠️ La règle vit ICI et pas dans l'écran : un second écran, ou un appel
+    #  direct, contournerait un garde posé côté front. C'est le serveur qui
+    #  décide de ce qu'il écrit.
+    if source_du_nom(session) != "contrat":
+        syndic.nom_syndic = body.nom_syndic
     syndic.adresse = body.adresse
     syndic.site_web = body.site_web
 
