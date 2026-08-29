@@ -957,11 +957,7 @@
 		styleBoite="width:min(480px,95vw)"
 		on:fermer={() => (showPlanForm = false)}
 	>
-		<div class="modal-header">
-			<h3>Ajouter un plan</h3>
-			<button class="modal-close" on:click={() => (showPlanForm = false)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="plan-titre">Titre *</label>
 				<input
@@ -1019,11 +1015,7 @@
 		styleBoite="width:min(440px,95vw)"
 		on:fermer={() => (showReglementForm = false)}
 	>
-		<div class="modal-header">
-			<h3>Ajouter un règlement</h3>
-			<button class="modal-close" on:click={() => (showReglementForm = false)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="regl-titre">Titre *</label>
 				<input
@@ -1070,11 +1062,7 @@
 		styleBoite="width:min(520px,95vw)"
 		on:fermer={() => (showCrAgForm = false)}
 	>
-		<div class="modal-header">
-			<h3>Ajouter un CR d'AG</h3>
-			<button class="modal-close" on:click={() => (showCrAgForm = false)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
 				<div class="field">
 					<label for="ag-annee">Année *</label>
@@ -1152,11 +1140,7 @@
 		styleBoite="width:min(440px,95vw)"
 		on:fermer={() => (editingDocId = null)}
 	>
-		<div class="modal-header">
-			<h3>Modifier le document</h3>
-			<button class="modal-close" on:click={() => (editingDocId = null)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="edit-doc-titre">Titre *</label>
 				<input id="edit-doc-titre" type="text" bind:value={editingDocTitre} />
@@ -1200,11 +1184,7 @@
 		styleBoite="width:min(460px,95vw)"
 		on:fermer={() => (showDiagForm = null)}
 	>
-		<div class="modal-header">
-			<h3>Ajouter un rapport</h3>
-			<button class="modal-close" on:click={() => (showDiagForm = null)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="diag-titre"
 					>Titre <span style="color:var(--color-text-muted);font-size:.8rem"
@@ -1261,11 +1241,7 @@
 		styleBoite="width:min(440px,95vw)"
 		on:fermer={() => (editingRapportId = null)}
 	>
-		<div class="modal-header">
-			<h3>Modifier le rapport</h3>
-			<button class="modal-close" on:click={() => (editingRapportId = null)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="edit-r-titre">Titre *</label>
 				<input id="edit-r-titre" type="text" bind:value={editingRapportTitre} />
@@ -1303,15 +1279,11 @@
 <!-- ── Modal : ajouter / modifier une règle ──────────────────────────────────── -->
 {#if showRegleForm}
 	<Modale
-		titre="Règle"
+		titre={editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}
 		styleBoite="width:min(480px,95vw)"
 		on:fermer={() => (showRegleForm = false)}
 	>
-		<div class="modal-header">
-			<h3>{editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}</h3>
-			<button class="modal-close" on:click={() => (showRegleForm = false)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="regle-titre">Titre *</label>
 				<input
@@ -1448,20 +1420,12 @@
 	    l'avertissement en toutes lettres : un commentaire n'est pas un
 	    garde-fou. */
 
-	/* ── Modals ─────────────────────────────────────────────────── */
-	/*  `.modal-overlay` et `.modal` retirées (#561) : copies LOCALES qui avaient
-	    divergé de `styles/composants.css` — ni ombre ni animation ici, plus une
-	    bordure que les autres modales n'ont pas. Révélées en extrayant `Modale`. */
-	/*  🔴 `.modal-header`, `.modal-close` et `.modal-footer` retirees le 28/08/2026
-	    (#607) : le MEME bloc, au caractere pres, vivait dans trois ecrans, et il
-	    divergeait de `composants.css` (croix 1.3rem au lieu de 1.5, marges au lieu
-	    des remplissages). `prestataires` emploie ce balisage SANS aucune regle
-	    locale : c'est lui la reference, et il est en production. */
-	.modal-header h3 {
-		font-size: 1.05rem;
-		font-weight: 600;
-		margin: 0;
-	}
+	/*  🔴 L'EN-TÊTE d'une modale ne s'écrit plus ici : `Modale.svelte` le rend, et
+	    `styles/composants.css` le style (`.modal-titre`). #607 avait retiré
+	    `.modal-header`, `.modal-close` et `.modal-footer` de ces trois écrans en
+	    laissant `.modal-header h3` — la seule des quatre qui n'existait PAS en
+	    global, donc la seule que le retrait ne pouvait pas solder. Elle a survécu
+	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
 
 	/* ── Diagnostics ─────────────────────────────────────────────── */
 	.diag-list {

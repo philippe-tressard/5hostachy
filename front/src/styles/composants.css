@@ -938,9 +938,33 @@ label.field {
 	padding: 1rem 1.25rem;
 	border-bottom: 1px solid var(--color-border);
 }
-.modal-header h2 {
+/*  ── Le titre d'une modale ──
+    UNE règle, parce qu'il y en avait TROIS le 29/08/2026, pour le même objet :
+
+      .modal-header h2                     1.10rem   (ici, la seule partagée)
+      .modal-header h3                     1.05rem   recopiée dans 3 fichiers
+      <h2 style="font-size:1rem;…">        1.00rem   en ligne, 8 fois, 2 marges
+
+    Aucune n'était une décision : les deux dernières sont des copies qui ont
+    dérivé. Le niveau retenu est `h2` — `h1` est le titre de PAGE (`EntetePage`),
+    et c'est le seul des trois que cette feuille stylait déjà.
+
+    La graisse est `600`, celle des quatorze titres les plus nombreux (`h3`) —
+    les onze autres héritaient du `700` par défaut du navigateur, jamais choisi.
+
+    Rendu par `Modale.svelte` et par lui seul : un écran qui réécrit son titre
+    en rouvre une quatrième. */
+.modal-titre {
 	font-size: 1.1rem;
+	font-weight: 600;
 	margin: 0;
+}
+/*  Le padding appartient à la BOÎTE dans `.modal-box`, à l'en-tête et au corps
+    dans `.modal`. L'en-tête s'adapte ici, en une règle, plutôt que dans les
+    dix écrans qui emploient la première — sans quoi sa bordure serait rentrée
+    de 1,25 rem et son padding compté deux fois. */
+.modal-box > .modal-header {
+	padding: 0 0 0.75rem;
 }
 .modal-close {
 	background: none;
@@ -954,8 +978,19 @@ label.field {
 .modal-close:hover {
 	color: var(--color-text);
 }
+/*  Le corps empile ses champs en COLONNE, et cela vit ici depuis le 29/08/2026.
+    C'était écrit quinze fois : `style="display:flex;flex-direction:column;
+    gap:.75rem"` en ligne (delegations 1×, residence 7×), une règle locale dans
+    `mon-lot` avec `gap: .85rem` — la neuvième divergence du même objet —, et
+    `prestataires` sans rien, donc en simple bloc.
+
+    L'écart de 0,1 rem n'a jamais été décidé : c'est une copie qui a dérivé. La
+    valeur retenue est celle des huit, `.75rem`. */
 .modal-body {
 	padding: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
 }
 .modal-footer {
 	display: flex;

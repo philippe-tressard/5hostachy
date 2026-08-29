@@ -187,15 +187,11 @@
 <!-- ── Modal : créer une délégation ──────────────────────────────────── -->
 {#if showForm}
 	<Modale
-		titre="Nouvelle délégation"
+		titre="Nouvelle délégation aidant"
 		styleBoite="width:min(500px,95vw)"
 		on:fermer={() => (showForm = false)}
 	>
-		<div class="modal-header">
-			<h3>Nouvelle délégation aidant</h3>
-			<button class="modal-close" on:click={() => (showForm = false)}>✕</button>
-		</div>
-		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+		<div class="modal-body">
 			<div class="field">
 				<label for="d-mandant">Personne aidée (mandant) *</label>
 				<select id="d-mandant" bind:value={formMandantId}>
@@ -336,15 +332,10 @@
 		background: #b91c1c;
 	}
 
-	/* Modals & forms — réutilise les styles globaux */
-	/*  🔴 `.modal-header`, `.modal-close` et `.modal-footer` retirees le 28/08/2026
-	    (#607) : le MEME bloc, au caractere pres, vivait dans trois ecrans, et il
-	    divergeait de `composants.css` (croix 1.3rem au lieu de 1.5, marges au lieu
-	    des remplissages). `prestataires` emploie ce balisage SANS aucune regle
-	    locale : c'est lui la reference, et il est en production. */
-	.modal-header h3 {
-		font-size: 1.05rem;
-		font-weight: 600;
-		margin: 0;
-	}
+	/*  🔴 L'EN-TÊTE d'une modale ne s'écrit plus ici : `Modale.svelte` le rend, et
+	    `styles/composants.css` le style (`.modal-titre`). #607 avait retiré
+	    `.modal-header`, `.modal-close` et `.modal-footer` de ces trois écrans en
+	    laissant `.modal-header h3` — la seule des quatre qui n'existait PAS en
+	    global, donc la seule que le retrait ne pouvait pas solder. Elle a survécu
+	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
 </style>

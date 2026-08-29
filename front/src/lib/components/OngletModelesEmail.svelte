@@ -219,14 +219,14 @@
 <!-- Modal édition modèle e-mail -->
 {#if emailEdit}
 	<Modale
-		titre="Modifier le modèle d'e-mail"
+		titre={`Modifier le modèle ${emailEdit.code}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:680px"
 		on:fermer={() => (emailEdit = null)}
 	>
-		<h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">
-			Modifier le modèle — <code style="font-size:.85rem">{emailEdit.code}</code>
-		</h2>
+		<svelte:fragment slot="titre"
+			>Modifier le modèle — <code style="font-size:.85rem">{emailEdit.code}</code></svelte:fragment
+		>
 		<div style="display:flex;flex-direction:column;gap:.6rem">
 			<div class="field">
 				<label for="email-sujet">Sujet</label>

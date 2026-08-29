@@ -605,14 +605,11 @@
 <!-- Modal ajout / édition -->
 {#if showForm}
 	<Modale
-		titre="Question de la FAQ"
+		titre={editingItem ? 'Modifier la question' : 'Nouvelle question'}
 		classeBoite="modal-box card"
 		styleBoite="max-width:500px"
 		on:fermer={() => (showForm = false)}
 	>
-		<h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">
-			{editingItem ? 'Modifier la question' : 'Nouvelle question'}
-		</h2>
 		<div class="form-grid">
 			<label class="field"
 				>Catégorie *

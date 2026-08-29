@@ -1678,21 +1678,12 @@
 <!-- Modal notation prestataire (global, hors onglets) -->
 {#if showNotationForm}
 	<Modale
-		titre="Noter le prestataire"
+		titre="⭐ Noter le prestataire"
 		styleBoite="max-width:420px"
 		on:fermer={() => {
 			showNotationForm = null;
 		}}
 	>
-		<div class="modal-header">
-			<h2>⭐ Noter le prestataire</h2>
-			<button
-				class="modal-close"
-				on:click={() => {
-					showNotationForm = null;
-				}}>×</button
-			>
-		</div>
 		<div class="modal-body">
 			<div style="text-align:center;margin-bottom:1rem">
 				<div style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">

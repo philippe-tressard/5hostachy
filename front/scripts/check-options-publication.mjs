@@ -44,6 +44,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const SOURCE = join(RACINE, 'lib', 'options-publication.ts');
@@ -73,35 +74,14 @@ function echec(...lignes) {
 }
 
 /**
- * Le texte SANS ses commentaires.
+ * Le texte SANS ses commentaires — par le module commun.
  *
- * Décapage volontairement grossier — balisage, bloc, ligne : on ne cherche pas à
- * analyser le code, seulement à ne pas lire ce qui n'est jamais rendu.
+ * ⚠️ La copie qui vivait ici avait DEUX défauts de plus que les cinq autres :
+ * elle coupait sur `//` sans exclure les URL (`https://…` tronquait la ligne),
+ * et son décapage de bloc s'appliquait au balisage, où ces caractères sont du
+ * texte ordinaire. Le module partagé traite les deux, et son `--selftest` le
+ * montre — c'est tout l'intérêt de n'avoir qu'une écriture.
  */
-function sansCommentaires(texte) {
-	const OUVRE_BLOC = '/' + '*';
-	const FERME_BLOC = '*' + '/';
-	let sortie = texte.replace(/<!--[\s\S]*?-->/g, ' ');
-	//  Blocs `/* … */`, retirés à la main : le motif équivalent en expression
-	//  régulière porte les deux caractères qui ferment ce commentaire-ci.
-	for (;;) {
-		const i = sortie.indexOf(OUVRE_BLOC);
-		if (i === -1) break;
-		const j = sortie.indexOf(FERME_BLOC, i + 2);
-		if (j === -1) {
-			sortie = sortie.slice(0, i);
-			break;
-		}
-		sortie = sortie.slice(0, i) + ' ' + sortie.slice(j + 2);
-	}
-	return sortie
-		.split('\n')
-		.map((ligne) => {
-			const i = ligne.indexOf('//');
-			return i === -1 ? ligne : ligne.slice(0, i);
-		})
-		.join('\n');
-}
 
 // ── 1. Cas zéro : la source existe et dit ce qu'elle doit dire ───────────────
 if (!existsSync(SOURCE)) {

@@ -61,6 +61,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { analyserEvolForm, tolerancesMortes, EVOLFORM_TOLEREES } from './lib-etats-evolution.mjs';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const DOSSIER_ENTITES = join(RACINE, 'lib', 'entites');
@@ -293,12 +294,6 @@ function svelte(dir) {
 }
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne l'enfreint pas. */
-function sansCommentaires(texte) {
-	return texte
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
-}
 
 const tousSvelte = svelte(RACINE);
 if (tousSvelte.length === 0) {

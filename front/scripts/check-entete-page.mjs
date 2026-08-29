@@ -32,6 +32,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { cssGlobal } from './lib-css-global.mjs';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ROUTES = join(RACINE, 'routes');
@@ -61,12 +62,6 @@ const EXCEPTIONS = {
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */
-function sansCommentaires(texte) {
-	return texte
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
-}
 
 function fichiers(dir) {
 	const sortie = [];
