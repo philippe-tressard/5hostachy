@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Pastille from '$lib/components/Pastille.svelte';
+	import { relire } from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { SEPARATEUR_ELEMENT, perimetreParDefaut, type Perimetre } from '$lib/perimetres';
 
@@ -30,7 +31,11 @@
 	//  pouvait pas décrire une copropriété sans AFUL, ni un cinquième bâtiment.
 	$: actifs = $perimetresStore.filter((n) => n.actif);
 	$: parCode = new Map(actifs.map((n) => [n.code, n]));
-	$: defaut = perimetreParDefaut();
+	//  ⚠️ Le magasin est cité EXPRÈS : `perimetreParDefaut()` lit un état de
+	//  MODULE, posé au chargement de l'arbre. Sans cette dépendance, ce `$:`
+	//  ne se réexécute jamais et rend le `null` d'AVANT le chargement — le
+	//  formulaire s'ouvrirait alors sans sélection par défaut (#549).
+	$: defaut = relire($perimetresStore, perimetreParDefaut);
 
 	//  Un nœud de premier niveau est soit une racine sélectionnable, soit l'enfant
 	//  d'un REGROUPEMENT racine (« Bâtiments » n'est pas une cible : on choisit un

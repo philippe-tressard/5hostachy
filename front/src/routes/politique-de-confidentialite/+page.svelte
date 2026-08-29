@@ -5,7 +5,7 @@
 	const _siteNom = getSiteNom();
 	$: siteNom = $siteNomStore;
 	$: siteUrl = $configStore['site_url'] ?? '/';
-	$: year = new Date().getFullYear();
+	const year = new Date().getFullYear();
 	let customHtml = '';
 	onMount(async () => {
 		loadSiteConfig();

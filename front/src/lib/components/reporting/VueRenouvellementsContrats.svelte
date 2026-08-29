@@ -16,12 +16,13 @@
 	//  la table des libellés vivait dans `prestataires/+page.svelte` et qu'il n'y
 	//  avait pas accès. Une table qui vit dans UN écran, les autres s'en passent.
 	import { equipLabel } from '$lib/prestataires';
+	import { relire } from '$lib/utils';
 	import { fmtDate } from '$lib/date';
 	import { starsDisplay } from '$lib/utils';
 	import {
-		anneeCourante,
-		PREAVIS_MOIS,
 		MOIS_LABELS,
+		PREAVIS_MOIS,
+		anneeCourante,
 		contratsAvecEcheance,
 		type ReportContrat,
 		type ReportPrestataire,
@@ -32,9 +33,11 @@
 	/** Note moyenne et nombre d'avis par prestataire, calculés une fois en amont. */
 	export let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
 
-	//  Relue à chaque recalcul et non figée à l'import : un onglet laissé ouvert la
-	//  nuit du réveillon annoncerait sinon les échéances de l'année passée.
-	$: ANNEE_COURANTE = anneeCourante();
+	//  🔴 Relue à chaque rafraîchissement des DONNÉES — c'est `anneeDeReference`
+	//  qui porte le pourquoi. Cette ligne était `anneeCourante()` seule : un `$:`
+	//  sans variable réactive citée ne se réexécute jamais, et le commentaire
+	//  d'alors décrivait un remède qui n'avait pas lieu (#549, 29/08/2026).
+	$: ANNEE_COURANTE = relire(reportContrats, anneeCourante);
 
 	//  La dérivation vit dans `$lib/reporting.ts` : le parent en a besoin pour ses
 	//  compteurs, ce composant pour sa frise. La recopier serait la duplication

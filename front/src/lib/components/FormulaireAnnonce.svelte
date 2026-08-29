@@ -93,7 +93,7 @@
 
 	let submitting = false;
 
-	$: titreBoite = modeEdition ? "Modifier l'annonce" : 'Déposer une annonce';
+	const titreBoite = modeEdition ? "Modifier l'annonce" : 'Déposer une annonce';
 
 	function reinitialiser() {
 		titre = '';

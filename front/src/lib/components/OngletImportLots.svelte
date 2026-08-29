@@ -224,7 +224,7 @@
 				{ valeur: stats.avec_user, libelle: 'Copro lié' },
 			]
 		: []}
-	colonnesAttendues={'ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE'}
+	colonnesAttendues="ID_BATIMENT | N° LOT | TYPE | ÉTAGE | N° PORTE | N° COPROPRIÉTAIRE | NOM COPROPRIÉTAIRE"
 	libelleRemplacer="Remplacer les imports non résolus"
 	enCours={uploading}
 	statuts={['', 'en_attente', 'utilisateur_lie', 'lot_lie', 'resolu', 'ignore']}

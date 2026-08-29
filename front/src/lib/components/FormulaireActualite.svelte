@@ -168,7 +168,7 @@
 
 	let saving = false;
 
-	$: titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
+	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
 
 	function reinitialiser() {
 		titre = ''; contenu = ''; urgente = false; epingle = false;

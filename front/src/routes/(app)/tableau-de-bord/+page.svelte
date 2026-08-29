@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { relire } from '$lib/utils';
+	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
 	import { goto } from '$app/navigation';
@@ -58,14 +60,10 @@
 	//  `api/app/utils/visibility.py`. Ce n'est qu'un filtre d'AFFICHAGE : le serveur
 	//  a déjà écarté ce que l'utilisateur n'a pas le droit de voir.
 
-	// ── Salutation contextuelle ────────────────────────────────────────────
-	$: greeting = (() => {
-		const h = new Date().getHours();
-		if (h < 6) return 'Bonne nuit';
-		if (h < 12) return 'Bonjour';
-		if (h < 18) return 'Bon après-midi';
-		return 'Bonsoir';
-	})();
+	//  ⚠️ Dépend de l'HEURE : sans dépendance citée, ce `$:` restait au montage et
+	//  disait « Bonjour » à 20 h (`utils.relire`). `salutation` vit dans
+	//  `$lib/date` — c'est une notion de date, pas de cet écran.
+	$: greeting = relire(data, salutation);
 
 	$: roleLabels = (() => {
 		const STATUT: Record<string, string> = {

@@ -112,3 +112,41 @@ export function starsDisplay(note: number): string {
 	const pleines = Math.round(note);
 	return '★'.repeat(pleines) + '☆'.repeat(5 - pleines);
 }
+
+
+/**
+ * Relie un calcul SANS dépendance réactive à ce qui doit le déclencher.
+ *
+ * ```svelte
+ * $: minuit = relire(contrats, minuitDuJour);
+ * ```
+ *
+ * 🔴 **Le défaut qu'il corrige.** Un `$:` ne se réexécute que si l'une des
+ * variables réactives qu'il cite change. `$: annee = anneeCourante()` n'en cite
+ * aucune : Svelte l'exécute une fois et plus jamais. La ligne a **l'air**
+ * réactive, elle vaut un `const`, et aucune relecture ne peut le voir — c'est
+ * `svelte/no-immutable-reactive-statements` qui l'a trouvé (#549, 29/08/2026).
+ *
+ * Quatre écritures en souffraient, dont deux avec, juste au-dessus, le
+ * commentaire décrivant le rafraîchissement qui n'avait pas lieu :
+ *
+ * | Écran | Ce qui était figé | Ce que ça donnait |
+ * |---|---|---|
+ * | Reporting (×3) | l'année de référence | un onglet ouvert la nuit du réveillon annonçait les échéances de l'année passée — le commentaire disait l'empêcher |
+ * | Prestataires | minuit du jour | un onglet ouvert la veille classait « en retard » ce qui devenait dû le lendemain |
+ * | Sélecteur de périmètre | le périmètre par défaut | `perimetreParDefaut()` lit un état de module posé au chargement de l'arbre : avant lui, `null`, et pour toujours |
+ * | Tableau de bord | la salutation | « Bonjour » à 20 h |
+ *
+ * ⚠️ **`dependance` n'est pas lue, et c'est tout son objet** : elle dit à Svelte
+ * de quoi le calcul dépend. La citer est le geste, pas un effet de bord.
+ *
+ * ⚠️ **Ce n'est pas une horloge.** Le rechargement des données est le seul
+ * moment où la page apprend que le temps a passé ; un onglet ouvert et immobile
+ * reste en retard. Poser un `setInterval` pour ces quatre cas coûterait plus
+ * qu'il ne rapporte — ce qui change est qu'une navigation suffit à corriger.
+ */
+export function relire<T>(dependance: unknown, calcul: () => T): T {
+	void dependance;
+	return calcul();
+}
+
