@@ -10,11 +10,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     CommentaireSondage, MembreSyndic, Notification, OptionSondage, Sondage,
-    RoleUtilisateur, Utilisateur, VoteSondage,
+    Utilisateur, VoteSondage,
 )
 from app.schemas import liste_depuis_json
 from app.utils.reponses import enrich_reponse, tri_reponses
@@ -275,8 +275,8 @@ def modifier_sondage(
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
-    est_admin = user.has_role(RoleUtilisateur.admin)
-    if s.auteur_id != user.id and not est_admin:
+    #  L'auteur ou un admin — `peut_editer`, du module central.
+    if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut modifier ce sondage")
     if sondage_clos(s, datetime.utcnow()):
         raise HTTPException(400, "Ce sondage est clôturé et ne peut plus être modifié")
@@ -351,8 +351,8 @@ def supprimer_sondage(
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
-    est_admin = user.has_role(RoleUtilisateur.admin)
-    if s.auteur_id != user.id and not est_admin:
+    #  L'auteur ou un admin — `peut_editer`, du module central.
+    if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut supprimer ce sondage")
     # Suppression en cascade
     for c in session.exec(select(CommentaireSondage).where(CommentaireSondage.sondage_id == sondage_id)).all():
@@ -375,8 +375,8 @@ def cloturer_sondage(
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
-    est_admin = user.has_role(RoleUtilisateur.admin)
-    if s.auteur_id != user.id and not est_admin:
+    #  L'auteur ou un admin — `peut_editer`, du module central.
+    if not peut_editer(s, user):
         raise HTTPException(403, "Seul l'auteur ou un admin peut clôturer ce sondage")
     s.cloture_forcee = True
     session.add(s)

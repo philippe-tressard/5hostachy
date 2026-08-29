@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
     CommentaireSondage, OptionSondage, RoleUtilisateur, Sondage, Utilisateur,
@@ -132,9 +132,8 @@ def supprimer_commentaire(
     c = session.get(CommentaireSondage, commentaire_id)
     if not c or c.sondage_id != sondage_id:
         raise HTTPException(404, "Commentaire introuvable")
-    # Seuls l'auteur, le CS et l'admin peuvent supprimer
-    est_moderateur = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-    if c.auteur_id != user.id and not est_moderateur:
+    #  L'auteur, ou un modérateur — règle du module central.
+    if not peut_commenter(c, user):
         raise HTTPException(403, "Non autorisé")
     session.delete(c)
     session.commit()

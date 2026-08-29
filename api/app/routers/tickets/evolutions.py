@@ -8,12 +8,11 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_admin, require_cs_or_admin, peut_commenter
+from app.auth.deps import get_current_user, peut_commenter, peut_editer, require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
     Notification,
-    RoleUtilisateur,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -46,10 +45,10 @@ def get_evolutions(
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
-    if (
-        not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-        and ticket.auteur_id != user.id
-    ):
+    #  🔴 `peut_commenter` ÉLARGIT au « saisi pour » — et c'est une correction :
+    #  un résident pour qui le CS a déposé un ticket ne pouvait pas lire
+    #  l'historique de sa propre demande. C'est la raison d'être du champ.
+    if not peut_commenter(ticket, user):
         raise HTTPException(403, "Accès refusé")
     evols = session.exec(
         select(TicketEvolution)
@@ -72,7 +71,8 @@ def update_evolution(
         raise HTTPException(404, "Évolution introuvable")
     if evol.type not in ("commentaire", "etat"):
         raise HTTPException(422, "Ce type d'évolution ne peut pas être modifié")
-    if evol.auteur_id != user.id and not user.has_role(RoleUtilisateur.admin):
+    #  L'auteur ou un admin — `peut_editer`, du module central.
+    if not peut_editer(evol, user):
         raise HTTPException(403, "Accès refusé")
     if body.contenu is not None:
         evol.contenu = body.contenu

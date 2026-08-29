@@ -135,8 +135,14 @@ def peut_commander(user: Utilisateur) -> bool:
 #  rend vérifiables sans monter d'application.
 
 
-def _est_concerne(objet, user: Utilisateur) -> bool:
+def est_auteur(objet, user: Utilisateur) -> bool:
     """L'objet est-il *celui de* cet utilisateur ?
+
+    🔴 PUBLIQUE depuis le 29/08/2026. Elle s'appelait `_est_concerne` et n'était
+    lue que par les deux fonctions ci-dessous — pendant que QUATORZE sites
+    réécrivaient `objet.auteur_id != user.id` à la main, avec CINQ définitions
+    différentes de « ou quelqu'un de plus haut ». Une règle d'accès privée n'est
+    pas centralisée : elle est seulement inaccessible.
 
     ⚠️ « Saisi pour » compte comme auteur, et c'est la raison d'être du champ :
     un membre du CS qui dépose un ticket **au nom d'un résident** ne le dépossède
@@ -161,7 +167,7 @@ def peut_editer(objet, user: Utilisateur) -> bool:
     L'auteur (ou le « saisi pour »), et l'admin en cas de problème. **Pas le
     conseil syndical** : il agit sur le suivi, il ne réécrit pas la demande.
     """
-    return _est_concerne(objet, user) or user.has_role(RoleUtilisateur.admin)
+    return est_auteur(objet, user) or user.has_role(RoleUtilisateur.admin)
 
 
 def peut_commenter(objet, user: Utilisateur) -> bool:

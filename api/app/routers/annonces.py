@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Up
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import est_auteur, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
     PetiteAnnonce, TypeAnnonce, CategorieAnnonce, StatutAnnonce,
@@ -65,11 +65,17 @@ def _reponses_for(annonce_id: int, session: Session) -> list[dict]:
 
 
 def _can_manage(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
-    """Auteur, CS ou admin peut modifier/supprimer."""
-    return (
-        annonce.auteur_id == user.id
-        or user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-    )
+    """Auteur, CS ou admin peut modifier/supprimer.
+
+    🔴 Ce corps RÉÉCRIVAIT la règle centrale, mot pour mot. C'est la forme la plus
+    trompeuse de la duplication : une fonction nommée, à l'air factorisé, mais qui
+    ne partage rien avec les treize autres sites qui disaient la même chose — et
+    avec lesquels elle avait déjà divergé (29/08/2026).
+
+    Elle reste comme ALIAS LOCAL, parce que le nom porte le sens métier de cet
+    écran ; ce qu'elle ne fait plus, c'est décider.
+    """
+    return peut_commenter(annonce, user)
 
 
 def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict:
@@ -86,7 +92,9 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
         "auteur_prenom": auteur.prenom if auteur else "",
         "auteur_nom": auteur.nom if auteur else "",
         "auteur_email": auteur.email if annonce.contact_visible and auteur else None,
-        "est_auteur": annonce.auteur_id == user.id,
+        #  Calculé par la règle centrale, pas recomparé ici : le drapeau que
+        #  l'écran reçoit doit dire la même chose que le contrôle qui refuse.
+        "est_auteur": est_auteur(annonce, user),
         #  Calculé côté serveur et transporté : l'écran ne doit pas refaire la
         #  règle, sinon la liste et l'Historique peuvent trancher différemment —
         #  c'est le bug du 17/07/2026 sur les actualités, un élément visible dans
@@ -327,8 +335,8 @@ def delete_reponse(
     rep = session.get(ReponseCommunaute, rep_id)
     if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != annonce_id:
         raise HTTPException(404, "Réponse introuvable")
-    est_cs = user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-    if rep.auteur_id != user.id and not est_cs:
+    #  L'auteur, ou un modérateur — règle du module central, pas réécrite ici.
+    if not peut_commenter(rep, user):
         raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
     session.delete(rep)
     session.commit()
@@ -345,7 +353,8 @@ def add_photo(
     annonce = session.get(PetiteAnnonce, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
-    if annonce.auteur_id != user.id:
+    #  L'auteur SEUL — pas de modération sur ses propres photos, c'est voulu.
+    if not est_auteur(annonce, user):
         raise HTTPException(403, "Seul l'auteur peut ajouter des photos")
     photos = json.loads(annonce.photos_json)
     if len(photos) >= MAX_PHOTOS:
@@ -369,7 +378,8 @@ def remove_photo(
     annonce = session.get(PetiteAnnonce, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
-    if annonce.auteur_id != user.id:
+    #  L'auteur SEUL — même régime que l'ajout ci-dessus.
+    if not est_auteur(annonce, user):
         raise HTTPException(403, "Seul l'auteur peut supprimer ses photos")
     photos = [p for p in json.loads(annonce.photos_json) if p != url]
     annonce.photos_json = json.dumps(photos)

@@ -30,9 +30,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import require_admin, require_cs_or_admin
+from app.auth.deps import peut_editer, require_admin, require_cs_or_admin
 from app.database import get_session
-from app.models.core import Evenement, RoleUtilisateur, Utilisateur
+from app.models.core import Evenement, Utilisateur
 from app.models.evenement import EvenementEvolution
 from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import parse_photos, photos_internes
@@ -212,7 +212,8 @@ def update_evolution_evenement(
     evol = session.get(EvenementEvolution, evol_id)
     if not evol or evol.evenement_id != ev_id:
         raise HTTPException(404, "Entrée introuvable")
-    if evol.auteur_id != user.id and not user.has_role(RoleUtilisateur.admin):
+    #  L'auteur ou un admin — `peut_editer`, du module central.
+    if not peut_editer(evol, user):
         raise HTTPException(403, "Accès refusé")
     if body.contenu is not None:
         evol.contenu = body.contenu
