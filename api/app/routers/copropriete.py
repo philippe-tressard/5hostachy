@@ -81,6 +81,9 @@ class CoproprieteRead(BaseModel):
     #: RECONDUCTION TACITE. L'écran le dit, sinon l'échéance affichée ne se
     #: distingue pas d'un terme négocié (`utils/echeance_contrat.py`).
     assurance_reconduit: bool = False
+    #: Le terme est passé et RIEN ne l'a prolongé. Vrai seulement pour les
+    #: contrats SANS reconduction tacite — le mandat de syndic (#628).
+    assurance_echu: bool = False
 
     #: 🔴 Le SYNDIC, même moule que l'assurance — un contrat de référence.
     #:
@@ -97,6 +100,7 @@ class CoproprieteRead(BaseModel):
     syndic_echeance: Optional[date] = None
     syndic_document_id: Optional[int] = None
     syndic_reconduit: bool = False
+    syndic_echu: bool = False
     syndic_interlocuteur: Optional[str] = None
     syndic_interlocuteur_email: Optional[str] = None
 
@@ -211,6 +215,7 @@ def _echeance_lue(prefixe: str, contrat) -> dict:
     return {
         f"{prefixe}_echeance": e.date if e else None,
         f"{prefixe}_reconduit": bool(e and e.reconduit),
+        f"{prefixe}_echu": bool(e and e.echu),
     }
 
 

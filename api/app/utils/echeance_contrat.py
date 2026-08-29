@@ -33,7 +33,9 @@ L'échéance se **déduit**, elle ne se saisit pas :
     date de début + durée initiale, puis reportée d'un an tant qu'elle est passée
 
 Le report est la **reconduction tacite** : un contrat qui n'a pas été dénoncé
-court une année de plus. C'est ce qui répond à la remarque — l'année n'est pas
+court une année de plus. ⚠️ **Il ne vaut pas pour tous les contrats** — un mandat
+de syndic est voté en AG pour un terme et ne se reconduit pas ; voir
+`SANS_RECONDUCTION_TACITE`, corrigé le 29/08/2026 sur signalement. C'est ce qui répond à la remarque — l'année n'est pas
 retirée, elle est **toujours juste**, et on dit quand le terme initial a été
 dépassé. Un affichage sans année aurait perdu l'information utile : savoir si le
 préavis tombe cette année ou la suivante.
@@ -63,13 +65,41 @@ class _Contrat(Protocol):
     date_debut: Optional[date]
     duree_initiale_valeur: Optional[int]
     duree_initiale_unite: Optional[str]
+    type_equipement: object  # `TypeEquipement` ou la chaîne équivalente
+
+
+#: 🔴 LES TYPES QUI NE SE RECONDUISENT PAS TACITEMENT.
+#:
+#: Corrigé le 29/08/2026, signalé par l'utilisateur : *« c'est l'assurance qui
+#: est reconduite tacitement, pas le syndic »*. La première version reportait le
+#: terme de TOUS les contrats, y compris le mandat de syndic — ce qui masquait
+#: exactement le fait qu'il faut voir.
+#:
+#: Un mandat de syndic est **voté en assemblée générale pour une durée
+#: déterminée** (trois ans au plus). Il ne se reconduit pas : à son terme, il
+#: cesse, et la copropriété doit en voter un nouveau. Reporter sa date d'un an
+#: affichait un mandat valide là où il était **échu** — et supprimait de la
+#: fiche le seul signal qui appelait une AG.
+#:
+#: ⚠️ La liste est courte et le restera : la reconduction tacite est la règle
+#: pour les contrats de la copropriété (assurance, entretien, ascenseur,
+#: chaudière). C'est l'exception qui s'énumère, pas le cas général — l'inverse
+#: obligerait à penser à chaque nouveau type, et c'est celui qu'on oublie.
+SANS_RECONDUCTION_TACITE = frozenset({"syndic"})
 
 
 class Echeance(NamedTuple):
-    """La date du terme, et si l'on y est arrivé par reconduction."""
+    """Le terme du contrat, et ce qu'il faut en comprendre.
+
+    Les deux drapeaux s'excluent, et ce n'est pas un hasard : `reconduit` ne
+    peut naître que d'un report, `echu` que de son absence.
+    """
 
     date: date
+    #: Le terme initial est passé et le contrat a couru une année de plus.
     reconduit: bool
+    #: Le terme est passé et RIEN ne l'a prolongé — le mandat a cessé.
+    echu: bool = False
 
 
 def _ajouter_mois(depart: date, mois: int) -> date:
@@ -101,14 +131,31 @@ def echeance_du_contrat(contrat: _Contrat, aujourdhui: Optional[date] = None) ->
     reference = aujourdhui or date.today()
     valeur = contrat.duree_initiale_valeur
     unite = contrat.duree_initiale_unite
+    #  `TypeEquipement` est un `str, Enum` : `str(...)` rendrait « TypeEquipement.syndic ».
+    type_ = getattr(contrat.type_equipement, "value", contrat.type_equipement)
+    tacite = type_ not in SANS_RECONDUCTION_TACITE
 
     if valeur and unite == "ans":
         fin = _ajouter_mois(contrat.date_debut, 12 * valeur)
     elif valeur and unite == "mois":
         fin = _ajouter_mois(contrat.date_debut, valeur)
-    else:
+    elif tacite:
         #  Durée inconnue → annuel. Voir l'avertissement du module.
         fin = _ajouter_mois(contrat.date_debut, 12)
+    else:
+        #  🔴 Durée inconnue ET pas de reconduction : on ne sait RIEN du terme.
+        #
+        #  Prendre l'annuel par défaut ferait déclarer « échu » un mandat de
+        #  trois ans dès sa deuxième année — une fausse alerte, et sur le
+        #  contrat le plus important de la copropriété. Le repli annuel n'est
+        #  légitime que là où la date est un ANNIVERSAIRE qui revient ; ici elle
+        #  serait une invention présentée comme un constat.
+        return None
+
+    if not tacite:
+        #  Le terme ne bouge pas. Passé, il dit que le mandat a CESSÉ — c'est le
+        #  signal que la copropriété doit voter, et le masquer serait le défaut.
+        return Echeance(fin, reconduit=False, echu=fin <= reference)
 
     reconduit = False
     while fin <= reference:
@@ -125,5 +172,7 @@ def poser_echeance(lu, contrat):
     qu'il existe en deux exemplaires. Il rend `lu` pour se poser en compréhension.
     """
     e = echeance_du_contrat(contrat)
-    lu.date_fin, lu.reconduit = (e.date, e.reconduit) if e else (None, False)
+    lu.date_fin, lu.reconduit, lu.echu = (
+        (e.date, e.reconduit, e.echu) if e else (None, False, False)
+    )
     return lu

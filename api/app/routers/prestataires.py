@@ -198,6 +198,8 @@ class ContratRead(BaseModel):
     #: 📖 La règle, ses cas et son historique : `app/utils/echeance_contrat.py`.
     date_fin: Optional[date] = None
     reconduit: bool = False
+    #: Terme passé sans reconduction — un mandat de syndic qui a CESSÉ.
+    echu: bool = False
 
     class Config:
         from_attributes = True

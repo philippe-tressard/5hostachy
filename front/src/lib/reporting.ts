@@ -53,6 +53,9 @@ export interface ReportContrat {
 	date_fin?: string | null;
 	/**  Le terme initial est passé : le contrat court par reconduction tacite. */
 	reconduit?: boolean;
+	/**  Le terme est passé et RIEN ne l'a prolongé — un mandat de syndic qui a
+	 *   cessé. Exclusif de `reconduit` : voir `SANS_RECONDUCTION_TACITE`. */
+	echu?: boolean;
 	actif: boolean;
 }
 export interface DiagRapport {
