@@ -171,23 +171,27 @@ toast('success', statut === 'traite' ? 'Signalement traité' : 'Signalement igno
 } catch (e) { toast('error', e instanceof ApiError ? e.message : 'Erreur'); }
 }
 
+//  🔴 Le MOTIF vient de l'API (`communaute_motif_refus`), il ne se recalcule
+//  pas ici. Cet écran portait sa propre copie de la règle — statut, ban
+//  définitif, ban probatoire — avec un troisième libellé, différent de celui
+//  que l'API renvoie dans sa 403 et de celui que l'administration notifie
+//  (29/08/2026). L'API décide et FORMULE ; l'écran choisit le GESTE.
+
 // Garde réactive : redirige dès que le user est connu (garde contre la race condition async layout)
 $: if ($currentUser && ($currentUser.statut === 'syndic' || $currentUser.statut === 'mandataire')) {
-	toast('error', 'La rubrique Communauté n\'est pas accessible à votre profil.');
+	toast('error', $currentUser.communaute_motif_refus ?? "La rubrique Communauté n'est pas accessible à votre profil.");
 	goto('/tableau-de-bord', { replaceState: true });
 }
 
 onMount(async () => {
-if ($currentUser?.communaute_interdit) {
-	banMessage = 'Votre accès à la Communauté a été définitivement suspendu.';
+//  Un profil inadapté est déjà redirigé ci-dessus : ce qui reste ici est une
+//  suspension, qui s'affiche en bandeau plutôt qu'en redirection.
+if ($currentUser?.communaute_motif_refus) {
+	banMessage = $currentUser.communaute_motif_refus;
 	sondagesLoading = false; ideesLoading = false; annoncesLoading = false;
 	return;
 }
-if ($currentUser?.communaute_ban_jusqu_au && new Date($currentUser.communaute_ban_jusqu_au) > new Date()) {
-	banMessage = 'Votre accès à la Communauté est suspendu pour une période probatoire d\u2019un mois. À la 2ᵉ infraction, vous serez banni définitivement.';
-	sondagesLoading = false; ideesLoading = false; annoncesLoading = false;
-	return;
-}
+
 //  La liste des bâtiments n'est plus chargée ici : le sélecteur de périmètre
 //  lit l'arbre complet depuis son store, comme sur tous les autres écrans — un
 //  bâtiment n'est qu'un nœud parmi le parking, l'AFUL et les espaces.

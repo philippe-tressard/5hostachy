@@ -22,8 +22,9 @@ from app.utils.visibility import resultats_sondage_visibles, sondage_accessible,
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
 from .commun import (
-    SondageCreate, SondageRead, SondageUpdate, _deny_communaute_for_statut,
+    SondageCreate, SondageRead, SondageUpdate,
 )
+from app.utils.communaute import exiger_acces
 
 router = APIRouter(prefix="/sondages", tags=["sondages"])
 
@@ -33,7 +34,7 @@ def list_sondages(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     all_s = session.exec(select(Sondage).order_by(Sondage.cree_le.desc())).all()
     accessible = [s for s in all_s if sondage_accessible(s, user)]
     if not accessible:
@@ -68,7 +69,7 @@ def get_sondage(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")

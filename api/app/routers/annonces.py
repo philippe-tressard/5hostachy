@@ -11,7 +11,7 @@ from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import (
     PetiteAnnonce, TypeAnnonce, CategorieAnnonce, StatutAnnonce,
-    ReponseCommunaute, Utilisateur, StatutUtilisateur, RoleUtilisateur,
+    ReponseCommunaute, Utilisateur, RoleUtilisateur,
 )
 from app.routers.uploads import _save_image
 from app.utils.archivage import (
@@ -23,6 +23,7 @@ from app.utils.liens import lien_element
 from app.utils.reponses import (
     auteur_meta, enrich_reponse, notifier_nouvelle_reponse, tri_reponses,
 )
+from app.utils.communaute import exiger_acces
 
 router = APIRouter(prefix="/annonces", tags=["annonces"])
 
@@ -61,13 +62,6 @@ def _reponses_for(annonce_id: int, session: Session) -> list[dict]:
     return tri_reponses([enrich_reponse(r, session) for r in reps])
 
 
-def _deny_communaute_for_statut(user: Utilisateur) -> None:
-    if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
-        raise HTTPException(403, "La rubrique Communauté n'est pas accessible à votre profil")
-    if user.communaute_interdit:
-        raise HTTPException(403, "Votre accès à la Communauté a été définitivement suspendu.")
-    if user.communaute_ban_jusqu_au and user.communaute_ban_jusqu_au > datetime.utcnow():
-        raise HTTPException(403, "Votre accès à la Communauté est suspendu pour une période probatoire d\u2019un mois. À la 2\u1d49 infraction, vous serez banni définitivement.")
 
 
 def _can_manage(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
@@ -146,7 +140,7 @@ def list_annonces(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     #  ⚠️ Plus aucun filtre sur l'état : les annonces archivées sont RENDUES,
     #  dans leur propre section repliée. Les exclure ici les rendrait
     #  introuvables — or une annonce vendue le mois dernier est précisément ce
@@ -168,7 +162,7 @@ def create_annonce(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     annonce = PetiteAnnonce(
         titre=data.titre,
         description=data.description,
@@ -193,7 +187,7 @@ def update_annonce(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     annonce = session.get(PetiteAnnonce, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
@@ -226,7 +220,7 @@ def update_statut(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     annonce = session.get(PetiteAnnonce, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
@@ -281,7 +275,7 @@ def list_reponses(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     annonce = session.get(PetiteAnnonce, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
@@ -296,7 +290,7 @@ def create_reponse(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(
         RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
     ):
@@ -329,7 +323,7 @@ def delete_reponse(
     user: Utilisateur = Depends(get_current_user),
 ):
     """Supprimer une réponse : son auteur, ou un CS/admin."""
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     rep = session.get(ReponseCommunaute, rep_id)
     if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != annonce_id:
         raise HTTPException(404, "Réponse introuvable")
@@ -347,7 +341,7 @@ def add_photo(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     annonce = session.get(PetiteAnnonce, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")

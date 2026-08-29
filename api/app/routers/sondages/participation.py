@@ -19,8 +19,8 @@ from app.models.core import (
 )
 from app.utils.reponses import auteur_meta, notifier_nouvelle_reponse
 from app.utils.visibility import sondage_accessible, sondage_clos
+from app.utils.communaute import exiger_acces
 
-from .commun import _deny_communaute_for_statut
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def voter(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
         raise HTTPException(403, "Les utilisateurs externes ne peuvent pas voter")
     s = session.get(Sondage, sondage_id)
@@ -99,7 +99,7 @@ def commenter(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")

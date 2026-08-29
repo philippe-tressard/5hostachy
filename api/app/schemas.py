@@ -76,6 +76,10 @@ class UserRead(BaseModel):
     communaute_interdit: bool = False
     communaute_ban_count: int = 0
     communaute_ban_jusqu_au: Optional[datetime] = None
+    #  La CONCLUSION de la règle d'accès, calculée par `app/utils/communaute.py`.
+    #  Le front l'affiche telle quelle au lieu de refaire le raisonnement : il en
+    #  portait sa propre copie, avec un troisième libellé (29/08/2026).
+    communaute_motif_refus: Optional[str] = None
     last_seen_actualites: Optional[datetime] = None
     delegations_aidant: list[dict] = []  # délégations actives où l'utilisateur est aidant
     cree_le: datetime
@@ -86,8 +90,11 @@ class UserRead(BaseModel):
 
     @classmethod
     def from_orm_with_roles(cls, u, batiment_nom: Optional[str] = None, delegations_aidant: list[dict] | None = None) -> "UserRead":
+        from app.utils.communaute import motif_de_refus
+
         data = cls.model_validate(u)
         data.roles = u.roles
+        data.communaute_motif_refus = motif_de_refus(u)
         if batiment_nom is not None:
             data.batiment_nom = batiment_nom
         if delegations_aidant is not None:

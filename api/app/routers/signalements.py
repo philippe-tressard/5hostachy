@@ -23,9 +23,9 @@ from app.models.core import (
     ReponseCommunaute,
     Signalement,
     Sondage,
-    StatutUtilisateur,
     Utilisateur,
 )
+from app.utils.communaute import exiger_acces
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
 
@@ -39,13 +39,6 @@ _CIBLE_LABELS = {
 }
 
 
-def _deny_communaute_for_statut(user: Utilisateur) -> None:
-    if user.statut in (StatutUtilisateur.syndic, StatutUtilisateur.mandataire):
-        raise HTTPException(403, "La rubrique Communauté n'est pas accessible à votre profil")
-    if user.communaute_interdit:
-        raise HTTPException(403, "Votre accès à la Communauté a été définitivement suspendu.")
-    if user.communaute_ban_jusqu_au and user.communaute_ban_jusqu_au > datetime.utcnow():
-        raise HTTPException(403, "Votre accès à la Communauté est suspendu.")
 
 
 def _lien_cible(cible_type: str, cible_id: int) -> str:
@@ -97,7 +90,7 @@ def creer_signalement(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    _deny_communaute_for_statut(user)
+    exiger_acces(user)
     if body.cible_type not in _CIBLE_LABELS:
         raise HTTPException(422, "Type de contenu invalide")
     motif = (body.motif or "").strip()
