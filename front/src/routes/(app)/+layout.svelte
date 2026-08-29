@@ -51,10 +51,10 @@
 
 	$: siteNom  = $siteNomStore;
 	$: siteUrl  = $configStore['site_url'] ?? '';
-	$: buildVerShort = `v${pkg.version}-${import.meta.env.VITE_GIT_HASH ?? 'dev'}`;
-	$: instanceId = import.meta.env.VITE_INSTANCE_ID || '';
-	$: buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}${instanceId ? ` · RPi${instanceId}` : ''}`;
-	$: year     = new Date().getFullYear();
+	const buildVerShort = `v${pkg.version}-${import.meta.env.VITE_GIT_HASH ?? 'dev'}`;
+	const instanceId = import.meta.env.VITE_INSTANCE_ID || '';
+	const buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}${instanceId ? ` · RPi${instanceId}` : ''}`;
+	const year = new Date().getFullYear();
 </script>
 
 <div class="app-shell">

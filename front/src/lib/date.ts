@@ -104,3 +104,18 @@ export function daysSince(d: string | null | undefined): number {
 	if (Number.isNaN(ts)) return 0;
 	return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
 }
+
+/**
+ * La salutation qui convient à l'heure qu'il est.
+ *
+ * ⚠️ À employer via `relire(donnees, salutation)` : dans un `$:` qui ne cite
+ * aucune variable réactive, elle serait figée au montage et dirait « Bonjour »
+ * à 20 h (`$lib/utils.relire`, #549).
+ */
+export function salutation(): string {
+	const h = new Date().getHours();
+	if (h < 6) return 'Bonne nuit';
+	if (h < 12) return 'Bonjour';
+	if (h < 18) return 'Bon après-midi';
+	return 'Bonsoir';
+}

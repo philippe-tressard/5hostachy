@@ -28,7 +28,7 @@
 	//  laisse pas de trou à l'écran : rien ne pouvait le signaler.
 	//  `REPORT_KANBAN_COLS` dérive de `KANBAN_COLS` — une seule liste, un seul
 	//  endroit où l'oubli serait visible.
-	$: colonnesSuivies = REPORT_KANBAN_COLS.map((c) => c.id);
+	const colonnesSuivies = REPORT_KANBAN_COLS.map((c) => c.id);
 	$: reportKanbanEvents = reportEvenements
 		.filter((ev) => !!ev.statut_kanban && colonnesSuivies.includes(ev.statut_kanban))
 		.sort((a, b) => daysSince(b.cree_le) - daysSince(a.cree_le));

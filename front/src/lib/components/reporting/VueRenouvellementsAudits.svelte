@@ -9,13 +9,18 @@
 -->
 <script lang="ts">
 	import { fmtDate } from '$lib/date';
-	import { anneeCourante, diagnosticsAvecEcheance, type DiagType } from '$lib/reporting';
+	import { relire } from '$lib/utils';
+	import {
+		anneeCourante,
+		diagnosticsAvecEcheance,
+		type DiagType,
+	} from '$lib/reporting';
 
 	export let reportDiagTypes: DiagType[] = [];
 
 	//  Relue à chaque recalcul, pour la même raison que la frise : un onglet resté
 	//  ouvert la nuit du réveillon rangerait les audits sous l'année passée.
-	$: ANNEE_COURANTE = anneeCourante();
+	$: ANNEE_COURANTE = relire(reportDiagTypes, anneeCourante);
 
 	//  Dérivation partagée avec le parent, qui en compte les urgences.
 	$: diagsAvecNext = diagnosticsAvecEcheance(reportDiagTypes);

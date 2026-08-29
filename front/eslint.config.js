@@ -248,12 +248,28 @@ export default defineConfig(
 			// à reprendre en premier.
 			'svelte/require-each-key': 'off',
 
-			// 10 + 4 + 1 — trois règles sur les instructions réactives, lues une à
-			// une : des `$:` qui ne réagissent pas faute d'avoir à quoi réagir
-			// (`$: year = new Date().getFullYear()`, voulu) et des « boucle
-			// possible » heuristiques. Aucune n'est un défaut avéré.
-			'svelte/no-immutable-reactive-statements': 'off',
-			'svelte/infinite-reactive-loop': 'off',
+			// ✅ EN SERVICE depuis le 29/08/2026 (#549). Elles étaient coupées au
+			// motif qu'« aucune n'est un défaut avéré » — le relevé les avait lues
+			// comme des `$:` sans rien à quoi réagir, donc voulus. Les reprendre
+			// une à une a montré l'inverse sur la moitié :
+			//
+			//   • TROIS vues du reporting figeaient l'année de référence, avec juste
+			//     au-dessus le commentaire décrivant le rafraîchissement qui n'avait
+			//     pas lieu — « un onglet laissé ouvert la nuit du réveillon » ;
+			//   • l'écran des prestataires figeait MINUIT, borne du « en retard » :
+			//     un onglet ouvert la veille se trompait de jour ;
+			//   • le sélecteur de périmètre rendait le défaut d'AVANT le chargement
+			//     de l'arbre, donc `null`, et pour toujours ;
+			//   • et `infinite-reactive-loop`, qualifiée d'« heuristique », a trouvé
+			//     une boucle CERTAINE : sur une copropriété sans compteur, l'onglet
+			//     Consommations rappelait l'API sans fin (le cas zéro, invisible ici
+			//     puisque cette copropriété-ci a des compteurs).
+			//
+			// Le reste — huit `$:` qui sont vraiment des constantes — est écrit
+			// `const`, la seule forme qui ne mente pas sur son intention.
+			// Un seul faux positif subsiste, déclaré sur place avec sa raison.
+			'svelte/no-immutable-reactive-statements': 'error',
+			'svelte/infinite-reactive-loop': 'error',
 			//
 			//  🔴 `no-reactive-functions` ne peut PAS être réactivée aujourd'hui, et ce
 			//  n'est plus une question de dette : elle FAIT TOMBER ESLINT 10.
@@ -302,10 +318,13 @@ export default defineConfig(
 			//   `$:` et où l'analyse de flux redevient juste.
 			'no-useless-assignment': 'off',
 
-			// 2 — deux `{' '}` inutiles, tous deux dans `prestataires/+page.svelte`,
-			// 2 105 lignes dont le découpage est suivi en #453. On n'y entre pas
-			// pour deux caractères.
-			'svelte/no-useless-mustaches': 'off',
+			// ✅ EN SERVICE depuis le 29/08/2026 (#549). Trois `{'…'}` corrigés :
+			// deux espaces devenus des `&nbsp;` (là où c'était bien une espace
+			// insécable qu'on voulait) et un libellé de colonnes rendu à sa forme
+			// d'attribut. Le motif d'origine — « on n'entre pas dans un fichier de
+			// 2 105 lignes pour deux caractères » — ne tient plus : le fichier en
+			// fait 1 900 depuis le découpage des compteurs.
+			'svelte/no-useless-mustaches': 'error',
 
 			// 4 — `a ? f() : g()` employé comme INSTRUCTION. La note ci-dessus
 			// gardait la règle active en comptant sur une correction du code ; les 4

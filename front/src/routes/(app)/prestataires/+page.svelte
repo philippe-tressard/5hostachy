@@ -23,7 +23,8 @@
 	import { EQUIPEMENTS as equipements, TYPES_PRESTATAIRE as typesPrestataire,
 		equipLabel, frequenceLabel } from '$lib/prestataires';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
-	import { typeEquipementDuContrat } from '$lib/reporting';
+	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
+	import { relire } from '$lib/utils';
 	import { trackTabView } from '$lib/telemetry';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
@@ -144,10 +145,8 @@
 	//  calendrier, `frequence_type` réparti sur les mois de l'exercice. Le
 	//  décompte reste, l'écran séparé part.
 	//
-	//  ⚠️ `enRetard` compare à MINUIT, pas à l'instant : une visite prévue
-	//  aujourd'hui n'est pas en retard, et elle l'aurait été dès 00 h 01 avec un
-	//  `new Date()` nu — c'est la comparaison qu'écrivait l'ancien onglet.
-	$: minuit = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+	//  ⚠️ Minuit, pas l'instant ; `contrats` cité pour relire (`utils.relire`).
+	$: minuit = relire(contrats, minuitDuJour);
 	$: contratEnRetard = (c: any) => !!c.prochaine_visite && new Date(c.prochaine_visite) < minuit;
 	$: echeancesEnRetard = contrats.filter(contratEnRetard);
 	$: echeancesAVenir = contrats.filter(c => c.prochaine_visite && !contratEnRetard(c));
@@ -199,7 +198,13 @@
 		return [...map.entries()].sort((a, b) => b[0] - a[0]);
 	})();
 
+	//  🔴 CAS ZÉRO : sans compteur, `compteurConfigs.length === 0` restait vraie
+	//  après l'appel et l'onglet rappelait l'API sans fin (#549). Le drapeau dit
+	//  « DEMANDÉ », pas « reçu » : posé avant, jamais relevé.
+	let compteursDemandes = false;
+
 	async function loadCompteurConfigs() {
+		compteursDemandes = true;
 		try {
 			compteurConfigs = await prestApi.compteurConfigs();
 			if (compteurConfigs.length > 0 && !typeCompteur) typeCompteur = compteurConfigs[0].type_compteur;
@@ -214,7 +219,7 @@
 		finally { releveLoading = false; }
 	}
 
-	$: if (onglet === 'consommations' && compteurConfigs.length === 0) loadCompteurConfigs();
+	$: if (onglet === 'consommations' && !compteursDemandes) loadCompteurConfigs();
 	$: if (typeCompteur) loadReleves();
 
 	function resetReleveForm() {
@@ -936,7 +941,7 @@
 								{#if p.contacts && p.contacts.length > 0}
 									{#each p.contacts as c}
 										<span class="prest-contact">
-											📞 {c.telephone}{#if c.prenom || c.nom}{' '}— {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction}{' '}({c.fonction}){/if}
+											📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
 										</span>
 									{/each}
 								{:else if p.telephone}

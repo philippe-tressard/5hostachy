@@ -134,6 +134,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		_prestLoaded = true;
 		//  `prestApi.list()` est restreint au CS et aux admins : un résident qui
 		//  reçoit `[]` voit les cartes sans le nom du prestataire, et non une erreur.
+		//  ⚠️ Faux positif déclaré : `_prestLoaded` ferme le bloc (#549).
+		// eslint-disable-next-line svelte/infinite-reactive-loop
 		if ($isCS || $isAdmin) prestApi.list().then((p) => { prestataires = p; }).catch(() => {});
 	}
 

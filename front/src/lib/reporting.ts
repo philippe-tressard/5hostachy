@@ -127,6 +127,23 @@ export const PREAVIS_MOIS = 3;
 export function anneeCourante(): number {
 	return new Date().getFullYear();
 }
+
+/**
+ * Minuit du jour — la borne d'un « en retard », qui n'est PAS l'instant.
+ *
+ * ⚠️ Une échéance prévue aujourd'hui n'est pas en retard, et elle l'aurait été
+ * dès 00 h 01 avec un `new Date()` nu.
+ *
+ * ⚠️ À employer via `relire(donnees, minuitDuJour)` : appelée dans un `$:` qui
+ * ne cite aucune variable réactive, elle serait figée au chargement de l'onglet
+ * (`$lib/utils.relire`).
+ */
+export function minuitDuJour(): Date {
+	const d = new Date();
+	d.setHours(0, 0, 0, 0);
+	return d;
+}
+
 export const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
 /**

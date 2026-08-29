@@ -21,14 +21,15 @@
 -->
 <script lang="ts">
 	import VueRenouvellementsContrats from './VueRenouvellementsContrats.svelte';
+	import { relire } from '$lib/utils';
 	import VueRenouvellementsAudits from './VueRenouvellementsAudits.svelte';
 	import {
 		anneeCourante,
 		contratsAvecEcheance,
 		diagnosticsAvecEcheance,
+		type DiagType,
 		type ReportContrat,
 		type ReportPrestataire,
-		type DiagType,
 	} from '$lib/reporting';
 
 	export let reportContrats: ReportContrat[] = [];
@@ -37,7 +38,7 @@
 	/** Note moyenne et nombre d'avis par prestataire, calculés une fois en amont. */
 	export let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
 
-	$: ANNEE_COURANTE = anneeCourante();
+	$: ANNEE_COURANTE = relire(reportContrats, anneeCourante);
 
 	$: contratsAvecFin = contratsAvecEcheance(reportContrats, reportPrestataires, reportNoteMoyParPrest);
 	$: diagsAvecNext = diagnosticsAvecEcheance(reportDiagTypes);
