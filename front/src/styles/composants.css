@@ -590,3 +590,50 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Ligne de document ────────────────────────────────────────────────────────
+   🔴 Remontée ici le 29/08/2026 (#491). Elle vivait dans le `<style>` de
+   `SectionDocuments.svelte`, donc SCOPÉE à lui — alors que `residence` rend ses
+   règles de copropriété et ses rapports de diagnostic avec le même vocabulaire,
+   dans SON balisage. Ces trois blocs sortaient donc NUS : les boutons d'action
+   passaient sous le texte au lieu de s'aligner à droite.
+
+   ⚠️ Personne ne l'a vu pendant des semaines, et pour une raison qui vaut plus
+   que le défaut : `lint:classes-nues` lisait les COMMENTAIRES comme des
+   définitions. Le commentaire de `residence` qui explique que ces classes sont
+   parties les faisait passer pour présentes — le contrôle était aveuglé par la
+   documentation de son propre sujet. Corrigé le même jour.
+
+   C'est la règle que le contrôle énonce lui-même : une notion PARTAGÉE par
+   plusieurs écrans se remonte dans `src/styles/`, elle ne se recopie pas. */
+.doc-list { display: flex; flex-direction: column; gap: .4rem; }
+.doc-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: .7rem 1rem;
+	gap: .75rem;
+}
+.doc-info {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	flex: 1;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+.doc-titre { font-weight: 500; font-size: .9rem; }
+.doc-date {
+	font-size: .78rem;
+	color: var(--color-text-muted);
+	margin-left: auto;
+	white-space: nowrap;
+}
+.doc-actions { display: flex; gap: .35rem; flex-shrink: 0; }
+
+/*  Sous 480 px, la ligne passe en colonne : à trois éléments (icône, titre,
+    actions) elle déborde sinon, et les boutons sortent de l'écran. */
+@media (max-width: 480px) {
+	.doc-row { flex-direction: column; align-items: stretch; gap: .5rem; }
+	.doc-actions { justify-content: flex-end; }
+}

@@ -32,6 +32,7 @@
   refaite deux fois depuis.
 -->
 <script lang="ts">
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
 	import { annoncesHall as annoncesHallApi, publications as pubsApi, ApiError } from '$lib/api';
@@ -252,10 +253,8 @@
 
 	<div class="ah-panel">
 		<div class="perimetre-pills" style="margin-bottom:1rem">
-			<button type="button" class="pill" class:pill-active={ahVue === 'nouvelle'}
-				on:click={() => (ahVue = 'nouvelle')}>&#x1F4DD; Nouvelle annonce</button>
-			<button type="button" class="pill" class:pill-active={ahVue === 'historique'}
-				on:click={() => { ahVue = 'historique'; loadAnnoncesHall(); }}>&#x1F4C1; Archives</button>
+			<Pastille active={ahVue === 'nouvelle'} on:click={() => (ahVue = 'nouvelle')}>&#x1F4DD; Nouvelle annonce</Pastille>
+			<Pastille active={ahVue === 'historique'} on:click={() => { ahVue = 'historique'; loadAnnoncesHall(); }}>&#x1F4C1; Archives</Pastille>
 		</div>
 
 		{#if ahVue === 'nouvelle'}
@@ -297,10 +296,8 @@
 		{:else}
 			<!-- ── Historique ──────────────────────────────────────────────── -->
 			<div class="perimetre-pills" style="margin-bottom:.85rem">
-				<button type="button" class="pill" class:pill-active={!ahArchivees}
-					on:click={() => { ahArchivees = false; loadAnnoncesHall(true); }}>Annonces</button>
-				<button type="button" class="pill" class:pill-active={ahArchivees}
-					on:click={() => { ahArchivees = true; loadAnnoncesHall(true); }}>Archives</button>
+				<Pastille active={!ahArchivees} on:click={() => { ahArchivees = false; loadAnnoncesHall(true); }}>Annonces</Pastille>
+				<Pastille active={ahArchivees} on:click={() => { ahArchivees = true; loadAnnoncesHall(true); }}>Archives</Pastille>
 			</div>
 
 			{#if ahLoading}

@@ -6,6 +6,7 @@
   celle de l'onglet Tickets, jamais une seconde requête pour la même donnée.
 -->
 <script lang="ts">
+	import Pastille from '$lib/components/Pastille.svelte';
 	import { daysSince } from '$lib/date';
 	import { estTicketActif, ticketScope } from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
@@ -33,9 +34,9 @@
 
 <div class="reporting-toolbar no-print" style="margin-top:0;margin-bottom:1rem">
 	<div class="reporting-switch">
-		<button class="pill" class:pill-active={reportPeriodDays === 30} on:click={() => (reportPeriodDays = 30)}>30 jours</button>
-		<button class="pill" class:pill-active={reportPeriodDays === 90} on:click={() => (reportPeriodDays = 90)}>90 jours</button>
-		<button class="pill" class:pill-active={reportPeriodDays === 365} on:click={() => (reportPeriodDays = 365)}>12 mois</button>
+		<Pastille active={reportPeriodDays === 30} on:click={() => (reportPeriodDays = 30)}>30 jours</Pastille>
+		<Pastille active={reportPeriodDays === 90} on:click={() => (reportPeriodDays = 90)}>90 jours</Pastille>
+		<Pastille active={reportPeriodDays === 365} on:click={() => (reportPeriodDays = 365)}>12 mois</Pastille>
 	</div>
 </div>
 

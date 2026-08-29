@@ -25,8 +25,8 @@
   Usage :
 
       <LibelleGroupe titre="Périmètre *" id="crag-perimetre" classe="perimetre-pills">
-        <button class="pill">…</button>
-        <button class="pill">…</button>
+        <Pastille active={…}>…</Pastille>
+        <Pastille active={…}>…</Pastille>
       </LibelleGroupe>
 -->
 <script lang="ts">
