@@ -879,7 +879,7 @@
 						</div>
 						<div style="margin-top:.75rem">
 							<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">Contact{prestContacts.length > 1 ? 's' : ''}</div>
-							{#each prestContacts as contact, i}
+							{#each prestContacts as _contact, i}
 								<div style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)">
 									<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.35rem">
 										<input style="flex:2;min-width:140px" bind:value={prestContacts[i].telephone} placeholder="Téléphone *" />

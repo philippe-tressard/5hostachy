@@ -149,7 +149,7 @@
 		{#if sectionPresente(SONDAGE, etat, 'specifiques')}
 		<SectionFormulaire titre="Réponses possibles">
 			<div class="options">
-				{#each options as opt, i (i)}
+				{#each options as _opt, i (i)}
 					<div class="option">
 						<div class="option-ligne">
 							<span class="option-rang">{i + 1}.</span>
