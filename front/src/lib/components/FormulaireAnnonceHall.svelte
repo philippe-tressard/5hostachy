@@ -59,7 +59,12 @@
 	//  sous les pastilles — la page, elle, garde la VALIDITÉ, qui commande son
 	//  bouton. Le format retenu reste celui que l'API calcule ; ceci n'est qu'une
 	//  prévision, et c'est écrit dans l'aide.
-	const SEUILS: [string, number][] = [['A8', 70], ['A7', 140], ['A6', 300], ['A5', 600]];
+	const SEUILS: [string, number][] = [
+		['A8', 70],
+		['A7', 140],
+		['A6', 300],
+		['A5', 600],
+	];
 	const ORDRE = ['A4', 'A5', 'A6', 'A7', 'A8'];
 	const formatMinPhotos = 'A5';
 
@@ -95,22 +100,26 @@
 <!--  L'EXCEPTION : le pré-remplissage vient avant le titre. Voir l'en-tête. -->
 {#if pubs.length}
 	<div class="field">
-	<label for="ah-source">Pré-remplir depuis une actualité</label>
-	<select id="ah-source" value={sourceId}
-		on:change={(e) => onPrefill(
-			(e.currentTarget as HTMLSelectElement).value === ''
-				? ''
-				: Number((e.currentTarget as HTMLSelectElement).value)
-		)}>
-		<option value="">— Saisie libre —</option>
-		{#each pubs as pub}
-			<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
-		{/each}
-	</select>
+		<label for="ah-source">Pré-remplir depuis une actualité</label>
+		<select
+			id="ah-source"
+			value={sourceId}
+			on:change={(e) =>
+				onPrefill(
+					(e.currentTarget as HTMLSelectElement).value === ''
+						? ''
+						: Number((e.currentTarget as HTMLSelectElement).value),
+				)}
+		>
+			<option value="">— Saisie libre —</option>
+			{#each pubs as pub}
+				<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
+			{/each}
+		</select>
 	</div>
 	<p class="ah-aide">
-		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste
-		modifiable ci-dessous : l'affiche est indépendante de l'actualité d'origine.
+		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste modifiable
+		ci-dessous : l'affiche est indépendante de l'actualité d'origine.
 	</p>
 	<hr class="ah-separateur" />
 {/if}
@@ -120,8 +129,13 @@
       n'ayant qu'UN champ, son titre EST le libellé du champ (R3). -->
 <SectionFormulaire premiere titre="Titre" requis pour="ah-titre">
 	<div class="field champ-large">
-		<input id="ah-titre" type="text" bind:value={titre} maxlength="120"
-			placeholder="Ex : Coupure d'eau — mardi 4 août" />
+		<input
+			id="ah-titre"
+			type="text"
+			bind:value={titre}
+			maxlength="120"
+			placeholder="Ex : Coupure d'eau — mardi 4 août"
+		/>
 	</div>
 </SectionFormulaire>
 
@@ -138,20 +152,20 @@
 	      balisage l'empêche, et c'est très exactement la raison d'être de `Pastille`. -->
 	<div class="perimetre-pills">
 		{#each formats as f}
-			<Pastille petite active={format === f.val}
-				on:click={() => (format = f.val)}>{f.label}</Pastille>
+			<Pastille petite active={format === f.val} on:click={() => (format = f.val)}
+				>{f.label}</Pastille
+			>
 		{/each}
 	</div>
 	<p class="ah-aide">
 		{#if format === 'auto'}
-			Le plus petit format qui accueille le texte est retenu, pour occuper le moins
-			de place possible dans l'afficheur du hall. Sous l'A4, des pointillés de
-			découpe sont tracés sur l'affiche.
+			Le plus petit format qui accueille le texte est retenu, pour occuper le moins de place
+			possible dans l'afficheur du hall. Sous l'A4, des pointillés de découpe sont tracés sur
+			l'affiche.
 		{:else}
 			Format imposé — le message sera mis en page en {format.toUpperCase()}.
 		{/if}
-		<strong>Prévu : {formatPrevu}</strong> ({longueur} caractère{longueur > 1 ? 's' : ''} —
-		titre et message)
+		<strong>Prévu : {formatPrevu}</strong> ({longueur} caractère{longueur > 1 ? 's' : ''} — titre et message)
 	</p>
 </SectionFormulaire>
 
@@ -168,9 +182,7 @@
 	      que ce champ bouge, sans que rien ne le signale. Elle ne dit donc plus que ce
 	      dont elle répond : à quoi sert le périmètre. L'envoi se lit là où il se
 	      décide — dans la section Diffusion, qui porte sa propre aide. -->
-	<p class="ah-aide">
-		Imprimé sur l'affiche : il dit où elle doit être posée.
-	</p>
+	<p class="ah-aide">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
 </SectionFormulaire>
 
 <!--  6. Description — ici, le message affiché. -->
@@ -184,12 +196,18 @@
 	     mot deux fois, en deux typographies. C'est la règle que `SectionFormulaire`
 	     écrit noir sur blanc depuis le 16/08 (une section à UN champ ne répète pas
 	     son nom) ; seul cet écran l'avait manquée. Signalé par l'utilisateur. -->
-	<FichiersUpload id="ah-photos" bind:urls={photos} max={maxPhotos} mode="photos" titre=""
-		upload={onUpload} on:change={onPhotosChange} />
+	<FichiersUpload
+		id="ah-photos"
+		bind:urls={photos}
+		max={maxPhotos}
+		mode="photos"
+		titre=""
+		upload={onUpload}
+		on:change={onPhotosChange}
+	/>
 	<p class="ah-aide">
-		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de
-		l'annonce reste l'élément central. Une affiche avec photo ne descend jamais sous
-		l'{formatMinPhotos}.
+		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de l'annonce reste l'élément
+		central. Une affiche avec photo ne descend jamais sous l'{formatMinPhotos}.
 	</p>
 </SectionFormulaire>
 
@@ -212,14 +230,18 @@
 		<span>Envoyer l'affiche au conseil syndical du périmètre, pour impression</span>
 	</label>
 	<p class="ah-aide">
-		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis
-		l'historique — cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
+		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique
+		— cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
 	</p>
 </SectionFormulaire>
 
 <div class="form-actions">
-	<button type="button" class="btn btn-outline" disabled={!valide || apercuLoading}
-		on:click={onApercu}>
+	<button
+		type="button"
+		class="btn btn-outline"
+		disabled={!valide || apercuLoading}
+		on:click={onApercu}
+	>
 		{apercuLoading ? 'Génération…' : 'Aperçu'}
 	</button>
 	<!--  🔴 « Générer une affiche » (18/08/2026, demandé à l'écran : « Créer et
@@ -231,8 +253,7 @@
 	      (ux-patterns §9 quinquies bis) : cet écran ne crée pas un objet qu'on
 	      retrouvera dans une liste, il FABRIQUE un document à imprimer. Même
 	      famille que les imports, déjà hors périmètre de la règle. -->
-	<button type="button" class="btn btn-primary" disabled={!valide || saving}
-		on:click={onCreer}>
+	<button type="button" class="btn btn-primary" disabled={!valide || saving} on:click={onCreer}>
 		{saving ? 'Génération…' : 'Générer une affiche'}
 	</button>
 </div>
@@ -250,7 +271,12 @@
 	    raison — il aurait atteint TOUS les `<label>` du composant, y compris ceux
 	    d'un champ ajouté plus tard par quelqu'un qui ne lit pas ce bloc. C'est le
 	    défaut qui avait étiré les cases à cocher du sondage (16/08/2026). */
-	.ah-aide { font-size: .8rem; color: var(--color-text-muted); margin: .35rem 0 0; line-height: 1.5; }
+	.ah-aide {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin: 0.35rem 0 0;
+		line-height: 1.5;
+	}
 	/*  `.ah-label-espace` a disparu : l'espacement entre sections est celui de
 	    `SectionFormulaire`, une seule fois pour tout le site. */
 	/*  Une case et son libellé. Le `width:auto` annule le `width:100%` des champs
@@ -258,5 +284,9 @@
 	    de la ligne (défaut signalé sur le sondage ET l'annonce, 16/08/2026). */
 	/*  Le filet qui sépare le raccourci de pré-remplissage du formulaire lui-même.
 	    Il était posé en `style=` en ligne — nommé ici, il cesse d'être à réécrire. */
-	.ah-separateur { border: none; border-top: 1px solid var(--color-border); margin: .9rem 0; }
+	.ah-separateur {
+		border: none;
+		border-top: 1px solid var(--color-border);
+		margin: 0.9rem 0;
+	}
 </style>

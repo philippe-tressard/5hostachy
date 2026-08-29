@@ -83,7 +83,13 @@ export interface DiagType {
  *   dépend d'aucun autre écran : la prestation ponctuelle n'existe plus comme
  *   objet. Une justification qui s'appuie sur un écran voisin devient fausse
  *   quand celui-ci bouge, sans que rien ne le signale. */
-export const REPORT_VUES = ['kanban', 'tickets', 'prestataires', 'renouvellements', 'relance'] as const;
+export const REPORT_VUES = [
+	'kanban',
+	'tickets',
+	'prestataires',
+	'renouvellements',
+	'relance',
+] as const;
 export type ReportVue = (typeof REPORT_VUES)[number];
 
 /**  Les colonnes du kanban du REPORTING, dérivées de celles du calendrier.
@@ -113,10 +119,21 @@ export const KANBAN_LABELS: Record<string, string> = Object.fromEntries(
  *   doit couvrir toutes les colonnes rendues ; le repli `badge-gray` masquerait un
  *   nouvel identifiant sans rien dire. */
 export const KANBAN_COLORS: Record<string, string> = {
-	ag: 'badge-purple', cs: 'badge-blue', syndic: 'badge-orange',
-	fournisseur: 'badge-yellow', termine: 'badge-green', annule: 'badge-gray',
+	ag: 'badge-purple',
+	cs: 'badge-blue',
+	syndic: 'badge-orange',
+	fournisseur: 'badge-yellow',
+	termine: 'badge-green',
+	annule: 'badge-gray',
 };
-export const TYPE_LABELS: Record<string, string> = { travaux: 'Travaux', coupure: 'Coupure', ag: 'AG', maintenance: 'Maintenance', maintenance_recurrente: 'Maintenance récurrente', autre: 'Autre' };
+export const TYPE_LABELS: Record<string, string> = {
+	travaux: 'Travaux',
+	coupure: 'Coupure',
+	ag: 'AG',
+	maintenance: 'Maintenance',
+	maintenance_recurrente: 'Maintenance récurrente',
+	autre: 'Autre',
+};
 
 /* ── Renouvellements : calculs ────────────────────────────────────────────
    L'année de référence est une FONCTION, pas une constante. Elle était figée au
@@ -144,7 +161,20 @@ export function minuitDuJour(): Date {
 	return d;
 }
 
-export const MOIS_LABELS = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+export const MOIS_LABELS = [
+	'Janv.',
+	'Fév.',
+	'Mars',
+	'Avr.',
+	'Mai',
+	'Juin',
+	'Juil.',
+	'Août',
+	'Sept.',
+	'Oct.',
+	'Nov.',
+	'Déc.',
+];
 
 /**
  * L'échéance du contrat — LUE, non plus calculée ici.
@@ -190,7 +220,7 @@ export function diagNextDate(dt: DiagType): Date | null {
 	const match = dt.frequence.match(/(\d+)/);
 	if (!match) return null;
 	const freqAns = parseInt(match[1]);
-	const lastRapport = dt.rapports.find(r => r.date_rapport);
+	const lastRapport = dt.rapports.find((r) => r.date_rapport);
 	if (!lastRapport || !lastRapport.date_rapport) return null;
 	const d = new Date(lastRapport.date_rapport);
 	d.setFullYear(d.getFullYear() + freqAns);
@@ -203,7 +233,6 @@ export function diagUrgence(nextDate: Date): 'depasse' | 'annee' | 'futur' {
 	if (nextDate.getFullYear() === anneeCourante()) return 'annee';
 	return 'futur';
 }
-
 
 // ── Dérivations partagées (#453, 27/08/2026) ─────────────────────────────────
 //
@@ -294,9 +323,7 @@ export function diagnosticsAvecEcheance(types: DiagType[]): DiagAvecEcheance[] {
 	return types
 		.filter((dt) => !dt.non_applicable)
 		.map((dt) => {
-			const isPermanent = dt.frequence
-				? dt.frequence.toLowerCase().includes('permanent')
-				: false;
+			const isPermanent = dt.frequence ? dt.frequence.toLowerCase().includes('permanent') : false;
 			const next = isPermanent ? null : diagNextDate(dt);
 			const urgence: 'depasse' | 'annee' | 'futur' | 'inconnu' = next
 				? diagUrgence(next)
@@ -317,8 +344,6 @@ export function diagnosticsAvecEcheance(types: DiagType[]): DiagAvecEcheance[] {
 			return a.nextDate.getTime() - b.nextDate.getTime();
 		});
 }
-
-
 
 /**
  * De quel ÉQUIPEMENT parle un contrat — une seule règle, pour tous les usages.

@@ -27,8 +27,14 @@
 	// ── Édition ───────────────────────────────────────────────────────────────
 	let edite: Perimetre | null = null;
 	let form = {
-		libelle: '', libelle_court: '', description: '', icone: '',
-		portee_globale: false, selectionnable: true, ordre: 0, actif: true,
+		libelle: '',
+		libelle_court: '',
+		description: '',
+		icone: '',
+		portee_globale: false,
+		selectionnable: true,
+		ordre: 0,
+		actif: true,
 	};
 
 	function editer(n: Perimetre) {
@@ -140,21 +146,21 @@
 <svelte:head><title>Périmètres · {_siteNom}</title></svelte:head>
 
 <p class="page-desc">
-	L’arborescence qui sert à localiser une demande — un ticket, une actualité, un
-	événement. Elle est propre à cette copropriété : renommez, réorganisez, ajoutez
-	ou retirez ce qui n’existe pas ici.
+	L’arborescence qui sert à localiser une demande — un ticket, une actualité, un événement. Elle est
+	propre à cette copropriété : renommez, réorganisez, ajoutez ou retirez ce qui n’existe pas ici.
 </p>
 
 <div class="barre">
-	<button class="btn btn-primary" on:click={() => creer(null)}>+ Périmètre de premier niveau</button>
+	<button class="btn btn-primary" on:click={() => creer(null)}>+ Périmètre de premier niveau</button
+	>
 </div>
 
 {#if chargement}
 	<p>Chargement…</p>
 {:else if noeuds.length === 0}
 	<p class="empty-state">
-		Aucun périmètre. Créez-en un : tant que l’arborescence est vide, un contenu
-		sans périmètre reste visible de tous.
+		Aucun périmètre. Créez-en un : tant que l’arborescence est vide, un contenu sans périmètre reste
+		visible de tous.
 	</p>
 {:else}
 	<div class="ref-list">
@@ -172,12 +178,20 @@
 					{#if n.icone}<Icon name={n.icone} size={16} />{/if}
 					<span class="ref-titre">{n.libelle}</span>
 					{#if n.portee_globale}
-						<span class="badge badge-blue" title="Ce périmètre porte lui-même la portée globale : visible de tous les résidents">tous</span>
+						<span
+							class="badge badge-blue"
+							title="Ce périmètre porte lui-même la portée globale : visible de tous les résidents"
+							>tous</span
+						>
 					{:else if n.concerne_tous}
 						<!--  Hérité d'un ancêtre. Sans cette distinction, la pastille « tous »
 						      s'affichait à côté d'une case décochée — deux informations exactes
 						      qui se lisent comme une contradiction (signalé le 13/08/2026). -->
-						<span class="badge badge-gray" title="Hérité d’un périmètre parent — la case de ce nœud est décochée, et c’est normal">tous (hérité)</span>
+						<span
+							class="badge badge-gray"
+							title="Hérité d’un périmètre parent — la case de ce nœud est décochée, et c’est normal"
+							>tous (hérité)</span
+						>
 					{/if}
 					{#if !n.selectionnable}
 						<span class="badge badge-gray" title="Non proposé à la saisie">regroupement</span>
@@ -195,10 +209,16 @@
 						{#if n.description}<p class="ref-desc">{n.description}</p>{/if}
 						<div class="ref-actions">
 							<button class="btn-icon-edit" title="Modifier" on:click={() => editer(n)}>✏️</button>
-							<button class="btn-icon" title="Ajouter un sous-périmètre" on:click={() => creer(n.code)}>＋</button>
+							<button
+								class="btn-icon"
+								title="Ajouter un sous-périmètre"
+								on:click={() => creer(n.code)}>＋</button
+							>
 							<button class="btn-icon" title="Monter" on:click={() => deplacer(n, -1)}>▲</button>
 							<button class="btn-icon" title="Descendre" on:click={() => deplacer(n, 1)}>▼</button>
-							<button class="btn-icon-danger" title="Supprimer" on:click={() => supprimer(n)}>🗑️</button>
+							<button class="btn-icon-danger" title="Supprimer" on:click={() => supprimer(n)}
+								>🗑️</button
+							>
 						</div>
 					</div>
 				{/if}
@@ -212,147 +232,253 @@
 	<!--  Pas de fermeture au clic sur le fond : on saisit ici un libellé et une
 	      description, et un clic à côté effaçait tout sans prévenir. `Échap` et
 	      « Annuler » suffisent, et sont des gestes voulus. -->
-	<Modale titre="Modifier le périmètre" classeBoite="modal-box" fermetureAuFond={false}
-		on:fermer={() => (edite = null)}>
-			<h2>{edite.libelle}</h2>
-			<p class="modal-code">
-				Code <code>{edite.code}</code> — non modifiable : il est enregistré dans les
-				contenus déjà publiés.
-			</p>
+	<Modale
+		titre="Modifier le périmètre"
+		classeBoite="modal-box"
+		fermetureAuFond={false}
+		on:fermer={() => (edite = null)}
+	>
+		<h2>{edite.libelle}</h2>
+		<p class="modal-code">
+			Code <code>{edite.code}</code> — non modifiable : il est enregistré dans les contenus déjà publiés.
+		</p>
 
-			<label class="field">Libellé *
-				<input bind:value={form.libelle} required />
-			</label>
-			<label class="field">Libellé court
-				<input bind:value={form.libelle_court} placeholder={edite.libelle} />
-				<span class="field-hint">Employé sur les pastilles étroites du calendrier.</span>
-			</label>
-			<div class="field">Icône
-				<div class="icones">
+		<label class="field"
+			>Libellé *
+			<input bind:value={form.libelle} required />
+		</label>
+		<label class="field"
+			>Libellé court
+			<input bind:value={form.libelle_court} placeholder={edite.libelle} />
+			<span class="field-hint">Employé sur les pastilles étroites du calendrier.</span>
+		</label>
+		<div class="field">
+			Icône
+			<div class="icones">
+				<button
+					type="button"
+					class="icone"
+					class:icone-active={!form.icone}
+					title="Aucune icône"
+					on:click={() => (form.icone = '')}>—</button
+				>
+				{#each ICONES_PERIMETRE as ic (ic.nom)}
 					<button
-						type="button" class="icone" class:icone-active={!form.icone}
-						title="Aucune icône" on:click={() => (form.icone = '')}
-					>—</button>
-					{#each ICONES_PERIMETRE as ic (ic.nom)}
-						<button
-							type="button" class="icone" class:icone-active={form.icone === ic.nom}
-							title={ic.libelle} aria-label={ic.libelle}
-							on:click={() => (form.icone = ic.nom)}
-						>
-							<Icon name={ic.nom} size={18} />
-						</button>
-					{/each}
-				</div>
-				<span class="field-hint">
-					Affichée sur la pastille du sélecteur, devant le libellé.
-				</span>
+						type="button"
+						class="icone"
+						class:icone-active={form.icone === ic.nom}
+						title={ic.libelle}
+						aria-label={ic.libelle}
+						on:click={() => (form.icone = ic.nom)}
+					>
+						<Icon name={ic.nom} size={18} />
+					</button>
+				{/each}
 			</div>
+			<span class="field-hint"> Affichée sur la pastille du sélecteur, devant le libellé. </span>
+		</div>
 
-			<label class="field">Description
-				<textarea bind:value={form.description} rows="4"></textarea>
-				<span class="field-hint">
-					Affichée sous le sélecteur, au moment où l’on choisit ce périmètre.
+		<label class="field"
+			>Description
+			<textarea bind:value={form.description} rows="4"></textarea>
+			<span class="field-hint">
+				Affichée sous le sélecteur, au moment où l’on choisit ce périmètre.
+			</span>
+		</label>
+		<label class="field"
+			>Ordre
+			<input type="number" bind:value={form.ordre} />
+		</label>
+
+		<label class="field-check">
+			<input type="checkbox" bind:checked={form.selectionnable} />
+			Proposé à la saisie
+			<span class="field-hint">
+				Décochez pour un regroupement, ou pour retirer un périmètre des formulaires sans toucher aux
+				contenus qui le citent déjà.
+			</span>
+		</label>
+
+		<label class="field-check">
+			<input type="checkbox" bind:checked={form.actif} />
+			Actif
+		</label>
+
+		<label class="field-check danger">
+			<input type="checkbox" bind:checked={form.portee_globale} />
+			Concerne tous les résidents
+			{#if edite.concerne_tous && !edite.portee_globale}
+				<span class="field-hint herite">
+					ℹ️ Ce périmètre concerne <strong>déjà</strong> tous les résidents, par héritage de son parent
+					— la case ci-dessus est décochée, et c’est normal. La cocher n’ajouterait rien ; la laisser
+					décochée ne retire rien. Pour changer cela, il faut décocher la case du périmètre parent.
 				</span>
-			</label>
-			<label class="field">Ordre
-				<input type="number" bind:value={form.ordre} />
-			</label>
+			{/if}
+			<span class="field-hint">
+				⚠️ Un contenu ciblé sur ce périmètre — ou sur l’un de ses sous-périmètres — sera visible de <strong
+					>tous les résidents</strong
+				>
+				et notifiera
+				<strong>l’ensemble du conseil syndical</strong>, quel que soit leur bâtiment.
+			</span>
+		</label>
 
-			<label class="field-check">
-				<input type="checkbox" bind:checked={form.selectionnable} />
-				Proposé à la saisie
-				<span class="field-hint">
-					Décochez pour un regroupement, ou pour retirer un périmètre des formulaires
-					sans toucher aux contenus qui le citent déjà.
-				</span>
-			</label>
-
-			<label class="field-check">
-				<input type="checkbox" bind:checked={form.actif} />
-				Actif
-			</label>
-
-			<label class="field-check danger">
-				<input type="checkbox" bind:checked={form.portee_globale} />
-				Concerne tous les résidents
-				{#if edite.concerne_tous && !edite.portee_globale}
-					<span class="field-hint herite">
-						ℹ️ Ce périmètre concerne <strong>déjà</strong> tous les résidents, par
-						héritage de son parent — la case ci-dessus est décochée, et c’est normal.
-						La cocher n’ajouterait rien ; la laisser décochée ne retire rien. Pour
-						changer cela, il faut décocher la case du périmètre parent.
-					</span>
-				{/if}
-				<span class="field-hint">
-					⚠️ Un contenu ciblé sur ce périmètre — ou sur l’un de ses sous-périmètres —
-					sera visible de <strong>tous les résidents</strong> et notifiera
-					<strong>l’ensemble du conseil syndical</strong>, quel que soit leur bâtiment.
-				</span>
-			</label>
-
-			<div class="modal-actions">
-				<button class="btn btn-outline" on:click={() => (edite = null)}>Annuler</button>
-				<button class="btn btn-primary" disabled={enregistrement || !form.libelle.trim()} on:click={enregistrer}>
-					{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
-				</button>
-			</div>
+		<div class="modal-actions">
+			<button class="btn btn-outline" on:click={() => (edite = null)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={enregistrement || !form.libelle.trim()}
+				on:click={enregistrer}
+			>
+				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <!-- ── Création ────────────────────────────────────────────────────────────── -->
 {#if creation}
-	<Modale titre="Nouveau périmètre" classeBoite="modal-box" fermetureAuFond={false}
-		on:fermer={() => (creation = null)}>
-			<h2>{creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}</h2>
+	<Modale
+		titre="Nouveau périmètre"
+		classeBoite="modal-box"
+		fermetureAuFond={false}
+		on:fermer={() => (creation = null)}
+	>
+		<h2>{creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}</h2>
 
-			<label class="field">Libellé *
-				<input bind:value={nouveau.libelle} required />
-			</label>
-			<label class="field">Code *
-				<input bind:value={nouveau.code} placeholder={codePropose} />
-				<span class="field-hint">
-					Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus
-					être modifié : c’est lui qui sera enregistré dans les contenus.
-				</span>
-			</label>
-			<label class="field">Description
-				<textarea bind:value={nouveau.description} rows="3"></textarea>
-			</label>
+		<label class="field"
+			>Libellé *
+			<input bind:value={nouveau.libelle} required />
+		</label>
+		<label class="field"
+			>Code *
+			<input bind:value={nouveau.code} placeholder={codePropose} />
+			<span class="field-hint">
+				Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus être modifié :
+				c’est lui qui sera enregistré dans les contenus.
+			</span>
+		</label>
+		<label class="field"
+			>Description
+			<textarea bind:value={nouveau.description} rows="3"></textarea>
+		</label>
 
-			<div class="modal-actions">
-				<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
-				<button
-					class="btn btn-primary"
-					disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
-					on:click={enregistrerNouveau}
-				>
-					{enregistrement ? 'Création…' : 'Créer'}
-				</button>
-			</div>
+		<div class="modal-actions">
+			<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
+				on:click={enregistrerNouveau}
+			>
+				{enregistrement ? 'Création…' : 'Créer'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <style>
-	.page-desc { color: var(--color-text-muted); margin-bottom: 1rem; }
-	.barre { margin-bottom: 1rem; }
-	.ref-list { border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
-	.ref-item { border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
-	.ref-item:last-child { border-bottom: none; }
-	.ref-item.inactif { opacity: .55; }
-	.ref-tete { display: flex; align-items: center; gap: .5rem; padding: .55rem .8rem; cursor: pointer; }
-	.ref-tete:hover { background: var(--color-bg); }
-	.ref-titre { font-size: .9rem; }
-	.ref-code { font-size: .72rem; color: var(--color-text-muted); margin-left: auto; }
-	.chevron.open { transform: rotate(90deg); }
-	.ref-corps { padding: .2rem 1rem .8rem 1.6rem; border-top: 1px dashed var(--color-border); }
-	.ref-desc { font-size: .84rem; color: var(--color-text-muted); line-height: 1.55; margin: .5rem 0; }
-	.ref-actions { display: flex; gap: .3rem; }
-	.icones { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
-	.icone { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: var(--color-text-muted); font-size: .8rem; }
-	.icone:hover { border-color: var(--color-primary); color: var(--color-text); }
-	.icone-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-	.modal-code { font-size: .8rem; color: var(--color-text-muted); margin: -.4rem 0 1rem; }
-	.field-check { display: block; font-size: .85rem; margin-bottom: .8rem; }
-	.herite { border-left: 2px solid var(--color-border); padding-left: .5rem; margin-top: .4rem; }
-	.field-check.danger { border-left: 3px solid var(--color-warning, #d97706); padding-left: .6rem; }
+	.page-desc {
+		color: var(--color-text-muted);
+		margin-bottom: 1rem;
+	}
+	.barre {
+		margin-bottom: 1rem;
+	}
+	.ref-list {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		overflow: hidden;
+	}
+	.ref-item {
+		border-bottom: 1px solid var(--color-border);
+		background: var(--color-surface);
+	}
+	.ref-item:last-child {
+		border-bottom: none;
+	}
+	.ref-item.inactif {
+		opacity: 0.55;
+	}
+	.ref-tete {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.55rem 0.8rem;
+		cursor: pointer;
+	}
+	.ref-tete:hover {
+		background: var(--color-bg);
+	}
+	.ref-titre {
+		font-size: 0.9rem;
+	}
+	.ref-code {
+		font-size: 0.72rem;
+		color: var(--color-text-muted);
+		margin-left: auto;
+	}
+	.chevron.open {
+		transform: rotate(90deg);
+	}
+	.ref-corps {
+		padding: 0.2rem 1rem 0.8rem 1.6rem;
+		border-top: 1px dashed var(--color-border);
+	}
+	.ref-desc {
+		font-size: 0.84rem;
+		color: var(--color-text-muted);
+		line-height: 1.55;
+		margin: 0.5rem 0;
+	}
+	.ref-actions {
+		display: flex;
+		gap: 0.3rem;
+	}
+	.icones {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+		margin-top: 0.3rem;
+	}
+	.icone {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: var(--color-surface);
+		cursor: pointer;
+		color: var(--color-text-muted);
+		font-size: 0.8rem;
+	}
+	.icone:hover {
+		border-color: var(--color-primary);
+		color: var(--color-text);
+	}
+	.icone-active {
+		background: var(--color-primary);
+		color: #fff;
+		border-color: var(--color-primary);
+	}
+	.modal-code {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin: -0.4rem 0 1rem;
+	}
+	.field-check {
+		display: block;
+		font-size: 0.85rem;
+		margin-bottom: 0.8rem;
+	}
+	.herite {
+		border-left: 2px solid var(--color-border);
+		padding-left: 0.5rem;
+		margin-top: 0.4rem;
+	}
+	.field-check.danger {
+		border-left: 3px solid var(--color-warning, #d97706);
+		padding-left: 0.6rem;
+	}
 </style>

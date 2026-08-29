@@ -56,7 +56,10 @@
 	/** Le statut retenu (lié bidirectionnellement). */
 	export let filtre = '';
 
-	const dispatch = createEventDispatcher<{ importer: { fichier: File; remplacer: boolean }; filtrer: string }>();
+	const dispatch = createEventDispatcher<{
+		importer: { fichier: File; remplacer: boolean };
+		filtrer: string;
+	}>();
 
 	let fichier: FileList | null = null;
 	let remplacer = false;

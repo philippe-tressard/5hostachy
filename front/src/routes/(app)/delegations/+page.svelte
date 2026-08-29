@@ -4,11 +4,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, isCS } from '$lib/stores/auth';
-	import {
-		delegations as delegationsApi,
-		admin as adminApi,
-		ApiError,
-	} from '$lib/api';
+	import { delegations as delegationsApi, admin as adminApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort as fmt } from '$lib/date';
@@ -71,7 +67,6 @@
 		return map[s] ?? '';
 	}
 
-
 	async function creer() {
 		if (!formMandantId || !formAidantId) return;
 		saving = true;
@@ -122,8 +117,10 @@
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'heart-handshake'} />
 
-<ChargementPartiel erreur={erreurUtilisateurs}
-	consequence="Les menus « mandant » et « aidant » du formulaire de délégation sont vides : ce n'est pas qu'aucun résident n'est éligible." />
+<ChargementPartiel
+	erreur={erreurUtilisateurs}
+	consequence="Les menus « mandant » et « aidant » du formulaire de délégation sont vides : ce n'est pas qu'aucun résident n'est éligible."
+/>
 <p class="page-subtitle" style="margin-bottom:1.5rem;color:var(--color-text-muted);font-size:.9rem">
 	Gestion des accès délégués pour les proches aidants.
 	<br /><em style="font-size:.82rem">L'accès aidant ne constitue pas une procuration d'AG.</em>
@@ -132,10 +129,11 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else}
-
 	{#if $isCS}
 		<div style="margin-bottom:1.25rem">
-			<button class="btn btn-primary" on:click={() => (showForm = true)}>+ Nouvelle délégation</button>
+			<button class="btn btn-primary" on:click={() => (showForm = true)}
+				>+ Nouvelle délégation</button
+			>
 		</div>
 	{/if}
 
@@ -161,7 +159,9 @@
 						</div>
 						<div class="deleg-meta">
 							<span class="badge {statutBadge(d.statut)}">{statutLabel(d.statut)}</span>
-							<span class="deleg-date">Du {fmt(d.date_debut)}{d.date_fin ? ` au ${fmt(d.date_fin)}` : ' — illimité'}</span>
+							<span class="deleg-date"
+								>Du {fmt(d.date_debut)}{d.date_fin ? ` au ${fmt(d.date_fin)}` : ' — illimité'}</span
+							>
 						</div>
 						{#if d.motif}
 							<p class="deleg-motif">{d.motif}</p>
@@ -169,10 +169,13 @@
 					</div>
 					<div class="deleg-actions">
 						{#if d.statut === 'en_attente' && d.aidant_id === $currentUser?.id}
-							<button class="btn btn-sm btn-primary" on:click={() => accepter(d.id)}>Accepter</button>
+							<button class="btn btn-sm btn-primary" on:click={() => accepter(d.id)}
+								>Accepter</button
+							>
 						{/if}
 						{#if d.statut === 'en_attente' || d.statut === 'active'}
-							<button class="btn btn-sm btn-danger" on:click={() => revoquer(d.id)}>Révoquer</button>
+							<button class="btn btn-sm btn-danger" on:click={() => revoquer(d.id)}>Révoquer</button
+							>
 						{/if}
 					</div>
 				</div>
@@ -183,76 +186,155 @@
 
 <!-- ── Modal : créer une délégation ──────────────────────────────────── -->
 {#if showForm}
-	<Modale titre="Nouvelle délégation" styleBoite="width:min(500px,95vw)"
-		on:fermer={() => (showForm = false)}>
-			<div class="modal-header">
-				<h3>Nouvelle délégation aidant</h3>
-				<button class="modal-close" on:click={() => (showForm = false)}>✕</button>
+	<Modale
+		titre="Nouvelle délégation"
+		styleBoite="width:min(500px,95vw)"
+		on:fermer={() => (showForm = false)}
+	>
+		<div class="modal-header">
+			<h3>Nouvelle délégation aidant</h3>
+			<button class="modal-close" on:click={() => (showForm = false)}>✕</button>
+		</div>
+		<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
+			<div class="field">
+				<label for="d-mandant">Personne aidée (mandant) *</label>
+				<select id="d-mandant" bind:value={formMandantId}>
+					<option value={0} disabled>Choisir…</option>
+					{#each users.filter((u) => u.actif) as u}
+						<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
+					{/each}
+				</select>
 			</div>
-			<div class="modal-body" style="display:flex;flex-direction:column;gap:.75rem">
-				<div class="field">
-					<label for="d-mandant">Personne aidée (mandant) *</label>
-					<select id="d-mandant" bind:value={formMandantId}>
-						<option value={0} disabled>Choisir…</option>
-						{#each users.filter((u) => u.actif) as u}
-							<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
-						{/each}
-					</select>
-				</div>
-				<div class="field">
-					<label for="d-aidant">Proche aidant *</label>
-					<select id="d-aidant" bind:value={formAidantId}>
-						<option value={0} disabled>Choisir…</option>
-						{#each users.filter((u) => u.actif && u.id !== formMandantId) as u}
-							<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
-						{/each}
-					</select>
-				</div>
-				<div class="field">
-					<label for="d-motif">Motif</label>
-					<input id="d-motif" type="text" bind:value={formMotif} placeholder="Ex : Assistance personne âgée" />
-				</div>
-				<div class="field">
-					<label for="d-fin">Date de fin <span style="color:var(--color-text-muted);font-size:.8rem">(optionnel — défaut : illimité)</span></label>
-					<input id="d-fin" type="date" bind:value={formDateFin} />
-				</div>
-				<p style="font-size:.8rem;color:var(--color-text-muted);margin:0;padding:.25rem .5rem;background:var(--color-bg);border-radius:var(--radius)">
-					&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une procuration d'AG.
-				</p>
+			<div class="field">
+				<label for="d-aidant">Proche aidant *</label>
+				<select id="d-aidant" bind:value={formAidantId}>
+					<option value={0} disabled>Choisir…</option>
+					{#each users.filter((u) => u.actif && u.id !== formMandantId) as u}
+						<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
+					{/each}
+				</select>
 			</div>
-			<div class="modal-footer">
-				<button class="btn" on:click={() => (showForm = false)}>Annuler</button>
-				<button class="btn btn-primary"
-					disabled={saving || !formMandantId || !formAidantId || formMandantId === formAidantId}
-					on:click={creer}>
-					{saving ? 'Création…' : 'Créer'}
-				</button>
+			<div class="field">
+				<label for="d-motif">Motif</label>
+				<input
+					id="d-motif"
+					type="text"
+					bind:value={formMotif}
+					placeholder="Ex : Assistance personne âgée"
+				/>
 			</div>
+			<div class="field">
+				<label for="d-fin"
+					>Date de fin <span style="color:var(--color-text-muted);font-size:.8rem"
+						>(optionnel — défaut : illimité)</span
+					></label
+				>
+				<input id="d-fin" type="date" bind:value={formDateFin} />
+			</div>
+			<p
+				style="font-size:.8rem;color:var(--color-text-muted);margin:0;padding:.25rem .5rem;background:var(--color-bg);border-radius:var(--radius)"
+			>
+				&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une
+				procuration d'AG.
+			</p>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" on:click={() => (showForm = false)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={saving || !formMandantId || !formAidantId || formMandantId === formAidantId}
+				on:click={creer}
+			>
+				{saving ? 'Création…' : 'Créer'}
+			</button>
+		</div>
 	</Modale>
 {/if}
 
 <style>
-	.deleg-list { display: flex; flex-direction: column; gap: .6rem; }
-	.deleg-card { padding: 1rem 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-	.deleg-main { flex: 1; min-width: 0; }
-	.deleg-people { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; flex-wrap: wrap; }
-	.deleg-person { display: flex; flex-direction: column; gap: .1rem; }
-	.deleg-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); font-weight: 600; }
-	.deleg-name { font-weight: 600; font-size: .95rem; }
-	.deleg-arrow { color: var(--color-text-muted); }
-	.deleg-meta { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .25rem; }
-	.deleg-date { font-size: .82rem; color: var(--color-text-muted); }
-	.deleg-motif { font-size: .85rem; color: var(--color-text-muted); margin: .25rem 0 0; font-style: italic; }
-	.deleg-actions { display: flex; gap: .35rem; flex-shrink: 0; align-items: flex-start; padding-top: .25rem; }
+	.deleg-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+	.deleg-card {
+		padding: 1rem 1.25rem;
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.deleg-main {
+		flex: 1;
+		min-width: 0;
+	}
+	.deleg-people {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.deleg-person {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+	.deleg-label {
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--color-text-muted);
+		font-weight: 600;
+	}
+	.deleg-name {
+		font-weight: 600;
+		font-size: 0.95rem;
+	}
+	.deleg-arrow {
+		color: var(--color-text-muted);
+	}
+	.deleg-meta {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.25rem;
+	}
+	.deleg-date {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+	}
+	.deleg-motif {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		margin: 0.25rem 0 0;
+		font-style: italic;
+	}
+	.deleg-actions {
+		display: flex;
+		gap: 0.35rem;
+		flex-shrink: 0;
+		align-items: flex-start;
+		padding-top: 0.25rem;
+	}
 
 	/*  🔴 `.badge-orange`, `.badge-green` et `.badge-red` retirees le 28/08/2026
 	    (#607) : la charte les porte. `.badge-grey` reste — elle n'y est pas. */
-	.badge-grey { background: #f3f4f6; color: #6b7280; }
+	.badge-grey {
+		background: #f3f4f6;
+		color: #6b7280;
+	}
 
 	/*  La charte porte `.btn-danger` ; cet ecran ecrivait `#dc2626`
     EN DUR au lieu du jeton, donc hors du theme (#607, 28/08/2026). */
-	.btn-danger { border-color: var(--color-danger); }
-	.btn-danger:hover { background: #b91c1c; }
+	.btn-danger {
+		border-color: var(--color-danger);
+	}
+	.btn-danger:hover {
+		background: #b91c1c;
+	}
 
 	/* Modals & forms — réutilise les styles globaux */
 	/*  🔴 `.modal-header`, `.modal-close` et `.modal-footer` retirees le 28/08/2026
@@ -260,5 +342,9 @@
 	    divergeait de `composants.css` (croix 1.3rem au lieu de 1.5, marges au lieu
 	    des remplissages). `prestataires` emploie ce balisage SANS aucune regle
 	    locale : c'est lui la reference, et il est en production. */
-	.modal-header h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+	.modal-header h3 {
+		font-size: 1.05rem;
+		font-weight: 600;
+		margin: 0;
+	}
 </style>

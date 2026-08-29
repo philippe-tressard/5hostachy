@@ -17,56 +17,83 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
 /* ── Card ── */
 .card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-sm);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: 1.25rem;
+	box-shadow: var(--shadow-sm);
 }
 
 /* ── Buttons ── */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .5rem 1rem;
-  border-radius: var(--radius);
-  border: none;
-  font-size: .9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity .15s, background .15s;
-  text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.5rem 1rem;
+	border-radius: var(--radius);
+	border: none;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		opacity 0.15s,
+		background 0.15s;
+	text-decoration: none;
 }
 
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
 
-.btn-primary { background: var(--color-primary); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btn-primary {
+	background: var(--color-primary);
+	color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+	background: var(--color-primary-dark);
+}
 
-.btn-danger { background: var(--color-danger); color: #fff; }
+.btn-danger {
+	background: var(--color-danger);
+	color: #fff;
+}
 .btn-outline {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+	background: transparent;
+	border: 1px solid var(--color-border);
+	color: var(--color-text);
 }
-.btn-outline:hover:not(:disabled) { background: var(--color-bg); }
+.btn-outline:hover:not(:disabled) {
+	background: var(--color-bg);
+}
 
-.btn-sm { padding: .25rem .6rem; font-size: .875rem; }
+.btn-sm {
+	padding: 0.25rem 0.6rem;
+	font-size: 0.875rem;
+}
 
 /* Boutons icône (modifier · supprimer · action) */
-.btn-icon, .btn-icon-edit, .btn-icon-danger {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: .9rem;
-  padding: .25rem;
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
-  line-height: 1;
+.btn-icon,
+.btn-icon-edit,
+.btn-icon-danger {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	border-radius: var(--radius);
+	color: var(--color-text-muted);
+	line-height: 1;
 }
-.btn-icon:hover, .btn-icon-edit:hover { background: var(--color-bg-hover, #f3f4f6); color: var(--color-text); }
-.btn-icon-danger:hover { color: var(--color-danger); background: #fee2e2; }
+.btn-icon:hover,
+.btn-icon-edit:hover {
+	background: var(--color-bg-hover, #f3f4f6);
+	color: var(--color-text);
+}
+.btn-icon-danger:hover {
+	color: var(--color-danger);
+	background: #fee2e2;
+}
 
 /* ── L'icône ACTIVE : le mode en cours ───────────────────────────────────
    Signalé le 18/08/2026 : un titre de formulaire au-dessus du contenu faisait
@@ -80,16 +107,16 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
    ⚠️ Le fond est plein : un simple changement de teinte ne se distingue pas
    du survol, et l'on ne saurait plus si l'icône est active ou seulement
    pointée. */
-.btn-icon[aria-pressed="true"],
-.btn-icon-edit[aria-pressed="true"] {
-  background: var(--color-primary);
-  color: #fff;
-  transform: scale(1.15);
+.btn-icon[aria-pressed='true'],
+.btn-icon-edit[aria-pressed='true'] {
+	background: var(--color-primary);
+	color: #fff;
+	transform: scale(1.15);
 }
-.btn-icon[aria-pressed="true"]:hover,
-.btn-icon-edit[aria-pressed="true"]:hover {
-  background: var(--color-primary-dark, var(--color-primary));
-  color: #fff;
+.btn-icon[aria-pressed='true']:hover,
+.btn-icon-edit[aria-pressed='true']:hover {
+	background: var(--color-primary-dark, var(--color-primary));
+	color: #fff;
 }
 
 /* ── Chevron d'ouverture ─────────────────────────────────────────────────
@@ -105,15 +132,39 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .chevron {
 	font-size: 1.1rem;
 	color: var(--color-text-muted);
-	transition: transform .15s;
+	transition: transform 0.15s;
 	display: inline-block;
 	line-height: 1;
 }
-.chevron.open { transform: rotate(90deg); }
-.btn-icon-warn { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: #d97706; line-height: 1; }
-.btn-icon-warn:hover { background: #fef3c7; }
-.btn-icon-success { background: transparent; border: none; cursor: pointer; font-size: .9rem; padding: .25rem; border-radius: var(--radius); color: var(--color-success); line-height: 1; }
-.btn-icon-success:hover { background: #e6f4ee; }
+.chevron.open {
+	transform: rotate(90deg);
+}
+.btn-icon-warn {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	border-radius: var(--radius);
+	color: #d97706;
+	line-height: 1;
+}
+.btn-icon-warn:hover {
+	background: #fef3c7;
+}
+.btn-icon-success {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	border-radius: var(--radius);
+	color: var(--color-success);
+	line-height: 1;
+}
+.btn-icon-success:hover {
+	background: #e6f4ee;
+}
 
 /* ── Indicateur d'attente ────────────────────────────────────────────────
    « une action est en cours » est UN geste d'interface. Il n'existait qu'en un
@@ -126,49 +177,68 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
    écarte VRAIMENT ne garde en local que sa différence — même mécanique que
    `.chevron` ci-dessus, et c'est ce qui rend le découpage sûr. */
 .spinner {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  flex-shrink: 0;
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: spin 0.7s linear infinite;
+	flex-shrink: 0;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
 
 /* Une rotation perpétuelle est exactement ce que ce réglage vise ; on la
    ralentit au lieu de la couper — l'attente doit rester signalée. */
 @media (prefers-reduced-motion: reduce) {
-  .spinner { animation-duration: 2.5s; }
+	.spinner {
+		animation-duration: 2.5s;
+	}
 }
 
 /* Tooltip CSS immédiat sur boutons icône portant un attribut title */
-.btn-icon[title], .btn-icon-edit[title], .btn-icon-danger[title],
-.btn-icon-warn[title], .btn-icon-success[title] { position: relative; }
-
-.btn-icon[title]::after, .btn-icon-edit[title]::after, .btn-icon-danger[title]::after,
-.btn-icon-warn[title]::after, .btn-icon-success[title]::after {
-  content: attr(title);
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a1a2e;
-  color: #f2efe9;
-  font-size: .7rem;
-  font-family: var(--font-ui, system-ui, sans-serif);
-  white-space: nowrap;
-  padding: .2rem .5rem;
-  border-radius: 4px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .12s ease;
-  z-index: 200;
+.btn-icon[title],
+.btn-icon-edit[title],
+.btn-icon-danger[title],
+.btn-icon-warn[title],
+.btn-icon-success[title] {
+	position: relative;
 }
-.btn-icon[title]:hover::after, .btn-icon-edit[title]:hover::after, .btn-icon-danger[title]:hover::after,
-.btn-icon-warn[title]:hover::after, .btn-icon-success[title]:hover::after { opacity: 1; }
+
+.btn-icon[title]::after,
+.btn-icon-edit[title]::after,
+.btn-icon-danger[title]::after,
+.btn-icon-warn[title]::after,
+.btn-icon-success[title]::after {
+	content: attr(title);
+	position: absolute;
+	top: calc(100% + 5px);
+	left: 50%;
+	transform: translateX(-50%);
+	background: #1a1a2e;
+	color: #f2efe9;
+	font-size: 0.7rem;
+	font-family: var(--font-ui, system-ui, sans-serif);
+	white-space: nowrap;
+	padding: 0.2rem 0.5rem;
+	border-radius: 4px;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.12s ease;
+	z-index: 200;
+}
+.btn-icon[title]:hover::after,
+.btn-icon-edit[title]:hover::after,
+.btn-icon-danger[title]:hover::after,
+.btn-icon-warn[title]:hover::after,
+.btn-icon-success[title]:hover::after {
+	opacity: 1;
+}
 
 /* ── Forms ── */
 /*  `.field` et `.field label` étaient eux aussi déclarés DEUX fois, avec des
@@ -185,8 +255,17 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
     ⚠️ Une seule valeur pour tout le site. Aérer ici allonge les écrans longs :
     c'est le même arbitrage vu des deux bouts, et il se tranche une fois. */
-.field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
-.field label { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	margin-bottom: 1rem;
+}
+.field label {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--color-text);
+}
 /*  Le libellé d'un GROUPE de contrôles — pastilles, cases à cocher, boutons
     radio, éditeur riche. Un `<label>` ne sait pas nommer un groupe : posé
     dessus, il n'associe rien, ET IL LE FAIT EN SILENCE. C'est le défaut des
@@ -200,7 +279,12 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
     ⚠️ Elle vit ICI et non dans les six pages qui l'emploient : une notion
     partagée écrite dans une page est nue partout ailleurs (#562). */
-.libelle-groupe { display: block; font-size: .875rem; font-weight: 500; color: var(--color-text); }
+.libelle-groupe {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--color-text);
+}
 /* ── Grille de formulaire ──
    Des champs courts côte à côte, qui repassent en colonne quand la place manque.
 
@@ -215,7 +299,11 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
    Les valeurs sont celles des DEUX définitions qui étaient d’accord (annonce et
    sondage). Les écrans qui répartissent autrement ne gardent QUE ce qui diffère —
    une colonne, un espacement — jamais la règle entière. */
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
+.form-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+	gap: 0.75rem;
+}
 /*  Dans une GRILLE, l'espacement vertical est porté par `gap` : le
     `margin-bottom` de `.field` s'y ajoute et double l'interligne. Constaté en
     finissant #374 — `.form-grid` gap `.75rem` + `.field` `.75rem` = 1,5 rem
@@ -224,7 +312,9 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     (prestataires : gap `.65rem` + `.75rem` = 1,4 rem). Le corriger ici plutôt
     que d'annuler la marge écran par écran : une règle locale de plus serait
     exactement la « seconde définition libre de diverger » que #374 supprime. */
-.form-grid .field { margin-bottom: 0; }
+.form-grid .field {
+	margin-bottom: 0;
+}
 
 /*  Un champ multiligne se redimensionne À LA VERTICALE seulement : l'étirer en
     largeur déborderait de la colonne de grille et casserait l'alignement des
@@ -232,14 +322,20 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     orpheline le 29/08/2026 quand l'en-tête du syndic est parti en composant —
     elle n'y était déjà pas à sa place : elle vaut pour tout `.form-grid`, qui
     est défini ici. */
-.form-grid textarea { resize: vertical; }
+.form-grid textarea {
+	resize: vertical;
+}
 /*  Aide sous une case à cocher. Alignée sur le libellé, donc décalée de la
     largeur de la case. Définie ICI et non dans un composant : Svelte scope ses
     styles, si bien qu'un second écran qui reprend la classe hérite du balisage
     SANS le style — c'est ce qui a produit des pastilles nues en production le
     16/08 et fait créer `Pastille.svelte`. Elle vivait dans FormulaireEvenement ;
     FormulaireSondage en avait besoin (#397). */
-.aide-case { margin: .2rem 0 0 1.6rem; font-size: .8rem; color: var(--color-text-muted); }
+.aide-case {
+	margin: 0.2rem 0 0 1.6rem;
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+}
 /*  Aide sous un champ — la phrase qui dit ce qu’on attend, ou ce que la
     valeur entraîne.
 
@@ -252,7 +348,13 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
     Les valeurs retenues sont celles des DEUX définitions qui étaient d’accord
     (patrimoine et inscription) ; `admin` disait `.75rem`, seule. */
-.field-hint { display: block; font-size: .78rem; color: var(--color-text-muted); margin-top: .25rem; line-height: 1.45; }
+.field-hint {
+	display: block;
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	margin-top: 0.25rem;
+	line-height: 1.45;
+}
 /*  Un champ qui occupe la LIGNE ENTIÈRE d'une grille de formulaire.
     Les grilles répartissent en colonnes de ~180 px, ce qui convient aux champs
     courts (date, montant, statut) et écrase les autres : un sélecteur de
@@ -260,7 +362,10 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     libre se retrouvait dans le tiers le plus étroit (signalé à l'écran le
     16/08/2026). À poser sur le champ, pas sur la grille — c'est le contenu qui
     décide de sa largeur, pas l'écran qui l'accueille. */
-.form-grid .champ-large, .field.champ-large { grid-column: 1 / -1; }
+.form-grid .champ-large,
+.field.champ-large {
+	grid-column: 1 / -1;
+}
 /*  TROIS largeurs, et trois seulement — arbitré à l'écran le 19/08/2026 (#489).
     « Deux se retiennent, quatre se réinventent » : il y en avait quatre, toutes
     écrites EN LIGNE dans les pages (120px, 100px, 200px, 9rem), chacune
@@ -276,14 +381,24 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 
     ⚠️ À poser sur le CHAMP, jamais sur la grille : c'est le contenu qui décide
     de sa largeur, pas l'écran qui l'accueille. */
-.field.champ-court input, .field.champ-court select, .input-champ-court { max-width: 8rem; }
-.field.champ-moyen input, .field.champ-moyen select, .input-champ-moyen { max-width: 14rem; }
+.field.champ-court input,
+.field.champ-court select,
+.input-champ-court {
+	max-width: 8rem;
+}
+.field.champ-moyen input,
+.field.champ-moyen select,
+.input-champ-moyen {
+	max-width: 14rem;
+}
 /*  Un champ posé dans une RANGÉE — barre d’outils, ligne d’action, formulaire
     en ligne — et non dans une pile : l’espacement y est porté par le `gap` du
     parent, exactement comme dans `.form-grid`. Sans ce modificateur, chaque
     appelant écrivait `style="margin-bottom:0"`, c’est-à-dire une seconde valeur
     libre de diverger de celle de `.field` (#413, refusé par `lint:styles`). */
-.field.champ-en-ligne { margin-bottom: 0; }
+.field.champ-en-ligne {
+	margin-bottom: 0;
+}
 
 /*  Le <label> peut ENVELOPPER son champ — c'est même la forme la plus sûre :
     l'association label/champ est alors implicite et native, rien ne peut la
@@ -291,7 +406,11 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     le label d'un `.field` en div. Constaté en convertissant #374 : séparer le
     label du champ avait produit 39 avertissements « a form label must be
     associated with a control » — l'inverse du but recherché. */
-label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
+label.field {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--color-text);
+}
 /*  ⚠️ DÉFINITION UNIQUE du champ de saisie. Elle l'était si peu qu'`app.css`
     la portait DEUX FOIS — ici et 300 lignes plus bas — avec des valeurs
     différentes : `.5rem .75rem` contre `.45rem .6rem`, et surtout un fond blanc
@@ -306,48 +425,70 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 .field input,
 .field select,
 .field textarea {
-  width: 100%;
-  padding: .45rem .6rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size: .9rem;
-  background: var(--color-bg);
-  color: var(--color-text);
-  transition: border-color .15s;
+	width: 100%;
+	padding: 0.45rem 0.6rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	font-size: 0.9rem;
+	background: var(--color-bg);
+	color: var(--color-text);
+	transition: border-color 0.15s;
 }
 /*  Champ en LECTURE SEULE — il se voit, il ne se saisit pas. Écrit une seule
     fois dans `mon-lot` (les champs du locataire, verrouillés dès qu’un compte
     existant est reconnu) ; c’est une notion du champ, pas de cette page (#413). */
 .field input[readonly],
-.field textarea[readonly] { background: var(--color-surface-alt, #f8f9fa); color: var(--color-text-muted); cursor: default; }
+.field textarea[readonly] {
+	background: var(--color-surface-alt, #f8f9fa);
+	color: var(--color-text-muted);
+	cursor: default;
+}
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+	outline: none;
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 /* ── Badges ── */
 .badge {
-  display: inline-block;
-  padding: .15rem .5rem;
-  border-radius: 9999px;
-  font-size: .75rem;
-  font-weight: 600;
+	display: inline-block;
+	padding: 0.15rem 0.5rem;
+	border-radius: 9999px;
+	font-size: 0.75rem;
+	font-weight: 600;
 }
 
-.badge-blue   { background: var(--color-primary-light); color: var(--color-primary); }
-.badge-green  { background: #E6F4EE; color: #2E7D52; }
-.badge-orange { background: #FDF3E0; color: #B07D1E; }
-.badge-red    { background: #FDEDEC; color: #C0392B; }
-.badge-gray   { background: #EAEDF1; color: var(--color-text-muted); }
+.badge-blue {
+	background: var(--color-primary-light);
+	color: var(--color-primary);
+}
+.badge-green {
+	background: #e6f4ee;
+	color: #2e7d52;
+}
+.badge-orange {
+	background: #fdf3e0;
+	color: #b07d1e;
+}
+.badge-red {
+	background: #fdedec;
+	color: #c0392b;
+}
+.badge-gray {
+	background: #eaedf1;
+	color: var(--color-text-muted);
+}
 /*  Le jeu comptait six couleurs et le code en demandait une SEPTIÈME : douze
     emplois de `.badge-yellow` — statut de bail « en cours de sortie », message
     non lu — pour une classe définie nulle part. Le badge se rendait donc en gris
     de base, et l’état « en cours » était indistinguable de « inactif ».
     Valeurs prises dans la même échelle que `.badge-orange` (#495). */
-.badge-yellow { background: #FEF9E7; color: #A16207; }
+.badge-yellow {
+	background: #fef9e7;
+	color: #a16207;
+}
 
 /* ── Intitulé d'une section dans une page ──
    Écrit NEUF fois localement, avec neuf valeurs, et employé dans CINQ fichiers
@@ -363,16 +504,44 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
    déjà, et ce lot ne fait que combler les cinq trous. Les unifier est un
    arbitrage — trois d’entre elles portent une AUTRE notion, un vrai titre en
    1rem, qui mérite son propre nom. Suivi en #495. */
-.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .75rem; }
+.section-title {
+	font-size: 0.8rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.75rem;
+}
 
 /* ── Écrans d’authentification ──
    Connexion, inscription et mot de passe oublié les définissaient chacun de son
    côté ; `verifier-email` les employait sans aucune définition, et s’affichait
    donc sans carte, sans centrage et sans logo (#495). */
-.auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg); padding: 1rem; }
-.auth-card { width: 100%; max-width: 400px; padding: 2rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); }
-.auth-header { text-align: center; margin-bottom: 1.5rem; }
-.auth-logo { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-bg);
+	padding: 1rem;
+}
+.auth-card {
+	width: 100%;
+	max-width: 400px;
+	padding: 2rem;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+}
+.auth-header {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+.auth-logo {
+	font-size: 2.5rem;
+	display: block;
+	margin-bottom: 0.5rem;
+}
 
 /* ── Six notions partagées, définies dans UN fichier et employées dans PLUSIEURS ──
 
@@ -389,19 +558,38 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 
 /*  Une rangée de pastilles de périmètre. Employée par `PerimetrePicker`, l’espace
     CS, la résidence et l’annonce de hall — celle-ci ne l’avait pas. */
-.perimetre-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+.perimetre-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
 
 /*  Boîte de dialogue. `espace-cs` l’employait sans aucune définition : sa modale
     s’affichait sans fond ni cadre, à même la page assombrie. */
-.modal-box { background: var(--color-surface); border-radius: var(--radius); padding: 1.25rem; max-width: 560px; width: 92%; max-height: 88vh; overflow-y: auto; }
+.modal-box {
+	background: var(--color-surface);
+	border-radius: var(--radius);
+	padding: 1.25rem;
+	max-width: 560px;
+	width: 92%;
+	max-height: 88vh;
+	overflow-y: auto;
+}
 /*  Le pied d’une boîte de dialogue à DEUX gestes opposés (annuler ↔ supprimer),
     d’où `space-between` — à ne pas confondre avec `.modal-footer`, qui aligne à
     droite, ni avec `.form-actions`, qui soumet un formulaire. */
-.modal-actions { display: flex; justify-content: space-between; gap: .5rem; margin-top: 1rem; }
+.modal-actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-top: 1rem;
+}
 
 /*  Un événement urgent, marqué par un filet rouge à gauche. Défini par
     `CarteEvenement`, employé aussi par la page du calendrier. */
-.event-urgent { border-left: 3px solid var(--color-danger); }
+.event-urgent {
+	border-left: 3px solid var(--color-danger);
+}
 
 /* ── Le tableau kanban ────────────────────────────────────────────────────────
 
@@ -427,87 +615,213 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
    Ce qui reste LOCAL, à raison : la barre d'outils et l'exercice du calendrier,
    ses cartes dépliables et son glisser-déposer ; les boutons d'étape et la méta
    d'un devis. Ce sont des gestes propres à chaque écran, pas la grille commune. */
-.kanban { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: .5rem; }
-.kanban-col { min-width: 220px; flex: 1; border-radius: var(--radius); background: var(--color-bg); border: 1px solid var(--color-border); overflow: hidden; }
+.kanban {
+	display: flex;
+	gap: 0.6rem;
+	align-items: flex-start;
+	margin-bottom: 1.5rem;
+	overflow-x: auto;
+	padding-bottom: 0.5rem;
+}
+.kanban-col {
+	min-width: 220px;
+	flex: 1;
+	border-radius: var(--radius);
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	overflow: hidden;
+}
 /*  Une colonne pleine largeur sous 900 px : empilées, elles se lisent ; côte à
     côte, elles imposent un défilement horizontal sur un téléphone. */
-@media (max-width: 900px) { .kanban { flex-direction: column; } .kanban-col { min-width: 100%; } }
-.kanban-col-header { display: flex; justify-content: space-between; align-items: center; padding: .6rem .9rem; border-top: 3px solid; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
-.kanban-count { background: var(--color-border); border-radius: 999px; padding: .1rem .45rem; font-size: .72rem; font-weight: 700; }
-.kanban-count-total { font-size: .8rem; color: var(--color-text-muted); }
-.kanban-empty { padding: 1rem; font-size: .85rem; color: var(--color-text-muted); text-align: center; }
+@media (max-width: 900px) {
+	.kanban {
+		flex-direction: column;
+	}
+	.kanban-col {
+		min-width: 100%;
+	}
+}
+.kanban-col-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.6rem 0.9rem;
+	border-top: 3px solid;
+	font-weight: 600;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.kanban-count {
+	background: var(--color-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.45rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+}
+.kanban-count-total {
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+}
+.kanban-empty {
+	padding: 1rem;
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	text-align: center;
+}
 /*  `opacity` dans la transition sert le glisser-déposer du calendrier ; elle est
     sans effet là où rien ne se glisse — d'où le superset plutôt qu'une variante. */
-.kanban-card { margin: .3rem; padding: .4rem .55rem; display: flex; flex-direction: column; gap: .15rem; cursor: pointer; transition: box-shadow .15s, opacity .15s; }
-.kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.10); }
+.kanban-card {
+	margin: 0.3rem;
+	padding: 0.4rem 0.55rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	cursor: pointer;
+	transition:
+		box-shadow 0.15s,
+		opacity 0.15s;
+}
+.kanban-card:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
 /*  `min-height` réserve la place de la rangée de tags : sans elle, deux cartes
     voisines dont l'une n'a aucun tag ne s'alignent pas. */
-.kanban-card-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .15rem; min-height: .1rem; }
-.kb-tag { font-size: .65rem; font-weight: 600; padding: .1rem .4rem; border-radius: 3px; color: #fff; line-height: 1.4; }
-.kanban-card-prest { font-size: .68rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kanban-card-titre { font-size: .78rem; line-height: 1.3; }
-.kanban-card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: .25rem; gap: .3rem; }
-.kanban-card-actions { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
+.kanban-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-bottom: 0.15rem;
+	min-height: 0.1rem;
+}
+.kb-tag {
+	font-size: 0.65rem;
+	font-weight: 600;
+	padding: 0.1rem 0.4rem;
+	border-radius: 3px;
+	color: #fff;
+	line-height: 1.4;
+}
+.kanban-card-prest {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.kanban-card-titre {
+	font-size: 0.78rem;
+	line-height: 1.3;
+}
+.kanban-card-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	margin-top: 0.25rem;
+	gap: 0.3rem;
+}
+.kanban-card-actions {
+	display: flex;
+	gap: 0.3rem;
+	align-items: center;
+	flex-shrink: 0;
+}
 
 /*  Le geste discret « signaler » au fil d’une carte. Défini par les sondages,
     employé aussi par la carte d’annonce. */
-.signaler-inline { background: none; border: none; cursor: pointer; font-size: .78rem; color: var(--color-text-muted); opacity: .7; padding: 0 0 0 .5rem; }
-.signaler-inline:hover { opacity: 1; color: var(--color-danger); }
-.badge-purple { background: #F3E8FF; color: #6B21A8; }
+.signaler-inline {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	opacity: 0.7;
+	padding: 0 0 0 0.5rem;
+}
+.signaler-inline:hover {
+	opacity: 1;
+	color: var(--color-danger);
+}
+.badge-purple {
+	background: #f3e8ff;
+	color: #6b21a8;
+}
 /* Pastille de type du fil d'activité. Ici et pas dans un composant : elle est
    portée à la fois par les cartes du fil (FluxCard) et par le bandeau des
    urgences du tableau de bord — deux composants, donc deux portées Svelte
    distinctes, pour une seule et même pastille. */
 .flux-type-chip {
-  font-size: .65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  padding: .12rem .5rem;
-  border-radius: 1rem;
+	font-size: 0.65rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.12rem 0.5rem;
+	border-radius: 1rem;
 }
 
 /* ── Table ── */
 .table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .875rem;
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.875rem;
 }
 .table th {
-  padding: .5rem .75rem;
-  text-align: left;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  font-size: .75rem;
+	padding: 0.5rem 0.75rem;
+	text-align: left;
+	background: var(--color-bg);
+	border-bottom: 1px solid var(--color-border);
+	font-weight: 600;
+	color: var(--color-text-muted);
+	text-transform: uppercase;
+	font-size: 0.75rem;
 }
 .table td {
-  padding: .75rem;
-  border-bottom: 1px solid var(--color-border);
+	padding: 0.75rem;
+	border-bottom: 1px solid var(--color-border);
 }
-.table tbody tr:hover { background: var(--color-bg); }
+.table tbody tr:hover {
+	background: var(--color-bg);
+}
 
 /* ── Alerts ── */
 .alert {
-  padding: .75rem 1rem;
-  border-radius: var(--radius);
-  margin-bottom: 1rem;
-  font-size: .875rem;
+	padding: 0.75rem 1rem;
+	border-radius: var(--radius);
+	margin-bottom: 1rem;
+	font-size: 0.875rem;
 }
-.alert-error   { background: #FDEDEC; color: #C0392B; border: 1px solid #E8A99D; }
-.alert-success { background: #E6F4EE; color: #2E7D52; border: 1px solid #9DCFB3; }
-.alert-warning { background: #FDF3E0; color: #B07D1E; border: 1px solid #E8C87A; }
-.alert-info    { background: var(--color-primary-light); color: var(--color-primary-dark); border: 1px solid #9BB3CC; }
+.alert-error {
+	background: #fdedec;
+	color: #c0392b;
+	border: 1px solid #e8a99d;
+}
+.alert-success {
+	background: #e6f4ee;
+	color: #2e7d52;
+	border: 1px solid #9dcfb3;
+}
+.alert-warning {
+	background: #fdf3e0;
+	color: #b07d1e;
+	border: 1px solid #e8c87a;
+}
+.alert-info {
+	background: var(--color-primary-light);
+	color: var(--color-primary-dark);
+	border: 1px solid #9bb3cc;
+}
 
 /* ── Empty state ── */
 .empty-state {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--color-text-muted);
+	text-align: center;
+	padding: 3rem 1rem;
+	color: var(--color-text-muted);
 }
-.empty-state h3 { font-size: 1rem; margin-bottom: .5rem; color: var(--color-text); }
+.empty-state h3 {
+	font-size: 1rem;
+	margin-bottom: 0.5rem;
+	color: var(--color-text);
+}
 
 /* ── Barre de filtres ──
    Remontée ici le 18/08/2026 en découpant l'onglet Annonces : le composant
@@ -528,7 +842,13 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     `align-items: center` vient de tickets, seule page à l'avoir. Il n'y change
     rien tant que les contrôles ont la même hauteur — et il est juste dès qu'un
     seul est plus haut, ce qui arrive au premier bouton icône ajouté. */
-.filters { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
+.filters {
+	display: flex;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-bottom: 1.25rem;
+}
 
 /* ── Case à cocher ──
    Une case et son libellé sur une ligne, cliquables ensemble.
@@ -546,9 +866,18 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
    Les variantes restent NOMMÉES et locales : `.case + .case` (espacement d'une
    pile de cases, événement), `.case-secondaire` (case d'option sous un champ,
    sondage). Ce qui diffère se lit dans le balisage. */
-.case { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .875rem; }
-.case input[type="checkbox"] { width: auto; margin: 0; flex-shrink: 0; }
-
+.case {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+}
+.case input[type='checkbox'] {
+	width: auto;
+	margin: 0;
+	flex-shrink: 0;
+}
 
 /*  Variante NOMMÉE — une seule ligne qui défile, au lieu de passer à la ligne.
     Prestataires la porte sur ses deux barres : elles ont assez de filtres pour
@@ -557,47 +886,102 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     ⚠️ Ce n'est PAS le comportement par défaut, et c'est délibéré : un défilement
     horizontal masque des filtres sans le dire, là où `flex-wrap: wrap` les montre
     tous. La variante s'écrit donc là où on l'a voulue, elle ne s'hérite pas. */
-.filters--defilante { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
-.filters--defilante > * { flex-shrink: 0; }
+.filters--defilante {
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	padding-bottom: 0.25rem;
+	scrollbar-width: thin;
+}
+.filters--defilante > * {
+	flex-shrink: 0;
+}
 .filter-select {
-  padding: .35rem .5rem; border: 1px solid var(--color-border);
-  border-radius: var(--radius); font-size: .85rem; background: var(--color-bg);
+	padding: 0.35rem 0.5rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	font-size: 0.85rem;
+	background: var(--color-bg);
 }
 
 /* ── Modals (global) ── */
 .modal-overlay {
-  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
-  background: rgba(0,0,0,.45);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 200; padding: 1rem;
-  animation: fadeIn .15s ease;
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: rgba(0, 0, 0, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 200;
+	padding: 1rem;
+	animation: fadeIn 0.15s ease;
 }
 .modal {
-  background: var(--color-surface);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
-  max-width: 600px; width: 100%;
-  max-height: 90vh; overflow-y: auto;
-  animation: slideUp .2s ease;
+	background: var(--color-surface);
+	border-radius: var(--radius);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+	max-width: 600px;
+	width: 100%;
+	max-height: 90vh;
+	overflow-y: auto;
+	animation: slideUp 0.2s ease;
 }
-.modal-sm { max-width: 420px; }
+.modal-sm {
+	max-width: 420px;
+}
 .modal-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.25rem;
+	border-bottom: 1px solid var(--color-border);
 }
-.modal-header h2 { font-size: 1.1rem; margin: 0; }
+.modal-header h2 {
+	font-size: 1.1rem;
+	margin: 0;
+}
 .modal-close {
-  background: none; border: none; font-size: 1.5rem; cursor: pointer;
-  color: var(--color-text-muted); padding: .25rem; line-height: 1;
+	background: none;
+	border: none;
+	font-size: 1.5rem;
+	cursor: pointer;
+	color: var(--color-text-muted);
+	padding: 0.25rem;
+	line-height: 1;
 }
-.modal-close:hover { color: var(--color-text); }
-.modal-body { padding: 1.25rem; }
+.modal-close:hover {
+	color: var(--color-text);
+}
+.modal-body {
+	padding: 1.25rem;
+}
 .modal-footer {
-  display: flex; justify-content: flex-end; gap: .5rem;
-  padding: 1rem 1.25rem; border-top: 1px solid var(--color-border);
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	padding: 1rem 1.25rem;
+	border-top: 1px solid var(--color-border);
 }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
 
 /* ── Ligne de document ────────────────────────────────────────────────────────
    🔴 Remontée ici le 29/08/2026 (#491). Elle vivait dans le `<style>` de
@@ -614,36 +998,53 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
 
    C'est la règle que le contrôle énonce lui-même : une notion PARTAGÉE par
    plusieurs écrans se remonte dans `src/styles/`, elle ne se recopie pas. */
-.doc-list { display: flex; flex-direction: column; gap: .4rem; }
+.doc-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
 .doc-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: .7rem 1rem;
-	gap: .75rem;
+	padding: 0.7rem 1rem;
+	gap: 0.75rem;
 }
 .doc-info {
 	display: flex;
 	align-items: center;
-	gap: .5rem;
+	gap: 0.5rem;
 	flex: 1;
 	min-width: 0;
 	flex-wrap: wrap;
 }
-.doc-titre { font-weight: 500; font-size: .9rem; }
+.doc-titre {
+	font-weight: 500;
+	font-size: 0.9rem;
+}
 .doc-date {
-	font-size: .78rem;
+	font-size: 0.78rem;
 	color: var(--color-text-muted);
 	margin-left: auto;
 	white-space: nowrap;
 }
-.doc-actions { display: flex; gap: .35rem; flex-shrink: 0; }
+.doc-actions {
+	display: flex;
+	gap: 0.35rem;
+	flex-shrink: 0;
+}
 
 /*  Sous 480 px, la ligne passe en colonne : à trois éléments (icône, titre,
     actions) elle déborde sinon, et les boutons sortent de l'écran. */
 @media (max-width: 480px) {
-	.doc-row { flex-direction: column; align-items: stretch; gap: .5rem; }
-	.doc-actions { justify-content: flex-end; }
+	.doc-row {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+	.doc-actions {
+		justify-content: flex-end;
+	}
 }
 
 /*  En-tête d'une section administrable : le résumé en lecture, et la rangée de
@@ -658,8 +1059,18 @@ label.field { font-size: .875rem; font-weight: 500; color: var(--color-text); }
     Deux fichiers les emploient : les recopier aurait donné deux sources pour la
     même règle, qui divergent au premier ajustement. */
 .header-summary {
-display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
-font-size: .875rem; color: var(--color-text-muted);
-margin-bottom: 1rem; padding: .4rem 0;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	font-size: 0.875rem;
+	color: var(--color-text-muted);
+	margin-bottom: 1rem;
+	padding: 0.4rem 0;
 }
-.header-edit-actions { display: flex; gap: .5rem; align-items: center; padding-top: .25rem; }
+.header-edit-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	padding-top: 0.25rem;
+}

@@ -127,9 +127,9 @@ if (erreurs.length) {
 	for (const e of erreurs) console.error(`  • ${e}`);
 	console.error(
 		'\n🔴 Règle (`SectionFormulaire`, 16/08/2026) : une section qui nomme son contenu\n' +
-			"   ne le laisse pas se nommer lui-même. Poser titre=\"\" sur le champ, et pour=\n" +
-			"   sur la section quand le champ est labelable — le titre devient alors un vrai\n" +
-			'   <label for>, ce dont un lecteur d\'écran a besoin.\n',
+			'   ne le laisse pas se nommer lui-même. Poser titre="" sur le champ, et pour=\n' +
+			'   sur la section quand le champ est labelable — le titre devient alors un vrai\n' +
+			"   <label for>, ce dont un lecteur d'écran a besoin.\n",
 	);
 	process.exit(1);
 }

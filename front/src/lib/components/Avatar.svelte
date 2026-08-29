@@ -40,13 +40,21 @@
 		background: var(--avatar-bg, var(--color-primary));
 		color: var(--avatar-color, #fff);
 		box-shadow: var(--avatar-ring, none);
-		display: flex; align-items: center; justify-content: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		font-weight: 700;
-		font-size: calc(var(--avatar-size, 2.5rem) * .38);
+		font-size: calc(var(--avatar-size, 2.5rem) * 0.38);
 		line-height: 1;
 		flex-shrink: 0;
 		overflow: hidden;
 	}
-	img.avatar { object-fit: cover; background: none; }
-	.avatar-generique :global(svg) { width: 55%; height: 55%; }
+	img.avatar {
+		object-fit: cover;
+		background: none;
+	}
+	.avatar-generique :global(svg) {
+		width: 55%;
+		height: 55%;
+	}
 </style>

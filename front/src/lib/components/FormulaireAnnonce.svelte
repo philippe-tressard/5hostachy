@@ -156,8 +156,12 @@
 		<SectionFormulaire premiere>
 			<div class="field champ-large">
 				<label for="annonce-titre-{annonce?.id ?? 'new'}">Titre *</label>
-				<input id="annonce-titre-{annonce?.id ?? 'new'}" bind:value={titre} required
-					placeholder="Ex. Lave-linge Samsung presque neuf" />
+				<input
+					id="annonce-titre-{annonce?.id ?? 'new'}"
+					bind:value={titre}
+					required
+					placeholder="Ex. Lave-linge Samsung presque neuf"
+				/>
 			</div>
 		</SectionFormulaire>
 
@@ -180,8 +184,14 @@
 					{#if typeAnnonce === 'vente'}
 						<div class="field">
 							<label for="annonce-prix-{annonce?.id ?? 'new'}">Prix (€)</label>
-							<input id="annonce-prix-{annonce?.id ?? 'new'}" type="number" min="0" step="0.01"
-								bind:value={prix} placeholder="0.00" />
+							<input
+								id="annonce-prix-{annonce?.id ?? 'new'}"
+								type="number"
+								min="0"
+								step="0.01"
+								bind:value={prix}
+								placeholder="0.00"
+							/>
 						</div>
 						<div class="field">
 							<label class="case">
@@ -199,8 +209,11 @@
 		      aussi, dans son raccourci. -->
 		{#if sectionPresente(ANNONCE, etat, 'workflow')}
 			<SectionFormulaire titre="Où en est cette annonce ?">
-				<WorkflowPastilles options={OPTIONS_STATUT_ANNONCE} valeur={statut}
-					on:choisir={(e) => (statut = e.detail)} />
+				<WorkflowPastilles
+					options={OPTIONS_STATUT_ANNONCE}
+					valeur={statut}
+					on:choisir={(e) => (statut = e.detail)}
+				/>
 			</SectionFormulaire>
 		{/if}
 
@@ -209,9 +222,12 @@
 		      divergence avec son motif. -->
 		<ChampsCommuns
 			idPrefixe="annonce-{annonce?.id ?? 'new'}"
-			avecPerimetre={sectionPresente(ANNONCE, etat, 'perimetre')} bind:perimetre={perimetreCible}
+			avecPerimetre={sectionPresente(ANNONCE, etat, 'perimetre')}
+			bind:perimetre={perimetreCible}
 			avecDestinataires={sectionPresente(ANNONCE, etat, 'destinataires')}
-			avecDescription={sectionPresente(ANNONCE, etat, 'description')} descriptionRequise bind:description
+			avecDescription={sectionPresente(ANNONCE, etat, 'description')}
+			descriptionRequise
+			bind:description
 			descriptionPlaceholder="Décrivez l'objet, son état, conditions de remise…"
 			avecPhotos={sectionPresente(ANNONCE, etat, 'photos')}
 			avecDocuments={sectionPresente(ANNONCE, etat, 'documents')}
@@ -232,7 +248,9 @@
 		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
 		      de seconde commande d'annulation (#367). -->
 		<div class="form-actions">
-			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+				>Annuler</button
+			>
 			<button class="btn btn-primary" disabled={submitting}>
 				{submitting ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
@@ -241,7 +259,9 @@
 </FormulaireCreation>
 
 <style>
-	.form-grid .field { margin-bottom: 0; }
+	.form-grid .field {
+		margin-bottom: 0;
+	}
 
 	/*  La case et son libellé, côte à côte. Ce qui les séparait : la page portait
 	    `input, textarea { width: 100% }`, un sélecteur d'ÉLÉMENT nu qui atteignait

@@ -86,12 +86,14 @@
 	{#if titre}
 		{#if pour}
 			<label class="section-titre" for={pour} id={idTitre || undefined}>
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis} *{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}
+					*{/if}
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</label>
 		{:else}
 			<h4 class="section-titre" id={idTitre || undefined}>
-				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis} *{/if}
+				{#if icone}<Icon name={icone} size={15} />{/if}{titre}{#if requis}
+					*{/if}
 				{#if badge}<span class="badge badge-green section-badge">{badge}</span>{/if}
 			</h4>
 		{/if}
@@ -102,8 +104,8 @@
 <style>
 	.section-formulaire {
 		border-top: 1px solid var(--color-border);
-		padding-top: .9rem;
-		margin-top: .9rem;
+		padding-top: 0.9rem;
+		margin-top: 0.9rem;
 	}
 	/*  La première section n'est séparée de rien : le titre de la boîte
 	    (`FormulaireCreation`) joue déjà ce rôle au-dessus d'elle. */
@@ -119,13 +121,13 @@
 	.section-titre {
 		display: flex;
 		align-items: center;
-		gap: .4rem;
+		gap: 0.4rem;
 		flex-wrap: wrap;
-		margin: 0 0 .6rem;
-		font-size: .72rem;
+		margin: 0 0 0.6rem;
+		font-size: 0.72rem;
 		font-weight: 700;
 		text-transform: uppercase;
-		letter-spacing: .06em;
+		letter-spacing: 0.06em;
 		color: var(--color-text);
 	}
 	/*  Un `<label>` de section désigne un contrôle : il doit se cliquer. */
@@ -135,7 +137,7 @@
 	/*  Le badge ne suit PAS les petites capitales du titre : c'est une valeur,
 	    pas un intitulé — la lire en majuscules espacées la rendrait illisible. */
 	.section-badge {
-		font-size: .72rem;
+		font-size: 0.72rem;
 		text-transform: none;
 		letter-spacing: normal;
 		font-weight: 600;

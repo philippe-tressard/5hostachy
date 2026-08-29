@@ -3,7 +3,13 @@
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { currentUser, isCS, isAdmin, setUser } from '$lib/stores/auth';
-	import { publications as pubsApi, documents as docsApi, ApiError, type Publication, auth as authApi } from '$lib/api';
+	import {
+		publications as pubsApi,
+		documents as docsApi,
+		ApiError,
+		type Publication,
+		auth as authApi,
+	} from '$lib/api';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import { optionsActives, libelleOptionsActives } from '$lib/options-publication';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -47,7 +53,9 @@
 		try {
 			const docs = await docsApi.listByPublication(pubId);
 			pubFilesMap = { ...pubFilesMap, [pubId]: docs };
-		} catch { /* silencieux */ }
+		} catch {
+			/* silencieux */
+		}
 	}
 
 	onMount(async () => {
@@ -62,7 +70,10 @@
 			//  Rien n'est déplié d'office : la page s'ouvre sur une LISTE. La branche du dessus reste — un lien `#pub-<id>` doit ouvrir l'article visé.
 			// Persist last-seen timestamp server-side
 			const now = new Date().toISOString();
-			authApi.updateMe({ last_seen_actualites: now }).then((u: any) => setUser(u)).catch(() => {});
+			authApi
+				.updateMe({ last_seen_actualites: now })
+				.then((u: any) => setUser(u))
+				.catch(() => {});
 		} finally {
 			loading = false;
 		}
@@ -106,7 +117,7 @@
 	let editingPub: Publication | null = null;
 
 	// ── Évolutions ──────────────────────────────────────────────────────
-	let showEvolForm: number | null = null;  // pub.id ouvert
+	let showEvolForm: number | null = null; // pub.id ouvert
 	let evolSaving = false;
 
 	//  UN point d'entrée (#426) : le formulaire porte les DEUX gestes, et lequel a
@@ -135,7 +146,7 @@
 				fichiers_urls: data.fichiers_urls,
 				email_externe: data.email_externe || undefined,
 			});
-			pubList = pubList.map(p => {
+			pubList = pubList.map((p) => {
 				if (p.id !== pub.id) return p;
 				const updated = { ...p, evolutions: [...(p.evolutions ?? []), evol] };
 				if (data.type === 'etat') updated.statut = evol.nouveau_statut as any;
@@ -145,7 +156,9 @@
 			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (err: any) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { evolSaving = false; }
+		} finally {
+			evolSaving = false;
+		}
 	}
 
 	async function saveEvolEdit(e: CustomEvent) {
@@ -156,14 +169,23 @@
 				contenu: e.detail.contenu || undefined,
 				fichiers_urls: e.detail.fichiers_urls,
 			});
-			pubList = pubList.map(p => {
+			pubList = pubList.map((p) => {
 				if (p.id !== editingEvolPubId) return p;
-				return { ...p, evolutions: (p.evolutions ?? []).map(ev => ev.id === editingEvolId ? updated as any : ev) };
+				return {
+					...p,
+					evolutions: (p.evolutions ?? []).map((ev) =>
+						ev.id === editingEvolId ? (updated as any) : ev,
+					),
+				};
 			});
-			editingEvolId = null; editingEvolPubId = null;
+			editingEvolId = null;
+			editingEvolPubId = null;
 			toast('success', 'Commentaire mis à jour');
-		} catch { toast('error', 'Erreur de mise à jour'); }
-		finally { editEvolSaving = false; }
+		} catch {
+			toast('error', 'Erreur de mise à jour');
+		} finally {
+			editEvolSaving = false;
+		}
 	}
 
 	//  Effacer une entrée du fil — ADMIN seulement, revérifié par le serveur
@@ -172,11 +194,15 @@
 	async function supprimerEvol(pub: Publication, evolId: number) {
 		try {
 			await pubsApi.deleteEvolution(pub.id, evolId);
-			pubList = pubList.map(p => p.id !== pub.id
-				? p
-				: { ...p, evolutions: (p.evolutions ?? []).filter(ev => ev.id !== evolId) });
+			pubList = pubList.map((p) =>
+				p.id !== pub.id
+					? p
+					: { ...p, evolutions: (p.evolutions ?? []).filter((ev) => ev.id !== evolId) },
+			);
 			toast('success', 'Entrée supprimée');
-		} catch { toast('error', 'Erreur de suppression'); }
+		} catch {
+			toast('error', 'Erreur de suppression');
+		}
 	}
 
 	// ── Options de publication : le raccourci vers la SECTION 2 ─────────
@@ -246,7 +272,6 @@
 		pubList = pubList.map((p) => (p.id === e.detail.id ? e.detail : p));
 		editingPub = null;
 	}
-
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
@@ -279,12 +304,16 @@
 {:else}
 	{#each pubList as pub (pub.id)}
 		{@const expanded = expandedPubs.has(pub.id)}
-		<CarteActualite {pub} {expanded}
+		<CarteActualite
+			{pub}
+			{expanded}
 			apercu={!compactPubs}
 			documents={pubFilesMap[pub.id] ?? []}
-			formulaireOuvert={editingPub?.id === pub.id || showEvolForm === pub.id || optionsPub?.id === pub.id}
-			on:toggle={() => togglePub(pub.id)}>
-
+			formulaireOuvert={editingPub?.id === pub.id ||
+				showEvolForm === pub.id ||
+				optionsPub?.id === pub.id}
+			on:toggle={() => togglePub(pub.id)}
+		>
 			<!--  L'ORDRE DES ICÔNES est celui de la carte de ticket, désigné comme
 			      référence le 18/08/2026 : 🔄 commenter · ✏️ modifier · 🗑️ supprimer.
 			      Il était inversé ici, et deux cartes du même site ne se lisaient pas
@@ -300,11 +329,20 @@
 			      publication bascule dans l'Historique au bout de son délai. -->
 			<svelte:fragment slot="actions">
 				{#if $isCS}
-					<button class="btn-icon" aria-pressed={showEvolForm === pub.id} aria-label="Commenter"
+					<button
+						class="btn-icon"
+						aria-pressed={showEvolForm === pub.id}
+						aria-label="Commenter"
 						title="Commenter"
-						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button>
-					<button class="btn-icon-edit" aria-pressed={editingPub?.id === pub.id} aria-label="Modifier" title="Modifier"
-						on:click|stopPropagation={() => startEdit(pub)}>✏️</button>
+						on:click|stopPropagation={() => ouvrirEvolution(pub)}>&#x1F504;</button
+					>
+					<button
+						class="btn-icon-edit"
+						aria-pressed={editingPub?.id === pub.id}
+						aria-label="Modifier"
+						title="Modifier"
+						on:click|stopPropagation={() => startEdit(pub)}>✏️</button
+					>
 					<!--  Le bouton n'existe QUE si la publication porte au moins une
 					      option : sur une actualité ordinaire il n'y a rien à faire
 					      évoluer, et un bouton inerte se lit comme une panne.
@@ -312,16 +350,23 @@
 					      table — c'est ce qui le rend lisible sans l'ouvrir. -->
 					{#if optionsActives(pub).length > 0}
 						{@const actives = optionsActives(pub)}
-						<button class="btn-icon btn-icon-options" aria-pressed={optionsPub?.id === pub.id}
+						<button
+							class="btn-icon btn-icon-options"
+							aria-pressed={optionsPub?.id === pub.id}
 							aria-label={libelleOptionsActives(pub)}
 							title="{libelleOptionsActives(pub)} — cliquer pour les modifier"
 							on:click|stopPropagation={() => ouvrirOptions(pub)}
-						>{#each actives as o (o.cle)}<span class="opt-glyphe">{o.glyphe}</span>{/each}</button>
+							>{#each actives as o (o.cle)}<span class="opt-glyphe">{o.glyphe}</span>{/each}</button
+						>
 					{/if}
 				{/if}
 				{#if $isAdmin}
-					<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
-						on:click|stopPropagation={() => deletePub(pub)}>🗑️</button>
+					<button
+						class="btn-icon-danger"
+						aria-label="Supprimer"
+						title="Supprimer définitivement"
+						on:click|stopPropagation={() => deletePub(pub)}>🗑️</button
+					>
 				{/if}
 			</svelte:fragment>
 
@@ -348,8 +393,12 @@
 					      périmètre restreint », qu'un panneau réécrit n'aurait pas eue.
 					      `role="presentation"` : ce conteneur n'est qu'un relais, il
 					      arrête la propagation pour que cocher ne referme pas la carte. -->
-					<div class="options-form" role="presentation"
-						on:click|stopPropagation on:keydown|stopPropagation>
+					<div
+						class="options-form"
+						role="presentation"
+						on:click|stopPropagation
+						on:keydown|stopPropagation
+					>
 						<h4 class="options-titre">Options de publication</h4>
 						<OptionsPublication
 							perimetreCible={pub.perimetre_cible ?? []}
@@ -362,11 +411,17 @@
 						<!--  L'annulation vit à côté d'« Enregistrer » — norme du
 						      18/08/2026, la même que sur Tickets et sur l'édition. -->
 						<div class="options-actions">
-							<button class="btn btn-primary btn-sm" disabled={optionsSaving}
+							<button
+								class="btn btn-primary btn-sm"
+								disabled={optionsSaving}
 								on:click={() => enregistrerOptions(pub)}
-							>{optionsSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
-							<button class="btn btn-outline btn-sm" disabled={optionsSaving}
-								on:click={() => (optionsPub = null)}>Annuler</button>
+								>{optionsSaving ? 'Enregistrement…' : 'Enregistrer'}</button
+							>
+							<button
+								class="btn btn-outline btn-sm"
+								disabled={optionsSaving}
+								on:click={() => (optionsPub = null)}>Annuler</button
+							>
 						</div>
 					</div>
 				{:else if showEvolForm === pub.id}
@@ -376,32 +431,38 @@
 					      referme pas la carte, il n'est pas lui-même interactif. Même
 					      geste que `CarteTicket`, qui portait déjà le rôle — ici
 					      l'avertissement d'accessibilité traînait depuis l'origine. -->
-					<div class="evol-form" role="presentation"
-						on:click|stopPropagation on:keydown|stopPropagation>
+					<div
+						class="evol-form"
+						role="presentation"
+						on:click|stopPropagation
+						on:keydown|stopPropagation
+					>
 						{#key showEvolForm}
-						<!--  ⚠️ Les pièces jointes sont DEUX sections, 7 et 8, jamais
+							<!--  ⚠️ Les pièces jointes sont DEUX sections, 7 et 8, jamais
 						      fusionnées : c'est cet écran qui portait le mode « unifié »
 						      d'`EvolForm`, et le mode a disparu avec son dernier appelant
 						      (#433). *Une variante ajoutée pour accueillir un écart
 						      existant ne factorise pas, elle entérine.* -->
-						<!--  ⚠️ AUCUNE option d'état : une actualité n'a pas de workflow
+							<!--  ⚠️ AUCUNE option d'état : une actualité n'a pas de workflow
 						      (arbitré le 18/08/2026). `EvolForm` ne rend donc pas la
 						      section Workflow, et l'entrée est toujours un commentaire —
 						      c'est la liste vide qui le dit, pas une condition en dur. -->
-						<EvolForm idPrefixe="pub-evol-{pub.id}" titre="Commenter"
-							statutOptions={[]}
-							statutLabels={STATUT_LABELS}
-							showNotifs={true}
-							defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
-							defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
-							defaultEnvoyerCs={pub.envoyer_cs ?? false}
-							showEmail={true}
-							showPhotos={true}
-							showDocuments={true}
-							saving={evolSaving}
-							on:submit={(e) => addEvolFromForm(pub, e)}
-							on:cancel={() => (showEvolForm = null)}
-						/>
+							<EvolForm
+								idPrefixe="pub-evol-{pub.id}"
+								titre="Commenter"
+								statutOptions={[]}
+								statutLabels={STATUT_LABELS}
+								showNotifs={true}
+								defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
+								defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
+								defaultEnvoyerCs={pub.envoyer_cs ?? false}
+								showEmail={true}
+								showPhotos={true}
+								showDocuments={true}
+								saving={evolSaving}
+								on:submit={(e) => addEvolFromForm(pub, e)}
+								on:cancel={() => (showEvolForm = null)}
+							/>
 						{/key}
 					</div>
 				{/if}
@@ -424,14 +485,20 @@
 							statutLabels={STATUT_LABELS}
 							peutModifier={$isCS}
 							currentUserId={$currentUser?.id}
-							estAdmin={$isAdmin} avecSuppression
+							estAdmin={$isAdmin}
+							avecSuppression
 							enEdition={editingEvolId}
-							on:modifier={(e) => { editingEvolId = e.detail; editingEvolPubId = pub.id; }}
+							on:modifier={(e) => {
+								editingEvolId = e.detail;
+								editingEvolPubId = pub.id;
+							}}
 							on:supprimer={(e) => supprimerEvol(pub, e.detail)}
 						>
 							<svelte:fragment slot="edition" let:evol>
 								{#key editingEvolId}
-									<EvolForm idPrefixe="pub-evol-edit-{evol.id}" titre="Modifier le commentaire"
+									<EvolForm
+										idPrefixe="pub-evol-edit-{evol.id}"
+										titre="Modifier le commentaire"
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
@@ -439,7 +506,10 @@
 										showDocuments={true}
 										saving={editEvolSaving}
 										on:submit={saveEvolEdit}
-										on:cancel={() => { editingEvolId = null; editingEvolPubId = null; }}
+										on:cancel={() => {
+											editingEvolId = null;
+											editingEvolPubId = null;
+										}}
 									/>
 								{/key}
 							</svelte:fragment>
@@ -460,8 +530,12 @@
 	    balisage qui les porte (#433). Ne reste ici que ce que CETTE page rend :
 	    la marge qui sépare le fil de ce qu'il suit — le parent seul sait ce qu'il
 	    y a au-dessus. */
-	.pub-fil { margin-top: .9rem; }
-	.evol-form { padding: .5rem 0; }
+	.pub-fil {
+		margin-top: 0.9rem;
+	}
+	.evol-form {
+		padding: 0.5rem 0;
+	}
 
 	/*  ── Bouton « options » ────────────────────────────────────────────────
 	    Il porte de un à quatre glyphes, donc sa largeur varie. `btn-icon` fixe
@@ -471,24 +545,42 @@
 	.btn-icon-options {
 		display: inline-flex;
 		align-items: center;
-		gap: .1rem;
+		gap: 0.1rem;
 		width: auto;
 		min-width: 44px;
 		min-height: 44px;
-		padding: 0 .35rem;
+		padding: 0 0.35rem;
 	}
 	/*  Les glyphes se serrent quand ils sont quatre : à taille pleine, le bouton
 	    dépasserait la rangée d'actions sur téléphone. */
-	.btn-icon-options .opt-glyphe { font-size: .8em; line-height: 1; }
+	.btn-icon-options .opt-glyphe {
+		font-size: 0.8em;
+		line-height: 1;
+	}
 
-	.options-form { padding: .5rem 0; }
-	.options-titre { margin: 0 0 .6rem; font-size: .9rem; font-weight: 600; }
-	.options-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+	.options-form {
+		padding: 0.5rem 0;
+	}
+	.options-titre {
+		margin: 0 0 0.6rem;
+		font-size: 0.9rem;
+		font-weight: 600;
+	}
+	.options-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
 	/*  Sur téléphone, les deux boutons prennent toute la largeur plutôt que de
 	    se serrer — même règle que les autres formulaires du site. */
 	@media (max-width: 480px) {
-		.options-actions { flex-direction: column; }
-		.options-actions :global(.btn) { width: 100%; min-height: 44px; }
+		.options-actions {
+			flex-direction: column;
+		}
+		.options-actions :global(.btn) {
+			width: 100%;
+			min-height: 44px;
+		}
 	}
 
 	/*  Les couleurs de badge vivent dans `styles/composants.css`. Cette page les

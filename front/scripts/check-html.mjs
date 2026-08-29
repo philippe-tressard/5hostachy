@@ -54,8 +54,8 @@ const EXCEPTIONS = {
 		'SVG codé en dur dans le composant : `icons[name]` est un littéral du dépôt, ' +
 		"jamais une donnée d'utilisateur. `name` ne sert qu'à choisir une entrée.",
 	'lib/components/QRCode.svelte':
-		'SVG produit LOCALEMENT par `qrcode-generator` à partir d\'une donnée encodée ' +
-		'en modules (carrés noirs et blancs) : la valeur n\'est jamais interpolée dans ' +
+		"SVG produit LOCALEMENT par `qrcode-generator` à partir d'une donnée encodée " +
+		"en modules (carrés noirs et blancs) : la valeur n'est jamais interpolée dans " +
 		'le balisage, elle est convertie en géométrie.',
 };
 
@@ -77,7 +77,9 @@ const SOURCE_SANITIZE = join(RACINE, 'lib', 'sanitize.ts');
 let assainisseurs;
 try {
 	const source = readFileSync(SOURCE_SANITIZE, 'utf8');
-	assainisseurs = new Set([...source.matchAll(/^export function (safe\w+)\s*\(/gm)].map(m => m[1]));
+	assainisseurs = new Set(
+		[...source.matchAll(/^export function (safe\w+)\s*\(/gm)].map((m) => m[1]),
+	);
 } catch {
 	console.error('✗ INCONNU : src/lib/sanitize.ts est illisible.');
 	console.error("Sans la liste des fonctions d'assainissement, ce contrôle ne conclut pas.");
@@ -130,7 +132,11 @@ for (const chemin of fichiers) {
 	const importes = new Set();
 	for (const m of source.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]\$lib\/sanitize['"]/g)) {
 		for (const nom of m[1].split(',')) {
-			const propre = nom.trim().split(/\s+as\s+/).pop().trim();
+			const propre = nom
+				.trim()
+				.split(/\s+as\s+/)
+				.pop()
+				.trim();
 			if (propre) importes.add(propre);
 		}
 	}
@@ -158,7 +164,9 @@ for (const chemin of fichiers) {
 		const ligne = source.slice(0, m.index).split('\n').length;
 		const brut = expression(source, m.index);
 		if (brut === null) {
-			erreurs.push(`${relatif}:${ligne} — accolade non refermée : expression illisible, donc INCONNU.`);
+			erreurs.push(
+				`${relatif}:${ligne} — accolade non refermée : expression illisible, donc INCONNU.`,
+			);
 			continue;
 		}
 		const expr = brut.replace(/^@html\s*/, '').trim();
@@ -174,7 +182,7 @@ for (const chemin of fichiers) {
 		if (appel && assainisseurs.has(appel[1])) {
 			erreurs.push(
 				`${relatif}:${ligne} — ${appel[1]}(…) porte le nom d'un assainisseur mais n'est PAS ` +
-					'importé de `$lib/sanitize` : c\'est une fonction locale, et rien ne dit ce qu\'elle fait.',
+					"importé de `$lib/sanitize` : c'est une fonction locale, et rien ne dit ce qu'elle fait.",
 			);
 		} else {
 			const apercu = expr.length > 60 ? expr.slice(0, 57) + '…' : expr;
@@ -200,7 +208,7 @@ if (prises < PRISES_MINIMALES) {
 }
 
 // ── 4. Une exception qui ne sert plus est une porte qu'on croit fermée ────────
-const mortes = Object.keys(EXCEPTIONS).filter(f => !exceptionsServies.has(f));
+const mortes = Object.keys(EXCEPTIONS).filter((f) => !exceptionsServies.has(f));
 if (mortes.length) {
 	console.error('✗ Exception déclarée et jamais servie — la retirer de `EXCEPTIONS` :\n');
 	for (const f of mortes) console.error(`  • ${f}`);

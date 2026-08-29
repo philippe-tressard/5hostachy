@@ -51,7 +51,7 @@ function fichiersSvelte(dir) {
 	return sortie;
 }
 
-const fichiers = fichiersSvelte(RACINE).filter(f => /[\\/]Formulaire[^\\/]*\.svelte$/.test(f));
+const fichiers = fichiersSvelte(RACINE).filter((f) => /[\\/]Formulaire[^\\/]*\.svelte$/.test(f));
 if (fichiers.length === 0) {
 	console.error('✗ Cas zéro : aucun Formulaire*.svelte trouvé — arborescence changée.');
 	console.error('Ne pas lire ceci comme un succès.');
@@ -84,7 +84,10 @@ for (const chemin of fichiers) {
 
 		//  Le nom de la variable liée, sans son chemin (`form.statut_kanban` → le
 		//  nom complet sert de sonde, `statut` → `statut`).
-		const expr = valeur[1].trim().replace(/\s*\?\?.*$/, '').trim();
+		const expr = valeur[1]
+			.trim()
+			.replace(/\s*\?\?.*$/, '')
+			.trim();
 		const nom = expr.split('.').pop().trim();
 		if (!/^[A-Za-z_$][\w$]*$/.test(nom)) continue;
 
@@ -93,10 +96,7 @@ for (const chemin of fichiers) {
 		//  Apparaît-il ailleurs que dans son propre rendu et sa déclaration ?
 		//  Une charge utile l'écrit soit en abrégé (`statut,`), soit nommément
 		//  (`statut: x`, `payload.statut = x`, `statut_kanban: …`).
-		const dansCharge = new RegExp(
-			`(^|[^\\w$.])${nom}\\s*[,:]|\\.${nom}\\s*=|\\b${nom}:\\s`,
-			'm',
-		);
+		const dansCharge = new RegExp(`(^|[^\\w$.])${nom}\\s*[,:]|\\.${nom}\\s*=|\\b${nom}:\\s`, 'm');
 		//  On retire la balise elle-même et la déclaration `let nom = …` avant de
 		//  chercher : sinon le rendu se répondrait à lui-même.
 		const sansRendu = source

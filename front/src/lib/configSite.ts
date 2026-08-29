@@ -57,13 +57,13 @@ export const CONFIG_SITE_DEFAUT: ConfigSite = {
 	site_manager_user_id: '',
 	whatsapp_footer: '— Le Conseil Syndical',
 	email_footer: '— Envoyé depuis 5hostachy.fr',
-	reference_copro: ''
+	reference_copro: '',
 };
 
 /** Configuration stockée → formulaire. */
 export function lireConfigSite(
 	cfg: Record<string, string>,
-	legal: { mentions_legales?: string; politique_confidentialite?: string } = {}
+	legal: { mentions_legales?: string; politique_confidentialite?: string } = {},
 ): ConfigSite {
 	return {
 		nom: cfg['site_nom'] ?? CONFIG_SITE_DEFAUT.nom,
@@ -81,7 +81,7 @@ export function lireConfigSite(
 		site_manager_user_id: cfg['site_manager_user_id'] ?? '',
 		whatsapp_footer: cfg['whatsapp_footer'] ?? CONFIG_SITE_DEFAUT.whatsapp_footer,
 		email_footer: cfg['email_footer'] ?? CONFIG_SITE_DEFAUT.email_footer,
-		reference_copro: cfg['reference_copro'] ?? ''
+		reference_copro: cfg['reference_copro'] ?? '',
 	};
 }
 
@@ -100,13 +100,15 @@ export function ecrireConfigSite(c: ConfigSite): Record<string, string> {
 		login_sous_titre: c.login_sous_titre,
 		mentions_legales: c.mentions_legales,
 		politique_confidentialite: c.politique_confidentialite,
-		archivage_delai_jours: String(c.archivage_delai_jours || CONFIG_SITE_DEFAUT.archivage_delai_jours),
+		archivage_delai_jours: String(
+			c.archivage_delai_jours || CONFIG_SITE_DEFAUT.archivage_delai_jours,
+		),
 		relance_syndic_delai_jours: String(c.relance_syndic_delai_jours),
 		notify_ticket_bug_email: c.notify_ticket_bug_email ? '1' : '0',
 		notify_new_user_created_email: c.notify_new_user_created_email ? '1' : '0',
 		site_manager_user_id: c.site_manager_user_id || '',
 		whatsapp_footer: c.whatsapp_footer,
 		email_footer: c.email_footer,
-		reference_copro: c.reference_copro
+		reference_copro: c.reference_copro,
 	};
 }

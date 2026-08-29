@@ -30,7 +30,6 @@
 	export let chargement = false;
 	/** Le vocabulaire des types d'occupant — porté par la page (voir l'en-tête). */
 	export let statutLabels: Record<string, string> = {};
-
 </script>
 
 {#if !chargement && demandes.length > 0}
@@ -46,10 +45,15 @@
 						<td>{fmtDate(d.cree_le)}</td>
 						<td>
 							{#if d.statut_souhaite}{statutLabels[d.statut_souhaite] ?? d.statut_souhaite}{/if}
-							{#if d.statut_souhaite && d.batiment_nom_souhaite}&nbsp;/ {/if}
+							{#if d.statut_souhaite && d.batiment_nom_souhaite}&nbsp;/
+							{/if}
 							{#if d.batiment_nom_souhaite}{d.batiment_nom_souhaite}{/if}
 						</td>
-						<td><span class="badge {STATUT_DEMANDE_BADGE[d.statut_demande] ?? 'badge-gray'}">{STATUT_DEMANDE_LABEL[d.statut_demande] ?? d.statut_demande}</span></td>
+						<td
+							><span class="badge {STATUT_DEMANDE_BADGE[d.statut_demande] ?? 'badge-gray'}"
+								>{STATUT_DEMANDE_LABEL[d.statut_demande] ?? d.statut_demande}</span
+							></td
+						>
 						<td class="hd-motif">{d.motif_refus ?? '—'}</td>
 					</tr>
 				{/each}
@@ -63,12 +67,19 @@
 	    déplaçant est ce qui les rend modifiables sans relire le balisage — et
 	    `lint:styles-nus` refuse désormais un sélecteur d'élément nu dans un
 	    composant, ce qui impose de les nommer de toute façon. */
-	.hd-bloc { margin-top: 1rem; }
+	.hd-bloc {
+		margin-top: 1rem;
+	}
 	.hd-resume {
 		cursor: pointer;
 		font-size: 0.85rem;
 		color: var(--color-text-muted);
 	}
-	.hd-table { font-size: 0.83rem; margin-top: 0.5rem; }
-	.hd-motif { color: var(--color-text-muted); }
+	.hd-table {
+		font-size: 0.83rem;
+		margin-top: 0.5rem;
+	}
+	.hd-motif {
+		color: var(--color-text-muted);
+	}
 </style>

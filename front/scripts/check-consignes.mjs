@@ -62,7 +62,7 @@ const SOURCE = join(RACINE_FRONT, 'lib', 'sanitize.ts');
 let attendues;
 try {
 	const src = readFileSync(SOURCE, 'utf8');
-	attendues = [...src.matchAll(/^export function (safe\w+)\s*\(/gm)].map(m => m[1]);
+	attendues = [...src.matchAll(/^export function (safe\w+)\s*\(/gm)].map((m) => m[1]);
 } catch {
 	console.error('✗ INCONNU : src/lib/sanitize.ts est illisible — ce contrôle ne conclut pas.');
 	process.exit(1);
@@ -110,11 +110,11 @@ for (const chemin of candidats) {
 	const relatif = relative(RACINE_DEPOT, chemin).replace(/\\/g, '/');
 	const texte = readFileSync(chemin, 'utf8');
 
-	const parle = attendues.some(f => texte.includes(f)) || texte.includes('{@html');
+	const parle = attendues.some((f) => texte.includes(f)) || texte.includes('{@html');
 	if (!parle) continue;
 	concernes++;
 
-	const absentes = attendues.filter(f => !texte.includes(f));
+	const absentes = attendues.filter((f) => !texte.includes(f));
 	if (absentes.length) {
 		erreurs.push(
 			`${relatif} — parle d'assainissement mais ne nomme pas : ${absentes.join(', ')}. ` +
@@ -136,8 +136,8 @@ if (erreurs.length) {
 	console.error('✗ Consigne incomplète — elle décrit un dépôt qui n’existe pas :\n');
 	for (const e of erreurs) console.error(`  • ${e}`);
 	console.error(
-		"\n🔴 Une consigne périmée est le seul résidu de factorisation qui RÉGÉNÈRE le\n" +
-			"   défaut : elle fait réécrire à la main ce que le dépôt a mutualisé, par\n" +
+		'\n🔴 Une consigne périmée est le seul résidu de factorisation qui RÉGÉNÈRE le\n' +
+			'   défaut : elle fait réécrire à la main ce que le dépôt a mutualisé, par\n' +
 			'   quelqu’un qui la suit correctement. C’est ainsi que `renderContent` est né\n' +
 			'   (#429), et personne ne pouvait le voir — le code produit était correct.\n',
 	);

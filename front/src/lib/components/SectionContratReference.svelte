@@ -83,8 +83,8 @@
 
 	{#if erreur}
 		<p class="ref-alerte">
-			La liste des contrats n'a pas pu être chargée. Ce qui s'affiche ci-dessous
-			reste juste ; seule la <strong>modification</strong> du choix est indisponible.
+			La liste des contrats n'a pas pu être chargée. Ce qui s'affiche ci-dessous reste juste ; seule
+			la <strong>modification</strong> du choix est indisponible.
 		</p>
 	{:else if candidats.length === 0}
 		<p class="ref-vide">Aucun contrat de ce type n'est enregistré.</p>
@@ -93,7 +93,8 @@
 	{#if visibles.length}
 		<dl class="ref-lecture">
 			{#each visibles as [label, valeur]}
-				<dt>{label}</dt><dd>{valeur}</dd>
+				<dt>{label}</dt>
+				<dd>{valeur}</dd>
 			{/each}
 		</dl>
 		{#if documentId}
@@ -117,32 +118,42 @@
 	.ref-lecture {
 		display: grid;
 		grid-template-columns: auto 1fr;
-		gap: .3rem .75rem;
-		margin: .75rem 0 0;
-		font-size: .875rem;
+		gap: 0.3rem 0.75rem;
+		margin: 0.75rem 0 0;
+		font-size: 0.875rem;
 	}
-	.ref-lecture dt { color: var(--color-text-muted); }
-	.ref-lecture dd { margin: 0; }
+	.ref-lecture dt {
+		color: var(--color-text-muted);
+	}
+	.ref-lecture dd {
+		margin: 0;
+	}
 
 	/*  Sous 520 px, deux colonnes écrasent la valeur contre le libellé : on
 	    empile. C'est la même bascule que les autres listes de définitions du
 	    site — la responsivité appartient au composant qui porte le balisage. */
 	@media (max-width: 520px) {
-		.ref-lecture { grid-template-columns: 1fr; gap: 0 0; }
-		.ref-lecture dt { margin-top: .5rem; }
+		.ref-lecture {
+			grid-template-columns: 1fr;
+			gap: 0 0;
+		}
+		.ref-lecture dt {
+			margin-top: 0.5rem;
+		}
 	}
 
-	.ref-vide, .ref-renvoi {
-		font-size: .82rem;
+	.ref-vide,
+	.ref-renvoi {
+		font-size: 0.82rem;
 		color: var(--color-text-muted);
-		margin: .6rem 0 0;
+		margin: 0.6rem 0 0;
 		line-height: 1.5;
 	}
 	.ref-alerte {
-		font-size: .82rem;
+		font-size: 0.82rem;
 		line-height: 1.5;
-		margin: .6rem 0 0;
-		padding: .5rem .7rem;
+		margin: 0.6rem 0 0;
+		padding: 0.5rem 0.7rem;
 		border-left: 3px solid var(--color-warning, #d97706);
 		background: var(--color-bg);
 	}

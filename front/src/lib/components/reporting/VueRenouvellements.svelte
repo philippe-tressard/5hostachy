@@ -40,7 +40,11 @@
 
 	$: ANNEE_COURANTE = relire(reportContrats, anneeCourante);
 
-	$: contratsAvecFin = contratsAvecEcheance(reportContrats, reportPrestataires, reportNoteMoyParPrest);
+	$: contratsAvecFin = contratsAvecEcheance(
+		reportContrats,
+		reportPrestataires,
+		reportNoteMoyParPrest,
+	);
 	$: diagsAvecNext = diagnosticsAvecEcheance(reportDiagTypes);
 
 	$: renKpiContrats = contratsAvecFin.filter((c) => {

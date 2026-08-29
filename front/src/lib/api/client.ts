@@ -13,8 +13,12 @@ export const BASE = '/api';
 
 /** ID du mandant si l'aidant agit en délégation (null = agit pour soi-même) */
 let _actingAsId: number | null = null;
-export function setActingAs(mandantId: number | null) { _actingAsId = mandantId; }
-export function getActingAs(): number | null { return _actingAsId; }
+export function setActingAs(mandantId: number | null) {
+	_actingAsId = mandantId;
+}
+export function getActingAs(): number | null {
+	return _actingAsId;
+}
 
 export class ApiError extends Error {
 	constructor(
@@ -64,9 +68,11 @@ let _refreshing: Promise<boolean> | null = null;
 async function tryRefresh(): Promise<boolean> {
 	if (_refreshing) return _refreshing;
 	_refreshing = fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
-		.then(r => r.ok)
+		.then((r) => r.ok)
 		.catch(() => false)
-		.finally(() => { _refreshing = null; });
+		.finally(() => {
+			_refreshing = null;
+		});
 	return _refreshing;
 }
 
@@ -120,9 +126,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		if (res.status >= 500) {
 			// Erreur serveur : ne pas exposer le détail technique à l'utilisateur
 			console.error(`[API ${res.status}] ${method} ${path} — ${rawDetail}`);
-			const userMsg = res.status === 503
-				? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'
-				: 'Une erreur est survenue. Si le problème persiste, contactez l’administrateur.';
+			const userMsg =
+				res.status === 503
+					? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'
+					: 'Une erreur est survenue. Si le problème persiste, contactez l’administrateur.';
 			throw new ApiError(res.status, userMsg, rawDetail);
 		}
 

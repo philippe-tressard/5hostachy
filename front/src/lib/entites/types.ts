@@ -164,10 +164,7 @@ export interface EntiteDeclaree {
 }
 
 /** La déclaration d'une section, ou `undefined` si l'entité est incomplète. */
-export function section(
-	entite: EntiteDeclaree,
-	id: IdSection,
-): SectionDeclaree | undefined {
+export function section(entite: EntiteDeclaree, id: IdSection): SectionDeclaree | undefined {
 	return entite.sections.find((s) => s.id === id);
 }
 
@@ -178,11 +175,7 @@ export function section(
  * rouvre la divergence silencieuse que le cadre supprime — `lint:etats` refuse
  * qu'une section soit gouvernée par autre chose que cet appel.
  */
-export function sectionPresente(
-	entite: EntiteDeclaree,
-	etat: Etat,
-	id: IdSection,
-): boolean {
+export function sectionPresente(entite: EntiteDeclaree, etat: Etat, id: IdSection): boolean {
 	const s = section(entite, id);
 	if (!s || s.sansObjet) return false;
 	return !s.absente?.[etat];
@@ -194,10 +187,6 @@ export function sectionsDe(entite: EntiteDeclaree, etat: Etat): SectionDeclaree[
 }
 
 /** La divergence déclarée pour cette section dans cet état, s'il y en a une. */
-export function divergence(
-	entite: EntiteDeclaree,
-	etat: Etat,
-	id: IdSection,
-): Divergence | null {
+export function divergence(entite: EntiteDeclaree, etat: Etat, id: IdSection): Divergence | null {
 	return section(entite, id)?.absente?.[etat] ?? null;
 }

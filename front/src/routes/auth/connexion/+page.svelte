@@ -8,10 +8,12 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 
-	onMount(() => { loadSiteConfig(); });
+	onMount(() => {
+		loadSiteConfig();
+	});
 
-	$: _siteNom       = $siteNomStore;
-	$: brandIcon      = $configStore['site_icone'] ?? 'building-2';
+	$: _siteNom = $siteNomStore;
+	$: brandIcon = $configStore['site_icone'] ?? 'building-2';
 	$: loginSousTitre = $configStore['login_sous_titre'] ?? 'Votre espace numérique de résidence';
 
 	let email = '';
@@ -72,9 +74,17 @@
 				{#if emailNotVerified}
 					<div style="margin-top:.5rem">
 						{#if resendDone}
-							<span style="color:var(--color-text-muted); font-size:.85rem">Un nouveau lien a été envoyé si un compte non vérifié existe pour cette adresse.</span>
+							<span style="color:var(--color-text-muted); font-size:.85rem"
+								>Un nouveau lien a été envoyé si un compte non vérifié existe pour cette adresse.</span
+							>
 						{:else}
-							<button type="button" class="btn btn-sm btn-outline" style="margin-top:.25rem" disabled={resendLoading} on:click={resendVerification}>
+							<button
+								type="button"
+								class="btn btn-sm btn-outline"
+								style="margin-top:.25rem"
+								disabled={resendLoading}
+								on:click={resendVerification}
+							>
 								{resendLoading ? 'Envoi…' : 'Renvoyer le lien de vérification'}
 							</button>
 						{/if}
@@ -125,10 +135,13 @@
 		font-size: 1.5rem;
 		font-weight: 700;
 		color: var(--color-primary);
-		margin-bottom: .3rem;
+		margin-bottom: 0.3rem;
 	}
 
-	.auth-header p { color: var(--color-text-muted); font-size: .875rem; }
+	.auth-header p {
+		color: var(--color-text-muted);
+		font-size: 0.875rem;
+	}
 
 	.btn-wrapper {
 		display: flex;
@@ -144,17 +157,17 @@
 	.auth-links {
 		display: flex;
 		justify-content: center;
-		gap: .5rem;
+		gap: 0.5rem;
 		margin-top: 1rem;
-		font-size: .875rem;
+		font-size: 0.875rem;
 	}
 
 	.auth-legal {
 		display: flex;
 		justify-content: center;
-		gap: .5rem;
+		gap: 0.5rem;
 		margin-top: 1.25rem;
-		font-size: .75rem;
+		font-size: 0.75rem;
 		color: var(--color-text-muted);
 	}
 </style>

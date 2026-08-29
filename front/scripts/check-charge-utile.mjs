@@ -154,10 +154,12 @@ function selftest() {
 	//  🔴 LE cas qui a fait échouer la première version de ce contrôle : une
 	//  virgule DANS un commentaire coupait le découpage, et le champ suivant
 	//  disparaissait du relevé.
-	t('virgule dans un commentaire', 'a,b',
-		'f({ a: 1,\n\t//  un texte avec une virgule, et une suite\n\tb: 2 })');
-	t('virgule dans un commentaire de bloc', 'a,b',
-		'f({ a: 1, /* virgule, ici */ b: 2 })');
+	t(
+		'virgule dans un commentaire',
+		'a,b',
+		'f({ a: 1,\n\t//  un texte avec une virgule, et une suite\n\tb: 2 })',
+	);
+	t('virgule dans un commentaire de bloc', 'a,b', 'f({ a: 1, /* virgule, ici */ b: 2 })');
 
 	console.log(
 		ko === 0

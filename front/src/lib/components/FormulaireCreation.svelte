@@ -118,13 +118,25 @@
 <!--  `aria-label` porte le titre dans TOUS les cas : ce qui disparaît est le
       titre VISIBLE, pas l'information. Un lecteur d'écran continue d'annoncer
       « Modifier le commentaire » en entrant dans le formulaire. -->
-<div class="formulaire-creation largeur-saisie" class:card={encadre}
-	bind:this={cadre} role="group" aria-label={titre}>
+<div
+	class="formulaire-creation largeur-saisie"
+	class:card={encadre}
+	bind:this={cadre}
+	role="group"
+	aria-label={titre}
+>
 	{#if encadre}<h2>{titre}</h2>{/if}
 	<slot />
 </div>
 
 <style>
-	.formulaire-creation { margin-bottom: 1.5rem; scroll-margin-top: 5rem; }
-	.formulaire-creation h2 { font-size: 1rem; font-weight: 600; margin: 0 0 1rem; }
+	.formulaire-creation {
+		margin-bottom: 1.5rem;
+		scroll-margin-top: 5rem;
+	}
+	.formulaire-creation h2 {
+		font-size: 1rem;
+		font-weight: 600;
+		margin: 0 0 1rem;
+	}
 </style>

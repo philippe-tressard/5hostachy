@@ -1,18 +1,18 @@
 {
-  "_lisezMoi": [
-    "Vulnérabilités tolérées par `npm run lint:audit` (scripts/check-audit.mjs).",
-    "Une exception se justifie par l'ATTEIGNABILITÉ mesurée dans ce projet, jamais par",
-    "la sévérité annoncée par le registre : une haute confinée à la chaîne de",
-    "construction ne vaut pas une basse embarquée dans le serveur SSR (#411).",
-    "Format : \"GHSA-xxxx-xxxx-xxxx\": { motif, leveeSi, revoirLe (AAAA-MM-JJ) }.",
-    "Une exception PÉRIMÉE ou devenue INUTILE fait échouer le contrôle, à dessein :",
-    "c'est ce qui force sa relecture au lieu de la laisser dormir.",
-    "Aucune exception aujourd'hui — les quatre vulnérabilités de #411 ont été",
-    "corrigées : nanoid par `npm audit fix` (lock seul), cookie par l'override",
-    "`cookie: ^0.7.2` de package.json. Cet override force une dépendance transitive",
-    "au-delà du `^0.6.0` déclaré par @sveltejs/kit ; il se retire le jour où kit",
-    "publie une version dépendant de cookie >= 0.7 (2.70.2 est la dernière au",
-    "17/08/2026, et elle est vulnérable — il n'y avait donc rien à monter)."
-  ],
-  "exceptions": {}
+	"_lisezMoi": [
+		"Vulnérabilités tolérées par `npm run lint:audit` (scripts/check-audit.mjs).",
+		"Une exception se justifie par l'ATTEIGNABILITÉ mesurée dans ce projet, jamais par",
+		"la sévérité annoncée par le registre : une haute confinée à la chaîne de",
+		"construction ne vaut pas une basse embarquée dans le serveur SSR (#411).",
+		"Format : \"GHSA-xxxx-xxxx-xxxx\": { motif, leveeSi, revoirLe (AAAA-MM-JJ) }.",
+		"Une exception PÉRIMÉE ou devenue INUTILE fait échouer le contrôle, à dessein :",
+		"c'est ce qui force sa relecture au lieu de la laisser dormir.",
+		"Aucune exception aujourd'hui — les quatre vulnérabilités de #411 ont été",
+		"corrigées : nanoid par `npm audit fix` (lock seul), cookie par l'override",
+		"`cookie: ^0.7.2` de package.json. Cet override force une dépendance transitive",
+		"au-delà du `^0.6.0` déclaré par @sveltejs/kit ; il se retire le jour où kit",
+		"publie une version dépendant de cookie >= 0.7 (2.70.2 est la dernière au",
+		"17/08/2026, et elle est vulnérable — il n'y avait donc rien à monter)."
+	],
+	"exceptions": {}
 }

@@ -119,7 +119,9 @@
 	class:expanded
 	class:urgent={ticket.categorie === 'urgence'}
 	role="presentation"
-	on:click={() => { if (!expanded) dispatch('basculer'); }}
+	on:click={() => {
+		if (!expanded) dispatch('basculer');
+	}}
 >
 	<!--  Titre sur sa propre ligne, puis tags à gauche / date + actions à droite :
 	      la norme de toutes les cartes du site (`EnteteCarte`, 18/08/2026). -->
@@ -128,9 +130,12 @@
 	      `role="button"` — il interceptait la sélection de texte, et obligeait
 	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 	      déplie pas la carte au même instant. -->
-	<EnteteCarte titre={ticket.titre} date={fmtDate(dateAffichee)}
-		basculable on:toggle={() => dispatch('basculer')}
->
+	<EnteteCarte
+		titre={ticket.titre}
+		date={fmtDate(dateAffichee)}
+		basculable
+		on:toggle={() => dispatch('basculer')}
+	>
 		<svelte:fragment slot="titre-suffixe">
 			{#if isNouveau(ticket.cree_le, ticket.mis_a_jour_le)}
 				<span class="badge badge-gray tk-neuf">NEW</span>
@@ -159,7 +164,9 @@
 			<span class="badge {STATUT_TICKET_BADGE[ticket.statut] ?? 'badge-gray'}">
 				{STATUT_TICKET_LABELS[ticket.statut] ?? ticket.statut}
 			</span>
-			{#if !estPerimetreParDefaut(ticket.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(ticket.perimetre_cible)}</span>{/if}
+			{#if !estPerimetreParDefaut(ticket.perimetre_cible)}<span class="badge badge-gray"
+					>&#x1F539; {perimetreLabel(ticket.perimetre_cible)}</span
+				>{/if}
 			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
 			<span class="tk-numero">#{ticket.numero}</span>
 			<!--  🔴 LE BÂTIMENT DU DEMANDEUR, à côté de son nom (28/08/2026).
@@ -173,7 +180,9 @@
 			      ci-dessus). Rien à cacher à un résident : il ne voit que SES
 			      tickets, donc son propre bâtiment. -->
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
-			{#if ticket.auteur_batiment_nom}<span class="tk-auteur">&#x1F4CD; {ticket.auteur_batiment_nom}</span>{/if}
+			{#if ticket.auteur_batiment_nom}<span class="tk-auteur"
+					>&#x1F4CD; {ticket.auteur_batiment_nom}</span
+				>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<!--  UN point d'entrée (#426) : le formulaire porte les deux gestes.
@@ -183,24 +192,39 @@
 			      titre au-dessus du formulaire (18/08/2026). Elle s'inverse et grossit —
 			      style dans `app.css`, une seule fois pour tout le site. -->
 			{#if peutSuivreCeTicket}
-				<button class="btn-icon" aria-pressed={mode === 'evolution'} aria-label="Commenter ou changer l’état"
+				<button
+					class="btn-icon"
+					aria-pressed={mode === 'evolution'}
+					aria-label="Commenter ou changer l’état"
 					title="Commenter ou changer l’état"
-					on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button>
+					on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button
+				>
 			{/if}
 			{#if peutEditerCeTicket}
-				<button class="btn-icon" aria-pressed={mode === 'edition'} aria-label="Modifier" title="Modifier le ticket"
-					on:click|stopPropagation={() => dispatch('modifier')}>✏️</button>
+				<button
+					class="btn-icon"
+					aria-pressed={mode === 'edition'}
+					aria-label="Modifier"
+					title="Modifier le ticket"
+					on:click|stopPropagation={() => dispatch('modifier')}>✏️</button
+				>
 			{/if}
 			<!--  ⚠️ La corbeille NE SUIT PAS le droit d'édition : supprimer
 			      définitivement est irréversible, et cela reste à l'administrateur.
 			      Elle s'était retrouvée dans le bloc du crayon en une passe de
 			      réécriture — trois lignes plus bas, et le geste changeait de main. -->
 			{#if peutAdministrer}
-				<button class="btn-icon-danger" aria-label="Supprimer" title="Supprimer définitivement"
-					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button>
+				<button
+					class="btn-icon-danger"
+					aria-label="Supprimer"
+					title="Supprimer définitivement"
+					on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button
+				>
 			{/if}
 		</svelte:fragment>
-		<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
+		<svelte:fragment slot="chevron"
+			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
+		>
 	</EnteteCarte>
 
 	{#if !expanded}
@@ -211,22 +235,30 @@
 		<!--  Le corps ne replie pas la carte : on y saisit, on y clique des
 		      vignettes. `role="presentation"` dit que ce conteneur n'est qu'un
 		      relais — l'élément interactif, c'est la carte. -->
-		<div class="carte-corps tk-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+		<div
+			class="carte-corps tk-body"
+			role="presentation"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
+		>
 			{#if mode === 'edition'}
 				<div class="tk-formulaire">
 					<FormulaireTicket {ticket} on:modifie on:annule={() => dispatch('annuler')} />
 				</div>
 			{:else if mode === 'evolution'}
 				<div class="tk-formulaire">
-					<EvolForm idPrefixe="tk-evol-{ticket.id}" titre="Commenter ou changer l’état"
-						demanderApercu={(saisie) => ticketsApi.apercuDiffusion({
-							ticket_id: ticket.id,
-							commentaire: saisie.contenu,
-							fichiers_urls: saisie.fichiers_urls,
-							destinataire_syndic: saisie.syndic,
-							destinataire_cs: saisie.cs,
-							partager_whatsapp: saisie.whatsapp,
-						})}
+					<EvolForm
+						idPrefixe="tk-evol-{ticket.id}"
+						titre="Commenter ou changer l’état"
+						demanderApercu={(saisie) =>
+							ticketsApi.apercuDiffusion({
+								ticket_id: ticket.id,
+								commentaire: saisie.contenu,
+								fichiers_urls: saisie.fichiers_urls,
+								destinataire_syndic: saisie.syndic,
+								destinataire_cs: saisie.cs,
+								partager_whatsapp: saisie.whatsapp,
+							})}
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
@@ -262,28 +294,34 @@
 					      ⚠️ Les états ne sont PAS proposés en correction : corriger le
 					      texte d'une entrée ne rejoue pas la transition qu'elle a
 					      enregistrée (`test_correction_pas_transition.py`). -->
-					<RubriqueHistorique {evolutions} statutLabels={STATUT_TICKET_LABELS}
-						peutModifier={peutSuivreCeTicket}
-						currentUserId={$currentUser?.id}
-						estAdmin={$isAdmin} avecSuppression
-						enEdition={evolEnEdition}
-						on:modifier={(e) => dispatch('evol_modifier', e.detail)}
-						on:supprimer={(e) => dispatch('evol_supprimer', { ticket, evolId: e.detail })}>
-						<svelte:fragment slot="edition" let:evol>
-							{#key evolEnEdition}
-								<EvolForm idPrefixe="tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
-									editMode={true}
-									initialContenu={evol.contenu || ''}
-									initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-									showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
-									showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
-									saving={evolCorrectionEnCours}
-									on:submit={(e) => dispatch('evol_corriger', e.detail)}
-									on:cancel={() => dispatch('evol_annuler')}
-								/>
-							{/key}
-						</svelte:fragment>
-					</RubriqueHistorique>
+						<RubriqueHistorique
+							{evolutions}
+							statutLabels={STATUT_TICKET_LABELS}
+							peutModifier={peutSuivreCeTicket}
+							currentUserId={$currentUser?.id}
+							estAdmin={$isAdmin}
+							avecSuppression
+							enEdition={evolEnEdition}
+							on:modifier={(e) => dispatch('evol_modifier', e.detail)}
+							on:supprimer={(e) => dispatch('evol_supprimer', { ticket, evolId: e.detail })}
+						>
+							<svelte:fragment slot="edition" let:evol>
+								{#key evolEnEdition}
+									<EvolForm
+										idPrefixe="tk-evol-edit-{evol.id}"
+										titre="Modifier le commentaire"
+										editMode={true}
+										initialContenu={evol.contenu || ''}
+										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+										showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
+										showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
+										saving={evolCorrectionEnCours}
+										on:submit={(e) => dispatch('evol_corriger', e.detail)}
+										on:cancel={() => dispatch('evol_annuler')}
+									/>
+								{/key}
+							</svelte:fragment>
+						</RubriqueHistorique>
 					</div>
 				{/if}
 			{/if}
@@ -304,17 +342,40 @@
 	    qu'elle ne faisait rien. */
 	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
 	    Ne reste ici que ce qui est propre à un ticket. */
-	.tk-cat { flex-shrink: 0; font-size: .95rem; }
-	.tk-auteur { font-size: .78rem; color: var(--color-text-muted); }
-	.tk-neuf { margin-left: .5em; font-size: .82em; font-weight: 500; vertical-align: middle; }
+	.tk-cat {
+		flex-shrink: 0;
+		font-size: 0.95rem;
+	}
+	.tk-auteur {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+	}
+	.tk-neuf {
+		margin-left: 0.5em;
+		font-size: 0.82em;
+		font-weight: 500;
+		vertical-align: middle;
+	}
 
-	.tk-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
-	.tk-formulaire { padding: .25rem 0; }
-	.tk-meta { color: var(--color-text-muted); font-size: .78rem; }
-	.tk-numero { font-family: monospace; }
+	.tk-body {
+		padding: 0.75rem 1rem 1rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.tk-formulaire {
+		padding: 0.25rem 0;
+	}
+	.tk-meta {
+		color: var(--color-text-muted);
+		font-size: 0.78rem;
+	}
+	.tk-numero {
+		font-family: monospace;
+	}
 	/*  La marge haute du fil appartient à son hôte : la rubrique ne sait pas ce
 	    qu'elle suit. C'est cette marge que la fiche du ticket avait perdue. */
-	.tk-fil { margin-top: .9rem; }
+	.tk-fil {
+		margin-top: 0.9rem;
+	}
 
 	/*  Allure d'archive — portée ici et non par la page hôte : le `<style>` d'une
 	    page n'atteint pas le balisage d'un composant enfant. */
@@ -322,15 +383,25 @@
 		border-left: 4px solid var(--color-border);
 		border-radius: var(--radius);
 		background: var(--color-surface);
-		opacity: .8;
-		transition: opacity .15s, border-left-color .15s;
+		opacity: 0.8;
+		transition:
+			opacity 0.15s,
+			border-left-color 0.15s;
 	}
-	.history-item:hover { opacity: 1; }
+	.history-item:hover {
+		opacity: 1;
+	}
 	/*  ⚠️ Un ticket ARCHIVÉ porte `.history-item` et NON `.carte-liste` : la règle
 	    globale de survol ne l'atteint pas. Sans ces deux lignes, son titre serait
 	    le seul du site à ne pas répondre au survol — un écart invisible tant
 	    qu'on ne déroule pas les archives. */
-	.history-item:hover :global(.ec-titre) { color: var(--color-primary); }
-	.history-item :global(.ec-titre) { transition: color .12s ease; }
-	.history-item.expanded { opacity: 1; }
+	.history-item:hover :global(.ec-titre) {
+		color: var(--color-primary);
+	}
+	.history-item :global(.ec-titre) {
+		transition: color 0.12s ease;
+	}
+	.history-item.expanded {
+		opacity: 1;
+	}
 </style>

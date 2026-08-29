@@ -77,9 +77,7 @@ const orphelins = avertissements(lignesDuRapport(), 'Unused CSS selector').map((
 });
 
 const fautifs = orphelins.filter((o) => !(o.selecteur in TOLERANCES));
-const inutiles = Object.keys(TOLERANCES).filter(
-	(s) => !orphelins.some((o) => o.selecteur === s)
-);
+const inutiles = Object.keys(TOLERANCES).filter((s) => !orphelins.some((o) => o.selecteur === s));
 
 if (fautifs.length || inutiles.length) {
 	console.error(`\n✗ ${fautifs.length} sélecteur(s) CSS orphelin(s)\n`);
@@ -92,7 +90,7 @@ if (fautifs.length || inutiles.length) {
 			"  ⚠️ Avant de le supprimer, vérifier qu'il n'est pas employé par un AUTRE\n" +
 			'  fichier : Svelte scope au fichier, et une règle « orpheline » ici peut être\n' +
 			"  la SEULE définition d'une classe qu'un autre écran rend alors NUE.\n" +
-			"  Dans ce cas, elle se REMONTE dans `app.css` — elle ne se supprime pas.\n"
+			'  Dans ce cas, elle se REMONTE dans `app.css` — elle ne se supprime pas.\n',
 	);
 	process.exit(1);
 }

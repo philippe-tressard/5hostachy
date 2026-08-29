@@ -190,9 +190,7 @@ export function resumePlan(plan: Plan, exercice: number): string {
 	const parts: string[] = [];
 	if (plan.ignores > 0) parts.push(`${plan.ignores} existant(s) ignoré(s)`);
 	if (plan.horsPlafond.length > 0) {
-		const detail = plan.horsPlafond
-			.map((h) => `${h.titre} (${h.parAn}/an)`)
-			.join(', ');
+		const detail = plan.horsPlafond.map((h) => `${h.titre} (${h.parAn}/an)`).join(', ');
 		parts.push(
 			`${plan.horsPlafond.length} écarté(s) au-delà de ${OCCURRENCES_MAX_AN}/an : ${detail}`,
 		);

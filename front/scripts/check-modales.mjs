@@ -124,7 +124,7 @@ const MOTIFS = [
 		//  défaut qu'une copie locale du fond, et c'est celle qui avait divergé.
 		regex: /^[\t ]*\.modal(-overlay|-box)?[\s.,:[{]/gm,
 		quoi: 'une règle de modale est redéfinie en CSS local',
-		remede: "elle vit dans `styles/composants.css` — passer par `classeBoite`/`styleBoite`",
+		remede: 'elle vit dans `styles/composants.css` — passer par `classeBoite`/`styleBoite`',
 	},
 ];
 
@@ -175,7 +175,7 @@ if (fautifs.length > 0) {
 	}
 	console.error(
 		"\n  Une copie du fond n'emporte pas ce qui compte : `Échap`, le rôle et le verrou de\n" +
-			'  défilement. Seize modales sur vingt-six ne se fermaient qu\'à la souris (#561).',
+			"  défilement. Seize modales sur vingt-six ne se fermaient qu'à la souris (#561).",
 	);
 	process.exit(1);
 }

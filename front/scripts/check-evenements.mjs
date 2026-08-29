@@ -48,7 +48,15 @@
  *
  * Éprouvé en réintroduisant chaque forme, une par une — voir `--selftest`.
  */
-import { readFileSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import {
+	readFileSync,
+	readdirSync,
+	statSync,
+	mkdtempSync,
+	mkdirSync,
+	writeFileSync,
+	rmSync,
+} from 'node:fs';
 import { join, relative, basename, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -66,7 +74,7 @@ const TOLERANCES = {
 	'DestinatairePicker.change': 'Idem `PerimetrePicker` : `bind:value` transmet déjà la valeur.',
 	'RichEditor.change': 'Idem : `bind:value` transmet déjà la valeur.',
 	'FichiersUpload.change': 'Idem, via `bind:urls` / `bind:fichiers`.',
-	'ImageUpload.change': 'Idem, via `bind:value`.'
+	'ImageUpload.change': 'Idem, via `bind:value`.',
 };
 
 /**
@@ -86,7 +94,7 @@ const TOLERANCES = {
  * partout. Une paire dont le composant a disparu fait échouer le contrôle.
  */
 const PAIRES_CAPACITE = {
-	RubriqueHistorique: { prop: 'avecSuppression', evenement: 'supprimer' }
+	RubriqueHistorique: { prop: 'avecSuppression', evenement: 'supprimer' },
 };
 
 function fichiersSvelte(dir, out = []) {
@@ -134,12 +142,16 @@ function usagesDe(nom, texte) {
 	const re = new RegExp(`<${nom}(?=[\\s/>])`, 'g');
 	let m;
 	while ((m = re.exec(texte))) {
-		let prof = 0, fin = -1;
+		let prof = 0,
+			fin = -1;
 		for (let k = m.index; k < texte.length; k++) {
 			const c = texte[k];
 			if (c === '{') prof++;
 			else if (c === '}') prof--;
-			else if (c === '>' && prof === 0) { fin = k; break; }
+			else if (c === '>' && prof === 0) {
+				fin = k;
+				break;
+			}
 		}
 		if (fin > 0) out.push(texte.slice(m.index, fin + 1));
 	}
@@ -156,7 +168,8 @@ function commentTraite(balise, evt) {
 /** Analyse une arborescence `.svelte`. Rend le relevé, sans rien afficher. */
 function analyser(racine, tolerances) {
 	const source = new Map(); // CHEMIN -> texte (jamais le basename : les routes s'appellent toutes `+page`)
-	for (const f of fichiersSvelte(racine)) source.set(f.replace(/\\/g, '/'), readFileSync(f, 'utf8'));
+	for (const f of fichiersSvelte(racine))
+		source.set(f.replace(/\\/g, '/'), readFileSync(f, 'utf8'));
 	const importsPar = new Map();
 	for (const [chemin, texte] of source) importsPar.set(chemin, importsDe(racine, chemin, texte));
 
@@ -188,7 +201,10 @@ function analyser(racine, tolerances) {
 		for (const [evt, ligne] of evenementsDispatches(texte)) {
 			nbDispatch++;
 			const cle = `${basename(chemin, '.svelte')}.${evt}`;
-			if (tolerances[cle]) { servies.add(cle); continue; }
+			if (tolerances[cle]) {
+				servies.add(cle);
+				continue;
+			}
 			if (!estTraite(chemin, evt)) {
 				orphelins.push({ cle, fichier: relative(racine, chemin).replace(/\\/g, '/'), ligne, evt });
 			}
@@ -213,7 +229,11 @@ function analyser(racine, tolerances) {
 					if (declare !== ecoute) {
 						depareillees.push({
 							fichier: relative(racine, chemin).replace(/\\/g, '/'),
-							composant, prop, evenement, declare, ecoute
+							composant,
+							prop,
+							evenement,
+							declare,
+							ecoute,
 						});
 					}
 				}
@@ -221,7 +241,15 @@ function analyser(racine, tolerances) {
 		}
 	}
 	const pairesMortes = Object.keys(PAIRES_CAPACITE).filter((c) => !pairesVues.has(c));
-	return { orphelins, mortes, servies, nbDispatch, nbFichiers: source.size, depareillees, pairesMortes };
+	return {
+		orphelins,
+		mortes,
+		servies,
+		nbDispatch,
+		nbFichiers: source.size,
+		depareillees,
+		pairesMortes,
+	};
 }
 
 // ── Self-test : chaque forme réintroduite volontairement ─────────────────────
@@ -235,34 +263,85 @@ if (process.argv[2] === '--selftest') {
 	let st = 0;
 	const t = (libelle, attendu, obtenu) => {
 		if (attendu === obtenu) console.log(`PASS  ${libelle} → ${obtenu}`);
-		else { console.log(`FAIL  ${libelle}  attendu=${attendu} obtenu=${obtenu}`); st = 1; }
+		else {
+			console.log(`FAIL  ${libelle}  attendu=${attendu} obtenu=${obtenu}`);
+			st = 1;
+		}
 	};
 
 	//  1. dispatch jamais écouté → REFUSÉ
-	ecrire('lib/Muet.svelte', `<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('perdu')}>x</button>`);
+	ecrire(
+		'lib/Muet.svelte',
+		`<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('perdu')}>x</button>`,
+	);
 	ecrire('routes/a/+page.svelte', `<script>import Muet from '$lib/Muet.svelte';</script><Muet />`);
 	//  2. chaîne avec transfert NU qui aboutit → ACCEPTÉ (le cas de #505, corrigé)
-	ecrire('lib/Bas.svelte', `<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('remonte')}>x</button>`);
-	ecrire('lib/Milieu.svelte', `<script>import Bas from '$lib/Bas.svelte';</script><Bas on:remonte />`);
-	ecrire('routes/b/+page.svelte', `<script>import Milieu from '$lib/Milieu.svelte';</script><Milieu on:remonte={() => {}} />`);
+	ecrire(
+		'lib/Bas.svelte',
+		`<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('remonte')}>x</button>`,
+	);
+	ecrire(
+		'lib/Milieu.svelte',
+		`<script>import Bas from '$lib/Bas.svelte';</script><Bas on:remonte />`,
+	);
+	ecrire(
+		'routes/b/+page.svelte',
+		`<script>import Milieu from '$lib/Milieu.svelte';</script><Milieu on:remonte={() => {}} />`,
+	);
 	//  3. chaîne avec transfert NU qui n'aboutit PAS → REFUSÉ (le défaut exact de #505)
-	ecrire('lib/BasKo.svelte', `<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('orphelin')}>x</button>`);
-	ecrire('lib/MilieuKo.svelte', `<script>import BasKo from '$lib/BasKo.svelte';</script><BasKo on:orphelin />`);
-	ecrire('routes/c/+page.svelte', `<script>import MilieuKo from '$lib/MilieuKo.svelte';</script><MilieuKo />`);
+	ecrire(
+		'lib/BasKo.svelte',
+		`<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('orphelin')}>x</button>`,
+	);
+	ecrire(
+		'lib/MilieuKo.svelte',
+		`<script>import BasKo from '$lib/BasKo.svelte';</script><BasKo on:orphelin />`,
+	);
+	ecrire(
+		'routes/c/+page.svelte',
+		`<script>import MilieuKo from '$lib/MilieuKo.svelte';</script><MilieuKo />`,
+	);
 	//  4. composant importé sous ALIAS, écouté → ACCEPTÉ (le faux positif corrigé)
-	ecrire('lib/VraiNom.svelte', `<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('valide')}>x</button>`);
-	ecrire('routes/d/+page.svelte', `<script>import ToutAutreNom from '$lib/VraiNom.svelte';</script><ToutAutreNom on:valide={() => {}} />`);
+	ecrire(
+		'lib/VraiNom.svelte',
+		`<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('valide')}>x</button>`,
+	);
+	ecrire(
+		'routes/d/+page.svelte',
+		`<script>import ToutAutreNom from '$lib/VraiNom.svelte';</script><ToutAutreNom on:valide={() => {}} />`,
+	);
 	//  5. deux routes homonymes `+page.svelte` → l'une écoute (l'indexation par
 	//     basename les écrasait, et déclarait l'événement orphelin à tort)
-	ecrire('lib/Homonyme.svelte', `<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('vu')}>x</button>`);
-	ecrire('routes/e/+page.svelte', `<script>import Homonyme from '$lib/Homonyme.svelte';</script><Homonyme on:vu={() => {}} />`);
+	ecrire(
+		'lib/Homonyme.svelte',
+		`<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('vu')}>x</button>`,
+	);
+	ecrire(
+		'routes/e/+page.svelte',
+		`<script>import Homonyme from '$lib/Homonyme.svelte';</script><Homonyme on:vu={() => {}} />`,
+	);
 
 	//  8-10. Capacités : le composant réel de PAIRES_CAPACITE, avec trois appelants
-	ecrire('lib/RubriqueHistorique.svelte', `<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('supprimer')}>x</button>`);
-	ecrire('routes/f/+page.svelte', `<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique avecSuppression on:supprimer={() => {}} />`);
-	ecrire('routes/g/+page.svelte', `<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique />`);
-	ecrire('routes/h/+page.svelte', `<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique avecSuppression />`);
-	ecrire('routes/i/+page.svelte', `<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique on:supprimer={() => {}} />`);
+	ecrire(
+		'lib/RubriqueHistorique.svelte',
+		`<script>const dispatch = createEventDispatcher();</script><button on:click={() => dispatch('supprimer')}>x</button>`,
+	);
+	ecrire(
+		'routes/f/+page.svelte',
+		`<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique avecSuppression on:supprimer={() => {}} />`,
+	);
+	ecrire(
+		'routes/g/+page.svelte',
+		`<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique />`,
+	);
+	ecrire(
+		'routes/h/+page.svelte',
+		`<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique avecSuppression />`,
+	);
+	ecrire(
+		'routes/i/+page.svelte',
+		`<script>import RubriqueHistorique from '$lib/RubriqueHistorique.svelte';</script><RubriqueHistorique on:supprimer={() => {}} />`,
+	);
 
 	const r = analyser(tmp, {});
 	const orph = new Set(r.orphelins.map((o) => o.cle));
@@ -273,10 +352,26 @@ if (process.argv[2] === '--selftest') {
 	t('routes homonymes +page.svelte', false, orph.has('Homonyme.vu'));
 
 	const dep = r.depareillees.map((d) => `${d.fichier}|${d.declare}|${d.ecoute}`);
-	t('capacité déclarée ET écoutée', false, dep.some((x) => x.startsWith('routes/f/')));
-	t('capacité ni déclarée ni écoutée', false, dep.some((x) => x.startsWith('routes/g/')));
-	t('déclarée SANS écouteur → geste sans effet', true, dep.some((x) => x.startsWith('routes/h/')));
-	t('écoutée SANS déclaration → geste invisible', true, dep.some((x) => x.startsWith('routes/i/')));
+	t(
+		'capacité déclarée ET écoutée',
+		false,
+		dep.some((x) => x.startsWith('routes/f/')),
+	);
+	t(
+		'capacité ni déclarée ni écoutée',
+		false,
+		dep.some((x) => x.startsWith('routes/g/')),
+	);
+	t(
+		'déclarée SANS écouteur → geste sans effet',
+		true,
+		dep.some((x) => x.startsWith('routes/h/')),
+	);
+	t(
+		'écoutée SANS déclaration → geste invisible',
+		true,
+		dep.some((x) => x.startsWith('routes/i/')),
+	);
 
 	//  6. une tolérance qui ne sert plus fait échouer
 	const r2 = analyser(tmp, { 'Disparu.jamais': 'motif obsolète' });
@@ -286,12 +381,18 @@ if (process.argv[2] === '--selftest') {
 	t('tolérance servie', false, new Set(r3.orphelins.map((o) => o.cle)).has('Muet.perdu'));
 
 	rmSync(tmp, { recursive: true, force: true });
-	console.log(st === 0 ? '\n✓ Autotest : les orphelins sont refusés, les chaînes complètes acceptées, alias et homonymes compris.' : '\n✗ Autotest en échec');
+	console.log(
+		st === 0
+			? '\n✓ Autotest : les orphelins sont refusés, les chaînes complètes acceptées, alias et homonymes compris.'
+			: '\n✗ Autotest en échec',
+	);
 	process.exit(st);
 }
 
-const { orphelins, mortes, servies, nbDispatch, nbFichiers, depareillees, pairesMortes } =
-	analyser(RACINE, TOLERANCES);
+const { orphelins, mortes, servies, nbDispatch, nbFichiers, depareillees, pairesMortes } = analyser(
+	RACINE,
+	TOLERANCES,
+);
 
 let echec = false;
 if (orphelins.length) {
@@ -300,7 +401,9 @@ if (orphelins.length) {
 	for (const o of orphelins) {
 		console.error(`  ${o.fichier}:${o.ligne} — dispatch('${o.evt}')`);
 		console.error(`      aucun appelant ne pose \`on:${o.evt}={…}\` au bout de la chaîne.`);
-		console.error(`      → soit le geste est mort (le corriger), soit c'est voulu (le déclarer dans TOLERANCES).\n`);
+		console.error(
+			`      → soit le geste est mort (le corriger), soit c'est voulu (le déclarer dans TOLERANCES).\n`,
+		);
 	}
 }
 if (mortes.length) {
@@ -319,7 +422,7 @@ if (depareillees.length) {
 		console.error(
 			d.declare
 				? `      d\u00e9clare \`${d.prop}\` mais n'\u00e9coute pas \`on:${d.evenement}\` \u2014 le geste serait propos\u00e9 sans effet.`
-				: `      \u00e9coute \`on:${d.evenement}\` mais ne d\u00e9clare pas \`${d.prop}\` \u2014 le geste ne s'affichera jamais.`
+				: `      \u00e9coute \`on:${d.evenement}\` mais ne d\u00e9clare pas \`${d.prop}\` \u2014 le geste ne s'affichera jamais.`,
 		);
 		console.error('');
 	}
@@ -336,5 +439,5 @@ if (echec) process.exit(1);
 
 console.log(
 	`✓ Événements : ${nbDispatch} dispatch(s) dans ${nbFichiers} composants — tous traités au bout de leur chaîne, ` +
-		`${servies.size} tolérance(s) et ${Object.keys(PAIRES_CAPACITE).length} capacité(s) déclarée(s), toutes appariées.`
+		`${servies.size} tolérance(s) et ${Object.keys(PAIRES_CAPACITE).length} capacité(s) déclarée(s), toutes appariées.`,
 );

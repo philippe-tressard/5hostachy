@@ -102,8 +102,8 @@
 	//  ce sont des calculs de PRÉSENTATION — combien de caractères, quel format en
 	//  résulte — et ils n'ont d'intérêt que pour l'aide affichée sous les pastilles.
 	//  La page garde ce qu'elle seule sait : la validité, qui commande son bouton.
-	$: ahFormulaireValide = ahTitre.trim().length > 0
-		&& (stripHtml(ahMessage).length + ahTitre.trim().length) > 0;
+	$: ahFormulaireValide =
+		ahTitre.trim().length > 0 && stripHtml(ahMessage).length + ahTitre.trim().length > 0;
 
 	/** Les 10 actualités publiées les plus récentes, pour le pré-remplissage. */
 	async function loadAhPublications() {
@@ -111,7 +111,7 @@
 		try {
 			const pubs = await pubsApi.list();
 			ahPubs = pubs
-				.filter(p => !p.brouillon)
+				.filter((p) => !p.brouillon)
 				.sort((a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime())
 				.slice(0, AH_PUBS_MAX);
 			ahPubsLoaded = true;
@@ -134,9 +134,12 @@
 			ahApercuHtml = '';
 			ahApercuFormat = '';
 			const nb = ahPhotos.length;
-			toast('info', nb > 0
-				? `Annonce pré-remplie (${nb} image${nb > 1 ? 's' : ''}) — ajustez avant de valider`
-				: 'Annonce pré-remplie — ajustez le texte avant de valider');
+			toast(
+				'info',
+				nb > 0
+					? `Annonce pré-remplie (${nb} image${nb > 1 ? 's' : ''}) — ajustez avant de valider`
+					: 'Annonce pré-remplie — ajustez le texte avant de valider',
+			);
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du pré-remplissage');
 		}
@@ -185,7 +188,10 @@
 			ahApercuHtml = r.html;
 			ahApercuFormat = r.format_label;
 		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : "Erreur lors de la génération de l'aperçu");
+			toast(
+				'error',
+				e instanceof ApiError ? e.message : "Erreur lors de la génération de l'aperçu",
+			);
 		} finally {
 			ahApercuLoading = false;
 		}
@@ -252,65 +258,105 @@
 	}
 </script>
 
-	<div class="ah-panel">
-		<div class="perimetre-pills" style="margin-bottom:1rem">
-			<Pastille active={ahVue === 'nouvelle'} on:click={() => (ahVue = 'nouvelle')}>&#x1F4DD; Nouvelle annonce</Pastille>
-			<Pastille active={ahVue === 'historique'} on:click={() => { ahVue = 'historique'; loadAnnoncesHall(); }}>&#x1F4C1; Archives</Pastille>
+<div class="ah-panel">
+	<div class="perimetre-pills" style="margin-bottom:1rem">
+		<Pastille active={ahVue === 'nouvelle'} on:click={() => (ahVue = 'nouvelle')}
+			>&#x1F4DD; Nouvelle annonce</Pastille
+		>
+		<Pastille
+			active={ahVue === 'historique'}
+			on:click={() => {
+				ahVue = 'historique';
+				loadAnnoncesHall();
+			}}>&#x1F4C1; Archives</Pastille
+		>
+	</div>
+
+	{#if ahVue === 'nouvelle'}
+		<!-- ── Création d'une annonce ──────────────────────────────────── -->
+		<div class="ah-layout">
+			<section class="card ah-form">
+				<FormulaireAnnonceHall
+					bind:titre={ahTitre}
+					bind:message={ahMessage}
+					bind:perimetre={ahPerimetre}
+					bind:format={ahFormat}
+					bind:photos={ahPhotos}
+					pubs={ahPubs}
+					sourceId={ahSourceId}
+					formats={AH_FORMATS}
+					maxPhotos={MAX_FICHIERS}
+					bind:envoyerCs={ahEnvoyerCs}
+					valide={ahFormulaireValide}
+					saving={ahSaving}
+					apercuLoading={ahApercuLoading}
+					onPrefill={ahPrefillDepuisPublication}
+					onApercu={ahPrevisualiser}
+					onCreer={ahCreer}
+					onUpload={async (f) => (await fichiersApi.upload(f)).url}
+					onPhotosChange={() => {
+						ahApercuHtml = '';
+						ahApercuFormat = '';
+					}}
+				/>
+			</section>
+
+			<section class="card ah-apercu">
+				<h3 class="ah-apercu-titre">
+					Aperçu {#if ahApercuFormat}<span class="badge badge-blue">{ahApercuFormat}</span>{/if}
+				</h3>
+				{#if ahApercuHtml}
+					<div class="ah-apercu-cadre">
+						<iframe
+							class="ah-apercu-frame"
+							title="Aperçu de l'annonce"
+							sandbox=""
+							srcdoc={ahApercuHtml}
+						></iframe>
+					</div>
+				{:else}
+					<div class="empty-state" style="margin:0">
+						<p>
+							Renseignez le titre et le message, puis cliquez sur <strong>Aperçu</strong> pour voir l'affiche
+							telle qu'elle sortira de l'imprimante.
+						</p>
+					</div>
+				{/if}
+			</section>
+		</div>
+	{:else}
+		<!-- ── Historique ──────────────────────────────────────────────── -->
+		<div class="perimetre-pills" style="margin-bottom:.85rem">
+			<Pastille
+				active={!ahArchivees}
+				on:click={() => {
+					ahArchivees = false;
+					loadAnnoncesHall(true);
+				}}>Annonces</Pastille
+			>
+			<Pastille
+				active={ahArchivees}
+				on:click={() => {
+					ahArchivees = true;
+					loadAnnoncesHall(true);
+				}}>Archives</Pastille
+			>
 		</div>
 
-		{#if ahVue === 'nouvelle'}
-			<!-- ── Création d'une annonce ──────────────────────────────────── -->
-			<div class="ah-layout">
-				<section class="card ah-form">
-					<FormulaireAnnonceHall
-						bind:titre={ahTitre} bind:message={ahMessage}
-						bind:perimetre={ahPerimetre} bind:format={ahFormat} bind:photos={ahPhotos}
-						pubs={ahPubs} sourceId={ahSourceId} formats={AH_FORMATS}
-						maxPhotos={MAX_FICHIERS}
-						bind:envoyerCs={ahEnvoyerCs}
-						valide={ahFormulaireValide} saving={ahSaving} apercuLoading={ahApercuLoading}
-						onPrefill={ahPrefillDepuisPublication}
-						onApercu={ahPrevisualiser}
-						onCreer={ahCreer}
-						onUpload={async (f) => (await fichiersApi.upload(f)).url}
-						onPhotosChange={() => { ahApercuHtml = ''; ahApercuFormat = ''; }}
-					/>
-				</section>
-
-				<section class="card ah-apercu">
-					<h3 class="ah-apercu-titre">
-						Aperçu {#if ahApercuFormat}<span class="badge badge-blue">{ahApercuFormat}</span>{/if}
-					</h3>
-					{#if ahApercuHtml}
-						<div class="ah-apercu-cadre">
-							<iframe class="ah-apercu-frame" title="Aperçu de l'annonce" sandbox="" srcdoc={ahApercuHtml}></iframe>
-						</div>
-					{:else}
-						<div class="empty-state" style="margin:0">
-							<p>Renseignez le titre et le message, puis cliquez sur <strong>Aperçu</strong> pour voir
-							l'affiche telle qu'elle sortira de l'imprimante.</p>
-						</div>
-					{/if}
-				</section>
+		{#if ahLoading}
+			<p style="color:var(--color-text-muted)">Chargement…</p>
+		{:else if ahList.length === 0}
+			<div class="empty-state">
+				<h3>{ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}</h3>
+				<p>
+					{ahArchivees
+						? "Les annonces archivées depuis l'historique apparaîtront ici."
+						: "Créez la première annonce depuis l'onglet « Nouvelle annonce »."}
+				</p>
 			</div>
-
 		{:else}
-			<!-- ── Historique ──────────────────────────────────────────────── -->
-			<div class="perimetre-pills" style="margin-bottom:.85rem">
-				<Pastille active={!ahArchivees} on:click={() => { ahArchivees = false; loadAnnoncesHall(true); }}>Annonces</Pastille>
-				<Pastille active={ahArchivees} on:click={() => { ahArchivees = true; loadAnnoncesHall(true); }}>Archives</Pastille>
-			</div>
-
-			{#if ahLoading}
-				<p style="color:var(--color-text-muted)">Chargement…</p>
-			{:else if ahList.length === 0}
-				<div class="empty-state">
-					<h3>{ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}</h3>
-					<p>{ahArchivees ? "Les annonces archivées depuis l'historique apparaîtront ici." : 'Créez la première annonce depuis l\'onglet « Nouvelle annonce ».'}</p>
-				</div>
-			{:else}
-				{#each ahList as annonce}
-					<!--  🔴 `EnteteCarte` + `Vignette`, la NORME des cartes du site depuis le
+			{#each ahList as annonce}
+				<!--  🔴 `EnteteCarte` + `Vignette`, la NORME des cartes du site depuis le
 					      18/08/2026 (#480). Cette liste recomposait son en-tête à la main —
 					      titre après les badges, méta sur sa propre ligne — alors que les cinq
 					      autres listes passent par le composant. Deux cartes du même site ne
@@ -320,119 +366,203 @@
 					      ⚠️ `basculable` : le titre déplie, comme partout ailleurs. Le bouton
 					      ▼ reste — il porte l'affordance pour qui ne devine pas qu'un titre
 					      clique —, mais il n'est plus le seul chemin. -->
-					<div class="card ah-card">
-						<div class="ah-card-top">
-							<Vignette
-								src={annonce.images?.[0] ?? null}
-								alt={annonce.titre}
-								placeholder={annonce.format_label}
-								count={Math.max(0, (annonce.images?.length ?? 0) - 1)}
-								title="Format {annonce.format_label}"
-							/>
-							<div class="ah-card-body">
-								<EnteteCarte titre={annonce.titre} date={fmtDate(annonce.cree_le)}
-									basculable
-									on:toggle={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
-								>
-									<svelte:fragment slot="tags">
-										<span class="badge badge-blue">{annonce.format_label}</span>
-										<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
-										{#if annonce.publication_id}<span class="badge badge-gray" title="Générée depuis une actualité">&#x1F4F0; Actualité</span>{/if}
-										{#if annonce.archivee}<span class="badge badge-gray">Archivée</span>{/if}
-									</svelte:fragment>
-									<svelte:fragment slot="actions">
-										<a class="btn btn-sm btn-outline" href={annoncesHallApi.pdfUrl(annonce.id)} target="_blank" rel="noopener">
-											&#x1F4C4; PDF{#if annonce.taille_octets} <span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
-										</a>
-										<button class="btn btn-sm btn-outline"
-											aria-label={ahExpandedId === annonce.id ? 'Replier' : 'Déplier'}
-											on:click|stopPropagation={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}>
-											{ahExpandedId === annonce.id ? '▲' : '▼'}
-										</button>
-									</svelte:fragment>
-								</EnteteCarte>
-								<!--  La méta reste SOUS l'en-tête : elle porte l'envoi, qui n'est ni
+				<div class="card ah-card">
+					<div class="ah-card-top">
+						<Vignette
+							src={annonce.images?.[0] ?? null}
+							alt={annonce.titre}
+							placeholder={annonce.format_label}
+							count={Math.max(0, (annonce.images?.length ?? 0) - 1)}
+							title="Format {annonce.format_label}"
+						/>
+						<div class="ah-card-body">
+							<EnteteCarte
+								titre={annonce.titre}
+								date={fmtDate(annonce.cree_le)}
+								basculable
+								on:toggle={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
+							>
+								<svelte:fragment slot="tags">
+									<span class="badge badge-blue">{annonce.format_label}</span>
+									<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
+									{#if annonce.publication_id}<span
+											class="badge badge-gray"
+											title="Générée depuis une actualité">&#x1F4F0; Actualité</span
+										>{/if}
+									{#if annonce.archivee}<span class="badge badge-gray">Archivée</span>{/if}
+								</svelte:fragment>
+								<svelte:fragment slot="actions">
+									<a
+										class="btn btn-sm btn-outline"
+										href={annoncesHallApi.pdfUrl(annonce.id)}
+										target="_blank"
+										rel="noopener"
+									>
+										&#x1F4C4; PDF{#if annonce.taille_octets}
+											<span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
+									</a>
+									<button
+										class="btn btn-sm btn-outline"
+										aria-label={ahExpandedId === annonce.id ? 'Replier' : 'Déplier'}
+										on:click|stopPropagation={() =>
+											(ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
+									>
+										{ahExpandedId === annonce.id ? '▲' : '▼'}
+									</button>
+								</svelte:fragment>
+							</EnteteCarte>
+							<!--  La méta reste SOUS l'en-tête : elle porte l'envoi, qui n'est ni
 								      un tag ni une date de création. -->
-								<small class="ah-card-meta">
-									{#if annonce.auteur_nom}{annonce.auteur_nom} · {/if}
-									{#if annonce.destinataires.length}
-										&#x2709; {annonce.destinataires.length} destinataire{annonce.destinataires.length > 1 ? 's' : ''}
-									{:else}
-										<span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
-									{/if}
-								</small>
-								<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
-							</div>
-						</div>
-
-						{#if ahExpandedId === annonce.id}
-							<div class="ah-card-details">
-								<div class="rich-content" style="font-size:.88rem">{@html safeHtml(annonce.message)}</div>
-								{#if annonce.images?.length}
-									<div style="margin-top:.6rem">
-										<FichiersUpload urls={annonce.images} readonly size={64} />
-									</div>
+							<small class="ah-card-meta">
+								{#if annonce.auteur_nom}{annonce.auteur_nom} ·
 								{/if}
 								{#if annonce.destinataires.length}
-									<p class="ah-card-meta" style="margin-top:.6rem">
-										Envoyée le {fmtDatetime(annonce.envoye_le ?? annonce.cree_le)} à
-										{annonce.destinataires.join(', ')}
-									</p>
+									&#x2709; {annonce.destinataires.length} destinataire{annonce.destinataires
+										.length > 1
+										? 's'
+										: ''}
+								{:else}
+									<span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
 								{/if}
-								<div class="ah-card-actions" style="margin-top:.75rem">
-									<button class="btn btn-sm btn-outline" on:click={() => ahRenvoyer(annonce)}>
-										&#x2709; Renvoyer au CS
-									</button>
-									<button class="btn-icon-warn" title={annonce.archivee ? 'Restaurer' : 'Archiver'}
-										aria-label={annonce.archivee ? 'Restaurer cette annonce' : 'Archiver cette annonce'}
-										on:click={() => ahArchiver(annonce)}>
-										{annonce.archivee ? '↩️' : '\u{1F4E6}'}
-									</button>
-									{#if $isAdmin && annonce.archivee}
-										<button class="btn-icon-danger" title="Supprimer définitivement"
-											aria-label="Supprimer définitivement cette annonce"
-											on:click={() => ahSupprimer(annonce)}>&#x1F5D1;&#xFE0F;</button>
-									{/if}
-								</div>
-							</div>
-						{/if}
+							</small>
+							<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
+						</div>
 					</div>
-				{/each}
-			{/if}
+
+					{#if ahExpandedId === annonce.id}
+						<div class="ah-card-details">
+							<div class="rich-content" style="font-size:.88rem">
+								{@html safeHtml(annonce.message)}
+							</div>
+							{#if annonce.images?.length}
+								<div style="margin-top:.6rem">
+									<FichiersUpload urls={annonce.images} readonly size={64} />
+								</div>
+							{/if}
+							{#if annonce.destinataires.length}
+								<p class="ah-card-meta" style="margin-top:.6rem">
+									Envoyée le {fmtDatetime(annonce.envoye_le ?? annonce.cree_le)} à
+									{annonce.destinataires.join(', ')}
+								</p>
+							{/if}
+							<div class="ah-card-actions" style="margin-top:.75rem">
+								<button class="btn btn-sm btn-outline" on:click={() => ahRenvoyer(annonce)}>
+									&#x2709; Renvoyer au CS
+								</button>
+								<button
+									class="btn-icon-warn"
+									title={annonce.archivee ? 'Restaurer' : 'Archiver'}
+									aria-label={annonce.archivee
+										? 'Restaurer cette annonce'
+										: 'Archiver cette annonce'}
+									on:click={() => ahArchiver(annonce)}
+								>
+									{annonce.archivee ? '↩️' : '\u{1F4E6}'}
+								</button>
+								{#if $isAdmin && annonce.archivee}
+									<button
+										class="btn-icon-danger"
+										title="Supprimer définitivement"
+										aria-label="Supprimer définitivement cette annonce"
+										on:click={() => ahSupprimer(annonce)}>&#x1F5D1;&#xFE0F;</button
+									>
+								{/if}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/each}
 		{/if}
-	</div>
+	{/if}
+</div>
 
 <style>
-	.ah-panel { display: flex; flex-direction: column; }
-	.ah-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
-	.ah-form { padding: 1rem 1.1rem; }
+	.ah-panel {
+		display: flex;
+		flex-direction: column;
+	}
+	.ah-layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 1rem;
+		align-items: start;
+	}
+	.ah-form {
+		padding: 1rem 1.1rem;
+	}
 	/*  `.ah-form label` et `.ah-form input` sont partis avec le formulaire, dans
 	    `FormulaireAnnonceHall` — un style n'atteint pas le balisage d'un enfant. */
-	.ah-apercu { padding: 1rem 1.1rem; }
+	.ah-apercu {
+		padding: 1rem 1.1rem;
+	}
 	.ah-apercu-titre {
-		display: flex; align-items: center; gap: .4rem;
-		font-size: .95rem; font-weight: 600; margin-bottom: .75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.95rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
 	}
 	.ah-apercu-cadre {
-		border: 1px solid var(--color-border); border-radius: var(--radius);
-		overflow: hidden; background: #fff;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: #fff;
 	}
-	.ah-apercu-frame { width: 100%; height: 640px; border: none; display: block; }
+	.ah-apercu-frame {
+		width: 100%;
+		height: 640px;
+		border: none;
+		display: block;
+	}
 
-	.ah-card { padding: .85rem 1.1rem; margin-bottom: .5rem; }
-	.ah-card-top { display: flex; gap: .85rem; align-items: flex-start; }
-	.ah-card-body { flex: 1; min-width: 0; }
+	.ah-card {
+		padding: 0.85rem 1.1rem;
+		margin-bottom: 0.5rem;
+	}
+	.ah-card-top {
+		display: flex;
+		gap: 0.85rem;
+		align-items: flex-start;
+	}
+	.ah-card-body {
+		flex: 1;
+		min-width: 0;
+	}
 	/*  `.ah-card-badges` et `.ah-card-titre` retirées le 29/08/2026 (#480) :
 	    `EnteteCarte` porte désormais les tags et le titre, avec leur mise en
 	    forme. Les laisser aurait fait deux vocabulaires pour une seule notion. */
-	.ah-card-meta { color: var(--color-text-muted); font-size: .78rem; }
-	.ah-card-apercu { font-size: .82rem; color: var(--color-text-muted); margin-top: .35rem; }
-	.ah-card-actions { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
-	.ah-poids { font-size: .72rem; color: var(--color-text-muted); }
-	.ah-card-details { border-top: 1px solid var(--color-border); margin-top: .75rem; padding-top: .75rem; }
+	.ah-card-meta {
+		color: var(--color-text-muted);
+		font-size: 0.78rem;
+	}
+	.ah-card-apercu {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+	}
+	.ah-card-actions {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	.ah-poids {
+		font-size: 0.72rem;
+		color: var(--color-text-muted);
+	}
+	.ah-card-details {
+		border-top: 1px solid var(--color-border);
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+	}
 
 	@media (max-width: 900px) {
-		.ah-layout { grid-template-columns: 1fr; }
-		.ah-apercu-frame { height: 460px; }
+		.ah-layout {
+			grid-template-columns: 1fr;
+		}
+		.ah-apercu-frame {
+			height: 460px;
+		}
 	}
 </style>

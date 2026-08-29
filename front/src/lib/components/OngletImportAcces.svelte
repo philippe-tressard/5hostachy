@@ -45,7 +45,10 @@
 		televersement = true;
 		try {
 			const r = await modele.api.upload(fichier, remplacer);
-			toast('success', `Import : ${r.importes} ajoutés, ${r.doublons} doublons, ${r.ignores} ignorés`);
+			toast(
+				'success',
+				`Import : ${r.importes} ajoutés, ${r.doublons} doublons, ${r.ignores} ignorés`,
+			);
 			await recharger();
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur import');
@@ -90,7 +93,9 @@
 		editLot = String(imp.lot_id ?? '');
 		editChezLoc = imp.chez_locataire;
 		editNotes = imp.notes_admin ?? '';
-		editBooleens = Object.fromEntries(modele.champsBooleens.map((c) => [c.cle, imp[c.cle] ?? false]));
+		editBooleens = Object.fromEntries(
+			modele.champsBooleens.map((c) => [c.cle, imp[c.cle] ?? false]),
+		);
 	}
 
 	function annulerEdition() {
@@ -205,7 +210,12 @@
 	on:importer={(e) => televerser(e.detail.fichier, e.detail.remplacer)}
 	on:filtrer={recharger}
 >
-	<button slot="actions" class="btn btn-outline btn-sm" on:click={autoMatch} disabled={rapprochement}>
+	<button
+		slot="actions"
+		class="btn btn-outline btn-sm"
+		on:click={autoMatch}
+		disabled={rapprochement}
+	>
 		{rapprochement ? 'Recherche…' : '\u{1F517} Auto-match'}
 	</button>
 </BarreImport>
@@ -388,7 +398,11 @@
 											on:click={annulerEdition}
 											disabled={enregistrement}>Annuler</button
 										>
-										<button class="btn btn-primary" on:click={enregistrer} disabled={enregistrement}>
+										<button
+											class="btn btn-primary"
+											on:click={enregistrer}
+											disabled={enregistrement}
+										>
 											{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 										</button>
 									</div>

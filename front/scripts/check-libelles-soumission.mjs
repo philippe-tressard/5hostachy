@@ -122,7 +122,7 @@ const EXCEPTIONS = {
 	//  Ce ne sont pas des créations d'objet, et leur verbe métier est le bon.
 	'lib/components/FormulaireCreation.svelte':
 		"c'est le cadre (titre + boîte), pas un formulaire — chaque écran écrit son " +
-		"propre bouton dans son <form>",
+		'propre bouton dans son <form>',
 	'lib/components/ChangementMotDePasse.svelte':
 		'changement de mot de passe — hors périmètre explicite de la règle',
 	'routes/auth/connexion/+page.svelte': "écran d'authentification — « Se connecter »",
@@ -146,8 +146,8 @@ const EXCEPTIONS = {
 	//  Repéré par ce contrôle en extrayant le reporting (#453) : la rangée est
 	//  passée à `.form-actions`, ce qui l'a rendue visible ici.
 	'lib/components/reporting/VueRelanceSyndic.svelte':
-		"envoi groupé de relances — « Envoyer la relance (N tickets) » agit sur une " +
-		"sélection existante, il ne crée aucun objet",
+		'envoi groupé de relances — « Envoyer la relance (N tickets) » agit sur une ' +
+		'sélection existante, il ne crée aucun objet',
 
 	//  ── RESTE À TRAITER — révélé par l'élargissement de portée (#416) ───────
 	//  Ces écarts sont réels et connus. Ils ne sont PAS corrigés dans #416, dont
@@ -285,7 +285,10 @@ function libellesDuBouton(contenu) {
 	}
 
 	const libelles = [];
-	const texte = litteral.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+	const texte = litteral
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
 	if (/[A-Za-zÀ-ÿ]/.test(texte)) libelles.push(texte);
 
 	const chaine = /'((?:[^'\\]|\\.){2,})'|"((?:[^"\\]|\\.){2,})"|`((?:[^`\\]|\\.){2,})`/g;

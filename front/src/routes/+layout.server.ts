@@ -11,6 +11,8 @@ export const load = async ({ fetch }) => {
 	try {
 		const r = await fetch(`${apiBase}/config`);
 		if (r.ok) return { siteConfig: await r.json() };
-	} catch { /* réseau indisponible : le client chargera la config */ }
+	} catch {
+		/* réseau indisponible : le client chargera la config */
+	}
 	return { siteConfig: {} };
 };

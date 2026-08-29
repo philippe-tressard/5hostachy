@@ -41,10 +41,7 @@ const CANAUX = [
 	'destinataireSyndic',
 	'destinataireCs',
 ];
-const CASE_DE_CANAL = new RegExp(
-	`bind:checked=\\{[^}]*\\b(${CANAUX.join('|')})\\b`,
-	'g',
-);
+const CASE_DE_CANAL = new RegExp(`bind:checked=\\{[^}]*\\b(${CANAUX.join('|')})\\b`, 'g');
 /**
  * Les écrans qui écrivent LÉGITIMEMENT une case de canal à la main, avec leur
  * raison — comme `lint:soumission` et `lint:styles` le font déjà.
@@ -104,7 +101,7 @@ for (const chemin of tous) {
 
 	for (const m of source.matchAll(CASE_DE_CANAL)) {
 		fautes.push(
-			`${rel.split(sep).join('/')} — case « ${m[1] } » écrite à la main : ` +
+			`${rel.split(sep).join('/')} — case « ${m[1]} » écrite à la main : ` +
 				'utiliser <CanauxNotification bind:whatsapp bind:syndic bind:cs />',
 		);
 	}

@@ -11,10 +11,16 @@
 		loadSiteConfig();
 		try {
 			const r = await fetch('/api/config/legal');
-			if (r.ok) { const d = await r.json(); customHtml = d['politique_confidentialite'] ?? ''; }
-		} catch { /* silencieux */ }
+			if (r.ok) {
+				const d = await r.json();
+				customHtml = d['politique_confidentialite'] ?? '';
+			}
+		} catch {
+			/* silencieux */
+		}
 	});
 </script>
+
 <svelte:head><title>Politique de confidentialité — {_siteNom}</title></svelte:head>
 
 <main class="legal-page">

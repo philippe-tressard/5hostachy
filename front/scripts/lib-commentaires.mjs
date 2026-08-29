@@ -51,7 +51,10 @@ import { pathToFileURL } from 'node:url';
 export function neutraliserCommentaires(source) {
 	return source
 		.replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, (bloc) => bloc.replace(/[^\n]/g, ' '))
-		.replace(/(^|[^:])\/\/[^\n]*/g, (bloc, avant) => avant + ' '.repeat(bloc.length - avant.length));
+		.replace(
+			/(^|[^:])\/\/[^\n]*/g,
+			(bloc, avant) => avant + ' '.repeat(bloc.length - avant.length),
+		);
 }
 
 function selftest() {
@@ -71,7 +74,9 @@ function selftest() {
 		const obtenu = neutraliserCommentaires(source);
 		const soucis = [];
 		if (obtenu.length !== source.length) {
-			soucis.push(`longueur ${obtenu.length} au lieu de ${source.length} — les positions se décalent`);
+			soucis.push(
+				`longueur ${obtenu.length} au lieu de ${source.length} — les positions se décalent`,
+			);
 		}
 		if ((obtenu.match(/\n/g) || []).length !== (source.match(/\n/g) || []).length) {
 			soucis.push('sauts de ligne perdus — les numéros de ligne deviennent faux');
@@ -94,8 +99,11 @@ function selftest() {
 	t('commentaire Svelte', '<!-- interdit -->\n<p>ok</p>', 'interdit');
 	//  🔴 Le cas que la détection line-locale ne voit pas — celui qui a fait
 	//  refuser trois lots le 20/08/2026.
-	t('commentaire Svelte multi-lignes',
-		'<!--  ligne un\n      ligne deux : interdit\n-->\n<p>ok</p>', 'interdit');
+	t(
+		'commentaire Svelte multi-lignes',
+		'<!--  ligne un\n      ligne deux : interdit\n-->\n<p>ok</p>',
+		'interdit',
+	);
 	t('commentaire de bloc multi-lignes', '/*\n interdit\n*/\nconst a = 1;', 'interdit');
 	//  ⚠️ Ce qui n'est PAS un commentaire doit rester intact, au caractère près.
 	t('URL avec double barre', "const u = 'https://exemple.fr/a';", null);

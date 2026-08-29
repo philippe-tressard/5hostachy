@@ -31,19 +31,30 @@
 	/* Ce qui reste à faire, dit dans l'ordre où l'utilisateur remplit — un
 	   bouton désactivé sans explication laisse chercher (`standards/11` §3). */
 	$: aideAction =
-		pwdActuel.length === 0 ? 'Saisissez d’abord votre mot de passe actuel.'
-		: pwdNouv.length < 8 ? 'Le nouveau mot de passe doit faire 8 caractères au minimum.'
-		: pwdNouv !== pwdConf ? 'Les deux saisies du nouveau mot de passe doivent être identiques.'
-		: '';
+		pwdActuel.length === 0
+			? 'Saisissez d’abord votre mot de passe actuel.'
+			: pwdNouv.length < 8
+				? 'Le nouveau mot de passe doit faire 8 caractères au minimum.'
+				: pwdNouv !== pwdConf
+					? 'Les deux saisies du nouveau mot de passe doivent être identiques.'
+					: '';
 	$: formulaireValide = aideAction === '';
 
 	async function changePassword() {
 		// Garde conservée : la soumission reste atteignable à la touche Entrée.
-		if (pwdNouv !== pwdConf) { toast('error', 'Les mots de passe ne correspondent pas'); return; }
+		if (pwdNouv !== pwdConf) {
+			toast('error', 'Les mots de passe ne correspondent pas');
+			return;
+		}
 		savingPwd = true;
 		try {
-			await authApi.changePassword({ mot_de_passe_actuel: pwdActuel, nouveau_mot_de_passe: pwdNouv });
-			pwdActuel = ''; pwdNouv = ''; pwdConf = '';
+			await authApi.changePassword({
+				mot_de_passe_actuel: pwdActuel,
+				nouveau_mot_de_passe: pwdNouv,
+			});
+			pwdActuel = '';
+			pwdNouv = '';
+			pwdConf = '';
 			toast('success', 'Mot de passe modifié');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -92,7 +103,12 @@
 			{#if aideAction && !savingPwd}
 				<p class="aide">{aideAction}</p>
 			{/if}
-			<button type="submit" class="btn btn-primary" disabled={savingPwd || !formulaireValide} aria-busy={savingPwd}>
+			<button
+				type="submit"
+				class="btn btn-primary"
+				disabled={savingPwd || !formulaireValide}
+				aria-busy={savingPwd}
+			>
 				{#if savingPwd}<span class="spinner" aria-hidden="true"></span>{/if}
 				{savingPwd ? 'Modification…' : 'Modifier le mot de passe'}
 			</button>
@@ -103,7 +119,7 @@
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
 	.section-aide {
-		font-size: .8rem;
+		font-size: 0.8rem;
 		color: var(--color-text-muted);
 		margin-bottom: 1rem;
 		line-height: 1.4;
@@ -111,11 +127,13 @@
 
 	.bloc-nouveau {
 		border-left: 3px solid var(--color-border);
-		padding-left: .85rem;
+		padding-left: 0.85rem;
 		margin-bottom: 1rem;
 	}
 	/* Le dernier champ du bloc ne pousse pas : la marge est portée par le bloc. */
-	.bloc-nouveau > :global(.field:last-child) { margin-bottom: 0; }
+	.bloc-nouveau > :global(.field:last-child) {
+		margin-bottom: 0;
+	}
 
 	/*  La charte porte l'alignement, l'ecart et la marge ; seuls
     `align-items` et `flex-wrap` sont propres a cette rangee (#607, 28/08/2026). */
@@ -125,7 +143,7 @@
 	}
 	.aide {
 		margin-right: auto;
-		font-size: .8rem;
+		font-size: 0.8rem;
 		color: var(--color-text-muted);
 		line-height: 1.4;
 	}
@@ -133,8 +151,16 @@
 	/* Sur un téléphone, l'aide et le bouton s'empilent : le bouton prend toute
 	   la largeur plutôt que de se tasser dans un coin (`standards/11` §10). */
 	@media (max-width: 480px) {
-		.form-actions { gap: .6rem; }
-		.aide { margin-right: 0; width: 100%; }
-		.form-actions .btn { width: 100%; justify-content: center; }
+		.form-actions {
+			gap: 0.6rem;
+		}
+		.aide {
+			margin-right: 0;
+			width: 100%;
+		}
+		.form-actions .btn {
+			width: 100%;
+			justify-content: center;
+		}
 	}
 </style>

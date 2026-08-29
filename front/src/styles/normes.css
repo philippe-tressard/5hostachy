@@ -16,28 +16,40 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
    ───────────────────────────────────────────────────────────────────────── */
 
 /* ── Page header ── */
-.page-header { 
-  display: flex; 
-  justify-content: space-between;
-  align-items: center; 
-  gap: .75rem; 
-  margin-bottom: 1.5rem; 
-  padding-left: 1.25rem; 
+.page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 1.5rem;
+	padding-left: 1.25rem;
 }
 
 /* ── Page header button (top-right buttons: "+ Nouveau...") ── */
 .page-header-btn {
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.2;
-  min-height: 2.5rem;
-  white-space: nowrap;
+	padding: 0.5rem 1rem;
+	font-size: 0.9rem;
+	font-weight: 600;
+	line-height: 1.2;
+	min-height: 2.5rem;
+	white-space: nowrap;
 }
 
 /* ── Page subtitle ── */
-.page-subtitle { font-size: .9rem; color: var(--color-text-muted); margin-bottom: 1.5rem; line-height: 1.55; padding-left: 1.25rem; }
-.tab-descriptif { font-size: .82rem; color: var(--color-text-muted); margin: -.75rem 0 1.5rem; padding-left: 1.25rem; line-height: 1.45; }
+.page-subtitle {
+	font-size: 0.9rem;
+	color: var(--color-text-muted);
+	margin-bottom: 1.5rem;
+	line-height: 1.55;
+	padding-left: 1.25rem;
+}
+.tab-descriptif {
+	font-size: 0.82rem;
+	color: var(--color-text-muted);
+	margin: -0.75rem 0 1.5rem;
+	padding-left: 1.25rem;
+	line-height: 1.45;
+}
 
 /* ── Norme UX : largeur des formulaires de saisie ─────────────────────────
 
@@ -72,8 +84,12 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     La marge n'est pas redite ici : `.container` la porte (`max-width: 1200px` et
     `padding: 0 2rem`, réduit sous 640 px), et elle est déjà responsive. Un
     formulaire s'arrête donc au même bord que les cartes de la liste sous lui. */
-:root { --largeur-saisie: 100%; }
-.largeur-saisie { max-width: var(--largeur-saisie); }
+:root {
+	--largeur-saisie: 100%;
+}
+.largeur-saisie {
+	max-width: var(--largeur-saisie);
+}
 
 /* ── Norme UX : carte de liste expansible ─────────────────────────────────
 
@@ -93,19 +109,25 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
    (voir ApercuCarte.svelte) dit que le texte continue, au lieu de le couper.
    ────────────────────────────────────────────────────────────────────────── */
 .carte-liste {
-  margin-bottom: .75rem;
-  border-left: 4px solid var(--color-border);
-  border-radius: var(--radius);
-  position: relative;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow .15s ease, border-left-color .15s ease;
+	margin-bottom: 0.75rem;
+	border-left: 4px solid var(--color-border);
+	border-radius: var(--radius);
+	position: relative;
+	background: var(--color-surface);
+	box-shadow: var(--shadow-sm);
+	transition:
+		box-shadow 0.15s ease,
+		border-left-color 0.15s ease;
 }
 .carte-liste:hover,
-.carte-liste.expanded { border-left-color: var(--color-primary); }
+.carte-liste.expanded {
+	border-left-color: var(--color-primary);
+}
 /*  L'ombre ne se renforce qu'au survol : au repos, une ombre marquée sur chaque
     carte fatigue une liste longue. Au survol elle isole celle qu'on vise. */
-.carte-liste:hover { box-shadow: 0 4px 14px rgba(30, 58, 95, .13); }
+.carte-liste:hover {
+	box-shadow: 0 4px 14px rgba(30, 58, 95, 0.13);
+}
 /*  🔴 LE FOND CHANGE AU SURVOL — c'est ce qui dit « cette carte se déplie ».
     Demandé le 18/08/2026 : « appliquer partout la logique du fil d'actualité,
     cliquable sur toute la zone, avec changement de couleur au survol ».
@@ -120,7 +142,9 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     `:not(.expanded)` porte donc toute la règle. Sans lui, le curseur
     promettrait partout un clic qui ne fait rien, et le fond se surlignerait
     sous un formulaire ouvert. */
-.carte-liste:not(.expanded) { cursor: pointer; }
+.carte-liste:not(.expanded) {
+	cursor: pointer;
+}
 
 /*  🔴 C'est le TITRE qui se colore au survol, jamais la carte entière.
     Signalé le 18/08/2026 : « quand tout l'article change de couleur c'est
@@ -135,10 +159,14 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     La règle vit ICI et non dans `EnteteCarte` : le déclencheur est le survol du
     PARENT, qu'un composant enfant ne peut pas connaître. `.carte-liste` est déjà
     une classe globale de ce fichier — les deux vont ensemble. */
-.carte-liste:not(.expanded):hover .ec-titre { color: var(--color-primary); }
+.carte-liste:not(.expanded):hover .ec-titre {
+	color: var(--color-primary);
+}
 /*  Dépliée, la carte n'est plus une cible : le titre se colore à son propre
     survol, puisqu'il est le seul à répondre. */
-.carte-liste.expanded .ec-titre:hover { color: var(--color-primary); }
+.carte-liste.expanded .ec-titre:hover {
+	color: var(--color-primary);
+}
 
 /*  Les listes qui portent ENCORE leur propre balisage de ligne, en attendant
     leur découpage (#432 pour le calendrier, #453 pour l'Espace CS). Leur titre
@@ -151,12 +179,21 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
     `.carte-liste` a été créé pour supprimer. Elles disparaîtront avec les
     balisages qu'elles servent. */
 .event-row:hover .event-titre,
-.tk-row:hover .tk-row-titre { color: var(--color-primary); }
-.event-titre, .tk-row-titre { transition: color .12s ease; }
-.carte-liste.urgent { border-left-color: var(--color-danger); }
+.tk-row:hover .tk-row-titre {
+	color: var(--color-primary);
+}
+.event-titre,
+.tk-row-titre {
+	transition: color 0.12s ease;
+}
+.carte-liste.urgent {
+	border-left-color: var(--color-danger);
+}
 
 @media (max-width: 640px) {
-  .carte-liste { margin-bottom: .6rem; }
+	.carte-liste {
+		margin-bottom: 0.6rem;
+	}
 }
 
 /* ── Norme UX : troncature à N lignes ──
@@ -167,125 +204,172 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
    kanban du tableau de bord (#561, 28/08/2026), et les trois écritures de la
    notion omettaient toutes `line-clamp` — la propriété STANDARD, que les
    navigateurs non-WebKit lisent. Elles tronquaient donc par chance. */
-.clamp-5, .clamp-2 {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.clamp-5,
+.clamp-2 {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
-.clamp-5 { -webkit-line-clamp: 5; line-clamp: 5; }
-.clamp-2 { -webkit-line-clamp: 2; line-clamp: 2; }
+.clamp-5 {
+	-webkit-line-clamp: 5;
+	line-clamp: 5;
+}
+.clamp-2 {
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+}
 
 @media (min-width: 1024px) {
-  .container { padding: 0 2.5rem; }
-  .page { padding-top: 2rem; padding-bottom: 2rem; }
+	.container {
+		padding: 0 2.5rem;
+	}
+	.page {
+		padding-top: 2rem;
+		padding-bottom: 2rem;
+	}
 }
 
 /* ── Mobile global ── */
 @media (max-width: 767px) {
-  :root {
-    font-size: 12px;
-  }
+	:root {
+		font-size: 12px;
+	}
 
-  .container {
-    padding: 0 1.25rem;
-  }
+	.container {
+		padding: 0 1.25rem;
+	}
 
-  .page {
-    padding-top: 1.25rem;
-    padding-bottom: 1.25rem;
-  }
+	.page {
+		padding-top: 1.25rem;
+		padding-bottom: 1.25rem;
+	}
 
-  /* Tables : scroll horizontal + cellules compactes */
-  .table {
-    font-size: .8rem;
-  }
-  .table th,
-  .table td {
-    padding: .4rem .5rem;
-    white-space: nowrap;
-  }
-  /* Wrapper scrollable pour les tables */
-  .card { overflow-x: auto; max-width: 100%; }
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+	/* Tables : scroll horizontal + cellules compactes */
+	.table {
+		font-size: 0.8rem;
+	}
+	.table th,
+	.table td {
+		padding: 0.4rem 0.5rem;
+		white-space: nowrap;
+	}
+	/* Wrapper scrollable pour les tables */
+	.card {
+		overflow-x: auto;
+		max-width: 100%;
+	}
+	.table-wrap {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		max-width: 100%;
+	}
 
-  /* Inputs/selects : ne pas forcer de min-width en flex/grid */
-  input, select, textarea { min-width: 0; }
+	/* Inputs/selects : ne pas forcer de min-width en flex/grid */
+	input,
+	select,
+	textarea {
+		min-width: 0;
+	}
 
-  /* Modales : contraindre à la largeur de l'écran */
-  .modal-overlay { padding: .75rem; }
+	/* Modales : contraindre à la largeur de l'écran */
+	.modal-overlay {
+		padding: 0.75rem;
+	}
 
-  /* Boutons plus compacts */
-  .btn {
-    padding: .4rem .75rem;
-    font-size: .8rem;
-  }
-  .btn-sm {
-    padding: .25rem .5rem;
-    font-size: .75rem;
-  }
-  .page-header-btn {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
-    min-height: 2.15rem;
-  }
+	/* Boutons plus compacts */
+	.btn {
+		padding: 0.4rem 0.75rem;
+		font-size: 0.8rem;
+	}
+	.btn-sm {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.75rem;
+	}
+	.page-header-btn {
+		padding: 0.4rem 0.75rem;
+		font-size: 0.8rem;
+		min-height: 2.15rem;
+	}
 
-  /* Ligne d'actions : retour à la ligne */
-  .action-row {
-    flex-wrap: wrap;
-    gap: .35rem;
-  }
+	/* Ligne d'actions : retour à la ligne */
+	.action-row {
+		flex-wrap: wrap;
+		gap: 0.35rem;
+	}
 
-  /* Grilles de formulaire : 1 colonne */
-  .form-grid {
-    grid-template-columns: 1fr !important;
-  }
+	/* Grilles de formulaire : 1 colonne */
+	.form-grid {
+		grid-template-columns: 1fr !important;
+	}
 
-  /* Cards */
-  .card {
-    padding: 1rem;
-  }
+	/* Cards */
+	.card {
+		padding: 1rem;
+	}
 
-  /* Page header flex : colonne + sticky sous la topbar sur mobile */
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: .5rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    padding-bottom: .75rem;
-    margin-bottom: 1rem;
-    position: sticky;
-    top: 3.25rem;
-    background: var(--color-bg, #f2efe9);
-    z-index: 50;
-  }
-  .page-subtitle { padding-left: 1rem; }
-  .tab-descriptif { padding-left: 1rem; }
+	/* Page header flex : colonne + sticky sous la topbar sur mobile */
+	.page-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+		padding-left: 1rem;
+		padding-right: 1rem;
+		padding-bottom: 0.75rem;
+		margin-bottom: 1rem;
+		position: sticky;
+		top: 3.25rem;
+		background: var(--color-bg, #f2efe9);
+		z-index: 50;
+	}
+	.page-subtitle {
+		padding-left: 1rem;
+	}
+	.tab-descriptif {
+		padding-left: 1rem;
+	}
 
-  /* KPI row : 2 colonnes min */
-  .kpi-row {
-    grid-template-columns: 1fr 1fr;
-  }
+	/* KPI row : 2 colonnes min */
+	.kpi-row {
+		grid-template-columns: 1fr 1fr;
+	}
 }
 
 /* ── Formulaires ──
    Charte : Annuler (à gauche) | Action principale (à droite) */
 .form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: .5rem;
-  margin-top: .75rem;
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
 }
 
-
 /* ── Affichage texte enrichi (TipTap HTML) ── */
-.rich-content p  { margin: 0 0 .4rem; }
-.rich-content p:last-child { margin-bottom: 0; }
-.rich-content ul, .rich-content ol { padding-left: 1.4rem; margin: .25rem 0; }
-.rich-content li + li { margin-top: .15rem; }
-.rich-content blockquote { border-left: 3px solid var(--color-border); padding-left: .75rem; color: var(--color-text-muted); margin: .4rem 0; }
-.rich-content strong { font-weight: 600; }
-.rich-content em     { font-style: italic; }
+.rich-content p {
+	margin: 0 0 0.4rem;
+}
+.rich-content p:last-child {
+	margin-bottom: 0;
+}
+.rich-content ul,
+.rich-content ol {
+	padding-left: 1.4rem;
+	margin: 0.25rem 0;
+}
+.rich-content li + li {
+	margin-top: 0.15rem;
+}
+.rich-content blockquote {
+	border-left: 3px solid var(--color-border);
+	padding-left: 0.75rem;
+	color: var(--color-text-muted);
+	margin: 0.4rem 0;
+}
+.rich-content strong {
+	font-weight: 600;
+}
+.rich-content em {
+	font-style: italic;
+}
 
 /* ── Cible d'un lien profond (fil d'activité, notification, e-mail) ──
    Posée en JS par `$lib/deepLink.ts` → doit rester GLOBALE : une classe ajoutée
@@ -293,12 +377,18 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
    Sur une liste longue, le simple défilement ne dit pas LEQUEL des éléments
    visibles était visé — d'où la surbrillance, qui s'efface d'elle-même. */
 .cible-lien {
-  animation: cible-lien-pulse 2.5s ease-out;
-  scroll-margin-top: 1rem;
+	animation: cible-lien-pulse 2.5s ease-out;
+	scroll-margin-top: 1rem;
 }
 
 @keyframes cible-lien-pulse {
-  0%   { box-shadow: 0 0 0 3px var(--color-primary); }
-  70%  { box-shadow: 0 0 0 3px var(--color-primary); }
-  100% { box-shadow: 0 0 0 3px transparent; }
+	0% {
+		box-shadow: 0 0 0 3px var(--color-primary);
+	}
+	70% {
+		box-shadow: 0 0 0 3px var(--color-primary);
+	}
+	100% {
+		box-shadow: 0 0 0 3px transparent;
+	}
 }

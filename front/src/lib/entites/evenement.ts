@@ -103,8 +103,7 @@ export const EVENEMENT: EntiteDeclaree = {
 			absente: {
 				evolution: {
 					motif: 'hérité',
-					explication:
-						"Le périmètre est celui de l'événement ; une entrée ne le redéfinit pas.",
+					explication: "Le périmètre est celui de l'événement ; une entrée ne le redéfinit pas.",
 				},
 			},
 		},
@@ -113,7 +112,7 @@ export const EVENEMENT: EntiteDeclaree = {
 			sansObjet:
 				"Un événement n'adresse personne nommément dans l'application : il est vu par qui " +
 				'son périmètre concerne, et le Kanban filtre déjà ses colonnes selon le statut du ' +
-				"lecteur. `envoyer_syndic` et `envoyer_cs` ne sont PAS des destinataires au sens " +
+				'lecteur. `envoyer_syndic` et `envoyer_cs` ne sont PAS des destinataires au sens ' +
 				'de la section 5 — ce sont deux canaux, et ils vivent en Diffusion (section 9), ' +
 				'comme sur les tickets.',
 		},

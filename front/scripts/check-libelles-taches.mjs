@@ -84,12 +84,13 @@ try {
 //  voyait que les guillemets simples : le dépôt en portait de doubles à ces
 //  endroits-là, et le contrôle était vert par accident de citation. Prettier
 //  normalise les guillemets, ce qui a révélé l'angle mort (#419).
-const LIBELLES = corpsDesTables(source, /export const (LIBELLE_TACHE|LIBELLE_ACTION)\b/g)
-	.flatMap((corps) => valeursDeclarees(corps, '[a-z_]+'));
+const LIBELLES = corpsDesTables(source, /export const (LIBELLE_TACHE|LIBELLE_ACTION)\b/g).flatMap(
+	(corps) => valeursDeclarees(corps, '[a-z_]+'),
+);
 if (LIBELLES.length < 5) {
 	console.error(
 		`✗ check-libelles-taches : ${LIBELLES.length} libellé(s) extrait(s) de ${SOURCE} — ` +
-			'le format a changé et le contrôle ne mesure plus rien.'
+			'le format a changé et le contrôle ne mesure plus rien.',
 	);
 	process.exit(1);
 }
@@ -127,12 +128,12 @@ if (fautes.length) {
 	for (const f of fautes) console.error(`   ${f}`);
 	console.error(
 		`\n  ${fautes.length} occurrence(s). Utiliser LIBELLE_TACHE[...] :` +
-			'\n  un nom recopié diverge, et la synthèse cesse de renvoyer à son détail.'
+			'\n  un nom recopié diverge, et la synthèse cesse de renvoyer à son détail.',
 	);
 	process.exit(1);
 }
 
 console.log(
 	`✓ Libellés de tâches : ${LIBELLES.length} noms, source unique respectée ` +
-		`(${tous.length} fichiers analysés).`
+		`(${tous.length} fichiers analysés).`,
 );

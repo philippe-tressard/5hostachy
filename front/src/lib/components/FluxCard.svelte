@@ -24,14 +24,22 @@
 	import FluxVignette from '$lib/components/FluxVignette.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import {
-		badgeClass, isNew, typeCouleur, typeFond, typeLibelle, typeLink, typeVoirLabel,
+		badgeClass,
+		isNew,
+		typeCouleur,
+		typeFond,
+		typeLibelle,
+		typeLink,
+		typeVoirLabel,
 	} from '$lib/flux';
 
 	export let item: FluxItem;
 	export let expanded = false;
 
 	const dispatch = createEventDispatcher<{ toggle: string }>();
-	function basculer() { dispatch('toggle', item.id); }
+	function basculer() {
+		dispatch('toggle', item.id);
+	}
 
 	$: typeColor = typeCouleur(item.type);
 	$: nouveau = isNew(item);
@@ -93,7 +101,9 @@
 	>
 		<div class="flux-card-top">
 			<div class="flux-card-top-left">
-				<span class="flux-type-chip" style="background:{typeFond(item.type)};color:{typeColor}">{typeLibelle(item.type)}</span>
+				<span class="flux-type-chip" style="background:{typeFond(item.type)};color:{typeColor}"
+					>{typeLibelle(item.type)}</span
+				>
 				{#if nouveau}<span class="new-badge">NEW</span>{/if}
 			</div>
 			<div class="flux-card-top-right">
@@ -116,14 +126,19 @@
 					      caractères) était déjà transporté et déjà rendu par la carte
 					      DÉPLIÉE. Seule la carte pliée l'ignorait. -->
 					<p class="flux-detail clamp-3">
-						{#if item.detail}<span class="flux-detail-libelle">{item.detail}</span>{/if}{#if item.detail && extraitReplie}&#8201;—&#8201;{/if}{extraitReplie}
+						{#if item.detail}<span class="flux-detail-libelle">{item.detail}</span
+							>{/if}{#if item.detail && extraitReplie}&#8201;—&#8201;{/if}{extraitReplie}
 					</p>
 				{/if}
 			</div>
 			<!-- Plié : aperçu. Déplié : la galerie plus bas prend le relais,
 			     inutile de montrer deux fois la même image. -->
 			{#if !expanded}
-				<FluxVignette {photos} {fichiers} nbPieces={(item.meta?.pj_compte as number | undefined) ?? 0} />
+				<FluxVignette
+					{photos}
+					{fichiers}
+					nbPieces={(item.meta?.pj_compte as number | undefined) ?? 0}
+				/>
 			{/if}
 		</div>
 		{#if item.badges.length > 0 || perimetreAffiche || aVenir}
@@ -131,7 +146,9 @@
 				<!-- La ligne est datée de l'annonce : sans ce repère, un événement
 				     à venir se lirait comme s'il avait déjà eu lieu. -->
 				{#if aVenir}
-					<span class="badge badge-orange" style="font-size:.7rem">🗓️ prévu le {fmtDatetimeShort(String(debut))}</span>
+					<span class="badge badge-orange" style="font-size:.7rem"
+						>🗓️ prévu le {fmtDatetimeShort(String(debut))}</span
+					>
 				{/if}
 				<!--  🔴 `badge-gray`, comme sur les CARTES (18/08/2026). Le fil le rendait
 				      en `badge-blue` : le même périmètre changeait donc de couleur selon
@@ -160,13 +177,22 @@
 				     tout événement sans heure de fin — désormais l'information
 				     essentielle, puisque la ligne du fil est datée de l'annonce. -->
 				{#if debut}
-					<p class="flux-meta-line">🕐 {fmtDatetimeShort(String(debut))}{#if item.meta?.fin} → {fmtDatetimeShort(String(item.meta.fin))}{/if}</p>
+					<p class="flux-meta-line">
+						🕐 {fmtDatetimeShort(String(debut))}{#if item.meta?.fin}
+							→ {fmtDatetimeShort(String(item.meta.fin))}{/if}
+					</p>
 				{/if}
 				{#if item.meta?.auteur}<p class="flux-meta-line">✍️ {item.meta.auteur}</p>{/if}
 				{#if item.meta?.statut}
 					<p class="flux-meta-line">
 						État :
-						<span class="badge {item.meta.statut === 'résolu' || item.meta.statut === 'réalisé' ? 'badge-green' : item.meta.statut === 'en_cours' || item.meta.statut === 'ouvert' ? 'badge-orange' : 'badge-gray'}">{item.meta.statut}</span>
+						<span
+							class="badge {item.meta.statut === 'résolu' || item.meta.statut === 'réalisé'
+								? 'badge-green'
+								: item.meta.statut === 'en_cours' || item.meta.statut === 'ouvert'
+									? 'badge-orange'
+									: 'badge-gray'}">{item.meta.statut}</span
+						>
 					</p>
 				{/if}
 				<!--  🔴 LA DERNIÈRE MISE À JOUR D'ABORD, le texte d'origine ensuite
@@ -188,14 +214,18 @@
 					<div class="flux-reaction">
 						<span class="flux-reaction-icon">💬</span>
 						<div class="flux-reaction-body">
-							{#if item.meta?.evol_auteur}<span class="flux-reaction-auteur">{item.meta.evol_auteur}</span>{/if}
+							{#if item.meta?.evol_auteur}<span class="flux-reaction-auteur"
+									>{item.meta.evol_auteur}</span
+								>{/if}
 							<p class="flux-reaction-text">{item.meta.evol_contenu}</p>
 						</div>
 					</div>
 				{/if}
 				<!--  Le texte d'origine, en dessous : il rappelle DE QUOI il s'agit. -->
 				{#if item.meta?.full_html}
-					<div class="flux-full-content rich-content">{@html safeHtml(String(item.meta.full_html))}</div>
+					<div class="flux-full-content rich-content">
+						{@html safeHtml(String(item.meta.full_html))}
+					</div>
 				{:else if item.meta?.description}
 					<p class="flux-full-content">{item.meta.description}</p>
 				{:else if item.detail}
@@ -222,31 +252,61 @@
 
 <style>
 	.flux-item {
-		display: flex; align-items: flex-start; gap: .75rem;
-		color: inherit; position: relative; margin-bottom: .5rem;
+		display: flex;
+		align-items: flex-start;
+		gap: 0.75rem;
+		color: inherit;
+		position: relative;
+		margin-bottom: 0.5rem;
 	}
 	.flux-dot {
-		width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: .85rem;
-		position: absolute; left: -1.35rem;
-		border: 2px solid var(--color-surface); box-shadow: 0 0 0 2px var(--color-border); z-index: 1;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		margin-top: 0.85rem;
+		position: absolute;
+		left: -1.35rem;
+		border: 2px solid var(--color-surface);
+		box-shadow: 0 0 0 2px var(--color-border);
+		z-index: 1;
 	}
 	.flux-new-dot {
-		position: absolute; left: -1.7rem; top: .55rem;
-		width: 18px; height: 18px; border-radius: 50%;
-		background: rgba(239, 68, 68, .15);
-		animation: new-dot-pulse 2s ease-in-out infinite; z-index: 0;
+		position: absolute;
+		left: -1.7rem;
+		top: 0.55rem;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		background: rgba(239, 68, 68, 0.15);
+		animation: new-dot-pulse 2s ease-in-out infinite;
+		z-index: 0;
 	}
 	@keyframes new-dot-pulse {
-		0%, 100% { transform: scale(1); opacity: .6; }
-		50% { transform: scale(1.6); opacity: 0; }
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 0.6;
+		}
+		50% {
+			transform: scale(1.6);
+			opacity: 0;
+		}
 	}
 	.flux-card {
-		flex: 1; padding: .7rem .9rem;
-		transition: box-shadow .15s, border-left-color .15s, background .12s;
+		flex: 1;
+		padding: 0.7rem 0.9rem;
+		transition:
+			box-shadow 0.15s,
+			border-left-color 0.15s,
+			background 0.12s;
 		border-left: 4px solid var(--color-border);
 		cursor: pointer;
 	}
-	.flux-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+	.flux-card:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
 	/*  Le fond change au survol, comme sur toutes les listes dépliables du site
 	    (#362). La carte ne renforçait que son OMBRE — trop discret pour annoncer
 	    « ceci s'ouvre », et l'utilisateur l'a signalé deux fois : une carte du fil
@@ -266,54 +326,147 @@
 
 	    ⚠️ Pas de soulignement : le titre n'est pas un lien, c'est une zone
 	    cliquable — le souligner le ferait passer pour une navigation. */
-	.flux-item:hover .flux-card { box-shadow: var(--shadow); }
-	.flux-item:hover .flux-titre { color: var(--color-primary); }
-	.flux-titre { transition: color .12s ease; }
-	.flux-item.flux-urgent .flux-card { border-left-color: var(--color-danger) !important; }
-	.flux-item.flux-expanded .flux-card { box-shadow: var(--shadow); }
+	.flux-item:hover .flux-card {
+		box-shadow: var(--shadow);
+	}
+	.flux-item:hover .flux-titre {
+		color: var(--color-primary);
+	}
+	.flux-titre {
+		transition: color 0.12s ease;
+	}
+	.flux-item.flux-urgent .flux-card {
+		border-left-color: var(--color-danger) !important;
+	}
+	.flux-item.flux-expanded .flux-card {
+		box-shadow: var(--shadow);
+	}
 
-	.flux-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .35rem; }
-	.flux-card-top-left { display: flex; align-items: center; gap: .4rem; }
-	.flux-card-top-right { display: flex; align-items: center; gap: .5rem; }
-	.flux-heure { font-size: .72rem; color: var(--color-text-muted); white-space: nowrap; }
-	.flux-card-body { display: flex; align-items: flex-start; gap: .5rem; }
-	.flux-icon { font-size: 1.05rem; flex-shrink: 0; line-height: 1; margin-top: .1rem; }
-	.flux-card-text { flex: 1; min-width: 0; }
-	.flux-titre { font-size: .88rem; font-weight: 500; line-height: 1.35; display: block; }
-	.flux-detail { font-size: .8rem; color: var(--color-text-muted); margin: .15rem 0 0; line-height: 1.4; }
+	.flux-card-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.35rem;
+	}
+	.flux-card-top-left {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.flux-card-top-right {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.flux-heure {
+		font-size: 0.72rem;
+		color: var(--color-text-muted);
+		white-space: nowrap;
+	}
+	.flux-card-body {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+	.flux-icon {
+		font-size: 1.05rem;
+		flex-shrink: 0;
+		line-height: 1;
+		margin-top: 0.1rem;
+	}
+	.flux-card-text {
+		flex: 1;
+		min-width: 0;
+	}
+	.flux-titre {
+		font-size: 0.88rem;
+		font-weight: 500;
+		line-height: 1.35;
+		display: block;
+	}
+	.flux-detail {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin: 0.15rem 0 0;
+		line-height: 1.4;
+	}
 	/*  Le libellé garde le poids qu'il avait quand il était seul : c'est lui qui
 	    dit la NATURE de la mise à jour, l'extrait n'en donne que la teneur. */
-	.flux-detail-libelle { font-weight: 600; }
-	.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-	.flux-badges { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .35rem; }
+	.flux-detail-libelle {
+		font-weight: 600;
+	}
+	.clamp-3 {
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.flux-badges {
+		display: flex;
+		gap: 0.3rem;
+		flex-wrap: wrap;
+		margin-top: 0.35rem;
+	}
 
 	/* ═══ NEW BADGE ═════════════════════════════════════════════════════ */
 	@keyframes new-pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: .7; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
 	}
 	.new-badge {
-		font-size: .55rem; font-weight: 700; letter-spacing: .06em;
-		background: #EF4444; color: #fff;
-		padding: .1rem .35rem; border-radius: .2rem;
+		font-size: 0.55rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		background: #ef4444;
+		color: #fff;
+		padding: 0.1rem 0.35rem;
+		border-radius: 0.2rem;
 		animation: new-pulse 2s ease-in-out infinite;
-		flex-shrink: 0; text-transform: uppercase;
+		flex-shrink: 0;
+		text-transform: uppercase;
 	}
 
 	/* ═══ CHEVRON ═══════════════════════════════════════════════════════ */
 	/*  Écart assumé : chevron en gras, non sélectionnable, dans un flex. */
-	.chevron { font-weight: 700; flex-shrink: 0; user-select: none; }
+	.chevron {
+		font-weight: 700;
+		flex-shrink: 0;
+		user-select: none;
+	}
 
 	/* ═══ CORPS DÉPLIÉ ══════════════════════════════════════════════════ */
 	.flux-body {
 		border-top: 1px solid var(--color-border);
-		padding: .75rem .5rem .75rem 1.7rem;
-		margin-top: .5rem;
+		padding: 0.75rem 0.5rem 0.75rem 1.7rem;
+		margin-top: 0.5rem;
 	}
-	.flux-meta-line { font-size: .82rem; color: var(--color-text-muted); margin: .15rem 0; }
-	.flux-full-content { font-size: .85rem; line-height: 1.55; margin: .5rem 0; }
-	.flux-link { font-size: .78rem; color: var(--color-primary); font-weight: 500; text-decoration: none; display: inline-block; margin-top: .5rem; }
-	.flux-link:hover { text-decoration: underline; }
+	.flux-meta-line {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+		margin: 0.15rem 0;
+	}
+	.flux-full-content {
+		font-size: 0.85rem;
+		line-height: 1.55;
+		margin: 0.5rem 0;
+	}
+	.flux-link {
+		font-size: 0.78rem;
+		color: var(--color-primary);
+		font-weight: 500;
+		text-decoration: none;
+		display: inline-block;
+		margin-top: 0.5rem;
+	}
+	.flux-link:hover {
+		text-decoration: underline;
+	}
 
 	/* Galerie dépliée — les styles étaient écrits en `style=` sur chaque balise,
 	   donc quatre fois pour deux blocs.
@@ -321,23 +474,54 @@
 	   retirée : le format des photos appartient désormais à `PiecesJointes`, qui
 	   les rend en grand une fois la carte dépliée. Deux endroits pour décider de
 	   la même taille, c'est un endroit de trop — et celui-ci était devenu mort. */
-	.flux-photos { margin: .5rem 0; }
+	.flux-photos {
+		margin: 0.5rem 0;
+	}
 
 	/* ═══ RÉACTION INLINE (ticket_mis_a_jour) ═══════════════════════════ */
 	.flux-reaction {
-		display: flex; gap: .5rem; align-items: flex-start;
-		margin: .6rem 0 .3rem;
-		padding: .5rem .75rem; border-radius: 6px;
-		background: #EEF2F7; border-left: 3px solid var(--color-primary);
-		font-size: .82rem;
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+		margin: 0.6rem 0 0.3rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 6px;
+		background: #eef2f7;
+		border-left: 3px solid var(--color-primary);
+		font-size: 0.82rem;
 	}
-	.flux-reaction-icon { flex-shrink: 0; font-size: .85rem; margin-top: .1rem; }
-	.flux-reaction-body { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
-	.flux-reaction-auteur { font-size: .75rem; font-weight: 600; color: var(--color-primary); }
-	.flux-reaction-text { margin: 0; color: var(--color-text); line-height: 1.45; }
+	.flux-reaction-icon {
+		flex-shrink: 0;
+		font-size: 0.85rem;
+		margin-top: 0.1rem;
+	}
+	.flux-reaction-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+	.flux-reaction-auteur {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-primary);
+	}
+	.flux-reaction-text {
+		margin: 0;
+		color: var(--color-text);
+		line-height: 1.45;
+	}
 
 	@media (max-width: 767px) {
-		.flux-dot { left: -1.1rem; width: 8px; height: 8px; }
-		.flux-new-dot { left: -1.4rem; width: 14px; height: 14px; }
+		.flux-dot {
+			left: -1.1rem;
+			width: 8px;
+			height: 8px;
+		}
+		.flux-new-dot {
+			left: -1.4rem;
+			width: 14px;
+			height: 14px;
+		}
 	}
 </style>

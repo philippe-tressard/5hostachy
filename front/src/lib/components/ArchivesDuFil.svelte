@@ -57,28 +57,52 @@
 		{#each groupesParJour as groupe}
 			<div class="flux-day-label">{groupe.label}</div>
 			{#each groupe.items as item (item.id)}
-				<FluxCard {item} expanded={itemDeplie === item.id}
-					on:toggle={(e) => onBasculer(e.detail)} />
+				<FluxCard
+					{item}
+					expanded={itemDeplie === item.id}
+					on:toggle={(e) => onBasculer(e.detail)}
+				/>
 			{/each}
 		{/each}
 	</div>
 {/if}
 
 <style>
-	.flux-timeline { position: relative; padding-left: 1.5rem; }
+	.flux-timeline {
+		position: relative;
+		padding-left: 1.5rem;
+	}
 	.flux-timeline::before {
-		content: ''; position: absolute; left: .45rem; top: 1.5rem; bottom: .5rem;
-		width: 2px; background: var(--color-border); border-radius: 1px;
+		content: '';
+		position: absolute;
+		left: 0.45rem;
+		top: 1.5rem;
+		bottom: 0.5rem;
+		width: 2px;
+		background: var(--color-border);
+		border-radius: 1px;
 	}
 	.flux-day-label {
-		position: relative; font-size: .72rem; font-weight: 700; text-transform: uppercase;
-		letter-spacing: .06em; color: var(--color-text-muted); padding: .9rem 0 .35rem; margin-left: -.15rem;
+		position: relative;
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+		padding: 0.9rem 0 0.35rem;
+		margin-left: -0.15rem;
 	}
 	/*  L'atténuation qui distingue l'archive du fil vivant. */
-	.older-timeline { opacity: .85; }
+	.older-timeline {
+		opacity: 0.85;
+	}
 
 	@media (max-width: 767px) {
-		.flux-timeline { padding-left: 1.25rem; }
-		.flux-timeline::before { left: .35rem; }
+		.flux-timeline {
+			padding-left: 1.25rem;
+		}
+		.flux-timeline::before {
+			left: 0.35rem;
+		}
 	}
 </style>

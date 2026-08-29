@@ -55,17 +55,34 @@
 </script>
 
 <div class="carte-apercu">
-	<div class="carte-preview rich-content clamp-5" class:tronque bind:this={bloc}>{@html safeDescription(contenu)}</div>
+	<div class="carte-preview rich-content clamp-5" class:tronque bind:this={bloc}>
+		{@html safeDescription(contenu)}
+	</div>
 	<FluxVignette {photos} {fichiers} />
 </div>
 
 <style>
 	/*  `min-width:0` : sans lui un enfant flex ne rétrécit pas sous la largeur de
 	    son contenu, et le `-webkit-line-clamp` de .clamp-5 n'est jamais appliqué. */
-	.carte-apercu { display: flex; align-items: flex-start; gap: .85rem; padding: 0 .95rem .85rem; }
-	.carte-apercu .carte-preview { flex: 1; min-width: 0; }
-	.carte-preview { font-size: .875rem; line-height: 1.6; color: var(--color-text-muted); position: relative; }
-	.carte-preview :global(p) { margin: 0 0 .4em; }
+	.carte-apercu {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.85rem;
+		padding: 0 0.95rem 0.85rem;
+	}
+	.carte-apercu .carte-preview {
+		flex: 1;
+		min-width: 0;
+	}
+	.carte-preview {
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: var(--color-text-muted);
+		position: relative;
+	}
+	.carte-preview :global(p) {
+		margin: 0 0 0.4em;
+	}
 
 	/*  Le texte tronqué était coupé NET au ras du bord : rien ne disait s'il
 	    continuait ou si la carte s'arrêtait là, et deux cartes voisines formaient
@@ -73,15 +90,20 @@
 	    `pointer-events:none` : il couvre le texte, il ne doit pas manger le clic
 	    qui déplie la carte. */
 	.carte-preview.tronque::after {
-		content: "";
+		content: '';
 		position: absolute;
-		left: 0; right: 0; bottom: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
 		height: 2.2em;
 		pointer-events: none;
 		background: linear-gradient(to bottom, transparent, var(--color-surface));
 	}
 
 	@media (max-width: 640px) {
-		.carte-apercu { padding: 0 .75rem .7rem; gap: .6rem; }
+		.carte-apercu {
+			padding: 0 0.75rem 0.7rem;
+			gap: 0.6rem;
+		}
 	}
 </style>

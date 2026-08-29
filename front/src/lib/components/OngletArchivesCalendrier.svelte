@@ -56,9 +56,23 @@
 {:else}
 	{#each archiveByYear as [year, monthGroups]}
 		<div class="archive-year-section">
-			<button class="archive-year-header" on:click={() => { if (expandedArchiveYears.has(year)) expandedArchiveYears.delete(year); else expandedArchiveYears.add(year); expandedArchiveYears = expandedArchiveYears; }}>
+			<button
+				class="archive-year-header"
+				on:click={() => {
+					if (expandedArchiveYears.has(year)) expandedArchiveYears.delete(year);
+					else expandedArchiveYears.add(year);
+					expandedArchiveYears = expandedArchiveYears;
+				}}
+			>
 				<span class="archive-year-label">&#x1F4C5; {year}</span>
-				<span class="archive-year-count">{monthGroups.reduce((s, [, items]) => s + items.length, 0)} élément{monthGroups.reduce((s, [, items]) => s + items.length, 0) > 1 ? 's' : ''}</span>
+				<span class="archive-year-count"
+					>{monthGroups.reduce((s, [, items]) => s + items.length, 0)} élément{monthGroups.reduce(
+						(s, [, items]) => s + items.length,
+						0,
+					) > 1
+						? 's'
+						: ''}</span
+				>
 				<span class="chevron" class:open={expandedArchiveYears.has(year)}>›</span>
 			</button>
 			{#if expandedArchiveYears.has(year)}
@@ -71,31 +85,58 @@
 								      maintenances passent par `RangeeCalendrier` : la structure
 								      *type · corps · date · actions* était recopiée quatre fois, et
 								      c'est ce partage qui interdisait de découper la page (#432). -->
-								<RangeeCalendrier archive bordure="#0ea5e9"
-									typeTexte="&#x1F4F0;" badgeType={{ texte: 'Actualité', couleur: '#0ea5e9' }}
-									titre={item.titre} description={item.contenu}
-									dates={[{ texte: fmtDateShort(item._date) },
-										...(item.auteur_nom ? [{ texte: item.auteur_nom, attenue: true }] : [])]}
+								<RangeeCalendrier
+									archive
+									bordure="#0ea5e9"
+									typeTexte="&#x1F4F0;"
+									badgeType={{ texte: 'Actualité', couleur: '#0ea5e9' }}
+									titre={item.titre}
+									description={item.contenu}
+									dates={[
+										{ texte: fmtDateShort(item._date) },
+										...(item.auteur_nom ? [{ texte: item.auteur_nom, attenue: true }] : []),
+									]}
 									perimetre={item.perimetre_cible}
-									avecActions={$isAdmin}>
+									avecActions={$isAdmin}
+								>
 									<svelte:fragment slot="actions">
-										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button>
+										<button
+											class="btn-icon-danger"
+											aria-label="Supprimer définitivement"
+											title="Supprimer définitivement"
+											on:click={() => deleteArchivedPub(item)}>&#x1F5D1;️</button
+										>
 									</svelte:fragment>
 								</RangeeCalendrier>
 							{:else}
 								<!-- Événement archivé -->
-								<RangeeCalendrier archive bordure="#10b981" urgent={item.type === 'coupure'}
-									typeTexte={typeLabel(item.type)} badgeType={{ texte: 'Événement', couleur: '#10b981' }}
-									titre={item.titre} description={item.description}
+								<RangeeCalendrier
+									archive
+									bordure="#10b981"
+									urgent={item.type === 'coupure'}
+									typeTexte={typeLabel(item.type)}
+									badgeType={{ texte: 'Événement', couleur: '#10b981' }}
+									titre={item.titre}
+									description={item.description}
 									metas={item.lieu ? [`\u{1F4CD} ${item.lieu}`] : []}
-									dates={[{ texte: formatDate(item.debut) },
-										...(item.fin ? [{ texte: `→ ${formatDate(item.fin)}`, attenue: true }] : [])]}
+									dates={[
+										{ texte: formatDate(item.debut) },
+										...(item.fin ? [{ texte: `→ ${formatDate(item.fin)}`, attenue: true }] : []),
+									]}
 									perimetre={item.perimetre}
-									pied={(item.mis_a_jour_le ? `Mise à jour le ${fmtDateLong(item.mis_a_jour_le)}` : `Publié le ${fmtDateLong(item.cree_le)}`)
-										+ (item.auteur_nom ? ` · ${item.auteur_nom}` : '')}
-									avecActions={$isAdmin}>
+									pied={(item.mis_a_jour_le
+										? `Mise à jour le ${fmtDateLong(item.mis_a_jour_le)}`
+										: `Publié le ${fmtDateLong(item.cree_le)}`) +
+										(item.auteur_nom ? ` · ${item.auteur_nom}` : '')}
+									avecActions={$isAdmin}
+								>
 									<svelte:fragment slot="actions">
-										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button>
+										<button
+											class="btn-icon-danger"
+											aria-label="Supprimer définitivement"
+											title="Supprimer définitivement"
+											on:click={() => deleteEv(item.id)}>&#x1F5D1;️</button
+										>
 									</svelte:fragment>
 								</RangeeCalendrier>
 							{/if}
@@ -121,11 +162,45 @@
 
 	    `.chevron` vient d'`app.css` — elle est déjà globale, et c'est ce qui
 	    rend ce découpage sûr. */
-	.archive-year-section { margin-bottom: .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
-	.archive-year-header { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .65rem 1rem; background: var(--color-surface); border: none; cursor: pointer; font-size: .95rem; font-weight: 600; text-align: left; }
-	.archive-year-header:hover { background: var(--color-bg); }
-	.archive-year-label { flex: 1; }
-	.archive-year-count { font-size: .8rem; font-weight: 400; color: var(--color-text-muted); }
-	.month-group { margin-bottom: 1.5rem; }
-	.month-label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
+	.archive-year-section {
+		margin-bottom: 0.5rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		overflow: hidden;
+	}
+	.archive-year-header {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.65rem 1rem;
+		background: var(--color-surface);
+		border: none;
+		cursor: pointer;
+		font-size: 0.95rem;
+		font-weight: 600;
+		text-align: left;
+	}
+	.archive-year-header:hover {
+		background: var(--color-bg);
+	}
+	.archive-year-label {
+		flex: 1;
+	}
+	.archive-year-count {
+		font-size: 0.8rem;
+		font-weight: 400;
+		color: var(--color-text-muted);
+	}
+	.month-group {
+		margin-bottom: 1.5rem;
+	}
+	.month-label {
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+		margin-bottom: 0.5rem;
+	}
 </style>

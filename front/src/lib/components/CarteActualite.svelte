@@ -61,11 +61,17 @@
 	//  qu'aucun lien ne soit cassé.
 </script>
 
-<div class="carte-liste" class:expanded class:urgent={pub.urgente} class:attenue={!estFil}
+<div
+	class="carte-liste"
+	class:expanded
+	class:urgent={pub.urgente}
+	class:attenue={!estFil}
 	id="pub-{pub.id}"
 	role="presentation"
-	on:click={() => { if (!expanded) basculer(); }}>
-
+	on:click={() => {
+		if (!expanded) basculer();
+	}}
+>
 	{#if estFil && pub.epingle}
 		{@const o = optionPublication('epingle')}
 		<span class="pin-badge" title={o?.aide} aria-label={o?.etat}>{o?.glyphe}</span>
@@ -80,11 +86,16 @@
 	      `role="button"` — il interceptait la sélection de texte, et obligeait
 	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 	      déplie pas la carte au même instant. -->
-	<EnteteCarte titre={pub.titre} date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}
-		basculable on:toggle={basculer}
->
+	<EnteteCarte
+		titre={pub.titre}
+		date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}
+		basculable
+		on:toggle={basculer}
+	>
 		<svelte:fragment slot="titre-suffixe">
-			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
+			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span
+					class="badge badge-gray pub-neuf">New</span
+				>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
 			<!--  ⚠️ Le brouillon portait ✏️ — le crayon qui EST l'icône « Modifier »
@@ -94,8 +105,13 @@
 				{@const o = optionPublication('brouillon')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
 			{/if}
-			{#if pub.statut && pub.statut !== 'publie'}<span class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}">{STATUT_LABELS[pub.statut] ?? pub.statut}</span>{/if}
-			{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray">&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span>{/if}
+			{#if pub.statut && pub.statut !== 'publie'}<span
+					class="badge {STATUT_BADGE[pub.statut] ?? 'badge-gray'}"
+					>{STATUT_LABELS[pub.statut] ?? pub.statut}</span
+				>{/if}
+			{#if !estPerimetreParDefaut(pub.perimetre_cible)}<span class="badge badge-gray"
+					>&#x1F539; {perimetreLabel(pub.perimetre_cible)}</span
+				>{/if}
 			{#if pub.confidentiel}
 				{@const o = optionPublication('confidentiel')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>
@@ -103,7 +119,9 @@
 			{#if pub.auteur_nom}<span class="pub-auteur">{pub.auteur_nom}</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions"><slot name="actions" /></svelte:fragment>
-		<svelte:fragment slot="chevron"><span class="chevron" class:open={expanded}>›</span></svelte:fragment>
+		<svelte:fragment slot="chevron"
+			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
+		>
 	</EnteteCarte>
 
 	{#if !expanded && apercu}
@@ -119,7 +137,9 @@
 				<slot name="formulaire" />
 			{:else}
 				<!--  Texte AVANT les photos : une image en tête poussait le premier mot sous la ligne de flottaison. -->
-				<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">{@html safeHtml(pub.contenu)}</div>
+				<div class="rich-content" style="font-size:.875rem;line-height:1.6;margin-bottom:.5rem">
+					{@html safeHtml(pub.contenu)}
+				</div>
 				{#if pub.photos_urls?.length}
 					<PiecesJointes urls={pub.photos_urls} format="grand" />
 				{/if}
@@ -133,7 +153,10 @@
 					</div>
 				{/if}
 				<small style="color:var(--color-text-muted);font-size:.78rem">
-				{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(pub.cree_le)}{/if}{#if pub.auteur_nom} · {pub.auteur_nom}{/if}
+					{#if pub.mis_a_jour_le}Mise à jour le {fmtDateLong(pub.mis_a_jour_le)}{:else}Publié le {fmtDateLong(
+							pub.cree_le,
+						)}{/if}{#if pub.auteur_nom}
+						· {pub.auteur_nom}{/if}
 				</small>
 				<slot name="apres-corps" />
 			{/if}
@@ -144,19 +167,69 @@
 <style>
 	/*  Conteneur, survol, urgence et espacement : `.carte-liste` (app.css). Ne
 	    reste ici que ce qui est propre à la publication. */
-	.pin-badge { position: absolute; top: -9px; left: 8px; display: inline-flex; align-items: center; background: var(--color-primary); color: #fff; font-size: .65rem; padding: .1rem .35rem; border-radius: 8px; line-height: 1.6; z-index: 1; pointer-events: none; }
+	.pin-badge {
+		position: absolute;
+		top: -9px;
+		left: 8px;
+		display: inline-flex;
+		align-items: center;
+		background: var(--color-primary);
+		color: #fff;
+		font-size: 0.65rem;
+		padding: 0.1rem 0.35rem;
+		border-radius: 8px;
+		line-height: 1.6;
+		z-index: 1;
+		pointer-events: none;
+	}
 
 	/*  L'en-tête vit dans `EnteteCarte` — titre, tags, date, actions et leur repli.
 	    Ne reste ici que ce qui est propre à une publication. */
-	.pub-neuf { margin-left: .4em; font-size: .82em; font-weight: 500; vertical-align: middle; }
-	.pub-auteur { font-size: .78rem; color: var(--color-text-muted); }
+	.pub-neuf {
+		margin-left: 0.4em;
+		font-size: 0.82em;
+		font-weight: 500;
+		vertical-align: middle;
+	}
+	.pub-auteur {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+	}
 
-	.pub-body { padding: .75rem 1rem 1rem; border-top: 1px solid var(--color-border); }
-	.pub-attachments { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 .25rem; }
-	.pub-attachment-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; padding: .25rem .55rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-primary); text-decoration: none; }
-	.pub-attachment-link:hover { background: var(--color-border); }
+	.pub-body {
+		padding: 0.75rem 1rem 1rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.pub-attachments {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin: 0.5rem 0 0.25rem;
+	}
+	.pub-attachment-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.82rem;
+		padding: 0.25rem 0.55rem;
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		color: var(--color-primary);
+		text-decoration: none;
+	}
+	.pub-attachment-link:hover {
+		background: var(--color-border);
+	}
 
 	/*  Archives : la carte s'efface tant qu'on ne la vise pas. */
-	.attenue { opacity: .8; transition: opacity .15s; margin-bottom: .3rem; }
-	.attenue:hover, .attenue.expanded { opacity: 1; }
+	.attenue {
+		opacity: 0.8;
+		transition: opacity 0.15s;
+		margin-bottom: 0.3rem;
+	}
+	.attenue:hover,
+	.attenue.expanded {
+		opacity: 1;
+	}
 </style>

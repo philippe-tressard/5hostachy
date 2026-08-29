@@ -5,9 +5,15 @@
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
-import { onMount } from 'svelte';
-import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
-	import { calendrier as calApi, publications as pubsApi, prestataires as prestApi, ApiError, type Publication } from '$lib/api';
+	import { onMount } from 'svelte';
+	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
+	import {
+		calendrier as calApi,
+		publications as pubsApi,
+		prestataires as prestApi,
+		ApiError,
+		type Publication,
+	} from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
 	import CarteEvenement from '$lib/components/CarteEvenement.svelte';
 	import RangeeCalendrier from '$lib/components/RangeeCalendrier.svelte';
@@ -17,8 +23,20 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	import { fmtDatetimeShort, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
-	import { clePlanifiee, planifier, resumePlan, type SourceRecurrente } from '$lib/init-prestataires';
-	import { perimetreLabel, estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment, perimetreLabelUn, noeudPerimetre } from '$lib/utils';
+	import {
+		clePlanifiee,
+		planifier,
+		resumePlan,
+		type SourceRecurrente,
+	} from '$lib/init-prestataires';
+	import {
+		perimetreLabel,
+		estPerimetreParDefaut,
+		perimetreDefautListe,
+		perimetreDuBatiment,
+		perimetreLabelUn,
+		noeudPerimetre,
+	} from '$lib/utils';
 	import { perimetresStore } from '$lib/stores/perimetres';
 
 	$: _pc = getPageConfig($configStore, 'calendrier', defautsDePage('calendrier'));
@@ -101,14 +119,19 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	];
 
 	function typeLabel(t: string) {
-		return types.find(x => x.val === t)?.label ?? t;
+		return types.find((x) => x.val === t)?.label ?? t;
 	}
-
 
 	onMount(async () => {
 		try {
 			evenements = await calApi.list();
-			const expiredYears = [...new Set(evenements.filter(e => evenementArchive(e, archivageDelaiMs)).map(e => new Date(e.fin ?? e.debut).getFullYear()))].sort((a, b) => b - a);
+			const expiredYears = [
+				...new Set(
+					evenements
+						.filter((e) => evenementArchive(e, archivageDelaiMs))
+						.map((e) => new Date(e.fin ?? e.debut).getFullYear()),
+				),
+			].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
 			// Liens profonds : `?onglet=` pour la vue, `#ev-<id>` pour l'événement.
 			// L'ancre impose la vue liste — c'est la seule où un événement porte un id.
@@ -130,30 +153,44 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	// Chargement des données prestataires après que le store utilisateur soit disponible
 	// (évite les appels 403 pour les non-CS/admin, et corrige la course entre onMount et le chargement du store)
 	let _prestLoaded = false;
+
+	//  Hors du bloc réactif : dedans, l'affectation faisait signaler une « boucle
+	//  possible » — faux positif que le `eslint-disable-next-line` taisait, et un
+	//  tel commentaire se décroche au reformatage (#419).
+	function chargerPrestataires() {
+		if (!$isCS && !$isAdmin) return;
+		prestApi
+			.list()
+			.then((p) => {
+				prestataires = p;
+			})
+			.catch(() => {});
+	}
+
 	$: if ($currentUser && !_prestLoaded) {
 		_prestLoaded = true;
-		//  `prestApi.list()` est restreint au CS et aux admins : un résident qui
-		//  reçoit `[]` voit les cartes sans le nom du prestataire, et non une erreur.
-		//  ⚠️ Faux positif déclaré : `_prestLoaded` ferme le bloc (#549).
-		// eslint-disable-next-line svelte/infinite-reactive-loop
-		if ($isCS || $isAdmin) prestApi.list().then((p) => { prestataires = p; }).catch(() => {});
+		chargerPrestataires();
 	}
 
 	// AG visibles uniquement par propriétaires, CS et admin
-	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) => ['propriétaire', 'conseil_syndical', 'admin'].includes(r));
-	$: visibleTypes = (canSeeAG ? types : types.filter(t => t.val !== 'ag')).filter(t => t.val !== 'maintenance_recurrente');
+	$: canSeeAG = ($currentUser?.roles ?? []).some((r: string) =>
+		['propriétaire', 'conseil_syndical', 'admin'].includes(r),
+	);
+	$: visibleTypes = (canSeeAG ? types : types.filter((t) => t.val !== 'ag')).filter(
+		(t) => t.val !== 'maintenance_recurrente',
+	);
 	$: filtered = (() => {
-		let evs = canSeeAG ? evenements : evenements.filter(e => e.type !== 'ag');
+		let evs = canSeeAG ? evenements : evenements.filter((e) => e.type !== 'ag');
 		// Un événement avec suivi kanban actif (non terminé / non annulé) reste visible en Liste
 		// même si sa date de début est passée — il disparaîtra seulement à la clôture du kanban.
-		evs = evs.filter(e => {
+		evs = evs.filter((e) => {
 			if (e.archivee) return false;
 			const kanbanActif = e.statut_kanban && !['termine', 'annule'].includes(e.statut_kanban);
 			return !evenementArchive(e, archivageDelaiMs) || kanbanActif;
 		});
 		// Les maintenances récurrentes restent hors vue Liste.
 		// Exception métier: les prestations ponctuelles (non récurrentes) avec workflow restent visibles en Liste ET Kanban.
-		evs = evs.filter(e => {
+		evs = evs.filter((e) => {
 			if (e.type === 'maintenance_recurrente') return false;
 			if (!e.statut_kanban) return true;
 			// Tout événement marqué affichable est visible en liste (cohérence avec "Événements récents" du tableau de bord)
@@ -162,25 +199,29 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			if ($isCS || $isAdmin) return !!e.prestataire_id;
 			return false;
 		});
-		return filtreType ? evs.filter(e => e.type === filtreType) : evs;
+		return filtreType ? evs.filter((e) => e.type === filtreType) : evs;
 	})();
 	$: allArchiveEvs = (() => {
-		let evs = canSeeAG ? evenements : evenements.filter(e => e.type !== 'ag');
-		evs = evs.filter(e => evenementArchive(e, archivageDelaiMs) || e.archivee);
+		let evs = canSeeAG ? evenements : evenements.filter((e) => e.type !== 'ag');
+		evs = evs.filter((e) => evenementArchive(e, archivageDelaiMs) || e.archivee);
 		// Règle métier : un événement avec suivi kanban ne peut figurer en archives
 		// que s'il est Terminé ou Annulé. Les statuts actifs (ag, cs, syndic, fournisseur)
 		// restent dans la vue Kanban jusqu'à leur clôture.
-		evs = evs.filter(e => !e.statut_kanban || ['termine', 'annule'].includes(e.statut_kanban));
+		evs = evs.filter((e) => !e.statut_kanban || ['termine', 'annule'].includes(e.statut_kanban));
 		// Maintenances récurrentes : uniquement les terminées (pas les annulées)
-		evs = evs.filter(e => e.type !== 'maintenance_recurrente' || e.statut_kanban === 'termine');
-		return filtreType ? evs.filter(e => e.type === filtreType) : evs;
+		evs = evs.filter((e) => e.type !== 'maintenance_recurrente' || e.statut_kanban === 'termine');
+		return filtreType ? evs.filter((e) => e.type === filtreType) : evs;
 	})();
 
 	// Fusion événements + publications + prestations archivés en une seule liste
 	$: allArchiveItems = (() => {
 		const items: any[] = [
-			...allArchiveEvs.map(ev => ({ ...ev, _kind: 'ev', _date: ev.fin ?? ev.debut })),
-			...archivedPubs.map(pub => ({ ...pub, _kind: 'pub', _date: pub.mis_a_jour_le ?? pub.cree_le })),
+			...allArchiveEvs.map((ev) => ({ ...ev, _kind: 'ev', _date: ev.fin ?? ev.debut })),
+			...archivedPubs.map((pub) => ({
+				...pub,
+				_kind: 'pub',
+				_date: pub.mis_a_jour_le ?? pub.cree_le,
+			})),
 		];
 		items.sort((a, b) => new Date(b._date).getTime() - new Date(a._date).getTime());
 		return items;
@@ -193,15 +234,17 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			if (!map.has(y)) map.set(y, []);
 			map.get(y)!.push(item);
 		}
-		return [...map.entries()].sort((a, b) => b[0] - a[0]).map(([year, items]) => {
-			const monthMap = new Map<string, any[]>();
-			for (const item of items) {
-				const key = fmtMonthYear(item._date);
-				if (!monthMap.has(key)) monthMap.set(key, []);
-				monthMap.get(key)!.push(item);
-			}
-			return [year, [...monthMap.entries()]] as [number, [string, any[]][]];
-		});
+		return [...map.entries()]
+			.sort((a, b) => b[0] - a[0])
+			.map(([year, items]) => {
+				const monthMap = new Map<string, any[]>();
+				for (const item of items) {
+					const key = fmtMonthYear(item._date);
+					if (!monthMap.has(key)) monthMap.set(key, []);
+					monthMap.get(key)!.push(item);
+				}
+				return [year, [...monthMap.entries()]] as [number, [string, any[]][]];
+			});
 	})();
 
 	// ── Pièces jointes ─────────────────────────────────────────────────────
@@ -214,7 +257,24 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	let fichiersUrls: string[] = [];
 
 	function resetForm() {
-		form = { titre: '', description: '', type: 'autre', lieu: '', debut: _now.toISOString().slice(0, 10), debut_heure: '', fin: '', statut_kanban: '', prestataire_id: '', frequence_type: '', frequence_valeur: '', affichable: true, epingle: false, partager_whatsapp: false, envoyer_syndic: false, envoyer_cs: false };
+		form = {
+			titre: '',
+			description: '',
+			type: 'autre',
+			lieu: '',
+			debut: _now.toISOString().slice(0, 10),
+			debut_heure: '',
+			fin: '',
+			statut_kanban: '',
+			prestataire_id: '',
+			frequence_type: '',
+			frequence_valeur: '',
+			affichable: true,
+			epingle: false,
+			partager_whatsapp: false,
+			envoyer_syndic: false,
+			envoyer_cs: false,
+		};
 		formPerimetreCible = perimetreDefautListe();
 		epingleInitial = false;
 		editId = null;
@@ -224,8 +284,11 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	function startEdit(ev: any) {
 		form = {
-			titre: ev.titre, description: ev.description ?? '', type: ev.type,
-			lieu: ev.lieu ?? '', debut: ev.debut?.slice(0, 10) ?? '',
+			titre: ev.titre,
+			description: ev.description ?? '',
+			type: ev.type,
+			lieu: ev.lieu ?? '',
+			debut: ev.debut?.slice(0, 10) ?? '',
 			debut_heure: ev.debut?.slice(11, 16) ?? '',
 			fin: ev.fin?.slice(0, 16) ?? '',
 			statut_kanban: ev.statut_kanban ?? '',
@@ -242,7 +305,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		// en cours d'édition comme un épinglage supplémentaire.
 		epingleInitial = form.epingle;
 		const p = ev.perimetre ?? '';
-		formPerimetreCible = estPerimetreParDefaut(p) ? perimetreDefautListe() : p.split(',').filter(Boolean);
+		formPerimetreCible = estPerimetreParDefaut(p)
+			? perimetreDefautListe()
+			: p.split(',').filter(Boolean);
 		editId = ev.id;
 		photosUrls = ev.photos_urls ?? [];
 		fichiersUrls = ev.fichiers_urls ?? [];
@@ -250,12 +315,20 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	}
 
 	async function save() {
-		if (!form.titre || !form.debut) { toast('error', 'Titre et date de début obligatoires'); return; }
+		if (!form.titre || !form.debut) {
+			toast('error', 'Titre et date de début obligatoires');
+			return;
+		}
 		submitting = true;
 		const perimetre = formPerimetreCible.join(',');
 		//  `debut_heure` est écarté DÉLIBÉRÉMENT de `formData` : il est recomposé
 		//  dans `debut` ci-dessous. Le préfixe `_` dit que l'inemploi est voulu.
-		const { debut_heure: _debut_heure, frequence_type: ft, frequence_valeur: fv, ...formData } = form;
+		const {
+			debut_heure: _debut_heure,
+			frequence_type: ft,
+			frequence_valeur: fv,
+			...formData
+		} = form;
 		const payload = {
 			...formData,
 			perimetre,
@@ -297,35 +370,44 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		if (!confirm('Archiver cet événement ?')) return;
 		try {
 			await calApi.archive(id);
-			evenements = evenements.map(e => e.id === id ? { ...e, archivee: true } : e);
+			evenements = evenements.map((e) => (e.id === id ? { ...e, archivee: true } : e));
 			toast('success', 'Événement archivé');
-		} catch { toast('error', 'Erreur'); }
+		} catch {
+			toast('error', 'Erreur');
+		}
 	}
 
 	async function deleteEv(id: number) {
 		if (!confirm('Supprimer définitivement cet événement ? Cette action est irréversible.')) return;
 		try {
 			await calApi.delete(id);
-			evenements = evenements.filter(e => e.id !== id);
+			evenements = evenements.filter((e) => e.id !== id);
 			toast('success', 'Événement supprimé définitivement');
-		} catch { toast('error', 'Erreur'); }
+		} catch {
+			toast('error', 'Erreur');
+		}
 	}
 
 	async function loadArchivedPubs() {
 		if (archivedPubsLoaded) return;
 		try {
 			archivedPubs = await pubsApi.list(true);
-		} catch { /* silencieux */ }
+		} catch {
+			/* silencieux */
+		}
 		archivedPubsLoaded = true;
 	}
 
 	async function deleteArchivedPub(pub: Publication) {
-		if (!confirm(`Supprimer définitivement « ${pub.titre} » ? Cette action est irréversible.`)) return;
+		if (!confirm(`Supprimer définitivement « ${pub.titre} » ? Cette action est irréversible.`))
+			return;
 		try {
 			await pubsApi.delete(pub.id);
-			archivedPubs = archivedPubs.filter(p => p.id !== pub.id);
+			archivedPubs = archivedPubs.filter((p) => p.id !== pub.id);
 			toast('success', 'Publication supprimée définitivement');
-		} catch { toast('error', 'Erreur'); }
+		} catch {
+			toast('error', 'Erreur');
+		}
 	}
 
 	$: if (onglet === 'archives') loadArchivedPubs();
@@ -336,7 +418,8 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	/*  Vue liste : années passées → « 2025 », année courante → « mars 2026 ».
 	    ⚠️ L'ORDRE vit ici, une seule fois : il était écrit DEUX fois (28/08/2026). */
-	const duPlusRecent = (a: any, b: any) => new Date(b.debut).getTime() - new Date(a.debut).getTime();
+	const duPlusRecent = (a: any, b: any) =>
+		new Date(b.debut).getTime() - new Date(a.debut).getTime();
 
 	function groupByYear(evs: any[]) {
 		const currentYear = new Date().getFullYear();
@@ -345,10 +428,11 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		for (const ev of [...evs].sort(duPlusRecent)) {
 			const d = new Date(ev.debut);
 			const year = d.getFullYear();
-			const key = year < currentYear
-				? String(year)
-				: fmtMonthYear(ev.debut);
-			if (!indexMap.has(key)) { indexMap.set(key, result.length); result.push([key, []]); }
+			const key = year < currentYear ? String(year) : fmtMonthYear(ev.debut);
+			if (!indexMap.has(key)) {
+				indexMap.set(key, result.length);
+				result.push([key, []]);
+			}
 			result[indexMap.get(key)!][1].push(ev);
 		}
 		return result;
@@ -359,10 +443,14 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	// Maintenances récurrentes trackées dans le workflow Kanban (statut_kanban actif, non archivées, non périmées)
 	$: recurringMaintenances = (() => {
 		if (filtreType && filtreType !== 'maintenance_recurrente') return [];
-		return evenements.filter((e: any) =>
-			e.type === 'maintenance_recurrente'
-			&& e.statut_kanban && e.statut_kanban !== 'annule'
-			&& !e.archivee && !evenementArchive(e, archivageDelaiMs));
+		return evenements.filter(
+			(e: any) =>
+				e.type === 'maintenance_recurrente' &&
+				e.statut_kanban &&
+				e.statut_kanban !== 'annule' &&
+				!e.archivee &&
+				!evenementArchive(e, archivageDelaiMs),
+		);
 	})();
 	let showPeriodicSection = false;
 
@@ -381,7 +469,17 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
 	//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
-	const PALETTE_PERIMETRE = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#8b5cf6', '#ec4899', '#0ea5e9', '#14b8a6'];
+	const PALETTE_PERIMETRE = [
+		'#ef4444',
+		'#3b82f6',
+		'#22c55e',
+		'#f59e0b',
+		'#f97316',
+		'#8b5cf6',
+		'#ec4899',
+		'#0ea5e9',
+		'#14b8a6',
+	];
 	function couleurPerimetre(code: string): string {
 		let s = 0;
 		for (let i = 0; i < code.length; i++) s = (s * 31 + code.charCodeAt(i)) >>> 0;
@@ -407,25 +505,31 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	$: _kanbanCtx = { isCS: $isCS, isAdmin: $isAdmin, canSeeAG, statut: $currentUser?.statut ?? '' };
 
 	$: kanbanEvs = (() => {
-		const baseEvents = evenements.filter(ev =>
-			ev.statut_kanban && kanbanEvVisible(ev, _kanbanCtx)
+		const baseEvents = evenements.filter(
+			(ev) => ev.statut_kanban && kanbanEvVisible(ev, _kanbanCtx),
 		);
-		return baseEvents.filter(ev => {
+		return baseEvents.filter((ev) => {
 			if (!kanbanEvMatchesYear(ev, kanbanExercice)) return false;
 			if (kanbanBatiment) {
 				const p = ev.perimetre ?? '';
-				if (!estPerimetreParDefaut(p) && !p.split(',').some((s: string) => s.trim() === kanbanBatiment)) return false;
+				if (
+					!estPerimetreParDefaut(p) &&
+					!p.split(',').some((s: string) => s.trim() === kanbanBatiment)
+				)
+					return false;
 			}
 			return true;
 		});
 	})();
 
-	$: kanbanCols = KANBAN_COLS
-		.filter(col => kanbanColVisible(col.id, _kanbanCtx))
-		.map(col => ({
+	$: kanbanCols = KANBAN_COLS.filter((col) => kanbanColVisible(col.id, _kanbanCtx)).map((col) => ({
 		...col,
-		items: kanbanEvs.filter(ev => {
-			if (ev.archivee && ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur') {
+		items: kanbanEvs.filter((ev) => {
+			if (
+				ev.archivee &&
+				ev.type === 'maintenance_recurrente' &&
+				ev.statut_kanban === 'fournisseur'
+			) {
 				return col.id === 'termine';
 			}
 			return ev.statut_kanban === col.id;
@@ -434,7 +538,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 	$: kanbanExerciceOptions = (() => {
 		const years = new Set<number>();
-		evenements.forEach(ev => { if (ev.statut_kanban) years.add(new Date(ev.debut).getFullYear()); });
+		evenements.forEach((ev) => {
+			if (ev.statut_kanban) years.add(new Date(ev.debut).getFullYear());
+		});
 		years.add(defaultExercice);
 		return [...years].sort((a, b) => b - a);
 	})();
@@ -461,15 +567,20 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 		const id = dragEvId;
 		dragEvId = null;
 		if (id <= 0) return;
-		const item = evenements.find(e => e.id === id);
+		const item = evenements.find((e) => e.id === id);
 		if (!item || item.statut_kanban === colId) return;
 		const old = item.statut_kanban;
 		const shouldArchive = colId === 'termine';
-		evenements = evenements.map(e => e.id === id ? { ...e, statut_kanban: colId, archivee: shouldArchive ? true : e.archivee } : e);
+		evenements = evenements.map((e) =>
+			e.id === id ? { ...e, statut_kanban: colId, archivee: shouldArchive ? true : e.archivee } : e,
+		);
 		try {
-			await calApi.update(id, shouldArchive ? { statut_kanban: colId, archivee: true } : { statut_kanban: colId });
+			await calApi.update(
+				id,
+				shouldArchive ? { statut_kanban: colId, archivee: true } : { statut_kanban: colId },
+			);
 		} catch {
-			evenements = evenements.map(e => e.id === id ? { ...e, statut_kanban: old } : e);
+			evenements = evenements.map((e) => (e.id === id ? { ...e, statut_kanban: old } : e));
 			toast('error', 'Erreur lors du déplacement');
 		}
 	}
@@ -477,9 +588,16 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	//  `PERIMETRE_SHORT` a disparu : le libellé court est un CHAMP de l'arbre
 	//  (`libelle_court`), et c'est sa recopie ici qui l'avait fait diverger (#316).
 	function perimetreTags(p: string): { label: string; color: string }[] {
-		if (estPerimetreParDefaut(p)) return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
-		return p.split(',').map(s => s.trim()).filter(Boolean)
-			.map(s => ({ label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s), color: couleurPerimetre(s) }));
+		if (estPerimetreParDefaut(p))
+			return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
+		return p
+			.split(',')
+			.map((s) => s.trim())
+			.filter(Boolean)
+			.map((s) => ({
+				label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s),
+				color: couleurPerimetre(s),
+			}));
 	}
 
 	// Couleur dégradée par année : teinte HSL qui tourne de 52° par an à partir de 2024
@@ -576,21 +694,35 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
 <!-- Onglets -->
 <div class="tabs" role="tablist" style="margin-bottom:1.5rem">
-	<button role="tab" class:active={onglet === 'liste'} on:click={() => onglet = 'liste'}>{_pc.onglets?.liste?.label ?? '\u{1F4CB} Liste'}</button>
+	<button role="tab" class:active={onglet === 'liste'} on:click={() => (onglet = 'liste')}
+		>{_pc.onglets?.liste?.label ?? '\u{1F4CB} Liste'}</button
+	>
 	{#if !isLocataire}
-	<button role="tab" class:active={onglet === 'kanban'} on:click={() => onglet = 'kanban'}>{_pc.onglets?.kanban?.label ?? '\u{1F5C3}️ Kanban'}</button>
-	<button role="tab" class:active={onglet === 'archives'} on:click={() => onglet = 'archives'}>{_pc.onglets?.archives?.label ?? TITRE_ARCHIVES}</button>
+		<button role="tab" class:active={onglet === 'kanban'} on:click={() => (onglet = 'kanban')}
+			>{_pc.onglets?.kanban?.label ?? '\u{1F5C3}️ Kanban'}</button
+		>
+		<button role="tab" class:active={onglet === 'archives'} on:click={() => (onglet = 'archives')}
+			>{_pc.onglets?.archives?.label ?? TITRE_ARCHIVES}</button
+		>
 	{/if}
 </div>
 {#if _pc.onglets?.[onglet]?.descriptif}
-<p class="tab-descriptif">{@html safeHtml(_pc.onglets[onglet].descriptif)}</p>
+	<p class="tab-descriptif">{@html safeHtml(_pc.onglets[onglet].descriptif)}</p>
 {/if}
 
 <!-- Filtres -->
 <div class="filters">
-	<button class="btn btn-sm" class:btn-primary={filtreType === ''} on:click={() => filtreType = ''}>Tous</button>
+	<button
+		class="btn btn-sm"
+		class:btn-primary={filtreType === ''}
+		on:click={() => (filtreType = '')}>Tous</button
+	>
 	{#each visibleTypes as t}
-		<button class="btn btn-sm" class:btn-primary={filtreType === t.val} on:click={() => filtreType = t.val}>
+		<button
+			class="btn btn-sm"
+			class:btn-primary={filtreType === t.val}
+			on:click={() => (filtreType = t.val)}
+		>
 			{t.label}
 		</button>
 	{/each}
@@ -599,11 +731,23 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 <!-- Formulaire création/édition -->
 {#if showForm && $isCS}
 	<FormulaireCreation titre={editId ? 'Modifier l’événement' : 'Nouvel événement'}>
-			<FormulaireEvenement bind:form bind:photosUrls bind:fichiersUrls
-				bind:formPerimetreCible {types} {prestataires} {submitting}
-				modeEdition={editId !== null}
-				{epingleInitial} kanbanCols={KANBAN_COLS} onSubmit={save}
-				on:annule={() => { showForm = false; resetForm(); }} />
+		<FormulaireEvenement
+			bind:form
+			bind:photosUrls
+			bind:fichiersUrls
+			bind:formPerimetreCible
+			{types}
+			{prestataires}
+			{submitting}
+			modeEdition={editId !== null}
+			{epingleInitial}
+			kanbanCols={KANBAN_COLS}
+			onSubmit={save}
+			on:annule={() => {
+				showForm = false;
+				resetForm();
+			}}
+		/>
 	</FormulaireCreation>
 {/if}
 
@@ -611,10 +755,15 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if onglet === 'archives'}
-	<OngletArchivesCalendrier {allArchiveItems} {archiveByYear}
-		bind:expandedArchiveYears {typeLabel} {formatDate}
-		{deleteArchivedPub} {deleteEv} />
-
+	<OngletArchivesCalendrier
+		{allArchiveItems}
+		{archiveByYear}
+		bind:expandedArchiveYears
+		{typeLabel}
+		{formatDate}
+		{deleteArchivedPub}
+		{deleteEv}
+	/>
 {:else if listItems.length === 0 && !recurringMaintenances.length && !kanbanEvs.length}
 	<div class="empty-state">
 		<h3>Aucun événement</h3>
@@ -626,39 +775,64 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 			<div class="month-label">&#x1F4C5; {annee}</div>
 			{#each evs as ev}
 				{@const expanded = expandedEvId === ev.id}
-				<CarteEvenement {ev} {expanded} colonnes={KANBAN_COLS} peutAgir={$isCS}
-					suiviOuvert={evolOuverte === ev.id} editionOuverte={showForm && editId === ev.id} {typeLabel} formatDate={formatDate}
+				<CarteEvenement
+					{ev}
+					{expanded}
+					colonnes={KANBAN_COLS}
+					peutAgir={$isCS}
+					suiviOuvert={evolOuverte === ev.id}
+					editionOuverte={showForm && editId === ev.id}
+					{typeLabel}
+					{formatDate}
 					on:basculer={() => (expandedEvId = expanded ? null : ev.id)}
 					on:suivre={() => ouvrirSuivi(ev)}
 					on:modifier={() => startEdit(ev)}
 					on:archiver={() => archiveEv(ev.id)}
 					on:evolue={recharger}
-					on:fermer={() => (evolOuverte = null)} />
+					on:fermer={() => (evolOuverte = null)}
+				/>
 			{/each}
 		</div>
 	{/each}
 	{#if recurringMaintenances.length > 0}
 		<div class="recurring-section">
-			<button class="recurring-toggle" on:click={() => showPeriodicSection = !showPeriodicSection}>
+			<button
+				class="recurring-toggle"
+				on:click={() => (showPeriodicSection = !showPeriodicSection)}
+			>
 				🔄 Maintenances récurrentes
-				<span style="font-size:.8rem;font-weight:400;color:var(--color-text-muted)">({recurringMaintenances.length})</span>
+				<span style="font-size:.8rem;font-weight:400;color:var(--color-text-muted)"
+					>({recurringMaintenances.length})</span
+				>
 				<span class="chevron" class:open={showPeriodicSection} style="margin-left:auto">›</span>
 			</button>
 			{#if showPeriodicSection}
 				{#each recurringMaintenances as ev}
-					{@const col = ev.statut_kanban ? KANBAN_COLS.find(c => c.id === ev.statut_kanban) : undefined}
+					{@const col = ev.statut_kanban
+						? KANBAN_COLS.find((c) => c.id === ev.statut_kanban)
+						: undefined}
 					<RangeeCalendrier
 						typeTexte={typeLabel(ev.type)}
 						titre={ev.titre}
-						metas={[...(ev.prestataire_nom ? [`\u{1F3AF} ${ev.prestataire_nom}`] : []),
-							...(ev.lieu ? [`\u{1F4CD} ${ev.lieu}`] : [])]}
-						dates={[{ texte: formatDate(ev.debut) },
-							...(ev.fin ? [{ texte: `→ ${formatDate(ev.fin)}`, attenue: true }] : [])]}
+						metas={[
+							...(ev.prestataire_nom ? [`\u{1F3AF} ${ev.prestataire_nom}`] : []),
+							...(ev.lieu ? [`\u{1F4CD} ${ev.lieu}`] : []),
+						]}
+						dates={[
+							{ texte: formatDate(ev.debut) },
+							...(ev.fin ? [{ texte: `→ ${formatDate(ev.fin)}`, attenue: true }] : []),
+						]}
 						perimetre={ev.perimetre}
 						badgeKanban={col ? { texte: col.label, couleur: col.color } : null}
-						avecActions={$isCS}>
+						avecActions={$isCS}
+					>
 						<svelte:fragment slot="actions">
-							<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
+							<button
+								class="btn-icon-edit"
+								aria-label="Modifier"
+								title="Modifier"
+								on:click={() => startEdit(ev)}>✏️</button
+							>
 						</svelte:fragment>
 					</RangeeCalendrier>
 				{/each}
@@ -680,7 +854,9 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 				{#each BATIMENT_OPTIONS as b}<option value={b.val}>{b.label}</option>{/each}
 			</select>
 		</label>
-		<span class="kanban-count-total">{kanbanEvs.length} affaire{kanbanEvs.length > 1 ? 's' : ''}</span>
+		<span class="kanban-count-total"
+			>{kanbanEvs.length} affaire{kanbanEvs.length > 1 ? 's' : ''}</span
+		>
 		{#if $isCS}
 			<button class="btn btn-sm kanban-init-btn" on:click={initPrestataires} disabled={initLoading}>
 				{initLoading ? '⏳ Création…' : '⚙️ Init. prestataires'}
@@ -690,10 +866,12 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	<div class="kanban">
 		{#each kanbanCols as col}
 			{@const items = col.items}
-			<div class="kanban-col"
+			<div
+				class="kanban-col"
 				on:dragover={onDragOver}
 				on:drop={(e) => onDrop(e, col.id)}
-				role="list">
+				role="list"
+			>
 				<div class="kanban-col-header" style="border-top-color:{col.color}">
 					<span>{col.label}</span>
 					<span class="kanban-count">{items.length}</span>
@@ -702,41 +880,79 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 					<p class="kanban-empty">Aucune affaire</p>
 				{:else}
 					{#each items as ev (ev.id)}
-						<div class="kanban-card card"
+						<div
+							class="kanban-card card"
 							class:event-urgent={ev.type === 'coupure'}
 							class:kanban-card-expanded={expandedKanbanId === ev.id}
 							draggable={$isCS && expandedKanbanId !== ev.id ? 'true' : 'false'}
 							on:dragstart={(e) => onDragStart(e, ev.id)}
-							on:click={() => expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id}
-							on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id; } }}
+							on:click={() => (expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id)}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									expandedKanbanId = expandedKanbanId === ev.id ? null : ev.id;
+								}
+							}}
 							role="button"
-							tabindex="0">
+							tabindex="0"
+						>
 							<!-- Tags périmètre + année (uniquement si année ≠ exercice sélectionné) -->
 							<div class="kanban-card-tags">
 								{#each perimetreTags(ev.perimetre) as tag}
 									<span class="kb-tag" style="background:{tag.color}">{tag.label}</span>
 								{/each}
-								<span class="kb-tag" style="background:{yearColor(new Date(ev.debut).getFullYear())}" title="Événement de {new Date(ev.debut).getFullYear()}">{new Date(ev.debut).getFullYear()}</span>
+								<span
+									class="kb-tag"
+									style="background:{yearColor(new Date(ev.debut).getFullYear())}"
+									title="Événement de {new Date(ev.debut).getFullYear()}"
+									>{new Date(ev.debut).getFullYear()}</span
+								>
 							</div>
-							{#if ev.prestataire_nom}<span class="kanban-card-prest">{ev.prestataire_nom}</span>{/if}
+							{#if ev.prestataire_nom}<span class="kanban-card-prest">{ev.prestataire_nom}</span
+								>{/if}
 							<strong class="kanban-card-titre">{ev.titre}</strong>
 							<div class="kanban-card-footer">
 								<span class="kanban-card-type">{typeLabel(ev.type)}</span>
 								{#if $isCS}
-									<div class="kanban-card-actions" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-										<button class="btn-icon-edit" aria-label="Modifier" title="Modifier" on:click={() => startEdit(ev)}>✏️</button>
-									{#if $isAdmin}
-										<button class="btn-icon-danger" aria-label="Supprimer définitivement" title="Supprimer définitivement" on:click={() => deleteEv(ev.id)}>&#x1F5D1;️</button>
-									{/if}
+									<div
+										class="kanban-card-actions"
+										role="presentation"
+										on:click|stopPropagation
+										on:keydown|stopPropagation
+									>
+										<button
+											class="btn-icon-edit"
+											aria-label="Modifier"
+											title="Modifier"
+											on:click={() => startEdit(ev)}>✏️</button
+										>
+										{#if $isAdmin}
+											<button
+												class="btn-icon-danger"
+												aria-label="Supprimer définitivement"
+												title="Supprimer définitivement"
+												on:click={() => deleteEv(ev.id)}>&#x1F5D1;️</button
+											>
+										{/if}
 									</div>
 								{/if}
 							</div>
 							{#if expandedKanbanId === ev.id}
-								<div class="kanban-card-detail" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-									<div class="kanban-card-detail-row">📅 {formatDate(ev.debut)}{#if ev.fin} → {formatDate(ev.fin)}{/if}</div>
+								<div
+									class="kanban-card-detail"
+									role="presentation"
+									on:click|stopPropagation
+									on:keydown|stopPropagation
+								>
+									<div class="kanban-card-detail-row">
+										📅 {formatDate(ev.debut)}{#if ev.fin}
+											→ {formatDate(ev.fin)}{/if}
+									</div>
 									{#if ev.lieu}<div class="kanban-card-detail-row">📍 {ev.lieu}</div>{/if}
 									{#if ev.description}
-										<div class="kanban-card-detail-desc rich-content">{@html safeHtml(ev.description)}</div>
+										<div class="kanban-card-detail-desc rich-content">
+											{@html safeHtml(ev.description)}
+										</div>
 									{/if}
 								</div>
 							{/if}
@@ -758,8 +974,17 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    virgule qui fusionnait avec la règle suivante, #372) est partie AVEC la
 	    règle, dans le composant qui la rend. Une explication qui reste où le code
 	    n'est plus n'explique plus rien. */
-	.month-group { margin-bottom: 1.5rem; }
-	.month-label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: .5rem; }
+	.month-group {
+		margin-bottom: 1.5rem;
+	}
+	.month-label {
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+		margin-bottom: 0.5rem;
+	}
 	/*  ✅ Les règles `.event-*` et `.archive-*` sont parties dans
 	    `RangeeCalendrier.svelte` (#432), AVEC le balisage qui les portait — la
 	    seule façon qu'elles s'appliquent encore, Svelte scopant le style au
@@ -772,14 +997,50 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    extraire qu'un aurait emporté les règles et laissé l'autre nu, ce qui est
 	    exactement la panne des pastilles de la v2.67.11. */
 
-	.tabs { padding-bottom: .1rem; }  /* le reste vient de la charte (#607) */
+	.tabs {
+		padding-bottom: 0.1rem;
+	} /* le reste vient de la charte (#607) */
 
-	.kanban-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; flex-wrap: wrap; }
-	.kanban-exercice-label { font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: .4rem; }
-	.kanban-exercice-select { padding: .25rem .5rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); font-size: .85rem; }
-	.kanban-init-btn { margin-left: auto; font-size: .8rem; padding: .3rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; white-space: nowrap; }
-	.kanban-init-btn:hover:not(:disabled) { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-	.kanban-init-btn:disabled { opacity: .5; cursor: not-allowed; }
+	.kanban-toolbar {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+		flex-wrap: wrap;
+	}
+	.kanban-exercice-label {
+		font-size: 0.85rem;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.kanban-exercice-select {
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: var(--color-surface);
+		font-size: 0.85rem;
+	}
+	.kanban-init-btn {
+		margin-left: auto;
+		font-size: 0.8rem;
+		padding: 0.3rem 0.75rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: var(--color-surface);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.kanban-init-btn:hover:not(:disabled) {
+		background: var(--color-primary);
+		color: #fff;
+		border-color: var(--color-primary);
+	}
+	.kanban-init-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 	/*  Les cinq règles `.archive-year-*` sont parties avec
 	    `OngletArchivesCalendrier` : elles n'habillaient que son balisage. */
 	/*  ⚠️ `.kanban-col` était défini DEUX fois, à quinze lignes d'intervalle, avec
@@ -791,23 +1052,61 @@ import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 	    périmètres et des années, que la minuscule harmonise. Elle n'est PAS montée
 	    dans `composants.css` parce que les tags des prestations portent un sigle —
 	    « OS joint » deviendrait « os joint » (#453, 28/08/2026). */
-	.kb-tag { text-transform: lowercase; }
-	.kanban-card-expanded { cursor: default; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-	.kanban-card-detail { border-top: 1px solid var(--color-border); margin-top: .3rem; padding-top: .35rem; }
-	.kanban-card-detail-row { font-size: .72rem; color: var(--color-text-muted); line-height: 1.5; }
-	.kanban-card-detail-desc { font-size: .72rem; line-height: 1.5; margin-top: .25rem; }
-	.kanban-card:active { cursor: grabbing; }
-	.kanban-card[draggable="true"]:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-	.kanban-card-type { font-size: .72rem; font-weight: 600; color: var(--color-text-muted); }
-	.recurring-section { margin-top: 1.5rem; padding: .5rem 0; }
-	.recurring-toggle {
-		background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius);
-		cursor: pointer; font-size: .875rem; font-weight: 600;
-		color: #0369a1; padding: .5rem .9rem;
-		width: 100%; text-align: left;
-		display: flex; align-items: center; gap: .5rem;
+	.kb-tag {
+		text-transform: lowercase;
 	}
-	.recurring-toggle:hover { background: #e0f2fe; }
+	.kanban-card-expanded {
+		cursor: default;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+	}
+	.kanban-card-detail {
+		border-top: 1px solid var(--color-border);
+		margin-top: 0.3rem;
+		padding-top: 0.35rem;
+	}
+	.kanban-card-detail-row {
+		font-size: 0.72rem;
+		color: var(--color-text-muted);
+		line-height: 1.5;
+	}
+	.kanban-card-detail-desc {
+		font-size: 0.72rem;
+		line-height: 1.5;
+		margin-top: 0.25rem;
+	}
+	.kanban-card:active {
+		cursor: grabbing;
+	}
+	.kanban-card[draggable='true']:hover {
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+	}
+	.kanban-card-type {
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--color-text-muted);
+	}
+	.recurring-section {
+		margin-top: 1.5rem;
+		padding: 0.5rem 0;
+	}
+	.recurring-toggle {
+		background: #f0f9ff;
+		border: 1px solid #bae6fd;
+		border-radius: var(--radius);
+		cursor: pointer;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #0369a1;
+		padding: 0.5rem 0.9rem;
+		width: 100%;
+		text-align: left;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.recurring-toggle:hover {
+		background: #e0f2fe;
+	}
 	/*  ⚠️ `.maintenance-archive-section` et `.maintenance-archive-toggle` vivaient
 	    ici sans être posées sur aucun élément — signalées elles aussi par
 	    `svelte-check`. Supprimées avec #432. */

@@ -99,7 +99,7 @@ if (absentes.length > 0) {
 }
 if (!/^\.page-header\s*\{/m.test(cssGlobal(RACINE))) {
 	console.error(
-		"✗ Cas zéro : `app.css` ne porte plus la règle `.page-header`. Elle a déménagé, et " +
+		'✗ Cas zéro : `app.css` ne porte plus la règle `.page-header`. Elle a déménagé, et ' +
 			"interdire les redéfinitions locales n'aurait plus de sens.",
 	);
 	process.exit(1);
@@ -166,7 +166,7 @@ if (pagesAvecEntete === 0) {
 }
 
 if (fautifs.length > 0) {
-	console.error("✗ En-tête(s) de page écrit(s) hors du composant :");
+	console.error('✗ En-tête(s) de page écrit(s) hors du composant :');
 	for (const { fichier, trouves } of fautifs) {
 		for (const t of trouves) {
 			console.error(`    ${fichier} — ${t.exemples.join(' · ')}`);
@@ -177,14 +177,14 @@ if (fautifs.length > 0) {
 	console.error(
 		"\n  Redéfinir localement une règle globale sans redéclarer TOUS ses champs n'annule\n" +
 			"  pas le global : on en hérite en silence. C'est ainsi que le titre de « Nouveau\n" +
-			'  ticket » se retrouvait à droite de l\'écran (#363).',
+			"  ticket » se retrouvait à droite de l'écran (#363).",
 	);
 	process.exit(1);
 }
 
 const inutiles = Object.keys(EXCEPTIONS).filter((f) => !exceptionsUtiles.has(f));
 if (inutiles.length > 0) {
-	console.error("✗ Exception(s) devenue(s) inutile(s) :");
+	console.error('✗ Exception(s) devenue(s) inutile(s) :');
 	for (const f of inutiles) console.error(`    ${f} — retirer l'entrée de EXCEPTIONS`);
 	process.exit(1);
 }

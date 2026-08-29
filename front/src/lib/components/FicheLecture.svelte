@@ -102,17 +102,27 @@
 	    pas atteinte par le `<style>` du parent — c'est la panne qui a envoyé des
 	    pastilles nues en production (v2.67.11). */
 	.fiche-perimetre {
-		font-size: .8rem;
+		font-size: 0.8rem;
 		color: var(--color-text-muted);
-		margin: .25rem 0 .5rem;
+		margin: 0.25rem 0 0.5rem;
 	}
 	.fiche-description {
-		font-size: .875rem;
+		font-size: 0.875rem;
 		line-height: 1.6;
-		margin-bottom: .5rem;
+		margin-bottom: 0.5rem;
 	}
-	.fiche-description :global(p) { margin: 0 0 .5em; }
-	.fiche-description :global(p:last-child) { margin-bottom: 0; }
-	.fiche-description :global(ul), .fiche-description :global(ol) { padding-left: 1.3em; margin: 0 0 .5em; }
-	.fiche-pieces { margin-bottom: .5rem; }
+	.fiche-description :global(p) {
+		margin: 0 0 0.5em;
+	}
+	.fiche-description :global(p:last-child) {
+		margin-bottom: 0;
+	}
+	.fiche-description :global(ul),
+	.fiche-description :global(ol) {
+		padding-left: 1.3em;
+		margin: 0 0 0.5em;
+	}
+	.fiche-pieces {
+		margin-bottom: 0.5rem;
+	}
 </style>

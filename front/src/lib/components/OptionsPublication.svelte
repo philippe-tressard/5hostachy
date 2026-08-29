@@ -88,14 +88,19 @@
 	      besoin d'une variable nommée, et une boucle générique obligerait à un
 	      objet intermédiaire que l'hôte devrait ensuite redéfaire. -->
 	<label class="checkbox-field" title={optEpingle?.aide}>
-		<input type="checkbox" bind:checked={epingle} /> {optEpingle?.glyphe} {optEpingle?.action}
+		<input type="checkbox" bind:checked={epingle} />
+		{optEpingle?.glyphe}
+		{optEpingle?.action}
 	</label>
 	<label class="checkbox-field" title={optUrgente?.aide}>
-		<input type="checkbox" bind:checked={urgente} /> {optUrgente?.glyphe} {optUrgente?.action}
+		<input type="checkbox" bind:checked={urgente} />
+		{optUrgente?.glyphe}
+		{optUrgente?.action}
 	</label>
 	<label class="checkbox-field" title={optBrouillon?.aide}>
 		<input type="checkbox" bind:checked={brouillon} />
-		{optBrouillon?.glyphe} {optBrouillon?.action} (invisible pour les résidents)
+		{optBrouillon?.glyphe}
+		{optBrouillon?.action} (invisible pour les résidents)
 	</label>
 	<label
 		class="checkbox-field"
@@ -110,20 +115,20 @@
 			disabled={rienARestreindre}
 			aria-describedby={rienARestreindre ? idAideConfidentiel : undefined}
 		/>
-		{optConfidentiel?.glyphe} {optConfidentiel?.action} — visible du seul périmètre sélectionné
+		{optConfidentiel?.glyphe}
+		{optConfidentiel?.action} — visible du seul périmètre sélectionné
 	</label>
 </div>
 
 {#if rienARestreindre}
 	<p class="aide" id={idAideConfidentiel}>
-		&#x1F512; <strong>Confidentiel</strong> demande un périmètre restreint — un bâtiment, par
-		exemple. Le périmètre choisi concerne déjà tous les résidents : il n'y a rien à leur
-		cacher.
+		&#x1F512; <strong>Confidentiel</strong> demande un périmètre restreint — un bâtiment, par exemple.
+		Le périmètre choisi concerne déjà tous les résidents : il n'y a rien à leur cacher.
 	</p>
 {:else if confidentiel}
 	<p class="aide">
-		&#x1F512; Seuls les résidents du périmètre sélectionné verront cette actualité — ni dans le
-		fil, ni par un lien direct pour les autres. Le réglage reste modifiable après publication.
+		&#x1F512; Seuls les résidents du périmètre sélectionné verront cette actualité — ni dans le fil,
+		ni par un lien direct pour les autres. Le réglage reste modifiable après publication.
 	</p>
 	<!--  🔴 CE QUI SORT, canal par canal (#623, 29/08/2026).
 	      L'auteur découvrait la conséquence après l'envoi, ou jamais. Et elle
@@ -139,10 +144,12 @@
 		<p class="avert-titre">&#x26A0;&#xFE0F; Ce qui sortira de l'application</p>
 		<ul class="avert-liste">
 			<li>
-				<strong>Groupe WhatsApp</strong> — le <strong>titre</strong> et le périmètre
-				partent, avec un lien vers l'application. Le contenu, lui, ne sort pas.
-				<span class="avert-consigne">Le groupe est commun à toute la copropriété :
-				n'écrivez rien de confidentiel dans le titre.</span>
+				<strong>Groupe WhatsApp</strong> — le <strong>titre</strong> et le périmètre partent, avec
+				un lien vers l'application. Le contenu, lui, ne sort pas.
+				<span class="avert-consigne"
+					>Le groupe est commun à toute la copropriété : n'écrivez rien de confidentiel dans le
+					titre.</span
+				>
 			</li>
 			<li>
 				<strong>Syndic et conseil syndical</strong> — l'e-mail part
@@ -166,13 +173,13 @@
 	.cases :global(.checkbox-field) {
 		display: flex;
 		align-items: center;
-		gap: .4rem;
-		font-size: .875rem;
+		gap: 0.4rem;
+		font-size: 0.875rem;
 		cursor: pointer;
 	}
 	/*  Une case grisée doit se VOIR grisée, pas seulement refuser le clic. */
 	.cases .desactivee {
-		opacity: .5;
+		opacity: 0.5;
 		cursor: not-allowed;
 	}
 	/*  L'avertissement de diffusion : encadré, pas un simple paragraphe d'aide.
@@ -180,28 +187,38 @@
 	    pas d'un groupe — là où `.aide` explique un réglage. Deux niveaux de
 	    gravité, deux rendus. */
 	.avert-diffusion {
-		border-left: 3px solid var(--color-warning, #B07D1E);
-		background: var(--color-warning-light, #FFFBEB);
+		border-left: 3px solid var(--color-warning, #b07d1e);
+		background: var(--color-warning-light, #fffbeb);
 		border-radius: var(--radius);
-		padding: .6rem .8rem;
-		margin: -.25rem 0 1rem;
+		padding: 0.6rem 0.8rem;
+		margin: -0.25rem 0 1rem;
 	}
-	.avert-titre { margin: 0 0 .35rem; font-size: .8rem; font-weight: 600; }
+	.avert-titre {
+		margin: 0 0 0.35rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
 	.avert-liste {
 		margin: 0;
 		padding-left: 1.1rem;
-		font-size: .78rem;
+		font-size: 0.78rem;
 		line-height: 1.5;
 		color: var(--color-text);
 	}
-	.avert-liste li + li { margin-top: .3rem; }
+	.avert-liste li + li {
+		margin-top: 0.3rem;
+	}
 	/*  La consigne d'écriture sur sa propre ligne : c'est la SEULE phrase qui
 	    demande une action de l'auteur, les autres décrivent. */
-	.avert-consigne { display: block; margin-top: .15rem; font-style: italic; }
+	.avert-consigne {
+		display: block;
+		margin-top: 0.15rem;
+		font-style: italic;
+	}
 	.aide {
-		font-size: .78rem;
+		font-size: 0.78rem;
 		color: var(--color-text-muted);
-		margin: -.5rem 0 1rem;
+		margin: -0.5rem 0 1rem;
 		line-height: 1.45;
 	}
 	/*  Sous 480 px, les cases passent en colonne et gagnent une cible tactile
@@ -209,7 +226,7 @@
 	@media (max-width: 480px) {
 		.cases {
 			flex-direction: column;
-			gap: .25rem;
+			gap: 0.25rem;
 		}
 		.cases :global(.checkbox-field) {
 			min-height: 44px;

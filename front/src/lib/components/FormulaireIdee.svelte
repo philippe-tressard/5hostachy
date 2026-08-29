@@ -66,7 +66,11 @@
 	<form on:submit|preventDefault={creer}>
 		<label class="field champ-large">
 			Titre *
-			<input bind:value={form.titre} placeholder="Ex. Vélos électriques en libre-service" required />
+			<input
+				bind:value={form.titre}
+				placeholder="Ex. Vélos électriques en libre-service"
+				required
+			/>
 		</label>
 		<!--  4 et 6 : le PÉRIMÈTRE et la description, hérités du composant partagé.
 		      Le périmètre est arrivé le 18/08/2026 (migration 0153) — l'idée était la
@@ -78,8 +82,10 @@
 		      c'est elle qui les fait disparaître — pas une condition écrite ici. -->
 		<ChampsCommuns
 			idPrefixe="idee"
-			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')} bind:perimetre={perimetreCible}
-			avecDescription={sectionPresente(IDEE, etat, 'description')} descriptionRequise
+			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')}
+			bind:perimetre={perimetreCible}
+			avecDescription={sectionPresente(IDEE, etat, 'description')}
+			descriptionRequise
 			bind:description={form.description}
 			descriptionPlaceholder="Décrivez votre idée…"
 		/>
@@ -87,8 +93,12 @@
 		      sur Tickets, constatée, puis étendue. L'en-tête de page ne porte plus
 		      de seconde commande d'annulation (#367). -->
 		<div class="form-actions">
-			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}>Annuler</button>
-			<button class="btn btn-primary" disabled={submitting}>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button>
+			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+				>Annuler</button
+			>
+			<button class="btn btn-primary" disabled={submitting}
+				>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button
+			>
 		</div>
 	</form>
 </FormulaireCreation>

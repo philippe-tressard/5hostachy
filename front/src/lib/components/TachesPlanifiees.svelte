@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from '$lib/components/Icon.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	//  Extrait de `admin/+page.svelte` (2577 lignes) le 11/08/2026, au fil de
 	//  l'eau : y ajouter la colonne « Tâche » aurait fait grossir un fichier déjà
 	//  cinq fois au-dessus du plafond de modularité.
@@ -53,7 +53,6 @@
 	//  indiscernable d'« À jour », puis d'« Exécution manquante » : deux jours de
 	//  faux vert, puis un faux rouge, du 16 au 18/08/2026.
 
-
 	//  ⚠️ La couleur suit la GRAVITÉ, pas le nom. « En cours » est vert : la tâche
 	//  fait ce qu'on attend d'elle. « Rapport non reçu » est orange et non rouge —
 	//  rien n'est cassé côté tâche, c'est la surveillance qui est aveugle, et un
@@ -81,7 +80,7 @@
 	//  Le détail vit désormais SOUS la ligne qui l'annonce.
 	const SOURCE: Record<string, string> = {
 		backup: '/admin/sauvegardes/historique',
-		telemetrie: '/admin/telemetry/historique'
+		telemetrie: '/admin/telemetry/historique',
 	};
 
 	//  Profondeur d'historique sous une ligne dépliée. UNE constante : elle était
@@ -108,7 +107,7 @@
 		backup: 'Stockage des archives : /data/5hostachy/backups/',
 		telemetrie:
 			'Automatique chaque nuit à 2 h. Agrège les événements bruts en données ' +
-			'journalières puis mensuelles, et purge les données expirées.'
+			'journalières puis mensuelles, et purge les données expirées.',
 	};
 
 	let historiques: Record<string, any[]> = {};
@@ -184,7 +183,7 @@
 	const LANCEMENT: Record<string, string> = {
 		maintenance: '/admin/maintenance/lancer',
 		backup: '/admin/sauvegardes/maintenant',
-		telemetrie: '/admin/telemetry/agreger'
+		telemetrie: '/admin/telemetry/agreger',
 	};
 
 	//  ⚠️ Ce bouton ne lance PAS `maintenance.sh`. Il appelle
@@ -223,17 +222,20 @@
 </script>
 
 <section class="card config-section">
-	<h2 class="config-section-title"><Icon name="clipboard-list" size={17} />Santé des tâches planifiées</h2>
+	<h2 class="config-section-title">
+		<Icon name="clipboard-list" size={17} />Santé des tâches planifiées
+	</h2>
 	<p class="muted" style="font-size:.85rem">
-		Synthèse : <strong>une ligne par tâche</strong>, portant la <strong>dernière
-		exécution réelle</strong> — quel que soit le nœud qui l'a faite. En dessous,
-		<strong>une sous-ligne par nœud ayant rendu compte</strong> : un nœud sain ne
-		compense pas un nœud muet, et l'on voit lequel décroche sans avoir à cliquer.
-		Sans ce contrôle, une absence de ligne se lirait comme « tout va bien ».
+		Synthèse : <strong>une ligne par tâche</strong>, portant la
+		<strong>dernière exécution réelle</strong>
+		— quel que soit le nœud qui l'a faite. En dessous,
+		<strong>une sous-ligne par nœud ayant rendu compte</strong> : un nœud sain ne compense pas un
+		nœud muet, et l'on voit lequel décroche sans avoir à cliquer. Sans ce contrôle, une absence de
+		ligne se lirait comme « tout va bien ».
 		<br />
-		⚠️ Une tâche qui n'affiche <strong>qu'une seule</strong> sous-ligne n'a été
-		rapportée que par ce nœud-là. Selon la tâche, c'est normal (elle ne tourne que
-		sur l'actif) ou c'est le signe que l'autre nœud ne rend pas compte.
+		⚠️ Une tâche qui n'affiche <strong>qu'une seule</strong> sous-ligne n'a été rapportée que par ce nœud-là.
+		Selon la tâche, c'est normal (elle ne tourne que sur l'actif) ou c'est le signe que l'autre nœud ne
+		rend pas compte.
 	</p>
 	{#if santeLoading}
 		<p class="muted">Chargement...</p>
@@ -248,15 +250,22 @@
 				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th></tr></thead>
 				<tbody>
 					{#each sante.taches as t}
-						<tr class="cliquable" role="button" tabindex="0"
+						<tr
+							class="cliquable"
+							role="button"
+							tabindex="0"
 							aria-expanded={ouverte === t.tache}
 							on:click={() => basculer(t.tache)}
-							on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), basculer(t.tache))}>
+							on:keydown={(e) =>
+								(e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), basculer(t.tache))}
+						>
 							<td>
 								<!--  Affordance de dépliement DEVANT le libellé, pas au bout de la
 								      ligne : à droite, gris et petit, il n'était pas vu — l'utilisateur
 								      ignorait que les lignes s'ouvraient (11/08/2026). -->
-								<span class="chevron" class:open={ouverte === t.tache} aria-hidden="true">&#x25B8;</span>
+								<span class="chevron" class:open={ouverte === t.tache} aria-hidden="true"
+									>&#x25B8;</span
+								>
 								{LIBELLE_TACHE[t.tache] ?? t.tache}
 							</td>
 							<td style="color:var(--color-text-muted)">
@@ -275,32 +284,44 @@
 								{#if t.statut === 'aucune_execution'}
 									—
 								{:else if !t.noeud_enregistre}
-									<span style="font-style:italic"
-										title="Cette exécution est antérieure à la migration 0137, qui a ajouté la colonne : on ne sait pas quel nœud l'a faite. Afficher le nœud qui répond aujourd'hui serait faux — le rôle alterne chaque nuit. La colonne se remplit à chaque exécution depuis.">non enregistré</span>
+									<span
+										style="font-style:italic"
+										title="Cette exécution est antérieure à la migration 0137, qui a ajouté la colonne : on ne sait pas quel nœud l'a faite. Afficher le nœud qui répond aujourd'hui serait faux — le rôle alterne chaque nuit. La colonne se remplit à chaque exécution depuis."
+										>non enregistré</span
+									>
 								{:else}
 									<!-- Le nœud de la DERNIÈRE exécution. Les autres ont leur propre
 									     sous-ligne ci-dessous : plus rien n'est élu ni masqué (#331). -->
-									<span title={t.noeuds?.length
-										? `Nœud de la dernière exécution. L'état de chaque nœud est détaillé sous cette ligne.`
-										: ''}>{t.noeud.toUpperCase()}</span>
+									<span
+										title={t.noeuds?.length
+											? `Nœud de la dernière exécution. L'état de chaque nœud est détaillé sous cette ligne.`
+											: ''}>{t.noeud.toUpperCase()}</span
+									>
 								{/if}
 							</td>
 							<td>
-								<span class="badge {CLASSE_STATUT[t.statut] ?? 'badge-red'}"
-									title={AIDE_STATUT[t.statut] ?? ''}>
+								<span
+									class="badge {CLASSE_STATUT[t.statut] ?? 'badge-red'}"
+									title={AIDE_STATUT[t.statut] ?? ''}
+								>
 									{LIBELLE_STATUT[t.statut] ?? t.statut}
 								</span>
 								{#if t.noeud_en_retard}
 									<!-- La dernière exécution est saine, mais un nœud décroche. L'ancien
 									     écran le disait en remplaçant l'état ET la date par ceux du
 									     retardataire — ce qui faisait mentir « Dernier rapport ». -->
-									<span class="badge badge-orange" style="margin-left:.35rem"
-										title="Ce nœud n'a pas exécuté la tâche dans le délai attendu. La dernière exécution, elle, s'est bien passée sur l'autre nœud.">
+									<span
+										class="badge badge-orange"
+										style="margin-left:.35rem"
+										title="Ce nœud n'a pas exécuté la tâche dans le délai attendu. La dernière exécution, elle, s'est bien passée sur l'autre nœud."
+									>
 										{t.noeud_en_retard.toUpperCase()} en retard
 									</span>
 								{/if}
 							</td>
-							<td style="color:var(--color-text-muted)">{t.derniere ? fmtDatetime(t.derniere) : '—'}</td>
+							<td style="color:var(--color-text-muted)"
+								>{t.derniere ? fmtDatetime(t.derniere) : '—'}</td
+							>
 						</tr>
 						{#if t.noeuds?.length}
 							<!--  UNE SOUS-LIGNE PAR NŒUD, toujours visible (#331).
@@ -329,12 +350,16 @@
 									<td></td>
 									<td style="color:var(--color-text-muted)">↳ {n.noeud.toUpperCase()}</td>
 									<td>
-										<span class="badge {CLASSE_STATUT[n.statut] ?? 'badge-red'}"
-											title={AIDE_STATUT[n.statut] ?? ''}>
+										<span
+											class="badge {CLASSE_STATUT[n.statut] ?? 'badge-red'}"
+											title={AIDE_STATUT[n.statut] ?? ''}
+										>
 											{LIBELLE_STATUT[n.statut] ?? n.statut}
 										</span>
 									</td>
-									<td style="color:var(--color-text-muted)">{n.derniere ? fmtDatetime(n.derniere) : '—'}</td>
+									<td style="color:var(--color-text-muted)"
+										>{n.derniere ? fmtDatetime(n.derniere) : '—'}</td
+									>
 								</tr>
 							{/each}
 						{/if}
@@ -375,15 +400,24 @@
 															<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
 														{/if}
 														{#if aValeur(lignes, 'declenchee_par')}
-															<td style="color:var(--color-text-muted)">{l.declenchee_par ?? '—'}</td>
+															<td style="color:var(--color-text-muted)"
+																>{l.declenchee_par ?? '—'}</td
+															>
 														{/if}
 														<td>
-															<span class="badge {l.statut === 'erreur' || l.statut === 'echouee' ? 'badge-red' : 'badge-green'}">
+															<span
+																class="badge {l.statut === 'erreur' || l.statut === 'echouee'
+																	? 'badge-red'
+																	: 'badge-green'}"
+															>
 																{l.statut ?? '—'}
 															</span>
 															<!--  Le motif de l'échec était porté par la carte supprimée avec
 															      #299 : sans lui, un statut « erreur » ne dit pas pourquoi. -->
-															{#if l.erreur}<span title={l.erreur} style="margin-left:.4rem;cursor:help">⚠️</span>{/if}
+															{#if l.erreur}<span
+																	title={l.erreur}
+																	style="margin-left:.4rem;cursor:help">⚠️</span
+																>{/if}
 														</td>
 														{#if aValeur(lignes, 'jours_agreges')}
 															<td style="color:var(--color-text-muted)">{fmtAgrege(l)}</td>
@@ -402,7 +436,11 @@
 														{/if}
 														{#if aValeur(lignes, 'details')}
 															<td style="font-size:.72rem;color:var(--color-text-muted)">
-																{l.details ? Object.entries(l.details).map(([k, v]) => `${k}: ${v}`).join(' · ') : '—'}
+																{l.details
+																	? Object.entries(l.details)
+																			.map(([k, v]) => `${k}: ${v}`)
+																			.join(' · ')
+																	: '—'}
 															</td>
 														{/if}
 													</tr>
@@ -420,15 +458,19 @@
 										<div class="lancement">
 											{#if t.tache === 'maintenance'}
 												<span class="muted note-lancement">
-													part applicative seulement — l'hygiène du nœud en veille reste au script hebdomadaire
+													part applicative seulement — l'hygiène du nœud en veille reste au script
+													hebdomadaire
 												</span>
 											{/if}
-											<button class="btn btn-primary" style="font-size:.8rem;padding:.3rem .7rem"
+											<button
+												class="btn btn-primary"
+												style="font-size:.8rem;padding:.3rem .7rem"
 												on:click|stopPropagation={() => declencher(t.tache)}
 												disabled={enCours === t.tache}
 												title={t.tache === 'maintenance'
 													? "Purges et VACUUM, sur ce nœud uniquement. Ne remplace pas le script hebdomadaire, qui fait en plus l'hygiène du nœud en veille."
-													: ''}>
+													: ''}
+											>
 												{enCours === t.tache ? 'En cours...' : libelleBouton(t.tache)}
 											</button>
 										</div>
@@ -454,31 +496,58 @@
 	/*  Ligne de synthèse dépliable. Le détail vit SOUS la ligne qui l'annonce :
 	    c'est ce qui remplace les trois tableaux séparés que l'utilisateur a
 	    jugés illisibles le 11/08/2026. */
-	tr.cliquable { cursor: pointer; }
-	tr.cliquable:hover { background: var(--color-bg); }
-	tr.cliquable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-	tr.detail > td { background: var(--color-bg); padding: .25rem 0 .75rem; }
+	tr.cliquable {
+		cursor: pointer;
+	}
+	tr.cliquable:hover {
+		background: var(--color-bg);
+	}
+	tr.cliquable:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
+	}
+	tr.detail > td {
+		background: var(--color-bg);
+		padding: 0.25rem 0 0.75rem;
+	}
 	/*  Sous-ligne par nœud : rattachée visuellement à sa tâche sans devenir une
 	    ligne de plein droit, sinon on relit un tableau à double granularité —
 	    exactement ce qui avait été corrigé le 11/08/2026. */
-	tr.par-noeud > td { padding-top: .15rem; padding-bottom: .15rem; font-size: .95em; }
+	tr.par-noeud > td {
+		padding-top: 0.15rem;
+		padding-bottom: 0.15rem;
+		font-size: 0.95em;
+	}
 	/*  Écart assumé : plus petit et en couleur primaire — il ouvre une ligne
 	    de tableau, pas une carte, et doit se voir (il était invisible avant
 	    le 11/08, cf. #299). */
 	/*  Le chevron d'une tache est plus petit et de la couleur primaire : il annonce
 	    une action, pas un depliage neutre (#607, 28/08/2026). */
-	.chevron { font-size: .9rem; color: var(--color-primary); margin-right: .4rem; }
+	.chevron {
+		font-size: 0.9rem;
+		color: var(--color-primary);
+		margin-right: 0.4rem;
+	}
 	/*  Aide propre à une tâche, en tête de son détail — recueillie des deux cartes
 	    supprimées avec #299. */
 	.aide-tache {
-		margin: .5rem 0 .25rem; padding-left: .75rem;
-		font-size: .78rem; color: var(--color-text-muted);
+		margin: 0.5rem 0 0.25rem;
+		padding-left: 0.75rem;
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
 	}
 	/*  Action primaire à droite. `margin-right:auto` sur la note plutôt que
 	    `space-between` : sans note, le bouton doit rester à droite quand même. */
 	.lancement {
-		display: flex; align-items: center; justify-content: flex-end;
-		gap: .75rem; margin: .5rem 0 .25rem; padding: 0 .75rem;
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.75rem;
+		margin: 0.5rem 0 0.25rem;
+		padding: 0 0.75rem;
 	}
-	.note-lancement { font-size: .75rem; margin-right: auto; }
+	.note-lancement {
+		font-size: 0.75rem;
+		margin-right: auto;
+	}
 </style>

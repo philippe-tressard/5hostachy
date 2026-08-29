@@ -64,7 +64,7 @@
 	//  déclenche qu'au changement de photo visible, là où `on:scroll` recalculerait
 	//  à chaque pixel parcouru.
 	function observerPiste(noeud: HTMLDivElement) {
-		if (typeof IntersectionObserver === 'undefined') return;   // rendu serveur
+		if (typeof IntersectionObserver === 'undefined') return; // rendu serveur
 		//  ⚠️ « la dernière entrée visible gagne » est FAUX : plusieurs photos sont
 		//  visibles à la fois — c'est même le but, la lisière suivante est ce qui
 		//  signale qu'on peut défiler. Le compteur affichait « 2 / 5 » à l'ouverture,
@@ -99,7 +99,7 @@
 				}
 				recalculer();
 			},
-			{ root: noeud, threshold: 0.6 }
+			{ root: noeud, threshold: 0.6 },
 		);
 		for (const enfant of noeud.children) vues.observe(enfant);
 		return vues;
@@ -140,10 +140,20 @@
 
 					<!--  Flèches réservées au pointeur fin : au doigt, le défilement natif
 					      fait le travail, et deux cibles de plus mangeraient la photo. -->
-					<button type="button" class="pj-fleche pj-fleche-prec" aria-hidden="true" tabindex="-1"
-						on:click|stopPropagation={() => glisser(-1)}>&#x2039;</button>
-					<button type="button" class="pj-fleche pj-fleche-suiv" aria-hidden="true" tabindex="-1"
-						on:click|stopPropagation={() => glisser(1)}>&#x203A;</button>
+					<button
+						type="button"
+						class="pj-fleche pj-fleche-prec"
+						aria-hidden="true"
+						tabindex="-1"
+						on:click|stopPropagation={() => glisser(-1)}>&#x2039;</button
+					>
+					<button
+						type="button"
+						class="pj-fleche pj-fleche-suiv"
+						aria-hidden="true"
+						tabindex="-1"
+						on:click|stopPropagation={() => glisser(1)}>&#x203A;</button
+					>
 
 					<div class="pj-jauge">
 						<!--  Le compteur suit le DÉFILEMENT, pas les seuls boutons : piloté par
@@ -189,7 +199,13 @@
 		{#if documents.length}
 			<div class="pj-docs">
 				{#each documents as url (url)}
-					<a class="pj-doc" class:pj-doc-compact={compact} href={url} target="_blank" rel="noopener">
+					<a
+						class="pj-doc"
+						class:pj-doc-compact={compact}
+						href={url}
+						target="_blank"
+						rel="noopener"
+					>
 						<span aria-hidden="true">&#x1F4C4;</span>
 						<span class="pj-doc-nom">{nomFichier(url)}</span>
 					</a>
@@ -204,8 +220,16 @@
 {/if}
 
 <style>
-	.pj { display: flex; flex-direction: column; gap: .4rem; }
-	.pj-photos { display: flex; gap: .5rem; flex-wrap: wrap; }
+	.pj {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.pj-photos {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
 
 	/*  Boutons et non liens : l'action reste dans la page. Le style par défaut du
 	    bouton est neutralisé pour que seule la photo se voie. */
@@ -225,19 +249,27 @@
 	    flottait au milieu d'un vide gris occupant la moitié de la surface. En
 	    fixant la hauteur, les bandes vides disparaissent d'elles-mêmes et le
 	    mélange portrait/paysage cesse d'être un accident. */
-	.pj-galerie-bloc { position: relative; }
+	.pj-galerie-bloc {
+		position: relative;
+	}
 	.pj-galerie {
 		--pj-h: clamp(220px, 42vh, 300px);
 		display: flex;
-		gap: .5rem;
+		gap: 0.5rem;
 		overflow-x: auto;
 		scroll-snap-type: x mandatory;
 		scroll-behavior: smooth;
 		scrollbar-width: none;
 		-webkit-overflow-scrolling: touch;
 	}
-	.pj-galerie::-webkit-scrollbar { display: none; }
-	@media (min-width: 768px) { .pj-galerie { --pj-h: 360px; } }
+	.pj-galerie::-webkit-scrollbar {
+		display: none;
+	}
+	@media (min-width: 768px) {
+		.pj-galerie {
+			--pj-h: 360px;
+		}
+	}
 
 	.pj-slide {
 		flex: 0 0 auto;
@@ -261,54 +293,98 @@
 		background: var(--color-bg);
 		cursor: zoom-in;
 	}
-	.pj-slide img { height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block; }
-	.pj-slide:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+	.pj-slide img {
+		height: 100%;
+		width: auto;
+		max-width: 100%;
+		object-fit: contain;
+		display: block;
+	}
+	.pj-slide:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
 
 	/*  Flèches réservées au pointeur FIN. Au doigt, le défilement natif fait le
 	    travail et deux cibles de plus mangeraient la photo. */
-	.pj-fleche { display: none; }
+	.pj-fleche {
+		display: none;
+	}
 	@media (hover: hover) and (pointer: fine) {
 		.pj-fleche {
 			display: grid;
 			place-items: center;
 			position: absolute;
 			top: calc(50% - 22px);
-			width: 44px;               /* cible tactile minimale, socle 11 §10 */
+			width: 44px; /* cible tactile minimale, socle 11 §10 */
 			height: 44px;
 			border: none;
 			border-radius: 50%;
-			background: rgba(0, 0, 0, .5);
+			background: rgba(0, 0, 0, 0.5);
 			color: #fff;
 			font-size: 1.6rem;
 			line-height: 1;
 			cursor: pointer;
 			opacity: 0;
-			transition: opacity .15s;
+			transition: opacity 0.15s;
 		}
 		.pj-galerie-bloc:hover .pj-fleche,
-		.pj-fleche:focus-visible { opacity: 1; }
-		.pj-fleche-prec { left: .35rem; }
-		.pj-fleche-suiv { right: .35rem; }
+		.pj-fleche:focus-visible {
+			opacity: 1;
+		}
+		.pj-fleche-prec {
+			left: 0.35rem;
+		}
+		.pj-fleche-suiv {
+			right: 0.35rem;
+		}
 	}
 
-	.pj-jauge { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
-	.pj-compteur { font-size: .75rem; color: var(--color-text-muted); }
-	.pj-points { display: flex; gap: .25rem; }
-	.pj-point {
-		width: 6px; height: 6px; border-radius: 50%;
-		background: var(--color-border); transition: background .15s;
+	.pj-jauge {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.35rem;
 	}
-	.pj-point-actif { background: var(--color-primary); }
+	.pj-compteur {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+	}
+	.pj-points {
+		display: flex;
+		gap: 0.25rem;
+	}
+	.pj-point {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--color-border);
+		transition: background 0.15s;
+	}
+	.pj-point-actif {
+		background: var(--color-primary);
+	}
 
 	/*  Non négociable : `smooth` et les fondus sont des déclencheurs de malaise
 	    pour les personnes concernées, pas un confort. */
 	@media (prefers-reduced-motion: reduce) {
-		.pj-galerie { scroll-behavior: auto; }
-		.pj-fleche, .pj-point { transition: none; }
+		.pj-galerie {
+			scroll-behavior: auto;
+		}
+		.pj-fleche,
+		.pj-point {
+			transition: none;
+		}
 	}
 
-	.pj-grandes { display: flex; flex-direction: column; gap: .5rem; }
-	.pj-grande { width: 100%; }
+	.pj-grandes {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.pj-grande {
+		width: 100%;
+	}
 	.pj-grande img {
 		width: 100%;
 		/*  Plafond de hauteur : une photo portrait 1200×1600 affichée pleine
@@ -320,22 +396,30 @@
 		border: 1px solid var(--color-border);
 		background: var(--color-bg-alt, #f5f5f5);
 	}
-	.pj-docs { display: flex; gap: .35rem; flex-wrap: wrap; }
+	.pj-docs {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
 	.pj-doc {
 		display: inline-flex;
 		align-items: center;
-		gap: .3rem;
+		gap: 0.3rem;
 		max-width: 100%;
-		padding: .2rem .5rem;
+		padding: 0.2rem 0.5rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		background: var(--color-bg-alt, #f5f5f5);
 		color: var(--color-primary);
-		font-size: .82rem;
+		font-size: 0.82rem;
 		text-decoration: none;
 	}
-	.pj-doc-compact { font-size: .75rem; }
-	.pj-doc:hover { border-color: var(--color-primary); }
+	.pj-doc-compact {
+		font-size: 0.75rem;
+	}
+	.pj-doc:hover {
+		border-color: var(--color-primary);
+	}
 	/* Un nom long ne doit pas pousser la carte hors de l'écran sur mobile. */
 	.pj-doc-nom {
 		overflow: hidden;
@@ -344,6 +428,8 @@
 		max-width: 220px;
 	}
 	@media (max-width: 480px) {
-		.pj-doc-nom { max-width: 62vw; }
+		.pj-doc-nom {
+			max-width: 62vw;
+		}
 	}
 </style>

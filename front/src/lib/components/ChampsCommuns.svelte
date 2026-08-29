@@ -144,8 +144,12 @@
 	<!--  Le sélecteur se tait (`titre=""`) : la section le nomme. Les pastilles ne
 	      sont pas un contrôle labelable — `for` n'y associerait rien —, d'où le
 	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
-	<SectionFormulaire titre="Périmètre" requis badge={badgePerimetre}
-		idTitre="{idPrefixe}-perimetre-titre">
+	<SectionFormulaire
+		titre="Périmètre"
+		requis
+		badge={badgePerimetre}
+		idTitre="{idPrefixe}-perimetre-titre"
+	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
 			<PerimetrePicker bind:value={perimetre} mode={perimetreMode} titre="" />
 		</div>
@@ -153,8 +157,12 @@
 {/if}
 
 {#if avecDestinataires}
-	<SectionFormulaire titre="Destinataires" requis badge={badgeDestinataires}
-		idTitre="{idPrefixe}-destinataires-titre">
+	<SectionFormulaire
+		titre="Destinataires"
+		requis
+		badge={badgeDestinataires}
+		idTitre="{idPrefixe}-destinataires-titre"
+	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-destinataires-titre">
 			<DestinatairePicker bind:value={destinataires} titre="" />
 		</div>
@@ -165,12 +173,19 @@
 	<!--  La zone de saisie est un `contenteditable`, donc PAS labelable : le titre
 	      reste un `<h4>` et l'éditeur s'y relie par `aria-labelledby`. Un
 	      `<label for>` n'aurait rien associé, et l'aurait fait en silence. -->
-	<SectionFormulaire titre="Description" requis={descriptionRequise}
-		idTitre="{idPrefixe}-description-titre">
+	<SectionFormulaire
+		titre="Description"
+		requis={descriptionRequise}
+		idTitre="{idPrefixe}-description-titre"
+	>
 		<div class="field champ-large">
-			<RichEditor id="{idPrefixe}-description" bind:value={description}
+			<RichEditor
+				id="{idPrefixe}-description"
+				bind:value={description}
 				ariaLabelledby="{idPrefixe}-description-titre"
-				placeholder={descriptionPlaceholder} minHeight={descriptionHauteur} />
+				placeholder={descriptionPlaceholder}
+				minHeight={descriptionHauteur}
+			/>
 		</div>
 	</SectionFormulaire>
 {/if}
@@ -180,8 +195,14 @@
 	      EST labelable, et le clic sur le titre ouvre donc le sélecteur. -->
 	<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
 		<div class="field champ-large">
-			<FichiersUpload id="{idPrefixe}-photos" bind:urls={photos} titre=""
-				label="Ajouter une photo" accept={ACCEPT_PHOTOS} size={80} />
+			<FichiersUpload
+				id="{idPrefixe}-photos"
+				bind:urls={photos}
+				titre=""
+				label="Ajouter une photo"
+				accept={ACCEPT_PHOTOS}
+				size={80}
+			/>
 		</div>
 	</SectionFormulaire>
 {/if}
@@ -198,9 +219,14 @@
 			{#if documentsControle === 'slot'}
 				<slot name="documents" />
 			{:else}
-				<FichiersUpload id="{idPrefixe}-documents" mode="documents" titre=""
+				<FichiersUpload
+					id="{idPrefixe}-documents"
+					mode="documents"
+					titre=""
 					differe={documentsDifferes}
-					bind:urls={documents} bind:fichiers={documentsFichiers} />
+					bind:urls={documents}
+					bind:fichiers={documentsFichiers}
+				/>
 			{/if}
 		</div>
 	</SectionFormulaire>
@@ -221,8 +247,17 @@
       désormais — le jour où un écran fournit sa fonction, il obtient l'aperçu
       sans une ligne de plus. -->
 {#if avecDiffusion}
-	<SectionDiffusion {avecCanaux} bind:whatsapp bind:syndic bind:cs {aideWhatsapp}
-		bind:this={refDiffusion} {demanderApercu} {envoiEnCours} on:envoyer>
+	<SectionDiffusion
+		{avecCanaux}
+		bind:whatsapp
+		bind:syndic
+		bind:cs
+		{aideWhatsapp}
+		bind:this={refDiffusion}
+		{demanderApercu}
+		{envoiEnCours}
+		on:envoyer
+	>
 		<svelte:fragment slot="options"><slot name="diffusion" /></svelte:fragment>
 	</SectionDiffusion>
 {/if}

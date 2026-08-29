@@ -57,7 +57,7 @@ function inconnu(raison, detail) {
 	console.error(`\n⚠️  INCONNU — ${raison}`);
 	if (detail) console.error(`   ${String(detail).trim().split('\n').slice(0, 5).join('\n   ')}`);
 	console.error(
-		"   L'audit n'a PAS été mesuré : ce n'est ni un succès ni un échec. Relancer le job.\n"
+		"   L'audit n'a PAS été mesuré : ce n'est ni un succès ni un échec. Relancer le job.\n",
 	);
 	process.exit(2);
 }
@@ -78,7 +78,7 @@ const audit = spawnSync('npm audit --json', {
 	maxBuffer: 32 * 1024 * 1024,
 });
 
-if (audit.error) inconnu('`npm audit` n\'a pas pu être lancé', audit.error.message);
+if (audit.error) inconnu("`npm audit` n'a pas pu être lancé", audit.error.message);
 
 let rapport;
 try {
@@ -128,7 +128,7 @@ for (const [id, info] of avisTrouves) {
 		echecs.push(
 			`${info.severite.toUpperCase()} — ${id} : ${info.titre}\n` +
 				`      paquets : ${paquets}\n` +
-				`      → corriger (npm audit fix, override, montée de version) ou écrire une exception motivée dans audit-exceptions.json`
+				`      → corriger (npm audit fix, override, montée de version) ou écrire une exception motivée dans audit-exceptions.json`,
 		);
 		continue;
 	}
@@ -141,7 +141,7 @@ for (const [id, info] of avisTrouves) {
 		echecs.push(
 			`${id} : exception PÉRIMÉE (à revoir le ${exc.revoirLe}) — ${info.titre}\n` +
 				`      levée si : ${exc.leveeSi}\n` +
-				`      → vérifier si la condition de levée est remplie, puis corriger ou repousser la date en le disant`
+				`      → vérifier si la condition de levée est remplie, puis corriger ou repousser la date en le disant`,
 		);
 		continue;
 	}
@@ -155,7 +155,7 @@ for (const id of Object.keys(exceptions)) {
 	if (!avisTrouves.has(id))
 		echecs.push(
 			`${id} : exception INUTILE — cet avis n'apparaît plus dans l'arbre\n` +
-				`      → la retirer de audit-exceptions.json`
+				`      → la retirer de audit-exceptions.json`,
 		);
 }
 
@@ -169,13 +169,13 @@ if (echecs.length) {
 	console.error('\n❌ Audit des dépendances — ' + echecs.length + ' point(s) bloquant(s) :\n');
 	for (const l of echecs) console.error(`   ${l}\n`);
 	console.error(
-		'Rappel : l\'audit porte sur tout l\'arbre, devDependencies comprises — `@sveltejs/kit`\n' +
-			'et `@sveltejs/adapter-node` y sont déclarés et servent pourtant le site en production.\n'
+		"Rappel : l'audit porte sur tout l'arbre, devDependencies comprises — `@sveltejs/kit`\n" +
+			'et `@sveltejs/adapter-node` y sont déclarés et servent pourtant le site en production.\n',
 	);
 	process.exit(1);
 }
 
 const total = Object.keys(rapport.vulnerabilities).length;
 console.log(
-	`✓ Aucune vulnérabilité connue hors exception (${total} paquet(s) signalé(s), ${tolerees.length} exception(s) en cours).`
+	`✓ Aucune vulnérabilité connue hors exception (${total} paquet(s) signalé(s), ${tolerees.length} exception(s) en cours).`,
 );

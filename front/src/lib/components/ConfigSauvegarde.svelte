@@ -74,10 +74,12 @@
 	      locale, à trois centimètres d'un « Santé des tâches planifiées » rendu
 	      par le motif partagé — deux blocs du même onglet, deux façons de titrer.
 	      Un émoji dépend en plus de la police du système. -->
-	<h3 class="config-section-title"><Icon name="sliders-horizontal" size={17} />Réglage de la sauvegarde quotidienne</h3>
+	<h3 class="config-section-title">
+		<Icon name="sliders-horizontal" size={17} />Réglage de la sauvegarde quotidienne
+	</h3>
 	<p class="aide">
-		La sauvegarde s’exécute <strong>tous les jours</strong>. Son historique et son
-		déclenchement manuel sont dans le tableau ci-dessus, avec les autres tâches.
+		La sauvegarde s’exécute <strong>tous les jours</strong>. Son historique et son déclenchement
+		manuel sont dans le tableau ci-dessus, avec les autres tâches.
 	</p>
 
 	{#if chargement}
@@ -102,11 +104,11 @@
 		</p>
 		{#if heure_execution === 2 || heure_execution === 3}
 			<p class="avertissement">
-				⚠️ <strong>{String(heure_execution).padStart(2, '0')} h</strong> croise une autre
-				tâche : la <strong>bascule</strong> entre les deux Raspberry Pi tourne à 02 h,
-				et la <strong>maintenance hebdomadaire</strong> (purge et VACUUM de la base) le
-				dimanche à 03 h. Une sauvegarde qui démarre pendant l’une ou l’autre lit une
-				base en cours de réorganisation. Préférez une heure creuse — 01 h ou 04 h.
+				⚠️ <strong>{String(heure_execution).padStart(2, '0')} h</strong> croise une autre tâche : la
+				<strong>bascule</strong>
+				entre les deux Raspberry Pi tourne à 02 h, et la <strong>maintenance hebdomadaire</strong> (purge
+				et VACUUM de la base) le dimanche à 03 h. Une sauvegarde qui démarre pendant l’une ou l’autre
+				lit une base en cours de réorganisation. Préférez une heure creuse — 01 h ou 04 h.
 			</p>
 		{/if}
 		<!--  🔴 `.form-actions` — barre de soumission alignée à DROITE, comme partout
@@ -122,7 +124,12 @@
 		      les champs font, puis on valide. Placé juste sous la grille, il coupait
 		      la note qui explique le champ qu'on vient de régler. -->
 		<div class="form-actions">
-			<button class="btn btn-primary" type="submit" form="config-sauvegarde" disabled={enregistrement}>
+			<button
+				class="btn btn-primary"
+				type="submit"
+				form="config-sauvegarde"
+				disabled={enregistrement}
+			>
 				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
@@ -130,9 +137,32 @@
 </section>
 
 <style>
-	.config-sauvegarde { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
-	.aide { font-size: .82rem; color: var(--color-text-muted); line-height: 1.5; margin: 0 0 .9rem; }
-	.note { margin: .7rem 0 0; }
-	.avertissement { font-size: .82rem; line-height: 1.5; margin: .7rem 0 0; padding: .6rem .7rem; border-left: 3px solid var(--color-warning, #d97706); background: var(--color-bg); }
-	.grille { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
+	.config-sauvegarde {
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.aide {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin: 0 0 0.9rem;
+	}
+	.note {
+		margin: 0.7rem 0 0;
+	}
+	.avertissement {
+		font-size: 0.82rem;
+		line-height: 1.5;
+		margin: 0.7rem 0 0;
+		padding: 0.6rem 0.7rem;
+		border-left: 3px solid var(--color-warning, #d97706);
+		background: var(--color-bg);
+	}
+	.grille {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.8rem;
+		align-items: flex-end;
+	}
 </style>

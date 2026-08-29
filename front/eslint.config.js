@@ -36,7 +36,7 @@ export default defineConfig(
 	// fichiers sur 785 venaient des répertoires de build). `static/` porte les
 	// manuels et des ressources tierces, non écrites ici.
 	{
-		ignores: ['build/', '.svelte-kit/', 'node_modules/', 'static/']
+		ignores: ['build/', '.svelte-kit/', 'node_modules/', 'static/'],
 	},
 
 	// ── Sources TypeScript et JavaScript ────────────────────────────────────────
@@ -46,16 +46,16 @@ export default defineConfig(
 		languageOptions: {
 			ecmaVersion: 2022,
 			sourceType: 'module',
-			globals: { ...globals.browser, ...globals.node }
-		}
+			globals: { ...globals.browser, ...globals.node },
+		},
 	},
 
 	// ── Scripts de contrôle (`npm run lint:*`) : Node pur, pas de navigateur ─────
 	{
 		files: ['scripts/**/*.{js,mjs,ts}'],
 		languageOptions: {
-			globals: { ...globals.node }
-		}
+			globals: { ...globals.node },
+		},
 	},
 
 	// ── Fichiers de configuration à la racine ───────────────────────────────────
@@ -71,8 +71,8 @@ export default defineConfig(
 			ecmaVersion: 2022,
 			sourceType: 'module',
 			parser: ts.parser,
-			globals: { ...globals.node }
-		}
+			globals: { ...globals.node },
+		},
 	},
 
 	// ── Composants Svelte ───────────────────────────────────────────────────────
@@ -90,8 +90,8 @@ export default defineConfig(
 			parserOptions: {
 				parser: ts.parser,
 				extraFileExtensions: ['.svelte'],
-				svelteConfig
-			}
+				svelteConfig,
+			},
 		},
 		rules: {
 			// ── `no-unused-vars` : la version TypeScript PLANTE sur les .svelte ────────
@@ -120,20 +120,23 @@ export default defineConfig(
 			//  `export let onUpload: (f: File) => …` lui montrait un `f` jamais employé.
 			//  `args: 'none'` était le pansement de cette cécité ; il n'est plus utile,
 			//  et il masquait au passage les vrais paramètres morts.
-			'@typescript-eslint/no-unused-vars': ['error', {
-				//  Les quatre portées où la convention `_` dit « je sais, et c'est
-				//  voulu ». Sans elles, l'outil punit une intention explicite.
-				argsIgnorePattern: '^_',
-				varsIgnorePattern: '^_',
-				caughtErrorsIgnorePattern: '^_',
-				//  `{#each xs as _opt, i}` — le tableau est parcouru pour son INDEX,
-				//  et c'est nécessaire : dans un formulaire, la liaison doit viser
-				//  `options[i].libelle` et non la variable de boucle, sinon
-				//  `bind:value` écrit dans une copie locale et la saisie est perdue.
-				//  Deux composants le font (`FormulaireSondage`, `prestataires`) ; le
-				//  motif est écrit ICI, une fois, et pas en commentaire dans chacun.
-				destructuredArrayIgnorePattern: '^_',
-			}],
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{
+					//  Les quatre portées où la convention `_` dit « je sais, et c'est
+					//  voulu ». Sans elles, l'outil punit une intention explicite.
+					argsIgnorePattern: '^_',
+					varsIgnorePattern: '^_',
+					caughtErrorsIgnorePattern: '^_',
+					//  `{#each xs as _opt, i}` — le tableau est parcouru pour son INDEX,
+					//  et c'est nécessaire : dans un formulaire, la liaison doit viser
+					//  `options[i].libelle` et non la variable de boucle, sinon
+					//  `bind:value` écrit dans une copie locale et la saisie est perdue.
+					//  Deux composants le font (`FormulaireSondage`, `prestataires`) ; le
+					//  motif est écrit ICI, une fois, et pas en commentaire dans chacun.
+					destructuredArrayIgnorePattern: '^_',
+				},
+			],
 			//
 			//  ⚠️ MISE À JOUR DU 20/08/2026 — la règle de base ne lit pas TypeScript,
 			//  et 59 de ses 139 signalements étaient des NOMS DE PARAMÈTRES DANS DES
@@ -335,9 +338,9 @@ export default defineConfig(
 			// son côté (#550).
 			'@typescript-eslint/no-unused-expressions': [
 				'error',
-				{ allowTernary: true, allowShortCircuit: true }
-			]
-		}
+				{ allowTernary: true, allowShortCircuit: true },
+			],
+		},
 	},
 
 	// ── Décisions qui valent PARTOUT, `.ts` comme `.svelte` ─────────────────────
@@ -365,8 +368,8 @@ export default defineConfig(
 			// instruction est une forme volontaire et lisible de ce dépôt.
 			'@typescript-eslint/no-unused-expressions': [
 				'error',
-				{ allowTernary: true, allowShortCircuit: true }
-			]
-		}
-	}
+				{ allowTernary: true, allowShortCircuit: true },
+			],
+		},
+	},
 );

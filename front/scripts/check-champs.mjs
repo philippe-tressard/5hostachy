@@ -52,7 +52,7 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  */
 const EXCEPTIONS = {
 	'routes/(app)/calendrier/+page.svelte':
-		"Les deux sélecteurs « Exercice » et « Bâtiment » de la barre du kanban : ce sont " +
+		'Les deux sélecteurs « Exercice » et « Bâtiment » de la barre du kanban : ce sont ' +
 		"des filtres de VUE, pas des champs d'un formulaire. Ils portent un libellé parce " +
 		"qu'on doit savoir ce qu'ils filtrent, et vivent sur une ligne dans `.kanban-toolbar` " +
 		'— un `.field`, qui empile en colonne sur toute la largeur, les sortirait de la barre.',
@@ -60,14 +60,35 @@ const EXCEPTIONS = {
 
 /** `<input type="…">` qui se saisissent. Les autres sont des contrôles. */
 const TYPES_DE_SAISIE = new Set([
-	'text', 'email', 'tel', 'url', 'password', 'number', 'date', 'time',
-	'datetime-local', 'search', 'month', 'week',
+	'text',
+	'email',
+	'tel',
+	'url',
+	'password',
+	'number',
+	'date',
+	'time',
+	'datetime-local',
+	'search',
+	'month',
+	'week',
 ]);
 
 /** Balises sans fermeture : elles n'empilent rien. */
 const BALISES_VIDES = new Set([
-	'br', 'hr', 'img', 'meta', 'link', 'source', 'area', 'base', 'col', 'embed',
-	'track', 'wbr', 'input',
+	'br',
+	'hr',
+	'img',
+	'meta',
+	'link',
+	'source',
+	'area',
+	'base',
+	'col',
+	'embed',
+	'track',
+	'wbr',
+	'input',
 ]);
 
 /** Nombre minimal de champs libellés attendus — cas zéro. */
@@ -115,7 +136,10 @@ export function releve(source, chemin = '?') {
 
 		if (fermante) {
 			for (let i = pile.length - 1; i >= 0; i--) {
-				if (pile[i].tag === tag) { pile.length = i; break; }
+				if (pile[i].tag === tag) {
+					pile.length = i;
+					break;
+				}
 			}
 			continue;
 		}
@@ -143,7 +167,10 @@ export function releve(source, chemin = '?') {
 				tag,
 				type,
 				forme: enveloppe ? 'libellé enveloppant' : 'libellé frère (for=)',
-				contexte: pile.slice(-2).map((e) => e.tag + (e.classes ? '.' + e.classes.split(/\s+/)[0] : '')).join(' > '),
+				contexte: pile
+					.slice(-2)
+					.map((e) => e.tag + (e.classes ? '.' + e.classes.split(/\s+/)[0] : ''))
+					.join(' > '),
 			});
 			continue;
 		}
@@ -158,12 +185,18 @@ export function releve(source, chemin = '?') {
 // ── `--selftest` : le contrôle doit être VU refuser les TROIS formes ──────────
 if (process.argv.includes('--selftest')) {
 	const cas = [
-		['libellé enveloppant, sur une ligne',
-			'<div class="form-grid"><label>Question *<input type="text" bind:value={q} /></label></div>'],
-		['libellé enveloppant, multi-lignes',
-			'<div class="form-grid">\n<label>Statut\n<select bind:value={s}><option>a</option></select>\n</label>\n</div>'],
-		['libellé frère, relié par for=',
-			'<div><label for="faq-q">Question *</label>\n<input id="faq-q" class="input-field" type="text" /></div>'],
+		[
+			'libellé enveloppant, sur une ligne',
+			'<div class="form-grid"><label>Question *<input type="text" bind:value={q} /></label></div>',
+		],
+		[
+			'libellé enveloppant, multi-lignes',
+			'<div class="form-grid">\n<label>Statut\n<select bind:value={s}><option>a</option></select>\n</label>\n</div>',
+		],
+		[
+			'libellé frère, relié par for=',
+			'<div><label for="faq-q">Question *</label>\n<input id="faq-q" class="input-field" type="text" /></div>',
+		],
 	];
 	let echecs = 0;
 	for (const [nom, gabaritCas] of cas) {
@@ -175,12 +208,18 @@ if (process.argv.includes('--selftest')) {
 	//  Le symétrique : la même écriture DANS un `.field` passe. Sans lui, un
 	//  contrôle qui refuserait tout aurait l'air de marcher.
 	const conformes = [
-		['libellé enveloppant dans un .field',
-			'<label class="field">Question *<input type="text" /></label>'],
-		['libellé frère dans un .field',
-			'<div class="field"><label for="x">Sujet</label><input id="x" type="text" /></div>'],
-		['contrôle SANS libellé : hors périmètre',
-			'<div class="filters"><input type="search" placeholder="Rechercher" /></div>'],
+		[
+			'libellé enveloppant dans un .field',
+			'<label class="field">Question *<input type="text" /></label>',
+		],
+		[
+			'libellé frère dans un .field',
+			'<div class="field"><label for="x">Sujet</label><input id="x" type="text" /></div>',
+		],
+		[
+			'contrôle SANS libellé : hors périmètre',
+			'<div class="filters"><input type="search" placeholder="Rechercher" /></div>',
+		],
 	];
 	for (const [nom, gabaritCas] of conformes) {
 		const { trouves } = releve(gabaritCas, 'cas');
@@ -192,7 +231,9 @@ if (process.argv.includes('--selftest')) {
 		console.error(`\n✗ ${echecs} cas d'autotest en échec.`);
 		process.exit(1);
 	}
-	console.log('\n✓ Autotest : les trois formes d’écriture sont refusées, et acceptées dans un `.field`.');
+	console.log(
+		'\n✓ Autotest : les trois formes d’écriture sont refusées, et acceptées dans un `.field`.',
+	);
 	process.exit(0);
 }
 
@@ -213,7 +254,10 @@ for (const chemin of fichiers) {
 	const r = releve(readFileSync(chemin, 'utf8'), relatif);
 	libelles += r.libelles;
 	for (const t of r.trouves) {
-		if (relatif in EXCEPTIONS) { exceptionsServies.add(relatif); continue; }
+		if (relatif in EXCEPTIONS) {
+			exceptionsServies.add(relatif);
+			continue;
+		}
 		erreurs.push(
 			`${t.chemin}:${t.ligne} — <${t.tag}${t.type ? ` type="${t.type}"` : ''}> ` +
 				`[${t.forme}] hors d'un \`.field\`, sous [${t.contexte || 'racine'}].`,
@@ -226,8 +270,8 @@ if (libelles < PRISES_MINIMALES) {
 		`✗ Cas zéro : ${libelles} champ(s) libellé(s) reconnu(s), ${PRISES_MINIMALES} attendus au minimum.`,
 	);
 	console.error(
-		"Le front en portait 196 le 19/08/2026. Un effondrement du relevé dit que le\n" +
-			"contrôle a cessé de voir, pas que le défaut a disparu (`standards/04` §2).",
+		'Le front en portait 196 le 19/08/2026. Un effondrement du relevé dit que le\n' +
+			'contrôle a cessé de voir, pas que le défaut a disparu (`standards/04` §2).',
 	);
 	process.exit(1);
 }

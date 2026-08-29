@@ -53,7 +53,14 @@
       savoir si l'appelant a fourni un sous-texte. Sans cette condition, la
       pastille passerait en deux lignes chez tout le monde — y compris là où il
       n'y a rien à mettre dessous. -->
-<button type="button" class="pastille" class:active class:petite class:avec-detail={$$slots.detail} on:click>
+<button
+	type="button"
+	class="pastille"
+	class:active
+	class:petite
+	class:avec-detail={$$slots.detail}
+	on:click
+>
 	{#if icone}<Icon name={icone} size={15} />{/if}
 	<span class="pastille-corps">
 		<span class="pastille-libelle"><slot /></span>
@@ -66,21 +73,34 @@
 	.pastille {
 		display: inline-flex;
 		align-items: center;
-		gap: .35rem;
-		padding: .35rem .7rem;
+		gap: 0.35rem;
+		padding: 0.35rem 0.7rem;
 		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		background: var(--color-surface);
-		font-size: .82rem;
+		font-size: 0.82rem;
 		cursor: pointer;
 		color: var(--color-text-muted);
-		transition: all .12s;
+		transition: all 0.12s;
 		white-space: nowrap;
 	}
-	.pastille:hover { border-color: var(--color-primary); color: var(--color-text); }
-	.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-	.petite { font-size: .78rem; padding: .28rem .6rem; }
-	.pastille-chevron { margin-left: .3rem; opacity: .6; }
+	.pastille:hover {
+		border-color: var(--color-primary);
+		color: var(--color-text);
+	}
+	.active {
+		background: var(--color-primary);
+		color: #fff;
+		border-color: var(--color-primary);
+	}
+	.petite {
+		font-size: 0.78rem;
+		padding: 0.28rem 0.6rem;
+	}
+	.pastille-chevron {
+		margin-left: 0.3rem;
+		opacity: 0.6;
+	}
 
 	/*  ── Le SOUS-TEXTE (29/08/2026, arbitré avec l'utilisateur) ──────────────
 	    Deux listes portaient une description par option — type de prestataire,
@@ -93,28 +113,39 @@
 	    existants ne serait pas un enrichissement. */
 	/*  Le libellé porte le poids ; le sous-texte s'en distingue par la taille et
 	    l'opacité, jamais par une couleur qui deviendrait illisible en actif. */
-	.pastille-libelle { font-weight: inherit; }
-	.pastille-corps { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+	.pastille-libelle {
+		font-weight: inherit;
+	}
+	.pastille-corps {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: flex-start;
+		line-height: 1.25;
+	}
 	.avec-detail {
 		align-items: flex-start;
-		padding: .45rem .8rem;
+		padding: 0.45rem 0.8rem;
 		border-radius: var(--radius);
 		/*  Le sous-texte est une phrase : elle doit pouvoir se replier. */
 		white-space: normal;
 		text-align: left;
 	}
 	.pastille-detail {
-		font-size: .72rem;
-		opacity: .75;
+		font-size: 0.72rem;
+		opacity: 0.75;
 		font-weight: 400;
 	}
 	/*  Sur fond plein, le sous-texte reste lisible : c'est l'opacité qui le
 	    distingue, jamais une couleur fixe qui deviendrait illisible en actif. */
-	.active .pastille-detail { opacity: .85; }
+	.active .pastille-detail {
+		opacity: 0.85;
+	}
 
 	/*  Sous 480 px, une pastille à sous-texte prend toute la largeur : côte à
 	    côte, deux phrases de six mots débordent (socle 11 §10). */
 	@media (max-width: 480px) {
-		.avec-detail { width: 100%; }
+		.avec-detail {
+			width: 100%;
+		}
 	}
 </style>

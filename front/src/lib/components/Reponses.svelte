@@ -62,9 +62,13 @@
 				<div class="reponse" class:cs={rep.est_cs}>
 					<div class="reponse-tete">
 						<span class="reponse-auteur">{rep.auteur_nom}</span>
-						{#if rep.auteur_batiment}<span class="badge badge-gray">{rep.auteur_batiment}</span>{/if}
-						{#if rep.auteur_role}<span class="badge {rep.est_cs ? 'badge-blue' : 'badge-gray'}">{rep.auteur_role}</span>{/if}
-						{#if rep.est_cs}<span class="reponse-poids" title="Réponse du conseil syndical">⭐</span>{/if}
+						{#if rep.auteur_batiment}<span class="badge badge-gray">{rep.auteur_batiment}</span
+							>{/if}
+						{#if rep.auteur_role}<span class="badge {rep.est_cs ? 'badge-blue' : 'badge-gray'}"
+								>{rep.auteur_role}</span
+							>{/if}
+						{#if rep.est_cs}<span class="reponse-poids" title="Réponse du conseil syndical">⭐</span
+							>{/if}
 						<small class="reponse-date">{fmtDateShort(rep.cree_le)}</small>
 						{#if onReport && rep.auteur_id !== currentUserId}
 							<button
@@ -96,7 +100,7 @@
 				      et `.reponse-form textarea` est qualifié. Angle mort suivi en #593. -->
 				<div class="reponse-form">
 					<div class="field champ-en-ligne">
-						<textarea bind:value={content} rows="2" placeholder={placeholder}></textarea>
+						<textarea bind:value={content} rows="2" {placeholder}></textarea>
 					</div>
 					<button class="btn btn-primary" disabled={submitting} on:click={submit}>
 						{submitting ? 'Envoi…' : 'Répondre'}
@@ -189,6 +193,10 @@
 	/*  La PEAU du champ vient de `.field textarea` (composants.css). Ne restent
 	    ici que la disposition — largeur dans la rangée — et le redimensionnement,
 	    qui sont propres à ce contexte et ne recomposent rien. */
-	.reponse-form .field { flex: 1; }
-	.reponse-form textarea { resize: vertical; }
+	.reponse-form .field {
+		flex: 1;
+	}
+	.reponse-form textarea {
+		resize: vertical;
+	}
 </style>

@@ -52,8 +52,7 @@ export const TICKET: EntiteDeclaree = {
 			absente: {
 				evolution: {
 					motif: 'hérité',
-					explication:
-						"Une entrée de l'Historique se rattache au ticket ; elle ne le renomme pas.",
+					explication: "Une entrée de l'Historique se rattache au ticket ; elle ne le renomme pas.",
 				},
 			},
 		},

@@ -17,8 +17,8 @@ export const ROLE_LABELS: Record<Locale, Record<string, string>> = {
 	fr: {
 		résident: 'Résident',
 		locataire: 'Locataire',
-		'copropriétaire_résident': 'Copropriétaire Résident',
-		'copropriétaire_bailleur': 'Copropriétaire Bailleur',
+		copropriétaire_résident: 'Copropriétaire Résident',
+		copropriétaire_bailleur: 'Copropriétaire Bailleur',
 		bailleur: 'Copropriétaire Bailleur',
 		syndic: 'Syndic',
 		mandataire: 'Mandataire',
@@ -28,8 +28,8 @@ export const ROLE_LABELS: Record<Locale, Record<string, string>> = {
 	en: {
 		résident: 'Resident',
 		locataire: 'Tenant',
-		'copropriétaire_résident': 'Owner-Occupier',
-		'copropriétaire_bailleur': 'Landlord',
+		copropriétaire_résident: 'Owner-Occupier',
+		copropriétaire_bailleur: 'Landlord',
 		bailleur: 'Landlord',
 		syndic: 'Manager',
 		mandataire: 'Proxy',

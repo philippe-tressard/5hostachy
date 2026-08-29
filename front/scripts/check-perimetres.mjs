@@ -50,7 +50,7 @@ const STORE = join(RACINE, 'lib', 'stores', 'perimetres.ts');
 const MOTIFS = [
 	{
 		regex: /['"]résidence['"]/g,
-		quoi: "le code du périmètre par défaut, écrit en dur",
+		quoi: 'le code du périmètre par défaut, écrit en dur',
 		remede: '`perimetreParDefaut()`, `perimetreDefautListe()` ou `estPerimetreParDefaut()`',
 	},
 	{
@@ -72,7 +72,7 @@ const EXCEPTIONS = {
 		'contenus qui citent un nœud supprimé depuis, et documente ce qui a été retiré.',
 	'lib/api/documents.ts':
 		'granularité documentaire — `Document.perimetre` vaut `résidence` | `bâtiment` | ' +
-		"`lot`. Autre axe : qui a le droit de LIRE un fichier, pas où se passe une demande.",
+		'`lot`. Autre axe : qui a le droit de LIRE un fichier, pas où se passe une demande.',
 	'routes/(app)/residence/+page.svelte':
 		'granularité documentaire également (dépôt de plans et de règlements).',
 };
@@ -106,7 +106,10 @@ function fichiers(dir) {
 //  ── Auto-contrôle (cas zéro) ────────────────────────────────────────────────
 //  Sans la source ni le store, le motif a changé et ce contrôle ne mesure plus
 //  rien : il passerait au vert pour la pire des raisons.
-for (const [chemin, quoi] of [[SOURCE, 'la source du rendu'], [STORE, 'le store']]) {
+for (const [chemin, quoi] of [
+	[SOURCE, 'la source du rendu'],
+	[STORE, 'le store'],
+]) {
 	if (!existsSync(chemin)) {
 		console.error(`✗ Cas zéro : ${quoi} est introuvable (${chemin}) — contrôle inopérant.`);
 		process.exit(1);
@@ -114,7 +117,12 @@ for (const [chemin, quoi] of [[SOURCE, 'la source du rendu'], [STORE, 'le store'
 }
 const source = readFileSync(SOURCE, 'utf8');
 const store = readFileSync(STORE, 'utf8');
-const attendus = ['perimetreLabel', 'definirPerimetres', 'estPerimetreParDefaut', 'perimetreDuBatiment'];
+const attendus = [
+	'perimetreLabel',
+	'definirPerimetres',
+	'estPerimetreParDefaut',
+	'perimetreDuBatiment',
+];
 const manquants = attendus.filter((f) => !source.includes(`export function ${f}`));
 if (manquants.length > 0) {
 	console.error(
@@ -170,7 +178,7 @@ if (fautifs.length > 0) {
 	console.error(
 		"\n  L'arborescence vit en base et s'édite depuis /admin/patrimoine. Un code\n" +
 			"  écrit ici cesse d'être vrai dès qu'une copropriété le renomme — sans\n" +
-			'  erreur, sans trace, et seulement à l\'écran.',
+			"  erreur, sans trace, et seulement à l'écran.",
 	);
 	process.exit(1);
 }

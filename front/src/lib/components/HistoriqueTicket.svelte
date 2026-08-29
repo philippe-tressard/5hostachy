@@ -64,8 +64,11 @@
 	//  La saisie vient du formulaire lui-même : lui seul la tient, et une lecture
 	//  depuis ici rendrait des valeurs vides.
 	function apercuDuCommentaire(saisie: {
-		contenu: string; fichiers_urls: string[];
-		whatsapp: boolean; syndic: boolean; cs: boolean;
+		contenu: string;
+		fichiers_urls: string[];
+		whatsapp: boolean;
+		syndic: boolean;
+		cs: boolean;
 	}) {
 		return ticketsApi.apercuDiffusion({
 			ticket_id: ticketId,
@@ -86,7 +89,9 @@
 			toast('success', e.detail?.nouveau_statut ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (err) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { enregistre = false; }
+		} finally {
+			enregistre = false;
+		}
 	}
 
 	//  🔴 Ni `type` ni `nouveau_statut` : une CORRECTION n'est pas une transition.
@@ -105,7 +110,9 @@
 			toast('success', 'Entrée corrigée');
 		} catch (err) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { corrige = false; }
+		} finally {
+			corrige = false;
+		}
 	}
 
 	//  Effacer — ADMIN seulement, et le serveur le revérifie (`require_admin`). Une
@@ -130,7 +137,8 @@
 		vide="Aucune évolution enregistrée."
 		peutModifier={$isCS}
 		currentUserId={$currentUser?.id}
-		estAdmin={$isAdmin} avecSuppression
+		estAdmin={$isAdmin}
+		avecSuppression
 		{enEdition}
 		on:modifier={(e) => (enEdition = e.detail)}
 		on:supprimer={supprimer}
@@ -148,7 +156,9 @@
 
 		<svelte:fragment slot="edition" let:evol>
 			{#key enEdition}
-				<EvolForm idPrefixe="tk-evol-edit-{evol.id}" titre="Modifier le commentaire"
+				<EvolForm
+					idPrefixe="tk-evol-edit-{evol.id}"
+					titre="Modifier le commentaire"
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
@@ -165,7 +175,9 @@
 	{#if ouvert}
 		<div class="evol-form card">
 			{#key ouvert}
-				<EvolForm idPrefixe="tk-evol" titre="Commenter"
+				<EvolForm
+					idPrefixe="tk-evol"
+					titre="Commenter"
 					demanderApercu={apercuDuCommentaire}
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
@@ -187,6 +199,11 @@
 <style>
 	/*  Le balisage part avec ses styles : une classe posée ici et définie dans la
 	    page ne serait pas atteinte (panne des pastilles nues, v2.67.11). */
-	.bloc-historique { margin-top: 1.5rem; max-width: 720px; }
-	.evol-form { margin-top: 1rem; }
+	.bloc-historique {
+		margin-top: 1.5rem;
+		max-width: 720px;
+	}
+	.evol-form {
+		margin-top: 1rem;
+	}
 </style>

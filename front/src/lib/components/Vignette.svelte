@@ -42,15 +42,25 @@
 		border: 1px solid var(--color-border);
 		background: var(--color-bg-alt, #f5f5f5);
 	}
-	.vignette img { width: 100%; height: 100%; object-fit: cover; }
-	.vignette-empty { display: flex; align-items: center; justify-content: center; }
-	.vignette-placeholder { font-size: 1.6rem; }
+	.vignette img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.vignette-empty {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.vignette-placeholder {
+		font-size: 1.6rem;
+	}
 	.vignette-count {
 		position: absolute;
 		bottom: 2px;
 		right: 4px;
-		font-size: .68rem;
-		background: rgba(0, 0, 0, .55);
+		font-size: 0.68rem;
+		background: rgba(0, 0, 0, 0.55);
 		color: #fff;
 		border-radius: 4px;
 		padding: 0 4px;

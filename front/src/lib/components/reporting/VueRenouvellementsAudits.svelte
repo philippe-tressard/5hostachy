@@ -10,11 +10,7 @@
 <script lang="ts">
 	import { fmtDate } from '$lib/date';
 	import { relire } from '$lib/utils';
-	import {
-		anneeCourante,
-		diagnosticsAvecEcheance,
-		type DiagType,
-	} from '$lib/reporting';
+	import { anneeCourante, diagnosticsAvecEcheance, type DiagType } from '$lib/reporting';
 
 	export let reportDiagTypes: DiagType[] = [];
 
@@ -44,22 +40,34 @@
 <!-- Section 2 : Diagnostics et Contrôles Réglementaires -->
 <section class="report-card">
 	<h3>🔍 Diagnostics et Contrôles Réglementaires — {ANNEE_COURANTE}–{ANNEE_COURANTE + 10}</h3>
-	<p class="report-intro">Échéances issues de Résidence / Diagnostics et Contrôles Réglementaires, calculées depuis le dernier rapport + fréquence légale.</p>
+	<p class="report-intro">
+		Échéances issues de Résidence / Diagnostics et Contrôles Réglementaires, calculées depuis le
+		dernier rapport + fréquence légale.
+	</p>
 
 	{#if diagsAvecNext.length === 0}
-		<div class="empty-state"><h3>Aucun diagnostic applicable</h3><p>Tous les diagnostics sont non applicables.</p></div>
+		<div class="empty-state">
+			<h3>Aucun diagnostic applicable</h3>
+			<p>Tous les diagnostics sont non applicables.</p>
+		</div>
 	{:else}
 		<!-- Grille par année -->
 		{#each diagsParAnnee as [annee, diags]}
 			<div class="audit-year-group" class:audit-year-current={annee === ANNEE_COURANTE}>
 				<h4 class="audit-year-title">
 					{annee}
-					<span class="badge {annee === ANNEE_COURANTE ? 'badge-orange' : 'badge-blue'}">{diags.length} audit{diags.length > 1 ? 's' : ''}</span>
+					<span class="badge {annee === ANNEE_COURANTE ? 'badge-orange' : 'badge-blue'}"
+						>{diags.length} audit{diags.length > 1 ? 's' : ''}</span
+					>
 				</h4>
 				<div class="report-table-wrap">
 					<table class="report-table compact">
 						<thead>
-							<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Prochaine échéance</th><th>Statut</th></tr>
+							<tr
+								><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th
+									>Prochaine échéance</th
+								><th>Statut</th></tr
+							>
 						</thead>
 						<tbody>
 							{#each diags as d (d.id)}
@@ -71,7 +79,9 @@
 									<td>{d.nextDate ? fmtDate(d.nextDate.toISOString()) : 'N/A'}</td>
 									<td>
 										{#if d.urgence === 'depasse'}<span class="badge badge-red">Dépassé</span>
-										{:else if d.urgence === 'annee'}<span class="badge badge-orange">À faire en {ANNEE_COURANTE}</span>
+										{:else if d.urgence === 'annee'}<span class="badge badge-orange"
+												>À faire en {ANNEE_COURANTE}</span
+											>
 										{:else}<span class="badge badge-blue">{annee}</span>
 										{/if}
 									</td>
@@ -94,7 +104,11 @@
 				<div class="report-table-wrap">
 					<table class="report-table compact">
 						<thead>
-							<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Statut</th></tr>
+							<tr
+								><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th
+									>Statut</th
+								></tr
+							>
 						</thead>
 						<tbody>
 							{#each diagsPermanents as d (d.id)}
@@ -123,7 +137,11 @@
 				<div class="report-table-wrap">
 					<table class="report-table compact">
 						<thead>
-							<tr><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th>Statut</th></tr>
+							<tr
+								><th>Diagnostic</th><th>Code</th><th>Fréquence</th><th>Dernier rapport</th><th
+									>Statut</th
+								></tr
+							>
 						</thead>
 						<tbody>
 							{#each diagsSansEcheance as d (d.id)}
@@ -147,21 +165,39 @@
 	{/if}
 </section>
 
-
 <style>
 	/* ── Renouvellements : audits par année ───────────────────────── */
-	.audit-year-group { margin-bottom: 1.2rem; }
-	.audit-year-group:last-child { margin-bottom: 0; }
-	.audit-year-title {
-		font-size: .95rem; font-weight: 700; margin: 0 0 .5rem;
-		display: flex; align-items: center; gap: .5rem;
+	.audit-year-group {
+		margin-bottom: 1.2rem;
 	}
-	.audit-year-current { border-left: 3px solid #f59e0b; padding-left: .75rem; }
+	.audit-year-group:last-child {
+		margin-bottom: 0;
+	}
+	.audit-year-title {
+		font-size: 0.95rem;
+		font-weight: 700;
+		margin: 0 0 0.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.audit-year-current {
+		border-left: 3px solid #f59e0b;
+		padding-left: 0.75rem;
+	}
 
 	@media print {
-		.audit-year-group { break-inside: auto; }
-		.audit-year-title { break-after: avoid; }
-		.report-table { break-inside: auto; }
-		.report-table tr { break-inside: avoid; }
+		.audit-year-group {
+			break-inside: auto;
+		}
+		.audit-year-title {
+			break-after: avoid;
+		}
+		.report-table {
+			break-inside: auto;
+		}
+		.report-table tr {
+			break-inside: avoid;
+		}
 	}
 </style>

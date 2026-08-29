@@ -39,7 +39,8 @@
 			</div>
 		{:else}
 			<p style="font-size:.875rem;color:var(--color-text-muted);margin-bottom:1.5rem">
-				Saisissez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+				Saisissez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot
+				de passe.
 			</p>
 			<form on:submit|preventDefault={submit}>
 				<div class="field">
@@ -72,18 +73,26 @@
 	    jetons : elle ne suivait donc NI le theme NI la charte, sur un ecran
 	    d'authentification qu'on ne regarde jamais (#607, 28/08/2026).
 	    Seule l'ombre lui est propre. */
-	.auth-card { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-	h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: .25rem; }
+	.auth-card {
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+	}
+	h1 {
+		font-size: 1.3rem;
+		font-weight: 700;
+		margin-bottom: 0.25rem;
+	}
 	.success-box {
 		background: #f0fdf4;
 		border: 1px solid #bbf7d0;
-		border-radius: .5rem;
+		border-radius: 0.5rem;
 		padding: 1rem 1.25rem;
-		font-size: .875rem;
+		font-size: 0.875rem;
 		color: #166534;
 		line-height: 1.6;
 	}
-	.success-box p + p { margin-top: .4rem; }
+	.success-box p + p {
+		margin-top: 0.4rem;
+	}
 
 	.btn-wrapper {
 		display: flex;

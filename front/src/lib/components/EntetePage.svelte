@@ -59,7 +59,9 @@
 		{#if retour}
 			<a href={retour} class="btn btn-outline entete-retour">← Retour</a>
 		{/if}
-		<h1>{#if icone}<Icon name={icone} size={20} />{/if}{titre}</h1>
+		<h1>
+			{#if icone}<Icon name={icone} size={20} />{/if}{titre}
+		</h1>
 	</div>
 	{#if $$slots.default}
 		<div class="entete-actions"><slot /></div>
@@ -69,12 +71,31 @@
 <style>
 	/*  Retour et titre forment UN bloc : sans ce groupe, `space-between` les
 	    écarterait aux deux bouts — exactement le défaut corrigé ici. */
-	.entete-principal { display: flex; align-items: center; gap: .75rem; min-width: 0; }
-	.entete-retour { flex-shrink: 0; }
+	.entete-principal {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+	.entete-retour {
+		flex-shrink: 0;
+	}
 
-	h1 { display: flex; align-items: center; gap: .4rem; font-size: 1.4rem; font-weight: 700; min-width: 0; }
+	h1 {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 1.4rem;
+		font-weight: 700;
+		min-width: 0;
+	}
 
-	.entete-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+	.entete-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
 
 	/*  Aucune largeur n'est écrite ici : c'est la classe globale `largeur-saisie`
 	    (app.css) qui est posée sur le conteneur. Recopier « 720 px » aurait créé

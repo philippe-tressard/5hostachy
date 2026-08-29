@@ -12,13 +12,9 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import {
-		CATEGORIES_TICKET,
-		STATUTS_TICKET_FILTRE,
-		estTicketClos,
-	} from '$lib/tickets';
+	import { CATEGORIES_TICKET, STATUTS_TICKET_FILTRE, estTicketClos } from '$lib/tickets';
 
-$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
+	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
 
 	let ticketList: Ticket[] = [];
@@ -65,7 +61,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 			// Auto-ouverture depuis ?open=TK-XXXXX (lien profond depuis le tableau de bord)
 			const openNum = params.get('open');
 			if (openNum) {
-				const target = ticketList.find(t => t.numero === openNum);
+				const target = ticketList.find((t) => t.numero === openNum);
 				if (target) {
 					if (estArchive(target)) {
 						historyExpanded = true;
@@ -78,8 +74,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 					revelerCible(`ticket-${target.id}`);
 				}
 			}
+		} finally {
+			loading = false;
 		}
-		finally { loading = false; }
 	});
 
 	// Délai de grâce : un ticket clôturé reste visible dans la liste principale
@@ -103,7 +100,11 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 
 	$: historyTickets = ticketList
 		.filter((t) => estArchive(t) && new Date(t.mis_a_jour_le ?? t.cree_le) >= THREE_YEARS_AGO)
-		.sort((a, b) => new Date(b.mis_a_jour_le ?? b.cree_le).getTime() - new Date(a.mis_a_jour_le ?? a.cree_le).getTime());
+		.sort(
+			(a, b) =>
+				new Date(b.mis_a_jour_le ?? b.cree_le).getTime() -
+				new Date(a.mis_a_jour_le ?? a.cree_le).getTime(),
+		);
 
 	//  ⚠️ Le groupement par année vivait ici — troisième copie du même bloc,
 	//  avec l'Espace CS et `ArchivesParAnnee` lui-même. Il est parti dans le
@@ -136,7 +137,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 			evolsMap[id] = await ticketsApi.evolutions(id);
 			evolsLoaded = new Set([...evolsLoaded, id]);
 			evolsMap = { ...evolsMap };
-		} catch { /* silencieux */ }
+		} catch {
+			/* silencieux */
+		}
 	}
 
 	//  Ouvrir un formulaire déplie sa carte et referme l'autre : deux formulaires
@@ -207,7 +210,9 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 			toast('success', 'Entrée corrigée');
 		} catch (e2) {
 			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
-		} finally { evolCorrectionEnCours = false; }
+		} finally {
+			evolCorrectionEnCours = false;
+		}
 	}
 
 	async function addEvolution(e: CustomEvent<{ ticket: Ticket; data: unknown }>) {
@@ -238,22 +243,29 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 				perimetre_cible: data.perimetre_cible,
 			});
 			if (data.type === 'etat') {
-				ticketList = ticketList.map(x => x.id === t.id ? { ...x, statut: data.nouveau_statut ?? x.statut } : x);
+				ticketList = ticketList.map((x) =>
+					x.id === t.id ? { ...x, statut: data.nouveau_statut ?? x.statut } : x,
+				);
 			}
 			await loadEvolutions(t.id);
 			showEvolForm = null;
 			toast('success', data.type === 'etat' ? 'Statut mis à jour' : 'Commentaire ajouté');
 		} catch (e2) {
 			toast('error', e2 instanceof ApiError ? e2.message : 'Erreur');
-		} finally { evolSaving = false; }
+		} finally {
+			evolSaving = false;
+		}
 	}
 
 	async function deleteTicket(e: CustomEvent<Ticket>) {
 		const t = e.detail;
-		if (!confirm(`Supprimer définitivement le ticket #${t.numero} ? Cette action est irréversible.`)) return;
+		if (
+			!confirm(`Supprimer définitivement le ticket #${t.numero} ? Cette action est irréversible.`)
+		)
+			return;
 		try {
 			await ticketsApi.delete(t.id);
-			ticketList = ticketList.filter(x => x.id !== t.id);
+			ticketList = ticketList.filter((x) => x.id !== t.id);
 			toast('success', 'Ticket supprimé');
 		} catch (err) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
@@ -265,7 +277,7 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 	//  historique qui n'en dit rien.
 	async function ticketModifie(e: CustomEvent<Ticket>) {
 		const maj = e.detail;
-		ticketList = ticketList.map(x => x.id === maj.id ? { ...x, ...maj } : x);
+		ticketList = ticketList.map((x) => (x.id === maj.id ? { ...x, ...maj } : x));
 		await loadEvolutions(maj.id);
 		editingTicket = null;
 	}
@@ -294,18 +306,32 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
 
 <div class="filters">
 	<span class="filter-group">
-		<button class="btn btn-sm" class:btn-primary={filterStatut === ''} on:click={() => filterStatut = ''}>Tous</button>
+		<button
+			class="btn btn-sm"
+			class:btn-primary={filterStatut === ''}
+			on:click={() => (filterStatut = '')}>Tous</button
+		>
 		{#each STATUTS_TICKET_FILTRE as s (s.value)}
-			<button class="btn btn-sm" class:btn-primary={filterStatut === s.value}
-				on:click={() => filterStatut = s.value}>{s.label}</button>
+			<button
+				class="btn btn-sm"
+				class:btn-primary={filterStatut === s.value}
+				on:click={() => (filterStatut = s.value)}>{s.label}</button
+			>
 		{/each}
 	</span>
 	<span class="filter-sep"></span>
 	<span class="filter-group">
-		<button class="btn btn-sm" class:btn-primary={filterCat === ''} on:click={() => filterCat = ''}>Toutes</button>
+		<button
+			class="btn btn-sm"
+			class:btn-primary={filterCat === ''}
+			on:click={() => (filterCat = '')}>Toutes</button
+		>
 		{#each CATEGORIES_TICKET as c (c.value)}
-			<button class="btn btn-sm" class:btn-primary={filterCat === c.value}
-				on:click={() => filterCat = c.value}>{c.emoji} {c.label}</button>
+			<button
+				class="btn btn-sm"
+				class:btn-primary={filterCat === c.value}
+				on:click={() => (filterCat = c.value)}>{c.emoji} {c.label}</button
+			>
 		{/each}
 	</span>
 </div>
@@ -358,45 +384,62 @@ $: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes
       fait, mais pas en même temps qu'un renommage. Suivi en #516. -->
 {#if historyTickets.length > 0}
 	<div>
-		<ArchivesParAnnee items={historyTickets} dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
-			compte={historyTickets.length} charge anneeOuverte={anneeVisee}
-			bind:ouvert={historyExpanded} let:objet={ticketArchive}>
-							<ListeTickets
-								tickets={[ticketArchive]}
-								archive
-								expandedIds={expandedTickets}
-								{evolsMap}
-								ticketEnEdition={editingTicket}
-								ticketEnEvolution={showEvolForm}
-								evolutionEnCours={evolSaving}
-								{evolEnEdition}
-								{evolCorrectionEnCours}
-								peutAdministrer={$isAdmin}
-								on:basculer={(e) => toggleTicket(e.detail)}
-								on:evoluer_ouvrir={(e) => openEvolForm(e.detail)}
-								on:modifier={(e) => openEditForm(e.detail)}
-								on:supprimer={deleteTicket}
-								on:evoluer={addEvolution}
-								on:evol_modifier={(e) => (evolEnEdition = e.detail)}
-								on:evol_annuler={() => (evolEnEdition = null)}
-								on:evol_corriger={corrigerEvolution}
-								on:evol_supprimer={supprimerEvolution}
-								on:modifie={ticketModifie}
-								on:annuler={fermerFormulaires}
-							/>
+		<ArchivesParAnnee
+			items={historyTickets}
+			dateDe={(t) => t.mis_a_jour_le ?? t.cree_le}
+			compte={historyTickets.length}
+			charge
+			anneeOuverte={anneeVisee}
+			bind:ouvert={historyExpanded}
+			let:objet={ticketArchive}
+		>
+			<ListeTickets
+				tickets={[ticketArchive]}
+				archive
+				expandedIds={expandedTickets}
+				{evolsMap}
+				ticketEnEdition={editingTicket}
+				ticketEnEvolution={showEvolForm}
+				evolutionEnCours={evolSaving}
+				{evolEnEdition}
+				{evolCorrectionEnCours}
+				peutAdministrer={$isAdmin}
+				on:basculer={(e) => toggleTicket(e.detail)}
+				on:evoluer_ouvrir={(e) => openEvolForm(e.detail)}
+				on:modifier={(e) => openEditForm(e.detail)}
+				on:supprimer={deleteTicket}
+				on:evoluer={addEvolution}
+				on:evol_modifier={(e) => (evolEnEdition = e.detail)}
+				on:evol_annuler={() => (evolEnEdition = null)}
+				on:evol_corriger={corrigerEvolution}
+				on:evol_supprimer={supprimerEvolution}
+				on:modifie={ticketModifie}
+				on:annuler={fermerFormulaires}
+			/>
 		</ArchivesParAnnee>
 	</div>
 {/if}
 
 <style>
-	.etat-chargement { color: var(--color-text-muted); }
+	.etat-chargement {
+		color: var(--color-text-muted);
+	}
 
 	/* Filtres (style identique à calendrier) */
 	/*  `.filters` vient d'`app.css` — sa marge basse et son `align-items` y sont
 	    remontés (#446). Ne restent ici que le groupe et le séparateur, qui n'ont
 	    pas d'équivalent ailleurs. */
-	.filter-group { display: flex; gap: .4rem; flex-wrap: wrap; }
-	.filter-sep { width: 1px; height: 1.2rem; background: var(--color-border); margin: 0 .3rem; }
+	.filter-group {
+		display: flex;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+	}
+	.filter-sep {
+		width: 1px;
+		height: 1.2rem;
+		background: var(--color-border);
+		margin: 0 0.3rem;
+	}
 
 	/*  Le badge « ⚡ Urgente » réécrivait ici `.badge-orange` en `:global(…)`, donc
 	    pour tout le site une fois la feuille de cette page chargée : sa teinte

@@ -44,9 +44,7 @@
 	$: if (coche) rafraichir();
 
 	$: message =
-		total === null || !coche
-			? null
-			: avertissementEpinglage(total - (dejaEpingle ? 1 : 0) + 1);
+		total === null || !coche ? null : avertissementEpinglage(total - (dejaEpingle ? 1 : 0) + 1);
 </script>
 
 {#if message}
@@ -55,9 +53,9 @@
 
 <style>
 	.alerte-epinglage {
-		margin: .3rem 0 0 1.6rem;
-		font-size: .8rem;
+		margin: 0.3rem 0 0 1.6rem;
+		font-size: 0.8rem;
 		line-height: 1.4;
-		color: #92400E;
+		color: #92400e;
 	}
 </style>

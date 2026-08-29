@@ -103,9 +103,9 @@ export const PUBLICATION: EntiteDeclaree = {
 				evolution: {
 					motif: 'hérité',
 					explication:
-						"Épinglage, urgence et confidentialité qualifient la publication entière. Une " +
+						'Épinglage, urgence et confidentialité qualifient la publication entière. Une ' +
 						'entrée du fil ne réépingle pas ce à quoi elle se rattache, et ne peut pas ' +
-						"restreindre une lecture que la publication a déjà ouverte.",
+						'restreindre une lecture que la publication a déjà ouverte.',
 				},
 			},
 		},
@@ -138,8 +138,7 @@ export const PUBLICATION: EntiteDeclaree = {
 			absente: {
 				evolution: {
 					motif: 'hérité',
-					explication:
-						'Le périmètre est celui de la publication ; une entrée ne le redéfinit pas.',
+					explication: 'Le périmètre est celui de la publication ; une entrée ne le redéfinit pas.',
 				},
 			},
 		},

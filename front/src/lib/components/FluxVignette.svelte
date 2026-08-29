@@ -57,8 +57,12 @@
 		{#if reste > 0}<span class="flux-vignette-compte">+{reste}</span>{/if}
 	</div>
 {:else if nbFichiers > 0}
-	<div class="flux-vignette flux-vignette-doc" style="--taille:{size}px"
-		role="img" aria-label={libelleFichiers}>
+	<div
+		class="flux-vignette flux-vignette-doc"
+		style="--taille:{size}px"
+		role="img"
+		aria-label={libelleFichiers}
+	>
 		<span class="flux-vignette-doc-icone" aria-hidden="true">📎</span>
 		{#if nbFichiers > 1}<span class="flux-vignette-compte">{nbFichiers}</span>{/if}
 	</div>
@@ -85,11 +89,11 @@
 		position: absolute;
 		right: 2px;
 		bottom: 2px;
-		padding: 0 .3rem;
+		padding: 0 0.3rem;
 		border-radius: 6px;
-		background: rgba(0, 0, 0, .62);
+		background: rgba(0, 0, 0, 0.62);
 		color: #fff;
-		font-size: .68rem;
+		font-size: 0.68rem;
 		font-weight: 600;
 		line-height: 1.35;
 	}
@@ -99,12 +103,21 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--color-surface-alt, #F4F5F7);
+		background: var(--color-surface-alt, #f4f5f7);
 		border-style: dashed;
 	}
-	.flux-vignette-doc-icone { font-size: 1.35rem; line-height: 1; opacity: .75; }
+	.flux-vignette-doc-icone {
+		font-size: 1.35rem;
+		line-height: 1;
+		opacity: 0.75;
+	}
 	@media (max-width: 640px) {
-		.flux-vignette { width: 48px; height: 48px; }
-		.flux-vignette-doc-icone { font-size: 1.15rem; }
+		.flux-vignette {
+			width: 48px;
+			height: 48px;
+		}
+		.flux-vignette-doc-icone {
+			font-size: 1.15rem;
+		}
 	}
 </style>

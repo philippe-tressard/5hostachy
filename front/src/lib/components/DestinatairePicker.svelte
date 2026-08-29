@@ -38,7 +38,7 @@
 	}
 
 	function toggleItem(val: string) {
-		const s = new Set(value.filter(v => v !== TOUS_LES_RESIDENTS));
+		const s = new Set(value.filter((v) => v !== TOUS_LES_RESIDENTS));
 		if (s.has(val)) s.delete(val);
 		else s.add(val);
 		value = s.size > 0 ? [...s] : [TOUS_LES_RESIDENTS];
@@ -50,20 +50,36 @@
 	<!--  Badge d'état : « Tous les résidents » se lit sans dépiler les pastilles.
 	      Même règle que le périmètre (skill `ux-patterns` §9 quater). -->
 	<div class="destinataire-titre">
-		{titre}{#if requis} *{/if}
+		{titre}{#if requis}
+			*{/if}
 		{#if isTous}<span class="badge badge-green destinataire-badge">Tous les résidents</span>{/if}
 	</div>
 {/if}
 <div class="destinataire-pills">
 	<Pastille active={isTous} icone="users-round" on:click={selectTous}>Tous les résidents</Pastille>
 	{#each DESTINATAIRES as o (o.code)}
-		<Pastille active={!isTous && selected.has(o.code)} icone={o.icone}
-			on:click={() => toggleItem(o.code)}>{o.libelle}</Pastille>
+		<Pastille
+			active={!isTous && selected.has(o.code)}
+			icone={o.icone}
+			on:click={() => toggleItem(o.code)}>{o.libelle}</Pastille
+		>
 	{/each}
 </div>
 
 <style>
-	.destinataire-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
-	.destinataire-titre { font-size: .875rem; font-weight: 500; color: var(--color-text); margin-bottom: .3rem; }
-	.destinataire-badge { font-size: .72rem; margin-left: .4rem; }
+	.destinataire-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+	.destinataire-titre {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-text);
+		margin-bottom: 0.3rem;
+	}
+	.destinataire-badge {
+		font-size: 0.72rem;
+		margin-left: 0.4rem;
+	}
 </style>

@@ -78,11 +78,19 @@ export function equipLabel(val: string | null | undefined): string {
  *
  *   ⚠️ Même contrainte que ci-dessus : `val` correspond à `TypePrestataire`. */
 export const TYPES_PRESTATAIRE: readonly { val: string; label: string; desc: string }[] = [
-	{ val: 'contrat_recurrent', label: '\u{1F504} Contrat récurrent', desc: 'Entretien, maintenance' },
+	{
+		val: 'contrat_recurrent',
+		label: '\u{1F504} Contrat récurrent',
+		desc: 'Entretien, maintenance',
+	},
 	{ val: 'ponctuel', label: '\u{1F4CD} Dépannage', desc: 'Interventions ponctuelles' },
 	{ val: 'travaux', label: '\u{1F3D7}\u{FE0F} Travaux', desc: 'Interventions importantes' },
 	{ val: 'reglementaire', label: '\u{1F4CB} Réglementaire', desc: 'Contrôles obligatoires' },
-	{ val: 'etudes_expertise', label: '\u{1F4D0} Études & expertise', desc: 'Diagnostics, maîtrise d’œuvre' },
+	{
+		val: 'etudes_expertise',
+		label: '\u{1F4D0} Études & expertise',
+		desc: 'Diagnostics, maîtrise d’œuvre',
+	},
 	{ val: 'gestion', label: '\u{1F3E2} Gestion', desc: 'Syndic, gestion locative' },
 ];
 

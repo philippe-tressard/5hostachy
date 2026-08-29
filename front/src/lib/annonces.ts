@@ -82,19 +82,25 @@ export function categorieAnnonceLabel(val: string) {
 
 export function typeAnnonceClass(val: string) {
 	return (
-		({ vente: 'badge-blue', don: 'badge-green', recherche: 'badge-orange' } as Record<string, string>)[val] ??
-		'badge-gray'
+		(
+			{ vente: 'badge-blue', don: 'badge-green', recherche: 'badge-orange' } as Record<
+				string,
+				string
+			>
+		)[val] ?? 'badge-gray'
 	);
 }
 
 export function statutAnnonceClass(val: string) {
 	return (
-		({
-			en_cours: 'badge-green',
-			reserve: 'badge-orange',
-			vendu: 'badge-blue',
-			donne: 'badge-blue',
-			annule: 'badge-gray',
-		} as Record<string, string>)[val] ?? 'badge-gray'
+		(
+			{
+				en_cours: 'badge-green',
+				reserve: 'badge-orange',
+				vendu: 'badge-blue',
+				donne: 'badge-blue',
+				annule: 'badge-gray',
+			} as Record<string, string>
+		)[val] ?? 'badge-gray'
 	);
 }

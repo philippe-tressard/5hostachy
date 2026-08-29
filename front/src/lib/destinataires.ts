@@ -65,7 +65,10 @@ export function destinatairesLabel(valeur: string[] | string | null | undefined)
 			codes = Array.isArray(parse) ? parse.map(String) : [];
 		} catch {
 			//  Ancien format CSV, ou donnée abîmée : on rend ce qu'on a plutôt que rien.
-			codes = valeur.split(',').map((v) => v.trim()).filter(Boolean);
+			codes = valeur
+				.split(',')
+				.map((v) => v.trim())
+				.filter(Boolean);
 		}
 	} else {
 		codes = [];

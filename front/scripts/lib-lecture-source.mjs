@@ -129,4 +129,3 @@ export function baliseFermante(source, nom, depuis = 0) {
 if (process.argv.includes('--selftest')) {
 	import('./lib-lecture-source.selftest.mjs').then((m) => m.selftest());
 }
-

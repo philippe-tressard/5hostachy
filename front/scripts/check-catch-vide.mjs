@@ -116,11 +116,17 @@ function selftest() {
 	t('cité dans un commentaire Svelte', 0, '<!-- .catch(() => []) -->');
 	//  Une URL contient `//` : le retrait des commentaires ne doit pas tronquer
 	//  la ligne et faire disparaître un appel fautif placé après.
-	t('URL puis appel fautif sur la même ligne', 1,
-		"const u = 'https://x.fr'; api.list().catch(() => []);");
+	t(
+		'URL puis appel fautif sur la même ligne',
+		1,
+		"const u = 'https://x.fr'; api.list().catch(() => []);",
+	);
 
-	console.log(ko === 0 ? '\n✓ Autotest : la forme fautive est refusée, les catch légitimes passent.'
-	                     : '\n✗ Autotest en échec');
+	console.log(
+		ko === 0
+			? '\n✓ Autotest : la forme fautive est refusée, les catch légitimes passent.'
+			: '\n✗ Autotest en échec',
+	);
 	return ko;
 }
 

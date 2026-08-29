@@ -75,8 +75,12 @@
 	      SEULE cible quand la carte est dépliée. `stopPropagation` l'isole du
 	      conteneur, qui ne déplie que depuis l'état replié. -->
 	{#if basculable}
-		<button type="button" class="ec-titre clamp-2 ec-titre-btn"
-			on:click|stopPropagation={() => dispatch('toggle')}>{titre}<slot name="titre-suffixe" /></button>
+		<button
+			type="button"
+			class="ec-titre clamp-2 ec-titre-btn"
+			on:click|stopPropagation={() => dispatch('toggle')}
+			>{titre}<slot name="titre-suffixe" /></button
+		>
 	{:else}
 		<div class="ec-titre clamp-2">{titre}<slot name="titre-suffixe" /></div>
 	{/if}
@@ -94,14 +98,19 @@
 </div>
 
 <style>
-	.entete { display: flex; flex-direction: column; gap: .3rem; padding: .6rem .9rem; }
+	.entete {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		padding: 0.6rem 0.9rem;
+	}
 
 	/*  Deux lignes au maximum : un titre long est coupé, il ne déforme pas la
 	    carte et ne repousse pas ce qui suit. */
 	/*  La troncature à deux lignes vit dans `.clamp-2` (normes.css) : elle était
 	    écrite ici ET dans le kanban du tableau de bord (#561). */
 	.ec-titre {
-		font-size: .9rem;
+		font-size: 0.9rem;
 		font-weight: 500;
 		line-height: 1.35;
 	}
@@ -121,15 +130,22 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: .4rem .6rem;
+		gap: 0.4rem 0.6rem;
 		flex-wrap: nowrap;
 	}
 	/*  Le titre est un bouton, remis à plat : il hérite de son propre style et ne
 	    se déguise pas en contrôle de formulaire. Le survol le souligne — c'est le
 	    seul repère qui dise « ceci referme », une fois la carte ouverte. */
 	.ec-titre-btn {
-		appearance: none; background: none; border: 0; padding: 0; margin: 0;
-		font: inherit; color: inherit; text-align: left; width: 100%;
+		appearance: none;
+		background: none;
+		border: 0;
+		padding: 0;
+		margin: 0;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+		width: 100%;
 		cursor: pointer;
 	}
 	/*  ⚠️ NI soulignement NI couleur ici : le survol du titre est décidé par
@@ -138,27 +154,56 @@
 	    pas connaître le survol de son parent.
 	    Le soulignement est écarté sur demande : le titre n'est pas un lien, c'est
 	    une zone cliquable. */
-	.ec-titre-btn { transition: color .12s ease; }
-	.ec-titre-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 3px; }
+	.ec-titre-btn {
+		transition: color 0.12s ease;
+	}
+	.ec-titre-btn:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+		border-radius: 3px;
+	}
 
 	.ec-tags {
-		display: flex; align-items: center; gap: .35rem;
-		flex-wrap: nowrap; min-width: 0;
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		flex-wrap: nowrap;
+		min-width: 0;
 		/*  Barre de défilement masquée : elle apparaîtrait sous chaque carte et
 		    ferait du bruit pour trois badges. */
-		overflow-x: auto; scrollbar-width: none;
+		overflow-x: auto;
+		scrollbar-width: none;
 	}
-	.ec-tags::-webkit-scrollbar { display: none; }
+	.ec-tags::-webkit-scrollbar {
+		display: none;
+	}
 	/*  Les badges ne se compriment pas : un « Confidentiel » réduit à « Confid… »
 	    ne dit plus rien, alors qu'un badge sorti du cadre se ramène d'un geste. */
-	.ec-tags :global(> *) { flex-shrink: 0; }
-	.ec-droite { display: flex; align-items: center; gap: .3rem; margin-left: auto; flex-shrink: 0; }
-	.ec-date { font-size: .78rem; color: var(--color-text-muted); white-space: nowrap; }
+	.ec-tags :global(> *) {
+		flex-shrink: 0;
+	}
+	.ec-droite {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+	.ec-date {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		white-space: nowrap;
+	}
 
 	/*  Cible tactile sur les actions (socle 11 §10) : sous 480 px, les icônes
 	    d'une carte étaient hautes de 26 px. */
 	@media (max-width: 480px) {
-		.entete { padding: .55rem .7rem; }
-		.ec-droite :global(button) { min-height: 32px; min-width: 32px; }
+		.entete {
+			padding: 0.55rem 0.7rem;
+		}
+		.ec-droite :global(button) {
+			min-height: 32px;
+			min-width: 32px;
+		}
 	}
 </style>

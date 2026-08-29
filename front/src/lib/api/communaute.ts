@@ -16,7 +16,11 @@ export const sondages = {
 	supprimer: (id: number) => api.delete(`/sondages/${id}`),
 	cloturer: (id: number) => api.patch<any>(`/sondages/${id}/cloturer`, {}),
 	voter: (id: number, option_id: number, commentaire?: string, reponse_libre?: string) =>
-		api.post(`/sondages/${id}/voter`, { option_id, commentaire: commentaire || null, reponse_libre: reponse_libre || null }),
+		api.post(`/sondages/${id}/voter`, {
+			option_id,
+			commentaire: commentaire || null,
+			reponse_libre: reponse_libre || null,
+		}),
 	commenter: (id: number, contenu: string) =>
 		api.post<any>(`/sondages/${id}/commenter`, { contenu }),
 	supprimerCommentaire: (sondageId: number, commentaireId: number) =>
@@ -44,7 +48,8 @@ export const annonces = {
 	supprimer: (id: number) => api.delete(`/annonces/${id}`),
 	uploadPhoto: (id: number, file: File): Promise<{ url: string; photos: string[] }> =>
 		postFormData(`/annonces/${id}/photo`, { file }),
-	deletePhoto: (id: number, url: string) => api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
+	deletePhoto: (id: number, url: string) =>
+		api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
 	listReponses: (id: number) => api.get<any[]>(`/annonces/${id}/reponses`),
 	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
 	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),

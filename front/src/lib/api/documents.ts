@@ -47,11 +47,11 @@ export const documents = {
 		postFormData('/documents', { titre, contrat_id: String(contratId), file }),
 	uploadForPublication: (titre: string, publicationId: number, file: File): Promise<any> =>
 		postFormData('/documents', { titre, publication_id: String(publicationId), file }),
-	listByPublication: (publicationId: number) => api.get<any[]>(`/documents?publication_id=${publicationId}`),
+	listByPublication: (publicationId: number) =>
+		api.get<any[]>(`/documents?publication_id=${publicationId}`),
 	downloadUrl: (docId: number) => `${BASE}/documents/${docId}/télécharger`,
 	delete: (id: number) => api.delete(`/documents/${id}`),
 };
-
 
 export const fichiersApi = {
 	/**
@@ -73,11 +73,14 @@ export function uploadExcel<T = any>(path: string, file: File, remplacer = false
 	//  Le libellé reste distinct : un import de tableur qui échoue ne se raconte pas
 	//  comme un téléversement de pièce jointe. C'est la SEULE des cinq divergences
 	//  de libellé qui portait un sens ; les quatre autres disaient la même chose.
-	return postFormData<T>(`${path}${remplacer ? '?remplacer=true' : ''}`, { file }, {
-		libelleErreur: 'Erreur import',
-	});
+	return postFormData<T>(
+		`${path}${remplacer ? '?remplacer=true' : ''}`,
+		{ file },
+		{
+			libelleErreur: 'Erreur import',
+		},
+	);
 }
-
 
 export const uploads = {
 	avatar: (file: File) => uploadFile('/uploads/avatar', file),

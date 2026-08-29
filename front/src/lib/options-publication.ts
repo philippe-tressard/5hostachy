@@ -94,7 +94,7 @@ export function optionPublication(cle: CleOptionPublication): OptionPublication 
  * n'accepte que le booléen vrai.
  */
 export function optionsActives(
-	pub: Partial<Record<CleOptionPublication, boolean | undefined>>
+	pub: Partial<Record<CleOptionPublication, boolean | undefined>>,
 ): OptionPublication[] {
 	return OPTIONS_PUBLICATION.filter((o) => pub[o.cle] === true);
 }
@@ -106,7 +106,7 @@ export function optionsActives(
  * bouton, et un `aria-label` vide vaudrait mieux qu'un « Options : » orphelin.
  */
 export function libelleOptionsActives(
-	pub: Partial<Record<CleOptionPublication, boolean | undefined>>
+	pub: Partial<Record<CleOptionPublication, boolean | undefined>>,
 ): string {
 	const actives = optionsActives(pub);
 	if (actives.length === 0) return '';

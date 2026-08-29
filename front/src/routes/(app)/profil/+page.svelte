@@ -3,7 +3,7 @@
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
-import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
 	import { auth as authApi, lots as lotsApi, uploads as uploadsApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -65,8 +65,8 @@ import { onMount } from 'svelte';
 
 	// ── Labels ─────────────────────────────────────────────────────────────────
 	const statutLabels: Record<string, string> = {
-		'copropriétaire_résident': 'Copropriétaire résident',
-		'copropriétaire_bailleur': 'Copropriétaire bailleur',
+		copropriétaire_résident: 'Copropriétaire résident',
+		copropriétaire_bailleur: 'Copropriétaire bailleur',
 		locataire: 'Locataire',
 		syndic: 'Syndic',
 		mandataire: 'Mandataire',
@@ -75,8 +75,8 @@ import { onMount } from 'svelte';
 	const roleLabels: Record<string, string> = {
 		résident: 'Résident',
 		locataire: 'Locataire',
-		'copropriétaire_résident': 'Copropriétaire Résident',
-		'copropriétaire_bailleur': 'Copropriétaire Bailleur',
+		copropriétaire_résident: 'Copropriétaire Résident',
+		copropriétaire_bailleur: 'Copropriétaire Bailleur',
 		bailleur: 'Copropriétaire Bailleur',
 		syndic: 'Syndic',
 		mandataire: 'Mandataire',
@@ -87,8 +87,8 @@ import { onMount } from 'svelte';
 	const roleBadge: Record<string, string> = {
 		résident: 'badge-gray',
 		locataire: 'badge-gray',
-		'copropriétaire_résident': 'badge-teal',
-		'copropriétaire_bailleur': 'badge-purple',
+		copropriétaire_résident: 'badge-teal',
+		copropriétaire_bailleur: 'badge-purple',
 		bailleur: 'badge-purple',
 		syndic: 'badge-orange',
 		mandataire: 'badge-yellow',
@@ -100,7 +100,6 @@ import { onMount } from 'svelte';
 	//  `HistoriqueDemandes` le lisent. Je l'avais d'abord emporté avec la table
 	//  extraite — la page s'en sert aussi, quarante lignes plus haut.
 	$: derniereConnexion = ($currentUser as any)?.derniere_connexion ?? null;
-
 
 	// ── Init ──────────────────────────────────────────────────────────────────
 	//  L'initialisation suit le STORE, pas le montage : le layout `(app)` peuple
@@ -116,14 +115,15 @@ import { onMount } from 'svelte';
 	}
 
 	function initialiserDepuis(u: any) {
-		{  // bloc nu : le corps n'a pas changé, seul son déclencheur
+		{
+			// bloc nu : le corps n'a pas changé, seul son déclencheur
 
-			prenom    = u.prenom    ?? '';
-			nom       = u.nom       ?? '';
+			prenom = u.prenom ?? '';
+			nom = u.nom ?? '';
 			telephone = (u as any).telephone ?? '';
-			societe   = u.societe   ?? '';
-			fonction  = (u as any).fonction  ?? '';
-			email     = u.email     ?? '';
+			societe = u.societe ?? '';
+			fonction = (u as any).fonction ?? '';
+			email = u.email ?? '';
 			arrivantBatimentNumero = (u as any).batiment_nom?.replace(/[^0-9]/g, '') ?? '';
 			optOutTelemetrie = u.opt_out_telemetrie ?? false;
 
@@ -135,7 +135,10 @@ import { onMount } from 'svelte';
 				if (savedChoix === 'nouvel_arrivant' || savedChoix === 'deja_resident') {
 					arrivantChoix = savedChoix;
 					// Migrer vers la base
-					authApi.updateMe({ demarche_arrivant: savedChoix }).then(updated => setUser(updated)).catch(() => {});
+					authApi
+						.updateMe({ demarche_arrivant: savedChoix })
+						.then((updated) => setUser(updated))
+						.catch(() => {});
 				}
 			}
 
@@ -151,7 +154,7 @@ import { onMount } from 'svelte';
 			} catch {
 				valeursNotifs = { ...DEFAUTS_NOTIFS };
 			}
-			valeursNotifs = valeursNotifs;   // Svelte 4 : réassigner pour propager
+			valeursNotifs = valeursNotifs; // Svelte 4 : réassigner pour propager
 			restreindreAMesBatiments = u.restreindre_a_mes_batiments ?? false;
 		}
 	}
@@ -166,7 +169,8 @@ import { onMount } from 'svelte';
 			essayer<any[]>(lotsApi.mesList(), []),
 			essayer<any[]>(authApi.batiments(), []),
 		]);
-		mesLots = lots; batiments = bats;
+		mesLots = lots;
+		batiments = bats;
 
 		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
 		demandes = dem;
@@ -179,13 +183,14 @@ import { onMount } from 'svelte';
 		saving = true;
 		try {
 			const emailChanged = email && email !== $currentUser?.email;
-		const updated = await authApi.updateMe({
-			prenom, nom,
-			telephone: telephone || null,
-			societe: societe || null,
-			fonction: fonction || null,
-			...(emailChanged ? { email } : {}),
-		});
+			const updated = await authApi.updateMe({
+				prenom,
+				nom,
+				telephone: telephone || null,
+				societe: societe || null,
+				fonction: fonction || null,
+				...(emailChanged ? { email } : {}),
+			});
 			setUser(updated);
 			toast('success', 'Profil mis à jour');
 		} catch (e) {
@@ -239,7 +244,9 @@ import { onMount } from 'svelte';
 			});
 			demandes = [d, ...demandes];
 			showDemandeForm = false;
-			demandeStatut = ''; demandeBatimentId = null; demandeMotif = '';
+			demandeStatut = '';
+			demandeBatimentId = null;
+			demandeMotif = '';
 			toast('success', 'Demande envoyée au conseil syndical');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -257,15 +264,20 @@ import { onMount } from 'svelte';
 		try {
 			const batimentFinal = arrivantBatimentNumero
 				? `Bât. ${arrivantBatimentNumero}`
-				: (($currentUser?.batiment_nom || '').trim() || null);
+				: ($currentUser?.batiment_nom || '').trim() || null;
 			await authApi.declarerNouvelArrivant({
 				batiment: batimentFinal,
-				ancien_resident: arrivantAncienResidentInconnu ? null : (arrivantAncienResident.trim() || null),
+				ancien_resident: arrivantAncienResidentInconnu
+					? null
+					: arrivantAncienResident.trim() || null,
 				ancien_resident_inconnu: arrivantAncienResidentInconnu,
 			});
 			arrivantChoix = 'nouvel_arrivant';
 			// Rafraîchir le user en store (la base a été mise à jour côté serveur)
-			authApi.me().then(u => setUser(u)).catch(() => {});
+			authApi
+				.me()
+				.then((u) => setUser(u))
+				.catch(() => {});
 			toast('success', 'Déclaration Nouvel Arrivant envoyée');
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -284,19 +296,19 @@ import { onMount } from 'svelte';
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		}
 	}
-
 </script>
 
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
 <EntetePage titre={_pc.titre} icone={_pc.icone || 'user'} />
 
-<ChargementPartiel erreur={erreurChargement}
-	consequence="Vos lots, la liste des bâtiments et l'historique de vos demandes peuvent être absents de cet écran." />
+<ChargementPartiel
+	erreur={erreurChargement}
+	consequence="Vos lots, la liste des bâtiments et l'historique de vos demandes peuvent être absents de cet écran."
+/>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <div style="max-width:580px">
-
 	<!-- ── Avatar + Infos personnelles ──────────────────────────────────────── -->
 	<section class="card" style="margin-bottom:1.5rem">
 		<h2 class="section-title">Informations personnelles</h2>
@@ -334,11 +346,21 @@ import { onMount } from 'svelte';
 			</div>
 			<div class="field">
 				<label for="p-societe">Société</label>
-				<input id="p-societe" type="text" bind:value={societe} placeholder="Ex : Agence Dupont, Cabinet ABC…" />
+				<input
+					id="p-societe"
+					type="text"
+					bind:value={societe}
+					placeholder="Ex : Agence Dupont, Cabinet ABC…"
+				/>
 			</div>
 			<div class="field">
 				<label for="p-fonction">Fonction</label>
-				<input id="p-fonction" type="text" bind:value={fonction} placeholder="Ex : Gestionnaire, Mandataire…" />
+				<input
+					id="p-fonction"
+					type="text"
+					bind:value={fonction}
+					placeholder="Ex : Gestionnaire, Mandataire…"
+				/>
 			</div>
 			<div class="form-actions">
 				<button type="submit" class="btn btn-primary" disabled={saving}>
@@ -364,12 +386,22 @@ import { onMount } from 'svelte';
 				<dd>
 					{#each mesLots as lot}
 						<span style="display:block">
-							{#if lot.batiment_nom}{lot.batiment_nom} — {/if}
+							{#if lot.batiment_nom}{lot.batiment_nom} —
+							{/if}
 							N° {lot.numero}
-							· {({appartement:'Appartement',cave:'Cave',parking:'Parking'} as Record<string, string>)[lot.type] ?? lot.type}
+							· {(
+								{ appartement: 'Appartement', cave: 'Cave', parking: 'Parking' } as Record<
+									string,
+									string
+								>
+							)[lot.type] ?? lot.type}
 							{#if lot.type_appartement} ({lot.type_appartement}){/if}
 							{#if lot.etage !== null && lot.etage !== undefined}
-								· {lot.etage === 0 ? 'RDC' : (lot.etage < 0 ? 'SS ' + Math.abs(lot.etage) : lot.etage + (lot.etage === 1 ? 'er' : 'ème') + ' étage')}
+								· {lot.etage === 0
+									? 'RDC'
+									: lot.etage < 0
+										? 'SS ' + Math.abs(lot.etage)
+										: lot.etage + (lot.etage === 1 ? 'er' : 'ème') + ' étage'}
 							{/if}
 							{#if lot.superficie} · {lot.superficie} m²{/if}
 						</span>
@@ -379,7 +411,7 @@ import { onMount } from 'svelte';
 
 			<dt>Rôle(s)</dt>
 			<dd style="display:flex;gap:0.35rem;flex-wrap:wrap">
-				{#each ($currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident']) as r}
+				{#each $currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident'] as r}
 					<span class="badge {roleBadge[r] ?? 'badge-gray'}">{roleLabels[r] ?? r}</span>
 				{/each}
 			</dd>
@@ -403,15 +435,19 @@ import { onMount } from 'svelte';
 		<!-- Demande de modification -->
 		{#if demandePending}
 			<div class="info-banner info-yellow" style="margin-top:1rem">
-				<strong>Demande en attente</strong> : 
+				<strong>Demande en attente</strong> :
 				{#if demandePending.statut_souhaite}
-					changement de type vers «&nbsp;{statutLabels[demandePending.statut_souhaite] ?? demandePending.statut_souhaite}&nbsp;»
+					changement de type vers «&nbsp;{statutLabels[demandePending.statut_souhaite] ??
+						demandePending.statut_souhaite}&nbsp;»
 				{/if}
 				{#if demandePending.statut_souhaite && demandePending.batiment_nom_souhaite}&nbsp;+&nbsp;{/if}
 				{#if demandePending.batiment_nom_souhaite}
 					déménagement vers {demandePending.batiment_nom_souhaite}
 				{/if}
-				<span class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]}" style="margin-left:.5rem">
+				<span
+					class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]}"
+					style="margin-left:.5rem"
+				>
 					{STATUT_DEMANDE_LABEL[demandePending.statut_demande]}
 				</span>
 			</div>
@@ -428,7 +464,8 @@ import { onMount } from 'svelte';
 		{#if showDemandeForm && !demandePending}
 			<div class="demande-form" style="margin-top:1rem">
 				<p class="hint" style="margin-bottom:.75rem">
-					Les modifications du profil d'utilisateur et du bâtiment sont soumises à validation du conseil syndical.
+					Les modifications du profil d'utilisateur et du bâtiment sont soumises à validation du
+					conseil syndical.
 				</p>
 				<div class="field">
 					<label for="dm-statut">Nouveau profil d'utilisateur</label>
@@ -452,10 +489,18 @@ import { onMount } from 'svelte';
 				</div>
 				<div class="field">
 					<label for="dm-motif">Motif / justification</label>
-					<textarea id="dm-motif" rows="2" bind:value={demandeMotif} placeholder="Expliquez brièvement…"></textarea>
+					<textarea
+						id="dm-motif"
+						rows="2"
+						bind:value={demandeMotif}
+						placeholder="Expliquez brièvement…"></textarea>
 				</div>
 				<div class="form-actions">
-					<button class="btn btn-primary btn-sm" disabled={savingDemande} on:click={soumettreDemandeModif}>
+					<button
+						class="btn btn-primary btn-sm"
+						disabled={savingDemande}
+						on:click={soumettreDemandeModif}
+					>
 						{savingDemande ? 'Envoi…' : 'Envoyer la demande'}
 					</button>
 				</div>
@@ -467,52 +512,68 @@ import { onMount } from 'svelte';
 	</section>
 
 	{#if !arrivantChoix}
-	<section class="card" style="margin-bottom:1.5rem">
-		<h2 class="section-title">Démarche Nouvel Arrivant</h2>
-		<p class="hint" style="margin-bottom:.6rem">
-			Ce choix vous appartient : vous êtes la meilleure personne pour savoir si vous venez d'arriver dans la résidence.
-		</p>
-		<div class="info-banner info-yellow" style="margin-bottom:.8rem">
-			Vous venez de créer un compte sur la plateforme.
-			<br />
-			<strong>Nouvel arrivant</strong> : vous emménagez réellement dans la résidence (Démarches nouvel arrivant : interphone, BAL, ...)
-			<br />
-			<strong>Déjà résident</strong> : vous venez de créer un compte mais vous étiez déjà résident (donc pas de démarche nouvel arrivant)
-		</div>
+		<section class="card" style="margin-bottom:1.5rem">
+			<h2 class="section-title">Démarche Nouvel Arrivant</h2>
+			<p class="hint" style="margin-bottom:.6rem">
+				Ce choix vous appartient : vous êtes la meilleure personne pour savoir si vous venez
+				d'arriver dans la résidence.
+			</p>
+			<div class="info-banner info-yellow" style="margin-bottom:.8rem">
+				Vous venez de créer un compte sur la plateforme.
+				<br />
+				<strong>Nouvel arrivant</strong> : vous emménagez réellement dans la résidence (Démarches
+				nouvel arrivant : interphone, BAL, ...)
+				<br />
+				<strong>Déjà résident</strong> : vous venez de créer un compte mais vous étiez déjà résident (donc
+				pas de démarche nouvel arrivant)
+			</div>
 
-		<div class="field">
-			<label for="arr-bat">Bâtiment concerné</label>
-			<select id="arr-bat" bind:value={arrivantBatimentNumero}>
-				<option value="">— Sélectionner —</option>
-				{#if batiments.length > 0}
-					{#each batiments as bat}
-						<option value={String(bat.numero)}>{`Bât. ${bat.numero}`}</option>
-					{/each}
-				{:else}
-					<option value="1">Bât. 1</option>
-					<option value="2">Bât. 2</option>
-					<option value="3">Bât. 3</option>
-					<option value="4">Bât. 4</option>
-				{/if}
-			</select>
-		</div>
-		<div class="field">
-			<label for="arr-ancien">Nom de l'ancien résident</label>
-			<input id="arr-ancien" type="text" bind:value={arrivantAncienResident} disabled={arrivantAncienResidentInconnu} placeholder="Ex : Mme Dupont" />
-		</div>
-		<label style="display:flex;align-items:center;gap:.5rem;margin-top:-.35rem;margin-bottom:.7rem;font-size:.88rem;color:var(--color-text-muted)">
-			<input type="checkbox" bind:checked={arrivantAncienResidentInconnu} />
-			Je ne sais pas
-		</label>
-		<div class="form-actions">
-			<button class="btn btn-primary" on:click={declarerNouvelArrivant} disabled={savingArrivant}>
-				{savingArrivant ? 'Envoi…' : 'Je suis un nouvel arrivant'}
-			</button>
-			<button class="btn btn-arrivant-deja" type="button" on:click={declarerDejaResident} disabled={savingArrivant}>
-				Je suis déjà résident
-			</button>
-		</div>
-	</section>
+			<div class="field">
+				<label for="arr-bat">Bâtiment concerné</label>
+				<select id="arr-bat" bind:value={arrivantBatimentNumero}>
+					<option value="">— Sélectionner —</option>
+					{#if batiments.length > 0}
+						{#each batiments as bat}
+							<option value={String(bat.numero)}>{`Bât. ${bat.numero}`}</option>
+						{/each}
+					{:else}
+						<option value="1">Bât. 1</option>
+						<option value="2">Bât. 2</option>
+						<option value="3">Bât. 3</option>
+						<option value="4">Bât. 4</option>
+					{/if}
+				</select>
+			</div>
+			<div class="field">
+				<label for="arr-ancien">Nom de l'ancien résident</label>
+				<input
+					id="arr-ancien"
+					type="text"
+					bind:value={arrivantAncienResident}
+					disabled={arrivantAncienResidentInconnu}
+					placeholder="Ex : Mme Dupont"
+				/>
+			</div>
+			<label
+				style="display:flex;align-items:center;gap:.5rem;margin-top:-.35rem;margin-bottom:.7rem;font-size:.88rem;color:var(--color-text-muted)"
+			>
+				<input type="checkbox" bind:checked={arrivantAncienResidentInconnu} />
+				Je ne sais pas
+			</label>
+			<div class="form-actions">
+				<button class="btn btn-primary" on:click={declarerNouvelArrivant} disabled={savingArrivant}>
+					{savingArrivant ? 'Envoi…' : 'Je suis un nouvel arrivant'}
+				</button>
+				<button
+					class="btn btn-arrivant-deja"
+					type="button"
+					on:click={declarerDejaResident}
+					disabled={savingArrivant}
+				>
+					Je suis déjà résident
+				</button>
+			</div>
+		</section>
 	{/if}
 
 	<ChangementMotDePasse />
@@ -528,9 +589,11 @@ import { onMount } from 'svelte';
 	<section class="card" style="border-color:#fde68a;background:#fffbeb">
 		<h2 style="font-size:.95rem;font-weight:600;margin-bottom:.5rem">Vos droits (RGPD)</h2>
 		<p style="font-size:.8rem;line-height:1.55;color:var(--color-text-muted)">
-			Conformément au RGPD, vous pouvez exercer vos droits d'accès, rectification, portabilité et effacement
-			en contactant le responsable de traitement à l'adresse indiquée dans la
-			<a href="/politique-de-confidentialite" style="color:var(--color-primary)">politique de confidentialité</a>.
+			Conformément au RGPD, vous pouvez exercer vos droits d'accès, rectification, portabilité et
+			effacement en contactant le responsable de traitement à l'adresse indiquée dans la
+			<a href="/politique-de-confidentialite" style="color:var(--color-primary)"
+				>politique de confidentialité</a
+			>.
 		</p>
 
 		<!-- Télémétrie opt-out -->
@@ -547,7 +610,12 @@ import { onMount } from 'svelte';
 							setTelemetryOptOut(optOutTelemetrie);
 							const updated = await authApi.me();
 							setUser(updated);
-							toast('success', optOutTelemetrie ? 'Collecte de statistiques désactivée.' : 'Collecte de statistiques réactivée.');
+							toast(
+								'success',
+								optOutTelemetrie
+									? 'Collecte de statistiques désactivée.'
+									: 'Collecte de statistiques réactivée.',
+							);
 						} catch {
 							optOutTelemetrie = !optOutTelemetrie;
 							toast('error', 'Erreur lors de la mise à jour.');
@@ -557,12 +625,15 @@ import { onMount } from 'svelte';
 				/>
 				Refuser la collecte de statistiques de navigation
 			</label>
-			<p style="font-size:.78rem;color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem">
-				Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les plus utilisées,
-				de détecter d'éventuels problèmes de navigation et d'orienter les améliorations futures vers ce qui vous est
-				réellement utile au quotidien. Elles ne contiennent aucune donnée personnelle sensible et ne sont jamais
-				partagées avec des tiers. En les désactivant, vous nous privez d'informations précieuses pour vous offrir
-				une meilleure expérience.
+			<p
+				style="font-size:.78rem;color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem"
+			>
+				Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les
+				plus utilisées, de détecter d'éventuels problèmes de navigation et d'orienter les
+				améliorations futures vers ce qui vous est réellement utile au quotidien. Elles ne
+				contiennent aucune donnée personnelle sensible et ne sont jamais partagées avec des tiers.
+				En les désactivant, vous nous privez d'informations précieuses pour vous offrir une
+				meilleure expérience.
 			</p>
 
 			<div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -585,7 +656,7 @@ import { onMount } from 'svelte';
 							URL.revokeObjectURL(url);
 							toast('success', 'Export téléchargé.');
 						} catch {
-							toast('error', 'Erreur lors de l\'export.');
+							toast('error', "Erreur lors de l'export.");
 						}
 						exportingTelemetrie = false;
 					}}
@@ -637,32 +708,60 @@ import { onMount } from 'svelte';
 			</div>
 		</div>
 	</section>
-
 </div>
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
-	.form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-	.form-actions { flex-wrap: wrap; }  /* le reste vient de la charte (#607) */
-	.checkbox-field { display: flex; align-items: center; gap: .5rem; font-size: .875rem; cursor: pointer; }
-	.hint { font-size: 0.78rem; color: var(--color-text-muted); }
+	.form-row {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.form-actions {
+		flex-wrap: wrap;
+	} /* le reste vient de la charte (#607) */
+	.checkbox-field {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+	.hint {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+	}
 	.info-grid {
 		display: grid;
 		grid-template-columns: auto 1fr;
-		gap: .4rem .75rem;
-		font-size: .875rem;
-		margin-bottom: .25rem;
+		gap: 0.4rem 0.75rem;
+		font-size: 0.875rem;
+		margin-bottom: 0.25rem;
 	}
-	.info-grid dt { font-weight: 500; color: var(--color-text-muted); white-space: nowrap; }
-	.info-grid dd { margin: 0; }
+	.info-grid dt {
+		font-weight: 500;
+		color: var(--color-text-muted);
+		white-space: nowrap;
+	}
+	.info-grid dd {
+		margin: 0;
+	}
 	.info-banner {
-		padding: .6rem .9rem;
+		padding: 0.6rem 0.9rem;
 		border-radius: var(--radius);
-		font-size: .85rem;
+		font-size: 0.85rem;
 	}
-	.info-yellow { background: #fffbeb; border: 1px solid #fde68a; }
-	.btn-arrivant-deja { background: var(--color-success); color: #fff; }
-	.btn-arrivant-deja:hover:not(:disabled) { background: #256f47; }
+	.info-yellow {
+		background: #fffbeb;
+		border: 1px solid #fde68a;
+	}
+	.btn-arrivant-deja {
+		background: var(--color-success);
+		color: #fff;
+	}
+	.btn-arrivant-deja:hover:not(:disabled) {
+		background: #256f47;
+	}
 	.demande-form {
 		background: var(--color-bg-subtle, #f9fafb);
 		border: 1px solid var(--color-border);

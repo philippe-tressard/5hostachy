@@ -23,25 +23,34 @@
 	}
 
 	async function supprimer(ul: any) {
-		if (!confirm(`Supprimer l'association de « ${ul.user_nom} » au lot ${ul.lot_numero} (${ul.batiment}) ?`)) return;
+		if (
+			!confirm(
+				`Supprimer l'association de « ${ul.user_nom} » au lot ${ul.lot_numero} (${ul.batiment}) ?`,
+			)
+		)
+			return;
 		try {
 			await adminApi.supprimerUserLot(ul.user_lot_id);
 			toast('success', 'Association supprimée');
-			rows = rows.filter(r => r.user_lot_id !== ul.user_lot_id);
+			rows = rows.filter((r) => r.user_lot_id !== ul.user_lot_id);
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur suppression');
 		}
 	}
 
-	async function supprimerToutesPourUtilisateur(g: { user_id: number; user_nom: string; lots: any[] }) {
+	async function supprimerToutesPourUtilisateur(g: {
+		user_id: number;
+		user_nom: string;
+		lots: any[];
+	}) {
 		if (!g.lots.length) return;
 		if (!confirm(`Supprimer ${g.lots.length} association(s) pour « ${g.user_nom} » ?`)) return;
 		deletingUserId = g.user_id;
 		try {
 			const results = await Promise.allSettled(
-				g.lots.map((ul) => adminApi.supprimerUserLot(ul.user_lot_id))
+				g.lots.map((ul) => adminApi.supprimerUserLot(ul.user_lot_id)),
 			);
-			const ok = results.filter(r => r.status === 'fulfilled').length;
+			const ok = results.filter((r) => r.status === 'fulfilled').length;
 			const ko = results.length - ok;
 			if (ok > 0) {
 				const idsToDelete = new Set<number>();
@@ -65,20 +74,30 @@
 	}
 
 	$: grouped = (() => {
-		const map = new Map<number, { user_id: number; user_nom: string; user_statut: string; lots: any[] }>();
+		const map = new Map<
+			number,
+			{ user_id: number; user_nom: string; user_statut: string; lots: any[] }
+		>();
 		for (const r of filtered) {
-			if (!map.has(r.user_id)) map.set(r.user_id, { user_id: r.user_id, user_nom: r.user_nom, user_statut: r.user_statut, lots: [] });
+			if (!map.has(r.user_id))
+				map.set(r.user_id, {
+					user_id: r.user_id,
+					user_nom: r.user_nom,
+					user_statut: r.user_statut,
+					lots: [],
+				});
 			map.get(r.user_id)!.lots.push(r);
 		}
 		return [...map.values()].sort((a, b) => a.user_nom.localeCompare(b.user_nom));
 	})();
 
 	$: filtered = filtre
-		? rows.filter(r =>
-			r.user_nom.toLowerCase().includes(filtre.toLowerCase()) ||
-			r.lot_numero?.toLowerCase().includes(filtre.toLowerCase()) ||
-			r.batiment?.toLowerCase().includes(filtre.toLowerCase())
-		)
+		? rows.filter(
+				(r) =>
+					r.user_nom.toLowerCase().includes(filtre.toLowerCase()) ||
+					r.lot_numero?.toLowerCase().includes(filtre.toLowerCase()) ||
+					r.batiment?.toLowerCase().includes(filtre.toLowerCase()),
+			)
 		: rows;
 
 	onMount(charger);
@@ -87,14 +106,20 @@
 <svelte:head><title>Audit associations lots — {_siteNom}</title></svelte:head>
 
 <p style="color:var(--color-text-muted);font-size:.9rem;margin:0 0 1rem">
-	Liste toutes les associations utilisateur ↔ lot actives. Permet de repérer et supprimer les affectations erronées (faux positifs de l'auto-match).
+	Liste toutes les associations utilisateur ↔ lot actives. Permet de repérer et supprimer les
+	affectations erronées (faux positifs de l'auto-match).
 </p>
 
 <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
 	<div class="field champ-en-ligne" style="max-width:320px">
-	<input type="text" placeholder="Filtrer par nom, lot ou bâtiment…" bind:value={filtre} />
-</div>
-	<span style="color:var(--color-text-muted);font-size:.85rem">{filtered.length} association{filtered.length > 1 ? 's' : ''} — {grouped.length} utilisateur{grouped.length > 1 ? 's' : ''}</span>
+		<input type="text" placeholder="Filtrer par nom, lot ou bâtiment…" bind:value={filtre} />
+	</div>
+	<span style="color:var(--color-text-muted);font-size:.85rem"
+		>{filtered.length} association{filtered.length > 1 ? 's' : ''} — {grouped.length} utilisateur{grouped.length >
+		1
+			? 's'
+			: ''}</span
+	>
 </div>
 
 {#if loading}
@@ -107,18 +132,26 @@
 			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
 				<strong>{g.user_nom}</strong>
 				<span class="badge badge-gray" style="font-size:.75rem">{g.user_statut}</span>
-				<span style="color:var(--color-text-muted);font-size:.8rem">— {g.lots.length} lot{g.lots.length > 1 ? 's' : ''}</span>
+				<span style="color:var(--color-text-muted);font-size:.8rem"
+					>— {g.lots.length} lot{g.lots.length > 1 ? 's' : ''}</span
+				>
 				<button
 					class="btn btn-sm btn-outline"
 					style="margin-left:auto"
 					disabled={deletingUserId === g.user_id}
 					on:click={() => supprimerToutesPourUtilisateur(g)}
 				>
-					{deletingUserId === g.user_id ? 'Suppression…' : `Supprimer les ${g.lots.length} associations`}
+					{deletingUserId === g.user_id
+						? 'Suppression…'
+						: `Supprimer les ${g.lots.length} associations`}
 				</button>
 			</div>
 			<table class="table" style="table-layout:fixed;width:100%;margin:0">
-				<colgroup><col style="width:25%"><col style="width:20%"><col style="width:20%"><col style="width:20%"><col style="width:15%"></colgroup>
+				<colgroup
+					><col style="width:25%" /><col style="width:20%" /><col style="width:20%" /><col
+						style="width:20%"
+					/><col style="width:15%" /></colgroup
+				>
 				<thead><tr><th>Lot</th><th>Type lot</th><th>Bâtiment</th><th>Lien</th><th></th></tr></thead>
 				<tbody>
 					{#each g.lots as ul}
@@ -128,7 +161,11 @@
 							<td>{ul.batiment}</td>
 							<td><span class="badge badge-blue">{ul.type_lien}</span></td>
 							<td style="text-align:right">
-								<button class="btn-icon-danger" title="Supprimer cette association" on:click={() => supprimer(ul)}>&#x1F5D1;️</button>
+								<button
+									class="btn-icon-danger"
+									title="Supprimer cette association"
+									on:click={() => supprimer(ul)}>&#x1F5D1;️</button
+								>
 							</td>
 						</tr>
 					{/each}

@@ -14,9 +14,9 @@
 <script lang="ts">
 	export let password: string = '';
 
-	$: hasLength  = password.length >= 8;
-	$: hasUpper   = /[A-Z]/.test(password);
-	$: hasDigit   = /\d/.test(password);
+	$: hasLength = password.length >= 8;
+	$: hasUpper = /[A-Z]/.test(password);
+	$: hasDigit = /\d/.test(password);
 	$: hasSpecial = /[@$!%*?&#._\-+]/.test(password);
 
 	$: score = [hasLength, hasUpper, hasDigit, hasSpecial].filter(Boolean).length;
@@ -27,28 +27,18 @@
 	   de contraste AA de 4,5:1 (`standards/11` §13.2) — #16a34a et #d97706 y
 	   échouaient sur fond clair. */
 	$: jaugeCouleur =
-		score === 4 ? '#16a34a' :
-		score === 3 ? '#d97706' :
-		score >= 1  ? '#dc2626' :
-		'transparent';
+		score === 4 ? '#16a34a' : score === 3 ? '#d97706' : score >= 1 ? '#dc2626' : 'transparent';
 
 	$: libelleCouleur =
-		score === 4 ? '#15803d' :
-		score === 3 ? '#b45309' :
-		score >= 1  ? '#b91c1c' :
-		'inherit';
+		score === 4 ? '#15803d' : score === 3 ? '#b45309' : score >= 1 ? '#b91c1c' : 'inherit';
 
-	$: gaugeLabel =
-		score === 4 ? 'Fort' :
-		score === 3 ? 'Moyen' :
-		score >= 1  ? 'Faible' :
-		'';
+	$: gaugeLabel = score === 4 ? 'Fort' : score === 3 ? 'Moyen' : score >= 1 ? 'Faible' : '';
 
 	// La seule et unique liste des critères.
 	$: criteres = [
-		{ label: '8 caractères minimum',                ok: hasLength  },
-		{ label: 'Une lettre majuscule',                ok: hasUpper   },
-		{ label: 'Un chiffre',                          ok: hasDigit   },
+		{ label: '8 caractères minimum', ok: hasLength },
+		{ label: 'Une lettre majuscule', ok: hasUpper },
+		{ label: 'Un chiffre', ok: hasDigit },
 		{ label: 'Un caractère spécial (@$!%*?&#._-+)', ok: hasSpecial },
 	];
 </script>
@@ -56,7 +46,12 @@
 <!-- La région `status` reste montée en permanence : une zone d'annonce créée en
      même temps que son contenu n'est pas annoncée par tous les lecteurs d'écran. -->
 <div class="pwd-strength" class:ouvert={password.length > 0}>
-	<div class="pwd-inner" role="status" aria-live="polite" aria-label="Force du mot de passe : {gaugeLabel}">
+	<div
+		class="pwd-inner"
+		role="status"
+		aria-live="polite"
+		aria-label="Force du mot de passe : {gaugeLabel}"
+	>
 		{#if password.length > 0}
 			<div class="pwd-carte">
 				<div class="gauge">
@@ -89,40 +84,53 @@
 		grid-template-rows: 0fr;
 		margin-top: 0;
 		opacity: 0;
-		transition: grid-template-rows .18s ease, opacity .18s ease, margin-top .18s ease;
+		transition:
+			grid-template-rows 0.18s ease,
+			opacity 0.18s ease,
+			margin-top 0.18s ease;
 	}
 	.pwd-strength.ouvert {
 		grid-template-rows: 1fr;
-		margin-top: .5rem;
+		margin-top: 0.5rem;
 		opacity: 1;
 	}
-	.pwd-inner { overflow: hidden; min-height: 0; }
+	.pwd-inner {
+		overflow: hidden;
+		min-height: 0;
+	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.pwd-strength { transition: none; }
+		.pwd-strength {
+			transition: none;
+		}
 	}
 
 	.pwd-carte {
-		padding: .55rem .7rem;
+		padding: 0.55rem 0.7rem;
 		background: var(--color-bg);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 	}
 
-	.gauge { display: flex; align-items: center; gap: .25rem; margin-bottom: .45rem; }
+	.gauge {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		margin-bottom: 0.45rem;
+	}
 	.gauge-bar {
 		flex: 1;
 		height: 4px;
 		border-radius: 2px;
 		background: var(--color-border, #e5e7eb);
-		transition: background .2s ease;
+		transition: background 0.2s ease;
 	}
 	.gauge-label {
-		font-size: .75rem;
+		font-size: 0.75rem;
 		font-weight: 600;
 		min-width: 3rem;
 		text-align: right;
-		transition: color .2s ease;
+		transition: color 0.2s ease;
 	}
 
 	.criteria-list {
@@ -131,16 +139,23 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		gap: .2rem;
+		gap: 0.2rem;
 	}
 	.criteria-list li {
 		display: flex;
 		align-items: center;
-		gap: .35rem;
-		font-size: .8rem;
+		gap: 0.35rem;
+		font-size: 0.8rem;
 		color: var(--color-text-muted, #6b7280);
-		transition: color .15s ease;
+		transition: color 0.15s ease;
 	}
-	.criteria-list li.ok { color: #15803d; }
-	.check-icon { width: 1rem; text-align: center; font-size: .85rem; flex-shrink: 0; }
+	.criteria-list li.ok {
+		color: #15803d;
+	}
+	.check-icon {
+		width: 1rem;
+		text-align: center;
+		font-size: 0.85rem;
+		flex-shrink: 0;
+	}
 </style>

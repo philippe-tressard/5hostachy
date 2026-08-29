@@ -94,7 +94,9 @@
 			toast('success', data.type === 'etat' ? 'Suivi mis à jour' : 'Commentaire ajouté');
 		} catch (err: any) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { enCours = false; }
+		} finally {
+			enCours = false;
+		}
 	}
 	//  🔴 Une CORRECTION n'est pas une transition : elle ne porte pas de
 	//  `nouveau_statut`, et le serveur inscrit « Correction : … » plutôt qu'une
@@ -115,7 +117,9 @@
 			toast('success', 'Entrée corrigée');
 		} catch (err: any) {
 			toast('error', err instanceof ApiError ? err.message : 'Erreur');
-		} finally { correctionEnCours = false; }
+		} finally {
+			correctionEnCours = false;
+		}
 	}
 
 	//  Effacer — ADMIN seulement, et le serveur le revérifie (`require_admin`).
@@ -140,7 +144,8 @@
 		vide={peutAgir ? 'Aucune entrée pour le moment.' : ''}
 		peutModifier={peutAgir}
 		currentUserId={$currentUser?.id}
-		estAdmin={$isAdmin} avecSuppression
+		estAdmin={$isAdmin}
+		avecSuppression
 		{enEdition}
 		on:modifier={(e) => (enEdition = e.detail)}
 		on:supprimer={supprimer}
@@ -150,7 +155,9 @@
 		      pas le mouvement de colonne qu'elle a enregistré. -->
 		<svelte:fragment slot="edition" let:evol>
 			{#key enEdition}
-				<EvolForm idPrefixe="ev-evol-edit-{evol.id}" titre="Modifier le commentaire"
+				<EvolForm
+					idPrefixe="ev-evol-edit-{evol.id}"
+					titre="Modifier le commentaire"
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
@@ -166,7 +173,9 @@
 
 	{#if ouvert}
 		{#key ouvert}
-			<EvolForm idPrefixe="ev-evol-{evenement.id}" titre="Commenter ou changer l’état"
+			<EvolForm
+				idPrefixe="ev-evol-{evenement.id}"
+				titre="Commenter ou changer l’état"
 				statutOptions={options}
 				statutLabels={libelles}
 				currentStatut={evenement.statut_kanban ?? ''}
@@ -184,5 +193,7 @@
 <style>
 	/*  La marge qui sépare le fil de ce qu'il suit. Le reste de son allure vit
 	    dans `RubriqueHistorique`, avec le balisage qui la porte. */
-	.ev-fil { margin-top: .9rem; }
+	.ev-fil {
+		margin-top: 0.9rem;
+	}
 </style>

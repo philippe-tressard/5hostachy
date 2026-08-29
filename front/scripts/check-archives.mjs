@@ -117,11 +117,15 @@ function selftest() {
 	t('le cas de #516 : titre en dur', 1, '<SectionRepliee titre="\u{1F4C1} Archives" />');
 	t('titre en dur, autre mot', 1, '<SectionRepliee titre="Historique des demandes" />');
 	t('titre en h2', 1, '<h2 class="section-title">Archives de mes demandes</h2>');
-	t('libellé d\'onglet par défaut', 1, "{_pc.onglets?.archives?.label ?? '\u{1F4C1} Archives'}");
+	t("libellé d'onglet par défaut", 1, "{_pc.onglets?.archives?.label ?? '\u{1F4C1} Archives'}");
 	//  🔴 Ce qu'il ne doit PAS refuser.
 	t('la constante partagée', 0, '<SectionRepliee titre={TITRE_ARCHIVES} />');
-	t('le fil d\'un objet, par la constante', 0, '<RubriqueHistorique titre={TITRE_HISTORIQUE} />');
-	t('le journal des envois (déclaré)', 0, '<SectionRepliee titre="\u{1F4EC} Historique des envois" />');
+	t("le fil d'un objet, par la constante", 0, '<RubriqueHistorique titre={TITRE_HISTORIQUE} />');
+	t(
+		'le journal des envois (déclaré)',
+		0,
+		'<SectionRepliee titre="\u{1F4EC} Historique des envois" />',
+	);
 	t('le mot dans une phrase', 0, '<p>Les annonces conclues sont rangées dans les Archives.</p>');
 	t('le mot dans un commentaire', 0, '<!-- la section « Archives » vient de #516 -->');
 	t('un titre sans rapport', 0, '<SectionRepliee titre="Documents" />');
@@ -168,9 +172,9 @@ function main() {
 	for (const [f, titre] of coupables) console.error(`    ${f}  →  « ${titre} »`);
 	console.error('');
 	console.error(`  Employer \`${CONSTANTE}\` de \`$lib/archives\`. Cinq écrans l'avaient en dur`);
-	console.error('  et concordaient parce qu\'on venait de les aligner à la main (#516).');
+	console.error("  et concordaient parce qu'on venait de les aligner à la main (#516).");
 	console.error('');
-	console.error('  Si le titre est légitime — le FIL d\'un objet, par exemple —, le déclarer');
+	console.error("  Si le titre est légitime — le FIL d'un objet, par exemple —, le déclarer");
 	console.error('  dans `TITRES_LEGITIMES` avec sa raison.');
 	console.error('');
 	return 1;

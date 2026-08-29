@@ -37,29 +37,37 @@ import { estTicketClos } from '$lib/tickets';
 // 12° de la sarcelle de `prestataire`, un rapprochement voulu tant que les deux
 // rubriques partageaient la page /prestataires.
 export const TYPE_LABELS: Record<string, string> = {
-	ticket_resolu: 'Ticket résolu', ticket_ouvert: 'Ticket', ticket_mis_a_jour: 'Ticket mis à jour',
-	publication: 'Actualité', evenement: 'Événement',
-	sondage_clos: 'Sondage clos', sondage_ouvert: 'Sondage',
-	annonce: 'Petite annonce', idee: 'Boîte à idées',
-	prestataire: 'Prestataire', document: 'Document', diagnostic: 'Diagnostic',
-	faq: 'Question fréquente', annuaire: 'Annuaire',
+	ticket_resolu: 'Ticket résolu',
+	ticket_ouvert: 'Ticket',
+	ticket_mis_a_jour: 'Ticket mis à jour',
+	publication: 'Actualité',
+	evenement: 'Événement',
+	sondage_clos: 'Sondage clos',
+	sondage_ouvert: 'Sondage',
+	annonce: 'Petite annonce',
+	idee: 'Boîte à idées',
+	prestataire: 'Prestataire',
+	document: 'Document',
+	diagnostic: 'Diagnostic',
+	faq: 'Question fréquente',
+	annuaire: 'Annuaire',
 };
 
 export const TYPE_COLORS: Record<string, string> = {
-	ticket_resolu: '#B91C1C',          //   0° rouge
+	ticket_resolu: '#B91C1C', //   0° rouge
 	ticket_ouvert: '#B91C1C',
 	ticket_mis_a_jour: '#B91C1C',
-	annonce: '#C2410C',                //  17° orange
-	evenement: '#A16207',              //  35° ambre
-	diagnostic: '#4D7C0F',             //  86° olive
-	annuaire: '#15803D',               // 142° vert
-	prestataire: '#0F766E',            // 175° sarcelle
-	idee: '#0E7490',                   // 193° cyan
+	annonce: '#C2410C', //  17° orange
+	evenement: '#A16207', //  35° ambre
+	diagnostic: '#4D7C0F', //  86° olive
+	annuaire: '#15803D', // 142° vert
+	prestataire: '#0F766E', // 175° sarcelle
+	idee: '#0E7490', // 193° cyan
 	publication: 'var(--color-primary)', // 214° bleu Seine, couleur de la charte
-	document: '#4338CA',               // 245° indigo
-	sondage_clos: '#6D28D9',           // 263° violet
+	document: '#4338CA', // 245° indigo
+	sondage_clos: '#6D28D9', // 263° violet
 	sondage_ouvert: '#6D28D9',
-	faq: '#A21CAF',                    // 295° fuchsia
+	faq: '#A21CAF', // 295° fuchsia
 };
 
 export const TYPE_BG: Record<string, string> = {
@@ -122,7 +130,8 @@ export function typeLink(item: FluxItem): string | null {
 }
 
 export function typeVoirLabel(item: FluxItem): string {
-	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type)) return 'Voir le ticket →';
+	if (['ticket_ouvert', 'ticket_resolu', 'ticket_mis_a_jour'].includes(item.type))
+		return 'Voir le ticket →';
 	if (item.type === 'publication') return "Voir l'actualité →";
 	if (item.type === 'evenement') return "Voir l'événement →";
 	if (item.type === 'sondage_ouvert' || item.type === 'sondage_clos') return 'Voir le sondage →';

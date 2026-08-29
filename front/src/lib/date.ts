@@ -15,7 +15,7 @@ export function isNouveau(cree_le: string, mis_a_jour_le?: string | null): boole
 	const created = new Date(cree_le).getTime();
 	const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 	const notUpdated = !mis_a_jour_le || mis_a_jour_le === cree_le;
-	return notUpdated && (now - created < FORTY_EIGHT_HOURS);
+	return notUpdated && now - created < FORTY_EIGHT_HOURS;
 }
 /**
  * Utilitaires de formatage de dates — Europe/Paris
@@ -31,19 +31,34 @@ const LOCALE = 'fr-FR';
 /** "2 avr. 2026" */
 export function fmtDate(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ });
+	return new Date(d).toLocaleDateString(LOCALE, {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		timeZone: TZ,
+	});
 }
 
 /** "2 avril 2026" */
 export function fmtDateLong(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
+	return new Date(d).toLocaleDateString(LOCALE, {
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric',
+		timeZone: TZ,
+	});
 }
 
 /** "02 avr. 2026" */
 export function fmtDate2d(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleDateString(LOCALE, { day: '2-digit', month: 'short', year: 'numeric', timeZone: TZ });
+	return new Date(d).toLocaleDateString(LOCALE, {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+		timeZone: TZ,
+	});
 }
 
 /** "10/04/2026" */
@@ -55,25 +70,47 @@ export function fmtDateShort(d: string | null | undefined): string {
 /** "2 avr. 2026, 14:30" */
 export function fmtDatetime(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ });
+	return new Date(d).toLocaleString(LOCALE, {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: TZ,
+	});
 }
 
 /** "02 avr. 2026, 14:30" */
 export function fmtDatetime2d(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleString(LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ });
+	return new Date(d).toLocaleString(LOCALE, {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: TZ,
+	});
 }
 
 /** "10/04/2026 14:30" */
 export function fmtDatetimeShort(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleString(LOCALE, { dateStyle: 'short', timeStyle: 'short', timeZone: TZ });
+	return new Date(d).toLocaleString(LOCALE, {
+		dateStyle: 'short',
+		timeStyle: 'short',
+		timeZone: TZ,
+	});
 }
 
 /** "14:30" */
 export function fmtTime(d: string | null | undefined): string {
 	if (!d) return '—';
-	return new Date(d).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+	return new Date(d).toLocaleTimeString(LOCALE, {
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: TZ,
+	});
 }
 
 /** "avril 2026" */
