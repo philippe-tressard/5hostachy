@@ -26,6 +26,7 @@ from app.models.core import (
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
+from app.utils.syndic import nom_du_syndic
 from html import escape
 from typing import Optional
 
@@ -382,7 +383,10 @@ def get_fiche_arrivant(
             "membres": cs_membres,
         },
         syndic_data={
-            "nom_syndic": syndic_info.nom_syndic if syndic_info else "",
+            #  🔴 Le CONTRAT fait foi (#535). C'est le consommateur qui compte le
+            #  plus : la fiche arrivant est REMISE aux nouveaux résidents, et ils
+            #  n'ont aucun moyen de savoir qu'elle nomme l'ancien syndic.
+            "nom_syndic": nom_du_syndic(session),
             "adresse": syndic_info.adresse if syndic_info else "",
             "site_web": syndic_info.site_web if syndic_info else None,
             "membres": syndic_membres,
