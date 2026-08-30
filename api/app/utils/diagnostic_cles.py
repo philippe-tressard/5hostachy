@@ -56,6 +56,18 @@ def compter_orphelins(engine) -> dict:
 
     try:
         with engine.connect() as conn:
+            #  🔴 LE RÉGIME LUI-MÊME, et pas seulement son résultat.
+            #
+            #  `foreign_key_check` dit ce que la base CONTIENT ; il ne dit rien de
+            #  ce qu'elle REFUSERA demain. Les deux questions sont distinctes, et
+            #  la seconde est celle qu'on se pose après avoir activé les clés :
+            #  « ont-elles vraiment pris ? »
+            #
+            #  Sans ce champ, un relevé à zéro se lit comme une victoire sur une
+            #  base où les clés seraient restées désactivées — l'appel
+            #  `activer_cles_etrangeres` ne prenant PAS effet s'il est placé après
+            #  le bloc d'amorçage (mesuré le 30/08/2026, cf. `database.py`).
+            cles_actives = bool(conn.execute(text("PRAGMA foreign_keys")).scalar())
             lignes = conn.execute(text("PRAGMA foreign_key_check")).fetchall()
             #  Le `fkid` rendu par le PRAGMA est un INDEX dans la liste des clés
             #  de la table : illisible tel quel. On le résout en NOM DE COLONNE,
@@ -75,6 +87,7 @@ def compter_orphelins(engine) -> dict:
     return {
         "ok": not lignes,
         "inconnu": False,
+        "cles_actives": cles_actives,
         "orphelins": len(lignes),
         "par_relation": [
             {"table": t, "colonne": c, "table_parente": p, "lignes": n}
