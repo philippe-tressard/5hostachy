@@ -19,7 +19,9 @@ from app.models.core import (
     Publication, PublicationEvolution, RoleUtilisateur, Utilisateur,
 )
 from app.schemas import PublicationCreate, PublicationRead, PublicationUpdate
+from app.models.annonce_hall import AnnonceHall
 from app.utils.photos import photos_json, premiere_photo
+from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
 from app.utils.visibility import publication_visible
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
@@ -364,5 +366,28 @@ def delete_publication(
     # Supprimer les évolutions liées avant la publication (pas de CASCADE en SQLite)
     for evol in list(pub.evolutions):
         session.delete(evol)
+    #  🔴 IL MANQUAIT LES DOCUMENTS ET LES AFFICHES (#546). Trois tables
+    #  référencent une publication ; seules les évolutions étaient traitées.
+    #
+    #    • `document.publication_id` : une pièce jointe n'existe que par sa
+    #      publication — elle part avec, fichier compris ;
+    #    • `annonce_hall.publication_id` : l'affiche, elle, RESTE et se délie.
+    #      Une affiche a été imprimée et posée dans le hall : supprimer la
+    #      publication d'origine n'annule pas ce qui est au mur.
+    docs = supprimer_documents_de(session, "publication_id", pub_id)
+    affiches = session.exec(
+        select(AnnonceHall).where(AnnonceHall.publication_id == pub_id)
+    ).all()
+    for affiche in affiches:
+        affiche.publication_id = None
+        session.add(affiche)
+    #  ⚠️ Le `flush()` ordonne les DELETE — mais ICI, le retirer ne fait PAS
+    #  échouer le test : mesuré, pas supposé. L'ordre tombe juste par accident
+    #  d'implémentation, `Document` n'ayant aucune `Relationship` vers
+    #  `Publication` pour le garantir (cf. `utils/suppression_liee.py`, où le
+    #  même geste est, lui, indispensable pour le ticket et l'événement).
+    #  Il reste : une ligne qui coûte un aller-retour vaut mieux qu'un ordre dont
+    #  rien ne dit qu'il tiendra à la prochaine version de SQLAlchemy.
+    flush_si_necessaire(session, docs)
     session.delete(pub)
     session.commit()

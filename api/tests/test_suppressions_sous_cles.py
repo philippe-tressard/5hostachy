@@ -55,24 +55,25 @@ EMAIL = "suppression-546@test.fr"
 
 
 def _purger(session: Session) -> None:
-    """Nettoyage à l'ENTRÉE comme à la sortie.
+    """Nettoyage à l'ENTRÉE comme à la sortie, par le code de production.
 
-    Une fixture qui ne nettoie qu'en sortie laisse ses lignes derrière elle dès
-    qu'un test échoue — et c'est ce fichier-ci qui provoque des échecs. Le
-    suivant tomberait alors sur une erreur de montage qui masque le vrai verdict.
+    🔴 **`purger()` plutôt qu'une énumération à la main.** Ce module lit les
+    MÉTADONNÉES : il découvre tout ce qui dépend de l'utilisateur de test, y
+    compris les tables qu'un cas ajoutera demain. Une purge écrite à la main ici
+    aurait dû énumérer tickets, documents, publications, télécommandes, vigiks,
+    idées, sondages… et elle aurait manqué la suivante — c'est exactement le
+    défaut que `purge_referentielle` a corrigé pour les fixtures (#546).
+
+    ⚠️ Le `rollback()` d'abord : une session laissée en erreur par un test qui
+    échoue refuse toute requête suivante. Ce fichier PROVOQUE des échecs — sans
+    lui, le premier cas rouge empoisonnerait tous les suivants, et on lirait des
+    erreurs de montage à la place des vrais verdicts.
     """
+    from app.utils.purge_referentielle import purger
+
+    session.rollback()
     for u in session.exec(select(Utilisateur).where(Utilisateur.email == EMAIL)).all():
-        for d in session.exec(select(Document).where(Document.publie_par_id == u.id)).all():
-            session.delete(d)
-        for t in session.exec(select(Ticket).where(Ticket.auteur_id == u.id)).all():
-            for e in session.exec(
-                select(TicketEvolution).where(TicketEvolution.ticket_id == t.id)
-            ).all():
-                session.delete(e)
-            for d in session.exec(select(Document).where(Document.ticket_id == t.id)).all():
-                session.delete(d)
-            session.delete(t)
-        session.delete(u)
+        purger(session, "utilisateur", u.id)
     session.commit()
 
 
@@ -254,3 +255,94 @@ def test_supprimer_un_evenement_qui_porte_un_document(contexte):
     assert session.get(Evenement, ev.id) is None
     restants = session.exec(select(Document).where(Document.evenement_id == ev.id)).all()
     assert restants == [], "les documents de l'événement doivent partir avec lui"
+
+
+# ── Les sept tables restantes du relevé du 30/08 ─────────────────────────────
+#
+#  Toutes portent au moins une référence entrante que le code doit traiter. Le
+#  tableau publié dans #546 les classait « à risque » sur la seule lecture du
+#  schéma ; ces tests disent lesquelles le sont vraiment — le sondage, lui, était
+#  déjà correct.
+
+
+def test_supprimer_une_idee_avec_ses_votes(contexte):
+    """`vote_idee.idee_id` est NOT NULL et sans `Relationship` vers `Idee`."""
+    from app.models.communaute import Idee, VoteIdee
+    from app.routers.idees import delete_idee
+
+    session, admin = contexte
+    idee = Idee(titre="T", description="d", auteur_id=admin.id)
+    session.add(idee)
+    session.commit()
+    session.refresh(idee)
+    session.add(VoteIdee(idee_id=idee.id, user_id=admin.id))
+    session.commit()
+
+    delete_idee(idee.id, session, admin)
+    assert session.get(Idee, idee.id) is None
+
+
+def test_supprimer_une_publication_avec_son_historique_et_ses_documents(contexte):
+    """Trois références entrantes, dont `publication_evolution` en NOT NULL.
+
+    `document.publication_id` et `annonce_hall.publication_id` sont nullables —
+    mais sous les clés, une ligne qui référence un parent supprimé bloque, que
+    la colonne soit obligatoire ou non.
+    """
+    from app.models.core import Publication, PublicationEvolution
+    from app.routers.publications.crud import delete_publication
+
+    session, admin = contexte
+    pub = Publication(titre="T", contenu="c", auteur_id=admin.id)
+    session.add(pub)
+    session.commit()
+    session.refresh(pub)
+    session.add(PublicationEvolution(publication_id=pub.id, type="commentaire", auteur_id=admin.id))
+    session.add(
+        Document(
+            titre="PJ",
+            fichier_nom="pj.pdf",
+            fichier_chemin="/tmp/pj-546.pdf",
+            publication_id=pub.id,
+            publie_par_id=admin.id,
+        )
+    )
+    session.commit()
+
+    delete_publication(pub.id, session, admin)
+    assert session.get(Publication, pub.id) is None
+    assert session.exec(select(Document).where(Document.publication_id == pub.id)).all() == []
+
+
+def test_supprimer_une_telecommande_attribuee(contexte):
+    """`user_telecommande.telecommande_id` est NOT NULL et sans `Relationship`."""
+    from app.models.core import Telecommande, UserTelecommande
+    from app.routers.acces import supprimer_telecommande
+
+    session, admin = contexte
+    tc = Telecommande(code="TC-546", user_id=admin.id)
+    session.add(tc)
+    session.commit()
+    session.refresh(tc)
+    session.add(UserTelecommande(user_id=admin.id, telecommande_id=tc.id))
+    session.commit()
+
+    supprimer_telecommande(tc.id, session, admin)
+    assert session.get(Telecommande, tc.id) is None
+
+
+def test_supprimer_un_vigik_attribue(contexte):
+    """`user_vigik.vigik_id` est NOT NULL et sans `Relationship`."""
+    from app.models.core import UserVigik, Vigik
+    from app.routers.acces import supprimer_vigik
+
+    session, admin = contexte
+    v = Vigik(code="VG-546", user_id=admin.id)
+    session.add(v)
+    session.commit()
+    session.refresh(v)
+    session.add(UserVigik(user_id=admin.id, vigik_id=v.id))
+    session.commit()
+
+    supprimer_vigik(v.id, session, admin)
+    assert session.get(Vigik, v.id) is None
