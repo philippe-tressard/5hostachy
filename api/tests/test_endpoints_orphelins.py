@@ -38,6 +38,11 @@ SANS_CONSOMMATEUR_FRONT = {
     "/admin/db/checkpoint":
         "voie in-process obligatoire contre la corruption SQLite (CLAUDE.md, "
         "règle d'or) — appelée à la main pendant un incident, jamais par le front",
+    "/admin/db/cles-etrangeres":
+        "même famille que /admin/db/checkpoint : diagnostic in-process, seule "
+        "voie autorisée pour lire l'état de la base pendant que l'API tourne. "
+        "Appelé à la main avant d'activer foreign_keys=ON (#546, étape 2 bis) — "
+        "l'écran viendra si le besoin devient récurrent, pas avant",
     "/admin/notifications":
         "API d'administration exposée pour l'exploitation, sans écran dédié",
     "/admin/notifications/{notif_id}/lue":
