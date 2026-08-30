@@ -212,7 +212,31 @@ def apercu_pieces(ticket: Ticket, session: Session) -> list[str]:
 
 def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     auteur = session.get(Utilisateur, ticket.auteur_id)
-    auteur_batiment_id = ticket.batiment_id or (auteur.batiment_id if auteur else None)
+    #  🔴 LE BÂTIMENT DU DEMANDEUR, ET RIEN D'AUTRE (#653, 30/08/2026).
+    #
+    #  Cette ligne était :
+    #
+    #      auteur_batiment_id = ticket.batiment_id or (auteur.batiment_id if auteur else None)
+    #
+    #  Le champ s'appelle `auteur_batiment_nom`, la carte le rend sous 📍 avec le
+    #  commentaire « LE BÂTIMENT DU DEMANDEUR » — et le calcul prenait d'abord
+    #  celui du TICKET. Dès qu'un ticket portait un `batiment_id`, le badge
+    #  affichait le bâtiment visé sous une étiquette qui annonce celui de la
+    #  personne : un membre du CS lisait « Philippe TRESSARD 📍 Bât. 4 » et en
+    #  déduisait où habite Philippe. Signalé à l'écran, sur une carte où « Bât. 4 »
+    #  apparaissait deux fois — une fois comme périmètre, une fois comme ce badge.
+    #
+    #  ⚠️ AUCUN REPLI, et c'est le cœur du correctif. Quand l'auteur n'a pas de
+    #  bâtiment renseigné, on n'affiche RIEN : retomber sur celui du ticket
+    #  remettrait une valeur juste sous une étiquette fausse, ce qui est
+    #  exactement le défaut qu'on retire. Le périmètre visé est déjà rendu à côté,
+    #  par le badge 🔹 — le taire ici ne perd aucune information.
+    #
+    #  📖 `ticketScope()` (front) porte le repli, LUI, et l'annonce : « le bâtiment
+    #  de l'auteur, à défaut le bâtiment ciblé, à défaut la résidence ». Il devient
+    #  juste par ce correctif — il recevait jusqu'ici un premier terme qui pouvait
+    #  déjà être le second.
+    auteur_batiment_id = auteur.batiment_id if auteur else None
     batiment = session.get(Batiment, auteur_batiment_id) if auteur_batiment_id else None
     # Calcul de l'affichage "saisi pour"
     saisi_pour_affichage: str | None = None

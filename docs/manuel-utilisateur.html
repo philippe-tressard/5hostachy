@@ -661,17 +661,38 @@
     /* ═══════════════════════════════════════════
        CALLOUTS
     ═══════════════════════════════════════════ */
+    /* 🔴 UNE GRILLE, ET NON UN `flex` (30/08/2026).
+       En `display:flex`, CHAQUE enfant direct devient une colonne : l'icône,
+       puis un paragraphe par colonne. Les encadrés à un seul `<p>` s'affichaient
+       donc correctement, et les DIX qui en portent plusieurs se rendaient en
+       colonnes verticales d'un ou deux mots de large — illisibles.
+       Signalé à l'écran, capture à l'appui. Le défaut était visible depuis que
+       le deuxième paragraphe existe : la règle `.callout p + p { margin-top }`
+       juste en dessous prouve que l'empilement était l'intention, et qu'elle
+       n'a jamais été obtenue.
+       La grille place l'icône en colonne 1 et TOUT le reste en colonne 2, quel
+       que soit le nombre de blocs et leur nature (`<p>`, `<ul>`, `<div>`) —
+       c'est ce qui la rend préférable à l'enveloppement des dix encadrés dans
+       un `<div>` : elle vaut aussi pour le onzième. */
     .callout {
-      display: flex;
-      gap: 12px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      /* Écart HORIZONTAL seul : le vertical reste porté par `p + p` ci-dessous,
+         qui existait déjà et n'a jamais pu servir. */
+      gap: 0 12px;
       padding: 1rem 1.25rem;
       border-radius: 10px;
       margin: 1.25rem 0;
       font-size: .9rem;
-      align-items: flex-start;
+      align-items: start;
     }
 
-    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    /* Tout ce qui n'est pas l'icône va en colonne 2, donc chaque bloc sur sa
+       propre ligne. Sans cette règle, le placement automatique renverrait le
+       deuxième paragraphe sous l'icône, en colonne 1. */
+    .callout > :not(.callout-icon) { grid-column: 2; }
+
+    .callout-icon { font-size: 18px; margin-top: 1px; }
 
     .callout.info    { background: #eff6ff; border-left: 4px solid #3b82f6; }
     .callout.tip     { background: #f0fdf4; border-left: 4px solid #22c55e; }
@@ -991,7 +1012,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique copropriétaire</div>
-    <span class="topbar-badge">Version 3.72 · Août 2026</span>
+    <span class="topbar-badge">Version 3.73 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -2990,7 +3011,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.72</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.73</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
