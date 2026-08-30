@@ -257,7 +257,6 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         auteur_id=ticket.auteur_id,
         auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else None,
         auteur_batiment_nom=f"Bât. {batiment.numero}" if batiment else None,
-        auteur_batiment_id=auteur_batiment_id,
         lot_id=ticket.lot_id,
         batiment_id=ticket.batiment_id,
         perimetre_cible=ticket.perimetre_cible,

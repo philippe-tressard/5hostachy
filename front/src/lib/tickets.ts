@@ -26,10 +26,6 @@ export interface StatutTicket {
 	badge: string;
 }
 
-//  Les bâtiments qu'un périmètre vise réellement — jamais recalculé ici : la
-//  remontée dans l'arbre vit dans `$lib/perimetres`, avec son miroir serveur.
-import { batimentsCibles } from './perimetres';
-
 //: Les quatre états, dans l'ordre du workflow : c'est celui dans lequel ils
 //: s'affichent partout, boutons de la fiche comme listes déroulantes.
 export const STATUTS_TICKET: readonly StatutTicket[] = [
@@ -186,52 +182,6 @@ export function ticketScope(t: {
 	batiment_id?: number | null;
 }): string {
 	return t.auteur_batiment_nom ?? (t.batiment_id ? `Bât. ${t.batiment_id}` : 'Résidence');
-}
-
-/**
- * Faut-il MONTRER le badge 📍 du bâtiment du demandeur ?
- *
- * **Non quand le périmètre le dit déjà** — arbitré à l'écran le 30/08/2026 (#653) :
- * *« ne montre le badge que s'il diffère du périmètre »*.
- *
- * ## Pourquoi cette règle
- *
- * Les deux marques cohabitent sur la même ligne et portent le même texte :
- * `🔹 Bât. 3 › Toit · Bât. 4 › Toit` puis `📍 Bât. 4`. Elles disent pourtant deux
- * choses différentes — le périmètre VISÉ, et le bâtiment de la PERSONNE — et rien
- * ne permet de le lire : un seul caractère d'icône les sépare, et `ux-patterns` §1
- * est la seule chose qui l'explique. On voit « Bât. 4 » deux fois.
- *
- * Or le cas le plus fréquent est justement celui-là : on signale surtout ce qui
- * est chez soi. Le badge n'apprend donc quelque chose que dans le cas INVERSE —
- * *« qui signale un problème ailleurs que chez lui ? »* —, et c'est précisément
- * ce que le CS a besoin de repérer.
- *
- * ## Ce que la comparaison porte sur
- *
- * 🔴 Sur les **identifiants**, jamais sur les libellés. « Bât. 4 » est un nom de
- * bâtiment ; « Bât. 4 › Toit » est un chemin d'arbre. Les rapprocher par leur
- * texte reviendrait à réimplémenter `batimentsCibles()` avec une sous-chaîne — et
- * à se tromper au premier bâtiment dont le numéro en préfixe un autre (« Bât. 1 »
- * dans « Bât. 12 »).
- *
- * `batimentsCibles()` fait remonter chaque nœud jusqu'au bâtiment qui le porte :
- * c'est ce qui fait qu'un ticket sur « Bât. 4 › Toit » masque bien le badge d'un
- * auteur du bâtiment 4, sans que le toit ait à répéter son bâtiment.
- *
- * ⚠️ **`ticketScope()` ci-dessus n'est PAS concerné** : le reporting groupe par
- * bâtiment de l'auteur et en a besoin *même* quand il coïncide avec le périmètre.
- * Masquer est une décision d'AFFICHAGE, et elle ne remonte pas dans la donnée.
- */
-export function afficherBatimentDemandeur(t: {
-	auteur_batiment_id?: number | null;
-	perimetre_cible?: string[] | string | null;
-}): boolean {
-	//  Pas de bâtiment connu : il n'y a rien à montrer. Le cas existe — un compte
-	//  sans rattachement — et il ne doit pas retomber sur le périmètre (c'est le
-	//  correctif du point 2 de #653).
-	if (!t.auteur_batiment_id) return false;
-	return !batimentsCibles(t.perimetre_cible ?? null).includes(t.auteur_batiment_id);
 }
 
 /**

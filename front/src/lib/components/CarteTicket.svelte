@@ -57,7 +57,6 @@
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
-		afficherBatimentDemandeur,
 		categorieTicketEmoji,
 	} from '$lib/tickets';
 
@@ -170,28 +169,28 @@
 				>{/if}
 			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
 			<span class="tk-numero">#{ticket.numero}</span>
-			<!--  🔴 LE BÂTIMENT DU DEMANDEUR, à côté de son nom (28/08/2026).
-			      Il n'était lisible que dans l'onglet « Tickets résidence » de
-			      l'Espace CS, qui rendait le ticket à la main. Cet onglet est parti
-			      — redondant avec cet écran-ci — et son information devait donc
-			      arriver ici, sinon la simplification aurait retiré une capacité au
-			      passage : le manuel dit depuis toujours que le CS identifie le
-			      contexte au bâtiment du demandeur avant d'agir.
-			      📍 = lieu physique, jamais 🔹 (réservé au périmètre logique, tag
-			      ci-dessus). Rien à cacher à un résident : il ne voit que SES
-			      tickets, donc son propre bâtiment.
+			<!--  🔴 PAS DE BADGE 📍 DU DEMANDEUR — arbitré à l'écran le 30/08/2026
+			      (#653) : *« se restreindre uniquement au périmètre »*.
 
-			      ⚠️ MASQUÉ quand le périmètre le dit déjà (#653, 30/08/2026) : les
-			      deux marques portaient le même texte sur la même ligne, séparées
-			      par un seul caractère d'icône, et on lisait « Bât. 4 » deux fois.
-			      Le badge n'apprend quelque chose que dans le cas inverse — « qui
-			      signale un problème ailleurs que chez lui ? » — et c'est justement
-			      celui que le CS a besoin de repérer. La décision vit dans
-			      `$lib/tickets`, sur les identifiants et non sur les libellés. -->
+			      Il a existé du 28/08 au 30/08. Ajouté par #603 pour ne pas perdre
+			      une capacité de l'onglet « Tickets résidence » qui venait d'être
+			      retiré, il disait le bâtiment de rattachement du COMPTE — donc où
+			      habite la personne, pas où est le problème. La carte porte déjà
+			      🔹 le périmètre visé, qui répond à la seule question que se pose
+			      un lecteur de liste.
+
+			      ⚠️ Deux tentatives de le sauver ont échoué, et c'est ce qui a
+			      tranché : le rendre exact (il affichait le bâtiment du TICKET), puis
+			      le masquer quand il coïncidait avec le périmètre. Restait le cas où
+			      il diffère — « Philippe (Bât. 4) signale un problème aux bâtiments
+			      1-2-3 » — et là encore il n'apprend rien d'utile : le CS agit sur le
+			      lieu du problème.
+
+			      📖 Ce qui manquait vraiment est plus fin qu'un bâtiment : le LOT
+			      (`Lot` = bâtiment + numéro + étage). `Ticket.lot_id` existe et
+			      l'API l'accepte déjà — seul l'écran ne le propose pas. Suivi
+			      dans #653 ; ne pas remettre un badge de bâtiment en attendant. -->
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
-			{#if ticket.auteur_batiment_nom && afficherBatimentDemandeur(ticket)}<span class="tk-auteur"
-					>&#x1F4CD; {ticket.auteur_batiment_nom}</span
-				>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
 			<!--  UN point d'entrée (#426) : le formulaire porte les deux gestes.
