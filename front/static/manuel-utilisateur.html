@@ -646,7 +646,16 @@
     }
 
     .step-content { padding-top: 4px; }
-    .step-content strong { display: block; margin-bottom: 2px; }
+    /* Le TITRE de l'étape — enfant direct — passe seul à la ligne.
+       Le `>` n'est pas un détail : sans lui, la règle atteignait AUSSI les
+       `<strong>` en plein milieu d'une phrase, et chaque mot mis en avant
+       cassait la ligne. « jusqu'à / 10 photos / (JPG…) / et jusqu'à /
+       10 documents / … » : six lignes pour une phrase. Signalé à l'écran le
+       30/08/2026, capture à l'appui.
+       Même famille que le sélecteur d'élément nu que le front interdit
+       (`ux-patterns` §9 octies) : un sélecteur qui vise un rôle précis doit
+       le dire, sinon il attrape tout ce qui lui ressemble. */
+    .step-content > strong { display: block; margin-bottom: 2px; }
     .step-content p { font-size: .9rem; color: var(--muted); }
 
     /* ═══════════════════════════════════════════
@@ -728,6 +737,7 @@
     .cat-nuisance { background: #fdf4ff; border-color: #e9d5ff; color: #7e22ce; }
     .cat-question { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
     .cat-urgence  { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    .cat-bug      { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
 
     /* ═══════════════════════════════════════════
        FAQ ACCORDÉON
@@ -980,8 +990,8 @@
        TOPBAR
   ══════════════════════════════════ -->
   <header class="topbar">
-    <div class="topbar-title">Guide pratique coproprietaire</div>
-    <span class="topbar-badge">Version 3.71 · Août 2026</span>
+    <div class="topbar-title">Guide pratique copropriétaire</div>
+    <span class="topbar-badge">Version 3.72 · Août 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -993,19 +1003,19 @@
          HERO
     ──────────────────────────────── -->
     <section class="hero" id="intro">
-      <p class="hero-kicker">Bienvenue sur votre extranet de residence</p>
+      <p class="hero-kicker">Bienvenue sur votre extranet de résidence</p>
       <h1>Le guide simple pour trouver vite ce dont vous avez besoin</h1>
-      <p>Ce manuel a ete pense pour un coproprietaire presse. Vous n'avez pas besoin de tout lire : choisissez une action, ouvrez la bonne rubrique et suivez les etapes utiles.</p>
+      <p>Ce manuel a été pensé pour un copropriétaire pressé. Vous n'avez pas besoin de tout lire : choisissez une action, ouvrez la bonne rubrique et suivez les étapes utiles.</p>
       <div class="hero-actions">
         <a class="hero-link primary" href="#express">Commencer en 3 minutes</a>
         <a class="hero-link secondary" href="#faq">Voir les questions rapides</a>
       </div>
       <div class="hero-cards">
         <div class="hero-card">Essentiel en quelques clics</div>
-        <div class="hero-card">Textes courts et etapes claires</div>
-        <div class="hero-card">Acces direct aux rubriques utiles</div>
+        <div class="hero-card">Textes courts et étapes claires</div>
+        <div class="hero-card">Accès direct aux rubriques utiles</div>
       </div>
-      <p class="hero-note">Bon reflexe : commencez par <strong>Actualites</strong>, <strong>Calendrier</strong> et <strong>Tickets</strong>. Ce sont les 3 ecrans les plus utiles au quotidien.</p>
+      <p class="hero-note">Bon reflexe : commencez par <strong>Actualités</strong>, <strong>Calendrier</strong> et <strong>Tickets</strong>. Ce sont les 3 écrans les plus utiles au quotidien.</p>
     </section>
 
     <section class="quick-start" id="express">
@@ -1013,25 +1023,25 @@
         <div>
           <p class="hero-kicker" style="color:#2563eb; margin-bottom:.35rem">Guide express</p>
           <h2 style="font-size:1.45rem; margin-bottom:.35rem">Commencer sans se perdre</h2>
-          <p style="color:var(--muted); max-width:620px">Si vous debutez, suivez seulement ces 3 etapes. Vous aurez deja l'essentiel pour utiliser 5Hostachy sans stress.</p>
+          <p style="color:var(--muted); max-width:620px">Si vous debutez, suivez seulement ces 3 étapes. Vous aurez déjà l'essentiel pour utiliser 5Hostachy sans stress.</p>
         </div>
-        <span class="quick-badge">3 minutes pour demarrer</span>
+        <span class="quick-badge">3 minutes pour démarrer</span>
       </div>
 
       <div class="quick-grid">
         <div class="quick-card">
           <span class="quick-step">1</span>
           <strong>Connectez-vous</strong>
-          <p>Entrez votre e-mail et votre mot de passe. Si besoin, creez votre compte ou utilisez le lien de reinitialisation.</p>
+          <p>Entrez votre e-mail et votre mot de passe. Si besoin, créez votre compte ou utilisez le lien de réinitialisation.</p>
           <ul class="micro-list">
-            <li>Premiere visite : allez a Connexion &amp; inscription</li>
-            <li>Mot de passe oublie : utilisez le lien sur l'ecran d'accueil</li>
+            <li>Première visite : allez à Connexion &amp; inscription</li>
+            <li>Mot de passe oublié : utilisez le lien sur l'écran d'accueil</li>
           </ul>
         </div>
         <div class="quick-card">
           <span class="quick-step">2</span>
-          <strong>Reglez vos notifications</strong>
-          <p>Choisissez ce que vous voulez recevoir dans l'appli et par e-mail pour eviter les oublis sans etre submerge.</p>
+          <strong>Réglez vos notifications</strong>
+          <p>Choisissez ce que vous voulez recevoir dans l'appli et par e-mail pour éviter les oublis sans être submergé.</p>
           <ul class="micro-list">
             <li>Ouvrez Mon profil</li>
             <li>Cochez les canaux utiles ligne par ligne</li>
@@ -1039,46 +1049,46 @@
         </div>
         <div class="quick-card">
           <span class="quick-step">3</span>
-          <strong>Faites votre premiere action</strong>
-          <p>Ensuite, allez directement a votre besoin du moment : signaler, verifier, telecharger ou demander.</p>
+          <strong>Faites votre première action</strong>
+          <p>Ensuite, allez directement a votre besoin du moment : signaler, vérifier, télécharger ou demander.</p>
           <ul class="micro-list">
-            <li>Probleme : Tickets</li>
+            <li>Problème : Tickets</li>
             <li>Date ou travaux : Calendrier</li>
-            <li>Document : Ma residence</li>
+            <li>Document : Ma résidence</li>
           </ul>
         </div>
       </div>
 
       <div class="choice-grid">
         <a class="choice-card" href="#tickets">
-          <strong>Je veux signaler un probleme</strong>
+          <strong>Je veux signaler un problème</strong>
           <p>Allez dans Tickets pour faire une demande claire et suivre son avancement.</p>
         </a>
         <a class="choice-card" href="#calendrier">
-          <strong>Je veux verifier une date</strong>
+          <strong>Je veux vérifier une date</strong>
           <p>Ouvrez Calendrier pour voir les interventions, coupures, AG et suivis de travaux.</p>
         </a>
         <a class="choice-card" href="#residence">
           <strong>Je veux retrouver un document</strong>
-          <p>Ouvrez Ma residence pour les documents utiles de la copropriete.</p>
+          <p>Ouvrez Ma résidence pour les documents utiles de la copropriété.</p>
         </a>
         <a class="choice-card" href="#badges">
           <strong>Je veux demander un badge</strong>
-          <p>La rubrique Acces &amp; badges explique la procedure et le suivi.</p>
+          <p>La rubrique Accès &amp; badges explique la procédure et le suivi.</p>
         </a>
         <a class="choice-card" href="#news">
           <strong>Je veux lire les informations importantes</strong>
-          <p>Les Actualites regroupent les annonces officielles du conseil syndical.</p>
+          <p>Les Actualités regroupent les annonces officielles du conseil syndical.</p>
         </a>
         <a class="choice-card" href="#profil">
-          <strong>Je veux regler mon compte</strong>
-          <p>Dans Mon profil, modifiez vos informations et vos preferences de notifications.</p>
+          <strong>Je veux régler mon compte</strong>
+          <p>Dans Mon profil, modifiez vos informations et vos préférences de notifications.</p>
         </a>
       </div>
 
       <div class="persona-block" id="par-profil">
         <h3>Mini sommaire par profil</h3>
-        <p>Vous etes presse ? Choisissez votre profil et ouvrez seulement les rubriques vraiment utiles pour vous.</p>
+        <p>Vous êtes pressé ? Choisissez votre profil et ouvrez seulement les rubriques vraiment utiles pour vous.</p>
         <div class="persona-grid">
           <a class="persona-card" href="#lot">
             <strong>Je suis copropriétaire résident</strong>
@@ -1091,8 +1101,8 @@
           <a class="persona-card" href="#profil">
             <strong>Je suis locataire</strong>
             <ul>
-              <li>Mon profil pour regler les notifications</li>
-              <li>Actualites pour les infos officielles</li>
+              <li>Mon profil pour régler les notifications</li>
+              <li>Actualités pour les infos officielles</li>
               <li>Tickets pour vos demandes et suivis</li>
             </ul>
           </a>
@@ -1101,8 +1111,8 @@
             <ul>
               <li>Prestataires pour le suivi des interventions</li>
               <li>Calendrier pour piloter le workflow</li>
-              <li>Tickets pour repondre et cloturer</li>
-              <li>Delegations pour les aidants familiaux</li>
+              <li>Tickets pour répondre et cloturer</li>
+              <li>Délégations pour les aidants familiaux</li>
             </ul>
           </a>
         </div>
@@ -1118,8 +1128,8 @@
       <div class="chapter-header">
         <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9">&#x1F5BC;</div>
         <div>
-          <h2>Captures guidees des ecrans clefs</h2>
-          <p>8 reperes visuels pour trouver rapidement ou cliquer dans les rubriques les plus consultees.</p>
+          <h2>Captures guidees des écrans clefs</h2>
+          <p>8 reperes visuels pour trouver rapidement ou cliquer dans les rubriques les plus consultées.</p>
         </div>
       </div>
 
@@ -1132,8 +1142,8 @@
         </article>
         <article class="capture-card">
           <img src="img/capture-2-creer-ticket.png" alt="Creer un ticket" loading="lazy">
-          <h3>2. Creer un ticket</h3>
-          <p>Utilisez le bouton de creation pour signaler un probleme en moins de 2 minutes.</p>
+          <h3>2. Créer un ticket</h3>
+          <p>Utilisez le bouton de création pour signaler un problème en moins de 2 minutes.</p>
           <span class="capture-tag">Action prioritaire</span>
         </article>
         <article class="capture-card">
@@ -1157,20 +1167,20 @@
         <article class="capture-card">
           <img src="img/capture-6-mon-profil.png" alt="Mon profil" loading="lazy">
           <h3>6. Mon profil</h3>
-          <p>Reglez votre mot de passe, vos infos et la matrice de notifications appli/e-mail.</p>
+          <p>Réglez votre mot de passe, vos infos et la matrice de notifications appli/e-mail.</p>
           <span class="capture-tag">Parametres</span>
         </article>
         <article class="capture-card">
           <img src="img/capture-7-ma-residence.png" alt="Ma residence" loading="lazy">
-          <h3>7. Ma residence</h3>
-          <p>Retrouvez les documents importants (AG, reglement, informations communes).</p>
+          <h3>7. Ma résidence</h3>
+          <p>Retrouvez les documents importants (AG, règlement, informations communes).</p>
           <span class="capture-tag">Documents</span>
         </article>
         <article class="capture-card">
           <img src="img/capture-8-acces-badges.png" alt="Acces et badges" loading="lazy">
-          <h3>8. Acces &amp; badges</h3>
-          <p>Demandez un badge ou une telecommande et suivez la validation de votre demande.</p>
-          <span class="capture-tag">Acces residence</span>
+          <h3>8. Accès &amp; badges</h3>
+          <p>Demandez un badge ou une télécommande et suivez la validation de votre demande.</p>
+          <span class="capture-tag">Accès résidence</span>
         </article>
       </div>
     </section>
@@ -1183,12 +1193,12 @@
         <div class="chapter-icon" style="background:#eff6ff; color:#2563eb">&#x1F4A1;</div>
         <div>
           <h2>A quoi sert l'application ?</h2>
-          <p>Retenez surtout une chose : elle vous evite de chercher partout.</p>
+          <p>Retenez surtout une chose : elle vous évite de chercher partout.</p>
         </div>
       </div>
 
       <div class="card">
-        <p><strong>5Hostachy</strong> est votre espace numérique de copropriete. Au lieu de jongler entre affichage papier, e-mails, appels et documents perdus, vous retrouvez tout au meme endroit.</p>
+        <p><strong>5Hostachy</strong> est votre espace numérique de copropriété. Au lieu de jongler entre affichage papier, e-mails, appels et documents perdus, vous retrouvez tout au même endroit.</p>
 
         <div class="scan-grid">
           <div class="scan-card">
@@ -1196,24 +1206,24 @@
             <p>Quand vous avez une action a faire, voici ou aller sans hesiter.</p>
             <ul>
               <li>Signaler une panne ou une nuisance : <strong>Tickets</strong></li>
-              <li>Demander un badge ou une telecommande : <strong>Acces &amp; badges</strong></li>
+              <li>Demander un badge ou une télécommande : <strong>Accès &amp; badges</strong></li>
               <li>Trouver un contact : <strong>Annuaire</strong></li>
             </ul>
           </div>
           <div class="scan-card">
             <h3>Pour rester informe</h3>
-            <p>Quand vous voulez simplement savoir ce qu'il se passe dans la residence.</p>
+            <p>Quand vous voulez simplement savoir ce qu'il se passe dans la résidence.</p>
             <ul>
-              <li>Annonces officielles : <strong>Actualites</strong></li>
+              <li>Annonces officielles : <strong>Actualités</strong></li>
               <li>Dates, interventions, coupures : <strong>Calendrier</strong></li>
-              <li>Votes et idees : <strong>Communaute</strong></li>
+              <li>Votes et idées : <strong>Communauté</strong></li>
             </ul>
           </div>
           <div class="scan-card">
             <h3>Pour retrouver un document</h3>
-            <p>Quand vous cherchez une piece ou une information de reference.</p>
+            <p>Quand vous cherchez une pièce ou une information de référence.</p>
             <ul>
-              <li>Reglement, AG, documents residence : <strong>Ma residence</strong></li>
+              <li>Règlement, AG, documents résidence : <strong>Ma résidence</strong></li>
               <li>Vos informations et lots : <strong>Mes lots</strong></li>
               <li>Parametres et notifications : <strong>Mon profil</strong></li>
             </ul>
@@ -1222,14 +1232,14 @@
             <h3>Ce que vous y gagnez</h3>
             <p>Le vrai benefice n'est pas technique. C'est un gain de temps.</p>
             <ul>
-              <li>Moins d'oublis grace aux notifications</li>
+              <li>Moins d'oublis grâce aux notifications</li>
               <li>Moins d'allers-retours par e-mail</li>
-              <li>Plus de visibilite sur les demandes en cours</li>
+              <li>Plus de visibilité sur les demandes en cours</li>
             </ul>
           </div>
         </div>
 
-        <p class="mini-note">Conseil simple : si vous ne savez pas ou cliquer, commencez par la question suivante. <strong>Est-ce que je veux agir, verifier une information, ou retrouver un document ?</strong> La bonne rubrique devient alors evidente.</p>
+        <p class="mini-note">Conseil simple : si vous ne savez pas ou cliquer, commencez par la question suivante. <strong>Est-ce que je veux agir, vérifier une information, ou retrouver un document ?</strong> La bonne rubrique devient alors evidente.</p>
       </div>
 
       <div class="callout info">
@@ -1663,23 +1673,23 @@
         <div class="cat-grid">
           <div class="cat-card cat-panne">
             &#x1F6E0;️ Panne
-            <small>Équipement cassé, ascenseur, éclairage, chauffage…</small>
+            <small>Équipement défectueux, ascenseur, chauffage…</small>
           </div>
           <div class="cat-card cat-nuisance">
             &#x1F4E2; Nuisance
-            <small>Bruit, odeur, problème de voisinage…</small>
+            <small>Bruit, odeur, parking…</small>
           </div>
           <div class="cat-card cat-question">
             ❓ Question
-            <small>Demande d'information au conseil</small>
+            <small>Information, procédure…</small>
           </div>
           <div class="cat-card cat-urgence">
             &#x1F6A8; Urgence
-            <small>Dégât des eaux, danger, sécurité…</small>
+            <small>Inondation, panne majeure, danger immédiat</small>
           </div>
-          <div class="cat-card" style="background:#f0fdf4; border-color:#bbf7d0; color:#15803d">
+          <div class="cat-card cat-bug">
             &#x1F41B; Bug
-            <small>Dysfonctionnement de l'application elle-même</small>
+            <small>Pb technique sur 5Hostachy</small>
           </div>
         </div>
 
@@ -1688,7 +1698,7 @@
             <span class="step-num" style="background:var(--c-ticket)">2</span>
             <div class="step-content">
               <strong>Décrivez le problème</strong>
-              <p>Donnez un titre court et une description claire. Vous pouvez joindre jusqu'à <strong>5 photos</strong> (JPG, PNG, WebP, GIF) et jusqu'à <strong>5 documents</strong> — devis, facture, courrier, constat : <strong>PDF, Word ou Excel</strong>, 15 Mo maximum par fichier.</p>
+              <p>Donnez un titre court et une description claire. Vous pouvez joindre jusqu'à <strong>10 photos</strong> (JPG, PNG, WebP, GIF — 5 Mo par photo) et jusqu'à <strong>10 documents</strong> — devis, facture, courrier, constat : <strong>PDF, Word, Excel ou texte</strong>, 15 Mo par document.</p>
             </div>
           </li>
           <li class="step">
@@ -2106,7 +2116,7 @@
         </div>
         <div class="callout tip" style="margin-top:.8rem">
           <span class="callout-icon">&#x1F4CE;</span>
-          <p><strong>Pièces jointes d'une affaire</strong> (CS et admin) — le formulaire de création accepte jusqu'à <strong>5 photos</strong> et jusqu'à <strong>5 documents</strong> (PDF, Word, Excel). Si vous cochez <strong>« ✉️ Envoyer au syndic »</strong> ou <strong>« ✉️ Envoyer au Conseil Syndical »</strong>, ces fichiers <strong>partent en pièces jointes de l'e-mail</strong> : un devis ou un constat arrive donc directement chez le destinataire.</p>
+          <p><strong>Pièces jointes d'une affaire</strong> (CS et admin) — le formulaire de création accepte jusqu'à <strong>10 photos</strong> et jusqu'à <strong>10 documents</strong> (PDF, Word, Excel ou texte). Si vous cochez <strong>« ✉️ Envoyer au syndic »</strong> ou <strong>« ✉️ Envoyer au Conseil Syndical »</strong>, ces fichiers <strong>partent en pièces jointes de l'e-mail</strong> : un devis ou un constat arrive donc directement chez le destinataire.</p>
         </div>
         <div class="callout tip" style="margin-top:.8rem">
           <span class="callout-icon">&#x1F4CC;</span>
@@ -2479,7 +2489,7 @@
         </div>
         <div class="callout info" style="margin-top:1rem">
           <span class="callout-icon">ℹ️</span>
-          <p>Depuis la FAQ, la question <strong>« Quel prix pour ces badges ? »</strong> affiche un bouton direct vers <strong>Accès &amp; badges → Nouvelle demande</strong>. Le lien direct est <strong>/faq#badge-prix</strong> pour y acceder rapidement.</p>
+          <p>Depuis la FAQ, la question <strong>« Quel prix pour ces badges ? »</strong> affiche un bouton direct vers <strong>Accès &amp; badges → Nouvelle demande</strong>. Le lien direct est <strong>/faq#badge-prix</strong> pour y accéder rapidement.</p>
         </div>
       </div>
     </section>
@@ -2980,7 +2990,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.71</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.72</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
