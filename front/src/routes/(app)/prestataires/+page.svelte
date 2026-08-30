@@ -1383,11 +1383,7 @@
 						>
 					</div>
 					<div class="field" style="margin-top:.6rem">
-						<label
-							for="releve-note"
-							style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem"
-							>Note (optionnel)</label
-						>
+						<label for="releve-note">Note</label>
 						<input
 							id="releve-note"
 							type="text"
@@ -1397,9 +1393,7 @@
 						/>
 					</div>
 					<div class="field" style="margin-top:.6rem">
-						<span style="font-size:.875rem;font-weight:500;display:block;margin-bottom:.25rem"
-							>Photo du relevé (optionnel)</span
-						>
+						<span class="libelle-groupe">Photo du relevé</span>
 						<!--  Différé : la photo part par `prestApi.uploadRelevePhoto`,
 							      une fois le relevé créé. -->
 						<FichiersUpload
@@ -1502,7 +1496,7 @@
 					</p>{/if}
 			</div>
 			<label class="field">
-				Commentaire (optionnel)
+				Commentaire
 				<textarea bind:value={notationCommentaire} rows="3" style="resize:vertical"></textarea>
 			</label>
 		</div>

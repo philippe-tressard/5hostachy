@@ -42,6 +42,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -56,6 +57,35 @@ const EXCEPTIONS = {
 		"des filtres de VUE, pas des champs d'un formulaire. Ils portent un libellé parce " +
 		"qu'on doit savoir ce qu'ils filtrent, et vivent sur une ligne dans `.kanban-toolbar` " +
 		'— un `.field`, qui empile en colonne sur toute la largeur, les sortirait de la barre.',
+};
+
+/**
+ * « (optionnel) » LÉGITIMES, avec leur raison — chemin POSIX → raison.
+ *
+ * ## La règle (`ux-patterns` §9)
+ *
+ * > Champ requis : label suivi de ` *`. **Pas** de mention « (optionnel) » :
+ * > l'absence de `*` suffit.
+ *
+ * Elle était écrite depuis le 15/08/2026, et **neuf** libellés la contredisaient
+ * le 30/08 — dont un porté par une classe dédiée, `.optional-hint`, c'est-à-dire
+ * un motif *installé*, prêt à se recopier. C'est la définition d'une règle sans
+ * garde-fou (`standards/05`).
+ *
+ * ⚠️ Le motif cherché est LITTÉRAL : pas de faux positif possible, donc pas
+ * d'échappatoire non plus. Une occasion légitime se déclare ici.
+ */
+const OPTIONNEL_LEGITIME = {
+	'routes/auth/inscription/+page.svelte':
+		"🔴 CONSENTEMENT RGPD. « J'accepte de recevoir les notifications … (optionnel) » — " +
+		"la mention distingue le consentement FACULTATIF de l'acceptation obligatoire des " +
+		'CGU juste au-dessus. Sa valeur est juridique, pas ergonomique : un consentement ' +
+		'doit être libre et éclairé (`standards/14`). Elle ne se retire pas.',
+	'routes/(app)/mon-lot/+page.svelte':
+		'Deux `<legend>` de `<fieldset>` — « Associer un compte existant », « Compte ' +
+		"locataire associé ». La règle dit « l'absence de `*` suffit » : elle vaut pour un " +
+		"CHAMP, qui peut porter un astérisque. Un GROUPE entier facultatif n'a pas cette " +
+		"marque, et rien d'autre ne dirait qu'on peut le laisser vide.",
 };
 
 /** `<input type="…">` qui se saisissent. Les autres sont des contrôles. */
@@ -248,10 +278,23 @@ if (fichiers.length === 0) {
 const erreurs = [];
 const exceptionsServies = new Set();
 let libelles = 0;
+let optionnelsVus = 0;
+const optionnelsServis = new Set();
+const erreursOptionnel = [];
 
 for (const chemin of fichiers) {
 	const relatif = relative(RACINE, chemin).replace(/\\/g, '/');
-	const r = releve(readFileSync(chemin, 'utf8'), relatif);
+	const brut = readFileSync(chemin, 'utf8');
+	//  Hors commentaire (un fichier qui explique la règle la cite) et hors
+	//  `placeholder=` — un texte d'invite n'est pas un libellé, et l'y forcer
+	//  donnerait des dérogations à la pelle.
+	const sansPlaceholder = sansCommentaires(brut).replace(/placeholder\s*=\s*"[^"]*"/g, '');
+	if (/\(optionnel\)/i.test(sansPlaceholder)) {
+		optionnelsVus += (sansPlaceholder.match(/\(optionnel\)/gi) || []).length;
+		if (relatif in OPTIONNEL_LEGITIME) optionnelsServis.add(relatif);
+		else erreursOptionnel.push(relatif);
+	}
+	const r = releve(brut, relatif);
 	libelles += r.libelles;
 	for (const t of r.trouves) {
 		if (relatif in EXCEPTIONS) {
@@ -304,7 +347,28 @@ if (erreurs.length) {
 	process.exit(1);
 }
 
+if (erreursOptionnel.length) {
+	console.error('✗ « (optionnel) » sur un libellé :\n');
+	for (const f of erreursOptionnel) console.error(`  • ${f}`);
+	console.error(
+		"\n🔴 Règle (`ux-patterns` §9) : un champ requis porte ` *`, et **l'absence de\n" +
+			"   `*` suffit** à dire qu'un champ est facultatif. « (optionnel) » ajoute un\n" +
+			'   second vocabulaire pour la même information, et les deux dérivent : neuf\n' +
+			'   libellés le portaient le 30/08/2026, dont un via une classe dédiée.\n' +
+			'   Une occasion légitime se DÉCLARE dans `OPTIONNEL_LEGITIME` avec sa raison.\n',
+	);
+	process.exit(1);
+}
+
+const optMortes = Object.keys(OPTIONNEL_LEGITIME).filter((f) => !optionnelsServis.has(f));
+if (optMortes.length) {
+	console.error('✗ « (optionnel) » déclaré légitime et absent — retirer la ligne :\n');
+	for (const f of optMortes) console.error(`  • ${f}`);
+	process.exit(1);
+}
+
 console.log(
 	`✓ Champs : ${libelles} champs libellés dans ${fichiers.length} composants — ` +
-		`tous dans un \`.field\`, ${Object.keys(EXCEPTIONS).length} exception déclarée et servie.`,
+		`tous dans un \`.field\`, ${Object.keys(EXCEPTIONS).length} exception déclarée et servie, ` +
+		`${optionnelsVus} « (optionnel) » tous justifiés.`,
 );
