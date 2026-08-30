@@ -8,6 +8,7 @@
 	import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireUtilisateur from '$lib/components/FormulaireUtilisateur.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
 	import LegalEditor from '$lib/components/LegalEditor.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -1210,45 +1211,22 @@
 	{/if}
 
 	<!-- Modal édition utilisateur -->
+	<!-- Éditer un objet existant → la modale, qui déclare son geste (§14 bis, #640). -->
 	{#if editUser}
 		<Modale
+			edition
 			titre="Modifier l'utilisateur"
 			classeBoite="modal-box card"
 			styleBoite="max-width:520px"
 			on:fermer={() => (editUser = null)}
 		>
-			<div class="form-grid">
-				<label class="field">Prénom<input type="text" bind:value={editForm.prenom} /></label>
-				<label class="field">Nom<input type="text" bind:value={editForm.nom} /></label>
-				<label class="field">E-mail<input type="email" bind:value={editForm.email} /></label>
-				<label class="field">Téléphone<input type="text" bind:value={editForm.telephone} /></label>
-				<label class="field">Société<input type="text" bind:value={editForm.societe} /></label>
-				<label class="field"
-					>Statut
-					<select bind:value={editForm.statut}>
-						{#each Object.entries(statutLabels) as [val, lbl] (val)}
-							<option value={val}>{lbl}</option>
-						{/each}
-					</select>
-				</label>
-				<label class="field"
-					>Bâtiment
-					<select bind:value={editForm.batiment_id}>
-						<option value={null}>— Aucun —</option>
-						{#each batimentsList as b (b.id)}
-							<option value={b.id}>Bât. {b.numero}</option>
-						{/each}
-					</select>
-				</label>
-				<label class="case" style="padding-top:1.2rem">
-					<input type="checkbox" bind:checked={editForm.actif} />
-					Compte actif
-				</label>
-			</div>
-			<div class="modal-footer">
-				<button class="btn btn-outline" on:click={() => (editUser = null)}>Annuler</button>
-				<button class="btn btn-primary" on:click={saveEdit}>Enregistrer</button>
-			</div>
+			<FormulaireUtilisateur
+				bind:editForm
+				{statutLabels}
+				{batimentsList}
+				onAnnuler={() => (editUser = null)}
+				onEnregistrer={saveEdit}
+			/>
 		</Modale>
 	{/if}
 

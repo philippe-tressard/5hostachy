@@ -94,7 +94,7 @@
       </Modale>
 -->
 <script lang="ts">
-	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { afterUpdate, createEventDispatcher, onDestroy } from 'svelte';
 
 	/**
 	 * Le titre de la boîte — **affiché ET annoncé**. Obligatoire : sans lui, un
@@ -143,8 +143,47 @@
 	 */
 	export let edition = false;
 
-	//  Le fond ne se clique pas sur une édition : voir `edition` ci-dessus.
-	$: fondFermant = fermetureAuFond && !edition;
+	/**
+	 * La boîte contient-elle un champ de saisie ? Mesuré sur le DOM rendu.
+	 *
+	 * 🔴 POURQUOI LE COMPOSANT LE DÉCIDE, ET NON L'ÉCRAN (30/08/2026, #640).
+	 *
+	 * `fermetureAuFond` et `edition` existaient tous deux pour protéger une
+	 * saisie d'un clic à côté. Les deux sont des **déclarations** — il faut y
+	 * penser. Relevé sur l'écran d'administration : **trois** modales portant
+	 * respectivement 8, 3 et 2 champs de saisie, et **aucune des trois** ne
+	 * l'avait posée. Un clic à côté effaçait la saisie, sans confirmation ni
+	 * moyen de la retrouver.
+	 *
+	 * Trois sur trois, ce n'est pas de l'inattention : c'est qu'une protection
+	 * qui dépend d'un geste qu'on peut oublier ne protège que ceux qui y ont
+	 * pensé. La même leçon que la prop `marge` d'`EntetePage` — *tant que le
+	 * mécanisme d'exception existe, l'exception se reproduit*.
+	 *
+	 * Or ce n'est pas une décision d'écran : **c'est une propriété du contenu.**
+	 * Une boîte qui contient une saisie ne se ferme pas au clic sur le fond, et
+	 * le composant est le seul à pouvoir le savoir pour tout le monde à la fois.
+	 *
+	 * ⚠️ Mesuré `afterUpdate` et non au seul montage : le contenu d'une modale
+	 * est souvent conditionnel (un champ qui n'apparaît qu'une fois une option
+	 * choisie). Une mesure unique au montage manquerait exactement ces cas-là,
+	 * et se tromperait dans le sens dangereux.
+	 *
+	 * La garde `!==` est nécessaire, pas décorative : `afterUpdate` qui écrit un
+	 * état déclenche un rendu, donc `afterUpdate` à nouveau. Sans elle, la
+	 * boucle ne converge pas.
+	 */
+	let boite: HTMLElement | undefined;
+	let contientSaisie = false;
+	afterUpdate(() => {
+		const trouve = !!boite?.querySelector('input, textarea, select');
+		if (trouve !== contientSaisie) contientSaisie = trouve;
+	});
+
+	//  Le fond ne se clique ni sur une édition (déclarée), ni sur une saisie
+	//  (constatée). `fermetureAuFond={false}` reste utile pour une modale sans
+	//  champ qu'on veut néanmoins protéger d'un clic distrait.
+	$: fondFermant = fermetureAuFond && !edition && !contientSaisie;
 
 	const dispatch = createEventDispatcher<{ fermer: void }>();
 
@@ -189,6 +228,7 @@
 
 <div class="modal-overlay" role="presentation" on:click|self={() => fondFermant && fermer()}>
 	<div
+		bind:this={boite}
 		class={classeBoite}
 		style={styleBoite}
 		role="dialog"

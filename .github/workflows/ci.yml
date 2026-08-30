@@ -727,6 +727,13 @@ jobs:
           node scripts/check-charge-utile.mjs --selftest
           node scripts/check-modificateurs.mjs --selftest
           node scripts/lib-commentaires.mjs --selftest
+          # 🔒 Une modale qui contient une saisie ne se ferme pas au clic sur le
+          # fond. La protection reposait sur deux déclarations que l'écran devait
+          # penser à poser — trois modales d'administration portant 8, 3 et 2
+          # champs ne les avaient posées ni l'une ni l'autre (#640). Elle vit
+          # maintenant dans le composant ; ce test éprouve sa décision, et échoue
+          # si la détection qui l'alimente disparaît.
+          node scripts/check-fermeture-modale.mjs --selftest
           # 🔴 Porte les fonctions pures de `lint:styles` ET de `lint:classes-nues`,
           # expose un `--selftest` depuis sa création… que RIEN ne lançait (#562).
           # Le module le plus partagé du lot était le seul non éprouvé.

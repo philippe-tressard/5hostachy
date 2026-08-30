@@ -175,10 +175,26 @@ const MOTIFS = [
 ];
 
 /**
- * Les `<Modale>` d'un fichier : la balise ouvrante et le début de son contenu.
+ * Les `<Modale>` d'un fichier : la balise ouvrante et **son contenu réel**.
  *
  * La fin de la balise est le premier `>` HORS accolade — un attribut peut
  * contenir `=>` ou un objet, que suivre naïvement couperait trop tôt.
+ *
+ * 🔴 LE CONTENU EST BORNÉ PAR `</Modale>`, ET NON PAR UNE FENÊTRE DE N
+ * CARACTÈRES (30/08/2026). Il l'était : « les 1200 caractères qui suivent ».
+ * C'est une approximation, et elle se trompe **dans les deux sens** :
+ *
+ *   - trop court, elle rate un formulaire situé plus bas dans une longue modale ;
+ *   - trop long, elle déborde sur la modale SUIVANTE — et c'est ce qui est
+ *     arrivé le jour où un composant de formulaire a été monté dans la seconde
+ *     de deux modales voisines : le contrôle a accusé la première, une simple
+ *     confirmation sans le moindre champ.
+ *
+ * ⚠️ Un contrôle qui crie sur du légitime finit désarmé (leçon de C16). Ici il
+ * aurait fallu déclarer `edition` sur une boîte de confirmation — c'est-à-dire
+ * mentir sur le geste pour faire taire le contrôle.
+ *
+ * La borne équilibrée coûte deux lignes et supprime la classe entière.
  */
 function modales(contenu) {
 	const sorties = [];
@@ -191,7 +207,22 @@ function modales(contenu) {
 			else if (c === '}') accolades--;
 			else if (c === '>' && accolades === 0) break;
 		}
-		sorties.push({ balise: contenu.slice(m.index, i + 1), suite: contenu.slice(i + 1, i + 1200) });
+		//  Fermeture ÉQUILIBRÉE : une modale peut en contenir une autre (une
+		//  confirmation par-dessus un formulaire). Prendre le premier `</Modale>`
+		//  couperait alors le contenu de la première au milieu.
+		let j = i + 1;
+		let profondeur = 1;
+		const jetons = /<Modale(?=[\s>])|<\/Modale>/g;
+		jetons.lastIndex = j;
+		let t;
+		while ((t = jetons.exec(contenu)) !== null) {
+			profondeur += t[0] === '</Modale>' ? -1 : 1;
+			if (profondeur === 0) break;
+		}
+		//  Modale non fermée (fin de fichier) : on prend ce qui reste plutôt que
+		//  rien — se taire sur un balisage incomplet serait le pire des deux.
+		const fin = t ? t.index : contenu.length;
+		sorties.push({ balise: contenu.slice(m.index, i + 1), suite: contenu.slice(i + 1, fin) });
 	}
 	return sorties;
 }
