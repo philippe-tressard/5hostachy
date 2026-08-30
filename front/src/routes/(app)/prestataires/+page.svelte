@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import ChampsContrat from '$lib/components/ChampsContrat.svelte';
 	import DocumentsContrat from '$lib/components/DocumentsContrat.svelte';
@@ -309,7 +310,7 @@
 	}
 
 	async function deleteReleve(id: number) {
-		if (!confirm('Supprimer ce relevé ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce relevé')))) return;
 		try {
 			await prestApi.deleteReleve(id);
 			releves = releves.filter((r) => r.id !== id);
@@ -366,7 +367,7 @@
 	}
 
 	async function deleteCompteurConfig(cfg: any) {
-		if (!confirm(`Supprimer la catégorie « ${cfg.label} » ?`)) return;
+		if (!(await confirmer(SUPPRESSION(`La catégorie « ${cfg.label} »`)))) return;
 		try {
 			await prestApi.deleteCompteurConfig(cfg.id);
 			compteurConfigs = compteurConfigs.filter((c) => c.id !== cfg.id);
@@ -541,7 +542,7 @@
 	}
 
 	async function deletePrest(id: number) {
-		if (!confirm('Archiver ce prestataire ?')) return;
+		if (!(await confirmer('Archiver ce prestataire ?'))) return;
 		try {
 			await prestApi.delete(id);
 			prestataires = prestataires.filter((p) => p.id !== id);
@@ -658,7 +659,7 @@
 	}
 
 	async function deleteDoc(contratId: number, docId: number) {
-		if (!confirm('Supprimer ce document ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce document')))) return;
 		try {
 			await docsApi.delete(docId);
 			contratDocsMap = { ...contratDocsMap, [contratId]: await docsApi.list(undefined, contratId) };
@@ -669,7 +670,7 @@
 	}
 
 	async function deleteContrat(id: number) {
-		if (!confirm('Archiver ce contrat ?')) return;
+		if (!(await confirmer('Archiver ce contrat ?'))) return;
 		try {
 			await prestApi.deleteContrat(id);
 			contrats = contrats.filter((c) => c.id !== id);

@@ -30,8 +30,8 @@ import { fileURLToPath } from 'node:url';
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 
-/** Le compte au 29/08/2026, après conversion de l'écran Calendrier. */
-const PLAFOND = 41;
+/** Le compte au 30/08/2026, après conversion de `residence` et `prestataires`. */
+const PLAFOND = 31;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de
@@ -59,7 +59,28 @@ if (tous.length < 50) {
 	process.exit(1);
 }
 
+/**
+ * 🔴 `confirmer()` rend une **promesse**. Sans `await`, l'appel est *truthy* :
+ *
+ *     if (!confirmer('Supprimer ?')) return;     // ← ne retourne JAMAIS
+ *
+ * Le geste s'exécute alors **sans que personne ait confirmé**, et rien ne le
+ * dit : pas d'erreur, pas de journal, une boîte qui s'affiche puis disparaît
+ * pendant que la suppression est déjà partie.
+ *
+ * C'est le risque que la conversion des quarante `confirm()` natifs introduit à
+ * chaque écran repris — la forme native, elle, était synchrone. Le contrôle est
+ * donc **préventif** : il n'y a aucun appel fautif aujourd'hui, et c'est
+ * précisément le moment de le poser.
+ *
+ * ⚠️ Motif volontairement étroit : `confirmer(` non précédé de `await`. Une
+ * affectation différée (`const p = confirmer(…)`) n'existe nulle part et serait
+ * un usage à instruire, pas à tolérer en silence.
+ */
+const APPELS_SANS_AWAIT = /(?<!await\s{1,4})\bconfirmer\s*\(/;
+
 const releve = [];
+const sansAwait = [];
 for (const chemin of tous) {
 	const rel = relative(SOURCE, chemin).split(sep).join('/');
 	if (HORS_RELEVE.includes(rel)) continue;
@@ -67,7 +88,23 @@ for (const chemin of tous) {
 	lignes.forEach((ligne, i) => {
 		//  `confirmer(` est le remplacement : il ne doit pas compter.
 		if (/\bconfirm\s*\(/.test(ligne)) releve.push(`${rel}:${i + 1}`);
+		//  `confirmer(` sans `await` — le geste part sans confirmation.
+		if (/\bconfirmer\s*\(/.test(ligne) && APPELS_SANS_AWAIT.test(ligne)) {
+			sansAwait.push(`${rel}:${i + 1} — ${ligne.trim().slice(0, 70)}`);
+		}
 	});
+}
+
+if (sansAwait.length) {
+	console.error(
+		`\n✗ ${sansAwait.length} appel(s) à \`confirmer()\` SANS \`await\` :\n\n` +
+			sansAwait.map((l) => `   ${l}`).join('\n') +
+			'\n\n  🔴 `confirmer()` rend une PROMESSE : sans `await`, elle est toujours' +
+			'\n  *truthy*, la garde ne retourne jamais, et le geste part SANS que personne' +
+			'\n  ait confirmé. Rien ne le signale — ni erreur, ni journal.\n' +
+			"\n  La forme : `if (!(await confirmer('…'))) return;`\n",
+	);
+	process.exit(1);
 }
 
 if (releve.length > PLAFOND) {
