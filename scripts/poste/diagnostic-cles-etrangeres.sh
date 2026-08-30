@@ -99,7 +99,19 @@ CORPS="${REP%|*}"
 
 case "$(verdict_orphelins "$CODE" "$CORPS")" in
   SAIN)
-    echo "✓ Aucune ligne orpheline — la base peut recevoir foreign_keys=ON."
+    #  Deux faits DISTINCTS, et les confondre a un coût : « rien d'orphelin »
+    #  décrit ce que la base contient, « clés actives » ce qu'elle refusera
+    #  demain. Un relevé à zéro sur une base sans clés n'est pas une victoire,
+    #  c'est un sursis.
+    case "$CORPS" in
+      *'"cles_actives":true'*|*'"cles_actives": true'*)
+        echo "✓ Aucune ligne orpheline, et les clés étrangères sont ACTIVES." ;;
+      *'"cles_actives"'*)
+        echo "⚠ Aucune ligne orpheline, mais les clés étrangères sont INACTIVES."
+        echo "  La base est saine et rien ne la maintiendra ainsi." ;;
+      *)
+        echo "✓ Aucune ligne orpheline — état des clés non rendu par l'API." ;;
+    esac
     ;;
   ORPHELINS)
     echo "🔴 Des lignes orphelines subsistent — à traiter AVANT d'activer les clés :"

@@ -293,3 +293,24 @@ def test_une_base_saine_ne_declenche_aucune_suppression(admin_et_ticket):
     assert resultat["ok"] is True
     assert resultat["supprimees"] == 0
     assert resultat["par_table"] == []
+
+
+def test_le_releve_dit_si_les_cles_sont_ACTIVES(admin_et_ticket):
+    """Deux faits distincts, et les confondre a un coût.
+
+    « Aucune ligne orpheline » décrit ce que la base CONTIENT. « Clés actives »
+    décrit ce qu'elle REFUSERA demain. Un relevé à zéro sur une base sans clés
+    n'est pas une victoire, c'est un sursis — et c'est exactement l'état dans
+    lequel la production a vécu jusqu'au 30/08/2026.
+
+    ⚠️ Sans ce champ, on ne pouvait pas vérifier que l'activation avait pris :
+    `activer_cles_etrangeres` ne prend PAS effet s'il est appelé après le bloc
+    d'amorçage, et rien ne le dit (cf. `app/database.py`).
+    """
+    from app.utils.diagnostic_cles import compter_orphelins
+
+    resultat = compter_orphelins(engine)
+    assert "cles_actives" in resultat, "le relevé doit dire dans quel RÉGIME il a mesuré"
+    #  La suite tourne clés actives (conftest) : le champ doit le refléter, sinon
+    #  il ne mesure pas ce qu'il prétend.
+    assert resultat["cles_actives"] is True
