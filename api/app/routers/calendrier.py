@@ -18,6 +18,7 @@ from app.routers.calendrier_historique import (
     _evolutions_de,
 )
 from app.utils.liens import lien_element
+from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
 from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import evenement_visible
 
@@ -343,5 +344,20 @@ def delete_evenement(
     ev = session.get(Evenement, ev_id)
     if not ev:
         raise HTTPException(404, "Événement introuvable")
+    #  🔴 L'ÉVÉNEMENT PARTAIT SEUL (#546, 30/08/2026). Deux tables le
+    #  référencent, aucune n'était nettoyée : `evenement_evolution` (**NOT
+    #  NULL** — tout l'historique) et `document`. Sans les clés — le régime
+    #  actuel de la production — la suppression réussit et laisse des lignes
+    #  orphelines ; celles de l'historique sont même irrécupérables, leur
+    #  `evenement_id` étant obligatoire. Rien ne le signalait.
+    #  Le `flush()` ordonne les DELETE ; le pourquoi vit dans
+    #  `utils/suppression_liee.py`.
+    evolutions = session.exec(
+        select(EvenementEvolution).where(EvenementEvolution.evenement_id == ev_id)
+    ).all()
+    for evol in evolutions:
+        session.delete(evol)
+    n_docs = supprimer_documents_de(session, "evenement_id", ev_id)
+    flush_si_necessaire(session, len(evolutions), n_docs)
     session.delete(ev)
     session.commit()

@@ -22,18 +22,27 @@ from app.models.core import (
 )
 from app.schemas import TicketCreate, TicketRead, TicketUpdate
 from app.utils.fichiers import chemins_locaux
+from app.utils.suppression_liee import (
+    flush_si_necessaire,
+    supprimer_documents_de,
+    supprimer_lignes_liees,
+)
 from app.utils.liens import lien_ticket
 from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import ticket_visible
 
 from .commun import (
     STATUT_LABELS,
-    config_site,
     generer_numero,
     ticket_read,
 )
 from .correction import _appliquer_contenu, _appliquer_relations, _envoye
-from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
+from .courriels import (
+    _alerter_bug,
+    _partager_sur_le_groupe,
+    envoyer_email_externe,
+    envoyer_email_syndic_cs,
+)
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
 #  chemin VIDE (`GET /tickets`, `POST /tickets`), et FastAPI refuse un chemin
@@ -83,67 +92,6 @@ def _notifier_cs_creation(session: Session, ticket: Ticket, urgence: bool) -> No
             lien=lien_ticket(ticket.id),
             urgente=urgence,
         ))
-
-
-def _alerter_bug(
-    session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks
-) -> None:
-    """Un ticket « bug » prévient le gestionnaire du site : c'est du ressort admin."""
-    cfg = config_site(session, "notify_ticket_bug_email", "site_email", "site_manager_user_id")
-    if cfg.get("notify_ticket_bug_email") != "1":
-        return
-
-    from app.utils.email import get_site_manager_notification_email, send_email
-
-    target_email, site_cfg = get_site_manager_notification_email(session)
-    if not target_email:
-        return
-    background_tasks.add_task(
-        send_email,
-        code="ticket_bug_admin",
-        to=target_email,
-        context={
-            "ticket": {
-                "id": ticket.id,
-                "numero": ticket.numero,
-                "titre": ticket.titre,
-                "description": ticket.description,
-                "categorie": ticket.categorie,
-            },
-            "auteur": {"prenom": user.prenom, "nom": user.nom, "email": user.email},
-            "residence": {"nom": site_cfg.get("site_nom") or cfg.get("site_nom") or "5Hostachy"},
-            "app": {"url": site_cfg.get("site_url") or cfg.get("site_url") or "https://localhost"},
-        },
-    )
-
-
-def _partager_sur_le_groupe(
-    session: Session, ticket: Ticket, background_tasks: BackgroundTasks
-) -> None:
-    """Publie le ticket sur le groupe WhatsApp, première photo comprise.
-
-    L'autorisation est vérifiée par l'appelant : le groupe diffuse à tous les
-    résidents, il n'est pas ouvert à l'auteur d'un ticket quelconque.
-    """
-    from app.utils.fichiers import est_image
-    from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
-
-    wa_config = config_whatsapp(session)
-    if not whatsapp_actif(wa_config):
-        return
-    #  La première photo accompagne le message, comme l'image d'une actualité :
-    #  sur une fuite ou une dégradation, c'est elle qui porte l'information. Les
-    #  documents joints ne partent pas — le bridge n'envoie qu'une image.
-    premiere_photo = next((u for u in parse_photos(ticket.photos_urls) if est_image(u)), None)
-    background_tasks.add_task(
-        envoyer_whatsapp_avec_log,
-        f"\U0001f3ab {ticket.titre}",
-        ticket.description,
-        ticket.categorie == "urgence",
-        ticket.perimetre_cible,
-        premiere_photo,
-        wa_config,
-    )
 
 
 @router.post("", response_model=TicketRead, status_code=201)
@@ -487,9 +435,11 @@ def delete_ticket(
     ticket = session.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket introuvable")
-    for evol in list(ticket.evolutions):
-        session.delete(evol)
-    for msg in list(ticket.messages):
-        session.delete(msg)
+    #  Tout ce qui n'existe que par ce ticket part avec lui. Les DOCUMENTS
+    #  manquaient (#546) : un document joint n'a plus d'objet sans son porteur.
+    #  Le `flush()` ordonne les DELETE — pourquoi : `utils/suppression_liee.py`.
+    enfants = supprimer_lignes_liees(session, ticket.evolutions, ticket.messages)
+    docs = supprimer_documents_de(session, "ticket_id", ticket_id)
+    flush_si_necessaire(session, enfants, docs)
     session.delete(ticket)
     session.commit()
