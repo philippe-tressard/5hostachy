@@ -81,3 +81,94 @@ def compter_orphelins(engine) -> dict:
             for (t, c, p), n in sorted(detail.items(), key=lambda x: -x[1])
         ],
     }
+
+
+def purger_orphelins(engine, *, simuler: bool = True) -> dict:
+    """Supprimer les lignes qui référencent un parent disparu.
+
+    ## 🔴 SIMULATION PAR DÉFAUT, et ce n'est pas une politesse
+
+    `simuler=True` rend exactement ce qui SERAIT supprimé, sans rien toucher.
+    L'appelant doit demander la suppression explicitement. Une opération
+    irréversible dont le mode destructeur est le défaut finit par s'exécuter par
+    accident — au premier appel de vérification, au premier rechargement d'un
+    écran.
+
+    ## Ce qu'elle supprime, et rien d'autre
+
+    **Uniquement les `rowid` que `PRAGMA foreign_key_check` désigne.** Pas une
+    requête « toutes les lignes dont le parent est absent » réécrite à la main :
+    c'est SQLite qui dit lesquelles, et on lui obéit ligne par ligne.
+
+    La différence n'est pas théorique. Une jointure écrite à la main se trompe
+    sur les clés composites, sur les colonnes nullables (`NULL` ne référence
+    rien, donc n'est jamais orpheline), et sur les tables sans clé primaire
+    déclarée. Le PRAGMA, lui, applique la définition du moteur.
+
+    ⚠️ **Le `rowid` ne sort jamais de cette fonction** : il sert à supprimer,
+    il n'est pas rendu. Le canal des scripts est borné à « aucune donnée de
+    copropriétaire », et un rowid désigne une ligne précise.
+
+    ## Pourquoi une seule transaction
+
+    Toutes les suppressions, ou aucune. Une purge à moitié faite laisserait la
+    base dans un état que le relevé suivant décrirait mal, et il n'y a aucune
+    raison de la fractionner : on parle de dizaines de lignes, pas de millions.
+
+    ## Pourquoi les clés restent DÉSACTIVÉES pendant l'opération
+
+    Supprimer une ligne orpheline ne viole aucune contrainte — mais deux
+    orphelines peuvent se référencer l'une l'autre, et l'ordre des suppressions
+    deviendrait alors significatif. On ne s'impose pas cette contrainte pour
+    retirer des lignes qui, par définition, ne sont plus référencées par rien de
+    valide.
+
+    ⚠️ Le PRAGMA est reposé dans un `finally` : il vaut pour la CONNEXION, et
+    la laisser modifiée contaminerait tout ce qui la réutilise ensuite. C'est le
+    piège qui a désarmé la suite de tests entière le 30/08/2026.
+    """
+    from sqlalchemy import text
+
+    try:
+        with engine.connect() as conn:
+            lignes = conn.execute(text("PRAGMA foreign_key_check")).fetchall()
+            if not lignes:
+                return {"ok": True, "inconnu": False, "simule": simuler,
+                        "supprimees": 0, "par_table": []}
+
+            #  Ce qui SERAIT (ou vient d'être) supprimé, par table — le compte
+            #  que l'appelant lit, avant comme après.
+            par_table = Counter(ligne[0] for ligne in lignes)
+            resume = [{"table": t, "lignes": n}
+                      for t, n in sorted(par_table.items(), key=lambda x: -x[1])]
+
+            if simuler:
+                return {"ok": True, "inconnu": False, "simule": True,
+                        "supprimees": 0, "seraient_supprimees": len(lignes),
+                        "par_table": resume}
+
+            etat_cles = conn.execute(text("PRAGMA foreign_keys")).scalar()
+            try:
+                conn.execute(text("PRAGMA foreign_keys=OFF"))
+                for table, rowid, _parent, _fkid in lignes:
+                    #  Le nom de table vient des métadonnées de SQLite, pas d'une
+                    #  entrée utilisateur — mais il est quand même encadré par des
+                    #  guillemets doubles, et le rowid passe en PARAMÈTRE LIÉ.
+                    #  Aucune valeur d'appelant n'entre dans cette requête.
+                    conn.execute(
+                        text(f'DELETE FROM "{table}" WHERE rowid = :r'), {"r": rowid}
+                    )
+                conn.commit()
+            finally:
+                #  Rétablir l'état d'ORIGINE, pas « ON » : la production tourne
+                #  encore à OFF, et forcer ON ici changerait le régime de la
+                #  connexion à l'insu de tout le monde.
+                conn.execute(text(f"PRAGMA foreign_keys={'ON' if etat_cles else 'OFF'}"))
+                conn.commit()
+
+            return {"ok": True, "inconnu": False, "simule": False,
+                    "supprimees": len(lignes), "par_table": resume}
+    except Exception as exc:  # pragma: no cover - éprouvé par un moteur simulé
+        #  INCONNU, jamais « 0 supprimée » : une purge qui échoue à mi-chemin
+        #  doit se dire, sinon l'appelant croirait la base assainie.
+        return {"ok": False, "inconnu": True, "erreur": str(exc)}

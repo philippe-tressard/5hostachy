@@ -9,6 +9,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireUtilisateur from '$lib/components/FormulaireUtilisateur.svelte';
+	import IntegriteReferentielle from '$lib/components/IntegriteReferentielle.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
 	import LegalEditor from '$lib/components/LegalEditor.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
@@ -1387,6 +1388,7 @@
       profondeur d'historique y passe de 4 à 10 : retirer les cartes sans
       compenser aurait réduit en silence ce qu'un administrateur peut voir. -->
 	<TachesPlanifiees />
+	<IntegriteReferentielle />
 {:else if onglet === 'emails'}
 	<OngletModelesEmail />
 {:else if onglet === 'site'}

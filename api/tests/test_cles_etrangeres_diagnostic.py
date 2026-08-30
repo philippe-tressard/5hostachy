@@ -74,7 +74,14 @@ def admin_et_ticket():
         yield session, admin, ticket, evol
 
         #  Nettoyage : l'orphelin éventuel d'abord, sinon le ticket ne part pas.
+        #
+        #  ⚠️ `expire_all()` est NÉCESSAIRE : la purge supprime des lignes par SQL
+        #  direct, sans passer par la session. Les objets qu'elle tient en cache
+        #  désignent alors des lignes disparues, et `session.delete()` lève
+        #  `ObjectDeletedError` — une erreur de teardown qu'on lirait comme un
+        #  échec du test.
         session.rollback()
+        session.expire_all()
         for e in session.exec(select(TicketEvolution).where(TicketEvolution.auteur_id == admin.id)).all():
             session.delete(e)
         for t in session.exec(select(Ticket).where(Ticket.auteur_id == admin.id)).all():
@@ -162,3 +169,127 @@ def test_une_mesure_impossible_rend_INCONNU_et_non_zero(monkeypatch):
     assert resultat["inconnu"] is True
     assert resultat["ok"] is False
     assert "orphelins" not in resultat, "ne pas rendre un compte qu'on n'a pas mesuré"
+
+
+# ── La PURGE ─────────────────────────────────────────────────────────────────
+#
+#  🔴 Une opération irréversible sur la base de production. Ce que ces tests
+#  doivent établir, dans l'ordre d'importance :
+#
+#    1. elle ne touche PAS les lignes saines — c'est le risque majeur ;
+#    2. la simulation ne supprime rien — c'est le mode par défaut ;
+#    3. elle supprime bien les orphelines, et rend un compte juste.
+#
+#  Le premier est le seul dont l'échec serait irrattrapable en production.
+
+
+def _orpheliner(session, ticket_id: int) -> None:
+    """Faire disparaître un ticket sans ses évolutions — le régime de la production."""
+    session.commit()
+    with engine.connect() as conn:
+        conn.execute(text("PRAGMA foreign_keys=OFF"))
+        try:
+            conn.execute(text("DELETE FROM ticket WHERE id = :i"), {"i": ticket_id})
+            conn.commit()
+        finally:
+            #  Cf. le commentaire du test plus haut : le PRAGMA vaut pour la
+            #  connexion, et le pool de `:memory:` n'en a qu'une.
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.commit()
+
+
+def test_la_simulation_ne_supprime_RIEN(admin_et_ticket):
+    """Le mode par défaut. Il rend le compte de ce qui partirait, et laisse tout."""
+    from app.utils.diagnostic_cles import purger_orphelins
+
+    session, _admin, ticket, evol = admin_et_ticket
+    #  ⚠️ Les identifiants sont relevés AVANT : `rollback()` expire les objets,
+    #  et lire un attribut d'une ligne disparue déclenche un rafraîchissement
+    #  qui lève `ObjectDeletedError` — une erreur de plomberie qu'on lirait
+    #  comme un échec du test.
+    evol_id = evol.id
+    _orpheliner(session, ticket.id)
+
+    resultat = purger_orphelins(engine)  # simuler=True par défaut
+    assert resultat["simule"] is True
+    assert resultat["supprimees"] == 0
+    assert resultat["seraient_supprimees"] >= 1
+
+    session.rollback()
+    assert session.get(TicketEvolution, evol_id) is not None, (
+        "la simulation a supprimé une ligne — le mode par défaut doit être inoffensif"
+    )
+
+
+def test_la_purge_supprime_les_orphelines_et_rend_un_compte_juste(admin_et_ticket):
+    """Le cas nominal, avec le compte par table que l'écran affichera."""
+    from app.utils.diagnostic_cles import compter_orphelins, purger_orphelins
+
+    session, _admin, ticket, evol = admin_et_ticket
+    evol_id = evol.id
+    _orpheliner(session, ticket.id)
+    avant = compter_orphelins(engine)["orphelins"]
+
+    resultat = purger_orphelins(engine, simuler=False)
+    assert resultat["simule"] is False
+    assert resultat["supprimees"] == avant
+    assert {t["table"] for t in resultat["par_table"]} >= {"ticket_evolution"}
+
+    session.rollback()
+    assert session.get(TicketEvolution, evol_id) is None
+    #  Et la base est réellement assainie — vérifié par la MESURE, pas par le
+    #  retour de la fonction qui vient de la modifier.
+    assert compter_orphelins(engine)["orphelins"] == 0
+
+
+def test_la_purge_NE_TOUCHE_PAS_les_lignes_saines(admin_et_ticket):
+    """🔴 LE TEST QUI COMPTE — celui dont l'échec serait irrattrapable.
+
+    Un second ticket, intact, avec son évolution. La purge doit l'ignorer
+    complètement : elle ne supprime que les `rowid` que SQLite désigne, jamais
+    « toutes les lignes qui ressemblent à des orphelines ».
+    """
+    from app.models.core import Ticket
+    from app.utils.diagnostic_cles import purger_orphelins
+
+    session, admin, ticket, evol = admin_et_ticket
+    evol_id = evol.id
+
+    sain = Ticket(
+        numero="TK-SAIN-1", titre="T", description="d", categorie="panne", auteur_id=admin.id
+    )
+    session.add(sain)
+    session.commit()
+    session.refresh(sain)
+    evol_saine = TicketEvolution(
+        ticket_id=sain.id, auteur_id=admin.id, type="commentaire", contenu="intacte"
+    )
+    session.add(evol_saine)
+    session.commit()
+    session.refresh(evol_saine)
+    sain_id, evol_saine_id = sain.id, evol_saine.id
+
+    _orpheliner(session, ticket.id)
+    purger_orphelins(engine, simuler=False)
+
+    session.rollback()
+    assert session.get(Ticket, sain_id) is not None, "un ticket sain a été supprimé"
+    survivante = session.get(TicketEvolution, evol_saine_id)
+    assert survivante is not None, "une évolution SAINE a été supprimée par la purge"
+    assert survivante.contenu == "intacte"
+    assert session.get(TicketEvolution, evol_id) is None, "l'orpheline, elle, devait partir"
+
+    session.delete(survivante)
+    session.commit()
+    session.delete(session.get(Ticket, sain_id))
+    session.commit()
+
+
+def test_une_base_saine_ne_declenche_aucune_suppression(admin_et_ticket):
+    """Le cas zéro : rien à purger ne doit pas produire d'écriture ni d'erreur."""
+    from app.utils.diagnostic_cles import purger_orphelins
+
+    resultat = purger_orphelins(engine, simuler=False)
+    assert resultat["ok"] is True
+    assert resultat["supprimees"] == 0
+    assert resultat["par_table"] == []
