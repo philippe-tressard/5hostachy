@@ -252,3 +252,74 @@ def test_la_suite_TOURNE_avec_les_cles_actives():
         "les 873 tests tournent sans vérifier une seule des 119 clés déclarées, "
         "et rien d'autre ne le dirait (#546)."
     )
+
+
+def test_le_moteur_DE_L_APPLICATION_active_les_cles(tmp_path):
+    """🔴 Le test précédent ne prouve PAS celui-ci, et c'est tout l'enjeu.
+
+    `test_la_suite_TOURNE_avec_les_cles_actives` mesure le moteur de la SUITE,
+    dont les clés sont posées par `conftest.pytest_configure`. Il resterait vert
+    si `app/database.py` cessait de les activer : la production tournerait sans
+    clés, et rien ne le dirait.
+
+    Ce test-ci importe `app.database` dans un **sous-processus sans conftest**,
+    et lit le PRAGMA sur une connexion réelle. C'est le seul montage qui mesure
+    ce que fait le module pour de vrai.
+
+    ## Ce qu'il verrouille précisément
+
+    L'écouteur ne s'exécute qu'à l'OUVERTURE d'une connexion. Le bloc d'amorçage
+    de `database.py` en ouvre une ; l'appel doit donc venir **avant** lui. Mesuré
+    le 30/08/2026 en le plaçant après :
+
+        appel APRÈS l'amorçage   → PRAGMA foreign_keys = 0
+        appel AVANT l'amorçage   → PRAGMA foreign_keys = 1
+
+    Déplacer cette ligne de vingt lignes suffit à désactiver les clés en
+    production — sans qu'aucun test, aucun lint ni aucun démarrage ne bronche.
+    C'est le piège que le docstring de `activer_cles_etrangeres` décrit, et qu'on
+    peut refaire en la branchant.
+
+    ⚠️ On vérifie AUSSI `synchronous` et `busy_timeout` : le `engine.dispose()`
+    de la fonction recycle la connexion, et l'on doit établir qu'il n'emporte pas
+    la durabilité choisie après les corruptions de juin 2026.
+    """
+    import json
+    import pathlib
+    import subprocess
+    import sys
+
+    programme = (
+        "import os, json;"
+        "os.environ['DATABASE_URL'] = 'sqlite:///' + %r;"
+        "from sqlalchemy import text;"
+        "from app.database import engine;"
+        "c = engine.connect();"
+        "print(json.dumps({p: c.execute(text('PRAGMA ' + p)).scalar()"
+        " for p in ('foreign_keys', 'synchronous', 'busy_timeout')}))"
+    ) % str(tmp_path / "essai.db").replace("\\", "/")
+
+    api = pathlib.Path(__file__).resolve().parents[1]
+    sortie = subprocess.run(
+        [sys.executable, "-c", programme],
+        cwd=str(api),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert sortie.returncode == 0, (
+        "l'import de `app.database` a échoué dans un processus neuf — "
+        f"c'est ce que fait le conteneur au démarrage.\n{sortie.stderr[-2000:]}"
+    )
+    reglages = json.loads(sortie.stdout.strip().splitlines()[-1])
+
+    assert reglages["foreign_keys"] == 1, (
+        "le moteur de l'APPLICATION ne pose pas `foreign_keys=ON`. Vérifier que "
+        "`activer_cles_etrangeres(engine)` est appelé AVANT le bloc d'amorçage de "
+        "`app/database.py` : après, l'écouteur ne prend pas effet (#546)."
+    )
+    assert reglages["synchronous"] == 2, (
+        "`synchronous=FULL` a été perdu — le `dispose()` de l'activation des clés "
+        "a emporté la durabilité posée après les corruptions de juin 2026."
+    )
+    assert reglages["busy_timeout"] == 5000, "`busy_timeout` a été perdu"
