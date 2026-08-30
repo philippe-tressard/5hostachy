@@ -899,6 +899,22 @@ label.field {
 .filters--defilante > * {
 	flex-shrink: 0;
 }
+/*  ── Rangée à HAUTEURS ÉGALES ──
+    Arbitré à l'écran le 30/08/2026 : *« mets la hauteur des vignettes à la même
+    hauteur même si le sous-texte n'est que sur une seule ligne »*.
+
+    Une rangée de pastilles à sous-texte mélange des descriptions d'une et de deux
+    lignes : « Bruit, odeur, parking… » contre « Équipement défectueux, ascenseur,
+    chauffage… ». Avec l'`align-items: center` du défaut, les pastilles courtes
+    flottent au milieu de la rangée et l'œil ne trouve plus de ligne de base — ce
+    ne sont plus des voisines, ce sont des blocs posés au hasard.
+
+    ⚠️ Variante NOMMÉE, comme `--defilante` : elle ne s'hérite pas. Une rangée de
+    pastilles SANS sous-texte a déjà des hauteurs égales — l'étirement n'y
+    changerait rien, mais l'écrire partout ferait croire qu'il y sert. */
+.filters--egalisee {
+	align-items: stretch;
+}
 .filter-select {
 	padding: 0.35rem 0.5rem;
 	border: 1px solid var(--color-border);

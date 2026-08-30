@@ -1,13 +1,13 @@
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import ChampsContrat from '$lib/components/ChampsContrat.svelte';
+	import DocumentsContrat from '$lib/components/DocumentsContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import AjoutDocumentContrat from '$lib/components/AjoutDocumentContrat.svelte';
 	import { onMount } from 'svelte';
 	import { prestataires as prestApi, documents as docsApi, ApiError } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
@@ -763,36 +763,12 @@
 				<ChampsContrat bind:contratForm {prestataires} {equipements} />
 				{#if editContratId}
 					<div style="margin-top:.8rem">
-						<div style="font-size:.85rem;font-weight:600;margin-bottom:.4rem">
-							📄 Documents ({contratDocsMap[editContratId]?.length ?? 0})
-						</div>
-						{#if contratDocsMap[editContratId]?.length > 0}
-							{#each contratDocsMap[editContratId] as doc}
-								<div
-									style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
-								>
-									<a href={docsApi.downloadUrl(doc.id)} target="_blank"
-										>📎 {doc.titre || doc.fichier_nom}</a
-									>
-									<span style="font-size:.75rem;color:var(--color-text-muted)"
-										>{fmtDateShort(doc.publie_le)}</span
-									>
-									<button
-										class="btn-icon-danger"
-										title="Supprimer"
-										style="margin-left:auto"
-										on:click|stopPropagation={() => deleteDoc(editContratId ?? 0, doc.id)}
-										>🗑️</button
-									>
-								</div>
-							{/each}
-						{:else}
-							<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">Aucun document.</p>
-						{/if}
-						<AjoutDocumentContrat
-							id="contrat-edit-doc"
+						<DocumentsContrat
 							contratId={editContratId ?? 0}
-							on:ajoute={() => rechargerDocs(editContratId ?? 0)}
+							documents={contratDocsMap[editContratId ?? 0]}
+							onSupprimer={deleteDoc}
+							onAjoute={rechargerDocs}
+							idChamp="contrat-edit-doc"
 						/>
 					</div>
 				{/if}
@@ -900,37 +876,12 @@
 									<ChampsContrat bind:contratForm {prestataires} {equipements} />
 								</div>
 								<div class="contrat-section">
-									<div class="contrat-section-title">
-										📄 Documents ({contratDocsMap[c.id]?.length ?? 0})
-									</div>
-									{#if contratDocsMap[c.id]?.length > 0}
-										{#each contratDocsMap[c.id] as doc}
-											<div
-												style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
-											>
-												<a href={docsApi.downloadUrl(doc.id)} target="_blank"
-													>📎 {doc.titre || doc.fichier_nom}</a
-												>
-												<span style="font-size:.75rem;color:var(--color-text-muted)"
-													>{fmtDateShort(doc.publie_le)}</span
-												>
-												<button
-													class="btn-icon-danger"
-													title="Supprimer"
-													style="margin-left:auto"
-													on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button
-												>
-											</div>
-										{/each}
-									{:else}
-										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">
-											Aucun document.
-										</p>
-									{/if}
-									<AjoutDocumentContrat
-										id="contrat-{c.id}-doc"
+									<DocumentsContrat
 										contratId={c.id}
-										on:ajoute={() => rechargerDocs(c.id)}
+										documents={contratDocsMap[c.id]}
+										onSupprimer={deleteDoc}
+										onAjoute={rechargerDocs}
+										idChamp="contrat-{c.id}-doc"
 									/>
 								</div>
 								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
