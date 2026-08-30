@@ -53,8 +53,8 @@ import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
-/** Le compte au 30/08/2026, après les 37 clés prouvées. Il ne remonte pas. */
-const PLAFOND = 105;
+/** Le compte au 30/08/2026, après 52 clés prouvées (37 par `id`, 15 par `val`/`code`/`value`). Il ne remonte pas. */
+const PLAFOND = 90;
 
 /** En dessous, le repérage ne mord plus — le dépôt en porte ~200. */
 const PLANCHER_EACH = 150;

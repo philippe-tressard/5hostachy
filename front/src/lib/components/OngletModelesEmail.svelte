@@ -186,7 +186,7 @@
 				>
 			</thead>
 			<tbody>
-				{#each emailTemplates as tpl}
+				{#each emailTemplates as tpl (tpl.code)}
 					<tr>
 						<td><code style="font-size:.78rem">{tpl.code}</code></td>
 						<td style="font-size:.875rem">{tpl.libelle ?? tpl.nom ?? '—'}</td>

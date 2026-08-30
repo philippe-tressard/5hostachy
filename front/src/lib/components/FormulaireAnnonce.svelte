@@ -172,13 +172,13 @@
 					<div class="field">
 						<label for="annonce-type-{annonce?.id ?? 'new'}">Type</label>
 						<select id="annonce-type-{annonce?.id ?? 'new'}" bind:value={typeAnnonce}>
-							{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}
+							{#each TYPES_ANNONCE as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
 						</select>
 					</div>
 					<div class="field">
 						<label for="annonce-categorie-{annonce?.id ?? 'new'}">Catégorie</label>
 						<select id="annonce-categorie-{annonce?.id ?? 'new'}" bind:value={categorie}>
-							{#each CATEGORIES_ANNONCE as c}<option value={c.val}>{c.label}</option>{/each}
+							{#each CATEGORIES_ANNONCE as c (c.val)}<option value={c.val}>{c.label}</option>{/each}
 						</select>
 					</div>
 					{#if typeAnnonce === 'vente'}

@@ -140,7 +140,7 @@
 				<div class="field">
 					<label for="statut">Profil d'utilisateur *</label>
 					<select id="statut" bind:value={statut} required>
-						{#each statuts as s}
+						{#each statuts as s (s.value)}
 							<option value={s.value}>{s.label}</option>
 						{/each}
 					</select>

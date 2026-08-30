@@ -74,7 +74,7 @@
 	<label class="field"
 		>Équipement
 		<select bind:value={contratForm.type_equipement}>
-			{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+			{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
 		</select>
 	</label>
 	<label class="field">N° contrat<input bind:value={contratForm.numero_contrat} /></label>

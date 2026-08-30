@@ -720,7 +720,7 @@
 		class:btn-primary={filtreType === ''}
 		on:click={() => (filtreType = '')}>Tous</button
 	>
-	{#each visibleTypes as t}
+	{#each visibleTypes as t (t.val)}
 		<button
 			class="btn btn-sm"
 			class:btn-primary={filtreType === t.val}
@@ -854,7 +854,7 @@
 		<label class="kanban-exercice-label">
 			Bâtiment :
 			<select bind:value={kanbanBatiment} class="kanban-exercice-select">
-				{#each BATIMENT_OPTIONS as b}<option value={b.val}>{b.label}</option>{/each}
+				{#each BATIMENT_OPTIONS as b (b.val)}<option value={b.val}>{b.label}</option>{/each}
 			</select>
 		</label>
 		<span class="kanban-count-total"
