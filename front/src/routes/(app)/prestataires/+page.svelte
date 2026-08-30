@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
-	import ChampsContrat from '$lib/components/ChampsContrat.svelte';
-	import DocumentsContrat from '$lib/components/DocumentsContrat.svelte';
+	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
@@ -126,7 +125,11 @@
 	let submitting = false;
 
 	// ── Contrat form ──────────────────────────────────────────────
-	let contratFormPrestId: number | null = null;
+	//  Deux états, deux variables qui disent ce qu'elles sont. L'ancien
+	//  `contratFormPrestId: number | null` ne valait que `-1` ou `null` : un
+	//  booléen déguisé en identifiant, et c'est ce déguisement qui a rendu
+	//  invisible un `{#if}` toujours faux — voir `FormulaireContrat`.
+	let contratFormOuvert = false;
 	let editContratId: number | null = null;
 
 	let contratForm = {
@@ -578,12 +581,14 @@
 			const p = prestataires.find((pr) => pr.id === prestId);
 			if (p?.specialite && p.specialite !== 'autre') contratForm.type_equipement = p.specialite;
 		}
-		contratFormPrestId = prestId ?? -1;
+		contratFormOuvert = true;
 		editContratId = null;
 	}
 
+	//  Ferme les deux enveloppes — une seule est ouverte à la fois.
 	function closeContratForm() {
-		contratFormPrestId = null;
+		contratFormOuvert = false;
+		editContratId = null;
 		resetContratForm();
 	}
 
@@ -604,7 +609,7 @@
 			notes: c.notes ?? '',
 		};
 		editContratId = c.id;
-		contratFormPrestId = -1;
+		contratFormOuvert = false;
 	}
 
 	async function saveContrat() {
@@ -635,6 +640,9 @@
 			frequence_valeur: contratForm.frequence_valeur ? Number(contratForm.frequence_valeur) : null,
 			prochaine_visite: contratForm.prochaine_visite || null,
 		};
+		//  🔴 Lu AVANT la fermeture, qui remet `editContratId` à `null`. Le message
+		//  le lisait après : une modification annonçait donc « Contrat créé ».
+		const etaitUneModification = editContratId !== null;
 		try {
 			if (editContratId) {
 				await prestApi.updateContrat(editContratId, payload);
@@ -642,9 +650,8 @@
 				await prestApi.createContrat(payload);
 			}
 			contrats = await prestApi.contrats();
-			contratFormPrestId = null;
-			resetContratForm();
-			toast('success', editContratId ? 'Contrat modifié' : 'Contrat créé');
+			closeContratForm();
+			toast('success', etaitUneModification ? 'Contrat modifié' : 'Contrat créé');
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
@@ -688,7 +695,7 @@
 <EntetePage
 	titre={_pc.titre}
 	icone={_pc.icone || 'hard-hat'}
-	alignerSaisie={showPrestForm || contratFormPrestId !== null || showReleveForm}
+	alignerSaisie={showPrestForm || contratFormOuvert || showReleveForm}
 >
 	{#if $isCS}
 		{#if onglet === 'prestataires'}
@@ -702,10 +709,10 @@
 			/>
 		{:else if onglet === 'contrats_tab'}
 			<BoutonNouveau
-				ouvert={contratFormPrestId !== null}
+				ouvert={contratFormOuvert}
 				libelle="Nouveau contrat"
 				on:basculer={() => {
-					if (contratFormPrestId !== null) closeContratForm();
+					if (contratFormOuvert) closeContratForm();
 					else openAddContrat();
 				}}
 			/>
@@ -755,31 +762,18 @@
 	<!-- ONGLET 3 : CONTRATS                                          -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
 {:else if onglet === 'contrats_tab'}
-	{#if contratFormPrestId === -1}
-		<FormulaireCreation
-			cle={editContratId}
-			titre={editContratId ? 'Modifier le contrat' : 'Nouveau contrat'}
-		>
-			<div>
-				<ChampsContrat bind:contratForm {prestataires} {equipements} />
-				{#if editContratId}
-					<div style="margin-top:.8rem">
-						<DocumentsContrat
-							contratId={editContratId ?? 0}
-							documents={contratDocsMap[editContratId ?? 0]}
-							onSupprimer={deleteDoc}
-							onAjoute={rechargerDocs}
-							idChamp="contrat-edit-doc"
-						/>
-					</div>
-				{/if}
-			</div>
-			<div class="form-actions">
-				<button type="button" class="btn btn-outline" on:click={closeContratForm}>Annuler</button>
-				<button class="btn btn-primary" disabled={submitting} on:click={saveContrat}
-					>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button
-				>
-			</div>
+	<!-- Créer → la boîte ; éditer → la modale plus bas. Le formulaire est le même
+	     objet dans les deux cas (`ux-patterns` §14 bis, #640). -->
+	{#if contratFormOuvert && !editContratId}
+		<FormulaireCreation titre="Nouveau contrat">
+			<FormulaireContrat
+				bind:contratForm
+				{prestataires}
+				{equipements}
+				{submitting}
+				onAnnuler={closeContratForm}
+				onEnregistrer={saveContrat}
+			/>
 		</FormulaireCreation>
 	{/if}
 
@@ -871,123 +865,93 @@
 					</div>
 					{#if contratExpanded}
 						<div class="contrat-detail-body">
-							{#if editContratId === c.id && contratFormPrestId !== -1}
-								<div class="contrat-section">
-									<div class="contrat-section-title">Infos contrat</div>
-									<ChampsContrat bind:contratForm {prestataires} {equipements} />
+							<div class="contrat-section">
+								<div class="contrat-section-title">Infos contrat</div>
+								<div class="detail-grid">
+									<div>
+										<span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}
+									</div>
+									{#if c.duree_initiale_valeur}<div>
+											<span class="detail-label">Durée</span>{c.duree_initiale_valeur}
+											{c.duree_initiale_unite}
+										</div>{/if}
+									{#if c.frequence_type}
+										<div><span class="detail-label">Fréquence</span>{frequenceLabel(c)}</div>
+									{/if}
+									{#if c.prochaine_visite}<div>
+											<span class="detail-label">Prochaine visite</span><span
+												style="color:var(--color-primary);font-weight:600"
+												>🗓 {fmtDateShort(c.prochaine_visite)}</span
+											>
+										</div>{/if}
 								</div>
+							</div>
+							{#if c.notes}
 								<div class="contrat-section">
-									<DocumentsContrat
-										contratId={c.id}
-										documents={contratDocsMap[c.id]}
-										onSupprimer={deleteDoc}
-										onAjoute={rechargerDocs}
-										idChamp="contrat-{c.id}-doc"
-									/>
+									<div
+										class="contrat-section-title clickable"
+										role="button"
+										tabindex="0"
+										on:click|stopPropagation={() => {
+											expandedNotes.has(c.id)
+												? expandedNotes.delete(c.id)
+												: expandedNotes.add(c.id);
+											expandedNotes = expandedNotes;
+										}}
+										on:keydown|stopPropagation={(e) =>
+											(e.key === 'Enter' || e.key === ' ') &&
+											(expandedNotes.has(c.id)
+												? expandedNotes.delete(c.id)
+												: expandedNotes.add(c.id),
+											(expandedNotes = expandedNotes))}
+									>
+										Synthèse du ou des contrats {expandedNotes.has(c.id) ? '▲' : '▼'}
+									</div>
+									{#if expandedNotes.has(c.id)}
+										<div class="rich-content" style="font-size:.875rem">
+											{@html safeHtml(c.notes)}
+										</div>
+									{/if}
 								</div>
+							{/if}
+							<div class="contrat-section">
+								<div class="contrat-section-title">
+									📄 Documents ({contratDocsMap[c.id]?.length ?? 0})
+								</div>
+								{#if contratDocsMap[c.id]?.length > 0}
+									{#each contratDocsMap[c.id] as doc (doc.id)}
+										<div
+											style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
+										>
+											<a href={docsApi.downloadUrl(doc.id)} target="_blank"
+												>📎 {doc.titre || doc.fichier_nom}</a
+											>
+											<span style="font-size:.75rem;color:var(--color-text-muted)"
+												>{fmtDateShort(doc.publie_le)}</span
+											>
+											{#if $isCS}
+												<button
+													class="btn-icon-danger"
+													title="Supprimer"
+													style="margin-left:auto"
+													on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button
+												>
+											{/if}
+										</div>
+									{/each}
+								{:else}
+									<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">
+										Aucun document.
+									</p>
+								{/if}
+							</div>
+							{#if $isCS}
 								<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
 									<button
 										class="btn btn-sm btn-outline"
-										on:click|stopPropagation={() => {
-											editContratId = null;
-											resetContratForm();
-										}}>Annuler</button
+										on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button
 									>
-									<button
-										class="btn btn-sm btn-primary"
-										disabled={submitting}
-										on:click|stopPropagation={saveContrat}
-										>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button
-									>
-								</div>
-							{:else}
-								<div class="contrat-section">
-									<div class="contrat-section-title">Infos contrat</div>
-									<div class="detail-grid">
-										<div>
-											<span class="detail-label">Date de début</span>📅 {fmtDateShort(c.date_debut)}
-										</div>
-										{#if c.duree_initiale_valeur}<div>
-												<span class="detail-label">Durée</span>{c.duree_initiale_valeur}
-												{c.duree_initiale_unite}
-											</div>{/if}
-										{#if c.frequence_type}
-											<div><span class="detail-label">Fréquence</span>{frequenceLabel(c)}</div>
-										{/if}
-										{#if c.prochaine_visite}<div>
-												<span class="detail-label">Prochaine visite</span><span
-													style="color:var(--color-primary);font-weight:600"
-													>🗓 {fmtDateShort(c.prochaine_visite)}</span
-												>
-											</div>{/if}
-									</div>
-								</div>
-								{#if c.notes}
-									<div class="contrat-section">
-										<div
-											class="contrat-section-title clickable"
-											role="button"
-											tabindex="0"
-											on:click|stopPropagation={() => {
-												expandedNotes.has(c.id)
-													? expandedNotes.delete(c.id)
-													: expandedNotes.add(c.id);
-												expandedNotes = expandedNotes;
-											}}
-											on:keydown|stopPropagation={(e) =>
-												(e.key === 'Enter' || e.key === ' ') &&
-												(expandedNotes.has(c.id)
-													? expandedNotes.delete(c.id)
-													: expandedNotes.add(c.id),
-												(expandedNotes = expandedNotes))}
-										>
-											Synthèse du ou des contrats {expandedNotes.has(c.id) ? '▲' : '▼'}
-										</div>
-										{#if expandedNotes.has(c.id)}
-											<div class="rich-content" style="font-size:.875rem">
-												{@html safeHtml(c.notes)}
-											</div>
-										{/if}
-									</div>
-								{/if}
-								<div class="contrat-section">
-									<div class="contrat-section-title">
-										📄 Documents ({contratDocsMap[c.id]?.length ?? 0})
-									</div>
-									{#if contratDocsMap[c.id]?.length > 0}
-										{#each contratDocsMap[c.id] as doc (doc.id)}
-											<div
-												style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
-											>
-												<a href={docsApi.downloadUrl(doc.id)} target="_blank"
-													>📎 {doc.titre || doc.fichier_nom}</a
-												>
-												<span style="font-size:.75rem;color:var(--color-text-muted)"
-													>{fmtDateShort(doc.publie_le)}</span
-												>
-												{#if $isCS}
-													<button
-														class="btn-icon-danger"
-														title="Supprimer"
-														style="margin-left:auto"
-														on:click|stopPropagation={() => deleteDoc(c.id, doc.id)}>🗑️</button
-													>
-												{/if}
-											</div>
-										{/each}
-									{:else}
-										<p style="font-size:.82rem;color:var(--color-text-muted);margin:0">
-											Aucun document.
-										</p>
-									{/if}
-								</div>
-								{#if $isCS}
-									<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-										<button
-											class="btn btn-sm btn-outline"
-											on:click|stopPropagation={() => startEditContrat(c)}>✏️ Modifier</button
-										>
-										<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
+									<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
 										      seul onglet Visites : retirer cet onglet sans porter le geste
 										      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
 										      saisir, alors que la fiche et le reporting continuaient d'en
@@ -996,15 +960,14 @@
 										      celle d'hier (#603).
 										      Sans intervenant, il n'y a personne à noter : le bouton
 										      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
-										{#if c.prestataire_id}
-											<button
-												class="btn btn-sm btn-outline contrat-noter"
-												on:click|stopPropagation={() => openNotationForm(c.prestataire_id, c.id)}
-												>⭐ Noter</button
-											>
-										{/if}
-									</div>
-								{/if}
+									{#if c.prestataire_id}
+										<button
+											class="btn btn-sm btn-outline contrat-noter"
+											on:click|stopPropagation={() => openNotationForm(c.prestataire_id, c.id)}
+											>⭐ Noter</button
+										>
+									{/if}
+								</div>
 							{/if}
 						</div>
 					{/if}
@@ -1459,7 +1422,29 @@
 	{/if}
 {/if}
 
-<!-- Modal contrat (global, hors onglets) -->
+<!--
+	Modale d'ÉDITION d'un contrat, hors onglets comme les autres modales de l'écran.
+	`edition` n'est pas décoratif : il déclare le geste (exigé par `lint:formulaires`)
+	et implique `fermetureAuFond={false}` — un clic à côté n'efface pas la saisie.
+-->
+{#if editContratId}
+	<Modale edition titre="Modifier le contrat" on:fermer={closeContratForm}>
+		<div class="modal-body">
+			<FormulaireContrat
+				bind:contratForm
+				{prestataires}
+				{equipements}
+				contratId={editContratId}
+				documents={contratDocsMap[editContratId]}
+				onSupprimer={deleteDoc}
+				onAjoute={rechargerDocs}
+				{submitting}
+				onAnnuler={closeContratForm}
+				onEnregistrer={saveContrat}
+			/>
+		</div>
+	</Modale>
+{/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->
 {#if showNotationForm}
