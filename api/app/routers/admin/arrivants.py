@@ -26,6 +26,7 @@ from app.models.core import (
 #  LOCALE `site_manager_user_id`, et l'import serait alors masqué. C'est la raison
 #  d'être de l'ancien alias `_get_site_manager_user_id`, supprimé au découpage.
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
+from app.utils.destinataires import syndic_principal as _syndic_principal
 from app.utils.syndic import nom_du_syndic
 from html import escape
 from typing import Optional
@@ -79,11 +80,7 @@ def _declencher_accueil_arrivant(
     demarches: list[str] = []
 
     # Syndic principal (pour l'email BAL)
-    syndic_principal: MembreSyndic | None = session.exec(
-        select(MembreSyndic).where(
-            MembreSyndic.est_principal == True  # noqa: E712
-        )
-    ).first()
+    syndic_principal: MembreSyndic | None = _syndic_principal(session)
     if syndic_principal:
         demarches.append(
             f"• Demande d'étiquette boîte aux lettres transmise au syndic{bat_str}{ancien_str}."

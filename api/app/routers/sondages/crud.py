@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CommentaireSondage, MembreSyndic, Notification, OptionSondage, Sondage,
+    CommentaireSondage, Notification, OptionSondage, Sondage,
     Utilisateur, VoteSondage,
 )
 from app.schemas import liste_depuis_json
@@ -202,30 +202,11 @@ def create_sondage(
 
         if body.envoyer_syndic or body.envoyer_cs:
             from app.utils.email import send_email_group
-            destinataires: list[tuple[int | None, str]] = []
-            seen_emails: set[str] = set()
+            from app.utils.destinataires import destinataires_syndic_cs
 
-            if body.envoyer_syndic:
-                syndic_principal = session.exec(
-                    select(MembreSyndic).where(MembreSyndic.est_principal == True)
-                ).first()
-                if syndic_principal and syndic_principal.email:
-                    destinataires.append((syndic_principal.user_id, syndic_principal.email))
-                    seen_emails.add(syndic_principal.email.lower())
-
-            if body.envoyer_cs:
-                cs_users = session.exec(
-                    select(Utilisateur.id, Utilisateur.email)
-                    .where(
-                        Utilisateur.actif == True,
-                        Utilisateur.email.isnot(None),
-                        Utilisateur.roles_json.contains("conseil_syndical"),
-                    )
-                ).all()
-                for uid, email in cs_users:
-                    if email and email.lower() not in seen_emails:
-                        destinataires.append((uid, email))
-                        seen_emails.add(email.lower())
+            destinataires = destinataires_syndic_cs(
+                session, syndic=body.envoyer_syndic, cs=body.envoyer_cs
+            )
 
             # Le template `publication_syndic` déréférence `publication.titre`,
             # `publication.contenu` et `publication.id` : avec la clé `ticket`

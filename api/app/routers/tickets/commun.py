@@ -16,14 +16,12 @@ Trois duplications que le fichier long avait fabriquées vivent désormais ici :
 import json
 import random
 import string
-from typing import Optional
 
 from sqlmodel import Session, select
 
 from app.models.core import (
     Batiment,
     ConfigSite,
-    MembreSyndic,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -75,59 +73,25 @@ def contexte_site(cfg: dict) -> dict:
 
 
 # ── Destinataires ────────────────────────────────────────────────────────────
-
-def destinataires_syndic_cs(
-    session: Session,
-    *,
-    syndic: bool,
-    cs: bool,
-    deja_vus: Optional[set[str]] = None,
-) -> list[tuple[int | None, str]]:
-    """(user_id, e-mail) du syndic principal puis des membres du CS, dédoublonnés.
-
-    Le syndic passe en premier et gagne le doublon : c'est lui le destinataire
-    principal d'un e-mail de ticket, un membre du CS qui serait aussi le syndic
-    ne doit pas le recevoir deux fois.
-
-    `deja_vus` permet à la relance syndic d'exclure du CC les adresses déjà
-    placées en destinataire principal, sans réécrire la déduplication.
-
-    ⚠️ Cette fonction décide **qui reçoit un e-mail de ticket**. Elle est le seul
-    endroit où cette règle s'écrit — la disperser à nouveau, c'est réintroduire
-    l'angle mort d'une rubrique oubliée (`standards/02-factorisation.md` §2).
-    """
-    destinataires: list[tuple[int | None, str]] = []
-    vus: set[str] = set(deja_vus or ())
-
-    if syndic:
-        principal = session.exec(
-            select(MembreSyndic).where(MembreSyndic.est_principal == True)  # noqa: E712
-        ).first()
-        if principal and principal.email:
-            destinataires.append((principal.user_id, principal.email))
-            vus.add(principal.email.lower())
-
-    if cs:
-        membres = session.exec(
-            select(Utilisateur.id, Utilisateur.email).where(
-                Utilisateur.actif == True,  # noqa: E712
-                Utilisateur.email.isnot(None),
-                Utilisateur.roles_json.contains("conseil_syndical"),
-            )
-        ).all()
-        for uid, email in membres:
-            if email and email.lower() not in vus:
-                destinataires.append((uid, email))
-                vus.add(email.lower())
-
-    return destinataires
-
-
-def syndic_principal(session: Session) -> Optional[MembreSyndic]:
-    """Le gestionnaire syndic principal, ou None s'il n'est pas configuré."""
-    return session.exec(
-        select(MembreSyndic).where(MembreSyndic.est_principal == True)  # noqa: E712
-    ).first()
+#
+# 🔴 LA RÈGLE A DÉMÉNAGÉ le 31/08/2026, et ces deux noms n'en sont plus que des
+# renvois. Ce fichier portait le corps, avec ce commentaire : *« elle est le seul
+# endroit où cette règle s'écrit »*. C'était faux — le calendrier, les
+# publications et les sondages en portaient chacun une copie, identique à la
+# variable près, et sans un mot d'explication.
+#
+# ⚠️ C'est la forme la plus coûteuse de la duplication : le seul fichier qui
+# parlait du sujet affirmait que le problème n'existait pas. Une relecture qui
+# ouvrait celui-ci en repartait rassurée.
+#
+# Le corps vit dans `app/utils/destinataires.py`, que `CLAUDE.md` désigne comme
+# la source unique des destinataires. Les alias restent parce que six modules et
+# la documentation du paquet les nomment : les supprimer serait un second lot,
+# et il n'apporterait rien de plus que du renommage.
+from app.utils.destinataires import (  # noqa: F401  (ré-export volontaire)
+    destinataires_syndic_cs,
+    syndic_principal,
+)
 
 
 # ── Libellés d'évolution ─────────────────────────────────────────────────────
