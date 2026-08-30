@@ -54,7 +54,7 @@
 <SectionRepliee titre={TITRE_ARCHIVES} {compte} bind:ouvert />
 {#if ouvert}
 	<div class="flux-timeline older-timeline">
-		{#each groupesParJour as groupe}
+		{#each groupesParJour as groupe (groupe.label)}
 			<div class="flux-day-label">{groupe.label}</div>
 			{#each groupe.items as item (item.id)}
 				<FluxCard

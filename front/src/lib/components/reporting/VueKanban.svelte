@@ -52,14 +52,14 @@
 		</div>
 		<div class="kpi-label">Dossiers en cours</div>
 	</div>
-	{#each reportKanbanByCol as col}
+	{#each reportKanbanByCol as col (col.col)}
 		<div class="kpi-card">
 			<div class="kpi-value">{col.items.length}</div>
 			<div class="kpi-label">{col.label}</div>
 		</div>
 	{/each}
 </div>
-{#each reportKanbanByCol as col}
+{#each reportKanbanByCol as col (col.col)}
 	<section class="report-card" style="margin-bottom:1.5rem">
 		<h3>
 			<span class="badge {col.badge}">{col.label}</span> — {col.items.length} dossier{col.items

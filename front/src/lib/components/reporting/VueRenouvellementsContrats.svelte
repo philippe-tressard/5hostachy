@@ -75,7 +75,7 @@
 	{:else}
 		<div class="frise-container">
 			<div class="frise-months">
-				{#each MOIS_LABELS as m}<div class="frise-month-label">{m}</div>{/each}
+				{#each MOIS_LABELS as m (m)}<div class="frise-month-label">{m}</div>{/each}
 			</div>
 			{#each contratsAnneeCourante.filter((x): x is typeof x & { dateFin: Date } => !!x.dateFin) as c (c.id)}
 				{@const finDansAnnee = c.dateFin.getFullYear() === ANNEE_COURANTE}

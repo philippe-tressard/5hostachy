@@ -66,7 +66,7 @@
 		>Prestataire *
 		<select bind:value={contratForm.prestataire_id} required>
 			<option value="">— Sélectionner —</option>
-			{#each prestataires as pr}<option value={String(pr.id)}>{pr.nom}</option>{/each}
+			{#each prestataires as pr (pr.id)}<option value={String(pr.id)}>{pr.nom}</option>{/each}
 		</select>
 	</label>
 	<!--  🔴 Ce champ MANQUAIT à l'édition en ligne avant le 30/08/2026 : le type

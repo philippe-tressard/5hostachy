@@ -628,7 +628,7 @@
 	{:else}
 		<!-- Fil récent (<30 jours) -->
 		<div class="flux-timeline section-reveal" class:section-visible={ready} style="--delay:.3s">
-			{#each recentDayGroups as group}
+			{#each recentDayGroups as group (group.label)}
 				<div class="flux-day-label">{group.label}</div>
 				{#each group.items as item (item.id)}
 					<FluxCard

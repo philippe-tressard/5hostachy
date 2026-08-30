@@ -38,7 +38,15 @@
 	export let contratId: number | null = null;
 	/**  Ce qui s'affiche une fois le contrat désigné : `[libellé, valeur]`.
 	 *   Les valeurs vides sont écartées par le composant — une ligne vide se lit
-	 *   comme une donnée manquante alors qu'elle est simplement absente. */
+	 *   comme une donnée manquante alors qu'elle est simplement absente.
+	 *
+	 *   ⚠️ **Le libellé sert de clé de liste** (`{#each … (label)}`), il doit donc
+	 *   être unique DANS UN MÊME APPEL. Les deux appelants actuels le sont, et
+	 *   deux d'entre eux partagent bien « Téléphone » et « Courriel » — sans
+	 *   conséquence, puisque chaque appel a son propre tableau. Un libellé répété
+	 *   dans le même tableau ferait lever Svelte à l'affichage : c'est un défaut
+	 *   de saisie visible tout de suite, et non un état qui glisse en silence —
+	 *   ce que l'absence de clé produisait. */
 	export let lignes: [string, string | null | undefined][] = [];
 	/**  L'identifiant du document attaché au contrat, s'il y en a un. */
 	export let documentId: number | null = null;
@@ -92,7 +100,7 @@
 
 	{#if visibles.length}
 		<dl class="ref-lecture">
-			{#each visibles as [label, valeur]}
+			{#each visibles as [label, valeur] (label)}
 				<dt>{label}</dt>
 				<dd>{valeur}</dd>
 			{/each}

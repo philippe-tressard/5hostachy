@@ -40,7 +40,7 @@
 				<tr><th>Date</th><th>Changement demandé</th><th>Statut</th><th>Motif refus</th></tr>
 			</thead>
 			<tbody>
-				{#each demandes as d}
+				{#each demandes as d (d.id)}
 					<tr>
 						<td>{fmtDate(d.cree_le)}</td>
 						<td>
