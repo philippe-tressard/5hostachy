@@ -287,6 +287,10 @@ jobs:
           bash scripts/poste/rejouer-ci.sh        --selftest
           python scripts/poste/verifier-fins-de-ligne.py --selftest
           bash scripts/poste/verifier-points-entree.sh --selftest
+          # 🔒 Le résultat NORMAL de ce diagnostic est ZÉRO orphelin : sans
+          # self-test, un script qui confondrait « aucun » et « je n'ai pas pu
+          # demander » rendrait le même message dans les deux cas (#546).
+          bash scripts/poste/diagnostic-cles-etrangeres.sh --selftest
 
       - name: Contrats d'infra (logs rotés, chemins de sortie datés)
         # Deux régressions vécues le 31/07/2026, toutes deux invisibles pendant

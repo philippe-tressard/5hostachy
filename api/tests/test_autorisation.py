@@ -110,6 +110,23 @@ _PUBLICS_ASSUMES = {
     # ce qui rend le point 9 du pré-check mesurable au lieu d'`INCONNU` à chaque
     # exécution : un contrôle que personne ne fait ne protège rien.
     ("rapports_scripts.py", "emails_echecs_recents"),
+    # Même canal, même clé : COMBIEN de lignes de la base référencent un parent
+    # disparu, et par quelle relation. Rend des noms de tables, des noms de
+    # colonnes et des comptes — **jamais un `rowid`**, que `PRAGMA
+    # foreign_key_check` fournit pourtant et qui désignerait une ligne précise
+    # (cf. `utils/diagnostic_cles.py`).
+    #
+    # 🔴 Pourquoi une seconde porte plutôt qu'un « admin OU clé » sur la route
+    # `/admin/db/cles-etrangeres` : une dépendance optionnelle et une auth
+    # conditionnelle sont la forme exacte dans laquelle un contournement se
+    # glisse sans se voir. Deux portes explicites, chacune avec sa serrure, et
+    # UNE seule mesure derrière — c'est ce que ce fichier vérifie route par
+    # route, et il ne saurait pas lire un `if` d'authentification.
+    #
+    # Elle existe pour que la surveillance soit CONTINUE : des orphelins peuvent
+    # réapparaître tant que les endpoints DELETE non testés n'ont pas été
+    # éprouvés (#546).
+    ("rapports_scripts.py", "maintenance_cles_etrangeres"),
 }
 
 

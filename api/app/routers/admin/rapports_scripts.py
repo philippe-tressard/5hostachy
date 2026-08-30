@@ -187,3 +187,34 @@ def emails_echecs_recents(
         "dernier": max((l.cree_le for l in lignes), default=None),
         "genere_le": datetime.utcnow(),
     }
+
+
+@router.get("/maintenance/cles-etrangeres")
+def maintenance_cles_etrangeres(
+    x_maintenance_key: Optional[str] = Header(default=None, alias="x-maintenance-key"),
+):
+    """Les lignes orphelines de la base — porte des SCRIPTS d'exploitation (#546).
+
+    Même mesure que `GET /admin/db/cles-etrangeres`, autre authentification :
+    la clé partagée que les crons lisent dans `/opt/5hostachy/.env`.
+
+    ⚠️ **Elle reste dans la borne de ce canal** — « aucune donnée de
+    copropriétaire » : noms de tables, noms de colonnes, comptes. Le `rowid`
+    que rend `PRAGMA foreign_key_check` désignerait une ligne précise ; il
+    n'est pas exposé (cf. `utils/diagnostic_cles.py`).
+
+    🔴 Pourquoi cette seconde porte plutôt qu'un « admin OU clé » sur une seule
+    route : une dépendance optionnelle et une auth conditionnelle sont la forme
+    exacte dans laquelle un contournement se glisse sans se voir. Deux portes
+    explicites, chacune avec sa serrure, et **une seule** mesure derrière.
+
+    Elle existe pour que la surveillance soit CONTINUE : des orphelins peuvent
+    réapparaître tant que les 21 endpoints DELETE non testés n'ont pas été
+    éprouvés. Ce qui est critique en continu ne se vérifie pas qu'en MEP.
+    """
+    _exiger_cle_maintenance(x_maintenance_key)
+
+    from app.database import engine
+    from app.utils.diagnostic_cles import compter_orphelins
+
+    return compter_orphelins(engine)
