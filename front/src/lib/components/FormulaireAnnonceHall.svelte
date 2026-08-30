@@ -151,7 +151,7 @@
 	      la règle ne suffit pas : seul un composant qui porte son style AVEC son
 	      balisage l'empêche, et c'est très exactement la raison d'être de `Pastille`. -->
 	<div class="perimetre-pills">
-		{#each formats as f}
+		{#each formats as f (f.val)}
 			<Pastille petite active={format === f.val} on:click={() => (format = f.val)}
 				>{f.label}</Pastille
 			>

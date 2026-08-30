@@ -389,7 +389,7 @@
 										{#each editOccupants as occ, i}
 											<div class="occupant-row">
 												<select bind:value={occ.type_lien} class="select-role">
-													{#each TYPES_LIEN as tl}
+													{#each TYPES_LIEN as tl (tl.value)}
 														<option value={tl.value}>{tl.label}</option>
 													{/each}
 												</select>

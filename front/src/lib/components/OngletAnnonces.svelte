@@ -174,11 +174,11 @@
 <div class="filters">
 	<select bind:value={filtreType} class="filter-select" aria-label="Filtrer par type">
 		<option value="">Tous types</option>
-		{#each TYPES_ANNONCE as t}<option value={t.val}>{t.label}</option>{/each}
+		{#each TYPES_ANNONCE as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
 	</select>
 	<select bind:value={filtreCategorie} class="filter-select" aria-label="Filtrer par catégorie">
 		<option value="">Toutes catégories</option>
-		{#each CATEGORIES_ANNONCE as c}<option value={c.val}>{c.label}</option>{/each}
+		{#each CATEGORIES_ANNONCE as c (c.val)}<option value={c.val}>{c.label}</option>{/each}
 	</select>
 	<select bind:value={filtreTri} class="filter-select" aria-label="Trier les annonces">
 		<option value="recent">Plus récentes</option>

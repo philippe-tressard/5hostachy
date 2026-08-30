@@ -55,7 +55,7 @@
 {/if}
 
 <div class="filters">
-	{#each STATUTS_IDEE_FILTRE as s}
+	{#each STATUTS_IDEE_FILTRE as s (s.val)}
 		<button
 			class="btn btn-sm"
 			class:btn-primary={filtreStatut === s.val}

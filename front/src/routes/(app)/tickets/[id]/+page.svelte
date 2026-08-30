@@ -253,7 +253,7 @@
 					<div class="status-actions">
 						<span class="status-label">Changer le statut :</span>
 						<div class="status-boutons">
-							{#each STATUTS_TICKET as s}
+							{#each STATUTS_TICKET as s (s.value)}
 								<button
 									class="btn btn-sm {ticket.statut === s.value ? 'btn-primary' : 'btn-outline'}"
 									disabled={updatingStatus || ticket.statut === s.value}

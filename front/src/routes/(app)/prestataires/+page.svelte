@@ -1068,7 +1068,7 @@
 							>Spécialité *
 							<select bind:value={prestForm.specialite} required>
 								<option value="">— Sélectionner —</option>
-								{#each equipements as e}<option value={e.val}>{e.label}</option>{/each}
+								{#each equipements as e (e.val)}<option value={e.val}>{e.label}</option>{/each}
 							</select>
 						</label>
 						<label class="field">Email<input type="email" bind:value={prestForm.email} /></label>

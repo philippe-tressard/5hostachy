@@ -74,7 +74,7 @@
 				<div class="field">
 					<label for="ev-type">Type</label>
 					<select id="ev-type" bind:value={form.type}>
-						{#each types as t}<option value={t.val}>{t.label}</option>{/each}
+						{#each types as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
 					</select>
 				</div>
 				<div class="field">
