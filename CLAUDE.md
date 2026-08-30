@@ -157,11 +157,26 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - Documents existants : fiche arrivant (`fiche_arrivant.py`), annonce de hall (`annonce_hall.py`).
 
 ### Destinataires CS
-- `app/utils/destinataires.py` est la source unique : `membres_cs_notifiables(session, batiment_ids)`
-  (membres du CS liés à un compte actif + gestionnaire du site, dédoublonnés) et
-  `batiments_du_perimetre()` (résidence/parking/cave/AFUL = tout le CS).
-- À distinguer de `envoyer_cs` (publications/sondages/calendrier) qui vise **le rôle**
-  `conseil_syndical`, sans notion de périmètre.
+
+`app/utils/destinataires.py` est la source unique, et elle porte **deux règles
+distinctes** — les confondre envoie le bon message aux mauvaises personnes :
+
+| Ce qu'on vise | Fonction | Employée par |
+|---|---|---|
+| le CS **concerné par un périmètre** | `membres_cs_notifiables(session, batiment_ids)` (+ `batiments_du_perimetre()`) | nouvel arrivant, annonces de hall |
+| le CS **par le rôle**, sans périmètre | `membres_cs_avec_email(session)` | publications, sondages, calendrier, tickets |
+| le **syndic principal** | `syndic_principal(session)` | ci-dessous, fiche copropriété, arrivants |
+| **syndic puis CS, dédoublonnés** — qui reçoit un e-mail interne | `destinataires_syndic_cs(session, syndic=…, cs=…)` | les quatre entités qui cochent « envoyer au syndic / au CS » |
+
+🔴 La dernière ligne a existé en **quatre exemplaires identiques** (tickets,
+calendrier, publications, sondages) jusqu'au 31/08/2026 — et celui des tickets
+affirmait, en toutes lettres, être *« le seul endroit où cette règle s'écrit »*.
+Les trois autres n'avaient aucun commentaire : le seul fichier qui parlait du
+sujet disait que le problème n'existait pas.
+
+🔒 `api/tests/test_destinataires_source_unique.py` refuse une cinquième copie. Il
+laisse passer les notifications **in-app**, qui visent « CS **ou** admin » et
+rendent des `Utilisateur` — autre décision, autre destinataire.
 
 ### Sécurité
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`

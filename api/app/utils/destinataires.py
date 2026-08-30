@@ -153,3 +153,83 @@ def formule_appel(membres: list[MembreSyndic]) -> str:
         for m in membres
         if (m.nom or "").strip()
     )
+
+
+# ── Syndic + conseil syndical : QUI reçoit un e-mail interne ──────────────────
+#
+# 🔴 Cette règle existait en QUATRE exemplaires, tous identiques à la variable
+# près : tickets, calendrier, publications, sondages. Et celui des tickets
+# portait, en toutes lettres, *« elle est le seul endroit où cette règle
+# s'écrit »* — une affirmation d'unicité au milieu de quatre copies.
+#
+# ⚠️ C'est la forme la plus coûteuse de la duplication : les trois autres
+# n'avaient AUCUN commentaire, donc rien ne signalait qu'elles existaient, et le
+# seul fichier qui parlait du sujet disait que le problème n'existait pas.
+# Corriger la règle chez l'un — ajouter un destinataire, changer la
+# déduplication — laissait les trois autres en arrière sans qu'un contrôle,
+# ni une relecture, ne puisse le voir.
+#
+# 🔒 `api/tests/test_destinataires_source_unique.py` refuse une cinquième.
+
+def syndic_principal(session: Session) -> Optional[MembreSyndic]:
+    """Le gestionnaire syndic principal, ou None s'il n'est pas configuré."""
+    return session.exec(
+        select(MembreSyndic).where(MembreSyndic.est_principal == True)  # noqa: E712
+    ).first()
+
+
+def membres_cs_avec_email(session: Session) -> list[tuple[int, str]]:
+    """(id, e-mail) des membres du CS joignables par courriel.
+
+    ⚠️ Le critère est le **rôle** `conseil_syndical`, sans notion de périmètre —
+    à distinguer de `membres_cs_notifiables()` ci-dessus, qui part de la table
+    `MembreCS` et filtre par bâtiment. Les deux coexistent volontairement, et
+    `CLAUDE.md` dit laquelle sert à quoi : celle-ci vise le rôle (publications,
+    sondages, calendrier, tickets), l'autre vise le périmètre (nouvel arrivant,
+    annonces de hall).
+    """
+    return [
+        (uid, email)
+        for uid, email in session.exec(
+            select(Utilisateur.id, Utilisateur.email).where(
+                Utilisateur.actif == True,  # noqa: E712
+                Utilisateur.email.isnot(None),
+                Utilisateur.roles_json.contains("conseil_syndical"),
+            )
+        ).all()
+        if email
+    ]
+
+
+def destinataires_syndic_cs(
+    session: Session,
+    *,
+    syndic: bool,
+    cs: bool,
+    deja_vus: Optional[set[str]] = None,
+) -> list[tuple[int | None, str]]:
+    """(user_id, e-mail) du syndic principal puis des membres du CS, dédoublonnés.
+
+    Le syndic passe en premier et **gagne le doublon** : c'est lui le destinataire
+    principal, un membre du CS qui serait aussi le syndic ne doit pas recevoir le
+    message deux fois.
+
+    `deja_vus` permet à une relance d'exclure du CC les adresses déjà placées en
+    destinataire principal, sans réécrire la déduplication.
+    """
+    destinataires: list[tuple[int | None, str]] = []
+    vus: set[str] = set(deja_vus or ())
+
+    if syndic:
+        principal = syndic_principal(session)
+        if principal and principal.email:
+            destinataires.append((principal.user_id, principal.email))
+            vus.add(principal.email.lower())
+
+    if cs:
+        for uid, email in membres_cs_avec_email(session):
+            if email.lower() not in vus:
+                destinataires.append((uid, email))
+                vus.add(email.lower())
+
+    return destinataires

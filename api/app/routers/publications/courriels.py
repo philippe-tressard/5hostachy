@@ -11,7 +11,7 @@ from fastapi import BackgroundTasks
 from sqlmodel import Session, select
 
 from app.models.core import (
-    ConfigSite, Document, MembreSyndic, Publication, PublicationEvolution,
+    ConfigSite, Document, Publication, PublicationEvolution,
     Utilisateur,
 )
 from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
@@ -42,33 +42,16 @@ def _envoyer_email_syndic_publication(
     """Envoie un email au syndic et/ou CS avec la publication en corps."""
     from app.utils.email import send_email_group
 
-    destinataires: list[tuple[int | None, str]] = []
-    seen_emails: set[str] = set()
+    from app.utils.destinataires import destinataires_syndic_cs
 
-    if syndic:
-        syndic_principal = session.exec(
-            select(MembreSyndic).where(MembreSyndic.est_principal == True)
-        ).first()
-        if syndic_principal and syndic_principal.email:
-            destinataires.append((syndic_principal.user_id, syndic_principal.email))
-            seen_emails.add(syndic_principal.email.lower())
-
-    if cs:
-        cs_users = session.exec(
-            select(Utilisateur.id, Utilisateur.email)
-            .where(
-                Utilisateur.actif == True,
-                Utilisateur.email.isnot(None),
-                Utilisateur.roles_json.contains("conseil_syndical"),
-            )
-        ).all()
-        for uid, email in cs_users:
-            if email and email.lower() not in seen_emails:
-                destinataires.append((uid, email))
-                seen_emails.add(email.lower())
-
+    destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
     if not destinataires:
         return
+    #  Les adresses déjà servies — l'auteur ne doit pas se recevoir deux fois.
+    #  Le jeu était construit au fil de la boucle qui vivait ici ; il se déduit
+    #  maintenant du résultat, ce qui le garde vrai si la règle de
+    #  déduplication change dans sa source.
+    seen_emails = {email.lower() for _, email in destinataires}
 
     cfg_rows = session.exec(
         select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))

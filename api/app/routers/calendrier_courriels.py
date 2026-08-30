@@ -17,9 +17,9 @@ rouvrir cette panne.
 import json
 
 from fastapi import BackgroundTasks
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from app.models.core import Evenement, MembreSyndic, Utilisateur
+from app.models.core import Evenement, Utilisateur
 from app.utils.dates_fr import datetime_longue
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_element
@@ -140,30 +140,9 @@ def notifier_canaux(
             else parse_photos(ev.photos_urls) + parse_photos(ev.fichiers_urls)
         )
 
-        destinataires: list[tuple[int | None, str]] = []
-        seen_emails: set[str] = set()
+        from app.utils.destinataires import destinataires_syndic_cs
 
-        if syndic:
-            syndic_principal = session.exec(
-                select(MembreSyndic).where(MembreSyndic.est_principal == True)
-            ).first()
-            if syndic_principal and syndic_principal.email:
-                destinataires.append((syndic_principal.user_id, syndic_principal.email))
-                seen_emails.add(syndic_principal.email.lower())
-
-        if cs:
-            cs_users = session.exec(
-                select(Utilisateur.id, Utilisateur.email)
-                .where(
-                    Utilisateur.actif == True,
-                    Utilisateur.email.isnot(None),
-                    Utilisateur.roles_json.contains("conseil_syndical"),
-                )
-            ).all()
-            for uid, email in cs_users:
-                if email and email.lower() not in seen_emails:
-                    destinataires.append((uid, email))
-                    seen_emails.add(email.lower())
+        destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
 
         # Le template `calendrier_evenement_cree` attend `evenement`, pas
         # `ticket` : ce contexte avait été repris du mail de ticket sans

@@ -9,10 +9,11 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
 from app.models.core import (
-    Batiment, ContratEntretien, Copropriete, Lot, MembreSyndic, Prestataire,
+    Batiment, ContratEntretien, Copropriete, Lot, Prestataire,
     TypeEquipement, Utilisateur,
 )
 
+from app.utils.destinataires import syndic_principal
 from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.syndic import nom_du_syndic
 
@@ -264,9 +265,7 @@ def syndic_du_contrat(session: Session, copro: Copropriete) -> dict:
     Le prestataire porte donc l'ORGANISATION, l'annuaire garde les PERSONNES.
     """
     contrat = contrat_de_reference(session, copro, "syndic")
-    principal = session.exec(
-        select(MembreSyndic).where(MembreSyndic.est_principal == True)  # noqa: E712
-    ).first()
+    principal = syndic_principal(session)
 
     lu: dict = {}
     if principal:
