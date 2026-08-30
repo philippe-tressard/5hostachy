@@ -47,27 +47,82 @@
 	    Sans lui, rien n'indiquait qu'un bâtiment cachait neuf espaces, et personne
 	    ne cliquait (signalé le 12/08/2026). */
 	export let chevron = false;
+
+	/**
+	 * Rendre un **vrai bouton radio** plutôt qu'un `<button>` — `{ nom, valeur }`,
+	 * `nom` étant le groupe et `valeur` ce que cette pastille sélectionne.
+	 *
+	 * ## Pourquoi (30/08/2026, signalé à l'écran)
+	 *
+	 * > « Dans tickets tu ne peux pas réduire ces pastilles à la même taille que
+	 * >   nouveau prestataire »
+	 *
+	 * Les cinq catégories de ticket étaient des cartes maison (`.cat-option`,
+	 * grille à deux colonnes, bordure 2 px, padding double) — deux fois plus
+	 * hautes que les pastilles du même site, pour la même question posée à
+	 * l'utilisateur.
+	 *
+	 * 🔴 **Elles ne pouvaient PAS être converties jusqu'ici**, et `ux-patterns` le
+	 * disait : *« un vrai `radiogroup` avec des `<input type="radio">` ne se
+	 * convertit pas — `Pastille` rend un `<button>`, la navigation par flèches et
+	 * l'annonce du lecteur d'écran y seraient perdues. L'uniformité ne se paie pas
+	 * en accessibilité. »*
+	 *
+	 * L'argument reste juste. Ce qui change, c'est la réponse : **on enrichit
+	 * l'objet au lieu de le contourner.** Avec `radio`, la pastille rend un
+	 * `<label>` portant un `<input type="radio">` visuellement masqué — apparence
+	 * de pastille, sémantique de radiogroup, flèches et lecteur d'écran intacts.
+	 *
+	 * ⚠️ Le `<input>` est masqué par `clip`, **jamais par `display:none`** : ce
+	 * dernier le retire de l'ordre de tabulation et de l'arbre d'accessibilité,
+	 * c'est-à-dire qu'il annule très exactement ce que ce mode existe pour
+	 * préserver. C'est ce que faisait `.cat-option input[type='radio']`.
+	 */
+	export let radio: { nom: string; valeur: string } | null = null;
 </script>
 
 <!--  ⚠️ `$$slots.detail` et non une prop : c'est le SEUL moyen pour Svelte de
       savoir si l'appelant a fourni un sous-texte. Sans cette condition, la
       pastille passerait en deux lignes chez tout le monde — y compris là où il
       n'y a rien à mettre dessous. -->
-<button
-	type="button"
-	class="pastille"
-	class:active
-	class:petite
-	class:avec-detail={$$slots.detail}
-	on:click
->
-	{#if icone}<Icon name={icone} size={15} />{/if}
-	<span class="pastille-corps">
-		<span class="pastille-libelle"><slot /></span>
-		{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
-	</span>
-	{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
-</button>
+{#if radio}
+	<!--  Le mode radio : même apparence, sémantique de `radiogroup`. Le contenu
+	      est écrit deux fois dans le balisage parce que Svelte n'a pas d'élément
+	      « `<button>` ou `<label>` selon le cas » qui accepte un `<slot>` — mais
+	      le STYLE, lui, n'existe qu'une fois, et c'est ce qui compte : c'est sa
+	      duplication qui produit les divergences (v2.67.11). -->
+	<label class="pastille" class:active class:petite class:avec-detail={$$slots.detail}>
+		<input
+			type="radio"
+			class="pastille-radio"
+			name={radio.nom}
+			value={radio.valeur}
+			checked={active}
+			on:change
+		/>
+		{#if icone}<Icon name={icone} size={15} />{/if}
+		<span class="pastille-corps">
+			<span class="pastille-libelle"><slot /></span>
+			{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
+		</span>
+	</label>
+{:else}
+	<button
+		type="button"
+		class="pastille"
+		class:active
+		class:petite
+		class:avec-detail={$$slots.detail}
+		on:click
+	>
+		{#if icone}<Icon name={icone} size={15} />{/if}
+		<span class="pastille-corps">
+			<span class="pastille-libelle"><slot /></span>
+			{#if $$slots.detail}<span class="pastille-detail"><slot name="detail" /></span>{/if}
+		</span>
+		{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
+	</button>
+{/if}
 
 <style>
 	.pastille {
@@ -100,6 +155,33 @@
 	.pastille-chevron {
 		margin-left: 0.3rem;
 		opacity: 0.6;
+	}
+
+	/*  🔴 Le bouton radio est masqué à l'ŒIL, jamais à l'accessibilité.
+	    `display: none` l'aurait retiré de l'ordre de tabulation et de l'arbre
+	    d'accessibilité — donc annulé la navigation par flèches et l'annonce du
+	    lecteur d'écran, c'est-à-dire tout ce que ce mode existe pour préserver.
+	    C'est pourtant ce que faisait `.cat-option input[type='radio']`, qu'il
+	    remplace. Le découpage à 1 px est le motif standard : l'élément reste
+	    focusable et lu, il n'occupe simplement aucune surface. */
+	.pastille-radio {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		clip-path: inset(50%);
+		white-space: nowrap;
+		border: 0;
+	}
+	/*  Le focus clavier doit se VOIR : sans cela, un utilisateur au clavier
+	    déplace une sélection invisible. Le contour est porté par la pastille,
+	    puisque c'est elle qu'on regarde. */
+	.pastille:has(.pastille-radio:focus-visible) {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
 	}
 
 	/*  ── Le SOUS-TEXTE (29/08/2026, arbitré avec l'utilisateur) ──────────────

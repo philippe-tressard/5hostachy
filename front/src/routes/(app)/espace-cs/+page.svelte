@@ -708,7 +708,7 @@
 				>
 			</div>
 		{/if}
-		<div class="modal-actions">
+		<div class="form-actions">
 			<button class="btn btn-outline" on:click={() => (cvModal = null)}>Annuler</button>
 			<button class="btn btn-success" disabled={cvSubmitting} on:click={confirmerCSValidation}>
 				{cvSubmitting ? 'En cours…' : '✓ Valider le compte'}

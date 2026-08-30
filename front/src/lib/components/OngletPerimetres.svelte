@@ -322,7 +322,7 @@
 			</span>
 		</label>
 
-		<div class="modal-actions">
+		<div class="form-actions">
 			<button class="btn btn-outline" on:click={() => (edite = null)}>Annuler</button>
 			<button
 				class="btn btn-primary"
@@ -360,14 +360,14 @@
 			<textarea bind:value={nouveau.description} rows="3"></textarea>
 		</label>
 
-		<div class="modal-actions">
+		<div class="form-actions">
 			<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
 			<button
 				class="btn btn-primary"
 				disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
 				on:click={enregistrerNouveau}
 			>
-				{enregistrement ? 'Création…' : 'Créer'}
+				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
 	</Modale>

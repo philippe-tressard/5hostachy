@@ -575,15 +575,19 @@ label.field {
 	max-height: 88vh;
 	overflow-y: auto;
 }
-/*  Le pied d’une boîte de dialogue à DEUX gestes opposés (annuler ↔ supprimer),
-    d’où `space-between` — à ne pas confondre avec `.modal-footer`, qui aligne à
-    droite, ni avec `.form-actions`, qui soumet un formulaire. */
-.modal-actions {
-	display: flex;
-	justify-content: space-between;
-	gap: 0.5rem;
-	margin-top: 1rem;
-}
+/*  🔴 `.modal-actions` RETIRÉE le 30/08/2026, signalée à l'écran : *« annuler est
+    à gauche du bouton d'enregistrer, pas complètement à droite »*.
+
+    Elle alignait en `space-between` — Annuler rejeté au bord gauche de la boîte,
+    Enregistrer au bord droit — au motif d'« une boîte à DEUX gestes opposés
+    (annuler ↔ supprimer) ». Ses TROIS emplois étaient des couples
+    Annuler / Enregistrer : le cas qu'elle décrivait n'existait nulle part.
+
+    Une classe posée pour un cas qui ne se présente pas finit par servir au cas
+    d'à côté, et c'est ce qui est arrivé aux trois. Elles emploient désormais
+    `.form-actions` — Annuler juste à gauche de l'action primaire, les deux
+    groupés à droite, comme sur tous les formulaires du site (`ux-patterns` §9
+    quinquies). La classe part avec elles : la garder inviterait la quatrième. */
 
 /*  Un événement urgent, marqué par un filet rouge à gauche. Défini par
     `CarteEvenement`, employé aussi par la page du calendrier. */

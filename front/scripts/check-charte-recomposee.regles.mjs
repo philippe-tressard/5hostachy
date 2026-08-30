@@ -54,6 +54,20 @@ export const TOLERANCES = {
 		'480 px au lieu de 400 — l’inscription porte deux fois plus de champs',
 	'routes/auth/inscription/+page.svelte::auth-logo': 'logo réduit sur une page déjà longue',
 
+	//  ── Descendants par balise (lus depuis le 30/08/2026) ───────────────────
+	//  🔴 Cette forme de sélecteur — `.classe element` — échappait au contrôle, qui
+	//  ne lisait que `.classe` seule. C'est elle qu'emploie tout composant qui
+	//  habille ses enfants : onglets, tableaux, listes. Son ajout a trouvé une
+	//  redéfinition COMPLÈTE de `.tabs button` qui faisait disparaître le liseré de
+	//  l'onglet actif en production, et deux règles de tableau dont cinq
+	//  propriétés sur sept étaient identiques à la charte.
+	'routes/(app)/prestataires/+page.svelte::tabs button':
+		'onglets à ICÔNE, plus nombreux : padding et police resserrés pour tenir sur une ligne',
+	'routes/(app)/acces-securite/+page.svelte::table th':
+		'tableaux DENSES (imports d’accès, listes de badges) : en-tête resserré',
+	'routes/(app)/acces-securite/+page.svelte::table td':
+		'même raison — la cellule suit l’en-tête, sinon la colonne se décale',
+
 	//  ── Boutons ──────────────────────────────────────────────────────────────
 	'routes/(app)/admin/+page.svelte::btn-sm':
 		'boutons plus denses dans les tableaux de configuration',

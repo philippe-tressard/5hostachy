@@ -49,6 +49,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET, type ModeSaisiPour } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
@@ -68,6 +69,17 @@
 	 *   `!modeEdition` ne gouverne une section ici, et `npm run lint:etats` le
 	 *   refuse. Le mode ne change pas pendant la vie du composant. */
 	const etat: Etat = modeEdition ? 'edition' : 'creation';
+
+	//  `CATEGORIES_TICKET` parle en `value`/`description`, `ChoixPastilles` en
+	//  `val`/`desc` : l'adaptation se fait ICI, chez l'appelant, et non par une
+	//  variante du composant — la table est verrouillée côté API par
+	//  `test_statuts_tickets.py`, et une variante ajoutée pour accueillir un
+	//  écart existant ne factorise pas, elle entérine (R3 bis).
+	const OPTIONS_CATEGORIE = CATEGORIES_TICKET.map((c) => ({
+		val: c.value,
+		label: `${c.emoji} ${c.label}`,
+		desc: c.description,
+	}));
 
 	const dispatch = createEventDispatcher<{ cree: Ticket; modifie: Ticket; annule: void }>();
 
@@ -349,17 +361,24 @@
 		      vit dans la déclaration en commentaire, faute de pouvoir s'y écrire. -->
 		{#if sectionPresente(TICKET, etat, 'specifiques')}
 			<SectionFormulaire titre="Catégorie" requis idTitre="ticket-categorie-titre">
-				<div class="field champ-large" role="radiogroup" aria-labelledby="ticket-categorie-titre">
-					<div class="cat-grid">
-						{#each CATEGORIES_TICKET as cat (cat.value)}
-							<label class="cat-option" class:selected={categorie === cat.value}>
-								<input type="radio" bind:group={categorie} value={cat.value} />
-								<span class="cat-label">{cat.emoji} {cat.label}</span>
-								<span class="cat-desc">{cat.description}</span>
-							</label>
-						{/each}
-					</div>
-				</div>
+				<!--  🔴 `ChoixPastilles` en mode radio depuis le 30/08/2026, signalé à
+				      l'écran : *« dans tickets tu ne peux pas réduire ces pastilles à la
+				      même taille que nouveau prestataire »*. C'étaient des cartes maison,
+				      deux fois plus hautes que les pastilles du même site pour la même
+				      question posée.
+				      `ux-patterns` refusait la conversion — à raison : `Pastille` rendait
+				      un `<button>`, et un `radiogroup` y aurait perdu ses flèches. La
+				      réponse a été d'ENRICHIR l'objet plutôt que de le contourner : la
+				      pastille sait désormais porter un `<input type="radio">`, masqué à
+				      l'œil mais pas à l'accessibilité. -->
+				<ChoixPastilles
+					options={OPTIONS_CATEGORIE}
+					bind:valeur={categorie}
+					tous={false}
+					radio="ticket-categorie"
+					libelle="Catégorie"
+					avecDetail
+				/>
 			</SectionFormulaire>
 		{/if}
 
@@ -470,41 +489,17 @@
 		line-height: 1.45;
 		margin: 0.25rem 0 0;
 	}
-	.cat-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.5rem;
-	}
+	/*  🔴 `.cat-grid`, `.cat-option`, `.cat-label` et `.cat-desc` retirées le
+	    30/08/2026 : les cinq catégories passent par `ChoixPastilles`, qui porte
+	    son style avec son balisage. Ces règles décrivaient une carte deux fois
+	    plus haute qu'une pastille pour la même question posée à l'utilisateur.
 
-	.cat-option {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		padding: 0.75rem;
-		border: 2px solid var(--color-border);
-		border-radius: var(--radius);
-		cursor: pointer;
-		transition:
-			border-color 0.15s,
-			background 0.15s;
-	}
-
-	.cat-option input[type='radio'] {
-		display: none;
-	}
-	.cat-option.selected {
-		border-color: var(--color-primary);
-		background: var(--color-primary-light);
-	}
-
-	.cat-label {
-		font-weight: 600;
-		font-size: 0.9rem;
-	}
-	.cat-desc {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-	}
+	    ⚠️ L'une d'elles était un défaut d'accessibilité : `.cat-option
+	    input[type='radio'] { display: none }` retirait le bouton radio de l'ordre
+	    de tabulation ET de l'arbre d'accessibilité. Le `radiogroup` était donc
+	    déjà perdu ici — au clavier comme au lecteur d'écran — alors que c'est
+	    précisément l'argument qui interdisait la conversion en pastilles.
+	    `Pastille` le masque par découpage, ce qui le garde focusable et lu. */
 
 	/*  `.intitule-champ` a disparu d'ici : « Saisi pour » est devenu le TITRE de
 	    sa section (`SectionFormulaire`), qui porte déjà sa typographie. Un
@@ -519,10 +514,4 @@
 	    `ChampSaisiPour.svelte` (#498) — les garder ici en ferait des règles
 	    orphelines, c'est-à-dire la moitié du défaut que `lint:classes-nues`
 	    surveille par l'autre bout. */
-
-	@media (max-width: 480px) {
-		.cat-grid {
-			grid-template-columns: 1fr;
-		}
-	}
 </style>

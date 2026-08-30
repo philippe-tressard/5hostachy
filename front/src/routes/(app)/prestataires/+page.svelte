@@ -100,7 +100,8 @@
 	// `startsWith` ou par `in` aurait laissé passer un onglet qui n'existe plus.
 	//  L'ordre EST celui de la barre ; le DÉFAUT reste « Contrats », 2ᵉ onglet.
 	const ONGLETS = ['prestataires', 'contrats_tab', 'consommations'] as const;
-	let onglet: (typeof ONGLETS)[number] = 'contrats_tab';
+	//  L'onglet initial porte le nom de l'écran (`ux-patterns` §4 ter, 30/08/2026).
+	let onglet: (typeof ONGLETS)[number] = 'prestataires';
 	$: trackTabView(onglet);
 
 	// Expand prestataire cards
@@ -1577,24 +1578,16 @@
 		overflow-x: auto;
 		scrollbar-width: thin;
 	} /* le reste : charte (#607) */
+	/*  Ne garde QUE l'écart (30/08/2026) : la règle complète écrasait le liseré
+	    de l'onglet actif. Raison de l'écart : `check-charte-recomposee.regles.mjs`. */
 	.tabs button {
 		padding: 0.45rem 0.75rem;
-		border: none;
-		background: none;
-		cursor: pointer;
 		font-size: 0.85rem;
-		color: var(--color-text-muted);
-		border-bottom: 2px solid transparent;
-		margin-bottom: -2px;
-		border-radius: var(--radius) var(--radius) 0 0;
 		white-space: nowrap;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
 	}
-	/*  `:hover` et `.active` viennent de la charte (#491) : cet écran ne garde
-	    que son ÉCART — des onglets à icône, plus compacts, qui tiennent sur
-	    une ligne. Les redéfinir à l'identique ne servait à rien. */
 
 	/* ── Sous-vue toggle ── */
 
