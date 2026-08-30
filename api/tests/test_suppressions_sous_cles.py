@@ -38,7 +38,7 @@ l'authentification — laquelle a ses propres tests (`test_autorisation.py`,
 montage de session et de cookies sans rien mesurer de plus sur la question posée.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 from sqlmodel import Session, select
@@ -346,3 +346,105 @@ def test_supprimer_un_vigik_attribue(contexte):
 
     supprimer_vigik(v.id, session, admin)
     assert session.get(Vigik, v.id) is None
+
+
+# ── Les deux dernières tables du relevé ──────────────────────────────────────
+#
+#  ⚠️ `option_sondage` n'apparaît pas ici, et ce n'est pas un oubli : elle n'a
+#  aucun endpoint DELETE propre. Sa seule suppression a lieu dans
+#  `supprimer_sondage`, déjà éprouvé plus haut — et vert. Une entrée du relevé
+#  qui se referme sans écrire une ligne reste un résultat.
+
+
+def test_supprimer_un_bail_avec_ses_objets_remis_et_ses_acces(contexte, batiments):
+    """`remise_objet.bail_id` est NOT NULL ; vigik et télécommande se DÉLIENT.
+
+    Le code traitait déjà les trois — ce test dit s'il le fait dans le bon ORDRE,
+    ce que la lecture ne montre pas : aucune de ces tables n'a de `Relationship`
+    vers `LocationBail`.
+    """
+    from app.models.copropriete import Lot
+    from app.models.core import LocationBail, RemiseObjet, Telecommande, Vigik
+    from app.routers.bailleur import supprimer_bail
+
+    session, admin = contexte
+    lot = Lot(batiment_id=batiments[0], numero="546")
+    session.add(lot)
+    session.commit()
+    session.refresh(lot)
+    bail = LocationBail(lot_id=lot.id, bailleur_id=admin.id, date_entree=date(2026, 1, 1))
+    session.add(bail)
+    session.commit()
+    session.refresh(bail)
+    session.add(RemiseObjet(bail_id=bail.id, libelle="Clé"))
+    session.add(Vigik(code="VG-BAIL", user_id=admin.id, bail_id=bail.id))
+    session.add(Telecommande(code="TC-BAIL", user_id=admin.id, bail_id=bail.id))
+    session.commit()
+
+    supprimer_bail(bail.id, admin, session)
+    assert session.get(LocationBail, bail.id) is None
+    #  Les accès ne partent PAS : ils appartiennent à la copropriété, pas au bail.
+    #  Ils reviennent seulement « non confiés au locataire ».
+    for modele, code in ((Vigik, "VG-BAIL"), (Telecommande, "TC-BAIL")):
+        objet = session.exec(select(modele).where(modele.code == code)).first()
+        assert objet is not None, f"{modele.__name__} ne doit pas être supprimé avec le bail"
+        assert objet.bail_id is None and objet.chez_locataire is False
+    session.delete(lot)
+    session.commit()
+
+
+def test_supprimer_un_document_cite_par_un_contrat(contexte):
+    """🔴 `contrat_entretien.document_id` référence le document, et rien ne le délie.
+
+    Le contrat, lui, doit SURVIVRE : un contrat d'entretien existe indépendamment
+    du fichier scanné qu'on lui a joint. C'est l'inverse du document d'un ticket,
+    qui n'existe que par son porteur — la décision dépend de ce que la ligne
+    raconte, pas de la nullabilité de sa colonne.
+    """
+    from sqlmodel import Session as S  # noqa: F401  (lisibilité du montage)
+
+    from app.models.copropriete import Copropriete
+    from app.models.core import ContratEntretien, Prestataire
+    from app.routers.documents import delete_document
+
+    session, admin = contexte
+    #  Ce test monte SA copropriété plutôt que d'emprunter celle de `batiments` :
+    #  cette fixture-là vide le patrimoine à l'entrée comme à la sortie, et
+    #  dépendre de son cycle de vie ferait échouer le montage selon l'ordre des
+    #  tests — un test dont le résultat dépend de l'ordre n'est pas un test.
+    copro = Copropriete(nom="Copro 546", adresse="1 rue du Test")
+    session.add(copro)
+    session.commit()
+    session.refresh(copro)
+    prest = Prestataire(nom="Ascenseurs 546", specialite="ascenseur")
+    session.add(prest)
+    session.commit()
+    session.refresh(prest)
+    doc = Document(
+        titre="Contrat scanné",
+        fichier_nom="c.pdf",
+        fichier_chemin="/tmp/c-546.pdf",
+        publie_par_id=admin.id,
+    )
+    session.add(doc)
+    session.commit()
+    session.refresh(doc)
+    contrat = ContratEntretien(
+        copropriete_id=copro.id,
+        prestataire_id=prest.id,
+        libelle="Entretien ascenseur",
+        document_id=doc.id,
+    )
+    session.add(contrat)
+    session.commit()
+    session.refresh(contrat)
+
+    delete_document(doc.id, session, admin)
+    assert session.get(Document, doc.id) is None
+    survivant = session.get(ContratEntretien, contrat.id)
+    assert survivant is not None, "le contrat ne part pas avec son fichier joint"
+    assert survivant.document_id is None, "sa référence au document doit être déliée"
+    session.delete(survivant)
+    session.delete(prest)
+    session.delete(copro)
+    session.commit()
