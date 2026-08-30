@@ -273,7 +273,7 @@
 			{#if peutVoter}
 				<!-- Mode vote -->
 				<form on:submit|preventDefault={voter}>
-					{#each sondage.options as opt}
+					{#each sondage.options as opt (opt.id)}
 						<label class="option-label" class:selected={selectedOption === opt.id}>
 							<input
 								type="radio"
@@ -355,7 +355,7 @@
 				</p>
 			{:else}
 				<!-- Mode résultats -->
-				{#each sondage.options as opt}
+				{#each sondage.options as opt (opt.id)}
 					<div class="result-row" class:winner={opt.id === sondage.mon_vote}>
 						<div class="result-label">
 							{opt.libelle}

@@ -275,7 +275,7 @@
 
 	<!-- Thread messages -->
 	<div class="messages">
-		{#each messages as msg}
+		{#each messages as msg (msg.id)}
 			{@const isOwn = msg.auteur?.id === $currentUser?.id}
 			{#if !msg.interne || $isCS}
 				<div

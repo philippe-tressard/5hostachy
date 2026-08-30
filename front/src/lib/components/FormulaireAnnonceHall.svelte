@@ -112,7 +112,7 @@
 				)}
 		>
 			<option value="">— Saisie libre —</option>
-			{#each pubs as pub}
+			{#each pubs as pub (pub.id)}
 				<option value={pub.id}>{fmtDateShort(pub.cree_le)} · {pub.titre}</option>
 			{/each}
 		</select>

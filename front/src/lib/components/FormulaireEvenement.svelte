@@ -97,7 +97,7 @@
 					<label for="ev-prestataire">Prestataire</label>
 					<select id="ev-prestataire" bind:value={form.prestataire_id}>
 						<option value="">— Aucun —</option>
-						{#each prestataires.filter((p) => p.actif !== false) as p}
+						{#each prestataires.filter((p) => p.actif !== false) as p (p.id)}
 							<option value={String(p.id)}>{p.nom}</option>
 						{/each}
 					</select>

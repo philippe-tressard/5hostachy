@@ -196,7 +196,7 @@
 				<label for="d-mandant">Personne aidée (mandant) *</label>
 				<select id="d-mandant" bind:value={formMandantId}>
 					<option value={0} disabled>Choisir…</option>
-					{#each users.filter((u) => u.actif) as u}
+					{#each users.filter((u) => u.actif) as u (u.id)}
 						<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
 					{/each}
 				</select>
@@ -205,7 +205,7 @@
 				<label for="d-aidant">Proche aidant *</label>
 				<select id="d-aidant" bind:value={formAidantId}>
 					<option value={0} disabled>Choisir…</option>
-					{#each users.filter((u) => u.actif && u.id !== formMandantId) as u}
+					{#each users.filter((u) => u.actif && u.id !== formMandantId) as u (u.id)}
 						<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
 					{/each}
 				</select>

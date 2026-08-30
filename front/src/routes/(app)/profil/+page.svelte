@@ -482,7 +482,7 @@
 					<label for="dm-bat">Bâtiment souhaité</label>
 					<select id="dm-bat" bind:value={demandeBatimentId}>
 						<option value={null}>— Inchangé —</option>
-						{#each batiments as bat}
+						{#each batiments as bat (bat.id)}
 							<option value={bat.id}>Bât. {bat.numero}</option>
 						{/each}
 					</select>

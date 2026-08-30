@@ -369,7 +369,7 @@
 										<label for="imp-lot-{imp.id}">Lot en base</label>
 										<select id="imp-lot-{imp.id}" bind:value={editLot}>
 											<option value="">— Non lié —</option>
-											{#each lots as l}
+											{#each lots as l (l.id)}
 												<option value={String(l.id)}
 													>{l.batiment_nom ?? `Bât.${l.batiment_id}`} — {l.numero} ({l.type})</option
 												>
@@ -395,7 +395,7 @@
 												</select>
 												<select bind:value={occ.user_id} class="select-user">
 													<option value="">— Non lié —</option>
-													{#each utilisateurs as u}
+													{#each utilisateurs as u (u.id)}
 														<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
 													{/each}
 												</select>

@@ -102,7 +102,7 @@
 {:else}
 	{#if grouped.today.length > 0}
 		<h2 class="section-title">Aujourd'hui</h2>
-		{#each grouped.today as n}
+		{#each grouped.today as n (n.id)}
 			<div class="notif-row card {n.lue ? 'notif-read' : 'notif-unread'}" role="article">
 				<div class="notif-body">
 					{#if !n.lue}<div class="unread-dot"></div>{/if}
@@ -137,7 +137,7 @@
 
 	{#if grouped.older.length > 0}
 		<h2 class="section-title" style="margin-top:1.25rem">Plus anciennes</h2>
-		{#each grouped.older as n}
+		{#each grouped.older as n (n.id)}
 			<div class="notif-row card {n.lue ? 'notif-read' : 'notif-unread'}" role="article">
 				<div class="notif-body">
 					{#if !n.lue}<div class="unread-dot"></div>{/if}

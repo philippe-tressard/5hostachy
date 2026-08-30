@@ -774,7 +774,7 @@
 			{#if comptesEnAttente.length === 0}
 				<p class="text-muted-sm">Aucun compte en attente.</p>
 			{:else}
-				{#each comptesEnAttente as user}
+				{#each comptesEnAttente as user (user.id)}
 					<div class="pending-row card">
 						<div class="pending-info">
 							<strong>{user.prenom} {user.nom}</strong>
@@ -810,7 +810,7 @@
 			{#if commandesEnAttente.length === 0}
 				<p class="text-muted-sm">Aucune demande en attente.</p>
 			{:else}
-				{#each commandesEnAttente as cmd}
+				{#each commandesEnAttente as cmd (cmd.id)}
 					<div class="pending-row card">
 						<div class="pending-info">
 							<strong>{cmd.proprietaire.prenom} {cmd.proprietaire.nom}</strong>

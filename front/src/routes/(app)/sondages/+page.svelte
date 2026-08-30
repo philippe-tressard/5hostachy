@@ -406,7 +406,7 @@
 			titreVide="Aucun sondage"
 			messageVide="Les sondages du conseil syndical apparaîtront ici."
 		>
-			{#each sondages as s}
+			{#each sondages as s (s.id)}
 				<a href="/sondages/{s.id}" class="sondage-card card">
 					<div class="sondage-body">
 						<strong class="sondage-question"

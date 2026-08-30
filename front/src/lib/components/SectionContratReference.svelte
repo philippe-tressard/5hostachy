@@ -75,7 +75,7 @@
 		<label for="ref-{section}">Contrat de référence</label>
 		<select id="ref-{section}" bind:value={contratId}>
 			<option value={null}>— aucun —</option>
-			{#each candidats as c}
+			{#each candidats as c (c.id)}
 				<option value={c.id}>{libelleCandidat(c)}</option>
 			{/each}
 		</select>
