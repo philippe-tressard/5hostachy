@@ -127,7 +127,10 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		value: 'bug',
 		label: 'Bug',
 		emoji: '\u{1F41B}',
-		description: 'Problème technique sur le site ou l’application',
+		//  Arbitré à l'écran le 30/08/2026. « le site ou l'application » décrivait
+		//  le support ; le résident, lui, cherche le NOM de ce qu'il utilise —
+		//  et il n'a pas à savoir si sa gêne vient du site ou de la PWA.
+		description: 'Pb technique sur 5Hostachy',
 	},
 ];
 
