@@ -478,6 +478,44 @@ formulaire ouvert.
 
 Pages implémentées : `mon-lot`, `sondages`, `espace-cs`, `admin`, `calendrier`
 
+### 🔴 4 bis. L'onglet ACTIF se voit — trois marques, pas une
+
+Arbitré à l'écran le 30/08/2026 : *« on ne voit pas l'onglet actif ; ajoute ce
+design dans l'UX et applique-le à tous »*.
+
+`.tabs button.active` (`styles/ecrans.css`) porte les **trois** marques, et il
+les faut toutes :
+
+| Marque | Pourquoi elle ne suffit pas seule |
+|---|---|
+| **liseré bas** en couleur primaire | la seule qui se voie d'un coup d'œil — c'est celle qui manquait |
+| **couleur** du texte en primaire | seule, elle se confond avec le survol |
+| **graisse 600** | seule, elle est trop discrète ; et elle porte l'écart pour qui distingue mal les couleurs |
+
+**Un écran ne redéfinit JAMAIS `.tabs button` en entier.** Il ne pose que son
+écart — taille, espacement, icône — et hérite du reste.
+
+⚠️ **Le défaut, et il est structurel.** `prestataires` redéfinissait les neuf
+propriétés de la charte, dont `color` et `border-bottom: transparent` : les deux
+que `.active` change. À spécificité égale, le style **scopé** d'un composant
+Svelte est injecté APRÈS la feuille commune — il gagne. Le liseré de l'onglet
+actif disparaissait donc, sans qu'aucune règle ne soit fausse.
+
+🔴 Et un commentaire posé juste à côté affirmait *« cet écran ne garde que son
+ÉCART »*. C'était faux, et il a survécu à deux lots qui le citaient : **un
+commentaire n'est pas un garde-fou** — c'est la troisième fois que ce dépôt
+l'apprend (#562, #491, celui-ci).
+
+### 4 ter. L'onglet ouvert par défaut est celui que le MENU annonce
+
+Signalé le même jour : *« quand on clique sur prestataire, la page affichée par
+défaut est celle des contrats »*. Une entrée de menu qui ouvre autre chose que ce
+qu'elle nomme fait douter d'avoir cliqué au bon endroit.
+
+**Règle** : l'onglet initial porte le nom de l'écran, sauf raison écrite sur
+place. Une ouverture directe par `?onglet=` reste prioritaire — c'est un choix
+explicite du lien, pas un défaut.
+
 ## 5. Pill Buttons
 
 **Quand** : choix exclusif ou multiple, ≤ 8 options, libellés courts.
@@ -1221,9 +1259,45 @@ signaler **trois fois** :
    bascule en « ✕ Annuler ». Ne PAS en ajouter une seconde dans la boîte.
 2. **`alignerSaisie={showForm}` sur `EntetePage`** dès qu'un formulaire s'ouvre
    dans la page — sans lui le bouton flotte loin de ce qu'il annule.
-3. **Jamais de modale pour un formulaire de création.** Les modales restent
-   légitimes pour une confirmation, un téléversement ponctuel ou la visionneuse —
-   ce qui les distingue : elles n'ont pas de `<form>`.
+3. **Jamais de modale pour un formulaire de CRÉATION.** Les modales restent
+   légitimes pour une confirmation, un téléversement ponctuel, la visionneuse —
+   et, depuis le 30/08/2026, pour l'**édition** (voir §14 bis).
+
+### 🔴 14 bis. LA MODALE EST LE FORMAT STANDARD D'ÉDITION (30/08/2026)
+
+Arbitré à l'écran : *« d'une manière générale, je trouve qu'en édition le format
+modal est plus net que le dépliement sur une même fenêtre. Mets dans l'UX que la
+modale est le format standard d'édition et corrige partout. »*
+
+| Geste | Format |
+|---|---|
+| **Créer** | la **boîte dans la page** — `FormulaireCreation`, §14 ci-dessus |
+| **Éditer** un objet existant | **la modale** — `Modale`, qui porte titre, croix, `Échap` et verrou |
+
+**Pourquoi la distinction tient** — elle n'est pas un compromis :
+
+- une **création** part d'une page vide et s'inscrit dans le flux de l'écran : la
+  boîte montre où l'objet va atterrir, et le bouton d'en-tête bascule en
+  « ✕ Annuler », sans double commande ;
+- une **édition** interrompt une lecture. Déplier un formulaire au milieu d'une
+  liste déplace tout ce qui est en dessous, et l'on perd de vue l'objet qu'on
+  modifie. La modale isole le geste et le referme sans rien décaler.
+
+⚠️ **Ce que ce renversement ne remet PAS en cause.** #367 avait été arbitré après
+que l'utilisateur l'ait signalé **trois fois**, et ses trois constats restent
+vrais : pas de **double commande** d'annulation (celle du calendrier vivait sous
+l'overlay, visible et inutilisable), pas de bouton **excentré**, et surtout pas
+**trois paradigmes** pour une même intention. La règle passe de « un format pour
+tout » à « un format par geste » — deux, nommés, et pas un de plus.
+
+🔴 **Le garde-fou change de forme, il ne disparaît pas.** `lint:formulaires`
+refusait toute modale contenant un `<form>`. Il doit désormais distinguer les
+deux gestes, et **une modale de création reste refusée** — sans quoi la règle
+redevient « au cas par cas », c'est-à-dire les trois paradigmes de #367.
+
+⚠️ **R5 s'applique** : l'enrichissement se propose sur **UN** écran, se fait
+constater, puis se généralise. La conversion ne se fait donc pas d'un bloc sur
+les dix écrans concernés.
 
 **Garde-fou** : `npm run lint:formulaires` (job `build-frontend`). Il refuse un
 cadre `card largeur-saisie` enveloppant un `<form>`, et toute modale contenant un

@@ -555,16 +555,14 @@
 	.table {
 		font-size: 0.9rem;
 	}
+	/*  Ne garde que l'écart — la raison est déclarée dans
+	    `check-charte-recomposee.regles.mjs` (30/08/2026). */
 	.table th {
-		text-align: left;
 		padding: 0.4rem 0.5rem;
 		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		border-bottom: 1px solid var(--color-border);
 	}
 	.table td {
 		padding: 0.5rem;
-		border-bottom: 1px solid var(--color-border);
 	}
 	.form-row {
 		display: grid;

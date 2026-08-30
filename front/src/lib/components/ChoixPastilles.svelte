@@ -80,6 +80,19 @@
 	/** Ajoute le ` *` de la charte au libellé visible. */
 	export let requis = false;
 
+	/**
+	 * Nom du groupe de **boutons radio** — active le mode `radiogroup`.
+	 *
+	 * ⚠️ À réserver au choix EXCLUSIF et obligatoire d'un formulaire, là où la
+	 * navigation par flèches a un sens. Un filtre reste des `<button>` : il n'y a
+	 * rien à « parcourir », et l'entrée « Tous » n'est pas une valeur du modèle.
+	 *
+	 * Le conteneur porte alors `role="radiogroup"` et non `role="group"` — sans
+	 * quoi un lecteur d'écran annonce un groupe quelconque et n'énonce ni la
+	 * position (« 2 sur 5 ») ni l'exclusivité du choix.
+	 */
+	export let radio = '';
+
 	//  Un identifiant par instance : deux rangées sur le même écran ne doivent pas
 	//  se renvoyer au même libellé.
 	//
@@ -96,11 +109,14 @@
 	{/if}
 	<div
 		class="filters filters--defilante"
-		role="group"
+		role={radio ? 'radiogroup' : 'group'}
 		aria-label={libelleVisible ? undefined : libelle}
 		aria-labelledby={libelleVisible ? idTitre : undefined}
 	>
 		{#if tous !== false}
+			<!--  Jamais en radio : « Tous » n'est pas une valeur du modèle, c'est
+			      l'absence de filtre. Le mode radio est réservé au choix exclusif
+			      et obligatoire d'un formulaire, où ce vide n'existe pas. -->
 			<Pastille active={valeur === ''} on:click={() => (valeur = '')}>{tous}</Pastille>
 		{/if}
 		<!--  ⚠️ DEUX branches, et non un `{#if}` autour du `slot=` : Svelte exige
@@ -110,11 +126,23 @@
 		      montrer, donc la pastille sur une seule ligne. -->
 		{#each options as o (o.val)}
 			{#if avecDetail && o.desc}
-				<Pastille active={valeur === o.val} on:click={() => (valeur = o.val)}>
+				<Pastille
+					active={valeur === o.val}
+					radio={radio ? { nom: radio, valeur: o.val } : null}
+					on:click={() => (valeur = o.val)}
+					on:change={() => (valeur = o.val)}
+				>
 					{o.label}<span slot="detail">{o.desc}</span>
 				</Pastille>
 			{:else}
-				<Pastille active={valeur === o.val} on:click={() => (valeur = o.val)}>{o.label}</Pastille>
+				<Pastille
+					active={valeur === o.val}
+					radio={radio ? { nom: radio, valeur: o.val } : null}
+					on:click={() => (valeur = o.val)}
+					on:change={() => (valeur = o.val)}
+				>
+					{o.label}
+				</Pastille>
 			{/if}
 		{/each}
 	</div>

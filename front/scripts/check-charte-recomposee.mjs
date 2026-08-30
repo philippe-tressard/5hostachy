@@ -79,10 +79,36 @@ function fichiersSvelte(dossier) {
 	return trouves;
 }
 
-/** Le nom de la classe quand le sélecteur est EXACTEMENT `.x`, sinon `null`. */
+/**
+ * La CLÉ de comparaison quand le sélecteur en a une, sinon `null`.
+ *
+ * Deux formes, et deux seulement :
+ *   - `.x`          → `x`         (la classe seule)
+ *   - `.x element`  → `x element` (un descendant par sa BALISE)
+ *
+ * 🔴 La seconde a été ajoutée le 30/08/2026, après un défaut visible en
+ * production : *« on ne voit pas l'onglet actif »*. `prestataires` redéfinissait
+ * `.tabs button` en entier — les neuf propriétés de la charte, dont `color` et
+ * `border-bottom: transparent`, c'est-à-dire les deux que `.tabs button.active`
+ * change. À spécificité égale, le style scopé du composant est injecté après la
+ * feuille commune : il gagnait, et le liseré de l'onglet actif disparaissait.
+ *
+ * ⚠️ Ce contrôle était **vert**, et il ne pouvait pas faire autrement : il ne
+ * lisait que les sélecteurs `.x` seuls. C'est le motif corrigé le matin même
+ * dans `check-modales` — *un contrôle qui n'énumère que les formes qu'il connaît
+ * est aveugle à la suivante*. Ici la forme manquante est celle qu'emploie tout
+ * composant qui habille ses enfants : onglets, listes, tableaux.
+ *
+ * On s'arrête au descendant par balise : `.x .y` est déjà couvert par `.y`, et
+ * les pseudo-classes (`:hover`, `.active`) sont des ÉTATS — les comparer
+ * demanderait de résoudre la cascade, pas de comparer deux corps de règle.
+ */
 function classeSeule(selecteur) {
-	const m = /^\s*\.([A-Za-z][\w-]*)\s*$/.exec(selecteur);
-	return m ? m[1] : null;
+	const propre = selecteur.trim();
+	const simple = /^\.([A-Za-z][\w-]*)$/.exec(propre);
+	if (simple) return simple[1];
+	const descendant = /^\.([A-Za-z][\w-]*)\s+([a-z][a-z0-9]*)$/.exec(propre);
+	return descendant ? `${descendant[1]} ${descendant[2]}` : null;
 }
 
 // ── Cas zéro ────────────────────────────────────────────────────────────────
