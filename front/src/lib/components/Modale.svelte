@@ -115,6 +115,24 @@
 	 */
 	export let fermetureAuFond = true;
 
+	/**
+	 * Cette modale porte un formulaire d'**ÉDITION** — le geste que
+	 * `ux-patterns` §14 bis autorise en modale depuis le 30/08/2026 :
+	 *
+	 * > créer → la boîte dans la page · éditer → la modale
+	 *
+	 * ⚠️ **Une déclaration, pas une commodité.** `lint:formulaires` refuse toute
+	 * `<Modale>` contenant un `<form>` qui ne la porte pas — c'est-à-dire toute
+	 * modale de CRÉATION, le paradigme que #367 a supprimé après trois
+	 * signalements. Sans cette distinction, la règle redeviendrait « au cas par
+	 * cas », et les trois paradigmes reviendraient avec elle.
+	 *
+	 * 🔴 Elle existe aussi parce que rien dans le balisage ne dit si l'on crée ou
+	 * si l'on corrige. Le contrôle ne peut pas le deviner ; celui qui écrit
+	 * l'écran, si. C'est R4 appliqué à un geste : *la divergence se déclare.*
+	 */
+	export let edition = false;
+
 	const dispatch = createEventDispatcher<{ fermer: void }>();
 
 	//  🔴 Compteur PARTAGÉ par toutes les modales du site, et non un booléen par

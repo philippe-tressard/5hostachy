@@ -20,8 +20,30 @@
  *
  *   1. `class="card largeur-saisie"` écrit à la main — passer par
  *      `<FormulaireCreation titre="…">` ;
- *   2. un `<h2>` de titre de formulaire portant `font-size` en ligne — le
- *      composant le porte.
+ *   2. une `<Modale>` portant un `<form>` **sans se déclarer `edition`**.
+ *
+ * ## 🔴 Le point 2 a changé de forme le 30/08/2026 — et il était MORT
+ *
+ * Il cherchait `class="modal-overlay"` suivi d'un `<form>`. Or #561 (28/08) a
+ * fait absorber ce fond par `Modale.svelte`, qui vit dans `lib/` — hors du
+ * périmètre `routes/` de ce contrôle. **Le motif ne pouvait donc plus rien
+ * trouver, jamais**, et le contrôle restait vert : c'est `standards/04` §27, un
+ * contrôle dont le résultat normal est zéro ne peut pas se relire lui-même.
+ *
+ * Il lit maintenant les `<Modale>` elles-mêmes, et il porte un **plancher
+ * d'éléments lus** — sans quoi il pourrait redevenir muet de la même façon.
+ *
+ * ## Et la règle qu'il applique a changé le même jour (`ux-patterns` §14 bis)
+ *
+ * Arbitré à l'écran : *« en édition, le format modal est plus net que le
+ * dépliement sur une même fenêtre »*. Un geste, un format :
+ *
+ *   - **créer** → la boîte dans la page (ce que #367 a établi, et qui tient) ;
+ *   - **éditer** → la modale, qui se déclare par `<Modale edition>`.
+ *
+ * ⚠️ La modale de CRÉATION reste refusée. Sans cette moitié-là, la règle
+ * redeviendrait « au cas par cas », c'est-à-dire les trois paradigmes que #367 a
+ * supprimés après trois signalements.
  *
  * Le contrôle s'auto-contrôle : composant absent, prop disparue ou plus aucune
  * page utilisatrice → il ÉCHOUE au lieu de conclure au vert
@@ -92,15 +114,14 @@ const MOTIFS = [
 		quoi: 'un cadre de formulaire est rendu à la main',
 		remede: '<FormulaireCreation titre="…"> … </FormulaireCreation>',
 	},
-	{
-		//  Le paradigme à éliminer. Une modale qui enveloppe un `<form>` EST un
-		//  formulaire de création déguisé — c'est ce que faisaient le calendrier et
-		//  prestataires. Les modales de confirmation, d'upload ponctuel ou la
-		//  visionneuse n'ont pas de `<form>` et ne sont pas visées.
-		regex: /class="[^"]*\bmodal-overlay\b[^"]*"[\s\S]{0,900}?<form/g,
-		quoi: 'un formulaire est rendu dans une MODALE',
-		remede: 'une boîte dans la page — <FormulaireCreation titre="…">',
-	},
+	//  🔴 Le motif qui cherchait `class="modal-overlay"` est RETIRÉ : il était mort
+	//  depuis #561 (28/08/2026). Le fond de modale ne s'écrit plus à la main —
+	//  `Modale.svelte` l'a absorbé, et il vit dans `lib/`, hors du périmètre
+	//  `routes/` de ce contrôle. Le motif ne pouvait donc plus rien trouver,
+	//  jamais, et le contrôle restait vert : `standards/04` §27, un contrôle dont
+	//  le résultat normal est zéro ne peut pas se relire lui-même.
+	//
+	//  Il est remplacé plus bas par une lecture de `<Modale>` — voir `modaleSansEdition`.
 	//  Pas de motif sur `<h2 style="font-size…">`. Il avait été écrit, et il criait
 	//  sur neuf pages dont sept portaient un titre de SECTION parfaitement légitime
 	//  (admin, espace-cs, faq, profil, fiches de ticket et de sondage). Rien dans le
@@ -110,19 +131,67 @@ const MOTIFS = [
 	//  propre invariant le jour où il sera tranché.
 ];
 
+/**
+ * Les `<Modale>` d'un fichier : la balise ouvrante et le début de son contenu.
+ *
+ * La fin de la balise est le premier `>` HORS accolade — un attribut peut
+ * contenir `=>` ou un objet, que suivre naïvement couperait trop tôt.
+ */
+function modales(contenu) {
+	const sorties = [];
+	for (const m of contenu.matchAll(/<Modale(?=[\s>])/g)) {
+		let i = m.index + '<Modale'.length;
+		let accolades = 0;
+		for (; i < contenu.length; i++) {
+			const c = contenu[i];
+			if (c === '{') accolades++;
+			else if (c === '}') accolades--;
+			else if (c === '>' && accolades === 0) break;
+		}
+		sorties.push({ balise: contenu.slice(m.index, i + 1), suite: contenu.slice(i + 1, i + 1200) });
+	}
+	return sorties;
+}
+
+/**
+ * Une modale qui porte un `<form>` **sans se déclarer `edition`** — donc une
+ * modale de CRÉATION, le paradigme que #367 a supprimé.
+ *
+ * ⚠️ Rien dans le balisage ne dit si l'on crée ou si l'on corrige : le contrôle
+ * ne peut pas le deviner, celui qui écrit l'écran si. D'où la prop, et non une
+ * heuristique — une heuristique se trompe en silence dans les deux sens.
+ */
+function modaleSansEdition(contenu) {
+	return modales(contenu)
+		.filter((m) => /<form\b/.test(m.suite) && !/\bedition\b/.test(m.balise))
+		.map((m) => m.balise.slice(0, 80).replace(/\s+/g, ' '));
+}
+
 const fautifs = [];
 const exceptionsUtiles = new Set();
 let pagesAvecFormulaire = 0;
+let modalesLues = 0;
 
 for (const f of tous) {
 	const rel = relative(ROUTES, f).split(sep).join('/');
 	const brut = readFileSync(f, 'utf8');
 	if (brut.includes('<FormulaireCreation')) pagesAvecFormulaire++;
 	const contenu = sansCommentaires(brut);
+	modalesLues += modales(contenu).length;
 	const trouves = [];
 	for (const motif of MOTIFS) {
 		const m = contenu.match(motif.regex);
 		if (m) trouves.push({ ...motif, exemples: [...new Set(m.map((s) => s.trim()))].slice(0, 2) });
+	}
+	const creationEnModale = modaleSansEdition(contenu);
+	if (creationEnModale.length > 0) {
+		trouves.push({
+			quoi: 'un formulaire est rendu dans une MODALE sans se déclarer `edition`',
+			remede:
+				'créer → <FormulaireCreation titre="…"> (la boîte dans la page) · ' +
+				'corriger un objet existant → <Modale edition …> (`ux-patterns` §14 bis)',
+			exemples: creationEnModale.slice(0, 2),
+		});
 	}
 	if (trouves.length === 0) continue;
 	if (rel in EXCEPTIONS) {
@@ -130,6 +199,19 @@ for (const f of tous) {
 		continue;
 	}
 	fautifs.push({ fichier: rel, trouves });
+}
+
+//  🔴 Le relevé légitime de ce contrôle est VIDE : il ne peut donc pas distinguer
+//  « rien trouvé » de « rien lu » (`standards/04` §27). C'est exactement ainsi que
+//  son motif précédent est resté vert en étant mort. Le témoin est un plancher
+//  d'éléments LUS : sous ce seuil, le repérage des `<Modale>` ne mord plus.
+const PLANCHER_MODALES = 10;
+if (modalesLues < PLANCHER_MODALES) {
+	console.error(
+		`✗ Cas zéro : ${modalesLues} <Modale> recensée(s) dans routes/, ${PLANCHER_MODALES} ` +
+			'attendues au minimum. Le repérage ne mord plus — ne pas lire ceci comme un succès.',
+	);
+	process.exit(1);
 }
 
 //  Le composant peut exister, être conforme, et n'être employé nulle part.
@@ -167,5 +249,6 @@ if (inutiles.length > 0) {
 
 console.log(
 	`✓ Formulaires : ${pagesAvecFormulaire} page(s) passent par FormulaireCreation, ` +
-		`${tous.length} page(s) vérifiée(s), ${Object.keys(EXCEPTIONS).length} exception(s) justifiée(s).`,
+		`${tous.length} page(s) et ${modalesLues} modale(s) vérifiée(s), ` +
+		`${Object.keys(EXCEPTIONS).length} exception(s) justifiée(s).`,
 );
