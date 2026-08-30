@@ -544,6 +544,19 @@ jobs:
         working-directory: front
         run: npm run lint:formulaires
 
+      # 🔴 L'API Svelte 4 COMPILE et lève à l'exécution. `confirmation.ts`
+      # montait sa boîte avec `new Confirmation(...)` depuis sa création : la
+      # fonction n'a JAMAIS marché, et 17 gestes en dépendaient (suppressions,
+      # archivages). Ni `svelte-check`, ni ESLint, ni le build ne pouvaient le
+      # voir — tous les contrôles de ce dépôt sont statiques, et `new X()` est du
+      # JavaScript valide.
+      # En production, le message est minifié en « Cannot use 'in' operator to
+      # search for 'Symbol($state)' in undefined » : illisible. C'est
+      # l'utilisateur qui l'a signalé, sur un bouton qui « ne faisait rien ».
+      - name: Aucune API Svelte 4 (elle compile, et lève au clic)
+        working-directory: front
+        run: npm run lint:api-svelte4
+
       # R4 du cadre d'interface (#430) : une entité, quatre rendus, et **toute
       # divergence entre deux états se déclare avec son motif**. Le relevé des 42
       # couples menu/entité a mesuré 13 éditions sur 23 réinventant un motif que

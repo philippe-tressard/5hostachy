@@ -1,3 +1,5 @@
+import { mount, unmount } from 'svelte';
+
 import Confirmation from '$lib/components/Confirmation.svelte';
 
 /**
@@ -53,7 +55,28 @@ export function confirmer(
 		const hote = document.createElement('div');
 		document.body.appendChild(hote);
 		let rendu = false;
-		const composant = new Confirmation({
+		//  🔴 `mount()`, PAS `new Confirmation(...)` — corrigé le 30/08/2026.
+		//
+		//  Ce fichier montait le composant avec l'API Svelte 4. Le projet est en
+		//  **Svelte 5**, où elle lève :
+		//
+		//      component_api_invalid_new — Attempted to instantiate
+		//      Confirmation.svelte with `new Confirmation`, which is no longer
+		//      valid in Svelte 5.
+		//
+		//  Conséquence : `confirmer()` n'a JAMAIS fonctionné. Les 17 gestes qui en
+		//  dépendent — suppressions, archivages — levaient au lieu de demander, et
+		//  l'action n'avait pas lieu.
+		//
+		//  ⚠️ Ce qui l'a rendu invisible : en production, le message est minifié
+		//  en « Cannot use 'in' operator to search for 'Symbol($state)' in
+		//  undefined » — illisible, et sans rapport apparent avec une boîte de
+		//  dialogue. C'est l'utilisateur qui l'a signalé, sur un bouton qui « ne
+		//  faisait rien ». Aucun contrôle du dépôt ne pouvait le voir : ils sont
+		//  tous statiques, et cette ligne compile parfaitement.
+		//
+		//  🔒 `lint:api-svelte4` refuse désormais cette forme dans tout le front.
+		const composant = mount(Confirmation, {
 			target: hote,
 			props: {
 				titre: opts.titre ?? 'Confirmer',
@@ -67,7 +90,8 @@ export function confirmer(
 					//  démontage serait tenté deux fois.
 					if (rendu) return;
 					rendu = true;
-					composant.$destroy();
+					//  `unmount()` remplace `$destroy()`, retiré en Svelte 5.
+					unmount(composant);
 					hote.remove();
 					resoudre(ok);
 				},
