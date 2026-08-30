@@ -109,6 +109,7 @@
 	{/if}
 	<div
 		class="filters filters--defilante"
+		class:filters--egalisee={avecDetail}
 		role={radio ? 'radiogroup' : 'group'}
 		aria-label={libelleVisible ? undefined : libelle}
 		aria-labelledby={libelleVisible ? idTitre : undefined}
