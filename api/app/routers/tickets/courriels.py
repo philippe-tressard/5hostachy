@@ -15,7 +15,8 @@ from typing import Optional
 from fastapi import BackgroundTasks
 from sqlmodel import Session, select
 
-from app.models.core import MessageTicket, TicketEvolution, Utilisateur
+from app.models.core import MessageTicket, Ticket, TicketEvolution, Utilisateur
+from app.utils.photos import parse_photos
 from app.utils.dates_fr import date_courte, datetime_longue_paris as fmt_paris
 from app.utils.fichiers import chemins_locaux
 
@@ -202,4 +203,72 @@ def envoyer_email_externe(
         to=email_externe,
         context=ctx,
         attachments=attachments or None,
+    )
+
+
+#  ── Déplacés depuis `crud.py` le 30/08/2026 (#546) ──────────────────────
+#  Le contrôle de modularité a refusé une ligne de plus dans `crud.py`, et il
+#  désignait un problème de PLACEMENT : ces deux fonctions COMPOSENT ET
+#  ENVOIENT un message, ce que l'en-tête de ce fichier-ci décrit comme sa
+#  raison d'être — « pour que les routes ne portent plus que la décision de
+#  l'envoyer ». Elles étaient restées dans le CRUD par l'accident du
+#  découpage initial, pas par choix.
+
+def _alerter_bug(
+    session: Session, ticket: Ticket, user: Utilisateur, background_tasks: BackgroundTasks
+) -> None:
+    """Un ticket « bug » prévient le gestionnaire du site : c'est du ressort admin."""
+    cfg = config_site(session, "notify_ticket_bug_email", "site_email", "site_manager_user_id")
+    if cfg.get("notify_ticket_bug_email") != "1":
+        return
+
+    from app.utils.email import get_site_manager_notification_email, send_email
+
+    target_email, site_cfg = get_site_manager_notification_email(session)
+    if not target_email:
+        return
+    background_tasks.add_task(
+        send_email,
+        code="ticket_bug_admin",
+        to=target_email,
+        context={
+            "ticket": {
+                "id": ticket.id,
+                "numero": ticket.numero,
+                "titre": ticket.titre,
+                "description": ticket.description,
+                "categorie": ticket.categorie,
+            },
+            "auteur": {"prenom": user.prenom, "nom": user.nom, "email": user.email},
+            "residence": {"nom": site_cfg.get("site_nom") or cfg.get("site_nom") or "5Hostachy"},
+            "app": {"url": site_cfg.get("site_url") or cfg.get("site_url") or "https://localhost"},
+        },
+    )
+
+def _partager_sur_le_groupe(
+    session: Session, ticket: Ticket, background_tasks: BackgroundTasks
+) -> None:
+    """Publie le ticket sur le groupe WhatsApp, première photo comprise.
+
+    L'autorisation est vérifiée par l'appelant : le groupe diffuse à tous les
+    résidents, il n'est pas ouvert à l'auteur d'un ticket quelconque.
+    """
+    from app.utils.fichiers import est_image
+    from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
+
+    wa_config = config_whatsapp(session)
+    if not whatsapp_actif(wa_config):
+        return
+    #  La première photo accompagne le message, comme l'image d'une actualité :
+    #  sur une fuite ou une dégradation, c'est elle qui porte l'information. Les
+    #  documents joints ne partent pas — le bridge n'envoie qu'une image.
+    premiere_photo = next((u for u in parse_photos(ticket.photos_urls) if est_image(u)), None)
+    background_tasks.add_task(
+        envoyer_whatsapp_avec_log,
+        f"\U0001f3ab {ticket.titre}",
+        ticket.description,
+        ticket.categorie == "urgence",
+        ticket.perimetre_cible,
+        premiere_photo,
+        wa_config,
     )
