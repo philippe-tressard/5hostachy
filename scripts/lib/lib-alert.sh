@@ -15,6 +15,24 @@
 #  pour que tout script d'infra puisse alerter sans le recopier (règle de
 #  non-duplication du projet).
 #
+#  🔴 UN CINQUIÈME APPELANT MANQUAIT, ET C'ÉTAIT LE PLUS EXPOSÉ (30/08/2026).
+#  `bascule.sh` a gardé son propre `smtplib` jusqu'à cette date — trente lignes
+#  écrites une seconde fois, alors que ce module dit depuis sa création qu'il
+#  existe pour cela. Il était le seul des cinq à ne pas l'employer.
+#
+#  ⚠️ Ce n'était pas qu'une duplication, et c'est ce qui a décidé de la
+#  corriger : son envoi passait par `docker exec hostachy_api python3`, donc par
+#  un conteneur que la bascule VENAIT D'ARRÊTER en phase 2. Le rollback le
+#  relance avant d'alerter — mais si cette relance échoue, c'est-à-dire dans le
+#  seul cas où l'alerte compte vraiment, elle ne partait pas : le script se
+#  contentait d'un `(email non envoyé — conteneur API indisponible)` dans un
+#  journal que personne ne lit à 02:00.
+#
+#  Un canal qui emprunte ce qui est en panne ne peut pas signaler cette panne
+#  (`standards/07` §2) — c'est la limite déjà nommée ci-dessous pour le réseau,
+#  et elle valait ici pour le conteneur. Ce module, lui, envoie depuis l'HÔTE en
+#  lisant `.env` : il ne dépend d'aucun conteneur.
+#
 #  Usage :
 #    source /opt/5hostachy/scripts/lib/lib-alert.sh
 #    ALERT_COOLDOWN_FILE=/tmp/mon-script-cooldown   # défaut : par nom de script

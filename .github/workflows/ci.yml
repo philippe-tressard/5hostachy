@@ -325,6 +325,25 @@ jobs:
                 bad = 1 } }
             END { exit bad }
           ' scripts/exploitation/auto-deploy.sh || st=1
+          # 🔴 Le moteur d'envoi d'e-mail vit dans lib-alert.sh, et NULLE PART
+          # ailleurs. `bascule.sh` a gardé le sien jusqu'au 30/08/2026 — trente
+          # lignes de smtplib recopiées, et pire : envoyées par `docker exec
+          # hostachy_api`, donc par un conteneur que sa propre phase 2 arrête.
+          # L'alerte de bascule échouée ne partait donc pas dans le seul cas où
+          # elle compte : quand le rollback n'a pas su relancer les conteneurs.
+          # Rien ne le disait — c'est une duplication qu'aucun contrôle ne
+          # voyait, et ce lot en est la troisième dans ce dépôt (moteur d'envoi
+          # du monitoring, v2.41.0).
+          for f in $(git ls-files -- 'scripts/*.sh'); do
+            case "$f" in scripts/lib/lib-alert.sh) continue ;; esac
+            grep -qE '^[^#]*(smtplib|MIMEText|starttls)' "$f" \
+              && { echo "::error file=$f::moteur SMTP réécrit — passer par scripts/lib/lib-alert.sh (alert_if_not_in_cooldown), seul endroit où l'envoi est défini"; st=1; }
+          done
+          # Et l'inverse, sinon le contrôle ci-dessus serait vert le jour où
+          # PERSONNE n'envoie plus rien : le module doit toujours porter le
+          # moteur qu'il centralise (cas zéro, `standards/04` §2).
+          grep -qE '^[^#]*smtplib' scripts/lib/lib-alert.sh \
+            || { echo "::error file=scripts/lib/lib-alert.sh::le moteur SMTP a disparu du module qui doit le porter — le contrôle ci-dessus ne mesure plus rien"; st=1; }
           exit $st
 
       - name: Modularité — un fichier de plus de 500 lignes ne doit pas grossir

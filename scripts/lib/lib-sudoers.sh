@@ -44,14 +44,26 @@ SUDOERS_HERITES="010_pi-nopasswd bascule ptressard ptressard-extra"
 # n'importe quel service — une escalade complète sous couvert de « redémarrer le
 # tunnel ».
 #
-# ⚠️ `rsync` est là par nécessité, et c'est la surface qui reste à retirer.
-# `bascule.sh` l'appelle trois fois via SSH pour installer uploads, WhatsApp auth
-# et la base dans les volumes Docker du peer. `sudo rsync` sans borne de chemin
-# EST une escalade root complète — rsync écrit où il veut. Le remède est connu et
-# éprouvé (v2.46.11 : un conteneur jetable au lieu de sudo), mais il touche la
-# phase de synchronisation de la BASE, où le `--delete` supprime les WAL/SHM
-# résiduels du peer. C'est la règle d'or, et cela ne se modifie pas sans pouvoir
-# observer une bascule réelle. Décision assumée, tracée dans #302.
+# ⚠️ `rsync` est la dernière surface à retirer, et elle ne sert DÉJÀ PLUS.
+# `sudo rsync` sans borne de chemin EST une escalade root complète — rsync écrit
+# où il veut, `/etc/sudoers.d/` et `/root/.ssh/` compris.
+#
+# État au 30/08/2026 (#582) : `bascule.sh` l'appelait trois fois pour installer
+# uploads, WhatsApp auth et la base dans les volumes du peer. Les trois passent
+# maintenant par un conteneur jetable (`lib-volumes.sh`) — **zéro appel**, vérifié
+# par le self-test de ce module et non par ce commentaire.
+#
+# 🔴 ELLE RESTE POURTANT ÉCRITE ICI, ET C'EST DÉLIBÉRÉ. La phase 4 convertie n'a
+# jamais tourné : elle ne s'exécute qu'à la bascule de 02:00. Retirer la règle
+# aujourd'hui supprimerait le chemin de repli de la seule phase qui n'a pas fait
+# ses preuves — et sur la plus délicate des trois, celle de la base. Elle part au
+# lot suivant, une fois le journal de bascule lu :
+#
+#     → DB installée dans le volume peer (conteneur jetable, sans sudo).
+#
+# ⚠️ Une permission qu'aucun appelant n'utilise n'en est pas moins ouverte : ce
+# délai est une dette datée, pas un état stable. S'il devait durer, c'est ce
+# commentaire qui aurait tort, pas la règle.
 # ⚠️ Le heredoc ci-dessous n'est PAS quoté — il doit substituer $u. Donc aucun
 # accent grave dans son corps : il y ouvrirait une substitution de commande.
 # Vécu le 12/08/2026, « is-active: command not found » à chaque appel — et le
@@ -80,8 +92,10 @@ $u ALL=(root) NOPASSWD: /usr/bin/systemctl disable cloudflared
 # « crontab <fichier> », donc l'exécution de n'importe quoi en root.
 $u ALL=(root) NOPASSWD: /usr/bin/crontab -l
 
-# Installation des volumes sur le peer — bascule.sh, phases 1, 2 et 4.
-# ⚠️ Surface la plus large de ce fichier, et la prochaine à retirer (#302).
+# Installation des volumes sur le peer — PLUS AUCUN APPELANT depuis le
+# 30/08/2026 : les phases 1, 2 et 4 de bascule.sh passent par un conteneur
+# jetable (lib-volumes.sh). Conservée le temps qu'une bascule ait EXERCÉ la
+# phase 4 convertie ; elle part ensuite. Surface la plus large de ce fichier.
 $u ALL=(root) NOPASSWD: /usr/bin/rsync
 REGLE
 }
