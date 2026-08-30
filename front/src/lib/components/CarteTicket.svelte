@@ -57,6 +57,7 @@
 		STATUT_TICKET_BADGE,
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
+		afficherBatimentDemandeur,
 		categorieTicketEmoji,
 	} from '$lib/tickets';
 
@@ -178,9 +179,17 @@
 			      contexte au bâtiment du demandeur avant d'agir.
 			      📍 = lieu physique, jamais 🔹 (réservé au périmètre logique, tag
 			      ci-dessus). Rien à cacher à un résident : il ne voit que SES
-			      tickets, donc son propre bâtiment. -->
+			      tickets, donc son propre bâtiment.
+
+			      ⚠️ MASQUÉ quand le périmètre le dit déjà (#653, 30/08/2026) : les
+			      deux marques portaient le même texte sur la même ligne, séparées
+			      par un seul caractère d'icône, et on lisait « Bât. 4 » deux fois.
+			      Le badge n'apprend quelque chose que dans le cas inverse — « qui
+			      signale un problème ailleurs que chez lui ? » — et c'est justement
+			      celui que le CS a besoin de repérer. La décision vit dans
+			      `$lib/tickets`, sur les identifiants et non sur les libellés. -->
 			{#if ticket.auteur_nom}<span class="tk-auteur">{ticket.auteur_nom}</span>{/if}
-			{#if ticket.auteur_batiment_nom}<span class="tk-auteur"
+			{#if ticket.auteur_batiment_nom && afficherBatimentDemandeur(ticket)}<span class="tk-auteur"
 					>&#x1F4CD; {ticket.auteur_batiment_nom}</span
 				>{/if}
 		</svelte:fragment>

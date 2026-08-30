@@ -57,6 +57,9 @@ export interface Ticket {
 	auteur_id: number;
 	auteur_nom?: string | null;
 	auteur_batiment_nom?: string | null;
+	/** L'identifiant derrière `auteur_batiment_nom` — sert à savoir si ce bâtiment
+	 *  est déjà visé par le périmètre, donc s'il faut montrer le badge (#653). */
+	auteur_batiment_id?: number | null;
 	lot_id?: number;
 	batiment_id?: number;
 	perimetre_cible?: string[];

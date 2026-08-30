@@ -734,6 +734,13 @@ jobs:
           # maintenant dans le composant ; ce test éprouve sa décision, et échoue
           # si la détection qui l'alimente disparaît.
           node scripts/check-fermeture-modale.mjs --selftest
+          # 🔒 Le badge 📍 du demandeur ne se montre que s'il apprend quelque
+          # chose — donc pas quand le périmètre vise déjà son bâtiment (#653).
+          # La règle remonte l'arbre des périmètres : elle ne se relit pas, elle
+          # s'exécute. Le contrôle transpile les deux modules et les fait tourner
+          # sur un arbre où « Bât. 1 » et « Bât. 12 » cohabitent — le piège
+          # qu'un rapprochement de libellés par sous-chaîne ne verrait pas.
+          node scripts/check-badge-demandeur.mjs --selftest
           # 🔴 Porte les fonctions pures de `lint:styles` ET de `lint:classes-nues`,
           # expose un `--selftest` depuis sa création… que RIEN ne lançait (#562).
           # Le module le plus partagé du lot était le seul non éprouvé.

@@ -176,6 +176,11 @@ class TicketRead(BaseModel):
     auteur_id: int
     auteur_nom: Optional[str] = None
     auteur_batiment_nom: Optional[str] = None
+    #: L'identifiant derrière `auteur_batiment_nom`, pour que la carte puisse
+    #: décider de MONTRER ce badge, sans comparer des libellés (#653).
+    #: « Bât. 4 » et le périmètre « Bât. 4 › Toit » ne se rapprochent pas par
+    #: leur texte — l'un est un nom de bâtiment, l'autre un chemin d'arbre.
+    auteur_batiment_id: Optional[int] = None
     lot_id: Optional[int] = None
     batiment_id: Optional[int] = None
     perimetre_cible: Optional[List[str]] = None
