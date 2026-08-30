@@ -79,7 +79,7 @@
 				{#each monthGroups as [mois, items]}
 					<div class="month-group" style="padding-left:.75rem">
 						<div class="month-label">{mois}</div>
-						{#each items as item}
+						{#each items as item (item.id)}
 							{#if item._kind === 'pub'}
 								<!--  Publication archivée. Les trois rangées d'archives et celle des
 								      maintenances passent par `RangeeCalendrier` : la structure

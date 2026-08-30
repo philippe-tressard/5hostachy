@@ -355,7 +355,7 @@
 				</p>
 			</div>
 		{:else}
-			{#each ahList as annonce}
+			{#each ahList as annonce (annonce.id)}
 				<!--  🔴 `EnteteCarte` + `Vignette`, la NORME des cartes du site depuis le
 					      18/08/2026 (#480). Cette liste recomposait son en-tête à la main —
 					      titre après les badges, méta sur sa propre ligne — alors que les cinq

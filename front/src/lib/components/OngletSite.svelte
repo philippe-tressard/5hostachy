@@ -48,7 +48,7 @@
 			Gestionnaire du site (utilisateur)
 			<select bind:value={siteConfig.site_manager_user_id}>
 				<option value="">Aucun (utiliser l'e-mail administrateur)</option>
-				{#each siteManagerUsers as u}
+				{#each siteManagerUsers as u (u.id)}
 					<option value={String(u.id)}>{u.prenom} {u.nom} — {u.email}</option>
 				{/each}
 			</select>

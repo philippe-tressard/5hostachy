@@ -219,7 +219,7 @@
 					<colgroup><col style="width:35%" /><col style="width:9rem" /><col /></colgroup>
 					<thead><tr><th>Code</th><th>Statut</th><th>Actions</th></tr></thead>
 					<tbody>
-						{#each vigiks as v}
+						{#each vigiks as v (v.id)}
 							<tr>
 								<td style="font-family:monospace">{v.code}</td>
 								<td><span class="badge {statutClass(v.statut)}">{v.statut}</span></td>
@@ -262,7 +262,7 @@
 					<colgroup><col style="width:35%" /><col style="width:9rem" /><col /></colgroup>
 					<thead><tr><th>Code</th><th>Statut</th><th>Actions</th></tr></thead>
 					<tbody>
-						{#each telecommandes as tc}
+						{#each telecommandes as tc (tc.id)}
 							<tr>
 								<td style="font-family:monospace">{tc.code}</td>
 								<td><span class="badge {statutClass(tc.statut)}">{tc.statut}</span></td>
@@ -320,7 +320,7 @@
 							Lot concerné *
 							<select bind:value={formLotId} required>
 								<option value="">— Sélectionner —</option>
-								{#each mesLots as lot}
+								{#each mesLots as lot (lot.id)}
 									<option value={lot.id}>Lot {lot.numero}</option>
 								{/each}
 							</select>

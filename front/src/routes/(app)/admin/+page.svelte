@@ -929,7 +929,7 @@
 					<tr><th>Utilisateur</th><th>Type</th><th>Lot</th><th>Date</th><th>Actions</th></tr>
 				</thead>
 				<tbody>
-					{#each commandes as cmd}
+					{#each commandes as cmd (cmd.id)}
 						<tr>
 							<td style="font-weight:500">#{cmd.user_id}</td>
 							<td><span class="badge badge-blue">{cmd.type}</span></td>
@@ -1235,7 +1235,7 @@
 					>Bâtiment
 					<select bind:value={editForm.batiment_id}>
 						<option value={null}>— Aucun —</option>
-						{#each batimentsList as b}
+						{#each batimentsList as b (b.id)}
 							<option value={b.id}>Bât. {b.numero}</option>
 						{/each}
 					</select>
@@ -1323,7 +1323,7 @@
 					>
 				</thead>
 				<tbody>
-					{#each demandesProfil as d}
+					{#each demandesProfil as d (d.id)}
 						<tr>
 							<td>
 								<div style="font-weight:600">{d.utilisateur_nom}</div>
@@ -1507,7 +1507,7 @@
 								<div class="pages-form-section" style="grid-column:1/-1">
 									<div class="pages-form-section-title">Onglets</div>
 									<div class="onglets-cards">
-										{#each pg.onglets as o}
+										{#each pg.onglets as o (o.id)}
 											<div class="onglet-card">
 												<label class="field">
 													Label « {o.id} »

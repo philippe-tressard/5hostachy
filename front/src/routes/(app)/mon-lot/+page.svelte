@@ -883,7 +883,7 @@
 		<!-- Section 1 : Tous les lots possédés -->
 		<div class="lots-section-label">🏢 Lots possédés ({lots.length})</div>
 		<div class="lots-possedes-grid">
-			{#each lotsAvecBail as lot}
+			{#each lotsAvecBail as lot (lot.id)}
 				<div
 					class="lot-possede-card card"
 					class:lot-occupe={!!lot.bail}
@@ -1013,7 +1013,7 @@
 		<!-- ── Vue standard (non bailleur) : sélecteur lot + carte ── -->
 		{#if lots.length > 1}
 			<div class="lot-tabs" role="tablist">
-				{#each lots as lot}
+				{#each lots as lot (lot.id)}
 					<button
 						role="tab"
 						class:active={selectedLotId === lot.id}
@@ -1723,7 +1723,7 @@
 					<div class="acces-filters">
 						<span style="font-size:.78rem;color:var(--color-text-muted)">Filtrer lots source :</span
 						>
-						{#each lotsSourcesAcces as ls}
+						{#each lotsSourcesAcces as ls (ls.id)}
 							<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}
 								>{ls.label}</Pastille
 							>

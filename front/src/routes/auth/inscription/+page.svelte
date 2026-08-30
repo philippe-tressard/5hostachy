@@ -218,7 +218,7 @@
 						<label for="batiment">Bâtiment *</label>
 						<select id="batiment" bind:value={batiment_id} required>
 							<option value={null}>-- Sélectionnez votre bâtiment --</option>
-							{#each batiments as b}
+							{#each batiments as b (b.id)}
 								<option value={b.id}>Bâtiment {b.numero}</option>
 							{/each}
 						</select>

@@ -343,7 +343,7 @@
 											<label for="imp-proprio">Propriétaire *</label>
 											<select id="imp-proprio" bind:value={editProprio}>
 												<option value="">— Non lié —</option>
-												{#each utilisateurs as u}
+												{#each utilisateurs as u (u.id)}
 													<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
 												{/each}
 											</select>
@@ -352,7 +352,7 @@
 											<label for="imp-loc">Locataire</label>
 											<select id="imp-loc" bind:value={editLoc}>
 												<option value="">— Aucun —</option>
-												{#each utilisateurs as u}
+												{#each utilisateurs as u (u.id)}
 													<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
 												{/each}
 											</select>
@@ -361,7 +361,7 @@
 											<label for="imp-lot">Lot</label>
 											<select id="imp-lot" bind:value={editLot}>
 												<option value="">— Auto / Inconnu —</option>
-												{#each lots as l}
+												{#each lots as l (l.id)}
 													<option value={String(l.id)}
 														>Bât.{l.batiment_nom ?? l.batiment_id} — {l.numero} ({l.type})</option
 													>

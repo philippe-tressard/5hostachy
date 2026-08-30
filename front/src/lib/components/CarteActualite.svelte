@@ -145,7 +145,7 @@
 				{/if}
 				{#if documents.length > 0}
 					<div class="pub-attachments">
-						{#each documents as doc}
+						{#each documents as doc (doc.id)}
 							<a href={docsApi.downloadUrl(doc.id)} target="_blank" class="pub-attachment-link">
 								📎 {doc.titre || doc.fichier_nom}
 							</a>

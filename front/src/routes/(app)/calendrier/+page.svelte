@@ -776,7 +776,7 @@
 	{#each groups as [annee, evs]}
 		<div class="month-group">
 			<div class="month-label">&#x1F4C5; {annee}</div>
-			{#each evs as ev}
+			{#each evs as ev (ev.id)}
 				{@const expanded = expandedEvId === ev.id}
 				<CarteEvenement
 					{ev}
@@ -867,7 +867,7 @@
 		{/if}
 	</div>
 	<div class="kanban">
-		{#each kanbanCols as col}
+		{#each kanbanCols as col (col.id)}
 			{@const items = col.items}
 			<div
 				class="kanban-col"

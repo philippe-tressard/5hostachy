@@ -955,7 +955,7 @@
 										📄 Documents ({contratDocsMap[c.id]?.length ?? 0})
 									</div>
 									{#if contratDocsMap[c.id]?.length > 0}
-										{#each contratDocsMap[c.id] as doc}
+										{#each contratDocsMap[c.id] as doc (doc.id)}
 											<div
 												style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;font-size:.85rem;flex-wrap:wrap"
 											>
