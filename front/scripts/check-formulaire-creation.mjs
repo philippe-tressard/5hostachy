@@ -55,7 +55,38 @@ import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ROUTES = join(RACINE, 'routes');
-const COMPOSANT = join(RACINE, 'lib', 'components', 'FormulaireCreation.svelte');
+const COMPOSANTS = join(RACINE, 'lib', 'components');
+const COMPOSANT = join(COMPOSANTS, 'FormulaireCreation.svelte');
+
+/**
+ * Les composants de `lib/components/` qui rendent eux-mêmes un `<form>`.
+ *
+ * 🔴 SANS CELA, LE CONTRÔLE EST AVEUGLE À TOUT FORMULAIRE FACTORISÉ — et donc à
+ * ceux qu'on vient d'extraire, c'est-à-dire au bon code. Il cherchait `<form>`
+ * dans le balisage de la page ; une modale montant `<FormulaireContrat />`
+ * n'en contient aucun, et passait sans sa déclaration `edition`.
+ *
+ * Constaté le 30/08/2026 en éprouvant le contrôle **par son échec** : la
+ * première modale d'édition du site a été écrite, sa déclaration retirée
+ * exprès — et le contrôle est resté vert. Même famille que la première version
+ * du self-test de `lib-volumes.sh`, qui avait échoué le jour où le code s'est
+ * amélioré : *un contrôle qui ne voit pas la factorisation mesure la forme, pas
+ * le fait.*
+ *
+ * La liste est **calculée**, jamais tenue à la main : une liste recopiée
+ * diverge au premier composant ajouté, et c'est justement le composant ajouté
+ * qui échappe au contrôle.
+ */
+function composantsPorteursDeFormulaire() {
+	const noms = new Set();
+	for (const nom of readdirSync(COMPOSANTS)) {
+		if (!nom.endsWith('.svelte')) continue;
+		if (/<form\b/.test(sansCommentaires(readFileSync(join(COMPOSANTS, nom), 'utf8')))) {
+			noms.add(nom.replace(/\.svelte$/, ''));
+		}
+	}
+	return noms;
+}
 
 /**
  * Emplois légitimes hors du composant, avec leur raison.
@@ -99,6 +130,18 @@ if (!/export let titre\b/.test(readFileSync(COMPOSANT, 'utf8'))) {
 const tous = fichiers(ROUTES);
 if (tous.length === 0) {
 	console.error("✗ Cas zéro : aucune page analysée — l'arborescence a changé.");
+	process.exit(1);
+}
+
+//  Cas zéro du repérage par composant : s'il ne trouve plus aucun porteur, la
+//  moitié « formulaire factorisé » du contrôle ne mesure plus rien — et elle
+//  échouerait en silence, exactement comme le motif `modal-overlay` mort de #561.
+const PORTEURS = composantsPorteursDeFormulaire();
+if (PORTEURS.size === 0) {
+	console.error(
+		'✗ Cas zéro : aucun composant de lib/components/ ne rend de <form>. Le repérage ' +
+			'des formulaires factorisés ne mord plus — ne pas lire ceci comme un succès.',
+	);
 	process.exit(1);
 }
 
@@ -161,9 +204,14 @@ function modales(contenu) {
  * ne peut pas le deviner, celui qui écrit l'écran si. D'où la prop, et non une
  * heuristique — une heuristique se trompe en silence dans les deux sens.
  */
-function modaleSansEdition(contenu) {
+function modaleSansEdition(contenu, porteurs) {
+	//  Un formulaire, dans une modale, s'écrit de deux façons : en clair
+	//  (`<form>`) ou monté par un composant qui en porte un. Les deux comptent —
+	//  ne voir que la première, c'est ne surveiller que le code non factorisé.
+	const monteUnFormulaire = (suite) =>
+		/<form\b/.test(suite) || [...porteurs].some((n) => new RegExp(`<${n}\\b`).test(suite));
 	return modales(contenu)
-		.filter((m) => /<form\b/.test(m.suite) && !/\bedition\b/.test(m.balise))
+		.filter((m) => monteUnFormulaire(m.suite) && !/\bedition\b/.test(m.balise))
 		.map((m) => m.balise.slice(0, 80).replace(/\s+/g, ' '));
 }
 
@@ -183,7 +231,7 @@ for (const f of tous) {
 		const m = contenu.match(motif.regex);
 		if (m) trouves.push({ ...motif, exemples: [...new Set(m.map((s) => s.trim()))].slice(0, 2) });
 	}
-	const creationEnModale = modaleSansEdition(contenu);
+	const creationEnModale = modaleSansEdition(contenu, PORTEURS);
 	if (creationEnModale.length > 0) {
 		trouves.push({
 			quoi: 'un formulaire est rendu dans une MODALE sans se déclarer `edition`',
