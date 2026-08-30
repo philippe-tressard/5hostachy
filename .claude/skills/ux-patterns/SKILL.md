@@ -1299,9 +1299,52 @@ redevient « au cas par cas », c'est-à-dire les trois paradigmes de #367.
 constater, puis se généralise. La conversion ne se fait donc pas d'un bloc sur
 les dix écrans concernés.
 
+#### 🔴 OÙ SE POSE LE CADRE : **là où le geste est connu** (30/08/2026, calendrier)
+
+La question s'est posée au troisième écran, et elle se reposera aux suivants —
+elle est donc tranchée ici plutôt qu'à chaque conversion.
+
+| Le composant de formulaire reçoit-il le geste ? | Qui pose le cadre |
+|---|---|
+| **oui** (`modeEdition` est une de ses propriétés) | **le composant** |
+| **non** (il ne connaît que les champs) | **l'écran appelant** |
+
+`FormulaireContrat` écrit l'inverse dans son en-tête — *« mettre le cadre ici
+obligerait le composant à connaître le geste »* — et **c'est juste pour lui** :
+il ne le reçoit pas. `FormulaireEvenement`, si, depuis #432. La règle générale
+recouvre donc les deux cas sans en contredire aucun.
+
+⚠️ **Ce qu'il en coûte de choisir l'autre.** Poser le cadre dans la page oblige à
+deux branches `{#if}` montant le **même** formulaire avec les mêmes propriétés —
+seize pour l'événement, dont quatre liaisons bidirectionnelles que Svelte 4 ne
+sait pas répandre. Deux copies qui divergent au premier champ ajouté, c'est-à-dire
+la duplication que l'extraction du composant avait supprimée.
+
+**En syntaxe Svelte 4, la forme qui n'écrit le corps qu'une fois est :**
+
+```svelte
+<svelte:component
+	this={modeEdition ? Modale : FormulaireCreation}
+	titre={titreCadre}
+	{...(modeEdition ? { edition: true } : {})}
+	on:fermer={() => dispatch('annule')}
+>
+```
+
+🔒 **Nommer `Modale` DANS le `this={…}` fait partie du geste** : c'est ce que
+`lint:formulaires` lit. Un cadre choisi dans une variable (`const cadre = …`)
+compile aussi bien et sort la modale du champ du contrôle.
+
 **Garde-fou** : `npm run lint:formulaires` (job `build-frontend`). Il refuse un
-cadre `card largeur-saisie` enveloppant un `<form>`, et toute modale contenant un
-`<form>`. Il a trouvé **deux écrans que l'audit manuel avait manqués**.
+cadre `card largeur-saisie` enveloppant un `<form>`, et toute modale portant un
+formulaire **sans se déclarer `edition`**. Il a trouvé **deux écrans que l'audit
+manuel avait manqués**.
+
+🔒 **Son périmètre a été étendu le 30/08/2026, et c'était le préalable.** Il ne
+lisait que `routes/`, alors que le cadre se pose dans le **composant** dès que
+celui-ci connaît le geste : chaque conversion faisait donc sortir la modale de son
+champ — *convertir revenait à se désarmer*. Il lit désormais aussi
+`lib/components/`, et il reconnaît la modale montée par `<svelte:component>`.
 
 **Reste à traiter — `prestataires`**, déclaré en exception : quatre formulaires
 encore en modale dans un fichier de 2 182 lignes qui doit d'abord être découpé, et

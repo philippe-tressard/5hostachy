@@ -3,7 +3,6 @@
 	import { delaiArchivageMs, evenementArchive } from '$lib/archivage';
 	import { TITRE_ARCHIVES } from '$lib/archives';
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
@@ -731,27 +730,26 @@
 	{/each}
 </div>
 
-<!-- Formulaire création/édition -->
+<!--  Le cadre — boîte ou modale — est porté par `FormulaireEvenement`, seul
+      endroit où le geste est connu sans être recopié. Le pourquoi y est écrit. -->
 {#if showForm && $isCS}
-	<FormulaireCreation titre={editId ? 'Modifier l’événement' : 'Nouvel événement'}>
-		<FormulaireEvenement
-			bind:form
-			bind:photosUrls
-			bind:fichiersUrls
-			bind:formPerimetreCible
-			{types}
-			{prestataires}
-			{submitting}
-			modeEdition={editId !== null}
-			{epingleInitial}
-			kanbanCols={KANBAN_COLS}
-			onSubmit={save}
-			on:annule={() => {
-				showForm = false;
-				resetForm();
-			}}
-		/>
-	</FormulaireCreation>
+	<FormulaireEvenement
+		bind:form
+		bind:photosUrls
+		bind:fichiersUrls
+		bind:formPerimetreCible
+		{types}
+		{prestataires}
+		{submitting}
+		modeEdition={editId !== null}
+		{epingleInitial}
+		kanbanCols={KANBAN_COLS}
+		onSubmit={save}
+		on:annule={() => {
+			showForm = false;
+			resetForm();
+		}}
+	/>
 {/if}
 
 <!-- Contenu -->
