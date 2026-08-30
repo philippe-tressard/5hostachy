@@ -130,9 +130,6 @@ export const TOLERANCES = {
 	//  devenue une section à part entière dont le TITRE est le libellé (§9 septies).
 	//  La question « quelle classe pour un `<legend>` ? » ne se pose plus — il n'y
 	//  en a plus. Le contrôle l'a signalé de lui-même, comme il doit.
-	'routes/(app)/prestataires/+page.svelte::libelle-champ':
-		'deux libellés écrits à la main (l. ~1857 et ~1861) — écran de 2 182 lignes déjà ' +
-		'déclaré en exception de `lint:formulaires` et de `lint:soumission`, à découper avant',
 
 	//  ── form-actions : la rangée d'actions alignée à droite, à la main ───────
 	'routes/(app)/annuaire/+page.svelte::form-actions':

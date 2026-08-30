@@ -1272,7 +1272,7 @@
 					<input bind:value={accueilBatiment} placeholder="Ex: Bât. A, Apt. 12…" />
 				</label>
 				<label class="field"
-					>Ancien résident (optionnel)
+					>Ancien résident
 					<input bind:value={accueilAncienResident} placeholder="Nom de l'ancien occupant…" />
 				</label>
 			</div>
@@ -1623,7 +1623,7 @@
 					<input bind:value={cvBatiment} placeholder="Ex: Bât. A, Apt. 12…" />
 				</label>
 				<label class="field"
-					>Ancien résident (optionnel)
+					>Ancien résident
 					<input bind:value={cvAncienResident} placeholder="Nom de l'ancien occupant…" />
 				</label>
 			</div>

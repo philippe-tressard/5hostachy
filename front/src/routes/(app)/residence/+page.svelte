@@ -1251,10 +1251,7 @@
 				<input id="edit-r-date" type="date" bind:value={editingRapportDate} />
 			</div>
 			<div class="field">
-				<label for="edit-r-synthese"
-					>Synthèse <span style="color:var(--color-text-muted);font-size:.8rem">(optionnel)</span
-					></label
-				>
+				<label for="edit-r-synthese">Synthèse</label>
 				<textarea
 					id="edit-r-synthese"
 					bind:value={editingRapportSynthese}

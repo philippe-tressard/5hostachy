@@ -701,7 +701,7 @@
 					/></label
 				>
 				<label class="field"
-					>Ancien résident (optionnel)<input
+					>Ancien résident<input
 						bind:value={cvAncienResident}
 						placeholder="Nom de l'ancien occupant…"
 					/></label
@@ -1029,7 +1029,7 @@
 										checked={membresCS[i].est_president}
 										on:change={() => onPresidentChange(i)}
 									/>
-									<span>Président du Conseil Syndical (optionnel)</span>
+									<span>Président du Conseil Syndical</span>
 								</label>
 							</div>
 							<div class="header-edit-actions" style="margin-top:.75rem">
