@@ -34,7 +34,7 @@
 </script>
 
 {#if edition}
-	<div class="form-grid" style="max-width:580px;margin-bottom:1rem">
+	<div class="form-grid largeur-saisie" style="margin-bottom:1rem">
 		<label class="field champ-large">
 			Nom du syndic
 			<input

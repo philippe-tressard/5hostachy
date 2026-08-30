@@ -27,7 +27,7 @@
 
 <section class="card config-section">
 	<h2 class="config-section-title"><Icon name="settings" size={17} />Paramètres généraux</h2>
-	<div class="form-grid" style="max-width:600px">
+	<div class="form-grid largeur-saisie">
 		<label class="field">
 			Nom de la plateforme
 			<input type="text" bind:value={siteConfig.nom} placeholder="5Hostachy" />
@@ -127,7 +127,7 @@
 			>
 		</label>
 	</div>
-	<div class="form-actions" style="max-width:600px">
+	<div class="form-actions largeur-saisie">
 		<button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
 			{siteSaving ? 'Enregistrement…' : 'Enregistrer'}
 		</button>

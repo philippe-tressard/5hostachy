@@ -865,7 +865,7 @@
 			</div>
 
 			{#if csHeaderEditing}
-				<div class="form-grid" style="max-width:460px;margin-bottom:1rem">
+				<div class="form-grid largeur-saisie" style="margin-bottom:1rem">
 					<label class="field">
 						Voté en AG
 						<input
