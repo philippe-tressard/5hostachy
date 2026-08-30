@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
@@ -293,7 +294,7 @@
 	}
 
 	async function deleteRegle(id: number) {
-		if (!confirm('Supprimer cette règle ?')) return;
+		if (!(await confirmer(SUPPRESSION('Cette règle')))) return;
 		try {
 			await reglesApi.remove(id);
 			regles = regles.filter((r) => r.id !== id);
@@ -347,7 +348,7 @@
 	}
 
 	async function deletePlan(id: number) {
-		if (!confirm('Supprimer ce plan ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce plan')))) return;
 		try {
 			await documentsApi.delete(id);
 			plans = plans.filter((d) => d.id !== id);
@@ -381,7 +382,7 @@
 	}
 
 	async function deleteReglement(id: number) {
-		if (!confirm('Supprimer ce document ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce document')))) return;
 		try {
 			await documentsApi.delete(id);
 			reglements = reglements.filter((d) => d.id !== id);
@@ -427,7 +428,7 @@
 	}
 
 	async function deleteCrAg(id: number) {
-		if (!confirm('Supprimer ce document ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce document')))) return;
 		try {
 			await documentsApi.delete(id);
 			crAg = crAg.filter((d) => d.id !== id);
@@ -537,7 +538,7 @@
 	}
 
 	async function deleteRapport(typeId: number, rapportId: number) {
-		if (!confirm('Supprimer ce rapport ?')) return;
+		if (!(await confirmer(SUPPRESSION('Ce rapport')))) return;
 		try {
 			await diagnosticsApi.deleteRapport(rapportId);
 			diagnosticTypes = diagnosticTypes.map((t) =>
