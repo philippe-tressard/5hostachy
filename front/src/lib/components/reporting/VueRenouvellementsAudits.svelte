@@ -52,7 +52,7 @@
 		</div>
 	{:else}
 		<!-- Grille par année -->
-		{#each diagsParAnnee as [annee, diags]}
+		{#each diagsParAnnee as [annee, diags] (annee)}
 			<div class="audit-year-group" class:audit-year-current={annee === ANNEE_COURANTE}>
 				<h4 class="audit-year-title">
 					{annee}

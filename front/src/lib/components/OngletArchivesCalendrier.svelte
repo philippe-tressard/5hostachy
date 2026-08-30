@@ -54,7 +54,7 @@
 		<p>Les éléments archivés apparaîtront ici.</p>
 	</div>
 {:else}
-	{#each archiveByYear as [year, monthGroups]}
+	{#each archiveByYear as [year, monthGroups] (year)}
 		<div class="archive-year-section">
 			<button
 				class="archive-year-header"
@@ -76,7 +76,7 @@
 				<span class="chevron" class:open={expandedArchiveYears.has(year)}>›</span>
 			</button>
 			{#if expandedArchiveYears.has(year)}
-				{#each monthGroups as [mois, items]}
+				{#each monthGroups as [mois, items] (mois)}
 					<div class="month-group" style="padding-left:.75rem">
 						<div class="month-label">{mois}</div>
 						{#each items as item (item.id)}
