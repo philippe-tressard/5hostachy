@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    CategorieDocument, ConfigSite, Document, Notification,
+    CategorieDocument, ConfigSite, ContratEntretien, Document, Notification,
     ProfilAccesDocument, Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
@@ -326,6 +326,21 @@ def delete_document(
     doc = session.get(Document, doc_id)
     if not doc:
         raise HTTPException(404, "Document introuvable")
+    #  🔴 UN CONTRAT PEUT CITER CE DOCUMENT, et rien ne le déliait (#546).
+    #  `contrat_entretien.document_id` référence le document : sous les clés, la
+    #  suppression échoue ; sans elles — le régime actuel — le contrat garde une
+    #  référence vers un fichier disparu, et l'écran des prestataires affiche un
+    #  lien mort.
+    #
+    #  ⚠️ Ici le parent SURVIT, contrairement au ticket ou à l'événement : un
+    #  contrat d'entretien existe indépendamment du fichier scanné qu'on lui a
+    #  joint. La décision dépend de ce que la ligne RACONTE, jamais de la
+    #  nullabilité de sa colonne.
+    for contrat in session.exec(
+        select(ContratEntretien).where(ContratEntretien.document_id == doc_id)
+    ).all():
+        contrat.document_id = None
+        session.add(contrat)
     if os.path.exists(doc.fichier_chemin):
         os.remove(doc.fichier_chemin)
     session.delete(doc)
