@@ -130,8 +130,21 @@
 	 * 🔴 Elle existe aussi parce que rien dans le balisage ne dit si l'on crée ou
 	 * si l'on corrige. Le contrôle ne peut pas le deviner ; celui qui écrit
 	 * l'écran, si. C'est R4 appliqué à un geste : *la divergence se déclare.*
+	 *
+	 * ⚠️ **Elle n'est PAS décorative** : elle implique `fermetureAuFond={false}`.
+	 * Une modale d'édition contient une saisie, et un clic à côté ne doit pas
+	 * l'effacer sans prévenir — c'est la décision qu'`OngletPerimetres` avait
+	 * prise seul (*« on saisit ici un libellé et une description »*), et qui
+	 * devient générale. Le geste la porte, l'écran n'a plus à y penser.
+	 *
+	 * `svelte-check` l'a exigé, et il avait raison : une prop qu'aucun rendu ne
+	 * lit est une prop que rien ne relie au comportement — elle aurait pu être
+	 * mal orthographiée dans un appel sans que rien ne le dise.
 	 */
 	export let edition = false;
+
+	//  Le fond ne se clique pas sur une édition : voir `edition` ci-dessus.
+	$: fondFermant = fermetureAuFond && !edition;
 
 	const dispatch = createEventDispatcher<{ fermer: void }>();
 
@@ -174,7 +187,7 @@
 
 <svelte:window on:keydown={auClavier} />
 
-<div class="modal-overlay" role="presentation" on:click|self={() => fermetureAuFond && fermer()}>
+<div class="modal-overlay" role="presentation" on:click|self={() => fondFermant && fermer()}>
 	<div
 		class={classeBoite}
 		style={styleBoite}

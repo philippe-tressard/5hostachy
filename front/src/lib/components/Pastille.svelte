@@ -211,6 +211,19 @@
 		/*  Le sous-texte est une phrase : elle doit pouvoir se replier. */
 		white-space: normal;
 		text-align: left;
+		/*  🔴 Une BORNE, pas une largeur — arbitré à l'écran le 30/08/2026 :
+		    *« mets le libellé sur 2 lignes pour diminuer la largeur »*.
+
+		    Sans elle, la pastille s'étire à la longueur de sa phrase la plus
+		    longue : « Équipement défectueux, ascenseur, chauffage… » faisait à
+		    elle seule le double des autres, et une rangée de cinq débordait de
+		    l'écran. Bornée, chaque pastille se replie sur deux lignes et la
+		    rangée redevient lisible d'un coup d'œil.
+
+		    ⚠️ `max-width` et non `width` : une pastille au libellé court —
+		    « Gestion / Syndic, gestion locative » — reste étroite. Une largeur
+		    fixe alignerait au prix d'un vide à droite de chacune. */
+		max-width: 13rem;
 	}
 	.pastille-detail {
 		font-size: 0.72rem;
