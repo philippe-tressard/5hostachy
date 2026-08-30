@@ -17,6 +17,7 @@ from app.models.core import (
     Batiment, Lot,
 )
 from app.schemas import CommandeAccesCreate, CommandeAccesRead
+from app.utils.acces_detachement import detacher_acces
 from app.utils.auto_match_service import (
     _user_keys, _matches_user, _create_user_vigiks, _create_user_telecommandes,
 )
@@ -198,6 +199,9 @@ def supprimer_vigik(
     vigik = session.get(Vigik, vigik_id)
     if not vigik or vigik.user_id != user.id:
         raise HTTPException(404, "Badge introuvable")
+    #  L'attribution part, la ligne d'import se délie — pourquoi, et pourquoi
+    #  c'est le même geste que la télécommande : `utils/acces_detachement.py`.
+    detacher_acces(session, vigik_id, UserVigik, "vigik_id", VigikImport, "vigik_id")
     session.delete(vigik)
     session.commit()
 
@@ -211,14 +215,10 @@ def supprimer_telecommande(
     tc = session.get(Telecommande, tc_id)
     if not tc or tc.user_id != user.id:
         raise HTTPException(404, "Télécommande introuvable")
-    # Dé-lier l'import correspondant s'il existe
-    imp = session.exec(
-        select(TelecommandeImport).where(TelecommandeImport.telecommande_id == tc_id)
-    ).first()
-    if imp:
-        imp.telecommande_id = None
-        imp.statut = StatutImport.proprietaire_lie if imp.user_proprietaire_id else StatutImport.en_attente
-        session.add(imp)
+    #  Même geste que le vigik, et désormais le même code (#546).
+    detacher_acces(
+        session, tc_id, UserTelecommande, "telecommande_id", TelecommandeImport, "telecommande_id"
+    )
     session.delete(tc)
     session.commit()
 
