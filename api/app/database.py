@@ -23,10 +23,13 @@ SessionLocal = lambda: Session(engine)
 def activer_cles_etrangeres(moteur) -> None:
     """Fait poser `PRAGMA foreign_keys=ON` sur CHAQUE connexion de `moteur`.
 
-    🔴 **Pas encore appelé sur le moteur de l'application (#546).** Ce n'est pas
-    un oubli, c'est l'état du chantier, et le dire vaut mieux que le taire.
+    ✅ **Appelé sur le moteur de l'application depuis le 30/08/2026** — fin de
+    #546. Ce paragraphe a dit le contraire pendant deux jours, et c'était juste :
+    la fonction existait, éprouvée, et n'était pas branchée. Il est corrigé le
+    jour où il cesse de l'être, parce qu'un commentaire qui survit à ce qu'il
+    décrit est pire qu'absent.
 
-    ## Ce que l'absence de ce PRAGMA coûte
+    ## Ce que l'absence de ce PRAGMA coûtait
 
     SQLite ne vérifie **aucune** clé étrangère par défaut, et le réglage n'est
     **pas** persisté dans le fichier — contrairement à `journal_mode=WAL`. Il vaut
@@ -43,23 +46,25 @@ def activer_cles_etrangeres(moteur) -> None:
     écouteur enregistré six lignes trop bas laisse le relevé dire `foreign_keys =
     0` alors qu'il est « en place ». Vérifié.
 
-    ## Pourquoi l'activation n'a pas eu lieu le 28/08/2026
+    ## Pourquoi l'activation a attendu le 30/08/2026
 
     Activer le PRAGMA ne valide **pas** l'existant : SQLite ne relit pas la base,
     une ligne orpheline reste lisible, et seules les écritures futures sont
-    refusées. Le risque n'est donc pas au démarrage — la crainte inverse avait
+    refusées. Le risque n'était donc pas au démarrage — la crainte inverse avait
     immobilisé ce ticket depuis le 20/08, et elle était fausse.
 
-    Le vrai coût est ailleurs : **40 tests s'appuient sur l'absence de
-    vérification**. Leurs fixtures montent et démontent le patrimoine dans un
-    ordre que les clés refusent, et créent des lignes que la base rejetterait.
-    Les activer sans les avoir repris ferait échouer la suite, et un contrôle
-    rouge en permanence est désarmé dans la semaine.
+    Trois conditions ont dû être remplies, dans cet ordre :
 
-    ⚠️ La fonction est déjà éprouvée par `test_purge_referentielle.py`, qui
-    l'applique à un moteur **dédié** : la purge y est vérifiée avec les clés
-    ACTIVES, sur la vraie déclaration des modèles. Ce n'est pas l'application,
-    mais ce n'est pas non plus une maquette.
+      1. **les fixtures** ne construisent plus de lignes orphelines (4 lots, 103
+         erreurs ramenées à zéro — régime par défaut de la suite depuis le 29/08) ;
+      2. **les suppressions** ont été exercées : 11 endpoints DELETE testés, six
+         défauts corrigés. Deux ne se voyaient qu'en traçant le SQL émis ;
+      3. **la base** a été purgée : 50 lignes orphelines relevées, supprimées
+         depuis l'écran d'administration, relevé rendu à zéro par deux sondes.
+
+    ⚠️ **L'ordre n'était pas négociable.** Sans la 3, l'activation n'aurait rien
+    cassé au démarrage, mais toute écriture touchant l'une de ces lignes aurait
+    échoué ensuite — avec un message ne disant pas qu'elle datait de mois.
     """
 
     @event.listens_for(moteur, "connect")
@@ -67,6 +72,32 @@ def activer_cles_etrangeres(moteur) -> None:
         curseur = dbapi_connection.cursor()
         curseur.execute("PRAGMA foreign_keys=ON")
         curseur.close()
+
+#  🔴 LES CLÉS ÉTRANGÈRES SONT ACTIVES — 30/08/2026, fin de #546. Les trois
+#  conditions qui l'ont permis sont dans le docstring ci-dessus.
+#
+#  ⚠️ **CET APPEL EST AVANT LE BLOC D'AMORÇAGE, ET C'EST NÉCESSAIRE.** Placé
+#  après, il ne prenait pas effet — mesuré, pas supposé :
+#
+#      appel APRÈS l'amorçage   → PRAGMA foreign_keys = 0
+#      appel AVANT l'amorçage   → PRAGMA foreign_keys = 1
+#
+#  L'écouteur ne s'exécute qu'à l'ouverture d'une connexion. Le bloc d'amorçage
+#  en ouvre une avant lui ; le `engine.dispose()` de la fonction devrait la
+#  recycler, et ne suffit pas ici. Poser l'écouteur en premier garantit que
+#  **toute** connexion l'obtient, quel que soit le pool.
+#
+#  C'est le piège que le docstring de la fonction décrit — « un écouteur
+#  enregistré six lignes trop bas laisse le relevé dire foreign_keys = 0 » — et
+#  je l'ai refait en la branchant. Il ne se voit qu'en LISANT le PRAGMA sur une
+#  connexion réelle : l'appel est là, la fonction est juste, et le réglage
+#  n'est pas posé.
+#
+#  ⚠️ Vérifié aussi : `synchronous=FULL` et `busy_timeout=5000`, posés par le
+#  bloc ci-dessous, **survivent** au `dispose()` de la fonction (mesurés à 2 et
+#  5000 sur deux connexions successives). La durabilité choisie après les
+#  corruptions de juin n'est pas perdue.
+activer_cles_etrangeres(engine)
 
 # WAL mode : lectures et écritures concurrentes sans blocage mutuel
 # synchronous=FULL : chaque commit est fsync'd intégralement (WAL + en-tête).
@@ -79,6 +110,7 @@ with engine.connect() as _conn:
     _conn.execute(text("PRAGMA synchronous=FULL"))
     _conn.execute(text("PRAGMA busy_timeout=5000"))
     _conn.commit()
+
 
 
 def get_session():
