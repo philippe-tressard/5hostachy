@@ -773,7 +773,7 @@
 		<p>Le calendrier de la résidence apparaîtra ici.</p>
 	</div>
 {:else if onglet === 'liste'}
-	{#each groups as [annee, evs]}
+	{#each groups as [annee, evs] (annee)}
 		<div class="month-group">
 			<div class="month-label">&#x1F4C5; {annee}</div>
 			{#each evs as ev (ev.id)}

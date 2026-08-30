@@ -984,7 +984,7 @@
 			/>
 			<select class="input-sm role-select" bind:value={userStatutFilter} style="min-width:160px">
 				<option value="">— Tous les types —</option>
-				{#each Object.entries(statutLabels) as [val, label]}
+				{#each Object.entries(statutLabels) as [val, label] (val)}
 					<option value={val}>{label}</option>
 				{/each}
 			</select>
@@ -1226,7 +1226,7 @@
 				<label class="field"
 					>Statut
 					<select bind:value={editForm.statut}>
-						{#each Object.entries(statutLabels) as [val, lbl]}
+						{#each Object.entries(statutLabels) as [val, lbl] (val)}
 							<option value={val}>{lbl}</option>
 						{/each}
 					</select>

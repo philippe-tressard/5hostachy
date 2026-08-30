@@ -454,7 +454,7 @@
 			</button>
 		</div>
 	</div>
-	{#each Object.entries(reorderGrouped) as [categorie, catItems]}
+	{#each Object.entries(reorderGrouped) as [categorie, catItems] (categorie)}
 		<h2 class="categorie-title">{categorie}</h2>
 		{#each catItems as item, idx (item.id)}
 			<div
@@ -489,7 +489,7 @@
 		{/each}
 	{/each}
 {:else}
-	{#each Object.entries(filteredGrouped) as [categorie, catItems]}
+	{#each Object.entries(filteredGrouped) as [categorie, catItems] (categorie)}
 		<div style="display:flex;justify-content:space-between;align-items:center">
 			{#if canEdit && editingCategory === categorie}
 				<div class="categorie-edit">
