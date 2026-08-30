@@ -78,7 +78,7 @@
 			<table class="report-table compact">
 				<thead><tr><th>Catégorie</th><th>Total</th><th>Ouverts / en cours</th></tr></thead>
 				<tbody>
-					{#each reportTicketCategories as row}
+					{#each reportTicketCategories as row (row.categorie)}
 						<tr><td>{row.categorie}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
 					{/each}
 				</tbody>
@@ -94,7 +94,7 @@
 					><tr><th>Bâtiment / périmètre</th><th>Total</th><th>Ouverts / en cours</th></tr></thead
 				>
 				<tbody>
-					{#each reportTicketBuildings as row}
+					{#each reportTicketBuildings as row (row.batiment)}
 						<tr><td>{row.batiment}</td><td>{row.total}</td><td>{row.ouverts}</td></tr>
 					{/each}
 				</tbody>

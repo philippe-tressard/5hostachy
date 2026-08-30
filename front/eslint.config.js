@@ -245,10 +245,20 @@ export default defineConfig(
 			// compris ce qu'on ajoutera demain. Ici, toute règle non citée reste
 			// active — une nouvelle violation fait échouer la CI dès aujourd'hui.
 
-			// 160 — `{#each}` sans clé. C'est la plus intéressante des six : sans
-			// clé, Svelte réutilise les nœuds par POSITION, et un élément retiré au
-			// milieu d'une liste emporte l'état de son voisin. Classe de bug réelle,
-			// à reprendre en premier.
+			// `{#each}` sans clé. La plus intéressante des six : sans clé, Svelte
+			// réutilise les nœuds par POSITION, et un élément retiré au milieu d'une
+			// liste emporte l'état de son voisin. Classe de bug réelle.
+			//
+			// 🔴 LE COMPTE N'EST PLUS ÉCRIT ICI, ET C'EST VOULU. Il l'était — « 160 »
+			// — et il est resté à 160 pendant que quatre lots le ramenaient à 57 :
+			// trois PR successives avaient corrigé le code sans rouvrir ce
+			// commentaire. Un chiffre recopié dérive au premier lot, et celui-ci
+			// avait l'autorité d'une configuration.
+			//
+			// Le compte vit dans `scripts/check-each-key.mjs` (`npm run lint:each-key`),
+			// qui le MESURE à chaque exécution et refuse aussi bien un dépassement
+			// qu'un plafond devenu périmé — donc il ne peut pas mentir dans un sens
+			// ni dans l'autre. La règle se rallume ici quand ce plafond atteint zéro.
 			'svelte/require-each-key': 'off',
 
 			// ✅ EN SERVICE depuis le 29/08/2026 (#549). Elles étaient coupées au

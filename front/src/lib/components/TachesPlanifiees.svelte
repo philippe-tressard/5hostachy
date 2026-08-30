@@ -345,7 +345,7 @@
 							      rien ne le déclare. Un nœud qui n'a jamais écrit reste donc absent
 							      du tableau plutôt qu'affiché en creux. C'est #488, et c'est ce qui
 							      reste à faire. -->
-							{#each t.noeuds as n}
+							{#each t.noeuds as n (n.noeud)}
 								<tr class="par-noeud">
 									<td></td>
 									<td style="color:var(--color-text-muted)">↳ {n.noeud.toUpperCase()}</td>

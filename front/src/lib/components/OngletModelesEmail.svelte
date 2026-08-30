@@ -235,7 +235,7 @@
 			<div class="field">
 				<label for="email-intention">Intention — ce que le message attend du destinataire</label>
 				<select id="email-intention" bind:value={emailIntention}>
-					{#each INTENTIONS as i}<option value={i.valeur}>{i.label}</option>{/each}
+					{#each INTENTIONS as i (i.valeur)}<option value={i.valeur}>{i.label}</option>{/each}
 				</select>
 				<span class="field-hint"
 					>Affichée en bandeau au-dessus du corps, pour que le lecteur sache d'emblée s'il doit
@@ -316,7 +316,7 @@
 				></thead
 			>
 			<tbody>
-				{#each emailHistory as h}
+				{#each emailHistory as h (h.id)}
 					<tr>
 						<td style="white-space:nowrap">{fmt(h.cree_le)}</td>
 						<td><code style="font-size:.75rem">{h.code}</code></td>

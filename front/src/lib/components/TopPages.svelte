@@ -39,7 +39,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each pages as p}
+				{#each pages as p (p.page)}
 					<tr>
 						<td><code style="font-size:.82rem">{p.page}</code></td>
 						<td style="text-align:right;font-weight:600">{p.total}</td>

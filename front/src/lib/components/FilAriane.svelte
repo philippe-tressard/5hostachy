@@ -55,7 +55,7 @@
 
 <nav class="fil" aria-label="Fil d'Ariane">
 	<a class="fil-lien fil-site" href="/tableau-de-bord">{$siteNomStore}</a>
-	{#each segments as s}
+	{#each segments as s (s.href)}
 		<span class="fil-sep" aria-hidden="true">›</span>
 		<a class="fil-lien" href={s.href}>{s.libelle}</a>
 	{/each}

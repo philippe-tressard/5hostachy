@@ -127,7 +127,7 @@
 {:else if grouped.length === 0}
 	<p style="color:var(--color-text-muted)">Aucune association trouvée.</p>
 {:else}
-	{#each grouped as g}
+	{#each grouped as g (g.user_id)}
 		<div class="card" style="margin-bottom:.75rem;padding:.75rem 1rem">
 			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
 				<strong>{g.user_nom}</strong>
@@ -154,7 +154,7 @@
 				>
 				<thead><tr><th>Lot</th><th>Type lot</th><th>Bâtiment</th><th>Lien</th><th></th></tr></thead>
 				<tbody>
-					{#each g.lots as ul}
+					{#each g.lots as ul (ul.user_lot_id)}
 						<tr>
 							<td style="font-family:monospace">{ul.lot_numero}</td>
 							<td>{ul.lot_type}</td>

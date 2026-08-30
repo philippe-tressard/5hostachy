@@ -233,7 +233,7 @@
 		<table class="table imp-table-dense">
 			<thead>
 				<tr>
-					{#each colonnesSpecifiques as c}<th>{c.entete}</th>{/each}
+					{#each colonnesSpecifiques as c (c.cle)}<th>{c.entete}</th>{/each}
 					<th>Propriétaire (Excel)</th><th>Locataire (Excel)</th>
 					<th>{modele.colonneCle.entete}</th><th>Lot lié</th>
 					<th>Proprio lié</th><th>Locataire lié</th>
@@ -246,7 +246,7 @@
 						class:imp-row-resolu={imp.statut === 'resolu'}
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
-						{#each colonnesSpecifiques as c}
+						{#each colonnesSpecifiques as c (c.cle)}
 							<td style="font-size:.8rem">{imp[c.cle] ?? '—'}</td>
 						{/each}
 						<td style="font-weight:500">{imp.nom_proprietaire}</td>
@@ -277,7 +277,7 @@
 							<span class="badge {STATUT_BADGE[imp.statut] ?? 'badge-gray'}"
 								>{STATUT_LABEL[imp.statut] ?? imp.statut}</span
 							>
-							{#each modele.decorationsStatut(imp) as d}
+							{#each modele.decorationsStatut(imp) as d (d.titre)}
 								<span title={d.titre} style="margin-left:.25rem">{d.icone}</span>
 							{/each}
 						</td>
@@ -374,7 +374,7 @@
 												{modele.libelleChezLocataire}
 											</label>
 										</div>
-										{#each modele.champsBooleens as c}
+										{#each modele.champsBooleens as c (c.cle)}
 											<div class="field imp-field-checkbox">
 												<label>
 													<input type="checkbox" bind:checked={editBooleens[c.cle]} />

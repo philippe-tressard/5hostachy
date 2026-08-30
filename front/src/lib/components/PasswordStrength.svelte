@@ -63,7 +63,7 @@
 					{/if}
 				</div>
 				<ul class="criteria-list">
-					{#each criteres as c}
+					{#each criteres as c (c.label)}
 						<li class:ok={c.ok}>
 							<span class="check-icon">{c.ok ? '✓' : '○'}</span>
 							{c.label}

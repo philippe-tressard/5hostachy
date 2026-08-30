@@ -141,7 +141,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each batiments as b}
+					{#each batiments as b (b.id)}
 						<tr>
 							<td style="font-weight:600">Bât. {b.numero}</td>
 							<td>{(b.nb_parkings ?? 0) > 0 ? b.nb_parkings : '—'}</td>

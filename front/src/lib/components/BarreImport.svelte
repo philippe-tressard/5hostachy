@@ -73,7 +73,7 @@
 
 {#if tuiles.length > 0}
 	<div class="imp-stats-bar card">
-		{#each tuiles as t}
+		{#each tuiles as t (t.libelle)}
 			<div class="imp-stat">
 				<span class="imp-stat-val" style={t.couleur ? `color:${t.couleur}` : ''}>{t.valeur}</span>
 				<span class="imp-stat-lbl">{t.libelle}</span>
@@ -102,7 +102,7 @@
 <div class="imp-toolbar">
 	<div class="imp-filtres">
 		<span class="muted" style="font-size:.85rem">Filtrer :</span>
-		{#each statuts as s}
+		{#each statuts as s (s)}
 			<button
 				class="btn btn-sm {filtre === s ? 'btn-primary' : 'btn-outline'}"
 				on:click={() => {
