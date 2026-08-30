@@ -14,6 +14,8 @@
   masqué par la modale ; le passage à la boîte dans la page l'a révélé.
 -->
 <script lang="ts">
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import Modale from '$lib/components/Modale.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
@@ -56,80 +58,120 @@
 	 *   n'importent aucune entité. L'écran n'était pas conforme, il était hors de
 	 *   portée du contrôle (#432). */
 	$: etat = (modeEdition ? 'edition' : 'creation') as Etat;
+
+	/**  LE CADRE du formulaire — il dépend du geste (`ux-patterns` §14 bis, arbitré
+	 *   à l'écran le 30/08/2026) : *« en édition, le format modal est plus net que
+	 *   le dépliement sur une même fenêtre »*.
+	 *
+	 *   🔴 **Pourquoi le cadre est posé ICI et non dans la page.**
+	 *   `FormulaireContrat` écrit l'inverse — *« mettre le cadre ici obligerait le
+	 *   composant à connaître le geste »* — et c'est juste POUR LUI : il ne reçoit
+	 *   pas le geste. Ce composant-ci, si : `modeEdition` est une de ses propriétés
+	 *   depuis #432, et elle est lue trois lignes plus haut pour choisir l'état. La
+	 *   prémisse ne tient donc pas, et la règle qu'on en tire est plus générale que
+	 *   les deux : **le cadre se pose là où le geste est connu.**
+	 *
+	 *   ⚠️ Ce qu'il en aurait coûté dans la page : deux branches montant le même
+	 *   formulaire avec les mêmes seize propriétés, dont quatre liaisons
+	 *   bidirectionnelles que Svelte 4 ne sait pas répandre — deux copies qui
+	 *   divergent au premier champ ajouté. C'est la duplication que l'extraction de
+	 *   ce composant, le 15/08/2026, avait justement supprimée.
+	 *
+	 *   🔒 `lint:formulaires` lit `lib/components/` depuis ce lot (#640, point 1).
+	 *   Sans cela, poser le cadre ici sortait la modale du champ du contrôle :
+	 *   convertir un écran serait revenu à se désarmer. */
+	$: titreCadre = modeEdition ? 'Modifier l’événement' : 'Nouvel événement';
 </script>
 
-<form on:submit|preventDefault={onSubmit}>
-	<!--  1. Titre. -->
-	<SectionFormulaire premiere>
-		<div class="field champ-large">
-			<label for="ev-titre">Titre *</label>
-			<input id="ev-titre" bind:value={form.titre} required />
-		</div>
-	</SectionFormulaire>
+<!--
+	Un seul montage du formulaire, deux cadres possibles. `svelte:component` est ce
+	qui permet d'écrire le corps UNE fois : deux branches `{#if}` en auraient fait
+	deux copies de deux cents lignes.
 
-	<!--  2. Champs spécifiques de l'événement. -->
-	{#if sectionPresente(EVENEMENT, etat, 'specifiques')}
-		<SectionFormulaire titre="Détails">
-			<div class="form-grid">
-				<div class="field">
-					<label for="ev-type">Type</label>
-					<select id="ev-type" bind:value={form.type}>
-						{#each types as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
-					</select>
+	`edition` n'est pas décoratif — il déclare le geste (exigé par
+	`lint:formulaires`) et implique `fermetureAuFond={false}` : un clic à côté
+	n'efface pas la saisie. Il n'est passé qu'en édition, pour que la boîte de
+	création ne reçoive pas une propriété qu'elle ne connaît pas.
+-->
+<svelte:component
+	this={modeEdition ? Modale : FormulaireCreation}
+	titre={titreCadre}
+	{...modeEdition ? { edition: true } : {}}
+	on:fermer={() => dispatch('annule')}
+>
+	<div class:modal-body={modeEdition}>
+		<form on:submit|preventDefault={onSubmit}>
+			<!--  1. Titre. -->
+			<SectionFormulaire premiere>
+				<div class="field champ-large">
+					<label for="ev-titre">Titre *</label>
+					<input id="ev-titre" bind:value={form.titre} required />
 				</div>
-				<div class="field">
-					<label for="ev-debut">Date de début *</label>
-					<input id="ev-debut" type="date" bind:value={form.debut} required />
-				</div>
-				<div class="field">
-					<label for="ev-heure">Heure (optionnelle)</label>
-					<input id="ev-heure" type="time" bind:value={form.debut_heure} />
-				</div>
-				<div class="field">
-					<label for="ev-fin">Fin</label>
-					<input id="ev-fin" type="datetime-local" bind:value={form.fin} />
-				</div>
-				<div class="field">
-					<label for="ev-lieu">Lieu</label>
-					<input id="ev-lieu" bind:value={form.lieu} />
-				</div>
-				<div class="field">
-					<label for="ev-prestataire">Prestataire</label>
-					<select id="ev-prestataire" bind:value={form.prestataire_id}>
-						<option value="">— Aucun —</option>
-						{#each prestataires.filter((p) => p.actif !== false) as p (p.id)}
-							<option value={String(p.id)}>{p.nom}</option>
-						{/each}
-					</select>
-				</div>
-				{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
-					<div class="field">
-						<label for="ev-frequence">Fréquence (optionnelle)</label>
-						<select id="ev-frequence" bind:value={form.frequence_type}>
-							<option value="">— Pas de récurrence —</option>
-							<option value="fois_par_an">× / an</option>
-							<option value="mois">Tous les N mois</option>
-							<option value="semaines">Toutes les N semaines</option>
-						</select>
-					</div>
-					{#if form.frequence_type}
+			</SectionFormulaire>
+
+			<!--  2. Champs spécifiques de l'événement. -->
+			{#if sectionPresente(EVENEMENT, etat, 'specifiques')}
+				<SectionFormulaire titre="Détails">
+					<div class="form-grid">
 						<div class="field">
-							<label for="ev-frequence-valeur">Valeur</label>
-							<input
-								id="ev-frequence-valeur"
-								type="number"
-								min="1"
-								bind:value={form.frequence_valeur}
-								placeholder="ex: 2"
-							/>
+							<label for="ev-type">Type</label>
+							<select id="ev-type" bind:value={form.type}>
+								{#each types as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
+							</select>
 						</div>
-					{/if}
-				{/if}
-			</div>
-		</SectionFormulaire>
-	{/if}
+						<div class="field">
+							<label for="ev-debut">Date de début *</label>
+							<input id="ev-debut" type="date" bind:value={form.debut} required />
+						</div>
+						<div class="field">
+							<label for="ev-heure">Heure (optionnelle)</label>
+							<input id="ev-heure" type="time" bind:value={form.debut_heure} />
+						</div>
+						<div class="field">
+							<label for="ev-fin">Fin</label>
+							<input id="ev-fin" type="datetime-local" bind:value={form.fin} />
+						</div>
+						<div class="field">
+							<label for="ev-lieu">Lieu</label>
+							<input id="ev-lieu" bind:value={form.lieu} />
+						</div>
+						<div class="field">
+							<label for="ev-prestataire">Prestataire</label>
+							<select id="ev-prestataire" bind:value={form.prestataire_id}>
+								<option value="">— Aucun —</option>
+								{#each prestataires.filter((p) => p.actif !== false) as p (p.id)}
+									<option value={String(p.id)}>{p.nom}</option>
+								{/each}
+							</select>
+						</div>
+						{#if form.prestataire_id && form.type !== 'maintenance_recurrente'}
+							<div class="field">
+								<label for="ev-frequence">Fréquence (optionnelle)</label>
+								<select id="ev-frequence" bind:value={form.frequence_type}>
+									<option value="">— Pas de récurrence —</option>
+									<option value="fois_par_an">× / an</option>
+									<option value="mois">Tous les N mois</option>
+									<option value="semaines">Toutes les N semaines</option>
+								</select>
+							</div>
+							{#if form.frequence_type}
+								<div class="field">
+									<label for="ev-frequence-valeur">Valeur</label>
+									<input
+										id="ev-frequence-valeur"
+										type="number"
+										min="1"
+										bind:value={form.frequence_valeur}
+										placeholder="ex: 2"
+									/>
+								</div>
+							{/if}
+						{/if}
+					</div>
+				</SectionFormulaire>
+			{/if}
 
-	<!--  3. Workflow — où en est cet événement.
+			<!--  3. Workflow — où en est cet événement.
 	      🔴 LE KANBAN *EST* LE WORKFLOW (18/08/2026) : ses colonnes répondent
 	      exactement à la question de la section 3 du cadre — « où en est cet
 	      objet ? ». La section s'appelait « Suivi Kanban », ce qui nommait
@@ -137,10 +179,10 @@
 	      rangée dans la DIFFUSION, qui dit qui le voit et non où il en est.
 	      Aucun second champ d'état n'a été créé : deux notions de suivi sur le
 	      même objet se contredisent au premier écart. -->
-	{#if sectionPresente(EVENEMENT, etat, 'workflow')}
-		<SectionFormulaire titre="Workflow" idTitre="ev-kanban-titre">
-			<div class="field champ-large">
-				<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
+			{#if sectionPresente(EVENEMENT, etat, 'workflow')}
+				<SectionFormulaire titre="Workflow" idTitre="ev-kanban-titre">
+					<div class="field champ-large">
+						<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). Norme posée sur
 			      Tickets, constatée, puis étendue ici (R5).
 			      ⚠️ « Pas de suivi Kanban » est une pastille comme les autres, et elle
 			      est active par défaut : l'absence de suivi est un choix qui se voit,
@@ -153,78 +195,80 @@
 			      dossier n'est pas suivi » — alors que les six autres pastilles
 			      nomment des COLONNES du Kanban, et que l'événement reste évidemment
 			      suivi par son fil d'historique. -->
-				<WorkflowPastilles
-					valeur={form.statut_kanban ?? ''}
-					idTitre="ev-kanban-titre"
-					options={[
-						{ value: '', label: '— Pas de suivi Kanban' },
-						...kanbanCols.map((c) => ({ value: c.id, label: c.label })),
-					]}
-					on:choisir={(e) => (form.statut_kanban = e.detail)}
-				/>
-			</div>
-		</SectionFormulaire>
-	{/if}
+						<WorkflowPastilles
+							valeur={form.statut_kanban ?? ''}
+							idTitre="ev-kanban-titre"
+							options={[
+								{ value: '', label: '— Pas de suivi Kanban' },
+								...kanbanCols.map((c) => ({ value: c.id, label: c.label })),
+							]}
+							on:choisir={(e) => (form.statut_kanban = e.detail)}
+						/>
+					</div>
+				</SectionFormulaire>
+			{/if}
 
-	<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
+			<!--  4 à 9 : ordre, intitulés et séparations hérités du composant partagé.
 	      Leur PRÉSENCE, elle, se lit dans la déclaration — plus aucune n'est
 	      posée en dur (R4). -->
-	<ChampsCommuns
-		idPrefixe="ev"
-		avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
-		bind:perimetre={formPerimetreCible}
-		avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
-		bind:description={form.description}
-		descriptionPlaceholder="Description de l'événement…"
-		avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')}
-		bind:photos={photosUrls}
-		avecDocuments={sectionPresente(EVENEMENT, etat, 'documents')}
-		bind:documents={fichiersUrls}
-		avecDiffusion={sectionPresente(EVENEMENT, etat, 'diffusion')}
-		bind:whatsapp={form.partager_whatsapp}
-		bind:syndic={form.envoyer_syndic}
-		bind:cs={form.envoyer_cs}
-	>
-		<svelte:fragment slot="diffusion">
-			<div class="field champ-large">
-				<label class="case">
-					<input
-						type="checkbox"
-						bind:checked={form.affichable}
-						disabled={form.type === 'maintenance_recurrente'}
-					/>
-					<span>Afficher dans le fil d'activité du tableau de bord</span>
-				</label>
-				<label class="case" class:desactive={!form.affichable}>
-					<input type="checkbox" bind:checked={form.epingle} disabled={!form.affichable} />
-					<span>📌 Épingler dans le fil d'activité</span>
-				</label>
-				<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
-				{#if !form.affichable}
-					<p class="aide-case">Un événement absent du fil ne peut pas y être épinglé.</p>
-				{/if}
-				{#if form.type === 'maintenance_recurrente'}
-					<p class="aide-case">
-						Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans le
-						Kanban.
-					</p>
-				{/if}
-			</div>
-		</svelte:fragment>
-	</ChampsCommuns>
+			<ChampsCommuns
+				idPrefixe="ev"
+				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
+				bind:perimetre={formPerimetreCible}
+				avecDescription={sectionPresente(EVENEMENT, etat, 'description')}
+				bind:description={form.description}
+				descriptionPlaceholder="Description de l'événement…"
+				avecPhotos={sectionPresente(EVENEMENT, etat, 'photos')}
+				bind:photos={photosUrls}
+				avecDocuments={sectionPresente(EVENEMENT, etat, 'documents')}
+				bind:documents={fichiersUrls}
+				avecDiffusion={sectionPresente(EVENEMENT, etat, 'diffusion')}
+				bind:whatsapp={form.partager_whatsapp}
+				bind:syndic={form.envoyer_syndic}
+				bind:cs={form.envoyer_cs}
+			>
+				<svelte:fragment slot="diffusion">
+					<div class="field champ-large">
+						<label class="case">
+							<input
+								type="checkbox"
+								bind:checked={form.affichable}
+								disabled={form.type === 'maintenance_recurrente'}
+							/>
+							<span>Afficher dans le fil d'activité du tableau de bord</span>
+						</label>
+						<label class="case" class:desactive={!form.affichable}>
+							<input type="checkbox" bind:checked={form.epingle} disabled={!form.affichable} />
+							<span>📌 Épingler dans le fil d'activité</span>
+						</label>
+						<AlerteEpinglage coche={form.epingle} dejaEpingle={epingleInitial} />
+						{#if !form.affichable}
+							<p class="aide-case">Un événement absent du fil ne peut pas y être épinglé.</p>
+						{/if}
+						{#if form.type === 'maintenance_recurrente'}
+							<p class="aide-case">
+								Les maintenances récurrentes restent hors du fil d'activité : elles se suivent dans
+								le Kanban.
+							</p>
+						{/if}
+					</div>
+				</svelte:fragment>
+			</ChampsCommuns>
 
-	<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée sur
+			<!--  « Annuler » est À CÔTÉ d'« Enregistrer » — norme du 18/08/2026, posée sur
 	      Tickets puis étendue. L'en-tête de page ne porte plus de seconde commande
 	      d'annulation (#367). -->
-	<div class="form-actions">
-		<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
-			>Annuler</button
-		>
-		<button class="btn btn-primary" disabled={submitting}
-			>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button
-		>
+			<div class="form-actions">
+				<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+					>Annuler</button
+				>
+				<button class="btn btn-primary" disabled={submitting}
+					>{submitting ? 'Enregistrement…' : 'Enregistrer'}</button
+				>
+			</div>
+		</form>
 	</div>
-</form>
+</svelte:component>
 
 <style>
 	/*  Mêmes règles, même raison que dans `FormulairePrestation` : le balisage
