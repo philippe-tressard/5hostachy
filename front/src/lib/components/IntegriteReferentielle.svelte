@@ -61,30 +61,50 @@
 		try {
 			//  1er temps : la SIMULATION. L'endpoint ne supprime rien sans
 			//  `confirmer=true` — on lui demande donc d'abord ce qui partirait.
-			const simulation = await api.post<{ seraient_supprimees?: number }>(
-				'/admin/db/purger-orphelins',
-			);
-			const combien = simulation.seraient_supprimees ?? 0;
-			if (!combien) {
-				toast('success', 'Aucune ligne orpheline à supprimer.');
+			const simulation = await api.post<{
+				seraient_supprimees?: number;
+				seraient_deliees?: number;
+			}>('/admin/db/purger-orphelins');
+			const aSupprimer = simulation.seraient_supprimees ?? 0;
+			const aDelier = simulation.seraient_deliees ?? 0;
+			if (!aSupprimer && !aDelier) {
+				toast('success', 'Aucune ligne orpheline à réparer.');
 				await analyser();
 				return;
 			}
-			//  2e temps : la confirmation REPÈTE le compte. Un « Voulez-vous
-			//  continuer ? » sans chiffre ne fait pas décider, il fait cliquer.
+			//  2e temps : la confirmation REPÈTE les comptes — et depuis le
+			//  31/08/2026 elle en annonce DEUX.
+			//
+			//  🔴 Elle n'en disait qu'un, et il agrégeait deux gestes de nature
+			//  opposée. Le 30/08, l'écran a annoncé « 50 lignes vont être
+			//  supprimées » : 49 l'ont été à juste titre, et la 50e — un membre du
+			//  conseil syndical dont le compte lié avait disparu — a été détruite
+			//  alors qu'il fallait seulement délier. On approuvait une destruction
+			//  en croyant en approuver une autre.
+			const lignes = [
+				aSupprimer
+					? `• ${aSupprimer} ligne(s) SUPPRIMÉE(S) : leur parent est obligatoire, elles ne peuvent pas exister sans lui.`
+					: null,
+				aDelier
+					? `• ${aDelier} ligne(s) CONSERVÉE(S), lien mis à vide : le parent était facultatif, c'est la référence qui est cassée.`
+					: null,
+			].filter(Boolean);
 			const ok = await confirmer({
-				titre: 'Supprimer les lignes orphelines',
+				titre: 'Réparer les lignes orphelines',
 				message:
-					`${combien} ligne(s) référencent un parent qui n'existe plus et vont être supprimées.\n\n` +
-					"Cette action est irréversible. Vérifiez qu'une sauvegarde hors site récente existe.",
-				libelleConfirmer: `Supprimer ${combien} ligne(s)`,
-				danger: true,
+					`${lignes.join('\n')}\n\n` +
+					"La suppression est irréversible. Vérifiez qu'une sauvegarde hors site récente existe.",
+				libelleConfirmer: aSupprimer ? `Réparer (${aSupprimer} suppression·s)` : 'Réparer',
+				danger: aSupprimer > 0,
 			});
 			if (!ok) return;
-			const resultat = await api.post<{ supprimees: number }>(
+			const resultat = await api.post<{ supprimees: number; deliees: number }>(
 				'/admin/db/purger-orphelins?confirmer=true',
 			);
-			toast('success', `${resultat.supprimees} ligne(s) supprimée(s).`);
+			toast(
+				'success',
+				`${resultat.supprimees} ligne(s) supprimée(s), ${resultat.deliees} déliée(s).`,
+			);
 			await analyser();
 		} catch (e: any) {
 			toast('error', e?.message ?? 'Purge impossible');
