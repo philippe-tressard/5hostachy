@@ -219,6 +219,7 @@
 <!-- Modal édition modèle e-mail -->
 {#if emailEdit}
 	<Modale
+		edition
 		titre={`Modifier le modèle ${emailEdit.code}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:680px"

@@ -95,11 +95,24 @@ function composantsPorteursDeFormulaire() {
  * contrôle échoue si l'une cesse de servir.
  */
 const EXCEPTIONS = {
-	//  Plus aucune : `prestataires` a été traité le 15/08/2026 (ses quatre modales
-	//  sont devenues des boîtes, et son `<select>` de périmètre a laissé place à
-	//  `PerimetrePicker mode="single"`). L'exception qui le couvrait a été retirée
-	//  parce que ce contrôle l'a refusée dès qu'elle est devenue inutile — c'est
-	//  exactement ce qu'on attend d'une liste de tolérances.
+	//  🔴 QUATRE ÉCRANS, SEPT MODALES DE CRÉATION — suivi en #672, ouvert le
+	//  31/08/2026 par l'élargissement de ce contrôle aux champs nus.
+	//
+	//  Elles créent un objet dans une modale, ce que #367 a supprimé après trois
+	//  signalements de l'utilisateur. Elles y ont échappé parce que ce contrôle ne
+	//  cherchait qu'un `<form>` : elles n'en portent aucun, seulement des `.field`.
+	//
+	//  ⚠️ Elles ne sont PAS tolérées « parce que c'est comme ça » : elles sont
+	//  datées, ticketées, et R5 impose un écran à la fois. Deux d'entre elles
+	//  dépassent le plafond de modularité et demandent d'abord l'extraction d'un
+	//  `Formulaire<Entité>`, comme la FAQ le jour même.
+	'routes/(app)/delegations/+page.svelte': '#672 — « Nouvelle délégation aidant »',
+	'routes/(app)/mon-lot/+page.svelte':
+		"#672 — « Nouveau bail » (fichier de 2 230 l., extraction d'abord)",
+	'routes/(app)/residence/+page.svelte':
+		"#672 — quatre « Ajouter … » (fichier de 1 518 l., extraction d'abord)",
+	'lib/components/OngletPerimetres.svelte':
+		"#672 — « Nouveau périmètre » (l'édition, elle, est déclarée)",
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */
@@ -324,11 +337,29 @@ function modalesDe(contenu, { tag, fermeture, ouvrant, filtre }) {
  * heuristique — une heuristique se trompe en silence dans les deux sens.
  */
 function modaleSansEdition(contenu, porteurs) {
-	//  Un formulaire, dans une modale, s'écrit de deux façons : en clair
-	//  (`<form>`) ou monté par un composant qui en porte un. Les deux comptent —
-	//  ne voir que la première, c'est ne surveiller que le code non factorisé.
+	//  Un formulaire, dans une modale, s'écrit de TROIS façons : en clair
+	//  (`<form>`), monté par un composant qui en porte un, ou — et c'est la plus
+	//  fréquente ici — écrit en champs nus, sans jamais la balise.
+	//
+	//  🔴 LA TROISIÈME A ÉTÉ AJOUTÉE LE 31/08/2026, ET ELLE A TROUVÉ 12 MODALES
+	//  dans 8 fichiers : sept créations en modale, et neuf éditions qui n'avaient
+	//  jamais déclaré leur geste. Aucune n'avait été vue par ce contrôle.
+	//
+	//  La FAQ ouvrait une modale pour la CRÉATION d'une question depuis toujours,
+	//  soit le paradigme que #367 a supprimé après trois signalements de
+	//  l'utilisateur. Elle est passée dessous parce que sa modale ne contient
+	//  aucune balise `<form>` : seulement des `<label class="field">` et un
+	//  éditeur riche. **Un formulaire n'a pas besoin d'en porter un.**
+	//
+	//  ⚠️ Le signal est `class="field"`, et NON `<input>` : le projet impose que
+	//  tout champ libellé vive dans un `.field` (`lint:champs`, six nomenclatures
+	//  locales avant #413). Un `<input>` nu sert aussi à filtrer une liste ou à
+	//  chercher — le compter ferait crier sur des modales de lecture, et un
+	//  contrôle qui crie sur du légitime finit désarmé (leçon de C16).
 	const monteUnFormulaire = (suite) =>
-		/<form\b/.test(suite) || [...porteurs].some((n) => new RegExp(`<${n}\\b`).test(suite));
+		/<form\b/.test(suite) ||
+		/class="[^"]*\bfield\b/.test(suite) ||
+		[...porteurs].some((n) => new RegExp(`<${n}\\b`).test(suite));
 	return modales(contenu)
 		.filter((m) => monteUnFormulaire(m.suite) && !/\bedition\b/.test(m.balise))
 		.map((m) => m.balise.slice(0, 80).replace(/\s+/g, ' '));

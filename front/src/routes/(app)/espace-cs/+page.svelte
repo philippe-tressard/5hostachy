@@ -672,6 +672,7 @@
 
 {#if cvModal}
 	<Modale
+		edition
 		titre={`Valider le compte de ${cvModal.prenom} ${cvModal.nom}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:460px"

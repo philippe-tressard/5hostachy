@@ -1462,6 +1462,7 @@
 <!-- ── Modal : terminer bail ────────────────────────────────────────── -->
 {#if bailATerminer}
 	<Modale
+		edition
 		titre="Terminer le bail"
 		styleBoite="width:min(400px,95vw)"
 		on:fermer={() => (bailATerminer = null)}
@@ -1508,6 +1509,7 @@
 <!-- ── Modal : modifier locataire ───────────────────────────────────── -->
 {#if bailEdite}
 	<Modale
+		edition
 		titre="Modifier les informations"
 		styleBoite="width:min(560px,95vw)"
 		on:fermer={() => (bailEdite = null)}
@@ -1664,6 +1666,7 @@
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
 {#if objetRetour}
 	<Modale
+		edition
 		titre={`Retour — ${objetRetour.libelle}`}
 		styleBoite="width:min(380px,95vw)"
 		on:fermer={() => (objetRetour = null)}
@@ -1690,6 +1693,7 @@
 <!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
 {#if bailAcces}
 	<Modale
+		edition
 		titre={`Accès — ${nomLocataire(bailAcces)}`}
 		styleBoite="width:min(620px,95vw)"
 		on:fermer={() => (bailAcces = null)}

@@ -43,7 +43,13 @@ export const TOLERANCES = {
 		'colonnes de 180 px et gap resserré, même raison',
 	//  ⚠️ Celui-ci n'est PAS une répartition : c'est une pile. Le nom ment sur ce
 	//  que fait la règle, et c'est la vraie dette de la liste.
-	'routes/(app)/faq/+page.svelte::form-grid':
+	//  ⚠️ La clé a suivi le BALISAGE le 31/08/2026 : le formulaire de la FAQ est
+	//  devenu `FormulaireFaq.svelte`, et sa règle est partie avec lui (#344 —
+	//  une règle laissée dans la page que le balisage vient de quitter ne
+	//  s'applique plus à rien). La dette, elle, n'a pas bougé d'un pouce : la
+	//  retirer parce que le fichier a changé de nom l'aurait fait disparaître
+	//  des relevés sans que rien ne soit corrigé.
+	'lib/components/FormulaireFaq.svelte::form-grid':
 		'⚠️ DETTE — `display: flex` en colonne : ce n’est plus une grille, c’est une pile. ' +
 		'La classe ment sur ce qu’elle fait ; à renommer plutôt qu’à aligner',
 

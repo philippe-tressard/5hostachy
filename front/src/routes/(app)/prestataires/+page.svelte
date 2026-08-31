@@ -1449,6 +1449,7 @@
 <!-- Modal notation prestataire (global, hors onglets) -->
 {#if showNotationForm}
 	<Modale
+		edition
 		titre="⭐ Noter le prestataire"
 		styleBoite="max-width:420px"
 		on:fermer={() => {

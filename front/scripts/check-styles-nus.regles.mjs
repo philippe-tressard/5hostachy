@@ -137,7 +137,6 @@ export const TOLERANCES = {
 	//  Il y en avait deux ; celle de la relance syndic est passée à `.form-actions`
 	//  en extrayant le reporting (#453), où le contrôle a cessé de la tolérer.
 	'routes/(app)/espace-cs/+page.svelte::form-actions': 'une rangée alignée à la main (l. ~1170)',
-	'routes/(app)/faq/+page.svelte::form-actions': 'pied de modale aligné à la main (l. ~543)',
 	'routes/(app)/mon-lot/+page.svelte::form-actions':
 		'rangée d’actions alignée à la main, avec `flex-wrap` (l. ~889)',
 	'routes/(app)/residence/+page.svelte::form-actions': 'pied de modale aligné à la main (l. ~584)',

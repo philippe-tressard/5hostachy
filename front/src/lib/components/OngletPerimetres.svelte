@@ -233,6 +233,7 @@
 	      description, et un clic à côté effaçait tout sans prévenir. `Échap` et
 	      « Annuler » suffisent, et sont des gestes voulus. -->
 	<Modale
+		edition
 		titre={edite.libelle}
 		classeBoite="modal-box"
 		fermetureAuFond={false}

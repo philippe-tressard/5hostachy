@@ -1233,6 +1233,7 @@
 
 	{#if accueilModal}
 		<Modale
+			edition
 			titre="🏠 Accueil nouvel arrivant"
 			classeBoite="modal-box card"
 			styleBoite="max-width:480px"
@@ -1571,6 +1572,7 @@
 {/if}
 {#if cvModal}
 	<Modale
+		edition
 		titre={`Valider le compte de ${cvModal.user.prenom} ${cvModal.user.nom}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:480px"
