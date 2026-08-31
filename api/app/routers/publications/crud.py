@@ -35,6 +35,7 @@ from .commun import (
 from .courriels import (
     _envoyer_email_externe_publication, _envoyer_email_syndic_publication,
 )
+from app.utils.corrections import contenu_correction
 
 router = APIRouter(prefix="/publications", tags=["publications"])
 
@@ -240,7 +241,7 @@ def update_publication(
         session.add(PublicationEvolution(
             publication_id=pub.id,
             type="commentaire",
-            contenu="Correction : " + " ; ".join(corrections),
+            contenu=contenu_correction(corrections),
             auteur_id=user.id,
             cree_le=datetime.utcnow(),
         ))

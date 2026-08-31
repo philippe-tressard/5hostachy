@@ -26,6 +26,7 @@ from app.utils.perimetres import (
 )
 from .commun import ContexteFlux, auteur_nom, badges_marqueurs, strip_html
 from .schemas import FluxItem
+from app.utils.corrections import est_correction
 
 #: Icône par type d'événement. Définie **ici** et importée par `sante.py`, qui
 #: la réutilise pour l'agenda « Prochaines échéances » : le même événement doit
@@ -168,6 +169,16 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
     #  c'est précisément le genre d'avancée qu'on vient y chercher.
     for evol, ev in _evolutions(ctx):
         if not evenement_visible(ev, ctx.user):
+            continue
+        #  🔴 UNE CORRECTION N'EST PAS UNE NOUVELLE (01/09/2026, signalé à
+        #  l'écran : *« pourquoi cet évènement a été mis à jour, il n'a eu qu'une
+        #  édition »*). Rectifier un périmètre écrivait « Mise à jour —
+        #  Correction : Périmètre » dans le fil de toute la copropriété.
+        #
+        #  Elle reste dans l'HISTORIQUE de l'objet, qui dit qui a corrigé quoi.
+        #  Le fil, lui, répond à « qu'est-ce qui est arrivé ? » — et se tromper
+        #  n'est pas arriver. `app/utils/corrections.py`.
+        if est_correction(evol):
             continue
         etat = KANBAN_LABELS.get(evol.nouveau_statut or "", "")
         #  Un `etat` porte sa colonne, un `commentaire` n'en a pas : c'est cette
