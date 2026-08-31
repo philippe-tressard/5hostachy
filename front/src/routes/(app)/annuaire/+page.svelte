@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -164,7 +165,7 @@
 								{/if}
 								<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 								<div>
-									<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
+									<strong>{m.genre} {nomAffiche(m)}</strong>
 									{#if m.etage != null}
 										<div class="contact-loc">Étage {m.etage}</div>
 									{/if}
@@ -198,7 +199,7 @@
 						{/if}
 						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 						<div>
-							<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
+							<strong>{m.genre} {nomAffiche(m)}</strong>
 							{#if m.batiment_nom || m.etage != null}
 								<div class="contact-loc">
 									{#if m.batiment_nom}Bât. {m.batiment_nom}{/if}{#if m.batiment_nom && m.etage != null}
@@ -247,7 +248,7 @@
 						{/if}
 						<Avatar photoUrl={m.photo_url} prenom={m.prenom} nom={m.nom} />
 						<div>
-							<strong>{m.genre} {m.prenom} <span class="nom-upper">{m.nom}</span></strong>
+							<strong>{m.genre} {nomAffiche(m)}</strong>
 							{#if m.fonction}<div class="contact-role">{m.fonction}</div>{/if}
 							{#if m.email}
 								<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
@@ -369,9 +370,6 @@
 		z-index: 1;
 	}
 
-	.nom-upper {
-		text-transform: uppercase;
-	}
 	.contact-societe {
 		font-size: 0.8rem;
 		font-style: italic;

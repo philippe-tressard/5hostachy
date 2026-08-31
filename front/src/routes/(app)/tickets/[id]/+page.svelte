@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
@@ -286,7 +287,7 @@
 					class:message-vise={msgVise === msg.id}
 				>
 					<div class="msg-header">
-						<strong>{msg.auteur?.prenom} {msg.auteur?.nom}</strong>
+						<strong>{nomAffiche(msg.auteur)}</strong>
 						{#if msg.interne}<span class="badge badge-yellow msg-badge">interne</span>{/if}
 						<span class="msg-time">{fmtDatetime(msg.cree_le)}</span>
 					</div>

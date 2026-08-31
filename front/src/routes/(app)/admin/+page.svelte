@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
@@ -218,7 +219,7 @@
 			} else if (aideMatch && !aideMatch.aide_trouve) {
 				toast(
 					'warning',
-					`Compte activé — ⚠️ Copropriétaire aidé(e) « ${u.prenom_aide ?? ''} ${u.nom_aide ?? ''} » non trouvé(e). Affectation manuelle requise.`,
+					`Compte activé — ⚠️ Copropriétaire aidé(e) « ${nomAffiche(u.prenom_aide, u.nom_aide)} » non trouvé(e). Affectation manuelle requise.`,
 				);
 			} else if (lots > 0)
 				toast('success', `Compte activé — ${lots} lot(s) résolu(s) automatiquement.`);
@@ -264,7 +265,7 @@
 				batiment: accueilBatiment || null,
 				ancien_resident: accueilAncienResident || null,
 			});
-			toast('success', `Actions d'accueil envoyées pour ${u.prenom} ${u.nom}.`);
+			toast('success', `Actions d'accueil envoyées pour ${nomAffiche(u)}.`);
 			accueilModal = null;
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
@@ -297,7 +298,7 @@
 			const updated = await api.post<any>(endpoint, { role });
 			toast(
 				'success',
-				`Rôle ${roleLabels[role] ?? role} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${user.prenom} ${user.nom}.`,
+				`Rôle ${roleLabels[role] ?? role} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${nomAffiche(user)}.`,
 			);
 			utilisateurs = utilisateurs.map((u) => (u.id === user.id ? { ...u, ...updated } : u));
 		} catch (e: any) {
@@ -340,7 +341,7 @@
 		try {
 			await api.delete(`/admin/utilisateurs/${target.id}`);
 			utilisateurs = utilisateurs.filter((u) => u.id !== target.id);
-			toast('success', `${target.prenom} ${target.nom} supprimé.`);
+			toast('success', `${nomAffiche(target)} supprimé.`);
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
 		}
@@ -358,11 +359,11 @@
 			utilisateurs = utilisateurs.map((x) => (x.id === u.id ? { ...x, ...updated } : x));
 			if (interdit) {
 				const msg = updated.communaute_interdit
-					? `${u.prenom} ${u.nom} banni définitivement de la communauté.`
-					: `${u.prenom} ${u.nom} banni de la communauté pour 1 mois (probatoire).`;
+					? `${nomAffiche(u)} banni définitivement de la communauté.`
+					: `${nomAffiche(u)} banni de la communauté pour 1 mois (probatoire).`;
 				toast('success', msg);
 			} else {
-				toast('success', `${u.prenom} ${u.nom} réautorisé à la communauté.`);
+				toast('success', `${nomAffiche(u)} réautorisé à la communauté.`);
 			}
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
@@ -836,8 +837,7 @@
 						{@const u = item.user ?? item}
 						<tr>
 							<td style="font-weight:500"
-								>{u.prenom}
-								{u.nom}
+								>{nomAffiche(u)}
 								{#if u.statut === 'locataire' && u.nom_proprietaire}
 									<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">
 										&#x1F464; Prop. : {u.nom_proprietaire}
@@ -1023,8 +1023,7 @@
 								class:row-inactive={!u.actif}
 							>
 								<td style="font-weight:500">
-									{u.prenom}
-									{u.nom}
+									{nomAffiche(u)}
 									{#if u.statut === 'locataire' && u.nom_proprietaire}
 										<div style="font-size:.75rem;color:var(--color-text-muted);margin-top:.15rem">
 											🏠 Bailleur : {u.nom_proprietaire}
@@ -1142,7 +1141,7 @@
 												class="btn-icon"
 												aria-label="Rejouer auto-match lots"
 												title="Rejouer auto-match lots"
-												on:click={() => relancerAutoMatch(u.id, `${u.prenom} ${u.nom}`)}>🔄</button
+												on:click={() => relancerAutoMatch(u.id, nomAffiche(u))}>🔄</button
 											>
 										{/if}
 										<button
@@ -1198,7 +1197,7 @@
 				{roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
 				<strong>{roleLabels[roleEnCours.role] ?? roleEnCours.role}</strong>
 				{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
-				<strong>{roleEnCours.user.prenom} {roleEnCours.user.nom}</strong> ?
+				<strong>{nomAffiche(roleEnCours.user)}</strong> ?
 				<br />
 				<span style="font-size:.8rem;color:var(--color-text-muted)">
 					Cette personne recevra une notification.
@@ -1240,7 +1239,7 @@
 			on:fermer={() => (accueilModal = null)}
 		>
 			<p style="font-size:.85rem;margin-bottom:.1rem">
-				<strong>{accueilModal.user.prenom} {accueilModal.user.nom}</strong>
+				<strong>{nomAffiche(accueilModal.user)}</strong>
 			</p>
 			<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.75rem">
 				Déclenche : bienvenue, consignes de copropriété, demande d'étiquette BAL (syndic), demande
@@ -1273,7 +1272,7 @@
 		>
 			<p style="font-size:.875rem;margin-bottom:1rem">
 				Vous êtes sur le point de supprimer définitivement le compte de
-				<strong>{deleteConfirm.prenom} {deleteConfirm.nom}</strong> ({deleteConfirm.email}).
+				<strong>{nomAffiche(deleteConfirm)}</strong> ({deleteConfirm.email}).
 				<br /><span style="color:var(--color-danger);font-size:.8rem"
 					>Cette action est irréversible.</span
 				>
@@ -1573,7 +1572,7 @@
 {#if cvModal}
 	<Modale
 		edition
-		titre={`Valider le compte de ${cvModal.user.prenom} ${cvModal.user.nom}`}
+		titre={`Valider le compte de ${nomAffiche(cvModal.user)}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:480px"
 		on:fermer={() => (cvModal = null)}

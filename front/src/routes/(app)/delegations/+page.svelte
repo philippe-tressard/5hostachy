@@ -1,5 +1,6 @@
 <script lang="ts">
-	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
@@ -184,70 +185,75 @@
 	{/if}
 {/if}
 
-<!-- ── Modal : créer une délégation ──────────────────────────────────── -->
+<!-- ── Créer une délégation — une BOÎTE dans la page, pas une modale ──────
+     Convertie le 31/08/2026 (#672). Elle avait échappé à #367 parce que
+     `lint:formulaires` ne cherchait qu'un `<form>` : celle-ci n'en portait
+     aucun, seulement des `.field`. -->
 {#if showForm}
-	<Modale
-		titre="Nouvelle délégation aidant"
-		styleBoite="width:min(500px,95vw)"
-		on:fermer={() => (showForm = false)}
-	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="d-mandant">Personne aidée (mandant) *</label>
-				<select id="d-mandant" bind:value={formMandantId}>
-					<option value={0} disabled>Choisir…</option>
-					{#each users.filter((u) => u.actif) as u (u.id)}
-						<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
-					{/each}
-				</select>
-			</div>
-			<div class="field">
-				<label for="d-aidant">Proche aidant *</label>
-				<select id="d-aidant" bind:value={formAidantId}>
-					<option value={0} disabled>Choisir…</option>
-					{#each users.filter((u) => u.actif && u.id !== formMandantId) as u (u.id)}
-						<option value={u.id}>{u.prenom} {u.nom} ({u.email})</option>
-					{/each}
-				</select>
-			</div>
-			<div class="field">
-				<label for="d-motif">Motif</label>
-				<input
-					id="d-motif"
-					type="text"
-					bind:value={formMotif}
-					placeholder="Ex : Assistance personne âgée"
-				/>
-			</div>
-			<div class="field">
-				<label for="d-fin"
-					>Date de fin <span style="color:var(--color-text-muted);font-size:.8rem"
-						>(optionnel — défaut : illimité)</span
-					></label
-				>
-				<input id="d-fin" type="date" bind:value={formDateFin} />
-			</div>
-			<p
-				style="font-size:.8rem;color:var(--color-text-muted);margin:0;padding:.25rem .5rem;background:var(--color-bg);border-radius:var(--radius)"
-			>
-				&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une
-				procuration d'AG.
-			</p>
+	<FormulaireCreation titre="Nouvelle délégation aidant">
+		<div class="field">
+			<label for="d-mandant">Personne aidée (mandant) *</label>
+			<select id="d-mandant" bind:value={formMandantId}>
+				<option value={0} disabled>Choisir…</option>
+				{#each users.filter((u) => u.actif) as u (u.id)}
+					<option value={u.id}>{nomAffiche(u)} ({u.email})</option>
+				{/each}
+			</select>
 		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showForm = false)}>Annuler</button>
+		<div class="field">
+			<label for="d-aidant">Proche aidant *</label>
+			<select id="d-aidant" bind:value={formAidantId}>
+				<option value={0} disabled>Choisir…</option>
+				{#each users.filter((u) => u.actif && u.id !== formMandantId) as u (u.id)}
+					<option value={u.id}>{nomAffiche(u)} ({u.email})</option>
+				{/each}
+			</select>
+		</div>
+		<div class="field">
+			<label for="d-motif">Motif</label>
+			<input
+				id="d-motif"
+				type="text"
+				bind:value={formMotif}
+				placeholder="Ex : Assistance personne âgée"
+			/>
+		</div>
+		<div class="field">
+			<label for="d-fin">Date de fin</label>
+			<input id="d-fin" type="date" bind:value={formDateFin} />
+			<!--  Pas de « (optionnel) » : le requis se marque par `*` et rien d'autre
+			      (cadre R3). Ce qu'il fallait dire, c'est ce qui se passe sans date. -->
+			<span class="field-hint">Sans date, la délégation reste valable sans limite.</span>
+		</div>
+		<p class="avertissement">
+			&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une
+			procuration d'AG.
+		</p>
+
+		<div class="form-actions">
+			<button class="btn btn-outline" on:click={() => (showForm = false)}>Annuler</button>
 			<button
 				class="btn btn-primary"
 				disabled={saving || !formMandantId || !formAidantId || formMandantId === formAidantId}
 				on:click={creer}
 			>
-				{saving ? 'Création…' : 'Créer'}
+				{saving ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
-	</Modale>
+	</FormulaireCreation>
 {/if}
 
 <style>
+	/*  L'avertissement juridique du formulaire : il était écrit en `style=` sur
+	    la balise, ce que `lint:charte` ne peut pas relire. */
+	.avertissement {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin: 0;
+		padding: 0.25rem 0.5rem;
+		background: var(--color-bg);
+		border-radius: var(--radius);
+	}
 	.deleg-list {
 		display: flex;
 		flex-direction: column;

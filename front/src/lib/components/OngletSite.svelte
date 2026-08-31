@@ -16,6 +16,7 @@
   donnerait deux vérités sur la configuration du site.
 -->
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 
 	/** Lié : la page porte l'état et l'enregistre. */
@@ -49,7 +50,7 @@
 			<select bind:value={siteConfig.site_manager_user_id}>
 				<option value="">Aucun (utiliser l'e-mail administrateur)</option>
 				{#each siteManagerUsers as u (u.id)}
-					<option value={String(u.id)}>{u.prenom} {u.nom} — {u.email}</option>
+					<option value={String(u.id)}>{nomAffiche(u)} — {u.email}</option>
 				{/each}
 			</select>
 			<span class="field-hint"

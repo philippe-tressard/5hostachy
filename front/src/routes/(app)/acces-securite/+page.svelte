@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import { onMount } from 'svelte';
@@ -485,9 +486,8 @@
 						<div class="lar-header">
 							<div class="lar-tenant">
 								<strong
-									>{[premierBail.locataire_prenom, premierBail.locataire_nom]
-										.filter(Boolean)
-										.join(' ') || 'Locataire non renseigné'}</strong
+									>{nomAffiche(premierBail.locataire_prenom, premierBail.locataire_nom) ||
+										'Locataire non renseigné'}</strong
 								>
 								{#if premierBail.locataire_email}<a
 										href="mailto:{premierBail.locataire_email}"

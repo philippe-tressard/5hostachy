@@ -17,6 +17,7 @@
   instance rouvrirait la porte à la quatrième copie — c'est ce qui est arrivé ici.
 -->
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -261,14 +262,14 @@
 						<td style="font-size:.8rem;color:var(--color-text-muted)">{imp.lot_label ?? '—'}</td>
 						<td style="font-size:.8rem">
 							{#if imp.proprietaire}
-								<span style="color:#16a34a">{imp.proprietaire.prenom} {imp.proprietaire.nom}</span>
+								<span style="color:#16a34a">{nomAffiche(imp.proprietaire)}</span>
 							{:else}
 								<span style="color:#d97706">Non lié</span>
 							{/if}
 						</td>
 						<td style="font-size:.8rem;color:var(--color-text-muted)">
 							{#if imp.locataire}
-								{imp.locataire.prenom} {imp.locataire.nom}
+								{nomAffiche(imp.locataire)}
 							{:else if imp.nom_locataire}
 								<span style="color:#d97706">Non lié</span>
 							{:else}—{/if}
@@ -344,7 +345,7 @@
 											<select id="imp-proprio" bind:value={editProprio}>
 												<option value="">— Non lié —</option>
 												{#each utilisateurs as u (u.id)}
-													<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
+													<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
 												{/each}
 											</select>
 										</div>
@@ -353,7 +354,7 @@
 											<select id="imp-loc" bind:value={editLoc}>
 												<option value="">— Aucun —</option>
 												{#each utilisateurs as u (u.id)}
-													<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
+													<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
 												{/each}
 											</select>
 										</div>

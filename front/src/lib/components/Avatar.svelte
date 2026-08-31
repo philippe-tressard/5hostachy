@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	/**
 	 * Pastille ronde d'identité : la photo de profil si elle existe, sinon les
 	 * initiales, sinon une silhouette générique.
@@ -18,7 +19,7 @@
 	export let prenom: string | null | undefined = '';
 	export let nom: string | null | undefined = '';
 
-	$: nomComplet = [prenom, nom].filter(Boolean).join(' ').trim();
+	$: nomComplet = nomAffiche(prenom, nom);
 	$: initiales = ((prenom?.[0] ?? '') + (nom?.[0] ?? '')).toUpperCase();
 </script>
 

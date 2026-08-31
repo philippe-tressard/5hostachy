@@ -32,6 +32,7 @@
   `$lib/annonces.ts` : la carte le rend, l'onglet en fait ses filtres.
 -->
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import EnteteCarte from './EnteteCarte.svelte';
 	import ApercuCarte from './ApercuCarte.svelte';
 	import FichiersUpload from './FichiersUpload.svelte';
@@ -225,11 +226,11 @@
 					{#if annonce.auteur_email}
 						<small
 							>&#x1F4EC; <a href="mailto:{annonce.auteur_email}"
-								>{annonce.auteur_prenom} {annonce.auteur_nom}</a
+								>{nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)}</a
 							></small
 						>
 					{:else}
-						<small>&#x1F464; {annonce.auteur_prenom} {annonce.auteur_nom}</small>
+						<small>&#x1F464; {nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)}</small>
 					{/if}
 				</div>
 

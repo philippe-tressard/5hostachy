@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, api } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -299,9 +300,7 @@
 												>{TYPE_LIEN_LABEL[occ.type_lien] ?? occ.type_lien}</span
 											>
 											{#if occ.utilisateur}
-												<span style="color:#16a34a"
-													>{occ.utilisateur.prenom} {occ.utilisateur.nom}</span
-												>
+												<span style="color:#16a34a">{nomAffiche(occ.utilisateur)}</span>
 											{:else}
 												<span style="color:#d97706">Non lié</span>
 											{/if}
@@ -396,7 +395,7 @@
 												<select bind:value={occ.user_id} class="select-user">
 													<option value="">— Non lié —</option>
 													{#each utilisateurs as u (u.id)}
-														<option value={String(u.id)}>{u.prenom} {u.nom} ({u.email})</option>
+														<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
 													{/each}
 												</select>
 												<button

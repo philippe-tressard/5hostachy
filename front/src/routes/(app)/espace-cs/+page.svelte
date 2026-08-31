@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
 	import Onglet from '$lib/components/Onglet.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -415,8 +416,8 @@
 		);
 		if (currentPresident !== -1) {
 			// Demander confirmation
-			const oldName = `${membresCS[currentPresident].prenom} ${membresCS[currentPresident].nom}`;
-			const newName = `${membresCS[i].prenom} ${membresCS[i].nom}`;
+			const oldName = nomAffiche(membresCS[currentPresident]);
+			const newName = nomAffiche(membresCS[i]);
 			const confirmed = confirm(
 				`Un président existe déjà (${oldName}).\n\nVoulez-vous remplacer par ${newName} ?`,
 			);
@@ -437,7 +438,7 @@
 			// Aucun président existant, on peut le cocher
 			membresCS[i] = { ...membresCS[i], est_president: true };
 			membresCS = [...membresCS];
-			toast('info', `${membresCS[i].prenom} ${membresCS[i].nom} est maintenant président du CS`);
+			toast('info', `${nomAffiche(membresCS[i])} est maintenant président du CS`);
 		}
 	}
 
@@ -470,7 +471,7 @@
 			});
 			csOpenIdx = null;
 			csEditIdx = null;
-			toast('success', `${membresCS[i].prenom} ${membresCS[i].nom} enregistré`);
+			toast('success', `${nomAffiche(membresCS[i])} enregistré`);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
@@ -574,7 +575,7 @@
 	async function saveSyndic() {
 		for (const m of membresSyndic) {
 			if (!m.telephones.some((t) => t.trim())) {
-				toast('error', `Au moins un téléphone requis pour ${m.prenom || '…'} ${m.nom || ''}`);
+				toast('error', `Au moins un téléphone requis pour ${nomAffiche(m) || '…'}`);
 				return;
 			}
 		}
@@ -600,7 +601,7 @@
 			await annuaireAdmin.putSyndic(chargeUtileSyndic());
 			syndicOpenIdx = null;
 			syndicEditIdx = null;
-			toast('success', `${membresSyndic[i].prenom} ${membresSyndic[i].nom} enregistré`);
+			toast('success', `${nomAffiche(membresSyndic[i])} enregistré`);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
@@ -673,7 +674,7 @@
 {#if cvModal}
 	<Modale
 		edition
-		titre={`Valider le compte de ${cvModal.prenom} ${cvModal.nom}`}
+		titre={`Valider le compte de ${nomAffiche(cvModal)}`}
 		classeBoite="modal-box card"
 		styleBoite="max-width:460px"
 		on:fermer={() => (cvModal = null)}
@@ -778,14 +779,16 @@
 				{#each comptesEnAttente as user (user.id)}
 					<div class="pending-row card">
 						<div class="pending-info">
-							<strong>{user.prenom} {user.nom}</strong>
+							<strong>{nomAffiche(user)}</strong>
 							<span class="text-muted-sm">
 								{user.statut?.replace(/_/g, ' ') ?? '…'}{user.batiment_id
 									? ` — ${batimentsMap[user.batiment_id] ?? `Bât. #${user.batiment_id}`}`
 									: ''}
 							</span>
 							{#if (user.statut === 'aidant' || user.statut === 'mandataire') && user.nom_aide}
-								<span class="text-muted-sm">👤 Aidé : {user.prenom_aide} {user.nom_aide}</span>
+								<span class="text-muted-sm"
+									>👤 Aidé : {nomAffiche(user.prenom_aide, user.nom_aide)}</span
+								>
 							{/if}
 							<span class="text-muted-sm">{fmtDateShort(user.cree_le)}</span>
 						</div>
@@ -814,7 +817,7 @@
 				{#each commandesEnAttente as cmd (cmd.id)}
 					<div class="pending-row card">
 						<div class="pending-info">
-							<strong>{cmd.proprietaire.prenom} {cmd.proprietaire.nom}</strong>
+							<strong>{nomAffiche(cmd.proprietaire)}</strong>
 							<span class="text-muted-sm">
 								{cmd.lot.batiment.nom} · {cmd.lot.reference} ·
 								{cmd.type_acces.replace('_', ' ')} · {cmd.quantite}
@@ -938,9 +941,7 @@
 					<div class="membre-card-header">
 						<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 							{#if m.est_president}<span class="badge-president">👑 Président</span>{/if}
-							<span class="membre-card-title"
-								>{m.genre} {m.prenom || '…'} <span class="nom-upper">{m.nom || ''}</span></span
-							>
+							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
 						</div>
 						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
 							{#if csEditIdx === i}
@@ -1146,9 +1147,7 @@
 					<div class="membre-card-header">
 						<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
 							{#if m.est_principal}<span class="badge-principal">Interlocuteur principal</span>{/if}
-							<span class="membre-card-title"
-								>{m.genre} {m.prenom || '…'} <span class="nom-upper">{m.nom || ''}</span></span
-							>
+							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
 						</div>
 						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
 							{#if i > 0}
@@ -1442,9 +1441,6 @@
 	.membre-card-title {
 		font-size: 0.875rem;
 		font-weight: 600;
-	}
-	.nom-upper {
-		text-transform: uppercase;
 	}
 	.membre-card-actions {
 		display: flex;

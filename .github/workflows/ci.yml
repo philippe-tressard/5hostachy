@@ -996,6 +996,18 @@ jobs:
         working-directory: front
         run: npm run lint:perimetre-herite
 
+      - name: « Prénom NOM » concorde entre le front et l'API
+        # La règle « le nom passe en capitales, le prénom garde sa casse » est
+        # écrite DEUX fois — les contextes de construction sont ./api et ./front,
+        # rien de la racine n'entre dans les images. Le motif viable est copie +
+        # concordance EXÉCUTÉE : le contrôle transpile lib/noms.ts, l'exécute sur
+        # les cas LUS dans test_noms_affichage.py, et refuse la moindre dérive.
+        #
+        # `perimetreLabel` a été corrigée d'un seul côté le 18/08 et a mis neuf
+        # jours à se voir — c'est l'utilisateur qui l'a vue, pas la CI.
+        working-directory: front
+        run: npm run lint:noms
+
       - name: Case « M'envoyer une copie » liée ET envoyée
         # Même forme de piège que `lint:apercu`, rencontrée deux fois le même
         # jour : un écran lie la case et ne met jamais `envoyer_auteur` dans sa
