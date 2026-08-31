@@ -136,6 +136,11 @@ def annuaire(
 # ── Annuaire CS — gestion (CS + admin) ──────────────────────────────────────
 
 class MembreCSIn(BaseModel):
+    #  🔴 L'IDENTIFIANT, ajouté le 31/08/2026. Le front le renvoyait DÉJÀ — il
+    #  repasse la liste telle que le GET la lui a donnée — et ce schéma le jetait
+    #  en silence. Sans lui, le PUT ne peut pas savoir qui est qui, et il ne lui
+    #  reste qu'à tout supprimer puis tout recréer. Voir `put_composition_cs`.
+    id: Optional[int] = None
     genre: str
     prenom: str
     nom: str
@@ -220,24 +225,66 @@ def put_composition_cs(
         session.add(wa_cfg)
     wa_cfg.valeur = body.whatsapp_url or ""
 
-    # Remplacer tous les membres CS
-    old = session.exec(select(MembreCS)).all()
-    for m in old:
-        session.delete(m)
-    session.flush()
+    #  ── RÉCONCILIER, et surtout pas remplacer ────────────────────────────
+    #
+    #  🔴 CE BLOC SUPPRIMAIT LES SEPT LIGNES ET LES RECRÉAIT, à chaque
+    #  enregistrement. Signalé le 31/08/2026 : *« je n'ai modifié que Christine
+    #  LONGUÈVE et ça a ajouté tous les membres du CS qui n'ont pas été
+    #  modifiés »* — sept entrées « Nouveau membre du conseil syndical » au fil
+    #  d'actualité, pour une correction d'étage.
+    #
+    #  Ce que « tout recréer » détruisait, en plus du fil :
+    #
+    #    • `cree_le` — la date d'entrée au conseil, remise à l'instant présent.
+    #      C'est elle que `flux/annuaire.py` compare à `ctx.since`, d'où les
+    #      sept fausses nouveautés ;
+    #    • l'`id` de chaque membre, qui changeait à chaque sauvegarde. Rien ne
+    #      le référence aujourd'hui, mais toute clé étrangère qui le ferait
+    #      demain se retrouverait orpheline sans qu'aucun geste ne l'explique.
+    #
+    #  ⚠️ Le front renvoyait DÉJÀ l'identifiant : il repasse la liste telle que
+    #  le GET la lui a donnée. C'est `MembreCSIn` qui le jetait. Le défaut
+    #  n'était donc pas « on ne peut pas savoir qui est qui » — c'était qu'on
+    #  refusait de l'écouter.
+    #
+    #  La réconciliation dit ce qui s'est passé, et le fil le répète fidèlement :
+    #  une ligne modifiée est une MODIFICATION, une ligne ajoutée est une
+    #  arrivée. Un membre réellement nouveau produit bien son entrée de fil.
+    existants = {m.id: m for m in session.exec(select(MembreCS)).all()}
+    gardes: set[int] = set()
 
     for i, mb in enumerate(body.membres):
-        session.add(MembreCS(
-            genre=mb.genre,
-            prenom=mb.prenom,
-            nom=mb.nom,
-            batiment_id=mb.batiment_id,
-            etage=mb.etage,
-            est_gestionnaire_site=False,
-            est_president=mb.est_president,
-            ordre=i,
-            user_id=mb.user_id,
-        ))
+        ancien = existants.get(mb.id) if mb.id is not None else None
+        if ancien is not None:
+            #  Mise à jour EN PLACE : `cree_le` et `id` survivent.
+            ancien.genre = mb.genre
+            ancien.prenom = mb.prenom
+            ancien.nom = mb.nom
+            ancien.batiment_id = mb.batiment_id
+            ancien.etage = mb.etage
+            ancien.est_president = mb.est_president
+            ancien.ordre = i
+            ancien.user_id = mb.user_id
+            gardes.add(ancien.id)
+        else:
+            #  Sans identifiant connu, c'est une arrivée : elle date d'aujourd'hui
+            #  et le fil a raison de l'annoncer.
+            session.add(MembreCS(
+                genre=mb.genre,
+                prenom=mb.prenom,
+                nom=mb.nom,
+                batiment_id=mb.batiment_id,
+                etage=mb.etage,
+                est_gestionnaire_site=False,
+                est_president=mb.est_president,
+                ordre=i,
+                user_id=mb.user_id,
+            ))
+
+    #  Ce que la nouvelle liste ne contient plus a quitté le conseil.
+    for id_, membre in existants.items():
+        if id_ not in gardes:
+            session.delete(membre)
 
     session.commit()
     return {"ok": True}
