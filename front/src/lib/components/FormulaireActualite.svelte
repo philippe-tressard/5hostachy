@@ -50,6 +50,7 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import Modale from '$lib/components/Modale.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
@@ -185,6 +186,25 @@
 
 	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
 
+	//  LE CADRE, et il dépend du geste — `ux-patterns` §14 bis : créer se fait
+	//  dans une boîte de la page, corriger dans une modale. Il se pose ICI parce
+	//  que `modeEdition` est connu ici, et nulle part ailleurs sans le recopier :
+	//  c'est la règle « le cadre se pose là où le geste est connu », posée sur le
+	//  calendrier le 30/08/2026 (#640) et appliquée à son deuxième composant.
+	//
+	//  🔴 EN ÉDITION, CE COMPOSANT NE VIT PLUS DANS LA CARTE. Il était monté dans
+	//  le créneau `formulaire` de `CarteActualite`, qui ne le rend que sous
+	//  `{#if expanded}` : replier la carte pendant la saisie aurait fait
+	//  disparaître la fenêtre, et la saisie avec elle, sans un mot. Une modale ne
+	//  peut pas dépendre de l'état d'un élément qu'elle recouvre. La page le monte
+	//  donc à son niveau, à côté du formulaire de création.
+	//
+	//  ⚠️ `encadre={!modeEdition}` a disparu avec la conversion, et ce n'est pas
+	//  une simplification : il existait parce que l'édition s'ouvrait DANS la carte
+	//  de la publication, et qu'une carte dans une carte fait deux bordures pour un
+	//  seul objet (#425). La modale n'est plus dans la carte — le problème que la
+	//  propriété corrigeait n'existe plus, donc la propriété part avec lui.
+
 	function reinitialiser() {
 		titre = '';
 		contenu = '';
@@ -276,103 +296,118 @@
 	}
 </script>
 
-<FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
-	<form on:submit|preventDefault={enregistrer}>
-		<!--  1. Titre. -->
-		<SectionFormulaire premiere>
-			<div class="field champ-large">
-				<label for="pub-titre-{publication?.id ?? 'new'}">Titre *</label>
-				<input
-					id="pub-titre-{publication?.id ?? 'new'}"
-					type="text"
-					bind:value={titre}
-					required
-					maxlength="200"
-				/>
-			</div>
-		</SectionFormulaire>
+<!--
+	Un seul montage du formulaire, deux cadres possibles. `svelte:component` est
+	ce qui permet d'écrire le corps UNE fois — deux branches `{#if}` en feraient
+	deux copies de deux cents lignes, qui divergeraient au premier champ ajouté.
 
-		<!--  2. Champs spécifiques — ce qui DÉCRIT la publication. Ces quatre
+	🔒 `Modale` est nommée DANS le `this={…}` : c'est ce que `lint:formulaires`
+	lit. Un cadre choisi dans une variable compile aussi bien et sort la modale du
+	champ du contrôle.
+-->
+<svelte:component
+	this={modeEdition ? Modale : FormulaireCreation}
+	titre={titreBoite}
+	{...modeEdition ? { edition: true } : {}}
+	on:fermer={() => dispatch('annule')}
+>
+	<div class:modal-body={modeEdition}>
+		<form on:submit|preventDefault={enregistrer}>
+			<!--  1. Titre. -->
+			<SectionFormulaire premiere>
+				<div class="field champ-large">
+					<label for="pub-titre-{publication?.id ?? 'new'}">Titre *</label>
+					<input
+						id="pub-titre-{publication?.id ?? 'new'}"
+						type="text"
+						bind:value={titre}
+						required
+						maxlength="200"
+					/>
+				</div>
+			</SectionFormulaire>
+
+			<!--  2. Champs spécifiques — ce qui DÉCRIT la publication. Ces quatre
 		      options vivaient dans la Diffusion : les y laisser les aurait fait
 		      disparaître de l'édition, et publier un brouillon serait devenu
 		      impossible (le crayon ✏️ est le seul chemin qui le permette). Aucune
 		      n'est un acte — voir `$lib/entites/publication`. -->
-		{#if sectionPresente(PUBLICATION, etat, 'specifiques')}
-			<SectionFormulaire titre="Options de publication">
-				<OptionsPublication
-					{perimetreCible}
-					dejaEpingle={epingleInitial}
-					bind:epingle
-					bind:urgente
-					bind:brouillon
-					bind:confidentiel
-				/>
-			</SectionFormulaire>
-		{/if}
+			{#if sectionPresente(PUBLICATION, etat, 'specifiques')}
+				<SectionFormulaire titre="Options de publication">
+					<OptionsPublication
+						{perimetreCible}
+						dejaEpingle={epingleInitial}
+						bind:epingle
+						bind:urgente
+						bind:brouillon
+						bind:confidentiel
+					/>
+				</SectionFormulaire>
+			{/if}
 
-		<!--  4 à 9 : l'ordre, les intitulés et les séparations viennent du
+			<!--  4 à 9 : l'ordre, les intitulés et les séparations viennent du
 		      composant partagé — voir `ChampsCommuns.svelte`. Aucune de ces
 		      sections n'est gouvernée par `modeEdition` : elles le sont par la
 		      DÉCLARATION, qui porte chaque divergence avec son motif. -->
-		<ChampsCommuns
-			idPrefixe="pub-{publication?.id ?? 'new'}"
-			avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
-			bind:perimetre={perimetreCible}
-			avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
-			bind:destinataires={publicCible}
-			avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
-			descriptionRequise
-			bind:description={contenu}
-			descriptionPlaceholder="Contenu de l'actualité…"
-			avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')}
-			bind:photos
-			avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')}
-			documentsDifferes
-			documentsControle={modeEdition ? 'slot' : 'interne'}
-			bind:documentsFichiers={pendingFiles}
-			avecDiffusion={sectionPresente(PUBLICATION, etat, 'diffusion')}
-			bind:whatsapp={partagerWhatsapp}
-			bind:syndic={envoyerSyndic}
-			bind:cs={envoyerCs}
-			aideWhatsapp={confidentiel
-				? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
-				: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
-		>
-			<!--  ✅ EN CORRECTION, les documents s'ajoutent et se retirent à l'unité :
+			<ChampsCommuns
+				idPrefixe="pub-{publication?.id ?? 'new'}"
+				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
+				bind:perimetre={perimetreCible}
+				avecDestinataires={sectionPresente(PUBLICATION, etat, 'destinataires')}
+				bind:destinataires={publicCible}
+				avecDescription={sectionPresente(PUBLICATION, etat, 'description')}
+				descriptionRequise
+				bind:description={contenu}
+				descriptionPlaceholder="Contenu de l'actualité…"
+				avecPhotos={sectionPresente(PUBLICATION, etat, 'photos')}
+				bind:photos
+				avecDocuments={sectionPresente(PUBLICATION, etat, 'documents')}
+				documentsDifferes
+				documentsControle={modeEdition ? 'slot' : 'interne'}
+				bind:documentsFichiers={pendingFiles}
+				avecDiffusion={sectionPresente(PUBLICATION, etat, 'diffusion')}
+				bind:whatsapp={partagerWhatsapp}
+				bind:syndic={envoyerSyndic}
+				bind:cs={envoyerCs}
+				aideWhatsapp={confidentiel
+					? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
+					: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
+			>
+				<!--  ✅ EN CORRECTION, les documents s'ajoutent et se retirent à l'unité :
 			      la publication existe, il n'y a rien à différer. Le contrôle vient
 			      d'ici parce que ce sont des entités `Document` avec un identifiant ;
 			      la SECTION, elle — son rang, son intitulé, sa séparation — reste
 			      celle de `ChampsCommuns`. -->
-			<svelte:fragment slot="documents">
-				{#if docsExistants.length}
-					<ul class="docs-liste">
-						{#each docsExistants as doc (doc.id)}
-							<li>
-								<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
-								<button
-									type="button"
-									class="btn-icon-danger"
-									aria-label="Retirer ce document"
-									title="Retirer ce document"
-									on:click={() => retirerDocument(doc.id)}>🗑️</button
-								>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				<label class="btn btn-outline btn-sm docs-ajout">
-					{docsEnCours ? 'Téléversement…' : '+ Ajouter un document'}
-					<input
-						type="file"
-						multiple
-						accept={ACCEPT_DOCUMENTS}
-						disabled={docsEnCours}
-						on:change={ajouterDocuments}
-					/>
-				</label>
-			</svelte:fragment>
+				<svelte:fragment slot="documents">
+					{#if docsExistants.length}
+						<ul class="docs-liste">
+							{#each docsExistants as doc (doc.id)}
+								<li>
+									<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
+									<button
+										type="button"
+										class="btn-icon-danger"
+										aria-label="Retirer ce document"
+										title="Retirer ce document"
+										on:click={() => retirerDocument(doc.id)}>🗑️</button
+									>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+					<label class="btn btn-outline btn-sm docs-ajout">
+						{docsEnCours ? 'Téléversement…' : '+ Ajouter un document'}
+						<input
+							type="file"
+							multiple
+							accept={ACCEPT_DOCUMENTS}
+							disabled={docsEnCours}
+							on:change={ajouterDocuments}
+						/>
+					</label>
+				</svelte:fragment>
 
-			<!--  🔴 Les canaux appartiennent à l'OBJET, plus à cet écran (#498).
+				<!--  🔴 Les canaux appartiennent à l'OBJET, plus à cet écran (#498).
 			      Ce commentaire disait « les actualités rendent leurs canaux
 			      elles-mêmes : l'affiche de hall n'est pas un canal, et
 			      `CanauxNotification` ne saurait pas la porter ». La prémisse est
@@ -381,29 +416,30 @@
 			      qui existe pour ça. Rendre les canaux ici obligeait à passer
 			      `avecCanaux={false}`, et les actualités se retrouvaient DANS
 			      l'objet avec des canaux qui le contournaient. -->
-			<svelte:fragment slot="diffusion">
-				<DiffusionPublication {confidentiel} bind:annonceHall />
-			</svelte:fragment>
-		</ChampsCommuns>
+				<svelte:fragment slot="diffusion">
+					<DiffusionPublication {confidentiel} bind:annonceHall />
+				</svelte:fragment>
+			</ChampsCommuns>
 
-		<!--  Le bouton « Annuler » n'existe qu'en ÉDITION : en création, la commande
+			<!--  Le bouton « Annuler » n'existe qu'en ÉDITION : en création, la commande
 		      vit dans l'en-tête de page, où le bouton d'ouverture bascule en
 		      « ✕ Annuler » — deux commandes pour un formulaire est le défaut relevé
 		      sur la modale du calendrier (#367). Même contrat que `FormulaireTicket`. -->
-		<!--  « Annuler » est À CÔTÉ d'« Enregistrer », dans les deux gestes — norme
+			<!--  « Annuler » est À CÔTÉ d'« Enregistrer », dans les deux gestes — norme
 		      posée sur Tickets le 18/08/2026, constatée, puis étendue ici.
 		      ⚠️ Corollaire : l'en-tête de page ne porte plus « ✕ Annuler » quand le
 		      formulaire est ouvert (#367 — deux commandes pour un seul formulaire). -->
-		<div class="form-actions">
-			<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
-				>Annuler</button
-			>
-			<button type="submit" class="btn btn-primary" disabled={saving}>
-				{saving ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</form>
-</FormulaireCreation>
+			<div class="form-actions">
+				<button type="button" class="btn btn-outline" on:click={() => dispatch('annule')}
+					>Annuler</button
+				>
+				<button type="submit" class="btn btn-primary" disabled={saving}>
+					{saving ? 'Enregistrement…' : 'Enregistrer'}
+				</button>
+			</div>
+		</form>
+	</div>
+</svelte:component>
 
 <style>
 	/*  La liste des documents déjà joints, en correction. Elle porte son style ici,

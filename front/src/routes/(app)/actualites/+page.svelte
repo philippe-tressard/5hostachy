@@ -294,6 +294,19 @@
 	<FormulaireActualite on:cree={publicationCreee} on:annule={() => (showForm = false)} />
 {/if}
 
+<!--  Correction — LE MÊME composant qu'à la création (#433), qui porte son
+      cadre : boîte là-bas, modale ici. Il sort de la carte avec la modale, le
+      pourquoi est écrit dans le composant (#640). -->
+{#if editingPub}
+	{#key editingPub.id}
+		<FormulaireActualite
+			publication={editingPub}
+			on:modifie={publicationModifiee}
+			on:annule={() => (editingPub = null)}
+		/>
+	{/key}
+{/if}
+
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else if pubList.length === 0}
@@ -309,9 +322,7 @@
 			{expanded}
 			apercu={!compactPubs}
 			documents={pubFilesMap[pub.id] ?? []}
-			formulaireOuvert={editingPub?.id === pub.id ||
-				showEvolForm === pub.id ||
-				optionsPub?.id === pub.id}
+			formulaireOuvert={showEvolForm === pub.id || optionsPub?.id === pub.id}
 			on:toggle={() => togglePub(pub.id)}
 		>
 			<!--  L'ORDRE DES ICÔNES est celui de la carte de ticket, désigné comme
@@ -371,21 +382,7 @@
 			</svelte:fragment>
 
 			<svelte:fragment slot="formulaire">
-				{#if editingPub?.id === pub.id}
-					<!--  ── Correction ──  LE MÊME formulaire qu'à la création, paramétré
-					      par la publication (#433). Il y en avait un second, écrit à la
-					      main sur 31 lignes, qui perdait cinq notions et en gagnait une
-					      que la création n'avait pas. `{#key}` : le mode et les valeurs
-					      initiales sont figés à la construction — passer d'une
-					      publication à l'autre doit remonter le composant à neuf. -->
-					{#key pub.id}
-						<FormulaireActualite
-							publication={pub}
-							on:modifie={publicationModifiee}
-							on:annule={() => (editingPub = null)}
-						/>
-					{/key}
-				{:else if optionsPub?.id === pub.id}
+				{#if optionsPub?.id === pub.id}
 					<!--  ── Options de publication ──
 					      LE MÊME composant qu'à la création et à l'édition
 					      (`OptionsPublication`, section 2 du cadre #430) : ni copie, ni
