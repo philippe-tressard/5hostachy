@@ -33,7 +33,7 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
 
 /** Le compte au 30/08/2026, après conversion de `residence` et `prestataires`. */
-const PLAFOND = 31;
+const PLAFOND = 30;
 
 /**
  * Fichiers qui PARLENT de `confirm()` sans en appeler un : le composant de

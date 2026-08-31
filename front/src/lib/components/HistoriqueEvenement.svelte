@@ -158,6 +158,7 @@
 				<EvolForm
 					entrees={evenement.evolutions ?? []}
 					idPrefixe="ev-evol-edit-{evol.id}"
+					auteurNom={evenement.auteur_nom ?? ''}
 					titre="Modifier le commentaire"
 					editMode={true}
 					initialContenu={evol.contenu || ''}
@@ -177,6 +178,7 @@
 			<EvolForm
 				entrees={evenement.evolutions ?? []}
 				idPrefixe="ev-evol-{evenement.id}"
+				auteurNom={evenement.auteur_nom ?? ''}
 				titre="Commenter ou changer l’état"
 				statutOptions={options}
 				statutLabels={libelles}

@@ -92,6 +92,7 @@ from app.utils.destinataires import (  # noqa: F401  (ré-export volontaire)
     destinataires_syndic_cs,
     syndic_principal,
 )
+from app.utils.noms import nom_affiche
 
 
 # ── Libellés d'évolution ─────────────────────────────────────────────────────
@@ -127,7 +128,7 @@ def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
         id=e.id, ticket_id=e.ticket_id, type=e.type,
         contenu=e.contenu, ancien_statut=e.ancien_statut,
         nouveau_statut=e.nouveau_statut, auteur_id=e.auteur_id,
-        auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
+        auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
         cree_le=e.cree_le,
         fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
         #  `None` — et non `[]` — quand l'entrée ne parle pas du périmètre : le
@@ -207,7 +208,7 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
     if ticket.saisi_pour_user_id:
         sp_user = session.get(Utilisateur, ticket.saisi_pour_user_id)
         if sp_user:
-            saisi_pour_affichage = f"{sp_user.prenom} {sp_user.nom}"
+            saisi_pour_affichage = nom_affiche(sp_user.prenom, sp_user.nom)
     elif ticket.saisi_pour_nom:
         saisi_pour_affichage = ticket.saisi_pour_nom
     return TicketRead(
@@ -219,7 +220,7 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         statut=ticket.statut,
         priorite=ticket.priorite,
         auteur_id=ticket.auteur_id,
-        auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else None,
+        auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
         auteur_batiment_nom=f"Bât. {batiment.numero}" if batiment else None,
         lot_id=ticket.lot_id,
         batiment_id=ticket.batiment_id,

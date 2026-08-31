@@ -142,10 +142,19 @@ def create_publication(
                 envoyer_whatsapp_avec_log, pub.titre, pub.contenu, pub.urgente, pub.perimetre_cible, premiere_photo(pub.photos_urls), wa_config,
                 pub.public_cible, pub.id, pub.confidentiel,
             )
-    if pub.envoyer_syndic and not pub.brouillon:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
-    if pub.envoyer_cs and not pub.brouillon:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+    #  🔴 UN SEUL ENVOI, pas deux. `destinataires_syndic_cs` fusionne et
+    #  dédoublonne les deux listes — c'est ce pour quoi elle existe (#668).
+    #  L'appeler deux fois envoyait DEUX courriels quand les deux cases étaient
+    #  cochées, et le syndic qui siège au CS les recevait tous les deux.
+    #
+    #  L'aperçu, lui, annonçait déjà **une** liste fusionnée : l'écran et l'envoi
+    #  se contredisaient, et c'est l'écran qui avait raison (31/08/2026).
+    if (pub.envoyer_syndic or pub.envoyer_cs) and not pub.brouillon:
+        _envoyer_email_syndic_publication(
+            pub, user, background_tasks, session,
+            syndic=pub.envoyer_syndic, cs=pub.envoyer_cs,
+            auteur=bool(getattr(body, "envoyer_auteur", False)),
+        )
     if pub.annonce_hall and not pub.brouillon:
         _generer_annonce_hall(pub, user, background_tasks, session)
     if email_externe and email_externe.strip() and not pub.brouillon:
@@ -277,10 +286,17 @@ def update_publication(
                     pub.perimetre_cible, premiere_photo(pub.photos_urls), wa_config,
                     pub.public_cible, pub.id, pub.confidentiel,
                 )
-        if _vient_d_etre_coche('envoyer_syndic'):
-            _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
-        if _vient_d_etre_coche('envoyer_cs'):
-            _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+        #  Un seul envoi — voir la création. Seuls les canaux qui VIENNENT
+        #  d'être cochés partent : un canal déjà coché ne repart pas à chaque
+        #  enregistrement, c'est ce qui rend l'édition sûre (cadre, 18/08).
+        _neuf_syndic = _vient_d_etre_coche('envoyer_syndic')
+        _neuf_cs = _vient_d_etre_coche('envoyer_cs')
+        if _neuf_syndic or _neuf_cs:
+            _envoyer_email_syndic_publication(
+                pub, user, background_tasks, session,
+                syndic=_neuf_syndic, cs=_neuf_cs,
+                auteur=bool(getattr(body, "envoyer_auteur", False)),
+            )
         if _vient_d_etre_coche('annonce_hall'):
             _generer_annonce_hall(pub, user, background_tasks, session)
 
@@ -293,10 +309,12 @@ def update_publication(
                 pub.public_cible, pub.id, pub.confidentiel,
             )
     # Envoi email syndic si brouillon publié + flag activé
-    if was_brouillon_published and pub.envoyer_syndic:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
-    if was_brouillon_published and pub.envoyer_cs:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
+    if was_brouillon_published and (pub.envoyer_syndic or pub.envoyer_cs):
+        _envoyer_email_syndic_publication(
+            pub, user, background_tasks, session,
+            syndic=pub.envoyer_syndic, cs=pub.envoyer_cs,
+            auteur=bool(getattr(body, "envoyer_auteur", False)),
+        )
     if was_brouillon_published and pub.annonce_hall:
         _generer_annonce_hall(pub, user, background_tasks, session)
 
@@ -316,11 +334,16 @@ def renvoyer_email_publication(
         raise HTTPException(404, "Publication introuvable")
     if pub.brouillon:
         raise HTTPException(422, "Impossible de renvoyer un brouillon")
-    if pub.envoyer_syndic:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=True, cs=False)
-    if pub.envoyer_cs:
-        _envoyer_email_syndic_publication(pub, user, background_tasks, session, syndic=False, cs=True)
-    if not pub.envoyer_syndic and not pub.envoyer_cs:
+    if pub.envoyer_syndic or pub.envoyer_cs:
+        #  Un seul envoi, comme à la création. Pas de copie à l'auteur : ce
+        #  renvoi est un geste d'ADMINISTRATION, pas une diffusion voulue par
+        #  l'auteur — le lui copier lui annoncerait un envoi qu'il n'a pas
+        #  demandé.
+        _envoyer_email_syndic_publication(
+            pub, user, background_tasks, session,
+            syndic=pub.envoyer_syndic, cs=pub.envoyer_cs,
+        )
+    else:
         raise HTTPException(422, "Cette publication n'a pas de destinataires email configurés")
 
 

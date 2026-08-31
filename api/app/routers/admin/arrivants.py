@@ -30,6 +30,7 @@ from app.utils.destinataires import syndic_principal as _syndic_principal
 from app.utils.syndic import nom_du_syndic
 from html import escape
 from typing import Optional
+from app.utils.noms import nom_affiche
 
 router = APIRouter()
 
@@ -69,7 +70,7 @@ def _declencher_accueil_arrivant(
         if deja_declenche:
             raise HTTPException(409, "La démarche Nouvel Arrivant a déjà été déclarée pour ce compte")
 
-    nom_complet = f"{user.prenom} {user.nom}"
+    nom_complet = nom_affiche(user.prenom, user.nom)
     bat = body.batiment or ""
     ancien = body.ancien_resident or ""
     bat_str = f", {bat}" if bat else ""
@@ -279,9 +280,9 @@ def list_baux(
             "statut": b.statut,
             "locataire_email": b.locataire_email,
             "locataire_id": b.locataire_id,
-            "locataire_nom": f"{locataire.prenom} {locataire.nom}" if locataire else None,
+            "locataire_nom": nom_affiche(locataire.prenom, locataire.nom) if locataire else None,
             "bailleur_id": b.bailleur_id,
-            "bailleur_nom": f"{bailleur.prenom} {bailleur.nom}" if bailleur else "?",
+            "bailleur_nom": nom_affiche(bailleur.prenom, bailleur.nom) if bailleur else "?",
             "date_entree": b.date_entree,
             "liaison_manquante": bool(b.locataire_email and not b.locataire_id),
         })

@@ -112,8 +112,12 @@ const EXCEPTIONS = {
 	//  l'exige, en refusant l'exception dès qu'elle cesse de servir.
 	'routes/(app)/mon-lot/+page.svelte':
 		"#672 — « Nouveau bail » (fichier de 2 230 l., extraction d'abord)",
-	'routes/(app)/residence/+page.svelte':
-		"#672 — quatre « Ajouter … » (fichier de 1 518 l., extraction d'abord)",
+	//  ✅ `residence` est sorti de cette liste le 31/08/2026. Ses SEPT formulaires
+	//  — plan, règlement, CR d'AG, rapport, et les trois éditions — étaient bâtis
+	//  du même vocabulaire, par copie ; ils passent tous par `FormulaireDocument`,
+	//  qui pose la boîte à la création et la fenêtre à l'édition.
+	//
+	//  Il ne restait qu'un écran sur les quatre à la fin de la journée.
 	//  ✅ `OngletPerimetres` est sorti de cette liste le 31/08/2026, converti le
 	//  jour même où il y est entré. Il n'y reste rien de lui : c'est ce contrôle
 	//  qui l'a exigé, en refusant l'exception dès qu'elle a cessé de servir.

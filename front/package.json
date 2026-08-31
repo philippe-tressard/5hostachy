@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "3.50.0",
+	"version": "3.51.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -51,6 +51,7 @@
 		"lint:apercu": "node scripts/check-apercu-branche.mjs",
 		"lint:perimetre-herite": "node scripts/check-perimetre-herite.mjs",
 		"lint:noms": "node scripts/check-noms.mjs",
+		"lint:filtre-statuts": "node scripts/check-filtre-statuts.mjs",
 		"lint:diffusion-auteur": "node scripts/check-diffusion-auteur.mjs",
 		"lint:version-servie": "node scripts/check-version-servie.mjs",
 		"lint:largeur-saisie": "node scripts/check-largeur-saisie.mjs",

@@ -45,7 +45,25 @@
 	/**  « M'envoyer une copie » — la quatrième case de `CanauxNotification`, qui en
 	 *   porte le pourquoi. Transmise, jamais décidée ici : cette section est un
 	 *   relais, et c'est l'écran qui sait quoi en faire à l'envoi. */
+	/**  🔴 UNE SEULE CHARGE UTILE POUR LES QUATRE CANAUX, dans l'écran appelant.
+	 *
+	 *   Les canaux voyagent souvent dans PLUSIEURS charges utiles d'un même
+	 *   écran — l'aperçu, la création, la mise à jour. `FormulaireActualite` en
+	 *   avait trois, et l'ajout de `envoyer_auteur` a dû être fait trois fois. Une
+	 *   quatrième oubliée, et le canal s'affiche sans jamais partir : c'est le
+	 *   défaut corrigé le 31/08/2026, sur cinq écrans à la fois.
+	 *
+	 *   Le remède tient en une ligne : un objet `canaux` réactif, répandu par
+	 *   `...canaux` dans chaque charge utile.
+	 *
+	 *   ⚠️ Les canaux partent AUSSI à la mise à jour, et c'est voulu : le serveur
+	 *   n'envoie que sur la TRANSITION décoché → coché, donc réenregistrer sans y
+	 *   toucher ne rejoue rien. C'est ce qui rend l'édition sûre (cadre, 18/08). */
 	export let auteur = false;
+	/**  Le nom de l'auteur de l'objet, relayé jusqu'à la case « Envoyer une copie
+	 *   à … ». Relais pur : ce composant ne sait pas non plus qui a écrit
+	 *   l'objet — seul l'écran tient l'objet. */
+	export let auteurNom = '';
 	/** Afficher les trois cases de canal. */
 	export let avecCanaux = false;
 	/** Afficher le champ d'adresse externe (CS/admin). */
@@ -143,7 +161,15 @@
 		{/if}
 
 		{#if avecCanaux}
-			<CanauxNotification bind:whatsapp bind:syndic bind:cs bind:auteur {compact} {aideWhatsapp} />
+			<CanauxNotification
+				bind:whatsapp
+				bind:syndic
+				bind:cs
+				bind:auteur
+				{auteurNom}
+				{compact}
+				{aideWhatsapp}
+			/>
 			<!--  🔴 L'aide propre au contexte est AFFICHÉE, plus seulement en infobulle.
 			      `CanauxNotification` en fait un `title=` — invisible au doigt, invisible
 			      au lecteur d'écran tant qu'on ne survole pas. Or sur une actualité

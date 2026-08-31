@@ -42,6 +42,7 @@ from sqlmodel import Session
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import Publication, Utilisateur
+from app.utils.copie_auteur import adresse_copie, auteur_de
 from app.utils.apercu_diffusion import ApercuCanal, ApercuDiffusion, apercu_email, apercu_whatsapp
 from app.utils.destinataires import destinataires_syndic_cs
 from app.utils.fichiers import est_image
@@ -75,6 +76,9 @@ class BrouillonPublication(BaseModel):
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
     partager_whatsapp: bool = False
+    #  « Envoyer une copie à … » — la 4e case de la Diffusion. L'aperçu doit la
+    #  montrer : taire un destinataire ferait mentir l'aperçu par omission.
+    envoyer_auteur: bool = False
 
 
 def _publication_previsionnelle(b: BrouillonPublication, auteur: Utilisateur) -> Publication:
@@ -139,6 +143,14 @@ def apercu_diffusion(
                     session, syndic=brouillon.envoyer_syndic, cs=brouillon.envoyer_cs
                 ),
                 pieces_jointes=pieces,
+                #  La copie va à l'auteur de la PUBLICATION — voir
+                #  `app/utils/copie_auteur.py`. L'aperçu doit l'annoncer :
+                #  taire un destinataire ferait mentir l'aperçu par omission.
+                copie_auteur=(
+                    adresse_copie(session, auteur_de(session, Publication, brouillon.publication_id), user)
+                    if brouillon.envoyer_auteur
+                    else None
+                ),
             )
         )
 

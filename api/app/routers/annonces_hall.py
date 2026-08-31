@@ -37,6 +37,7 @@ from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiabl
 from app.utils.email import send_email_group
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
 from app.utils.photos import parse_photos
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/annonces-hall", tags=["annonces-hall"])
 
@@ -136,7 +137,7 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
         "archivee": annonce.archivee,
         "publication_id": annonce.publication_id,
         "cree_le": annonce.cree_le.isoformat(),
-        "auteur_nom": f"{auteur.prenom} {auteur.nom}" if auteur else "",
+        "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "",
     }
 
 

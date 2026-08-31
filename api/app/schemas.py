@@ -303,6 +303,18 @@ class PublicationCreate(BaseModel):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    #  🔴 « Envoyer une copie à … » — la 4e case de la Diffusion (31/08/2026).
+    #
+    #  Elle s'affichait déjà sur cet écran, `CanauxNotification` la posant pour
+    #  les huit formulaires qui emploient la Diffusion. Mais **seuls les tickets
+    #  la lisaient** : ici, la cocher n'avait aucun effet, et rien ne le disait.
+    #
+    #  ⚠️ C'est exactement ce que le cadre interdit — *« avant de rouvrir un
+    #  champ dans l'interface, vérifier que le serveur le CONSOMME »*. Le
+    #  contrôle `lint:diffusion-auteur` ne voyait pas le trou : les écrans
+    #  concernés ne lient pas la case eux-mêmes, ils la reçoivent de
+    #  `ChampsCommuns`, qui figurait sur sa liste de relais.
+    envoyer_auteur: bool = False
     annonce_hall: bool = False  # génère l'affiche de hall + envoi au CS du périmètre
     confidentiel: bool = False  # lecture réservée au périmètre visé (#347)
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
@@ -323,6 +335,9 @@ class PublicationUpdate(BaseModel):
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
+    #  Voir `PublicationCreate` : la case ne se stocke pas, c'est une intention
+    #  d'envoi. À la mise à jour elle vaut pour CET enregistrement.
+    envoyer_auteur: Optional[bool] = None
     annonce_hall: Optional[bool] = None
     #  Modifiable après publication, volontairement : c'est ce qui permet de
     #  rattraper une actualité publiée au mauvais périmètre. Elle disparaît alors

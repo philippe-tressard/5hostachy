@@ -161,13 +161,36 @@
 		transition: all 0.12s;
 		white-space: nowrap;
 	}
-	/*  PRIVATIF : un contour discontinu, et rien d'autre. Pas de couleur — elle
-	    est prise par l'état retenu — ni de symbole — l'icône du nœud l'occupe
-	    déjà. Le trait suffit à dire « délimité, à quelqu'un », et il reste lisible
-	    sur la pastille pleine comme sur la pastille retenue. */
+	/*  PRIVATIF : un contour discontinu au repos.
+	    Pas de couleur — elle est prise par l'état retenu — ni de symbole —
+	    l'icône du nœud l'occupe déjà. */
 	.pastille.privatif {
 		border-style: dashed;
 		border-width: 1.5px;
+	}
+
+	/*  🔴 ET UN APLAT HACHURÉ UNE FOIS RETENUE (signalé à l'écran le 01/09/2026 :
+	    *« une pastille privative active n'est pas très visible »*).
+
+	    Le contour discontinu disparaissait sous l'aplat plein : la bordure et le
+	    fond prenaient la même couleur, et le trait n'avait plus rien à trancher.
+	    La distinction ne tenait donc que sur les pastilles NON retenues —
+	    c'est-à-dire justement celles qu'on ne regarde pas.
+
+	    Le motif reprend l'idée du trait interrompu, à l'échelle du fond : des
+	    hachures dans les deux bleus de la charte. Il reste lisible en noir et
+	    blanc et ne dépend d'aucune image. Le texte garde son fond uni derrière
+	    lui — sans quoi les hachures passeraient sous les lettres. */
+	.pastille.privatif.active {
+		background-image: repeating-linear-gradient(
+			135deg,
+			transparent 0,
+			transparent 5px,
+			rgba(255, 255, 255, 0.28) 5px,
+			rgba(255, 255, 255, 0.28) 10px
+		);
+		border-style: dashed;
+		border-color: #fff;
 	}
 	.pastille:hover {
 		border-color: var(--color-primary);

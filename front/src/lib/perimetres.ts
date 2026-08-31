@@ -445,3 +445,34 @@ export function perimetreHerite(
 export function memePerimetre(a: string[], b: string[]): boolean {
 	return a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|');
 }
+
+/**
+ * Le périmètre d'une nouvelle entrée d'historique : ce qu'elle déclare, et le
+ * libellé de ce dont elle part.
+ *
+ * ## Pourquoi une fonction et pas trois `$:` dans le formulaire
+ *
+ * Les deux valeurs se répondent, et la subtile est `declare` : elle vaut
+ * `undefined` tant qu'on n'a pas touché à l'hérité. C'est ce **vide** qui permet
+ * au courriel de n'afficher « 🔹 … » que sur les entrées qui ont précisé quelque
+ * chose — une entrée qui redit le périmètre du ticket n'apprend rien.
+ *
+ * Elles vivaient dans `EvolForm`, qui sert quatre écrans et qui a franchi le
+ * plafond de modularité le 31/08/2026. Le contrôle désignait un **placement** :
+ * ces trois lignes parlent de périmètre, pas de formulaire, et leur place est
+ * ici — à côté de `perimetreHerite`, dont elles sont les seules clientes.
+ */
+export function perimetreEntree(
+	perimetreCourant: string[],
+	entrees: { perimetre_cible?: string[] | null }[],
+	choisi: string[],
+	sectionActive: boolean,
+): { declare: string[] | undefined; libelleActuel: string } {
+	const depart = perimetreHerite(perimetreCourant, entrees);
+	return {
+		declare: sectionActive && choisi.length && !memePerimetre(choisi, depart) ? choisi : undefined,
+		libelleActuel: depart.length
+			? perimetreLabel(depart)
+			: perimetreLabelUn(perimetreParDefaut() ?? ''),
+	};
+}

@@ -53,6 +53,9 @@
 	let partagerWhatsapp = false;
 	let envoyerSyndic = false;
 	let envoyerCs = false;
+	//  « Envoyer une copie à … » — la case vit dans `CanauxNotification`, qui
+	//  porte la règle et son pourquoi. Elle s'affichait ici sans être lue (31/08).
+	let envoyerAuteur = false;
 	let submitting = false;
 
 	/**  🔴 Ce formulaire ne sert QUE la création, et la déclaration le dit sans
@@ -122,6 +125,7 @@
 				partager_whatsapp: partagerWhatsapp,
 				envoyer_syndic: envoyerSyndic,
 				envoyer_cs: envoyerCs,
+				envoyer_auteur: envoyerAuteur,
 			});
 			reinitialiser();
 			toast('success', 'Sondage créé');
@@ -239,6 +243,7 @@
 			bind:whatsapp={partagerWhatsapp}
 			bind:syndic={envoyerSyndic}
 			bind:cs={envoyerCs}
+			bind:auteur={envoyerAuteur}
 		/>
 
 		<!--  Pas de bouton « Annuler » ici : la commande vit dans l'en-tête de page,

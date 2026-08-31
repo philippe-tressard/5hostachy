@@ -37,6 +37,7 @@ from app.models.evenement import EvenementEvolution
 from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import parse_photos, photos_internes
 from app.routers.calendrier_courriels import notifier_canaux
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -71,6 +72,11 @@ class EvolutionEvenementCreate(BaseModel):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    #  « Envoyer une copie à … » — la 4e case de la Diffusion (31/08/2026).
+    #  Elle s'affichait sur cet écran sans être lue nulle part. Le destinataire
+    #  est l'auteur de l'OBJET, pas celui qui écrit : le CS qui reprend un
+    #  ticket décide alors de notifier le résident qui l'a ouvert.
+    envoyer_auteur: bool = False
 
 
 #: Les libellés des colonnes du Kanban, écrits UNE fois côté serveur : ce sont
@@ -121,7 +127,7 @@ def _evolutions_de(ev_id: int, session: Session) -> list[EvolutionEvenementRead]
         brut["fichiers_urls"] = parse_photos(e.fichiers_urls)
         lue = EvolutionEvenementRead.model_validate(brut)
         auteur = session.get(Utilisateur, e.auteur_id)
-        lue.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
+        lue.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
         sortie.append(lue)
     return sortie
 
@@ -183,6 +189,7 @@ def add_evolution_evenement(
         whatsapp=body.partager_whatsapp,
         syndic=body.envoyer_syndic,
         cs=body.envoyer_cs,
+        auteur=bool(getattr(body, "envoyer_auteur", False)),
         suivi={
             "commentaire": body.contenu or "",
             "etat": KANBAN_LABELS.get(evol.nouveau_statut or "", ""),

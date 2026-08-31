@@ -23,6 +23,7 @@ from app.models.core import (
     RoleUtilisateur,
     Utilisateur,
 )
+from app.utils.noms import nom_affiche
 
 # Code du template email (voir seed.EMAIL_TEMPLATES + _EMAIL_PREF_MAP).
 REPONSE_EMAIL_CODE = "reponse_communaute"
@@ -62,7 +63,7 @@ def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
         if bat:
             batiment = f"Bât. {bat.numero}"
     return {
-        "auteur_nom": f"{auteur.prenom} {auteur.nom}",
+        "auteur_nom": nom_affiche(auteur.prenom, auteur.nom),
         "auteur_batiment": batiment,
         "auteur_role": role,
         "est_cs": est_cs,
@@ -137,7 +138,7 @@ def notifier_nouvelle_reponse(
         from app.utils.email import send_email
         ctx = {
             "reponse": {
-                "auteur": f"{auteur.prenom} {auteur.nom}",
+                "auteur": nom_affiche(auteur.prenom, auteur.nom),
                 "rubrique_label": rubrique_label,
                 "sujet": sujet,
                 "extrait": extrait[:300],

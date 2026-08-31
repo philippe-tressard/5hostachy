@@ -156,13 +156,38 @@ function reglesRedefinies(contenu, classesGlobales) {
 	return trouves;
 }
 
-/** Les `<Modale …>` d'un fichier, chacune réduite au début de son contenu. */
+/**
+ * Les ouvertures de modale d'un fichier, chacune réduite au début de son contenu.
+ *
+ * 🔴 **Deux formes, et la seconde était invisible jusqu'au 31/08/2026.**
+ *
+ * Un composant qui sert les deux gestes — créer dans une boîte, corriger dans une
+ * fenêtre — ne peut pas écrire `<Modale>` : il écrirait alors son corps DEUX
+ * fois, ce qui est la duplication qu'il existe pour supprimer. Il pose donc
+ * `<svelte:component this={edition ? Modale : FormulaireCreation}>`.
+ *
+ * Ce contrôle ne comptait que la première forme. Quatre composants employaient
+ * déjà la seconde (`FormulaireActualite`, `FormulaireEvenement`,
+ * `FormulaireFaq`…) : leurs modales échappaient au contrôle du titre, et le
+ * plancher du cas zéro baissait à chaque factorisation — donnant à croire que
+ * le repérage ne mordait plus alors que c'était le code qui s'améliorait.
+ *
+ * C'est la même leçon que `lint:html` et `lint:formulaires` ont apprise : **un
+ * contrôle qui ne voit pas la factorisation mesure la forme, pas le fait.**
+ */
 function ouverturesModale(contenu) {
 	const sorties = [];
-	for (const m of contenu.matchAll(/<Modale(?=[\s>])/g)) {
+	//  `<Modale…>` d'un côté, `<svelte:component this={… Modale …}…>` de l'autre.
+	//  Le second n'est retenu que si `Modale` figure dans l'expression `this` :
+	//  un `<svelte:component>` qui rend autre chose n'est pas une modale.
+	for (const m of contenu.matchAll(/<Modale(?=[\s>])|<svelte:component(?=[\s>])/g)) {
+		if (m[0].startsWith('<svelte:component')) {
+			const jusquAuThis = contenu.slice(m.index, m.index + 300);
+			if (!/this=\{[^}]*\bModale\b/.test(jusquAuThis)) continue;
+		}
 		//  Fin de la balise ouvrante : le premier `>` hors accolade — un attribut
 		//  peut contenir `=>` ou un objet, que suivre naïvement couperait trop tôt.
-		let i = m.index + '<Modale'.length;
+		let i = m.index + m[0].length;
 		let accolades = 0;
 		for (; i < contenu.length; i++) {
 			const c = contenu[i];
@@ -265,9 +290,18 @@ if (fichiersAvecModale < 2) {
 //  Le contrôle du titre ne vaut que s'il a des modales à regarder : sans ce
 //  compte, un jour où plus rien n'emploierait `<Modale>` il annoncerait « aucun
 //  titre réécrit » — vrai, et sans aucun rapport avec ce qu'il prétend garder.
-if (titresRendus < 25) {
+//  ⚠️ Le plancher a BAISSÉ le 31/08/2026, de 25 à 22, et c'est une baisse
+//  légitime : la page Résidence a rendu ses six formulaires à `FormulaireDocument`
+//  (#672). Six modales sont devenues une, qui sert les six.
+//
+//  🔴 Un plancher qu'on baisse à chaque échec cesse d'être un témoin. Celui-ci
+//  n'a été baissé qu'APRÈS avoir appris à compter la seconde forme d'ouverture
+//  (voir `ouverturesModale`) — sans quoi on aurait entériné un aveuglement en
+//  croyant enregistrer un progrès.
+const PLANCHER_MODALES = 22;
+if (titresRendus < PLANCHER_MODALES) {
 	console.error(
-		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), 25 attendues au minimum. ` +
+		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), ${PLANCHER_MODALES} attendues au minimum. ` +
 			'Le repérage des balises ouvrantes ne mord plus — ne pas lire ce contrôle comme vert.',
 	);
 	process.exit(1);

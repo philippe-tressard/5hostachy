@@ -25,6 +25,7 @@ from app.database import get_session
 from app.models.core import ContratEntretien, NotationPrestataire, Prestataire, TypeEquipement, TypePrestataire, Utilisateur
 
 from app.utils.echeance_contrat import poser_echeance
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
@@ -308,7 +309,7 @@ def list_notations(
     for n in notations:
         auteur = session.get(Utilisateur, n.auteur_id)
         nr = NotationRead.model_validate(n)
-        nr.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
+        nr.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
         result.append(nr)
     return result
 
@@ -333,7 +334,7 @@ def create_notation(
     session.commit()
     session.refresh(n)
     nr = NotationRead.model_validate(n)
-    nr.auteur_nom = f"{user.prenom} {user.nom}"
+    nr.auteur_nom = nom_affiche(user.prenom, user.nom)
     return nr
 
 
@@ -375,7 +376,7 @@ def get_prestataire_synthese(
         notations_read.append({
             "id": n.id, "note": n.note, "commentaire": n.commentaire,
             "contrat_id": n.contrat_id,
-            "auteur_nom": f"{auteur.prenom} {auteur.nom}" if auteur else "?",
+            "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
             "cree_le": n.cree_le.isoformat(),
         })
 

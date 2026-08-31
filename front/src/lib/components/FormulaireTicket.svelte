@@ -457,6 +457,7 @@
 			bind:syndic={destinataireSyndic}
 			bind:cs={destinataireCs}
 			bind:auteur={envoyerAuteur}
+			auteurNom={ticket?.auteur_nom ?? ''}
 			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
 		/>
 

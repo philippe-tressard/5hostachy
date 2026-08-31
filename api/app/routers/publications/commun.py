@@ -20,6 +20,7 @@ from app.utils.archivage import (
     est_archivable,
 )
 from app.utils.perimetres import a_portee_globale
+from app.utils.noms import nom_affiche
 
 #  `_generer_annonce_hall` journalise l'échec de génération sans le propager :
 #  sans ce logger, l'`except` du module d'origine levait un `NameError` et
@@ -70,7 +71,7 @@ def _pub_to_read(pub: Publication, session: Session) -> PublicationRead:
     evol_reads = [evolution_read(e, session) for e in evols]
     data = PublicationRead.model_validate(pub)
     auteur_pub = session.get(Utilisateur, pub.auteur_id)
-    data.auteur_nom = f"{auteur_pub.prenom} {auteur_pub.nom}" if auteur_pub else "?"
+    data.auteur_nom = nom_affiche(auteur_pub.prenom, auteur_pub.nom) if auteur_pub else "?"
     data.evolutions = evol_reads
     return data
 
@@ -221,7 +222,7 @@ def evolution_read(evol: PublicationEvolution, session: Session) -> EvolutionRea
         ancien_statut=evol.ancien_statut,
         nouveau_statut=evol.nouveau_statut,
         auteur_id=evol.auteur_id,
-        auteur_nom=f"{auteur.prenom} {auteur.nom}" if auteur else "?",
+        auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
         cree_le=evol.cree_le,
         fichiers_urls=json.loads(evol.fichiers_urls) if evol.fichiers_urls else [],
     )

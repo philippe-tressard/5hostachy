@@ -18,7 +18,7 @@ from sqlmodel import Session, select
 from app.models.core import MessageTicket, Ticket, TicketEvolution, Utilisateur
 from app.utils.photos import parse_photos
 from app.utils.categories_ticket import libelle_categorie
-from app.utils.noms import nom_affiche
+from app.utils.copie_auteur import copie_demandee
 from app.utils.perimetres import perimetre_label_json
 from app.utils.dates_fr import date_courte, datetime_longue_paris as fmt_paris
 from app.utils.fichiers import chemins_locaux
@@ -29,6 +29,7 @@ from .commun import (
     destinataires_syndic_cs,
     libelle_evolution,
 )
+from app.utils.noms import nom_affiche
 
 
 def _contexte_ticket(ticket) -> dict:
@@ -90,27 +91,16 @@ def envoyer_email_syndic_cs(
         pieces_jointes=pieces_jointes, commentaire=commentaire, evolutions=evolutions,
     )
 
-    #  🔴 L'AUTEUR EN COPIE — SUR DEMANDE, jamais d'office.
+    #  🔴 LA COPIE VA À L'AUTEUR DU TICKET, pas à qui écrit.
     #
-    #  Une première version le faisait implicitement : l'auteur recevait une
-    #  copie cachée dès qu'il n'était pas déjà destinataire. Arbitré le
-    #  31/08/2026, le jour même :
-    #
-    #  > *« pour l'auteur dans la diffusion, que cette section fasse apparaître
-    #  > une coche supplémentaire EN CLAIR et pas un envoi implicite à
-    #  > l'auteur »*
-    #
-    #  C'était commode, et c'était une décision prise à sa place : le formulaire
-    #  annonçait trois destinataires et en servait quatre. La case vit dans
-    #  `CanauxNotification`, donc sur les huit écrans qui emploient la Diffusion.
-    #
-    #  ⚠️ Le doublon reste écarté sur les ADRESSES retenues, pas sur le rôle : un
-    #  membre du CS qui coche la case ne doit pas se recevoir deux fois.
-    deja_servies = {e.lower() for _, e in destinataires}
-    auteur_bcc = (
-        [user.email]
-        if auteur and user.email and user.email.lower() not in deja_servies
-        else None
+    #  La règle, ses trois états successifs du 31/08/2026 et la déduplication
+    #  vivent dans `app/utils/copie_auteur.py` — elle sert aussi les publications
+    #  et le calendrier, où elle avait trois comportements différents.
+    auteur_bcc = copie_demandee(
+        session,
+        getattr(ticket, "auteur_id", None),
+        (e for _, e in destinataires),
+        demandee=auteur,
     )
 
     background_tasks.add_task(
@@ -251,7 +241,7 @@ def envoyer_email_externe(
     for m in msgs_for_history:
         auteur_m = session.get(Utilisateur, m.auteur_id)
         msgs_ctx.append({
-            "auteur_nom": f"{auteur_m.prenom} {auteur_m.nom}" if auteur_m else "?",
+            "auteur_nom": nom_affiche(auteur_m.prenom, auteur_m.nom) if auteur_m else "?",
             "date": fmt_paris(m.cree_le),
             "contenu": m.contenu,
         })

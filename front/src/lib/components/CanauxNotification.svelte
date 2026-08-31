@@ -31,6 +31,8 @@
   décochées côté appelant. Envoyer une notification est une action délibérée.
 -->
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
+	import { currentUser } from '$lib/stores/auth';
 	import Icon from '$lib/components/Icon.svelte';
 
 	/** Partager sur le groupe WhatsApp de la copropriété */
@@ -61,6 +63,20 @@
 	 *   ⚠️ **Décochée par défaut.** Une case cochée d'avance n'est pas un choix :
 	 *   ce serait l'envoi implicite sous un autre nom. */
 	export let auteur = false;
+	/**  Le NOM de l'auteur de l'objet — celui qui recevra la copie. Vide tant
+	 *   que l'objet n'existe pas : l'écran passe alors le nom du rédacteur, qui
+	 *   en sera l'auteur.
+	 *
+	 *   ⚠️ L'écran ne le passe QUE s'il tient un objet déjà créé. À la création,
+	 *   l'auteur sera le rédacteur : le composant retombe donc tout seul sur le
+	 *   compte connecté, plutôt que de faire écrire la même ligne dans chacun des
+	 *   huit formulaires. C'est la règle du 31/08/2026 — *« les comportements
+	 *   demandés doivent être au niveau des objets pour être dans toutes les
+	 *   pages y faisant référence »*. */
+	export let auteurNom = '';
+
+	//  Le nom réellement affiché : celui de l'auteur de l'objet, sinon le nôtre.
+	$: nomCopie = auteurNom || nomAffiche($currentUser);
 </script>
 
 <div class="canaux" class:compact>
@@ -87,10 +103,26 @@
 
 	<!--  EN DERNIER : les trois premières disent qui d'AUTRE est prévenu, celle-ci
 	      parle de soi. L'ordre suit le sens, pas l'ordre d'ajout. -->
-	<label class="checkbox-field" title="Vous recevrez une copie de ce message.">
+	<!--  🔴 CETTE CASE NOMME SON DESTINATAIRE, et c'est le seul libellé qui lève
+	      l'ambiguïté (arbitré à l'écran le 31/08/2026, en trois temps).
+
+	      « M'envoyer une copie », puis « … de ce message » : jugés obscurs.
+	      « Envoyer une copie à l'auteur » : pire encore — dès que le CS prend le
+	      relais d'un ticket, « l'auteur » ne désigne plus rien de sûr, celui du
+	      ticket ou celui du commentaire ?
+
+	      La règle retenue : *« si le CS prend la main sur un ticket ouvert par un
+	      résident pour notifier le CS ou le syndic, il décide alors de notifier
+	      l'auteur »*. Donc l'auteur de l'OBJET, et son nom écrit en toutes
+	      lettres — le seul libellé où l'on sait à qui l'on écrit.
+
+	      ⚠️ Sans nom (objet pas encore créé, auteur supprimé), on retombe sur
+	      « l'auteur » : jamais sur rien. Une case sans destinataire lisible
+	      serait un envoi implicite sous un autre nom. -->
+	<label class="checkbox-field">
 		<input type="checkbox" bind:checked={auteur} />
 		<span class="ico" aria-hidden="true">&#x2709;&#xFE0F;</span>
-		<span>M'envoyer une copie</span>
+		<span>Envoyer une copie à {nomCopie || "l'auteur"}</span>
 	</label>
 </div>
 

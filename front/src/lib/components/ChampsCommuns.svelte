@@ -120,6 +120,10 @@
 	export let cs = false;
 	/** « M'envoyer une copie » — relayée telle quelle (voir `CanauxNotification`). */
 	export let auteur = false;
+	/**  Le nom de l'auteur de l'objet, relayé jusqu'à la case « Envoyer une copie
+	 *   à … ». Relais pur : ce composant ne sait pas non plus qui a écrit
+	 *   l'objet — seul l'écran tient l'objet. */
+	export let auteurNom = '';
 	export let aideWhatsapp = '';
 	/**  La fonction d'aperçu de l'écran — transmise TELLE QUELLE à l'objet
 	 *   Diffusion, qui porte l'état et la modale (#498). Absente = pas d'aperçu,
@@ -255,6 +259,7 @@
 		bind:syndic
 		bind:cs
 		bind:auteur
+		{auteurNom}
 		{aideWhatsapp}
 		bind:this={refDiffusion}
 		{demanderApercu}

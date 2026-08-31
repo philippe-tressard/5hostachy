@@ -2,9 +2,8 @@
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
@@ -72,14 +71,17 @@
 	// Formulaires documents
 	let showPlanForm = false;
 	let newPlanTitre = '';
-	let newPlanPerimetre: 'résidence' | 'bâtiment' = 'résidence';
-	let newPlanBatimentId = 0;
-	let newPlanFile: File | null = null;
+	//  🔴 Le plan liait son sélecteur à `newCrAgPerimetre` — la variable du CR
+	//  d'AG (copie du 27/08, #470). Choisir un périmètre sur un plan ne faisait
+	//  donc rien pour le plan, et pré-remplissait en douce le formulaire d'AG.
+	//  Il a désormais le sien, et les deux formulaires sont le même objet.
+	let newPlanPerimetre: string[] = [];
+	let newPlanFichiers: FileList | null = null;
 	let savingPlan = false;
 
 	let showReglementForm = false;
 	let newReglementTitre = '';
-	let newReglementFile: File | null = null;
+	let newReglementFichiers: FileList | null = null;
 	let savingReglement = false;
 
 	let showCrAgForm = false;
@@ -95,7 +97,7 @@
 	//  copropriétaires quel que soit le bâtiment dont elle parle (#617). C'est
 	//  cet arbitrage qui a rendu la migration possible sans toucher aux accès.
 	let newCrAgPerimetre: string[] = [];
-	let newCrAgFile: File | null = null;
+	let newCrAgFichiers: FileList | null = null;
 	let savingCrAg = false;
 
 	// Édition document (plans, règlements, CR d'AG)
@@ -111,7 +113,7 @@
 	let showDiagForm: number | null = null; // id du type en cours d'ajout
 	let newDiagTitre = '';
 	let newDiagDate = '';
-	let newDiagFiles: FileList | null = null;
+	let newDiagFichiers: FileList | null = null;
 	let savingDiag = false;
 	let editingRapportId: number | null = null;
 	let editingRapportTitre = '';
@@ -323,22 +325,28 @@
 
 	// ── Plans ──────────────────────────────────────────────────────────────────
 	async function addPlan() {
-		if (!catIdPlan || !newPlanTitre.trim() || !newPlanFile) return;
+		const fichier = newPlanFichiers?.[0];
+		if (!catIdPlan || !newPlanTitre.trim() || !fichier) return;
 		savingPlan = true;
 		try {
+			//  Le périmètre décrit DE QUOI parle le plan ; il ne restreint pas sa
+			//  lecture — même règle que le CR d'AG ci-dessous, et même raison
+			//  (migration 0159). Les droits restent à `résidence`.
 			const doc = await documentsApi.upload(
 				newPlanTitre.trim(),
 				catIdPlan,
-				newPlanFile,
+				fichier,
+				'résidence',
+				undefined,
+				undefined,
+				undefined,
 				newPlanPerimetre,
-				newPlanPerimetre === 'bâtiment' && newPlanBatimentId ? newPlanBatimentId : undefined,
 			);
 			plans = [doc, ...plans];
 			showPlanForm = false;
 			newPlanTitre = '';
-			newPlanPerimetre = 'résidence';
-			newPlanBatimentId = 0;
-			newPlanFile = null;
+			newPlanPerimetre = [];
+			newPlanFichiers = null;
 			toast('success', 'Plan ajouté');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -360,19 +368,20 @@
 
 	// ── Règlement ──────────────────────────────────────────────────────────────
 	async function addReglement() {
-		if (!catIdReglement || !newReglementTitre.trim() || !newReglementFile) return;
+		const fichier = newReglementFichiers?.[0];
+		if (!catIdReglement || !newReglementTitre.trim() || !fichier) return;
 		savingReglement = true;
 		try {
 			const doc = await documentsApi.upload(
 				newReglementTitre.trim(),
 				catIdReglement,
-				newReglementFile,
+				fichier,
 				'résidence',
 			);
 			reglements = [doc, ...reglements];
 			showReglementForm = false;
 			newReglementTitre = '';
-			newReglementFile = null;
+			newReglementFichiers = null;
 			toast('success', 'Règlement ajouté');
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -394,7 +403,8 @@
 
 	// ── CR d'AG ────────────────────────────────────────────────────────────────
 	async function addCrAg() {
-		if (!catIdCrAg || !newCrAgTitre.trim() || !newCrAgFile) return;
+		const fichier = newCrAgFichiers?.[0];
+		if (!catIdCrAg || !newCrAgTitre.trim() || !fichier) return;
 		if (!newCrAgAnnee || !newCrAgDateAg) return;
 		savingCrAg = true;
 		try {
@@ -405,7 +415,7 @@
 			const doc = await documentsApi.upload(
 				newCrAgTitre.trim(),
 				catIdCrAg,
-				newCrAgFile,
+				fichier,
 				'résidence',
 				undefined,
 				newCrAgAnnee ? Number(newCrAgAnnee) : undefined,
@@ -418,7 +428,7 @@
 			newCrAgAnnee = '';
 			newCrAgDateAg = '';
 			newCrAgPerimetre = [];
-			newCrAgFile = null;
+			newCrAgFichiers = null;
 			toast('success', "CR d'AG ajouté");
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -477,13 +487,13 @@
 		showDiagForm = typeId;
 		newDiagTitre = '';
 		newDiagDate = '';
-		newDiagFiles = null;
+		newDiagFichiers = null;
 	}
 
 	async function addRapport() {
-		if (!showDiagForm || !newDiagFiles?.length) return;
+		if (!showDiagForm || !newDiagFichiers?.length) return;
 		savingDiag = true;
-		const files = Array.from(newDiagFiles);
+		const files = Array.from(newDiagFichiers);
 		const newRapports: any[] = [];
 		try {
 			for (const file of files) {
@@ -950,206 +960,114 @@
 	</div>
 {/if}
 
-<!-- ── Modal : ajouter un plan ────────────────────────────────────────── -->
+<!-- ── Les documents ─────────────────────────────────────────
+     Six formulaires bâtis du même vocabulaire, désormais UN objet :
+     `FormulaireDocument`. Il porte l'ordre des sections du cadre, le
+     `PerimetrePicker`, et le cadre qui va avec le geste — boîte à la création
+     (#672), fenêtre à l'édition (#640). -->
+
 {#if showPlanForm}
-	<!--  Fond, rôle, `Échap` et verrou de défilement : cf. `Modale.svelte` (#561). -->
-	<Modale
-		titre="Ajouter un plan"
-		styleBoite="width:min(480px,95vw)"
-		on:fermer={() => (showPlanForm = false)}
-	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="plan-titre">Titre *</label>
-				<input
-					id="plan-titre"
-					type="text"
-					bind:value={newPlanTitre}
-					placeholder="ex : Plan de masse résidence"
-				/>
-			</div>
-			<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
-				      main (#470). L'écran parlait en identifiants de bâtiments : il ne
-				      pouvait cibler ni le parking, ni les caves, ni l'AFUL, ni un
-				      espace de bâtiment, et ne recevait aucune des corrections
-				      apportées à l'objet depuis. C'était le DERNIER des dix points
-				      d'usage à ne pas en hériter.
-				      `requis={false}` : une AG de toute la copropriété ne cible rien. -->
-			<div class="field">
-				<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
-			</div>
-			<div class="field">
-				<label for="plan-file">Fichier *</label>
-				<input
-					id="plan-file"
-					type="file"
-					accept=".pdf,.jpg,.jpeg,.png,.webp"
-					on:change={(e) => {
-						newPlanFile = (e.target as HTMLInputElement).files?.[0] ?? null;
-					}}
-				/>
-				{#if newPlanFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
-						{newPlanFile.name}
-					</p>{/if}
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showPlanForm = false)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingPlan ||
-					!newPlanTitre.trim() ||
-					!newPlanFile ||
-					(newPlanPerimetre === 'bâtiment' && !newPlanBatimentId)}
-				on:click={addPlan}
-			>
-				{savingPlan ? 'Ajout…' : 'Ajouter'}
-			</button>
-		</div>
-	</Modale>
+	<FormulaireDocument
+		intitule="Ajouter un plan"
+		bind:titre={newPlanTitre}
+		placeholderTitre="ex : Plan de masse résidence"
+		avecPerimetre
+		bind:perimetre={newPlanPerimetre}
+		bind:fichiers={newPlanFichiers}
+		enregistrement={savingPlan}
+		complet={!!newPlanTitre.trim() && !!newPlanFichiers?.length}
+		on:annuler={() => (showPlanForm = false)}
+		on:enregistrer={addPlan}
+	/>
 {/if}
 
-<!-- ── Modal : ajouter un règlement ───────────────────────────────────── -->
 {#if showReglementForm}
-	<Modale
-		titre="Ajouter un règlement"
-		styleBoite="width:min(440px,95vw)"
-		on:fermer={() => (showReglementForm = false)}
-	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="regl-titre">Titre *</label>
-				<input
-					id="regl-titre"
-					type="text"
-					bind:value={newReglementTitre}
-					placeholder="ex : Règlement de copropriété 2024"
-				/>
-			</div>
-			<div class="field">
-				<label for="regl-file">Fichier *</label>
-				<input
-					id="regl-file"
-					type="file"
-					accept=".pdf,.jpg,.jpeg,.png,.webp"
-					on:change={(e) => {
-						newReglementFile = (e.target as HTMLInputElement).files?.[0] ?? null;
-					}}
-				/>
-				{#if newReglementFile}<p
-						style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem"
-					>
-						{newReglementFile.name}
-					</p>{/if}
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showReglementForm = false)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingReglement || !newReglementTitre.trim() || !newReglementFile}
-				on:click={addReglement}
-			>
-				{savingReglement ? 'Ajout…' : 'Ajouter'}
-			</button>
-		</div>
-	</Modale>
+	<FormulaireDocument
+		intitule="Ajouter un règlement"
+		bind:titre={newReglementTitre}
+		placeholderTitre="ex : Règlement de copropriété 2024"
+		bind:fichiers={newReglementFichiers}
+		enregistrement={savingReglement}
+		complet={!!newReglementTitre.trim() && !!newReglementFichiers?.length}
+		on:annuler={() => (showReglementForm = false)}
+		on:enregistrer={addReglement}
+	/>
 {/if}
 
-<!-- ── Modal : ajouter un CR d'AG ─────────────────────────────────────── -->
 {#if showCrAgForm}
-	<Modale
-		titre="Ajouter un CR d'AG"
-		styleBoite="width:min(520px,95vw)"
-		on:fermer={() => (showCrAgForm = false)}
+	<FormulaireDocument
+		intitule="Ajouter un CR d'AG"
+		bind:titre={newCrAgTitre}
+		placeholderTitre="ex : PV AG ordinaire 2025"
+		avecPerimetre
+		bind:perimetre={newCrAgPerimetre}
+		bind:fichiers={newCrAgFichiers}
+		enregistrement={savingCrAg}
+		complet={!!newCrAgAnnee &&
+			!!newCrAgDateAg &&
+			!!newCrAgTitre.trim() &&
+			!!newCrAgFichiers?.length}
+		on:annuler={() => (showCrAgForm = false)}
+		on:enregistrer={addCrAg}
 	>
-		<div class="modal-body">
-			<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-				<div class="field">
-					<label for="ag-annee">Année *</label>
-					<input
-						id="ag-annee"
-						type="number"
-						bind:value={newCrAgAnnee}
-						min="1900"
-						max="2100"
-						placeholder="2025"
-					/>
-				</div>
-				<div class="field">
-					<label for="ag-date">Date de l'AG *</label>
-					<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
-				</div>
-			</div>
-			<div class="field">
-				<label for="ag-titre">Titre *</label>
+		<div class="paire" slot="specifiques">
+			<label class="field" for="ag-annee">
+				Année *
 				<input
-					id="ag-titre"
-					type="text"
-					bind:value={newCrAgTitre}
-					placeholder="ex : PV AG ordinaire 2025"
+					id="ag-annee"
+					type="number"
+					bind:value={newCrAgAnnee}
+					min="1900"
+					max="2100"
+					placeholder="2025"
 				/>
-			</div>
-			<!--  🔴 `PerimetrePicker`, l'objet du site — plus un sélecteur écrit à la
-				      main (#470). L'écran parlait en identifiants de bâtiments : il ne
-				      pouvait cibler ni le parking, ni les caves, ni l'AFUL, ni un espace
-				      de bâtiment, et ne recevait aucune des corrections apportées à
-				      l'objet depuis. C'était le DERNIER des dix points d'usage à ne pas
-				      en hériter.
-
-				      ⚠️ `requis={false}` : une AG de toute la copropriété ne cible rien,
-				      et l'absence de périmètre est ici une réponse valide. -->
-			<div class="field">
-				<PerimetrePicker bind:value={newCrAgPerimetre} titre="Périmètre" requis={false} />
-			</div>
-			<div class="field">
-				<label for="ag-file">Fichier *</label>
-				<input
-					id="ag-file"
-					type="file"
-					accept=".pdf,.jpg,.jpeg,.png,.webp"
-					on:change={(e) => {
-						newCrAgFile = (e.target as HTMLInputElement).files?.[0] ?? null;
-					}}
-				/>
-				{#if newCrAgFile}<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
-						{newCrAgFile.name}
-					</p>{/if}
-			</div>
+			</label>
+			<label class="field" for="ag-date">
+				Date de l'AG *
+				<input id="ag-date" type="date" bind:value={newCrAgDateAg} />
+			</label>
 		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showCrAgForm = false)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingCrAg ||
-					!newCrAgAnnee ||
-					!newCrAgDateAg ||
-					!newCrAgTitre.trim() ||
-					!newCrAgFile}
-				on:click={addCrAg}
-			>
-				{savingCrAg ? 'Ajout…' : 'Ajouter'}
-			</button>
-		</div>
-	</Modale>
+	</FormulaireDocument>
 {/if}
 
-<!-- ── Modal : modifier un document ────────────────────────────────────────────────── -->
-{#if editingDocId !== null}
-	<Modale
-		titre="Modifier le document"
-		styleBoite="width:min(440px,95vw)"
-		on:fermer={() => (editingDocId = null)}
+{#if showDiagForm !== null}
+	<FormulaireDocument
+		intitule="Ajouter un rapport"
+		bind:titre={newDiagTitre}
+		titreRequis={false}
+		placeholderTitre="Rapport DPE 2024…"
+		aideTitre="Sans titre, chaque fichier prend le sien."
+		multiple
+		libelleFichier="Fichier(s)"
+		bind:fichiers={newDiagFichiers}
+		enregistrement={savingDiag}
+		complet={!!newDiagFichiers?.length}
+		on:annuler={() => (showDiagForm = null)}
+		on:enregistrer={addRapport}
 	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="edit-doc-titre">Titre *</label>
-				<input id="edit-doc-titre" type="text" bind:value={editingDocTitre} />
-			</div>
+		<label class="field" for="diag-date" slot="specifiques">
+			Date du diagnostic
+			<input id="diag-date" type="date" bind:value={newDiagDate} />
+		</label>
+	</FormulaireDocument>
+{/if}
+
+{#if editingDocId !== null}
+	<FormulaireDocument
+		edition
+		intitule="Modifier le document"
+		bind:titre={editingDocTitre}
+		avecFichier={false}
+		enregistrement={savingDoc}
+		complet={!!editingDocTitre.trim()}
+		on:annuler={() => (editingDocId = null)}
+		on:enregistrer={saveEditDoc}
+	>
+		<svelte:fragment slot="specifiques">
 			{#if editingDocMode === 'ag'}
-				<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-					<div class="field">
-						<label for="edit-doc-annee">Année</label>
+				<div class="paire">
+					<label class="field" for="edit-doc-annee">
+						Année
 						<input
 							id="edit-doc-annee"
 							type="number"
@@ -1157,164 +1075,77 @@
 							min="1900"
 							max="2100"
 						/>
-					</div>
-					<div class="field">
-						<label for="edit-doc-date">Date de l'AG</label>
+					</label>
+					<label class="field" for="edit-doc-date">
+						Date de l'AG
 						<input id="edit-doc-date" type="date" bind:value={editingDocDate} />
-					</div>
+					</label>
 				</div>
 			{/if}
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (editingDocId = null)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingDoc || !editingDocTitre.trim()}
-				on:click={saveEditDoc}
-			>
-				{savingDoc ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</Modale>
+		</svelte:fragment>
+	</FormulaireDocument>
 {/if}
 
-<!-- ── Modal : ajouter un rapport diagnostique ───────────────────────────────── -->
-{#if showDiagForm !== null}
-	<Modale
-		titre="Ajouter un rapport"
-		styleBoite="width:min(460px,95vw)"
-		on:fermer={() => (showDiagForm = null)}
-	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="diag-titre"
-					>Titre <span style="color:var(--color-text-muted);font-size:.8rem"
-						>(optionnel si multi-fichiers)</span
-					></label
-				>
-				<input
-					id="diag-titre"
-					type="text"
-					bind:value={newDiagTitre}
-					placeholder="Rapport DPE 2024… (auto si vide)"
-				/>
-			</div>
-			<div class="field">
-				<label for="diag-date">Date du diagnostic</label>
-				<input id="diag-date" type="date" bind:value={newDiagDate} />
-			</div>
-			<div class="field">
-				<label for="diag-file">Fichier(s) *</label>
-				<input
-					id="diag-file"
-					type="file"
-					multiple
-					accept=".pdf,.jpg,.jpeg,.png,.webp"
-					on:change={(e) => {
-						newDiagFiles = (e.target as HTMLInputElement).files;
-					}}
-				/>
-				{#if newDiagFiles?.length}
-					<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.25rem">
-						{#if newDiagFiles.length === 1}{newDiagFiles[0].name}{:else}{newDiagFiles.length} fichiers
-							sélectionnés{/if}
-					</p>
-				{/if}
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showDiagForm = null)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingDiag || !newDiagFiles?.length}
-				on:click={addRapport}
-			>
-				{savingDiag ? 'Ajout…' : 'Ajouter'}
-			</button>
-		</div>
-	</Modale>
-{/if}
-
-<!-- ── Modal : modifier un rapport diagnostique ──────────────────────────────── -->
 {#if editingRapportId !== null}
-	<Modale
-		titre="Modifier le rapport"
-		styleBoite="width:min(440px,95vw)"
-		on:fermer={() => (editingRapportId = null)}
+	<FormulaireDocument
+		edition
+		intitule="Modifier le rapport"
+		bind:titre={editingRapportTitre}
+		avecFichier={false}
+		enregistrement={savingRapport}
+		complet={!!editingRapportTitre.trim()}
+		on:annuler={() => (editingRapportId = null)}
+		on:enregistrer={saveRapport}
 	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="edit-r-titre">Titre *</label>
-				<input id="edit-r-titre" type="text" bind:value={editingRapportTitre} />
-			</div>
-			<div class="field">
-				<label for="edit-r-date">Date du diagnostic</label>
-				<input id="edit-r-date" type="date" bind:value={editingRapportDate} />
-			</div>
-			<div class="field">
-				<label for="edit-r-synthese">Synthèse</label>
-				<textarea
-					id="edit-r-synthese"
-					bind:value={editingRapportSynthese}
-					placeholder="Conclusions clés, points d'attention, recommandations…"
-					rows="4"
-					style="width:100%;resize:vertical"></textarea>
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (editingRapportId = null)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingRapport || !editingRapportTitre.trim()}
-				on:click={saveRapport}
-			>
-				{savingRapport ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</Modale>
+		<label class="field" for="edit-r-date" slot="specifiques">
+			Date du diagnostic
+			<input id="edit-r-date" type="date" bind:value={editingRapportDate} />
+		</label>
+		<label class="field" for="edit-r-synthese" slot="description">
+			Synthèse
+			<textarea
+				id="edit-r-synthese"
+				bind:value={editingRapportSynthese}
+				placeholder="Conclusions clés, points d'attention, recommandations…"
+				rows="4"></textarea>
+		</label>
+	</FormulaireDocument>
 {/if}
 
-<!-- ── Modal : ajouter / modifier une règle ──────────────────────────────────── -->
+<!--  La règle de résidence : le SEPTIÈME formulaire de cet écran, et le même
+      objet que les six autres. Son geste est connu de `editingRegleId` — donc
+      une fenêtre quand on corrige, une boîte quand on ajoute (#640, #672). -->
 {#if showRegleForm}
-	<Modale
-		titre={editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}
-		styleBoite="width:min(480px,95vw)"
-		on:fermer={() => (showRegleForm = false)}
+	<FormulaireDocument
+		edition={editingRegleId !== null}
+		intitule={editingRegleId ? 'Modifier la règle' : 'Ajouter une règle'}
+		bind:titre={regleTitre}
+		placeholderTitre="Ex : RAL menuiseries façade bâtiment A"
+		avecFichier={false}
+		enregistrement={savingRegle}
+		complet={!!regleTitre.trim()}
+		on:annuler={() => (showRegleForm = false)}
+		on:enregistrer={saveRegle}
 	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="regle-titre">Titre *</label>
-				<input
-					id="regle-titre"
-					type="text"
-					bind:value={regleTitre}
-					placeholder="Ex : RAL menuiseries façade bâtiment A"
-				/>
-			</div>
-			<div class="field">
-				<label for="regle-contenu">Détail / valeur</label>
-				<textarea
-					id="regle-contenu"
-					bind:value={regleContenu}
-					placeholder="Ex : Façade extérieure RAL 6021 vert clair"
-					rows="3"
-					style="width:100%;resize:vertical"></textarea>
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showRegleForm = false)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={savingRegle || !regleTitre.trim()}
-				on:click={saveRegle}
-			>
-				{savingRegle ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</Modale>
+		<label class="field" for="regle-contenu" slot="description">
+			Détail / valeur
+			<textarea
+				id="regle-contenu"
+				bind:value={regleContenu}
+				placeholder="Ex : Façade extérieure RAL 6021 vert clair"
+				rows="3"></textarea>
+		</label>
+	</FormulaireDocument>
 {/if}
 
 <style>
+	/*  Deux champs courts qui vont ensemble — année et date d'AG. La règle
+	    était écrite en `style=` sur la balise, dans les deux formulaires. */
+	.paire {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.75rem;
+	}
 	/* ── Photo bannière ─────────────────────────────────────────── */
 	.photo-figure {
 		margin: 0 auto 2rem;

@@ -36,6 +36,7 @@ from .commun import (
     syndic_principal,
     ticket_read,
 )
+from app.utils.noms import nom_affiche
 
 router = APIRouter()
 
@@ -183,7 +184,7 @@ def envoyer_relance_syndic(
         #  base les utilise encore tant que la migration 0127 n'a pas tourné, et
         #  une variable absente rend une chaîne vide sans rien signaler.
         "civilite": "Monsieur" if principal.genre == GenreCivilite.mr else "Madame",
-        "nom_gestionnaire": f"{principal.prenom} {principal.nom}".strip(),
+        "nom_gestionnaire": nom_affiche(principal.prenom, principal.nom),
         "residence": {"nom": cfg.get("site_nom", "5Hostachy")},
         "anciennete": anciennete,
         "tickets": [_contexte_ticket(session, t) for t in tickets_relance],

@@ -42,6 +42,9 @@
 	import { sectionPresente } from '$lib/entites/types';
 
 	export let ticketId: number;
+	/**  Le nom de l'auteur du TICKET — il nomme le destinataire de « Envoyer une
+	 *   copie à … ». Reçu de la page : ce composant ne tient que le fil. */
+	export let auteurNom = '';
 	export let statutCourant = '';
 	/**  Périmètre courant du ticket — affiché en badge dans le formulaire, pour
 	     qu'on voie d'où l'on part avant de le préciser (#497). */
@@ -159,6 +162,7 @@
 				<EvolForm
 					entrees={evolutions}
 					idPrefixe="tk-evol-edit-{evol.id}"
+					{auteurNom}
 					titre="Modifier le commentaire"
 					editMode={true}
 					initialContenu={evol.contenu || ''}
@@ -179,6 +183,7 @@
 				<EvolForm
 					entrees={evolutions}
 					idPrefixe="tk-evol"
+					{auteurNom}
 					titre="Commenter"
 					demanderApercu={apercuDuCommentaire}
 					statutLabels={STATUT_TICKET_LABELS}
