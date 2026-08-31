@@ -8,6 +8,7 @@ syndic n'est pas une information réservée.
 from sqlmodel import select
 
 from app.models.core import MembreCS, MembreSyndic
+from app.utils.noms import nom_affiche
 
 from .commun import ContexteFlux
 from .schemas import FluxItem
@@ -25,7 +26,10 @@ def _carte_membre(ident: str, membre, detail: str, badge: str, meta: dict) -> Fl
         type="annuaire",
         date=membre.cree_le,
         cree_le=membre.cree_le,
-        titre=f"{membre.prenom} {membre.nom}",
+        #  « Prénom NOM », nom en capitales — la règle du site, écrite une
+        #  seule fois (`utils/noms.py`). Ce titre rendait la casse tapée :
+        #  « Jean-Sébastien CourT », signalé à l'écran le 31/08/2026.
+        titre=nom_affiche(membre.prenom, membre.nom),
         detail=detail,
         icon="\U0001f465",
         badges=[badge],
