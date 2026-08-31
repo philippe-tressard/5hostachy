@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "3.45.0",
+	"version": "3.45.1",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -48,6 +48,7 @@
 		"lint:a11y": "node scripts/check-a11y.mjs",
 		"lint:charte": "node scripts/check-charte-recomposee.mjs",
 		"lint:confirmation": "node scripts/check-confirmation.mjs",
+		"lint:apercu": "node scripts/check-apercu-branche.mjs",
 		"lint:version-servie": "node scripts/check-version-servie.mjs",
 		"lint:largeur-saisie": "node scripts/check-largeur-saisie.mjs",
 		"lint:each-key": "node scripts/check-each-key.mjs",

@@ -970,6 +970,20 @@ jobs:
         working-directory: front
         run: npm run lint:confirmation
 
+      - name: Aperçu de diffusion branché des DEUX côtés
+        # 🔴 Brancher l'aperçu demande DEUX gestes : fournir la fonction
+        # (`demanderApercu`) et s'intercaler dans la soumission
+        # (`ouvrirSiDiffusion`). Le lot du 31/08/2026 a fait le premier sur deux
+        # écrans et oublié le second : tout avait l'air branché — endpoint
+        # correct, modale prête — et l'envoi partait sans rien montrer.
+        #
+        # ⚠️ Rien ne pouvait le signaler : `svelte-check` est vert (les deux
+        # moitiés compilent séparément), les tests du serveur aussi (l'endpoint
+        # est correct). Le seul symptôme a été un mail reçu par ses
+        # destinataires — c'est-à-dire le dommage lui-même.
+        working-directory: front
+        run: npm run lint:apercu
+
       - name: Formatage (prettier --check)
         # 🔴 Le dernier point de #419, et sans lui les trois autres ne servent
         # à rien : le dépôt vient d'être reformaté, et un format que rien ne

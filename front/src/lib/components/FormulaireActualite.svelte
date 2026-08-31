@@ -191,6 +191,12 @@
 	//  conseil syndical sans que son auteur ait rien pu voir ni annuler. Le point
 	//  d'accroche existait pourtant depuis le 29/08 : ce qui manquait était
 	//  l'endpoint, et le contexte du gabarit que l'envoi construisait chez lui.
+	//  🔴 Sans ces deux-là, `demanderApercu` ne sert À RIEN : la modale sait
+	//  s'ouvrir, et personne ne l'ouvre. C'est l'erreur du 31/08/2026 — le
+	//  pourquoi est dans `scripts/check-apercu-branche.mjs`, qui la refuse.
+	let refDiffusion: any = null;
+	$: aUneDiffusion = envoyerSyndic || envoyerCs || partagerWhatsapp;
+
 	const brouillonApercu = () =>
 		pubsApi.apercuDiffusion({
 			publication_id: publication?.id,
@@ -206,24 +212,13 @@
 
 	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
 
-	//  LE CADRE, et il dépend du geste — `ux-patterns` §14 bis : créer se fait
-	//  dans une boîte de la page, corriger dans une modale. Il se pose ICI parce
-	//  que `modeEdition` est connu ici, et nulle part ailleurs sans le recopier :
-	//  c'est la règle « le cadre se pose là où le geste est connu », posée sur le
-	//  calendrier le 30/08/2026 (#640) et appliquée à son deuxième composant.
+	//  LE CADRE dépend du geste — `ux-patterns` §14 bis, qui porte la règle et
+	//  son pourquoi : boîte pour créer, modale pour corriger, et le cadre se pose
+	//  là où le geste est connu. Ici, c'est `modeEdition`.
 	//
-	//  🔴 EN ÉDITION, CE COMPOSANT NE VIT PLUS DANS LA CARTE. Il était monté dans
-	//  le créneau `formulaire` de `CarteActualite`, qui ne le rend que sous
-	//  `{#if expanded}` : replier la carte pendant la saisie aurait fait
-	//  disparaître la fenêtre, et la saisie avec elle, sans un mot. Une modale ne
-	//  peut pas dépendre de l'état d'un élément qu'elle recouvre. La page le monte
-	//  donc à son niveau, à côté du formulaire de création.
-	//
-	//  ⚠️ `encadre={!modeEdition}` a disparu avec la conversion, et ce n'est pas
-	//  une simplification : il existait parce que l'édition s'ouvrait DANS la carte
-	//  de la publication, et qu'une carte dans une carte fait deux bordures pour un
-	//  seul objet (#425). La modale n'est plus dans la carte — le problème que la
-	//  propriété corrigeait n'existe plus, donc la propriété part avec lui.
+	//  ⚠️ En édition, ce composant ne vit plus dans la carte : elle ne le rendait
+	//  que dépliée, et replier pendant la saisie aurait effacé la fenêtre AVEC la
+	//  saisie. `encadre` est parti avec le problème qu'il corrigeait (#425).
 
 	function reinitialiser() {
 		titre = '';
@@ -242,8 +237,17 @@
 		pendingFiles = [];
 	}
 
+	/**  Aperçu d'abord si un canal est coché — même patron que `FormulaireTicket`,
+	 *   qui en porte le pourquoi. `enregistrer` reste l'unique chemin d'écriture. */
+	function soumettre() {
+		if (!titre.trim() || richEmpty(contenu)) return;
+		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
+		void enregistrer();
+	}
+
 	async function enregistrer() {
 		if (!titre.trim() || richEmpty(contenu)) return;
+		refDiffusion?.fermerApercu();
 		saving = true;
 		try {
 			if (publication) {
@@ -332,7 +336,7 @@
 	on:fermer={() => dispatch('annule')}
 >
 	<div class:modal-body={modeEdition}>
-		<form on:submit|preventDefault={enregistrer}>
+		<form on:submit|preventDefault={soumettre}>
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">
@@ -371,6 +375,9 @@
 		      DÉCLARATION, qui porte chaque divergence avec son motif. -->
 			<ChampsCommuns
 				demanderApercu={brouillonApercu}
+				bind:refDiffusion
+				envoiEnCours={saving}
+				on:envoyer={() => void enregistrer()}
 				idPrefixe="pub-{publication?.id ?? 'new'}"
 				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
 				bind:perimetre={perimetreCible}
