@@ -314,3 +314,104 @@ def test_le_releve_dit_si_les_cles_sont_ACTIVES(admin_et_ticket):
     #  La suite tourne clés actives (conftest) : le champ doit le refléter, sinon
     #  il ne mesure pas ce qu'il prétend.
     assert resultat["cles_actives"] is True
+
+
+# ── La régression du 31/08/2026 : un membre du CS supprimé pour un lien cassé ──
+
+def _membre_cs_orphelin(session) -> int:
+    """Un membre du CS dont le compte lié a disparu — l'état exact de la production.
+
+    C'est le cas réel : `membre_cs.user_id` pointait vers un `utilisateur`
+    supprimé depuis longtemps. La colonne est **nullable**, et un autre membre
+    du CS existe légitimement avec `user_id` à NULL.
+    """
+    from app.models.core import GenreCivilite, MembreCS, Utilisateur
+
+    compte = Utilisateur(
+        email="christine.test@example.org", prenom="Christine", nom="LONGUEVE",
+        hashed_password="x", actif=True,
+    )
+    session.add(compte)
+    session.commit()
+    session.refresh(compte)
+    membre = MembreCS(
+        genre=GenreCivilite.mme, prenom="Christine", nom="LONGUEVE",
+        etage=3, ordre=5, user_id=compte.id,
+    )
+    session.add(membre)
+    session.commit()
+    session.refresh(membre)
+    membre_id = membre.id
+
+    #  Le compte disparaît, le membre reste — clés désactivées le temps de
+    #  reproduire un historique que la base a réellement porté.
+    with engine.connect() as conn:
+        conn.execute(text("PRAGMA foreign_keys=OFF"))
+        try:
+            conn.execute(text("DELETE FROM utilisateur WHERE id = :i"), {"i": compte.id})
+            conn.commit()
+        finally:
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.commit()
+    return membre_id
+
+
+def test_une_cle_NULLABLE_se_delie_et_ne_supprime_PAS_la_ligne(admin_et_ticket):
+    """🔴 LE TEST QUI MANQUAIT — et son absence a coûté un membre du CS.
+
+    Le 31/08/2026, la purge livrée la veille a effacé la ligne `membre_cs` de
+    Christine LONGUÈVE : elle pointait vers un `utilisateur` supprimé de longue
+    date, et l'outil en a conclu qu'il fallait supprimer la **membre**.
+
+    C'était le **lien** qui était cassé, pas la membre. `membre_cs.user_id` est
+    nullable, et un autre membre du CS vit très bien avec cette colonne à NULL.
+
+    ⚠️ La règle existait — dans #546 même : *« la décision dépend de ce que la
+    ligne RACONTE, jamais de la nullabilité de sa colonne »*. Elle avait été
+    posée pour les suppressions en cascade des endpoints, et **rien ne l'a
+    portée jusqu'à l'outil de purge**. Une règle énoncée pour un chemin ne
+    protège pas l'autre ; seul un test le fait.
+    """
+    from app.models.core import MembreCS
+    from app.utils.diagnostic_cles import purger_orphelins
+
+    session, _admin, _ticket, _evol = admin_et_ticket
+    membre_id = _membre_cs_orphelin(session)
+
+    resultat = purger_orphelins(engine, simuler=False)
+    assert resultat["ok"] and not resultat["inconnu"]
+    assert resultat["deliees"] >= 1, "la clé nullable devait être DÉLIÉE, pas supprimée"
+
+    session.expire_all()
+    membre = session.get(MembreCS, membre_id)
+    assert membre is not None, (
+        "LA MEMBRE A ÉTÉ SUPPRIMÉE — c'est exactement la régression du 31/08/2026."
+    )
+    assert membre.user_id is None, "le lien cassé devait passer à NULL"
+    assert membre.prenom == "Christine" and membre.etage == 3, (
+        "la ligne doit être intacte : seul le lien change"
+    )
+
+
+def test_la_simulation_annonce_les_DEUX_remedes(admin_et_ticket):
+    """Le relevé doit distinguer ce qui partira de ce qui sera seulement délié.
+
+    Sans cette distinction, l'écran de confirmation dirait « 50 lignes seront
+    supprimées » là où 49 partent et une est réparée — et l'on approuverait une
+    destruction en croyant en approuver une autre.
+    """
+    from app.utils.diagnostic_cles import purger_orphelins
+
+    session, _admin, ticket, _evol = admin_et_ticket
+    _orpheliner(session, ticket.id)          # clé OBLIGAToire → suppression
+    _membre_cs_orphelin(session)             # clé nullable    → déliaison
+
+    simulation = purger_orphelins(engine, simuler=True)
+    assert simulation["seraient_supprimees"] >= 1
+    assert simulation["seraient_deliees"] >= 1
+    #  Et la simulation ne touche toujours à rien.
+    assert simulation["supprimees"] == 0 and simulation["deliees"] == 0
+    remedes = {e["remede"] for e in simulation["par_table"]}
+    assert remedes == {"suppression", "deliaison"}, (
+        f"les deux remèdes doivent être nommés dans le relevé, obtenu : {remedes}"
+    )
