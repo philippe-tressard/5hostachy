@@ -106,7 +106,10 @@ const EXCEPTIONS = {
 	//  datées, ticketées, et R5 impose un écran à la fois. Deux d'entre elles
 	//  dépassent le plafond de modularité et demandent d'abord l'extraction d'un
 	//  `Formulaire<Entité>`, comme la FAQ le jour même.
-	'routes/(app)/delegations/+page.svelte': '#672 — « Nouvelle délégation aidant »',
+	//  ✅ `delegations` est sorti de cette liste le 31/08/2026 : « Nouvelle
+	//  délégation aidant » est devenue une boîte dans la page. Il en reste DEUX,
+	//  et toutes deux demandent d'abord une extraction — c'est le contrôle qui
+	//  l'exige, en refusant l'exception dès qu'elle cesse de servir.
 	'routes/(app)/mon-lot/+page.svelte':
 		"#672 — « Nouveau bail » (fichier de 2 230 l., extraction d'abord)",
 	'routes/(app)/residence/+page.svelte':
