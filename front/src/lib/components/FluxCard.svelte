@@ -18,6 +18,8 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+
+	import { isAdmin } from '$lib/stores/auth';
 	import type { FluxItem } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort } from '$lib/date';
@@ -36,7 +38,15 @@
 	export let item: FluxItem;
 	export let expanded = false;
 
-	const dispatch = createEventDispatcher<{ toggle: string }>();
+	/**  🗑️ Retirer la carte du FIL — admin seulement, et sur les cartes d'ANNUAIRE
+	 *   seulement. La carte n'agit pas, elle prévient — comme pour `toggle`. */
+	const dispatch = createEventDispatcher<{ toggle: string; masquer: string }>();
+
+	/**  Une carte ne se retire du fil que si son objet n'a pas d'archivage : ce
+	 *   qui s'archive se retire EN S'ARCHIVANT, et poser un 🗑️ à côté offrirait
+	 *   un second chemin pour la même intention (#367). Seul l'annuaire n'a pas
+	 *   d'archivage. Le raisonnement complet est dans l'endpoint. */
+	$: retirable = item.type === 'annuaire';
 	function basculer() {
 		dispatch('toggle', item.id);
 	}
@@ -108,6 +118,17 @@
 			</div>
 			<div class="flux-card-top-right">
 				<span class="flux-heure">{fmtDatetimeShort(item.date)}</span>
+				{#if $isAdmin && retirable}
+					<!--  `stopPropagation` : la carte entière bascule au clic. Sans lui,
+					      retirer une carte la déplierait au passage. -->
+					<button
+						class="btn-icon-danger"
+						title="Retirer du fil (l'élément reste à son origine)"
+						aria-label="Retirer cette carte du fil"
+						on:click|stopPropagation={() => dispatch('masquer', item.id)}
+						on:keydown|stopPropagation>🗑️</button
+					>
+				{/if}
 				<span class="chevron" class:open={expanded}>›</span>
 			</div>
 		</div>
@@ -258,40 +279,6 @@
 		color: inherit;
 		position: relative;
 		margin-bottom: 0.5rem;
-	}
-	.flux-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		margin-top: 0.85rem;
-		position: absolute;
-		left: -1.35rem;
-		border: 2px solid var(--color-surface);
-		box-shadow: 0 0 0 2px var(--color-border);
-		z-index: 1;
-	}
-	.flux-new-dot {
-		position: absolute;
-		left: -1.7rem;
-		top: 0.55rem;
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		background: rgba(239, 68, 68, 0.15);
-		animation: new-dot-pulse 2s ease-in-out infinite;
-		z-index: 0;
-	}
-	@keyframes new-dot-pulse {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.6;
-		}
-		50% {
-			transform: scale(1.6);
-			opacity: 0;
-		}
 	}
 	.flux-card {
 		flex: 1;

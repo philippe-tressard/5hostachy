@@ -67,11 +67,11 @@ laisser tomber aurait cassé le garde-fou qui protège contre le 404 du
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_admin
 from app.database import get_session
-from app.models.core import Utilisateur
+from app.models.core import FluxMasque, Utilisateur
 
 from . import (
     annuaire,
@@ -126,9 +126,84 @@ def get_flux(
     items: list[FluxItem] = []
     for collecter in _COLLECTEURS:
         items.extend(collecter(ctx))
+
+    #  🔴 LE MASQUAGE S'APPLIQUE ICI, ET NULLE PART AILLEURS.
+    #
+    #  Le fil a SEPT collecteurs. Filtrer chez chacun d'eux, c'est écrire sept
+    #  fois la même règle et en oublier une au huitième — celui qu'on ajoutera.
+    #  Au point d'assemblage, la règle est écrite une fois et couvre ce qui
+    #  existe comme ce qui viendra.
+    #
+    #  ⚠️ Aucun objet n'est supprimé : ce sont des identifiants d'AFFICHAGE
+    #  (`pub_7`, `mcs_12`) qui sont retirés de la vue. L'actualité, le membre du
+    #  conseil ou le ticket restent consultables depuis leur écran — c'est très
+    #  exactement ce que la demande du 31/08/2026 dit.
+    masques = set(session.exec(select(FluxMasque.item_id)).all())
+    items = [i for i in items if i.id not in masques]
+
     items.sort(key=lambda x: x.date, reverse=True)
 
     return FluxResponse(items=items, sante=sante.calculer(ctx))
+
+
+@router.delete("/{item_id}", status_code=204)
+def masquer_item(
+    item_id: str,
+    session: Session = Depends(get_session),
+    admin: Utilisateur = Depends(require_admin),
+):
+    """Retirer une carte du fil — **sans toucher à l'objet qu'elle décrit**.
+
+    > *« supprimer, uniquement pour l'admin sur le fil d'actualité (pour
+    > supprimer certaines publications dans le fil, celle-ci reste tracée à
+    > l'origine : actualité, annuaire, ticket, …) »* — 31/08/2026
+
+    ## 🔴 Où ce geste est OFFERT, et pourquoi pas partout
+
+    Arbitré le 31/08/2026, après avoir posé le bouton sur toutes les cartes :
+
+    > *« si on archive le document d'origine, il disparaît donc c'est bon […]
+    > juste le pb de l'annuaire »*
+
+    Ce qui s'archive se retire du fil **en s'archivant**, et c'est le geste du
+    site : *archiver, pas supprimer*. Poser un 🗑️ à côté offrirait un second
+    chemin pour la même intention — la « troisième forme pour une même
+    intention » que #367 a supprimée, et qu'il a fallu signaler trois fois.
+
+    L'annuaire, lui, n'a pas d'archivage : un membre du conseil syndical y est
+    ou n'y est pas. Sa carte est donc la seule qu'on ne puisse retirer autrement.
+    L'écran ne propose le bouton que sur elle (`FluxCard`, `retirable`).
+
+    ⚠️ **Cet endpoint reste générique**, et c'est délibéré : lui faire connaître
+    la liste des types archivables serait une seconde liste à tenir d'accord avec
+    la première, et c'est toujours la seconde qui dérive. C'est l'OFFRE qui est
+    restreinte, pas la capacité — un administrateur qui appellerait l'API sur une
+    autre carte obtiendrait ce qu'il demande, et il l'aura demandé.
+
+    ## Pourquoi `require_admin` et pas `require_cs_or_admin`
+
+    Le geste demandé est explicitement réservé à l'administrateur. Il n'a rien
+    d'une modération de contenu — le contenu ne bouge pas : c'est un réglage de
+    ce que le fil montre, et le fil est vu par tous les résidents.
+
+    ## Pourquoi c'est idempotent, et pourquoi ça compte
+
+    Masquer une carte déjà masquée est le même fait, pas une erreur. L'écran
+    retire la carte de sa liste avant même la réponse ; un second clic sur un
+    autre onglet ne doit pas produire un message d'erreur pour un état déjà
+    atteint. La contrainte d'unicité de `item_id` porte la même idée en base.
+
+    ⚠️ **Aucune validation du format de `item_id`.** Un identifiant qui ne
+    correspond à aucune carte crée une ligne inerte : le fil ne la rencontrera
+    jamais. Refuser demanderait de connaître les sept formats — donc de les
+    recopier ici, et de les tenir à jour à chaque collecteur ajouté. Le coût du
+    refus dépasse le coût de la ligne morte.
+    """
+    deja = session.exec(select(FluxMasque).where(FluxMasque.item_id == item_id)).first()
+    if deja is None:
+        session.add(FluxMasque(item_id=item_id, masque_par_id=admin.id))
+        session.commit()
+    return None
 
 
 #  Surface publique conservée pour les importateurs externes (cf. docstring).

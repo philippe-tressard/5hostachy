@@ -835,6 +835,7 @@ from app.models.evenement import (  # noqa: E402,F401
 from app.models.communaute import (  # noqa: E402,F401
     CategorieAnnonce as CategorieAnnonce,
     CommentaireSondage as CommentaireSondage,
+    FluxMasque as FluxMasque,
     Idee as Idee,
     OptionSondage as OptionSondage,
     PetiteAnnonce as PetiteAnnonce,

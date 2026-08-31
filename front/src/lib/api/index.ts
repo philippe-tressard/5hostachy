@@ -230,6 +230,14 @@ export const flux = {
 	/** Compte des éléments épinglés, toutes rubriques confondues (CS/admin) —
 	 *  alimente l'avertissement de plafond souple des formulaires. */
 	epingles: () => api.get<EpinglesCompte>('/flux/epingles'),
+	//  Retirer une carte du FIL — admin uniquement (31/08/2026).
+	//
+	//  ⚠️ Le nom du verbe est trompeur et c'est celui du protocole : `DELETE` ne
+	//  supprime ici qu'une LIGNE D'AFFICHAGE. Le fil est une vue calculée ;
+	//  l'actualité, le membre du conseil ou le ticket restent consultables depuis
+	//  leur écran. C'est ce que la demande dit : « celle-ci reste tracée à
+	//  l'origine : actualité, annuaire, ticket, … ».
+	masquer: (itemId: string) => api.delete<void>(`/flux/${encodeURIComponent(itemId)}`),
 };
 
 // ── Upload fichiers ─────────────────────────────────────────────────────────
