@@ -111,8 +111,9 @@ const EXCEPTIONS = {
 		"#672 — « Nouveau bail » (fichier de 2 230 l., extraction d'abord)",
 	'routes/(app)/residence/+page.svelte':
 		"#672 — quatre « Ajouter … » (fichier de 1 518 l., extraction d'abord)",
-	'lib/components/OngletPerimetres.svelte':
-		"#672 — « Nouveau périmètre » (l'édition, elle, est déclarée)",
+	//  ✅ `OngletPerimetres` est sorti de cette liste le 31/08/2026, converti le
+	//  jour même où il y est entré. Il n'y reste rien de lui : c'est ce contrôle
+	//  qui l'a exigé, en refusant l'exception dès qu'elle a cessé de servir.
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */
