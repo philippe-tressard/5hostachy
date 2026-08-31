@@ -1,11 +1,12 @@
 <script lang="ts">
+	import ChampsPerimetre from '$lib/components/ChampsPerimetre.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import { onMount } from 'svelte';
 	import { perimetres as perimetresApi, ApiError } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 	import { perimetresStore, rechargerPerimetres } from '$lib/stores/perimetres';
-	import { ICONES_PERIMETRE, type Perimetre } from '$lib/perimetres';
+	import { type Perimetre } from '$lib/perimetres';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
 
@@ -34,6 +35,7 @@
 		icone: '',
 		portee_globale: false,
 		selectionnable: true,
+		privatif: false,
 		ordre: 0,
 		actif: true,
 	};
@@ -47,6 +49,7 @@
 			icone: n.icone ?? '',
 			portee_globale: n.portee_globale,
 			selectionnable: n.selectionnable,
+			privatif: n.privatif,
 			ordre: n.ordre,
 			actif: n.actif,
 		};
@@ -63,6 +66,7 @@
 				icone: form.icone || null,
 				portee_globale: form.portee_globale,
 				selectionnable: form.selectionnable,
+				privatif: form.privatif,
 				ordre: Number(form.ordre) || 0,
 				actif: form.actif,
 			} as any);
@@ -288,89 +292,12 @@
 		fermetureAuFond={false}
 		on:fermer={() => (edite = null)}
 	>
-		<p class="modal-code">
-			Code <code>{edite.code}</code> — non modifiable : il est enregistré dans les contenus déjà publiés.
-		</p>
-
-		<label class="field"
-			>Libellé *
-			<input bind:value={form.libelle} required />
-		</label>
-		<label class="field"
-			>Libellé court
-			<input bind:value={form.libelle_court} placeholder={edite.libelle} />
-			<span class="field-hint">Employé sur les pastilles étroites du calendrier.</span>
-		</label>
-		<div class="field">
-			Icône
-			<div class="icones">
-				<button
-					type="button"
-					class="icone"
-					class:icone-active={!form.icone}
-					title="Aucune icône"
-					on:click={() => (form.icone = '')}>—</button
-				>
-				{#each ICONES_PERIMETRE as ic (ic.nom)}
-					<button
-						type="button"
-						class="icone"
-						class:icone-active={form.icone === ic.nom}
-						title={ic.libelle}
-						aria-label={ic.libelle}
-						on:click={() => (form.icone = ic.nom)}
-					>
-						<Icon name={ic.nom} size={18} />
-					</button>
-				{/each}
-			</div>
-			<span class="field-hint"> Affichée sur la pastille du sélecteur, devant le libellé. </span>
-		</div>
-
-		<label class="field"
-			>Description
-			<textarea bind:value={form.description} rows="4"></textarea>
-			<span class="field-hint">
-				Affichée sous le sélecteur, au moment où l’on choisit ce périmètre.
-			</span>
-		</label>
-		<label class="field"
-			>Ordre
-			<input type="number" bind:value={form.ordre} />
-		</label>
-
-		<label class="field-check">
-			<input type="checkbox" bind:checked={form.selectionnable} />
-			Proposé à la saisie
-			<span class="field-hint">
-				Décochez pour un regroupement, ou pour retirer un périmètre des formulaires sans toucher aux
-				contenus qui le citent déjà.
-			</span>
-		</label>
-
-		<label class="field-check">
-			<input type="checkbox" bind:checked={form.actif} />
-			Actif
-		</label>
-
-		<label class="field-check danger">
-			<input type="checkbox" bind:checked={form.portee_globale} />
-			Concerne tous les résidents
-			{#if edite.concerne_tous && !edite.portee_globale}
-				<span class="field-hint herite">
-					ℹ️ Ce périmètre concerne <strong>déjà</strong> tous les résidents, par héritage de son parent
-					— la case ci-dessus est décochée, et c’est normal. La cocher n’ajouterait rien ; la laisser
-					décochée ne retire rien. Pour changer cela, il faut décocher la case du périmètre parent.
-				</span>
-			{/if}
-			<span class="field-hint">
-				⚠️ Un contenu ciblé sur ce périmètre — ou sur l’un de ses sous-périmètres — sera visible de <strong
-					>tous les résidents</strong
-				>
-				et notifiera
-				<strong>l’ensemble du conseil syndical</strong>, quel que soit leur bâtiment.
-			</span>
-		</label>
+		<ChampsPerimetre
+			bind:form
+			code={edite.code}
+			libelleParDefaut={edite.libelle}
+			concerneTousHerite={edite.concerne_tous}
+		/>
 
 		<div class="form-actions">
 			<button class="btn btn-outline" on:click={() => (edite = null)}>Annuler</button>
@@ -426,9 +353,6 @@
 		color: var(--color-text-muted);
 		margin-left: auto;
 	}
-	.chevron.open {
-		transform: rotate(90deg);
-	}
 	.ref-corps {
 		padding: 0.2rem 1rem 0.8rem 1.6rem;
 		border-top: 1px dashed var(--color-border);
@@ -442,52 +366,5 @@
 	.ref-actions {
 		display: flex;
 		gap: 0.3rem;
-	}
-	.icones {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.3rem;
-		margin-top: 0.3rem;
-	}
-	.icone {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: var(--color-surface);
-		cursor: pointer;
-		color: var(--color-text-muted);
-		font-size: 0.8rem;
-	}
-	.icone:hover {
-		border-color: var(--color-primary);
-		color: var(--color-text);
-	}
-	.icone-active {
-		background: var(--color-primary);
-		color: #fff;
-		border-color: var(--color-primary);
-	}
-	.modal-code {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		margin: -0.4rem 0 1rem;
-	}
-	.field-check {
-		display: block;
-		font-size: 0.85rem;
-		margin-bottom: 0.8rem;
-	}
-	.herite {
-		border-left: 2px solid var(--color-border);
-		padding-left: 0.5rem;
-		margin-top: 0.4rem;
-	}
-	.field-check.danger {
-		border-left: 3px solid var(--color-warning, #d97706);
-		padding-left: 0.6rem;
 	}
 </style>

@@ -40,6 +40,21 @@
 	/** Variante réduite, pour un second niveau de précision. */
 	export let petite = false;
 
+	/**  Cet espace est-il PRIVATIF — un logement, une cave, une place attribuée ?
+	 *   Demandé le 31/08/2026 : l'arborescence n'avait pas de mot pour dire que
+	 *   « Logement » est chez quelqu'un quand « Hall d'entrée » est à tout le
+	 *   monde, alors que c'est la première question devant une demande.
+	 *
+	 *   Le repère est un **contour discontinu** : il se lit sans couleur — donc
+	 *   sans entrer en concurrence avec l'état RETENU, qui est le plein — et sans
+	 *   ajouter de symbole, la pastille portant déjà son icône.
+	 *
+	 *   ⚠️ **L'appelant ne le passe QUE sur une pastille pleine.** Dès qu'une
+	 *   rangée se contracte, la pastille résume plusieurs espaces à la fois : un
+	 *   contour qui dirait « privatif » y parlerait d'un seul d'entre eux. Le
+	 *   repère disparaît donc avec la contraction, ce qui est la règle demandée. */
+	export let privatif = false;
+
 	/** Icône Lucide facultative, affichée avant le libellé. */
 	export let icone = '';
 
@@ -91,7 +106,13 @@
 	      « `<button>` ou `<label>` selon le cas » qui accepte un `<slot>` — mais
 	      le STYLE, lui, n'existe qu'une fois, et c'est ce qui compte : c'est sa
 	      duplication qui produit les divergences (v2.67.11). -->
-	<label class="pastille" class:active class:petite class:avec-detail={$$slots.detail}>
+	<label
+		class="pastille"
+		class:active
+		class:petite
+		class:privatif
+		class:avec-detail={$$slots.detail}
+	>
 		<input
 			type="radio"
 			class="pastille-radio"
@@ -112,6 +133,7 @@
 		class="pastille"
 		class:active
 		class:petite
+		class:privatif
 		class:avec-detail={$$slots.detail}
 		on:click
 	>
@@ -138,6 +160,14 @@
 		color: var(--color-text-muted);
 		transition: all 0.12s;
 		white-space: nowrap;
+	}
+	/*  PRIVATIF : un contour discontinu, et rien d'autre. Pas de couleur — elle
+	    est prise par l'état retenu — ni de symbole — l'icône du nœud l'occupe
+	    déjà. Le trait suffit à dire « délimité, à quelqu'un », et il reste lisible
+	    sur la pastille pleine comme sur la pastille retenue. */
+	.pastille.privatif {
+		border-style: dashed;
+		border-width: 1.5px;
 	}
 	.pastille:hover {
 		border-color: var(--color-primary);

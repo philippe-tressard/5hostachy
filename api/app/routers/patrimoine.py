@@ -72,6 +72,7 @@ class PerimetreRead(BaseModel):
     #: déjà publiés qui les citent — d'où un seul point de lecture et des drapeaux
     #: plutôt que deux listes.
     selectionnable: bool
+    privatif: bool
     #: Vrai si un contenu cite ce code : l'écran propose alors de désactiver plutôt
     #: que de supprimer, et dit pourquoi.
     utilise: bool
@@ -87,6 +88,7 @@ class PerimetreCreate(BaseModel):
     batiment_id: Optional[int] = None
     portee_globale: bool = False
     selectionnable: bool = True
+    privatif: bool = False
     ordre: int = 0
 
 
@@ -100,6 +102,7 @@ class PerimetreUpdate(BaseModel):
     batiment_id: Optional[int] = None
     portee_globale: Optional[bool] = None
     selectionnable: Optional[bool] = None
+    privatif: Optional[bool] = None
     ordre: Optional[int] = None
     actif: Optional[bool] = None
 
@@ -214,6 +217,7 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
                 portee_globale=noeud.portee_globale,
                 concerne_tous=_concerne_tous(noeud, par_id),
                 selectionnable=noeud.selectionnable,
+                privatif=noeud.privatif,
                 utilise=noeud.code.lower() in cites,
             ))
             descendre(noeud.id)
@@ -230,6 +234,7 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
                 batiment_id=noeud.batiment_id, profondeur=0, ordre=noeud.ordre,
                 actif=noeud.actif, portee_globale=noeud.portee_globale,
                 concerne_tous=noeud.portee_globale, selectionnable=noeud.selectionnable,
+                privatif=noeud.privatif,
                 utilise=noeud.code.lower() in cites,
             ))
     return sortie
@@ -315,6 +320,7 @@ def creer_perimetre(
         batiment_id=body.batiment_id,
         portee_globale=body.portee_globale,
         selectionnable=body.selectionnable,
+        privatif=body.privatif,
         ordre=body.ordre,
         modifie_par_id=admin.id,
         modifie_le=datetime.utcnow(),
