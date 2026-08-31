@@ -1,12 +1,11 @@
 <script lang="ts">
-	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireFaq from '$lib/components/FormulaireFaq.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { faq as faqApi } from '$lib/api';
 	import { isCS, isAdmin, currentUser } from '$lib/stores/auth';
-	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -375,11 +374,6 @@
 		}
 	}
 
-	function onCategorieSelectChange() {
-		formIsNewCategorie = formCategorie === '__new__';
-		if (formIsNewCategorie) formNewCategorie = '';
-	}
-
 	// ---- rename category ----
 	let editingCategory: string | null = null;
 	let editCategoryName = '';
@@ -602,59 +596,22 @@
 	</p>
 </div>
 
-<!-- Modal ajout / édition -->
+<!--  Le formulaire est un COMPOSANT, comme pour les six autres entités du site.
+      Il porte son cadre : boîte pour créer, modale pour corriger (`ux-patterns`
+      §14 bis). Cet écran ouvrait une modale pour les DEUX — voir le composant. -->
 {#if showForm}
-	<Modale
-		titre={editingItem ? 'Modifier la question' : 'Nouvelle question'}
-		classeBoite="modal-box card"
-		styleBoite="max-width:500px"
-		on:fermer={() => (showForm = false)}
-	>
-		<div class="form-grid">
-			<label class="field"
-				>Catégorie *
-				<select bind:value={formCategorie} on:change={onCategorieSelectChange}>
-					<option value="" disabled>— Choisir une catégorie —</option>
-					{#each existingCategories as cat}
-						<option value={cat}>{cat}</option>
-					{/each}
-					<option value="__new__">➕ Nouvelle catégorie…</option>
-				</select>
-			</label>
-			{#if formIsNewCategorie}
-				<label class="field"
-					>Nom de la nouvelle catégorie *<input
-						type="text"
-						bind:value={formNewCategorie}
-						placeholder="Ex : 🗑️ Tri des déchets"
-					/></label
-				>
-			{/if}
-
-			<label class="field"
-				>Question *<input type="text" bind:value={formQuestion} placeholder="La question…" /></label
-			>
-
-			<div class="field">
-				<label for="faq-reponse">Réponse *</label
-				><!-- RichEditor : pas labelable, donc pas d'enveloppement -->
-				<RichEditor
-					id="faq-reponse"
-					bind:value={formReponse}
-					placeholder="La réponse…"
-					minHeight="120px"
-				/>
-			</div>
-		</div>
-		<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
-			<button class="btn btn-outline" on:click={() => (showForm = false)} disabled={saving}
-				>Annuler</button
-			>
-			<button class="btn btn-primary" on:click={saveItem} disabled={saving}>
-				{saving ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</Modale>
+	<FormulaireFaq
+		modeEdition={editingItem !== null}
+		bind:categorie={formCategorie}
+		bind:nouvelleCategorie={formNewCategorie}
+		bind:estNouvelleCategorie={formIsNewCategorie}
+		bind:question={formQuestion}
+		bind:reponse={formReponse}
+		categories={existingCategories}
+		enregistrement={saving}
+		onEnregistrer={saveItem}
+		on:annule={() => (showForm = false)}
+	/>
 {/if}
 
 <style>
@@ -752,11 +709,6 @@
 		margin: 0.5rem 0 0;
 		font-size: 0.875rem;
 		color: var(--color-text-muted);
-	}
-	.form-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
 	}
 	/*  Ne sert plus qu'au renommage de catégorie EN LIGNE. Fond explicite : son absence rendait les champs blancs (#413). */
 	.input-field {
