@@ -24,6 +24,8 @@
 	import { EVENEMENT } from '$lib/entites/evenement';
 	import { createEventDispatcher } from 'svelte';
 
+	import { calendrier as calApi } from '$lib/api';
+
 	const dispatch = createEventDispatcher<{ annule: void }>();
 
 	/** L'objet de saisie, lié en deux sens : la page porte son cycle de vie. */
@@ -81,6 +83,24 @@
 	 *   Sans cela, poser le cadre ici sortait la modale du champ du contrôle :
 	 *   convertir un écran serait revenu à se désarmer. */
 	$: titreCadre = modeEdition ? 'Modifier l’événement' : 'Nouvel événement';
+
+	//  L'aperçu de ce qui partira, avant de confirmer (#498) — signalé comme
+	//  fonctionnalité CRITIQUE le 31/08/2026, après qu'un envoi soit parti sans
+	//  que personne ait pu le voir. Le serveur compose par les mêmes fonctions
+	//  que l'envoi ; cet appel ne fait que lui donner le brouillon.
+	const brouillonApercu = () =>
+		calApi.apercuDiffusion({
+			titre: form.titre,
+			description: form.description,
+			type: form.type,
+			debut: form.debut || undefined,
+			perimetre: formPerimetreCible.join(','),
+			photos_urls: photosUrls,
+			fichiers_urls: fichiersUrls,
+			envoyer_syndic: form.envoyer_syndic,
+			envoyer_cs: form.envoyer_cs,
+			partager_whatsapp: form.partager_whatsapp,
+		});
 </script>
 
 <!--
@@ -212,6 +232,7 @@
 	      Leur PRÉSENCE, elle, se lit dans la déclaration — plus aucune n'est
 	      posée en dur (R4). -->
 			<ChampsCommuns
+				demanderApercu={brouillonApercu}
 				idPrefixe="ev"
 				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
 				bind:perimetre={formPerimetreCible}

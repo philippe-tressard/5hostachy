@@ -21,102 +21,14 @@ import ast
 from pathlib import Path
 
 import pytest
-from jinja2 import BaseLoader, nodes
-from jinja2.sandbox import SandboxedEnvironment
-
 from app.seed import EMAIL_TEMPLATES
+#  L'analyse du GABARIT vit à part depuis le 31/08/2026 : ce fichier-ci n'analyse
+#  que le POINT D'APPEL. Deux analyses de natures différentes, deux modules.
+from tests.lib_variables_jinja import _variables_qui_font_echouer
 from tests.test_email_templates import BASE_CTX_VARS
 
 _APP_DIR = Path(__file__).resolve().parents[1] / "app"
 _FONCTIONS_ENVOI = {"send_email", "send_email_group"}
-
-_env_jinja = SandboxedEnvironment(loader=BaseLoader())
-
-
-def _variables_qui_font_echouer(sujet: str | None, corps: str | None) -> set[str]:
-    """Variables dont l'ABSENCE lève une `UndefinedError` à l'envoi.
-
-    `send_email` utilise un `SandboxedEnvironment` par défaut, donc l'`Undefined`
-    permissif : un `{{ x }}` seul rend une chaîne vide et ne casse rien. Seuls
-    lèvent l'accès à un attribut ou à une clé (`{{ x.y }}`, `{{ x['y'] }}`),
-    l'itération (`{% for i in x %}`).
-
-    Les filtres sont volontairement HORS du critère : `{{ commentaire | safe }}`
-    sur une variable absente rend une chaîne vide sans lever, et deux templates
-    du dépôt s'appuient dessus. Seuls quelques filtres (`| length`) échoueraient
-    — les inclure tous ferait crier au loup là où rien ne casse.
-
-    Exiger davantage produirait de faux positifs : plusieurs contextes du dépôt
-    omettent des variables seulement affichées, sans que l'envoi échoue.
-    """
-    # Sujet et corps sont analysés SÉPARÉMENT puis réunis. Les concaténer
-    # laissait un `{% if x %}` du corps « garder » un `{{ x.y }}` du sujet, qui
-    # n'est protégé par rien — le sujet est rendu à part, avant le corps.
-    # Trouvé le 03/08/2026 : `acces_apparies_auto` déréférence `utilisateur` dans
-    # son sujet et le teste dans une condition du corps ; sa clé manquante ne
-    # faisait rougir aucun test alors que l'envoi levait bien `UndefinedError`.
-    return (
-        _risquees_dans(sujet or "")
-        | _risquees_dans(corps or "")
-    )
-
-
-def _risquees_dans(source: str) -> set[str]:
-    """Variables dont l'absence lève, dans UN fragment de template."""
-    arbre = _env_jinja.parse(source)
-    risquees: set[str] = set()
-
-    # `{% for m in messages %}` définit `m` (et `loop`) : ce sont des variables
-    # locales au template, que le contexte n'a évidemment pas à fournir.
-    locales: set[str] = {"loop"}
-
-    def _noms_cibles(cible):
-        """`find_all` de Jinja ne renvoie PAS le nœud lui-même : sans ce cas,
-        `{% for m in … %}` (cible simple) laissait `m` passer pour une variable
-        de contexte manquante."""
-        if isinstance(cible, nodes.Name):
-            yield cible.name
-        for n in cible.find_all(nodes.Name):
-            yield n.name
-
-    for n in arbre.find_all(nodes.For):
-        locales.update(_noms_cibles(n.target))
-    for n in arbre.find_all(nodes.Assign):
-        locales.update(_noms_cibles(n.target))
-
-    def _nom(node) -> str | None:
-        return node.name if isinstance(node, nodes.Name) else None
-
-    for n in arbre.find_all((nodes.Getattr, nodes.Getitem)):
-        if (nom := _nom(n.node)):
-            risquees.add(nom)
-    for n in arbre.find_all(nodes.For):
-        if (nom := _nom(n.iter)):
-            risquees.add(nom)
-    # Variables testées par un `{% if %}` quelque part dans le template : leur
-    # absence rend la condition fausse, donc le bloc qui les déréférence n'est
-    # jamais atteint. `ticket_syndic` protège ainsi `messages` et `historique`
-    # (`{% if is_commentaire and messages %}`), et ses envois qui ne les
-    # fournissent pas fonctionnent — les signaler serait crier au loup.
-    #
-    # Approximation assumée : la garde est cherchée dans TOUT le template, pas
-    # seulement sur le bloc englobant. Elle ne peut donc produire que des faux
-    # négatifs (une variable gardée ici et déréférencée ailleurs sans garde
-    # passerait), jamais de faux positifs — le bon sens pour un garde-fou dont
-    # personne ne doit apprendre à ignorer les alertes.
-    gardees: set[str] = set()
-    for n in arbre.find_all(nodes.If):
-        gardees.update(x.name for x in _tous_les_noms(n.test))
-
-    return risquees - BASE_CTX_VARS - locales - gardees
-
-
-def _tous_les_noms(node):
-    """`find_all` de Jinja n'inclut pas le nœud lui-même."""
-    if isinstance(node, nodes.Name):
-        yield node
-    yield from node.find_all(nodes.Name)
-
 
 _VARS_CRITIQUES: dict[str, set[str]] = {
     row[0]: _variables_qui_font_echouer(row[2], row[3]) for row in EMAIL_TEMPLATES
@@ -173,6 +85,14 @@ def _cibles_assignees(node):
     for c in cibles:
         if isinstance(c, ast.Name):
             yield c
+        #  🔴 `ctx, pieces = contexte_xxx(…)` — le DÉPAQUETAGE (31/08/2026).
+        #  Sans lui, l'envoi devenait opaque le jour où il cessait de construire
+        #  son contexte à la main : l'analyseur ne suivait la factorisation ni à
+        #  l'aller ni au retour (cf. `_dict_rendu_par`).
+        elif isinstance(c, (ast.Tuple, ast.List)):
+            for e in c.elts:
+                if isinstance(e, ast.Name):
+                    yield e
 
 
 def _codes_possibles(node, portee: ast.AST, module: ast.AST, ligne: int) -> set[str] | None:
@@ -342,12 +262,20 @@ def _dict_rendu_par(nom_fonction: str) -> ast.Dict | None:
             for r in ast.walk(n):
                 if not isinstance(r, ast.Return) or r.value is None:
                     continue
-                if isinstance(r.value, ast.Dict):
-                    return r.value
-                if isinstance(r.value, ast.Name):
+                rendu = r.value
+                #  🔴 `return ctx, pieces` compte AUSSI (31/08/2026). Le contexte
+                #  et ses pièces sont rendus d'un bloc parce que le drapeau
+                #  `fichiers` se calcule SUR la liste. L'analyseur ne voyait que
+                #  `return {...}` et `return ctx` : l'envoi devenait opaque le
+                #  jour où il s'améliorait.
+                if isinstance(rendu, ast.Tuple) and rendu.elts:
+                    rendu = rendu.elts[0]
+                if isinstance(rendu, ast.Dict):
+                    return rendu
+                if isinstance(rendu, ast.Name):
                     for a in ast.walk(n):
                         if isinstance(getattr(a, "value", None), ast.Dict) and any(
-                            c.id == r.value.id for c in _cibles_assignees(a)
+                            c.id == rendu.id for c in _cibles_assignees(a)
                         ):
                             return a.value
     return None

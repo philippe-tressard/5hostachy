@@ -34,25 +34,30 @@ def _batiments_de(pub) -> set[int]:
     return batiments_cibles(parse_json_perimetres(getattr(pub, "perimetre_cible", None)))
 
 
-def _envoyer_email_syndic_publication(
-    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
-    *, syndic: bool = True, cs: bool = False,
-    commentaire: str | None = None, fichiers_urls: list[str] | None = None,
-):
-    """Envoie un email au syndic et/ou CS avec la publication en corps."""
-    from app.utils.email import send_email_group
+def contexte_publication_syndic(
+    pub: Publication,
+    user: Utilisateur,
+    session: Session,
+    *,
+    commentaire: str | None = None,
+    fichiers_urls: list[str] | None = None,
+) -> tuple[dict, list[str]]:
+    """Le contexte du gabarit `publication_syndic`, et les pièces qui l'accompagnent.
 
-    from app.utils.destinataires import destinataires_syndic_cs
+    🔴 EXTRAIT DE L'ENVOI LE 31/08/2026, ET C'EST LE POINT DE TOUT LE LOT.
 
-    destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
-    if not destinataires:
-        return
-    #  Les adresses déjà servies — l'auteur ne doit pas se recevoir deux fois.
-    #  Le jeu était construit au fil de la boucle qui vivait ici ; il se déduit
-    #  maintenant du résultat, ce qui le garde vrai si la règle de
-    #  déduplication change dans sa source.
-    seen_emails = {email.lower() for _, email in destinataires}
+    L'envoi construisait ce dictionnaire dans son propre corps. L'aperçu ne
+    pouvait donc pas l'obtenir : il aurait fallu le **recopier**, et un aperçu
+    reconstruit devient faux à la première évolution du gabarit — sans que
+    personne le voie, puisque c'est l'aperçu qu'on regarde pour vérifier.
 
+    ⚠️ Rendre le contexte ET les pièces ensemble n'est pas une commodité : le
+    drapeau `fichiers` du gabarit se calcule **sur la liste**. Les séparer
+    permettrait d'annoncer des pièces jointes qui ne partent pas, ce qui est
+    exactement le défaut corrigé le 10/08/2026 en sens inverse.
+
+    `test_apercu_publication.py` échoue si l'un des deux chemins s'en écarte.
+    """
     cfg_rows = session.exec(
         select(ConfigSite).where(ConfigSite.cle.in_(("site_nom", "site_url")))
     ).all()
@@ -61,7 +66,7 @@ def _envoyer_email_syndic_publication(
     # Historique des évolutions (pour les commentaires)
     evols_ctx = []
     is_commentaire = commentaire is not None
-    if is_commentaire:
+    if is_commentaire and pub.id is not None:
         evols = session.exec(
             select(PublicationEvolution)
             .where(PublicationEvolution.publication_id == pub.id)
@@ -84,10 +89,11 @@ def _envoyer_email_syndic_publication(
     all_attachments: list[str] = chemins_locaux(parse_photos(pub.photos_urls))
 
     # Fichiers joints (documents liés à la publication)
-    docs = session.exec(select(Document).where(Document.publication_id == pub.id)).all()
-    for doc in docs:
-        if doc.fichier_chemin and os.path.isfile(doc.fichier_chemin):
-            all_attachments.append(doc.fichier_chemin)
+    if pub.id is not None:
+        docs = session.exec(select(Document).where(Document.publication_id == pub.id)).all()
+        for doc in docs:
+            if doc.fichier_chemin and os.path.isfile(doc.fichier_chemin):
+                all_attachments.append(doc.fichier_chemin)
 
     # Fichiers joints au commentaire
     if fichiers_urls:
@@ -109,21 +115,47 @@ def _envoyer_email_syndic_publication(
         # jointes les envoyait sans jamais les annoncer.
         "fichiers": bool(all_attachments),
     }
+    return ctx, all_attachments
 
-    if destinataires:
-        # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
-        # Pas de doublon si l'auteur est déjà destinataire principal (syndic/CS).
-        auteur_bcc = [user.email] if user.email.lower() not in seen_emails else None
-        background_tasks.add_task(
-            send_email_group,
-            code="publication_syndic",
-            to_recipients=destinataires,
-            context=ctx,
-            session=session,
-            bcc=auteur_bcc,
-            attachments=all_attachments or None,
-            batiments_concernes=_batiments_de(pub),
-        )
+
+def _envoyer_email_syndic_publication(
+    pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
+    *, syndic: bool = True, cs: bool = False,
+    commentaire: str | None = None, fichiers_urls: list[str] | None = None,
+):
+    """Envoie un email au syndic et/ou CS avec la publication en corps."""
+    from app.utils.destinataires import destinataires_syndic_cs
+    from app.utils.email import send_email_group
+
+    destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
+    if not destinataires:
+        return
+    #  Les adresses déjà servies — l'auteur ne doit pas se recevoir deux fois.
+    #  Le jeu était construit au fil de la boucle qui vivait ici ; il se déduit
+    #  maintenant du résultat, ce qui le garde vrai si la règle de
+    #  déduplication change dans sa source.
+    seen_emails = {email.lower() for _, email in destinataires}
+
+    #  🔴 LA MÊME fonction que l'aperçu. Ne pas remettre la construction ici :
+    #  c'est ce qui a fait qu'une actualité est partie sans aperçu possible
+    #  jusqu'au 31/08/2026.
+    ctx, all_attachments = contexte_publication_syndic(
+        pub, user, session, commentaire=commentaire, fichiers_urls=fichiers_urls
+    )
+
+    # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
+    # Pas de doublon si l'auteur est déjà destinataire principal (syndic/CS).
+    auteur_bcc = [user.email] if user.email.lower() not in seen_emails else None
+    background_tasks.add_task(
+        send_email_group,
+        code="publication_syndic",
+        to_recipients=destinataires,
+        context=ctx,
+        session=session,
+        bcc=auteur_bcc,
+        attachments=all_attachments or None,
+        batiments_concernes=_batiments_de(pub),
+    )
 
 
 def _envoyer_email_externe_publication(
