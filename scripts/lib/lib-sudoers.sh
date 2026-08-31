@@ -44,26 +44,29 @@ SUDOERS_HERITES="010_pi-nopasswd bascule ptressard ptressard-extra"
 # n'importe quel service — une escalade complète sous couvert de « redémarrer le
 # tunnel ».
 #
-# ⚠️ `rsync` est la dernière surface à retirer, et elle ne sert DÉJÀ PLUS.
+# ✅ `rsync` EST PARTI le 31/08/2026 (#582), et c'est la fin du chantier.
 # `sudo rsync` sans borne de chemin EST une escalade root complète — rsync écrit
-# où il veut, `/etc/sudoers.d/` et `/root/.ssh/` compris.
+# où il veut, `/etc/sudoers.d/` et `/root/.ssh/` compris. La règle avait l'air
+# bornée à un outil ; elle ne l'était pas.
 #
-# État au 30/08/2026 (#582) : `bascule.sh` l'appelait trois fois pour installer
-# uploads, WhatsApp auth et la base dans les volumes du peer. Les trois passent
-# maintenant par un conteneur jetable (`lib-volumes.sh`) — **zéro appel**, vérifié
-# par le self-test de ce module et non par ce commentaire.
+# Elle servait à `bascule.sh`, qui l'appelait trois fois pour installer uploads,
+# WhatsApp auth et la base dans les volumes du peer. Les trois passent par un
+# conteneur jetable (`lib-volumes.sh`), qui n'ouvre aucun privilège nouveau : le
+# compte est déjà dans le groupe `docker`.
 #
-# 🔴 ELLE RESTE POURTANT ÉCRITE ICI, ET C'EST DÉLIBÉRÉ. La phase 4 convertie n'a
-# jamais tourné : elle ne s'exécute qu'à la bascule de 02:00. Retirer la règle
-# aujourd'hui supprimerait le chemin de repli de la seule phase qui n'a pas fait
-# ses preuves — et sur la plus délicate des trois, celle de la base. Elle part au
-# lot suivant, une fois le journal de bascule lu :
+# 🔴 LE RETRAIT A ATTENDU UNE PREUVE D'EXÉCUTION, PAS UNE PREUVE DE CODE.
+# « Zéro appel dans `bascule.sh` » et « zéro appel exécuté » sont deux faits
+# différents : la phase 4 ne tourne qu'à 02:00. Retirer la règle avant aurait
+# supprimé le chemin de repli de la seule phase non éprouvée — et la plus
+# délicate des trois, celle qui porte le `--delete` sur la base. La preuve
+# attendue, lue dans le journal de la bascule du 31/08/2026 à 02:02:26 :
 #
 #     → DB installée dans le volume peer (conteneur jetable, sans sudo).
+#     ===== Bascule terminée : rpi1 est maintenant actif =====
 #
-# ⚠️ Une permission qu'aucun appelant n'utilise n'en est pas moins ouverte : ce
-# délai est une dette datée, pas un état stable. S'il devait durer, c'est ce
-# commentaire qui aurait tort, pas la règle.
+# ⚠️ Retirer la règle du DÉPÔT ne la retire pas des NŒUDS. Elle y reste jusqu'à
+# `bash scripts/installation/durcir-sudoers.sh` ; d'ici là `--etat` la signale
+# comme divergente, ce qui est exactement ce qu'on veut lire.
 # ⚠️ Le heredoc ci-dessous n'est PAS quoté — il doit substituer $u. Donc aucun
 # accent grave dans son corps : il y ouvrirait une substitution de commande.
 # Vécu le 12/08/2026, « is-active: command not found » à chaque appel — et le
@@ -92,11 +95,10 @@ $u ALL=(root) NOPASSWD: /usr/bin/systemctl disable cloudflared
 # « crontab <fichier> », donc l'exécution de n'importe quoi en root.
 $u ALL=(root) NOPASSWD: /usr/bin/crontab -l
 
-# Installation des volumes sur le peer — PLUS AUCUN APPELANT depuis le
-# 30/08/2026 : les phases 1, 2 et 4 de bascule.sh passent par un conteneur
-# jetable (lib-volumes.sh). Conservée le temps qu'une bascule ait EXERCÉ la
-# phase 4 convertie ; elle part ensuite. Surface la plus large de ce fichier.
-$u ALL=(root) NOPASSWD: /usr/bin/rsync
+# Ici vivait `NOPASSWD: /usr/bin/rsync`, la surface la plus large de ce
+# fichier. Retirée le 31/08/2026, après qu'une bascule ait exercé les trois
+# phases converties. Ne pas la remettre pour « dépanner » : un rsync privilégié
+# sans borne de chemin rend le compte équivalent à root.
 REGLE
 }
 
@@ -200,13 +202,23 @@ sudoers_selftest() {
   echo "-- la règle composée est-elle valide et complète ? --"
   local regle; regle=$(sudoers_regle ptressard)
   for besoin in "systemctl start cloudflared" "systemctl stop cloudflared" \
-                "crontab -l" "/usr/bin/rsync"; do
+                "crontab -l"; do
     if printf '%s' "$regle" | grep -q -- "$besoin"; then
       echo "PASS  besoin couvert : $besoin"
     else
       echo "FAIL  besoin NON couvert : $besoin"; st=1
     fi
   done
+  #  🔴 Et le contrôle INVERSE : la règle composée ne doit PLUS accorder rsync.
+  #  Sans lui, un copier-coller le rétablirait et tous les autres contrôles
+  #  resteraient verts — ils vérifient ce qui est COUVERT, jamais ce qui ne doit
+  #  plus l'être. Un contrôle qui ne cherche que des présences ne voit pas une
+  #  régression par ajout (`standards/04`).
+  if printf '%s' "$regle" | grep -q -- "/usr/bin/rsync"; then
+    echo "FAIL  la regle accorde encore rsync (escalade root complete, #582)"; st=1
+  else
+    echo "PASS  la regle n accorde plus rsync"
+  fi
   #  Une règle sans borne d'unité autoriserait toute unité systemd : c'est le
   #  défaut que ce fichier existe pour ne pas reproduire.
   if printf '%s' "$regle" | grep -qE '^[a-z]+ ALL=\(root\) NOPASSWD: /usr/bin/systemctl (start|stop|restart|enable|disable)$'; then
@@ -224,6 +236,13 @@ sudoers_selftest() {
   echo "-- NOPASSWD : « peut » n'est pas « peut sans mot de passe » --"
   #  Sortie réelle d'un nœud durci : la ligne `(ALL : ALL) ALL` couvre TOUT avec
   #  mot de passe, et c'est elle qui faisait dire « AUTORISÉE » à l'ancienne sonde.
+  #
+  #  ⚠️ Elle porte encore `/usr/bin/rsync`, et c'est VOULU : c'est l'état d'un
+  #  nœud qui n'a pas été repassé depuis le 31/08/2026. Ce témoin éprouve le
+  #  LECTEUR, pas la politique — et il éprouve précisément le cas que
+  #  `durcir-sudoers.sh --etat` doit savoir signaler. Le remplacer par une sortie
+  #  déjà conforme ferait disparaître le seul cas où l'on vérifie que la dérive
+  #  se voit.
   local sortie_durcie="User ptressard may run the following commands on n1:
     (ALL : ALL) ALL
     (root) NOPASSWD: /usr/bin/systemctl start cloudflared

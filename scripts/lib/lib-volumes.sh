@@ -309,12 +309,20 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     #  Le baisser pour faire passer le test rendrait ce contrôle mensonger, ce
     #  qui est pire que son absence.
     #
-    #  🔴 ZÉRO N'EST PAS « TERMINÉ ». La phase 4 convertie n'a jamais tourné :
-    #  elle ne s'exécute qu'à 02:00. Tant que le journal de la bascule n'a pas
-    #  montré `→ DB installée dans le volume peer (conteneur jetable, sans
-    #  sudo).`, la règle `NOPASSWD: /usr/bin/rsync` RESTE en place — la retirer
-    #  maintenant supprimerait le chemin de repli de la seule phase qui n'a pas
-    #  encore fait ses preuves, et sur la plus délicate des trois.
+    #  ✅ TERMINÉ le 31/08/2026 — et « zéro appel » ne l'a jamais suffi à lui
+    #  seul. « Zéro appel dans le code » et « zéro appel exécuté » sont deux
+    #  faits différents : la phase 4 ne tourne qu'à 02:00. La règle sudo est
+    #  restée en place jusqu'à ce que le journal montre la ligne attendue —
+    #  chemin de repli conservé pour la seule phase non éprouvée, et la plus
+    #  délicate des trois (c'est elle qui porte le `--delete` sur la base) :
+    #
+    #      [2026-08-31 02:02:26]   → DB installée dans le volume peer
+    #                                (conteneur jetable, sans sudo).
+    #      [2026-08-31 02:02:53] ===== Bascule terminée =====
+    #
+    #  ⚠️ Ce compteur RESTE à zéro et reste utile : il refuse le retour d'un
+    #  `sudo rsync` dans `bascule.sh`, que plus rien n'autoriserait côté sudoers
+    #  — donc une bascule qui échouerait au pire moment, à 02:00, sans personne.
     APPELS_SUDO_ATTENDUS=0
 
     bascule="$(dirname "${BASH_SOURCE[0]}")/../exploitation/bascule.sh"

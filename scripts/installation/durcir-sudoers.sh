@@ -133,6 +133,9 @@ etat() {
     else
       log "   surface NOPASSWD réelle :"
       sudoers_surface_nopasswd "$liste" | sed 's/^/     · /'
+      #  `rsync` reste INTERROGÉ après son retrait (#582) : `--etat` doit dire
+      #  « NON » sur un nœud durci, et « oui » sur un nœud pas encore repassé.
+      #  Ne plus le demander ferait disparaître la seule trace de la dérive.
       for c in "/usr/bin/systemctl start cloudflared" "/usr/bin/crontab -l" "/usr/bin/rsync"; do
         printf '   sans mot de passe %-32s ' "$c"
         sudoers_est_nopasswd "$liste" "$c" && echo "oui" || echo "NON"
@@ -189,7 +192,10 @@ nettoyer() {
       log "   surface NOPASSWD illisible → on ne retire RIEN (INCONNU n est pas OK)."
       continue
     fi
-    for c in "/usr/bin/systemctl start cloudflared" "/usr/bin/systemctl stop cloudflared" "/usr/bin/crontab -l" "/usr/bin/rsync"; do
+    #  🔴 `rsync` a QUITTÉ cette liste le 31/08/2026 (#582). L'exiger encore
+    #  ferait refuser le retrait sur un nœud déjà correct — le contrôle
+    #  bloquerait sur l'absence de ce qu'on vient de supprimer.
+    for c in "/usr/bin/systemctl start cloudflared" "/usr/bin/systemctl stop cloudflared" "/usr/bin/crontab -l"; do
       sudoers_est_nopasswd "$liste" "$c" || { log "   permission MANQUANTE : $c"; ko=1; }
     done
     [ "$ko" -eq 1 ] && { log "   → on ne retire RIEN."; continue; }
