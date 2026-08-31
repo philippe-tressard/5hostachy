@@ -64,6 +64,21 @@ class Perimetre(SQLModel, table=True):
     #: retirer un périmètre de la saisie sans casser l'historique : `cave` reste
     #: affiché sur les contenus déjà publiés, sans être proposé aux nouveaux.
     selectionnable: bool = Field(default=True)
+    #: Ce nœud désigne-t-il un espace **PRIVATIF** — un logement, une cave, une
+    #: place de parking attribuée — par opposition aux parties communes ?
+    #:
+    #: Demandé le 31/08/2026. La copropriété n'a pas de mot pour cette
+    #: distinction dans l'arborescence : « Logement » y voisine « Hall d'entrée »
+    #: sans que rien ne dise que l'un est chez quelqu'un et l'autre à tout le
+    #: monde. Or c'est la question qu'on se pose en premier devant une demande.
+    #:
+    #: ⚠️ **Purement visuel pour l'instant**, et c'est délibéré : la pastille se
+    #: distingue, rien d'autre ne change. Le jour où il faudra en tirer un droit
+    #: — qui voit, qui est notifié — la donnée sera là, et la décision sera
+    #: prise pour elle-même plutôt que découverte dans un effet de bord.
+    #:
+    #: Administré depuis Admin → Patrimoine, comme `selectionnable`.
+    privatif: bool = Field(default=False)
 
     ordre: int = Field(default=0)
     actif: bool = Field(default=True)

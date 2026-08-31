@@ -40,6 +40,14 @@ export interface Perimetre {
 	portee_globale: boolean;
 	concerne_tous: boolean;
 	selectionnable: boolean;
+	/**  Cet espace est-il PRIVATIF — un logement, une cave, une place attribuée —
+	 *   par opposition aux parties communes ? Administré depuis Admin →
+	 *   Patrimoine, jamais deviné d'après le libellé : chaque copropriété nomme
+	 *   ses espaces comme elle veut (31/08/2026).
+	 *
+	 *   ⚠️ **Purement visuel pour l'instant.** La pastille se distingue, rien
+	 *   d'autre ne change — ni qui voit, ni qui est notifié. */
+	privatif: boolean;
 	utilise: boolean;
 }
 

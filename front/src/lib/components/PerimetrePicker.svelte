@@ -303,6 +303,7 @@
 			active={!estDefaut && (selection.has(n.code) || choisis.length > 0)}
 			icone={n.icone ?? ''}
 			chevron={aDesEnfants.has(n.code) && !contracte}
+			privatif={n.privatif && !contracte}
 			on:click={() => basculer(n.code)}
 			>{n.libelle}{#if contracte}<span class="perimetre-resume">
 					› {choisis.map((e) => e.libelle_court || e.libelle).join(SEPARATEUR_ELEMENT)}</span
@@ -319,8 +320,11 @@
 		</p>
 		<div class="perimetre-pills">
 			{#each niveau2 as espace (espace.code)}
-				<Pastille petite active={selection.has(espace.code)} on:click={() => basculer(espace.code)}
-					>{espace.libelle}</Pastille
+				<Pastille
+					petite
+					privatif={espace.privatif}
+					active={selection.has(espace.code)}
+					on:click={() => basculer(espace.code)}>{espace.libelle}</Pastille
 				>
 			{/each}
 		</div>
