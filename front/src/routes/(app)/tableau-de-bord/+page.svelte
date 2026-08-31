@@ -118,6 +118,26 @@
 
 	// ── Expand state (unique entre prochaines échéances et fil d'activité) ─
 	let expandedItem: string | null = null;
+	/**  Retirer une carte du fil. Le droit est vérifié côté SERVEUR
+	 *   (`require_admin`) : le bouton n'est qu'une commodité.
+	 *
+	 *   La carte part tout de suite, sans attendre la réponse — le geste est
+	 *   idempotent, et une carte qui reste une seconde se relit comme un clic
+	 *   manqué. En cas d'échec, la liste est rétablie à l'identique. */
+	async function masquerItem(id: string) {
+		if (!data) return;
+		const avant = data.items;
+		data = { ...data, items: data.items.filter((i) => i.id !== id) };
+		try {
+			await flux.masquer(id);
+		} catch (e: any) {
+			//  Rétabli à l'identique : un fil amputé sans que rien ne soit
+			//  enregistré serait un mensonge qui disparaît au rechargement.
+			data = { ...data, items: avant };
+			toast('error', e?.message ?? 'Retrait impossible');
+		}
+	}
+
 	function toggleItem(id: string) {
 		expandedItem = expandedItem === id ? null : id;
 	}
@@ -493,6 +513,7 @@
 							{item}
 							expanded={expandedItem === item.id}
 							on:toggle={(e) => toggleItem(e.detail)}
+							on:masquer={(e) => void masquerItem(e.detail)}
 						/>
 					{/each}
 				</div>
@@ -635,6 +656,7 @@
 						{item}
 						expanded={expandedItem === item.id}
 						on:toggle={(e) => toggleItem(e.detail)}
+						on:masquer={(e) => void masquerItem(e.detail)}
 					/>
 				{/each}
 			{/each}
@@ -649,6 +671,7 @@
 					bind:ouvert={olderOpen}
 					itemDeplie={expandedItem}
 					onBasculer={toggleItem}
+					onMasquer={masquerItem}
 				/>
 			</div>
 		{/if}
@@ -1259,30 +1282,6 @@
 	}
 
 	/* ═══ FLUX TIMELINE ═════════════════════════════════════════════════ */
-	.flux-timeline {
-		position: relative;
-		padding-left: 1.5rem;
-	}
-	.flux-timeline::before {
-		content: '';
-		position: absolute;
-		left: 0.45rem;
-		top: 1.5rem;
-		bottom: 0.5rem;
-		width: 2px;
-		background: var(--color-border);
-		border-radius: 1px;
-	}
-	.flux-day-label {
-		position: relative;
-		font-size: 0.72rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-		padding: 0.9rem 0 0.35rem;
-		margin-left: -0.15rem;
-	}
 	/* ═══ ÉPINGLÉ ═══════════════════════════════════════════════════════
 	   Délibérément sobre : gris et bleu de la charte, aucun rouge, aucune
 	   animation. Ce bandeau doit se distinguer de la chronologie sans entrer
@@ -1326,12 +1325,6 @@
 		.hero {
 			margin: -0.75rem -0.75rem 0;
 			padding: 1.25rem 1rem 1rem;
-		}
-		.flux-timeline {
-			padding-left: 1.25rem;
-		}
-		.flux-timeline::before {
-			left: 0.35rem;
 		}
 		.consignes-card {
 			gap: 0.5rem;

@@ -1129,3 +1129,89 @@ label.field {
 	align-items: center;
 	padding-top: 0.25rem;
 }
+
+/*  ── La FRISE du fil d'actualité ────────────────────────────────────────────
+    Le trait vertical, les pastilles qui s'y accrochent et les libellés de jour.
+
+    🔴 REMONTÉ ICI LE 31/08/2026, et la duplication était DÉCLARÉE : le
+    commentaire d'`ArchivesDuFil` disait en toutes lettres « `.flux-timeline` et
+    `.flux-day-label` sont **recopiées** depuis la page ». Deux copies qui
+    devaient rester d'accord, sans rien pour le vérifier — et une troisième
+    portion, les pastilles, vivait dans `FluxCard`, qui n'est pas la frise mais
+    ce qu'on y accroche.
+
+    ⚠️ Svelte scope ses styles au FICHIER : c'est ce qui obligeait à recopier.
+    Le remède n'est donc pas « faire attention », c'est de sortir la règle des
+    fichiers qui la partagent. Trois écrans la rendent aujourd'hui (tableau de
+    bord, archives du fil, cartes) ; le quatrième l'aura sans rien copier. */
+.flux-timeline {
+	position: relative;
+	padding-left: 1.5rem;
+}
+.flux-timeline::before {
+	content: '';
+	position: absolute;
+	left: 0.45rem;
+	top: 1.5rem;
+	bottom: 0.5rem;
+	width: 2px;
+	background: var(--color-border);
+	border-radius: 1px;
+}
+.flux-day-label {
+	position: relative;
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	padding: 0.9rem 0 0.35rem;
+	margin-left: -0.15rem;
+}
+@media (max-width: 767px) {
+	.flux-timeline {
+		padding-left: 1.25rem;
+	}
+	.flux-timeline::before {
+		left: 0.35rem;
+	}
+}
+
+/*  Les PASTILLES accrochées à la frise. Elles vivaient dans `FluxCard`, qui est
+    ce qu'on accroche — pas la frise elle-même. Elles rejoignent le trait auquel
+    elles se rattachent : les deux n'ont de sens qu'ensemble, et la carte n'a pas
+    à savoir comment la chronologie se dessine. */
+.flux-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	margin-top: 0.85rem;
+	position: absolute;
+	left: -1.35rem;
+	border: 2px solid var(--color-surface);
+	box-shadow: 0 0 0 2px var(--color-border);
+	z-index: 1;
+}
+.flux-new-dot {
+	position: absolute;
+	left: -1.7rem;
+	top: 0.55rem;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: rgba(239, 68, 68, 0.15);
+	animation: new-dot-pulse 2s ease-in-out infinite;
+	z-index: 0;
+}
+@keyframes new-dot-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+		opacity: 0.6;
+	}
+	50% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
+}

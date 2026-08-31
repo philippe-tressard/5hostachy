@@ -239,3 +239,50 @@ class Signalement(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     traite_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
     traite_le: Optional[datetime] = None
+
+
+class FluxMasque(SQLModel, table=True):
+    """Une entrée du fil que l'administrateur a retirée de la VUE.
+
+    ## Ce que c'est, et surtout ce que ce n'est pas
+
+    Demandé le 31/08/2026 : *« supprimer, uniquement pour l'admin sur le fil
+    d'actualité — celle-ci reste tracée à l'origine : actualité, annuaire,
+    ticket… »*
+
+    🔴 **L'objet n'est PAS supprimé.** Le fil est une vue *calculée* à partir des
+    sept sources ; retirer une carte n'y retire qu'une ligne d'affichage.
+    L'actualité, le membre du conseil ou le ticket restent où ils sont, intacts
+    et consultables depuis leur écran. C'est exactement ce que la demande dit, et
+    c'est aussi ce qui la rend sûre : un geste d'affichage ne détruit rien.
+
+    ⚠️ **La règle « archiver, pas supprimer » ne s'applique donc pas ici** —
+    elle protège des objets, et il n'y en a aucun à protéger. Un fil archivé
+    n'aurait aucun sens : personne ne consulte les archives d'une vue.
+
+    ## Pourquoi l'identifiant est une CHAÎNE
+
+    `item_id` porte la forme du fil : `pub_7`, `mcs_12`, `tk_15`, `ev_evol_3`.
+    C'est un identifiant de VUE, pas de table — deux sources différentes peuvent
+    porter le même numéro sans se confondre, et c'est précisément ce préfixe qui
+    l'empêche. Y mettre une clé étrangère demanderait de savoir vers quelle table
+    pointer, ce qui n'a pas de réponse.
+
+    ⚠️ Conséquence assumée : si l'objet d'origine est un jour supprimé, la ligne
+    de masquage lui survit sans référence. Elle est inerte — le fil ne produit
+    plus la carte, donc plus rien ne la consulte — et `maintenance.sh` peut la
+    purger si elle devient nombreuse. Une clé étrangère aurait été plus propre et
+    n'était pas possible ; le dire vaut mieux que le taire.
+    """
+
+    __tablename__ = "flux_masque"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    #  L'identifiant de la CARTE, tel que le fil le fabrique. Unique : masquer
+    #  deux fois la même carte est le même fait, pas deux.
+    item_id: str = Field(index=True, unique=True)
+    #  Qui a retiré la carte. NULLABLE — et ce n'est pas une facilité : si le
+    #  compte est supprimé un jour, c'est le LIEN qui disparaît, pas le
+    #  masquage. La leçon du 31/08/2026, où une purge a effacé un membre du
+    #  conseil syndical pour réparer une référence cassée.
+    masque_par_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
+    masque_le: datetime = Field(default_factory=datetime.utcnow)

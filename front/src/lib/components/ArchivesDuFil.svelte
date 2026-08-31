@@ -25,12 +25,23 @@
   la nature de ce qu'il montre, à condition de le DIRE — c'est ce que fait ce
   commentaire, et ce qui distingue une divergence assumée d'un oubli.
 
-  ## Les styles voyagent avec le balisage
+  ## La frise est dans la CHARTE, plus recopiée ici
 
-  `.flux-timeline` et `.flux-day-label` sont **recopiées** depuis la page, qui
-  les emploie encore pour le fil récent. Deux portées Svelte distinctes ne
-  peuvent pas partager une règle scopée ; les remonter dans `app.css` en ferait
-  des règles globales pour deux usages sans raison de rester identiques.
+  🔴 Ce paragraphe disait l'inverse jusqu'au 31/08/2026 : *« `.flux-timeline` et
+  `.flux-day-label` sont **recopiées** depuis la page […] les remonter en ferait
+  des règles globales pour deux usages sans raison de rester identiques »*.
+
+  Elles avaient TOUTES les raisons de rester identiques — c'est la même frise, vue
+  à deux endroits. `lint:charte` l'a établi le jour où elles sont montées dans
+  `composants.css` : les copies d'ici redéfinissaient dix propriétés, **toutes
+  identiques**, donc dix règles qui ne servaient à rien.
+
+  ⚠️ La justification était vraie sur son premier terme (Svelte scope au fichier)
+  et fausse sur sa conclusion. Une duplication déclarée reste une duplication : la
+  déclarer dit qu'on l'a vue, pas qu'elle est saine.
+
+  Ce qui reste ici est ce qui DIFFÈRE : `.older-timeline`, l'atténuation qui
+  distingue l'archive du fil vivant.
 -->
 <script lang="ts">
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
@@ -49,6 +60,9 @@
 	 *   typé `number` par réflexe — `svelte-check` l'a refusé. */
 	export let itemDeplie: string | null = null;
 	export let onBasculer: (id: string) => void;
+	/**  Retirer une carte du fil. Le composant ne le fait pas lui-même : il n'a
+	 *   ni la liste ni le droit d'écrire. Même contrat que `onBasculer`. */
+	export let onMasquer: (id: string) => void = () => {};
 </script>
 
 <SectionRepliee titre={TITRE_ARCHIVES} {compte} bind:ouvert />
@@ -61,6 +75,7 @@
 					{item}
 					expanded={itemDeplie === item.id}
 					on:toggle={(e) => onBasculer(e.detail)}
+					on:masquer={(e) => onMasquer(e.detail)}
 				/>
 			{/each}
 		{/each}
@@ -68,41 +83,8 @@
 {/if}
 
 <style>
-	.flux-timeline {
-		position: relative;
-		padding-left: 1.5rem;
-	}
-	.flux-timeline::before {
-		content: '';
-		position: absolute;
-		left: 0.45rem;
-		top: 1.5rem;
-		bottom: 0.5rem;
-		width: 2px;
-		background: var(--color-border);
-		border-radius: 1px;
-	}
-	.flux-day-label {
-		position: relative;
-		font-size: 0.72rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-		padding: 0.9rem 0 0.35rem;
-		margin-left: -0.15rem;
-	}
 	/*  L'atténuation qui distingue l'archive du fil vivant. */
 	.older-timeline {
 		opacity: 0.85;
-	}
-
-	@media (max-width: 767px) {
-		.flux-timeline {
-			padding-left: 1.25rem;
-		}
-		.flux-timeline::before {
-			left: 0.35rem;
-		}
 	}
 </style>
