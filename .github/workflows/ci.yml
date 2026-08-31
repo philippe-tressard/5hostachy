@@ -984,6 +984,18 @@ jobs:
         working-directory: front
         run: npm run lint:apercu
 
+      - name: Périmètre hérité par une entrée d'historique
+        # Fonction PURE dont tout le sens tient dans trois cas qui se
+        # ressemblent, et dont un est contre-intuitif : une entrée qui ne dit
+        # RIEN du périmètre ne change rien. Il est tentant de prendre « la
+        # dernière entrée » sans regarder si elle disait quelque chose — et l'on
+        # ferait alors revenir le périmètre du ticket à chaque commentaire vide.
+        #
+        # Ce dépôt n'a pas de lanceur de tests côté front : la fonction est
+        # transpilée et EXÉCUTÉE, comme `lint:libelle-perimetre` le fait déjà.
+        working-directory: front
+        run: npm run lint:perimetre-herite
+
       - name: Formatage (prettier --check)
         # 🔴 Le dernier point de #419, et sans lui les trois autres ne servent
         # à rien : le dépôt vient d'être reformaté, et un format que rien ne

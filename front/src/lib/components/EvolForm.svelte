@@ -86,11 +86,17 @@
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
+	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
-	import { perimetreLabel, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
+	import {
+		memePerimetre,
+		perimetreHerite,
+		perimetreLabel,
+		perimetreLabelUn,
+		perimetreParDefaut,
+	} from '$lib/perimetres';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	/** Préfixe des `id` des champs. Plusieurs formulaires d'évolution coexistent à
@@ -145,17 +151,19 @@
 	export let initialFichiers: { url: string; nom: string; type?: string }[] = [];
 	/**  Proposer de PRÉCISER LE PÉRIMÈTRE dans cette entrée (#497).
 	 *
-	 *   Un ticket se signale avec ce qu'on sait au moment où on le signale — donc
-	 *   souvent le périmètre le plus large, parce qu'on ignore encore d'où ça
-	 *   vient. Puis on cherche : « bâtiment 2 » devient « bât. 2, 3ᵉ étage, cage B ».
-	 *   Jusqu'ici cette précision se perdait, ou se racontait en texte libre.
+	 *   Un ticket se signale avec ce qu’on sait — donc souvent le périmètre le
+	 *   plus large. Puis on cherche : « bâtiment 2 » devient « bât. 2, cage B ».
 	 *
-	 *   ⚠️ Facultatif, et **vide par défaut** : ne rien toucher ne change rien.
-	 *   Une entrée qui ne parle pas du périmètre n'en déclare aucun, elle ne
-	 *   l'élargit surtout pas à la résidence entière. */
+	 *   ⚠️ Le sélecteur part de l’HÉRITÉ depuis le 31/08/2026 — il partait vide,
+	 *   et montrait « Copropriété entière » sur un ticket situé « Bât. 1 ›
+	 *   Escaliers ». Ne rien toucher ne déclare toujours rien : c’est la
+	 *   comparaison à `perimetreDepart`, et non le vide, qui le garantit. */
 	export let avecPerimetre = false;
-	/** Périmètre courant de l'objet — affiché en badge, comme l'état courant. */
+	/**  Le périmètre de l’objet, et l’historique déjà écrit : ensemble ils donnent
+	 *   celui dont cette entrée HÉRITE (`perimetreHerite`) — badge et point de
+	 *   départ du sélecteur, calculés une seule fois pour ne pas en montrer deux. */
 	export let perimetreCourant: string[] = [];
+	export let entrees: { perimetre_cible?: string[] | null }[] = [];
 	/**  Comment demander l'aperçu de ce qui partira — `null` = pas d'aperçu ici.
 	 *
 	 *   🔴 Fournie par l'APPELANT, jamais codée ici : ce formulaire sert quatre
@@ -205,11 +213,8 @@
 	let envoyerSyndic = defaultEnvoyerSyndic;
 	let envoyerCs = defaultEnvoyerCs;
 	let emailExterne = '';
-	//  Vide tant que personne n'y touche : c'est ce vide qui veut dire « cette
-	//  entrée ne dit rien du périmètre ». Le pré-remplir avec le périmètre courant
-	//  ferait déclarer un périmètre à chaque commentaire — donc écrire dans
-	//  l'historique un resserrement qui n'a pas eu lieu.
-	let perimetre: string[] = [];
+	//  Pré-rempli avec l’hérité (31/08/2026) — voir `perimetreHerite`.
+	let perimetre: string[] = perimetreHerite(perimetreCourant, entrees);
 
 	//  7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430).
 	//  Le tri se fait à l'ouverture, sur ce que l'entrée portait déjà : les
@@ -224,6 +229,7 @@
 		: [];
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
+
 	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
 
 	$: allFichiersUrls = [...photos, ...docs];
@@ -251,8 +257,16 @@
 	//  n'affiche le badge que sur le périmètre par défaut, parce que le sélecteur
 	//  montre déjà la sélection ; ici le sélecteur part vide, donc le badge est le
 	//  SEUL endroit où l'on lit le périmètre actuel — il est toujours affiché.
-	$: libellePerimetreActuel = perimetreCourant.length
-		? perimetreLabel(perimetreCourant)
+	$: perimetreDepart = perimetreHerite(perimetreCourant, entrees);
+	//  Ce que l’entrée DÉCLARE : rien si l’on n’a pas touché à l’hérité. C’est ce
+	//  vide qui permet au courriel d’afficher « 🔹 … » sur les seules entrées qui
+	//  ont précisé quelque chose.
+	$: perimetreDeclare =
+		sectionPerimetre && perimetre.length && !memePerimetre(perimetre, perimetreDepart)
+			? perimetre
+			: undefined;
+	$: libellePerimetreActuel = perimetreDepart.length
+		? perimetreLabel(perimetreDepart)
 		: perimetreLabelUn(perimetreParDefaut() ?? '');
 
 	//  Le commentaire est REQUIS pour une évolution de type commentaire, facultatif
@@ -321,9 +335,7 @@
 			envoyer_cs: showNotifs ? envoyerCs : undefined,
 			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
-			//  `undefined` et non `[]` : le serveur distingue « n'en parle pas » de
-			//  « plus aucun périmètre », et seul le premier laisse le ticket tranquille.
-			perimetre_cible: sectionPerimetre && perimetre.length ? perimetre : undefined,
+			perimetre_cible: perimetreDeclare,
 		});
 	}
 </script>
@@ -358,16 +370,14 @@
 			badge={libelleStatutActuel}
 			idTitre="{idPrefixe}-workflow-titre"
 		>
-			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-workflow-titre">
-				<div class="evol-pastilles">
-					{#each statutOptions as opt (opt.value)}
-						<Pastille
-							active={(nouveauStatut || currentStatut) === opt.value}
-							on:click={() => (nouveauStatut = opt.value)}>{opt.label}</Pastille
-						>
-					{/each}
-				</div>
-			</div>
+			<!--  `WorkflowPastilles`, et non une rangée réécrite : elle l'était, à
+			      l'identique, pour un composant que le calendrier emploie déjà. -->
+			<WorkflowPastilles
+				options={statutOptions}
+				valeur={nouveauStatut || currentStatut}
+				idTitre="{idPrefixe}-workflow-titre"
+				on:choisir={(e) => (nouveauStatut = e.detail)}
+			/>
 		</SectionFormulaire>
 	{/if}
 
@@ -387,7 +397,7 @@
 		>
 			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
 				<PerimetrePicker bind:value={perimetre} titre="" />
-				<p class="evol-aide">
+				<p class="aide-bloc">
 					À renseigner seulement pour <strong>préciser</strong> le périmètre — par exemple quand on a
 					trouvé d'où vient la fuite. Laissé vide, le périmètre du ticket ne bouge pas.
 				</p>
@@ -492,11 +502,6 @@
 <style>
 	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
 	    (`Pastille.svelte`, v2.67.11) : ne vit ici que leur disposition. */
-	.evol-pastilles {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
 
 	/*  Le texte d'aide sous le sélecteur de périmètre. Défini ICI, avec le
 	    balisage qu'il habille : un style de page n'atteint pas un composant, et
@@ -506,12 +511,6 @@
 	    disent la même chose aux mêmes valeurs. Suivi à part : les fusionner
 	    demande de reprendre les trois appelants, pas d'en ajouter une quatrième
 	    en douce ici. */
-	.evol-aide {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		line-height: 1.5;
-		margin: 0.6rem 0 0;
-	}
 
 	/*  `.case-interne` est partie avec son balisage dans `SectionDiffusion.svelte`
 	    (#498), cible tactile de 44 px comprise : la garder ici en ferait une règle

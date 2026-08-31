@@ -272,6 +272,7 @@
 						currentStatut={ticket.statut}
 						avecPerimetre={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'perimetre')}
 						perimetreCourant={ticket.perimetre_cible ?? []}
+						entrees={evolutions}
 						showNotifs={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'diffusion')}
 						showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
 						showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}

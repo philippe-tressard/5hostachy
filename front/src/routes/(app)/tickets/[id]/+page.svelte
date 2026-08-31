@@ -310,6 +310,7 @@
 			<div class="card reply-form">
 				{#key repondreOuvert}
 					<EvolForm
+						entrees={evolutions}
 						idPrefixe="tk-msg"
 						titre="Répondre"
 						showPhotos={!newInterne}

@@ -117,7 +117,7 @@
 			{/each}
 		</select>
 	</div>
-	<p class="ah-aide">
+	<p class="aide-bloc">
 		Reprend le titre, le contenu, le périmètre et l'image de l'actualité. Tout reste modifiable
 		ci-dessous : l'affiche est indépendante de l'actualité d'origine.
 	</p>
@@ -157,7 +157,7 @@
 			>
 		{/each}
 	</div>
-	<p class="ah-aide">
+	<p class="aide-bloc">
 		{#if format === 'auto'}
 			Le plus petit format qui accueille le texte est retenu, pour occuper le moins de place
 			possible dans l'afficheur du hall. Sous l'A4, des pointillés de découpe sont tracés sur
@@ -182,7 +182,7 @@
 	      que ce champ bouge, sans que rien ne le signale. Elle ne dit donc plus que ce
 	      dont elle répond : à quoi sert le périmètre. L'envoi se lit là où il se
 	      décide — dans la section Diffusion, qui porte sa propre aide. -->
-	<p class="ah-aide">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
+	<p class="aide-bloc">Imprimé sur l'affiche : il dit où elle doit être posée.</p>
 </SectionFormulaire>
 
 <!--  6. Description — ici, le message affiché. -->
@@ -205,7 +205,7 @@
 		upload={onUpload}
 		on:change={onPhotosChange}
 	/>
-	<p class="ah-aide">
+	<p class="aide-bloc">
 		Facultatives, {maxPhotos} au maximum, placées en pied d'affiche : le texte de l'annonce reste l'élément
 		central. Une affiche avec photo ne descend jamais sous l'{formatMinPhotos}.
 	</p>
@@ -229,7 +229,7 @@
 		<input id="ah-diffusion" type="checkbox" bind:checked={envoyerCs} />
 		<span>Envoyer l'affiche au conseil syndical du périmètre, pour impression</span>
 	</label>
-	<p class="ah-aide">
+	<p class="aide-bloc">
 		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique
 		— cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
 	</p>
@@ -271,12 +271,6 @@
 	    raison — il aurait atteint TOUS les `<label>` du composant, y compris ceux
 	    d'un champ ajouté plus tard par quelqu'un qui ne lit pas ce bloc. C'est le
 	    défaut qui avait étiré les cases à cocher du sondage (16/08/2026). */
-	.ah-aide {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		margin: 0.35rem 0 0;
-		line-height: 1.5;
-	}
 	/*  `.ah-label-espace` a disparu : l'espacement entre sections est celui de
 	    `SectionFormulaire`, une seule fois pour tout le site. */
 	/*  Une case et son libellé. Le `width:auto` annule le `width:100%` des champs

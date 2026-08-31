@@ -49,6 +49,7 @@
 		"lint:charte": "node scripts/check-charte-recomposee.mjs",
 		"lint:confirmation": "node scripts/check-confirmation.mjs",
 		"lint:apercu": "node scripts/check-apercu-branche.mjs",
+		"lint:perimetre-herite": "node scripts/check-perimetre-herite.mjs",
 		"lint:version-servie": "node scripts/check-version-servie.mjs",
 		"lint:largeur-saisie": "node scripts/check-largeur-saisie.mjs",
 		"lint:each-key": "node scripts/check-each-key.mjs",

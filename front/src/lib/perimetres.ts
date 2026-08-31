@@ -382,3 +382,58 @@ export const ICONES_PERIMETRE: { nom: string; libelle: string }[] = [
 	{ nom: 'wrench', libelle: 'Entretien' },
 	{ nom: 'settings', libelle: 'Divers technique' },
 ];
+
+/**
+ * Le périmètre dont HÉRITE une nouvelle entrée d'historique.
+ *
+ * 🔴 Signalé à l'écran le 31/08/2026 :
+ *
+ * > *« quand on fait un commentaire sur un Ticket, par défaut le périmètre du
+ * > dernier commentaire (ou du ticket original si 1er commentaire) n'est pas
+ * > conservé »*
+ *
+ * Le formulaire proposait « Copropriété entière » sur un ticket situé « Bât. 1 ›
+ * Escaliers ». Il ne mentait pas sur ce qui allait s'écrire — le serveur ne
+ * touche à rien quand le champ est vide — mais il **montrait un choix par défaut
+ * qui n'était pas celui qui s'appliquerait**, ce qui revient au même pour qui
+ * lit l'écran.
+ *
+ * ⚠️ L'héritage remonte les entrées, il ne prend pas seulement le ticket : une
+ * entrée a pu resserrer le périmètre — « on a trouvé d'où vient la fuite » — et
+ * c'est ce resserrement, le plus récent, qui vaut ensuite. Prendre le ticket
+ * ferait revenir en arrière à chaque commentaire.
+ *
+ * ⚠️ Une entrée qui ne dit RIEN du périmètre ne compte pas : elle n'a rien
+ * précisé, donc elle n'a rien changé. C'est le sens de la valeur vide, et c'est
+ * ce qui permet à un courriel d'afficher « 🔹 … » sur une entrée pour dire
+ * qu'elle a précisé quelque chose.
+ *
+ * @param perimetreObjet le périmètre de l'objet porteur (ticket, événement…)
+ * @param entrees        l'historique, dans l'ordre CHRONOLOGIQUE
+ */
+export function perimetreHerite(
+	perimetreObjet: string[] | null | undefined,
+	entrees: { perimetre_cible?: string[] | null }[] = [],
+): string[] {
+	for (let i = entrees.length - 1; i >= 0; i--) {
+		const precise = entrees[i]?.perimetre_cible;
+		if (precise && precise.length) return [...precise];
+	}
+	return [...(perimetreObjet ?? [])];
+}
+
+/**
+ * Deux périmètres désignent-ils la même chose ? **L'ORDRE ne compte pas.**
+ *
+ * Le sélecteur mémorise l'ordre des clics ; deux mêmes zones cochées dans un
+ * autre ordre sont le même périmètre. C'est déjà la règle de `perimetreLabel`,
+ * qui trie avant de rendre — la comparer autrement ferait diverger l'affichage
+ * et la décision.
+ *
+ * ⚠️ Employé pour n'envoyer `perimetre_cible` que s'il DIFFÈRE de l'hérité : une
+ * comparaison sensible à l'ordre ferait déclarer un resserrement à chaque
+ * commentaire où l'on aurait décoché puis recoché la même zone.
+ */
+export function memePerimetre(a: string[], b: string[]): boolean {
+	return a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|');
+}
