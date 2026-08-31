@@ -996,6 +996,17 @@ jobs:
         working-directory: front
         run: npm run lint:perimetre-herite
 
+      - name: Le filtre d'états couvre ce que la liste affiche
+        # Il proposait les seuls états ACTIFS, au motif que « les clos ont leur
+        # section Historique ». Faux d'une semaine : un ticket clôturé reste sept
+        # jours dans la liste principale, et « Résolu » s'y affichait sans qu'aucun
+        # bouton puisse l'isoler (signalé à l'écran le 01/09/2026).
+        #
+        # Le défaut n'était pas la liste mais sa SOURCE : elle décrivait ce qu'on
+        # croyait afficher. La fonction est transpilée et EXÉCUTÉE ici.
+        working-directory: front
+        run: npm run lint:filtre-statuts
+
       - name: « Prénom NOM » concorde entre le front et l'API
         # La règle « le nom passe en capitales, le prénom garde sa casse » est
         # écrite DEUX fois — les contextes de construction sont ./api et ./front,

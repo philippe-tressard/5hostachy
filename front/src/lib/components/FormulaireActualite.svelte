@@ -48,23 +48,19 @@
   signale. Toute retouche ici se vérifie sur un envoi réel.
 -->
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
+	import { attacherAPublication } from '$lib/fichiers';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
-	import {
-		publications as pubsApi,
-		documents as docsApi,
-		ApiError,
-		type Publication,
-	} from '$lib/api';
+	import { publications as pubsApi, ApiError, type Publication } from '$lib/api';
 	import { perimetreDefautListe } from '$lib/utils';
 	import { richEmpty } from '$lib/publications';
-	import { ACCEPT_DOCUMENTS, nomFichier } from '$lib/fichiers';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { PUBLICATION } from '$lib/entites/publication';
@@ -128,44 +124,6 @@
 	//  ✅ EN CORRECTION, la publication existe : on ajoute et on retire à l'unité,
 	//  tout de suite. C'est ce qui a permis de rouvrir la section sans attendre
 	//  #390 — il n'a jamais été nécessaire de « remplacer la liste ».
-	let docsExistants: { id: number; titre?: string; fichier_nom?: string }[] = [];
-	let docsEnCours = false;
-
-	onMount(async () => {
-		if (!publication) return;
-		try {
-			docsExistants = await docsApi.listByPublication(publication.id);
-		} catch {
-			/* la section reste vide plutôt que de bloquer la correction */
-		}
-	});
-
-	async function ajouterDocuments(e: Event) {
-		const input = e.target as HTMLInputElement;
-		if (!publication || !input.files?.length) return;
-		docsEnCours = true;
-		try {
-			for (const f of Array.from(input.files)) {
-				const doc = await docsApi.uploadForPublication(f.name, publication.id, f);
-				docsExistants = [...docsExistants, doc];
-			}
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Téléversement impossible');
-		} finally {
-			docsEnCours = false;
-			input.value = '';
-		}
-	}
-
-	async function retirerDocument(id: number) {
-		if (!confirm('Retirer ce document de la publication ?')) return;
-		try {
-			await docsApi.delete(id);
-			docsExistants = docsExistants.filter((d) => d.id !== id);
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Suppression impossible');
-		}
-	}
 
 	//  ── 9. Diffusion ────────────────────────────────────────────────────────
 	//  ✅ Rouverte à l'édition (18/08/2026). Les cases reprennent les valeurs
@@ -174,6 +132,19 @@
 	let partagerWhatsapp = publication?.partager_whatsapp ?? false;
 	let envoyerSyndic = publication?.envoyer_syndic ?? false;
 	let envoyerCs = publication?.envoyer_cs ?? false;
+	//  « Envoyer une copie à … » — la case vit dans `CanauxNotification`, qui
+	//  porte la règle et son pourquoi. Elle s'affichait ici sans être lue (31/08).
+	let envoyerAuteur = false;
+
+	//  Les quatre canaux, écrits UNE fois pour les trois charges utiles de cet
+	//  écran — la règle et son pourquoi : `SectionDiffusion.svelte`.
+	$: canaux = {
+		partager_whatsapp: partagerWhatsapp,
+		envoyer_syndic: envoyerSyndic,
+		envoyer_cs: envoyerCs,
+		envoyer_auteur: envoyerAuteur,
+	};
+
 	let annonceHall = publication?.annonce_hall ?? false;
 
 	//  ⚠️ La règle « Confidentiel interdit l'affiche de hall » enjambe les sections
@@ -205,9 +176,7 @@
 			urgente,
 			perimetre_cible: perimetreCible,
 			photos_urls: photos,
-			envoyer_syndic: envoyerSyndic,
-			envoyer_cs: envoyerCs,
-			partager_whatsapp: partagerWhatsapp,
+			...canaux,
 		});
 
 	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
@@ -264,12 +233,7 @@
 					perimetre_cible: perimetreCible,
 					public_cible: publicCible,
 					photos_urls: photos,
-					//  Les canaux partent aussi : le serveur n'envoie que sur la
-					//  TRANSITION décoché → coché, donc réenregistrer sans y toucher
-					//  ne rejoue rien.
-					partager_whatsapp: partagerWhatsapp,
-					envoyer_syndic: envoyerSyndic,
-					envoyer_cs: envoyerCs,
+					...canaux,
 					annonce_hall: annonceHall,
 				});
 				toast('success', 'Publication mise à jour');
@@ -291,20 +255,15 @@
 				public_cible: publicCible,
 				brouillon: publierApresDocuments ? true : brouillon,
 				photos_urls: photos,
-				partager_whatsapp: partagerWhatsapp,
-				envoyer_syndic: envoyerSyndic,
-				envoyer_cs: envoyerCs,
+				...canaux,
 				annonce_hall: annonceHall,
 				confidentiel,
 			});
-			if (pendingFiles.length > 0) {
-				for (const f of pendingFiles) {
-					try {
-						await docsApi.uploadForPublication(f.name, pub.id, f);
-					} catch {
-						/* ignoré */
-					}
-				}
+			//  Un échec ici ne doit pas perdre la publication déjà créée.
+			try {
+				await attacherAPublication(pub.id, pendingFiles);
+			} catch {
+				/* la publication existe : le document se rattrape depuis l'écran */
 			}
 			if (publierApresDocuments) {
 				pub = await pubsApi.update(pub.id, { brouillon: false });
@@ -397,6 +356,8 @@
 				bind:whatsapp={partagerWhatsapp}
 				bind:syndic={envoyerSyndic}
 				bind:cs={envoyerCs}
+				bind:auteur={envoyerAuteur}
+				auteurNom={publication?.auteur_nom ?? ''}
 				aideWhatsapp={confidentiel
 					? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
 					: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}
@@ -407,32 +368,9 @@
 			      la SECTION, elle — son rang, son intitulé, sa séparation — reste
 			      celle de `ChampsCommuns`. -->
 				<svelte:fragment slot="documents">
-					{#if docsExistants.length}
-						<ul class="docs-liste">
-							{#each docsExistants as doc (doc.id)}
-								<li>
-									<span class="docs-nom">📎 {doc.titre || nomFichier(doc.fichier_nom ?? '')}</span>
-									<button
-										type="button"
-										class="btn-icon-danger"
-										aria-label="Retirer ce document"
-										title="Retirer ce document"
-										on:click={() => retirerDocument(doc.id)}>🗑️</button
-									>
-								</li>
-							{/each}
-						</ul>
+					{#if publication}
+						<DocumentsPublication publicationId={publication.id} />
 					{/if}
-					<label class="btn btn-outline btn-sm docs-ajout">
-						{docsEnCours ? 'Téléversement…' : '+ Ajouter un document'}
-						<input
-							type="file"
-							multiple
-							accept={ACCEPT_DOCUMENTS}
-							disabled={docsEnCours}
-							on:change={ajouterDocuments}
-						/>
-					</label>
 				</svelte:fragment>
 
 				<!--  🔴 Les canaux appartiennent à l'OBJET, plus à cet écran (#498).
@@ -470,35 +408,4 @@
 </svelte:component>
 
 <style>
-	/*  La liste des documents déjà joints, en correction. Elle porte son style ici,
-	    avec le balisage qui l'utilise — un style laissé chez le parent n'atteint pas
-	    le balisage d'un enfant (v2.67.11). */
-	.docs-liste {
-		list-style: none;
-		margin: 0 0 0.6rem;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-	}
-	.docs-liste li {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.85rem;
-	}
-	.docs-nom {
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.docs-ajout {
-		display: inline-flex;
-		cursor: pointer;
-	}
-	.docs-ajout input[type='file'] {
-		display: none;
-	}
 </style>

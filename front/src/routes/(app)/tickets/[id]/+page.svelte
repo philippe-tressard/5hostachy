@@ -313,6 +313,7 @@
 					<EvolForm
 						entrees={evolutions}
 						idPrefixe="tk-msg"
+						auteurNom={ticket.auteur_nom ?? ''}
 						titre="Répondre"
 						showPhotos={!newInterne}
 						showDocuments={!newInterne}
@@ -334,6 +335,7 @@
 	      sens — le crayon manquait à la liste, la corbeille manquait ici. -->
 	<HistoriqueTicket
 		{ticketId}
+		auteurNom={ticket?.auteur_nom ?? ''}
 		statutCourant={ticket?.statut ?? ''}
 		perimetreCourant={ticket?.perimetre_cible ?? []}
 		{evolutions}

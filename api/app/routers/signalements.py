@@ -26,6 +26,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.communaute import exiger_acces
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
 
@@ -157,8 +158,8 @@ def _enrich(sig: Signalement, session: Session) -> dict:
         "motif": sig.motif,
         "statut": sig.statut,
         "cree_le": sig.cree_le,
-        "signale_par": f"{signaleur.prenom} {signaleur.nom}" if signaleur else "Inconnu",
-        "auteur_cible": f"{auteur.prenom} {auteur.nom}" if auteur else None,
+        "signale_par": nom_affiche(signaleur.prenom, signaleur.nom) if signaleur else "Inconnu",
+        "auteur_cible": nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
         "auteur_cible_id": sig.auteur_cible_id,
     }
 

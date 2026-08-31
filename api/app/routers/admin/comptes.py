@@ -23,6 +23,7 @@ from app.models.core import (
 from app.schemas import UserRead
 from app.utils.comptes import comptes_en_attente as lister_comptes_en_attente, marquer_decide
 from typing import Any
+from app.utils.noms import nom_affiche
 
 router = APIRouter()
 
@@ -151,7 +152,7 @@ def traiter_compte(
             aide_result = {"aide_trouve": False, "lots": 0, "tc": 0, "vigik": 0, "delegation": False}
             if aide:
                 aide_result["aide_trouve"] = True
-                aide_result["aide_nom"] = f"{aide.prenom} {aide.nom}"
+                aide_result["aide_nom"] = nom_affiche(aide.prenom, aide.nom)
                 # Copier les lots
                 aide_lots = session.exec(select(UserLot).where(UserLot.user_id == aide.id, UserLot.actif == True)).all()
                 for ul in aide_lots:

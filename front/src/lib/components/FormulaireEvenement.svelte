@@ -93,6 +93,10 @@
 	//  fournie, la modale sait s'ouvrir — et personne ne l'ouvre. C'est l'erreur
 	//  du 31/08/2026, constatée par l'utilisateur en RECEVANT le mail.
 	let refDiffusion: any = null;
+	//  « Envoyer une copie à … » — la case vit dans `CanauxNotification`, qui
+	//  porte la règle et son pourquoi. Elle s'affichait ici sans être lue (31/08).
+	let envoyerAuteur = false;
+
 	$: aUneDiffusion = form.envoyer_syndic || form.envoyer_cs || form.partager_whatsapp;
 
 	/**  Le geste de soumission : aperçu d'abord si un canal est coché.
@@ -123,6 +127,7 @@
 			fichiers_urls: fichiersUrls,
 			envoyer_syndic: form.envoyer_syndic,
 			envoyer_cs: form.envoyer_cs,
+			envoyer_auteur: envoyerAuteur,
 			partager_whatsapp: form.partager_whatsapp,
 		});
 </script>
@@ -274,6 +279,8 @@
 				bind:whatsapp={form.partager_whatsapp}
 				bind:syndic={form.envoyer_syndic}
 				bind:cs={form.envoyer_cs}
+				bind:auteur={envoyerAuteur}
+				auteurNom={form?.auteur_nom ?? ''}
 			>
 				<svelte:fragment slot="diffusion">
 					<div class="field champ-large">

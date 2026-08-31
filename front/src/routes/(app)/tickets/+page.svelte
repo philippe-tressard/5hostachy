@@ -12,7 +12,7 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import { CATEGORIES_TICKET, STATUTS_TICKET_FILTRE, estTicketClos } from '$lib/tickets';
+	import { CATEGORIES_TICKET, statutsPresents, estTicketClos } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -87,8 +87,17 @@
 		return Date.now() - new Date(t.mis_a_jour_le ?? t.cree_le).getTime() > HISTORIQUE_DELAI_MS;
 	}
 
-	$: filtered = ticketList.filter((t) => {
-		if (estArchive(t)) return false;
+	//  Ce que la liste principale peut montrer, AVANT le filtre d'état : c'est
+	//  cet ensemble-là qui donne les boutons du filtre. Le calculer après
+	//  n'en laisserait qu'un seul, celui qu'on vient de choisir.
+	$: affichables = ticketList.filter((t) => !estArchive(t));
+	$: optionsStatut = statutsPresents(affichables);
+	//  ⚠️ Un filtre retenu sur un état qui vient de disparaître de la liste — le
+	//  dernier ticket résolu bascule dans l'Historique — laisserait un écran vide
+	//  ET plus aucun bouton pour en sortir. On retombe alors sur « Tous ».
+	$: if (filterStatut && !optionsStatut.some((o) => o.value === filterStatut)) filterStatut = '';
+
+	$: filtered = affichables.filter((t) => {
 		if (filterStatut && t.statut !== filterStatut) return false;
 		if (filterCat && t.categorie !== filterCat) return false;
 		return true;
@@ -312,7 +321,7 @@
 			class:btn-primary={filterStatut === ''}
 			on:click={() => (filterStatut = '')}>Tous</button
 		>
-		{#each STATUTS_TICKET_FILTRE as s (s.value)}
+		{#each optionsStatut as s (s.value)}
 			<button
 				class="btn btn-sm"
 				class:btn-primary={filterStatut === s.value}

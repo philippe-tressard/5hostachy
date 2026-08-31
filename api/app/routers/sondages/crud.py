@@ -202,6 +202,7 @@ def create_sondage(
 
         if body.envoyer_syndic or body.envoyer_cs:
             from app.utils.email import send_email_group
+            from app.utils.copie_auteur import copie_demandee
             from app.utils.destinataires import destinataires_syndic_cs
 
             destinataires = destinataires_syndic_cs(
@@ -237,6 +238,13 @@ def create_sondage(
                     send_email_group, code="publication_syndic",
                     to_recipients=destinataires, context=ctx,
                     session=session,
+                    #  La copie à l'auteur du sondage — règle commune dans
+                    #  `app/utils/copie_auteur.py`. Elle n'existait pas ici,
+                    #  alors que la case s'affichait sur cet écran.
+                    bcc=copie_demandee(
+                        session, s.auteur_id, (e for _, e in destinataires),
+                        demandee=bool(body.envoyer_auteur),
+                    ),
                 )
 
     return s

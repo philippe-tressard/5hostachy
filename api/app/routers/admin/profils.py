@@ -18,6 +18,7 @@ from app.models.core import (
     Utilisateur,
 )
 from datetime import datetime
+from app.utils.noms import nom_affiche
 
 router = APIRouter()
 
@@ -40,7 +41,7 @@ def list_demandes_profil(
         utilisateur = session.get(Utilisateur, d.utilisateur_id)
         bat = session.get(Batiment, d.batiment_id_souhaite) if d.batiment_id_souhaite else None
         item = d.model_dump()
-        item["utilisateur_nom"] = f"{utilisateur.prenom} {utilisateur.nom}" if utilisateur else "?"
+        item["utilisateur_nom"] = nom_affiche(utilisateur.prenom, utilisateur.nom) if utilisateur else "?"
         item["utilisateur_email"] = utilisateur.email if utilisateur else None
         item["statut_actuel"] = utilisateur.statut.value if utilisateur else None
         item["batiment_actuel"] = (f"Bât. {session.get(Batiment, utilisateur.batiment_id).numero}"

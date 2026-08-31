@@ -147,3 +147,36 @@ export function apercuAvecRepli(
 	}
 	return propres;
 }
+
+/**
+ * Attacher des fichiers à une publication, un par un, dans l'ordre.
+ *
+ * Les deux chemins de `FormulaireActualite` faisaient la même boucle : celui qui
+ * ajoute des documents à une publication existante, et celui qui téléverse ce
+ * qui avait été retenu pendant la création (la publication n'ayant pas encore
+ * d'identifiant au moment du choix). Extraite le 31/08/2026, sur refus de
+ * modularité — et le contrôle désignait bien une duplication, pas une longueur.
+ *
+ * ⚠️ **Séquentiel, et c'est voulu** : l'API attribue son ordre d'affichage à
+ * l'arrivée. Un `Promise.all` les remonterait dans un ordre imprévisible.
+ *
+ * Elle **laisse remonter** l'erreur : chaque appelant décide s'il la signale ou
+ * s'il poursuit — ils n'en font pas la même chose, et c'est légitime.
+ */
+export interface DocumentAttache {
+	id: number;
+	titre?: string;
+	fichier_nom?: string;
+}
+
+export async function attacherAPublication(
+	publicationId: number,
+	fichiers: Iterable<File>,
+): Promise<DocumentAttache[]> {
+	const { documents } = await import('$lib/api');
+	const crees: DocumentAttache[] = [];
+	for (const f of fichiers) {
+		crees.push(await documents.uploadForPublication(f.name, publicationId, f));
+	}
+	return crees;
+}

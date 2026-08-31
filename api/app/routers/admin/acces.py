@@ -21,6 +21,7 @@ from app.models.core import (
 )
 from datetime import datetime
 from typing import Any
+from app.utils.noms import nom_affiche
 
 router = APIRouter()
 
@@ -117,7 +118,7 @@ def audit_user_lots(
         result.append({
             "user_lot_id": ul.id,
             "user_id": ul.user_id,
-            "user_nom": f"{user.prenom} {user.nom}" if user else "?",
+            "user_nom": nom_affiche(user.prenom, user.nom) if user else "?",
             "user_statut": user.statut.value if user and hasattr(user.statut, "value") else str(user.statut) if user else "?",
             "lot_id": ul.lot_id,
             "lot_numero": lot.numero if lot else "?",

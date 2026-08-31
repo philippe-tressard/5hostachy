@@ -24,6 +24,7 @@ from app.models.core import Utilisateur
 #  différents pour AFUL. Importés sous leur vrai nom et non ré-exportés : un
 #  alias qui délègue au helper partagé masque son origine (socle 02 §6).
 from app.utils.perimetres import parse_json_perimetres, parse_perimetres
+from app.utils.noms import nom_affiche
 
 
 @dataclass(frozen=True)
@@ -76,7 +77,7 @@ def auteur_nom(session: Session, uid: Optional[int]) -> Optional[str]:
     if not uid:
         return None
     u = session.get(Utilisateur, uid)
-    return f"{u.prenom} {u.nom}" if u else None
+    return nom_affiche(u.prenom, u.nom) if u else None
 
 
 def strip_html(text: Optional[str], max_len: int = 120) -> Optional[str]:

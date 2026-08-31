@@ -87,13 +87,7 @@
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
-	import {
-		memePerimetre,
-		perimetreHerite,
-		perimetreLabel,
-		perimetreLabelUn,
-		perimetreParDefaut,
-	} from '$lib/perimetres';
+	import { perimetreEntree, perimetreHerite } from '$lib/perimetres';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	/** Préfixe des `id` des champs. Plusieurs formulaires d'évolution coexistent à
@@ -183,6 +177,10 @@
 		  }) => Promise<ApercuDiffusion>)
 		| null = null;
 	/** Contrôlé par le parent : est-ce que la sauvegarde API est en cours */
+	/**  Le nom de l'auteur de l'OBJET commenté, jamais celui du commentaire —
+	 *   la règle vit dans `CanauxNotification.svelte`. */
+	export let auteurNom = '';
+
 	export let saving = false;
 
 	// ── Events ────────────────────────────────────────────────────────────────
@@ -256,17 +254,15 @@
 	//  n'affiche le badge que sur le périmètre par défaut, parce que le sélecteur
 	//  montre déjà la sélection ; ici le sélecteur part vide, donc le badge est le
 	//  SEUL endroit où l'on lit le périmètre actuel — il est toujours affiché.
-	$: perimetreDepart = perimetreHerite(perimetreCourant, entrees);
-	//  Ce que l’entrée DÉCLARE : rien si l’on n’a pas touché à l’hérité. C’est ce
-	//  vide qui permet au courriel d’afficher « 🔹 … » sur les seules entrées qui
-	//  ont précisé quelque chose.
-	$: perimetreDeclare =
-		sectionPerimetre && perimetre.length && !memePerimetre(perimetre, perimetreDepart)
-			? perimetre
-			: undefined;
-	$: libellePerimetreActuel = perimetreDepart.length
-		? perimetreLabel(perimetreDepart)
-		: perimetreLabelUn(perimetreParDefaut() ?? '');
+	//
+	//  Le calcul lui-même vit dans `$lib/perimetres` : il parle de périmètre, pas
+	//  de formulaire (extrait le 31/08/2026, sur refus de modularité).
+	//  ⚠️ Des affectations plutôt qu'une déstructuration réactive : ESLint 10
+	//  plante sur `$: ({a, b} = f())` (@typescript-eslint/no-unused-vars). Le
+	//  contournement est ici, pas dans une règle désactivée.
+	$: entreePerimetre = perimetreEntree(perimetreCourant, entrees, perimetre, sectionPerimetre);
+	$: perimetreDeclare = entreePerimetre.declare;
+	$: libellePerimetreActuel = entreePerimetre.libelleActuel;
 
 	//  Le commentaire est REQUIS pour une évolution de type commentaire, facultatif
 	//  quand il accompagne un changement d'état. Pas de mention « (optionnel) » :
@@ -476,6 +472,7 @@
 		bind:syndic={envoyerSyndic}
 		bind:cs={envoyerCs}
 		bind:auteur={envoyerAuteur}
+		{auteurNom}
 		avecEmailExterne={showEmail}
 		bind:emailExterne
 		{avecInterne}

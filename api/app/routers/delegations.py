@@ -9,6 +9,7 @@ from sqlmodel import Session, select, or_
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Delegation, RoleUtilisateur, StatutDelegation, Utilisateur
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/delegations", tags=["délégations aidant"])
 
@@ -44,7 +45,7 @@ class DelegationUpdate(BaseModel):
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _user_display(u: Utilisateur) -> str:
-    return f"{u.prenom} {u.nom}"
+    return nom_affiche(u.prenom, u.nom)
 
 
 def _to_read(d: Delegation, session: Session) -> dict:

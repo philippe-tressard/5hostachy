@@ -21,6 +21,7 @@ from app.utils.liens import lien_element
 from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
 from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import evenement_visible
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -44,6 +45,11 @@ class EvenementCreate(BaseModel):
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
+    #  « Envoyer une copie à … » — la 4e case de la Diffusion (31/08/2026).
+    #  Elle s'affichait sur cet écran sans être lue nulle part. Le destinataire
+    #  est l'auteur de l'OBJET, pas celui qui écrit : le CS qui reprend un
+    #  ticket décide alors de notifier le résident qui l'a ouvert.
+    envoyer_auteur: Optional[bool] = None
     # Pièces jointes déjà téléversées via POST /uploads/fichier. Les fournir dès
     # la création est ce qui permet à l'e-mail syndic/CS de partir avec.
     photos_urls: list[str] = []
@@ -122,7 +128,7 @@ def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     data = EvenementRead.model_validate(brut)
     data.evolutions = _evolutions_de(ev.id, session)
     auteur = session.get(Utilisateur, ev.auteur_id)
-    data.auteur_nom = f"{auteur.prenom} {auteur.nom}" if auteur else "?"
+    data.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
     if ev.prestataire_id:
         prest = session.get(Prestataire, ev.prestataire_id)
         data.prestataire_nom = prest.nom if prest else None
@@ -213,6 +219,7 @@ def create_evenement(
         whatsapp=bool(body.partager_whatsapp),
         syndic=bool(body.envoyer_syndic),
         cs=bool(body.envoyer_cs),
+        auteur=bool(getattr(body, "envoyer_auteur", False)),
     )
 
     return _ev_to_read(ev, session)

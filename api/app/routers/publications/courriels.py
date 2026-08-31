@@ -18,6 +18,7 @@ from app.utils.dates_fr import datetime_longue_paris as _fmt_paris
 from app.utils.fichiers import chemins_locaux
 from app.utils.perimetres import batiments_cibles, parse_json_perimetres
 from app.utils.photos import parse_photos
+from app.utils.noms import nom_affiche
 
 
 def _batiments_de(pub) -> set[int]:
@@ -77,7 +78,7 @@ def contexte_publication_syndic(
                 continue
             auteur_e = session.get(Utilisateur, e.auteur_id)
             evols_ctx.append({
-                "auteur_nom": f"{auteur_e.prenom} {auteur_e.nom}" if auteur_e else "?",
+                "auteur_nom": nom_affiche(auteur_e.prenom, auteur_e.nom) if auteur_e else "?",
                 "date": _fmt_paris(e.cree_le),
                 "contenu": e.contenu,
             })
@@ -122,19 +123,16 @@ def _envoyer_email_syndic_publication(
     pub: Publication, user: Utilisateur, background_tasks: BackgroundTasks, session: Session,
     *, syndic: bool = True, cs: bool = False,
     commentaire: str | None = None, fichiers_urls: list[str] | None = None,
+    auteur: bool = False,
 ):
     """Envoie un email au syndic et/ou CS avec la publication en corps."""
+    from app.utils.copie_auteur import copie_demandee
     from app.utils.destinataires import destinataires_syndic_cs
     from app.utils.email import send_email_group
 
     destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
     if not destinataires:
         return
-    #  Les adresses déjà servies — l'auteur ne doit pas se recevoir deux fois.
-    #  Le jeu était construit au fil de la boucle qui vivait ici ; il se déduit
-    #  maintenant du résultat, ce qui le garde vrai si la règle de
-    #  déduplication change dans sa source.
-    seen_emails = {email.lower() for _, email in destinataires}
 
     #  🔴 LA MÊME fonction que l'aperçu. Ne pas remettre la construction ici :
     #  c'est ce qui a fait qu'une actualité est partie sans aperçu possible
@@ -143,9 +141,22 @@ def _envoyer_email_syndic_publication(
         pub, user, session, commentaire=commentaire, fichiers_urls=fichiers_urls
     )
 
-    # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
-    # Pas de doublon si l'auteur est déjà destinataire principal (syndic/CS).
-    auteur_bcc = [user.email] if user.email.lower() not in seen_emails else None
+    #  🔴 LA COPIE EST DEMANDÉE, et elle va à l'auteur de la PUBLICATION.
+    #
+    #  Deux corrections d'un coup, le 31/08/2026 :
+    #  • elle partait **d'office** ici, alors que les tickets la demandaient
+    #    déjà — le formulaire annonçait trois destinataires et en servait
+    #    quatre, sur l'écran même où la case existait sans être lue ;
+    #  • elle visait `user`, c'est-à-dire qui écrit. Sur un commentaire repris
+    #    par le CS, ce n'est pas la bonne personne.
+    #
+    #  La règle et sa déduplication : `app/utils/copie_auteur.py`.
+    auteur_bcc = copie_demandee(
+        session,
+        getattr(pub, "auteur_id", None),
+        (email for _, email in destinataires),
+        demandee=auteur,
+    )
     background_tasks.add_task(
         send_email_group,
         code="publication_syndic",
@@ -190,7 +201,7 @@ def _envoyer_email_externe_publication(
             continue
         auteur_e = session.get(Utilisateur, e.auteur_id)
         evol_ctx.append({
-            "auteur_nom": f"{auteur_e.prenom} {auteur_e.nom}" if auteur_e else "?",
+            "auteur_nom": nom_affiche(auteur_e.prenom, auteur_e.nom) if auteur_e else "?",
             "date": _fmt_paris(e.cree_le),
             "contenu": e.contenu,
         })

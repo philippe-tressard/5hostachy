@@ -37,6 +37,11 @@ class SondageCreate(BaseModel):
     partager_whatsapp: bool = False
     envoyer_syndic: bool = False
     envoyer_cs: bool = False
+    #  « Envoyer une copie à … » — la 4e case de la Diffusion (31/08/2026).
+    #  Elle s'affichait sur cet écran sans être lue nulle part. Un sondage ne
+    #  se crée que par son auteur : ici les deux personnes coïncident toujours,
+    #  et c'est le seul des quatre écrans où c'est vrai.
+    envoyer_auteur: bool = False
 
 
 class SondageRead(BaseModel):

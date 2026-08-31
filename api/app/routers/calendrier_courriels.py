@@ -169,6 +169,10 @@ def notifier_canaux(
     whatsapp: bool = False,
     syndic: bool = False,
     cs: bool = False,
+    #  « Envoyer une copie à … » — la 4e case de la Diffusion. Elle s'affichait
+    #  sur cet écran et n'était lue nulle part : la cocher n'avait aucun effet
+    #  (31/08/2026). Voir `app/utils/copie_auteur.py`.
+    auteur: bool = False,
     suivi: dict | None = None,
     fichiers_suivi: list[str] | None = None,
 ) -> None:
@@ -213,6 +217,7 @@ def notifier_canaux(
         )
 
     if syndic or cs:
+        from app.utils.copie_auteur import copie_demandee
         from app.utils.destinataires import destinataires_syndic_cs
         from app.utils.email import send_email_group
 
@@ -225,4 +230,14 @@ def notifier_canaux(
                 # Cet envoi ne transportait AUCUNE pièce jointe : une affaire
                 # créée avec son devis notifiait le syndic sans le devis.
                 attachments=pieces_jointes or None,
+                #  🔴 La copie à l'auteur de l'ÉVÉNEMENT. Elle n'existait PAS ici,
+                #  alors que la case s'affichait sur cet écran comme sur les
+                #  autres : une case cochée, et rien. Règle commune dans
+                #  `app/utils/copie_auteur.py` (31/08/2026).
+                bcc=copie_demandee(
+                    session,
+                    getattr(ev, "auteur_id", None),
+                    (e for _, e in destinataires),
+                    demandee=auteur,
+                ),
             )

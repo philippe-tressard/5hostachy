@@ -8,10 +8,10 @@ syndic n'est pas une information réservée.
 from sqlmodel import select
 
 from app.models.core import MembreCS, MembreSyndic
-from app.utils.noms import nom_affiche
 
 from .commun import ContexteFlux
 from .schemas import FluxItem
+from app.utils.noms import nom_affiche
 
 
 def _carte_membre(ident: str, membre, detail: str, badge: str, meta: dict) -> FluxItem:

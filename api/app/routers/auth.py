@@ -22,6 +22,7 @@ from app.models.core import (Utilisateur, RefreshToken, EmailVerificationToken, 
 from app.schemas import UserCreate, UserRead, LoginRequest
 from app.utils.limiter import limiter
 from app.utils.mots_de_passe import verifier_robustesse as _check_password_strength
+from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -280,7 +281,7 @@ def _build_user_read(user: Utilisateur, session: Session) -> UserRead:
             delegations_aidant.append({
                 "delegation_id": d.id,
                 "mandant_id": mandant.id,
-                "mandant_nom": f"{mandant.prenom} {mandant.nom}",
+                "mandant_nom": nom_affiche(mandant.prenom, mandant.nom),
             })
     return UserRead.from_orm_with_roles(user, batiment_nom=batiment_nom, delegations_aidant=delegations_aidant)
 

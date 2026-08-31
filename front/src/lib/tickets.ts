@@ -72,13 +72,34 @@ export const STATUTS_TICKET_ACTIFS: readonly string[] = STATUTS_TICKET.map((s) =
 	(v) => !STATUTS_TICKET_CLOS.includes(v),
 );
 
-//: Le filtre rapide des deux listes (Tickets, Espace CS) ne propose QUE les états
-//: actifs : « Tous » couvre le reste, et les clos ont leur section Historique.
-//: C'est un sous-ensemble volontaire — mais il tire sa pastille et son libellé
-//: d'ici, sinon c'est une liste de plus qui se réécrit à la main.
-export const STATUTS_TICKET_FILTRE = STATUT_TICKET_OPTIONS.filter((o) =>
-	STATUTS_TICKET_ACTIFS.includes(o.value),
-);
+//: 🔴 LE FILTRE SE DÉDUIT DE LA LISTE, il ne se choisit plus.
+//:
+//: Il proposait les seuls états ACTIFS, au motif que « les clos ont leur section
+//: Historique ». C'était faux d'une semaine : un ticket clôturé reste **sept
+//: jours** dans la liste principale (délai de grâce). Un ticket « Résolu » hier
+//: s'affiche donc, et aucun bouton ne permettait de l'isoler — signalé à l'écran
+//: le 01/09/2026 : *« le filtre ne comprend pas tous les états du workflow
+//: pouvant être affichés sur la page (notamment résolu ?) »*.
+//:
+//: ⚠️ Le défaut n'était pas la liste, c'était sa SOURCE : elle décrivait ce
+//: qu'on croyait afficher, pas ce qui s'affiche. Elle se calcule maintenant sur
+//: les tickets réellement rendus — ce qui couvre aussi `fermé`, l'état
+//: historique qu'aucune liste écrite à la main n'aurait pensé à inclure.
+//:
+//: L'ordre reste celui du workflow, jamais celui d'apparition : un filtre dont
+//: les boutons bougent d'un chargement à l'autre n'est pas un filtre.
+export function statutsPresents(
+	tickets: readonly { statut: string }[],
+): { value: string; label: string }[] {
+	const presents = new Set(tickets.map((t) => t.statut));
+	const connus = STATUT_TICKET_OPTIONS.filter((o) => presents.has(o.value));
+	//: Les états historiques (`fermé`) n'ont pas d'emoji : ils portent leur
+	//: libellé seul, ce qui les distingue sans les mettre en avant.
+	const historiques = Object.keys(STATUTS_TICKET_HISTORIQUES)
+		.filter((v) => presents.has(v))
+		.map((v) => ({ value: v, label: STATUT_TICKET_LABELS[v] }));
+	return [...connus, ...historiques];
+}
 
 //  ── Les catégories — même histoire que les statuts, un cran plus tard ────────
 //

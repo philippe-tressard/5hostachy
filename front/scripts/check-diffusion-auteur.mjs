@@ -71,10 +71,39 @@ if (tous.length < 50) {
 
 const lient = [];
 const fautifs = [];
+//  🔴 LE TROU QUE CE CONTRÔLE N'A PAS VU (31/08/2026).
+//
+//  Il ne regardait QUE les écrans qui lient `bind:auteur`, et il écartait les
+//  relais. Or c'est le relais qui AFFICHE la case : un écran pouvait employer
+//  `ChampsCommuns avecDiffusion` sans jamais lier `auteur`, et la case
+//  s'affichait alors, se cochait, et n'allait nulle part — ni dans la charge
+//  utile, ni dans un champ du serveur.
+//
+//  C'était vrai de CINQ écrans — actualité, sondage, événement… — pendant que ce
+//  contrôle annonçait « 6 écrans lient la case, et tous l'envoient ». Il disait
+//  vrai, et il mesurait la mauvaise chose : *un contrôle qui ne regarde que ce
+//  qui est branché ne voit jamais ce qui ne l'est pas.*
+//
+//  Deux vérifications désormais : qui LIE la case l'envoie, et qui l'AFFICHE la lie.
+const orphelins = [];
 for (const chemin of tous) {
 	const rel = relative(SOURCE, chemin).split(sep).join('/');
-	if (RELAIS.includes(rel)) continue;
 	const source = sansCommentaires(readFileSync(chemin, 'utf8'));
+	if (RELAIS.includes(rel)) continue;
+	//  ⚠️ La case n'apparaît QUE si les canaux sont rendus. `ChampsCommuns` les
+	//  rend par défaut (`avecCanaux = true`), et un écran peut les couper
+	//  explicitement — c'est le cas de l'annonce, dont la Diffusion ne porte
+	//  que l'affiche de hall. La couper est une décision légitime ; ne pas lier
+	//  la case tout en la montrant ne l'est pas.
+	//
+	//  🔴 Sans cette nuance le contrôle criait sur du légitime — et un contrôle
+	//  qui crie sur du légitime finit désarmé (leçon de C16).
+	const montreLesCanaux =
+		/\bavecDiffusion\b|<SectionDiffusion|<CanauxNotification/.test(source) &&
+		!/avecCanaux={false}/.test(source);
+	if (montreLesCanaux && !/bind:auteur\b/.test(source)) {
+		orphelins.push(rel);
+	}
 	if (!/bind:auteur\b/.test(source)) continue;
 	lient.push(rel);
 	if (!/envoyer_auteur/.test(source)) {
@@ -93,6 +122,18 @@ if (lient.length === 0) {
 	process.exit(1);
 }
 
+if (orphelins.length) {
+	console.error('\n✗ Écran(s) qui AFFICHENT la case sans jamais la lire :\n');
+	for (const f of orphelins) console.error(`   ${f}`);
+	console.error(
+		'\n  🔴 La case s’affiche, se coche, et ne va nulle part. C’est le défaut' +
+			'\n  du 31/08/2026 : cinq écrans dans cet état, et ce contrôle vert.' +
+			'\n\n  Lier `bind:auteur={…}`, passer `auteurNom`, mettre `envoyer_auteur`' +
+			'\n  dans la charge utile — et vérifier que le SERVEUR le consomme.\n',
+	);
+	process.exit(1);
+}
+
 if (fautifs.length) {
 	console.error('\n✗ Case « M’envoyer une copie » liée mais JAMAIS envoyée :\n');
 	for (const f of fautifs) console.error(`   ${f}`);
@@ -106,6 +147,6 @@ if (fautifs.length) {
 }
 
 console.log(
-	`✓ Diffusion : ${lient.length} écran(s) lient « M’envoyer une copie », et tous ` +
-		`l’envoient (${tous.length} composants vérifiés).`,
+	`✓ Diffusion : ${lient.length} écran(s) lient « Envoyer une copie à … », tous ` +
+		`l’envoient, et aucun ne l’affiche sans la lire (${tous.length} composants vérifiés).`,
 );
