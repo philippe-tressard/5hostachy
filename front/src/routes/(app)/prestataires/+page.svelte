@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
@@ -1162,8 +1163,9 @@
 								{#if p.contacts && p.contacts.length > 0}
 									{#each p.contacts as c}
 										<span class="prest-contact">
-											📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {c.prenom ?? ''}
-												{c.nom ?? ''}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
+											📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
+													c,
+												)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
 										</span>
 									{/each}
 								{:else if p.telephone}

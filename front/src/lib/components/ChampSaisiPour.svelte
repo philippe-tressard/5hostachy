@@ -19,6 +19,7 @@
   nues (v2.67.11), que `npm run lint:classes-nues` refuse depuis.
 -->
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import type { ModeSaisiPour } from '$lib/tickets';
 
@@ -63,7 +64,7 @@
 			<select bind:value={userId} style="margin-top:.5rem" aria-label="Résident concerné">
 				<option value={null}>— Sélectionner un résident —</option>
 				{#each residents as u (u.id)}
-					<option value={u.id}>{u.prenom} {u.nom}{u.email ? ` (${u.email})` : ''}</option>
+					<option value={u.id}>{nomAffiche(u)}{u.email ? ` (${u.email})` : ''}</option>
 				{/each}
 			</select>
 		{:else if mode === 'exterieur'}

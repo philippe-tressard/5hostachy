@@ -7,6 +7,7 @@
   prestataire — les charger toutes d'avance n'aurait aucun sens.
 -->
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	//  ⚠️ Cet écran affichait la valeur BRUTE — `chauffage_collectif` — parce que
 	//  la table des libellés vivait dans `prestataires/+page.svelte` et qu'il n'y
 	//  avait pas accès. Une table qui vit dans UN écran, les autres s'en passent.
@@ -90,7 +91,7 @@
 					{#each reportPrestSynth.contacts as c}
 						<p style="margin-left:1rem">
 							📞 {c.telephone ?? '—'}{#if c.prenom || c.nom}
-								— {c.prenom ?? ''} {c.nom ?? ''}{/if}{#if c.fonction}
+								— {nomAffiche(c)}{/if}{#if c.fonction}
 								({c.fonction}){/if}{#if c.email}
 								· {c.email}{/if}
 						</p>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nomAffiche } from '$lib/noms';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
@@ -701,7 +702,7 @@
 
 	function nomLocataire(bail: Bail): string {
 		if (bail.locataire_prenom || bail.locataire_nom) {
-			return [bail.locataire_prenom, bail.locataire_nom].filter(Boolean).join(' ');
+			return nomAffiche(bail.locataire_prenom, bail.locataire_nom);
 		}
 		return 'Locataire non renseigné';
 	}
@@ -818,9 +819,7 @@
 				{#if monBailData.bailleur_nom || monBailData.bailleur_prenom}
 					<div style="margin-top:.75rem;font-size:.85rem;color:var(--color-text-muted)">
 						🏢 Propriétaire : <strong
-							>{[monBailData.bailleur_prenom, monBailData.bailleur_nom]
-								.filter(Boolean)
-								.join(' ')}</strong
+							>{nomAffiche(monBailData.bailleur_prenom, monBailData.bailleur_nom)}</strong
 						>
 						{#if monBailData.bailleur_email}<br />📬
 							<a href="mailto:{monBailData.bailleur_email}" style="color:var(--color-primary)"
@@ -1332,9 +1331,7 @@
 					<!-- Locataire sélectionné -->
 					<div class="locataire-selected">
 						<div class="locataire-selected-info">
-							<span class="locataire-selected-name"
-								>✓ {locataireTrouve.prenom} {locataireTrouve.nom}</span
-							>
+							<span class="locataire-selected-name">✓ {nomAffiche(locataireTrouve)}</span>
 							<span class="locataire-selected-email">{locataireTrouve.email}</span>
 							{#if !locataireTrouve.actif}
 								<span class="badge badge-yellow" style="font-size:.72rem"
@@ -1377,7 +1374,7 @@
 							{#each locataireResultats as r (r.id)}
 								<li>
 									<button class="locataire-resultat-btn" on:click={() => selectionnerLocataire(r)}>
-										<span class="lr-name">{r.prenom} {r.nom}</span>
+										<span class="lr-name">{nomAffiche(r)}</span>
 										<span class="lr-email">{r.email}</span>
 										{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
 												>En attente</span
@@ -1521,9 +1518,7 @@
 				{#if editLocataireTrouve}
 					<div class="locataire-selected">
 						<div class="locataire-selected-info">
-							<span class="locataire-selected-name"
-								>✓ {editLocataireTrouve.prenom} {editLocataireTrouve.nom}</span
-							>
+							<span class="locataire-selected-name">✓ {nomAffiche(editLocataireTrouve)}</span>
 							<span class="locataire-selected-email">{editLocataireTrouve.email}</span>
 							{#if !editLocataireTrouve.actif}
 								<span class="badge badge-yellow" style="font-size:.72rem"
@@ -1550,7 +1545,7 @@
 										class="locataire-resultat-btn"
 										on:click={() => editSelectionnerLocataire(s)}
 									>
-										<span class="lr-name">{s.prenom} {s.nom}</span>
+										<span class="lr-name">{nomAffiche(s)}</span>
 										<span class="lr-email">{s.email}</span>
 										{#if !s.actif}<span class="badge badge-yellow" style="font-size:.68rem"
 												>En attente</span
@@ -1591,7 +1586,7 @@
 										class="locataire-resultat-btn"
 										on:click={() => editSelectionnerLocataire(r)}
 									>
-										<span class="lr-name">{r.prenom} {r.nom}</span>
+										<span class="lr-name">{nomAffiche(r)}</span>
 										<span class="lr-email">{r.email}</span>
 										{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
 												>En attente</span
