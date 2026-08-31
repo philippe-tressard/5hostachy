@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import { onMount } from 'svelte';
 	import { perimetres as perimetresApi, ApiError } from '$lib/api';
@@ -154,6 +155,54 @@
 	<button class="btn btn-primary" on:click={() => creer(null)}>+ Périmètre de premier niveau</button
 	>
 </div>
+
+<!--
+	Création d'un périmètre — LA BOÎTE DANS LA PAGE, et non une modale (#672).
+
+	🔴 C'en était une, et le contrôle ne pouvait pas le voir : il cherchait un
+	`<form>`, et ce formulaire n'en a jamais porté — seulement des `.field`.
+	C'est le paradigme que #367 a supprimé après trois signalements.
+
+	Elle est placée SOUS la barre d'action, et non en bas du composant : le geste
+	part d'ici. `FormulaireCreation` s'amène de lui-même à l'écran quand il
+	s'ouvre hors du champ de vision, ce qui couvre le « + sous-périmètre » d'un
+	nœud profond.
+
+	⚠️ L'édition, elle, RESTE une modale et le déclare. Un geste, un format.
+-->
+{#if creation}
+	<FormulaireCreation
+		titre={creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}
+	>
+		<label class="field"
+			>Libellé *
+			<input bind:value={nouveau.libelle} required />
+		</label>
+		<label class="field"
+			>Code *
+			<input bind:value={nouveau.code} placeholder={codePropose} />
+			<span class="field-hint">
+				Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus être modifié :
+				c’est lui qui sera enregistré dans les contenus.
+			</span>
+		</label>
+		<label class="field"
+			>Description
+			<textarea bind:value={nouveau.description} rows="3"></textarea>
+		</label>
+
+		<div class="form-actions">
+			<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
+			<button
+				class="btn btn-primary"
+				disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
+				on:click={enregistrerNouveau}
+			>
+				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
+	</FormulaireCreation>
+{/if}
 
 {#if chargement}
 	<p>Chargement…</p>
@@ -329,44 +378,6 @@
 				class="btn btn-primary"
 				disabled={enregistrement || !form.libelle.trim()}
 				on:click={enregistrer}
-			>
-				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
-			</button>
-		</div>
-	</Modale>
-{/if}
-
-<!-- ── Création ────────────────────────────────────────────────────────────── -->
-{#if creation}
-	<Modale
-		titre={creation.parent ? `Sous-périmètre de ${creation.parent}` : 'Nouveau périmètre'}
-		classeBoite="modal-box"
-		fermetureAuFond={false}
-		on:fermer={() => (creation = null)}
-	>
-		<label class="field"
-			>Libellé *
-			<input bind:value={nouveau.libelle} required />
-		</label>
-		<label class="field"
-			>Code *
-			<input bind:value={nouveau.code} placeholder={codePropose} />
-			<span class="field-hint">
-				Laissé vide, il vaudra <code>{codePropose || '…'}</code>. Il ne pourra plus être modifié :
-				c’est lui qui sera enregistré dans les contenus.
-			</span>
-		</label>
-		<label class="field"
-			>Description
-			<textarea bind:value={nouveau.description} rows="3"></textarea>
-		</label>
-
-		<div class="form-actions">
-			<button class="btn btn-outline" on:click={() => (creation = null)}>Annuler</button>
-			<button
-				class="btn btn-primary"
-				disabled={enregistrement || !nouveau.libelle.trim() || !(nouveau.code || codePropose)}
-				on:click={enregistrerNouveau}
 			>
 				{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
