@@ -996,6 +996,14 @@ jobs:
         working-directory: front
         run: npm run lint:perimetre-herite
 
+      - name: Case « M'envoyer une copie » liée ET envoyée
+        # Même forme de piège que `lint:apercu`, rencontrée deux fois le même
+        # jour : un écran lie la case et ne met jamais `envoyer_auteur` dans sa
+        # charge utile. La case s'affiche, se coche, et ne fait rien — et le seul
+        # symptôme est une copie qui n'arrive pas, c'est-à-dire une absence.
+        working-directory: front
+        run: npm run lint:diffusion-auteur
+
       - name: Formatage (prettier --check)
         # 🔴 Le dernier point de #419, et sans lui les trois autres ne servent
         # à rien : le dépôt vient d'être reformaté, et un format que rien ne

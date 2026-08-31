@@ -229,6 +229,7 @@
 				partager_whatsapp: data.partager_whatsapp || undefined,
 				envoyer_syndic: data.envoyer_syndic || undefined,
 				envoyer_cs: data.envoyer_cs || undefined,
+				envoyer_auteur: data.envoyer_auteur || undefined,
 				//  🔴 MANQUAIT jusqu'au 20/08/2026, et cela se voyait à l'écran :
 				//  `CarteTicket` propose bien la section Périmètre
 				//  (`avecPerimetre`), `EvolForm` la collecte et l'émet — et cette

@@ -96,6 +96,9 @@ class BrouillonTicket(BaseModel):
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     partager_whatsapp: bool = False
+    #  « M'envoyer une copie » — la 4e case de la Diffusion. L'aperçu doit la
+    #  montrer : taire un destinataire ferait mentir l'aperçu par omission.
+    envoyer_auteur: bool = False
 
 
 #  🔴 Les deux schémas et les deux assembleurs viennent de `app/utils/
@@ -186,6 +189,7 @@ def apercu_diffusion(
                     session, syndic=brouillon.destinataire_syndic, cs=brouillon.destinataire_cs
                 ),
                 pieces_jointes=pieces,
+                copie_auteur=user.email if brouillon.envoyer_auteur else None,
             )
         )
 

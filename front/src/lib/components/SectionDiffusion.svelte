@@ -42,6 +42,10 @@
 	export let whatsapp = false;
 	export let syndic = false;
 	export let cs = false;
+	/**  « M'envoyer une copie » — la quatrième case de `CanauxNotification`, qui en
+	 *   porte le pourquoi. Transmise, jamais décidée ici : cette section est un
+	 *   relais, et c'est l'écran qui sait quoi en faire à l'envoi. */
+	export let auteur = false;
 	/** Afficher les trois cases de canal. */
 	export let avecCanaux = false;
 	/** Afficher le champ d'adresse externe (CS/admin). */
@@ -139,7 +143,7 @@
 		{/if}
 
 		{#if avecCanaux}
-			<CanauxNotification bind:whatsapp bind:syndic bind:cs {compact} {aideWhatsapp} />
+			<CanauxNotification bind:whatsapp bind:syndic bind:cs bind:auteur {compact} {aideWhatsapp} />
 			<!--  🔴 L'aide propre au contexte est AFFICHÉE, plus seulement en infobulle.
 			      `CanauxNotification` en fait un `title=` — invisible au doigt, invisible
 			      au lecteur d'écran tant qu'on ne survole pas. Or sur une actualité

@@ -68,6 +68,7 @@ def envoyer_email_syndic_cs(
     pieces_jointes: list[str],
     commentaire: Optional[str] = None,
     evolutions: Optional[list[TicketEvolution]] = None,
+    auteur: bool = False,
 ):
     """E-mail `ticket_syndic`, à la création comme à l'ajout d'une évolution.
 
@@ -89,24 +90,26 @@ def envoyer_email_syndic_cs(
         pieces_jointes=pieces_jointes, commentaire=commentaire, evolutions=evolutions,
     )
 
-    #  🔴 L'AUTEUR EN COPIE CACHÉE, s'il n'est pas déjà destinataire.
+    #  🔴 L'AUTEUR EN COPIE — SUR DEMANDE, jamais d'office.
     #
-    #  Demandé le 31/08/2026 : *« dans la diffusion, pour un commentaire (autre
-    #  que le CS) ajouter en plus l'auteur »*. Un résident qui commente et coche
-    #  « envoyer au syndic » n'avait aucune confirmation que son message était
-    #  parti — alors qu'un membre du CS, lui, se recevait par la liste du CS.
+    #  Une première version le faisait implicitement : l'auteur recevait une
+    #  copie cachée dès qu'il n'était pas déjà destinataire. Arbitré le
+    #  31/08/2026, le jour même :
     #
-    #  ⚠️ « Autre que le CS » est vérifié sur les ADRESSES réellement retenues,
-    #  pas sur le rôle : c'est le même fait, dit par ce qui compte. Un membre du
-    #  CS y figure déjà, et la copie serait un doublon.
+    #  > *« pour l'auteur dans la diffusion, que cette section fasse apparaître
+    #  > une coche supplémentaire EN CLAIR et pas un envoi implicite à
+    #  > l'auteur »*
     #
-    #  Les publications font exactement cela depuis toujours
-    #  (`publications/courriels.py`) — c'est la règle qui manquait ici, pas une
-    #  nouvelle.
+    #  C'était commode, et c'était une décision prise à sa place : le formulaire
+    #  annonçait trois destinataires et en servait quatre. La case vit dans
+    #  `CanauxNotification`, donc sur les huit écrans qui emploient la Diffusion.
+    #
+    #  ⚠️ Le doublon reste écarté sur les ADRESSES retenues, pas sur le rôle : un
+    #  membre du CS qui coche la case ne doit pas se recevoir deux fois.
     deja_servies = {e.lower() for _, e in destinataires}
     auteur_bcc = (
         [user.email]
-        if user.email and user.email.lower() not in deja_servies
+        if auteur and user.email and user.email.lower() not in deja_servies
         else None
     )
 

@@ -100,6 +100,10 @@ export interface ChargeUtileEvolution {
 	partager_whatsapp?: boolean;
 	envoyer_syndic?: boolean;
 	envoyer_cs?: boolean;
+	/**  « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). Un
+	 *   CHOIX, jamais un envoi implicite : le formulaire annonçait trois
+	 *   destinataires et en servait quatre. */
+	envoyer_auteur?: boolean;
 	/**  Le périmètre que l'entrée PRÉCISE — absent quand elle n'en parle pas, et
 	 *   le serveur ne touche alors pas à celui de l'objet (#497). */
 	perimetre_cible?: string[];

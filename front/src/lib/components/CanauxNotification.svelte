@@ -43,6 +43,24 @@
 	export let compact = false;
 	/** Infobulle propre au contexte, sinon la formulation générique */
 	export let aideWhatsapp = '';
+	/**  🔴 M'ENVOYER UNE COPIE — la quatrième case, arbitrée le 31/08/2026.
+	 *
+	 *   > « pour l'auteur dans la diffusion, que cette section fasse apparaître
+	 *   > une coche supplémentaire EN CLAIR et pas un envoi implicite à l'auteur »
+	 *
+	 *   Un envoi implicite avait été livré quelques heures plus tôt : l'auteur
+	 *   recevait une copie cachée dès qu'il n'était pas déjà destinataire. C'était
+	 *   commode, et c’était une décision prise à sa place — le formulaire annonçait
+	 *   trois destinataires et en servait quatre.
+	 *
+	 *   ⚠️ Elle vit ICI et non dans un écran : cette section sert huit formulaires,
+	 *   et une case posée dans l'un des huit n'aurait été offerte que là. C'est la
+	 *   règle rappelée le même jour — *« les comportements demandés doivent être au
+	 *   niveau des objets pour être dans toutes les pages y faisant référence »*.
+	 *
+	 *   ⚠️ **Décochée par défaut.** Une case cochée d'avance n'est pas un choix :
+	 *   ce serait l'envoi implicite sous un autre nom. */
+	export let auteur = false;
 </script>
 
 <div class="canaux" class:compact>
@@ -65,6 +83,14 @@
 		<input type="checkbox" bind:checked={cs} />
 		<span class="ico" aria-hidden="true">&#x2709;&#xFE0F;</span>
 		<span>Envoyer au Conseil Syndical</span>
+	</label>
+
+	<!--  EN DERNIER : les trois premières disent qui d'AUTRE est prévenu, celle-ci
+	      parle de soi. L'ordre suit le sens, pas l'ordre d'ajout. -->
+	<label class="checkbox-field" title="Vous recevrez une copie de ce message.">
+		<input type="checkbox" bind:checked={auteur} />
+		<span class="ico" aria-hidden="true">&#x2709;&#xFE0F;</span>
+		<span>M'envoyer une copie</span>
 	</label>
 </div>
 

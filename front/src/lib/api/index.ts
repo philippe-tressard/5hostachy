@@ -87,6 +87,8 @@ export const tickets = {
 		destinataire_syndic?: boolean;
 		destinataire_cs?: boolean;
 		partager_whatsapp?: boolean;
+		/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
+		envoyer_auteur?: boolean;
 	}) => api.post<ApercuDiffusion>('/tickets/apercu-diffusion', brouillon),
 	//  `perimetre_cible` : le périmètre que l'entrée PRÉCISE, absent quand elle
 	//  n'en parle pas — le serveur ne touche alors pas à celui du ticket (#497).
@@ -99,6 +101,8 @@ export const tickets = {
 			fichiers_urls?: string[];
 			email_externe?: string;
 			partager_whatsapp?: boolean;
+			/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
+			envoyer_auteur?: boolean;
 			envoyer_syndic?: boolean;
 			envoyer_cs?: boolean;
 			perimetre_cible?: string[];
@@ -140,6 +144,8 @@ export const publications = {
 		envoyer_syndic?: boolean;
 		envoyer_cs?: boolean;
 		partager_whatsapp?: boolean;
+		/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
+		envoyer_auteur?: boolean;
 	}) => api.post<ApercuDiffusion>('/publications/apercu-diffusion', brouillon),
 	list: (archived = false) =>
 		api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
@@ -156,6 +162,8 @@ export const publications = {
 			contenu?: string;
 			nouveau_statut?: string;
 			partager_whatsapp?: boolean;
+			/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
+			envoyer_auteur?: boolean;
 			envoyer_syndic?: boolean;
 			envoyer_cs?: boolean;
 			fichiers_urls?: string[];
@@ -201,6 +209,8 @@ export const calendrier = {
 		envoyer_syndic?: boolean;
 		envoyer_cs?: boolean;
 		partager_whatsapp?: boolean;
+		/** « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026). */
+		envoyer_auteur?: boolean;
 	}) => api.post<ApercuDiffusion>('/calendrier/apercu-diffusion', brouillon),
 	list: () => api.get<any[]>('/calendrier'),
 	get: (id: number) => api.get<any>(`/calendrier/${id}`),
