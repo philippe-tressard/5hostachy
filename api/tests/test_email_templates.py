@@ -44,9 +44,15 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "compte_active": {"destinataire"},
     "compte_refuse": {"destinataire"},
     "ticket_bug_admin": {"auteur", "ticket"},
+    #  `commentaire_perimetre` ajouté le 31/08/2026 : le courriel du syndic ne
+    #  disait PAS le périmètre — *« cette information est capitale pour le syndic
+    #  ou le CS pour identifier le périmètre du problème »*. Le ticket porte le
+    #  sien dans `ticket.perimetre`, chaque entrée de l'historique dans
+    #  `m.perimetre`, et celle en cours ici.
     "ticket_syndic": {
         "messages", "date_creation", "commentaire", "is_commentaire", "ticket",
         "fichiers", "date_commentaire", "historique", "auteur",
+        "commentaire_perimetre",
     },
     "ticket_statut_change": {"destinataire", "ticket"},
     "ticket_nouveau_message": {"ticket", "auteur_action", "message"},

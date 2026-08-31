@@ -17,6 +17,9 @@ from sqlmodel import Session, select
 
 from app.models.core import MessageTicket, Ticket, TicketEvolution, Utilisateur
 from app.utils.photos import parse_photos
+from app.utils.categories_ticket import libelle_categorie
+from app.utils.noms import nom_affiche
+from app.utils.perimetres import perimetre_label_json
 from app.utils.dates_fr import date_courte, datetime_longue_paris as fmt_paris
 from app.utils.fichiers import chemins_locaux
 
@@ -35,7 +38,22 @@ def _contexte_ticket(ticket) -> dict:
         "numero": ticket.numero,
         "titre": ticket.titre,
         "description": ticket.description or "",
-        "categorie": ticket.categorie or "",
+        #  🔴 LE LIBELLÉ, pas l'énumération. Le courriel du syndic affichait
+        #  « CategorieTicket.panne » : `CategorieTicket` est une `(str, Enum)`, et
+        #  depuis Python 3.11 son `__str__` rend le nom qualifié. Le destinataire
+        #  lisait un identifiant de code Python. Signalé à l'écran le 31/08/2026.
+        "categorie": libelle_categorie(ticket.categorie),
+        #  🔴 LE PÉRIMÈTRE, absent jusqu'au 31/08/2026 — et c'est celui des deux
+        #  ajouts qui compte le plus :
+        #
+        #  > « il manque le périmètre, il faut l'ajouter car cette information est
+        #  > capitale pour le syndic ou le CS pour identifier le périmètre du
+        #  > problème »
+        #
+        #  Un syndic qui reçoit « ferme-porte explosif » sans savoir de quel
+        #  bâtiment ni de quelle cage d'escalier doit rappeler pour le demander.
+        #  L'écran l'affiche depuis toujours ; le courriel, jamais.
+        "perimetre": perimetre_label_json(getattr(ticket, "perimetre_cible", None)),
     }
 
 
@@ -71,12 +89,34 @@ def envoyer_email_syndic_cs(
         pieces_jointes=pieces_jointes, commentaire=commentaire, evolutions=evolutions,
     )
 
+    #  🔴 L'AUTEUR EN COPIE CACHÉE, s'il n'est pas déjà destinataire.
+    #
+    #  Demandé le 31/08/2026 : *« dans la diffusion, pour un commentaire (autre
+    #  que le CS) ajouter en plus l'auteur »*. Un résident qui commente et coche
+    #  « envoyer au syndic » n'avait aucune confirmation que son message était
+    #  parti — alors qu'un membre du CS, lui, se recevait par la liste du CS.
+    #
+    #  ⚠️ « Autre que le CS » est vérifié sur les ADRESSES réellement retenues,
+    #  pas sur le rôle : c'est le même fait, dit par ce qui compte. Un membre du
+    #  CS y figure déjà, et la copie serait un doublon.
+    #
+    #  Les publications font exactement cela depuis toujours
+    #  (`publications/courriels.py`) — c'est la règle qui manquait ici, pas une
+    #  nouvelle.
+    deja_servies = {e.lower() for _, e in destinataires}
+    auteur_bcc = (
+        [user.email]
+        if user.email and user.email.lower() not in deja_servies
+        else None
+    )
+
     background_tasks.add_task(
         send_email_group,
         code="ticket_syndic",
         to_recipients=destinataires,
         context=ctx,
         session=session,
+        bcc=auteur_bcc,
         attachments=pieces_jointes or None,
     )
 
@@ -117,9 +157,27 @@ def contexte_ticket_syndic(
         if ev.contenu:
             auteur_e = session.get(Utilisateur, ev.auteur_id)
             messages_ctx.append({
-                "auteur_nom": f"{auteur_e.prenom} {auteur_e.nom}" if auteur_e else "?",
+                "auteur_nom": nom_affiche(
+                    auteur_e.prenom if auteur_e else None,
+                    auteur_e.nom if auteur_e else None,
+                ) or "?",
                 "date": fmt_paris(ev.cree_le),
                 "contenu": ev.contenu,
+                #  🔴 Le périmètre de CETTE entrée, demandé le 31/08/2026 :
+                #  *« il faut signaler l'auteur et le périmètre de chaque
+                #  commentaire »*. Une entrée peut préciser le périmètre — « on a
+                #  trouvé d'où vient la fuite » — et c'est justement ce qu'un
+                #  syndic cherche dans un fil.
+                #
+                #  ⚠️ VIDE quand l'entrée n'en parle pas, et le gabarit n'affiche
+                #  alors rien. Reprendre celui du ticket ferait croire que chaque
+                #  commentaire l'a redit — donc l'a confirmé — alors qu'il ne
+                #  faisait que ne rien préciser. C'est la même règle que le
+                #  serveur applique déjà à l'écriture : « laissé vide, le
+                #  périmètre du ticket ne bouge pas » (#497).
+                "perimetre": perimetre_label_json(
+                    getattr(ev, "perimetre_cible", None)
+                ),
             })
 
     ctx = {
@@ -129,6 +187,19 @@ def contexte_ticket_syndic(
         "is_commentaire": bool(commentaire and commentaire.strip()),
         "commentaire": commentaire or "",
         "date_commentaire": fmt_paris(datetime.utcnow()),
+        #  Le périmètre que le COMMENTAIRE en cours précise, s'il en précise
+        #  un. Vide sinon, et le gabarit n'affiche alors rien : reprendre celui
+        #  du ticket ferait croire que ce commentaire l'a redit, donc confirmé.
+        #
+        #  ⚠️ Il vient des évolutions et non du ticket : à la CRÉATION il n'y a
+        #  pas de commentaire, et la clé vaut alors la chaîne vide — présente,
+        #  comme toutes les autres, parce qu'une clé absente est très exactement
+        #  la panne « X is undefined » que ce dépôt a vue trois fois.
+        "commentaire_perimetre": (
+            perimetre_label_json(getattr(evolutions[-1], "perimetre_cible", None))
+            if evolutions
+            else ""
+        ),
         "date_creation": date_courte(ticket.cree_le),
         #  🔴 Du PLUS RÉCENT au plus ancien (#529, signalé à l'écran : « le
         #  dernier message n'est pas inclus en premier »).
