@@ -52,7 +52,13 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, peut_commenter
 from app.database import get_session
-from app.models.core import ModeleEmail, Ticket, TicketEvolution, Utilisateur
+from app.models.core import Ticket, TicketEvolution, Utilisateur
+from app.utils.apercu_diffusion import (
+    ApercuCanal,
+    ApercuDiffusion,
+    apercu_email,
+    apercu_whatsapp,
+)
 from app.utils.fichiers import est_image
 from app.utils.photos import photos_internes
 
@@ -92,29 +98,13 @@ class BrouillonTicket(BaseModel):
     partager_whatsapp: bool = False
 
 
-class ApercuCanal(BaseModel):
-    """Un canal, tel qu'il partira — ou la raison pour laquelle il ne partira pas."""
-
-    canal: str                       # 'email' | 'whatsapp'
-    actif: bool
-    #  🔴 `inactif_motif` est ce qui distingue cet aperçu d'une maquette : si le
-    #  bridge est éteint ou qu'aucun destinataire n'est joignable, l'écran doit
-    #  le dire AVANT l'envoi, pas laisser croire à une diffusion qui n'aura pas
-    #  lieu. C'est le défaut que #480 décrit sur l'annonce de hall.
-    inactif_motif: Optional[str] = None
-    destinataires: list[str] = []
-    sujet: Optional[str] = None
-    corps_html: Optional[str] = None
-    texte: Optional[str] = None
-    #  Vrai quand le message est réduit à « avertissement + périmètre + lien ».
-    ampute: bool = False
-    avec_photo: bool = False
-
-
-class ApercuDiffusion(BaseModel):
-    canaux: list[ApercuCanal]
-    #  Champs qui n'existeront qu'après la création — l'écran les nomme.
-    attribues_a_la_creation: list[str] = []
+#  🔴 Les deux schémas et les deux assembleurs viennent de `app/utils/
+#  apercu_diffusion.py` depuis le 31/08/2026. Ils vivaient ICI, et les tickets
+#  étaient donc le seul écran capable d'aperçu : le jour où l'utilisateur a
+#  demandé la même chose sur une actualité, il n'y avait rien à brancher.
+#
+#  ⚠️ La forme de la réponse ne change pas d'un octet — `test_apercu_diffusion`
+#  le vérifie sans avoir été touché.
 
 
 def _ticket_previsionnel(brouillon: BrouillonTicket, auteur: Utilisateur) -> Ticket:
@@ -155,15 +145,6 @@ def apercu_diffusion(
     — l'aperçu le reflète en marquant le canal inactif, plutôt que de montrer un
     message qui ne partira pas.
     """
-    from app.utils.email import composer_email
-    from app.utils.email import _contexte_rendu  # même rendu que l'envoi
-    from app.utils.whatsapp import (
-        config_whatsapp,
-        construire_message,
-        message_sans_contenu,
-        whatsapp_actif,
-    )
-
     #  Deux gestes, un seul endpoint : créer un ticket, ou commenter un ticket
     #  existant. Le second lit l'objet RÉEL en base — son numéro, son titre et son
     #  fil sont déjà attribués, donc rien n'est prévisionnel de ce côté-là.
@@ -192,74 +173,37 @@ def apercu_diffusion(
 
     # ── E-mail syndic / conseil syndical ────────────────────────────────────
     if brouillon.destinataire_syndic or brouillon.destinataire_cs:
-        destinataires = destinataires_syndic_cs(
-            session, syndic=brouillon.destinataire_syndic, cs=brouillon.destinataire_cs
-        )
-        if not destinataires:
-            canaux.append(ApercuCanal(
-                canal="email", actif=False,
-                inactif_motif="Aucun destinataire joignable : le syndic ou le conseil "
-                              "syndical n'a pas d'adresse renseignée.",
-            ))
-        else:
-            modele = session.exec(
-                __import__("sqlmodel").select(ModeleEmail).where(ModeleEmail.code == "ticket_syndic")
-            ).first()
-            if not modele or not modele.actif:
-                canaux.append(ApercuCanal(
-                    canal="email", actif=False,
-                    inactif_motif="Le modèle d'e-mail « ticket_syndic » est inactif ou absent.",
-                ))
-            else:
-                ctx_metier = contexte_ticket_syndic(
+        canaux.append(
+            apercu_email(
+                session,
+                code_modele="ticket_syndic",
+                contexte=contexte_ticket_syndic(
                     ticket, user, session, pieces_jointes=pieces,
                     commentaire=brouillon.commentaire or None,
                     evolutions=evolutions,
-                )
-                ctx, site_nom, site_url, footer = _contexte_rendu(session, ctx_metier)
-                sujet, html = composer_email(
-                    modele, ctx, site_nom=site_nom, site_url=site_url,
-                    email_footer=footer, attachments=pieces or None,
-                )
-                canaux.append(ApercuCanal(
-                    canal="email", actif=True,
-                    destinataires=[e for _, e in destinataires],
-                    sujet=sujet, corps_html=html,
-                ))
+                ),
+                destinataires=destinataires_syndic_cs(
+                    session, syndic=brouillon.destinataire_syndic, cs=brouillon.destinataire_cs
+                ),
+                pieces_jointes=pieces,
+            )
+        )
 
     # ── Groupe WhatsApp ─────────────────────────────────────────────────────
     if brouillon.partager_whatsapp:
-        est_cs = user.has_role(*_ROLES_DIFFUSION)
-        wa_config = config_whatsapp(session)
-        if not est_cs:
-            canaux.append(ApercuCanal(
-                canal="whatsapp", actif=False,
-                inactif_motif="Le partage sur le groupe est réservé au conseil syndical.",
-            ))
-        elif not whatsapp_actif(wa_config):
-            canaux.append(ApercuCanal(
-                canal="whatsapp", actif=False,
-                inactif_motif="Le groupe WhatsApp n'est pas connecté : rien ne partira.",
-            ))
-        else:
-            texte = construire_message(
-                f"\U0001f3ab {ticket.titre}",
-                ticket.description,
-                ticket.categorie == "urgence",
-                ticket.perimetre_cible,
-                wa_config,
+        canaux.append(
+            apercu_whatsapp(
+                session,
+                user,
+                titre=f"\U0001f3ab {ticket.titre}",
+                contenu=ticket.description,
+                urgent=ticket.categorie == "urgence",
+                perimetre=ticket.perimetre_cible,
+                photo=next(
+                    (u for u in photos_internes(brouillon.photos_urls) if est_image(u)), None
+                ),
             )
-            photo = next((u for u in photos_internes(brouillon.photos_urls) if est_image(u)), None)
-            ampute = message_sans_contenu(None, False)
-            canaux.append(ApercuCanal(
-                canal="whatsapp", actif=True,
-                destinataires=["Groupe de la copropriété"],
-                texte=texte, ampute=ampute,
-                #  La photo ne part QU'AVEC le message complet — même règle que
-                #  l'envoi : sur un message amputé, l'image dirait au groupe ce
-                #  que le texte s'abstient de dire.
-                avec_photo=bool(photo) and not ampute,
-            ))
+        )
 
     #  Sur un ticket EXISTANT, rien n'est attribué plus tard : le numéro et le
     #  lien sont déjà là. Annoncer le contraire ferait douter d'un aperçu exact.
@@ -268,14 +212,3 @@ def apercu_diffusion(
         canaux=canaux,
         attribues_a_la_creation=a_attribuer if canaux else [],
     )
-
-
-#  Les rôles autorisés à diffuser sur le groupe — lus par `has_role`, jamais
-#  comparés à une chaîne (`standards/03` §1, et l'audit du 26/07/2026).
-def _roles_diffusion():
-    from app.models.core import RoleUtilisateur
-
-    return (RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
-
-
-_ROLES_DIFFUSION = _roles_diffusion()

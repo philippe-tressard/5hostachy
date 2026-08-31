@@ -35,13 +35,14 @@ caractère près à ceux d'avant le découpage.
 """
 from fastapi import APIRouter
 
-from . import crud, evolutions
+from . import apercu, crud, evolutions
 
 #  Le sous-module à chemins nus reçoit le préfixe ici. Ce littéral est aussi ce
 #  que lit `test_endpoints_orphelins` pour reconstruire les chemins d'un paquet
 #  découpé : le garder en clair n'est pas cosmétique.
 _a_prefixer = APIRouter(prefix="/publications", tags=["publications"])
 _a_prefixer.include_router(evolutions.router)
+_a_prefixer.include_router(apercu.router)
 
 router = APIRouter(tags=["publications"])
 router.include_router(_a_prefixer)

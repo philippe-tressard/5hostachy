@@ -184,6 +184,26 @@
 
 	let saving = false;
 
+	//  L'aperçu de ce qui partira, avant de confirmer (#498). Il compose par les
+	//  MÊMES fonctions que l'envoi — voir `publications/apercu.py`.
+	//
+	//  🔴 Cet écran n'en avait pas. Le 31/08/2026, une actualité est partie au
+	//  conseil syndical sans que son auteur ait rien pu voir ni annuler. Le point
+	//  d'accroche existait pourtant depuis le 29/08 : ce qui manquait était
+	//  l'endpoint, et le contexte du gabarit que l'envoi construisait chez lui.
+	const brouillonApercu = () =>
+		pubsApi.apercuDiffusion({
+			publication_id: publication?.id,
+			titre: titre.trim(),
+			contenu,
+			urgente,
+			perimetre_cible: perimetreCible,
+			photos_urls: photos,
+			envoyer_syndic: envoyerSyndic,
+			envoyer_cs: envoyerCs,
+			partager_whatsapp: partagerWhatsapp,
+		});
+
 	const titreBoite = modeEdition ? 'Modifier la publication' : 'Nouvelle publication';
 
 	//  LE CADRE, et il dépend du geste — `ux-patterns` §14 bis : créer se fait
@@ -350,6 +370,7 @@
 		      sections n'est gouvernée par `modeEdition` : elles le sont par la
 		      DÉCLARATION, qui porte chaque divergence avec son motif. -->
 			<ChampsCommuns
+				demanderApercu={brouillonApercu}
 				idPrefixe="pub-{publication?.id ?? 'new'}"
 				avecPerimetre={sectionPresente(PUBLICATION, etat, 'perimetre')}
 				bind:perimetre={perimetreCible}

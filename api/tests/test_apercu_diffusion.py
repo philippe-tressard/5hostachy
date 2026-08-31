@@ -29,6 +29,19 @@ from pathlib import Path
 _RACINE = Path(__file__).resolve().parents[2]
 _EMAIL = _RACINE / "api" / "app" / "utils" / "email" / "__init__.py"
 _APERCU = _RACINE / "api" / "app" / "routers" / "tickets" / "apercu.py"
+#  🔴 LA COMPOSITION A DÉMÉNAGÉ LE 31/08/2026, et ces tests l'ont refusée.
+#
+#  Ils lisaient `tickets/apercu.py` et y cherchaient `composer_email(` et
+#  `construire_message(`. Le jour où ces deux appels sont passés dans un module
+#  partagé — pour que les actualités et le calendrier aient enfin le même aperçu —
+#  les tests ont échoué alors que le code venait de S'AMÉLIORER.
+#
+#  ⚠️ C'est le piège que ce dépôt connaît bien : *un contrôle qui ne voit pas la
+#  factorisation mesure la forme, pas le fait* (self-test de `lib-volumes.sh`,
+#  `check-formulaire-creation` aveugle aux formulaires extraits). La correction
+#  n'est PAS d'assouplir : c'est de suivre la composition là où elle est, et
+#  d'exiger EN PLUS que le routeur passe par elle.
+_ASSEMBLEUR = _RACINE / "api" / "app" / "utils" / "apercu_diffusion.py"
 _COURRIELS = _RACINE / "api" / "app" / "routers" / "tickets" / "courriels.py"
 _WHATSAPP = _RACINE / "api" / "app" / "utils" / "whatsapp.py"
 
@@ -47,9 +60,29 @@ def _corps_de(chemin: Path, nom: str) -> str:
     )
 
 
+def test_le_routeur_ne_compose_RIEN_lui_meme():
+    """Le routeur d'aperçu délègue aux assembleurs, il ne les recopie pas.
+
+    C'est la moitié que le déménagement de la composition aurait pu faire perdre :
+    sans elle, un routeur pourrait rappeler `composer_email` à sa façon, et
+    l'assembleur partagé ne servirait plus qu'à ceux qui veulent bien s'en servir.
+    """
+    routeur = _APERCU.read_text(encoding="utf-8")
+    for assembleur in ("apercu_email(", "apercu_whatsapp("):
+        assert assembleur in routeur, (
+            f"L'aperçu des tickets n'appelle plus `{assembleur}` : il compose de "
+            "son côté, et les entités branchées sur l'assembleur divergeront de lui."
+        )
+    for interdit in ("composer_email(", "construire_message(", "_contexte_rendu("):
+        assert interdit not in routeur, (
+            f"Le routeur appelle `{interdit}` en direct : la composition doit "
+            "rester dans `apercu_diffusion.py`, sinon il y en a de nouveau deux."
+        )
+
+
 def test_l_apercu_et_l_envoi_composent_l_email_au_meme_endroit():
     """`composer_email` est la seule composition, et l'aperçu passe par elle."""
-    apercu = _APERCU.read_text(encoding="utf-8")
+    apercu = _ASSEMBLEUR.read_text(encoding="utf-8")
     assert "composer_email(" in apercu, (
         "L'aperçu ne passe plus par `composer_email` : il recompose le message de "
         "son côté, et montrera donc autre chose que ce qui partira."
@@ -90,7 +123,7 @@ def test_l_apercu_whatsapp_ne_reecrit_pas_le_message():
     confidentiel. Rien à l'écran ne le disait avant, et c'est le meilleur apport
     de cet aperçu.
     """
-    apercu = _APERCU.read_text(encoding="utf-8")
+    apercu = _ASSEMBLEUR.read_text(encoding="utf-8")
     assert "construire_message(" in apercu
     assert "message_sans_contenu(" in apercu, (
         "L'aperçu ne consulte pas `message_sans_contenu` : il montrerait le "

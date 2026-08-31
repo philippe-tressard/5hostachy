@@ -24,6 +24,8 @@
  * Usage : npm run lint:confirmation   (exit 1 si le plafond est dépassé)
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+
+import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -84,7 +86,22 @@ const sansAwait = [];
 for (const chemin of tous) {
 	const rel = relative(SOURCE, chemin).split(sep).join('/');
 	if (HORS_RELEVE.includes(rel)) continue;
-	const lignes = readFileSync(chemin, 'utf8').split('\n');
+	//  🔴 LES COMMENTAIRES SONT NEUTRALISÉS, depuis le 31/08/2026.
+	//
+	//  Ce contrôle lisait le fichier brut. Deux commentaires écrits ce jour-là —
+	//  « L'aperçu de ce qui partira, avant de confirmer (#498) » — ont donc été
+	//  comptés comme des appels sans `await`, et la CI a échoué sur du texte.
+	//
+	//  ⚠️ Un contrôle qui crie sur du légitime finit désarmé (leçon de C16), et
+	//  le remède évident aurait été de reformuler la phrase pour lui plaire —
+	//  c'est-à-dire de laisser le contrôle dicter la prose. Les autres contrôles
+	//  du dépôt neutralisent les commentaires depuis longtemps ; celui-ci ne le
+	//  faisait pas, et personne ne l'avait vu parce qu'aucun commentaire n'avait
+	//  encore employé le mot.
+	//
+	//  La neutralisation remplace le texte par des espaces sans changer le nombre
+	//  de lignes : les numéros du relevé restent justes.
+	const lignes = sansCommentaires(readFileSync(chemin, 'utf8')).split('\n');
 	lignes.forEach((ligne, i) => {
 		//  `confirmer(` est le remplacement : il ne doit pas compter.
 		if (/\bconfirm\s*\(/.test(ligne)) releve.push(`${rel}:${i + 1}`);

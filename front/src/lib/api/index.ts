@@ -121,6 +121,26 @@ export const tickets = {
 };
 
 export const publications = {
+	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498).
+	//
+	//  🔴 Il n'existait que pour les tickets. Le 31/08/2026, une actualité est
+	//  partie au conseil syndical sans que son auteur ait rien pu voir ni annuler.
+	//  Comme celui des tickets, il ne crée RIEN et ne recompose rien : le message
+	//  est composé par les MÊMES fonctions que l'envoi.
+	apercuDiffusion: (brouillon: {
+		/** Renseigné pour un COMMENTAIRE sur une publication existante. */
+		publication_id?: number;
+		commentaire?: string;
+		titre?: string;
+		contenu?: string;
+		urgente?: boolean;
+		perimetre_cible?: string[];
+		photos_urls?: string[];
+		fichiers_urls?: string[];
+		envoyer_syndic?: boolean;
+		envoyer_cs?: boolean;
+		partager_whatsapp?: boolean;
+	}) => api.post<ApercuDiffusion>('/publications/apercu-diffusion', brouillon),
 	list: (archived = false) =>
 		api.get<Publication[]>(`/publications${archived ? '?archived=true' : ''}`),
 	create: (data: unknown) => api.post<Publication>('/publications', data),
@@ -160,6 +180,28 @@ export const notifications = {
 };
 
 export const calendrier = {
+	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498).
+	//
+	//  🔴 Cet écran n'en avait pas : seuls les tickets en avaient un. Comme eux,
+	//  il ne crée RIEN et ne recompose rien — le message est composé par les
+	//  MÊMES fonctions que l'envoi (`contexte_evenement_canaux`).
+	apercuDiffusion: (brouillon: {
+		/** Renseigné pour une entrée d'Historique sur un événement existant. */
+		evenement_id?: number;
+		/** L'entrée en cours : sa présence bascule le gabarit ET le message. */
+		suivi?: { etat?: string; commentaire?: string };
+		fichiers_suivi?: string[];
+		titre?: string;
+		description?: string;
+		type?: string;
+		debut?: string;
+		perimetre?: string;
+		photos_urls?: string[];
+		fichiers_urls?: string[];
+		envoyer_syndic?: boolean;
+		envoyer_cs?: boolean;
+		partager_whatsapp?: boolean;
+	}) => api.post<ApercuDiffusion>('/calendrier/apercu-diffusion', brouillon),
 	list: () => api.get<any[]>('/calendrier'),
 	get: (id: number) => api.get<any>(`/calendrier/${id}`),
 	create: (data: unknown) => api.post<any>('/calendrier', data),
