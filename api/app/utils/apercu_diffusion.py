@@ -95,6 +95,7 @@ def apercu_email(
     contexte: dict[str, Any],
     destinataires: list[tuple[int | None, str]],
     pieces_jointes: Optional[list[str]] = None,
+    copie_auteur: Optional[str] = None,
 ) -> ApercuCanal:
     """L'e-mail tel qu'il sera composé — ou pourquoi il ne partira pas.
 
@@ -133,10 +134,21 @@ def apercu_email(
         email_footer=footer,
         attachments=pieces_jointes or None,
     )
+    #  🔴 La copie à l'auteur est ANNONCÉE, pas seulement envoyée. Un aperçu qui
+    #  tairait un destinataire montrerait moins que ce qui part — et c'est
+    #  exactement ce qu'on reproche à un envoi implicite (31/08/2026).
+    #
+    #  ⚠️ Nommée « (copie) » : elle part en copie CACHÉE, donc les autres
+    #  destinataires ne la verront pas. L'auteur, lui, doit savoir qu'il l'a
+    #  demandée.
+    adresses = [e for _, e in destinataires]
+    if copie_auteur and copie_auteur.lower() not in {e.lower() for e in adresses}:
+        adresses.append(f"{copie_auteur} (copie)")
+
     return ApercuCanal(
         canal="email",
         actif=True,
-        destinataires=[e for _, e in destinataires],
+        destinataires=adresses,
         sujet=sujet,
         corps_html=html,
     )

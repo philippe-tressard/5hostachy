@@ -346,6 +346,7 @@ def add_evolution(
                 pieces_jointes=chemins_locaux(photos_internes(body.fichiers_urls)),
                 commentaire=body.contenu,
                 evolutions=evols_hist,
+                auteur=bool(getattr(body, "envoyer_auteur", False)),
             )
 
     # Email externe (CS/Admin uniquement)

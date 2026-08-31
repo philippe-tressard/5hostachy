@@ -10,12 +10,9 @@
   soumission disait « Valider » en création contre « Enregistrer » en édition —
   le même geste, deux libellés, dans la même ligne de code.
 
-  L'ordre est désormais celui de tout le site :
-
-    3. Workflow    →  cette entrée change-t-elle l'état, et vers quoi ?
-    6. Description →  le commentaire
-    7-8. Photos / Documents (ou Pièces jointes en mode unifié)
-    9. Diffusion   →  message interne, canaux, adresse externe — EN DERNIER
+  L'ordre est désormais celui de tout le site — Workflow, Description, Photos,
+  Documents, Diffusion en dernier. La liste n’est pas recopiée ici : elle vit
+  dans `ux-patterns` §9 sexies, et deux versions divergeraient au premier lot.
 
   ## UN SEUL POINT D'ENTRÉE, ET LE GESTE SE LIT DANS LES PASTILLES (#426)
 
@@ -198,6 +195,7 @@
 			partager_whatsapp?: boolean;
 			envoyer_syndic?: boolean;
 			envoyer_cs?: boolean;
+			envoyer_auteur?: boolean;
 			email_externe?: string;
 			interne?: boolean;
 			perimetre_cible?: string[];
@@ -212,6 +210,7 @@
 	let partagerWhatsapp = defaultPartagerWhatsapp;
 	let envoyerSyndic = defaultEnvoyerSyndic;
 	let envoyerCs = defaultEnvoyerCs;
+	let envoyerAuteur = false;
 	let emailExterne = '';
 	//  Pré-rempli avec l’hérité (31/08/2026) — voir `perimetreHerite`.
 	let perimetre: string[] = perimetreHerite(perimetreCourant, entrees);
@@ -333,6 +332,7 @@
 			partager_whatsapp: showNotifs ? partagerWhatsapp : undefined,
 			envoyer_syndic: showNotifs ? envoyerSyndic : undefined,
 			envoyer_cs: showNotifs ? envoyerCs : undefined,
+			envoyer_auteur: showNotifs ? envoyerAuteur : undefined,
 			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
 			perimetre_cible: perimetreDeclare,
@@ -475,6 +475,7 @@
 		bind:whatsapp={partagerWhatsapp}
 		bind:syndic={envoyerSyndic}
 		bind:cs={envoyerCs}
+		bind:auteur={envoyerAuteur}
 		avecEmailExterne={showEmail}
 		bind:emailExterne
 		{avecInterne}

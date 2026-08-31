@@ -9,12 +9,9 @@
   « ← Retour » à gauche du titre là où tout le site porte « ✕ Annuler » à droite,
   et un seul bouton d'annulation en bas de formulaire.
 
-  POURQUOI UN COMPOSANT plutôt que le formulaire recopié dans `tickets/+page.svelte` :
-  cette page fait déjà 659 lignes. Y verser 280 lignes de formulaire la porterait à
-  ~940, très au-delà des 500 lignes du rang 1 (`standards/02` §6). Les actualités
-  ont résolu le même problème de la même façon — `FormulaireActualite.svelte` — et
-  ce composant en suit le contrat à la lettre : il porte lui-même sa boîte
-  `FormulaireCreation` et signale la création par l'événement `cree`.
+  POURQUOI UN COMPOSANT plutôt que le formulaire recopié dans la page : celle-ci
+  ferait ~940 lignes, très au-delà du rang 1 (`standards/02` §6). Il suit le
+  contrat de `FormulaireActualite` : il porte sa boîte et signale par `cree`.
 
   ## POURQUOI IL SERT AUSSI L'ÉDITION (17/08/2026, #425)
 
@@ -124,6 +121,7 @@
 	//  c'est l'incident du triple envoi WhatsApp du 14/08/2026.
 	let destinataireSyndic = ticket?.destinataire_syndic ?? false;
 	let destinataireCs = ticket?.destinataire_cs ?? false;
+	let envoyerAuteur = false;
 	//  ⚠️ Le partage WhatsApp est un ACTE, pas un champ : `Ticket` n'a pas cette
 	//  colonne (à la différence de `Publication`). La case repart donc DÉCOCHÉE à
 	//  chaque ouverture — il n'y a pas d'état à restaurer, seulement un envoi à
@@ -202,6 +200,7 @@
 			destinataire_syndic: destinataireSyndic,
 			destinataire_cs: destinataireCs,
 			partager_whatsapp: partagerWhatsapp,
+			envoyer_auteur: envoyerAuteur,
 		});
 
 	$: titreBoite = modeEdition
@@ -281,6 +280,7 @@
 				destinataire_syndic: destinataireSyndic,
 				destinataire_cs: destinataireCs,
 				partager_whatsapp: partagerWhatsapp,
+				envoyer_auteur: envoyerAuteur,
 				photos_urls: photosUrls,
 				fichiers_urls: fichiersUrls,
 			};
@@ -456,6 +456,7 @@
 			bind:whatsapp={partagerWhatsapp}
 			bind:syndic={destinataireSyndic}
 			bind:cs={destinataireCs}
+			bind:auteur={envoyerAuteur}
 			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
 		/>
 

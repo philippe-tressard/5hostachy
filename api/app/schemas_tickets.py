@@ -34,6 +34,10 @@ class TicketEvolutionCreate(BaseModel):
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None
+    #  « M'envoyer une copie » — la 4e case de la Diffusion (31/08/2026).
+    #  Jamais persistée : c'est une décision propre à CET envoi, pas un réglage
+    #  de l'objet. La recharger cochée reviendrait à l'imposer.
+    envoyer_auteur: Optional[bool] = None
     fichiers_urls: List[str] = []
     email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
     #  Le périmètre que cette entrée déclare — facultatif. `None` veut dire « cette

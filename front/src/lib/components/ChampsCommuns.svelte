@@ -118,6 +118,8 @@
 	export let whatsapp = false;
 	export let syndic = false;
 	export let cs = false;
+	/** « M'envoyer une copie » — relayée telle quelle (voir `CanauxNotification`). */
+	export let auteur = false;
 	export let aideWhatsapp = '';
 	/**  La fonction d'aperçu de l'écran — transmise TELLE QUELLE à l'objet
 	 *   Diffusion, qui porte l'état et la modale (#498). Absente = pas d'aperçu,
@@ -252,6 +254,7 @@
 		bind:whatsapp
 		bind:syndic
 		bind:cs
+		bind:auteur
 		{aideWhatsapp}
 		bind:this={refDiffusion}
 		{demanderApercu}

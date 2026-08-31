@@ -162,6 +162,7 @@ def create_ticket(
             pieces_jointes=chemins_locaux(
                 parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
             ),
+            auteur=bool(getattr(body, "envoyer_auteur", False)),
         )
 
     session.commit()

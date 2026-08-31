@@ -146,6 +146,7 @@ class TicketCreate(BaseModel):
     perimetre_cible: Optional[List[str]] = None
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
+    envoyer_auteur: bool = False
     #  Troisième canal, aligné sur les actualités, le calendrier et les sondages.
     #  Il manquait ici et NULLE PART ailleurs : un ticket ne pouvait être partagé
     #  sur le groupe qu'après coup, via un commentaire (signalé le 08/08/2026).
@@ -188,6 +189,7 @@ class TicketRead(BaseModel):
     apercu_pieces: ListeJson = []
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
+    envoyer_auteur: bool = False
     saisi_pour_user_id: Optional[int] = None
     saisi_pour_nom: Optional[str] = None
     saisi_pour_email: Optional[str] = None
