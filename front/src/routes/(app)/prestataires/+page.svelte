@@ -1234,7 +1234,7 @@
 {:else if onglet === 'consommations'}
 	<div style="margin-bottom:1.25rem">
 		<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-			{#each compteurConfigs as cfg}
+			{#each compteurConfigs as cfg (cfg.type_compteur)}
 				<button
 					class="btn btn-sm"
 					class:btn-primary={typeCompteur === cfg.type_compteur}
@@ -1266,7 +1266,7 @@
 						style="font-size:.82rem;padding:.2rem .4rem;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg)"
 					>
 						<option value="">— Aucun —</option>
-						{#each prestataires as p}<option value={String(p.id)}>{p.nom}</option>{/each}
+						{#each prestataires as p (p.id)}<option value={String(p.id)}>{p.nom}</option>{/each}
 					</select>
 					<button class="btn btn-sm btn-outline" on:click={() => (editCompteurId = null)}
 						>Annuler</button

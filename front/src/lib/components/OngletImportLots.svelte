@@ -292,7 +292,7 @@
 						<td style="font-size:.8rem">
 							{#if imp.utilisateurs?.length}
 								<div class="occupants-list">
-									{#each imp.utilisateurs as occ}
+									{#each imp.utilisateurs as occ (occ.user_id ?? occ.type_lien)}
 										<div class="occupant-tag">
 											<span
 												class="occ-role"

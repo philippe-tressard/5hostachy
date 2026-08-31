@@ -452,7 +452,7 @@
 					>
 					<thead><tr><th>Code</th><th>Type</th><th>Statut</th></tr></thead>
 					<tbody>
-						{#each accesRecus as a}
+						{#each accesRecus as a (a.id)}
 							<tr>
 								<td style="font-family:monospace">{a.code}</td>
 								<td>{a.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>

@@ -833,7 +833,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each comptes as item}
+					{#each comptes as item ((item.user ?? item).id)}
 						{@const u = item.user ?? item}
 						<tr>
 							<td style="font-weight:500"

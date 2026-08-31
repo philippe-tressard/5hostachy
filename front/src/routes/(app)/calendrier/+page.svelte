@@ -808,7 +808,7 @@
 				<span class="chevron" class:open={showPeriodicSection} style="margin-left:auto">›</span>
 			</button>
 			{#if showPeriodicSection}
-				{#each recurringMaintenances as ev}
+				{#each recurringMaintenances as ev (ev.id)}
 					{@const col = ev.statut_kanban
 						? KANBAN_COLS.find((c) => c.id === ev.statut_kanban)
 						: undefined}
@@ -846,7 +846,7 @@
 		<label class="kanban-exercice-label">
 			Exercice :
 			<select bind:value={kanbanExercice} class="kanban-exercice-select">
-				{#each kanbanExerciceOptions as y}<option value={y}>{y}</option>{/each}
+				{#each kanbanExerciceOptions as y (y)}<option value={y}>{y}</option>{/each}
 			</select>
 		</label>
 		<label class="kanban-exercice-label">

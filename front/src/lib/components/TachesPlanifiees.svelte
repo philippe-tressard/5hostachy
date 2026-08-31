@@ -249,7 +249,7 @@
 			<table class="table" style="font-size:.82rem">
 				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th></tr></thead>
 				<tbody>
-					{#each sante.taches as t}
+					{#each sante.taches as t (t.tache)}
 						<tr
 							class="cliquable"
 							role="button"

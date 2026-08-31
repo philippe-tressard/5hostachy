@@ -120,7 +120,7 @@
 	</a>
 
 	<div class="nav-section">
-		{#each allNav as item}
+		{#each allNav as item (item.href)}
 			<a href={item.href} class="nav-item" class:active={isActive(item.href)}>
 				<span class="nav-icon"><Icon name={item.icon} size={18} /></span>
 				<span class="nav-label">{item.label}</span>
@@ -146,7 +146,7 @@
 					}}
 				>
 					<option value={0}>Moi-même</option>
-					{#each $currentUser?.delegations_aidant ?? [] as d}
+					{#each $currentUser?.delegations_aidant ?? [] as d (d.mandant_id)}
 						<option value={d.mandant_id}>{d.mandant_nom}</option>
 					{/each}
 				</select>
@@ -202,7 +202,7 @@
 	<div class="overlay-backdrop" on:click={closeMenu}></div>
 	<div class="overlay-menu">
 		<div class="overlay-nav">
-			{#each allNav as item}
+			{#each allNav as item (item.href)}
 				<a href={item.href} class="overlay-item" class:active={isActive(item.href)}>
 					<span class="nav-icon"><Icon name={item.icon} size={20} /></span>
 					<span>{item.label}</span>
@@ -227,7 +227,7 @@
 						}}
 					>
 						<option value={0}>Moi-même</option>
-						{#each $currentUser?.delegations_aidant ?? [] as d}
+						{#each $currentUser?.delegations_aidant ?? [] as d (d.mandant_id)}
 							<option value={d.mandant_id}>{d.mandant_nom}</option>
 						{/each}
 					</select>
