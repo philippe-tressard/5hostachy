@@ -439,7 +439,7 @@
 	{/if}
 	{#if urgentItems.length > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.1s">
-			{#each urgentItems.slice(0, 3) as u}
+			{#each urgentItems.slice(0, 3) as u (u.id)}
 				{@const progress = urgencyProgress(u)}
 				<fieldset
 					class="urgence-fieldset"
@@ -534,7 +534,7 @@
 			{:else}
 				<!-- Desktop : grille de colonnes -->
 				<div class="kb-grid kb-desktop">
-					{#each dashKanbanCols as col}
+					{#each dashKanbanCols as col (col.id)}
 						<div class="kb-col" class:kb-col-vide={col.items.length === 0}>
 							<div class="kb-col-head" style="border-top-color:{col.color}">
 								<span class="kb-col-label" style="color:{col.color}">{col.label}</span>

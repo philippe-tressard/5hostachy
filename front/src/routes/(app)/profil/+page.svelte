@@ -384,7 +384,7 @@
 			{#if mesLots.length > 0}
 				<dt>Lot{mesLots.length > 1 ? 's' : ''}</dt>
 				<dd>
-					{#each mesLots as lot}
+					{#each mesLots as lot (lot.id)}
 						<span style="display:block">
 							{#if lot.batiment_nom}{lot.batiment_nom} —
 							{/if}
@@ -533,7 +533,7 @@
 				<select id="arr-bat" bind:value={arrivantBatimentNumero}>
 					<option value="">— Sélectionner —</option>
 					{#if batiments.length > 0}
-						{#each batiments as bat}
+						{#each batiments as bat (bat.numero)}
 							<option value={String(bat.numero)}>{`Bât. ${bat.numero}`}</option>
 						{/each}
 					{:else}

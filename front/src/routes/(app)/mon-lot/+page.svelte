@@ -933,7 +933,7 @@
 			<div class="lots-section-label" style="margin-top:1.8rem">
 				👥 Locataires ({locatairesMap.length})
 			</div>
-			{#each locatairesMap as loc}
+			{#each locatairesMap as loc (loc.bail.locataire_id ?? `ext_${loc.bail.id}`)}
 				{@const premierBail = loc.bail}
 				<div class="locataire-card card">
 					<div class="loc-header">
@@ -958,7 +958,7 @@
 						</div>
 					</div>
 					<div class="loc-lots">
-						{#each loc.baux as bail}
+						{#each loc.baux as bail (bail.id)}
 							{@const lot = lots.find((l) => l.id === bail.lot_id)}
 							{#if lot}
 								<div class="loc-lot-row">

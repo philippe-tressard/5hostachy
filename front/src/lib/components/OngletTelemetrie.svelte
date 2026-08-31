@@ -242,7 +242,7 @@
 						></thead
 					>
 					<tbody>
-						{#each telemetryData.top_users as u}
+						{#each telemetryData.top_users as u (u.nom)}
 							<tr>
 								<td style="font-size:.85rem">{u.nom}</td>
 								<td style="font-size:.8rem;color:var(--color-text-muted)">{u.statut ?? '—'}</td>

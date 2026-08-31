@@ -136,14 +136,14 @@
 		{#if data.cs.membres.length === 0}
 			<p style="color:var(--color-text-muted);font-size:.9rem">Aucun membre CS enregistré.</p>
 		{:else if batimentsCS.length > 1}
-			{#each batimentsCS as groupe}
+			{#each batimentsCS as groupe (groupe.batiment ?? '')}
 				<div class="batiment-section">
 					<div class="batiment-label">
 						<Icon name="building-2" size={12} />
 						{groupe.batiment ? `Bâtiment ${groupe.batiment}` : 'Sans bâtiment'}
 					</div>
 					<div class="contact-grid">
-						{#each groupe.membres as m}
+						{#each groupe.membres as m (m.id)}
 							<div class="contact-card card">
 								{#if m.est_gestionnaire_site}
 									<span
@@ -177,7 +177,7 @@
 			{/each}
 		{:else}
 			<div class="contact-grid">
-				{#each data.cs.membres as m}
+				{#each data.cs.membres as m (m.id)}
 					<div class="contact-card card">
 						{#if m.est_gestionnaire_site}
 							<span
@@ -241,7 +241,7 @@
 			<p style="color:var(--color-text-muted);font-size:.9rem">Aucun contact syndic enregistré.</p>
 		{:else}
 			<div class="contact-grid">
-				{#each data.syndic.membres as m}
+				{#each data.syndic.membres as m (m.id)}
 					<div class="contact-card card" class:card-principal={m.est_principal}>
 						{#if m.est_principal}
 							<span class="star-principal-badge" title="Gestionnaire principal"> ★ </span>
