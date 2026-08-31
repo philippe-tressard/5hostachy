@@ -328,7 +328,7 @@
 {/if}
 
 {#if descriptionActive}
-	<p class="perimetre-aide">{descriptionActive}</p>
+	<p class="aide-bloc">{descriptionActive}</p>
 {/if}
 
 <style>
@@ -372,11 +372,5 @@
 	}
 	.perimetre-facultatif {
 		opacity: 0.75;
-	}
-	.perimetre-aide {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		line-height: 1.5;
-		margin: 0.6rem 0 0;
 	}
 </style>

@@ -156,6 +156,7 @@
 		<svelte:fragment slot="edition" let:evol>
 			{#key enEdition}
 				<EvolForm
+					entrees={evenement.evolutions ?? []}
 					idPrefixe="ev-evol-edit-{evol.id}"
 					titre="Modifier le commentaire"
 					editMode={true}
@@ -174,6 +175,7 @@
 	{#if ouvert}
 		{#key ouvert}
 			<EvolForm
+				entrees={evenement.evolutions ?? []}
 				idPrefixe="ev-evol-{evenement.id}"
 				titre="Commenter ou changer l’état"
 				statutOptions={options}

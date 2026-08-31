@@ -157,6 +157,7 @@
 		<svelte:fragment slot="edition" let:evol>
 			{#key enEdition}
 				<EvolForm
+					entrees={evolutions}
 					idPrefixe="tk-evol-edit-{evol.id}"
 					titre="Modifier le commentaire"
 					editMode={true}
@@ -176,6 +177,7 @@
 		<div class="evol-form card">
 			{#key ouvert}
 				<EvolForm
+					entrees={evolutions}
 					idPrefixe="tk-evol"
 					titre="Commenter"
 					demanderApercu={apercuDuCommentaire}

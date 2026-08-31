@@ -1215,3 +1215,28 @@ label.field {
 		opacity: 0;
 	}
 }
+
+/*  ── L'AIDE SOUS UN BLOC ────────────────────────────────────────────────────
+    La phrase qui explique ce qu'on attend, sous un sélecteur ou un groupe —
+    « À renseigner seulement pour préciser le périmètre… ».
+
+    🔴 TROISIÈME écriture de la même notion, et c'est `EvolForm` qui le disait :
+    « .ah-aide (FormulaireAnnonceHall) et .perimetre-aide (PerimetrePicker)
+    disent la même chose aux mêmes valeurs. Suivi à part : les fusionner demande
+    de reprendre les trois appelants, pas d'en ajouter une quatrième en douce
+    ici. » C'est fait — les trois appelants sont repris.
+
+    ⚠️ `.ah-aide` portait `margin-top: .35rem` là où les deux autres portaient
+    `.6rem`. L'écart n'a jamais été décidé : c'est une copie qui a dérivé, comme
+    les 0,1 rem de `.modal-body`. La valeur retenue est celle des deux.
+
+    ⚠️ À DISTINGUER de `.field-hint`, qui vit sous UN champ et à l'intérieur de
+    son `.field` : plus petite, plus serrée, et rattachée au champ qu'elle
+    commente. Deux notions voisines, deux classes — les fondre ferait perdre le
+    rattachement. */
+.aide-bloc {
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+	line-height: 1.5;
+	margin: 0.6rem 0 0;
+}
