@@ -95,8 +95,8 @@ $u ALL=(root) NOPASSWD: /usr/bin/systemctl disable cloudflared
 # « crontab <fichier> », donc l'exécution de n'importe quoi en root.
 $u ALL=(root) NOPASSWD: /usr/bin/crontab -l
 
-# Ici vivait `NOPASSWD: /usr/bin/rsync`, la surface la plus large de ce
-# fichier. Retirée le 31/08/2026, après qu'une bascule ait exercé les trois
+# Ici vivait la regle NOPASSWD sur /usr/bin/rsync, la surface la plus large
+# de ce fichier. Retirée le 31/08/2026, après qu'une bascule ait exercé les trois
 # phases converties. Ne pas la remettre pour « dépanner » : un rsync privilégié
 # sans borne de chemin rend le compte équivalent à root.
 REGLE
@@ -200,6 +200,44 @@ sudoers_selftest() {
   n "état inconnu : on ne touche à rien"     non "INCONNU"
 
   echo "-- la règle composée est-elle valide et complète ? --"
+  #  🔴 D'ABORD : la règle a-t-elle été composée SANS incident ?
+  #
+  #  Le heredoc de `sudoers_regle` n'est pas quoté — il doit substituer $u — donc
+  #  un accent grave dans son corps ouvre une substitution de commande. L'avertis-
+  #  sement est écrit au-dessus de la fonction depuis le 12/08/2026, où il avait
+  #  produit « is-active: command not found » et un fichier TRONQUÉ sans que rien
+  #  ne le signale.
+  #
+  #  ⚠️ Il s'est reproduit le 31/08/2026, dans un commentaire ajouté par ce lot-ci.
+  #  Les onze contrôles qui suivent étaient tous VERTS : ils vérifient ce que la
+  #  règle CONTIENT, et la substitution n'avait mangé qu'un commentaire. Elle
+  #  aurait tout aussi bien pu manger une ligne de permission.
+  #
+  #  Une consigne écrite trois lignes au-dessus de la fonction n'a pas suffi —
+  #  deux fois. On mesure donc les deux faces : le symptôme (rien sur la sortie
+  #  d'erreur) et la cause (aucun accent grave dans le corps du heredoc).
+  local err_regle; err_regle=$(sudoers_regle ptressard 2>&1 >/dev/null)
+  if [ -n "$err_regle" ]; then
+    echo "FAIL  la composition a ecrit sur la sortie d erreur : $err_regle"
+    echo "      → substitution de commande dans le heredoc (accent grave ?)"
+    st=1
+  else
+    echo "PASS  la regle se compose sans rien ecrire sur la sortie d erreur"
+  fi
+  #  ⚠️ Le motif de début est ANCRÉ sur la ligne entière. Sans cela, la ligne de
+  #  ce sed — qui contient elle aussi « cat <<REGLE » — ouvrait une SECONDE plage
+  #  qui balayait le self-test, lequel parle des accents graves en en écrivant.
+  #  La sonde se lisait elle-même et échouait sur son propre commentaire.
+  local corps; corps=$(sed -n '/^  cat <<REGLE$/,/^REGLE$/p' "${BASH_SOURCE[0]}")
+  if [ -z "$corps" ]; then
+    #  Cas zéro : sans corps lu, l'absence d'accent grave ne prouve rien.
+    echo "FAIL  corps du heredoc introuvable — controle inoperant, pas OK"; st=1
+  elif printf '%s' "$corps" | grep -q '`'; then
+    echo "FAIL  accent grave dans le heredoc : il ouvre une substitution"; st=1
+  else
+    echo "PASS  aucun accent grave dans le corps du heredoc"
+  fi
+
   local regle; regle=$(sudoers_regle ptressard)
   for besoin in "systemctl start cloudflared" "systemctl stop cloudflared" \
                 "crontab -l"; do
@@ -214,7 +252,11 @@ sudoers_selftest() {
   #  resteraient verts — ils vérifient ce qui est COUVERT, jamais ce qui ne doit
   #  plus l'être. Un contrôle qui ne cherche que des présences ne voit pas une
   #  régression par ajout (`standards/04`).
-  if printf '%s' "$regle" | grep -q -- "/usr/bin/rsync"; then
+  #  ⚠️ On cherche une ligne de PERMISSION, pas une mention : le commentaire qui
+  #  explique le retrait nomme forcément la commande retirée. Un motif trop large
+  #  échouait dessus — et aurait fait retirer l'explication pour obtenir du vert,
+  #  c'est-à-dire supprimer la trace de la décision pour satisfaire le contrôle.
+  if printf '%s' "$regle" | grep -qE '^[^#]*NOPASSWD:.*rsync'; then
     echo "FAIL  la regle accorde encore rsync (escalade root complete, #582)"; st=1
   else
     echo "PASS  la regle n accorde plus rsync"
