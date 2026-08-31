@@ -88,6 +88,30 @@
 	//  fonctionnalité CRITIQUE le 31/08/2026, après qu'un envoi soit parti sans
 	//  que personne ait pu le voir. Le serveur compose par les mêmes fonctions
 	//  que l'envoi ; cet appel ne fait que lui donner le brouillon.
+	//  🔴 LA RÉFÉRENCE À LA SECTION, et le drapeau qui dit s'il y a matière à
+	//  diffuser. Sans eux, `demanderApercu` ne sert À RIEN : la fonction est
+	//  fournie, la modale sait s'ouvrir — et personne ne l'ouvre. C'est l'erreur
+	//  du 31/08/2026, constatée par l'utilisateur en RECEVANT le mail.
+	let refDiffusion: any = null;
+	$: aUneDiffusion = form.envoyer_syndic || form.envoyer_cs || form.partager_whatsapp;
+
+	/**  Le geste de soumission : aperçu d'abord si un canal est coché.
+	 *
+	 *   Il s'intercale ICI et non dans `onSubmit`, qui appartient à la page et
+	 *   reste le seul chemin d'enregistrement — appelé par le formulaire comme par
+	 *   la confirmation de la modale.
+	 */
+	function soumettre() {
+		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
+		onSubmit();
+	}
+
+	/** Enregistrer depuis la modale d'aperçu : on la ferme, puis on enregistre. */
+	function confirmerEnvoi() {
+		refDiffusion?.fermerApercu();
+		onSubmit();
+	}
+
 	const brouillonApercu = () =>
 		calApi.apercuDiffusion({
 			titre: form.titre,
@@ -120,7 +144,7 @@
 	on:fermer={() => dispatch('annule')}
 >
 	<div class:modal-body={modeEdition}>
-		<form on:submit|preventDefault={onSubmit}>
+		<form on:submit|preventDefault={soumettre}>
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
 				<div class="field champ-large">
@@ -233,6 +257,9 @@
 	      posée en dur (R4). -->
 			<ChampsCommuns
 				demanderApercu={brouillonApercu}
+				bind:refDiffusion
+				envoiEnCours={submitting}
+				on:envoyer={confirmerEnvoi}
 				idPrefixe="ev"
 				avecPerimetre={sectionPresente(EVENEMENT, etat, 'perimetre')}
 				bind:perimetre={formPerimetreCible}
