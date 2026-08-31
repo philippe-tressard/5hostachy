@@ -111,7 +111,10 @@ export const tickets = {
 	updateEvolution: (
 		id: number,
 		evolId: number,
-		data: { contenu?: string; fichiers_urls?: string[] },
+		//  `perimetre_cible` : la CORRECTION d'une erreur d'affectation
+		//  (01/09/2026). Le serveur ne la propage au ticket que si cette entrée
+		//  est la dernière à avoir précisé — `app/utils/perimetre_fil.py`.
+		data: { contenu?: string; fichiers_urls?: string[]; perimetre_cible?: string[] },
 	) => api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
 	//  Réservé à l'ADMIN côté serveur (`require_admin`) : effacer une trace que
 	//  d'autres ont pu lire n'est pas corriger son propre texte.

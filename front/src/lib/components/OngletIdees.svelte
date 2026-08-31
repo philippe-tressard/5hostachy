@@ -94,9 +94,7 @@
 				      idée ne se déplie pas, elle montre tout. -->
 				<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
 					<svelte:fragment slot="titre-suffixe">
-						{#if isNouveau(idee.cree_le, idee.mis_a_jour_le)}<span
-								class="badge badge-gray idee-neuf">New</span
-							>{/if}
+						{#if isNouveau(idee.cree_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
 					</svelte:fragment>
 					<svelte:fragment slot="tags">
 						<span class="badge {statutClass(idee.statut)}"

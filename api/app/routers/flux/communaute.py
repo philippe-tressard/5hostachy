@@ -121,7 +121,20 @@ def _collecter_annonces(ctx: ContexteFlux) -> list[FluxItem]:
         cartes.append(FluxItem(
             id=f"ann_{a.id}",
             type="annonce",
-            date=a.mis_a_jour_le or a.cree_le,
+            #  🔴 PAS `mis_a_jour_le` — signalé le 01/09/2026 : *« l'édition ne
+            #  change pas la date de modification (correction d'erreurs) »* et
+            #  *« ne modifie pas la mise à jour dans le fil d'actualité »*.
+            #
+            #  Corriger une faute de frappe sur une annonce la remontait en tête
+            #  du fil, à la date du jour, pastille NEW comprise — comme s'il
+            #  s'était passé quelque chose.
+            #
+            #  ⚠️ La leçon était DÉJÀ écrite, dans `flux/publications.py`, mot
+            #  pour mot, depuis le 01/08/2026 : elle avait été appliquée là où
+            #  le défaut avait été vu, et pas chez le voisin qui faisait la même
+            #  chose. Des quinze sources du fil, celle-ci était la seule à
+            #  employer `mis_a_jour_le`.
+            date=a.cree_le,
             cree_le=a.cree_le,
             titre=a.titre,
             detail=" · ".join(detail_parts),

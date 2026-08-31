@@ -411,7 +411,7 @@
 					<div class="sondage-body">
 						<strong class="sondage-question"
 							>{s.question}
-							{#if isNouveau(s.cree_le, s.mis_a_jour_le)}<span
+							{#if isNouveau(s.cree_le)}<span
 									class="badge badge-gray"
 									style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle"
 									>New</span
