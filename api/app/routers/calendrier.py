@@ -22,6 +22,7 @@ from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_
 from app.utils.photos import parse_photos, photos_internes
 from app.utils.visibility import evenement_visible
 from app.utils.noms import nom_affiche
+from app.utils.corrections import contenu_correction
 
 router = APIRouter(prefix="/calendrier", tags=["calendrier"])
 
@@ -332,7 +333,7 @@ def update_evenement(
         session.add(EvenementEvolution(
             evenement_id=ev.id,
             type="commentaire",
-            contenu="Correction : " + " ; ".join(corrections),
+            contenu=contenu_correction(corrections),
             auteur_id=user.id,
             cree_le=datetime.utcnow(),
         ))

@@ -43,6 +43,11 @@ from .courriels import (
     envoyer_email_externe,
     envoyer_email_syndic_cs,
 )
+from app.utils.corrections import (
+    PREFIXE_CORRECTION,
+    PREFIXE_CORRECTION_AUTEUR,
+    SEPARATEUR_CORRECTION,
+)
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
 #  chemin VIDE (`GET /tickets`, `POST /tickets`), et FastAPI refuse un chemin
@@ -365,10 +370,13 @@ def update_ticket(
     #  dans le test, qui vérifie chaque entité séparément.
     etat_a_change = body.statut is not None and body.statut != ancien_statut
     if changes and etat_a_change:
-        prefix = "Correction" if is_cs_admin else "Correction auteur"
+        #  Le préfixe et son assemblage viennent de `app/utils/corrections.py` :
+        #  la chaîne était écrite quatre fois, et le fil avait besoin d'un
+        #  cinquième pour la RECONNAÎTRE (01/09/2026).
         session.add(TicketEvolution(
             ticket_id=ticket.id, type="commentaire",
-            contenu=prefix + " : " + " ; ".join(changes),
+            contenu=(PREFIXE_CORRECTION if is_cs_admin else PREFIXE_CORRECTION_AUTEUR)
+            + SEPARATEUR_CORRECTION.join(changes),
             auteur_id=user.id, cree_le=datetime.utcnow(),
         ))
 

@@ -26,6 +26,7 @@ from app.utils.visibility import ticket_visible
 from app.utils.perimetres import perimetre_label
 from .commun import ContexteFlux, auteur_nom, perimetres_de, strip_html
 from .schemas import FluxItem
+from app.utils.corrections import est_correction
 
 #: Évolutions qui produisent une carte « ticket mis à jour » sans changer l'état.
 #: (type en base, préfixe d'identifiant, libellé, icône)
@@ -186,6 +187,12 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
     for type_evolution, prefixe, detail, icon in _MISES_A_JOUR:
         for evol, tk in _evolutions(ctx, type_evolution):
             if not ticket_visible(tk, ctx.user):
+                continue
+            #  🔴 UNE CORRECTION N'EST PAS UNE NOUVELLE — même règle que les
+            #  événements (01/09/2026). Corriger un ticket écrit « Correction :
+            #  Périmètre » dans son Historique, et cela n'a rien à faire dans le
+            #  fil de la copropriété. `app/utils/corrections.py`.
+            if est_correction(evol):
                 continue
             vus.add(tk.id)
             cartes.append(_carte_mise_a_jour(
