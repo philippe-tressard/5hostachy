@@ -19,6 +19,7 @@ from app.models.core import (
 )
 from app.schemas import TicketEvolutionCreate, TicketEvolutionRead, TicketEvolutionUpdate
 from app.utils.evolutions import supprimer_evolution
+from app.utils.perimetre_fil import doit_propager
 from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
 from app.utils.photos import photos_internes
@@ -78,6 +79,28 @@ def update_evolution(
         evol.contenu = body.contenu
     if body.fichiers_urls is not None:
         evol.fichiers_urls = json.dumps(photos_internes(body.fichiers_urls), ensure_ascii=False)
+    if body.perimetre_cible is not None:
+        #  🔴 CORRIGER, pas raturer. La règle et son pourquoi vivent dans
+        #  `app/utils/perimetre_fil.py` — elle a son `--selftest`.
+        evol.perimetre_cible = (
+            json.dumps(body.perimetre_cible, ensure_ascii=False)
+            if body.perimetre_cible
+            else None
+        )
+        fil = session.exec(
+            select(TicketEvolution)
+            .where(TicketEvolution.ticket_id == ticket_id)
+            .order_by(TicketEvolution.cree_le)
+        ).all()
+        #  ⚠️ L'entrée en base porte encore l'ancienne valeur dans `fil` : on la
+        #  remplace par l'objet modifié, sinon on compare la correction à
+        #  elle-même d'avant.
+        fil = [evol if e.id == evol.id else e for e in fil]
+        if doit_propager(evol, fil):
+            ticket = session.get(Ticket, ticket_id)
+            if ticket:
+                ticket.perimetre_cible = evol.perimetre_cible
+                session.add(ticket)
     session.add(evol)
     session.commit()
     session.refresh(evol)

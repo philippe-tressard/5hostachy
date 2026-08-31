@@ -49,13 +49,12 @@
   avant le périmètre — les confondre est l'erreur d'origine.
 -->
 <script lang="ts">
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
+	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import PerimetrePicker from './PerimetrePicker.svelte';
 	import DestinatairePicker from './DestinatairePicker.svelte';
-	import RichEditor from './RichEditor.svelte';
-	import FichiersUpload from './FichiersUpload.svelte';
 	import SectionDiffusion from './SectionDiffusion.svelte';
-	import { ACCEPT_PHOTOS } from '$lib/fichiers';
 	import { estPerimetreParDefaut, perimetreLabelUn, perimetreParDefaut } from '$lib/perimetres';
 	import { concerneTousLesResidents } from '$lib/destinataires';
 
@@ -176,67 +175,29 @@
 {/if}
 
 {#if avecDescription}
-	<!--  La zone de saisie est un `contenteditable`, donc PAS labelable : le titre
-	      reste un `<h4>` et l'éditeur s'y relie par `aria-labelledby`. Un
-	      `<label for>` n'aurait rien associé, et l'aurait fait en silence. -->
-	<SectionFormulaire
-		titre="Description"
+	<SectionDescription
+		{idPrefixe}
 		requis={descriptionRequise}
-		idTitre="{idPrefixe}-description-titre"
-	>
-		<div class="field champ-large">
-			<RichEditor
-				id="{idPrefixe}-description"
-				bind:value={description}
-				ariaLabelledby="{idPrefixe}-description-titre"
-				placeholder={descriptionPlaceholder}
-				minHeight={descriptionHauteur}
-			/>
-		</div>
-	</SectionFormulaire>
+		placeholder={descriptionPlaceholder}
+		hauteur={descriptionHauteur}
+		bind:valeur={description}
+	/>
 {/if}
 
-{#if avecPhotos}
-	<!--  `pour` : l'intitulé devient un vrai `<label for>` — l'input fichier, lui,
-	      EST labelable, et le clic sur le titre ouvre donc le sélecteur. -->
-	<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
-		<div class="field champ-large">
-			<FichiersUpload
-				id="{idPrefixe}-photos"
-				bind:urls={photos}
-				titre=""
-				label="Ajouter une photo"
-				accept={ACCEPT_PHOTOS}
-				size={80}
-			/>
-		</div>
-	</SectionFormulaire>
-{/if}
-
-{#if avecDocuments}
-	<SectionFormulaire titre="Documents" pour="{idPrefixe}-documents">
-		<div class="field champ-large">
-			<!--  L'écran peut fournir SON contrôle, comme pour la Diffusion : les
-			      documents d'une publication sont des entités `Document` avec un
-			      identifiant, pas une liste d'URLs — on les ajoute et on les retire à
-			      l'unité. Le régime de téléversement est un paramètre de l'objet, il
-			      ne s'uniformise pas ; ce qui s'uniformise, c'est la SECTION — son
-			      rang, son intitulé et sa séparation, qui restent ici. -->
-			{#if documentsControle === 'slot'}
-				<slot name="documents" />
-			{:else}
-				<FichiersUpload
-					id="{idPrefixe}-documents"
-					mode="documents"
-					titre=""
-					differe={documentsDifferes}
-					bind:urls={documents}
-					bind:fichiers={documentsFichiers}
-				/>
-			{/if}
-		</div>
-	</SectionFormulaire>
-{/if}
+<!--  7. Photos · 8. Documents — DEUX sections, écrites une seule fois pour ce
+      composant ET `EvolForm`, qui les portait à l'identique (01/09/2026). -->
+<SectionsPiecesJointes
+	{idPrefixe}
+	{avecPhotos}
+	bind:photos
+	{avecDocuments}
+	{documentsControle}
+	{documentsDifferes}
+	bind:documents
+	bind:documentsFichiers
+>
+	<svelte:fragment slot="documents"><slot name="documents" /></svelte:fragment>
+</SectionsPiecesJointes>
 
 <!--  🔴 La section 9 vient de `SectionDiffusion`, elle n'est plus réécrite ici
       (#498, 20/08/2026).

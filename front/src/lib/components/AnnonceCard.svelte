@@ -103,7 +103,7 @@
 		on:toggle={onToggle}
 	>
 		<svelte:fragment slot="titre-suffixe">
-			{#if !annonce.archivee && isNouveau(annonce.cree_le, annonce.mis_a_jour_le)}<span
+			{#if !annonce.archivee && isNouveau(annonce.cree_le)}<span
 					class="badge badge-gray annonce-neuf">New</span
 				>{/if}
 		</svelte:fragment>

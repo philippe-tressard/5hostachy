@@ -208,18 +208,58 @@ def test_le_dernier_perimetre_declare_l_emporte(cs):
         _nettoyer(session, ticket.id)
 
 
-def test_le_perimetre_ne_se_rature_pas_par_correction():
-    """Une correction ne peut pas réécrire un périmètre déclaré.
+def test_le_perimetre_SE_CORRIGE_sur_une_entree():
+    """🔴 DÉCISION ROUVERTE le 01/09/2026, et écrite ici.
 
-    `TicketEvolutionUpdate` ne porte pas le champ, délibérément : un périmètre
-    déclaré est un fait daté. On en déclare un nouveau, on ne rature pas l'ancien
-    — sinon l'historique du resserrement, qui est tout l'intérêt, disparaît.
+    Ce test affirmait l'inverse — « une correction ne peut pas réécrire un
+    périmètre déclaré » — et il disait déjà quoi faire le jour où l'on
+    changerait d'avis : *« ce n'est pas ce test qu'il faut changer, c'est la
+    décision de #497 qu'il faut rouvrir, et l'écrire »*.
 
-    ⚠️ Ce test regarde le SCHÉMA, pas un appel : Pydantic ignore en silence un
-    champ qu'il ne connaît pas, donc un `PATCH` avec `perimetre_cible` renverrait
-    200 sans rien faire. Le seul endroit où l'absence se constate est ici.
+    Elle est rouverte, à l'écran :
+
+    > *« L'édition peut modifier le périmètre (correction d'erreur
+    > d'affectation d'un périmètre) »*
+
+    Le motif d'origine — un périmètre déclaré est un fait daté — vaut pour un
+    RESSERREMENT, pas pour une faute de clic. Et la faute coûte cher : le
+    périmètre d'une entrée écrase celui du ticket, donc une erreur
+    d'affectation reclasse tout le ticket.
     """
-    assert "perimetre_cible" not in TicketEvolutionUpdate.model_fields, (
-        "Si ce champ est ajouté un jour, ce n'est pas ce test qu'il faut changer : "
-        "c'est la décision de #497 qu'il faut rouvrir, et l'écrire."
+    assert "perimetre_cible" in TicketEvolutionUpdate.model_fields, (
+        "Le champ a disparu du schéma : le formulaire proposerait un périmètre "
+        "que Pydantic ignorerait en silence, et le PATCH rendrait 200 sans rien "
+        "faire. C'est le pire des deux mondes."
     )
+
+
+def test_corriger_une_ANCIENNE_entree_ne_defait_pas_une_precision_recente():
+    """⚠️ La subtilité de la règle, et la seule qui se perde.
+
+    Trois commentaires resserrent le périmètre ; on corrige le PREMIER. Le
+    ticket doit garder ce que le DERNIER a dit — sinon corriger une vieille
+    faute de frappe reclasserait le ticket sur un périmètre abandonné depuis,
+    ce qui ne se verrait que sur une liste filtrée.
+
+    La décision est pure et vit dans `app/utils/perimetre_fil.py`, avec son
+    `--selftest`. Ce test-ci vérifie qu'elle est bien CÂBLÉE : une fonction
+    juste que personne n'appelle ne protège de rien.
+    """
+    import json as _json
+
+    from app.utils.perimetre_fil import doit_propager
+
+    class _E:
+        def __init__(self, id, cible):
+            self.id = id
+            self.perimetre_cible = _json.dumps(cible) if cible else None
+
+    ancienne, muette, recente = _E(1, BAT_2), _E(2, None), _E(3, PRECIS)
+    fil = [ancienne, muette, recente]
+    assert not doit_propager(ancienne, fil), (
+        "Corriger la PREMIÈRE entrée ne doit pas défaire ce que la dernière a "
+        "précisé."
+    )
+    assert doit_propager(recente, fil)
+    #  Et le cas zéro : une entrée qui ne dit plus rien n'impose rien.
+    assert not doit_propager(muette, fil)

@@ -77,16 +77,16 @@
     cancel        – fermer le formulaire sans sauvegarder
 -->
 <script lang="ts">
+	import SectionWorkflow from '$lib/components/SectionWorkflow.svelte';
+	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { createEventDispatcher } from 'svelte';
-	import RichEditor from '$lib/components/RichEditor.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 	import type { ApercuDiffusion } from '$lib/api';
-	import { ACCEPT_PHOTOS, estImage } from '$lib/fichiers';
+	import { estImage } from '$lib/fichiers';
 	import { perimetreEntree, perimetreHerite } from '$lib/perimetres';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
@@ -140,6 +140,10 @@
 	export let initialContenu = '';
 	/** Fichiers initiaux (mode édition) */
 	export let initialFichiers: { url: string; nom: string; type?: string }[] = [];
+
+	/**  Le périmètre que l'entrée AVAIT déclaré, en correction. Vide si elle n'en
+	 *   déclarait aucun — le sélecteur part alors de l'hérité, comme en saisie. */
+	export let initialPerimetre: string[] = [];
 	/**  Proposer de PRÉCISER LE PÉRIMÈTRE dans cette entrée (#497).
 	 *
 	 *   Un ticket se signale avec ce qu’on sait — donc souvent le périmètre le
@@ -211,7 +215,10 @@
 	let envoyerAuteur = false;
 	let emailExterne = '';
 	//  Pré-rempli avec l’hérité (31/08/2026) — voir `perimetreHerite`.
-	let perimetre: string[] = perimetreHerite(perimetreCourant, entrees);
+	let perimetre: string[] =
+		editMode && initialPerimetre.length
+			? [...initialPerimetre]
+			: perimetreHerite(perimetreCourant, entrees);
 
 	//  7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430).
 	//  Le tri se fait à l'ouverture, sur ce que l'entrée portait déjà : les
@@ -239,10 +246,25 @@
 	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
 	//  la décide (#426).
 	$: sectionWorkflow = !editMode && statutOptions.length > 0;
-	//  Préciser le périmètre est un geste de SUIVI : il n'a pas de sens en
-	//  réécrivant une entrée passée, où il raturerait un fait daté (le serveur
-	//  refuse d'ailleurs `perimetre_cible` sur un PATCH).
-	$: sectionPerimetre = avecPerimetre && !editMode;
+	//  🔴 LE PÉRIMÈTRE SE CORRIGE AUSSI (01/09/2026, à l'écran) :
+	//
+	//  > *« L'édition peut modifier le périmètre (correction d'erreur
+	//  > d'affectation d'un périmètre) »*
+	//
+	//  Cette ligne valait `avecPerimetre && !editMode`, au motif que « préciser
+	//  est un geste de SUIVI, qui raturerait un fait daté en réécrivant une
+	//  entrée passée » — et le serveur refusait le champ en PATCH, ce qui
+	//  fermait la question.
+	//
+	//  Le motif vaut pour un RESSERREMENT, pas pour une faute de clic. Et la
+	//  faute coûte cher : le périmètre d'une entrée écrase celui du ticket,
+	//  donc une erreur d'affectation reclasse tout le ticket.
+	//
+	//  ⚠️ Côté serveur, la correction ne se propage à l'objet que si l'entrée
+	//  corrigée est la dernière à avoir précisé quelque chose
+	//  (`app/utils/perimetre_fil.py`) : corriger une vieille entrée ne défait
+	//  pas une précision récente.
+	$: sectionPerimetre = avecPerimetre;
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
@@ -359,22 +381,14 @@
 		      qu'UN point d'entrée sur la carte.
 		      Section à un champ : le titre EST le libellé, et il porte l'état actuel
 		      en badge (`ux-patterns` §9 septies et §9 quater). -->
-		<SectionFormulaire
+		<SectionWorkflow
 			premiere
-			titre="Workflow"
-			requis
-			badge={libelleStatutActuel}
 			idTitre="{idPrefixe}-workflow-titre"
-		>
-			<!--  `WorkflowPastilles`, et non une rangée réécrite : elle l'était, à
-			      l'identique, pour un composant que le calendrier emploie déjà. -->
-			<WorkflowPastilles
-				options={statutOptions}
-				valeur={nouveauStatut || currentStatut}
-				idTitre="{idPrefixe}-workflow-titre"
-				on:choisir={(e) => (nouveauStatut = e.detail)}
-			/>
-		</SectionFormulaire>
+			options={statutOptions}
+			valeur={nouveauStatut || currentStatut}
+			badge={libelleStatutActuel}
+			on:choisir={(e) => (nouveauStatut = e.detail)}
+		/>
 	{/if}
 
 	<!-- ── 4. Périmètre ─────────────────────────────────────────────────────
@@ -402,59 +416,40 @@
 	{/if}
 
 	<!-- ── 6. Description ───────────────────────────────────────────────────
-	     Section à UN champ : le titre EST le libellé, et l'éditeur ne réécrit
-	     rien (`ux-patterns` §9 septies). L'éditeur riche est un `contenteditable`,
-	     donc PAS labelable : le titre reste un `<h4>` et l'éditeur s'y relie par
-	     `aria-labelledby` — un `for` n'aurait rien associé, et en silence. -->
-	<SectionFormulaire
+	     Section à UN champ : le titre EST le libellé. Le rendu vient de
+	     `SectionDescription`, écrit une fois pour ce composant et
+	     `ChampsCommuns` (01/09/2026). -->
+	<SectionDescription
+		{idPrefixe}
+		idChamp="contenu"
 		premiere={!sectionWorkflow}
 		titre={titreContenu}
 		requis={contenuRequis}
-		idTitre="{idPrefixe}-contenu-titre"
-	>
-		<div class="field champ-large">
-			<RichEditor
-				id="{idPrefixe}-contenu"
-				bind:value={contenu}
-				ariaLabelledby="{idPrefixe}-contenu-titre"
-				placeholder={editMode
-					? 'Modifier le commentaire…'
-					: evolType === 'etat'
-						? 'Précisions sur ce changement…'
-						: 'Ajoutez un commentaire de suivi…'}
-				minHeight="90px"
-			/>
-		</div>
-	</SectionFormulaire>
+		hauteur="90px"
+		placeholder={editMode
+			? 'Modifier le commentaire…'
+			: evolType === 'etat'
+				? 'Précisions sur ce changement…'
+				: 'Ajoutez un commentaire de suivi…'}
+		bind:valeur={contenu}
+	/>
 
 	<!-- ── 7-8. Photos et Documents ─────────────────────────────────────────
 	     ✅ Les pièces jointes ne dépendent PLUS du geste (18/08/2026). Une
 	     condition héritée les fermait sur un changement d'état — sans qu'aucun
 	     commit ni aucune issue n'en porte la raison, alors qu'une photo justifie
-	     souvent un passage à « Résolu ». Elle ne pouvait de toute façon pas
-	     survivre au point d'entrée unique : le geste n'est plus connu à
-	     l'ouverture du formulaire, il se déduit de ce qu'on y fait. -->
-	{#if showPhotos}
-		<SectionFormulaire titre="Photos" pour="{idPrefixe}-photos">
-			<div class="field champ-large">
-				<FichiersUpload
-					id="{idPrefixe}-photos"
-					bind:urls={photos}
-					titre=""
-					label="Ajouter une photo"
-					accept={ACCEPT_PHOTOS}
-					size={80}
-				/>
-			</div>
-		</SectionFormulaire>
-	{/if}
-	{#if showDocuments}
-		<SectionFormulaire titre="Documents" pour="{idPrefixe}-docs">
-			<div class="field champ-large">
-				<FichiersUpload id="{idPrefixe}-docs" mode="documents" titre="" bind:urls={docs} />
-			</div>
-		</SectionFormulaire>
-	{/if}
+	     souvent un passage à « Résolu ».
+
+	     Les deux sections viennent de `SectionsPiecesJointes` : elles étaient
+	     écrites à l'identique ici et dans `ChampsCommuns` (01/09/2026). -->
+	<SectionsPiecesJointes
+		{idPrefixe}
+		avecPhotos={showPhotos}
+		bind:photos
+		avecDocuments={showDocuments}
+		bind:documents={docs}
+		idDocuments="docs"
+	/>
 
 	<!-- ── 9. Diffusion — un OBJET du site, rendu partout pareil (#498) ─────
 	     Arbitré à l'écran le 19/08/2026 : *« C'est une évolution sur l'objet

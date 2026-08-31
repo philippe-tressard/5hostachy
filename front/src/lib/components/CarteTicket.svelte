@@ -137,7 +137,7 @@
 		on:toggle={() => dispatch('basculer')}
 	>
 		<svelte:fragment slot="titre-suffixe">
-			{#if isNouveau(ticket.cree_le, ticket.mis_a_jour_le)}
+			{#if isNouveau(ticket.cree_le)}
 				<span class="badge badge-gray tk-neuf">NEW</span>
 			{/if}
 		</svelte:fragment>
@@ -324,6 +324,10 @@
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+										avecPerimetre={sectionPresente(TICKET, 'evolution', 'perimetre')}
+										perimetreCourant={ticket.perimetre_cible ?? []}
+										entrees={evolutions}
+										initialPerimetre={evol.perimetre_cible ?? []}
 										showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
 										showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 										saving={evolCorrectionEnCours}

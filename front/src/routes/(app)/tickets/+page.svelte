@@ -213,6 +213,10 @@
 			await ticketsApi.updateEvolution(t.id, evolEnEdition, {
 				contenu: e.detail.data.contenu ?? '',
 				fichiers_urls: e.detail.data.fichiers_urls,
+				//  🔴 La correction du périmètre part AUSSI (01/09/2026) : le
+				//  sélecteur s'affiche désormais en correction, et un champ affiché
+				//  qui ne part pas est le défaut de la veille, rejoué.
+				perimetre_cible: e.detail.data.perimetre_cible,
 			});
 			await loadEvolutions(t.id);
 			evolEnEdition = null;

@@ -107,6 +107,10 @@
 			await ticketsApi.updateEvolution(ticketId, enEdition, {
 				contenu: e.detail?.contenu ?? '',
 				fichiers_urls: e.detail?.fichiers_urls,
+				//  🔴 La correction du périmètre part AUSSI (01/09/2026). Sans cette
+				//  ligne, le sélectionneur s'affiche et n'envoie rien — la case
+				//  cochée qui ne fait rien, exactement le défaut de la veille.
+				perimetre_cible: e.detail?.perimetre_cible,
 			});
 			enEdition = null;
 			dispatch('change');
@@ -167,6 +171,9 @@
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
+					avecPerimetre={$isCS && sectionPresente(TICKET, 'evolution', 'perimetre')}
+					{perimetreCourant}
+					initialPerimetre={evol.perimetre_cible ?? []}
 					showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
 					showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 					saving={corrige}

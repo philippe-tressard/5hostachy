@@ -49,9 +49,17 @@ class TicketEvolutionCreate(BaseModel):
 class TicketEvolutionUpdate(BaseModel):
     contenu: Optional[str] = None
     fichiers_urls: Optional[List[str]] = None
-    #  ⚠️ Pas de `perimetre_cible` ici, et c'est délibéré : un périmètre déclaré est
-    #  un fait daté. On en déclare un nouveau, on ne rature pas l'ancien — sinon
-    #  l'historique du resserrement, qui est tout l'intérêt, disparaît.
+    #  🔴 LE PÉRIMÈTRE SE CORRIGE (01/09/2026). Ce champ était refusé ici, au
+    #  motif qu'« un périmètre déclaré est un fait daté ». Le raisonnement vaut
+    #  pour un RESSERREMENT — « finalement, c'est le hall du bâtiment 3 » — et
+    #  pas pour une FAUTE DE CLIC, qui s'écrit exactement pareil et qui coûte
+    #  cher : le périmètre d'une entrée écrase celui du ticket, donc une erreur
+    #  d'affectation reclasse tout le ticket.
+    #
+    #  ⚠️ La propagation à l'objet obéit à une règle : voir
+    #  `app/utils/perimetre_fil.py`. Corriger une entrée ancienne ne doit pas
+    #  défaire une précision récente.
+    perimetre_cible: Optional[List[str]] = None
 
 
 class TicketEvolutionRead(BaseModel):

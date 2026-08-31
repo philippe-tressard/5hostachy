@@ -90,11 +90,22 @@ def test_publication_recente_reste_visible():
 #: `urgente`) ? Seuls `Publication` et `Evenement` en ont — pour les autres,
 #: `mis_a_jour_le` n'est écrit que par une modification réelle, qui est une
 #: nouvelle en soi et mérite donc de redater la ligne.
-_DATATION_SUR_MISE_A_JOUR_ADMISE = {
-    "communaute.py":
-        "PetiteAnnonce ne porte ni `epingle` ni `urgente` : son `mis_a_jour_le` "
-        "n'est écrit que par une modification réelle (prix, passage à « Vendu »)",
-}
+#:
+#: 🔴 **VIDE depuis le 01/09/2026, et la prémisse de la seule exemption était
+#: fausse.** `communaute.py` était exempté au motif que « `PetiteAnnonce` ne
+#: porte ni `epingle` ni `urgente` : son `mis_a_jour_le` n'est écrit que par une
+#: modification RÉELLE ». C'est faux : le `PATCH` d'une annonce l'écrit aussi,
+#: donc corriger une faute de frappe remontait l'annonce en tête du fil, à la
+#: date du jour, pastille NEW comprise. Signalé à l'écran :
+#:
+#:     « l'édition ne change pas la date de modification (correction d'erreurs) »
+#:     « ne modifie pas la mise à jour dans le fil d'actualité »
+#:
+#: ⚠️ Le critère « la rubrique porte-t-elle un marqueur ? » distinguait mal :
+#: ce qui compte n'est pas ce que l'objet PORTE, c'est ce qui ÉCRIT le champ. Et
+#: une correction l'écrit partout. Aucune rubrique n'a donc de raison de dater
+#: sur lui — sur les quinze sources du fil, quatorze l'avaient déjà compris.
+_DATATION_SUR_MISE_A_JOUR_ADMISE: dict[str, str] = {}
 
 
 def _modules_du_flux() -> list[Path]:
@@ -181,4 +192,21 @@ def test_le_fil_ne_date_aucune_ligne_sur_mis_a_jour_le():
     assert not obsoletes, (
         f"Exemption(s) devenue(s) inutile(s) : {sorted(obsoletes)} — les retirer de "
         "`_DATATION_SUR_MISE_A_JOUR_ADMISE`."
+    )
+
+
+def test_la_lecon_reste_ecrite_ou_le_defaut_a_ete_vu():
+    """Le commentaire qui porte la règle ne doit pas disparaître en silence.
+
+    `flux/publications.py` est le seul endroit qui explique POURQUOI la date
+    d'une publication n'est pas sa dernière écriture. Le supprimer rendrait le
+    choix incompréhensible au prochain lecteur — qui le « corrigerait » de bonne
+    foi. C'est déjà arrivé : la leçon, écrite là le 01/08/2026, n'a pas franchi
+    le fichier voisin, et l'annonce a redaté sur `mis_a_jour_le` un mois de plus.
+    """
+    source = (_FLUX / "publications.py").read_text(encoding="utf-8")
+    assert "PAS `mis_a_jour_le`" in source, (
+        "Le commentaire qui porte la règle a disparu de flux/publications.py. "
+        "S'il a été déplacé, mettre ce test à jour ; s'il a été supprimé, le "
+        "rétablir : c'est le seul endroit où le choix s'explique."
     )

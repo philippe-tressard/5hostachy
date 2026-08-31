@@ -93,9 +93,7 @@
 		on:toggle={basculer}
 	>
 		<svelte:fragment slot="titre-suffixe">
-			{#if estFil && isNouveau(pub.cree_le, pub.mis_a_jour_le)}<span
-					class="badge badge-gray pub-neuf">New</span
-				>{/if}
+			{#if estFil && isNouveau(pub.cree_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
 			<!--  ⚠️ Le brouillon portait ✏️ — le crayon qui EST l'icône « Modifier »
