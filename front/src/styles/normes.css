@@ -230,6 +230,19 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 }
 
 /* ── Mobile global ── */
+/*  🔴 LE DÉFAUT DOIT VIVRE ICI AUSSI, et c'est une régression du 01/09/2026 qui
+    l'a montré. `.kb-mobile { display: none }` était écrit dans la page : Svelte le
+    compile en `.kb-mobile.svelte-<hash>`, spécificité 0-2-0. La bascule ci-dessous,
+    globale, vaut 0-1-0 — elle PERDAIT. Le kanban condensé a disparu entièrement :
+    `.kb-desktop` masqué par son `!important`, `.kb-mobile` jamais montré.
+
+    ⚠️ La leçon est celle de `lint:classe-relayee`, dans l'autre sens : le scope
+    n'isole pas seulement, il AJOUTE de la spécificité. Une règle globale ne peut
+    pas surcharger une règle scopée — les deux doivent vivre au même niveau. */
+.kb-mobile {
+	display: none;
+}
+
 /*  ── Le KANBAN passe en vue étroite sous 900 px ───────────────────────────────
     Deux rendus du kanban existent : le complet (page Calendrier, `.kanban`
     ci-dessus, colonnes empilées) et le condensé du tableau de bord, qui montre

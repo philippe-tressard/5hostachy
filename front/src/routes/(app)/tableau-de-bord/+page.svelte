@@ -1183,9 +1183,6 @@
 	}
 
 	/* Mobile */
-	.kb-mobile {
-		display: none;
-	}
 	.kb-mobile-nav {
 		display: flex;
 		align-items: center;
