@@ -23,7 +23,7 @@
 	import { trackTabView } from '$lib/telemetry';
 	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
 	import {
-		clePlanifiee,
+		clesDesEvenements,
 		planifier,
 		resumePlan,
 		type SourceRecurrente,
@@ -611,20 +611,6 @@
 	//  écrire — et la résolution du périmètre, qui dépend des données chargées.
 	let initLoading = false;
 
-	/** Les événements déjà posés pour l'exercice, sous forme de clés. */
-	function clesExistantes(exercice: number): Set<string> {
-		return new Set(
-			evenements
-				.filter(
-					(ev: any) =>
-						ev.type === 'maintenance_recurrente' &&
-						!ev.archivee &&
-						new Date(ev.debut).getFullYear() === exercice,
-				)
-				.map((ev: any) => clePlanifiee(ev.titre, new Date(ev.debut).getMonth())),
-		);
-	}
-
 	async function initPrestataires() {
 		initLoading = true;
 		try {
@@ -643,6 +629,7 @@
 						frequence_type: c.frequence_type ?? null,
 						frequence_valeur: c.frequence_valeur ?? null,
 						prestataire_id: c.prestataire_id ?? null,
+						contrat_id: c.id,
 						perimetre: perimetreDuBatiment(c.batiment_id),
 						description: c.notes ?? null,
 					})),
@@ -653,6 +640,8 @@
 						frequence_type: ev.frequence_type ?? null,
 						frequence_valeur: ev.frequence_valeur ?? null,
 						prestataire_id: ev.prestataire_id ?? null,
+						//  Un événement de maintenance saisi à la main n'a pas de contrat.
+						contrat_id: null,
 						//  ⚠️ Ce repli est le correctif de #605 : la branche
 						//  événement posait `ev.perimetre ?? ''`, donc une chaîne VIDE
 						//  quand la source n'en portait pas, là où l'autre calculait
@@ -662,7 +651,11 @@
 					})),
 			];
 
-			const plan = planifier(sources, clesExistantes(kanbanExercice), kanbanExercice);
+			const plan = planifier(
+				sources,
+				clesDesEvenements(evenements, kanbanExercice),
+				kanbanExercice,
+			);
 			const message = resumePlan(plan, kanbanExercice);
 			if (plan.aCreer.length === 0) {
 				toast('info', message);

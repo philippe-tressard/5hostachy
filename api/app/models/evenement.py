@@ -81,6 +81,13 @@ class Evenement(SQLModel, table=True):
     archivee: bool = False
     statut_kanban: Optional[str] = Field(default=None)  # ag|cs|syndic|fournisseur|termine|annule
     prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
+    #  🔴 La SOURCE de la visite, quand elle vient du pré-remplissage du kanban
+    #  (#605, point 2). Le rapprochement se faisait sur le titre littéral : le
+    #  renommer — ou renommer le prestataire — recréait tout l'exercice en double.
+    #
+    #  ⚠️ Nullable, et ça le reste : les visites créées AVANT le 01/09/2026 n'en
+    #  ont pas, et un événement de maintenance saisi à la main n'a pas de contrat.
+    contrat_id: Optional[int] = Field(default=None, foreign_key="contrat_entretien.id")
     frequence_type: Optional[str] = Field(default=None)   # "semaines", "mois", "fois_par_an"
     frequence_valeur: Optional[int] = Field(default=None)
     affichable: bool = Field(default=False)  # visible dans le dashboard (évènements récents)

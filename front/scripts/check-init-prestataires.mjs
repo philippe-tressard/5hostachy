@@ -24,6 +24,8 @@
 import {
 	OCCURRENCES_MAX_AN,
 	clePlanifiee,
+	cleSource,
+	clesDesEvenements,
 	frequenceAnnuelle,
 	moisOccurrence,
 	planifier,
@@ -49,6 +51,7 @@ const source = (over) => ({
 	frequence_type: 'fois_par_an',
 	frequence_valeur: 2,
 	prestataire_id: 7,
+	contrat_id: 42,
 	perimetre: 'batiment-a',
 	description: null,
 	...over,
@@ -122,6 +125,140 @@ verifier(
 	clePlanifiee('Otis — Ascenseur A', 3),
 	clePlanifiee('Otis — Ascenseur A (2/4)', 3),
 );
+
+// ── La clé par SOURCE, et sa rétro-compatibilité ────────────────────────────
+//
+//  🔴 C'est ici que se joue le même risque que `titreBase` en son temps : les
+//  visites créées AVANT le 01/09/2026 ne portent aucun `contrat_id`. Rapprocher
+//  uniquement par la source ferait recréer l'exercice entier au premier clic —
+//  le défaut qu'on corrige, en pire.
+
+verifier(
+	'cleSource : deux contrats différents ne se confondent pas',
+	cleSource(42, 0) === cleSource(43, 0),
+	false,
+);
+verifier(
+	'cleSource : deux occurrences du même contrat non plus',
+	cleSource(42, 0) === cleSource(42, 1),
+	false,
+);
+
+//  Une visite existante reconnue par sa SOURCE : le titre a beau avoir changé —
+//  contrat renommé, prestataire renommé — elle n'est pas recréée. C'est tout
+//  l'objet de ce lot.
+const titreChange = planifier(
+	[source({ titre: 'AUTRE NOM COMPLÈTEMENT', frequence_valeur: 2 })],
+	new Set([cleSource(42, 0), cleSource(42, 1)]),
+	2027,
+);
+verifier('planifier : le contrat renommé ne recrée RIEN', titreChange.aCreer.length, 0);
+verifier('planifier : … et le dit', titreChange.ignores, 2);
+
+//  Le repli par titre reste actif pour l'existant sans `contrat_id`.
+const ancienStyle = planifier(
+	[source({ frequence_valeur: 2 })],
+	new Set([clePlanifiee('Otis — Ascenseur A', 0), clePlanifiee('Otis — Ascenseur A', 6)]),
+	2027,
+);
+verifier(
+	'planifier : les visites d’avant la migration restent reconnues',
+	ancienStyle.aCreer.length,
+	0,
+);
+
+//  🔴 Le cas que le mois ne savait pas traiter : la fréquence passe de 2 à 3.
+//  Par titre + mois, les deux anciennes ne correspondent plus (les mois ont
+//  bougé) et l'on obtient TROIS nouvelles, soit cinq visites. Par source, les
+//  index 0 et 1 correspondent et seule la troisième est créée.
+const frequenceChangee = planifier(
+	[source({ frequence_valeur: 3 })],
+	new Set([cleSource(42, 0), cleSource(42, 1)]),
+	2027,
+);
+verifier(
+	'planifier : de 2 à 3 par an, une seule visite ajoutée',
+	frequenceChangee.aCreer.length,
+	1,
+);
+
+//  Une source SANS contrat — un événement de maintenance saisi à la main — ne
+//  doit pas planter, ni se rapprocher d'une clé de contrat.
+const sansContrat = planifier(
+	[source({ contrat_id: null, frequence_valeur: 1 })],
+	new Set([cleSource(42, 0)]),
+	2027,
+);
+verifier(
+	'planifier : une source sans contrat ignore la clé de source',
+	sansContrat.aCreer.length,
+	1,
+);
+
+//  L'événement fabriqué PORTE son contrat : sans cela la clé de source serait
+//  écrite mais jamais relue, et le lot suivant recréerait tout.
+verifier(
+	'planifier : l’événement créé porte son contrat_id',
+	planifier([source({ frequence_valeur: 1 })], new Set(), 2027).aCreer[0].contrat_id,
+	42,
+);
+
+// ── Les clés des visites DÉJÀ posées ────────────────────────────────────────
+//
+//  Cette fonction vivait dans l'écran, où rien ne l'éprouvait — et c'est elle qui
+//  décide si le clic recrée ou non l'exercice entier.
+
+const visite = (over) => ({
+	titre: 'Otis — Ascenseur A',
+	debut: '2027-03-15T09:00',
+	type: 'maintenance_recurrente',
+	archivee: false,
+	contrat_id: 42,
+	...over,
+});
+
+verifier(
+	'clesDesEvenements : une visite avec contrat rend DEUX clés',
+	clesDesEvenements([visite()], 2027).size,
+	2,
+);
+verifier(
+	'clesDesEvenements : une visite d’avant la migration n’en rend qu’une',
+	clesDesEvenements([visite({ contrat_id: null })], 2027).size,
+	1,
+);
+//  L'index se déduit du RANG par date, pas de l'ordre du tableau : l'API rend
+//  les événements dans un ordre qui n'est pas garanti.
+verifier(
+	'clesDesEvenements : l’index suit la DATE, pas l’ordre reçu',
+	[
+		...clesDesEvenements(
+			[visite({ debut: '2027-09-15T09:00' }), visite({ debut: '2027-03-15T09:00' })],
+			2027,
+		),
+	].includes(cleSource(42, 0)),
+	true,
+);
+//  Les trois filtres, chacun pour lui-même : un archivé, un autre type, un autre
+//  exercice ne doivent RIEN produire — sinon le pré-remplissage se croirait déjà
+//  fait et n'écrirait rien du tout.
+verifier(
+	'clesDesEvenements : une visite archivée est ignorée',
+	clesDesEvenements([visite({ archivee: true })], 2027).size,
+	0,
+);
+verifier(
+	'clesDesEvenements : un autre type est ignoré',
+	clesDesEvenements([visite({ type: 'maintenance' })], 2027).size,
+	0,
+);
+verifier(
+	'clesDesEvenements : un autre exercice est ignoré',
+	clesDesEvenements([visite({ debut: '2026-03-15T09:00' })], 2027).size,
+	0,
+);
+//  Le cas zéro : aucune visite, aucune clé — et surtout pas une erreur.
+verifier('clesDesEvenements : liste vide', clesDesEvenements([], 2027).size, 0);
 
 // ── Le plan ─────────────────────────────────────────────────────────────────
 
@@ -199,5 +336,5 @@ if (echecs.length) {
 }
 console.log(
 	`✓ check-init-prestataires — ${cas} cas : fréquences, répartition, numéro d’occurrence ` +
-		'(et sa rétro-compatibilité), plafond parlant, cas zéro.',
+		'(et sa rétro-compatibilité), clé par SOURCE et son repli, plafond parlant, cas zéro.',
 );
