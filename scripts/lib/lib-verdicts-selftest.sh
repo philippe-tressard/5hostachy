@@ -399,6 +399,16 @@ verdicts_selftest() {
   #  Les deux cas zéro : pas de réponse, et une réponse sans CSP du tout.
   vc "aucune réponse"                      INCONNU "" "connect-src"
   vc "réponse sans en-tête CSP"            INCONNU "$(printf 'HTTP/2 200\r\nX-Frame-Options: DENY\r\n')" "connect-src"
+  #  🔴 Le rôle, et il a MANQUÉ à la première écriture — constaté en production
+  #  une heure après la mise en service : le contrôle rendait WARN toutes les
+  #  quinze minutes sur le standby, qui ne sert rien. C'est le défaut que le
+  #  commentaire de C23, juste à côté, décrit et corrige depuis le 20/08/2026.
+  #  Écrire un contrôle voisin sans relire ce que son voisin a appris, c'est
+  #  refaire son défaut (`standards/04` §25).
+  vc "standby : rien à constater"          SANS_OBJET "" "connect-src" standby
+  #  ⚠️ Et il le reste même si quelque chose répondait : ce n'est pas le site.
+  vc "standby, réponse parasite"           SANS_OBJET "$_CSP_OK" "connect-src" standby
+
 
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail

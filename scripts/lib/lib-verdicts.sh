@@ -299,7 +299,17 @@ verdict_notification() { # $1=fails $2=warns → critique|digest|silence
 # les directives figurent — le contrôle serait vert quoi qu'il arrive au mode
 # bloquant, c'est-à-dire exactement l'inverse de ce qu'on lui demande.
 verdict_csp_directives() {
-  local recus="$1" directives="$2" ligne manquantes="" d
+  local recus="$1" directives="$2" role="${3:-actif}" ligne manquantes="" d
+  #  🔴 LE RÔLE, et il a manqué à la première écriture (constaté en production le
+  #  01/09/2026, une heure après la mise en service). Le standby ne sert rien : ce
+  #  contrôle y rendait WARN toutes les quinze minutes, sur la moitié du parc, et
+  #  le digest quotidien l'emportait.
+  #
+  #  ⚠️ C'est EXACTEMENT le défaut que le commentaire de C23, juste à côté, décrit
+  #  et corrige — « un contrôle dont le vert est inatteignable finit par se
+  #  contourner » (`standards/04` §25). Écrire un contrôle voisin sans relire ce
+  #  que son voisin a appris, c'est refaire son défaut.
+  [ "$role" = "standby" ] && { echo SANS_OBJET; return; }
   [ -z "$recus" ] && { echo INCONNU; return; }
   ligne=$(printf '%s' "$recus" | grep -i "^Content-Security-Policy:" | head -1)
   [ -z "$ligne" ] && { echo INCONNU; return; }
