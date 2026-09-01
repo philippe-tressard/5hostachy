@@ -172,7 +172,8 @@ La décision est **pure** (`verdict_notification`, `lib-verdicts.sh`, couverte p
 
 🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
 contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
-retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée) — au motif qu’un FAIL
+retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée), et depuis le
+01/09/2026 **C1** dans ses deux cas non concluants (voir ci-dessous) — au motif qu’un FAIL
 à `*/15` enverrait un mail par heure. Le raisonnement était juste sur la **fréquence**
 et faux sur la **conclusion** : on en a déduit « pas de mail » là où il fallait « pas
 ce mail-là ». Ces cinq contrôles n’avaient donc **aucun destinataire**.
@@ -184,6 +185,47 @@ L’écran affichait « À jour » sur un rapport vieux de cinq jours.
 
 ⚠️ **Un WARN sans destinataire est un contrôle mort** — `standards/04` §7. Poser un
 nouveau contrôle en WARN est légitime ; le laisser sans canal ne l’est pas.
+
+### C1 — « site public KO » demande DEUX sondes, pas une (01/09/2026)
+
+Une alerte critique est partie à 01:21 pour un `HTTP 503` qui a duré moins de
+quinze minutes : `auto-deploy.sh` recréait les conteneurs entre 01:18 et 01:23, et
+Caddy rend 503 pendant que son amont redémarre. **Une seule occurrence dans 1,8 Mo
+de journal**, l’exécution suivante verte, et tous les autres contrôles au vert dans
+la même exécution — y compris « pas de split-brain » et « code aligné ».
+
+🔴 **La preuve que le contrôle avait tort existait déjà, chez le voisin.**
+`health-watch.sh` sonde la MÊME URL, re-sonde à 30 s avant de conclure, et a écarté
+un 503 identique à 05:42 le même jour : *« Site revenu entre les deux checks
+(HTTP 200) — faux positif, pas d’action »*. Deux contrôles du même fait, deux
+fiabilités — et c’est le plus bruyant qui écrivait à l’exploitant.
+
+C1 rend donc désormais quatre verdicts, décidés par `verdict_site_public`
+(`lib-verdicts.sh`, pure, couverte par `--selftest`) :
+
+| Sondes | Verrou de build sur l’actif | Verdict |
+|---|---|---|
+| 200 | — | **OK** |
+| ≠200 puis 200 | — | **WARN** — hoquet, pas une panne |
+| ≠200 deux fois | tenu | **WARN** — build en cours, revérifié dans 15 min |
+| ≠200 deux fois | libre | **FAIL** — le chemin critique est inchangé |
+
+⚠️ **Ce n’est pas un assouplissement de seuil.** La leçon du point 10 (#448) est
+que la tolérance masque ; ici on ajoute une **seconde mesure**, et les deux cas
+non concluants sortent en WARN — donc dans le digest, jamais en silence. Un build
+qui échoue laisse le site KO : le verrou est relâché, et l’exécution suivante
+alerte.
+
+Le verrou est lu **sur le nœud qui porte la prod**, jamais sur celui qui observe —
+un build sur le standby ne fait pas tomber le site public. Il est remonté par le
+champ `deploiement` de `lib-collecte.sh`, qui prend et relâche un verrou *partagé*
+sur `.auto-deploy.lock` : il échoue face à l’exclusif du build sans jamais bloquer
+un build qui démarrerait pile à cet instant.
+
+📎 Au passage : `http_code` existait en **trois** exemplaires — ici, dans
+`lib-verdicts.sh` et dans `precheck-mep.sh` — et la troisième avait perdu le
+correctif du 30/07/2026 (garde sur la sortie vide). Elle vit maintenant dans
+`scripts/lib/lib-sonde.sh`, et nulle part ailleurs.
 
 ## Sync DB manuelle (sans basculer)
 ⚠️ Copier `app.db` pendant que l'API écrit = copie potentiellement déchirée. On stoppe

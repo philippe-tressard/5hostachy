@@ -23,11 +23,44 @@
 #  ou aberrante, jamais un vert (`standards/04-fiabilite-des-controles.md`).
 # =============================================================================
 
-# ── Sonde HTTP — UNE valeur, toujours (cf. health-watch.sh) ──────────────────
-http_code() {  # $1 = URL, $2 = timeout (défaut 10) → code HTTP ou 000
-  local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-10}" "$1" 2>/dev/null)
-  echo "${code:-000}"
+#  `http_code` vivait ici — elle est dans `lib-sonde.sh` depuis le 01/09/2026,
+#  où elle est écrite UNE fois pour les trois scripts qui la sondaient.
+
+# ── Le site public est-il RÉELLEMENT en panne ? (PURE — testable) ────────────
+# Args : code1  code2  deploiement       (deploiement = "oui" / "non" / autre)
+#   code1 : première sonde de l'URL publique
+#   code2 : seconde sonde, après un délai — "" si l'on n'a pas eu à la faire
+#   deploiement : un build d'auto-deploy tient-il son verrou sur l'ACTIF ?
+# Échoit : OK · TRANSITOIRE:<code1> · DEPLOIEMENT:<code1> · KO:<code2> · INCONNU
+#
+# 🔴 POURQUOI (01/09/2026). À 01:21, C1 a envoyé une alerte critique « Site public
+# KO (HTTP 503) ». Le site n'était pas en panne : `auto-deploy.sh` recréait les
+# conteneurs entre 01:18 et 01:23 — le 503 est la réponse de Caddy pendant que son
+# amont redémarre. Une seule occurrence dans 1,8 Mo de journal, et l'exécution
+# suivante était verte.
+#
+# ⚠️ Ce n'est PAS un assouplissement de seuil — la leçon du point 10 (#448) est
+# que la tolérance masque. C'est une SECONDE MESURE : un site réellement KO l'est
+# encore quelques secondes plus tard, et le reste aux exécutions suivantes.
+#
+# La preuve que le contrôle avait tort était déjà dans son propre rapport :
+# `health-watch.sh`, qui sonde la même URL, re-sonde à 30 s avant de conclure. Il
+# a écarté le 503 de 05:42 le même jour — « Site revenu entre les deux checks
+# (HTTP 200) — faux positif, pas d'action ». Deux contrôles du même fait, deux
+# fiabilités : le plus bruyant est celui qui alerte.
+#
+# ⚠️ DEPLOIEMENT n'est pas un vert. Un build qui échoue laisse le site KO, et
+# l'exécution suivante — quinze minutes plus tard, verrou relâché — le dira en
+# FAIL. La dérogation ne survit donc pas à son objet.
+verdict_site_public() {
+  local code1="${1:-}" code2="${2:-}" deploiement="${3:-}"
+  [ -z "$code1" ] && { echo "INCONNU"; return; }
+  [ "$code1" = "200" ] && { echo "OK"; return; }
+  [ "$code2" = "200" ] && { echo "TRANSITOIRE:$code1"; return; }
+  [ "$deploiement" = "oui" ] && { echo "DEPLOIEMENT:$code1"; return; }
+  #  On rend le code de la SECONDE sonde : c'est le plus récent, donc l'état à
+  #  l'instant de la décision. Vide (sonde impossible) → on garde le premier.
+  echo "KO:${code2:-$code1}"
 }
 
 # ── Empreinte des scripts planifiés dans un crontab (PURE — testable) ────────

@@ -78,7 +78,11 @@ rapporter() {              # $1 = numéro, $2 = verdict, $3 = libellé, $4 = dé
 #  traduisent en INCONNU — jamais en OK.
 sur() { timeout 25 ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" "$2" 2>/dev/null; }
 
-http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$1" 2>/dev/null; }
+#  🔴 Cette copie-ci avait DIVERGÉ : ni garde sur la sortie vide, ni timeout par
+#  défaut, alors que les deux autres portaient le correctif du 30/07/2026. Le
+#  point 1 pouvait donc afficher un code vide, que rien ne distingue d un OK.
+# shellcheck source=../lib/lib-sonde.sh
+. "$RACINE_DEPOT/scripts/lib/lib-sonde.sh"
 
 echo "═══ Pré-check MEP — $(date '+%Y-%m-%d %H:%M') ═══"
 echo

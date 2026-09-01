@@ -63,6 +63,17 @@ echo "disk=$(df / | awk "NR==2{print \$5}" | tr -d %)"
 echo "ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
 echo "epoch=$(date +%s)"
 echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
+# Un build auto-deploy est-il EN COURS sur ce nœud ? Le verrou est le fait
+# lui-même — `auto-deploy.sh` le tient du début du build jusqu a la fin, et C1
+# s en sert pour ne pas crier au loup pendant les trois minutes où Caddy rend
+# 503 parce que son amont redémarre (01/09/2026).
+# Le sous-shell prend un verrou PARTAGÉ et le relâche aussitôt : il échoue face
+# à l exclusif du build, et ne bloque pas un build qui démarrerait pile ici.
+# ⚠️ Aucune apostrophe ci-dessus, et ce n est pas du style : ces lignes sont DANS
+# la chaîne simple-quotée, une apostrophe nue la refermerait (avertissement plus
+# haut dans ce fichier — et je viens de m y reprendre).
+DEP=non; if command -v flock >/dev/null 2>&1 && [ -f $R/.auto-deploy.lock ]; then ( flock -n -s 9 ) 9<>$R/.auto-deploy.lock 2>/dev/null || DEP=oui; fi
+echo "deploiement=$DEP"
 BIG=""; for l in /var/log/hostachy-*.log; do [ -f "$l" ] || continue; sz=$(( $(stat -c %s "$l")/1048576 )); [ "$sz" -ge '"$LOG_WARN_MB"' ] && BIG="$BIG $(basename $l):${sz}M"; done
 echo "biglogs=$BIG"
 echo "deploylog_owner=$(stat -c %U /var/log/hostachy-deploy.log 2>/dev/null || echo missing)"
