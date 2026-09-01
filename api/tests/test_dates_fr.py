@@ -102,3 +102,81 @@ def test_aucune_directive_strftime_localisee_dans_app():
         "Format de date dépendant de la locale (mois/jour en anglais en prod) :\n"
         + "\n".join(fautifs)
     )
+
+
+# ── Durées : `jj:hh:mm`, et une seule écriture ────────────────────────────────
+#
+# POURQUOI (01/09/2026, demandé à l'écran) : le fil affichait « Résolu en 23.9h »
+# — un arrondi décimal d'heures, qui n'a de sens nulle part ailleurs sur le site
+# et qu'il faut convertir de tête pour lire 23 h 54. Le séparateur décimal était
+# en prime un point, sur un site intégralement en français.
+
+def test_duree_jhm_rend_le_format_demande():
+    """`jj:hh:mm`, sur deux chiffres, jusqu'au-delà de 99 jours."""
+    from datetime import timedelta
+
+    from app.utils.dates_fr import duree_jhm
+
+    cas = [
+        (timedelta(hours=23, minutes=54), "00:23:54"),
+        (timedelta(days=2, hours=3, minutes=15), "02:03:15"),
+        (timedelta(minutes=7), "00:00:07"),
+        #  Les secondes ne remontent PAS d'un cran : 59 s reste « 00:00:00 ».
+        #  Arrondir ferait dire « une minute » à ce qui n'en est pas une, et la
+        #  minute est la plus petite unité que ce format affiche.
+        (timedelta(seconds=59), "00:00:00"),
+        #  Au-delà de 99 jours le champ déborde à trois chiffres, et c'est voulu :
+        #  tronquer afficherait « 00:01:00 » pour un ticket vieux de cent jours.
+        (timedelta(days=100, hours=1), "100:01:00"),
+    ]
+    for ecart, attendu in cas:
+        assert duree_jhm(ecart) == attendu, f"{ecart!r} devrait rendre {attendu}"
+
+
+def test_duree_jhm_distingue_le_zero_de_l_incoherence():
+    """🔴 Le cas zéro de cette fonction, et c'est celui qui a produit un défaut.
+
+    Zéro est une durée VALIDE — un ticket résolu dans la minute. L'ancien code
+    testait `if duree` sur un float arrondi à `0.0` : la mention disparaissait
+    pour le ticket le plus vite résolu, le seul à ne pas dire son temps.
+
+    Une durée NÉGATIVE, elle, est une donnée incohérente (fermeture antérieure à
+    la création). L'afficher « -1:00:00 » habillerait le défaut ; on rend `None`,
+    et l'appelant n'affiche rien.
+    """
+    from datetime import timedelta
+
+    from app.utils.dates_fr import duree_jhm
+
+    assert duree_jhm(timedelta(0)) == "00:00:00"
+    assert duree_jhm(timedelta(seconds=-1)) is None
+    assert duree_jhm(timedelta(days=-3)) is None
+
+
+def test_aucune_duree_en_heures_decimales_dans_app():
+    """Une durée AFFICHÉE se formate par `duree_jhm`, jamais à la main.
+
+    Le motif vise la conversion en heures décimales suivie d'un arrondi — la
+    forme exacte qui produisait « 23.9h ». Un calcul de durée à des fins de
+    STATISTIQUE reste permis (`flux/sante.py` en moyenne une population) : ce
+    n'est pas un format, personne ne le lit tel quel.
+
+    ⚠️ Le contrôle porte donc sur la mise en forme, pas sur le calcul — et il le
+    dit, plutôt que d'interdire `total_seconds()` en bloc, ce qui l'aurait fait
+    désarmer au premier usage légitime.
+    """
+    import re
+
+    motif = re.compile(r"round\(\s*\([^)]*\)\.total_seconds\(\)\s*/\s*3600")
+    fautifs: list[str] = []
+    for chemin in sorted(_APP_DIR.rglob("*.py")):
+        for num, ligne in enumerate(
+            chemin.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if motif.search(ligne):
+                fautifs.append(f"{chemin.relative_to(_APP_DIR.parent)}:{num}: {ligne.strip()}")
+
+    assert not fautifs, (
+        "Durée arrondie en heures décimales — c'est la forme qui affichait "
+        "« Résolu en 23.9h ». Passer par `dates_fr.duree_jhm()` :\n" + "\n".join(fautifs)
+    )

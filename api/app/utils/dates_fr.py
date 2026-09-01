@@ -17,7 +17,7 @@ format dépendant de la locale réapparaît dans `app/`.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 TZ_PARIS = ZoneInfo("Europe/Paris")
@@ -111,3 +111,44 @@ def formule_anciennete(mois: list[int]) -> str:
     if mini < 2:
         return f"un à {maxi} mois"
     return f"{mini} à {maxi} mois"
+
+
+def duree_jhm(ecart: timedelta) -> str | None:
+    """Une durée écoulée, en `jj:hh:mm`. `None` si elle n'a pas de sens.
+
+    >>> duree_jhm(timedelta(hours=23, minutes=54))
+    '00:23:54'
+    >>> duree_jhm(timedelta(days=2, hours=3, minutes=15))
+    '02:03:15'
+
+    🔴 POURQUOI CE FORMAT (01/09/2026, demandé à l'écran). Le fil affichait
+    « Résolu en 23.9h » : un arrondi décimal d'heures, qui n'a de sens nulle part
+    ailleurs sur le site et qu'il faut convertir de tête pour savoir qu'il s'agit
+    de 23 h 54. Le point décimal était en prime un point, pas une virgule, sur un
+    site intégralement en français.
+
+    ⚠️ Écrit ICI et non dans le routeur qui l'affiche : une durée est un format,
+    et un format réimplémenté dans une page est ce que `test_dates_fr.py` et
+    `npm run lint:dates` existent pour empêcher. Deux endroits calculent déjà une
+    durée de résolution (`flux/tickets.py` et `flux/sante.py`) — le second n'a
+    pas encore de lecteur, mais le jour où il en aura un, le format sera le même.
+
+    ## Ce qu'elle rend `None`, et pourquoi ce n'est pas zéro
+
+    Une durée **négative** (fermeture antérieure à la création) est une donnée
+    incohérente : l'afficher « -1:00:00 » habillerait le défaut au lieu de le
+    taire. L'appelant décide alors de ne rien montrer.
+
+    ⚠️ Zéro, en revanche, est une durée VALIDE — un ticket résolu dans la minute.
+    Elle rend donc `'00:00:00'`, et pas `None` : c'est le cas zéro de cette
+    fonction, et le distinguer de l'incohérence est tout son objet. L'ancien code
+    écrivait `if duree`, ce qui traitait les deux pareil et faisait disparaître
+    la mention pour une résolution immédiate.
+    """
+    secondes = int(ecart.total_seconds())
+    if secondes < 0:
+        return None
+    jours, reste = divmod(secondes, 86400)
+    heures, reste = divmod(reste, 3600)
+    minutes = reste // 60
+    return f"{jours:02d}:{heures:02d}:{minutes:02d}"
