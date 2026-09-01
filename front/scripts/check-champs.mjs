@@ -81,11 +81,22 @@ const OPTIONNEL_LEGITIME = {
 		"la mention distingue le consentement FACULTATIF de l'acceptation obligatoire des " +
 		'CGU juste au-dessus. Sa valeur est juridique, pas ergonomique : un consentement ' +
 		'doit être libre et éclairé (`standards/14`). Elle ne se retire pas.',
-	'routes/(app)/mon-lot/+page.svelte':
-		'Deux `<legend>` de `<fieldset>` — « Associer un compte existant », « Compte ' +
-		"locataire associé ». La règle dit « l'absence de `*` suffit » : elle vaut pour un " +
-		"CHAMP, qui peut porter un astérisque. Un GROUPE entier facultatif n'a pas cette " +
-		"marque, et rien d'autre ne dirait qu'on peut le laisser vide.",
+	//  ⚠️ La déclaration a SUIVI le balisage le 01/09/2026, DEUX fois dans le même
+	//  lot : de `mon-lot` vers `FormulaireBail` quand le formulaire de bail est
+	//  parti dans son composant (#672), puis vers `RechercheLocataire` quand la
+	//  recherche de compte y a été extraite à son tour. Le second `<legend>`
+	//  (« Compte locataire associé ») a disparu avec la modale d'édition, que le
+	//  même composant rend désormais.
+	//
+	//  Une exception qui reste sur l'ancien fichier se met à parler d'un balisage
+	//  absent — et ce contrôle la refuse alors, ce qui est exactement ce qu'on lui
+	//  demande. C'est ce qui a rendu ces deux déplacements obligatoires, et non
+	//  facultatifs.
+	'lib/components/RechercheLocataire.svelte':
+		'Le `<legend>` du `<fieldset>` « Associer un compte existant ». La règle dit ' +
+		"« l'absence de `*` suffit » : elle vaut pour un CHAMP, qui peut porter un " +
+		"astérisque. Un GROUPE entier facultatif n'a pas cette marque, et rien " +
+		"d'autre ne dirait qu'on peut le laisser vide.",
 };
 
 /** `<input type="…">` qui se saisissent. Les autres sont des contrôles. */

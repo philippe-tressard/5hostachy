@@ -95,32 +95,24 @@ function composantsPorteursDeFormulaire() {
  * contrôle échoue si l'une cesse de servir.
  */
 const EXCEPTIONS = {
-	//  🔴 QUATRE ÉCRANS, SEPT MODALES DE CRÉATION — suivi en #672, ouvert le
-	//  31/08/2026 par l'élargissement de ce contrôle aux champs nus.
+	//  ✅ VIDE, et c'est l'aboutissement de #672 — clos le 01/09/2026.
 	//
-	//  Elles créent un objet dans une modale, ce que #367 a supprimé après trois
-	//  signalements de l'utilisateur. Elles y ont échappé parce que ce contrôle ne
-	//  cherchait qu'un `<form>` : elles n'en portent aucun, seulement des `.field`.
+	//  Le 31/08, l'élargissement de ce contrôle aux champs nus (`.field`, pas
+	//  `<form>`) avait trouvé QUATRE écrans portant sept modales de création : le
+	//  paradigme que #367 a supprimé après trois signalements de l'utilisateur.
+	//  Ils y avaient échappé parce que le contrôle ne cherchait qu'un `<form>`,
+	//  qu'aucun de ces formulaires ne porte.
 	//
-	//  ⚠️ Elles ne sont PAS tolérées « parce que c'est comme ça » : elles sont
-	//  datées, ticketées, et R5 impose un écran à la fois. Deux d'entre elles
-	//  dépassent le plafond de modularité et demandent d'abord l'extraction d'un
-	//  `Formulaire<Entité>`, comme la FAQ le jour même.
-	//  ✅ `delegations` est sorti de cette liste le 31/08/2026 : « Nouvelle
-	//  délégation aidant » est devenue une boîte dans la page. Il en reste DEUX,
-	//  et toutes deux demandent d'abord une extraction — c'est le contrôle qui
-	//  l'exige, en refusant l'exception dès qu'elle cesse de servir.
-	'routes/(app)/mon-lot/+page.svelte':
-		"#672 — « Nouveau bail » (fichier de 2 230 l., extraction d'abord)",
-	//  ✅ `residence` est sorti de cette liste le 31/08/2026. Ses SEPT formulaires
-	//  — plan, règlement, CR d'AG, rapport, et les trois éditions — étaient bâtis
-	//  du même vocabulaire, par copie ; ils passent tous par `FormulaireDocument`,
-	//  qui pose la boîte à la création et la fenêtre à l'édition.
+	//  `delegations`, `residence` et `OngletPerimetres` sont sortis le jour même.
+	//  `mon-lot` a demandé un lot à lui : « Nouveau bail » vivait dans un fichier
+	//  de 2 229 lignes, et le contrôle de modularité refusait d'y ajouter une
+	//  ligne. Le corps est dans `FormulaireBail.svelte`, et la page est passée
+	//  sous les 1 700.
 	//
-	//  Il ne restait qu'un écran sur les quatre à la fin de la journée.
-	//  ✅ `OngletPerimetres` est sorti de cette liste le 31/08/2026, converti le
-	//  jour même où il y est entré. Il n'y reste rien de lui : c'est ce contrôle
-	//  qui l'a exigé, en refusant l'exception dès qu'elle a cessé de servir.
+	//  ⚠️ Ne rien remettre ici sans un ticket et une date. Une exception sans
+	//  échéance fait croire que la règle a des trous qu'elle n'a pas — et ce
+	//  contrôle échoue si l'une d'elles cesse de servir, précisément pour que
+	//  personne n'ait à y penser.
 };
 
 /** Retire commentaires et balisage commenté : expliquer la règle ne doit pas l'enfreindre. */

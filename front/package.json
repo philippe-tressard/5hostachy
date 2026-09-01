@@ -56,6 +56,7 @@
 		"lint:version-servie": "node scripts/check-version-servie.mjs",
 		"lint:largeur-saisie": "node scripts/check-largeur-saisie.mjs",
 		"lint:each-key": "node scripts/check-each-key.mjs",
+		"lint:classe-relayee": "node scripts/check-classe-relayee.mjs",
 		"lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest"
 	},
 	"devDependencies": {
