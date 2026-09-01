@@ -1,5 +1,14 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
+	import {
+		REPLIE,
+		ajouter,
+		basculer,
+		editer,
+		retirer,
+		terminerEdition,
+		type EtatDepliable,
+	} from '$lib/listeDepliable';
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
 	import Onglet from '$lib/components/Onglet.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -109,8 +118,13 @@
 	let membresCS: MembreCSForm[] = [];
 	let savingCS = false;
 	let savingCSIdx: number | null = null;
-	let csOpenIdx: number | null = null;
-	let csEditIdx: number | null = null;
+	//  🔴 UNE seule mécanique pour les deux listes (#640). Elle vivait ici en deux
+	//  exemplaires — `csOpenIdx`/`csEditIdx` et `syndicOpenIdx`/`syndicEditIdx` —
+	//  avec deux fonctions de retrait LITTÉRALEMENT identiques. Deux entités
+	//  différentes, mais le même comportement : déplier, éditer, ajouter, retirer
+	//  en décalant les index. `$lib/listeDepliable` la porte, et son `--selftest`
+	//  l'éprouve — le décalage d'index est la partie qu'on recopie sans la relire.
+	let cs: EtatDepliable = REPLIE;
 
 	// Syndic
 	let nomSyndic = '';
@@ -121,8 +135,7 @@
 	let membresSyndic: MembreSyndicForm[] = [];
 	let savingSyndic = false;
 	let savingSyndicIdx: number | null = null;
-	let syndicOpenIdx: number | null = null;
-	let syndicEditIdx: number | null = null;
+	let syndic: EtatDepliable = REPLIE;
 
 	// WhatsApp
 	let whatsappUrl = '';
@@ -319,8 +332,7 @@
 				return (a.nom ?? '').localeCompare(b.nom ?? '', 'fr');
 			});
 			membresCS = [...membresCS];
-			csOpenIdx = null;
-			csEditIdx = null;
+			cs = REPLIE;
 			csHeaderEditing = false;
 			nomSyndic = syndicData.nom_syndic ?? '';
 			nomSyndicSource = syndicData.nom_syndic_source ?? 'aucune';
@@ -341,8 +353,7 @@
 				est_principal: m.est_principal ?? false,
 				user_id: m.user_id ?? null,
 			}));
-			syndicOpenIdx = null;
-			syndicEditIdx = null;
+			syndic = REPLIE;
 			syndicHeaderEditing = false;
 		} catch {
 			toast('error', 'Erreur chargement annuaire');
@@ -367,16 +378,11 @@
 				est_president: false,
 			},
 		];
-		csOpenIdx = membresCS.length - 1;
-		csEditIdx = membresCS.length - 1;
+		cs = ajouter(membresCS.length);
 	}
 	function removeMembreCS(i: number) {
 		membresCS = membresCS.filter((_, j) => j !== i);
-		if (csOpenIdx === i) {
-			csOpenIdx = null;
-			csEditIdx = null;
-		} else if (csOpenIdx !== null && csOpenIdx > i) csOpenIdx--;
-		if (csEditIdx !== null && csEditIdx !== i && csEditIdx > i) csEditIdx--;
+		cs = retirer(cs, i);
 	}
 
 	function onCSNomInput(i: number) {
@@ -469,8 +475,7 @@
 				whatsapp_url: whatsappUrl || null,
 				membres: membresCS,
 			});
-			csOpenIdx = null;
-			csEditIdx = null;
+			cs = REPLIE;
 			toast('success', `${nomAffiche(membresCS[i])} enregistré`);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -494,16 +499,11 @@
 				user_id: null,
 			},
 		];
-		syndicOpenIdx = membresSyndic.length - 1;
-		syndicEditIdx = membresSyndic.length - 1;
+		syndic = ajouter(membresSyndic.length);
 	}
 	function removeMembreSyndic(i: number) {
 		membresSyndic = membresSyndic.filter((_, j) => j !== i);
-		if (syndicOpenIdx === i) {
-			syndicOpenIdx = null;
-			syndicEditIdx = null;
-		} else if (syndicOpenIdx !== null && syndicOpenIdx > i) syndicOpenIdx--;
-		if (syndicEditIdx !== null && syndicEditIdx !== i && syndicEditIdx > i) syndicEditIdx--;
+		syndic = retirer(syndic, i);
 	}
 
 	function clearUserSyndic(i: number) {
@@ -562,8 +562,7 @@
 		const arr = [...membresSyndic];
 		[arr[i], arr[j]] = [arr[j], arr[i]];
 		membresSyndic = arr;
-		syndicOpenIdx = null;
-		syndicEditIdx = null;
+		syndic = REPLIE;
 		// Sauvegarde silencieuse de l'ordre
 		try {
 			await annuaireAdmin.putSyndic(chargeUtileSyndic());
@@ -599,8 +598,7 @@
 		savingSyndicIdx = i;
 		try {
 			await annuaireAdmin.putSyndic(chargeUtileSyndic());
-			syndicOpenIdx = null;
-			syndicEditIdx = null;
+			syndic = REPLIE;
 			toast('success', `${nomAffiche(membresSyndic[i])} enregistré`);
 		} catch (e: any) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
@@ -928,12 +926,12 @@
 					role="button"
 					tabindex="0"
 					on:click={() => {
-						if (csEditIdx !== i) csOpenIdx = csOpenIdx === i ? null : i;
+						cs = basculer(cs, i);
 					}}
 					on:keydown={(e) => {
-						if ((e.key === 'Enter' || e.key === ' ') && csEditIdx !== i) {
+						if (e.key === 'Enter' || e.key === ' ') {
 							e.preventDefault();
-							csOpenIdx = csOpenIdx === i ? null : i;
+							cs = basculer(cs, i);
 						}
 					}}
 				>
@@ -944,7 +942,7 @@
 							<span class="membre-card-title">{m.genre} {nomAffiche(m) || '…'}</span>
 						</div>
 						<div class="membre-card-actions" role="presentation" on:click|stopPropagation>
-							{#if csEditIdx === i}
+							{#if cs.edite === i}
 								<button
 									type="button"
 									class="btn-icon btn-icon-save"
@@ -960,8 +958,7 @@
 									class="btn-icon btn-icon-edit"
 									title="Modifier"
 									on:click={() => {
-										csOpenIdx = i;
-										csEditIdx = i;
+										cs = editer(i);
 									}}><Icon name="pencil" size={13} /></button
 								>
 							{/if}
@@ -974,8 +971,8 @@
 						</div>
 					</div>
 
-					{#if csOpenIdx === i}
-						{#if csEditIdx === i}
+					{#if cs.ouvert === i}
+						{#if cs.edite === i}
 							<div class="form-grid">
 								<label class="field">
 									Civilité
@@ -1045,8 +1042,8 @@
 								<button
 									class="btn btn-sm btn-outline"
 									on:click={() => {
-										csEditIdx = null;
-										csOpenIdx = null;
+										cs = terminerEdition(cs);
+										cs = { ouvert: null, edite: cs.edite };
 									}}>Annuler</button
 								>
 							</div>
@@ -1134,12 +1131,12 @@
 					role="button"
 					tabindex="0"
 					on:click={() => {
-						if (syndicEditIdx !== i) syndicOpenIdx = syndicOpenIdx === i ? null : i;
+						syndic = basculer(syndic, i);
 					}}
 					on:keydown={(e) => {
-						if ((e.key === 'Enter' || e.key === ' ') && syndicEditIdx !== i) {
+						if (e.key === 'Enter' || e.key === ' ') {
 							e.preventDefault();
-							syndicOpenIdx = syndicOpenIdx === i ? null : i;
+							syndic = basculer(syndic, i);
 						}
 					}}
 				>
@@ -1173,7 +1170,7 @@
 									on:click={() => setPrincipal(i)}>★</button
 								>
 							{/if}
-							{#if syndicEditIdx === i}
+							{#if syndic.edite === i}
 								<button
 									type="button"
 									class="btn-icon btn-icon-save"
@@ -1189,8 +1186,7 @@
 									class="btn-icon btn-icon-edit"
 									title="Modifier"
 									on:click={() => {
-										syndicOpenIdx = i;
-										syndicEditIdx = i;
+										syndic = editer(i);
 									}}><Icon name="pencil" size={13} /></button
 								>
 							{/if}
@@ -1203,8 +1199,8 @@
 						</div>
 					</div>
 
-					{#if syndicOpenIdx === i}
-						{#if syndicEditIdx === i}
+					{#if syndic.ouvert === i}
+						{#if syndic.edite === i}
 							<div class="form-grid">
 								<label class="field">
 									Civilité

@@ -778,6 +778,13 @@ jobs:
           # `$lib/init-prestataires.ts` — que Node lit directement, donc le
           # module éprouvé est CELUI QUE LE SITE EMBARQUE, pas une copie.
           npm run lint:init-prestataires
+          # La mécanique des cartes dépliables (#640) : elle vivait DEUX fois
+          # dans `espace-cs` — membres du CS et du syndic —, avec deux fonctions
+          # de retrait littéralement identiques, et rien ne l'éprouvait. Le
+          # décalage d'index après un retrait est la partie qu'on recopie sans la
+          # relire : une erreur d'un cran ouvre la carte du voisin, et cela ne se
+          # voit qu'en supprimant un membre du MILIEU de la liste.
+          npm run lint:liste-depliable
 
       # 🔴 Une balise ouvrante fermée AU MILIEU de ses attributs : les attributs
       # restants sortent du balisage et s'affichent EN TEXTE à l'écran.

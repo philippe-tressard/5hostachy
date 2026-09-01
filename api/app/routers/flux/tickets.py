@@ -152,10 +152,12 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
         vus.add(tk.id)
         nouveau = evol.nouveau_statut or ""
         if nouveau == "résolu":
-            #  🔴 `jj:hh:mm`, et non un arrondi décimal d'heures (01/09/2026,
+            #  🔴 `00j23h54'`, et non un arrondi décimal d'heures (01/09/2026,
             #  demandé à l'écran). « Résolu en 23.9h » n'a de sens nulle part
             #  ailleurs sur le site et se convertit de tête ; le point décimal
             #  était en prime un point sur un site intégralement en français.
+            #  Les unités sont portées : `00:00:30` se lisait trente secondes
+            #  alors qu'il voulait dire trente minutes.
             #  Le format vit dans `dates_fr.duree_jhm` — une durée EST un format.
             duree = None
             if tk.ferme_le and tk.cree_le:
@@ -179,7 +181,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
                     **_meta_ticket(tk),
                     "statut": "résolu",
                     #  Le nom dit désormais ce que la valeur EST : plus des heures
-                    #  décimales, mais `jj:hh:mm`. Aucun écran ne la lisait — le
+                    #  décimales, mais `00j23h54'`. Aucun écran ne la lisait — le
                     #  renommer maintenant évite qu'un futur lecteur croie à un nombre.
                     "duree": duree,
                     "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
