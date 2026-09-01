@@ -54,6 +54,28 @@ export function kanbanEvVisible(ev: any, ctx: KanbanCtx): boolean {
 }
 
 /** Retourne true si la colonne doit être affichée pour cet utilisateur. */
+/**
+ * Largeur en dessous de laquelle un kanban passe en vue étroite.
+ *
+ * 🔴 Le site rend le kanban à DEUX endroits — la page Calendrier (colonnes
+ * empilées) et le tableau de bord (une colonne à la fois). Ils basculaient à
+ * **767** et **900 px**, si bien qu'entre les deux l'un était lisible et l'autre
+ * non : exactement la plage des tablettes en portrait (768 à 820 px), que ni un
+ * téléphone ni un ordinateur n'occupent. Signalé le 01/09/2026 sur un iPad.
+ *
+ * ⚠️ Le condensé ne bascule plus par le CSS mais par un `{#if}` sur cette valeur.
+ * Deux tentatives de bascule CSS ont échoué le même soir — la première parce
+ * qu'une règle globale ne surcharge pas une règle scopée, la seconde pour une
+ * raison que je n'ai jamais pu observer, faute de voir l'écran connecté. Un
+ * rendu conditionnel ne dépend d'aucune cascade : une seule vue existe à la fois,
+ * et ce qui n'est pas rendu ne peut pas être masqué par erreur.
+ *
+ * Le kanban complet, lui, garde sa bascule CSS (`.kanban`, `composants.css`) :
+ * elle n'empile que des colonnes, sans changer ce qui est rendu.
+ * `api/tests/test_seuil_kanban.py` refuse que les deux valeurs divergent.
+ */
+export const SEUIL_KANBAN_ETROIT = 900;
+
 export function kanbanColVisible(colId: string, ctx: KanbanCtx): boolean {
 	if (colId === 'ag' || colId === 'cs') return ctx.canSeeAG;
 	return true;

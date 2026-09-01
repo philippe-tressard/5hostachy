@@ -56,8 +56,20 @@ _FRONT = _RACINE / "front" / "src"
 #: autre chose sans le dire.
 _SOURCES = [
     (_FRONT / "styles" / "composants.css", r"\.kanban \{\s*\n\s*flex-direction: column;"),
-    (_FRONT / "styles" / "normes.css", r"\.kb-desktop \{"),
+
 ]
+
+
+def _constante_seuil() -> int:
+    """`SEUIL_KANBAN_ETROIT` dans `$lib/kanban.ts` — le seuil du condensé."""
+    fichier = _FRONT / "lib" / "kanban.ts"
+    assert fichier.exists(), f"{fichier} est introuvable — ce test ne mesure plus rien."
+    m = re.search(r"^export const SEUIL_KANBAN_ETROIT = (\d+);", fichier.read_text(encoding="utf-8"), re.M)
+    assert m, (
+        "`SEUIL_KANBAN_ETROIT` introuvable — renommée, ou la bascule est repassée "
+        "au CSS. Dans les deux cas ce test ne surveille plus rien (INCONNU, pas OK)."
+    )
+    return int(m.group(1))
 
 
 def _seuil_de(chemin: Path, selecteur: str) -> int:
@@ -80,8 +92,16 @@ def _seuil_de(chemin: Path, selecteur: str) -> int:
 
 
 def test_les_deux_kanbans_basculent_au_meme_seuil():
-    """Un objet, deux rendus, un seul seuil."""
+    """Un objet, deux rendus, un seul seuil.
+
+    ⚠️ Les deux ne basculent plus de la même FAÇON : le complet par une requête
+    de média, le condensé par un `{#if}` sur une constante — deux bascules CSS
+    ayant échoué le même soir. Ce test compare donc une media-query à une
+    constante TypeScript, et c'est voulu : ce qui doit rester d'accord est la
+    VALEUR, pas le mécanisme.
+    """
     seuils = {chemin.name: _seuil_de(chemin, sel) for chemin, sel in _SOURCES}
+    seuils["kanban.ts"] = _constante_seuil()
 
     valeurs = set(seuils.values())
     assert len(valeurs) == 1, (
