@@ -39,6 +39,9 @@ class EvenementCreate(BaseModel):
     batiment_id: Optional[int] = None
     statut_kanban: Optional[str] = None
     prestataire_id: Optional[int] = None
+    #  La SOURCE d'une visite pré-remplie — le rapprochement se faisait sur le
+    #  titre littéral, qu'un renommage faisait perdre (#605, point 2).
+    contrat_id: Optional[int] = None
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: bool = True
@@ -73,6 +76,7 @@ class EvenementRead(BaseModel):
     mis_a_jour_le: Optional[datetime] = None
     statut_kanban: Optional[str] = None
     prestataire_id: Optional[int] = None
+    contrat_id: Optional[int] = None
     prestataire_nom: Optional[str] = None
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None

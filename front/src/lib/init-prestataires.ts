@@ -41,6 +41,9 @@ export interface SourceRecurrente {
 	frequence_type: string | null;
 	frequence_valeur: number | null;
 	prestataire_id: number | null;
+	/**  Le contrat d'où vient cette visite, quand il y en a un (#605, point 2).
+	 *   `null` pour une source qui est un événement de maintenance saisi à la main. */
+	contrat_id: number | null;
 	/** Déjà résolu par l'appelant : le calcul dépend de données chargées. */
 	perimetre: string;
 	description: string | null;
@@ -53,6 +56,8 @@ export interface EvenementPlanifie {
 	batiment_id: null;
 	statut_kanban: 'fournisseur';
 	prestataire_id: number | null;
+	/** La source, quand la visite vient d'un contrat — la clé anti-doublon (#605). */
+	contrat_id: number | null;
 	debut: string;
 	description: string | null;
 	affichable: false;
@@ -123,13 +128,80 @@ export function titreBase(titre: string): string {
 /**
  * La clé qui dit « cette occurrence existe déjà » : titre de base + mois.
  *
- * ⚠️ Elle reste **fragile**, et c'est documenté en #605 : elle repose sur une
- * chaîne d'affichage. Renommer un contrat ou son prestataire fait perdre la
- * correspondance, et changer la fréquence déplace les mois. Le remède est un
- * `contrat_id` sur l'événement — donc une migration, hors de ce lot.
+ * ⚠️ Elle est **fragile**, et c'est pourquoi `cleSource` existe depuis le
+ * 01/09/2026 : elle repose sur une chaîne d'affichage, que renommer un contrat ou
+ * son prestataire fait perdre.
+ *
+ * Elle ne disparaît pas pour autant — c'est le **repli** qui reconnaît les visites
+ * créées avant cette date, qui ne portent aucun `contrat_id`. Le retirer ferait
+ * recréer l'intégralité de l'exercice au premier clic.
  */
 export function clePlanifiee(titre: string, mois: number): string {
 	return `${titreBase(titre)}||${mois}`;
+}
+
+/**
+ * La clé qui dit « cette occurrence existe déjà », par sa SOURCE (#605, point 2).
+ *
+ * 🔴 Une chaîne d'affichage n'est pas une identité. `clePlanifiee` rapproche sur
+ * le titre littéral et le mois, et les deux se dérobent :
+ *
+ * - renommer un contrat — ou renommer le prestataire, qui compose le titre —
+ *   fait perdre la correspondance, et le clic suivant **recrée tout l'exercice
+ *   en double** ;
+ * - passer la fréquence de 2 à 3 par an déplace les visites : les anciennes ne
+ *   correspondent plus, et l'on obtient 3 nouvelles **en plus** des 2 existantes.
+ *
+ * L'index d'occurrence remplace le mois pour cette seconde raison : de 2 à 3 par
+ * an, les index 0 et 1 correspondent toujours, et seul le 2 est créé. Les deux
+ * premières visites restent aux mois de l'ancienne répartition — imparfait, et
+ * franchement meilleur que cinq cartes.
+ */
+export function cleSource(contratId: number, index: number): string {
+	return `contrat:${contratId}#${index}`;
+}
+
+/** Une visite déjà posée, telle que l'API la rend — seuls ces champs comptent. */
+export interface VisiteExistante {
+	titre: string;
+	debut: string;
+	type?: string;
+	archivee?: boolean;
+	contrat_id?: number | null;
+}
+
+/**
+ * Les clés des visites DÉJÀ posées pour un exercice — les deux formes.
+ *
+ * 🔴 Elle vivait dans l'écran, où rien ne l'éprouvait : c'est pourtant elle qui
+ * décide si le clic recrée ou non l'exercice entier. Le contrôle de modularité
+ * a refusé de la laisser grossir dans une page de 1 114 lignes, et il désignait
+ * le bon endroit — cette fonction parle de clés, comme ses deux voisines.
+ *
+ * ⚠️ **Deux clés par visite**, et la rétro-compatibilité l'impose : celles créées
+ * avant le 01/09/2026 ne portent aucun `contrat_id`. Ne rapprocher que par la
+ * source ferait recréer tout l'exercice au premier clic.
+ *
+ * L'index d'occurrence se déduit du **rang** de la visite parmi celles du même
+ * contrat, triées par date — l'ordre dans lequel `planifier` les fabrique.
+ */
+export function clesDesEvenements(evenements: VisiteExistante[], exercice: number): Set<string> {
+	const retenus = evenements.filter(
+		(ev) =>
+			ev.type === 'maintenance_recurrente' &&
+			!ev.archivee &&
+			new Date(ev.debut).getFullYear() === exercice,
+	);
+	return new Set(
+		retenus.flatMap((ev) => {
+			const parTitre = clePlanifiee(ev.titre, new Date(ev.debut).getMonth());
+			if (!ev.contrat_id) return [parTitre];
+			const fratrie = retenus
+				.filter((o) => o.contrat_id === ev.contrat_id)
+				.sort((a, b) => a.debut.localeCompare(b.debut));
+			return [parTitre, cleSource(ev.contrat_id, fratrie.indexOf(ev))];
+		}),
+	);
 }
 
 /**
@@ -159,8 +231,21 @@ export function planifier(
 		}
 		for (let i = 0; i < parAn; i++) {
 			const mois = moisOccurrence(parAn, i);
-			//  La clé se calcule sur le mois EN BASE 0, comme les événements lus.
-			if (clesExistantes.has(clePlanifiee(source.titre, mois - 1))) {
+			//  🔴 DEUX clés, et c'est la rétro-compatibilité qui l'impose. Les
+			//  visites créées avant le 01/09/2026 n'ont pas de `contrat_id` : ne
+			//  rapprocher que par la source ferait recréer l'intégralité de
+			//  l'exercice au premier clic — le défaut même qu'on corrige, en pire.
+			//
+			//  ⚠️ Le repli par titre disparaîtra tout seul : un exercice
+			//  entièrement pré-rempli après cette date n'a plus que des visites
+			//  portant leur contrat. Le retirer AVANT serait le retirer trop tôt.
+			//
+			//  La clé de titre se calcule sur le mois EN BASE 0, comme les
+			//  événements lus.
+			const dejaLa =
+				(source.contrat_id !== null && clesExistantes.has(cleSource(source.contrat_id, i))) ||
+				clesExistantes.has(clePlanifiee(source.titre, mois - 1));
+			if (dejaLa) {
 				plan.ignores++;
 				continue;
 			}
@@ -171,6 +256,7 @@ export function planifier(
 				batiment_id: null,
 				statut_kanban: 'fournisseur',
 				prestataire_id: source.prestataire_id || null,
+				contrat_id: source.contrat_id,
 				debut: `${exercice}-${String(mois).padStart(2, '0')}-15T09:00`,
 				description: source.description || null,
 				affichable: false,
