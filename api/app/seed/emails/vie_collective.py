@@ -156,9 +156,14 @@ MODELES = [
      '</td></tr></table>'
      '<p style="margin:0 0 20px;font-size:13px;color:#5A6070">\U0001f4ce Pièce jointe : <strong>{{ annonce.fichier }}</strong> '
      '— imprimer en couleur, sans mise à l’échelle (100 %).</p>'
-     '<p style="text-align:center;margin:0">'
-     '<a href="{{ app.url }}/espace-cs?onglet=annonces-hall" '
+     #  🔴 Le bouton pointe l'ACTUALITÉ d'origine, et n'apparaît que s'il y en
+     #  a une (`annonce.lien`, cf. `annonces_hall_courriels.lien_affiche`).
+     #  Il visait `/espace-cs`, que le front réserve au conseil syndical : depuis
+     #  que le syndic reçoit ce courriel (#480), il y était renvoyé au tableau de
+     #  bord. C'était le seul modèle du site à viser une route à accès restreint.
+     '{% if annonce.lien %}<p style="text-align:center;margin:0">'
+     '<a href="{{ app.url }}{{ annonce.lien }}" '
      'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
-     'Voir l’historique des annonces</a></p>',
+     'Voir l’actualité d’origine</a></p>{% endif %}',
      True),
 ]

@@ -274,6 +274,12 @@ export interface AnnonceHallInput {
 	perimetre_cible: string[];
 	format_demande: string;
 	images?: string[];
+	//  Les TROIS canaux de la Diffusion (#480). Ils étaient absents : l'écran ne
+	//  portait qu'une case, et le serveur ne consommait qu'un canal sur trois.
+	envoyer_cs?: boolean;
+	envoyer_syndic?: boolean;
+	partager_whatsapp?: boolean;
+	envoyer_auteur?: boolean;
 }
 
 /** Champs d'une actualité, prêts à alimenter le formulaire d'annonce de hall. */

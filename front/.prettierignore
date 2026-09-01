@@ -31,3 +31,11 @@ static/manuel-utilisateur-1-page.html
 # CI le dirait — mais après coup, sur un diff de 800 lignes sans objet.
 # Son autorité est l'égalité octet pour octet, pas une convention de mise en forme.
 src/lib/icones-svg.json
+
+# ── Caches d'outils : présents chez le développeur, absents du runner ─────────
+# Un `pytest` lancé depuis `front/` y dépose `.pytest_cache/README.md`, que git
+# ignore (il porte son propre `.gitignore`) mais que prettier voyait : le rejeu
+# local de la CI échouait sur un fichier que la CI, elle, ne verra jamais.
+# Un contrôle qui ne rend pas le même verdict en local et en CI n'est plus une
+# répétition de la CI — c'est un second contrôle, et le plus bruyant gagne.
+.pytest_cache/

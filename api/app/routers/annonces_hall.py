@@ -23,18 +23,20 @@ from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import AnnonceHall, ConfigSite, Document, Publication, Utilisateur
 from app.utils.annonce_hall import (
+    APERCU_MAX,
     FORMATS,
     MAX_PHOTOS,
     choisir_format,
     construire_html,
-    date_longue,
     format_libelle,
     generer_pdf,
     nom_fichier,
     texte_brut,
 )
-from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiables
-from app.utils.email import send_email_group
+from app.routers.annonces_hall_courriels import (
+    _envoyer_email_annonce,
+    _partager_sur_le_groupe,
+)
 from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
 from app.utils.photos import parse_photos
 from app.utils.noms import nom_affiche
@@ -43,7 +45,6 @@ router = APIRouter(prefix="/annonces-hall", tags=["annonces-hall"])
 
 PDF_DIR = Path("/app/uploads/annonces-hall")
 UPLOADS_ROOT = os.path.realpath("/app/uploads")
-APERCU_MAX = 180
 
 
 # ── Schémas ──────────────────────────────────────────────────────────────────
@@ -67,6 +68,14 @@ class AnnonceHallCreate(AnnonceHallBase):
     #  est « ne pas envoyer ». Un défaut à `True` reproduirait l'automatisme qu'on
     #  vient de retirer, en donnant l'illusion du choix.
     envoyer_cs: bool = False
+    #  Les deux autres canaux de la Diffusion (#480). Mêmes règles : décochés par
+    #  défaut, et CONSOMMÉS — un champ ouvert dans l'interface que le serveur
+    #  ignorerait est ce que le cadre interdit.
+    envoyer_syndic: bool = False
+    partager_whatsapp: bool = False
+    #  La 4e case : « Envoyer une copie à … ». Le destinataire est l'auteur de
+    #  l'AFFICHE — voir `app/utils/copie_auteur.py`.
+    envoyer_auteur: bool = False
 
 
 class AnnonceHallArchive(BaseModel):
@@ -139,46 +148,6 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
         "cree_le": annonce.cree_le.isoformat(),
         "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "",
     }
-
-
-def _envoyer_email_cs(
-    annonce: AnnonceHall, user: Utilisateur, background_tasks: BackgroundTasks,
-    session: Session,
-) -> list[str]:
-    """Programme l'envoi de l'annonce au CS du périmètre. Retourne les e-mails visés."""
-    perimetres = parse_json_perimetres(annonce.perimetre_cible)
-    destinataires = membres_cs_notifiables(session, batiments_du_perimetre(perimetres))
-    if not destinataires:
-        return []
-
-    ctx = {
-        "annonce": {
-            "id": annonce.id,
-            "titre": annonce.titre,
-            "perimetre": perimetre_label_liste(perimetres),
-            "format": format_libelle(annonce.format_effectif),
-            "date": date_longue(annonce.cree_le),
-            "apercu": texte_brut(annonce.message)[:APERCU_MAX],
-            "fichier": annonce.pdf_nom,
-        },
-        "auteur": {"prenom": user.prenom, "nom": user.nom},
-    }
-
-    emails = [email for _, email in destinataires]
-    # Auteur en copie cachée : confirmation visuelle que l'envoi a bien eu lieu.
-    auteur_bcc = (
-        [user.email] if user.email and user.email.lower() not in {e.lower() for e in emails} else None
-    )
-    background_tasks.add_task(
-        send_email_group,
-        code="annonce_hall",
-        to_recipients=destinataires,
-        context=ctx,
-        session=session,
-        bcc=auteur_bcc,
-        attachments=[annonce.pdf_chemin] if os.path.isfile(annonce.pdf_chemin) else None,
-    )
-    return emails
 
 
 def images_de_publication(pub: Publication, session: Session) -> list[str]:
@@ -298,6 +267,13 @@ def creer_annonce_hall(
     #  Les autres appelants (pré-remplissage depuis une actualité) n'envoient donc
     #  rien sans le demander.
     envoyer_cs: bool = False,
+    #  🔴 Les DEUX autres canaux de la Diffusion (#480, 01/09/2026). Ils
+    #  s'affichaient dans `CanauxNotification` partout ailleurs et n'existaient pas
+    #  ici : l'écran portait une case unique, et le cadre interdit d'ouvrir un
+    #  champ que le serveur ne consomme pas. Les voici consommés.
+    envoyer_syndic: bool = False,
+    partager_whatsapp: bool = False,
+    envoyer_auteur: bool = False,
 ) -> AnnonceHall:
     """Génère le PDF et l'enregistre dans l'historique.
 
@@ -367,14 +343,26 @@ def creer_annonce_hall(
     #
     #  Sans la case, `destinataires` et `envoye_le` restent vides : l'historique dit
     #  qu'une affiche a été générée, et rien de plus — ce qui est exactement le fait.
-    if envoyer_cs:
-        emails = _envoyer_email_cs(annonce, user, background_tasks, session)
+    diffuse = False
+    if envoyer_cs or envoyer_syndic:
+        emails = _envoyer_email_annonce(
+            annonce, user, background_tasks, session,
+            syndic=envoyer_syndic, cs=envoyer_cs, auteur=envoyer_auteur,
+        )
         if emails:
             annonce.destinataires = json.dumps(emails, ensure_ascii=False)
-            annonce.envoye_le = datetime.utcnow()
-            session.add(annonce)
-            session.commit()
-            session.refresh(annonce)
+            diffuse = True
+    if partager_whatsapp and _partager_sur_le_groupe(annonce, background_tasks, session):
+        diffuse = True
+
+    #  ⚠️ `envoye_le` est posé si UN canal a réellement été programmé — pas si une
+    #  case était cochée. Un WhatsApp éteint ou un périmètre sans conseiller ne
+    #  doivent pas inscrire dans l'historique une diffusion qui n'a pas eu lieu.
+    if diffuse:
+        annonce.envoye_le = datetime.utcnow()
+        session.add(annonce)
+        session.commit()
+        session.refresh(annonce)
 
     return annonce
 
@@ -397,6 +385,9 @@ def create_annonce_hall(
         format_demande=body.format_demande,
         images=body.images,
         envoyer_cs=body.envoyer_cs,
+        envoyer_syndic=body.envoyer_syndic,
+        partager_whatsapp=body.partager_whatsapp,
+        envoyer_auteur=body.envoyer_auteur,
     )
     return _to_read(annonce, session)
 
@@ -430,7 +421,9 @@ def renvoyer_email(
     annonce = session.get(AnnonceHall, annonce_id)
     if not annonce:
         raise HTTPException(404, "Annonce introuvable")
-    emails = _envoyer_email_cs(annonce, user, background_tasks, session)
+    #  Le renvoi manuel vise le CS du périmètre, comme avant : c'est un geste de
+    #  rattrapage sur un envoi qui a déjà eu lieu, pas une nouvelle diffusion.
+    emails = _envoyer_email_annonce(annonce, user, background_tasks, session)
     if not emails:
         raise HTTPException(
             422,

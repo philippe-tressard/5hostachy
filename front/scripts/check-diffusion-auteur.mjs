@@ -47,6 +47,10 @@ const RELAIS = [
 	'lib/components/CanauxNotification.svelte',
 	'lib/components/SectionDiffusion.svelte',
 	'lib/components/ChampsCommuns.svelte',
+	//  Ajouté le 01/09/2026 (#480) : ce formulaire pose la Diffusion, et c'est
+	//  l'onglet qui l'héberge qui compose la charge utile. Même structure que les
+	//  trois autres — et le contrôle suit désormais le SECOND saut, voir plus bas.
+	'lib/components/FormulaireAnnonceHall.svelte',
 ];
 
 function fichiers(dir) {
@@ -104,7 +108,11 @@ for (const chemin of tous) {
 	if (montreLesCanaux && !/bind:auteur\b/.test(source)) {
 		orphelins.push(rel);
 	}
-	if (!/bind:auteur\b/.test(source)) continue;
+	//  🔴 LE SECOND SAUT. Un écran ne lie pas toujours `auteur` directement : il
+	//  peut lier la prop d'un relais (`bind:envoyerAuteur={…}`), et c'est LUI qui
+	//  compose la charge utile. Sans cette ligne, le relais serait exempté et son
+	//  hôte invisible — la case reviendrait à ne rien faire, par un chemin de plus.
+	if (!/bind:auteur\b|bind:envoyerAuteur\b/.test(source)) continue;
 	lient.push(rel);
 	if (!/envoyer_auteur/.test(source)) {
 		fautifs.push(rel);
