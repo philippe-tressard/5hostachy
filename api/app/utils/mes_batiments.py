@@ -1,4 +1,4 @@
-"""Les bâtiments d'un utilisateur — au sens large, et pour un seul usage.
+"""Les bâtiments d'un utilisateur — au sens large, et la source unique de cette notion.
 
 ## Ce que ce module sert, et ce qu'il ne sert pas
 
@@ -7,30 +7,39 @@ Il répond à « quels bâtiments sont les MIENS ? », question posée par la pr
 détenir des lots dans plusieurs bâtiments : `Utilisateur.batiment_id`, qui est
 unique, ne suffit donc pas à répondre.
 
-⚠️ **Cette liste ne peut jamais ÉLARGIR un accès.** C'est la contrainte posée par
-l'utilisateur le 14/08/2026 : *une agence, un bailleur ou un mandataire qui
-n'avaient pas de visibilité n'en gagnent aucune.* L'ouverture porte sur l'axe
-**bâtiment**, jamais sur l'axe **public**.
+⚠️ **Cette liste décide d'un accès depuis le 02/09/2026.** Ce fichier affirmait
+l'inverse — « elle ne décide jamais d'un accès », et la règle « continue de
+s'appuyer sur le seul `batiment_id` ». C'est faux, et le laisser écrit serait
+pire que de ne rien écrire : une consigne fausse est celle qu'on croit.
 
-Elle a **deux** appelants, et un seul sens de lecture — montrer moins, jamais plus :
+**Trois** appelants, un seul et même sens de « mes bâtiments » :
 
-1. la préférence « n'afficher que les contenus de mes bâtiments » : elle retire ce
-   que l'utilisateur a demandé à ne plus voir ;
-2. depuis le **02/09/2026**, `utils/visibility.perimetre_visible`, mais
-   **uniquement dans la branche « aucun `batiment_id` »**.
+| Appelant | Ce qu'il en fait | Cas zéro |
+|---|---|---|
+| la préférence « n'afficher que les contenus de mes bâtiments » (`visibility.perimetre_visible`, branche restreinte) | retire ce que l'utilisateur a demandé à ne plus voir | « rien à restreindre » → on montre |
+| la **règle géographique d'accès** (`visibility.perimetre_visible`) — centralisée là et nulle part ailleurs | décide qui voit un contenu ciblé sur un bâtiment | « pas résident » → on refuse |
+| `utils/preferences_mail.classer` | route un e-mail vers « mon bâtiment » ou « autres bâtiments » | « on ne peut pas dire que ça vient d'ailleurs » → on n'y touche pas |
 
-Le point 2 revient sur ce que ce fichier affirmait jusque-là — « cette liste ne
-décide jamais d'un accès », et la règle « continue de s'appuyer sur le seul
-`batiment_id` ». La raison de cette affirmation reste vraie et n'est pas
-enfreinte : décider sur cette liste **en toutes circonstances** élargirait, et
-c'est précisément l'erreur qu'a commise la première écriture du correctif de ce
-jour-là. Confinée à la branche sans rattachement, elle ne peut que retirer — le
-repli permissif y rendait `True` pour tout le monde, et un bailleur, qui n'a par
-construction aucun `batiment_id`, y passe de « toute la résidence » aux bâtiments
-de ses seuls lots.
+⚠️ Ils appellent tous la même fonction et diffèrent sur le seul **cas zéro** —
+c'est la seule chose que cette fonction ne tranche pas à leur place, et c'est
+volontaire : une absence d'information ne veut pas dire la même chose selon
+qu'on masque, qu'on autorise ou qu'on trie.
 
-🔒 Verrouillé par `tests/test_visibilite_ouverte.py` : un compte QUI A un
-rattachement ne gagne rien du bâtiment de ses lots.
+## Ce que l'arbitrage du 02/09/2026 a changé, et ce qu'il n'a pas changé
+
+La contrainte du 14/08/2026 — *une agence, un bailleur ou un mandataire qui
+n'avaient pas de visibilité n'en gagnent aucune* — est **levée sur l'axe
+bâtiment**, dans les mots de l'utilisateur : *« un bailleur sans rattachement
+voit les bâtiments de ses lots »*, et à généraliser. Un compte rattaché au
+bâtiment A et détenteur d'un lot en B voit désormais B.
+
+🔒 Elle tient **intacte sur l'axe public** : `public_cible`,
+`ProfilAccesDocument` et les règles mandataire sont combinés en ET avec la règle
+géographique. Détenir un lot donne le bâtiment, jamais le droit de lire ce qui ne
+vous est pas adressé. Verrouillé par `tests/test_visibilite_ouverte.py`, qui
+vérifie l'élargissement et sa borne **dans le même test** — pour qu'ils ne
+puissent pas se séparer.
+
 
 ## Le cache
 
@@ -64,10 +73,19 @@ def invalider_cache(user_id: Optional[int] = None) -> None:
 def batiments_de_l_utilisateur(user) -> frozenset[int]:
     """Les bâtiments de son rattachement **et** de ses lots actifs.
 
-    Renvoie un ensemble **vide** si rien n'est connu — ce que l'appelant doit
-    traiter comme « aucune restriction possible », et non comme « aucun accès » :
-    un utilisateur sans bâtiment ni lot qui coche la restriction ne doit pas se
-    retrouver devant un fil vide (cas zéro, `standards/04` §2).
+    Renvoie un ensemble **vide** si rien n'est connu. ⚠️ Ce cas zéro n'a PAS le
+    même sens pour les deux appelants, et cette fonction ne tranche pas à leur
+    place — elle rend un fait, ils en tirent une décision :
+
+    - la **restriction volontaire** le lit « aucune restriction possible » :
+      quelqu'un qui coche une case ne doit pas se retrouver devant un fil vide ;
+    - la **règle d'accès** le lit « pas résident de la copropriété » : ni
+      rattachement ni lot, donc aucun contenu ciblé sur un bâtiment.
+
+    Répondre `True` des deux côtés — ce que faisait le repli permissif de
+    `perimetre_visible` jusqu'au 02/09/2026 — ouvrait toute la résidence, et avec
+    elle les actualités confidentielles, à des comptes techniques (cas zéro,
+    `standards/04` §2 : une absence d'information n'est pas une autorisation).
     """
     user_id = getattr(user, "id", None)
     connus: set[int] = set()

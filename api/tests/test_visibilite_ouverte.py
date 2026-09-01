@@ -1,6 +1,6 @@
 """Ouvrir les actualités à toute la copropriété n'accorde AUCUN accès nouveau.
 
-## La contrainte, telle qu'elle a été posée
+## La contrainte, telle qu'elle a été posée — et telle qu'elle a été amendée
 
 Le 14/08/2026, en ouvrant les actualités aux autres bâtiments (#339) :
 
@@ -8,8 +8,25 @@ Le 14/08/2026, en ouvrant les actualités aux autres bâtiments (#339) :
 > si elles n'avaient pas de visibilité, elles n'auront toujours pas de
 > visibilité. »
 
-C'est la propriété que ce fichier verrouille. L'ouverture porte sur l'axe
-**bâtiment** ; elle ne touche pas l'axe **public**.
+Elle portait sur **deux** axes, et un seul a bougé depuis :
+
+| Axe | État |
+|---|---|
+| **public** (`public_cible`, `ProfilAccesDocument`, règles mandataire) | intact, et c'est ce que ce fichier verrouille |
+| **bâtiment** | amendé le **02/09/2026**, sur arbitrage |
+
+L'amendement, dans les mots de l'utilisateur : *« un bailleur sans rattachement
+voit les bâtiments de ses lots »*, et à généraliser. Les **lots** comptent donc
+désormais pour tout le monde — un compte rattaché au bâtiment A et détenteur d'un
+lot en B voit B, ce qui n'était pas le cas la veille.
+
+⚠️ C'est un élargissement, il est assumé, et il est **borné** : il ne franchit
+pas l'axe public. Une publication réservée aux locataires ne devient pas lisible
+d'un bailleur parce qu'il détient un lot —
+`test_un_lot_donne_acces_a_son_batiment_meme_avec_un_rattachement` le vérifie
+dans le même test que l'élargissement lui-même, pour que les deux ne puissent
+pas se séparer.
+
 
 ## Pourquoi un test, et pas une relecture
 
@@ -368,19 +385,25 @@ def test_un_lot_suffit_a_ne_pas_etre_coupe(bailleur_avec_lot, batiments):
     assert perimetre_visible([f"bat:{batiments[0]}"], bailleur_avec_lot) is False
 
 
-def test_un_lot_n_elargit_rien_a_qui_a_deja_un_rattachement(batiments):
-    """🔴 La contrainte du 14/08/2026, verrouillée sur le nouveau chemin.
+def test_un_lot_donne_acces_a_son_batiment_meme_avec_un_rattachement(batiments):
+    """🔴 LA CONTRAINTE DU 14/08/2026 EST LEVÉE ICI, ET SEULEMENT ICI.
 
     > « une agence, un bailleur ou un mandataire qui n'avaient pas de visibilité
     >   n'en gagnent aucune »
 
-    La consultation des lots est confinée à la branche « aucun rattachement ».
-    Un compte qui EN A un décide comme avant, sur lui seul — même s'il détient
-    par ailleurs un lot dans un autre bâtiment.
+    Ce test disait exactement cela, sur ce chemin, jusqu'au 02/09/2026 : les lots
+    n'étaient consultés que pour un compte SANS rattachement. Arbitrage de
+    l'utilisateur — *« un bailleur sans rattachement voit les bâtiments de ses
+    lots »*, et à généraliser. Un compte rattaché au bâtiment A et détenteur d'un
+    lot en B voit désormais B.
 
-    C'est le test que la première écriture du correctif échouait : elle décidait
-    sur `batiments_de_l_utilisateur()` en toutes circonstances, et ce profil-là
-    gagnait l'accès au bâtiment de son lot.
+    ⚠️ Le test change de sens, pas de raison d'être : il reste le seul endroit où
+    l'on constate ce que les lots accordent. Sans lui, l'élargissement ne serait
+    écrit nulle part, et un élargissement qu'on ne nomme pas est indistinguable
+    d'un défaut.
+
+    Ce qui NE bouge pas est verrouillé par les deux tests de tête de ce fichier :
+    l'axe **public** refuse toujours ce qu'il refusait.
     """
     with Session(engine) as session:
         user = Utilisateur(
@@ -404,7 +427,14 @@ def test_un_lot_n_elargit_rien_a_qui_a_deja_un_rattachement(batiments):
                 "le lot n'est pas remonté — ce test ne mesure plus le cas qu'il décrit"
             )
             assert perimetre_visible([f"bat:{batiments[0]}"], user) is True
-            assert perimetre_visible([f"bat:{batiments[1]}"], user) is False
+            assert perimetre_visible([f"bat:{batiments[1]}"], user) is True
+            #  Un bâtiment où il n'a NI rattachement NI lot : toujours refusé.
+            #  C'est ce qui distingue « les lots comptent » de « il voit tout ».
+            assert perimetre_visible([f"bat:{batiments[2]}"], user) is False
+            #  🔒 L'axe PUBLIC n'a pas bougé d'un pouce : le lot lui donne le
+            #  bâtiment, jamais le droit de lire ce qui ne lui est pas adressé.
+            reservee = _publication(f'["bat:{batiments[1]}"]', '["locataires"]')
+            assert publication_visible(reservee, user) is False
         finally:
             for ul in session.exec(
                 select(UserLot).where(UserLot.user_id == user.id)
@@ -414,6 +444,7 @@ def test_un_lot_n_elargit_rien_a_qui_a_deja_un_rattachement(batiments):
             purger_ligne(session, Utilisateur, user.id)
             session.commit()
             mes_batiments.invalider_cache()
+
 
 
 def test_un_compte_sans_rattachement_ni_lot_ne_voit_rien_de_cible(batiments):
