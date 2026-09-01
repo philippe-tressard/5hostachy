@@ -219,6 +219,41 @@ point** (que sudo ignore), puis un `mv` atomique. Le contenu installé est véri
 avant le `mv` : rsync absent, `systemctl start cloudflared` présent — sans quoi la
 bascule casserait.
 
+### C23 bis — la CSP bloquante porte-t-elle ses directives ? (01/09/2026)
+
+C23 vérifie que l'en-tête `Content-Security-Policy` est **présent**. Il l'était
+déjà quand la politique ne portait que quatre directives inoffensives, et il le
+resterait si l'une d'elles disparaissait du `Caddyfile` : *présent* ne dit rien de
+ce qu'il **contient**.
+
+`connect-src 'self'` est passée en mode bloquant le 01/09/2026 (#536), sur la foi
+du relevé (`Admin → CSP`) : aucune violation la concernant sur 104 rapports. C'est
+la directive qui empêche l'**exfiltration** — même si un XSS s'exécutait, il ne
+pourrait rien envoyer vers un domaine tiers. La perdre en silence retirerait la
+moitié utile de la politique.
+
+⚠️ **Présence, jamais valeur.** Une attente de valeur exacte a déjà tué un contrôle
+d'en-têtes ici : `check-stack.sh` exigeait `X-Frame-Options: SAMEORIGIN` là où le
+Caddyfile dit `DENY`, il échouait 144 fois par jour, on l'a retiré du cron — et
+plus rien n'a regardé les en-têtes pendant quinze jours.
+
+📎 **Deux défauts commis en l'écrivant, et corrigés dans l'heure.** Ils valent
+d'être lus, parce qu'ils sont tous deux de la famille « le contrôle ne mesure
+rien » :
+
+1. **il s'exécutait AVANT sa mesure.** `ENTETES_RECUS` est calculé par C23 ; C23
+   bis était placé au-dessus, donc il lisait une variable vide et rendait INCONNU
+   à chaque passage. Un INCONNU se lit « pas cette fois », jamais « mort depuis
+   toujours » (`standards/04` §23) ;
+2. **il ignorait le RÔLE.** Le standby ne sert rien : il y rendait WARN tous les
+   quarts d'heure, sur la moitié du parc, et le digest quotidien l'emportait.
+   C'est exactement le défaut que le commentaire de C23, juste à côté, décrit et
+   corrige depuis le 20/08/2026 — *écrire un contrôle voisin sans relire ce que
+   son voisin a appris, c'est refaire son défaut*.
+
+Les deux sont couverts par `--selftest`, y compris le cas « standby avec une
+réponse parasite » : ce n'est pas le site, donc rien à constater.
+
 ### C1 — « site public KO » demande DEUX sondes, pas une (01/09/2026)
 
 Une alerte critique est partie à 01:21 pour un `HTTP 503` qui a duré moins de
