@@ -7,7 +7,12 @@
 	import { goto } from '$app/navigation';
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
-	import { kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
+	import {
+		kanbanEvVisible,
+		kanbanColVisible,
+		kanbanEvMatchesYear,
+		SEUIL_KANBAN_ETROIT,
+	} from '$lib/kanban';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong, fmtTime } from '$lib/date';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
@@ -288,6 +293,11 @@
 	}
 	$: mobileKanbanCurrent = mobileKanbanCols[mobileKanbanIdx] ?? null;
 
+	//  Bascule par rendu conditionnel, pas par CSS — le pourquoi est avec la
+	//  constante (`$lib/kanban.ts`) : deux bascules CSS ont échoué le même soir.
+	let largeurFenetre = 0;
+	$: vueEtroite = largeurFenetre > 0 && largeurFenetre <= SEUIL_KANBAN_ETROIT;
+
 	// ── Les trois registres du fil ─────────────────────────────────────────
 	// 1. 🔴 Urgences  — « qu'est-ce qui brûle ? »        (plafonné à 3, s'auto-périme)
 	// 2. 📌 Épinglé   — « qu'est-ce qu'il ne faut pas perdre de vue ? »
@@ -328,6 +338,7 @@
 	}
 </script>
 
+<svelte:window bind:innerWidth={largeurFenetre} />
 <svelte:head><title>{_pc.titre} — {_siteNom}</title></svelte:head>
 
 {#if loading}
@@ -532,49 +543,49 @@
 			{#if dashKanbanEvs.length === 0 && !loading}
 				<p class="kb-vide">Aucun dossier actif pour {_kanbanYear}.</p>
 			{:else}
-				<!-- Desktop : grille de colonnes -->
-				<div class="kb-grid kb-desktop">
-					{#each dashKanbanCols as col (col.id)}
-						<div class="kb-col" class:kb-col-vide={col.items.length === 0}>
-							<div class="kb-col-head" style="border-top-color:{col.color}">
-								<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
-								{#if col.total > 0}
-									<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
-										{col.total > 5 ? `+${col.total - 5} / ${col.total}` : col.total}
-									</span>
+				{#if !vueEtroite}
+					<div class="kb-grid">
+						{#each dashKanbanCols as col (col.id)}
+							<div class="kb-col" class:kb-col-vide={col.items.length === 0}>
+								<div class="kb-col-head" style="border-top-color:{col.color}">
+									<span class="kb-col-label" style="color:{col.color}">{col.label}</span>
+									{#if col.total > 0}
+										<span class="kb-col-count" style="background:{col.color}1a;color:{col.color}">
+											{col.total > 5 ? `+${col.total - 5} / ${col.total}` : col.total}
+										</span>
+									{/if}
+								</div>
+								{#if col.items.length === 0}
+									<p class="kb-vide-col">—</p>
+								{:else}
+									{#each col.items as item (item.id)}
+										<div
+											class="kb-item"
+											role="button"
+											tabindex="0"
+											on:click={() => goto(`/calendrier#ev-${item.id}`)}
+											on:keydown={(e) =>
+												(e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}
+										>
+											<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
+											<div class="kb-item-text">
+												<span class="kb-item-titre clamp-2">{item.titre}</span>
+												{#if !estPerimetreParDefaut(item.perimetre)}
+													<span class="kb-item-perim"
+														>&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span
+													>
+												{/if}
+											</div>
+										</div>
+									{/each}
 								{/if}
 							</div>
-							{#if col.items.length === 0}
-								<p class="kb-vide-col">—</p>
-							{:else}
-								{#each col.items as item (item.id)}
-									<div
-										class="kb-item"
-										role="button"
-										tabindex="0"
-										on:click={() => goto(`/calendrier#ev-${item.id}`)}
-										on:keydown={(e) =>
-											(e.key === 'Enter' || e.key === ' ') && goto(`/calendrier#ev-${item.id}`)}
-									>
-										<span class="kb-item-icon">{EV_ICONS[item.type] ?? '\u{1F4CC}'}</span>
-										<div class="kb-item-text">
-											<span class="kb-item-titre clamp-2">{item.titre}</span>
-											{#if !estPerimetreParDefaut(item.perimetre)}
-												<span class="kb-item-perim"
-													>&#x1F539; {dashKanbanPerimLabel(item.perimetre)}</span
-												>
-											{/if}
-										</div>
-									</div>
-								{/each}
-							{/if}
-						</div>
-					{/each}
-				</div>
+						{/each}
+					</div>
+				{/if}
 
-				<!-- Mobile : une colonne à la fois (colonnes vides masquées) -->
-				{#if mobileKanbanCols.length > 0}
-					<div class="kb-mobile">
+				{#if vueEtroite && mobileKanbanCols.length > 0}
+					<div>
 						<div class="kb-mobile-nav">
 							<button
 								class="kb-nav-btn"
@@ -1070,213 +1081,12 @@
 	/* ═══ KPI CARDS ═════════════════════════════════════════════════════ */
 
 	/* ═══ KANBAN WIDGET ═════════════════════════════════════════════════ */
-	.kb-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.6rem;
-	}
-	.kb-voir-lien {
-		font-size: 0.78rem;
-		color: var(--color-primary);
-		font-weight: 500;
-		text-decoration: none;
-		white-space: nowrap;
-	}
-	.kb-voir-lien:hover {
-		text-decoration: underline;
-	}
-	.kb-vide {
-		font-size: 0.85rem;
-		color: var(--color-text-muted);
-		text-align: center;
-		padding: 1rem 0;
-		margin: 0;
-	}
 
 	/* Grille desktop */
-	.kb-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
-		gap: 0.45rem;
-		margin-bottom: 1.25rem;
-	}
-	.kb-col {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		overflow: hidden;
-		transition: opacity 0.15s;
-	}
-	.kb-col-vide {
-		opacity: 0.4;
-	}
-	.kb-col-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.35rem 0.6rem;
-		background: var(--color-bg);
-		border-top: 3px solid transparent;
-		border-bottom: 1px solid var(--color-border);
-	}
-	.kb-col-label {
-		font-size: 0.68rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-	.kb-col-count {
-		font-size: 0.62rem;
-		font-weight: 700;
-		padding: 0.1rem 0.4rem;
-		border-radius: 1rem;
-	}
-	.kb-vide-col {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-		text-align: center;
-		padding: 0.65rem 0.5rem;
-		margin: 0;
-	}
 
-	/* Item commun desktop + mobile */
-	.kb-item {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.4rem;
-		padding: 0.45rem 0.6rem;
-		border-top: 1px solid var(--color-border);
-		cursor: pointer;
-		transition: background 0.12s;
-	}
-	.kb-item:first-of-type {
-		border-top: none;
-	}
-	.kb-item:hover {
-		background: var(--color-bg);
-	}
-	.kb-item:focus-visible {
-		outline: 2px solid var(--color-primary);
-		outline-offset: -2px;
-	}
-	.kb-item-icon {
-		flex-shrink: 0;
-		font-size: 0.85rem;
-		line-height: 1.3;
-	}
-	.kb-item-text {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.1rem;
-	}
-	.kb-item-titre {
-		font-size: 0.8rem;
-		color: var(--color-text);
-		line-height: 1.3;
-	} /* troncature : `.clamp-2` (#561) */
-	.kb-item-perim {
-		font-size: 0.68rem;
-		color: var(--color-text-muted);
-	}
+	/* Item commun desktop + mobile */ /* troncature : `.clamp-2` (#561) */
 
 	/* Mobile */
-	.kb-mobile-nav {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.5rem 0.75rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius) var(--radius) 0 0;
-		border-bottom: none;
-	}
-	.kb-mobile-nav-center {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.08rem;
-		flex: 1;
-	}
-	.kb-mobile-col-label {
-		font-size: 0.82rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-	.kb-mobile-pos {
-		font-size: 0.66rem;
-		color: var(--color-text-muted);
-	}
-	.kb-nav-btn {
-		background: none;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		width: 2rem;
-		height: 2rem;
-		flex-shrink: 0;
-		font-size: 1.25rem;
-		font-weight: 700;
-		color: var(--color-text);
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition:
-			background 0.12s,
-			border-color 0.12s;
-		line-height: 1;
-	}
-	.kb-nav-btn:hover:not(:disabled) {
-		background: var(--color-bg);
-		border-color: var(--color-primary);
-	}
-	.kb-nav-btn:disabled {
-		opacity: 0.3;
-		cursor: default;
-	}
-	.kb-mobile-items {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 0 0 var(--radius) var(--radius);
-		overflow: hidden;
-	}
-	.kb-mobile-plus {
-		font-size: 0.74rem;
-		color: var(--color-text-muted);
-		text-align: center;
-		padding: 0.4rem 0.75rem;
-		margin: 0;
-		border-top: 1px solid var(--color-border);
-	}
-	.kb-mobile-plus-lien {
-		color: var(--color-primary);
-		text-decoration: none;
-		font-weight: 500;
-	}
-	.kb-mobile-plus-lien:hover {
-		text-decoration: underline;
-	}
-	.kb-mobile-lien {
-		display: block;
-		text-align: center;
-		padding: 0.55rem 1rem;
-		margin-top: 0.45rem;
-		font-size: 0.8rem;
-		color: var(--color-primary);
-		font-weight: 500;
-		text-decoration: none;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		transition: background 0.12s;
-	}
-	.kb-mobile-lien:hover {
-		background: var(--color-primary-light);
-	}
 
 	/* ═══ FLUX TIMELINE ═════════════════════════════════════════════════ */
 	/* ═══ ÉPINGLÉ ═══════════════════════════════════════════════════════
@@ -1313,11 +1123,6 @@
 	    son balisage. */
 
 	/* ═══ RESPONSIVE ════════════════════════════════════════════════════ */
-	@media (min-width: 768px) {
-		.kb-mobile {
-			display: none !important;
-		}
-	}
 	@media (max-width: 767px) {
 		.hero {
 			margin: -0.75rem -0.75rem 0;

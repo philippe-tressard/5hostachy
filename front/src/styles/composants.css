@@ -1269,3 +1269,223 @@ label.field {
 	line-height: 1.5;
 	margin: 0.6rem 0 0;
 }
+
+/* ── Le KANBAN CONDENSÉ du tableau de bord ─────────────────────────────────────
+   Le même objet que `.kanban` ci-dessus, dans son rendu d'aperçu : cinq colonnes
+   resserrées au large, une colonne à la fois quand l'écran est étroit.
+
+   🔴 Ces trente-deux règles vivaient dans `tableau-de-bord/+page.svelte`, donc
+   SCOPÉES. Elles en sortent le 01/09/2026 pour deux raisons qui se rejoignent :
+
+   1. le contrôle de modularité refusait d'agrandir cette page, et il désignait —
+      comme onze fois ce jour-là — un placement : un kanban est un composant du
+      site, pas une mise en forme d'écran ;
+   2. surtout, **plus aucune règle scopée ne concurrence celles-ci**. Deux
+      bascules d'affichage par CSS avaient échoué le même soir, la première parce
+      qu'une règle globale ne surcharge pas une règle scopée. En sortant TOUT le
+      bloc, la question de la spécificité disparaît au lieu d'être arbitrée.
+
+   ⚠️ La bascule large/étroit, elle, n'est plus en CSS du tout : c'est un `{#if}`
+   sur `SEUIL_KANBAN_ETROIT` (`$lib/kanban.ts`). Ne pas réintroduire ici de classe
+   d'interrupteur — c'est la forme qui a échoué deux fois. */
+.kb-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.6rem;
+}
+.kb-voir-lien {
+	font-size: 0.78rem;
+	color: var(--color-primary);
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+}
+.kb-voir-lien:hover {
+	text-decoration: underline;
+}
+.kb-vide {
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 1rem 0;
+	margin: 0;
+}
+.kb-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
+	gap: 0.45rem;
+	margin-bottom: 1.25rem;
+}
+.kb-col {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	overflow: hidden;
+	transition: opacity 0.15s;
+}
+.kb-col-vide {
+	opacity: 0.4;
+}
+.kb-col-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.35rem 0.6rem;
+	background: var(--color-bg);
+	border-top: 3px solid transparent;
+	border-bottom: 1px solid var(--color-border);
+}
+.kb-col-label {
+	font-size: 0.68rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.kb-col-count {
+	font-size: 0.62rem;
+	font-weight: 700;
+	padding: 0.1rem 0.4rem;
+	border-radius: 1rem;
+}
+.kb-vide-col {
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 0.65rem 0.5rem;
+	margin: 0;
+}
+.kb-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.4rem;
+	padding: 0.45rem 0.6rem;
+	border-top: 1px solid var(--color-border);
+	cursor: pointer;
+	transition: background 0.12s;
+}
+.kb-item:first-of-type {
+	border-top: none;
+}
+.kb-item:hover {
+	background: var(--color-bg);
+}
+.kb-item:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: -2px;
+}
+.kb-item-icon {
+	flex-shrink: 0;
+	font-size: 0.85rem;
+	line-height: 1.3;
+}
+.kb-item-text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+.kb-item-titre {
+	font-size: 0.8rem;
+	color: var(--color-text);
+	line-height: 1.3;
+}
+.kb-item-perim {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+}
+.kb-mobile-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius) var(--radius) 0 0;
+	border-bottom: none;
+}
+.kb-mobile-nav-center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.08rem;
+	flex: 1;
+}
+.kb-mobile-col-label {
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.kb-mobile-pos {
+	font-size: 0.66rem;
+	color: var(--color-text-muted);
+}
+.kb-nav-btn {
+	background: none;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	width: 2rem;
+	height: 2rem;
+	flex-shrink: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--color-text);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		background 0.12s,
+		border-color 0.12s;
+	line-height: 1;
+}
+.kb-nav-btn:hover:not(:disabled) {
+	background: var(--color-bg);
+	border-color: var(--color-primary);
+}
+.kb-nav-btn:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+.kb-mobile-items {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 0 0 var(--radius) var(--radius);
+	overflow: hidden;
+}
+.kb-mobile-plus {
+	font-size: 0.74rem;
+	color: var(--color-text-muted);
+	text-align: center;
+	padding: 0.4rem 0.75rem;
+	margin: 0;
+	border-top: 1px solid var(--color-border);
+}
+.kb-mobile-plus-lien {
+	color: var(--color-primary);
+	text-decoration: none;
+	font-weight: 500;
+}
+.kb-mobile-plus-lien:hover {
+	text-decoration: underline;
+}
+.kb-mobile-lien {
+	display: block;
+	text-align: center;
+	padding: 0.55rem 1rem;
+	margin-top: 0.45rem;
+	font-size: 0.8rem;
+	color: var(--color-primary);
+	font-weight: 500;
+	text-decoration: none;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	transition: background 0.12s;
+}
+.kb-mobile-lien:hover {
+	background: var(--color-primary-light);
+}
