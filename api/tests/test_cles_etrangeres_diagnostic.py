@@ -415,3 +415,45 @@ def test_la_simulation_annonce_les_DEUX_remedes(admin_et_ticket):
     assert remedes == {"suppression", "deliaison"}, (
         f"les deux remèdes doivent être nommés dans le relevé, obtenu : {remedes}"
     )
+# ── L'interpolation d'identifiants SQL, et pourquoi elle est VÉRIFIÉE ────────
+
+
+def test_un_identifiant_sql_hors_norme_est_REFUSE():
+    """🔴 La seule exception à « jamais de f-string dans du SQL », et sa garde.
+
+    SQLite **ne sait pas lier un identifiant** — seules les valeurs se lient. Un
+    nom de table ou de colonne doit donc être interpolé. L'exception était
+    argumentée en commentaire depuis toujours (« ces noms viennent des
+    métadonnées de SQLite, pas d'une entrée utilisateur »), et c'est vrai.
+
+    Mais une consigne ne se maintient pas seule. Un nom contenant un guillemet
+    sortirait des `"…"` et ferait de ce module un point d'injection, quel que
+    soit le soin mis à ne lui passer que du schéma.
+    """
+    from app.utils.diagnostic_cles import _sur
+
+    assert _sur("ticket") == "ticket"
+    assert _sur("_perimetre_2") == "_perimetre_2"
+    for hostile in (
+        'a" ; DROP TABLE utilisateur; --',
+        "ticket's",
+        "ticket ticket",
+        "2tables",
+        "",
+        "ticket;",
+    ):
+        with pytest.raises(ValueError):
+            _sur(hostile)
+
+
+def test_refuser_LEVE_plutot_que_d_ecarter_en_silence():
+    """⚠️ Un nom non reconnu est un fait anormal du schéma.
+
+    L'écarter silencieusement laisserait une orpheline que le relevé suivant
+    recompterait indéfiniment, sans jamais dire pourquoi — un contrôle qui ne
+    dit pas ce qu'il ignore ment par omission.
+    """
+    from app.utils.diagnostic_cles import _sur
+
+    with pytest.raises(ValueError, match="Identifiant SQL refusé"):
+        _sur('mauvais"nom')

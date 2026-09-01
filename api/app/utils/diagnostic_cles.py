@@ -31,6 +31,7 @@ uvicorn, sur le moteur de l'application — comme le checkpoint et `quick_check`
 """
 
 import logging
+import re
 from collections import Counter
 
 #  🔴 Le journal n'est PAS décoratif ici. La purge est irréversible, et jusqu'au
@@ -39,6 +40,31 @@ from collections import Counter
 #  perte d'un membre du conseil syndical a été signalée le lendemain, il a fallu
 #  remonter à une sauvegarde de la veille pour établir ce qui était parti.
 logger = logging.getLogger(__name__)
+
+
+#: Un identifiant SQLite légitime : lettre ou souligné, puis alphanumérique.
+#: 🔴 SQLite **ne sait pas lier un identifiant** — seules les valeurs se lient.
+#: Un nom de table ou de colonne doit donc être interpolé, et c'est la seule
+#: exception à la règle « jamais de f-string dans du SQL » (`CLAUDE.md`).
+#:
+#: Elle était déjà argumentée en commentaire — « ces noms viennent des
+#: métadonnées de SQLite, pas d'une entrée utilisateur ». C'est vrai, et une
+#: consigne ne se maintient pas seule : ce motif la rend VÉRIFIÉE. Un nom
+#: contenant un guillemet sortirait des `"…"` et ferait de ce module un point
+#: d'injection, quel que soit le soin mis à ne lui passer que du schéma.
+_IDENTIFIANT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _sur(identifiant: str) -> str:
+    """Rend l'identifiant, ou lève. Jamais de repli silencieux.
+
+    ⚠️ Lever est la bonne réponse : un nom qu'on ne reconnaît pas est un fait
+    anormal du schéma, et l'écarter en silence laisserait une orpheline que le
+    relevé suivant recompterait indéfiniment, sans jamais dire pourquoi.
+    """
+    if not _IDENTIFIANT.match(identifiant):
+        raise ValueError(f"Identifiant SQL refusé : {identifiant!r}")
+    return identifiant
 
 
 def compter_orphelins(engine) -> dict:
@@ -83,7 +109,7 @@ def compter_orphelins(engine) -> dict:
             #  relation. Interrogé seulement pour les tables en défaut.
             colonnes: dict[tuple[str, int], str] = {}
             for table in {ligne[0] for ligne in lignes}:
-                for fk in conn.execute(text(f'PRAGMA foreign_key_list("{table}")')).fetchall():
+                for fk in conn.execute(text(f'PRAGMA foreign_key_list("{_sur(table)}")')).fetchall():
                     colonnes[(table, fk[0])] = fk[3]
     except Exception as exc:  # pragma: no cover - éprouvé par un moteur simulé
         return {"ok": False, "inconnu": True, "erreur": str(exc)}
@@ -140,11 +166,11 @@ def _remedes(conn, lignes):
     def meta(table: str):
         if table not in cache:
             fks: dict = {}
-            for f in conn.execute(text(f'PRAGMA foreign_key_list("{table}")')):
+            for f in conn.execute(text(f'PRAGMA foreign_key_list("{_sur(table)}")')):
                 fks.setdefault(f[0], []).append(f[3])
             colonnes = {
                 c[1]: bool(c[3])  # notnull
-                for c in conn.execute(text(f'PRAGMA table_info("{table}")'))
+                for c in conn.execute(text(f'PRAGMA table_info("{_sur(table)}")'))
             }
             cache[table] = (fks, colonnes)
         return cache[table]
@@ -250,14 +276,14 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
                     #  encadrés par des guillemets doubles, et le rowid passe en
                     #  PARAMÈTRE LIÉ. Aucune valeur d'appelant n'entre ici.
                     if remede == "deliaison":
-                        mise_a_null = ", ".join(f'"{c}" = NULL' for c in cols)
+                        mise_a_null = ", ".join(f'"{_sur(c)}" = NULL' for c in cols)
                         conn.execute(
-                            text(f'UPDATE "{table}" SET {mise_a_null} WHERE rowid = :r'),
+                            text(f'UPDATE "{_sur(table)}" SET {mise_a_null} WHERE rowid = :r'),
                             {"r": rowid},
                         )
                     else:
                         conn.execute(
-                            text(f'DELETE FROM "{table}" WHERE rowid = :r'), {"r": rowid}
+                            text(f'DELETE FROM "{_sur(table)}" WHERE rowid = :r'), {"r": rowid}
                         )
                 conn.commit()
             finally:
