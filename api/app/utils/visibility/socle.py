@@ -91,10 +91,14 @@ def perimetre_visible(
     fonction est combinée en ET avec `public_cible` (résidents, copropriétaires,
     bailleurs, locataires, CS), avec `ProfilAccesDocument` et avec les règles
     mandataire de `routers/bailleur.py` : l'ouvrir ne peut donc rien débloquer
-    pour quelqu'un que ces règles refusent. Contrainte posée par l'utilisateur le
-    14/08/2026 — *une agence, un bailleur ou un mandataire qui n'avaient pas de
-    visibilité n'en gagnent aucune* — et vérifiée couple par couple dans
+    pour quelqu'un que ces règles refusent. C'est la moitié de la contrainte du
+    14/08/2026 qui n'a jamais bougé, vérifiée couple par couple dans
     `tests/test_visibilite_ouverte.py`.
+
+    ⚠️ L'autre moitié — *une agence, un bailleur ou un mandataire qui n'avaient
+    pas de visibilité n'en gagnent aucune* — a été **levée le 02/09/2026**, sur
+    arbitrage, et seulement sur l'axe bâtiment : voir « Mes bâtiments » dans le
+    corps de la fonction.
 
     - Code introuvable : n'accorde **rien**. Un nœud supprimé, un arbre vidé ou une
       table illisible ne peuvent pas justifier un accès — ils ne permettent pas de
@@ -116,58 +120,72 @@ def perimetre_visible(
     if a_portee_globale(perimetres):
         return True
 
+    #  ── « Mes bâtiments » : UNE notion, UN endroit, deux cas zéro ────────────
+    #
+    #  🔒 LA RÈGLE D'ACCÈS RESTE CENTRALISÉE, ET CE BLOC N'EN INTRODUIT AUCUNE.
+    #  La règle géographique vit dans cette fonction et nulle part ailleurs — ses
+    #  appelants la composent, aucun ne la réécrit (`test_perimetres_liste_en_dur`
+    #  refuse qu'une liste de périmètres réapparaisse, `test_autorisation` qu'un
+    #  endpoint se passe de dépendance). Et « quels bâtiments sont les siens » a
+    #  sa propre source unique, `utils/mes_batiments` : aucun rattachement, aucun
+    #  lot, aucun identifiant de bâtiment ne se lit ici en direct. Le jour où
+    #  cette notion changera — usufruit, mandat, lot indivis —, elle changera
+    #  là-bas, et cette décision suivra sans être rouverte.
+    #
+    #  🔴 DEUX ARBITRAGES SUCCESSIFS DE L'UTILISATEUR, LE 02/09/2026. Ils ne
+    #  disent pas la même chose, et le second lève une contrainte que le premier
+    #  respectait :
+    #
+    #  1. *« Un utilisateur sans bâtiment ne doit rien voir car il n'est pas
+    #     résident. »* — cette fonction portait depuis toujours un repli
+    #     permissif : `user.batiment_id is None` → `True`, « accès résidence
+    #     entière par défaut ». Deux tests l'épinglaient en disant, l'un et
+    #     l'autre, « le jour où ce repli sera repris » : c'était ce jour-là.
+    #
+    #     Ce que ça referme dépasse les périmètres : la CONFIDENTIALITÉ passe par
+    #     ce même chemin (`ouvert_a_la_copropriete=False`). Un compte sans
+    #     bâtiment voyait les actualités confidentielles de TOUS les bâtiments, et
+    #     rien ne le signalait — un contenu visible de trop de monde ne produit
+    #     aucune plainte.
+    #
+    #  2. *« Un bailleur sans rattachement voit les bâtiments de ses lots »*, et à
+    #     généraliser : les lots comptent pour TOUT LE MONDE, pas seulement pour
+    #     qui n'a aucun rattachement.
+    #
+    #  ⚠️ LE POINT 2 LÈVE LA CONTRAINTE DU 14/08/2026 — *une agence, un bailleur
+    #  ou un mandataire qui n'avaient pas de visibilité n'en gagnent aucune* — et
+    #  il faut le dire, parce qu'un élargissement d'accès qu'on ne nomme pas est
+    #  indistinguable d'un défaut. Un bailleur rattaché au bâtiment A et détenteur
+    #  d'un lot en B voit maintenant B ; il ne le voyait pas hier.
+    #
+    #  La levée est BORNÉE à l'axe **bâtiment**, et c'est ce qui la rend tenable :
+    #  l'axe **public** (`public_cible`), `ProfilAccesDocument` et les règles
+    #  mandataire sont intacts, et cette fonction leur est combinée en ET. Une
+    #  publication réservée aux locataires ne devient pas lisible d'un bailleur
+    #  parce qu'il détient un lot. `test_visibilite_ouverte.py` le rejoue couple
+    #  par couple.
+    #
+    #  Ce qu'on gagne au passage : la restriction volontaire et la décision
+    #  d'accès emploient enfin la MÊME notion de « mes bâtiments ». Elles
+    #  divergeaient — rattachement + lots ici, rattachement seul là —, et l'écart
+    #  était invisible parce que chacune était juste de son côté.
+    miens = batiments_de_l_utilisateur(user)
+
     if ouvert_a_la_copropriete:
         if not getattr(user, "restreindre_a_mes_batiments", False):
             return True
-        #  L'utilisateur s'est restreint LUI-MÊME. On prend alors ses bâtiments au
-        #  sens large — rattachement et lots —, parce qu'il s'agit de lui montrer
-        #  les siens, pas de lui accorder quoi que ce soit : cette liste ne sert
-        #  qu'ici, et seulement pour montrer MOINS.
-        miens = batiments_de_l_utilisateur(user)
+        #  Cas zéro : rien de connu, donc rien à restreindre — renvoyer False
+        #  laisserait un fil vide à qui a simplement coché une case.
         if not miens:
-            #  Cas zéro : rien de connu, donc rien à restreindre. Renvoyer False
-            #  laisserait un fil vide à qui a simplement coché une case.
             return True
         return bool(miens & batiments_cibles(perimetres))
 
-    #  🔴 LE REPLI PERMISSIF EST FERMÉ (02/09/2026), sur arbitrage :
-    #  *« un utilisateur sans bâtiment ne doit rien voir car il n'est pas
-    #  résident »*.
-    #
-    #  Il rendait `True` dès que `user.batiment_id` était `None` — « accès
-    #  résidence entière par défaut ». Deux tests l'épinglaient en disant, l'un et
-    #  l'autre, « le jour où ce repli sera repris » : c'est ce jour-là.
-    #
-    #  Ce que ça referme, au-delà des périmètres : la CONFIDENTIALITÉ passe par ce
-    #  même chemin (`ouvert_a_la_copropriete=False`). Un compte sans bâtiment
-    #  voyait donc les actualités confidentielles de TOUS les bâtiments.
-    #
-    #  ⚠️ POURQUOI LES LOTS, ET POURQUOI SEULEMENT ICI. Un copropriétaire
-    #  BAILLEUR n'a par construction aucun `batiment_id` : c'est son locataire qui
-    #  habite. Fermer sur le seul rattachement l'aurait coupé de sa propre
-    #  copropriété, en croyant n'écarter que des comptes techniques.
-    #
-    #  Mais la consultation des lots reste CONFINÉE à cette branche, et c'est la
-    #  contrainte posée le 14/08/2026, écrite dans `utils/mes_batiments` : *une
-    #  agence, un bailleur ou un mandataire qui n'avaient pas de visibilité n'en
-    #  gagnent aucune*. Décider sur `batiments_de_l_utilisateur()` en toutes
-    #  circonstances — ce qu'a fait la première écriture de ce correctif —
-    #  ÉLARGIT : un bailleur rattaché au bâtiment A et détenteur d'un lot en B
-    #  gagnait l'accès à B. Un élargissement obtenu en croyant ne faire que
-    #  restreindre, et qu'aucun test existant n'attrapait, tous portant sur le
-    #  rattachement seul.
-    #
-    #  Confinée ici, la règle ne peut que retirer : celui qui a un rattachement
-    #  garde exactement ce qu'il avait, celui qui n'en a pas passe de « toute la
-    #  résidence » aux bâtiments de ses lots — et à rien du tout s'il n'en a
-    #  aucun. Verrouillé par `test_visibilite_ouverte.py`.
-    if user.batiment_id is None:
-        #  Sans rattachement, ce sont les lots qui disent de quoi ce compte est.
-        #  Vide = ni rattachement ni lot : pas résident de la copropriété. Ce qui
-        #  lui est destiné passe par les périmètres à portée globale, traités plus
-        #  haut, et par les objets dont il est l'auteur ou le destinataire.
-        return bool(batiments_de_l_utilisateur(user) & batiments_cibles(perimetres))
-    return user.batiment_id in batiments_cibles(perimetres)
+    #  Même intersection, cas zéro INVERSE, et c'est toute la différence : ne pas
+    #  savoir de quels bâtiments on parle n'a pas le même sens selon qu'on
+    #  restreint un affichage ou qu'on décide d'un accès.
+    if not miens:
+        return False
+    return bool(miens & batiments_cibles(perimetres))
 
 
 # ── Règle « à qui ça s'adresse » ──────────────────────────────────────────────
