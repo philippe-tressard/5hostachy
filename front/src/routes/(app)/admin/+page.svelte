@@ -25,6 +25,7 @@
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
+	import OngletCsp from '$lib/components/OngletCsp.svelte';
 	import OngletModelesEmail from '$lib/components/OngletModelesEmail.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
@@ -52,6 +53,7 @@
 		'whatsapp',
 		'smtp',
 		'telemetry',
+		'csp',
 		'maintenance',
 		'copropriete',
 		'perimetres',
@@ -808,6 +810,7 @@
 		<Onglet actif={onglet === 'telemetry'} on:click={() => (onglet = 'telemetry')}
 			>Télémétrie</Onglet
 		>
+		<Onglet actif={onglet === 'csp'} on:click={() => (onglet = 'csp')}>Sécurité (CSP)</Onglet>
 		<Onglet actif={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}
 			>Maintenance</Onglet
 		>
@@ -1556,6 +1559,8 @@
 	/>
 {:else if onglet === 'telemetry'}
 	<OngletTelemetrie />
+{:else if onglet === 'csp'}
+	<OngletCsp />
 {:else if onglet === 'copropriete'}
 	<OngletCopropriete />
 {:else if onglet === 'perimetres'}
