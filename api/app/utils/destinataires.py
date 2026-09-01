@@ -217,6 +217,40 @@ def destinataires_syndic_cs(
     `deja_vus` permet à une relance d'exclure du CC les adresses déjà placées en
     destinataire principal, sans réécrire la déduplication.
     """
+    return syndic_puis(
+        session,
+        syndic=syndic,
+        membres=membres_cs_avec_email(session) if cs else [],
+        deja_vus=deja_vus,
+    )
+
+
+def syndic_puis(
+    session: Session,
+    *,
+    syndic: bool,
+    membres: list[tuple[int | None, str]],
+    deja_vus: Optional[set[str]] = None,
+) -> list[tuple[int | None, str]]:
+    """Le syndic principal, puis une liste de membres DÉJÀ choisie, dédoublonnés.
+
+    🔴 Ce site choisit le conseil syndical de **deux** façons, et les confondre
+    envoie le bon message aux mauvaises personnes :
+
+    - par le **rôle** — `membres_cs_avec_email` : publications, sondages,
+      calendrier, tickets ;
+    - par le **périmètre** — `membres_cs_notifiables` : nouvel arrivant, annonces
+      de hall, où seul le CS du bâtiment concerné est visé.
+
+    La règle de **déduplication**, elle, est la même dans les deux cas — le
+    syndic passe en premier et gagne le doublon. Elle vit donc ici, et le choix
+    du CS reste à l'appelant : c'est ce qui a permis à l'annonce de hall de
+    recevoir le canal « syndic » (#480) sans écrire une cinquième copie du bloc.
+
+    ⚠️ Le bloc a déjà existé en **quatre exemplaires identiques** jusqu'au
+    31/08/2026 — et celui des tickets affirmait, en toutes lettres, être « le
+    seul endroit où cette règle s'écrit ».
+    """
     destinataires: list[tuple[int | None, str]] = []
     vus: set[str] = set(deja_vus or ())
 
@@ -226,10 +260,9 @@ def destinataires_syndic_cs(
             destinataires.append((principal.user_id, principal.email))
             vus.add(principal.email.lower())
 
-    if cs:
-        for uid, email in membres_cs_avec_email(session):
-            if email.lower() not in vus:
-                destinataires.append((uid, email))
-                vus.add(email.lower())
+    for uid, email in membres:
+        if email and email.lower() not in vus:
+            destinataires.append((uid, email))
+            vus.add(email.lower())
 
     return destinataires

@@ -31,6 +31,7 @@
   réécrire ce qu'on vient de saisir.
 -->
 <script lang="ts">
+	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -78,12 +79,27 @@
 			: fmt;
 	})();
 
-	/**  9. DIFFUSION — l'envoi de l'affiche au conseil syndical.
+	/**  9. DIFFUSION — les TROIS canaux, comme partout ailleurs (#480).
 	 *
-	 *   ⚠️ Décoché par défaut, et le SERVEUR le consomme (`envoyer_cs`) : le cadre
-	 *   interdit d'ouvrir un champ que le serveur ignorerait — la case promettrait
-	 *   un envoi qui n'a pas lieu, ce qui est pire qu'une case absente. */
+	 *   🔴 Cet écran portait UNE case, au motif écrit ici même que « WhatsApp et le
+	 *   syndic n'ont pas d'objet : une affiche s'imprime et se pose, le conseil
+	 *   syndical est le seul destinataire qui en fasse quelque chose ».
+	 *   L'arbitrage est renversé — *« Diffusion n'est pas standard : WhatsApp, CS,
+	 *   syndic ⇒ utilise l'objet standard »*.
+	 *
+	 *   ⚠️ Le report était **légitime** : le cadre interdit d'ouvrir un champ que le
+	 *   serveur ne consomme pas, et il n'en consommait qu'un sur trois. Les deux
+	 *   autres sont consommés depuis le 01/09/2026 — c'est ce qui a permis de poser
+	 *   l'objet.
+	 *
+	 *   Tous décochés par défaut : la valeur par défaut d'un envoi est « ne pas
+	 *   envoyer ». */
 	export let envoyerCs = false;
+	export let envoyerSyndic = false;
+	export let partagerWhatsapp = false;
+	export let envoyerAuteur = false;
+	/** Le nom de l'auteur de l'affiche — il nomme le destinataire de la copie. */
+	export let auteurNom = '';
 
 	export let valide = false;
 	export let saving = false;
@@ -212,26 +228,28 @@
 </SectionFormulaire>
 
 <SectionFormulaire titre="Diffusion">
-	<!--  9. Diffusion — le seul ACTE du formulaire, et le dernier, comme partout.
-	
-	      🔴 L'envoi au CS était AUTOMATIQUE le matin du 18/08 : il partait au moindre
-	      essai de mise en page, pièce jointe comprise. Retiré dans la foulée, il revient
-	      ici sous sa forme juste — une case, décochée par défaut.
-	
-	      ⚠️ Décochée, et c'est le point : la valeur par défaut d'un envoi est « ne pas
-	      envoyer ». Un défaut à coché reproduirait l'automatisme qu'on vient de retirer,
-	      en donnant l'illusion du choix.
-	
-	      ⚠️ UNE seule case, pas `CanauxNotification` : WhatsApp et le syndic n'ont pas
-	      d'objet ici. Une affiche de hall s'imprime et se pose — le conseil syndical est
-	      le seul destinataire qui en fasse quelque chose. -->
-	<label class="case">
-		<input id="ah-diffusion" type="checkbox" bind:checked={envoyerCs} />
-		<span>Envoyer l'affiche au conseil syndical du périmètre, pour impression</span>
-	</label>
+	<!--  🔴 L'OBJET DIFFUSION, et non trois cases écrites ici (#480).
+
+	      Cet écran portait UNE case. L'argument était réel — une affiche s'imprime
+	      et se pose — mais il décidait à la place du CS : rien n'empêche de vouloir
+	      prévenir le syndic, ou d'annoncer sur le groupe qu'une affiche est posée.
+
+	      ⚠️ Le lien envoyé sur WhatsApp pointe l'ACTUALITÉ dont l'affiche est
+	      tirée, quand il y en a une. Une affiche autonome part sans lien :
+	      l'historique des affiches est un écran d'administration, et y envoyer les
+	      résidents leur donnerait un 403. -->
+	<CanauxNotification
+		bind:whatsapp={partagerWhatsapp}
+		bind:syndic={envoyerSyndic}
+		bind:cs={envoyerCs}
+		bind:auteur={envoyerAuteur}
+		{auteurNom}
+		aideWhatsapp="Le groupe reçoit le titre, le message et un lien vers l'actualité d'origine — jamais le PDF."
+	/>
 	<p class="aide-bloc">
-		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique
-		— cocher ajoute un envoi par courriel, avec le PDF en pièce jointe.
+		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique.
+		Le conseil syndical reçoit le PDF en pièce jointe, pour impression — et seuls les conseillers du
+		périmètre visé sont prévenus.
 	</p>
 </SectionFormulaire>
 

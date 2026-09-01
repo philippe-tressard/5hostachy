@@ -1,0 +1,160 @@
+"""La DIFFUSION d'une annonce de hall — courriel et groupe WhatsApp.
+
+Toutes les entités du site portent leur diffusion dans un module dédié :
+`calendrier_courriels.py`, `publications/courriels.py`, `tickets/courriels.py`.
+L'annonce de hall écrivait la sienne dans son routeur — c'était tenable tant
+qu'elle n'avait **qu'un** canal sur trois.
+
+Extrait le 01/09/2026 en lui donnant les deux autres (#480), sur refus du
+contrôle de modularité — qui désignait, comme les huit fois précédentes cette
+semaine, un **placement** et non une longueur.
+
+## 🔴 Ce que l'annonce de hall fait AUTREMENT, et qu'il ne faut pas uniformiser
+
+Le conseil syndical y est choisi **par le PÉRIMÈTRE**, pas par le rôle : une
+affiche du bâtiment 3 ne concerne pas le conseiller du bâtiment 1, qui ne
+l'imprimera pas. C'est l'autre règle de `destinataires.py`, et les confondre
+enverrait le bon message aux mauvaises personnes.
+
+Ce qui est **commun**, en revanche, c'est la déduplication — le syndic passe en
+premier et gagne le doublon — et elle vit dans `syndic_puis`.
+"""
+from __future__ import annotations
+
+import os
+
+from fastapi import BackgroundTasks
+from sqlmodel import Session
+
+from app.models.core import AnnonceHall, Utilisateur
+from app.utils.annonce_hall import APERCU_MAX, date_longue, format_libelle, texte_brut
+
+from app.utils.copie_auteur import copie_demandee
+from app.utils.destinataires import (
+    batiments_du_perimetre,
+    membres_cs_notifiables,
+    syndic_puis,
+)
+from app.utils.email import send_email_group
+from app.utils.liens import lien_element
+from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
+from app.utils.whatsapp import (
+    config_whatsapp,
+    envoyer_whatsapp_avec_log,
+    whatsapp_actif,
+)
+
+
+def lien_affiche(annonce: AnnonceHall) -> str | None:
+    """Le lien qui accompagne une affiche — ou `None` quand il n'y en a pas.
+
+    🔴 **Un seul lien pour les deux canaux.** L'e-mail et le groupe WhatsApp
+    parlent de la même affiche : s'ils pointaient deux endroits différents, l'un
+    des deux aurait tort, et rien ne le dirait.
+
+    ⚠️ Il pointe l'**ACTUALITÉ** dont l'affiche est tirée, et seulement si elle
+    existe. L'historique des affiches vit dans `/espace-cs`, que le front réserve
+    au conseil syndical (`if (!$isCS) goto('/tableau-de-bord')`) : le syndic — qui
+    reçoit ce courriel depuis le 01/09/2026 (#480) — y était renvoyé au tableau de
+    bord. Le bouton était **mort pour la moitié de ses destinataires**, et le
+    modèle d'e-mail était le seul du site à viser une route à accès restreint.
+
+    Une affiche autonome part donc **sans lien** : le PDF est en pièce jointe,
+    c'est tout son contenu, et un bouton qui ne mène nulle part vaut moins que
+    pas de bouton.
+    """
+    return lien_element("pub", annonce.publication_id) if annonce.publication_id else None
+
+
+def _envoyer_email_annonce(
+    annonce: AnnonceHall, user: Utilisateur, background_tasks: BackgroundTasks,
+    session: Session, *, syndic: bool = False, cs: bool = True,
+    auteur: bool = False,
+) -> list[str]:
+    """Programme l'envoi de l'annonce, et rend les e-mails visés.
+
+    🔴 Le CS est choisi **par le PÉRIMÈTRE** ici, pas par le rôle : une affiche
+    du bâtiment 3 ne concerne pas le conseiller du bâtiment 1, qui ne l'imprimera
+    pas. C'est l'autre règle de `destinataires.py`, et les confondre enverrait le
+    bon message aux mauvaises personnes.
+
+    La déduplication, elle, est commune — `syndic_puis` : le syndic passe en
+    premier et gagne le doublon (#480).
+    """
+    perimetres = parse_json_perimetres(annonce.perimetre_cible)
+    destinataires = syndic_puis(
+        session,
+        syndic=syndic,
+        membres=membres_cs_notifiables(session, batiments_du_perimetre(perimetres)) if cs else [],
+    )
+    if not destinataires:
+        return []
+
+    ctx = {
+        "annonce": {
+            "id": annonce.id,
+            "titre": annonce.titre,
+            "perimetre": perimetre_label_liste(perimetres),
+            "format": format_libelle(annonce.format_effectif),
+            "date": date_longue(annonce.cree_le),
+            "apercu": texte_brut(annonce.message)[:APERCU_MAX],
+            "fichier": annonce.pdf_nom,
+            #  Le bouton du gabarit est conditionné à cette clé — voir `lien_affiche`.
+            "lien": lien_affiche(annonce),
+        },
+        "auteur": {"prenom": user.prenom, "nom": user.nom},
+    }
+
+    emails = [email for _, email in destinataires]
+    #  🔴 La copie va à l'auteur de l'AFFICHE, et SUR DEMANDE. Elle partait ici
+    #  d'office — le formulaire annonçait ses destinataires et en servait un de
+    #  plus. Règle commune : `app/utils/copie_auteur.py` (01/09/2026).
+    auteur_bcc = copie_demandee(
+        session, annonce.auteur_id, emails, demandee=auteur,
+    )
+    background_tasks.add_task(
+        send_email_group,
+        code="annonce_hall",
+        to_recipients=destinataires,
+        context=ctx,
+        session=session,
+        bcc=auteur_bcc,
+        attachments=[annonce.pdf_chemin] if os.path.isfile(annonce.pdf_chemin) else None,
+    )
+    return emails
+
+
+def _partager_sur_le_groupe(
+    annonce: AnnonceHall, background_tasks: BackgroundTasks, session: Session
+) -> bool:
+    """Annonce l'affiche sur le groupe WhatsApp, avec un LIEN.
+
+    🔴 **Un lien, pas le PDF** — arbitré le 01/09/2026. Le bridge n'envoie que
+    du texte et une image ; joindre un document demanderait de l'exposer à une URL
+    publique, c'est-à-dire d'ouvrir un accès non authentifié à un document dont le
+    périmètre est parfois restreint.
+
+    ⚠️ **Le lien pointe l'ACTUALITÉ dont l'affiche est tirée**, et seulement si
+    elle existe. L'historique des affiches est un écran d'administration : y
+    envoyer les résidents leur donnerait un 403. Une affiche autonome part donc
+    **sans lien** — son titre et son message sont déjà tout son contenu, et un lien
+    cassé vaut moins que pas de lien.
+
+    Rend `True` si l'envoi a été programmé — le WhatsApp peut être éteint, et le
+    dire évite d'inscrire dans l'historique une diffusion qui n'a pas eu lieu.
+    """
+    cfg = config_whatsapp(session)
+    if not whatsapp_actif(cfg):
+        return False
+    perimetres = parse_json_perimetres(annonce.perimetre_cible)
+    background_tasks.add_task(
+        envoyer_whatsapp_avec_log,
+        annonce.titre,
+        texte_brut(annonce.message),
+        False,
+        ",".join(perimetres) if perimetres else None,
+        None,
+        cfg,
+        lien=lien_affiche(annonce),
+    )
+    return True

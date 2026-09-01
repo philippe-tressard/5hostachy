@@ -32,20 +32,15 @@
   refaite deux fois depuis.
 -->
 <script lang="ts">
-	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
+	import HistoriqueAnnoncesHall from '$lib/components/HistoriqueAnnoncesHall.svelte';
 	import { annoncesHall as annoncesHallApi, publications as pubsApi, ApiError } from '$lib/api';
-	import type { AnnonceHall, Publication } from '$lib/api';
+	import type { Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { stripHtml, perimetreDefautListe } from '$lib/utils';
-	import { safeHtml } from '$lib/sanitize';
-	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 	import { fichiersApi } from '$lib/api';
-	import { isAdmin } from '$lib/stores/auth';
-	import Vignette from '$lib/components/Vignette.svelte';
-	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
 
 	/** Le plafond de fichiers du site — porté par la page, source unique. */
 	export let MAX_FICHIERS: number;
@@ -54,17 +49,13 @@
 	//  `loadAhPublications()` à deux endroits (au montage et au clic d'onglet) :
 	//  deux appelants pour un seul besoin, et une occasion de plus d'en oublier un.
 	onMount(() => {
-		loadAnnoncesHall();
 		loadAhPublications();
 	});
 
 	// -- Annonces Hall ------------------------------------------------------
+	/** Le composant d'historique, pour lui demander un rechargement. */
+	let refHistorique: HistoriqueAnnoncesHall | undefined;
 	let ahVue: 'nouvelle' | 'historique' = 'nouvelle';
-	let ahList: AnnonceHall[] = [];
-	let ahLoading = false;
-	let ahLoaded = false;
-	let ahArchivees = false;
-	let ahExpandedId: number | null = null;
 
 	// Formulaire de création
 	let ahTitre = '';
@@ -73,6 +64,13 @@
 	let ahFormat: AhFormat = 'auto';
 	let ahPhotos: string[] = [];
 	let ahEnvoyerCs = false;
+	//  Les deux canaux qui manquaient (#480, 01/09/2026). L'écran portait UNE
+	//  case, au motif que « WhatsApp et le syndic n'ont pas d'objet ici » —
+	//  arbitrage renversé : la Diffusion est un objet du site, elle se rend
+	//  partout pareil.
+	let ahEnvoyerSyndic = false;
+	let ahPartagerWhatsapp = false;
+	let ahEnvoyerAuteur = false;
 	let ahSaving = false;
 
 	// Aperçu avant envoi
@@ -145,25 +143,15 @@
 		}
 	}
 
-	async function loadAnnoncesHall(force = false) {
-		if (ahLoaded && !force) return;
-		ahLoading = true;
-		try {
-			ahList = await annoncesHallApi.list(ahArchivees);
-			ahLoaded = true;
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur de chargement des annonces');
-		} finally {
-			ahLoading = false;
-		}
-	}
-
 	function ahPayload() {
 		return {
 			titre: ahTitre.trim(),
 			message: ahMessage,
 			perimetre_cible: ahPerimetre,
 			envoyer_cs: ahEnvoyerCs,
+			envoyer_syndic: ahEnvoyerSyndic,
+			partager_whatsapp: ahPartagerWhatsapp,
+			envoyer_auteur: ahEnvoyerAuteur,
 			format_demande: ahFormat,
 			images: ahPhotos,
 		};
@@ -178,6 +166,14 @@
 		ahApercuHtml = '';
 		ahApercuFormat = '';
 		ahSourceId = '';
+		//  🔴 LES CANAUX AUSSI. Ils ne l'étaient pas : après une affiche envoyée au
+		//  CS, la case restait cochée, et la suivante partait sans qu'on l'ait
+		//  redemandé. C'est l'envoi implicite sous un autre nom — la valeur par
+		//  défaut d'un envoi est « ne pas envoyer » (01/09/2026).
+		ahEnvoyerCs = false;
+		ahEnvoyerSyndic = false;
+		ahPartagerWhatsapp = false;
+		ahEnvoyerAuteur = false;
 	}
 
 	async function ahPrevisualiser() {
@@ -210,51 +206,13 @@
 					: `Annonce ${annonce.format_label} créée — aucun membre du CS à notifier sur ce périmètre`,
 			);
 			ahResetForm();
-			await loadAnnoncesHall(true);
+			await refHistorique?.recharger();
 			ahVue = 'historique';
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : "Erreur lors de la création de l'annonce");
 		} finally {
 			ahSaving = false;
 		}
-	}
-
-	async function ahArchiver(annonce: AnnonceHall) {
-		try {
-			await annoncesHallApi.archiver(annonce.id, !annonce.archivee);
-			toast('success', annonce.archivee ? 'Annonce restaurée' : 'Annonce archivée');
-			await loadAnnoncesHall(true);
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : "Erreur lors de l'archivage");
-		}
-	}
-
-	async function ahRenvoyer(annonce: AnnonceHall) {
-		try {
-			await annoncesHallApi.renvoyerEmail(annonce.id);
-			toast('success', 'Annonce renvoyée au CS du périmètre');
-			await loadAnnoncesHall(true);
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors du renvoi');
-		}
-	}
-
-	async function ahSupprimer(annonce: AnnonceHall) {
-		if (!confirm(`Supprimer définitivement « ${annonce.titre} » ? Le PDF sera effacé.`)) return;
-		try {
-			await annoncesHallApi.delete(annonce.id);
-			toast('success', 'Annonce supprimée');
-			await loadAnnoncesHall(true);
-		} catch (e) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur lors de la suppression');
-		}
-	}
-
-	function ahPoids(octets: number | null): string {
-		if (!octets) return '';
-		return octets < 1024 * 1024
-			? `${Math.round(octets / 1024)} Ko`
-			: `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
 	}
 </script>
 
@@ -263,12 +221,8 @@
 		<Pastille active={ahVue === 'nouvelle'} on:click={() => (ahVue = 'nouvelle')}
 			>&#x1F4DD; Nouvelle annonce</Pastille
 		>
-		<Pastille
-			active={ahVue === 'historique'}
-			on:click={() => {
-				ahVue = 'historique';
-				loadAnnoncesHall();
-			}}>&#x1F4C1; Archives</Pastille
+		<Pastille active={ahVue === 'historique'} on:click={() => (ahVue = 'historique')}
+			>&#x1F4C1; Archives</Pastille
 		>
 	</div>
 
@@ -287,6 +241,9 @@
 					formats={AH_FORMATS}
 					maxPhotos={MAX_FICHIERS}
 					bind:envoyerCs={ahEnvoyerCs}
+					bind:envoyerSyndic={ahEnvoyerSyndic}
+					bind:partagerWhatsapp={ahPartagerWhatsapp}
+					bind:envoyerAuteur={ahEnvoyerAuteur}
 					valide={ahFormulaireValide}
 					saving={ahSaving}
 					apercuLoading={ahApercuLoading}
@@ -325,154 +282,9 @@
 			</section>
 		</div>
 	{:else}
-		<!-- ── Historique ──────────────────────────────────────────────── -->
-		<div class="perimetre-pills" style="margin-bottom:.85rem">
-			<Pastille
-				active={!ahArchivees}
-				on:click={() => {
-					ahArchivees = false;
-					loadAnnoncesHall(true);
-				}}>Annonces</Pastille
-			>
-			<Pastille
-				active={ahArchivees}
-				on:click={() => {
-					ahArchivees = true;
-					loadAnnoncesHall(true);
-				}}>Archives</Pastille
-			>
-		</div>
-
-		{#if ahLoading}
-			<p style="color:var(--color-text-muted)">Chargement…</p>
-		{:else if ahList.length === 0}
-			<div class="empty-state">
-				<h3>{ahArchivees ? 'Aucune annonce archivée' : 'Aucune annonce'}</h3>
-				<p>
-					{ahArchivees
-						? "Les annonces archivées depuis l'historique apparaîtront ici."
-						: "Créez la première annonce depuis l'onglet « Nouvelle annonce »."}
-				</p>
-			</div>
-		{:else}
-			{#each ahList as annonce (annonce.id)}
-				<!--  🔴 `EnteteCarte` + `Vignette`, la NORME des cartes du site depuis le
-					      18/08/2026 (#480). Cette liste recomposait son en-tête à la main —
-					      titre après les badges, méta sur sa propre ligne — alors que les cinq
-					      autres listes passent par le composant. Deux cartes du même site ne
-					      se lisaient pas pareil, et surtout : c'est en recomposant un en-tête
-					      que le titre avait disparu sur téléphone.
-
-					      ⚠️ `basculable` : le titre déplie, comme partout ailleurs. Le bouton
-					      ▼ reste — il porte l'affordance pour qui ne devine pas qu'un titre
-					      clique —, mais il n'est plus le seul chemin. -->
-				<div class="card ah-card">
-					<div class="ah-card-top">
-						<Vignette
-							src={annonce.images?.[0] ?? null}
-							alt={annonce.titre}
-							placeholder={annonce.format_label}
-							count={Math.max(0, (annonce.images?.length ?? 0) - 1)}
-							title="Format {annonce.format_label}"
-						/>
-						<div class="ah-card-body">
-							<EnteteCarte
-								titre={annonce.titre}
-								date={fmtDate(annonce.cree_le)}
-								basculable
-								on:toggle={() => (ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
-							>
-								<svelte:fragment slot="tags">
-									<span class="badge badge-blue">{annonce.format_label}</span>
-									<span class="badge badge-gray">&#x1F539; {annonce.perimetre_label}</span>
-									{#if annonce.publication_id}<span
-											class="badge badge-gray"
-											title="Générée depuis une actualité">&#x1F4F0; Actualité</span
-										>{/if}
-									{#if annonce.archivee}<span class="badge badge-gray">Archivée</span>{/if}
-								</svelte:fragment>
-								<svelte:fragment slot="actions">
-									<a
-										class="btn btn-sm btn-outline"
-										href={annoncesHallApi.pdfUrl(annonce.id)}
-										target="_blank"
-										rel="noopener"
-									>
-										&#x1F4C4; PDF{#if annonce.taille_octets}
-											<span class="ah-poids">{ahPoids(annonce.taille_octets)}</span>{/if}
-									</a>
-									<button
-										class="btn btn-sm btn-outline"
-										aria-label={ahExpandedId === annonce.id ? 'Replier' : 'Déplier'}
-										on:click|stopPropagation={() =>
-											(ahExpandedId = ahExpandedId === annonce.id ? null : annonce.id)}
-									>
-										{ahExpandedId === annonce.id ? '▲' : '▼'}
-									</button>
-								</svelte:fragment>
-							</EnteteCarte>
-							<!--  La méta reste SOUS l'en-tête : elle porte l'envoi, qui n'est ni
-								      un tag ni une date de création. -->
-							<small class="ah-card-meta">
-								{#if annonce.auteur_nom}{annonce.auteur_nom} ·
-								{/if}
-								{#if annonce.destinataires.length}
-									&#x2709; {annonce.destinataires.length} destinataire{annonce.destinataires
-										.length > 1
-										? 's'
-										: ''}
-								{:else}
-									<span style="color:var(--color-warning,#B07D1E)">non envoyée</span>
-								{/if}
-							</small>
-							<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
-						</div>
-					</div>
-
-					{#if ahExpandedId === annonce.id}
-						<div class="ah-card-details">
-							<div class="rich-content" style="font-size:.88rem">
-								{@html safeHtml(annonce.message)}
-							</div>
-							{#if annonce.images?.length}
-								<div style="margin-top:.6rem">
-									<FichiersUpload urls={annonce.images} readonly size={64} />
-								</div>
-							{/if}
-							{#if annonce.destinataires.length}
-								<p class="ah-card-meta" style="margin-top:.6rem">
-									Envoyée le {fmtDatetime(annonce.envoye_le ?? annonce.cree_le)} à
-									{annonce.destinataires.join(', ')}
-								</p>
-							{/if}
-							<div class="ah-card-actions" style="margin-top:.75rem">
-								<button class="btn btn-sm btn-outline" on:click={() => ahRenvoyer(annonce)}>
-									&#x2709; Renvoyer au CS
-								</button>
-								<button
-									class="btn-icon-warn"
-									title={annonce.archivee ? 'Restaurer' : 'Archiver'}
-									aria-label={annonce.archivee
-										? 'Restaurer cette annonce'
-										: 'Archiver cette annonce'}
-									on:click={() => ahArchiver(annonce)}
-								>
-									{annonce.archivee ? '↩️' : '\u{1F4E6}'}
-								</button>
-								{#if $isAdmin && annonce.archivee}
-									<button
-										class="btn-icon-danger"
-										title="Supprimer définitivement"
-										aria-label="Supprimer définitivement cette annonce"
-										on:click={() => ahSupprimer(annonce)}>&#x1F5D1;&#xFE0F;</button
-									>
-								{/if}
-							</div>
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
+		<!--  L'historique vit dans son propre composant (01/09/2026) : cet onglet
+		      portait deux vues sans rapport, et seule la création avait la sienne. -->
+		<HistoriqueAnnoncesHall bind:this={refHistorique} />
 	{/if}
 </div>
 
@@ -516,46 +328,9 @@
 		display: block;
 	}
 
-	.ah-card {
-		padding: 0.85rem 1.1rem;
-		margin-bottom: 0.5rem;
-	}
-	.ah-card-top {
-		display: flex;
-		gap: 0.85rem;
-		align-items: flex-start;
-	}
-	.ah-card-body {
-		flex: 1;
-		min-width: 0;
-	}
 	/*  `.ah-card-badges` et `.ah-card-titre` retirées le 29/08/2026 (#480) :
 	    `EnteteCarte` porte désormais les tags et le titre, avec leur mise en
 	    forme. Les laisser aurait fait deux vocabulaires pour une seule notion. */
-	.ah-card-meta {
-		color: var(--color-text-muted);
-		font-size: 0.78rem;
-	}
-	.ah-card-apercu {
-		font-size: 0.82rem;
-		color: var(--color-text-muted);
-		margin-top: 0.35rem;
-	}
-	.ah-card-actions {
-		display: flex;
-		gap: 0.4rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-	.ah-poids {
-		font-size: 0.72rem;
-		color: var(--color-text-muted);
-	}
-	.ah-card-details {
-		border-top: 1px solid var(--color-border);
-		margin-top: 0.75rem;
-		padding-top: 0.75rem;
-	}
 
 	@media (max-width: 900px) {
 		.ah-layout {

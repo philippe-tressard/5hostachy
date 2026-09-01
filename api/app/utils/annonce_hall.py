@@ -140,6 +140,11 @@ _ATTRS_INTERDITS = re.compile(r"\s(on\w+|srcdoc)\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+#: Longueur de l'aperçu du message — dans l'historique comme dans le courriel.
+#: Il vivait dans le routeur, qui n'en est qu'un des deux clients (01/09/2026).
+APERCU_MAX = 180
+
+
 def texte_brut(html: str) -> str:
     """HTML riche → texte brut (pendant serveur de `stripHtml` côté front)."""
     txt = re.sub(r"<[^>]*>", " ", html or "")
