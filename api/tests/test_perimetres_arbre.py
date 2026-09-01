@@ -139,7 +139,28 @@ def test_equivalence_stricte_sur_les_codes_en_service(batiments):
         obtenu = perimetre_visible(cible, utilisateur(roles, batiment_id))
         if attendu != obtenu:
             ecarts.append((cible, roles, batiment_id, attendu, obtenu))
-    assert not ecarts, f"{len(ecarts)} verdict(s) de visibilité modifié(s) : {ecarts[:5]}"
+
+    #  🔴 UN SEUL écart est voulu, depuis le 02/09/2026 : le compte SANS bâtiment,
+    #  qui voyait tout et ne voit plus rien. Le reste du tableau doit être
+    #  rigoureusement identique — c'est ce qui prouve que la fermeture du repli
+    #  n'a pas déplacé une frontière au passage.
+    voulus = [e for e in ecarts if e[2] is None and e[3] is True and e[4] is False]
+    autres = [e for e in ecarts if e not in voulus]
+
+    assert not autres, (
+        f"{len(autres)} verdict(s) de visibilité modifié(s) HORS du changement "
+        f"déclaré : {autres[:5]}\n"
+        "  Quelqu'un gagne ou perd un accès sans que ce soit l'objet du lot."
+    )
+    #  ⚠️ La dérogation ne survit pas à son objet : si plus aucun compte sans
+    #  bâtiment ne change de verdict, c'est que le repli est revenu — ou que
+    #  `rattachements` ne contient plus `None`, et ce test ne mesure plus le cas
+    #  qu'il prétend couvrir.
+    assert voulus, (
+        "Aucun compte sans bâtiment ne change de verdict : soit le repli permissif "
+        "est de retour, soit ce test a cessé d'éprouver le cas `batiment_id=None`. "
+        "Dans les deux cas, INCONNU — pas OK."
+    )
 
 
 def test_equivalence_des_destinataires(batiments):
@@ -182,16 +203,34 @@ def test_libelles_des_codes_en_service_inchanges(batiments):
     assert P.perimetre_label(["bat:1", "parking"]) == "Bâtiment 1 · Parking"
 
 
-# ── Le repli permissif, épinglé pour qu'il ne bouge pas par accident ──────────
+# ── Le repli permissif est FERMÉ (02/09/2026) — épinglé fermé ────────────────
 
-def test_utilisateur_sans_batiment_voit_tout(batiments):
-    """Repli permissif conservé volontairement — suivi à part, pas corrigé ici.
+def test_utilisateur_sans_aucun_batiment_ne_voit_rien(batiments):
+    """*« Un utilisateur sans bâtiment ne doit rien voir car il n'est pas résident. »*
 
-    Le changer modifierait qui voit quoi aujourd'hui. Ce test existe pour qu'il ne
-    se corrige pas *par inadvertance* au détour d'une refonte de l'arbre.
+    🔴 Ce test disait exactement le contraire jusqu'au 02/09/2026, et il le disait
+    à dessein : le repli permissif rendait `True`, et l'épingler empêchait qu'on
+    le corrige *par inadvertance*. La correction est venue, décidée — le test
+    change donc de sens, pas de raison d'être.
     """
     sans_batiment = utilisateur("résident", None)
-    assert perimetre_visible([f"bat:{batiments[0]}"], sans_batiment) is True
+    assert perimetre_visible([f"bat:{batiments[0]}"], sans_batiment) is False
+
+
+def test_un_batiment_ne_donne_pas_acces_aux_autres(batiments):
+    """Le corollaire, qui n'était pas éprouvé isolément.
+
+    Fermer sur l'ensemble vide ne dit rien de l'intersection : une implémentation
+    qui rendrait `True` dès que l'utilisateur a UN bâtiment quelconque passerait
+    le test ci-dessus.
+    """
+    du_premier = utilisateur("résident", batiments[0])
+    assert perimetre_visible([f"bat:{batiments[0]}"], du_premier) is True
+    assert perimetre_visible([f"bat:{batiments[1]}"], du_premier) is False
+    #  Ciblage multiple : il suffit qu'UN des périmètres visés soit le sien.
+    assert perimetre_visible(
+        [f"bat:{batiments[1]}", f"bat:{batiments[0]}"], du_premier
+    ) is True
 
 
 # ── Ce qui change volontairement : la donnée abîmée refuse ────────────────────

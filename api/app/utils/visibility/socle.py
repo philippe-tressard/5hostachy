@@ -130,12 +130,43 @@ def perimetre_visible(
             return True
         return bool(miens & batiments_cibles(perimetres))
 
+    #  🔴 LE REPLI PERMISSIF EST FERMÉ (02/09/2026), sur arbitrage :
+    #  *« un utilisateur sans bâtiment ne doit rien voir car il n'est pas
+    #  résident »*.
+    #
+    #  Il rendait `True` dès que `user.batiment_id` était `None` — « accès
+    #  résidence entière par défaut ». Deux tests l'épinglaient en disant, l'un et
+    #  l'autre, « le jour où ce repli sera repris » : c'est ce jour-là.
+    #
+    #  Ce que ça referme, au-delà des périmètres : la CONFIDENTIALITÉ passe par ce
+    #  même chemin (`ouvert_a_la_copropriete=False`). Un compte sans bâtiment
+    #  voyait donc les actualités confidentielles de TOUS les bâtiments.
+    #
+    #  ⚠️ POURQUOI LES LOTS, ET POURQUOI SEULEMENT ICI. Un copropriétaire
+    #  BAILLEUR n'a par construction aucun `batiment_id` : c'est son locataire qui
+    #  habite. Fermer sur le seul rattachement l'aurait coupé de sa propre
+    #  copropriété, en croyant n'écarter que des comptes techniques.
+    #
+    #  Mais la consultation des lots reste CONFINÉE à cette branche, et c'est la
+    #  contrainte posée le 14/08/2026, écrite dans `utils/mes_batiments` : *une
+    #  agence, un bailleur ou un mandataire qui n'avaient pas de visibilité n'en
+    #  gagnent aucune*. Décider sur `batiments_de_l_utilisateur()` en toutes
+    #  circonstances — ce qu'a fait la première écriture de ce correctif —
+    #  ÉLARGIT : un bailleur rattaché au bâtiment A et détenteur d'un lot en B
+    #  gagnait l'accès à B. Un élargissement obtenu en croyant ne faire que
+    #  restreindre, et qu'aucun test existant n'attrapait, tous portant sur le
+    #  rattachement seul.
+    #
+    #  Confinée ici, la règle ne peut que retirer : celui qui a un rattachement
+    #  garde exactement ce qu'il avait, celui qui n'en a pas passe de « toute la
+    #  résidence » aux bâtiments de ses lots — et à rien du tout s'il n'en a
+    #  aucun. Verrouillé par `test_visibilite_ouverte.py`.
     if user.batiment_id is None:
-        #  Pas de bâtiment assigné → accès résidence entière par défaut.
-        #  ⚠️ Repli permissif **conservé volontairement** : le corriger changerait
-        #  qui voit quoi aujourd'hui, ce qui n'est pas l'objet de ce lot. Il est
-        #  épinglé par un test pour qu'il ne bouge pas par accident, et suivi à part.
-        return True
+        #  Sans rattachement, ce sont les lots qui disent de quoi ce compte est.
+        #  Vide = ni rattachement ni lot : pas résident de la copropriété. Ce qui
+        #  lui est destiné passe par les périmètres à portée globale, traités plus
+        #  haut, et par les objets dont il est l'auteur ou le destinataire.
+        return bool(batiments_de_l_utilisateur(user) & batiments_cibles(perimetres))
     return user.batiment_id in batiments_cibles(perimetres)
 
 

@@ -7,17 +7,30 @@ Il répond à « quels bâtiments sont les MIENS ? », question posée par la pr
 détenir des lots dans plusieurs bâtiments : `Utilisateur.batiment_id`, qui est
 unique, ne suffit donc pas à répondre.
 
-⚠️ **Cette liste ne décide jamais d'un accès.** Elle sert exclusivement à
-restreindre ce qu'un utilisateur a demandé à ne plus voir — donc à lui montrer
-**moins**, jamais plus. La règle qui décide de la visibilité d'un document, d'un
-sondage ou d'une AG continue de s'appuyer sur le seul `batiment_id`
-(`utils/visibility.perimetre_visible`), et il faut qu'il en reste ainsi : élargir
-la notion de « mes bâtiments » à mes lots au milieu d'une décision d'accès
-ouvrirait des contenus réservés à quelqu'un qui ne les voyait pas.
+⚠️ **Cette liste ne peut jamais ÉLARGIR un accès.** C'est la contrainte posée par
+l'utilisateur le 14/08/2026 : *une agence, un bailleur ou un mandataire qui
+n'avaient pas de visibilité n'en gagnent aucune.* L'ouverture porte sur l'axe
+**bâtiment**, jamais sur l'axe **public**.
 
-C'est la contrainte posée par l'utilisateur le 14/08/2026 : *une agence, un
-bailleur ou un mandataire qui n'avaient pas de visibilité n'en gagnent aucune.*
-L'ouverture porte sur l'axe **bâtiment**, jamais sur l'axe **public**.
+Elle a **deux** appelants, et un seul sens de lecture — montrer moins, jamais plus :
+
+1. la préférence « n'afficher que les contenus de mes bâtiments » : elle retire ce
+   que l'utilisateur a demandé à ne plus voir ;
+2. depuis le **02/09/2026**, `utils/visibility.perimetre_visible`, mais
+   **uniquement dans la branche « aucun `batiment_id` »**.
+
+Le point 2 revient sur ce que ce fichier affirmait jusque-là — « cette liste ne
+décide jamais d'un accès », et la règle « continue de s'appuyer sur le seul
+`batiment_id` ». La raison de cette affirmation reste vraie et n'est pas
+enfreinte : décider sur cette liste **en toutes circonstances** élargirait, et
+c'est précisément l'erreur qu'a commise la première écriture du correctif de ce
+jour-là. Confinée à la branche sans rattachement, elle ne peut que retirer — le
+repli permissif y rendait `True` pour tout le monde, et un bailleur, qui n'a par
+construction aucun `batiment_id`, y passe de « toute la résidence » aux bâtiments
+de ses seuls lots.
+
+🔒 Verrouillé par `tests/test_visibilite_ouverte.py` : un compte QUI A un
+rattachement ne gagne rien du bâtiment de ses lots.
 
 ## Le cache
 
