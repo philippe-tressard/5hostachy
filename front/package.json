@@ -57,7 +57,8 @@
 		"lint:largeur-saisie": "node scripts/check-largeur-saisie.mjs",
 		"lint:each-key": "node scripts/check-each-key.mjs",
 		"lint:classe-relayee": "node scripts/check-classe-relayee.mjs",
-		"lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest"
+		"lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest",
+		"lint:liste-depliable": "node --experimental-strip-types scripts/check-liste-depliable.mjs --selftest"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
