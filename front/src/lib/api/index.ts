@@ -218,6 +218,16 @@ export const calendrier = {
 	list: () => api.get<any[]>('/calendrier'),
 	get: (id: number) => api.get<any>(`/calendrier/${id}`),
 	create: (data: unknown) => api.post<any>('/calendrier', data),
+	//  🔴 UNE requête, UNE transaction (#605, point 3). Le pré-remplissage du
+	//  kanban écrivait en boucle : `for (const ev of aCreer) await create(ev)`.
+	//  Un échec au 7e sur 20 laissait SIX événements créés et l'écran disait
+	//  « Erreur lors de l'initialisation » sans dire lesquels.
+	//
+	//  ⚠️ Ce point d'entrée ne DIFFUSE jamais et refuse les types qui notifient
+	//  (coupure, travaux) : un lot est un pré-remplissage silencieux, en faire un
+	//  canal offrirait cent envois en une requête. Le serveur les rejette en 422
+	//  plutôt que de les ignorer — sinon l'appelant croirait avoir diffusé.
+	createLot: (evenements: unknown[]) => api.post<any[]>('/calendrier/lot', { evenements }),
 	update: (id: number, data: unknown) => api.patch<any>(`/calendrier/${id}`, data),
 	archive: (id: number) => api.patch<any>(`/calendrier/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/calendrier/${id}`),
