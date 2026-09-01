@@ -285,7 +285,7 @@ traiter avant toute autre chose. Site HS : SSH sur l'actif →
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
 | `0 3 * * 0` `maintenance.sh` | purge, VACUUM, rotation des logs |
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
-| `*/15 * * * *` `check-reliability.sh` | 26 contrôles de fiabilité + alerte e-mail sur `FAIL` |
+| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C24** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` |
 
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
 jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois

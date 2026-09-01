@@ -173,7 +173,8 @@ La décision est **pure** (`verdict_notification`, `lib-verdicts.sh`, couverte p
 🔴 **Pourquoi le digest existe.** L’alerte ne partait que sur `FAILS > 0`. Or **cinq**
 contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (maintenance en
 retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée), et depuis le
-01/09/2026 **C1** dans ses deux cas non concluants (voir ci-dessous) — au motif qu’un FAIL
+01/09/2026 **C1** dans ses deux cas non concluants et **C24** (surface sudo ⇆ dépôt)
+— au motif qu’un FAIL
 à `*/15` enverrait un mail par heure. Le raisonnement était juste sur la **fréquence**
 et faux sur la **conclusion** : on en a déduit « pas de mail » là où il fallait « pas
 ce mail-là ». Ces cinq contrôles n’avaient donc **aucun destinataire**.
@@ -185,6 +186,38 @@ L’écran affichait « À jour » sur un rapport vieux de cinq jours.
 
 ⚠️ **Un WARN sans destinataire est un contrôle mort** — `standards/04` §7. Poser un
 nouveau contrôle en WARN est légitime ; le laisser sans canal ne l’est pas.
+
+### C24 — la surface sudo INSTALLÉE doit être celle du dépôt (01/09/2026)
+
+Le 31/08, `NOPASSWD: /usr/bin/rsync` — un rsync privilégié **sans borne de
+chemin**, donc une escalade root complète — a été retiré du dépôt (#582), avec un
+commentaire disant *« c’est la fin du chantier »*. Il est resté installé sur les
+**deux** machines : `durcir-sudoers.sh` n’avait jamais été rejoué. Vingt-quatre
+heures, et vingt-trois contrôles au vert à chaque quart d’heure.
+
+⚠️ **Ni C20 ni C21 ne pouvaient le voir.** C20 compare les deux nœuds **entre
+eux** — deux nœuds identiquement périmés lui paraissent parfaits. C21 regarde si
+la cible d’une permission est réinscriptible par son appelant : `/usr/bin/rsync`
+ne l’est pas. C’est le même trou que **C22** comble pour les points d’entrée, un
+objet plus loin : *comparer au dépôt, et pas seulement au voisin.*
+
+C24 compare la surface `NOPASSWD` réellement accordée à celle que
+`sudoers_regle()` compose, et nomme les écarts dans les deux sens :
+
+| Écart | Verdict | Ce que ça veut dire |
+|---|---|---|
+| permission **en trop** | WARN | le dépôt ne l’accorde plus, la machine si — rejouer `durcir-sudoers.sh` |
+| permission **manquante** | WARN | un geste de la bascule échouera au prochain passage |
+| surface non mesurée | WARN | INCONNU, jamais un vert |
+
+📎 **`durcir-sudoers.sh --appliquer` ne peut PAS tourner depuis une session non
+interactive** : il valide par `sudo -n visudo -cf`, et `visudo` n’est pas dans la
+surface NOPASSWD — il échoue en « a password is required », proprement, sans rien
+modifier. La voie employée le 01/09 est celle du reste du projet : un conteneur
+jetable montant `/etc/sudoers.d`, une écriture sous un nom **commençant par un
+point** (que sudo ignore), puis un `mv` atomique. Le contenu installé est vérifié
+avant le `mv` : rsync absent, `systemctl start cloudflared` présent — sans quoi la
+bascule casserait.
 
 ### C1 — « site public KO » demande DEUX sondes, pas une (01/09/2026)
 

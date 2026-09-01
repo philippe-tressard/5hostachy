@@ -101,6 +101,47 @@ verdict_sudo_risque() {  # $1 = champ collecté → OK | RISQUE | INCONNU
 # Appelé par `verdicts_selftest` (lib-verdicts.sh) : une seule commande pour
 # l'utilisateur et pour la CI. `st_fail` appartient à l'appelant — ces tests
 # l'incrémentent comme les autres, donc un échec ici fait échouer le tout.
+
+# ── C24. La surface accordée EST-ELLE celle que le dépôt compose ? (PURE) ────
+# Args : reelle  attendue    (deux listes « cmd|cmd|… », triées, séparateur |)
+# Échoit : OK · EN_TROP:<liste> · MANQUANTES:<liste> · ECART:<en trop>/<manq> · INCONNU
+#
+# 🔴 POURQUOI (01/09/2026). Le 31/08, la règle `NOPASSWD: /usr/bin/rsync` — un
+# rsync privilégié sans borne de chemin, donc une escalade root complète — a été
+# retirée du dépôt (#582), avec un commentaire disant « c est la fin du chantier ».
+# Elle est restée installée sur les DEUX machines : `durcir-sudoers.sh` n avait
+# jamais été rejoué. Vingt-quatre heures, et vingt-trois contrôles au vert.
+#
+# ⚠️ C20 ne pouvait pas le voir : il compare les deux nœuds ENTRE EUX, et deux
+# nœuds identiquement périmés lui semblent parfaits. C est exactement le trou que
+# C22 comble pour les points d entrée — la même leçon, un objet plus loin.
+#
+# EN_TROP est le cas dangereux (une permission que le dépôt ne veut plus) ;
+# MANQUANTES casse un geste (la bascule perdrait cloudflared). Les deux sont dits.
+verdict_sudo_surface() {
+  local reelle="${1:-}" attendue="${2:-}"
+  #  Une surface vide n est pas « aucune permission » : c est une mesure qui n a
+  #  pas eu lieu. Et une attendue vide veut dire que le dépôt n est pas lisible.
+  { [ -z "$reelle" ] || [ -z "$attendue" ]; } && { echo "INCONNU"; return; }
+  [ "$reelle" = "$attendue" ] && { echo "OK"; return; }
+
+  local trop="" manq="" c
+  local IFS='|'
+  for c in $reelle;   do [ -n "$c" ] && case "|$attendue|" in *"|$c|"*) ;; *) trop="$trop$c, " ;; esac; done
+  for c in $attendue; do [ -n "$c" ] && case "|$reelle|"   in *"|$c|"*) ;; *) manq="$manq$c, " ;; esac; done
+  unset IFS
+  trop="${trop%, }"; manq="${manq%, }"
+
+  if [ -n "$trop" ] && [ -n "$manq" ]; then echo "ECART:$trop/$manq"
+  elif [ -n "$trop" ]; then echo "EN_TROP:$trop"
+  elif [ -n "$manq" ]; then echo "MANQUANTES:$manq"
+  else
+    #  Mêmes éléments, chaîne différente : un tri ou un espace diverge. Ce n est
+    #  pas un vert — on ne compare plus la même chose que ce qu on croit.
+    echo "INCONNU"
+  fi
+}
+
 sudo_selftest() {
   echo "-- C20 : parité des permissions élevées entre les 2 nœuds --"
   sp() {  # $1 = libellé, $2 = attendu, $3 = inventaire A, $4 = inventaire B
@@ -161,4 +202,26 @@ ptressard ALL=(root) NOPASSWD: /usr/bin/rsync"
   #  le nœud le moins surveillé serait celui qui rassure le plus.
   sr "non mesurable (peer, non-root)"     INCONNU ""
   sr "sortie sans marqueur de mesure"     INCONNU "bascule.sh"
+
+  echo "-- C24 : la surface installée est celle du dépôt --"
+  ss() {  # $1 = libellé, $2 = attendu, $3 = réelle, $4 = attendue-par-le-dépôt
+    local got; got=$(verdict_sudo_surface "$3" "$4")
+    [ "$got" = "$2" ] && echo "PASS  $1 → $got"       || { echo "FAIL  $1  attendu=$2 obtenu=$got"; st_fail=1; }
+  }
+  _ATT="ATTENDUE"
+  ss "conforme au dépôt"                  OK "$_ATT" "$_ATT"
+  #  🔴 Le fait du 01/09/2026 : rsync retiré du dépôt, resté sur les machines.
+  ss "une permission EN TROP (rsync)"     "EN_TROP:/usr/bin/rsync"      "/usr/bin/crontab -l|/usr/bin/rsync|" "/usr/bin/crontab -l|"
+  #  L autre sens : la bascule perdrait cloudflared, et rien ne le dirait avant
+  #  02:00 du matin.
+  ss "une permission MANQUANTE"           "MANQUANTES:/usr/bin/systemctl start cloudflared"      "/usr/bin/crontab -l|" "/usr/bin/crontab -l|/usr/bin/systemctl start cloudflared|"
+  ss "les deux à la fois"                 "ECART:/usr/bin/rsync//usr/bin/crontab -l"      "/usr/bin/rsync|" "/usr/bin/crontab -l|"
+  #  Le cas zéro, deux fois : une mesure absente n est pas « aucune permission »,
+  #  et un dépôt illisible n est pas « rien d attendu ». INCONNU, jamais OK.
+  ss "surface non mesurée"                INCONNU "" "$_ATT"
+  ss "dépôt non composable"               INCONNU "$_ATT" ""
+  ss "les deux vides"                     INCONNU "" ""
+  #  Mêmes éléments, ordre différent : le tri a divergé quelque part, donc on ne
+  #  compare plus ce qu on croit comparer. Surtout pas un vert.
+  ss "mêmes éléments, ordre différent"    INCONNU "/usr/bin/b|/usr/bin/a|" "/usr/bin/a|/usr/bin/b|"
 }

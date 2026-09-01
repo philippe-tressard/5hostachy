@@ -161,4 +161,19 @@ if [ "$(id -u)" = "0" ]; then
 else
   echo "sudorisk="
 fi
+
+# La SURFACE accordée au compte de service, triée et aplatie — la matière de C24.
+# Elle se compare à ce que `sudoers_regle` compose dans le dépôt : C20 ne compare
+# que les deux nœuds ENTRE EUX, donc deux nœuds identiquement périmés lui semblent
+# parfaits. C est exactement ce qui est arrivé du 31/08 au 01/09/2026 : la règle
+# NOPASSWD sur rsync — une escalade root complète — était retirée du dépôt, et
+# toujours installée sur les DEUX machines. Vingt-trois contrôles au vert.
+if [ "$(id -u)" = "0" ]; then
+  SURF=$(grep -rhE "^ptressard[[:space:]]+.*NOPASSWD:" /etc/sudoers.d/ /etc/sudoers 2>/dev/null | grep -vE "^[[:space:]]*#")
+else
+  # Le peer est collecté en tant que ptressard, pas root : `sudo -n -l` liste
+  # ses propres droits SANS mot de passe, et rend la même surface.
+  SURF=$(sudo -n -l 2>/dev/null | grep "NOPASSWD:")
+fi
+echo "sudosurface=$(printf "%s" "$SURF" | sed -n "s/.*NOPASSWD:[[:space:]]*//p" | sed "s/[[:space:]]*$//" | sort -u | tr "\\n" "|")"
 '

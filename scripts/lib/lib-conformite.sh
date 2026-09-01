@@ -76,6 +76,34 @@ conformite_verdicts() {
     *)       warn "Points d'entrée de $SELF non lisibles : ${PE#*|} — ni vert ni rouge (sudo -n refusé, ou nœud non provisionné)" ;;
   esac
 
+  # ── C24. La surface sudo INSTALLÉE est-elle celle que le dépôt compose ? ──────
+  #  🔴 Le 31/08/2026, `NOPASSWD: /usr/bin/rsync` — un rsync privilégié sans borne
+  #  de chemin, donc une escalade root complète — a été retiré du dépôt (#582) avec
+  #  un commentaire disant « c'est la fin du chantier ». Il est resté installé sur
+  #  les DEUX machines : `durcir-sudoers.sh` n'avait jamais été rejoué. Vingt-quatre
+  #  heures, et vingt-trois contrôles au vert à chaque quart d'heure.
+  #
+  #  ⚠️ C20 ne pouvait pas le voir : il compare les deux nœuds ENTRE EUX, et deux
+  #  nœuds identiquement périmés lui paraissent parfaits. C21 non plus : rsync n'est
+  #  pas réinscriptible par son appelant. C'est le même trou que C22 comble pour les
+  #  points d'entrée — comparer au DÉPÔT, et pas seulement au voisin.
+  #
+  #  WARN et non FAIL : une permission en trop n'interrompt pas le service. Mais
+  #  elle a un destinataire — le digest quotidien (#449) —, ce qui est toute la
+  #  différence entre un contrôle et un contrôle mort.
+  SURF_ATTENDUE=$(sudoers_regle ptressard 2>/dev/null     | sed -n 's/^ptressard[[:space:]]*ALL=(root)[[:space:]]*NOPASSWD:[[:space:]]*//p'     | sed 's/[[:space:]]*$//' | sort -u | tr '
+' '|')
+  case "$(verdict_sudo_surface "${S_sudosurface:-}" "$SURF_ATTENDUE")" in
+    OK)           ok   "Surface sudo de $SELF conforme au dépôt" ;;
+    EN_TROP:*)    V24=$(verdict_sudo_surface "${S_sudosurface:-}" "$SURF_ATTENDUE")
+                  warn "Surface sudo de $SELF : permission(s) EN TROP → ${V24#EN_TROP:} — le dépôt ne les accorde plus, la machine si (relancer scripts/installation/durcir-sudoers.sh)" ;;
+    MANQUANTES:*) V24=$(verdict_sudo_surface "${S_sudosurface:-}" "$SURF_ATTENDUE")
+                  warn "Surface sudo de $SELF : permission(s) MANQUANTE(S) → ${V24#MANQUANTES:} — un geste de la bascule échouera au prochain passage" ;;
+    ECART:*)      V24=$(verdict_sudo_surface "${S_sudosurface:-}" "$SURF_ATTENDUE")
+                  warn "Surface sudo de $SELF NON conforme au dépôt → ${V24#ECART:} (en trop / manquantes)" ;;
+    *)            warn "Surface sudo de $SELF non mesurable — ni vert ni rouge" ;;
+  esac
+
   # ── C23. Les en-têtes de sécurité sont-ils RÉELLEMENT servis ? ────────────────
   # 🔴 Un contrôle des en-têtes existait — dans `check-stack.sh`, RETIRÉ du cron de
   # rpi2 le 06/08/2026 parce qu'il y échouait 144 fois par jour. Il échouait parce
