@@ -16,7 +16,24 @@
  * allers-retours d'encodage sous Windows (cf. skill `svelte-patterns`).
  */
 
+/**  Photos d'une petite annonce. ⚠️ Bornée CÔTÉ SERVEUR — `routers/annonces.py`
+ *   refuse au-delà (`MAX_PHOTOS = 5`). Les deux doivent rester d'accord :
+ *   `api/tests/test_plafonds_pieces_jointes.py` le vérifie. */
 export const MAX_PHOTOS_ANNONCE = 5;
+
+/**  Photos d'une AFFICHE DE HALL. ⚠️ Bornée côté serveur elle aussi —
+ *   `utils/annonce_hall.py` (`MAX_PHOTOS = 2`), et `POST /annonces-hall` refuse
+ *   en **422** au-delà.
+ *
+ *   🔴 L'écran passait `MAX_FICHIERS` (10) jusqu'au 01/09/2026 : un conseiller
+ *   qui ajoutait cinq photos remplissait tout son formulaire, cliquait, et
+ *   perdait sa saisie sur un 422. Le manuel, lui, disait « 1 ou 2 » — il avait
+ *   raison, c'est l'écran qui mentait.
+ *
+ *   La raison de la limite est le format : au-delà de deux, l'affiche déborde du
+ *   feuillet et le format A4/A5 n'est plus tenu. Ce n'est donc pas un plafond
+ *   d'interface, c'est une contrainte du document. */
+export const MAX_PHOTOS_AFFICHE = 2;
 
 export const TYPES_ANNONCE = [
 	{ val: 'vente', label: '\u{1F3F7}️ Vente' },
