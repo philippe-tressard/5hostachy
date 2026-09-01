@@ -72,6 +72,19 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: 0.875rem;
 }
 
+/*  Le cran en dessous de `.btn-sm` — un bouton d'appoint DANS un champ ou une
+    ligne de liste (« ✕ Changer », « ✕ Dissocier »).
+
+    Définie localement dans `mon-lot` jusqu'au 01/09/2026, et devenue nue le jour
+    où le formulaire de bail est parti dans son composant : le style était resté
+    dans la page, le balisage l'avait quittée. C'est la régression des pastilles
+    (v2.67.11), et le remède est celui de `.form-grid` — la notion est partagée,
+    elle vit ici. */
+.btn-xs {
+	padding: 0.15rem 0.4rem;
+	font-size: 0.75rem;
+}
+
 /* Boutons icône (modifier · supprimer · action) */
 .btn-icon,
 .btn-icon-edit,
@@ -324,6 +337,22 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     est défini ici. */
 .form-grid textarea {
 	resize: vertical;
+}
+
+/*  Une grille à DEUX colonnes exactement, là où `.form-grid` en met autant que la
+    place le permet. Deux champs qui vont par paire — prénom/nom, entrée/sortie —
+    ne doivent pas se retrouver seuls sur leur ligne quand la fenêtre s'élargit.
+
+    ⚠️ Elle repasse à UNE colonne sur téléphone, comme `.form-grid` : la règle est
+    plus bas, dans la même requête de média que sa voisine — sans quoi deux
+    champs de 220 px se partageraient 320 px d'écran.
+
+    Définie localement dans `mon-lot` jusqu'au 01/09/2026, devenue nue quand le
+    formulaire de bail est parti dans son composant. */
+.form-grid-2 {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.75rem;
 }
 /*  Aide sous une case à cocher. Alignée sur le libellé, donc décalée de la
     largeur de la case. Définie ICI et non dans un composant : Svelte scope ses

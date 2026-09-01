@@ -957,6 +957,18 @@ jobs:
         working-directory: front
         run: npm run lint:each-key
 
+      - name: Classe relayée à un composant, stylée en :global() borné
+        #  🔴 Une classe passée en prop `classe=` est appliquée par le COMPOSANT,
+        #  sur son balisage : elle y prend SON scope, pas celui de qui la passe.
+        #  Écrite à plat chez l'appelant, la règle ne correspond à rien — et les
+        #  DEUX appelants du site étaient dans ce cas au 01/09/2026, avec une mise
+        #  en page morte depuis toujours (liste de lots sans bordure, deux champs
+        #  empilés au lieu d'être côte à côte).
+        #  ⚠️ `svelte-check` ne le voit pas : il ne signale « sélecteur inutilisé »
+        #  que si le fichier n'a aucun autre usage de la classe.
+        working-directory: front
+        run: npm run lint:classe-relayee
+
       - name: Confirmation dans la charte (plafond décroissant)
         # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
         # navigateur bloque le fil d'exécution, ignore la charte, et donne le

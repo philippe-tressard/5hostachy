@@ -186,28 +186,40 @@
 				{/if}
 
 				{#if isAidantOrMandataire}
-					<LibelleGroupe titre="Copropriétaire aidé *" id="coproprietaire-aide" classe="field-row">
-						<div class="field">
-							<input
-								id="prenom-aide"
-								type="text"
-								bind:value={prenom_aide}
-								required
-								placeholder="Prénom"
-							/>
-						</div>
-						<div class="field">
-							<input
-								id="nom-aide"
-								type="text"
-								bind:value={nom_aide}
-								required
-								placeholder="NOM"
-								style="text-transform:uppercase"
-								on:input={() => (nom_aide = nom_aide.toUpperCase())}
-							/>
-						</div>
-					</LibelleGroupe>
+					<!--  ⚠️ `.aide-grille` enveloppe, et la grille est `:global()` IMBRIQUÉ.
+					      La classe passée en prop `classe=` est appliquée par `LibelleGroupe`
+					      sur SON balisage : elle y prend le scope de `LibelleGroupe`, jamais
+					      celui d'ici. `.field-row` écrit à plat ne l'atteignait pas — les deux
+					      champs s'empilaient au lieu de se ranger côte à côte, et ce depuis
+					      toujours (trouvé le 01/09/2026 en extrayant `FormulaireBail`). -->
+					<div class="aide-grille">
+						<LibelleGroupe
+							titre="Copropriétaire aidé *"
+							id="coproprietaire-aide"
+							classe="field-row"
+						>
+							<div class="field">
+								<input
+									id="prenom-aide"
+									type="text"
+									bind:value={prenom_aide}
+									required
+									placeholder="Prénom"
+								/>
+							</div>
+							<div class="field">
+								<input
+									id="nom-aide"
+									type="text"
+									bind:value={nom_aide}
+									required
+									placeholder="NOM"
+									style="text-transform:uppercase"
+									on:input={() => (nom_aide = nom_aide.toUpperCase())}
+								/>
+							</div>
+						</LibelleGroupe>
+					</div>
 					<p class="field-hint">
 						Permet au conseil syndical de rattacher votre compte au bon copropriétaire.
 					</p>
@@ -307,7 +319,7 @@
 		font-size: 0.875rem;
 	}
 
-	.field-row {
+	.aide-grille :global(.field-row) {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 0.75rem;

@@ -2,15 +2,14 @@
 	import { nomAffiche } from '$lib/noms';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
-	import RichEditor from '$lib/components/RichEditor.svelte';
 	import { fmtDateShort as fmt } from '$lib/date';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
@@ -112,23 +111,6 @@
 		notes: '',
 	};
 	let savingBail = false;
-	let rechercheLocataire = '';
-	let locataireTrouve: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	} | null = null;
-	let locataireResultats: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	}[] = [];
-	let locataireRechercheFaite = false;
-	let cherchantLocataire = false;
 	let newBailLocataireId: number | null = null;
 
 	// Terminer bail
@@ -154,32 +136,6 @@
 		notes: '',
 	};
 	let editLocataireId: number | null = null;
-	// Recherche / suggestions dans le modal d'édition
-	let editRechercheLocataire = '';
-	let editCherchant = false;
-	let editLocataireResultats: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	}[] = [];
-	let editLocataireRechercheFaite = false;
-	let editLocataireTrouve: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	} | null = null;
-	let editSuggestions: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	}[] = [];
-	let editSuggestionsLoaded = false;
 
 	// Gestion des accès (Vigik / TC) par bail
 	let bailAcces: Bail | null = null;
@@ -257,10 +213,10 @@
 				date_sortie_prevue: '',
 				notes: '',
 			};
-			rechercheLocataire = '';
-			locataireTrouve = null;
-			locataireResultats = [];
-			locataireRechercheFaite = false;
+			//  L'état de la RECHERCHE de locataire vit dans `FormulaireBail` : il
+			//  n'a d'existence que pendant la saisie. Le formulaire est démonté par
+			//  `showNewBail = false`, donc il repart vierge — rien à réinitialiser
+			//  ici, et surtout rien à réinitialiser DEUX fois.
 			newBailLocataireId = null;
 			toast(
 				'success',
@@ -310,69 +266,9 @@
 			date_sortie_prevue: bail.date_sortie_prevue ?? '',
 			notes: bail.notes ?? '',
 		};
-		editLocataireTrouve = bail.locataire_id
-			? {
-					id: bail.locataire_id,
-					nom: bail.locataire_nom ?? '',
-					prenom: bail.locataire_prenom ?? '',
-					email: bail.locataire_email ?? '',
-					actif: true,
-				}
-			: null;
-		editRechercheLocataire = '';
-		editLocataireResultats = [];
-		editLocataireRechercheFaite = false;
-		if (!editSuggestionsLoaded) {
-			bailApi
-				.locatairesSuggeres()
-				.then((r) => {
-					editSuggestions = r;
-					editSuggestionsLoaded = true;
-				})
-				.catch(() => {});
-		}
-	}
-
-	function editSelectionnerLocataire(l: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	}) {
-		editLocataireTrouve = l;
-		editLocataireId = l.id;
-		editLocataire.locataire_nom = l.nom;
-		editLocataire.locataire_prenom = l.prenom;
-		editLocataire.locataire_email = l.email;
-		editLocataireResultats = [];
-		editRechercheLocataire = '';
-	}
-
-	function editDissocierLocataire() {
-		editLocataireTrouve = null;
-		editLocataireId = null;
-	}
-
-	async function editChercherLocataire() {
-		if (!editRechercheLocataire.trim()) return;
-		editCherchant = true;
-		editLocataireTrouve = null;
-		editLocataireId = null;
-		editLocataireResultats = [];
-		try {
-			const results = await bailApi.searchLocataire(editRechercheLocataire.trim());
-			editLocataireRechercheFaite = true;
-			if (results.length === 1) {
-				editSelectionnerLocataire(results[0]);
-			} else {
-				editLocataireResultats = results;
-			}
-		} catch {
-			editLocataireRechercheFaite = true;
-		} finally {
-			editCherchant = false;
-		}
+		//  L'état de la recherche — compte associé, résultats, suggestions — vit
+		//  dans `FormulaireBail` : il n'existe que pendant la saisie, et le
+		//  formulaire est monté à l'ouverture, démonté à la fermeture.
 	}
 
 	async function sauvegarderLocataire() {
@@ -424,54 +320,6 @@
 	}
 
 	// ── Recherche locataire ────────────────────────────────────────────────────
-	function selectionnerLocataire(l: {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	}) {
-		locataireTrouve = l;
-		newBailLocataireId = l.id;
-		newBail.locataire_email = l.email;
-		newBail.locataire_nom = l.nom;
-		newBail.locataire_prenom = l.prenom;
-		locataireResultats = [];
-	}
-
-	function reinitialiserLocataire() {
-		locataireTrouve = null;
-		newBailLocataireId = null;
-		locataireResultats = [];
-		locataireRechercheFaite = false;
-		rechercheLocataire = '';
-		newBail.locataire_email = '';
-		newBail.locataire_nom = '';
-		newBail.locataire_prenom = '';
-	}
-
-	async function chercherLocataire() {
-		if (!rechercheLocataire.trim()) return;
-		cherchantLocataire = true;
-		locataireTrouve = null;
-		locataireResultats = [];
-		try {
-			const results = await bailApi.searchLocataire(rechercheLocataire.trim());
-			locataireRechercheFaite = true;
-			if (results.length === 1) {
-				// Sélection automatique si un seul résultat
-				selectionnerLocataire(results[0]);
-			} else {
-				locataireResultats = results;
-				newBailLocataireId = null;
-			}
-		} catch {
-			locataireRechercheFaite = true;
-			newBailLocataireId = null;
-		} finally {
-			cherchantLocataire = false;
-		}
-	}
 
 	// ── Gestion accès ─────────────────────────────────────────────────────────
 	async function ouvrirAccesBail(bail: Bail) {
@@ -715,6 +563,16 @@
 		return t;
 	}
 
+	//  Les lots tels que `FormulaireBail` les attend : un libellé et un état.
+	//  🔴 La préparation vit ICI, pas dans le composant : `lotLabel` s'appuie sur
+	//  `lotTypeLabel`, qui sert encore à l'affichage des accès plus bas. L'emporter
+	//  dans le composant en aurait fait une deuxième écriture.
+	$: lotsACocher = lots.map((l) => ({
+		id: l.id,
+		libelle: lotLabel(l),
+		occupe: !!bauxActifs.find((b) => b.lot_id === l.id),
+	}));
+
 	function lotLabel(lot: LotDetail): string {
 		const bat = lot.batiment_nom ?? '—';
 		const type = lotTypeLabel(lot.type);
@@ -722,12 +580,6 @@
 		const etage = lot.etage !== null ? (lot.etage === 0 ? ' · RDC' : ` · Ét. ${lot.etage}`) : '';
 		const surface = lot.superficie ? ` · ${lot.superficie} m²` : '';
 		return `${bat} — ${type}${sub} n°${lot.numero}${etage}${surface}`;
-	}
-
-	function toggleNewBailLot(id: number) {
-		if (newBailLotIds.has(id)) newBailLotIds.delete(id);
-		else newBailLotIds.add(id);
-		newBailLotIds = new Set(newBailLotIds);
 	}
 </script>
 
@@ -1051,6 +903,29 @@
 <!-- ── Onglet : Gestion locative ────────────────────────────────────── -->
 {#if mainTab === 'location'}
 	<div style="max-width:900px">
+		<!--  🔴 LA BOÎTE DANS LA PAGE, et non une modale (#367 / #672).
+
+		      « Nouveau bail » était la dernière modale de création du site. Elle y
+		      avait échappé parce que `lint:formulaires` ne cherchait qu'un `<form>`,
+		      et ce formulaire n'en porte aucun — seulement des `.field`.
+
+		      ⚠️ Le corps vit dans `FormulaireBail.svelte` : cette page pesait 2 229
+		      lignes, et le contrôle de modularité refusait d'y ajouter la moindre
+		      ligne. Comme les huit refus précédents, il désignait un PLACEMENT — la
+		      saisie d'un bail n'a rien à faire dans l'écran qui liste les lots, les
+		      baux, les accès et les diagnostics. -->
+		{#if showNewBail}
+			<FormulaireBail
+				lots={lotsACocher}
+				bind:lotIds={newBailLotIds}
+				bind:bail={newBail}
+				bind:locataireId={newBailLocataireId}
+				enregistrement={savingBail}
+				on:annuler={() => (showNewBail = false)}
+				on:enregistrer={creerBail}
+			/>
+		{/if}
+
 		<div class="bail-tabs" style="margin-bottom:1.5rem">
 			<button class:active={bailTab === 'actif'} on:click={() => (bailTab = 'actif')}>
 				Baux actifs ({bauxActifs.length})
@@ -1281,181 +1156,6 @@
 	</div>
 {/if}
 
-<!-- ── Modal : nouveau bail ─────────────────────────────────────────── -->
-{#if showNewBail}
-	<Modale
-		titre="Nouveau bail"
-		styleBoite="width:min(560px,95vw)"
-		on:fermer={() => (showNewBail = false)}
-	>
-		<div class="modal-body">
-			<!-- Sélection des lots -->
-			<div class="field">
-				<LibelleGroupe titre="Lot(s) concerné(s) *" id="bail-lots" classe="lot-checklist">
-					{#each lots as lot (lot.id)}
-						{@const occupied = !!bauxActifs.find((b) => b.lot_id === lot.id)}
-						<label
-							class="lot-check-item"
-							class:disabled={occupied}
-							title={occupied ? 'Ce lot a déjà un bail actif' : undefined}
-						>
-							<input
-								type="checkbox"
-								checked={newBailLotIds.has(lot.id)}
-								disabled={occupied}
-								on:change={() => toggleNewBailLot(lot.id)}
-							/>
-							<span class="lot-check-label">
-								<span class="lot-check-name">{lotLabel(lot)}</span>
-								{#if occupied}<span class="badge badge-yellow" style="font-size:.68rem"
-										>Bail actif</span
-									>{/if}
-							</span>
-						</label>
-					{/each}
-				</LibelleGroupe>
-				{#if newBailLotIds.size > 0}
-					<p class="lot-selection-hint">
-						{newBailLotIds.size} lot{newBailLotIds.size > 1 ? 's' : ''} sélectionné{newBailLotIds.size >
-						1
-							? 's'
-							: ''} — un bail sera créé pour chacun
-					</p>
-				{/if}
-			</div>
-
-			<!-- Recherche locataire inscrit -->
-			<fieldset class="search-locataire-box">
-				<legend>Associer un compte existant <span class="optional-hint">(optionnel)</span></legend>
-				{#if locataireTrouve}
-					<!-- Locataire sélectionné -->
-					<div class="locataire-selected">
-						<div class="locataire-selected-info">
-							<span class="locataire-selected-name">✓ {nomAffiche(locataireTrouve)}</span>
-							<span class="locataire-selected-email">{locataireTrouve.email}</span>
-							{#if !locataireTrouve.actif}
-								<span class="badge badge-yellow" style="font-size:.72rem"
-									>En attente d'activation</span
-								>
-							{/if}
-						</div>
-						<button
-							class="btn btn-xs btn-outline"
-							on:click={reinitialiserLocataire}
-							title="Changer de locataire">✕ Changer</button
-						>
-					</div>
-				{:else}
-					<div class="search-locataire-row">
-						<div class="field champ-en-ligne">
-							<input
-								type="search"
-								id="nb-recherche"
-								placeholder="Nom, prénom ou email…"
-								bind:value={rechercheLocataire}
-								on:keydown={(e) => e.key === 'Enter' && chercherLocataire()}
-								autocomplete="off"
-							/>
-						</div>
-						<button
-							class="btn btn-sm"
-							disabled={cherchantLocataire || !rechercheLocataire.trim()}
-							on:click={chercherLocataire}
-						>
-							{cherchantLocataire ? '…' : '🔍 Chercher'}
-						</button>
-					</div>
-					{#if locataireRechercheFaite && locataireResultats.length === 0 && !cherchantLocataire}
-						<p class="search-no-result">
-							Aucun compte trouvé — renseignez manuellement ci-dessous.
-						</p>
-					{:else if locataireResultats.length > 1}
-						<ul class="locataire-resultats">
-							{#each locataireResultats as r (r.id)}
-								<li>
-									<button class="locataire-resultat-btn" on:click={() => selectionnerLocataire(r)}>
-										<span class="lr-name">{nomAffiche(r)}</span>
-										<span class="lr-email">{r.email}</span>
-										{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
-												>En attente</span
-											>{/if}
-									</button>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				{/if}
-			</fieldset>
-
-			<!-- Informations locataire (pré-remplies si compte sélectionné) -->
-			<div class="form-grid form-grid-2">
-				<div class="field">
-					<label for="nb-prenom">Prénom</label>
-					<input
-						id="nb-prenom"
-						type="text"
-						bind:value={newBail.locataire_prenom}
-						placeholder="Prénom"
-						readonly={!!locataireTrouve}
-					/>
-				</div>
-				<div class="field">
-					<label for="nb-nom">Nom</label>
-					<input
-						id="nb-nom"
-						type="text"
-						bind:value={newBail.locataire_nom}
-						placeholder="Nom"
-						readonly={!!locataireTrouve}
-					/>
-				</div>
-				<div class="field">
-					<label for="nb-email">E-mail</label>
-					<input
-						id="nb-email"
-						type="email"
-						bind:value={newBail.locataire_email}
-						placeholder="email@exemple.fr"
-						readonly={!!locataireTrouve}
-					/>
-				</div>
-				<div class="field">
-					<label for="nb-tel">Téléphone</label>
-					<input
-						id="nb-tel"
-						type="text"
-						bind:value={newBail.locataire_telephone}
-						placeholder="06 …"
-					/>
-				</div>
-				<div class="field">
-					<label for="nb-entree">Date d'entrée *</label>
-					<input id="nb-entree" type="date" bind:value={newBail.date_entree} />
-				</div>
-				<div class="field">
-					<label for="nb-sortie">Sortie prévue</label>
-					<input id="nb-sortie" type="date" bind:value={newBail.date_sortie_prevue} />
-				</div>
-			</div>
-			<div class="field">
-				<span class="libelle-groupe" id="bail-notes-titre">Notes</span>
-				<RichEditor
-					bind:value={newBail.notes}
-					ariaLabelledby="bail-notes-titre"
-					placeholder="Notes sur le bail…"
-					minHeight="80px"
-				/>
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (showNewBail = false)}>Annuler</button>
-			<button class="btn btn-primary" disabled={savingBail} on:click={creerBail}>
-				{savingBail ? 'Création…' : 'Créer le bail'}
-			</button>
-		</div>
-	</Modale>
-{/if}
-
 <!-- ── Modal : terminer bail ────────────────────────────────────────── -->
 {#if bailATerminer}
 	<Modale
@@ -1503,159 +1203,24 @@
 	</Modale>
 {/if}
 
-<!-- ── Modal : modifier locataire ───────────────────────────────────── -->
-{#if bailEdite}
-	<Modale
-		edition
-		titre="Modifier les informations"
-		styleBoite="width:min(560px,95vw)"
-		on:fermer={() => (bailEdite = null)}
-	>
-		<div class="modal-body">
-			<!-- Associer un compte locataire -->
-			<fieldset class="search-locataire-box" style="margin-bottom:1rem">
-				<legend>Compte locataire associé <span class="optional-hint">(optionnel)</span></legend>
-				{#if editLocataireTrouve}
-					<div class="locataire-selected">
-						<div class="locataire-selected-info">
-							<span class="locataire-selected-name">✓ {nomAffiche(editLocataireTrouve)}</span>
-							<span class="locataire-selected-email">{editLocataireTrouve.email}</span>
-							{#if !editLocataireTrouve.actif}
-								<span class="badge badge-yellow" style="font-size:.72rem"
-									>En attente d'activation</span
-								>
-							{/if}
-						</div>
-						<button
-							class="btn btn-xs btn-outline"
-							on:click={editDissocierLocataire}
-							title="Dissocier ce compte">✕ Dissocier</button
-						>
-					</div>
-				{:else}
-					<!-- Suggestions : locataires ayant déclaré ce bailleur -->
-					{#if editSuggestions.length > 0}
-						<p style="font-size:.78rem;color:var(--color-text-muted);margin-bottom:.4rem">
-							Locataires ayant déclaré votre nom :
-						</p>
-						<ul class="locataire-resultats" style="margin-bottom:.65rem">
-							{#each editSuggestions as s (s.id)}
-								<li>
-									<button
-										class="locataire-resultat-btn"
-										on:click={() => editSelectionnerLocataire(s)}
-									>
-										<span class="lr-name">{nomAffiche(s)}</span>
-										<span class="lr-email">{s.email}</span>
-										{#if !s.actif}<span class="badge badge-yellow" style="font-size:.68rem"
-												>En attente</span
-											>{/if}
-									</button>
-								</li>
-							{/each}
-						</ul>
-						<p style="font-size:.75rem;color:var(--color-text-muted);margin-bottom:.35rem">
-							Ou recherchez un autre compte :
-						</p>
-					{/if}
-					<div class="search-locataire-row">
-						<div class="field champ-en-ligne">
-							<input
-								type="search"
-								placeholder="Nom, prénom ou email…"
-								bind:value={editRechercheLocataire}
-								on:keydown={(e) => e.key === 'Enter' && editChercherLocataire()}
-								autocomplete="off"
-							/>
-						</div>
-						<button
-							class="btn btn-sm"
-							disabled={editCherchant || !editRechercheLocataire.trim()}
-							on:click={editChercherLocataire}
-						>
-							{editCherchant ? '…' : '🔍 Chercher'}
-						</button>
-					</div>
-					{#if editLocataireRechercheFaite && editLocataireResultats.length === 0 && !editCherchant}
-						<p class="search-no-result">Aucun compte trouvé.</p>
-					{:else if editLocataireResultats.length > 0}
-						<ul class="locataire-resultats">
-							{#each editLocataireResultats as r (r.id)}
-								<li>
-									<button
-										class="locataire-resultat-btn"
-										on:click={() => editSelectionnerLocataire(r)}
-									>
-										<span class="lr-name">{nomAffiche(r)}</span>
-										<span class="lr-email">{r.email}</span>
-										{#if !r.actif}<span class="badge badge-yellow" style="font-size:.68rem"
-												>En attente</span
-											>{/if}
-									</button>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				{/if}
-			</fieldset>
+<!-- ── Correction d'un bail : LE MÊME formulaire, en modale ─────────── -->
+<!--  🔴 Il était écrit une SECONDE fois ici (01/09/2026, #672) : mêmes champs,
+      même recherche de locataire, six variables d'état en double et trois
+      fonctions recopiées. Deux écritures du même formulaire, et rien pour dire
+      qu'elles avaient divergé — c'est le défaut qui a fait qu'un sélecteur de
+      périmètre de plan écrivait dans la variable du CR d'AG (#453).
 
-			<div class="form-grid locataire-edit-grid">
-				<div class="field">
-					<label for="el-prenom">Prénom</label>
-					<input
-						id="el-prenom"
-						type="text"
-						bind:value={editLocataire.locataire_prenom}
-						placeholder="Prénom"
-					/>
-				</div>
-				<div class="field">
-					<label for="el-nom">Nom</label>
-					<input
-						id="el-nom"
-						type="text"
-						bind:value={editLocataire.locataire_nom}
-						placeholder="Nom"
-					/>
-				</div>
-				<div class="field">
-					<label for="el-email">E-mail</label>
-					<input
-						id="el-email"
-						type="email"
-						bind:value={editLocataire.locataire_email}
-						placeholder="email@exemple.fr"
-					/>
-				</div>
-				<div class="field">
-					<label for="el-tel">Téléphone</label>
-					<input
-						id="el-tel"
-						type="text"
-						bind:value={editLocataire.locataire_telephone}
-						placeholder="06 …"
-					/>
-				</div>
-				<div class="field champ-large">
-					<label for="el-sortie">Sortie prévue</label>
-					<input id="el-sortie" type="date" bind:value={editLocataire.date_sortie_prevue} />
-				</div>
-				<div class="field champ-large">
-					<span class="libelle-groupe" id="bail-edit-notes-titre">Notes</span>
-					<RichEditor
-						bind:value={editLocataire.notes}
-						ariaLabelledby="bail-edit-notes-titre"
-						placeholder="Notes sur le bail…"
-						minHeight="120px"
-					/>
-				</div>
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (bailEdite = null)}>Annuler</button>
-			<button class="btn btn-primary" on:click={sauvegarderLocataire}>Enregistrer</button>
-		</div>
-	</Modale>
+      `avecLots` et `avecDateEntree` portent les DEUX seules différences : un
+      bail existant ne change ni de lot ni de date d'entrée. -->
+{#if bailEdite}
+	<FormulaireBail
+		edition
+		intitule="Modifier les informations"
+		bind:bail={editLocataire}
+		bind:locataireId={editLocataireId}
+		on:annuler={() => (bailEdite = null)}
+		on:enregistrer={sauvegarderLocataire}
+	/>
 {/if}
 
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
@@ -2022,50 +1587,6 @@
 	}
 
 	/* Lot multi-checklist */
-	.lot-checklist {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		overflow: hidden;
-	}
-	.lot-check-item {
-		display: flex;
-		align-items: center;
-		gap: 0.65rem;
-		padding: 0.5rem 0.75rem;
-		cursor: pointer;
-		background: var(--color-bg);
-		border-bottom: 1px solid var(--color-border);
-		transition: background 0.1s;
-	}
-	.lot-check-item:last-child {
-		border-bottom: none;
-	}
-	.lot-check-item:hover:not(.disabled) {
-		background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg));
-	}
-	.lot-check-item.disabled {
-		opacity: 0.55;
-		cursor: default;
-	}
-	.lot-check-label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		font-size: 0.9rem;
-		line-height: 1.3;
-	}
-	.lot-check-name {
-		flex: 1;
-	}
-	.lot-selection-hint {
-		font-size: 0.8rem;
-		color: var(--color-primary);
-		margin-top: 0.35rem;
-	}
 	.mode-personnel-note {
 		margin: 0.6rem 0 0.9rem;
 		padding: 0.55rem 0.75rem;
@@ -2084,107 +1605,10 @@
 	    global, donc la seule que le retrait ne pouvait pas solder. Elle a survécu
 	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
 
-	/* Grille 2 colonnes pour les champs de formulaire */
-	.form-grid-2 {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.75rem;
-	}
-
 	/* Bloc recherche locataire */
-	.search-locataire-box {
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 0.75rem 0.85rem;
-		background: var(--color-surface-alt, #f8f9fa);
-		margin: 0;
-	}
-	.search-locataire-box legend {
-		font-size: 0.82rem;
-		font-weight: 600;
-		padding: 0 0.3rem;
-		color: var(--color-text);
-	}
-	.optional-hint {
-		font-weight: 400;
-		color: var(--color-text-muted);
-	}
-	.search-locataire-row {
-		display: flex;
-		gap: 0.5rem;
-		margin-top: 0.4rem;
-	}
 	/*  Le champ vit dans un `.field champ-en-ligne` depuis le 28/08/2026 : il
 	    repeignait `.field input` et perdait le focus de la charte (#593, volet
 	    C). Ne reste ici que la répartition, propre à cette rangée. */
-	.search-locataire-row .field {
-		flex: 1;
-	}
-	.search-no-result {
-		font-size: 0.82rem;
-		color: var(--color-danger, #dc2626);
-		margin-top: 0.45rem;
-	}
-	.locataire-resultats {
-		list-style: none;
-		margin: 0.5rem 0 0;
-		padding: 0;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		overflow: hidden;
-	}
-	.locataire-resultats li + li {
-		border-top: 1px solid var(--color-border);
-	}
-	.locataire-resultat-btn {
-		width: 100%;
-		text-align: left;
-		background: var(--color-bg);
-		border: none;
-		padding: 0.5rem 0.75rem;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		transition: background 0.1s;
-	}
-	.locataire-resultat-btn:hover {
-		background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
-	}
-	.lr-name {
-		font-weight: 600;
-		font-size: 0.88rem;
-	}
-	.lr-email {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-	}
-	.locataire-selected {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		margin-top: 0.4rem;
-		padding: 0.45rem 0.6rem;
-		background: color-mix(in srgb, var(--color-success, #16a34a) 8%, var(--color-bg));
-		border: 1px solid color-mix(in srgb, var(--color-success, #16a34a) 35%, transparent);
-		border-radius: var(--radius);
-	}
-	.locataire-selected-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.1rem;
-	}
-	.locataire-selected-name {
-		font-weight: 600;
-		font-size: 0.88rem;
-	}
-	.locataire-selected-email {
-		font-size: 0.78rem;
-		color: var(--color-text-muted);
-	}
 
 	.locataire-edit-grid {
 		display: grid;
@@ -2214,16 +1638,8 @@
 		.locataire-edit-grid {
 			grid-template-columns: 1fr;
 		}
-		.form-grid-2 {
-			grid-template-columns: 1fr;
-		}
 		.search-locataire-row {
 			flex-direction: column;
 		}
-	}
-
-	.btn-xs {
-		padding: 0.15rem 0.4rem;
-		font-size: 0.75rem;
 	}
 </style>

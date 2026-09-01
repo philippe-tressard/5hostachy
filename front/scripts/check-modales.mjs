@@ -298,7 +298,16 @@ if (fichiersAvecModale < 2) {
 //  n'a été baissé qu'APRÈS avoir appris à compter la seconde forme d'ouverture
 //  (voir `ouverturesModale`) — sans quoi on aurait entériné un aveuglement en
 //  croyant enregistrer un progrès.
-const PLANCHER_MODALES = 22;
+//
+//  ⚠️ 22 → 21 le 01/09/2026, et pour la même raison : « Modifier les informations »
+//  d'un bail était une SECONDE écriture du formulaire de création — mêmes champs,
+//  même recherche de locataire, six variables d'état en double. Les deux gestes
+//  passent maintenant par `FormulaireBail`, qui pose la boîte à la création et la
+//  modale à la correction. Une modale de moins, et une écriture de moins (#672).
+//
+//  La vérification qui autorise la baisse : le contrôle voit toujours les 21
+//  autres, et `lint:formulaires` ne porte plus AUCUNE exception.
+const PLANCHER_MODALES = 21;
 if (titresRendus < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), ${PLANCHER_MODALES} attendues au minimum. ` +

@@ -297,8 +297,13 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 		gap: 0.35rem;
 	}
 
-	/* Grilles de formulaire : 1 colonne */
-	.form-grid {
+	/*  Grilles de formulaire : 1 colonne.
+	    ⚠️ `.form-grid-2` AUSSI, et il a manqué à l'appel jusqu'au 01/09/2026 : sa
+	    règle de repli vivait dans `mon-lot`, avec sa définition, si bien que les
+	    autres écrans qui la reprendraient auraient eu deux colonnes de 220 px sur un
+	    téléphone de 320. Une variante qui remonte au global emporte SON responsive. */
+	.form-grid,
+	.form-grid-2 {
 		grid-template-columns: 1fr !important;
 	}
 
