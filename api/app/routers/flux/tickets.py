@@ -19,6 +19,7 @@ table, pas un quatrième bloc à recopier.
 from sqlmodel import select
 
 from app.models.core import STATUTS_TICKET_ACTIFS, Ticket, TicketEvolution
+from app.utils.dates_fr import duree_jhm
 from app.utils.fichiers import est_image
 from app.utils.photos import parse_photos
 from app.utils.visibility import ticket_visible
@@ -151,23 +152,36 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
         vus.add(tk.id)
         nouveau = evol.nouveau_statut or ""
         if nouveau == "résolu":
+            #  🔴 `jj:hh:mm`, et non un arrondi décimal d'heures (01/09/2026,
+            #  demandé à l'écran). « Résolu en 23.9h » n'a de sens nulle part
+            #  ailleurs sur le site et se convertit de tête ; le point décimal
+            #  était en prime un point sur un site intégralement en français.
+            #  Le format vit dans `dates_fr.duree_jhm` — une durée EST un format.
             duree = None
             if tk.ferme_le and tk.cree_le:
-                duree = round((tk.ferme_le - tk.cree_le).total_seconds() / 3600, 1)
+                duree = duree_jhm(tk.ferme_le - tk.cree_le)
             cartes.append(FluxItem(
                 id=f"tk_{tk.id}",
                 type="ticket_resolu",
                 date=evol.cree_le,
                 cree_le=tk.cree_le,
                 titre=tk.titre,
-                detail=f"Résolu{f' en {duree}h' if duree else ''}",
+                #  ⚠️ `is not None` et non `if duree`. L'ancien code testait un
+                #  FLOAT : une résolution en moins de six minutes s'arrondissait à
+                #  `0.0`, donc falsy, et la mention disparaissait — le ticket le
+                #  plus vite résolu était le seul à ne pas le dire. `duree_jhm`
+                #  rend `None` sur une donnée incohérente, jamais sur un zéro.
+                detail=f"Résolu{f' en {duree}' if duree is not None else ''}",
                 icon="✅",
                 badges=[f"#{tk.numero}", tk.categorie],
                 lien="/tickets",
                 meta={
                     **_meta_ticket(tk),
                     "statut": "résolu",
-                    "duree_h": duree,
+                    #  Le nom dit désormais ce que la valeur EST : plus des heures
+                    #  décimales, mais `jj:hh:mm`. Aucun écran ne la lisait — le
+                    #  renommer maintenant évite qu'un futur lecteur croie à un nombre.
+                    "duree": duree,
                     "cloture_le": tk.ferme_le.isoformat() if tk.ferme_le else None,
                     #  Même règle que les trois autres cartes de ticket : une photo
                     #  jointe au commentaire de clôture doit se voir.
