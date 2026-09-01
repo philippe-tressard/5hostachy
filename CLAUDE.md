@@ -137,7 +137,14 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - ID séquentiel 4 chiffres : `0087`, `0088`…
 - **Jamais** modifier une migration existante — créer une nouvelle
 - **Jamais** de f-string dans `op.execute()` → `text(...).bindparams(...)`
-- SQLite : pas de `ALTER TYPE`, pas de `CREATE TYPE`
+- SQLite : pas de `ALTER TYPE`, pas de `CREATE TYPE`, et **pas de `ForeignKey`
+  dans un `add_column`** — SQLite refuse d'altérer les contraintes d'une table
+  existante, la migration crashe *après* avoir ajouté la colonne, et `start.sh`
+  (`set -e`) arrête le conteneur. C'est arrivé **deux fois** (0117 le 25/07/2026,
+  0165 le 01/09) sans que personne le voie : le redémarrage suivant passe grâce à
+  la garde d'idempotence. Poser une colonne simple, et ne pas déclarer
+  `foreign_key` dans le modèle non plus — sinon base neuve et base migrée
+  divergent. `api/tests/test_migrations.py` le refuse.
 - `start.sh` a `set -e` : une migration qui crash = conteneur bloqué
 
 ### Dépendances d'auth
@@ -285,7 +292,7 @@ traiter avant toute autre chose. Site HS : SSH sur l'actif →
 | `0 2 * * *` `bascule.sh` | bascule active/standby |
 | `0 3 * * 0` `maintenance.sh` | purge, VACUUM, rotation des logs |
 | `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
-| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C24** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` |
+| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C24** (plus C23 bis) (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` |
 
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
 jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` qui y échouait 144 fois

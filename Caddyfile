@@ -39,7 +39,29 @@
         #  un remède plus grave que le mal, posé sans pouvoir l'observer.
         #  Leur mise en place demande un déploiement suivi en `Report-Only`
         #  d'abord. Suivi en issue.
-        Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        #  ── `connect-src 'self'` REJOINT le mode bloquant (01/09/2026, #536) ──
+        #
+        #  🔴 C'est la directive la plus utile de la politique, et la seule que le
+        #  relevé permettait de poser sans parier : sur 104 rapports et six
+        #  violations distinctes, **aucune ne concerne `connect-src`**. L'API, la
+        #  télémétrie et le service worker sont tous sur la même origine.
+        #
+        #  Ce qu'elle ferme : même si un XSS s'exécutait — ce contre quoi
+        #  `script-src` protégerait, et qu'on ne peut pas poser ici, voir plus bas
+        #  — il ne pourrait **rien exfiltrer** vers un domaine tiers. `fetch`,
+        #  `XMLHttpRequest`, WebSocket, `EventSource` et `sendBeacon` sont tous
+        #  couverts. C'est la seconde moitié du travail : empêcher l'exécution, et
+        #  à défaut empêcher la sortie.
+        #
+        #  ⚠️ Elle coupe de fait l'émission du beacon Cloudflare Web Analytics
+        #  (`static.cloudflareinsights.com`), relevé le même jour et suivi en
+        #  #701. C'est assumé et annoncé, pas un effet de bord découvert après :
+        #  le site mesure déjà son audience in-process (`Admin → Télémétrie`).
+        #
+        #  ⚠️ `default-src` reste ABSENT du mode bloquant, et c'est délibéré : il
+        #  couvrirait `script-src` par héritage, et l'on retomberait sur ce qu'on
+        #  ne peut pas poser. Chaque directive bloquante est nommée une par une.
+        Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'"
 
         #  ── L'étape suivante, en MODE OBSERVATION (#536, 28/08/2026) ──
         #
@@ -68,6 +90,13 @@
         #    img-src … data: blob:      QR codes et aperçus sont produits en
         #                               `data:`/`blob:` côté navigateur.
         #    connect-src 'self'         l'API est servie sur la même origine.
+        #                               ✅ PASSÉE EN BLOQUANT le 01/09/2026 : le
+        #                               relevé n'a montré aucune violation. Elle
+        #                               reste écrite ici pour que la politique
+        #                               observée demeure complète — sans quoi le
+        #                               relevé cesserait de mesurer ce qu'elle
+        #                               couvre, et l'on ne verrait pas arriver un
+        #                               appel sortant nouveau.
         #
         #  🔴 Ne PAS passer en mode bloquant tant que le relevé n'est pas à zéro,
         #  ni sans avoir regardé le site après. Un remède posé sans pouvoir

@@ -42,6 +42,11 @@ class AnnonceHall(SQLModel, table=True):
     envoye_le: Optional[datetime] = None
     archivee: bool = False
     # Publication d'origine si l'annonce a été générée depuis une actualité
-    publication_id: Optional[int] = Field(default=None, foreign_key="publication.id")
+    #  ⚠️ PAS de `foreign_key=` : la migration 0117 a tenté de poser la contrainte
+    #  et a crashé (SQLite refuse d'altérer les contraintes d'une table existante).
+    #  La colonne existe partout SANS elle. La déclarer ici ferait porter à une
+    #  base neuve (`create_all`) un schéma que les bases migrées n'ont pas —
+    #  divergence qui n'apparaîtrait qu'un jour, sur une machine.
+    publication_id: Optional[int] = Field(default=None)
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: datetime = Field(default_factory=datetime.utcnow)

@@ -279,6 +279,36 @@ verdict_notification() { # $1=fails $2=warns → critique|digest|silence
 #:
 #: ⚠️ Sur l'ACTIF, en revanche, une absence de réponse reste INCONNU — et là
 #: c'est un fait à regarder : le site ne répond plus en local.
+# ── C23 bis. La CSP BLOQUANTE porte-t-elle les directives qu'on croit ? ──────
+# Args : recus (sortie de `curl -sI`)  directives (séparées par des espaces)
+# Échoit : OK · MANQUANT:<liste> · INCONNU
+#
+# 🔴 POURQUOI (01/09/2026, #536). C23 vérifie que l'en-tête `Content-Security-Policy`
+# est PRÉSENT. Il l'était déjà quand la politique ne portait que quatre directives
+# inoffensives, et il le resterait si l'une d'elles disparaissait du Caddyfile :
+# « présent » ne dit rien de ce qu'il contient.
+#
+# ⚠️ On vérifie la PRÉSENCE d'une directive, jamais sa VALEUR. C'est ce qui a tué
+# le contrôle précédent : `check-stack.sh` attendait `X-Frame-Options: SAMEORIGIN`
+# là où le Caddyfile disait `DENY`, il échouait 144 fois par jour, on l'a retiré du
+# cron — et plus rien n'a regardé les en-têtes pendant quinze jours. Une attente de
+# valeur exacte se périme au premier ajustement légitime.
+#
+# ⚠️ `^Content-Security-Policy:` avec les deux-points, et c'est le cœur du motif :
+# sans eux il attraperait aussi `Content-Security-Policy-Report-Only`, où toutes
+# les directives figurent — le contrôle serait vert quoi qu'il arrive au mode
+# bloquant, c'est-à-dire exactement l'inverse de ce qu'on lui demande.
+verdict_csp_directives() {
+  local recus="$1" directives="$2" ligne manquantes="" d
+  [ -z "$recus" ] && { echo INCONNU; return; }
+  ligne=$(printf '%s' "$recus" | grep -i "^Content-Security-Policy:" | head -1)
+  [ -z "$ligne" ] && { echo INCONNU; return; }
+  for d in $directives; do
+    printf '%s' "$ligne" | grep -q "$d" || manquantes="${manquantes}${manquantes:+,}${d}"
+  done
+  [ -z "$manquantes" ] && echo OK || echo "MANQUANT:$manquantes"
+}
+
 verdict_entetes_securite() {
   local recus="$1" attendus="$2" role="${3:-actif}" manquants="" nom
   #  Le standby ne sert rien : il n'y a pas d'en-tête à constater chez lui.
