@@ -31,7 +31,8 @@
   réécrire ce qu'on vient de saisir.
 -->
 <script lang="ts">
-	import CanauxNotification from '$lib/components/CanauxNotification.svelte';
+	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
+	import { annoncesHall as annoncesHallApi } from '$lib/api';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -100,6 +101,45 @@
 	export let envoyerAuteur = false;
 	/** Le nom de l'auteur de l'affiche — il nomme le destinataire de la copie. */
 	export let auteurNom = '';
+
+	//  L'APERÇU AVANT ENVOI (#498, branché ici le 01/09/2026).
+	//
+	//  🔴 Cet écran en était privé DÉLIBÉRÉMENT : tant que le serveur ne consommait
+	//  qu'un canal sur trois, un aperçu y aurait montré un envoi qui n'a pas lieu —
+	//  le mensonge même que #498 existe pour empêcher. Les trois canaux sont
+	//  consommés depuis #480, et la condition est levée.
+	//
+	//  ⚠️ Brancher l'aperçu demande DEUX gestes, et le second est celui qu'on
+	//  oublie : fournir `demanderApercu` NE SUFFIT PAS, il faut s'intercaler dans la
+	//  soumission. Le 31/08, l'oubli du second a fait partir une actualité que
+	//  personne n'a pu annuler — `npm run lint:apercu` le refuse depuis.
+	let refDiffusion: any = null;
+	$: aUneDiffusion = envoyerCs || envoyerSyndic || partagerWhatsapp;
+
+	const brouillonApercu = () =>
+		annoncesHallApi.apercuDiffusion({
+			//  L'affiche pré-remplie depuis une actualité en garde le lien : c'est
+			//  lui que le groupe WhatsApp reçoit, et l'aperçu doit le montrer.
+			publication_id: typeof sourceId === 'number' ? sourceId : undefined,
+			titre: titre.trim(),
+			message,
+			perimetre_cible: perimetre,
+			format_demande: format,
+			images: photos,
+			envoyer_cs: envoyerCs,
+			envoyer_syndic: envoyerSyndic,
+			partager_whatsapp: partagerWhatsapp,
+			envoyer_auteur: envoyerAuteur,
+		});
+
+	/**  Aperçu d'abord si un canal est coché — même patron que `FormulaireActualite`.
+	 *   `onCreer` reste l'unique chemin d'écriture. */
+	function soumettre() {
+		if (!valide) return;
+		if (refDiffusion?.ouvrirSiDiffusion(aUneDiffusion)) return;
+		refDiffusion?.fermerApercu();
+		onCreer();
+	}
 
 	export let valide = false;
 	export let saving = false;
@@ -238,13 +278,20 @@
 	      tirée, quand il y en a une. Une affiche autonome part sans lien :
 	      l'historique des affiches est un écran d'administration, et y envoyer les
 	      résidents leur donnerait un 403. -->
-	<CanauxNotification
+	<SectionDiffusion
+		avecCanaux
+		compact
+		idPrefixe="ah-diffusion"
+		bind:this={refDiffusion}
 		bind:whatsapp={partagerWhatsapp}
 		bind:syndic={envoyerSyndic}
 		bind:cs={envoyerCs}
 		bind:auteur={envoyerAuteur}
 		{auteurNom}
 		aideWhatsapp="Le groupe reçoit le titre, le message et un lien vers l'actualité d'origine — jamais le PDF."
+		demanderApercu={brouillonApercu}
+		envoiEnCours={saving}
+		on:envoyer={() => onCreer()}
 	/>
 	<p class="aide-bloc">
 		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique.
@@ -271,7 +318,7 @@
 	      (ux-patterns §9 quinquies bis) : cet écran ne crée pas un objet qu'on
 	      retrouvera dans une liste, il FABRIQUE un document à imprimer. Même
 	      famille que les imports, déjà hors périmètre de la règle. -->
-	<button type="button" class="btn btn-primary" disabled={!valide || saving} on:click={onCreer}>
+	<button type="button" class="btn btn-primary" disabled={!valide || saving} on:click={soumettre}>
 		{saving ? 'Génération…' : 'Générer une affiche'}
 	</button>
 </div>

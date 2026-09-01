@@ -43,6 +43,13 @@ from app.utils.noms import nom_affiche
 
 router = APIRouter(prefix="/annonces-hall", tags=["annonces-hall"])
 
+#  L'aperçu avant envoi vit dans son propre module — même découpage que les
+#  actualités (`publications/apercu.py`) : il ne partage avec la création que les
+#  fonctions de composition, et surtout pas son routeur (#480/#498).
+from app.routers.annonces_hall_apercu import router as _router_apercu  # noqa: E402
+
+router.include_router(_router_apercu)
+
 PDF_DIR = Path("/app/uploads/annonces-hall")
 UPLOADS_ROOT = os.path.realpath("/app/uploads")
 

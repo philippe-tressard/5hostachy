@@ -66,31 +66,18 @@ def lien_affiche(annonce: AnnonceHall) -> str | None:
     return lien_element("pub", annonce.publication_id) if annonce.publication_id else None
 
 
-def _envoyer_email_annonce(
-    annonce: AnnonceHall, user: Utilisateur, background_tasks: BackgroundTasks,
-    session: Session, *, syndic: bool = False, cs: bool = True,
-    auteur: bool = False,
-) -> list[str]:
-    """Programme l'envoi de l'annonce, et rend les e-mails visés.
+def contexte_annonce_hall(annonce: AnnonceHall, user: Utilisateur) -> dict:
+    """Le contexte du gabarit `annonce_hall` — composé ICI, et une seule fois.
 
-    🔴 Le CS est choisi **par le PÉRIMÈTRE** ici, pas par le rôle : une affiche
-    du bâtiment 3 ne concerne pas le conseiller du bâtiment 1, qui ne l'imprimera
-    pas. C'est l'autre règle de `destinataires.py`, et les confondre enverrait le
-    bon message aux mauvaises personnes.
-
-    La déduplication, elle, est commune — `syndic_puis` : le syndic passe en
-    premier et gagne le doublon (#480).
+    🔴 C'est la condition de l'aperçu avant envoi (#498/#480). Tant qu'une
+    fonction d'envoi construit son contexte dans son propre corps, un aperçu doit
+    le **recopier** — et un aperçu recomposé devient faux à la première évolution
+    du gabarit, sans que personne le voie, puisque c'est justement l'aperçu qu'on
+    regarde pour vérifier. La leçon est celle de `contexte_publication_syndic`,
+    extraite le 31/08/2026 pour la même raison.
     """
     perimetres = parse_json_perimetres(annonce.perimetre_cible)
-    destinataires = syndic_puis(
-        session,
-        syndic=syndic,
-        membres=membres_cs_notifiables(session, batiments_du_perimetre(perimetres)) if cs else [],
-    )
-    if not destinataires:
-        return []
-
-    ctx = {
+    return {
         "annonce": {
             "id": annonce.id,
             "titre": annonce.titre,
@@ -105,6 +92,44 @@ def _envoyer_email_annonce(
         "auteur": {"prenom": user.prenom, "nom": user.nom},
     }
 
+
+def destinataires_annonce(
+    annonce: AnnonceHall, session: Session, *, syndic: bool, cs: bool
+) -> list[tuple[int | None, str]]:
+    """Qui reçoit cette affiche — l'envoi et l'aperçu appellent la MÊME fonction.
+
+    🔴 Le CS est choisi **par le PÉRIMÈTRE**, pas par le rôle : une affiche du
+    bâtiment 3 ne concerne pas le conseiller du bâtiment 1, qui ne l'imprimera
+    pas. C'est l'autre règle de `destinataires.py`, et les confondre enverrait le
+    bon message aux mauvaises personnes.
+
+    La déduplication, elle, est commune — `syndic_puis` : le syndic passe en
+    premier et gagne le doublon (#480).
+    """
+    perimetres = parse_json_perimetres(annonce.perimetre_cible)
+    return syndic_puis(
+        session,
+        syndic=syndic,
+        membres=membres_cs_notifiables(session, batiments_du_perimetre(perimetres)) if cs else [],
+    )
+
+
+def _envoyer_email_annonce(
+    annonce: AnnonceHall, user: Utilisateur, background_tasks: BackgroundTasks,
+    session: Session, *, syndic: bool = False, cs: bool = True,
+    auteur: bool = False,
+) -> list[str]:
+    """Programme l'envoi de l'annonce, et rend les e-mails visés.
+
+    Le choix des destinataires et la composition du contexte vivent au-dessus :
+    l'aperçu (#498) appelle les mêmes fonctions, sinon il montrerait autre chose
+    que ce qui part.
+    """
+    destinataires = destinataires_annonce(annonce, session, syndic=syndic, cs=cs)
+    if not destinataires:
+        return []
+
+    ctx = contexte_annonce_hall(annonce, user)
     emails = [email for _, email in destinataires]
     #  🔴 La copie va à l'auteur de l'AFFICHE, et SUR DEMANDE. Elle partait ici
     #  d'office — le formulaire annonçait ses destinataires et en servait un de

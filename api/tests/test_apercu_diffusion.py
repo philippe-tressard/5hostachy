@@ -138,6 +138,52 @@ def test_l_apercu_whatsapp_ne_reecrit_pas_le_message():
         )
 
 
+def test_l_apercu_whatsapp_transmet_TOUT_ce_que_l_envoi_transmet():
+    """Les deux appels à `construire_message` doivent porter les mêmes arguments.
+
+    🔴 POURQUOI (01/09/2026). `apercu_whatsapp` n'avait pas de paramètre `lien`,
+    donc ne le transmettait pas — alors que `_envoyer_whatsapp` le passe. Aucun
+    appelant ne s'en servait, et le défaut est resté invisible jusqu'à ce que
+    l'annonce de hall envoie un lien vers l'actualité d'origine (#480). L'aperçu
+    aurait alors montré un message **sans le lien** que le groupe reçoit.
+
+    ⚠️ C'est l'angle mort propre aux aperçus : on regarde l'aperçu POUR vérifier
+    ce qui part. Une omission y est indétectable à l'usage — seule la comparaison
+    des deux appels la révèle, et seulement en lisant le code.
+
+    Le test compare les **mots-clés** des deux appels. Les positionnels ne sont
+    pas comparés : leur ordre est déjà verrouillé par la signature, et les nommer
+    ici recopierait cette signature — une seconde liste qui divergerait.
+    """
+    def _mots_cles(source: str, dans: str) -> set[str]:
+        """Les arguments NOMMÉS de l'appel à `construire_message` dans `dans`."""
+        arbre = ast.parse(source)
+        for noeud in ast.walk(arbre):
+            if not (isinstance(noeud, ast.FunctionDef) and noeud.name == dans):
+                continue
+            for appel in ast.walk(noeud):
+                if (
+                    isinstance(appel, ast.Call)
+                    and getattr(appel.func, "id", None) == "construire_message"
+                ):
+                    return {kw.arg for kw in appel.keywords if kw.arg}
+        raise AssertionError(
+            f"aucun appel à `construire_message` dans `{dans}` — le test "
+            "surveillait un appel qui n'existe plus, il ne surveillait donc rien."
+        )
+
+    cotes = _mots_cles(_ASSEMBLEUR.read_text(encoding="utf-8"), "apercu_whatsapp")
+    envoi = _mots_cles(_WHATSAPP.read_text(encoding="utf-8"), "envoyer_whatsapp")
+
+    manquants = envoi - cotes
+    assert not manquants, (
+        "`apercu_whatsapp` ne transmet pas à `construire_message` : "
+        + ", ".join(sorted(manquants))
+        + " — l'aperçu tairait ce que le message porte, et personne ne pourrait "
+        "le voir : c'est l'aperçu qu'on regarde pour vérifier."
+    )
+
+
 def test_l_apercu_n_ecrit_rien_en_base():
     """Un aperçu qui persiste son brouillon laisserait des tickets fantômes.
 
