@@ -226,6 +226,99 @@ def create_evenement(
     return _ev_to_read(ev, session)
 
 
+#  Plafond d'un lot. Le pré-remplissage des prestataires en crée au plus quatre
+#  par contrat, et le site en compte quelques dizaines : cent laisse une marge
+#  large sans qu'une requête forgée puisse écrire dix mille lignes.
+LOT_MAX = 100
+
+
+class EvenementsLot(BaseModel):
+    """Un pré-remplissage : plusieurs événements, tout ou rien."""
+
+    evenements: list[EvenementCreate]
+
+
+@router.post("/lot", response_model=list[EvenementRead], status_code=201)
+def create_evenements_lot(
+    body: EvenementsLot,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Crée plusieurs événements en UNE transaction — ou aucun (#605, point 3).
+
+    🔴 POURQUOI. Le pré-remplissage du kanban écrivait en boucle depuis le
+    navigateur :
+
+        for (const ev of plan.aCreer) await calApi.create(ev);
+
+    Un échec au 7ᵉ sur 20 laissait **six** événements créés, et l'écran affichait
+    « Erreur lors de l'initialisation » sans dire lesquels. Le second passage en
+    ignorait une partie — mais seulement si aucun titre n'avait bougé, la clé
+    anti-doublon étant le titre littéral (point 2 du ticket, encore ouvert).
+
+    Ici, `session.commit()` est appelé **une fois** : soit les vingt existent,
+    soit aucun. Le geste redevient rejouable.
+
+    ## 🔴 Ce que ce point d'entrée REFUSE, et pourquoi c'est le cœur du sujet
+
+    **Aucune notification, aucune diffusion, jamais.** Un lot est un
+    pré-remplissage silencieux ; en faire un canal, c'est offrir l'envoi de cent
+    courriels ou messages WhatsApp en une requête.
+
+    Deux refus, donc, plutôt qu'un silence :
+
+    - un événement portant `partager_whatsapp`, `envoyer_syndic`, `envoyer_cs` ou
+      `envoyer_auteur` est **rejeté** (422). Les ignorer serait pire : l'appelant
+      croirait avoir diffusé.
+    - un `coupure` ou un `travaux` est **rejeté** lui aussi. La création unitaire
+      notifie tous les résidents pour ces deux types ; les créer ici sans
+      notification produirait deux comportements pour un même type, selon le
+      point d'entrée employé — exactement la divergence que ce dépôt traque.
+    """
+    if not body.evenements:
+        raise HTTPException(422, "Aucun événement à créer.")
+    if len(body.evenements) > LOT_MAX:
+        raise HTTPException(422, f"Lot trop grand : {len(body.evenements)} > {LOT_MAX}.")
+
+    canaux = ("partager_whatsapp", "envoyer_syndic", "envoyer_cs", "envoyer_auteur")
+    for i, item in enumerate(body.evenements, start=1):
+        if any(getattr(item, c, None) for c in canaux):
+            raise HTTPException(
+                422,
+                f"Événement {i} : un lot ne diffuse pas. Retirer les canaux, ou "
+                "créer cet événement un par un.",
+            )
+        if item.type in (TypeEvenement.coupure, TypeEvenement.travaux):
+            raise HTTPException(
+                422,
+                f"Événement {i} : « {item.type.value} » notifie tous les résidents "
+                "à la création unitaire. Le créer en lot le rendrait silencieux — "
+                "passer par la création un par un.",
+            )
+
+    crees: list[Evenement] = []
+    for item in body.evenements:
+        champs = item.model_dump(exclude_none=True)
+        #  Même conversion que la création unitaire, et pour la même raison :
+        #  les colonnes stockent un tableau JSON, et `photos_internes` écarte
+        #  toute URL qui ne vient pas de notre endpoint d'upload.
+        for champ in ("photos_urls", "fichiers_urls"):
+            champs[champ] = json.dumps(
+                photos_internes(champs.get(champ) or []), ensure_ascii=False
+            )
+        for c in canaux:
+            champs.pop(c, None)
+        ev = Evenement(**champs, auteur_id=user.id)
+        session.add(ev)
+        crees.append(ev)
+
+    #  UN seul commit — c'est tout l'objet de ce point d'entrée.
+    session.commit()
+    for ev in crees:
+        session.refresh(ev)
+    return [_ev_to_read(ev, session) for ev in crees]
+
+
 def _next_visit_date(contrat: ContratEntretien, from_date: date) -> date | None:
     """Calcule la prochaine visite à partir de la fréquence du contrat."""
     ft, fv = contrat.frequence_type, contrat.frequence_valeur

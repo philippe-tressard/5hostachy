@@ -670,7 +670,7 @@
 			}
 			if (!(await confirmer({ titre: 'Initialiser les prestataires', message }))) return;
 
-			for (const ev of plan.aCreer) await calApi.create(ev);
+			await calApi.createLot(plan.aCreer);
 			evenements = await calApi.list();
 			toast('success', `${plan.aCreer.length} événement(s) créé(s)`);
 		} catch {

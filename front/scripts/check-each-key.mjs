@@ -22,8 +22,17 @@
  * pour une raison qui mérite d'être protégée : ce dépôt indexe son état par
  * IDENTITÉ, pas par position — `expandedEvId === ev.id`, `evolOuverte === ev.id`.
  * Les composants de liste (`CarteEvenement`, `FluxCard`) reçoivent leur état en
- * props plutôt que de le tenir en interne. Là où l'état est indexé par position
- * (`csOpenIdx`), l'écran **compense le décalage à la main** à la suppression.
+ * props plutôt que de le tenir en interne. Là où l'état est indexé par POSITION —
+ * l'annuaire du CS et du syndic —, le décalage est compensé à la suppression.
+ *
+ * ⚠️ Depuis le 01/09/2026 cette compensation ne s'écrit plus dans l'écran mais
+ * dans `$lib/listeDepliable`, éprouvée par `npm run lint:liste-depliable` : elle y
+ * existait en DEUX exemplaires identiques, et c'est exactement le genre de code
+ * qu'on recopie sans le relire. Les deux `{#each membres… as m, i}` de
+ * `espace-cs` restent donc SANS clé, et c'est justifié : ces lignes de formulaire
+ * n'ont aucun identifiant stable (`user_id` est nullable, un membre ajouté n'a
+ * rien), et l'état y est indexé par position. Poser une clé devinée y serait le
+ * remède pire que le mal que ce fichier décrit plus bas.
  *
  * Autrement dit : la convention du dépôt neutralise l'essentiel du risque. Ce
  * qui reste vrai, et ce que ce plafond protège :
