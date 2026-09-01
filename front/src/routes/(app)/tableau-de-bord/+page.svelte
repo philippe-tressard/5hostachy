@@ -1340,11 +1340,5 @@
 		.relance-alerte-text strong {
 			font-size: 0.82rem;
 		}
-		.kb-desktop {
-			display: none !important;
-		}
-		.kb-mobile {
-			display: block;
-		}
 	}
 </style>
