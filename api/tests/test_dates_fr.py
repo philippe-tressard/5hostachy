@@ -104,12 +104,15 @@ def test_aucune_directive_strftime_localisee_dans_app():
     )
 
 
-# ── Durées : `jj:hh:mm`, et une seule écriture ────────────────────────────────
+# ── Durées : `00j23h54'`, et une seule écriture ───────────────────────────────
 #
 # POURQUOI (01/09/2026, demandé à l'écran) : le fil affichait « Résolu en 23.9h »
 # — un arrondi décimal d'heures, qui n'a de sens nulle part ailleurs sur le site
 # et qu'il faut convertir de tête pour lire 23 h 54. Le séparateur décimal était
 # en prime un point, sur un site intégralement en français.
+#
+# ⚠️ Le format porte ses UNITÉS, et pas seulement des deux-points : `00:00:30` se
+# lit spontanément trente secondes alors qu'il voulait dire trente minutes.
 
 def test_duree_jhm_rend_le_format_demande():
     """`jj:hh:mm`, sur deux chiffres, jusqu'au-delà de 99 jours."""
@@ -118,16 +121,16 @@ def test_duree_jhm_rend_le_format_demande():
     from app.utils.dates_fr import duree_jhm
 
     cas = [
-        (timedelta(hours=23, minutes=54), "00:23:54"),
-        (timedelta(days=2, hours=3, minutes=15), "02:03:15"),
-        (timedelta(minutes=7), "00:00:07"),
+        (timedelta(hours=23, minutes=54), "00j23h54'"),
+        (timedelta(days=2, hours=3, minutes=15), "02j03h15'"),
+        (timedelta(minutes=7), "00j00h07'"),
         #  Les secondes ne remontent PAS d'un cran : 59 s reste « 00:00:00 ».
         #  Arrondir ferait dire « une minute » à ce qui n'en est pas une, et la
         #  minute est la plus petite unité que ce format affiche.
-        (timedelta(seconds=59), "00:00:00"),
+        (timedelta(seconds=59), "00j00h00'"),
         #  Au-delà de 99 jours le champ déborde à trois chiffres, et c'est voulu :
-        #  tronquer afficherait « 00:01:00 » pour un ticket vieux de cent jours.
-        (timedelta(days=100, hours=1), "100:01:00"),
+        #  tronquer afficherait « 00j01h00' » pour un ticket vieux de cent jours.
+        (timedelta(days=100, hours=1), "100j01h00'"),
     ]
     for ecart, attendu in cas:
         assert duree_jhm(ecart) == attendu, f"{ecart!r} devrait rendre {attendu}"
@@ -148,7 +151,7 @@ def test_duree_jhm_distingue_le_zero_de_l_incoherence():
 
     from app.utils.dates_fr import duree_jhm
 
-    assert duree_jhm(timedelta(0)) == "00:00:00"
+    assert duree_jhm(timedelta(0)) == "00j00h00'"
     assert duree_jhm(timedelta(seconds=-1)) is None
     assert duree_jhm(timedelta(days=-3)) is None
 

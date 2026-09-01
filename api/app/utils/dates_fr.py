@@ -114,18 +114,24 @@ def formule_anciennete(mois: list[int]) -> str:
 
 
 def duree_jhm(ecart: timedelta) -> str | None:
-    """Une durée écoulée, en `jj:hh:mm`. `None` si elle n'a pas de sens.
+    """Une durée écoulée, en `00j23h54'`. `None` si elle n'a pas de sens.
 
     >>> duree_jhm(timedelta(hours=23, minutes=54))
-    '00:23:54'
+    "00j23h54'"
     >>> duree_jhm(timedelta(days=2, hours=3, minutes=15))
-    '02:03:15'
+    "02j03h15'"
 
     🔴 POURQUOI CE FORMAT (01/09/2026, demandé à l'écran). Le fil affichait
     « Résolu en 23.9h » : un arrondi décimal d'heures, qui n'a de sens nulle part
     ailleurs sur le site et qu'il faut convertir de tête pour savoir qu'il s'agit
     de 23 h 54. Le point décimal était en prime un point, pas une virgule, sur un
     site intégralement en français.
+
+    ⚠️ **Les UNITÉS sont portées, pas devinées** — `00j23h54'` et non
+    `00:23:54` (demandé le 01/09/2026, peu après le premier format). Trois
+    nombres séparés par des deux-points se lisent spontanément `hh:mm:ss` :
+    « 00:00:30 » voulait dire trente MINUTES et se lisait trente secondes. Les
+    unités lèvent l'ambiguïté sans allonger.
 
     ⚠️ Écrit ICI et non dans le routeur qui l'affiche : une durée est un format,
     et un format réimplémenté dans une page est ce que `test_dates_fr.py` et
@@ -136,11 +142,11 @@ def duree_jhm(ecart: timedelta) -> str | None:
     ## Ce qu'elle rend `None`, et pourquoi ce n'est pas zéro
 
     Une durée **négative** (fermeture antérieure à la création) est une donnée
-    incohérente : l'afficher « -1:00:00 » habillerait le défaut au lieu de le
+    incohérente : l'afficher « -1j00h00' » habillerait le défaut au lieu de le
     taire. L'appelant décide alors de ne rien montrer.
 
     ⚠️ Zéro, en revanche, est une durée VALIDE — un ticket résolu dans la minute.
-    Elle rend donc `'00:00:00'`, et pas `None` : c'est le cas zéro de cette
+    Elle rend donc `"00j00h00'"`, et pas `None` : c'est le cas zéro de cette
     fonction, et le distinguer de l'incohérence est tout son objet. L'ancien code
     écrivait `if duree`, ce qui traitait les deux pareil et faisait disparaître
     la mention pour une résolution immédiate.
@@ -151,4 +157,4 @@ def duree_jhm(ecart: timedelta) -> str | None:
     jours, reste = divmod(secondes, 86400)
     heures, reste = divmod(reste, 3600)
     minutes = reste // 60
-    return f"{jours:02d}:{heures:02d}:{minutes:02d}"
+    return f"{jours:02d}j{heures:02d}h{minutes:02d}'"
