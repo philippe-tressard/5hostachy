@@ -281,6 +281,28 @@ export const annuaire = {
 };
 
 export const annoncesHall = {
+	//  L'aperçu de ce qui partira, avant de confirmer la diffusion (#498/#480).
+	//
+	//  🔴 Dernier des points de diffusion à le recevoir, et le seul qui en était
+	//  privé DÉLIBÉRÉMENT : tant que le serveur ne consommait qu'un canal sur
+	//  trois, un aperçu y aurait montré un envoi qui n'a pas lieu. Comme les
+	//  trois autres, il ne crée RIEN et ne recompose rien — l'e-mail et le
+	//  message sont composés par les MÊMES fonctions que l'envoi.
+	apercuDiffusion: (brouillon: {
+		/** Renseigné quand l'affiche est pré-remplie depuis une actualité : c'est
+		 *  ce qui donne son lien au message WhatsApp, et lui seul. */
+		publication_id?: number;
+		titre?: string;
+		message?: string;
+		perimetre_cible?: string[];
+		format_demande?: string;
+		images?: string[];
+		envoyer_cs?: boolean;
+		envoyer_syndic?: boolean;
+		partager_whatsapp?: boolean;
+		/** « M'envoyer une copie » — la 4e case de la Diffusion. */
+		envoyer_auteur?: boolean;
+	}) => api.post<ApercuDiffusion>('/annonces-hall/apercu-diffusion', brouillon),
 	list: (archivees = false) => api.get<AnnonceHall[]>(`/annonces-hall?archivees=${archivees}`),
 	create: (data: AnnonceHallInput) => api.post<AnnonceHall>('/annonces-hall', data),
 	depuisPublication: (pubId: number) =>

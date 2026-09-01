@@ -163,6 +163,7 @@ def apercu_whatsapp(
     urgent: bool = False,
     perimetre: Optional[str] = None,
     photo: Optional[str] = None,
+    lien: Optional[str] = None,
 ) -> ApercuCanal:
     """Le message du groupe tel qu'il sera composé — ou pourquoi il ne partira pas.
 
@@ -192,7 +193,13 @@ def apercu_whatsapp(
             inactif_motif="Le groupe WhatsApp n'est pas connecté : rien ne partira.",
         )
 
-    texte = construire_message(titre, contenu, urgent, perimetre, cfg)
+    #  ⚠️ `lien=` doit être transmis, sinon l'aperçu tait ce que le message porte.
+    #  Aucun appelant ne le passait avant l'annonce de hall (01/09/2026), et c'est
+    #  précisément le genre d'omission qu'un aperçu ne peut pas révéler : on
+    #  regarde l'aperçu POUR vérifier. `test_apercu_whatsapp_fidele` compare
+    #  désormais les deux appels à `construire_message` — celui de l'aperçu et
+    #  celui de l'envoi — et refuse qu'un paramètre n'existe que d'un côté.
+    texte = construire_message(titre, contenu, urgent, perimetre, cfg, lien=lien)
     ampute = message_sans_contenu(None, False)
     return ApercuCanal(
         canal="whatsapp",
