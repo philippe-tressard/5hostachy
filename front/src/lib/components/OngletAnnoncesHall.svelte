@@ -36,14 +36,12 @@
 	import { onMount } from 'svelte';
 	import FormulaireAnnonceHall from '$lib/components/FormulaireAnnonceHall.svelte';
 	import HistoriqueAnnoncesHall from '$lib/components/HistoriqueAnnoncesHall.svelte';
+	import { MAX_PHOTOS_AFFICHE } from '$lib/annonces';
 	import { annoncesHall as annoncesHallApi, publications as pubsApi, ApiError } from '$lib/api';
 	import type { Publication } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { stripHtml, perimetreDefautListe } from '$lib/utils';
 	import { fichiersApi } from '$lib/api';
-
-	/** Le plafond de fichiers du site — porté par la page, source unique. */
-	export let MAX_FICHIERS: number;
 
 	//  L'onglet s'amorce SEUL. Avant, la page appelait `loadAnnoncesHall()` et
 	//  `loadAhPublications()` à deux endroits (au montage et au clic d'onglet) :
@@ -127,7 +125,7 @@
 			ahTitre = src.titre;
 			ahMessage = src.message;
 			ahPerimetre = src.perimetre_cible?.length ? [...src.perimetre_cible] : perimetreDefautListe();
-			ahPhotos = (src.images ?? []).slice(0, MAX_FICHIERS);
+			ahPhotos = (src.images ?? []).slice(0, MAX_PHOTOS_AFFICHE);
 			ahFormat = 'auto';
 			ahApercuHtml = '';
 			ahApercuFormat = '';
@@ -239,7 +237,7 @@
 					pubs={ahPubs}
 					sourceId={ahSourceId}
 					formats={AH_FORMATS}
-					maxPhotos={MAX_FICHIERS}
+					maxPhotos={MAX_PHOTOS_AFFICHE}
 					bind:envoyerCs={ahEnvoyerCs}
 					bind:envoyerSyndic={ahEnvoyerSyndic}
 					bind:partagerWhatsapp={ahPartagerWhatsapp}

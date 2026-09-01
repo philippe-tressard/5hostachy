@@ -33,6 +33,30 @@ export const ACCEPT_FICHIERS = `${ACCEPT_PHOTOS},${ACCEPT_DOCUMENTS}`;
  *  Porté ici, il se change une fois pour tout le site — et le libellé du
  *  composant l'annonce, donc il ne peut plus mentir. Valeur retenue par
  *  l'utilisateur : la plus disante des trois, élargie à 10.
+ *
+ *  🔴 « UNE FOIS POUR TOUT LE SITE » ÉTAIT FAUX, et l'est resté deux semaines
+ *  (corrigé le 01/09/2026). Deux objets ont leur propre plafond, et ce ne sont
+ *  pas des oublis — ils sont **bornés côté serveur**, pour des raisons qui leur
+ *  appartiennent :
+ *
+ *    · petite annonce  → 5  (`routers/annonces.py`, refus au-delà)
+ *    · affiche de hall → 2  (`utils/annonce_hall.py` : au-delà, l'affiche
+ *                            déborde du feuillet et le format n'est plus tenu ;
+ *                            `POST /annonces-hall` refuse en 422)
+ *
+ *  Les deux vivent dans `$lib/annonces.ts`, avec leur raison.
+ *
+ *  ⚠️ Et le plus important : **cette constante-ci n'est bornée par AUCUN
+ *  routeur**. C'est un confort d'interface, pas une limite — un client qui poste
+ *  cinquante URLs passe. Même statut que `ACCEPT_*` ci-dessus, dont l'en-tête le
+ *  dit déjà : « celle-ci ne fait que filtrer le sélecteur de fichiers du
+ *  navigateur, elle ne protège rien ». C'est vrai du nombre aussi.
+ *
+ *  🔒 `api/tests/test_plafonds_pieces_jointes.py` rapproche chaque plafond
+ *  annoncé de celui que le serveur applique — et constate que celui-ci n'en a
+ *  aucun. Il a été écrit après qu'un écran ait promis dix photos là où le
+ *  serveur en refusait plus de deux : le conseiller perdait sa saisie sur un 422
+ *  qu'il ne pouvait pas prévoir.
  */
 export const MAX_FICHIERS = 10;
 

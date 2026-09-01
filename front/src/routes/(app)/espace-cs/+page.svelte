@@ -27,7 +27,6 @@
 	import { fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
-	import { MAX_FICHIERS } from '$lib/fichiers';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -843,7 +842,8 @@
 		vueInitiale={vueReporting}
 	/>
 {:else if onglet === 'annonces-hall'}
-	<OngletAnnoncesHall {MAX_FICHIERS} />
+	<!-- Aucune prop de plafond : l'affiche a la sienne (`$lib/annonces`, #651). -->
+	<OngletAnnoncesHall />
 {:else if onglet === 'annuaire'}
 	{#if annuaireLoading}
 		<p style="color:var(--color-text-muted)">Chargement…</p>
