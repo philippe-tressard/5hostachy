@@ -34,7 +34,10 @@ import pytest
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.models.core import Publication, StatutUtilisateur, Utilisateur
+from app.models.copropriete import Lot
+from app.models.core import Publication, StatutUtilisateur, UserLot, Utilisateur
+from app.utils import mes_batiments
+from tests.purge_test import purger_ligne
 from app.utils import perimetres as P
 from app.utils.visibility import perimetre_visible, publication_visible
 
@@ -283,19 +286,142 @@ def test_un_ciblage_illisible_refuse_aussi_en_confidentiel(batiments):
     assert publication_visible(pub, resident) is False
 
 
-def test_sans_batiment_connu_le_confidentiel_ne_referme_rien(batiments):
-    """Limite connue, **épinglée** plutôt que passée sous silence.
+def test_sans_batiment_connu_le_confidentiel_se_referme(batiments):
+    """La limite épinglée ici a été **levée** le 02/09/2026, sur arbitrage.
 
-    `perimetre_visible` porte un repli permissif assumé : un compte sans bâtiment
-    de rattachement accède à toute la résidence. Ce repli vaut depuis toujours
-    pour les documents, les sondages et les AG ; la confidentialité n'étant que
-    ce même chemin (`ouvert_a_la_copropriete=False`), elle en hérite — un compte
-    sans `batiment_id` voit donc les actualités confidentielles.
+    Ce test disait l'inverse, et disait pourquoi : `perimetre_visible` portait un
+    repli permissif — un compte sans bâtiment de rattachement accédait à toute la
+    résidence. La confidentialité n'étant que ce même chemin
+    (`ouvert_a_la_copropriete=False`), elle en héritait : un compte sans bâtiment
+    voyait les actualités confidentielles de tous les bâtiments.
 
-    Ce n'est pas un effet du lot #347, et le corriger changerait qui voit quoi
-    bien au-delà des actualités. Le contrôle est ici pour que la dépendance soit
-    écrite : le jour où ce repli sera repris, la confidentialité en dépend.
+    Il concluait par *« le jour où ce repli sera repris, la confidentialité en
+    dépend »*. Le repli est repris — *« un utilisateur sans bâtiment ne doit rien
+    voir car il n'est pas résident »* —, et c'est ce test qui le constate côté
+    confidentialité. Il garde donc exactement le même rôle : rendre visible la
+    dépendance entre les deux notions, dans un sens comme dans l'autre.
     """
     sans_batiment = _utilisateur("résident", StatutUtilisateur.locataire, None)
     pub = _publication(f'["bat:{batiments[2]}"]', '["résidents"]', confidentiel=True)
-    assert publication_visible(pub, sans_batiment) is True
+    assert publication_visible(pub, sans_batiment) is False
+
+
+
+# ── La fermeture du repli ne RETIRE que — elle n'accorde rien ─────────────────
+#
+#  🔴 C'est l'invariant que ce fichier entier existe pour tenir, appliqué au lot
+#  du 02/09/2026. Fermer un accès est facile à faire pénasser pour anodin ; la
+#  première écriture du correctif décidait sur `batiments_de_l_utilisateur()`
+#  tout entier — rattachement ET lots — et ÉLARGISSAIT au passage : un bailleur
+#  rattaché au bâtiment A, propriétaire d'un lot dans le bâtiment B, gagnait
+#  l'accès à B. Un élargissement obtenu en croyant ne faire que restreindre, et
+#  qu'aucun test existant n'attrapait, tous portant sur le rattachement seul.
+
+
+@pytest.fixture()
+def bailleur_avec_lot(batiments):
+    """Un compte SANS rattachement, mais propriétaire d'un lot — donc résident.
+
+    C'est le cas que la fermeture ne doit pas emporter : `batiment_id` est nul,
+    comme pour un compte technique, et pourtant ce compte a bien un pied dans la
+    copropriété.
+    """
+    with Session(engine) as session:
+        user = Utilisateur(
+            nom="Bailleur", prenom="Sans", email="bailleur-sans-rattachement@test.fr",
+            roles_json="propriétaire", statut=StatutUtilisateur.copropriétaire_bailleur,
+            batiment_id=None, actif=True,
+        )
+        session.add(user)
+        lot = Lot(batiment_id=batiments[1], numero="B12")
+        session.add(lot)
+        session.commit()
+        session.refresh(user)
+        session.refresh(lot)
+        session.add(UserLot(user_id=user.id, lot_id=lot.id, actif=True))
+        session.commit()
+        mes_batiments.invalider_cache()
+
+        yield user
+
+        for ul in session.exec(
+            select(UserLot).where(UserLot.user_id == user.id)
+        ).all():
+            purger_ligne(session, UserLot, ul.id)
+        purger_ligne(session, Lot, lot.id)
+        purger_ligne(session, Utilisateur, user.id)
+        session.commit()
+        mes_batiments.invalider_cache()
+
+
+def test_un_lot_suffit_a_ne_pas_etre_coupe(bailleur_avec_lot, batiments):
+    """Détenir un lot, c'est être de la copropriété — même sans rattachement.
+
+    Sans cette nuance, la fermeture aurait coupé de vrais copropriétaires en
+    croyant n'écarter que des comptes techniques : un bailleur n'a par
+    construction aucun `batiment_id`, c'est son locataire qui habite.
+    """
+    #  Le bâtiment de son lot : il le voit.
+    assert perimetre_visible([f"bat:{batiments[1]}"], bailleur_avec_lot) is True
+    #  Un autre bâtiment : il ne le voit pas. C'est là que la fermeture opère —
+    #  avant, le repli lui rendait `True` sur celui-ci aussi.
+    assert perimetre_visible([f"bat:{batiments[0]}"], bailleur_avec_lot) is False
+
+
+def test_un_lot_n_elargit_rien_a_qui_a_deja_un_rattachement(batiments):
+    """🔴 La contrainte du 14/08/2026, verrouillée sur le nouveau chemin.
+
+    > « une agence, un bailleur ou un mandataire qui n'avaient pas de visibilité
+    >   n'en gagnent aucune »
+
+    La consultation des lots est confinée à la branche « aucun rattachement ».
+    Un compte qui EN A un décide comme avant, sur lui seul — même s'il détient
+    par ailleurs un lot dans un autre bâtiment.
+
+    C'est le test que la première écriture du correctif échouait : elle décidait
+    sur `batiments_de_l_utilisateur()` en toutes circonstances, et ce profil-là
+    gagnait l'accès au bâtiment de son lot.
+    """
+    with Session(engine) as session:
+        user = Utilisateur(
+            nom="Mixte", prenom="Cas", email="rattache-et-proprietaire@test.fr",
+            roles_json="propriétaire",
+            statut=StatutUtilisateur.copropriétaire_bailleur,
+            batiment_id=batiments[0], actif=True,
+        )
+        session.add(user)
+        lot = Lot(batiment_id=batiments[1], numero="C7")
+        session.add(lot)
+        session.commit()
+        session.refresh(user)
+        session.refresh(lot)
+        session.add(UserLot(user_id=user.id, lot_id=lot.id, actif=True))
+        session.commit()
+        mes_batiments.invalider_cache()
+        try:
+            #  Cas zéro : sans ce lot effectivement rattaché, le test ne prouve rien.
+            assert batiments[1] in mes_batiments.batiments_de_l_utilisateur(user), (
+                "le lot n'est pas remonté — ce test ne mesure plus le cas qu'il décrit"
+            )
+            assert perimetre_visible([f"bat:{batiments[0]}"], user) is True
+            assert perimetre_visible([f"bat:{batiments[1]}"], user) is False
+        finally:
+            for ul in session.exec(
+                select(UserLot).where(UserLot.user_id == user.id)
+            ).all():
+                purger_ligne(session, UserLot, ul.id)
+            purger_ligne(session, Lot, lot.id)
+            purger_ligne(session, Utilisateur, user.id)
+            session.commit()
+            mes_batiments.invalider_cache()
+
+
+def test_un_compte_sans_rattachement_ni_lot_ne_voit_rien_de_cible(batiments):
+    """Le cas visé par l'arbitrage : ni rattachement, ni lot, donc pas résident."""
+    technique = _utilisateur("mandataire", None, None)
+    assert perimetre_visible([f"bat:{batiments[0]}"], technique) is False
+    #  ⚠️ Ce qui reste ouvert, et qui ne relève PAS de ce lot : un contenu à portée
+    #  globale (« résidence ») est visible de tous, y compris de ce compte — la
+    #  branche `a_portee_globale` court-circuite avant toute question de bâtiment,
+    #  et c'est le comportement d'avant comme d'après.
+    assert perimetre_visible(["résidence"], technique) is True

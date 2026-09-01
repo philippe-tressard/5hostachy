@@ -18,9 +18,7 @@ Deux comportements changent **volontairement**, et sont testés comme tels :
 2. un arbre vide ou inconnu ne restreint rien, ce qui permet de servir une autre
    copropriété sans qu'aucun code de périmètre existe dans le code.
 """
-import ast
 import itertools
-from pathlib import Path
 
 import pytest
 from sqlmodel import Session, SQLModel, select
@@ -36,8 +34,6 @@ from tests.conftest import vider_patrimoine
 from app.utils.destinataires import batiments_du_perimetre
 from app.utils.visibility import perimetre_visible, publication_visible
 from tests.purge_test import etat_invalide
-
-RACINE_API = Path(__file__).resolve().parents[1]
 
 
 # ── L'ancienne implémentation, recopiée telle quelle ──────────────────────────
@@ -139,7 +135,28 @@ def test_equivalence_stricte_sur_les_codes_en_service(batiments):
         obtenu = perimetre_visible(cible, utilisateur(roles, batiment_id))
         if attendu != obtenu:
             ecarts.append((cible, roles, batiment_id, attendu, obtenu))
-    assert not ecarts, f"{len(ecarts)} verdict(s) de visibilité modifié(s) : {ecarts[:5]}"
+
+    #  🔴 UN SEUL écart est voulu, depuis le 02/09/2026 : le compte SANS bâtiment,
+    #  qui voyait tout et ne voit plus rien. Le reste du tableau doit être
+    #  rigoureusement identique — c'est ce qui prouve que la fermeture du repli
+    #  n'a pas déplacé une frontière au passage.
+    voulus = [e for e in ecarts if e[2] is None and e[3] is True and e[4] is False]
+    autres = [e for e in ecarts if e not in voulus]
+
+    assert not autres, (
+        f"{len(autres)} verdict(s) de visibilité modifié(s) HORS du changement "
+        f"déclaré : {autres[:5]}\n"
+        "  Quelqu'un gagne ou perd un accès sans que ce soit l'objet du lot."
+    )
+    #  ⚠️ La dérogation ne survit pas à son objet : si plus aucun compte sans
+    #  bâtiment ne change de verdict, c'est que le repli est revenu — ou que
+    #  `rattachements` ne contient plus `None`, et ce test ne mesure plus le cas
+    #  qu'il prétend couvrir.
+    assert voulus, (
+        "Aucun compte sans bâtiment ne change de verdict : soit le repli permissif "
+        "est de retour, soit ce test a cessé d'éprouver le cas `batiment_id=None`. "
+        "Dans les deux cas, INCONNU — pas OK."
+    )
 
 
 def test_equivalence_des_destinataires(batiments):
@@ -182,16 +199,34 @@ def test_libelles_des_codes_en_service_inchanges(batiments):
     assert P.perimetre_label(["bat:1", "parking"]) == "Bâtiment 1 · Parking"
 
 
-# ── Le repli permissif, épinglé pour qu'il ne bouge pas par accident ──────────
+# ── Le repli permissif est FERMÉ (02/09/2026) — épinglé fermé ────────────────
 
-def test_utilisateur_sans_batiment_voit_tout(batiments):
-    """Repli permissif conservé volontairement — suivi à part, pas corrigé ici.
+def test_utilisateur_sans_aucun_batiment_ne_voit_rien(batiments):
+    """*« Un utilisateur sans bâtiment ne doit rien voir car il n'est pas résident. »*
 
-    Le changer modifierait qui voit quoi aujourd'hui. Ce test existe pour qu'il ne
-    se corrige pas *par inadvertance* au détour d'une refonte de l'arbre.
+    🔴 Ce test disait exactement le contraire jusqu'au 02/09/2026, et il le disait
+    à dessein : le repli permissif rendait `True`, et l'épingler empêchait qu'on
+    le corrige *par inadvertance*. La correction est venue, décidée — le test
+    change donc de sens, pas de raison d'être.
     """
     sans_batiment = utilisateur("résident", None)
-    assert perimetre_visible([f"bat:{batiments[0]}"], sans_batiment) is True
+    assert perimetre_visible([f"bat:{batiments[0]}"], sans_batiment) is False
+
+
+def test_un_batiment_ne_donne_pas_acces_aux_autres(batiments):
+    """Le corollaire, qui n'était pas éprouvé isolément.
+
+    Fermer sur l'ensemble vide ne dit rien de l'intersection : une implémentation
+    qui rendrait `True` dès que l'utilisateur a UN bâtiment quelconque passerait
+    le test ci-dessus.
+    """
+    du_premier = utilisateur("résident", batiments[0])
+    assert perimetre_visible([f"bat:{batiments[0]}"], du_premier) is True
+    assert perimetre_visible([f"bat:{batiments[1]}"], du_premier) is False
+    #  Ciblage multiple : il suffit qu'UN des périmètres visés soit le sien.
+    assert perimetre_visible(
+        [f"bat:{batiments[1]}", f"bat:{batiments[0]}"], du_premier
+    ) is True
 
 
 # ── Ce qui change volontairement : la donnée abîmée refuse ────────────────────
@@ -414,85 +449,9 @@ def test_un_noeud_par_batiment_reel(batiments):
     assert f"bat:{batiments[-1] + 1}" not in arbre
 
 
-# ── Analyse statique : la liste ne doit pas réapparaître ──────────────────────
-
-#  Les deux contrôles ci-dessous sont statiques parce que le couplage est implicite :
-#  rien, à l'exécution, ne signale qu'une quatrième copie de la liste est apparue
-#  (`standards/05`). Ils travaillent sur l'AST et non sur le texte — un commentaire
-#  qui *explique* pourquoi « résidence » a disparu est légitime, et un contrôle qui
-#  le refuserait pousserait à supprimer les explications plutôt que les défauts.
-
-def _constantes_texte_hors_docstring(fichier: Path) -> list[str]:
-    """Les chaînes littérales du fichier, docstrings et commentaires exclus."""
-    arbre_py = ast.parse(fichier.read_text(encoding="utf-8"))
-    docstrings = set()
-    for noeud in ast.walk(arbre_py):
-        if isinstance(noeud, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            corps = getattr(noeud, "body", [])
-            if (corps and isinstance(corps[0], ast.Expr)
-                    and isinstance(corps[0].value, ast.Constant)
-                    and isinstance(corps[0].value.value, str)):
-                docstrings.add(id(corps[0].value))
-    return [
-        noeud.value
-        for noeud in ast.walk(arbre_py)
-        if isinstance(noeud, ast.Constant)
-        and isinstance(noeud.value, str)
-        and id(noeud) not in docstrings
-    ]
-
-
-def test_aucune_liste_de_perimetres_ne_subsiste_dans_le_code():
-    """Les constantes supprimées ne doivent pas revenir, ici ou sous un autre nom.
-
-    Une liste de périmètres dans le code, c'est le défaut d'origine : il y en avait
-    trois exemplaires, et ils avaient divergé.
-    """
-    interdits = {"SCOPES_RESIDENCE", "_PERIMETRES_GLOBAUX", "PERIMETRE_LABELS"}
-    fautifs = []
-    for fichier in (RACINE_API / "app").rglob("*.py"):
-        for noeud in ast.walk(ast.parse(fichier.read_text(encoding="utf-8"))):
-            cibles = []
-            if isinstance(noeud, ast.Assign):
-                cibles = noeud.targets
-            elif isinstance(noeud, ast.AnnAssign):
-                cibles = [noeud.target]
-            for cible in cibles:
-                if isinstance(cible, ast.Name) and cible.id in interdits:
-                    fautifs.append(f"{fichier.relative_to(RACINE_API)} → {cible.id}")
-    assert not fautifs, "liste de périmètres réapparue : " + ", ".join(fautifs)
-
-
-def test_les_regles_de_decision_ne_citent_aucun_code_de_perimetre():
-    """`visibility`, `destinataires` et le fil ne connaissent plus aucun périmètre.
-
-    Ils doivent fonctionner pour une copropriété sans AFUL et sans caves : ils ne
-    peuvent donc pas nommer ces périmètres dans une décision. Sans ce contrôle, la
-    tentation de « juste ajouter le cas » ferait revenir la liste par petits bouts.
-    """
-    #  ⚠️ `visibility` est un PAQUET depuis le 20/08/2026 (#547) : on surveille
-    #  TOUS ses fragments, pas un fichier nommé. Pointer le seul `socle.py`
-    #  laisserait une règle sortir du contrôle en changeant simplement de
-    #  fragment — « la portée du contrôle fait partie du contrôle »
-    #  (`standards/05` §9).
-    surveilles = [
-        *sorted((RACINE_API / "app" / "utils" / "visibility").glob("*.py")),
-        RACINE_API / "app" / "utils" / "destinataires.py",
-        RACINE_API / "app" / "routers" / "flux" / "evenements.py",
-    ]
-    #  🔴 CAS ZÉRO — un chemin qui ne désigne plus rien rendrait ce test vert sans
-    #  rien lire. C'est arrivé au découpage : le fichier surveillé avait disparu.
-    #  Il a échoué bruyamment ce jour-là ; qu'il continue de le faire.
-    manquants = [f for f in surveilles if not f.is_file()]
-    assert not manquants, f"fichier surveillé introuvable : {manquants}"
-    assert len(surveilles) >= 5, (
-        f"{len(surveilles)} fichier(s) surveillé(s) : le paquet `visibility` a-t-il "
-        "été renommé ? Ce test ne mesurerait plus grand-chose."
-    )
-    codes = {"résidence", "parking", "cave", "aful"}
-    fautifs = []
-    for fichier in surveilles:
-        for valeur in _constantes_texte_hors_docstring(fichier):
-            if valeur.strip().lower() in codes:
-                fautifs.append(f"{fichier.name} → « {valeur} »")
-    assert not fautifs, "code de périmètre en dur dans une règle : " + ", ".join(fautifs)
+# ── Ce que ce fichier NE couvre plus ─────────────────────────────────────────
+#
+#  Les deux contrôles STATIQUES — « aucune liste de périmètres ne réapparaît » —
+#  vivent dans `test_perimetres_liste_en_dur.py` depuis le 02/09/2026. Ils ne
+#  montent aucune base et ne dépendent d'aucune fixture : la couture est réelle,
+#  ce n'est pas la ligne où le compteur a dépassé.
