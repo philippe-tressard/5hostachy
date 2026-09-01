@@ -376,6 +376,30 @@ verdicts_selftest() {
   #  Sans seconde sonde (cas de repli), on garde ce qu'on a mesuré.
   vs "pas de seconde sonde"               "KO:502"          502 ""    non
 
+  echo "-- C23 bis : la CSP bloquante porte ses directives --"
+  vc() { # description attendu recus directives
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(verdict_csp_directives "$@")
+    if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+    else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
+  }
+  _CSP_OK=$(printf 'HTTP/2 200\r\nContent-Security-Policy: frame-ancestors '"'"'none'"'"'; object-src '"'"'none'"'"'; base-uri '"'"'self'"'"'; form-action '"'"'self'"'"'; connect-src '"'"'self'"'"'\r\n')
+  _CSP_SANS=$(printf 'HTTP/2 200\r\nContent-Security-Policy: frame-ancestors '"'"'none'"'"'; object-src '"'"'none'"'"'\r\n')
+  #  🔴 LE cas qui donne son sens au motif : le report-only porte TOUTES les
+  #  directives. Sans les deux-points dans `^Content-Security-Policy:`, le
+  #  contrôle serait vert alors que le mode bloquant est vide.
+  _CSP_RO=$(printf 'HTTP/2 200\r\nContent-Security-Policy-Report-Only: default-src '"'"'self'"'"'; connect-src '"'"'self'"'"'; form-action '"'"'self'"'"'\r\n')
+
+  vc "toutes les directives présentes"     OK "$_CSP_OK" "frame-ancestors connect-src form-action"
+  vc "connect-src perdue en silence"       "MANQUANT:connect-src" "$_CSP_SANS" "frame-ancestors connect-src"
+  vc "deux manquantes, toutes deux dites"  "MANQUANT:connect-src,form-action" "$_CSP_SANS" "connect-src form-action"
+  #  Le report-only ne doit RIEN valider : sinon le contrôle mesure la politique
+  #  observée en croyant mesurer celle qui bloque.
+  vc "seul le Report-Only est servi"       INCONNU "$_CSP_RO" "connect-src"
+  #  Les deux cas zéro : pas de réponse, et une réponse sans CSP du tout.
+  vc "aucune réponse"                      INCONNU "" "connect-src"
+  vc "réponse sans en-tête CSP"            INCONNU "$(printf 'HTTP/2 200\r\nX-Frame-Options: DENY\r\n')" "connect-src"
+
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail
 }

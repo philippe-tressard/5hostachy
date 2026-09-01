@@ -21,10 +21,28 @@ Une chaîne d'affichage n'est pas une identité. `contrat_id` en est une.
 2. un événement de maintenance **saisi à la main** n'a pas de contrat, et c'est
    légitime.
 
-⚠️ `ondelete` n'est pas posé : SQLite ne réécrit pas une contrainte sans
-recréer la table, et le comportement voulu — un contrat supprimé laisse ses
-visites passées — est celui d'une FK nullable non contrainte. Les suppressions de
-contrat passent par `purge_referentielle`, qui lit les métadonnées.
+## 🔴 AUCUNE contrainte de clé étrangère, et ce n'est pas un oubli
+
+La première écriture de cette migration posait `sa.ForeignKey("contrat_entretien.id")`
+dans le `add_column`. **Elle a crashé en production le 01/09/2026** :
+
+    NotImplementedError: No support for ALTER of constraints in SQLite dialect.
+
+SQLite ne sait pas ajouter une contrainte à une table existante : il faut la
+recréer (mode « batch » d'Alembic). Alembic avait déjà exécuté le `ADD COLUMN`
+quand il a levé — la colonne existait donc, sans sa contrainte, et la révision
+n'était pas marquée. Le conteneur est reparti (`start.sh` a `set -e`), et c'est
+la garde d'idempotence ci-dessous qui a rattrapé le second passage.
+
+⚠️ Le remède n'est PAS le mode batch : il recopie toute la table `evenement`, ce
+qui est un risque disproportionné pour un champ dont la contrainte n'apporte
+rien ici. Le comportement voulu — un contrat supprimé laisse ses visites passées
+— est exactement celui d'une colonne entière **non contrainte**. Les suppressions
+de contrat passent par `purge_referentielle`, qui lit les métadonnées.
+
+Le modèle SQLModel ne déclare donc pas `foreign_key` non plus : une base neuve
+(`create_all`) et une base migrée doivent porter le MÊME schéma, sinon la
+divergence n'apparaît qu'un jour, sur une machine, sans qu'on sache pourquoi.
 
 Revision ID: 0165
 Revises: 0164
@@ -53,7 +71,7 @@ def upgrade():
     if "contrat_id" not in _colonnes("evenement"):
         op.add_column(
             "evenement",
-            sa.Column("contrat_id", sa.Integer(), sa.ForeignKey("contrat_entretien.id"), nullable=True),
+            sa.Column("contrat_id", sa.Integer(), nullable=True),
         )
 
 

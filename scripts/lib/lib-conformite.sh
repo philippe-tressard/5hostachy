@@ -76,6 +76,28 @@ conformite_verdicts() {
     *)       warn "Points d'entrée de $SELF non lisibles : ${PE#*|} — ni vert ni rouge (sudo -n refusé, ou nœud non provisionné)" ;;
   esac
 
+  # ── C23 bis. La CSP bloquante porte-t-elle ses directives ? ───────────────────
+  #  C23 dit que l'en-tête EXISTE. Il existait déjà quand la politique ne portait
+  #  que quatre directives inoffensives, et il existerait encore si l'une d'elles
+  #  disparaissait du Caddyfile. « Présent » ne dit rien de ce qu'il contient.
+  #
+  #  🔴 `connect-src` est passée en bloquant le 01/09/2026 (#536), sur la foi du
+  #  relevé : aucune violation la concernant sur 104 rapports. C'est la directive
+  #  qui empêche l'EXFILTRATION — même si un XSS s'exécutait, il ne pourrait rien
+  #  envoyer vers un domaine tiers. La perdre en silence retirerait la moitié utile
+  #  de la politique, et rien ne le dirait.
+  #
+  #  ⚠️ PRÉSENCE, jamais valeur : c'est une attente de valeur exacte qui a fait
+  #  désarmer `check-stack.sh` le 06/08/2026, après quoi plus rien n'a regardé les
+  #  en-têtes pendant quinze jours.
+  CSP_DIRECTIVES="frame-ancestors object-src base-uri form-action connect-src"
+  case "$(verdict_csp_directives "$ENTETES_RECUS" "$CSP_DIRECTIVES")" in
+    OK)          ok   "CSP bloquante complète (${CSP_DIRECTIVES// /, })" ;;
+    MANQUANT:*)  V23B=$(verdict_csp_directives "$ENTETES_RECUS" "$CSP_DIRECTIVES")
+                 warn "Directive(s) ABSENTE(S) de la CSP bloquante : ${V23B#MANQUANT:} — la protection correspondante ne s'applique plus, et l'en-tête est pourtant bien servi" ;;
+    *)           warn "CSP bloquante non mesurable (aucune réponse locale, ou en-tête absent) — ni vert ni rouge" ;;
+  esac
+
   # ── C24. La surface sudo INSTALLÉE est-elle celle que le dépôt compose ? ──────
   #  🔴 Le 31/08/2026, `NOPASSWD: /usr/bin/rsync` — un rsync privilégié sans borne
   #  de chemin, donc une escalade root complète — a été retiré du dépôt (#582) avec
