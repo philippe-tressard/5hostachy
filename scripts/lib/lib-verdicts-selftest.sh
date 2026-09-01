@@ -349,6 +349,33 @@ verdicts_selftest() {
   #  regarder. La distinction est tout l'objet du correctif.
   ve "actif muet : toujours INCONNU"      "INCONNU" "" "X-Frame-Options" "actif"
 
+  echo "-- verdict_site_public (C1) --"
+  vs() { # description attendu code1 code2 deploiement
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(verdict_site_public "$@")
+    if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+    else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
+  }
+  vs "site debout"                        "OK"              200 ""    non
+  #  Le cas du 01/09/2026 à 05:42, qu'aucune sonde unique ne sait distinguer d'une
+  #  panne : health-watch l'a écarté, C1 aurait alerté.
+  vs "hoquet : revenu à la 2e sonde"      "TRANSITOIRE:503" 503 200   non
+  #  Le cas du 01/09/2026 à 01:21 : le build tenait le verrou, Caddy rendait 503.
+  vs "build en cours sur l'actif"         "DEPLOIEMENT:503" 503 503   oui
+  #  🔴 Et le cas qui doit RESTER rouge — c'est pour lui que le contrôle existe.
+  vs "vraiment KO, hors déploiement"      "KO:503"          503 503   non
+  vs "injoignable (curl a échoué)"        "KO:000"          000 000   non
+  #  Un déploiement n'excuse QUE le temps de son verrou : une fois relâché, le
+  #  même 503 redevient un FAIL à l'exécution suivante.
+  vs "503 persistant, verrou relâché"     "KO:503"          503 503   ""
+  #  Une sonde qui n'a pas pu s'exécuter n'est pas un vert — `standards/04` §1.
+  vs "première sonde impossible"          "INCONNU"         ""  ""    non
+  #  ⚠️ Le code rendu est celui de la SECONDE sonde : c'est l'état au moment de
+  #  décider. Un 502 devenu 503 doit se lire 503, pas 502.
+  vs "l'état le plus récent gagne"        "KO:503"          502 503   non
+  #  Sans seconde sonde (cas de repli), on garde ce qu'on a mesuré.
+  vs "pas de seconde sonde"               "KO:502"          502 ""    non
+
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail
 }
