@@ -70,6 +70,14 @@
 	     `perimetre` ne porte qu'un code ; les passer au tableau demande une
 	     migration, suivie à part. */
 	export let perimetreMode: 'multi' | 'single' = 'multi';
+	/**  Le périmètre est-il OBLIGATOIRE ? Vrai partout sauf sur une évolution, où
+	 *   il sert à **préciser** le périmètre de l'objet porteur : ne rien y toucher
+	 *   ne change rien (#497). */
+	export let perimetreRequis = true;
+	/**  Le badge de la section. `null` = calculé (le périmètre par défaut, quand
+	 *   c'est lui). Une évolution y met le périmètre COURANT de l'objet porteur —
+	 *   on voit d'où l'on part, ce qu'aucun calcul local ne peut deviner. */
+	export let perimetreBadge: string | null = null;
 
 	//  ── 5. Destinataires ──────────────────────────────────────────────────────
 	export let avecDestinataires = false;
@@ -164,12 +172,22 @@
 	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
 	<SectionFormulaire
 		titre="Périmètre"
-		requis
-		badge={badgePerimetre}
+		requis={perimetreRequis}
+		badge={perimetreBadge ?? badgePerimetre}
 		idTitre="{idPrefixe}-perimetre-titre"
 	>
 		<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
 			<PerimetrePicker bind:value={perimetre} mode={perimetreMode} titre="" />
+			<!--  🔴 Un SLOT et non une prop de texte : l'aide porte du balisage (un
+			      `<strong>`), et une prop obligerait à un `{@html}` — donc à un
+			      assainisseur, pour du contenu qui n'est pas de la donnée mais du
+			      gabarit. Le slot laisse le balisage chez l'appelant : rien à
+			      assainir, rien à faire confiance.
+
+			      Vide par défaut : l'aide n'existe que là où le geste n'est pas
+			      évident. Sur une évolution, « laissé vide, le périmètre du ticket ne
+			      bouge pas » ne se déduit pas du champ. -->
+			<slot name="aidePerimetre" />
 		</div>
 	</SectionFormulaire>
 {/if}
