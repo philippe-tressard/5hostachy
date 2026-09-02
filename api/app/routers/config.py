@@ -55,6 +55,31 @@ def _est_public(cle: str) -> bool:
     return cle in _PUBLIC_KEYS or cle.startswith(_PUBLIC_PREFIXES)
 
 
+#: 🔴 Les clés dont la VALEUR ne sort jamais, même pour un administrateur.
+#:
+#: `GET /config/admin` renvoyait `smtp_password` en clair (03/09/2026). L'écran ne
+#: l'affichait pas — il s'en servait pour savoir si un mot de passe était posé —
+#: mais il était bien dans la réponse HTTP : lisible dans l'onglet réseau du
+#: navigateur, dans un cache, dans une capture d'écran de débogage.
+#:
+#: Un secret qu'un écran n'affiche pas mais que l'API transmet est un secret
+#: exposé : la protection est alors dans le rendu, c'est-à-dire nulle part.
+#:
+#: ⚠️ Le marqueur conserve ce dont l'écran a besoin — savoir si la valeur EXISTE —
+#: sans transmettre laquelle. C'est pourquoi il n'est pas une chaîne vide.
+_SECRETS = {'smtp_password', 'imap_password', 'whatsapp_api_key'}
+
+#: Ce que l'API renvoie à la place. L'écran teste sa présence, jamais sa valeur.
+MARQUEUR_SECRET = '••••••••'
+
+
+def _valeur_pour_admin(cle: str, valeur: str) -> str:
+    """La valeur telle qu'un administrateur a le droit de la LIRE."""
+    if cle in _SECRETS and valeur:
+        return MARQUEUR_SECRET
+    return valeur
+
+
 @router.get("", response_model=Dict[str, str])
 def get_config(session: Session = Depends(get_session)):
     """Clés de configuration de l'interface exposables **sans authentification**.
@@ -75,7 +100,11 @@ def get_config_admin(
 ):
     """Retourne toutes les clés de configuration, y compris les clés privées (admin uniquement)."""
     rows = session.exec(select(ConfigSite)).all()
-    return {r.cle: r.valeur for r in rows if r.cle not in _LEGAL_KEYS}
+    return {
+        r.cle: _valeur_pour_admin(r.cle, r.valeur)
+        for r in rows
+        if r.cle not in _LEGAL_KEYS
+    }
 
 
 @router.get("/legal", response_model=Dict[str, str])
@@ -306,3 +335,62 @@ async def smtp_test(
         return {"ok": True, "message": f"E-mail de test envoyé à {payload.email}"}
     except Exception as e:
         raise HTTPException(500, f"Échec de l'envoi : {e}")
+
+
+@router.post("/imap-test")
+def imap_test(
+    user: Utilisateur = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    """Ouvre la boîte des réponses et rend ce qu'elle contient (admin uniquement).
+
+    🔴 Ce test existe parce qu'un réglage qu'on ne peut pas éprouver est un
+    réglage qu'on croit bon. Il ne se contente pas de se connecter : il compte les
+    messages **non lus**, c'est-à-dire exactement ce que la relève traitera.
+
+    ⚠️ Il ne TRAITE rien et ne marque rien comme lu — le lancer dix fois ne change
+    rien à l'état de la boîte. C'est ce qui le rend utilisable pour tâtonner sur
+    les paramètres OVH sans conséquence.
+    """
+    import imaplib
+
+    from app.utils.courriel_boite import config_imap
+
+    cfg = config_imap(session)
+    manquants = [c for c in ("imap_server", "imap_username", "imap_password") if not cfg.get(c)]
+    if manquants:
+        raise HTTPException(400, "Paramètre(s) manquant(s) : " + ", ".join(manquants))
+
+    dossier = cfg.get("imap_dossier") or "INBOX"
+    try:
+        boite = imaplib.IMAP4_SSL(cfg["imap_server"], int(cfg.get("imap_port") or 993))
+    except Exception as e:
+        raise HTTPException(502, f"Connexion au serveur impossible : {e}")
+    try:
+        try:
+            boite.login(cfg["imap_username"], cfg["imap_password"])
+        except Exception as e:
+            raise HTTPException(401, f"Identifiants refusés par le serveur : {e}")
+        statut, _ = boite.select(dossier, readonly=True)
+        if statut != "OK":
+            raise HTTPException(404, f"Dossier « {dossier} » introuvable sur ce compte.")
+        _st, donnees = boite.search(None, "UNSEEN")
+        non_lus = len(donnees[0].split()) if donnees and donnees[0] else 0
+    finally:
+        try:
+            boite.logout()
+        except Exception:
+            pass
+
+    actif = (cfg.get("imap_enabled") or "").lower() in ("1", "true", "oui")
+    return {
+        "ok": True,
+        "non_lus": non_lus,
+        "dossier": dossier,
+        "actif": actif,
+        "message": (
+            f"Connexion réussie — {non_lus} message(s) non lu(s) dans « {dossier} ». "
+            + ("La relève est active." if actif else
+               "⚠️ La relève est INACTIVE : cochez « Relever les réponses » et enregistrez.")
+        ),
+    }

@@ -46,6 +46,32 @@
 	let smtpTestEmail = '';
 	let smtpTesting = false;
 
+	//  ── Réception des réponses (IMAP) — #703 ────────────────────────────────
+	//
+	//  🔴 CET ÉCRAN MANQUAIT, et son absence rendait la fonction inexistante :
+	//  la v3.73.0 a livré la relève, les clés `imap_*` et la tâche planifiée,
+	//  mais AUCUN endroit pour les renseigner. Un réglage qu'on ne peut pas
+	//  atteindre n'est pas un réglage — signalé à l'écran le 03/09/2026 :
+	//  *« IMAP : je ne vois pas quoi faire »*.
+	//
+	//  Il vit dans l'onglet SMTP parce que c'est la MÊME boîte, chez le même
+	//  hébergeur, avec les mêmes identifiants : les séparer aurait obligé à
+	//  saisir deux fois ce qui ne fait qu'un.
+	let imapConfig = {
+		enabled: false,
+		server: '',
+		port: 993,
+		username: '',
+		password: '',
+		dossier: 'INBOX',
+		plancher: '2026-09-02',
+	};
+	let imapSaving = false;
+	let imapPasswordSet = false;
+	let imapEditingPassword = true;
+	let imapTesting = false;
+	let imapResultat = '';
+
 	//  Les valeurs arrivent APRÈS le montage (la page les charge) : un `$:` les
 	//  reprend dès qu'elles changent, là où une affectation au montage figerait
 	//  le formulaire sur des champs vides.
@@ -60,6 +86,22 @@
 		smtpConfig.ssl_tls = valeurs['smtp_ssl_tls'] === '1';
 		smtpPasswordSet = !!valeurs['smtp_password'];
 		smtpEditingPassword = !smtpPasswordSet;
+
+		imapConfig.enabled = valeurs['imap_enabled'] === '1';
+		imapConfig.server = valeurs['imap_server'] ?? '';
+		imapConfig.port = parseInt(valeurs['imap_port'] ?? '993') || 993;
+		imapConfig.username = valeurs['imap_username'] ?? '';
+		imapConfig.dossier = valeurs['imap_dossier'] || 'INBOX';
+		imapConfig.plancher = valeurs['imap_plancher'] || '2026-09-02';
+		imapPasswordSet = !!valeurs['imap_password'];
+		imapEditingPassword = !imapPasswordSet;
+	}
+
+	/** Reprend les paramètres d'envoi : même compte, même hébergeur. */
+	function reprendreDuSmtp() {
+		imapConfig.server = smtpConfig.server.replace(/^smtp\./, 'ssl0.').trim();
+		imapConfig.username = smtpConfig.username || smtpConfig.from;
+		toast('info', 'Serveur et identifiant repris — le mot de passe reste à saisir.');
 	}
 
 	async function saveSmtpConfig() {
@@ -89,6 +131,49 @@
 			toast('error', e.message ?? 'Erreur');
 		} finally {
 			smtpSaving = false;
+		}
+	}
+
+	async function saveImapConfig() {
+		imapSaving = true;
+		try {
+			const payload: Record<string, string> = {
+				imap_enabled: imapConfig.enabled ? '1' : '0',
+				imap_server: imapConfig.server.trim(),
+				imap_port: String(imapConfig.port),
+				imap_username: imapConfig.username.trim(),
+				imap_dossier: imapConfig.dossier.trim() || 'INBOX',
+				imap_plancher: imapConfig.plancher,
+			};
+			//  Le mot de passe n'est envoyé QUE s'il a été saisi : l'API renvoie un
+			//  marqueur à sa place, et le réexpédier l'écraserait par des points.
+			if (imapConfig.password) payload['imap_password'] = imapConfig.password;
+			await configApi.save(payload);
+			if (imapConfig.password) {
+				imapPasswordSet = true;
+				imapEditingPassword = false;
+			}
+			imapConfig.password = '';
+			toast('success', 'Réception des réponses enregistrée.');
+		} catch (e: any) {
+			toast('error', e.message ?? 'Erreur');
+		} finally {
+			imapSaving = false;
+		}
+	}
+
+	async function testerImap() {
+		imapTesting = true;
+		imapResultat = '';
+		try {
+			const r: any = await api.post('/config/imap-test', {});
+			imapResultat = r.message;
+			toast('success', 'Connexion à la boîte réussie.');
+		} catch (e: any) {
+			imapResultat = e.message ?? 'Échec';
+			toast('error', imapResultat);
+		} finally {
+			imapTesting = false;
 		}
 	}
 
@@ -231,6 +316,99 @@
 		</div>
 	</SectionFormulaire>
 
+	<!--  🔴 RÉCEPTION DES RÉPONSES (#703). Placée APRÈS l'envoi et son test, parce
+	      qu'elle en dépend : sans envoi, aucune réponse à recevoir. -->
+	<SectionFormulaire icone="message-square-text" titre="Réception des réponses aux tickets">
+		<div class="largeur-saisie">
+			<p class="field-hint" style="margin-bottom:.75rem">
+				Quand le syndic répond à un e-mail de ticket, sa réponse arrive dans la boîte d'envoi et
+				personne ne la voit. Activée, cette relève la dépose dans le fil du ticket concerné, toutes
+				les 10 minutes.
+			</p>
+		</div>
+		<div class="form-grid largeur-saisie">
+			<label class="field" style="grid-column:span 2">
+				<span class="case">
+					<input type="checkbox" bind:checked={imapConfig.enabled} />
+					Relever les réponses
+				</span>
+				<span class="field-hint">
+					Tant que cette case est décochée, rien n'est relevé — vous pouvez régler et tester sans
+					conséquence.
+				</span>
+			</label>
+			<label class="field">
+				Serveur IMAP
+				<input type="text" bind:value={imapConfig.server} placeholder="ssl0.ovh.net" />
+			</label>
+			<label class="field champ-court">
+				Port
+				<input type="number" bind:value={imapConfig.port} min="1" max="65535" placeholder="993" />
+			</label>
+			<label class="field">
+				Nom d'utilisateur
+				<input type="text" bind:value={imapConfig.username} placeholder="noreply@exemple.fr" />
+				<span class="field-hint">Le même compte que l'envoi, chez le même hébergeur.</span>
+			</label>
+			<label class="field">
+				Mot de passe
+				<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+					<input
+						type="password"
+						bind:value={imapConfig.password}
+						autocomplete="new-password"
+						disabled={imapPasswordSet && !imapEditingPassword}
+						placeholder={imapPasswordSet && !imapEditingPassword
+							? 'Mot de passe masqué'
+							: 'Mot de passe de la boîte'}
+						style="flex:1;min-width:220px"
+					/>
+					{#if imapPasswordSet && !imapEditingPassword}
+						<button
+							class="btn btn-outline btn-sm"
+							type="button"
+							on:click={() => {
+								imapEditingPassword = true;
+								imapConfig.password = '';
+							}}
+						>
+							Changer
+						</button>
+					{/if}
+				</div>
+			</label>
+			<label class="field champ-court">
+				Dossier
+				<input type="text" bind:value={imapConfig.dossier} placeholder="INBOX" />
+			</label>
+			<label class="field champ-court">
+				Ne rien relever avant le
+				<input type="date" bind:value={imapConfig.plancher} />
+				<span class="field-hint"> Évite de rejouer d'anciens messages à la première relève. </span>
+			</label>
+		</div>
+		<div class="largeur-saisie form-actions">
+			<button class="btn btn-outline btn-sm" type="button" on:click={reprendreDuSmtp}>
+				Reprendre les paramètres d'envoi
+			</button>
+			<button class="btn btn-primary" on:click={saveImapConfig} disabled={imapSaving}>
+				{imapSaving ? 'Enregistrement…' : 'Enregistrer'}
+			</button>
+		</div>
+		<div class="largeur-saisie" style="margin-top:.75rem">
+			<button class="btn btn-outline" on:click={testerImap} disabled={imapTesting}>
+				{imapTesting ? 'Connexion…' : '📥 Tester la connexion'}
+			</button>
+			{#if imapResultat}
+				<p class="imap-resultat">{imapResultat}</p>
+			{/if}
+			<p class="field-hint" style="margin-top:.3rem">
+				Se connecte avec ce qui est <strong>enregistré</strong>, compte les messages non lus, et ne
+				traite rien. Enregistrez d'abord.
+			</p>
+		</div>
+	</SectionFormulaire>
+
 	<SectionFormulaire icone="message-square-text" titre="Signature des e-mails">
 		<div class="largeur-saisie">
 			<label class="field">
@@ -264,3 +442,17 @@
 		</button>
 	</div>
 </section>
+
+<style>
+	/*  Le résultat du test : un encadré, pas un `toast`. Un toast disparaît, et
+	    c'est précisément ce message qu'on relit en corrigeant un paramètre. */
+	.imap-resultat {
+		margin: 0.6rem 0 0;
+		padding: 0.55rem 0.7rem;
+		background: var(--color-bg);
+		border-left: 3px solid var(--color-primary);
+		border-radius: 0 var(--radius) var(--radius) 0;
+		font-size: 0.85rem;
+		white-space: pre-wrap;
+	}
+</style>
