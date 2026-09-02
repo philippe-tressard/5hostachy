@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "3.67.0",
+	"version": "3.68.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -92,7 +92,8 @@
 	"overrides": {
 		"lodash": "4.17.21",
 		"cookie": "^0.7.2",
-		"@humanfs/node": "^0.16.8"
+		"@humanfs/node": "^0.16.8",
+		"fast-uri": "^3.1.6"
 	},
 	"type": "module"
 }

@@ -211,6 +211,41 @@ jobs:
           done
           exit $st
 
+      - name: Aucune séquence regex avalée par un template literal
+        # 🔴 LA MÊME FAMILLE QUE CI-DESSUS, ET LE CONTRÔLE PRÉCÉDENT NE PEUT PAS
+        # LA VOIR (02/09/2026, quatrième occurrence).
+        #
+        #     new RegExp(`<${nom}\b([^>]*)>`)
+        #
+        # Dans un template literal, JavaScript interprète `\b` comme le caractère
+        # BACKSPACE. Le motif cherche donc `<Nom␈`, qui ne correspond à rien — et
+        # le contrôle qui l'emploie est vert parce qu'il ne mesure RIEN.
+        #
+        # ⚠️ Le fichier, lui, ne contient AUCUN octet suspect : deux caractères
+        # parfaitement lisibles, transformés à l'exécution. Ni l'étape ci-dessus
+        # (qui lit les octets), ni `no-control-regex` d'ESLint (qui ne voit que
+        # les littéraux `/…/`), ni une relecture ne pouvaient l'attraper.
+        #
+        # C'est ce qui a rendu `lint:titres` inopérant depuis son écriture : il
+        # est passé au vert sur le défaut même qu'il devait empêcher, signalé
+        # trois fois par l'utilisateur.
+        #
+        # Il faut écrire `\\b` — un antislash pour le template, un pour le regex.
+        run: |
+          st=0
+          for f in $(git ls-files -- '*.ts' '*.js' '*.mjs' '*.svelte'); do
+            # Une accolade-dollar puis, dans le MÊME backtick, une séquence
+            # d'échappement regex à un seul antislash. `bfnrtv0` et `\x` sont les
+            # échappements que JavaScript consomme dans une chaîne.
+            if LC_ALL=C grep -nE 'new RegExp\(`[^`]*[^\\]\\[bBsSwWdDnrtv0]' "$f" >/dev/null; then
+              LC_ALL=C grep -nE 'new RegExp\(`[^`]*[^\\]\\[bBsSwWdDnrtv0]' "$f" | while read -r l; do
+                echo "::error file=$f::séquence regex à UN antislash dans un template literal — le motif ne cherchera pas ce que vous croyez : $l"
+              done
+              st=1
+            fi
+          done
+          exit $st
+
       - name: Absence de BOM dans le code et la configuration
         # Le contrôle ci-dessus ne couvre que les scripts shell. Or le BOM est un
         # artefact de poste Windows, pas un problème de shell : il avait déjà

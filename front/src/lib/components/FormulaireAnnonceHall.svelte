@@ -267,38 +267,44 @@
 	</p>
 </SectionFormulaire>
 
-<SectionFormulaire titre="Diffusion">
-	<!--  🔴 L'OBJET DIFFUSION, et non trois cases écrites ici (#480).
+<!--  ⚠️ PAS de `<SectionFormulaire titre="Diffusion">` autour : `SectionDiffusion`
+      pose DÉJÀ sa propre section du même nom. L'envelopper affichait deux bandes
+      « DIFFUSION » l'une sous l'autre — signalé à l'écran le 02/09/2026, capture à
+      l'appui.
 
-	      Cet écran portait UNE case. L'argument était réel — une affiche s'imprime
-	      et se pose — mais il décidait à la place du CS : rien n'empêche de vouloir
-	      prévenir le syndic, ou d'annoncer sur le groupe qu'une affiche est posée.
+      🔴 TROISIÈME fois que ce défaut est signalé, et la PREMIÈRE depuis que
+      `lint:titres` existe : son contrôle tenait la liste des composants porteurs
+      À LA MAIN, et `SectionDiffusion` n'y était pas. Elle est calculée depuis. -->
+<!--  🔴 L'OBJET DIFFUSION, et non trois cases écrites ici (#480).
 
-	      ⚠️ Le lien envoyé sur WhatsApp pointe l'ACTUALITÉ dont l'affiche est
-	      tirée, quand il y en a une. Une affiche autonome part sans lien :
-	      l'historique des affiches est un écran d'administration, et y envoyer les
-	      résidents leur donnerait un 403. -->
-	<SectionDiffusion
-		avecCanaux
-		compact
-		idPrefixe="ah-diffusion"
-		bind:this={refDiffusion}
-		bind:whatsapp={partagerWhatsapp}
-		bind:syndic={envoyerSyndic}
-		bind:cs={envoyerCs}
-		bind:auteur={envoyerAuteur}
-		{auteurNom}
-		aideWhatsapp="Le groupe reçoit le titre, le message et un lien vers l'actualité d'origine — jamais le PDF."
-		demanderApercu={brouillonApercu}
-		envoiEnCours={saving}
-		on:envoyer={() => onCreer()}
-	/>
-	<p class="aide-bloc">
-		Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique.
-		Le conseil syndical reçoit le PDF en pièce jointe, pour impression — et seuls les conseillers du
-		périmètre visé sont prévenus.
-	</p>
-</SectionFormulaire>
+      Cet écran portait UNE case. L'argument était réel — une affiche s'imprime
+      et se pose — mais il décidait à la place du CS : rien n'empêche de vouloir
+      prévenir le syndic, ou d'annoncer sur le groupe qu'une affiche est posée.
+
+      ⚠️ Le lien envoyé sur WhatsApp pointe l'ACTUALITÉ dont l'affiche est
+      tirée, quand il y en a une. Une affiche autonome part sans lien :
+      l'historique des affiches est un écran d'administration, et y envoyer les
+      résidents leur donnerait un 403. -->
+<SectionDiffusion
+	avecCanaux
+	compact
+	idPrefixe="ah-diffusion"
+	bind:this={refDiffusion}
+	bind:whatsapp={partagerWhatsapp}
+	bind:syndic={envoyerSyndic}
+	bind:cs={envoyerCs}
+	bind:auteur={envoyerAuteur}
+	{auteurNom}
+	aideWhatsapp="Le groupe reçoit le titre, le message et un lien vers l'actualité d'origine — jamais le PDF."
+	demanderApercu={brouillonApercu}
+	envoiEnCours={saving}
+	on:envoyer={() => onCreer()}
+/>
+<p class="aide-bloc">
+	Facultatif. L'affiche est générée dans tous les cas et reste téléchargeable depuis l'historique.
+	Le conseil syndical reçoit le PDF en pièce jointe, pour impression — et seuls les conseillers du
+	périmètre visé sont prévenus.
+</p>
 
 <div class="form-actions">
 	<button

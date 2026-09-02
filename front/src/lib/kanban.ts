@@ -36,9 +36,21 @@ export interface KanbanCtx {
 /** Retourne true si l'événement doit être visible dans le kanban pour cet utilisateur.
  *  Pré-condition : les locataires n'ont pas accès au kanban — ne pas appeler pour eux. */
 export function kanbanEvVisible(ev: any, ctx: KanbanCtx): boolean {
-	// Items archivés : masqués sauf annulé et maintenance récurrente en cours fournisseur
+	//  🔴 `archivee_manuellement` ET NON `archivee` (02/09/2026, régression signalée
+	//  à l'écran : « en kanban, je ne vois plus AG et Prestataire »).
+	//
+	//  `archivee` est devenu l'état EFFECTIF le jour même — archivage manuel OU
+	//  30 jours après la date de l'événement (#515). Le kanban s'est alors vidé de
+	//  toutes les cartes dont la DATE est passée : une AG de l'an dernier qu'on
+	//  suit encore, une visite de prestataire pré-remplie sur un mois écoulé.
+	//
+	//  ⚠️ Un suivi kanban n'est pas gouverné par le temps, il l'est par son STATUT :
+	//  une carte quitte le tableau quand on la met en « Terminé », geste qui pose la
+	//  colonne. C'est ce que la vue Liste dit déjà de son côté — *« un événement
+	//  avec suivi kanban actif reste visible même si sa date est passée »*.
+	// Items archivés à la main : masqués sauf annulé et maintenance récurrente en cours fournisseur
 	if (
-		ev.archivee &&
+		ev.archivee_manuellement &&
 		ev.statut_kanban !== 'annule' &&
 		!(ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')
 	)
@@ -98,4 +110,23 @@ export function kanbanEvMatchesYear(ev: any, exercice: number): boolean {
 		ev.statut_kanban !== 'termine' &&
 		ev.statut_kanban !== 'annule';
 	return isOverdue || year === exercice;
+}
+
+/**
+ * Un événement, **archivé** — les deux notions posées ensemble.
+ *
+ * 🔴 Elles sont DEUX depuis le 02/09/2026, et les séparer était le correctif :
+ *
+ *   · `archivee_manuellement` — la colonne, ce que le geste écrit. C'est elle que
+ *     le kanban lit : un suivi n'est pas gouverné par le temps mais par son statut ;
+ *   · `archivee` — l'état EFFECTIF, calculé par le serveur (manuel **ou** 30 jours
+ *     après la date). C'est lui que lisent la liste et les Archives.
+ *
+ * ⚠️ Les poser ensemble n'est pas une commodité. La mise à jour optimiste de
+ * l'écran doit refléter ce que le serveur RENVERRA — n'en poser qu'une laisserait
+ * la carte disparue d'une vue et présente dans l'autre jusqu'au rechargement, ce
+ * qui est exactement le défaut du 17/07/2026 sur les actualités.
+ */
+export function evenementArchive<T extends Record<string, unknown>>(ev: T): T {
+	return { ...ev, archivee: true, archivee_manuellement: true };
 }
