@@ -282,6 +282,20 @@ def update_ticket(
         if body.priorite is not None:
             ticket.priorite = body.priorite
 
+    #  🔴 CONFIDENTIEL — CS/admin UNIQUEMENT, et posé ici avec le statut et la
+    #  priorité parce que c'est la même nature de décision : elle appartient au
+    #  conseil, pas à l'auteur (#710).
+    #
+    #  ⚠️ Il ne passe PAS par `_appliquer_contenu` : un auteur peut corriger son
+    #  texte, il ne décide pas qui a le droit de le lire. Le mettre là aurait
+    #  ouvert le drapeau à quiconque peut éditer le ticket.
+    if body.confidentiel is not None:
+        if not is_cs_admin:
+            raise HTTPException(
+                403, "Seul le CS ou un administrateur peut rendre un ticket confidentiel"
+            )
+        ticket.confidentiel = body.confidentiel
+
     #  Champs du CONTENU — le droit a déjà été vérifié plus haut
     #  (`peut_editer`) : auteur, « saisi pour », ou admin.
     changes: list[str] = []
