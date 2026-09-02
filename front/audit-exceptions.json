@@ -7,12 +7,17 @@
 		"Format : \"GHSA-xxxx-xxxx-xxxx\": { motif, leveeSi, revoirLe (AAAA-MM-JJ) }.",
 		"Une exception PÉRIMÉE ou devenue INUTILE fait échouer le contrôle, à dessein :",
 		"c'est ce qui force sa relecture au lieu de la laisser dormir.",
-		"Aucune exception aujourd'hui — les quatre vulnérabilités de #411 ont été",
-		"corrigées : nanoid par `npm audit fix` (lock seul), cookie par l'override",
-		"`cookie: ^0.7.2` de package.json. Cet override force une dépendance transitive",
-		"au-delà du `^0.6.0` déclaré par @sveltejs/kit ; il se retire le jour où kit",
-		"publie une version dépendant de cookie >= 0.7 (2.70.2 est la dernière au",
-		"17/08/2026, et elle est vulnérable — il n'y avait donc rien à monter)."
+		"Historique : les quatre vulnérabilités de #411 ont été corrigées — nanoid par",
+		"`npm audit fix` (lock seul), cookie par l'override `cookie: ^0.7.2`. Un troisième",
+		"override, `@humanfs/node: ^0.16.8`, a été posé le 02/09/2026 pour GHSA-p498-v437-472g",
+		"(dépendance transitive d'ESLint, montée de patch, aucune exception nécessaire)."
 	],
-	"exceptions": {}
+	"exceptions": {
+		"GHSA-cp6q-959q-f8rh": {
+			"paquet": "@tiptap/core",
+			"motif": "Tiptap : `mergeAttributes()` transforme une clé `__proto__` PROPRE en attributs DOM exécutables hérités. Le correctif exige Tiptap 3 — une montée MAJEURE de l'éditeur riche, employé par `RichEditor` (tout le site) et `LegalEditor`. Atteignabilité mesurée ici : le vecteur est du contenu chargé DANS l'éditeur, c'est-à-dire un contenu de notre base ouvert en correction par un auteur authentifié. Ce que l'éditeur PRODUIT est ré-assaini à l'affichage par DOMPurify (`$lib/sanitize`, vérifié en CI par `lint:html`) : la lecture n'est pas exposée. Le risque résiduel est un auteur qui piège un contenu et un membre du CS qui l'ouvre pour le corriger — donc un compte nécessaire, et une poignée de personnes nommées. Réel, borné, et non vérifiable à l'aveugle : une montée majeure de l'éditeur se constate à l'écran.",
+			"leveeSi": "Tiptap 3 est monté et l'éditeur vérifié à l'écran (gras/italique/liens, listes, collage depuis Word, et le rendu des contenus existants) — suivi en #724.",
+			"revoirLe": "2026-10-02"
+		}
+	}
 }

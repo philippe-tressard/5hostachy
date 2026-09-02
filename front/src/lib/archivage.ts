@@ -24,14 +24,22 @@
  * tableau de bord. Personne ne s'en est aperçu : un défaut qui vaut la même chose
  * que le réglage courant est indiscernable d'un réglage qui fonctionne.
  *
- * ## Ce que ce module fait, et ce qu'il ne fait pas
+ * ## ✅ Le CALENDRIER n'appelle plus ce module (02/09/2026)
  *
- * Il donne **un** défaut et **une** lecture. Il ne rend pas la clé publique — ce
- * serait exposer un réglage de plus sur un endpoint indexable pour un confort
- * d'affichage. La vraie sortie est que ces deux écrans cessent de calculer
- * l'archivage et lisent ce que l'API leur envoie, comme les annonces le font
- * déjà (`"archivee": est_archivee(...)`). C'est le reste de #515 ; en attendant,
- * l'écart est ici, écrit, à un seul endroit.
+ * Ce fichier annonçait sa propre sortie : *« la vraie sortie est que ces deux
+ * écrans cessent de calculer l'archivage et lisent ce que l'API leur envoie »*.
+ * C'est fait pour le calendrier — `evenementArchive()` a été **supprimée**, et
+ * l'écran lit `e.archivee`, calculé par `app/utils/archivage.py`.
+ *
+ * Trois écarts sont tombés avec elle : l'annulation devient immédiate, l'épinglage
+ * protège, et surtout **le réglage de l'administration gouverne enfin le
+ * calendrier** — ce qu'il n'avait jamais fait, la clé n'étant pas publique.
+ *
+ * ⚠️ **Le tableau de bord, lui, appelle encore `delaiArchivageMs`** pour son seuil
+ * « récent ». Il reste donc sur le défaut en dur, pour la même raison qu'avant : la
+ * clé n'est pas publiée, et la publier serait exposer un réglage de plus sur un
+ * endpoint anonyme pour un confort d'affichage. Sa sortie est la même que celle du
+ * calendrier — lire ce que l'API envoie — et elle n'est pas encore faite.
  *
  * ⚠️ `DELAI_ARCHIVAGE_JOURS` est une **copie** de `ARCHIVAGE_DELAI_JOURS`
  * (`api/app/utils/archivage.py`). Les contextes de build sont `./api` et
@@ -62,28 +70,6 @@ export function delaiArchivageJours(config: Record<string, string> | null | unde
 /** Le même délai en millisecondes — ce que manipulent les comparaisons de dates. */
 export function delaiArchivageMs(config: Record<string, string> | null | undefined): number {
 	return delaiArchivageJours(config) * 86_400_000;
-}
-
-/**
- * Un événement du calendrier est-il passé aux Archives ?
- *
- * ⚠️ Vivait dans `calendrier/+page.svelte` sous le nom `isExpired`, avec un
- * **défaut de 48 h en dur** — le dernier des quatre nombres qui répondaient à
- * la même question. Le déclencheur est la **fin** de l'événement (ou son début
- * s'il n'a pas de fin), conformément à l'arbitrage du 19/08/2026 : *« Calendrier
- * = après la date de l'événement »*.
- *
- * ⚠️ Ne connaît ni `archivee` (archivage manuel) ni `statut_kanban` : l'écran
- * les teste séparément. Le pendant serveur, `REGLES["evenement"]`, les intègre —
- * et c'est lui qui fera foi le jour où le calendrier lira l'état que l'API lui
- * envoie plutôt que de le recalculer (le reste de #515).
- */
-export function evenementArchive(
-	ev: { debut?: string | Date; fin?: string | Date | null },
-	delaiMs: number,
-): boolean {
-	const fin = new Date((ev.fin ?? ev.debut) as string | Date);
-	return fin.getTime() + delaiMs < Date.now();
 }
 
 //  Réexport de commodité pour les écrans qui n'ont pas besoin du store : évite
