@@ -315,8 +315,8 @@
 						idPrefixe="tk-msg"
 						auteurNom={ticket.auteur_nom ?? ''}
 						titre="Répondre"
-						showPhotos={!newInterne}
-						showDocuments={!newInterne}
+						entite={TICKET}
+						avecPiecesJointes={!newInterne}
 						showEmail={$isCS && !newInterne}
 						avecInterne={$isCS}
 						bind:interne={newInterne}

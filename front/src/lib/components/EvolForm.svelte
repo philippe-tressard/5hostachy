@@ -24,10 +24,9 @@
   > « le bouton commentaire n'a pas lieu d'être — il est présent sur le fil
   >   principal pour ouvrir un *nouveau commentaire* » (17/08/2026)
 
-  Première tentative (18/08, matin) : deux boutons sur la carte, 💬 et 🔄, et le
-  geste figé par l'appelant. **Refusée à l'écran le 18/08** — *« l'icône commenter
-  est à retirer, devenue obsolète ; il manque le principal, la section Workflow
-  avec les différentes pastilles »*.
+  Première tentative (18/08, matin) : deux boutons sur la carte, le geste figé
+  par l'appelant. **Refusée à l'écran** — *« il manque le principal, la section
+  Workflow avec les différentes pastilles »*.
 
   La forme retenue est plus simple, et c'est **UN** point d'entrée : le bouton 🔄
   ouvre le formulaire, dont la **section Workflow** porte les états en pastilles,
@@ -42,9 +41,9 @@
   Les pièces jointes sont DEUX sections, jamais une (#433) : le mode unifié
   (`separatePhotosAndDocs`) a disparu le 18/08/2026 avec son dernier appelant.
 
-  ⚠️ **Ce composant n'est pas gouverné par la déclaration d'entité**
-  (`$lib/entites/`) : il sert cinq écrans, et l'état `evolution` est déclaré sans
-  être confronté à son rendu (#463).
+  ✅ **Gouverné par la déclaration d'entité** (02/09/2026, #463) : il REÇOIT
+  l'entité et lit `sectionPresente(…, 'evolution', …)` lui-même. Les cinq écrans
+  ne décident plus des sections — seulement des DROITS de leur lecteur.
 
   ✅ **L'écart d'intitulé est levé (02/09/2026)** — arbitré : *« oui, unifier à
   commentaire »*. La description basculait « Commentaire » / « Contenu » selon le
@@ -56,21 +55,8 @@
   « l'intitulé de `ChampsCommuns` est figé à Description » — était tombée le
   matin même.
 
-  ⏭ Reste de #463 : brancher les sections sur `sectionPresente(…, 'evolution')`,
-  sur UN écran d'abord (R5 — ce composant en sert cinq).
-
-  Props clés :
-    statutOptions      – états proposables, rendus en pastilles (section Workflow)
-    statutLabels       – map value→label pour afficher le statut actuel
-    currentStatut      – statut actuel de l'item parent (badge du libellé)
-    showNotifs         – afficher les cases WhatsApp/syndic/CS
-    showEmail          – afficher le champ email externe
-    showPhotos         – ouvrir la section 7 (Photos)
-    showDocuments      – ouvrir la section 8 (Documents)
-    editMode           – masque le statut, pré-remplit contenu+fichiers
-    initialContenu     – contenu initial (mode édition)
-    initialFichiers    – fichiers initiaux (mode édition)
-    saving             – contrôlé par le parent (en cours de sauvegarde API)
+  Les props sont documentées UNE fois, chacune à sa déclaration : cette liste-ci
+  les recopiait, et deux listes divergent au premier ajout.
 
   Événements :
     submit(data)  – {type, contenu, nouveau_statut?, fichiers_urls, partager_whatsapp?, envoyer_syndic?, envoyer_cs?, email_externe?}
@@ -84,6 +70,7 @@
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import { sectionPresente, type EntiteDeclaree } from '$lib/entites/types';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { estImage } from '$lib/fichiers';
 	import { perimetreEntree, perimetreHerite } from '$lib/perimetres';
@@ -110,7 +97,23 @@
 	/** Statut actuel de l'objet parent (badge à droite de l'intitulé) */
 	export let currentStatut = '';
 	/** Afficher les cases de partage (WhatsApp / syndic / CS) */
-	export let showNotifs = false;
+	/**  🔴 L'ENTITÉ dont ce fil est le quatrième état (#463) : c'est ELLE qui dit
+	 *   quelles sections existent, plus les cinq écrans chacun de son côté (trois
+	 *   recopiaient `sectionPresente(TICKET, 'evolution', …)`, deux passaient `true`
+	 *   en dur — les valeurs coïncidaient, d'où l'invisibilité de la divergence).
+	 *
+	 *   ⚠️ La déclaration dit ce qui EXISTE, jamais ce que CET utilisateur a le
+	 *   droit de faire : les trois props ci-dessous portent cela et restent chez
+	 *   l'appelant, seul à connaître le lecteur. Les mêler aurait fait décider d'un
+	 *   droit par une déclaration de forme. */
+	export let entite: EntiteDeclaree;
+	/**  Un DROIT, pas une section : `$isCS` sur la fiche, l'auteur sur sa carte. */
+	export let peutDiffuser = true;
+	/**  Même nature : préciser le périmètre change qui verra l'objet. */
+	export let peutPreciserPerimetre = true;
+	/**  Une variante du GESTE, pas de la section — R4 ne sait pas la déclarer
+	 *   (#436) : faux sur une note interne, ligne de suivi et non signalement. */
+	export let avecPiecesJointes = true;
 	/** Valeurs par défaut des notifications */
 	export let defaultPartagerWhatsapp = false;
 	export let defaultEnvoyerSyndic = false;
@@ -130,9 +133,6 @@
 	 * (« une section ne se fusionne JAMAIS avec une autre »). Un écran ne
 	 * pouvait donc pas déclarer les Photos présentes et les Documents absents.
 	 */
-	export let showPhotos = false;
-	/** Section 8 — Documents. Voir `showPhotos` : les deux sont indépendantes. */
-	export let showDocuments = false;
 	/** Mode édition : masque le statut, pré-remplit contenu+fichiers */
 	export let editMode = false;
 	/** Contenu initial (mode édition) */
@@ -143,16 +143,6 @@
 	/**  Le périmètre que l'entrée AVAIT déclaré, en correction. Vide si elle n'en
 	 *   déclarait aucun — le sélecteur part alors de l'hérité, comme en saisie. */
 	export let initialPerimetre: string[] = [];
-	/**  Proposer de PRÉCISER LE PÉRIMÈTRE dans cette entrée (#497).
-	 *
-	 *   Un ticket se signale avec ce qu’on sait — donc souvent le périmètre le
-	 *   plus large. Puis on cherche : « bâtiment 2 » devient « bât. 2, cage B ».
-	 *
-	 *   ⚠️ Le sélecteur part de l’HÉRITÉ depuis le 31/08/2026 — il partait vide,
-	 *   et montrait « Copropriété entière » sur un ticket situé « Bât. 1 ›
-	 *   Escaliers ». Ne rien toucher ne déclare toujours rien : c’est la
-	 *   comparaison à `perimetreDepart`, et non le vide, qui le garantit. */
-	export let avecPerimetre = false;
 	/**  Le périmètre de l’objet, et l’historique déjà écrit : ensemble ils donnent
 	 *   celui dont cette entrée HÉRITE (`perimetreHerite`) — badge et point de
 	 *   départ du sélecteur, calculés une seule fois pour ne pas en montrer deux. */
@@ -263,7 +253,12 @@
 	//  corrigée est la dernière à avoir précisé quelque chose
 	//  (`app/utils/perimetre_fil.py`) : corriger une vieille entrée ne défait
 	//  pas une précision récente.
-	$: sectionPerimetre = avecPerimetre;
+	//  🔴 Chaque ligne combine ce qui EXISTE (la déclaration) et ce que cet
+	//  utilisateur-ci PEUT (le droit) — jamais l'un à la place de l'autre (#463).
+	$: sectionPerimetre = peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'perimetre');
+	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'photos');
+	$: sectionDocuments = avecPiecesJointes && sectionPresente(entite, 'evolution', 'documents');
+	$: sectionDiffusion = peutDiffuser && sectionPresente(entite, 'evolution', 'diffusion');
 
 	//  L'état actuel se lit en BADGE à droite de l'intitulé, pas en ligne de texte
 	//  sous lui (`ux-patterns` §9 quater) — c'est la forme qu'a déjà la carte du
@@ -314,7 +309,7 @@
 	//  Il ne s'interpose QUE si l'appelant sait le composer ET qu'un canal est
 	//  coché : sans canal il n'y a rien à montrer, et une modale de plus serait
 	//  une étape gratuite entre l'utilisateur et son commentaire.
-	$: aUneDiffusion = showNotifs && (partagerWhatsapp || envoyerSyndic || envoyerCs);
+	$: aUneDiffusion = sectionDiffusion && (partagerWhatsapp || envoyerSyndic || envoyerCs);
 	//  🔴 La saisie est PASSÉE à l'appelant, elle n'est pas lue depuis l'extérieur.
 	//  Ce formulaire tient son état ; une fermeture posée chez l'appelant lirait
 	//  des valeurs vides — première tentative, corrigée avant d'être livrée.
@@ -348,10 +343,10 @@
 			contenu,
 			nouveau_statut: !editMode && evolType === 'etat' ? nouveauStatut : undefined,
 			fichiers_urls: allFichiersUrls,
-			partager_whatsapp: showNotifs ? partagerWhatsapp : undefined,
-			envoyer_syndic: showNotifs ? envoyerSyndic : undefined,
-			envoyer_cs: showNotifs ? envoyerCs : undefined,
-			envoyer_auteur: showNotifs ? envoyerAuteur : undefined,
+			partager_whatsapp: sectionDiffusion ? partagerWhatsapp : undefined,
+			envoyer_syndic: sectionDiffusion ? envoyerSyndic : undefined,
+			envoyer_cs: sectionDiffusion ? envoyerCs : undefined,
+			envoyer_auteur: sectionDiffusion ? envoyerAuteur : undefined,
 			email_externe: showEmail ? emailExterne.trim() || undefined : undefined,
 			interne: avecInterne ? interne : undefined,
 			perimetre_cible: perimetreDeclare,
@@ -447,9 +442,9 @@
 	     écrites à l'identique ici et dans `ChampsCommuns` (01/09/2026). -->
 	<SectionsPiecesJointes
 		{idPrefixe}
-		avecPhotos={showPhotos}
+		avecPhotos={sectionPhotos}
 		bind:photos
-		avecDocuments={showDocuments}
+		avecDocuments={sectionDocuments}
 		bind:documents={docs}
 		idDocuments="docs"
 	/>
@@ -465,7 +460,7 @@
 		envoiEnCours={saving}
 		on:envoyer={handleSubmit}
 		{idPrefixe}
-		avecCanaux={showNotifs}
+		avecCanaux={sectionDiffusion}
 		bind:whatsapp={partagerWhatsapp}
 		bind:syndic={envoyerSyndic}
 		bind:cs={envoyerCs}

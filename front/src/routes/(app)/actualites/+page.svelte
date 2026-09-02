@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PUBLICATION } from '$lib/entites/publication';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
@@ -450,13 +451,11 @@
 								titre="Commenter"
 								statutOptions={[]}
 								statutLabels={STATUT_LABELS}
-								showNotifs={true}
 								defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
 								defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
 								defaultEnvoyerCs={pub.envoyer_cs ?? false}
 								showEmail={true}
-								showPhotos={true}
-								showDocuments={true}
+								entite={PUBLICATION}
 								saving={evolSaving}
 								on:submit={(e) => addEvolFromForm(pub, e)}
 								on:cancel={() => (showEvolForm = null)}
@@ -501,8 +500,7 @@
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-										showPhotos={true}
-										showDocuments={true}
+										entite={PUBLICATION}
 										saving={editEvolSaving}
 										on:submit={saveEvolEdit}
 										on:cancel={() => {
