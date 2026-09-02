@@ -338,7 +338,7 @@ def _partager_sur_le_groupe(
     premiere_photo = next((u for u in parse_photos(ticket.photos_urls) if est_image(u)), None)
     background_tasks.add_task(
         envoyer_whatsapp_avec_log,
-        f"\U0001f3ab {ticket.titre}",
+        f"🎫 {ticket.titre}",
         ticket.description,
         ticket.categorie == "urgence",
         ticket.perimetre_cible,

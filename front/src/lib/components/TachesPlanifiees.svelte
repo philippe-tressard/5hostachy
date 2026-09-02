@@ -393,7 +393,7 @@
 												</tr>
 											</thead>
 											<tbody>
-												{#each lignes as l}
+												{#each lignes as l (l)}
 													<tr>
 														<td>{fmtDatetime(l.cree_le)}</td>
 														{#if aValeur(lignes, 'noeud')}

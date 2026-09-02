@@ -81,14 +81,30 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  *    sûre EN MÊME TEMPS qu'elle corrige le rendu — au lieu de choisir entre les
  *    deux, ou de fabriquer une clé pour satisfaire ce contrôle.
  *
- * ⚠️ Les 26 restantes n'entrent dans aucune des deux. Elles itèrent sur des
- * listes dont rien ne prouve l'unicité — des chaînes venues de la base, des
- * objets sans identifiant (`MembreCSForm` n'en a pas), des réponses libres.
- * Chacune demande une décision, et un `(i)` ajouté pour faire baisser ce chiffre
- * serait le contournement que #453 condamne : satisfaire le contrôle par la
- * forme, sans faire ce qu'il demande.
+ * ## 26 → 5, le 03/09/2026
+ *
+ * Vingt et une ont reçu une clé, et la plupart par l'IDENTITÉ DE RÉFÉRENCE de
+ * l'objet — `(occ)`, `(m)`, `(_contact)`. C'est la bonne clé d'une liste éditée
+ * en place : elle survit à un retrait au milieu, là où l'index décale l'état de
+ * tous les suivants. Trois de ces listes portaient des `bind:` sur chaque ligne
+ * — le cas exact que la règle protège, pas une coquetterie de linter.
+ *
+ * Les cinq restantes itéraient sur des CHAÎNES potentiellement dupliquées — des
+ * numéros découpés d'un champ libre. Leur poser une clé aurait été PIRE que le
+ * défaut : deux numéros identiques font lever `each_key_duplicate`, et l'écran
+ * entier tombe. Quatre ont été réglées **à la source** : `telephonesDe()`
+ * (`$lib/utils`) découpe, nettoie et DÉDOUBLONNE — la clé devient sûre en même
+ * temps que le rendu se corrige, au lieu de choisir entre les deux. Elle
+ * remplace au passage `splitTels()` et une recopie littérale dans l'annuaire.
+ *
+ * ⚠️ LA DERNIÈRE RESTE, ET C'EST DÉFINITIF : `espace-cs` ligne ~1248 édite les
+ * numéros d'un membre du syndic par `bind:value={…telephones[ti]}`. La boucle a
+ * BESOIN de l'index pour écrire dans le tableau, et une clé portée par la valeur
+ * changerait à chaque caractère tapé — Svelte recréerait le nœud, et le champ
+ * perdrait le focus en cours de frappe. Le remède serait ici plus grave que le
+ * mal, et aucune clé n'est meilleure que l'index.
  */
-const PLAFOND = 26;
+const PLAFOND = 1;
 
 /** En dessous, le repérage ne mord plus — le dépôt en porte ~200. */
 const PLANCHER_EACH = 150;

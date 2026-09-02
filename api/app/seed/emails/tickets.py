@@ -27,9 +27,9 @@ MODELES = [
      #  n'affiche qu'une soixantaine de caractères, et sur ces quatre
      #  informations, celle que le destinataire ne connaît pas encore est le
      #  titre. La résidence est ce qu'on accepte de perdre.
-     '{% if is_commentaire %}{{ prefixe_copro }}\U0001f4ac Commentaire — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}',
+     '{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire — Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f4cb Ticket transmis par le conseil syndical{% endif %}'
+     '{% if is_commentaire %}💬 Nouveau commentaire{% else %}📋 Ticket transmis par le conseil syndical{% endif %}'
      '</h2>'
      '<p style="margin:0 0 16px">'
      '{% if is_commentaire %}'
@@ -41,15 +41,15 @@ MODELES = [
      '{% if is_commentaire %}'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#EEF2F7;padding:16px">'
-     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}{% if commentaire_perimetre %} — \U0001f539 {{ commentaire_perimetre }}{% endif %}</p>'
+     '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}{% if commentaire_perimetre %} — 🔹 {{ commentaire_perimetre }}{% endif %}</p>'
      '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
-     '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Pièces jointes disponibles ci-dessous.</p>{% endif %}'
+     '{% if fichiers %}<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Pièces jointes disponibles ci-dessous.</p>{% endif %}'
      '</td></tr></table>'
      '<h3 style="margin:0 0 12px;font-size:13px;font-weight:600;color:#8A8FA0;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'
      '{% endif %}'
      '<table role="presentation" style="width:100%;margin:0 0 {% if is_commentaire %}8{% else %}20{% endif %}px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#F2EFE9;padding:16px">'
-     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · \U0001f539 {{ ticket.perimetre }}{% endif %}{% if is_commentaire %} — Soumis le {{ date_creation }}{% endif %}</p>'
+     '<p style="margin:0 0 4px;font-size:13px;color:#5A6070">Ticket #{{ ticket.numero }}{% if ticket.categorie %} · {{ ticket.categorie }}{% endif %}{% if ticket.perimetre %} · 🔹 {{ ticket.perimetre }}{% endif %}{% if is_commentaire %} — Soumis le {{ date_creation }}{% endif %}</p>'
      '<p style="margin:0 0 8px;font-weight:700;font-size:16px;color:#1E3A5F">{{ ticket.titre }}</p>'
      '{% if ticket.description %}<div style="font-size:14px;color:#1A1A2E">{{ ticket.description | safe }}</div>{% endif %}'
      '{% if not is_commentaire %}<p style="margin:8px 0 0;font-size:14px;color:#5A6070">Soumis par {{ auteur.prenom }} {{ auteur.nom }}</p>{% endif %}'
@@ -58,7 +58,7 @@ MODELES = [
      '{% for m in messages %}'
      '<table role="presentation" style="width:100%;margin:0 0 8px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#FFFFFF;padding:12px 16px">'
-     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} — {{ m.date }}{% if m.perimetre %} — \U0001f539 {{ m.perimetre }}{% endif %}</p>'
+     '<p style="margin:0 0 4px;font-size:12px;color:#8A8FA0">{{ m.auteur_nom }} — {{ m.date }}{% if m.perimetre %} — 🔹 {{ m.perimetre }}{% endif %}</p>'
      '<div style="font-size:14px;color:#1A1A2E">{{ m.contenu | safe }}</div>'
      '</td></tr></table>'
      '{% endfor %}'
@@ -101,7 +101,7 @@ MODELES = [
     ("relance_syndic", "Relance tickets syndic non résolus",
      "{{ prefixe_copro }}Relance ticket(s) sans avancée depuis {{ anciennete }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '\U0001f514 Relance ticket(s) sans avancée depuis {{ anciennete }}</h2>'
+     '🔔 Relance ticket(s) sans avancée depuis {{ anciennete }}</h2>'
      '<p style="margin:0 0 20px">{{ interlocuteurs }},</p>'
      # Préambule partenarial (choisi le 01/08/2026) : poser l’ancienneté réelle
      # et le mécontentement qu’elle nourrit, sans mettre le gestionnaire en
@@ -160,14 +160,14 @@ MODELES = [
      #  exception » sur un destinataire que le code ne peut pas identifier.
      '{% if is_commentaire %}{{ prefixe_copro }}Relance Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% else %}{{ prefixe_copro }}Ticket #{{ ticket.numero }} — {{ ticket.titre }}{% endif %}',
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">'
-     '{% if is_commentaire %}\U0001f4ac Nouveau commentaire{% else %}\U0001f527 Ticket{% endif %} : {{ ticket.titre }}</h2>'
+     '{% if is_commentaire %}💬 Nouveau commentaire{% else %}🔧 Ticket{% endif %} : {{ ticket.titre }}</h2>'
      '{% if is_commentaire %}'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:2px solid #1E3A5F;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#EEF2F7;padding:16px">'
      '<p style="margin:0 0 6px;font-size:13px;color:#5A6070;font-weight:600">{{ auteur.prenom }} {{ auteur.nom }} — {{ date_commentaire }}</p>'
      '<div style="font-size:14px;color:#1A1A2E">{{ commentaire | safe }}</div>'
      '{% if fichiers %}'
-     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">\U0001f4ce Voir les pièces jointes ci-dessous.</p>'
+     '<p style="margin:8px 0 0;font-size:13px;color:#5A6070">📎 Voir les pièces jointes ci-dessous.</p>'
      '{% endif %}'
      '</td></tr></table>'
      '<h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#5A6070;text-transform:uppercase;letter-spacing:.5px">Historique</h3>'

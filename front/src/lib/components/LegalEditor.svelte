@@ -2,7 +2,11 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { Editor } from '@tiptap/core';
 	import StarterKit from '@tiptap/starter-kit';
-	import Underline from '@tiptap/extension-underline';
+	//  🔴 `Underline` N'EST PLUS IMPORTÉ (Tiptap 3, 03/09/2026) : StarterKit 3
+	//  l'inclut. Le garder aurait chargé l'extension DEUX fois — Tiptap avertit à
+	//  l'exécution et n'en garde qu'une, mais un avertissement de console n'est lu
+	//  par personne. Vérifié en listant les extensions du StarterKit installé,
+	//  jamais supposé d'après le guide de migration.
 
 	export let value: string = '';
 	export let minHeight: string = '400px';
@@ -17,7 +21,7 @@
 	onMount(() => {
 		editor = new Editor({
 			element: editorEl,
-			extensions: [StarterKit, Underline],
+			extensions: [StarterKit],
 			content: value,
 			onUpdate: ({ editor }) => {
 				value = editor.getHTML();
@@ -31,7 +35,7 @@
 
 	// Sync external resets (e.g. load from API)
 	$: if (editor && !sourceMode && value !== editor.getHTML()) {
-		editor.commands.setContent(value ?? '', false);
+		editor.commands.setContent(value ?? '', { emitUpdate: false });
 	}
 
 	function toggleSource() {
@@ -45,7 +49,7 @@
 			sourceMode = false;
 			// setContent runs via the reactive $: above once editor renders
 			setTimeout(() => {
-				if (editor) editor.commands.setContent(value ?? '', false);
+				if (editor) editor.commands.setContent(value ?? '', { emitUpdate: false });
 			}, 0);
 		}
 	}

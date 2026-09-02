@@ -918,7 +918,7 @@
 				</div>
 			{/if}
 
-			{#each membresCS as m, i}
+			{#each membresCS as m, i (m)}
 				<div
 					class="membre-card"
 					class:membre-president={m.est_president}
@@ -1123,7 +1123,7 @@
 				onEnregistrer={saveSyndic}
 			/>
 
-			{#each membresSyndic as m, i}
+			{#each membresSyndic as m, i (m)}
 				<div
 					class="membre-card"
 					class:membre-principal={m.est_principal}

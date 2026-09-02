@@ -97,13 +97,13 @@ def contexte_evenement_canaux(
         commentaire = suivi.get("commentaire") or ""
         #  L'état, quand il y en a un, ouvre le message : c'est l'information
         #  qu'on lit en diagonale dans un groupe. Le commentaire suit.
-        wa_titre = f"\U0001f504 {ev.titre}"
+        wa_titre = f"🔄 {ev.titre}"
         wa_contenu = f"<b>{etat}</b><br>{commentaire}" if etat else commentaire
         #  Les photos du SUIVI d'abord ; à défaut, celles de l'événement — une
         #  entrée sans photo montre au moins de quoi on parle.
         wa_photos = parse_photos(_json(fichiers_suivi)) or parse_photos(ev.photos_urls)
     else:
-        wa_titre = f"\U0001f4c5 {ev.titre}"
+        wa_titre = f"📅 {ev.titre}"
         wa_contenu = ev.description or ""
         wa_photos = parse_photos(ev.photos_urls)
 

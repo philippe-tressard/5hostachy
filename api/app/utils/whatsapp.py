@@ -188,9 +188,9 @@ def _build_message(
         perimetre_label = "Copropriété"
 
     if urgente:
-        header = f"\U0001f6a8 URGENT — \U0001f539 {perimetre_label} — *{titre}*"
+        header = f"🚨 URGENT — 🔹 {perimetre_label} — *{titre}*"
     else:
-        header = f"\U0001f4e2 \U0001f539 {perimetre_label} — *{titre}*"
+        header = f"📢 🔹 {perimetre_label} — *{titre}*"
 
     # Contenu : convertir le formatage HTML en markdown WhatsApp
     # Gras : <b>, <strong>  → *texte*
@@ -293,12 +293,12 @@ def _build_message_restreint(
         perimetre_label = "Copropriété"
 
     if urgente:
-        header = f"\U0001f6a8 URGENT — \U0001f539 {perimetre_label} — *{titre}*"
+        header = f"🚨 URGENT — 🔹 {perimetre_label} — *{titre}*"
     else:
-        header = f"\U0001f4e2 \U0001f539 {perimetre_label} — *{titre}*"
+        header = f"📢 🔹 {perimetre_label} — *{titre}*"
 
     avertissement = (
-        "\U0001f512 Cette publication est réservée à un public ciblé.\n"
+        "🔒 Cette publication est réservée à un public ciblé.\n"
         "Elle n'est pas accessible à tous les résidents.\n"
         "Si vous êtes concerné(e), connectez-vous sur 5Hostachy pour la consulter :"
     )
@@ -403,7 +403,7 @@ def envoyer_whatsapp(
             lien = (config.get('site_url') or '').strip().rstrip('/')
             if lien:
                 payload["text"] += (
-                    "\n\n\U0001F4F7 Photos à voir sur le site : "
+                    "\n\n📷 Photos à voir sur le site : "
                     f"{lien}/actualites"
                 )
 

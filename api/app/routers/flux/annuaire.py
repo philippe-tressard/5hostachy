@@ -31,7 +31,7 @@ def _carte_membre(ident: str, membre, detail: str, badge: str, meta: dict) -> Fl
         #  « Jean-Sébastien CourT », signalé à l'écran le 31/08/2026.
         titre=nom_affiche(membre.prenom, membre.nom),
         detail=detail,
-        icon="\U0001f465",
+        icon="👥",
         badges=[badge],
         lien="/annuaire",
         meta=meta,

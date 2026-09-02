@@ -180,7 +180,7 @@
 				{#if perimetreAffiche}
 					<span class="badge badge-gray">🔹 {perimetreAffiche}</span>
 				{/if}
-				{#each item.badges as b}
+				{#each item.badges as b (b)}
 					<span class="badge {badgeClass(item.type, b)}">{b}</span>
 				{/each}
 			</div>

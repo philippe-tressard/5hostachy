@@ -480,7 +480,7 @@
 				<p style="font-size:.85rem;color:var(--color-text-muted);margin-bottom:.9rem">
 					Résumé des accès (Vigik / télécommandes) confiés à vos locataires.
 				</p>
-				{#each locatairesAcces as { baux, items }}
+				{#each locatairesAcces as { baux, items } (baux[0]?.id ?? baux)}
 					{@const premierBail = baux[0]}
 					<div class="locataire-acces-row">
 						<div class="lar-header">
@@ -512,7 +512,7 @@
 						</div>
 						{#if items.length > 0}
 							<div class="lar-items">
-								{#each items as item}
+								{#each items as item (item.id ?? item.code)}
 									<div class="lar-item">
 										<span style="font-family:monospace;font-size:.85rem">{item.code}</span>
 										<span

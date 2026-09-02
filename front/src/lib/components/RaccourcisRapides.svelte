@@ -27,7 +27,7 @@
 		>
 			<Icon name={r.icone} size={14} />
 			{r.libelle}
-			{#each r.compteurs(sante) as c}
+			{#each r.compteurs(sante) as c (c)}
 				{#if c.valeur > 0}
 					<span
 						class="quick-count"

@@ -150,7 +150,7 @@ def _bandeau_pieces_jointes(noms: list[str]) -> str:
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="border-top:1px solid #E4E7EC">'
         '<tr><td style="padding-top:14px;font-size:13px;color:#5A6070">'
-        f'\U0001F4CE Ce message comporte <strong>{libelle}</strong> :'
+        f'📎 Ce message comporte <strong>{libelle}</strong> :'
         '</td></tr>'
         f'<tr><td style="padding-top:6px"><table role="presentation" cellpadding="0" '
         f'cellspacing="0">{lignes}</table></td></tr>'

@@ -156,3 +156,32 @@ export function relire<T>(dependance: unknown, calcul: () => T): T {
 	void dependance;
 	return calcul();
 }
+
+/**
+ * Les numéros de téléphone d'un champ libre — découpés, nettoyés, DÉDOUBLONNÉS.
+ *
+ * 🔴 Écrit deux fois avant le 03/09/2026 : `splitTels()` dans les prestataires,
+ * et `m.telephone.split(',').filter((t) => t.trim())` recopié dans l'annuaire.
+ * Deux écritures de la même notion, qui auraient divergé au premier changement
+ * de séparateur.
+ *
+ * ⚠️ Le dédoublonnage est ce qui manquait aux deux, et il règle DEUX choses à la
+ * fois :
+ *
+ * 1. **le rendu** — un numéro saisi deux fois dans le même champ s'affichait
+ *    deux fois, sans que personne y voie autre chose qu'une saisie maladroite ;
+ * 2. **la clé de liste** — sans unicité, `{#each … as tel (tel)}` fait lever
+ *    `each_key_duplicate` à Svelte et **l'écran entier tombe**. C'est pourquoi
+ *    ces cinq boucles étaient restées sans clé : la corriger par la forme aurait
+ *    été plus dangereux que le défaut. Dédoublonner à la SOURCE rend la clé
+ *    sûre, au lieu de choisir entre les deux.
+ */
+export function telephonesDe(champ: string | null | undefined): string[] {
+	if (!champ) return [];
+	const vus = new Set<string>();
+	for (const brut of champ.split(',')) {
+		const numero = brut.trim();
+		if (numero) vus.add(numero);
+	}
+	return [...vus];
+}

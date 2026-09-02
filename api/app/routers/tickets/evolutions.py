@@ -240,9 +240,9 @@ def _message_pour_le_groupe(ticket: Ticket, body: TicketEvolutionCreate, nb_prec
     )
     if msg and nb_precedents:
         msg += (
-            f"\n\n\U0001f4dc Cet échange comporte {nb_precedents} commentaire(s) précédent(s).\n"
+            f"\n\n📜 Cet échange comporte {nb_precedents} commentaire(s) précédent(s).\n"
             f"Consultez l'historique complet sur l'application :\n"
-            f"\U0001f449 {site_url.rstrip('/')}{lien_ticket(ticket.id)}"
+            f"👉 {site_url.rstrip('/')}{lien_ticket(ticket.id)}"
         )
     return msg
 
@@ -349,7 +349,7 @@ def add_evolution(
             if whatsapp_actif(wa_config):
                 background_tasks.add_task(
                     envoyer_whatsapp_avec_log,
-                    f"\U0001f527 {ticket.titre}",
+                    f"🔧 {ticket.titre}",
                     _message_pour_le_groupe(
                         ticket, body,
                         nb_precedents=sum(1 for ev in evols_hist if ev.contenu),

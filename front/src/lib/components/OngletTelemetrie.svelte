@@ -207,7 +207,7 @@
 							></div>
 						{/each}
 						<div class="tl-chart">
-							{#each telemetryData.chart as d}
+							{#each telemetryData.chart as d (d)}
 								<div
 									class="tl-bar-col {tlScope === 'annee' ? 'tl-bar-col-month' : ''}"
 									title="{d.label} — {d.total} vues{d.uniques != null

@@ -161,7 +161,7 @@
 						<span class="pj-compteur" aria-live="polite">{courante + 1} / {photos.length}</span>
 						{#if photos.length <= 8}
 							<span class="pj-points" aria-hidden="true">
-								{#each photos as _, i}
+								{#each photos as _, i (_)}
 									<span class="pj-point" class:pj-point-actif={i === courante}></span>
 								{/each}
 							</span>
