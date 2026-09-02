@@ -244,6 +244,12 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
         #  mesurer avant d'optimiser.
         archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
+        #  ⚠️ REMPLI, et pas seulement déclaré. C'est le défaut SYMÉTRIQUE de
+        #  celui du 02/09 : un champ passé sans être au schéma est ignoré par
+        #  Pydantic ; un champ au schéma et jamais rempli prend sa valeur par
+        #  défaut — ici `False`, donc « aucun ticket n'est confidentiel ».
+        #  `test_schemas_champs` ne voit que le premier, et il le dit.
+        confidentiel=ticket.confidentiel,
         non_relancable=ticket.non_relancable,
         non_relancable_motif=ticket.non_relancable_motif,
         relance_count=compter_relances(session, ticket.id),

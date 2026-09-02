@@ -307,6 +307,9 @@ class Ticket(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None
+    #  Refermé sur son auteur et le CS (#710). Défaut `False`, comme
+    #  `Publication.confidentiel` — voir la migration 0166 pour le pourquoi.
+    confidentiel: bool = False
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
     saisi_pour: Optional[Utilisateur] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"})
