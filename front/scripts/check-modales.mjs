@@ -52,6 +52,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { cssGlobal } from './lib-css-global.mjs';
+import { FORMES_CADRES, modales } from './lib-cadres.mjs';
 import { emploieComposant } from './lib-lecture-source.mjs';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
@@ -157,48 +158,25 @@ function reglesRedefinies(contenu, classesGlobales) {
 }
 
 /**
- * Les ouvertures de modale d'un fichier, chacune réduite au début de son contenu.
+ * Les cadres du fichier — le contenu qui suit chaque balise ouvrante.
  *
- * 🔴 **Deux formes, et la seconde était invisible jusqu'au 31/08/2026.**
+ * 🔴 LA LECTURE DU BALISAGE A DÉMÉNAGÉ (02/09/2026) dans `lib-cadres.mjs`. Elle
+ * s'écrivait ici ET dans `check-formulaire-creation.mjs`, en deux versions qui
+ * avaient divergé : celle-ci ne comptait pas les imbrications (une modale de
+ * confirmation par-dessus un formulaire coupait le contenu de la première au
+ * milieu) et rendait la suite sans la balise.
  *
- * Un composant qui sert les deux gestes — créer dans une boîte, corriger dans une
- * fenêtre — ne peut pas écrire `<Modale>` : il écrirait alors son corps DEUX
- * fois, ce qui est la duplication qu'il existe pour supprimer. Il pose donc
- * `<svelte:component this={edition ? Modale : FormulaireCreation}>`.
+ * Le coût de la duplication était concret : apprendre une forme d'ouverture à
+ * l'une ne l'apprenait pas à l'autre. La forme dynamique a dû être ajoutée deux
+ * fois, à dix jours d'écart.
  *
- * Ce contrôle ne comptait que la première forme. Quatre composants employaient
- * déjà la seconde (`FormulaireActualite`, `FormulaireEvenement`,
- * `FormulaireFaq`…) : leurs modales échappaient au contrôle du titre, et le
- * plancher du cas zéro baissait à chaque factorisation — donnant à croire que
- * le repérage ne mordait plus alors que c'était le code qui s'améliorait.
- *
- * C'est la même leçon que `lint:html` et `lint:formulaires` ont apprise : **un
- * contrôle qui ne voit pas la factorisation mesure la forme, pas le fait.**
+ * ⚠️ Ce contrôle veut les TROIS formes (`FORMES_CADRES`), y compris
+ * `<CadreFormulaire>` : l'invariant qu'il garde — le titre ne se réécrit pas
+ * dans le contenu — vaut dès qu'un cadre reçoit `titre` en prop, ce que ce
+ * dernier fait dans les deux gestes. `check-formulaire-creation`, lui, n'en veut
+ * que deux ; la raison est écrite dans `lib-cadres.mjs`.
  */
-function ouverturesModale(contenu) {
-	const sorties = [];
-	//  `<Modale…>` d'un côté, `<svelte:component this={… Modale …}…>` de l'autre.
-	//  Le second n'est retenu que si `Modale` figure dans l'expression `this` :
-	//  un `<svelte:component>` qui rend autre chose n'est pas une modale.
-	for (const m of contenu.matchAll(/<Modale(?=[\s>])|<svelte:component(?=[\s>])/g)) {
-		if (m[0].startsWith('<svelte:component')) {
-			const jusquAuThis = contenu.slice(m.index, m.index + 300);
-			if (!/this=\{[^}]*\bModale\b/.test(jusquAuThis)) continue;
-		}
-		//  Fin de la balise ouvrante : le premier `>` hors accolade — un attribut
-		//  peut contenir `=>` ou un objet, que suivre naïvement couperait trop tôt.
-		let i = m.index + m[0].length;
-		let accolades = 0;
-		for (; i < contenu.length; i++) {
-			const c = contenu[i];
-			if (c === '{') accolades++;
-			else if (c === '}') accolades--;
-			else if (c === '>' && accolades === 0) break;
-		}
-		sorties.push(contenu.slice(i + 1, i + 400));
-	}
-	return sorties;
-}
+const ouverturesModale = (contenu) => modales(contenu, FORMES_CADRES).map((m) => m.suite);
 
 const compterModales = (contenu) => ouverturesModale(contenu).length;
 
