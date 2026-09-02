@@ -20,14 +20,11 @@
 -->
 <script lang="ts">
 	import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
-	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
-	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
-	import Reponses from '$lib/components/Reponses.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
-	import { safeHtml } from '$lib/sanitize';
-	import { fmtDateShort, isNouveau } from '$lib/date';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
-	import { STATUTS_IDEE, STATUT_IDEE_LABELS, STATUTS_IDEE_FILTRE } from '$lib/idees';
+	import ListeIdees from '$lib/components/ListeIdees.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
+	import { TITRE_ARCHIVES } from '$lib/archives';
+	import { STATUTS_IDEE_FILTRE } from '$lib/idees';
 
 	export let idees: any[] = [];
 	export let chargement = false;
@@ -48,6 +45,17 @@
 	export let onSignaler: (cibleType: string, cibleId: number) => void;
 	export let onRepondre: (id: number, contenu: string) => Promise<void> | void;
 	export let onSupprimerReponse: (id: number, reponseId: number) => void;
+
+	//  🔴 `idee.archivee` est calculé par le SERVEUR (`app/utils/archivage.py`,
+	//  règle du site, un seul délai). Refaire le calcul ici en ferait une seconde
+	//  règle, et les deux trancheraient différemment le jour où le délai change.
+	$: courantes = idees.filter((i) => !i.archivee);
+	$: archivees = idees.filter((i) => i.archivee);
+	//  ⚠️ Le message d'état vide ne cite PAS le délai. Il vaut 30 jours par
+	//  défaut mais se règle en administration : l'écrire ici en dur ferait mentir
+	//  l'écran au premier ajustement, et le transporter avec chaque idée serait
+	//  un champ par objet pour une valeur du site. Même formulation que les
+	//  annonces, qui ont tranché la question le 18/08.
 </script>
 
 {#if showForm}
@@ -72,155 +80,46 @@
 	titreVide="Aucune idée pour l'instant"
 	messageVide="Soyez le premier à proposer une idée !"
 >
-	{#each idees as idee (idee.id)}
-		<div class="idee-card card" id="idee-{idee.id}">
-			<button
-				class="vote-btn"
-				class:voted={idee.mon_vote}
-				on:click={() => onVoter(idee.id)}
-				title={idee.mon_vote ? 'Retirer mon vote' : 'Voter pour cette idée'}
-			>
-				<span class="vote-icon">{idee.mon_vote ? '❤️' : '\u{1F90D}'}</span>
-				<span class="vote-count">{idee.nb_votes}</span>
-			</button>
-			<div class="idee-body">
-				<!--  🔴 L'EN-TÊTE DU SITE (18/08/2026, signalé à l'écran : « l'état sur une
-				      2nde ligne après le titre »). Le titre et le badge d'état partageaient une
-				      ligne en `space-between`, seule carte du produit dans ce cas — les quatre
-				      autres passent par `EnteteCarte`.
-
-				      ⚠️ L'en-tête vit DANS `.idee-body`, pas au-dessus : le bouton de vote reste
-				      à gauche de l'ensemble, il n'est pas un tag. `basculable` reste faux — une
-				      idée ne se déplie pas, elle montre tout. -->
-				<EnteteCarte titre={idee.titre} date={fmtDateShort(idee.cree_le)}>
-					<svelte:fragment slot="titre-suffixe">
-						{#if isNouveau(idee.cree_le)}<span class="badge badge-gray idee-neuf">New</span>{/if}
-					</svelte:fragment>
-					<svelte:fragment slot="tags">
-						<span class="badge {statutClass(idee.statut)}"
-							>{STATUT_IDEE_LABELS[idee.statut] ?? idee.statut}</span
-						>
-						{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray"
-								>&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span
-							>{/if}
-					</svelte:fragment>
-				</EnteteCarte>
-				<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
-				{#if idee.auteur_id !== currentUserId}
-					<button
-						class="signaler-inline"
-						title="Signaler cette idée au conseil syndical"
-						aria-label="Signaler cette idée"
-						on:click={() => onSignaler('idee', idee.id)}>🚩</button
-					>
-				{/if}
-
-				<Reponses
-					reponses={idee.reponses ?? []}
-					{currentUserId}
-					isCS={estCS}
-					placeholder="Votre réponse à cette idée…"
-					onSubmit={(c) => onRepondre(idee.id, c)}
-					onDelete={(rid) => onSupprimerReponse(idee.id, rid)}
-					onReport={(rid) => onSignaler('reponse', rid)}
-				/>
-			</div>
-			{#if estCS}
-				<div class="idee-actions">
-					<!--  Workflow en PASTILLES, jamais un `<select>` nu (R3, #423). -->
-					<WorkflowPastilles
-						options={STATUTS_IDEE}
-						valeur={idee.statut}
-						on:choisir={(e) => onChangerStatut(idee.id, e.detail)}
-					/>
-					{#if estAdmin}
-						<button
-							class="btn-icon-danger"
-							title="Supprimer cette idée"
-							on:click={() => onSupprimer(idee.id)}>🗑️</button
-						>
-					{/if}
-				</div>
-			{/if}
+	{#if courantes.length === 0 && archivees.length > 0}
+		<div class="empty-state">
+			<h3>Aucune idée en cours</h3>
+			<p>Les idées décidées sont rangées dans les Archives, ci-dessous.</p>
 		</div>
-	{/each}
+	{/if}
+	<ListeIdees
+		idees={courantes}
+		{currentUserId}
+		{estCS}
+		{estAdmin}
+		{statutClass}
+		{onVoter}
+		{onChangerStatut}
+		{onSupprimer}
+		{onSignaler}
+		{onRepondre}
+		{onSupprimerReponse}
+	/>
+
+	<!--  Les Archives : même bandeau que les annonces et les actualités
+	      (`SectionRepliee`), et les MÊMES cartes — `ListeIdees`, appelé une
+	      seconde fois. Recopier le bloc sous la section repliée aurait créé deux
+	      rendus libres de diverger, ce qui est arrivé six fois au fil des
+	      tickets (#431). -->
+	{#if archivees.length}
+		<SectionRepliee titre={TITRE_ARCHIVES} compte={archivees.length}>
+			<ListeIdees
+				idees={archivees}
+				{currentUserId}
+				{estCS}
+				{estAdmin}
+				{statutClass}
+				{onVoter}
+				{onChangerStatut}
+				{onSupprimer}
+				{onSignaler}
+				{onRepondre}
+				{onSupprimerReponse}
+			/>
+		</SectionRepliee>
+	{/if}
 </EtatListe>
-
-<style>
-	/*  🔴 Ces règles VOYAGENT avec le balisage qu'elles habillent. Svelte scope
-	    les styles au composant qui rend l'élément : les laisser dans la page
-	    aurait livré les cartes NUES en production — c'est la panne des pastilles
-	    de la v2.67.11, refaite deux fois depuis.
-
-	    `.filters` n'est pas ici : elle vient d'`app.css`, partagée par plusieurs
-	    écrans. Trois orphelines sont restées derrière (`.idee-header`,
-	    `.idee-titre`, `.idee-actions select`) : leur balisage avait disparu avec
-	    `EnteteCarte` et `WorkflowPastilles`, elles n'habillaient plus rien.
-
-	    ⚠️ 29/08/2026 — ce commentaire était FAUX pour `.idee-actions` : son
-	    balisage n'avait pas disparu (l. 110), seule la règle `.idee-actions select`
-	    l'avait. La rangée sortait donc nue, les pastilles de workflow empilées
-	    au-dessus du bouton de suppression au lieu d'être alignées avec.
-
-	    🔴 Personne ne l'a vu parce que `lint:classes-nues` lisait les COMMENTAIRES
-	    comme des définitions : cette phrase-ci, qui cite `.idee-actions` pour
-	    expliquer son retrait, la faisait passer pour définie. Le contrôle était
-	    aveuglé par la documentation de son propre sujet. */
-	.idee-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-	.idee-card {
-		display: flex;
-		gap: 1rem;
-		align-items: flex-start;
-		padding: 1rem 1.25rem;
-		margin-bottom: 0.5rem;
-	}
-	.vote-btn {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.2rem;
-		background: none;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 0.5rem 0.6rem;
-		cursor: pointer;
-		transition: border-color 0.12s;
-		min-width: 3.5rem;
-	}
-	.vote-btn:hover {
-		border-color: var(--color-primary);
-	}
-	.vote-btn.voted {
-		border-color: var(--color-primary);
-		background: var(--color-primary-light);
-	}
-	.vote-icon {
-		font-size: 1.1rem;
-	}
-	.vote-count {
-		font-size: 0.85rem;
-		font-weight: 700;
-		color: var(--color-primary);
-	}
-	.idee-body {
-		flex: 1;
-	}
-	.idee-neuf {
-		margin-left: 0.5em;
-		font-size: 0.82em;
-		font-weight: 500;
-		vertical-align: middle;
-	}
-	.idee-desc {
-		font-size: 0.85rem;
-		color: var(--color-text-muted);
-		margin: 0.2rem 0 0.3rem;
-	}
-	/*  `:hover` vient de `styles/composants.css` — la redéfinir à l'identique
-	    ne servait à rien (29/08/2026). */
-</style>
