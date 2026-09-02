@@ -319,6 +319,41 @@ verdict_csp_directives() {
   [ -z "$manquantes" ] && echo OK || echo "MANQUANT:$manquantes"
 }
 
+# ── C25. Un script TIERS est-il servi dans la page publique ? ────────────────
+#
+# 🔴 Pourquoi (#701, 02/09/2026). Le relevé CSP a trouvé
+# `https://static.cloudflareinsights.com/beacon.min.js` chargé sur chaque page.
+# **Aucun `<script>` du dépôt ne le référence** : il est injecté par Cloudflare,
+# à l'arête, APRÈS notre origine. Le dépôt ne peut donc rien en dire, et aucun
+# contrôle de code ne pouvait le voir — seule une mesure de ce qu'un NAVIGATEUR
+# reçoit le montre.
+#
+# Décision de l'utilisateur : le couper (Cloudflare → Web Analytics). Ce contrôle
+# est ce qui rend la décision durable — sinon, réactiver l'option d'un clic
+# remettrait un tiers sur le chemin de chaque résident sans que rien ne le dise.
+#
+# ⚠️ Il mesure la page PUBLIQUE, depuis le nœud, avec un en-tête `Accept: text/html`
+# — Cloudflare n'injecte que dans du HTML rendu à un navigateur. Mesurer
+# `localhost` ne verrait jamais rien : l'injection a lieu en aval de l'origine.
+# C'est `standards/04` §14 : observer la chose, pas son enregistrement.
+#
+# ⚠️ Le motif porte sur des HÔTES, pas sur « toute URL absolue » : le site en sert
+# légitimement (les polices Google, déclarées dans la CSP). Un contrôle qui crie
+# sur du légitime finit désarmé.
+verdict_script_tiers() {
+  local html="$1" hotes="$2" role="${3:-actif}" trouves="" h
+  #  Le standby ne sert rien : rien à observer chez lui.
+  [ "$role" = "standby" ] && { echo SANS_OBJET; return; }
+  #  🔴 CAS ZÉRO. Une page vide n'est pas une page sans tiers : c'est une mesure
+  #  qui n'a pas eu lieu. Rendre OK ici, c'est le faux vert que `standards/04` §1
+  #  interdit — et celui que ce dépôt a déjà produit quatre fois.
+  [ -z "$html" ] && { echo INCONNU; return; }
+  for h in $hotes; do
+    printf '%s' "$html" | grep -qF "$h" && trouves="${trouves}${trouves:+,}${h}"
+  done
+  [ -z "$trouves" ] && echo OK || echo "TIERS:$trouves"
+}
+
 verdict_entetes_securite() {
   local recus="$1" attendus="$2" role="${3:-actif}" manquants="" nom
   #  Le standby ne sert rien : il n'y a pas d'en-tête à constater chez lui.
