@@ -1,5 +1,16 @@
 """Les tickets ÉCRITS AVANT l'ouverture restent fermés — #710, étape 2
 
+🔴 ANNULÉE PAR LA MIGRATION 0169 le 03/09/2026, quelques heures après son
+déploiement. Ce qui suit décrit un raisonnement que l'usage a réfuté :
+
+> « la confidentialité est un geste explicite » — l'utilisateur, 03/09/2026
+
+Un drapeau posé par une migration n'est le geste de personne, et un badge 🔒 sur
+100 % des tickets ne distingue plus rien. Cette migration reste dans la chaîne —
+on ne réécrit pas une migration appliquée — mais son effet est défait par 0169.
+Lire 0169 avant de croire ce qui suit.
+
+
 ## La décision, et pourquoi elle penche de ce côté
 
 L'ouverture en lecture arrive dans le même lot que cette migration : un résident
