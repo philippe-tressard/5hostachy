@@ -145,11 +145,13 @@
 	const basculer = (a: any) => (expandedAnnonce = expandedAnnonce === a.id ? null : a.id);
 	const basculerGestion = (a: any) => (gestionPhotos = gestionPhotos === a.id ? null : a.id);
 
+	//  🔴 La correction s'ouvre dans une FENÊTRE depuis le 02/09/2026 (#640).
+	//  Elle prenait la place du corps de la carte, ce qui obligeait à déplier
+	//  l'annonce pour que le clic sur ✏️ ait un effet visible — un couplage entre
+	//  deux gestes qui n'ont rien à voir. La fenêtre s'ouvre par-dessus : plus
+	//  besoin de toucher au dépliement.
 	function modifier(a: any) {
 		editAnnonce = editAnnonce?.id === a.id ? null : a;
-		//  Le formulaire prend la place du CORPS : sans déplier, le clic sur ✏️
-		//  n'aurait aucun effet visible.
-		if (editAnnonce) expandedAnnonce = a.id;
 	}
 
 	function appliquerModification(maj: any) {
@@ -212,7 +214,6 @@
 		liste={courantes}
 		expandedId={expandedAnnonce}
 		gestionPhotosId={gestionPhotos}
-		{editAnnonce}
 		{estCS}
 		{estAdmin}
 		{currentUserId}
@@ -226,8 +227,6 @@
 		onRepondre={repondre}
 		onSupprimerReponse={supprimerReponse}
 		{onSignaler}
-		onModifiee={appliquerModification}
-		onAnnulerEdition={() => (editAnnonce = null)}
 	/>
 
 	<!--  L'Historique : replié par défaut, même bandeau que celui des actualités
@@ -242,7 +241,6 @@
 				liste={archivees}
 				expandedId={expandedAnnonce}
 				gestionPhotosId={gestionPhotos}
-				{editAnnonce}
 				{estCS}
 				{estAdmin}
 				{currentUserId}
@@ -256,9 +254,23 @@
 				onRepondre={repondre}
 				onSupprimerReponse={supprimerReponse}
 				{onSignaler}
-				onModifiee={appliquerModification}
-				onAnnulerEdition={() => (editAnnonce = null)}
 			/>
 		</SectionRepliee>
 	{/if}
+{/if}
+
+<!--  La fenêtre de correction, montée UNE seule fois et hors des deux listes.
+      `ListeAnnonces` est rendu deux fois — annonces courantes et Archives —, et
+      l'y laisser en aurait monté deux exemplaires sur la même annonce.
+
+      `{#key}` remonte le composant d'une annonce à l'autre : ses champs sont
+      initialisés une seule fois, à la construction. -->
+{#if editAnnonce}
+	{#key editAnnonce.id}
+		<FormulaireAnnonce
+			annonce={editAnnonce}
+			on:modifie={(e) => appliquerModification(e.detail)}
+			on:annule={() => (editAnnonce = null)}
+		/>
+	{/key}
 {/if}

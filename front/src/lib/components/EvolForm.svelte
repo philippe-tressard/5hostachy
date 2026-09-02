@@ -39,25 +39,25 @@
   C'est aussi ce qui supprime la question « et si je veux commenter ET changer
   l'état ? » : c'était déjà possible, mais il fallait le deviner.
 
-  ## Les pièces jointes sont DEUX sections, jamais une (#433)
+  Les pièces jointes sont DEUX sections, jamais une (#433) : le mode unifié
+  (`separatePhotosAndDocs`) a disparu le 18/08/2026 avec son dernier appelant.
 
-  Le mode « pièces jointes unifiées » (`separatePhotosAndDocs = false`) fusionnait
-  les sections 7 et 8, ce que le cadre #430 interdit dans tous les rendus. Il a
-  disparu le 18/08/2026, quand son dernier appelant l'a quitté : *une variante
-  ajoutée pour accueillir un écart existant ne factorise pas, elle entérine*.
+  ⚠️ **Ce composant n'est pas gouverné par la déclaration d'entité**
+  (`$lib/entites/`) : il sert cinq écrans, et l'état `evolution` est déclaré sans
+  être confronté à son rendu (#463).
 
-  ⚠️ **Ce composant n'est toujours pas gouverné par la déclaration d'entité**
-  (`$lib/entites/`) : il sert quatre écrans, et l'état `evolution` est déclaré
-  sans être encore confronté à son rendu. Un écart connu subsiste — l'intitulé de
-  la description bascule « Commentaire » / « Contenu » selon le mode, là où R3
-  demande le MÊME libellé d'un formulaire à l'autre.
+  ✅ **L'écart d'intitulé est levé (02/09/2026)** — arbitré : *« oui, unifier à
+  commentaire »*. La description basculait « Commentaire » / « Contenu » selon le
+  mode, là où R3 demande le MÊME libellé d'un formulaire à l'autre.
 
-  ⚠️ **Pourquoi `SectionFormulaire` et non `ChampsCommuns`.** `ChampsCommuns` est
-  le point d'héritage des sections 4 à 9, et c'est lui qu'il faudrait utiliser —
-  son intitulé de description est figé à « Description » là où l'évolution parle
-  de « Commentaire ». Les sections sont donc composées ici avec
-  `SectionFormulaire`, dans le MÊME ordre et avec les MÊMES intitulés que
-  `ChampsCommuns` — toute évolution de l'un doit suivre dans l'autre.
+  ⚠️ **Pourquoi encore `SectionFormulaire` et non `ChampsCommuns`.** La raison
+  invoquée jusqu'ici — « son intitulé est figé à Description » — ne tient plus :
+  `ChampsCommuns` accepte un `descriptionTitre` depuis le même lot. Ce qui reste
+  est **R5** : le brancher changerait les CINQ écrans avant qu'on les ait
+  regardés. C'est le travail de #463, désormais débloqué.
+
+  En attendant, les sections sont composées ici dans le MÊME ordre et avec les
+  MÊMES intitulés que `ChampsCommuns` — toute évolution de l'un suit dans l'autre.
 
   Props clés :
     statutOptions      – états proposables, rendus en pastilles (section Workflow)
@@ -289,7 +289,9 @@
 	//  Le commentaire est REQUIS pour une évolution de type commentaire, facultatif
 	//  quand il accompagne un changement d'état. Pas de mention « (optionnel) » :
 	//  l'absence d'astérisque suffit (`ux-patterns` §9).
-	$: titreContenu = editMode ? 'Contenu' : 'Commentaire';
+	//  🔴 L'INTITULÉ NE BASCULE PLUS (voir l'en-tête). « Commentaire » et non
+	//  « Description » : c'est le mot d'un auteur sur un fil, pas le corps d'un objet.
+	const titreContenu = 'Commentaire';
 	//  🔴 LE GESTE EST DÉDUIT, il ne se déclare plus. Une pastille laissée sur
 	//  l'état courant ne change rien : l'entrée est un commentaire. En choisir une
 	//  autre en fait un changement d'état. C'est ce qui permet UN seul point

@@ -21,14 +21,18 @@
 -->
 <script lang="ts">
 	import AnnonceCard from './AnnonceCard.svelte';
-	import FormulaireAnnonce from './FormulaireAnnonce.svelte';
 
 	/** Les annonces à rendre, déjà filtrées et triées par l'appelant. */
 	export let liste: any[] = [];
-	/** L'annonce dépliée, et celle en cours de correction — tenues par l'onglet. */
+	/**  L'annonce dépliée — tenue par l'onglet (un lien profond la désigne).
+	 *
+	 *   ⚠️ `editAnnonce` N'EST PLUS ICI depuis le 02/09/2026 : la correction
+	 *   s'ouvre dans une FENÊTRE, posée une seule fois par l'onglet. Ce composant
+	 *   est rendu DEUX fois — les annonces courantes et les Archives — et y
+	 *   laisser le formulaire en aurait monté deux exemplaires, dont un invisible,
+	 *   sur la même annonce. */
 	export let expandedId: number | null = null;
 	export let gestionPhotosId: number | null = null;
-	export let editAnnonce: any = null;
 
 	export let estCS = false;
 	export let estAdmin = false;
@@ -44,9 +48,6 @@
 	export let onRepondre: (id: number, contenu: string) => Promise<void>;
 	export let onSupprimerReponse: (id: number, repId: number) => void;
 	export let onSignaler: (cibleType: string, cibleId: number) => void;
-	/** Une annonce vient d'être corrigée : l'onglet met sa liste à jour. */
-	export let onModifiee: (maj: any) => void;
-	export let onAnnulerEdition: () => void;
 </script>
 
 {#each liste as annonce (annonce.id)}
@@ -54,7 +55,6 @@
 		{annonce}
 		expanded={expandedId === annonce.id}
 		gestionOuverte={gestionPhotosId === annonce.id}
-		formulaireOuvert={editAnnonce?.id === annonce.id}
 		{estCS}
 		{estAdmin}
 		{currentUserId}
@@ -69,20 +69,5 @@
 		onSupprimerReponse={(rid) => onSupprimerReponse(annonce.id, rid)}
 		onSignalerAnnonce={() => onSignaler('annonce', annonce.id)}
 		onSignalerReponse={(rid) => onSignaler('reponse', rid)}
-	>
-		<!--  Le formulaire de CORRECTION prend la place du corps, il ne s'ajoute pas
-		      dessous : deux cartes empilées pour un seul objet, c'est ce que #425
-		      appelle « la carte dans la carte ».
-		      `{#key}` remonte le composant d'une annonce à l'autre — ses champs sont
-		      initialisés une seule fois, à la construction. -->
-		<svelte:fragment slot="formulaire">
-			{#key editAnnonce?.id}
-				<FormulaireAnnonce
-					annonce={editAnnonce}
-					on:modifie={(e) => onModifiee(e.detail)}
-					on:annule={onAnnulerEdition}
-				/>
-			{/key}
-		</svelte:fragment>
-	</AnnonceCard>
+	/>
 {/each}
