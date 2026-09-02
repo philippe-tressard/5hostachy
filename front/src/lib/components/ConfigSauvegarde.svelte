@@ -89,7 +89,9 @@
 			<label class="field champ-en-ligne">
 				<span>Heure d’exécution</span>
 				<select bind:value={heure_execution}>
-					{#each Array.from({ length: 24 }, (_, h) => h) as h}
+					<!--  La clé est l'heure elle-même : 0 à 23, distinctes par construction.
+					      Ce n'est pas l'index déguisé — `h` EST la valeur rendue. -->
+					{#each Array.from({ length: 24 }, (_, h) => h) as h (h)}
 						<option value={h}>{String(h).padStart(2, '0')} h 00</option>
 					{/each}
 				</select>

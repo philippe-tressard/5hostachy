@@ -55,7 +55,8 @@
 		{#if password.length > 0}
 			<div class="pwd-carte">
 				<div class="gauge">
-					{#each [0, 1, 2, 3] as i}
+					<!--  Liste littérale de quatre valeurs distinctes : elles sont leur propre clé. -->
+					{#each [0, 1, 2, 3] as i (i)}
 						<div class="gauge-bar" style={score > i ? `background:${jaugeCouleur}` : ''}></div>
 					{/each}
 					{#if gaugeLabel}

@@ -29,14 +29,8 @@
 		sourcesDesContrats,
 		sourcesDesEvenements,
 	} from '$lib/init-prestataires';
-	import {
-		perimetreLabel,
-		estPerimetreParDefaut,
-		perimetreDefautListe,
-		perimetreDuBatiment,
-		perimetreLabelUn,
-		noeudPerimetre,
-	} from '$lib/utils';
+	import { estPerimetreParDefaut, perimetreDefautListe, perimetreDuBatiment } from '$lib/utils';
+	import { perimetreTags } from '$lib/perimetres-pastilles';
 	import { perimetresStore } from '$lib/stores/perimetres';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 
@@ -466,24 +460,6 @@
 		evenements = await calApi.list();
 	}
 
-	//  Couleur DÉRIVÉE du code : la table de sept clés en dur laissait en gris tout
-	//  périmètre créé depuis l'administration, et tout bâtiment au-delà du quatrième.
-	const PALETTE_PERIMETRE = [
-		'#ef4444',
-		'#3b82f6',
-		'#22c55e',
-		'#f59e0b',
-		'#f97316',
-		'#8b5cf6',
-		'#ec4899',
-		'#0ea5e9',
-		'#14b8a6',
-	];
-	function couleurPerimetre(code: string): string {
-		let s = 0;
-		for (let i = 0; i < code.length; i++) s = (s * 31 + code.charCodeAt(i)) >>> 0;
-		return PALETTE_PERIMETRE[s % PALETTE_PERIMETRE.length];
-	}
 	// Exercice = année. Par défaut : année courante, sauf si < février → N-1
 	const defaultExercice = _now.getMonth() < 1 ? _now.getFullYear() - 1 : _now.getFullYear();
 	let kanbanExercice = defaultExercice;
@@ -586,19 +562,6 @@
 
 	//  `PERIMETRE_SHORT` a disparu : le libellé court est un CHAMP de l'arbre
 	//  (`libelle_court`), et c'est sa recopie ici qui l'avait fait diverger (#316).
-	function perimetreTags(p: string): { label: string; color: string }[] {
-		if (estPerimetreParDefaut(p))
-			return [{ label: '\u{1F3D8}️ ' + perimetreLabel(perimetreDefautListe()), color: '#6b7280' }];
-		return p
-			.split(',')
-			.map((s) => s.trim())
-			.filter(Boolean)
-			.map((s) => ({
-				label: noeudPerimetre(s)?.libelle_court ?? perimetreLabelUn(s),
-				color: couleurPerimetre(s),
-			}));
-	}
-
 	// Couleur dégradée par année : teinte HSL qui tourne de 52° par an à partir de 2024
 	function yearColor(year: number): string {
 		const hue = ((year - 2024) * 52 + 220) % 360;
@@ -873,7 +836,7 @@
 						>
 							<!-- Tags périmètre + année (uniquement si année ≠ exercice sélectionné) -->
 							<div class="kanban-card-tags">
-								{#each perimetreTags(ev.perimetre) as tag}
+								{#each perimetreTags(ev.perimetre) as tag (tag.code)}
 									<span class="kb-tag" style="background:{tag.color}">{tag.label}</span>
 								{/each}
 								<span

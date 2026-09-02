@@ -1461,7 +1461,8 @@
 		<div class="modal-body">
 			<div style="text-align:center;margin-bottom:1rem">
 				<div style="display:inline-flex;gap:.25rem;font-size:2rem;cursor:pointer">
-					{#each [1, 2, 3, 4, 5] as s}
+					<!--  Les cinq étoiles : littérales et distinctes, chacune sa propre clé. -->
+					{#each [1, 2, 3, 4, 5] as s (s)}
 						<button
 							type="button"
 							class="star-btn"
