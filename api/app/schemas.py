@@ -197,6 +197,8 @@ class TicketRead(BaseModel):
     non_relancable: bool = False
     non_relancable_motif: Optional[str] = None
     relance_count: int = 0
+    #: Règle du SITE (`utils/archivage`, #515) — l'écran en appliquait une autre.
+    archivee: bool = False
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
