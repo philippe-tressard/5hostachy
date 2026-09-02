@@ -206,7 +206,7 @@ def apercu_diffusion(
             apercu_whatsapp(
                 session,
                 user,
-                titre=f"\U0001f3ab {ticket.titre}",
+                titre=f"🎫 {ticket.titre}",
                 contenu=ticket.description,
                 urgent=ticket.categorie == "urgence",
                 perimetre=ticket.perimetre_cible,

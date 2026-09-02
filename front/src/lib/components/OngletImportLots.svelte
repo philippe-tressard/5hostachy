@@ -385,7 +385,7 @@
 												on:click={ajouterOccupant}>+ Ajouter</button
 											>
 										</div>
-										{#each editOccupants as occ, i}
+										{#each editOccupants as occ, i (occ)}
 											<div class="occupant-row">
 												<select bind:value={occ.type_lien} class="select-role">
 													{#each TYPES_LIEN as tl (tl.value)}

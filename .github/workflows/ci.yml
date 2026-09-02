@@ -1025,6 +1025,19 @@ jobs:
         working-directory: front
         run: npm run lint:each-key
 
+      - name: L'éditeur riche suit l'API de la version de Tiptap installée
+        # 🔴 La montée 2 → 3 (#724, correctif de GHSA-cp6q-959q-f8rh) a cassé deux
+        # choses qui ne se voient PAS à l'exécution : `setContent(html, false)`
+        # dont le second argument est devenu un objet, et `Underline` désormais
+        # INCLUS dans StarterKit — l'importer en plus le charge deux fois, Tiptap
+        # avertit dans la console, et une console n'est lue par personne.
+        #
+        # Le contrôle LIT les extensions du paquet installé ; il ne croit pas un
+        # guide de migration. La prochaine montée en déplacera d'autres, et il le
+        # dira. Il ne remplace pas la vérification à l'écran, qui reste due.
+        working-directory: front
+        run: npm run lint:editeur
+
       - name: Classe relayée à un composant, stylée en :global() borné
         #  🔴 Une classe passée en prop `classe=` est appliquée par le COMPOSANT,
         #  sur son balisage : elle y prend SON scope, pas celui de qui la passe.

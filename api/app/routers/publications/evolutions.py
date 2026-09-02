@@ -140,9 +140,9 @@ def add_evolution(
                 site_url = (wa_config.get('site_url') or '').rstrip('/')
                 nb = len(evols_precedents)
                 wa_contenu += (
-                    f"\n\n\U0001f4dc Cet échange comporte {nb} commentaire(s) précédent(s).\n"
+                    f"\n\n📜 Cet échange comporte {nb} commentaire(s) précédent(s).\n"
                     f"Consultez l'historique complet sur l'application :\n"
-                    f"\U0001f449 {site_url}/actualites#pub-{pub.id}"
+                    f"👉 {site_url}/actualites#pub-{pub.id}"
                 )
             background_tasks.add_task(
                 envoyer_whatsapp_avec_log,

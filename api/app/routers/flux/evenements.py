@@ -210,7 +210,7 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             cree_le=ev.cree_le,
             titre=ev.titre,
             detail=detail,
-            icon="\U0001f504" if etat else "\U0001f527",
+            icon="🔄" if etat else "🔧",
             badges=badges_marqueurs(ev) + [ev.type] + ([prest.nom] if prest else []),
             lien=lien_element("ev", ev.id),
             meta={

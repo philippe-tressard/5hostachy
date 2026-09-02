@@ -861,7 +861,7 @@
 							>
 							<td>
 								<div style="display:flex;gap:.25rem;flex-wrap:wrap">
-									{#each u.roles?.length ? u.roles : [u.role] as r}
+									{#each u.roles?.length ? u.roles : [u.role] as r (r)}
 										<span class="badge {roleBadgeClass[r] ?? 'badge-gray'}" style="font-size:.75rem"
 											>{roleLabels[r] ?? r}</span
 										>

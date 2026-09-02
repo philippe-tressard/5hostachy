@@ -96,14 +96,14 @@
 
 	<div class="event-body">
 		<strong class="event-titre">{titre}</strong>
-		{#each metas as meta}<span class="event-meta">{meta}</span>{/each}
+		{#each metas as meta (meta)}<span class="event-meta">{meta}</span>{/each}
 		{#if description}
 			<div class="event-desc rich-content clamp-5">{@html safeHtml(description)}</div>
 		{/if}
 	</div>
 
 	<div class="event-date">
-		{#each dates as ligne}
+		{#each dates as ligne (ligne)}
 			<div class:date-attenuee={ligne.attenue}>{ligne.texte}</div>
 		{/each}
 		{#if perimetreVisible}

@@ -11,6 +11,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateLong as formatDate } from '$lib/date';
 	import { revelerCible } from '$lib/deepLink';
+	import { telephonesDe } from '$lib/utils';
 
 	$: _pc = getPageConfig($configStore, 'annuaire', defautsDePage('annuaire'));
 	$: _siteNom = $siteNomStore;
@@ -254,8 +255,8 @@
 								<a href="mailto:{m.email}" class="contact-email">{m.email}</a>
 							{/if}
 							{#if m.telephone}
-								{#each m.telephone.split(',').filter((t) => t.trim()) as tel}
-									<a href="tel:{tel.trim()}" class="contact-email">&#x1F4DE; {tel.trim()}</a>
+								{#each telephonesDe(m.telephone) as tel (tel)}
+									<a href="tel:{tel}" class="contact-email">&#x1F4DE; {tel}</a>
 								{/each}
 							{/if}
 						</div>

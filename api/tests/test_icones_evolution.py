@@ -121,6 +121,6 @@ def test_le_commentaire_porte_la_bulle():
     précédent. Celui-ci fixe le fait constaté à l'écran : le bouton dit
     « 💬 Commenter », donc l'entrée qu'il produit porte 💬.
     """
-    bulle = "\U0001F4AC"
+    bulle = "💬"
     assert _icones_front().get("commentaire") == bulle
     assert _icones_api().get("commentaire") == bulle

@@ -101,7 +101,7 @@ def _prefixe_copro(reference: str) -> str:
     être retiré d'un formulaire, et la règle avec lui.
     """
     ref = (reference or "").strip()
-    return f"\U0001f3e2 {ref} — " if ref else ""
+    return f"🏢 {ref} — " if ref else ""
 
 
 def _contexte_rendu(session: Session, context: dict) -> tuple[dict, str, str, str]:

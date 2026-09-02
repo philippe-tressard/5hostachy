@@ -954,7 +954,7 @@
 					<p>{bailTab === 'actif' ? 'Aucun bail actif.' : 'Aucun bail terminé.'}</p>
 				</div>
 			{:else}
-				{#each grouped as group}
+				{#each grouped as group (group)}
 					{@const premierBail = group.bail}
 					<div class="card" style="margin-bottom:1.5rem;padding:1.25rem">
 						<!-- En-tête locataire -->

@@ -114,7 +114,7 @@ def _collecter_documents(ctx: ContexteFlux) -> list[FluxItem]:
             cree_le=d.publie_le,
             titre=d.titre,
             detail="Nouveau document",
-            icon="\U0001f4c4",
+            icon="📄",
             badges=[],
             lien=_lien_document(d, ctx.user, ctx.session),
             #  Un document EST un fichier : sa carte doit le signaler comme
@@ -147,7 +147,7 @@ def _collecter_diagnostics(ctx: ContexteFlux) -> list[FluxItem]:
             cree_le=dg.publie_le,
             titre=dg.titre,
             detail=strip_html(dg.synthese) if dg.synthese else "Nouveau rapport de diagnostic",
-            icon="\U0001f9ea",
+            icon="🧪",
             badges=["Diagnostic"],
             # Section « Diagnostics et Contrôles Réglementaires » de /residence
             lien=lien_element("diag", dg.id),

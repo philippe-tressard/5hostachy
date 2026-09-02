@@ -88,7 +88,7 @@
 				{#if reportPrestSynth.email}<p><strong>Email :</strong> {reportPrestSynth.email}</p>{/if}
 				{#if reportPrestSynth.contacts && reportPrestSynth.contacts.length > 0}
 					<p><strong>Contacts :</strong></p>
-					{#each reportPrestSynth.contacts as c}
+					{#each reportPrestSynth.contacts as c (c)}
 						<p style="margin-left:1rem">
 							📞 {c.telephone ?? '—'}{#if c.prenom || c.nom}
 								— {nomAffiche(c)}{/if}{#if c.fonction}
@@ -108,7 +108,7 @@
 				</p>
 				{#if reportPrestSynth.prochaines_visites && reportPrestSynth.prochaines_visites.length > 0}
 					<p><strong>Prochaines visites :</strong></p>
-					{#each reportPrestSynth.prochaines_visites as v}
+					{#each reportPrestSynth.prochaines_visites as v (v)}
 						<p style="margin-left:1rem">📅 {fmtDate(v.date)} — {v.contrat}</p>
 					{/each}
 				{/if}
@@ -120,7 +120,7 @@
 				<table class="report-table compact">
 					<thead><tr><th>Date</th><th>Note</th><th>Commentaire</th><th>Par</th></tr></thead>
 					<tbody>
-						{#each reportPrestSynth.notations as n}
+						{#each reportPrestSynth.notations as n (n)}
 							<tr>
 								<td>{fmtDate(n.cree_le)}</td>
 								<td style="color:#f59e0b">{starsDisplay(n.note)} {n.note}/5</td>
@@ -141,7 +141,7 @@
 						></thead
 					>
 					<tbody>
-						{#each reportPrestSynth.contrats as c}
+						{#each reportPrestSynth.contrats as c (c)}
 							<tr>
 								<td>{c.libelle}</td>
 								<td>{equipLabel(c.type_equipement)}</td>

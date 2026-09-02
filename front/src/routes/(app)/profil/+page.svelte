@@ -411,7 +411,7 @@
 
 			<dt>Rôle(s)</dt>
 			<dd style="display:flex;gap:0.35rem;flex-wrap:wrap">
-				{#each $currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident'] as r}
+				{#each $currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident'] as r (r)}
 					<span class="badge {roleBadge[r] ?? 'badge-gray'}">{roleLabels[r] ?? r}</span>
 				{/each}
 			</dd>

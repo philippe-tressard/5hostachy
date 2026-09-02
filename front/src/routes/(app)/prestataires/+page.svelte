@@ -29,7 +29,7 @@
 	} from '$lib/prestataires';
 	import { fmtDateShort, fmtDayMonth } from '$lib/date';
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
-	import { relire } from '$lib/utils';
+	import { relire, telephonesDe } from '$lib/utils';
 	import { trackTabView } from '$lib/telemetry';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
 
@@ -385,10 +385,6 @@
 
 	function fmtReleve(r: any) {
 		return fmtDayMonth(r.date_releve);
-	}
-
-	function splitTels(tel: string): string[] {
-		return tel.split(',').filter((t) => t.trim());
 	}
 
 	function contratsForPrest(prestId: number): any[] {
@@ -1041,7 +1037,7 @@
 						<div style="font-size:.85rem;font-weight:600;margin-bottom:.35rem">
 							Contact{prestContacts.length > 1 ? 's' : ''}
 						</div>
-						{#each prestContacts as _contact, i}
+						{#each prestContacts as _contact, i (_contact)}
 							<div
 								style="border:1px solid var(--color-border);border-radius:6px;padding:.6rem;margin-bottom:.5rem;background:var(--color-bg)"
 							>
@@ -1161,7 +1157,7 @@
 						{#if !compactPrests || expanded}
 							<div class="prest-contacts">
 								{#if p.contacts && p.contacts.length > 0}
-									{#each p.contacts as c}
+									{#each p.contacts as c (c.id ?? c)}
 										<span class="prest-contact">
 											📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
 													c,
@@ -1169,7 +1165,7 @@
 										</span>
 									{/each}
 								{:else if p.telephone}
-									{#each splitTels(p.telephone) as tel}
+									{#each telephonesDe(p.telephone) as tel (tel)}
 										<span class="prest-contact">📞 {tel.trim()}</span>
 									{/each}
 								{/if}
@@ -1207,7 +1203,7 @@
 								{#if p.telephone}
 									<div>
 										<span class="detail-label">Téléphone</span>
-										{#each splitTels(p.telephone) as tel}
+										{#each telephonesDe(p.telephone) as tel (tel)}
 											<span style="display:block">📞 {tel.trim()}</span>
 										{/each}
 									</div>

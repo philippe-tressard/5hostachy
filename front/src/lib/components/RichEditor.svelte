@@ -2,7 +2,11 @@
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import { Editor } from '@tiptap/core';
 	import StarterKit from '@tiptap/starter-kit';
-	import Underline from '@tiptap/extension-underline';
+	//  🔴 `Underline` N'EST PLUS IMPORTÉ (Tiptap 3, 03/09/2026) : StarterKit 3
+	//  l'inclut. Le garder aurait chargé l'extension DEUX fois — Tiptap avertit à
+	//  l'exécution et n'en garde qu'une, mais un avertissement de console n'est lu
+	//  par personne. Vérifié en listant les extensions du StarterKit installé,
+	//  jamais supposé d'après le guide de migration.
 	import Placeholder from '@tiptap/extension-placeholder';
 
 	export let value: string = '';
@@ -32,7 +36,7 @@
 	onMount(() => {
 		editor = new Editor({
 			element: editorEl,
-			extensions: [StarterKit, Underline, Placeholder.configure({ placeholder })],
+			extensions: [StarterKit, Placeholder.configure({ placeholder })],
 			// Tiptap remplace l'élément monté : les attributs doivent être posés sur la
 			// zone éditable qu'il génère, sinon ils désignent un nœud disparu.
 			editorProps: {
@@ -56,7 +60,7 @@
 
 	// Sync external value change (e.g. when form is reset)
 	$: if (editor && value !== editor.getHTML()) {
-		editor.commands.setContent(value ?? '', false);
+		editor.commands.setContent(value ?? '', { emitUpdate: false });
 	}
 </script>
 

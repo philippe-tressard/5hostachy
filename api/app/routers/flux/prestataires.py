@@ -46,7 +46,7 @@ def _collecter_fiches(ctx: ContexteFlux) -> list[FluxItem]:
             cree_le=pr.cree_le,
             titre=pr.nom,
             detail=pr.specialite or "Nouveau prestataire",
-            icon="\U0001f6e0️",
+            icon="🛠️",
             badges=[pr.specialite] if pr.specialite else [],
             lien=lien_element("presta", pr.id),
             meta={"prestataire_id": pr.id, "specialite": pr.specialite},

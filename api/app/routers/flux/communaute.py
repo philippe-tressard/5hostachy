@@ -18,7 +18,7 @@ from app.utils.visibility import sondage_accessible, sondage_clos
 from .commun import ContexteFlux, auteur_nom, strip_html
 from .schemas import FluxItem
 
-_ANN_ICONS = {"vente": "\U0001f3f7️", "don": "\U0001f381", "recherche": "\U0001f50d"}
+_ANN_ICONS = {"vente": "🏷️", "don": "🎁", "recherche": "🔍"}
 _ANN_TYPE_LABELS = {"vente": "Vente", "don": "Don", "recherche": "Recherche"}
 _ANN_STATUT_BADGES = {"disponible": "Disponible", "reserve": "Réservé", "vendu": "Vendu"}
 _IDEE_STATUT_BADGES = {
@@ -139,7 +139,7 @@ def _collecter_annonces(ctx: ContexteFlux) -> list[FluxItem]:
             titre=a.titre,
             detail=" · ".join(detail_parts),
             badges=[_ANN_STATUT_BADGES.get(a.statut, a.statut)],
-            icon=_ANN_ICONS.get(a.type_annonce, "\U0001f3f7️"),
+            icon=_ANN_ICONS.get(a.type_annonce, "🏷️"),
             lien=lien_element("annonce", a.id),
             meta={
                 "annonce_id": a.id,
@@ -176,7 +176,7 @@ def _collecter_idees(ctx: ContexteFlux) -> list[FluxItem]:
             titre=idee.titre,
             detail=_pluriel_votes(nb_votes),
             badges=[_IDEE_STATUT_BADGES.get(idee.statut, idee.statut)],
-            icon="\U0001f4a1",
+            icon="💡",
             lien=lien_element("idee", idee.id),
             meta={
                 "idee_id": idee.id,
