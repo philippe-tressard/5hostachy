@@ -47,7 +47,6 @@ SOURCE = RACINE / "utils" / "archivage.py"
 #: une section Archives — donc à proposer sur un écran, faire constater, puis
 #: généraliser (R5 du cadre #430). Suivi en **#515**.
 NON_BRANCHEES = {
-    "sondage": "#515 — idem pour les sondages clos.",
     "evenement": "#515 — le calendrier a ses propres Archives, à rapprocher de la règle du site.",
     "annonce_hall": "#515 — les affiches envoyées restent en liste.",
 }

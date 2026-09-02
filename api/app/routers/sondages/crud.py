@@ -17,6 +17,7 @@ from app.models.core import (
     Utilisateur, VoteSondage,
 )
 from app.schemas import liste_depuis_json
+from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.reponses import enrich_reponse, tri_reponses
 from app.utils.visibility import resultats_sondage_visibles, sondage_accessible, sondage_clos
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
@@ -52,6 +53,7 @@ def list_sondages(
     #  `ContexteFlux.now` — c'est d'ailleurs pourquoi `sondage_clos` prend
     #  `maintenant` en paramètre au lieu de le lire lui-même.
     maintenant = datetime.utcnow()
+    seuil_jours = seuil_archivage_jours(session)
     result = []
     for s in accessible:
         d = SondageRead.model_validate(s)
@@ -59,6 +61,10 @@ def list_sondages(
         #  La liste ne laisse plus l'écran conclure : c'est la MÊME fonction que
         #  la fiche, le vote, la modification et le fil (#468).
         d.cloture = sondage_clos(s, maintenant)
+        #  Idem pour l'archivage : la règle du site, transportée. Le seuil est
+        #  lu UNE fois hors de la boucle — deux sondages du même appel ne
+        #  peuvent pas être tranchés sur des seuils différents.
+        d.archivee = est_archivable("sondage", s, seuil_jours=seuil_jours)
         result.append(d)
     return result
 

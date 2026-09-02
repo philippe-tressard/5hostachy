@@ -67,6 +67,11 @@ class SondageRead(BaseModel):
     #  comparant à l'heure LOCALE du navigateur quand le serveur date en UTC
     #  (#468). Un écran ne tranche pas ce genre de question (`ux-patterns` §16).
     cloture: bool = False
+    #: Règle du SITE (`utils/archivage`, #515) : 30 jours après la date de
+    #: clôture. Un sondage clos reste donc un mois sous les yeux avant de
+    #: rejoindre les Archives — c'est le délai unique, réglable en
+    #: administration, et non une valeur propre à cet écran.
+    archivee: bool = False
 
     class Config:
         from_attributes = True

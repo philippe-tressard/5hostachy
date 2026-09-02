@@ -18,12 +18,12 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { messageErreur } from '$lib/erreurs';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import ListeSondages from '$lib/components/ListeSondages.svelte';
+	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
+	import { TITRE_ARCHIVES } from '$lib/archives';
 	import OngletIdees from '$lib/components/OngletIdees.svelte';
-	import { fmtDateShort, isNouveau } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
-	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
-	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 
 	$: _pc = getPageConfig($configStore, 'communaute', defautsDePage('communaute'));
 	$: _siteNom = $siteNomStore;
@@ -47,6 +47,14 @@
 	// (périmètre, destinataires), les options et les canaux y sont désormais, avec
 	// le reste des formulaires du site. Ne restent ici que la LISTE et ses actions.
 	let sondages: any[] = [];
+
+	//  🔴 `s.archivee` est calculé par le SERVEUR (`app/utils/archivage.py`, #515) :
+	//  30 jours après la date de clôture, délai réglable en administration. Le
+	//  recalculer ici en ferait une seconde règle — c'est exactement ce que #468 a
+	//  retiré pour `cloture`, que la liste comparait à l'heure LOCALE du navigateur
+	//  quand le serveur date en UTC.
+	$: courants = sondages.filter((s) => !s.archivee);
+	$: archives = sondages.filter((s) => s.archivee);
 	let sondagesLoading = true;
 	let showFormSondage = false;
 
@@ -406,75 +414,22 @@
 			titreVide="Aucun sondage"
 			messageVide="Les sondages du conseil syndical apparaîtront ici."
 		>
-			{#each sondages as s (s.id)}
-				<a href="/sondages/{s.id}" class="sondage-card card">
-					<div class="sondage-body">
-						<strong class="sondage-question"
-							>{s.question}
-							{#if isNouveau(s.cree_le)}<span
-									class="badge badge-gray"
-									style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle"
-									>New</span
-								>{/if}
-						</strong>
-						{#if s.description}<div class="sondage-desc rich-content clamp-5">
-								{@html safeHtml(s.description)}
-							</div>{/if}
-						<small style="color:var(--color-text-muted)">
-							{fmtDateShort(s.cree_le)}
-							{#if s.cloture_le}
-								· {s.cloture ? '🔒 Clôturé' : `Clôture le ${fmtDateShort(s.cloture_le)}`}
-							{/if}
-							·
-							<span class="sondage-votants"
-								>{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span
-							>
-						</small>
-						<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre logique
-      (jamais 📍, qui est réservé au lieu physique), et rien du tout quand le
-      ciblage est le défaut — le redire n'apprend rien. Les badges rendaient
-      jusqu'ici les valeurs BRUTES de la base (« copropriétaire_résident »,
-      « Bât. 3 » reconstitué à la main), faute de traduction disponible. -->
-						{#if !estPerimetreParDefaut(s.perimetre_cible) || !concerneTousLesResidents(s.public_cible)}
-							<div class="sondage-ciblage">
-								{#if !estPerimetreParDefaut(s.perimetre_cible)}
-									<span class="badge badge-blue sondage-badge"
-										>&#x1F539; {perimetreLabel(s.perimetre_cible)}</span
-									>
-								{/if}
-								{#if !concerneTousLesResidents(s.public_cible)}
-									<span class="badge badge-orange sondage-badge"
-										>{destinatairesLabel(s.public_cible)}</span
-									>
-								{/if}
-							</div>
-						{/if}
-					</div>
-					<div class="sondage-actions">
-						{#if s.cloture}
-							<span class="badge badge-gray">Clôturé</span>
-						{:else}
-							<span class="badge badge-green">Ouvert</span>
-						{/if}
-						{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
-							<button
-								class="btn-icon-warn"
-								aria-label="Stopper ce sondage"
-								title="Stopper"
-								on:click={(e) => arreterSondage(s, e)}>⏹️</button
-							>
-						{/if}
-						{#if $currentUser?.id === s.auteur_id || $isAdmin}
-							<button
-								class="btn-icon-danger"
-								aria-label="Supprimer"
-								title="Supprimer"
-								on:click={(e) => supprimerSondage(s, e)}>&#x1F5D1;️</button
-							>
-						{/if}
-					</div>
-				</a>
-			{/each}
+			{#if courants.length === 0 && archives.length > 0}
+				<div class="empty-state">
+					<h3>Aucun sondage en cours</h3>
+					<p>Les sondages clos sont rangés dans les Archives, ci-dessous.</p>
+				</div>
+			{/if}
+			<ListeSondages sondages={courants} {arreterSondage} {supprimerSondage} />
+
+			<!--  Les Archives : même bandeau que les annonces, les idées et les
+			      actualités (`SectionRepliee`), et les MÊMES cartes — `ListeSondages`,
+			      appelé une seconde fois. -->
+			{#if archives.length}
+				<SectionRepliee titre={TITRE_ARCHIVES} compte={archives.length}>
+					<ListeSondages sondages={archives} {arreterSondage} {supprimerSondage} />
+				</SectionRepliee>
+			{/if}
 		</EtatListe>
 	{/if}
 
@@ -522,49 +477,6 @@
     est propre a cet ecran (#607, 28/08/2026). */
 	.tabs {
 		padding-bottom: 0.1rem;
-	}
-	.sondage-card {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		padding: 1rem 1.25rem;
-		margin-bottom: 0.5rem;
-		text-decoration: none;
-		color: var(--color-text);
-		transition: border-color 0.12s;
-	}
-	.sondage-card:hover {
-		border-color: var(--color-primary);
-	}
-	.sondage-actions {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 0.35rem;
-		flex-shrink: 0;
-	}
-	.sondage-question {
-		font-size: 0.95rem;
-		font-weight: 600;
-		display: block;
-		margin-bottom: 0.2rem;
-	}
-	.sondage-desc {
-		font-size: 0.85rem;
-		color: var(--color-text-muted);
-		margin: 0.2rem 0 0.3rem;
-	}
-	.sondage-votants {
-		font-weight: 600;
-	}
-	.sondage-ciblage {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-		margin-top: 0.35rem;
-	}
-	.sondage-badge {
-		font-size: 0.7rem;
 	}
 	/* Les styles des réponses sont dans le composant partagé Reponses.svelte */
 	/* Signalement + modération */
