@@ -340,14 +340,11 @@
 		line-height: 1.5;
 	}
 
+	/*  Seule divergence conservée, avec son motif : le libellé des conditions
+	    tient sur plusieurs lignes, et la case doit s'aligner sur la PREMIÈRE,
+	    pas se centrer sur le bloc. Le reste vient de la charte. */
 	.checkbox-field {
-		display: flex;
 		align-items: flex-start;
-		gap: 0.5rem;
-		font-size: 0.85rem;
-		margin-top: 0.4rem;
-		line-height: 1.4;
-		cursor: pointer;
 	}
 
 	.auth-links {

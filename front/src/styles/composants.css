@@ -1489,3 +1489,12 @@ label.field {
 .kb-mobile-lien:hover {
 	background: var(--color-primary-light);
 }
+
+/*  Case + libellé. Remontée le 02/09/2026 — cf. `OptionsPublication.svelte`. */
+.checkbox-field {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	cursor: pointer;
+}

@@ -88,6 +88,14 @@ export interface Ticket {
 	     plus : deux règles pour la même notion trancheraient différemment, et un
 	     ticket apparaîtrait dans la liste sans être dans les Archives. */
 	archivee?: boolean;
+	/** 🔒 Réservé à l'auteur, à la personne concernée et au conseil syndical.
+	     Le contrepoids de l'ouverture en lecture par périmètre (#710).
+
+	     ⚠️ Même mot que `Publication.confidentiel`, décision DIFFÉRENTE : là-bas
+	     il restreint au périmètre visé, ici il referme sans le regarder — sinon
+	     il ne mordrait pas sur un ticket à portée « résidence », le cas le plus
+	     fréquent. */
+	confidentiel?: boolean;
 }
 
 export interface RelanceSyndicResponse {

@@ -66,13 +66,7 @@
 	.form-actions {
 		flex-wrap: wrap;
 	}
-	.checkbox-field {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-		cursor: pointer;
-	}
+
 	.checkbox-field input {
 		margin: 0;
 		flex-shrink: 0;

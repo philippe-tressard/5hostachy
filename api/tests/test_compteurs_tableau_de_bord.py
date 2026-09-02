@@ -174,23 +174,47 @@ def test_une_echeance_passee_clot_le_sondage_pour_le_compteur(base):
 # ── Tickets — (a) la portée du décompte ──────────────────────────────────────
 
 def test_le_compteur_tickets_egale_ce_que_l_ecran_montre(base):
-    """La pastille compte les tickets ouverts que l'utilisateur peut ouvrir."""
-    cs = _utilisateur(base, "cs@test.fr", "conseil_syndical")
-    resident = _utilisateur(base, "resident@test.fr", "résident")
-    autre = _utilisateur(base, "autre@test.fr", "résident")
+    """La pastille compte les tickets ouverts que l'utilisateur peut ouvrir.
 
-    for i, auteur in enumerate((resident, autre, autre)):
-        base.add(Ticket(numero=f"T{i}", titre="T", description="D", auteur_id=auteur.id))
+    ⚠️ Les valeurs attendues ont changé le 02/09/2026 avec l'ouverture par
+    périmètre (#710) — et c'est le TEST qui avait tort, pas la règle : il
+    encodait « chacun ne voit que les siens », qui n'est plus la règle du site.
+
+    Ce que l'invariant vérifie n'a pas bougé : **la pastille et l'écran comptent
+    la même chose**. Un décompte plus large que la liste annonce des tickets
+    qu'on ne trouve pas ; plus étroit, il en cache.
+
+    Les tickets portent ici des périmètres DIFFÉRENTS, sans quoi l'ouverture les
+    rendrait tous visibles de tout le monde et le test ne distinguerait plus rien
+    — il resterait vert en ayant cessé de mesurer.
+    """
+    bat1, bat2 = _batiments(base)[:2]
+    cs = _utilisateur(base, "cs@test.fr", "conseil_syndical")
+    resident = _utilisateur(base, "resident@test.fr", "résident", batiment_id=bat1)
+    autre = _utilisateur(base, "autre@test.fr", "résident", batiment_id=bat2)
+
+    #  (auteur, périmètre) — qui le voit se lit dans la colonne de droite.
+    lot = [
+        (resident, f'["bat:{bat1}"]'),   # resident (auteur+bât.), cs
+        (autre, f'["bat:{bat2}"]'),      # autre (auteur+bât.), cs
+        (autre, '["résidence"]'),        # tout le monde : portée globale
+    ]
+    for i, (auteur, perimetre) in enumerate(lot):
+        base.add(Ticket(
+            numero=f"T{i}", titre="T", description="D",
+            auteur_id=auteur.id, perimetre_cible=perimetre,
+        ))
     base.commit()
 
-    for user, attendu in ((resident, 1), (autre, 2), (cs, 3)):
+    for user, attendu in ((resident, 2), (autre, 2), (cs, 3)):
         annonce = calculer(_contexte(base, user)).tickets_ouverts
         ouverts_a_l_ecran = [
             t for t in list_tickets(session=base, user=user)
             if t.statut in ("ouvert", "en_cours")
         ]
         assert annonce == len(ouverts_a_l_ecran) == attendu, (
-            f"{user.email} : pastille {annonce}, écran {len(ouverts_a_l_ecran)}"
+            f"{user.email} : pastille {annonce}, écran {len(ouverts_a_l_ecran)}, "
+            f"attendu {attendu}"
         )
 
 

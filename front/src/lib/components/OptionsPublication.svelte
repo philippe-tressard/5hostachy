@@ -168,15 +168,15 @@
 		flex-wrap: wrap;
 		margin-bottom: 1rem;
 	}
-	/*  `:global` parce que `.checkbox-field` est une classe partagée du thème —
-	    même raison que dans `CanauxNotification.svelte`. */
-	.cases :global(.checkbox-field) {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.875rem;
-		cursor: pointer;
-	}
+	/*  🔴 `.checkbox-field` A DÉMÉNAGÉ dans `styles/composants.css` (02/09/2026),
+	    et c'est une correction. La règle qui vivait ici ne s'appliquait qu'à
+	    l'intérieur de `.cases` — or HUIT fichiers emploient la classe (profil,
+	    inscription, notifications, diffusion, formulaire de ticket…), et partout
+	    ailleurs la case se rendait NUE, sans alignement ni curseur.
+	    ⚠️ Le commentaire qui était ici affirmait que `.checkbox-field` était
+	    « une classe partagée du thème ». C'était faux, et jamais vérifié : il
+	    décrivait ce qu'on croyait avoir fait. `lint:classes-nues` l'a vu au 9e
+	    usage, pas avant. */
 	/*  Une case grisée doit se VOIR grisée, pas seulement refuser le clic. */
 	.cases .desactivee {
 		opacity: 0.5;
