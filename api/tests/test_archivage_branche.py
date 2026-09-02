@@ -48,7 +48,6 @@ SOURCE = RACINE / "utils" / "archivage.py"
 #: généraliser (R5 du cadre #430). Suivi en **#515**.
 NON_BRANCHEES = {
     "evenement": "#515 — le calendrier a ses propres Archives, à rapprocher de la règle du site.",
-    "annonce_hall": "#515 — les affiches envoyées restent en liste.",
 }
 
 
