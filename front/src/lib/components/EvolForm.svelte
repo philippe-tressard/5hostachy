@@ -50,14 +50,14 @@
   commentaire »*. La description basculait « Commentaire » / « Contenu » selon le
   mode, là où R3 demande le MÊME libellé d'un formulaire à l'autre.
 
-  ⚠️ **Pourquoi encore `SectionFormulaire` et non `ChampsCommuns`.** La raison
-  invoquée jusqu'ici — « son intitulé est figé à Description » — ne tient plus :
-  `ChampsCommuns` accepte un `descriptionTitre` depuis le même lot. Ce qui reste
-  est **R5** : le brancher changerait les CINQ écrans avant qu'on les ait
-  regardés. C'est le travail de #463, désormais débloqué.
+  ✅ **`SectionFormulaire` n'est plus employé ici** (02/09/2026, #463) : les
+  sections 4, 6, 7-8 et 9 passent par les composants du cadre. L'ordre et les
+  intitulés ne sont plus tenus par recopie. La raison invoquée jusqu'ici —
+  « l'intitulé de `ChampsCommuns` est figé à Description » — était tombée le
+  matin même.
 
-  En attendant, les sections sont composées ici dans le MÊME ordre et avec les
-  MÊMES intitulés que `ChampsCommuns` — toute évolution de l'un suit dans l'autre.
+  ⏭ Reste de #463 : brancher les sections sur `sectionPresente(…, 'evolution')`,
+  sur UN écran d'abord (R5 — ce composant en sert cinq).
 
   Props clés :
     statutOptions      – états proposables, rendus en pastilles (section Workflow)
@@ -81,10 +81,9 @@
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
-	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
+	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import type { ApercuDiffusion } from '$lib/api';
 	import { estImage } from '$lib/fichiers';
 	import { perimetreEntree, perimetreHerite } from '$lib/perimetres';
@@ -401,20 +400,22 @@
 	     Section à UN champ : le titre EST le libellé, le sélecteur se tait
 	     (`ux-patterns` §9 septies). Les pastilles ne sont pas labelables, d'où le
 	     couple `idTitre` / `aria-labelledby`, comme dans `ChampsCommuns`. -->
+	<!--  🔴 HÉRITÉ de `ChampsCommuns`, plus recopié (#463) : ce bloc y était
+	      À L'IDENTIQUE. Trois adaptations seulement, portées par le point
+	      d'héritage — non requis, badge de l'objet porteur, aide en slot. -->
 	{#if sectionPerimetre}
-		<SectionFormulaire
-			titre="Périmètre"
-			badge={libellePerimetreActuel}
-			idTitre="{idPrefixe}-perimetre-titre"
+		<ChampsCommuns
+			{idPrefixe}
+			avecPerimetre
+			bind:perimetre
+			perimetreRequis={false}
+			perimetreBadge={libellePerimetreActuel}
 		>
-			<div class="field champ-large" role="group" aria-labelledby="{idPrefixe}-perimetre-titre">
-				<PerimetrePicker bind:value={perimetre} titre="" />
-				<p class="aide-bloc">
-					À renseigner seulement pour <strong>préciser</strong> le périmètre — par exemple quand on a
-					trouvé d'où vient la fuite. Laissé vide, le périmètre du ticket ne bouge pas.
-				</p>
-			</div>
-		</SectionFormulaire>
+			<p class="aide-bloc" slot="aidePerimetre">
+				À renseigner seulement pour <strong>préciser</strong> le périmètre — par exemple quand on a trouvé
+				d'où vient la fuite. Laissé vide, le périmètre du ticket ne bouge pas.
+			</p>
+		</ChampsCommuns>
 	{/if}
 
 	<!-- ── 6. Description ───────────────────────────────────────────────────
