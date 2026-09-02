@@ -85,17 +85,17 @@ export const FORME_DYNAMIQUE = {
 	//  aussi, légitimement, à tout autre choix de composant.
 	//
 	//  ⚠️ **Une inclusion de chaîne, et surtout pas une expression régulière
-	//  avec ``.** Ce filtre en a porté une, et les deux `` se sont écrits
+	//  avec `\b`.** Ce filtre en a porté une, et les deux `\b` se sont écrits
 	//  dans le fichier en **caractères de recul U+0008**, invisibles à la
 	//  relecture. Le motif ne correspondait alors à rien : `filtre` rendait
 	//  toujours `false`, aucune modale dynamique n'était vue, et le contrôle
 	//  affichait un ✓.
 	//
 	//  🔴 C'est EXACTEMENT le défaut trouvé le 20/08/2026 dans
-	//  `check-workflow-envoye.mjs` (#549) — un `` au milieu d'un motif qui
+	//  `check-workflow-envoye.mjs` (#549) — un `\b` au milieu d'un motif qui
 	//  ne retirait donc rien — reproduit dix jours plus tard, dans un autre
 	//  garde-fou, par la même cause : un motif écrit depuis un interpréteur de
-	//  commandes, où `` est **un** caractère et non deux.
+	//  commandes, où `\b` est **un** caractère et non deux.
 	//
 	//  ⚠️ ET LE GARDE-FOU EXISTAIT. `no-control-regex` d'ESLint le nomme, et il
 	//  est actif sur `scripts/**`. Il n'a rien dit parce qu'il n'a pas été LANCÉ
