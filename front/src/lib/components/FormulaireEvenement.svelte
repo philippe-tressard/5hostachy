@@ -14,8 +14,7 @@
   masqué par la modale ; le passage à la boîte dans la page l'a révélé.
 -->
 <script lang="ts">
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import AlerteEpinglage from '$lib/components/AlerteEpinglage.svelte';
@@ -133,21 +132,16 @@
 </script>
 
 <!--
-	Un seul montage du formulaire, deux cadres possibles. `svelte:component` est ce
-	qui permet d'écrire le corps UNE fois : deux branches `{#if}` en auraient fait
-	deux copies de deux cents lignes.
+	Un seul montage du formulaire, deux cadres possibles — et le CHOIX du cadre
+	n'est plus écrit ici. `CadreFormulaire` le porte pour les six formulaires qui
+	en ont besoin : il s'y écrivait cinq fois, et les copies avaient commencé à
+	diverger (02/09/2026).
 
-	`edition` n'est pas décoratif — il déclare le geste (exigé par
-	`lint:formulaires`) et implique `fermetureAuFond={false}` : un clic à côté
-	n'efface pas la saisie. Il n'est passé qu'en édition, pour que la boîte de
-	création ne reçoive pas une propriété qu'elle ne connaît pas.
+	Ce qui reste ici : `edition`, qui déclare le GESTE. Ce n'est pas décoratif —
+	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
+	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<svelte:component
-	this={modeEdition ? Modale : FormulaireCreation}
-	titre={titreCadre}
-	{...modeEdition ? { edition: true } : {}}
-	on:fermer={() => dispatch('annule')}
->
+<CadreFormulaire edition={modeEdition} titre={titreCadre} on:fermer={() => dispatch('annule')}>
 	<div class:modal-body={modeEdition}>
 		<form on:submit|preventDefault={soumettre}>
 			<!--  1. Titre. -->
@@ -323,7 +317,7 @@
 			</div>
 		</form>
 	</div>
-</svelte:component>
+</CadreFormulaire>
 
 <style>
 	/*  Mêmes règles, même raison que dans `FormulairePrestation` : le balisage

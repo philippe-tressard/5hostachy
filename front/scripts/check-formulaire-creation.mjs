@@ -52,11 +52,14 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
+import { modales } from './lib-cadres.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const ROUTES = join(RACINE, 'routes');
 const COMPOSANTS = join(RACINE, 'lib', 'components');
 const COMPOSANT = join(COMPOSANTS, 'FormulaireCreation.svelte');
+const CADRE = join(COMPOSANTS, 'CadreFormulaire.svelte');
+const CADRE_REL = 'lib/components/CadreFormulaire.svelte';
 
 /**
  * Les composants de `lib/components/` qui rendent eux-mêmes un `<form>`.
@@ -200,6 +203,23 @@ const MOTIFS = [
 	//  contrôle qui crie sur du légitime finit désarmé, c'est la leçon de C16.
 	//  L'uniformisation des titres de section est un autre sujet, qui aura son
 	//  propre invariant le jour où il sera tranché.
+	{
+		//  🔴 LE CHOIX DU CADRE NE SE RECOPIE PAS (02/09/2026).
+		//
+		//  `<svelte:component this={… ? Modale : FormulaireCreation}>` s'écrivait
+		//  dans CINQ formulaires, et `FormulaireAnnonce` allait être le sixième.
+		//  Les copies avaient déjà divergé — deux passaient `fermetureAuFond={false}`
+		//  avec un commentaire d'incident, alors que `Modale` l'impose depuis
+		//  toujours dès que `edition` est posé. Une redondance qui faisait croire à
+		//  un défaut chez les trois autres.
+		//
+		//  Le choix vit désormais dans `CadreFormulaire.svelte`, seul autorisé à
+		//  nommer ce ternaire (il est écarté du relevé plus bas). Ailleurs, c'est
+		//  une sixième copie.
+		regex: /(?:Modale\s*:\s*FormulaireCreation|FormulaireCreation\s*:\s*Modale)/g,
+		quoi: 'le CHOIX du cadre (boîte ou fenêtre) est recopié',
+		remede: '<CadreFormulaire {edition} titre="…"> … </CadreFormulaire>',
+	},
 ];
 
 /**
@@ -224,109 +244,6 @@ const MOTIFS = [
  *
  * La borne équilibrée coûte deux lignes et supprime la classe entière.
  */
-/**
- * 🔴 UNE MODALE MONTÉE DYNAMIQUEMENT EST UNE MODALE (30/08/2026).
- *
- * `<svelte:component this={modeEdition ? Modale : FormulaireCreation}>` est la
- * seule forme, en syntaxe Svelte 4, qui permette d'écrire le corps d'un
- * formulaire UNE fois pour deux cadres — deux branches `{#if}` en feraient deux
- * copies de deux cents lignes. C'est donc une forme qu'on va rencontrer à chaque
- * conversion de #640, et le contrôle ne la voyait pas : le tag ne s'appelle pas
- * `<Modale>`.
- *
- * Il est resté VERT sur la première conversion, formulaire monté dans une modale
- * comprise. Troisième fois que ce fichier découvre la même cécité — motif
- * `modal-overlay` mort, formulaire factorisé invisible, périmètre borné à
- * `routes/` — et toujours pour la même raison : *il mesurait la forme et non le
- * fait.*
- *
- * ⚠️ Le repérage exige que `Modale` figure dans la balise ouvrante. Un composant
- * choisi ailleurs (`const cadre = …` hors du balisage) échapperait encore ; c'est
- * pourquoi le nom est écrit DANS l'expression `this={…}`, et non déduit d'une
- * variable — écrire le geste là où le contrôle peut le lire fait partie du geste.
- */
-const OUVERTURES = [
-	//  ⚠️ Le motif est une FABRIQUE, pas un littéral partagé : un `RegExp` global
-	//  réutilisé porte son `lastIndex` d'un appel à l'autre, et le deuxième
-	//  fichier analysé n'y trouve alors plus rien. Un contrôle qui ne lit que le
-	//  premier fichier est vert sur tous les autres.
-	{ tag: '<Modale', fermeture: '</Modale>', ouvrant: () => /<Modale(?=[\s>])/g },
-	{
-		tag: '<svelte:component',
-		fermeture: '</svelte:component>',
-		ouvrant: () => /<svelte:component(?=[\s>])/g,
-		//  Seules celles qui montent une `Modale` nous concernent : ce tag sert
-		//  aussi, légitimement, à tout autre choix de composant.
-		//
-		//  ⚠️ **Une inclusion de chaîne, et surtout pas une expression régulière
-		//  avec `\b`.** Ce filtre en a porté une, et les deux `\b` se sont écrits
-		//  dans le fichier en **caractères de recul U+0008**, invisibles à la
-		//  relecture. Le motif ne correspondait alors à rien : `filtre` rendait
-		//  toujours `false`, aucune modale dynamique n'était vue, et le contrôle
-		//  affichait un ✓.
-		//
-		//  🔴 C'est EXACTEMENT le défaut trouvé le 20/08/2026 dans
-		//  `check-workflow-envoye.mjs` (#549) — un `\x08` au milieu d'un motif qui
-		//  ne retirait donc rien — reproduit dix jours plus tard, dans un autre
-		//  garde-fou, par la même cause : un motif écrit depuis un interpréteur de
-		//  commandes, où `\b` est **un** caractère et non deux.
-		//
-		//  ⚠️ ET LE GARDE-FOU EXISTAIT. `no-control-regex` d'ESLint le nomme —
-		//  « Unexpected control character(s) in regular expression: \x08, \x08 » —
-		//  et il est actif sur `scripts/**`. Il n'a rien dit parce qu'il n'a pas
-		//  été LANCÉ entre l'écriture et la mesure : c'est un défaut de conduite,
-		//  pas de couverture, et le nommer comme tel évite d'ajouter un contrôle
-		//  de plus là où il y en avait déjà un.
-		//
-		//  Ce qui l'a rattrapé en attendant : avoir exigé que le compteur de
-		//  modales AUGMENTE après la conversion. Il est resté à 28, et c'est le
-		//  seul signe qu'il y a eu. Un contrôle se vérifie par son échec **et** par
-		//  son décompte — `standards/04` §27.
-		filtre: (balise) => balise.includes('Modale'),
-	},
-];
-
-function modales(contenu) {
-	const sorties = [];
-	for (const forme of OUVERTURES) sorties.push(...modalesDe(contenu, forme));
-	return sorties;
-}
-
-function modalesDe(contenu, { tag, fermeture, ouvrant, filtre }) {
-	const sorties = [];
-	for (const m of contenu.matchAll(ouvrant())) {
-		let i = m.index + tag.length;
-		let accolades = 0;
-		for (; i < contenu.length; i++) {
-			const c = contenu[i];
-			if (c === '{') accolades++;
-			else if (c === '}') accolades--;
-			else if (c === '>' && accolades === 0) break;
-		}
-		//  Fermeture ÉQUILIBRÉE : une modale peut en contenir une autre (une
-		//  confirmation par-dessus un formulaire). Prendre le premier `</Modale>`
-		//  couperait alors le contenu de la première au milieu.
-		const balise = contenu.slice(m.index, i + 1);
-		if (filtre && !filtre(balise)) continue;
-		let profondeur = 1;
-		//  `tag` et `fermeture` contiennent `:` et `/` : on les échappe entièrement
-		//  plutôt que caractère par caractère — une liste d'exceptions à échapper
-		//  oublie toujours le caractère ajouté ensuite.
-		const ech = (s) => s.replace(/[.*+?^${}()|[\]\\/:]/g, '\\$&');
-		const jetons = new RegExp(`${ech(tag)}(?=[\\s>])|${ech(fermeture)}`, 'g');
-		jetons.lastIndex = i + 1;
-		let t;
-		while ((t = jetons.exec(contenu)) !== null) {
-			profondeur += t[0] === fermeture ? -1 : 1;
-			if (profondeur === 0) break;
-		}
-		//  Modale non fermée (fin de fichier) : on prend ce qui reste plutôt que
-		//  rien — se taire sur un balisage incomplet serait le pire des deux.
-		const fin = t ? t.index : contenu.length;
-		sorties.push({ balise, suite: contenu.slice(i + 1, fin) });
-	}
-	return sorties;
-}
 
 /**
  * Une modale qui porte un `<form>` **sans se déclarer `edition`** — donc une
@@ -369,6 +286,7 @@ const fautifs = [];
 const exceptionsUtiles = new Set();
 let pagesAvecFormulaire = 0;
 let modalesLues = 0;
+let cadresLus = 0;
 
 for (const f of tous) {
 	//  Le chemin est rendu depuis `src/`, les deux racines étant mêlées : « lib/… »
@@ -379,6 +297,7 @@ for (const f of tous) {
 	if (brut.includes('<FormulaireCreation')) pagesAvecFormulaire++;
 	const contenu = sansCommentaires(brut);
 	modalesLues += modales(contenu).length;
+	if (rel !== CADRE_REL) cadresLus += (contenu.match(/<CadreFormulaire(?=[\s>])/g) ?? []).length;
 	const trouves = [];
 	for (const motif of MOTIFS) {
 		const m = contenu.match(motif.regex);
@@ -394,6 +313,11 @@ for (const f of tous) {
 			exemples: creationEnModale.slice(0, 2),
 		});
 	}
+	//  `CadreFormulaire` porte le ternaire par construction : le lui reprocher
+	//  reviendrait à interdire la factorisation qu'on vient de faire. Le cas zéro
+	//  ci-dessous vérifie qu'il le porte TOUJOURS — donc la tolérance ne peut pas
+	//  devenir un trou.
+	if (rel === CADRE_REL) continue;
 	if (trouves.length === 0) continue;
 	if (rel in EXCEPTIONS) {
 		exceptionsUtiles.add(rel);
@@ -411,6 +335,46 @@ if (modalesLues < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${modalesLues} <Modale> recensée(s) dans routes/ et lib/components/, ${PLANCHER_MODALES} ` +
 			'attendues au minimum. Le repérage ne mord plus — ne pas lire ceci comme un succès.',
+	);
+	process.exit(1);
+}
+
+//  🔴 CAS ZÉRO DU CADRE FACTORISÉ (02/09/2026).
+//
+//  La factorisation a fait TOMBER le décompte de modales de 21 à 17 : cinq
+//  formulaires ne nomment plus `Modale` dans leur balisage, et le contrôle est
+//  passé au vert en mesurant MOINS. C'est le faux vert que ce fichier a déjà
+//  produit trois fois — motif mort, formulaire factorisé invisible, périmètre
+//  borné à `routes/`.
+//
+//  Le contrôle suit donc l'indirection : il exige que `CadreFormulaire` existe,
+//  qu'il nomme LES DEUX cadres dans son `this={…}`, et qu'il soit réellement
+//  employé. Sans quoi la règle « créer → boîte, corriger → fenêtre » ne serait
+//  plus tenue par personne, et rien ne le dirait.
+if (!existsSync(CADRE)) {
+	console.error(
+		`✗ Cas zéro : ${CADRE_REL} est introuvable. Le choix du cadre n'a plus de ` +
+			'source unique — ce contrôle ne mesure plus la règle qu’il énonce.',
+	);
+	process.exit(1);
+}
+const cadreSource = sansCommentaires(readFileSync(CADRE, 'utf8'));
+for (const nom of ['Modale', 'FormulaireCreation']) {
+	if (!new RegExp(`this=[^>]*${nom}`).test(cadreSource)) {
+		console.error(
+			`✗ Cas zéro : ${CADRE_REL} ne nomme plus \`${nom}\` dans son \`this={…}\`. ` +
+				'Un cadre choisi dans une variable compile aussi bien et sort du champ du contrôle.',
+		);
+		process.exit(1);
+	}
+}
+//  Employé par les formulaires, pas seulement présent. Le plancher est bas
+//  exprès : ce qui compte est qu'il ne tombe pas à zéro sans qu'on le voie.
+const PLANCHER_CADRE = 5;
+if (cadresLus < PLANCHER_CADRE) {
+	console.error(
+		`✗ Cas zéro : ${cadresLus} emploi(s) de <CadreFormulaire>, ${PLANCHER_CADRE} attendus ` +
+			'au minimum. Les formulaires sont-ils repartis chacun avec son cadre ?',
 	);
 	process.exit(1);
 }
@@ -450,6 +414,6 @@ if (inutiles.length > 0) {
 
 console.log(
 	`✓ Formulaires : ${pagesAvecFormulaire} page(s) passent par FormulaireCreation, ` +
-		`${tous.length} page(s) et ${modalesLues} modale(s) vérifiée(s), ` +
+		`${tous.length} page(s), ${modalesLues} modale(s) et ${cadresLus} cadre(s) vérifié(s), ` +
 		`${Object.keys(EXCEPTIONS).length} exception(s) justifiée(s).`,
 );

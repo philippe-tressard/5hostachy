@@ -22,8 +22,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 
 	const dispatch = createEventDispatcher<{ annule: void }>();
@@ -57,20 +56,20 @@
 </script>
 
 <!--
-	Un seul montage des champs, deux cadres possibles. `svelte:component` est ce
-	qui permet d'écrire le corps UNE fois — deux branches `{#if}` en feraient deux
-	copies qui divergeraient au premier champ ajouté.
+	Un seul montage du formulaire, deux cadres possibles — et le CHOIX du cadre
+	n'est plus écrit ici. `CadreFormulaire` le porte pour les six formulaires qui
+	en ont besoin : il s'y écrivait cinq fois, et les copies avaient commencé à
+	diverger (02/09/2026).
 
-	🔒 `Modale` est nommée DANS le `this={…}` : c'est ce que `lint:formulaires`
-	lit. Un cadre choisi dans une variable compile aussi bien et sort la modale du
-	champ du contrôle.
+	Ce qui reste ici : `edition`, qui déclare le GESTE. Ce n'est pas décoratif —
+	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
+	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<svelte:component
-	this={modeEdition ? Modale : FormulaireCreation}
+<CadreFormulaire
+	edition={modeEdition}
 	titre={titreCadre}
-	{...modeEdition
-		? { edition: true, classeBoite: 'modal-box card', styleBoite: 'max-width:500px' }
-		: {}}
+	classeBoite="modal-box card"
+	styleBoite="max-width:500px"
 	on:fermer={() => dispatch('annule')}
 >
 	<div class="form-grid" class:modal-body={modeEdition}>
@@ -120,7 +119,7 @@
 			{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
 	</div>
-</svelte:component>
+</CadreFormulaire>
 
 <style>
 	/*  🔴 SURCHARGE ASSUMÉE de `.form-grid` (`composants.css`), qui est une grille

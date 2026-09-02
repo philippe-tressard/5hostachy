@@ -50,8 +50,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { attacherAPublication } from '$lib/fichiers';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
@@ -280,20 +279,16 @@
 </script>
 
 <!--
-	Un seul montage du formulaire, deux cadres possibles. `svelte:component` est
-	ce qui permet d'écrire le corps UNE fois — deux branches `{#if}` en feraient
-	deux copies de deux cents lignes, qui divergeraient au premier champ ajouté.
+	Un seul montage du formulaire, deux cadres possibles — et le CHOIX du cadre
+	n'est plus écrit ici. `CadreFormulaire` le porte pour les six formulaires qui
+	en ont besoin : il s'y écrivait cinq fois, et les copies avaient commencé à
+	diverger (02/09/2026).
 
-	🔒 `Modale` est nommée DANS le `this={…}` : c'est ce que `lint:formulaires`
-	lit. Un cadre choisi dans une variable compile aussi bien et sort la modale du
-	champ du contrôle.
+	Ce qui reste ici : `edition`, qui déclare le GESTE. Ce n'est pas décoratif —
+	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
+	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<svelte:component
-	this={modeEdition ? Modale : FormulaireCreation}
-	titre={titreBoite}
-	{...modeEdition ? { edition: true } : {}}
-	on:fermer={() => dispatch('annule')}
->
+<CadreFormulaire edition={modeEdition} titre={titreBoite} on:fermer={() => dispatch('annule')}>
 	<div class:modal-body={modeEdition}>
 		<form on:submit|preventDefault={soumettre}>
 			<!--  1. Titre. -->
@@ -405,7 +400,7 @@
 			</div>
 		</form>
 	</div>
-</svelte:component>
+</CadreFormulaire>
 
 <style>
 </style>

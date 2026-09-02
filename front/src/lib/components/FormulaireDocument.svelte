@@ -34,12 +34,13 @@
   ## Le cadre suit le GESTE, et c'est le composant qui le pose
 
   Création → `FormulaireCreation` (la boîte dans la page, #367) ·
-  Édition → `Modale` (#640). Écrit **une fois**, par `<svelte:component>` : sans
-  lui, le corps du formulaire existerait en deux exemplaires dans le même
-  fichier, ce qui est le défaut qu'on vient de corriger.
+  Édition → `Modale` (#640). Le choix du cadre vit dans `CadreFormulaire`, écrit
+  une fois pour les six formulaires concernés (02/09/2026) ; ici on ne déclare que
+  le GESTE, par `edition`.
 
-  `fermetureAuFond={false}` en édition : on saisit ici un titre et une synthèse,
-  et un clic à côté effaçait tout sans prévenir (leçon d'`OngletPerimetres`).
+  ⚠️ Ce fichier passait `fermetureAuFond={false}` avec un commentaire d'incident.
+  C'était **redondant** : `Modale` l'impose dès que `edition` est posé
+  (`fondFermant = fermetureAuFond && !edition && …`).
 -->
 <script lang="ts" context="module">
 	/** Compteur d'instances — voir `uid` plus bas : il remplace `Math.random()`. */
@@ -49,8 +50,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import PerimetrePicker from '$lib/components/PerimetrePicker.svelte';
 
 	/** L'intitulé du formulaire — en-tête de la boîte, ou titre de la modale. */
@@ -100,11 +100,10 @@
 	$: choisis = fichiers ? Array.from(fichiers) : [];
 </script>
 
-<svelte:component
-	this={edition ? Modale : FormulaireCreation}
-	{...edition
-		? { edition: true, titre: intitule, classeBoite: 'modal-box', fermetureAuFond: false }
-		: { titre: intitule }}
+<CadreFormulaire
+	{edition}
+	titre={intitule}
+	classeBoite="modal-box"
 	on:fermer={() => dispatch('annuler')}
 >
 	<label class="field" for="{uid}-titre">
@@ -154,4 +153,4 @@
 			{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
 	</div>
-</svelte:component>
+</CadreFormulaire>

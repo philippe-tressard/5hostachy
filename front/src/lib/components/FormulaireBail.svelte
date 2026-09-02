@@ -19,11 +19,15 @@
   ## Le cadre suit le GESTE, et c'est le composant qui le pose
 
   Création → `FormulaireCreation` (la boîte dans la page, #367) ·
-  Édition → `Modale` (#640). Écrit **une fois**, par `<svelte:component>` : sans
-  lui, le corps du formulaire existerait en deux exemplaires dans le même fichier.
+  Édition → `Modale` (#640). Le choix du cadre vit dans `CadreFormulaire`, écrit
+  une fois pour les six formulaires concernés (02/09/2026) ; ici on ne déclare que
+  le GESTE, par `edition`.
 
-  `fermetureAuFond={false}` en édition : on saisit ici un locataire et deux dates,
-  et un clic à côté effacerait tout sans prévenir (leçon d'`OngletPerimetres`).
+  ⚠️ Ce fichier passait `fermetureAuFond={false}` avec un commentaire d'incident.
+  C'était **redondant** : `Modale` l'impose dès que `edition` est posé
+  (`fondFermant = fermetureAuFond && !edition && …`). La prop laissait croire que
+  les trois formulaires qui ne la passaient pas avaient un défaut — ils n'en
+  avaient aucun.
 
   ## Ce que ce composant ne sait PAS, et c'est voulu
 
@@ -44,9 +48,8 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import RechercheLocataire from '$lib/components/RechercheLocataire.svelte';
 	import RichEditor from '$lib/components/RichEditor.svelte';
 
@@ -127,11 +130,10 @@
 	$: complet = (!avecLots || lotIds.size > 0) && (!avecDateEntree || !!bail.date_entree);
 </script>
 
-<svelte:component
-	this={edition ? Modale : FormulaireCreation}
-	{...edition
-		? { edition: true, titre: intitule, classeBoite: 'modal-box', fermetureAuFond: false }
-		: { titre: intitule }}
+<CadreFormulaire
+	{edition}
+	titre={intitule}
+	classeBoite="modal-box"
 	on:fermer={() => dispatch('annuler')}
 >
 	{#if avecLots}
@@ -257,7 +259,7 @@
 			{enregistrement ? 'Enregistrement…' : 'Enregistrer'}
 		</button>
 	</div>
-</svelte:component>
+</CadreFormulaire>
 
 <style>
 	/*  Le balisage part avec ses styles : une classe posée ici et définie dans la
