@@ -1046,6 +1046,19 @@ jobs:
         working-directory: front
         run: npm run lint:cadre-geste
 
+      - name: Le manuel annonce les menus du site, et le bon public
+        # 🔴 #651 tient en une phrase : « le manuel RECOPIE des tables que le code
+        # fait évoluer, et rien ne les rapproche ». La section « Les écrans » porte
+        # deux tables que le code tient déjà — les routes (`pages.ts`) et qui les
+        # voit (`Nav.svelte`). En écrire une troisième en prose aurait refait le
+        # défaut le jour même où on le corrige.
+        #
+        # ⚠️ Le contrôle lit des attributs `data-page`/`data-acces`, pas la prose :
+        # « la prose ne se lit pas comme une table » (#651), et un contrôle qui crie
+        # sur du légitime finit désarmé.
+        working-directory: front
+        run: npm run lint:manuel-menus
+
       - name: Confirmation dans la charte (plafond décroissant)
         # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
         # navigateur bloque le fil d'exécution, ignore la charte, et donne le
