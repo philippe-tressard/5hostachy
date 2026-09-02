@@ -22,6 +22,7 @@
 	import { trackTabView } from '$lib/telemetry';
 	import {
 		KANBAN_COLS,
+		colonneDeLEvenement,
 		evenementArchive,
 		kanbanColVisible,
 		kanbanEvMatchesYear,
@@ -503,18 +504,9 @@
 
 	$: kanbanCols = KANBAN_COLS.filter((col) => kanbanColVisible(col.id, _kanbanCtx)).map((col) => ({
 		...col,
-		items: kanbanEvs.filter((ev) => {
-			if (
-				//  Manuel, comme `kanbanEvVisible` : le tableau est gouverné par le
-				//  statut, pas par le temps.
-				ev.archivee_manuellement &&
-				ev.type === 'maintenance_recurrente' &&
-				ev.statut_kanban === 'fournisseur'
-			) {
-				return col.id === 'termine';
-			}
-			return ev.statut_kanban === col.id;
-		}),
+		//  Le rangement vit dans `$lib/kanban` : il était écrit ICI et au tableau de
+		//  bord, et les deux ont divergé (02/09/2026, signalé à l'écran).
+		items: kanbanEvs.filter((ev) => colonneDeLEvenement(ev) === col.id),
 	}));
 
 	$: kanbanExerciceOptions = (() => {

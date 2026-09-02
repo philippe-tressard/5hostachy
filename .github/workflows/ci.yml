@@ -211,6 +211,32 @@ jobs:
           done
           exit $st
 
+      - name: Le rangement des cartes du kanban ne s'écrit qu'à un endroit
+        # 🔴 Signalé à l'écran le 02/09/2026 : « je n'ai pas la même vue entre le
+        # fil et le calendrier pour le kanban ». Prestataire affichait 1 d'un côté
+        # et 5 de l'autre, Terminé 9 contre 5.
+        #
+        # Le calcul « dans quelle colonne va cette carte » était écrit DEUX fois,
+        # à l'identique, dans `calendrier/+page.svelte` et
+        # `tableau-de-bord/+page.svelte`. Le jour où `archivee` a changé de sens
+        # (#515), un seul des deux a été corrigé — et rien ne l'a dit.
+        #
+        # C'est le cadre #430 mot pour mot : *un objet a plusieurs rendus, et toute
+        # divergence entre eux se déclare*. Celle-ci ne se déclarait nulle part et
+        # n'était visible qu'en regardant les deux écrans côte à côte.
+        #
+        # La règle vit dans `$lib/kanban.colonneDeLEvenement`.
+        run: |
+          st=0
+          for f in $(git ls-files -- 'front/src/**/*.svelte' 'front/src/**/*.ts'); do
+            case "$f" in front/src/lib/kanban.ts) continue ;; esac
+            if LC_ALL=C grep -nE 'statut_kanban\s*===\s*col(\.id)?\b' "$f" >/dev/null; then
+              echo "::error file=$f::le rangement des cartes du kanban est recopié ici — employer \`colonneDeLEvenement()\` de \$lib/kanban"
+              st=1
+            fi
+          done
+          exit $st
+
       - name: Aucune séquence regex avalée par un template literal
         # 🔴 LA MÊME FAMILLE QUE CI-DESSUS, ET LE CONTRÔLE PRÉCÉDENT NE PEUT PAS
         # LA VOIR (02/09/2026, quatrième occurrence).
