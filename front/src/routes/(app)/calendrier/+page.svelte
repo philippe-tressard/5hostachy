@@ -26,7 +26,8 @@
 		clesDesEvenements,
 		planifier,
 		resumePlan,
-		type SourceRecurrente,
+		sourcesDesContrats,
+		sourcesDesEvenements,
 	} from '$lib/init-prestataires';
 	import {
 		perimetreLabel,
@@ -616,45 +617,25 @@
 		try {
 			const [contrats, prests] = await Promise.all([prestApi.contrats(), prestApi.list()]);
 			const prestMap = new Map(prests.map((p: any) => [p.id, p.nom]));
-
-			//  Les deux sources deviennent UNE liste normalisée : c'est ce qui
-			//  supprime la seconde boucle, et avec elle la divergence du périmètre.
-			const sources: SourceRecurrente[] = [
-				//  Un contrat ÉCHU ne génère plus de visites (#605). ⚠️ `echu` est FAUX
-				//  sous reconduction tacite — voir `utils/echeance_contrat.py`.
-				...contrats
-					.filter((c: any) => !c.echu)
-					.map((c: any) => ({
-						titre: `${prestMap.get(c.prestataire_id) ?? 'Prestataire'} — ${c.libelle}`,
-						frequence_type: c.frequence_type ?? null,
-						frequence_valeur: c.frequence_valeur ?? null,
-						prestataire_id: c.prestataire_id ?? null,
-						contrat_id: c.id,
-						perimetre: perimetreDuBatiment(c.batiment_id),
-						description: c.notes ?? null,
-					})),
-				...evenements
-					.filter((ev: any) => ev.type === 'maintenance' && ev.prestataire_id && !ev.archivee)
-					.map((ev: any) => ({
-						titre: ev.titre,
-						frequence_type: ev.frequence_type ?? null,
-						frequence_valeur: ev.frequence_valeur ?? null,
-						prestataire_id: ev.prestataire_id ?? null,
-						//  Un événement de maintenance saisi à la main n'a pas de contrat.
-						contrat_id: null,
-						//  ⚠️ Ce repli est le correctif de #605 : la branche
-						//  événement posait `ev.perimetre ?? ''`, donc une chaîne VIDE
-						//  quand la source n'en portait pas, là où l'autre calculait
-						//  celui du bâtiment. Les deux le calculent désormais.
-						perimetre: ev.perimetre || perimetreDuBatiment(ev.batiment_id),
-						description: ev.description ?? null,
-					})),
-			];
+			//  🔴 LA NORMALISATION A DÉMÉNAGÉ dans `$lib/init-prestataires` (#605).
+			//  Elle vivait ici, et rien ne l'éprouvait — c'est ce que le point 4 du
+			//  ticket reprochait aux fonctions de calcul avant leur extraction, et
+			//  le filtre des contrats échus y a été ajouté au même endroit aveugle.
+			//  La page ne garde que ce qu'elle seule sait : le nom d'un prestataire
+			//  et le périmètre d'un bâtiment.
+			const ctx = {
+				nomPrestataire: (id: number | null | undefined) =>
+					prestMap.get(id as number) ?? 'Prestataire',
+				perimetreDuBatiment,
+			};
+			const { sources: desContrats, echus } = sourcesDesContrats(contrats, ctx);
+			const sources = [...desContrats, ...sourcesDesEvenements(evenements, ctx)];
 
 			const plan = planifier(
 				sources,
 				clesDesEvenements(evenements, kanbanExercice),
 				kanbanExercice,
+				echus,
 			);
 			const message = resumePlan(plan, kanbanExercice);
 			if (plan.aCreer.length === 0) {

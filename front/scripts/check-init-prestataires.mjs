@@ -32,6 +32,8 @@ import {
 	resumePlan,
 	titreBase,
 	titreOccurrence,
+	sourcesDesContrats,
+	sourcesDesEvenements,
 } from '../src/lib/init-prestataires.ts';
 
 const echecs = [];
@@ -329,6 +331,120 @@ verifier(
 	'Aucune source de maintenance récurrente pour 2027.',
 );
 
+// ── Les contrats ÉCHUS, et ce que « échu » veut dire ────────────────────────
+//
+//  🔴 Ces vingt lignes vivaient dans `calendrier/+page.svelte`, où RIEN ne les
+//  éprouvait — le point 4 de #605 reprochait exactement cela aux fonctions de
+//  calcul avant leur extraction, et le filtre `echu` a été ajouté au même
+//  endroit aveugle le 01/09/2026.
+
+const ctx = {
+	nomPrestataire: (id) => (id === 7 ? 'Chauffagiste' : 'Prestataire'),
+	perimetreDuBatiment: (id) => (id ? `bat:${id}` : 'résidence'),
+};
+
+const contrat = (extra = {}) => ({
+	id: 1,
+	libelle: 'Chaudière',
+	prestataire_id: 7,
+	batiment_id: 2,
+	frequence_type: 'fois_par_an',
+	frequence_valeur: 2,
+	notes: null,
+	echu: false,
+	...extra,
+});
+
+const courant = sourcesDesContrats([contrat()], ctx);
+verifier('sourcesDesContrats : un contrat courant devient une source', courant.sources.length, 1);
+verifier('sourcesDesContrats : aucun échu à signaler', courant.echus, 0);
+verifier(
+	'sourcesDesContrats : le titre porte le nom du prestataire',
+	courant.sources[0].titre,
+	'Chauffagiste — Chaudière',
+);
+verifier(
+	'sourcesDesContrats : le périmètre vient du bâtiment',
+	courant.sources[0].perimetre,
+	'bat:2',
+);
+verifier('sourcesDesContrats : la source porte son contrat', courant.sources[0].contrat_id, 1);
+
+const echu = sourcesDesContrats([contrat({ echu: true })], ctx);
+verifier('sourcesDesContrats : un contrat échu ne devient pas une source', echu.sources.length, 0);
+verifier('sourcesDesContrats : et il est COMPTÉ, pas tu', echu.echus, 1);
+
+//  🔴 Le cas qui distingue « échu » de « expiré », et qui est le cœur de la
+//  réponse à la question du 28/08/2026. Un contrat d'entretien sous reconduction
+//  tacite n'est JAMAIS `echu` — le serveur reporte son terme d'un an tant qu'il
+//  est passé. Il continue donc de générer ses visites, et c'est juste : un
+//  contrat qu'on n'a pas dénoncé court. Le geste qui l'arrête est l'archivage.
+const vieuxMaisReconduit = sourcesDesContrats([contrat({ echu: false })], ctx);
+verifier(
+	'sourcesDesContrats : reconduit tacitement ⇒ toujours une source',
+	vieuxMaisReconduit.sources.length,
+	1,
+);
+
+//  Le compte remonte jusqu'au message : une décision qui écarte silencieusement
+//  se lit comme une absence de matière.
+const planAvecEchus = planifier([], new Set(), 2027, 3);
+verifier('planifier : le compte des échus est transmis', planAvecEchus.echus, 3);
+verifier(
+	'resumePlan : les échus sont NOMMÉS dans le message',
+	resumePlan(planAvecEchus, 2027),
+	'Rien à créer pour 2027 — 3 contrat(s) échu(s) écarté(s).',
+);
+
+// ── Les événements de maintenance saisis à la main ──────────────────────────
+const evenement = (extra = {}) => ({
+	type: 'maintenance',
+	titre: 'Ramonage',
+	prestataire_id: 9,
+	batiment_id: 3,
+	perimetre: null,
+	frequence_type: 'fois_par_an',
+	frequence_valeur: 1,
+	description: null,
+	...extra,
+});
+
+verifier(
+	'sourcesDesEvenements : un autre type est ignoré',
+	sourcesDesEvenements([evenement({ type: 'travaux' })], ctx).length,
+	0,
+);
+verifier(
+	'sourcesDesEvenements : sans prestataire, ignoré',
+	sourcesDesEvenements([evenement({ prestataire_id: null })], ctx).length,
+	0,
+);
+verifier(
+	'sourcesDesEvenements : archivé, ignoré',
+	sourcesDesEvenements([evenement({ archivee: true })], ctx).length,
+	0,
+);
+//  🔴 LE CORRECTIF DE #605, ÉPINGLÉ. Cette branche posait `ev.perimetre ?? ''`,
+//  donc une chaîne VIDE quand l'événement n'en portait pas, là où la branche des
+//  contrats calculait celui du bâtiment.
+verifier(
+	'sourcesDesEvenements : sans périmètre, celui du bâtiment',
+	sourcesDesEvenements([evenement()], ctx)[0].perimetre,
+	'bat:3',
+);
+verifier(
+	'sourcesDesEvenements : avec périmètre, on garde le sien',
+	sourcesDesEvenements([evenement({ perimetre: 'parking' })], ctx)[0].perimetre,
+	'parking',
+);
+//  Un événement saisi à la main n'a pas de contrat : sa clé anti-doublon reste
+//  le titre, et c'est le repli que `planifier` documente.
+verifier(
+	'sourcesDesEvenements : aucun contrat_id',
+	sourcesDesEvenements([evenement()], ctx)[0].contrat_id,
+	null,
+);
+
 if (echecs.length) {
 	console.error(`\n✗ check-init-prestataires : ${echecs.length} cas en échec\n`);
 	for (const e of echecs) console.error(`   ${e}\n`);
@@ -336,5 +452,6 @@ if (echecs.length) {
 }
 console.log(
 	`✓ check-init-prestataires — ${cas} cas : fréquences, répartition, numéro d’occurrence ` +
-		'(et sa rétro-compatibilité), clé par SOURCE et son repli, plafond parlant, cas zéro.',
+		'(et sa rétro-compatibilité), clé par SOURCE et son repli, plafond parlant, ' +
+		'contrats échus écartés ET comptés, normalisation des deux sources, cas zéro.',
 );

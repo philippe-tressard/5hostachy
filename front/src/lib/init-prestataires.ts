@@ -71,6 +71,12 @@ export interface Plan {
 	horsPlafond: { titre: string; parAn: number }[];
 	/** Les sources sans fréquence exploitable : elles ne se pré-remplissent pas. */
 	sansFrequence: number;
+	/**  Les contrats ÉCHUS, écartés avant même d'être des sources (#605, point 1).
+	 *
+	 *   Comptés ici pour la même raison que `horsPlafond` : une décision qui
+	 *   écarte silencieusement se lit comme une absence de matière. « Aucune
+	 *   source » et « j'en ai écarté trois » ne veulent pas dire la même chose. */
+	echus: number;
 }
 
 /**
@@ -212,12 +218,128 @@ export function clesDesEvenements(evenements: VisiteExistante[], exercice: numbe
  * @param clesExistantes les clés (`clePlanifiee`) déjà présentes pour l'exercice
  * @param exercice     l'année visée
  */
+/**  Ce que la page sait et que ce module ne peut pas savoir : le nom d'un
+ *   prestataire, et le périmètre d'un bâtiment. Les deux dépendent de données
+ *   chargées par l'écran.
+ *
+ *   Un objet de rappels plutôt que les données elles-mêmes : passer la liste des
+ *   prestataires et l'arbre des périmètres obligerait ce module à connaître leurs
+ *   structures, et à recopier `perimetreDuBatiment` — qui vit ailleurs et sert
+ *   déjà à d'autres écrans. */
+export interface ContexteSources {
+	nomPrestataire: (id: number | null | undefined) => string;
+	perimetreDuBatiment: (id: number | null | undefined) => string;
+}
+
+/**  Un contrat tel que `GET /prestataires/contrats` le rend — les seuls champs lus.
+ *
+ *   `echu` est **dérivé par le serveur** (`utils/echeance_contrat.py`), jamais
+ *   saisi : date de début + durée initiale, reportée d'un an tant qu'elle est
+ *   passée. Le refaire ici en ferait une seconde règle. */
+export interface ContratSource {
+	id: number;
+	libelle: string;
+	prestataire_id: number | null;
+	batiment_id: number | null;
+	frequence_type: string | null;
+	frequence_valeur: number | null;
+	notes: string | null;
+	echu: boolean;
+}
+
+/**  Un événement de maintenance saisi à la main — l'autre source. */
+export interface EvenementSource {
+	type: string;
+	titre: string;
+	prestataire_id: number | null;
+	batiment_id: number | null;
+	perimetre: string | null;
+	frequence_type: string | null;
+	frequence_valeur: number | null;
+	description: string | null;
+	archivee?: boolean;
+}
+
+/**
+ * Les contrats, normalisés en sources — **et les échus écartés, comptés**.
+ *
+ * ## 🔴 Pourquoi cette fonction existe (#605, points 1 et 4)
+ *
+ * Ces vingt lignes vivaient dans `calendrier/+page.svelte`, où **rien ne les
+ * éprouvait** — c'est le point 4 du ticket, qui reprochait exactement cela aux
+ * fonctions de calcul avant leur extraction. Le filtre `echu` y a été ajouté sans
+ * qu'aucun test ne puisse dire s'il écarte ce qu'il faut, ni s'il écarte trop.
+ *
+ * ⚠️ **`echu` est FAUX sous reconduction tacite, et c'est voulu.** Un contrat
+ * d'entretien qu'on n'a pas dénoncé COURT : il doit continuer à générer ses
+ * visites. Le seul geste qui l'arrête est l'archivage (`actif = false`), que
+ * l'API filtre déjà en amont. `echu` ne vaut donc que pour les contrats **sans**
+ * reconduction tacite — le mandat de syndic, aujourd'hui —, dont le terme ne
+ * bouge pas et dont le dépassement dit que la copropriété doit voter.
+ *
+ * C'est la réponse à la question posée le 28/08/2026 (*« un prestataire non
+ * renouvelé est-il écarté ? »*), et elle tient en une phrase : **oui s'il est
+ * archivé ou si son type ne se reconduit pas ; non s'il se reconduit tacitement,
+ * parce qu'alors il n'est pas expiré.**
+ */
+export function sourcesDesContrats(
+	contrats: ContratSource[],
+	ctx: ContexteSources,
+): { sources: SourceRecurrente[]; echus: number } {
+	const sources: SourceRecurrente[] = [];
+	let echus = 0;
+	for (const c of contrats) {
+		if (c.echu) {
+			echus++;
+			continue;
+		}
+		sources.push({
+			titre: `${ctx.nomPrestataire(c.prestataire_id)} — ${c.libelle}`,
+			frequence_type: c.frequence_type ?? null,
+			frequence_valeur: c.frequence_valeur ?? null,
+			prestataire_id: c.prestataire_id ?? null,
+			contrat_id: c.id,
+			perimetre: ctx.perimetreDuBatiment(c.batiment_id),
+			description: c.notes ?? null,
+		});
+	}
+	return { sources, echus };
+}
+
+/**
+ * Les événements de maintenance saisis à la main, normalisés en sources.
+ *
+ * ⚠️ Le périmètre retombe sur celui du bâtiment quand l'événement n'en porte
+ * pas. C'était le correctif de #605 : cette branche posait `ev.perimetre ?? ''`
+ * — une chaîne VIDE là où la branche des contrats calculait le périmètre. Les
+ * deux le calculent maintenant, et elles sont ici côte à côte, ce qui est la
+ * seule façon de ne pas les laisser diverger à nouveau.
+ */
+export function sourcesDesEvenements(
+	evenements: EvenementSource[],
+	ctx: ContexteSources,
+): SourceRecurrente[] {
+	return evenements
+		.filter((ev) => ev.type === 'maintenance' && ev.prestataire_id && !ev.archivee)
+		.map((ev) => ({
+			titre: ev.titre,
+			frequence_type: ev.frequence_type ?? null,
+			frequence_valeur: ev.frequence_valeur ?? null,
+			prestataire_id: ev.prestataire_id ?? null,
+			//  Un événement de maintenance saisi à la main n'a pas de contrat.
+			contrat_id: null,
+			perimetre: ev.perimetre || ctx.perimetreDuBatiment(ev.batiment_id),
+			description: ev.description ?? null,
+		}));
+}
+
 export function planifier(
 	sources: SourceRecurrente[],
 	clesExistantes: Set<string>,
 	exercice: number,
+	echus = 0,
 ): Plan {
-	const plan: Plan = { aCreer: [], ignores: 0, horsPlafond: [], sansFrequence: 0 };
+	const plan: Plan = { aCreer: [], ignores: 0, horsPlafond: [], sansFrequence: 0, echus };
 
 	for (const source of sources) {
 		const parAn = frequenceAnnuelle(source.frequence_type, source.frequence_valeur);
@@ -282,6 +404,7 @@ export function resumePlan(plan: Plan, exercice: number): string {
 		);
 	}
 	if (plan.sansFrequence > 0) parts.push(`${plan.sansFrequence} sans fréquence exploitable`);
+	if (plan.echus > 0) parts.push(`${plan.echus} contrat(s) échu(s) écarté(s)`);
 
 	if (plan.aCreer.length === 0) {
 		return parts.length === 0
