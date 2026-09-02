@@ -20,7 +20,13 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort, fmtMonthYear } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
-	import { KANBAN_COLS, kanbanEvVisible, kanbanColVisible, kanbanEvMatchesYear } from '$lib/kanban';
+	import {
+		KANBAN_COLS,
+		evenementArchive,
+		kanbanColVisible,
+		kanbanEvMatchesYear,
+		kanbanEvVisible,
+	} from '$lib/kanban';
 	import {
 		clesDesEvenements,
 		planifier,
@@ -171,10 +177,8 @@
 		let evs = canSeeAG ? evenements : evenements.filter((e) => e.type !== 'ag');
 		// Un événement avec suivi kanban actif (non terminé / non annulé) reste visible en Liste
 		// même si sa date de début est passée — il disparaîtra seulement à la clôture du kanban.
-		//  🔴 `e.archivee` vient du SERVEUR depuis le 02/09/2026 (#515). L'écran le
-		//  calculait et divergeait sur trois points — annulation non immédiate,
-		//  épinglage non protecteur, et surtout un délai d'administration qui ne
-		//  l'atteignait jamais. Le détail est dans `$lib/archivage.ts`.
+		//  🔴 `e.archivee` vient du SERVEUR (#515) : l'écran le calculait et divergeait
+		//  sur trois points. Le détail est dans `$lib/archivage.ts`.
 		evs = evs.filter((e) => {
 			//  Le suivi kanban ACTIF prime : un événement passé mais non clôturé reste
 			//  en liste. Cette règle-là est propre au calendrier et ne bouge pas.
@@ -364,7 +368,7 @@
 		if (!(await confirmer('Archiver cet événement ?'))) return;
 		try {
 			await calApi.archive(id);
-			evenements = evenements.map((e) => (e.id === id ? { ...e, archivee: true } : e));
+			evenements = evenements.map((e) => (e.id === id ? evenementArchive(e) : e));
 			toast('success', 'Événement archivé');
 		} catch {
 			toast('error', 'Erreur');
@@ -501,7 +505,9 @@
 		...col,
 		items: kanbanEvs.filter((ev) => {
 			if (
-				ev.archivee &&
+				//  Manuel, comme `kanbanEvVisible` : le tableau est gouverné par le
+				//  statut, pas par le temps.
+				ev.archivee_manuellement &&
 				ev.type === 'maintenance_recurrente' &&
 				ev.statut_kanban === 'fournisseur'
 			) {
@@ -547,7 +553,7 @@
 		const old = item.statut_kanban;
 		const shouldArchive = colId === 'termine';
 		evenements = evenements.map((e) =>
-			e.id === id ? { ...e, statut_kanban: colId, archivee: shouldArchive ? true : e.archivee } : e,
+			e.id === id ? { ...(shouldArchive ? evenementArchive(e) : e), statut_kanban: colId } : e,
 		);
 		try {
 			await calApi.update(

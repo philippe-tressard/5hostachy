@@ -29,9 +29,24 @@
     deux props étaient **redondantes**, et leur commentaire faisait croire que les
     trois autres écrans avaient un défaut. Retirées ici.
   - `classeBoite` valait `modal` (Actualité, Événement), `modal-box` (Bail,
-    Document) ou `modal-box card` (FAQ). Ces trois valeurs restent **passées par
-    l'écran** : uniformiser un rendu ne se décide pas dans une factorisation, ça
-    se regarde. C'est une divergence déclarée, pas résolue.
+    Document) ou `modal-box card` (FAQ). Cette divergence a été **déclarée et non
+    résolue** le 02/09 au matin : *« uniformiser un rendu ne se décide pas dans une
+    factorisation, ça se regarde »*.
+
+  🔴 **L'ÉCRAN A REGARDÉ, LE MÊME JOUR, ET IL A TRANCHÉ** (« Modifier l'annonce »,
+  signalé en capture). Ces deux valeurs ne sont pas décoratives : elles décident
+  **où vit le padding**. `.modal` ne pose rien sur la boîte — il appartient à
+  l'en-tête et au corps (`.modal-body`) ; `.modal-box` le pose sur la boîte.
+
+  Six formulaires, **deux techniques** pour le même besoin — et `FormulaireAnnonce`
+  n'avait NI l'une NI l'autre : ses bandes de section sortaient à fleur de fenêtre,
+  le titre collé au bord. Personne ne l'avait vu parce que c'était le seul des six
+  dans ce cas, et que rien ne rapproche « j'ai choisi `modal` » de « j'ai pensé au
+  corps ».
+
+  Le cadre le garantit désormais : sur la classe par défaut, il enveloppe lui-même
+  le contenu dans `.modal-body`. Un écran qui passe une autre classe déclare qu'il
+  s'en charge — c'est le cas de la FAQ, plus étroite à dessein.
 
   ## Ce que ce composant NE fait pas
 
@@ -63,9 +78,13 @@
 	/** Le titre du cadre — en-tête de la boîte, ou titre annoncé de la fenêtre. */
 	export let titre: string;
 
-	/**  Classes de la fenêtre — **édition seulement**. Trois valeurs en service
-	 *   (`modal`, `modal-box`, `modal-box card`) ; voir l'en-tête. */
-	export let classeBoite = 'modal';
+	/**  Où vit le PADDING de la fenêtre, et c'est tout ce que cette prop décide.
+	 *
+	 *   `.modal` ne pose aucun padding sur la boîte : il appartient à l'en-tête et
+	 *   au corps (`.modal-body`). `.modal-box` le pose sur la boîte elle-même. Les
+	 *   deux marchent — mais il FAUT l'un des deux, et c'est ce qui manquait. */
+	const CLASSE_PAR_DEFAUT = 'modal';
+	export let classeBoite = CLASSE_PAR_DEFAUT;
 	/** Style de la fenêtre, pour une largeur propre à l'écran — édition seulement. */
 	export let styleBoite = '';
 
@@ -84,5 +103,9 @@
 	{...edition ? { edition: true, classeBoite, styleBoite } : { encadre, cle }}
 	on:fermer
 >
-	<slot />
+	{#if edition && classeBoite === CLASSE_PAR_DEFAUT}
+		<div class="modal-body"><slot /></div>
+	{:else}
+		<slot />
+	{/if}
 </svelte:component>

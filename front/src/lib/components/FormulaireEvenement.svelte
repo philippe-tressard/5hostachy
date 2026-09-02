@@ -142,7 +142,10 @@
 	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
 <CadreFormulaire edition={modeEdition} titre={titreCadre} on:fermer={() => dispatch('annule')}>
-	<div class:modal-body={modeEdition}>
+	<!--  ⚠️ Plus de `class:modal-body` ici : `CadreFormulaire` enveloppe lui-même
+	      le contenu sur la classe par défaut (02/09/2026). Le laisser en
+	      poserait un SECOND, et le padding serait compté deux fois. -->
+	<div>
 		<form on:submit|preventDefault={soumettre}>
 			<!--  1. Titre. -->
 			<SectionFormulaire premiere>
