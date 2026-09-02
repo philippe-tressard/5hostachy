@@ -167,6 +167,16 @@
 					>&#x1F539; {perimetreLabel(ticket.perimetre_cible)}</span
 				>{/if}
 			{#if ticket.priorite === 'haute'}<span class="badge badge-orange">⚡ Urgente</span>{/if}
+			<!--  🔒 Le contrepoids de l'ouverture en lecture (#710) doit SE VOIR :
+			      sans ce badge, le conseil syndical ne peut pas relire ce qu'il a
+			      fermé, et « confidentiel » redeviendrait une case qu'on coche sans
+			      jamais vérifier. Il n'apparaît que sur les tickets fermés — un
+			      badge posé sur tous ne distinguerait rien. -->
+			{#if ticket.confidentiel}<span
+					class="badge badge-gray"
+					title="Réservé à l'auteur, à la personne concernée et au conseil syndical"
+					>🔒 Confidentiel</span
+				>{/if}
 			<span class="tk-numero">#{ticket.numero}</span>
 			<!--  🔴 PAS DE BADGE 📍 DU DEMANDEUR — arbitré à l'écran le 30/08/2026
 			      (#653) : *« se restreindre uniquement au périmètre »*.

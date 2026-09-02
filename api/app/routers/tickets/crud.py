@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlmodel import Session, or_, select
+from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin, peut_commander, peut_commenter, peut_editer
 from app.database import get_session
@@ -29,6 +29,7 @@ from app.utils.suppression_liee import (
 )
 from app.utils.liens import lien_ticket
 from app.utils.photos import parse_photos, photos_internes
+from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.visibility import ticket_visible
 
 from .commun import (
@@ -48,6 +49,7 @@ from app.utils.corrections import (
     PREFIXE_CORRECTION_AUTEUR,
     SEPARATEUR_CORRECTION,
 )
+from app.utils.destinataires import membres_cs_ou_admin
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
 #  chemin VIDE (`GET /tickets`, `POST /tickets`), et FastAPI refuse un chemin
@@ -61,26 +63,35 @@ def list_tickets(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    stmt = select(Ticket)
-    if not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        stmt = stmt.where(
-            or_(Ticket.auteur_id == user.id, Ticket.saisi_pour_user_id == user.id)
-        )
-    tickets = session.exec(stmt.order_by(Ticket.cree_le.desc())).all()
-    return [ticket_read(ticket, session) for ticket in tickets]
+    #  🔴 UNE SEULE RÈGLE DE VISIBILITÉ, ET ELLE EST EN PYTHON (#710, 02/09/2026).
+    #
+    #  Ce filtre existait aussi en SQL — `auteur_id == moi OR saisi_pour == moi` —
+    #  et disait donc la même chose que `ticket_visible` dans un autre langage.
+    #  Tant que la règle tenait en deux colonnes, les deux écritures pouvaient
+    #  rester d'accord par chance. Le périmètre y met fin : il demande l'arbre des
+    #  périmètres, l'héritage de la portée globale et les lots de l'utilisateur,
+    #  qu'aucun `where` ne sait exprimer sans re-dériver la règle une troisième
+    #  fois.
+    #
+    #  Alors la liste passe par la MÊME fonction que la fiche. C'est le motif que
+    #  `flux/sante.py` emploie déjà, et pour la même raison : « la liste ramenait
+    #  ce que le détail refusait » est un défaut qu'on ne voit jamais depuis la
+    #  liste — on ne remarque pas ce qui manque.
+    #
+    #  ⚠️ Coût assumé : tous les tickets sont chargés puis filtrés. À l'échelle
+    #  d'une copropriété c'est quelques centaines de lignes ; le jour où ça ne
+    #  l'est plus, la réponse est la pagination, jamais une seconde règle.
+    tickets = session.exec(select(Ticket).order_by(Ticket.cree_le.desc())).all()
+    return [
+        ticket_read(ticket, session)
+        for ticket in tickets
+        if ticket_visible(ticket, user)
+    ]
 
 
 def _notifier_cs_creation(session: Session, ticket: Ticket, urgence: bool) -> None:
     """Notification in-app à tout le CS, plus le syndic si le ticket est urgent."""
-    cs_members = session.exec(
-        select(Utilisateur).where(
-            Utilisateur.actif == True,  # noqa: E712
-            or_(
-                Utilisateur.roles_json.contains("conseil_syndical"),
-                Utilisateur.roles_json.contains("admin"),
-            ),
-        )
-    ).all()
+    cs_members = membres_cs_ou_admin(session)
     if urgence:
         syndics = session.exec(
             select(Utilisateur).where(Utilisateur.statut == StatutUtilisateur.syndic)
@@ -120,6 +131,11 @@ def create_ticket(
     est_cs = peut_commander(user)
     ticket = Ticket(
         numero=generer_numero(),
+        #  L'adresse de réponse est fixée à la CRÉATION (#703) : la poser plus
+        #  tard obligerait à savoir quels tickets en ont déjà une, et un ticket
+        #  sans jeton part avec un courriel sans `Reply-To` — la réponse du
+        #  syndic retomberait alors dans la boîte muette d'avant.
+        jeton_courriel=nouveau_jeton(),
         titre=body.titre,
         description=body.description,
         categorie=body.categorie,

@@ -27,6 +27,15 @@
  * une variation VOULUE d'une copie oubliée, puisque le CSS ne le dit pas.
  */
 export const TOLERANCES = {
+	//  ── `.checkbox-field` : l'alignement quand le libellé fait plusieurs lignes ─
+	//  La charte centre la case sur son libellé, ce qui est juste tant qu'il tient
+	//  sur une ligne. Les conditions d'utilisation en font trois : la case doit
+	//  alors s'aligner sur la PREMIÈRE, sinon elle flotte au milieu du paragraphe.
+	//  C'est la SEULE des quatre propriétés qui reste locale — les trois autres
+	//  (gap, font-size, display) étaient trois valeurs différentes pour la même
+	//  case, et sont remontées dans la charte le 02/09/2026.
+	'routes/auth/inscription/+page.svelte::checkbox-field':
+		'align-items: flex-start — le libellé des conditions tient sur plusieurs lignes',
 	//  ── `.form-grid` : la répartition en colonnes ────────────────────────────
 	//  `composants.css` le prévoit en toutes lettres : « les écrans qui
 	//  répartissent autrement ne gardent QUE ce qui diffère — une colonne, un

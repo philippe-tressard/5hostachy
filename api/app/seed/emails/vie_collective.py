@@ -118,7 +118,7 @@ MODELES = [
      True),
     ("document_publie", "Document publié", "Nouveau document disponible — {{ residence.nom }}",
      '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">\U0001f4c4 Nouveau document</h2>'
-     '<p style="margin:0 0 16px">Un nouveau document a été publié sur l\u2019espace de votre résidence\u202f:</p>'
+     '<p style="margin:0 0 16px">Un nouveau document a été publié sur l’espace de votre résidence\u202f:</p>'
      '<table role="presentation" style="width:100%;margin:0 0 20px;border:1px solid #D0D8E4;border-radius:8px;overflow:hidden"><tr>'
      '<td style="background:#F2EFE9;padding:16px">'
      '<p style="margin:0;font-weight:700;font-size:16px;color:#1E3A5F">{{ document.titre }}</p>'

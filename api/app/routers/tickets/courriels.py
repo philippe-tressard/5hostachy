@@ -103,6 +103,14 @@ def envoyer_email_syndic_cs(
         demandee=auteur,
     )
 
+    #  🔴 L'ADRESSE DE RÉPONSE (#703). C'est le SEUL courriel du site auquel on
+    #  attend une réponse écrite : le syndic répond, et sa réponse doit rejoindre
+    #  le fil du ticket au lieu de dormir dans une boîte que personne n'ouvre.
+    #
+    #  Le jeton part avec l'envoi, jamais l'identifiant du ticket : il sera
+    #  recopié dans tous les carnets d'adresses de la chaîne, et un identifiant
+    #  en clair donnerait le moyen d'écrire sur n'importe quel ticket en devinant
+    #  `tickets+42@`. Voir `utils/courriel_entrant.py`.
     background_tasks.add_task(
         send_email_group,
         code="ticket_syndic",
@@ -111,6 +119,7 @@ def envoyer_email_syndic_cs(
         session=session,
         bcc=auteur_bcc,
         attachments=pieces_jointes or None,
+        jeton_reponse=getattr(ticket, "jeton_courriel", None),
     )
 
 

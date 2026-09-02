@@ -31,7 +31,7 @@ _BOUTON_AVANT = (
     '<a href="{{ app.url }}/espace-cs?onglet=annonces-hall" '
     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;'
     'font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
-    "Voir l\u2019historique des annonces</a></p>"
+    "Voir l’historique des annonces</a></p>"
 )
 
 _BOUTON_APRES = (
@@ -39,7 +39,7 @@ _BOUTON_APRES = (
     '<a href="{{ app.url }}{{ annonce.lien }}" '
     'style="display:inline-block;background:#1E3A5F;color:#ffffff;font-weight:600;'
     'font-size:15px;padding:12px 32px;border-radius:6px;text-decoration:none">'
-    "Voir l\u2019actualité d\u2019origine</a></p>{% endif %}"
+    "Voir l’actualité d’origine</a></p>{% endif %}"
 )
 
 

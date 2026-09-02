@@ -181,9 +181,9 @@ def creer_commande_acces(
     if not user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         user_lot_ids = [ul.lot_id for ul in user.user_lots if ul.actif]
         if body.lot_id not in user_lot_ids:
-            raise HTTPException(403, "Vous n'\u00eates pas associ\u00e9 \u00e0 ce lot.")
+            raise HTTPException(403, "Vous n'êtes pas associé à ce lot.")
     if body.quantite < 1 or body.quantite > 10:
-        raise HTTPException(400, "Quantit\u00e9 invalide (1-10).")
+        raise HTTPException(400, "Quantité invalide (1-10).")
     cmd = CommandeAcces(
         user_id=user.id,
         lot_id=body.lot_id,

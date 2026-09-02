@@ -140,6 +140,19 @@ async def lifespan(app: FastAPI):
     from app.utils.health_monitor import run_health_check
     scheduler.add_job(run_health_check, "cron", hour=6, minute=0, id="health_check")
 
+    #  Réponses par courriel aux tickets (#703). Toutes les 10 minutes : assez
+    #  souvent pour qu'une réponse du syndic paraisse « immédiate » dans le fil,
+    #  assez rare pour ne pas marteler la boîte IMAP.
+    #
+    #  ⚠️ `relever()` ne lève jamais — voir sa docstring : une exception ici
+    #  tuerait le job pour de bon, et la relève s'arrêterait en silence. Elle
+    #  rend un compte, qu'elle journalise.
+    #
+    #  Rien ne tourne tant que `imap_enabled` n'est pas posé en administration :
+    #  la fonction sort immédiatement.
+    from app.utils.courriel_boite import relever as _relever_reponses
+    scheduler.add_job(_relever_reponses, "interval", minutes=10, id="courriel_reponses")
+
     yield
     # Nettoyage à l'arrêt
     scheduler.shutdown()

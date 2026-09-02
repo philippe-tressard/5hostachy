@@ -192,15 +192,57 @@ def can_see_ag(user: Utilisateur) -> bool:
         RoleUtilisateur.admin,
     )
 
-# \u2500\u2500 R\u00e8gles ticket \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n
+# ── Règles ticket ─────────────────────────────────────────────────────────────
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
-    """
-    Retourne True si l'utilisateur peut voir ce ticket.
+    """Qui peut LIRE ce ticket — jamais qui peut y écrire.
 
-    - CS / Admin : toujours True.
-    - Auteur du ticket (auteur_id == user.id).
-    - R\u00e9sident inscrit pour le compte duquel le ticket a \u00e9t\u00e9 saisi
-      (saisi_pour_user_id == user.id).
+    ## L'ouverture du 02/09/2026 (#710)
+
+    > « Les copropriétaires et locataires peuvent désormais voir les tickets de
+    >   leur périmètre. »
+
+    Un résident voit les tickets dont le périmètre recoupe **ses bâtiments**, et
+    ceux à portée globale. La règle n'est pas réécrite ici : `perimetre_visible`
+    la porte, `mes_batiments` porte « quels bâtiments sont les siens ». Ce corps
+    ne fait que les **composer** — aucune liste de périmètres, aucun
+    `batiment_id`, aucun rôle en dur.
+
+    🔴 ET CE N'EST PAS LA RÈGLE DES ACTUALITÉS, malgré l'apparence. La première
+    écriture de cette fonction passait `ouvert_a_la_copropriete=not confidentiel`,
+    par analogie avec `publication_visible` — deux tests l'ont refusée dans la
+    minute, et ils avaient raison deux fois :
+
+    - ce paramètre ne restreint pas au périmètre, il **l'ignore** : un résident
+      sans préférence de restriction voyait alors TOUS les tickets, y compris
+      ceux d'un bâtiment où il n'a rien. L'ouverture demandée était « son
+      périmètre », pas « tout » ;
+    - et il rendait le drapeau `confidentiel` **inopérant** sur le cas le plus
+      courant, un ticket à portée « résidence » : la portée globale est décidée
+      avant lui, donc il ne refermait rien du tout.
+
+    Une actualité s'adresse à la copropriété et son ciblage n'est qu'un accent
+    (#339) ; un ticket est une **affaire**, et son périmètre dit qui elle
+    regarde. Le même mot, deux règles — les composer pareil était l'erreur.
+
+    ## Ce que cette fonction n'ouvre PAS
+
+    Elle décide de la **lecture**. Commenter, faire avancer le suivi, corriger la
+    demande passent par `peut_commenter` / `peut_editer` (`auth/deps.py`), qui ne
+    l'appellent pas : élargir la lecture ne donne donc aucun droit d'écriture.
+    C'est ce qui rend le « lecture seule » du ticket structurel plutôt que promis.
+
+    ## `confidentiel` — le filet
+
+    Un litige de voisinage, un impayé, un dégât des eaux qui nomme quelqu'un :
+    ces tickets existent, et l'ouverture les rendrait lisibles de tout un
+    bâtiment. Le drapeau les ramène à ce qu'ils étaient hier — **l'auteur, la
+    personne pour qui le ticket a été saisi, le CS**, et personne d'autre. Ces
+    trois cas sont traités AVANT, et le drapeau ne les touche pas.
+
+    ⚠️ Il refuse donc SANS consulter le périmètre, et c'est délibéré : un ticket
+    confidentiel à portée « résidence » doit se refermer comme les autres. Écrit
+    dans l'autre ordre, le drapeau n'aurait mordu que sur les tickets déjà les
+    plus restreints — ceux dont on n'a pas besoin de lui.
     """
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         return True
@@ -208,4 +250,13 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
         return True
     if ticket.saisi_pour_user_id is not None and ticket.saisi_pour_user_id == user.id:
         return True
-    return False
+
+    if ticket.confidentiel:
+        return False
+
+    perims = _codes_json_pour_acces(ticket.perimetre_cible)
+    if perims is None:
+        #  Ciblage illisible : on refuse. Le CS, l'admin et l'auteur sont déjà
+        #  sortis plus haut — personne ne perd l'accès nécessaire pour corriger.
+        return False
+    return perimetre_visible(perims, user)

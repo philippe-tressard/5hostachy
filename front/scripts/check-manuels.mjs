@@ -37,12 +37,10 @@ import * as prettier from 'prettier';
 const FRONT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const RACINE = join(FRONT, '..');
 
-const MANUELS = [
-	'docs/manuel-utilisateur.html',
-	'docs/manuel-utilisateur-1-page.html',
-	'front/static/manuel-utilisateur.html',
-	'front/static/manuel-utilisateur-1-page.html',
-];
+//  🔴 UN SEUL manuel depuis le 02/09/2026 (#651) : la « version 1 page » a été
+//  supprimée sur arbitrage. Deux documents sur le même produit divergent au
+//  premier écran qui change.
+const MANUELS = ['docs/manuel-utilisateur.html', 'front/static/manuel-utilisateur.html'];
 
 const echecs = [];
 

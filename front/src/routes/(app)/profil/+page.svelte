@@ -720,13 +720,7 @@
 	.form-actions {
 		flex-wrap: wrap;
 	} /* le reste vient de la charte (#607) */
-	.checkbox-field {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-		cursor: pointer;
-	}
+
 	.hint {
 		font-size: 0.78rem;
 		color: var(--color-text-muted);

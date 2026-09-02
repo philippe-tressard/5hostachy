@@ -62,18 +62,6 @@ _MOTIF = re.compile(r"auteur_id\s*[!=]=\s*(user|current_user)\.id")
 EXCEPTIONS = {
     "tickets/evolutions.py": "décide d'une NOTIFICATION à l'auteur, pas d'un droit",
     "tickets/messages.py": "décide d'une NOTIFICATION à l'auteur, pas d'un droit",
-    #  🔴 Celle-ci est d'une autre nature, et c'est la plus délicate des trois.
-    #
-    #  `list_tickets` filtre en SQL (`WHERE auteur_id = :id OR saisi_pour = :id`).
-    #  Une clause SQL ne peut pas appeler `ticket_visible`, qui est du Python :
-    #  il faudrait charger TOUS les tickets pour les filtrer ensuite. La règle est
-    #  donc écrite DEUX fois — une en Python, une en SQL — et rien dans le langage
-    #  ne peut les rendre solidaires.
-    #
-    #  C'est pour cela que `test_le_filtre_sql_dit_la_meme_chose_que_ticket_visible`
-    #  existe plus bas : puisqu'on ne peut pas supprimer la seconde écriture, on
-    #  vérifie qu'elle dit la même chose que la première.
-    "tickets/crud.py": "filtre SQL — solidarité vérifiée par le test de concordance",
 }
 
 
@@ -185,49 +173,46 @@ def test_aucune_comparaison_directe_de_role_ou_de_statut():
 #  durcir `ticket_visible` laisserait la LISTE ouverte, ou l'inverse : deux
 #  chemins vers la même donnée, d'accord entre eux jusqu'au jour où l'un change.
 
-def test_le_filtre_sql_dit_la_meme_chose_que_ticket_visible():
-    """Les deux écritures de « qui voit un ticket », comparées cas par cas."""
-    import types
+def test_list_tickets_ne_REECRIT_pas_la_visibilite_en_SQL():
+    """🔴 Ce test a remplacé un test de concordance, et le remplacement est la leçon.
 
-    from app.models.core import RoleUtilisateur
-    from app.utils.visibility import ticket_visible
+    Jusqu'au 02/09/2026, `list_tickets` portait un `WHERE auteur_id = :id OR
+    saisi_pour = :id` : la règle de visibilité écrite une SECONDE fois, en SQL.
+    Elle était déclarée en exception ici, avec ce motif — *« une clause SQL ne
+    peut pas appeler `ticket_visible` ; on ne peut donc pas supprimer la seconde
+    écriture, on vérifie qu'elle dit la même chose »* — et un test rejouait les
+    deux verdicts cas par cas.
 
-    def _user(uid, cs=False):
-        u = types.SimpleNamespace(id=uid)
-        u.has_role = lambda *r: cs and RoleUtilisateur.conseil_syndical in r or (
-            cs and RoleUtilisateur.admin in r
-        )
-        return u
+    L'ouverture par périmètre (#710) a tranché autrement : le `WHERE` a été
+    **supprimé**, la liste passe par `ticket_visible` comme la fiche. Le test de
+    concordance n'avait alors plus rien à comparer — et un test dont la cible a
+    disparu est vert en ne mesurant rien.
 
-    def _ticket(auteur, saisi_pour=None):
-        return types.SimpleNamespace(auteur_id=auteur, saisi_pour_user_id=saisi_pour)
-
-    def _filtre_sql(ticket, user) -> bool:
-        """La transcription du `WHERE` de `list_tickets`, en Python.
-
-        ⚠️ Recopiée à la main — c'est assumé, et c'est ce que le test compare.
-        Si elle cesse de correspondre au vrai `WHERE`, c'est le test qui devient
-        faux : le relire fait partie de toute modification de `list_tickets`.
-        """
-        if user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-            return True
-        return ticket.auteur_id == user.id or ticket.saisi_pour_user_id == user.id
-
-    cas = [
-        ("son propre ticket", _ticket(7), _user(7)),
-        ("ticket d'un autre", _ticket(9), _user(7)),
-        ("saisi POUR lui", _ticket(9, saisi_pour=7), _user(7)),
-        ("saisi pour un autre", _ticket(9, saisi_pour=8), _user(7)),
-        ("le CS voit tout", _ticket(9), _user(7, cs=True)),
-        ("sans auteur ni saisi_pour", _ticket(None), _user(7)),
-    ]
-    ecarts = [
-        f"{libelle} : SQL={_filtre_sql(t, u)} / Python={ticket_visible(t, u)}"
-        for libelle, t, u in cas
-        if _filtre_sql(t, u) != ticket_visible(t, u)
-    ]
-    assert not ecarts, (
-        "Le filtre SQL de `list_tickets` et `ticket_visible` divergent : "
-        f"{ecarts}. Deux chemins vers la même donnée qui ne disent pas la même "
-        "chose — l'un des deux laisse voir ce que l'autre refuse."
+    ⚠️ Ce qu'on garde de lui : la surveillance. Le jour où quelqu'un
+    « optimisera » la liste en réintroduisant un filtre, ce test tombera. C'est
+    le seul moment où la divergence serait encore réparable : une fois en
+    production, elle ne fait aucun bruit — on ne remarque pas ce qui manque
+    d'une liste.
+    """
+    source = (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "app" / "routers" / "tickets" / "crud.py"
+    ).read_text(encoding="utf-8")
+    arbre = ast.parse(source)
+    fn = next(
+        n for n in ast.walk(arbre)
+        if isinstance(n, ast.FunctionDef) and n.name == "list_tickets"
     )
+    corps = ast.get_source_segment(source, fn) or ""
+
+    assert "ticket_visible" in corps, (
+        "`list_tickets` n'appelle plus `ticket_visible` : soit la liste ne filtre "
+        "plus rien, soit elle a sa propre règle. Les deux sont graves."
+    )
+    for interdit in (".where(", "or_("):
+        assert interdit not in corps, (
+            f"`list_tickets` porte de nouveau un `{interdit}` : la règle de "
+            "visibilité est en train d'être réécrite en SQL. Elle ne peut pas "
+            "exprimer l'arbre des périmètres ni les lots — les deux écritures "
+            "divergeront, et la liste laissera voir ce que la fiche refuse."
+        )

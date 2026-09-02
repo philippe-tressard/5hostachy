@@ -17,7 +17,12 @@ import re
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
 
-_MANUELS = ("manuel-utilisateur.html", "manuel-utilisateur-1-page.html")
+#: 🔴 UN SEUL manuel depuis le 02/09/2026 (#651). La « version 1 page » a été
+#: supprimée sur arbitrage : *« le manuel utilisateur en 1 page est à supprimer ;
+#: le manuel utilisateur suffit »*. Deux documents décrivant le même produit
+#: divergent au premier écran qui change — et c'est le plus court, donc le moins
+#: relu, qui restait en arrière.
+_MANUELS = ("manuel-utilisateur.html",)
 
 
 def test_manuels_synchronises_docs_et_static():

@@ -84,6 +84,8 @@
 	let description = ticket?.description ?? '';
 	let categorie = ticket?.categorie ?? 'panne';
 	let statut = ticket?.statut ?? 'ouvert';
+	//  🔒 Confidentiel (#710) — le CS seul le pose, et le serveur le revérifie.
+	let confidentiel = ticket?.confidentiel ?? false;
 	//  Workflow du ticket, VISIBLE de tous dès la création : c'est une information
 	//  capitale pour le suivi, et la masquer laissait croire qu'un ticket n'a pas
 	//  d'état tant que le CS ne l'a pas touché. Seul le CS peut la MODIFIER — un
@@ -258,6 +260,7 @@
 					...($isCS
 						? {
 								statut,
+								confidentiel,
 								destinataire_syndic: destinataireSyndic,
 								destinataire_cs: destinataireCs,
 								partager_whatsapp: partagerWhatsapp,
@@ -292,6 +295,7 @@
 				//  charge utile l'avait oublié. Comme en édition, il n'accompagne le lot que
 				//  pour le CS : un résident ne doit pas ouvrir un ticket déjà « Résolu ».
 				payload.statut = statut;
+				payload.confidentiel = confidentiel;
 				if (modeSaisiPour === 'resident' && saisiPourUserId) {
 					payload.saisi_pour_user_id = saisiPourUserId;
 				} else if (modeSaisiPour === 'exterieur') {
@@ -390,6 +394,20 @@
 				bind:email={saisiPourEmail}
 				residents={usersActifs}
 			/>
+
+			<!--  🔒 CONFIDENTIEL (#710). Pourquoi ce n'est PAS la case d'une
+			      actualité malgré le mot : `Ticket.confidentiel`, api/types.ts. -->
+			<div class="field">
+				<label class="checkbox-field" for="ticket-confidentiel">
+					<input id="ticket-confidentiel" type="checkbox" bind:checked={confidentiel} />
+					🔒 Confidentiel
+				</label>
+				<p class="aide-champ">
+					{confidentiel
+						? 'Seuls vous, le conseil syndical et la personne concernée voyez ce ticket.'
+						: 'Visible des résidents dont ce ticket concerne le bâtiment. Cochez pour le réserver au conseil syndical.'}
+				</p>
+			</div>
 		{/if}
 
 		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
@@ -422,20 +440,13 @@
 			</div>
 		</SectionFormulaire>
 
-		<!--  4 à 9 : l'ordre, les intitulés et les séparations sont hérités du
-		      composant partagé — voir `ChampsCommuns.svelte`.
-		      ⚠️ Aucune de ces sections n'est gouvernée par `modeEdition` : elles le
-		      sont par la DÉCLARATION (`$lib/entites/ticket`), qui porte chaque
-		      divergence avec son motif — et `npm run lint:etats` refuse qu'on
-		      remette une condition en dur ici. Aujourd'hui :
-		      • Photos — absente en édition, motif `api` #431 (`TicketUpdate`
-		        n'accepte pas `photos_urls` : les proposer ferait disparaître la
-		        sélection à l'enregistrement, en silence) ;
-		      • Documents — OUVERTS à l'édition depuis #431 : `fichiers_urls` est
-		        accepté, et une liste vide efface sans ambiguïté ;
-		      • Diffusion — absente en édition, motif `geste` : les canaux
-		        notifient, et rejouer un envoi à chaque faute de frappe rattrapée
-		        est l'incident du triple envoi WhatsApp (14/08/2026). -->
+		<!--  4 à 9 : ordre, intitulés et séparations hérités de `ChampsCommuns`.
+		      🔴 Aucune n'est gouvernée par `modeEdition` mais par la DÉCLARATION
+		      (`$lib/entites/ticket`), qui porte chaque divergence avec son motif ;
+		      `lint:etats` refuse qu'on remette une condition en dur ici.
+		      ⚠️ Les motifs NE SE RECOPIENT PAS : ce commentaire les listait, et
+		      il avait divergé — il annonçait encore Photos en motif `api`, soldé
+		      le 18/08/2026. Une copie d'une source unique est une source de plus. -->
 		<ChampsCommuns
 			bind:refDiffusion
 			demanderApercu={brouillonApercu}
@@ -491,17 +502,11 @@
 		line-height: 1.45;
 		margin: 0.25rem 0 0;
 	}
-	/*  🔴 `.cat-grid`, `.cat-option`, `.cat-label` et `.cat-desc` retirées le
-	    30/08/2026 : les cinq catégories passent par `ChoixPastilles`, qui porte
-	    son style avec son balisage. Ces règles décrivaient une carte deux fois
-	    plus haute qu'une pastille pour la même question posée à l'utilisateur.
-
-	    ⚠️ L'une d'elles était un défaut d'accessibilité : `.cat-option
-	    input[type='radio'] { display: none }` retirait le bouton radio de l'ordre
-	    de tabulation ET de l'arbre d'accessibilité. Le `radiogroup` était donc
-	    déjà perdu ici — au clavier comme au lecteur d'écran — alors que c'est
-	    précisément l'argument qui interdisait la conversion en pastilles.
-	    `Pastille` le masque par découpage, ce qui le garde focusable et lu. */
+	/*  `.cat-grid`, `.cat-option`, `.cat-label`, `.cat-desc` retirées le 30/08/2026 :
+	    les catégories passent par `ChoixPastilles`, qui porte son style. L'une
+	    d'elles masquait le radio en `display:none` — donc hors tabulation ET hors
+	    arbre d'accessibilité ; `Pastille` le masque par découpage, ce qui le garde
+	    focusable et lu. */
 
 	/*  `.intitule-champ` a disparu d'ici : « Saisi pour » est devenu le TITRE de
 	    sa section (`SectionFormulaire`), qui porte déjà sa typographie. Un

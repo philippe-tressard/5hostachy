@@ -10,7 +10,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_cs_or_admin
@@ -27,6 +26,7 @@ from app.models.core import (
 )
 from app.utils.communaute import exiger_acces
 from app.utils.noms import nom_affiche
+from app.utils.destinataires import membres_cs_ou_admin
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
 
@@ -121,15 +121,7 @@ def creer_signalement(
     session.add(sig)
 
     # Notifier les CS/admin (in-app) de l'arrivée d'un signalement.
-    cs_members = session.exec(
-        select(Utilisateur).where(
-            Utilisateur.actif == True,  # noqa: E712
-            or_(
-                Utilisateur.roles_json.contains("conseil_syndical"),
-                Utilisateur.roles_json.contains("admin"),
-            ),
-        )
-    ).all()
+    cs_members = membres_cs_ou_admin(session)
     for m in cs_members:
         if m.id != user.id:
             session.add(Notification(

@@ -21,9 +21,9 @@ def upgrade() -> None:
 
     corps_texte = (
         '{% if reference_copro %}[{{ reference_copro }}] {% endif %}'
-        'Ticket #{{ ticket.numero }} \u2014 {{ ticket.titre }}\n'
+        'Ticket #{{ ticket.numero }} — {{ ticket.titre }}\n'
         'Auteur\u202f: {{ auteur.prenom }} {{ auteur.nom }}\n'
-        '{% if ticket.description %}D\u00e9tail\u202f: {{ ticket.description }}\n{% endif %}'
+        '{% if ticket.description %}Détail\u202f: {{ ticket.description }}\n{% endif %}'
         '{% if historique and historique|length > 1 %}\n'
         'Historique\u202f:\n'
         '{% for h in historique %}- {{ h.date }}\u202f: {{ h.label }}\n{% endfor %}'

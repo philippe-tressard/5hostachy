@@ -50,18 +50,30 @@ EXCEPTIONS = {
 
 MOTIFS = {
     "est_principal == True": "le syndic principal — `syndic_principal(session)`",
+    'roles_json.contains("admin")':
+        "les destinataires d'une notification IN-APP (CS **ou** admin) — "
+        "`membres_cs_ou_admin(session)`",
     'roles_json.contains("conseil_syndical")':
         "la liste du CS par le rôle — `membres_cs_avec_email(session)` "
         "ou `destinataires_syndic_cs(...)`",
 }
 
-#  ⚠️ Les notifications IN-APP visent « CS **ou** admin » et rendent des
-#  `Utilisateur`, pas des couples (id, e-mail) : ce n'est pas la même décision,
-#  et les confondre enverrait des courriels aux administrateurs. Elles sont
-#  reconnues par la présence de `contains("admin")` dans le même appel, et non
-#  listées fichier par fichier — une liste de fichiers se périme, une
-#  caractéristique du code se vérifie.
-MARQUEUR_IN_APP = 'roles_json.contains("admin")'
+#  🔴 L'EXEMPTION DES NOTIFICATIONS IN-APP EST TOMBÉE LE 02/09/2026.
+#
+#  Elle disait ceci, et c'était vrai : *« les notifications in-app visent CS ou
+#  admin et rendent des `Utilisateur`, pas des couples (id, e-mail) : ce n'est pas
+#  la même décision, et les confondre enverrait des courriels aux
+#  administrateurs »*. Le marqueur `contains("admin")` les laissait donc passer.
+#
+#  Sauf que « une autre décision » n'autorise pas « écrite partout » : elle
+#  l'était **trois fois** — `tickets/crud.py`, `tickets/messages.py`,
+#  `signalements.py` — et elle avait commencé à diverger, la copie des messages
+#  exigeant en plus `email IS NOT NULL`, ce qui privait de notification à l'écran
+#  un membre du CS sans adresse.
+#
+#  Elle a maintenant sa source unique, `membres_cs_ou_admin(session)`. Le
+#  marqueur n'exempte donc plus : il DÉSIGNE le remède, comme les deux autres.
+#  L'exemption était le symptôme d'une règle qui n'existait pas encore.
 
 
 def _fichiers_python() -> list[Path]:
@@ -95,8 +107,10 @@ def test_la_regle_des_destinataires_ne_s_ecrit_qu_a_un_endroit():
         for motif, remede in MOTIFS.items():
             if motif not in source:
                 continue
-            if motif == 'roles_json.contains("conseil_syndical")' and MARQUEUR_IN_APP in source:
-                continue  # notification in-app : autre décision, autre destinataire
+            #  Un appel in-app cite les DEUX rôles : ne le compter qu'une fois,
+            #  sur le motif « admin », qui désigne le bon remède.
+            if motif == 'roles_json.contains("conseil_syndical")'                     and 'roles_json.contains("admin")' in source:
+                continue
             if rel in EXCEPTIONS:
                 exceptions_utiles.add(rel)
                 continue
