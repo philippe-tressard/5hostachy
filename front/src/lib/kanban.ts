@@ -130,3 +130,35 @@ export function kanbanEvMatchesYear(ev: any, exercice: number): boolean {
 export function evenementArchive<T extends Record<string, unknown>>(ev: T): T {
 	return { ...ev, archivee: true, archivee_manuellement: true };
 }
+
+/**
+ * **Dans quelle colonne cette carte va-t-elle ?** — écrit une seule fois.
+ *
+ * 🔴 POURQUOI (02/09/2026, signalé à l'écran : *« je n'ai pas la même vue entre le
+ * fil et le calendrier pour le kanban »*).
+ *
+ * Ce calcul existait **deux fois** — dans `calendrier/+page.svelte` et dans
+ * `tableau-de-bord/+page.svelte` —, à l'identique. Corriger l'un le jour où
+ * `archivee` a changé de sens n'a pas corrigé l'autre : le fil rangeait quatre
+ * maintenances de la colonne « Prestataire » dans « Terminé », le calendrier non.
+ * Prestataire affichait 1 d'un côté et 5 de l'autre, Terminé 9 contre 5.
+ *
+ * C'est le cadre #430 mot pour mot : *un objet a plusieurs rendus, et toute
+ * divergence entre eux se déclare*. Celle-ci ne se déclarait nulle part, et elle
+ * n'était visible qu'en regardant les deux écrans côte à côte.
+ *
+ * ⚠️ La règle : une **maintenance récurrente** archivée à la main et restée en
+ * colonne « Fournisseur » se range dans « Terminé ». C'est le seul déplacement, et
+ * il porte sur l'archivage MANUEL — pas sur l'état effectif, qui inclut le temps.
+ * Une visite pré-remplie sur un mois écoulé reste chez le prestataire tant que
+ * personne ne l'a close.
+ */
+export function colonneDeLEvenement(ev: any): string {
+	if (
+		ev.archivee_manuellement &&
+		ev.type === 'maintenance_recurrente' &&
+		ev.statut_kanban === 'fournisseur'
+	)
+		return 'termine';
+	return ev.statut_kanban;
+}

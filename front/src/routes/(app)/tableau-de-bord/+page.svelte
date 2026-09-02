@@ -8,6 +8,7 @@
 	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
 	import { flux, lots, calendrier as calApi, type FluxItem, type FluxResponse } from '$lib/api';
 	import {
+		colonneDeLEvenement,
 		kanbanEvVisible,
 		kanbanColVisible,
 		kanbanEvMatchesYear,
@@ -272,11 +273,9 @@
 	$: dashKanbanCols = DASH_KANBAN_COLS.filter((col) =>
 		kanbanColVisible(col.id, _dashKanbanCtx),
 	).map((col) => {
-		let items: any[] = dashKanbanEvs.filter((ev: any) => {
-			if (ev.archivee && ev.type === 'maintenance_recurrente' && ev.statut_kanban === 'fournisseur')
-				return col.id === 'termine';
-			return ev.statut_kanban === col.id;
-		});
+		//  🔴 Le rangement vit dans `$lib/kanban` : il était écrit ici ET dans le
+		//  calendrier, et les deux ont divergé (signalé à l'écran, 02/09/2026).
+		let items: any[] = dashKanbanEvs.filter((ev: any) => colonneDeLEvenement(ev) === col.id);
 		if (col.id === 'termine') {
 			items = [...items].sort(
 				(a: any, b: any) =>
