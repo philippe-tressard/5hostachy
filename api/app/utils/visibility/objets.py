@@ -192,14 +192,14 @@ def can_see_ag(user: Utilisateur) -> bool:
         RoleUtilisateur.admin,
     )
 
-# \u2500\u2500 R\u00e8gles ticket \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n
+# ── Règles ticket ─────────────────────────────────────────────────────────────
 def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
     """
     Retourne True si l'utilisateur peut voir ce ticket.
 
     - CS / Admin : toujours True.
     - Auteur du ticket (auteur_id == user.id).
-    - R\u00e9sident inscrit pour le compte duquel le ticket a \u00e9t\u00e9 saisi
+    - Résident inscrit pour le compte duquel le ticket a été saisi
       (saisi_pour_user_id == user.id).
     """
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):

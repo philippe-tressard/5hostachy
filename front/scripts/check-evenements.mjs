@@ -415,14 +415,14 @@ if (mortes.length) {
 if (depareillees.length) {
 	echec = true;
 	console.error(`
-\u2717 ${depareillees.length} capacit\u00e9(s) d\u00e9pareill\u00e9e(s) \u2014 la prop et l'\u00e9couteur vont ENSEMBLE :
+✗ ${depareillees.length} capacité(s) dépareillée(s) — la prop et l'écouteur vont ENSEMBLE :
 `);
 	for (const d of depareillees) {
-		console.error(`  ${d.fichier} \u2014 <${d.composant}>`);
+		console.error(`  ${d.fichier} — <${d.composant}>`);
 		console.error(
 			d.declare
-				? `      d\u00e9clare \`${d.prop}\` mais n'\u00e9coute pas \`on:${d.evenement}\` \u2014 le geste serait propos\u00e9 sans effet.`
-				: `      \u00e9coute \`on:${d.evenement}\` mais ne d\u00e9clare pas \`${d.prop}\` \u2014 le geste ne s'affichera jamais.`,
+				? `      déclare \`${d.prop}\` mais n'écoute pas \`on:${d.evenement}\` — le geste serait proposé sans effet.`
+				: `      écoute \`on:${d.evenement}\` mais ne déclare pas \`${d.prop}\` — le geste ne s'affichera jamais.`,
 		);
 		console.error('');
 	}
@@ -430,7 +430,7 @@ if (depareillees.length) {
 if (pairesMortes.length) {
 	echec = true;
 	console.error(`
-\u2717 ${pairesMortes.length} paire(s) de capacit\u00e9 dont le composant a disparu \u2014 les retirer :
+✗ ${pairesMortes.length} paire(s) de capacité dont le composant a disparu — les retirer :
 `);
 	for (const c of pairesMortes) console.error(`  ${c}`);
 	console.error('');

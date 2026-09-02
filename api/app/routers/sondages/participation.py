@@ -46,7 +46,7 @@ def voter(
     if not s:
         raise HTTPException(404, "Sondage introuvable")
     if not sondage_accessible(s, user):
-        raise HTTPException(403, "Vous n'\u00eates pas autoris\u00e9 \u00e0 participer \u00e0 ce sondage")
+        raise HTTPException(403, "Vous n'êtes pas autorisé à participer à ce sondage")
     if sondage_clos(s, datetime.utcnow()):
         raise HTTPException(400, "Ce sondage est clôturé")
 

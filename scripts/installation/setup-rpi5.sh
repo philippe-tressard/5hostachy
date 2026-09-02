@@ -687,7 +687,7 @@ else
   echo "  3. Lancez : cd ${INSTALL_DIR} && docker compose up -d"
 fi
 echo ""
-echo -e "  Acc\u00e8s local        : ${CYAN}https://<RPi-IP>${RESET}  (certificat auto-sign\u00e9 \u00e0 accepter)"
-echo -e "  Logs en temps r\u00e9el : ${CYAN}docker compose -f ${INSTALL_DIR}/docker-compose.yml logs -f${RESET}"
+echo -e "  Accès local        : ${CYAN}https://<RPi-IP>${RESET}  (certificat auto-signé à accepter)"
+echo -e "  Logs en temps réel : ${CYAN}docker compose -f ${INSTALL_DIR}/docker-compose.yml logs -f${RESET}"
 echo -e "  Statut des services: ${CYAN}docker compose -f ${INSTALL_DIR}/docker-compose.yml ps${RESET}"
 echo ""

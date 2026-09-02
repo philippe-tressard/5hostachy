@@ -188,9 +188,9 @@ def _build_message(
         perimetre_label = "Copropriété"
 
     if urgente:
-        header = f"\U0001f6a8 URGENT \u2014 \U0001f539 {perimetre_label} \u2014 *{titre}*"
+        header = f"\U0001f6a8 URGENT — \U0001f539 {perimetre_label} — *{titre}*"
     else:
-        header = f"\U0001f4e2 \U0001f539 {perimetre_label} \u2014 *{titre}*"
+        header = f"\U0001f4e2 \U0001f539 {perimetre_label} — *{titre}*"
 
     # Contenu : convertir le formatage HTML en markdown WhatsApp
     # Gras : <b>, <strong>  → *texte*
@@ -293,9 +293,9 @@ def _build_message_restreint(
         perimetre_label = "Copropriété"
 
     if urgente:
-        header = f"\U0001f6a8 URGENT \u2014 \U0001f539 {perimetre_label} \u2014 *{titre}*"
+        header = f"\U0001f6a8 URGENT — \U0001f539 {perimetre_label} — *{titre}*"
     else:
-        header = f"\U0001f4e2 \U0001f539 {perimetre_label} \u2014 *{titre}*"
+        header = f"\U0001f4e2 \U0001f539 {perimetre_label} — *{titre}*"
 
     avertissement = (
         "\U0001f512 Cette publication est réservée à un public ciblé.\n"
