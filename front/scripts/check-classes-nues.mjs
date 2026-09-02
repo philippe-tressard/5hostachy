@@ -135,7 +135,11 @@ const TOLEREES = {
 	//  règle — l’étoile choisie ne se distingue pas de celle qu’on n’a pas prise.
 	'routes/(app)/prestataires/+page.svelte': ['star-btn'],
 	//  Le corps d’un sondage, sans mise en forme propre.
-	'routes/(app)/sondages/+page.svelte': ['sondage-body'],
+	//  ⚠️ Déplacée de `routes/(app)/sondages/+page.svelte` le 02/09/2026, quand la
+	//  carte est partie dans `ListeSondages` (#515) : la tolérance suit le BALISAGE,
+	//  et l'entrée restée sur l'ancien fichier a fait échouer ce contrôle — c'est
+	//  la bonne façon d'échouer.
+	'lib/components/ListeSondages.svelte': ['sondage-body'],
 };
 
 /** Un composant sans aucune classe reconnue signalerait une analyse cassée. */
