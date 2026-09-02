@@ -16,6 +16,7 @@ from app.models.core import (
     Utilisateur,
     VoteIdee,
 )
+from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.communaute import exiger_acces
 from app.utils.liens import lien_element
 from app.utils.reponses import (
@@ -63,6 +64,9 @@ class IdeeRead(BaseModel):
     perimetre_cible: list[str] = []
     nb_votes: int = 0
     mon_vote: bool = False
+    #: Calculé par la règle du site (`utils/archivage`), jamais stocké : l'archivage
+    #: automatique est une conséquence du temps, pas un état qu'on pose.
+    archivee: bool = False
 
     class Config:
         from_attributes = True
@@ -86,6 +90,11 @@ def _perimetre_liste(brut: Optional[str]) -> list[str]:
 
 
 def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
+    #  🔴 LU UNE FOIS, hors de la boucle. `seuil_archivage_jours` interroge la
+    #  configuration : le lire par idée ferait N requêtes pour une valeur du site,
+    #  et surtout deux idées du même appel pourraient être tranchées sur des
+    #  seuils différents si le réglage changeait entre deux tours.
+    seuil_jours = seuil_archivage_jours(session)
     result = []
     for idee in idees:
         nb = len(session.exec(select(VoteIdee).where(VoteIdee.idee_id == idee.id)).all())
@@ -100,6 +109,11 @@ def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
             #  contrat que les événements et les annonces.
             "perimetre_cible": _perimetre_liste(idee.perimetre_cible),
             "cree_le": idee.cree_le, "nb_votes": nb, "mon_vote": mon_vote,
+            #  Calculé côté SERVEUR et transporté (#515). L'écran ne doit pas
+            #  refaire la règle : la liste et les Archives trancheraient alors
+            #  séparément, et une idée apparaîtrait dans l'une sans l'autre —
+            #  c'est le bug du 17/07/2026 sur les actualités.
+            "archivee": est_archivable("idee", idee, seuil_jours=seuil_jours),
             "reponses": reponses, "nb_reponses": len(reponses),
         })
     return result
