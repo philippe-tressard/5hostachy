@@ -42,7 +42,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
@@ -150,7 +150,17 @@
 	}
 </script>
 
-<FormulaireCreation titre={titreBoite} encadre={!modeEdition}>
+<!--
+	Le cadre suit le GESTE (`ux-patterns` §14 bis) : boîte dans la page au dépôt,
+	fenêtre à la correction. Le choix vit dans `CadreFormulaire`, écrit une fois
+	pour les six formulaires concernés.
+
+	🔴 Ce fichier était le SEPTIÈME écran de #640, et le seul jamais listé dans
+	son « Reste » : il éditait DANS la carte, en remplaçant le corps de l'annonce.
+	Le ticket citait deux écrans déjà conformes et oubliait celui-ci — c'est ce
+	qui a décidé l'écriture de `lint:cadre-geste`, qui le recense désormais.
+-->
+<CadreFormulaire edition={modeEdition} titre={titreBoite}>
 	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre. -->
 		<SectionFormulaire premiere>
@@ -256,7 +266,7 @@
 			</button>
 		</div>
 	</form>
-</FormulaireCreation>
+</CadreFormulaire>
 
 <style>
 	.form-grid .field {

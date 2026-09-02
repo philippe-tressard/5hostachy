@@ -71,10 +71,6 @@ const CADRE = join(COMPOSANTS, 'CadreFormulaire.svelte');
  * régression au même endroit.
  */
 const EXCEPTIONS = {
-	'FormulaireAnnonce.svelte':
-		'#640 — Communauté › Petites annonces édite DANS la carte. La conversion ' +
-		"demande de sortir le formulaire du slot d'AnnonceCard : changement visible, " +
-		'à faire constater à l’écran.',
 	'FormulaireTicket.svelte':
 		'#463 — le quatrième état (`evolution`) reste à confronter à son rendu. ' +
 		'EvolForm sert cinq écrans ; les changer tous avant de les avoir regardés ' +

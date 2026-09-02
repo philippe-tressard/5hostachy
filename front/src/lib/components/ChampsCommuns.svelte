@@ -78,6 +78,19 @@
 	//  ── 6. Description ────────────────────────────────────────────────────────
 	export let avecDescription = false;
 	export let description = '';
+	/**  L'intitulé de la section — « Description » par défaut.
+	 *
+	 *   🔴 Il était FIGÉ, et c'est ce qui empêchait `EvolForm` d'hériter de ce
+	 *   composant : une évolution parle de « Commentaire », pas de « Description »
+	 *   (#463). Le formulaire recopiait donc l'ordre ET les intitulés des sections
+	 *   4 à 9 — deux endroits qui doivent rester d'accord, sans contrôle pour le
+	 *   vérifier, ce que le cadre #430 supprime partout ailleurs.
+	 *
+	 *   ⚠️ Ce n'est pas une porte ouverte à un libellé par écran : **R3** demande
+	 *   le même mot d'un formulaire à l'autre pour la même notion. Le paramètre
+	 *   existe pour les objets dont la section n'est PAS une description — et
+	 *   aujourd'hui il n'y en a qu'un. */
+	export let descriptionTitre = 'Description';
 	export let descriptionRequise = false;
 	export let descriptionPlaceholder = '';
 	/**  Hauteur minimale de l'éditeur. Elle valait 60, 80, 90, 100 ou 120 px selon
@@ -177,6 +190,7 @@
 {#if avecDescription}
 	<SectionDescription
 		{idPrefixe}
+		titre={descriptionTitre}
 		requis={descriptionRequise}
 		placeholder={descriptionPlaceholder}
 		hauteur={descriptionHauteur}
