@@ -217,14 +217,22 @@
 						<button class="btn btn-sm btn-outline" on:click={() => ahRenvoyer(annonce)}>
 							&#x2709; Renvoyer au CS
 						</button>
-						<button
-							class="btn-icon-warn"
-							title={annonce.archivee ? 'Restaurer' : 'Archiver'}
-							aria-label={annonce.archivee ? 'Restaurer cette annonce' : 'Archiver cette annonce'}
-							on:click={() => ahArchiver(annonce)}
-						>
-							{annonce.archivee ? '↩️' : '\u{1F4E6}'}
-						</button>
+						<!--  🔴 LE GESTE N'EST OFFERT QUE S'IL A UN EFFET (#515, 02/09/2026).
+						      Une affiche archivée par le TEMPS — 30 jours après l'envoi,
+						      règle du site — ne se restaure pas : retirer le drapeau
+						      manuel ne la ramènerait pas dans la liste active, et le
+						      bouton promettrait un geste sans conséquence. On ne montre
+						      pas une commande qui ne fera rien, on la retire. -->
+						{#if !annonce.archivee || annonce.archivee_manuellement}
+							<button
+								class="btn-icon-warn"
+								title={annonce.archivee ? 'Restaurer' : 'Archiver'}
+								aria-label={annonce.archivee ? 'Restaurer cette annonce' : 'Archiver cette annonce'}
+								on:click={() => ahArchiver(annonce)}
+							>
+								{annonce.archivee ? '↩️' : '\u{1F4E6}'}
+							</button>
+						{/if}
 						{#if $isAdmin && annonce.archivee}
 							<button
 								class="btn-icon-danger"

@@ -271,7 +271,13 @@ export interface AnnonceHall {
 	taille_octets: number | null;
 	destinataires: string[];
 	envoye_le: string | null;
+	/**  État EFFECTIF : archivée à la main, **ou** par la règle du site — 30 jours
+	     après l'envoi (#515). C'est ce que les deux listes emploient. */
 	archivee: boolean;
+	/**  La décision HUMAINE seule. « Restaurer » n'a d'effet que sur elle : sur
+	     une affiche archivée par le TEMPS, retirer le drapeau manuel ne la
+	     ramènerait pas, et l'écran ne propose donc pas le geste. */
+	archivee_manuellement?: boolean;
 	publication_id: number | null;
 	cree_le: string;
 	auteur_nom: string;

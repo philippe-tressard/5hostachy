@@ -16,12 +16,12 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import AnnonceHall, ConfigSite, Document, Publication, Utilisateur
+from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.annonce_hall import (
     APERCU_MAX,
     FORMATS,
@@ -54,40 +54,13 @@ PDF_DIR = Path("/app/uploads/annonces-hall")
 UPLOADS_ROOT = os.path.realpath("/app/uploads")
 
 
-# ── Schémas ──────────────────────────────────────────────────────────────────
-
-class AnnonceHallBase(BaseModel):
-    titre: str
-    message: str
-    perimetre_cible: list[str] = ["résidence"]
-    format_demande: str = "auto"
-    images: list[str] = []
-
-
-class AnnonceHallCreate(AnnonceHallBase):
-    #  🔴 La DIFFUSION est un ACTE, et elle se coche (section 9 du cadre #430).
-    #
-    #  L'envoi au CS était AUTOMATIQUE jusqu'au 18/08, puis supprimé le même jour
-    #  parce qu'il partait au moindre essai de mise en page. Il revient ici sous sa
-    #  forme juste : un choix, décoché par défaut.
-    #
-    #  ⚠️ Décoché par défaut, et c'est le point : la valeur par défaut d'un envoi
-    #  est « ne pas envoyer ». Un défaut à `True` reproduirait l'automatisme qu'on
-    #  vient de retirer, en donnant l'illusion du choix.
-    envoyer_cs: bool = False
-    #  Les deux autres canaux de la Diffusion (#480). Mêmes règles : décochés par
-    #  défaut, et CONSOMMÉS — un champ ouvert dans l'interface que le serveur
-    #  ignorerait est ce que le cadre interdit.
-    envoyer_syndic: bool = False
-    partager_whatsapp: bool = False
-    #  La 4e case : « Envoyer une copie à … ». Le destinataire est l'auteur de
-    #  l'AFFICHE — voir `app/utils/copie_auteur.py`.
-    envoyer_auteur: bool = False
-
-
-class AnnonceHallArchive(BaseModel):
-    archivee: bool
-
+#  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de
+#  modularité) : ce qui DÉCLARE part, ce qui DÉCIDE reste.
+from app.routers.annonces_hall_schemas import (  # noqa: E402
+    AnnonceHallArchive,
+    AnnonceHallBase,
+    AnnonceHallCreate,
+)
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -150,7 +123,10 @@ def _to_read(annonce: AnnonceHall, session: Session) -> dict:
         "taille_octets": annonce.taille_octets,
         "destinataires": json.loads(annonce.destinataires or "[]"),
         "envoye_le": annonce.envoye_le.isoformat() if annonce.envoye_le else None,
-        "archivee": annonce.archivee,
+        #  🔴 EFFECTIF, et non la colonne : la règle du site archive une affiche
+        #  30 jours après son envoi, que personne n'ait rien coché.
+        "archivee": est_archivable("annonce_hall", annonce, seuil_jours=seuil_archivage_jours(session)),
+        "archivee_manuellement": annonce.archivee,
         "publication_id": annonce.publication_id,
         "cree_le": annonce.cree_le.isoformat(),
         "auteur_nom": nom_affiche(auteur.prenom, auteur.nom) if auteur else "",
@@ -208,12 +184,25 @@ def list_annonces_hall(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    annonces = session.exec(
-        select(AnnonceHall)
-        .where(AnnonceHall.archivee == archivees)
-        .order_by(AnnonceHall.cree_le.desc())  # type: ignore[arg-type]
+    #  🔴 LE TRI SE FAIT EN PYTHON, plus en SQL (#515, 02/09/2026).
+    #
+    #  La colonne `archivee` ne porte que la décision HUMAINE. La règle du site en
+    #  ajoute une seconde — 30 jours après l'envoi — que SQL ne sait pas exprimer
+    #  sans recopier le calcul en SQL, c'est-à-dire sans en faire une deuxième
+    #  écriture de la règle. C'est exactement ce que ce lot supprime ailleurs.
+    #
+    #  ⚠️ Le coût est assumé : la table des affiches de hall compte quelques
+    #  dizaines de lignes, et l'écran est réservé au CS. À revoir si elle grossit,
+    #  et à MESURER avant d'optimiser.
+    seuil_jours = seuil_archivage_jours(session)
+    toutes = session.exec(
+        select(AnnonceHall).order_by(AnnonceHall.cree_le.desc())  # type: ignore[arg-type]
     ).all()
-    return [_to_read(a, session) for a in annonces]
+    retenues = [
+        a for a in toutes
+        if est_archivable("annonce_hall", a, seuil_jours=seuil_jours) == archivees
+    ]
+    return [_to_read(a, session) for a in retenues]
 
 
 @router.get("/depuis-publication/{pub_id}",
