@@ -27,6 +27,7 @@ from app.models.core import (
     Utilisateur,
 )
 from app.schemas import TicketEvolutionRead, TicketRead
+from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.photos import parse_photos
 
 #: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
@@ -236,6 +237,13 @@ def ticket_read(ticket: Ticket, session: Session) -> TicketRead:
         saisi_pour_affichage=saisi_pour_affichage,
         cree_le=ticket.cree_le,
         mis_a_jour_le=ticket.mis_a_jour_le,
+        #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici
+        #  dans une fonction appelée PAR TICKET : c'est un appel par ticket, et
+        #  c'est assumé — la liste en compte quelques dizaines. Le factoriser
+        #  demanderait de passer le seuil à tous les appelants de `ticket_read`,
+        #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
+        #  mesurer avant d'optimiser.
+        archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
         non_relancable=ticket.non_relancable,
         non_relancable_motif=ticket.non_relancable_motif,
         relance_count=compter_relances(session, ticket.id),

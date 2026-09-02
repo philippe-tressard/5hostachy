@@ -12,7 +12,7 @@
 	import type { ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
-	import { CATEGORIES_TICKET, statutsPresents, estTicketClos } from '$lib/tickets';
+	import { CATEGORIES_TICKET, statutsPresents } from '$lib/tickets';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -79,13 +79,22 @@
 		}
 	});
 
-	// Délai de grâce : un ticket clôturé reste visible dans la liste principale
-	// pendant 7 jours après sa clôture, puis bascule dans l'Historique.
-	const HISTORIQUE_DELAI_MS = 7 * 24 * 60 * 60 * 1000;
-	function estArchive(t: { statut: string; mis_a_jour_le?: string; cree_le: string }): boolean {
-		if (!estTicketClos(t.statut)) return false;
-		return Date.now() - new Date(t.mis_a_jour_le ?? t.cree_le).getTime() > HISTORIQUE_DELAI_MS;
-	}
+	//  🔴 LA RÈGLE D'ARCHIVAGE A QUITTÉ CET ÉCRAN (#515, 02/09/2026).
+	//
+	//  Elle s'écrivait ici, en dur, et disait **7 jours** — là où la règle du site
+	//  en annonce **30**, réglables depuis l'administration. Deux règles pour la
+	//  même notion, et celle que l'exploitant croyait tenir n'était appliquée nulle
+	//  part sur cet écran.
+	//
+	//  Elle lisait aussi `mis_a_jour_le`, donc une simple correction de faute de
+	//  frappe sur un ticket résolu repoussait son archivage d'une semaine. La règle
+	//  du site prend `ferme_le` en priorité, précisément pour ça.
+	//
+	//  ⚠️ `t.archivee` est calculé côté SERVEUR et transporté. Le recalculer ici en
+	//  ferait une seconde règle, et la liste et les Archives trancheraient
+	//  séparément — un ticket visible dans l'une et pas dans l'autre, qui est le
+	//  bug du 17/07/2026 sur les actualités.
+	const estArchive = (t: { archivee?: boolean }): boolean => t.archivee === true;
 
 	//  Ce que la liste principale peut montrer, AVANT le filtre d'état : c'est
 	//  cet ensemble-là qui donne les boutons du filtre. Le calculer après

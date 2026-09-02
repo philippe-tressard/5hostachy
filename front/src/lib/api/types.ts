@@ -79,6 +79,15 @@ export interface Ticket {
 	     celles de l'entrée d'Historique la plus récente qui en porte. Calculé par
 	     le serveur (#464) — le front ne rejoue pas la règle. */
 	apercu_pieces?: string[];
+	/**  Le ticket a-t-il quitté la liste active pour les Archives ? Calculé par la
+	     règle du SITE (`app/utils/archivage.py`, #515) : 30 jours après « Résolu »,
+	     immédiat sur « Annulé », le délai étant réglable en administration.
+
+	     🔴 L'écran appliquait sa propre règle — 7 jours, en dur, sur
+	     `mis_a_jour_le` — pendant que le site en annonçait 30. Le front ne la rejoue
+	     plus : deux règles pour la même notion trancheraient différemment, et un
+	     ticket apparaîtrait dans la liste sans être dans les Archives. */
+	archivee?: boolean;
 }
 
 export interface RelanceSyndicResponse {
