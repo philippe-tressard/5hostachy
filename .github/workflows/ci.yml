@@ -976,6 +976,15 @@ jobs:
         working-directory: front
         run: npm run lint:classe-relayee
 
+      - name: Cadre du geste (édition en fenêtre, création en boîte)
+        # 🔴 L'AUTRE MOITIÉ de `ux-patterns` §14 bis, qui n'avait aucun contrôle.
+        # `lint:formulaires` refuse une création EN modale ; rien ne refusait une
+        # édition HORS modale. C'est ce qui a laissé « Petites annonces » éditer
+        # dans la carte pendant six conversions de #640 — et le « Reste » du
+        # ticket ne le listait même pas.
+        working-directory: front
+        run: npm run lint:cadre-geste
+
       - name: Confirmation dans la charte (plafond décroissant)
         # Le nombre de `confirm()` NATIFS ne peut que baisser. La boîte du
         # navigateur bloque le fil d'exécution, ignore la charte, et donne le
