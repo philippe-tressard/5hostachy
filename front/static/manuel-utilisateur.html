@@ -530,53 +530,80 @@
       color: var(--muted);
     }
 
-    .capture-grid {
+    /* ═══════════════════════════════════════════
+       LES ÉCRANS — une carte par menu, avec son public
+       ═══════════════════════════════════════════
+       🔴 Remplace la grille de captures d'écran (02/09/2026, signalé à l'écran :
+       « les écrans sont flous et peut-être obsolètes, les boutons sont inactifs »).
+
+       Les images n'étaient pas floues par manque de résolution — 1 480 px — mais
+       parce qu'un écran entier réduit à 300 px n'apprend rien. Et elles dataient
+       du 21 mars, avant des dizaines d'écrans refaits.
+
+       Ce qui les remplace porte l'information que le lecteur cherche vraiment :
+       à quoi sert le menu, et QUI y a accès. Les `data-page` / `data-acces` ne
+       sont pas décoratifs : `npm run lint:manuel-menus` les rapproche de
+       `pages.ts` et de `Nav.svelte`, pour qu'une troisième liste ne se mette pas
+       à diverger — c'est le sujet même de #651. */
+    .ecran-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: .9rem;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .75rem;
       margin-top: .9rem;
     }
 
-    .capture-card {
+    .ecran-card {
+      display: block;
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: .9rem;
+      padding: .85rem .9rem;
       background: #ffffff;
       box-shadow: var(--shadow);
+      text-decoration: none;
+      color: inherit;
     }
 
-    .capture-card img {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      margin-bottom: .65rem;
+    /*  Seules les cartes qui MÈNENT quelque part réagissent au survol : une carte
+        inerte qui se soulève promet un clic qui ne vient pas — c'est le défaut
+        qu'on corrige ici. */
+    a.ecran-card:hover {
+      border-color: #a5b4fc;
+      transform: translateY(-1px);
+    }
+
+    .ecran-icone {
+      font-size: 1.35rem;
+      line-height: 1;
       display: block;
-      aspect-ratio: 16 / 10;
-      object-fit: cover;
-      background: #f8fafc;
+      margin-bottom: .4rem;
     }
 
-    .capture-card h3 {
+    .ecran-card h3 {
       font-size: .92rem;
-      margin-bottom: .25rem;
+      margin-bottom: .3rem;
     }
 
-    .capture-card p {
+    .ecran-card p {
       font-size: .84rem;
       color: var(--muted);
-      margin-bottom: .45rem;
+      margin-bottom: .5rem;
     }
 
-    .capture-tag {
+    /*  Le public : une pastille, pas un bouton. Elle informe, elle n'invite pas
+        à cliquer — la distinction que la version précédente ne faisait pas. */
+    .ecran-acces {
       display: inline-block;
-      font-size: .77rem;
+      font-size: .74rem;
       font-weight: 700;
-      color: #1d4ed8;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
       border-radius: 999px;
-      padding: .25rem .55rem;
+      padding: .2rem .5rem;
+      border: 1px solid;
     }
+    .ecran-acces-tous      { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+    .ecran-acces-resident  { color: #0e7490; background: #ecfeff; border-color: #a5f3fc; }
+    .ecran-acces-cs-ou-aidant { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .ecran-acces-cs        { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .ecran-acces-admin     { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
 
     /* ═══════════════════════════════════════════
        SECTIONS
@@ -881,7 +908,7 @@
       .choice-grid,
       .scan-grid,
       .persona-grid,
-      .capture-grid { grid-template-columns: 1fr; display: grid; }
+      .ecran-grid { grid-template-columns: 1fr; display: grid; }
       .hero-cards { display: flex; }
       .cat-grid { grid-template-columns: 1fr; }
     }
@@ -950,7 +977,7 @@
         <span class="dot" style="background:#0891b2"></span> Je suis...
       </a>
       <a class="nav-item" href="#captures">
-        <span class="dot" style="background:#7c3aed"></span> Captures guidees
+        <span class="dot" style="background:#7c3aed"></span> Les écrans
       </a>
       <a class="nav-item" href="#connexion">
         <span class="dot nav-dot-login"></span> Connexion &amp; Inscription
@@ -1012,7 +1039,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique copropriétaire</div>
-    <span class="topbar-badge">Version 3.79 · Septembre 2026</span>
+    <span class="topbar-badge">Version 3.80 · Septembre 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1149,60 +1176,102 @@
       <div class="chapter-header">
         <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9">&#x1F5BC;</div>
         <div>
-          <h2>Captures guidees des écrans clefs</h2>
-          <p>8 reperes visuels pour trouver rapidement ou cliquer dans les rubriques les plus consultées.</p>
+          <h2>Les écrans, en un coup d'œil</h2>
+          <p>Ce que chaque menu contient, et <strong>qui peut le voir</strong>. Cliquez pour aller au détail.</p>
         </div>
       </div>
 
-      <div class="capture-grid">
-        <article class="capture-card">
-          <img src="img/capture-1-tableau-de-bord.png" alt="Tableau de bord" loading="lazy">
-          <h3>1. Tableau de bord</h3>
-          <p>Premier écran après connexion. KPIs, alertes urgentes, prochaines échéances et fil d'activité chronologique.</p>
-          <span class="capture-tag">Accueil complet</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-2-creer-ticket.png" alt="Creer un ticket" loading="lazy">
-          <h3>2. Créer un ticket</h3>
-          <p>Utilisez le bouton de création pour signaler un problème en moins de 2 minutes.</p>
-          <span class="capture-tag">Action prioritaire</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-3-suivi-tickets.png" alt="Suivi des tickets" loading="lazy">
-          <h3>3. Suivi des tickets</h3>
-          <p>Consultez le statut de vos demandes : ouvert, en cours, résolu ou annulé.</p>
-          <span class="capture-tag">Suivi clair</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-4-calendrier-liste.png" alt="Calendrier - Liste" loading="lazy">
-          <h3>4. Calendrier - Liste</h3>
-          <p>Vue chronologique pour savoir ce qui arrive cette semaine ou ce mois-ci.</p>
-          <span class="capture-tag">Planifier vite</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-5-calendrier-kanban.png" alt="Calendrier - Kanban" loading="lazy">
-          <h3>5. Calendrier - Kanban</h3>
-          <p>Visualisez l'avancement des actions par colonne (syndic, prestataire, termine).</p>
-          <span class="capture-tag">Pilotage</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-6-mon-profil.png" alt="Mon profil" loading="lazy">
-          <h3>6. Mon profil</h3>
-          <p>Réglez votre mot de passe, vos infos et la matrice de notifications appli/e-mail.</p>
-          <span class="capture-tag">Parametres</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-7-ma-residence.png" alt="Ma residence" loading="lazy">
-          <h3>7. Ma résidence</h3>
-          <p>Retrouvez les documents importants (AG, règlement, informations communes).</p>
-          <span class="capture-tag">Documents</span>
-        </article>
-        <article class="capture-card">
-          <img src="img/capture-8-acces-badges.png" alt="Acces et badges" loading="lazy">
-          <h3>8. Accès &amp; badges</h3>
-          <p>Demandez un badge ou une télécommande et suivez la validation de votre demande.</p>
-          <span class="capture-tag">Accès résidence</span>
-        </article>
+      <div class="ecran-grid">
+        <div class="ecran-card" data-page="/tableau-de-bord" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F3E0;</span>
+          <h3>Accueil</h3>
+          <p>Le premier écran après connexion : ce qui vous concerne aujourd'hui, les urgences, et le fil de ce qui s'est passé récemment.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/actualites" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F4F0;</span>
+          <h3>Actualités</h3>
+          <p>Les informations publiées par le conseil syndical. Vous pouvez y réagir et y répondre.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/tickets" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F3AB;</span>
+          <h3>Tickets</h3>
+          <p>Signaler un problème et suivre son traitement. C'est le point d'entrée de toute demande.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/calendrier" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F4C5;</span>
+          <h3>Calendrier</h3>
+          <p>Ce qui est prévu dans la résidence : coupures, travaux, assemblées, visites de prestataires.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/residence" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F3E2;</span>
+          <h3>Résidence</h3>
+          <p>Les documents communs — procès-verbaux, règlement, rapports — et les informations sur la copropriété.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/mon-lot" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F511;</span>
+          <h3>Mes lots</h3>
+          <p>Vos lots, vos baux et vos diagnostics. Un bailleur y gère aussi ses locataires.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/acces-securite" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F6E1;&#xFE0F;</span>
+          <h3>Accès &amp; badges</h3>
+          <p>Demander un badge, un bip ou une télécommande, et suivre l'avancement de la demande.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/sondages" data-acces="resident">
+          <span class="ecran-icone" aria-hidden="true">&#x1F4CA;</span>
+          <h3>Communauté</h3>
+          <p>Sondages, boîte à idées et petites annonces entre résidents. Réservé aux résidents : ni le syndic ni un mandataire n'y ont accès.</p>
+          <span class="ecran-acces ecran-acces-resident">Résidents</span>
+        </div>
+        <div class="ecran-card" data-page="/annuaire" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F4D2;</span>
+          <h3>Annuaire</h3>
+          <p>Qui contacter, et pour quoi : conseil syndical, syndic, prestataires, urgences.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/faq" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x2753;</span>
+          <h3>FAQ</h3>
+          <p>Les questions déjà posées et leurs réponses. À regarder avant d'ouvrir un ticket.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/delegations" data-acces="cs-ou-aidant">
+          <span class="ecran-icone" aria-hidden="true">&#x1F91D;</span>
+          <h3>Délégations</h3>
+          <p>Autoriser un proche à consulter et agir à votre place. Ce n'est pas une procuration d'assemblée générale.</p>
+          <span class="ecran-acces ecran-acces-cs-ou-aidant">CS &amp; aidants</span>
+        </div>
+        <div class="ecran-card" data-page="/prestataires" data-acces="cs">
+          <span class="ecran-icone" aria-hidden="true">&#x1F527;</span>
+          <h3>Prestataires</h3>
+          <p>Les entreprises, leurs contrats d'entretien et le suivi des interventions.</p>
+          <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
+        </div>
+        <div class="ecran-card" data-page="/espace-cs" data-acces="cs">
+          <span class="ecran-icone" aria-hidden="true">&#x2705;</span>
+          <h3>Espace CS</h3>
+          <p>Les outils du conseil : comptes et accès, reporting, affiches de hall, annuaire interne.</p>
+          <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
+        </div>
+        <div class="ecran-card" data-page="/admin" data-acces="admin">
+          <span class="ecran-icone" aria-hidden="true">&#x2699;&#xFE0F;</span>
+          <h3>Admin</h3>
+          <p>Le paramétrage du site : utilisateurs, rôles, modèles d'e-mail, référentiels.</p>
+          <span class="ecran-acces ecran-acces-admin">Administrateur</span>
+        </div>
+        <div class="ecran-card" data-page="profil" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true">&#x1F464;</span>
+          <h3>Mon profil</h3>
+          <p>Vos informations, votre mot de passe, et le réglage de ce que vous recevez par e-mail ou en notification.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
       </div>
     </section>
 
@@ -3013,7 +3082,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.79</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.80</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
