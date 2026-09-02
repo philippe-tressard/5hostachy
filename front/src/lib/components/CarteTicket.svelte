@@ -50,7 +50,6 @@
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
 	import { TICKET } from '$lib/entites/ticket';
-	import { sectionPresente } from '$lib/entites/types';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import {
@@ -271,12 +270,11 @@
 						statutOptions={STATUT_TICKET_OPTIONS}
 						statutLabels={STATUT_TICKET_LABELS}
 						currentStatut={ticket.statut}
-						avecPerimetre={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'perimetre')}
+						entite={TICKET}
+						peutPreciserPerimetre={peutSuivreCeTicket}
 						perimetreCourant={ticket.perimetre_cible ?? []}
 						entrees={evolutions}
-						showNotifs={peutSuivreCeTicket && sectionPresente(TICKET, 'evolution', 'diffusion')}
-						showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
-						showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
+						peutDiffuser={peutSuivreCeTicket}
 						saving={evolutionEnCours}
 						on:submit={(e) => dispatch('evoluer', e.detail)}
 						on:cancel={() => dispatch('annuler')}
@@ -324,12 +322,10 @@
 										editMode={true}
 										initialContenu={evol.contenu || ''}
 										initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-										avecPerimetre={sectionPresente(TICKET, 'evolution', 'perimetre')}
+										entite={TICKET}
 										perimetreCourant={ticket.perimetre_cible ?? []}
 										entrees={evolutions}
 										initialPerimetre={evol.perimetre_cible ?? []}
-										showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
-										showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 										saving={evolCorrectionEnCours}
 										on:submit={(e) => dispatch('evol_corriger', e.detail)}
 										on:cancel={() => dispatch('evol_annuler')}

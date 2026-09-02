@@ -39,7 +39,6 @@
 	import { STATUT_TICKET_LABELS } from '$lib/tickets';
 	import { evolutionIcone } from '$lib/evolutions';
 	import { TICKET } from '$lib/entites/ticket';
-	import { sectionPresente } from '$lib/entites/types';
 
 	export let ticketId: number;
 	/**  Le nom de l'auteur du TICKET — il nomme le destinataire de « Envoyer une
@@ -171,11 +170,10 @@
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-					avecPerimetre={$isCS && sectionPresente(TICKET, 'evolution', 'perimetre')}
+					entite={TICKET}
+					peutPreciserPerimetre={$isCS}
 					{perimetreCourant}
 					initialPerimetre={evol.perimetre_cible ?? []}
-					showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
-					showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 					saving={corrige}
 					on:submit={corriger}
 					on:cancel={() => (enEdition = null)}
@@ -195,12 +193,11 @@
 					demanderApercu={apercuDuCommentaire}
 					statutLabels={STATUT_TICKET_LABELS}
 					currentStatut={statutCourant}
-					avecPerimetre={$isCS && sectionPresente(TICKET, 'evolution', 'perimetre')}
+					entite={TICKET}
+					peutPreciserPerimetre={$isCS}
 					{perimetreCourant}
-					showNotifs={$isCS && sectionPresente(TICKET, 'evolution', 'diffusion')}
+					peutDiffuser={$isCS}
 					showEmail={$isCS}
-					showPhotos={sectionPresente(TICKET, 'evolution', 'photos')}
-					showDocuments={sectionPresente(TICKET, 'evolution', 'documents')}
 					saving={enregistre}
 					on:submit={ajouter}
 					on:cancel={() => (ouvert = false)}

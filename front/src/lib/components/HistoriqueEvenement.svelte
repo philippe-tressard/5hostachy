@@ -33,6 +33,7 @@
   nus (la panne des pastilles, v2.67.11). Ce découpage-là attend #432.
 -->
 <script lang="ts">
+	import { EVENEMENT } from '$lib/entites/evenement';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
@@ -163,8 +164,7 @@
 					editMode={true}
 					initialContenu={evol.contenu || ''}
 					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-					showPhotos={true}
-					showDocuments={true}
+					entite={EVENEMENT}
 					saving={correctionEnCours}
 					on:submit={corriger}
 					on:cancel={() => (enEdition = null)}
@@ -183,9 +183,7 @@
 				statutOptions={options}
 				statutLabels={libelles}
 				currentStatut={evenement.statut_kanban ?? ''}
-				showPhotos={true}
-				showDocuments={true}
-				showNotifs={true}
+				entite={EVENEMENT}
 				saving={enCours}
 				on:submit={enregistrer}
 				on:cancel={() => dispatch('fermer')}

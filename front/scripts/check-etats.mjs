@@ -60,7 +60,12 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { analyserEvolForm, tolerancesMortes, EVOLFORM_TOLEREES } from './lib-etats-evolution.mjs';
+import {
+	analyserEvolForm,
+	tolerancesMortes,
+	ENTITE_REQUISE,
+	EVOLFORM_TOLEREES,
+} from './lib-etats-evolution.mjs';
 import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -336,8 +341,15 @@ for (const chemin of tousSvelte) {
 		}
 	}
 
+	//  🔴 `EvolForm` est le POINT D'ENTRÉE du quatrième état, pas un écran (#463,
+	//  02/09/2026) : il REÇOIT l'entité et lit la déclaration lui-même, son
+	//  `sectionPresente(entite, …)` ne peut donc nommer aucune entité littérale.
+	//  Ce qu'on lui demande est vérifié plus bas, chez ses appelants. Sans cette
+	//  exception, le contrôle refuserait la centralisation qu'il réclame.
+	const estPointEntree = court.replace(/\\/g, '/').endsWith('lib/components/EvolForm.svelte');
+
 	// 5. les six sections de `ChampsCommuns` passent par `sectionPresente`
-	for (const [prop, id] of Object.entries(PROPS_SECTION)) {
+	for (const [prop, id] of Object.entries(estPointEntree ? {} : PROPS_SECTION)) {
 		const re = new RegExp(`\\b${prop}\\b(\\s*=\\s*\\{([^}]*)\\})?`, 'g');
 		let m;
 		while ((m = re.exec(texte))) {
@@ -366,7 +378,7 @@ for (const chemin of tousSvelte) {
 		if (!ORDRE.includes(m[3])) {
 			echec(`${court} — \`sectionPresente(…, '${m[3]}')\` : section inconnue du cadre.`);
 		}
-		if (nomsEntites.size && !nomsEntites.has(m[1])) {
+		if (!estPointEntree && nomsEntites.size && !nomsEntites.has(m[1])) {
 			echec(`${court} — \`sectionPresente(${m[1]}, …)\` : ce n'est pas une entité déclarée.`);
 		}
 	}
@@ -402,12 +414,34 @@ for (const chemin of tousSvelte) {
 	//  clé de tolérance écrite avec des `/` ne correspondrait alors jamais — le
 	//  contrôle serait vert par accident, pas par mérite.
 	const court = relative(RACINE, chemin).replace(/\\/g, '/');
-	const { ecarts, servies } = analyserEvolForm(
-		court,
-		sansCommentaires(readFileSync(chemin, 'utf8')),
-	);
+	const texteEvol = sansCommentaires(readFileSync(chemin, 'utf8'));
+	const { ecarts, servies } = analyserEvolForm(court, texteEvol);
 	for (const e of ecarts) echec(e);
 	evolformServies.push(...servies);
+
+	//  🔴 LE CONTRAT QUI REMPLACE LES QUATRE PROPS (02/09/2026). Les props que ce
+	//  contrôle surveillait — `avecPerimetre`, `showPhotos`… — n'existent plus.
+	//  ⚠️ Sans ce test il serait vert **en ne mesurant plus rien** : un écran
+	//  pourrait rendre le fil sans déclaration, et plus aucune prop ne trahirait
+	//  une section hors cadre. Un contrôle dont la cible a disparu ne se relit pas.
+	if (court !== 'lib/components/EvolForm.svelte' && ENTITE_REQUISE.test(texteEvol)) {
+		//  ⚠️ Une FENÊTRE après la balise, et non `[^>]*` : les attributs d'un
+		//  `<EvolForm>` contiennent des fonctions fléchées, et `=>` coupait le motif
+		//  avant l'attribut cherché. Le contrôle refusait alors les quatre écrans qui
+		//  passent pourtant l'entité — un contrôle qui crie sur du légitime finit
+		//  désarmé.
+		const debut = texteEvol.search(ENTITE_REQUISE);
+		const fenetre = texteEvol.slice(debut, debut + 2000);
+		const entiteCitee = /\bentite=\{([A-Za-z_$][\w$]*)\}/.exec(fenetre);
+		if (!entiteCitee) {
+			echec(
+				`${court} — rend <EvolForm> sans lui passer entite={…}. Le quatrième état ` +
+					'serait gouverné par cet écran et non par la déclaration (#463).',
+			);
+		} else if (nomsEntites.size && !nomsEntites.has(entiteCitee[1])) {
+			echec(`${court} — <EvolForm entite={${entiteCitee[1]}}> : ce n'est pas une entité déclarée.`);
+		}
+	}
 }
 for (const m of tolerancesMortes(evolformServies)) {
 	echec(

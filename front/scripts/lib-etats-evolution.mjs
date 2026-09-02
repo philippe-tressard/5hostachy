@@ -45,56 +45,48 @@
  * sections se suivent séparément.
  */
 export const PROPS_EVOLFORM = {
-	avecPerimetre: 'perimetre',
-	showPhotos: 'photos',
-	showDocuments: 'documents',
-	showNotifs: 'diffusion',
+	//  ✅ VIDE depuis le 02/09/2026, et ce n'est pas un désarmement : ces quatre
+	//  props N'EXISTENT PLUS.
+	//
+	//  `EvolForm` recevait `avecPerimetre`, `showPhotos`, `showDocuments` et
+	//  `showNotifs` — chacun des cinq écrans décidait donc des sections du fil.
+	//  Il reçoit désormais l'ENTITÉ, et lit la déclaration lui-même. Il n'y a plus
+	//  de prop de section à surveiller chez les appelants : il y a une entité à
+	//  exiger, ce que fait `ENTITE_REQUISE` ci-dessous.
 };
 
 /**
- * Le relevé du 28/08/2026, **figé — et il ne peut que décroître.**
+ * Tout écran qui rend `<EvolForm>` doit lui passer une **entité déclarée**.
  *
- * R5 interdit de brancher les cinq écrans d'un coup : *l'enrichissement se
- * propose sur UN écran, se fait constater, puis se généralise*. Poser le contrôle
- * en refusant tout aurait donc rendu le job rouge en permanence, donc désarmé
- * dans la semaine (#419) — et brancher les cinq écrans sans les regarder aurait
- * enfreint R5.
- *
- * Ces entrées sont la troisième voie : le relevé vit dans le **code** et non dans
- * un ticket, chaque écran branché retire sa ligne, et le contrôle **échoue** dès
- * qu'une entrée cesse de servir. C'est ce qui garantit qu'on ne pourra pas
- * « oublier » de la retirer.
- *
- * ✅ Ce que le relevé a trouvé de **bon** : `avecPerimetre` passait déjà par la
- * déclaration sur les deux écrans de ticket. Ce n'était donc pas un chantier neuf
- * — c'était un chantier commencé que rien ne surveillait. Il est **terminé pour
- * les tickets** depuis le 28/08/2026, et leurs deux lignes ont quitté ce relevé,
- * qui ne peut que décroître.
+ * 🔴 C'est le contrat qui remplace les quatre props (#463, 02/09/2026). Sans lui,
+ * ce contrôle perdrait tout regard sur le quatrième état : les props qu'il
+ * surveillait ont disparu, et un écran pourrait rendre le fil sans déclaration
+ * sans que rien ne le dise — le contrôle serait vert en ne mesurant plus rien,
+ * ce que ce dépôt a produit quatre fois cette semaine.
  */
-export const EVOLFORM_TOLEREES = {
-	//  ✅ `CarteTicket` et `HistoriqueTicket` ont QUITTÉ ce relevé le 28/08/2026 :
-	//  leurs quatre props passent par la déclaration. Les deux allaient ensemble —
-	//  ils rendent la MÊME carte de ticket, en liste et en fiche, et les brancher
-	//  séparément aurait rouvert la divergence que #431 avait fermée.
-	//  `showPhotos={!newInterne}` — un message interne n'accepte pas de pièce
-	//  jointe. C'est une règle MÉTIER, qui devra se lire dans la déclaration et
-	//  non se perdre : la brancher demande d'abord de trancher comment le cadre
-	//  dit « cette section dépend d'un choix fait dans le formulaire ».
-	'routes/(app)/tickets/[id]/+page.svelte': ['showPhotos', 'showDocuments'],
-	//  Le calendrier, constaté et stable depuis #432 — n'y toucher qu'après avoir
-	//  fait constater les tickets (R5).
-	'lib/components/HistoriqueEvenement.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
-	'routes/(app)/actualites/+page.svelte': ['showPhotos', 'showDocuments', 'showNotifs'],
-	//  ✅ `routes/(app)/espace-cs/+page.svelte` a QUITTÉ ce relevé le 28/08/2026,
-	//  et pas parce qu'on l'a branché : l'écran a disparu. Sa ligne disait
-	//  *« `showNotifs={false}` en dur : l'espace CS ne propose AUCUNE diffusion sur
-	//  un commentaire de ticket, là où la carte de ticket la propose au même
-	//  utilisateur. Deux écrans montrent le même objet et ne s'accordent pas. »*
-	//  Le cadre demande alors lequel des deux a tort — la réponse était : le
-	//  second écran n'avait pas lieu d'être. L'onglet « Tickets résidence » de
-	//  l'Espace CS, redondant avec `/tickets`, a été retiré, et la divergence avec
-	//  lui. Une divergence se solde aussi en supprimant l'un des deux rendus.
-};
+export const ENTITE_REQUISE = /<EvolForm\b/;
+
+/**
+ * Les écrans encore hors déclaration.
+ *
+ * ✅ **VIDE depuis le 02/09/2026** — les cinq sont branchés.
+ *
+ * Le relevé du 28/08 vivait dans le code et non dans un ticket, chaque écran
+ * branché retirait sa ligne, et le contrôle échouait dès qu'une entrée cessait de
+ * servir. C'est ce qui a garanti qu'on ne pourrait pas « oublier » de le vider :
+ * il a échoué de lui-même quand les trois derniers ont été branchés.
+ *
+ * ⚠️ Le laisser vide ne désarme rien — `ENTITE_REQUISE` prend le relais, et un
+ * sixième écran qui rendrait `EvolForm` sans entité échouerait le jour même.
+ *
+ * ⚠️ Le cas `showPhotos={!newInterne}` de la fiche de ticket disait : *« une règle
+ * MÉTIER, qui devra se lire dans la déclaration »*. Il est devenu
+ * `avecPiecesJointes={!newInterne}` : ce n'est PAS une section absente mais une
+ * variante du GESTE — une note interne est une ligne de suivi, pas un
+ * signalement. R4 ne déclare que des sections (#436), et forcer cette nuance dans
+ * la déclaration aurait fait dire à l'entité quelque chose qu'elle ne sait pas.
+ */
+export const EVOLFORM_TOLEREES = {};
 
 /**
  * Les écarts d'un fichier, et les tolérances qu'il a réellement servies.
@@ -163,87 +155,54 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 	//  🔴 LE cas du ticket : une prop posée en dur. C'est la forme exacte qui
 	//  échappait au contrôle — `showFiles={true}`, six fois dans le dépôt avant sa
 	//  scission en `showPhotos` / `showDocuments`.
-	verifier(
-		'une prop en dur est un écart',
-		analyserEvolForm('x.svelte', '<EvolForm showPhotos={true} />').ecarts.length,
-		1,
-	);
 	//  La forme conforme, celle que `avecPerimetre` emploie déjà sur les tickets.
-	verifier(
-		'gouvernée par la déclaration : aucun écart',
-		analyserEvolForm(
-			'x.svelte',
-			"<EvolForm avecPerimetre={droit && sectionPresente(TICKET, 'evolution', 'perimetre')} />",
-		).ecarts.length,
-		0,
-	);
 	//  ⚠️ Le piège : `sectionPresente(…)` présent mais sur une AUTRE section.
 	//  Sans le second test, un copier-coller de la ligne du périmètre passerait
 	//  pour un branchement des photos.
-	verifier(
-		'sectionPresente sur la MAUVAISE section reste un écart',
-		analyserEvolForm(
-			'x.svelte',
-			"<EvolForm showPhotos={sectionPresente(TICKET, 'evolution', 'perimetre')} />",
-		).ecarts.length,
-		1,
-	);
 	//  Une prop sans accolade (`showPhotos` seul) vaut `true` en Svelte.
-	verifier(
-		'une prop sans valeur vaut true, donc écart',
-		analyserEvolForm('x.svelte', '<EvolForm showPhotos />').ecarts.length,
-		1,
-	);
 	//  Les attributs s'écrivent sur plusieurs lignes dans tout ce dépôt : un motif
 	//  qui s'arrêterait à la fin de ligne ne verrait presque aucune balise réelle.
-	verifier(
-		'balise sur plusieurs lignes',
-		analyserEvolForm('x.svelte', '<EvolForm\n\tidPrefixe="a"\n\tshowNotifs={true}\n/>').ecarts
-			.length,
-		1,
-	);
 	//  Une tolérance couvre la prop pour TOUT le fichier, et se déclare servie.
-	//  L'exemple ne peut plus etre `CarteTicket` : il est BRANCHE depuis le
-	//  28/08/2026, donc sorti du releve. Un self-test qui citerait un fichier
-	//  sorti du releve passerait au vert en ne mesurant plus rien.
-	const tol = analyserEvolForm(
-		'routes/(app)/actualites/+page.svelte',
-		'<EvolForm showPhotos={true} showNotifs={peutSuivre} />',
-	);
-	verifier('un fichier toléré ne produit aucun écart', tol.ecarts.length, 0);
-	verifier('et il déclare ses tolérances SERVIES', tol.servies, [
-		'routes/(app)/actualites/+page.svelte::showPhotos',
-		'routes/(app)/actualites/+page.svelte::showNotifs',
-	]);
-	//  🔴 L'autre sens de rupture : une tolérance que plus personne ne sert.
-	//  Sans lui, la liste ne décroîtrait jamais et le contrôle s'endormirait.
+	//  ── Le contrat qui a REMPLACÉ les quatre props (02/09/2026, #463) ────────
+	//
+	//  ⚠️ SIX cas ont été retirés ici, et ce n'est pas un désarmement : ils
+	//  éprouvaient `analyserEvolForm` sur les props `showPhotos`, `showNotifs`…
+	//  qui N'EXISTENT PLUS. Un cas dont la cible a disparu ne mesure rien, et le
+	//  laisser aurait donné du vert sur un contrôle vide.
+	//
+	//  Ce qui les remplace éprouve le nouveau contrat, et il est plus fort : il
+	//  porte sur TOUS les écrans, là où les tolérances en épargnaient trois.
+	//
+	//  Les cas précédents éprouvaient `PROPS_EVOLFORM` et `EVOLFORM_TOLEREES`.
+	//  Ces deux tables sont vides : les props n'existent plus, et les cinq écrans
+	//  sont branchés. Les retirer sans rien mettre à la place aurait laissé le
+	//  quatrième état sans aucun contrôle — le faux vert que ce dépôt produit
+	//  quand la cible d'un contrôle disparaît.
+	const appel = (t) => entiteDeLAppel(t);
+	verifier("un écran qui ne rend pas EvolForm n'est pas concerné", appel('<div />').rend, false);
 	verifier(
-		'une tolérance non servie est signalée',
-		tolerancesMortes(['routes/(app)/actualites/+page.svelte::showPhotos']).includes(
-			'routes/(app)/actualites/+page.svelte — showNotifs',
-		),
-		true,
+		"l'entité passée est reconnue",
+		appel('<EvolForm\n\tidPrefixe="x"\n\tentite={TICKET}\n/>').entite,
+		'TICKET',
 	);
-	//  Les sections 7 et 8 sont INDEPENDANTES depuis la scission : une balise qui
-	//  ne brancherait que les photos doit rester en ecart sur les documents. Sans
-	//  ce cas, la scission pourrait etre a moitie faite sans que rien ne le dise.
+	//  🔴 LE CAS QUI DONNE SON SENS AU MOTIF. Les attributs d'un `<EvolForm>`
+	//  portent des fonctions fléchées, et un motif borné par `[^>]*` s'arrêtait au
+	//  `>` de `=>` — il refusait alors les quatre écrans qui passent pourtant
+	//  l'entité. Un contrôle qui crie sur du légitime finit désarmé.
 	verifier(
-		'photos branchées, documents en dur : l’écart reste sur les documents',
-		analyserEvolForm(
-			'x.svelte',
-			"<EvolForm showPhotos={sectionPresente(TICKET, 'evolution', 'photos')} " +
-				'showDocuments={true} />',
-		).ecarts.length,
-		1,
+		'une fonction fléchée AVANT ne masque pas l’entité',
+		appel('<EvolForm\n\ton:submit={(e) => f(e)}\n\tentite={PUBLICATION}\n/>').entite,
+		'PUBLICATION',
 	);
+	verifier(
+		'un écran qui rend EvolForm sans entité est signalé',
+		appel('<EvolForm\n\ton:submit={(e) => f(e)}\n/>').entite,
+		null,
+	);
+
 	//  Le fichier BRANCHE n'a plus de filet : une prop qui y reviendrait en dur
 	//  doit echouer. Sans ce cas, retirer une ligne du releve pourrait n'avoir
 	//  aucun effet et personne ne le saurait.
-	verifier(
-		'un fichier sorti du relévé n’est plus toléré',
-		analyserEvolForm('lib/components/CarteTicket.svelte', '<EvolForm showPhotos />').ecarts.length,
-		1,
-	);
 	//  Cas zéro : aucune balise `<EvolForm>` ne doit rien inventer.
 	verifier(
 		'cas zéro : pas d’EvolForm, pas d’écart',
@@ -252,11 +211,43 @@ if (lanceDirectement && process.argv.includes('--selftest')) {
 	);
 	//  Et le relevé lui-même ne doit pas s'être vidé par accident : un contrôle
 	//  dont la liste tombe à zéro se confondrait avec un chantier terminé.
-	verifier('le relevé est non vide', Object.keys(EVOLFORM_TOLEREES).length > 0, true);
+	//  ⚠️ Le relevé est VIDE depuis le 02/09/2026 : les cinq écrans sont branchés.
+	//  Ce cas vérifiait qu'il restait quelque chose à surveiller ; c'est désormais
+	//  `ENTITE_REQUISE` qui joue ce rôle, et le vérifier ici serait exiger que le
+	//  chantier ne se termine jamais.
+	verifier(
+		'le relevé est vide — les cinq écrans sont branchés',
+		Object.keys(EVOLFORM_TOLEREES).length,
+		0,
+	);
 
 	if (fail) {
 		console.error('\n✗ lib-etats-evolution --selftest : des cas échouent.');
 		process.exit(1);
 	}
 	console.log('✓ lib-etats-evolution --selftest : la passe voit ce qu’on croit.');
+}
+
+/**
+ * L'entité qu'un écran passe à `<EvolForm>` — ou `null` s'il n'en passe aucune.
+ *
+ * 🔴 C'est la décision qui remplace les quatre props (#463, 02/09/2026), et elle
+ * vit ICI parce qu'elle est **pure** : une chaîne entre, un nom de variable sort.
+ * Les cas qui l'éprouvent sont dans le `--selftest`, comme ceux qu'elle remplace.
+ *
+ * ⚠️ Une FENÊTRE après la balise, et non `[^>]*` : les attributs d'un `<EvolForm>`
+ * contiennent des fonctions fléchées, et le `>` de `=>` coupait le motif avant
+ * l'attribut cherché. Le premier essai refusait ainsi les quatre écrans qui
+ * passent pourtant l'entité — et un contrôle qui crie sur du légitime finit
+ * désarmé.
+ *
+ * @returns `{ rend: false }` si l'écran ne rend pas `EvolForm` ·
+ *          `{ rend: true, entite: null }` s'il le rend sans entité ·
+ *          `{ rend: true, entite: '<NOM>' }` sinon.
+ */
+export function entiteDeLAppel(texte) {
+	const debut = texte.search(ENTITE_REQUISE);
+	if (debut < 0) return { rend: false, entite: null };
+	const m = /\bentite=\{([A-Za-z_$][\w$]*)\}/.exec(texte.slice(debut, debut + 2000));
+	return { rend: true, entite: m ? m[1] : null };
 }
