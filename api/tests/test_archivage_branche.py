@@ -43,12 +43,15 @@ SOURCE = RACINE / "utils" / "archivage.py"
 
 #: Règles déclarées que personne ne lit encore, avec leur raison.
 #:
-#: 🔴 Chacune demande un changement VISIBLE — l'objet quitte la liste active pour
-#: une section Archives — donc à proposer sur un écran, faire constater, puis
-#: généraliser (R5 du cadre #430). Suivi en **#515**.
-NON_BRANCHEES = {
-    "evenement": "#515 — le calendrier a ses propres Archives, à rapprocher de la règle du site.",
-}
+#: ✅ **VIDE depuis le 02/09/2026** — les sept objets sont branchés. Ce n'est pas
+#: une case cochée : c'est ce que ce fichier existait pour obtenir, et le second
+#: test ci-dessous a fait échouer la suite à CHACUN des cinq branchements, jusqu'à
+#: ce qu'on vienne retirer la ligne correspondante.
+#:
+#: ⚠️ Le laisser vide ne désarme rien : le premier test refuse toujours une règle
+#: que personne ne lit. Une huitième règle ajoutée sans appelant échouerait le jour
+#: même. C'est là toute la différence entre un contrôle et une liste de courses.
+NON_BRANCHEES: dict[str, str] = {}
 
 
 def _appelants() -> dict[str, list[str]]:

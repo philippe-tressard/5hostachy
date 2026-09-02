@@ -1,6 +1,5 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import { delaiArchivageMs, evenementArchive } from '$lib/archivage';
 	import { TITRE_ARCHIVES } from '$lib/archives';
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
@@ -53,9 +52,6 @@
 
 	const _now = new Date();
 	let expandedArchiveYears = new Set<number>();
-
-	//  Le délai d'archivage du site — voir `$lib/archivage` (#515).
-	$: archivageDelaiMs = delaiArchivageMs($configStore);
 
 	let showForm = false;
 	let editId: number | null = null;
@@ -122,9 +118,7 @@
 			evenements = await calApi.list();
 			const expiredYears = [
 				...new Set(
-					evenements
-						.filter((e) => evenementArchive(e, archivageDelaiMs))
-						.map((e) => new Date(e.fin ?? e.debut).getFullYear()),
+					evenements.filter((e) => e.archivee).map((e) => new Date(e.fin ?? e.debut).getFullYear()),
 				),
 			].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
@@ -177,10 +171,15 @@
 		let evs = canSeeAG ? evenements : evenements.filter((e) => e.type !== 'ag');
 		// Un événement avec suivi kanban actif (non terminé / non annulé) reste visible en Liste
 		// même si sa date de début est passée — il disparaîtra seulement à la clôture du kanban.
+		//  🔴 `e.archivee` vient du SERVEUR depuis le 02/09/2026 (#515). L'écran le
+		//  calculait et divergeait sur trois points — annulation non immédiate,
+		//  épinglage non protecteur, et surtout un délai d'administration qui ne
+		//  l'atteignait jamais. Le détail est dans `$lib/archivage.ts`.
 		evs = evs.filter((e) => {
-			if (e.archivee) return false;
+			//  Le suivi kanban ACTIF prime : un événement passé mais non clôturé reste
+			//  en liste. Cette règle-là est propre au calendrier et ne bouge pas.
 			const kanbanActif = e.statut_kanban && !['termine', 'annule'].includes(e.statut_kanban);
-			return !evenementArchive(e, archivageDelaiMs) || kanbanActif;
+			return !e.archivee || kanbanActif;
 		});
 		// Les maintenances récurrentes restent hors vue Liste.
 		// Exception métier: les prestations ponctuelles (non récurrentes) avec workflow restent visibles en Liste ET Kanban.
@@ -197,7 +196,8 @@
 	})();
 	$: allArchiveEvs = (() => {
 		let evs = canSeeAG ? evenements : evenements.filter((e) => e.type !== 'ag');
-		evs = evs.filter((e) => evenementArchive(e, archivageDelaiMs) || e.archivee);
+		//  Un seul test : `archivee` porte déjà l'archivage manuel ET celui du temps.
+		evs = evs.filter((e) => e.archivee);
 		// Règle métier : un événement avec suivi kanban ne peut figurer en archives
 		// que s'il est Terminé ou Annulé. Les statuts actifs (ag, cs, syndic, fournisseur)
 		// restent dans la vue Kanban jusqu'à leur clôture.
@@ -441,8 +441,8 @@
 				e.type === 'maintenance_recurrente' &&
 				e.statut_kanban &&
 				e.statut_kanban !== 'annule' &&
-				!e.archivee &&
-				!evenementArchive(e, archivageDelaiMs),
+				//  Un seul test : `archivee` porte l'archivage manuel ET celui du temps.
+				!e.archivee,
 		);
 	})();
 	let showPeriodicSection = false;

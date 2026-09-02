@@ -17,6 +17,7 @@ from app.routers.calendrier_historique import (
     EvolutionEvenementRead,
     _evolutions_de,
 )
+from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.liens import lien_element
 from app.utils.suppression_liee import flush_si_necessaire, supprimer_documents_de
 from app.utils.photos import parse_photos, photos_internes
@@ -81,7 +82,19 @@ class EvenementRead(BaseModel):
     frequence_type: Optional[str] = None
     frequence_valeur: Optional[int] = None
     affichable: bool = True
+    #: État EFFECTIF : archivé à la main, **ou** par la règle du site — 30 jours
+    #: après la fin de l'événement, immédiat s'il est annulé, jamais s'il est
+    #: épinglé (`utils/archivage`, #515). C'est ce que l'écran emploie.
+    #:
+    #: 🔴 Le calendrier le calculait LUI-MÊME, et divergeait sur trois points :
+    #: l'annulation n'y était pas immédiate, l'épinglage n'y protégeait pas, et
+    #: surtout le délai réglé en administration ne l'atteignait jamais — la clé
+    #: `archivage_delai_jours` n'est pas dans la liste blanche de `GET /config`,
+    #: donc l'écran tournait depuis toujours sur son défaut en dur.
     archivee: bool = False
+    #: La DÉCISION HUMAINE, seule — la colonne. Même séparation que l'affiche de
+    #: hall : elle dit si « désarchiver » aurait un effet.
+    archivee_manuellement: bool = False
     epingle: bool = False
     # Stocké en colonne comme un tableau JSON (convention Ticket.photos_urls) ;
     # exposé en liste pour que le front n'ait rien à désérialiser.
@@ -131,6 +144,11 @@ def _ev_to_read(ev: Evenement, session: Session) -> EvenementRead:
     brut["photos_urls"] = parse_photos(ev.photos_urls)
     brut["fichiers_urls"] = parse_photos(ev.fichiers_urls)
     data = EvenementRead.model_validate(brut)
+    #  La colonne d'abord — `model_validate` a déjà posé `archivee` depuis elle —
+    #  puis l'état effectif par-dessus. L'ordre compte : l'inverse écraserait le
+    #  calcul par la colonne.
+    data.archivee_manuellement = ev.archivee
+    data.archivee = est_archivable("evenement", ev, seuil_jours=seuil_archivage_jours(session))
     data.evolutions = _evolutions_de(ev.id, session)
     auteur = session.get(Utilisateur, ev.auteur_id)
     data.auteur_nom = nom_affiche(auteur.prenom, auteur.nom) if auteur else "?"
