@@ -189,12 +189,18 @@
 				<h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
 				<div class="tl-chart-wrap">
 					<div class="tl-y-axis">
-						{#each yTicks as tick}
+						<!--  🔴 `tick` est une clé SÛRE, et ça se démontre plutôt que ça ne se
+						      suppose — une clé dupliquée fait planter Svelte à l'exécution.
+						      `yTicks = [4,3,2,1,0].map((i) => i * step)`, et `step` vaut
+						      `Math.ceil(maxVal / 4 / u) * u` avec `maxVal >= 1` et `u >= 1` :
+						      le quotient est > 0, donc `Math.ceil` rend au moins 1, donc
+						      `step >= 1`. Les cinq multiples sont alors distincts. -->
+						{#each yTicks as tick (tick)}
 							<div class="tl-y-tick" style="bottom:{(tick / (yTicks[0] || 1)) * 100}%">{tick}</div>
 						{/each}
 					</div>
 					<div class="tl-chart-inner">
-						{#each yTicks as tick}
+						{#each yTicks as tick (tick)}
 							<div
 								class="tl-y-gridline"
 								style="bottom:{(tick / (yTicks[0] || 1)) * 120 + 18}px"

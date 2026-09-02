@@ -62,8 +62,33 @@ import { neutraliserCommentaires as sansCommentaires } from './lib-commentaires.
 
 const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
-/** Le compte au 30/08/2026, après 60 clés prouvées : 37 par `id`, 15 par `val`/`code`, 8 par clé de groupe. Il ne remonte pas. */
-const PLAFOND = 33;
+/**
+ * Le compte réel. Il ne remonte pas.
+ *
+ * 30/08/2026 : 60 clés prouvées (37 par `id`, 15 par `val`/`code`, 8 par groupe) → 33.
+ *
+ * 02/09/2026 : **33 → 26**, sept de plus, et par deux voies seulement — parce que
+ * ce sont les deux seules qui ne devinent rien :
+ *
+ * 1. **La valeur EST la clé**, sur une liste littérale et distincte par
+ *    construction : les 24 heures d'une sauvegarde, les 4 barres d'une jauge de
+ *    mot de passe, les 5 étoiles d'une notation, les 5 graduations d'un graphe
+ *    (dont l'écart est démontré ≥ 1 dans le commentaire posé sur place).
+ * 2. **Le doublon était lui-même un défaut d'affichage**, corrigé à la source :
+ *    les variables d'un modèle d'e-mail (texte libre en base) et les pastilles de
+ *    périmètre d'un événement (liste de codes écrite par plusieurs chemins)
+ *    pouvaient afficher deux fois la même chose. Les dédoublonner rend la clé
+ *    sûre EN MÊME TEMPS qu'elle corrige le rendu — au lieu de choisir entre les
+ *    deux, ou de fabriquer une clé pour satisfaire ce contrôle.
+ *
+ * ⚠️ Les 26 restantes n'entrent dans aucune des deux. Elles itèrent sur des
+ * listes dont rien ne prouve l'unicité — des chaînes venues de la base, des
+ * objets sans identifiant (`MembreCSForm` n'en a pas), des réponses libres.
+ * Chacune demande une décision, et un `(i)` ajouté pour faire baisser ce chiffre
+ * serait le contournement que #453 condamne : satisfaire le contrôle par la
+ * forme, sans faire ce qu'il demande.
+ */
+const PLAFOND = 26;
 
 /** En dessous, le repérage ne mord plus — le dépôt en porte ~200. */
 const PLANCHER_EACH = 150;

@@ -64,19 +64,29 @@
 	//  `{{ ["civilite" }}`, crochets et guillemets compris. Le défaut est corrigé
 	//  en le fusionnant ici (19/08/2026) plutôt que recopié : on analyse le JSON, et
 	//  on ne retombe sur la virgule que pour une valeur ancienne écrite à plat.
+	//  🔴 Le dédoublonnage n'est PAS un artifice pour satisfaire `lint:each-key`.
+	//  Annoncer deux fois la même variable disponible est un défaut d'affichage à
+	//  part entière — et c'est ce qui rendait la clé impossible : `variables_disponibles`
+	//  est du texte libre en base (JSON, ou liste à plat pour les valeurs héritées),
+	//  donc rien n'y garantissait l'unicité. Le corriger à la source rend la clé
+	//  sûre en même temps, au lieu de choisir entre les deux.
+	const unique = (v: string[]): string[] => [...new Set(v)];
+
 	function variablesDeModele(brut: string | null | undefined): string[] {
 		const texte = (brut ?? '').trim();
 		if (!texte) return [];
 		try {
 			const lu = JSON.parse(texte);
-			if (Array.isArray(lu)) return lu.map((v) => String(v).trim()).filter(Boolean);
+			if (Array.isArray(lu)) return unique(lu.map((v) => String(v).trim()).filter(Boolean));
 		} catch {
 			/* valeur héritée, écrite à plat */
 		}
-		return texte
-			.split(',')
-			.map((v) => v.trim())
-			.filter(Boolean);
+		return unique(
+			texte
+				.split(',')
+				.map((v) => v.trim())
+				.filter(Boolean),
+		);
 	}
 
 	const labelIntention = (v: string | null | undefined) =>
@@ -279,7 +289,7 @@
 			{#if emailEdit.variables_disponibles}
 				<p class="variables-modele">
 					<strong>Variables disponibles :</strong>
-					{#each variablesDeModele(emailEdit.variables_disponibles) as v}
+					{#each variablesDeModele(emailEdit.variables_disponibles) as v (v)}
 						<code>{`{{ ${v} }}`}</code>
 					{/each}
 				</p>
