@@ -219,6 +219,29 @@ point** (que sudo ignore), puis un `mv` atomique. Le contenu installé est véri
 avant le `mv` : rsync absent, `systemctl start cloudflared` présent — sans quoi la
 bascule casserait.
 
+### C25 — un script TIERS est-il servi dans la page publique ? (02/09/2026)
+
+Le relevé CSP a trouvé `static.cloudflareinsights.com/beacon.min.js` chargé sur
+chaque page. **Aucun `<script>` du dépôt ne le référence** : Cloudflare l'injecte
+à l'arête, APRÈS notre origine.
+
+C'est ce qui rend ce contrôle particulier : ni une relecture du code, ni
+`curl http://localhost/` ne pouvaient le voir. Il mesure donc l'**URL publique**,
+avec un `Accept: text/html` et un UA de navigateur — Cloudflare n'injecte que dans
+du HTML rendu à un navigateur.
+
+⚠️ **Sur l'ACTIF seulement.** Depuis le standby, la même URL publique répond (elle
+sort par le WAN et revient sur l'actif) : le contrôle passerait deux fois sur le
+même fait (`standards/04` §33).
+
+⚠️ Le motif porte sur des **hôtes nommés**, pas sur « toute URL absolue » : le
+site en sert légitimement (polices Google, déclarées dans la CSP). Un contrôle qui
+crie sur du légitime finit désarmé.
+
+Décision de l'utilisateur (02/09/2026) : **couper** Web Analytics côté Cloudflare.
+Ce contrôle est ce qui rend la décision durable — sans lui, réactiver l'option
+d'un clic remettrait un tiers sur le chemin de chaque résident.
+
 ### C23 bis — la CSP bloquante porte-t-elle ses directives ? (01/09/2026)
 
 C23 vérifie que l'en-tête `Content-Security-Policy` est **présent**. Il l'était

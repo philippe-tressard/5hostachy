@@ -409,6 +409,29 @@ verdicts_selftest() {
   #  ⚠️ Et il le reste même si quelque chose répondait : ce n'est pas le site.
   vc "standby, réponse parasite"           SANS_OBJET "$_CSP_OK" "connect-src" standby
 
+  echo "-- C25 : aucun script tiers dans la page publique --"
+  vt() { # description attendu html hotes [role]
+    local desc="$1" exp="$2"; shift 2
+    local got; got=$(verdict_script_tiers "$@")
+    if [ "$got" = "$exp" ]; then echo "PASS  $desc  → $got"
+    else echo "FAIL  $desc  attendu=$exp obtenu=$got"; st_fail=1; fi
+  }
+  _HTML_PROPRE='<html><head><script src="/_app/immutable/x.js"></script></head></html>'
+  _HTML_BEACON='<html><body><script src="https://static.cloudflareinsights.com/beacon.min.js"></script></body></html>'
+  _HOTES="static.cloudflareinsights.com googletagmanager.com"
+
+  vt "page sans tiers"                     OK          "$_HTML_PROPRE" "$_HOTES"
+  vt "le beacon Cloudflare est revenu"     "TIERS:static.cloudflareinsights.com" "$_HTML_BEACON" "$_HOTES"
+  #  🔴 LE CAS ZÉRO, et c'est le seul qui compte vraiment ici : le relevé légitime
+  #  de ce contrôle est VIDE. Sans lui, une page qu'on n'a pas pu charger — WAN
+  #  coupé, 502, redirection — rendrait OK, et on lirait « aucun tiers » là où il
+  #  faut lire « je n'ai pas regardé » (`standards/04` §1).
+  vt "aucune page reçue"                   INCONNU     "" "$_HOTES"
+  #  Le standby ne sert rien : ni vert ni rouge, sans objet.
+  vt "standby"                             SANS_OBJET  "$_HTML_BEACON" "$_HOTES" standby
+  #  Une URL absolue LÉGITIME ne doit pas crier : la CSP autorise les polices.
+  vt "polices Google, déclarées"           OK          '<link href="https://fonts.googleapis.com/css2?family=X">' "$_HOTES"
+
 
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   return $st_fail

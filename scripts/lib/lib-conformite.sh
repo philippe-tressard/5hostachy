@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  lib-conformite.sh — les contrôles de CONFORMITÉ de `check-reliability.sh`
-#                      (C20 à C23)
+#                      (C20 à C25)
 #
 #  Extrait le 20/08/2026, au fil de l'eau : `check-reliability.sh` a dépassé son
 #  plafond en recevant C23 (les en-têtes de sécurité réellement servis), et le
@@ -14,6 +14,7 @@
 #    C21  une permission élevée vaut-elle mieux que la cible qu'elle désigne ?
 #    C22  les points d'entrée du nœud sont-ils ceux du dépôt ?
 #    C23  les en-têtes de sécurité sont-ils réellement servis ?
+#    C25  un script TIERS est-il servi dans la page publique ?
 #
 #  Les contrôles restés dans `check-reliability.sh` posent l'autre question :
 #  *le service fonctionne-t-il ?* — la base, le rôle actif, le tunnel, la
@@ -157,5 +158,36 @@ conformite_verdicts() {
     MANQUANT:*)  V23B=$(verdict_csp_directives "$ENTETES_RECUS" "$CSP_DIRECTIVES" "$ENTETES_ROLE")
                  warn "Directive(s) ABSENTE(S) de la CSP bloquante : ${V23B#MANQUANT:} — la protection correspondante ne s'applique plus, et l'en-tête est pourtant bien servi" ;;
     *)           warn "CSP bloquante non mesurable (aucune réponse locale, ou en-tête absent) — ni vert ni rouge" ;;
+  esac
+
+  # ── C25. Un script TIERS est-il servi dans la page publique ? ─────────────────
+  #  🔴 Pourquoi (#701, 02/09/2026). Le relevé CSP a trouvé le beacon de Cloudflare
+  #  Web Analytics chargé sur chaque page. AUCUN `<script>` du dépôt ne le
+  #  référence : il est injecté par Cloudflare, à l'arête, APRÈS notre origine.
+  #  Aucun contrôle de code ne pouvait le voir, et `curl http://localhost/` non
+  #  plus — l'injection a lieu en aval.
+  #
+  #  Décision de l'utilisateur : le couper. Ce contrôle rend la décision DURABLE :
+  #  réactiver l'option d'un clic dans un tableau de bord tiers remettrait un
+  #  script sur le chemin de chaque résident, et rien ne le dirait.
+  #
+  #  ⚠️ Il mesure donc l'URL PUBLIQUE, avec un `Accept: text/html` et un UA de
+  #  navigateur — Cloudflare n'injecte que dans du HTML rendu à un navigateur.
+  #  C'est `standards/04` §14 : observer la chose, pas son enregistrement.
+  #
+  #  ⚠️ Et il ne tourne QUE sur l'actif : depuis le standby, la même URL publique
+  #  répond (elle sort par le WAN et revient sur l'actif), donc le contrôle
+  #  passerait deux fois sur le même fait — `standards/04` §33.
+  HOTES_TIERS="static.cloudflareinsights.com googletagmanager.com google-analytics.com"
+  PAGE_PUBLIQUE=""
+  if [ "$ENTETES_ROLE" = "actif" ]; then
+    PAGE_PUBLIQUE=$(curl -s --max-time 10 -H 'Accept: text/html'       -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36'       "${SITE_PUBLIC_HTML:-https://5hostachy.fr/auth/connexion}" 2>/dev/null)
+  fi
+  case "$(verdict_script_tiers "$PAGE_PUBLIQUE" "$HOTES_TIERS" "$ENTETES_ROLE")" in
+    OK)          ok   "Aucun script tiers dans la page publique (${HOTES_TIERS// /, } surveillés)" ;;
+    SANS_OBJET)  ok   "Scripts tiers : sans objet sur le standby (il ne sert pas la page publique)" ;;
+    TIERS:*)     V25=$(verdict_script_tiers "$PAGE_PUBLIQUE" "$HOTES_TIERS" "$ENTETES_ROLE")
+                 warn "Script TIERS servi à chaque résident : ${V25#TIERS:} — il n'est dans aucun fichier du dépôt, donc il vient d'un réglage d'arête (Cloudflare). Le couper, ou l'écrire dans les pages légales (#701)" ;;
+    *)           warn "Scripts tiers non mesurables (page publique non reçue) — ni vert ni rouge" ;;
   esac
 }
