@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
 from app.models.core import ConfigSite, GenreCivilite, MembreCS, MembreSyndic, Utilisateur
 from app.utils.perimetres import a_portee_globale, batiments_cibles
@@ -199,6 +199,38 @@ def membres_cs_avec_email(session: Session) -> list[tuple[int, str]]:
         ).all()
         if email
     ]
+
+
+def membres_cs_ou_admin(session: Session) -> list[Utilisateur]:
+    """Les `Utilisateur` à NOTIFIER dans l'application — conseil syndical **ou** admin.
+
+    🔴 C'est la CINQUIÈME règle de destinataires, et la première qui n'était nulle
+    part. `CLAUDE.md` écrivait, à propos du contrôle de source unique : *« il
+    laisse passer les notifications in-app, qui visent CS ou admin et rendent des
+    `Utilisateur` — autre décision, autre destinataire »*. C'est vrai, et c'était
+    la bonne raison de ne pas les confondre avec `membres_cs_avec_email`.
+
+    Sauf que cette autre décision était écrite **trois fois** : `tickets/crud.py`,
+    `tickets/messages.py`, `signalements.py`. Et elle avait déjà commencé à
+    diverger — la copie des messages exigeait en plus `email IS NOT NULL`, ce qui
+    privait de notification **in-app** un membre du CS sans adresse. Une
+    notification qui s'affiche à l'écran n'a pas besoin d'une adresse : la
+    condition venait d'un copier-coller depuis un envoi de courriel.
+
+    ⚠️ La différence avec `membres_cs_avec_email` est intacte, et elle compte :
+    celle-ci vise l'écran (CS **ou** admin, avec ou sans adresse), l'autre la
+    boîte aux lettres (CS seul, adresse obligatoire). Deux publics, deux
+    fonctions, un seul endroit chacune.
+    """
+    return list(session.exec(
+        select(Utilisateur).where(
+            Utilisateur.actif == True,  # noqa: E712
+            or_(
+                Utilisateur.roles_json.contains("conseil_syndical"),
+                Utilisateur.roles_json.contains("admin"),
+            ),
+        )
+    ).all())
 
 
 def destinataires_syndic_cs(

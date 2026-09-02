@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from sqlmodel import Session, or_, select
+from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user
 from app.database import get_session
@@ -25,6 +25,7 @@ from app.utils.visibility import ticket_visible
 
 from .commun import config_site, contexte_site
 from .courriels import envoyer_email_externe
+from app.utils.destinataires import membres_cs_ou_admin
 
 router = APIRouter()
 
@@ -150,16 +151,11 @@ def add_message(
                     )
         else:
             # Résident répond → notifier les CS/Admin
-            cs_members = session.exec(
-                select(Utilisateur).where(
-                    Utilisateur.actif == True,  # noqa: E712
-                    Utilisateur.email.isnot(None),
-                    or_(
-                        Utilisateur.roles_json.contains("conseil_syndical"),
-                        Utilisateur.roles_json.contains("admin"),
-                    ),
-                )
-            ).all()
+            #  ⚠️ `email IS NOT NULL` a disparu ici, et c'était un défaut :
+            #  une notification IN-APP n'a pas besoin d'adresse. La condition
+            #  venait d'un copier-coller depuis un envoi de courriel, et privait
+            #  d'alerte à l'écran un membre du CS sans adresse enregistrée.
+            cs_members = membres_cs_ou_admin(session)
             for member in cs_members:
                 if member.id != user.id:
                     _prevenir(

@@ -307,6 +307,9 @@ class Ticket(SQLModel, table=True):
     cree_le: datetime = Field(default_factory=datetime.utcnow)
     mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
     ferme_le: Optional[datetime] = None
+    #  Adresse de réponse `tickets+<jeton>@…` (#703) : tiré au sort, jamais dérivé
+    #  de l'id — il voyage dans les carnets d'adresses de toute la chaîne.
+    jeton_courriel: Optional[str] = Field(default=None, index=True)
     #  Refermé sur son auteur et le CS (#710). Défaut `False`, comme
     #  `Publication.confidentiel` — voir la migration 0166 pour le pourquoi.
     confidentiel: bool = False
