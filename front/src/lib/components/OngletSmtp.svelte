@@ -101,7 +101,13 @@
 	function reprendreDuSmtp() {
 		imapConfig.server = smtpConfig.server.replace(/^smtp\./, 'ssl0.').trim();
 		imapConfig.username = smtpConfig.username || smtpConfig.from;
-		toast('info', 'Serveur et identifiant repris — le mot de passe reste à saisir.');
+		//  🔴 « Copié » et non « repris — le mot de passe reste à saisir » : la
+		//  première rédaction annonçait ce qui MANQUAIT, sur un ton indiscernable
+		//  d'une erreur. Elle est apparue à quelqu'un qui venait justement de
+		//  saisir son mot de passe, et a été lue comme un échec (03/09/2026).
+		//  Un message de confirmation dit ce qui a été FAIT ; ce qui reste à faire
+		//  est déjà écrit sous les champs concernés.
+		toast('success', 'Serveur et identifiant copiés depuis la configuration d’envoi.');
 	}
 
 	async function saveSmtpConfig() {
