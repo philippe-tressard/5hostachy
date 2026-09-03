@@ -121,7 +121,12 @@ def test_les_marqueurs_de_la_migration_reconnaissent_le_gabarit():
 
 
 def test_les_mentions_ecrites_nomment_vraiment_quelqu_un():
-    """Ce que la migration pose doit répondre aux questions, pas les reformuler."""
+    """Ce que la migration pose doit répondre aux questions, pas les reformuler.
+
+    ⚠️ Ce test lit la migration 0170, qui reste telle qu'elle a été appliquée —
+    on ne réécrit pas une migration. Le texte SERVI aujourd'hui est celui de
+    0173, qui a remplacé le nom par l'entité : voir le test suivant.
+    """
     texte = _texte_nu(_module_migration().MENTIONS)
     for quoi, motif in (
         ("un nom d'éditeur", r"Philippe Tressard"),
@@ -214,3 +219,62 @@ def test_les_corrections_de_0171_sont_bien_formees():
     #  Et le défaut nommé par le lot doit bien être celui qu'on corrige.
     assert any("Aucun transfert hors UE" in avant for avant, _ in corrections)
     assert not any("Aucun transfert hors UE" in apres for _, apres in corrections)
+
+
+# ── Aucune personne physique nommée sur une page publique (0173) ─────────────
+
+_MIGRATION_ANONYME = (
+    _RACINE / "alembic" / "versions" / "0173_editeur_sans_nom_de_personne.py"
+)
+
+
+def test_l_editeur_publie_n_est_plus_une_personne_nommee():
+    """🔴 Demandé le 03/09/2026 : *« peux-tu enlever mon nom des mentions »*.
+
+    La page est **publique et indexable**. Y publier le nom d'une personne
+    physique, pour un outil interne de copropriété ni commercial ni destiné au
+    public, c'est publier une donnée personnelle sans nécessité — la
+    minimisation (RGPD art. 5-1-c) dit exactement cela.
+
+    ⚠️ Retirer le nom sans rien mettre à la place recréerait le défaut corrigé la
+    veille : une page qui n'identifie personne. L'éditeur devient donc une
+    ENTITÉ — le conseil syndical —, identifiable et joignable.
+    """
+    substitutions = _charger(_MIGRATION_ANONYME, "mig0173").SUBSTITUTIONS
+    assert substitutions, "la migration ne remplace plus rien"
+    for avant, apres in substitutions:
+        assert "Philippe Tressard" in avant, (
+            "un remplacement de 0173 ne vise pas le nom qu'il doit retirer"
+        )
+        assert "Philippe Tressard" not in apres, (
+            "le nom d'une personne réapparaît dans le texte de remplacement"
+        )
+        assert "conseil syndical" in apres, (
+            "le nom est retiré sans qu'aucune entité prenne sa place : la page "
+            "n'identifierait plus d'éditeur"
+        )
+
+
+def test_les_remplacements_de_0173_visent_bien_le_texte_pose_par_0170_et_0171():
+    """🔴 Une migration de texte qui rate sa cible est inerte, EN SILENCE.
+
+    Contrairement au test que j'avais écrit puis retiré pour 0171, celui-ci ne
+    dépend pas de `HEAD` : les textes de 0170 et 0171 sont figés dans leurs
+    propres fichiers — une migration ne se réécrit pas. La comparaison est donc
+    stable, aujourd'hui comme dans un an.
+    """
+    mentions = _module_migration().MENTIONS
+    politique_apres = "".join(
+        apres for _, apres in _charger(_MIGRATION_POLITIQUE, "mig0171").CORRECTIONS
+    )
+    cible = mentions + politique_apres
+
+    introuvables = [
+        avant[:60]
+        for avant, _ in _charger(_MIGRATION_ANONYME, "mig0173").SUBSTITUTIONS
+        if avant not in cible
+    ]
+    assert not introuvables, (
+        "fragment(s) que 0173 ne trouvera jamais — le nom resterait publié :\n  "
+        + "\n  ".join(introuvables)
+    )

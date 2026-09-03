@@ -20,6 +20,7 @@ from app.schemas import CommandeAccesCreate, CommandeAccesRead
 from app.utils.acces_detachement import detacher_acces
 from app.utils.auto_match_service import (
     _user_keys, _matches_user, _create_user_vigiks, _create_user_telecommandes,
+    rattacher_lot_unique,
 )
 from app.utils.destinataires import membres_cs_notifiables
 
@@ -460,17 +461,10 @@ def auto_match_imports(
                 imp.user_locataire_id = candidats[0].id
                 changed = True
 
-        # Auto-link lot via UserLot si pas encore lié
-        if imp.user_proprietaire_id and not imp.lot_id:
-            user_lots = session.exec(
-                select(UserLot).where(
-                    UserLot.user_id == imp.user_proprietaire_id,
-                    UserLot.actif == True,
-                )
-            ).all()
-            if len(user_lots) == 1:
-                imp.lot_id = user_lots[0].lot_id
-                changed = True
+        #  La règle du lot unique vit dans `rattacher_lot_unique` — elle était
+        #  écrite quatre fois, avec deux comportements différents.
+        if rattacher_lot_unique(imp, session):
+            changed = True
 
         if changed:
             if imp.user_proprietaire_id:
@@ -827,17 +821,10 @@ def auto_match_imports_vigik(
                 imp.lot_id = lot_id
                 changed = True
 
-        # Auto-link lot via UserLot si encore pas résolu
-        if imp.user_proprietaire_id and not imp.lot_id:
-            user_lots = session.exec(
-                select(UserLot).where(
-                    UserLot.user_id == imp.user_proprietaire_id,
-                    UserLot.actif == True,
-                )
-            ).all()
-            if len(user_lots) == 1:
-                imp.lot_id = user_lots[0].lot_id
-                changed = True
+        #  La règle du lot unique vit dans `rattacher_lot_unique` — elle était
+        #  écrite quatre fois, avec deux comportements différents.
+        if rattacher_lot_unique(imp, session):
+            changed = True
 
         if changed:
             if imp.user_proprietaire_id:
