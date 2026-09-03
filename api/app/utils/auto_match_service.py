@@ -174,6 +174,28 @@ def _statut_to_type_lien(statut) -> str:
     return _MAP.get(val, "propriétaire")
 
 
+def rattacher_lot_unique(imp, session: Session) -> bool:
+    """UN seul lot actif chez le propriétaire → l'import lui est rattaché.
+
+    🔴 Écrite quatre fois, avec deux comportements. Elle décide qui verra ce lot.
+    Le pourquoi : `tests/test_rattachement_lot_unique.py`.
+    """
+    from app.models.core import UserLot
+
+    if not imp.user_proprietaire_id or imp.lot_id:
+        return False
+    lots = session.exec(
+        select(UserLot).where(
+            UserLot.user_id == imp.user_proprietaire_id,
+            UserLot.actif == True,  # noqa: E712
+        )
+    ).all()
+    if len(lots) != 1:
+        return False
+    imp.lot_id = lots[0].lot_id
+    return True
+
+
 def count_lots_for_user(nom: str, prenom: str, session: Session) -> int:
     """Dry-run : compte les LotImport dont le nom_coproprietaire correspond à ce user.
     Inclut tous les statuts pour donner un aperçu global (même 'resolu')."""
@@ -240,8 +262,7 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
 def _auto_match_tc(user, session: Session) -> int:
     from datetime import datetime
     from app.models.core import (
-        TelecommandeImport, StatutImport, UserLot,
-        Telecommande, StatutAcces,
+        TelecommandeImport, StatutImport, Telecommande, StatutAcces,
     )
     keys = _user_keys(user.nom, user.prenom)
     imports = session.exec(
@@ -264,17 +285,9 @@ def _auto_match_tc(user, session: Session) -> int:
             if _matches_user(imp.nom_locataire, keys):
                 imp.user_locataire_id = user.id
                 changed = True
-        # Auto-link lot via UserLot si proprio connu et 1 seul lot
-        if changed and imp.user_proprietaire_id and not imp.lot_id:
-            user_lots = session.exec(
-                select(UserLot).where(
-                    UserLot.user_id == imp.user_proprietaire_id,
-                    UserLot.actif == True,
-                )
-            ).all()
-            if len(user_lots) == 1:
-                imp.lot_id = user_lots[0].lot_id
         if changed:
+            #  Règle du lot unique : `rattacher_lot_unique` (écrite 4× avant).
+            rattacher_lot_unique(imp, session)
             if imp.user_proprietaire_id:
                 imp.statut = StatutImport.proprietaire_lie
             # Auto-résolution : créer la Telecommande si proprio lié + référence
@@ -307,7 +320,7 @@ def _auto_match_tc(user, session: Session) -> int:
 
 def _auto_match_vigik(user, session: Session) -> int:
     from datetime import datetime
-    from app.models.core import VigikImport, StatutImport, UserLot, Vigik, StatutAcces
+    from app.models.core import VigikImport, StatutImport, Vigik, StatutAcces
     from app.utils.import_vigiks import _build_lot_index, normaliser as _norm_vigik
     keys = _user_keys(user.nom, user.prenom)
     imports = session.exec(
@@ -338,17 +351,8 @@ def _auto_match_vigik(user, session: Session) -> int:
             if lot_id:
                 imp.lot_id = lot_id
                 changed = True
-        # Auto-link lot via UserLot
-        if changed and imp.user_proprietaire_id and not imp.lot_id:
-            user_lots = session.exec(
-                select(UserLot).where(
-                    UserLot.user_id == imp.user_proprietaire_id,
-                    UserLot.actif == True,
-                )
-            ).all()
-            if len(user_lots) == 1:
-                imp.lot_id = user_lots[0].lot_id
         if changed:
+            rattacher_lot_unique(imp, session)
             if imp.user_proprietaire_id:
                 imp.statut = StatutImport.proprietaire_lie
             # Auto-résolution : créer le Vigik si proprio lié + code
