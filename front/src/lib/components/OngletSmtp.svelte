@@ -72,36 +72,84 @@
 	let imapTesting = false;
 	let imapResultat = '';
 
-	//  Les valeurs arrivent APRÈS le montage (la page les charge) : un `$:` les
-	//  reprend dès qu'elles changent, là où une affectation au montage figerait
-	//  le formulaire sur des champs vides.
-	$: if (valeurs && Object.keys(valeurs).length) {
-		smtpConfig.enabled = valeurs['smtp_enabled'] === '1';
-		smtpConfig.server = valeurs['smtp_server'] ?? '';
-		smtpConfig.port = parseInt(valeurs['smtp_port'] ?? '587') || 587;
-		smtpConfig.from = valeurs['smtp_from'] ?? '';
-		smtpConfig.from_name = valeurs['smtp_from_name'] ?? '';
-		smtpConfig.username = valeurs['smtp_username'] ?? '';
-		smtpConfig.starttls = valeurs['smtp_starttls'] !== '0';
-		smtpConfig.ssl_tls = valeurs['smtp_ssl_tls'] === '1';
-		smtpPasswordSet = !!valeurs['smtp_password'];
+	//  🔴 HYDRATER UNE SEULE FOIS, PUIS RELIRE — correctif du 03/09/2026.
+	//
+	//  Les valeurs arrivent APRÈS le montage : ce `$:` les reprend dès qu'elles
+	//  changent, là où une affectation au montage figerait des champs vides.
+	//
+	//  Mais il RÉÉCRIVAIT le formulaire à chaque ré-exécution, avec le `valeurs`
+	//  du montage. Signalé à l'écran : *« quand je fais enregistrer ça efface les
+	//  champs Nom et password »* — la saisie partait bien vers le serveur, puis
+	//  l'écran la remplaçait par ce qu'il avait lu au chargement, c'est-à-dire
+	//  rien. On voyait un formulaire vidé, et on en concluait un échec.
+	//
+	//  Deux gestes, et il faut les deux :
+	//    • cette garde — un formulaire ne s'hydrate qu'une fois, à l'arrivée des
+	//      données, jamais par-dessus une saisie en cours ;
+	//    • `relire()` après chaque enregistrement — sinon la garde figerait
+	//      l'écran sur l'état du montage, et le prochain aller-retour entre
+	//      onglets réafficherait des champs vides sur une base renseignée.
+	let hydrate = false;
+	$: if (!hydrate && valeurs && Object.keys(valeurs).length) {
+		hydrate = true;
+		hydrater(valeurs);
+	}
+
+	function hydrater(lues: Record<string, string>) {
+		smtpConfig.enabled = lues['smtp_enabled'] === '1';
+		smtpConfig.server = lues['smtp_server'] ?? '';
+		smtpConfig.port = parseInt(lues['smtp_port'] ?? '587') || 587;
+		smtpConfig.from = lues['smtp_from'] ?? '';
+		smtpConfig.from_name = lues['smtp_from_name'] ?? '';
+		smtpConfig.username = lues['smtp_username'] ?? '';
+		smtpConfig.starttls = lues['smtp_starttls'] !== '0';
+		smtpConfig.ssl_tls = lues['smtp_ssl_tls'] === '1';
+		smtpPasswordSet = !!lues['smtp_password'];
 		smtpEditingPassword = !smtpPasswordSet;
 
-		imapConfig.enabled = valeurs['imap_enabled'] === '1';
-		imapConfig.server = valeurs['imap_server'] ?? '';
-		imapConfig.port = parseInt(valeurs['imap_port'] ?? '993') || 993;
-		imapConfig.username = valeurs['imap_username'] ?? '';
-		imapConfig.dossier = valeurs['imap_dossier'] || 'INBOX';
-		imapConfig.plancher = valeurs['imap_plancher'] || '2026-09-02';
-		imapPasswordSet = !!valeurs['imap_password'];
+		imapConfig.enabled = lues['imap_enabled'] === '1';
+		imapConfig.server = lues['imap_server'] ?? '';
+		imapConfig.port = parseInt(lues['imap_port'] ?? '993') || 993;
+		imapConfig.username = lues['imap_username'] ?? '';
+		imapConfig.dossier = lues['imap_dossier'] || 'INBOX';
+		imapConfig.plancher = lues['imap_plancher'] || '2026-09-02';
+		imapPasswordSet = !!lues['imap_password'];
 		imapEditingPassword = !imapPasswordSet;
+	}
+
+	/** Relit ce que le serveur a RETENU, et remet le formulaire dessus.
+	 *
+	 * 🔴 Relire plutôt que recopier ce qu'on vient d'envoyer : c'est la seule
+	 * façon de montrer l'état réel. Une clé refusée, tronquée ou normalisée
+	 * côté serveur se verrait ici — alors qu'un `{ ...valeurs, ...payload }`
+	 * afficherait la saisie en la faisant passer pour un enregistrement.
+	 *
+	 * ⚠️ Et c'est ce qui rend l'aller-retour entre onglets juste : le composant
+	 * est détruit puis recréé, donc réhydraté depuis `valeurs` — qui date du
+	 * montage de la PAGE. Sans cette relecture, les champs reparaîtraient vides
+	 * après un changement d'onglet, alors que la base est renseignée.
+	 */
+	async function relire() {
+		try {
+			valeurs = await api.get<Record<string, string>>('/config/admin');
+			hydrater(valeurs);
+		} catch {
+			//  Muet à dessein : l'enregistrement a réussi, seul l'affichage est en
+			//  retard. Un second message d'erreur ferait douter d'un succès réel.
+		}
 	}
 
 	/** Reprend les paramètres d'envoi : même compte, même hébergeur. */
 	function reprendreDuSmtp() {
 		imapConfig.server = smtpConfig.server.replace(/^smtp\./, 'ssl0.').trim();
 		imapConfig.username = smtpConfig.username || smtpConfig.from;
-		toast('info', 'Serveur et identifiant repris — le mot de passe reste à saisir.');
+		//  🔴 « Copié » et non « repris — le mot de passe reste à saisir » : la
+		//  première rédaction annonçait ce qui MANQUAIT, sur un ton indiscernable
+		//  d'une erreur. Elle est apparue à quelqu'un qui venait justement de
+		//  saisir son mot de passe, et a été lue comme un échec (03/09/2026).
+		//  Un message de confirmation dit ce qui a été FAIT ; ce qui reste à faire
+		//  est déjà écrit sous les champs concernés.
+		toast('success', 'Serveur et identifiant copiés depuis la configuration d’envoi.');
 	}
 
 	async function saveSmtpConfig() {
@@ -121,11 +169,8 @@
 			};
 			if (smtpConfig.password) payload['smtp_password'] = smtpConfig.password;
 			await configApi.save(payload);
-			if (smtpConfig.password) {
-				smtpPasswordSet = true;
-				smtpEditingPassword = false;
-			}
 			smtpConfig.password = '';
+			await relire();
 			toast('success', 'Configuration SMTP enregistrée.');
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
@@ -149,11 +194,8 @@
 			//  marqueur à sa place, et le réexpédier l'écraserait par des points.
 			if (imapConfig.password) payload['imap_password'] = imapConfig.password;
 			await configApi.save(payload);
-			if (imapConfig.password) {
-				imapPasswordSet = true;
-				imapEditingPassword = false;
-			}
 			imapConfig.password = '';
+			await relire();
 			toast('success', 'Réception des réponses enregistrée.');
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
