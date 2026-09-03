@@ -55,13 +55,20 @@ from app.seed.contenus_legaux import DEFAULT_LEGAL
 
 _RACINE = Path(__file__).resolve().parents[1]
 _MIGRATION = _RACINE / "alembic" / "versions" / "0170_mentions_legales_reelles.py"
+_MIGRATION_POLITIQUE = (
+    _RACINE / "alembic" / "versions" / "0171_politique_confidentialite_exacte.py"
+)
 
 
-def _module_migration():
-    spec = importlib.util.spec_from_file_location("mig0170", _MIGRATION)
+def _charger(chemin: Path, nom: str):
+    spec = importlib.util.spec_from_file_location(nom, chemin)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _module_migration():
+    return _charger(_MIGRATION, "mig0170")
 
 
 def _texte_nu(html: str) -> str:
@@ -141,3 +148,69 @@ def test_la_migration_n_ecrase_PAS_une_redaction_a_la_main():
         "la migration ne teste plus la présence d'un marqueur avant d'écrire : "
         "elle écraserait une rédaction faite depuis Admin → Légal"
     )
+
+
+# ── La politique de confidentialité (migration 0171) ─────────────────────────
+
+def test_le_seed_n_affirme_plus_qu_aucune_donnee_ne_sort_de_l_UE():
+    """🔴 L'affirmation était FAUSSE, et deux pages du site se contredisaient.
+
+    Les mentions légales déclarent Cloudflare, Inc. (États-Unis) comme
+    intermédiaire technique. La politique disait « Aucun transfert hors UE ». Le
+    fait n'avait pas changé — seulement le moment où on l'a écrit quelque part.
+
+    ⚠️ Le texte DÉCRIT le relais, il ne le QUALIFIE pas : savoir si cela
+    constitue un transfert au sens du chapitre V est une question de droit, et
+    `standards/14` interdit de l'improviser.
+    """
+    assert "Aucun transfert hors UE" not in DEFAULT_LEGAL["politique_confidentialite"]
+
+
+def test_la_politique_du_seed_reste_un_gabarit_declare():
+    """Le seed porte le PRODUIT : il ne nomme aucun responsable, et le dit."""
+    politique = DEFAULT_LEGAL["politique_confidentialite"]
+    assert politique.count("À RENSEIGNER") >= 3, (
+        "le gabarit de la politique ne se signale pas sur le responsable du "
+        "traitement, l'hébergement et l'acheminement"
+    )
+    assert "Philippe Tressard" not in politique, (
+        "le seed nomme un éditeur : tout autre déploiement publierait des "
+        "mentions FAUSSES — le seed porte le produit, la base porte l'instance"
+    )
+
+
+def test_les_corrections_de_0171_sont_bien_formees():
+    """🔴 CE TEST A ÉTÉ RÉÉCRIT DANS SON PROPRE LOT, et c'est la leçon.
+
+    La première version comparait les fragments cherchés par la migration au seed
+    tel que `git show HEAD:` le portait — pour vérifier qu'ils correspondaient
+    bien au texte présent en base. L'intention était juste. Le mécanisme ne
+    l'était pas : **`HEAD` avance**. Dès le commit du lot, HEAD portait le seed
+    CORRIGÉ, les fragments n'y étaient plus, et le test échouait sur son propre
+    succès.
+
+    Un contrôle dont le verdict dépend de l'endroit où l'on se trouve dans
+    l'historique n'est pas un contrôle, c'est une coïncidence.
+
+    ⚠️ CE QUI RESTE INVÉRIFIABLE EN CI, ET QU'IL FAUT DONC DIRE : que les
+    fragments correspondent au texte réellement EN BASE. Une espace, une
+    insécable ou un accent mal recopié rendrait la migration inerte — au vert,
+    sans rien changer, et la page resterait fausse. Cela se constate en
+    production, et nulle part ailleurs :
+
+        curl -s https://5hostachy.fr/api/config/legal
+
+    Ce que ce test tient, lui : les corrections sont bien formées, et elles
+    changent quelque chose.
+    """
+    corrections = _charger(_MIGRATION_POLITIQUE, "mig0171").CORRECTIONS
+    assert corrections, "la migration ne corrige plus rien"
+    for avant, apres in corrections:
+        assert avant.strip(), "un fragment cherché est vide : il correspondrait partout"
+        assert avant != apres, "une correction qui ne change rien est une migration inerte"
+        assert len(avant) > 40, (
+            f"fragment trop court pour être sûr de sa cible : {avant!r}"
+        )
+    #  Et le défaut nommé par le lot doit bien être celui qu'on corrige.
+    assert any("Aucun transfert hors UE" in avant for avant, _ in corrections)
+    assert not any("Aucun transfert hors UE" in apres for _, apres in corrections)
