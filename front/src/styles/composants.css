@@ -1498,3 +1498,13 @@ label.field {
 	font-size: 0.875rem;
 	cursor: pointer;
 }
+
+/*  Icône de menu. Remontée le 03/09 : un style ne franchit pas un composant. */
+.nav-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	flex-shrink: 0;
+	font-size: 1.1rem;
+}
