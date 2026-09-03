@@ -55,13 +55,20 @@ from app.seed.contenus_legaux import DEFAULT_LEGAL
 
 _RACINE = Path(__file__).resolve().parents[1]
 _MIGRATION = _RACINE / "alembic" / "versions" / "0170_mentions_legales_reelles.py"
+_MIGRATION_POLITIQUE = (
+    _RACINE / "alembic" / "versions" / "0171_politique_confidentialite_exacte.py"
+)
 
 
-def _module_migration():
-    spec = importlib.util.spec_from_file_location("mig0170", _MIGRATION)
+def _charger(chemin: Path, nom: str):
+    spec = importlib.util.spec_from_file_location(nom, chemin)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _module_migration():
+    return _charger(_MIGRATION, "mig0170")
 
 
 def _texte_nu(html: str) -> str:
@@ -140,4 +147,71 @@ def test_la_migration_n_ecrase_PAS_une_redaction_a_la_main():
     assert "if not any(marqueur in actuel" in source, (
         "la migration ne teste plus la présence d'un marqueur avant d'écrire : "
         "elle écraserait une rédaction faite depuis Admin → Légal"
+    )
+
+
+# ── La politique de confidentialité (migration 0171) ─────────────────────────
+
+def test_le_seed_n_affirme_plus_qu_aucune_donnee_ne_sort_de_l_UE():
+    """🔴 L'affirmation était FAUSSE, et deux pages du site se contredisaient.
+
+    Les mentions légales déclarent Cloudflare, Inc. (États-Unis) comme
+    intermédiaire technique. La politique disait « Aucun transfert hors UE ». Le
+    fait n'avait pas changé — seulement le moment où on l'a écrit quelque part.
+
+    ⚠️ Le texte DÉCRIT le relais, il ne le QUALIFIE pas : savoir si cela
+    constitue un transfert au sens du chapitre V est une question de droit, et
+    `standards/14` interdit de l'improviser.
+    """
+    assert "Aucun transfert hors UE" not in DEFAULT_LEGAL["politique_confidentialite"]
+
+
+def test_la_politique_du_seed_reste_un_gabarit_declare():
+    """Le seed porte le PRODUIT : il ne nomme aucun responsable, et le dit."""
+    politique = DEFAULT_LEGAL["politique_confidentialite"]
+    assert politique.count("À RENSEIGNER") >= 3, (
+        "le gabarit de la politique ne se signale pas sur le responsable du "
+        "traitement, l'hébergement et l'acheminement"
+    )
+    assert "Philippe Tressard" not in politique, (
+        "le seed nomme un éditeur : tout autre déploiement publierait des "
+        "mentions FAUSSES — le seed porte le produit, la base porte l'instance"
+    )
+
+
+def test_les_corrections_de_0171_visent_un_texte_qui_a_EXISTÉ():
+    """🔴 Une migration de texte qui ne trouve pas sa cible est inerte, en silence.
+
+    0171 remplace trois fragments dans le texte EN BASE. Ces fragments viennent
+    de l'ancien seed — celui d'avant ce lot. S'ils étaient mal recopiés (une
+    espace, une insécable, un accent), la migration passerait au vert sans avoir
+    rien changé, et la page resterait fausse en production.
+
+    On ne peut pas les comparer au seed actuel : il vient justement d'être
+    corrigé. On les compare donc à la version PRÉCÉDENTE du fichier, telle que
+    git la porte — la seule source qui dise ce que la base contient vraiment.
+    """
+    import subprocess
+
+    ancien = subprocess.run(
+        ["git", "show", "HEAD:api/app/seed/contenus_legaux.py"],
+        capture_output=True, cwd=_RACINE.parent,
+    ).stdout.decode("utf-8")
+    if not ancien:
+        import pytest
+
+        pytest.skip("hors dépôt git — la version précédente est introuvable")
+
+    espace = {}
+    exec(compile(ancien, "<ancien seed>", "exec"), espace)
+    avant_lot = espace["DEFAULT_LEGAL"]["politique_confidentialite"]
+
+    introuvables = [
+        avant[:60] for avant, _ in _charger(_MIGRATION_POLITIQUE, "mig0171").CORRECTIONS
+        if avant not in avant_lot
+    ]
+    assert not introuvables, (
+        "fragment(s) que la migration 0171 ne trouvera JAMAIS dans le texte en "
+        "base — elle serait inerte sans rien dire :\n  "
+        + "\n  ".join(introuvables)
     )

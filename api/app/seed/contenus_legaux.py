@@ -46,34 +46,35 @@ DEFAULT_LEGAL = {
         "<p>Pour toute question, contactez l'administrateur via la messagerie interne.</p>"
     ),
     'politique_confidentialite': (
-        '<h2>1. Responsable du traitement</h2>'
-        "<p>Le responsable du traitement est l'administrateur de cette instance 5Hostachy "
-        '(syndic bénévole ou conseil syndical). Toute demande relative à vos données peut lui être adressée '
-        "via la messagerie de l'application.</p>"
-        '<h2>2. Données collectées</h2>'
-        "<ul><li><strong>Données d'identification\u00a0:</strong> nom, prénom, adresse e-mail, téléphone (facultatif).</li>"
-        '<li><strong>Données de résidence\u00a0:</strong> lot(s) associé(s), bâtiment, tantièmes.</li>'
-        '<li><strong>Données d\'usage\u00a0:</strong> tickets soumis, messages échangés, documents téléchargés.</li>'
-        '<li><strong>Données techniques\u00a0:</strong> tokens d\'authentification (cookies HttpOnly), date de connexion.</li></ul>'
-        '<h2>3. Finalités et bases légales</h2>'
-        '<ul><li><strong>Gestion de la copropriété</strong> — base\u00a0: intérêt légitime (art.\u00a06-1-f).</li>'
-        '<li><strong>Authentification et sécurité</strong> — base\u00a0: intérêt légitime (art.\u00a06-1-f).</li>'
-        '<li><strong>Communication résidents/CS</strong> — base\u00a0: exécution du contrat (art.\u00a06-1-b).</li>'
-        '<li><strong>E-mails transactionnels</strong> — base\u00a0: intérêt légitime / consentement.</li></ul>'
-        '<h2>4. Destinataires</h2>'
-        "<p>Les données sont accessibles uniquement aux membres du conseil syndical et à l'administrateur. "
-        'Elles ne sont pas transférées à des tiers ni commercialisées. Aucun transfert hors UE.</p>'
-        '<h2>5. Durée de conservation</h2>'
-        '<ul><li>Données de compte actif\u00a0: durée de la relation + 2 ans.</li>'
-        '<li>Tokens de rafraîchissement\u00a0: 7 jours glissants.</li>'
-        '<li>Sauvegardes\u00a0: selon la configuration.</li></ul>'
-        '<h2>6. Vos droits</h2>'
-        '<p>Conformément au RGPD vous disposez des droits d\'accès (art.\u00a015), rectification (art.\u00a016), '
-        'effacement (art.\u00a017), portabilité (art.\u00a020), opposition (art.\u00a021) et retrait du consentement (art.\u00a07-3). '
-        "Contactez l'administrateur via la messagerie. En cas de litige\u00a0: <strong>CNIL</strong> — www.cnil.fr.</p>"
-        '<h2>7. Cookies</h2>'
-        "<p>L'application utilise exclusivement des cookies techniques d'authentification "
-        '(<code>access_token</code>, <code>refresh_token</code>) définis en '
-        '<code>HttpOnly; Secure; SameSite=Strict</code>. Aucun cookie publicitaire ou de traçage.</p>'
+        '<h2>1. Responsable du traitement</h2><p>Le responsable du traitement est <strong>À RENSEIGNER</strong>'
+        " — nom de l'éditeur et adresse à laquelle exercer ses droits. Cette adresse doit être joignable <em>"
+        "sans compte</em> : un droit d'effacement s'exerce souvent après la suppression du compte.</p><h2>"
+        "2. Données collectées</h2><ul><li><strong>Données d'identification\xa0:</strong>"
+        ' nom, prénom, adresse e-mail, téléphone (facultatif).</li><li><strong>Données de résidence\xa0:</strong>'
+        " lot(s) associé(s), bâtiment, tantièmes.</li><li><strong>Données d'usage\xa0:</strong>"
+        ' tickets soumis, messages échangés, documents téléchargés.</li><li><strong>Données techniques\xa0:</strong>'
+        " tokens d'authentification (cookies HttpOnly), date de connexion.</li></ul><h2>"
+        '3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong>'
+        ' — base\xa0: intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong>'
+        ' — base\xa0: intérêt légitime (art.\xa06-1-f).</li><li><strong>Communication résidents/CS</strong>'
+        ' — base\xa0: exécution du contrat (art.\xa06-1-b).</li><li><strong>E-mails transactionnels</strong>'
+        ' — base\xa0: intérêt légitime / consentement.</li></ul><h2>4. Destinataires</h2><p>'
+        "Les données sont accessibles uniquement aux membres du conseil syndical et à l'administrateur. Elles ne sont n"
+        'i cédées à des tiers, ni commercialisées, ni utilisées à des fins publicitaires.</p><p><strong>'
+        'Hébergement et acheminement.</strong> <strong>À RENSEIGNER</strong>'
+        ' — où les données sont stockées, et par qui. <strong>À RENSEIGNER</strong>'
+        " si un intermédiaire technique (CDN, proxy, résolveur DNS) relaie les connexions : nommez-le et dites d'où il "
+        'opère. Un relais hors UE traite au minimum les adresses IP des visiteurs, et le taire rendrait ce paragraphe i'
+        'nexact.</p><h2>5. Durée de conservation</h2><ul><li>'
+        'Données de compte actif\xa0: durée de la relation + 2 ans.</li><li>'
+        'Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la configuration.</li></ul><h2>'
+        "6. Vos droits</h2><p>Conformément au RGPD vous disposez des droits d'accès (art.\xa015), rectification (art.\xa016),"
+        ' effacement (art.\xa017), portabilité (art.\xa020), opposition (art.\xa021) et retrait du consentement (art.\xa07-3). Pour'
+        " les exercer, écrivez à l'adresse indiquée au point 1 — cette voie doit rester ouverte même sans compte, y com"
+        "pris après sa suppression. Les titulaires d'un compte peuvent aussi passer par la messagerie de l'application,"
+        ' ou exporter et effacer leurs données depuis leur profil. En cas de litige\xa0: <strong>CNIL</strong>'
+        " — www.cnil.fr.</p><h2>7. Cookies</h2><p>L'application utilise exclusivement des cookies techniques d'authenti"
+        'fication (<code>access_token</code>, <code>refresh_token</code>) définis en <code>'
+        'HttpOnly; Secure; SameSite=Strict</code>. Aucun cookie publicitaire ou de traçage.</p>'
     ),
 }
