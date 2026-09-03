@@ -6,6 +6,7 @@ Domaine à part entière : c'est le seul endroit qui écrit au syndic **au nom d
 conseil syndical**, avec sa civilité, l'ancienneté réelle des dossiers et
 l'historique de chaque ticket.
 """
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -24,6 +25,8 @@ from app.models.core import (
 )
 from app.schemas import TicketRead
 from app.utils.dates_fr import date_courte, formule_anciennete, mois_ecoules
+from app.models.courriel import RelanceCourriel
+from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.destinataires import formule_appel, interlocuteurs_syndic
 from app.utils.perimetres import perimetre_label_json
 
@@ -190,6 +193,23 @@ def envoyer_relance_syndic(
         "tickets": [_contexte_ticket(session, t) for t in tickets_relance],
     }
 
+    #  🔴 L'ADRESSE DE RÉPONSE D'UN ENVOI GROUPÉ (#703, 03/09/2026).
+    #
+    #  Ce message porte N tickets : il n'a pas de jeton de ticket, et il n'en
+    #  aura jamais. Sans celui-ci, la réponse du syndic arrivait dans la boîte
+    #  sans rien pour la rattacher — ignorée EN SILENCE, alors qu'on venait de
+    #  la solliciter.
+    #
+    #  ⚠️ Le jeton rattache à la RELANCE, pas à un ticket : la réponse ira au
+    #  conseil syndical avec la liste des dossiers concernés, jamais recopiée
+    #  dans les N fils. Voir `models.RelanceCourriel`.
+    relance = RelanceCourriel(
+        jeton=nouveau_jeton(),
+        tickets_json=json.dumps([t.id for t in tickets_relance]),
+        cree_le=now,
+    )
+    session.add(relance)
+
     to_recipients = [(principal.user_id, principal.email)]
     #  Le CS passe en copie, sans le syndic qui est déjà destinataire principal.
     cc_recipients = destinataires_syndic_cs(
@@ -206,6 +226,7 @@ def envoyer_relance_syndic(
         to_recipients=to_recipients,
         context=ctx,
         cc_recipients=cc_recipients or None,
+        jeton_reponse=relance.jeton,
     )
 
     return {"sent": len(tickets_relance), "relance_to": principal.email}
