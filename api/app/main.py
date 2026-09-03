@@ -75,6 +75,7 @@ from app.routers import (
     telemetry, flux,
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
+from app.routers import manuel
 from app.routers import csp
 from app.seed import seed
 from app.utils.backup import setup_scheduler
@@ -277,6 +278,7 @@ app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)
 app.include_router(annonces_hall.router)
+app.include_router(manuel.router)
 app.include_router(copropriete.router)
 app.include_router(uploads.router)
 app.include_router(faq.router)

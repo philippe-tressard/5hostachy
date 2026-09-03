@@ -520,6 +520,12 @@
     }
     .aide-lien:hover { border-color: #0d9488; }
     .aide-lien-fort { background: #0d9488; border-color: #0d9488; color: #ffffff; }
+    .aide-pdf {
+      margin: 1.1rem auto 0;
+      font-size: .84rem;
+      color: var(--muted);
+    }
+    .aide-pdf a { color: #0f766e; font-weight: 600; }
 
     .ecran-card h3 {
       font-size: .92rem;
@@ -833,7 +839,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique copropriétaire</div>
-    <span class="topbar-badge">Version 3.82 · Septembre 2026</span>
+    <span class="topbar-badge">Version 3.83 · Septembre 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1073,6 +1079,13 @@
         <a class="aide-lien" href="/tickets">Ouvrir un ticket</a>
         <a class="aide-lien" href="/annuaire">Contacter le conseil syndical</a>
       </div>
+      <!--  Le PDF est composé À PARTIR de cette page — il n'en est pas une
+            seconde rédaction. Voir `api/app/utils/manuel_pdf.py`. -->
+      <p class="aide-pdf">
+        Besoin de l'emporter ou de l'afficher&nbsp;?
+        <a href="/api/manuel/pdf" target="_blank" rel="noopener">Télécharger ce guide en PDF</a>
+        — même contenu, avec une page de garde et un sommaire.
+      </p>
     </div>
 
   </main>
@@ -1081,7 +1094,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.82</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.83</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

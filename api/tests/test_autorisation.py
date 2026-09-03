@@ -80,6 +80,16 @@ _PUBLICS_ASSUMES = {
     ("auth_mot_de_passe.py", "reset_password"),
     # Liste des bâtiments : alimente le formulaire d'inscription.
     ("auth.py", "list_batiments"),
+    #  Le manuel utilisateur en PDF (#651). Public, comme
+    #  `/manuel-utilisateur.html` que le front sert déjà sans session : un manuel
+    #  qui explique comment se servir du site doit pouvoir être lu AVANT de
+    #  savoir s'en servir.
+    #
+    #  ⚠️ Et il ne contient aucune donnée — ni nom, ni adresse, ni contenu de la
+    #  copropriété : seulement la description des écrans. C'est cela qui rend
+    #  l'exemption tenable, pas le fait qu'elle soit commode. Le jour où ce
+    #  document citerait un résident, cette ligne devrait tomber.
+    ("manuel.py", "manuel_pdf"),
     # Coquille d'interface et pages légales, filtrées par LISTE BLANCHE
     # (cf. `_PUBLIC_KEYS` dans routers/config.py) — vérifié plus bas.
     ("config.py", "get_config"), ("config.py", "get_legal_config"),

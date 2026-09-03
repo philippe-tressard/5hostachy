@@ -35,6 +35,13 @@ ROUTEURS = RACINE / "api" / "app" / "routers"
 #: ici est une décision consciente : si la raison ne tient pas en une ligne,
 #: c'est probablement que la route doit être supprimée.
 SANS_CONSOMMATEUR_FRONT = {
+    "/manuel/pdf":
+        "appelé depuis un LIEN du manuel HTML statique (`front/static/"
+        "manuel-utilisateur.html`, section « Une question ? »), pas depuis le "
+        "code SvelteKit que ce contrôle balaie. Le lien est vérifié par "
+        "`test_manuel_pdf.test_le_manuel_annonce_le_lien_vers_son_PDF` — "
+        "l'endpoint n'est donc pas orphelin, il est consommé ailleurs que là où "
+        "ce scan regarde",
     "/admin/db/checkpoint":
         "voie in-process obligatoire contre la corruption SQLite (CLAUDE.md, "
         "règle d'or) — appelée à la main pendant un incident, jamais par le front",
