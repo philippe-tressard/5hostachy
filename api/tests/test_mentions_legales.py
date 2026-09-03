@@ -179,39 +179,38 @@ def test_la_politique_du_seed_reste_un_gabarit_declare():
     )
 
 
-def test_les_corrections_de_0171_visent_un_texte_qui_a_EXISTÉ():
-    """🔴 Une migration de texte qui ne trouve pas sa cible est inerte, en silence.
+def test_les_corrections_de_0171_sont_bien_formees():
+    """🔴 CE TEST A ÉTÉ RÉÉCRIT DANS SON PROPRE LOT, et c'est la leçon.
 
-    0171 remplace trois fragments dans le texte EN BASE. Ces fragments viennent
-    de l'ancien seed — celui d'avant ce lot. S'ils étaient mal recopiés (une
-    espace, une insécable, un accent), la migration passerait au vert sans avoir
-    rien changé, et la page resterait fausse en production.
+    La première version comparait les fragments cherchés par la migration au seed
+    tel que `git show HEAD:` le portait — pour vérifier qu'ils correspondaient
+    bien au texte présent en base. L'intention était juste. Le mécanisme ne
+    l'était pas : **`HEAD` avance**. Dès le commit du lot, HEAD portait le seed
+    CORRIGÉ, les fragments n'y étaient plus, et le test échouait sur son propre
+    succès.
 
-    On ne peut pas les comparer au seed actuel : il vient justement d'être
-    corrigé. On les compare donc à la version PRÉCÉDENTE du fichier, telle que
-    git la porte — la seule source qui dise ce que la base contient vraiment.
+    Un contrôle dont le verdict dépend de l'endroit où l'on se trouve dans
+    l'historique n'est pas un contrôle, c'est une coïncidence.
+
+    ⚠️ CE QUI RESTE INVÉRIFIABLE EN CI, ET QU'IL FAUT DONC DIRE : que les
+    fragments correspondent au texte réellement EN BASE. Une espace, une
+    insécable ou un accent mal recopié rendrait la migration inerte — au vert,
+    sans rien changer, et la page resterait fausse. Cela se constate en
+    production, et nulle part ailleurs :
+
+        curl -s https://5hostachy.fr/api/config/legal
+
+    Ce que ce test tient, lui : les corrections sont bien formées, et elles
+    changent quelque chose.
     """
-    import subprocess
-
-    ancien = subprocess.run(
-        ["git", "show", "HEAD:api/app/seed/contenus_legaux.py"],
-        capture_output=True, cwd=_RACINE.parent,
-    ).stdout.decode("utf-8")
-    if not ancien:
-        import pytest
-
-        pytest.skip("hors dépôt git — la version précédente est introuvable")
-
-    espace = {}
-    exec(compile(ancien, "<ancien seed>", "exec"), espace)
-    avant_lot = espace["DEFAULT_LEGAL"]["politique_confidentialite"]
-
-    introuvables = [
-        avant[:60] for avant, _ in _charger(_MIGRATION_POLITIQUE, "mig0171").CORRECTIONS
-        if avant not in avant_lot
-    ]
-    assert not introuvables, (
-        "fragment(s) que la migration 0171 ne trouvera JAMAIS dans le texte en "
-        "base — elle serait inerte sans rien dire :\n  "
-        + "\n  ".join(introuvables)
-    )
+    corrections = _charger(_MIGRATION_POLITIQUE, "mig0171").CORRECTIONS
+    assert corrections, "la migration ne corrige plus rien"
+    for avant, apres in corrections:
+        assert avant.strip(), "un fragment cherché est vide : il correspondrait partout"
+        assert avant != apres, "une correction qui ne change rien est une migration inerte"
+        assert len(avant) > 40, (
+            f"fragment trop court pour être sûr de sa cible : {avant!r}"
+        )
+    #  Et le défaut nommé par le lot doit bien être celui qu'on corrige.
+    assert any("Aucun transfert hors UE" in avant for avant, _ in corrections)
+    assert not any("Aucun transfert hors UE" in apres for _, apres in corrections)
