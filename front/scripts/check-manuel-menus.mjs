@@ -25,6 +25,22 @@
  *   1. l'ensemble des routes citées = l'ensemble des routes de \`pages.ts\` ;
  *   2. le public annoncé = ce que \`Nav.svelte\` applique.
  *
+ * ## ⚠️ CE QU'IL NE PEUT PAS VÉRIFIER : L'ORDRE
+ *
+ * Le manuel présente les écrans dans l'ordre du menu. Mais cet ordre ne vit pas
+ * dans le code : il est dans `pages_order`, une clé de `ConfigSite` que
+ * l'administration réordonne. `pages.ts` n'en porte que le défaut, et la
+ * production s'en écarte — c'est ce qui a été signalé le 03/09/2026, *« les
+ * écrans n'est pas celui effectif des menus »*.
+ *
+ * Ce contrôle vérifie donc l'ENSEMBLE des routes et le PUBLIC de chacune, jamais
+ * leur ordre. Le relever avant de retoucher la grille :
+ *
+ *     curl -s https://5hostachy.fr/api/config | grep -o '"pages_order":"[^"]*"'
+ *
+ * Une limite nommée vaut mieux qu'une limite tue : sans ce paragraphe, un vert
+ * ici se lirait comme « le manuel est conforme au menu », ce qu'il ne dit pas.
+ *
  * ⚠️ **La prose ne se lit pas comme une table** — #651 le dit lui-même, et un
  * contrôle qui crie sur du légitime finit désarmé. Les attributs sont la réponse :
  * ils rendent la table lisible par une machine sans contraindre le texte, qui

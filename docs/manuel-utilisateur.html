@@ -77,13 +77,16 @@
       border-bottom: 1px solid #334155;
     }
 
+    /*  🔴 Le LOGO du site, pas une pastille avec un emoji : le tracé vient de
+        `front/static/favicon.svg`, celui que porte l'onglet du navigateur et
+        l'icône de l'application. Un manuel qui montre un autre logo que le
+        produit oblige le lecteur à faire le rapprochement lui-même. Le fond
+        bleu et le centrage servaient l'emoji — le logo porte les siens. */
     .sidebar-logo .logo-icon {
       width: 36px; height: 36px;
-      background: #3b82f6;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+      display: block;
     }
+    .sidebar-logo .logo-icon svg { width: 100%; height: 100%; display: block; }
 
     .sidebar-logo span {
       font-weight: 700;
@@ -797,7 +800,7 @@
   <nav class="sidebar">
 
     <div class="sidebar-logo">
-      <div class="logo-icon">&#x1F3E0;</div>
+      <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true"> <rect width="64" height="64" rx="14" fill="#1E3A5F"/> <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 54V18a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v36Z"/> <path d="M18 34h-6a4 4 0 0 0-4 4v16h10"/> <path d="M46 30h6a4 4 0 0 1 4 4v20H46"/> <path d="M25 22h14"/> <path d="M25 30h14"/> <path d="M25 38h14"/> <path d="M25 46h14"/> </g> <path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/> </svg></div>
       <span>
         5Hostachy
         <small>Manuel utilisateur</small>
@@ -815,8 +818,8 @@
       <a class="nav-item" href="#par-profil">
         <span class="dot" style="background:#0891b2"></span> Je suis...
       </a>
-      <a class="nav-item" href="#captures">
-        <span class="dot" style="background:#7c3aed"></span> Les écrans
+      <a class="nav-item" href="#ecrans">
+        <span class="dot" style="background:#7c3aed"></span> Le menu
       </a>
       <a class="nav-item" href="#aide">
         <span class="dot" style="background:#0d9488"></span> Une question ?
@@ -830,7 +833,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique copropriétaire</div>
-    <span class="topbar-badge">Version 3.81 · Septembre 2026</span>
+    <span class="topbar-badge">Version 3.82 · Septembre 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -847,7 +850,7 @@
       <p>Ce guide tient en une page. Trois étapes pour démarrer, puis la carte des écrans du site. Le détail — les cas particuliers, les réponses déjà données — vit dans l'application, où il reste à jour.</p>
       <div class="hero-actions">
         <a class="hero-link primary" href="#express">Commencer en 3 minutes</a>
-        <a class="hero-link secondary" href="#captures">Voir les écrans</a>
+        <a class="hero-link secondary" href="#ecrans">Voir les écrans</a>
       </div>
       <div class="hero-cards">
         <div class="hero-card">Essentiel en quelques clics</div>
@@ -881,7 +884,7 @@
         <div class="quick-card">
           <span class="quick-step">3</span>
           <strong>Allez à votre besoin</strong>
-          <p>Un problème&nbsp;? <strong>Tickets</strong>. Une date&nbsp;? <strong>Calendrier</strong>. Un document&nbsp;? <strong>Ma résidence</strong>. Un badge&nbsp;? <strong>Accès &amp; badges</strong>.</p>
+          <p>Un problème&nbsp;? <strong>Tickets</strong>. Une date&nbsp;? <strong>Calendrier</strong>. Un document&nbsp;? <strong>Résidence</strong>. Un badge&nbsp;? <strong>Accès &amp; badges</strong>.</p>
         </div>
       </div>
 
@@ -909,7 +912,7 @@
             <strong>Je suis bailleur</strong>
             <ul>
               <li><strong>Mes lots</strong> — vos baux et vos locataires</li>
-              <li><strong>Ma résidence</strong> — les documents de la copropriété</li>
+              <li><strong>Résidence</strong> — les documents de la copropriété</li>
               <li><strong>Actualités</strong> — ce qui touche votre bien</li>
             </ul>
           </div>
@@ -925,12 +928,12 @@
       </div>
     </section>
 
-    <section class="chapter" id="captures">
+    <section class="chapter" id="ecrans">
       <div class="chapter-header">
-        <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9">&#x1F5BC;</div>
+        <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:24px;height:24px"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></div>
         <div>
-          <h2>Les écrans, en un coup d'œil</h2>
-          <p>Les entrées du menu, <strong>dans leur ordre et avec leurs icônes</strong>. Chaque bloc dit ce que l'écran contient et <strong>qui peut le voir</strong>. Trois d'entre eux se déplient.</p>
+          <h2>Le menu, écran par écran</h2>
+          <p>Les entrées du menu de gauche, <strong>dans leur ordre et avec leurs icônes</strong>. Chaque bloc dit ce que l'écran contient et <strong>qui peut le voir</strong>. Trois d'entre eux se déplient.</p>
         </div>
       </div>
 
@@ -943,8 +946,36 @@
         </div>
         <div class="ecran-card" data-page="/residence" data-acces="tous">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span>
-          <h3>Ma résidence</h3>
+          <h3>Résidence</h3>
           <p>Les documents communs — procès-verbaux, règlement, rapports — et les informations sur la copropriété.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/actualites" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span>
+          <h3>Actualités</h3>
+          <p>Les informations publiées par le conseil syndical. Vous pouvez y réagir et y répondre.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+        </div>
+        <div class="ecran-card" data-page="/tickets" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg></span>
+          <h3>Tickets</h3>
+          <p>Signaler un problème et suivre son traitement. C'est le point d'entrée de toute demande.</p>
+          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Signaler</strong> — un titre, une catégorie, le lieu concerné, une description. Ajoutez des photos : elles évitent une visite pour rien.</li>
+            <li><strong>Suivre</strong> — chaque ticket a un fil. Vous y voyez les réponses du conseil syndical et l'avancement (Ouvert → En cours → Résolu).</li>
+            <li><strong>Répondre par e-mail</strong> — répondez directement au message reçu, votre réponse rejoint le fil du ticket.</li>
+            <li><strong>Ce que vous voyez</strong> — vos demandes, et celles qui concernent vos bâtiments. Un ticket marqué <strong>🔒 Confidentiel</strong> par le conseil syndical reste réservé à son auteur et au conseil.</li>
+          </ul>
+          <p class="ecran-note">Vous ne commentez que vos propres tickets : lire ceux du voisinage ne donne aucun droit d'écriture.</p></div>
+          </details>
+        </div>
+        <div class="ecran-card" data-page="/calendrier" data-acces="tous">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg></span>
+          <h3>Calendrier</h3>
+          <p>Ce qui est prévu : coupures, travaux, assemblées, visites de prestataires. Trois vues — Liste, Kanban, Archives.</p>
           <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
         </div>
         <div class="ecran-card" data-page="/mon-lot" data-acces="tous">
@@ -971,42 +1002,14 @@
           <p>Les entreprises, leurs contrats d'entretien et le suivi des interventions.</p>
           <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
         </div>
-        <div class="ecran-card" data-page="/calendrier" data-acces="tous">
-          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg></span>
-          <h3>Calendrier</h3>
-          <p>Ce qui est prévu : coupures, travaux, assemblées, visites de prestataires. Trois vues — Liste, Kanban, Archives.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
-        </div>
-        <div class="ecran-card" data-page="/actualites" data-acces="tous">
-          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></span>
-          <h3>Actualités</h3>
-          <p>Les informations publiées par le conseil syndical. Vous pouvez y réagir et y répondre.</p>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
-        </div>
-        <div class="ecran-card" data-page="/tickets" data-acces="tous">
-          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></svg></span>
-          <h3>Mes Tickets</h3>
-          <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
-          <details class="ecran-detail">
-            <summary>En savoir plus</summary>
-            <div class="ecran-detail-corps"><p>C'est le point d'entrée de <strong>toute demande</strong> : une panne, une question, une réclamation.</p>
-          <ul>
-            <li><strong>Signaler</strong> — un titre, une catégorie, le lieu concerné, une description. Ajoutez des photos : elles évitent une visite pour rien.</li>
-            <li><strong>Suivre</strong> — chaque ticket a un fil. Vous y voyez les réponses du conseil syndical et l'avancement (Ouvert → En cours → Résolu).</li>
-            <li><strong>Répondre par e-mail</strong> — répondez directement au message reçu, votre réponse rejoint le fil du ticket.</li>
-            <li><strong>Ce que vous voyez</strong> — vos demandes, et celles qui concernent vos bâtiments. Un ticket marqué <strong>🔒 Confidentiel</strong> par le conseil syndical reste réservé à son auteur et au conseil.</li>
-          </ul>
-          <p class="ecran-note">Vous ne pouvez commenter que vos propres tickets : lire ceux du voisinage ne donne aucun droit d'écriture.</p></div>
-          </details>
-        </div>
         <div class="ecran-card" data-page="/sondages" data-acces="resident">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg></span>
           <h3>Communauté</h3>
+          <p>L'espace entre résidents. Réservé aux résidents : ni le syndic ni un mandataire n'y ont accès.</p>
           <span class="ecran-acces ecran-acces-resident">Résidents</span>
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
-            <div class="ecran-detail-corps"><p>L'espace entre résidents. <strong>Réservé aux résidents</strong> : ni le syndic ni un mandataire n'y ont accès.</p>
-          <ul>
+            <div class="ecran-detail-corps"><ul>
             <li><strong>📊 Sondages</strong> — donner son avis sur une décision à venir. Un sondage se ferme à sa date d'échéance.</li>
             <li><strong>💡 Boîte à idées</strong> — proposer une amélioration, soutenir celles des autres.</li>
             <li><strong>🏷️ Petites annonces</strong> — donner, prêter, vendre entre voisins.</li>
@@ -1021,32 +1024,33 @@
         </div>
         <div class="ecran-card" data-page="/espace-cs" data-acces="cs">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 22V2"/></svg></span>
-          <h3>Espace CS</h3>
+          <h3>Espace Conseil Syndical (CS)</h3>
           <p>Les outils du conseil : comptes et accès, reporting, affiches de hall, annuaire interne.</p>
           <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
         </div>
-        <div class="ecran-card" data-page="/delegations" data-acces="cs-ou-aidant">
-          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg></span>
-          <h3>Délégations aidant</h3>
-          <p>Autoriser un proche à consulter et agir à votre place. Ce n'est pas une procuration d'assemblée générale.</p>
-          <span class="ecran-acces ecran-acces-cs-ou-aidant">CS &amp; aidants</span>
-        </div>
         <div class="ecran-card" data-page="/admin" data-acces="admin">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="20" r="2"/></svg></span>
-          <h3>Paramétrage</h3>
+          <h3>Admin</h3>
           <p>Le paramétrage du site : utilisateurs, rôles, modèles d'e-mail, référentiels.</p>
           <span class="ecran-acces ecran-acces-admin">Administrateur</span>
+        </div>
+        <div class="ecran-card" data-page="/delegations" data-acces="cs-ou-aidant">
+          <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg></span>
+          <h3>Délégations</h3>
+          <p>Autoriser un proche à consulter et agir à votre place. Ce n'est pas une procuration d'assemblée générale.</p>
+          <span class="ecran-acces ecran-acces-cs-ou-aidant">CS &amp; aidants</span>
         </div>
         <div class="ecran-card" data-page="profil" data-acces="tous">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
           <h3>Mon profil</h3>
+          <p>Vos informations, votre mot de passe, et le réglage de ce que vous recevez.</p>
           <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
-            <div class="ecran-detail-corps"><p>Accessible par votre prénom, en haut du menu. Trois choses s'y règlent :</p>
+            <div class="ecran-detail-corps"><p>Accessible par <strong>votre prénom</strong>, en bas du menu — il n'a pas d'entrée propre.</p>
           <ul>
             <li><strong>Vos informations</strong> — nom, téléphone, adresse e-mail, mot de passe.</li>
-            <li><strong>Vos notifications</strong> — ligne par ligne, ce que vous voulez recevoir dans l'application et par e-mail. C'est ici qu'on évite d'être submergé sans rien manquer.</li>
+            <li><strong>Vos notifications</strong> — ligne par ligne, ce que vous recevez dans l'application et par e-mail. C'est ici qu'on évite d'être submergé sans rien manquer.</li>
             <li><strong>Vos droits (RGPD)</strong> — exporter vos données, refuser la mesure d'audience, effacer votre historique.</li>
           </ul></div>
           </details>
@@ -1077,7 +1081,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.81</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.82</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
