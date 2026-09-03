@@ -1,21 +1,41 @@
-"""Mentions légales et politique de confidentialité par défaut.
+"""Mentions légales et politique de confidentialité — GABARIT DU PRODUIT.
 
 Servis tels quels tant que rien n'a été saisi en base ; `routers/config.py` les
 lit en repli. Ils énoncent des obligations (RGPD, durées de conservation,
 coordonnées de la CNIL) : toute modification est une décision juridique, pas
 rédactionnelle — cf. `standards/14-conformite-juridique.md`.
+
+## 🔴 LE SEED PORTE LE PRODUIT, LA BASE PORTE L'INSTANCE (03/09/2026)
+
+5Hostachy est sous licence MIT et peut être déployé ailleurs. Écrire ICI le nom
+d'un éditeur ou d'un hébergeur les imposerait à tout autre déploiement, qui
+publierait alors des mentions **fausses** — pire que des mentions vagues. Les
+mentions de CETTE instance vivent en base (migration 0170).
+
+Ce fichier reste donc générique. Mais il ne prétend plus être des mentions
+valides : là où il disait « l'identité de l'éditeur correspond à la copropriété
+ou au syndic bénévole qui gère cette instance », il dit **À RENSEIGNER**.
+
+La différence n'est pas rédactionnelle. L'ancienne formulation décrivait ce
+qu'il aurait fallu écrire, au lieu de l'écrire — et elle s'affichait sur une
+page **publique** comme si elle était complète. Défaut sans symptôme : la page
+se rend, elle a l'air finie, et personne ne la lit jusqu'à ce que quelqu'un
+cherche qui contacter. La nôtre a vécu ainsi jusqu'à ce qu'un lecteur le voie.
 """
 
 DEFAULT_LEGAL = {
     'mentions_legales': (
         '<h2>Éditeur du service</h2>'
-        '<p><strong>5Hostachy</strong><br>Application de gestion de copropriété — déployée en mode auto-hébergé.<br>'
-        "L'identité de l'éditeur correspond à la copropriété ou au syndic bénévole qui gère cette instance.</p>"
+        "<p><strong>À RENSEIGNER</strong> — nom de l'éditeur (personne physique ou "
+        "syndicat des copropriétaires), et adresse si l'éditeur est professionnel.<br>"
+        "Cette page est PUBLIQUE et la loi impose d'identifier l'éditeur : tant que "
+        "cette mention n'est pas remplacée depuis <em>Admin → Légal</em>, le site ne "
+        "satisfait pas à cette obligation.</p>"
         '<h2>Directeur de la publication</h2>'
-        "<p>Le directeur de la publication est l'administrateur désigné de l'instance.</p>"
+        "<p><strong>À RENSEIGNER</strong> — nom de la personne responsable du contenu publié.</p>"
         '<h2>Hébergeur</h2>'
-        "<p>Cette application est auto-hébergée. L'hébergeur est l'organisation ou la personne physique "
-        "administrant le serveur sur lequel l'instance est déployée.</p>"
+        "<p><strong>À RENSEIGNER</strong> — nom et coordonnées de l'hébergeur, ou mention "
+        "de l'auto-hébergement et des intermédiaires techniques éventuels (DNS, proxy).</p>"
         '<h2>Propriété intellectuelle</h2>'
         '<p>Le code source de 5Hostachy est distribué sous licence <a href="https://spdx.org/licenses/MIT.html" target="_blank" rel="noopener noreferrer">MIT</a> (voir le fichier LICENSE du dépôt). '
         "Les contenus publiés dans l'application restent la propriété de leurs auteurs respectifs.</p>"
