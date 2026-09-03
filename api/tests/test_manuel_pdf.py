@@ -38,6 +38,7 @@ from app.utils.manuel_pdf import (
     corps_du_manuel,
     lire_manuel,
     sommaire,
+    titres_ancres,
     version_du_manuel,
 )
 
@@ -138,13 +139,35 @@ def test_le_sommaire_suit_les_titres_du_document(manuel, document):
     Ce manuel vient précisément de perdre toutes ses tables recopiées (#651) :
     en réintroduire une, tenue à la main, serait le comble.
     """
-    titres = sommaire(manuel)
-    assert titres, "aucun titre relevé : le sommaire serait vide"
-    for titre in titres:
-        assert titre in document, f"« {titre} » manque au sommaire composé"
+    corps, releve = titres_ancres(manuel)
+    assert len(releve) >= 18, (
+        f"seulement {len(releve)} entrées : le sommaire s'arrête au niveau 2 et "
+        "ne permet plus de trouver un écran"
+    )
+    #  Les quinze écrans sont des `<h3>` : sans eux, on ne peut pas chercher
+    #  « Accès & badges », c'est-à-dire ce pour quoi on ouvre un sommaire.
+    assert sum(1 for niveau, _, _ in releve if niveau == 3) >= 16
+
+    for _niveau, titre, ancre in releve:
+        assert f'href="#{ancre}"' in document, f"« {titre} » manque au sommaire"
+        assert f'id="{ancre}"' in corps, (
+            f"l'ancre de « {titre} » n'est posée nulle part : le lien du "
+            "sommaire pointerait dans le vide"
+        )
+
     #  L'ordre du document, pas un ordre inventé.
-    positions = [document.index(f"<li>{t}</li>") for t in titres]
+    positions = [document.index(f'href="#{a}"') for _, _, a in releve]
     assert positions == sorted(positions)
+
+
+def test_les_numeros_de_page_sont_RESOLUS_a_la_mise_en_page(document):
+    """🔴 Jamais écrits — on ne sait pas encore combien de pages fera le document.
+
+    `target-counter()` les résout au moment de la pagination. Un numéro saisi
+    serait faux dès la première phrase ajoutée au manuel, et faux en silence :
+    rien ne signale un sommaire qui renvoie à la mauvaise page.
+    """
+    assert "target-counter(attr(href), page)" in document
 
 
 def test_le_sommaire_decode_les_entites(manuel):
@@ -174,21 +197,28 @@ def test_la_version_du_manuel_est_reprise_telle_qu_elle_est_ecrite(manuel, docum
     assert version in document
 
 
-def test_les_mentions_avertissent_de_la_PEREMPTION(document):
-    """⚠️ Ce n'est pas une formule de style.
+def test_les_mentions_identifient_l_editeur(document):
+    """Ce qu'un document distribuable doit porter.
 
-    Un PDF imprimé survit à l'écran qu'il décrit. C'est le seul endroit où l'on
-    peut le dire au lecteur qui l'aura sous les yeux dans deux ans — et lui
-    indiquer où trouver la version à jour.
+    ⚠️ L'avertissement de péremption a été RETIRÉ le 03/09/2026, à la demande —
+    et ce test l'exigeait. Il ne le réclame donc plus : un contrôle qui survit à
+    la décision qu'il gardait devient un obstacle, pas un garde-fou.
+
+    Ce qui reste exigé n'a pas bougé : le document dit qui l'édite, et ne nomme
+    aucune personne physique. La licence et le renvoi aux mentions légales
+    vivent dans le corps du manuel (section « À quoi sert ce site ? »), donc
+    dans le PDF par construction.
     """
     assert 'class="mentions"' in document
-    assert "c'est l'écran qui a raison" in document
     assert "conseil syndical de la copropriété" in document, (
         "les mentions ne nomment aucun éditeur"
     )
     assert "Philippe Tressard" not in document, (
         "un nom de personne réapparaît dans un document distribuable"
     )
+    #  La licence est annoncée par le manuel lui-même : le PDF la reprend.
+    assert "licence MIT" in document
+    assert "auto-hébergée" in document
 
 
 # ── La lecture de la source ──────────────────────────────────────────────────
@@ -211,3 +241,40 @@ def test_le_manuel_annonce_le_lien_vers_son_PDF(manuel):
     assert "/api/manuel/pdf" in apres_aide, (
         "le lien PDF n'est pas dans la section « Une question ? »"
     )
+
+
+def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
+    """🔴 Un document qu'on ne trouve pas n'existe pas.
+
+    Signalé à l'écran le 03/09/2026 : *« je ne vois pas où générer le pdf du
+    manuel »*. Le lien existait — au BAS du manuel, une page qu'on ouvre déjà
+    rarement. Il est désormais posé là où l'œil arrive.
+
+    ⚠️ Ce test regarde les fichiers plutôt que le rendu : il ne prouve pas qu'un
+    lecteur verra les liens, seulement qu'ils n'ont pas disparu d'un des trois
+    endroits. C'est ce qu'un test peut tenir ; le reste se constate à l'écran.
+    """
+    front = _MANUEL.resolve().parents[1] / "front" / "src"
+
+    #  ⚠️ On découpe sur le BALISAGE, pas sur un nom de classe : la première
+    #  occurrence de « quick-start » est dans la feuille de style, bien avant le
+    #  bandeau. Le premier découpage s'y est fait prendre, et le test accusait un
+    #  lien pourtant présent.
+    debut_hero = manuel.index('<section class="hero"')
+    hero = manuel[debut_hero : manuel.index("</section>", debut_hero)]
+
+    endroits = {
+        "en haut du manuel (bandeau d'accueil)": hero,
+        "en bas du manuel (Une question ?)": manuel[manuel.index('id="aide"') :],
+        #  Les deux entrées de guide ont été extraites de `Nav.svelte` le
+        #  03/09/2026 : elles y étaient écrites DEUX fois, menu latéral et menu
+        #  mobile. Le lien vit donc dans le composant, pas dans la page.
+        "menu du site": (front / "lib" / "components" / "LiensGuide.svelte").read_text(
+            encoding="utf-8"
+        ),
+        "FAQ": (front / "routes" / "(app)" / "faq" / "+page.svelte").read_text(
+            encoding="utf-8"
+        ),
+    }
+    manquants = [ou for ou, texte in endroits.items() if "/api/manuel/pdf" not in texte]
+    assert not manquants, "le lien vers le PDF a disparu de : " + ", ".join(manquants)

@@ -520,6 +520,24 @@
     }
     .aide-lien:hover { border-color: #0d9488; }
     .aide-lien-fort { background: #0d9488; border-color: #0d9488; color: #ffffff; }
+    .apropos { margin-bottom: 2rem; }
+    .apropos h3 { margin: 1.1rem 0 .5rem; font-size: 1rem; }
+    .profils-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .7rem;
+    }
+    .profil-card {
+      border: 1px solid var(--border);
+      border-left: 3px solid #2563eb;
+      border-radius: 0 10px 10px 0;
+      padding: .7rem .85rem;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+    .profil-card strong { display: block; font-size: .9rem; margin-bottom: .2rem; }
+    .profil-card p { font-size: .82rem; color: var(--muted); margin: 0; }
+
     .aide-pdf {
       margin: 1.1rem auto 0;
       font-size: .84rem;
@@ -818,6 +836,9 @@
       <a class="nav-item" href="#intro">
         <span class="dot" style="background:#94a3b8"></span> Présentation
       </a>
+      <a class="nav-item" href="#apropos">
+        <span class="dot" style="background:#0284c7"></span> Ce site, en bref
+      </a>
       <a class="nav-item" href="#express">
         <span class="dot" style="background:#2563eb"></span> Trois étapes
       </a>
@@ -839,7 +860,7 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique copropriétaire</div>
-    <span class="topbar-badge">Version 3.83 · Septembre 2026</span>
+    <span class="topbar-badge">Version 3.87 · Septembre 2026</span>
   </header>
 
   <!-- ══════════════════════════════════
@@ -857,6 +878,12 @@
       <div class="hero-actions">
         <a class="hero-link primary" href="#express">Commencer en 3 minutes</a>
         <a class="hero-link secondary" href="#ecrans">Voir les écrans</a>
+        <!--  Le PDF EN HAUT aussi : il n'était qu'au bas de la page, et on ne
+              le trouvait pas (signalé le 03/09/2026). Un document qu'on ne
+              trouve pas n'existe pas. -->
+        <a class="hero-link secondary" href="/api/manuel/pdf" target="_blank" rel="noopener">
+          Télécharger en PDF
+        </a>
       </div>
       <div class="hero-cards">
         <div class="hero-card">Essentiel en quelques clics</div>
@@ -864,6 +891,81 @@
         <div class="hero-card">Le détail reste dans l'application</div>
       </div>
       <p class="hero-note">Bon reflexe : commencez par <strong>Actualités</strong>, <strong>Calendrier</strong> et <strong>Tickets</strong>. Ce sont les 3 écrans les plus utiles au quotidien.</p>
+    </section>
+
+    <!--  🔴 CE QU'EST CE SITE — demandé le 03/09/2026, et il manquait vraiment :
+          le guide expliquait comment s'en servir sans jamais dire à quoi il sert
+          ni à qui il s'adresse. Un lecteur qui découvre le PDF dans sa boîte aux
+          lettres n'a pas ce contexte.
+          ⚠️ « Responsive » est écarté à la demande : le mot est technique et ne
+          dit rien à qui ne le connaît pas. On décrit ce qu'on constate — la
+          page s'adapte à l'écran. -->
+    <section class="apropos" id="apropos">
+      <h2>À quoi sert ce site&nbsp;?</h2>
+      <p>
+        5Hostachy rassemble en un seul endroit ce qui concerne la vie de la copropriété :
+        <strong>signaler un problème et suivre son traitement</strong>, <strong>savoir ce qui est prévu</strong>
+        — travaux, coupures, assemblées —, <strong>retrouver un document</strong> et
+        <strong>échanger entre voisins</strong>. Il remplace les papiers dans les boîtes,
+        les fils de courriels et les affiches qu'on rate.
+      </p>
+      <p>
+        Il est <strong>privé</strong> : l'accès est réservé aux personnes inscrites et validées
+        par le conseil syndical. Rien n'y est public, rien n'y est vendu.
+      </p>
+
+      <h3>Pour qui&nbsp;?</h3>
+      <div class="profils-grid">
+        <div class="profil-card">
+          <strong>Copropriétaire</strong>
+          <p>Vos lots, vos diagnostics, les documents de la copropriété, et tout signalement.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Locataire</strong>
+          <p>Les informations de la résidence, vos demandes, et ce qui touche votre logement.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Bailleur</strong>
+          <p>Vos baux, vos locataires, et ce qui concerne vos biens — même à distance.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Conseil syndical</strong>
+          <p>Le suivi des dossiers, les comptes, les prestataires, les annonces de hall.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Syndic</strong>
+          <p>Reçoit les demandes qui lui sont adressées et y répond, par le site ou par courriel.</p>
+        </div>
+        <div class="profil-card">
+          <strong>Un proche qui vous aide</strong>
+          <p>Une délégation permet à quelqu'un d'agir en votre nom, si vous le souhaitez.</p>
+        </div>
+      </div>
+
+      <h3>Sur téléphone comme sur ordinateur</h3>
+      <p>
+        Le même site fonctionne sur <strong>PC et Mac</strong>, sur <strong>tablette</strong>
+        et sur <strong>téléphone</strong> — Android comme iPhone. Il n'y a rien à installer et
+        rien à mettre à jour : vous ouvrez la même adresse, et l'affichage s'ajuste tout seul
+        à la taille de votre écran.
+      </p>
+      <p>
+        Sur téléphone, vous pouvez <strong>l'ajouter à votre écran d'accueil</strong> : il
+        s'ouvre alors comme une application, en plein écran, sans passer par le navigateur.
+      </p>
+
+      <h3>Un logiciel libre</h3>
+      <p>
+        5Hostachy est distribué sous <strong>licence MIT</strong> : son code source est ouvert,
+        librement consultable et réutilisable par une autre copropriété. Cette instance est
+        <strong>auto-hébergée</strong> — les données restent sur une machine de la copropriété,
+        elles ne sont ni vendues ni confiées à un prestataire.
+      </p>
+      <p>
+        Les <a href="/mentions-legales">mentions légales</a> et la
+        <a href="/politique-confidentialite">politique de confidentialité</a> détaillent
+        l'éditeur, l'hébergement, et ce que deviennent vos données.
+      </p>
     </section>
 
     <section class="quick-start" id="express">
@@ -1094,7 +1196,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.83</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.87</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

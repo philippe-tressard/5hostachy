@@ -15,6 +15,7 @@
 	import { setUser } from '$lib/stores/auth';
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
+	import LiensGuide from '$lib/components/LiensGuide.svelte';
 	import { HREFS_DEFAUT, ID_VERS_HREF, HREF_VERS_PAGE } from '$lib/pages';
 
 	// Les valeurs par défaut, l'ordre et la correspondance identifiant → route
@@ -162,10 +163,13 @@
 			<span class="nav-icon"><Icon name="user" size={18} /></span>
 			<span class="nav-label">{$currentUser?.prenom ?? t['/profil']}</span>
 		</a>
-		<a href="/manuel-utilisateur.html" target="_blank" rel="noopener" class="nav-item nav-guide">
-			<span class="nav-icon"><Icon name="book-open" size={18} /></span>
-			<span class="nav-label">Guide</span>
-		</a>
+		<!--  🔴 ENVELOPPE + `:global()` BORNÉ : le style de `.nav-item` est scopé à
+		      cette page et n'atteint PAS le `<a>` rendu par le composant — la
+		      règle serait morte et les deux liens s'afficheraient nus.
+		      `lint:classe-relayee` l'a refusé, et il a bien fait. -->
+		<div class="enveloppe-guide">
+			<LiensGuide classe="nav-item" taille={18} />
+		</div>
 		<button class="nav-item nav-logout" on:click={logout} type="button">
 			<span class="nav-icon"><Icon name="log-out" size={18} /></span>
 			<span class="nav-label">{t['deconnexion']}</span>
@@ -243,15 +247,9 @@
 				<span class="nav-icon"><Icon name="user" size={20} /></span>
 				<span>{$currentUser?.prenom ?? t['/profil']}</span>
 			</a>
-			<a
-				href="/manuel-utilisateur.html"
-				target="_blank"
-				rel="noopener"
-				class="overlay-item nav-guide"
-			>
-				<span class="nav-icon"><Icon name="book-open" size={20} /></span>
-				<span>Guide</span>
-			</a>
+			<div class="enveloppe-guide">
+				<LiensGuide classe="overlay-item" taille={20} />
+			</div>
 			<button class="overlay-item nav-logout" on:click={logout} type="button">
 				<span class="nav-icon"><Icon name="log-out" size={20} /></span>
 				<span>{t['deconnexion']}</span>
@@ -337,15 +335,6 @@
 		font-weight: 600;
 	}
 
-	.nav-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.25rem;
-		flex-shrink: 0;
-		font-size: 1.1rem;
-	}
-
 	.nav-footer {
 		padding: 0.5rem;
 		border-top: 1px solid var(--color-border);
@@ -359,11 +348,6 @@
 		color: var(--color-danger);
 		background: #fdedec;
 	}
-	.nav-guide {
-		color: var(--color-text-muted);
-		font-size: 0.85rem;
-	}
-
 	/* ── Mobile topbar ─────────────────────────────────────────────────────── */
 	.mobile-topbar {
 		display: none;
@@ -541,5 +525,18 @@
 		border-radius: var(--radius);
 		font-size: 0.78rem;
 		line-height: 1.3;
+	}
+	/*  Les deux règles ci-dessous ne sont PAS des redéfinitions : elles rendent
+	    applicables au composant enfant celles que la page porte déjà. Bornées à
+	    l'enveloppe, elles ne fuient nulle part. */
+	.enveloppe-guide :global(.nav-item),
+	.enveloppe-guide :global(.overlay-item) {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.55rem 0.7rem;
+		border-radius: var(--radius);
+		color: var(--color-text);
+		text-decoration: none;
 	}
 </style>

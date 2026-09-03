@@ -41,10 +41,8 @@ from datetime import date
 from html import escape, unescape
 
 from app.utils.dates_fr import date_longue
+from app.utils.manuel_pdf_css import css_du_pdf
 from app.utils.pdf_theme import (
-    FONT_SANS,
-    FONT_SERIF,
-    PALETTE_CSS,
     html_to_pdf,
     logo_svg,
     qr_data_uri,
@@ -57,7 +55,7 @@ URL_MANUEL_INTERNE = "http://front:3000/manuel-utilisateur.html"
 #: Ce qu'on garde du manuel : son corps, sans la barre latérale ni le script de
 #: navigation, qui n'ont aucun sens sur un feuillet imprimé.
 _MAIN = re.compile(r"<main[^>]*>(.*?)</main>", re.S | re.I)
-_TITRES = re.compile(r"<h2[^>]*>(.*?)</h2>", re.S | re.I)
+_TITRES = re.compile(r"<h([23])([^>]*)>(.*?)</h\1>", re.S | re.I)
 _BALISES = re.compile(r"<[^>]+>")
 _VERSION = re.compile(r"Manuel utilisateur (v[\d.]+)")
 
@@ -135,243 +133,55 @@ def styles_du_manuel(html: str) -> str:
     return "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", html, re.S | re.I))
 
 
-def sommaire(html: str) -> list[str]:
-    """Les titres de niveau 2, DANS L'ORDRE DU DOCUMENT.
+def _ancre(indice: int) -> str:
+    """L'identifiant posé sur un titre pour que le sommaire puisse le viser.
 
-    ⚠️ Construit depuis le document, jamais tenu à la main : une table des
-    matières recopiée est une table de plus, et ce manuel vient de perdre toutes
-    les siennes (#651).
+    Un compteur, pas un slug du titre : deux écrans peuvent porter le même mot,
+    et un identifiant en double ferait pointer deux entrées au même endroit.
+    """
+    return f"som-{indice}"
+
+
+def titres_ancres(html: str) -> tuple[str, list[tuple[int, str, str]]]:
+    """Le corps AVEC des ancres, et la liste `(niveau, titre, ancre)`.
+
+    🔴 Les deux sont rendus ENSEMBLE, et c'est délibéré : un sommaire dont les
+    ancres seraient calculées séparément du corps pointerait à côté au premier
+    titre ajouté. Ici, l'identifiant est posé et relevé dans la même passe — ils
+    ne peuvent pas diverger.
+
+    ⚠️ Niveaux 2 ET 3 : les quinze écrans sont des `<h3>`. Un sommaire qui
+    s'arrêterait au niveau 2 n'offrirait que trois entrées, et ne permettrait pas
+    de trouver « Accès & badges » — c'est-à-dire ce pour quoi on ouvre un
+    sommaire.
     """
     corps = corps_du_manuel(html)
-    titres = []
-    for brut in _TITRES.findall(corps):
+    releve: list[tuple[int, str, str]] = []
+
+    def poser(m: re.Match) -> str:
+        niveau, attrs, contenu = int(m.group(1)), m.group(2), m.group(3)
         #  `unescape` avant de normaliser : le manuel écrit « Une question&nbsp;? »
         #  en typographie française, et un sommaire qui afficherait l'entité
         #  brute trahirait sa fabrication.
-        titre = unescape(_BALISES.sub("", brut))
-        titre = re.sub(r"\s+", " ", titre).strip()
-        if titre:
-            titres.append(titre)
-    return titres
+        titre = re.sub(r"\s+", " ", unescape(_BALISES.sub("", contenu))).strip()
+        if not titre:
+            return m.group(0)
+        ancre = _ancre(len(releve))
+        releve.append((niveau, titre, ancre))
+        return f'<h{niveau}{attrs} id="{ancre}">{contenu}</h{niveau}>'
+
+    return _TITRES.sub(poser, corps), releve
+
+
+def sommaire(html: str) -> list[str]:
+    """Les titres du document, dans l'ordre. Conservé pour la lisibilité des tests."""
+    return [titre for _, titre, _ in titres_ancres(html)[1]]
 
 
 def version_du_manuel(html: str) -> str:
     """La version imprimée dans le pied du manuel, ou une chaîne vide."""
     trouve = _VERSION.search(_BALISES.sub(" ", html))
     return trouve.group(1) if trouve else ""
-
-
-def _css(styles_manuel: str) -> str:
-    """Le CSS du PDF : celui du manuel, plus ce que l'impression exige."""
-    return f"""
-{PALETTE_CSS}
-{styles_manuel}
-
-@page {{
-  size: A4;
-  margin: 18mm 16mm 20mm;
-  @bottom-center {{
-    content: counter(page) " / " counter(pages);
-    font-family: {FONT_SANS};
-    font-size: 8pt;
-    color: var(--light-muted);
-  }}
-}}
-/*  La page de garde n'a ni marge ni numéro : elle est une affiche. */
-@page garde {{ margin: 0; @bottom-center {{ content: none; }} }}
-
-body {{
-  font-family: {FONT_SANS};
-  color: var(--ink);
-  background: #fff;
-  font-size: 10pt;
-  line-height: 1.5;
-}}
-
-/*  🔴 CE QUE L'IMPRESSION IMPOSE, et que l'écran n'a pas. La barre latérale et
-    les boutons d'action sont des gestes d'écran : sur le papier, ils ne mènent
-    nulle part. Le repli des blocs, lui, est levé À LA COMPOSITION (voir
-    `corps_du_manuel`) — pas ici : ce qui suit habille le résultat. */
-.sidebar, .hero-actions, .aide-liens {{ display: none !important; }}
-.ecran-detail {{ margin-top: 2mm; border-top: 1px dashed var(--border); padding-top: 2mm; }}
-.ecran-detail-titre {{
-  font-size: 8.5pt;
-  font-weight: 700;
-  color: var(--gold);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  margin: 0 0 1.5mm;
-}}
-.ecran-detail-corps {{ margin-top: 0; }}
-
-.ecran-grid {{ display: block; }}
-.ecran-card {{
-  page-break-inside: avoid;
-  margin-bottom: 6mm;
-  border: 1px solid var(--border);
-  border-radius: 4mm;
-  padding: 4mm 5mm;
-}}
-.ecran-icone {{ width: 7mm; height: 7mm; color: var(--navy); }}
-.quick-grid, .persona-grid {{ display: block; }}
-.quick-card, .persona-card {{
-  page-break-inside: avoid;
-  margin-bottom: 4mm;
-  border: 1px solid var(--border);
-  border-radius: 3mm;
-  padding: 3mm 4mm;
-}}
-.chapter, .quick-start, .hero {{
-  page-break-inside: auto;
-  background: none;
-  color: var(--ink);
-  padding: 0;
-  margin-bottom: 8mm;
-}}
-.hero h1 {{ color: var(--navy); font-family: {FONT_SERIF}; }}
-.hero p, .hero-note {{ color: var(--muted); }}
-.hero-kicker {{ color: var(--gold) !important; }}
-/*  Les pastilles du bandeau d'accueil sont blanches sur fond bleu à l'écran :
-    sur le papier, le fond disparaît et elles deviennent invisibles. Repeintes
-    plutôt que masquées — elles portent trois phrases utiles. */
-.hero-cards {{ display: block; margin-top: 4mm; }}
-.hero-card {{
-  display: inline-block;
-  margin: 0 2mm 2mm 0;
-  padding: 1.5mm 3mm;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 8.5pt;
-}}
-h2 {{
-  font-family: {FONT_SERIF};
-  color: var(--navy);
-  font-size: 15pt;
-  page-break-after: avoid;
-}}
-h3 {{ page-break-after: avoid; }}
-a {{ color: var(--navy); text-decoration: none; }}
-
-/* ── Page de garde ────────────────────────────────────────────────────── */
-.garde {{
-  page: garde;
-  page-break-after: always;
-  height: 297mm;
-  position: relative;
-  background: var(--navy);
-  color: #fff;
-  text-align: center;
-}}
-/*  Le bandeau doré : la seule ligne de couleur chaude de la charte, employée
-    ici comme sur les affiches de hall — un rappel, pas une décoration. */
-.garde::after {{
-  content: "";
-  position: absolute; left: 0; right: 0; bottom: 0;
-  height: 14mm;
-  background: var(--gold);
-}}
-/*  Un liseré doré en haut répond à celui du pied : la page est tenue par ses
-    deux bords, pas posée sur un fond. */
-.garde::before {{
-  content: "";
-  position: absolute; left: 0; right: 0; top: 0;
-  height: 4mm;
-  background: var(--gold);
-}}
-.garde-logo {{ padding-top: 34mm; }}
-/*  Médaillon : le logo est blanc sur bleu, il se perdrait sans un fond clair. */
-.garde-medaillon {{
-  width: 30mm; height: 30mm;
-  margin: 0 auto;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .08);
-  border: 1px solid rgba(255, 255, 255, .18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}}
-.garde-surtitre {{
-  font-size: 9.5pt;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-top: 10mm;
-}}
-.garde-titre {{
-  font-family: {FONT_SERIF};
-  font-size: 34pt;
-  line-height: 1.1;
-  margin: 4mm 22mm 0;
-  letter-spacing: .01em;
-}}
-.garde-sous {{
-  font-size: 12pt;
-  color: #C7D2E0;
-  margin: 6mm 28mm 0;
-  line-height: 1.6;
-}}
-.garde-filet {{
-  width: 26mm; height: 2px;
-  background: var(--gold);
-  margin: 10mm auto;
-}}
-.garde-qr {{ margin-top: 12mm; }}
-.garde-qr img {{
-  width: 34mm; height: 34mm;
-  background: #fff;
-  padding: 3mm;
-  border-radius: 3mm;
-}}
-.garde-qr p {{
-  font-size: 9.5pt;
-  color: #C7D2E0;
-  margin-top: 4mm;
-}}
-.garde-qr strong {{ color: #fff; }}
-.garde-pied {{
-  position: absolute;
-  left: 0; right: 0; bottom: 20mm;
-  font-size: 9pt;
-  color: #A8B6C8;
-}}
-
-/* ── Sommaire ─────────────────────────────────────────────────────────── */
-.sommaire {{ page-break-after: always; }}
-.sommaire h2 {{ margin-bottom: 6mm; }}
-.sommaire ol {{ list-style: none; padding: 0; counter-reset: som; }}
-.sommaire li {{
-  counter-increment: som;
-  padding: 2.5mm 0;
-  border-bottom: 1px dotted var(--border);
-  font-size: 11pt;
-}}
-.sommaire li::before {{
-  content: counter(som) ".";
-  color: var(--gold);
-  font-weight: 700;
-  margin-right: 3mm;
-}}
-
-/* ── Mentions ─────────────────────────────────────────────────────────── */
-.mentions {{
-  page-break-before: always;
-  border-top: 3px solid var(--gold);
-  padding-top: 6mm;
-  font-size: 9pt;
-  color: var(--muted);
-}}
-.mentions h2 {{ font-size: 13pt; }}
-.mentions dt {{ font-weight: 700; color: var(--ink); margin-top: 3mm; }}
-.mentions dd {{ margin: 0 0 1mm; }}
-.mentions .avert {{
-  margin-top: 6mm;
-  padding: 3mm 4mm;
-  background: var(--bg);
-  border-left: 3px solid var(--gold);
-}}
-"""
 
 
 def _garde(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
@@ -398,11 +208,25 @@ def _garde(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
 """
 
 
-def _sommaire(titres: list[str]) -> str:
-    if not titres:
+def _sommaire(releve: list[tuple[int, str, str]]) -> str:
+    """Le sommaire, à DEUX niveaux et avec les numéros de page.
+
+    🔴 Les numéros ne sont pas calculés ici — ils ne peuvent pas l'être : on ne
+    sait pas encore combien de pages fera le document. C'est `target-counter()`
+    qui les résout au moment de la mise en page, une fonctionnalité CSS Paged
+    Media que WeasyPrint implémente. Un numéro écrit à la main serait faux dès
+    la première phrase ajoutée au manuel.
+    """
+    if not releve:
         return ""
-    lignes = "".join(f"<li>{escape(t)}</li>" for t in titres)
-    return f'<section class="sommaire"><h2>Sommaire</h2><ol>{lignes}</ol></section>'
+    lignes = "".join(
+        f'<li class="som-n{niveau}"><a href="#{ancre}">{escape(titre)}</a></li>'
+        for niveau, titre, ancre in releve
+    )
+    return (
+        '<section class="sommaire"><h2>Sommaire</h2>'
+        f"<ol>{lignes}</ol></section>"
+    )
 
 
 def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
@@ -426,10 +250,6 @@ def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str
     <dd>Document à usage interne, destiné aux résidents. Il décrit un site dont
         l'accès est réservé aux personnes inscrites.</dd>
   </dl>
-  <p class="avert"><strong>Ce feuillet est une photographie.</strong> Le site
-     évolue ; la version en ligne, elle, est toujours à jour —
-     {escape(site_url)}/manuel-utilisateur.html. En cas de désaccord entre ce
-     papier et l'écran, c'est l'écran qui a raison.</p>
 </section>
 """
 
@@ -454,15 +274,17 @@ def composer_html(
     html = html_manuel if html_manuel is not None else lire_manuel()
     edite_le = edite_le or date.today()
     version = version_du_manuel(html)
+    #  Le corps et le relevé viennent de la MÊME passe : voir `titres_ancres`.
+    corps, releve = titres_ancres(html)
 
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
 <title>Manuel utilisateur — {escape(site_nom)}</title>
-<style>{_css(styles_du_manuel(html))}</style>
+<style>{css_du_pdf(styles_du_manuel(html))}</style>
 </head><body>
 {_garde(site_nom, site_url, version, edite_le)}
-{_sommaire(sommaire(html))}
-{corps_du_manuel(html)}
+{_sommaire(releve)}
+{corps}
 {_mentions(site_nom, site_url, version, edite_le)}
 </body></html>"""
 

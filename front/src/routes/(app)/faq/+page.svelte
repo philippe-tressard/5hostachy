@@ -590,9 +590,9 @@
 	<p style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)">
 		<span style="vertical-align:middle;margin-right:.3rem;display:inline-flex"
 			><Icon name="book-open" size={15} /></span
-		>Consultez le
-		<a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur complet</a> pour
-		un guide pas à pas de toutes les fonctionnalités.
+		>Le <a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur</a>
+		vous guide pas à pas, et existe
+		<a href="/api/manuel/pdf" target="_blank" rel="noopener">en PDF</a>.
 	</p>
 </div>
 
