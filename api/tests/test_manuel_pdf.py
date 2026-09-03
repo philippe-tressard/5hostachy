@@ -105,6 +105,30 @@ def test_les_blocs_depliables_sont_OUVERTS(document):
     assert "votre réponse rejoint le fil du ticket" in document
     assert "Boîte à idées" in document
 
+    #  🔴 LES ATTRIBUTS SURVIVENT À LA CONVERSION — ajouté après un vrai défaut.
+    #
+    #  Le remplacement s'écrit avec une référence de groupe. Écrite via un
+    #  heredoc, elle est devenue le caractère de contrôle U+0001 : la conversion
+    #  produisait un `<div>` SANS SA CLASSE, avec un caractère invisible dedans.
+    #  Les assertions ci-dessus passaient toutes — plus de `<details`, le texte
+    #  présent — et le bloc se serait imprimé sans son habillage.
+    #
+    #  ⚠️ C'est l'étape « Aucun caractère de contrôle invisible » de la CI qui
+    #  l'a vu, pas ce fichier. Il regarde maintenant ce qu'il aurait dû regarder
+    #  dès le début : non pas que la balise a changé, mais que le RÉSULTAT est
+    #  celui qu'on veut. Le caractère fautif n'est pas cité ici — l'écrire pour
+    #  l'expliquer le réintroduirait, et la CI refuserait ce fichier à son tour.
+    assert document.count('<div class="ecran-detail">') == 3, (
+        "les blocs convertis ont perdu leurs attributs : ils s'imprimeraient "
+        "sans leur habillage"
+    )
+    #  Les trois seuls caractères de contrôle voulus, désignés par leur code —
+    #  les écrire en littéral dans ce fichier serait précisément le défaut.
+    voulus = {9, 10, 13}
+    assert not any(ord(c) < 32 and ord(c) not in voulus for c in document), (
+        "un caractère de contrôle s'est glissé dans le document composé"
+    )
+
 
 # ── Le sommaire est CONSTRUIT, pas recopié ───────────────────────────────────
 

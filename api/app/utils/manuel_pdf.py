@@ -118,7 +118,7 @@ def corps_du_manuel(html: str) -> str:
         corps,
         flags=re.S | re.I,
     )
-    corps = re.sub(r"<details([^>]*)>", r"<div>", corps, flags=re.I)
+    corps = re.sub(r"<details([^>]*)>", r"<div\1>", corps, flags=re.I)
     corps = re.sub(r"</details>", "</div>", corps, flags=re.I)
     #  Les liens de navigation interne (#ancre) n'ont pas de sens imprimés, mais
     #  on garde le texte : les retirer amputerait des phrases.
