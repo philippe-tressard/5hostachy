@@ -53,8 +53,15 @@ from app.models.core import (
     TicketEvolution,
     Utilisateur,
 )
-from app.models.courriel import RelanceCourriel
-from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, PLANCHER_PAR_DEFAUT, examiner
+from app.models.courriel import RelanceCourriel, ReponseRelance
+from app.utils.courriel_ingestion import (
+    ACCEPTE,
+    IGNORE,
+    PLANCHER_PAR_DEFAUT,
+    REFUSE,
+    RELANCE,
+    examiner,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +176,18 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
     liste = ", ".join(f"#{n}" for n in numeros) or "aucun ticket retrouvé"
 
     texte = _sans_citation(corps)
+
+    #  🔴 CONSERVÉE AVANT D'ÊTRE NOTIFIÉE (04/09/2026). La notification prévient ;
+    #  elle ne conserve pas. Sans cette ligne, la réponse n'existait que dans un
+    #  champ `corps` qu'on ne relit jamais — le défaut que ce chantier corrige,
+    #  déplacé de la boîte aux lettres vers une table de notifications.
+    session.add(ReponseRelance(
+        relance_id=relance.id,
+        expediteur=verdict.expediteur,
+        contenu=texte,
+        recue_le=datetime.utcnow(),
+    ))
+
     for membre in membres_cs_ou_admin(session):
         session.add(Notification(
             destinataire_id=membre.id,
@@ -180,10 +199,14 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
                 "Cette réponse n'a été ajoutée à aucun fil : elle parle de "
                 "plusieurs dossiers à la fois. À reporter là où elle s'applique."
             ),
-            lien="/tickets",
+            #  Vers l'écran qui la CONSERVE, pas vers la liste des tickets : la
+            #  notification se perd, la page se rouvre.
+            lien="/espace-cs?onglet=reporting",
         ))
     session.commit()
-    return REFUSE
+    #  RELANCE et non REFUSE : la réponse est reçue, conservée et notifiée. Rien
+    #  n'a été refusé — seulement pas ventilé, ce qui est la décision voulue.
+    return RELANCE
 
 
 def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
@@ -293,7 +316,7 @@ def relever() -> dict[str, int]:
     """
     from app.database import SessionLocal
 
-    comptes = {ACCEPTE: 0, REFUSE: 0, IGNORE: 0}
+    comptes = {ACCEPTE: 0, RELANCE: 0, REFUSE: 0, IGNORE: 0}
     session = SessionLocal()
     try:
         cfg = config_imap(session)
@@ -351,8 +374,10 @@ def relever() -> dict[str, int]:
     #  Un passage sans message est un fait, pas un non-événement : c'est ce qui
     #  prouve que la relève est vivante et que la boîte est simplement vide.
     if any(comptes.values()):
-        logger.info("Réponses par courriel — écrites=%d refusées=%d ignorées=%d",
-                    comptes[ACCEPTE], comptes[REFUSE], comptes[IGNORE])
+        logger.info(
+            "Réponses par courriel — écrites=%d relances=%d refusées=%d ignorées=%d",
+            comptes[ACCEPTE], comptes[RELANCE], comptes[REFUSE], comptes[IGNORE],
+        )
     else:
         logger.debug("Réponses par courriel : relève effectuée, aucun message")
     return comptes

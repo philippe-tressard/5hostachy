@@ -98,6 +98,21 @@ export interface Ticket {
 	confidentiel?: boolean;
 }
 
+/** Une réponse du syndic à une relance GROUPÉE — jamais ventilée dans les fils.
+ *
+ *  ⚠️ `tickets` liste ce que la RELANCE contenait, pas ce que la réponse
+ *  mentionne : aucune machine ne sait à quel dossier chaque phrase se rapporte,
+ *  et c'est précisément pourquoi on ne la ventile pas. C'est un contexte de
+ *  lecture, jamais un rattachement. */
+export interface ReponseRelance {
+	id: number;
+	expediteur: string;
+	contenu: string;
+	recue_le: string;
+	relance_le: string | null;
+	tickets: string[];
+}
+
 export interface RelanceSyndicResponse {
 	delai_jours: number;
 	tickets: Ticket[];

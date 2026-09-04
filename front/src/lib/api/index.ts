@@ -10,6 +10,7 @@ import type {
 	Publication,
 	PublicationEvolution,
 	RelanceSyndicResponse,
+	ReponseRelance,
 	Ticket,
 	TicketEvolution,
 	TicketMessage,
@@ -121,6 +122,10 @@ export const tickets = {
 	deleteEvolution: (id: number, evolId: number) =>
 		api.delete<void>(`/tickets/${id}/evolutions/${evolId}`),
 	relanceSyndicList: () => api.get<RelanceSyndicResponse>('/tickets/relance-syndic'),
+	//  Les réponses du syndic aux relances groupées : conservées et relues ici,
+	//  parce qu'une notification se lit une fois puis descend dans la pile.
+	relanceReponses: () =>
+		api.get<{ reponses: ReponseRelance[] }>('/tickets/relance-syndic/reponses'),
 	envoiRelance: (ticket_ids: number[]) =>
 		api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
 	// Pas de `uploadPhoto` : photos et documents passent par `fichiersApi.upload`

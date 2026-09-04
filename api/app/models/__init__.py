@@ -16,5 +16,6 @@ from app.models.copropriete import (  # patrimoine PHYSIQUE, extrait le 13/08/20
     Lot as Lot,
 )
 from app.models.courriel import RelanceCourriel as RelanceCourriel
+from app.models.courriel import ReponseRelance as ReponseRelance
 from app.models.perimetre import Perimetre as Perimetre
 from app.models.evenement import EvenementEvolution as EvenementEvolution

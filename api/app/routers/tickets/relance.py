@@ -116,6 +116,74 @@ def _contexte_ticket(session: Session, ticket: Ticket) -> dict:
     }
 
 
+@router.get("/relance-syndic/reponses")
+def list_reponses_relance(
+    session: Session = Depends(get_session),
+    _user: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Les réponses du syndic aux relances, de la plus récente à la plus ancienne.
+
+    🔴 POURQUOI CET ÉCRAN EXISTE. La réponse était captée et notifiée, jamais
+    CONSERVÉE à un endroit qu'on rouvre. Une notification se lit une fois puis
+    descend dans la pile — passé quelques jours, la réponse du syndic était en
+    base et introuvable. C'est le défaut que tout ce chantier corrige, déplacé de
+    la boîte aux lettres vers une table de notifications (04/09/2026).
+
+    ⚠️ Chaque réponse porte les tickets que la RELANCE contenait, pas ceux qu'elle
+    mentionne : aucune machine ne sait à quel dossier chaque phrase se rapporte —
+    c'est précisément pourquoi on ne la ventile pas. La liste sert de contexte au
+    lecteur, jamais de rattachement.
+    """
+    from app.models.courriel import RelanceCourriel, ReponseRelance
+
+    reponses = session.exec(
+        select(ReponseRelance).order_by(ReponseRelance.recue_le.desc()).limit(50)
+    ).all()
+    if not reponses:
+        return {"reponses": []}
+
+    relances = {
+        r.id: r
+        for r in session.exec(
+            select(RelanceCourriel).where(
+                RelanceCourriel.id.in_({x.relance_id for x in reponses})
+            )
+        ).all()
+    }
+    #  Les numéros sont résolus ICI, une fois : le front n'a pas à savoir que la
+    #  relance stocke des identifiants en JSON.
+    ids_tous = set()
+    for rel in relances.values():
+        try:
+            ids_tous.update(int(i) for i in json.loads(rel.tickets_json or "[]"))
+        except (ValueError, TypeError):
+            pass
+    numeros = {
+        t.id: t.numero
+        for t in (
+            session.exec(select(Ticket).where(Ticket.id.in_(ids_tous))).all()
+            if ids_tous else []
+        )
+    }
+
+    sortie = []
+    for rep in reponses:
+        rel = relances.get(rep.relance_id)
+        try:
+            ids = [int(i) for i in json.loads(rel.tickets_json or "[]")] if rel else []
+        except (ValueError, TypeError):
+            ids = []
+        sortie.append({
+            "id": rep.id,
+            "expediteur": rep.expediteur,
+            "contenu": rep.contenu,
+            "recue_le": rep.recue_le,
+            "relance_le": rel.cree_le if rel else None,
+            "tickets": [numeros[i] for i in ids if i in numeros],
+        })
+    return {"reponses": sortie}
+
+
 @router.post("/relance-syndic", status_code=200)
 def envoyer_relance_syndic(
     body: RelanceSyndicRequest,
