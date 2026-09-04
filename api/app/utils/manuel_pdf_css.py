@@ -115,6 +115,73 @@ body {{
 .profil-card {{ border-left-color: #2563eb; }}
 .profil-card strong {{ display: block; margin-bottom: .6mm; }}
 .apropos {{ margin-bottom: 5mm; }}
+
+/*  🔴 LES DEUX MAQUETTES DU MENU. Elles sont reconstruites en HTML, pas
+    photographiées : une capture se périme au premier écran renommé et pixellise
+    à l'impression. Celle-ci reste nette à toute taille et suit le site.
+
+    ⚠️ `break-inside: avoid` sur chaque figure : une maquette coupée en deux
+    pages ne montre plus un menu, elle montre deux moitiés de liste. */
+.maq-duo {{
+  display: block;
+  column-count: 2;
+  column-gap: 8mm;
+  margin: 3mm 0;
+}}
+.maq {{
+  break-inside: avoid;
+  page-break-inside: avoid;
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 3mm;
+}}
+.maq-legende {{
+  font-size: 8pt;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 1.5mm;
+}}
+.maq-cadre {{
+  border: 1px solid var(--border);
+  border-radius: 2mm;
+  overflow: hidden;
+}}
+.maq-bureau {{ border-top: 1mm solid var(--navy); }}
+.maq-mobile {{ border-top: 1mm solid var(--gold); max-width: 52mm; }}
+.maq-marque {{
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+  font-weight: 700;
+  font-size: 8pt;
+  padding: 1.5mm 2mm;
+}}
+.maq-bureau .maq-marque {{ border-bottom: 1px solid var(--border); }}
+.maq-barre {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}}
+.maq-burger {{ font-size: 10pt; padding: 1.5mm 2mm; }}
+.maq-liste {{ list-style: none; margin: 0; padding: 1mm; }}
+.maq-item {{
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+  padding: .7mm 1.5mm;
+  border-radius: 1.5mm;
+  font-size: 7.5pt;
+  color: var(--muted);
+}}
+/*  L'entrée active fait comprendre que la colonne EST un menu, pas une liste. */
+.maq-actif {{
+  background: var(--bg);
+  color: var(--navy);
+  font-weight: 700;
+}}
+.maq-note {{ font-size: 8pt; color: var(--muted); }}
 .ecran-acces {{
   display: inline-block;
   font-size: 7pt;
