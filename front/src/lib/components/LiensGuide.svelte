@@ -26,18 +26,24 @@
 	export let classe: string;
 	/** 18 px sur le côté, 20 px en plein écran. */
 	export let taille = 18;
+	/** Le menu principal ne montre que le guide en ligne (04/09/2026) : deux
+	    entrées côte à côte l'encombraient pour un document qu'on télécharge une
+	    fois. Le menu mobile, plus court, les garde toutes deux. */
+	export let avecPdf = true;
 </script>
 
 <a href="/manuel-utilisateur.html" target="_blank" rel="noopener" class="{classe} nav-guide">
 	<span class="nav-icon"><Icon name="book-open" size={taille} /></span>
 	<span>Guide</span>
 </a>
-<!--  Le guide en PDF : il était enterré au bas du manuel (03/09/2026) — un
-      document qu'on ne trouve pas n'existe pas. -->
-<a href="/api/manuel/pdf" target="_blank" rel="noopener" class="{classe} nav-guide">
-	<span class="nav-icon"><Icon name="file-text" size={taille} /></span>
-	<span>Guide PDF</span>
-</a>
+{#if avecPdf}
+	<!--  Le guide en PDF : il était enterré au bas du manuel (03/09/2026) — un
+	      document qu'on ne trouve pas n'existe pas. -->
+	<a href="/api/manuel/pdf" target="_blank" rel="noopener" class="{classe} nav-guide">
+		<span class="nav-icon"><Icon name="file-text" size={taille} /></span>
+		<span>Guide PDF</span>
+	</a>
+{/if}
 
 <style>
 	/*  Le style suit le BALISAGE : `.nav-guide` vivait dans `Nav.svelte`, elle

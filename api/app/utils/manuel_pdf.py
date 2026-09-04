@@ -289,6 +289,31 @@ def composer_html(
 </body></html>"""
 
 
+#: 🔴 LE PDF EST MIS EN CACHE (04/09/2026), et voici pourquoi ça se justifie.
+#:
+#: Signalé à l'écran : *« plus de 10 secondes sans message, avec une page vide
+#: d'attente »*. WeasyPrint recomposait TOUT le document à chaque clic — polices,
+#: colonnes, pagination, résolution des numéros de page — sur un Raspberry Pi.
+#:
+#: Or le résultat ne dépend que de trois choses : le manuel servi, le nom et
+#: l'URL du site, et la date d'édition. Aucune ne change entre deux clics.
+#:
+#: ⚠️ La clé est l'EMPREINTE DU MANUEL, pas sa version : une retouche livrée sans
+#: bump de version doit produire un PDF neuf. Se fier au numéro de version aurait
+#: servi un document périmé sans que rien ne le signale — le défaut qu'on
+#: passe son temps à corriger ailleurs.
+#:
+#: ⚠️ Le cache vit dans le PROCESS : il disparaît à chaque redémarrage, donc à
+#: chaque déploiement. C'est voulu — pas d'invalidation à écrire, donc pas
+#: d'invalidation à oublier.
+_CACHE: dict[tuple[str, str, str, str], bytes] = {}
+
+#: Au-delà, on jette le plus ancien. Deux entrées suffisent (la date change à
+#: minuit) ; la borne existe pour qu'une boucle anormale ne gonfle pas la mémoire
+#: d'un conteneur qui n'en a pas beaucoup.
+_CACHE_MAX = 4
+
+
 def generer_manuel_pdf(
     site_nom: str,
     site_url: str,
@@ -296,7 +321,24 @@ def generer_manuel_pdf(
     html_manuel: str | None = None,
     edite_le: date | None = None,
 ) -> bytes:
-    """Le manuel complet en PDF."""
-    return html_to_pdf(
-        composer_html(site_nom, site_url, html_manuel=html_manuel, edite_le=edite_le)
+    """Le manuel complet en PDF, mis en cache sur l'empreinte de sa source."""
+    import hashlib
+
+    html = html_manuel if html_manuel is not None else lire_manuel()
+    edite_le = edite_le or date.today()
+    cle = (
+        hashlib.sha256(html.encode("utf-8")).hexdigest(),
+        site_nom,
+        site_url,
+        edite_le.isoformat(),
     )
+    if cle in _CACHE:
+        return _CACHE[cle]
+
+    pdf = html_to_pdf(
+        composer_html(site_nom, site_url, html_manuel=html, edite_le=edite_le)
+    )
+    if len(_CACHE) >= _CACHE_MAX:
+        _CACHE.pop(next(iter(_CACHE)))
+    _CACHE[cle] = pdf
+    return pdf
