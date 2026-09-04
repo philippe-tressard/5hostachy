@@ -46,7 +46,7 @@ from app.utils.courriel_entrant import (
     jeton_dans,
     nouveau_jeton,
 )
-from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, examiner
+from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, RELANCE, examiner
 from tests.purge_test import purger_ligne
 
 _AUTH_OK = "mx.ovh.net; spf=pass smtp.mailfrom=syndic.fr; dkim=pass; dmarc=pass"
@@ -338,7 +338,10 @@ def test_une_reponse_a_une_relance_groupee_va_au_CONSEIL_et_dans_aucun_fil(scene
         datetime(2026, 9, 3),
     )
     try:
-        assert decision == REFUSE, "une réponse groupée ne s'écrit pas dans un fil"
+        #  RELANCE et non REFUSE (04/09/2026) : rien n'a été refusé — la
+        #  réponse est reçue, conservée et notifiée, seulement pas ventilée.
+        #  Le journal disait « refusées=1 » sur un traitement réussi.
+        assert decision == RELANCE, "une réponse groupée ne s'écrit pas dans un fil"
         for t in vises:
             assert _evolutions(session, t) == [], (
                 f"la réponse a été recopiée dans le fil de {t.numero} — elle parle "
@@ -430,7 +433,7 @@ def test_le_syndic_peut_repondre_PLUSIEURS_FOIS_a_la_meme_relance(scene):
             assert traiter(
                 session, _entetes(relance.jeton, de=syndic.email), texte,
                 datetime(2026, 9, 3),
-            ) == REFUSE
+            ) == RELANCE
 
         corps = [n.corps for n in _notifs(session, cs)]
         assert len(corps) == 2, (

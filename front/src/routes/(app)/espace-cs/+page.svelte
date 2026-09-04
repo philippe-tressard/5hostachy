@@ -27,6 +27,7 @@
 	import { fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
+	import { ongletDeLUrl } from '$lib/deepLink';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -88,7 +89,11 @@
 	}
 
 	// -- Onglet -------------------------------------------------------------
-	let onglet: 'validations' | 'reporting' | 'annonces-hall' | 'annuaire' = 'validations';
+	//  🔴 UNE SEULE LISTE (04/09/2026) : elle était écrite deux fois, ici et dans
+	//  un `includes([...])`. `const ONGLETS` est la convention du projet, lue par
+	//  `test_liens_front` pour vérifier qu'un lien de l'API vise un onglet réel.
+	const ONGLETS = ['validations', 'reporting', 'annonces-hall', 'annuaire'] as const;
+	let onglet: (typeof ONGLETS)[number] = 'validations';
 	/** Vue de reporting demandée par l'URL — c'est `OngletReporting` qui la valide. */
 	let vueReporting: string | null = null;
 	$: trackTabView(onglet);
@@ -254,11 +259,9 @@
 
 		// Navigation depuis le dashboard via ?onglet=...&vue=...
 		const params = new URLSearchParams(window.location.search);
-		const pOnglet = params.get('onglet') as typeof onglet | null;
 		const pVue = params.get('vue');
-		if (pOnglet && ['validations', 'reporting', 'annonces-hall', 'annuaire'].includes(pOnglet)) {
-			onglet = pOnglet;
-		}
+		const pOnglet = ongletDeLUrl(ONGLETS);
+		if (pOnglet) onglet = pOnglet;
 		if (pVue && onglet === 'reporting') vueReporting = pVue;
 
 		try {

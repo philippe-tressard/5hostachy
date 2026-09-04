@@ -10,10 +10,11 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { tickets as ticketsApi, type Ticket } from '$lib/api';
+	import { tickets as ticketsApi, type Ticket, type ReponseRelance } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { apiMessage } from '$lib/utils';
-	import { daysSince } from '$lib/date';
+	//  `fmtDatetime` vient de $lib/date — jamais un format réimplémenté ici.
+	import { daysSince, fmtDatetime } from '$lib/date';
 	import {
 		STATUT_TICKET_BADGE as TK_STATUT_BADGE,
 		STATUT_TICKET_LABELS as TK_STATUT_LABELS,
@@ -80,13 +81,64 @@
 		}
 	}
 
+	//  🔴 LES RÉPONSES DU SYNDIC, conservées et relues ICI (04/09/2026).
+	//
+	//  Elles étaient captées et notifiées, jamais consultables : une notification
+	//  se lit une fois puis descend dans la pile. Passé quelques jours, la réponse
+	//  du syndic était en base et introuvable — le défaut que tout ce chantier
+	//  corrige, déplacé de la boîte aux lettres vers une table de notifications.
+	//
+	//  ⚠️ Elles s'affichent sous la relance, jamais dans les fils : « pour le
+	//  TK-123 on intervient jeudi, le TK-456 est clos » recopié dans quatre fils
+	//  serait faux dans trois. Le conseil reporte là où c'est juste.
+	let reponses: ReponseRelance[] = [];
+
+	async function loadReponses() {
+		try {
+			reponses = (await ticketsApi.relanceReponses()).reponses;
+		} catch {
+			//  Muet : l'écran principal reste utilisable sans cet historique, et
+			//  un second message d'erreur ferait douter du reste de la page.
+		}
+	}
+
 	/** Rechargement demandé par la barre d'outils du parent. */
 	export function recharger() {
 		loadRelanceSyndic(true);
+		loadReponses();
 	}
 
-	onMount(() => loadRelanceSyndic());
+	onMount(() => {
+		loadRelanceSyndic();
+		loadReponses();
+	});
 </script>
+
+{#if reponses.length}
+	<section class="report-card" style="margin-bottom:1.5rem">
+		<h3 class="rep-titre">&#x1F4E8; Réponses du syndic aux relances</h3>
+		<p class="rep-aide">
+			Ces réponses portent sur <strong>plusieurs dossiers à la fois</strong> : elles ne sont volontairement
+			ajoutées à aucun fil. À reporter dans les tickets concernés.
+		</p>
+		{#each reponses as rep (rep.id)}
+			<article class="rep-carte">
+				<header class="rep-entete">
+					<span class="rep-de">{rep.expediteur}</span>
+					<span class="rep-quand">{fmtDatetime(rep.recue_le)}</span>
+				</header>
+				{#if rep.tickets.length}
+					<p class="rep-tickets">
+						Relance portant sur&nbsp;: {#each rep.tickets as num, i (num)}<span
+								class="badge badge-gray">#{num}</span
+							>{#if i < rep.tickets.length - 1}&nbsp;{/if}{/each}
+					</p>
+				{/if}
+				<p class="rep-texte">{rep.contenu || '(message sans texte lisible)'}</p>
+			</article>
+		{/each}
+	</section>
+{/if}
 
 {#if relanceLoading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
@@ -295,5 +347,50 @@
 	.relance-date-overdue {
 		color: #b45309;
 		font-weight: 600;
+	}
+
+	.rep-titre {
+		margin-bottom: 0.35rem;
+	}
+	.rep-aide {
+		font-size: 0.82rem;
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.rep-carte {
+		border: 1px solid var(--color-border);
+		border-left: 3px solid var(--color-primary);
+		border-radius: 0 var(--radius) var(--radius) 0;
+		padding: 0.6rem 0.8rem;
+		margin-bottom: 0.6rem;
+		background: var(--color-bg);
+	}
+	.rep-entete {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.3rem;
+	}
+	.rep-de {
+		font-weight: 600;
+		font-size: 0.88rem;
+	}
+	.rep-quand {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+	}
+	.rep-tickets {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-bottom: 0.4rem;
+	}
+	/*  `pre-wrap` : une réponse de courriel porte ses propres retours à la ligne,
+	    et les écraser collerait des paragraphes que le syndic a séparés. */
+	.rep-texte {
+		white-space: pre-wrap;
+		font-size: 0.88rem;
+		margin: 0;
 	}
 </style>

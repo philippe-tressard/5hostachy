@@ -47,3 +47,41 @@ class RelanceCourriel(SQLModel, table=True):
     #: message CONTENAIT, pas ce que les tickets sont devenus.
     tickets_json: str = "[]"
     cree_le: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ReponseRelance(SQLModel, table=True):
+    """Une réponse du syndic à une relance groupée — CONSERVÉE, pas seulement notifiée.
+
+    🔴 POURQUOI CETTE TABLE EXISTE (04/09/2026), et c'est une correction.
+
+    La première version se contentait d'une notification portant le texte. Elle
+    répondait à « le conseil est-il prévenu ? » et pas à « où le relit-on ? ».
+    Une notification se lit une fois puis descend dans la pile ; passé quelques
+    jours, la réponse du syndic était en base — dans un champ `corps` — et
+    introuvable.
+
+    ⚠️ C'est le défaut même que tout ce lot prétendait corriger : *« une réponse
+    arrive et personne ne la voit »*. Je l'avais déplacé de la boîte aux lettres
+    vers une table de notifications, ce qui n'est pas la même chose que le
+    résoudre. Relevé à l'écran : *« où sera affiché le retour syndic ? »*.
+
+    Elle s'affiche désormais sous la relance qui l'a provoquée — Espace CS →
+    Reporting → Relance syndic —, là où le conseil regarde déjà.
+
+    ⚠️ Plusieurs réponses par relance : le jeton ne s'épuise pas. Le syndic peut
+    répondre un dossier à la fois, ou préciser le lendemain. Chaque réponse est
+    une ligne, jamais un écrasement de la précédente.
+    """
+
+    __tablename__ = "reponse_relance"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    relance_id: int = Field(index=True)
+    #: L'adresse telle qu'elle figurait dans le `From:` — après quoi
+    #: l'authentification a été vérifiée. On conserve la forme brute : c'est ce
+    #: qu'un humain reconnaît, et le nom affiché fait partie de l'information.
+    expediteur: str = ""
+    #: Le texte SANS la citation du message précédent : sans quoi chaque échange
+    #: recopierait tout l'échange.
+    contenu: str = ""
+    recue_le: datetime = Field(default_factory=datetime.utcnow)

@@ -65,6 +65,14 @@ ACCEPTE = "accepte"          # à écrire dans le ticket
 REFUSE = "refuse"            # rattaché, mais non authentifié → prévenir le CS
 IGNORE = "ignore"            # sans rapport avec un ticket → ne rien faire
 
+#: 🔴 Un QUATRIÈME verdict, ajouté le 04/09/2026. Une réponse à une relance
+#: GROUPÉE est reçue, conservée et notifiée — mais elle n'entre dans aucun fil.
+#: Elle était comptée `REFUSE`, ce qui est faux : rien n'a été refusé, on a fait
+#: exactement ce qu'il fallait. Le journal disait « refusées=1 » sur un
+#: traitement réussi, et c'est le journal qu'on lit pour savoir si la relève va
+#: bien.
+RELANCE = "relance"          # rattachée à une relance groupée → conservée, non ventilée
+
 
 @dataclass(frozen=True)
 class Verdict:
