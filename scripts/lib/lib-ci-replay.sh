@@ -188,6 +188,23 @@ ci_requalifier() {         # $1 = code de sortie, sortie de l'étape sur stdin
   case "$sortie" in
     *"command not found"*|*"not recognized"*|*": No such file or directory"*"sh:"*)
       echo "INCONNU outil absent du poste" ;;
+    #  🔴 UN CONTRÔLE QUI SE DÉCLARE NON MESURÉ (04/09/2026).
+    #
+    #  `lint:audit` sort en code 2 et écrit « INCONNU — `npm audit` a renvoyé une
+    #  erreur » quand le registre npm ne répond pas. Ce n'est ni un succès ni un
+    #  échec DU LOT : c'est une mesure qu'on n'a pas pu prendre, et le contrôle
+    #  le dit lui-même, exactement comme `standards/04` le demande.
+    #
+    #  Le compter FAIL bloquait le push d'un lot sain — quatre fois dans la
+    #  matinée du 04/09 — et poussait vers `SKIP_PRECHECK=1`, c'est-à-dire à
+    #  désarmer soixante-dix étapes pour en contourner une. C'est le défaut que
+    #  #318 avait déjà corrigé sur le point 0c, reproduit un cran plus bas.
+    #
+    #  ⚠️ Le motif est étroit : le mot doit venir du contrôle LUI-MÊME, en tête
+    #  de sa ligne de verdict. Un contrôle qui échoue vraiment n'écrit pas
+    #  « INCONNU » — et s'il le faisait, ce serait son défaut, pas celui d'ici.
+    *"INCONNU —"*|*"INCONNU -"*)
+      echo "INCONNU le contrôle se déclare non mesuré" ;;
     *) echo FAIL ;;
   esac
 }
@@ -263,6 +280,16 @@ YAML
   t "requalification — succès"       "$(printf '' | ci_requalifier 0)" "OK"
   t "requalification — outil absent" "$(printf 'bash: ruff: command not found\n' | ci_requalifier 127)" "INCONNU outil absent du poste"
   t "requalification — vrai échec"   "$(printf 'F401 unused import\n' | ci_requalifier 1)" "FAIL"
+  #  Le cas du 04/09/2026 : `lint:audit` quand le registre npm ne répond pas —
+  #  code 2, et le contrôle DIT lui-même qu'il n'a pas mesuré.
+  t "requalification — non mesuré" \
+    "$(printf 'INCONNU — audit npm injoignable\n' | ci_requalifier 2)" \
+    "INCONNU le contrôle se déclare non mesuré"
+  #  🔴 Et sa réciproque, qui rend la requalification sûre : un échec qui parle
+  #  d'un INCONNU AILLEURS reste un échec. Sans ce cas, le motif pourrait
+  #  s'élargir sans qu'on s'en aperçoive.
+  t "requalification — le mot seul ne suffit pas" \
+    "$(printf 'le point 9 reste INCONNU par construction\n' | ci_requalifier 1)" "FAIL"
 
   #  Éprouvé sur le VRAI fichier quand il est là : c'est le seul contrôle qui
   #  verrait un `ci.yml` réécrit dans une forme que le parseur ne sait plus lire.
