@@ -540,11 +540,21 @@
         photographiées. Une capture se périme au premier écran renommé et devient
         illisible à l'impression ; celle-ci reprend les icônes et les libellés du
         menu réel, reste nette en PDF, et suit le site quand il change. */
+    /*  🔴 DEUX COLONNES CÔTE À CÔTE, jamais l'une sous l'autre (04/09/2026).
+        L'`auto-fit` précédent repliait la grille dès que la place manquait — or
+        c'est justement la COMPARAISON des deux menus qui fait le propos. Empilées,
+        les maquettes redeviennent deux listes sans rapport l'une avec l'autre.
+        ⚠️ Sous 520 px on repasse à une colonne : à cette largeur, deux maquettes
+        côte à côte seraient illisibles toutes les deux. */
     .maq-duo {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
       gap: 1rem;
       margin: .9rem 0 .6rem;
+    }
+    @media (max-width: 520px) {
+      .maq-duo { grid-template-columns: 1fr; }
     }
     .maq { margin: 0; }
     .maq-legende {
@@ -580,7 +590,34 @@
       background: var(--bg);
     }
     .maq-barre .maq-marque { padding-right: 0; }
-    .maq-burger { font-size: 1.05rem; padding: .5rem .7rem; color: #1e293b; }
+    /*  Le bouton est DESSINÉ et encadré, pour ressembler à un bouton : le
+        caractère ☰ qu'il remplace se lisait comme une décoration, et il ne dit
+        rien à qui n'a jamais fait le rapprochement. */
+    .maq-burger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: .35rem .5rem;
+      padding: .25rem;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #ffffff;
+      color: #1e293b;
+    }
+    .maq-explication {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      margin: .5rem 0 0;
+      padding: .5rem .6rem;
+      border-left: 3px solid #C9983A;
+      background: #fdf8ef;
+      border-radius: 0 7px 7px 0;
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .maq-explication-icone { flex-shrink: 0; color: #C9983A; margin-top: .1rem; }
     .maq-liste { list-style: none; margin: 0; padding: .35rem; }
     .maq-item {
       display: flex;
@@ -953,7 +990,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 3.89 · Septembre 2026</span>
+      <span class="topbar-badge">Version 3.90 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1142,8 +1179,8 @@
       <h3>Le menu, sur ordinateur et sur téléphone</h3>
       <p>
         C'est la <strong>même application</strong> : seule la façon d'atteindre le menu
-        change. Sur un grand écran il est toujours là, à gauche&nbsp;; sur téléphone il
-        s'ouvre par le bouton <strong>☰</strong>, en haut.
+        change. Sur un grand écran il est toujours là, à gauche&nbsp;; sur téléphone,
+        où la place manque, il est replié et s'ouvre d'une pression.
       </p>
       <div class="maq-duo">
         <figure class="maq">
@@ -1172,7 +1209,7 @@
           <div class="maq-cadre maq-mobile">
             <div class="maq-barre">
               <span class="maq-marque"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span>5Hostachy</span></span>
-              <span class="maq-burger" aria-hidden="true">☰</span>
+              <span class="maq-burger" aria-label="Bouton du menu"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg></span>
             </div>
             <ul class="maq-liste maq-liste-mobile">
             <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Accueil</span></li>
@@ -1190,6 +1227,16 @@
             <li class="maq-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="20" r="2"/></svg><span>Admin</span></li>
             </ul>
           </div>
+          <p class="maq-explication">
+            <span class="maq-explication-icone">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            </span>
+            <span>
+              Ces <strong>trois petits traits</strong>, en haut de l'écran, ouvrent le
+              menu&nbsp;: appuyez dessus et la liste ci-dessous apparaît. Une seconde
+              pression la referme.
+            </span>
+          </p>
         </figure>
       </div>
       <p class="maq-note">
@@ -1348,7 +1395,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.89</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.90</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

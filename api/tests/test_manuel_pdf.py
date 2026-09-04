@@ -378,3 +378,66 @@ def test_le_manuel_impose_la_revalidation_au_navigateur():
     assert ">Cache-Control" in bloc.group(1), (
         "sans `>`, la directive s'AJOUTE à celle d'amont au lieu de la remplacer"
     )
+
+
+# ── Les deux maquettes du menu : côte à côte, et le bouton expliqué ──────────
+
+
+def test_les_deux_maquettes_sont_COTE_A_COTE_dans_le_PDF():
+    """🔴 Le flux en colonnes les empilait — et empilées, elles ne comparent plus rien.
+
+    `.maq-duo` était décrit en `column-count: 2`. Sur une figure plus haute que
+    la colonne disponible, `break-inside: avoid` interdit à WeasyPrint de la
+    répartir : il empile. Les deux maquettes se sont donc retrouvées l'une SOUS
+    l'autre en production, signalé à l'écran le 04/09/2026.
+
+    Le flux en colonnes est fait pour du texte qui coule ; ces deux figures ne
+    coulent pas, elles se **comparent** : c'est la comparaison qui montre que
+    c'est le même menu à deux endroits, et non deux menus différents.
+
+    ⚠️ Ce test lit du CSS, ce qui est un pis-aller assumé : WeasyPrint n'est pas
+    installable sur le poste de développement (libs système absentes du
+    Dockerfile côté Windows), donc le rendu réel ne peut pas être mesuré ici.
+    Il vaut mieux vérifier la cause connue que rien du tout — mais il ne prouve
+    pas la mise en page, et cette limite est nommée exprès.
+    """
+    from app.utils.manuel_pdf_css import css_du_pdf
+
+    CSS = css_du_pdf("")
+    bloc = re.search(r"\.maq-duo \{(.*?)\}", CSS, re.S)
+    assert bloc, "la règle `.maq-duo` a disparu : les maquettes ne sont plus cadrées"
+    regle = bloc.group(1)
+    assert "column-count" not in regle, (
+        "`.maq-duo` repasse en flux de colonnes : les deux maquettes s'empileront "
+        "l'une sous l'autre dès que l'une dépassera la hauteur disponible"
+    )
+    assert "display: flex" in regle, (
+        "seul un conteneur flex garantit les deux maquettes côte à côte quelle "
+        "que soit leur hauteur"
+    )
+
+
+def test_le_bouton_du_menu_telephone_est_DESSINE_et_EXPLIQUE(manuel):
+    """Un symbole que le lecteur doit déjà connaître n'explique rien.
+
+    Le bouton portait le caractère ☰. Il ne dit rien à qui n'a jamais fait le
+    rapprochement — c'est-à-dire au lecteur de ce guide, qui n'est pas
+    informaticien : c'est la remarque du 04/09/2026. Il est désormais dessiné,
+    encadré comme un bouton, et une ligne dit en toutes lettres ce qu'il fait.
+
+    Le pendant côté manuel HTML est `npm run lint:manuel-menus`. Ce test-ci
+    couvre la **mise en forme PDF**, que le contrôle front ne voit pas.
+    """
+    from app.utils.manuel_pdf_css import css_du_pdf
+
+    CSS = css_du_pdf("")
+    assert 'class="maq-burger"' in manuel and "<svg" in manuel
+    assert 'class="maq-explication"' in manuel, (
+        "le bouton du menu téléphone est montré sans être expliqué"
+    )
+    #  Sans style, l'explication se fondrait dans le corps du texte : elle ne se
+    #  rattacherait plus visuellement au bouton qu'elle décrit.
+    assert ".maq-explication {" in CSS, (
+        "l'explication du bouton n'a pas de style dans le PDF — elle s'y "
+        "afficherait comme un paragraphe ordinaire, détachée de son bouton"
+    )
