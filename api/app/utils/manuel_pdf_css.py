@@ -122,18 +122,30 @@ body {{
 
     ⚠️ `break-inside: avoid` sur chaque figure : une maquette coupée en deux
     pages ne montre plus un menu, elle montre deux moitiés de liste. */
+/*  🔴 FLEX, ET NON `column-count` (04/09/2026).
+    Les deux maquettes étaient décrites en colonnes typographiques, et se sont
+    retrouvées l'une SOUS l'autre : `break-inside: avoid` sur des blocs plus hauts
+    que la colonne disponible interdit à WeasyPrint de les répartir, il les
+    empile. Le flux en colonnes est fait pour du TEXTE qui coule ; ces deux
+    figures ne coulent pas, elles se comparent.
+
+    Or la comparaison EST le propos : empilées, elles redeviennent deux listes
+    sans rapport l'une avec l'autre, et le lecteur ne voit plus que c'est le
+    même menu à deux endroits. Le flex les met côte à côte quoi qu'il arrive. */
 .maq-duo {{
-  display: block;
-  column-count: 2;
-  column-gap: 8mm;
+  display: flex;
+  align-items: flex-start;
+  gap: 6mm;
   margin: 3mm 0;
-}}
-.maq {{
   break-inside: avoid;
   page-break-inside: avoid;
-  display: inline-block;
-  width: 100%;
-  margin: 0 0 3mm;
+}}
+.maq {{
+  flex: 1 1 0;
+  min-width: 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin: 0;
 }}
 .maq-legende {{
   font-size: 8pt;
@@ -164,7 +176,35 @@ body {{
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }}
-.maq-burger {{ font-size: 10pt; padding: 1.5mm 2mm; }}
+/*  Le bouton du menu est DESSINÉ et encadré, pour ressembler à un bouton. Il
+    portait le caractère ☰, qui se lit comme une décoration — et ne dit rien à
+    qui n'a jamais fait le rapprochement, c'est-à-dire au lecteur de ce guide. */
+.maq-burger {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1mm 1.5mm;
+  padding: .8mm;
+  border: 1px solid var(--border);
+  border-radius: 1.5mm;
+  background: #fff;
+  color: var(--navy);
+}}
+/*  La légende du bouton : sous la maquette qui le montre, jamais ailleurs. */
+.maq-explication {{
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5mm;
+  margin: 1.5mm 0 0;
+  padding: 1.5mm 2mm;
+  border-left: .8mm solid var(--gold);
+  background: #fdf8ef;
+  font-size: 7.5pt;
+  color: var(--muted);
+  line-height: 1.4;
+  break-inside: avoid;
+}}
+.maq-explication-icone {{ color: var(--gold); }}
 .maq-liste {{ list-style: none; margin: 0; padding: 1mm; }}
 .maq-item {{
   display: flex;

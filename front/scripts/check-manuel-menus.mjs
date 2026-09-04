@@ -134,6 +134,58 @@ for (const m of nav.matchAll(/if \(href === '([^']+)'\)/g)) {
 	}
 }
 
+// ── Les DEUX MAQUETTES du menu (04/09/2026) ────────────────────────────────
+//  Elles montrent le même menu à deux endroits : celui de l'ordinateur, toujours
+//  affiché, et celui du téléphone, replié. C'est la COMPARAISON qui fait le
+//  propos — si les deux listes divergent, le lecteur ne compare plus rien, il lit
+//  deux menus dont l'un est faux, sans savoir lequel.
+//
+//  ⚠️ On ne vérifie PAS que les maquettes citent les mêmes routes que la grille :
+//  une maquette est une illustration, elle peut légitimement s'arrêter avant la
+//  fin. Ce qu'on exige, c'est qu'elles soient d'accord ENTRE ELLES.
+const duo = manuel.match(/<div class="maq-duo">([\s\S]*?)<\/div>\s*<p class="maq-note"/);
+if (!duo) {
+	erreurs.push('les deux maquettes du menu sont introuvables (`.maq-duo`)');
+} else {
+	const figures = duo[1].split('<figure class="maq">').slice(1);
+	if (figures.length !== 2) {
+		erreurs.push(`${figures.length} maquette(s) de menu au lieu de 2`);
+	} else {
+		const compte = (f) => (f.match(/class="maq-item/g) || []).length;
+		const [bureau, mobile] = figures.map(compte);
+		//  Cas zéro : deux listes vides seraient « d’accord », et ne montreraient rien.
+		if (bureau < 5 || mobile < 5) {
+			erreurs.push(`maquettes quasi vides (${bureau} et ${mobile} entrées) — rien à comparer`);
+		} else if (bureau !== mobile) {
+			erreurs.push(
+				`les deux maquettes divergent : ${bureau} entrées sur ordinateur, ` +
+					`${mobile} sur téléphone — c'est pourtant le même menu`,
+			);
+		}
+
+		//  🔴 LE BOUTON DU TÉLÉPHONE DOIT ÊTRE DESSINÉ ET EXPLIQUÉ (04/09/2026).
+		//  Il portait le caractère ☰, qui ne dit rien à qui n'a jamais fait le
+		//  rapprochement — c'est-à-dire au lecteur de ce guide, qui n'est pas
+		//  informaticien. Un symbole que le lecteur doit déjà connaître n'explique
+		//  rien : il trie ceux qui savaient déjà.
+		const tel = figures[1];
+		if (!/class="maq-burger"[^>]*>\s*<svg/.test(tel)) {
+			erreurs.push(
+				"le bouton du menu téléphone n'est pas dessiné (un caractère ne s'imprime pas pareil, et ne s'explique pas)",
+			);
+		}
+		//  ⚠️ L'attribut ENTIER, pas la sous-chaîne : `maq-explication-icone` la
+		//  contient, et le contrôle restait vert sur une explication supprimée dont
+		//  il ne subsistait que l'icône. Trouvé en éprouvant le contrôle, pas en le
+		//  relisant.
+		if (!tel.includes('class="maq-explication"')) {
+			erreurs.push(
+				'le bouton du menu téléphone est montré sans être expliqué (`.maq-explication` dans sa figure)',
+			);
+		}
+	}
+}
+
 if (erreurs.length > 0) {
 	console.error('✗ Le manuel et le code ne disent pas la même chose des menus :');
 	for (const e of erreurs) console.error(`    ${e}`);
