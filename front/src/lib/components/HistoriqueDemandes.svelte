@@ -35,30 +35,32 @@
 {#if !chargement && demandes.length > 0}
 	<details class="hd-bloc">
 		<summary class="hd-resume">Historique des demandes ({demandes.length})</summary>
-		<table class="table hd-table">
-			<thead>
-				<tr><th>Date</th><th>Changement demandé</th><th>Statut</th><th>Motif refus</th></tr>
-			</thead>
-			<tbody>
-				{#each demandes as d (d.id)}
-					<tr>
-						<td>{fmtDate(d.cree_le)}</td>
-						<td>
-							{#if d.statut_souhaite}{statutLabels[d.statut_souhaite] ?? d.statut_souhaite}{/if}
-							{#if d.statut_souhaite && d.batiment_nom_souhaite}&nbsp;/
-							{/if}
-							{#if d.batiment_nom_souhaite}{d.batiment_nom_souhaite}{/if}
-						</td>
-						<td
-							><span class="badge {STATUT_DEMANDE_BADGE[d.statut_demande] ?? 'badge-gray'}"
-								>{STATUT_DEMANDE_LABEL[d.statut_demande] ?? d.statut_demande}</span
-							></td
-						>
-						<td class="hd-motif">{d.motif_refus ?? '—'}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="table-wrap">
+			<table class="table hd-table">
+				<thead>
+					<tr><th>Date</th><th>Changement demandé</th><th>Statut</th><th>Motif refus</th></tr>
+				</thead>
+				<tbody>
+					{#each demandes as d (d.id)}
+						<tr>
+							<td>{fmtDate(d.cree_le)}</td>
+							<td>
+								{#if d.statut_souhaite}{statutLabels[d.statut_souhaite] ?? d.statut_souhaite}{/if}
+								{#if d.statut_souhaite && d.batiment_nom_souhaite}&nbsp;/
+								{/if}
+								{#if d.batiment_nom_souhaite}{d.batiment_nom_souhaite}{/if}
+							</td>
+							<td
+								><span class="badge {STATUT_DEMANDE_BADGE[d.statut_demande] ?? 'badge-gray'}"
+									>{STATUT_DEMANDE_LABEL[d.statut_demande] ?? d.statut_demande}</span
+								></td
+							>
+							<td class="hd-motif">{d.motif_refus ?? '—'}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</details>
 {/if}
 

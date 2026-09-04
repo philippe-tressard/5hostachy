@@ -1025,6 +1025,21 @@ jobs:
         working-directory: front
         run: npm run lint:each-key
 
+      - name: Tableaux dans un conteneur défilant (responsive)
+        # 🔴 Un `<table>` ne se comprime pas, et `normes.css` pose même
+        # `white-space: nowrap` sur ses cellules sous 767 px — à raison, une date
+        # coupée en deux est illisible. Sa largeur est donc incompressible.
+        #
+        # Or `socle.css` porte `body { overflow-x: hidden }`. Les deux ensemble
+        # donnent le pire résultat : le tableau dépasse l'écran ET le dépassement
+        # est masqué. Les dernières colonnes deviennent INATTEIGNABLES — pas de
+        # barre, pas de geste. Un débordement visible se contourne, celui-là non.
+        #
+        # Cinq tableaux y échappaient au 04/09/2026. Personne ne l'avait vu :
+        # sur un grand écran, tout va bien.
+        working-directory: front
+        run: npm run lint:tableaux
+
       - name: L'éditeur riche suit l'API de la version de Tiptap installée
         # 🔴 La montée 2 → 3 (#724, correctif de GHSA-cp6q-959q-f8rh) a cassé deux
         # choses qui ne se voient PAS à l'exécution : `setContent(html, false)`

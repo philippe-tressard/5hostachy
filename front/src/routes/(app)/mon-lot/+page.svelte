@@ -1090,61 +1090,65 @@
 											Aucun objet enregistré.
 										</p>
 									{:else}
-										<table class="table" style="font-size:0.85rem">
-											<thead>
-												<tr>
-													<th>Type</th>
-													<th>Libellé</th>
-													<th>Qté</th>
-													<th>Référence</th>
-													<th>Statut</th>
-													<th>Remis le</th>
-													<th>Rendu le</th>
-													{#if bail.statut !== 'termine'}
-														<th></th>
-													{/if}
-												</tr>
-											</thead>
-											<tbody>
-												{#each bail.objets as objet (objet.id)}
+										<div class="table-wrap">
+											<table class="table" style="font-size:0.85rem">
+												<thead>
 													<tr>
-														<td>{typeLabel[objet.type] ?? objet.type}</td>
-														<td>{objet.libelle}</td>
-														<td style="text-align:center">{objet.quantite}</td>
-														<td>{objet.reference ?? '—'}</td>
-														<td>
-															<span class="badge {statutObjetBadge[objet.statut] ?? 'badge-gray'}">
-																{statutObjetLabel[objet.statut] ?? objet.statut}
-															</span>
-														</td>
-														<td>{fmt(objet.remis_le)}</td>
-														<td>{fmt(objet.rendu_le)}</td>
+														<th>Type</th>
+														<th>Libellé</th>
+														<th>Qté</th>
+														<th>Référence</th>
+														<th>Statut</th>
+														<th>Remis le</th>
+														<th>Rendu le</th>
 														{#if bail.statut !== 'termine'}
-															<td>
-																<div style="display:flex;gap:0.35rem">
-																	{#if objet.statut === 'en_possession'}
-																		<button
-																			class="btn btn-xs"
-																			title="Enregistrer retour / perte"
-																			on:click={() => {
-																				objetRetour = objet;
-																				retourDate = '';
-																				retourPerdu = false;
-																			}}>↩</button
-																		>
-																	{/if}
-																	<button
-																		class="btn btn-xs btn-danger"
-																		title="Supprimer"
-																		on:click={() => supprimerObjet(bail, objet)}>✕</button
-																	>
-																</div>
-															</td>
+															<th></th>
 														{/if}
 													</tr>
-												{/each}
-											</tbody>
-										</table>
+												</thead>
+												<tbody>
+													{#each bail.objets as objet (objet.id)}
+														<tr>
+															<td>{typeLabel[objet.type] ?? objet.type}</td>
+															<td>{objet.libelle}</td>
+															<td style="text-align:center">{objet.quantite}</td>
+															<td>{objet.reference ?? '—'}</td>
+															<td>
+																<span
+																	class="badge {statutObjetBadge[objet.statut] ?? 'badge-gray'}"
+																>
+																	{statutObjetLabel[objet.statut] ?? objet.statut}
+																</span>
+															</td>
+															<td>{fmt(objet.remis_le)}</td>
+															<td>{fmt(objet.rendu_le)}</td>
+															{#if bail.statut !== 'termine'}
+																<td>
+																	<div style="display:flex;gap:0.35rem">
+																		{#if objet.statut === 'en_possession'}
+																			<button
+																				class="btn btn-xs"
+																				title="Enregistrer retour / perte"
+																				on:click={() => {
+																					objetRetour = objet;
+																					retourDate = '';
+																					retourPerdu = false;
+																				}}>↩</button
+																			>
+																		{/if}
+																		<button
+																			class="btn btn-xs btn-danger"
+																			title="Supprimer"
+																			on:click={() => supprimerObjet(bail, objet)}>✕</button
+																		>
+																	</div>
+																</td>
+															{/if}
+														</tr>
+													{/each}
+												</tbody>
+											</table>
+										</div>
 									{/if}
 								</div>
 							</div>
@@ -1294,65 +1298,67 @@
 						{/each}
 					</div>
 				{/if}
-				<table class="table" style="font-size:0.85rem">
-					<thead>
-						<tr>
-							<th style="width:2rem"></th>
-							<th>Lot source</th>
-							<th>Type</th>
-							<th>Code</th>
-							<th>Statut</th>
-							<th>Localisation</th>
-							<th>Info</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each accesFiltres as acces (acces.type + acces.id)}
+				<div class="table-wrap">
+					<table class="table" style="font-size:0.85rem">
+						<thead>
 							<tr>
-								<td>
-									{#if isSelectable(acces)}
-										<input
-											type="checkbox"
-											checked={acces.type === 'vigik'
-												? selectionVigik.has(acces.id)
-												: selectionTc.has(acces.id)}
-											on:change={() => toggleAcces(acces.type, acces.id)}
-										/>
-									{/if}
-								</td>
-								<td
-									>{acces.lot_label ?? '—'}
-									<span class="badge badge-gray" style="margin-left:.25rem"
-										>{lotTypeLabel(acces.lot_type)}</span
-									></td
-								>
-								<td>{acces.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
-								<td style="font-family:monospace">{acces.code}</td>
-								<td>
-									<span class="badge {acces.statut === 'actif' ? 'badge-green' : 'badge-gray'}">
-										{acces.statut}
-									</span>
-								</td>
-								<td>
-									{#if acces.chez_locataire}
-										<span class="badge badge-yellow">Chez locataire</span>
-									{:else}
-										<span class="badge badge-blue">Chez bailleur</span>
-									{/if}
-								</td>
-								<td>
-									{#if acces.recommande}
-										<span class="badge badge-green">Recommandé</span>
-									{:else if acces.motif_non_eligible}
-										<span class="badge badge-gray" title={acces.motif_non_eligible}
-											>{acces.motif_non_eligible}</span
-										>
-									{/if}
-								</td>
+								<th style="width:2rem"></th>
+								<th>Lot source</th>
+								<th>Type</th>
+								<th>Code</th>
+								<th>Statut</th>
+								<th>Localisation</th>
+								<th>Info</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{#each accesFiltres as acces (acces.type + acces.id)}
+								<tr>
+									<td>
+										{#if isSelectable(acces)}
+											<input
+												type="checkbox"
+												checked={acces.type === 'vigik'
+													? selectionVigik.has(acces.id)
+													: selectionTc.has(acces.id)}
+												on:change={() => toggleAcces(acces.type, acces.id)}
+											/>
+										{/if}
+									</td>
+									<td
+										>{acces.lot_label ?? '—'}
+										<span class="badge badge-gray" style="margin-left:.25rem"
+											>{lotTypeLabel(acces.lot_type)}</span
+										></td
+									>
+									<td>{acces.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
+									<td style="font-family:monospace">{acces.code}</td>
+									<td>
+										<span class="badge {acces.statut === 'actif' ? 'badge-green' : 'badge-gray'}">
+											{acces.statut}
+										</span>
+									</td>
+									<td>
+										{#if acces.chez_locataire}
+											<span class="badge badge-yellow">Chez locataire</span>
+										{:else}
+											<span class="badge badge-blue">Chez bailleur</span>
+										{/if}
+									</td>
+									<td>
+										{#if acces.recommande}
+											<span class="badge badge-green">Recommandé</span>
+										{:else if acces.motif_non_eligible}
+											<span class="badge badge-gray" title={acces.motif_non_eligible}
+												>{acces.motif_non_eligible}</span
+											>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 				{#if accesListe.some((a) => a.chez_locataire)}
 					<button class="btn btn-sm" style="margin-top:0.75rem" on:click={recupererAcces}>
 						↩ Tout récupérer
