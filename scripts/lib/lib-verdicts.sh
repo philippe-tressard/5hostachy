@@ -52,15 +52,54 @@
 # ⚠️ DEPLOIEMENT n'est pas un vert. Un build qui échoue laisse le site KO, et
 # l'exécution suivante — quinze minutes plus tard, verrou relâché — le dira en
 # FAIL. La dérogation ne survit donc pas à son objet.
+#
+# 🔴 LA BASCULE EST LA SECONDE OPÉRATION NORMALE QUI COUPE LE SITE (04/09/2026).
+#
+# Le 04/09 à 02:06, TROIS contrôles ont crié en même temps — site 503, aucun
+# conteneur nulle part, cloudflared sur aucun nœud. Les trois décrivaient
+# exactement le milieu d'une bascule réussie : entre 02:05:46 (« Cloudflared
+# local stoppé ») et 02:06:33 (« URL publique OK »), soit **47 secondes**. Le
+# journal de bascule dit 7/7, base intègre, site rétabli.
+#
+# ⚠️ Le verrou existait DÉJÀ et était DÉJÀ lu : `.bascule-lock`, que C6 examine
+# pour dire « opération en cours ». Trois contrôles voisins l'ignoraient. C'est
+# le même oubli que le verrou de build avant le 01/09 — écrire un contrôle sans
+# relire ce que son voisin a appris, c'est refaire son défaut.
+#
+# ⚠️ La tolérance est BORNÉE par l'âge du verrou (`LOCK_STALE_MIN`) : une bascule
+# figée depuis vingt minutes n'est plus une opération en cours, c'est une panne,
+# et le FAIL doit alors partir. Sans cette borne, un verrou oublié rendrait les
+# trois contrôles définitivement muets.
 verdict_site_public() {
-  local code1="${1:-}" code2="${2:-}" deploiement="${3:-}"
+  local code1="${1:-}" code2="${2:-}" deploiement="${3:-}" bascule="${4:-}"
   [ -z "$code1" ] && { echo "INCONNU"; return; }
   [ "$code1" = "200" ] && { echo "OK"; return; }
   [ "$code2" = "200" ] && { echo "TRANSITOIRE:$code1"; return; }
+  [ "$bascule" = "oui" ] && { echo "BASCULE:$code1"; return; }
   [ "$deploiement" = "oui" ] && { echo "DEPLOIEMENT:$code1"; return; }
   #  On rend le code de la SECONDE sonde : c'est le plus récent, donc l'état à
   #  l'instant de la décision. Vide (sonde impossible) → on garde le premier.
   echo "KO:${code2:-$code1}"
+}
+
+# ── Une bascule est-elle EN COURS ? (PURE — testable) ────────────────────────
+#
+# Rend "oui" si l'un des deux nœuds porte un `.bascule-lock` récent. « Récent »
+# est borné : au-delà de `stale_min`, le verrou est orphelin — une bascule figée
+# est une panne, pas une opération en cours, et les contrôles doivent reparler.
+#
+# ⚠️ Un verrou dont l'horodatage est absent ou illisible (0) ne vaut PAS « en
+# cours » : on ne tait un contrôle que sur une preuve, jamais sur une absence.
+bascule_en_cours() {  # $1,$2 = mtimes des verrous · $3 = maintenant · $4 = seuil min
+  local a="${1:-0}" b="${2:-0}" maintenant="${3:-0}" stale_min="${4:-20}" mtime age
+  for mtime in "$a" "$b"; do
+    case "$mtime" in ''|*[!0-9]*) continue ;; esac
+    [ "$mtime" -le 0 ] && continue
+    age=$(( (maintenant - mtime) / 60 ))
+    [ "$age" -lt 0 ] && continue
+    [ "$age" -lt "$stale_min" ] && { echo "oui"; return; }
+  done
+  echo "non"
 }
 
 # ── Empreinte des scripts planifiés dans un crontab (PURE — testable) ────────

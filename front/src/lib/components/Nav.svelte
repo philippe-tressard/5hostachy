@@ -163,12 +163,12 @@
 			<span class="nav-icon"><Icon name="user" size={18} /></span>
 			<span class="nav-label">{$currentUser?.prenom ?? t['/profil']}</span>
 		</a>
-		<!--  🔴 ENVELOPPE + `:global()` BORNÉ : le style de `.nav-item` est scopé à
-		      cette page et n'atteint PAS le `<a>` rendu par le composant — la
-		      règle serait morte et les deux liens s'afficheraient nus.
-		      `lint:classe-relayee` l'a refusé, et il a bien fait. -->
+		<!--  ⚠️ Le menu principal ne porte QUE le guide en ligne (04/09/2026,
+		      arbitré à l'écran). Le PDF reste atteignable depuis le manuel et
+		      depuis la FAQ : deux entrées « Guide » côte à côte encombraient un
+		      menu déjà long, pour un document qu'on télécharge une fois. -->
 		<div class="enveloppe-guide">
-			<LiensGuide classe="nav-item" taille={18} />
+			<LiensGuide classe="nav-item" taille={18} avecPdf={false} />
 		</div>
 		<button class="nav-item nav-logout" on:click={logout} type="button">
 			<span class="nav-icon"><Icon name="log-out" size={18} /></span>

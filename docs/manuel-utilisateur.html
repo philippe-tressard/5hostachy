@@ -143,6 +143,22 @@
     }
 
     .topbar-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+    .topbar-actions { display: flex; align-items: center; gap: .6rem; }
+    .topbar-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f766e;
+      background: #f0fdfa;
+      border: 1px solid #99f6e4;
+      border-radius: 999px;
+      padding: .3rem .75rem;
+      text-decoration: none;
+    }
+    .topbar-pdf:hover { border-color: #0d9488; }
+
     .topbar-badge {
       background: #eff6ff;
       color: #2563eb;
@@ -860,7 +876,16 @@
   ══════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-title">Guide pratique copropriétaire</div>
-    <span class="topbar-badge">Version 3.87 · Septembre 2026</span>
+    <div class="topbar-actions">
+      <!--  Le lien PDF vit ICI depuis le 04/09/2026 : il occupait une seconde
+            entrée du menu de gauche, qui en compte déjà quatorze. En haut à
+            droite, il est vu par qui ouvre le guide — c'est-à-dire exactement
+            qui pourrait vouloir l'emporter. -->
+      <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
+        &#x2B07; Version PDF
+      </a>
+      <span class="topbar-badge">Version 3.88 · Septembre 2026</span>
+    </div>
   </header>
 
   <!-- ══════════════════════════════════
@@ -1196,7 +1221,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.87</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.88</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

@@ -278,3 +278,63 @@ def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
     }
     manquants = [ou for ou, texte in endroits.items() if "/api/manuel/pdf" not in texte]
     assert not manquants, "le lien vers le PDF a disparu de : " + ", ".join(manquants)
+
+
+# ── Le cache : servir vite, sans jamais servir périmé ────────────────────────
+
+def test_le_cache_sert_le_MEME_pdf_et_ne_recompose_pas(manuel, monkeypatch):
+    """🔴 Signalé à l'écran : *« plus de 10 secondes avec une page vide »*.
+
+    WeasyPrint recomposait tout le document à chaque clic. Le résultat ne dépend
+    pourtant que du manuel, du site et de la date — aucun ne change entre deux
+    clics.
+    """
+    from app.utils import manuel_pdf as m
+
+    m._CACHE.clear()
+    appels = []
+    monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
+
+    a = m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
+                             edite_le=date(2026, 9, 4))
+    b = m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
+                             edite_le=date(2026, 9, 4))
+    assert a == b
+    assert len(appels) == 1, "le document a été recomposé alors qu'il n'a pas changé"
+
+
+def test_un_manuel_MODIFIE_produit_un_pdf_neuf(manuel, monkeypatch):
+    """⚠️ La clé est l'EMPREINTE du manuel, jamais sa version.
+
+    Une retouche livrée sans bump de version doit produire un PDF neuf. Se fier
+    au numéro aurait servi un document périmé sans que rien ne le signale — le
+    défaut qu'on corrige partout ailleurs dans ce dépôt.
+    """
+    from app.utils import manuel_pdf as m
+
+    m._CACHE.clear()
+    appels = []
+    monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
+
+    m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
+                         edite_le=date(2026, 9, 4))
+    m.generer_manuel_pdf("5Hostachy", "https://x.fr",
+                         html_manuel=manuel + "<!-- retouche -->",
+                         edite_le=date(2026, 9, 4))
+    assert len(appels) == 2, "un manuel modifié a servi le PDF de l'ancien"
+
+
+def test_le_cache_est_BORNE(manuel, monkeypatch):
+    """Une boucle anormale ne doit pas gonfler la mémoire d'un conteneur.
+
+    La date change à minuit : deux entrées suffisent en régime normal. La borne
+    existe pour l'anormal, pas pour le nominal.
+    """
+    from app.utils import manuel_pdf as m
+
+    m._CACHE.clear()
+    monkeypatch.setattr(m, "html_to_pdf", lambda doc: b"%PDF-x")
+    for jour in range(1, 12):
+        m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
+                             edite_le=date(2026, 9, jour))
+    assert len(m._CACHE) <= m._CACHE_MAX
