@@ -130,46 +130,48 @@
 	{#if batiments.length > 0}
 		<div style="border-top:1px solid var(--color-border);padding-top:1rem">
 			<p class="info-label" style="margin-bottom:.6rem">Composition</p>
-			<table class="batiment-table">
-				<thead>
-					<tr>
-						<th>Bâtiment</th>
-						<th>Parkings</th>
-						<th>Caves</th>
-						<th>Appartements</th>
-						<th>Loc. commerciaux</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each batiments as b (b.id)}
+			<div class="table-wrap">
+				<table class="batiment-table">
+					<thead>
 						<tr>
-							<td style="font-weight:600">Bât. {b.numero}</td>
-							<td>{(b.nb_parkings ?? 0) > 0 ? b.nb_parkings : '—'}</td>
-							<td>{(b.nb_caves ?? 0) > 0 ? b.nb_caves : '—'}</td>
-							<td>{(b.nb_appartements ?? 0) > 0 ? b.nb_appartements : '—'}</td>
-							<td>{(b.nb_locaux_commerciaux ?? 0) > 0 ? b.nb_locaux_commerciaux : '—'}</td>
+							<th>Bâtiment</th>
+							<th>Parkings</th>
+							<th>Caves</th>
+							<th>Appartements</th>
+							<th>Loc. commerciaux</th>
 						</tr>
-					{/each}
-					{#if hasOrphanLots}
+					</thead>
+					<tbody>
+						{#each batiments as b (b.id)}
+							<tr>
+								<td style="font-weight:600">Bât. {b.numero}</td>
+								<td>{(b.nb_parkings ?? 0) > 0 ? b.nb_parkings : '—'}</td>
+								<td>{(b.nb_caves ?? 0) > 0 ? b.nb_caves : '—'}</td>
+								<td>{(b.nb_appartements ?? 0) > 0 ? b.nb_appartements : '—'}</td>
+								<td>{(b.nb_locaux_commerciaux ?? 0) > 0 ? b.nb_locaux_commerciaux : '—'}</td>
+							</tr>
+						{/each}
+						{#if hasOrphanLots}
+							<tr>
+								<td style="color:var(--color-text-muted);font-style:italic">Communs</td>
+								<td>{copropriete.nb_parkings_communs}</td>
+								<td>—</td>
+								<td>—</td>
+								<td>—</td>
+							</tr>
+						{/if}
+					</tbody>
+					<tfoot>
 						<tr>
-							<td style="color:var(--color-text-muted);font-style:italic">Communs</td>
-							<td>{copropriete.nb_parkings_communs}</td>
-							<td>—</td>
-							<td>—</td>
-							<td>—</td>
+							<td>Total</td>
+							<td>{totalParking > 0 ? totalParking : '—'}</td>
+							<td>{totalCave > 0 ? totalCave : '—'}</td>
+							<td>{totalAppart > 0 ? totalAppart : '—'}</td>
+							<td>{totalLocaux > 0 ? totalLocaux : '—'}</td>
 						</tr>
-					{/if}
-				</tbody>
-				<tfoot>
-					<tr>
-						<td>Total</td>
-						<td>{totalParking > 0 ? totalParking : '—'}</td>
-						<td>{totalCave > 0 ? totalCave : '—'}</td>
-						<td>{totalAppart > 0 ? totalAppart : '—'}</td>
-						<td>{totalLocaux > 0 ? totalLocaux : '—'}</td>
-					</tr>
-				</tfoot>
-			</table>
+					</tfoot>
+				</table>
+			</div>
 		</div>
 	{/if}
 </div>

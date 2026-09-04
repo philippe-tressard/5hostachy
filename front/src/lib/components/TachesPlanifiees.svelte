@@ -377,76 +377,80 @@
 											Aucune exécution enregistrée pour cette tâche.
 										</p>
 									{:else}
-										<table class="table" style="font-size:.78rem;margin:.25rem 0">
-											<thead>
-												<tr>
-													<th>Date</th>
-													{#if aValeur(lignes, 'noeud')}<th>Nœud</th>{/if}
-													{#if aValeur(lignes, 'declenchee_par')}<th>Déclenchement</th>{/if}
-													<th>Statut</th>
-													{#if aValeur(lignes, 'jours_agreges')}<th>Événements agrégés</th>{/if}
-													{#if aPurges(lignes)}<th>Purges</th>{/if}
-													{#if aValeur(lignes, 'duree_secondes')}<th>Durée</th>{/if}
-													{#if aValeur(lignes, 'taille_octets')}<th>Taille</th>{/if}
-													{#if aValeur(lignes, 'taille_db_octets')}<th>Taille DB</th>{/if}
-													{#if aValeur(lignes, 'details')}<th>Détail</th>{/if}
-												</tr>
-											</thead>
-											<tbody>
-												{#each lignes as l (l)}
+										<div class="table-wrap">
+											<table class="table" style="font-size:.78rem;margin:.25rem 0">
+												<thead>
 													<tr>
-														<td>{fmtDatetime(l.cree_le)}</td>
-														{#if aValeur(lignes, 'noeud')}
-															<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
-														{/if}
-														{#if aValeur(lignes, 'declenchee_par')}
-															<td style="color:var(--color-text-muted)"
-																>{l.declenchee_par ?? '—'}</td
-															>
-														{/if}
-														<td>
-															<span
-																class="badge {l.statut === 'erreur' || l.statut === 'echouee'
-																	? 'badge-red'
-																	: 'badge-green'}"
-															>
-																{l.statut ?? '—'}
-															</span>
-															<!--  Le motif de l'échec était porté par la carte supprimée avec
-															      #299 : sans lui, un statut « erreur » ne dit pas pourquoi. -->
-															{#if l.erreur}<span
-																	title={l.erreur}
-																	style="margin-left:.4rem;cursor:help">⚠️</span
-																>{/if}
-														</td>
-														{#if aValeur(lignes, 'jours_agreges')}
-															<td style="color:var(--color-text-muted)">{fmtAgrege(l)}</td>
-														{/if}
-														{#if aPurges(lignes)}
-															<td style="color:var(--color-text-muted)">{totalPurges(l)} lignes</td>
-														{/if}
-														{#if aValeur(lignes, 'duree_secondes')}
-															<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
-														{/if}
-														{#if aValeur(lignes, 'taille_octets')}
-															<td>{fmtOctets(l.taille_octets)}</td>
-														{/if}
-														{#if aValeur(lignes, 'taille_db_octets')}
-															<td>{fmtOctets(l.taille_db_octets)}</td>
-														{/if}
-														{#if aValeur(lignes, 'details')}
-															<td style="font-size:.72rem;color:var(--color-text-muted)">
-																{l.details
-																	? Object.entries(l.details)
-																			.map(([k, v]) => `${k}: ${v}`)
-																			.join(' · ')
-																	: '—'}
-															</td>
-														{/if}
+														<th>Date</th>
+														{#if aValeur(lignes, 'noeud')}<th>Nœud</th>{/if}
+														{#if aValeur(lignes, 'declenchee_par')}<th>Déclenchement</th>{/if}
+														<th>Statut</th>
+														{#if aValeur(lignes, 'jours_agreges')}<th>Événements agrégés</th>{/if}
+														{#if aPurges(lignes)}<th>Purges</th>{/if}
+														{#if aValeur(lignes, 'duree_secondes')}<th>Durée</th>{/if}
+														{#if aValeur(lignes, 'taille_octets')}<th>Taille</th>{/if}
+														{#if aValeur(lignes, 'taille_db_octets')}<th>Taille DB</th>{/if}
+														{#if aValeur(lignes, 'details')}<th>Détail</th>{/if}
 													</tr>
-												{/each}
-											</tbody>
-										</table>
+												</thead>
+												<tbody>
+													{#each lignes as l (l)}
+														<tr>
+															<td>{fmtDatetime(l.cree_le)}</td>
+															{#if aValeur(lignes, 'noeud')}
+																<td>{l.noeud ? l.noeud.toUpperCase() : '—'}</td>
+															{/if}
+															{#if aValeur(lignes, 'declenchee_par')}
+																<td style="color:var(--color-text-muted)"
+																	>{l.declenchee_par ?? '—'}</td
+																>
+															{/if}
+															<td>
+																<span
+																	class="badge {l.statut === 'erreur' || l.statut === 'echouee'
+																		? 'badge-red'
+																		: 'badge-green'}"
+																>
+																	{l.statut ?? '—'}
+																</span>
+																<!--  Le motif de l'échec était porté par la carte supprimée avec
+															      #299 : sans lui, un statut « erreur » ne dit pas pourquoi. -->
+																{#if l.erreur}<span
+																		title={l.erreur}
+																		style="margin-left:.4rem;cursor:help">⚠️</span
+																	>{/if}
+															</td>
+															{#if aValeur(lignes, 'jours_agreges')}
+																<td style="color:var(--color-text-muted)">{fmtAgrege(l)}</td>
+															{/if}
+															{#if aPurges(lignes)}
+																<td style="color:var(--color-text-muted)"
+																	>{totalPurges(l)} lignes</td
+																>
+															{/if}
+															{#if aValeur(lignes, 'duree_secondes')}
+																<td>{l.duree_secondes != null ? `${l.duree_secondes} s` : '—'}</td>
+															{/if}
+															{#if aValeur(lignes, 'taille_octets')}
+																<td>{fmtOctets(l.taille_octets)}</td>
+															{/if}
+															{#if aValeur(lignes, 'taille_db_octets')}
+																<td>{fmtOctets(l.taille_db_octets)}</td>
+															{/if}
+															{#if aValeur(lignes, 'details')}
+																<td style="font-size:.72rem;color:var(--color-text-muted)">
+																	{l.details
+																		? Object.entries(l.details)
+																				.map(([k, v]) => `${k}: ${v}`)
+																				.join(' · ')
+																		: '—'}
+																</td>
+															{/if}
+														</tr>
+													{/each}
+												</tbody>
+											</table>
+										</div>
 									{/if}
 									{#if LANCEMENT[t.tache]}
 										<!--  Bouton à DROITE, comme dans les deux cartes supprimées avec #299
