@@ -203,6 +203,23 @@
         reverse_proxy front:3000
     }
 
+    # 🔴 LE MANUEL, pour la même raison — signalé à l'écran le 04/09/2026 :
+    # « je ne vois pas le menu générer un PDF » alors que la production servait
+    # bien la bonne version. Le navigateur montrait la 3.87, l'origine la 3.88.
+    #
+    # Ce fichier ne portait AUCUN `Cache-Control` : le navigateur applique alors
+    # sa propre heuristique, calculée sur `Last-Modified`. Un document qui change
+    # à chaque lot et qu'on sert sans directive sera lu périmé — et personne ne
+    # le sait, puisque la page s'affiche parfaitement.
+    #
+    # ⚠️ C'est la troisième fois que ce défaut se manifeste sous une autre forme
+    # (bandeau PWA v2.24.0, `sw.js` le 14/08). Le remède est le même : `no-cache`
+    # n'interdit pas de stocker, il impose de revalider.
+    handle /manuel-utilisateur.html {
+        header >Cache-Control "no-cache, must-revalidate"
+        reverse_proxy front:3000
+    }
+
     # Frontend SvelteKit (SSR)
     handle {
         reverse_proxy front:3000

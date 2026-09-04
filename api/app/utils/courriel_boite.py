@@ -298,6 +298,18 @@ def relever() -> dict[str, int]:
     try:
         cfg = config_imap(session)
         if (cfg.get("imap_enabled") or "").lower() not in ("1", "true", "oui"):
+            #  🔴 UNE TRACE MÊME QUAND ON NE FAIT RIEN (04/09/2026).
+            #
+            #  La relève ne journalisait que si elle traitait un message. Silence
+            #  = « désactivée » ou « activée, boîte vide » — deux états qu'on ne
+            #  pouvait pas distinguer, y compris en lisant les journaux. À la
+            #  question « est-ce que ça tourne ? », il n'y avait pas de réponse.
+            #
+            #  C'est le CONTRAT DE BATTEMENT déjà posé pour `auto-deploy.sh` (C14,
+            #  31/07/2026) : aucun chemin ne doit être muet, surtout celui qui ne
+            #  fait rien. `debug` et non `info` : c'est une trace de diagnostic,
+            #  pas un événement.
+            logger.debug("Réponses par courriel : relève désactivée (imap_enabled)")
             return comptes
 
         plancher = PLANCHER_PAR_DEFAUT
@@ -336,7 +348,11 @@ def relever() -> dict[str, int]:
     finally:
         session.close()
 
+    #  Un passage sans message est un fait, pas un non-événement : c'est ce qui
+    #  prouve que la relève est vivante et que la boîte est simplement vide.
     if any(comptes.values()):
         logger.info("Réponses par courriel — écrites=%d refusées=%d ignorées=%d",
                     comptes[ACCEPTE], comptes[REFUSE], comptes[IGNORE])
+    else:
+        logger.debug("Réponses par courriel : relève effectuée, aucun message")
     return comptes

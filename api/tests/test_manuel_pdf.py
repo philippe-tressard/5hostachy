@@ -338,3 +338,43 @@ def test_le_cache_est_BORNE(manuel, monkeypatch):
         m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel,
                              edite_le=date(2026, 9, jour))
     assert len(m._CACHE) <= m._CACHE_MAX
+
+
+# ── Le manuel doit être REVALIDÉ, jamais servi de mémoire ────────────────────
+
+def test_le_manuel_impose_la_revalidation_au_navigateur():
+    """🔴 Signalé le 04/09/2026 : *« je ne vois pas le menu générer un PDF »*.
+
+    La production servait la bonne version ; le navigateur affichait la
+    précédente. Le fichier ne portait **aucun** `Cache-Control` — le navigateur
+    applique alors sa propre heuristique, calculée sur `Last-Modified`.
+
+    ⚠️ Un document qui change à chaque lot et qu'on sert sans directive sera lu
+    périmé, **et personne ne le saura** : la page s'affiche parfaitement. C'est la
+    troisième forme de ce défaut ici — bandeau PWA (v2.24.0), `sw.js`
+    (14/08/2026), le manuel aujourd'hui.
+
+    `no-cache` n'interdit pas de stocker : il impose de revalider. Le fichier
+    reste donc en cache local, et un `304` suffit quand il n'a pas changé.
+    """
+    caddy = (_MANUEL.resolve().parents[1] / "Caddyfile").read_text(encoding="utf-8")
+    bloc = re.search(
+        r"handle\s+/manuel-utilisateur\.html\s*\{(.*?)\n    \}", caddy, re.S
+    )
+    assert bloc, (
+        "aucun bloc `handle /manuel-utilisateur.html` : le manuel est servi sans "
+        "directive de cache, donc mis en cache à l'heuristique du navigateur"
+    )
+    directive = re.search(r'header\s+>?Cache-Control\s+"([^"]+)"', bloc.group(1))
+    assert directive, "le bloc du manuel n'impose plus de Cache-Control"
+    valeur = directive.group(1).lower()
+    assert "no-cache" in valeur or "no-store" in valeur, (
+        f"Cache-Control « {directive.group(1)} » laisse servir le manuel de "
+        "mémoire : une version périmée s'affichera sans que rien ne le signale"
+    )
+    #  ⚠️ Le `>` REMPLACE l'en-tête ; sans lui, `header` AJOUTE et la valeur
+    #  d'amont subsiste — défaut constaté sur `sw.js` le 14/08/2026, où
+    #  « max-age=14400 » avait survécu à la fusion.
+    assert ">Cache-Control" in bloc.group(1), (
+        "sans `>`, la directive s'AJOUTE à celle d'amont au lieu de la remplacer"
+    )
