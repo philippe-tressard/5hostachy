@@ -232,9 +232,10 @@ def _sommaire(releve: list[tuple[int, str, str]]) -> str:
 def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
     """Les mentions du feuillet — ce qu'un document imprimé doit porter.
 
-    ⚠️ L'avertissement de péremption n'est pas une formule : un PDF imprimé
-    survit à l'écran qu'il décrit, et c'est le seul endroit où on peut le dire au
-    lecteur qui l'aura sous les yeux dans deux ans.
+    ⚠️ La LICENCE y figure (04/09/2026, à la demande). Le corps du manuel la
+    mentionne déjà, mais un feuillet imprimé se lit par sa fin quand on cherche
+    « qui a fait ça, et sous quelles conditions » : c'est là qu'on regarde, pas
+    au milieu d'une section « À quoi sert ce site ? ».
     """
     return f"""
 <section class="mentions">
@@ -249,6 +250,12 @@ def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str
     <dt>Diffusion</dt>
     <dd>Document à usage interne, destiné aux résidents. Il décrit un site dont
         l'accès est réservé aux personnes inscrites.</dd>
+    <dt>Licence</dt>
+    <dd>Le code source de 5Hostachy est distribué sous licence
+        <strong>MIT</strong> : libre de consultation, de modification et de
+        réutilisation, y compris par une autre copropriété. Le présent document
+        et les contenus publiés dans l'application restent la propriété de leurs
+        auteurs.</dd>
   </dl>
 </section>
 """
