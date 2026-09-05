@@ -45,6 +45,26 @@ settings = get_settings()
 logger = logging.getLogger("email")
 
 
+def _masquer(adresse: str | None) -> str:
+    """`p***@domaine.fr` — assez pour diagnostiquer, pas assez pour ficher.
+
+    🔴 Les journaux portaient l'adresse ENTIÈRE (#777). Ces lignes partent dans
+    les alertes du monitoring et dans les rapports qu'on recopie ailleurs : c'est
+    par là qu'une adresse de résident sort. Le premier caractère et le domaine
+    suffisent à reconnaître un destinataire quand on cherche pourquoi un envoi a
+    échoué.
+
+    ⚠️ L'historique en base garde l'adresse entière : il répond à « qui n'a pas
+    reçu quoi ? », derrière une session admin.
+    """
+    if not adresse:
+        return "(vide)"
+    tete, _, domaine = adresse.partition("@")
+    if not domaine:
+        return "***"
+    return f"{tete[:1]}***@{domaine}"
+
+
 # Mapping code email → clé préférence utilisateur (catégorie_mail)
 # Les codes absents (system, account) sont toujours envoyés.
 #  Les rubriques ont disparu le 14/08/2026 (#339) : le réglage ne se fait plus par
@@ -251,6 +271,125 @@ def _reply_to(smtp_cfg: dict, jeton_reponse: str | None) -> dict[str, str]:
     return {"Reply-To": adresse_de_reponse(jeton_reponse, domaine)}
 
 
+async def _envoyer_modele(
+    code: str,
+    context: dict[str, Any],
+    session: Session,
+    *,
+    to: list[str],
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
+    attachments: list[str] | None = None,
+    jeton_reponse: str | None = None,
+) -> None:
+    """Le tronc commun des deux envois : modèle, rendu, SMTP, journal, nettoyage.
+
+    🔴 `send_email` (103 l.) et `send_email_group` (112 l.) étaient identiques à
+    **68 %** — mesuré. Deux écritures d'une même séquence, donc deux occasions de
+    diverger, et elles avaient déjà divergé : le chemin groupé ne journalisait
+    pas le cas « modèle inactif », abandonnant l'envoi sans laisser de trace.
+
+    Ne reste chez les appelants que ce qui les distingue vraiment : la
+    vérification des **préférences** et la résolution des destinataires.
+
+    ⚠️ La session n'est ni ouverte ni fermée ici — elle appartient à l'appelant,
+    seul à savoir s'il l'a créée.
+    """
+    trace = ", ".join(to + (cc or []))
+
+    template: ModeleEmail | None = session.exec(
+        select(ModeleEmail).where(ModeleEmail.code == code)
+    ).first()
+    if not template or not template.actif:
+        #  JOURNALISE DANS LES DEUX CAS depuis la factorisation : le chemin
+        #  groupe abandonnait en silence, et un envoi qui n'a pas eu lieu sans
+        #  trace est indistinguable d'un envoi qui n'a jamais ete demande.
+        _log_email(session, code, trace, "ignore", erreur="template inactive ou inexistante")
+        return
+
+    ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
+    smtp_cfg = _get_smtp_config(session)
+    fixed_attachments: list[str] = []
+    try:
+        from fastapi_mail import FastMail, MessageSchema
+
+        cfg = connexion_smtp(
+            smtp_cfg,
+            expediteur=adresse_expedition(
+                smtp_cfg, expediteur_du_modele(code, jeton_reponse=jeton_reponse)
+            ),
+        )
+        fm = FastMail(cfg)
+        rendered_subject, full_html = composer_email(
+            template, ctx, site_nom=site_nom, site_url=site_url,
+            email_footer=email_footer, attachments=attachments,
+        )
+        msg_kwargs: dict[str, Any] = dict(
+            subject=rendered_subject,
+            #  Sans destinataire principal, les copies le deviennent : un
+            #  message sans `recipients` ne part pas.
+            recipients=to if to else (cc or []),
+            body=full_html,
+            subtype="html",
+            headers=_reply_to(smtp_cfg, jeton_reponse) or None,
+        )
+        if to and cc:
+            msg_kwargs["cc"] = cc
+        if bcc:
+            msg_kwargs["bcc"] = bcc
+        if attachments:
+            prets, fixed_attachments = _preparer_pieces_jointes(attachments)
+            msg_kwargs["attachments"] = prets
+        await fm.send_message(MessageSchema(**msg_kwargs))
+        _log_email(session, code, trace, "succes", sujet=rendered_subject)
+    except Exception as exc:
+        #  L'ADRESSE EST MASQUEE (#777) : ces lignes partent dans les alertes du
+        #  monitoring et dans les rapports qu'on recopie ailleurs. L'historique
+        #  en base, lui, garde l'adresse entiere — il est derriere une session
+        #  admin, et sert a repondre a « qui n'a pas recu quoi ? ».
+        if len(to) + len(cc or []) > 1:
+            logger.error(
+                "Erreur envoi email groupe [%s] -> %d destinataire(s) : %s",
+                code, len(to) + len(cc or []), exc,
+            )
+        else:
+            logger.error("Erreur envoi email [%s] -> %s : %s", code, _masquer(trace), exc)
+        _log_email(session, code, trace, "erreur", erreur=str(exc)[:500])
+    finally:
+        #  Les fichiers temporaires produits par la correction EXIF.
+        for fp in fixed_attachments:
+            if not attachments or fp not in attachments:
+                try:
+                    os.unlink(fp)
+                except OSError:
+                    pass
+
+
+def _envoi_actif(session: Session) -> bool:
+    """L'envoi est-il actif ? La configuration prime sur le réglage.
+
+    Écrit une fois : `smtp_enabled` absent de la base signifie « pas encore
+    configuré », et c'est alors `settings.mail_enabled` qui tranche — subtilité
+    que les deux chemins portaient chacun de leur côté.
+    """
+    smtp_cfg = _get_smtp_config(session)
+    if smtp_cfg.get("smtp_enabled") is not None:
+        return smtp_cfg["smtp_enabled"] == "1"
+    return bool(settings.mail_enabled)
+
+
+def _session_ou_neuve(session: Session | None) -> tuple[Session, bool]:
+    """La session de l'appelant, ou une neuve — et qui devra la fermer.
+
+    Les tâches d'arrière-plan n'en ont pas : elles s'exécutent après la réponse.
+    """
+    if session is not None:
+        return session, False
+    from app.database import SessionLocal
+
+    return SessionLocal(), True
+
+
 async def send_email(
     code: str,
     to: str,
@@ -264,95 +403,35 @@ async def send_email(
     batiments_concernes: set[int] | None = None,
     jeton_reponse: str | None = None,
 ):
-    """
-    Récupère le ModèleEmail par code, rend sujet + corps, envoie si MAIL_ENABLED.
+    """Envoie le modèle `code` à UN destinataire, si ses préférences l'acceptent.
 
-    Les images jointes sont automatiquement corrigées (orientation EXIF) avant envoi.
-    Fail graceful : en cas d'erreur, log sans bloquer l'événement déclencheur.
-    
-    Si *destinataire_id* est fourni et que le code email est lié à une
-    catégorie de préférence, l'email n'est envoyé que si l'utilisateur
-    a activé la préférence correspondante.
+    Fail graceful : une erreur d'envoi est journalisée, jamais propagée — un
+    ticket créé ne doit pas échouer parce que le SMTP est indisponible.
+
+    Rendu, envoi et journal vivent dans `_envoyer_modele`, partagé avec l'envoi
+    groupé : ne reste ici que **la préférence du destinataire**.
     """
-    from app.database import SessionLocal
-    
-    # Créer une nouvelle session si elle n'existe pas (pour les background tasks)
-    if session is None:
-        session = SessionLocal()
-        close_session = True
-    else:
-        close_session = False
-    
+    session, close_session = _session_ou_neuve(session)
     try:
-        # ── Vérification préférence utilisateur ──────────────────────────
         if destinataire_id:
             user = session.get(Utilisateur, destinataire_id)
             if user and not mail_autorise(user, batiments_concernes):
-                logger.debug("Email [%s] non envoyé → préférence de bâtiment, user %s",
-                             code, destinataire_id)
-                _log_email(session, code, to, "ignore", erreur="préférence de bâtiment")
+                logger.debug(
+                    "Email [%s] non envoye -> preference de batiment, user %s",
+                    code, destinataire_id,
+                )
+                _log_email(session, code, to, "ignore", erreur="preference de batiment")
                 return
 
-        smtp_cfg = _get_smtp_config(session)
-        if smtp_cfg.get('smtp_enabled') is not None:
-            if smtp_cfg['smtp_enabled'] != '1':
-                return
-        elif not settings.mail_enabled:
+        if not _envoi_actif(session):
             return
 
-        template: ModeleEmail | None = session.exec(
-            select(ModeleEmail).where(ModeleEmail.code == code)
-        ).first()
-        if not template or not template.actif:
-            _log_email(session, code, to, "ignore", erreur="template inactive ou inexistante")
-            return
-
-        ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
-
-        try:
-            from fastapi_mail import FastMail, MessageSchema
-
-            cfg = connexion_smtp(
-                smtp_cfg,
-                expediteur=adresse_expedition(
-                    smtp_cfg, expediteur_du_modele(code, jeton_reponse=jeton_reponse)
-                ),
-            )
-            fm = FastMail(cfg)
-            rendered_subject, full_html = composer_email(
-                template, ctx, site_nom=site_nom, site_url=site_url,
-                email_footer=email_footer, attachments=attachments,
-            )
-            msg_kwargs = dict(
-                subject=rendered_subject,
-                recipients=[to],
-                body=full_html,
-                subtype="html",
-                headers=_reply_to(smtp_cfg, jeton_reponse) or None,
-            )
-            if cc:
-                msg_kwargs["cc"] = cc
-            if bcc:
-                msg_kwargs["bcc"] = bcc
-            fixed_attachments: list[str] = []
-            if attachments:
-                prets, fixed_attachments = _preparer_pieces_jointes(attachments)
-                msg_kwargs["attachments"] = prets
-            msg = MessageSchema(**msg_kwargs)
-            await fm.send_message(msg)
-            _log_email(session, code, to, "succes", sujet=rendered_subject)
-        except Exception as exc:
-            logger.error("Erreur envoi email [%s] → %s : %s", code, to, exc)
-            _log_email(session, code, to, "erreur", erreur=str(exc)[:500])
+        await _envoyer_modele(
+            code, context, session,
+            to=[to], cc=cc, bcc=bcc,
+            attachments=attachments, jeton_reponse=jeton_reponse,
+        )
     finally:
-        # Nettoyer les fichiers temporaires EXIF
-        if attachments:
-            for fp in fixed_attachments:
-                if fp not in attachments:
-                    try:
-                        os.unlink(fp)
-                    except OSError:
-                        pass
         if close_session:
             session.close()
 
@@ -380,101 +459,37 @@ async def send_email_group(
     batiments_concernes: set[int] | None = None,
     jeton_reponse: str | None = None,
 ):
+    """Envoie UN seul message à plusieurs destinataires (to + cc facultatif).
+
+    Les préférences de chacun sont vérifiées **individuellement** — c'est la
+    seule vraie différence avec l'envoi unitaire. Les destinataires se voient
+    entre eux, et l'historique n'enregistre qu'une ligne pour tous.
+
+    Le reste vient de `_envoyer_modele`, partagé avec `send_email`.
     """
-    Envoie UN seul email groupé à plusieurs destinataires (to + cc optionnel).
-
-    - to_recipients  : liste (user_id | None, email) — destinataires principaux (se voient entre eux)
-    - cc_recipients  : liste (user_id | None, email) — destinataires en copie (ex: auteur du ticket)
-    - Les préférences de chaque utilisateur sont vérifiées individuellement en amont.
-    - Un seul enregistrement dans historique_email liste tous les destinataires.
-    - Les pièces jointes (photos) sont transmises si fournies.
-    """
-    from app.database import SessionLocal
-
-    if session is None:
-        session = SessionLocal()
-        close_session = True
-    else:
-        close_session = False
-
-    fixed_attachments: list[str] = []
+    session, close_session = _session_ou_neuve(session)
     try:
-        smtp_cfg = _get_smtp_config(session)
-        if smtp_cfg.get('smtp_enabled') is not None:
-            if smtp_cfg['smtp_enabled'] != '1':
-                return
-        elif not settings.mail_enabled:
+        if not _envoi_actif(session):
             return
 
-        template: ModeleEmail | None = session.exec(
-            select(ModeleEmail).where(ModeleEmail.code == code)
-        ).first()
-        if not template or not template.actif:
-            return
-
-        # Filtrage des préférences individuelles
-        filtered_to = [
-            (uid, email) for uid, email in to_recipients
+        to_emails = [
+            email for uid, email in to_recipients
             if _check_pref(uid, session, batiments_concernes)
         ]
-        filtered_cc = [
-            (uid, email) for uid, email in (cc_recipients or [])
+        cc_emails = [
+            email for uid, email in (cc_recipients or [])
             if _check_pref(uid, session, batiments_concernes)
         ]
-
-        if not filtered_to and not filtered_cc:
+        #  Personne ne veut de ce message : ce n'est pas un echec, c'est la
+        #  preference de chacun qui a ete respectee.
+        if not to_emails and not cc_emails:
             return
 
-        to_emails = [email for _, email in filtered_to]
-        cc_emails = [email for _, email in filtered_cc]
-        all_emails_str = ", ".join(to_emails + cc_emails)
-
-        ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
-
-        try:
-            from fastapi_mail import FastMail, MessageSchema
-
-            cfg = connexion_smtp(
-                smtp_cfg,
-                expediteur=adresse_expedition(
-                    smtp_cfg, expediteur_du_modele(code, jeton_reponse=jeton_reponse)
-                ),
-            )
-            fm = FastMail(cfg)
-            rendered_subject, full_html = composer_email(
-                template, ctx, site_nom=site_nom, site_url=site_url,
-                email_footer=email_footer, attachments=attachments,
-            )
-            msg_kwargs: dict[str, Any] = dict(
-                subject=rendered_subject,
-                recipients=to_emails if to_emails else cc_emails,
-                body=full_html,
-                subtype="html",
-                headers=_reply_to(smtp_cfg, jeton_reponse) or None,
-            )
-            # CC : uniquement si to non vide (sinon tous en recipients)
-            if to_emails and cc_emails:
-                msg_kwargs["cc"] = cc_emails
-            if bcc:
-                msg_kwargs["bcc"] = bcc
-            # Pièces jointes (photos) — correction orientation EXIF avant envoi
-            if attachments:
-                prets, fixed_attachments = _preparer_pieces_jointes(attachments)
-                msg_kwargs["attachments"] = prets
-            msg = MessageSchema(**msg_kwargs)
-            await fm.send_message(msg)
-            _log_email(session, code, all_emails_str, "succes", sujet=rendered_subject)
-        except Exception as exc:
-            logger.error("Erreur envoi email groupé [%s] → %s : %s", code, all_emails_str, exc)
-            _log_email(session, code, all_emails_str, "erreur", erreur=str(exc)[:500])
+        await _envoyer_modele(
+            code, context, session,
+            to=to_emails, cc=cc_emails, bcc=bcc,
+            attachments=attachments, jeton_reponse=jeton_reponse,
+        )
     finally:
-        # Nettoyer les fichiers temporaires EXIF
-        if attachments:
-            for fp in fixed_attachments:
-                if fp not in attachments:
-                    try:
-                        os.unlink(fp)
-                    except OSError:
-                        pass
         if close_session:
             session.close()

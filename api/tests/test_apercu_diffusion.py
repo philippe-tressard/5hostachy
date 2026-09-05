@@ -25,6 +25,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
+from tests.aides_ast import corps_avec_delegations, corps_de
 
 _RACINE = Path(__file__).resolve().parents[2]
 _EMAIL = _RACINE / "api" / "app" / "utils" / "email" / "__init__.py"
@@ -44,20 +45,6 @@ _APERCU = _RACINE / "api" / "app" / "routers" / "tickets" / "apercu.py"
 _ASSEMBLEUR = _RACINE / "api" / "app" / "utils" / "apercu_diffusion.py"
 _COURRIELS = _RACINE / "api" / "app" / "routers" / "tickets" / "courriels.py"
 _WHATSAPP = _RACINE / "api" / "app" / "utils" / "whatsapp.py"
-
-
-def _corps_de(chemin: Path, nom: str) -> str:
-    """Le source de la fonction `nom`, ou lève — un test qui ne trouve pas sa
-    cible doit échouer, pas passer en silence (`standards/04` §1)."""
-    source = chemin.read_text(encoding="utf-8")
-    arbre = ast.parse(source)
-    for n in ast.walk(arbre):
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == nom:
-            return ast.get_source_segment(source, n) or ""
-    raise AssertionError(
-        f"`{nom}` est introuvable dans {chemin.name} — ce test surveillait une "
-        "fonction qui n'existe plus, il ne surveillait donc plus rien."
-    )
 
 
 def test_le_routeur_ne_compose_RIEN_lui_meme():
@@ -93,9 +80,18 @@ def test_l_apercu_et_l_envoi_composent_l_email_au_meme_endroit():
         "`composer_email` lui échapperait, et les deux rendus divergeraient."
     )
     envoi = _EMAIL.read_text(encoding="utf-8")
+    #  🔴 ON SUIT LA DÉLÉGATION (05/09/2026). Ce test exigeait l'appel DANS le
+    #  corps de chaque fonction ; le jour où `send_email` et `send_email_group`
+    #  ont été factorisées — elles étaient identiques à 68 % —, la composition
+    #  est descendue d'un cran et les deux ont échoué, alors que la propriété
+    #  surveillée n'avait pas bougé. `standards/04` §35 : un contrôle qui
+    #  reconnaît son objet à un indice de forme devient d'autant plus aveugle
+    #  que le code est bien factorisé.
     for fonction in ("send_email", "send_email_group"):
-        assert "composer_email(" in _corps_de(_EMAIL, fonction), (
-            f"`{fonction}` ne passe plus par `composer_email`."
+        assert "composer_email(" in corps_avec_delegations(_EMAIL, fonction), (
+            f"`{fonction}` ne passe plus par `composer_email`, ni directement ni "
+            "par une fonction du module : elle recomposerait le message de son "
+            "côté, et l'aperçu montrerait autre chose que ce qui part."
         )
     #  Une seule définition, sinon « la seule composition » est un vœu.
     assert len(re.findall(r"^def composer_email\(", envoi, re.MULTILINE)) == 1
@@ -112,7 +108,7 @@ def test_l_apercu_et_l_envoi_construisent_le_contexte_au_meme_endroit():
         "L'aperçu construit son propre contexte : les variables du gabarit "
         "peuvent alors diverger de celles de l'envoi sans qu'aucun test ne le voie."
     )
-    assert "contexte_ticket_syndic(" in _corps_de(_COURRIELS, "envoyer_email_syndic_cs")
+    assert "contexte_ticket_syndic(" in corps_de(_COURRIELS, "envoyer_email_syndic_cs")
 
 
 def test_l_apercu_whatsapp_ne_reecrit_pas_le_message():
@@ -189,7 +185,7 @@ def test_l_apercu_n_ecrit_rien_en_base():
 
     Le ticket prévisionnel est un objet en mémoire, jamais ajouté à la session.
     """
-    corps = _corps_de(_APERCU, "apercu_diffusion") + _corps_de(_APERCU, "_ticket_previsionnel")
+    corps = corps_de(_APERCU, "apercu_diffusion") + corps_de(_APERCU, "_ticket_previsionnel")
     for interdit in ("session.add(", "session.commit(", "session.delete("):
         assert interdit not in corps, (
             f"L'aperçu appelle `{interdit}` : il modifierait la base alors que "

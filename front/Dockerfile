@@ -24,6 +24,13 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json .
 COPY --from=builder /app/node_modules ./node_modules
 RUN addgroup -S app && adduser -S app -G app
+#  🔴 ET ON S'EN SERT (#769, 05/09/2026). L'utilisateur était créé depuis
+#  toujours, et le conteneur tournait quand même en root : `USER` manquait.
+#  Un compte créé mais jamais endossé ne protège rien — il donne juste l'air.
+#
+#  Rien à écrire ici : le serveur SSR ne sert que `build/` et `node_modules/`,
+#  copiés en lecture. Pas de volume, donc pas de reprise de propriétés à faire.
+USER app
 
 EXPOSE 3000
 ENV PORT=3000

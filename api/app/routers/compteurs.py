@@ -10,6 +10,7 @@ photo justificative.
 `main.py`. Changer les chemins aurait cassé le client TypeScript et les liens
 existants pour un gain nul : c'est le RANGEMENT du code qui change, pas l'API.
 """
+import logging
 import os
 import shutil
 from datetime import date, datetime
@@ -24,10 +25,13 @@ from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import CompteurConfig, ReleveCompteur, Utilisateur
 from app.utils.fichiers import (
+    signature_incoherente,
     REPERTOIRE_PRIVE, extension_assainie, nom_lisible, nom_stocke,
 )
 
 #  Même préfixe que `prestataires.py` : les deux routeurs servent le même écran.
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 
 
@@ -67,7 +71,7 @@ class ReleveRead(BaseModel):
 def list_releves(
     type_compteur: Optional[str] = None,
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_cs_or_admin),
 ):
     q = select(ReleveCompteur)
     if type_compteur:
@@ -126,14 +130,29 @@ async def upload_releve_photo(
     r_id: int,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_cs_or_admin),
 ):
     r = session.get(ReleveCompteur, r_id)
     if not r:
         raise HTTPException(404, "Relevé introuvable")
     os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
     raw_name = file.filename or "photo"
-    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
+    #  Les 16 premiers octets suffisent à toutes les signatures connues ;
+    #  `seek(0)` remet le flux à zéro pour la copie qui suit.
+    _debut = file.file.read(16)
+    file.file.seek(0)
+    _extension = extension_assainie(raw_name)
+    #  🔴 LE CONTENU DOIT CORRESPONDRE À CE QU'IL PRÉTEND ÊTRE (#773).
+    #  `content_type` vient du client : seule la signature du fichier
+    #  tranche. La règle vit dans `utils/fichiers` et n'est écrite qu'une
+    #  fois — les quatre points de téléversement l'appellent.
+    _motif = signature_incoherente(_debut, _extension)
+    if _motif:
+        logger.warning(
+            "Téléversement refusé (utilisateur %s) : %s", getattr(user, "id", "?"), _motif
+        )
+        raise HTTPException(400, f"Fichier refusé : {_motif}.")
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, _extension))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
     r.photo_url = f"/api/prestataires/releves/{r.id}/photo/{os.path.basename(dest)}"

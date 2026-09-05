@@ -1,4 +1,5 @@
 """Router diagnostics réglementaires — types + rapports avec upload."""
+import logging
 import os
 import shutil
 from datetime import datetime, date as dateclass
@@ -12,7 +13,9 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import DiagnosticRapport, DiagnosticType, Utilisateur
-from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
+from app.utils.fichiers import signature_incoherente, REPERTOIRE_PRIVE, extension_assainie, nom_stocke
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
 
@@ -139,7 +142,22 @@ async def upload_rapport(
     # racine, il serait aussi servi en statique par Caddy, sans aucun contrôle.
     os.makedirs(REPERTOIRE_PRIVE, exist_ok=True)
     raw_name = file.filename or "rapport"
-    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
+    #  Les 16 premiers octets suffisent à toutes les signatures connues ;
+    #  `seek(0)` remet le flux à zéro pour la copie qui suit.
+    _debut = file.file.read(16)
+    file.file.seek(0)
+    _extension = extension_assainie(raw_name)
+    #  🔴 LE CONTENU DOIT CORRESPONDRE À CE QU'IL PRÉTEND ÊTRE (#773).
+    #  `content_type` vient du client : seule la signature du fichier
+    #  tranche. La règle vit dans `utils/fichiers` et n'est écrite qu'une
+    #  fois — les quatre points de téléversement l'appellent.
+    _motif = signature_incoherente(_debut, _extension)
+    if _motif:
+        logger.warning(
+            "Téléversement refusé (utilisateur %s) : %s", getattr(user, "id", "?"), _motif
+        )
+        raise HTTPException(400, f"Fichier refusé : {_motif}.")
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, _extension))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
 

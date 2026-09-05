@@ -57,10 +57,21 @@
 	const year = new Date().getFullYear();
 </script>
 
+<!--  🔴 LE LIEN D'ÉVITEMENT — premier élément focalisable de la page (#778).
+      Le menu compte treize entrées : sans lui, un utilisateur au clavier ou au
+      lecteur d'écran les retraverse À CHAQUE navigation avant d'atteindre le
+      contenu. WCAG 2.4.1, niveau A — le premier critère de navigation, et le
+      moins coûteux.
+
+      ⚠️ Il vit dans le SQUELETTE et nulle part ailleurs : c'est R1 (le squelette
+      porte ce qui vaut pour toutes les pages), et un lien posé dans un écran
+      n'aurait servi que celui-là. -->
+<a class="lien-evitement" href="#contenu">Aller au contenu</a>
+
 <div class="app-shell">
 	<Nav />
 	<div class="app-content">
-		<main class="app-main">
+		<main class="app-main" id="contenu" tabindex="-1">
 			<div class="container page">
 				<slot />
 			</div>

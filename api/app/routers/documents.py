@@ -1,5 +1,6 @@
 """Router documents — bibliothèque documentaire avec contrôle d'accès 3 couches."""
 import json
+import logging
 import os
 import shutil
 from typing import Optional
@@ -16,9 +17,11 @@ from app.models.core import (
     ProfilAccesDocument, Utilisateur, RoleUtilisateur
 )
 from app.schemas import DocumentRead
-from app.utils.fichiers import REPERTOIRE_PRIVE, extension_assainie, nom_stocke
+from app.utils.fichiers import signature_incoherente, REPERTOIRE_PRIVE, extension_assainie, nom_stocke
 # Toute règle de visibilité — documents compris — vient du module central.
 from app.utils.visibility import document_visible
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -271,7 +274,22 @@ async def upload_document(
     # authentifié qui impose lui-même le `media_type`, l'extension d'origine
     # peut donc être conservée telle quelle.
     raw_name = file.filename or "document"
-    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, extension_assainie(raw_name)))
+    #  Les 16 premiers octets suffisent à toutes les signatures connues ;
+    #  `seek(0)` remet le flux à zéro pour la copie qui suit.
+    _debut = file.file.read(16)
+    file.file.seek(0)
+    _extension = extension_assainie(raw_name)
+    #  🔴 LE CONTENU DOIT CORRESPONDRE À CE QU'IL PRÉTEND ÊTRE (#773).
+    #  `content_type` vient du client : seule la signature du fichier
+    #  tranche. La règle vit dans `utils/fichiers` et n'est écrite qu'une
+    #  fois — les quatre points de téléversement l'appellent.
+    _motif = signature_incoherente(_debut, _extension)
+    if _motif:
+        logger.warning(
+            "Téléversement refusé (utilisateur %s) : %s", getattr(user, "id", "?"), _motif
+        )
+        raise HTTPException(400, f"Fichier refusé : {_motif}.")
+    dest = os.path.join(REPERTOIRE_PRIVE, nom_stocke(raw_name, _extension))
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
 

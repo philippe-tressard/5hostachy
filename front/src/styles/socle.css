@@ -146,3 +146,35 @@ a.btn:hover {
 	padding-top: 1.5rem;
 	padding-bottom: 1.5rem;
 }
+
+/*  🔴 LE LIEN D'ÉVITEMENT (#778, 05/09/2026) — invisible tant qu'on ne l'a pas.
+
+    Il n'est PAS masqué par `display:none` ni `visibility:hidden` : les deux le
+    retireraient de l'ordre de tabulation, c'est-à-dire de la seule chose qui le
+    rend utile. Il est sorti de l'écran, et revient au focus.
+
+    ⚠️ `:focus` et non `:focus-visible` : ce lien ne s'atteint QUE par le
+    clavier, et `:focus-visible` ajouterait une heuristique de navigateur là où
+    la règle est certaine.
+
+    Il vit dans le socle parce qu'il habille le squelette, pas un écran. */
+.lien-evitement {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	z-index: 100;
+	padding: 0.6rem 1rem;
+	background: var(--color-primary);
+	color: #fff;
+	border-radius: 0 0 var(--radius) 0;
+	font-weight: 600;
+	text-decoration: none;
+}
+.lien-evitement:focus {
+	left: 0;
+}
+/*  Le `<main>` reçoit le focus par programme (`tabindex="-1"`) : sans cette
+    règle, le navigateur y dessinerait un contour permanent après le saut. */
+.app-main:focus {
+	outline: none;
+}
