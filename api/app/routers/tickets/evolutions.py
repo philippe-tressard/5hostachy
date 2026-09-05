@@ -326,7 +326,12 @@ def add_evolution(
     session.refresh(evol)
 
     # ── Notifications WhatsApp / syndic / CS optionnelles ──────────────────
-    if body.partager_whatsapp or body.envoyer_syndic or body.envoyer_cs:
+    #  🔴 Un ticket réservé au conseil ne part pas sur le groupe des résidents
+    #  (05/09/2026) : la même règle qu'à la création, au troisième point d'envoi.
+    #  Le syndic et le CS, eux, restent joignables — ce sont les destinataires
+    #  légitimes d'un dossier fermé au voisinage.
+    partage_whatsapp = body.partager_whatsapp and not ticket.confidentiel
+    if partage_whatsapp or body.envoyer_syndic or body.envoyer_cs:
         # Évolutions précédentes (hors celle qui vient d'être créée) — le même
         # historique alimente le message WhatsApp et le tableau de l'e-mail.
         evols_hist = session.exec(
@@ -338,7 +343,10 @@ def add_evolution(
             .order_by(TicketEvolution.cree_le)
         ).all()
 
-        if body.partager_whatsapp:
+        #  `partage_whatsapp`, pas `body.partager_whatsapp` : c'est CE `if` qui
+        #  décide de l'envoi, le précédent pouvant être franchi par le syndic
+        #  ou le CS seuls.
+        if partage_whatsapp:
             from app.utils.whatsapp import (
                 config_whatsapp,
                 envoyer_whatsapp_avec_log,

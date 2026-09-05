@@ -111,3 +111,45 @@ export interface ChargeUtileEvolution {
 	 *   aujourd'hui la seule fiche d'un ticket. */
 	interne?: boolean;
 }
+
+/**
+ * Le contenu riche est-il vide ? (balises retirées, espaces compris)
+ *
+ * Sorti d'`EvolForm` le 05/09/2026 avec les deux règles qui suivent : ce sont
+ * des règles **du fil**, pas de l'affichage — elles répondent à « cette entrée
+ * dit-elle quelque chose ? », question qui se pose pareil quel que soit l'écran.
+ */
+export function contenuRicheVide(html: string): boolean {
+	return !html || html.replace(/<[^>]+>/g, '').trim() === '';
+}
+
+/**
+ * 🔴 LE GESTE EST DÉDUIT, il ne se déclare pas.
+ *
+ * Une pastille laissée sur l'état courant ne change rien : l'entrée est un
+ * commentaire. En choisir une autre en fait un changement d'état. C'est ce qui
+ * permet UN seul point d'entrée à l'écran — la question « lequel des deux ? » a
+ * déjà sa réponse dans ce que l'utilisateur a fait.
+ *
+ * Une CORRECTION (`editMode`) n'est jamais un changement d'état : on relit un
+ * texte, on ne fait pas avancer le dossier.
+ */
+export function typeDeLEntree(
+	editMode: boolean,
+	nouveauStatut: string,
+	statutCourant: string,
+): 'commentaire' | 'etat' {
+	return !editMode && nouveauStatut && nouveauStatut !== statutCourant ? 'etat' : 'commentaire';
+}
+
+/**
+ * Une entrée vaut si elle APPORTE quelque chose : un changement d'état, un
+ * texte, ou une pièce jointe. Rien des trois → rien à enregistrer.
+ */
+export function entreeEnregistrable(
+	type: 'commentaire' | 'etat',
+	contenu: string,
+	nbFichiers: number,
+): boolean {
+	return type === 'etat' || !(contenuRicheVide(contenu) && nbFichiers === 0);
+}

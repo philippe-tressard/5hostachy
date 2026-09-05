@@ -97,9 +97,11 @@
 			{#if estFil && isNouveau(pub.cree_le)}<span class="badge badge-gray pub-neuf">New</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="tags">
-			<!--  ⚠️ Le brouillon portait ✏️ — le crayon qui EST l'icône « Modifier »
-			      de toutes les barres d'actions du site. Deux notions, un glyphe : il
-			      porte 📝 depuis le 29/08/2026, et le glyphe vient de la table. -->
+			<!--  ⚠️ Ce badge a changé DEUX fois de glyphe, et jamais ici : il portait
+			      ✏️ — le crayon qui EST l'icône « Modifier » — puis 📝, et depuis le
+			      05/09/2026 le 🛡️ de « visible du seul conseil syndical », notion
+			      commune à l'actualité et au ticket. Le balisage n'a pas bougé une
+			      seule fois : tout vient de la table. -->
 			{#if pub.brouillon}
 				{@const o = optionPublication('brouillon')}
 				<span class="badge badge-gray" title={o?.aide}>{o?.glyphe} {o?.etat}</span>

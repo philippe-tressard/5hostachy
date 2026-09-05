@@ -67,6 +67,7 @@
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
+	import { typeDeLEntree, entreeEnregistrable } from '$lib/evolutions';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionsCiblageEvolution from '$lib/components/SectionsCiblageEvolution.svelte';
@@ -225,8 +226,6 @@
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
-	const richEmpty = (html: string) => !html || html.replace(/<[^>]+>/g, '').trim() === '';
-
 	$: allFichiersUrls = [...photos, ...docs];
 
 	//  Sections visibles. La PREMIÈRE section rendue ne porte pas de filet
@@ -285,26 +284,18 @@
 	$: perimetreDeclare = entreePerimetre.declare;
 	$: libellePerimetreActuel = entreePerimetre.libelleActuel;
 
-	//  Le commentaire est REQUIS pour une évolution de type commentaire, facultatif
-	//  quand il accompagne un changement d'état. Pas de mention « (optionnel) » :
-	//  l'absence d'astérisque suffit (`ux-patterns` §9).
 	//  🔴 L'INTITULÉ NE BASCULE PLUS (voir l'en-tête). « Commentaire » et non
 	//  « Description » : c'est le mot d'un auteur sur un fil, pas le corps d'un objet.
 	const titreContenu = 'Commentaire';
-	//  🔴 LE GESTE EST DÉDUIT, il ne se déclare plus. Une pastille laissée sur
-	//  l'état courant ne change rien : l'entrée est un commentaire. En choisir une
-	//  autre en fait un changement d'état. C'est ce qui permet UN seul point
-	//  d'entrée — la question « lequel des deux ? » a déjà sa réponse à l'écran.
-	$: evolType =
-		!editMode && nouveauStatut && nouveauStatut !== currentStatut ? 'etat' : 'commentaire';
+	//  Les trois règles du fil vivent dans `$lib/evolutions` depuis le 05/09/2026 :
+	//  « quel geste ? », « le texte est-il requis ? », « y a-t-il quelque chose à
+	//  enregistrer ? » se posent pareil sur les trois entités qui portent un fil.
+	$: evolType = typeDeLEntree(editMode, nouveauStatut, currentStatut);
 	//  Le commentaire est REQUIS quand l'entrée n'apporte que lui : sans texte ni
-	//  changement d'état, l'entrée ne dirait rien.
+	//  changement d'état, l'entrée ne dirait rien. Pas de mention « (optionnel) » :
+	//  l'absence d'astérisque suffit (`ux-patterns` §9).
 	$: contenuRequis = !editMode && evolType === 'commentaire';
-
-	//  Une entrée vaut si elle apporte quelque chose : un changement d'état, un
-	//  texte, ou une pièce jointe. Rien des trois → rien à enregistrer.
-	$: canSubmit =
-		!saving && (evolType === 'etat' || !(richEmpty(contenu) && allFichiersUrls.length === 0));
+	$: canSubmit = !saving && entreeEnregistrable(evolType, contenu, allFichiersUrls.length);
 
 	// Le téléversement lui-même vit dans `FichiersUpload` : trois copies de la
 	// même fonction (photo, document, fichier unifié) ne différaient que par la
@@ -321,6 +312,15 @@
 	//  L'état et la modale vivent dans `SectionDiffusion` depuis le 20/08/2026 :
 	//  l'aperçu appartient à l'objet Diffusion, pas à ses appelants (#498). Ne
 	//  reste ici que la SAISIE à transmettre — ce formulaire seul la connaît.
+	/**  Motif interdisant le groupe WhatsApp — relayé tel quel jusqu'à
+	 *   `CanauxNotification`, où la règle vit. L'hôte le calcule avec
+	 *   `motifWhatsappInterdit()` : c'est lui qui tient l'objet.
+	 *
+	 *   ⚠️ Il vaut aussi pour un COMMENTAIRE, pas seulement à la création : un
+	 *   ticket réservé au conseil le reste quand on le commente, et laisser la
+	 *   case cochable ferait promettre un envoi que le serveur refuse. */
+	export let whatsappInterdit = '';
+
 	let refDiffusion: SectionDiffusion;
 	const brouillonApercu = () => {
 		if (!demanderApercu) throw new Error('Aperçu non disponible sur cet écran.');

@@ -11,10 +11,13 @@
 		type Publication,
 		auth as authApi,
 	} from '$lib/api';
-	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
+	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import PanneauOptionsPublication from '$lib/components/PanneauOptionsPublication.svelte';
-	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import { optionsActives, libelleOptionsActives } from '$lib/options-publication';
+	import {
+		motifWhatsappInterdit,
+		optionsActives,
+		libelleOptionsActives,
+	} from '$lib/options-publication';
 	import { toast } from '$lib/components/Toast.svelte';
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
 	import FormulaireActualite from '$lib/components/FormulaireActualite.svelte';
@@ -440,6 +443,7 @@
 								statutOptions={[]}
 								statutLabels={STATUT_LABELS}
 								defaultPartagerWhatsapp={pub.partager_whatsapp ?? false}
+								whatsappInterdit={motifWhatsappInterdit(pub.brouillon ?? false, 'actualité')}
 								defaultEnvoyerSyndic={pub.envoyer_syndic ?? false}
 								defaultEnvoyerCs={pub.envoyer_cs ?? false}
 								showEmail={true}
@@ -455,16 +459,15 @@
 								      dans le panneau d'options : ni copie, ni variante. Il porte déjà
 								      la règle « Confidentiel exige un périmètre restreint ». -->
 								<svelte:fragment slot="specifiques" let:premiere>
-									<SectionFormulaire titre="Options de publication" {premiere}>
-										<OptionsPublication
-											perimetreCible={pub.perimetre_cible ?? []}
-											dejaEpingle={pub.epingle ?? false}
-											bind:epingle={evolOptions.epingle}
-											bind:urgente={evolOptions.urgente}
-											bind:brouillon={evolOptions.brouillon}
-											bind:confidentiel={evolOptions.confidentiel}
-										/>
-									</SectionFormulaire>
+									<SectionOptionsPublication
+										{premiere}
+										perimetreCible={pub.perimetre_cible ?? []}
+										dejaEpingle={pub.epingle ?? false}
+										bind:epingle={evolOptions.epingle}
+										bind:urgente={evolOptions.urgente}
+										bind:brouillon={evolOptions.brouillon}
+										bind:confidentiel={evolOptions.confidentiel}
+									/>
 								</svelte:fragment>
 							</EvolForm>
 						{/key}

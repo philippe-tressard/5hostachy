@@ -149,6 +149,8 @@
 	 *   l'objet — seul l'écran tient l'objet. */
 	export let auteurNom = '';
 	export let aideWhatsapp = '';
+	/** Motif interdisant le groupe WhatsApp — relayé jusqu'à `CanauxNotification`. */
+	export let whatsappInterdit = '';
 	/**  La fonction d'aperçu de l'écran — transmise TELLE QUELLE à l'objet
 	 *   Diffusion, qui porte l'état et la modale (#498). Absente = pas d'aperçu,
 	 *   ce qui est le cas des écrans sans endpoint. */
@@ -260,6 +262,7 @@
 		bind:auteur
 		{auteurNom}
 		{aideWhatsapp}
+		{whatsappInterdit}
 		bind:this={refDiffusion}
 		{demanderApercu}
 		{envoiEnCours}

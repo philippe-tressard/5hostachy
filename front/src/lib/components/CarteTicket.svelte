@@ -41,6 +41,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import { motifWhatsappInterdit, optionPublication } from '$lib/options-publication';
 	import BoutonLien from './BoutonLien.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
@@ -178,11 +179,13 @@
 			      ACTUALITÉ, où il restreint la lecture au périmètre. Ici la règle est
 			      autre — l'auteur, la personne concernée, le conseil. Deux règles sous
 			      un même glyphe se lisent comme une seule. -->
-			{#if ticket.confidentiel}<span
-					class="badge badge-gray"
-					title="Réservé à l'auteur, à la personne concernée et au conseil syndical"
-					>&#x1F6E1;&#xFE0F; Conseil syndical</span
-				>{/if}
+			{#if ticket.confidentiel}
+				{@const opt = optionPublication('brouillon')}
+				<!--  Glyphe et mot viennent de la TABLE, comme sur une actualité : c'est
+				      la même notion, et deux écritures divergeraient au premier
+				      changement de libellé (05/09/2026). -->
+				<span class="badge badge-gray" title={opt?.aide}>{opt?.glyphe} {opt?.etat}</span>
+			{/if}
 			<span class="tk-numero">#{ticket.numero}</span>
 			<!--  🔴 PAS DE BADGE 📍 DU DEMANDEUR — arbitré à l'écran le 30/08/2026
 			      (#653) : *« se restreindre uniquement au périmètre »*.
@@ -294,6 +297,7 @@
 						peutPreciserPerimetre={peutSuivreCeTicket}
 						perimetreCourant={ticket.perimetre_cible ?? []}
 						entrees={evolutions}
+						whatsappInterdit={motifWhatsappInterdit(ticket.confidentiel ?? false, 'ticket')}
 						peutDiffuser={peutSuivreCeTicket}
 						saving={evolutionEnCours}
 						on:submit={(e) => dispatch('evoluer', e.detail)}

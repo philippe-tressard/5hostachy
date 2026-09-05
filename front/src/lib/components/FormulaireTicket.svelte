@@ -40,19 +40,17 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
-	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
-	import ChampConfidentiel from '$lib/components/ChampConfidentiel.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
+	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
-	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
-	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { STATUT_TICKET_OPTIONS, CATEGORIES_TICKET, type ModeSaisiPour } from '$lib/tickets';
+	import { CATEGORIES_TICKET, type ModeSaisiPour } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
+	import { motifWhatsappInterdit } from '$lib/options-publication';
 
 	/**  Le ticket à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut) =
 	 *   création. Le mode ne change pas pendant la vie du composant : l'appelant le
@@ -356,79 +354,24 @@
 			</div>
 		</SectionFormulaire>
 
-		<!--  2. Champs spécifiques — DEUX champs nommés, dans cet ordre : la
-		      catégorie, puis « Saisi pour ». Ce dernier était rendu APRÈS les pièces
-		      jointes, entre les documents et la diffusion : le seul champ du site à
-		      être hors de sa section (signalé le 16/08/2026).
-		      ⚠️ La SECTION est présente en édition — la catégorie s'y corrige comme
-		      le titre —, mais « Saisi pour » n'y est pas : `TicketUpdate` ne sait pas
-		      EFFACER les `saisi_pour_*`, et « En mon nom » serait un choix sans effet.
-		      R4 ne déclare que des sections, pas des champs : ce motif `api` (#431)
-		      vit dans la déclaration en commentaire, faute de pouvoir s'y écrire. -->
-		{#if sectionPresente(TICKET, etat, 'specifiques')}
-			<SectionFormulaire titre="Catégorie" requis idTitre="ticket-categorie-titre">
-				<!--  🔴 `ChoixPastilles` en mode radio depuis le 30/08/2026, signalé à
-				      l'écran : *« dans tickets tu ne peux pas réduire ces pastilles à la
-				      même taille que nouveau prestataire »*. C'étaient des cartes maison,
-				      deux fois plus hautes que les pastilles du même site pour la même
-				      question posée.
-				      `ux-patterns` refusait la conversion — à raison : `Pastille` rendait
-				      un `<button>`, et un `radiogroup` y aurait perdu ses flèches. La
-				      réponse a été d'ENRICHIR l'objet plutôt que de le contourner : la
-				      pastille sait désormais porter un `<input type="radio">`, masqué à
-				      l'œil mais pas à l'accessibilité. -->
-				<ChoixPastilles
-					options={OPTIONS_CATEGORIE}
-					bind:valeur={categorie}
-					tous={false}
-					radio="ticket-categorie"
-					libelle="Catégorie"
-					avecDetail
-				/>
-			</SectionFormulaire>
-		{/if}
-
-		{#if $isCS && sectionPresente(TICKET, etat, 'specifiques')}
-			<ChampSaisiPour
-				bind:mode={modeSaisiPour}
-				bind:userId={saisiPourUserId}
-				bind:nom={saisiPourNom}
-				bind:email={saisiPourEmail}
-				residents={usersActifs}
-			/>
-
-			<ChampConfidentiel bind:confidentiel />
-		{/if}
-
-		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
-		      dit qui le voit et où (section 9). IDENTIQUE en création et en
-		      édition depuis le cadre #430 : une correction corrige l'état comme
-		      elle corrige un titre, et c'est le `PATCH` qui a changé de nature
-		      côté serveur (voir le bloc de commentaires du script). -->
-		<SectionFormulaire titre="Workflow" requis idTitre="ticket-workflow-titre">
-			<div class="field champ-large">
-				<!--  🔴 PASTILLES, jamais un `<select>` nu (R3, #423). « Ouvert » est
-				      active par défaut à la création — l'état de départ se voit, il ne
-				      se devine pas. Un résident ne peut pas faire avancer le suivi :
-				      la rangée est alors en lecture, et le serveur refait le contrôle
-				      (liste blanche CS) — ce que l'interface interdit n'est qu'un
-				      confort. -->
-				<WorkflowPastilles
-					options={STATUT_TICKET_OPTIONS}
-					valeur={statut}
-					lecture={!$isCS}
-					idTitre="ticket-workflow-titre"
-					on:choisir={(e) => (statut = e.detail)}
-				/>
-				{#if !$isCS}
-					<p class="aide-champ">
-						{modeEdition
-							? 'Seul le conseil syndical fait avancer le suivi d’un ticket.'
-							: 'Votre demande part en « Ouvert ». Le conseil syndical fait ensuite avancer son suivi.'}
-					</p>
-				{/if}
-			</div>
-		</SectionFormulaire>
+		<!--  2 et 3. Ce que le ticket a de PROPRE — catégorie, « Saisi pour »,
+		      options de publication, workflow. Extrait le 05/09/2026 dans
+		      `SectionsSpecifiquesTicket` : les sections 4 à 9 venaient déjà de
+		      `ChampsCommuns`, ce formulaire n'a plus à porter que l'assemblage et la
+		      soumission. L'ORDRE des sections, lui, ne bouge pas d'une ligne (R2). -->
+		<SectionsSpecifiquesTicket
+			{etat}
+			{OPTIONS_CATEGORIE}
+			{usersActifs}
+			{modeEdition}
+			bind:categorie
+			bind:statut
+			bind:confidentiel
+			bind:modeSaisiPour
+			bind:saisiPourUserId
+			bind:saisiPourNom
+			bind:saisiPourEmail
+		/>
 
 		<!--  4 à 9 : ordre, intitulés et séparations hérités de `ChampsCommuns`.
 		      🔴 Aucune n'est gouvernée par `modeEdition` mais par la DÉCLARATION
@@ -460,6 +403,7 @@
 			bind:auteur={envoyerAuteur}
 			auteurNom={ticket?.auteur_nom ?? ''}
 			aideWhatsapp="Le ticket est publié sur le groupe WhatsApp ; les photos jointes partent avec."
+			whatsappInterdit={motifWhatsappInterdit(confidentiel, 'ticket')}
 		/>
 
 		<!--  « Annuler » est À CÔTÉ d'« Enregistrer », dans les DEUX gestes
@@ -486,12 +430,6 @@
       formulaire » doit rendre la saisie intacte, et un formulaire démonté puis
       remonté la perdrait. C'est la moitié de l'arbitrage du 19/08. -->
 <style>
-	.aide-champ {
-		font-size: 0.8rem;
-		color: var(--color-text-muted);
-		line-height: 1.45;
-		margin: 0.25rem 0 0;
-	}
 	/*  `.cat-grid`, `.cat-option`, `.cat-label`, `.cat-desc` retirées le 30/08/2026 :
 	    les catégories passent par `ChoixPastilles`, qui porte son style. L'une
 	    d'elles masquait le radio en `display:none` — donc hors tabulation ET hors

@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
-	import { currentUser, isCS, isAdmin } from '$lib/stores/auth';
+	import { isCS, isAdmin } from '$lib/stores/auth';
 	import {
 		tickets as ticketsApi,
 		ApiError,
@@ -10,15 +9,14 @@
 		type TicketMessage,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import EvolForm from '$lib/components/EvolForm.svelte';
-	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import FicheLecture from '$lib/components/FicheLecture.svelte';
 	import HistoriqueTicket from '$lib/components/HistoriqueTicket.svelte';
+	import FilMessagesTicket from '$lib/components/FilMessagesTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import { siteNomStore } from '$lib/stores/pageConfig';
-	import { safeDescription } from '$lib/sanitize';
 	import FilAriane from '$lib/components/FilAriane.svelte';
-	import { fmtDatetime, fmtDateLong, fmtDateShort } from '$lib/date';
+	import { fmtDateLong, fmtDateShort } from '$lib/date';
+	import { motifWhatsappInterdit } from '$lib/options-publication';
 	import {
 		STATUTS_TICKET,
 		STATUT_TICKET_BADGE,
@@ -274,60 +272,21 @@
 		</FicheLecture>
 	</div>
 
-	<!-- Thread messages -->
-	<div class="messages">
-		{#each messages as msg (msg.id)}
-			{@const isOwn = msg.auteur?.id === $currentUser?.id}
-			{#if !msg.interne || $isCS}
-				<div
-					id="msg-{msg.id}"
-					class="message-bubble"
-					class:own={isOwn}
-					class:interne={msg.interne}
-					class:message-vise={msgVise === msg.id}
-				>
-					<div class="msg-header">
-						<strong>{nomAffiche(msg.auteur)}</strong>
-						{#if msg.interne}<span class="badge badge-yellow msg-badge">interne</span>{/if}
-						<span class="msg-time">{fmtDatetime(msg.cree_le)}</span>
-					</div>
-					<div class="msg-body">{@html safeDescription(msg.contenu)}</div>
-					{#if msg.fichiers_urls?.length}
-						<div class="msg-pj">
-							<PiecesJointes urls={msg.fichiers_urls} size={80} />
-						</div>
-					{/if}
-				</div>
-			{/if}
-		{/each}
-
-		{#if !repondreOuvert}
-			<div class="card carte-repondre">
-				<button type="button" class="btn btn-outline" on:click={() => (repondreOuvert = true)}>
-					{clos ? '↩️ Rouvrir la discussion' : '💬 Répondre'}
-				</button>
-			</div>
-		{:else}
-			<div class="card reply-form">
-				{#key repondreOuvert}
-					<EvolForm
-						entrees={evolutions}
-						idPrefixe="tk-msg"
-						auteurNom={ticket.auteur_nom ?? ''}
-						titre="Répondre"
-						entite={TICKET}
-						avecPiecesJointes={!newInterne}
-						showEmail={$isCS && !newInterne}
-						avecInterne={$isCS}
-						bind:interne={newInterne}
-						saving={sending}
-						on:submit={sendMessage}
-						on:cancel={() => (repondreOuvert = false)}
-					/>
-				{/key}
-			</div>
-		{/if}
-	</div>
+	<!--  LE FIL DES MESSAGES — extrait le 05/09/2026 dans `FilMessagesTicket`.
+	      Une rubrique complète (balisage, styles, geste de réponse) que le
+	      contrôle de modularité a refusé de laisser grossir ici. À ne pas
+	      confondre avec l'Historique juste en dessous : deux tables, deux fils. -->
+	<FilMessagesTicket
+		{ticket}
+		{messages}
+		{evolutions}
+		{msgVise}
+		{clos}
+		{sending}
+		bind:repondreOuvert
+		bind:newInterne
+		on:envoyer={(e) => sendMessage(e)}
+	/>
 
 	<!--  L'HISTORIQUE — le fil, avec ses gestes. Extrait le 18/08/2026 dans
 	      `HistoriqueTicket` : la liste et cette fiche le rendaient chacune de
@@ -338,6 +297,7 @@
 		auteurNom={ticket?.auteur_nom ?? ''}
 		statutCourant={ticket?.statut ?? ''}
 		perimetreCourant={ticket?.perimetre_cible ?? []}
+		whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}
 		{evolutions}
 		on:change={loadEvolutions}
 	/>
@@ -362,14 +322,6 @@
 		color: var(--color-text-muted);
 	}
 
-	/* Message pointé par l'ancre d'une notification : un cadre suffit à le
-	   situer, sans clignotement ni couleur criarde — on vient lire, pas être
-	   alerté une seconde fois. */
-	.message-vise {
-		outline: 2px solid var(--color-primary);
-		outline-offset: 3px;
-		border-radius: 10px;
-	}
 	/*  `.back-link` est parti dans `FilAriane` (#365) : il était défini trois
 	    fois à l'identique dans le dépôt, et disait « Retour aux tickets » là où
 	    le sondage disait « Communauté ». */
@@ -429,78 +381,6 @@
 		gap: 0.4rem;
 		flex-wrap: wrap;
 		margin-top: 0.3rem;
-	}
-
-	.messages {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-	.message-bubble {
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		padding: 0.75rem 1rem;
-		align-self: flex-start;
-		max-width: 90%;
-	}
-	.message-bubble.own {
-		background: #eff6ff;
-		align-self: flex-end;
-		border-color: #bfdbfe;
-	}
-	.message-bubble.interne {
-		background: #fefce8;
-		border-color: #fef08a;
-		opacity: 0.9;
-	}
-	.msg-header {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.78rem;
-		margin-bottom: 0.3rem;
-		flex-wrap: wrap;
-	}
-	.msg-header strong {
-		font-size: 0.85rem;
-	}
-	.msg-badge {
-		font-size: 0.65rem;
-	}
-	.msg-time {
-		color: var(--color-text-muted);
-		margin-left: auto;
-	}
-	.msg-body {
-		font-size: 0.875rem;
-		line-height: 1.55;
-		margin: 0;
-	}
-	.msg-body :global(p) {
-		margin: 0 0 0.4em;
-	}
-	.msg-body :global(p:last-child) {
-		margin-bottom: 0;
-	}
-	.msg-body :global(ul),
-	.msg-body :global(ol) {
-		padding-left: 1.3em;
-		margin: 0 0 0.4em;
-	}
-	.msg-body :global(strong) {
-		font-weight: 600;
-	}
-	.msg-pj {
-		margin-top: 0.4rem;
-	}
-
-	.carte-repondre {
-		text-align: center;
-		padding: 0.9rem;
-	}
-	.reply-form {
-		margin-top: 0.5rem;
 	}
 
 	.bloc-historique {

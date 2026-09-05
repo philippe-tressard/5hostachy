@@ -65,11 +65,22 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 		aide: 'Signalée par un bord rouge sur la carte.',
 	},
 	{
+		//  🔴 LA MÊME NOTION DES DEUX CÔTÉS (05/09/2026), arbitrée à l'écran :
+		//  « Fusion de ces 2 en 🛡️ Visibilité du ticket au seul conseil syndical ».
+		//
+		//  Elle s'appelait « Garder en brouillon » sur une actualité et
+		//  « Confidentiel » sur un ticket — deux mots, deux glyphes, un seul effet
+		//  observable : **seul le conseil syndical le voit**. Deux noms pour une même
+		//  notion, c'est deux occasions de croire à deux règles.
+		//
+		//  ⚠️ La CLÉ reste `brouillon` : c'est la colonne d'une actualité, et la
+		//  renommer n'apprendrait rien à personne. Le ticket y branche sa colonne
+		//  `confidentiel` — voir la prop `objet` d'`OptionsPublication`.
 		cle: 'brouillon',
-		glyphe: '\u{1F4DD}',
-		action: 'Garder en brouillon',
-		etat: 'Brouillon',
-		aide: 'Invisible pour les résidents, et aucun envoi n’est déclenché.',
+		glyphe: '\u{1F6E1}️',
+		action: 'Visibilité du {objet} au seul conseil syndical',
+		etat: 'Conseil syndical',
+		aide: 'Seul le conseil syndical le voit ; aucun envoi n’est déclenché.',
 	},
 	{
 		cle: 'confidentiel',
@@ -79,6 +90,18 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 		aide: 'Visible des seuls résidents du périmètre sélectionné.',
 	},
 ] as const;
+
+/**
+ * Le libellé d'action d'une option, pour l'objet qu'elle décrit.
+ *
+ * Certaines actions nomment l'objet — « Visibilité du **ticket** au seul conseil
+ * syndical » — parce que la même case sert deux entités et que « ce truc-là » ne
+ * se dit pas. Le gabarit vit dans la table ; le mot vient de l'appelant, seul à
+ * savoir ce qu'il rend.
+ */
+export function actionOption(option: OptionPublication, objet: string): string {
+	return option.action.replace('{objet}', objet);
+}
 
 /** L'option d'une clé, ou `undefined` — utile pour un rendu piloté par la donnée. */
 export function optionPublication(cle: CleOptionPublication): OptionPublication | undefined {
@@ -111,4 +134,32 @@ export function libelleOptionsActives(
 	const actives = optionsActives(pub);
 	if (actives.length === 0) return '';
 	return `Options : ${actives.map((o) => o.etat.toLocaleLowerCase('fr')).join(', ')}`;
+}
+
+/**
+ * 🔴 Le motif qui INTERDIT le groupe WhatsApp — vide quand rien ne l'interdit.
+ *
+ * > « si "Visibilité du ticket au seul conseil syndical" est sélectionné, la
+ * > diffusion WhatsApp est interdite » (05/09/2026)
+ *
+ * Le groupe rassemble **tous les résidents** : un objet qu'on vient de réserver
+ * au conseil syndical ne peut pas y être recopié — la case cochée dans l'écran
+ * promettrait une confidentialité que le canal annulerait aussitôt.
+ *
+ * La règle est écrite **une fois, ici**, parce qu'elle vaut pour toute entité
+ * portant l'option `brouillon` — actualité comme ticket — et qu'elle se lit
+ * dans quatre écrans : *« faire ces évolutions au niveau de l'objet pour ne
+ * pas dupliquer le code »*.
+ *
+ * ⚠️ **Ce n'est pas le contrôle.** Le serveur refuse l'envoi de son côté
+ * (`api/tests/test_canaux_notification.py`) : `partager_whatsapp` est un champ
+ * du corps de la requête, qui se poste sans passer par l'écran.
+ */
+export function motifWhatsappInterdit(reserveAuConseil: boolean, objet = 'publication'): string {
+	if (!reserveAuConseil) return '';
+	const option = optionPublication('brouillon');
+	return (
+		`${option?.glyphe ?? ''} Le groupe WhatsApp rassemble tous les résidents : ` +
+		`impossible d’y partager un ${objet} réservé au conseil syndical.`
+	);
 }
