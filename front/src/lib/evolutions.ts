@@ -110,6 +110,17 @@ export interface ChargeUtileEvolution {
 	/**  Message interne : proposé seulement là où `avecInterne` est activé, donc
 	 *   aujourd'hui la seule fiche d'un ticket. */
 	interne?: boolean;
+	/**  🔴 LES OPTIONS DE PUBLICATION D'UN TICKET (05/09/2026) — corrigées depuis
+	 *   un commentaire, comme sur une actualité : le formulaire montre le dernier
+	 *   état, ce qu'on enregistre devient l'état.
+	 *
+	 *   ⚠️ Elles ne sortent PAS d'`EvolForm`, qui reste générique : l'écran les
+	 *   fusionne dans la charge utile (`optionsVersTicket`). Elles voyagent ici
+	 *   parce que c'est ce type que les relais recopient — et un relais qui
+	 *   énumère ses champs jette ce qu'il ne nomme pas (#529). */
+	epingle?: boolean;
+	urgente?: boolean;
+	confidentiel?: boolean;
 }
 
 /**

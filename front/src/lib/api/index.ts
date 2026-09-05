@@ -107,6 +107,19 @@ export const tickets = {
 			envoyer_syndic?: boolean;
 			envoyer_cs?: boolean;
 			perimetre_cible?: string[];
+			/**  🔴 LES OPTIONS DE PUBLICATION, corrigées depuis un commentaire
+			 *   (05/09/2026) — comme sur une actualité : le formulaire montre le
+			 *   dernier état, ce qu'on enregistre devient l'état.
+			 *
+			 *   `undefined` veut dire « cette entrée ne dit rien de cette option » :
+			 *   le ticket garde la sienne, même convention que `perimetre_cible`.
+			 *
+			 *   ⚠️ `urgente` n'est pas une colonne du ticket : elle pilote sa
+			 *   `priorite`, ce que fait déjà la catégorie « Urgence ». Le pont vit
+			 *   dans `$lib/tickets` (`optionsVersTicket`). */
+			epingle?: boolean;
+			urgente?: boolean;
+			confidentiel?: boolean;
 		},
 	) => api.post<TicketEvolution>(`/tickets/${id}/evolutions`, data),
 	updateEvolution: (

@@ -41,7 +41,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
-	import { motifWhatsappInterdit, optionPublication } from '$lib/options-publication';
+	import { motifWhatsappInterdit, optionsActives } from '$lib/options-publication';
 	import BoutonLien from './BoutonLien.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
@@ -51,7 +51,9 @@
 	import { fichiersDepuisUrls } from '$lib/fichiers';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import EvolForm from './EvolForm.svelte';
+	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
 	import { TICKET } from '$lib/entites/ticket';
+	import { optionsDuTicket, optionsVersTicket } from '$lib/tickets';
 	import { fmtDate, isNouveau } from '$lib/date';
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import {
@@ -75,6 +77,13 @@
 	     il se lit dans les pastilles de la section Workflow, celle de l'état
 	     courant étant active. */
 	export let mode: 'lecture' | 'edition' | 'evolution' = 'lecture';
+
+	//  🔴 LES OPTIONS DE PUBLICATION du ticket, reprises À CHAQUE OUVERTURE du
+	//  formulaire de commentaire (05/09/2026) : ce qui s'affiche est l'état réel,
+	//  et ce qu'on enregistre devient l'état. Une COPIE — cocher une case ne
+	//  modifie pas le ticket avant l'envoi.
+	let optionsEvol = optionsDuTicket(ticket);
+	$: if (mode === 'evolution') optionsEvol = optionsDuTicket(ticket);
 	/** Enregistrement d'une évolution en cours — porté par la page (appel d'API). */
 	export let evolutionEnCours = false;
 	/**  L'entrée du fil en cours de CORRECTION, `null` si aucune. Portée par la
@@ -179,13 +188,15 @@
 			      ACTUALITÉ, où il restreint la lecture au périmètre. Ici la règle est
 			      autre — l'auteur, la personne concernée, le conseil. Deux règles sous
 			      un même glyphe se lisent comme une seule. -->
-			{#if ticket.confidentiel}
-				{@const opt = optionPublication('brouillon')}
-				<!--  Glyphe et mot viennent de la TABLE, comme sur une actualité : c'est
-				      la même notion, et deux écritures divergeraient au premier
-				      changement de libellé (05/09/2026). -->
-				<span class="badge badge-gray" title={opt?.aide}>{opt?.glyphe} {opt?.etat}</span>
-			{/if}
+			<!--  🔴 TOUTES LES OPTIONS ACTIVES, pas seulement 🛡️ (05/09/2026) : un
+			      ticket porte les mêmes options qu'une actualité, il doit les
+			      montrer pareil. Glyphe et mot viennent de la TABLE — deux
+			      écritures divergeraient au premier changement de libellé.
+			      Le pont clé d'écran ⇄ champ du ticket vit dans `$lib/tickets` :
+			      `urgente` s'y lit sur la priorité, `brouillon` sur `confidentiel`. -->
+			{#each optionsActives(optionsDuTicket(ticket)) as opt (opt.cle)}
+				<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
+			{/each}
 			<span class="tk-numero">#{ticket.numero}</span>
 			<!--  🔴 PAS DE BADGE 📍 DU DEMANDEUR — arbitré à l'écran le 30/08/2026
 			      (#653) : *« se restreindre uniquement au périmètre »*.
@@ -300,9 +311,16 @@
 						whatsappInterdit={motifWhatsappInterdit(ticket.confidentiel ?? false, 'ticket')}
 						peutDiffuser={peutSuivreCeTicket}
 						saving={evolutionEnCours}
-						on:submit={(e) => dispatch('evoluer', e.detail)}
+						on:submit={(e) =>
+							dispatch('evoluer', { ...e.detail, ...optionsVersTicket(optionsEvol) })}
 						on:cancel={() => dispatch('annuler')}
-					/>
+					>
+						<!--  Section 2 — le MÊME composant que la fiche du ticket : deux
+						      écrans commentent un ticket, un seul bloc les sert. -->
+						<svelte:fragment slot="specifiques" let:premiere>
+							<OptionsEvolutionTicket {premiere} bind:options={optionsEvol} />
+						</svelte:fragment>
+					</EvolForm>
 				</div>
 			{:else}
 				<FicheLecture

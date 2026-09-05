@@ -15,7 +15,14 @@ from typing import Optional
 from fastapi import BackgroundTasks
 from sqlmodel import Session, select
 
-from app.models.core import MessageTicket, Ticket, TicketEvolution, Utilisateur
+from app.models.core import (
+    MessageTicket,
+    Notification,
+    StatutUtilisateur,
+    Ticket,
+    TicketEvolution,
+    Utilisateur,
+)
 from app.utils.photos import parse_photos
 from app.utils.categories_ticket import libelle_categorie
 from app.utils.copie_auteur import copie_demandee
@@ -30,6 +37,8 @@ from .commun import (
     libelle_evolution,
 )
 from app.utils.noms import nom_affiche
+from app.utils.destinataires import membres_cs_ou_admin
+from app.utils.liens import lien_ticket
 
 
 def _contexte_ticket(ticket) -> dict:
@@ -345,3 +354,30 @@ def _partager_sur_le_groupe(
         premiere_photo,
         wa_config,
     )
+
+
+#  🔴 DÉPLACÉE DEPUIS `crud.py` le 05/09/2026, au fil de l'eau : le garde-fou de
+#  modularité a refusé que ce fichier-là grossisse pour recevoir les options de
+#  publication. Sa place est ici, et pas seulement pour la taille — c'est un
+#  EFFET de la création (« qui est prévenu ? »), du même registre exact que
+#  `_alerter_bug` et `_partager_sur_le_groupe` juste en dessous. `crud.py` garde
+#  la décision, ce module porte ce qui part.
+def _notifier_cs_creation(session: Session, ticket: Ticket, urgence: bool) -> None:
+    """Notification in-app à tout le CS, plus le syndic si le ticket est urgent."""
+    cs_members = membres_cs_ou_admin(session)
+    if urgence:
+        syndics = session.exec(
+            select(Utilisateur).where(Utilisateur.statut == StatutUtilisateur.syndic)
+        ).all()
+        cs_ids = {m.id for m in cs_members}
+        cs_members = list(cs_members) + [s for s in syndics if s.id not in cs_ids]
+
+    for member in cs_members:
+        session.add(Notification(
+            destinataire_id=member.id,
+            type="ticket_update",
+            titre=f"Nouveau ticket : {ticket.titre}",
+            corps=ticket.description[:200],
+            lien=lien_ticket(ticket.id),
+            urgente=urgence,
+        ))

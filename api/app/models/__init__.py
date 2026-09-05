@@ -18,4 +18,6 @@ from app.models.copropriete import (  # patrimoine PHYSIQUE, extrait le 13/08/20
 from app.models.courriel import RelanceCourriel as RelanceCourriel
 from app.models.courriel import ReponseRelance as ReponseRelance
 from app.models.perimetre import Perimetre as Perimetre
+from app.models.whatsapp import WhatsAppLog as WhatsAppLog
+from app.models.whatsapp import WhatsAppScheduled as WhatsAppScheduled
 from app.models.evenement import EvenementEvolution as EvenementEvolution

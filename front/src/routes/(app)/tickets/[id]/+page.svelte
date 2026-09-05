@@ -17,6 +17,7 @@
 	import FilAriane from '$lib/components/FilAriane.svelte';
 	import { fmtDateLong, fmtDateShort } from '$lib/date';
 	import { motifWhatsappInterdit } from '$lib/options-publication';
+	import { optionsDuTicket } from '$lib/tickets';
 	import {
 		STATUTS_TICKET,
 		STATUT_TICKET_BADGE,
@@ -298,6 +299,7 @@
 		statutCourant={ticket?.statut ?? ''}
 		perimetreCourant={ticket?.perimetre_cible ?? []}
 		whatsappInterdit={motifWhatsappInterdit(ticket?.confidentiel ?? false, 'ticket')}
+		optionsInitiales={optionsDuTicket(ticket)}
 		{evolutions}
 		on:change={loadEvolutions}
 	/>

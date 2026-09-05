@@ -264,6 +264,12 @@
 				//  le serveur enregistre une évolution valide, et seul le périmètre
 				//  affiché ensuite trahit la perte. Signalé à l'écran (#529).
 				perimetre_cible: data.perimetre_cible,
+				//  Même piège que la ligne au-dessus, et même remède : ce relais
+				//  ÉNUMÈRE, donc il jette ce qu'il ne nomme pas. Les options de
+				//  publication passent par ici depuis le 05/09/2026.
+				epingle: data.epingle,
+				urgente: data.urgente,
+				confidentiel: data.confidentiel,
 			});
 			if (data.type === 'etat') {
 				ticketList = ticketList.map((x) =>

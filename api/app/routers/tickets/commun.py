@@ -300,8 +300,89 @@ def trier_par_activite(session: Session, tickets: list[Ticket]) -> list[Ticket]:
             .group_by(TicketEvolution.ticket_id)
         ).all()
     )
+    #  📌 LES ÉPINGLÉS D'ABORD (05/09/2026) — c'est le sens même de l'option :
+    #  « maintenue en tête ». Un booléen en première clé de tri, l'activité
+    #  ensuite : entre deux tickets épinglés, le plus actif reste devant.
     return sorted(
         tickets,
-        key=lambda t: derniere_activite.get(t.id) or t.cree_le,
+        key=lambda t: (bool(t.epingle), derniere_activite.get(t.id) or t.cree_le),
         reverse=True,
     )
+
+
+#: Les options de publication d'un ticket, et la colonne que chacune pilote.
+#:
+#: 🔴 **Une écriture, trois chemins.** La création, la correction (`PATCH`) et le
+#: commentaire portent tous les trois ces options depuis le 05/09/2026, demandé à
+#: l'écran :
+#:
+#: > « tous les autres options de publication doivent être aussi conservé dans
+#: >   l'objet pour les tickets en édition et commentaire »
+#:
+#: Écrite trois fois, la règle aurait divergé au premier ajout — c'est ce qui
+#: était arrivé aux destinataires (quatre copies, cf. l'en-tête de ce module).
+#:
+#: ⚠️ **Les clés ne sont pas les colonnes**, et c'est voulu :
+#:
+#: | Option (écran) | Ce qu'elle écrit |
+#: |---|---|
+#: | `epingle` | `ticket.epingle` |
+#: | `urgente` | `ticket.priorite` — `haute` / `normale`, ce que fait déjà la catégorie « Urgence » |
+#: | `confidentiel` | `ticket.confidentiel` (🛡️ « au seul conseil syndical ») |
+#:
+#: Il n'y a pas de quatrième ligne pour 🔒 « visible du seul périmètre » : un
+#: ticket l'est DÉJÀ (`ticket_visible` n'ouvre pas à la copropriété, #339).
+OPTIONS_TICKET = ("epingle", "urgente", "confidentiel")
+
+#: Les options qui appartiennent au CONSEIL, pas à l'auteur.
+#:
+#: `confidentiel` décide qui a le droit de lire — un auteur corrige son texte, il
+#: ne décide pas de son audience (#710). Épingler et marquer urgent ordonnent la
+#: liste du conseil : même nature.
+OPTIONS_RESERVEES_AU_CS = ("epingle", "urgente", "confidentiel")
+
+
+def appliquer_options(ticket: Ticket, body, *, est_cs: bool) -> list[str]:
+    """Pose sur le ticket les options que `body` déclare. Rend celles qui ont changé.
+
+    `None` veut dire « ce corps ne dit rien de cette option » : le ticket garde
+    la sienne. C'est la même convention que `perimetre_cible`, et c'est elle qui
+    permet au même code de servir un `POST` complet et un commentaire qui ne
+    touche qu'une case.
+
+    ⚠️ **Le contrôle de droit est ICI**, pas dans les trois appelants : une règle
+    d'autorisation recopiée ne se durcit pas, on en corrige deux sur trois
+    (`standards/03-securite.md` §1). Un non-CS qui envoie ces champs les voit
+    simplement ignorés — l'écran ne les lui propose pas.
+    """
+    changees: list[str] = []
+    for option in OPTIONS_TICKET:
+        valeur = getattr(body, option, None)
+        if valeur is None:
+            continue
+        if option in OPTIONS_RESERVEES_AU_CS and not est_cs:
+            continue
+        if option == "urgente":
+            #  Pas de colonne `urgente` : l'urgence d'un ticket EST sa priorité.
+            nouvelle = "haute" if valeur else "normale"
+            if str(ticket.priorite) != nouvelle:
+                ticket.priorite = nouvelle
+                changees.append(option)
+            continue
+        if getattr(ticket, option) != valeur:
+            setattr(ticket, option, valeur)
+            changees.append(option)
+    return changees
+
+
+def options_du_ticket(ticket: Ticket) -> dict[str, bool]:
+    """L'état courant des options — ce que l'écran doit REPRENDRE à l'ouverture.
+
+    Le pendant en lecture d'`appliquer_options` : les deux sens de la même table,
+    au même endroit, pour qu'aucun ne puisse oublier une option que l'autre écrit.
+    """
+    return {
+        "epingle": bool(ticket.epingle),
+        "urgente": str(ticket.priorite) == "haute",
+        "confidentiel": bool(ticket.confidentiel),
+    }

@@ -96,6 +96,12 @@ export interface Ticket {
 	     il ne mordrait pas sur un ticket à portée « résidence », le cas le plus
 	     fréquent. */
 	confidentiel?: boolean;
+	/**  📌 Épinglé — maintenu en tête de la liste (05/09/2026).
+	 *
+	 *   ⚠️ Il n'y a pas de champ `urgente` en face : l'urgence d'un ticket EST sa
+	 *   `priorite`, que la catégorie « Urgence » met à `haute`. La case 🚨 de
+	 *   l'écran pilote celle-là — voir `optionsDuTicket()`. */
+	epingle?: boolean;
 }
 
 /** Une réponse du syndic à une relance GROUPÉE — jamais ventilée dans les fils.

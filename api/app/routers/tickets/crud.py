@@ -15,7 +15,6 @@ from app.models.core import (
     Notification,
     RoleUtilisateur,
     StatutTicket,
-    StatutUtilisateur,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -33,6 +32,7 @@ from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.visibility import ticket_visible
 
 from .commun import (
+    appliquer_options,
     STATUT_LABELS,
     generer_numero,
     ticket_read,
@@ -41,6 +41,7 @@ from .commun import (
 from .correction import _appliquer_contenu, _appliquer_relations, _envoye
 from .courriels import (
     _alerter_bug,
+    _notifier_cs_creation,
     _partager_sur_le_groupe,
     envoyer_email_externe,
     envoyer_email_syndic_cs,
@@ -50,7 +51,6 @@ from app.utils.corrections import (
     PREFIXE_CORRECTION_AUTEUR,
     SEPARATEUR_CORRECTION,
 )
-from app.utils.destinataires import membres_cs_ou_admin
 
 #  Seul sous-router à porter le préfixe : ses deux routes de collection ont un
 #  chemin VIDE (`GET /tickets`, `POST /tickets`), et FastAPI refuse un chemin
@@ -94,25 +94,6 @@ def list_tickets(
     ]
 
 
-def _notifier_cs_creation(session: Session, ticket: Ticket, urgence: bool) -> None:
-    """Notification in-app à tout le CS, plus le syndic si le ticket est urgent."""
-    cs_members = membres_cs_ou_admin(session)
-    if urgence:
-        syndics = session.exec(
-            select(Utilisateur).where(Utilisateur.statut == StatutUtilisateur.syndic)
-        ).all()
-        cs_ids = {m.id for m in cs_members}
-        cs_members = list(cs_members) + [s for s in syndics if s.id not in cs_ids]
-
-    for member in cs_members:
-        session.add(Notification(
-            destinataire_id=member.id,
-            type="ticket_update",
-            titre=f"Nouveau ticket : {ticket.titre}",
-            corps=ticket.description[:200],
-            lien=lien_ticket(ticket.id),
-            urgente=urgence,
-        ))
 
 
 @router.post("", response_model=TicketRead, status_code=201)
@@ -169,6 +150,10 @@ def create_ticket(
     )
     session.add(ticket)
     session.flush()
+    #  🔴 LES OPTIONS DE PUBLICATION — une écriture, trois chemins (05/09/2026).
+    #  `appliquer_options` porte la table et le contrôle de droit ; ce routeur
+    #  ne réécrit ni l'une ni l'autre (`commun.OPTIONS_TICKET`).
+    appliquer_options(ticket, body, est_cs=est_cs)
 
     _notifier_cs_creation(session, ticket, urgence=body.categorie == "urgence")
 
@@ -318,12 +303,22 @@ def update_ticket(
     #  ⚠️ Il ne passe PAS par `_appliquer_contenu` : un auteur peut corriger son
     #  texte, il ne décide pas qui a le droit de le lire. Le mettre là aurait
     #  ouvert le drapeau à quiconque peut éditer le ticket.
-    if body.confidentiel is not None:
-        if not is_cs_admin:
-            raise HTTPException(
-                403, "Seul le CS ou un administrateur peut rendre un ticket confidentiel"
-            )
-        ticket.confidentiel = body.confidentiel
+    #  🔴 LES OPTIONS DE PUBLICATION — CS/admin uniquement, et posées ici avec
+    #  le statut et la priorité parce que c'est la même nature de décision :
+    #  elle appartient au conseil, pas à l'auteur (#710).
+    #
+    #  ⚠️ Elles ne passent PAS par `_appliquer_contenu` : un auteur peut corriger
+    #  son texte, il ne décide pas qui a le droit de le lire.
+    #
+    #  ⚠️ Le REFUS reste explicite pour un non-CS qui demande `confidentiel` :
+    #  `appliquer_options` se contente d'ignorer, ce qui conviendrait mal ici —
+    #  ce chemin répondait 403 depuis #710, et un silence ferait croire au client
+    #  que sa correction a été prise.
+    if body.confidentiel is not None and not is_cs_admin:
+        raise HTTPException(
+            403, "Seul le CS ou un administrateur peut rendre un ticket confidentiel"
+        )
+    appliquer_options(ticket, body, est_cs=is_cs_admin)
 
     #  Champs du CONTENU — le droit a déjà été vérifié plus haut
     #  (`peut_editer`) : auteur, « saisi pour », ou admin.

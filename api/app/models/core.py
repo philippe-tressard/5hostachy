@@ -313,6 +313,14 @@ class Ticket(SQLModel, table=True):
     #  Refermé sur son auteur et le CS (#710). Défaut `False`, comme
     #  `Publication.confidentiel` — voir la migration 0166 pour le pourquoi.
     confidentiel: bool = False
+    #  📌 ÉPINGLÉ — maintenu en tête de la liste (05/09/2026).
+    #
+    #  ⚠️ C'est la SEULE colonne que les options de publication ont ajoutée au
+    #  ticket : 🚨 pilote `priorite`, et 🔒 n'a pas lieu d'être (un ticket est
+    #  déjà restreint à son périmètre). Le tableau des quatre options et de ce
+    #  que chacune écrit vit dans la migration 0175 — le recopier ici en ferait
+    #  deux écritures libres de diverger.
+    epingle: bool = False
 
     auteur: Optional[Utilisateur] = Relationship(back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"})
     saisi_pour: Optional[Utilisateur] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Ticket.saisi_pour_user_id]"})
@@ -1045,26 +1053,10 @@ class ConfigSite(SQLModel, table=True):
 
 
 # ──────────────────────────────────────────────
-#  Messages WhatsApp planifiés
+#  Messages WhatsApp planifiés — extraits le 05/09/2026 dans `models/whatsapp.py`
+#  (modularité, rang 1). Ré-exportés ici : aucun appelant n'a changé.
 # ──────────────────────────────────────────────
-
-class WhatsAppScheduled(SQLModel, table=True):
-    __tablename__ = "whatsapp_scheduled"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    label: str                    # ex. "Encombrants Bd Hostachy"
-    message: str                  # texte du message
-    cron_rule: str                # ex. "3eme_samedi" ou "4eme_samedi"
-    enabled: bool = True
-    cree_le: datetime = Field(default_factory=datetime.utcnow)
-    mis_a_jour_le: datetime = Field(default_factory=datetime.utcnow)
-
-
-class WhatsAppLog(SQLModel, table=True):
-    __tablename__ = "whatsapp_log"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    scheduled_id: Optional[int] = Field(default=None, foreign_key="whatsapp_scheduled.id")
-    label: str = ""
-    message: str
-    statut: str = "envoyé"        # envoyé | échec
-    erreur: Optional[str] = None
-    envoye_le: datetime = Field(default_factory=datetime.utcnow)
+from app.models.whatsapp import (  # noqa: E402,F401
+    WhatsAppLog as WhatsAppLog,
+    WhatsAppScheduled as WhatsAppScheduled,
+)

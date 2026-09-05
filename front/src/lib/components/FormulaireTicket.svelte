@@ -46,7 +46,12 @@
 	import SectionsSpecifiquesTicket from '$lib/components/SectionsSpecifiquesTicket.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { CATEGORIES_TICKET, type ModeSaisiPour } from '$lib/tickets';
+	import {
+		CATEGORIES_TICKET,
+		optionsDuTicket,
+		optionsVersTicket,
+		type ModeSaisiPour,
+	} from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -85,7 +90,14 @@
 	let statut = ticket?.statut ?? 'ouvert';
 	//  🛡️ Réservé au conseil syndical (#710) — le CS seul le pose, le serveur le
 	//  revérifie, et le libellé se distingue du 🔒 d'une actualité (voir le champ).
-	let confidentiel = ticket?.confidentiel ?? false;
+	//  🔴 LES TROIS OPTIONS, reprises du ticket (05/09/2026) : le formulaire
+	//  montre le DERNIER état, et ce qu'on enregistre devient l'état. Le pont
+	//  écran ⇄ objet vit dans `$lib/tickets` — `brouillon` écrit `confidentiel`,
+	//  `urgente` écrit la priorité, et rien ici ne le réécrit.
+	let options = optionsDuTicket(ticket);
+	//  `confidentiel` reste une variable à part : trois autres endroits de ce
+	//  fichier la lisent (la garde WhatsApp, notamment).
+	$: confidentiel = options.brouillon;
 	//  Workflow du ticket, VISIBLE de tous dès la création : c'est une information
 	//  capitale pour le suivi, et la masquer laissait croire qu'un ticket n'a pas
 	//  d'état tant que le CS ne l'a pas touché. Seul le CS peut la MODIFIER — un
@@ -260,7 +272,7 @@
 					...($isCS
 						? {
 								statut,
-								confidentiel,
+								...optionsVersTicket(options),
 								destinataire_syndic: destinataireSyndic,
 								destinataire_cs: destinataireCs,
 								partager_whatsapp: partagerWhatsapp,
@@ -295,7 +307,7 @@
 				//  charge utile l'avait oublié. Comme en édition, il n'accompagne le lot que
 				//  pour le CS : un résident ne doit pas ouvrir un ticket déjà « Résolu ».
 				payload.statut = statut;
-				payload.confidentiel = confidentiel;
+				Object.assign(payload, optionsVersTicket(options));
 				if (modeSaisiPour === 'resident' && saisiPourUserId) {
 					payload.saisi_pour_user_id = saisiPourUserId;
 				} else if (modeSaisiPour === 'exterieur') {
@@ -366,7 +378,7 @@
 			{modeEdition}
 			bind:categorie
 			bind:statut
-			bind:confidentiel
+			bind:options
 			bind:modeSaisiPour
 			bind:saisiPourUserId
 			bind:saisiPourNom

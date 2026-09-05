@@ -44,6 +44,22 @@ class TicketEvolutionCreate(BaseModel):
     #  évolution ne dit rien du périmètre », et le ticket garde le sien. Quand il
     #  est fourni, il devient le périmètre COURANT du ticket (#497).
     perimetre_cible: Optional[List[str]] = None
+    #  🔴 LES OPTIONS DE PUBLICATION SE CORRIGENT DEPUIS UN COMMENTAIRE
+    #  (05/09/2026), demandé à l'écran :
+    #
+    #  > « tous les autres options de publication doivent être aussi conservé
+    #  >   dans l'objet pour les tickets en édition et commentaire »
+    #
+    #  C'est la règle déjà posée pour l'actualité : le formulaire montre le
+    #  DERNIER état, et ce qu'on enregistre DEVIENT l'état. `None` veut dire
+    #  « cette entrée ne dit rien de cette option » — le ticket garde la sienne,
+    #  exactement comme `perimetre_cible` juste au-dessus.
+    epingle: Optional[bool] = None
+    confidentiel: Optional[bool] = None
+    #  🚨 « Marquer urgente » ne crée PAS de colonne : elle pilote `priorite`,
+    #  que la catégorie « Urgence » met déjà à `haute`. Arbitré le 05/09/2026 —
+    #  deux notions d'urgence sur le même écran finiraient par se contredire.
+    urgente: Optional[bool] = None
 
 
 class TicketEvolutionUpdate(BaseModel):
