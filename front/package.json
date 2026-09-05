@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "3.102.0",
+	"version": "3.102.1",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -62,7 +62,8 @@
 		"lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest",
 		"lint:liste-depliable": "node --experimental-strip-types scripts/check-liste-depliable.mjs --selftest",
 		"lint:editeur": "node scripts/check-editeur-riche.mjs",
-		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs"
+		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs",
+		"lint:csp": "node scripts/check-csp-servie.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

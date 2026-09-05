@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, peut_commenter, require_cs_or_admin
+from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Idee,
@@ -18,13 +18,13 @@ from app.models.core import (
 )
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.communaute import exiger_acces
+from app.routers.reponses_communaute import (
+    enregistrer_routes_reponses,
+    reponses_de,
+)
 from app.utils.liens import lien_element
 from app.utils.reponses import (
-    auteur_meta,
-    enrich_reponse,
-    notifier_nouvelle_reponse,
     notifier_votants_idee,
-    tri_reponses,
 )
 
 router = APIRouter(prefix="/idees", tags=["idées"])
@@ -35,15 +35,9 @@ RUBRIQUE = "idee"
 _STATUT_NOTIF_LABELS = {"retenue": "Retenue", "realisee": "Réalisée"}
 
 
-def _reponses_for(idee_id: int, session: Session) -> list[dict]:
-    """Réponses d'une idée : CS/admin en tête (plus de poids), puis chronologique."""
-    reps = session.exec(
-        select(ReponseCommunaute).where(
-            ReponseCommunaute.rubrique == RUBRIQUE,
-            ReponseCommunaute.cible_id == idee_id,
-        )
-    ).all()
-    return tri_reponses([enrich_reponse(r, session) for r in reps])
+def _reponses_for(cible_id: int, session: Session) -> list[dict]:
+    """Les réponses de cette rubrique — la règle vit dans la fabrique."""
+    return reponses_de(RUBRIQUE, cible_id, session)
 
 
 class IdeeCreate(BaseModel):
@@ -251,71 +245,20 @@ def delete_idee(
 
 # ── Réponses aux idées ─────────────────────────────────────────────────────────
 
-class ReponseCreate(BaseModel):
-    contenu: str
-
-
-@router.get("/{idee_id}/reponses")
-def list_reponses(
-    idee_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    exiger_acces(user)
-    idee = session.get(Idee, idee_id)
-    if not idee:
-        raise HTTPException(404, "Idée introuvable")
-    return _reponses_for(idee_id, session)
-
-
-@router.post("/{idee_id}/reponses", status_code=201)
-def create_reponse(
-    idee_id: int,
-    body: ReponseCreate,
-    background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    exiger_acces(user)
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
-        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
-    ):
-        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas répondre")
-    contenu = (body.contenu or "").strip()
-    if not contenu:
-        raise HTTPException(422, "La réponse ne peut pas être vide")
-    idee = session.get(Idee, idee_id)
-    if not idee:
-        raise HTTPException(404, "Idée introuvable")
-    rep = ReponseCommunaute(rubrique=RUBRIQUE, cible_id=idee_id, auteur_id=user.id, contenu=contenu)
-    session.add(rep)
-    # Notifier le créateur de l'idée (in-app + email selon préférences)
-    notifier_nouvelle_reponse(
-        session, background_tasks,
-        createur_id=idee.auteur_id, auteur=user,
-        rubrique_label="votre idée", sujet=idee.titre,
-        extrait=contenu, lien_path=lien_element("idee", idee_id),
-    )
-    session.commit()
-    session.refresh(rep)
-    return {"id": rep.id, "cible_id": rep.cible_id, "auteur_id": rep.auteur_id,
-            "contenu": rep.contenu, "cree_le": rep.cree_le, **auteur_meta(user, session)}
-
-
-@router.delete("/{idee_id}/reponses/{rep_id}", status_code=204)
-def delete_reponse(
-    idee_id: int,
-    rep_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Supprimer une réponse : son auteur, ou un CS/admin."""
-    exiger_acces(user)
-    rep = session.get(ReponseCommunaute, rep_id)
-    if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != idee_id:
-        raise HTTPException(404, "Réponse introuvable")
-    #  L'auteur, ou un modérateur — règle du module central.
-    if not peut_commenter(rep, user):
-        raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
-    session.delete(rep)
-    session.commit()
+#  🔴 LES RÉPONSES NE SONT PLUS ÉCRITES ICI (05/09/2026).
+#
+#  Les trois routes — lister, créer, supprimer — étaient identiques à
+#  99 %, 94 % et 99 % de celles de l'autre rubrique de communauté. Six
+#  fonctions pour deux fois la même chose, dont la règle qui refuse les
+#  comptes externes : écrite deux fois, elle se durcit une fois sur deux.
+#
+#  La fabrique les pose, adaptées par ces cinq paramètres. Ce qui reste
+#  ici est ce qui est PROPRE à cette rubrique — et rien d'autre.
+enregistrer_routes_reponses(
+    router,
+    rubrique=RUBRIQUE,
+    modele=Idee,
+    libelle="Idée",
+    rubrique_label="votre idée",
+    prefixe_lien="idee",
+)
