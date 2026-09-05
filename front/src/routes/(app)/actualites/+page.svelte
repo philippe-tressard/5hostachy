@@ -12,6 +12,8 @@
 		auth as authApi,
 	} from '$lib/api';
 	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
+	import PanneauOptionsPublication from '$lib/components/PanneauOptionsPublication.svelte';
+	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { optionsActives, libelleOptionsActives } from '$lib/options-publication';
 	import { toast } from '$lib/components/Toast.svelte';
 	import CarteActualite from '$lib/components/CarteActualite.svelte';
@@ -124,10 +126,27 @@
 	//  UN point d'entrée (#426) : le formulaire porte les DEUX gestes, et lequel a
 	//  été fait se lit dans les pastilles de la section Workflow — celle de l'état
 	//  courant est active, la laisser telle quelle ne change rien.
+	//  🔴 LE COMMENTAIRE PORTE AUSSI LE CIBLAGE (05/09/2026), demandé à l'écran :
+	//  *« les sections Options de publication, Périmètre et Destinataires doivent
+	//  être visibles même pour chaque commentaire ; tu remets le dernier état, et
+	//  le nouveau sauvegardé deviendra validé »*.
+	//
+	//  Copie de travail, comme pour le panneau d'options : on n'écrit dans la
+	//  publication qu'après la réponse du serveur. Elle vit ICI et non dans
+	//  `EvolForm`, qui reste générique — c'est l'écran qui sait ce que « options de
+	//  publication » veut dire.
+	let evolOptions = { epingle: false, urgente: false, brouillon: false, confidentiel: false };
+
 	function ouvrirEvolution(pub: Publication) {
 		showEvolForm = pub.id;
 		editingPub = null;
 		expandedPubs = new Set([pub.id]);
+		evolOptions = {
+			epingle: pub.epingle ?? false,
+			urgente: pub.urgente ?? false,
+			brouillon: pub.brouillon ?? false,
+			confidentiel: pub.confidentiel ?? false,
+		};
 	}
 	let editingEvolId: number | null = null;
 	let editingEvolPubId: number | null = null;
@@ -384,44 +403,13 @@
 
 			<svelte:fragment slot="formulaire">
 				{#if optionsPub?.id === pub.id}
-					<!--  ── Options de publication ──
-					      LE MÊME composant qu'à la création et à l'édition
-					      (`OptionsPublication`, section 2 du cadre #430) : ni copie, ni
-					      variante. Il porte déjà la règle « Confidentiel exige un
-					      périmètre restreint », qu'un panneau réécrit n'aurait pas eue.
-					      `role="presentation"` : ce conteneur n'est qu'un relais, il
-					      arrête la propagation pour que cocher ne referme pas la carte. -->
-					<div
-						class="options-form"
-						role="presentation"
-						on:click|stopPropagation
-						on:keydown|stopPropagation
-					>
-						<h4 class="options-titre">Options de publication</h4>
-						<OptionsPublication
-							perimetreCible={pub.perimetre_cible ?? []}
-							dejaEpingle={pub.epingle ?? false}
-							bind:epingle={optionsBrouillon.epingle}
-							bind:urgente={optionsBrouillon.urgente}
-							bind:brouillon={optionsBrouillon.brouillon}
-							bind:confidentiel={optionsBrouillon.confidentiel}
-						/>
-						<!--  L'annulation vit à côté d'« Enregistrer » — norme du
-						      18/08/2026, la même que sur Tickets et sur l'édition. -->
-						<div class="options-actions">
-							<button
-								class="btn btn-primary btn-sm"
-								disabled={optionsSaving}
-								on:click={() => enregistrerOptions(pub)}
-								>{optionsSaving ? 'Enregistrement…' : 'Enregistrer'}</button
-							>
-							<button
-								class="btn btn-outline btn-sm"
-								disabled={optionsSaving}
-								on:click={() => (optionsPub = null)}>Annuler</button
-							>
-						</div>
-					</div>
+					<PanneauOptionsPublication
+						{pub}
+						bind:options={optionsBrouillon}
+						enregistrement={optionsSaving}
+						on:enregistrer={() => enregistrerOptions(pub)}
+						on:annuler={() => (optionsPub = null)}
+					/>
 				{:else if showEvolForm === pub.id}
 					<!--  ── Commenter / changer l'état ──
 					      `role="presentation"` dit que ce conteneur n'est qu'un relais :
@@ -457,9 +445,28 @@
 								showEmail={true}
 								entite={PUBLICATION}
 								saving={evolSaving}
+								perimetreCourant={pub.perimetre_cible ?? []}
+								initialDestinataires={pub.public_cible ?? []}
+								aidePerimetre="Le périmètre en vigueur est repris tel quel : le corriger ici corrige la publication entière."
 								on:submit={(e) => addEvolFromForm(pub, e)}
 								on:cancel={() => (showEvolForm = null)}
-							/>
+							>
+								<!--  Section 2 — LE MÊME composant qu'à la création, à l'édition et
+								      dans le panneau d'options : ni copie, ni variante. Il porte déjà
+								      la règle « Confidentiel exige un périmètre restreint ». -->
+								<svelte:fragment slot="specifiques">
+									<SectionFormulaire titre="Options de publication">
+										<OptionsPublication
+											perimetreCible={pub.perimetre_cible ?? []}
+											dejaEpingle={pub.epingle ?? false}
+											bind:epingle={evolOptions.epingle}
+											bind:urgente={evolOptions.urgente}
+											bind:brouillon={evolOptions.brouillon}
+											bind:confidentiel={evolOptions.confidentiel}
+										/>
+									</SectionFormulaire>
+								</svelte:fragment>
+							</EvolForm>
 						{/key}
 					</div>
 				{/if}
@@ -553,31 +560,6 @@
 	.btn-icon-options .opt-glyphe {
 		font-size: 0.8em;
 		line-height: 1;
-	}
-
-	.options-form {
-		padding: 0.5rem 0;
-	}
-	.options-titre {
-		margin: 0 0 0.6rem;
-		font-size: 0.9rem;
-		font-weight: 600;
-	}
-	.options-actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-	/*  Sur téléphone, les deux boutons prennent toute la largeur plutôt que de
-	    se serrer — même règle que les autres formulaires du site. */
-	@media (max-width: 480px) {
-		.options-actions {
-			flex-direction: column;
-		}
-		.options-actions :global(.btn) {
-			width: 100%;
-			min-height: 44px;
-		}
 	}
 
 	/*  Les couleurs de badge vivent dans `styles/composants.css`. Cette page les

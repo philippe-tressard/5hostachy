@@ -99,15 +99,23 @@ export const PUBLICATION: EntiteDeclaree = {
 			id: 'specifiques',
 			objet: 'Épinglage · Urgence · Brouillon · Confidentiel',
 			titreEcran: 'Options de publication',
-			absente: {
-				evolution: {
-					motif: 'hérité',
-					explication:
-						'Épinglage, urgence et confidentialité qualifient la publication entière. Une ' +
-						'entrée du fil ne réépingle pas ce à quoi elle se rattache, et ne peut pas ' +
-						'restreindre une lecture que la publication a déjà ouverte.',
-				},
-			},
+			//  🔴 OUVERTE À L'ÉVOLUTION (05/09/2026), sur demande de l'utilisateur :
+			//  *« les sections Options de publication, Périmètre et Destinataires
+			//  doivent être visibles même pour chaque commentaire ; tu remets le
+			//  dernier état, et le nouveau sauvegardé deviendra validé »*.
+			//
+			//  Ce paragraphe disait l'inverse — « une entrée du fil ne réépingle pas
+			//  ce à quoi elle se rattache » — et le raisonnement tenait pour une
+			//  entrée vue comme un FAIT DATÉ. Mais une actualité vit : elle
+			//  s'épingle quand elle devient urgente, se dépingle quand elle ne l'est
+			//  plus, et le moment où on la commente est justement celui où on s'en
+			//  aperçoit. Obliger à rouvrir le formulaire d'édition pour cela faisait
+			//  deux gestes d'un seul.
+			//
+			//  ⚠️ Ce que la réserve d'origine disait de vrai reste vrai : cocher
+			//  « confidentiel » après coup NE REPREND PAS une lecture déjà ouverte —
+			//  qui a lu a lu, et un e-mail parti ne se rappelle pas. La section le
+			//  dit à l'écran plutôt que de se fermer.
 		},
 		{
 			//  🔴 UNE ACTUALITÉ N'A PAS DE WORKFLOW — arbitré le 18/08/2026, après
@@ -135,24 +143,20 @@ export const PUBLICATION: EntiteDeclaree = {
 			id: 'perimetre',
 			objet: 'PerimetrePicker — de quoi il s’agit',
 			requis: true,
-			absente: {
-				evolution: {
-					motif: 'hérité',
-					explication: 'Le périmètre est celui de la publication ; une entrée ne le redéfinit pas.',
-				},
-			},
+			//  Ouvert à l'évolution le 05/09/2026 (voir la section 2 ci-dessus) :
+			//  le champ part rempli du périmètre en vigueur, et ce qu'on enregistre
+			//  devient le périmètre de la publication. C'est un geste de CORRECTION,
+			//  pas de précision — d'où une aide différente de celle du ticket.
 		},
 		{
 			id: 'destinataires',
 			objet: 'DestinatairePicker — qui est concerné dans l’application',
-			absente: {
-				evolution: {
-					motif: 'hérité',
-					explication:
-						"Le public visé est celui de la publication. Une entrée qui l'élargirait " +
-						'montrerait un suivi à des résidents qui n’ont jamais vu ce qu’il suit.',
-				},
-			},
+			//  Ouvert à l'évolution le 05/09/2026, comme les deux sections
+			//  ci-dessus. La réserve d'origine — « une entrée qui élargirait le
+			//  public montrerait un suivi à des résidents qui n'ont jamais vu ce
+			//  qu'il suit » — vaut pour un ciblage propre à l'ENTRÉE. Ici il n'y en
+			//  a pas : on modifie celui de la publication, donc le suivi et ce qu'il
+			//  suit restent visibles des mêmes personnes, par construction.
 		},
 		{
 			id: 'description',

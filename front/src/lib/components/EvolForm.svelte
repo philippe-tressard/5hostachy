@@ -69,10 +69,10 @@
 	import SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
-	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
+	import SectionsCiblageEvolution from '$lib/components/SectionsCiblageEvolution.svelte';
 	import { sectionPresente, type EntiteDeclaree } from '$lib/entites/types';
 	import type { ApercuDiffusion } from '$lib/api';
-	import { estImage } from '$lib/fichiers';
+	import { separerFichiers } from '$lib/fichiers';
 	import { perimetreEntree, perimetreHerite } from '$lib/perimetres';
 
 	// ── Props ─────────────────────────────────────────────────────────────────
@@ -143,6 +143,9 @@
 	/**  Le périmètre que l'entrée AVAIT déclaré, en correction. Vide si elle n'en
 	 *   déclarait aucun — le sélecteur part alors de l'hérité, comme en saisie. */
 	export let initialPerimetre: string[] = [];
+	/** Le ciblage en vigueur et son aide — voir `SectionsCiblageEvolution`. */
+	export let initialDestinataires: string[] = [];
+	export let aidePerimetre = '';
 	/**  Le périmètre de l’objet, et l’historique déjà écrit : ensemble ils donnent
 	 *   celui dont cette entrée HÉRITE (`perimetreHerite`) — badge et point de
 	 *   départ du sélecteur, calculés une seule fois pour ne pas en montrer deux. */
@@ -208,18 +211,17 @@
 		editMode && initialPerimetre.length
 			? [...initialPerimetre]
 			: perimetreHerite(perimetreCourant, entrees);
+	//  Repli sur le défaut du site : une liste vide serait un effacement.
+	let destinataires: string[] = initialDestinataires.length
+		? [...initialDestinataires]
+		: ['résidents'];
 
 	//  7. Photos · 8. Documents — DEUX sections, jamais une seule (cadre #430).
-	//  Le tri se fait à l'ouverture, sur ce que l'entrée portait déjà : les
-	//  évolutions ne stockent qu'une liste (`fichiers_urls`), et c'est `estImage`
-	//  qui décide de quel côté chaque pièce revient — la même règle que partout
-	//  ailleurs (`$lib/fichiers`), jamais réimplémentée dans un écran.
-	let photos: string[] = editMode
-		? initialFichiers.filter((f) => estImage(f.url)).map((f) => f.url)
-		: [];
-	let docs: string[] = editMode
-		? initialFichiers.filter((f) => !estImage(f.url)).map((f) => f.url)
-		: [];
+	//  Le tri vient de `$lib/fichiers` : c'est une règle de FICHIERS, pas de
+	//  formulaire — et elle y était déjà, sous le nom `separerFichiers`.
+	const heritees = separerFichiers(editMode ? initialFichiers.map((f) => f.url) : []);
+	let photos: string[] = heritees.photos;
+	let docs: string[] = heritees.documents;
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -256,6 +258,16 @@
 	//  🔴 Chaque ligne combine ce qui EXISTE (la déclaration) et ce que cet
 	//  utilisateur-ci PEUT (le droit) — jamais l'un à la place de l'autre (#463).
 	$: sectionPerimetre = peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'perimetre');
+	//  🔴 DESTINATAIRES ET OPTIONS DANS UNE ENTRÉE DU FIL (05/09/2026), demandé
+	//  par l'utilisateur : *« les sections Options de publication, Périmètre et
+	//  Destinataires doivent être visibles même pour chaque commentaire ; tu
+	//  remets le dernier état, et le nouveau sauvegardé deviendra validé »*.
+	//
+	//  Ce sont les DÉCLARATIONS d'entité qui ouvrent ces sections — ici on ne
+	//  fait que les lire. Sur un ticket elles restent fermées : rien ne change
+	//  pour lui.
+	$: sectionDestinataires = sectionPresente(entite, 'evolution', 'destinataires');
+	$: sectionSpecifiques = sectionPresente(entite, 'evolution', 'specifiques');
 	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'photos');
 	$: sectionDocuments = avecPiecesJointes && sectionPresente(entite, 'evolution', 'documents');
 	$: sectionDiffusion = peutDiffuser && sectionPresente(entite, 'evolution', 'diffusion');
@@ -387,30 +399,25 @@
 		/>
 	{/if}
 
-	<!-- ── 4. Périmètre ─────────────────────────────────────────────────────
-	     Le périmètre d'un ticket n'est pas acquis à l'ouverture : il se précise à
-	     mesure qu'on cherche (#497). Cette section le laisse dire, sans jamais
-	     l'imposer — le sélecteur part VIDE, et ne rien y toucher ne change rien.
-	     Le badge porte le périmètre COURANT : on voit d'où l'on part.
-	     Section à UN champ : le titre EST le libellé, le sélecteur se tait
-	     (`ux-patterns` §9 septies). Les pastilles ne sont pas labelables, d'où le
-	     couple `idTitre` / `aria-labelledby`, comme dans `ChampsCommuns`. -->
-	<!--  🔴 HÉRITÉ de `ChampsCommuns`, plus recopié (#463) : ce bloc y était
-	      À L'IDENTIQUE. Trois adaptations seulement, portées par le point
-	      d'héritage — non requis, badge de l'objet porteur, aide en slot. -->
-	{#if sectionPerimetre}
-		<ChampsCommuns
-			{idPrefixe}
-			avecPerimetre
-			bind:perimetre
-			perimetreRequis={false}
-			perimetreBadge={libellePerimetreActuel}
-		>
-			<p class="aide-bloc" slot="aidePerimetre">
-				À renseigner seulement pour <strong>préciser</strong> le périmètre — par exemple quand on a trouvé
-				d'où vient la fuite. Laissé vide, le périmètre du ticket ne bouge pas.
-			</p>
-		</ChampsCommuns>
+	<!-- ── 4. Périmètre · 5. Destinataires ──────────────────────────────────
+	     Deux sections HÉRITÉES de `ChampsCommuns`, portées par un composant
+	     commun depuis le 05/09/2026 : leur aide diffère d'une entité à l'autre
+	     (préciser d'où vient une fuite, ou corriger le ciblage d'une actualité),
+	     mais leur rendu ne doit pas. -->
+	<SectionsCiblageEvolution
+		{idPrefixe}
+		avecPerimetre={sectionPerimetre}
+		bind:perimetre
+		perimetreBadge={libellePerimetreActuel}
+		{aidePerimetre}
+		avecDestinataires={sectionDestinataires}
+		bind:destinataires
+	/>
+
+	<!--  2. Champs spécifiques à l'entité — c'est l'écran qui les connaît.
+	      Sur une actualité : les options de publication (05/09/2026). -->
+	{#if sectionSpecifiques}
+		<slot name="specifiques" />
 	{/if}
 
 	<!-- ── 6. Description ───────────────────────────────────────────────────
@@ -490,21 +497,7 @@
 	</div>
 </FormulaireCreation>
 
-<style>
-	/*  La rangée de pastilles du workflow. Les pastilles portent leur propre style
-	    (`Pastille.svelte`, v2.67.11) : ne vit ici que leur disposition. */
-
-	/*  Le texte d'aide sous le sélecteur de périmètre. Défini ICI, avec le
-	    balisage qu'il habille : un style de page n'atteint pas un composant, et
-	    une classe seulement employée arrive nue à l'écran (v2.67.11).
-	    ⚠️ C'est la TROISIÈME écriture de la même notion dans le dépôt —
-	    `.ah-aide` (FormulaireAnnonceHall) et `.perimetre-aide` (PerimetrePicker)
-	    disent la même chose aux mêmes valeurs. Suivi à part : les fusionner
-	    demande de reprendre les trois appelants, pas d'en ajouter une quatrième
-	    en douce ici. */
-
-	/*  `.case-interne` est partie avec son balisage dans `SectionDiffusion.svelte`
-	    (#498), cible tactile de 44 px comprise : la garder ici en ferait une règle
-	    orpheline, c'est-à-dire la moitié du défaut que `lint:classes-nues`
-	    surveille par l'autre bout. */
-</style>
+<!--  Aucun `<style>` : tout le rendu vient des composants montés ci-dessus, et
+      chaque règle voyage avec le balisage qu'elle habille (v2.67.11). Les notes
+      qui expliquaient l'absence de `.aide-bloc`, `.case-interne` et de la rangée
+      de pastilles sont désormais dans les trois composants qui les portent. -->

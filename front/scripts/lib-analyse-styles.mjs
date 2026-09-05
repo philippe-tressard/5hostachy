@@ -209,6 +209,22 @@ export function reglesCss(source, { horsMedia = false } = {}) {
 			i = j;
 			continue;
 		}
+		//  🔴 UNE INSTRUCTION SANS BLOC FERME AUSSI LE SÉLECTEUR EN COURS
+		//  (05/09/2026). `@import './styles/x.css';` n'ouvre aucune accolade : sans
+		//  cette remise à zéro, il restait collé au sélecteur suivant, qui
+		//  commençait donc par « @ » — et la branche des règles-at faisait SAUTER
+		//  la première règle du fichier concaténé juste après `app.css`.
+		//
+		//  Le défaut dormait depuis toujours et n'a mordu que le jour où un
+		//  fragment neuf (`champs.css`) est passé en tête du tri alphabétique : sa
+		//  première règle, `.field`, a disparu de l'analyse, et quatre contrôles
+		//  ont annoncé qu'elle « n'existait plus dans app.css ». Le contrôle avait
+		//  raison de crier ; c'est sa lecture qui était fausse.
+		if (c === ';') {
+			tete = '';
+			i++;
+			continue;
+		}
 		if (c === '}') {
 			tete = '';
 			i++;

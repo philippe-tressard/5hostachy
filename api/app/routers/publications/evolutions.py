@@ -4,6 +4,7 @@ Extrait de `publications.py` le 11/08/2026. Voir `__init__.py`.
 
 Chemins nus : le préfixe `/publications` est appliqué au montage.
 """
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -19,7 +20,7 @@ from app.utils.evolutions import supprimer_evolution
 from app.utils.photos import photos_json
 from app.utils.whatsapp import config_whatsapp, envoyer_whatsapp_avec_log, whatsapp_actif
 
-from .commun import STATUTS_PUBLICATION, evolution_read
+from .commun import STATUTS_PUBLICATION, appliquer_confidentialite, evolution_read
 from .courriels import (
     _envoyer_email_externe_publication, _envoyer_email_syndic_publication,
 )
@@ -110,6 +111,34 @@ def add_evolution(
     if body.type == "etat":
         pub.statut = body.nouveau_statut
         pub.statut_change_le = datetime.utcnow()
+        pub.mis_a_jour_le = datetime.utcnow()
+        session.add(pub)
+
+    #  🔴 L'ENTRÉE PORTE AUSSI LE CIBLAGE ET LES OPTIONS (05/09/2026). Le
+    #  formulaire de commentaire montre désormais le périmètre, les destinataires
+    #  et les options en vigueur : *« tu remets le dernier état, et le nouveau
+    #  sauvegardé deviendra validé »*.
+    #
+    #  Ils modifient la PUBLICATION, pas l'entrée — d'où l'écriture sur `pub`. Un
+    #  champ absent (`None`) ne touche à rien : c'est ce qui permet à tout client
+    #  qui les ignore — un bundle resté en cache — de continuer à commenter comme
+    #  avant, sans effacer un ciblage qu'il ne connaît pas.
+    envoye = body.model_dump(exclude_unset=True)
+    modifie = False
+    for champ in ("perimetre_cible", "public_cible"):
+        if envoye.get(champ) is not None:
+            setattr(pub, champ, json.dumps(envoye[champ], ensure_ascii=False))
+            modifie = True
+    for champ in ("epingle", "urgente", "brouillon", "confidentiel"):
+        if envoye.get(champ) is not None:
+            setattr(pub, champ, envoye[champ])
+            modifie = True
+    if modifie:
+        #  Les deux invariants de la confidentialité tiennent ici comme dans le
+        #  `PATCH` : le drapeau se décoche tout seul sur un périmètre à portée
+        #  globale, où il ne retirerait la publication à personne. Sans cet appel,
+        #  ce chemin-ci serait le trou par lequel la promesse redevient menteuse.
+        appliquer_confidentialite(pub, session)
         pub.mis_a_jour_le = datetime.utcnow()
         session.add(pub)
 
