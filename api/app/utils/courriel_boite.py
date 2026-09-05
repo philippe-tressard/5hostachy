@@ -201,7 +201,7 @@ def _reponse_a_une_relance(session: Session, relance: RelanceCourriel, verdict,
             ),
             #  Vers l'écran qui la CONSERVE, pas vers la liste des tickets : la
             #  notification se perd, la page se rouvre.
-            lien="/espace-cs?onglet=reporting",
+            lien="/espace-cs/reporting",
         ))
     session.commit()
     #  RELANCE et non REFUSE : la réponse est reçue, conservée et notifiée. Rien

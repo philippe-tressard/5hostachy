@@ -34,6 +34,7 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import BoutonLien from './BoutonLien.svelte';
 	import ApercuCarte from './ApercuCarte.svelte';
 	import FichiersUpload from './FichiersUpload.svelte';
 	import PiecesJointes from './PiecesJointes.svelte';
@@ -135,6 +136,10 @@
 		      le geste est le titre, mais il ne coûte rien et protégerait d'un futur
 		      conteneur redevenu cliquable. -->
 		<svelte:fragment slot="actions">
+			<!--  🔗 EN PREMIER, et c'est délibéré : c'est la seule action que TOUT le
+			      monde a. Placée entre ✏️ et 🗑️, sa position dépendrait des droits du
+			      lecteur — elle sauterait d'un cran selon qu'on peut modifier ou non. -->
+			<BoutonLien ancre="annonce-{annonce.id}" quoi="l'annonce" />
 			{#if peutModifier}
 				<button
 					class="btn-icon"

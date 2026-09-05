@@ -4,7 +4,6 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import Modale from '$lib/components/Modale.svelte';
-	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -31,7 +30,11 @@
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
 	import { relire, telephonesDe } from '$lib/utils';
 	import { trackTabView } from '$lib/telemetry';
-	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
+	import { goto } from '$app/navigation';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import { routeOnglet } from '$lib/routes-onglets';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', defautsDePage('prestataires'));
 	$: _siteNom = $siteNomStore;
@@ -91,18 +94,16 @@
 	}
 
 	// ── Onglets (3) ────────────────────────────────────────────────
-	// Liste explicite : elle sert aussi à valider le `?onglet=` d'un lien profond
-	// (même convention que /calendrier et /sondages, cf. `$lib/deepLink.ts`).
+	//  La liste, l'ordre ET l'adresse de chaque onglet vivent dans la table
+	//  (`$lib/pages.ts`). Elle était écrite ici, et la table n'en connaissait que
+	//  DEUX sur trois : « Contrats » n'était donc ni renommable ni descriptible
+	//  depuis l'administration, alors que les quatre autres pages du site le sont.
 	//
-	// ⚠️ `'prestations'` et `'visites'` ont disparu (#603). Un lien profond qui les demande encore
-	// — un favori, un vieux courriel — n'appartient plus à cette liste, donc
-	// `ongletDeLUrl` rend `null` et la page s'ouvre sur son défaut. C'est
-	// exactement le service que rend une liste explicite ; une validation par
-	// `startsWith` ou par `in` aurait laissé passer un onglet qui n'existe plus.
-	//  L'ordre EST celui de la barre ; le DÉFAUT reste « Contrats », 2ᵉ onglet.
-	const ONGLETS = ['prestataires', 'contrats_tab', 'consommations'] as const;
-	//  L'onglet initial porte le nom de l'écran (`ux-patterns` §4 ter, 30/08/2026).
-	let onglet: (typeof ONGLETS)[number] = 'prestataires';
+	//  ⚠️ `'prestations'` et `'visites'` ont disparu (#603), comme `?onglet=` lui-même
+	//  (05/09/2026). Une ancienne adresse qui les nomme encore est redirigée vers la
+	//  page par `resoudreOnglet`, jamais vers un onglet inventé.
+	export let data: { onglet: string };
+	$: onglet = data.onglet;
 	$: trackTabView(onglet);
 
 	// Expand prestataire cards
@@ -458,19 +459,19 @@
 		// Cette page a QUATRE onglets et s'ouvre sur « Contrats » : une fiche
 		// prestataire visée sans onglet restait invisible, l'ancre ne désignant aucun
 		// élément rendu (`/prestataires#presta-23`, signalé le 28/07/2026).
-		// L'ancre prime sur `?onglet=` : elle est plus précise que la vue demandée.
+		// L'ancre décide de la ROUTE : elle est plus précise que la vue demandée.
 		//
 		// ⚠️ L'ancre `#dv-<id>` d'une prestation ponctuelle est partie avec elle
 		// (#603). Un lien qui la porte encore ne désigne plus rien : la page
 		// s'ouvre sur son défaut, sans erreur — `cibleDuHash` n'est simplement
 		// plus interrogé pour ce préfixe.
-		const urlOnglet = ongletDeLUrl(ONGLETS);
-		if (urlOnglet) onglet = urlOnglet;
-
 		const idPresta = cibleDuHash('presta');
 		if (idPresta !== null) {
-			onglet = 'prestataires';
 			expandedPrests = new Set([...expandedPrests, idPresta]);
+			if (onglet !== 'prestataires') {
+				goto(`${routeOnglet('prestataires', 'prestataires')}#presta-${idPresta}`);
+				return;
+			}
 			revelerCible(`presta-${idPresta}`);
 		}
 	});
@@ -704,7 +705,7 @@
 					if (!showPrestForm) resetPrestForm();
 				}}
 			/>
-		{:else if onglet === 'contrats_tab'}
+		{:else if onglet === 'contrats'}
 			<BoutonNouveau
 				ouvert={contratFormOuvert}
 				libelle="Nouveau contrat"
@@ -727,30 +728,7 @@
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-<!-- ── Onglets ─────────────────────────────────────────────────── -->
-<div class="tabs" role="tablist">
-	<button
-		role="tab"
-		class:active={onglet === 'prestataires'}
-		on:click={() => (onglet = 'prestataires')}
-	>
-		<Icon name="hard-hat" size={15} /> Prestataires
-	</button>
-	<button
-		role="tab"
-		class:active={onglet === 'contrats_tab'}
-		on:click={() => (onglet = 'contrats_tab')}
-	>
-		<Icon name="file-text" size={15} /> Contrats
-	</button>
-	<button
-		role="tab"
-		class:active={onglet === 'consommations'}
-		on:click={() => (onglet = 'consommations')}
-	>
-		💧 Consommations
-	</button>
-</div>
+<BarreOnglets pageId="prestataires" actif={onglet} />
 
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
@@ -758,7 +736,7 @@
 	<!-- ══════════════════════════════════════════════════════════════ -->
 	<!-- ONGLET 3 : CONTRATS                                          -->
 	<!-- ══════════════════════════════════════════════════════════════ -->
-{:else if onglet === 'contrats_tab'}
+{:else if onglet === 'contrats'}
 	<!-- Créer → la boîte ; éditer → la modale plus bas. Le formulaire est le même
 	     objet dans les deux cas (`ux-patterns` §14 bis, #640). -->
 	{#if contratFormOuvert && !editContratId}
@@ -1182,6 +1160,7 @@
 										>🗓 {fmtDateShort(nextVisit)}</span
 									>{/if}
 							{/if}
+							<BoutonLien ancre="presta-{p.id}" quoi="la fiche prestataire" />
 							{#if $isCS}
 								<button
 									class="btn-icon-edit"
@@ -1503,23 +1482,6 @@
 {/if}
 
 <style>
-	/* ── Onglets ── */
-	.tabs {
-		padding-bottom: 0.1rem;
-		overflow-x: auto;
-		scrollbar-width: thin;
-	} /* le reste : charte (#607) */
-	/*  Ne garde QUE l'écart (30/08/2026) : la règle complète écrasait le liseré
-	    de l'onglet actif. Raison de l'écart : `check-charte-recomposee.regles.mjs`. */
-	.tabs button {
-		padding: 0.45rem 0.75rem;
-		font-size: 0.85rem;
-		white-space: nowrap;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-	}
-
 	/* ── Sous-vue toggle ── */
 
 	/* ── Compteur config row ── */
@@ -1803,10 +1765,6 @@
 		}
 		.contrat-infos {
 			min-width: 80px;
-		}
-		.tabs button {
-			padding: 0.4rem 0.55rem;
-			font-size: 0.78rem;
 		}
 	}
 </style>

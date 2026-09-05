@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import { perimetreLabel, estPerimetreParDefaut } from '$lib/perimetres';
 	import Icon from '$lib/components/Icon.svelte';
@@ -880,6 +881,7 @@
 													{/if}
 												</div>
 												<div class="doc-actions">
+													<BoutonLien ancre="diag-{rapport.id}" quoi="le rapport" />
 													<a
 														href={diagnosticsApi.downloadUrl(rapport.id)}
 														target="_blank"

@@ -93,39 +93,44 @@ Conventions et patterns pour créer des pages et composants SvelteKit dans le pr
 </script>
 ```
 
-## Pattern: Onglets (Tabs)
+## Pattern: Onglets (Tabs) — un onglet est une ADRESSE
+
+🔴 Depuis le 05/09/2026, un onglet n'est plus un état local : c'est une **route**.
+On ne l'affecte pas, on y navigue. Le détail (forme des URL, redirection des
+anciennes, masquage vs redirection) est dans `ux-patterns` §4.
 
 ```svelte
+<!-- src/routes/(app)/calendrier/+page.ts — la page ne bouge pas -->
+import { resoudreOnglet } from '$lib/deepLink';
+
+export const load = ({ url }) => resoudreOnglet('calendrier', url);
+```
+
+`/calendrier/kanban` arrive sur cette même route : `reroute` (`src/hooks.ts`) l'y
+envoie, et `url` reste l'adresse demandée.
+
+```svelte
+<!-- src/routes/(app)/calendrier/+page.svelte -->
 <script lang="ts">
-	let onglet: 'liste' | 'archives' = 'liste';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+
+	export let data: { onglet: string; sous: string | null };
+	$: onglet = data.onglet;
 </script>
 
-<div class="tabs" role="tablist" style="margin-bottom:1.5rem">
-	<button role="tab" class:active={onglet === 'liste'} on:click={() => onglet = 'liste'}>
-		Liste
-	</button>
-	<button role="tab" class:active={onglet === 'archives'} on:click={() => onglet = 'archives'}>
-		Archives
-	</button>
-</div>
-
-{#if _pc.onglets?.[onglet]?.descriptif}
-	<p class="tab-descriptif">{_pc.onglets[onglet].descriptif}</p>
-{/if}
+<BarreOnglets pageId="calendrier" actif={onglet} />
 
 {#if onglet === 'liste'}
 	<!-- contenu liste -->
 {:else if onglet === 'archives'}
 	<!-- contenu archives -->
 {/if}
-
-<style>
-	.tabs { display: flex; gap: .4rem; border-bottom: 2px solid var(--color-border); padding-bottom: .1rem; }
-	.tabs button { padding: .45rem 1rem; border: none; background: none; cursor: pointer; font-size: .9rem; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: var(--radius) var(--radius) 0 0; }
-	.tabs button:hover { color: var(--color-text); background: var(--color-bg); }
-	.tabs button.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
-</style>
 ```
+
+⚠️ **Ne pas écrire la rangée à la main** : `BarreOnglets` lit la liste, l'ordre, les
+libellés (configurables en administration) et les routes dans `$lib/pages.ts`, et
+rend chaque onglet en `<a>`. Un `<div class="tabs">` local rouvre les cinq
+divergences que ce composant vient de fermer.
 
 ## Pattern: Carte expansible (Expand Card)
 

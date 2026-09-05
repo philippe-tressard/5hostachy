@@ -433,7 +433,7 @@
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
 	{#if ($isCS || $isAdmin) && (data.sante.tickets_relance_syndic ?? 0) > 0}
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.08s">
-			<a href="/espace-cs?onglet=reporting&vue=relance" class="relance-alerte-card">
+			<a href="/espace-cs/reporting?vue=relance" class="relance-alerte-card">
 				<span class="relance-alerte-icon">🔔</span>
 				<div class="relance-alerte-text">
 					<strong
@@ -536,7 +536,7 @@
 		<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
 			<div class="kb-header">
 				<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
-				<a href="/calendrier?onglet=kanban" class="kb-voir-lien">Voir le Kanban complet →</a>
+				<a href="/calendrier/kanban" class="kb-voir-lien">Voir le Kanban complet →</a>
 			</div>
 
 			{#if dashKanbanEvs.length === 0 && !loading}
@@ -636,7 +636,7 @@
 								{/if}
 							</div>
 						{/if}
-						<a href="/calendrier?onglet=kanban" class="kb-mobile-lien">Voir le Kanban complet →</a>
+						<a href="/calendrier/kanban" class="kb-mobile-lien">Voir le Kanban complet →</a>
 					</div>
 				{/if}
 			{/if}

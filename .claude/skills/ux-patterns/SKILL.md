@@ -49,7 +49,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 2 | **Le survol colore le TITRE**, jamais le fond du bloc, et **sans soulignement** | §3 |
 | 3 | **Le liseré gauche** de `.carte-liste` qui passe au bleu est **la référence** — sauf sur le fil, où il porte déjà la couleur du type | §3 |
 | 4 | **L'en-tête de carte** : titre sur sa ligne, puis tags à gauche / date + actions + chevron à droite, **sur une seule ligne** | §3 |
-| 5 | **Ordre des icônes : 🔄 ✏️ 🗑️**, dans l'en-tête et jamais dans le corps | §3 |
+| 5 | **Ordre des icônes : 🔗 🔄 ✏️ 🗑️**, dans l'en-tête et jamais dans le corps — le 🔗 en tête parce qu'il est le seul que tout le monde a | §3 |
 | 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
 | 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
 | 8 | **Un workflow se déclare, le tracer est une AUTRE décision** — cinq états sur une annonce, aucun fil | §16 |
@@ -353,8 +353,27 @@ au squelette, une seule fois pour toutes les pages ; chaque carte qui recomposai
 son en-tête avait sa propre façon de mal se replier.
 
 **L'ORDRE DES ICÔNES est celui de la carte de ticket**, désignée comme référence :
-**🔄 commenter · ✏️ modifier · 🗑️ supprimer**, puis le chevron. Il était inversé
-sur les actualités, et deux cartes du même site ne se lisaient pas pareil.
+**🔗 copier le lien · 🔄 commenter · ✏️ modifier · 🗑️ supprimer**, puis le chevron.
+Il était inversé sur les actualités, et deux cartes du même site ne se lisaient pas
+pareil.
+
+🔴 **Le 🔗 est en PREMIER, et sa position est un raisonnement, pas un goût**
+(05/09/2026). C'est la seule action que **tout le monde** a : posée entre ✏️ et 🗑️,
+elle sauterait d'un cran selon les droits du lecteur, et deux personnes ne
+verraient pas la même rangée au même endroit. Les trois autres sont conditionnelles,
+elle non — donc elle est l'ancre.
+
+**Il se rend par `BoutonLien.svelte`**, jamais à la main : il copie l'adresse
+**absolue** de l'élément (`ancre="annonce-42"` → l'`id` que la carte pose déjà pour
+les liens profonds, ou `chemin` quand la publication a sa page). Un lien relatif
+collé dans un SMS ne mène nulle part, et le presse-papiers est refusé dans certains
+navigateurs embarqués — le repli est dans le composant, une seule fois.
+
+⚠️ **Copier un lien n'est pas un droit** : le composant se rend pour tout le monde.
+Trois rangées d'actions étaient conditionnées au droit d'édition (FAQ, idées, et
+la rangée du conseil syndical) — elles ont été ouvertes, l'édition restant, elle,
+réservée. L'adresse ne donne aucun accès : la page vérifie les droits de qui
+l'ouvre, pas de qui l'a envoyée.
 
 ### La source unique : `.carte-liste` (app.css) — depuis le 15/08/2026
 
@@ -468,23 +487,69 @@ formulaire ouvert.
 
 ## 4. Onglets (Tabs)
 
-**Quand** : page avec 2+ vues ou sections distinctes.
+### 🔴 UN ONGLET EST UNE ADRESSE (05/09/2026) — et la rangée est UN composant
 
-- État : `let onglet: 'a' | 'b' = 'a'`
-- `role="tablist"` sur le conteneur, `role="tab"` sur chaque bouton
-- Descriptif par onglet : `_pc.onglets?.[onglet]?.descriptif`
-- CSS : `.tabs` + `.tabs button.active`
+Demandé par l'utilisateur : *« que chaque onglet et sous-onglet soient accessibles
+directement par une URL »*, après avoir voulu envoyer une petite annonce et n'avoir
+eu à copier que l'adresse de la page voisine.
+
+| Ce qu'on écrit | Où |
+|---|---|
+| la rangée | **`BarreOnglets.svelte`** — `<BarreOnglets pageId="…" actif={onglet} />`, jamais un `<div class="tabs">` à la main |
+| la liste, l'ordre, le libellé **et la route** de chaque onglet | `$lib/pages.ts` (`onglets[].route`, `onglets[].sous[]`) |
+| la résolution route ⇄ onglet | `$lib/routes-onglets.ts` (`routeOnglet`, `ongletDepuisChemin`) |
+| la lecture de l'URL | le **`load`** du `+page.ts` : `resoudreOnglet(pageId, url)` |
+| l'onglet dans l'écran | `export let data` → `$: onglet = data.onglet` — **jamais** un `let onglet` qu'on affecte |
+
+**La forme de l'adresse** : *plate quand l'onglet est un CONTENU* (`/annonces`,
+`/idees`, `/sondages`), *imbriquée quand il est une VUE* (`/calendrier/kanban`,
+`/espace-cs/reporting`, `/mon-lot/location/archives`). `/kanban` seul ne dit pas de
+quoi il parle.
+
+**Mécanique SvelteKit** : **`reroute`** (`front/src/hooks.ts`) traduit l'adresse en
+route avant que le routeur ne cherche le fichier — `/annonces` est rendue par
+`routes/(app)/sondages/+page.svelte`, sans redirection, sans fichier dupliqué et
+**sans déplacer un seul écran**. L'URL affichée ne change pas : c'est elle que reçoit
+le `load`, et c'est elle qui dit l'onglet. Un chemin non déclaré n'est pas traduit,
+donc SvelteKit rend une **404** — se replier sur le premier onglet ferait passer
+`/calendrier/kanbna` pour une adresse valide, et le lien cassé survivrait.
+
+⚠️ **Un segment de reste (`section/[...vue]/`) faisait la même chose et a été
+abandonné** : il oblige à DÉPLACER l'écran, et le garde-fou de modularité compte
+alors un fichier de 1 800 lignes comme un fichier neuf au-dessus du plafond. Le
+contrôle avait raison sur le fond — un écran de cette taille doit être découpé —
+mais pas au prix d'un refus de toute réorganisation d'URL. `reroute` ne touche à
+aucun écran.
+
+- Descriptif par onglet : rendu par `BarreOnglets`, plus par l'écran
+- Un onglet fermé à un profil se **masque** (`masques=[…]`) **et** se **redirige** :
+  masquer répond à ce qui s'affiche, rediriger à ce qui s'atteint
 - **Ne jamais utiliser** le pattern `view-toggle` / `view-btn` (pattern non-standard, supprimé)
 
-Pages implémentées : `mon-lot`, `sondages`, `espace-cs`, `admin`, `calendrier`
+⚠️ `?onglet=` était la convention jusque-là. Les anciennes adresses partent en
+**308** depuis `resoudreOnglet` — e-mails déjà envoyés, favoris et liens de l'API
+continuent de fonctionner — mais **plus rien ne l'écrit**. Côté API, `EMPLACEMENTS`
+(`app/utils/liens.py`) porte désormais des routes, et `test_liens_front.py` vérifie
+qu'elles sont déclarées dans `pages.ts`.
+
+Pages implémentées : `mon-lot`, Communauté (`/sondages` · `/idees` · `/annonces`),
+`espace-cs`, `calendrier`, `prestataires`. **`admin` reste sur `?onglet=`** :
+demande explicite de l'utilisateur (« sauf admin »), et ses onglets ne se partagent
+pas.
 
 ### 🔴 4 bis. L'onglet ACTIF se voit — trois marques, pas une
 
 Arbitré à l'écran le 30/08/2026 : *« on ne voit pas l'onglet actif ; ajoute ce
 design dans l'UX et applique-le à tous »*.
 
-`.tabs button.active` (`styles/ecrans.css`) porte les **trois** marques, et il
-les faut toutes :
+`.tab-btn.active` (`styles/ecrans.css`) porte les **trois** marques, et il les
+faut toutes :
+
+⚠️ **Il y a DEUX sélecteurs, et c'est ce qui a coûté une marque.** `.tabs
+button.active` habille les onglets-boutons, `.tab-btn.active` les onglets-liens —
+et seul le premier portait la graisse. Tant que les onglets d'un écran étaient des
+`<button>`, personne ne le voyait ; le jour où ils ont eu une adresse (05/09/2026),
+toutes les rangées du site sont passées par le second. Corrigé le même jour.
 
 | Marque | Pourquoi elle ne suffit pas seule |
 |---|---|
@@ -513,7 +578,7 @@ défaut est celle des contrats »*. Une entrée de menu qui ouvre autre chose qu
 qu'elle nomme fait douter d'avoir cliqué au bon endroit.
 
 **Règle** : l'onglet initial porte le nom de l'écran, sauf raison écrite sur
-place. Une ouverture directe par `?onglet=` reste prioritaire — c'est un choix
+place. Une ouverture directe par son **adresse** reste prioritaire — c'est un choix
 explicite du lien, pas un défaut.
 
 ## 5. Pill Buttons

@@ -34,6 +34,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/** Le titre affiché, emoji compris — la page reste maîtresse de son vocabulaire. */
@@ -78,6 +79,7 @@
 						{#if dateDe(doc)}<span class="doc-date">{dateDe(doc)}</span>{/if}
 					</div>
 					<div class="doc-actions">
+						<BoutonLien ancre="doc-{doc.id}" quoi="le document" />
 						<a href={urlTelechargement(doc)} target="_blank" class="btn btn-sm" download>
 							⬇ Télécharger
 						</a>

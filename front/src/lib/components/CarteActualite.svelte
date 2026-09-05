@@ -20,6 +20,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
 	import { documents as docsApi, type Publication } from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
@@ -116,7 +117,10 @@
 			{/if}
 			{#if pub.auteur_nom}<span class="pub-auteur">{pub.auteur_nom}</span>{/if}
 		</svelte:fragment>
-		<svelte:fragment slot="actions"><slot name="actions" /></svelte:fragment>
+		<svelte:fragment slot="actions">
+			<BoutonLien ancre="pub-{pub.id}" quoi="la publication" />
+			<slot name="actions" />
+		</svelte:fragment>
 		<svelte:fragment slot="chevron"
 			><span class="chevron" class:open={expanded}>›</span></svelte:fragment
 		>

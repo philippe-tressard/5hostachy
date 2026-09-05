@@ -27,6 +27,7 @@ from app.models.core import (
 from app.utils.communaute import exiger_acces
 from app.utils.noms import nom_affiche
 from app.utils.destinataires import membres_cs_ou_admin
+from app.utils.liens import lien_element, lien_sondage
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
 
@@ -49,13 +50,15 @@ def _lien_cible(cible_type: str, cible_id: int) -> str:
     leur idée / annonce / sondage, dont on ne connaît pas l'id ici. Le lien reste
     alors la page — c'est déjà la rubrique, pas une route inexistante.
     """
-    if cible_type == "idee":
-        return f"/sondages?onglet=idees#idee-{cible_id}"
-    if cible_type == "annonce":
-        return f"/sondages?onglet=annonces#annonce-{cible_id}"
+    if cible_type in ("idee", "annonce"):
+        #  La table décide de la rubrique et de son adresse : ces deux liens étaient
+        #  fabriqués à la main, et ils ont survécu tels quels au passage aux URL
+        #  dédiées (05/09/2026) — c'est exactement ce que `liens.py` existe pour
+        #  éviter, et ce que la table a corrigé partout ailleurs en une ligne.
+        return lien_element(cible_type, cible_id)
     if cible_type == "sondage":
-        return f"/sondages/{cible_id}"
-    return "/sondages"
+        return lien_sondage(cible_id)
+    return lien_sondage()
 
 
 def _resoudre_cible(cible_type: str, cible_id: int, session: Session):

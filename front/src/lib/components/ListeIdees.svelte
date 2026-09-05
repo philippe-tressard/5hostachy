@@ -30,6 +30,7 @@
 -->
 <script lang="ts">
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { safeHtml } from '$lib/sanitize';
@@ -83,6 +84,11 @@
 					{#if !estPerimetreParDefaut(idee.perimetre_cible)}<span class="badge badge-gray"
 							>&#x1F539; {perimetreLabel(idee.perimetre_cible)}</span
 						>{/if}
+				</svelte:fragment>
+				<!--  Dans l'en-tête, PAS dans `.idee-actions` : cette rangée-là n'existe
+				      que pour le conseil syndical, et copier un lien n'est pas un droit. -->
+				<svelte:fragment slot="actions">
+					<BoutonLien ancre="idee-{idee.id}" quoi="l'idée" />
 				</svelte:fragment>
 			</EnteteCarte>
 			<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>

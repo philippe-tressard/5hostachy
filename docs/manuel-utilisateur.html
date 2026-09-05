@@ -990,7 +990,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 3.90 · Septembre 2026</span>
+      <span class="topbar-badge">Version 3.91 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1282,7 +1282,7 @@
         <div class="ecran-card" data-page="/calendrier" data-acces="tous">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg></span>
           <h3>Calendrier</h3>
-          <p>Ce qui est prévu : coupures, travaux, assemblées, visites de prestataires. Trois vues — Liste, Kanban, Archives.</p>
+          <p>Ce qui est prévu : coupures, travaux, assemblées, visites de prestataires. Trois vues, chacune à son adresse — Liste (<code>/calendrier</code>), Kanban (<code>/calendrier/kanban</code>), Archives (<code>/calendrier/archives</code>).</p>
           <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
         </div>
         <div class="ecran-card" data-page="/mon-lot" data-acces="tous">
@@ -1317,9 +1317,9 @@
           <details class="ecran-detail">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
-            <li><strong>📊 Sondages</strong> — donner son avis sur une décision à venir. Un sondage se ferme à sa date d'échéance.</li>
-            <li><strong>💡 Boîte à idées</strong> — proposer une amélioration, soutenir celles des autres.</li>
-            <li><strong>🏷️ Petites annonces</strong> — donner, prêter, vendre entre voisins.</li>
+            <li><strong>📊 Sondages</strong> — donner son avis sur une décision à venir. Un sondage se ferme à sa date d'échéance. Adresse&nbsp;: <code>/sondages</code></li>
+            <li><strong>💡 Boîte à idées</strong> — proposer une amélioration, soutenir celles des autres. Adresse&nbsp;: <code>/idees</code></li>
+            <li><strong>🏷️ Petites annonces</strong> — donner, prêter, vendre entre voisins. Adresse&nbsp;: <code>/annonces</code></li>
           </ul></div>
           </details>
         </div>
@@ -1364,6 +1364,26 @@
         </div>
       </div>
 
+      <h3>Envoyer un lien vers ce qu'on regarde</h3>
+      <p>
+        <strong>Chaque rubrique a son adresse.</strong> Les petites annonces, c'est
+        <code>/annonces</code>&nbsp;; la boîte à idées, <code>/idees</code>&nbsp;; le Kanban du
+        calendrier, <code>/calendrier/kanban</code>. L'adresse affichée en haut du navigateur
+        suit l'onglet ouvert&nbsp;: elle se copie et s'envoie telle quelle, et le bouton
+        <strong>Précédent</strong> revient à l'onglet précédent.
+      </p>
+      <p>
+        <strong>Chaque publication a la sienne.</strong> L'icône 🔗, à côté du crayon, copie
+        le lien de l'élément — une annonce, une actualité, un ticket, une question de la
+        FAQ, un document. Collez-le dans un message&nbsp;: votre voisin arrivera
+        directement dessus, déplié.
+      </p>
+      <p class="ecran-note">
+        Le lien ne donne aucun droit&nbsp;: la personne qui l'ouvre doit être connectée, et
+        elle voit ce qu'elle a le droit de voir, ni plus ni moins. Envoyer le lien d'un
+        ticket confidentiel ne le rend pas lisible.
+      </p>
+
     </section>
 
     <!-- ════════════════════════════════
@@ -1395,7 +1415,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.90</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.91</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 

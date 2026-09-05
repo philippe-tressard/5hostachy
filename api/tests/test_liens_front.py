@@ -30,6 +30,16 @@ import types
 
 import pytest
 
+from tests.aides_routes_front import (
+    _onglet_de_la_route,
+    _page_du_lien,
+    _page_existe,
+    _resoudre,
+    _routes_onglets_du_front,
+    _segments_par_onglet,
+    contenu_deplie,
+)
+
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
 _FRONT_SRC = _RACINE / "front" / "src"
@@ -58,40 +68,11 @@ def _liens_de_l_api() -> dict[str, list[str]]:
     return trouves
 
 
-def _resoudre(base: pathlib.Path, segments: list[str]) -> bool:
-    """Une page SvelteKit sert-elle ce chemin depuis `base` ?"""
-    if not segments:
-        return (base / "+page.svelte").exists()
-
-    seg, reste = segments[0], segments[1:]
-    if not base.is_dir():
-        return False
-    sous_dossiers = [d for d in base.iterdir() if d.is_dir()]
-
-    # Les groupes `(app)`, `(marketing)`… n'apparaissent pas dans l'URL : on traverse.
-    for groupe in (d for d in sous_dossiers if d.name.startswith("(")):
-        if _resoudre(groupe, segments):
-            return True
-
-    if seg.startswith("{"):  # segment dynamique d'une f-string → `[id]`, `[slug]`…
-        candidats = [d for d in sous_dossiers if d.name.startswith("[")]
-    else:
-        candidats = [d for d in sous_dossiers if d.name == seg]
-
-    return any(_resoudre(c, reste) for c in candidats)
-
-
 def page_element(prefixe: str) -> str:
     """Raccourci de lecture vers la table centrale."""
     from app.utils.liens import EMPLACEMENTS
 
-    return EMPLACEMENTS[prefixe][0]
-
-
-def _page_existe(lien: str) -> bool:
-    chemin = lien.split("#")[0].split("?")[0]
-    segments = [s for s in chemin.strip("/").split("/") if s]
-    return _resoudre(_ROUTES, segments)
+    return EMPLACEMENTS[prefixe]
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
@@ -158,79 +139,6 @@ def test_des_liens_de_modeles_sont_analyses():
     )
 
 
-def _page_du_lien(lien: str) -> pathlib.Path | None:
-    """Fichier `+page.svelte` qui sert ce lien (pour inspecter ancres et onglets)."""
-    segments = [s for s in lien.split("#")[0].split("?")[0].strip("/").split("/") if s]
-
-    def descendre(base: pathlib.Path, restants: list[str]) -> pathlib.Path | None:
-        if not restants:
-            page = base / "+page.svelte"
-            return page if page.exists() else None
-        seg, suite = restants[0], restants[1:]
-        if not base.is_dir():
-            return None
-        sous = [d for d in base.iterdir() if d.is_dir()]
-        for groupe in (d for d in sous if d.name.startswith("(")):
-            trouve = descendre(groupe, restants)
-            if trouve:
-                return trouve
-        cibles = (
-            [d for d in sous if d.name.startswith("[")]
-            if seg.startswith("{")
-            else [d for d in sous if d.name == seg]
-        )
-        for c in cibles:
-            trouve = descendre(c, suite)
-            if trouve:
-                return trouve
-        return None
-
-    return descendre(_ROUTES, segments)
-
-
-_MOTIF_IMPORT_COMPOSANT = re.compile(
-    r"import\s+(\w+)\s+from\s+['\"]\$lib/components/([\w./-]+\.svelte)['\"]"
-)
-
-
-def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 2) -> str:
-    """Le balisage d'une page, **composants locaux inclus**, à leur place d'appel.
-
-    Une page qui rend `id="annonce-…"` directement, ou qui délègue à
-    `<AnnonceCard>` qui le rend, produit le même écran : les contrôles d'ancre
-    doivent voir les deux. Sans cela, découper une page en composants ferait
-    échouer ces tests **sans qu'aucun lien ne soit cassé**, et la tentation serait
-    de les affaiblir — alors qu'ils viennent d'attraper trois liens morts.
-
-    Le découpage est une obligation permanente ici (rang 1 §4, « au fil de l'eau ») :
-    ce dépliage n'est donc pas une commodité ponctuelle, c'est ce qui permet aux
-    deux règles de coexister. Constaté le 14/08/2026, quand l'extraction de
-    `AnnonceCard.svelte` a fait tomber deux de ces tests.
-
-    Le contenu du composant est **inséré** à l'endroit de sa balise plutôt que
-    substitué : `_segments_par_onglet` découpe la page par onglet, et l'ancre doit
-    donc tomber dans le segment où le composant est réellement invoqué. Une
-    substitution demanderait de reconnaître la fin d'une balise dont les attributs
-    contiennent des `>` (`onToggle={() => …}`), ce qu'aucune expression régulière
-    ne fait correctement.
-    """
-    contenu = fichier.read_text(encoding="utf-8-sig")
-    if _profondeur <= 0:
-        return contenu
-
-    for nom, cible in _MOTIF_IMPORT_COMPOSANT.findall(contenu):
-        chemin = _FRONT_SRC / "lib" / "components" / cible
-        if not chemin.is_file():
-            continue
-        position = contenu.find(f"<{nom}", contenu.find("</script>"))
-        if position == -1:
-            continue                       # importé mais pas utilisé dans le balisage
-        interne = contenu_deplie(chemin, _profondeur - 1)
-        contenu = contenu[:position] + interne + contenu[position:]
-
-    return contenu
-
-
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
 def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
     """`#doc-42` n'a de sens que si la page pose `id="doc-{…}"` sur ses éléments.
@@ -262,57 +170,42 @@ def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
-def test_les_onglets_des_liens_existent_dans_la_page_visee():
-    """`?onglet=annonces` doit correspondre à un onglet réellement déclaré.
+def test_les_routes_de_la_table_sont_des_onglets_declares():
+    """Chaque route d'`EMPLACEMENTS` doit être une adresse que le front DÉCLARE.
 
-    Les pages à onglets listent leurs valeurs dans une constante `ONGLETS` (voir
-    `$lib/deepLink.ts`) : c'est cette liste que le lien doit viser. Une valeur
-    inconnue est ignorée en silence et l'utilisateur reste sur l'onglet par défaut,
-    exactement le symptôme d'origine.
+    Le contrôle a changé de forme le 05/09/2026, pas d'objet. Il vérifiait qu'un
+    `?onglet=xxx` correspondait à une valeur connue de la page ; il vérifie
+    maintenant que la ROUTE écrite côté API est l'une de celles que `$lib/pages.ts`
+    déclare — ou la page d'un écran sans onglets (`/actualites`, `/faq`).
+
+    Sans lui, `/annonce` au lieu d'`/annonces` passerait : le segment de reste
+    accepte tout, et c'est le front qui rendrait la 404 — chez l'utilisateur.
     """
-    inconnus = []
-    for lien, fichiers in sorted(_liens_de_l_api().items()):
-        m = re.search(r"[?&]onglet=([^&#]+)", lien)
-        if not m:
-            continue
-        onglet = m.group(1)
-        page = _page_du_lien(lien)
-        if page is None:
-            continue
-        contenu = page.read_text(encoding="utf-8-sig")
-        declares = re.search(r"const ONGLETS = \[([^\]]+)\]", contenu)
-        valeurs = re.findall(r"'([^']+)'", declares.group(1)) if declares else []
-        if onglet not in valeurs:
-            inconnus.append(
-                f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
-                f"      {page.relative_to(_RACINE)} déclare {valeurs or 'aucun onglet'}"
-            )
+    from app.utils.liens import EMPLACEMENTS
 
-    assert not inconnus, (
-        "Ces liens visent un onglet qui n'existe pas : la page s'ouvrira sur son "
-        "onglet par défaut, sans le contenu attendu :\n" + "\n".join(inconnus)
+    declarees = set(_routes_onglets_du_front())
+    assert declarees, (
+        "aucune route d'onglet lue dans front/src/lib/pages.ts — le motif ne "
+        "reconnaît plus la table, et ce contrôle ne vérifie plus rien"
     )
 
+    inconnues = []
+    for prefixe, route in sorted(EMPLACEMENTS.items()):
+        if route in declarees:
+            continue
+        #  Une page sans onglets n'a pas de route déclarée : elle doit alors exister
+        #  telle quelle dans l'arborescence.
+        segments = [x for x in route.strip("/").split("/") if x]
+        if _resoudre(_ROUTES, segments):
+            continue
+        inconnues.append(
+            f"  {prefixe} → {route} : ni onglet déclaré dans pages.ts, ni page du front"
+        )
 
-# Les pages à onglets branchent leur contenu sur `onglet === '…'` ou `activeTab === '…'`.
-_MOTIF_BRANCHE_ONGLET = re.compile(r"(?:onglet|activeTab)\s*===\s*'([\w]+)'")
-
-
-def _segments_par_onglet(contenu: str) -> dict[str, str]:
-    """{onglet: portion(s) du fichier rendue(s) sous cet onglet}.
-
-    Découpage volontairement grossier : chaque marqueur `onglet === 'x'` ouvre une
-    portion qui court jusqu'au marqueur suivant. Une page déclare plusieurs fois le
-    même onglet (bouton d'en-tête, onglet de la barre, bloc de contenu) → on
-    concatène toutes ses portions. Suffisant pour répondre à la seule question
-    posée : « cet onglet rend-il, quelque part, un `id="prefixe-…"` ? »
-    """
-    marqueurs = list(_MOTIF_BRANCHE_ONGLET.finditer(contenu))
-    segments: dict[str, str] = {}
-    for i, m in enumerate(marqueurs):
-        fin = marqueurs[i + 1].start() if i + 1 < len(marqueurs) else len(contenu)
-        segments[m.group(1)] = segments.get(m.group(1), "") + contenu[m.start():fin]
-    return segments
+    assert not inconnues, (
+        "Ces routes ne correspondent à aucune adresse déclarée par le front :\n"
+        + "\n".join(inconnues)
+    )
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
@@ -331,8 +224,9 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
     from app.utils.liens import EMPLACEMENTS, lien_element
 
     ecarts = []
-    for prefixe, (page, onglet) in sorted(EMPLACEMENTS.items()):
-        fichier = _page_du_lien(page)
+    for prefixe, route in sorted(EMPLACEMENTS.items()):
+        onglet = _onglet_de_la_route(route)
+        fichier = _page_du_lien(route)
         if fichier is None:
             continue  # déjà couvert par le test des pages
         contenu = contenu_deplie(fichier)
@@ -344,9 +238,9 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
             # devenue une page à onglets sans que la table le sache.
             if segments and ancre in contenu:
                 ecarts.append(
-                    f"  {prefixe} → {page} : la page a désormais des onglets "
-                    f"({', '.join(sorted(segments))}) mais EMPLACEMENTS n'en déclare "
-                    f"aucun — le lien s'ouvrira sur l'onglet par défaut"
+                    f"  {prefixe} → {route} : la page a désormais des onglets "
+                    f"({', '.join(sorted(segments))}) mais aucun n'est déclaré pour "
+                    f"cette route — le lien s'ouvrira sur l'onglet par défaut"
                 )
             continue
 
@@ -413,9 +307,9 @@ def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
 
     cas = [
         (_faux_document(publication_id=3), resident, "/actualites#pub-3"),
-        # L'onglet fait partie du lien : /prestataires s'ouvre sur « Prestations
-        # ponctuelles », la fiche vit sous « Prestataires ».
-        (_faux_document(contrat_id=9), cs, "/prestataires?onglet=prestataires#presta-7"),
+        # `/prestataires` EST l'adresse de l'onglet Prestataires depuis le
+        # 05/09/2026 : l'onglet n'a plus à être porté par un paramètre.
+        (_faux_document(contrat_id=9), cs, "/prestataires#presta-7"),
         # Page réservée au CS/admin : un résident n'a rien à y faire, même s'il a le
         # droit de lire le document.
         (_faux_document(contrat_id=9), resident, None),

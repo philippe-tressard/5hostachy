@@ -76,8 +76,11 @@ export const TOLERANCES = {
 	//  redéfinition COMPLÈTE de `.tabs button` qui faisait disparaître le liseré de
 	//  l'onglet actif en production, et deux règles de tableau dont cinq
 	//  propriétés sur sept étaient identiques à la charte.
-	'routes/(app)/prestataires/+page.svelte::tabs button':
-		'onglets à ICÔNE, plus nombreux : padding et police resserrés pour tenir sur une ligne',
+	//
+	//  ⚠️ L'exception de `/prestataires` a disparu le 05/09/2026, et pas parce qu'on
+	//  l'a rabotée : la rangée d'onglets est devenue UN composant (`BarreOnglets`),
+	//  qui porte le défilement horizontal pour toutes les pages. L'écart n'avait plus
+	//  d'objet — c'est la bonne façon de retirer une dérogation.
 	'routes/(app)/acces-securite/+page.svelte::table th':
 		'tableaux DENSES (imports d’accès, listes de badges) : en-tête resserré',
 	'routes/(app)/acces-securite/+page.svelte::table td':
@@ -101,7 +104,7 @@ export const TOLERANCES = {
 		'une photo quelconque',
 	'lib/components/TachesPlanifiees.svelte::chevron':
 		'chevron plus petit et en couleur primaire : il annonce une action, pas un dépliage neutre',
-	'routes/(app)/faq/+page.svelte::chevron':
+	'lib/components/CarteFaq.svelte::chevron':
 		'`color: inherit` — le chevron suit la couleur de la question, qui change au survol',
 	'routes/(app)/acces-securite/+page.svelte::table':
 		'tableau plus lisible : ses cellules portent des codes et des dates',

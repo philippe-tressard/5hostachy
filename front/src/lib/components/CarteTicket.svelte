@@ -41,6 +41,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import ApercuTicket from './ApercuTicket.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import BoutonLien from './BoutonLien.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/utils';
@@ -208,6 +209,10 @@
 			<!--  `aria-pressed` : le MODE se lit sur l'icône qui l'a ouvert, pas sur un
 			      titre au-dessus du formulaire (18/08/2026). Elle s'inverse et grossit —
 			      style dans `app.css`, une seule fois pour tout le site. -->
+			<!--  Un ticket a sa PAGE : c'est elle qu'on envoie, pas l'ancre d'une carte
+			      dans une liste que le destinataire n'a peut-être pas le droit de voir
+			      en entier. Même adresse que `lien_ticket()` côté API. -->
+			<BoutonLien chemin="/tickets/{ticket.id}" quoi="le ticket" />
 			{#if peutSuivreCeTicket}
 				<button
 					class="btn-icon"

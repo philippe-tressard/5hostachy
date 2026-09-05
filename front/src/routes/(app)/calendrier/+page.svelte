@@ -1,10 +1,13 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import { TITRE_ARCHIVES } from '$lib/archives';
 	import OngletArchivesCalendrier from '$lib/components/OngletArchivesCalendrier.svelte';
 	import FormulaireEvenement from '$lib/components/FormulaireEvenement.svelte';
 	import { onMount } from 'svelte';
-	import { cibleDuHash, ongletDeLUrl, revelerCible } from '$lib/deepLink';
+	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
+	import { cibleDuHash, revelerCible } from '$lib/deepLink';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import { routeOnglet } from '$lib/routes-onglets';
 	import {
 		calendrier as calApi,
 		publications as pubsApi,
@@ -46,11 +49,18 @@
 	let evenements: any[] = [];
 	let prestataires: any[] = [];
 	let loading = true;
-	// Liste explicite : sert aussi à valider le `?onglet=` d'un lien profond.
-	const ONGLETS = ['liste', 'kanban', 'archives'] as const;
-	let onglet: (typeof ONGLETS)[number] = 'liste';
+	/**  La vue vient du CHEMIN (`/calendrier/kanban`), résolue par le `load` :
+	 *   changer d'onglet est une navigation, pas une affectation. */
+	export let data: { onglet: string };
+	$: onglet = data.onglet;
 	$: isLocataire = $currentUser?.statut === 'locataire';
-	$: if (isLocataire && (onglet === 'kanban' || onglet === 'archives')) onglet = 'liste';
+	//  Masquer un onglet ne suffit pas : un locataire qui ouvre `/calendrier/kanban`
+	//  — par un favori, un lien reçu — doit être ramené sur la liste. Le masquage
+	//  répond à ce qui s'affiche, la redirection à ce qui s'atteint.
+	const ONGLETS_FERMES_AUX_LOCATAIRES = ['kanban', 'archives'];
+	$: if (browser && isLocataire && ONGLETS_FERMES_AUX_LOCATAIRES.includes(onglet)) {
+		goto(routeOnglet('calendrier', 'liste'), { replaceState: true });
+	}
 	$: trackTabView(onglet);
 	let filtreType = '';
 
@@ -129,14 +139,15 @@
 				),
 			].sort((a, b) => b - a);
 			if (expiredYears.length > 0) expandedArchiveYears = new Set([expiredYears[0]]);
-			// Liens profonds : `?onglet=` pour la vue, `#ev-<id>` pour l'événement.
-			// L'ancre impose la vue liste — c'est la seule où un événement porte un id.
-			const urlOnglet = ongletDeLUrl(ONGLETS);
-			if (urlOnglet) onglet = urlOnglet;
+			//  Lien profond : `#ev-<id>` désigne un événement, et seule la vue liste
+			//  lui pose un id — l'ancre impose donc la route.
 			const idEv = cibleDuHash('ev');
 			if (idEv !== null) {
-				onglet = 'liste';
 				expandedEvId = idEv;
+				if (onglet !== 'liste') {
+					goto(`${routeOnglet('calendrier', 'liste')}#ev-${idEv}`);
+					return;
+				}
 				revelerCible(`ev-${idEv}`);
 			}
 		} catch {
@@ -630,22 +641,11 @@
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- Onglets -->
-<div class="tabs" role="tablist" style="margin-bottom:1.5rem">
-	<button role="tab" class:active={onglet === 'liste'} on:click={() => (onglet = 'liste')}
-		>{_pc.onglets?.liste?.label ?? '\u{1F4CB} Liste'}</button
-	>
-	{#if !isLocataire}
-		<button role="tab" class:active={onglet === 'kanban'} on:click={() => (onglet = 'kanban')}
-			>{_pc.onglets?.kanban?.label ?? '\u{1F5C3}️ Kanban'}</button
-		>
-		<button role="tab" class:active={onglet === 'archives'} on:click={() => (onglet = 'archives')}
-			>{_pc.onglets?.archives?.label ?? TITRE_ARCHIVES}</button
-		>
-	{/if}
-</div>
-{#if _pc.onglets?.[onglet]?.descriptif}
-	<p class="tab-descriptif">{@html safeHtml(_pc.onglets[onglet].descriptif)}</p>
-{/if}
+<BarreOnglets
+	pageId="calendrier"
+	actif={onglet}
+	masques={isLocataire ? ONGLETS_FERMES_AUX_LOCATAIRES : []}
+/>
 
 <!-- Filtres -->
 <div class="filters">
@@ -932,10 +932,6 @@
 	    travail de #432 ». Reprendre les deux ENSEMBLE était la condition : n'en
 	    extraire qu'un aurait emporté les règles et laissé l'autre nu, ce qui est
 	    exactement la panne des pastilles de la v2.67.11. */
-
-	.tabs {
-		padding-bottom: 0.1rem;
-	} /* le reste vient de la charte (#607) */
 
 	.kanban-toolbar {
 		display: flex;
