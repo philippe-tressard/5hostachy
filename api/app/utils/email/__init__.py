@@ -28,7 +28,12 @@ from app.models.core import ConfigSite, HistoriqueEmail, ModeleEmail, Utilisateu
 from app.utils.fichiers import nom_lisible
 #  La configuration du canal SMTP est un sujet distinct de la composition
 #  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026.
-from app.utils.smtp import _get_smtp_config, connexion_smtp  # noqa: F401  (ré-export : config.py l'importe d'ici)
+from app.seed.emails import expediteur_du_modele
+from app.utils.smtp import (  # noqa: F401  (ré-export : config.py l'importe d'ici)
+    _get_smtp_config,
+    adresse_expedition,
+    connexion_smtp,
+)
 
 from .gabarit import INTENTIONS, _wrap_email  # noqa: F401  (ré-export : admin/communications l'importe d'ici)
 from .pieces_jointes import _preparer_pieces_jointes
@@ -307,7 +312,12 @@ async def send_email(
         try:
             from fastapi_mail import FastMail, MessageSchema
 
-            cfg = connexion_smtp(smtp_cfg)
+            cfg = connexion_smtp(
+                smtp_cfg,
+                expediteur=adresse_expedition(
+                    smtp_cfg, expediteur_du_modele(code, jeton_reponse=jeton_reponse)
+                ),
+            )
             fm = FastMail(cfg)
             rendered_subject, full_html = composer_email(
                 template, ctx, site_nom=site_nom, site_url=site_url,
@@ -424,7 +434,12 @@ async def send_email_group(
         try:
             from fastapi_mail import FastMail, MessageSchema
 
-            cfg = connexion_smtp(smtp_cfg)
+            cfg = connexion_smtp(
+                smtp_cfg,
+                expediteur=adresse_expedition(
+                    smtp_cfg, expediteur_du_modele(code, jeton_reponse=jeton_reponse)
+                ),
+            )
             fm = FastMail(cfg)
             rendered_subject, full_html = composer_email(
                 template, ctx, site_nom=site_nom, site_url=site_url,

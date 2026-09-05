@@ -85,3 +85,53 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "publication_externe": "information",
     "acces_apparies_auto": "information",
 }
+
+
+# ── Qui EXPÉDIE, et pourquoi ce n'est pas toujours « noreply » ────────────────
+#
+# Consigne de l'utilisateur (05/09/2026) : *« utiliser contact@5hostachy.fr ;
+# réserver noreply@5hostachy.fr dans les cas où il n'y a pas de réponse à
+# obtenir »*.
+#
+# Tout partait de `noreply@`, y compris ce qui espérait une réponse du syndic.
+# Une adresse qui s'annonce « ne répondez pas » décourage la réponse qu'on
+# sollicite — et quand elle arrive quand même, elle arrive dans une boîte dont le
+# nom dit qu'on ne la lit pas. C'est le pendant humain du défaut technique de
+# #754 : le tuyau existait, le panneau au-dessus disait de ne pas s'en servir.
+#
+# La décision suit l'INTENTION, qui est déjà déclarée pour chaque modèle : pas de
+# seconde table à tenir d'accord, et un modèle neuf hérite d'un choix explicite au
+# lieu d'un défaut silencieux.
+EXPEDITEUR_REPONSE = "reponse"   # contact@ — on peut nous répondre
+EXPEDITEUR_MUET = "muet"         # noreply@ — il n'y a rien à répondre
+
+EXPEDITEUR_PAR_INTENTION: dict[str, str] = {
+    #  On attend une réponse écrite : c'est le cas qui a motivé la consigne.
+    "reponse_attendue": EXPEDITEUR_REPONSE,
+    #  On demande un geste. Le geste se fait sur le site, mais le destinataire
+    #  peut légitimement répondre pour demander pourquoi : la porte reste
+    #  ouverte. C'est la lecture littérale de la consigne — `noreply@` est
+    #  RÉSERVÉ à ce qui n'appelle aucune réponse, pas « employé par défaut ».
+    "action_requise": EXPEDITEUR_REPONSE,
+    #  On informe. Rien n'est demandé, rien n'est attendu.
+    "information": EXPEDITEUR_MUET,
+}
+
+
+def expediteur_du_modele(code: str, *, jeton_reponse: str | None = None) -> str:
+    """`EXPEDITEUR_REPONSE` ou `EXPEDITEUR_MUET` pour ce modèle.
+
+    ⚠️ **Un envoi qui porte une adresse de réponse de ticket est TOUJOURS
+    parlant**, quelle que soit son intention : `Reply-To: tickets+<jeton>@` dit
+    explicitement « répondez à ce message », et le site sait rattacher cette
+    réponse au dossier (#703, #754). L'expédier depuis `noreply@` se
+    contredirait dans le même message.
+
+    Une intention inconnue — un modèle ajouté sans l'inscrire dans
+    `INTENTIONS_PAR_MODELE` — rend `EXPEDITEUR_REPONSE` : entre laisser une
+    réponse possible et l'interdire par omission, le défaut sûr est le premier.
+    """
+    if jeton_reponse:
+        return EXPEDITEUR_REPONSE
+    intention = INTENTIONS_PAR_MODELE.get(code, "")
+    return EXPEDITEUR_PAR_INTENTION.get(intention, EXPEDITEUR_REPONSE)
