@@ -292,128 +292,18 @@ from app.schemas_tickets import (  # noqa: E402,F401
 )
 
 
-class PublicationCreate(BaseModel):
-    titre: str
-    contenu: str
-    perimetre: str = "résidence"
-    batiment_id: Optional[int] = None
-    epingle: bool = False
-    urgente: bool = False
-    photos_urls: ListeJson = []
-    perimetre_cible: List[str] = ["résidence"]
-    public_cible: List[str] = ["résidents"]
-    statut: Optional[str] = "publie"
-    brouillon: bool = False
-    partager_whatsapp: bool = False
-    envoyer_syndic: bool = False
-    envoyer_cs: bool = False
-    #  🔴 « Envoyer une copie à … » — la 4e case de la Diffusion (31/08/2026).
-    #
-    #  Elle s'affichait déjà sur cet écran, `CanauxNotification` la posant pour
-    #  les huit formulaires qui emploient la Diffusion. Mais **seuls les tickets
-    #  la lisaient** : ici, la cocher n'avait aucun effet, et rien ne le disait.
-    #
-    #  ⚠️ C'est exactement ce que le cadre interdit — *« avant de rouvrir un
-    #  champ dans l'interface, vérifier que le serveur le CONSOMME »*. Le
-    #  contrôle `lint:diffusion-auteur` ne voyait pas le trou : les écrans
-    #  concernés ne lient pas la case eux-mêmes, ils la reçoivent de
-    #  `ChampsCommuns`, qui figurait sur sa liste de relais.
-    envoyer_auteur: bool = False
-    annonce_hall: bool = False  # génère l'affiche de hall + envoi au CS du périmètre
-    confidentiel: bool = False  # lecture réservée au périmètre visé (#347)
-    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
-
-
-class PublicationUpdate(BaseModel):
-    titre: Optional[str] = None
-    contenu: Optional[str] = None
-    epingle: Optional[bool] = None
-    urgente: Optional[bool] = None
-    photos_urls: Optional[ListeJson] = None
-    batiment_id: Optional[int] = None
-    perimetre_cible: Optional[List[str]] = None
-    public_cible: Optional[List[str]] = None
-    statut: Optional[str] = None
-    brouillon: Optional[bool] = None
-    archivee: Optional[bool] = None
-    partager_whatsapp: Optional[bool] = None
-    envoyer_syndic: Optional[bool] = None
-    envoyer_cs: Optional[bool] = None
-    #  Voir `PublicationCreate` : la case ne se stocke pas, c'est une intention
-    #  d'envoi. À la mise à jour elle vaut pour CET enregistrement.
-    envoyer_auteur: Optional[bool] = None
-    annonce_hall: Optional[bool] = None
-    #  Modifiable après publication, volontairement : c'est ce qui permet de
-    #  rattraper une actualité publiée au mauvais périmètre. Elle disparaît alors
-    #  du fil des autres périmètres — ceux qui l'ont lue l'ont lue (arbitrage #347).
-    confidentiel: Optional[bool] = None
-
-
-class EvolutionRead(BaseModel):
-    id: int
-    publication_id: int
-    type: str
-    contenu: Optional[str] = None
-    ancien_statut: Optional[str] = None
-    nouveau_statut: Optional[str] = None
-    auteur_id: int
-    auteur_nom: Optional[str] = None
-    cree_le: datetime
-    fichiers_urls: ListeJson = []
-
-    class Config:
-        from_attributes = True
-
-
-class EvolutionCreate(BaseModel):
-    type: str  # commentaire | etat | correction
-    contenu: Optional[str] = None
-    nouveau_statut: Optional[str] = None  # requis si type=="etat"
-    partager_whatsapp: Optional[bool] = None  # None = hérite de la publication
-    envoyer_syndic: Optional[bool] = None  # None = hérite de la publication
-    envoyer_cs: Optional[bool] = None  # None = hérite de la publication
-    fichiers_urls: List[str] = []
-    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
-
-
-class PublicationRead(BaseModel):
-    id: int
-    titre: str
-    contenu: str
-    perimetre: str
-    batiment_id: Optional[int] = None
-    epingle: bool
-    urgente: bool
-    auteur_id: int
-    photos_urls: ListeJson = []
-    cree_le: datetime
-    mis_a_jour_le: Optional[datetime] = None
-    perimetre_cible: List[str] = ["résidence"]
-    public_cible: List[str] = ["résidents"]
-    statut: Optional[str] = None
-    statut_change_le: Optional[datetime] = None
-    brouillon: bool = False
-    partager_whatsapp: bool = False
-    envoyer_syndic: bool = False
-    envoyer_cs: bool = False
-    annonce_hall: bool = False
-    confidentiel: bool = False
-    evolutions: List[EvolutionRead] = []
-    auteur_nom: Optional[str] = None
-
-    @field_validator('perimetre_cible', 'public_cible', mode='before')
-    @classmethod
-    def parse_json_list(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except Exception:
-                return [v] if v else []
-        return v or []
-
-    class Config:
-        from_attributes = True
-
+#  Les schémas des PUBLICATIONS vivent dans leur propre module depuis le
+#  05/09/2026 : ce fichier avait dépassé son plafond de 500 lignes et grossissait
+#  encore. Même découpe que `schemas_tickets` — et même ré-export, pour que rien
+#  n'ait à changer d'import : `from app.schemas import PublicationRead` continue
+#  de fonctionner, ici comme dans les dix routeurs qui l'écrivent.
+from app.schemas_publications import (  # noqa: E402,F401
+    EvolutionCreate as EvolutionCreate,
+    EvolutionRead as EvolutionRead,
+    PublicationCreate as PublicationCreate,
+    PublicationRead as PublicationRead,
+    PublicationUpdate as PublicationUpdate,
+)
 
 class DocumentRead(BaseModel):
     id: int

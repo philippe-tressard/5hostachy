@@ -41,6 +41,7 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import { tickets as ticketsApi, admin as adminApi, ApiError, type Ticket } from '$lib/api';
 	import ChampSaisiPour from '$lib/components/ChampSaisiPour.svelte';
+	import ChampConfidentiel from '$lib/components/ChampConfidentiel.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -395,19 +396,7 @@
 				residents={usersActifs}
 			/>
 
-			<!--  🔒 CONFIDENTIEL (#710). Pourquoi ce n'est PAS la case d'une
-			      actualité malgré le mot : `Ticket.confidentiel`, api/types.ts. -->
-			<div class="field">
-				<label class="checkbox-field" for="ticket-confidentiel">
-					<input id="ticket-confidentiel" type="checkbox" bind:checked={confidentiel} />
-					🔒 Confidentiel
-				</label>
-				<p class="aide-champ">
-					{confidentiel
-						? 'Seuls vous, le conseil syndical et la personne concernée voyez ce ticket.'
-						: 'Visible des résidents dont ce ticket concerne le bâtiment. Cochez pour le réserver au conseil syndical.'}
-				</p>
-			</div>
+			<ChampConfidentiel bind:confidentiel />
 		{/if}
 
 		<!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui

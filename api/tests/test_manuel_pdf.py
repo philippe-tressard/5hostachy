@@ -89,8 +89,9 @@ def test_les_QUINZE_ecrans_sont_dans_le_PDF(document):
 def test_les_blocs_depliables_sont_OUVERTS(document):
     """Un `<details>` fermé, sur du papier, est du contenu perdu.
 
-    Et c'est justement celui qu'on a demandé à voir : Tickets, Communauté et Mon
-    profil, les trois écrans dont l'usage ne se devine pas au titre.
+    Et c'est justement celui qu'on a demandé à voir : Tickets, Communauté, Mon
+    profil — et, depuis le 05/09/2026, Actualités, dont le fil porte désormais le
+    ciblage. Quatre écrans dont l'usage ne se devine pas au titre.
 
     ⚠️ La première version s'en remettait au CSS (`display: block !important`).
     Ça ne suffit pas : le repli d'un `<details>` est un comportement natif, pas
@@ -101,7 +102,7 @@ def test_les_blocs_depliables_sont_OUVERTS(document):
         "un `<details>` subsiste : son contenu pourrait ne pas être imprimé"
     )
     assert "<summary" not in document
-    assert document.count("En détail") == 3, "les trois blocs ne sont pas dépliés"
+    assert document.count("En détail") == 4, "les quatre blocs ne sont pas dépliés"
     #  Et leur contenu doit vraiment être là.
     assert "votre réponse rejoint le fil du ticket" in document
     assert "Boîte à idées" in document
@@ -119,7 +120,7 @@ def test_les_blocs_depliables_sont_OUVERTS(document):
     #  dès le début : non pas que la balise a changé, mais que le RÉSULTAT est
     #  celui qu'on veut. Le caractère fautif n'est pas cité ici — l'écrire pour
     #  l'expliquer le réintroduirait, et la CI refuserait ce fichier à son tour.
-    assert document.count('<div class="ecran-detail">') == 3, (
+    assert document.count('<div class="ecran-detail">') == 4, (
         "les blocs convertis ont perdu leurs attributs : ils s'imprimeraient "
         "sans leur habillage"
     )

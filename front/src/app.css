@@ -19,6 +19,7 @@
 
 @import './styles/socle.css';
 @import './styles/composants.css';
+@import './styles/champs.css';
 @import './styles/normes.css';
 @import './styles/ecrans.css';
 /*  Les deux pages légales, ajoutées le 28/08/2026 (#583). EN DERNIER, et sans
