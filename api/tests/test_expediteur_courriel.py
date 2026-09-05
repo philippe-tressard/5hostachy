@@ -24,7 +24,7 @@ from app.seed.emails import (
     INTENTIONS_PAR_MODELE,
     expediteur_du_modele,
 )
-from app.utils.smtp import adresse_expedition
+from app.utils.smtp import adresse_expedition, adresses_a_tester
 
 _CFG = {"smtp_from": "noreply@5hostachy.fr", "smtp_from_reponse": "contact@5hostachy.fr"}
 
@@ -89,3 +89,23 @@ def test_chaque_intention_declaree_a_un_expediteur():
         "ces intentions n'ont pas d'expéditeur déclaré, elles prendront le défaut "
         f"en silence : {sorted(manquantes)}"
     )
+
+
+def test_le_bouton_de_test_exerce_les_DEUX_adresses():
+    """🔴 Un contrôle doit exercer ce qui SERT.
+
+    Le bouton « tester la configuration » n'envoyait que depuis `smtp_from`.
+    Depuis que deux adresses servent, un serveur qui refuserait la seconde —
+    cas courant quand elle est un **alias** et non un compte — aurait passé le
+    test et échoué sur un vrai ticket, dans un journal que personne ne lit à ce
+    moment-là.
+    """
+    assert adresses_a_tester(_CFG) == ["noreply@5hostachy.fr", "contact@5hostachy.fr"]
+
+
+def test_une_seule_adresse_configuree_ne_fabrique_pas_un_second_envoi():
+    """On n'envoie pas deux fois la même chose pour faire nombre : un test qui
+    double sans rien prouver de plus finit par être perçu comme du bruit.
+    """
+    assert adresses_a_tester({"smtp_from": "a@x.fr"}) == ["a@x.fr"]
+    assert adresses_a_tester({"smtp_from": "a@x.fr", "smtp_from_reponse": "a@x.fr"}) == ["a@x.fr"]

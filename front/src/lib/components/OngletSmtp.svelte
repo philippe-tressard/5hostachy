@@ -141,8 +141,11 @@
 		if (!smtpTestEmail) return;
 		smtpTesting = true;
 		try {
-			await api.post('/config/smtp-test', { email: smtpTestEmail });
-			toast('success', `E-mail de test envoyé à ${smtpTestEmail}`);
+			//  Le serveur dit CE QU'IL A FAIT — un envoi par adresse d'expédition
+			//  configurée. Réécrire le message ici le figerait à un seul envoi, et
+			//  l'écran annoncerait autre chose que ce qui est parti.
+			const r: any = await api.post('/config/smtp-test', { email: smtpTestEmail });
+			toast('success', r?.message ?? `E-mail de test envoyé à ${smtpTestEmail}`);
 		} catch (e: any) {
 			toast('error', e.message ?? "Échec de l'envoi");
 		} finally {
@@ -289,7 +292,10 @@
 				</button>
 			</div>
 			<p style="font-size:.8rem;color:var(--color-text-muted);margin-top:.3rem">
-				Envoie un e-mail de test avec la configuration SMTP actuellement enregistrée en base.
+				Envoie un e-mail de test avec la configuration SMTP actuellement enregistrée en base,
+				<strong>depuis chacune des deux adresses d'expédition</strong> — celle qui n'attend pas de
+				réponse et celle qui en attend une. Un serveur peut accepter l'une et refuser l'autre,
+				surtout si la seconde est un <strong>alias</strong> : il faut recevoir les deux messages.
 			</p>
 		</div>
 	</SectionFormulaire>
