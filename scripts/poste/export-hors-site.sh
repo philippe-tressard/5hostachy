@@ -89,97 +89,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
+#  Les DÉCISIONS pures vivent dans un module sourcé (#775, 05/09/2026) :
+#  elles s'éprouvent par `--selftest` sans les deux RPi. Ce script garde ce
+#  qui touche au réseau, au disque et à l'orchestration.
+source "$(dirname "$0")/../lib/lib-export-hors-site.sh"
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  FONCTIONS PURES — aucune E/S : ni SSH, ni écriture, ni réseau.
 #  C'est le seul moyen de tester une décision d'infra sans les deux RPi
 #  (pattern inauguré par boot-role-guard.sh, cf. CLAUDE.md § job CI test-scripts).
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Quel nœud sert réellement ? ──────────────────────────────────────────────
-# Entrées : les codes HTTP obtenus sur http://<ip>/api/health de chaque nœud.
-# On ne lit PAS `.active` : ce drapeau a déjà divergé en production (26/07/2026,
-# neuf FAIL consécutifs), et il peut désigner un nœud qui ne sert rien. La
-# sauvegarde de 03:00 est produite par le conteneur API — donc par le nœud qui
-# RÉPOND, par définition. On interroge le fait, pas sa déclaration.
-decider_source() { # $1=code_rpi1 $2=code_rpi2 → rpi1|rpi2|split-brain|aucun
-  local c1="${1:-000}" c2="${2:-000}"
-  if [ "$c1" = "200" ] && [ "$c2" = "200" ]; then echo "split-brain"; return 0; fi
-  if [ "$c1" = "200" ]; then echo "rpi1"; return 0; fi
-  if [ "$c2" = "200" ]; then echo "rpi2"; return 0; fi
-  echo "aucun"
+
+# ── Transférer UNE archive, sans jamais laisser de fichier tronqué ──────────
+# 🔴 Écrite une fois (05/09/2026) : le rattrapage recopiait ce geste. La
+# subtilité qui compte — le nom définitif n'apparaît QU'APRÈS un transfert
+# complet, sinon une rotation prendrait un fichier tronqué pour une sauvegarde.
+transferer_archive() { # $1=ip $2=nom → 0 si la copie est complète
+  local ip="$1" nom="$2" dest="$EXPORT_DEST/$2"
+  if $SSH_CMD "$EXPORT_SSH_USER@$ip" "$LIRE cat '/b/$nom'" > "$dest.partiel" 2>/dev/null; then
+    mv -f "$dest.partiel" "$dest"
+    return 0
+  fi
+  rm -f "$dest.partiel"
+  return 1
 }
 
-# ── L'archive contient-elle bien la base ? ───────────────────────────────────
-# Prend le LISTING déjà produit, et ne fait aucune E/S — parce que la version
-# « en ligne » de ce test était fausse de deux façons (04/08/2026) :
-#   • `tar -tzf … | grep -qx app.db` : `grep -q` sort dès le premier match et
-#     ferme le tube ; `tar` meurt alors en SIGPIPE, et `set -o pipefail` propage
-#     cet échec. Le test rendait donc « absent » sur une archive qui contenait
-#     app.db — un faux négatif silencieux sur le contrôle le plus important ;
-#   • une comparaison par sous-chaîne ferait passer `uploads/app.db` pour la
-#     base. Le nom doit correspondre à la ligne ENTIÈRE.
-contient_app_db() { # $1=listing tar → oui|non
-  case $'\n'"${1:-}"$'\n' in
-    *$'\napp.db\n'*) echo "oui" ;;
-    *)              echo "non" ;;
-  esac
-}
-
-# ── Le nom d'archive annoncé par le nœud est-il acceptable ? ─────────────────
-# Ce nom vient d'une machine distante et repart dans une commande exécutée là-bas :
-# il est validé en LISTE BLANCHE ancrée (standards/03-securite.md §2), jamais par
-# liste noire. Sans cette borne, un nom fabriqué deviendrait un chemin ou une
-# commande. C'est aussi ce qui garantit qu'on ne lira jamais autre chose qu'une
-# archive de sauvegarde close — jamais `app.db`.
-nom_valide() { # $1 = nom candidat → 0 si acceptable
-  local n=${1:-}
-  [ -n "$n" ] || return 1
-  [[ "$n" =~ ^hostachy_backup_[A-Za-z0-9._-]+\.tar\.gz$ ]] || return 1
-  case "$n" in */*|*'\'*|*..*) return 1 ;; esac
-  return 0
-}
-
-# ── L'archive tirée est-elle exploitable ? ───────────────────────────────────
-# Quatre conditions, toutes nécessaires. Une archive qu'on n'a pas su vérifier
-# n'est PAS déclarée saine : elle renvoie `erreur`, jamais `succes` — un
-# contrôle qui ne peut pas s'exécuter rend INCONNU (standards/04 §1), et une
-# sauvegarde qu'on croit bonne à tort est pire que pas de sauvegarde du tout.
-verdict_archive() { # $1=octets $2=empreintes_identiques $3=contient_db $4=integrite → statut|message
-  local octets="${1:-0}" empreintes="${2:-non}" contient="${3:-non}" integrite="${4:-inconnue}"
-  if [ "${octets:-0}" -le 0 ] 2>/dev/null || [ -z "$octets" ]; then
-    echo "erreur|Archive vide ou absente après transfert."; return 0
-  fi
-  if [ "$empreintes" != "oui" ]; then
-    echo "erreur|Empreinte SHA-256 différente de la source — transfert tronqué ou altéré."; return 0
-  fi
-  if [ "$contient" != "oui" ]; then
-    echo "erreur|L'archive ne contient pas app.db — sauvegarde inexploitable."; return 0
-  fi
-  if [ "$integrite" = "inconnue" ]; then
-    echo "erreur|Intégrité NON vérifiée (ni sqlite3 ni python disponibles) — copie non validée."; return 0
-  fi
-  if [ "$integrite" != "ok" ]; then
-    echo "erreur|Base corrompue dans l'archive (integrity_check : $integrite)."; return 0
-  fi
-  echo "succes|Copie hors site vérifiée ($octets octets, integrity_check : ok)."
-}
-
-# ── Quelles copies locales supprimer ? ───────────────────────────────────────
-# Reçoit la liste des noms DÉJÀ TRIÉE par ordre chronologique croissant (le nom
-# porte l'horodatage : hostachy_backup_YYYYmmdd_HHMMSS.tar.gz — même convention
-# que _rotate_backups() côté API). Rend les noms excédentaires, les plus anciens
-# d'abord. `keep <= 0` ne supprime RIEN : une valeur de configuration aberrante
-# ne doit jamais effacer les sauvegardes.
-archives_a_supprimer() { # $1=keep, liste sur stdin → noms à supprimer
-  local keep="${1:-0}" total=0
-  local -a noms=()
-  while IFS= read -r n; do [ -n "$n" ] && noms+=("$n"); done
-  total=${#noms[@]}
-  if [ "$keep" -le 0 ] 2>/dev/null; then return 0; fi
-  [ "$total" -le "$keep" ] && return 0
-  local i
-  for ((i = 0; i < total - keep; i++)); do echo "${noms[$i]}"; done
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SELF-TEST — exécuté en CI (job test-scripts), aucun effet de bord.
@@ -198,6 +133,23 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
   check "aucun ne répond"           "aucun"       "$(decider_source 000 000)"
   check "503 n'est pas un actif"    "rpi2"        "$(decider_source 503 200)"
   check "codes absents → aucun"     "aucun"       "$(decider_source)"
+
+  # ── Continuité de la série (#775) ──
+  # La veille et l'avant-veille présentes, sur une fenêtre de 2 jours : rien ne
+  # manque. C'est le cas nominal, et il doit rendre une chaîne VIDE — un
+  # contrôle qui crie sur une série complète est désarmé dans la semaine.
+  SERIE_OK=$'hostachy_backup_20260904_020000.tar.gz\nhostachy_backup_20260903_020000.tar.gz'
+  check "série complète → rien" "" "$(printf '%s' "$SERIE_OK" | jours_manquants 2 20260905)"
+  # Un trou au milieu : c'est le seul cas qui compte, et c'est celui qu'une
+  # simple présence d'archive ne voit pas.
+  SERIE_TROU=$'hostachy_backup_20260904_020000.tar.gz'
+  check "un jour manque"    "20260903" "$(printf '%s' "$SERIE_TROU" | jours_manquants 2 20260905)"
+  # 🔴 LE CAS ZÉRO : aucune archive du tout. Une liste vide doit rendre TOUS les
+  # jours, pas une chaîne vide — sinon « rien à signaler » et « je n'ai rien pu
+  # lire » deviennent le même résultat (`standards/04` §1).
+  check "liste vide → tous"  "20260904 20260903" "$(printf '' | jours_manquants 2 20260905)"
+  # L'archive du jour même n'est pas exigée : elle n'existe qu'après 02:00.
+  check "le jour même n'est pas exigé" "" "$(printf '%s' "$SERIE_OK" | jours_manquants 1 20260905)"
 
   # Le faux négatif du 04/08/2026 : `tar | grep -q` sous pipefail rendait
   # « absent » sur une archive contenant app.db. Le listing est désormais
@@ -366,16 +318,12 @@ if [ -f "$LOCAL" ] && [ "$(sha256sum "$LOCAL" 2>/dev/null | awk '{print $1}')" =
 else
   log "  Transfert en cours…"
   # Flux via ssh plutôt que rsync/scp : Git for Windows n'embarque pas rsync, et
-  # scp ne sait pas élever ses droits sur la source.
-  if ! $SSH_CMD "$SSH_CIBLE" "$LIRE cat '/b/$ARCHIVE'" > "$LOCAL.partiel" 2>/dev/null; then
+  # scp ne sait pas élever ses droits sur la source. Le geste vit dans
+  # `transferer_archive`, partagé avec la passe de rattrapage.
+  if ! transferer_archive "$SOURCE_IP" "$ARCHIVE"; then
     log "ERREUR: transfert interrompu."
-    rm -f "$LOCAL.partiel"
     exit 1
   fi
-  # Renommage seulement après transfert complet : jamais de fichier tronqué
-  # portant un nom définitif, qu'une rotation prendrait ensuite pour une
-  # sauvegarde valide.
-  mv -f "$LOCAL.partiel" "$LOCAL"
 fi
 
 OCTETS=$(stat -c%s "$LOCAL" 2>/dev/null || echo 0)
@@ -479,6 +427,43 @@ fi
 # dernier écran doit répondre sans effort à « est-ce que ma sauvegarde est là,
 # et est-elle bonne ? ». Un code de sortie ne se lit pas dans une fenêtre qui
 # se referme.
+# ── 4. RATTRAPAGE SUR L'AUTRE NŒUD, ET CONTINUITÉ DE LA SÉRIE (#775) ────────
+#
+# Sans cette passe, la copie hors site ne contient qu'une nuit sur deux — et
+# personne ne le voit, puisque l'archive du JOUR, elle, est bien là.
+#
+# ⚠️ Le standby a `docker` et son volume même sans conteneur : même lecture, sans
+# privilège supplémentaire. Et cette passe n'échoue JAMAIS le script — l'archive
+# du jour est déjà copiée et vérifiée. Un standby injoignable est un rattrapage
+# manqué, pas une sauvegarde manquée ; il est dit, et le relevé le montre.
+AUTRE_NOEUD="rpi1"; AUTRE_IP="$RPI1_IP"
+[ "$SOURCE_NOEUD" = "rpi1" ] || { AUTRE_NOEUD="rpi1"; AUTRE_IP="$RPI1_IP"; }
+[ "$SOURCE_NOEUD" = "rpi1" ] && { AUTRE_NOEUD="rpi2"; AUTRE_IP="$RPI2_IP"; }
+
+log "  Rattrapage sur $AUTRE_NOEUD ($AUTRE_IP)…"
+RATTRAPEES=0
+if LISTE_AUTRE=$($SSH_CMD "$EXPORT_SSH_USER@$AUTRE_IP" "$LIRE ls /b" 2>/dev/null); then
+  for nom in $LISTE_AUTRE; do
+    nom_valide "$nom" || continue
+    [ -f "$EXPORT_DEST/$nom" ] && continue
+    if transferer_archive "$AUTRE_IP" "$nom"; then
+      RATTRAPEES=$((RATTRAPEES + 1))
+      log "    + $nom (absent localement)"
+    else
+      log "    ! $nom — transfert impossible depuis $AUTRE_NOEUD"
+    fi
+  done
+  [ "$RATTRAPEES" = "0" ] && log "    (rien à rattraper)"
+else
+  log "    ! $AUTRE_NOEUD injoignable — rattrapage INCONNU, la série peut avoir des trous."
+fi
+
+# Le relevé de continuité : il porte sur ce qu'on DÉTIENT, après rattrapage.
+MANQUANTS=$(ls "$EXPORT_DEST" 2>/dev/null | jours_manquants 14)
+if [ -n "$MANQUANTS" ]; then
+  log "  ⚠️  Jours absents de la copie hors site (14 derniers) : $MANQUANTS"
+fi
+
 echo
 if [ "$STATUT" = "succes" ]; then
   echo "  ✅ SAUVEGARDE HORS SITE À JOUR"

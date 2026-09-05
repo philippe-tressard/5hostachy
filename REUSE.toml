@@ -1,0 +1,30 @@
+#  Conformité REUSE — la licence de chaque fichier, en un endroit.
+#
+#  🔴 UN SEUL MOTIF, ET C'EST VOULU (05/09/2026, #774). La conversion depuis
+#  `.reuse/dep5` en avait produit DOUZE : `**`, puis `docs/**`, `specs/**`,
+#  `front/static/**`, `**.md`, `**.json`, `**.yml`… tous avec le même
+#  propriétaire et la même licence. `**` les couvre déjà tous — les onze autres
+#  étaient de la duplication pure, héritée d'un format qui listait les
+#  répertoires un par un.
+#
+#  Douze écritures d'une même règle, c'est douze occasions de corriger la
+#  licence à onze endroits sur douze le jour où elle change.
+#
+#  ⚠️ Le format `dep5` qui les portait est DÉPRÉCIÉ depuis REUSE 3.2 : garder un
+#  format que l'outil cessera de lire, c'est programmer la panne du contrôle
+#  qu'on vient de poser en intégration continue.
+#
+#  ⚠️ Une exception future — une image sous une autre licence, une bibliothèque
+#  tierce embarquée — s'ajoute en bloc SUPPLÉMENTAIRE, plus précis que `**`.
+#  C'est le seul cas où un second bloc dit quelque chose que le premier ne dit
+#  pas ; sinon, il le répète.
+version = 1
+SPDX-PackageName = "5Hostachy"
+SPDX-PackageSupplier = "https://github.com/philippe-tressard/5hostachy/issues"
+SPDX-PackageDownloadLocation = "https://github.com/philippe-tressard/5hostachy"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Philippe TRESSARD"
+SPDX-License-Identifier = "MIT"

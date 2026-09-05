@@ -90,6 +90,26 @@ jobs:
         working-directory: api
         run: python scripts/check_audit_python.py
 
+      - name: Conformité des licences (REUSE)
+        # 🔴 RANG 1 (`standards/14`) — et il n'était vérifié NULLE PART jusqu'au
+        # 05/09/2026 (#774). Le projet EST conforme : `reuse lint` compte 913
+        # fichiers sur 913 couverts, par le motif `**` de `REUSE.toml`. Ce qui
+        # manquait, c'est le contrôle : une conformité que rien ne mesure dérive
+        # au premier fichier ajouté hors du motif — et personne ne le saurait.
+        #
+        # ⚠️ Le format `dep5` employé jusqu'ici est DÉPRÉCIÉ par REUSE 3.2. Il a
+        # été converti en `REUSE.toml` le même jour : garder un format que
+        # l'outil ne lira plus, c'est programmer la panne du contrôle qu'on vient
+        # de poser.
+        #
+        # ⚠️ `python -m reuse` et non `reuse` : l'exécutable posé par pip n'est pas
+        # dans le PATH d'un poste Windows, et le rejeu local rendait INCONNU —
+        # c'est-à-dire ni vert ni rouge, donc un contrôle qu'on ne peut pas
+        # relire avant de pousser. Le module, lui, s'appelle partout pareil.
+        run: |
+          python -m pip install reuse
+          python -m reuse lint
+
       - name: Run Ruff
         # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
         # ce n'est pas du style. Une factorisation se termine par la suppression

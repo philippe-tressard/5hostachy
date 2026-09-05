@@ -61,7 +61,26 @@
         #  ⚠️ `default-src` reste ABSENT du mode bloquant, et c'est délibéré : il
         #  couvrirait `script-src` par héritage, et l'on retomberait sur ce qu'on
         #  ne peut pas poser. Chaque directive bloquante est nommée une par une.
-        Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'"
+        #  ── CE QUE LE RELEVÉ AUTORISE À BLOQUER (#770, 05/09/2026) ──
+        #
+        #  `font-src` et `style-src` sont passés en mode BLOQUANT parce que le
+        #  compteur persistant (`ConfigSite.csp_violations`, servi par
+        #  `GET /admin/csp`) ne leur attribue AUCUNE violation sur 404 rapports.
+        #
+        #  ⚠️ `img-src` reste dehors : ses trois violations viennent d'une
+        #  extension de navigateur (1Password injecte `https://images/icons/…`),
+        #  donc d'aucune ressource du site. Le bloquer ne protégerait rien et
+        #  casserait l'affichage de l'extension chez le visiteur — ce n'est pas
+        #  à nous d'en décider.
+        #
+        #  🔴 `script-src` NE PEUT PAS ENCORE Y ENTRER, et c'est le vrai sujet de
+        #  #770 : SvelteKit sert DEUX scripts inline par page (hydratation), qui
+        #  totalisent 370 des 404 violations relevées. Le poser en bloquant
+        #  casserait le site. Il lui faut des hash ou un nonce générés par
+        #  SvelteKit lui-même (`kit.csp`) — seul le framework connaît le contenu
+        #  de ses scripts. Tant que ce n'est pas fait, la directive reste en
+        #  observation, où elle ne ment sur rien.
+        Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'"
 
         #  ── L'étape suivante, en MODE OBSERVATION (#536, 28/08/2026) ──
         #
