@@ -46,9 +46,9 @@ export const TOLERANCES = {
 		'`auto-fill` et non `auto-fit` — les champs ne s’étirent pas quand il en manque',
 	'routes/(app)/admin/+page.svelte::form-grid':
 		'deux colonnes fixes : cet écran de configuration apparie des libellés et des valeurs',
-	'routes/(app)/espace-cs/[...vue]/+page.svelte::form-grid':
+	'routes/(app)/espace-cs/+page.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
-	'routes/(app)/prestataires/[...vue]/+page.svelte::form-grid':
+	'routes/(app)/prestataires/+page.svelte::form-grid':
 		'colonnes de 180 px et gap resserré, même raison',
 	//  ⚠️ Celui-ci n'est PAS une répartition : c'est une pile. Le nom ment sur ce
 	//  que fait la règle, et c'est la vraie dette de la liste.
@@ -89,10 +89,10 @@ export const TOLERANCES = {
 	//  ── Boutons ──────────────────────────────────────────────────────────────
 	'routes/(app)/admin/+page.svelte::btn-sm':
 		'boutons plus denses dans les tableaux de configuration',
-	'routes/(app)/espace-cs/[...vue]/+page.svelte::btn-icon':
+	'routes/(app)/espace-cs/+page.svelte::btn-icon':
 		'boutons-icônes CERCLÉS et carrés (2 rem) formant une barre d’actions, là où la ' +
 		'charte habille une icône nue',
-	'routes/(app)/espace-cs/[...vue]/+page.svelte::btn-icon-edit':
+	'routes/(app)/espace-cs/+page.svelte::btn-icon-edit':
 		'le crayon est en couleur primaire — il est l’action principale de la rangée',
 	'lib/components/ChampSaisiPour.svelte::tab-btn':
 		'onglets ENCADRÉS et non soulignés : boutons de bascule dans un champ, pas la ' +

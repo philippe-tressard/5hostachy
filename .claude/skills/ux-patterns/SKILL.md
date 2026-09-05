@@ -506,11 +506,20 @@ eu à copier que l'adresse de la page voisine.
 `/espace-cs/reporting`, `/mon-lot/location/archives`). `/kanban` seul ne dit pas de
 quoi il parle.
 
-**Mécanique SvelteKit** : les vues sont servies par un segment de reste
-(`section/[...vue]/+page.svelte`), les contenus par une route statique par rubrique
-qui monte le même composant d'écran. Un chemin non déclaré rend une **404** — se
-replier sur le premier onglet ferait passer `/calendrier/kanbna` pour une adresse
-valide, et le lien cassé survivrait.
+**Mécanique SvelteKit** : **`reroute`** (`front/src/hooks.ts`) traduit l'adresse en
+route avant que le routeur ne cherche le fichier — `/annonces` est rendue par
+`routes/(app)/sondages/+page.svelte`, sans redirection, sans fichier dupliqué et
+**sans déplacer un seul écran**. L'URL affichée ne change pas : c'est elle que reçoit
+le `load`, et c'est elle qui dit l'onglet. Un chemin non déclaré n'est pas traduit,
+donc SvelteKit rend une **404** — se replier sur le premier onglet ferait passer
+`/calendrier/kanbna` pour une adresse valide, et le lien cassé survivrait.
+
+⚠️ **Un segment de reste (`section/[...vue]/`) faisait la même chose et a été
+abandonné** : il oblige à DÉPLACER l'écran, et le garde-fou de modularité compte
+alors un fichier de 1 800 lignes comme un fichier neuf au-dessus du plafond. Le
+contrôle avait raison sur le fond — un écran de cette taille doit être découpé —
+mais pas au prix d'un refus de toute réorganisation d'URL. `reroute` ne touche à
+aucun écran.
 
 - Descriptif par onglet : rendu par `BarreOnglets`, plus par l'écran
 - Un onglet fermé à un profil se **masque** (`masques=[…]`) **et** se **redirige** :

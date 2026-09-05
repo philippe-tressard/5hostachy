@@ -98,3 +98,26 @@ export function routeSousOnglet(pageId: string, ongletId: string, sousId: string
 	}
 	return sous.route;
 }
+
+/**
+ * La ROUTE qui rend une adresse d'onglet — `/annonces` → `/sondages`.
+ *
+ * Employée par `reroute` (`src/hooks.ts`) : les onglets d'une page sont servis
+ * par le fichier de cette page, jamais par dix-sept jumeaux. Rend `undefined`
+ * quand l'adresse n'est pas une route d'onglet : SvelteKit résout alors
+ * normalement (une page ordinaire, ou une 404).
+ */
+export function routeInterne(chemin: string): string | undefined {
+	const cible = normaliserChemin(chemin);
+	for (const page of PAGES) {
+		if (!page.href || !page.onglets) continue;
+		for (const o of page.onglets) {
+			const routes = [o.route, ...(o.sous ?? []).map((s) => s.route)];
+			//  La route de l'onglet par défaut EST celle de la page : la traduire
+			//  vers elle-même est inutile, et masquerait une boucle si elle
+			//  divergeait un jour.
+			if (routes.includes(cible) && cible !== page.href) return page.href;
+		}
+	}
+	return undefined;
+}

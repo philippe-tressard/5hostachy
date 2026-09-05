@@ -30,6 +30,16 @@ import types
 
 import pytest
 
+from tests.aides_routes_front import (
+    _onglet_de_la_route,
+    _page_du_lien,
+    _page_existe,
+    _resoudre,
+    _routes_onglets_du_front,
+    _segments_par_onglet,
+    contenu_deplie,
+)
+
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
 _FRONT_SRC = _RACINE / "front" / "src"
@@ -58,60 +68,11 @@ def _liens_de_l_api() -> dict[str, list[str]]:
     return trouves
 
 
-def _resoudre(base: pathlib.Path, segments: list[str]) -> bool:
-    """Une page SvelteKit sert-elle ce chemin depuis `base` ?"""
-    if not segments:
-        return (base / "+page.svelte").exists()
-
-    seg, reste = segments[0], segments[1:]
-    if not base.is_dir():
-        return False
-    sous_dossiers = [d for d in base.iterdir() if d.is_dir()]
-
-    # Les groupes `(app)`, `(marketing)`… n'apparaissent pas dans l'URL : on traverse.
-    for groupe in (d for d in sous_dossiers if d.name.startswith("(")):
-        if _resoudre(groupe, segments):
-            return True
-
-    if seg.startswith("{"):  # segment dynamique d'une f-string → `[id]`, `[slug]`…
-        candidats = [d for d in sous_dossiers if d.name.startswith("[")]
-    else:
-        candidats = [d for d in sous_dossiers if d.name == seg]
-
-    return any(_resoudre(c, reste) for c in candidats)
-
-
 def page_element(prefixe: str) -> str:
     """Raccourci de lecture vers la table centrale."""
     from app.utils.liens import EMPLACEMENTS
 
     return EMPLACEMENTS[prefixe]
-
-
-#  Les URL dédiées des onglets, lues dans la table du front (`$lib/pages.ts`).
-#  Elles sont servies par un segment de reste (`[...vue]`), qui accepte N'IMPORTE
-#  quel chemin : les chercher dans l'arborescence rendrait `/calendrier/kanbna`
-#  aussi valide que `/calendrier/kanban`, et ce contrôle ne contrôlerait plus rien.
-#  C'est la déclaration qui fait foi, comme côté front où elle rend la 404.
-_MOTIF_ROUTE_ONGLET = re.compile(r"id: '([\w-]+)',\s*route: '([^']+)'")
-
-
-def _routes_onglets_du_front() -> set[str]:
-    fichier = _FRONT_SRC / "lib" / "pages.ts"
-    if not fichier.is_file():
-        return set()
-    return {
-        route
-        for _id, route in _MOTIF_ROUTE_ONGLET.findall(fichier.read_text(encoding="utf-8-sig"))
-    }
-
-
-def _page_existe(lien: str) -> bool:
-    chemin = lien.split("#")[0].split("?")[0]
-    if chemin.rstrip("/") in _routes_onglets_du_front():
-        return True
-    segments = [s for s in chemin.strip("/").split("/") if s]
-    return _resoudre(_ROUTES, segments)
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
@@ -178,91 +139,6 @@ def test_des_liens_de_modeles_sont_analyses():
     )
 
 
-def _page_du_lien(lien: str) -> pathlib.Path | None:
-    """Fichier `+page.svelte` qui sert ce lien (pour inspecter ancres et onglets)."""
-    segments = [s for s in lien.split("#")[0].split("?")[0].strip("/").split("/") if s]
-
-    def descendre(base: pathlib.Path, restants: list[str]) -> pathlib.Path | None:
-        if not restants:
-            page = base / "+page.svelte"
-            return page if page.exists() else None
-        seg, suite = restants[0], restants[1:]
-        if not base.is_dir():
-            return None
-        sous = [d for d in base.iterdir() if d.is_dir()]
-        for groupe in (d for d in sous if d.name.startswith("(")):
-            trouve = descendre(groupe, restants)
-            if trouve:
-                return trouve
-        cibles = (
-            [d for d in sous if d.name.startswith("[")]
-            if seg.startswith("{")
-            else [d for d in sous if d.name == seg]
-        )
-        for c in cibles:
-            trouve = descendre(c, suite)
-            if trouve:
-                return trouve
-        #  Le segment de reste sert tous les onglets d'une page : `/calendrier/kanban`
-        #  et `/calendrier` sont le même fichier.
-        for reste_dir in (d for d in sous if d.name.startswith("[...")):
-            page = reste_dir / "+page.svelte"
-            if page.exists():
-                return page
-        return None
-
-    return descendre(_ROUTES, segments)
-
-
-_MOTIF_IMPORT_COMPOSANT = re.compile(
-    r"import\s+(\w+)\s+from\s+['\"]\$lib/components/([\w./-]+\.svelte)['\"]"
-)
-
-
-def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 3) -> str:
-    """Le balisage d'une page, **composants locaux inclus**, à leur place d'appel.
-
-    Une page qui rend `id="annonce-…"` directement, ou qui délègue à
-    `<AnnonceCard>` qui le rend, produit le même écran : les contrôles d'ancre
-    doivent voir les deux. Sans cela, découper une page en composants ferait
-    échouer ces tests **sans qu'aucun lien ne soit cassé**, et la tentation serait
-    de les affaiblir — alors qu'ils viennent d'attraper trois liens morts.
-
-    Le découpage est une obligation permanente ici (rang 1 §4, « au fil de l'eau ») :
-    ce dépliage n'est donc pas une commodité ponctuelle, c'est ce qui permet aux
-    deux règles de coexister. Constaté le 14/08/2026, quand l'extraction de
-    `AnnonceCard.svelte` a fait tomber deux de ces tests.
-
-    ⚠️ La profondeur est passée de 2 à 3 le 05/09/2026 : `/annonces` monte
-    `PageCommunaute`, qui monte `OngletAnnonces`, qui monte `AnnonceCard` — c'est
-    cette dernière qui pose `id="annonce-…"`. Une route qui délègue son écran à un
-    composant ajoute un niveau, et le contrôle doit le suivre, sinon il déclare
-    l'ancre absente alors qu'elle est rendue.
-
-    Le contenu du composant est **inséré** à l'endroit de sa balise plutôt que
-    substitué : `_segments_par_onglet` découpe la page par onglet, et l'ancre doit
-    donc tomber dans le segment où le composant est réellement invoqué. Une
-    substitution demanderait de reconnaître la fin d'une balise dont les attributs
-    contiennent des `>` (`onToggle={() => …}`), ce qu'aucune expression régulière
-    ne fait correctement.
-    """
-    contenu = fichier.read_text(encoding="utf-8-sig")
-    if _profondeur <= 0:
-        return contenu
-
-    for nom, cible in _MOTIF_IMPORT_COMPOSANT.findall(contenu):
-        chemin = _FRONT_SRC / "lib" / "components" / cible
-        if not chemin.is_file():
-            continue
-        position = contenu.find(f"<{nom}", contenu.find("</script>"))
-        if position == -1:
-            continue                       # importé mais pas utilisé dans le balisage
-        interne = contenu_deplie(chemin, _profondeur - 1)
-        contenu = contenu[:position] + interne + contenu[position:]
-
-    return contenu
-
-
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
 def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
     """`#doc-42` n'a de sens que si la page pose `id="doc-{…}"` sur ses éléments.
@@ -307,7 +183,7 @@ def test_les_routes_de_la_table_sont_des_onglets_declares():
     """
     from app.utils.liens import EMPLACEMENTS
 
-    declarees = _routes_onglets_du_front()
+    declarees = set(_routes_onglets_du_front())
     assert declarees, (
         "aucune route d'onglet lue dans front/src/lib/pages.ts — le motif ne "
         "reconnaît plus la table, et ce contrôle ne vérifie plus rien"
@@ -330,38 +206,6 @@ def test_les_routes_de_la_table_sont_des_onglets_declares():
         "Ces routes ne correspondent à aucune adresse déclarée par le front :\n"
         + "\n".join(inconnues)
     )
-
-
-def _onglet_de_la_route(route: str) -> str | None:
-    """L'identifiant d'onglet que cette route ouvre, ou `None` si la page n'en a pas."""
-    fichier = _FRONT_SRC / "lib" / "pages.ts"
-    if not fichier.is_file():
-        return None
-    for ident, r in _MOTIF_ROUTE_ONGLET.findall(fichier.read_text(encoding="utf-8-sig")):
-        if r == route:
-            return ident
-    return None
-
-
-# Les pages à onglets branchent leur contenu sur `onglet === '…'` ou `activeTab === '…'`.
-_MOTIF_BRANCHE_ONGLET = re.compile(r"(?:onglet|activeTab)\s*===\s*'([\w]+)'")
-
-
-def _segments_par_onglet(contenu: str) -> dict[str, str]:
-    """{onglet: portion(s) du fichier rendue(s) sous cet onglet}.
-
-    Découpage volontairement grossier : chaque marqueur `onglet === 'x'` ouvre une
-    portion qui court jusqu'au marqueur suivant. Une page déclare plusieurs fois le
-    même onglet (bouton d'en-tête, onglet de la barre, bloc de contenu) → on
-    concatène toutes ses portions. Suffisant pour répondre à la seule question
-    posée : « cet onglet rend-il, quelque part, un `id="prefixe-…"` ? »
-    """
-    marqueurs = list(_MOTIF_BRANCHE_ONGLET.finditer(contenu))
-    segments: dict[str, str] = {}
-    for i, m in enumerate(marqueurs):
-        fin = marqueurs[i + 1].start() if i + 1 < len(marqueurs) else len(contenu)
-        segments[m.group(1)] = segments.get(m.group(1), "") + contenu[m.start():fin]
-    return segments
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
