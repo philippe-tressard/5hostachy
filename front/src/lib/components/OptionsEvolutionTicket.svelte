@@ -29,7 +29,7 @@
 -->
 <script lang="ts">
 	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
-	import { OPTIONS_TICKET } from '$lib/tickets';
+	import { OPTIONS_TICKET, TICKET_CONFIDENTIEL_ACQUIS } from '$lib/tickets';
 	import { isCS } from '$lib/stores/auth';
 
 	/** Vrai pour la première section rendue du formulaire : pas de filet au-dessus. */
@@ -45,6 +45,7 @@
 		{premiere}
 		objet="ticket"
 		options={OPTIONS_TICKET}
+		confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
 		bind:epingle={options.epingle}
 		bind:urgente={options.urgente}
 		bind:brouillon={options.brouillon}

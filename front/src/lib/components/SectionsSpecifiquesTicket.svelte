@@ -24,7 +24,12 @@
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { OPTIONS_TICKET, STATUT_TICKET_OPTIONS, type ModeSaisiPour } from '$lib/tickets';
+	import {
+		OPTIONS_TICKET,
+		TICKET_CONFIDENTIEL_ACQUIS,
+		STATUT_TICKET_OPTIONS,
+		type ModeSaisiPour,
+	} from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -105,6 +110,7 @@
 	<SectionOptionsPublication
 		objet="ticket"
 		options={OPTIONS_TICKET}
+		confidentielAcquis={TICKET_CONFIDENTIEL_ACQUIS}
 		bind:epingle={options.epingle}
 		bind:urgente={options.urgente}
 		bind:brouillon={options.brouillon}
