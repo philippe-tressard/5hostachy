@@ -247,7 +247,31 @@ export type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
  * `confidentiel` ne s'applique pas ici. Les deux sens du pont vivent donc côte
  * à côte, pour qu'aucun ne puisse être corrigé sans l'autre.
  */
-export const OPTIONS_TICKET: CleOptionPublication[] = ['epingle', 'urgente', 'brouillon'];
+export const OPTIONS_TICKET: CleOptionPublication[] = [
+	'epingle',
+	'urgente',
+	'brouillon',
+	'confidentiel',
+];
+
+/**
+ * 🔒 Pourquoi « Confidentiel » est MONTRÉ mais VERROUILLÉ sur un ticket.
+ *
+ * Demandé à l'écran le 05/09/2026 : *« il manque l'option confidentiel sur
+ * l'objet Options de publication »*. Elle manquait en effet — et elle n'aurait
+ * rien pu restreindre : `ticket_visible` appelle `perimetre_visible` **sans**
+ * `ouvert_a_la_copropriete`, là où une actualité le passe (#339). Un ticket se
+ * comporte donc déjà comme une actualité confidentielle, toujours.
+ *
+ * Trois issues étaient possibles, deux sont mauvaises : l'omettre laissait un
+ * trou dans une liste de quatre ; la rendre cochable aurait promis une
+ * protection que rien n'applique, et le premier qui s'y fie se croit couvert.
+ * Elle est donc **cochée et verrouillée**, avec ce motif écrit sous elle — ce
+ * n'est pas une case morte, c'est un état de l'objet, et il mérite d'être lu.
+ */
+export const TICKET_CONFIDENTIEL_ACQUIS =
+	'🔒 Un ticket est toujours visible des seuls résidents du périmètre sélectionné : ' +
+	'contrairement à une actualité, son ciblage restreint la lecture. Rien à cocher.';
 
 /** L'état COURANT des options — ce que le formulaire reprend à l'ouverture. */
 export function optionsDuTicket(ticket: Ticket | null | undefined): {

@@ -72,16 +72,26 @@ export const TICKET: EntiteDeclaree = {
 			//  R4 ne déclarant qu'une divergence de SECTION, un champ fermé au sein
 			//  d'une section ouverte n'était déclarable nulle part.
 			id: 'specifiques',
-			objet: 'Catégorie + Saisi pour (en mon nom / résident inscrit / personne extérieure)',
-			titreEcran: ['Catégorie', 'Saisi pour'],
-			absente: {
-				evolution: {
-					motif: 'hérité',
-					explication:
-						'La catégorie et la personne pour qui le ticket a été saisi appartiennent au ' +
-						"ticket, pas à l'entrée du fil.",
-				},
-			},
+			objet:
+				'Catégorie + Saisi pour (en mon nom / résident inscrit / personne extérieure) ' +
+				'+ Options de publication',
+			titreEcran: ['Catégorie', 'Saisi pour', 'Options de publication'],
+			//  🔴 OUVERTE À L'ÉVOLUTION (05/09/2026), constaté à l'écran :
+			//  *« Options de publications n'apparaît pas sur un commentaire sur un
+			//  ticket existant »*.
+			//
+			//  Elle était déclarée ABSENTE, motif `hérité`, et le motif restait juste
+			//  pour ce qu'il nommait : la catégorie et « Saisi pour » appartiennent au
+			//  ticket, pas à l'entrée du fil. Mais la section a reçu une troisième
+			//  chose le même jour — les OPTIONS DE PUBLICATION —, et celles-là se
+			//  corrigent en commentant, exactement comme sur une actualité : le
+			//  formulaire montre le dernier état, ce qu'on enregistre devient l'état.
+			//
+			//  Une section absente pour l'un de ses champs fermait la porte aux deux
+			//  autres. C'est la limite connue de R4, qui ne déclare que des SECTIONS
+			//  et jamais des champs (#436) : la divergence de champ vit donc ici, en
+			//  commentaire — `OptionsEvolutionTicket` ne rend QUE les options, et
+			//  `EvolForm` n'a jamais proposé ni catégorie ni « Saisi pour ».
 		},
 		{
 			//  🔴 Aucune divergence, et c'est la correction due au cadre. L'édition

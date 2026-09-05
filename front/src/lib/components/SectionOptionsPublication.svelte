@@ -43,6 +43,8 @@
 	export let perimetreCible: string[] = [];
 	/** L'objet édité était-il DÉJÀ épinglé ? (évite un double comptage) */
 	export let dejaEpingle = false;
+	/** 🔒 Motif pour lequel l'objet est TOUJOURS restreint — relayé tel quel. */
+	export let confidentielAcquis = '';
 </script>
 
 <SectionFormulaire titre="Options de publication" {premiere} idTitre="{objet}-options-titre">
@@ -51,6 +53,7 @@
 		{options}
 		{perimetreCible}
 		{dejaEpingle}
+		{confidentielAcquis}
 		bind:epingle
 		bind:urgente
 		bind:brouillon

@@ -58,6 +58,20 @@
 	export let perimetreCible: string[] = [];
 	/** L'élément édité était-il DÉJÀ épinglé ? (évite un double comptage) */
 	export let dejaEpingle = false;
+	/**  🔒 DÉJÀ ACQUIS — le motif pour lequel cette entité est TOUJOURS restreinte
+	 *   à son périmètre. Vide quand le choix se pose vraiment.
+	 *
+	 *   Demandé à l'écran le 05/09/2026 : *« il manque l'option confidentiel sur
+	 *   l'objet Options de publication »*. Sur un ticket, elle ne pouvait rien
+	 *   restreindre — sa lecture passe par `perimetre_visible` SANS
+	 *   `ouvert_a_la_copropriete`, là où une actualité le passe (#339) : le ticket
+	 *   se comporte déjà comme une actualité confidentielle.
+	 *
+	 *   Plutôt que de l'omettre (l'option manquait) ou de la rendre cochable
+	 *   (elle n'aurait rien fait — une promesse vide), elle est montrée **cochée
+	 *   et verrouillée**, avec son motif écrit. Ce n'est pas une case morte :
+	 *   c'est un ÉTAT de l'objet, et il vaut la peine d'être lu. */
+	export let confidentielAcquis = '';
 
 	/**  Le nom de l'objet décrit — « publication », « ticket ». Il entre dans les
 	 *   libellés qui le nomment (« Visibilité du **ticket** au seul conseil
@@ -127,16 +141,18 @@
 	{#if rendue('confidentiel')}
 		<label
 			class="checkbox-field"
-			class:desactivee={rienARestreindre}
-			title={rienARestreindre
-				? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
-				: optConfidentiel?.aide}
+			class:desactivee={rienARestreindre || confidentielAcquis}
+			title={confidentielAcquis ||
+				(rienARestreindre
+					? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
+					: optConfidentiel?.aide)}
 		>
 			<input
 				type="checkbox"
-				bind:checked={confidentiel}
-				disabled={rienARestreindre}
-				aria-describedby={rienARestreindre ? idAideConfidentiel : undefined}
+				checked={confidentielAcquis ? true : confidentiel}
+				on:change={(e) => (confidentiel = e.currentTarget.checked)}
+				disabled={!!confidentielAcquis || rienARestreindre}
+				aria-describedby={rienARestreindre || confidentielAcquis ? idAideConfidentiel : undefined}
 			/>
 			{optConfidentiel?.glyphe}
 			{optConfidentiel && actionOption(optConfidentiel, objet)} — visible du seul périmètre sélectionné
@@ -144,7 +160,12 @@
 	{/if}
 </div>
 
-{#if rendue('confidentiel') && rienARestreindre}
+{#if rendue('confidentiel') && confidentielAcquis}
+	<!--  Le motif est ÉCRIT, pas seulement en infobulle : au doigt il n'y a pas
+	      de survol, et un lecteur d'écran ne lit pas un `title` sans l'y
+	      chercher (leçon du 28/08/2026). -->
+	<p class="aide" id={idAideConfidentiel}>{confidentielAcquis}</p>
+{:else if rendue('confidentiel') && rienARestreindre}
 	<p class="aide" id={idAideConfidentiel}>
 		&#x1F512; <strong>Confidentiel</strong> demande un périmètre restreint — un bâtiment, par exemple.
 		Le périmètre choisi concerne déjà tous les résidents : il n'y a rien à leur cacher.
