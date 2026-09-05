@@ -454,8 +454,8 @@
 								<!--  Section 2 — LE MÊME composant qu'à la création, à l'édition et
 								      dans le panneau d'options : ni copie, ni variante. Il porte déjà
 								      la règle « Confidentiel exige un périmètre restreint ». -->
-								<svelte:fragment slot="specifiques">
-									<SectionFormulaire titre="Options de publication">
+								<svelte:fragment slot="specifiques" let:premiere>
+									<SectionFormulaire titre="Options de publication" {premiere}>
 										<OptionsPublication
 											perimetreCible={pub.perimetre_cible ?? []}
 											dejaEpingle={pub.epingle ?? false}
