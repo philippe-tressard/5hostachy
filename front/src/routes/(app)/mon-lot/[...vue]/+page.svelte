@@ -11,15 +11,36 @@
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort as fmt } from '$lib/date';
+	import Onglet from '$lib/components/Onglet.svelte';
+	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
+	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
+	import { TITRE_ARCHIVES } from '$lib/archives';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
 	$: _siteNom = $siteNomStore;
+	//  Deux lectures d'un même droit : le masquage dit ce qui s'AFFICHE, la
+	//  redirection ce qui s'ATTEINT. Depuis que la gestion locative a une adresse,
+	//  la seconde ne va plus de soi — un lien reçu par un locataire ouvrirait
+	//  l'onglet que la barre lui cache.
 	$: isBailleur = $currentUser?.statut === 'copropriétaire_bailleur';
 	$: isResident = $currentUser?.statut === 'copropriétaire_résident';
 
+	const ROUTE_BAUX_ACTIFS = routeSousOnglet('mon-lot', 'location', 'actif');
+	const ROUTE_BAUX_ARCHIVES = routeSousOnglet('mon-lot', 'location', 'archives');
+
 	// ── Onglet principal ───────────────────────────────────────────────────────
-	type MainTab = 'lots' | 'location';
-	let mainTab: MainTab = 'lots';
+	//  L'onglet ET son sous-onglet viennent du CHEMIN — `/mon-lot/location/archives`
+	//  est une adresse à part entière, qu'on peut envoyer. Le `load` les résout ;
+	//  cet écran ne fait que les lire.
+	export let data: { onglet: string; sous: string | null };
+	$: mainTab = data.onglet;
+	$: bailTab = data.sous ?? 'actif';
+	$: peutGererLocation = isBailleur || $isAdmin || $isCS || (isResident && bauxTermines.length > 0);
+	$: if (browser && !bauxLoading && mainTab === 'location' && !peutGererLocation) {
+		goto(routeOnglet('mon-lot', 'lots'), { replaceState: true });
+	}
 
 	// ── Types ──────────────────────────────────────────────────────────────────
 	interface LotDetail {
@@ -96,7 +117,6 @@
 	// ── State (gestion locative) ──────────────────────────────────────────────
 	let baux: Bail[] = [];
 	let bauxLoading = true;
-	let bailTab: 'actif' | 'historique' = 'actif';
 
 	// Nouveau bail
 	let showNewBail = false;
@@ -594,22 +614,8 @@
 </EntetePage>
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
-{#if isBailleur || $isAdmin || $isCS || (isResident && bauxTermines.length > 0)}
-	<div class="tabs" role="tablist" style="margin-bottom:1.5rem">
-		<button role="tab" class:active={mainTab === 'lots'} on:click={() => (mainTab = 'lots')}>
-			{_pc.onglets?.lots?.label ?? '\u{1F3E0} Mes lots'}
-		</button>
-		<button
-			role="tab"
-			class:active={mainTab === 'location'}
-			on:click={() => (mainTab = 'location')}
-		>
-			{_pc.onglets?.location?.label ?? '\u{1F4CB} Gestion locative'}
-		</button>
-	</div>
-	{#if _pc.onglets?.[mainTab]?.descriptif}
-		<p class="tab-descriptif">{@html safeHtml(_pc.onglets[mainTab].descriptif)}</p>
-	{/if}
+{#if peutGererLocation}
+	<BarreOnglets pageId="mon-lot" actif={mainTab} />
 {/if}
 
 <!-- ── Onglet : Mes lots ────────────────────────────────────────────── -->
@@ -768,9 +774,9 @@
 							class="btn btn-sm btn-primary"
 							style="margin-top:.4rem"
 							on:click={() => {
-								mainTab = 'location';
 								newBailLotIds = new Set([lot.id]);
 								showNewBail = true;
+								goto(ROUTE_BAUX_ACTIFS);
 							}}
 						>
 							+ Créer un bail
@@ -830,12 +836,8 @@
 						{/each}
 					</div>
 					<div class="lbc-actions">
-						<button
-							class="btn btn-sm btn-outline"
-							on:click={() => {
-								mainTab = 'location';
-								bailTab = 'actif';
-							}}>📋 Gestion locative</button
+						<button class="btn btn-sm btn-outline" on:click={() => goto(ROUTE_BAUX_ACTIFS)}
+							>📋 Gestion locative</button
 						>
 						<button class="btn btn-sm btn-outline" on:click={() => ouvrirAccesBail(premierBail)}
 							>🔑 Accès</button
@@ -926,13 +928,18 @@
 			/>
 		{/if}
 
-		<div class="bail-tabs" style="margin-bottom:1.5rem">
-			<button class:active={bailTab === 'actif'} on:click={() => (bailTab = 'actif')}>
+		<!--  Deux LIENS, pas deux boutons : le sous-onglet a une adresse, donc il
+		      s'envoie, le bouton Précédent le retrouve et le clic milieu l'ouvre à
+		      côté. Et c'est `Onglet` qui les rend : `.bail-tabs` était une rangée
+		      d'onglets de plus, avec ses 25 lignes de style et sans les trois marques
+		      de l'onglet actif (`ux-patterns` §4 bis). -->
+		<div class="tabs sous-onglets">
+			<Onglet href={ROUTE_BAUX_ACTIFS} actif={bailTab === 'actif'}>
 				Baux actifs ({bauxActifs.length})
-			</button>
-			<button class:active={bailTab === 'historique'} on:click={() => (bailTab = 'historique')}>
-				Archives ({bauxTermines.length})
-			</button>
+			</Onglet>
+			<Onglet href={ROUTE_BAUX_ARCHIVES} actif={bailTab === 'archives'}>
+				{TITRE_ARCHIVES} ({bauxTermines.length})
+			</Onglet>
 		</div>
 
 		{#if bauxLoading}
@@ -1566,30 +1573,8 @@
 	} /* le reste vient de la charte (#607) */
 
 	/* Bail sub-tabs */
-	.bail-tabs {
-		display: flex;
-		gap: 0.25rem;
-		border-bottom: 2px solid var(--color-border);
-	}
-	.bail-tabs button {
-		background: none;
-		border: none;
-		padding: 0.5rem 1rem;
-		cursor: pointer;
-		font-size: 0.9rem;
-		color: var(--color-text-muted);
-		border-bottom: 2px solid transparent;
-		margin-bottom: -2px;
-		transition: color 0.15s;
-	}
-	.bail-tabs button:hover {
-		color: var(--color-text);
-		background: var(--color-bg);
-	}
-	.bail-tabs button.active {
-		color: var(--color-primary);
-		border-bottom-color: var(--color-primary);
-		font-weight: 600;
+	.sous-onglets {
+		margin-bottom: 1.5rem;
 	}
 
 	/* Lot multi-checklist */

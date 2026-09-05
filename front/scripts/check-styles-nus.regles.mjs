@@ -136,8 +136,9 @@ export const TOLERANCES = {
 		'rangée d’actions alignée à la main (l. ~198)',
 	//  Il y en avait deux ; celle de la relance syndic est passée à `.form-actions`
 	//  en extrayant le reporting (#453), où le contrôle a cessé de la tolérer.
-	'routes/(app)/espace-cs/+page.svelte::form-actions': 'une rangée alignée à la main (l. ~1170)',
-	'routes/(app)/mon-lot/+page.svelte::form-actions':
+	'routes/(app)/espace-cs/[...vue]/+page.svelte::form-actions':
+		'une rangée alignée à la main (l. ~1170)',
+	'routes/(app)/mon-lot/[...vue]/+page.svelte::form-actions':
 		'rangée d’actions alignée à la main, avec `flex-wrap` (l. ~889)',
 	'routes/(app)/residence/+page.svelte::form-actions': 'pied de modale aligné à la main (l. ~584)',
 	'routes/(app)/sondages/[id]/+page.svelte::form-actions':
@@ -150,7 +151,7 @@ export const TOLERANCES = {
 	//  extrayant le reporting (#453) — même dette, autre fichier.
 	'lib/components/reporting/VueRelanceSyndic.svelte::controle-saisie':
 		'champ de motif re-peint à la main (l. ~150)',
-	'routes/(app)/prestataires/+page.svelte::controle-saisie':
+	'routes/(app)/prestataires/[...vue]/+page.svelte::controle-saisie':
 		'un `<select>` et un `<input>` re-peints à la main (l. ~1815 et ~1840) — même écran de ' +
 		'2 182 lignes que ci-dessus',
 	//  ✅ Tolérance TOMBÉE le 28/08/2026 (#561). Les deux `<textarea>` sont dans un

@@ -6,6 +6,7 @@
 	import { api, config as configApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import ChampIcone from '$lib/components/ChampIcone.svelte';
 	import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
@@ -1440,28 +1441,7 @@
 						<div class="pages-form-grid">
 							<div class="pages-form-section">
 								<div class="pages-form-section-title">Navigation (barre de menu)</div>
-								<label class="field">
-									Icône Lucide
-									<div style="display:flex;align-items:center;gap:.5rem">
-										<input
-											style="flex:1"
-											type="text"
-											bind:value={pg.icone}
-											placeholder="ex. : layout-dashboard"
-										/>
-										<span
-											style="color:var(--color-text-muted);flex-shrink:0;display:flex;align-items:center"
-											><Icon name={pg.icone || 'help-circle'} size={20} /></span
-										>
-									</div>
-									<span class="field-hint"
-										>Cette icône s'affiche dans le menu <strong>et</strong> aussi avant le titre H1
-										en haut de la page (c'est la même icône, modifiable ici).
-										<a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer"
-											>Parcourir lucide.dev →</a
-										></span
-									>
-								</label>
+								<ChampIcone bind:valeur={pg.icone} id="page-icone-{pg.id}" />
 								<label class="field">
 									Label menu
 									<input type="text" bind:value={pg.navLabel} />

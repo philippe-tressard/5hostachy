@@ -172,8 +172,8 @@
 			>
 				<svelte:fragment slot="renvoi">
 					L'assurance est un <strong>contrat</strong> : elle se modifie dans
-					<a href="/prestataires?onglet=contrats_tab">Prestataires → Contrats</a>, avec son
-					prestataire, son échéance et son attestation.
+					<a href="/prestataires/contrats">Prestataires → Contrats</a>, avec son prestataire, son
+					échéance et son attestation.
 				</svelte:fragment>
 			</SectionContratReference>
 
@@ -216,7 +216,7 @@
 			>
 				<svelte:fragment slot="renvoi">
 					Le cabinet et son mandat se modifient dans
-					<a href="/prestataires?onglet=contrats_tab">Prestataires → Contrats</a>. Ses
+					<a href="/prestataires/contrats">Prestataires → Contrats</a>. Ses
 					<strong>membres</strong>, eux, vivent dans
 					<a href="/espace-cs">Espace CS &rsaquo; Annuaire</a> — c'est de là que partent les courriels
 					au cabinet.

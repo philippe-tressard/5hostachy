@@ -274,9 +274,17 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	color: var(--color-text);
 	text-decoration: none;
 }
+/*  Les TROIS marques de l'onglet actif (`ux-patterns` §4 bis) : liseré, couleur
+    et GRAISSE. La graisse manquait ici — `.tabs button.active` la portait, pas
+    `.tab-btn.active`, et la différence est passée inaperçue tant que les onglets
+    d'un écran étaient des `<button>` : depuis le 05/09/2026 ils ont une adresse,
+    donc ce sont des `<a class="tab-btn">`, et toutes les rangées du site passent
+    par cette règle-ci. C'est la marque qui porte l'écart pour qui distingue mal
+    les couleurs. */
 .tab-btn.active {
 	color: var(--color-primary);
 	border-bottom-color: var(--color-primary);
+	font-weight: 600;
 }
 
 /* ══ Vocabulaire du reporting CS, et trois notions que la page partage ══

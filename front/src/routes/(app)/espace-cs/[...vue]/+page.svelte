@@ -10,7 +10,6 @@
 		type EtatDepliable,
 	} from '$lib/listeDepliable';
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
-	import Onglet from '$lib/components/Onglet.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
@@ -27,7 +26,7 @@
 	import { fmtDateShort } from '$lib/date';
 	import OngletReporting from '$lib/components/reporting/OngletReporting.svelte';
 	import { trackTabView } from '$lib/telemetry';
-	import { ongletDeLUrl } from '$lib/deepLink';
+	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -89,11 +88,12 @@
 	}
 
 	// -- Onglet -------------------------------------------------------------
-	//  🔴 UNE SEULE LISTE (04/09/2026) : elle était écrite deux fois, ici et dans
-	//  un `includes([...])`. `const ONGLETS` est la convention du projet, lue par
-	//  `test_liens_front` pour vérifier qu'un lien de l'API vise un onglet réel.
-	const ONGLETS = ['validations', 'reporting', 'annonces-hall', 'annuaire'] as const;
-	let onglet: (typeof ONGLETS)[number] = 'validations';
+	//  🔴 UNE SEULE LISTE, et elle est dans la TABLE (`$lib/pages.ts`, 05/09/2026).
+	//  Elle a d'abord été écrite deux fois dans ce fichier (04/09), puis une fois
+	//  ici et une fois dans la table — qui porte désormais aussi l'URL de chaque
+	//  onglet. Une liste locale rouvrirait la divergence avec l'adresse.
+	export let data: { onglet: string };
+	$: onglet = data.onglet;
 	/** Vue de reporting demandée par l'URL — c'est `OngletReporting` qui la valide. */
 	let vueReporting: string | null = null;
 	$: trackTabView(onglet);
@@ -257,11 +257,10 @@
 			return;
 		}
 
-		// Navigation depuis le dashboard via ?onglet=...&vue=...
-		const params = new URLSearchParams(window.location.search);
-		const pVue = params.get('vue');
-		const pOnglet = ongletDeLUrl(ONGLETS);
-		if (pOnglet) onglet = pOnglet;
+		//  La vue de reporting reste un PARAMÈTRE (`?vue=`) : ce n'est pas une rangée
+		//  d'onglets mais une sélection en pastilles, et le tableau de bord s'en sert
+		//  pour ouvrir directement un suivi. L'onglet, lui, est dans le chemin.
+		const pVue = new URLSearchParams(window.location.search).get('vue');
 		if (pVue && onglet === 'reporting') vueReporting = pVue;
 
 		try {
@@ -730,27 +729,11 @@
 <div class="page-subtitle">{@html safeHtml(_pc.descriptif)}</div>
 
 <!-- Onglets -->
-<div class="tabs" style="margin-bottom:1.5rem">
-	<Onglet
-		actif={onglet === 'validations'}
-		compte={nbComptes + nbCommandes}
-		on:click={() => (onglet = 'validations')}
-	>
-		{_pc.onglets?.validations?.label ?? '✅ Comptes & accès'}
-	</Onglet>
-	<Onglet actif={onglet === 'reporting'} on:click={() => (onglet = 'reporting')}>
-		{_pc.onglets?.reporting?.label ?? '\u{1F4CA} Reporting'}
-	</Onglet>
-	<Onglet actif={onglet === 'annonces-hall'} on:click={() => (onglet = 'annonces-hall')}>
-		{_pc.onglets?.['annonces-hall']?.label ?? '\u{1F4C4} Annonces Hall'}
-	</Onglet>
-	<Onglet actif={onglet === 'annuaire'} on:click={() => (onglet = 'annuaire')}>
-		{_pc.onglets?.annuaire?.label ?? '\u{1F4D2} Annuaire CS & Syndic'}
-	</Onglet>
-</div>
-{#if _pc.onglets?.[onglet]?.descriptif}
-	<p class="tab-descriptif">{@html safeHtml(_pc.onglets[onglet].descriptif)}</p>
-{/if}
+<BarreOnglets
+	pageId="espace-cs"
+	actif={onglet}
+	comptes={{ validations: nbComptes + nbCommandes }}
+/>
 
 {#if onglet === 'validations'}
 	{#if loading}

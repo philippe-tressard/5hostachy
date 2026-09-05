@@ -46,9 +46,9 @@ export const TOLERANCES = {
 		'`auto-fill` et non `auto-fit` — les champs ne s’étirent pas quand il en manque',
 	'routes/(app)/admin/+page.svelte::form-grid':
 		'deux colonnes fixes : cet écran de configuration apparie des libellés et des valeurs',
-	'routes/(app)/espace-cs/+page.svelte::form-grid':
+	'routes/(app)/espace-cs/[...vue]/+page.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
-	'routes/(app)/prestataires/+page.svelte::form-grid':
+	'routes/(app)/prestataires/[...vue]/+page.svelte::form-grid':
 		'colonnes de 180 px et gap resserré, même raison',
 	//  ⚠️ Celui-ci n'est PAS une répartition : c'est une pile. Le nom ment sur ce
 	//  que fait la règle, et c'est la vraie dette de la liste.
@@ -76,8 +76,11 @@ export const TOLERANCES = {
 	//  redéfinition COMPLÈTE de `.tabs button` qui faisait disparaître le liseré de
 	//  l'onglet actif en production, et deux règles de tableau dont cinq
 	//  propriétés sur sept étaient identiques à la charte.
-	'routes/(app)/prestataires/+page.svelte::tabs button':
-		'onglets à ICÔNE, plus nombreux : padding et police resserrés pour tenir sur une ligne',
+	//
+	//  ⚠️ L'exception de `/prestataires` a disparu le 05/09/2026, et pas parce qu'on
+	//  l'a rabotée : la rangée d'onglets est devenue UN composant (`BarreOnglets`),
+	//  qui porte le défilement horizontal pour toutes les pages. L'écart n'avait plus
+	//  d'objet — c'est la bonne façon de retirer une dérogation.
 	'routes/(app)/acces-securite/+page.svelte::table th':
 		'tableaux DENSES (imports d’accès, listes de badges) : en-tête resserré',
 	'routes/(app)/acces-securite/+page.svelte::table td':
@@ -86,10 +89,10 @@ export const TOLERANCES = {
 	//  ── Boutons ──────────────────────────────────────────────────────────────
 	'routes/(app)/admin/+page.svelte::btn-sm':
 		'boutons plus denses dans les tableaux de configuration',
-	'routes/(app)/espace-cs/+page.svelte::btn-icon':
+	'routes/(app)/espace-cs/[...vue]/+page.svelte::btn-icon':
 		'boutons-icônes CERCLÉS et carrés (2 rem) formant une barre d’actions, là où la ' +
 		'charte habille une icône nue',
-	'routes/(app)/espace-cs/+page.svelte::btn-icon-edit':
+	'routes/(app)/espace-cs/[...vue]/+page.svelte::btn-icon-edit':
 		'le crayon est en couleur primaire — il est l’action principale de la rangée',
 	'lib/components/ChampSaisiPour.svelte::tab-btn':
 		'onglets ENCADRÉS et non soulignés : boutons de bascule dans un champ, pas la ' +
@@ -101,7 +104,7 @@ export const TOLERANCES = {
 		'une photo quelconque',
 	'lib/components/TachesPlanifiees.svelte::chevron':
 		'chevron plus petit et en couleur primaire : il annonce une action, pas un dépliage neutre',
-	'routes/(app)/faq/+page.svelte::chevron':
+	'lib/components/CarteFaq.svelte::chevron':
 		'`color: inherit` — le chevron suit la couleur de la question, qui change au survol',
 	'routes/(app)/acces-securite/+page.svelte::table':
 		'tableau plus lisible : ses cellules portent des codes et des dates',

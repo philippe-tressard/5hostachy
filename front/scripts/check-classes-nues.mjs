@@ -133,7 +133,7 @@ const TOLEREES = {
 	'lib/components/reporting/VueRenouvellementsContrats.svelte': ['frise-month-label'],
 	//  🔴 La notation par étoiles : `class:active` sur chaque étoile, et aucune
 	//  règle — l’étoile choisie ne se distingue pas de celle qu’on n’a pas prise.
-	'routes/(app)/prestataires/+page.svelte': ['star-btn'],
+	'routes/(app)/prestataires/[...vue]/+page.svelte': ['star-btn'],
 	//  Le corps d’un sondage, sans mise en forme propre.
 	//  ⚠️ Déplacée de `routes/(app)/sondages/+page.svelte` le 02/09/2026, quand la
 	//  carte est partie dans `ListeSondages` (#515) : la tolérance suit le BALISAGE,

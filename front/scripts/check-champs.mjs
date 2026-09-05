@@ -52,7 +52,7 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  * Une exception qui ne sert plus fait échouer le contrôle.
  */
 const EXCEPTIONS = {
-	'routes/(app)/calendrier/+page.svelte':
+	'routes/(app)/calendrier/[...vue]/+page.svelte':
 		'Les deux sélecteurs « Exercice » et « Bâtiment » de la barre du kanban : ce sont ' +
 		"des filtres de VUE, pas des champs d'un formulaire. Ils portent un libellé parce " +
 		"qu'on doit savoir ce qu'ils filtrent, et vivent sur une ligne dans `.kanban-toolbar` " +

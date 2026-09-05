@@ -37,6 +37,7 @@
 - **Périmètres** — arborescence de la copropriété (bâtiments et leurs espaces, parking, AFUL, espaces verts, cheminements, locaux techniques) servant à localiser tickets, actualités, événements, **sondages** et annonces. Sur un ticket, il n'est pas figé à l'ouverture : une entrée du fil de suivi peut le **préciser** à mesure qu'on cherche, et l'historique garde la trace du resserrement. Entièrement éditable depuis l'administration, sans déploiement. Le périmètre dit *de quoi* il s'agit, pas *qui peut lire* — sauf sur une actualité marquée **🔒 Confidentiel**, où il redevient restrictif (lecture réservée au périmètre visé, affiche de hall alors impossible)
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence
 - **Maintenance** — Tâches automatiques (purge tokens, archivage, logs) + déclenchement manuel
+- **Liens partageables** — Chaque onglet et sous-onglet a son **adresse propre** (`/annonces`, `/idees`, `/calendrier/kanban`, `/mon-lot/location/archives`…) : l'adresse du navigateur suit ce qu'on regarde, elle se copie et s'envoie. Chaque publication porte une icône 🔗 qui copie **son** lien — annonce, actualité, événement, ticket, idée, sondage, question de FAQ, document, rapport de diagnostic. Le lien n'ouvre aucun droit : le destinataire doit être connecté et ne voit que ce qui le concerne. Les anciennes adresses (`?onglet=…`) restent servies, en redirection permanente
 
 ## Captures d'écran
 

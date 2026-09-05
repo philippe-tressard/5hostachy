@@ -26,6 +26,8 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import { routeOnglet } from '$lib/routes-onglets';
 	import ApercuCarte from './ApercuCarte.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import HistoriqueEvenement from './HistoriqueEvenement.svelte';
@@ -101,6 +103,15 @@
 			{#if ev.auteur_nom}<span class="event-meta">{ev.auteur_nom}</span>{/if}
 		</svelte:fragment>
 		<svelte:fragment slot="actions">
+			<!--  Le chemin est EXPLICITE : cette carte se rend aussi sous `/calendrier/archives`,
+			      et l'événement, lui, vit dans la vue liste — c'est elle qui pose `id="ev-…"`,
+			      comme le dit `EMPLACEMENTS` côté API. Copier l'adresse de la page courante
+			      donnerait un lien qui ouvre la bonne page sur rien. -->
+			<BoutonLien
+				ancre="ev-{ev.id}"
+				chemin={routeOnglet('calendrier', 'liste')}
+				quoi="l'événement"
+			/>
 			<!--  🔴 La garde `_source !== 'devis_ponctuel'` a disparu avec les
 				      prestations ponctuelles (#603). Elle privait d'actions les cartes
 				      fabriquées à la volée depuis un devis : identifiant négatif, aucune

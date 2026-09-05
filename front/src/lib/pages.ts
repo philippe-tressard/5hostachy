@@ -30,12 +30,40 @@
  * notification.
  */
 
+import { TITRE_ARCHIVES } from '$lib/archives';
 import type { PageConfig } from '$lib/stores/pageConfig';
 
 export interface OngletDef {
 	id: string;
 	label: string;
 	descriptif: string;
+	/**
+	 * L'URL dédiée de cet onglet — celle qu'on copie dans la barre d'adresse et
+	 * qu'on envoie à un voisin. Elle est ABSOLUE (elle commence par `/`) et non
+	 * relative à la page : les trois rubriques de la Communauté vivent à la racine
+	 * (`/annonces`), les vues d'un même objet sous leur page (`/calendrier/kanban`).
+	 *
+	 * La règle, arbitrée le 05/09/2026 : **plate quand l'onglet est un CONTENU,
+	 * imbriquée quand il est une VUE**. `/kanban` ou `/archives` seuls ne disent
+	 * pas de quoi ils parlent ; `/annonces` si.
+	 *
+	 * ⚠️ La route de l'onglet par défaut est celle de la page (`href`) : sans quoi
+	 * l'entrée de menu et le premier onglet seraient deux adresses pour le même
+	 * écran, et `test_liens_front.py` refuse.
+	 */
+	route: string;
+	/** Les sous-onglets, quand l'onglet en porte une rangée (un seul cas : les
+	    baux de la gestion locative). Ils ont une URL, pas d'entrée dans la
+	    configuration éditable — l'administration n'ordonne et ne renomme que les
+	    onglets de premier niveau. */
+	sous?: SousOngletDef[];
+}
+
+/** Un sous-onglet : une URL et rien d'autre. Son libellé vit dans l'écran, qui
+    est le seul à savoir ce qu'il compte (« Baux actifs (3) »). */
+export interface SousOngletDef {
+	id: string;
+	route: string;
 }
 
 export interface PageDef {
@@ -87,11 +115,17 @@ export const PAGES: PageDef[] = [
 		onglets: [
 			{
 				id: 'lots',
+				route: '/mon-lot',
 				label: '\u{1F3E0} Mes lots',
 				descriptif: 'Situation de vos lots dans la résidence : appartements, caves et parkings.',
 			},
 			{
 				id: 'location',
+				route: '/mon-lot/location',
+				sous: [
+					{ id: 'actif', route: '/mon-lot/location' },
+					{ id: 'archives', route: '/mon-lot/location/archives' },
+				],
 				label: '\u{1F4CB} Gestion locative',
 				descriptif: 'Suivi de vos baux, locataires et documents de gestion locative.',
 			},
@@ -129,11 +163,19 @@ export const PAGES: PageDef[] = [
 		onglets: [
 			{
 				id: 'prestataires',
+				route: '/prestataires',
 				label: '\u{1F527} Prestataires',
 				descriptif: "Intervenants et contrats d'entretien de la résidence.",
 			},
 			{
+				id: 'contrats',
+				route: '/prestataires/contrats',
+				label: '\u{1F4C4} Contrats',
+				descriptif: "Contrats d'entretien en cours, leur échéance et leurs documents.",
+			},
+			{
 				id: 'consommations',
+				route: '/prestataires/consommations',
 				label: '\u{1F4A7} Consommations',
 				descriptif: 'Suivi des relevés de compteurs et abonnements de la résidence.',
 			},
@@ -150,17 +192,23 @@ export const PAGES: PageDef[] = [
 		onglets: [
 			{
 				id: 'liste',
+				route: '/calendrier',
 				label: '\u{1F4CB} Liste',
 				descriptif: 'Les événements, du plus lointain au plus ancien.',
 			},
 			{
 				id: 'kanban',
+				route: '/calendrier/kanban',
 				label: '\u{1F5C3}️ Kanban',
 				descriptif: 'Organisation visuelle des événements par statut.',
 			},
 			{
 				id: 'archives',
-				label: '\u{1F4C1} Archives',
+				route: '/calendrier/archives',
+				//  Le mot ET son icône viennent de `$lib/archives` : ils étaient recopiés
+				//  ici, et #516 existe précisément pour qu'« Archives » ne s'écrive qu'une
+				//  fois — la recopie concordait, à l'instant où on l'avait posée.
+				label: TITRE_ARCHIVES,
 				descriptif: 'Actualités et événements archivés.',
 			},
 		],
@@ -196,16 +244,19 @@ export const PAGES: PageDef[] = [
 		onglets: [
 			{
 				id: 'sondages',
+				route: '/sondages',
 				label: '\u{1F4CA} Sondages',
 				descriptif: 'Participez aux votes et consultations de la copropriété.',
 			},
 			{
 				id: 'idees',
+				route: '/idees',
 				label: '\u{1F4A1} Boîte à idées',
 				descriptif: 'Proposez et soutenez des idées pour améliorer la vie en résidence.',
 			},
 			{
 				id: 'annonces',
+				route: '/annonces',
 				label: '\u{1F3F7}️ Petites annonces',
 				descriptif: 'Achetez, vendez ou donnez des objets entre résidents.',
 			},
@@ -233,23 +284,27 @@ export const PAGES: PageDef[] = [
 		onglets: [
 			{
 				id: 'validations',
+				route: '/espace-cs',
 				label: '✅ Comptes & accès',
 				descriptif: "Comptes en attente, demandes d'accès et validations à traiter.",
 			},
 			{
 				id: 'reporting',
+				route: '/espace-cs/reporting',
 				label: '\u{1F4CA} Reporting',
 				descriptif:
 					'Synthèses et indicateurs : kanban, tableau des tickets, prestataires, renouvellements de contrats et relance syndic.',
 			},
 			{
 				id: 'annonces-hall',
+				route: '/espace-cs/annonces-hall',
 				label: '\u{1F4C4} Annonces Hall',
 				descriptif:
 					"Créez une annonce à afficher dans le hall des bâtiments : PDF à la charte de la résidence, envoyé par mail aux membres du CS concernés, puis conservé dans l'historique.",
 			},
 			{
 				id: 'annuaire',
+				route: '/espace-cs/annuaire',
 				label: '\u{1F4D2} Annuaire CS & Syndic',
 				descriptif: 'Coordonnées des membres du CS et du syndic.',
 			},

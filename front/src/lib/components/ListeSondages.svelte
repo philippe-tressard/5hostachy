@@ -23,6 +23,7 @@
 -->
 <script lang="ts">
 	import { fmtDateShort, isNouveau } from '$lib/date';
+	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
@@ -78,6 +79,8 @@
 			{/if}
 		</div>
 		<div class="sondage-actions">
+			<!--  Un sondage a sa page : on copie SON adresse, pas celle de la liste. -->
+			<BoutonLien chemin="/sondages/{s.id}" quoi="le sondage" />
 			{#if s.cloture}
 				<span class="badge badge-gray">Clôturé</span>
 			{:else}

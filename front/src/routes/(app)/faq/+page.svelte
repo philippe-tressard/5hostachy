@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FormulaireFaq from '$lib/components/FormulaireFaq.svelte';
+	import CarteFaq from '$lib/components/CarteFaq.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
@@ -452,7 +453,7 @@
 		<h2 class="categorie-title">{categorie}</h2>
 		{#each catItems as item, idx (item.id)}
 			<div
-				class="faq-item card reorder-item"
+				class="card reorder-item"
 				class:drag-over={dragOverItem?.id === item.id}
 				draggable="true"
 				on:dragstart={() => handleDragStart(item, categorie)}
@@ -524,59 +525,16 @@
 			{/if}
 		</div>
 		{#each catItems as item (item.id)}
-			<div
-				id="faq-{item.id}"
-				class="faq-item card"
-				class:item-inactive={!item.actif}
-				role="button"
-				tabindex="0"
-				on:click={() => toggle(item.id)}
-				on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggle(item.id)}
-			>
-				<div class="faq-header">
-					<button class="faq-q" tabindex="-1" aria-expanded={!!open[item.id]}>
-						<span>{item.question}</span>
-						<span class="chevron" class:open={open[item.id]}>›</span>
-					</button>
-					{#if canEdit}
-						<div class="faq-actions">
-							<button
-								class="btn-icon-edit"
-								aria-label="Modifier"
-								title="Modifier"
-								on:click|stopPropagation={() => openEdit(item)}>✏️</button
-							>
-							<button
-								class={item.actif ? 'btn-icon-warn' : 'btn-icon-edit'}
-								aria-label={item.actif ? 'Masquer' : 'Afficher'}
-								title={item.actif ? 'Masquer' : 'Afficher'}
-								on:click|stopPropagation={() => toggleActif(item)}
-							>
-								{item.actif ? '\u{1F648}' : '\u{1F441}️'}
-							</button>
-							<button
-								class="btn-icon-danger"
-								aria-label="Supprimer"
-								title="Supprimer"
-								on:click|stopPropagation={() => deleteItem(item)}>&#x1F5D1;️</button
-							>
-						</div>
-					{/if}
-				</div>
-				{#if open[item.id]}
-					<div class="faq-a rich-content" role="presentation" on:click|stopPropagation>
-						{@html safeHtml(item.reponse)}
-						{#if isBadgePrixQuestion(item.question)}
-							<div class="faq-cta-row">
-								<a class="btn btn-primary btn-sm" href="/acces-securite#nouvelle-demande"
-									>Faire une nouvelle demande d'accès</a
-								>
-								<a class="btn btn-outline btn-sm" href="/acces-securite">Voir Accès &amp; badges</a>
-							</div>
-						{/if}
-					</div>
-				{/if}
-			</div>
+			<CarteFaq
+				{item}
+				ouvert={!!open[item.id]}
+				{canEdit}
+				avecCta={isBadgePrixQuestion(item.question)}
+				on:basculer={() => toggle(item.id)}
+				on:modifier={() => openEdit(item)}
+				on:basculerActif={() => toggleActif(item)}
+				on:supprimer={() => deleteItem(item)}
+			/>
 		{/each}
 	{/each}
 {/if}
@@ -644,63 +602,6 @@
 		padding: 0.3rem 0.5rem;
 		max-width: 300px;
 	}
-	.faq-item {
-		cursor: pointer;
-		margin-bottom: 0.35rem;
-		overflow: visible;
-		padding: 0;
-	}
-	.item-inactive {
-		opacity: 0.55;
-	}
-	.faq-header {
-		display: flex;
-		align-items: center;
-	}
-	.faq-q {
-		user-select: none;
-		flex: 1;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.875rem 1rem;
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-size: 0.925rem;
-		font-weight: 500;
-		text-align: left;
-		gap: 1rem;
-		color: var(--color-text);
-	}
-	.faq-q:hover {
-		background: var(--color-bg-subtle);
-	}
-	/*  Écart assumé : il HÉRITE la couleur de sa question, et vit dans un flex. */
-	.chevron {
-		color: inherit;
-		flex-shrink: 0;
-	}
-	.faq-a {
-		padding: 0.5rem 1rem 0.9rem;
-		font-size: 0.875rem;
-		color: var(--color-text-muted);
-		line-height: 1.55;
-		border-top: 1px solid var(--color-border);
-	}
-	.faq-cta-row {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		margin-top: 0.8rem;
-		padding-top: 0.75rem;
-		border-top: 1px dashed var(--color-border);
-	}
-	.faq-actions {
-		display: flex;
-		gap: 0.15rem;
-		padding-right: 0.5rem;
-	}
 	.still-need-help {
 		margin-top: 2rem;
 		padding: 1.25rem;
@@ -739,6 +640,10 @@
 		border: 1px dashed var(--color-border);
 	}
 	.reorder-item {
+		/*  L'espacement venait de `.faq-item`, partie avec la carte dans
+		    `CarteFaq.svelte` : une ligne de réorganisation n'est pas une carte de
+		    question, elle n'a que son interligne en commun. */
+		margin-bottom: 0.35rem;
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;

@@ -85,11 +85,31 @@ def page_element(prefixe: str) -> str:
     """Raccourci de lecture vers la table centrale."""
     from app.utils.liens import EMPLACEMENTS
 
-    return EMPLACEMENTS[prefixe][0]
+    return EMPLACEMENTS[prefixe]
+
+
+#  Les URL dédiées des onglets, lues dans la table du front (`$lib/pages.ts`).
+#  Elles sont servies par un segment de reste (`[...vue]`), qui accepte N'IMPORTE
+#  quel chemin : les chercher dans l'arborescence rendrait `/calendrier/kanbna`
+#  aussi valide que `/calendrier/kanban`, et ce contrôle ne contrôlerait plus rien.
+#  C'est la déclaration qui fait foi, comme côté front où elle rend la 404.
+_MOTIF_ROUTE_ONGLET = re.compile(r"id: '([\w-]+)',\s*route: '([^']+)'")
+
+
+def _routes_onglets_du_front() -> set[str]:
+    fichier = _FRONT_SRC / "lib" / "pages.ts"
+    if not fichier.is_file():
+        return set()
+    return {
+        route
+        for _id, route in _MOTIF_ROUTE_ONGLET.findall(fichier.read_text(encoding="utf-8-sig"))
+    }
 
 
 def _page_existe(lien: str) -> bool:
     chemin = lien.split("#")[0].split("?")[0]
+    if chemin.rstrip("/") in _routes_onglets_du_front():
+        return True
     segments = [s for s in chemin.strip("/").split("/") if s]
     return _resoudre(_ROUTES, segments)
 
@@ -183,6 +203,12 @@ def _page_du_lien(lien: str) -> pathlib.Path | None:
             trouve = descendre(c, suite)
             if trouve:
                 return trouve
+        #  Le segment de reste sert tous les onglets d'une page : `/calendrier/kanban`
+        #  et `/calendrier` sont le même fichier.
+        for reste_dir in (d for d in sous if d.name.startswith("[...")):
+            page = reste_dir / "+page.svelte"
+            if page.exists():
+                return page
         return None
 
     return descendre(_ROUTES, segments)
@@ -193,7 +219,7 @@ _MOTIF_IMPORT_COMPOSANT = re.compile(
 )
 
 
-def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 2) -> str:
+def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 3) -> str:
     """Le balisage d'une page, **composants locaux inclus**, à leur place d'appel.
 
     Une page qui rend `id="annonce-…"` directement, ou qui délègue à
@@ -206,6 +232,12 @@ def contenu_deplie(fichier: pathlib.Path, _profondeur: int = 2) -> str:
     ce dépliage n'est donc pas une commodité ponctuelle, c'est ce qui permet aux
     deux règles de coexister. Constaté le 14/08/2026, quand l'extraction de
     `AnnonceCard.svelte` a fait tomber deux de ces tests.
+
+    ⚠️ La profondeur est passée de 2 à 3 le 05/09/2026 : `/annonces` monte
+    `PageCommunaute`, qui monte `OngletAnnonces`, qui monte `AnnonceCard` — c'est
+    cette dernière qui pose `id="annonce-…"`. Une route qui délègue son écran à un
+    composant ajoute un niveau, et le contrôle doit le suivre, sinon il déclare
+    l'ancre absente alors qu'elle est rendue.
 
     Le contenu du composant est **inséré** à l'endroit de sa balise plutôt que
     substitué : `_segments_par_onglet` découpe la page par onglet, et l'ancre doit
@@ -262,36 +294,53 @@ def test_les_ancres_des_liens_sont_produites_par_la_page_visee():
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
-def test_les_onglets_des_liens_existent_dans_la_page_visee():
-    """`?onglet=annonces` doit correspondre à un onglet réellement déclaré.
+def test_les_routes_de_la_table_sont_des_onglets_declares():
+    """Chaque route d'`EMPLACEMENTS` doit être une adresse que le front DÉCLARE.
 
-    Les pages à onglets listent leurs valeurs dans une constante `ONGLETS` (voir
-    `$lib/deepLink.ts`) : c'est cette liste que le lien doit viser. Une valeur
-    inconnue est ignorée en silence et l'utilisateur reste sur l'onglet par défaut,
-    exactement le symptôme d'origine.
+    Le contrôle a changé de forme le 05/09/2026, pas d'objet. Il vérifiait qu'un
+    `?onglet=xxx` correspondait à une valeur connue de la page ; il vérifie
+    maintenant que la ROUTE écrite côté API est l'une de celles que `$lib/pages.ts`
+    déclare — ou la page d'un écran sans onglets (`/actualites`, `/faq`).
+
+    Sans lui, `/annonce` au lieu d'`/annonces` passerait : le segment de reste
+    accepte tout, et c'est le front qui rendrait la 404 — chez l'utilisateur.
     """
-    inconnus = []
-    for lien, fichiers in sorted(_liens_de_l_api().items()):
-        m = re.search(r"[?&]onglet=([^&#]+)", lien)
-        if not m:
-            continue
-        onglet = m.group(1)
-        page = _page_du_lien(lien)
-        if page is None:
-            continue
-        contenu = page.read_text(encoding="utf-8-sig")
-        declares = re.search(r"const ONGLETS = \[([^\]]+)\]", contenu)
-        valeurs = re.findall(r"'([^']+)'", declares.group(1)) if declares else []
-        if onglet not in valeurs:
-            inconnus.append(
-                f"  {lien}  ← {', '.join(sorted(set(fichiers)))}\n"
-                f"      {page.relative_to(_RACINE)} déclare {valeurs or 'aucun onglet'}"
-            )
+    from app.utils.liens import EMPLACEMENTS
 
-    assert not inconnus, (
-        "Ces liens visent un onglet qui n'existe pas : la page s'ouvrira sur son "
-        "onglet par défaut, sans le contenu attendu :\n" + "\n".join(inconnus)
+    declarees = _routes_onglets_du_front()
+    assert declarees, (
+        "aucune route d'onglet lue dans front/src/lib/pages.ts — le motif ne "
+        "reconnaît plus la table, et ce contrôle ne vérifie plus rien"
     )
+
+    inconnues = []
+    for prefixe, route in sorted(EMPLACEMENTS.items()):
+        if route in declarees:
+            continue
+        #  Une page sans onglets n'a pas de route déclarée : elle doit alors exister
+        #  telle quelle dans l'arborescence.
+        segments = [x for x in route.strip("/").split("/") if x]
+        if _resoudre(_ROUTES, segments):
+            continue
+        inconnues.append(
+            f"  {prefixe} → {route} : ni onglet déclaré dans pages.ts, ni page du front"
+        )
+
+    assert not inconnues, (
+        "Ces routes ne correspondent à aucune adresse déclarée par le front :\n"
+        + "\n".join(inconnues)
+    )
+
+
+def _onglet_de_la_route(route: str) -> str | None:
+    """L'identifiant d'onglet que cette route ouvre, ou `None` si la page n'en a pas."""
+    fichier = _FRONT_SRC / "lib" / "pages.ts"
+    if not fichier.is_file():
+        return None
+    for ident, r in _MOTIF_ROUTE_ONGLET.findall(fichier.read_text(encoding="utf-8-sig")):
+        if r == route:
+            return ident
+    return None
 
 
 # Les pages à onglets branchent leur contenu sur `onglet === '…'` ou `activeTab === '…'`.
@@ -331,8 +380,9 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
     from app.utils.liens import EMPLACEMENTS, lien_element
 
     ecarts = []
-    for prefixe, (page, onglet) in sorted(EMPLACEMENTS.items()):
-        fichier = _page_du_lien(page)
+    for prefixe, route in sorted(EMPLACEMENTS.items()):
+        onglet = _onglet_de_la_route(route)
+        fichier = _page_du_lien(route)
         if fichier is None:
             continue  # déjà couvert par le test des pages
         contenu = contenu_deplie(fichier)
@@ -344,9 +394,9 @@ def test_l_ancre_est_rendue_par_l_onglet_que_le_lien_selectionne():
             # devenue une page à onglets sans que la table le sache.
             if segments and ancre in contenu:
                 ecarts.append(
-                    f"  {prefixe} → {page} : la page a désormais des onglets "
-                    f"({', '.join(sorted(segments))}) mais EMPLACEMENTS n'en déclare "
-                    f"aucun — le lien s'ouvrira sur l'onglet par défaut"
+                    f"  {prefixe} → {route} : la page a désormais des onglets "
+                    f"({', '.join(sorted(segments))}) mais aucun n'est déclaré pour "
+                    f"cette route — le lien s'ouvrira sur l'onglet par défaut"
                 )
             continue
 
@@ -413,9 +463,9 @@ def test_chaque_document_pointe_vers_l_endroit_ou_il_est_affiche():
 
     cas = [
         (_faux_document(publication_id=3), resident, "/actualites#pub-3"),
-        # L'onglet fait partie du lien : /prestataires s'ouvre sur « Prestations
-        # ponctuelles », la fiche vit sous « Prestataires ».
-        (_faux_document(contrat_id=9), cs, "/prestataires?onglet=prestataires#presta-7"),
+        # `/prestataires` EST l'adresse de l'onglet Prestataires depuis le
+        # 05/09/2026 : l'onglet n'a plus à être porté par un paramètre.
+        (_faux_document(contrat_id=9), cs, "/prestataires#presta-7"),
         # Page réservée au CS/admin : un résident n'a rien à y faire, même s'il a le
         # droit de lire le document.
         (_faux_document(contrat_id=9), resident, None),
