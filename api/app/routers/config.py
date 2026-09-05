@@ -308,6 +308,7 @@ async def smtp_test(
     """Envoie un e-mail de test à l'adresse fournie en utilisant la config SMTP actuelle (admin uniquement)."""
     from app.config import get_settings
     from app.utils.email import _get_smtp_config, connexion_smtp
+    from app.utils.smtp import adresses_a_tester
 
     settings = get_settings()
     smtp_cfg = _get_smtp_config(session)
@@ -315,26 +316,47 @@ async def smtp_test(
     if smtp_cfg.get('smtp_enabled') != '1' and not settings.mail_enabled:
         raise HTTPException(400, "L'envoi d'e-mails est désactivé. Activez-le avant de tester.")
 
+    #  UN envoi PAR ADRESSE d'expédition configurée (#756). Le test n'en exerçait
+    #  qu'une, alors que deux servent désormais selon l'intention du message : un
+    #  serveur qui refuse la seconde — cas courant quand elle est un ALIAS et non
+    #  un compte — passait le test et échouait sur un vrai ticket.
+    adresses = adresses_a_tester(smtp_cfg)
+    envoyees: list[str] = []
     try:
         from fastapi_mail import FastMail, MessageSchema
 
-        cfg = connexion_smtp(smtp_cfg)
-        fm = FastMail(cfg)
-        msg = MessageSchema(
-            subject="[5Hostachy] Test de configuration SMTP",
-            recipients=[payload.email],
-            body=(
-                "<p>Bonjour,</p>"
-                "<p>Ceci est un e-mail de test envoyé depuis l'interface d'administration de <strong>5Hostachy</strong>.</p>"
-                "<p>Si vous recevez ce message, votre configuration SMTP est correctement configurée ✅</p>"
-                "<p style='color:#64748b;font-size:.85em'>— 5Hostachy</p>"
-            ),
-            subtype="html",
-        )
-        await fm.send_message(msg)
-        return {"ok": True, "message": f"E-mail de test envoyé à {payload.email}"}
+        for adresse in adresses:
+            cfg = connexion_smtp(smtp_cfg, expediteur=adresse)
+            fm = FastMail(cfg)
+            msg = MessageSchema(
+                subject=f"[5Hostachy] Test de configuration SMTP — depuis {adresse}",
+                recipients=[payload.email],
+                body=(
+                    "<p>Bonjour,</p>"
+                    "<p>Ceci est un e-mail de test envoyé depuis l'interface "
+                    "d'administration de <strong>5Hostachy</strong>.</p>"
+                    f"<p>Il part de <strong>{adresse}</strong>. Si vous recevez un message "
+                    "pour chacune des adresses configurées, l'envoi fonctionne pour les "
+                    "deux ✅</p>"
+                    "<p style='color:#64748b;font-size:.85em'>— 5Hostachy</p>"
+                ),
+                subtype="html",
+            )
+            await fm.send_message(msg)
+            envoyees.append(adresse)
     except Exception as e:
-        raise HTTPException(500, f"Échec de l'envoi : {e}")
+        #  Dire ce qui est DÉJÀ parti : sans cela, un échec sur la seconde adresse
+        #  se lirait comme un échec total, et on chercherait la panne du côté du
+        #  serveur alors que seule l'adresse ajoutée est en cause.
+        deja = f" ({len(envoyees)} déjà envoyé depuis {', '.join(envoyees)})" if envoyees else ""
+        raise HTTPException(500, f"Échec de l'envoi depuis {adresses[len(envoyees)]}{deja} : {e}")
+    return {
+        "ok": True,
+        "message": (
+            f"{len(envoyees)} e-mail(s) de test envoyé(s) à {payload.email}, "
+            f"depuis {', '.join(envoyees)}"
+        ),
+    }
 
 
 @router.post("/imap-test")

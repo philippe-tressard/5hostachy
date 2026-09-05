@@ -43,6 +43,31 @@ def adresse_expedition(smtp_cfg: dict, genre: str) -> str:
     return (smtp_cfg.get("smtp_from_reponse") or "").strip() or defaut
 
 
+def adresses_a_tester(smtp_cfg: dict) -> list[str]:
+    """Les adresses d'expédition distinctes, dans l'ordre où on les éprouve.
+
+    🔴 **Le bouton « tester » n'exerçait qu'une adresse sur deux** (05/09/2026).
+    Depuis #756 un message part de `noreply@` ou de `contact@` selon son
+    intention ; le test, lui, partait toujours de la première. Un serveur qui
+    refuserait la seconde — c'est le cas courant quand elle est un **alias** et
+    non un compte — l'aurait laissé passer, et l'échec ne serait apparu que sur
+    un vrai ticket, dans un journal que personne ne lit à ce moment-là.
+
+    C'est la règle du dépôt appliquée à un contrôle : *la fonction qui vérifie
+    doit être celle qui sert* (#498, et le P3 du post-check qui l'a apprise deux
+    fois). Une seule adresse configurée rend une seule entrée : on ne fabrique
+    pas un second envoi pour faire nombre.
+    """
+    from app.seed.emails import EXPEDITEUR_MUET, EXPEDITEUR_REPONSE
+
+    vues: list[str] = []
+    for genre in (EXPEDITEUR_MUET, EXPEDITEUR_REPONSE):
+        adresse = adresse_expedition(smtp_cfg, genre)
+        if adresse and adresse not in vues:
+            vues.append(adresse)
+    return vues
+
+
 def connexion_smtp(smtp_cfg: dict, *, expediteur: str | None = None):
     """La connexion SMTP effective : configuration en base, sinon le `.env`.
 
