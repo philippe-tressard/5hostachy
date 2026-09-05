@@ -102,10 +102,12 @@ def test_les_blocs_depliables_sont_OUVERTS(document):
         "un `<details>` subsiste : son contenu pourrait ne pas être imprimé"
     )
     assert "<summary" not in document
-    assert document.count("En détail") == 4, "les quatre blocs ne sont pas dépliés"
+    assert document.count("En détail") == 5, "les cinq blocs ne sont pas dépliés"
     #  Et leur contenu doit vraiment être là.
     assert "votre réponse rejoint le fil du ticket" in document
     assert "Boîte à idées" in document
+    #  Le cinquième, ajouté le 05/09/2026 : ce qu'on trouve sur l'Accueil.
+    assert "Consignes de la copropriété" in document
 
     #  🔴 LES ATTRIBUTS SURVIVENT À LA CONVERSION — ajouté après un vrai défaut.
     #
@@ -120,7 +122,7 @@ def test_les_blocs_depliables_sont_OUVERTS(document):
     #  dès le début : non pas que la balise a changé, mais que le RÉSULTAT est
     #  celui qu'on veut. Le caractère fautif n'est pas cité ici — l'écrire pour
     #  l'expliquer le réintroduirait, et la CI refuserait ce fichier à son tour.
-    assert document.count('<div class="ecran-detail">') == 4, (
+    assert document.count('<div class="ecran-detail">') == 5, (
         "les blocs convertis ont perdu leurs attributs : ils s'imprimeraient "
         "sans leur habillage"
     )
@@ -206,9 +208,20 @@ def test_les_mentions_identifient_l_editeur(document):
     la décision qu'il gardait devient un obstacle, pas un garde-fou.
 
     Ce qui reste exigé n'a pas bougé : le document dit qui l'édite, et ne nomme
-    aucune personne physique. La licence et le renvoi aux mentions légales
-    vivent dans le corps du manuel (section « À quoi sert ce site ? »), donc
-    dans le PDF par construction.
+    aucune personne physique.
+
+    🔴 LA LICENCE VIT DANS LES MENTIONS, ET NULLE PART AILLEURS (05/09/2026).
+
+    Elle vivait dans le corps du manuel, et ce test s'en contentait — « dans le
+    PDF par construction ». Le jour où la section « Un logiciel libre » est
+    passée en fin de page, elle s'est retrouvée juste avant ces mentions-ci, qui
+    la disent déjà : deux paragraphes de suite pour la même chose. Demandé à
+    l'écran : *« à voir la cohérence pour qu'il n'y ait pas de redondance »*.
+
+    Le corps imprimé la perd donc (`corps_du_manuel`), et ce test vérifie les
+    DEUX moitiés : elle est bien là, et elle n'y est qu'UNE fois. Sans la
+    seconde, retirer la section du corps sans la reporter ici aurait produit un
+    feuillet sans licence — le défaut inverse, et silencieux.
     """
     assert 'class="mentions"' in document
     assert "conseil syndical de la copropriété" in document, (
@@ -217,9 +230,14 @@ def test_les_mentions_identifient_l_editeur(document):
     assert "Philippe Tressard" not in document, (
         "un nom de personne réapparaît dans un document distribuable"
     )
-    #  La licence est annoncée par le manuel lui-même : le PDF la reprend.
-    assert "licence MIT" in document
-    assert "auto-hébergée" in document
+    assert "licence MIT" in document, "le feuillet ne dit plus sous quelle licence"
+    assert "auto-hébergée" in document, "le feuillet ne dit plus où vivent les données"
+    #  🔴 UNE SEULE FOIS — voir le pourquoi dans le docstring.
+    assert document.count("licence MIT") == 1, (
+        "la licence est écrite deux fois dans le feuillet : le corps la répète "
+        "alors que les mentions la portent (`corps_du_manuel` doit retirer la "
+        "section « Un logiciel libre »)."
+    )
 
 
 # ── La lecture de la source ──────────────────────────────────────────────────
