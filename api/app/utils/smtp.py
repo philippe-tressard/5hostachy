@@ -14,7 +14,12 @@ from sqlmodel import Session, select
 from app.config import get_settings
 from app.models.core import ConfigSite
 
-_SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_from_name', 'smtp_username', 'smtp_password', 'smtp_starttls', 'smtp_ssl_tls'}
+#  ⚠️ `smtp_from_reponse` est la SECONDE adresse d'expédition (05/09/2026) :
+#  `contact@` pour ce qui appelle une réponse, `smtp_from` (`noreply@`) pour ce
+#  qui n'en appelle aucune. Une clé absente ou vide se replie sur `smtp_from` —
+#  une installation qui n'a pas encore renseigné la seconde adresse continue
+#  d'envoyer exactement comme avant, plutôt que depuis une adresse vide.
+_SMTP_KEYS = {'smtp_enabled', 'smtp_server', 'smtp_port', 'smtp_from', 'smtp_from_reponse', 'smtp_from_name', 'smtp_username', 'smtp_password', 'smtp_starttls', 'smtp_ssl_tls'}
 
 
 def _get_smtp_config(session: Session) -> dict:
@@ -22,7 +27,23 @@ def _get_smtp_config(session: Session) -> dict:
     return {r.cle: r.valeur for r in rows}
 
 
-def connexion_smtp(smtp_cfg: dict):
+def adresse_expedition(smtp_cfg: dict, genre: str) -> str:
+    """L'adresse d'expédition pour ce genre d'envoi (`expediteur_du_modele`).
+
+    Repli explicite : sans seconde adresse configurée, tout part de `smtp_from`
+    comme avant. Le silence de la configuration ne doit pas produire une adresse
+    vide — un message sans expéditeur est refusé par le serveur, et l'envoi
+    échouerait sans que le motif ait quoi que ce soit à voir avec son contenu.
+    """
+    from app.seed.emails import EXPEDITEUR_REPONSE
+
+    defaut = smtp_cfg.get("smtp_from") or get_settings().mail_from
+    if genre != EXPEDITEUR_REPONSE:
+        return defaut
+    return (smtp_cfg.get("smtp_from_reponse") or "").strip() or defaut
+
+
+def connexion_smtp(smtp_cfg: dict, *, expediteur: str | None = None):
     """La connexion SMTP effective : configuration en base, sinon le `.env`.
 
     Ces dix-sept lignes étaient écrites **trois fois** — deux dans ce module
@@ -55,7 +76,9 @@ def connexion_smtp(smtp_cfg: dict):
     return ConnectionConfig(
         MAIL_USERNAME=username,
         MAIL_PASSWORD=smtp_cfg.get("smtp_password") or settings.mail_password,
-        MAIL_FROM=smtp_cfg.get("smtp_from") or settings.mail_from,
+        #  L'expéditeur peut être imposé par l'appelant : c'est l'INTENTION du
+        #  modèle qui le décide, pas la connexion (voir `adresse_expedition`).
+        MAIL_FROM=expediteur or smtp_cfg.get("smtp_from") or settings.mail_from,
         MAIL_FROM_NAME=smtp_cfg.get("smtp_from_name") or settings.mail_from_name,
         MAIL_PORT=int(smtp_cfg.get("smtp_port") or settings.mail_port),
         MAIL_SERVER=smtp_cfg.get("smtp_server") or settings.mail_server,
