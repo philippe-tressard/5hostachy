@@ -53,7 +53,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from email.utils import parseaddr
 
-from app.utils.courriel_entrant import jeton_dans
+from app.utils.courriel_entrant import jeton_dans, numero_dans_sujet
 
 #: Les messages antérieurs sont ignorés — arbitrage du 02/09/2026.
 PLANCHER_PAR_DEFAUT = datetime(2026, 9, 2)
@@ -81,6 +81,10 @@ class Verdict:
     decision: str
     jeton: str | None = None
     reference: str | None = None
+    #:  Le numéro lu dans le SUJET — un repli, quand le sous-adressage n'achemine
+    #:  pas le jeton (05/09/2026). Il DÉSIGNE un ticket, il ne prouve rien : c'est
+    #:  `courriel_boite` qui exige alors que l'expéditeur ait affaire à ce ticket.
+    numero: str | None = None
     expediteur: str = ""
     motif: str = ""
 
@@ -174,10 +178,14 @@ def examiner(
         lire.get("to"), lire.get("delivered-to"), lire.get("envelope-to"), lire.get("cc")
     )
     reference = reference_citee(lire.get("in-reply-to"), lire.get("references"))
-    if not jeton and not reference:
+    #  Le repli : le numéro écrit dans le sujet. Il n'est lu que si le jeton
+    #  manque — un sujet réécrit ne doit jamais l'emporter sur une adresse qui,
+    #  elle, prouve quelque chose.
+    numero = numero_dans_sujet(lire.get("subject")) if not jeton else None
+    if not jeton and not reference and not numero:
         return Verdict(IGNORE, expediteur=from_, motif="ne répond à aucun ticket")
 
     ok, motif = expediteur_authentifie(lire.get("authentication-results"), from_)
-    if not ok:
-        return Verdict(REFUSE, jeton=jeton, reference=reference, expediteur=from_, motif=motif)
-    return Verdict(ACCEPTE, jeton=jeton, reference=reference, expediteur=from_, motif=motif)
+    decision = ACCEPTE if ok else REFUSE
+    return Verdict(decision, jeton=jeton, reference=reference, numero=numero,
+                   expediteur=from_, motif=motif)

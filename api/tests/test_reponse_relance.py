@@ -16,8 +16,11 @@ from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import nouveau_jeton as _jeton
 from app.utils.courriel_ingestion import RELANCE
 from tests.purge_test import purger_ligne
-from tests.test_courriel_reponse_ticket import (  # noqa: F401  (fixture partagée)
-    _entetes,
+#  La scène (ticket + comptes + fiche syndic) vit avec les tests qui ÉCRIVENT :
+#  elle a suivi le découpage du 05/09/2026. `_entetes`, qui ne fabrique qu'un
+#  dictionnaire, est resté du côté des décisions pures.
+from tests.test_courriel_reponse_ticket import _entetes  # noqa: F401
+from tests.test_courriel_reponse_ticket_bout_en_bout import (  # noqa: F401
     _evolutions,
     scene,
 )
