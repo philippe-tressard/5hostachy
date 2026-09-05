@@ -4,6 +4,7 @@ API FastAPI v0.1
 """
 import json as _json
 import logging as _logging
+import os as _os
 import re as _re
 import traceback as _traceback
 from contextlib import asynccontextmanager
@@ -21,6 +22,27 @@ from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.exc import OperationalError as _SAOperationalError
 
 from app.utils.limiter import limiter
+
+#  🔴 SANS CETTE LIGNE, TOUT `logger.info` DE L'APPLICATION DISPARAÎT (05/09/2026).
+#
+#  Uvicorn ne configure QUE ses propres journaux (`uvicorn`, `uvicorn.access`,
+#  `uvicorn.error`). Un `logging.getLogger(__name__)` applicatif remonte au logger
+#  RACINE, qui n'a aucun destinataire : Python se rabat alors sur son handler de
+#  dernier recours, lequel n'émet qu'à partir de WARNING. Conséquence : tous les
+#  `info` du produit — relève des réponses, checkpoint WAL, sauvegardes
+#  orphelines, envois d'e-mails — n'étaient écrits NULLE PART.
+#
+#  On l'a payé deux fois sur le même sujet : #747 a ajouté un battement à la
+#  relève des courriels pour répondre à « est-ce que ça tourne ? », puis on l'a
+#  fait passer de `debug` à `info` le 05/09 — les deux invisibles. Le défaut
+#  n'était pas le niveau choisi, c'était qu'aucun niveau ne sortait.
+#
+#  ⚠️ `basicConfig` ne touche que le logger racine : les journaux d'uvicorn ont
+#  leurs propres handlers et ne se propagent pas, donc rien n'est dupliqué.
+_logging.basicConfig(
+    level=_os.environ.get("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+)
 
 _logger = _logging.getLogger("hostachy.api")
 

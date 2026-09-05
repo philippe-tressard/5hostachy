@@ -396,7 +396,12 @@ def relever() -> dict[str, int]:
             #  31/07/2026) : aucun chemin ne doit être muet, surtout celui qui ne
             #  fait rien. `debug` et non `info` : c'est une trace de diagnostic,
             #  pas un événement.
-            logger.debug("Réponses par courriel : relève désactivée (imap_enabled)")
+            #  🔴 `info` ET NON `debug` (05/09/2026). La trace existait depuis le
+            #  04/09 — mais en `debug`, un niveau que la production n'émet pas :
+            #  personne ne pouvait la lire, et la question « est-ce que ça tourne ? »
+            #  restait sans réponse, exactement comme avant qu'on l'écrive. Un
+            #  battement qu'on ne peut pas entendre n'est pas un battement.
+            logger.info("Réponses par courriel : relève DÉSACTIVÉE (imap_enabled≠1)")
             return comptes
 
         plancher = PLANCHER_PAR_DEFAUT
@@ -413,7 +418,18 @@ def relever() -> dict[str, int]:
             boite.select(cfg.get("imap_dossier") or "INBOX")
             _statut, donnees = boite.search(None, "UNSEEN")
             for numero in (donnees[0].split() if donnees and donnees[0] else []):
-                _st, brut = boite.fetch(numero, "(RFC822)")
+                #  🔴 `BODY.PEEK[]` ET NON `RFC822` (05/09/2026). En IMAP, lire un
+                #  message avec `RFC822` pose `\Seen` **au moment de la lecture** :
+                #  le message était donc acquitté avant qu'on ait décidé quoi que ce
+                #  soit. Si le traitement échouait ensuite — exception, base
+                #  indisponible — la réponse du syndic était perdue pour de bon, et
+                #  la relève suivante ne la voyait plus.
+                #
+                #  C'est la classe de défaut du triple envoi WhatsApp, à l'envers :
+                #  on acquittait le TRANSPORT au lieu du FAIT. `PEEK` lit sans
+                #  marquer ; le marquage vient après, et seulement si le traitement
+                #  a abouti.
+                _st, brut = boite.fetch(numero, "(BODY.PEEK[])")
                 if not brut or not brut[0]:
                     continue
                 message = email.message_from_bytes(brut[0][1])
@@ -422,8 +438,25 @@ def relever() -> dict[str, int]:
                     recu_le = parsedate_to_datetime(message.get("Date", "")).replace(tzinfo=None)
                 except Exception:
                     recu_le = None
-                decision = traiter(session, entetes, _corps_lisible(message), recu_le, plancher)
+                try:
+                    decision = traiter(
+                        session, entetes, _corps_lisible(message), recu_le, plancher
+                    )
+                except Exception as exc:
+                    #  Le message reste NON LU : il sera repris dans dix minutes. Et
+                    #  l'échec est journalisé en ERROR, donc visible du point 6 du
+                    #  pré-check et de l'alerte quotidienne — un message qui
+                    #  échouerait indéfiniment se signale au lieu de tourner en
+                    #  silence. Une erreur qui se répète est un appel, pas du bruit.
+                    logger.error(
+                        "Réponse par courriel non traitée (laissée non lue) — de %s, "
+                        "objet %r : %s",
+                        entetes.get("From", "?"), entetes.get("Subject", "?"), exc,
+                    )
+                    session.rollback()
+                    continue
                 comptes[decision] += 1
+                #  L'acquittement vient APRÈS le fait, et lui seul.
                 boite.store(numero, "+FLAGS", "\\Seen")
         finally:
             try:
@@ -443,5 +476,9 @@ def relever() -> dict[str, int]:
             comptes[ACCEPTE], comptes[RELANCE], comptes[REFUSE], comptes[IGNORE],
         )
     else:
-        logger.debug("Réponses par courriel : relève effectuée, aucun message")
+        #  Même raison : c'est CE passage-là qui prouve que la relève est vivante
+        #  et que la boîte est simplement vide. Une ligne toutes les dix minutes
+        #  dans un journal qui en compte des milliers par heure est un prix
+        #  dérisoire devant une fonction qu'on croit morte.
+        logger.info("Réponses par courriel : relève effectuée, aucun message non lu")
     return comptes
