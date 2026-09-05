@@ -23,17 +23,28 @@ Trois voies existaient pour retrouver le ticket d'une réponse :
 
 | Voie | Ce qu'elle vaut |
 |---|---|
-| le jeton dans l'adresse (`tickets+<jeton>@`) | ✅ survit à un transfert, à une réécriture de sujet, à tout client |
+| le jeton dans l'adresse (`tickets+<jeton>@`) | ✅ survit à un transfert, à une réécriture de sujet, à tout client — **quand le serveur de courriel accepte le sous-adressage** |
 | `In-Reply-To` / `References` | ⚠️ certains clients et passerelles les perdent |
-| le numéro dans le sujet (`#TK-0042`) | ❌ un sujet se réécrit, se traduit, se tronque — **et se falsifie** |
+| le numéro dans le sujet (`Ticket #42`) | ⚠️ un sujet se réécrit, se traduit, se tronque — **et se falsifie** |
 
-**Le rattachement se fait par le jeton, et par lui seul.** La troisième voie est
-écartée définitivement. La seconde sert seulement à reconnaître qu'un message
-RÉPOND à quelque chose — ce qui distingue « je ne sais pas rattacher » de « je
-refuse » — et non à désigner un ticket : conserver le `Message-ID` de chaque
-envoi serait un travail de plus, à faire le jour où l'on constaterait que le
-sous-adressage ne passe pas. Écrire la moitié de ce mécanisme aujourd'hui
-laisserait une fonction jamais appelée, c'est-à-dire une promesse non tenue.
+🔴 **REVIREMENT DU 05/09/2026 — le sujet devient un REPLI, jamais le premier
+choix.** Ce fichier écrivait « la troisième voie est écartée définitivement », et
+c'était un bon raisonnement sur une hypothèse fausse : *que la première marche*.
+L'utilisateur a constaté l'inverse — *« cette adresse pour le suivi du syndic ne
+semble pas marcher, peux-tu faire une solution de repli en te basant sur l'objet
+du ticket »*. Une voie sûre qui n'achemine rien ne protège personne : elle perd
+la réponse du syndic, en silence.
+
+L'ordre est donc : **jeton d'abord** ; à défaut, **numéro dans le sujet**. Et
+parce que le sujet se falsifie, le repli est payé par un contrôle que le jeton
+n'exigeait pas — l'expéditeur doit être quelqu'un que le site aurait ÉCRIT à
+propos de ce ticket (`courriel_boite.correspondant_du_ticket`). Le jeton, lui,
+prouvait déjà cela par sa seule possession.
+
+La seconde voie sert toujours seulement à reconnaître qu'un message RÉPOND à
+quelque chose — ce qui distingue « je ne sais pas rattacher » de « je refuse » —
+et non à désigner un ticket : conserver le `Message-ID` de chaque envoi serait un
+travail de plus.
 
 🔴 **Le jeton est opaque et non devinable.** Il voyage dans l'adresse, donc dans
 tous les carnets d'adresses et toutes les archives de la chaîne : y écrire
@@ -101,6 +112,43 @@ def domaine_de(adresse: str) -> str:
     if "@" not in brute:
         return ""
     return brute.rsplit("@", 1)[1].strip().lower()
+
+
+#: Le numéro de ticket tel que NOS sujets l'écrivent : « Ticket #TK-123456 — … ».
+#: Les préfixes de réponse (`Re:`, `TR:`, `Fwd:`) et le préfixe de copropriété
+#: passent devant sans gêner, puisqu'on cherche le motif n'importe où dans la
+#: ligne. Le dièse est facultatif : certains clients le mangent en réécrivant le
+#: sujet, et « Ticket TK-123456 » désigne aussi clairement.
+#:
+#: ⚠️ Le numéro est une CHAÎNE dans le modèle (`Ticket.numero`), aujourd'hui six
+#: chiffres. Le motif accepte donc des lettres : ancrer sur `\d{6}` ferait
+#: dépendre la relève du courriel d'un choix de génération qui n'a rien à voir
+#: avec elle, et la panne serait silencieuse — le message deviendrait « sans
+#: rapport avec un ticket ».
+_SUJET_NUMERO = re.compile(r"ticket\s*#?\s*(TK-[0-9A-Za-z]{4,12})", re.IGNORECASE)
+
+
+def numero_dans_sujet(sujet: str | None) -> str | None:
+    """Le numéro de ticket écrit dans le sujet (« TK-123456 »), s'il y en a un.
+
+    ⚠️ **Ce numéro ne prouve rien.** Il figure dans tous les courriels déjà
+    envoyés, et n'importe qui peut l'écrire. Il DÉSIGNE un ticket ; c'est à
+    l'appelant de vérifier que l'expéditeur avait quelque chose à y faire —
+    `courriel_boite.correspondant_du_ticket`.
+
+    Le motif exige le mot « Ticket » devant : sans lui, un sujet qui contient
+    « TK-123456 » pour toute autre raison rattacherait un message au hasard.
+
+    >>> numero_dans_sujet("Re: Ticket #TK-482910 — Fuite au 3e — Les Hostachys")
+    'TK-482910'
+    >>> numero_dans_sujet("Re: votre facture TK-482910")
+    """
+    if not sujet:
+        return None
+    trouve = _SUJET_NUMERO.search(sujet)
+    #  Rendu TEL QUEL : c'est une clé, et rien ne dit qu'elle sera toujours
+    #  insensible à la casse. La comparaison, elle, l'est (`courriel_boite`).
+    return trouve.group(1) if trouve else None
 
 
 def jeton_dans(*valeurs: str | None) -> str | None:
