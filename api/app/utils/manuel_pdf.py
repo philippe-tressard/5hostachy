@@ -118,6 +118,26 @@ def corps_du_manuel(html: str) -> str:
     )
     corps = re.sub(r"<details([^>]*)>", r"<div\1>", corps, flags=re.I)
     corps = re.sub(r"</details>", "</div>", corps, flags=re.I)
+    #  🔴 « UN LOGICIEL LIBRE » NE FIGURE PAS DEUX FOIS (05/09/2026).
+    #
+    #  Demandé à l'écran : *« le § Un logiciel libre est à déplacer à la fin, et
+    #  dans le PDF après le § À propos de ce document — à voir la cohérence pour
+    #  qu'il n'y ait pas de redondance »*.
+    #
+    #  Sur la page, cette section est désormais la dernière. Dans le feuillet
+    #  imprimé, elle tomberait donc juste AVANT `_mentions`, qui porte déjà la
+    #  licence MIT — deux paragraphes de suite pour dire la même chose. Le corps
+    #  la perd ici, et les mentions restent le seul endroit qui l'énonce : c'est
+    #  là qu'on regarde quand on cherche « qui a fait ça, et sous quelles
+    #  conditions ».
+    #
+    #  ⚠️ C'est le SEUL retrait du corps imprimé, et il ne se généralise pas :
+    #  tout le reste de la page est repris tel quel. Une section retirée est une
+    #  section qu'un lecteur du PDF n'a jamais vue — cf. les blocs dépliables
+    #  juste au-dessus, ouverts pour la même raison, en sens inverse.
+    corps = re.sub(
+        r'<section[^>]*id="logiciel-libre".*?</section>', "", corps, flags=re.S | re.I
+    )
     #  Les liens de navigation interne (#ancre) n'ont pas de sens imprimés, mais
     #  on garde le texte : les retirer amputerait des phrases.
     return corps
@@ -251,11 +271,14 @@ def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str
     <dd>Document à usage interne, destiné aux résidents. Il décrit un site dont
         l'accès est réservé aux personnes inscrites.</dd>
     <dt>Licence</dt>
-    <dd>Le code source de 5Hostachy est distribué sous licence
-        <strong>MIT</strong> : libre de consultation, de modification et de
-        réutilisation, y compris par une autre copropriété. Le présent document
-        et les contenus publiés dans l'application restent la propriété de leurs
-        auteurs.</dd>
+    <dd>Le code source de 5Hostachy est distribué sous <strong>licence MIT</strong> :
+        libre de consultation, de modification et de réutilisation, y compris par
+        une autre copropriété. Le présent document et les contenus publiés dans
+        l'application restent la propriété de leurs auteurs.</dd>
+    <dt>Hébergement</dt>
+    <dd>Cette instance est <strong>auto-hébergée</strong> : les données restent sur
+        une machine de la copropriété, elles ne sont ni vendues ni confiées à un
+        prestataire.</dd>
   </dl>
 </section>
 """

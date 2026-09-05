@@ -990,7 +990,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 3.99 · Septembre 2026</span>
+      <span class="topbar-badge">Version 3.100 · Septembre 2026</span>
     </div>
   </header>
 
@@ -1073,30 +1073,6 @@
         </div>
       </div>
 
-      <h3>Sur téléphone comme sur ordinateur</h3>
-      <p>
-        Le même site fonctionne sur <strong>PC et Mac</strong>, sur <strong>tablette</strong>
-        et sur <strong>téléphone</strong> — Android comme iPhone. Il n'y a rien à installer et
-        rien à mettre à jour : vous ouvrez la même adresse, et l'affichage s'ajuste tout seul
-        à la taille de votre écran.
-      </p>
-      <p>
-        Sur téléphone, vous pouvez <strong>l'ajouter à votre écran d'accueil</strong> : il
-        s'ouvre alors comme une application, en plein écran, sans passer par le navigateur.
-      </p>
-
-      <h3>Un logiciel libre</h3>
-      <p>
-        5Hostachy est distribué sous <strong>licence MIT</strong> : son code source est ouvert,
-        librement consultable et réutilisable par une autre copropriété. Cette instance est
-        <strong>auto-hébergée</strong> — les données restent sur une machine de la copropriété,
-        elles ne sont ni vendues ni confiées à un prestataire.
-      </p>
-      <p>
-        Les <a href="/mentions-legales">mentions légales</a> et la
-        <a href="/politique-confidentialite">politique de confidentialité</a> détaillent
-        l'éditeur, l'hébergement, et ce que deviennent vos données.
-      </p>
     </section>
 
     <section class="quick-start" id="express">
@@ -1144,7 +1120,7 @@
             <ul>
               <li><strong>Mon profil</strong> — régler vos notifications</li>
               <li><strong>Actualités</strong> — les infos officielles</li>
-              <li><strong>Tickets</strong> — <strong>vos</strong> demandes et leur suivi. Vous ne voyez pas celles des autres résidents&nbsp;: les affaires de la copropriété sont réservées aux copropriétaires et au conseil syndical.</li>
+              <li><strong>Tickets</strong> — vos demandes, et elles seules&nbsp;: les affaires de la copropriété sont réservées aux copropriétaires et au conseil syndical.</li>
             </ul>
           </div>
           <div class="persona-card">
@@ -1176,11 +1152,22 @@
         </div>
       </div>
 
-      <h3>Le menu, sur ordinateur et sur téléphone</h3>
+      <h3>Sur téléphone comme sur ordinateur</h3>
       <p>
-        C'est la <strong>même application</strong> : seule la façon d'atteindre le menu
-        change. Sur un grand écran il est toujours là, à gauche&nbsp;; sur téléphone,
-        où la place manque, il est replié et s'ouvre d'une pression.
+        Le même site fonctionne sur <strong>PC et Mac</strong>, sur <strong>tablette</strong>
+        et sur <strong>téléphone</strong> — Android comme iPhone. Il n'y a rien à installer et
+        rien à mettre à jour : vous ouvrez la même adresse, et l'affichage s'ajuste tout seul
+        à la taille de votre écran.
+      </p>
+      <p>
+        Sur téléphone, vous pouvez <strong>l'ajouter à votre écran d'accueil</strong> : il
+        s'ouvre alors comme une application, en plein écran, sans passer par le navigateur.
+      </p>
+
+      <p>
+        Le menu lui-même suit la même logique&nbsp;: sur un grand écran il est toujours là,
+        à gauche&nbsp;; sur téléphone, où la place manque, il est replié et s'ouvre d'une
+        pression.
       </p>
       <div class="maq-duo">
         <figure class="maq">
@@ -1248,8 +1235,18 @@
         <div class="ecran-card" data-page="/tableau-de-bord" data-acces="tous">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
           <h3>Accueil</h3>
-          <p>Ce qui vous concerne aujourd'hui : alertes, tickets en cours, prochaines dates, et le fil des dernières nouvelles.</p>
+          <p>La première page après la connexion&nbsp;: ce qui vous concerne aujourd'hui, rassemblé en un écran.</p>
           <span class="ecran-acces ecran-acces-tous">Tout le monde</span>
+          <details class="ecran-detail">
+            <summary>En savoir plus</summary>
+            <div class="ecran-detail-corps"><ul>
+            <li><strong>Consignes de la copropriété</strong> — les règles à connaître (encombrants, tri, stationnement…), en haut de page parce qu'elles se lisent une fois et servent tout le temps.</li>
+            <li><strong>📌 Épinglé</strong> — ce que le conseil syndical veut garder sous les yeux&nbsp;: une actualité importante y reste tant qu'elle l'est.</li>
+            <li><strong>📋 Kanban</strong> — les dossiers en cours par étape (à faire, en cours, terminé). Une vue d'avancement, pas une liste de tâches à faire soi-même.</li>
+            <li><strong>Fil d'activité</strong> — tout ce qui a bougé récemment&nbsp;: actualités, tickets, événements, sondages, dans l'ordre du plus récent. Passé un certain temps, les entrées glissent dans les <strong>archives</strong>, dépliables en bas de page — rien ne disparaît.</li>
+          </ul>
+          <p class="ecran-note">Chaque bloc ne montre que ce que vous avez le droit de voir&nbsp;: deux personnes n'ont pas le même Accueil, et c'est voulu.</p></div>
+          </details>
         </div>
         <div class="ecran-card" data-page="/residence" data-acces="tous">
           <span class="ecran-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span>
@@ -1419,13 +1416,38 @@
       </p>
     </div>
 
+    <!-- ════════════════════════════════
+         UN LOGICIEL LIBRE — en dernier, comme la mention légale d'un imprimé.
+         Déplacé ici le 05/09/2026, à la demande : cette page se lit par sa fin
+         quand on cherche « qui a fait ça, et sous quelles conditions ».
+         ⚠️ Dans le PDF, la section « À propos de ce document » porte DÉJÀ la
+         licence : le corps imprimé ne la répète pas — `manuel_pdf.py` retire
+         cette section-ci, et les mentions restent le seul endroit qui la dit.
+    ════════════════════════════════ -->
+    <div class="divider"></div>
+
+    <section class="apropos" id="logiciel-libre">
+      <h2>Un logiciel libre</h2>
+      <p>
+        5Hostachy est distribué sous <strong>licence MIT</strong> : son code source est ouvert,
+        librement consultable et réutilisable par une autre copropriété. Cette instance est
+        <strong>auto-hébergée</strong> — les données restent sur une machine de la copropriété,
+        elles ne sont ni vendues ni confiées à un prestataire.
+      </p>
+      <p>
+        Les <a href="/mentions-legales">mentions légales</a> et la
+        <a href="/politique-confidentialite">politique de confidentialité</a> détaillent
+        l'éditeur, l'hébergement, et ce que deviennent vos données.
+      </p>
+    </section>
+
   </main>
 
   <!-- ══════════════════════════════════
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v3.99</span>
+    <span>© 2026 5Hostachy — Manuel utilisateur v3.100</span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
