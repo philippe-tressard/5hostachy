@@ -96,9 +96,15 @@ def scene(batiments):
     P.invalider_cache()
     with Session(engine) as session:
         b1, b2 = batiments[0], batiments[1]
-        auteur = _utilisateur(session, "résident", StatutUtilisateur.locataire, b1)
-        voisin = _utilisateur(session, "résident", StatutUtilisateur.locataire, b2)
-        cs = _utilisateur(session, "conseil_syndical", StatutUtilisateur.locataire, b2)
+        #  🔴 COPROPRIÉTAIRES, et non locataires (05/09/2026). L'ouverture du
+        #  02/09 visait « les copropriétaires et locataires » ; les locataires en
+        #  sont ressortis à la demande de l'utilisateur — *« les locataires ne
+        #  voient pas les tickets »*. Les éprouver ici sur des locataires ferait
+        #  passer ces tests pour la mauvaise raison : tout serait refusé, et le
+        #  filtre par périmètre ne serait plus mesuré du tout.
+        auteur = _utilisateur(session, "résident", StatutUtilisateur.copropriétaire_résident, b1)
+        voisin = _utilisateur(session, "résident", StatutUtilisateur.copropriétaire_résident, b2)
+        cs = _utilisateur(session, "conseil_syndical", StatutUtilisateur.copropriétaire_résident, b2)
         tickets = {
             "chez_moi": _ticket(session, auteur.id, [f"bat:{b1}"]),
             "chez_le_voisin": _ticket(session, auteur.id, [f"bat:{b2}"]),
@@ -216,3 +222,41 @@ def test_le_batiment_du_voisin_est_bien_celui_qu_on_croit(scene, batiments):
         mes_batiments.batiments_de_l_utilisateur(voisin)
     )
     assert Batiment is not None  # l'arbre a bien été semé par la fixture
+
+
+# ── 3. Le locataire : ses tickets, et rien d'autre (05/09/2026) ───────────────
+
+def test_un_LOCATAIRE_ne_voit_pas_le_ticket_d_un_voisin(scene):
+    """Demandé à l'écran : *« les locataires ne voient pas les tickets »*.
+
+    Retrait partiel de l'ouverture du 02/09, qui visait « les copropriétaires et
+    locataires ». Un locataire habite l'immeuble sans en être copropriétaire :
+    les affaires de la copropriété ne le regardent pas.
+    """
+    session, tickets, _auteur, _voisin, _cs = scene
+    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, None)
+    try:
+        assert ticket_visible(tickets["toute_la_residence"], locataire) is False
+        assert ticket_visible(tickets["chez_moi"], locataire) is False
+    finally:
+        purger_ligne(session, Utilisateur, locataire.id)
+        session.commit()
+
+
+def test_un_LOCATAIRE_voit_TOUJOURS_ses_propres_tickets(scene):
+    """🔴 La moitié qui compte : il doit pouvoir signaler, et suivre sa demande.
+
+    Fermer sans cette réserve ferait disparaître son propre dossier de sa propre
+    liste — le locataire pourrait déposer un ticket et ne plus jamais le revoir.
+    Les cas « auteur » et « saisi pour » sont traités avant la règle, et elle ne
+    les touche pas.
+    """
+    session, _tickets, _auteur, _voisin, _cs = scene
+    locataire = _utilisateur(session, "résident", StatutUtilisateur.locataire, None)
+    sien = _ticket(session, locataire.id, ["résidence"])
+    try:
+        assert ticket_visible(sien, locataire) is True
+    finally:
+        purger_ligne(session, Ticket, sien.id)
+        purger_ligne(session, Utilisateur, locataire.id)
+        session.commit()
