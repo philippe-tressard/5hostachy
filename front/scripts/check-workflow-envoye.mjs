@@ -31,7 +31,20 @@
  * l'a pas simplement **oubliée**, ce qui est exactement ce qui s'est produit.
  *
  * ⚠️ La lecture d'un champ (`valeur={objet.statut}` sur une carte d'affichage)
- * n'est pas concernée : seuls les fichiers `Formulaire*` sont examinés.
+ * n'est pas concernée : le contrôle n'examine que les fichiers qui rendent la
+ * rangée **modifiable**, et une carte d'affichage la rend en `lecture`.
+ *
+ * ## 🔴 La portée ne dépend PLUS du NOM du fichier (05/09/2026)
+ *
+ * Elle valait `Formulaire*.svelte`. Le jour où les sections 2 et 3 du ticket ont
+ * été extraites dans `SectionsSpecifiquesTicket.svelte` — un découpage exigé par
+ * le contrôle de modularité —, la rangée du ticket est sortie du champ du
+ * contrôle : le relevé est tombé de 3 à 2, et seul le **cas zéro** l'a signalé.
+ *
+ * C'est le défaut décrit dans `standards/04` §35 : un contrôle qui reconnaît son
+ * objet à un indice de forme (ici, un préfixe de nom) devient d'autant plus
+ * aveugle que le code est bien découpé. La portée est donc désormais « tout
+ * fichier qui rend `WorkflowPastilles` » — le FAIT, pas la convention.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -51,9 +64,12 @@ function fichiersSvelte(dir) {
 	return sortie;
 }
 
-const fichiers = fichiersSvelte(RACINE).filter((f) => /[\\/]Formulaire[^\\/]*\.svelte$/.test(f));
+//  Tout fichier qui REND la rangée, quel que soit son nom (voir l'en-tête).
+const fichiers = fichiersSvelte(RACINE).filter((f) =>
+	readFileSync(f, 'utf8').includes('<WorkflowPastilles'),
+);
 if (fichiers.length === 0) {
-	console.error('✗ Cas zéro : aucun Formulaire*.svelte trouvé — arborescence changée.');
+	console.error('✗ Cas zéro : aucun fichier ne rend <WorkflowPastilles> — portée cassée.');
 	console.error('Ne pas lire ceci comme un succès.');
 	process.exit(1);
 }
@@ -104,13 +120,44 @@ for (const chemin of fichiers) {
 			.replace(new RegExp(`\\blet\\s+${nom}\\b[^;\\n]*`, 'g'), '')
 			.replace(new RegExp(`\\bexport\\s+let\\s+${nom}\\b[^;\\n]*`, 'g'), '');
 
-		if (!dansCharge.test(sansRendu)) {
+		if (dansCharge.test(sansRendu)) continue;
+
+		//  🔴 UN COMPOSANT DE SECTIONS NE CONSTRUIT PAS DE CHARGE UTILE — il
+		//  REMONTE la valeur au formulaire par une prop liée (05/09/2026).
+		//
+		//  `SectionsSpecifiquesTicket` a été extrait de `FormulaireTicket` pour
+		//  satisfaire le contrôle de modularité : la rangée du ticket est partie
+		//  avec, la charge utile est restée. Refuser ici reviendrait à interdire
+		//  la découpe ; l'accepter sans rien vérifier reviendrait à désarmer le
+		//  contrôle. On suit donc la valeur d'un cran : le fichier l'exporte, et
+		//  c'est chez celui qui la LIE que la charge utile doit la porter.
+		//
+		//  Le fait vérifié est le même — « ce que la rangée modifie finit dans un
+		//  envoi » — sur une chaîne d'un maillon de plus.
+		const exporte = new RegExp(String.raw`\bexport\s+let\s+${nom}\b`).test(source);
+		if (exporte) {
+			const composant = relatif
+				.split('/')
+				.pop()
+				.replace(/\.svelte$/, '');
+			const lieurs = fichiersSvelte(RACINE).filter((f) => {
+				const src = readFileSync(f, 'utf8');
+				return src.includes(`<${composant}`) && new RegExp(String.raw`\bbind:${nom}\b`).test(src);
+			});
+			if (lieurs.some((f) => dansCharge.test(readFileSync(f, 'utf8')))) continue;
 			erreurs.push(
-				`${relatif}:${ligne} — la rangée Workflow modifie « ${nom} », et ce nom ` +
-					"n'apparaît dans AUCUNE charge utile du fichier : les pastilles se cliquent " +
-					'et le serveur ne reçoit rien.',
+				`${relatif}:${ligne} — la rangée Workflow modifie « ${nom} », que ce composant ` +
+					`EXPORTE : aucun des ${lieurs.length} fichier(s) qui le lient ne met ce nom dans ` +
+					'une charge utile. La valeur remonte et personne ne l’envoie.',
 			);
+			continue;
 		}
+
+		erreurs.push(
+			`${relatif}:${ligne} — la rangée Workflow modifie « ${nom} », et ce nom ` +
+				"n'apparaît dans AUCUNE charge utile du fichier : les pastilles se cliquent " +
+				'et le serveur ne reçoit rien.',
+		);
 	}
 }
 

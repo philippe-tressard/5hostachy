@@ -74,20 +74,53 @@
 	 *   demandés doivent être au niveau des objets pour être dans toutes les
 	 *   pages y faisant référence »*. */
 	export let auteurNom = '';
+	/**  🔴 LE MOTIF QUI INTERDIT LE GROUPE — vide quand rien ne l'interdit.
+	 *
+	 *   > « si "Visibilité du ticket au seul conseil syndical" est sélectionné,
+	 *   > la diffusion WhatsApp est interdite » (05/09/2026)
+	 *
+	 *   Le groupe rassemble **tous les résidents** : un objet qu'on vient de
+	 *   réserver au conseil syndical ne peut pas y être recopié. La règle vaut
+	 *   pour toute entité qui porte cette option — actualité comme ticket —,
+	 *   donc elle vit ICI, au niveau de l'objet, et pas dans les huit
+	 *   formulaires qui affichent cette section : *« faire ces évolutions au
+	 *   niveau de l'objet pour ne pas dupliquer le code »*.
+	 *
+	 *   ⚠️ Une chaîne, pas un booléen : la case grisée doit DIRE pourquoi elle
+	 *   l'est. Une case qui refuse sans motif se lit comme une panne.
+	 *
+	 *   ⚠️ **Ceci n'est PAS le contrôle.** Le serveur refuse l'envoi de son
+	 *   côté (`api/tests/test_canaux_notification.py`) : `partager_whatsapp` est
+	 *   un champ du corps de la requête, qui se poste sans passer par l'écran. */
+	export let whatsappInterdit = '';
 
 	//  Le nom réellement affiché : celui de l'auteur de l'objet, sinon le nôtre.
 	$: nomCopie = auteurNom || nomAffiche($currentUser);
+
+	//  Cocher puis interdire laisserait une case cochée et grisée, c'est-à-dire
+	//  la promesse d'un envoi qui n'aura pas lieu. On décoche.
+	$: if (whatsappInterdit && whatsapp) whatsapp = false;
 </script>
 
 <div class="canaux" class:compact>
 	<label
 		class="checkbox-field"
-		title={aideWhatsapp || 'Le message est publié sur le groupe WhatsApp de la copropriété.'}
+		class:interdite={whatsappInterdit}
+		title={whatsappInterdit ||
+			aideWhatsapp ||
+			'Le message est publié sur le groupe WhatsApp de la copropriété.'}
 	>
-		<input type="checkbox" bind:checked={whatsapp} />
+		<input type="checkbox" bind:checked={whatsapp} disabled={!!whatsappInterdit} />
 		<Icon name="whatsapp" size={compact ? 16 : 18} />
 		<span>Partager sur le groupe</span>
 	</label>
+	<!--  Le motif est ÉCRIT, pas seulement en infobulle : au doigt il n'y a pas de
+	      survol, et un lecteur d'écran ne lit pas un `title` sans l'y chercher.
+	      C'est la leçon du 28/08/2026, déjà tirée pour `aideWhatsapp` juste à
+	      côté — l'appliquer ici plutôt que la réapprendre. -->
+	{#if whatsappInterdit}
+		<p class="motif-interdit">{whatsappInterdit}</p>
+	{/if}
 
 	<label class="checkbox-field" title="Le syndic principal recevra un e-mail.">
 		<input type="checkbox" bind:checked={syndic} />
@@ -156,6 +189,18 @@
 	.ico {
 		font-size: 1.1em;
 		line-height: 1;
+	}
+	/*  Grisée ET non cliquable : `disabled` seul laisse le libellé au contraste
+	    normal, donc une case qui a l'air disponible. */
+	.canaux :global(.checkbox-field.interdite) {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+	.motif-interdit {
+		flex-basis: 100%;
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
 	}
 	/*  Sous 480 px, trois cases côte à côte deviennent illisibles : elles
 	    passent en colonne pleine largeur. Et surtout la case gagne une hauteur

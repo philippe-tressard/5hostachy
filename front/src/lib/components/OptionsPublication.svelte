@@ -40,7 +40,11 @@
 	//  Glyphes et libellés : la table est la source unique (`$lib/options-publication`).
 	//  Ils étaient écrits ici ET dans les badges de `CarteActualite`, et avaient
 	//  divergé — l'épinglage n'avait pas de glyphe ici et 📌 là-bas.
-	import { optionPublication } from '$lib/options-publication';
+	import {
+		actionOption,
+		optionPublication,
+		type CleOptionPublication,
+	} from '$lib/options-publication';
 
 	/** Épingler en tête du fil. */
 	export let epingle = false;
@@ -54,6 +58,18 @@
 	export let perimetreCible: string[] = [];
 	/** L'élément édité était-il DÉJÀ épinglé ? (évite un double comptage) */
 	export let dejaEpingle = false;
+
+	/**  Le nom de l'objet décrit — « publication », « ticket ». Il entre dans les
+	 *   libellés qui le nomment (« Visibilité du **ticket** au seul conseil
+	 *   syndical ») : la même case sert deux entités, et « ce truc-là » ne se dit
+	 *   pas. */
+	export let objet = 'publication';
+
+	/**  Les options RENDUES, dans l'ordre de la table. Toutes par défaut — un
+	 *   ticket n'en porte qu'une, faute de colonne pour l'épinglage et l'urgence,
+	 *   qu'il exprime par sa catégorie (05/09/2026). */
+	export let options: CleOptionPublication[] = ['epingle', 'urgente', 'brouillon', 'confidentiel'];
+	$: rendue = (cle: CleOptionPublication) => options.includes(cle);
 
 	//  Identifiant unique : deux formulaires peuvent coexister à l'écran (la
 	//  création est ouverte pendant qu'une actualité est dépliée), et deux
@@ -87,45 +103,53 @@
 	      même chose. Les LIAISONS, elles, restent explicites — `bind:checked` a
 	      besoin d'une variable nommée, et une boucle générique obligerait à un
 	      objet intermédiaire que l'hôte devrait ensuite redéfaire. -->
-	<label class="checkbox-field" title={optEpingle?.aide}>
-		<input type="checkbox" bind:checked={epingle} />
-		{optEpingle?.glyphe}
-		{optEpingle?.action}
-	</label>
-	<label class="checkbox-field" title={optUrgente?.aide}>
-		<input type="checkbox" bind:checked={urgente} />
-		{optUrgente?.glyphe}
-		{optUrgente?.action}
-	</label>
-	<label class="checkbox-field" title={optBrouillon?.aide}>
-		<input type="checkbox" bind:checked={brouillon} />
-		{optBrouillon?.glyphe}
-		{optBrouillon?.action} (invisible pour les résidents)
-	</label>
-	<label
-		class="checkbox-field"
-		class:desactivee={rienARestreindre}
-		title={rienARestreindre
-			? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
-			: optConfidentiel?.aide}
-	>
-		<input
-			type="checkbox"
-			bind:checked={confidentiel}
-			disabled={rienARestreindre}
-			aria-describedby={rienARestreindre ? idAideConfidentiel : undefined}
-		/>
-		{optConfidentiel?.glyphe}
-		{optConfidentiel?.action} — visible du seul périmètre sélectionné
-	</label>
+	{#if rendue('epingle')}
+		<label class="checkbox-field" title={optEpingle?.aide}>
+			<input type="checkbox" bind:checked={epingle} />
+			{optEpingle?.glyphe}
+			{optEpingle && actionOption(optEpingle, objet)}
+		</label>
+	{/if}
+	{#if rendue('urgente')}
+		<label class="checkbox-field" title={optUrgente?.aide}>
+			<input type="checkbox" bind:checked={urgente} />
+			{optUrgente?.glyphe}
+			{optUrgente && actionOption(optUrgente, objet)}
+		</label>
+	{/if}
+	{#if rendue('brouillon')}
+		<label class="checkbox-field" title={optBrouillon?.aide}>
+			<input type="checkbox" bind:checked={brouillon} />
+			{optBrouillon?.glyphe}
+			{optBrouillon && actionOption(optBrouillon, objet)}
+		</label>
+	{/if}
+	{#if rendue('confidentiel')}
+		<label
+			class="checkbox-field"
+			class:desactivee={rienARestreindre}
+			title={rienARestreindre
+				? "Le périmètre sélectionné concerne déjà tous les résidents : il n'y a rien à restreindre."
+				: optConfidentiel?.aide}
+		>
+			<input
+				type="checkbox"
+				bind:checked={confidentiel}
+				disabled={rienARestreindre}
+				aria-describedby={rienARestreindre ? idAideConfidentiel : undefined}
+			/>
+			{optConfidentiel?.glyphe}
+			{optConfidentiel && actionOption(optConfidentiel, objet)} — visible du seul périmètre sélectionné
+		</label>
+	{/if}
 </div>
 
-{#if rienARestreindre}
+{#if rendue('confidentiel') && rienARestreindre}
 	<p class="aide" id={idAideConfidentiel}>
 		&#x1F512; <strong>Confidentiel</strong> demande un périmètre restreint — un bâtiment, par exemple.
 		Le périmètre choisi concerne déjà tous les résidents : il n'y a rien à leur cacher.
 	</p>
-{:else if confidentiel}
+{:else if rendue('confidentiel') && confidentiel}
 	<p class="aide">
 		&#x1F512; Seuls les résidents du périmètre sélectionné verront cette actualité — ni dans le fil,
 		ni par un lien direct pour les autres. Le réglage reste modifiable après publication.

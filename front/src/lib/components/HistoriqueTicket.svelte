@@ -48,6 +48,11 @@
 	/**  Périmètre courant du ticket — affiché en badge dans le formulaire, pour
 	     qu'on voie d'où l'on part avant de le préciser (#497). */
 	export let perimetreCourant: string[] = [];
+	/**  Motif interdisant le groupe WhatsApp — relayé tel quel jusqu'à
+	 *   `CanauxNotification`. Calculé par la fiche, qui tient le ticket : ce
+	 *   composant ne reçoit que des primitives, et recalculer la règle ici en
+	 *   ferait une deuxième écriture. */
+	export let whatsappInterdit = '';
 	export let evolutions: TicketEvolution[] = [];
 
 	/** Émis après toute écriture — la page recharge ce qu'elle affiche. */
@@ -197,6 +202,7 @@
 					peutPreciserPerimetre={$isCS}
 					{perimetreCourant}
 					peutDiffuser={$isCS}
+					{whatsappInterdit}
 					showEmail={$isCS}
 					saving={enregistre}
 					on:submit={ajouter}

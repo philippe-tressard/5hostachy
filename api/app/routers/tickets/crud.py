@@ -175,7 +175,15 @@ def create_ticket(
     if body.categorie == "bug":
         _alerter_bug(session, ticket, user, background_tasks)
 
-    if body.partager_whatsapp and est_cs:
+    #  🔴 CE QUI EST RÉSERVÉ AU CONSEIL NE PART PAS SUR LE GROUPE (05/09/2026),
+    #  demandé à l'écran : *« si "Visibilité du ticket au seul conseil syndical"
+    #  est sélectionné, la diffusion WhatsApp est interdite »*.
+    #
+    #  L'actualité tenait déjà la règle (`not pub.brouillon` à chaque canal) ; le
+    #  ticket, non — un ticket fermé au voisinage pouvait partir en entier sur le
+    #  groupe des résidents. La garde est ici plutôt que dans l'écran : une case
+    #  masquée ne protège rien, le champ peut être posté directement.
+    if body.partager_whatsapp and est_cs and not ticket.confidentiel:
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
     if ticket.destinataire_syndic or ticket.destinataire_cs:
@@ -452,7 +460,8 @@ def update_ticket(
     #  `test_canaux_notification` lit l'arbre syntaxique et refuse toute condition
     #  portant `partager_whatsapp` sans rôle. Une garde qu'un contrôle ne peut pas
     #  voir ne le protège pas de la refonte qui déplacera l'appel.
-    if body.partager_whatsapp and is_cs_admin:
+    #  Même règle qu'à la création : réservé au conseil ⇒ pas de groupe WhatsApp.
+    if body.partager_whatsapp and is_cs_admin and not ticket.confidentiel:
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
     if (ticket.destinataire_syndic and not syndic_avant) or (

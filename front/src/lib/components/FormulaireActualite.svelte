@@ -54,7 +54,7 @@
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import DocumentsPublication from '$lib/components/DocumentsPublication.svelte';
-	import OptionsPublication from '$lib/components/OptionsPublication.svelte';
+	import SectionOptionsPublication from '$lib/components/SectionOptionsPublication.svelte';
 	import DiffusionPublication from '$lib/components/DiffusionPublication.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { publications as pubsApi, ApiError, type Publication } from '$lib/api';
@@ -63,6 +63,7 @@
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { PUBLICATION } from '$lib/entites/publication';
+	import { motifWhatsappInterdit } from '$lib/options-publication';
 
 	/**  La publication à MODIFIER, avec ses valeurs déjà saisies. `null` (défaut)
 	 *   = création. Le mode ne change pas pendant la vie du composant : l'appelant
@@ -314,16 +315,14 @@
 		      impossible (le crayon ✏️ est le seul chemin qui le permette). Aucune
 		      n'est un acte — voir `$lib/entites/publication`. -->
 			{#if sectionPresente(PUBLICATION, etat, 'specifiques')}
-				<SectionFormulaire titre="Options de publication">
-					<OptionsPublication
-						{perimetreCible}
-						dejaEpingle={epingleInitial}
-						bind:epingle
-						bind:urgente
-						bind:brouillon
-						bind:confidentiel
-					/>
-				</SectionFormulaire>
+				<SectionOptionsPublication
+					{perimetreCible}
+					dejaEpingle={epingleInitial}
+					bind:epingle
+					bind:urgente
+					bind:brouillon
+					bind:confidentiel
+				/>
 			{/if}
 
 			<!--  4 à 9 : l'ordre, les intitulés et les séparations viennent du
@@ -356,6 +355,7 @@
 				bind:cs={envoyerCs}
 				bind:auteur={envoyerAuteur}
 				auteurNom={publication?.auteur_nom ?? ''}
+				whatsappInterdit={motifWhatsappInterdit(brouillon, 'actualité')}
 				aideWhatsapp={confidentiel
 					? "Le groupe est commun à toute la copropriété : le message ne portera ni le titre ni le contenu, seulement le périmètre concerné et un lien vers l'application."
 					: "Le message est publié sur le groupe WhatsApp ; l'image jointe part avec."}

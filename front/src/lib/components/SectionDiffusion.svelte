@@ -80,6 +80,9 @@
 	export let fichiers: string[] = [];
 	/** Infobulle propre au contexte, passée telle quelle à `CanauxNotification`. */
 	export let aideWhatsapp = '';
+	/**  Motif interdisant le groupe WhatsApp — relayé tel quel, la règle vit
+	 *   dans `CanauxNotification` (voir sa documentation). */
+	export let whatsappInterdit = '';
 	/** Rendu en version dense (fil d'évolution, devis). */
 	export let compact = false;
 
@@ -169,6 +172,7 @@
 				{auteurNom}
 				{compact}
 				{aideWhatsapp}
+				{whatsappInterdit}
 			/>
 			<!--  🔴 L'aide propre au contexte est AFFICHÉE, plus seulement en infobulle.
 			      `CanauxNotification` en fait un `title=` — invisible au doigt, invisible

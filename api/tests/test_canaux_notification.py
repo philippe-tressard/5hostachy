@@ -76,15 +76,58 @@ def _condition_resolue(fonction: ast.AST, test: ast.AST) -> str:
     return " ".join(morceaux)
 
 
+#: Les appels qui font PARTIR un message sur le groupe. C'est eux qui désignent
+#: un point de partage — pas le nom du champ.
+_ENVOIS = ("_partager_sur_le_groupe", "envoyer_whatsapp")
+
+
+def _gardes_des_envois(fonction: ast.AST) -> list[str]:
+    """Pour chaque envoi WhatsApp, TOUTES les conditions qui l'englobent, résolues.
+
+    ⚠️ **Trois repères ont été essayés avant celui-ci** (05/09/2026), chacun
+    aveugle d'un côté différent :
+
+    1. le texte écrit du `if` — aveugle à `if partage_whatsapp:`, alimenté par
+       une variable locale, c'est-à-dire au point d'envoi qu'on venait de garder ;
+    2. la condition **résolue** — attrapait en plus un `if` qui ne fait rien
+       partir : la validation des champs réservés, qui énumère `partager_whatsapp`
+       dans un tuple ;
+    3. le `if` **immédiat** de l'appel — aveugle à une garde portée par un `if`
+       englobant, ce qui décrit littéralement l'envoi des évolutions, niché sous
+       `if whatsapp_actif(...)`.
+
+    Un envoi n'a pas lieu « sous une condition » mais sous **la conjonction de
+    toutes celles qu'il faut franchir**. C'est donc elle qu'on lit — le fait, et
+    non l'un de ses symptômes.
+    """
+    gardes: list[str] = []
+
+    def descendre(noeud: ast.AST, pile: list[str]) -> None:
+        for enfant in ast.iter_child_nodes(noeud):
+            if isinstance(enfant, ast.If):
+                condition = _condition_resolue(fonction, enfant.test)
+                for instruction in enfant.body:
+                    descendre(instruction, pile + [condition])
+                #  Le `else` ne bénéficie PAS de la condition du `if`.
+                for instruction in enfant.orelse:
+                    descendre(instruction, pile)
+                continue
+            if any(m in ast.unparse(enfant) for m in _ENVOIS) and pile:
+                gardes.append(" et ".join(pile))
+            descendre(enfant, pile)
+
+    descendre(fonction, [])
+    return gardes
+
+
 def _conditions_de_partage(arbre: ast.AST) -> list[str]:
-    """Conditions résolues des `if` qui décident d'un partage WhatsApp."""
-    trouvees = []
+    """Les gardes de tous les envois WhatsApp d'un module, dédoublonnées."""
+    trouvees: list[str] = []
     for fonction in ast.walk(arbre):
-        if not isinstance(fonction, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        for n in ast.walk(fonction):
-            if isinstance(n, ast.If) and "partager_whatsapp" in ast.unparse(n.test):
-                trouvees.append(_condition_resolue(fonction, n.test))
+        if isinstance(fonction, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for garde in _gardes_des_envois(fonction):
+                if garde not in trouvees:
+                    trouvees.append(garde)
     return trouvees
 
 
@@ -126,6 +169,48 @@ def test_le_partage_whatsapp_d_un_ticket_est_reserve_au_cs():
                 assert attendu in condition, (
                     f"Le garde du partage WhatsApp ne mentionne pas `{attendu}` : {condition}"
                 )
+
+
+def test_un_ticket_reserve_au_conseil_ne_part_JAMAIS_sur_le_groupe():
+    """🔴 « Visibilité au seul conseil syndical » ⇒ aucune diffusion WhatsApp.
+
+    Demandé à l'écran le 05/09/2026 :
+
+    > « si "Visibilité du ticket au seul conseil syndical" est sélectionné, la
+    >   diffusion WhatsApp est interdite »
+
+    Le groupe WhatsApp rassemble **tous les résidents**. Un ticket qu'on vient
+    de fermer au voisinage — un litige, un impayé, un signalement nominatif —
+    y serait recopié en entier : la case cochée dans l'écran promettrait une
+    confidentialité que le canal annulerait aussitôt.
+
+    ## Pourquoi un test, et pas seulement une case grisée
+
+    L'actualité tenait la règle depuis toujours (`and not pub.brouillon` à
+    chaque canal) ; le ticket, non — **trois** points d'envoi, aucun gardé.
+    Griser la case à l'écran ne protège rien : `partager_whatsapp` est un
+    champ du corps de la requête, qui se poste directement
+    (`standards/03-securite.md` §1 — l'interface est un confort, le serveur
+    est le contrôle).
+
+    Le contrôle porte sur les **deux** modules d'envoi, et il exige la
+    condition là où l'envoi se décide : c'est le FAIT, pas le symptôme.
+    """
+    modules = ("crud.py", "evolutions.py")
+    for nom in modules:
+        source = (_APP / "routers" / "tickets" / nom).read_text(encoding="utf-8")
+        conditions = _conditions_de_partage(ast.parse(source))
+        assert conditions, (
+            f"Aucune condition portant `partager_whatsapp` dans tickets/{nom} : "
+            "soit le partage n'y est plus gardé, soit le contrôle a perdu sa "
+            "portée — dans les deux cas, ne pas lire ce test comme vert."
+        )
+        for condition in conditions:
+            assert "confidentiel" in condition, (
+                f"tickets/{nom} : un ticket réservé au conseil syndical peut partir "
+                "sur le groupe WhatsApp de tous les résidents. La condition doit "
+                f"porter `not ticket.confidentiel`. Condition trouvée : {condition}"
+            )
 
 
 def test_peut_commander_est_reserve_au_cs():
