@@ -38,17 +38,14 @@ Test : python scripts/poste/verifier-fins-de-ligne.py --selftest
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-#  🔴 La console de ce poste est en cp1252 : sans cela, le contrôle PLANTE en
-#  affichant son propre verdict — un « ✓ » suffit. Il tournerait en CI (UTF-8)
-#  et échouerait là où il sert, dans le hook pre-commit du poste Windows.
-#  Trouvé au premier lancement du self-test : la décision était juste, le tuyau
-#  cassé. C'est la leçon de `check-reliability` (11/08), une fois de plus.
-for flux in (sys.stdout, sys.stderr):
-    try:
-        flux.reconfigure(encoding="utf-8", errors="replace")
-    except (AttributeError, ValueError):  # flux redirigé, Python ancien
-        pass
+#  La console de ce poste est en cp1252 : le POURQUOI vit dans `lib_console`,
+#  qui porte ces lignes pour tous les contrôles du poste (06/09/2026).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib_console import console_utf8  # noqa: E402
+
+console_utf8()
 
 #  Un diff peut légitimement dépasser le réel de quelques lignes (une ligne
 #  ajoutée en fin de fichier sans saut final, par exemple). En dessous de ce

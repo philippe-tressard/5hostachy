@@ -373,7 +373,49 @@ if [ "$STATUT" != "succes" ] && [ -f "$LOCAL" ]; then
   log "  → Copie écartée sous $ARCHIVE.invalide (ne pas la prendre pour une sauvegarde)."
 fi
 
-# ── 4. Rotation des copies locales ───────────────────────────────────────────
+# ── 4. Rattrapage sur l'autre nœud (#775) ───────────────────────────────────
+#
+# Sans cette passe, la copie hors site ne contient qu'une nuit sur deux — et
+# personne ne le voit, puisque l'archive du JOUR, elle, est bien là.
+#
+# ⚠️ Le standby a `docker` et son volume même sans conteneur : même lecture, sans
+# privilège supplémentaire. Et cette passe n'échoue JAMAIS le script — l'archive
+# du jour est déjà copiée et vérifiée. Un standby injoignable est un rattrapage
+# manqué, pas une sauvegarde manquée ; il est dit, et le relevé le montre.
+# 🔴 `RPI1_IP`/`RPI2_IP` n'ont JAMAIS existé : ces trois lignes recopiaient à la
+# main ce que `lib-role.sh` fournit — et sous `set -u`, la première tuait le
+# script ici même, après la copie du jour. La passe de rattrapage n'a donc
+# jamais tourné, ni le relevé de continuité (constaté le 06/09/2026 en
+# vérifiant #775 en production, pas par un contrôle). Cf. §Garde-fou ci-dessous.
+AUTRE_NOEUD=$(role_peer "$SOURCE_NOEUD")
+AUTRE_IP=$(role_ip "$AUTRE_NOEUD")
+if [ -z "$AUTRE_IP" ]; then
+  # Chaîne vide = nœud inconnu de la table. INCONNU, jamais un silence.
+  log "    ! Pair de $SOURCE_NOEUD introuvable dans lib-role.sh — rattrapage INCONNU."
+  AUTRE_NOEUD=""; AUTRE_IP=""
+fi
+
+RATTRAPEES=0
+[ -n "$AUTRE_IP" ] && log "  Rattrapage sur $AUTRE_NOEUD ($AUTRE_IP)…"
+if [ -z "$AUTRE_IP" ]; then
+  : # pair inconnu — déjà dit ci-dessus, ne pas le redire en « injoignable »
+elif LISTE_AUTRE=$($SSH_CMD "$EXPORT_SSH_USER@$AUTRE_IP" "$LIRE ls /b" 2>/dev/null); then
+  for nom in $LISTE_AUTRE; do
+    nom_valide "$nom" || continue
+    [ -f "$EXPORT_DEST/$nom" ] && continue
+    if transferer_archive "$AUTRE_IP" "$nom"; then
+      RATTRAPEES=$((RATTRAPEES + 1))
+      log "    + $nom (absent localement)"
+    else
+      log "    ! $nom — transfert impossible depuis $AUTRE_NOEUD"
+    fi
+  done
+  [ "$RATTRAPEES" = "0" ] && log "    (rien à rattraper)"
+else
+  log "    ! $AUTRE_NOEUD injoignable — rattrapage INCONNU, la série peut avoir des trous."
+fi
+
+# ── 5. Rotation des copies locales ───────────────────────────────────────────
 if [ "$STATUT" = "succes" ]; then
   SUPPRIMEES=0
   while IFS= read -r vieux; do
@@ -383,7 +425,14 @@ if [ "$STATUT" = "succes" ]; then
   log "  Rotation : $SUPPRIMEES ancienne(s) copie(s) supprimée(s), $EXPORT_KEEP conservée(s)."
 fi
 
-# ── 5. Rapport à l'API (canal cron existant) ─────────────────────────────────
+# ── 6. Relevé de continuité de la série (#775) ──────────────────────────────
+# Le relevé de continuité : il porte sur ce qu'on DÉTIENT, après rattrapage.
+MANQUANTS=$(ls "$EXPORT_DEST" 2>/dev/null | jours_manquants 14)
+if [ -n "$MANQUANTS" ]; then
+  log "  ⚠️  Jours absents de la copie hors site (14 derniers) : $MANQUANTS"
+fi
+
+# ── 7. Rapport à l'API (canal cron existant) ─────────────────────────────────
 # La clé est lue sur le nœud, pas recopiée sur le poste : un secret dupliqué est
 # un secret à faire tourner deux fois.
 # Le dépouillement se fait ICI, pas dans la commande distante : imbriquer des
@@ -422,48 +471,11 @@ else
     "Rapport"
 fi
 
-# ── 6. Résumé lisible ────────────────────────────────────────────────────────
+# ── 8. Résumé lisible ────────────────────────────────────────────────────────
 # Ce script est lancé à la main, par un humain qui regarde la console : le
 # dernier écran doit répondre sans effort à « est-ce que ma sauvegarde est là,
 # et est-elle bonne ? ». Un code de sortie ne se lit pas dans une fenêtre qui
 # se referme.
-# ── 4. RATTRAPAGE SUR L'AUTRE NŒUD, ET CONTINUITÉ DE LA SÉRIE (#775) ────────
-#
-# Sans cette passe, la copie hors site ne contient qu'une nuit sur deux — et
-# personne ne le voit, puisque l'archive du JOUR, elle, est bien là.
-#
-# ⚠️ Le standby a `docker` et son volume même sans conteneur : même lecture, sans
-# privilège supplémentaire. Et cette passe n'échoue JAMAIS le script — l'archive
-# du jour est déjà copiée et vérifiée. Un standby injoignable est un rattrapage
-# manqué, pas une sauvegarde manquée ; il est dit, et le relevé le montre.
-AUTRE_NOEUD="rpi1"; AUTRE_IP="$RPI1_IP"
-[ "$SOURCE_NOEUD" = "rpi1" ] || { AUTRE_NOEUD="rpi1"; AUTRE_IP="$RPI1_IP"; }
-[ "$SOURCE_NOEUD" = "rpi1" ] && { AUTRE_NOEUD="rpi2"; AUTRE_IP="$RPI2_IP"; }
-
-log "  Rattrapage sur $AUTRE_NOEUD ($AUTRE_IP)…"
-RATTRAPEES=0
-if LISTE_AUTRE=$($SSH_CMD "$EXPORT_SSH_USER@$AUTRE_IP" "$LIRE ls /b" 2>/dev/null); then
-  for nom in $LISTE_AUTRE; do
-    nom_valide "$nom" || continue
-    [ -f "$EXPORT_DEST/$nom" ] && continue
-    if transferer_archive "$AUTRE_IP" "$nom"; then
-      RATTRAPEES=$((RATTRAPEES + 1))
-      log "    + $nom (absent localement)"
-    else
-      log "    ! $nom — transfert impossible depuis $AUTRE_NOEUD"
-    fi
-  done
-  [ "$RATTRAPEES" = "0" ] && log "    (rien à rattraper)"
-else
-  log "    ! $AUTRE_NOEUD injoignable — rattrapage INCONNU, la série peut avoir des trous."
-fi
-
-# Le relevé de continuité : il porte sur ce qu'on DÉTIENT, après rattrapage.
-MANQUANTS=$(ls "$EXPORT_DEST" 2>/dev/null | jours_manquants 14)
-if [ -n "$MANQUANTS" ]; then
-  log "  ⚠️  Jours absents de la copie hors site (14 derniers) : $MANQUANTS"
-fi
-
 echo
 if [ "$STATUT" = "succes" ]; then
   echo "  ✅ SAUVEGARDE HORS SITE À JOUR"
