@@ -15,6 +15,9 @@
 //  La contrepartie serveur est `StatutTicket` (`api/app/models/core.py`), et
 //  `api/tests/test_statuts_tickets.py` échoue si les deux divergent.
 
+import type { CleOptionPublication } from '$lib/options-publication';
+import type { Ticket } from '$lib/api';
+
 export interface StatutTicket {
 	/** Valeur envoyée à l'API — jamais traduite, jamais réécrite. */
 	value: string;
@@ -214,3 +217,60 @@ export function ticketScope(t: {
  * saisit — comme les statuts et les catégories juste au-dessus.
  */
 export type ModeSaisiPour = 'moi' | 'resident' | 'exterieur';
+
+// ── Options de publication ───────────────────────────────────────────────────
+
+/**
+ * 🔴 LES OPTIONS DE PUBLICATION D'UN TICKET — le pont écran ⇄ objet, écrit ICI.
+ *
+ * Demandé à l'écran le 05/09/2026 :
+ *
+ * > « tous les autres options de publication doivent être aussi conservé dans
+ * >   l'objet pour les tickets en édition et commentaire »
+ * > « pas que Visibilité du ticket »
+ *
+ * ## Les clés de l'écran ne sont pas les champs du ticket
+ *
+ * | Option (table `$lib/options-publication`) | Champ du ticket |
+ * |---|---|
+ * | `epingle` | `epingle` |
+ * | `urgente` | `priorite === 'haute'` — ce que la catégorie « Urgence » pose déjà |
+ * | `brouillon` (🛡️ « au seul conseil syndical ») | `confidentiel` |
+ *
+ * `confidentiel` de la table (🔒 « visible du seul périmètre ») **n'est pas
+ * proposé** : un ticket l'est déjà. Sa lecture passe par `perimetre_visible`
+ * sans `ouvert_a_la_copropriete`, là où une actualité le passe (#339) — la case
+ * n'aurait rien restreint, et une case sans effet est une promesse vide.
+ *
+ * ⚠️ Deux noms se croisent, et c'est le piège de ce fichier : la clé d'écran
+ * `brouillon` écrit la colonne `confidentiel`, tandis que la clé d'écran
+ * `confidentiel` ne s'applique pas ici. Les deux sens du pont vivent donc côte
+ * à côte, pour qu'aucun ne puisse être corrigé sans l'autre.
+ */
+export const OPTIONS_TICKET: CleOptionPublication[] = ['epingle', 'urgente', 'brouillon'];
+
+/** L'état COURANT des options — ce que le formulaire reprend à l'ouverture. */
+export function optionsDuTicket(ticket: Ticket | null | undefined): {
+	epingle: boolean;
+	urgente: boolean;
+	brouillon: boolean;
+} {
+	return {
+		epingle: ticket?.epingle ?? false,
+		urgente: ticket?.priorite === 'haute',
+		brouillon: ticket?.confidentiel ?? false,
+	};
+}
+
+/** Ce qu'on ENVOIE — l'autre sens du même pont. */
+export function optionsVersTicket(options: {
+	epingle: boolean;
+	urgente: boolean;
+	brouillon: boolean;
+}): { epingle: boolean; urgente: boolean; confidentiel: boolean } {
+	return {
+		epingle: options.epingle,
+		urgente: options.urgente,
+		confidentiel: options.brouillon,
+	};
+}

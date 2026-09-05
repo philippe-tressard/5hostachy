@@ -32,11 +32,12 @@
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import EvolForm from './EvolForm.svelte';
+	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
 	import { tickets as ticketsApi, ApiError, type TicketEvolution } from '$lib/api';
 	import { toast } from './Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
-	import { STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { STATUT_TICKET_LABELS, optionsVersTicket } from '$lib/tickets';
 	import { evolutionIcone } from '$lib/evolutions';
 	import { TICKET } from '$lib/entites/ticket';
 
@@ -53,6 +54,19 @@
 	 *   composant ne reçoit que des primitives, et recalculer la règle ici en
 	 *   ferait une deuxième écriture. */
 	export let whatsappInterdit = '';
+	/**  🔴 LES OPTIONS DE PUBLICATION DU TICKET, à l'état où elles sont
+	 *   (05/09/2026) : le formulaire de commentaire les montre, et ce qu'on
+	 *   enregistre DEVIENT l'état — comme sur une actualité.
+	 *
+	 *   La fiche les calcule avec `optionsDuTicket()` : ce composant ne reçoit que
+	 *   des primitives, et refaire le pont ici en ferait une deuxième écriture. */
+	export let optionsInitiales = { epingle: false, urgente: false, brouillon: false };
+
+	//  Une COPIE : ce que l'utilisateur coche ne doit pas modifier le ticket avant
+	//  l'enregistrement. Remontée à chaque ouverture du formulaire, pour repartir
+	//  de l'état réel plutôt que de la dernière saisie abandonnée.
+	let options = { ...optionsInitiales };
+	$: if (ouvert) options = { ...optionsInitiales };
 	export let evolutions: TicketEvolution[] = [];
 
 	/** Émis après toute écriture — la page recharge ce qu'elle affiche. */
@@ -90,7 +104,13 @@
 	async function ajouter(e: CustomEvent) {
 		enregistre = true;
 		try {
-			await ticketsApi.addEvolution(ticketId, e.detail);
+			//  Les options voyagent AVEC l'entrée : c'est le serveur qui les applique
+			//  au ticket (`commun.appliquer_options`), pas un second appel qui pourrait
+			//  réussir à moitié.
+			await ticketsApi.addEvolution(ticketId, {
+				...e.detail,
+				...optionsVersTicket(options),
+			});
 			ouvert = false;
 			dispatch('change');
 			toast('success', e.detail?.nouveau_statut ? 'Statut mis à jour' : 'Commentaire ajouté');
@@ -207,7 +227,13 @@
 					saving={enregistre}
 					on:submit={ajouter}
 					on:cancel={() => (ouvert = false)}
-				/>
+				>
+					<!--  Section 2 — le MÊME composant que la liste des tickets : deux
+					      écrans commentent un ticket, un seul bloc les sert. -->
+					<svelte:fragment slot="specifiques" let:premiere>
+						<OptionsEvolutionTicket {premiere} bind:options />
+					</svelte:fragment>
+				</EvolForm>
 			{/key}
 		</div>
 	{/if}

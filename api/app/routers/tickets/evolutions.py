@@ -13,6 +13,7 @@ from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
     Notification,
+    RoleUtilisateur,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -24,7 +25,13 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.liens import lien_ticket
 from app.utils.photos import photos_internes
 
-from .commun import STATUT_LABELS, config_site, contexte_site, evol_read
+from .commun import (
+    STATUT_LABELS,
+    appliquer_options,
+    config_site,
+    contexte_site,
+    evol_read,
+)
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
 
 router = APIRouter()
@@ -302,6 +309,25 @@ def add_evolution(
     #  qui ne parle pas du périmètre ne l'élargit pas à la résidence entière.
     if body.perimetre_cible:
         ticket.perimetre_cible = json.dumps(body.perimetre_cible, ensure_ascii=False)
+        ticket.mis_a_jour_le = datetime.utcnow()
+        session.add(ticket)
+    #  🔴 LES OPTIONS DE PUBLICATION SE CORRIGENT DEPUIS UN COMMENTAIRE
+    #  (05/09/2026), demandé à l'écran :
+    #
+    #  > « tous les autres options de publication doivent être aussi conservé
+    #  >   dans l'objet pour les tickets en édition et commentaire »
+    #
+    #  Même mécanique que le périmètre juste au-dessus, et pour la même raison :
+    #  le formulaire montre le DERNIER état, ce qu'on enregistre DEVIENT l'état.
+    #  Le reporter sur le ticket rend justes, sans les toucher, toutes les vues
+    #  qui le lisent déjà.
+    #
+    #  ⚠️ La table des options et le contrôle de droit vivent dans
+    #  `commun.appliquer_options` — le troisième chemin qui les applique, et le
+    #  troisième à ne pas les réécrire.
+    if appliquer_options(ticket, body, est_cs=user.has_role(
+        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
+    )):
         ticket.mis_a_jour_le = datetime.utcnow()
         session.add(ticket)
 

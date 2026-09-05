@@ -131,6 +131,7 @@ class TicketCreate(BaseModel):
     titre: str
     description: str
     categorie: str = "panne"
+    epingle: bool = False
     #  Le workflow du ticket est saisissable DÈS la création (16/08/2026) : il
     #  ne se changeait qu'après coup, depuis la carte, alors qu'un membre du CS
     #  qui saisit un ticket déjà traité connaît son étape. Défaut inchangé —
@@ -200,6 +201,9 @@ class TicketRead(BaseModel):
     #: Règle du SITE (`utils/archivage`, #515) — l'écran en appliquait une autre.
     archivee: bool = False
     confidentiel: bool = False
+    #  📌 Épinglé — RELU, contrairement à `partager_whatsapp` juste en dessous :
+    #  c'est un ÉTAT du ticket, pas un acte. L'écran doit pouvoir le reprendre.
+    epingle: bool = False
     cree_le: datetime
     mis_a_jour_le: Optional[datetime] = None
 
@@ -234,6 +238,7 @@ class TicketUpdate(BaseModel):
     destinataire_syndic: Optional[bool] = None
     destinataire_cs: Optional[bool] = None
     confidentiel: Optional[bool] = None
+    epingle: Optional[bool] = None
     #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
     #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le
     #  groupe, maintenant » — et il ne se relit donc pas. La case repart décochée

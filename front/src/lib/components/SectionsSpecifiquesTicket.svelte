@@ -24,7 +24,7 @@
 	import WorkflowPastilles from '$lib/components/WorkflowPastilles.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { STATUT_TICKET_OPTIONS, type ModeSaisiPour } from '$lib/tickets';
+	import { OPTIONS_TICKET, STATUT_TICKET_OPTIONS, type ModeSaisiPour } from '$lib/tickets';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { TICKET } from '$lib/entites/ticket';
@@ -40,7 +40,14 @@
 
 	export let categorie = 'panne';
 	export let statut = 'ouvert';
-	export let confidentiel = false;
+	/**  🔴 LES TROIS OPTIONS DE PUBLICATION, en un objet lié (05/09/2026).
+	 *
+	 *   Un objet plutôt que trois `bind:` séparés : c'est LUI que l'écran reprend
+	 *   du ticket (`optionsDuTicket`) et renvoie tel quel (`optionsVersTicket`).
+	 *   Trois liaisons distinctes obligeraient chaque hôte à défaire puis refaire
+	 *   le même objet — et le premier qui en oublierait une la remettrait à son
+	 *   défaut sans que personne le voie. */
+	export let options = { epingle: false, urgente: false, brouillon: false };
 	export let modeSaisiPour: ModeSaisiPour = 'moi';
 	export let saisiPourUserId: number | null = null;
 	export let saisiPourNom = '';
@@ -95,7 +102,13 @@
 		      donnée derrière serait une promesse vide. Sa colonne `confidentiel`
 		      se branche sur la clé d'affichage `brouillon` : même notion, deux
 		      colonnes historiques (voir `$lib/options-publication`). -->
-	<SectionOptionsPublication objet="ticket" options={['brouillon']} bind:brouillon={confidentiel} />
+	<SectionOptionsPublication
+		objet="ticket"
+		options={OPTIONS_TICKET}
+		bind:epingle={options.epingle}
+		bind:urgente={options.urgente}
+		bind:brouillon={options.brouillon}
+	/>
 {/if}
 
 <!--  3. Workflow — où en est le ticket. À distinguer de la diffusion, qui
