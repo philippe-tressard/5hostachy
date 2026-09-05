@@ -8,12 +8,15 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from PIL import Image, ImageOps
 import io
+import logging
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Copropriete, Utilisateur
-from app.utils.fichiers import nom_stocke
+from app.utils.fichiers import signature_incoherente, nom_stocke
 from sqlmodel import Session, select
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
@@ -162,6 +165,18 @@ def upload_fichier(
         # `Content-Type` d'après l'extension du fichier sur disque. Un `.html`
         # téléversé sous un type MIME autorisé s'exécuterait sur notre origine.
         ext_map = DOC_EXTENSIONS.get(file.content_type, ".bin")
+        #  🔴 ET LE CONTENU DOIT CORRESPONDRE (#773, 05/09/2026). L'extension
+        #  vient d'une liste blanche, mais le TYPE qui l'a choisie vient du
+        #  client : un exécutable annoncé `application/pdf` était stocké en
+        #  `.pdf`, puis servi aux résidents. Les images étaient réellement
+        #  vérifiées (PIL les ouvre) ; les documents, non — deux exigences pour
+        #  la même question, dans le même endpoint.
+        motif = signature_incoherente(data, ext_map)
+        if motif:
+            logger.warning(
+                "Téléversement refusé (utilisateur %s) : %s", user.id, motif
+            )
+            raise HTTPException(400, f"Fichier refusé : {motif}.")
         dest_dir = UPLOADS_ROOT / "fichiers"
         dest_dir.mkdir(parents=True, exist_ok=True)
         filename = nom_stocke(original_name, ext_map)

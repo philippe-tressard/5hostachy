@@ -89,7 +89,11 @@ services:
       - "127.0.0.1:8090:8090"
     environment:
       - TZ=Europe/Paris
-      - WA_API_KEY=${WHATSAPP_API_KEY:-changeme}
+      #  🔴 PAS DE SECRET PAR DÉFAUT (#776, 05/09/2026). `:-changeme` laissait le
+      #  bridge démarrer SANS ERREUR quand `.env` perdait la variable — et
+      #  `SECRET_KEY`, elle, refuse de démarrer depuis toujours (`config.py`).
+      #  Le même défaut, deux traitements : `:?` aligne le second sur le premier.
+      - WA_API_KEY=${WHATSAPP_API_KEY:?WHATSAPP_API_KEY manquante dans .env}
       - WA_PORT=8090
       - WA_AUTH_DIR=/app/auth_state
       - WA_LOG_LEVEL=warn

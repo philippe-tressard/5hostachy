@@ -27,6 +27,7 @@ import re
 import pytest
 
 from app.routers.uploads import ALLOWED_DOC_MIME, ALLOWED_MIME, DOC_EXTENSIONS
+from tests.aides_ast import corps_de
 from app.utils.fichiers import extension_assainie, nom_stocke, radical_assaini
 from app.utils.photos import photos_internes, photos_json
 
@@ -332,21 +333,23 @@ def test_le_sommaire_vient_du_meme_endroit_que_les_pieces_jointes():
         m.start() for m in re.finditer(r"_wrap_email\(", source)
         if "def _wrap_email" not in source[max(0, m.start() - 200):m.start()]
     ]
-    debut_composer = source.index("def composer_email(")
-    fin_composer = source.index("async def send_email(", debut_composer)
+    #  🔴 LES BORNES VIENNENT DE L'AST, PLUS D'UN `index()` (05/09/2026).
+    #  Elles étaient calculées entre `def composer_email(` et `async def
+    #  send_email(` — c'est-à-dire en supposant l'ORDRE des fonctions dans le
+    #  fichier. La factorisation des deux envois a inséré `_envoyer_modele`
+    #  entre les deux, et ce découpage s'est mis à mesurer autre chose.
+    corps_composer = corps_de(RACINE / "api" / "app" / "utils" / "email" / "__init__.py", "composer_email")
+    debut_composer = source.index(corps_composer)
+    fin_composer = debut_composer + len(corps_composer)
     assert all(debut_composer < p < fin_composer for p in hors), (
         "`_wrap_email` est appelée hors de `composer_email` : toute règle de "
         "composition posée ailleurs serait absente de l'aperçu avant envoi (#498)."
     )
 
-    for fonction in ("async def send_email(", "async def send_email_group("):
-        debut = source.index(fonction)
-        fin = source.find(chr(10) + "async def ", debut + 10)
-        corps = source[debut:fin if fin > 0 else len(source)]
-        assert "composer_email(" in corps, (
-            f"`{fonction.strip()}` ne passe plus par `composer_email` : elle "
-            "recomposerait le message de son côté, et l'aperçu mentirait."
-        )
+    #  🔴 « les deux envois passent par `composer_email` » a quitté ce test le
+    #  05/09/2026 : `test_apercu_diffusion` le vérifiait aussi, et deux écritures
+    #  d'un même contrôle divergent comme deux écritures d'une même règle — elles
+    #  avaient d'ailleurs divergé. Il reste là où il est le sujet.
 
 
 # ─────────────────────────────────────────────────────────────────────────────

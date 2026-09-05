@@ -26,8 +26,22 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Code source
 COPY . .
 
+#  🔴 UN UTILISATEUR APPLICATIF, PAS ROOT (#769, 05/09/2026).
+#
+#  Le conteneur tournait en root : un défaut d'exécution (rendu PDF, dépendance
+#  compromise, désérialisation) donnait root SUR LE VOLUME DE DONNÉES. Le
+#  confinement Docker ne sépare rien quand le processus est root.
+#
+#  ⚠️ `USER app` n'est PAS posé ici, et c'est délibéré : les trois volumes sont
+#  déjà écrits par root sur les deux nœuds, et un conteneur non-root ne pourrait
+#  plus ouvrir `app.db` — l'API tomberait au premier déploiement. `start.sh`
+#  garde donc root le temps de reprendre les propriétés, puis LAISSE root
+#  (`setpriv`, présent dans l'image de base). La migration se fait ainsi toute
+#  seule, sur les deux nœuds, sans geste manuel sur une base en production.
+RUN useradd --system --uid 10001 --shell /usr/sbin/nologin app
+
 # Répertoires de données
-RUN mkdir -p /app/data /app/uploads /backups
+RUN mkdir -p /app/data /app/uploads /backups     && chown -R app:app /app/data /app/uploads /backups
 
 # Script de démarrage (migrations + uvicorn)
 RUN chmod +x /app/start.sh
