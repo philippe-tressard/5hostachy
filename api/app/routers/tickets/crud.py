@@ -36,6 +36,7 @@ from .commun import (
     STATUT_LABELS,
     generer_numero,
     ticket_read,
+    trier_par_activite,
 )
 from .correction import _appliquer_contenu, _appliquer_relations, _envoye
 from .courriels import (
@@ -81,7 +82,11 @@ def list_tickets(
     #  ⚠️ Coût assumé : tous les tickets sont chargés puis filtrés. À l'échelle
     #  d'une copropriété c'est quelques centaines de lignes ; le jour où ça ne
     #  l'est plus, la réponse est la pagination, jamais une seconde règle.
-    tickets = session.exec(select(Ticket).order_by(Ticket.cree_le.desc())).all()
+    tickets = session.exec(select(Ticket)).all()
+
+    #  Le tri suit l'ACTIVITÉ, pas la date de dépôt (05/09/2026) : la règle et sa
+    #  raison vivent dans `commun.py`, avec les autres décisions partagées.
+    tickets = trier_par_activite(session, tickets)
     return [
         ticket_read(ticket, session)
         for ticket in tickets

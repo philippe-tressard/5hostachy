@@ -20,6 +20,7 @@ from app.models.core import (
     Publication,
     RoleUtilisateur,
     Sondage,
+    StatutUtilisateur,
     Ticket,
     TypeEvenement,
     Utilisateur,
@@ -250,6 +251,23 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
         return True
     if ticket.saisi_pour_user_id is not None and ticket.saisi_pour_user_id == user.id:
         return True
+
+    #  🔴 UN LOCATAIRE NE VOIT QUE LES SIENS (05/09/2026), demandé à l'écran :
+    #  *« les locataires ne voient pas les tickets »*.
+    #
+    #  C'est un retrait partiel de l'ouverture du 02/09 (#710), qui visait « les
+    #  copropriétaires et locataires ». Ce qu'un locataire a déposé — ou ce qu'on
+    #  a saisi pour lui — lui reste visible : ces deux cas sont traités AVANT, et
+    #  cette règle ne les touche pas. Il peut donc toujours signaler, et suivre sa
+    #  propre demande ; il ne lit simplement plus les affaires de l'immeuble.
+    #
+    #  ⚠️ La règle est ICI, avec les autres, et nulle part ailleurs : ni dans un
+    #  écran, ni dans un `where` de liste. *« pour la sécurité tout doit être
+    #  centralisé, pas de règles perdues dans une page »* — et c'est aussi ce qui
+    #  fait que la liste et la fiche ne peuvent pas diverger, puisque les deux
+    #  passent par cette fonction.
+    if user.statut == StatutUtilisateur.locataire:
+        return False
 
     if ticket.confidentiel:
         return False

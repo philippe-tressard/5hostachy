@@ -17,6 +17,7 @@ import json
 import random
 import string
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.models.core import (
@@ -264,3 +265,43 @@ def compter_relances(session: Session, ticket_id: int) -> int:
             TicketEvolution.type == "relance",
         )
     ).all())
+
+
+def trier_par_activite(session: Session, tickets: list[Ticket]) -> list[Ticket]:
+    """Les tickets, du plus RÉCEMMENT ACTIF au plus ancien.
+
+    🔴 LE TRI SUIT L'ACTIVITÉ, PAS LA DATE DE DÉPÔT (05/09/2026), demandé à
+    l'écran : *« s'il y a eu un commentaire sur un ticket, celui-ci remonte
+    dans la liste — tri sur mise à jour, sauf édition pour une correction »*.
+
+    Un dossier qui bouge doit se voir. Trié sur `cree_le`, un ticket ouvert il
+    y a trois mois et commenté ce matin restait en bas, là où personne ne le
+    relit.
+
+    ⚠️ ET SURTOUT PAS SUR `mis_a_jour_le` : cette colonne bouge à CHAQUE
+    écriture, y compris une correction de faute de frappe. Corriger un titre
+    ferait remonter le ticket en tête sans qu'il se soit rien passé — c'est
+    exactement ce que l'utilisateur exclut, et c'est la même distinction que
+    l'archivage, qui se mesure sur `statut_change_le` et non sur
+    `mis_a_jour_le` (`ux-patterns` §16).
+
+    La date d'activité est donc celle de la dernière ENTRÉE du fil : un
+    commentaire, un changement d'état, un message, une relance en créent une ;
+    une correction pure n'en crée aucune (voir le `PATCH` de `crud.py`, qui
+    n'écrit une entrée que si l'état a changé). Éditer une entrée existante ne
+    touche pas son `cree_le` : le fil ne se réordonne pas quand on se relit.
+
+    UNE seule requête groupée, pas une par ticket : la liste charge déjà tous
+    les tickets, elle ne doit pas charger tous les fils.
+    """
+    derniere_activite = dict(
+        session.exec(
+            select(TicketEvolution.ticket_id, func.max(TicketEvolution.cree_le))
+            .group_by(TicketEvolution.ticket_id)
+        ).all()
+    )
+    return sorted(
+        tickets,
+        key=lambda t: derniere_activite.get(t.id) or t.cree_le,
+        reverse=True,
+    )
