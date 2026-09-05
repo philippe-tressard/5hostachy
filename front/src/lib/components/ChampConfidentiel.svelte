@@ -22,6 +22,23 @@
      le complément dit sur quoi il porte — et l'aide dit désormais, en toutes
      lettres, que le réglage est indépendant du champ voisin.
 
+  ## 🔴 Et pourquoi 🛡️ plutôt que 🔒 (05/09/2026, second passage)
+
+  Arbitré à l'écran : *« ne faudrait-il pas un autre icône, car le confidentiel
+  est réservé pour Actualité ? Il faut une cohérence ! »*
+
+  Les deux notions ne sont PAS la même, et elles portaient le même mot et le même
+  glyphe :
+
+  | | Actualité — 🔒 Confidentiel | Ticket — 🛡️ Réservé au conseil |
+  |---|---|---|
+  | ce que ça restreint | la lecture au **périmètre** visé | la lecture à l'auteur, à la personne concernée et au **conseil syndical** |
+  | condition | exige un périmètre restreint, sinon la case est grisée | aucune |
+
+  Un même cadenas sur deux règles différentes fait croire à une seule. Le mot ET
+  l'icône changent donc du côté du ticket ; `Ticket.confidentiel` reste le nom du
+  champ en base, parce que renommer une colonne ne clarifie rien pour personne.
+
   🔴 Le CS seul le pose, et le serveur le revérifie (#710) : cet écran ne fait que
   proposer. La règle qui compte est côté API.
 -->
@@ -33,7 +50,7 @@
 <div class="field">
 	<label class="case" for="ticket-confidentiel">
 		<input id="ticket-confidentiel" type="checkbox" bind:checked={confidentiel} />
-		🔒 Réserver ce ticket au conseil syndical
+		&#x1F6E1;&#xFE0F; Réserver ce ticket au conseil syndical
 	</label>
 	<!--  `.field-hint` : l'aide d'un champ, telle que la charte la définit. La
 	      version locale de `FormulaireTicket` (`.aide-champ`) dit la même chose à

@@ -81,6 +81,10 @@
 
 	//  ── 5. Destinataires ──────────────────────────────────────────────────────
 	export let avecDestinataires = false;
+	/**  Ce bloc ouvre-t-il le formulaire ? Une section n'affiche son filet que si
+	 *   quelque chose la précède — sinon il double celui du cadre, et c'est le
+	 *   « double trait » signalé à l'écran le 05/09/2026. */
+	export let premiere = false;
 	export let destinataires: string[] = ['résidents'];
 
 	//  ── 6. Description ────────────────────────────────────────────────────────
@@ -171,6 +175,7 @@
 	      sont pas un contrôle labelable — `for` n'y associerait rien —, d'où le
 	      couple `id` sur le titre / `aria-labelledby` sur le groupe. -->
 	<SectionFormulaire
+		{premiere}
 		titre="Périmètre"
 		requis={perimetreRequis}
 		badge={perimetreBadge ?? badgePerimetre}
@@ -194,6 +199,7 @@
 
 {#if avecDestinataires}
 	<SectionFormulaire
+		premiere={premiere && !avecPerimetre}
 		titre="Destinataires"
 		requis
 		badge={badgeDestinataires}

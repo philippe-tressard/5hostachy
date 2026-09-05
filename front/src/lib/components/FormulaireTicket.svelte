@@ -85,7 +85,8 @@
 	let description = ticket?.description ?? '';
 	let categorie = ticket?.categorie ?? 'panne';
 	let statut = ticket?.statut ?? 'ouvert';
-	//  🔒 Confidentiel (#710) — le CS seul le pose, et le serveur le revérifie.
+	//  🛡️ Réservé au conseil syndical (#710) — le CS seul le pose, le serveur le
+	//  revérifie, et le libellé se distingue du 🔒 d'une actualité (voir le champ).
 	let confidentiel = ticket?.confidentiel ?? false;
 	//  Workflow du ticket, VISIBLE de tous dès la création : c'est une information
 	//  capitale pour le suivi, et la masquer laissait croire qu'un ticket n'a pas

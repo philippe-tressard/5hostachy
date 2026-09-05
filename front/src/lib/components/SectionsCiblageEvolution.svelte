@@ -45,11 +45,14 @@
 	/** La section 5. */
 	export let avecDestinataires = false;
 	export let destinataires: string[] = [];
+	/** Ce bloc ouvre-t-il le formulaire ? (pas de filet au-dessus) */
+	export let premiere = false;
 </script>
 
 {#if avecPerimetre || avecDestinataires}
 	<ChampsCommuns
 		{idPrefixe}
+		{premiere}
 		{avecPerimetre}
 		bind:perimetre
 		perimetreRequis={false}

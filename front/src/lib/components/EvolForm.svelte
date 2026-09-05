@@ -258,14 +258,7 @@
 	//  🔴 Chaque ligne combine ce qui EXISTE (la déclaration) et ce que cet
 	//  utilisateur-ci PEUT (le droit) — jamais l'un à la place de l'autre (#463).
 	$: sectionPerimetre = peutPreciserPerimetre && sectionPresente(entite, 'evolution', 'perimetre');
-	//  🔴 DESTINATAIRES ET OPTIONS DANS UNE ENTRÉE DU FIL (05/09/2026), demandé
-	//  par l'utilisateur : *« les sections Options de publication, Périmètre et
-	//  Destinataires doivent être visibles même pour chaque commentaire ; tu
-	//  remets le dernier état, et le nouveau sauvegardé deviendra validé »*.
-	//
-	//  Ce sont les DÉCLARATIONS d'entité qui ouvrent ces sections — ici on ne
-	//  fait que les lire. Sur un ticket elles restent fermées : rien ne change
-	//  pour lui.
+	//  Ouvertes par la DÉCLARATION de l'entité — voir `SectionsCiblageEvolution`.
 	$: sectionDestinataires = sectionPresente(entite, 'evolution', 'destinataires');
 	$: sectionSpecifiques = sectionPresente(entite, 'evolution', 'specifiques');
 	$: sectionPhotos = avecPiecesJointes && sectionPresente(entite, 'evolution', 'photos');
@@ -399,13 +392,16 @@
 		/>
 	{/if}
 
-	<!-- ── 4. Périmètre · 5. Destinataires ──────────────────────────────────
-	     Deux sections HÉRITÉES de `ChampsCommuns`, portées par un composant
-	     commun depuis le 05/09/2026 : leur aide diffère d'une entité à l'autre
-	     (préciser d'où vient une fuite, ou corriger le ciblage d'une actualité),
-	     mais leur rendu ne doit pas. -->
+	<!--  2. Champs spécifiques — AVANT le ciblage : même ordre dans les quatre
+	      états (cadre #430, R2). Le commentaire l'inversait (05/09/2026). -->
+	{#if sectionSpecifiques}
+		<slot name="specifiques" premiere={!sectionWorkflow} />
+	{/if}
+
+	<!--  4. Périmètre · 5. Destinataires — dans `SectionsCiblageEvolution`. -->
 	<SectionsCiblageEvolution
 		{idPrefixe}
+		premiere={!sectionWorkflow && !sectionSpecifiques}
 		avecPerimetre={sectionPerimetre}
 		bind:perimetre
 		perimetreBadge={libellePerimetreActuel}
@@ -414,12 +410,6 @@
 		bind:destinataires
 	/>
 
-	<!--  2. Champs spécifiques à l'entité — c'est l'écran qui les connaît.
-	      Sur une actualité : les options de publication (05/09/2026). -->
-	{#if sectionSpecifiques}
-		<slot name="specifiques" />
-	{/if}
-
 	<!-- ── 6. Description ───────────────────────────────────────────────────
 	     Section à UN champ : le titre EST le libellé. Le rendu vient de
 	     `SectionDescription`, écrit une fois pour ce composant et
@@ -427,7 +417,7 @@
 	<SectionDescription
 		{idPrefixe}
 		idChamp="contenu"
-		premiere={!sectionWorkflow}
+		premiere={!sectionWorkflow && !sectionSpecifiques && !sectionPerimetre && !sectionDestinataires}
 		titre={titreContenu}
 		requis={contenuRequis}
 		hauteur="90px"
