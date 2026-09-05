@@ -58,9 +58,12 @@
         #  #701. C'est assumé et annoncé, pas un effet de bord découvert après :
         #  le site mesure déjà son audience in-process (`Admin → Télémétrie`).
         #
-        #  ⚠️ `default-src` reste ABSENT du mode bloquant, et c'est délibéré : il
-        #  couvrirait `script-src` par héritage, et l'on retomberait sur ce qu'on
-        #  ne peut pas poser. Chaque directive bloquante est nommée une par une.
+        #  ⚠️ `default-src` reste ABSENT du mode bloquant, et le motif a changé
+        #  le 06/09/2026 : il ne couvre plus un trou, il en créerait un. Posé
+        #  ici, il hériterait à `script-src` la valeur de Caddy, qui ignore les
+        #  condensats de SvelteKit — et l'en-tête le plus strict gagnant, il
+        #  bloquerait l'hydratation. Chaque directive bloquante est nommée une
+        #  par une, et les scripts sont nommés ailleurs.
         #  ── CE QUE LE RELEVÉ AUTORISE À BLOQUER (#770, 05/09/2026) ──
         #
         #  `font-src` et `style-src` sont passés en mode BLOQUANT parce que le
@@ -73,14 +76,20 @@
         #  casserait l'affichage de l'extension chez le visiteur — ce n'est pas
         #  à nous d'en décider.
         #
-        #  🔴 `script-src` NE PEUT PAS ENCORE Y ENTRER, et c'est le vrai sujet de
-        #  #770 : SvelteKit sert DEUX scripts inline par page (hydratation), qui
-        #  totalisent 370 des 404 violations relevées. Le poser en bloquant
-        #  casserait le site. Il lui faut des hash ou un nonce générés par
-        #  SvelteKit lui-même (`kit.csp`) — seul le framework connaît le contenu
-        #  de ses scripts. Tant que ce n'est pas fait, la directive reste en
-        #  observation, où elle ne ment sur rien.
-        Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'"
+        #  ✅ `script-src` EST DÉSORMAIS BLOQUANT — mais il n'est pas écrit ici,
+        #  et c'est le cœur de #770 (06/09/2026). SvelteKit sert un script inline
+        #  par page (hydratation) : il totalisait 370 des 404 violations. Seul le
+        #  framework connaît le contenu de ses scripts, donc seul lui peut en
+        #  calculer le condensat — `kit.csp` (mode `hash`) dans
+        #  `front/svelte.config.js` émet `script-src 'self' 'sha256-…'`.
+        #
+        #  🔴 D'où le `+` : dans un bloc `header`, écrire le nom nu REMPLACE.
+        #  Sans lui, Caddy écraserait le condensat de SvelteKit et le site
+        #  deviendrait blanc — la panne exacte que #770 voulait éviter. Avec `+`,
+        #  les deux en-têtes coexistent : un navigateur les applique TOUS, chacun
+        #  sur ce qu'il nomme. Ici ils sont disjoints — Caddy ne dit rien des
+        #  scripts, SvelteKit ne dit rien du reste.
+        +Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'"
 
         #  ── L'étape suivante, en MODE OBSERVATION (#536, 28/08/2026) ──
         #
@@ -121,7 +130,18 @@
         #  ni sans avoir regardé le site après. Un remède posé sans pouvoir
         #  l'observer serait pire que le mal — c'est ce que dit #536, et c'est ce
         #  que ce mode-ci évite.
-        Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; report-uri /api/csp-report"
+        #  ⚠️ `default-src` et `script-src` ONT QUITTÉ cette politique le
+        #  06/09/2026, et pas par relâchement : `script-src` est désormais
+        #  BLOQUANT (via SvelteKit), et `default-src` le couvrait par héritage.
+        #  Les garder ici ferait recompter chaque page comme une violation —
+        #  370 par semaine sur un mécanisme désormais autorisé. Un compteur qui
+        #  mesure ce qui est déjà réglé noie ce qui ne l'est pas.
+        #
+        #  Ce qui reste en observation est exactement le PAS SUIVANT : `style-src`
+        #  SANS `'unsafe-inline'`, et `img-src`. Ce dernier n'est pas passé en
+        #  bloquant parce que ses trois violations viennent d'une extension de
+        #  navigateur (1Password) et d'aucune ressource du site.
+        +Content-Security-Policy-Report-Only "style-src 'self'; img-src 'self' data: blob:; report-uri /api/csp-report"
     }
 
     # API — proxy vers FastAPI

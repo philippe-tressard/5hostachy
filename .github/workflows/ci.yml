@@ -834,6 +834,7 @@ jobs:
         working-directory: front
         run: |
           node scripts/check-evenements.mjs --selftest
+          node scripts/check-csp-servie.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
           node scripts/check-charge-utile.mjs --selftest
@@ -1249,3 +1250,21 @@ jobs:
       - name: Version lisible dans le bundle (l'extracteur de P3 mesure encore)
         working-directory: front
         run: npm run lint:version-servie
+
+      # 🔒 `script-src` en mode BLOQUANT tient à SIX LIGNES de `svelte.config.js`
+      # (#770, 06/09/2026) : c'est SvelteKit qui émet `script-src 'self'
+      # 'sha256-…'`, parce que lui seul connaît le contenu de ses scripts
+      # d'hydratation. Rien n'obligeait ces lignes à rester là.
+      #
+      # Le contrôle DÉMARRE le serveur construit et lit l'en-tête d'une vraie
+      # réponse — pas la configuration. La v2.24.0 avait livré un bandeau PWA
+      # « vérifié » sur des artefacts corrects pendant que le service worker ne
+      # s'enregistrait plus : un artefact ne prouve rien sur le comportement.
+      #
+      # Il vérifie aussi le `Caddyfile`, et c'est indissociable : sans le `+`
+      # devant `Content-Security-Policy`, Caddy ÉCRASE l'en-tête de SvelteKit,
+      # les condensats sont perdus et le site devient blanc. Aucune des deux
+      # moitiés ne se voit depuis l'autre.
+      - name: CSP servie (script-src bloquant, condensats préservés)
+        working-directory: front
+        run: npm run lint:csp
