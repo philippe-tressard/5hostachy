@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -11,7 +11,7 @@ from app.auth.deps import est_auteur, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
     PetiteAnnonce, TypeAnnonce, CategorieAnnonce, StatutAnnonce,
-    ReponseCommunaute, Utilisateur, RoleUtilisateur,
+    ReponseCommunaute, Utilisateur,
 )
 from app.routers.uploads import _save_image
 from app.utils.archivage import (
@@ -19,9 +19,9 @@ from app.utils.archivage import (
     est_archivable,
     seuil_archivage_jours,
 )
-from app.utils.liens import lien_element
-from app.utils.reponses import (
-    auteur_meta, enrich_reponse, notifier_nouvelle_reponse, tri_reponses,
+from app.routers.reponses_communaute import (
+    enregistrer_routes_reponses,
+    reponses_de,
 )
 from app.utils.communaute import exiger_acces
 
@@ -51,15 +51,14 @@ def est_archivee(annonce: PetiteAnnonce, jours: int = ARCHIVAGE_DELAI_JOURS) -> 
     return est_archivable("annonce", annonce, seuil_jours=jours)
 
 
-def _reponses_for(annonce_id: int, session: Session) -> list[dict]:
-    """Réponses d'une annonce : CS/admin en tête (plus de poids), puis chronologique."""
-    reps = session.exec(
-        select(ReponseCommunaute).where(
-            ReponseCommunaute.rubrique == RUBRIQUE,
-            ReponseCommunaute.cible_id == annonce_id,
-        )
-    ).all()
-    return tri_reponses([enrich_reponse(r, session) for r in reps])
+def _reponses_for(cible_id: int, session: Session) -> list[dict]:
+    """Les réponses de cette rubrique — la règle vit dans `reponses_communaute`.
+
+    Ce corps était identique à celui de l'autre rubrique, au discriminant
+    près. Il ne reste qu'un nom local, gardé parce que la fiche détaillée
+    l'appelle : le supprimer déplacerait la question sans y répondre.
+    """
+    return reponses_de(RUBRIQUE, cible_id, session)
 
 
 
@@ -273,75 +272,23 @@ def delete_annonce(
 
 # ── Réponses aux annonces ────────────────────────────────────────────────────
 
-class ReponseCreate(BaseModel):
-    contenu: str
-
-
-@router.get("/{annonce_id}/reponses")
-def list_reponses(
-    annonce_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    exiger_acces(user)
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
-    return _reponses_for(annonce_id, session)
-
-
-@router.post("/{annonce_id}/reponses", status_code=201)
-def create_reponse(
-    annonce_id: int,
-    body: ReponseCreate,
-    background_tasks: BackgroundTasks,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    exiger_acces(user)
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
-        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
-    ):
-        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas répondre")
-    contenu = (body.contenu or "").strip()
-    if not contenu:
-        raise HTTPException(422, "La réponse ne peut pas être vide")
-    annonce = session.get(PetiteAnnonce, annonce_id)
-    if not annonce:
-        raise HTTPException(404, "Annonce introuvable")
-    rep = ReponseCommunaute(rubrique=RUBRIQUE, cible_id=annonce_id, auteur_id=user.id, contenu=contenu)
-    session.add(rep)
-    notifier_nouvelle_reponse(
-        session, background_tasks,
-        createur_id=annonce.auteur_id, auteur=user,
-        rubrique_label="votre annonce", sujet=annonce.titre,
-        extrait=contenu, lien_path=lien_element("annonce", annonce_id),
-    )
-    session.commit()
-    session.refresh(rep)
-    return {"id": rep.id, "cible_id": rep.cible_id, "auteur_id": rep.auteur_id,
-            "contenu": rep.contenu, "cree_le": rep.cree_le, **auteur_meta(user, session)}
-
-
-@router.delete("/{annonce_id}/reponses/{rep_id}", status_code=204)
-def delete_reponse(
-    annonce_id: int,
-    rep_id: int,
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Supprimer une réponse : son auteur, ou un CS/admin."""
-    exiger_acces(user)
-    rep = session.get(ReponseCommunaute, rep_id)
-    if not rep or rep.rubrique != RUBRIQUE or rep.cible_id != annonce_id:
-        raise HTTPException(404, "Réponse introuvable")
-    #  L'auteur, ou un modérateur — règle du module central, pas réécrite ici.
-    if not peut_commenter(rep, user):
-        raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
-    session.delete(rep)
-    session.commit()
-
-
+#  🔴 LES RÉPONSES NE SONT PLUS ÉCRITES ICI (05/09/2026).
+#
+#  Les trois routes — lister, créer, supprimer — étaient identiques à
+#  99 %, 94 % et 99 % de celles de l'autre rubrique de communauté. Six
+#  fonctions pour deux fois la même chose, dont la règle qui refuse les
+#  comptes externes : écrite deux fois, elle se durcit une fois sur deux.
+#
+#  La fabrique les pose, adaptées par ces cinq paramètres. Ce qui reste
+#  ici est ce qui est PROPRE à cette rubrique — et rien d'autre.
+enregistrer_routes_reponses(
+    router,
+    rubrique=RUBRIQUE,
+    modele=PetiteAnnonce,
+    libelle="Annonce",
+    rubrique_label="votre annonce",
+    prefixe_lien="annonce",
+)
 @router.post("/{annonce_id}/photo")
 def add_photo(
     annonce_id: int,
