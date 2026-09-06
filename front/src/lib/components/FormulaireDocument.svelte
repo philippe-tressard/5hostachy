@@ -100,12 +100,7 @@
 	$: choisis = fichiers ? Array.from(fichiers) : [];
 </script>
 
-<CadreFormulaire
-	{edition}
-	titre={intitule}
-	classeBoite="modal-box"
-	on:fermer={() => dispatch('annuler')}
->
+<CadreFormulaire {edition} titre={intitule} on:fermer={() => dispatch('annuler')}>
 	<label class="field" for="{uid}-titre">
 		{libelleTitre}{titreRequis ? ' *' : ''}
 		<input id="{uid}-titre" type="text" bind:value={titre} placeholder={placeholderTitre} />

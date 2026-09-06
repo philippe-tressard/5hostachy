@@ -1326,45 +1326,53 @@ signaler **trois fois** :
    dans la page — sans lui le bouton flotte loin de ce qu'il annule.
 3. **Jamais de modale pour un formulaire de CRÉATION.** Les modales restent
    légitimes pour une confirmation, un téléversement ponctuel, la visionneuse —
-   et, depuis le 30/08/2026, pour l'**édition** (voir §14 bis).
+   — mais **plus pour l'édition** d'un objet : voir §14 bis (06/09/2026).
 
-### 🔴 14 bis. LA MODALE EST LE FORMAT STANDARD D'ÉDITION (30/08/2026)
+### 🔴 14 bis. CRÉER ET CORRIGER EMPLOIENT LA MÊME BOÎTE DANS LA PAGE (06/09/2026)
 
-Arbitré à l'écran : *« d'une manière générale, je trouve qu'en édition le format
-modal est plus net que le dépliement sur une même fenêtre. Mets dans l'UX que la
-modale est le format standard d'édition et corrige partout. »*
+Arbitré à l'écran : *« la boîte d'édition n'est pas standard à l'UX, elle
+apparaît dans une fenêtre indépendante au lieu de la fenêtre principale […]
+comme le reste du site, avec un UX standard, pas de spécifique. »*
 
 | Geste | Format |
 |---|---|
 | **Créer** | la **boîte dans la page** — `FormulaireCreation`, §14 ci-dessus |
-| **Éditer** un objet existant | **la modale** — `Modale`, qui porte titre, croix, `Échap` et verrou |
+| **Corriger** un objet existant | **la même boîte**, au même endroit |
 
-**Pourquoi la distinction tient** — elle n'est pas un compromis :
+Le choix se fait dans **`CadreFormulaire`**, et nulle part ailleurs : huit
+formulaires le traversent.
 
-- une **création** part d'une page vide et s'inscrit dans le flux de l'écran : la
-  boîte montre où l'objet va atterrir, et le bouton d'en-tête bascule en
-  « ✕ Annuler », sans double commande ;
-- une **édition** interrompt une lecture. Déplier un formulaire au milieu d'une
-  liste déplace tout ce qui est en dessous, et l'on perd de vue l'objet qu'on
-  modifie. La modale isole le geste et le referme sans rien décaler.
+## ⚠️ CE PARAGRAPHE DISAIT L'INVERSE PENDANT SEPT JOURS
 
-⚠️ **Ce que ce renversement ne remet PAS en cause.** #367 avait été arbitré après
-que l'utilisateur l'ait signalé **trois fois**, et ses trois constats restent
-vrais : pas de **double commande** d'annulation (celle du calendrier vivait sous
-l'overlay, visible et inutilisable), pas de bouton **excentré**, et surtout pas
-**trois paradigmes** pour une même intention. La règle passe de « un format pour
-tout » à « un format par geste » — deux, nommés, et pas un de plus.
+Du 30/08 au 06/09/2026, il énonçait : *« la modale est le format standard
+d'édition »*, arbitré à l'écran lui aussi, avec un raisonnement qui se tenait —
+« une édition interrompt une lecture ; déplier un formulaire au milieu d'une
+liste déplace tout ce qui est en dessous ».
 
-🔴 **Le garde-fou change de forme, il ne disparaît pas.** `lint:formulaires`
-refusait toute modale contenant un `<form>`. Il doit désormais distinguer les
-deux gestes, et **une modale de création reste refusée** — sans quoi la règle
-redevient « au cas par cas », c'est-à-dire les trois paradigmes de #367.
+🔴 **Ce raisonnement n'a pas été réfuté, il a été tranché autrement** : une boîte
+qui flotte par-dessus la page est un **paradigme de plus**, et c'est exactement
+ce que #367 avait éliminé pour la création (il y en avait trois). Le produit a
+préféré un seul format pour les deux gestes à deux formats bien motivés.
 
-⚠️ **R5 s'applique** : l'enrichissement se propose sur **UN** écran, se fait
-constater, puis se généralise. La conversion ne se fait donc pas d'un bloc sur
-les dix écrans concernés.
+L'argument du décalage de liste, lui, avait **déjà** sa réponse :
+`FormulaireCreation` s'amène lui-même à l'écran depuis le 29/08 — c'est
+l'édition, dont le geste part d'une carte, qui en a le plus besoin.
 
-#### 🔴 OÙ SE POSE LE CADRE : **là où le geste est connu** (30/08/2026, calendrier)
+⚠️ **Ce que ce second renversement ne remet PAS en cause** : les trois constats
+de #367 restent vrais — pas de **double commande** d'annulation, pas de bouton
+**excentré**, et surtout pas plusieurs paradigmes pour une même intention. On
+revient simplement à « un format pour tout ».
+
+🔒 **Le garde-fou a fait son travail avant de changer de forme.** Le cas zéro de
+`lint:formulaires` exigeait de trouver `Modale` dans le `this={…}` de
+`CadreFormulaire` : il a **refusé le lot qui appliquait la décision**, au lieu de
+passer au vert en mesurant moins. Il vérifie désormais l'inverse — que la boîte
+est rendue, et qu'aucune `Modale` ne revient par la porte de derrière.
+
+⚠️ Les modales restent légitimes pour ce qui n'est pas un formulaire d'entité :
+confirmation, téléversement ponctuel, visionneuse, écrans d'administration.
+
+### 🔴 OÙ SE POSE LE CADRE : **là où le geste est connu** (30/08/2026, calendrier)
 
 La question s'est posée au troisième écran, et elle se reposera aux suivants —
 elle est donc tranchée ici plutôt qu'à chaque conversion.
