@@ -34,6 +34,7 @@
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import NotationsPrestataire from '$lib/components/NotationsPrestataire.svelte';
 	import { routeOnglet } from '$lib/routes-onglets';
 
 	$: _pc = getPageConfig($configStore, 'prestataires', defautsDePage('prestataires'));
@@ -83,15 +84,11 @@
 		}
 	}
 
-	function avgNote(prestataireId: number): number | null {
-		const pn = notations.filter((n) => n.prestataire_id === prestataireId);
-		if (pn.length === 0) return null;
-		return Math.round((pn.reduce((s: number, n: any) => s + n.note, 0) / pn.length) * 10) / 10;
-	}
-
-	function starsDisplay(note: number): string {
-		return '★'.repeat(Math.round(note)) + '☆'.repeat(5 - Math.round(note));
-	}
+	//  🔴 `avgNote` et `starsDisplay` sont parties dans `$lib/notations` (#807) :
+	//  la liste des avis en avait besoin AUSSI, et c'est le moment exact où une
+	//  fonction se recopie. Le badge de moyenne est rendu par
+	//  `NotationsPrestataire` en mode `resume` — la note et les avis qui la
+	//  composent au même endroit.
 
 	// ── Onglets (3) ────────────────────────────────────────────────
 	//  La liste, l'ordre ET l'adresse de chaque onglet vivent dans la table
@@ -1120,17 +1117,10 @@
 							<span class="badge badge-blue" style="margin-left:.25rem"
 								>{equipLabel(p.specialite)}</span
 							>
-							{#if avgNote(p.id) !== null}
-								<span
-									class="badge"
-									style="margin-left:.25rem;color:#f59e0b;font-size:.82rem"
-									title="{avgNote(p.id)}/5 ({notations.filter((n) => n.prestataire_id === p.id)
-										.length} avis)"
-								>
-									{starsDisplay(avgNote(p.id) ?? 0)}
-									{avgNote(p.id)}
-								</span>
-							{/if}
+							<NotationsPrestataire
+								resume
+								notations={notations.filter((n) => n.prestataire_id === p.id)}
+							/>
 						</div>
 						{#if !compactPrests || expanded}
 							<div class="prest-contacts">
@@ -1196,6 +1186,15 @@
 										>
 									</div>{/if}
 							</div>
+							<!--  Les avis, enfin visibles un par un (#807). L'écran n'en montrait
+							      que la MOYENNE, dans un badge : impossible de savoir qui avait
+							      noté quoi, et donc impossible de retirer une note posée par
+							      erreur — alors que l'endpoint de suppression existait. -->
+							<NotationsPrestataire
+								notations={notations.filter((n) => n.prestataire_id === p.id)}
+								peutSupprimer={$isCS}
+								on:supprimee={(e) => (notations = notations.filter((n) => n.id !== e.detail))}
+							/>
 						</div>
 					{/if}
 				</div>

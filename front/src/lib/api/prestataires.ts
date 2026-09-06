@@ -49,8 +49,10 @@ export const prestataires = {
 		commentaire?: string;
 		contrat_id?: number;
 	}) => api.post<any>('/prestataires/notations', data),
-	//  @sans-appelant Aucun bouton ne permet de retirer sa propre notation : une
-	//  fois publiée, elle est définitive — et elle nomme un tiers. (#807)
+	//  ✅ Appelée par `NotationsPrestataire.svelte` depuis le 06/09/2026 (#807).
+	//  Elle a porté la déclaration « sans appelant » quelques heures : l'endpoint
+	//  existait, réservé au CS, et aucun écran ne l'appelait — l'écran ne montrait
+	//  que la MOYENNE des avis, donc il n'y avait nulle part où poser le bouton.
 	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
 	// Synthèse
 	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),
