@@ -17,10 +17,14 @@ export const STATUTS_IDEE = [
 
 /** La rangée de filtres — les mêmes états, précédés de « Toutes ». Dérivée,
     jamais réécrite : une seconde liste diverge au premier état ajouté. */
-export const STATUTS_IDEE_FILTRE = [
-	{ val: '', label: 'Toutes' },
-	...STATUTS_IDEE.map((s) => ({ val: s.value, label: s.label })),
-];
+//  🔴 `STATUTS_IDEE_FILTRE` a DISPARU le 06/09/2026 (#795) : il n'existait que
+//  pour poser l'entrée « Toutes » en tête d'une rangée de boutons écrite à la
+//  main. `ChoixPastilles` porte cette entrée (`tous="Toutes"`), et la liste des
+//  états redevient ce qu'elle est — la liste des états.
+//
+//  ⚠️ Une constante qui n'existe que pour compenser l'absence d'un composant
+//  disparaît avec elle. La garder « au cas où » aurait laissé deux façons de
+//  décrire les mêmes états, libres de diverger.
 
 /** Le libellé d'un état, DÉRIVÉ de la liste — jamais une seconde table.
 

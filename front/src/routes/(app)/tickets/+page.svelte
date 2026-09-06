@@ -1,5 +1,6 @@
 <script lang="ts">
 	import EntetePage from '$lib/components/EntetePage.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { onMount } from 'svelte';
 	import { revelerCible } from '$lib/deepLink';
 	import { isAdmin } from '$lib/stores/auth';
@@ -333,36 +334,30 @@
 
 <AvertissementUrgence />
 
+<!--  🔴 DEUX rangées écrites à la main, soit la deuxième et la troisième
+      écriture du motif « choisir une entrée d'une liste courte » —
+      `ChoixPastilles` (#491) le porte, avec l'entrée qui ne choisit rien, le
+      défilement horizontal et le libellé de groupe accessible.
+
+      ⚠️ Le libellé N'EST PAS un `<label>` : une rangée de `<button>` n'est pas
+      labelable, et un `for` posé dessus n'associe rien **en silence**
+      (`ux-patterns` §9 septies). Le composant pose `role="group"` +
+      `aria-labelledby` — c'est une des raisons d'être de ce composant, et elle
+      se perdait à chaque recopie. -->
 <div class="filters">
-	<span class="filter-group">
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filterStatut === ''}
-			on:click={() => (filterStatut = '')}>Tous</button
-		>
-		{#each optionsStatut as s (s.value)}
-			<button
-				class="btn btn-sm"
-				class:btn-primary={filterStatut === s.value}
-				on:click={() => (filterStatut = s.value)}>{s.label}</button
-			>
-		{/each}
-	</span>
+	<ChoixPastilles
+		options={optionsStatut.map((s) => ({ val: s.value, label: s.label }))}
+		bind:valeur={filterStatut}
+		tous="Tous"
+		libelle="Filtrer les tickets par état"
+	/>
 	<span class="filter-sep"></span>
-	<span class="filter-group">
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filterCat === ''}
-			on:click={() => (filterCat = '')}>Toutes</button
-		>
-		{#each CATEGORIES_TICKET as c (c.value)}
-			<button
-				class="btn btn-sm"
-				class:btn-primary={filterCat === c.value}
-				on:click={() => (filterCat = c.value)}>{c.emoji} {c.label}</button
-			>
-		{/each}
-	</span>
+	<ChoixPastilles
+		options={CATEGORIES_TICKET.map((c) => ({ val: c.value, label: `${c.emoji} ${c.label}` }))}
+		bind:valeur={filterCat}
+		tous="Toutes"
+		libelle="Filtrer les tickets par catégorie"
+	/>
 </div>
 
 {#if loading}
@@ -458,11 +453,10 @@
 	/*  `.filters` vient d'`app.css` — sa marge basse et son `align-items` y sont
 	    remontés (#446). Ne restent ici que le groupe et le séparateur, qui n'ont
 	    pas d'équivalent ailleurs. */
-	.filter-group {
-		display: flex;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-	}
+	/*  🔴 `.filter-group` a disparu le 06/09/2026 (#795) : `ChoixPastilles` porte
+	    lui-même son groupe, son défilement et son libellé accessible. Le
+	    sélecteur est resté orphelin le temps d'une compilation — svelte-check
+	    l'a dit tout de suite, et c'est la bonne façon d'échouer. */
 	.filter-sep {
 		width: 1px;
 		height: 1.2rem;

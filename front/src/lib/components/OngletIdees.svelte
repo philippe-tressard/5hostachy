@@ -22,9 +22,10 @@
 	import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ListeIdees from '$lib/components/ListeIdees.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
-	import { STATUTS_IDEE_FILTRE } from '$lib/idees';
+	import { STATUTS_IDEE } from '$lib/idees';
 
 	export let idees: any[] = [];
 	export let chargement = false;
@@ -88,15 +89,21 @@
 	{/key}
 {/if}
 
-<div class="filters">
-	{#each STATUTS_IDEE_FILTRE as s (s.val)}
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filtreStatut === s.val}
-			on:click={() => (filtreStatut = s.val)}>{s.label}</button
-		>
-	{/each}
-</div>
+<!--  🔴 Cette rangée de boutons était la TROISIÈME écriture du même motif —
+      « choisir une entrée d'une liste courte, avec une entrée qui ne choisit
+      rien ». `ChoixPastilles` le porte depuis le 30/08/2026 (#491), et son
+      en-tête annonçait littéralement ce qui allait arriver : « elle se recopie
+      une troisième fois au premier filtre ajouté ».
+
+      ⚠️ `STATUTS_IDEE_FILTRE` portait déjà son entrée « Toutes » en tête de
+      liste ; c'est `tous` qui la pose maintenant, et la liste redevient celle
+      des seuls statuts (#795). -->
+<ChoixPastilles
+	options={STATUTS_IDEE.map((s) => ({ val: s.value, label: s.label }))}
+	bind:valeur={filtreStatut}
+	tous="Toutes"
+	libelle="Filtrer les idées par état"
+/>
 
 <EtatListe
 	{chargement}
