@@ -26,7 +26,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
@@ -36,20 +36,45 @@
 	import { perimetreDefautListe } from '$lib/perimetres';
 
 	//  L'API des sondages ne rend pas de type dédié : la page recharge sa liste.
-	const dispatch = createEventDispatcher<{ cree: unknown; annule: void }>();
+	const dispatch = createEventDispatcher<{ cree: unknown; modifie: unknown; annule: void }>();
 
-	type OptionForm = { libelle: string; champ_libre: boolean };
+	//  `id` n'existe QU'EN édition : le serveur corrige un libellé par son
+	//  identifiant, et vérifie qu'il appartient bien à ce sondage.
+	type OptionForm = { id?: number; libelle: string; champ_libre: boolean };
 
-	let question = '';
-	let description = '';
-	let clotureLe = '';
-	let resultatsPublics = true;
-	let options: OptionForm[] = [
-		{ libelle: '', champ_libre: false },
-		{ libelle: '', champ_libre: false },
-	];
-	let perimetreCible: string[] = perimetreDefautListe();
-	let publicCible: string[] = ['résidents'];
+	/**  Le sondage à corriger, ou `null` pour une création (#783).
+	 *
+	 *   🔴 Ce fichier portait, jusqu'au 06/09/2026, ce constat : «
+	 *   `PATCH /sondages/{id}` existe côté serveur et personne ne l'appelle ».
+	 *   Tout était écrit et testé sauf le chemin pour y arriver — corriger une
+	 *   faute de frappe imposait de supprimer et recréer, donc de perdre les votes.
+	 *   Le constat était juste ; il devient l'implantation. */
+	export let sondage: any = null;
+
+	$: modeEdition = sondage !== null;
+	$: etat = (modeEdition ? 'edition' : 'creation') as Etat;
+
+	//  Initialisés À LA CONSTRUCTION, jamais réactifs : un `$:` écraserait la
+	//  saisie en cours dès que le parent rafraîchit sa liste. C'est `{#key}` chez
+	//  l'appelant qui remonte le composant — même contrat que `FormulaireAnnonce`.
+	let question = sondage?.question ?? '';
+	let description = sondage?.description ?? '';
+	//  `<input type="datetime-local">` veut `AAAA-MM-JJTHH:MM`, pas de l'ISO avec
+	//  fuseau : couper à seize caractères est ce que fait déjà l'événement.
+	let clotureLe = sondage?.cloture_le ? String(sondage.cloture_le).slice(0, 16) : '';
+	let resultatsPublics = sondage?.resultats_publics ?? true;
+	let options: OptionForm[] = sondage?.options?.length
+		? sondage.options.map((o: any) => ({
+				id: o.id,
+				libelle: o.libelle,
+				champ_libre: o.champ_libre ?? false,
+			}))
+		: [
+				{ libelle: '', champ_libre: false },
+				{ libelle: '', champ_libre: false },
+			];
+	let perimetreCible: string[] = [...(sondage?.perimetre_cible ?? perimetreDefautListe())];
+	let publicCible: string[] = [...(sondage?.public_cible ?? ['résidents'])];
 	let partagerWhatsapp = false;
 	let envoyerSyndic = false;
 	let envoyerCs = false;
@@ -57,15 +82,6 @@
 	//  porte la règle et son pourquoi. Elle s'affichait ici sans être lue (31/08).
 	let envoyerAuteur = false;
 	let submitting = false;
-
-	/**  🔴 Ce formulaire ne sert QUE la création, et la déclaration le dit sans
-	 *   ambiguïté : `PATCH /sondages/{id}` existe côté serveur et personne ne
-	 *   l'appelle. Corriger une faute de frappe dans la question impose donc de
-	 *   supprimer et recréer — ce qui perd tous les votes déjà exprimés (#467).
-	 *
-	 *   L'état est donc une CONSTANTE, pas une prop : l'écrire ainsi rend le manque
-	 *   visible en relecture, là où l'absence de prop ne dit rien. */
-	const etat: Etat = 'creation';
 
 	function ajouterOption() {
 		options = [...options, { libelle: '', champ_libre: false }];
@@ -102,7 +118,45 @@
 		envoyerCs = false;
 	}
 
-	async function creer() {
+	/**  Corriger un sondage — strictement ce que `SondageUpdate` accepte.
+	 *
+	 *   🔴 Ni le ciblage ni les canaux de diffusion ne sont renvoyés, et ce n'est
+	 *   pas un oubli : le serveur ne les expose pas. Restreindre un périmètre après
+	 *   coup masquerait le sondage à des gens qui ont déjà voté ; renvoyer un canal
+	 *   rediffuserait. Les envoyer quand même serait ignoré côté serveur, et ferait
+	 *   croire ICI que le geste a marché.
+	 *
+	 *   ⚠️ Les options portent leur `id` : le serveur corrige un LIBELLÉ, il
+	 *   n'ajoute ni ne retire de réponse — la liste engagerait ceux qui ont voté.
+	 *   Les options nouvelles (sans `id`) sont donc écartées ici plutôt que
+	 *   refusées là-bas : l'écran ne les propose pas non plus. */
+	async function corriger() {
+		if (!question.trim()) {
+			toast('error', 'La question est obligatoire');
+			return;
+		}
+		submitting = true;
+		try {
+			const maj = await sondagesApi.modifier(sondage.id, {
+				question,
+				description: description || null,
+				cloture_le: clotureLe ? new Date(clotureLe).toISOString() : null,
+				resultats_publics: resultatsPublics,
+				options: options
+					.filter((o) => o.id !== undefined && o.libelle.trim())
+					.map((o) => ({ id: o.id, libelle: o.libelle })),
+			});
+			toast('success', 'Sondage mis à jour');
+			dispatch('modifie', maj);
+		} catch (e) {
+			toast('error', e instanceof ApiError ? e.message : 'Erreur');
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function enregistrer() {
+		if (modeEdition) return corriger();
 		const opts = options
 			.map((o, i) => ({ libelle: o.libelle, ordre: i, champ_libre: o.champ_libre }))
 			.filter((o) => o.libelle.trim());
@@ -138,8 +192,11 @@
 	}
 </script>
 
-<FormulaireCreation titre="Nouveau sondage">
-	<form on:submit|preventDefault={creer}>
+<CadreFormulaire
+	edition={modeEdition}
+	titre={modeEdition ? 'Modifier le sondage' : 'Nouveau sondage'}
+>
+	<form on:submit|preventDefault={enregistrer}>
 		<!--  1. Titre — ici, la question posée, et le titre de la section EST son
 		      libellé (`titreEcran: 'Question'`). -->
 		<SectionFormulaire premiere>
@@ -166,23 +223,32 @@
 									placeholder="Réponse {i + 1}"
 									aria-label="Libellé de la réponse {i + 1}"
 								/>
-								<button
-									type="button"
-									class="btn btn-sm btn-outline"
-									title="Monter"
-									aria-label="Monter la réponse {i + 1}"
-									disabled={i === 0}
-									on:click={() => monter(i)}>↑</button
-								>
-								<button
-									type="button"
-									class="btn btn-sm btn-outline"
-									title="Descendre"
-									aria-label="Descendre la réponse {i + 1}"
-									disabled={i === options.length - 1}
-									on:click={() => descendre(i)}>↓</button
-								>
-								{#if options.length > 2}
+								<!--  🔒 EN CORRECTION, la liste des réponses NE BOUGE PAS — seuls
+								      les libellés se corrigent. Ajouter, retirer ou réordonner
+								      changerait ce que les votes déjà exprimés désignent, et le
+								      serveur le refuse (`SondageUpdate` ne prend qu'un `id` et un
+								      `libelle`). Masquer ces gestes ici, c'est dire la même chose
+								      que l'API — un bouton qui déclencherait un refus serait pire
+								      qu'absent. -->
+								{#if !modeEdition}
+									<button
+										type="button"
+										class="btn btn-sm btn-outline"
+										title="Monter"
+										aria-label="Monter la réponse {i + 1}"
+										disabled={i === 0}
+										on:click={() => monter(i)}>↑</button
+									>
+									<button
+										type="button"
+										class="btn btn-sm btn-outline"
+										title="Descendre"
+										aria-label="Descendre la réponse {i + 1}"
+										disabled={i === options.length - 1}
+										on:click={() => descendre(i)}>↓</button
+									>
+								{/if}
+								{#if !modeEdition && options.length > 2}
 									<button
 										type="button"
 										class="btn btn-sm btn-outline option-supprimer"
@@ -192,15 +258,19 @@
 									>
 								{/if}
 							</div>
-							<label class="case case-secondaire">
-								<input type="checkbox" bind:checked={options[i].champ_libre} />
-								<span>Champ libre (le répondant pourra préciser sa réponse par écrit)</span>
-							</label>
+							{#if !modeEdition}
+								<label class="case case-secondaire">
+									<input type="checkbox" bind:checked={options[i].champ_libre} />
+									<span>Champ libre (le répondant pourra préciser sa réponse par écrit)</span>
+								</label>
+							{/if}
 						</div>
 					{/each}
-					<button type="button" class="btn btn-sm btn-outline" on:click={ajouterOption}>
-						+ Ajouter une autre réponse
-					</button>
+					{#if !modeEdition}
+						<button type="button" class="btn btn-sm btn-outline" on:click={ajouterOption}>
+							+ Ajouter une autre réponse
+						</button>
+					{/if}
 				</div>
 			</SectionFormulaire>
 
@@ -260,7 +330,7 @@
 			</button>
 		</div>
 	</form>
-</FormulaireCreation>
+</CadreFormulaire>
 
 <style>
 	.form-grid .field {

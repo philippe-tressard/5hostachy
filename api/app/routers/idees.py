@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_cs_or_admin
+from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     Idee,
@@ -53,6 +53,29 @@ class IdeeCreate(BaseModel):
     #  `public_cible_visible` fait d'une valeur absente, et l'inverse
     #  rendrait l'idée invisible de tous sans rien dire.
     public_cible: Optional[list[str]] = None
+
+
+class IdeeUpdate(BaseModel):
+    """Ce qu'une idÃ©e accepte de voir corrigÃ© aprÃ¨s son dÃ©pÃ´t (#783).
+
+    DemandÃ© par Philippe le 06/09/2026 : Â« il n'est pas possible de l'Ã©diter
+    (si erreur de saisie) Â». C'est donc la CORRECTION qui est visÃ©e, pas la
+    rÃ©Ã©criture d'une idÃ©e en une autre.
+
+    ð´ Les champs de CIBLAGE (`perimetre_cible`, `public_cible`) n'y sont pas,
+    et c'est la mÃªme dÃ©cision que pour le sondage (`SondageUpdate`) : restreindre
+    aprÃ¨s coup masquerait l'idÃ©e Ã  des gens qui l'ont dÃ©jÃ  votÃ©e. Un champ qu'on
+    n'expose pas ne se contourne pas â tant que la question n'est pas tranchÃ©e,
+    son absence vaut refus.
+
+    â ï¸ Le `statut` n'y est pas non plus : il a dÃ©jÃ  sa route
+    (`PATCH /idees/{id}/statut`, rÃ©servÃ©e au CS), qui horodate `statut_change_le`
+    et prÃ©vient les votants. L'exposer ici donnerait DEUX chemins vers le mÃªme
+    fait, dont un qui oublierait les deux effets de bord.
+    """
+
+    titre: Optional[str] = None
+    description: Optional[str] = None
 
 
 class IdeeRead(BaseModel):
@@ -198,6 +221,53 @@ def voter(
 
 class StatutUpdate(BaseModel):
     statut: str  # ouverte | retenue | rejetee | realisee
+
+
+@router.patch("/{idee_id}")
+def update_idee(
+    idee_id: int,
+    body: IdeeUpdate,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Corriger le titre ou la description d'une idÃ©e (#783).
+
+    L'idÃ©e Ã©tait la seule entitÃ© de la CommunautÃ© sans aucun moyen de se
+    corriger : une faute de frappe y Ã©tait dÃ©finitive, ou imposait de supprimer
+    et redéposer â ce qui perd les votes et les rÃ©ponses dÃ©jÃ  reÃ§us.
+    """
+    exiger_acces(user)
+    idee = session.get(Idee, idee_id)
+    #  404 et non 403 quand elle n'est pas visible : Â« interdit Â» confirmerait son
+    #  existence. L'auteur, lui, voit toujours la sienne (`cible_visible`).
+    if not idee or not idee_visible(idee, user):
+        raise HTTPException(404, "IdÃ©e introuvable")
+    #  ð `peut_editer` â l'auteur ou un admin, du module central. **Pas le
+    #  conseil syndical** : il dÃ©cide du STATUT d'une idÃ©e, il ne rÃ©Ã©crit pas la
+    #  proposition de quelqu'un. C'est exactement la rÃ¨gle du sondage, et c'est la
+    #  mÃªme fonction : une rÃ¨gle d'autorisation recopiÃ©e se durcit une fois sur deux.
+    if not peut_editer(idee, user):
+        raise HTTPException(403, "Seul l'auteur ou un admin peut modifier cette idÃ©e")
+    #  Une idÃ©e ARCHIVÃE ne se corrige plus â le pendant de Â« ce sondage est
+    #  clÃ´turÃ© et ne peut plus Ãªtre modifiÃ© Â». Elle a quittÃ© la vie active, et la
+    #  rÃ©Ã©crire changerait rÃ©troactivement ce que les votants ont soutenu.
+    if est_archivable("idee", idee, seuil_jours=seuil_archivage_jours(session)):
+        raise HTTPException(400, "Cette idÃ©e est archivÃ©e et ne peut plus Ãªtre modifiÃ©e")
+
+    donnees = body.model_dump(exclude_unset=True)
+    for champ in ("titre", "description"):
+        if champ in donnees:
+            valeur = (donnees[champ] or "").strip()
+            if not valeur:
+                raise HTTPException(422, f"Le champ Â« {champ} Â» ne peut pas Ãªtre vide")
+            setattr(idee, champ, valeur)
+    #  â ï¸ `statut_change_le` n'est PAS touchÃ© : corriger une faute de frappe ne
+    #  doit pas repousser l'archivage d'un mois. C'est la leÃ§on que `PetiteAnnonce`
+    #  porte dÃ©jÃ , et la raison d'Ãªtre de ce champ distinct de `mis_a_jour_le`.
+    session.add(idee)
+    session.commit()
+    session.refresh(idee)
+    return _enrich([idee], user.id, session)[0]
 
 
 @router.patch("/{idee_id}/statut")
