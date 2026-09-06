@@ -33,7 +33,7 @@
 <script lang="ts">
 	import Modale from '$lib/components/Modale.svelte';
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
+	import { admin as adminApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
@@ -100,8 +100,8 @@
 		emailHistoryLoading = true;
 		try {
 			[emailTemplates, emailHistory] = await Promise.all([
-				api.get<any[]>('/admin/modeles-email'),
-				api.get<any[]>('/admin/emails/historique'),
+				adminApi.emailTemplates(),
+				adminApi.emailsHistorique(),
 			]);
 		} finally {
 			emailsLoading = false;
@@ -125,7 +125,7 @@
 		if (!emailEdit) return;
 		emailSaving = true;
 		try {
-			const updated = await api.patch<any>(`/admin/modeles-email/${emailEdit.id}`, {
+			const updated = await adminApi.updateEmailTemplate(emailEdit.id, {
 				sujet: emailSujet,
 				corps_html: emailCorpsHtml,
 				corps_texte: emailCorpsTexte,
@@ -156,7 +156,7 @@
 			return;
 		emailResetting = true;
 		try {
-			const res = await api.post<{ message: string }>('/admin/modeles-email/reinitialiser', {});
+			const res = await adminApi.resetEmailTemplates();
 			toast('success', res?.message ?? 'Designs réinitialisés.');
 			await loadEmails();
 		} catch (e: any) {

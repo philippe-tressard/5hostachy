@@ -6,7 +6,7 @@
 	//  parent, parce qu'il vit dans la configuration du site partagée avec
 	//  l'onglet « Paramétrage site ».
 	import { onMount } from 'svelte';
-	import { api, config as configApi } from '$lib/api';
+	import { config as configApi } from '$lib/api';
 	import { configStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDatetimeShort } from '$lib/date';
@@ -68,14 +68,14 @@
 
 	async function loadWaScheduled() {
 		try {
-			waScheduled = await api.get('/config/whatsapp-scheduled');
+			waScheduled = await configApi.whatsappPlanifies();
 		} catch {
 			/**/
 		}
 	}
 	async function loadWaLogs() {
 		try {
-			waLogs = await api.get('/config/whatsapp-logs');
+			waLogs = await configApi.whatsappJournaux();
 		} catch {
 			/**/
 		}
@@ -100,7 +100,7 @@
 	async function saveWaScheduledItem(item: (typeof waScheduled)[0]) {
 		waScheduledSaving = { ...waScheduledSaving, [item.id]: true };
 		try {
-			await api.put(`/config/whatsapp-scheduled/${item.id}`, {
+			await configApi.modifierWhatsappPlanifie(item.id, {
 				label: item.label,
 				message: item.message,
 				cron_rule: item.cron_rule,
@@ -118,7 +118,7 @@
 		if (!waTestMessage.trim()) return;
 		waTesting = true;
 		try {
-			await api.post('/config/whatsapp-test', { message: waTestMessage });
+			await configApi.testerWhatsapp(waTestMessage);
 			toast('success', 'Message de test envoyé sur le groupe WhatsApp.');
 		} catch (e: any) {
 			//  Le serveur répond 502 quand le bridge n'a pas acquitté : ce n'est pas
@@ -133,7 +133,7 @@
 	async function checkWaStatus() {
 		waStatusLoading = true;
 		try {
-			waStatus = await api.get('/config/whatsapp-status');
+			waStatus = await configApi.whatsappStatut();
 			if (waStatus?.state === 'waiting_qr') waQrTimestamp = Date.now();
 		} catch (e: any) {
 			waStatus = null;

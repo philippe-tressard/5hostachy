@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
-	import { api, config as configApi } from '$lib/api';
+	import { api, admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import ChampIcone from '$lib/components/ChampIcone.svelte';
@@ -72,7 +72,7 @@
 	let batimentsMap: Record<number, string> = {};
 	async function loadBatiments() {
 		try {
-			const list = await api.get<{ id: number; numero: string }[]>('/auth/batiments');
+			const list = await authApi.batiments();
 			batimentsMap = Object.fromEntries(
 				list.map((b: { id: number; numero: string }) => [b.id, `Bât. ${b.numero}`]),
 			);
@@ -92,7 +92,7 @@
 	async function loadComptes() {
 		comptesLoading = true;
 		try {
-			comptes = await api.get<any[]>('/admin/comptes-en-attente/enrichis');
+			comptes = await adminApi.comptesEnAttenteEnrichis();
 		} finally {
 			comptesLoading = false;
 		}
@@ -100,7 +100,7 @@
 
 	async function refuserCompte(id: number) {
 		try {
-			await api.post(`/admin/comptes/${id}/traiter`, { action: 'refuser', motif: refusMotif[id] });
+			await adminApi.traiterCompte(id, { action: 'refuser', motif: refusMotif[id] });
 			toast('info', 'Compte refusé.');
 			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== id);
 		} catch (e: any) {
@@ -110,7 +110,7 @@
 
 	async function relancerAutoMatch(userId: number, userNom: string) {
 		try {
-			const res = await api.post<any>(`/admin/utilisateurs/${userId}/auto-match`, {});
+			const res = await adminApi.autoMatchUtilisateur(userId);
 			const lots = res?.auto_match?.lots_resolus ?? 0;
 			const lotsM = res?.auto_match?.lots ?? 0;
 			if (lots > 0) toast('success', `${userNom} — ${lots} lot(s) résolu(s) automatiquement.`);
@@ -132,7 +132,7 @@
 	async function loadCommandes() {
 		commandesLoading = true;
 		try {
-			commandes = await api.get<any[]>('/admin/commandes-acces');
+			commandes = await adminApi.commandesAccesEnAttente();
 		} finally {
 			commandesLoading = false;
 		}
@@ -140,7 +140,7 @@
 
 	async function accepterCommande(id: number) {
 		try {
-			await api.post(`/admin/commandes-acces/${id}/traiter`, { action: 'accepter' });
+			await adminApi.traiterCommandeAcces(id, { action: 'accepter' });
 			toast('success', 'Commande acceptee.');
 			commandes = commandes.filter((c) => c.id !== id);
 		} catch (e: any) {
@@ -150,7 +150,7 @@
 
 	async function refuserCommande(id: number) {
 		try {
-			await api.post(`/admin/commandes-acces/${id}/traiter`, {
+			await adminApi.traiterCommandeAcces(id, {
 				action: 'refuser',
 				motif_refus: cmdMotif[id],
 			});
@@ -209,7 +209,7 @@
 		const u = cvModal.user;
 		cvSubmitting = true;
 		try {
-			const res = await api.post<any>(`/admin/comptes/${u.id}/traiter`, { action: 'valider' });
+			const res = await adminApi.traiterCompte(u.id, { action: 'valider' });
 			const lots = res?.auto_match?.lots_resolus ?? 0;
 			const lotsMatches = res?.auto_match?.lots ?? 0;
 			const aideMatch = res?.auto_match?.aide_match;
@@ -234,7 +234,7 @@
 			else toast('success', 'Compte activé.');
 			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== u.id);
 			if (cvNewArrivant) {
-				await api.post(`/admin/utilisateurs/${u.id}/accueil-arrivant`, {
+				await adminApi.accueilArrivant(u.id, {
 					batiment: cvBatiment || null,
 					ancien_resident: cvAncienResident || null,
 				});
@@ -265,7 +265,7 @@
 		const u = accueilModal.user;
 		accueilSubmitting = true;
 		try {
-			await api.post(`/admin/utilisateurs/${u.id}/accueil-arrivant`, {
+			await adminApi.accueilArrivant(u.id, {
 				batiment: accueilBatiment || null,
 				ancien_resident: accueilAncienResident || null,
 			});
@@ -281,7 +281,7 @@
 	async function loadUtilisateurs() {
 		utilisateursLoading = true;
 		try {
-			utilisateurs = await api.get<any[]>('/admin/utilisateurs');
+			utilisateurs = await adminApi.utilisateurs();
 		} finally {
 			utilisateursLoading = false;
 		}
@@ -295,11 +295,14 @@
 		if (!roleEnCours) return;
 		const { user, role, action } = roleEnCours;
 		try {
-			const endpoint =
-				action === 'ajouter'
-					? `/admin/utilisateurs/${user.id}/ajouter-role`
-					: `/admin/utilisateurs/${user.id}/retirer-role`;
-			const updated = await api.post<any>(endpoint, { role });
+			//  🔴 Les deux méthodes EXISTAIENT dans le client et n'étaient appelées
+			//  nulle part (#801) : l'écran construisait l'URL dans un ternaire, ce
+			//  qui la rendait invisible à toute recherche par route. C'est la forme
+			//  la plus tenace du contournement — la chaîne recopiée ne ressemble
+			//  même plus à une route.
+			const updated = await (action === 'ajouter'
+				? adminApi.ajouterRole(user.id, role)
+				: adminApi.retirerRole(user.id, role));
 			toast(
 				'success',
 				`Rôle ${roleLabels[role] ?? role} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${nomAffiche(user)}.`,
@@ -329,7 +332,7 @@
 	async function saveEdit() {
 		if (!editUser) return;
 		try {
-			const updated = await api.patch<any>(`/admin/utilisateurs/${editUser.id}`, editForm);
+			const updated = await adminApi.modifierUtilisateur(editUser.id, editForm);
 			utilisateurs = utilisateurs.map((u) => (u.id === editUser!.id ? { ...u, ...updated } : u));
 			toast('success', 'Utilisateur mis à jour.');
 			editUser = null;
@@ -343,7 +346,7 @@
 		const target = deleteConfirm;
 		deleteConfirm = null;
 		try {
-			await api.delete(`/admin/utilisateurs/${target.id}`);
+			await adminApi.supprimerUtilisateur(target.id);
 			utilisateurs = utilisateurs.filter((u) => u.id !== target.id);
 			toast('success', `${nomAffiche(target)} supprimé.`);
 		} catch (e: any) {
@@ -357,9 +360,7 @@
 			(u.communaute_ban_jusqu_au && new Date(u.communaute_ban_jusqu_au) > new Date());
 		const interdit = !isBanned;
 		try {
-			const updated = await api.patch<any>(`/admin/utilisateurs/${u.id}/ban-communaute`, {
-				interdit,
-			});
+			const updated = await adminApi.banCommunaute(u.id, { interdit });
 			utilisateurs = utilisateurs.map((x) => (x.id === u.id ? { ...x, ...updated } : x));
 			if (interdit) {
 				const msg = updated.communaute_interdit
@@ -481,7 +482,7 @@
 	async function loadDemandesProfil() {
 		demandesProfilLoading = true;
 		try {
-			demandesProfil = await api.get<any[]>('/admin/demandes-profil');
+			demandesProfil = await adminApi.demandesProfil();
 		} catch {
 			/* ignore */
 		} finally {
@@ -491,7 +492,7 @@
 
 	async function approuverDemande(id: number) {
 		try {
-			await api.post(`/admin/demandes-profil/${id}/traiter`, { action: 'approuver' });
+			await adminApi.traiterDemandeProfil(id, { action: 'approuver' });
 			toast('success', 'Demande approuvée.');
 			demandesProfil = demandesProfil.filter((d) => d.id !== id);
 		} catch (e: any) {
@@ -501,7 +502,7 @@
 
 	async function rejeterDemande(id: number) {
 		try {
-			await api.post(`/admin/demandes-profil/${id}/traiter`, {
+			await adminApi.traiterDemandeProfil(id, {
 				action: 'rejeter',
 				motif_refus: refusDemande[id] || null,
 			});

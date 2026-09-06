@@ -18,7 +18,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
-	import { api, config as configApi } from '$lib/api';
+	import { config as configApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionReceptionReponses from '$lib/components/SectionReceptionReponses.svelte';
@@ -99,7 +99,7 @@
 	 */
 	async function relire() {
 		try {
-			valeurs = await api.get<Record<string, string>>('/config/admin');
+			valeurs = await configApi.admin();
 			hydrater(valeurs);
 		} catch {
 			//  Muet à dessein : l'enregistrement a réussi, seul l'affichage est en
@@ -144,7 +144,7 @@
 			//  Le serveur dit CE QU'IL A FAIT — un envoi par adresse d'expédition
 			//  configurée. Réécrire le message ici le figerait à un seul envoi, et
 			//  l'écran annoncerait autre chose que ce qui est parti.
-			const r: any = await api.post('/config/smtp-test', { email: smtpTestEmail });
+			const r: any = await configApi.testerSmtp(smtpTestEmail);
 			toast('success', r?.message ?? `E-mail de test envoyé à ${smtpTestEmail}`);
 		} catch (e: any) {
 			toast('error', e.message ?? "Échec de l'envoi");

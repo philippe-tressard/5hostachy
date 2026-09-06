@@ -22,27 +22,20 @@
 	 * et ne supprime qu'après une confirmation qui répète le compte. L'endpoint
 	 * porte la même prudence : sans `confirmer=true`, il ne fait rien.
 	 */
-	import { api } from '$lib/api';
+	import { admin as adminApi, type ReleveOrphelins } from '$lib/api';
 	import { confirmer } from '$lib/confirmation';
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 
-	type Relation = { table: string; colonne: string; table_parente: string; lignes: number };
-	type Releve = {
-		ok: boolean;
-		inconnu: boolean;
-		orphelins?: number;
-		par_relation?: Relation[];
-		erreur?: string;
-	};
-
-	let releve: Releve | null = null;
+	//  Le type de la réponse vit avec la méthode qui la rend (`$lib/api`, #801) :
+	//  il décrit un contrat d'API, pas une notion de cet écran.
+	let releve: ReleveOrphelins | null = null;
 	let enCours = false;
 
 	async function analyser() {
 		enCours = true;
 		try {
-			releve = await api.get<Releve>('/admin/db/cles-etrangeres');
+			releve = await adminApi.clesEtrangeres();
 			//  ⚠️ « n'a pas pu mesurer » n'est pas « rien à signaler ». L'API
 			//  distingue les deux ; l'écran doit le dire aussi, sinon il rassure
 			//  sur une mesure qui n'a pas eu lieu.
@@ -61,10 +54,7 @@
 		try {
 			//  1er temps : la SIMULATION. L'endpoint ne supprime rien sans
 			//  `confirmer=true` — on lui demande donc d'abord ce qui partirait.
-			const simulation = await api.post<{
-				seraient_supprimees?: number;
-				seraient_deliees?: number;
-			}>('/admin/db/purger-orphelins');
+			const simulation = await adminApi.simulerPurgeOrphelins();
 			const aSupprimer = simulation.seraient_supprimees ?? 0;
 			const aDelier = simulation.seraient_deliees ?? 0;
 			if (!aSupprimer && !aDelier) {
@@ -98,9 +88,7 @@
 				danger: aSupprimer > 0,
 			});
 			if (!ok) return;
-			const resultat = await api.post<{ supprimees: number; deliees: number }>(
-				'/admin/db/purger-orphelins?confirmer=true',
-			);
+			const resultat = await adminApi.purgerOrphelins();
 			toast(
 				'success',
 				`${resultat.supprimees} ligne(s) supprimée(s), ${resultat.deliees} déliée(s).`,

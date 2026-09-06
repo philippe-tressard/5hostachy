@@ -14,7 +14,7 @@
   Troisième extraction du même patron, après `OngletWhatsApp` et `OngletSmtp`.
 -->
 <script lang="ts">
-	import { api } from '$lib/api';
+	import { admin as adminApi } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
@@ -27,7 +27,7 @@
 	export async function loadTelemetry() {
 		telemetryLoading = true;
 		try {
-			telemetryData = await api.get<any>(`/telemetry/dashboard?scope=${tlScope}`);
+			telemetryData = await adminApi.telemetryDashboard(tlScope);
 		} catch {
 			telemetryData = null;
 		} finally {

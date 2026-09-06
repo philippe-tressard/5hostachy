@@ -1291,3 +1291,18 @@ jobs:
       - name: Seuil des listes courtes (pastilles vs select)
         working-directory: front
         run: npm run lint:seuil-listes
+
+      # 🔴 Le client TypeScript est la SEULE porte d'entrée de l'API (#801).
+      # Le ticket relevait « 48 méthodes que personne n'appelle » ; le tri a montré
+      # que la moitié n'était pas morte mais CONTOURNÉE — l'écran écrivait la route
+      # à la main pendant que la méthode existait deux fichiers plus loin. Trois
+      # recopies comptaient vraiment : `accueil-arrivant` était écrit TROIS fois,
+      # corps compris, et il déclenche des e-mails.
+      #
+      # ⚠️ ZÉRO exception, et c'est le moment qui le permet : le contrôle est posé
+      # APRÈS que le compte soit tombé à zéro. Une liste de tolérances posée avant
+      # le tri aurait figé 38 cas — et une tolérance qui ne sert plus finit par en
+      # couvrir une qui compte.
+      - name: Le client TypeScript est la seule porte d'entrée de l'API
+        working-directory: front
+        run: npm run lint:client-api
