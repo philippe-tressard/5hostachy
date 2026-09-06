@@ -190,7 +190,22 @@
 	<div class="evol-list">
 		{#each visibles as evol, i (evol.id)}
 			{#if i > 0}<hr class="evol-sep" />{/if}
-			<div class="evol-item evol-{evol.type}">
+			<!--  🔴 Trois `class:` plutôt que `evol-{evol.type}` (#810) : devant une
+			      classe interpolée, Svelte cesse de déclarer les sélecteurs inutilisés
+			      pour TOUT le fichier, et `lint:css-orphelin` devient aveugle sur ce
+			      composant — qui porte une centaine de lignes de style.
+
+			      Les trois valeurs sont celles de `TypeEvolution` ($lib/evolutions) :
+			      un quatrième type ajouté là-bas ne recevrait pas son fond ici, et
+			      c'est le seul risque que la conversion introduit. Il est moindre que
+			      l'aveuglement qu'elle supprime, et `svelte-check` signalera alors le
+			      sélecteur devenu orphelin — ce qu'il ne faisait pas. -->
+			<div
+				class="evol-item"
+				class:evol-commentaire={evol.type === 'commentaire'}
+				class:evol-etat={evol.type === 'etat'}
+				class:evol-reponse={evol.type === 'reponse'}
+			>
 				<!--  🔴 L'icône vient de `$lib/evolutions`, plus d'une chaîne écrite ici.
 				      Elle valait 📝 pour un commentaire alors que le bouton qui le crée
 				      dit « 💬 Commenter » — signalé à l'écran le 19/08/2026 : *« pourquoi

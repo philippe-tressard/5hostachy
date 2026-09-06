@@ -332,7 +332,6 @@
 	    l'Historique — elle valait 720 px écrits en ligne quatre fois. */
 	.ticket-header,
 	.messages,
-	.bloc-historique,
 	.zone-suppression {
 		max-width: 720px;
 	}
@@ -385,9 +384,12 @@
 		margin-top: 0.3rem;
 	}
 
-	.bloc-historique {
-		margin-top: 1.5rem;
-	}
+	/*  🔴 `.bloc-historique` a été retirée le 06/09/2026 (#810) — deux règles,
+	    zéro balisage. Le reste d'un bloc parti, invisible depuis des mois : cet
+	    écran porte une classe interpolée, et Svelte cesse alors de déclarer les
+	    sélecteurs inutilisés pour TOUT le fichier. Trouvée en neutralisant
+	    temporairement les interpolations du front pour mesurer ce que
+	    l'aveuglement masquait. */
 	.evol-form {
 		padding: 0.75rem;
 		margin-top: 0.75rem;

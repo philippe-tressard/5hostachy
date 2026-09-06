@@ -124,10 +124,81 @@ function fichiersSvelte(dir, acc = []) {
 }
 
 const tous = fichiersSvelte('src');
-const aveugles = tous.filter((f) => /class="[^"]*\{/.test(readFileSync(f, 'utf8')));
+/**
+ *  Le fichier PRIVÉ de ses commentaires — sinon le contrôle se compte lui-même.
+ *
+ *  🔴 Trois fichiers convertis le 06/09/2026 sont restés comptés « non
+ *  mesurés » : leurs commentaires expliquaient la conversion en CITANT le motif
+ *  (`class="toast toast-{t.type}"`). Un garde-fou qui se déclenche sur le récit
+ *  de sa propre application est un faux positif qu'on apprend à ignorer — et
+ *  c'est la deuxième fois de la journée, après `@sans-appelant` cité dans
+ *  `lint:client-appele`.
+ */
+function sansCommentaires(source) {
+	return source.replace(/<!--[\s\S]*?-->/g, '').replace(/^\s*(\/\/|\*|\/\*).*$/gm, '');
+}
+
+const aveugles = tous.filter((f) =>
+	/class="[^"]*\{/.test(sansCommentaires(readFileSync(f, 'utf8'))),
+);
+
+/**
+ *  Le nombre de fichiers que ce contrôle ne peut PAS mesurer. Il ne peut que
+ *  DÉCROÎTRE — comme le plafond de `lint:each-key`.
+ *
+ *  🔴 C'est ce qui transforme un constat en garde-fou. Sans plafond, le contrôle
+ *  annonçait sa portée et personne n'était tenu par le chiffre : une classe
+ *  interpolée ajoutée demain aurait fait un aveugle de plus, en silence.
+ *
+ *  Il valait 30 au relevé du 06/09/2026 (#810), puis 27 après conversion de cinq
+ *  écrans et correction du contrôle lui-même, qui se comptait dans ses propres
+ *  commentaires.
+ *
+ *  ⚠️ **Le baisser fait partie du geste.** Un plafond qui reste au-dessus du
+ *  relevé est une tolérance qui ne sert plus, et ce contrôle échoue aussi dans
+ *  ce sens-là.
+ */
+const PLAFOND_NON_MESURES = 27;
+
+const mesures = tous.length - aveugles.length;
+
+if (aveugles.length !== PLAFOND_NON_MESURES) {
+	const trop = aveugles.length > PLAFOND_NON_MESURES;
+	console.error(
+		`\n✗ ${aveugles.length} fichier(s) non mesurable(s) — le plafond est ${PLAFOND_NON_MESURES}.\n`,
+	);
+	if (trop) {
+		for (const f of aveugles) console.error(`   ${f}`);
+		console.error(
+			[
+				'',
+				'  Une classe INTERPOLÉE fait cesser Svelte de déclarer les sélecteurs',
+				'  inutilisés pour TOUT le fichier. Ce contrôle y devient aveugle, sans le dire.',
+				'',
+				'  Deux issues :',
+				'    • la classe calculée est LOCALE et ses valeurs sont connues',
+				'      -> `class:ma-classe={condition}`, que Svelte sait résoudre ;',
+				"    • elle vient d'une TABLE vers des classes globales (`badge {STATUT[…]}`)",
+				"      -> ne pas convertir : l'éclater en `class:` recopierait la table dans",
+				'      le balisage. Le fichier reste non mesuré, et il faut alors MONTER le',
+				'      plafond en le justifiant ici — ce qui doit rester exceptionnel.',
+				'',
+			].join('\n'),
+		);
+	} else {
+		console.error(
+			[
+				`  Abaisser \`PLAFOND_NON_MESURES\` à ${aveugles.length} dans ce fichier.`,
+				'  Un plafond qui reste au-dessus du relevé est une tolérance qui ne sert plus.',
+				'',
+			].join('\n'),
+		);
+	}
+	process.exit(1);
+}
 
 console.log(`✓ CSS : aucun sélecteur orphelin (${orphelins.length} toléré(s) et déclaré(s))`);
 console.log(
-	`  ⚠️ portée réelle : ${tous.length - aveugles.length}/${tous.length} fichiers mesurés — ` +
-		`${aveugles.length} portent une classe interpolée, où Svelte ne déclare AUCUN orphelin (#810).`,
+	`  ⚠️ portée réelle : ${mesures}/${tous.length} fichiers mesurés — ` +
+		`${aveugles.length} portent une classe interpolée (plafond ${PLAFOND_NON_MESURES}, #810).`,
 );

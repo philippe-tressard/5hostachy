@@ -89,6 +89,16 @@
 				{@const preavisWidth = ((barEnd - barStart) / 12) * 100}
 				{@const finPos = finDansAnnee ? ((moisFin + 0.5) / 12) * 100 : 99}
 				{@const friseStyle = c.reconduit ? 'reconduit' : c.urgence}
+				<!--  🔴 Les `class:` ci-dessous remplacent `frise-urgence-{friseStyle}`
+					      et `frise-marker-{friseStyle}` (#810). Devant une classe
+					      interpolée, Svelte cesse de déclarer les sélecteurs inutilisés
+					      pour TOUT le fichier — celui-ci porte deux cents lignes de style
+					      de frise, et l'aveuglement y masquait dix sélecteurs.
+
+					      ⚠️ Les cinq valeurs sont celles d'`urgence`, plus `reconduit`.
+					      Une sixième ajoutée en amont ne recevrait pas son style ici — et
+					      c'est justement ce que `svelte-check` dira désormais, en
+					      signalant le sélecteur devenu orphelin. Avant, il se taisait. -->
 				<div class="frise-row-v2">
 					<div class="frise-row-header">
 						<div class="frise-row-title">
@@ -121,13 +131,23 @@
 					<div class="frise-bar-track">
 						{#if preavisWidth > 0}
 							<div
-								class="frise-preavis-zone frise-urgence-{friseStyle}"
+								class="frise-preavis-zone"
+								class:frise-urgence-preavis={friseStyle === 'preavis'}
+								class:frise-urgence-inconnu={friseStyle === 'inconnu'}
+								class:frise-urgence-annee={friseStyle === 'annee'}
+								class:frise-urgence-futur={friseStyle === 'futur'}
+								class:frise-urgence-reconduit={friseStyle === 'reconduit'}
 								style="left:{(barStart / 12) * 100}%;width:{preavisWidth}%"
 							></div>
 						{/if}
 						{#if finDansAnnee}
 							<div
-								class="frise-marker frise-marker-{friseStyle}"
+								class="frise-marker"
+								class:frise-marker-preavis={friseStyle === 'preavis'}
+								class:frise-marker-inconnu={friseStyle === 'inconnu'}
+								class:frise-marker-annee={friseStyle === 'annee'}
+								class:frise-marker-futur={friseStyle === 'futur'}
+								class:frise-marker-reconduit={friseStyle === 'reconduit'}
 								style="left:{finPos}%"
 								title="Fin : {fmtDate(c.dateFin.toISOString())}"
 							>
@@ -137,7 +157,12 @@
 							</div>
 						{:else}
 							<div
-								class="frise-marker frise-marker-{friseStyle}"
+								class="frise-marker"
+								class:frise-marker-preavis={friseStyle === 'preavis'}
+								class:frise-marker-inconnu={friseStyle === 'inconnu'}
+								class:frise-marker-annee={friseStyle === 'annee'}
+								class:frise-marker-futur={friseStyle === 'futur'}
+								class:frise-marker-reconduit={friseStyle === 'reconduit'}
 								style="left:98%;opacity:.7"
 								title="Fin : {fmtDate(c.dateFin.toISOString())} ({c.dateFin.getFullYear()})"
 							>
@@ -354,7 +379,6 @@
 			currentColor 6px
 		);
 	}
-	.frise-preavis-zone.frise-urgence-expire,
 	.frise-preavis-zone.frise-urgence-preavis {
 		color: #dc2626;
 	}
@@ -367,6 +391,20 @@
 	.frise-preavis-zone.frise-urgence-reconduit {
 		color: #8b5cf6;
 	}
+	/*  🔴 `inconnu` — une date de fin qu'on n'a pas. Elle N'AVAIT AUCUN STYLE, et
+	    personne ne le voyait : l'ancienne écriture `frise-urgence-{friseStyle}`
+	    produisait la classe sans que rien ne vérifie qu'elle existe. La frise
+	    s'affichait donc en `currentColor` hérité, c'est-à-dire au hasard.
+
+	    Trouvé en convertissant l'interpolation en `class:` (#810) : le typage a
+	    d'abord refusé `expire`, qui n'est PAS une valeur d'`urgence` — cinq
+	    sélecteurs étaient écrits pour une valeur qui n'existe pas — puis
+	    `lint:classes-nues` a réclamé `inconnu`, qui existe et n'avait rien.
+
+	    Gris : on ne sait pas, et l'écran doit le dire sans alarmer. */
+	.frise-preavis-zone.frise-urgence-inconnu {
+		color: #9ca3af;
+	}
 
 	.frise-marker {
 		position: absolute;
@@ -376,7 +414,6 @@
 		transform: translateX(-50%);
 		border-radius: 2px;
 	}
-	.frise-marker-expire,
 	.frise-marker-preavis {
 		background: #dc2626;
 	}
@@ -388,6 +425,10 @@
 	}
 	.frise-marker-reconduit {
 		background: #8b5cf6;
+	}
+	/*  Même raison que `frise-urgence-inconnu` ci-dessus. */
+	.frise-marker-inconnu {
+		background: #9ca3af;
 	}
 
 	.frise-marker-label {

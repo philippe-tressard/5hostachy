@@ -14,6 +14,10 @@
   Troisième extraction du même patron, après `OngletWhatsApp` et `OngletSmtp`.
 -->
 <script lang="ts">
+	//  🔴 Les deux `class:` du gabarit remplacent des ternaires INTERPOLÉS
+	//  (#810) : devant `class="tl-bar {cond ? 'x' : ''}"`, Svelte cesse de
+	//  déclarer les sélecteurs inutilisés pour tout le fichier — et celui-ci
+	//  porte deux cents lignes de style de graphe.
 	import { admin as adminApi } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
@@ -209,13 +213,15 @@
 						<div class="tl-chart">
 							{#each telemetryData.chart as d (d)}
 								<div
-									class="tl-bar-col {tlScope === 'annee' ? 'tl-bar-col-month' : ''}"
+									class="tl-bar-col"
+									class:tl-bar-col-month={tlScope === 'annee'}
 									title="{d.label} — {d.total} vues{d.uniques != null
 										? `, ${d.uniques} uniques`
 										: ''}"
 								>
 									<div
-										class="tl-bar {tlScope === 'annee' ? 'tl-bar-month' : ''}"
+										class="tl-bar"
+										class:tl-bar-month={tlScope === 'annee'}
 										style="height:{Math.max(4, (d.total / maxVal) * 100)}%"
 									></div>
 									<div class="tl-bar-label">{d.label}</div>

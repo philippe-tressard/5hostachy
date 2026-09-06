@@ -24,7 +24,27 @@
 
 <div class="toast-container" aria-live="polite">
 	{#each $toasts as t (t.id)}
-		<div class="toast toast-{t.type}" role="alert">
+		<!--  🔴 Quatre `class:` plutôt que `class="toast toast-{t.type}"` (#810).
+		      Ce n'est pas un goût : devant une classe INTERPOLÉE, Svelte cesse de
+		      déclarer les sélecteurs inutilisés **pour tout le fichier**, et
+		      `lint:css-orphelin` devient aveugle sur l'écran entier. Mesuré :
+		      une règle morte ajoutée ici n'était pas signalée avant, elle l'est
+		      maintenant.
+
+		      ⚠️ La conversion ne vaut QUE parce que les quatre classes sont
+		      locales et connues. Là où l'interpolation vient d'une table de
+		      correspondance (`badge {STATUT_BADGE[…]}`), l'éclater en `class:`
+		      recopierait la table dans le balisage — c'est-à-dire exactement ce
+		      que la table supprime. Ces fichiers-là restent déclarés non
+		      mesurables, avec leur raison. -->
+		<div
+			class="toast"
+			class:toast-success={t.type === 'success'}
+			class:toast-error={t.type === 'error'}
+			class:toast-warning={t.type === 'warning'}
+			class:toast-info={t.type === 'info'}
+			role="alert"
+		>
 			<span>{t.message}</span>
 		</div>
 	{/each}
