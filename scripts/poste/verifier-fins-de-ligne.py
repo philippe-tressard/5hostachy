@@ -75,14 +75,51 @@ def normaliser(contenu: bytes) -> bytes:
     return contenu.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
 
 
+def _melange(data: bytes) -> tuple[int, int]:
+    """(nombre de CRLF, nombre de LF seuls)."""
+    crlf = data.count(b"\r\n")
+    return crlf, data.count(b"\n") - crlf
+
+
+def homogeneise(avant: bytes, apres: bytes) -> bool:
+    """Un fichier MIXTE est-il devenu homogène, sans que les lignes l'exigent ?
+
+    🔴 **L'angle mort du critère proportionnel, trouvé le 06/09/2026.**
+
+    `apparent > 3 × réel` cache exactement le cas où l'on convertit le plus :
+    la refactorisation. `visibility/objets.py` affichait 299 lignes pour 127
+    réelles — 172 de trop — et passait, parce que 299 n'atteint pas 3 × 127.
+    Le fichier voisin, lui (111 pour 17), était signalé. **Plus le changement
+    est gros, mieux la conversion se cache** : le contrôle protégeait le moins
+    là où le risque est le plus grand.
+
+    Ce critère-ci ne dépend d'aucun seuil : le fichier avait les deux familles
+    de fins de ligne, il n'en a plus qu'une. Aucune modification de contenu ne
+    produit cela — seule une réécriture en mode texte le fait.
+
+    ⚠️ Une exception réelle : supprimer TOUTES les lignes d'une famille rend le
+    fichier homogène sans rien convertir. D'où la garde sur la taille — en
+    dessous de la moitié des lignes conservées, on ne conclut pas.
+    """
+    crlf_av, lf_av = _melange(avant)
+    crlf_ap, lf_ap = _melange(apres)
+    if crlf_av == 0 or lf_av == 0:
+        return False  # il n'était pas mixte : rien à homogénéiser
+    if crlf_ap and lf_ap:
+        return False  # il l'est resté
+    reste = (crlf_ap + lf_ap) / max(crlf_av + lf_av, 1)
+    return reste > 0.5
+
+
 def verdict(avant: bytes, apres: bytes):
     """(suspect, apparent, reel). Fonction PURE : éprouvable sans dépôt."""
     if b"\x00" in avant or b"\x00" in apres:
         return False, 0, 0  # binaire : hors sujet
     apparent = lignes_differentes(avant, apres)
     reel = lignes_differentes(normaliser(avant), normaliser(apres))
-    suspect = apparent - reel > ECART_TOLERE and apparent > FACTEUR * max(reel, 1)
-    return suspect, apparent, reel
+    #  DEUX critères, et le second n'a pas de seuil — voir `homogeneise`.
+    proportionnel = apparent - reel > ECART_TOLERE and apparent > FACTEUR * max(reel, 1)
+    return proportionnel or homogeneise(avant, apres), apparent, reel
 
 
 def _selftest() -> int:
@@ -119,6 +156,28 @@ def _selftest() -> int:
     t("contenu binaire", False, b"\x00\x01\x02", b"\x00\x03\x04")
     #  Nouveau fichier (avant vide) : rien à comparer.
     t("nouveau fichier", False, b"", gros_lf)
+
+    #  🔴 L'ANGLE MORT DU 06/09/2026 — un fichier MIXTE homogénéisé au cours
+    #  d'une grosse refactorisation. Le critère proportionnel ne le voyait pas :
+    #  299 lignes apparentes pour 127 réelles, et 299 < 3 × 127. Ces quatre cas
+    #  manquaient, et c'est leur absence qui a laissé passer `objets.py`.
+    mixte = b"\r\n".join(b"ligne %d" % i for i in range(140)) + b"\r\n"
+    mixte += b"\n".join(b"suite %d" % i for i in range(60)) + b"\n"
+    #  Une refactorisation réelle : un tiers des lignes réécrites, ET tout
+    #  passé en CRLF. C'est le cas exact qui est passé.
+    refacto = mixte.replace(b"\n", b"\r\n").replace(b"\r\r\n", b"\r\n")
+    refacto = refacto.replace(b"suite 1", b"REECRIT 1").replace(b"suite 2", b"REECRIT 2")
+    t("mixte homogénéisé pendant une grosse refactorisation", True, mixte, refacto)
+    #  Le sens inverse : mixte → tout LF.
+    t("mixte homogénéisé en LF", True, mixte, normaliser(mixte))
+    #  Un fichier mixte qui LE RESTE ne déclenche rien, même très modifié.
+    encore_mixte = mixte.replace(b"ligne 5", b"ligne CINQ").replace(b"suite 5", b"suite CINQ")
+    t("mixte qui reste mixte", False, mixte, encore_mixte)
+    #  ⚠️ L'exception réelle : supprimer toutes les lignes d'une famille rend le
+    #  fichier homogène sans rien convertir. Il ne reste alors qu'un quart des
+    #  lignes — la garde de taille l'écarte, et c'est voulu.
+    tronque = b"\r\n".join(b"ligne %d" % i for i in range(50)) + b"\r\n"
+    t("suppression légitime de toute une famille", False, mixte, tronque)
 
     print("\n✓ Autotest : la conversion massive est refusée dans les deux sens,"
           if st == 0 else "\n✗ Autotest en échec")
