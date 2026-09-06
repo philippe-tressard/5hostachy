@@ -64,7 +64,8 @@
 		"lint:editeur": "node scripts/check-editeur-riche.mjs",
 		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs",
 		"lint:csp": "node scripts/check-csp-servie.mjs",
-		"lint:evitement": "node scripts/check-lien-evitement.mjs"
+		"lint:evitement": "node scripts/check-lien-evitement.mjs",
+		"lint:seuil-listes": "node scripts/check-seuil-listes-courtes.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
