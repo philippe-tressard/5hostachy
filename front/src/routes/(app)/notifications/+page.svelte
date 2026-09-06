@@ -1,4 +1,8 @@
 <script lang="ts">
+	//  🔴 Les deux `class:` du gabarit remplacent un ternaire INTERPOLÉ (#810).
+	//  Devant `class="… {cond ? 'a' : 'b'}"`, Svelte cesse de déclarer les
+	//  sélecteurs inutilisés pour TOUT le fichier — le contrôle devenait aveugle
+	//  sur cet écran. Deux valeurs locales et connues : la conversion ne coûte rien.
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { notifications as notifApi } from '$lib/api';
@@ -103,7 +107,12 @@
 	{#if grouped.today.length > 0}
 		<h2 class="section-title">Aujourd'hui</h2>
 		{#each grouped.today as n (n.id)}
-			<div class="notif-row card {n.lue ? 'notif-read' : 'notif-unread'}" role="article">
+			<div
+				class="notif-row card"
+				class:notif-read={n.lue}
+				class:notif-unread={!n.lue}
+				role="article"
+			>
 				<div class="notif-body">
 					{#if !n.lue}<div class="unread-dot"></div>{/if}
 					<div class="notif-content">
@@ -138,7 +147,12 @@
 	{#if grouped.older.length > 0}
 		<h2 class="section-title" style="margin-top:1.25rem">Plus anciennes</h2>
 		{#each grouped.older as n (n.id)}
-			<div class="notif-row card {n.lue ? 'notif-read' : 'notif-unread'}" role="article">
+			<div
+				class="notif-row card"
+				class:notif-read={n.lue}
+				class:notif-unread={!n.lue}
+				role="article"
+			>
 				<div class="notif-body">
 					{#if !n.lue}<div class="unread-dot"></div>{/if}
 					<div class="notif-content">

@@ -522,12 +522,6 @@
 	.table td {
 		padding: 0.5rem;
 	}
-	.form-row {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-		gap: 1rem;
-		margin-bottom: 1rem;
-	}
 	.commande-row {
 		display: flex;
 		justify-content: space-between;

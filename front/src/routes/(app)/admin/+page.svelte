@@ -1806,25 +1806,6 @@
 	.ref-item.expanded {
 		border-color: var(--color-primary);
 	}
-	.ref-row {
-		width: 100%;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.65rem 1rem;
-		background: none;
-		border: none;
-		cursor: pointer;
-		text-align: left;
-		font-size: 0.875rem;
-	}
-	.ref-row:hover {
-		background: var(--color-bg);
-	}
-	.ref-name {
-		font-weight: 600;
-		flex: 1;
-	}
 	.ref-meta {
 		font-size: 0.8rem;
 		white-space: nowrap;
@@ -1833,40 +1814,6 @@
 		padding: 0.75rem 1rem;
 		border-top: 1px solid var(--color-border);
 		background: var(--color-bg);
-	}
-	.ref-chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-bottom: 0.75rem;
-	}
-	.ref-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 999px;
-		padding: 0.2rem 0.65rem;
-		font-size: 0.8rem;
-	}
-	.chip-del {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-text-muted);
-		padding: 0 0.1rem;
-		font-size: 1rem;
-		line-height: 1;
-		margin-left: 0.1rem;
-	}
-	.chip-del:hover {
-		color: var(--color-danger);
-	}
-	.ref-add-row {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
 	}
 	.user-tags {
 		display: flex;
