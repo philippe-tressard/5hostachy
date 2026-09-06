@@ -23,12 +23,17 @@ export const acces = {
 	supprimerTc: (id: number) => api.delete(`/acces/telecommandes/${id}`),
 	declarerBadge: (data: { type: string; code: string }) =>
 		api.post<any>('/acces/declarer-badge', data),
-	// CS/Admin — badges individuels
+	//  CS/Admin — badges individuels.
+	//
+	//  @sans-appelant Aucun écran d'administration des badges n'existe : le seul
+	//  chemin côté CS est l'import Excel (`OngletImportAcces`). Ces cinq routes
+	//  sont donc atteignables par l'API et inatteignables par l'interface — à
+	//  livrer ou à retirer, c'est un arbitrage d'usage. (#805)
 	listVigiks: () => api.get<any[]>('/acces/admin/vigiks'),
-	listTelecommandes: () => api.get<any[]>('/acces/admin/telecommandes'),
-	updateVigik: (id: number, data: unknown) => api.patch(`/acces/admin/vigiks/${id}`, data),
-	creerVigik: (data: unknown) => api.post('/acces/admin/vigiks', data),
-	creerTelecommande: (data: unknown) => api.post('/acces/admin/telecommandes', data),
+	listTelecommandes: () => api.get<any[]>('/acces/admin/telecommandes'), //  @sans-appelant (#805)
+	updateVigik: (id: number, data: unknown) => api.patch(`/acces/admin/vigiks/${id}`, data), //  @sans-appelant (#805)
+	creerVigik: (data: unknown) => api.post('/acces/admin/vigiks', data), //  @sans-appelant (#805)
+	creerTelecommande: (data: unknown) => api.post('/acces/admin/telecommandes', data), //  @sans-appelant (#805)
 	// CS/Admin — import vigik
 	uploadImportVigik: (file: File, remplacer = false) =>
 		uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),

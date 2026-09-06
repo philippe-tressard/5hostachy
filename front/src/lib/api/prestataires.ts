@@ -49,6 +49,8 @@ export const prestataires = {
 		commentaire?: string;
 		contrat_id?: number;
 	}) => api.post<any>('/prestataires/notations', data),
+	//  @sans-appelant Aucun bouton ne permet de retirer sa propre notation : une
+	//  fois publiée, elle est définitive — et elle nomme un tiers. (#807)
 	deleteNotation: (id: number) => api.delete(`/prestataires/notations/${id}`),
 	// Synthèse
 	synthese: (prestataireId: number) => api.get<any>(`/prestataires/synthese/${prestataireId}`),

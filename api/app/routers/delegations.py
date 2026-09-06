@@ -210,31 +210,18 @@ def revoquer_delegation(
 
 # ── « Agir en tant que » ────────────────────────────────────────────────────
 
-@router.get("/mes-mandants")
-def mes_mandants(
-    session: Session = Depends(get_session),
-    user: Utilisateur = Depends(get_current_user),
-):
-    """Retourne la liste des personnes pour lesquelles l'utilisateur peut agir.
-    Utilisé par le switcher frontend.
-    """
-    today = date.today()
-    delegations = session.exec(
-        select(Delegation).where(
-            Delegation.aidant_id == user.id,
-            Delegation.statut == StatutDelegation.active,
-            Delegation.date_debut <= today,
-            or_(Delegation.date_fin.is_(None), Delegation.date_fin >= today),  # type: ignore[arg-type]
-        )
-    ).all()
-    result = []
-    for d in delegations:
-        mandant = session.get(Utilisateur, d.mandant_id)
-        if mandant:
-            result.append({
-                "delegation_id": d.id,
-                "mandant_id": mandant.id,
-                "mandant_nom": _user_display(mandant),
-                "mandant_batiment_id": mandant.batiment_id,
-            })
-    return result
+#  🔴 `GET /delegations/mes-mandants` A ÉTÉ SUPPRIMÉ le 06/09/2026 (#801).
+#
+#  Sa docstring affirmait « utilisé par le switcher frontend ». C'était FAUX :
+#  `Nav.svelte` lit `$currentUser.delegations_aidant`, servi par `auth.me()`.
+#  L'endpoint était une seconde voie vers la même donnée, sans appelant.
+#
+#  ⚠️ Et les deux requêtes étaient IDENTIQUES — même filtre sur le statut, même
+#  garde sur les dates (`auth.py`, construction de `delegations_aidant`). Deux
+#  écritures d'une même règle d'autorisation : celle qui dit qui peut agir au
+#  nom de qui. Elles avaient déjà commencé à diverger — celle-ci rendait un
+#  `mandant_batiment_id` que l'autre n'a pas, et que personne ne lisait.
+#
+#  Une règle d'autorisation écrite deux fois se durcit une fois sur deux
+#  (`CLAUDE.md`, la leçon de `_require_bailleur`). Ici la voie qui restait est
+#  celle qui SERT.

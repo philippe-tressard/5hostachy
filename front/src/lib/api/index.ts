@@ -38,6 +38,12 @@ export const auth = {
 	login: (email: string, password: string) => api.post<User>('/auth/login', { email, password }),
 	register: (data: unknown) => api.post<User>('/auth/register', data),
 	logout: () => api.post('/auth/logout'),
+	//  @sans-appelant-direct Le renouvellement de session est fait par
+	//  `tryRefresh()` dans `client.ts`, en `fetch` DIRECT — et c'est nécessaire :
+	//  le client ne peut pas s'appeler lui-même pour renouveler la session sans
+	//  récursion sur le 401 qu'il vient d'intercepter. Cette méthode reste la
+	//  déclaration lisible de la route ; l'appel réel est ailleurs, par
+	//  construction.
 	refresh: () => api.post('/auth/refresh'),
 	updateMe: (data: unknown) => api.patch<User>('/auth/me', data),
 	changePassword: (data: unknown) => api.post('/auth/change-password', data),
@@ -175,6 +181,11 @@ export const publications = {
 	archive: (id: number) => api.patch<Publication>(`/publications/${id}`, { archivee: true }),
 	delete: (id: number) => api.delete(`/publications/${id}`),
 	renvoyerEmail: (id: number) => api.post(`/publications/${id}/renvoyer-email`, {}),
+	//  @sans-appelant-declare Le bouton de renvoi a été RETIRÉ des actualités le
+	//  18/08/2026, sur arbitrage, avec sa conséquence écrite sur place : « un
+	//  envoi qui a échoué sans qu'on s'en rende compte n'a plus de chemin de
+	//  rattrapage depuis l'interface […] à rouvrir ailleurs si le besoin se
+	//  représente ». Le chemin est donc gardé exprès, pas oublié.
 	renvoyerWhatsapp: (id: number) => api.post(`/publications/${id}/renvoyer-whatsapp`, {}),
 	addEvolution: (
 		pubId: number,

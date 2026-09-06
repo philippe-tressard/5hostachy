@@ -7,11 +7,12 @@ syndic n'est pas une information réservée.
 """
 from sqlmodel import select
 
-from app.models.core import MembreCS, MembreSyndic
+from app.models.core import MembreCS, MembreSyndic, RoleUtilisateur
 
 from .commun import ContexteFlux
 from .schemas import FluxItem
 from app.utils.noms import nom_affiche
+from app.utils.roles_libelles import libelle_role
 
 
 def _carte_membre(ident: str, membre, detail: str, badge: str, meta: dict) -> FluxItem:
@@ -53,7 +54,10 @@ def collecter(ctx: ContexteFlux) -> list[FluxItem]:
             f"mcs_{m.id}",
             m,
             "Nouveau membre du conseil syndical" + (" — Président" if m.est_president else ""),
-            "Conseil syndical",
+            #  Le badge vient de la table unique (#801) : « Conseil syndical »
+            #  était écrit ici en dur, à côté de six autres écritures qui avaient
+            #  déjà divergé sur la casse.
+            libelle_role(RoleUtilisateur.conseil_syndical),
             {"membre_cs_id": m.id, "est_president": m.est_president},
         )
         for m in membres_cs

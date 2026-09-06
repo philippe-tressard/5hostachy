@@ -73,11 +73,21 @@ export const bailleur = {
 	creerBail: (lot_id: number, data: unknown) =>
 		api.post<any>(`/bailleur/lots/${lot_id}/bail`, data),
 	creerBailMulti: (data: unknown) => api.post<any[]>('/bailleur/baux/creer-multi', data),
-	getBail: (id: number) => api.get<any>(`/bailleur/baux/${id}`),
+	//  🔴 `getBail` A ÉTÉ RETIRÉE (#801) : l'écran `mon-lot` tient déjà ses baux
+	//  par `mesBaux()` / `tousBaux()` / `monBail()`, et travaille dessus. Relire
+	//  un bail seul depuis le serveur donnerait un second exemplaire du même
+	//  objet, libre de diverger de celui de la liste affichée.
 	updateBail: (id: number, data: unknown) => api.patch<any>(`/bailleur/baux/${id}`, data),
 	terminerBail: (id: number, data: unknown) => api.post<any>(`/bailleur/baux/${id}/terminer`, data),
+	//  @sans-appelant On peut RETOURNER et SUPPRIMER un objet remis au locataire,
+	//  pas en ajouter ni en corriger un : les objets ne se saisissent qu'à la
+	//  création du bail. Un bailleur qui remet une clé en cours de bail n'a aucun
+	//  moyen de l'enregistrer. (#806)
 	ajouterObjet: (bail_id: number, data: unknown) =>
 		api.post<any>(`/bailleur/baux/${bail_id}/objets`, data),
+	//  @sans-appelant Corriger un objet est aussi impossible que d'en ajouter un —
+	//  et donc corriger une faute de frappe demande de le supprimer, ce qui
+	//  supprimerait la ligne au lieu de la corriger. (#806)
 	updateObjet: (bail_id: number, obj_id: number, data: unknown) =>
 		api.patch<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}`, data),
 	retourObjet: (bail_id: number, obj_id: number, data: unknown) =>
