@@ -196,6 +196,26 @@ utilisateur (7). Le seuil les exclut, et il est **écrit ici pour que la questio
 ne se repose pas à chaque écran** : c'est en y répondant au cas par cas qu'on a
 obtenu sept pastilles réécrites à la main.
 
+🔒 **Garde-fou depuis le 06/09/2026 : `npm run lint:seuil-listes`.** La règle
+existait depuis huit jours et **n'avait pas été appliquée** au filtre « type » des
+petites annonces — trois valeurs en `<select>`. Personne ne l'a vu : une règle
+écrite dans une skill ne se relit pas avant de toucher un écran qu'on croit sans
+rapport. Même motif que `EnteteCarte`, `ChoixPastilles` et
+`parse_json_perimetres` : le composant existait, la règle existait, et rien ne
+les faisait appliquer.
+
+⚠️ L'utilisateur a énoncé « **≤ 5** » le 06/09/2026. Les deux valeurs donnent le
+**même verdict** sur tout le produit — aucune liste n'a cinq ni six entrées : 3
+(types d'annonce), 3 (tri), 4 (états d'idée), 4 (états de ticket), 9 (catégories
+d'annonce). Le seuil de 6 est conservé avec sa justification d'origine ; le noter
+évite qu'on croie à une divergence, et rappelle que le chiffre exact importe
+moins que le fait qu'il soit **écrit une fois**.
+
+⚠️ **Deux formes voisines sur une même barre ne sont pas une incohérence** : les
+annonces portent des pastilles (3 types) à côté d'un `<select>` (9 catégories).
+C'est la **cardinalité** qui choisit, pas l'écran — sinon la question se repose à
+chaque barre, et c'est ainsi qu'on a obtenu trois formes pour la même intention.
+
 ⚠️ **Le seuil décide d'une CONVERSION, il n'impose pas de revenir en arrière.**
 Les douze filtres d'équipement de `prestataires` restent des pastilles : ils
 l'étaient déjà en substance, et les défaire n'apporterait rien.

@@ -836,6 +836,7 @@ jobs:
           node scripts/check-evenements.mjs --selftest
           node scripts/check-csp-servie.mjs --selftest
           node scripts/check-lien-evitement.mjs --selftest
+          node scripts/check-seuil-listes-courtes.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
           node scripts/check-charge-utile.mjs --selftest
@@ -1278,3 +1279,15 @@ jobs:
       - name: Lien d'évitement clavier cohérent
         working-directory: front
         run: npm run lint:evitement
+
+      # 🔴 La règle du seuil des listes courtes existe depuis le 29/08/2026
+      # (`ux-patterns`, #491) et n'a PAS été appliquée au filtre « type » des
+      # petites annonces — trois valeurs en <select> — pendant huit jours.
+      # Personne ne l'a vu : une règle écrite dans une skill ne se relit pas avant
+      # de toucher un écran qu'on croit sans rapport.
+      #
+      # Même motif que `EnteteCarte`, `ChoixPastilles` et `parse_json_perimetres` :
+      # le composant existait, la règle existait, et rien ne les faisait appliquer.
+      - name: Seuil des listes courtes (pastilles vs select)
+        working-directory: front
+        run: npm run lint:seuil-listes

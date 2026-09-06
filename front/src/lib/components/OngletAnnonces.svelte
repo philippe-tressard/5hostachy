@@ -37,6 +37,7 @@
 	import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
 	import ListeAnnonces from '$lib/components/ListeAnnonces.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
@@ -183,10 +184,23 @@
 {/if}
 
 <div class="filters">
-	<select bind:value={filtreType} class="filter-select" aria-label="Filtrer par type">
-		<option value="">Tous types</option>
-		{#each TYPES_ANNONCE as t (t.val)}<option value={t.val}>{t.label}</option>{/each}
-	</select>
+	<!--  🔴 TROIS valeurs : sous le seuil des listes courtes, donc des PASTILLES —
+	      la règle est écrite dans `ux-patterns` depuis le 29/08/2026 (#491) et
+	      n'avait pas été appliquée ici. Confirmée par l'utilisateur le 06/09
+	      (« ≤ 5 valeurs en pastilles ») : les deux seuils coïncident, aucune liste
+	      du produit n'a cinq ou six valeurs.
+
+	      ⚠️ La catégorie reste un `<select>` juste à côté, et c'est la règle qui
+	      le veut : NEUF valeurs. Deux formes voisines sur une même barre n'est pas
+	      une incohérence — c'est la cardinalité qui choisit, pas l'écran. Le
+	      §« seuil des listes courtes » nomme d'ailleurs `CATEGORIES_ANNONCE` comme
+	      le cas qui reste dehors. -->
+	<ChoixPastilles
+		options={TYPES_ANNONCE}
+		bind:valeur={filtreType}
+		tous="Tous types"
+		libelle="Filtrer les annonces par type"
+	/>
 	<select bind:value={filtreCategorie} class="filter-select" aria-label="Filtrer par catégorie">
 		<option value="">Toutes catégories</option>
 		{#each CATEGORIES_ANNONCE as c (c.val)}<option value={c.val}>{c.label}</option>{/each}
