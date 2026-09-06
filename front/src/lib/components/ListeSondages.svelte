@@ -24,6 +24,7 @@
 <script lang="ts">
 	import { fmtDateShort, isNouveau } from '$lib/date';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
+	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
 	import { safeHtml } from '$lib/sanitize';
 	import { estPerimetreParDefaut, perimetreLabel } from '$lib/perimetres';
 	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
@@ -41,88 +42,84 @@
 
 {#each sondages as s (s.id)}
 	<a href="/sondages/{s.id}" class="sondage-card card">
-		<div class="sondage-body">
-			<strong class="sondage-question"
-				>{s.question}
-				{#if isNouveau(s.cree_le)}<span
-						class="badge badge-gray"
-						style="margin-left:.5em;font-size:.82em;font-weight:500;vertical-align:middle">New</span
-					>{/if}
-			</strong>
-			{#if s.description}<div class="sondage-desc rich-content clamp-5">
-					{@html safeHtml(s.description)}
-				</div>{/if}
-			<small style="color:var(--color-text-muted)">
-				{fmtDateShort(s.cree_le)}
-				{#if s.cloture_le}
-					· {s.cloture ? '🔒 Clôturé' : `Clôture le ${fmtDateShort(s.cloture_le)}`}
+		<!--  L'EN-TÊTE DU SITE (#794). Cette carte était la SIXIÈME et dernière à
+		      composer le sien à la main : titre en `<strong>`, date en
+		      `<small style="…">`, badge « New » avec quatre propriétés CSS écrites
+		      en ligne. Les cinq autres — annonce, idée, ticket, actualité,
+		      événement — passent par `EnteteCarte` depuis le 18/08/2026.
+
+		      ⚠️ `ListeIdees` portait ce jour-là le commentaire « seule carte du
+		      produit dans ce cas ». C'était faux au moment où il a été écrit : le
+		      sondage l'était aussi. Une correction posée sur l'écran qui l'a
+		      révélée, sans passer les voisins en revue.
+
+		      `basculable` reste faux : la carte entière est un lien vers la fiche,
+		      et un `<button>` dans un `<a>` serait invalide. -->
+		<EnteteCarte titre={s.question} date={fmtDateShort(s.cree_le)}>
+			<svelte:fragment slot="titre-suffixe">
+				{#if isNouveau(s.cree_le)}<span class="badge badge-gray sondage-neuf">New</span>{/if}
+			</svelte:fragment>
+			<svelte:fragment slot="tags">
+				<span class="badge {s.cloture ? 'badge-gray' : 'badge-green'}"
+					>{s.cloture ? '🔒 Clôturé' : 'Ouvert'}</span
+				>
+				{#if s.cloture_le && !s.cloture}
+					<span class="badge badge-gray">Clôture le {fmtDateShort(s.cloture_le)}</span>
 				{/if}
-				·
-				<span class="sondage-votants"
+				<span class="badge badge-gray"
 					>{s.nb_votants ?? 0} votant{(s.nb_votants ?? 0) !== 1 ? 's' : ''}</span
 				>
-			</small>
-			<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre logique
-      (jamais 📍, qui est réservé au lieu physique), et rien du tout quand le
-      ciblage est le défaut — le redire n'apprend rien. Les badges rendaient
-      jusqu'ici les valeurs BRUTES de la base (« copropriétaire_résident »,
-      « Bât. 3 » reconstitué à la main), faute de traduction disponible. -->
-			{#if !estPerimetreParDefaut(s.perimetre_cible) || !concerneTousLesResidents(s.public_cible)}
-				<div class="sondage-ciblage">
-					{#if !estPerimetreParDefaut(s.perimetre_cible)}
-						<span class="badge badge-blue sondage-badge"
-							>&#x1F539; {perimetreLabel(s.perimetre_cible)}</span
-						>
-					{/if}
-					{#if !concerneTousLesResidents(s.public_cible)}
-						<span class="badge badge-orange sondage-badge"
-							>{destinatairesLabel(s.public_cible)}</span
-						>
-					{/if}
-				</div>
-			{/if}
-		</div>
-		<div class="sondage-actions">
-			<!--  Un sondage a sa page : on copie SON adresse, pas celle de la liste. -->
-			<BoutonLien chemin="/sondages/{s.id}" quoi="le sondage" />
-			{#if s.cloture}
-				<span class="badge badge-gray">Clôturé</span>
-			{:else}
-				<span class="badge badge-green">Ouvert</span>
-			{/if}
-			{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
-				<button
-					class="btn-icon"
-					aria-label="Modifier ce sondage"
-					title="Modifier"
-					on:click={(e) => modifierSondage(s, e)}>&#x270F;&#xFE0F;</button
-				>
-			{/if}
-			{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
-				<button
-					class="btn-icon-warn"
-					aria-label="Stopper ce sondage"
-					title="Stopper"
-					on:click={(e) => arreterSondage(s, e)}>⏹️</button
-				>
-			{/if}
-			{#if $currentUser?.id === s.auteur_id || $isAdmin}
-				<button
-					class="btn-icon-danger"
-					aria-label="Supprimer"
-					title="Supprimer"
-					on:click={(e) => supprimerSondage(s, e)}>&#x1F5D1;️</button
-				>
-			{/if}
-		</div>
+				<!--  Ciblage affiché comme PARTOUT ailleurs : 🔹 pour le périmètre
+				      logique (jamais 📍, réservé au lieu physique), et rien du tout
+				      quand le ciblage est le défaut — le redire n'apprend rien. -->
+				{#if !estPerimetreParDefaut(s.perimetre_cible)}
+					<span class="badge badge-blue">&#x1F539; {perimetreLabel(s.perimetre_cible)}</span>
+				{/if}
+				{#if !concerneTousLesResidents(s.public_cible)}
+					<span class="badge badge-orange">{destinatairesLabel(s.public_cible)}</span>
+				{/if}
+			</svelte:fragment>
+			<svelte:fragment slot="actions">
+				<!--  🔗 EN PREMIER : la seule action que TOUT le monde a. Sa position ne
+				      doit pas dépendre des droits du lecteur. Même ordre que l'annonce
+				      et l'idée. Un sondage a sa page : on copie SON adresse. -->
+				<BoutonLien chemin="/sondages/{s.id}" quoi="le sondage" />
+				{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
+					<button
+						class="btn-icon"
+						aria-label="Modifier ce sondage"
+						title="Modifier"
+						on:click={(e) => modifierSondage(s, e)}>&#x270F;&#xFE0F;</button
+					>
+					<button
+						class="btn-icon-warn"
+						aria-label="Stopper ce sondage"
+						title="Stopper"
+						on:click={(e) => arreterSondage(s, e)}>⏹️</button
+					>
+				{/if}
+				{#if $currentUser?.id === s.auteur_id || $isAdmin}
+					<button
+						class="btn-icon-danger"
+						aria-label="Supprimer"
+						title="Supprimer"
+						on:click={(e) => supprimerSondage(s, e)}>&#x1F5D1;️</button
+					>
+				{/if}
+			</svelte:fragment>
+		</EnteteCarte>
+		{#if s.description}
+			<div class="sondage-desc rich-content clamp-5">{@html safeHtml(s.description)}</div>
+		{/if}
 	</a>
 {/each}
 
 <style>
 	.sondage-card {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
+		/*  Plus de `display: flex` à deux colonnes : les actions vivaient dans une
+		    COLONNE à droite, qui prenait sa largeur au titre. `EnteteCarte` les
+		    place sur la ligne des tags, comme les cinq autres cartes (#794). */
+		display: block;
 		padding: 1rem 1.25rem;
 		margin-bottom: 0.5rem;
 		text-decoration: none;
@@ -132,34 +129,15 @@
 	.sondage-card:hover {
 		border-color: var(--color-primary);
 	}
-	.sondage-actions {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 0.35rem;
-		flex-shrink: 0;
-	}
-	.sondage-question {
-		font-size: 0.95rem;
-		font-weight: 600;
-		display: block;
-		margin-bottom: 0.2rem;
+	.sondage-neuf {
+		font-size: 0.82em;
+		font-weight: 500;
+		margin-left: 0.5em;
+		vertical-align: middle;
 	}
 	.sondage-desc {
 		font-size: 0.85rem;
 		color: var(--color-text-muted);
 		margin: 0.2rem 0 0.3rem;
-	}
-	.sondage-votants {
-		font-weight: 600;
-	}
-	.sondage-ciblage {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-		margin-top: 0.35rem;
-	}
-	.sondage-badge {
-		font-size: 0.7rem;
 	}
 </style>
