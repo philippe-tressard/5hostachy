@@ -22,9 +22,8 @@
 	import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ListeIdees from '$lib/components/ListeIdees.svelte';
+	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
-	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
-	import { TITRE_ARCHIVES } from '$lib/archives';
 	import { STATUTS_IDEE } from '$lib/idees';
 
 	export let idees: any[] = [];
@@ -47,15 +46,15 @@
 	export let onRepondre: (id: number, contenu: string) => Promise<void> | void;
 	export let onSupprimerReponse: (id: number, reponseId: number) => void;
 
-	//  🔴 `idee.archivee` est calculé par le SERVEUR (`app/utils/archivage.py`,
-	//  règle du site, un seul délai). Refaire le calcul ici en ferait une seconde
-	//  règle, et les deux trancheraient différemment le jour où le délai change.
-	$: courantes = idees.filter((i) => !i.archivee);
-	$: archivees = idees.filter((i) => i.archivee);
-	//  La FENÊTRE de correction (#783). Une seule idée à la fois, et l'état vit
-	//  ICI : `ListeIdees` est rendu DEUX fois (courantes et Archives), l'y mettre
-	//  en aurait monté deux exemplaires. Même construction que `OngletAnnonces`,
-	//  qui a rencontré le problème le 02/09.
+	//  🔴 La partition courants / Archives est portée par `ListeEtArchives`, sur
+	//  le `archivee` que le SERVEUR calcule (`app/utils/archivage.py`, règle du
+	//  site, un seul délai). Elle était écrite ici, et à l'identique dans les deux
+	//  autres onglets de la Communauté.
+
+	//  La correction d'une idée (#783). Une seule à la fois, et l'état vit ICI :
+	//  `ListeIdees` est rendu DEUX fois (courantes et Archives), l'y mettre en
+	//  aurait monté deux exemplaires sur la même idée. Même construction que
+	//  `OngletAnnonces`, qui a rencontré le problème le 02/09.
 	let editIdee: any = null;
 	const modifier = (i: any) => (editIdee = editIdee?.id === i.id ? null : i);
 
@@ -103,47 +102,14 @@
 	titreVide="Aucune idée pour l'instant"
 	messageVide="Soyez le premier à proposer une idée !"
 >
-	{#if courantes.length === 0 && archivees.length > 0}
-		<div class="empty-state">
-			<h3>Aucune idée en cours</h3>
-			<p>Les idées décidées sont rangées dans les Archives, ci-dessous.</p>
-		</div>
-	{/if}
-	<ListeIdees
-		idees={courantes}
-		{currentUserId}
-		{estCS}
-		{estAdmin}
-		{statutClass}
-		{onVoter}
-		{onChangerStatut}
-		{onSupprimer}
-		{onSignaler}
-		{onRepondre}
-		{onSupprimerReponse}
-		onModifier={modifier}
-		editId={editIdee?.id ?? null}
+	<ListeEtArchives
+		liste={idees}
+		titreVideCourant="Aucune idée en cours"
+		messageVideCourant="Les idées décidées sont rangées dans les Archives, ci-dessous."
 	>
-		<svelte:fragment slot="formulaire" let:idee>
-			{#key idee.id}
-				<FormulaireIdee
-					{idee}
-					on:modifie={(e) => appliquerModification(e.detail)}
-					on:annule={() => (editIdee = null)}
-				/>
-			{/key}
-		</svelte:fragment>
-	</ListeIdees>
-
-	<!--  Les Archives : même bandeau que les annonces et les actualités
-	      (`SectionRepliee`), et les MÊMES cartes — `ListeIdees`, appelé une
-	      seconde fois. Recopier le bloc sous la section repliée aurait créé deux
-	      rendus libres de diverger, ce qui est arrivé six fois au fil des
-	      tickets (#431). -->
-	{#if archivees.length}
-		<SectionRepliee titre={TITRE_ARCHIVES} compte={archivees.length}>
+		<svelte:fragment let:items>
 			<ListeIdees
-				idees={archivees}
+				idees={items}
 				{currentUserId}
 				{estCS}
 				{estAdmin}
@@ -167,6 +133,6 @@
 					{/key}
 				</svelte:fragment>
 			</ListeIdees>
-		</SectionRepliee>
-	{/if}
+		</svelte:fragment>
+	</ListeEtArchives>
 </EtatListe>

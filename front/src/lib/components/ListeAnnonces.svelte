@@ -26,11 +26,11 @@
 	export let liste: any[] = [];
 	/**  L'annonce dépliée — tenue par l'onglet (un lien profond la désigne).
 	 *
-	 *   ⚠️ `editAnnonce` N'EST PLUS ICI depuis le 02/09/2026 : la correction
-	 *   s'ouvre dans une FENÊTRE, posée une seule fois par l'onglet. Ce composant
-	 *   est rendu DEUX fois — les annonces courantes et les Archives — et y
-	 *   laisser le formulaire en aurait monté deux exemplaires, dont un invisible,
-	 *   sur la même annonce. */
+	 *   ⚠️ `editAnnonce` N'EST PLUS ICI depuis le 02/09/2026 : l'ONGLET tient
+	 *   quelle annonce est en cours de correction, et ne fait que la désigner par
+	 *   `editId`. Ce composant est rendu DEUX fois — les annonces courantes et les
+	 *   Archives — et y loger cet état en aurait donné deux versions sur la même
+	 *   annonce. Le formulaire, lui, vit dans la carte (#787). */
 	export let expandedId: number | null = null;
 	export let gestionPhotosId: number | null = null;
 
