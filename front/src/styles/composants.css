@@ -306,6 +306,23 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
    déjà, et ce lot ne fait que combler les cinq trous. Les unifier est un
    arbitrage — trois d’entre elles portent une AUTRE notion, un vrai titre en
    1rem, qui mérite son propre nom. Suivi en #495. */
+/* ── L’en-tête d’une section : son titre à gauche, ses actions à droite ──
+   🔴 Écrite TROIS fois, à l’identique, dans `SectionDocuments`, `acces-securite`
+   et `residence` — l’ordre des propriétés variait, le résultat non. Un quatrième
+   écran l’a employée le 06/09/2026 (#805) et l’aurait rendue NUE : c’est
+   `lint:classes-nues` qui l’a dit, et c’est le moment où une copie devient une
+   règle.
+
+   ⚠️ Elle vient juste au-dessus de `.section-title`, qui était déjà globale :
+   les deux vont ensemble, et les séparer aurait laissé la moitié d’une notion
+   dans chaque camp. */
+.section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 0.75rem;
+}
+
 .section-title {
 	font-size: 0.8rem;
 	font-weight: 700;

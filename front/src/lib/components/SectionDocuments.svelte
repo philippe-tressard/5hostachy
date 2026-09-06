@@ -108,12 +108,6 @@
 	.section-documents {
 		margin-bottom: 2.5rem;
 	}
-	.section-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 0.75rem;
-	}
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
 	.section-title {
 		margin: 0;

@@ -277,7 +277,12 @@ def test_le_cs_voit_les_imports_auto_resolus():
     import pathlib
 
     racine = pathlib.Path(__file__).resolve().parents[2]
-    acces = (racine / "api" / "app" / "routers" / "acces.py").read_text(encoding="utf-8")
+    #  🔴 `acces.py` est devenu un PAQUET le 06/09/2026 (#805). Le contrôle lit
+    #  tous ses modules : il cherchait un fichier, il cherche un domaine.
+    paquet = racine / "api" / "app" / "routers" / "acces"
+    fichiers = sorted(paquet.glob("*.py"))
+    assert fichiers, f"{paquet} ne porte aucun module : le contrôle ne peut pas conclure"
+    acces = "\n".join(f.read_text(encoding="utf-8") for f in fichiers)
 
     assert "statut: str = Query(None)" in acces, (
         "Le filtre de statut n'est plus optionnel : le CS risque de ne plus voir "

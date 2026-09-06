@@ -12,6 +12,26 @@
 import { api } from './client';
 import { uploadExcel } from './documents';
 
+/**
+ *  Un badge vu par le conseil syndical — le code, et surtout **qui le porte**.
+ *
+ *  ⚠️ Le type vit ici parce que c'est une réponse d'API (même raison que
+ *  `ObjetRemis` et `ReleveOrphelins`). Il ne décrit PAS la table : `user_id` et
+ *  `lot_id` y sont résolus en nom et en libellé côté serveur, une fois, plutôt
+ *  que par un rapprochement que chaque écran referait à sa façon.
+ */
+export interface AccesAdmin {
+	id: number;
+	code: string;
+	statut: string;
+	/** Vrai quand le bailleur a transféré le badge à son locataire. */
+	chez_locataire: boolean;
+	porteur_nom: string;
+	porteur_id: number;
+	lot_libelle: string | null;
+	cree_le: string;
+}
+
 export const acces = {
 	mesVigiks: () => api.get<any[]>('/acces/mes-vigiks'),
 	mesTelecommandes: () => api.get<any[]>('/acces/mes-telecommandes'),
@@ -23,17 +43,25 @@ export const acces = {
 	supprimerTc: (id: number) => api.delete(`/acces/telecommandes/${id}`),
 	declarerBadge: (data: { type: string; code: string }) =>
 		api.post<any>('/acces/declarer-badge', data),
-	//  CS/Admin — badges individuels.
+	//  ── CS/Admin — QUELS badges circulent, et chez qui ────────────────────────
 	//
-	//  @sans-appelant Aucun écran d'administration des badges n'existe : le seul
-	//  chemin côté CS est l'import Excel (`OngletImportAcces`). Ces cinq routes
-	//  sont donc atteignables par l'API et inatteignables par l'interface — à
-	//  livrer ou à retirer, c'est un arbitrage d'usage. (#805)
-	listVigiks: () => api.get<any[]>('/acces/admin/vigiks'),
-	listTelecommandes: () => api.get<any[]>('/acces/admin/telecommandes'), //  @sans-appelant (#805)
-	updateVigik: (id: number, data: unknown) => api.patch(`/acces/admin/vigiks/${id}`, data), //  @sans-appelant (#805)
-	creerVigik: (data: unknown) => api.post('/acces/admin/vigiks', data), //  @sans-appelant (#805)
-	creerTelecommande: (data: unknown) => api.post('/acces/admin/telecommandes', data), //  @sans-appelant (#805)
+	//  🔴 Ces deux routes ont porté la déclaration « sans appelant » de #805, avec
+	//  trois autres qui CRÉAIENT et MODIFIAIENT des badges. Arbitrage du
+	//  06/09/2026 : **lecture seule**. Les trois routes d'écriture ont été
+	//  supprimées, client et endpoints.
+	//
+	//  Pourquoi celles-ci restent : elles répondent à une question qu'aucun autre
+	//  écran ne sait poser — « qui a le badge 4521 ? ». Pourquoi les autres sont
+	//  parties : enregistrer un badge est déjà couvert deux fois, par l'import
+	//  Excel (en masse) et par `declarerBadge` (le résident, à l'unité). Une
+	//  troisième voie jamais exercée est du code qui dérive sans qu'on le voie.
+	//
+	//  ⚠️ La réponse a été ENRICHIE en même temps qu'exposée : elle rendait
+	//  l'objet brut, donc `user_id` — un écran bâti dessus aurait affiché
+	//  « badge 4521 → utilisateur 37 ». Une route sans appelant n'est jamais mise
+	//  à l'épreuve de la question à laquelle elle est censée répondre.
+	listVigiks: () => api.get<AccesAdmin[]>('/acces/admin/vigiks'),
+	listTelecommandes: () => api.get<AccesAdmin[]>('/acces/admin/telecommandes'),
 	// CS/Admin — import vigik
 	uploadImportVigik: (file: File, remplacer = false) =>
 		uploadExcel('/acces/admin/imports-vigik/upload', file, remplacer),

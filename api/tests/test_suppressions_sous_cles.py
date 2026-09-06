@@ -317,7 +317,7 @@ def test_supprimer_une_publication_avec_son_historique_et_ses_documents(contexte
 def test_supprimer_une_telecommande_attribuee(contexte):
     """`user_telecommande.telecommande_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import Telecommande, UserTelecommande
-    from app.routers.acces import supprimer_telecommande
+    from app.routers.acces.resident import supprimer_telecommande
 
     session, admin = contexte
     tc = Telecommande(code="TC-546", user_id=admin.id)
@@ -334,7 +334,7 @@ def test_supprimer_une_telecommande_attribuee(contexte):
 def test_supprimer_un_vigik_attribue(contexte):
     """`user_vigik.vigik_id` est NOT NULL et sans `Relationship`."""
     from app.models.core import UserVigik, Vigik
-    from app.routers.acces import supprimer_vigik
+    from app.routers.acces.resident import supprimer_vigik
 
     session, admin = contexte
     v = Vigik(code="VG-546", user_id=admin.id)
