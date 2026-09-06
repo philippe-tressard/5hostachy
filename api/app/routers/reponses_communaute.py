@@ -42,9 +42,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, peut_commenter
+from app.auth.deps import exiger_non_externe, get_current_user, peut_commenter
 from app.database import get_session
-from app.models.core import ReponseCommunaute, RoleUtilisateur, Utilisateur
+from app.models.core import ReponseCommunaute, Utilisateur
 from app.utils.communaute import exiger_acces
 from app.utils.reponses import (
     auteur_meta,
@@ -160,13 +160,11 @@ def enregistrer_routes_reponses(
         user: Utilisateur = Depends(get_current_user),
     ):
         exiger_acces(user)
-        #  🔴 LE REFUS OPPOSÉ AUX COMPTES EXTERNES — la règle qui justifie à elle
-        #  seule cette factorisation. Écrite deux fois, elle se serait durcie une
-        #  fois sur deux.
-        if user.has_role(RoleUtilisateur.externe) and not user.has_role(
-            RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
-        ):
-            raise HTTPException(403, "Les utilisateurs externes ne peuvent pas répondre")
+        #  🔴 LE REFUS OPPOSÉ AUX COMPTES EXTERNES — la règle qui justifiait à elle
+        #  seule cette fabrique. Elle a fini de remonter le 06/09 : elle était
+        #  encore écrite CINQ fois dans le dépôt, et vit désormais dans
+        #  `auth/deps.py`, avec les autres règles d'autorisation.
+        exiger_non_externe(user, "répondre")
         contenu = (body.contenu or "").strip()
         if not contenu:
             raise HTTPException(422, "La réponse ne peut pas être vide")

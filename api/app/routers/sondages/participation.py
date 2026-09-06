@@ -11,10 +11,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, peut_commenter
+from app.auth.deps import exiger_non_externe, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
-    CommentaireSondage, OptionSondage, RoleUtilisateur, Sondage, Utilisateur,
+    CommentaireSondage, OptionSondage, Sondage, Utilisateur,
     VoteSondage,
 )
 from app.utils.reponses import auteur_meta, notifier_nouvelle_reponse
@@ -40,8 +40,7 @@ def voter(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas voter")
+    exiger_non_externe(user, "voter")
     s = session.get(Sondage, sondage_id)
     if not s:
         raise HTTPException(404, "Sondage introuvable")
