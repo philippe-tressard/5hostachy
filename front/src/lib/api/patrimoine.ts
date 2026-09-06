@@ -68,6 +68,28 @@ export const lots = {
 	ignorerimport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/ignorer`, {}),
 };
 
+/**
+ *  Un objet remis au locataire — clé, badge, télécommande. C'est la ligne de
+ *  l'inventaire d'un bail.
+ *
+ *  ⚠️ Le type vit ICI et non dans l'écran qui l'affiche (#806) : c'est une
+ *  réponse d'API, et il était déclaré à l'identique dans `mon-lot` et dans le
+ *  composant qui rend le tableau. Même raison que `ReleveOrphelins` (#801).
+ */
+export interface ObjetRemis {
+	id: number;
+	bail_id: number;
+	type: string;
+	libelle: string;
+	quantite: number;
+	reference: string | null;
+	statut: string;
+	remis_le: string | null;
+	rendu_le: string | null;
+	notes: string | null;
+	cree_le: string;
+}
+
 export const bailleur = {
 	mesBaux: () => api.get<any[]>('/bailleur/mes-baux'),
 	creerBail: (lot_id: number, data: unknown) =>
@@ -79,15 +101,20 @@ export const bailleur = {
 	//  objet, libre de diverger de celui de la liste affichée.
 	updateBail: (id: number, data: unknown) => api.patch<any>(`/bailleur/baux/${id}`, data),
 	terminerBail: (id: number, data: unknown) => api.post<any>(`/bailleur/baux/${id}/terminer`, data),
-	//  @sans-appelant On peut RETOURNER et SUPPRIMER un objet remis au locataire,
-	//  pas en ajouter ni en corriger un : les objets ne se saisissent qu'à la
-	//  création du bail. Un bailleur qui remet une clé en cours de bail n'a aucun
-	//  moyen de l'enregistrer. (#806)
+	//  ✅ Ces deux méthodes ont porté la déclaration « sans appelant » de #806
+	//  pendant quelques heures : rien ne les appelait, et il était donc impossible
+	//  d'enregistrer un objet remis dans l'inventaire d'un bail — ni d'en corriger
+	//  un. `InventaireBail.svelte` les appelle depuis le 06/09/2026.
+	//
+	//  ⚠️ La déclaration a été retirée le jour même, et `lint:client-appele` l'a
+	//  EXIGÉ : une tolérance qui ne sert plus finit par en couvrir une qui compte.
+	//
+	//  ⚠️ Le motif n'est pas cité littéralement ci-dessus, et c'est délibéré : le
+	//  contrôle lit les commentaires, et une citation le réactiverait. Un
+	//  garde-fou qui se déclenche sur le récit de sa propre application est un
+	//  faux positif qu'on apprend à ignorer.
 	ajouterObjet: (bail_id: number, data: unknown) =>
 		api.post<any>(`/bailleur/baux/${bail_id}/objets`, data),
-	//  @sans-appelant Corriger un objet est aussi impossible que d'en ajouter un —
-	//  et donc corriger une faute de frappe demande de le supprimer, ce qui
-	//  supprimerait la ligne au lieu de la corriger. (#806)
 	updateObjet: (bail_id: number, obj_id: number, data: unknown) =>
 		api.patch<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}`, data),
 	retourObjet: (bail_id: number, obj_id: number, data: unknown) =>

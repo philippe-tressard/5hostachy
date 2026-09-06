@@ -365,7 +365,9 @@ def test_supprimer_un_bail_avec_ses_objets_remis_et_ses_acces(contexte, batiment
     """
     from app.models.copropriete import Lot
     from app.models.core import LocationBail, RemiseObjet, Telecommande, Vigik
-    from app.routers.bailleur import supprimer_bail
+    #  `bailleur.py` est devenu un paquet le 06/09/2026 (#806) : la suppression
+    #  d'un bail vit dans le module qui porte son cycle de vie.
+    from app.routers.bailleur.baux import supprimer_bail
 
     session, admin = contexte
     lot = Lot(batiment_id=batiments[0], numero="546")

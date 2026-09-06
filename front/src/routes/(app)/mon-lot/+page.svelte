@@ -4,8 +4,9 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
+	import InventaireBail from '$lib/components/InventaireBail.svelte';
 	import { onMount } from 'svelte';
-	import { lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
+	import { lots as lotsApi, bailleur as bailApi, ApiError, type ObjetRemis } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -54,19 +55,9 @@
 		batiment_nom: string | null;
 	}
 
-	interface Objet {
-		id: number;
-		bail_id: number;
-		type: string;
-		libelle: string;
-		quantite: number;
-		reference: string | null;
-		statut: string;
-		remis_le: string | null;
-		rendu_le: string | null;
-		notes: string | null;
-		cree_le: string;
-	}
+	//  🔴 `Objet` est devenu `ObjetRemis`, dans `$lib/api` (#806) : c'est une
+	//  réponse d'API, pas une notion de cet écran, et il était déclaré à
+	//  l'identique ici et dans le composant qui le rend.
 
 	interface Bail {
 		id: number;
@@ -81,7 +72,7 @@
 		date_sortie_reelle: string | null;
 		statut: string;
 		notes: string | null;
-		objets: Objet[];
+		objets: ObjetRemis[];
 	}
 
 	interface Acces {
@@ -140,10 +131,8 @@
 	// Supprimer bail (admin)
 	let bailASupprimer: Bail | null = null;
 
-	// Retour objet
-	let objetRetour: Objet | null = null;
-	let retourDate = '';
-	let retourPerdu = false;
+	//  🔴 L'état du retour d'objet vit dans `InventaireBail` (#806), avec les trois
+	//  autres gestes d'inventaire. La page ne tient plus que les baux.
 
 	// Edition locataire
 	let bailEdite: Bail | null = null;
@@ -307,36 +296,12 @@
 		}
 	}
 
-	async function confirmerRetour() {
-		if (!objetRetour) return;
-		try {
-			const updated = await bailApi.retourObjet(objetRetour.bail_id, objetRetour.id, {
-				rendu_le: retourDate || null,
-				perdu: retourPerdu,
-			});
-			baux = baux.map((b) =>
-				b.id === updated.bail_id
-					? { ...b, objets: b.objets.map((o) => (o.id === updated.id ? updated : o)) }
-					: b,
-			);
-			objetRetour = null;
-			toast('success', retourPerdu ? 'Objet marqué perdu' : 'Retour enregistré');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
-	}
-
-	async function supprimerObjet(bail: Bail, objet: Objet) {
-		if (!confirm(`Supprimer "${objet.libelle}" ?`)) return;
-		try {
-			await bailApi.supprimerObjet(bail.id, objet.id);
-			baux = baux.map((b) =>
-				b.id === bail.id ? { ...b, objets: b.objets.filter((o) => o.id !== objet.id) } : b,
-			);
-			toast('success', 'Objet supprimé');
-		} catch (e: any) {
-			toast('error', e instanceof ApiError ? e.message : 'Erreur');
-		}
+	//  `confirmerRetour` et `supprimerObjet` sont partis dans `InventaireBail`
+	//  (#806) : quatre gestes sur une sous-entité entièrement contenue dans le
+	//  bail. La page n'en apprend que le résultat, par `on:change`.
+	/**  Recoud la liste d'objets d'un bail après un geste du composant. */
+	function majObjets(bailId: number, objets: ObjetRemis[]) {
+		baux = baux.map((b) => (b.id === bailId ? { ...b, objets } : b));
 	}
 
 	// ── Recherche locataire ────────────────────────────────────────────────────
@@ -541,26 +506,10 @@
 		).length;
 
 	// ── Helpers affichage ──────────────────────────────────────────────────────
-	const typeLabel: Record<string, string> = {
-		cle: '\u{1F511} Clé',
-		telecommande: '\u{1F4E1} Télécommande',
-		vigik: '\u{1F3F7}️ Vigik',
-		autre: '\u{1F4E6} Autre',
-	};
-
-	const statutObjetBadge: Record<string, string> = {
-		en_possession: 'badge-green',
-		rendu: 'badge-blue',
-		perdu: 'badge-red',
-		non_remis: 'badge-gray',
-	};
-
-	const statutObjetLabel: Record<string, string> = {
-		en_possession: 'En possession',
-		rendu: 'Rendu',
-		perdu: 'Perdu',
-		non_remis: 'Non remis',
-	};
+	//  🔴 `typeLabel`, `statutObjetBadge` et `statutObjetLabel` sont partis AVEC le
+	//  balisage qui les emploie (`InventaireBail`, #806). Les laisser ici aurait
+	//  produit un tableau nu chez le voisin — le défaut de `standards/02` §4 ter,
+	//  celui qui ne casse rien et qui se voit en production.
 
 	const statutBailLabel: Record<string, string> = {
 		actif: 'Actif',
@@ -1088,76 +1037,12 @@
 									</div>
 								{/if}
 
-								<div>
-									<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem">
-										Inventaire ({bail.objets.length} objet{bail.objets.length !== 1 ? 's' : ''})
-									</div>
-									{#if bail.objets.length === 0}
-										<p style="font-size:0.83rem;color:var(--color-text-muted)">
-											Aucun objet enregistré.
-										</p>
-									{:else}
-										<div class="table-wrap">
-											<table class="table" style="font-size:0.85rem">
-												<thead>
-													<tr>
-														<th>Type</th>
-														<th>Libellé</th>
-														<th>Qté</th>
-														<th>Référence</th>
-														<th>Statut</th>
-														<th>Remis le</th>
-														<th>Rendu le</th>
-														{#if bail.statut !== 'termine'}
-															<th></th>
-														{/if}
-													</tr>
-												</thead>
-												<tbody>
-													{#each bail.objets as objet (objet.id)}
-														<tr>
-															<td>{typeLabel[objet.type] ?? objet.type}</td>
-															<td>{objet.libelle}</td>
-															<td style="text-align:center">{objet.quantite}</td>
-															<td>{objet.reference ?? '—'}</td>
-															<td>
-																<span
-																	class="badge {statutObjetBadge[objet.statut] ?? 'badge-gray'}"
-																>
-																	{statutObjetLabel[objet.statut] ?? objet.statut}
-																</span>
-															</td>
-															<td>{fmt(objet.remis_le)}</td>
-															<td>{fmt(objet.rendu_le)}</td>
-															{#if bail.statut !== 'termine'}
-																<td>
-																	<div style="display:flex;gap:0.35rem">
-																		{#if objet.statut === 'en_possession'}
-																			<button
-																				class="btn btn-xs"
-																				title="Enregistrer retour / perte"
-																				on:click={() => {
-																					objetRetour = objet;
-																					retourDate = '';
-																					retourPerdu = false;
-																				}}>↩</button
-																			>
-																		{/if}
-																		<button
-																			class="btn btn-xs btn-danger"
-																			title="Supprimer"
-																			on:click={() => supprimerObjet(bail, objet)}>✕</button
-																		>
-																	</div>
-																</td>
-															{/if}
-														</tr>
-													{/each}
-												</tbody>
-											</table>
-										</div>
-									{/if}
-								</div>
+								<InventaireBail
+									bailId={bail.id}
+									objets={bail.objets}
+									modifiable={bail.statut !== 'termine'}
+									on:change={(e) => majObjets(bail.id, e.detail)}
+								/>
 							</div>
 						{/each}
 					</div>
@@ -1235,31 +1120,9 @@
 {/if}
 
 <!-- ── Modal : retour objet ─────────────────────────────────────────── -->
-{#if objetRetour}
-	<Modale
-		edition
-		titre={`Retour — ${objetRetour.libelle}`}
-		styleBoite="width:min(380px,95vw)"
-		on:fermer={() => (objetRetour = null)}
-	>
-		<div class="modal-body">
-			<div class="field">
-				<label for="ro-date">Date de retour</label>
-				<input id="ro-date" type="date" bind:value={retourDate} />
-			</div>
-			<label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem">
-				<input type="checkbox" bind:checked={retourPerdu} />
-				Marquer comme perdu
-			</label>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (objetRetour = null)}>Annuler</button>
-			<button class="btn {retourPerdu ? 'btn-danger' : 'btn-primary'}" on:click={confirmerRetour}>
-				{retourPerdu ? 'Perdu' : 'Retour confirmé'}
-			</button>
-		</div>
-	</Modale>
-{/if}
+<!--  🔴 La modale « Retour — … » A DÉMÉNAGÉ dans `InventaireBail` (#806) : elle
+     porte sur un objet, pas sur un bail, et laisser son balisage ici pendant que
+     le tableau qui l'ouvre est ailleurs aurait coupé un geste en deux fichiers. -->
 
 <!-- ── Modal : gestion des accès (Vigik / TC) ───────────────────────── -->
 {#if bailAcces}
@@ -1435,51 +1298,31 @@
 		color: var(--color-text-muted);
 		margin-bottom: 0.6rem;
 	}
-	.lot-bailleur-card {
-		padding: 1rem 1.2rem;
-		margin-bottom: 0.6rem;
-	}
+	/*  🔴 DIX règles orphelines ont été retirées d'ici le 06/09/2026 (#806), et la
+	    façon dont elles sont apparues vaut d'être écrite.
+
+	    Elles étaient mortes DEPUIS LONGTEMPS — restes d'un balisage parti, dont
+	    `.search-locataire-row`, recopiée ici alors que `RechercheLocataire.svelte`
+	    la porte avec son propre balisage. `lint:css-orphelin` n'en signalait
+	    aucune.
+
+	    ⚠️ La raison : le tableau d'inventaire contenait une classe INTERPOLÉE
+	    (`class="badge {statutObjetBadge[objet.statut] ?? …}"`). Devant une classe
+	    qu'il ne peut pas résoudre, le compilateur Svelte devient conservateur et
+	    cesse de déclarer des sélecteurs inutilisés — POUR TOUT LE FICHIER. Une
+	    seule interpolation aveuglait donc le contrôle sur 1 600 lignes.
+
+	    Le tableau parti dans `InventaireBail`, l'aveuglement est parti avec lui, et
+	    les dix restes sont devenus visibles. Un contrôle vert peut ne rien mesurer
+	    (`standards/04`) : ici il ne le disait pas — il annonçait « 0 orphelin »,
+	    pas « je n'ai pas pu regarder ». */
 	.lot-vacant {
 		opacity: 0.8;
 		border-style: dashed;
 	}
-	.lbc-top {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		margin-bottom: 0.5rem;
-	}
-	.lbc-lot-id {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
 	.lbc-lot-badge {
 		font-weight: 700;
 		font-size: 0.92rem;
-	}
-	.lbc-tenant {
-		border-top: 1px solid var(--color-border);
-		padding-top: 0.6rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-	}
-	.lbc-tenant-name {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		font-size: 0.92rem;
-	}
-	.lbc-tenant-meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-		align-items: center;
 	}
 	.lbc-actions {
 		display: flex;
@@ -1578,16 +1421,6 @@
 	}
 
 	/* Lot multi-checklist */
-	.mode-personnel-note {
-		margin: 0.6rem 0 0.9rem;
-		padding: 0.55rem 0.75rem;
-		font-size: 0.84rem;
-		color: var(--color-text-muted);
-		background: var(--color-bg-alt, #f8fafc);
-		border: 1px solid var(--color-border);
-		border-left: 3px solid var(--color-primary);
-		border-radius: var(--radius);
-	}
 
 	/*  🔴 L'EN-TÊTE d'une modale ne s'écrit plus ici : `Modale.svelte` le rend, et
 	    `styles/composants.css` le style (`.modal-titre`). #607 avait retiré
@@ -1601,11 +1434,6 @@
 	    repeignait `.field input` et perdait le focus de la charte (#593, volet
 	    C). Ne reste ici que la répartition, propre à cette rangée. */
 
-	.locataire-edit-grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.8rem;
-	}
 	.acces-presets {
 		display: flex;
 		flex-wrap: wrap;
@@ -1626,11 +1454,5 @@
 	    teinte pâle là où la charte remplit la pastille. */
 
 	@media (max-width: 680px) {
-		.locataire-edit-grid {
-			grid-template-columns: 1fr;
-		}
-		.search-locataire-row {
-			flex-direction: column;
-		}
 	}
 </style>

@@ -95,4 +95,39 @@ if (fautifs.length || inutiles.length) {
 	process.exit(1);
 }
 
+//  🔴 CE QUE CE CONTRÔLE NE PEUT PAS MESURER, ET QU'IL DOIT DIRE (#810, 06/09/2026)
+//
+//  Devant une classe INTERPOLÉE (`class="badge {expr}"`), le compilateur Svelte
+//  ne sait pas résoudre ce qui sera rendu : il devient conservateur et cesse de
+//  déclarer des sélecteurs inutilisés **pour tout le fichier**. Une seule
+//  interpolation aveugle donc le contrôle sur l'écran entier.
+//
+//  Constaté le 06/09/2026 : en sortant un tableau de `mon-lot` vers son propre
+//  composant, DIX sélecteurs morts depuis longtemps sont apparus d'un coup —
+//  dont un recopié d'un composant qui le portait déjà. Ils n'avaient jamais été
+//  signalés : le tableau contenait `class="badge {statutObjetBadge[…]}"`.
+//
+//  ⚠️ Le contrôle annonçait « 0 orphelin », pas « je n'ai pas pu regarder ». Un
+//  vert qui ne distingue pas les deux est un faux vert (`standards/04` §1). Il
+//  ne peut pas encore rendre INCONNU — cela le ferait échouer sur les fichiers
+//  concernés, dette qui se solde écran par écran (#810) — mais il ANNONCE
+//  désormais sa portée réelle, et c'est le minimum honnête.
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+
+function fichiersSvelte(dir, acc = []) {
+	for (const e of readdirSync(dir)) {
+		const p = `${dir}/${e}`;
+		if (statSync(p).isDirectory()) fichiersSvelte(p, acc);
+		else if (e.endsWith('.svelte')) acc.push(p);
+	}
+	return acc;
+}
+
+const tous = fichiersSvelte('src');
+const aveugles = tous.filter((f) => /class="[^"]*\{/.test(readFileSync(f, 'utf8')));
+
 console.log(`✓ CSS : aucun sélecteur orphelin (${orphelins.length} toléré(s) et déclaré(s))`);
+console.log(
+	`  ⚠️ portée réelle : ${tous.length - aveugles.length}/${tous.length} fichiers mesurés — ` +
+		`${aveugles.length} portent une classe interpolée, où Svelte ne déclare AUCUN orphelin (#810).`,
+);
