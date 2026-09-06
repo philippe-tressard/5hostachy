@@ -36,10 +36,9 @@
 <script lang="ts">
 	import FormulaireAnnonce from '$lib/components/FormulaireAnnonce.svelte';
 	import ListeAnnonces from '$lib/components/ListeAnnonces.svelte';
+	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
-	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
-	import { TITRE_ARCHIVES } from '$lib/archives';
 	import { CATEGORIES_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
 	import { annonces as annoncesApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -79,9 +78,9 @@
 		return new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime();
 	});
 
-	//  La partition vient du serveur, pas d'un calcul local — voir l'en-tête.
-	$: courantes = triees.filter((a) => !a.archivee);
-	$: archivees = triees.filter((a) => a.archivee);
+	//  La partition courants / Archives ne se fait plus ici : `ListeEtArchives`
+	//  la porte pour les trois onglets de la Communauté, sur le `archivee` que le
+	//  serveur calcule (voir son en-tête).
 
 	/** Téléverse une photo et retourne son URL (contrat attendu par `FichiersUpload`). */
 	async function uploadPhoto(id: number, file: File): Promise<string> {
@@ -147,11 +146,11 @@
 	const basculer = (a: any) => (expandedAnnonce = expandedAnnonce === a.id ? null : a.id);
 	const basculerGestion = (a: any) => (gestionPhotos = gestionPhotos === a.id ? null : a.id);
 
-	//  🔴 La correction s'ouvre dans une FENÊTRE depuis le 02/09/2026 (#640).
-	//  Elle prenait la place du corps de la carte, ce qui obligeait à déplier
-	//  l'annonce pour que le clic sur ✏️ ait un effet visible — un couplage entre
-	//  deux gestes qui n'ont rien à voir. La fenêtre s'ouvre par-dessus : plus
-	//  besoin de toucher au dépliement.
+	//  🔴 La correction s'ouvre DANS la carte, à la place de son corps (#787,
+	//  06/09/2026) — la fenêtre flottante posée le 02/09 (#640) a été écartée à
+	//  l'écran : « pas de spécifique, comme le reste du site ». Conséquence
+	//  directe : le clic sur ✏️ doit DÉPLIER la carte, sinon le formulaire n'a
+	//  nulle part où apparaître. C'est ce que fait la fonction ci-dessous.
 	function modifier(a: any) {
 		editAnnonce = editAnnonce?.id === a.id ? null : a;
 		//  🔴 DÉPLIER la carte, sinon le formulaire n'apparaît nulle part : il vit
@@ -223,65 +222,25 @@
       l'autre en arrière. C'est la duplication de balisage, pas de logique : celle
       qui ne casse rien et qui dérive.
 
-      La condition de vide couvre les DEUX listes (courantes + Archives) : une
+      La condition de vide porte sur la liste ENTIÈRE, archives comprises : une
       annonce archivée n'est pas rien, et annoncer « Aucune annonce » alors que
       les Archives en portent trois serait faux (#519). -->
 <EtatListe
 	{chargement}
 	{erreur}
-	vide={courantes.length === 0 && archivees.length === 0}
+	vide={triees.length === 0}
 	titreErreur="Impossible d'afficher les annonces"
 	titreVide="Aucune annonce"
 	messageVide="Déposez la première annonce en cliquant sur « Déposer une annonce »."
 >
-	{#if courantes.length === 0}
-		<div class="empty-state">
-			<h3>Aucune annonce en cours</h3>
-			<p>Les annonces conclues sont rangées dans les Archives, ci-dessous.</p>
-		</div>
-	{/if}
-	<ListeAnnonces
-		liste={courantes}
-		expandedId={expandedAnnonce}
-		gestionPhotosId={gestionPhotos}
-		{estCS}
-		{estAdmin}
-		{currentUserId}
-		onToggle={basculer}
-		onToggleGestion={basculerGestion}
-		onModifier={modifier}
-		editId={editAnnonce?.id ?? null}
-		onUpload={uploadPhoto}
-		onRemove={supprimerPhoto}
-		onStatut={changerStatut}
-		onSupprimer={supprimer}
-		onRepondre={repondre}
-		onSupprimerReponse={supprimerReponse}
-		{onSignaler}
+	<ListeEtArchives
+		liste={triees}
+		titreVideCourant="Aucune annonce en cours"
+		messageVideCourant="Les annonces conclues sont rangées dans les Archives, ci-dessous."
 	>
-		<svelte:fragment slot="formulaire" let:annonce>
-			<!--  `{#key}` remonte le composant d'une annonce à l'autre : ses champs
-			      sont initialisés une seule fois, à la construction. -->
-			{#key annonce.id}
-				<FormulaireAnnonce
-					{annonce}
-					on:modifie={(e) => appliquerModification(e.detail)}
-					on:annule={() => (editAnnonce = null)}
-				/>
-			{/key}
-		</svelte:fragment>
-	</ListeAnnonces>
-
-	<!--  L'Historique : replié par défaut, même bandeau que celui des actualités
-	      (`SectionRepliee`, extrait dans ce lot pour ne pas en écrire un second).
-	      Les cartes y sont les MÊMES — `ListeAnnonces`, appelé une seconde fois —
-	      simplement atténuées par `annonce.archivee`. -->
-	{#if archivees.length}
-		<!--  Titre depuis `$lib/archives` : il était en dur ici, comme dans
-		      quatre autres écrans (#516, point 4). -->
-		<SectionRepliee titre={TITRE_ARCHIVES} compte={archivees.length}>
+		<svelte:fragment let:items>
 			<ListeAnnonces
-				liste={archivees}
+				liste={items}
 				expandedId={expandedAnnonce}
 				gestionPhotosId={gestionPhotos}
 				{estCS}
@@ -301,7 +260,7 @@
 			>
 				<svelte:fragment slot="formulaire" let:annonce>
 					<!--  `{#key}` remonte le composant d'une annonce à l'autre : ses champs
-			      sont initialisés une seule fois, à la construction. -->
+					      sont initialisés une seule fois, à la construction. -->
 					{#key annonce.id}
 						<FormulaireAnnonce
 							{annonce}
@@ -311,8 +270,8 @@
 					{/key}
 				</svelte:fragment>
 			</ListeAnnonces>
-		</SectionRepliee>
-	{/if}
+		</svelte:fragment>
+	</ListeEtArchives>
 </EtatListe>
 
 <!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).

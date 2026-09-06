@@ -63,6 +63,7 @@
 | Reverse proxy | [Caddy](https://caddyserver.com/) |
 | Messaging | WhatsApp Bridge (Baileys) |
 | Déploiement | Docker Compose · Raspberry Pi 5 |
+| Tests | pytest (API) · [Playwright](https://playwright.dev/) (navigateur, bureau et mobile) · une cinquantaine de contrôles `lint:*` sur la source |
 | CDN / Tunnel | Cloudflare Tunnel + Worker (maintenance page) |
 
 ```
@@ -71,7 +72,8 @@
 │   ├── app/           # Code applicatif (routers, models, utils)
 │   └── alembic/       # Migrations de base de données
 ├── front/             # Frontend SvelteKit
-│   └── src/routes/    # Pages de l'application
+│   ├── src/routes/    # Pages de l'application
+│   └── e2e/           # Tests de navigateur (Playwright)
 ├── whatsapp-bridge/   # Bridge WhatsApp (Node.js)
 ├── scripts/           # Tous les scripts
 │   ├── exploitation/  # Lancés par cron/systemd sur les RPi (bascule, failover…)
@@ -128,7 +130,14 @@ uvicorn app.main:app --reload
 
 # Frontend (autre terminal)
 cd front && npm install && npm run dev
+
+# Tests de navigateur (le serveur de dev démarre tout seul)
+cd front && npx playwright install chromium && npm run e2e
 ```
+
+> Les tests Playwright couvrent aujourd'hui les écrans **publics** — le reste du
+> site est derrière une connexion. `front/e2e/README.md` dit ce qu'il faudrait
+> décider pour aller plus loin, et pourquoi ce n'est pas un oubli.
 
 ## Configuration
 

@@ -19,7 +19,7 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
+	import { admin as adminApi, copropriete as coproprieteApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { STATUT_BADGE, STATUT_LABEL, type ModeleImportAcces } from '$lib/imports-acces';
@@ -169,10 +169,7 @@
 	onMount(async () => {
 		loading = true;
 		try {
-			[utilisateurs, lots] = await Promise.all([
-				api.get<any[]>('/admin/utilisateurs'),
-				api.get<any[]>('/copropriete/lots'),
-			]);
+			[utilisateurs, lots] = await Promise.all([adminApi.utilisateurs(), coproprieteApi.lots()]);
 			await recharger();
 		} catch {
 			toast('error', 'Erreur de chargement');

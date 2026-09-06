@@ -35,8 +35,7 @@
 	import { messageErreur } from '$lib/erreurs';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ListeSondages from '$lib/components/ListeSondages.svelte';
-	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
-	import { TITRE_ARCHIVES } from '$lib/archives';
+	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 	import OngletIdees from '$lib/components/OngletIdees.svelte';
 	import { trackTabView } from '$lib/telemetry';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
@@ -65,13 +64,12 @@
 	// le reste des formulaires du site. Ne restent ici que la LISTE et ses actions.
 	let sondages: any[] = [];
 
-	//  🔴 `s.archivee` est calculé par le SERVEUR (`app/utils/archivage.py`, #515) :
-	//  30 jours après la date de clôture, délai réglable en administration. Le
+	//  🔴 La partition courants / Archives est portée par `ListeEtArchives`, sur
+	//  le `s.archivee` que le SERVEUR calcule (`app/utils/archivage.py`, #515) :
+	//  30 jours après la date de clôture, délai réglable en administration. La
 	//  recalculer ici en ferait une seconde règle — c'est exactement ce que #468 a
 	//  retiré pour `cloture`, que la liste comparait à l'heure LOCALE du navigateur
 	//  quand le serveur date en UTC.
-	$: courants = sondages.filter((s) => !s.archivee);
-	$: archives = sondages.filter((s) => s.archivee);
 	let sondagesLoading = true;
 	let showFormSondage = false;
 
@@ -82,7 +80,7 @@
 	//  était clos ou non selon le fuseau du lecteur. Un écran ne tranche pas ce
 	//  genre de question (`ux-patterns` §16).
 
-	//  La FENÊTRE de correction d'un sondage (#783). L'état vit ICI, pas dans
+	//  La correction d'un sondage (#783). L'état vit ICI, pas dans
 	//  `ListeSondages` : celui-ci est rendu DEUX fois (courants et Archives), et
 	//  l'y mettre en aurait monté deux exemplaires sur le même sondage.
 	let editSondage: any = null;
@@ -415,27 +413,15 @@
 			titreVide="Aucun sondage"
 			messageVide="Les sondages du conseil syndical apparaîtront ici."
 		>
-			{#if courants.length === 0 && archives.length > 0}
-				<div class="empty-state">
-					<h3>Aucun sondage en cours</h3>
-					<p>Les sondages clos sont rangés dans les Archives, ci-dessous.</p>
-				</div>
-			{/if}
-			<ListeSondages sondages={courants} {arreterSondage} {supprimerSondage} {modifierSondage} />
-
-			<!--  Les Archives : même bandeau que les annonces, les idées et les
-			      actualités (`SectionRepliee`), et les MÊMES cartes — `ListeSondages`,
-			      appelé une seconde fois. -->
-			{#if archives.length}
-				<SectionRepliee titre={TITRE_ARCHIVES} compte={archives.length}>
-					<ListeSondages
-						sondages={archives}
-						{arreterSondage}
-						{supprimerSondage}
-						{modifierSondage}
-					/>
-				</SectionRepliee>
-			{/if}
+			<ListeEtArchives
+				liste={sondages}
+				titreVideCourant="Aucun sondage en cours"
+				messageVideCourant="Les sondages clos sont rangés dans les Archives, ci-dessous."
+			>
+				<svelte:fragment let:items>
+					<ListeSondages sondages={items} {arreterSondage} {supprimerSondage} {modifierSondage} />
+				</svelte:fragment>
+			</ListeEtArchives>
 		</EtatListe>
 	{/if}
 

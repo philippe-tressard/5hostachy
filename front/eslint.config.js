@@ -41,7 +41,11 @@ export default defineConfig(
 
 	// ── Sources TypeScript et JavaScript ────────────────────────────────────────
 	{
-		files: ['src/**/*.{js,ts}', 'scripts/**/*.{js,mjs,ts}'],
+		//  `e2e/` rejoint ce bloc plutôt que d'en ouvrir un second : ce sont les
+		//  mêmes sources TypeScript, avec les mêmes globals de navigateur (les
+		//  callbacks de `page.evaluate` lisent `document`). Un bloc de plus aurait
+		//  été une seconde liste de règles, libre de diverger.
+		files: ['src/**/*.{js,ts}', 'scripts/**/*.{js,mjs,ts}', 'e2e/**/*.ts'],
 		extends: [js.configs.recommended, ts.configs.recommended],
 		languageOptions: {
 			ecmaVersion: 2022,

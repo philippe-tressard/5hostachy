@@ -19,7 +19,13 @@
 	import { onMount } from 'svelte';
 	import { isCS } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, annuaireAdmin, lots as lotsApi, api, ApiError } from '$lib/api';
+	import {
+		admin as adminApi,
+		annuaireAdmin,
+		auth as authApi,
+		lots as lotsApi,
+		ApiError,
+	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
@@ -279,7 +285,7 @@
 			] = await Promise.all([
 				adminApi.comptesEnAttente(),
 				adminApi.commandesAccesEnAttente(),
-				essayer<{ id: number; numero: string }[]>(api.get('/auth/batiments'), []),
+				essayer<{ id: number; numero: string }[]>(authApi.batiments(), []),
 				essayer<any[]>(adminApi.utilisateurs(), []),
 				essayer<any[]>(lotsApi.tous(), []),
 				essayer<any[]>(lotsApi.listImports(), []),
@@ -632,7 +638,7 @@
 			comptesEnAttente = comptesEnAttente.filter((x) => x.id !== u.id);
 			toast('success', 'Compte approuvé.');
 			if (cvNewArrivant) {
-				await api.post(`/admin/utilisateurs/${u.id}/accueil-arrivant`, {
+				await adminApi.accueilArrivant(u.id, {
 					batiment: cvBatiment || null,
 					ancien_resident: cvAncienResident || null,
 				});

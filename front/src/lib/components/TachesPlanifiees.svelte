@@ -10,7 +10,7 @@
 	//  hebdomadaire : jamais exécutée » au-dessus d'un tableau qui semblait
 	//  montrer des maintenances quotidiennes réussies.
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
+	import { admin as adminApi } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { LIBELLE_TACHE, LIBELLE_ACTION } from '$lib/taches';
@@ -61,7 +61,7 @@
 	async function charger() {
 		santeLoading = true;
 		try {
-			sante = await api.get('/admin/maintenance/sante');
+			sante = await adminApi.santeMaintenance();
 		} catch {
 			sante = null;
 		} finally {
@@ -78,10 +78,11 @@
 	//  agrégation — dans des cartes séparées : trois tableaux pour un même fait,
 	//  aucun ne le disant. Signalé illisible par l'utilisateur le 11/08/2026.
 	//  Le détail vit désormais SOUS la ligne qui l'annonce.
-	const SOURCE: Record<string, string> = {
-		backup: '/admin/sauvegardes/historique',
-		telemetrie: '/admin/telemetry/historique',
-	};
+	//  🔴 La table `SOURCE` des routes d'historique a REJOINT le client le
+	//  06/09/2026 (#801) : deux de ses routes y étaient déjà déclarées
+	//  (`telemetryHistorique`, `telemetryAgreger`) et figuraient au relevé des
+	//  méthodes « sans appelant » — elles en avaient un, il passait par une
+	//  table. Une route rangée dans une table reste une route recopiée.
 
 	//  Profondeur d'historique sous une ligne dépliée. UNE constante : elle était
 	//  écrite trois fois — dans `SOURCE.limite`, qui n'était même pas lue, dans
@@ -90,13 +91,6 @@
 	//  montraient l'historique complet (#299) : les retirer sans compenser aurait
 	//  réduit en silence ce qu'un administrateur peut voir.
 	const PROFONDEUR = 10;
-
-	function urlHistorique(tache: string): string {
-		return (
-			SOURCE[tache] ??
-			`/admin/maintenance/historique?tache=${encodeURIComponent(tache)}&limite=${PROFONDEUR}`
-		);
-	}
 
 	//  Ce que fait une tâche, quand sa ligne seule ne le dit pas. Repris des deux
 	//  cartes supprimées avec #299 : elles faisaient double emploi pour
@@ -117,7 +111,7 @@
 		if (historiques[tache] && !force) return;
 		enChargement = { ...enChargement, [tache]: true };
 		try {
-			const lignes = await api.get<any[]>(urlHistorique(tache));
+			const lignes = await adminApi.historiqueTache(tache, PROFONDEUR);
 			//  Les tables propres à une tâche ne savent pas se limiter côté serveur :
 			//  on tronque ici, à la même profondeur que les autres.
 			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, PROFONDEUR) };
@@ -180,12 +174,6 @@
 
 	//  Seules ces trois tâches savent se lancer à la main : les autres n'ont pas
 	//  d'équivalent in-process. Ne montrer le bouton que là où il agit.
-	const LANCEMENT: Record<string, string> = {
-		maintenance: '/admin/maintenance/lancer',
-		backup: '/admin/sauvegardes/maintenant',
-		telemetrie: '/admin/telemetry/agreger',
-	};
-
 	//  ⚠️ Ce bouton ne lance PAS `maintenance.sh`. Il appelle
 	//  `POST /admin/maintenance/lancer` → `run_maintenance`, exécuté DANS le
 	//  process de l'API : purges applicatives + VACUUM, sur le seul nœud qui
@@ -201,11 +189,10 @@
 	//  annoncé est celui de la PRISE EN COMPTE, pas du ménage — le tableau, lui,
 	//  dira ce qui s'est réellement passé.
 	async function declencher(tache: string) {
-		const url = LANCEMENT[tache];
-		if (!url) return;
+		if (!adminApi.tacheLancable(tache)) return;
 		enCours = tache;
 		try {
-			await api.post(url);
+			await adminApi.lancerTache(tache);
 			toast('success', `${LIBELLE_TACHE[tache]} lancée en arrière-plan.`);
 			//  La tâche part en arrière-plan (202) : le succès annoncé est celui de
 			//  la PRISE EN COMPTE. C'est l'historique rechargé qui dira ce qui s'est
@@ -452,7 +439,7 @@
 											</table>
 										</div>
 									{/if}
-									{#if LANCEMENT[t.tache]}
+									{#if adminApi.tacheLancable(t.tache)}
 										<!--  Bouton à DROITE, comme dans les deux cartes supprimées avec #299
 										      et comme partout ailleurs dans le projet : action primaire à
 										      droite (`ux-patterns` §9). Collé à gauche sous le tableau, il se

@@ -20,7 +20,7 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import { api, config as configApi } from '$lib/api';
+	import { config as configApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 
 	/** Le serveur d'envoi, pour le bouton « Reprendre les paramètres d'envoi ». */
@@ -101,7 +101,7 @@
 		imapTesting = true;
 		imapResultat = '';
 		try {
-			const r: any = await api.post('/config/imap-test', {});
+			const r: any = await configApi.testerImap();
 			imapResultat = r.message;
 			toast('success', 'Connexion à la boîte réussie.');
 		} catch (e: any) {
@@ -113,7 +113,7 @@
 	}
 
 	async function relire() {
-		const lues = await api.get<Record<string, string>>('/config/admin');
+		const lues = await configApi.admin();
 		imapConfig.enabled = lues['imap_enabled'] === '1';
 		imapConfig.server = lues['imap_server'] ?? '';
 		imapConfig.port = parseInt(lues['imap_port'] ?? '993') || 993;

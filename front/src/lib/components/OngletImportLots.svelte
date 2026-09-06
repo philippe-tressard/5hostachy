@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
-	import { lots as lotsApi, api } from '$lib/api';
+	import { lots as lotsApi, admin as adminApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BarreImport from '$lib/components/BarreImport.svelte';
@@ -193,10 +193,7 @@
 			//  ⚠️ `/copropriete/batiments` était appelé ici et son résultat JETÉ :
 			//  `batiments` n'était lu nulle part. Une requête à chaque ouverture de
 			//  l'onglet, pour rien — invisible, puisqu'elle réussissait.
-			[utilisateurs, lots] = await Promise.all([
-				api.get<any[]>('/admin/utilisateurs'),
-				lotsApi.tous(),
-			]);
+			[utilisateurs, lots] = await Promise.all([adminApi.utilisateurs(), lotsApi.tous()]);
 			await reload();
 		} catch {
 			toast('error', 'Erreur de chargement');
