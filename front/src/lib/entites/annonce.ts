@@ -144,13 +144,35 @@ export const ANNONCE: EntiteDeclaree = {
 			},
 		},
 		{
-			//  🔴 Vraie absence de NOTION, à ne pas confondre avec celle du périmètre
-			//  juste au-dessus — la nuance est développée dans l'en-tête.
+			//  🔴 REVIREMENT ASSUMÉ — l'utilisateur a tranché le 06/09/2026 : « ajoute
+			//  la section Destinataires ; en nouveau et en édition », et le ciblage
+			//  filtre la VISIBILITÉ, pas seulement les notifications.
+			//
+			//  Ce fichier disait l'inverse la veille, et le disait avec assurance :
+			//  « on n'annonce pas un lave-linge à trois voisins choisis ». Le
+			//  raisonnement n'était pas absurde — il supposait qu'une annonce
+			//  s'adresse par nature à tous, alors que vendre à son seul bâtiment, ou
+			//  réserver un don aux locataires, sont des gestes réels.
+			//
+			//  C'est la DEUXIÈME fois que l'écran réfute le papier sur cette entité
+			//  (la première : le workflow, absent puis ajouté le 18/08). La leçon
+			//  n'est pas qu'il faut moins déclarer, c'est que la déclaration rend le
+			//  désaccord visible et corrigeable en UN endroit.
+			//
+			//  ⚠️ Le périmètre (section 4) dit DE QUOI il s'agit, celle-ci À QUI on
+			//  s'adresse. Les deux axes sont indépendants et se combinent : c'est
+			//  `cible_visible` côté serveur qui les pose, la même fonction que pour
+			//  la publication et le sondage.
 			id: 'destinataires',
-			sansObjet:
-				"Une annonce s'adresse à toute la Communauté : c'est la rubrique qui filtre qui " +
-				'y entre (le syndic et les mandataires en sont exclus), pas l’annonce. On ' +
-				'n’annonce pas un lave-linge à trois voisins choisis.',
+			objet: 'DestinatairePicker — à qui cette annonce s’adresse',
+			absente: {
+				evolution: {
+					motif: 'hérité',
+					explication:
+						"Le public visé est celui de l'annonce. Une réponse de voisin ne l'élargit " +
+						'ni ne le restreint — sinon répondre suffirait à faire entrer des tiers.',
+				},
+			},
 		},
 		{
 			id: 'description',

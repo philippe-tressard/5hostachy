@@ -43,6 +43,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDate2d as fmtDate, isNouveau } from '$lib/date';
 	import { fmtMontant, perimetreLabel, estPerimetreParDefaut } from '$lib/utils';
+	import { concerneTousLesResidents, destinatairesLabel } from '$lib/destinataires';
 	import {
 		MAX_PHOTOS_ANNONCE,
 		OPTIONS_STATUT_ANNONCE,
@@ -114,6 +115,14 @@
 			<span class="badge badge-gray">{categorieAnnonceLabel(annonce.categorie)}</span>
 			<!--  🔹 = périmètre LOGIQUE, jamais affiché quand il vaut « résidence ».
 			      📍 resterait réservé à un lieu physique. -->
+			<!--  Le PUBLIC visé, à côté du lieu (#782). Affiché seulement quand il
+			      restreint quelque chose : un badge « Tous les résidents » sur chaque
+			      carte serait du bruit, et le bruit finit par masquer le signal.
+			      Même lecture et même libellé que la liste des sondages —
+			      `destinatairesLabel` est la seule écriture de ce vocabulaire. -->
+			{#if !concerneTousLesResidents(annonce.public_cible)}<span class="badge badge-orange"
+					>{destinatairesLabel(annonce.public_cible)}</span
+				>{/if}
 			{#if !estPerimetreParDefaut(annonce.perimetre_cible)}<span class="badge badge-gray"
 					>&#x1F539; {perimetreLabel(annonce.perimetre_cible)}</span
 				>{/if}

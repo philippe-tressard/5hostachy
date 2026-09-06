@@ -258,3 +258,56 @@ def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
         return True
     # Valeur non reconnue, ou public dont l'utilisateur ne fait pas partie
     return False
+
+
+def cible_visible(
+    perimetre_cible: Optional[str],
+    public_cible: Optional[str],
+    user: Utilisateur,
+    *,
+    ouvert_a_la_copropriete: bool = False,
+) -> bool:
+    """**La** règle « cet objet ciblé est-il visible de cet utilisateur ? ».
+
+    Les deux axes du ciblage, dans l'ordre, avec leurs cas de refus — écrits une
+    seule fois :
+
+    1. le conseil syndical et l'administration voient tout, et sortent d'abord :
+       c'est ce qui leur laisse de quoi corriger un ciblage fautif ;
+    2. le **périmètre** — où ça se passe ;
+    3. le **public cible** — à qui ça s'adresse.
+
+    ## Pourquoi cette fonction existe (06/09/2026)
+
+    `publication_visible` et `sondage_accessible` posaient **exactement** ces
+    trois questions, dans cet ordre, avec le même traitement du ciblage illisible
+    — et divergeaient sur un seul point, `ouvert_a_la_copropriete`, qui est
+    devenu le paramètre. Deux copies d'une règle d'accès se durcissent une fois
+    sur deux, et la petite annonce et l'idée allaient en faire une troisième et
+    une quatrième (#782).
+
+    ⚠️ Une règle d'autorisation ne se recopie pas « parce que l'objet est
+    différent » : c'est ce qui a produit `_require_bailleur`, doublon exact de
+    `require_proprietaire` posé hors du module central, avec dix-sept endpoints
+    dessus — et une spec qui le documentait comme officiel.
+
+    `ouvert_a_la_copropriete` reste **faux par défaut**, et c'est le choix sûr :
+    l'ouverture est une décision qui s'écrit chez l'appelant, jamais un effet de
+    bord hérité. Une actualité ciblée sur un bâtiment reste lisible de toute la
+    copropriété parce qu'elle **informe** (#339) ; un sondage fait **voter**, une
+    annonce s'adresse à qui son auteur a choisi — les ouvrir changerait
+    respectivement qui pèse sur le résultat et qui reçoit l'offre.
+    """
+    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
+        return True
+    perims = _codes_json_pour_acces(perimetre_cible)
+    if perims is None:
+        #  Ciblage illisible : on refuse. Un contrôle qui ne peut pas s'exécuter
+        #  ne renvoie jamais OK (`standards/04`), et le CS est déjà sorti plus
+        #  haut — il garde donc de quoi corriger l'objet.
+        return False
+    if not perimetre_visible(
+        perims, user, ouvert_a_la_copropriete=ouvert_a_la_copropriete
+    ):
+        return False
+    return public_cible_visible(public_cible, user)

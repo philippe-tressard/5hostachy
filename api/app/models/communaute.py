@@ -141,6 +141,19 @@ class PetiteAnnonce(SQLModel, table=True):
     #  `PerimetrePicker` et `perimetreLabel` qui la lisent, et ils ne savent lire
     #  que celle-là.
     perimetre_cible: Optional[str] = Field(default='["résidence"]')
+    #  Le PUBLIC CIBLE — section 5 du cadre #430, ajouté le 06/09/2026 (#782).
+    #  Le périmètre dit *de quoi* il s'agit ; celui-ci dit *à qui* on s'adresse.
+    #
+    #  🔴 Il filtre la VISIBILITÉ, pas seulement les notifications — décision de
+    #  Philippe, qui renverse le « sans objet » que la déclaration d'écran portait
+    #  la veille. `cible_visible` en décide, la même fonction que pour le sondage
+    #  et la publication : une règle d'accès recopiée se durcit une fois sur deux.
+    #
+    #  ⚠️ `None` = TOUT LE MONDE, jamais « personne ». C'est ce que
+    #  `public_cible_visible` fait d'une valeur absente, et ce que les annonces
+    #  déjà déposées doivent continuer de valoir. L'inverse les aurait toutes fait
+    #  disparaître en silence.
+    public_cible: Optional[str] = None
     statut: StatutAnnonce = StatutAnnonce.en_cours
     #  🔴 L'horodatage du DERNIER CHANGEMENT D'ÉTAT, et non de la dernière
     #  modification. C'est lui qui décide de l'archivage automatique à un mois.
@@ -190,6 +203,10 @@ class Idee(SQLModel, table=True):
     #  sondage avait fait (`batiments_ids`), et il a fallu une migration pour l'en
     #  sortir (#316, 0147). Migration 0153.
     perimetre_cible: Optional[str] = Field(default='["résidence"]')
+    #  Le PUBLIC CIBLE — même champ, même forme et même règle que la petite
+    #  annonce ci-dessus et que le sondage (#782, migration 0176). `None` = tout
+    #  le monde : les idées déjà déposées ne changent pas d'audience.
+    public_cible: Optional[str] = None
 
     votes: List["VoteIdee"] = Relationship(back_populates="idee")
 

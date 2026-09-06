@@ -80,6 +80,30 @@ def reponses_de(rubrique: str, cible_id: int, session: Session) -> list[dict]:
     return tri_reponses([enrich_reponse(r, session) for r in reps])
 
 
+def _cible_visible_ou_404(
+    session: Session,
+    modele: type,
+    cible_id: int,
+    libelle: str,
+    user: Utilisateur,
+    visible_de: Callable[[Any, Utilisateur], bool],
+) -> Any:
+    """La cible existe ET l'utilisateur a le droit de la voir — sinon 404.
+
+    🔒 **404 et non 403**, délibérément : répondre « interdit » confirmerait
+    l'existence de l'objet à qui n'a pas le droit de le voir. Sur une petite
+    annonce ciblée, cela révélerait qu'un voisin vend quelque chose sans dire
+    quoi — une fuite plus discrète, mais réelle.
+
+    Les trois routes de réponses posaient la même question à moitié (« existe-t-il ? »)
+    et chacune à sa façon. Une seule écriture, appelée trois fois.
+    """
+    cible = session.get(modele, cible_id)
+    if not cible or not visible_de(cible, user):
+        raise HTTPException(404, f"{libelle} introuvable")
+    return cible
+
+
 def enregistrer_routes_reponses(
     router: APIRouter,
     *,
@@ -88,6 +112,7 @@ def enregistrer_routes_reponses(
     libelle: str,
     rubrique_label: str,
     prefixe_lien: str,
+    visible_de: Callable[[Any, Utilisateur], bool],
     titre_de: Callable[[Any], str] = lambda cible: cible.titre,
 ) -> None:
     """Pose `GET`, `POST` et `DELETE .../{cible_id}/reponses` sur `router`.
@@ -97,6 +122,18 @@ def enregistrer_routes_reponses(
     * `libelle` — le mot des messages d'erreur (« Annonce », « Idée ») ;
     * `rubrique_label` — ce que lit l'auteur notifié (« votre annonce ») ;
     * `prefixe_lien` — le premier segment du lien construit vers le front.
+
+    🔒 `visible_de` est **obligatoire**, et sans valeur par défaut : c'est la
+    règle d'accès de la rubrique (`annonce_visible`, `idee_visible`). Lui donner
+    un défaut permissif aurait fait qu'une troisième rubrique, ajoutée sans y
+    penser, exposerait ses réponses à tout le monde — un oubli qui ne se voit pas
+    à la relecture. Ici il faut l'écrire, donc le décider.
+
+    ⚠️ Ces trois routes vérifiaient l'EXISTENCE de la cible, jamais sa visibilité.
+    Tant qu'annonces et idées s'adressaient à tous, cela ne se voyait pas ; le
+    public cible (#782, 06/09/2026) l'a rendu exploitable — lire et écrire les
+    réponses d'un objet dont on est exclu. Corrigé ici, donc pour les deux
+    rubriques à la fois : c'est ce que la fabrique achète.
 
     ⚠️ `titre_de` est un paramètre et non un attribut supposé : toutes les cibles
     portent aujourd'hui un `titre`, mais l'écrire en dur ferait de cette fabrique
@@ -111,8 +148,7 @@ def enregistrer_routes_reponses(
         user: Utilisateur = Depends(get_current_user),
     ):
         exiger_acces(user)
-        if not session.get(modele, cible_id):
-            raise HTTPException(404, f"{libelle} introuvable")
+        _cible_visible_ou_404(session, modele, cible_id, libelle, user, visible_de)
         return reponses_de(rubrique, cible_id, session)
 
     @router.post("/{cible_id}/reponses", status_code=201)
@@ -134,9 +170,9 @@ def enregistrer_routes_reponses(
         contenu = (body.contenu or "").strip()
         if not contenu:
             raise HTTPException(422, "La réponse ne peut pas être vide")
-        cible = session.get(modele, cible_id)
-        if not cible:
-            raise HTTPException(404, f"{libelle} introuvable")
+        cible = _cible_visible_ou_404(
+            session, modele, cible_id, libelle, user, visible_de
+        )
 
         rep = ReponseCommunaute(
             rubrique=rubrique, cible_id=cible_id, auteur_id=user.id, contenu=contenu
@@ -172,6 +208,7 @@ def enregistrer_routes_reponses(
     ):
         """Supprimer une réponse : son auteur, ou un CS/admin."""
         exiger_acces(user)
+        _cible_visible_ou_404(session, modele, cible_id, libelle, user, visible_de)
         rep = session.get(ReponseCommunaute, rep_id)
         if not rep or rep.rubrique != rubrique or rep.cible_id != cible_id:
             raise HTTPException(404, "Réponse introuvable")

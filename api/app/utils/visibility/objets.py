@@ -17,6 +17,8 @@ from datetime import datetime
 
 from app.models.core import (
     Evenement,
+    Idee,
+    PetiteAnnonce,
     Publication,
     RoleUtilisateur,
     Sondage,
@@ -31,49 +33,48 @@ from app.utils.perimetres import parse_perimetres
 #  parseur commun des listes de codes (« qui est visé »), et deux fragments le
 #  composent. Le découpage a coupé cette dépendance au premier essai — 56 tests
 #  sont tombés d'un coup sur un `NameError`, ce qui est la bonne façon d'échouer.
-from .socle import _codes_json_pour_acces, perimetre_visible, public_cible_visible
+from .socle import (
+    _codes_json_pour_acces,
+    cible_visible,
+    perimetre_visible,
+)
+#  ⚠️ `public_cible_visible` n'est plus importé ici depuis le 06/09/2026 : aucune
+#  règle de ce fichier ne l'appelle en direct — elles passent toutes par
+#  `cible_visible`, qui pose les deux axes. Une factorisation se termine par la
+#  suppression de ce qu'elle a remplacé, et c'est Ruff (F401) qui l'a rappelé.
 
 # ── Règles publication ────────────────────────────────────────────────────────
 
 def publication_visible(pub: Publication, user: Utilisateur) -> bool:
-    """
-    Retourne True si l'utilisateur peut voir cette publication.
+    """L'utilisateur peut-il voir cette publication ?
 
-    Vérifie deux dimensions indépendantes :
-      1. Périmètre géographique (perimetre_cible)
-      2. Public cible (public_cible) : résidents | copropriétaires | locataires | conseil_syndical
-    """
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
+    Périmètre puis public cible : c'est `cible_visible` qui les pose, et elle est
+    la SEULE écriture de cette règle depuis le 06/09/2026 (#782). Ce corps
+    portait les mêmes onze lignes que `sondage_accessible`, au paramètre
+    d'ouverture près.
 
-    # 1. Périmètre géographique
-    perims = _codes_json_pour_acces(pub.perimetre_cible)
-    if perims is None:
-        #  Ciblage illisible : on refuse. Le CS et l'admin sont déjà sortis plus
-        #  haut et gardent donc l'accès nécessaire pour corriger la publication.
-        return False
-    #  `ouvert_a_la_copropriete` : une actualité ciblée sur un autre bâtiment reste
-    #  lisible (#339). La vie d'une copropriété se passe rarement dans un seul
-    #  bâtiment — un chantier, une coupure, une réunion concernent souvent sans
-    #  être « chez soi ». Le résident qui préfère l'ancien fonctionnement coche
-    #  « n'afficher que mes bâtiments » dans son profil.
+    #  `ouvert_a_la_copropriete` : une actualité ciblée sur un autre bâtiment
+    #  reste lisible (#339). La vie d'une copropriété se passe rarement dans un
+    #  seul bâtiment — un chantier, une coupure, une réunion concernent souvent
+    #  sans être « chez soi ». Le résident qui préfère l'ancien fonctionnement
+    #  coche « n'afficher que mes bâtiments » dans son profil.
     #
-    #  ⚠️ Ce n'est QUE l'axe bâtiment. Le public cible ci-dessous n'est pas touché,
-    #  et c'est lui qui protège : une agence, un bailleur non résident ou un
-    #  mandataire qui ne voyaient pas cette publication ne la voient pas davantage.
+    #  ⚠️ Ce n'est QUE l'axe bâtiment. Le public cible n'est pas touché, et c'est
+    #  lui qui protège : une agence, un bailleur non résident ou un mandataire
+    #  qui ne voyaient pas cette publication ne la voient pas davantage.
     #
     #  `confidentiel` (#347) ne fait que **refermer** cette ouverture-là, et rien
     #  d'autre : il n'existe pas de seconde règle d'accès pour les actualités
     #  confidentielles — c'est le paramètre à sa valeur par défaut, c'est-à-dire
     #  le comportement d'avant #339. Une règle à part aurait dû être maintenue en
     #  parallèle de celle-ci, et c'est ainsi que deux règles divergent.
-    if not perimetre_visible(
-        perims, user, ouvert_a_la_copropriete=not pub.confidentiel
-    ):
-        return False
-
-    # 2. Public cible — règle partagée avec les sondages, voir plus haut.
-    return public_cible_visible(pub.public_cible, user)
+    """
+    return cible_visible(
+        pub.perimetre_cible,
+        pub.public_cible,
+        user,
+        ouvert_a_la_copropriete=not pub.confidentiel,
+    )
 
 
 # ── Règles sondage ────────────────────────────────────────────────────────────
@@ -127,8 +128,7 @@ def resultats_sondage_visibles(resultats_publics: bool, cloture: bool) -> bool:
 
 
 def sondage_accessible(sondage: Sondage, user: Utilisateur) -> bool:
-    """
-    Retourne True si l'utilisateur peut voir/voter à ce sondage.
+    """L'utilisateur peut-il voir ce sondage et y voter ?
 
     - CS / Admin : toujours True.
     - `perimetre_cible` (JSON de codes) : vide = aucune restriction géographique.
@@ -138,20 +138,12 @@ def sondage_accessible(sondage: Sondage, user: Utilisateur) -> bool:
     est délibérée : `ouvert_a_la_copropriete` reste à sa valeur par défaut, donc
     faux. Une actualité ciblée sur un bâtiment reste lisible de toute la
     copropriété (#339) parce qu'elle informe ; un sondage, lui, fait **voter** —
-    l'ouvrir changerait qui pèse sur le résultat. L'accès d'un sondage ciblé sur
-    un bâtiment est donc rigoureusement celui d'avant l'unification.
+    l'ouvrir changerait qui pèse sur le résultat.
+
+    Depuis le 06/09/2026 (#782), « exactement la même règle » n'est plus une
+    phrase de docstring : c'est le même appel.
     """
-    if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
-        return True
-    perims = _codes_json_pour_acces(sondage.perimetre_cible)
-    if perims is None:
-        #  Ciblage illisible : on refuse. Un contrôle qui ne peut pas s'exécuter
-        #  ne renvoie jamais OK (`standards/04`), et le CS est déjà sorti plus
-        #  haut — il garde donc de quoi corriger le sondage.
-        return False
-    if not perimetre_visible(perims, user):
-        return False
-    return public_cible_visible(sondage.public_cible, user)
+    return cible_visible(sondage.perimetre_cible, sondage.public_cible, user)
 
 
 # ── Règles événement ──────────────────────────────────────────────────────────
@@ -278,3 +270,44 @@ def ticket_visible(ticket: Ticket, user: Utilisateur) -> bool:
         #  sortis plus haut — personne ne perd l'accès nécessaire pour corriger.
         return False
     return perimetre_visible(perims, user)
+
+# ── Règles Communauté : petite annonce et idée ────────────────────────────────
+#
+#  🔴 CES DEUX FONCTIONS N'ONT PAS DE CORPS, ET C'EST LE SUJET.
+#
+#  Le public cible leur a été ouvert le 06/09/2026 (#782, migration 0176), avec
+#  la même sémantique que le sondage : il filtre la VISIBILITÉ, pas seulement les
+#  notifications. Écrire ici « if user.has_role(admin, cs): return True » suivi
+#  des deux axes aurait donné une TROISIÈME et une QUATRIÈME copie de la même
+#  règle — et une règle d'accès en quatre exemplaires se durcit une fois sur
+#  quatre. Ce dépôt a déjà payé ce prix (`utils/destinataires.py`, quatre copies
+#  jusqu'au 31/08 ; `_require_bailleur`, doublon de `require_proprietaire` avec
+#  dix-sept endpoints dessus, que la spec documentait comme officiel).
+#
+#  Elles existent quand même, plutôt qu'un appel direct à `cible_visible` chez
+#  l'appelant, pour deux raisons : elles NOMMENT la décision (« cette annonce
+#  est-elle visible ? » se lit mieux que trois arguments), et elles sont l'endroit
+#  où s'écrira une divergence FUTURE, si le produit en décide une — avec son
+#  motif, à un seul endroit.
+
+def annonce_visible(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
+    """Cette petite annonce est-elle visible de cet utilisateur ?
+
+    `ouvert_a_la_copropriete` reste faux : une annonce s'adresse à qui son auteur
+    a choisi. L'ouverture qui vaut pour une actualité — elle informe, donc elle
+    déborde son bâtiment (#339) — n'aurait ici aucun sens : on ne propose pas un
+    lave-linge à des voisins qu'on a explicitement écartés.
+    """
+    return cible_visible(annonce.perimetre_cible, annonce.public_cible, user)
+
+
+def idee_visible(idee: Idee, user: Utilisateur) -> bool:
+    """Cette idée est-elle visible de cet utilisateur ?
+
+    ⚠️ Une idée ciblée est privée des voix qui la porteraient — c'est exactement
+    l'objection que la déclaration d'écran opposait à cette section, et elle
+    reste vraie. Elle a été tranchée : le ciblage est un choix de l'auteur, pas
+    un défaut du produit. Ne pas le contourner ici en ouvrant discrètement
+    l'audience ; ce serait décider à sa place, sans que rien ne le dise.
+    """
+    return cible_visible(idee.perimetre_cible, idee.public_cible, user)

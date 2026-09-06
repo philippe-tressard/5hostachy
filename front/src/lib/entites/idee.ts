@@ -85,12 +85,26 @@ export const IDEE: EntiteDeclaree = {
 			},
 		},
 		{
+			//  🔴 REVIREMENT ASSUMÉ — tranché par l'utilisateur le 06/09/2026, en
+			//  même temps que celui de la petite annonce.
+			//
+			//  L'objection écrite ici la veille reste VRAIE : une idée ciblée est
+			//  privée des voix qui la porteraient. Elle n'a pas été réfutée, elle a
+			//  été tranchée — le ciblage est un choix de l'auteur, pas un défaut du
+			//  produit, et « refaire l'éclairage du parking » n'appelle pas
+			//  forcément l'avis de qui n'y gare rien.
+			//
+			//  ⚠️ Ne pas « compenser » côté serveur en ouvrant discrètement
+			//  l'audience : ce serait décider à la place de l'auteur, sans que rien
+			//  ne le dise. `idee_visible` applique le ciblage tel quel.
 			id: 'destinataires',
-			sansObjet:
-				"Une idée s'adresse à toute la Communauté : c'est le principe même d'une boîte à " +
-				'idées, où le vote des voisins décide de ce qui monte. Le périmètre dit de quoi ' +
-				'elle parle ; restreindre qui peut la lire la priverait des voix qui la portent. ' +
-				'Même raisonnement que la petite annonce.',
+			objet: 'DestinatairePicker — à qui cette idée s’adresse',
+			absente: {
+				evolution: {
+					motif: 'hérité',
+					explication: "Le public visé est celui de l'idée. Une réponse ne le redéfinit pas.",
+				},
+			},
 		},
 		{
 			id: 'description',
