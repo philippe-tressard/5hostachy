@@ -5,10 +5,17 @@ Extrait de `tickets.py` le 08/08/2026. Voir `__init__.py` pour la règle de déc
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, require_admin, peut_commander, peut_commenter, peut_editer
+from app.auth.deps import (
+    exiger_non_externe,
+    get_current_user,
+    peut_commander,
+    peut_commenter,
+    peut_editer,
+    require_admin,
+)
 from app.database import get_session
 from app.models.core import (
     STATUTS_TICKET_CLOS,
@@ -103,13 +110,7 @@ def create_ticket(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
-        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Les utilisateurs externes ne peuvent pas créer de tickets",
-        )
+    exiger_non_externe(user, "créer de tickets")
 
     #  Tous les champs « de commandement » (destinataires, saisie pour un tiers)
     #  sont neutralisés hors CS/admin. Le contrôle est ici, côté serveur : ce que

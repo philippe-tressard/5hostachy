@@ -7,12 +7,16 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
+from app.auth.deps import (
+    exiger_non_externe,
+    get_current_user,
+    peut_editer,
+    require_cs_or_admin,
+)
 from app.database import get_session
 from app.models.core import (
     Idee,
     ReponseCommunaute,
-    RoleUtilisateur,
     Utilisateur,
     VoteIdee,
 )
@@ -166,8 +170,7 @@ def create_idee(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas soumettre d'idées")
+    exiger_non_externe(user, "soumettre d'idées")
     idee = Idee(
         titre=body.titre, description=body.description, auteur_id=user.id,
         #  Liste vide == aucune restriction : on retombe sur le défaut, comme le
@@ -195,8 +198,7 @@ def voter(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    if user.has_role(RoleUtilisateur.externe) and not user.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin):
-        raise HTTPException(403, "Les utilisateurs externes ne peuvent pas voter")
+    exiger_non_externe(user, "voter")
     idee = session.get(Idee, idee_id)
     #  🔒 Voir ET voter suivent la même règle : sans ce contrôle, un résident hors
     #  du public visé pesait sur une idée qui ne lui était pas adressée, en

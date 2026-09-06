@@ -170,6 +170,45 @@ def peut_editer(objet, user: Utilisateur) -> bool:
     return est_auteur(objet, user) or user.has_role(RoleUtilisateur.admin)
 
 
+def exiger_non_externe(user: Utilisateur, geste: str) -> None:
+    """Un compte EXTERNE ne contribue pas â il consulte (lÃ¨ve 403 sinon).
+
+    ## Pourquoi cette fonction existe (06/09/2026)
+
+    Cette condition Ã©tait Ã©crite **cinq fois**, mot pour mot :
+
+    | Fichier | Geste refusÃ© |
+    |---|---|
+    | `routers/idees.py` | soumettre une idÃ©e |
+    | `routers/idees.py` | voter pour une idÃ©e |
+    | `routers/reponses_communaute.py` | rÃ©pondre |
+    | `routers/sondages/participation.py` | voter Ã  un sondage |
+    | `routers/tickets/crud.py` | ouvrir un ticket |
+
+    ð´ **Une rÃ¨gle d'autorisation en cinq exemplaires se durcit une fois sur
+    cinq.** C'est exactement ce qui Ã©tait arrivÃ© aux destinataires d'e-mail
+    (`utils/destinataires.py`, quatre copies jusqu'au 31/08) et Ã 
+    `_require_bailleur`, doublon de `require_proprietaire` posÃ© hors du module
+    central avec dix-sept endpoints dessus â que la spec documentait comme
+    officiel. Ici, le jour oÃ¹ un sixiÃ¨me rÃ´le devra Ãªtre Ã©cartÃ©, ou oÃ¹ la
+    dÃ©rogation du conseil syndical devra tomber, il y aura **un** endroit.
+
+    â ï¸ Le CS et l'admin gardent la main **mÃªme externes** : c'est la dÃ©rogation
+    que portaient les cinq copies, et elle n'est pas anodine â un conseiller
+    syndical qui n'habite plus la rÃ©sidence reste conseiller.
+
+    `geste` complÃ¨te le message lu par l'utilisateur (Â« â¦ ne peuvent pas
+    <geste> Â») : c'est la seule chose qui variait entre les cinq.
+    """
+    if user.has_role(RoleUtilisateur.externe) and not user.has_role(
+        RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin
+    ):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"Les utilisateurs externes ne peuvent pas {geste}",
+        )
+
+
 def peut_commenter(objet, user: Utilisateur) -> bool:
     """Ajouter une entrée d'Historique, et faire avancer le workflow.
 
