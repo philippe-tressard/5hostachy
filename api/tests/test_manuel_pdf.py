@@ -86,23 +86,41 @@ def test_les_QUINZE_ecrans_sont_dans_le_PDF(document):
 
 # ── 🔴 Les blocs dépliables : du contenu invisible serait du contenu perdu ────
 
-def test_les_blocs_depliables_sont_OUVERTS(document):
+def test_les_blocs_depliables_sont_OUVERTS(document, manuel):
     """Un `<details>` fermé, sur du papier, est du contenu perdu.
 
     Et c'est justement celui qu'on a demandé à voir : Tickets, Communauté, Mon
-    profil — et, depuis le 05/09/2026, Actualités, dont le fil porte désormais le
-    ciblage. Quatre écrans dont l'usage ne se devine pas au titre.
+    profil, Actualités — puis Mes lots et Prestataires (06/09/2026). Des écrans
+    dont l'usage ne se devine pas au titre.
 
     ⚠️ La première version s'en remettait au CSS (`display: block !important`).
     Ça ne suffit pas : le repli d'un `<details>` est un comportement natif, pas
     une règle de style — le navigateur l'a confirmé à l'aperçu, et un moteur PDF
     n'a aucune raison de faire mieux. La balise est donc transformée.
+
+    🔴 **Le compte n'est plus écrit en dur** (06/09/2026). Il valait `== 5`, et
+    ajouter deux blocs au manuel a fait échouer ce test — sur un manuel
+    parfaitement correct. Un chiffre figé transforme un garde-fou en formalité :
+    on le met à jour sans le lire, et le jour où il dit quelque chose, on l'a
+    déjà désarmé par habitude.
+
+    L'invariant n'a jamais été « il y en a cinq » : c'est **que tous ceux du
+    manuel se retrouvent dépliés**. Le test compte donc la SOURCE et compare.
     """
     assert "<details" not in document, (
         "un `<details>` subsiste : son contenu pourrait ne pas être imprimé"
     )
     assert "<summary" not in document
-    assert document.count("En détail") == 5, "les cinq blocs ne sont pas dépliés"
+
+    attendus = manuel.count("<details")
+    #  🔴 Cas zéro : si le manuel n'en portait plus aucun, la comparaison serait
+    #  vraie sans rien mesurer — et ce serait justement le signe que les blocs
+    #  ont disparu de la source.
+    assert attendus >= 5, f"le manuel ne porte plus que {attendus} bloc(s) dépliable(s)"
+    assert document.count("En détail") == attendus, (
+        f"{attendus} bloc(s) dépliable(s) dans le manuel, "
+        f"{document.count('En détail')} déplié(s) dans le document"
+    )
     #  Et leur contenu doit vraiment être là.
     assert "votre réponse rejoint le fil du ticket" in document
     assert "Boîte à idées" in document
@@ -122,7 +140,10 @@ def test_les_blocs_depliables_sont_OUVERTS(document):
     #  dès le début : non pas que la balise a changé, mais que le RÉSULTAT est
     #  celui qu'on veut. Le caractère fautif n'est pas cité ici — l'écrire pour
     #  l'expliquer le réintroduirait, et la CI refuserait ce fichier à son tour.
-    assert document.count('<div class="ecran-detail">') == 5, (
+    #  Même raison que plus haut : le compte vient de la SOURCE, pas d'un chiffre
+    #  figé. Ce qui est vérifié est que **chaque** bloc converti a gardé sa
+    #  classe — pas qu'il y en a un nombre convenu.
+    assert document.count('<div class="ecran-detail">') == attendus, (
         "les blocs convertis ont perdu leurs attributs : ils s'imprimeraient "
         "sans leur habillage"
     )
