@@ -135,6 +135,12 @@ def evol_read(e: TicketEvolution, session: Session) -> TicketEvolutionRead:
         fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
         #  `None` — et non `[]` — quand l'entrée ne parle pas du périmètre : le
         #  front distingue « n'en parle pas » de « plus aucun périmètre » (#497).
+        #
+        #  🔒 NE PAS remplacer par `parse_json_perimetres` (#789, 06/09/2026) :
+        #  elle retombe sur le défaut, ce qui ferait dire à chaque entrée
+        #  d'historique qu'elle parle de toute la résidence. Quatre autres sites
+        #  ont été ramenés à cette fonction ce jour-là ; celui-ci est resté, et
+        #  c'est une décision, pas un oubli.
         perimetre_cible=json.loads(e.perimetre_cible) if e.perimetre_cible else None,
     )
 

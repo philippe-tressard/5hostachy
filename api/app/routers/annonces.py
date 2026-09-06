@@ -24,6 +24,7 @@ from app.routers.reponses_communaute import (
     reponses_de,
 )
 from app.utils.communaute import exiger_acces
+from app.utils.perimetres import parse_json_perimetres
 from app.utils.visibility import annonce_visible
 
 router = APIRouter(prefix="/annonces", tags=["annonces"])
@@ -88,7 +89,11 @@ def _enrich(annonce: PetiteAnnonce, user: Utilisateur, session: Session) -> dict
         #  `PerimetrePicker` et `perimetreLabel` lisent côté front. Le `or` couvre les
         #  annonces déposées AVANT la migration 0151 — elles valaient « résidence » de
         #  fait, elles le valent explicitement.
-        "perimetre_cible": json.loads(annonce.perimetre_cible or '["résidence"]'),
+        #  🔴 `parse_json_perimetres`, et non un `json.loads` à la main : le défaut
+        #  est une DONNÉE (`code_par_defaut()`, lue dans l'arbre), pas la chaîne
+        #  « résidence ». Écrite en dur, elle mentirait sur une copropriété qui
+        #  renomme ce nœud (#789).
+        "perimetre_cible": parse_json_perimetres(annonce.perimetre_cible),
         #  Idem pour le public cible : liste de codes, jamais du JSON brut.
         #  `None` sort en liste VIDE, que `$lib/destinataires.ts` lit comme
         #  « tous les résidents » — le même sens des deux côtés.
