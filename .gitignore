@@ -33,6 +33,11 @@ front/build/
 front/.env
 front/.env.local
 
+# Playwright — sorties de tests, jamais versionnées
+front/e2e-rapport/
+front/test-results/
+front/playwright/.cache/
+
 # Donnees runtime
 data/
 backups/

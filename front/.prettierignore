@@ -39,3 +39,9 @@ src/lib/icones-svg.json
 # Un contrôle qui ne rend pas le même verdict en local et en CI n'est plus une
 # répétition de la CI — c'est un second contrôle, et le plus bruyant gagne.
 .pytest_cache/
+
+# ── Sorties de Playwright : rapport HTML et traces ───────────────────────────
+# Même motif que `build/` ci-dessus — ce sont des SORTIES. Le rapport est un
+# fichier HTML généré de 500 Ko : le reformater n'apprend rien et masque le reste.
+e2e-rapport/
+test-results/
