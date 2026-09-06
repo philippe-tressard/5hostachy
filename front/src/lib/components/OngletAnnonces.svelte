@@ -152,6 +152,14 @@
 	//  besoin de toucher au dépliement.
 	function modifier(a: any) {
 		editAnnonce = editAnnonce?.id === a.id ? null : a;
+		//  🔴 DÉPLIER la carte, sinon le formulaire n'apparaît nulle part : il vit
+		//  dans le corps, et le corps n'est rendu que déplié. Le bouton ✏️ aurait
+		//  été muet — le défaut EXACT que ce lot corrige, sous une autre forme.
+		//
+		//  ⚠️ Une seule carte dépliée à la fois, comme les actualités : deux
+		//  formulaires ouverts simultanément laisseraient l'utilisateur écrire dans
+		//  celui qu'il ne regarde pas.
+		expandedAnnonce = editAnnonce ? a.id : null;
 	}
 
 	function appliquerModification(maj: any) {
@@ -220,6 +228,7 @@
 		onToggle={basculer}
 		onToggleGestion={basculerGestion}
 		onModifier={modifier}
+		editId={editAnnonce?.id ?? null}
 		onUpload={uploadPhoto}
 		onRemove={supprimerPhoto}
 		onStatut={changerStatut}
@@ -227,7 +236,19 @@
 		onRepondre={repondre}
 		onSupprimerReponse={supprimerReponse}
 		{onSignaler}
-	/>
+	>
+		<svelte:fragment slot="formulaire" let:annonce>
+			<!--  `{#key}` remonte le composant d'une annonce à l'autre : ses champs
+			      sont initialisés une seule fois, à la construction. -->
+			{#key annonce.id}
+				<FormulaireAnnonce
+					{annonce}
+					on:modifie={(e) => appliquerModification(e.detail)}
+					on:annule={() => (editAnnonce = null)}
+				/>
+			{/key}
+		</svelte:fragment>
+	</ListeAnnonces>
 
 	<!--  L'Historique : replié par défaut, même bandeau que celui des actualités
 	      (`SectionRepliee`, extrait dans ce lot pour ne pas en écrire un second).
@@ -247,6 +268,7 @@
 				onToggle={basculer}
 				onToggleGestion={basculerGestion}
 				onModifier={modifier}
+				editId={editAnnonce?.id ?? null}
 				onUpload={uploadPhoto}
 				onRemove={supprimerPhoto}
 				onStatut={changerStatut}
@@ -254,23 +276,25 @@
 				onRepondre={repondre}
 				onSupprimerReponse={supprimerReponse}
 				{onSignaler}
-			/>
+			>
+				<svelte:fragment slot="formulaire" let:annonce>
+					<!--  `{#key}` remonte le composant d'une annonce à l'autre : ses champs
+			      sont initialisés une seule fois, à la construction. -->
+					{#key annonce.id}
+						<FormulaireAnnonce
+							{annonce}
+							on:modifie={(e) => appliquerModification(e.detail)}
+							on:annule={() => (editAnnonce = null)}
+						/>
+					{/key}
+				</svelte:fragment>
+			</ListeAnnonces>
 		</SectionRepliee>
 	{/if}
 {/if}
 
-<!--  La fenêtre de correction, montée UNE seule fois et hors des deux listes.
-      `ListeAnnonces` est rendu deux fois — annonces courantes et Archives —, et
-      l'y laisser en aurait monté deux exemplaires sur la même annonce.
-
-      `{#key}` remonte le composant d'une annonce à l'autre : ses champs sont
-      initialisés une seule fois, à la construction. -->
-{#if editAnnonce}
-	{#key editAnnonce.id}
-		<FormulaireAnnonce
-			annonce={editAnnonce}
-			on:modifie={(e) => appliquerModification(e.detail)}
-			on:annule={() => (editAnnonce = null)}
-		/>
-	{/key}
-{/if}
+<!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
+      Il était monté en bas, après les deux listes : « c'est tout en bas, et on
+      ne voit pas ». Il vit maintenant DANS la carte de l'annonce, par le slot
+      `formulaire` que `ListeAnnonces` relaie — le pattern de la carte
+      d'actualité, qui existait déjà. -->

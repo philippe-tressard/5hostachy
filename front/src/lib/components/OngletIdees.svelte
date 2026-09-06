@@ -22,9 +22,10 @@
 	import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ListeIdees from '$lib/components/ListeIdees.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
-	import { STATUTS_IDEE_FILTRE } from '$lib/idees';
+	import { STATUTS_IDEE } from '$lib/idees';
 
 	export let idees: any[] = [];
 	export let chargement = false;
@@ -73,30 +74,26 @@
 	<FormulaireIdee on:cree on:annule />
 {/if}
 
-<!--  La fenêtre de correction, montée UNE seule fois et hors des deux listes
-      — `ListeIdees` est rendu deux fois (courantes et Archives).
+<!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
+      Il était monté après les deux listes : « c'est tout en bas, et on ne voit
+      pas ». Il remplace maintenant la description DANS la carte, par le slot
+      `formulaire` — le pattern de la carte d'actualité, qui existait déjà. -->
 
-      `{#key}` remonte le composant d'une idée à l'autre : ses champs sont
-      initialisés une seule fois, à la construction. -->
-{#if editIdee}
-	{#key editIdee.id}
-		<FormulaireIdee
-			idee={editIdee}
-			on:modifie={(e) => appliquerModification(e.detail)}
-			on:annule={() => (editIdee = null)}
-		/>
-	{/key}
-{/if}
+<!--  🔴 Cette rangée de boutons était la TROISIÈME écriture du même motif —
+      « choisir une entrée d'une liste courte, avec une entrée qui ne choisit
+      rien ». `ChoixPastilles` le porte depuis le 30/08/2026 (#491), et son
+      en-tête annonçait littéralement ce qui allait arriver : « elle se recopie
+      une troisième fois au premier filtre ajouté ».
 
-<div class="filters">
-	{#each STATUTS_IDEE_FILTRE as s (s.val)}
-		<button
-			class="btn btn-sm"
-			class:btn-primary={filtreStatut === s.val}
-			on:click={() => (filtreStatut = s.val)}>{s.label}</button
-		>
-	{/each}
-</div>
+      ⚠️ `STATUTS_IDEE_FILTRE` portait déjà son entrée « Toutes » en tête de
+      liste ; c'est `tous` qui la pose maintenant, et la liste redevient celle
+      des seuls statuts (#795). -->
+<ChoixPastilles
+	options={STATUTS_IDEE.map((s) => ({ val: s.value, label: s.label }))}
+	bind:valeur={filtreStatut}
+	tous="Toutes"
+	libelle="Filtrer les idées par état"
+/>
 
 <EtatListe
 	{chargement}
@@ -125,7 +122,18 @@
 		{onRepondre}
 		{onSupprimerReponse}
 		onModifier={modifier}
-	/>
+		editId={editIdee?.id ?? null}
+	>
+		<svelte:fragment slot="formulaire" let:idee>
+			{#key idee.id}
+				<FormulaireIdee
+					{idee}
+					on:modifie={(e) => appliquerModification(e.detail)}
+					on:annule={() => (editIdee = null)}
+				/>
+			{/key}
+		</svelte:fragment>
+	</ListeIdees>
 
 	<!--  Les Archives : même bandeau que les annonces et les actualités
 	      (`SectionRepliee`), et les MÊMES cartes — `ListeIdees`, appelé une
@@ -147,7 +155,18 @@
 				{onRepondre}
 				{onSupprimerReponse}
 				onModifier={modifier}
-			/>
+				editId={editIdee?.id ?? null}
+			>
+				<svelte:fragment slot="formulaire" let:idee>
+					{#key idee.id}
+						<FormulaireIdee
+							{idee}
+							on:modifie={(e) => appliquerModification(e.detail)}
+							on:annule={() => (editIdee = null)}
+						/>
+					{/key}
+				</svelte:fragment>
+			</ListeIdees>
 		</SectionRepliee>
 	{/if}
 </EtatListe>

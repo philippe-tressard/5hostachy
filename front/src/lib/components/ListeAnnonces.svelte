@@ -48,6 +48,13 @@
 	export let onRepondre: (id: number, contenu: string) => Promise<void>;
 	export let onSupprimerReponse: (id: number, repId: number) => void;
 	export let onSignaler: (cibleType: string, cibleId: number) => void;
+	/**  L'identifiant de l'annonce en cours de correction, ou `null` (#787).
+	 *
+	 *   🔴 Le formulaire s'ouvrait EN BAS DE PAGE : « c'est tout en bas, et on ne
+	 *   voit pas ». Il s'ouvre désormais DANS la carte, à la place de son corps —
+	 *   ce que la carte d'actualité fait depuis longtemps (`slot="formulaire"`).
+	 *   Rien à inventer : le pattern existait, cette carte ne l'avait pas. */
+	export let editId: number | null = null;
 </script>
 
 {#each liste as annonce (annonce.id)}
@@ -69,5 +76,13 @@
 		onSupprimerReponse={(rid) => onSupprimerReponse(annonce.id, rid)}
 		onSignalerAnnonce={() => onSignaler('annonce', annonce.id)}
 		onSignalerReponse={(rid) => onSignaler('reponse', rid)}
-	/>
+		formulaireOuvert={editId === annonce.id}
+	>
+		<svelte:fragment slot="formulaire">
+			<!--  Relayé jusqu'ici : la liste ne sait pas construire le formulaire, elle
+			      sait seulement OÙ il va. L'appelant le fournit, comme pour les
+			      actualités. -->
+			<slot name="formulaire" {annonce} />
+		</svelte:fragment>
+	</AnnonceCard>
 {/each}
