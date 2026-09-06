@@ -74,20 +74,10 @@
 	<FormulaireIdee on:cree on:annule />
 {/if}
 
-<!--  La fenêtre de correction, montée UNE seule fois et hors des deux listes
-      — `ListeIdees` est rendu deux fois (courantes et Archives).
-
-      `{#key}` remonte le composant d'une idée à l'autre : ses champs sont
-      initialisés une seule fois, à la construction. -->
-{#if editIdee}
-	{#key editIdee.id}
-		<FormulaireIdee
-			idee={editIdee}
-			on:modifie={(e) => appliquerModification(e.detail)}
-			on:annule={() => (editIdee = null)}
-		/>
-	{/key}
-{/if}
+<!--  🔴 LE FORMULAIRE DE CORRECTION N'EST PLUS ICI (#787, 06/09/2026).
+      Il était monté après les deux listes : « c'est tout en bas, et on ne voit
+      pas ». Il remplace maintenant la description DANS la carte, par le slot
+      `formulaire` — le pattern de la carte d'actualité, qui existait déjà. -->
 
 <!--  🔴 Cette rangée de boutons était la TROISIÈME écriture du même motif —
       « choisir une entrée d'une liste courte, avec une entrée qui ne choisit
@@ -132,7 +122,18 @@
 		{onRepondre}
 		{onSupprimerReponse}
 		onModifier={modifier}
-	/>
+		editId={editIdee?.id ?? null}
+	>
+		<svelte:fragment slot="formulaire" let:idee>
+			{#key idee.id}
+				<FormulaireIdee
+					{idee}
+					on:modifie={(e) => appliquerModification(e.detail)}
+					on:annule={() => (editIdee = null)}
+				/>
+			{/key}
+		</svelte:fragment>
+	</ListeIdees>
 
 	<!--  Les Archives : même bandeau que les annonces et les actualités
 	      (`SectionRepliee`), et les MÊMES cartes — `ListeIdees`, appelé une
@@ -154,7 +155,18 @@
 				{onRepondre}
 				{onSupprimerReponse}
 				onModifier={modifier}
-			/>
+				editId={editIdee?.id ?? null}
+			>
+				<svelte:fragment slot="formulaire" let:idee>
+					{#key idee.id}
+						<FormulaireIdee
+							{idee}
+							on:modifie={(e) => appliquerModification(e.detail)}
+							on:annule={() => (editIdee = null)}
+						/>
+					{/key}
+				</svelte:fragment>
+			</ListeIdees>
 		</SectionRepliee>
 	{/if}
 </EtatListe>

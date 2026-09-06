@@ -57,6 +57,21 @@
 	export let annonce: any;
 	/** L'annonce est-elle dépliée ? */
 	export let expanded = false;
+	/**  Vrai quand la page affiche un formulaire À LA PLACE du contenu (#787).
+	 *
+	 *   🔴 Le formulaire de correction s'ouvrait EN BAS DE PAGE, hors de la carte
+	 *   : « c'est tout en bas, et on ne voit pas », signalé le 06/09/2026 — la
+	 *   seconde fois que le même geste est signalé muet, après le 29/08 sur les
+	 *   contrats. `FormulaireCreation` se ramène bien à l'écran, mais ramener une
+	 *   boîte posée après toute la liste n'est pas la même chose que corriger là
+	 *   où l'on a cliqué.
+	 *
+	 *   La carte d'actualité porte ce slot depuis longtemps ; celle-ci ne l'avait
+	 *   pas. Il ne fallait rien inventer, seulement le reprendre.
+	 *
+	 *   Explicite, et non déduit de `$$slots` : un slot fourni mais vide
+	 *   masquerait le corps en permanence. */
+	export let formulaireOuvert = false;
 	/** L'auteur a-t-il ouvert la zone de gestion des photos ? */
 	export let gestionOuverte = false;
 	export let estCS = false;
@@ -188,9 +203,12 @@
 			on:click|stopPropagation
 			on:keydown|stopPropagation
 		>
-			<div class="rich-content annonce-texte">{@html safeHtml(annonce.description)}</div>
+			{#if formulaireOuvert}
+				<slot name="formulaire" />
+			{:else}
+				<div class="rich-content annonce-texte">{@html safeHtml(annonce.description)}</div>
 
-			<!-- Les photos en grand, pour TOUT LE MONDE — auteur compris. Elles lui
+				<!-- Les photos en grand, pour TOUT LE MONDE — auteur compris. Elles lui
 				     étaient refusées (`&& !annonce.est_auteur`) : il n'avait que la grille
 				     d'édition ci-dessous, des vignettes faites pour ajouter et retirer, pas
 				     pour regarder. Deuxième fois que ce bloc privait quelqu'un de ses
@@ -198,87 +216,88 @@
 				     LECTEUR d'une annonce à une seule photo. Le défaut avait changé de
 				     victime, pas disparu. `npm run lint:fichiers` échoue désormais sur une
 				     galerie conditionnée à l'identité. -->
-			{#if annonce.photos?.length}
-				<PiecesJointes urls={annonce.photos} format="grand" />
-			{/if}
+				{#if annonce.photos?.length}
+					<PiecesJointes urls={annonce.photos} format="grand" />
+				{/if}
 
-			<!-- L'édition des photos, sur geste explicite : c'est le pattern du
+				<!-- L'édition des photos, sur geste explicite : c'est le pattern du
 				     produit. Elle reste ICI et non dans le formulaire — l'endpoint exige
 				     l'identifiant de l'annonce, dette `api` déclarée et suivie (#441).
 				     La rouvrir dans le formulaire donnerait deux chemins concurrents. -->
-			{#if annonce.est_auteur}
-				<button
-					class="btn btn-sm btn-outline annonce-gerer"
-					aria-expanded={gestionOuverte}
-					on:click={onToggleGestion}
-				>
-					{gestionOuverte ? '▲' : '▼'} Gérer les photos{annonce.photos?.length
-						? ` (${annonce.photos.length})`
-						: ''}
-				</button>
-				{#if gestionOuverte}
-					<FichiersUpload
-						urls={annonce.photos ?? []}
-						max={MAX_PHOTOS_ANNONCE}
-						mode="photos"
-						upload={onUpload}
-						remove={onRemove}
-					/>
-				{/if}
-			{/if}
-
-			<div class="annonce-contact">
-				{#if annonce.auteur_email}
-					<small
-						>&#x1F4EC; <a href="mailto:{annonce.auteur_email}"
-							>{nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)}</a
-						></small
+				{#if annonce.est_auteur}
+					<button
+						class="btn btn-sm btn-outline annonce-gerer"
+						aria-expanded={gestionOuverte}
+						on:click={onToggleGestion}
 					>
-				{:else}
-					<small>&#x1F464; {nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)}</small>
+						{gestionOuverte ? '▲' : '▼'} Gérer les photos{annonce.photos?.length
+							? ` (${annonce.photos.length})`
+							: ''}
+					</button>
+					{#if gestionOuverte}
+						<FichiersUpload
+							urls={annonce.photos ?? []}
+							max={MAX_PHOTOS_ANNONCE}
+							mode="photos"
+							upload={onUpload}
+							remove={onRemove}
+						/>
+					{/if}
 				{/if}
-			</div>
 
-			<!--  Le raccourci de workflow : des PASTILLES, jamais un `<select>` nu
+				<div class="annonce-contact">
+					{#if annonce.auteur_email}
+						<small
+							>&#x1F4EC; <a href="mailto:{annonce.auteur_email}"
+								>{nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)}</a
+							></small
+						>
+					{:else}
+						<small>&#x1F464; {nomAffiche(annonce.auteur_prenom, annonce.auteur_nom)}</small>
+					{/if}
+				</div>
+
+				<!--  Le raccourci de workflow : des PASTILLES, jamais un `<select>` nu
 				      (R3 / #423). Le `<select>` d'origine était le dernier du site.
 				      Il double le formulaire de correction, et c'est assumé : changer
 				      l'état est le geste le plus fréquent sur une annonce, il ne doit
 				      pas coûter l'ouverture d'un formulaire. Les deux chemins écrivent
 				      le MÊME fait, et le serveur l'horodate d'une seule façon. -->
-			{#if annonce.est_auteur}
-				<div class="annonce-workflow">
-					<span class="annonce-workflow-titre" id="wf-annonce-{annonce.id}"
-						>Où en est cette annonce ?</span
-					>
-					<WorkflowPastilles
-						options={OPTIONS_STATUT_ANNONCE}
-						valeur={annonce.statut}
-						idTitre="wf-annonce-{annonce.id}"
-						on:choisir={(e) => onStatut(e.detail)}
-					/>
-				</div>
-			{/if}
+				{#if annonce.est_auteur}
+					<div class="annonce-workflow">
+						<span class="annonce-workflow-titre" id="wf-annonce-{annonce.id}"
+							>Où en est cette annonce ?</span
+						>
+						<WorkflowPastilles
+							options={OPTIONS_STATUT_ANNONCE}
+							valeur={annonce.statut}
+							idTitre="wf-annonce-{annonce.id}"
+							on:choisir={(e) => onStatut(e.detail)}
+						/>
+					</div>
+				{/if}
 
-			{#if !annonce.est_auteur}
-				<div class="annonce-signaler">
-					<button
-						class="signaler-inline"
-						title="Signaler cette annonce au conseil syndical"
-						aria-label="Signaler cette annonce"
-						on:click={onSignalerAnnonce}>&#x1F6A9; Signaler l'annonce</button
-					>
-				</div>
-			{/if}
+				{#if !annonce.est_auteur}
+					<div class="annonce-signaler">
+						<button
+							class="signaler-inline"
+							title="Signaler cette annonce au conseil syndical"
+							aria-label="Signaler cette annonce"
+							on:click={onSignalerAnnonce}>&#x1F6A9; Signaler l'annonce</button
+						>
+					</div>
+				{/if}
 
-			<Reponses
-				reponses={annonce.reponses ?? []}
-				{currentUserId}
-				isCS={estCS}
-				placeholder="Une question sur cette annonce ?"
-				onSubmit={onRepondre}
-				onDelete={onSupprimerReponse}
-				onReport={onSignalerReponse}
-			/>
+				<Reponses
+					reponses={annonce.reponses ?? []}
+					{currentUserId}
+					isCS={estCS}
+					placeholder="Une question sur cette annonce ?"
+					onSubmit={onRepondre}
+					onDelete={onSupprimerReponse}
+					onReport={onSignalerReponse}
+				/>
+			{/if}
 		</div>
 	{/if}
 </div>

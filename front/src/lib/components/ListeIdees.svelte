@@ -53,6 +53,15 @@
 	 *   réservé à l'AUTEUR — le conseil syndical décide du statut, il ne réécrit
 	 *   pas la proposition de quelqu'un (`peut_editer` côté serveur). */
 	export let onModifier: (idee: any) => void;
+	/**  L'identifiant de l'idée en cours de correction, ou `null` (#787).
+	 *
+	 *   🔴 Le formulaire s'ouvrait EN BAS DE PAGE : « c'est tout en bas, et on ne
+	 *   voit pas ». Il remplace désormais la description, DANS la carte — la carte
+	 *   d'actualité porte ce slot depuis longtemps, celle-ci ne l'avait pas.
+	 *
+	 *   ⚠️ Une idée ne se déplie pas (« elle montre tout ») : il n'y a donc pas de
+	 *   corps à ouvrir, seulement une description à remplacer. */
+	export let editId: number | null = null;
 	export let onSignaler: (cibleType: string, cibleId: number) => void;
 	export let onRepondre: (id: number, contenu: string) => Promise<void> | void;
 	export let onSupprimerReponse: (id: number, reponseId: number) => void;
@@ -114,7 +123,11 @@
 					{/if}
 				</svelte:fragment>
 			</EnteteCarte>
-			<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
+			{#if editId === idee.id}
+				<slot name="formulaire" {idee} />
+			{:else}
+				<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>
+			{/if}
 			{#if idee.auteur_id !== currentUserId}
 				<button
 					class="signaler-inline"

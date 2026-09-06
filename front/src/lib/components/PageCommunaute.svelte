@@ -379,10 +379,21 @@
 			/>
 		{/if}
 
-		<!--  La fenêtre de correction (#783), montée UNE seule fois et hors des deux
-		      listes — `ListeSondages` est rendu deux fois (courants et Archives).
-		      `{#key}` remonte le composant d'un sondage à l'autre : ses champs sont
-		      initialisés une seule fois, à la construction. -->
+		<!--  La correction (#783), montée UNE seule fois et hors des deux listes —
+		      `ListeSondages` est rendu deux fois (courants et Archives). `{#key}`
+		      remonte le composant d'un sondage à l'autre : ses champs sont
+		      initialisés une seule fois, à la construction.
+
+		      ⚠️ ICI, ET NON DANS LA CARTE — contrairement aux annonces et aux idées,
+		      dont le formulaire est passé dans le corps de la carte le 06/09/2026
+		      (#787, « c'est tout en bas, et on ne voit pas »). Une carte de sondage
+		      est un `<a>` vers sa fiche : y glisser un formulaire mettrait des
+		      champs et des boutons **dans un lien**, ce qu'aucun navigateur ne rend
+		      correctement et qu'aucun lecteur d'écran n'annonce.
+
+		      Le formulaire est donc posé AU-DESSUS de la liste — le même endroit
+		      que les actualités, et il reste sous les yeux. Ce n'est pas un oubli :
+		      c'est la limite de ce que la carte-lien permet. -->
 		{#if editSondage}
 			{#key editSondage.id}
 				<FormulaireSondage
