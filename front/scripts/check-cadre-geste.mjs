@@ -3,9 +3,15 @@
  *
  * ## La règle, et pourquoi elle n'était surveillée qu'à moitié
  *
- * `ux-patterns` §14 bis, arbitré à l'écran le 30/08/2026 :
+ * `ux-patterns` §14 bis — dans sa forme du 06/09/2026 :
  *
- * > créer → la boîte dans la page · **éditer → la fenêtre**
+ * > créer et corriger → **la même boîte dans la page**
+ *
+ * 🔴 Ce fichier a énoncé la règle INVERSE (« éditer → la fenêtre », 30/08/2026)
+ * pendant sept jours. Le renversement ne retire rien à ce contrôle : il ne
+ * vérifie pas QUEL cadre est rendu, mais que le formulaire qui connaît son geste
+ * le laisse choisir à `CadreFormulaire`. C'est cette indirection qui a rendu le
+ * revirement possible en une ligne, au lieu de huit.
  *
  * `lint:formulaires` en garde une moitié : *une modale portant un formulaire doit
  * se déclarer `edition`* — autrement dit, **pas de création en modale**. L'autre
@@ -128,11 +134,15 @@ if (fautifs.length > 0) {
 	console.error('✗ Formulaire(s) qui connaissent le geste et ne posent pas leur cadre :');
 	for (const f of fautifs) console.error(`    lib/components/${f}`);
 	console.error('');
-	console.error('  En édition, le format est la FENÊTRE (`ux-patterns` §14 bis,');
-	console.error('  arbitré à l’écran le 30/08/2026). Un formulaire qui lit');
-	console.error('  `modeEdition` connaît le geste : il doit poser son cadre par');
-	console.error('  <CadreFormulaire {edition} …>, et non par <FormulaireCreation>,');
-	console.error('  qui ne sait rendre que la boîte.');
+	console.error('  Un formulaire qui lit `modeEdition` connaît le geste : il doit');
+	console.error('  poser son cadre par <CadreFormulaire {edition} …>, et non rendre');
+	console.error('  <FormulaireCreation> lui-même.');
+	console.error('');
+	console.error('  ⚠️ Depuis le 06/09/2026 les deux gestes emploient la MÊME boîte');
+	console.error('  (`ux-patterns` §14 bis) : passer par le cadre ne change donc plus');
+	console.error('  le rendu. Ce qui compte reste que le choix vive à UN endroit — le');
+	console.error('  jour où le produit voudra un autre format, la question se posera');
+	console.error('  là, une fois, et non dans huit formulaires.');
 	console.error('');
 	console.error('  Si la conversion demande un changement visible qu’il faut faire');
 	console.error('  constater d’abord, ajouter le composant à EXCEPTIONS AVEC SON TICKET.');

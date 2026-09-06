@@ -10,6 +10,7 @@
 	import { PAGES, ordonnerPages, type PageDef, defautsDePage, configDepuisPage } from '$lib/pages';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import Modale from '$lib/components/Modale.svelte';
+	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireUtilisateur from '$lib/components/FormulaireUtilisateur.svelte';
 	import IntegriteReferentielle from '$lib/components/IntegriteReferentielle.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
@@ -1217,13 +1218,11 @@
 	<!-- Modal édition utilisateur -->
 	<!-- Éditer un objet existant → la modale, qui déclare son geste (§14 bis, #640). -->
 	{#if editUser}
-		<Modale
-			edition
-			titre="Modifier l'utilisateur"
-			classeBoite="modal-box card"
-			styleBoite="max-width:520px"
-			on:fermer={() => (editUser = null)}
-		>
+		<!--  La CORRECTION d'un utilisateur — la même boîte que partout depuis le
+		      06/09/2026 (`ux-patterns` §14 bis). `cle` fait remonter le formulaire
+		      quand on passe d'un utilisateur à un autre : la liste est longue, et
+		      sans elle le second clic serait muet. -->
+		<FormulaireCreation titre="Modifier l'utilisateur" cle={editUser}>
 			<FormulaireUtilisateur
 				bind:editForm
 				{statutLabels}
@@ -1231,7 +1230,7 @@
 				onAnnuler={() => (editUser = null)}
 				onEnregistrer={saveEdit}
 			/>
-		</Modale>
+		</FormulaireCreation>
 	{/if}
 
 	{#if accueilModal}

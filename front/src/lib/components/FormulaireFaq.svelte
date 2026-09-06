@@ -65,13 +65,7 @@
 	`lint:formulaires` l'exige, et c'est lui qui distingue « créer » de
 	« corriger », ce que rien dans le balisage ne permettrait de deviner.
 -->
-<CadreFormulaire
-	edition={modeEdition}
-	titre={titreCadre}
-	classeBoite="modal-box card"
-	styleBoite="max-width:500px"
-	on:fermer={() => dispatch('annule')}
->
+<CadreFormulaire edition={modeEdition} titre={titreCadre} on:fermer={() => dispatch('annule')}>
 	<div class="form-grid" class:modal-body={modeEdition}>
 		<label class="field"
 			>Catégorie *

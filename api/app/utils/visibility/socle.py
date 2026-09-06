@@ -223,9 +223,32 @@ def public_cible_visible(raw: Optional[str], user: Utilisateur) -> bool:
     jamais l'accès : c'est ce qui permet à la migration 0147 de laisser passer un
     résidu sans risque, puisqu'un résidu ne peut alors que restreindre.
     """
-    public = _parse_json_list(raw, [])
+    #  🔴 UNE DONNÉE ILLISIBLE NE DONNE PAS L'ACCÈS (06/09/2026, #789).
+    #
+    #  `_parse_json_list` retombe sur son défaut — ici `[]`, c'est-à-dire
+    #  « aucune restriction » — quand le JSON ne se lit pas. Une colonne
+    #  `public_cible` corrompue rendait donc l'objet visible de TOUS : une
+    #  publication réservée au conseil syndical se serait ouverte à la
+    #  copropriété entière, sans message ni ligne de journal.
+    #
+    #  ⚠️ C'est **exactement** le défaut que `_codes_json_pour_acces` avait
+    #  corrigé pour le périmètre, avec ces mots : « une donnée abîmée
+    #  élargissait la visibilité au lieu de la restreindre é. Pour décider qui
+    #  a le droit de lire, il est exactement à l'envers ». La correction n'avait
+    #  pas traversé jusqu'à l'axe voisin — trouvé en écrivant la table des sens.
+    #
+    #  L'absence reste « tout le monde » : c'est le cas zéro, et il est légitime.
+    #  C'est la donnée PRÉSENTE mais illisible qui refuse.
+    if raw is not None and str(raw).strip() not in ("", "[]"):
+        codes = _codes_json_pour_acces(raw)
+        if codes is None:
+            return False
+        public = codes
+    else:
+        public = []
     if not public:
         return True
+
     if "résidents" in public:
         return True
     statut = user.statut.value if user.statut is not None else ""

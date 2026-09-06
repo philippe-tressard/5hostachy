@@ -1399,14 +1399,12 @@
 	{/if}
 {/if}
 
-<!--
-	Modale d'ÉDITION d'un contrat, hors onglets comme les autres modales de l'écran.
-	`edition` n'est pas décoratif : il déclare le geste (exigé par `lint:formulaires`)
-	et implique `fermetureAuFond={false}` — un clic à côté n'efface pas la saisie.
--->
+<!--  La CORRECTION d'un contrat — la même boîte que la création (§14 bis,
+	06/09/2026). ⚠️ `cle` n'est pas décoratif : sans elle, « Modifier » sur un
+	SECOND contrat ne remonterait pas le formulaire — muet, comme le 29/08 ici. -->
 {#if editContratId}
-	<Modale edition titre="Modifier le contrat" on:fermer={closeContratForm}>
-		<div class="modal-body">
+	<FormulaireCreation titre="Modifier le contrat" cle={editContratId}>
+		<div>
 			<FormulaireContrat
 				bind:contratForm
 				{prestataires}
@@ -1420,7 +1418,7 @@
 				onEnregistrer={saveContrat}
 			/>
 		</div>
-	</Modale>
+	</FormulaireCreation>
 {/if}
 
 <!-- Modal notation prestataire (global, hors onglets) -->

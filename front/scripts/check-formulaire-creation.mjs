@@ -348,9 +348,20 @@ if (modalesLues < PLANCHER_MODALES) {
 //  borné à `routes/`.
 //
 //  Le contrôle suit donc l'indirection : il exige que `CadreFormulaire` existe,
-//  qu'il nomme LES DEUX cadres dans son `this={…}`, et qu'il soit réellement
-//  employé. Sans quoi la règle « créer → boîte, corriger → fenêtre » ne serait
-//  plus tenue par personne, et rien ne le dirait.
+//  qu'il rende bien la boîte, et qu'il soit réellement employé. Sans quoi la
+//  règle ne serait plus tenue par personne, et rien ne le dirait.
+//
+//  🔴 IL NOMMAIT « LES DEUX cadres », ET IL N'Y EN A PLUS QU'UN (06/09/2026).
+//
+//  L'utilisateur a écarté la fenêtre flottante pour l'édition : « comme le reste
+//  du site, avec un UX standard, pas de spécifique ». `CadreFormulaire` ne rend
+//  donc plus qu'une chose, et ce cas zéro — qui exigeait de trouver `Modale` dans
+//  son `this={…}` — a **refusé le lot qui appliquait la décision**.
+//
+//  ⚠️ C'est le bon comportement d'un cas zéro, et il faut le dire : il a vu que la
+//  règle qu'il gardait avait changé, au lieu de passer au vert en mesurant moins.
+//  Ce qu'il vérifie désormais est ce qui reste vrai — le cadre existe, il rend la
+//  boîte, il est employé.
 if (!existsSync(CADRE)) {
 	console.error(
 		`✗ Cas zéro : ${CADRE_REL} est introuvable. Le choix du cadre n'a plus de ` +
@@ -359,14 +370,22 @@ if (!existsSync(CADRE)) {
 	process.exit(1);
 }
 const cadreSource = sansCommentaires(readFileSync(CADRE, 'utf8'));
-for (const nom of ['Modale', 'FormulaireCreation']) {
-	if (!new RegExp(`this=[^>]*${nom}`).test(cadreSource)) {
-		console.error(
-			`✗ Cas zéro : ${CADRE_REL} ne nomme plus \`${nom}\` dans son \`this={…}\`. ` +
-				'Un cadre choisi dans une variable compile aussi bien et sort du champ du contrôle.',
-		);
-		process.exit(1);
-	}
+if (!/<FormulaireCreation/.test(cadreSource)) {
+	console.error(
+		`✗ Cas zéro : ${CADRE_REL} ne rend plus <FormulaireCreation>. Créer et ` +
+			'corriger doivent employer la MÊME boîte dans la page (06/09/2026).',
+	);
+	process.exit(1);
+}
+//  🔒 Et la fenêtre flottante ne doit pas revenir par la porte de derrière : un
+//  `Modale` réintroduit ici rétablirait deux cadres sans que personne l'ait
+//  décidé — exactement ce que la décision du 06/09 écarte.
+if (/\bModale\b/.test(cadreSource)) {
+	console.error(
+		`✗ ${CADRE_REL} nomme à nouveau \`Modale\`. L'édition se fait dans la page ` +
+			'depuis le 06/09/2026 ; une fenêtre flottante y serait un second cadre.',
+	);
+	process.exit(1);
 }
 //  Employé par les formulaires, pas seulement présent. Le plancher est bas
 //  exprès : ce qui compte est qu'il ne tombe pas à zéro sans qu'on le voie.

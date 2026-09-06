@@ -211,6 +211,29 @@ function finBaliseOuvrante(src, debut) {
 	return -1;
 }
 
+/** Les zones `<FormulaireCreation …>` / `<CadreFormulaire …>` et leur contenu.
+ *
+ * 🔴 DEUX défauts corrigés le 06/09/2026, tous deux invisibles :
+ *  1. le contrôle C disait « rendus dans un <FormulaireCreation> » et lisait le
+ *     fichier ENTIER — il a sorti un panneau de réglages légitime dès qu'`admin`
+ *     a porté les deux ; un panneau qu'on quitte n'a rien à annuler ;
+ *  2. il ignorait `CadreFormulaire` : les huit formulaires factorisés le 02/09
+ *     étaient sortis de son champ sans que rien ne le dise (vérifié).
+ */
+function zonesFormulaireCreation(src) {
+	const zones = [];
+	//  ⚠️ Faux vert par RÉTRÉCISSEMENT — cf. en-tête de `zonesFormulaireCreation`.
+	const ouvrant = /<(FormulaireCreation|CadreFormulaire)\b[^>]*>/g;
+	let m;
+	while ((m = ouvrant.exec(src))) {
+		//  Auto-fermant (`<FormulaireCreation … />`) : pas de contenu à examiner.
+		if (m[0].endsWith('/>')) continue;
+		const fermant = src.indexOf(`</${m[1]}>`, m.index);
+		zones.push([m.index, fermant === -1 ? src.length : fermant]);
+	}
+	return zones;
+}
+
 /** Les blocs `<div class="… form-actions …">…</div>`, imbrication comprise. */
 function blocsFormActions(src) {
 	const zones = [];
@@ -418,9 +441,12 @@ for (const [rel, boutons] of releve) {
  */
 for (const rel of releve.keys()) {
 	const src = readFileSync(join(SOURCE, rel), 'utf8');
-	if (!src.includes('<FormulaireCreation')) continue;
+	const zones = zonesFormulaireCreation(src);
+	if (zones.length === 0) continue;
 	const ecarts = [];
 	for (const [debut, fin] of blocsFormActions(src)) {
+		//  🔒 Seulement les rangées DANS un formulaire qui s'ouvre (cf. plus haut).
+		if (!zones.some(([d, f]) => debut >= d && debut < f)) continue;
 		const bloc = src.slice(debut, fin);
 		const ligne = src.slice(0, debut).split(LF).length;
 		const posSoumission = bloc.indexOf('btn-primary');

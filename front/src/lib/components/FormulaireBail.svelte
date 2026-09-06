@@ -130,12 +130,7 @@
 	$: complet = (!avecLots || lotIds.size > 0) && (!avecDateEntree || !!bail.date_entree);
 </script>
 
-<CadreFormulaire
-	{edition}
-	titre={intitule}
-	classeBoite="modal-box"
-	on:fermer={() => dispatch('annuler')}
->
+<CadreFormulaire {edition} titre={intitule} on:fermer={() => dispatch('annuler')}>
 	{#if avecLots}
 		<!-- Section 2 — ce qui qualifie le bail : les lots qu'il couvre. -->
 		<!--  🔴 `.bail-lots` enveloppe, et le style de la liste est `:global()` IMBRIQUÉ.
