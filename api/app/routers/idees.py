@@ -22,6 +22,7 @@ from app.models.core import (
 )
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.communaute import exiger_acces
+from app.utils.perimetres import parse_json_perimetres
 from app.utils.visibility import idee_visible
 from app.routers.reponses_communaute import (
     enregistrer_routes_reponses,
@@ -102,18 +103,21 @@ class IdeeRead(BaseModel):
 def _perimetre_liste(brut: Optional[str]) -> list[str]:
     """La colonne stocke un tableau JSON ; l'API expose une liste.
 
-    ⚠️ Une valeur illisible rend le DÉFAUT et non une liste vide : `[]` signifierait
-    « aucune restriction » côté visibilité, ce qui est le même effet ici, mais
-    afficherait un badge 🔹 vide côté carte. Retomber sur le périmètre par défaut
-    est le comportement qu'avaient toutes les idées avant la migration 0153.
+    🔴 Ce corps RÉÉCRIVAIT `parse_json_perimetres`, mot pour mot — même
+    raisonnement, mêmes trois branches, même repli sur le défaut. C'est la forme
+    la plus trompeuse de la duplication : une fonction nommée, à l'air factorisée,
+    qui ne partage rien avec l'originale.
+
+    ⚠️ Et elle avait DÉJÀ divergé : elle écrivait `"résidence"` **en dur**, trois
+    fois, là où la fonction partagée lit `code_par_defaut()` — qui existe
+    précisément pour qu'une copropriété qui renomme ou supprime ce nœud ne casse
+    pas l'application. Le badge d'une idée aurait alors annoncé un périmètre
+    inexistant, et lui seul (06/09/2026, #789).
+
+    Le nom local reste : il porte le sens métier ici. Ce qu'il ne fait plus,
+    c'est décider.
     """
-    if not brut:
-        return ["résidence"]
-    try:
-        valeur = json.loads(brut)
-    except (TypeError, ValueError):
-        return ["résidence"]
-    return valeur if isinstance(valeur, list) else ["résidence"]
+    return parse_json_perimetres(brut)
 
 
 def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:

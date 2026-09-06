@@ -19,7 +19,7 @@ from app.utils.archivage import (
     PURGE_ANNULE_HEURES,
     est_archivable,
 )
-from app.utils.perimetres import a_portee_globale
+from app.utils.perimetres import a_portee_globale, parse_json_perimetres
 from app.utils.noms import nom_affiche
 
 #  `_generer_annonce_hall` journalise l'échec de génération sans le propager :
@@ -102,6 +102,11 @@ def appliquer_confidentialite(pub: Publication, session: Session) -> None:
     """
     if pub.confidentiel:
         try:
+            #  🔒 `json.loads` à la main, et NON `parse_json_perimetres` (#789,
+            #  06/09/2026) : ceci est une décision d'ACCÈS, pas un affichage. La
+            #  fonction partagée retombe sur le défaut quand la donnée est
+            #  illisible — un repli qui élargit, bienvenu pour un badge, exactement
+            #  à l'envers ici. Le `except` ci-dessous refuse au lieu d'élargir.
             codes = json.loads(pub.perimetre_cible or "[]")
         except Exception:
             #  Ciblage illisible : on ne RETIRE pas une protection sur la foi
@@ -161,7 +166,8 @@ def _generer_annonce_hall(
             background_tasks=background_tasks,
             titre=pub.titre,
             message=pub.contenu,
-            perimetre_cible=json.loads(pub.perimetre_cible or '["résidence"]'),
+            #  Le défaut est une donnée, pas la chaîne « résidence » (#789).
+            perimetre_cible=parse_json_perimetres(pub.perimetre_cible),
             images=images_de_publication(pub, session),
             publication_id=pub.id,
         )

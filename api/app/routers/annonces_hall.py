@@ -222,7 +222,10 @@ def prefill_depuis_publication(
     return {
         "titre": pub.titre,
         "message": pub.contenu,
-        "perimetre_cible": json.loads(pub.perimetre_cible or '["résidence"]'),
+        #  Le défaut est une donnée, pas la chaîne « résidence » (#789). Ce
+        #  fichier importait DÉJÀ `parse_json_perimetres` et l'employait dix lignes
+        #  plus haut — la copie était ici, sous les yeux.
+        "perimetre_cible": parse_json_perimetres(pub.perimetre_cible),
         "images": images_de_publication(pub, session),
     }
 
