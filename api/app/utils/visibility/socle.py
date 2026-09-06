@@ -266,6 +266,7 @@ def cible_visible(
     user: Utilisateur,
     *,
     ouvert_a_la_copropriete: bool = False,
+    auteur_id: Optional[int] = None,
 ) -> bool:
     """**La** règle « cet objet ciblé est-il visible de cet utilisateur ? ».
 
@@ -297,7 +298,22 @@ def cible_visible(
     copropriété parce qu'elle **informe** (#339) ; un sondage fait **voter**, une
     annonce s'adresse à qui son auteur a choisi — les ouvrir changerait
     respectivement qui pèse sur le résultat et qui reçoit l'offre.
+
+    🔴 `auteur_id` : **l'auteur voit toujours ce qu'il a écrit.** Sans ce
+    court-circuit, un locataire qui ciblait son annonce sur les copropriétaires
+    la faisait disparaître **pour lui-même** — plus de carte, donc plus de
+    bouton, donc plus aucun moyen de corriger le ciblage. Un objet qu'on ne peut
+    plus ni voir ni retirer est perdu, et rien ne l'aurait signalé (constaté le
+    06/09/2026 en préparant #783, sur du code livré la veille par #782).
+
+    ⚠️ Il est **optionnel**, et les publications comme les sondages ne le passent
+    pas : leurs auteurs sont CS ou admin, donc déjà sortis à la ligne suivante.
+    Le passer partout « au cas où » donnerait l'illusion d'une règle uniforme là
+    où le besoin n'existe pas — et ferait croire, le jour où une entité changera
+    de créateur, que la question a déjà été posée.
     """
+    if auteur_id is not None and user.id == auteur_id:
+        return True
     if user.has_role(RoleUtilisateur.admin, RoleUtilisateur.conseil_syndical):
         return True
     perims = _codes_json_pour_acces(perimetre_cible)

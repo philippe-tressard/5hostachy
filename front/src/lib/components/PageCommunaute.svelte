@@ -82,6 +82,19 @@
 	//  était clos ou non selon le fuseau du lecteur. Un écran ne tranche pas ce
 	//  genre de question (`ux-patterns` §16).
 
+	//  La FENÊTRE de correction d'un sondage (#783). L'état vit ICI, pas dans
+	//  `ListeSondages` : celui-ci est rendu DEUX fois (courants et Archives), et
+	//  l'y mettre en aurait monté deux exemplaires sur le même sondage.
+	let editSondage: any = null;
+
+	function modifierSondage(s: any, e: Event) {
+		//  ⚠️ La carte EST un lien vers la fiche du sondage : sans ce
+		//  `preventDefault`, le clic ouvre la page au lieu de la fenêtre. C'est ce
+		//  que font déjà « Stopper » et « Supprimer », juste à côté.
+		e.preventDefault();
+		editSondage = editSondage?.id === s.id ? null : s;
+	}
+
 	async function arreterSondage(s: any, e: Event) {
 		e.preventDefault();
 		if (!confirm(`Stopper le sondage "${s.question}" maintenant ?`)) return;
@@ -366,6 +379,23 @@
 			/>
 		{/if}
 
+		<!--  La fenêtre de correction (#783), montée UNE seule fois et hors des deux
+		      listes — `ListeSondages` est rendu deux fois (courants et Archives).
+		      `{#key}` remonte le composant d'un sondage à l'autre : ses champs sont
+		      initialisés une seule fois, à la construction. -->
+		{#if editSondage}
+			{#key editSondage.id}
+				<FormulaireSondage
+					sondage={editSondage}
+					on:modifie={async () => {
+						sondages = await sondagesApi.list();
+						editSondage = null;
+					}}
+					on:annule={() => (editSondage = null)}
+				/>
+			{/key}
+		{/if}
+
 		<EtatListe
 			chargement={sondagesLoading}
 			erreur={erreurSondages}
@@ -380,14 +410,19 @@
 					<p>Les sondages clos sont rangés dans les Archives, ci-dessous.</p>
 				</div>
 			{/if}
-			<ListeSondages sondages={courants} {arreterSondage} {supprimerSondage} />
+			<ListeSondages sondages={courants} {arreterSondage} {supprimerSondage} {modifierSondage} />
 
 			<!--  Les Archives : même bandeau que les annonces, les idées et les
 			      actualités (`SectionRepliee`), et les MÊMES cartes — `ListeSondages`,
 			      appelé une seconde fois. -->
 			{#if archives.length}
 				<SectionRepliee titre={TITRE_ARCHIVES} compte={archives.length}>
-					<ListeSondages sondages={archives} {arreterSondage} {supprimerSondage} />
+					<ListeSondages
+						sondages={archives}
+						{arreterSondage}
+						{supprimerSondage}
+						{modifierSondage}
+					/>
 				</SectionRepliee>
 			{/if}
 		</EtatListe>

@@ -51,6 +51,17 @@
 	//  règle, et les deux trancheraient différemment le jour où le délai change.
 	$: courantes = idees.filter((i) => !i.archivee);
 	$: archivees = idees.filter((i) => i.archivee);
+	//  La FENÊTRE de correction (#783). Une seule idée à la fois, et l'état vit
+	//  ICI : `ListeIdees` est rendu DEUX fois (courantes et Archives), l'y mettre
+	//  en aurait monté deux exemplaires. Même construction que `OngletAnnonces`,
+	//  qui a rencontré le problème le 02/09.
+	let editIdee: any = null;
+	const modifier = (i: any) => (editIdee = editIdee?.id === i.id ? null : i);
+
+	function appliquerModification(maj: any) {
+		idees = idees.map((i) => (i.id === maj.id ? maj : i));
+		editIdee = null;
+	}
 	//  ⚠️ Le message d'état vide ne cite PAS le délai. Il vaut 30 jours par
 	//  défaut mais se règle en administration : l'écrire ici en dur ferait mentir
 	//  l'écran au premier ajustement, et le transporter avec chaque idée serait
@@ -60,6 +71,21 @@
 
 {#if showForm}
 	<FormulaireIdee on:cree on:annule />
+{/if}
+
+<!--  La fenêtre de correction, montée UNE seule fois et hors des deux listes
+      — `ListeIdees` est rendu deux fois (courantes et Archives).
+
+      `{#key}` remonte le composant d'une idée à l'autre : ses champs sont
+      initialisés une seule fois, à la construction. -->
+{#if editIdee}
+	{#key editIdee.id}
+		<FormulaireIdee
+			idee={editIdee}
+			on:modifie={(e) => appliquerModification(e.detail)}
+			on:annule={() => (editIdee = null)}
+		/>
+	{/key}
 {/if}
 
 <div class="filters">
@@ -98,6 +124,7 @@
 		{onSignaler}
 		{onRepondre}
 		{onSupprimerReponse}
+		onModifier={modifier}
 	/>
 
 	<!--  Les Archives : même bandeau que les annonces et les actualités
@@ -119,6 +146,7 @@
 				{onSignaler}
 				{onRepondre}
 				{onSupprimerReponse}
+				onModifier={modifier}
 			/>
 		</SectionRepliee>
 	{/if}

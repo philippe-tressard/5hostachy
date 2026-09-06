@@ -78,6 +78,20 @@ export const IDEE: EntiteDeclaree = {
 			id: 'perimetre',
 			objet: 'PerimetrePicker — ce que l’idée concerne',
 			absente: {
+				//  🔒 Le CIBLAGE NE SE CORRIGE PAS (#783). Restreindre après coup
+				//  masquerait l'idée à des gens qui l'ont déjà votée — exactement la
+				//  décision prise pour le sondage, dont `SondageUpdate` n'expose ni
+				//  `perimetre_cible` ni `public_cible`.
+				//
+				//  ⚠️ Ce n'est pas un choix d'écran : `IdeeUpdate` ne l'accepte pas
+				//  non plus. L'afficher ici donnerait un champ qui ne fait rien — pire
+				//  qu'absent, parce qu'il promet quelque chose.
+				edition: {
+					motif: 'geste',
+					explication:
+						"Corriger une faute de frappe n'est pas redéfinir qui l'idée concerne. " +
+						'Le lieu se choisit au dépôt, quand personne ne l’a encore votée.',
+				},
 				evolution: {
 					motif: 'hérité',
 					explication: "Le périmètre est celui de l'idée ; une réponse ne le redéfinit pas.",
@@ -100,6 +114,15 @@ export const IDEE: EntiteDeclaree = {
 			id: 'destinataires',
 			objet: 'DestinatairePicker — à qui cette idée s’adresse',
 			absente: {
+				//  🔒 Même raison que le périmètre ci-dessus, et c'est la plus forte
+				//  des deux : restreindre le public APRÈS des votes retirerait l'idée
+				//  à ceux qui l'ont soutenue, sans que rien ne le leur dise (#783).
+				edition: {
+					motif: 'geste',
+					explication:
+						'Le public visé se choisit au dépôt. Le restreindre ensuite priverait ' +
+						'de leur voix ceux qui ont déjà voté — et l’API le refuse.',
+				},
 				evolution: {
 					motif: 'hérité',
 					explication: "Le public visé est celui de l'idée. Une réponse ne le redéfinit pas.",

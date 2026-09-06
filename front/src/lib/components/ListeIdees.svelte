@@ -49,6 +49,10 @@
 	export let onVoter: (id: number) => void;
 	export let onChangerStatut: (id: number, statut: string) => void;
 	export let onSupprimer: (id: number) => void;
+	/**  Corriger son idée (#783). Comme sur la petite annonce, le geste est
+	 *   réservé à l'AUTEUR — le conseil syndical décide du statut, il ne réécrit
+	 *   pas la proposition de quelqu'un (`peut_editer` côté serveur). */
+	export let onModifier: (idee: any) => void;
 	export let onSignaler: (cibleType: string, cibleId: number) => void;
 	export let onRepondre: (id: number, contenu: string) => Promise<void> | void;
 	export let onSupprimerReponse: (id: number, reponseId: number) => void;
@@ -95,7 +99,19 @@
 				<!--  Dans l'en-tête, PAS dans `.idee-actions` : cette rangée-là n'existe
 				      que pour le conseil syndical, et copier un lien n'est pas un droit. -->
 				<svelte:fragment slot="actions">
+					<!--  🔗 EN PREMIER, et c'est délibéré : c'est la seule action que TOUT le
+					      monde a. Placée après ✏️, sa position dépendrait des droits du lecteur
+					      — elle sauterait d'un cran selon qu'on est l'auteur ou non. Même ordre
+					      que la petite annonce. -->
 					<BoutonLien ancre="idee-{idee.id}" quoi="l'idée" />
+					{#if idee.auteur_id === currentUserId}
+						<button
+							class="btn-icon"
+							title="Modifier"
+							aria-label="Modifier l'idée"
+							on:click|stopPropagation={() => onModifier(idee)}>&#x270F;&#xFE0F;</button
+						>
+					{/if}
 				</svelte:fragment>
 			</EnteteCarte>
 			<div class="idee-desc rich-content clamp-5">{@html safeHtml(idee.description)}</div>

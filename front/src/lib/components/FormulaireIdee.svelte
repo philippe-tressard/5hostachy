@@ -8,8 +8,13 @@
   bloc-ci qui part — le plus autonome des trois, avec son propre état et sa propre
   responsabilité.
 
-  Il suit le contrat de `FormulaireActualite` et `FormulaireTicket` : il porte sa
-  boîte `FormulaireCreation` et signale la création par l'événement `cree`.
+  Il suit le contrat de `FormulaireActualite` et `FormulaireTicket` : il porte son
+  cadre (`CadreFormulaire`) et signale par un événement.
+
+  ⚠️ Il porte DÉSORMAIS LES DEUX GESTES (#783, 06/09/2026) : déposer une idée
+  et la corriger. Le cadre suit — créer dans une boîte, éditer dans une fenêtre
+  (`ux-patterns` §14 bis) — et c'est `CadreFormulaire` qui le décide, pas ce
+  fichier. Une seconde composante d'édition aurait dupliqué le formulaire entier.
 
   ⚠️ Deux défauts d'UX corrigés au passage, tous deux du même genre que ceux
   signalés par l'utilisateur sur les autres écrans :
@@ -21,7 +26,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
+	import CadreFormulaire from '$lib/components/CadreFormulaire.svelte';
 	import ChampsCommuns from '$lib/components/ChampsCommuns.svelte';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { IDEE } from '$lib/entites/idee';
@@ -31,27 +36,47 @@
 
 	//  L'API des idées ne rend pas de type dédié : l'événement porte l'objet créé
 	//  tel quel, et la page recharge sa liste depuis le serveur.
-	const dispatch = createEventDispatcher<{ cree: unknown; annule: void }>();
+	const dispatch = createEventDispatcher<{ cree: unknown; modifie: unknown; annule: void }>();
 
-	let form = { titre: '', description: '' };
-	let perimetreCible: string[] = perimetreDefautListe();
+	/**  L'idée à corriger, ou `null` pour un dépôt. C'est la SEULE prop qui
+	 *   distingue les deux gestes — tout le reste en découle. */
+	export let idee: any = null;
+
+	$: modeEdition = idee !== null;
+	/**  L'état du cadre #430. Il était écrit en CONSTANTE `'creation'`, avec ce
+	 *   commentaire : « corriger une idée déposée n'existe pas côté produit, et
+	 *   l'écrire ainsi rend le manque visible en relecture ». Le manque a été
+	 *   comblé (#783) : la constante devient une déduction. */
+	$: etat = (modeEdition ? 'edition' : 'creation') as Etat;
+
+	//  Initialisés À LA CONSTRUCTION, jamais réactifs : un `$:` écraserait la
+	//  saisie en cours dès que le parent rafraîchit sa liste. C'est `{#key}` chez
+	//  l'appelant qui remonte le composant d'une idée à l'autre — même contrat que
+	//  `FormulaireAnnonce`.
+	let form = { titre: idee?.titre ?? '', description: idee?.description ?? '' };
+	let perimetreCible: string[] = [...(idee?.perimetre_cible ?? perimetreDefautListe())];
 	//  Section 5 (#782). Vide = tous les résidents, ici comme côté serveur.
-	let publicCible: string[] = [];
+	let publicCible: string[] = [...(idee?.public_cible ?? [])];
 	let submitting = false;
 
-	/**  Ce formulaire ne sert que le DÉPÔT. L'état est écrit en constante plutôt
-	 *   qu'en prop : corriger une idée déposée n'existe pas côté produit, et
-	 *   l'écrire ainsi rend le manque visible en relecture. */
-	const etat: Etat = 'creation';
-
-	async function creer() {
+	async function enregistrer() {
 		if (!form.titre || !form.description) {
 			toast('error', 'Titre et description obligatoires');
 			return;
 		}
 		submitting = true;
 		try {
-			const idee = await ideesApi.create({
+			if (modeEdition) {
+				//  ⚠️ Le ciblage n'est PAS renvoyé : `IdeeUpdate` ne l'accepte pas.
+				//  Restreindre après coup masquerait l'idée à des gens qui l'ont déjà
+				//  votée — même décision que pour le sondage. L'envoyer quand même
+				//  serait ignoré par le serveur, et ferait croire ici que ça marche.
+				const maj = await ideesApi.modifier(idee.id, { ...form });
+				toast('success', 'Idée mise à jour');
+				dispatch('modifie', maj);
+				return;
+			}
+			const creee = await ideesApi.create({
 				...form,
 				perimetre_cible: perimetreCible,
 				public_cible: publicCible,
@@ -60,7 +85,7 @@
 			perimetreCible = perimetreDefautListe();
 			publicCible = [];
 			toast('success', 'Idée soumise !');
-			dispatch('cree', idee);
+			dispatch('cree', creee);
 		} catch (e) {
 			toast('error', e instanceof ApiError ? e.message : 'Erreur');
 		} finally {
@@ -69,8 +94,8 @@
 	}
 </script>
 
-<FormulaireCreation titre="Nouvelle idée">
-	<form on:submit|preventDefault={creer}>
+<CadreFormulaire edition={modeEdition} titre={modeEdition ? 'Modifier l’idée' : 'Nouvelle idée'}>
+	<form on:submit|preventDefault={enregistrer}>
 		<label class="field champ-large">
 			Titre *
 			<input
@@ -85,8 +110,9 @@
 		      « un local à vélos dans le bâtiment 3 » et « l'éclairage du parking » ne
 		      concernent pas les mêmes voisins.
 
-		      Les sections 2, 5, 7, 8 et 9 sont `sansObjet` : la déclaration le dit, et
-		      c'est elle qui les fait disparaître — pas une condition écrite ici. -->
+		      La section 5 (destinataires) s'est ouverte le 06/09 (#782) ; les sections
+		      2, 7, 8 et 9 restent `sansObjet`. C'est la DÉCLARATION qui le dit et qui
+		      les fait disparaître — jamais une condition écrite ici. -->
 		<ChampsCommuns
 			idPrefixe="idee"
 			avecPerimetre={sectionPresente(IDEE, etat, 'perimetre')}
@@ -110,4 +136,4 @@
 			>
 		</div>
 	</form>
-</FormulaireCreation>
+</CadreFormulaire>

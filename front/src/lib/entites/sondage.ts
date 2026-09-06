@@ -113,6 +113,17 @@ export const SONDAGE: EntiteDeclaree = {
 			objet: 'PerimetrePicker — qui est concerné par la question',
 			requis: true,
 			absente: {
+				//  🔒 Le CIBLAGE NE SE CORRIGE PAS (#783) — et ce n'est pas une décision
+				//  d'écran : `SondageUpdate` ne l'expose pas, avec ce motif écrit depuis
+				//  #467 : « restreindre un périmètre après coup masquerait le sondage à
+				//  des gens qui ont déjà voté ». L'afficher ici donnerait un champ qui ne
+				//  fait rien.
+				edition: {
+					motif: 'geste',
+					explication:
+						'Le périmètre se choisit à la création, quand personne n’a encore voté. ' +
+						'Le réduire ensuite retirerait le sondage à des votants.',
+				},
 				evolution: {
 					motif: 'hérité',
 					explication: 'Le périmètre est celui du sondage ; un commentaire ne le redéfinit pas.',
@@ -123,6 +134,15 @@ export const SONDAGE: EntiteDeclaree = {
 			id: 'destinataires',
 			objet: 'DestinatairePicker — quels profils peuvent voter',
 			absente: {
+				//  🔒 Même raison que le périmètre, et plus forte encore : ce champ
+				//  décide QUI PEUT VOTER. Le restreindre en cours de scrutin changerait
+				//  le corps électoral après les premières voix (#783).
+				edition: {
+					motif: 'geste',
+					explication:
+						'Qui peut voter se décide avant le premier vote. L’API ne l’accepte pas ' +
+						'en correction.',
+				},
 				evolution: {
 					motif: 'hérité',
 					explication:
@@ -154,6 +174,15 @@ export const SONDAGE: EntiteDeclaree = {
 			id: 'diffusion',
 			objet: 'CanauxNotification — WhatsApp, syndic, conseil syndical',
 			absente: {
+				//  🔒 Corriger n'est pas rediffuser (#783). Ces cases déclenchent des
+				//  ENVOIS — les proposer à la correction ferait repartir un message
+				//  WhatsApp à chaque faute de frappe rattrapée. `SondageUpdate` ne les
+				//  expose pas non plus.
+				edition: {
+					motif: 'geste',
+					explication:
+						'La diffusion a déjà eu lieu à la création. Corriger un libellé ne la ' + 'rejoue pas.',
+				},
 				affichage: {
 					motif: 'geste',
 					explication: "On n'affiche pas un envoi : la diffusion a eu lieu, elle ne se lit pas.",

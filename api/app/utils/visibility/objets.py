@@ -298,7 +298,12 @@ def annonce_visible(annonce: PetiteAnnonce, user: Utilisateur) -> bool:
     déborde son bâtiment (#339) — n'aurait ici aucun sens : on ne propose pas un
     lave-linge à des voisins qu'on a explicitement écartés.
     """
-    return cible_visible(annonce.perimetre_cible, annonce.public_cible, user)
+    return cible_visible(
+        annonce.perimetre_cible,
+        annonce.public_cible,
+        user,
+        auteur_id=annonce.auteur_id,
+    )
 
 
 def idee_visible(idee: Idee, user: Utilisateur) -> bool:
@@ -310,4 +315,9 @@ def idee_visible(idee: Idee, user: Utilisateur) -> bool:
     un défaut du produit. Ne pas le contourner ici en ouvrant discrètement
     l'audience ; ce serait décider à sa place, sans que rien ne le dise.
     """
-    return cible_visible(idee.perimetre_cible, idee.public_cible, user)
+    return cible_visible(
+        idee.perimetre_cible,
+        idee.public_cible,
+        user,
+        auteur_id=idee.auteur_id,
+    )

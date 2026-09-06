@@ -33,6 +33,10 @@
 	export let sondages: any[] = [];
 	export let arreterSondage: (s: any, e: Event) => void;
 	export let supprimerSondage: (s: any, e: Event) => void;
+	/**  Corriger son sondage (#783). Même condition que « Stopper » : l'auteur
+	 *   ou un admin, et **pas** un sondage clôturé — le serveur le refuse, et un
+	 *   bouton qui déclencherait un refus serait pire qu'absent. */
+	export let modifierSondage: (s: any, e: Event) => void;
 </script>
 
 {#each sondages as s (s.id)}
@@ -85,6 +89,14 @@
 				<span class="badge badge-gray">Clôturé</span>
 			{:else}
 				<span class="badge badge-green">Ouvert</span>
+			{/if}
+			{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
+				<button
+					class="btn-icon"
+					aria-label="Modifier ce sondage"
+					title="Modifier"
+					on:click={(e) => modifierSondage(s, e)}>&#x270F;&#xFE0F;</button
+				>
 			{/if}
 			{#if ($currentUser?.id === s.auteur_id || $isAdmin) && !s.cloture}
 				<button

@@ -30,6 +30,13 @@ export const sondages = {
 export const idees = {
 	list: () => api.get<any[]>('/idees'),
 	create: (data: unknown) => api.post<any>('/idees', data),
+	//  La CORRECTION d'une idée (#783). Le `PATCH` n'existait pas côté serveur :
+	//  l'idée était la seule entité de la Communauté où une faute de frappe était
+	//  définitive — ou imposait de supprimer et redéposer, ce qui perd les votes
+	//  et les réponses. Il n'accepte que le titre et la description : le ciblage
+	//  et le statut ont leurs propres règles, et un champ qu'on n'expose pas ne
+	//  se contourne pas.
+	modifier: (id: number, data: unknown) => api.patch<any>(`/idees/${id}`, data),
 	voter: (id: number) => api.post(`/idees/${id}/voter`),
 	updateStatut: (id: number, statut: string) => api.patch(`/idees/${id}/statut`, { statut }),
 	delete: (id: number) => api.delete(`/idees/${id}`),
