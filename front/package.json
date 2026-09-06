@@ -63,7 +63,8 @@
 		"lint:liste-depliable": "node --experimental-strip-types scripts/check-liste-depliable.mjs --selftest",
 		"lint:editeur": "node scripts/check-editeur-riche.mjs",
 		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs",
-		"lint:csp": "node scripts/check-csp-servie.mjs"
+		"lint:csp": "node scripts/check-csp-servie.mjs",
+		"lint:evitement": "node scripts/check-lien-evitement.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

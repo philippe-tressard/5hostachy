@@ -835,6 +835,7 @@ jobs:
         run: |
           node scripts/check-evenements.mjs --selftest
           node scripts/check-csp-servie.mjs --selftest
+          node scripts/check-lien-evitement.mjs --selftest
           node scripts/check-catch-vide.mjs --selftest
           node scripts/check-archives.mjs --selftest
           node scripts/check-charge-utile.mjs --selftest
@@ -1268,3 +1269,12 @@ jobs:
       - name: CSP servie (script-src bloquant, condensats préservés)
         working-directory: front
         run: npm run lint:csp
+
+      # ♿ Le lien d'évitement clavier (#778, WCAG 2.4.1) tient à QUATRE pièces —
+      # le lien, l'ancre, `tabindex="-1"` sur la cible, la bascule CSS au focus —
+      # et aucune ne voit les autres. Deux de ses modes d'échec laissent le HTML
+      # parfaitement correct pendant que la fonctionnalité est morte : c'est le
+      # bandeau PWA de la v2.24.0, à nouveau.
+      - name: Lien d'évitement clavier cohérent
+        working-directory: front
+        run: npm run lint:evitement
