@@ -28,7 +28,23 @@ from pathlib import Path
 
 import pytest
 
-ROUTEUR = Path(__file__).resolve().parent.parent / "app" / "routers" / "acces.py"
+#  🔴 `acces.py` est devenu un PAQUET le 06/09/2026 (#805) : le contrôle lit
+#  donc tous ses modules, concaténés. Il cherchait un fichier ; il cherche
+#  maintenant un domaine, ce qui est ce qu'il a toujours voulu dire.
+#
+#  ⚠️ Son cas zéro tient toujours : si le répertoire disparaissait, la
+#  concaténation serait vide et les assertions échoueraient — le contrôle rendrait
+#  INCONNU plutôt qu'un vert. C'est ce qu'il a fait le jour du découpage, avant
+#  cette correction : « acces.py introuvable, le contrôle ne peut pas conclure ».
+PAQUET = Path(__file__).resolve().parent.parent / "app" / "routers" / "acces"
+ROUTEUR = PAQUET  # nom historique, conservé pour les messages d'erreur
+
+
+def _source_du_domaine() -> str:
+    """Tous les modules du paquet, concaténés — l'équivalent de l'ancien fichier."""
+    fichiers = sorted(PAQUET.glob("*.py"))
+    assert fichiers, f"{PAQUET} ne porte aucun module : le contrôle ne peut pas conclure"
+    return "\n".join(f.read_text(encoding="utf-8") for f in fichiers)
 
 #  Les gestes qui n'ont volontairement PAS d'équivalent, avec leur raison.
 #  ⚠️ Une entrée qui ne sert plus fait échouer le test : une dérogation oubliée
@@ -48,7 +64,7 @@ def _verbes(prefixe: str) -> set[str]:
     import. `upload`, `stats`, `auto-match` et la liste agissent sur la
     collection et n'ont pas à se correspondre un pour un.
     """
-    source = ROUTEUR.read_text(encoding="utf-8")
+    source = _source_du_domaine()
     motif = re.compile(
         r'@router\.(?:post|patch|delete)\("' + re.escape(prefixe) + r'/\{import_id\}(?:/([\w-]+))?"'
     )
@@ -61,7 +77,7 @@ def test_le_routeur_est_lisible():
     C'est la forme d'échec la plus coûteuse : le test passerait au vert en ayant
     cessé de voir (`standards/04` §2).
     """
-    assert ROUTEUR.exists(), f"{ROUTEUR} introuvable — le contrôle ne peut pas conclure"
+    assert PAQUET.is_dir(), f"{PAQUET} introuvable — le contrôle ne peut pas conclure"
     tc = _verbes("/admin/imports")
     vigik = _verbes("/admin/imports-vigik")
     assert len(tc) >= 4, f"seulement {len(tc)} geste(s) lus côté télécommandes — motif cassé ?"

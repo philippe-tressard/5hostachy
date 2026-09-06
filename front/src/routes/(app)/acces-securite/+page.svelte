@@ -6,6 +6,8 @@
 	import { acces as accesApi, lots as lotsApi, bailleur as bailApi, ApiError } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { isCS, currentUser } from '$lib/stores/auth';
+	import BadgesCopropriete from '$lib/components/BadgesCopropriete.svelte';
+	import MesAcces from '$lib/components/MesAcces.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDateShort } from '$lib/date';
@@ -207,88 +209,39 @@
 {#if loading}
 	<p style="color:var(--color-text-muted)">Chargement…</p>
 {:else}
-	<!-- Mes vigiks -->
+	<!--  🔴 Les deux sections étaient écrites À L'IDENTIQUE, à quatre mots près
+	      (#805). Quarante lignes en double — table, colonnes, boutons et leurs
+	      conditions. Elles n'avaient pas encore divergé : c'est exactement le
+	      moment où l'on factorise, avant d'avoir à décider laquelle a raison.
+
+	      La condition d'affichage reste ici, pour les deux : un locataire sans
+	      badge ne voit pas la section vide, un copropriétaire si — il peut en
+	      déclarer un. Elle parle de la place de la section dans l'écran, pas du
+	      tableau. -->
 	{#if vigiks.length > 0 || $currentUser?.statut !== 'locataire'}
-		<section class="section card">
-			<div class="section-header">
-				<h2 class="section-title">Badges d'accès (Vigik)</h2>
-			</div>
-			{#if vigiks.length === 0}
-				<p style="color:var(--color-text-muted);font-size:.9rem">Aucun badge enregistré.</p>
-			{:else}
-				<table class="table" style="table-layout:fixed;width:100%">
-					<colgroup><col style="width:35%" /><col style="width:9rem" /><col /></colgroup>
-					<thead><tr><th>Code</th><th>Statut</th><th>Actions</th></tr></thead>
-					<tbody>
-						{#each vigiks as v (v.id)}
-							<tr>
-								<td style="font-family:monospace">{v.code}</td>
-								<td><span class="badge {statutClass(v.statut)}">{v.statut}</span></td>
-								<td style="display:flex;gap:.35rem;flex-wrap:wrap">
-									{#if v.statut === 'actif'}
-										<button
-											class="btn btn-sm btn-outline"
-											on:click={() => signalerPerdu(v.id, 'vigik')}>Signaler perdu</button
-										>
-									{/if}
-									{#if $isCS}
-										<button
-											class="btn-icon-danger"
-											aria-label="Supprimer ce badge Vigik"
-											title="Supprimer"
-											on:click={() => supprimer(v.id, 'vigik')}>&#x1F5D1;️</button
-										>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{/if}
-		</section>
+		<MesAcces
+			titre="Badges d'accès (Vigik)"
+			messageVide="Aucun badge enregistré."
+			nomObjet="ce badge Vigik"
+			items={vigiks}
+			peutSupprimer={$isCS}
+			classeStatut={statutClass}
+			onSignalerPerdu={(id) => signalerPerdu(id, 'vigik')}
+			onSupprimer={(id) => supprimer(id, 'vigik')}
+		/>
 	{/if}
 
-	<!-- Mes télécommandes -->
 	{#if telecommandes.length > 0 || $currentUser?.statut !== 'locataire'}
-		<section class="section card" style="margin-top:1rem">
-			<div class="section-header">
-				<h2 class="section-title">Télécommandes de parking</h2>
-			</div>
-			{#if telecommandes.length === 0}
-				<p style="color:var(--color-text-muted);font-size:.9rem">
-					Aucune télécommande enregistrée.
-				</p>
-			{:else}
-				<table class="table" style="table-layout:fixed;width:100%">
-					<colgroup><col style="width:35%" /><col style="width:9rem" /><col /></colgroup>
-					<thead><tr><th>Code</th><th>Statut</th><th>Actions</th></tr></thead>
-					<tbody>
-						{#each telecommandes as tc (tc.id)}
-							<tr>
-								<td style="font-family:monospace">{tc.code}</td>
-								<td><span class="badge {statutClass(tc.statut)}">{tc.statut}</span></td>
-								<td style="display:flex;gap:.35rem;flex-wrap:wrap">
-									{#if tc.statut === 'actif'}
-										<button
-											class="btn btn-sm btn-outline"
-											on:click={() => signalerPerdu(tc.id, 'tc')}>Signaler perdu</button
-										>
-									{/if}
-									{#if $isCS}
-										<button
-											class="btn-icon-danger"
-											aria-label="Supprimer cette télécommande"
-											title="Supprimer"
-											on:click={() => supprimer(tc.id, 'tc')}>&#x1F5D1;️</button
-										>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{/if}
-		</section>
+		<MesAcces
+			titre="Télécommandes de parking"
+			messageVide="Aucune télécommande enregistrée."
+			nomObjet="cette télécommande"
+			items={telecommandes}
+			peutSupprimer={$isCS}
+			classeStatut={statutClass}
+			onSignalerPerdu={(id) => signalerPerdu(id, 'tc')}
+			onSupprimer={(id) => supprimer(id, 'tc')}
+		/>
 	{/if}
 
 	<!-- Nouvelle demande -->
@@ -533,17 +486,22 @@
 			{/if}
 		</section>
 	{/if}
+
+	<!--  🔴 La vue d'ensemble du conseil syndical (#805). Elle vient APRÈS les
+	      sections personnelles : cet écran est d'abord celui du résident — ses
+	      badges, ses demandes — et le CS y ajoute un niveau de lecture, il ne le
+	      remplace pas.
+
+	      ⚠️ Réservée à `$isCS`, comme l'endpoint (`require_cs_or_admin`) : l'écran
+	      dit ce que le serveur fait, ni plus ni moins (`ux-patterns` §15). -->
+	{#if $isCS}
+		<BadgesCopropriete />
+	{/if}
 {/if}
 
 <!-- /loading -->
 
 <style>
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.75rem;
-	}
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
 	.section-title {
 		margin: 0;

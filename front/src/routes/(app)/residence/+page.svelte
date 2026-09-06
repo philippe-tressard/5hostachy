@@ -1209,12 +1209,11 @@
 	}
 
 	/* ── Sections ───────────────────────────────────────────────── */
-	.section-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 0.75rem;
-	}
+	/*  🔴 `.section-header` est remontée dans `styles/composants.css` le
+	    06/09/2026 (#805) : elle était écrite trois fois à l'identique — ici, dans
+	    `SectionDocuments` et dans `acces-securite` — et un quatrième écran qui
+	    l'employait l'aurait rendue NUE. C'est `lint:classes-nues` qui l'a dit, et
+	    c'est le moment où une copie devient une règle. */
 	/*  Seul `margin: 0` differe : la charte pose `margin-bottom` (#607, 28/08/2026). */
 	.section-title {
 		margin: 0;
