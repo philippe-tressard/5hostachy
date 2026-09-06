@@ -37,6 +37,9 @@ import { fileURLToPath } from 'node:url';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const LAYOUT = resolve(ICI, '..', 'src/routes/(app)/+layout.svelte');
+//  Le squelette RACINE : il précède celui de `(app)` dans le DOM, donc au
+//  clavier. Ce qu'il monte avant le `<slot />` passe AVANT le lien d'évitement.
+const RACINE_LAYOUT = resolve(ICI, '..', 'src/routes/+layout.svelte');
 const FEUILLE = resolve(ICI, '..', 'src/styles/socle.css');
 
 /** La décision, pure : ces deux sources portent-elles un lien d'évitement qui marche ? */
@@ -77,6 +80,34 @@ export function verdict(layout, css) {
 	}
 
 	return manques;
+}
+
+/**  Cinquième pièce : rien de focusable ne doit précéder le lien.
+ *
+ * 🔴 `MajDisponible` était monté AVANT le `<slot />` du squelette racine, et il
+ * porte deux boutons. Le premier Tab atteignait donc le bandeau de mise à jour
+ * au lieu de « Aller au contenu » — **seulement quand une version était
+ * disponible**, donc un défaut intermittent : celui qu'on ne reproduit jamais au
+ * moment où on le cherche (06/09/2026).
+ *
+ * Les deux composants sont en `position: fixed` : les descendre après le
+ * `<slot />` ne change rien à l'écran, et rend au clavier son premier arrêt.
+ *
+ * ⚠️ Le contrôle ne lit pas « ce qui est focusable » — il lit **ce qui est monté
+ * avant le `<slot />`**. C'est plus grossier et plus sûr : un composant peut
+ * devenir focusable sans que son nom change.
+ */
+export function verdictRacine(racine) {
+	const slot = racine.indexOf('<slot');
+	if (slot === -1) return ['le squelette racine ne rend pas de `<slot />` — analyse impossible'];
+	const avant = racine.slice(0, slot);
+	const composants = [...avant.matchAll(/<([A-Z]\w+)\b[^>]*\/?>/g)].map((m) => m[1]);
+	if (composants.length === 0) return [];
+	return [
+		`${composants.join(', ')} monté(s) AVANT le <slot /> du squelette racine : ` +
+			"ils précèdent le lien d'évitement au clavier. Les descendre après — " +
+			"leur position à l'écran n'en dépend pas s'ils sont en `position: fixed`.",
+	];
 }
 
 const CAS = [
@@ -127,13 +158,28 @@ function selftest() {
 		if (!ok) echecs++;
 		console.log(`${ok ? 'PASS' : 'ÉCHEC'}  ${nom} → ${obtenu} manque(s)`);
 	}
+	for (const [nom, racine, attendu] of [
+		['racine : rien avant le slot', `<slot />\n<Toast />`, 0],
+		['racine : un composant avant le slot', `<MajDisponible />\n<slot />`, 1],
+		['racine : deux composants avant', `<Toast />\n<MajDisponible />\n<slot />`, 1],
+		['racine sans slot : on ne conclut pas vert', `<Toast />`, 1],
+	]) {
+		const obtenu = verdictRacine(racine).length;
+		const ok = attendu === 0 ? obtenu === 0 : obtenu >= 1;
+		if (!ok) echecs++;
+		console.log(`${ok ? 'PASS' : 'ÉCHEC'}  ${nom} → ${obtenu} manque(s)`);
+	}
+
 	console.log(echecs ? `== ${echecs} ÉCHEC(S) ==` : '== TOUS OK ==');
 	return echecs ? 1 : 0;
 }
 
 if (process.argv.includes('--selftest')) process.exit(selftest());
 
-const manques = verdict(readFileSync(LAYOUT, 'utf8'), readFileSync(FEUILLE, 'utf8'));
+const manques = [
+	...verdict(readFileSync(LAYOUT, 'utf8'), readFileSync(FEUILLE, 'utf8')),
+	...verdictRacine(readFileSync(RACINE_LAYOUT, 'utf8')),
+];
 if (manques.length) {
 	console.error('❌ Le lien d’évitement clavier ne fonctionnerait pas (#778) :');
 	for (const m of manques) console.error(`   • ${m}`);
