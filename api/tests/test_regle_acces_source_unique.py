@@ -57,8 +57,15 @@ EXCEPTIONS = {
         "DESTINATAIRES d'une notification, pas un accès : choisit les membres du "
         "CS du bâtiment de l'arrivant. Relève de `utils/destinataires`, et son "
         "rapprochement est un sujet à part.",
-    "routers/delegations.py":
-        "AFFICHAGE — expose le bâtiment du mandant dans la fiche de délégation.",
+    #  🔴 `routers/delegations.py` A ÉTÉ RETIRÉ de cette liste le 06/09/2026
+    #  (#801) : son unique lecture de `batiment_id` vivait dans
+    #  `GET /mes-mandants`, endpoint supprimé le même jour parce qu'il doublait
+    #  `auth.me()` sans aucun appelant.
+    #
+    #  ⚠️ C'est le test `test_aucune_exception_ne_survit_a_son_objet` qui l'a
+    #  signalé, dans la minute — sans lui, la tolérance serait restée et aurait
+    #  fait croire la règle plus poreuse qu'elle ne l'est. Exactement ce pour
+    #  quoi il existe.
 }
 
 #: Les répertoires qui DÉCIDENT. `models/` est exclu : y déclarer le champ n'est

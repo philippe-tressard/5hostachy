@@ -40,7 +40,15 @@ export const idees = {
 	voter: (id: number) => api.post(`/idees/${id}/voter`),
 	updateStatut: (id: number, statut: string) => api.patch(`/idees/${id}/statut`, { statut }),
 	delete: (id: number) => api.delete(`/idees/${id}`),
-	listReponses: (id: number) => api.get<any[]>(`/idees/${id}/reponses`),
+	//  🔴 `listReponses` A ÉTÉ RETIRÉE le 06/09/2026 (#801) — pour l'idée comme
+	//  pour l'annonce, quelques lignes plus bas. Les réponses arrivent DÉJÀ avec
+	//  l'objet (`idee.reponses`, `annonce.reponses`), et c'est ce que les écrans
+	//  lisent : `ListeIdees` et `AnnonceCard` les passent tels quels. Une seconde
+	//  voie de lecture pour la même donnée, ce sont deux états libres de diverger
+	//  — et celle-ci n'a jamais eu d'appelant.
+	//
+	//  ⚠️ Les endpoints `GET /idees/{id}/reponses` et `/annonces/{id}/reponses`
+	//  RESTENT : c'est la porte côté client qui disparaît, pas la fonction.
 	repondre: (id: number, contenu: string) => api.post<any>(`/idees/${id}/reponses`, { contenu }),
 	supprimerReponse: (id: number, repId: number) => api.delete(`/idees/${id}/reponses/${repId}`),
 };
@@ -57,7 +65,7 @@ export const annonces = {
 		postFormData(`/annonces/${id}/photo`, { file }),
 	deletePhoto: (id: number, url: string) =>
 		api.delete(`/annonces/${id}/photo?url=${encodeURIComponent(url)}`),
-	listReponses: (id: number) => api.get<any[]>(`/annonces/${id}/reponses`),
+	//  `listReponses` retirée ici aussi — voir la note sur les idées ci-dessus.
 	repondre: (id: number, contenu: string) => api.post<any>(`/annonces/${id}/reponses`, { contenu }),
 	supprimerReponse: (id: number, repId: number) => api.delete(`/annonces/${id}/reponses/${repId}`),
 };
@@ -66,7 +74,12 @@ export const signalements = {
 	creer: (cible_type: string, cible_id: number, motif: string) =>
 		api.post('/signalements', { cible_type, cible_id, motif }),
 	liste: (statut = 'en_attente') => api.get<any[]>(`/signalements?statut=${statut}`),
-	count: () => api.get<{ en_attente: number }>('/signalements/count'),
+	//  🔴 `count` A ÉTÉ RETIRÉE le 06/09/2026 (#801) : l'écran charge déjà
+	//  `liste('en_attente')` et connaît donc `signalements.length`. Demander un
+	//  compteur au serveur pendant qu'on tient la liste, c'est un aller-retour de
+	//  plus pour une valeur qu'on a — et deux nombres libres de se contredire le
+	//  temps du chargement. L'endpoint `GET /signalements/count` reste, pour un
+	//  écran qui voudrait le compte SANS la liste.
 	resoudre: (id: number, statut: 'traite' | 'rejete') =>
 		api.patch(`/signalements/${id}`, { statut }),
 };

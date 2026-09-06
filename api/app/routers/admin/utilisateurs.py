@@ -41,6 +41,7 @@ from app.models.core import (
 from app.schemas import UserRead
 from app.utils.comptes import marquer_decide
 from app.utils.purge_referentielle import purger
+from app.utils.roles_libelles import libelle_role
 from datetime import datetime
 from typing import Optional
 from app.utils.communaute import notification_de_ban
@@ -132,16 +133,11 @@ def ajouter_role(
     except ValueError:
         raise HTTPException(400, f"Rôle invalide : {body.role}")
     user.ajouter_role(role)
-    labels = {
-        RoleUtilisateur.résident: "Résident",
-        RoleUtilisateur.conseil_syndical: "Membre du Conseil Syndical",
-        RoleUtilisateur.admin: "Administrateur",
-    }
     notif = Notification(
         destinataire_id=user.id,
         type="system",
         titre="Rôle ajouté",
-        corps=f"Le rôle {labels.get(role, body.role)} vous a été attribué.",
+        corps=f"Le rôle {libelle_role(role)} vous a été attribué.",
         lien="/profil",
     )
     session.add(user)
@@ -172,15 +168,11 @@ def retirer_role(
     except ValueError:
         raise HTTPException(400, f"Rôle invalide : {body.role}")
     user.retirer_role(role)
-    labels = {
-        RoleUtilisateur.conseil_syndical: "Conseil Syndical",
-        RoleUtilisateur.admin: "Administrateur",
-    }
     notif = Notification(
         destinataire_id=user.id,
         type="system",
         titre="Rôle retiré",
-        corps=f"Le rôle {labels.get(role, body.role)} vous a été retiré.",
+        corps=f"Le rôle {libelle_role(role)} vous a été retiré.",
         lien="/profil",
     )
     session.add(user)
@@ -383,46 +375,19 @@ def supprimer_utilisateur(
     session.commit()
 
 
-@router.post("/utilisateurs/{user_id}/changer-role", response_model=UserRead)
-def changer_role(
-    user_id: int,
-    body: RoleAction,
-    session: Session = Depends(get_session),
-    admin: Utilisateur = Depends(require_admin),
-):
-    """Remplace tous les rôles par un seul (compatibilité ascendante)."""
-    if admin.id == user_id:
-        raise HTTPException(400, "Vous ne pouvez pas changer votre propre rôle.")
-    user = session.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(404, "Utilisateur introuvable")
-    if not user.actif:
-        raise HTTPException(400, "Impossible de changer le rôle d'un compte inactif.")
-    try:
-        nouveau_role = RoleUtilisateur(body.role)
-    except ValueError:
-        raise HTTPException(400, f"Rôle invalide : {body.role}")
-    # Réinitialiser à un seul rôle
-    user.roles_json = nouveau_role.value
-    user.role = nouveau_role
-    labels = {
-        RoleUtilisateur.résident: "Résident",
-        RoleUtilisateur.conseil_syndical: "Membre du Conseil Syndical",
-        RoleUtilisateur.admin: "Administrateur",
-    }
-    notif = Notification(
-        destinataire_id=user.id,
-        type="system",
-        titre="Votre rôle a été mis à jour",
-        corps=f"Vos rôles dans l'application : {labels.get(nouveau_role, body.role)}.",
-        lien="/profil",
-    )
-    session.add(user)
-    session.add(notif)
-    session.commit()
-    session.refresh(user)
-    from app.schemas import UserRead
-    return UserRead.from_orm_with_roles(user)
+#  🔴 `POST /utilisateurs/{user_id}/changer-role` A ÉTÉ SUPPRIMÉ le 06/09/2026
+#  (#801). Il « remplaçait tous les rôles par un seul », et sa docstring le
+#  donnait pour de la « compatibilité ascendante » — avec rien : aucun écran,
+#  aucun script, aucun test ne l'appelait, et son client TypeScript figurait au
+#  relevé des méthodes sans appelant. Le produit a des rôles MULTIPLES depuis
+#  longtemps ; `ajouter-role` et `retirer-role`, juste au-dessus, sont les deux
+#  gestes réels.
+#
+#  ⚠️ Il portait la TROISIÈME copie de la table des libellés de rôles, et un
+#  passe-droit que les deux autres n'ont pas : il écrivait `user.role` et
+#  `user.roles_json` directement au lieu de passer par `ajouter_role()` /
+#  `retirer_role()` du modèle. Un endpoint sans appelant n'est pas seulement du
+#  code mort — c'est du code qui n'est plus corrigé quand la règle bouge.
 
 class BanCommunauteBody(BaseModel):
     interdit: bool

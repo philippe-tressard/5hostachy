@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { relire } from '$lib/utils';
+	import { libelleRole, libelleStatut, LIBELLES_STATUT } from '$lib/roles';
 	import { salutation } from '$lib/date';
 	import { delaiArchivageMs } from '$lib/archivage';
 	import ArchivesDuFil from '$lib/components/ArchivesDuFil.svelte';
@@ -83,25 +84,22 @@
 	//  `$lib/date` — c'est une notion de date, pas de cet écran.
 	$: greeting = relire(data, salutation);
 
+	//  🔴 Les deux tables locales ont rejoint `$lib/roles` (#801) : elles étaient
+	//  la troisième écriture front de la même notion, et la SEULE à écrire
+	//  « Copropriétaire résident » — les deux autres écrans mettaient une
+	//  capitale au second mot. C'est cette forme-ci qui a été retenue.
+	//
+	//  ⚠️ Ce qui reste ICI est la RÈGLE de composition, pas les libellés : on
+	//  annonce le statut, puis les rôles qui ajoutent quelque chose (conseil
+	//  syndical, admin), séparés par ` · `. `résident` et `propriétaire` n'y
+	//  figurent pas — ils ne disent rien de plus que le statut déjà affiché.
 	$: roleLabels = (() => {
-		const STATUT: Record<string, string> = {
-			copropriétaire_résident: 'Copropriétaire résident',
-			copropriétaire_bailleur: 'Copropriétaire bailleur',
-			locataire: 'Locataire',
-			syndic: 'Syndic',
-			mandataire: 'Mandataire',
-			aidant: 'Aidant (proche)',
-		};
-		const SPECIAL: Record<string, string> = {
-			conseil_syndical: 'Conseil syndical',
-			admin: 'Admin',
-		};
 		const labels: string[] = [];
 		const statut = $currentUser?.statut ?? '';
-		if (STATUT[statut]) labels.push(STATUT[statut]);
+		if (LIBELLES_STATUT[statut]) labels.push(libelleStatut(statut));
 		const allRoles = new Set([...($currentUser?.roles ?? []), $currentUser?.role ?? '']);
 		for (const r of ['conseil_syndical', 'admin']) {
-			if (allRoles.has(r)) labels.push(SPECIAL[r]);
+			if (allRoles.has(r)) labels.push(libelleRole(r));
 		}
 		return labels.join(' · ');
 	})();

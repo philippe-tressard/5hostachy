@@ -24,20 +24,17 @@ from app.models.core import (
     Utilisateur,
 )
 from app.utils.noms import nom_affiche
+from app.utils.roles_libelles import libelle_role, libelle_statut_court
 
 # Code du template email (voir seed.EMAIL_TEMPLATES + _EMAIL_PREF_MAP).
 REPONSE_EMAIL_CODE = "reponse_communaute"
 
-# Libellés de rôle affichés à côté d'une réponse.
-_STATUT_ROLE_LABELS = {
-    "copropriétaire_résident": "Copropriétaire",
-    "copropriétaire_bailleur": "Copropriétaire",
-    "locataire": "Locataire",
-    "syndic": "Syndic",
-    "mandataire": "Mandataire",
-    "aidant": "Aidant",
-    "admin_technique": "Admin technique",
-}
+#  🔴 Les libellés vivent dans `app/utils/roles_libelles.py` depuis le
+#  06/09/2026 (#801) : cette table était la SEPTIÈME écriture de la même notion,
+#  et la seule qui divergeait pour une bonne raison — sans la dire. Elle est
+#  désormais nommée `LIBELLES_STATUT_COURT`, avec son motif : à côté d'une
+#  réponse, « Copropriétaire » suffit ; préciser « résident » ou « bailleur »
+#  révélerait si la personne habite son lot ou le loue.
 
 
 def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
@@ -51,12 +48,15 @@ def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
                 "auteur_role": None, "est_cs": False}
     est_cs = auteur.has_role(RoleUtilisateur.conseil_syndical, RoleUtilisateur.admin)
     if auteur.has_role(RoleUtilisateur.conseil_syndical):
-        role = "Conseil syndical"
+        role = libelle_role(RoleUtilisateur.conseil_syndical)
     elif auteur.has_role(RoleUtilisateur.admin):
+        #  ⚠️ « Administrateur » et non « Admin » : le libellé de la table sert
+        #  une étiquette d'écran d'administration, celui-ci une signature en
+        #  toutes lettres. Divergence assumée, écrite ici plutôt que subie.
         role = "Administrateur"
     else:
         statut = auteur.statut.value if auteur.statut is not None else ""
-        role = _STATUT_ROLE_LABELS.get(statut, statut or None)
+        role = libelle_statut_court(statut) if statut else None
     batiment = None
     if auteur.batiment_id is not None:
         bat = session.get(Batiment, auteur.batiment_id)

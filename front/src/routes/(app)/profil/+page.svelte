@@ -2,6 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { DEFAUTS_NOTIFS } from '$lib/preferences';
+	import { libelleRole } from '$lib/roles';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
@@ -72,17 +73,9 @@
 		mandataire: 'Mandataire',
 	};
 
-	const roleLabels: Record<string, string> = {
-		résident: 'Résident',
-		locataire: 'Locataire',
-		copropriétaire_résident: 'Copropriétaire Résident',
-		copropriétaire_bailleur: 'Copropriétaire Bailleur',
-		bailleur: 'Copropriétaire Bailleur',
-		syndic: 'Syndic',
-		mandataire: 'Mandataire',
-		conseil_syndical: 'Conseil syndical',
-		admin: 'Admin',
-	};
+	//  🔴 Libellés dans `$lib/roles` (#801) — voir l'en-tête de ce module : la
+	//  table était écrite six fois, et celle-ci écrivait « Copropriétaire
+	//  Résident » là où le tableau de bord écrivait « Copropriétaire résident ».
 
 	const roleBadge: Record<string, string> = {
 		résident: 'badge-gray',
@@ -412,7 +405,7 @@
 			<dt>Rôle(s)</dt>
 			<dd style="display:flex;gap:0.35rem;flex-wrap:wrap">
 				{#each $currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident'] as r (r)}
-					<span class="badge {roleBadge[r] ?? 'badge-gray'}">{roleLabels[r] ?? r}</span>
+					<span class="badge {roleBadge[r] ?? 'badge-gray'}">{libelleRole(r)}</span>
 				{/each}
 			</dd>
 

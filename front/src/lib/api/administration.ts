@@ -25,7 +25,10 @@ export const delegations = {
 		api.patch<any>(`/delegations/${id}`, data),
 	accepter: (id: number) => api.post<any>(`/delegations/${id}/accepter`),
 	revoquer: (id: number) => api.post<any>(`/delegations/${id}/revoquer`),
-	mesMandants: () => api.get<any[]>('/delegations/mes-mandants'),
+	//  🔴 `mesMandants` A ÉTÉ RETIRÉE (#801) : le front lit
+	//  `$currentUser.delegations_aidant`, qui arrive avec l'utilisateur — c'est
+	//  ce que `Nav.svelte` emploie pour son sélecteur « agir au nom de ».
+	//  L'endpoint reste ; la seconde voie de lecture disparaît.
 };
 
 export const admin = {
@@ -61,14 +64,17 @@ export const admin = {
 	resetEmailTemplates: () => api.post<{ message: string }>('/admin/modeles-email/reinitialiser'),
 	// Utilisateurs & rôles
 	utilisateurs: () => api.get<any[]>('/admin/utilisateurs'),
-	//  🔴 Les trois rendent l'utilisateur MIS À JOUR, et le type le dit depuis le
+	//  🔴 Les deux rendent l'utilisateur MIS À JOUR, et le type le dit depuis le
 	//  06/09/2026 (#801). Sans argument de type, `api.post` rend `{}` : l'écran
 	//  qui fait `{ ...u, ...updated }` ne compilait pas, et il a donc réécrit
 	//  l'appel en dur — avec son propre `<any>` et une URL construite dans un
 	//  ternaire, invisible à toute recherche par route. Une méthode trop pauvre
 	//  ne fait pas contourner un peu : elle fait recopier la route en entier.
-	changerRole: (id: number, role: string) =>
-		api.post<any>(`/admin/utilisateurs/${id}/changer-role`, { role }),
+	//
+	//  ⚠️ Elles étaient TROIS. `changerRole` a été supprimée le même jour, client
+	//  ET endpoint : elle « remplaçait tous les rôles par un seul », donnée pour
+	//  de la « compatibilité ascendante » — avec rien, aucun appelant nulle part.
+	//  Le produit a des rôles MULTIPLES ; ces deux gestes-ci sont les vrais.
 	ajouterRole: (id: number, role: string) =>
 		api.post<any>(`/admin/utilisateurs/${id}/ajouter-role`, { role }),
 	retirerRole: (id: number, role: string) =>
@@ -83,6 +89,10 @@ export const admin = {
 		api.post(`/admin/demandes-profil/${id}/traiter`, data),
 	// Baux locatifs
 	baux: () => api.get<any[]>('/admin/baux'),
+	//  @sans-appelant Le rattachement d'un compte locataire à son bail se fait
+	//  aujourd'hui par `auto-match` à la validation du compte. Quand celui-ci
+	//  échoue — nom mal orthographié, bail créé après l'inscription — il n'existe
+	//  aucun geste manuel : l'endpoint est là, le bouton non. (#808)
 	lierLocataire: (bail_id: number, user_id: number) =>
 		api.post(`/admin/baux/${bail_id}/lier-locataire/${user_id}`, {}),
 	// Audit associations user-lot
@@ -95,9 +105,19 @@ export const admin = {
 	//  elle fait recopier la route en entier — et la route recopiée ne suit plus.
 	telemetryDashboard: (scope?: 'jour' | 'mois' | 'annee') =>
 		api.get<any>(`/telemetry/dashboard${buildQuery({ scope })}`),
-	telemetryUsersActive: () => api.get<any[]>('/telemetry/users-active'),
+	//  🔴 `telemetryUsersActive` A ÉTÉ RETIRÉE (#801) : le tableau de bord de
+	//  télémétrie porte déjà `kpi.utilisateurs` et `kpi.moy_utilisateurs_jour`,
+	//  servis par `telemetryDashboard()` en une requête. L'endpoint
+	//  `GET /telemetry/users-active` reste — il rend la LISTE, pas le compte, et
+	//  c'est un écran qui n'existe pas encore.
+	//  @sans-appelant-direct Appelées depuis CE module par `lancerTache()` et
+	//  `historiqueTache()`, jamais depuis un écran. Le relevé les compte comme
+	//  orphelines parce qu'il ne regarde que les appels HORS de `lib/api/` — et
+	//  c'est volontaire : un client qui ne s'appelle que lui-même serait
+	//  précisément le cas à signaler. Ici les deux tables de routes ont rejoint
+	//  ce module (#801), et l'appelant réel est `TachesPlanifiees`.
 	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
-	telemetryHistorique: () => api.get<any[]>('/admin/telemetry/historique'),
+	telemetryHistorique: () => api.get<any[]>('/admin/telemetry/historique'), //  @sans-appelant-direct idem
 
 	//  Le relevé CSP — agrégé côté serveur et PERSISTÉ dans `ConfigSite`, donc il
 	//  survit aux redémarrages. Il existait sans aucun lecteur : la donnée était

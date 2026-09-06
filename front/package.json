@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "3.108.0",
+	"version": "3.109.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -67,6 +67,7 @@
 		"lint:evitement": "node scripts/check-lien-evitement.mjs",
 		"lint:seuil-listes": "node scripts/check-seuil-listes-courtes.mjs",
 		"lint:client-api": "node scripts/check-client-api.mjs",
+		"lint:client-appele": "node scripts/check-client-appele.mjs",
 		"e2e": "playwright test",
 		"e2e:ui": "playwright test --ui"
 	},

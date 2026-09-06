@@ -4,6 +4,7 @@
 	import { get } from 'svelte/store';
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 	import { api, admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
+	import { libelleRole } from '$lib/roles';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import ChampIcone from '$lib/components/ChampIcone.svelte';
@@ -305,7 +306,7 @@
 				: adminApi.retirerRole(user.id, role));
 			toast(
 				'success',
-				`Rôle ${roleLabels[role] ?? role} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${nomAffiche(user)}.`,
+				`Rôle ${libelleRole(role)} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${nomAffiche(user)}.`,
 			);
 			utilisateurs = utilisateurs.map((u) => (u.id === user.id ? { ...u, ...updated } : u));
 		} catch (e: any) {
@@ -394,20 +395,12 @@
 			return (a.prenom ?? '').localeCompare(b.prenom ?? '', 'fr', { sensitivity: 'base' });
 		});
 
-	const roleLabels: Record<string, string> = {
-		propriétaire: 'Propriétaire',
-		résident: 'Résident',
-		externe: 'Externe',
-		conseil_syndical: 'Conseil syndical',
-		admin: 'Admin',
-		// legacy / compat
-		locataire: 'Locataire',
-		copropriétaire_résident: 'Copropriétaire Résident',
-		copropriétaire_bailleur: 'Copropriétaire Bailleur',
-		bailleur: 'Copropriétaire Bailleur',
-		syndic: 'Syndic',
-		mandataire: 'Mandataire',
-	};
+	//  🔴 La table des libellés vit dans `$lib/roles` depuis le 06/09/2026 (#801).
+	//  Elle était écrite SIX fois — trois ici côté front, trois côté serveur — et
+	//  les six avaient dérivé : « Copropriétaire Résident » dans deux écrans,
+	//  « Copropriétaire résident » dans le troisième ; « Conseil syndical » ici,
+	//  « Membre du Conseil Syndical » dans la notification que le serveur envoie.
+	//  Chacune était cohérente avec elle-même : aucun contrôle ne pouvait le voir.
 
 	const roleBadgeClass: Record<string, string> = {
 		propriétaire: 'badge-teal',
@@ -452,7 +445,7 @@
 	function displayRoles(u: any): { label: string; cls: string }[] {
 		const roles: string[] = u.roles?.length ? u.roles : [u.role];
 		return roles.map((r: string) => ({
-			label: roleLabels[r] ?? r,
+			label: libelleRole(r),
 			cls: roleBadgeClass[r] ?? 'badge-gray',
 		}));
 	}
@@ -866,7 +859,7 @@
 								<div style="display:flex;gap:.25rem;flex-wrap:wrap">
 									{#each u.roles?.length ? u.roles : [u.role] as r (r)}
 										<span class="badge {roleBadgeClass[r] ?? 'badge-gray'}" style="font-size:.75rem"
-											>{roleLabels[r] ?? r}</span
+											>{libelleRole(r)}</span
 										>
 									{/each}
 								</div>
@@ -1201,7 +1194,7 @@
 		>
 			<p style="font-size:.875rem;margin-bottom:1rem">
 				{roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
-				<strong>{roleLabels[roleEnCours.role] ?? roleEnCours.role}</strong>
+				<strong>{libelleRole(roleEnCours.role)}</strong>
 				{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
 				<strong>{nomAffiche(roleEnCours.user)}</strong> ?
 				<br />

@@ -1306,3 +1306,16 @@ jobs:
       - name: Le client TypeScript est la seule porte d'entrée de l'API
         working-directory: front
         run: npm run lint:client-api
+
+      # 🔴 Le pendant du contrôle ci-dessus, dans l'autre sens : une méthode du
+      # client que personne n'appelle doit se DÉCLARER (#801).
+      #
+      # Il n'interdit pas — le tri a montré que les neuf restantes ne sont pas du
+      # code mort mais des capacités inatteignables, des appelants hors écran, ou
+      # un geste retiré sur arbitrage. Interdire aurait forcé à supprimer des
+      # capacités réelles ; tolérer en silence aurait laissé revenir les 48.
+      # `@sans-appelant` exige en plus un numéro de ticket : une capacité
+      # inatteignable sans ticket est un oubli qui ressemble à une décision.
+      - name: Toute méthode du client est appelée, ou déclarée avec son motif
+        working-directory: front
+        run: npm run lint:client-appele
